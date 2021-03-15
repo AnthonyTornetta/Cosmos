@@ -9,16 +9,18 @@ import org.joml.Vector3i;
 
 import com.cornchipss.cosmos.blocks.Block;
 import com.cornchipss.cosmos.lights.LightMap;
+import com.cornchipss.cosmos.rendering.IRenderableStructure;
 import com.cornchipss.cosmos.utils.Logger;
 import com.cornchipss.cosmos.utils.Maths;
 import com.cornchipss.cosmos.world.Chunk;
+import com.cornchipss.cosmos.world.ClientChunk;
 import com.cornchipss.cosmos.world.World;
 
 public abstract class ClientStructure extends Structure
 {
 	private LightMap lightMap;
 	
-	private Set<Chunk> bulkUpdate;
+	private Set<ClientChunk> bulkUpdate;
 
 	public ClientStructure(World world)
 	{
@@ -35,7 +37,7 @@ public abstract class ClientStructure extends Structure
 	@Override
 	protected void setblockAt(int x, int y, int z, Block b)
 	{
-		Chunk c = chunk(x, y, z);
+		ClientChunk c = chunk(x, y, z);
 		
 		c.block(x % Chunk.WIDTH, y % Chunk.HEIGHT, z % Chunk.LENGTH, b, !bulkUpdating());
 		
@@ -75,9 +77,9 @@ public abstract class ClientStructure extends Structure
 		{
 			calculateLights(true);
 			
-			Set<Chunk> all = new LinkedHashSet<>();
+			Set<ClientChunk> all = new LinkedHashSet<>();
 		
-			for(Chunk c : bulkUpdate)
+			for(ClientChunk c : bulkUpdate)
 			{
 				// not the best way for account for all changes, given that large light sources would invalidate this, but it works for now
 				all.add(c);
@@ -95,7 +97,7 @@ public abstract class ClientStructure extends Structure
 					all.add(c.backNeighbor());
 			}
 			
-			for(Chunk c : all)
+			for(ClientChunk c : all)
 				c.render();
 		}
 		else
@@ -151,6 +153,12 @@ public abstract class ClientStructure extends Structure
 				}
 			}
 		}
+	}
+	
+	@Override
+	public ClientChunk chunk(int x, int y, int z)
+	{
+		return (ClientChunk)super.chunk(x, y, z);
 	}
 	
 	public LightMap lightMap()

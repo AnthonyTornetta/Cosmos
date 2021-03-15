@@ -21,7 +21,9 @@ public class Chunk implements IWritable
 	public static final int WIDTH = 16, HEIGHT = 16, LENGTH = 16;
 	
 	private Block[][][] blocks;
-	protected Block[][][] blocks() { return blocks; }
+	public Block[][][] blocks() { return blocks; }
+	
+	private Vector3ic structureIndex;
 	
 	/**
 	 * Offset relative to block structure's 0,0,0
@@ -38,11 +40,12 @@ public class Chunk implements IWritable
 	 */
 	private Chunk left, right, top, bottom, front, back;
 	
-	public Chunk(int offX, int offY, int offZ, Structure s)
+	public Chunk(int offX, int offY, int offZ, Vector3i structureIndex, Structure s)
 	{
 		this.offset = new Vector3i(offX, offY, offZ);
 		
 		this.structure = s;
+		this.structureIndex = structureIndex;
 		
 		blocks = createBlocksArray(WIDTH, HEIGHT, LENGTH);
 	}
@@ -236,5 +239,10 @@ public class Chunk implements IWritable
 	public Structure structure()
 	{
 		return structure;
+	}
+
+	public Vector3ic index()
+	{
+		return structureIndex;
 	}
 }

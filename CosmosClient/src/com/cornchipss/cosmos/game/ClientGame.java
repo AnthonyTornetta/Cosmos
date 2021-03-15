@@ -30,6 +30,7 @@ import com.cornchipss.cosmos.physx.Transform;
 import com.cornchipss.cosmos.registry.Biospheres;
 import com.cornchipss.cosmos.rendering.MaterialMesh;
 import com.cornchipss.cosmos.rendering.Window;
+import com.cornchipss.cosmos.structures.ClientShip;
 import com.cornchipss.cosmos.structures.Planet;
 import com.cornchipss.cosmos.structures.Ship;
 import com.cornchipss.cosmos.structures.Structure;
@@ -41,7 +42,7 @@ import com.cornchipss.cosmos.world.entities.player.ClientPlayer;
 public class ClientGame extends Game
 {
 	private Planet mainPlanet;
-	private Ship ship;
+	private ClientShip ship;
 	private Matrix4f projectionMatrix;
 	private ClientPlayer p;
 	private GUI gui;

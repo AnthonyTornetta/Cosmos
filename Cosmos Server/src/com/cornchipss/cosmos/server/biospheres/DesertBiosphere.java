@@ -2,6 +2,7 @@ package com.cornchipss.cosmos.server.biospheres;
 
 import org.joml.SimplexNoise;
 
+import com.cornchipss.cosmos.biospheres.Biosphere;
 import com.cornchipss.cosmos.blocks.Blocks;
 import com.cornchipss.cosmos.structures.Structure;
 import com.cornchipss.cosmos.utils.Maths;

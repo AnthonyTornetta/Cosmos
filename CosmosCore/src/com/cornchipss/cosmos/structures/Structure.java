@@ -313,19 +313,6 @@ public abstract class Structure extends PhysicalObject implements IWritable
 	public int length() { return length; }
 	public int height() { return height; }
 	public int width() { return width; }
-
-	/**
-	 * Not implemented
-	 * TODO implement this
-	 * @param r
-	 * @param x
-	 * @param y
-	 * @param z
-	 */
-	public void rotation(float r, float x, float y, float z)
-	{
-		throw new RuntimeException("Not yet implemented D;");
-	}
 	
 	public Matrix4fc openGLMatrix()
 	{

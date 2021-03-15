@@ -4,6 +4,8 @@ import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.lwjgl.glfw.GLFW;
 
+import com.cornchipss.cosmos.rendering.BulkModel;
+import com.cornchipss.cosmos.rendering.IRenderableStructure;
 import com.cornchipss.cosmos.utils.Maths;
 import com.cornchipss.cosmos.utils.io.Input;
 import com.cornchipss.cosmos.world.World;
@@ -83,5 +85,11 @@ public class ClientShip extends Ship
 			
 			pilot().body().transform().rotation(body().transform().rotation());
 		}
+	}
+
+	@Override
+	public BulkModel bulkmodel()
+	{
+		return null;
 	}
 }
