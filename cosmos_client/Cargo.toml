@@ -1,0 +1,25 @@
+[package]
+name = "cosmos_client"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+cosmos_core = { version = "0.1.0", path = "../cosmos_core" }
+
+rend3 = "0.3.0"
+rend3-routine = "0.3.0"
+rend3-framework = "0.3.0"
+winit = "0.26.0"
+
+image = { version = "0.24.3", default-features = false, features = ["png"]}
+
+lazy_static = "1.4.0"
+
+take_mut = "0.2.2"
+
+rapier3d = { version = "*", features = [ "simd-stable" ] }
+
+[profile.dev.package.rapier3d]
+opt-level = 3

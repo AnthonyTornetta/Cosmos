@@ -1,0 +1,320 @@
+use std::collections::HashSet;
+use rend3::types::{glam, Mesh};
+use rend3::types::glam::{Vec2, Vec3};
+use cosmos_core::block::block::{Block, BlockFace};
+use cosmos_core::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
+use cosmos_core::structure::structure::{Structure, StructureBlock};
+use cosmos_core::structure::structure_listener::StructureListener;
+use cosmos_core::utils::array_utils::flatten;
+use rapier3d::na::Vector3;
+
+pub struct StructureRenderer
+{
+    width: usize,
+    height: usize,
+    length: usize,
+    chunk_renderers: Vec<ChunkRenderer>,
+    changes: HashSet<Vector3<usize>>,
+    need_meshes: HashSet<Vector3<usize>>
+}
+
+impl StructureRenderer {
+    pub fn new(width: usize, height: usize, length: usize) -> Self {
+        let mut rends = Vec::with_capacity(width * height * length);
+
+        for _ in 0..(width * height * length)
+        {
+            rends.push(ChunkRenderer::new());
+        }
+
+        StructureRenderer {
+            chunk_renderers: rends,
+            changes: HashSet::new(),
+            need_meshes: HashSet::new(),
+            width, height, length
+        }
+    }
+
+    pub fn render(&mut self, structure: &Structure) {
+        for change in &self.changes {
+            let (x, y, z) = (change.x, change.y, change.z);
+
+            let left = match x {
+                0 => None,
+                x => Some(structure.chunk_from_chunk_coordinates(x - 1, y, z))
+            };
+
+            let right;
+            if x == self.width - 1 {
+                right = None;
+            }
+            else {
+                right = Some(structure.chunk_from_chunk_coordinates(x + 1, y, z));
+            }
+
+            let bottom = match y {
+                0 => None,
+                y => Some(structure.chunk_from_chunk_coordinates(x, y - 1, z))
+            };
+
+            let top;
+            if y == self.height - 1 {
+                top = None;
+            }
+            else {
+                top = Some(structure.chunk_from_chunk_coordinates(x, y + 1, z));
+            }
+
+            let back = match z {
+                0 => None,
+                z => Some(structure.chunk_from_chunk_coordinates(x, y, z - 1))
+            };
+
+            let front;
+            if z == self.length - 1 {
+                front = None;
+            }
+            else {
+                front = Some(structure.chunk_from_chunk_coordinates(x, y, z + 1));
+            }
+
+            self.chunk_renderers[flatten(x, y, z, self.width, self.height)].render(
+                structure.chunk_from_chunk_coordinates(x, y, z),
+                &structure.chunk_world_position(x, y, z),
+                left, right, bottom, top, back, front
+            );
+
+            self.need_meshes.insert(change.clone());
+        }
+
+        self.changes.clear();
+    }
+
+    pub fn create_meshes(&mut self) -> Vec<Mesh> {
+        let mut meshes = Vec::with_capacity(self.need_meshes.len());
+
+        for chunk in &self.need_meshes {
+            let mut renderer: Option<ChunkRenderer> = None;
+
+            take_mut::take(&mut self.chunk_renderers[flatten(chunk.x, chunk.y, chunk.z, self.width, self.height)], | x | {
+                renderer = Some(x);
+                ChunkRenderer::new()
+            });
+
+            let rend = renderer.unwrap();
+
+            meshes.push(
+                rend3::types::MeshBuilder::new(rend.positions, rend3::types::Handedness::Left)
+                    .with_indices(rend.indices)
+                    .with_vertex_uv0(rend.uvs)
+                    .build()
+                    .unwrap()
+            );
+        }
+
+        self.need_meshes.clear();
+
+        meshes
+    }
+}
+
+impl StructureListener for StructureRenderer {
+    fn notify_block_update(&mut self, _structure: &Structure, structure_block: &StructureBlock, _new_block: &Block) {
+        self.changes.insert(Vector3::new(structure_block.chunk_coord_x(), structure_block.chunk_coord_y(), structure_block.chunk_coord_z()));
+    }
+}
+
+pub struct ChunkRenderer
+{
+    pub indices: Vec<u32>,
+    pub uvs: Vec<Vec2>,
+    pub positions: Vec<Vec3>,
+}
+
+#[inline]
+fn vertex(x: f32, y: f32, z: f32) -> glam::Vec3 {
+    glam::Vec3::new(x, y, z)
+}
+
+#[inline]
+fn uv(x: f32, y: f32) -> glam::Vec2 {
+    glam::Vec2::new(x, y)
+}
+
+impl ChunkRenderer {
+    pub fn new() -> Self {
+        Self {
+            indices: Vec::new(),
+            uvs: Vec::new(),
+            positions: Vec::new()
+        }
+    }
+
+    pub fn render(&mut self, chunk: &Chunk, chunk_world_position: &Vector3<f32>,
+                  left: Option<&Chunk>, right: Option<&Chunk>,
+                  bottom: Option<&Chunk>, top: Option<&Chunk>,
+                  back: Option<&Chunk>, front: Option<&Chunk>) {
+
+        self.positions.clear();
+        self.uvs.clear();
+        self.positions.clear();
+
+        let mut last_index = 0;
+
+        for z in 0..CHUNK_DIMENSIONS
+        {
+            for y in 0..CHUNK_DIMENSIONS
+            {
+                for x in 0..CHUNK_DIMENSIONS
+                {
+                    if chunk.has_block_at(x, y, z) {
+                        let block = chunk.block_at(x, y, z);
+
+                        let (cx, cy, cz) = (x as f32 + chunk_world_position.x, y as f32 + chunk_world_position.y, z as f32 + chunk_world_position.z);
+
+                        // right
+                        if (x != CHUNK_DIMENSIONS - 1 && chunk.has_see_through_block_at(x + 1, y, z)) ||
+                            (x == CHUNK_DIMENSIONS - 1 && (right.is_none() || right.unwrap().has_see_through_block_at(0, y, z))) {
+                            self.positions.push(vertex(cx + 0.5, cy + -0.5, cz + -0.5));
+                            self.positions.push(vertex(cx + 0.5, cy + 0.5, cz + -0.5));
+                            self.positions.push(vertex(cx + 0.5, cy + 0.5, cz + 0.5));
+                            self.positions.push(vertex(cx + 0.5, cy + -0.5, cz + 0.5));
+
+                            let uvs = block.uv_for_side(BlockFace::Right);
+                            self.uvs.push(uv(uvs[0].x, uvs[1].y));
+                            self.uvs.push(uv(uvs[0].x, uvs[0].y));
+                            self.uvs.push(uv(uvs[1].x, uvs[0].y));
+                            self.uvs.push(uv(uvs[1].x, uvs[1].y));
+
+                            self.indices.push(0 + last_index);
+                            self.indices.push(1 + last_index);
+                            self.indices.push(2 + last_index);
+                            self.indices.push(2 + last_index);
+                            self.indices.push(3 + last_index);
+                            self.indices.push(0 + last_index);
+
+                            last_index += 4;
+                        }
+                        // left
+                        if (x != 0 && chunk.has_see_through_block_at(x - 1, y, z)) ||
+                            (x == 0 && (left.is_none() || left.unwrap().has_see_through_block_at(CHUNK_DIMENSIONS - 1, y, z))) {
+                            self.positions.push(vertex(cx + -0.5, cy + -0.5, cz + 0.5));
+                            self.positions.push(vertex(cx + -0.5, cy + 0.5, cz + 0.5));
+                            self.positions.push(vertex(cx + -0.5, cy + 0.5, cz + -0.5));
+                            self.positions.push(vertex(cx + -0.5, cy + -0.5, cz + -0.5));
+
+                            let uvs = block.uv_for_side(BlockFace::Left);
+                            self.uvs.push(uv(uvs[0].x, uvs[1].y));
+                            self.uvs.push(uv(uvs[0].x, uvs[0].y));
+                            self.uvs.push(uv(uvs[1].x, uvs[0].y));
+                            self.uvs.push(uv(uvs[1].x, uvs[1].y));
+
+                            self.indices.push(0 + last_index);
+                            self.indices.push(1 + last_index);
+                            self.indices.push(2 + last_index);
+                            self.indices.push(2 + last_index);
+                            self.indices.push(3 + last_index);
+                            self.indices.push(0 + last_index);
+
+                            last_index += 4;
+                        }
+
+                        // top
+                        if (y != CHUNK_DIMENSIONS - 1 && chunk.has_see_through_block_at(x, y + 1, z)) ||
+                            (y == CHUNK_DIMENSIONS - 1 && (top.is_none() || top.unwrap().has_see_through_block_at(x, 0, z))) {
+                            self.positions.push(vertex(cx + 0.5, cy + 0.5, cz + -0.5));
+                            self.positions.push(vertex(cx + -0.5, cy + 0.5, cz + -0.5));
+                            self.positions.push(vertex(cx + -0.5, cy + 0.5, cz + 0.5));
+                            self.positions.push(vertex(cx + 0.5, cy + 0.5, cz + 0.5));
+
+                            let uvs = block.uv_for_side(BlockFace::Top);
+                            self.uvs.push(uv(uvs[1].x, uvs[1].y));
+                            self.uvs.push(uv(uvs[0].x, uvs[1].y));
+                            self.uvs.push(uv(uvs[0].x, uvs[0].y));
+                            self.uvs.push(uv(uvs[1].x, uvs[0].y));
+
+                            self.indices.push(0 + last_index);
+                            self.indices.push(1 + last_index);
+                            self.indices.push(2 + last_index);
+                            self.indices.push(2 + last_index);
+                            self.indices.push(3 + last_index);
+                            self.indices.push(0 + last_index);
+
+                            last_index += 4;
+                        }
+                        // bottom
+                        if (y != 0 && chunk.has_see_through_block_at(x, y - 1, z)) ||
+                            (y == 0 && (bottom.is_none() || bottom.unwrap().has_see_through_block_at(x, CHUNK_DIMENSIONS - 1, z))) {
+                            self.positions.push(vertex(cx + 0.5, cy + -0.5, cz + 0.5));
+                            self.positions.push(vertex(cx + -0.5, cy + -0.5, cz + 0.5));
+                            self.positions.push(vertex(cx + -0.5, cy + -0.5, cz + -0.5));
+                            self.positions.push(vertex(cx + 0.5, cy + -0.5, cz + -0.5));
+
+                            let uvs = block.uv_for_side(BlockFace::Bottom);
+                            self.uvs.push(uv(uvs[1].x, uvs[0].y));
+                            self.uvs.push(uv(uvs[0].x, uvs[0].y));
+                            self.uvs.push(uv(uvs[0].x, uvs[1].y));
+                            self.uvs.push(uv(uvs[1].x, uvs[1].y));
+
+                            self.indices.push(0 + last_index);
+                            self.indices.push(1 + last_index);
+                            self.indices.push(2 + last_index);
+                            self.indices.push(2 + last_index);
+                            self.indices.push(3 + last_index);
+                            self.indices.push(0 + last_index);
+
+                            last_index += 4;
+                        }
+
+                        // back
+                        if (z != CHUNK_DIMENSIONS - 1 && chunk.has_see_through_block_at(x, y, z + 1)) ||
+                            (z == CHUNK_DIMENSIONS - 1 && (front.is_none() || front.unwrap().has_see_through_block_at(x, y, 0))) {
+                            self.positions.push(vertex(cx + -0.5, cy + -0.5, cz + 0.5));
+                            self.positions.push(vertex(cx + 0.5, cy + -0.5, cz + 0.5));
+                            self.positions.push(vertex(cx + 0.5, cy + 0.5, cz + 0.5));
+                            self.positions.push(vertex(cx + -0.5, cy + 0.5, cz + 0.5));
+
+                            let uvs = block.uv_for_side(BlockFace::Back);
+                            self.uvs.push(uv(uvs[0].x, uvs[0].y));
+                            self.uvs.push(uv(uvs[1].x, uvs[0].y));
+                            self.uvs.push(uv(uvs[1].x, uvs[1].y));
+                            self.uvs.push(uv(uvs[0].x, uvs[1].y));
+
+                            self.indices.push(0 + last_index);
+                            self.indices.push(1 + last_index);
+                            self.indices.push(2 + last_index);
+                            self.indices.push(2 + last_index);
+                            self.indices.push(3 + last_index);
+                            self.indices.push(0 + last_index);
+
+                            last_index += 4;
+                        }
+                        // front
+                        if (z != 0 && chunk.has_see_through_block_at(x, y, z - 1)) ||
+                            (z == 0 && (back.is_none() || back.unwrap().has_see_through_block_at(x, y, CHUNK_DIMENSIONS - 1))) {
+                            self.positions.push(vertex(cx + -0.5, cy + 0.5, cz + -0.5));
+                            self.positions.push(vertex(cx + 0.5, cy + 0.5, cz + -0.5));
+                            self.positions.push(vertex(cx + 0.5, cy + -0.5, cz + -0.5));
+                            self.positions.push(vertex(cx + -0.5, cy + -0.5, cz + -0.5));
+
+                            let uvs = block.uv_for_side(BlockFace::Front);
+                            self.uvs.push(uv(uvs[0].x, uvs[0].y));
+                            self.uvs.push(uv(uvs[1].x, uvs[0].y));
+                            self.uvs.push(uv(uvs[1].x, uvs[1].y));
+                            self.uvs.push(uv(uvs[0].x, uvs[1].y));
+
+                            self.indices.push(0 + last_index);
+                            self.indices.push(1 + last_index);
+                            self.indices.push(2 + last_index);
+                            self.indices.push(2 + last_index);
+                            self.indices.push(3 + last_index);
+                            self.indices.push(0 + last_index);
+
+                            last_index += 4;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
