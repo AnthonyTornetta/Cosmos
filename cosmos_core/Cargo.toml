@@ -8,9 +8,15 @@ edition = "2021"
 [dependencies]
 lazy_static = "1.4.0"
 
-rapier3d = { version = "*", features = [ "simd-stable" ] }
+bevy_rapier3d = { version = "0.16.2", features = [ "simd-stable" ] }
+bevy = "0.8.1"
 
 take_mut = "0.2.2"
 
-[profile.dev.package.rapier3d]
+# Enable max optimizations for dependencies, but not for our code:
+[profile.dev.package."*"]
 opt-level = 3
+
+# Makes rapier faster
+[profile.release]
+codegen-units = 1

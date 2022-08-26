@@ -1,4 +1,4 @@
-use rapier3d::na::Vector3;
+use bevy_rapier3d::na::Vector3;
 
 #[inline]
 pub fn add_vec<T : Copy + std::ops::Add<Output = T>>(v1: &Vector3<T>, v2: &Vector3<T>) -> Vector3<T> {

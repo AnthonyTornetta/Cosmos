@@ -1,5 +1,5 @@
 use lazy_static::lazy_static;
-use rapier3d::na::Vector2;
+use bevy_rapier3d::na::Vector2;
 use crate::block::block::{Block, BlockFace, BlockProperty};
 use crate::block::block_builder::BlockBuilder;
 

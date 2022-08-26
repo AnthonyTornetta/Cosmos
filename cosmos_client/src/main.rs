@@ -28,8 +28,6 @@ fn create_meshes() -> Vec<rend3::types::Mesh> {
 
     for z in 0..CHUNK_DIMENSIONS {
         for x in 0..CHUNK_DIMENSIONS {
-            // let y = (x as f32 / 12.0).sin() * CHUNK_DIMENSIONS as f32;
-
             let y: f32 = CHUNK_DIMENSIONS as f32 - ((x + z) as f32 / 12.0).sin().abs() * 4.0;
 
             for yy in 0..y.ceil() as usize {

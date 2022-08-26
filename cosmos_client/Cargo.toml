@@ -23,3 +23,7 @@ rapier3d = { version = "*", features = [ "simd-stable" ] }
 
 [profile.dev.package.rapier3d]
 opt-level = 3
+
+# Makes rapier faster
+[profile.release]
+codegen-units = 1

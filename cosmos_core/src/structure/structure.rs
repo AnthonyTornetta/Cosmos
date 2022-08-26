@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::rc::{Rc};
-use rapier3d::na::{Vector3};
-use rapier3d::prelude::RigidBody;
+use bevy_rapier3d::na::{Vector3};
+use bevy_rapier3d::prelude::{RigidBody, RigidBodyHandle};
 use crate::block::block::Block;
 use crate::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
 use crate::structure::structure_listener::StructureListener;
@@ -10,7 +10,6 @@ use crate::utils::vec_math::add_vec;
 
 pub struct Structure
 {
-    body: RigidBody,
     listeners: Vec<Rc<RefCell<dyn StructureListener>>>,
     chunks: Vec<Chunk>,
 
@@ -61,7 +60,7 @@ impl StructureBlock {
 }
 
 impl Structure {
-    pub fn new(body: RigidBody, width: usize, height: usize, length: usize) -> Self {
+    pub fn new(width: usize, height: usize, length: usize) -> Self {
         let mut chunks = Vec::with_capacity(width * height * length);
 
         for z in 0..length
@@ -78,7 +77,6 @@ impl Structure {
         Self {
             chunks,
             listeners: Vec::new(),
-            body,
             width, height, length
         }
     }
