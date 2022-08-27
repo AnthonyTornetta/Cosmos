@@ -41,16 +41,75 @@ fn add_player(mut commands: Commands) {
     });
 }
 
+enum Atlas {
+    Main
+}
+
+struct LoadingAsset {
+    atlas_type: Atlas,
+    handle: Handle<Image>
+}
+
+struct AssetsLoading(Vec<LoadingAsset>);
+
+struct MainAtlas {
+    handle: Handle<Image>
+}
+
+fn setup(server: Res<AssetServer>, mut loading: ResMut<AssetsLoading>) {
+    let main_atlas = server.load("images/atlas/main.png");
+
+    loading.0.push(LoadingAsset { handle: main_atlas, atlas_type: Atlas::Main });
+}
+
+fn check_assets_ready(
+    mut commands: Commands,
+    server: Res<AssetServer>,
+    loading: Res<AssetsLoading>,
+    mut state: ResMut<State<GameStatee>>
+) {
+    use bevy::asset::LoadState;
+
+    println!("RANN!!!");
+
+    match server.get_group_load_state(loading.0.iter().map(|h| h.handle.id)) {
+        LoadState::Failed => {
+            panic!("Failed to load asset!!");
+        }
+        LoadState::Loaded => {
+            // all assets are now ready
+
+            for asset in &loading.0 {
+                match asset.atlas_type {
+                    Atlas::Main => {
+                        commands.insert_resource(MainAtlas { handle: asset.handle.clone() });
+                    }
+                }
+            }
+
+            // this might be a good place to transition into your in-game state
+
+            // remove the resource to drop the tracking handles
+            commands.remove_resource::<AssetsLoading>();
+            // (note: if you don't have any other handles to the assets
+            // elsewhere, they will get unloaded after this)
+
+            state.set(GameStatee::Playing).unwrap();
+        }
+        _ => {
+            println!("Loading.");
+            // NotLoaded/Loading: not fully ready yet
+        }
+    }
+}
+
 fn add_structure(mut commands: Commands,
                  mut meshes: ResMut<Assets<Mesh>>,
-                 asset_server: Res<AssetServer>,
-                 mut images: ResMut<Assets<Image>>,
+                 main_atlas: Res<MainAtlas>,
                  mut materials: ResMut<Assets<StandardMaterial>>) {
 
-    let texture_handle = asset_server.load("images/atlas/main_dumb.png");
-
     let material_handle = materials.add(StandardMaterial {
-        base_color_texture: Some(texture_handle.clone()),
+        base_color_texture: Some(main_atlas.handle.clone()),
         alpha_mode: AlphaMode::Opaque,
         unlit: true,
         ..default()
@@ -118,13 +177,37 @@ fn add_structure(mut commands: Commands,
     });
 }
 
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+enum GameStatee {
+    Loading,
+    Playing
+}
 
 fn main() {
     shape::Cube::new(1.0);
 
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_startup_system(add_player)
-        .add_startup_system(add_structure)
+        .add_state(GameStatee::Loading)
+        .insert_resource(AssetsLoading { 0: Vec::new() })
+        .add_startup_system(setup)// add the app state type
+
+        // add systems to run regardless of state, as usual
+        // .add_system(nothing)
+
+        // systems to run only in the main menu
+        .add_system_set(
+            SystemSet::on_update(GameStatee::Loading)
+                .with_system(check_assets_ready)
+        )
+
+        // setup when entering the state
+
+        .add_system_set(
+            SystemSet::on_enter(GameStatee::Playing)
+                .with_system(add_player)
+                .with_system(add_structure)
+        )
+
         .run();
 }
