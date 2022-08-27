@@ -1,12 +1,14 @@
 use std::collections::HashSet;
-use rend3::types::{glam, Mesh};
-use rend3::types::glam::{Vec2, Vec3};
+use bevy::prelude::{Mesh, Vec3};
+use bevy::render::mesh::{Indices, MeshVertexAttribute, PrimitiveTopology};
 use cosmos_core::block::block::{Block, BlockFace};
 use cosmos_core::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
 use cosmos_core::structure::structure::{Structure, StructureBlock};
 use cosmos_core::structure::structure_listener::StructureListener;
 use cosmos_core::utils::array_utils::flatten;
-use rapier3d::na::Vector3;
+use bevy_rapier3d::na::Vector3;
+use bevy_rapier3d::parry::shape;
+use bevy_rapier3d::rapier::prelude::RigidBodyPosition;
 
 pub struct StructureRenderer
 {
@@ -21,15 +23,21 @@ pub struct StructureRenderer
 impl StructureRenderer {
     pub fn new(width: usize, height: usize, length: usize) -> Self {
         let mut rends = Vec::with_capacity(width * height * length);
+        let mut changes = HashSet::new();
 
-        for _ in 0..(width * height * length)
-        {
-            rends.push(ChunkRenderer::new());
+        for z in 0..length {
+            for y in 0..height {
+                for x in 0..width {
+                    rends.push(ChunkRenderer::new());
+
+                    changes.insert(Vector3::new(x, y, z));
+                }
+            }
         }
 
         StructureRenderer {
             chunk_renderers: rends,
-            changes: HashSet::new(),
+            changes,
             need_meshes: HashSet::new(),
             width, height, length
         }
@@ -80,7 +88,7 @@ impl StructureRenderer {
 
             self.chunk_renderers[flatten(x, y, z, self.width, self.height)].render(
                 structure.chunk_from_chunk_coordinates(x, y, z),
-                &structure.chunk_world_position(x, y, z),
+                &structure.chunk_relative_position(x, y, z),
                 left, right, bottom, top, back, front
             );
 
@@ -103,13 +111,13 @@ impl StructureRenderer {
 
             let rend = renderer.unwrap();
 
-            meshes.push(
-                rend3::types::MeshBuilder::new(rend.positions, rend3::types::Handedness::Left)
-                    .with_indices(rend.indices)
-                    .with_vertex_uv0(rend.uvs)
-                    .build()
-                    .unwrap()
-            );
+            let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
+            mesh.set_indices(Some(Indices::U32(rend.indices)));
+            mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, rend.positions);
+            mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, rend.normals);
+            mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, rend.uvs);
+
+            meshes.push(mesh);
         }
 
         self.need_meshes.clear();
@@ -127,18 +135,9 @@ impl StructureListener for StructureRenderer {
 pub struct ChunkRenderer
 {
     pub indices: Vec<u32>,
-    pub uvs: Vec<Vec2>,
-    pub positions: Vec<Vec3>,
-}
-
-#[inline]
-fn vertex(x: f32, y: f32, z: f32) -> glam::Vec3 {
-    glam::Vec3::new(x, y, z)
-}
-
-#[inline]
-fn uv(x: f32, y: f32) -> glam::Vec2 {
-    glam::Vec2::new(x, y)
+    pub uvs: Vec<[f32; 2]>,
+    pub positions: Vec<[f32; 3]>,
+    pub normals: Vec<[f32; 3]>
 }
 
 impl ChunkRenderer {
@@ -146,7 +145,8 @@ impl ChunkRenderer {
         Self {
             indices: Vec::new(),
             uvs: Vec::new(),
-            positions: Vec::new()
+            positions: Vec::new(),
+            normals: Vec::new()
         }
     }
 
@@ -155,9 +155,10 @@ impl ChunkRenderer {
                   bottom: Option<&Chunk>, top: Option<&Chunk>,
                   back: Option<&Chunk>, front: Option<&Chunk>) {
 
-        self.positions.clear();
+        self.indices.clear();
         self.uvs.clear();
         self.positions.clear();
+        self.normals.clear();
 
         let mut last_index = 0;
 
@@ -175,16 +176,21 @@ impl ChunkRenderer {
                         // right
                         if (x != CHUNK_DIMENSIONS - 1 && chunk.has_see_through_block_at(x + 1, y, z)) ||
                             (x == CHUNK_DIMENSIONS - 1 && (right.is_none() || right.unwrap().has_see_through_block_at(0, y, z))) {
-                            self.positions.push(vertex(cx + 0.5, cy + -0.5, cz + -0.5));
-                            self.positions.push(vertex(cx + 0.5, cy + 0.5, cz + -0.5));
-                            self.positions.push(vertex(cx + 0.5, cy + 0.5, cz + 0.5));
-                            self.positions.push(vertex(cx + 0.5, cy + -0.5, cz + 0.5));
+                            self.positions.push([cx + 0.5, cy + -0.5, cz + -0.5]);
+                            self.positions.push([cx + 0.5, cy + 0.5, cz + -0.5]);
+                            self.positions.push([cx + 0.5, cy + 0.5, cz + 0.5]);
+                            self.positions.push([cx + 0.5, cy + -0.5, cz + 0.5]);
+
+                            self.normals.push([1.0, 0.0, 0.0]);
+                            self.normals.push([1.0, 0.0, 0.0]);
+                            self.normals.push([1.0, 0.0, 0.0]);
+                            self.normals.push([1.0, 0.0, 0.0]);
 
                             let uvs = block.uv_for_side(BlockFace::Right);
-                            self.uvs.push(uv(uvs[0].x, uvs[1].y));
-                            self.uvs.push(uv(uvs[0].x, uvs[0].y));
-                            self.uvs.push(uv(uvs[1].x, uvs[0].y));
-                            self.uvs.push(uv(uvs[1].x, uvs[1].y));
+                            self.uvs.push([uvs[0].x, uvs[1].y]);
+                            self.uvs.push([uvs[0].x, uvs[0].y]);
+                            self.uvs.push([uvs[1].x, uvs[0].y]);
+                            self.uvs.push([uvs[1].x, uvs[1].y]);
 
                             self.indices.push(0 + last_index);
                             self.indices.push(1 + last_index);
@@ -198,16 +204,21 @@ impl ChunkRenderer {
                         // left
                         if (x != 0 && chunk.has_see_through_block_at(x - 1, y, z)) ||
                             (x == 0 && (left.is_none() || left.unwrap().has_see_through_block_at(CHUNK_DIMENSIONS - 1, y, z))) {
-                            self.positions.push(vertex(cx + -0.5, cy + -0.5, cz + 0.5));
-                            self.positions.push(vertex(cx + -0.5, cy + 0.5, cz + 0.5));
-                            self.positions.push(vertex(cx + -0.5, cy + 0.5, cz + -0.5));
-                            self.positions.push(vertex(cx + -0.5, cy + -0.5, cz + -0.5));
+                            self.positions.push([cx + -0.5, cy + -0.5, cz + 0.5]);
+                            self.positions.push([cx + -0.5, cy + 0.5, cz + 0.5]);
+                            self.positions.push([cx + -0.5, cy + 0.5, cz + -0.5]);
+                            self.positions.push([cx + -0.5, cy + -0.5, cz + -0.5]);
+
+                            self.normals.push([-1.0, 0.0, 0.0]);
+                            self.normals.push([-1.0, 0.0, 0.0]);
+                            self.normals.push([-1.0, 0.0, 0.0]);
+                            self.normals.push([-1.0, 0.0, 0.0]);
 
                             let uvs = block.uv_for_side(BlockFace::Left);
-                            self.uvs.push(uv(uvs[0].x, uvs[1].y));
-                            self.uvs.push(uv(uvs[0].x, uvs[0].y));
-                            self.uvs.push(uv(uvs[1].x, uvs[0].y));
-                            self.uvs.push(uv(uvs[1].x, uvs[1].y));
+                            self.uvs.push([uvs[0].x, uvs[1].y]); //swap
+                            self.uvs.push([uvs[0].x, uvs[0].y]);
+                            self.uvs.push([uvs[1].x, uvs[0].y]); //swap
+                            self.uvs.push([uvs[1].x, uvs[1].y]);
 
                             self.indices.push(0 + last_index);
                             self.indices.push(1 + last_index);
@@ -222,16 +233,21 @@ impl ChunkRenderer {
                         // top
                         if (y != CHUNK_DIMENSIONS - 1 && chunk.has_see_through_block_at(x, y + 1, z)) ||
                             (y == CHUNK_DIMENSIONS - 1 && (top.is_none() || top.unwrap().has_see_through_block_at(x, 0, z))) {
-                            self.positions.push(vertex(cx + 0.5, cy + 0.5, cz + -0.5));
-                            self.positions.push(vertex(cx + -0.5, cy + 0.5, cz + -0.5));
-                            self.positions.push(vertex(cx + -0.5, cy + 0.5, cz + 0.5));
-                            self.positions.push(vertex(cx + 0.5, cy + 0.5, cz + 0.5));
+                            self.positions.push([cx + 0.5, cy + 0.5, cz + -0.5]);
+                            self.positions.push([cx + -0.5, cy + 0.5, cz + -0.5]);
+                            self.positions.push([cx + -0.5, cy + 0.5, cz + 0.5]);
+                            self.positions.push([cx + 0.5, cy + 0.5, cz + 0.5]);
+
+                            self.normals.push([0.0, 1.0, 0.0]);
+                            self.normals.push([0.0, 1.0, 0.0]);
+                            self.normals.push([0.0, 1.0, 0.0]);
+                            self.normals.push([0.0, 1.0, 0.0]);
 
                             let uvs = block.uv_for_side(BlockFace::Top);
-                            self.uvs.push(uv(uvs[1].x, uvs[1].y));
-                            self.uvs.push(uv(uvs[0].x, uvs[1].y));
-                            self.uvs.push(uv(uvs[0].x, uvs[0].y));
-                            self.uvs.push(uv(uvs[1].x, uvs[0].y));
+                            self.uvs.push([uvs[1].x, uvs[1].y]);
+                            self.uvs.push([uvs[0].x, uvs[1].y]);
+                            self.uvs.push([uvs[0].x, uvs[0].y]);
+                            self.uvs.push([uvs[1].x, uvs[0].y]);
 
                             self.indices.push(0 + last_index);
                             self.indices.push(1 + last_index);
@@ -245,16 +261,21 @@ impl ChunkRenderer {
                         // bottom
                         if (y != 0 && chunk.has_see_through_block_at(x, y - 1, z)) ||
                             (y == 0 && (bottom.is_none() || bottom.unwrap().has_see_through_block_at(x, CHUNK_DIMENSIONS - 1, z))) {
-                            self.positions.push(vertex(cx + 0.5, cy + -0.5, cz + 0.5));
-                            self.positions.push(vertex(cx + -0.5, cy + -0.5, cz + 0.5));
-                            self.positions.push(vertex(cx + -0.5, cy + -0.5, cz + -0.5));
-                            self.positions.push(vertex(cx + 0.5, cy + -0.5, cz + -0.5));
+                            self.positions.push([cx + 0.5, cy + -0.5, cz + 0.5]);
+                            self.positions.push([cx + -0.5, cy + -0.5, cz + 0.5]);
+                            self.positions.push([cx + -0.5, cy + -0.5, cz + -0.5]);
+                            self.positions.push([cx + 0.5, cy + -0.5, cz + -0.5]);
+
+                            self.normals.push([0.0, -1.0, 0.0]);
+                            self.normals.push([0.0, -1.0, 0.0]);
+                            self.normals.push([0.0, -1.0, 0.0]);
+                            self.normals.push([0.0, -1.0, 0.0]);
 
                             let uvs = block.uv_for_side(BlockFace::Bottom);
-                            self.uvs.push(uv(uvs[1].x, uvs[0].y));
-                            self.uvs.push(uv(uvs[0].x, uvs[0].y));
-                            self.uvs.push(uv(uvs[0].x, uvs[1].y));
-                            self.uvs.push(uv(uvs[1].x, uvs[1].y));
+                            self.uvs.push([uvs[1].x, uvs[0].y]);
+                            self.uvs.push([uvs[0].x, uvs[0].y]);
+                            self.uvs.push([uvs[0].x, uvs[1].y]);
+                            self.uvs.push([uvs[1].x, uvs[1].y]);
 
                             self.indices.push(0 + last_index);
                             self.indices.push(1 + last_index);
@@ -269,16 +290,21 @@ impl ChunkRenderer {
                         // back
                         if (z != CHUNK_DIMENSIONS - 1 && chunk.has_see_through_block_at(x, y, z + 1)) ||
                             (z == CHUNK_DIMENSIONS - 1 && (front.is_none() || front.unwrap().has_see_through_block_at(x, y, 0))) {
-                            self.positions.push(vertex(cx + -0.5, cy + -0.5, cz + 0.5));
-                            self.positions.push(vertex(cx + 0.5, cy + -0.5, cz + 0.5));
-                            self.positions.push(vertex(cx + 0.5, cy + 0.5, cz + 0.5));
-                            self.positions.push(vertex(cx + -0.5, cy + 0.5, cz + 0.5));
+                            self.positions.push([cx + -0.5, cy + -0.5, cz + 0.5]);
+                            self.positions.push([cx + 0.5, cy + -0.5, cz + 0.5]);
+                            self.positions.push([cx + 0.5, cy + 0.5, cz + 0.5]);
+                            self.positions.push([cx + -0.5, cy + 0.5, cz + 0.5]);
+
+                            self.normals.push([0.0, 0.0, 1.0]);
+                            self.normals.push([0.0, 0.0, 1.0]);
+                            self.normals.push([0.0, 0.0, 1.0]);
+                            self.normals.push([0.0, 0.0, 1.0]);
 
                             let uvs = block.uv_for_side(BlockFace::Back);
-                            self.uvs.push(uv(uvs[0].x, uvs[0].y));
-                            self.uvs.push(uv(uvs[1].x, uvs[0].y));
-                            self.uvs.push(uv(uvs[1].x, uvs[1].y));
-                            self.uvs.push(uv(uvs[0].x, uvs[1].y));
+                            self.uvs.push([uvs[0].x, uvs[0].y]);
+                            self.uvs.push([uvs[1].x, uvs[0].y]);
+                            self.uvs.push([uvs[1].x, uvs[1].y]);
+                            self.uvs.push([uvs[0].x, uvs[1].y]);
 
                             self.indices.push(0 + last_index);
                             self.indices.push(1 + last_index);
@@ -292,16 +318,21 @@ impl ChunkRenderer {
                         // front
                         if (z != 0 && chunk.has_see_through_block_at(x, y, z - 1)) ||
                             (z == 0 && (back.is_none() || back.unwrap().has_see_through_block_at(x, y, CHUNK_DIMENSIONS - 1))) {
-                            self.positions.push(vertex(cx + -0.5, cy + 0.5, cz + -0.5));
-                            self.positions.push(vertex(cx + 0.5, cy + 0.5, cz + -0.5));
-                            self.positions.push(vertex(cx + 0.5, cy + -0.5, cz + -0.5));
-                            self.positions.push(vertex(cx + -0.5, cy + -0.5, cz + -0.5));
+                            self.positions.push([cx + -0.5, cy + 0.5, cz + -0.5]);
+                            self.positions.push([cx + 0.5, cy + 0.5, cz + -0.5]);
+                            self.positions.push([cx + 0.5, cy + -0.5, cz + -0.5]);
+                            self.positions.push([cx + -0.5, cy + -0.5, cz + -0.5]);
+
+                            self.normals.push([0.0, 0.0, -1.0]);
+                            self.normals.push([0.0, 0.0, -1.0]);
+                            self.normals.push([0.0, 0.0, -1.0]);
+                            self.normals.push([0.0, 0.0, -1.0]);
 
                             let uvs = block.uv_for_side(BlockFace::Front);
-                            self.uvs.push(uv(uvs[0].x, uvs[0].y));
-                            self.uvs.push(uv(uvs[1].x, uvs[0].y));
-                            self.uvs.push(uv(uvs[1].x, uvs[1].y));
-                            self.uvs.push(uv(uvs[0].x, uvs[1].y));
+                            self.uvs.push([uvs[0].x, uvs[0].y]);
+                            self.uvs.push([uvs[1].x, uvs[0].y]);
+                            self.uvs.push([uvs[1].x, uvs[1].y]);
+                            self.uvs.push([uvs[0].x, uvs[1].y]);
 
                             self.indices.push(0 + last_index);
                             self.indices.push(1 + last_index);

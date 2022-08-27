@@ -8,20 +8,17 @@ edition = "2021"
 [dependencies]
 cosmos_core = { version = "0.1.0", path = "../cosmos_core" }
 
-rend3 = "0.3.0"
-rend3-routine = "0.3.0"
-rend3-framework = "0.3.0"
-winit = "0.26.0"
-
 image = { version = "0.24.3", default-features = false, features = ["png"]}
 
 lazy_static = "1.4.0"
 
+bevy_rapier3d = { version = "0.16.2", features = [ "simd-stable" ] }
+bevy = "0.8.1"
+
 take_mut = "0.2.2"
 
-rapier3d = { version = "*", features = [ "simd-stable" ] }
-
-[profile.dev.package.rapier3d]
+# Enable max optimizations for dependencies, but not for our code:
+[profile.dev.package."*"]
 opt-level = 3
 
 # Makes rapier faster

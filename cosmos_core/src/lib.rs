@@ -1,6 +1,5 @@
 pub mod structure;
 pub mod block;
-pub mod world;
 pub mod utils;
 
 #[cfg(test)]

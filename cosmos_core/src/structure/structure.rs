@@ -1,7 +1,8 @@
 use std::cell::RefCell;
 use std::rc::{Rc};
 use bevy_rapier3d::na::{Vector3};
-use bevy_rapier3d::prelude::{RigidBody, RigidBodyHandle};
+use bevy_rapier3d::prelude::RigidBody;
+use bevy_rapier3d::rapier::prelude::RigidBodyPosition;
 use crate::block::block::Block;
 use crate::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
 use crate::structure::structure_listener::StructureListener;
@@ -81,6 +82,21 @@ impl Structure {
         }
     }
 
+    #[inline]
+    pub fn width(&self) -> usize {
+        self.width
+    }
+
+    #[inline]
+    pub fn height(&self) -> usize {
+        self.height
+    }
+
+    #[inline]
+    pub fn length(&self) -> usize {
+        self.length
+    }
+
     pub fn add_structure_listener(&mut self, listener: Rc<RefCell<dyn StructureListener>>) {
         self.listeners.push(listener);
     }
@@ -126,7 +142,7 @@ impl Structure {
             .set_block_at(x % CHUNK_DIMENSIONS, y % CHUNK_DIMENSIONS, z % CHUNK_DIMENSIONS, block);
     }
 
-    pub fn chunk_world_position(&self, x: usize, y: usize, z: usize) -> Vector3<f32> {
+    pub fn chunk_relative_position(&self, x: usize, y: usize, z: usize) -> Vector3<f32> {
         let xoff = self.width as f32 / 2.0 * CHUNK_DIMENSIONS as f32;
         let yoff = self.height as f32 / 2.0 * CHUNK_DIMENSIONS as f32;
         let zoff = self.length as f32 / 2.0 * CHUNK_DIMENSIONS as f32;
@@ -135,6 +151,11 @@ impl Structure {
         let yy = y as f32 * CHUNK_DIMENSIONS as f32 - yoff;
         let zz = z as f32 * CHUNK_DIMENSIONS as f32 - zoff;
 
-        add_vec(&self.body.position().translation.vector, &self.body.rotation().transform_vector(&Vector3::new(xx, yy, zz)))
+        Vector3::new(xx, yy, zz)
+    }
+
+    pub fn chunk_world_position(&self, x: usize, y: usize, z: usize, body_position: &RigidBodyPosition) -> Vector3<f32> {
+        add_vec(&body_position.position.translation.vector,
+                &body_position.position.rotation.transform_vector(&self.chunk_relative_position(x, y, z)))
     }
 }
