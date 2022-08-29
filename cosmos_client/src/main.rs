@@ -1,24 +1,18 @@
 mod rendering;
 
 use std::cell::RefCell;
-use std::path::Path;
-use std::process::id;
 use std::rc::Rc;
 use cosmos_core::structure::chunk::CHUNK_DIMENSIONS;
 
-use std::sync::Arc;
 use std::thread::sleep;
 use std::time::{Duration, SystemTime};
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
-use bevy::render::texture::DataFormat;
 use bevy_rapier3d::na::Vector3;
-use cosmos_core::block::block::BlockProperty::Transparent;
 use cosmos_core::block::blocks::{GRASS, STONE};
 use cosmos_core::structure::structure::Structure;
 use crate::rendering::structure_renderer::{StructureRenderer};
 use crate::rendering::uv_mapper::UVMapper;
-use crate::shape::Cube;
 
 struct CubeExample {
     x: u64,
@@ -41,7 +35,7 @@ impl Default for CubeExample {
 
 fn add_player(mut commands: Commands) {
     commands.spawn().insert_bundle(Camera3dBundle {
-        transform: Transform::from_xyz(0.0, 30.0, -50.0).looking_at(Vec3::new(0., 1., 0.), Vec3::Y),
+        transform: Transform::from_xyz(0.0, 60.0, -50.0).looking_at(Vec3::new(0., 1., 0.), Vec3::Y),
         ..default()
     });
 }
@@ -150,10 +144,10 @@ fn check_assets_ready(
                         }, TextureDimension::D2, data,
                         TextureFormat::Rgba8UnormSrgb);
 
-                        images.set(asset.handle.clone(), img);
+                        let handle = images.set(asset.handle.clone(), img);
 
                         commands.insert_resource(MainAtlas {
-                            handle: asset.handle.clone(),
+                            handle,
                             uv_mapper: UVMapper::new(width as usize, height as usize,
                                                      IMAGE_DIMENSIONS as usize, IMAGE_DIMENSIONS as usize,
                                                      PADDING as usize, PADDING as usize)
@@ -190,15 +184,15 @@ fn add_structure(mut commands: Commands,
         ..default()
     });
 
-    let mut structure = Structure::new(1, 1, 1);
+    let mut structure = Structure::new(2, 2, 2);
 
-    let renderer = Rc::new(RefCell::new(StructureRenderer::new(1, 1, 1)));
+    let renderer = Rc::new(RefCell::new(StructureRenderer::new(&structure)));
 
     structure.add_structure_listener(renderer.clone());
 
-    for z in 0..CHUNK_DIMENSIONS {
-        for x in 0..CHUNK_DIMENSIONS {
-            let y: f32 = CHUNK_DIMENSIONS as f32 - ((x + z) as f32 / 12.0).sin().abs() * 4.0;
+    for z in 0..CHUNK_DIMENSIONS * structure.length() {
+        for x in 0..CHUNK_DIMENSIONS * structure.width() {
+            let y: f32 = (CHUNK_DIMENSIONS * structure.height()) as f32 - ((x + z) as f32 / 12.0).sin().abs() * 4.0;
 
             for yy in 0..y.ceil() as usize {
                 if yy == y.ceil() as usize - 1 {

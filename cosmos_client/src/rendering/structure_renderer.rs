@@ -1,14 +1,13 @@
 use std::collections::HashSet;
-use bevy::prelude::{Mesh, Vec3};
-use bevy::render::mesh::{Indices, MeshVertexAttribute, PrimitiveTopology};
+use bevy::prelude::{Mesh};
+use bevy::render::mesh::{Indices, PrimitiveTopology};
 use cosmos_core::block::block::{Block, BlockFace};
 use cosmos_core::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
 use cosmos_core::structure::structure::{Structure, StructureBlock};
 use cosmos_core::structure::structure_listener::StructureListener;
 use cosmos_core::utils::array_utils::flatten;
 use bevy_rapier3d::na::Vector3;
-use bevy_rapier3d::parry::shape;
-use bevy_rapier3d::rapier::prelude::RigidBodyPosition;
+
 use crate::UVMapper;
 
 pub struct StructureRenderer
@@ -22,7 +21,11 @@ pub struct StructureRenderer
 }
 
 impl StructureRenderer {
-    pub fn new(width: usize, height: usize, length: usize) -> Self {
+    pub fn new(structure: &Structure) -> Self {
+        let width = structure.width();
+        let height = structure.height();
+        let length = structure.length();
+
         let mut rends = Vec::with_capacity(width * height * length);
         let mut changes = HashSet::new();
 

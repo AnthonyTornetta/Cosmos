@@ -1,7 +1,6 @@
 use std::cell::RefCell;
 use std::rc::{Rc};
 use bevy_rapier3d::na::{Vector3};
-use bevy_rapier3d::prelude::RigidBody;
 use bevy_rapier3d::rapier::prelude::RigidBodyPosition;
 use crate::block::block::Block;
 use crate::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
@@ -102,24 +101,24 @@ impl Structure {
     }
 
     /// (0, 0, 0) => chunk @ 0, 0, 0\
-    /// (1, 0, 0) => chunk @ 1, 0, 0\
+    /// (1, 0, 0) => chunk @ 1, 0, 0
     pub fn chunk_from_chunk_coordinates(&self, cx: usize, cy: usize, cz: usize) -> &Chunk {
-        &self.chunks[flatten(cx, cy, cz, CHUNK_DIMENSIONS, CHUNK_DIMENSIONS)]
+        &self.chunks[flatten(cx, cy, cz, self.width, self.height)]
     }
 
     fn mut_chunk_from_chunk_coordinates(&mut self, cx: usize, cy: usize, cz: usize) -> &mut Chunk {
-        &mut self.chunks[flatten(cx, cy, cz, CHUNK_DIMENSIONS, CHUNK_DIMENSIONS)]
+        &mut self.chunks[flatten(cx, cy, cz, self.width, self.height)]
     }
 
     /// (0, 0, 0) => chunk @ 0, 0, 0\
     /// (5, 0, 0) => chunk @ 0, 0, 0\
-    /// (32, 0, 0) => chunk @ 1, 0, 0\
+    /// (32, 0, 0) => chunk @ 1, 0, 0
     pub fn chunk_at_block_coordinates(&self, x: usize, y: usize, z: usize) -> &Chunk {
         self.chunk_from_chunk_coordinates(x / CHUNK_DIMENSIONS, y / CHUNK_DIMENSIONS, z / CHUNK_DIMENSIONS)
     }
 
     fn mut_chunk_at_block_coordinates(&mut self, x: usize, y: usize, z: usize) -> &mut Chunk {
-        &mut self.chunks[flatten(x / CHUNK_DIMENSIONS, y / CHUNK_DIMENSIONS, z / CHUNK_DIMENSIONS, CHUNK_DIMENSIONS, CHUNK_DIMENSIONS)]
+        &mut self.chunks[flatten(x / CHUNK_DIMENSIONS, y / CHUNK_DIMENSIONS, z / CHUNK_DIMENSIONS, self.width, self.height)]
     }
 
     pub fn block_at(&self, x: usize, y: usize, z: usize) -> &'static Block {

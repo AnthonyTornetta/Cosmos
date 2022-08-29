@@ -1,5 +1,3 @@
-use bevy_rapier3d::na::Vector2;
-
 pub enum BlockProperty {
     Opaque,
     Transparent,
