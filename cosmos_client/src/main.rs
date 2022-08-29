@@ -1,6 +1,7 @@
 mod rendering;
 
 use std::cell::RefCell;
+use std::path::Path;
 use std::process::id;
 use std::rc::Rc;
 use cosmos_core::structure::chunk::CHUNK_DIMENSIONS;
@@ -9,11 +10,15 @@ use std::sync::Arc;
 use std::thread::sleep;
 use std::time::{Duration, SystemTime};
 use bevy::prelude::*;
+use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
+use bevy::render::texture::DataFormat;
 use bevy_rapier3d::na::Vector3;
 use cosmos_core::block::block::BlockProperty::Transparent;
 use cosmos_core::block::blocks::{GRASS, STONE};
 use cosmos_core::structure::structure::Structure;
 use crate::rendering::structure_renderer::{StructureRenderer};
+use crate::rendering::uv_mapper::UVMapper;
+use crate::shape::Cube;
 
 struct CubeExample {
     x: u64,
@@ -41,36 +46,36 @@ fn add_player(mut commands: Commands) {
     });
 }
 
-enum Atlas {
+enum AtlasName {
     Main
 }
 
 struct LoadingAsset {
-    atlas_type: Atlas,
+    atlas_name: AtlasName,
     handle: Handle<Image>
 }
 
 struct AssetsLoading(Vec<LoadingAsset>);
 
 struct MainAtlas {
-    handle: Handle<Image>
+    handle: Handle<Image>,
+    uv_mapper: UVMapper
 }
 
 fn setup(server: Res<AssetServer>, mut loading: ResMut<AssetsLoading>) {
     let main_atlas = server.load("images/atlas/main.png");
 
-    loading.0.push(LoadingAsset { handle: main_atlas, atlas_type: Atlas::Main });
+    loading.0.push(LoadingAsset { handle: main_atlas, atlas_name: AtlasName::Main });
 }
 
 fn check_assets_ready(
     mut commands: Commands,
     server: Res<AssetServer>,
     loading: Res<AssetsLoading>,
-    mut state: ResMut<State<GameStatee>>
+    mut state: ResMut<State<GameStatee>>,
+    mut images: ResMut<Assets<Image>>
 ) {
     use bevy::asset::LoadState;
-
-    println!("RANN!!!");
 
     match server.get_group_load_state(loading.0.iter().map(|h| h.handle.id)) {
         LoadState::Failed => {
@@ -80,9 +85,79 @@ fn check_assets_ready(
             // all assets are now ready
 
             for asset in &loading.0 {
-                match asset.atlas_type {
-                    Atlas::Main => {
-                        commands.insert_resource(MainAtlas { handle: asset.handle.clone() });
+                match asset.atlas_name {
+                    AtlasName::Main => {
+
+                        const PADDING: u32 = 2;
+                        const IMAGE_DIMENSIONS: u32 = 16;
+
+                        let image = images.get(&asset.handle).unwrap();
+
+                        let img_size = image.size();
+
+                        let mut data: Vec<u8> = Vec::new();
+
+                        let mut i = 0;
+
+                        for y in 0..img_size.y as usize {
+                            let mut n = match y % IMAGE_DIMENSIONS as usize == 0 || (y + 1) % IMAGE_DIMENSIONS as usize == 0 {
+                                true => 1 + PADDING,
+                                false => 1
+                            };
+
+                            while n > 0 {
+                                let og_i = i;
+
+                                for x in 0..img_size.x as usize {
+                                    if x % IMAGE_DIMENSIONS as usize == 0 || (x + 1) % IMAGE_DIMENSIONS as usize == 0 {
+                                        for _ in 0..(PADDING + 1) {
+                                            data.push(image.data[i]);
+                                            data.push(image.data[i + 1]);
+                                            data.push(image.data[i + 2]);
+                                            data.push(image.data[i + 3]);
+                                        }
+                                    } else {
+                                        data.push(image.data[i]);
+                                        data.push(image.data[i + 1]);
+                                        data.push(image.data[i + 2]);
+                                        data.push(image.data[i + 3]);
+                                    }
+
+                                    i += 4;
+                                }
+
+                                n -= 1;
+
+                                if n != 0 {
+                                    i = og_i;
+                                }
+                            }
+                        }
+
+                        let y = img_size.y as u32;
+                        let x = img_size.x as u32;
+
+                        let height = (y / IMAGE_DIMENSIONS) * (IMAGE_DIMENSIONS + PADDING * 2);
+                        let width = (x / IMAGE_DIMENSIONS) * (IMAGE_DIMENSIONS + PADDING * 2);
+
+                        // debug save
+                        // image::save_buffer(&Path::new("image.png"), data.as_slice(), width, height, image::ColorType::Rgba8);
+
+                        let img = Image::new(Extent3d {
+                            height,
+                            width,
+                            depth_or_array_layers: 1,
+                        }, TextureDimension::D2, data,
+                        TextureFormat::Rgba8UnormSrgb);
+
+                        images.set(asset.handle.clone(), img);
+
+                        commands.insert_resource(MainAtlas {
+                            handle: asset.handle.clone(),
+                            uv_mapper: UVMapper::new(width as usize, height as usize,
+                                                     IMAGE_DIMENSIONS as usize, IMAGE_DIMENSIONS as usize,
+                                                     PADDING as usize, PADDING as usize)
+                        });
                     }
                 }
             }
@@ -90,6 +165,7 @@ fn check_assets_ready(
             // this might be a good place to transition into your in-game state
 
             // remove the resource to drop the tracking handles
+
             commands.remove_resource::<AssetsLoading>();
             // (note: if you don't have any other handles to the assets
             // elsewhere, they will get unloaded after this)
@@ -97,7 +173,6 @@ fn check_assets_ready(
             state.set(GameStatee::Playing).unwrap();
         }
         _ => {
-            println!("Loading.");
             // NotLoaded/Loading: not fully ready yet
         }
     }
@@ -111,7 +186,7 @@ fn add_structure(mut commands: Commands,
     let material_handle = materials.add(StandardMaterial {
         base_color_texture: Some(main_atlas.handle.clone()),
         alpha_mode: AlphaMode::Opaque,
-        unlit: true,
+        unlit: false,
         ..default()
     });
 
@@ -136,7 +211,7 @@ fn add_structure(mut commands: Commands,
         }
     }
 
-    renderer.borrow_mut().render(&structure);
+    renderer.borrow_mut().render(&structure, &main_atlas.uv_mapper);
 
     // rust needs this for some reason?
     let res = renderer.borrow_mut().create_meshes();
@@ -164,6 +239,13 @@ fn add_structure(mut commands: Commands,
                 });
             }
         });
+    //
+    // commands.spawn_bundle(PbrBundle {
+    //     mesh: meshes.add(Cube::new(40.0).into()),
+    //     transform: Transform::from_xyz(0.0, 0.0, 0.0),
+    //     material: material_handle.clone(),
+    //     ..default()
+    // });
 
     commands.spawn_bundle(PointLightBundle {
         point_light: PointLight {
@@ -184,8 +266,6 @@ enum GameStatee {
 }
 
 fn main() {
-    shape::Cube::new(1.0);
-
     App::new()
         .add_plugins(DefaultPlugins)
         .add_state(GameStatee::Loading)

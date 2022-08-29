@@ -54,11 +54,11 @@ pub struct Block {
     visibility: u8,
     id: u16,
     unlocalized_name: String,
-    uvs: [[Vector2<f32>; 2]; 6]
+    uvs: [usize; 6]
 }
 
 impl Block {
-    pub fn new(properties: &Vec<BlockProperty>, uvs: [[Vector2<f32>; 2]; 6], id: u16, unlocalized_name: String) -> Self {
+    pub fn new(properties: &Vec<BlockProperty>, uvs: [usize; 6], id: u16, unlocalized_name: String) -> Self {
         Self {
             visibility: BlockProperty::create_id(properties),
             id,
@@ -87,8 +87,8 @@ impl Block {
         self.id
     }
 
-    pub fn uv_for_side(&self, face: BlockFace) -> &[Vector2<f32>; 2] {
-        &self.uvs[face.index()]
+    pub fn uv_index_for_side(&self, face: BlockFace) -> usize {
+        self.uvs[face.index()]
     }
 
     pub fn unlocalized_name(&self) -> &String {

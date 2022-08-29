@@ -12,15 +12,15 @@ lazy_static! {
     pub static ref STONE: Block = BlockBuilder::new(1, String::from("cosmos:stone"))
         .add_property(BlockProperty::Opaque)
         .add_property(BlockProperty::Full)
-        .set_all_uvs(&[Vector2::new(2.0/16.0, 0.0), Vector2::new(3.0/16.0, 1.0 / 16.0)])
+        .set_all_uvs(2)
         .create();
 
     pub static ref GRASS: Block = BlockBuilder::new(2, String::from("cosmos:grass"))
         .add_property(BlockProperty::Opaque)
         .add_property(BlockProperty::Full)
-        .set_all_uvs(&[Vector2::new(4.0 / 16.0, 0.0 / 16.0), Vector2::new(5.0 / 16.0, 1.0 / 16.0)])
-        .set_side_uvs(BlockFace::Top, &[Vector2::new(1.0 / 16.0, 0.0), Vector2::new(2.0 / 16.0, 1.0 / 16.0)])
-        .set_side_uvs(BlockFace::Bottom, &[Vector2::new(3.0 / 16.0, 0.0), Vector2::new(4.0 / 16.0, 1.0 / 16.0)])
+        .set_all_uvs(4)
+        .set_side_uvs(BlockFace::Top, 1)
+        .set_side_uvs(BlockFace::Bottom, 3)
         .create();
 
     static ref BLOCKS: Vec<&'static Block> = vec![&AIR, &STONE, &GRASS];

@@ -9,6 +9,7 @@ use cosmos_core::utils::array_utils::flatten;
 use bevy_rapier3d::na::Vector3;
 use bevy_rapier3d::parry::shape;
 use bevy_rapier3d::rapier::prelude::RigidBodyPosition;
+use crate::UVMapper;
 
 pub struct StructureRenderer
 {
@@ -43,7 +44,7 @@ impl StructureRenderer {
         }
     }
 
-    pub fn render(&mut self, structure: &Structure) {
+    pub fn render(&mut self, structure: &Structure, uv_mapper: &UVMapper) {
         for change in &self.changes {
             let (x, y, z) = (change.x, change.y, change.z);
 
@@ -86,7 +87,7 @@ impl StructureRenderer {
                 front = Some(structure.chunk_from_chunk_coordinates(x, y, z + 1));
             }
 
-            self.chunk_renderers[flatten(x, y, z, self.width, self.height)].render(
+            self.chunk_renderers[flatten(x, y, z, self.width, self.height)].render(uv_mapper,
                 structure.chunk_from_chunk_coordinates(x, y, z),
                 &structure.chunk_relative_position(x, y, z),
                 left, right, bottom, top, back, front
@@ -150,7 +151,7 @@ impl ChunkRenderer {
         }
     }
 
-    pub fn render(&mut self, chunk: &Chunk, chunk_world_position: &Vector3<f32>,
+    pub fn render(&mut self, uv_mapper: &UVMapper, chunk: &Chunk, chunk_world_position: &Vector3<f32>,
                   left: Option<&Chunk>, right: Option<&Chunk>,
                   bottom: Option<&Chunk>, top: Option<&Chunk>,
                   back: Option<&Chunk>, front: Option<&Chunk>) {
@@ -186,7 +187,7 @@ impl ChunkRenderer {
                             self.normals.push([1.0, 0.0, 0.0]);
                             self.normals.push([1.0, 0.0, 0.0]);
 
-                            let uvs = block.uv_for_side(BlockFace::Right);
+                            let uvs = uv_mapper.map(block.uv_index_for_side(BlockFace::Right));
                             self.uvs.push([uvs[0].x, uvs[1].y]);
                             self.uvs.push([uvs[0].x, uvs[0].y]);
                             self.uvs.push([uvs[1].x, uvs[0].y]);
@@ -214,7 +215,7 @@ impl ChunkRenderer {
                             self.normals.push([-1.0, 0.0, 0.0]);
                             self.normals.push([-1.0, 0.0, 0.0]);
 
-                            let uvs = block.uv_for_side(BlockFace::Left);
+                            let uvs = uv_mapper.map(block.uv_index_for_side(BlockFace::Left));
                             self.uvs.push([uvs[0].x, uvs[1].y]); //swap
                             self.uvs.push([uvs[0].x, uvs[0].y]);
                             self.uvs.push([uvs[1].x, uvs[0].y]); //swap
@@ -243,7 +244,7 @@ impl ChunkRenderer {
                             self.normals.push([0.0, 1.0, 0.0]);
                             self.normals.push([0.0, 1.0, 0.0]);
 
-                            let uvs = block.uv_for_side(BlockFace::Top);
+                            let uvs = uv_mapper.map(block.uv_index_for_side(BlockFace::Top));
                             self.uvs.push([uvs[1].x, uvs[1].y]);
                             self.uvs.push([uvs[0].x, uvs[1].y]);
                             self.uvs.push([uvs[0].x, uvs[0].y]);
@@ -271,7 +272,7 @@ impl ChunkRenderer {
                             self.normals.push([0.0, -1.0, 0.0]);
                             self.normals.push([0.0, -1.0, 0.0]);
 
-                            let uvs = block.uv_for_side(BlockFace::Bottom);
+                            let uvs = uv_mapper.map(block.uv_index_for_side(BlockFace::Bottom));
                             self.uvs.push([uvs[1].x, uvs[0].y]);
                             self.uvs.push([uvs[0].x, uvs[0].y]);
                             self.uvs.push([uvs[0].x, uvs[1].y]);
@@ -300,7 +301,7 @@ impl ChunkRenderer {
                             self.normals.push([0.0, 0.0, 1.0]);
                             self.normals.push([0.0, 0.0, 1.0]);
 
-                            let uvs = block.uv_for_side(BlockFace::Back);
+                            let uvs = uv_mapper.map(block.uv_index_for_side(BlockFace::Back));
                             self.uvs.push([uvs[0].x, uvs[0].y]);
                             self.uvs.push([uvs[1].x, uvs[0].y]);
                             self.uvs.push([uvs[1].x, uvs[1].y]);
@@ -328,7 +329,10 @@ impl ChunkRenderer {
                             self.normals.push([0.0, 0.0, -1.0]);
                             self.normals.push([0.0, 0.0, -1.0]);
 
-                            let uvs = block.uv_for_side(BlockFace::Front);
+                            let uvs = uv_mapper.map(block.uv_index_for_side(BlockFace::Front));
+
+                            println!("{}, {}", uvs[0], uvs[1]);
+
                             self.uvs.push([uvs[0].x, uvs[0].y]);
                             self.uvs.push([uvs[1].x, uvs[0].y]);
                             self.uvs.push([uvs[1].x, uvs[1].y]);
