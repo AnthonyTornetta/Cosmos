@@ -9,7 +9,7 @@ use std::time::{Duration, SystemTime};
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use bevy_rapier3d::na::Vector3;
-use cosmos_core::block::blocks::{GRASS, STONE};
+use cosmos_core::block::blocks::{DIRT, GRASS, STONE};
 use cosmos_core::structure::structure::Structure;
 use crate::rendering::structure_renderer::{StructureRenderer};
 use crate::rendering::uv_mapper::UVMapper;
@@ -194,9 +194,13 @@ fn add_structure(mut commands: Commands,
         for x in 0..CHUNK_DIMENSIONS * structure.width() {
             let y: f32 = (CHUNK_DIMENSIONS * structure.height()) as f32 - ((x + z) as f32 / 12.0).sin().abs() * 4.0;
 
-            for yy in 0..y.ceil() as usize {
-                if yy == y.ceil() as usize - 1 {
+            let y_max = y.ceil() as usize;
+            for yy in 0..y_max {
+                if yy == y_max - 1 {
                     structure.set_block_at(x, yy, z, &GRASS);
+                }
+                else if yy > y_max - 5 {
+                    structure.set_block_at(x, yy, z, &DIRT);
                 }
                 else {
                     structure.set_block_at(x, yy, z, &STONE);

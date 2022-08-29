@@ -22,7 +22,13 @@ lazy_static! {
         .set_side_uvs(BlockFace::Bottom, 3)
         .create();
 
-    static ref BLOCKS: Vec<&'static Block> = vec![&AIR, &STONE, &GRASS];
+    pub static ref DIRT: Block = BlockBuilder::new(3, String::from("cosmos:dirt"))
+        .add_property(BlockProperty::Opaque)
+        .add_property(BlockProperty::Full)
+        .set_all_uvs(3)
+        .create();
+
+    static ref BLOCKS: Vec<&'static Block> = vec![&AIR, &STONE, &GRASS, &DIRT];
 }
 
 pub fn block_from_id(id: u16) -> &'static Block {
