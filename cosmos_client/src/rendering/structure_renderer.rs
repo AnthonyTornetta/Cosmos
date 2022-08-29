@@ -331,8 +331,6 @@ impl ChunkRenderer {
 
                             let uvs = uv_mapper.map(block.uv_index_for_side(BlockFace::Front));
 
-                            println!("{}, {}", uvs[0], uvs[1]);
-
                             self.uvs.push([uvs[0].x, uvs[0].y]);
                             self.uvs.push([uvs[1].x, uvs[0].y]);
                             self.uvs.push([uvs[1].x, uvs[1].y]);
