@@ -9,6 +9,9 @@ use std::time::{Duration, SystemTime};
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use bevy_rapier3d::na::Vector3;
+use bevy_rapier3d::plugin::{NoUserData, RapierConfiguration, RapierPhysicsPlugin};
+use bevy_rapier3d::prelude::{Collider, RigidBody, Vect};
+use bevy_rapier3d::render::RapierDebugRenderPlugin;
 use cosmos_core::block::blocks::{DIRT, GRASS, STONE};
 use cosmos_core::structure::structure::Structure;
 use crate::rendering::structure_renderer::{StructureRenderer};
@@ -33,11 +36,17 @@ impl Default for CubeExample {
     }
 }
 
+fn init_physics(mut phys: ResMut<RapierConfiguration>) {
+    phys.gravity = Vect::new(0.0, -1.0, 0.0);
+}
+
 fn add_player(mut commands: Commands) {
     commands.spawn().insert_bundle(Camera3dBundle {
         transform: Transform::from_xyz(0.0, 60.0, -50.0).looking_at(Vec3::new(0., 1., 0.), Vec3::Y),
         ..default()
-    });
+    })
+        .insert(Collider::cuboid(0.5, 0.5, 0.5))
+        .insert(RigidBody::Dynamic);
 }
 
 enum AtlasName {
@@ -266,6 +275,8 @@ enum GameStatee {
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
+        .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
+        .add_plugin(RapierDebugRenderPlugin::default())
         .add_state(GameStatee::Loading)
         .insert_resource(AssetsLoading { 0: Vec::new() })
         .add_startup_system(setup)// add the app state type
