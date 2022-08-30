@@ -10,12 +10,13 @@ use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use bevy_rapier3d::na::Vector3;
 use bevy_rapier3d::plugin::{NoUserData, RapierConfiguration, RapierPhysicsPlugin};
-use bevy_rapier3d::prelude::{Collider, RigidBody, Vect};
+use bevy_rapier3d::prelude::{Collider, LockedAxes, RigidBody, Vect};
 use bevy_rapier3d::render::RapierDebugRenderPlugin;
 use cosmos_core::block::blocks::{DIRT, GRASS, STONE};
 use cosmos_core::structure::structure::Structure;
 use crate::rendering::structure_renderer::{StructureRenderer};
 use crate::rendering::uv_mapper::UVMapper;
+use cosmos_core::physics::structure_physics::StructurePhysics;
 
 struct CubeExample {
     x: u64,
@@ -41,12 +42,19 @@ fn init_physics(mut phys: ResMut<RapierConfiguration>) {
 }
 
 fn add_player(mut commands: Commands) {
-    commands.spawn().insert_bundle(Camera3dBundle {
-        transform: Transform::from_xyz(0.0, 60.0, -50.0).looking_at(Vec3::new(0., 1., 0.), Vec3::Y),
+    commands.spawn().insert_bundle(PbrBundle {
+        transform: Transform::from_xyz(0.0, 60.0, 20.0),
         ..default()
     })
-        .insert(Collider::cuboid(0.5, 0.5, 0.5))
-        .insert(RigidBody::Dynamic);
+        .insert(Collider::capsule_y(0.5, 0.25))
+        .insert(LockedAxes::ROTATION_LOCKED)
+        .insert(RigidBody::Dynamic)
+    .with_children(|parent| {
+        parent.spawn_bundle(Camera3dBundle {
+            transform: Transform::from_xyz(0.0, 0.75, 0.0),
+            ..default()
+        });
+    });
 }
 
 enum AtlasName {
@@ -196,8 +204,10 @@ fn add_structure(mut commands: Commands,
     let mut structure = Structure::new(2, 2, 2);
 
     let renderer = Rc::new(RefCell::new(StructureRenderer::new(&structure)));
+    let physics_updater = Rc::new(RefCell::new(StructurePhysics::new()));
 
     structure.add_structure_listener(renderer.clone());
+    structure.add_structure_listener(physics_updater.clone());
 
     for z in 0..CHUNK_DIMENSIONS * structure.length() {
         for x in 0..CHUNK_DIMENSIONS * structure.width() {
@@ -220,13 +230,8 @@ fn add_structure(mut commands: Commands,
 
     renderer.borrow_mut().render(&structure, &main_atlas.uv_mapper);
 
-    // rust needs this for some reason?
-    let res = renderer.borrow_mut().create_meshes();
-
-    let mut handles = Vec::new();
-    for item in res {
-        handles.push(meshes.add(item));
-    }
+    let renders = renderer.borrow_mut().create_meshes();
+    let mut colliders = physics_updater.borrow_mut().create_colliders(&structure);
 
     commands.spawn()
         .insert_bundle(PbrBundle {
@@ -236,14 +241,26 @@ fn add_structure(mut commands: Commands,
             },
             ..default()
         })
+        .insert(RigidBody::Fixed)
         .with_children(|parent| {
-            for handle in handles {
-                parent.spawn_bundle(PbrBundle {
-                    mesh: handle,
+            for item in renders {
+                let coords = Vector3::new(item.x, item.y, item.z);
+
+                let rel_pos = structure.chunk_relative_position(item.x, item.y, item.z);
+
+                let mut child = parent.spawn_bundle(PbrBundle {
+                    mesh: meshes.add(item.mesh),
                     material: material_handle.clone(),
-                    transform: Transform::from_xyz(0.0, 0.0, 0.0),
+                    transform: Transform::from_xyz(rel_pos.x, rel_pos.y, rel_pos.z),
                     ..default()
                 });
+
+                for i in 0..colliders.len() {
+                    if colliders[i].chunk_coords == coords {
+                        child.insert(colliders.swap_remove(i).collider);
+                        break;
+                    }
+                }
             }
         });
     //
@@ -276,7 +293,7 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
-        .add_plugin(RapierDebugRenderPlugin::default())
+        // .add_plugin(RapierDebugRenderPlugin::default())
         .add_state(GameStatee::Loading)
         .insert_resource(AssetsLoading { 0: Vec::new() })
         .add_startup_system(setup)// add the app state type

@@ -20,6 +20,14 @@ pub struct StructureRenderer
     need_meshes: HashSet<Vector3<usize>>
 }
 
+pub struct ChunkMesh
+{
+    pub x: usize,
+    pub y: usize,
+    pub z: usize,
+    pub mesh: Mesh
+}
+
 impl StructureRenderer {
     pub fn new(structure: &Structure) -> Self {
         let width = structure.width();
@@ -92,7 +100,6 @@ impl StructureRenderer {
 
             self.chunk_renderers[flatten(x, y, z, self.width, self.height)].render(uv_mapper,
                 structure.chunk_from_chunk_coordinates(x, y, z),
-                &structure.chunk_relative_position(x, y, z),
                 left, right, bottom, top, back, front
             );
 
@@ -102,7 +109,7 @@ impl StructureRenderer {
         self.changes.clear();
     }
 
-    pub fn create_meshes(&mut self) -> Vec<Mesh> {
+    pub fn create_meshes(&mut self) -> Vec<ChunkMesh> {
         let mut meshes = Vec::with_capacity(self.need_meshes.len());
 
         for chunk in &self.need_meshes {
@@ -121,7 +128,12 @@ impl StructureRenderer {
             mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, rend.normals);
             mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, rend.uvs);
 
-            meshes.push(mesh);
+            meshes.push(ChunkMesh {
+                x: chunk.x,
+                y: chunk.y,
+                z: chunk.z,
+                mesh
+            });
         }
 
         self.need_meshes.clear();
@@ -154,7 +166,7 @@ impl ChunkRenderer {
         }
     }
 
-    pub fn render(&mut self, uv_mapper: &UVMapper, chunk: &Chunk, chunk_world_position: &Vector3<f32>,
+    pub fn render(&mut self, uv_mapper: &UVMapper, chunk: &Chunk,
                   left: Option<&Chunk>, right: Option<&Chunk>,
                   bottom: Option<&Chunk>, top: Option<&Chunk>,
                   back: Option<&Chunk>, front: Option<&Chunk>) {
@@ -175,7 +187,7 @@ impl ChunkRenderer {
                     if chunk.has_block_at(x, y, z) {
                         let block = chunk.block_at(x, y, z);
 
-                        let (cx, cy, cz) = (x as f32 + chunk_world_position.x, y as f32 + chunk_world_position.y, z as f32 + chunk_world_position.z);
+                        let (cx, cy, cz) = (x as f32, y as f32, z as f32);
 
                         // right
                         if (x != CHUNK_DIMENSIONS - 1 && chunk.has_see_through_block_at(x + 1, y, z)) ||
