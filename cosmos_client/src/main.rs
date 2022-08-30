@@ -7,7 +7,8 @@ use cosmos_core::structure::chunk::CHUNK_DIMENSIONS;
 use std::thread::sleep;
 use std::time::{Duration, SystemTime};
 use bevy::prelude::*;
-use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
+use bevy::render::render_resource::{Extent3d, FilterMode, TextureDimension, TextureFormat};
+use bevy::render::texture::{HdrTextureLoader, ImageSettings};
 use bevy_rapier3d::na::Vector3;
 use bevy_rapier3d::plugin::{NoUserData, RapierConfiguration, RapierPhysicsPlugin};
 use bevy_rapier3d::prelude::{Collider, LockedAxes, RigidBody, Vect};
@@ -291,6 +292,7 @@ enum GameStatee {
 
 fn main() {
     App::new()
+        .insert_resource(ImageSettings::default_nearest()) // MUST be before default plugins!
         .add_plugins(DefaultPlugins)
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
         // .add_plugin(RapierDebugRenderPlugin::default())
