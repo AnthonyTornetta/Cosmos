@@ -28,7 +28,20 @@ lazy_static! {
         .set_all_uvs(3)
         .create();
 
-    static ref BLOCKS: Vec<&'static Block> = vec![&AIR, &STONE, &GRASS, &DIRT];
+    pub static ref CHERRY_LEAF: Block = BlockBuilder::new(4, String::from("cosmos:cherry_leaf"))
+        .add_property(BlockProperty::Transparent)
+        .set_all_uvs(35)
+        .create();
+
+    pub static ref CHERRY_LOG: Block = BlockBuilder::new(5, String::from("cosmos:cherry_log"))
+        .add_property(BlockProperty::Opaque)
+        .add_property(BlockProperty::Full)
+        .set_all_uvs(34)
+        .set_side_uvs(BlockFace::Top, 33)
+        .set_side_uvs(BlockFace::Bottom, 33)
+        .create();
+
+    static ref BLOCKS: Vec<&'static Block> = vec![&AIR, &STONE, &GRASS, &DIRT, &CHERRY_LEAF, &CHERRY_LOG];
 }
 
 pub fn block_from_id(id: u16) -> &'static Block {
