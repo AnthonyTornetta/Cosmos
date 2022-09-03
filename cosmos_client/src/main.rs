@@ -1,4 +1,5 @@
 mod rendering;
+pub mod plugin;
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -22,7 +23,9 @@ use cosmos_core::structure::structure::Structure;
 use crate::rendering::structure_renderer::{StructureRenderer};
 use crate::rendering::uv_mapper::UVMapper;
 use cosmos_core::physics::structure_physics::StructurePhysics;
+use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
 use rand::Rng;
+use crate::plugin::client_plugin::ClientPluginGroup;
 
 struct CubeExample {
     x: u64,
@@ -588,8 +591,8 @@ enum GameState {
 fn main() {
     App::new()
         .insert_resource(ImageSettings::default_nearest()) // MUST be before default plugins!
-        .add_plugins(DefaultPlugins)
-        .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
+        .add_plugins(CosmosCorePluginGroup::default())
+        .add_plugins(ClientPluginGroup::default())
         .insert_resource(CosmosInputHandler::new())
         // .add_plugin(RapierDebugRenderPlugin::default())
         .add_state(GameState::Loading)

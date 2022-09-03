@@ -3,6 +3,7 @@ pub mod block;
 pub mod utils;
 pub mod entities;
 pub mod physics;
+pub mod plugin;
 
 #[cfg(test)]
 mod tests {
