@@ -24,7 +24,6 @@ pub struct CosmosCorePluginGroup;
 
 impl PluginGroup for CosmosCorePluginGroup {
     fn build(&mut self, group: &mut PluginGroupBuilder) {
-
         group.add(LogPlugin::default());
         group.add(CorePlugin::default());
         group.add(TimePlugin::default());

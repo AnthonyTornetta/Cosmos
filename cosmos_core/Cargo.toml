@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 lazy_static = "1.4.0"
 
-bevy_rapier3d = { version = "0.16.2", features = [ "simd-stable" ] }
+bevy_rapier3d = { version = "0.16.2", features = [ "simd-stable", "serde-serialize" ] }
 bevy = "0.8.1"
 
 take_mut = "0.2.2"

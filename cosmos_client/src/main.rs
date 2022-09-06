@@ -233,7 +233,7 @@ fn add_structure(mut commands: Commands,
         ..default()
     });
 
-    let mut structure = Structure::new(2, 2, 2);
+    let mut structure = Structure::new(8, 2, 8);
 
     let renderer = Rc::new(RefCell::new(StructureRenderer::new(&structure)));
     let physics_updater = Rc::new(RefCell::new(StructurePhysics::new()));

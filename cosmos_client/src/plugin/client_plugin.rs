@@ -20,13 +20,7 @@ pub struct ClientPluginGroup;
 
 impl PluginGroup for ClientPluginGroup {
     fn build(&mut self, group: &mut PluginGroupBuilder) {
-        group.add(InputPlugin::default());
-        group.add(WindowPlugin::default());
-        group.add(AssetPlugin::default());
-        group.add(ScenePlugin::default());
         group.add(WinitPlugin::default());
-        group.add(RenderPlugin::default());
-        group.add(CorePipelinePlugin::default());
         group.add(SpritePlugin::default());
         group.add(TextPlugin::default());
         group.add(UiPlugin::default());
