@@ -10,9 +10,10 @@ use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use bevy::render::texture::ImageSettings;
 use std::collections::HashMap;
+use std::f32::consts::PI;
 use std::net::UdpSocket;
 use bevy::render::camera::{Projection, RenderTarget};
-use bevy_rapier3d::na::Vector3;
+use bevy_rapier3d::na::{clamp, Vector3};
 use bevy_rapier3d::plugin::{RapierConfiguration, RapierPhysicsPlugin};
 use bevy_rapier3d::prelude::{Collider, LockedAxes, RigidBody, Vect, Velocity};
 use bevy_renet::renet::{ClientAuthentication, RenetClient};
@@ -410,7 +411,7 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     input_handler.set_keycode(CosmosInputs::Sprint, Some(KeyCode::R));
 }
 
-fn process_player_camera(wnds: Res<Windows>,
+fn process_player_camera(mut wnds: ResMut<Windows>,
         mut query: Query<(&mut Camera, &mut Transform, &mut CameraHelper)>)
 {
     // get the camera info and transform
@@ -418,10 +419,10 @@ fn process_player_camera(wnds: Res<Windows>,
     let (mut camera, mut camera_transform, mut camera_helper) = query.single_mut();
 
     // get the window that the camera is displaying to (or the primary window)
-    let wnd = if let RenderTarget::Window(id) = camera.target {
-        wnds.get(id).unwrap()
+    let mut wnd = if let RenderTarget::Window(id) = camera.target {
+        wnds.get_mut(id).unwrap()
     } else {
-        wnds.get_primary().unwrap()
+        wnds.get_primary_mut().unwrap()
     };
 
     // check if the cursor is inside the window and get its position
@@ -437,12 +438,19 @@ fn process_player_camera(wnds: Res<Windows>,
             camera_helper.angle_x += dy * 0.005;
             camera_helper.angle_y += -dx * 0.005;
 
+            camera_helper.angle_x = clamp(camera_helper.angle_x, -PI / 2.0, PI / 2.0);
+
             camera_transform.rotation = Quat::from_axis_angle(Vec3::Y, camera_helper.angle_y)
                 * Quat::from_axis_angle(Vec3::X, camera_helper.angle_x);
         }
 
-        camera_helper.last_x = screen_pos.x;
-        camera_helper.last_y = screen_pos.y;
+
+        let pos = Vec2::new(wnd.width() / 2.0, wnd.height() / 2.0);
+
+        camera_helper.last_x = pos.x;
+        camera_helper.last_y = pos.y;
+
+        wnd.set_cursor_position(pos);
     }
 }
 
@@ -460,8 +468,8 @@ fn process_player_movement(keys: Res<Input<KeyCode>>, time: Res<Time>,
         true => 20.0
     };
 
-    let mut forward = cam_trans.forward().clone();//-Vect::new(local_z.x, 0., local_z.z);
-    let mut right = cam_trans.right().clone();//Vect::new(local_z.z, 0., -local_z.x);
+    let mut forward = cam_trans.forward().clone();
+    let mut right = cam_trans.right().clone();
     let up = Vect::new(0.0, 1.0, 0.0);
 
     forward.y = 0.0;
@@ -712,7 +720,10 @@ fn wait_for_done_loading(mut state: ResMut<State<GameState>>, query: Query<&Play
 }
 
 fn setup_window(mut windows: ResMut<Windows>) {
-    windows.primary_mut().set_title("Cosmos".into());
+    let mut window = windows.primary_mut();
+    window.set_title("Cosmos".into());
+    window.set_cursor_lock_mode(true);
+    window.set_cursor_visibility(false);
 }
 
 fn main() {
