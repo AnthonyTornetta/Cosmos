@@ -6,12 +6,10 @@ use std::time::SystemTime;
 use bevy::prelude::*;
 use bevy::winit::WinitPlugin;
 use bevy_rapier3d::prelude::{Collider, LockedAxes, RigidBody, Velocity};
-use bevy_rapier3d::rapier::prelude::RigidBodyVelocity;
-use bevy_renet::renet::{RenetConnectionConfig, RenetServer, ServerAuthentication, ServerConfig, ServerEvent};
+use bevy_renet::renet::{RenetServer, ServerAuthentication, ServerConfig, ServerEvent};
 use bevy_renet::RenetServerPlugin;
 use cosmos_core::entities::player::Player;
-use cosmos_core::netty::netty::{ClientUnreliableMessages, NettyChannel, PROTOCOL_ID, server_connection_config, ServerUnreliableMessages};
-use cosmos_core::netty::netty::ClientReliableMessages::PlayerDisconnect;
+use cosmos_core::netty::netty::{ClientUnreliableMessages, NettyChannel, PROTOCOL_ID, server_connection_config};
 use cosmos_core::netty::netty::ServerReliableMessages::{MOTD, PlayerCreate, PlayerRemove};
 use cosmos_core::netty::netty::ServerUnreliableMessages::{BulkBodies};
 use cosmos_core::netty::netty_rigidbody::NettyRigidBody;
@@ -39,7 +37,7 @@ fn server_sync_bodies(
 
     tick.0 += 1;
 
-    let mut sync_message = BulkBodies {
+    let sync_message = BulkBodies {
         time_stamp: tick.0,
         bodies
     };
@@ -55,7 +53,7 @@ struct ClientTicks {
 
 fn server_listen_messages(
     mut server: ResMut<RenetServer>,
-    mut lobby: ResMut<ServerLobby>,
+    lobby: ResMut<ServerLobby>,
     mut players: Query<(&mut Transform, &mut Velocity), With<Player>>) {
 
     for client_id in server.clients_id().into_iter() {
