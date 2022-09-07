@@ -1,4 +1,3 @@
-use bevy::prelude::Query;
 use bevy::utils::HashSet;
 use bevy_rapier3d::math::Vect;
 use bevy_rapier3d::na::Vector3;
@@ -84,7 +83,7 @@ fn generate_chunk_collider(chunk: &Chunk) -> Collider {
 }
 
 impl StructureListener for StructurePhysics {
-    fn notify_block_update(&mut self, structure: &Structure, structure_block: &StructureBlock, new_block: &Block) {
+    fn notify_block_update(&mut self, _structure: &Structure, structure_block: &StructureBlock, _new_block: &Block) {
         self.needs_changed.insert(Vector3::new(structure_block.chunk_coord_x(), structure_block.chunk_coord_y(), structure_block.chunk_coord_z()));
     }
 }

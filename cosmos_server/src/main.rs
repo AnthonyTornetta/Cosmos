@@ -12,7 +12,7 @@ use bevy_renet::RenetServerPlugin;
 use cosmos_core::entities::player::Player;
 use cosmos_core::netty::netty::{ClientUnreliableMessages, NettyChannel, PROTOCOL_ID, server_connection_config, ServerUnreliableMessages};
 use cosmos_core::netty::netty::ClientReliableMessages::PlayerDisconnect;
-use cosmos_core::netty::netty::ServerReliableMessages::{PlayerCreate, PlayerRemove};
+use cosmos_core::netty::netty::ServerReliableMessages::{MOTD, PlayerCreate, PlayerRemove};
 use cosmos_core::netty::netty::ServerUnreliableMessages::{BulkBodies};
 use cosmos_core::netty::netty_rigidbody::NettyRigidBody;
 use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
@@ -64,8 +64,6 @@ fn server_listen_messages(
 
             match command {
                 ClientUnreliableMessages::PlayerBody { body } => {
-                    println!("Player transform received from {}!", client_id);
-
                     if let Some(player_entity) = lobby.players.get(&client_id) {
                         if let Ok((mut transform, mut velocity)) = players.get_mut(*player_entity) {
                             transform.translation = body.translation.into();
@@ -130,13 +128,17 @@ fn handle_events_system(
                     body: netty_body
                 }).unwrap();
 
+                server.send_message(*id, NettyChannel::Reliable.id(), bincode::serialize(&MOTD {
+                    motd: "Welcome to the server!".into()
+                }).unwrap());
+
                 server.broadcast_message(NettyChannel::Reliable.id(), msg);
             }
             ServerEvent::ClientDisconnected(id) => {
                 println!("Client {} disconnected", id);
 
                 client_ticks.ticks.remove(id);
-                if let Some(player_entity) = lobby.players.remove(id) {
+                if let Some(player_entity) = lobby.players.remove(&id) {
                     commands.entity(player_entity).despawn();
                 }
 

@@ -1,22 +1,15 @@
 use bevy::app::PluginGroupBuilder;
 use bevy::asset::AssetPlugin;
-use bevy::audio::AudioPlugin;
 use bevy::core::CorePlugin;
 use bevy::core_pipeline::CorePipelinePlugin;
 use bevy::diagnostic::DiagnosticsPlugin;
-use bevy::gltf::GltfPlugin;
 use bevy::input::InputPlugin;
 use bevy::log::LogPlugin;
-use bevy::pbr::PbrPlugin;
-use bevy::prelude::{AnimationPlugin, GilrsPlugin, HierarchyPlugin, PluginGroup, TransformPlugin};
+use bevy::prelude::{HierarchyPlugin, PluginGroup, TransformPlugin};
 use bevy::render::RenderPlugin;
 use bevy::scene::ScenePlugin;
-use bevy::sprite::SpritePlugin;
-use bevy::text::TextPlugin;
 use bevy::time::TimePlugin;
-use bevy::ui::UiPlugin;
 use bevy::window::WindowPlugin;
-use bevy::winit::WinitPlugin;
 use bevy_rapier3d::prelude::{NoUserData, RapierPhysicsPlugin};
 
 #[derive(Default)]

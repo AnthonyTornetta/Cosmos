@@ -5,23 +5,18 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use cosmos_core::structure::chunk::CHUNK_DIMENSIONS;
 
-use std::thread::sleep;
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use bevy::prelude::*;
-use bevy::render::render_resource::{Extent3d, FilterMode, TextureDimension, TextureFormat};
-use bevy::render::texture::{HdrTextureLoader, ImageSettings};
+use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
+use bevy::render::texture::ImageSettings;
 use std::collections::HashMap;
 use std::net::UdpSocket;
-use bevy::prelude::shape::Cube;
 use bevy::render::camera::{Projection, RenderTarget};
 use bevy_rapier3d::na::Vector3;
-use bevy_rapier3d::parry::shape::Cuboid;
-use bevy_rapier3d::plugin::{NoUserData, RapierConfiguration, RapierPhysicsPlugin};
+use bevy_rapier3d::plugin::{RapierConfiguration, RapierPhysicsPlugin};
 use bevy_rapier3d::prelude::{Collider, LockedAxes, RigidBody, Vect, Velocity};
-use bevy_rapier3d::rapier::prelude::RigidBodyVelocity;
-use bevy_rapier3d::render::RapierDebugRenderPlugin;
 use bevy_renet::renet::{ClientAuthentication, RenetClient};
-use bevy_renet::{RenetClientPlugin, run_if_client_connected};
+use bevy_renet::RenetClientPlugin;
 use cosmos_core::block::blocks::{DIRT, CHERRY_LEAF, STONE, CHERRY_LOG, GRASS};
 use cosmos_core::entities::player::Player;
 use cosmos_core::netty::netty::{client_connection_config, NettyChannel, ServerReliableMessages, ServerUnreliableMessages};
@@ -34,25 +29,6 @@ use cosmos_core::physics::structure_physics::StructurePhysics;
 use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
 use rand::Rng;
 use crate::plugin::client_plugin::ClientPluginGroup;
-
-struct CubeExample {
-    x: u64,
-    y_rot: f32,
-
-    camera_position: Vector3<f32>,
-    camera_rotation: Vector3<f32>,
-}
-
-impl Default for CubeExample {
-    fn default() -> Self {
-        Self {
-            x: 0,
-            y_rot: 0.0,
-            camera_position: Vector3::new(0.0, 0.0, 0.0),
-            camera_rotation: Vector3::new(0.0, 0.0, 0.0)
-        }
-    }
-}
 
 fn init_physics(mut phys: ResMut<RapierConfiguration>) {
     phys.gravity = Vect::new(0.0, -1.0, 0.0);
@@ -434,7 +410,7 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     input_handler.set_keycode(CosmosInputs::Sprint, Some(KeyCode::R));
 }
 
-fn process_player_camera(mut wnds: Res<Windows>,
+fn process_player_camera(wnds: Res<Windows>,
         mut query: Query<(&mut Camera, &mut Transform, &mut CameraHelper)>)
 {
     // get the camera info and transform
@@ -470,48 +446,12 @@ fn process_player_camera(mut wnds: Res<Windows>,
     }
 }
 
-#[inline]
-fn mul_vec(v: &Vec3, s: f32) -> Vec3 {
-    Vec3::new(v.x * s, v.y * s, v.z * s)
-}
-
-#[inline]
-fn vec_add(a: &mut Vect, b: &Vec3) {
-    a.x += b.x;
-    a.y += b.y;
-    a.z += b.z;
-}
-
-// The dot function is dumb
-#[inline]
-fn dot(vec: &Vect) -> f32{
-    vec.x * vec.x + vec.y * vec.y + vec.z * vec.z
-}
-
-fn add(vec: &mut Vect, b: &Vect) {
-    vec.x += b.x;
-    vec.y += b.y;
-    vec.z += b.z;
-}
-
-fn sub(vec: &mut Vect, b: &Vect) {
-    vec.x -= b.x;
-    vec.y -= b.y;
-    vec.z -= b.z;
-}
-
-fn mul(vec: &mut Vect, s: f32) {
-    vec.x *= s;
-    vec.y *= s;
-    vec.z *= s;
-}
-
 fn process_player_movement(keys: Res<Input<KeyCode>>, time: Res<Time>,
-        mut input_handler: ResMut<CosmosInputHandler>,
-        mut query: Query<(&mut Velocity, &mut Player), (With<LocalPlayer>)>,
-        mut cam_query: Query<&Transform, (With<Camera>)>) {
+        input_handler: ResMut<CosmosInputHandler>,
+        mut query: Query<&mut Velocity, With<LocalPlayer>>,
+        cam_query: Query<&Transform, With<Camera>>) {
 
-    let (mut velocity, mut player) = query.single_mut();
+    let mut velocity = query.single_mut();
 
     let cam_trans = cam_query.single();
 
@@ -522,7 +462,7 @@ fn process_player_movement(keys: Res<Input<KeyCode>>, time: Res<Time>,
 
     let mut forward = cam_trans.forward().clone();//-Vect::new(local_z.x, 0., local_z.z);
     let mut right = cam_trans.right().clone();//Vect::new(local_z.z, 0., -local_z.x);
-    let mut up = Vect::new(0.0, 1.0, 0.0);
+    let up = Vect::new(0.0, 1.0, 0.0);
 
     forward.y = 0.0;
     right.y = 0.0;
@@ -632,7 +572,6 @@ fn send_position(mut client: ResMut<RenetClient>,
 fn client_sync_players(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
     mut client: ResMut<RenetClient>,
     mut lobby: ResMut<ClientLobby>,
     mut network_mapping: ResMut<NetworkMapping>,
@@ -702,7 +641,6 @@ fn client_sync_players(
                     .insert(Player::new(name, id));
 
                 if client_id == id {
-                    println!("Local player added!!!");
                     client_entity.insert(LocalPlayer::default())
                         .with_children(|parent| {
                             parent.spawn_bundle(Camera3dBundle {
@@ -768,9 +706,13 @@ fn wait_for_connection(mut state: ResMut<State<GameState>>, client: Res<RenetCli
 
 fn wait_for_done_loading(mut state: ResMut<State<GameState>>, query: Query<&Player, With<LocalPlayer>>) {
     if query.get_single().is_ok() {
-        println!("Got player, starting game!!!");
-        state.set(GameState::Playing);
+        println!("Got local player, starting game!");
+        state.set(GameState::Playing).expect("Unable to change state into playing");
     }
+}
+
+fn setup_window(mut windows: ResMut<Windows>) {
+    windows.primary_mut().set_title("Cosmos".into());
 }
 
 fn main() {
@@ -784,11 +726,9 @@ fn main() {
         // .add_plugin(RapierDebugRenderPlugin::default())
         .add_state(GameState::Loading)
         .add_startup_system(init_input)
+        .add_startup_system(setup_window)
         .insert_resource(AssetsLoading { 0: Vec::new() })
         .add_startup_system(setup)// add the app state type
-
-        // add systems to run regardless of state, as usual
-        // .add_system(nothing)
 
         // systems to run only in the main menu
         .add_system_set(
@@ -796,11 +736,8 @@ fn main() {
                 .with_system(check_assets_ready)
         )
 
-        // setup when entering the state
-
         .add_system_set(
             SystemSet::on_enter(GameState::Playing)
-                // .with_system(add_player)
                 .with_system(add_structure)
         )
         .add_system_set(

@@ -1,17 +1,11 @@
 use bevy::app::PluginGroupBuilder;
-use bevy::asset::AssetPlugin;
 use bevy::audio::AudioPlugin;
-use bevy::core_pipeline::CorePipelinePlugin;
 use bevy::gltf::GltfPlugin;
-use bevy::input::InputPlugin;
 use bevy::pbr::PbrPlugin;
 use bevy::prelude::{AnimationPlugin, GilrsPlugin};
-use bevy::render::RenderPlugin;
-use bevy::scene::ScenePlugin;
 use bevy::sprite::SpritePlugin;
 use bevy::text::TextPlugin;
 use bevy::ui::UiPlugin;
-use bevy::window::WindowPlugin;
 use bevy::winit::WinitPlugin;
 use crate::PluginGroup;
 

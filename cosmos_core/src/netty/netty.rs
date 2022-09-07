@@ -1,7 +1,6 @@
 use std::time::Duration;
 use bevy::prelude::{Entity, Component};
 use bevy::utils::default;
-use bevy_rapier3d::prelude::RigidBody;
 use bevy_renet::renet::{ChannelConfig, ReliableChannelConfig, RenetConnectionConfig, UnreliableChannelConfig};
 use serde::{Serialize, Deserialize};
 use crate::netty::netty_rigidbody::NettyRigidBody;
