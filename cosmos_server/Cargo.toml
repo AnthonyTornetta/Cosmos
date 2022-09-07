@@ -1,5 +1,5 @@
 [package]
-name = "cosmos_client"
+name = "cosmos_server"
 version = "0.1.0"
 edition = "2021"
 
@@ -8,8 +8,6 @@ edition = "2021"
 [dependencies]
 cosmos_core = { version = "0.1.0", path = "../cosmos_core" }
 
-image = { version = "0.24.3", default-features = false, features = ["png"]}
-
 lazy_static = "1.4.0"
 
 bevy_rapier3d = { version = "0.16.2", features = [ "simd-stable" ] }
@@ -17,11 +15,11 @@ bevy = "0.8.1"
 
 take_mut = "0.2.2"
 
+rand = "0.8.5"
+
 bevy_renet = "0.0.5"
 serde = "1.0.144"
 bincode = "1.3.3"
-
-rand = "0.8.5"
 
 # Enable max optimizations for dependencies, but not for our code:
 [profile.dev.package."*"]

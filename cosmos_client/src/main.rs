@@ -1,47 +1,34 @@
 mod rendering;
+pub mod plugin;
 
 use std::cell::RefCell;
 use std::rc::Rc;
 use cosmos_core::structure::chunk::CHUNK_DIMENSIONS;
 
-use std::thread::sleep;
-use std::time::{Duration, Instant, SystemTime};
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use bevy::prelude::*;
-use bevy::render::render_resource::{Extent3d, FilterMode, TextureDimension, TextureFormat};
-use bevy::render::texture::{HdrTextureLoader, ImageSettings};
+use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
+use bevy::render::texture::ImageSettings;
 use std::collections::HashMap;
+use std::net::UdpSocket;
 use bevy::render::camera::{Projection, RenderTarget};
 use bevy_rapier3d::na::Vector3;
-use bevy_rapier3d::plugin::{NoUserData, RapierConfiguration, RapierPhysicsPlugin};
+use bevy_rapier3d::plugin::{RapierConfiguration, RapierPhysicsPlugin};
 use bevy_rapier3d::prelude::{Collider, LockedAxes, RigidBody, Vect, Velocity};
-use bevy_rapier3d::rapier::prelude::RigidBodyVelocity;
-use bevy_rapier3d::render::RapierDebugRenderPlugin;
+use bevy_renet::renet::{ClientAuthentication, RenetClient};
+use bevy_renet::RenetClientPlugin;
 use cosmos_core::block::blocks::{DIRT, CHERRY_LEAF, STONE, CHERRY_LOG, GRASS};
 use cosmos_core::entities::player::Player;
+use cosmos_core::netty::netty::{client_connection_config, NettyChannel, ServerReliableMessages, ServerUnreliableMessages};
+use cosmos_core::netty::netty::ClientUnreliableMessages::PlayerBody;
+use cosmos_core::netty::netty_rigidbody::NettyRigidBody;
 use cosmos_core::structure::structure::Structure;
 use crate::rendering::structure_renderer::{StructureRenderer};
 use crate::rendering::uv_mapper::UVMapper;
 use cosmos_core::physics::structure_physics::StructurePhysics;
+use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
 use rand::Rng;
-
-struct CubeExample {
-    x: u64,
-    y_rot: f32,
-
-    camera_position: Vector3<f32>,
-    camera_rotation: Vector3<f32>,
-}
-
-impl Default for CubeExample {
-    fn default() -> Self {
-        Self {
-            x: 0,
-            y_rot: 0.0,
-            camera_position: Vector3::new(0.0, 0.0, 0.0),
-            camera_rotation: Vector3::new(0.0, 0.0, 0.0)
-        }
-    }
-}
+use crate::plugin::client_plugin::ClientPluginGroup;
 
 fn init_physics(mut phys: ResMut<RapierConfiguration>) {
     phys.gravity = Vect::new(0.0, -1.0, 0.0);
@@ -55,29 +42,6 @@ struct CameraHelper {
 
     pub angle_y: f32,
     pub angle_x: f32,
-}
-
-fn add_player(mut commands: Commands) {
-    commands.spawn().insert_bundle(PbrBundle {
-        transform: Transform::from_xyz(0.0, 60.0, 20.0),
-        ..default()
-    })
-        .insert(Collider::capsule_y(0.5, 0.25))
-        .insert(LockedAxes::ROTATION_LOCKED)
-        .insert(RigidBody::Dynamic)
-        .insert(Velocity::default())
-        .insert(Player::new(String::from("joey")))
-    .with_children(|parent| {
-        parent.spawn_bundle(Camera3dBundle {
-            transform: Transform::from_xyz(0.0, 0.75, 0.0),
-            projection: Projection::from(PerspectiveProjection {
-                fov: (90.0 / 360.0) * (std::f32::consts::PI * 2.0),
-                ..default()
-            }),
-            ..default()
-        })
-            .insert(CameraHelper::default());
-    });
 }
 
 enum AtlasName {
@@ -207,7 +171,7 @@ fn check_assets_ready(
             // (note: if you don't have any other handles to the assets
             // elsewhere, they will get unloaded after this)
 
-            state.set(GameState::Playing).unwrap();
+            state.set(GameState::Connecting).unwrap();
         }
         _ => {
             // NotLoaded/Loading: not fully ready yet
@@ -230,7 +194,7 @@ fn add_structure(mut commands: Commands,
         ..default()
     });
 
-    let mut structure = Structure::new(2, 2, 2);
+    let mut structure = Structure::new(1, 1, 1);
 
     let renderer = Rc::new(RefCell::new(StructureRenderer::new(&structure)));
     let physics_updater = Rc::new(RefCell::new(StructurePhysics::new()));
@@ -446,7 +410,7 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     input_handler.set_keycode(CosmosInputs::Sprint, Some(KeyCode::R));
 }
 
-fn process_player_camera(mut wnds: Res<Windows>,
+fn process_player_camera(wnds: Res<Windows>,
         mut query: Query<(&mut Camera, &mut Transform, &mut CameraHelper)>)
 {
     // get the camera info and transform
@@ -482,48 +446,12 @@ fn process_player_camera(mut wnds: Res<Windows>,
     }
 }
 
-#[inline]
-fn mul_vec(v: &Vec3, s: f32) -> Vec3 {
-    Vec3::new(v.x * s, v.y * s, v.z * s)
-}
-
-#[inline]
-fn vec_add(a: &mut Vect, b: &Vec3) {
-    a.x += b.x;
-    a.y += b.y;
-    a.z += b.z;
-}
-
-// The dot function is dumb
-#[inline]
-fn dot(vec: &Vect) -> f32{
-    vec.x * vec.x + vec.y * vec.y + vec.z * vec.z
-}
-
-fn add(vec: &mut Vect, b: &Vect) {
-    vec.x += b.x;
-    vec.y += b.y;
-    vec.z += b.z;
-}
-
-fn sub(vec: &mut Vect, b: &Vect) {
-    vec.x -= b.x;
-    vec.y -= b.y;
-    vec.z -= b.z;
-}
-
-fn mul(vec: &mut Vect, s: f32) {
-    vec.x *= s;
-    vec.y *= s;
-    vec.z *= s;
-}
-
 fn process_player_movement(keys: Res<Input<KeyCode>>, time: Res<Time>,
-        mut input_handler: ResMut<CosmosInputHandler>,
-        mut query: Query<(&mut Velocity, &mut Player)>,
-        mut cam_query: Query<&Transform, With<Camera>>) {
+        input_handler: ResMut<CosmosInputHandler>,
+        mut query: Query<&mut Velocity, With<LocalPlayer>>,
+        cam_query: Query<&Transform, With<Camera>>) {
 
-    let (mut velocity, mut player) = query.single_mut();
+    let mut velocity = query.single_mut();
 
     let cam_trans = cam_query.single();
 
@@ -534,7 +462,7 @@ fn process_player_movement(keys: Res<Input<KeyCode>>, time: Res<Time>,
 
     let mut forward = cam_trans.forward().clone();//-Vect::new(local_z.x, 0., local_z.z);
     let mut right = cam_trans.right().clone();//Vect::new(local_z.z, 0., -local_z.x);
-    let mut up = Vect::new(0.0, 1.0, 0.0);
+    let up = Vect::new(0.0, 1.0, 0.0);
 
     forward.y = 0.0;
     right.y = 0.0;
@@ -582,23 +510,225 @@ fn process_player_movement(keys: Res<Input<KeyCode>>, time: Res<Time>,
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 enum GameState {
     Loading,
+    Connecting,
+    LoadingWorld,
     Playing
+}
+
+fn new_renet_client() -> RenetClient {
+    let port: u16 = 1337;
+
+    let server_addr = format!("127.0.0.1:{}", port).parse().unwrap();
+    let socket = UdpSocket::bind("127.0.0.1:0").unwrap();
+
+    let connection_config = client_connection_config();
+    let cur_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+    let client_id = cur_time.as_millis() as u64;
+
+    let auth = ClientAuthentication::Unsecure {
+        client_id,
+        protocol_id: cosmos_core::netty::netty::PROTOCOL_ID,
+        server_addr,
+        user_data: None
+    };
+
+    RenetClient::new(cur_time, socket, client_id, connection_config, auth).unwrap()
+}
+
+#[derive(Default)]
+struct NetworkMapping(HashMap<Entity, Entity>);
+
+#[derive(Debug)]
+struct PlayerInfo {
+    client_entity: Entity,
+    server_entity: Entity,
+}
+
+#[derive(Debug, Default)]
+struct ClientLobby {
+    players: HashMap<u64, PlayerInfo>,
+}
+
+#[derive(Debug)]
+struct MostRecentTick(Option<u32>);
+
+#[derive(Component, Default)]
+struct LocalPlayer;
+
+fn send_position(mut client: ResMut<RenetClient>,
+    query: Query<(&Velocity, &Transform), (With<Player>, With<LocalPlayer>)>) {
+
+    if let Ok((velocity, transform)) = query.get_single() {
+        let msg = PlayerBody {
+            body: NettyRigidBody::new(&velocity, &transform)
+        };
+
+        let serialized_message = bincode::serialize(&msg).unwrap();
+
+        client.send_message(NettyChannel::Unreliable.id(), serialized_message);
+    }
+}
+
+fn client_sync_players(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut client: ResMut<RenetClient>,
+    mut lobby: ResMut<ClientLobby>,
+    mut network_mapping: ResMut<NetworkMapping>,
+    mut most_recent_tick: ResMut<MostRecentTick>,
+
+    query_player: Query<&Player>,
+    mut query_body: Query<(&mut Transform, &mut Velocity, Option<&LocalPlayer>)>
+) {
+    let client_id = client.client_id();
+
+    while let Some(message) = client.receive_message(NettyChannel::Unreliable.id()) {
+        let msg: ServerUnreliableMessages = bincode::deserialize(&message).unwrap();
+
+        match msg {
+            ServerUnreliableMessages::PlayerBody {id, body} => {
+                let entity = lobby.players.get(&id).unwrap().client_entity.clone();
+
+                let (mut transform, mut velocity, _) = query_body.get_mut(entity).unwrap();
+
+                transform.translation = body.translation.into();
+                transform.rotation = body.rotation.into();
+
+                velocity.linvel = body.body_vel.linvel.into();
+                velocity.angvel = body.body_vel.angvel.into();
+            }
+            ServerUnreliableMessages::BulkBodies {bodies, time_stamp} => {
+
+                for (server_entity, body) in bodies.iter() {
+                    let maybe_exists = network_mapping.0.get(&server_entity);
+                    if maybe_exists.is_some() {
+                        let entity = maybe_exists.unwrap();
+
+                        let (mut transform, mut velocity, local) = query_body.get_mut(*entity).unwrap();
+
+                        if local.is_none() {
+                            transform.translation = body.translation.into();
+                            transform.rotation = body.rotation.into();
+
+                            velocity.linvel = body.body_vel.linvel.into();
+                            velocity.angvel = body.body_vel.angvel.into();
+                        }
+                    }
+                }
+
+            }
+        }
+    }
+
+    while let Some(message) = client.receive_message(NettyChannel::Reliable.id()) {
+        let msg: ServerReliableMessages = bincode::deserialize(&message).unwrap();
+
+        match msg {
+            ServerReliableMessages::PlayerCreate {body, id, entity, name} => {
+                println!("Player {} ({}) connected!", name.as_str(), id);
+
+                let mut client_entity = commands.spawn();
+
+                client_entity.insert_bundle(PbrBundle {
+                    transform: body.create_transform(),
+                    mesh: meshes.add(shape::Capsule::default().into()),
+                    ..default()
+                })
+                    .insert(Collider::capsule_y(0.5, 0.25))
+                    .insert(LockedAxes::ROTATION_LOCKED)
+                    .insert(RigidBody::Dynamic)
+                    .insert(body.create_velocity())
+                    .insert(Player::new(name, id));
+
+                if client_id == id {
+                    client_entity.insert(LocalPlayer::default())
+                        .with_children(|parent| {
+                            parent.spawn_bundle(Camera3dBundle {
+                                transform: Transform::from_xyz(0.0, 0.75, 0.0),
+                                projection: Projection::from(PerspectiveProjection {
+                                    fov: (90.0 / 360.0) * (std::f32::consts::PI * 2.0),
+                                    ..default()
+                                }),
+                                ..default()
+                            })
+                                .insert(CameraHelper::default());
+                        });
+                }
+
+                let player_info = PlayerInfo {
+                    server_entity: entity,
+                    client_entity: client_entity.id()
+                };
+
+                lobby.players.insert(id, player_info);
+                network_mapping.0.insert(entity, client_entity.id());
+            }
+            ServerReliableMessages::PlayerRemove {id} => {
+
+                if let Some(PlayerInfo {client_entity, server_entity}) = lobby.players.remove(&id) {
+                    let mut entity = commands.entity(client_entity);
+
+                    let name = query_player.get(client_entity).unwrap().name.clone();
+                    entity.despawn();
+                    network_mapping.0.remove(&server_entity);
+
+                    println!("Player {} ({}) disconnected", name , id);
+                }
+            }
+            ServerReliableMessages::StructureCreate {id, entity, body, serialized_structure} => {
+
+            }
+            ServerReliableMessages::StructureRemove {id} => {
+
+            }
+            ServerReliableMessages::MOTD { motd } => {
+                println!("Server MOTD: {}", motd);
+            }
+        }
+    }
+}
+
+fn establish_connection(mut commands: Commands) {
+    println!("Establishing connection w/ server...");
+    commands.insert_resource(ClientLobby::default());
+    commands.insert_resource(MostRecentTick(None));
+    commands.insert_resource(new_renet_client());
+    commands.insert_resource(NetworkMapping::default());
+}
+
+fn wait_for_connection(mut state: ResMut<State<GameState>>, client: Res<RenetClient>) {
+    println!("Waiting...");
+    if client.is_connected() {
+        println!("Loading server data...");
+        state.set(GameState::LoadingWorld).unwrap();
+    }
+}
+
+fn wait_for_done_loading(mut state: ResMut<State<GameState>>, query: Query<&Player, With<LocalPlayer>>) {
+    if query.get_single().is_ok() {
+        println!("Got local player, starting game!");
+        state.set(GameState::Playing).expect("Unable to change state into playing");
+    }
+}
+
+fn setup_window(mut windows: ResMut<Windows>) {
+    windows.primary_mut().set_title("Cosmos".into());
 }
 
 fn main() {
     App::new()
         .insert_resource(ImageSettings::default_nearest()) // MUST be before default plugins!
-        .add_plugins(DefaultPlugins)
-        .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
+        .add_plugins(CosmosCorePluginGroup::default())
+        .add_plugins(ClientPluginGroup::default())
+        .add_plugin(RenetClientPlugin{})
         .insert_resource(CosmosInputHandler::new())
+
         // .add_plugin(RapierDebugRenderPlugin::default())
         .add_state(GameState::Loading)
         .add_startup_system(init_input)
+        .add_startup_system(setup_window)
         .insert_resource(AssetsLoading { 0: Vec::new() })
         .add_startup_system(setup)// add the app state type
-
-        // add systems to run regardless of state, as usual
-        // .add_system(nothing)
 
         // systems to run only in the main menu
         .add_system_set(
@@ -606,17 +736,29 @@ fn main() {
                 .with_system(check_assets_ready)
         )
 
-        // setup when entering the state
-
         .add_system_set(
             SystemSet::on_enter(GameState::Playing)
-                .with_system(add_player)
                 .with_system(add_structure)
+        )
+        .add_system_set(
+            SystemSet::on_enter(GameState::Connecting)
+                .with_system(establish_connection)
+        )
+        .add_system_set(
+            SystemSet::on_update(GameState::Connecting)
+                .with_system(wait_for_connection)
+        )
+        .add_system_set(
+            SystemSet::on_update(GameState::LoadingWorld)
+                .with_system(client_sync_players)
+                .with_system(wait_for_done_loading)
         )
         .add_system_set(
             SystemSet::on_update(GameState::Playing)
                 .with_system(process_player_movement)
                 .with_system(process_player_camera)
+                .with_system(send_position)
+                .with_system(client_sync_players)
         )
 
         .run();
