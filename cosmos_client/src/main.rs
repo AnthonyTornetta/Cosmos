@@ -58,6 +58,7 @@ struct AssetsLoading(Vec<LoadingAsset>);
 
 struct MainAtlas {
     handle: Handle<Image>,
+    material: Handle<StandardMaterial>,
     uv_mapper: UVMapper
 }
 
@@ -75,7 +76,8 @@ fn check_assets_ready(
     server: Res<AssetServer>,
     loading: Res<AssetsLoading>,
     mut state: ResMut<State<GameState>>,
-    mut images: ResMut<Assets<Image>>
+    mut images: ResMut<Assets<Image>>,
+    mut materials: ResMut<Assets<StandardMaterial>>
 ) {
     use bevy::asset::LoadState;
 
@@ -154,8 +156,19 @@ fn check_assets_ready(
 
                         let handle = images.set(asset.handle.clone(), img);
 
+                        let material_handle = materials.add(StandardMaterial {
+                            base_color_texture: Some(handle.clone()),
+                            alpha_mode: AlphaMode::Mask(0.5),
+                            unlit: false,
+                            metallic: 0.0,
+                            reflectance: 0.0,
+
+                            ..default()
+                        });
+
                         commands.insert_resource(MainAtlas {
                             handle,
+                            material: material_handle,
                             uv_mapper: UVMapper::new(width as usize, height as usize,
                                                      IMAGE_DIMENSIONS as usize, IMAGE_DIMENSIONS as usize,
                                                      PADDING as usize, PADDING as usize)
@@ -182,131 +195,10 @@ fn check_assets_ready(
 
 fn add_structure(mut commands: Commands,
                  mut meshes: ResMut<Assets<Mesh>>,
-                 main_atlas: Res<MainAtlas>,
-                 mut materials: ResMut<Assets<StandardMaterial>>) {
+                 main_atlas: Res<MainAtlas>) {
 
-    let material_handle = materials.add(StandardMaterial {
-        base_color_texture: Some(main_atlas.handle.clone()),
-        alpha_mode: AlphaMode::Mask(0.5),
-        unlit: false,
-        metallic: 0.0,
-        reflectance: 0.0,
 
-        ..default()
-    });
 
-    let mut structure = Structure::new(1, 1, 1);
-
-    let renderer = Rc::new(RefCell::new(StructureRenderer::new(&structure)));
-    let physics_updater = Rc::new(RefCell::new(StructurePhysics::new()));
-
-    structure.add_structure_listener(renderer.clone());
-    structure.add_structure_listener(physics_updater.clone());
-
-    let mut now = Instant::now();
-    for z in 0..CHUNK_DIMENSIONS * structure.length() {
-        for x in 0..CHUNK_DIMENSIONS * structure.width() {
-            let y: f32 = (CHUNK_DIMENSIONS * structure.height()) as f32 - ((x + z) as f32 / 12.0).sin().abs() * 4.0 - 10.0;
-
-            let y_max = y.ceil() as usize;
-            for yy in 0..y_max {
-                if yy == y_max - 1 {
-                    structure.set_block_at(x, yy, z, &GRASS);
-
-                    let mut rng = rand::thread_rng();
-
-                    let n1: u8 = rng.gen();
-
-                    if n1 < 1 {
-                         for ty in (yy+1)..(yy + 7) {
-                             if ty != yy + 6 {
-                                 structure.set_block_at(x, ty, z, &CHERRY_LOG);
-                             }
-                             else {
-                                 structure.set_block_at(x, ty, z, &CHERRY_LEAF);
-                             }
-
-                             if ty > yy + 2 {
-                                 let range;
-                                 if ty < yy + 5 {
-                                     range = -2..3;
-                                 }
-                                 else {
-                                     range = -1..2;
-                                 }
-
-                                 for tz in range.clone() {
-                                     for tx in range.clone() {
-                                         if tx == 0 && tz == 0 || (tx + (x as i32) < 0 || tz + (z as i32) < 0 || ((tx + (x as i32)) as usize) >= structure.width() * 32 || ((tz + (z as i32)) as usize) >= structure.length() * 32) {
-                                             continue;
-                                         }
-                                         structure.set_block_at((x as i32 + tx) as usize, ty, (z as i32 + tz) as usize, &CHERRY_LEAF);
-                                     }
-                                 }
-                             }
-                         }
-                    }
-                }
-                else if yy > y_max - 5 {
-                    structure.set_block_at(x, yy, z, &DIRT);
-                }
-                else {
-                    structure.set_block_at(x, yy, z, &STONE);
-                }
-            }
-        }
-    }
-
-    println!("Done in {}ms", now.elapsed().as_millis());
-
-    now = Instant::now();
-
-    renderer.borrow_mut().render(&structure, &main_atlas.uv_mapper);
-
-    println!("Made mesh data in {}ms", now.elapsed().as_millis());
-
-    now = Instant::now();
-
-    let renders = renderer.borrow_mut().create_meshes();
-
-    println!("Meshes converted to bevy meshes in {}ms", now.elapsed().as_millis());
-
-    now = Instant::now();
-
-    let mut colliders = physics_updater.borrow_mut().create_colliders(&structure);
-
-    println!("Phyiscs done in {}ms", now.elapsed().as_millis());
-
-    commands.spawn()
-        .insert_bundle(PbrBundle {
-            transform: Transform {
-                translation: Vec3::new(0.0, 0.0, 0.0),
-                ..default()
-            },
-            ..default()
-        })
-        .insert(RigidBody::Fixed)
-        .with_children(|parent| {
-            for item in renders {
-                let coords = Vector3::new(item.x, item.y, item.z);
-
-                let rel_pos = structure.chunk_relative_position(item.x, item.y, item.z);
-
-                let mut child = parent.spawn_bundle(PbrBundle {
-                    mesh: meshes.add(item.mesh),
-                    material: material_handle.clone(),
-                    transform: Transform::from_xyz(rel_pos.x, rel_pos.y, rel_pos.z),
-                    ..default()
-                });
-
-                for i in 0..colliders.len() {
-                    if colliders[i].chunk_coords == coords {
-                        child.insert(colliders.swap_remove(i).collider);
-                        break;
-                    }
-                }
-            }
-        });
     //
     // commands.spawn_bundle(PbrBundle {
     //     mesh: meshes.add(Cube::new(40.0).into()),
@@ -584,6 +476,7 @@ fn client_sync_players(
     mut lobby: ResMut<ClientLobby>,
     mut network_mapping: ResMut<NetworkMapping>,
     mut most_recent_tick: ResMut<MostRecentTick>,
+    main_atlas: Res<MainAtlas>,
 
     query_player: Query<&Player>,
     mut query_body: Query<(&mut Transform, &mut Velocity, Option<&LocalPlayer>)>
@@ -683,10 +576,69 @@ fn client_sync_players(
                     println!("Player {} ({}) disconnected", name , id);
                 }
             }
-            ServerReliableMessages::StructureCreate {id, entity, body, serialized_structure} => {
+            ServerReliableMessages::StructureCreate {entity: server_entity, body, serialized_structure} => {
+                let mut structure: Structure = bincode::deserialize(&serialized_structure).unwrap();
+                //Structure::new(1, 1, 1);
 
+                let renderer = Rc::new(RefCell::new(StructureRenderer::new(&structure)));
+                let physics_updater = Rc::new(RefCell::new(StructurePhysics::new(&structure)));
+
+                structure.add_structure_listener(renderer.clone());
+                structure.add_structure_listener(physics_updater.clone());
+
+                let mut now = Instant::now();
+
+                renderer.borrow_mut().render(&structure, &main_atlas.uv_mapper);
+
+                println!("Made mesh data in {}ms", now.elapsed().as_millis());
+
+                now = Instant::now();
+
+                let renders = renderer.borrow_mut().create_meshes();
+
+                println!("Meshes converted to bevy meshes in {}ms", now.elapsed().as_millis());
+
+                now = Instant::now();
+
+                let mut colliders = physics_updater.borrow_mut().create_colliders(&structure);
+
+                println!("Phyiscs done in {}ms", now.elapsed().as_millis());
+
+                let entity = commands.spawn()
+                    .insert_bundle(PbrBundle {
+                        transform: Transform {
+                            translation: Vec3::new(0.0, 0.0, 0.0),
+                            ..default()
+                        },
+                        ..default()
+                    })
+                    .insert(RigidBody::Fixed)
+                    .insert(Velocity::default())
+                    .with_children(|parent| {
+                        for item in renders {
+                            let coords = Vector3::new(item.x, item.y, item.z);
+
+                            let rel_pos = structure.chunk_relative_position(item.x, item.y, item.z);
+
+                            let mut child = parent.spawn_bundle(PbrBundle {
+                                mesh: meshes.add(item.mesh),
+                                material: main_atlas.material.clone(),
+                                transform: Transform::from_xyz(rel_pos.x, rel_pos.y, rel_pos.z),
+                                ..default()
+                            });
+
+                            for i in 0..colliders.len() {
+                                if colliders[i].chunk_coords == coords {
+                                    child.insert(colliders.swap_remove(i).collider);
+                                    break;
+                                }
+                            }
+                        }
+                    }).id();
+
+                network_mapping.0.insert(server_entity, entity);
             }
-            ServerReliableMessages::StructureRemove {id} => {
+            ServerReliableMessages::StructureRemove {entity: server_entity} => {
 
             }
             ServerReliableMessages::MOTD { motd } => {

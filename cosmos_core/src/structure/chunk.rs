@@ -1,15 +1,18 @@
 use crate::block::block::Block;
 use crate::block::blocks::{AIR, block_from_id};
+use serde::{Serialize, Deserialize};
 
 pub const CHUNK_DIMENSIONS: usize = 32;
 const N_BLOCKS: usize = CHUNK_DIMENSIONS * CHUNK_DIMENSIONS * CHUNK_DIMENSIONS;
 
+#[derive(Serialize, Deserialize)]
 pub struct Chunk
 {
     x: usize,
     y: usize,
     z: usize,
 
+    #[serde(with = "serde_arrays")]
     blocks: [u16; N_BLOCKS]
 }
 

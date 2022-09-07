@@ -4,6 +4,7 @@ use bevy::utils::default;
 use bevy_renet::renet::{ChannelConfig, ReliableChannelConfig, RenetConnectionConfig, UnreliableChannelConfig};
 use serde::{Serialize, Deserialize};
 use crate::netty::netty_rigidbody::NettyRigidBody;
+use crate::structure::structure::Structure;
 
 pub enum NettyChannel {
     Reliable,
@@ -17,8 +18,8 @@ pub enum ServerReliableMessages
 {
     PlayerCreate { entity: Entity, name: String, id: u64, body: NettyRigidBody },
     PlayerRemove { id: u64 },
-    StructureCreate { entity: Entity, id: u64, body: NettyRigidBody, serialized_structure: Vec<u8> },
-    StructureRemove { id: u64 },
+    StructureCreate { entity: Entity, body: NettyRigidBody, serialized_structure: Vec<u8> },
+    StructureRemove { entity: Entity },
     MOTD { motd: String },
 }
 

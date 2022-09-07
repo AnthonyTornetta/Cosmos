@@ -17,10 +17,20 @@ pub struct StructurePhysics {
 }
 
 impl StructurePhysics {
-    pub fn new() -> Self {
-        Self {
-            needs_changed: HashSet::new()
+    pub fn new(structure: &Structure) -> Self {
+        let mut me = Self {
+            needs_changed: HashSet::with_capacity(structure.width() * structure.height() * structure.length())
+        };
+
+        for z in 0..structure.length() {
+            for y in 0..structure.height() {
+                for x in 0..structure.width() {
+                    me.needs_changed.insert(Vector3::new(x, y, z));
+                }
+            }
         }
+
+        me
     }
 
     pub fn create_colliders(&mut self, structure: &Structure) -> Vec<ChunkPhysicsModel> {

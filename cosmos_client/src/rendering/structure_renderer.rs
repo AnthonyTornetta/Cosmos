@@ -35,7 +35,7 @@ impl StructureRenderer {
         let length = structure.length();
 
         let mut rends = Vec::with_capacity(width * height * length);
-        let mut changes = HashSet::new();
+        let mut changes = HashSet::with_capacity(width * height * length);
 
         for z in 0..length {
             for y in 0..height {

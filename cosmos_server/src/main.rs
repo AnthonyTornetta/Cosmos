@@ -1,19 +1,27 @@
 mod server;
 
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::net::{SocketAddr, UdpSocket};
-use std::time::SystemTime;
+use std::rc::Rc;
+use std::time::{Instant, SystemTime};
 use bevy::prelude::*;
 use bevy::winit::WinitPlugin;
+use bevy_rapier3d::na::Vector3;
 use bevy_rapier3d::prelude::{Collider, LockedAxes, RigidBody, Velocity};
 use bevy_renet::renet::{RenetServer, ServerAuthentication, ServerConfig, ServerEvent};
 use bevy_renet::RenetServerPlugin;
+use cosmos_core::block::blocks::{CHERRY_LEAF, CHERRY_LOG, DIRT, GRASS, STONE};
 use cosmos_core::entities::player::Player;
 use cosmos_core::netty::netty::{ClientUnreliableMessages, NettyChannel, PROTOCOL_ID, server_connection_config};
-use cosmos_core::netty::netty::ServerReliableMessages::{MOTD, PlayerCreate, PlayerRemove};
+use cosmos_core::netty::netty::ServerReliableMessages::{MOTD, PlayerCreate, PlayerRemove, StructureCreate};
 use cosmos_core::netty::netty::ServerUnreliableMessages::{BulkBodies};
 use cosmos_core::netty::netty_rigidbody::NettyRigidBody;
+use cosmos_core::physics::structure_physics::StructurePhysics;
 use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
+use cosmos_core::structure::chunk::CHUNK_DIMENSIONS;
+use cosmos_core::structure::structure::Structure;
+use rand::Rng;
 
 #[derive(Debug, Default)]
 pub struct ServerLobby {
@@ -82,7 +90,8 @@ fn handle_events_system(
     mut server_events: EventReader<ServerEvent>,
     mut lobby: ResMut<ServerLobby>,
     mut client_ticks: ResMut<ClientTicks>,
-    players: Query<(Entity, &Player, &Transform, &Velocity)>)
+    players: Query<(Entity, &Player, &Transform, &Velocity)>,
+    structures_query: Query<(Entity, &Structure, &Transform, &Velocity)>)
 {
     for event in server_events.iter() {
         match event {
@@ -131,6 +140,14 @@ fn handle_events_system(
                 }).unwrap());
 
                 server.broadcast_message(NettyChannel::Reliable.id(), msg);
+
+                for (entity, structure, transform, velocity) in structures_query.iter() {
+                    server.send_message(*id, NettyChannel::Reliable.id(), StructureCreate {
+                        entity: entity.clone(),
+                        body: NettyRigidBody::new(velocity, transform),
+                        serialized_structure: bincode::serialize(structure).unwrap()
+                    });
+                }
             }
             ServerEvent::ClientDisconnected(id) => {
                 println!("Client {} disconnected", id);
@@ -148,6 +165,92 @@ fn handle_events_system(
             }
         }
     }
+}
+
+fn create_structure(mut commands: Commands) {
+    let mut structure = Structure::new(1, 1, 1);
+
+    let physics_updater = Rc::new(RefCell::new(StructurePhysics::new(&structure)));
+    structure.add_structure_listener(physics_updater.clone());
+
+    let mut now = Instant::now();
+    for z in 0..CHUNK_DIMENSIONS * structure.length() {
+        for x in 0..CHUNK_DIMENSIONS * structure.width() {
+            let y: f32 = (CHUNK_DIMENSIONS * structure.height()) as f32 - ((x + z) as f32 / 12.0).sin().abs() * 4.0 - 10.0;
+
+            let y_max = y.ceil() as usize;
+            for yy in 0..y_max {
+                if yy == y_max - 1 {
+                    structure.set_block_at(x, yy, z, &GRASS);
+
+                    let mut rng = rand::thread_rng();
+
+                    let n1: u8 = rng.gen();
+
+                    if n1 < 1 {
+                        for ty in (yy+1)..(yy + 7) {
+                            if ty != yy + 6 {
+                                structure.set_block_at(x, ty, z, &CHERRY_LOG);
+                            }
+                            else {
+                                structure.set_block_at(x, ty, z, &CHERRY_LEAF);
+                            }
+
+                            if ty > yy + 2 {
+                                let range;
+                                if ty < yy + 5 {
+                                    range = -2..3;
+                                }
+                                else {
+                                    range = -1..2;
+                                }
+
+                                for tz in range.clone() {
+                                    for tx in range.clone() {
+                                        if tx == 0 && tz == 0 || (tx + (x as i32) < 0 || tz + (z as i32) < 0 || ((tx + (x as i32)) as usize) >= structure.width() * 32 || ((tz + (z as i32)) as usize) >= structure.length() * 32) {
+                                            continue;
+                                        }
+                                        structure.set_block_at((x as i32 + tx) as usize, ty, (z as i32 + tz) as usize, &CHERRY_LEAF);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                else if yy > y_max - 5 {
+                    structure.set_block_at(x, yy, z, &DIRT);
+                }
+                else {
+                    structure.set_block_at(x, yy, z, &STONE);
+                }
+            }
+        }
+    }
+
+    println!("Done in {}ms", now.elapsed().as_millis());
+
+    let mut colliders = physics_updater.borrow_mut().create_colliders(&structure);
+
+    commands.spawn()
+        .insert_bundle(PbrBundle {
+            transform: Transform {
+                translation: Vec3::new(0.0, 0.0, 0.0),
+                ..default()
+            },
+            ..default()
+        })
+        .insert(Velocity::default())
+        .insert(RigidBody::Fixed)
+        .with_children(|parent| {
+            for item in colliders {
+                let rel_pos = structure.chunk_relative_position(item.chunk_coords.x, item.chunk_coords.y, item.chunk_coords.z);
+
+                parent.spawn_bundle(PbrBundle {
+                    transform: Transform::from_xyz(rel_pos.x, rel_pos.y, rel_pos.z),
+                    ..default()
+                }).insert(item.collider);
+            }
+        });
 }
 
 fn main() {
@@ -172,6 +275,8 @@ fn main() {
         .insert_resource(NetworkTick(0))
         .insert_resource(ClientTicks::default())
         .insert_resource(server)
+
+        .add_startup_system(create_structure)
 
         .add_system(server_listen_messages)
         .add_system(server_sync_bodies)

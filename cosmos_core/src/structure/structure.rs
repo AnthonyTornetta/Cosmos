@@ -1,5 +1,6 @@
 use std::cell::RefCell;
 use std::rc::{Rc};
+use std::sync::{Arc, Mutex};
 use bevy_rapier3d::na::{Vector3};
 use bevy_rapier3d::rapier::prelude::RigidBodyPosition;
 use crate::block::block::Block;
@@ -7,15 +8,26 @@ use crate::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
 use crate::structure::structure_listener::StructureListener;
 use crate::utils::array_utils::flatten;
 use crate::utils::vec_math::add_vec;
+use serde::{Serialize, Deserialize};
+use bevy::prelude::{Component, Entity};
 
+#[derive(Serialize, Deserialize, Component)]
 pub struct Structure
 {
-    listeners: Vec<Rc<RefCell<dyn StructureListener>>>,
-    chunks: Vec<Chunk>,
+    #[serde(skip)]
+    listeners: Vec<Arc<Mutex<dyn StructureListener>>>,
 
+    chunks: Vec<Chunk>,
     width: usize,
     height: usize,
     length: usize
+}
+
+pub struct BlockChangedEvent {
+    block: StructureBlock,
+    structure_entity: Entity,
+    old_block: &'static Block,
+    new_block: &'static Block
 }
 
 pub struct StructureBlock {
@@ -96,7 +108,7 @@ impl Structure {
         self.length
     }
 
-    pub fn add_structure_listener(&mut self, listener: Rc<RefCell<dyn StructureListener>>) {
+    pub fn add_structure_listener(&mut self, listener: Arc<Mutex<dyn StructureListener>>) {
         self.listeners.push(listener);
     }
 
