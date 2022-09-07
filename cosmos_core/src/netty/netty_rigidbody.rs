@@ -19,4 +19,19 @@ impl NettyRigidBody {
             rotation: transform.rotation.clone().into()
         }
     }
+
+    pub fn create_transform(&self) -> Transform {
+        Transform {
+            rotation: self.rotation.clone().into(),
+            translation: self.translation.clone().into(),
+            scale: Vec3::new(1.0, 1.0, 1.0)
+        }
+    }
+
+    pub fn create_velocity(&self) -> Velocity {
+        Velocity {
+            angvel: self.body_vel.angvel.clone().into(),
+            linvel: self.body_vel.linvel.clone().into()
+        }
+    }
 }

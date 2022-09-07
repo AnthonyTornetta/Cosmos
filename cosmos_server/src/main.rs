@@ -5,12 +5,14 @@ use std::net::{SocketAddr, UdpSocket};
 use std::time::SystemTime;
 use bevy::prelude::*;
 use bevy::winit::WinitPlugin;
-use bevy_rapier3d::prelude::Velocity;
+use bevy_rapier3d::prelude::{Collider, LockedAxes, RigidBody, Velocity};
 use bevy_rapier3d::rapier::prelude::RigidBodyVelocity;
 use bevy_renet::renet::{RenetConnectionConfig, RenetServer, ServerAuthentication, ServerConfig, ServerEvent};
 use bevy_renet::RenetServerPlugin;
 use cosmos_core::entities::player::Player;
-use cosmos_core::netty::netty::{ClientUnreliableMessages, NettyChannel, server_connection_config, ServerUnreliableMessages};
+use cosmos_core::netty::netty::{ClientUnreliableMessages, NettyChannel, PROTOCOL_ID, server_connection_config, ServerUnreliableMessages};
+use cosmos_core::netty::netty::ClientReliableMessages::PlayerDisconnect;
+use cosmos_core::netty::netty::ServerReliableMessages::{PlayerCreate, PlayerRemove};
 use cosmos_core::netty::netty::ServerUnreliableMessages::{BulkBodies};
 use cosmos_core::netty::netty_rigidbody::NettyRigidBody;
 use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
@@ -23,41 +25,6 @@ pub struct ServerLobby {
 #[derive(Debug, Default)]
 pub struct NetworkTick (u32);
 
-fn handle_messages(mut server: ResMut<RenetServer>)
-{
-    let channel_id = 0;
-
-    for client_id in server.clients_id().into_iter()
-    {
-        while let Some(message) = server.receive_message(client_id, channel_id)
-        {
-
-        }
-    }
-}
-
-fn handle_events_system(mut server: ResMut<RenetServer>, mut server_events: EventReader<ServerEvent>) {
-    while let Some(event) = server.get_event() {
-        for event in server_events.iter() {
-            match event {
-                ServerEvent::ClientConnected(id, user_data) => {
-                    println!("Client {} connected", id);
-                }
-                ServerEvent::ClientDisconnected(id) => {
-                    println!("Client {} disconnected", id);
-                }
-            }
-        }
-    }
-}
-
-fn send_message_system(mut server: ResMut<RenetServer>) {
-    let channel_id = 0;
-    // Send a text message for all clients
-    server.broadcast_message(channel_id, "server message".as_bytes().to_vec());
-}
-
-const PROTOCOL_ID: u64 = 7;
 
 fn server_sync_bodies(
     mut server: ResMut<RenetServer>,
@@ -70,7 +37,6 @@ fn server_sync_bodies(
         bodies.push((entity.clone(), NettyRigidBody::new(&velocity, &transform)));
     }
 
-
     tick.0 += 1;
 
     let mut sync_message = BulkBodies {
@@ -80,6 +46,11 @@ fn server_sync_bodies(
     let message = bincode::serialize(&sync_message).unwrap();
 
     server.broadcast_message(NettyChannel::Unreliable.id(), message);
+}
+
+#[derive(Default)]
+struct ClientTicks {
+    ticks: HashMap<u64, Option<u32>>
 }
 
 fn server_listen_messages(
@@ -102,8 +73,78 @@ fn server_listen_messages(
                             velocity.linvel = body.body_vel.linvel.into();
                             velocity.angvel = body.body_vel.angvel.into();
                         }
-                   }
+                    }
                 }
+            }
+        }
+    }
+}
+
+fn handle_events_system(
+    mut commands: Commands,
+    mut server: ResMut<RenetServer>,
+    mut server_events: EventReader<ServerEvent>,
+    mut lobby: ResMut<ServerLobby>,
+    mut client_ticks: ResMut<ClientTicks>,
+    players: Query<(Entity, &Player, &Transform, &Velocity)>)
+{
+    for event in server_events.iter() {
+        match event {
+            ServerEvent::ClientConnected(id, _user_data) => {
+                println!("Client {} connected", id);
+
+                for (entity, player, transform, velocity) in players.iter() {
+                    let body = NettyRigidBody::new(&velocity, &transform);
+
+                    let msg = bincode::serialize(&PlayerCreate {
+                        entity,
+                        id: player.id,
+                        body,
+                        name: player.name.clone(),
+                    }).unwrap();
+
+                    server.send_message(*id, NettyChannel::Reliable.id(), msg);
+                }
+
+                let name = "epic nameo";
+                let player = Player::new(String::from(name), *id);
+                let transform = Transform::from_xyz(0.0, 60.0, 0.0);
+                let velocity = Velocity::default();
+
+                let netty_body = NettyRigidBody::new(&velocity, &transform);
+
+                let mut player_entity = commands.spawn();
+                player_entity.insert(transform);
+                player_entity.insert(LockedAxes::ROTATION_LOCKED);
+                player_entity.insert(RigidBody::Dynamic);
+                player_entity.insert(velocity);
+                player_entity.insert(Collider::capsule_y(0.5, 0.25));
+                player_entity.insert(player);
+
+                lobby.players.insert(*id, player_entity.id());
+
+                let msg = bincode::serialize(&PlayerCreate {
+                    entity: player_entity.id(),
+                    id: *id,
+                    name: String::from(name),
+                    body: netty_body
+                }).unwrap();
+
+                server.broadcast_message(NettyChannel::Reliable.id(), msg);
+            }
+            ServerEvent::ClientDisconnected(id) => {
+                println!("Client {} disconnected", id);
+
+                client_ticks.ticks.remove(id);
+                if let Some(player_entity) = lobby.players.remove(id) {
+                    commands.entity(player_entity).despawn();
+                }
+
+                let message = bincode::serialize(&PlayerRemove {
+                    id: *id
+                }).unwrap();
+
+                server.broadcast_message(NettyChannel::Reliable.id(), message);
             }
         }
     }
@@ -129,10 +170,12 @@ fn main() {
 
         .insert_resource(ServerLobby::default())
         .insert_resource(NetworkTick(0))
+        .insert_resource(ClientTicks::default())
         .insert_resource(server)
 
-        .add_system(handle_messages)
+        .add_system(server_listen_messages)
+        .add_system(server_sync_bodies)
         .add_system(handle_events_system)
-        .add_system(send_message_system)
+
         .run();
 }

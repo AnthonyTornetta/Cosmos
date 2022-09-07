@@ -11,6 +11,8 @@ pub enum NettyChannel {
     Unreliable,
 }
 
+pub const PROTOCOL_ID: u64 = 7;
+
 #[derive(Debug, Serialize, Deserialize, Component)]
 pub enum ServerReliableMessages
 {
@@ -18,6 +20,7 @@ pub enum ServerReliableMessages
     PlayerRemove { id: u64 },
     StructureCreate { entity: Entity, id: u64, body: NettyRigidBody, serialized_structure: Vec<u8> },
     StructureRemove { id: u64 },
+    MOTD { motd: String },
 }
 
 #[derive(Debug, Serialize, Deserialize, Component)]
