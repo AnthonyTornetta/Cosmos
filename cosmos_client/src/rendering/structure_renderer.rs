@@ -4,7 +4,6 @@ use bevy::render::mesh::{Indices, PrimitiveTopology};
 use cosmos_core::block::block::{Block, BlockFace};
 use cosmos_core::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
 use cosmos_core::structure::structure::{Structure, StructureBlock};
-use cosmos_core::structure::structure_listener::StructureListener;
 use cosmos_core::utils::array_utils::flatten;
 use bevy_rapier3d::na::Vector3;
 
@@ -141,12 +140,12 @@ impl StructureRenderer {
         meshes
     }
 }
-
-impl StructureListener for StructureRenderer {
-    fn notify_block_update(&mut self, _structure: &Structure, structure_block: &StructureBlock, _new_block: &Block) {
-        self.changes.insert(Vector3::new(structure_block.chunk_coord_x(), structure_block.chunk_coord_y(), structure_block.chunk_coord_z()));
-    }
-}
+//
+// impl StructureListener for StructureRenderer {
+//     fn notify_block_update(&mut self, _structure: &Structure, structure_block: &StructureBlock, _new_block: &Block) {
+//         self.changes.insert(Vector3::new(structure_block.chunk_coord_x(), structure_block.chunk_coord_y(), structure_block.chunk_coord_z()));
+//     }
+// }
 
 pub struct ChunkRenderer
 {

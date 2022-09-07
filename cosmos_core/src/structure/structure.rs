@@ -5,17 +5,18 @@ use bevy_rapier3d::na::{Vector3};
 use bevy_rapier3d::rapier::prelude::RigidBodyPosition;
 use crate::block::block::Block;
 use crate::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
-use crate::structure::structure_listener::StructureListener;
 use crate::utils::array_utils::flatten;
 use crate::utils::vec_math::add_vec;
 use serde::{Serialize, Deserialize};
-use bevy::prelude::{Component, Entity};
+use bevy::prelude::{Commands, Component, Entity, EventWriter};
 
 #[derive(Serialize, Deserialize, Component)]
 pub struct Structure
 {
     #[serde(skip)]
-    listeners: Vec<Arc<Mutex<dyn StructureListener>>>,
+    chunk_entities: Vec<Option<Entity>>,
+    #[serde(skip)]
+    self_entity: Option<Entity>,
 
     chunks: Vec<Chunk>,
     width: usize,
@@ -24,10 +25,10 @@ pub struct Structure
 }
 
 pub struct BlockChangedEvent {
-    block: StructureBlock,
-    structure_entity: Entity,
-    old_block: &'static Block,
-    new_block: &'static Block
+    pub block: StructureBlock,
+    pub structure_entity: Entity,
+    pub old_block: &'static Block,
+    pub new_block: &'static Block
 }
 
 pub struct StructureBlock {
@@ -72,7 +73,7 @@ impl StructureBlock {
 }
 
 impl Structure {
-    pub fn new(width: usize, height: usize, length: usize) -> Self {
+    pub fn new(width: usize, height: usize, length: usize, self_entity: Entity) -> Self {
         let mut chunks = Vec::with_capacity(width * height * length);
 
         for z in 0..length
@@ -86,9 +87,13 @@ impl Structure {
             }
         }
 
+        let mut chunk_entities = Vec::with_capacity(chunks.len());
+        chunk_entities.fill(None);
+
         Self {
+            chunk_entities,
+            self_entity: Some(self_entity),
             chunks,
-            listeners: Vec::new(),
             width, height, length
         }
     }
@@ -108,8 +113,17 @@ impl Structure {
         self.length
     }
 
-    pub fn add_structure_listener(&mut self, listener: Arc<Mutex<dyn StructureListener>>) {
-        self.listeners.push(listener);
+    pub fn chunk_entity(&self, cx: usize, cy: usize, cz: usize) -> Entity {
+        // If this fails, that means the chunk entity ids were not set before being used
+        self.chunk_entities[flatten(cx, cy, cz, self.width, self.height)].unwrap().clone()
+    }
+
+    pub fn set_chunk_entity(&mut self, cx: usize, cy: usize, cz: usize, entity: Entity) {
+        self.chunk_entities[flatten(cx, cy, cz, self.width, self.height)] = Some(entity);
+    }
+
+    pub fn set_entity(&mut self, entity: Entity) {
+        self.self_entity = Some(entity);
     }
 
     /// (0, 0, 0) => chunk @ 0, 0, 0\
@@ -138,15 +152,22 @@ impl Structure {
             .block_at(x % CHUNK_DIMENSIONS, y % CHUNK_DIMENSIONS, z % CHUNK_DIMENSIONS)
     }
 
-    pub fn set_block_at(&mut self, x: usize, y: usize, z: usize, block: &'static Block) {
+    pub fn set_block_at(&mut self, x: usize, y: usize, z: usize, block: &'static Block,
+        mut event_writer: EventWriter<BlockChangedEvent>) {
         if self.block_at(x, y, z) == block {
             return;
         }
 
-        let struct_block = StructureBlock::new(x, y, z);
-
-        for listener in &self.listeners {
-            listener.borrow_mut().notify_block_update(self, &struct_block, block);
+        // for listener in &self.listeners {
+        //     listener.borrow_mut().notify_block_update(self, &struct_block, block);
+        // }
+        if self.self_entity.is_some() {
+            event_writer.send(BlockChangedEvent {
+                new_block: block,
+                old_block: self.block_at(x, y, z),
+                structure_entity: self.self_entity.unwrap().clone(),
+                block: StructureBlock::new(x, y, z)
+            });
         }
 
         self.mut_chunk_at_block_coordinates(x, y, z)

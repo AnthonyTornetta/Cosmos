@@ -1,25 +1,28 @@
+use bevy::prelude::{Children, Commands, Entity, EventReader, EventWriter, Query, Component};
 use bevy::utils::HashSet;
 use bevy_rapier3d::math::Vect;
 use bevy_rapier3d::na::Vector3;
 use bevy_rapier3d::prelude::{Collider, Rot};
 use crate::block::block::Block;
 use crate::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
-use crate::structure::structure::{Structure, StructureBlock};
-use crate::structure::structure_listener::StructureListener;
+use crate::structure::structure::{BlockChangedEvent, Structure, StructureBlock};
 
 pub struct ChunkPhysicsModel {
     pub collider: Collider,
     pub chunk_coords: Vector3<usize>
 }
 
+#[derive(Component)]
 pub struct StructurePhysics {
-    needs_changed: HashSet<Vector3<usize>>
+    needs_changed: HashSet<Vector3<usize>>,
+    entity: Entity
 }
 
 impl StructurePhysics {
-    pub fn new(structure: &Structure) -> Self {
+    pub fn new(structure: &Structure, entity: Entity) -> Self {
         let mut me = Self {
-            needs_changed: HashSet::with_capacity(structure.width() * structure.height() * structure.length())
+            needs_changed: HashSet::with_capacity(structure.width() * structure.height() * structure.length()),
+            entity
         };
 
         for z in 0..structure.length() {
@@ -92,8 +95,40 @@ fn generate_chunk_collider(chunk: &Chunk) -> Collider {
     Collider::compound(colliders)
 }
 
-impl StructureListener for StructurePhysics {
-    fn notify_block_update(&mut self, _structure: &Structure, structure_block: &StructureBlock, _new_block: &Block) {
-        self.needs_changed.insert(Vector3::new(structure_block.chunk_coord_x(), structure_block.chunk_coord_y(), structure_block.chunk_coord_z()));
+struct NeedsNewPhysicsEvent {
+    structure_entity: Entity,
+}
+
+fn listen_for_new_physics_evnet(
+    mut commands: Commands,
+    mut event: EventReader<NeedsNewPhysicsEvent>,
+    mut query: Query<(&Structure, &mut StructurePhysics)>){
+    for ev in event.iter() {
+        let (structure, mut physics) = query.get_mut(ev.structure_entity).unwrap();
+
+        let colliders = physics.create_colliders(structure);
+
+        for chunk_collider in colliders {
+            let coords = &chunk_collider.chunk_coords;
+            let mut entity_commands = commands.entity(structure.chunk_entity(coords.x, coords.y, coords.z));
+            entity_commands.remove::<Collider>();
+            entity_commands.insert(chunk_collider.collider);
+        }
+    }
+}
+
+fn listen_for_structure_event(
+    mut event: EventReader<BlockChangedEvent>,
+    mut query: Query<&mut StructurePhysics>,
+    mut event_writer: EventWriter<NeedsNewPhysicsEvent>)
+{
+    for ev in event.iter() {
+        let mut structure_physics = query.get_mut(ev.structure_entity).unwrap();
+
+        structure_physics.needs_changed.insert(Vector3::new(ev.block.chunk_coord_x(), ev.block.chunk_coord_y(), ev.block.chunk_coord_z()));
+
+        event_writer.send(NeedsNewPhysicsEvent {
+            structure_entity: ev.structure_entity.clone()
+        });
     }
 }

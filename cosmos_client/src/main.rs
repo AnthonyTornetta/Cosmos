@@ -18,12 +18,12 @@ use bevy_rapier3d::plugin::{RapierConfiguration, RapierPhysicsPlugin};
 use bevy_rapier3d::prelude::{Collider, LockedAxes, RigidBody, Vect, Velocity};
 use bevy_renet::renet::{ClientAuthentication, RenetClient};
 use bevy_renet::RenetClientPlugin;
-use cosmos_core::block::blocks::{DIRT, CHERRY_LEAF, STONE, CHERRY_LOG, GRASS};
+use cosmos_core::block::blocks::{DIRT, CHERRY_LEAF, STONE, CHERRY_LOG, GRASS, AIR};
 use cosmos_core::entities::player::Player;
 use cosmos_core::netty::netty::{client_connection_config, NettyChannel, ServerReliableMessages, ServerUnreliableMessages};
 use cosmos_core::netty::netty::ClientUnreliableMessages::PlayerBody;
 use cosmos_core::netty::netty_rigidbody::NettyRigidBody;
-use cosmos_core::structure::structure::Structure;
+use cosmos_core::structure::structure::{BlockChangedEvent, Structure, StructureBlock};
 use crate::rendering::structure_renderer::{StructureRenderer};
 use crate::rendering::uv_mapper::UVMapper;
 use cosmos_core::physics::structure_physics::StructurePhysics;
@@ -477,6 +477,7 @@ fn client_sync_players(
     mut network_mapping: ResMut<NetworkMapping>,
     mut most_recent_tick: ResMut<MostRecentTick>,
     main_atlas: Res<MainAtlas>,
+    mut block_event_writer: EventWriter<BlockChangedEvent>,
 
     query_player: Query<&Player>,
     mut query_body: Query<(&mut Transform, &mut Velocity, Option<&LocalPlayer>)>
@@ -577,35 +578,30 @@ fn client_sync_players(
                 }
             }
             ServerReliableMessages::StructureCreate {entity: server_entity, body, serialized_structure} => {
+                let mut entity = commands.spawn();
                 let mut structure: Structure = bincode::deserialize(&serialized_structure).unwrap();
-                //Structure::new(1, 1, 1);
+                structure.set_entity(entity.id());
 
-                let renderer = Rc::new(RefCell::new(StructureRenderer::new(&structure)));
-                let physics_updater = Rc::new(RefCell::new(StructurePhysics::new(&structure)));
-
-                structure.add_structure_listener(renderer.clone());
-                structure.add_structure_listener(physics_updater.clone());
+                // let renderer = StructureRenderer::new(&structure);
+                let mut physics_updater = StructurePhysics::new(&structure, entity.id());
 
                 let mut now = Instant::now();
 
-                renderer.borrow_mut().render(&structure, &main_atlas.uv_mapper);
+                // renderer.borrow_mut().render(&structure, &main_atlas.uv_mapper);
 
-                println!("Made mesh data in {}ms", now.elapsed().as_millis());
+                // println!("Made mesh data in {}ms", now.elapsed().as_millis());
+                //
+                // now = Instant::now();
+                //
+                // let renders = renderer.borrow_mut().create_meshes();
+                //
+                // println!("Meshes converted to bevy meshes in {}ms", now.elapsed().as_millis());
 
                 now = Instant::now();
-
-                let renders = renderer.borrow_mut().create_meshes();
-
-                println!("Meshes converted to bevy meshes in {}ms", now.elapsed().as_millis());
-
-                now = Instant::now();
-
-                let mut colliders = physics_updater.borrow_mut().create_colliders(&structure);
 
                 println!("Phyiscs done in {}ms", now.elapsed().as_millis());
 
-                let entity = commands.spawn()
-                    .insert_bundle(PbrBundle {
+                entity.insert_bundle(PbrBundle {
                         transform: Transform {
                             translation: Vec3::new(0.0, 0.0, 0.0),
                             ..default()
@@ -615,28 +611,30 @@ fn client_sync_players(
                     .insert(RigidBody::Fixed)
                     .insert(Velocity::default())
                     .with_children(|parent| {
-                        for item in renders {
-                            let coords = Vector3::new(item.x, item.y, item.z);
+                        for z in 0..structure.length() {
+                            for y in 0..structure.height() {
+                                for x in 0..structure.width() {
+                                    let mut entity = parent.spawn().id();
 
-                            let rel_pos = structure.chunk_relative_position(item.x, item.y, item.z);
-
-                            let mut child = parent.spawn_bundle(PbrBundle {
-                                mesh: meshes.add(item.mesh),
-                                material: main_atlas.material.clone(),
-                                transform: Transform::from_xyz(rel_pos.x, rel_pos.y, rel_pos.z),
-                                ..default()
-                            });
-
-                            for i in 0..colliders.len() {
-                                if colliders[i].chunk_coords == coords {
-                                    child.insert(colliders.swap_remove(i).collider);
-                                    break;
+                                    structure.set_chunk_entity(x, y, z, entity);
                                 }
                             }
                         }
-                    }).id();
+                    })
+                    .insert(physics_updater);
 
-                network_mapping.0.insert(server_entity, entity);
+                let block = structure.block_at(0, 0, 0);
+                entity.insert(structure);
+
+                // TODO: Replace this with a better event that makes it clear it's a new structure
+                block_event_writer.send(BlockChangedEvent {
+                    block: StructureBlock::new(0, 0, 0),
+                    structure_entity: entity.id(),
+                    old_block: &AIR,
+                    new_block: block
+                });
+
+                network_mapping.0.insert(server_entity, entity.id());
             }
             ServerReliableMessages::StructureRemove {entity: server_entity} => {
 
