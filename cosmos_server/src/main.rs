@@ -17,7 +17,7 @@ use cosmos_core::netty::netty::{ClientUnreliableMessages, NettyChannel, PROTOCOL
 use cosmos_core::netty::netty::ServerReliableMessages::{MOTD, PlayerCreate, PlayerRemove, StructureCreate};
 use cosmos_core::netty::netty::ServerUnreliableMessages::{BulkBodies};
 use cosmos_core::netty::netty_rigidbody::NettyRigidBody;
-use cosmos_core::physics::structure_physics::StructurePhysics;
+use cosmos_core::physics::structure_physics::{listen_for_new_physics_evnet, listen_for_structure_event, NeedsNewPhysicsEvent, StructurePhysics};
 use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
 use cosmos_core::structure::chunk::CHUNK_DIMENSIONS;
 use cosmos_core::structure::structure::{BlockChangedEvent, Structure, StructureBlock};
@@ -254,17 +254,23 @@ fn create_structure(mut commands: Commands,
         })
         .insert(physics_updater);
 
-    let block = structure.block_at(0, 0, 0);
     entity_cmd.insert(structure);
-
-    // TODO: Replace this with a better event that makes it clear it's a new structure
-    event_writer.send(BlockChangedEvent {
-        block: StructureBlock::new(0, 0, 0),
-        structure_entity: entity_cmd.id(),
-        old_block: &AIR,
-        new_block: block
-    });
 }
+
+// fn lol(mut event_writer: EventWriter<BlockChangedEvent>,
+//     query: Query<Entity, With<Structure>>)
+// {
+//     for e in query.iter() {
+//         println!("SENT!");
+//         // TODO: Replace this with a better event that makes it clear it's a new structure
+//         event_writer.send(BlockChangedEvent {
+//             block: StructureBlock::new(0, 0, 0),
+//             structure_entity: e.clone(),
+//             old_block: &AIR,
+//             new_block: &STONE
+//         });
+//     }
+// }
 
 fn main() {
 
@@ -289,12 +295,15 @@ fn main() {
         .insert_resource(ClientTicks::default())
         .insert_resource(server)
         .add_event::<BlockChangedEvent>()
-
+        .add_event::<NeedsNewPhysicsEvent>()
         .add_startup_system(create_structure)
 
         .add_system(server_listen_messages)
         .add_system(server_sync_bodies)
         .add_system(handle_events_system)
 
+        .add_system(listen_for_structure_event)
+        .add_system(listen_for_new_physics_evnet)
+        // .add_system(lol.before(listen_for_new_physics_evnet))
         .run();
 }

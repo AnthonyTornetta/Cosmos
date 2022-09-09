@@ -583,25 +583,8 @@ fn client_sync_players(
                 let mut structure: Structure = bincode::deserialize(&serialized_structure).unwrap();
                 structure.set_entity(entity.id());
 
-                // let renderer = StructureRenderer::new(&structure);
                 let mut physics_updater = StructurePhysics::new(&structure, entity.id());
                 let mut structure_renderer = StructureRenderer::new(&structure);
-
-                let mut now = Instant::now();
-
-                // renderer.borrow_mut().render(&structure, &main_atlas.uv_mapper);
-
-                // println!("Made mesh data in {}ms", now.elapsed().as_millis());
-                //
-                // now = Instant::now();
-                //
-                // let renders = renderer.borrow_mut().create_meshes();
-                //
-                // println!("Meshes converted to bevy meshes in {}ms", now.elapsed().as_millis());
-
-                now = Instant::now();
-
-                println!("Phyiscs done in {}ms", now.elapsed().as_millis());
 
                 entity.insert_bundle(PbrBundle {
                         transform: Transform {
@@ -623,7 +606,8 @@ fn client_sync_players(
                             }
                         }
                     })
-                    .insert(physics_updater);
+                    .insert(physics_updater)
+                    .insert(structure_renderer);
 
                 let block = structure.block_at(0, 0, 0);
                 entity.insert(structure);

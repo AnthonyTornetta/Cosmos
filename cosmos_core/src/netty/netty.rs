@@ -55,6 +55,8 @@ impl NettyChannel {
             ReliableChannelConfig {
                 channel_id: Self::Reliable.id(),
                 message_resend_time: Duration::from_millis(200),
+                max_message_size: 6000,
+                packet_budget: 7000,
                 ..default()
             }.into(),
             UnreliableChannelConfig {

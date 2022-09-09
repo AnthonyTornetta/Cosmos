@@ -88,10 +88,11 @@ impl Structure {
             }
         }
 
-        // let mut chunk_entities = Vec::with_capacity(chunks.len());
-        // chunk_entities.fill(None);
+        let mut chunk_entities = Vec::with_capacity(chunks.len());
 
-        let chunk_entities = vec![None; chunks.len()];
+        for _ in 0..(length * width * height) {
+            chunk_entities.push(None);
+        }
 
         Self {
             chunk_entities,
@@ -122,6 +123,11 @@ impl Structure {
     }
 
     pub fn set_chunk_entity(&mut self, cx: usize, cy: usize, cz: usize, entity: Entity) {
+        if self.chunk_entities.len() == 0 {
+            for _ in 0..(self.width * self.height * self.length) {
+                self.chunk_entities.push(None);
+            }
+        }
         self.chunk_entities[flatten(cx, cy, cz, self.width, self.height)] = Some(entity);
     }
 

@@ -68,35 +68,25 @@ impl Serialize for Chunk {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
         let mut chunk_data: Vec<u16> = Vec::new();
 
-        let mut n: u16 = 0;
-        let mut last_block: u16 = self.block_at(0, 0, 0).id();
+        let mut n: u16 = 1;
+        let mut last_block: u16 = self.blocks[0];
 
-        let mut ran = false;
+        for i in 1..N_BLOCKS {
+            let here = self.blocks[i];
+            if here != last_block {
+                chunk_data.push(n);
+                chunk_data.push(last_block);
 
-        for z in 0..CHUNK_DIMENSIONS {
-            for y in 0..CHUNK_DIMENSIONS {
-                for x in 0..CHUNK_DIMENSIONS {
-                    let here = self.block_at(x, y, z).id();
-                    match ran {
-                        true => {
-                            if here != last_block {
-                                chunk_data.push(n);
-                                chunk_data.push(last_block);
-
-                                last_block = here;
-                                n = 1;
-                            }
-                            else {
-                                n += 1;
-                            }
-                        }
-                        false => {
-                            n += 1; // we start with first block
-                            ran = true;
-                        }
-                    }
-                }
+                last_block = here;
+                n = 1;
+            } else {
+                n += 1;
             }
+        }
+
+        if n != 0 {
+            chunk_data.push(n);
+            chunk_data.push(last_block);
         }
 
         let mut s = serializer.serialize_struct("Chunk", 4).unwrap();
@@ -148,17 +138,28 @@ struct ChunkVisitor;
 fn vec_into_chunk_array(blocks: &Vec<u16>) -> [u16; N_BLOCKS] {
     let mut blocks_arr = [0; N_BLOCKS];
 
-    let mut i = 0;
     let mut blocks_i = 1;
     let mut n = blocks[0];
 
-    for _ in 0..N_BLOCKS {
+    let mut xi = 0;
+    let mut sum = 0;
+    for x in blocks {
+        if xi % 2 == 0 {
+            sum += x;
+        }
+        print!("{} ", x);
+        xi += 1;
+    }
+    println!("");
+
+    println!("{} -> {}", blocks.len() / 2, sum);
+
+    for i in 0..N_BLOCKS {
         if n == 0 {
             n = blocks[blocks_i + 1];
             blocks_i += 2;
         }
         blocks_arr[i] = blocks[blocks_i].clone();
-        i += 1;
         n -= 1;
     }
 
