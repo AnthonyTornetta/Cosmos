@@ -13,6 +13,7 @@ use std::collections::HashMap;
 use std::f32::consts::PI;
 use std::net::UdpSocket;
 use bevy::render::camera::{Projection, RenderTarget};
+use bevy::ui::FocusPolicy::Block;
 use bevy_rapier3d::na::{clamp, Vector3};
 use bevy_rapier3d::plugin::{RapierConfiguration, RapierPhysicsPlugin};
 use bevy_rapier3d::prelude::{Collider, LockedAxes, RigidBody, Vect, Velocity};
@@ -584,6 +585,7 @@ fn client_sync_players(
 
                 // let renderer = StructureRenderer::new(&structure);
                 let mut physics_updater = StructurePhysics::new(&structure, entity.id());
+                let mut structure_renderer = StructureRenderer::new(&structure);
 
                 let mut now = Instant::now();
 
@@ -683,6 +685,7 @@ fn main() {
         .add_plugins(ClientPluginGroup::default())
         .add_plugin(RenetClientPlugin{})
         .insert_resource(CosmosInputHandler::new())
+        .add_event::<BlockChangedEvent>()
 
         // .add_plugin(RapierDebugRenderPlugin::default())
         .add_state(GameState::Loading)

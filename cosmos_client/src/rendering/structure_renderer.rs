@@ -1,14 +1,15 @@
 use std::collections::HashSet;
-use bevy::prelude::{Mesh};
+use bevy::prelude::{EventReader, Mesh, Component};
 use bevy::render::mesh::{Indices, PrimitiveTopology};
 use cosmos_core::block::block::{Block, BlockFace};
 use cosmos_core::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
-use cosmos_core::structure::structure::{Structure, StructureBlock};
+use cosmos_core::structure::structure::{BlockChangedEvent, Structure, StructureBlock};
 use cosmos_core::utils::array_utils::flatten;
 use bevy_rapier3d::na::Vector3;
 
-use crate::UVMapper;
+use crate::{Entity, EventWriter, Query, UVMapper};
 
+#[derive(Component)]
 pub struct StructureRenderer
 {
     width: usize,
@@ -146,6 +147,20 @@ impl StructureRenderer {
 //         self.changes.insert(Vector3::new(structure_block.chunk_coord_x(), structure_block.chunk_coord_y(), structure_block.chunk_coord_z()));
 //     }
 // }
+
+struct NeedsNewRenderingEvent(Entity);
+
+fn monitor_block_updates_system(mut event: EventReader<BlockChangedEvent>,
+                                mut query: Query<&mut StructureRenderer>,
+                                mut event_writer: EventWriter<NeedsNewRenderingEvent>) {
+    for ev in event.iter() {
+        let mut structure_renderer = query.get_mut(ev.structure_entity).unwrap();
+
+        structure_renderer.changes.insert(Vector3::new(ev.block.chunk_coord_x(), ev.block.chunk_coord_y(), ev.block.chunk_coord_z()));
+
+
+    }
+}
 
 pub struct ChunkRenderer
 {

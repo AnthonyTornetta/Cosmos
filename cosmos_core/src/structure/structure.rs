@@ -7,8 +7,9 @@ use crate::block::block::Block;
 use crate::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
 use crate::utils::array_utils::flatten;
 use crate::utils::vec_math::add_vec;
-use serde::{Serialize, Deserialize};
+use serde::{Serialize, Deserialize, Serializer};
 use bevy::prelude::{Commands, Component, Entity, EventWriter};
+use serde::ser::SerializeStruct;
 
 #[derive(Serialize, Deserialize, Component)]
 pub struct Structure
@@ -87,8 +88,10 @@ impl Structure {
             }
         }
 
-        let mut chunk_entities = Vec::with_capacity(chunks.len());
-        chunk_entities.fill(None);
+        // let mut chunk_entities = Vec::with_capacity(chunks.len());
+        // chunk_entities.fill(None);
+
+        let chunk_entities = vec![None; chunks.len()];
 
         Self {
             chunk_entities,
@@ -153,7 +156,7 @@ impl Structure {
     }
 
     pub fn set_block_at(&mut self, x: usize, y: usize, z: usize, block: &'static Block,
-        mut event_writer: EventWriter<BlockChangedEvent>) {
+        mut event_writer: &mut EventWriter<BlockChangedEvent>) {
         if self.block_at(x, y, z) == block {
             return;
         }

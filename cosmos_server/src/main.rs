@@ -11,7 +11,7 @@ use bevy_rapier3d::na::Vector3;
 use bevy_rapier3d::prelude::{Collider, LockedAxes, RigidBody, Velocity};
 use bevy_renet::renet::{RenetServer, ServerAuthentication, ServerConfig, ServerEvent};
 use bevy_renet::RenetServerPlugin;
-use cosmos_core::block::blocks::{CHERRY_LEAF, CHERRY_LOG, DIRT, GRASS, STONE};
+use cosmos_core::block::blocks::{AIR, CHERRY_LEAF, CHERRY_LOG, DIRT, GRASS, STONE};
 use cosmos_core::entities::player::Player;
 use cosmos_core::netty::netty::{ClientUnreliableMessages, NettyChannel, PROTOCOL_ID, server_connection_config};
 use cosmos_core::netty::netty::ServerReliableMessages::{MOTD, PlayerCreate, PlayerRemove, StructureCreate};
@@ -20,7 +20,7 @@ use cosmos_core::netty::netty_rigidbody::NettyRigidBody;
 use cosmos_core::physics::structure_physics::StructurePhysics;
 use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
 use cosmos_core::structure::chunk::CHUNK_DIMENSIONS;
-use cosmos_core::structure::structure::Structure;
+use cosmos_core::structure::structure::{BlockChangedEvent, Structure, StructureBlock};
 use rand::Rng;
 
 #[derive(Debug, Default)]
@@ -142,11 +142,12 @@ fn handle_events_system(
                 server.broadcast_message(NettyChannel::Reliable.id(), msg);
 
                 for (entity, structure, transform, velocity) in structures_query.iter() {
-                    server.send_message(*id, NettyChannel::Reliable.id(), StructureCreate {
+                    server.send_message(*id, NettyChannel::Reliable.id(),
+                                        bincode::serialize(&StructureCreate {
                         entity: entity.clone(),
                         body: NettyRigidBody::new(velocity, transform),
                         serialized_structure: bincode::serialize(structure).unwrap()
-                    });
+                    }).unwrap());
                 }
             }
             ServerEvent::ClientDisconnected(id) => {
@@ -167,11 +168,13 @@ fn handle_events_system(
     }
 }
 
-fn create_structure(mut commands: Commands) {
-    let mut structure = Structure::new(1, 1, 1);
+fn create_structure(mut commands: Commands,
+    mut event_writer: EventWriter<BlockChangedEvent>) {
+    let mut entity_cmd = commands.spawn();
 
-    let physics_updater = Rc::new(RefCell::new(StructurePhysics::new(&structure)));
-    structure.add_structure_listener(physics_updater.clone());
+    let mut structure = Structure::new(1, 1, 1, entity_cmd.id());
+
+    let physics_updater = StructurePhysics::new(&structure, entity_cmd.id());
 
     let mut now = Instant::now();
     for z in 0..CHUNK_DIMENSIONS * structure.length() {
@@ -181,7 +184,7 @@ fn create_structure(mut commands: Commands) {
             let y_max = y.ceil() as usize;
             for yy in 0..y_max {
                 if yy == y_max - 1 {
-                    structure.set_block_at(x, yy, z, &GRASS);
+                    structure.set_block_at(x, yy, z, &GRASS, &mut event_writer);
 
                     let mut rng = rand::thread_rng();
 
@@ -190,10 +193,10 @@ fn create_structure(mut commands: Commands) {
                     if n1 < 1 {
                         for ty in (yy+1)..(yy + 7) {
                             if ty != yy + 6 {
-                                structure.set_block_at(x, ty, z, &CHERRY_LOG);
+                                structure.set_block_at(x, ty, z, &CHERRY_LOG, &mut event_writer);
                             }
                             else {
-                                structure.set_block_at(x, ty, z, &CHERRY_LEAF);
+                                structure.set_block_at(x, ty, z, &CHERRY_LEAF, &mut event_writer);
                             }
 
                             if ty > yy + 2 {
@@ -210,7 +213,7 @@ fn create_structure(mut commands: Commands) {
                                         if tx == 0 && tz == 0 || (tx + (x as i32) < 0 || tz + (z as i32) < 0 || ((tx + (x as i32)) as usize) >= structure.width() * 32 || ((tz + (z as i32)) as usize) >= structure.length() * 32) {
                                             continue;
                                         }
-                                        structure.set_block_at((x as i32 + tx) as usize, ty, (z as i32 + tz) as usize, &CHERRY_LEAF);
+                                        structure.set_block_at((x as i32 + tx) as usize, ty, (z as i32 + tz) as usize, &CHERRY_LEAF, &mut event_writer);
                                     }
                                 }
                             }
@@ -218,10 +221,10 @@ fn create_structure(mut commands: Commands) {
                     }
                 }
                 else if yy > y_max - 5 {
-                    structure.set_block_at(x, yy, z, &DIRT);
+                    structure.set_block_at(x, yy, z, &DIRT, &mut event_writer);
                 }
                 else {
-                    structure.set_block_at(x, yy, z, &STONE);
+                    structure.set_block_at(x, yy, z, &STONE, &mut event_writer);
                 }
             }
         }
@@ -229,28 +232,38 @@ fn create_structure(mut commands: Commands) {
 
     println!("Done in {}ms", now.elapsed().as_millis());
 
-    let mut colliders = physics_updater.borrow_mut().create_colliders(&structure);
-
-    commands.spawn()
-        .insert_bundle(PbrBundle {
-            transform: Transform {
-                translation: Vec3::new(0.0, 0.0, 0.0),
-                ..default()
-            },
+    entity_cmd.insert_bundle(PbrBundle {
+        transform: Transform {
+            translation: Vec3::new(0.0, 0.0, 0.0),
             ..default()
-        })
-        .insert(Velocity::default())
+        },
+        ..default()
+    })
         .insert(RigidBody::Fixed)
+        .insert(Velocity::default())
         .with_children(|parent| {
-            for item in colliders {
-                let rel_pos = structure.chunk_relative_position(item.chunk_coords.x, item.chunk_coords.y, item.chunk_coords.z);
+            for z in 0..structure.length() {
+                for y in 0..structure.height() {
+                    for x in 0..structure.width() {
+                        let mut entity = parent.spawn().id();
 
-                parent.spawn_bundle(PbrBundle {
-                    transform: Transform::from_xyz(rel_pos.x, rel_pos.y, rel_pos.z),
-                    ..default()
-                }).insert(item.collider);
+                        structure.set_chunk_entity(x, y, z, entity);
+                    }
+                }
             }
-        });
+        })
+        .insert(physics_updater);
+
+    let block = structure.block_at(0, 0, 0);
+    entity_cmd.insert(structure);
+
+    // TODO: Replace this with a better event that makes it clear it's a new structure
+    event_writer.send(BlockChangedEvent {
+        block: StructureBlock::new(0, 0, 0),
+        structure_entity: entity_cmd.id(),
+        old_block: &AIR,
+        new_block: block
+    });
 }
 
 fn main() {
@@ -275,6 +288,7 @@ fn main() {
         .insert_resource(NetworkTick(0))
         .insert_resource(ClientTicks::default())
         .insert_resource(server)
+        .add_event::<BlockChangedEvent>()
 
         .add_startup_system(create_structure)
 
