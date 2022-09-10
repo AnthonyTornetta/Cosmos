@@ -9,6 +9,7 @@ use crate::structure::structure::Structure;
 pub enum NettyChannel {
     Reliable,
     Unreliable,
+    HugeReliable,
 }
 
 pub const PROTOCOL_ID: u64 = 7;
@@ -18,8 +19,9 @@ pub enum ServerReliableMessages
 {
     PlayerCreate { entity: Entity, name: String, id: u64, body: NettyRigidBody },
     PlayerRemove { id: u64 },
-    StructureCreate { entity: Entity, body: NettyRigidBody, serialized_structure: Vec<u8> },
     StructureRemove { entity: Entity },
+    ChunkData { structure_entity: Entity, serialized_chunk: Vec<u8> },
+    StructureCreate { entity: Entity, body: NettyRigidBody, width: usize, height: usize, length: usize },
     MOTD { motd: String },
 }
 
@@ -47,6 +49,7 @@ impl NettyChannel {
         match self {
             Self::Reliable => 0,
             Self::Unreliable => 1,
+            Self::HugeReliable => 2,
         }
     }
 
@@ -61,6 +64,13 @@ impl NettyChannel {
             }.into(),
             UnreliableChannelConfig {
                 channel_id: Self::Unreliable.id(),
+                ..default()
+            }.into(),
+            ReliableChannelConfig {
+                channel_id: Self::HugeReliable.id(),
+                message_resend_time: Duration::from_millis(500),
+                max_message_size: 6000,
+                packet_budget: 7000,
                 ..default()
             }.into(),
         ]

@@ -3,7 +3,7 @@ pub mod plugin;
 
 use std::cell::RefCell;
 use std::rc::Rc;
-use cosmos_core::structure::chunk::CHUNK_DIMENSIONS;
+use cosmos_core::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
 
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use bevy::prelude::*;
@@ -24,7 +24,7 @@ use cosmos_core::entities::player::Player;
 use cosmos_core::netty::netty::{client_connection_config, NettyChannel, ServerReliableMessages, ServerUnreliableMessages};
 use cosmos_core::netty::netty::ClientUnreliableMessages::PlayerBody;
 use cosmos_core::netty::netty_rigidbody::NettyRigidBody;
-use cosmos_core::structure::structure::{BlockChangedEvent, Structure, StructureBlock, StructureCreated};
+use cosmos_core::structure::structure::{BlockChangedEvent, ChunkSetEvent, Structure, StructureBlock, StructureCreated};
 use crate::rendering::structure_renderer::{monitor_block_updates_system, monitor_needs_rendered_system, NeedsNewRenderingEvent, StructureRenderer};
 use crate::rendering::uv_mapper::UVMapper;
 use cosmos_core::physics::structure_physics::{listen_for_new_physics_event, listen_for_structure_event, NeedsNewPhysicsEvent, StructurePhysics};
@@ -481,7 +481,8 @@ fn client_sync_players(
     mut create_structure_writer: EventWriter<StructureCreated>,
 
     query_player: Query<&Player>,
-    mut query_body: Query<(&mut Transform, &mut Velocity, Option<&LocalPlayer>)>
+    mut query_body: Query<(&mut Transform, &mut Velocity, Option<&LocalPlayer>)>,
+    mut query_structure: Query<&mut Structure>
 ) {
     let client_id = client.client_id();
 
@@ -578,21 +579,22 @@ fn client_sync_players(
                     println!("Player {} ({}) disconnected", name , id);
                 }
             }
-            ServerReliableMessages::StructureCreate {entity: server_entity, body, serialized_structure} => {
+            ServerReliableMessages::StructureCreate { entity: server_entity, length, height, width, body  } => {
+                println!("Got Structure!");
+
                 let mut entity = commands.spawn();
-                let mut structure: Structure = bincode::deserialize(&serialized_structure).unwrap();
-                structure.set_entity(entity.id());
+                let mut structure = Structure::new(width, height, length, entity.id());
 
                 let physics_updater = StructurePhysics::new(&structure, entity.id());
                 let structure_renderer = StructureRenderer::new(&structure);
 
                 entity.insert_bundle(PbrBundle {
-                        transform: Transform {
-                            translation: Vec3::new(0.0, 0.0, 0.0),
-                            ..default()
-                        },
+                    transform: Transform {
+                        translation: Vec3::new(0.0, 0.0, 0.0),
                         ..default()
-                    })
+                    },
+                    ..default()
+                })
                     .insert(RigidBody::Fixed)
                     .insert(Velocity::default())
                     .with_children(|parent| {
@@ -620,6 +622,15 @@ fn client_sync_players(
                 create_structure_writer.send(StructureCreated {
                     entity: entity.id()
                 });
+            }
+            ServerReliableMessages::ChunkData { structure_entity: server_structure_entity, serialized_chunk } => {
+                let s_entity = network_mapping.0.get(&server_structure_entity).expect("Got chunk data for structure that doesn't exist on client");
+
+                let mut structure = query_structure.get_mut(s_entity.clone()).unwrap();
+
+                let chunk: Chunk = bincode::deserialize(&serialized_chunk).unwrap();
+
+                structure.set_chunk(chunk);
             }
             ServerReliableMessages::StructureRemove {entity: server_entity} => {
 
@@ -672,6 +683,7 @@ fn main() {
         .add_event::<NeedsNewPhysicsEvent>()
         .add_event::<NeedsNewRenderingEvent>()
         .add_event::<StructureCreated>()
+        .add_event::<ChunkSetEvent>()
 
         // .add_plugin(RapierDebugRenderPlugin::default())
         .add_state(GameState::Loading)

@@ -90,10 +90,10 @@ impl Serialize for Chunk {
         }
 
         let mut s = serializer.serialize_struct("Chunk", 4).unwrap();
-        s.serialize_field("x", &self.x);
-        s.serialize_field("y", &self.y);
-        s.serialize_field("z", &self.z);
-        s.serialize_field("blocks", &chunk_data);
+        s.serialize_field("x", &self.x)?;
+        s.serialize_field("y", &self.y)?;
+        s.serialize_field("z", &self.z)?;
+        s.serialize_field("blocks", &chunk_data)?;
         s.end()
     }
 }

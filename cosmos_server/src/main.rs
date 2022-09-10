@@ -20,7 +20,7 @@ use cosmos_core::netty::netty_rigidbody::NettyRigidBody;
 use cosmos_core::physics::structure_physics::{listen_for_new_physics_event, listen_for_structure_event, NeedsNewPhysicsEvent, StructurePhysics};
 use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
 use cosmos_core::structure::chunk::CHUNK_DIMENSIONS;
-use cosmos_core::structure::structure::{BlockChangedEvent, Structure, StructureBlock, StructureCreated};
+use cosmos_core::structure::structure::{BlockChangedEvent, ChunkSetEvent, Structure, StructureBlock, StructureCreated};
 use rand::Rng;
 
 #[derive(Debug, Default)]
@@ -143,11 +143,16 @@ fn handle_events_system(
                 server.broadcast_message(NettyChannel::Reliable.id(), msg);
 
                 for (entity, structure, transform, velocity) in structures_query.iter() {
+
+                    println!("Sending structure...");
+
                     server.send_message(*id, NettyChannel::Reliable.id(),
                                         bincode::serialize(&StructureCreate {
                         entity: entity.clone(),
                         body: NettyRigidBody::new(velocity, transform),
-                        serialized_structure: bincode::serialize(structure).unwrap()
+                        width: structure.width(),
+                        height: structure.height(),
+                        length: structure.length()
                     }).unwrap());
                 }
             }
@@ -262,21 +267,6 @@ fn create_structure(mut commands: Commands,
     });
 }
 
-// fn lol(mut event_writer: EventWriter<BlockChangedEvent>,
-//     query: Query<Entity, With<Structure>>)
-// {
-//     for e in query.iter() {
-//         println!("SENT!");
-//         // TODO: Replace this with a better event that makes it clear it's a new structure
-//         event_writer.send(BlockChangedEvent {
-//             block: StructureBlock::new(0, 0, 0),
-//             structure_entity: e.clone(),
-//             old_block: &AIR,
-//             new_block: &STONE
-//         });
-//     }
-// }
-
 fn main() {
 
     let port: u16 = 1337;
@@ -302,6 +292,7 @@ fn main() {
         .add_event::<BlockChangedEvent>()
         .add_event::<NeedsNewPhysicsEvent>()
         .add_event::<StructureCreated>()
+        .add_event::<ChunkSetEvent>()
         .add_startup_system(create_structure)
 
         .add_system(server_listen_messages)

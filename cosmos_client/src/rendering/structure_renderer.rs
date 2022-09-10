@@ -3,7 +3,7 @@ use bevy::prelude::{EventReader, Mesh, Component};
 use bevy::render::mesh::{Indices, PrimitiveTopology};
 use cosmos_core::block::block::{Block, BlockFace};
 use cosmos_core::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
-use cosmos_core::structure::structure::{BlockChangedEvent, Structure, StructureBlock, StructureCreated};
+use cosmos_core::structure::structure::{BlockChangedEvent, ChunkSetEvent, Structure, StructureBlock, StructureCreated};
 use cosmos_core::utils::array_utils::flatten;
 use bevy_rapier3d::na::Vector3;
 
@@ -144,40 +144,47 @@ impl StructureRenderer {
 
 pub struct NeedsNewRenderingEvent(Entity);
 
-fn dew_it(done_structures: &mut HashSet<u32>, entity: Entity, block: Option<&StructureBlock>, query: &mut Query<&mut StructureRenderer>,
+fn dew_it(done_structures: &mut HashSet<u32>, entity: Entity,
+          chunk_coords: Option<Vector3<usize>>, query: &mut Query<&mut StructureRenderer>,
           event_writer: &mut EventWriter<NeedsNewRenderingEvent>
 ) {
-    if done_structures.contains(&entity.id()) {
-        return;
-    }
-
-    done_structures.insert(entity.id());
-
-    println!("{}", entity.id());
-
-    if block.is_some() {
+    if chunk_coords.is_some() {
         let mut structure_renderer = query.get_mut(entity).unwrap();
 
-        structure_renderer.changes.insert(Vector3::new(block.unwrap().chunk_coord_x(),
-                                                       block.unwrap().chunk_coord_y(),
-                                                       block.unwrap().chunk_coord_z()));
+        structure_renderer.changes.insert(Vector3::new(chunk_coords.unwrap().x,
+                                                       chunk_coords.unwrap().y,
+                                                       chunk_coords.unwrap().z));
     }
 
-    event_writer.send(NeedsNewRenderingEvent(entity));
+    if !done_structures.contains(&entity.id()) {
+        done_structures.insert(entity.id());
+
+        event_writer.send(NeedsNewRenderingEvent(entity));
+    }
 }
 
-pub fn monitor_block_updates_system(mut event: EventReader<BlockChangedEvent>,
-                                mut structure_created_event: EventReader<StructureCreated>,
-                                mut query: Query<&mut StructureRenderer>,
-                                mut event_writer: EventWriter<NeedsNewRenderingEvent>) {
+pub fn monitor_block_updates_system(
+    mut event: EventReader<BlockChangedEvent>,
+    mut structure_created_event: EventReader<StructureCreated>,
+    mut chunk_set_event: EventReader<ChunkSetEvent>,
+    mut query: Query<&mut StructureRenderer>,
+    mut event_writer: EventWriter<NeedsNewRenderingEvent>
+) {
     let mut done_structures = HashSet::new();
 
     for ev in event.iter() {
-        dew_it(&mut done_structures, ev.structure_entity, Some(&ev.block), &mut query, &mut event_writer);
+        dew_it(
+            &mut done_structures, ev.structure_entity,
+            Some(Vector3::new(ev.block.chunk_coord_x(), ev.block.chunk_coord_y(), ev.block.chunk_coord_z())),
+            &mut query, &mut event_writer);
     }
 
     for ev in structure_created_event.iter() {
         dew_it(&mut done_structures, ev.entity, None, &mut query, &mut event_writer);
+    }
+
+    for ev in chunk_set_event.iter() {
+        dew_it(&mut done_structures, ev.structure_entity, Some(Vector3::new(ev.x, ev.y, ev.z)), &mut query, &mut event_writer);
     }
 }
 
@@ -196,8 +203,6 @@ pub fn monitor_needs_rendered_system(
         }
 
         done_structures.insert(ev.0.id());
-
-        commands.entity(ev.0).log_components();
 
         let res = query.get_mut(ev.0);
 

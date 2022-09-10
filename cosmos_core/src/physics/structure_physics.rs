@@ -6,6 +6,7 @@ use bevy_rapier3d::prelude::{Collider, Rot};
 use crate::block::block::Block;
 use crate::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
 use crate::structure::structure::{BlockChangedEvent, Structure, StructureBlock, StructureCreated};
+use crate::structure::structure::ChunkSetEvent;
 
 pub struct ChunkPhysicsModel {
     pub collider: Collider,
@@ -131,45 +132,45 @@ pub fn listen_for_new_physics_event(
 
 fn dew_it(done_structures: &mut HashSet<Entity>,
     entity: Entity,
-    block: Option<&StructureBlock>,
+    chunk_coords: Option<Vector3<usize>>,
     query: &mut Query<&mut StructurePhysics>,
     event_writer: &mut EventWriter<NeedsNewPhysicsEvent>
 ) {
-    if done_structures.contains(&entity) {
-        return;
+    if chunk_coords.is_some() {
+        let mut structure_physics = query.get_mut(entity).unwrap();
+
+        structure_physics.needs_changed.insert(chunk_coords.unwrap());
     }
 
-    done_structures.insert(entity);
+    if !done_structures.contains(&entity) {
+        done_structures.insert(entity);
 
-    let res = query.get_mut(entity);
-
-    if res.is_ok() {
-        let mut structure_physics = res.unwrap();
-
-        if block.is_some() {
-            structure_physics.needs_changed.insert(Vector3::new(block.unwrap().chunk_coord_x(),
-                                                                block.unwrap().chunk_coord_y(),
-                                                                block.unwrap().chunk_coord_z()));
-        }
+        event_writer.send(NeedsNewPhysicsEvent {
+            structure_entity: entity
+        });
     }
-
-    event_writer.send(NeedsNewPhysicsEvent {
-        structure_entity: entity
-    });
 }
 
 pub fn listen_for_structure_event(
     mut event: EventReader<BlockChangedEvent>,
     mut structure_created_event: EventReader<StructureCreated>,
+    mut chunk_set_event: EventReader<ChunkSetEvent>,
     mut query: Query<&mut StructurePhysics>,
     mut event_writer: EventWriter<NeedsNewPhysicsEvent>)
 {
     let mut done_structures = HashSet::new();
     for ev in event.iter() {
-        dew_it(&mut done_structures, ev.structure_entity, Some(&ev.block), &mut query, &mut event_writer);
+        dew_it(
+            &mut done_structures, ev.structure_entity,
+            Some(Vector3::new(ev.block.chunk_coord_x(), ev.block.chunk_coord_y(), ev.block.chunk_coord_z())),
+            &mut query, &mut event_writer);
     }
 
     for ev in structure_created_event.iter() {
         dew_it(&mut done_structures, ev.entity, None, &mut query, &mut event_writer);
+    }
+
+    for ev in chunk_set_event.iter() {
+        dew_it(&mut done_structures, ev.structure_entity, Some(Vector3::new(ev.x, ev.y, ev.z)), &mut query, &mut event_writer);
     }
 }

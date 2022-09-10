@@ -15,6 +15,13 @@ pub struct StructureCreated {
     pub entity: Entity
 }
 
+pub struct ChunkSetEvent {
+    pub structure_entity: Entity,
+    pub x: usize,
+    pub y: usize,
+    pub z: usize
+}
+
 #[derive(Serialize, Deserialize, Component)]
 pub struct Structure
 {
@@ -202,5 +209,10 @@ impl Structure {
     pub fn chunk_world_position(&self, x: usize, y: usize, z: usize, body_position: &RigidBodyPosition) -> Vector3<f32> {
         add_vec(&body_position.position.translation.vector,
                 &body_position.position.rotation.transform_vector(&self.chunk_relative_position(x, y, z)))
+    }
+
+    pub fn set_chunk(&mut self, chunk: Chunk) {
+        let i = flatten(chunk.structure_x(), chunk.structure_y(), chunk.structure_z(), self.width, self.height);
+        self.chunks[i] = chunk;
     }
 }
