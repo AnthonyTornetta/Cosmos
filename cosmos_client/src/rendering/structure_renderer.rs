@@ -220,6 +220,8 @@ pub fn monitor_needs_rendered_system(
 
                 let mut entity_commands = commands.entity(entity);
 
+                println!("Verts {}", chunk_mesh.mesh.count_vertices());
+
                 // entity_commands.remove::<Handle<Mesh>>();
                 // entity_commands.remove::<Handle<StandardMaterial>>();
                 entity_commands.insert(meshes.add(chunk_mesh.mesh));

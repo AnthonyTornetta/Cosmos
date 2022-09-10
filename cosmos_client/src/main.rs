@@ -599,7 +599,12 @@ fn client_sync_players(
                         for z in 0..structure.length() {
                             for y in 0..structure.height() {
                                 for x in 0..structure.width() {
-                                    let mut entity = parent.spawn().id();
+                                    let mut entity = parent.spawn()
+                                        .insert_bundle(PbrBundle {
+                                            transform: Transform::from_translation(structure.chunk_relative_position(x, y, z).into()),
+                                            ..default()
+                                        })
+                                        .id();
 
                                     structure.set_chunk_entity(x, y, z, entity);
                                 }
