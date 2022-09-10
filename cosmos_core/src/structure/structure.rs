@@ -146,6 +146,10 @@ impl Structure {
         self.self_entity = Some(entity);
     }
 
+    pub fn get_entity(&self) -> Option<Entity> {
+        self.self_entity.clone()
+    }
+
     /// (0, 0, 0) => chunk @ 0, 0, 0\
     /// (1, 0, 0) => chunk @ 1, 0, 0
     pub fn chunk_from_chunk_coordinates(&self, cx: usize, cy: usize, cz: usize) -> &Chunk {

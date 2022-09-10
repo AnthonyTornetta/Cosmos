@@ -202,7 +202,7 @@ fn create_structure(mut commands: Commands,
     mut event_writer: EventWriter<StructureCreated>) {
     let mut entity_cmd = commands.spawn();
 
-    let mut structure = Structure::new(1, 1, 1, entity_cmd.id());
+    let mut structure = Structure::new(4, 2, 4, entity_cmd.id());
 
     let physics_updater = StructurePhysics::new(&structure, entity_cmd.id());
 

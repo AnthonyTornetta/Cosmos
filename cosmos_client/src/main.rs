@@ -438,7 +438,32 @@ fn new_renet_client() -> RenetClient {
 }
 
 #[derive(Default)]
-struct NetworkMapping(HashMap<Entity, Entity>);
+struct NetworkMapping {
+    server_to_client: HashMap<Entity, Entity>,
+    client_to_server: HashMap<Entity, Entity>,
+}
+
+impl NetworkMapping {
+    pub fn add_mapping(&mut self, client_entity: &Entity, server_entity: &Entity) {
+        self.server_to_client.insert(server_entity.clone(), client_entity.clone());
+        self.client_to_server.insert(client_entity.clone(), server_entity.clone());
+    }
+
+    pub fn client_from_server(&self, server_entity: &Entity) -> Option<&Entity> {
+        self.server_to_client.get(server_entity)
+    }
+
+    pub fn server_from_client(&self, client_entity: &Entity) -> Option<&Entity> {
+        self.client_to_server.get(client_entity)
+    }
+
+    pub fn remove_mapping_from_server_entity(&mut self, server_entity: &Entity) {
+        let client_ent = self.server_to_client.remove(server_entity);
+        if client_ent.is_some() {
+            self.client_to_server.remove(&client_ent.unwrap());
+        }
+    }
+}
 
 #[derive(Debug)]
 struct PlayerInfo {
@@ -509,7 +534,7 @@ fn client_sync_players(
             ServerUnreliableMessages::BulkBodies {bodies, time_stamp} => {
 
                 for (server_entity, body) in bodies.iter() {
-                    let maybe_exists = network_mapping.0.get(&server_entity);
+                    let maybe_exists = network_mapping.client_from_server(&server_entity);
                     if maybe_exists.is_some() {
                         let entity = maybe_exists.unwrap();
 
@@ -570,7 +595,7 @@ fn client_sync_players(
                 };
 
                 lobby.players.insert(id, player_info);
-                network_mapping.0.insert(entity, client_entity.id());
+                network_mapping.add_mapping(&client_entity.id(), &entity);
             }
             ServerReliableMessages::PlayerRemove {id} => {
 
@@ -579,7 +604,7 @@ fn client_sync_players(
 
                     let name = query_player.get(client_entity).unwrap().name.clone();
                     entity.despawn();
-                    network_mapping.0.remove(&server_entity);
+                    network_mapping.remove_mapping_from_server_entity(&server_entity);
 
                     println!("Player {} ({}) disconnected", name , id);
                 }
@@ -624,14 +649,14 @@ fn client_sync_players(
                     .insert(structure_renderer)
                     .insert(NeedsPopulated);
 
-                network_mapping.0.insert(server_entity, entity.id());
+                network_mapping.add_mapping(&entity.id(), &server_entity);
 
-                create_structure_writer.send(StructureCreated {
-                    entity: entity.id()
-                });
+                // create_structure_writer.send(StructureCreated {
+                //     entity: entity.id()
+                // });
             }
             ServerReliableMessages::ChunkData { structure_entity: server_structure_entity, serialized_chunk } => {
-                let s_entity = network_mapping.0.get(&server_structure_entity).expect("Got chunk data for structure that doesn't exist on client");
+                let s_entity = network_mapping.client_from_server(&server_structure_entity).expect("Got chunk data for structure that doesn't exist on client");
 
                 let mut structure = query_structure.get_mut(s_entity.clone()).unwrap();
 
@@ -674,18 +699,18 @@ fn wait_for_connection(mut state: ResMut<State<GameState>>, client: Res<RenetCli
 
 fn populate_structures(
     mut commands: Commands,
-    mut query: Query<(Entity), (With<NeedsPopulated>, With<Structure>)>,
+    query: Query<Entity, (With<NeedsPopulated>, With<Structure>)>,
     mut client: ResMut<RenetClient>,
-    mapping: Res<NetworkMapping>
+    network_mapping: Res<NetworkMapping>
 ) {
-    for entity in query.iter_mut() {
+    for entity in query.iter() {
+        let server_ent = network_mapping.server_from_client(&entity).unwrap();
+
         commands.entity(entity).remove::<NeedsPopulated>();
 
         client.send_message(NettyChannel::Reliable.id(), bincode::serialize(&SendChunk {
-            server_entity: mapping.0.get(&entity).unwrap().clone()
+            server_entity: server_ent.clone()
         }).unwrap());
-
-        println!("Asked nicely");
     }
 }
 
