@@ -5,7 +5,7 @@ use bevy_rapier3d::na::Vector3;
 use bevy_rapier3d::prelude::{Collider, Rot};
 use crate::block::block::Block;
 use crate::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
-use crate::structure::structure::{BlockChangedEvent, Structure, StructureBlock};
+use crate::structure::structure::{BlockChangedEvent, Structure, StructureBlock, StructureCreated};
 
 pub struct ChunkPhysicsModel {
     pub collider: Collider,
@@ -99,53 +99,77 @@ pub struct NeedsNewPhysicsEvent {
     structure_entity: Entity,
 }
 
-pub fn listen_for_new_physics_evnet(
+pub fn listen_for_new_physics_event(
     mut commands: Commands,
     mut event: EventReader<NeedsNewPhysicsEvent>,
     mut query: Query<(&Structure, &mut StructurePhysics)>){
 
-    let mut done_structures = HashSet::new();
+    if event.len() != 0 {
+        let mut done_structures = HashSet::new();
 
-    for ev in event.iter() {
-        if done_structures.contains(&ev.structure_entity.id()) {
-            continue;
-        }
+        for ev in event.iter() {
+            if done_structures.contains(&ev.structure_entity.id()) {
+                continue;
+            }
 
-        done_structures.insert(ev.structure_entity.id());
+            done_structures.insert(ev.structure_entity.id());
 
-        let (structure, mut physics) = query.get_mut(ev.structure_entity).unwrap();
+            let (structure, mut physics) = query.get_mut(ev.structure_entity).unwrap();
 
-        let colliders = physics.create_colliders(structure);
+            let colliders = physics.create_colliders(structure);
 
-        for chunk_collider in colliders {
-            let coords = &chunk_collider.chunk_coords;
-            let mut entity_commands = commands.entity(structure.chunk_entity(coords.x, coords.y, coords.z));
-            entity_commands.remove::<Collider>();
-            entity_commands.insert(chunk_collider.collider);
-            println!("Created chunk's collider!");
+            for chunk_collider in colliders {
+                let coords = &chunk_collider.chunk_coords;
+                let mut entity_commands = commands.entity(structure.chunk_entity(coords.x, coords.y, coords.z));
+                entity_commands.remove::<Collider>();
+                entity_commands.insert(chunk_collider.collider);
+                println!("Created chunk's collider!");
+            }
         }
     }
 }
 
+fn dew_it(done_structures: &mut HashSet<Entity>,
+    entity: Entity,
+    block: Option<&StructureBlock>,
+    query: &mut Query<&mut StructurePhysics>,
+    event_writer: &mut EventWriter<NeedsNewPhysicsEvent>
+) {
+    if done_structures.contains(&entity) {
+        return;
+    }
+
+    done_structures.insert(entity);
+
+    let res = query.get_mut(entity);
+
+    if res.is_ok() {
+        let mut structure_physics = res.unwrap();
+
+        if block.is_some() {
+            structure_physics.needs_changed.insert(Vector3::new(block.unwrap().chunk_coord_x(),
+                                                                block.unwrap().chunk_coord_y(),
+                                                                block.unwrap().chunk_coord_z()));
+        }
+    }
+
+    event_writer.send(NeedsNewPhysicsEvent {
+        structure_entity: entity
+    });
+}
+
 pub fn listen_for_structure_event(
     mut event: EventReader<BlockChangedEvent>,
+    mut structure_created_event: EventReader<StructureCreated>,
     mut query: Query<&mut StructurePhysics>,
     mut event_writer: EventWriter<NeedsNewPhysicsEvent>)
 {
     let mut done_structures = HashSet::new();
     for ev in event.iter() {
-        if done_structures.contains(&ev.structure_entity.id()) {
-            continue;
-        }
+        dew_it(&mut done_structures, ev.structure_entity, Some(&ev.block), &mut query, &mut event_writer);
+    }
 
-        done_structures.insert(ev.structure_entity.id());
-
-        let mut structure_physics = query.get_mut(ev.structure_entity).unwrap();
-
-        structure_physics.needs_changed.insert(Vector3::new(ev.block.chunk_coord_x(), ev.block.chunk_coord_y(), ev.block.chunk_coord_z()));
-
-        event_writer.send(NeedsNewPhysicsEvent {
-            structure_entity: ev.structure_entity.clone()
-        });
+    for ev in structure_created_event.iter() {
+        dew_it(&mut done_structures, ev.entity, None, &mut query, &mut event_writer);
     }
 }

@@ -17,10 +17,10 @@ use cosmos_core::netty::netty::{ClientUnreliableMessages, NettyChannel, PROTOCOL
 use cosmos_core::netty::netty::ServerReliableMessages::{MOTD, PlayerCreate, PlayerRemove, StructureCreate};
 use cosmos_core::netty::netty::ServerUnreliableMessages::{BulkBodies};
 use cosmos_core::netty::netty_rigidbody::NettyRigidBody;
-use cosmos_core::physics::structure_physics::{listen_for_new_physics_evnet, listen_for_structure_event, NeedsNewPhysicsEvent, StructurePhysics};
+use cosmos_core::physics::structure_physics::{listen_for_new_physics_event, listen_for_structure_event, NeedsNewPhysicsEvent, StructurePhysics};
 use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
 use cosmos_core::structure::chunk::CHUNK_DIMENSIONS;
-use cosmos_core::structure::structure::{BlockChangedEvent, Structure, StructureBlock};
+use cosmos_core::structure::structure::{BlockChangedEvent, Structure, StructureBlock, StructureCreated};
 use rand::Rng;
 
 #[derive(Debug, Default)]
@@ -91,7 +91,8 @@ fn handle_events_system(
     mut lobby: ResMut<ServerLobby>,
     mut client_ticks: ResMut<ClientTicks>,
     players: Query<(Entity, &Player, &Transform, &Velocity)>,
-    structures_query: Query<(Entity, &Structure, &Transform, &Velocity)>)
+    structures_query: Query<(Entity, &Structure, &Transform, &Velocity)>,
+    mut event_writer: EventWriter<StructureCreated>)
 {
     for event in server_events.iter() {
         match event {
@@ -169,7 +170,7 @@ fn handle_events_system(
 }
 
 fn create_structure(mut commands: Commands,
-    mut event_writer: EventWriter<BlockChangedEvent>) {
+    mut event_writer: EventWriter<StructureCreated>) {
     let mut entity_cmd = commands.spawn();
 
     let mut structure = Structure::new(1, 1, 1, entity_cmd.id());
@@ -184,7 +185,7 @@ fn create_structure(mut commands: Commands,
             let y_max = y.ceil() as usize;
             for yy in 0..y_max {
                 if yy == y_max - 1 {
-                    structure.set_block_at(x, yy, z, &GRASS, &mut event_writer);
+                    structure.set_block_at(x, yy, z, &GRASS, None);
 
                     let mut rng = rand::thread_rng();
 
@@ -193,10 +194,10 @@ fn create_structure(mut commands: Commands,
                     if n1 < 1 {
                         for ty in (yy+1)..(yy + 7) {
                             if ty != yy + 6 {
-                                structure.set_block_at(x, ty, z, &CHERRY_LOG, &mut event_writer);
+                                structure.set_block_at(x, ty, z, &CHERRY_LOG, None);
                             }
                             else {
-                                structure.set_block_at(x, ty, z, &CHERRY_LEAF, &mut event_writer);
+                                structure.set_block_at(x, ty, z, &CHERRY_LEAF, None);
                             }
 
                             if ty > yy + 2 {
@@ -213,7 +214,7 @@ fn create_structure(mut commands: Commands,
                                         if tx == 0 && tz == 0 || (tx + (x as i32) < 0 || tz + (z as i32) < 0 || ((tx + (x as i32)) as usize) >= structure.width() * 32 || ((tz + (z as i32)) as usize) >= structure.length() * 32) {
                                             continue;
                                         }
-                                        structure.set_block_at((x as i32 + tx) as usize, ty, (z as i32 + tz) as usize, &CHERRY_LEAF, &mut event_writer);
+                                        structure.set_block_at((x as i32 + tx) as usize, ty, (z as i32 + tz) as usize, &CHERRY_LEAF, None);
                                     }
                                 }
                             }
@@ -221,10 +222,10 @@ fn create_structure(mut commands: Commands,
                     }
                 }
                 else if yy > y_max - 5 {
-                    structure.set_block_at(x, yy, z, &DIRT, &mut event_writer);
+                    structure.set_block_at(x, yy, z, &DIRT, None);
                 }
                 else {
-                    structure.set_block_at(x, yy, z, &STONE, &mut event_writer);
+                    structure.set_block_at(x, yy, z, &STONE, None);
                 }
             }
         }
@@ -255,6 +256,10 @@ fn create_structure(mut commands: Commands,
         .insert(physics_updater);
 
     entity_cmd.insert(structure);
+
+    event_writer.send(StructureCreated {
+        entity: entity_cmd.id()
+    });
 }
 
 // fn lol(mut event_writer: EventWriter<BlockChangedEvent>,
@@ -296,6 +301,7 @@ fn main() {
         .insert_resource(server)
         .add_event::<BlockChangedEvent>()
         .add_event::<NeedsNewPhysicsEvent>()
+        .add_event::<StructureCreated>()
         .add_startup_system(create_structure)
 
         .add_system(server_listen_messages)
@@ -303,7 +309,7 @@ fn main() {
         .add_system(handle_events_system)
 
         .add_system(listen_for_structure_event)
-        .add_system(listen_for_new_physics_evnet)
+        .add_system(listen_for_new_physics_event)
         // .add_system(lol.before(listen_for_new_physics_evnet))
         .run();
 }

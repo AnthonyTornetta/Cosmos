@@ -3,11 +3,11 @@ use bevy::prelude::{EventReader, Mesh, Component};
 use bevy::render::mesh::{Indices, PrimitiveTopology};
 use cosmos_core::block::block::{Block, BlockFace};
 use cosmos_core::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
-use cosmos_core::structure::structure::{BlockChangedEvent, Structure, StructureBlock};
+use cosmos_core::structure::structure::{BlockChangedEvent, Structure, StructureBlock, StructureCreated};
 use cosmos_core::utils::array_utils::flatten;
 use bevy_rapier3d::na::Vector3;
 
-use crate::{Entity, EventWriter, Query, UVMapper};
+use crate::{Assets, Commands, Entity, EventWriter, Handle, MainAtlas, Query, Res, ResMut, StandardMaterial, UVMapper};
 
 #[derive(Component)]
 pub struct StructureRenderer
@@ -141,24 +141,96 @@ impl StructureRenderer {
         meshes
     }
 }
-//
-// impl StructureListener for StructureRenderer {
-//     fn notify_block_update(&mut self, _structure: &Structure, structure_block: &StructureBlock, _new_block: &Block) {
-//         self.changes.insert(Vector3::new(structure_block.chunk_coord_x(), structure_block.chunk_coord_y(), structure_block.chunk_coord_z()));
-//     }
-// }
 
-struct NeedsNewRenderingEvent(Entity);
+pub struct NeedsNewRenderingEvent(Entity);
 
-fn monitor_block_updates_system(mut event: EventReader<BlockChangedEvent>,
+fn dew_it(done_structures: &mut HashSet<u32>, entity: Entity, block: Option<&StructureBlock>, query: &mut Query<&mut StructureRenderer>,
+          event_writer: &mut EventWriter<NeedsNewRenderingEvent>
+) {
+    if done_structures.contains(&entity.id()) {
+        return;
+    }
+
+    done_structures.insert(entity.id());
+
+    println!("{}", entity.id());
+
+    if block.is_some() {
+        let mut structure_renderer = query.get_mut(entity).unwrap();
+
+        structure_renderer.changes.insert(Vector3::new(block.unwrap().chunk_coord_x(),
+                                                       block.unwrap().chunk_coord_y(),
+                                                       block.unwrap().chunk_coord_z()));
+    }
+
+    event_writer.send(NeedsNewRenderingEvent(entity));
+}
+
+pub fn monitor_block_updates_system(mut event: EventReader<BlockChangedEvent>,
+                                mut structure_created_event: EventReader<StructureCreated>,
                                 mut query: Query<&mut StructureRenderer>,
                                 mut event_writer: EventWriter<NeedsNewRenderingEvent>) {
+    let mut done_structures = HashSet::new();
+
     for ev in event.iter() {
-        let mut structure_renderer = query.get_mut(ev.structure_entity).unwrap();
+        dew_it(&mut done_structures, ev.structure_entity, Some(&ev.block), &mut query, &mut event_writer);
+    }
 
-        structure_renderer.changes.insert(Vector3::new(ev.block.chunk_coord_x(), ev.block.chunk_coord_y(), ev.block.chunk_coord_z()));
+    for ev in structure_created_event.iter() {
+        dew_it(&mut done_structures, ev.entity, None, &mut query, &mut event_writer);
+    }
+}
 
+pub fn monitor_needs_rendered_system(
+    mut commands: Commands,
+    mut event: EventReader<NeedsNewRenderingEvent>,
+    mut query: Query<(&Structure, &mut StructureRenderer)>,
+    atlas: Res<MainAtlas>,
+    mesh_query: Query<Option<&Handle<Mesh>>>,
+    mut meshes: ResMut<Assets<Mesh>>
+) {
+    let mut done_structures = HashSet::new();
+    for ev in event.iter() {
+        if done_structures.contains(&ev.0.id()) {
+            continue;
+        }
 
+        done_structures.insert(ev.0.id());
+
+        commands.entity(ev.0).log_components();
+
+        let res = query.get_mut(ev.0);
+
+        if res.is_ok() {
+            println!("Ok...");
+            let (structure, mut renderer) = res.unwrap();
+
+            renderer.render(structure, &atlas.uv_mapper);
+
+            let chunk_meshes: Vec<ChunkMesh> = renderer.create_meshes();
+
+            for chunk_mesh in chunk_meshes {
+                let entity = structure.chunk_entity(chunk_mesh.x, chunk_mesh.y, chunk_mesh.z);
+
+                let old_mesh_handle = mesh_query.get(entity.clone()).unwrap();
+
+                if old_mesh_handle.is_some() {
+                    meshes.remove(old_mesh_handle.unwrap());
+                }
+
+                let mut entity_commands = commands.entity(entity);
+
+                // entity_commands.remove::<Handle<Mesh>>();
+                // entity_commands.remove::<Handle<StandardMaterial>>();
+                entity_commands.insert(meshes.add(chunk_mesh.mesh));
+                entity_commands.insert(atlas.material.clone());
+
+                println!("Created chunk's mesh!");
+            }
+        }
+        else {
+            println!(">")
+        }
     }
 }
 

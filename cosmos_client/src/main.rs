@@ -24,10 +24,10 @@ use cosmos_core::entities::player::Player;
 use cosmos_core::netty::netty::{client_connection_config, NettyChannel, ServerReliableMessages, ServerUnreliableMessages};
 use cosmos_core::netty::netty::ClientUnreliableMessages::PlayerBody;
 use cosmos_core::netty::netty_rigidbody::NettyRigidBody;
-use cosmos_core::structure::structure::{BlockChangedEvent, Structure, StructureBlock};
-use crate::rendering::structure_renderer::{StructureRenderer};
+use cosmos_core::structure::structure::{BlockChangedEvent, Structure, StructureBlock, StructureCreated};
+use crate::rendering::structure_renderer::{monitor_block_updates_system, monitor_needs_rendered_system, NeedsNewRenderingEvent, StructureRenderer};
 use crate::rendering::uv_mapper::UVMapper;
-use cosmos_core::physics::structure_physics::StructurePhysics;
+use cosmos_core::physics::structure_physics::{listen_for_new_physics_event, listen_for_structure_event, NeedsNewPhysicsEvent, StructurePhysics};
 use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
 use rand::Rng;
 use crate::plugin::client_plugin::ClientPluginGroup;
@@ -57,7 +57,7 @@ struct LoadingAsset {
 
 struct AssetsLoading(Vec<LoadingAsset>);
 
-struct MainAtlas {
+pub struct MainAtlas {
     handle: Handle<Image>,
     material: Handle<StandardMaterial>,
     uv_mapper: UVMapper
@@ -478,7 +478,7 @@ fn client_sync_players(
     mut network_mapping: ResMut<NetworkMapping>,
     mut most_recent_tick: ResMut<MostRecentTick>,
     main_atlas: Res<MainAtlas>,
-    mut block_event_writer: EventWriter<BlockChangedEvent>,
+    mut create_structure_writer: EventWriter<StructureCreated>,
 
     query_player: Query<&Player>,
     mut query_body: Query<(&mut Transform, &mut Velocity, Option<&LocalPlayer>)>
@@ -583,8 +583,8 @@ fn client_sync_players(
                 let mut structure: Structure = bincode::deserialize(&serialized_structure).unwrap();
                 structure.set_entity(entity.id());
 
-                let mut physics_updater = StructurePhysics::new(&structure, entity.id());
-                let mut structure_renderer = StructureRenderer::new(&structure);
+                let physics_updater = StructurePhysics::new(&structure, entity.id());
+                let structure_renderer = StructureRenderer::new(&structure);
 
                 entity.insert_bundle(PbrBundle {
                         transform: Transform {
@@ -607,20 +607,14 @@ fn client_sync_players(
                         }
                     })
                     .insert(physics_updater)
-                    .insert(structure_renderer);
-
-                let block = structure.block_at(0, 0, 0);
-                entity.insert(structure);
-
-                // TODO: Replace this with a better event that makes it clear it's a new structure
-                block_event_writer.send(BlockChangedEvent {
-                    block: StructureBlock::new(0, 0, 0),
-                    structure_entity: entity.id(),
-                    old_block: &AIR,
-                    new_block: block
-                });
+                    .insert(structure_renderer)
+                    .insert(structure);
 
                 network_mapping.0.insert(server_entity, entity.id());
+
+                create_structure_writer.send(StructureCreated {
+                    entity: entity.id()
+                });
             }
             ServerReliableMessages::StructureRemove {entity: server_entity} => {
 
@@ -670,6 +664,9 @@ fn main() {
         .add_plugin(RenetClientPlugin{})
         .insert_resource(CosmosInputHandler::new())
         .add_event::<BlockChangedEvent>()
+        .add_event::<NeedsNewPhysicsEvent>()
+        .add_event::<NeedsNewRenderingEvent>()
+        .add_event::<StructureCreated>()
 
         // .add_plugin(RapierDebugRenderPlugin::default())
         .add_state(GameState::Loading)
@@ -700,6 +697,10 @@ fn main() {
             SystemSet::on_update(GameState::LoadingWorld)
                 .with_system(client_sync_players)
                 .with_system(wait_for_done_loading)
+                .with_system(monitor_needs_rendered_system)
+                .with_system(monitor_block_updates_system)
+                .with_system(listen_for_structure_event)
+                .with_system(listen_for_new_physics_event)
         )
         .add_system_set(
             SystemSet::on_update(GameState::Playing)
@@ -707,6 +708,10 @@ fn main() {
                 .with_system(process_player_camera)
                 .with_system(send_position)
                 .with_system(client_sync_players)
+                .with_system(monitor_needs_rendered_system)
+                .with_system(monitor_block_updates_system)
+                .with_system(listen_for_structure_event)
+                .with_system(listen_for_new_physics_event)
         )
 
         .run();

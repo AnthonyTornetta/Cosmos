@@ -11,6 +11,10 @@ use serde::{Serialize, Deserialize, Serializer};
 use bevy::prelude::{Commands, Component, Entity, EventWriter};
 use serde::ser::SerializeStruct;
 
+pub struct StructureCreated {
+    pub entity: Entity
+}
+
 #[derive(Serialize, Deserialize, Component)]
 pub struct Structure
 {
@@ -162,7 +166,7 @@ impl Structure {
     }
 
     pub fn set_block_at(&mut self, x: usize, y: usize, z: usize, block: &'static Block,
-        mut event_writer: &mut EventWriter<BlockChangedEvent>) {
+        mut event_writer: Option<&mut EventWriter<BlockChangedEvent>>) {
         if self.block_at(x, y, z) == block {
             return;
         }
@@ -170,8 +174,8 @@ impl Structure {
         // for listener in &self.listeners {
         //     listener.borrow_mut().notify_block_update(self, &struct_block, block);
         // }
-        if self.self_entity.is_some() {
-            event_writer.send(BlockChangedEvent {
+        if self.self_entity.is_some() && event_writer.is_some() {
+            event_writer.unwrap().send(BlockChangedEvent {
                 new_block: block,
                 old_block: self.block_at(x, y, z),
                 structure_entity: self.self_entity.unwrap().clone(),
