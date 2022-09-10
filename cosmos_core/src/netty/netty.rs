@@ -29,6 +29,7 @@ pub enum ServerReliableMessages
 pub enum ClientReliableMessages
 {
     PlayerDisconnect,
+    SendChunk { server_entity: Entity }
 }
 
 #[derive(Debug, Serialize, Deserialize, Component)]

@@ -22,6 +22,7 @@ use bevy_renet::RenetClientPlugin;
 use cosmos_core::block::blocks::{DIRT, CHERRY_LEAF, STONE, CHERRY_LOG, GRASS, AIR};
 use cosmos_core::entities::player::Player;
 use cosmos_core::netty::netty::{client_connection_config, NettyChannel, ServerReliableMessages, ServerUnreliableMessages};
+use cosmos_core::netty::netty::ClientReliableMessages::SendChunk;
 use cosmos_core::netty::netty::ClientUnreliableMessages::PlayerBody;
 use cosmos_core::netty::netty_rigidbody::NettyRigidBody;
 use cosmos_core::structure::structure::{BlockChangedEvent, ChunkSetEvent, Structure, StructureBlock, StructureCreated};
@@ -456,6 +457,9 @@ struct MostRecentTick(Option<u32>);
 #[derive(Component, Default)]
 struct LocalPlayer;
 
+#[derive(Component, Default)]
+struct NeedsPopulated;
+
 fn send_position(mut client: ResMut<RenetClient>,
     query: Query<(&Velocity, &Transform), (With<Player>, With<LocalPlayer>)>) {
 
@@ -479,6 +483,7 @@ fn client_sync_players(
     mut most_recent_tick: ResMut<MostRecentTick>,
     main_atlas: Res<MainAtlas>,
     mut create_structure_writer: EventWriter<StructureCreated>,
+    mut set_chunk_event_writer: EventWriter<ChunkSetEvent>,
 
     query_player: Query<&Player>,
     mut query_body: Query<(&mut Transform, &mut Velocity, Option<&LocalPlayer>)>,
@@ -588,7 +593,8 @@ fn client_sync_players(
                 let physics_updater = StructurePhysics::new(&structure, entity.id());
                 let structure_renderer = StructureRenderer::new(&structure);
 
-                entity.insert_bundle(PbrBundle {
+                entity
+                    .insert_bundle(PbrBundle {
                     transform: Transform {
                         translation: Vec3::new(0.0, 0.0, 0.0),
                         ..default()
@@ -613,9 +619,10 @@ fn client_sync_players(
                             }
                         }
                     })
+                    .insert(structure)
                     .insert(physics_updater)
                     .insert(structure_renderer)
-                    .insert(structure);
+                    .insert(NeedsPopulated);
 
                 network_mapping.0.insert(server_entity, entity.id());
 
@@ -630,7 +637,14 @@ fn client_sync_players(
 
                 let chunk: Chunk = bincode::deserialize(&serialized_chunk).unwrap();
 
+                let (x, y, z) = (chunk.structure_x(), chunk.structure_y(), chunk.structure_z());
+
                 structure.set_chunk(chunk);
+
+                set_chunk_event_writer.send(ChunkSetEvent {
+                    x, y, z,
+                    structure_entity: s_entity.clone()
+                });
             }
             ServerReliableMessages::StructureRemove {entity: server_entity} => {
 
@@ -658,6 +672,23 @@ fn wait_for_connection(mut state: ResMut<State<GameState>>, client: Res<RenetCli
     }
 }
 
+fn populate_structures(
+    mut commands: Commands,
+    mut query: Query<(Entity), (With<NeedsPopulated>, With<Structure>)>,
+    mut client: ResMut<RenetClient>,
+    mapping: Res<NetworkMapping>
+) {
+    for entity in query.iter_mut() {
+        commands.entity(entity).remove::<NeedsPopulated>();
+
+        client.send_message(NettyChannel::Reliable.id(), bincode::serialize(&SendChunk {
+            server_entity: mapping.0.get(&entity).unwrap().clone()
+        }).unwrap());
+
+        println!("Asked nicely");
+    }
+}
+
 fn wait_for_done_loading(mut state: ResMut<State<GameState>>, query: Query<&Player, With<LocalPlayer>>) {
     if query.get_single().is_ok() {
         println!("Got local player, starting game!");
@@ -668,8 +699,8 @@ fn wait_for_done_loading(mut state: ResMut<State<GameState>>, query: Query<&Play
 fn setup_window(mut windows: ResMut<Windows>) {
     let mut window = windows.primary_mut();
     window.set_title("Cosmos".into());
-    window.set_cursor_lock_mode(true);
-    window.set_cursor_visibility(false);
+    // window.set_cursor_lock_mode(true);
+    // window.set_cursor_visibility(false);
 }
 
 fn main() {
@@ -718,6 +749,7 @@ fn main() {
                 .with_system(monitor_block_updates_system)
                 .with_system(listen_for_structure_event)
                 .with_system(listen_for_new_physics_event)
+                .with_system(populate_structures)
         )
         .add_system_set(
             SystemSet::on_update(GameState::Playing)
@@ -729,6 +761,7 @@ fn main() {
                 .with_system(monitor_block_updates_system)
                 .with_system(listen_for_structure_event)
                 .with_system(listen_for_new_physics_event)
+                .with_system(populate_structures)
         )
 
         .run();

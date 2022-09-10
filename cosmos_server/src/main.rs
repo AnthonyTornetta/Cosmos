@@ -13,13 +13,13 @@ use bevy_renet::renet::{RenetServer, ServerAuthentication, ServerConfig, ServerE
 use bevy_renet::RenetServerPlugin;
 use cosmos_core::block::blocks::{AIR, CHERRY_LEAF, CHERRY_LOG, DIRT, GRASS, STONE};
 use cosmos_core::entities::player::Player;
-use cosmos_core::netty::netty::{ClientUnreliableMessages, NettyChannel, PROTOCOL_ID, server_connection_config};
-use cosmos_core::netty::netty::ServerReliableMessages::{MOTD, PlayerCreate, PlayerRemove, StructureCreate};
+use cosmos_core::netty::netty::{ClientReliableMessages, ClientUnreliableMessages, NettyChannel, PROTOCOL_ID, server_connection_config};
+use cosmos_core::netty::netty::ServerReliableMessages::{ChunkData, MOTD, PlayerCreate, PlayerRemove, StructureCreate};
 use cosmos_core::netty::netty::ServerUnreliableMessages::{BulkBodies};
 use cosmos_core::netty::netty_rigidbody::NettyRigidBody;
 use cosmos_core::physics::structure_physics::{listen_for_new_physics_event, listen_for_structure_event, NeedsNewPhysicsEvent, StructurePhysics};
 use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
-use cosmos_core::structure::chunk::CHUNK_DIMENSIONS;
+use cosmos_core::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
 use cosmos_core::structure::structure::{BlockChangedEvent, ChunkSetEvent, Structure, StructureBlock, StructureCreated};
 use rand::Rng;
 
@@ -62,8 +62,9 @@ struct ClientTicks {
 fn server_listen_messages(
     mut server: ResMut<RenetServer>,
     lobby: ResMut<ServerLobby>,
-    mut players: Query<(&mut Transform, &mut Velocity), With<Player>>) {
-
+    mut players: Query<(&mut Transform, &mut Velocity), With<Player>>,
+    structure_query: Query<&Structure>
+) {
     for client_id in server.clients_id().into_iter() {
         while let Some(message) = server.receive_message(client_id, NettyChannel::Unreliable.id()) {
             let command: ClientUnreliableMessages = bincode::deserialize(&message).unwrap();
@@ -77,6 +78,29 @@ fn server_listen_messages(
                             velocity.linvel = body.body_vel.linvel.into();
                             velocity.angvel = body.body_vel.angvel.into();
                         }
+                    }
+                }
+            }
+        }
+
+        while let Some(message) = server.receive_message(client_id, NettyChannel::Reliable.id()) {
+            let command: ClientReliableMessages = bincode::deserialize(&message).unwrap();
+
+            match command {
+                ClientReliableMessages::PlayerDisconnect => {
+
+                }
+                ClientReliableMessages::SendChunk { server_entity } => {
+                    let structure = structure_query.get(server_entity.clone()).unwrap();
+
+                    for chunk in structure.chunks() {
+                        server.send_message(
+                            client_id, NettyChannel::Reliable.id(),
+                            bincode::serialize(&ChunkData {
+                                structure_entity: server_entity.clone(),
+                                serialized_chunk: bincode::serialize(chunk).unwrap()
+                            }).unwrap()
+                        );
                     }
                 }
             }

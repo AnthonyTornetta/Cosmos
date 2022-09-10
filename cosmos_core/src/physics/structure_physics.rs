@@ -9,7 +9,7 @@ use crate::structure::structure::{BlockChangedEvent, Structure, StructureBlock, 
 use crate::structure::structure::ChunkSetEvent;
 
 pub struct ChunkPhysicsModel {
-    pub collider: Collider,
+    pub collider: Option<Collider>,
     pub chunk_coords: Vector3<usize>
 }
 
@@ -53,7 +53,7 @@ impl StructurePhysics {
     }
 }
 
-fn generate_chunk_collider(chunk: &Chunk) -> Collider {
+fn generate_chunk_collider(chunk: &Chunk) -> Option<Collider> {
     let mut colliders: Vec<(Vect, Rot, Collider)> = Vec::new();
 
     // let collider_start;
@@ -93,7 +93,12 @@ fn generate_chunk_collider(chunk: &Chunk) -> Collider {
         }
     }
 
-    Collider::compound(colliders)
+    if colliders.is_empty() {
+        None
+    }
+    else {
+        Some(Collider::compound(colliders))
+    }
 }
 
 pub struct NeedsNewPhysicsEvent {
@@ -123,7 +128,10 @@ pub fn listen_for_new_physics_event(
                 let coords = &chunk_collider.chunk_coords;
                 let mut entity_commands = commands.entity(structure.chunk_entity(coords.x, coords.y, coords.z));
                 entity_commands.remove::<Collider>();
-                entity_commands.insert(chunk_collider.collider);
+
+                if chunk_collider.collider.is_some() {
+                    entity_commands.insert(chunk_collider.collider.unwrap());
+                }
                 println!("Created chunk's collider!");
             }
         }

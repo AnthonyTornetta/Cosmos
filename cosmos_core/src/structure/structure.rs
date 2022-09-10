@@ -172,15 +172,16 @@ impl Structure {
             .block_at(x % CHUNK_DIMENSIONS, y % CHUNK_DIMENSIONS, z % CHUNK_DIMENSIONS)
     }
 
+    pub fn chunks(&self) -> &Vec<Chunk> {
+        &self.chunks
+    }
+
     pub fn set_block_at(&mut self, x: usize, y: usize, z: usize, block: &'static Block,
         mut event_writer: Option<&mut EventWriter<BlockChangedEvent>>) {
         if self.block_at(x, y, z) == block {
             return;
         }
 
-        // for listener in &self.listeners {
-        //     listener.borrow_mut().notify_block_update(self, &struct_block, block);
-        // }
         if self.self_entity.is_some() && event_writer.is_some() {
             event_writer.unwrap().send(BlockChangedEvent {
                 new_block: block,
@@ -212,6 +213,7 @@ impl Structure {
     }
 
     pub fn set_chunk(&mut self, chunk: Chunk) {
+        println!("Set chunk!!!");
         let i = flatten(chunk.structure_x(), chunk.structure_y(), chunk.structure_z(), self.width, self.height);
         self.chunks[i] = chunk;
     }

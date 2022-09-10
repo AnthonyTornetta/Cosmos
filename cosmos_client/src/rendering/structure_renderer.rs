@@ -204,39 +204,31 @@ pub fn monitor_needs_rendered_system(
 
         done_structures.insert(ev.0.id());
 
-        let res = query.get_mut(ev.0);
+        let (structure, mut renderer) = query.get_mut(ev.0).unwrap();
 
-        if res.is_ok() {
-            println!("Ok...");
-            let (structure, mut renderer) = res.unwrap();
+        renderer.render(structure, &atlas.uv_mapper);
 
-            renderer.render(structure, &atlas.uv_mapper);
+        let chunk_meshes: Vec<ChunkMesh> = renderer.create_meshes();
 
-            let chunk_meshes: Vec<ChunkMesh> = renderer.create_meshes();
+        for chunk_mesh in chunk_meshes {
+            let entity = structure.chunk_entity(chunk_mesh.x, chunk_mesh.y, chunk_mesh.z);
 
-            for chunk_mesh in chunk_meshes {
-                let entity = structure.chunk_entity(chunk_mesh.x, chunk_mesh.y, chunk_mesh.z);
+            let old_mesh_handle = mesh_query.get(entity.clone()).unwrap();
 
-                let old_mesh_handle = mesh_query.get(entity.clone()).unwrap();
-
-                if old_mesh_handle.is_some() {
-                    meshes.remove(old_mesh_handle.unwrap());
-                }
-
-                let mut entity_commands = commands.entity(entity);
-
-                println!("Verts {}", chunk_mesh.mesh.count_vertices());
-
-                // entity_commands.remove::<Handle<Mesh>>();
-                // entity_commands.remove::<Handle<StandardMaterial>>();
-                entity_commands.insert(meshes.add(chunk_mesh.mesh));
-                entity_commands.insert(atlas.material.clone());
-
-                println!("Created chunk's mesh!");
+            if old_mesh_handle.is_some() {
+                meshes.remove(old_mesh_handle.unwrap());
             }
-        }
-        else {
-            println!(">")
+
+            let mut entity_commands = commands.entity(entity);
+
+            println!("Verts {}", chunk_mesh.mesh.count_vertices());
+
+            // entity_commands.remove::<Handle<Mesh>>();
+            // entity_commands.remove::<Handle<StandardMaterial>>();
+            entity_commands.insert(meshes.add(chunk_mesh.mesh));
+            entity_commands.insert(atlas.material.clone());
+
+            println!("Created chunk's mesh!");
         }
     }
 }
