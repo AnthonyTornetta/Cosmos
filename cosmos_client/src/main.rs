@@ -724,8 +724,8 @@ fn wait_for_done_loading(mut state: ResMut<State<GameState>>, query: Query<&Play
 fn setup_window(mut windows: ResMut<Windows>) {
     let mut window = windows.primary_mut();
     window.set_title("Cosmos".into());
-    // window.set_cursor_lock_mode(true);
-    // window.set_cursor_visibility(false);
+    window.set_cursor_lock_mode(true);
+    window.set_cursor_visibility(false);
 }
 
 fn main() {
