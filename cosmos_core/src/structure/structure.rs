@@ -2,14 +2,10 @@ use crate::block::block::Block;
 use crate::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
 use crate::utils::array_utils::flatten;
 use crate::utils::vec_math::add_vec;
-use bevy::prelude::{Commands, Component, Entity, EventWriter};
+use bevy::prelude::{Component, Entity, EventWriter};
 use bevy_rapier3d::na::Vector3;
 use bevy_rapier3d::rapier::prelude::RigidBodyPosition;
-use serde::ser::SerializeStruct;
-use serde::{Deserialize, Serialize, Serializer};
-use std::cell::RefCell;
-use std::rc::Rc;
-use std::sync::{Arc, Mutex};
+use serde::{Deserialize, Serialize};
 
 pub struct StructureCreated {
     pub entity: Entity,

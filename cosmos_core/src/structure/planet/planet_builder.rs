@@ -1,46 +1,23 @@
-use bevy::{
-    ecs::system::EntityCommands,
-    prelude::{BuildChildren, PbrBundle, Transform},
-};
-use bevy_rapier3d::prelude::{RigidBody, Velocity};
+use bevy::{ecs::system::EntityCommands, prelude::Transform};
+use bevy_rapier3d::prelude::Velocity;
 
-use crate::{physics::structure_physics::StructurePhysics, structure::structure::Structure};
+use crate::structure::{structure::Structure, structure_builder_trait::TStructureBuilder};
 
 use super::planet_builder_trait::TPlanetBuilder;
 
-#[derive(Default)]
-pub struct PlanetBuilder {}
+pub struct PlanetBuilder<T: TStructureBuilder> {
+    structure_builder: T,
+}
 
-impl TPlanetBuilder for PlanetBuilder {
+impl<T: TStructureBuilder> PlanetBuilder<T> {
+    pub fn new(structure_builder: T) -> Self {
+        Self { structure_builder }
+    }
+}
+
+impl<T: TStructureBuilder> TPlanetBuilder for PlanetBuilder<T> {
     fn create(&self, entity: &mut EntityCommands, transform: Transform, structure: &mut Structure) {
-        let physics_updater = StructurePhysics::new(structure, entity.id());
-
-        entity
-            .insert(RigidBody::Fixed)
-            .insert_bundle(PbrBundle {
-                transform,
-                ..Default::default()
-            })
-            .insert(Velocity::default())
-            .with_children(|parent| {
-                for z in 0..structure.length() {
-                    for y in 0..structure.height() {
-                        for x in 0..structure.width() {
-                            let entity = parent
-                                .spawn()
-                                .insert_bundle(PbrBundle {
-                                    transform: Transform::from_translation(
-                                        structure.chunk_relative_position(x, y, z).into(),
-                                    ),
-                                    ..Default::default()
-                                })
-                                .id();
-
-                            structure.set_chunk_entity(x, y, z, entity);
-                        }
-                    }
-                }
-            })
-            .insert(physics_updater);
+        self.structure_builder
+            .create(entity, transform, Velocity::default(), structure)
     }
 }

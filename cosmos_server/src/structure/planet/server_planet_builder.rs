@@ -9,11 +9,19 @@ use cosmos_core::{
         structure::{ChunkSetEvent, Structure},
     },
 };
-use rand::Rng;
 
-#[derive(Default)]
+use crate::structure::server_structure_builder::ServerStructureBuilder;
+
 pub struct ServerPlanetBuilder {
-    builder: PlanetBuilder,
+    builder: PlanetBuilder<ServerStructureBuilder>,
+}
+
+impl Default for ServerPlanetBuilder {
+    fn default() -> Self {
+        Self {
+            builder: PlanetBuilder::new(ServerStructureBuilder::default()),
+        }
+    }
 }
 
 pub struct GeneratePlanetChunkEvent {

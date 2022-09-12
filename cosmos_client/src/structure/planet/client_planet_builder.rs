@@ -3,13 +3,18 @@ use cosmos_core::structure::{
     structure::Structure,
 };
 
-use crate::{
-    rendering::structure_renderer::StructureRenderer, structure::chunk_retreiver::NeedsPopulated,
-};
+use crate::structure::client_structure_builder::ClientStructureBuilder;
 
-#[derive(Default)]
 pub struct ClientPlanetBuilder {
-    planet_builder: PlanetBuilder,
+    planet_builder: PlanetBuilder<ClientStructureBuilder>,
+}
+
+impl Default for ClientPlanetBuilder {
+    fn default() -> Self {
+        Self {
+            planet_builder: PlanetBuilder::new(ClientStructureBuilder::default()),
+        }
+    }
 }
 
 impl TPlanetBuilder for ClientPlanetBuilder {
@@ -20,10 +25,5 @@ impl TPlanetBuilder for ClientPlanetBuilder {
         structure: &mut Structure,
     ) {
         self.planet_builder.create(entity, transform, structure);
-
-        let renderer = StructureRenderer::new(structure);
-
-        entity.insert(renderer);
-        entity.insert(NeedsPopulated);
     }
 }
