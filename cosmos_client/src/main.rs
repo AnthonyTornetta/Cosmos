@@ -1,15 +1,20 @@
 pub mod plugin;
-mod rendering;
+pub mod rendering;
+pub mod state;
+pub mod structure;
 
 use cosmos_core::entities::sun::Sun;
 use cosmos_core::structure::chunk::Chunk;
+use cosmos_core::structure::planet::planet_builder_trait::TPlanetBuilder;
+use state::game_state::{self, GameState};
+use structure::chunk_retreiver;
 
 use crate::plugin::client_plugin::ClientPluginGroup;
 use crate::rendering::structure_renderer::{
     monitor_block_updates_system, monitor_needs_rendered_system, NeedsNewRenderingEvent,
-    StructureRenderer,
 };
 use crate::rendering::uv_mapper::UVMapper;
+use crate::structure::planet::client_planet_builder::ClientPlanetBuilder;
 use bevy::prelude::*;
 use bevy::render::camera::{Projection, RenderTarget};
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
@@ -19,7 +24,6 @@ use bevy_rapier3d::prelude::{Collider, LockedAxes, RigidBody, Vect, Velocity};
 use bevy_renet::renet::{ClientAuthentication, RenetClient};
 use bevy_renet::RenetClientPlugin;
 use cosmos_core::entities::player::Player;
-use cosmos_core::netty::netty::ClientReliableMessages::SendChunk;
 use cosmos_core::netty::netty::ClientUnreliableMessages::PlayerBody;
 use cosmos_core::netty::netty::{
     client_connection_config, NettyChannel, ServerReliableMessages, ServerUnreliableMessages,
@@ -27,7 +31,6 @@ use cosmos_core::netty::netty::{
 use cosmos_core::netty::netty_rigidbody::NettyRigidBody;
 use cosmos_core::physics::structure_physics::{
     listen_for_new_physics_event, listen_for_structure_event, NeedsNewPhysicsEvent,
-    StructurePhysics,
 };
 use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
 use cosmos_core::structure::structure::{
@@ -391,14 +394,6 @@ fn process_player_movement(
     velocity.linvel.y = y;
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
-enum GameState {
-    Loading,
-    Connecting,
-    LoadingWorld,
-    Playing,
-}
-
 fn new_renet_client() -> RenetClient {
     let port: u16 = 1337;
 
@@ -465,9 +460,6 @@ struct MostRecentTick(Option<u32>);
 
 #[derive(Component, Default)]
 struct LocalPlayer;
-
-#[derive(Component, Default)]
-struct NeedsPopulated;
 
 fn send_position(
     mut client: ResMut<RenetClient>,
@@ -612,39 +604,10 @@ fn client_sync_players(
                 let mut entity = commands.spawn();
                 let mut structure = Structure::new(width, height, length, entity.id());
 
-                let physics_updater = StructurePhysics::new(&structure, entity.id());
-                let structure_renderer = StructureRenderer::new(&structure);
+                let builder = ClientPlanetBuilder::default();
+                builder.create(&mut entity, body.create_transform(), &mut structure);
 
-                entity
-                    .insert_bundle(PbrBundle {
-                        transform: body.create_transform(),
-                        ..default()
-                    })
-                    .insert(RigidBody::Fixed)
-                    .insert(body.create_velocity())
-                    .with_children(|parent| {
-                        for z in 0..structure.length() {
-                            for y in 0..structure.height() {
-                                for x in 0..structure.width() {
-                                    let entity = parent
-                                        .spawn()
-                                        .insert_bundle(PbrBundle {
-                                            transform: Transform::from_translation(
-                                                structure.chunk_relative_position(x, y, z).into(),
-                                            ),
-                                            ..default()
-                                        })
-                                        .id();
-
-                                    structure.set_chunk_entity(x, y, z, entity);
-                                }
-                            }
-                        }
-                    })
-                    .insert(structure)
-                    .insert(physics_updater)
-                    .insert(structure_renderer)
-                    .insert(NeedsPopulated);
+                entity.insert(structure);
 
                 network_mapping.add_mapping(&entity.id(), &server_entity);
 
@@ -671,6 +634,8 @@ fn client_sync_players(
                 );
 
                 structure.set_chunk(chunk);
+
+                println!("Got chunk!");
 
                 set_chunk_event_writer.send(ChunkSetEvent {
                     x,
@@ -711,27 +676,6 @@ fn wait_for_connection(mut state: ResMut<State<GameState>>, client: Res<RenetCli
     if client.is_connected() {
         println!("Loading server data...");
         state.set(GameState::LoadingWorld).unwrap();
-    }
-}
-
-fn populate_structures(
-    mut commands: Commands,
-    query: Query<Entity, (With<NeedsPopulated>, With<Structure>)>,
-    mut client: ResMut<RenetClient>,
-    network_mapping: Res<NetworkMapping>,
-) {
-    for entity in query.iter() {
-        let server_ent = network_mapping.server_from_client(&entity).unwrap();
-
-        commands.entity(entity).remove::<NeedsPopulated>();
-
-        client.send_message(
-            NettyChannel::Reliable.id(),
-            bincode::serialize(&SendChunk {
-                server_entity: server_ent.clone(),
-            })
-            .unwrap(),
-        );
     }
 }
 
@@ -803,8 +747,11 @@ fn create_sun(
 }
 
 fn main() {
-    App::new()
-        .insert_resource(ImageSettings::default_nearest()) // MUST be before default plugins!
+    let mut app = App::new();
+
+    game_state::register(&mut app);
+
+    app.insert_resource(ImageSettings::default_nearest()) // MUST be before default plugins!
         .add_plugins(CosmosCorePluginGroup::default())
         .add_plugins(ClientPluginGroup::default())
         .add_plugin(RenetClientPlugin {})
@@ -814,8 +761,6 @@ fn main() {
         .add_event::<NeedsNewRenderingEvent>()
         .add_event::<StructureCreated>()
         .add_event::<ChunkSetEvent>()
-        // .add_plugin(RapierDebugRenderPlugin::default())
-        .add_state(GameState::Loading)
         .add_startup_system(init_input)
         .add_startup_system(setup_window)
         .insert_resource(AssetsLoading { 0: Vec::new() })
@@ -836,8 +781,7 @@ fn main() {
                 .with_system(monitor_needs_rendered_system)
                 .with_system(monitor_block_updates_system)
                 .with_system(listen_for_structure_event)
-                .with_system(listen_for_new_physics_event)
-                .with_system(populate_structures),
+                .with_system(listen_for_new_physics_event),
         )
         .add_system_set(
             SystemSet::on_update(GameState::Playing)
@@ -848,8 +792,10 @@ fn main() {
                 .with_system(monitor_needs_rendered_system)
                 .with_system(monitor_block_updates_system)
                 .with_system(listen_for_structure_event)
-                .with_system(listen_for_new_physics_event)
-                .with_system(populate_structures),
-        )
-        .run();
+                .with_system(listen_for_new_physics_event),
+        );
+
+    chunk_retreiver::register(&mut app);
+
+    app.run();
 }

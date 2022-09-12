@@ -2,7 +2,8 @@ pub enum BlockProperty {
     Opaque,
     Transparent,
     Full,
-    Empty
+    Empty,
+    ShipOnly,
 }
 
 pub enum BlockFace {
@@ -11,7 +12,7 @@ pub enum BlockFace {
     Left,
     Right,
     Top,
-    Bottom
+    Bottom,
 }
 
 impl BlockFace {
@@ -22,7 +23,7 @@ impl BlockFace {
             BlockFace::Top => 2,
             BlockFace::Bottom => 3,
             BlockFace::Front => 4,
-            BlockFace::Back => 5
+            BlockFace::Back => 5,
         }
     }
 }
@@ -30,10 +31,11 @@ impl BlockFace {
 impl BlockProperty {
     fn id(&self) -> u8 {
         match *self {
-            BlockProperty::Opaque => 0b1,
-            BlockProperty::Transparent => 0b10,
-            BlockProperty::Full => 0b100,
-            BlockProperty::Empty => 0b1000,
+            Self::Opaque => 0b1,
+            Self::Transparent => 0b10,
+            Self::Full => 0b100,
+            Self::Empty => 0b1000,
+            Self::ShipOnly => 0b10000,
         }
     }
 
@@ -52,16 +54,21 @@ pub struct Block {
     visibility: u8,
     id: u16,
     unlocalized_name: String,
-    uvs: [usize; 6]
+    uvs: [usize; 6],
 }
 
 impl Block {
-    pub fn new(properties: &Vec<BlockProperty>, uvs: [usize; 6], id: u16, unlocalized_name: String) -> Self {
+    pub fn new(
+        properties: &Vec<BlockProperty>,
+        uvs: [usize; 6],
+        id: u16,
+        unlocalized_name: String,
+    ) -> Self {
         Self {
             visibility: BlockProperty::create_id(properties),
             id,
             uvs,
-            unlocalized_name
+            unlocalized_name,
         }
     }
 

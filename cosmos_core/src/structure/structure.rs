@@ -1,30 +1,29 @@
-use std::cell::RefCell;
-use std::rc::{Rc};
-use std::sync::{Arc, Mutex};
-use bevy_rapier3d::na::{Vector3};
-use bevy_rapier3d::rapier::prelude::RigidBodyPosition;
 use crate::block::block::Block;
 use crate::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
 use crate::utils::array_utils::flatten;
 use crate::utils::vec_math::add_vec;
-use serde::{Serialize, Deserialize, Serializer};
 use bevy::prelude::{Commands, Component, Entity, EventWriter};
+use bevy_rapier3d::na::Vector3;
+use bevy_rapier3d::rapier::prelude::RigidBodyPosition;
 use serde::ser::SerializeStruct;
+use serde::{Deserialize, Serialize, Serializer};
+use std::cell::RefCell;
+use std::rc::Rc;
+use std::sync::{Arc, Mutex};
 
 pub struct StructureCreated {
-    pub entity: Entity
+    pub entity: Entity,
 }
 
 pub struct ChunkSetEvent {
     pub structure_entity: Entity,
     pub x: usize,
     pub y: usize,
-    pub z: usize
+    pub z: usize,
 }
 
 #[derive(Serialize, Deserialize, Component)]
-pub struct Structure
-{
+pub struct Structure {
     #[serde(skip)]
     chunk_entities: Vec<Option<Entity>>,
     #[serde(skip)]
@@ -33,34 +32,38 @@ pub struct Structure
     chunks: Vec<Chunk>,
     width: usize,
     height: usize,
-    length: usize
+    length: usize,
 }
 
 pub struct BlockChangedEvent {
     pub block: StructureBlock,
     pub structure_entity: Entity,
     pub old_block: &'static Block,
-    pub new_block: &'static Block
+    pub new_block: &'static Block,
 }
 
 pub struct StructureBlock {
     x: usize,
     y: usize,
-    z: usize
+    z: usize,
 }
 
 impl StructureBlock {
     #[inline]
-    pub fn x(&self) -> usize { self.x }
+    pub fn x(&self) -> usize {
+        self.x
+    }
     #[inline]
-    pub fn y(&self) -> usize { self.x }
+    pub fn y(&self) -> usize {
+        self.x
+    }
     #[inline]
-    pub fn z(&self) -> usize { self.x }
+    pub fn z(&self) -> usize {
+        self.x
+    }
 
     pub fn new(x: usize, y: usize, z: usize) -> Self {
-        Self {
-            x, y, z
-        }
+        Self { x, y, z }
     }
 
     #[inline]
@@ -88,12 +91,9 @@ impl Structure {
     pub fn new(width: usize, height: usize, length: usize, self_entity: Entity) -> Self {
         let mut chunks = Vec::with_capacity(width * height * length);
 
-        for z in 0..length
-        {
-            for y in 0..height
-            {
-                for x in 0..width
-                {
+        for z in 0..length {
+            for y in 0..height {
+                for x in 0..width {
                     chunks.push(Chunk::new(x, y, z));
                 }
             }
@@ -109,7 +109,9 @@ impl Structure {
             chunk_entities,
             self_entity: Some(self_entity),
             chunks,
-            width, height, length
+            width,
+            height,
+            length,
         }
     }
 
@@ -130,7 +132,9 @@ impl Structure {
 
     pub fn chunk_entity(&self, cx: usize, cy: usize, cz: usize) -> Entity {
         // If this fails, that means the chunk entity ids were not set before being used
-        self.chunk_entities[flatten(cx, cy, cz, self.width, self.height)].unwrap().clone()
+        self.chunk_entities[flatten(cx, cy, cz, self.width, self.height)]
+            .unwrap()
+            .clone()
     }
 
     pub fn set_chunk_entity(&mut self, cx: usize, cy: usize, cz: usize, entity: Entity) {
@@ -164,24 +168,43 @@ impl Structure {
     /// (5, 0, 0) => chunk @ 0, 0, 0\
     /// (32, 0, 0) => chunk @ 1, 0, 0
     pub fn chunk_at_block_coordinates(&self, x: usize, y: usize, z: usize) -> &Chunk {
-        self.chunk_from_chunk_coordinates(x / CHUNK_DIMENSIONS, y / CHUNK_DIMENSIONS, z / CHUNK_DIMENSIONS)
+        self.chunk_from_chunk_coordinates(
+            x / CHUNK_DIMENSIONS,
+            y / CHUNK_DIMENSIONS,
+            z / CHUNK_DIMENSIONS,
+        )
     }
 
     fn mut_chunk_at_block_coordinates(&mut self, x: usize, y: usize, z: usize) -> &mut Chunk {
-        &mut self.chunks[flatten(x / CHUNK_DIMENSIONS, y / CHUNK_DIMENSIONS, z / CHUNK_DIMENSIONS, self.width, self.height)]
+        &mut self.chunks[flatten(
+            x / CHUNK_DIMENSIONS,
+            y / CHUNK_DIMENSIONS,
+            z / CHUNK_DIMENSIONS,
+            self.width,
+            self.height,
+        )]
     }
 
     pub fn block_at(&self, x: usize, y: usize, z: usize) -> &'static Block {
-        self.chunk_at_block_coordinates(x, y, z)
-            .block_at(x % CHUNK_DIMENSIONS, y % CHUNK_DIMENSIONS, z % CHUNK_DIMENSIONS)
+        self.chunk_at_block_coordinates(x, y, z).block_at(
+            x % CHUNK_DIMENSIONS,
+            y % CHUNK_DIMENSIONS,
+            z % CHUNK_DIMENSIONS,
+        )
     }
 
     pub fn chunks(&self) -> &Vec<Chunk> {
         &self.chunks
     }
 
-    pub fn set_block_at(&mut self, x: usize, y: usize, z: usize, block: &'static Block,
-        mut event_writer: Option<&mut EventWriter<BlockChangedEvent>>) {
+    pub fn set_block_at(
+        &mut self,
+        x: usize,
+        y: usize,
+        z: usize,
+        block: &'static Block,
+        event_writer: Option<&mut EventWriter<BlockChangedEvent>>,
+    ) {
         if self.block_at(x, y, z) == block {
             return;
         }
@@ -191,12 +214,16 @@ impl Structure {
                 new_block: block,
                 old_block: self.block_at(x, y, z),
                 structure_entity: self.self_entity.unwrap().clone(),
-                block: StructureBlock::new(x, y, z)
+                block: StructureBlock::new(x, y, z),
             });
         }
 
-        self.mut_chunk_at_block_coordinates(x, y, z)
-            .set_block_at(x % CHUNK_DIMENSIONS, y % CHUNK_DIMENSIONS, z % CHUNK_DIMENSIONS, block);
+        self.mut_chunk_at_block_coordinates(x, y, z).set_block_at(
+            x % CHUNK_DIMENSIONS,
+            y % CHUNK_DIMENSIONS,
+            z % CHUNK_DIMENSIONS,
+            block,
+        );
     }
 
     pub fn chunk_relative_position(&self, x: usize, y: usize, z: usize) -> Vector3<f32> {
@@ -211,14 +238,31 @@ impl Structure {
         Vector3::new(xx, yy, zz)
     }
 
-    pub fn chunk_world_position(&self, x: usize, y: usize, z: usize, body_position: &RigidBodyPosition) -> Vector3<f32> {
-        add_vec(&body_position.position.translation.vector,
-                &body_position.position.rotation.transform_vector(&self.chunk_relative_position(x, y, z)))
+    pub fn chunk_world_position(
+        &self,
+        x: usize,
+        y: usize,
+        z: usize,
+        body_position: &RigidBodyPosition,
+    ) -> Vector3<f32> {
+        add_vec(
+            &body_position.position.translation.vector,
+            &body_position
+                .position
+                .rotation
+                .transform_vector(&self.chunk_relative_position(x, y, z)),
+        )
     }
 
     pub fn set_chunk(&mut self, chunk: Chunk) {
         println!("Set chunk!!!");
-        let i = flatten(chunk.structure_x(), chunk.structure_y(), chunk.structure_z(), self.width, self.height);
+        let i = flatten(
+            chunk.structure_x(),
+            chunk.structure_y(),
+            chunk.structure_z(),
+            self.width,
+            self.height,
+        );
         self.chunks[i] = chunk;
     }
 }

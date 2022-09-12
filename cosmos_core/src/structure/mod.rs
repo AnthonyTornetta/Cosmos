@@ -1,2 +1,3 @@
-pub mod structure;
 pub mod chunk;
+pub mod planet;
+pub mod structure;

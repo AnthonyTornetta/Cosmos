@@ -1,4 +1,5 @@
 mod server;
+mod structure;
 
 use bevy::prelude::*;
 use bevy::winit::WinitPlugin;
@@ -23,13 +24,14 @@ use cosmos_core::physics::structure_physics::{
 };
 use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
 use cosmos_core::structure::chunk::CHUNK_DIMENSIONS;
+use cosmos_core::structure::planet::planet_builder_trait::TPlanetBuilder;
 use cosmos_core::structure::structure::{
     BlockChangedEvent, ChunkSetEvent, Structure, StructureCreated,
 };
-use rand::Rng;
 use std::collections::HashMap;
 use std::net::{SocketAddr, UdpSocket};
 use std::time::{Instant, SystemTime};
+use structure::planet::server_planet_builder::{self, ServerPlanetBuilder};
 
 #[derive(Debug, Default)]
 pub struct ServerLobby {
@@ -237,97 +239,13 @@ fn create_structure(mut commands: Commands, mut event_writer: EventWriter<Struct
 
     let mut structure = Structure::new(4, 2, 4, entity_cmd.id());
 
-    let physics_updater = StructurePhysics::new(&structure, entity_cmd.id());
+    let builder = ServerPlanetBuilder::default();
 
-    let now = Instant::now();
-    for z in 0..CHUNK_DIMENSIONS * structure.length() {
-        for x in 0..CHUNK_DIMENSIONS * structure.width() {
-            let y: f32 = (CHUNK_DIMENSIONS * structure.height()) as f32
-                - ((x + z) as f32 / 12.0).sin().abs() * 4.0
-                - 10.0;
-
-            let y_max = y.ceil() as usize;
-            for yy in 0..y_max {
-                if yy == y_max - 1 {
-                    structure.set_block_at(x, yy, z, &GRASS, None);
-
-                    let mut rng = rand::thread_rng();
-
-                    let n1: u8 = rng.gen();
-
-                    if n1 < 1 {
-                        for ty in (yy + 1)..(yy + 7) {
-                            if ty != yy + 6 {
-                                structure.set_block_at(x, ty, z, &CHERRY_LOG, None);
-                            } else {
-                                structure.set_block_at(x, ty, z, &CHERRY_LEAF, None);
-                            }
-
-                            if ty > yy + 2 {
-                                let range;
-                                if ty < yy + 5 {
-                                    range = -2..3;
-                                } else {
-                                    range = -1..2;
-                                }
-
-                                for tz in range.clone() {
-                                    for tx in range.clone() {
-                                        if tx == 0 && tz == 0
-                                            || (tx + (x as i32) < 0
-                                                || tz + (z as i32) < 0
-                                                || ((tx + (x as i32)) as usize)
-                                                    >= structure.width() * 32
-                                                || ((tz + (z as i32)) as usize)
-                                                    >= structure.length() * 32)
-                                        {
-                                            continue;
-                                        }
-                                        structure.set_block_at(
-                                            (x as i32 + tx) as usize,
-                                            ty,
-                                            (z as i32 + tz) as usize,
-                                            &CHERRY_LEAF,
-                                            None,
-                                        );
-                                    }
-                                }
-                            }
-                        }
-                    }
-                } else if yy > y_max - 5 {
-                    structure.set_block_at(x, yy, z, &DIRT, None);
-                } else {
-                    structure.set_block_at(x, yy, z, &STONE, None);
-                }
-            }
-        }
-    }
-
-    println!("Done in {}ms", now.elapsed().as_millis());
-
-    entity_cmd
-        .insert_bundle(PbrBundle {
-            transform: Transform {
-                translation: Vec3::new(0.0, 0.0, 0.0),
-                ..default()
-            },
-            ..default()
-        })
-        .insert(RigidBody::Fixed)
-        .insert(Velocity::default())
-        .with_children(|parent| {
-            for z in 0..structure.length() {
-                for y in 0..structure.height() {
-                    for x in 0..structure.width() {
-                        let entity = parent.spawn().id();
-
-                        structure.set_chunk_entity(x, y, z, entity);
-                    }
-                }
-            }
-        })
-        .insert(physics_updater);
+    builder.create(
+        &mut entity_cmd,
+        Transform::from_xyz(0.0, 0.0, 0.0),
+        &mut structure,
+    );
 
     entity_cmd.insert(structure);
 
@@ -350,8 +268,9 @@ fn main() {
 
     let server = RenetServer::new(cur_time, server_config, connection_config, socket).unwrap();
 
-    App::new()
-        .add_plugins(CosmosCorePluginGroup::default())
+    let mut app = App::new();
+
+    app.add_plugins(CosmosCorePluginGroup::default())
         .add_plugin(RenetServerPlugin)
         .add_plugin(WinitPlugin::default())
         .insert_resource(ServerLobby::default())
@@ -367,7 +286,9 @@ fn main() {
         .add_system(server_sync_bodies)
         .add_system(handle_events_system)
         .add_system(listen_for_structure_event)
-        .add_system(listen_for_new_physics_event)
-        // .add_system(lol.before(listen_for_new_physics_evnet))
-        .run();
+        .add_system(listen_for_new_physics_event);
+
+    server_planet_builder::register(&mut app);
+
+    app.run();
 }

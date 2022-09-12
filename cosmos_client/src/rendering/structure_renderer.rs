@@ -1,31 +1,33 @@
-use std::collections::HashSet;
-use bevy::prelude::{EventReader, Mesh, Component};
+use bevy::prelude::{Component, EventReader, Mesh};
 use bevy::render::mesh::{Indices, PrimitiveTopology};
-use cosmos_core::block::block::{Block, BlockFace};
-use cosmos_core::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
-use cosmos_core::structure::structure::{BlockChangedEvent, ChunkSetEvent, Structure, StructureBlock, StructureCreated};
-use cosmos_core::utils::array_utils::flatten;
 use bevy_rapier3d::na::Vector3;
+use cosmos_core::block::block::BlockFace;
+use cosmos_core::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
+use cosmos_core::structure::structure::{
+    BlockChangedEvent, ChunkSetEvent, Structure, StructureCreated,
+};
+use cosmos_core::utils::array_utils::flatten;
+use std::collections::HashSet;
 
-use crate::{Assets, Commands, Entity, EventWriter, Handle, MainAtlas, Query, Res, ResMut, StandardMaterial, UVMapper};
+use crate::{
+    Assets, Commands, Entity, EventWriter, Handle, MainAtlas, Query, Res, ResMut, UVMapper,
+};
 
 #[derive(Component)]
-pub struct StructureRenderer
-{
+pub struct StructureRenderer {
     width: usize,
     height: usize,
     length: usize,
     chunk_renderers: Vec<ChunkRenderer>,
     changes: HashSet<Vector3<usize>>,
-    need_meshes: HashSet<Vector3<usize>>
+    need_meshes: HashSet<Vector3<usize>>,
 }
 
-pub struct ChunkMesh
-{
+pub struct ChunkMesh {
     pub x: usize,
     pub y: usize,
     pub z: usize,
-    pub mesh: Mesh
+    pub mesh: Mesh,
 }
 
 impl StructureRenderer {
@@ -51,7 +53,9 @@ impl StructureRenderer {
             chunk_renderers: rends,
             changes,
             need_meshes: HashSet::new(),
-            width, height, length
+            width,
+            height,
+            length,
         }
     }
 
@@ -61,46 +65,49 @@ impl StructureRenderer {
 
             let left = match x {
                 0 => None,
-                x => Some(structure.chunk_from_chunk_coordinates(x - 1, y, z))
+                x => Some(structure.chunk_from_chunk_coordinates(x - 1, y, z)),
             };
 
             let right;
             if x == self.width - 1 {
                 right = None;
-            }
-            else {
+            } else {
                 right = Some(structure.chunk_from_chunk_coordinates(x + 1, y, z));
             }
 
             let bottom = match y {
                 0 => None,
-                y => Some(structure.chunk_from_chunk_coordinates(x, y - 1, z))
+                y => Some(structure.chunk_from_chunk_coordinates(x, y - 1, z)),
             };
 
             let top;
             if y == self.height - 1 {
                 top = None;
-            }
-            else {
+            } else {
                 top = Some(structure.chunk_from_chunk_coordinates(x, y + 1, z));
             }
 
             let back = match z {
                 0 => None,
-                z => Some(structure.chunk_from_chunk_coordinates(x, y, z - 1))
+                z => Some(structure.chunk_from_chunk_coordinates(x, y, z - 1)),
             };
 
             let front;
             if z == self.length - 1 {
                 front = None;
-            }
-            else {
+            } else {
                 front = Some(structure.chunk_from_chunk_coordinates(x, y, z + 1));
             }
 
-            self.chunk_renderers[flatten(x, y, z, self.width, self.height)].render(uv_mapper,
+            self.chunk_renderers[flatten(x, y, z, self.width, self.height)].render(
+                uv_mapper,
                 structure.chunk_from_chunk_coordinates(x, y, z),
-                left, right, bottom, top, back, front
+                left,
+                right,
+                bottom,
+                top,
+                back,
+                front,
             );
 
             self.need_meshes.insert(change.clone());
@@ -115,10 +122,14 @@ impl StructureRenderer {
         for chunk in &self.need_meshes {
             let mut renderer: Option<ChunkRenderer> = None;
 
-            take_mut::take(&mut self.chunk_renderers[flatten(chunk.x, chunk.y, chunk.z, self.width, self.height)], | x | {
-                renderer = Some(x);
-                ChunkRenderer::new()
-            });
+            take_mut::take(
+                &mut self.chunk_renderers
+                    [flatten(chunk.x, chunk.y, chunk.z, self.width, self.height)],
+                |x| {
+                    renderer = Some(x);
+                    ChunkRenderer::new()
+                },
+            );
 
             let rend = renderer.unwrap();
 
@@ -132,7 +143,7 @@ impl StructureRenderer {
                 x: chunk.x,
                 y: chunk.y,
                 z: chunk.z,
-                mesh
+                mesh,
             });
         }
 
@@ -144,16 +155,21 @@ impl StructureRenderer {
 
 pub struct NeedsNewRenderingEvent(Entity);
 
-fn dew_it(done_structures: &mut HashSet<u32>, entity: Entity,
-          chunk_coords: Option<Vector3<usize>>, query: &mut Query<&mut StructureRenderer>,
-          event_writer: &mut EventWriter<NeedsNewRenderingEvent>
+fn dew_it(
+    done_structures: &mut HashSet<u32>,
+    entity: Entity,
+    chunk_coords: Option<Vector3<usize>>,
+    query: &mut Query<&mut StructureRenderer>,
+    event_writer: &mut EventWriter<NeedsNewRenderingEvent>,
 ) {
     if chunk_coords.is_some() {
         let mut structure_renderer = query.get_mut(entity).unwrap();
 
-        structure_renderer.changes.insert(Vector3::new(chunk_coords.unwrap().x,
-                                                       chunk_coords.unwrap().y,
-                                                       chunk_coords.unwrap().z));
+        structure_renderer.changes.insert(Vector3::new(
+            chunk_coords.unwrap().x,
+            chunk_coords.unwrap().y,
+            chunk_coords.unwrap().z,
+        ));
     }
 
     if !done_structures.contains(&entity.id()) {
@@ -168,23 +184,42 @@ pub fn monitor_block_updates_system(
     mut structure_created_event: EventReader<StructureCreated>,
     mut chunk_set_event: EventReader<ChunkSetEvent>,
     mut query: Query<&mut StructureRenderer>,
-    mut event_writer: EventWriter<NeedsNewRenderingEvent>
+    mut event_writer: EventWriter<NeedsNewRenderingEvent>,
 ) {
     let mut done_structures = HashSet::new();
 
     for ev in event.iter() {
         dew_it(
-            &mut done_structures, ev.structure_entity,
-            Some(Vector3::new(ev.block.chunk_coord_x(), ev.block.chunk_coord_y(), ev.block.chunk_coord_z())),
-            &mut query, &mut event_writer);
+            &mut done_structures,
+            ev.structure_entity,
+            Some(Vector3::new(
+                ev.block.chunk_coord_x(),
+                ev.block.chunk_coord_y(),
+                ev.block.chunk_coord_z(),
+            )),
+            &mut query,
+            &mut event_writer,
+        );
     }
 
     for ev in structure_created_event.iter() {
-        dew_it(&mut done_structures, ev.entity, None, &mut query, &mut event_writer);
+        dew_it(
+            &mut done_structures,
+            ev.entity,
+            None,
+            &mut query,
+            &mut event_writer,
+        );
     }
 
     for ev in chunk_set_event.iter() {
-        dew_it(&mut done_structures, ev.structure_entity, Some(Vector3::new(ev.x, ev.y, ev.z)), &mut query, &mut event_writer);
+        dew_it(
+            &mut done_structures,
+            ev.structure_entity,
+            Some(Vector3::new(ev.x, ev.y, ev.z)),
+            &mut query,
+            &mut event_writer,
+        );
     }
 }
 
@@ -194,7 +229,7 @@ pub fn monitor_needs_rendered_system(
     mut query: Query<(&Structure, &mut StructureRenderer)>,
     atlas: Res<MainAtlas>,
     mesh_query: Query<Option<&Handle<Mesh>>>,
-    mut meshes: ResMut<Assets<Mesh>>
+    mut meshes: ResMut<Assets<Mesh>>,
 ) {
     let mut done_structures = HashSet::new();
     for ev in event.iter() {
@@ -221,24 +256,23 @@ pub fn monitor_needs_rendered_system(
 
             let mut entity_commands = commands.entity(entity);
 
-            println!("Verts {}", chunk_mesh.mesh.count_vertices());
-
+            println!(
+                "Created chunk's mesh! (Verts: {})",
+                chunk_mesh.mesh.count_vertices()
+            );
             // entity_commands.remove::<Handle<Mesh>>();
             // entity_commands.remove::<Handle<StandardMaterial>>();
             entity_commands.insert(meshes.add(chunk_mesh.mesh));
             entity_commands.insert(atlas.material.clone());
-
-            println!("Created chunk's mesh!");
         }
     }
 }
 
-pub struct ChunkRenderer
-{
+pub struct ChunkRenderer {
     pub indices: Vec<u32>,
     pub uvs: Vec<[f32; 2]>,
     pub positions: Vec<[f32; 3]>,
-    pub normals: Vec<[f32; 3]>
+    pub normals: Vec<[f32; 3]>,
 }
 
 impl ChunkRenderer {
@@ -247,15 +281,21 @@ impl ChunkRenderer {
             indices: Vec::new(),
             uvs: Vec::new(),
             positions: Vec::new(),
-            normals: Vec::new()
+            normals: Vec::new(),
         }
     }
 
-    pub fn render(&mut self, uv_mapper: &UVMapper, chunk: &Chunk,
-                  left: Option<&Chunk>, right: Option<&Chunk>,
-                  bottom: Option<&Chunk>, top: Option<&Chunk>,
-                  back: Option<&Chunk>, front: Option<&Chunk>) {
-
+    pub fn render(
+        &mut self,
+        uv_mapper: &UVMapper,
+        chunk: &Chunk,
+        left: Option<&Chunk>,
+        right: Option<&Chunk>,
+        bottom: Option<&Chunk>,
+        top: Option<&Chunk>,
+        back: Option<&Chunk>,
+        front: Option<&Chunk>,
+    ) {
         self.indices.clear();
         self.uvs.clear();
         self.positions.clear();
@@ -263,20 +303,21 @@ impl ChunkRenderer {
 
         let mut last_index = 0;
 
-        for z in 0..CHUNK_DIMENSIONS
-        {
-            for y in 0..CHUNK_DIMENSIONS
-            {
-                for x in 0..CHUNK_DIMENSIONS
-                {
+        for z in 0..CHUNK_DIMENSIONS {
+            for y in 0..CHUNK_DIMENSIONS {
+                for x in 0..CHUNK_DIMENSIONS {
                     if chunk.has_block_at(x, y, z) {
                         let block = chunk.block_at(x, y, z);
 
                         let (cx, cy, cz) = (x as f32, y as f32, z as f32);
 
                         // right
-                        if (x != CHUNK_DIMENSIONS - 1 && chunk.has_see_through_block_at(x + 1, y, z)) ||
-                            (x == CHUNK_DIMENSIONS - 1 && (right.is_none() || right.unwrap().has_see_through_block_at(0, y, z))) {
+                        if (x != CHUNK_DIMENSIONS - 1
+                            && chunk.has_see_through_block_at(x + 1, y, z))
+                            || (x == CHUNK_DIMENSIONS - 1
+                                && (right.is_none()
+                                    || right.unwrap().has_see_through_block_at(0, y, z)))
+                        {
                             self.positions.push([cx + 0.5, cy + -0.5, cz + -0.5]);
                             self.positions.push([cx + 0.5, cy + 0.5, cz + -0.5]);
                             self.positions.push([cx + 0.5, cy + 0.5, cz + 0.5]);
@@ -303,8 +344,15 @@ impl ChunkRenderer {
                             last_index += 4;
                         }
                         // left
-                        if (x != 0 && chunk.has_see_through_block_at(x - 1, y, z)) ||
-                            (x == 0 && (left.is_none() || left.unwrap().has_see_through_block_at(CHUNK_DIMENSIONS - 1, y, z))) {
+                        if (x != 0 && chunk.has_see_through_block_at(x - 1, y, z))
+                            || (x == 0
+                                && (left.is_none()
+                                    || left.unwrap().has_see_through_block_at(
+                                        CHUNK_DIMENSIONS - 1,
+                                        y,
+                                        z,
+                                    )))
+                        {
                             self.positions.push([cx + -0.5, cy + -0.5, cz + 0.5]);
                             self.positions.push([cx + -0.5, cy + 0.5, cz + 0.5]);
                             self.positions.push([cx + -0.5, cy + 0.5, cz + -0.5]);
@@ -332,8 +380,12 @@ impl ChunkRenderer {
                         }
 
                         // top
-                        if (y != CHUNK_DIMENSIONS - 1 && chunk.has_see_through_block_at(x, y + 1, z)) ||
-                            (y == CHUNK_DIMENSIONS - 1 && (top.is_none() || top.unwrap().has_see_through_block_at(x, 0, z))) {
+                        if (y != CHUNK_DIMENSIONS - 1
+                            && chunk.has_see_through_block_at(x, y + 1, z))
+                            || (y == CHUNK_DIMENSIONS - 1
+                                && (top.is_none()
+                                    || top.unwrap().has_see_through_block_at(x, 0, z)))
+                        {
                             self.positions.push([cx + 0.5, cy + 0.5, cz + -0.5]);
                             self.positions.push([cx + -0.5, cy + 0.5, cz + -0.5]);
                             self.positions.push([cx + -0.5, cy + 0.5, cz + 0.5]);
@@ -360,8 +412,15 @@ impl ChunkRenderer {
                             last_index += 4;
                         }
                         // bottom
-                        if (y != 0 && chunk.has_see_through_block_at(x, y - 1, z)) ||
-                            (y == 0 && (bottom.is_none() || bottom.unwrap().has_see_through_block_at(x, CHUNK_DIMENSIONS - 1, z))) {
+                        if (y != 0 && chunk.has_see_through_block_at(x, y - 1, z))
+                            || (y == 0
+                                && (bottom.is_none()
+                                    || bottom.unwrap().has_see_through_block_at(
+                                        x,
+                                        CHUNK_DIMENSIONS - 1,
+                                        z,
+                                    )))
+                        {
                             self.positions.push([cx + 0.5, cy + -0.5, cz + 0.5]);
                             self.positions.push([cx + -0.5, cy + -0.5, cz + 0.5]);
                             self.positions.push([cx + -0.5, cy + -0.5, cz + -0.5]);
@@ -389,8 +448,12 @@ impl ChunkRenderer {
                         }
 
                         // back
-                        if (z != CHUNK_DIMENSIONS - 1 && chunk.has_see_through_block_at(x, y, z + 1)) ||
-                            (z == CHUNK_DIMENSIONS - 1 && (front.is_none() || front.unwrap().has_see_through_block_at(x, y, 0))) {
+                        if (z != CHUNK_DIMENSIONS - 1
+                            && chunk.has_see_through_block_at(x, y, z + 1))
+                            || (z == CHUNK_DIMENSIONS - 1
+                                && (front.is_none()
+                                    || front.unwrap().has_see_through_block_at(x, y, 0)))
+                        {
                             self.positions.push([cx + -0.5, cy + -0.5, cz + 0.5]);
                             self.positions.push([cx + 0.5, cy + -0.5, cz + 0.5]);
                             self.positions.push([cx + 0.5, cy + 0.5, cz + 0.5]);
@@ -417,8 +480,15 @@ impl ChunkRenderer {
                             last_index += 4;
                         }
                         // front
-                        if (z != 0 && chunk.has_see_through_block_at(x, y, z - 1)) ||
-                            (z == 0 && (back.is_none() || back.unwrap().has_see_through_block_at(x, y, CHUNK_DIMENSIONS - 1))) {
+                        if (z != 0 && chunk.has_see_through_block_at(x, y, z - 1))
+                            || (z == 0
+                                && (back.is_none()
+                                    || back.unwrap().has_see_through_block_at(
+                                        x,
+                                        y,
+                                        CHUNK_DIMENSIONS - 1,
+                                    )))
+                        {
                             self.positions.push([cx + -0.5, cy + 0.5, cz + -0.5]);
                             self.positions.push([cx + 0.5, cy + 0.5, cz + -0.5]);
                             self.positions.push([cx + 0.5, cy + -0.5, cz + -0.5]);

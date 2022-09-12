@@ -1,29 +1,29 @@
+use crate::block::block::Block;
+use crate::block::blocks::{block_from_id, AIR};
+use serde::de;
+use serde::de::{Deserialize, Deserializer, MapAccess, SeqAccess, Visitor};
+use serde::de::{EnumAccess, Error};
+use serde::ser::{Serialize, SerializeStruct, Serializer};
 use std::fmt;
 use std::fmt::{Formatter, Write};
-use crate::block::block::Block;
-use crate::block::blocks::{AIR, block_from_id};
-use serde::{de};
-use serde::de::{EnumAccess, Error};
-use serde::ser::{Serialize, Serializer, SerializeStruct};
-use serde::de::{Deserialize, Deserializer,Visitor, SeqAccess, MapAccess};
 
 pub const CHUNK_DIMENSIONS: usize = 32;
 const N_BLOCKS: usize = CHUNK_DIMENSIONS * CHUNK_DIMENSIONS * CHUNK_DIMENSIONS;
 
-pub struct Chunk
-{
+pub struct Chunk {
     x: usize,
     y: usize,
     z: usize,
-    blocks: [u16; N_BLOCKS]
+    blocks: [u16; N_BLOCKS],
 }
 
-impl Chunk
-{
+impl Chunk {
     pub fn new(x: usize, y: usize, z: usize) -> Self {
         Self {
-            x, y, z,
-            blocks: [0; N_BLOCKS]
+            x,
+            y,
+            z,
+            blocks: [0; N_BLOCKS],
         }
     }
 
@@ -55,7 +55,9 @@ impl Chunk
     }
 
     pub fn block_at(&self, x: usize, y: usize, z: usize) -> &'static Block {
-        block_from_id(self.blocks[z * CHUNK_DIMENSIONS * CHUNK_DIMENSIONS + y * CHUNK_DIMENSIONS + x])
+        block_from_id(
+            self.blocks[z * CHUNK_DIMENSIONS * CHUNK_DIMENSIONS + y * CHUNK_DIMENSIONS + x],
+        )
     }
 
     pub fn has_full_block_at(&self, x: usize, y: usize, z: usize) -> bool {
@@ -63,9 +65,11 @@ impl Chunk
     }
 }
 
-
 impl Serialize for Chunk {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
         let mut chunk_data: Vec<u16> = Vec::new();
 
         let mut n: u16 = 1;
@@ -101,7 +105,10 @@ impl Serialize for Chunk {
 static FIELDS: &'static [&'static str] = &["x", "y", "z", "blocks"];
 
 enum Field {
-    X, Y, Z, Blocks
+    X,
+    Y,
+    Z,
+    Blocks,
 }
 
 struct FieldVisitor;
@@ -114,8 +121,8 @@ impl<'de> Visitor<'de> for FieldVisitor {
     }
 
     fn visit_str<E>(self, value: &str) -> Result<Field, E>
-        where
-            E: de::Error,
+    where
+        E: de::Error,
     {
         match value {
             "x" => Ok(Field::X),
@@ -128,8 +135,11 @@ impl<'de> Visitor<'de> for FieldVisitor {
 }
 
 impl<'de> Deserialize<'de> for Field {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
-        deserializer.deserialize_identifier(FieldVisitor{})
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_identifier(FieldVisitor {})
     }
 }
 
@@ -147,12 +157,8 @@ fn vec_into_chunk_array(blocks: &Vec<u16>) -> [u16; N_BLOCKS] {
         if xi % 2 == 0 {
             sum += x;
         }
-        print!("{} ", x);
         xi += 1;
     }
-    println!("");
-
-    println!("{} -> {}", blocks.len() / 2, sum);
 
     for i in 0..N_BLOCKS {
         if n == 0 {
@@ -173,25 +179,35 @@ impl<'de> Visitor<'de> for ChunkVisitor {
         formatter.write_str("struct Chunk")
     }
 
-    fn visit_seq<A>(self, mut seq: A) -> Result<Chunk, A::Error> where A: SeqAccess<'de> {
-        let x = seq.next_element()?
+    fn visit_seq<A>(self, mut seq: A) -> Result<Chunk, A::Error>
+    where
+        A: SeqAccess<'de>,
+    {
+        let x = seq
+            .next_element()?
             .ok_or_else(|| A::Error::invalid_length(0, &self))?;
-        let y = seq.next_element()?
+        let y = seq
+            .next_element()?
             .ok_or_else(|| A::Error::invalid_length(1, &self))?;
-        let z = seq.next_element()?
+        let z = seq
+            .next_element()?
             .ok_or_else(|| A::Error::invalid_length(2, &self))?;
-        let blocks: Vec<u16> = seq.next_element()?
+        let blocks: Vec<u16> = seq
+            .next_element()?
             .ok_or_else(|| A::Error::invalid_length(3, &self))?;
 
         Ok(Chunk {
             x,
             y,
             z,
-            blocks: vec_into_chunk_array(&blocks)
+            blocks: vec_into_chunk_array(&blocks),
         })
     }
 
-    fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error> where A: MapAccess<'de> {
+    fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+    where
+        A: MapAccess<'de>,
+    {
         let mut x = None;
         let mut y = None;
         let mut z = None;
@@ -233,13 +249,16 @@ impl<'de> Visitor<'de> for ChunkVisitor {
             x,
             y,
             z,
-            blocks: vec_into_chunk_array(&blocks)
+            blocks: vec_into_chunk_array(&blocks),
         })
     }
 }
 
 impl<'de> Deserialize<'de> for Chunk {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
         deserializer.deserialize_struct("Chunk", FIELDS, ChunkVisitor)
     }
 }
