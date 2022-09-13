@@ -1,5 +1,5 @@
 use cosmos_core::structure::{
-    planet::{planet_builder::PlanetBuilder, planet_builder_trait::TPlanetBuilder},
+    planet::{planet_builder::PlanetBuilder, planet_builder::TPlanetBuilder},
     structure::Structure,
 };
 
@@ -18,12 +18,13 @@ impl Default for ClientPlanetBuilder {
 }
 
 impl TPlanetBuilder for ClientPlanetBuilder {
-    fn create(
+    fn insert_planet(
         &self,
         entity: &mut bevy::ecs::system::EntityCommands,
         transform: bevy::prelude::Transform,
         structure: &mut Structure,
     ) {
-        self.planet_builder.create(entity, transform, structure);
+        self.planet_builder
+            .insert_planet(entity, transform, structure);
     }
 }

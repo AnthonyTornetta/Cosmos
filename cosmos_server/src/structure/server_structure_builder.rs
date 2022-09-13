@@ -1,6 +1,4 @@
-use cosmos_core::structure::{
-    structure_builder::StructureBuilder, structure_builder_trait::TStructureBuilder,
-};
+use cosmos_core::structure::structure_builder::{StructureBuilder, TStructureBuilder};
 
 #[derive(Default)]
 pub struct ServerStructureBuilder {
@@ -8,7 +6,7 @@ pub struct ServerStructureBuilder {
 }
 
 impl TStructureBuilder for ServerStructureBuilder {
-    fn create(
+    fn insert_structure(
         &self,
         entity: &mut bevy::ecs::system::EntityCommands,
         transform: bevy::prelude::Transform,
@@ -16,6 +14,6 @@ impl TStructureBuilder for ServerStructureBuilder {
         structure: &mut cosmos_core::structure::structure::Structure,
     ) {
         self.structure_builder
-            .create(entity, transform, velocity, structure);
+            .insert_structure(entity, transform, velocity, structure);
     }
 }

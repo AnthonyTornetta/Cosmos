@@ -5,7 +5,7 @@ pub mod structure;
 
 use cosmos_core::entities::sun::Sun;
 use cosmos_core::structure::chunk::Chunk;
-use cosmos_core::structure::planet::planet_builder_trait::TPlanetBuilder;
+use cosmos_core::structure::planet::planet_builder::TPlanetBuilder;
 use state::game_state::{self, GameState};
 use structure::chunk_retreiver;
 
@@ -605,7 +605,7 @@ fn client_sync_players(
                 let mut structure = Structure::new(width, height, length, entity.id());
 
                 let builder = ClientPlanetBuilder::default();
-                builder.create(&mut entity, body.create_transform(), &mut structure);
+                builder.insert_planet(&mut entity, body.create_transform(), &mut structure);
 
                 entity.insert(structure);
 

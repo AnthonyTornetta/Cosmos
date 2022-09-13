@@ -1,11 +1,9 @@
-use std::ops::RangeBounds;
-
 use bevy::prelude::{App, Commands, Component, Entity, EventReader, EventWriter, Query, With};
 use cosmos_core::{
     block::blocks::*,
     structure::{
         chunk::CHUNK_DIMENSIONS,
-        planet::{planet_builder::PlanetBuilder, planet_builder_trait::TPlanetBuilder},
+        planet::{planet_builder::PlanetBuilder, planet_builder::TPlanetBuilder},
         structure::{ChunkSetEvent, Structure},
     },
 };
@@ -35,13 +33,13 @@ pub struct GeneratePlanetChunkEvent {
 struct NeedsGenerated;
 
 impl TPlanetBuilder for ServerPlanetBuilder {
-    fn create(
+    fn insert_planet(
         &self,
         entity: &mut bevy::ecs::system::EntityCommands,
         transform: bevy::prelude::Transform,
         structure: &mut cosmos_core::structure::structure::Structure,
     ) {
-        self.builder.create(entity, transform, structure);
+        self.builder.insert_planet(entity, transform, structure);
 
         entity.insert(NeedsGenerated);
     }

@@ -24,7 +24,7 @@ use cosmos_core::physics::structure_physics::{
 };
 use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
 use cosmos_core::structure::chunk::CHUNK_DIMENSIONS;
-use cosmos_core::structure::planet::planet_builder_trait::TPlanetBuilder;
+use cosmos_core::structure::planet::planet_builder::TPlanetBuilder;
 use cosmos_core::structure::structure::{
     BlockChangedEvent, ChunkSetEvent, Structure, StructureCreated,
 };
@@ -241,7 +241,7 @@ fn create_structure(mut commands: Commands, mut event_writer: EventWriter<Struct
 
     let builder = ServerPlanetBuilder::default();
 
-    builder.create(
+    builder.insert_planet(
         &mut entity_cmd,
         Transform::from_xyz(0.0, 0.0, 0.0),
         &mut structure,

@@ -6,13 +6,20 @@ use bevy_rapier3d::prelude::{RigidBody, Velocity};
 
 use crate::{physics::structure_physics::StructurePhysics, structure::structure::Structure};
 
-use super::structure_builder_trait::TStructureBuilder;
-
+pub trait TStructureBuilder {
+    fn insert_structure(
+        &self,
+        entity: &mut EntityCommands,
+        transform: Transform,
+        velocity: Velocity,
+        structure: &mut Structure,
+    );
+}
 #[derive(Default)]
 pub struct StructureBuilder {}
 
 impl TStructureBuilder for StructureBuilder {
-    fn create(
+    fn insert_structure(
         &self,
         entity: &mut EntityCommands,
         transform: Transform,
@@ -22,7 +29,6 @@ impl TStructureBuilder for StructureBuilder {
         let physics_updater = StructurePhysics::new(structure, entity.id());
 
         entity
-            .insert(RigidBody::Fixed)
             .insert_bundle(PbrBundle {
                 transform,
                 ..Default::default()
