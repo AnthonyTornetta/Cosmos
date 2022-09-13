@@ -31,6 +31,7 @@ use cosmos_core::structure::structure::{
 use std::collections::HashMap;
 use std::net::{SocketAddr, UdpSocket};
 use std::time::{Instant, SystemTime};
+use structure::planet::biosphere::grass_biosphere::{self, GrassBiosphere};
 use structure::planet::server_planet_builder::{self, ServerPlanetBuilder};
 
 #[derive(Debug, Default)]
@@ -239,7 +240,7 @@ fn create_structure(mut commands: Commands, mut event_writer: EventWriter<Struct
 
     let mut structure = Structure::new(4, 2, 4, entity_cmd.id());
 
-    let builder = ServerPlanetBuilder::default();
+    let builder = ServerPlanetBuilder::new(GrassBiosphere::default());
 
     builder.insert_planet(
         &mut entity_cmd,
@@ -288,7 +289,7 @@ fn main() {
         .add_system(listen_for_structure_event)
         .add_system(listen_for_new_physics_event);
 
-    server_planet_builder::register(&mut app);
+    grass_biosphere::register(&mut app);
 
     app.run();
 }
