@@ -7,7 +7,10 @@ use cosmos_core::structure::planet::{
 
 use crate::structure::server_structure_builder::ServerStructureBuilder;
 
-use super::biosphere::biosphere::{TBiosphere, TGenerateChunkEvent};
+use super::{
+    biosphere::biosphere::{TBiosphere, TGenerateChunkEvent},
+    generation::planet_generator::NeedsGenerated,
+};
 
 pub struct ServerPlanetBuilder<K: Component, V: TGenerateChunkEvent, T: TBiosphere<K, V>> {
     builder: PlanetBuilder<ServerStructureBuilder>,
@@ -39,6 +42,7 @@ impl<K: Component, V: TGenerateChunkEvent, T: TBiosphere<K, V>> TPlanetBuilder
     ) {
         self.builder.insert_planet(entity, transform, structure);
 
+        entity.insert(NeedsGenerated);
         entity.insert(self.biosphere.get_marker_component());
     }
 }
