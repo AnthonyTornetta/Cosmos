@@ -1,11 +1,12 @@
-use bevy::prelude::{App, Component, Entity, EventReader, EventWriter, Query};
+use bevy::prelude::{App, Component, Entity, EventReader, EventWriter, Query, Res};
 use cosmos_core::{
-    block::blocks::*,
+    block::blocks::Blocks,
     structure::{
         chunk::CHUNK_DIMENSIONS,
         structure::{ChunkSetEvent, Structure},
     },
 };
+use noise::NoiseFn;
 
 use super::biosphere::{TBiosphere, TGenerateChunkEvent};
 
@@ -48,12 +49,21 @@ impl TBiosphere<GrassBiosphereMarker, GrassChunkNeedsGeneratedEvent> for GrassBi
     }
 }
 
+const AMPLITUDE: f64 = 30.0;
+const DELTA: f64 = 0.05;
+
 pub fn generate_planet(
     mut query: Query<&mut Structure>,
     mut events: EventReader<GrassChunkNeedsGeneratedEvent>,
     mut event_writer: EventWriter<ChunkSetEvent>,
+    noise_generastor: Res<noise::OpenSimplex>,
+    blocks: Res<Blocks>,
 ) {
     for ev in events.iter() {
+        let grass = blocks.block_from_id("cosmos:grass");
+        let dirt = blocks.block_from_id("cosmos:dirt");
+        let stone = blocks.block_from_id("cosmos:stone");
+
         let mut structure = query.get_mut(ev.structure_entity.clone()).unwrap();
 
         let (start_x, start_y, start_z) = (
@@ -62,73 +72,29 @@ pub fn generate_planet(
             ev.z * CHUNK_DIMENSIONS,
         );
 
-        println!("Generated structure's chunk!");
-
         let s_height = structure.height() * CHUNK_DIMENSIONS;
 
-        let middle_air_start = s_height - 20;
+        let middle_air_start = s_height - 23;
 
         for z in start_z..(start_z + CHUNK_DIMENSIONS) {
             for x in start_x..(start_x + CHUNK_DIMENSIONS) {
-                let y_here = (s_height + (7.0 * ((x + z) as f32 * 0.1).sin()).round() as usize)
-                    - middle_air_start;
+                let y_here = (middle_air_start as f64
+                    + noise_generastor.get([x as f64 * DELTA, z as f64 * DELTA]) * AMPLITUDE)
+                    .round() as usize;
 
                 let stone_range = 0..(y_here - 5);
                 let dirt_range = (y_here - 5)..(y_here - 1);
                 let grass_range = (y_here - 1)..y_here;
 
                 for y in start_y..((start_y + CHUNK_DIMENSIONS).min(y_here)) {
-                    if grass_range.contains(&y) {
-                        structure.set_block_at(x, y, z, &GRASS, None);
-
-                        // let mut rng = rand::thread_rng();
-
-                        // let n1: u8 = rng.gen();
-
-                        // if n1 < 1 {
-                        //     for ty in (y + 1)..(y + 7) {
-                        //         if ty != y + 6 {
-                        //             structure.set_block_at(x, ty, z, &CHERRY_LOG, None);
-                        //         } else {
-                        //             structure.set_block_at(x, ty, z, &CHERRY_LEAF, None);
-                        //         }
-
-                        //         if ty > y + 2 {
-                        //             let range;
-                        //             if ty < y + 5 {
-                        //                 range = -2..3;
-                        //             } else {
-                        //                 range = -1..2;
-                        //             }
-
-                        //             for tz in range.clone() {
-                        //                 for tx in range.clone() {
-                        //                     if tx == 0 && tz == 0
-                        //                         || (tx + (x as i32) < 0
-                        //                             || tz + (z as i32) < 0
-                        //                             || ((tx + (x as i32)) as usize)
-                        //                                 >= structure.width() * 32
-                        //                             || ((tz + (z as i32)) as usize)
-                        //                                 >= structure.length() * 32)
-                        //                     {
-                        //                         continue;
-                        //                     }
-                        //                     structure.set_block_at(
-                        //                         (x as i32 + tx) as usize,
-                        //                         ty,
-                        //                         (z as i32 + tz) as usize,
-                        //                         &CHERRY_LEAF,
-                        //                         None,
-                        //                     );
-                        //                 }
-                        //             }
-                        //         }
-                        //     }
-                        // }
-                    } else if dirt_range.contains(&y) {
-                        structure.set_block_at(x, y, z, &DIRT, None);
-                    } else if stone_range.contains(&y) {
-                        structure.set_block_at(x, y, z, &STONE, None);
+                    if !structure.has_block_at(x, y, z) {
+                        if grass_range.contains(&y) {
+                            structure.set_block_at(x, y, z, &grass, &blocks, None);
+                        } else if dirt_range.contains(&y) {
+                            structure.set_block_at(x, y, z, &dirt, &blocks, None);
+                        } else if stone_range.contains(&y) {
+                            structure.set_block_at(x, y, z, &stone, &blocks, None);
+                        }
                     }
                 }
             }
@@ -139,7 +105,9 @@ pub fn generate_planet(
             x: ev.x,
             y: ev.y,
             z: ev.z,
-        })
+        });
+
+        println!("Generated grass chunk!");
     }
 }
 

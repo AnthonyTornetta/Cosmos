@@ -3,17 +3,15 @@ use crate::block::block::{Block, BlockFace, BlockProperty};
 pub struct BlockBuilder {
     uvs: [usize; 6],
     properties: Vec<BlockProperty>,
-    id: u16,
-    unlocalized_name: String
+    unlocalized_name: String,
 }
 
 impl BlockBuilder {
-    pub fn new(id: u16, unlocalized_name: String) -> Self {
+    pub fn new(unlocalized_name: String) -> Self {
         Self {
             uvs: [0; 6],
             properties: Vec::new(),
-            id,
-            unlocalized_name
+            unlocalized_name,
         }
     }
 
@@ -36,6 +34,11 @@ impl BlockBuilder {
     }
 
     pub fn create(&self) -> Block {
-        Block::new(&self.properties, self.uvs, self.id, self.unlocalized_name.clone())
+        Block::new(
+            &self.properties,
+            self.uvs,
+            u16::MAX,
+            self.unlocalized_name.clone(),
+        )
     }
 }

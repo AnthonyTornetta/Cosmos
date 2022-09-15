@@ -1,8 +1,9 @@
 use crate::block::block::Block;
+use crate::block::blocks::{Blocks, AIR_BLOCK_ID};
 use crate::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
 use crate::utils::array_utils::flatten;
 use crate::utils::vec_math::add_vec;
-use bevy::prelude::{Component, Entity, EventWriter};
+use bevy::prelude::{Component, Entity, EventWriter, Res};
 use bevy_rapier3d::na::Vector3;
 use bevy_rapier3d::rapier::prelude::RigidBodyPosition;
 use serde::{Deserialize, Serialize};
@@ -34,8 +35,8 @@ pub struct Structure {
 pub struct BlockChangedEvent {
     pub block: StructureBlock,
     pub structure_entity: Entity,
-    pub old_block: &'static Block,
-    pub new_block: &'static Block,
+    pub old_block: u16,
+    pub new_block: u16,
 }
 
 pub struct StructureBlock {
@@ -63,7 +64,7 @@ impl StructureBlock {
     }
 
     #[inline]
-    pub fn block(&self, structure: &Structure) -> &'static Block {
+    pub fn block(&self, structure: &Structure) -> u16 {
         structure.block_at(self.x, self.y, self.z)
     }
 
@@ -181,7 +182,11 @@ impl Structure {
         )]
     }
 
-    pub fn block_at(&self, x: usize, y: usize, z: usize) -> &'static Block {
+    pub fn has_block_at(&self, x: usize, y: usize, z: usize) -> bool {
+        self.block_at(x, y, z) != AIR_BLOCK_ID
+    }
+
+    pub fn block_at(&self, x: usize, y: usize, z: usize) -> u16 {
         self.chunk_at_block_coordinates(x, y, z).block_at(
             x % CHUNK_DIMENSIONS,
             y % CHUNK_DIMENSIONS,
@@ -198,17 +203,19 @@ impl Structure {
         x: usize,
         y: usize,
         z: usize,
-        block: &'static Block,
+        block: &Block,
+        blocks: &Res<Blocks>,
         event_writer: Option<&mut EventWriter<BlockChangedEvent>>,
     ) {
-        if self.block_at(x, y, z) == block {
+        let old_block = self.block_at(x, y, z);
+        if blocks.block_from_numeric_id(old_block) == block {
             return;
         }
 
         if self.self_entity.is_some() && event_writer.is_some() {
             event_writer.unwrap().send(BlockChangedEvent {
-                new_block: block,
-                old_block: self.block_at(x, y, z),
+                new_block: block.id(),
+                old_block,
                 structure_entity: self.self_entity.unwrap().clone(),
                 block: StructureBlock::new(x, y, z),
             });
@@ -251,7 +258,6 @@ impl Structure {
     }
 
     pub fn set_chunk(&mut self, chunk: Chunk) {
-        println!("Set chunk!!!");
         let i = flatten(
             chunk.structure_x(),
             chunk.structure_y(),

@@ -6,7 +6,6 @@ use bevy::winit::WinitPlugin;
 use bevy_rapier3d::prelude::{Collider, LockedAxes, RigidBody, Velocity};
 use bevy_renet::renet::{RenetServer, ServerAuthentication, ServerConfig, ServerEvent};
 use bevy_renet::RenetServerPlugin;
-use cosmos_core::block::blocks::{CHERRY_LEAF, CHERRY_LOG, DIRT, GRASS, STONE};
 use cosmos_core::entities::player::Player;
 use cosmos_core::entities::sun::Sun;
 use cosmos_core::netty::netty::ServerReliableMessages::{
@@ -22,12 +21,13 @@ use cosmos_core::physics::structure_physics::{
     listen_for_new_physics_event, listen_for_structure_event, NeedsNewPhysicsEvent,
     StructurePhysics,
 };
-use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
+use cosmos_core::plugin::cosmos_core_plugin::{CosmosCorePlugin, CosmosCorePluginGroup};
 use cosmos_core::structure::chunk::CHUNK_DIMENSIONS;
 use cosmos_core::structure::planet::planet_builder::TPlanetBuilder;
 use cosmos_core::structure::structure::{
     BlockChangedEvent, ChunkSetEvent, Structure, StructureCreated,
 };
+use noise::Seedable;
 use std::collections::HashMap;
 use std::net::{SocketAddr, UdpSocket};
 use std::time::{Instant, SystemTime};
@@ -238,7 +238,7 @@ fn create_world(mut commands: Commands) {
 fn create_structure(mut commands: Commands, mut event_writer: EventWriter<StructureCreated>) {
     let mut entity_cmd = commands.spawn();
 
-    let mut structure = Structure::new(4, 2, 4, entity_cmd.id());
+    let mut structure = Structure::new(16, 3, 16, entity_cmd.id());
 
     let builder = ServerPlanetBuilder::new(GrassBiosphere::default());
 
@@ -269,6 +269,16 @@ fn main() {
 
     let server = RenetServer::new(cur_time, server_config, connection_config, socket).unwrap();
 
+    let noise = noise::OpenSimplex::default();
+
+    noise.set_seed(
+        (SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_millis()
+            % u32::MAX as u128) as u32,
+    );
+
     let mut app = App::new();
 
     app.add_plugins(CosmosCorePluginGroup::default())
@@ -278,6 +288,7 @@ fn main() {
         .insert_resource(NetworkTick(0))
         .insert_resource(ClientTicks::default())
         .insert_resource(server)
+        .insert_resource(noise)
         .add_event::<BlockChangedEvent>()
         .add_event::<NeedsNewPhysicsEvent>()
         .add_event::<StructureCreated>()

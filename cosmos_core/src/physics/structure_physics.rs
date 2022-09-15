@@ -1,8 +1,9 @@
 use crate::block::block::Block;
+use crate::block::blocks::Blocks;
 use crate::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
 use crate::structure::structure::ChunkSetEvent;
 use crate::structure::structure::{BlockChangedEvent, Structure, StructureBlock, StructureCreated};
-use bevy::prelude::{Children, Commands, Component, Entity, EventReader, EventWriter, Query};
+use bevy::prelude::{Children, Commands, Component, Entity, EventReader, EventWriter, Query, Res};
 use bevy::utils::HashSet;
 use bevy_rapier3d::math::Vect;
 use bevy_rapier3d::na::Vector3;
@@ -39,13 +40,18 @@ impl StructurePhysics {
         me
     }
 
-    pub fn create_colliders(&mut self, structure: &Structure) -> Vec<ChunkPhysicsModel> {
+    pub fn create_colliders(
+        &mut self,
+        structure: &Structure,
+        blocks: &Res<Blocks>,
+    ) -> Vec<ChunkPhysicsModel> {
         let mut colliders = Vec::with_capacity(self.needs_changed.len());
 
         for c in &self.needs_changed {
             colliders.push(ChunkPhysicsModel {
                 collider: generate_chunk_collider(
                     structure.chunk_from_chunk_coordinates(c.x, c.y, c.z),
+                    blocks,
                 ),
                 chunk_coords: c.clone(),
             });
@@ -57,7 +63,7 @@ impl StructurePhysics {
     }
 }
 
-fn generate_chunk_collider(chunk: &Chunk) -> Option<Collider> {
+fn generate_chunk_collider(chunk: &Chunk, blocks: &Res<Blocks>) -> Option<Collider> {
     let mut colliders: Vec<(Vect, Rot, Collider)> = Vec::new();
 
     // let collider_start;
@@ -116,6 +122,7 @@ pub fn listen_for_new_physics_event(
     mut commands: Commands,
     mut event: EventReader<NeedsNewPhysicsEvent>,
     mut query: Query<(&Structure, &mut StructurePhysics)>,
+    blocks: Res<Blocks>,
 ) {
     if event.len() != 0 {
         let mut done_structures = HashSet::new();
@@ -129,7 +136,7 @@ pub fn listen_for_new_physics_event(
 
             let (structure, mut physics) = query.get_mut(ev.structure_entity).unwrap();
 
-            let colliders = physics.create_colliders(structure);
+            let colliders = physics.create_colliders(structure, &blocks);
 
             for chunk_collider in colliders {
                 let coords = &chunk_collider.chunk_coords;
@@ -140,7 +147,6 @@ pub fn listen_for_new_physics_event(
                 if chunk_collider.collider.is_some() {
                     entity_commands.insert(chunk_collider.collider.unwrap());
                 }
-                println!("Created chunk's collider!");
             }
         }
     }

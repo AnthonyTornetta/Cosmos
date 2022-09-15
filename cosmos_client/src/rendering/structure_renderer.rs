@@ -2,6 +2,7 @@ use bevy::prelude::{Component, EventReader, Mesh};
 use bevy::render::mesh::{Indices, PrimitiveTopology};
 use bevy_rapier3d::na::Vector3;
 use cosmos_core::block::block::BlockFace;
+use cosmos_core::block::blocks::{self, Blocks};
 use cosmos_core::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
 use cosmos_core::structure::structure::{
     BlockChangedEvent, ChunkSetEvent, Structure, StructureCreated,
@@ -59,7 +60,7 @@ impl StructureRenderer {
         }
     }
 
-    pub fn render(&mut self, structure: &Structure, uv_mapper: &UVMapper) {
+    pub fn render(&mut self, structure: &Structure, uv_mapper: &UVMapper, blocks: &Res<Blocks>) {
         for change in &self.changes {
             let (x, y, z) = (change.x, change.y, change.z);
 
@@ -108,6 +109,7 @@ impl StructureRenderer {
                 top,
                 back,
                 front,
+                blocks,
             );
 
             self.need_meshes.insert(change.clone());
@@ -230,6 +232,7 @@ pub fn monitor_needs_rendered_system(
     atlas: Res<MainAtlas>,
     mesh_query: Query<Option<&Handle<Mesh>>>,
     mut meshes: ResMut<Assets<Mesh>>,
+    blocks: Res<Blocks>,
 ) {
     let mut done_structures = HashSet::new();
     for ev in event.iter() {
@@ -241,7 +244,7 @@ pub fn monitor_needs_rendered_system(
 
         let (structure, mut renderer) = query.get_mut(ev.0).unwrap();
 
-        renderer.render(structure, &atlas.uv_mapper);
+        renderer.render(structure, &atlas.uv_mapper, &blocks);
 
         let chunk_meshes: Vec<ChunkMesh> = renderer.create_meshes();
 
@@ -295,6 +298,7 @@ impl ChunkRenderer {
         top: Option<&Chunk>,
         back: Option<&Chunk>,
         front: Option<&Chunk>,
+        blocks: &Res<Blocks>,
     ) {
         self.indices.clear();
         self.uvs.clear();
@@ -307,16 +311,16 @@ impl ChunkRenderer {
             for y in 0..CHUNK_DIMENSIONS {
                 for x in 0..CHUNK_DIMENSIONS {
                     if chunk.has_block_at(x, y, z) {
-                        let block = chunk.block_at(x, y, z);
+                        let block = blocks.block_from_numeric_id(chunk.block_at(x, y, z));
 
                         let (cx, cy, cz) = (x as f32, y as f32, z as f32);
 
                         // right
                         if (x != CHUNK_DIMENSIONS - 1
-                            && chunk.has_see_through_block_at(x + 1, y, z))
+                            && chunk.has_see_through_block_at(x + 1, y, z, blocks))
                             || (x == CHUNK_DIMENSIONS - 1
                                 && (right.is_none()
-                                    || right.unwrap().has_see_through_block_at(0, y, z)))
+                                    || right.unwrap().has_see_through_block_at(0, y, z, blocks)))
                         {
                             self.positions.push([cx + 0.5, cy + -0.5, cz + -0.5]);
                             self.positions.push([cx + 0.5, cy + 0.5, cz + -0.5]);
@@ -344,13 +348,14 @@ impl ChunkRenderer {
                             last_index += 4;
                         }
                         // left
-                        if (x != 0 && chunk.has_see_through_block_at(x - 1, y, z))
+                        if (x != 0 && chunk.has_see_through_block_at(x - 1, y, z, blocks))
                             || (x == 0
                                 && (left.is_none()
                                     || left.unwrap().has_see_through_block_at(
                                         CHUNK_DIMENSIONS - 1,
                                         y,
                                         z,
+                                        blocks,
                                     )))
                         {
                             self.positions.push([cx + -0.5, cy + -0.5, cz + 0.5]);
@@ -381,10 +386,10 @@ impl ChunkRenderer {
 
                         // top
                         if (y != CHUNK_DIMENSIONS - 1
-                            && chunk.has_see_through_block_at(x, y + 1, z))
+                            && chunk.has_see_through_block_at(x, y + 1, z, blocks))
                             || (y == CHUNK_DIMENSIONS - 1
                                 && (top.is_none()
-                                    || top.unwrap().has_see_through_block_at(x, 0, z)))
+                                    || top.unwrap().has_see_through_block_at(x, 0, z, blocks)))
                         {
                             self.positions.push([cx + 0.5, cy + 0.5, cz + -0.5]);
                             self.positions.push([cx + -0.5, cy + 0.5, cz + -0.5]);
@@ -412,13 +417,14 @@ impl ChunkRenderer {
                             last_index += 4;
                         }
                         // bottom
-                        if (y != 0 && chunk.has_see_through_block_at(x, y - 1, z))
+                        if (y != 0 && chunk.has_see_through_block_at(x, y - 1, z, blocks))
                             || (y == 0
                                 && (bottom.is_none()
                                     || bottom.unwrap().has_see_through_block_at(
                                         x,
                                         CHUNK_DIMENSIONS - 1,
                                         z,
+                                        blocks,
                                     )))
                         {
                             self.positions.push([cx + 0.5, cy + -0.5, cz + 0.5]);
@@ -449,10 +455,10 @@ impl ChunkRenderer {
 
                         // back
                         if (z != CHUNK_DIMENSIONS - 1
-                            && chunk.has_see_through_block_at(x, y, z + 1))
+                            && chunk.has_see_through_block_at(x, y, z + 1, blocks))
                             || (z == CHUNK_DIMENSIONS - 1
                                 && (front.is_none()
-                                    || front.unwrap().has_see_through_block_at(x, y, 0)))
+                                    || front.unwrap().has_see_through_block_at(x, y, 0, blocks)))
                         {
                             self.positions.push([cx + -0.5, cy + -0.5, cz + 0.5]);
                             self.positions.push([cx + 0.5, cy + -0.5, cz + 0.5]);
@@ -480,13 +486,14 @@ impl ChunkRenderer {
                             last_index += 4;
                         }
                         // front
-                        if (z != 0 && chunk.has_see_through_block_at(x, y, z - 1))
+                        if (z != 0 && chunk.has_see_through_block_at(x, y, z - 1, blocks))
                             || (z == 0
                                 && (back.is_none()
                                     || back.unwrap().has_see_through_block_at(
                                         x,
                                         y,
                                         CHUNK_DIMENSIONS - 1,
+                                        blocks,
                                     )))
                         {
                             self.positions.push([cx + -0.5, cy + 0.5, cz + -0.5]);

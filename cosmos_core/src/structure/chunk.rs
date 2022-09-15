@@ -1,13 +1,14 @@
 use crate::block::block::Block;
-use crate::block::blocks::{block_from_id, AIR};
+use crate::block::blocks::{Blocks, AIR_BLOCK_ID};
+use bevy::prelude::Res;
 use serde::de;
+use serde::de::Error;
 use serde::de::{Deserialize, Deserializer, MapAccess, SeqAccess, Visitor};
-use serde::de::{EnumAccess, Error};
 use serde::ser::{Serialize, SerializeStruct, Serializer};
 use std::fmt;
-use std::fmt::{Formatter, Write};
+use std::fmt::Formatter;
 
-pub const CHUNK_DIMENSIONS: usize = 32;
+pub const CHUNK_DIMENSIONS: usize = 16;
 const N_BLOCKS: usize = CHUNK_DIMENSIONS * CHUNK_DIMENSIONS * CHUNK_DIMENSIONS;
 
 pub struct Chunk {
@@ -46,22 +47,30 @@ impl Chunk {
         self.blocks[z * CHUNK_DIMENSIONS * CHUNK_DIMENSIONS + y * CHUNK_DIMENSIONS + x] = b.id();
     }
 
-    pub fn has_see_through_block_at(&self, x: usize, y: usize, z: usize) -> bool {
-        self.block_at(x, y, z).is_see_through()
+    pub fn has_see_through_block_at(
+        &self,
+        x: usize,
+        y: usize,
+        z: usize,
+        blocks: &Res<Blocks>,
+    ) -> bool {
+        blocks
+            .block_from_numeric_id(self.block_at(x, y, z))
+            .is_see_through()
     }
 
     pub fn has_block_at(&self, x: usize, y: usize, z: usize) -> bool {
-        *self.block_at(x, y, z) != *AIR
+        self.block_at(x, y, z) != AIR_BLOCK_ID
     }
 
-    pub fn block_at(&self, x: usize, y: usize, z: usize) -> &'static Block {
-        block_from_id(
-            self.blocks[z * CHUNK_DIMENSIONS * CHUNK_DIMENSIONS + y * CHUNK_DIMENSIONS + x],
-        )
+    pub fn block_at(&self, x: usize, y: usize, z: usize) -> u16 {
+        self.blocks[z * CHUNK_DIMENSIONS * CHUNK_DIMENSIONS + y * CHUNK_DIMENSIONS + x]
     }
 
-    pub fn has_full_block_at(&self, x: usize, y: usize, z: usize) -> bool {
-        self.block_at(x, y, z).is_full()
+    pub fn has_full_block_at(&self, x: usize, y: usize, z: usize, blocks: &Res<Blocks>) -> bool {
+        blocks
+            .block_from_numeric_id(self.block_at(x, y, z))
+            .is_full()
     }
 }
 

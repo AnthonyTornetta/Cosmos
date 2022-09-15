@@ -92,6 +92,11 @@ impl Block {
         self.id
     }
 
+    /// Only use this if you know what you're doing.  Should really only be used in the Blocks struct
+    pub(crate) fn set_numeric_id(&mut self, id: u16) {
+        self.id = id;
+    }
+
     pub fn uv_index_for_side(&self, face: BlockFace) -> usize {
         self.uvs[face.index()]
     }

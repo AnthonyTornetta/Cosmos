@@ -1,59 +1,112 @@
 use crate::block::block::{Block, BlockFace, BlockProperty};
 use crate::block::block_builder::BlockBuilder;
-use lazy_static::lazy_static;
+use bevy::prelude::{Commands, ResMut};
+use bevy::utils::HashMap;
 
 // TODO: Move this to bevy stuff
 
-lazy_static! {
-    pub static ref AIR: Block = BlockBuilder::new(0, String::from("cosmos:air"))
-        .add_property(BlockProperty::Transparent)
-        .add_property(BlockProperty::Empty)
-        .create();
-    pub static ref STONE: Block = BlockBuilder::new(1, String::from("cosmos:stone"))
-        .add_property(BlockProperty::Opaque)
-        .add_property(BlockProperty::Full)
-        .set_all_uvs(2)
-        .create();
-    pub static ref GRASS: Block = BlockBuilder::new(2, String::from("cosmos:grass"))
-        .add_property(BlockProperty::Opaque)
-        .add_property(BlockProperty::Full)
-        .set_all_uvs(4)
-        .set_side_uvs(BlockFace::Top, 1)
-        .set_side_uvs(BlockFace::Bottom, 3)
-        .create();
-    pub static ref DIRT: Block = BlockBuilder::new(3, String::from("cosmos:dirt"))
-        .add_property(BlockProperty::Opaque)
-        .add_property(BlockProperty::Full)
-        .set_all_uvs(3)
-        .create();
-    pub static ref CHERRY_LEAF: Block = BlockBuilder::new(4, String::from("cosmos:cherry_leaf"))
-        .add_property(BlockProperty::Transparent)
-        .set_all_uvs(35)
-        .create();
-    pub static ref CHERRY_LOG: Block = BlockBuilder::new(5, String::from("cosmos:cherry_log"))
-        .add_property(BlockProperty::Opaque)
-        .add_property(BlockProperty::Full)
-        .set_all_uvs(34)
-        .set_side_uvs(BlockFace::Top, 33)
-        .set_side_uvs(BlockFace::Bottom, 33)
-        .create();
-    pub static ref SHIP_CORE: Block = BlockBuilder::new(6, String::from("cosmos:ship_core"))
-        .add_property(BlockProperty::Opaque)
-        .add_property(BlockProperty::Full)
-        .add_property(BlockProperty::ShipOnly)
-        .set_all_uvs(0)
-        .create();
-    static ref BLOCKS: Vec<&'static Block> = vec![
-        &AIR,
-        &STONE,
-        &GRASS,
-        &DIRT,
-        &CHERRY_LEAF,
-        &CHERRY_LOG,
-        &SHIP_CORE
-    ];
+#[derive(Default)]
+pub struct Blocks {
+    blocks: Vec<Block>,
+    blocks_to_string: HashMap<String, u16>,
 }
 
-pub fn block_from_id(id: u16) -> &'static Block {
-    BLOCKS[id as usize]
+pub static AIR_BLOCK_ID: u16 = 0;
+
+impl Blocks {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Prefer to use `Self::block_from_id` in general, numeric IDs may change, unlocalized names should not
+    pub fn block_from_numeric_id(&self, id: u16) -> &Block {
+        &self.blocks[id as usize]
+    }
+
+    pub fn block_from_id(&self, id: &str) -> &Block {
+        self.block_from_numeric_id(
+            *self
+                .blocks_to_string
+                .get(id)
+                .expect(format!("No block with unlocalized name '{}'", id).as_str()),
+        )
+    }
+
+    pub fn register_block(&mut self, mut block: Block) {
+        let id = self.blocks.len() as u16;
+        block.set_numeric_id(id);
+        self.blocks_to_string
+            .insert(block.unlocalized_name().clone(), id);
+        self.blocks.push(block);
+    }
+}
+
+pub fn add_blocks_resource(mut commands: Commands) {
+    let mut blocks = Blocks::default();
+
+    // Game will break without air & needs this at ID 0
+    blocks.register_block(
+        BlockBuilder::new("cosmos:air".into())
+            .add_property(BlockProperty::Transparent)
+            .add_property(BlockProperty::Empty)
+            .create(),
+    );
+
+    // }
+
+    // pub fn add_all_blocks(mut blocks: ResMut<Blocks>) {
+    blocks.register_block(
+        BlockBuilder::new("cosmos:stone".into())
+            .add_property(BlockProperty::Opaque)
+            .add_property(BlockProperty::Full)
+            .set_all_uvs(2)
+            .create(),
+    );
+
+    blocks.register_block(
+        BlockBuilder::new("cosmos:grass".into())
+            .add_property(BlockProperty::Opaque)
+            .add_property(BlockProperty::Full)
+            .set_all_uvs(4)
+            .set_side_uvs(BlockFace::Top, 1)
+            .set_side_uvs(BlockFace::Bottom, 3)
+            .create(),
+    );
+
+    blocks.register_block(
+        BlockBuilder::new("cosmos:dirt".into())
+            .add_property(BlockProperty::Opaque)
+            .add_property(BlockProperty::Full)
+            .set_all_uvs(3)
+            .create(),
+    );
+
+    blocks.register_block(
+        BlockBuilder::new("cosmos:cherry_leaf".into())
+            .add_property(BlockProperty::Transparent)
+            .set_all_uvs(35)
+            .create(),
+    );
+
+    blocks.register_block(
+        BlockBuilder::new("cosmos:cherry_log".into())
+            .add_property(BlockProperty::Opaque)
+            .add_property(BlockProperty::Full)
+            .set_all_uvs(34)
+            .set_side_uvs(BlockFace::Top, 33)
+            .set_side_uvs(BlockFace::Bottom, 33)
+            .create(),
+    );
+
+    blocks.register_block(
+        BlockBuilder::new("cosmos:ship_core".into())
+            .add_property(BlockProperty::Opaque)
+            .add_property(BlockProperty::Full)
+            .add_property(BlockProperty::ShipOnly)
+            .set_all_uvs(0)
+            .create(),
+    );
+
+    commands.insert_resource(blocks);
+    println!("INSERTED!");
 }

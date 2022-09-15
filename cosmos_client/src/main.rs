@@ -708,8 +708,8 @@ fn create_sun(
             // transform: Transform::from_xyz(5.0, 8.0, 2.0),
             transform: Transform::from_xyz(0.0, 24.0, 0.0),
             point_light: PointLight {
-                intensity: 1600.0, // lumens - roughly a 100W non-halogen incandescent bulb
-                range: 16.0,
+                intensity: 160000.0, // lumens - roughly a 100W non-halogen incandescent bulb
+                range: 1600.0,
                 color: Color::WHITE,
                 shadows_enabled: true,
                 ..default()
