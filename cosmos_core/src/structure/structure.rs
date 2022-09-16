@@ -210,11 +210,29 @@ impl Structure {
     }
 
     pub fn block_at_relative_coords(&self, x: f32, y: f32, z: f32) -> u16 {
-        self.block_at(
-            (x + (self.width() * CHUNK_DIMENSIONS / 2) as f32) as usize,
-            (y + (self.height() * CHUNK_DIMENSIONS / 2) as f32) as usize,
-            (z + (self.length() * CHUNK_DIMENSIONS / 2) as f32) as usize,
-        )
+        let mut xxx = (x + (self.width() as f32 * CHUNK_DIMENSIONS as f32 / 2.0));
+        let mut yyy = (y + (self.height() as f32 * CHUNK_DIMENSIONS as f32 / 2.0));
+        let mut zzz = (z + (self.length() as f32 * CHUNK_DIMENSIONS as f32 / 2.0));
+
+        if self.width % 2 == 1 {
+            xxx += 0.5;
+        }
+
+        if self.height % 2 == 1 {
+            yyy += 0.5;
+        }
+
+        if self.length % 2 == 1 {
+            zzz += 0.5;
+        }
+        // println!("HIGHEST BLOCK: {} VS {}", highest_y, yyy);
+
+        println!(
+            "{} {} {} -> {} {} {}",
+            x, y, z, xxx as usize, yyy as usize, zzz as usize
+        );
+
+        self.block_at(xxx as usize, yyy as usize, zzz as usize)
     }
 
     pub fn block_at(&self, x: usize, y: usize, z: usize) -> u16 {
