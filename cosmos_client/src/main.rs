@@ -1,8 +1,10 @@
+pub mod interactions;
 pub mod plugin;
 pub mod rendering;
 pub mod state;
 pub mod structure;
 
+use cosmos_core::block::blocks::Blocks;
 use cosmos_core::entities::sun::Sun;
 use cosmos_core::structure::chunk::Chunk;
 use cosmos_core::structure::planet::planet_builder::TPlanetBuilder;
@@ -20,7 +22,9 @@ use bevy::render::camera::{Projection, RenderTarget};
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use bevy::render::texture::ImageSettings;
 use bevy_rapier3d::na::clamp;
-use bevy_rapier3d::prelude::{Collider, LockedAxes, RigidBody, Vect, Velocity};
+use bevy_rapier3d::prelude::{
+    Collider, LockedAxes, QueryFilter, RapierContext, RigidBody, Vect, Velocity,
+};
 use bevy_renet::renet::{ClientAuthentication, RenetClient};
 use bevy_renet::RenetClientPlugin;
 use cosmos_core::entities::player::Player;
@@ -212,14 +216,6 @@ fn check_assets_ready(
 }
 
 #[derive(Clone, Copy, Eq, PartialEq, Hash)]
-enum InputState {
-    JustPressed,
-    Pressed,
-    JustReleased,
-    Released,
-}
-
-#[derive(Clone, Copy, Eq, PartialEq, Hash)]
 enum CosmosInputs {
     MoveForward,
     MoveBackward,
@@ -231,7 +227,7 @@ enum CosmosInputs {
 }
 
 struct CosmosInputHandler {
-    input_mapping: HashMap<CosmosInputs, KeyCode>,
+    input_mapping: HashMap<CosmosInputs, (Option<KeyCode>, Option<MouseButton>)>,
 }
 
 impl CosmosInputHandler {
@@ -241,33 +237,77 @@ impl CosmosInputHandler {
         }
     }
 
-    pub fn check_just_released(&self, input_code: CosmosInputs, inputs: &Input<KeyCode>) -> bool {
+    pub fn check_just_released(
+        &self,
+        input_code: CosmosInputs,
+        inputs: &Input<KeyCode>,
+        mouse: &Input<MouseButton>,
+    ) -> bool {
         let keycode = self.keycode_for(input_code);
+        let mouse_button = self.mouse_button_for(input_code);
 
         keycode.is_some() && inputs.just_released(keycode.unwrap())
+            || mouse_button.is_some() && mouse.just_released(mouse_button.unwrap())
     }
 
-    pub fn check_released(&self, input_code: CosmosInputs, inputs: &Input<KeyCode>) -> bool {
-        !self.check_pressed(input_code, inputs)
+    pub fn check_released(
+        &self,
+        input_code: CosmosInputs,
+        inputs: &Input<KeyCode>,
+        mouse: &Input<MouseButton>,
+    ) -> bool {
+        !self.check_pressed(input_code, inputs, mouse)
     }
 
-    pub fn check_just_pressed(&self, input_code: CosmosInputs, inputs: &Input<KeyCode>) -> bool {
+    pub fn check_just_pressed(
+        &self,
+        input_code: CosmosInputs,
+        inputs: &Input<KeyCode>,
+        mouse: &Input<MouseButton>,
+    ) -> bool {
         let keycode = self.keycode_for(input_code);
+        let mouse_button = self.mouse_button_for(input_code);
 
         keycode.is_some() && inputs.just_pressed(keycode.unwrap())
+            || mouse_button.is_some() && mouse.just_pressed(mouse_button.unwrap())
     }
 
-    pub fn check_pressed(&self, input_code: CosmosInputs, inputs: &Input<KeyCode>) -> bool {
+    pub fn check_pressed(
+        &self,
+        input_code: CosmosInputs,
+        inputs: &Input<KeyCode>,
+        mouse: &Input<MouseButton>,
+    ) -> bool {
         let keycode = self.keycode_for(input_code);
+        let mouse_button = self.mouse_button_for(input_code);
 
         keycode.is_some() && inputs.pressed(keycode.unwrap())
+            || mouse_button.is_some() && mouse.pressed(mouse_button.unwrap())
     }
 
-    pub fn set_keycode(&mut self, input: CosmosInputs, keycode: Option<KeyCode>) {
-        if keycode.is_none() {
-            self.input_mapping.remove(&input);
+    pub fn clear_input(&mut self, input: CosmosInputs) {
+        self.input_mapping.remove(&input);
+    }
+
+    pub fn set_keycode(&mut self, input: CosmosInputs, keycode: KeyCode) {
+        if self.input_mapping.contains_key(&input) {
+            let mapping = self.input_mapping.get_mut(&input).unwrap();
+
+            mapping.0 = Some(keycode);
+            mapping.1 = None;
         } else {
-            self.input_mapping.insert(input, keycode.unwrap());
+            self.input_mapping.insert(input, (Some(keycode), None));
+        }
+    }
+
+    pub fn set_mouse_button(&mut self, input: CosmosInputs, button: MouseButton) {
+        if self.input_mapping.contains_key(&input) {
+            let mapping = self.input_mapping.get_mut(&input).unwrap();
+
+            mapping.0 = None;
+            mapping.1 = Some(button);
+        } else {
+            self.input_mapping.insert(input, (None, Some(button)));
         }
     }
 
@@ -276,19 +316,27 @@ impl CosmosInputHandler {
             return None;
         }
 
-        Some(self.input_mapping[&input])
+        self.input_mapping[&input].0
+    }
+
+    pub fn mouse_button_for(&self, input: CosmosInputs) -> Option<MouseButton> {
+        if !self.input_mapping.contains_key(&input) {
+            return None;
+        }
+
+        self.input_mapping[&input].1
     }
 }
 
 fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     // In future load these from settings
-    input_handler.set_keycode(CosmosInputs::MoveForward, Some(KeyCode::W));
-    input_handler.set_keycode(CosmosInputs::MoveLeft, Some(KeyCode::A));
-    input_handler.set_keycode(CosmosInputs::MoveBackward, Some(KeyCode::S));
-    input_handler.set_keycode(CosmosInputs::MoveRight, Some(KeyCode::D));
-    input_handler.set_keycode(CosmosInputs::SlowDown, Some(KeyCode::LShift));
-    input_handler.set_keycode(CosmosInputs::MoveUpOrJump, Some(KeyCode::Space));
-    input_handler.set_keycode(CosmosInputs::Sprint, Some(KeyCode::R));
+    input_handler.set_keycode(CosmosInputs::MoveForward, KeyCode::W);
+    input_handler.set_keycode(CosmosInputs::MoveLeft, KeyCode::A);
+    input_handler.set_keycode(CosmosInputs::MoveBackward, KeyCode::S);
+    input_handler.set_keycode(CosmosInputs::MoveRight, KeyCode::D);
+    input_handler.set_keycode(CosmosInputs::SlowDown, KeyCode::LShift);
+    input_handler.set_keycode(CosmosInputs::MoveUpOrJump, KeyCode::Space);
+    input_handler.set_keycode(CosmosInputs::Sprint, KeyCode::R);
 }
 
 fn process_player_camera(
@@ -332,8 +380,71 @@ fn process_player_camera(
     }
 }
 
+fn process_player_interaction(
+    keys: Res<Input<KeyCode>>,
+    mouse: Res<Input<MouseButton>>,
+    input_handler: Res<CosmosInputHandler>,
+    camera: Query<&GlobalTransform, With<Camera>>,
+    player_body: Query<Entity, With<LocalPlayer>>,
+    rapier_context: Res<RapierContext>,
+    parent_query: Query<&Parent>,
+    mut structure_query: Query<(&mut Structure, &GlobalTransform)>,
+    blocks: Res<Blocks>,
+    mut event_writer: EventWriter<BlockChangedEvent>,
+) {
+    let trans = camera.get_single().unwrap();
+    let player_body = player_body.get_single().unwrap();
+
+    println!("{}", trans.translation());
+
+    if let Some((entity, intersection)) = rapier_context.cast_ray_and_get_normal(
+        trans.translation(),
+        trans.forward(),
+        10.0,
+        true,
+        QueryFilter::new().exclude_rigid_body(player_body), // don't want to hit yourself
+    ) {
+        let parent = parent_query.get(entity);
+        if parent.is_ok() {
+            let structure_maybe = structure_query.get_mut(parent.unwrap().get());
+
+            if structure_maybe.is_ok() {
+                let (mut structure, transform) = structure_maybe.unwrap();
+
+                let point = transform
+                    .compute_matrix()
+                    .inverse()
+                    .transform_vector3(intersection.point);
+
+                println!("LOOKING AT STRUCTURE {} {}!", point, intersection.normal);
+
+                let air = blocks.block_from_id("cosmos:air");
+
+                if mouse.just_pressed(MouseButton::Left) {
+                    structure.set_block_at_relative_coords(
+                        point.x,
+                        point.y,
+                        point.z,
+                        air,
+                        &blocks,
+                        Some(&mut event_writer),
+                    );
+                }
+
+                println!(
+                    "{}",
+                    structure.block_at_relative_coords(point.x, point.y, point.z)
+                );
+            }
+        }
+
+        println!("HIT SOMETHING!");
+    }
+}
+
 fn process_player_movement(
     keys: Res<Input<KeyCode>>,
+    mouse: Res<Input<MouseButton>>,
     time: Res<Time>,
     input_handler: ResMut<CosmosInputHandler>,
     mut query: Query<&mut Velocity, With<LocalPlayer>>,
@@ -343,7 +454,7 @@ fn process_player_movement(
 
     let cam_trans = cam_query.single();
 
-    let max_speed: f32 = match input_handler.check_pressed(CosmosInputs::Sprint, &keys) {
+    let max_speed: f32 = match input_handler.check_pressed(CosmosInputs::Sprint, &keys, &mouse) {
         false => 5.0,
         true => 20.0,
     };
@@ -360,22 +471,22 @@ fn process_player_movement(
 
     let time = time.delta_seconds();
 
-    if input_handler.check_pressed(CosmosInputs::MoveForward, &keys) {
+    if input_handler.check_pressed(CosmosInputs::MoveForward, &keys, &mouse) {
         velocity.linvel += forward * time;
     }
-    if input_handler.check_pressed(CosmosInputs::MoveBackward, &keys) {
+    if input_handler.check_pressed(CosmosInputs::MoveBackward, &keys, &mouse) {
         velocity.linvel -= forward * time;
     }
-    if input_handler.check_just_pressed(CosmosInputs::MoveUpOrJump, &keys) {
+    if input_handler.check_just_pressed(CosmosInputs::MoveUpOrJump, &keys, &mouse) {
         velocity.linvel += up * 5.0;
     }
-    if input_handler.check_pressed(CosmosInputs::MoveLeft, &keys) {
+    if input_handler.check_pressed(CosmosInputs::MoveLeft, &keys, &mouse) {
         velocity.linvel -= right * time;
     }
-    if input_handler.check_pressed(CosmosInputs::MoveRight, &keys) {
+    if input_handler.check_pressed(CosmosInputs::MoveRight, &keys, &mouse) {
         velocity.linvel += right * time;
     }
-    if input_handler.check_pressed(CosmosInputs::SlowDown, &keys) {
+    if input_handler.check_pressed(CosmosInputs::SlowDown, &keys, &mouse) {
         let mut amt = velocity.linvel * 0.1;
         if amt.dot(amt) > max_speed * max_speed {
             amt = amt.normalize() * max_speed;
@@ -792,6 +903,7 @@ fn main() {
                 .with_system(monitor_needs_rendered_system)
                 .with_system(monitor_block_updates_system)
                 .with_system(listen_for_structure_event)
+                .with_system(process_player_interaction)
                 .with_system(listen_for_new_physics_event),
         );
 

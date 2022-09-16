@@ -1,10 +1,10 @@
-pub mod structure;
 pub mod block;
-pub mod utils;
 pub mod entities;
+pub mod netty;
 pub mod physics;
 pub mod plugin;
-pub mod netty;
+pub mod structure;
+pub mod utils;
 
 #[cfg(test)]
 mod tests {

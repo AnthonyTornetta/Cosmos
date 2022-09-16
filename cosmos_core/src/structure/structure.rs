@@ -186,6 +186,37 @@ impl Structure {
         self.block_at(x, y, z) != AIR_BLOCK_ID
     }
 
+    pub fn has_block_at_relative_coords(&self, x: f32, y: f32, z: f32) -> bool {
+        self.block_at_relative_coords(x, y, z) != AIR_BLOCK_ID
+    }
+
+    pub fn set_block_at_relative_coords(
+        &mut self,
+        x: f32,
+        y: f32,
+        z: f32,
+        block: &Block,
+        blocks: &Res<Blocks>,
+        event_writer: Option<&mut EventWriter<BlockChangedEvent>>,
+    ) {
+        self.set_block_at(
+            (x + (self.width() * CHUNK_DIMENSIONS / 2) as f32) as usize,
+            (y + (self.height() * CHUNK_DIMENSIONS / 2) as f32) as usize,
+            (z + (self.length() * CHUNK_DIMENSIONS / 2) as f32) as usize,
+            block,
+            blocks,
+            event_writer,
+        )
+    }
+
+    pub fn block_at_relative_coords(&self, x: f32, y: f32, z: f32) -> u16 {
+        self.block_at(
+            (x + (self.width() * CHUNK_DIMENSIONS / 2) as f32) as usize,
+            (y + (self.height() * CHUNK_DIMENSIONS / 2) as f32) as usize,
+            (z + (self.length() * CHUNK_DIMENSIONS / 2) as f32) as usize,
+        )
+    }
+
     pub fn block_at(&self, x: usize, y: usize, z: usize) -> u16 {
         self.chunk_at_block_coordinates(x, y, z).block_at(
             x % CHUNK_DIMENSIONS,
