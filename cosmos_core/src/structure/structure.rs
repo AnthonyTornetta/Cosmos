@@ -190,6 +190,32 @@ impl Structure {
         self.block_at_relative_coords(x, y, z) != AIR_BLOCK_ID
     }
 
+    fn relative_coords_to_local_coords(&self, x: f32, y: f32, z: f32) -> (usize, usize, usize) {
+        let mut xx = x + (self.width() as f32 * CHUNK_DIMENSIONS as f32 / 2.0);
+        let mut yy = y + (self.height() as f32 * CHUNK_DIMENSIONS as f32 / 2.0);
+        let mut zz = z + (self.length() as f32 * CHUNK_DIMENSIONS as f32 / 2.0);
+
+        if self.width % 2 == 1 {
+            xx += 0.5;
+        }
+
+        if self.height % 2 == 1 {
+            yy += 0.5;
+        }
+
+        if self.length % 2 == 1 {
+            zz += 0.5;
+        }
+        // println!("HIGHEST BLOCK: {} VS {}", highest_y, yyy);
+
+        println!(
+            "{:.2} {:.2} {:.2} -> {} {} {}",
+            x, y, z, xx as usize, yy as usize, zz as usize
+        );
+
+        (xx as usize, yy as usize, zz as usize)
+    }
+
     pub fn set_block_at_relative_coords(
         &mut self,
         x: f32,
@@ -199,40 +225,15 @@ impl Structure {
         blocks: &Res<Blocks>,
         event_writer: Option<&mut EventWriter<BlockChangedEvent>>,
     ) {
-        self.set_block_at(
-            (x + (self.width() * CHUNK_DIMENSIONS / 2) as f32) as usize,
-            (y + (self.height() * CHUNK_DIMENSIONS / 2) as f32) as usize,
-            (z + (self.length() * CHUNK_DIMENSIONS / 2) as f32) as usize,
-            block,
-            blocks,
-            event_writer,
-        )
+        let (xx, yy, zz) = self.relative_coords_to_local_coords(x, y, z);
+
+        self.set_block_at(xx, yy, zz, block, blocks, event_writer)
     }
 
     pub fn block_at_relative_coords(&self, x: f32, y: f32, z: f32) -> u16 {
-        let mut xxx = (x + (self.width() as f32 * CHUNK_DIMENSIONS as f32 / 2.0));
-        let mut yyy = (y + (self.height() as f32 * CHUNK_DIMENSIONS as f32 / 2.0));
-        let mut zzz = (z + (self.length() as f32 * CHUNK_DIMENSIONS as f32 / 2.0));
+        let (xx, yy, zz) = self.relative_coords_to_local_coords(x, y, z);
 
-        if self.width % 2 == 1 {
-            xxx += 0.5;
-        }
-
-        if self.height % 2 == 1 {
-            yyy += 0.5;
-        }
-
-        if self.length % 2 == 1 {
-            zzz += 0.5;
-        }
-        // println!("HIGHEST BLOCK: {} VS {}", highest_y, yyy);
-
-        println!(
-            "{} {} {} -> {} {} {}",
-            x, y, z, xxx as usize, yyy as usize, zzz as usize
-        );
-
-        self.block_at(xxx as usize, yyy as usize, zzz as usize)
+        self.block_at(xx, yy, zz)
     }
 
     pub fn block_at(&self, x: usize, y: usize, z: usize) -> u16 {
