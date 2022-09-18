@@ -395,8 +395,6 @@ fn process_player_interaction(
     let trans = camera.get_single().unwrap();
     let player_body = player_body.get_single().unwrap();
 
-    println!("{}", trans.translation());
-
     if let Some((entity, intersection)) = rapier_context.cast_ray_and_get_normal(
         trans.translation(),
         trans.forward(),
@@ -414,11 +412,11 @@ fn process_player_interaction(
                 let point = transform
                     .compute_matrix()
                     .inverse()
-                    .transform_vector3(intersection.point);
+                    .transform_vector3(intersection.point - intersection.normal * 0.0005);
 
                 println!("LOOKING AT STRUCTURE {} {}!", point, intersection.normal);
 
-                let air = blocks.block_from_id("cosmos:air");
+                let air = blocks.block_from_id("cosmos:stone");
 
                 if mouse.just_pressed(MouseButton::Left) {
                     structure.set_block_at_relative_coords(

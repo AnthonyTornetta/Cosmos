@@ -195,17 +195,17 @@ impl Structure {
         let mut yy = y + (self.height() as f32 * CHUNK_DIMENSIONS as f32 / 2.0);
         let mut zz = z + (self.length() as f32 * CHUNK_DIMENSIONS as f32 / 2.0);
 
-        if self.width % 2 == 1 {
-            xx += 0.5;
-        }
+        // if self.width % 2 == 1 {
+        xx += 0.5;
+        //}
 
-        if self.height % 2 == 1 {
-            yy += 0.5;
-        }
+        // if self.height % 2 == 1 {
+        //     yy += 0.5;
+        // }
 
-        if self.length % 2 == 1 {
-            zz += 0.5;
-        }
+        // if self.length % 2 == 1 {
+        zz += 0.5;
+        // }
         // println!("HIGHEST BLOCK: {} VS {}", highest_y, yyy);
 
         println!(
