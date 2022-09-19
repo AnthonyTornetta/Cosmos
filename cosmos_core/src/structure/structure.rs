@@ -190,28 +190,11 @@ impl Structure {
         self.block_at_relative_coords(x, y, z) != AIR_BLOCK_ID
     }
 
-    fn relative_coords_to_local_coords(&self, x: f32, y: f32, z: f32) -> (usize, usize, usize) {
-        let mut xx = x + (self.width() as f32 * CHUNK_DIMENSIONS as f32 / 2.0);
-        let mut yy = y + (self.height() as f32 * CHUNK_DIMENSIONS as f32 / 2.0);
-        let mut zz = z + (self.length() as f32 * CHUNK_DIMENSIONS as f32 / 2.0);
-
-        // if self.width % 2 == 1 {
-        xx += 0.5;
-        //}
-
-        // if self.height % 2 == 1 {
-        //     yy += 0.5;
-        // }
-
-        // if self.length % 2 == 1 {
-        zz += 0.5;
-        // }
-        // println!("HIGHEST BLOCK: {} VS {}", highest_y, yyy);
-
-        println!(
-            "{:.2} {:.2} {:.2} -> {} {} {}",
-            x, y, z, xx as usize, yy as usize, zz as usize
-        );
+    pub fn relative_coords_to_local_coords(&self, x: f32, y: f32, z: f32) -> (usize, usize, usize) {
+        // replace the + 0.5 with .round() at some point to make it a bit cleaner
+        let xx = x + (self.width() as f32 * CHUNK_DIMENSIONS as f32 / 2.0) + 0.5;
+        let yy = y + (self.height() as f32 * CHUNK_DIMENSIONS as f32 / 2.0) + 0.5;
+        let zz = z + (self.length() as f32 * CHUNK_DIMENSIONS as f32 / 2.0) + 0.5;
 
         (xx as usize, yy as usize, zz as usize)
     }

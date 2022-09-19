@@ -30,7 +30,8 @@ use bevy_renet::RenetClientPlugin;
 use cosmos_core::entities::player::Player;
 use cosmos_core::netty::netty::ClientUnreliableMessages::PlayerBody;
 use cosmos_core::netty::netty::{
-    client_connection_config, NettyChannel, ServerReliableMessages, ServerUnreliableMessages,
+    client_connection_config, ClientReliableMessages, NettyChannel, ServerReliableMessages,
+    ServerUnreliableMessages,
 };
 use cosmos_core::netty::netty_rigidbody::NettyRigidBody;
 use cosmos_core::physics::structure_physics::{
@@ -224,6 +225,10 @@ enum CosmosInputs {
     MoveLeft,
     MoveRight,
     Sprint,
+
+    BreakBlock,
+    PlaceBlock,
+    Interact,
 }
 
 struct CosmosInputHandler {
@@ -336,7 +341,11 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     input_handler.set_keycode(CosmosInputs::MoveRight, KeyCode::D);
     input_handler.set_keycode(CosmosInputs::SlowDown, KeyCode::LShift);
     input_handler.set_keycode(CosmosInputs::MoveUpOrJump, KeyCode::Space);
-    input_handler.set_keycode(CosmosInputs::Sprint, KeyCode::R);
+    input_handler.set_keycode(CosmosInputs::Sprint, KeyCode::LControl);
+
+    input_handler.set_mouse_button(CosmosInputs::BreakBlock, MouseButton::Left);
+    input_handler.set_mouse_button(CosmosInputs::PlaceBlock, MouseButton::Right);
+    input_handler.set_keycode(CosmosInputs::Interact, KeyCode::R);
 }
 
 fn process_player_camera(
@@ -380,6 +389,28 @@ fn process_player_camera(
     }
 }
 
+struct BlockBreakEvent {
+    structure_entity: Entity,
+    x: usize,
+    y: usize,
+    z: usize,
+}
+
+struct BlockPlaceEvent {
+    structure_entity: Entity,
+    block_id: u16,
+    x: usize,
+    y: usize,
+    z: usize,
+}
+
+struct BlockInteractEvent {
+    structure_entity: Entity,
+    x: usize,
+    y: usize,
+    z: usize,
+}
+
 fn process_player_interaction(
     keys: Res<Input<KeyCode>>,
     mouse: Res<Input<MouseButton>>,
@@ -388,9 +419,11 @@ fn process_player_interaction(
     player_body: Query<Entity, With<LocalPlayer>>,
     rapier_context: Res<RapierContext>,
     parent_query: Query<&Parent>,
-    mut structure_query: Query<(&mut Structure, &GlobalTransform)>,
+    structure_query: Query<(&Structure, &GlobalTransform)>,
     blocks: Res<Blocks>,
-    mut event_writer: EventWriter<BlockChangedEvent>,
+    mut break_writer: EventWriter<BlockBreakEvent>,
+    mut place_writer: EventWriter<BlockPlaceEvent>,
+    mut interact_writer: EventWriter<BlockInteractEvent>,
 ) {
     let trans = camera.get_single().unwrap();
     let player_body = player_body.get_single().unwrap();
@@ -404,39 +437,123 @@ fn process_player_interaction(
     ) {
         let parent = parent_query.get(entity);
         if parent.is_ok() {
-            let structure_maybe = structure_query.get_mut(parent.unwrap().get());
+            let structure_maybe = structure_query.get(parent.unwrap().get());
 
             if structure_maybe.is_ok() {
-                let (mut structure, transform) = structure_maybe.unwrap();
+                let (structure, transform) = structure_maybe.unwrap();
 
                 let point = transform
                     .compute_matrix()
                     .inverse()
                     .transform_vector3(intersection.point - intersection.normal * 0.0005);
 
-                println!("LOOKING AT STRUCTURE {} {}!", point, intersection.normal);
+                if input_handler.check_just_pressed(CosmosInputs::BreakBlock, &keys, &mouse) {
+                    let (x, y, z) =
+                        structure.relative_coords_to_local_coords(point.x, point.y, point.z);
 
-                let air = blocks.block_from_id("cosmos:stone");
-
-                if mouse.just_pressed(MouseButton::Left) {
-                    structure.set_block_at_relative_coords(
-                        point.x,
-                        point.y,
-                        point.z,
-                        air,
-                        &blocks,
-                        Some(&mut event_writer),
-                    );
+                    break_writer.send(BlockBreakEvent {
+                        structure_entity: structure.get_entity().unwrap(),
+                        x,
+                        y,
+                        z,
+                    });
                 }
 
-                println!(
-                    "{}",
-                    structure.block_at_relative_coords(point.x, point.y, point.z)
-                );
+                if input_handler.check_just_pressed(CosmosInputs::PlaceBlock, &keys, &mouse) {
+                    let (x, y, z) =
+                        structure.relative_coords_to_local_coords(point.x, point.y, point.z);
+
+                    let stone = blocks.block_from_id("cosmos:stone");
+
+                    place_writer.send(BlockPlaceEvent {
+                        structure_entity: structure.get_entity().unwrap().clone(),
+                        x,
+                        y,
+                        z,
+                        block_id: stone.id(),
+                    });
+                }
+
+                if input_handler.check_just_pressed(CosmosInputs::Interact, &keys, &mouse) {
+                    let (x, y, z) =
+                        structure.relative_coords_to_local_coords(point.x, point.y, point.z);
+
+                    interact_writer.send(BlockInteractEvent {
+                        structure_entity: structure.get_entity().unwrap().clone(),
+                        x,
+                        y,
+                        z,
+                    });
+                }
             }
         }
+    }
+}
 
-        println!("HIT SOMETHING!");
+fn handle_block_break(
+    mut event_reader: EventReader<BlockBreakEvent>,
+    mut client: ResMut<RenetClient>,
+    network_mapping: Res<NetworkMapping>,
+) {
+    for ev in event_reader.iter() {
+        client.send_message(
+            NettyChannel::Reliable.id(),
+            bincode::serialize(&ClientReliableMessages::BreakBlock {
+                structure_entity: network_mapping
+                    .server_from_client(&ev.structure_entity)
+                    .unwrap()
+                    .clone(),
+                x: ev.x,
+                y: ev.y,
+                z: ev.z,
+            })
+            .unwrap(),
+        );
+    }
+}
+
+fn handle_block_place(
+    mut event_reader: EventReader<BlockPlaceEvent>,
+    mut client: ResMut<RenetClient>,
+    network_mapping: Res<NetworkMapping>,
+) {
+    for ev in event_reader.iter() {
+        client.send_message(
+            NettyChannel::Reliable.id(),
+            bincode::serialize(&ClientReliableMessages::PlaceBlock {
+                structure_entity: network_mapping
+                    .server_from_client(&ev.structure_entity)
+                    .unwrap()
+                    .clone(),
+                x: ev.x,
+                y: ev.y,
+                z: ev.z,
+                block_id: ev.block_id,
+            })
+            .unwrap(),
+        );
+    }
+}
+
+fn handle_block_interact(
+    mut event_reader: EventReader<BlockInteractEvent>,
+    mut client: ResMut<RenetClient>,
+    network_mapping: Res<NetworkMapping>,
+) {
+    for ev in event_reader.iter() {
+        client.send_message(
+            NettyChannel::Reliable.id(),
+            bincode::serialize(&ClientReliableMessages::InteractWithBlock {
+                structure_entity: network_mapping
+                    .server_from_client(&ev.structure_entity)
+                    .unwrap()
+                    .clone(),
+                x: ev.x,
+                y: ev.y,
+                z: ev.z,
+            })
+            .unwrap(),
+        );
     }
 }
 
@@ -855,6 +972,34 @@ fn create_sun(
     });
 }
 
+fn add_crosshair(mut commands: Commands, asset_server: Res<AssetServer>) {
+    commands
+        .spawn_bundle(NodeBundle {
+            style: Style {
+                display: Display::Flex,
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
+                ..default()
+            },
+            color: Color::NONE.into(),
+
+            ..default()
+        })
+        .with_children(|parent| {
+            parent.spawn_bundle(NodeBundle {
+                image: asset_server.load("images/ui/crosshair.png").into(),
+                style: Style {
+                    size: Size::new(Val::Px(8.0), Val::Px(8.0)),
+                    ..default()
+                },
+
+                // color: Color::NONE.into(),
+                ..default()
+            });
+        });
+}
+
 fn main() {
     let mut app = App::new();
 
@@ -892,6 +1037,7 @@ fn main() {
                 .with_system(listen_for_structure_event)
                 .with_system(listen_for_new_physics_event),
         )
+        .add_system_set(SystemSet::on_enter(GameState::Playing).with_system(add_crosshair))
         .add_system_set(
             SystemSet::on_update(GameState::Playing)
                 .with_system(process_player_movement)
