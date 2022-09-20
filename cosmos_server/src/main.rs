@@ -1,3 +1,4 @@
+mod events;
 mod server;
 mod structure;
 
@@ -27,6 +28,7 @@ use cosmos_core::structure::planet::planet_builder::TPlanetBuilder;
 use cosmos_core::structure::structure::{
     BlockChangedEvent, ChunkSetEvent, Structure, StructureCreated,
 };
+use events::blocks::block_events::{self, *};
 use noise::Seedable;
 use std::collections::HashMap;
 use std::net::{SocketAddr, UdpSocket};
@@ -74,6 +76,9 @@ fn server_listen_messages(
     lobby: ResMut<ServerLobby>,
     mut players: Query<(&mut Transform, &mut Velocity), With<Player>>,
     structure_query: Query<&Structure>,
+    mut break_block_event: EventWriter<BlockBreakEvent>,
+    mut block_interact_event: EventWriter<BlockInteractEvent>,
+    mut place_block_event: EventWriter<BlockPlaceEvent>,
 ) {
     for client_id in server.clients_id().into_iter() {
         while let Some(message) = server.receive_message(client_id, NettyChannel::Unreliable.id()) {
@@ -112,6 +117,47 @@ fn server_listen_messages(
                             .unwrap(),
                         );
                     }
+                }
+                ClientReliableMessages::BreakBlock {
+                    structure_entity,
+                    x,
+                    y,
+                    z,
+                } => {
+                    break_block_event.send(BlockBreakEvent {
+                        structure_entity,
+                        x,
+                        y,
+                        z,
+                    });
+                }
+                ClientReliableMessages::PlaceBlock {
+                    structure_entity,
+                    x,
+                    y,
+                    z,
+                    block_id,
+                } => {
+                    place_block_event.send(BlockPlaceEvent {
+                        structure_entity,
+                        x,
+                        y,
+                        z,
+                        block_id,
+                    });
+                }
+                ClientReliableMessages::InteractWithBlock {
+                    structure_entity,
+                    x,
+                    y,
+                    z,
+                } => {
+                    block_interact_event.send(BlockInteractEvent {
+                        structure_entity,
+                        x,
+                        y,
+                        z,
+                    });
                 }
             }
         }
@@ -299,6 +345,8 @@ fn main() {
         .add_system(handle_events_system)
         .add_system(listen_for_structure_event)
         .add_system(listen_for_new_physics_event);
+
+    block_events::register(&mut app);
 
     grass_biosphere::register(&mut app);
 

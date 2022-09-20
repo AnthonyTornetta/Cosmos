@@ -709,9 +709,11 @@ fn client_sync_players(
     mut lobby: ResMut<ClientLobby>,
     mut network_mapping: ResMut<NetworkMapping>,
     mut set_chunk_event_writer: EventWriter<ChunkSetEvent>,
+    mut block_change_event_writer: EventWriter<BlockChangedEvent>,
     query_player: Query<&Player>,
     mut query_body: Query<(&mut Transform, &mut Velocity, Option<&LocalPlayer>)>,
     mut query_structure: Query<&mut Structure>,
+    blocks: Res<Blocks>,
 ) {
     let client_id = client.client_id();
 
@@ -885,6 +887,31 @@ fn client_sync_players(
             ServerReliableMessages::MOTD { motd } => {
                 println!("Server MOTD: {}", motd);
             }
+            ServerReliableMessages::BlockChange {
+                x,
+                y,
+                z,
+                structure_entity,
+                block_id,
+            } => {
+                let mut structure = query_structure
+                    .get_mut(
+                        network_mapping
+                            .client_from_server(&structure_entity)
+                            .unwrap()
+                            .clone(),
+                    )
+                    .unwrap();
+
+                structure.set_block_at(
+                    x,
+                    y,
+                    z,
+                    blocks.block_from_numeric_id(block_id),
+                    &blocks,
+                    Some(&mut block_change_event_writer),
+                );
+            }
         }
     }
 }
@@ -1015,6 +1042,9 @@ fn main() {
         .add_event::<NeedsNewRenderingEvent>()
         .add_event::<StructureCreated>()
         .add_event::<ChunkSetEvent>()
+        .add_event::<BlockBreakEvent>()
+        .add_event::<BlockPlaceEvent>()
+        .add_event::<BlockInteractEvent>()
         .add_startup_system(init_input)
         .add_startup_system(setup_window)
         .insert_resource(AssetsLoading { 0: Vec::new() })
@@ -1048,7 +1078,10 @@ fn main() {
                 .with_system(monitor_block_updates_system)
                 .with_system(listen_for_structure_event)
                 .with_system(process_player_interaction)
-                .with_system(listen_for_new_physics_event),
+                .with_system(listen_for_new_physics_event)
+                .with_system(handle_block_break)
+                .with_system(handle_block_place)
+                .with_system(handle_block_interact),
         );
 
     chunk_retreiver::register(&mut app);

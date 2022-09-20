@@ -44,6 +44,13 @@ pub enum ServerReliableMessages {
     MOTD {
         motd: String,
     },
+    BlockChange {
+        structure_entity: Entity,
+        x: usize,
+        y: usize,
+        z: usize,
+        block_id: u16,
+    },
 }
 
 #[derive(Debug, Serialize, Deserialize, Component)]

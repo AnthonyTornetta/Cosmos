@@ -52,11 +52,11 @@ impl StructureBlock {
     }
     #[inline]
     pub fn y(&self) -> usize {
-        self.x
+        self.y
     }
     #[inline]
     pub fn z(&self) -> usize {
-        self.x
+        self.z
     }
 
     pub fn new(x: usize, y: usize, z: usize) -> Self {
@@ -229,6 +229,24 @@ impl Structure {
 
     pub fn chunks(&self) -> &Vec<Chunk> {
         &self.chunks
+    }
+
+    pub fn remove_block_at(
+        &mut self,
+        x: usize,
+        y: usize,
+        z: usize,
+        blocks: &Res<Blocks>,
+        event_writer: Option<&mut EventWriter<BlockChangedEvent>>,
+    ) {
+        self.set_block_at(
+            x,
+            y,
+            z,
+            blocks.block_from_numeric_id(AIR_BLOCK_ID),
+            blocks,
+            event_writer,
+        )
     }
 
     pub fn set_block_at(

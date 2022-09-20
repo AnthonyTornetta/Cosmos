@@ -108,5 +108,4 @@ pub fn add_blocks_resource(mut commands: Commands) {
     );
 
     commands.insert_resource(blocks);
-    println!("INSERTED!");
 }

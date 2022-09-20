@@ -183,14 +183,100 @@ fn dew_it(
 
 pub fn monitor_block_updates_system(
     mut event: EventReader<BlockChangedEvent>,
-    mut structure_created_event: EventReader<StructureCreated>,
     mut chunk_set_event: EventReader<ChunkSetEvent>,
     mut query: Query<&mut StructureRenderer>,
     mut event_writer: EventWriter<NeedsNewRenderingEvent>,
+    structure_query: Query<&Structure>,
 ) {
     let mut done_structures = HashSet::new();
 
     for ev in event.iter() {
+        let structure = structure_query.get(ev.structure_entity).unwrap();
+
+        if ev.block.x() != 0 && ev.block.x() % CHUNK_DIMENSIONS == 0 {
+            dew_it(
+                &mut done_structures,
+                ev.structure_entity,
+                Some(Vector3::new(
+                    ev.block.chunk_coord_x() - 1,
+                    ev.block.chunk_coord_y(),
+                    ev.block.chunk_coord_z(),
+                )),
+                &mut query,
+                &mut event_writer,
+            );
+        }
+
+        if ev.block.x() != structure.width() - 1 && (ev.block.x() + 1) % CHUNK_DIMENSIONS == 0 {
+            dew_it(
+                &mut done_structures,
+                ev.structure_entity,
+                Some(Vector3::new(
+                    ev.block.chunk_coord_x() + 1,
+                    ev.block.chunk_coord_y(),
+                    ev.block.chunk_coord_z(),
+                )),
+                &mut query,
+                &mut event_writer,
+            );
+        }
+
+        if ev.block.y() != 0 && ev.block.y() % CHUNK_DIMENSIONS == 0 {
+            dew_it(
+                &mut done_structures,
+                ev.structure_entity,
+                Some(Vector3::new(
+                    ev.block.chunk_coord_x(),
+                    ev.block.chunk_coord_y() - 1,
+                    ev.block.chunk_coord_z(),
+                )),
+                &mut query,
+                &mut event_writer,
+            );
+        }
+
+        if ev.block.y() != structure.height() - 1 && (ev.block.y() + 1) % CHUNK_DIMENSIONS == 0 {
+            dew_it(
+                &mut done_structures,
+                ev.structure_entity,
+                Some(Vector3::new(
+                    ev.block.chunk_coord_x(),
+                    ev.block.chunk_coord_y() + 1,
+                    ev.block.chunk_coord_z(),
+                )),
+                &mut query,
+                &mut event_writer,
+            );
+        }
+
+        if ev.block.z() != 0 && ev.block.z() % CHUNK_DIMENSIONS == 0 {
+            dew_it(
+                &mut done_structures,
+                ev.structure_entity,
+                Some(Vector3::new(
+                    ev.block.chunk_coord_x(),
+                    ev.block.chunk_coord_y(),
+                    ev.block.chunk_coord_z() - 1,
+                )),
+                &mut query,
+                &mut event_writer,
+            );
+        }
+
+        if ev.block.z() != structure.length() - 1 && (ev.block.z() + 1) % CHUNK_DIMENSIONS == 0 {
+            dew_it(
+                &mut done_structures,
+                ev.structure_entity,
+                Some(Vector3::new(
+                    ev.block.chunk_coord_x(),
+                    ev.block.chunk_coord_y(),
+                    ev.block.chunk_coord_z() + 1,
+                )),
+                &mut query,
+                &mut event_writer,
+            );
+        }
+
         dew_it(
             &mut done_structures,
             ev.structure_entity,
@@ -204,15 +290,15 @@ pub fn monitor_block_updates_system(
         );
     }
 
-    for ev in structure_created_event.iter() {
-        dew_it(
-            &mut done_structures,
-            ev.entity,
-            None,
-            &mut query,
-            &mut event_writer,
-        );
-    }
+    // for ev in structure_created_event.iter() {
+    //     dew_it(
+    //         &mut done_structures,
+    //         ev.entity,
+    //         None,
+    //         &mut query,
+    //         &mut event_writer,
+    //     );
+    // }
 
     for ev in chunk_set_event.iter() {
         dew_it(
@@ -263,8 +349,7 @@ pub fn monitor_needs_rendered_system(
                 "Created chunk's mesh! (Verts: {})",
                 chunk_mesh.mesh.count_vertices()
             );
-            // entity_commands.remove::<Handle<Mesh>>();
-            // entity_commands.remove::<Handle<StandardMaterial>>();
+
             entity_commands.insert(meshes.add(chunk_mesh.mesh));
             entity_commands.insert(atlas.material.clone());
         }
