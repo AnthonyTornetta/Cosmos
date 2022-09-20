@@ -35,9 +35,9 @@ impl TStructureBuilder for StructureBuilder {
             })
             .insert(velocity)
             .with_children(|parent| {
-                for z in 0..structure.length() {
-                    for y in 0..structure.height() {
-                        for x in 0..structure.width() {
+                for z in 0..structure.chunks_length() {
+                    for y in 0..structure.chunks_height() {
+                        for x in 0..structure.chunks_width() {
                             let entity = parent
                                 .spawn()
                                 .insert_bundle(PbrBundle {

@@ -25,8 +25,6 @@ pub struct CosmosCorePlugin;
 impl Plugin for CosmosCorePlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.add_startup_system(add_blocks_resource);
-
-        println!("BUILT PLUGIN!");
     }
 }
 

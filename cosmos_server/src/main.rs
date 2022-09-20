@@ -237,9 +237,9 @@ fn handle_events_system(
                         bincode::serialize(&StructureCreate {
                             entity: entity.clone(),
                             body: NettyRigidBody::new(velocity, transform),
-                            width: structure.width(),
-                            height: structure.height(),
-                            length: structure.length(),
+                            width: structure.chunks_width(),
+                            height: structure.chunks_height(),
+                            length: structure.chunks_length(),
                         })
                         .unwrap(),
                     );
@@ -284,7 +284,7 @@ fn create_world(mut commands: Commands) {
 fn create_structure(mut commands: Commands, mut event_writer: EventWriter<StructureCreated>) {
     let mut entity_cmd = commands.spawn();
 
-    let mut structure = Structure::new(16, 3, 16, entity_cmd.id());
+    let mut structure = Structure::new(1, 3, 1, entity_cmd.id());
 
     let builder = ServerPlanetBuilder::new(GrassBiosphere::default());
 

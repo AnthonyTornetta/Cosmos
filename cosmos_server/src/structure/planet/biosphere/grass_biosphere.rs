@@ -72,7 +72,7 @@ pub fn generate_planet(
             ev.z * CHUNK_DIMENSIONS,
         );
 
-        let s_height = structure.height() * CHUNK_DIMENSIONS;
+        let s_height = structure.blocks_height();
 
         let middle_air_start = s_height - 23;
 

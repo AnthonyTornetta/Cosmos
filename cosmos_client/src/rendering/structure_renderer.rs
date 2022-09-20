@@ -33,9 +33,9 @@ pub struct ChunkMesh {
 
 impl StructureRenderer {
     pub fn new(structure: &Structure) -> Self {
-        let width = structure.width();
-        let height = structure.height();
-        let length = structure.length();
+        let width = structure.chunks_width();
+        let height = structure.chunks_height();
+        let length = structure.chunks_length();
 
         let mut rends = Vec::with_capacity(width * height * length);
         let mut changes = HashSet::with_capacity(width * height * length);
@@ -62,6 +62,10 @@ impl StructureRenderer {
 
     pub fn render(&mut self, structure: &Structure, uv_mapper: &UVMapper, blocks: &Res<Blocks>) {
         for change in &self.changes {
+            debug_assert!(change.x < self.width);
+            debug_assert!(change.y < self.height);
+            debug_assert!(change.z < self.length);
+
             let (x, y, z) = (change.x, change.y, change.z);
 
             let left = match x {
@@ -207,7 +211,9 @@ pub fn monitor_block_updates_system(
             );
         }
 
-        if ev.block.x() != structure.width() - 1 && (ev.block.x() + 1) % CHUNK_DIMENSIONS == 0 {
+        if ev.block.x() != structure.blocks_width() - 1
+            && (ev.block.x() + 1) % CHUNK_DIMENSIONS == 0
+        {
             dew_it(
                 &mut done_structures,
                 ev.structure_entity,
@@ -235,7 +241,9 @@ pub fn monitor_block_updates_system(
             );
         }
 
-        if ev.block.y() != structure.height() - 1 && (ev.block.y() + 1) % CHUNK_DIMENSIONS == 0 {
+        if ev.block.y() != structure.blocks_height() - 1
+            && (ev.block.y() + 1) % CHUNK_DIMENSIONS == 0
+        {
             dew_it(
                 &mut done_structures,
                 ev.structure_entity,
@@ -263,7 +271,9 @@ pub fn monitor_block_updates_system(
             );
         }
 
-        if ev.block.z() != structure.length() - 1 && (ev.block.z() + 1) % CHUNK_DIMENSIONS == 0 {
+        if ev.block.z() != structure.blocks_length() - 1
+            && (ev.block.z() + 1) % CHUNK_DIMENSIONS == 0
+        {
             dew_it(
                 &mut done_structures,
                 ev.structure_entity,

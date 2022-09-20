@@ -113,18 +113,33 @@ impl Structure {
     }
 
     #[inline]
-    pub fn width(&self) -> usize {
+    pub fn chunks_width(&self) -> usize {
         self.width
     }
 
     #[inline]
-    pub fn height(&self) -> usize {
+    pub fn chunks_height(&self) -> usize {
         self.height
     }
 
     #[inline]
-    pub fn length(&self) -> usize {
+    pub fn chunks_length(&self) -> usize {
         self.length
+    }
+
+    #[inline]
+    pub fn blocks_width(&self) -> usize {
+        self.width * CHUNK_DIMENSIONS
+    }
+
+    #[inline]
+    pub fn blocks_height(&self) -> usize {
+        self.height * CHUNK_DIMENSIONS
+    }
+
+    #[inline]
+    pub fn blocks_length(&self) -> usize {
+        self.length * CHUNK_DIMENSIONS
     }
 
     pub fn chunk_entity(&self, cx: usize, cy: usize, cz: usize) -> Entity {
@@ -192,9 +207,9 @@ impl Structure {
 
     pub fn relative_coords_to_local_coords(&self, x: f32, y: f32, z: f32) -> (usize, usize, usize) {
         // replace the + 0.5 with .round() at some point to make it a bit cleaner
-        let xx = x + (self.width() as f32 * CHUNK_DIMENSIONS as f32 / 2.0) + 0.5;
-        let yy = y + (self.height() as f32 * CHUNK_DIMENSIONS as f32 / 2.0) + 0.5;
-        let zz = z + (self.length() as f32 * CHUNK_DIMENSIONS as f32 / 2.0) + 0.5;
+        let xx = x + (self.blocks_width() as f32 / 2.0) + 0.5;
+        let yy = y + (self.blocks_height() as f32 / 2.0) + 0.5;
+        let zz = z + (self.blocks_length() as f32 / 2.0) + 0.5;
 
         (xx as usize, yy as usize, zz as usize)
     }

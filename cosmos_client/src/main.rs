@@ -4,6 +4,7 @@ pub mod rendering;
 pub mod state;
 pub mod structure;
 
+use bevy_rapier3d::render::RapierDebugRenderPlugin;
 use cosmos_core::block::blocks::Blocks;
 use cosmos_core::entities::sun::Sun;
 use cosmos_core::structure::chunk::Chunk;
@@ -442,10 +443,12 @@ fn process_player_interaction(
             if structure_maybe.is_ok() {
                 let (structure, transform) = structure_maybe.unwrap();
 
+                let moved_point = intersection.point - intersection.normal * 0.3;
+
                 let point = transform
                     .compute_matrix()
                     .inverse()
-                    .transform_vector3(intersection.point - intersection.normal * 0.0005);
+                    .transform_vector3(moved_point);
 
                 if input_handler.check_just_pressed(CosmosInputs::BreakBlock, &keys, &mouse) {
                     let (x, y, z) =
@@ -1036,6 +1039,7 @@ fn main() {
         .add_plugins(CosmosCorePluginGroup::default())
         .add_plugins(ClientPluginGroup::default())
         .add_plugin(RenetClientPlugin {})
+        .add_plugin(RapierDebugRenderPlugin::default())
         .insert_resource(CosmosInputHandler::new())
         .add_event::<BlockChangedEvent>()
         .add_event::<NeedsNewPhysicsEvent>()
