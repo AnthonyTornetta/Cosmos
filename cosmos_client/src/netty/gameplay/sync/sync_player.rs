@@ -1,10 +1,12 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::RenetClient;
-use cosmos_core::netty::netty::ClientUnreliableMessages;
 use cosmos_core::{
     entities::player::Player,
-    netty::{netty::NettyChannel, netty_rigidbody::NettyRigidBody},
+    netty::{
+        client_unreliable_messages::ClientUnreliableMessages, netty::NettyChannel,
+        netty_rigidbody::NettyRigidBody,
+    },
 };
 
 use crate::netty::flags::LocalPlayer;

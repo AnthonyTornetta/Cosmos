@@ -3,8 +3,10 @@ use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     entities::player::Player,
-    netty::netty::{
-        ClientReliableMessages, ClientUnreliableMessages, NettyChannel, ServerReliableMessages,
+    netty::{
+        client_reliable_messages::ClientReliableMessages,
+        client_unreliable_messages::ClientUnreliableMessages, netty::NettyChannel,
+        server_reliable_messages::ServerReliableMessages,
     },
     structure::structure::Structure,
 };

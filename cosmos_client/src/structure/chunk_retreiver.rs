@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy_renet::renet::RenetClient;
-use cosmos_core::netty::netty::ClientReliableMessages::SendChunk;
+use cosmos_core::netty::client_reliable_messages::ClientReliableMessages;
 use cosmos_core::{netty::netty::NettyChannel, structure::structure::Structure};
 
 use crate::state::game_state::GameState;
@@ -22,7 +22,7 @@ fn populate_structures(
 
         client.send_message(
             NettyChannel::Reliable.id(),
-            bincode::serialize(&SendChunk {
+            bincode::serialize(&ClientReliableMessages::SendChunk {
                 server_entity: server_ent.clone(),
             })
             .unwrap(),

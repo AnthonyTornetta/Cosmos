@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use bevy_renet::renet::{RenetServer, ServerEvent};
-use cosmos_core::netty::netty::ServerReliableMessages;
+use cosmos_core::netty::server_reliable_messages::ServerReliableMessages;
 use cosmos_core::structure::structure::Structure;
 use cosmos_core::{
     entities::player::Player,

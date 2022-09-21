@@ -2,8 +2,8 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::netty::{
-    netty::{NettyChannel, ServerUnreliableMessages},
-    netty_rigidbody::NettyRigidBody,
+    netty::NettyChannel, netty_rigidbody::NettyRigidBody,
+    server_unreliable_messages::ServerUnreliableMessages,
 };
 
 use crate::netty::netty::NetworkTick;
