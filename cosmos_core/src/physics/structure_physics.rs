@@ -222,14 +222,14 @@ fn generate_colliders(
     offset: Vector3<usize>,
     size: usize,
 ) {
-    let mut last_seen = None;
+    let mut last_seen_empty = None;
     for z in offset.z..(offset.z + size) {
         for y in offset.y..(offset.y + size) {
             for x in offset.x..(offset.x + size) {
-                let b = chunk.block_at(x, y, z);
-                if last_seen.is_none() {
-                    last_seen = Some(b);
-                } else if last_seen.unwrap() != b {
+                let b = blocks.block_from_numeric_id(chunk.block_at(x, y, z));
+                if last_seen_empty.is_none() {
+                    last_seen_empty = Some(b.is_empty());
+                } else if last_seen_empty.unwrap() != b.is_empty() {
                     let s2 = size / 2;
                     let s4 = s2 as f32 / 2.0;
 
@@ -318,7 +318,7 @@ fn generate_colliders(
         }
     }
 
-    if !blocks.block_from_numeric_id(last_seen.unwrap()).is_empty() {
+    if !last_seen_empty.unwrap() {
         let s2 = size as f32 / 2.0;
 
         colliders.push((location, Rot::IDENTITY, Collider::cuboid(s2, s2, s2)));
