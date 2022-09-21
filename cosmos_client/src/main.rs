@@ -165,11 +165,11 @@ fn main() {
                 .with_system(listen_for_new_physics_event),
         );
 
+    inputs::register(&mut app);
     window::setup::register(&mut app);
     asset_loading::register(&mut app);
     block_events::register(&mut app);
     block_interactions::register(&mut app);
-    inputs::register(&mut app);
     chunk_retreiver::register(&mut app);
     camera_controller::register(&mut app);
     crosshair::register(&mut app);
