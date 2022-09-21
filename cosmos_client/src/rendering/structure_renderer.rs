@@ -1,5 +1,6 @@
-use bevy::prelude::{Component, ComputedVisibility, EventReader, Mesh};
+use bevy::prelude::{Component, ComputedVisibility, EventReader, Mesh, Vec3};
 use bevy::render::mesh::{Indices, PrimitiveTopology};
+use bevy::render::primitives::Aabb;
 use bevy_rapier3d::na::Vector3;
 use cosmos_core::block::block::BlockFace;
 use cosmos_core::block::blocks::Blocks;
@@ -358,7 +359,13 @@ pub fn monitor_needs_rendered_system(
                 chunk_mesh.mesh.count_vertices()
             );
 
+            let s = (CHUNK_DIMENSIONS) as f32;
+
             entity_commands.insert(meshes.add(chunk_mesh.mesh));
+            entity_commands.insert(Aabb::from_min_max(
+                Vec3::new(-s, -s, -s),
+                Vec3::new(s, s, s),
+            ));
             entity_commands.insert(atlas.material.clone());
         }
     }

@@ -1060,7 +1060,7 @@ fn main() {
         .add_plugins(CosmosCorePluginGroup::default())
         .add_plugins(ClientPluginGroup::default())
         .add_plugin(RenetClientPlugin {})
-        .add_plugin(RapierDebugRenderPlugin::default())
+        // .add_plugin(RapierDebugRenderPlugin::default())
         .insert_resource(CosmosInputHandler::new())
         .add_event::<BlockChangedEvent>()
         .add_event::<NeedsNewPhysicsEvent>()
