@@ -1,12 +1,10 @@
-use bevy::prelude::{Component, EventReader, Mesh};
+use bevy::prelude::{Component, ComputedVisibility, EventReader, Mesh};
 use bevy::render::mesh::{Indices, PrimitiveTopology};
 use bevy_rapier3d::na::Vector3;
 use cosmos_core::block::block::BlockFace;
-use cosmos_core::block::blocks::{self, Blocks};
+use cosmos_core::block::blocks::Blocks;
 use cosmos_core::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
-use cosmos_core::structure::structure::{
-    BlockChangedEvent, ChunkSetEvent, Structure, StructureCreated,
-};
+use cosmos_core::structure::structure::{BlockChangedEvent, ChunkSetEvent, Structure};
 use cosmos_core::utils::array_utils::flatten;
 use std::collections::HashSet;
 

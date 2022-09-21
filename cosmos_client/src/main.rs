@@ -443,16 +443,17 @@ fn process_player_interaction(
             if structure_maybe.is_ok() {
                 let (structure, transform) = structure_maybe.unwrap();
 
-                let moved_point = intersection.point - intersection.normal * 0.3;
-
-                let point = transform
-                    .compute_matrix()
-                    .inverse()
-                    .transform_vector3(moved_point);
-
                 if input_handler.check_just_pressed(CosmosInputs::BreakBlock, &keys, &mouse) {
-                    let (x, y, z) =
-                        structure.relative_coords_to_local_coords(point.x, point.y, point.z);
+                    let moved_point = intersection.point - intersection.normal * 0.3;
+
+                    let point = transform
+                        .compute_matrix()
+                        .inverse()
+                        .transform_vector3(moved_point);
+
+                    let (x, y, z) = structure
+                        .relative_coords_to_local_coords(point.x, point.y, point.z)
+                        .expect("Tried to break block outside of structure?");
 
                     break_writer.send(BlockBreakEvent {
                         structure_entity: structure.get_entity().unwrap(),
@@ -463,23 +464,43 @@ fn process_player_interaction(
                 }
 
                 if input_handler.check_just_pressed(CosmosInputs::PlaceBlock, &keys, &mouse) {
-                    let (x, y, z) =
+                    let moved_point = intersection.point + intersection.normal * 0.95;
+
+                    let point = transform
+                        .compute_matrix()
+                        .inverse()
+                        .transform_vector3(moved_point);
+
+                    let coords =
                         structure.relative_coords_to_local_coords(point.x, point.y, point.z);
 
-                    let stone = blocks.block_from_id("cosmos:stone");
+                    if coords.is_ok() {
+                        let (x, y, z) = coords.unwrap();
+                        if structure.is_within_blocks(x, y, z) {
+                            let stone = blocks.block_from_id("cosmos:stone");
 
-                    place_writer.send(BlockPlaceEvent {
-                        structure_entity: structure.get_entity().unwrap().clone(),
-                        x,
-                        y,
-                        z,
-                        block_id: stone.id(),
-                    });
+                            place_writer.send(BlockPlaceEvent {
+                                structure_entity: structure.get_entity().unwrap().clone(),
+                                x,
+                                y,
+                                z,
+                                block_id: stone.id(),
+                            });
+                        }
+                    }
                 }
 
                 if input_handler.check_just_pressed(CosmosInputs::Interact, &keys, &mouse) {
-                    let (x, y, z) =
-                        structure.relative_coords_to_local_coords(point.x, point.y, point.z);
+                    let moved_point = intersection.point + intersection.normal * 0.95;
+
+                    let point = transform
+                        .compute_matrix()
+                        .inverse()
+                        .transform_vector3(moved_point);
+
+                    let (x, y, z) = structure
+                        .relative_coords_to_local_coords(point.x, point.y, point.z)
+                        .unwrap();
 
                     interact_writer.send(BlockInteractEvent {
                         structure_entity: structure.get_entity().unwrap().clone(),

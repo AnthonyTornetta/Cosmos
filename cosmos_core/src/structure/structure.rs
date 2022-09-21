@@ -1,3 +1,5 @@
+use std::num::NonZeroU8;
+
 use crate::block::block::Block;
 use crate::block::blocks::{Blocks, AIR_BLOCK_ID};
 use crate::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
@@ -197,41 +199,39 @@ impl Structure {
         )]
     }
 
+    pub fn is_within_blocks(&self, x: usize, y: usize, z: usize) -> bool {
+        x < self.blocks_width() && y < self.blocks_height() && z < self.blocks_length()
+    }
+
     pub fn has_block_at(&self, x: usize, y: usize, z: usize) -> bool {
         self.block_at(x, y, z) != AIR_BLOCK_ID
     }
 
-    pub fn has_block_at_relative_coords(&self, x: f32, y: f32, z: f32) -> bool {
-        self.block_at_relative_coords(x, y, z) != AIR_BLOCK_ID
-    }
-
-    pub fn relative_coords_to_local_coords(&self, x: f32, y: f32, z: f32) -> (usize, usize, usize) {
+    /// # Arguments
+    /// Coordinates relative to the structure's 0, 0, 0 position in the world mapped to block coordinates
+    /// # Returns
+    /// - Ok (x, y, z) of the block coordinates if the point is within the structure
+    /// - Err(false) if one of the x/y/z coordinates are outside the structure in the negative direction
+    /// - Err (true) if one of the x/y/z coordinates are outside the structure in the positive direction
+    pub fn relative_coords_to_local_coords(
+        &self,
+        x: f32,
+        y: f32,
+        z: f32,
+    ) -> Result<(usize, usize, usize), bool> {
         // replace the + 0.5 with .round() at some point to make it a bit cleaner
         let xx = x + (self.blocks_width() as f32 / 2.0) + 0.5;
         let yy = y + (self.blocks_height() as f32 / 2.0) + 0.5;
         let zz = z + (self.blocks_length() as f32 / 2.0) + 0.5;
 
-        (xx as usize, yy as usize, zz as usize)
-    }
-
-    pub fn set_block_at_relative_coords(
-        &mut self,
-        x: f32,
-        y: f32,
-        z: f32,
-        block: &Block,
-        blocks: &Res<Blocks>,
-        event_writer: Option<&mut EventWriter<BlockChangedEvent>>,
-    ) {
-        let (xx, yy, zz) = self.relative_coords_to_local_coords(x, y, z);
-
-        self.set_block_at(xx, yy, zz, block, blocks, event_writer)
-    }
-
-    pub fn block_at_relative_coords(&self, x: f32, y: f32, z: f32) -> u16 {
-        let (xx, yy, zz) = self.relative_coords_to_local_coords(x, y, z);
-
-        self.block_at(xx, yy, zz)
+        if xx >= 0.0 && yy >= 0.0 && zz >= 0.0 {
+            let (xxx, yyy, zzz) = (xx as usize, yy as usize, zz as usize);
+            if self.is_within_blocks(xxx, yyy, zzz) {
+                return Ok((xxx, yyy, zzz));
+            }
+            return Err(true);
+        }
+        return Err(false);
     }
 
     pub fn block_at(&self, x: usize, y: usize, z: usize) -> u16 {
