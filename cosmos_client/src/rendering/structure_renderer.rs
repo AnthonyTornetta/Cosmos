@@ -1,17 +1,30 @@
-use bevy::prelude::{Component, ComputedVisibility, EventReader, Mesh, Vec3};
+use crate::state::game_state::GameState;
+use bevy::prelude::{App, Component, EventReader, Mesh, SystemSet, Vec3};
 use bevy::render::mesh::{Indices, PrimitiveTopology};
 use bevy::render::primitives::Aabb;
 use bevy_rapier3d::na::Vector3;
 use cosmos_core::block::block::BlockFace;
 use cosmos_core::block::blocks::Blocks;
+use cosmos_core::events::block_events::BlockChangedEvent;
 use cosmos_core::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
-use cosmos_core::structure::structure::{BlockChangedEvent, ChunkSetEvent, Structure};
+use cosmos_core::structure::events::ChunkSetEvent;
+use cosmos_core::structure::structure::Structure;
 use cosmos_core::utils::array_utils::flatten;
 use std::collections::HashSet;
 
-use crate::{
-    Assets, Commands, Entity, EventWriter, Handle, MainAtlas, Query, Res, ResMut, UVMapper,
-};
+use crate::asset::asset_loading::MainAtlas;
+use crate::{Assets, Commands, Entity, EventWriter, Handle, Query, Res, ResMut, UVMapper};
+
+pub fn register(app: &mut App) {
+    app.add_event::<NeedsNewRenderingEvent>()
+        .add_system_set(
+            SystemSet::on_update(GameState::LoadingWorld)
+                .with_system(monitor_needs_rendered_system),
+        )
+        .add_system_set(
+            SystemSet::on_update(GameState::Playing).with_system(monitor_needs_rendered_system),
+        );
+}
 
 #[derive(Component)]
 pub struct StructureRenderer {

@@ -2,8 +2,9 @@ use bevy::prelude::*;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::blocks::Blocks,
+    events::block_events::BlockChangedEvent,
     netty::netty::{NettyChannel, ServerReliableMessages},
-    structure::structure::{BlockChangedEvent, Structure},
+    structure::structure::Structure,
 };
 
 pub struct BlockBreakEvent {

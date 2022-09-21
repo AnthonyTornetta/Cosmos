@@ -1,6 +1,6 @@
 use crate::block::block::{Block, BlockFace, BlockProperty};
 use crate::block::block_builder::BlockBuilder;
-use bevy::prelude::{Commands, ResMut};
+use bevy::prelude::Commands;
 use bevy::utils::HashMap;
 
 // TODO: Move this to bevy stuff

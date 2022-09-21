@@ -8,7 +8,6 @@ use bevy_rapier3d::prelude::{Collider, LockedAxes, RigidBody, Velocity};
 use bevy_renet::renet::{RenetServer, ServerAuthentication, ServerConfig, ServerEvent};
 use bevy_renet::RenetServerPlugin;
 use cosmos_core::entities::player::Player;
-use cosmos_core::entities::sun::Sun;
 use cosmos_core::netty::netty::ServerReliableMessages::{
     ChunkData, PlayerCreate, PlayerRemove, StructureCreate, MOTD,
 };
@@ -19,22 +18,19 @@ use cosmos_core::netty::netty::{
 };
 use cosmos_core::netty::netty_rigidbody::NettyRigidBody;
 use cosmos_core::physics::structure_physics::{
-    listen_for_new_physics_event, listen_for_structure_event, NeedsNewPhysicsEvent,
-    StructurePhysics,
+    listen_for_new_physics_event, listen_for_structure_event,
 };
-use cosmos_core::plugin::cosmos_core_plugin::{CosmosCorePlugin, CosmosCorePluginGroup};
-use cosmos_core::structure::chunk::CHUNK_DIMENSIONS;
+use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
+use cosmos_core::structure::events::StructureCreated;
 use cosmos_core::structure::planet::planet_builder::TPlanetBuilder;
-use cosmos_core::structure::structure::{
-    BlockChangedEvent, ChunkSetEvent, Structure, StructureCreated,
-};
+use cosmos_core::structure::structure::Structure;
 use events::blocks::block_events::{self, *};
 use noise::Seedable;
 use std::collections::HashMap;
 use std::net::{SocketAddr, UdpSocket};
-use std::time::{Instant, SystemTime};
+use std::time::SystemTime;
 use structure::planet::biosphere::grass_biosphere::{self, GrassBiosphere};
-use structure::planet::server_planet_builder::{self, ServerPlanetBuilder};
+use structure::planet::server_planet_builder::ServerPlanetBuilder;
 
 #[derive(Debug, Default)]
 pub struct ServerLobby {
@@ -261,26 +257,6 @@ fn handle_events_system(
     }
 }
 
-fn create_world(mut commands: Commands) {
-    commands
-        .spawn()
-        .insert(Sun {
-            intensity: 1.0,
-            color: Color::WHITE,
-        })
-        .insert_bundle(PointLightBundle {
-            transform: Transform::from_xyz(0.0, 1000.0, 0.0),
-            point_light: PointLight {
-                color: Color::WHITE,
-                intensity: 100000.0,
-                radius: 1000000.0,
-                range: 1000000.0,
-                ..default()
-            },
-            ..default()
-        });
-}
-
 fn create_structure(mut commands: Commands, mut event_writer: EventWriter<StructureCreated>) {
     let mut entity_cmd = commands.spawn();
 
@@ -335,10 +311,6 @@ fn main() {
         .insert_resource(ClientTicks::default())
         .insert_resource(server)
         .insert_resource(noise)
-        .add_event::<BlockChangedEvent>()
-        .add_event::<NeedsNewPhysicsEvent>()
-        .add_event::<StructureCreated>()
-        .add_event::<ChunkSetEvent>()
         .add_startup_system(create_structure)
         .add_system(server_listen_messages)
         .add_system(server_sync_bodies)

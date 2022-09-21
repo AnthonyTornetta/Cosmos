@@ -1,13 +1,10 @@
-use std::time::SystemTime;
-
-use crate::block::block::Block;
-use crate::block::blocks::{Blocks, AIR_BLOCK_ID};
+use crate::block::blocks::Blocks;
+use crate::events::block_events::BlockChangedEvent;
 use crate::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
-use crate::structure::structure::ChunkSetEvent;
-use crate::structure::structure::{BlockChangedEvent, Structure, StructureBlock, StructureCreated};
-use crate::utils::array_utils::flatten;
+use crate::structure::events::ChunkSetEvent;
+use crate::structure::structure::Structure;
 use crate::utils::timer::UtilsTimer;
-use bevy::prelude::{Children, Commands, Component, Entity, EventReader, EventWriter, Query, Res};
+use bevy::prelude::{App, Commands, Component, Entity, EventReader, EventWriter, Query, Res};
 use bevy::utils::HashSet;
 use bevy_rapier3d::math::Vect;
 use bevy_rapier3d::na::Vector3;
@@ -21,16 +18,14 @@ pub struct ChunkPhysicsModel {
 #[derive(Component)]
 pub struct StructurePhysics {
     needs_changed: HashSet<Vector3<usize>>,
-    entity: Entity,
 }
 
 impl StructurePhysics {
-    pub fn new(structure: &Structure, entity: Entity) -> Self {
+    pub fn new(structure: &Structure) -> Self {
         let mut me = Self {
             needs_changed: HashSet::with_capacity(
                 structure.chunks_width() * structure.chunks_height() * structure.chunks_length(),
             ),
-            entity,
         };
 
         for z in 0..structure.chunks_length() {
@@ -64,153 +59,6 @@ impl StructurePhysics {
         self.needs_changed.clear();
 
         colliders
-    }
-}
-
-struct QuadTree {
-    blocks: Option<Vec<bool>>,
-    dimensions: usize,
-    children: Option<Vec<QuadTree>>,
-}
-
-impl QuadTree {
-    pub fn new(dimensions: usize) -> Self {
-        let mut blocks = Vec::with_capacity(dimensions * dimensions * dimensions);
-
-        for _ in 0..dimensions * dimensions * dimensions {
-            blocks.push(false);
-        }
-
-        Self {
-            blocks: Some(blocks),
-            children: None,
-            dimensions,
-        }
-    }
-
-    pub fn from(dimensions: usize, blocks: Vec<bool>) -> Self {
-        Self {
-            blocks: Some(blocks),
-            children: None,
-            dimensions,
-        }
-    }
-
-    fn is_full(&self) -> bool {
-        if self.blocks.is_some() {
-            for b in self.blocks.as_ref().unwrap() {
-                if !b {
-                    return false;
-                }
-            }
-        }
-
-        true
-    }
-
-    fn get_block(&self, x: usize, y: usize, z: usize) -> bool {
-        if self.blocks.is_some() {
-            return self.blocks.as_ref().unwrap()
-                [flatten(x, y, z, self.dimensions, self.dimensions)];
-        } else {
-            let d2 = self.dimensions / 2;
-
-            let child_i = flatten(x / d2, y / d2, z / d2, 2, 2);
-
-            return self.children.as_ref().unwrap()[child_i].get_block(x % d2, y % d2, z % d2);
-        }
-    }
-
-    fn check_then_combine(&mut self) {
-        if self.children.is_some() {
-            for child in self.children.as_ref().unwrap() {
-                if !child.is_full() {
-                    return;
-                }
-            }
-
-            let mut blocks: Vec<bool> =
-                Vec::with_capacity(self.dimensions * self.dimensions * self.dimensions);
-
-            for z in 0..self.dimensions {
-                for y in 0..self.dimensions {
-                    for x in 0..self.dimensions {
-                        blocks[flatten(x, y, z, self.dimensions, self.dimensions)] =
-                            self.get_block(x, y, z);
-                    }
-                }
-            }
-
-            self.blocks = Some(blocks);
-            self.children = None;
-        }
-    }
-
-    pub fn add_colliders(colliders: &mut Vec<(Vect, Rot, Collider)>, x: f32, y: f32, z: f32) {}
-
-    fn check_then_subdivide(&mut self) {
-        if self.dimensions == 1 {
-            return;
-        }
-
-        if self.blocks.is_some() {
-            if !self.is_full() {
-                let d2 = self.dimensions / 2;
-
-                let mut top_left = Self::new(d2);
-                let mut top_right = Self::new(d2);
-                let mut bottom_left = Self::new(d2);
-                let mut bottom_right = Self::new(d2);
-
-                for z in 0..d2 {
-                    for y in 0..d2 {
-                        for x in 0..d2 {
-                            let i = flatten(x, y, z, d2, d2);
-                            top_left.blocks.as_mut().unwrap()[i] = self.blocks.as_ref().unwrap()[i];
-
-                            top_right.blocks.as_mut().unwrap()[i] =
-                                self.blocks.as_ref().unwrap()[flatten(x + d2, y, z, d2, d2)];
-
-                            bottom_left.blocks.as_mut().unwrap()[i] =
-                                self.blocks.as_ref().unwrap()[flatten(x, y + d2, z, d2, d2)];
-
-                            bottom_right.blocks.as_mut().unwrap()[i] =
-                                self.blocks.as_ref().unwrap()[flatten(x + d2, y + d2, z, d2, d2)];
-                        }
-                    }
-                }
-
-                top_left.check_then_subdivide();
-                top_right.check_then_subdivide();
-                bottom_left.check_then_subdivide();
-                bottom_right.check_then_subdivide();
-
-                self.blocks = None;
-                self.children = Some(vec![top_left, top_right, bottom_left, bottom_right]);
-            }
-        }
-    }
-
-    pub fn set_block(&mut self, x: usize, y: usize, z: usize, has_collider: bool) {
-        if self.blocks.is_some() {
-            self.blocks.as_mut().unwrap()[flatten(x, y, z, self.dimensions, self.dimensions)] =
-                has_collider;
-
-            if !has_collider {
-                self.check_then_subdivide();
-            }
-        } else {
-            let d2 = self.dimensions / 2;
-
-            let child_i = flatten(x / d2, y / d2, z / d2, 2, 2);
-
-            self.children.as_mut().unwrap()[child_i].set_block(
-                x % d2,
-                y % d2,
-                z % d2,
-                has_collider,
-            );
-        }
     }
 }
 
@@ -328,12 +176,6 @@ fn generate_colliders(
 fn generate_chunk_collider(chunk: &Chunk, blocks: &Res<Blocks>) -> Option<Collider> {
     let mut colliders: Vec<(Vect, Rot, Collider)> = Vec::new();
 
-    // let collider_start;
-    //
-    // let mut collider_length = 0;
-    // let mut collider_width = 0;
-    // let mut collider_height = 0;
-
     let mut timer = UtilsTimer::start();
 
     generate_colliders(
@@ -348,55 +190,6 @@ fn generate_chunk_collider(chunk: &Chunk, blocks: &Res<Blocks>) -> Option<Collid
         Vector3::new(0, 0, 0),
         CHUNK_DIMENSIONS,
     );
-
-    // colliders.push((
-    //     Vect::new(
-    //         CHUNK_DIMENSIONS as f32 / 2.0,
-    //         CHUNK_DIMENSIONS as f32 / 2.0,
-    //         CHUNK_DIMENSIONS as f32 / 2.0,
-    //     ),
-    //     Rot::default(),
-    //     Collider::cuboid(
-    //         CHUNK_DIMENSIONS as f32 / 2.0,
-    //         CHUNK_DIMENSIONS as f32 / 2.0,
-    //         CHUNK_DIMENSIONS as f32 / 2.0,
-    //     ),
-    // ));
-
-    // for z in 0..CHUNK_DIMENSIONS {
-    //     // y
-    //     for y in 0..CHUNK_DIMENSIONS {
-    //         // x
-    //         for x in 0..CHUNK_DIMENSIONS {
-    //             // z
-    //             if chunk.has_block_at(x, y, z) {
-    //                 colliders.push((
-    //                     Vect::new(x as f32, y as f32, z as f32),
-    //                     Rot::default(),
-    //                     Collider::cuboid(0.5, 0.5, 0.5),
-    //                 ));
-    //                 //
-    //                 // if collider_length == 0 {
-    //                 //     collider_start = Vector3::new(x, y, z);
-    //                 // }
-    //                 //
-    //                 // if collider_length == 0 {
-    //                 //
-    //                 // }
-    //                 // collider_length += 1;
-    //             }
-    //             // else {
-    //             //     let pos = Vector3::new(
-    //             //         collider_start.x as f32 + collider_width as f32 / 2.0,
-    //             //         collider_start.y as f32 + collider_height as f32 / 2.0,
-    //             //         collider_start.z as f32 + collider_length as f32 / 2.0
-    //             //     );
-    //             //
-    //             //     colliders.push()
-    //             // }
-    //         }
-    //     }
-    // }
 
     timer.log_duration("Generated colliders in");
 
@@ -505,4 +298,8 @@ pub fn listen_for_structure_event(
             &mut event_writer,
         );
     }
+}
+
+pub fn register(app: &mut App) {
+    app.add_event::<NeedsNewPhysicsEvent>();
 }

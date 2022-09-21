@@ -1,7 +1,6 @@
-use std::num::NonZeroU8;
-
 use crate::block::block::Block;
 use crate::block::blocks::{Blocks, AIR_BLOCK_ID};
+use crate::events::block_events::BlockChangedEvent;
 use crate::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
 use crate::utils::array_utils::flatten;
 use crate::utils::vec_math::add_vec;
@@ -9,17 +8,6 @@ use bevy::prelude::{Component, Entity, EventWriter, Res};
 use bevy_rapier3d::na::Vector3;
 use bevy_rapier3d::rapier::prelude::RigidBodyPosition;
 use serde::{Deserialize, Serialize};
-
-pub struct StructureCreated {
-    pub entity: Entity,
-}
-
-pub struct ChunkSetEvent {
-    pub structure_entity: Entity,
-    pub x: usize,
-    pub y: usize,
-    pub z: usize,
-}
 
 #[derive(Serialize, Deserialize, Component)]
 pub struct Structure {
@@ -32,13 +20,6 @@ pub struct Structure {
     width: usize,
     height: usize,
     length: usize,
-}
-
-pub struct BlockChangedEvent {
-    pub block: StructureBlock,
-    pub structure_entity: Entity,
-    pub old_block: u16,
-    pub new_block: u16,
 }
 
 pub struct StructureBlock {
@@ -174,7 +155,12 @@ impl Structure {
         &self.chunks[flatten(cx, cy, cz, self.width, self.height)]
     }
 
-    fn mut_chunk_from_chunk_coordinates(&mut self, cx: usize, cy: usize, cz: usize) -> &mut Chunk {
+    pub fn mut_chunk_from_chunk_coordinates(
+        &mut self,
+        cx: usize,
+        cy: usize,
+        cz: usize,
+    ) -> &mut Chunk {
         &mut self.chunks[flatten(cx, cy, cz, self.width, self.height)]
     }
 

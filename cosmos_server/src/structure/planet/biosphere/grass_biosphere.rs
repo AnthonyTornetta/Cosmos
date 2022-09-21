@@ -1,10 +1,7 @@
 use bevy::prelude::{App, Component, Entity, EventReader, EventWriter, Query, Res};
 use cosmos_core::{
     block::blocks::Blocks,
-    structure::{
-        chunk::CHUNK_DIMENSIONS,
-        structure::{ChunkSetEvent, Structure},
-    },
+    structure::{chunk::CHUNK_DIMENSIONS, events::ChunkSetEvent, structure::Structure},
 };
 use noise::NoiseFn;
 

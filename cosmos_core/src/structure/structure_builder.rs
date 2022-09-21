@@ -2,7 +2,7 @@ use bevy::{
     ecs::system::EntityCommands,
     prelude::{BuildChildren, PbrBundle, Transform},
 };
-use bevy_rapier3d::prelude::{RigidBody, Velocity};
+use bevy_rapier3d::prelude::Velocity;
 
 use crate::{physics::structure_physics::StructurePhysics, structure::structure::Structure};
 
@@ -26,7 +26,7 @@ impl TStructureBuilder for StructureBuilder {
         velocity: Velocity,
         structure: &mut Structure,
     ) {
-        let physics_updater = StructurePhysics::new(structure, entity.id());
+        let physics_updater = StructurePhysics::new(structure);
 
         entity
             .insert_bundle(PbrBundle {
