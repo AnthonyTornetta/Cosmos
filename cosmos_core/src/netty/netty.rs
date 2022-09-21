@@ -1,5 +1,4 @@
 use crate::netty::netty_rigidbody::NettyRigidBody;
-use crate::structure::structure::Structure;
 use bevy::prelude::{Component, Entity};
 use bevy::utils::default;
 use bevy_renet::renet::{
@@ -11,7 +10,6 @@ use std::time::Duration;
 pub enum NettyChannel {
     Reliable,
     Unreliable,
-    HugeReliable,
 }
 
 pub const PROTOCOL_ID: u64 = 7;
@@ -102,7 +100,6 @@ impl NettyChannel {
         match self {
             Self::Reliable => 0,
             Self::Unreliable => 1,
-            Self::HugeReliable => 2,
         }
     }
 
@@ -111,6 +108,8 @@ impl NettyChannel {
             ReliableChannelConfig {
                 channel_id: Self::Reliable.id(),
                 message_resend_time: Duration::from_millis(200),
+                message_send_queue_size: 4096 * 4,
+                message_receive_queue_size: 4096 * 4,
                 max_message_size: 6000,
                 packet_budget: 7000,
                 ..default()
@@ -118,14 +117,8 @@ impl NettyChannel {
             .into(),
             UnreliableChannelConfig {
                 channel_id: Self::Unreliable.id(),
-                ..default()
-            }
-            .into(),
-            ReliableChannelConfig {
-                channel_id: Self::HugeReliable.id(),
-                message_resend_time: Duration::from_millis(500),
-                max_message_size: 6000,
-                packet_budget: 7000,
+                message_send_queue_size: 4096 * 4,
+                message_receive_queue_size: 4096 * 4,
                 ..default()
             }
             .into(),

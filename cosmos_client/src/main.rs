@@ -983,10 +983,10 @@ fn create_sun(
     commands
         .spawn_bundle(PointLightBundle {
             // transform: Transform::from_xyz(5.0, 8.0, 2.0),
-            transform: Transform::from_xyz(0.0, 24.0, 0.0),
+            transform: Transform::from_xyz(0.0, 100.0, 0.0),
             point_light: PointLight {
                 intensity: 160000.0, // lumens - roughly a 100W non-halogen incandescent bulb
-                range: 1600.0,
+                range: 16000.0,
                 color: Color::WHITE,
                 shadows_enabled: true,
                 ..default()
@@ -1008,19 +1008,19 @@ fn create_sun(
             });
         });
 
-    commands.spawn_bundle(PbrBundle {
-        transform: Transform::from_xyz(0.0, 60.0, 0.0),
-        mesh: meshes.add(Mesh::from(shape::UVSphere {
-            radius: 1.0,
-            ..default()
-        })),
-        material: materials.add(StandardMaterial {
-            base_color: Color::BLUE,
-            // emissive: Color::rgba_linear(0.0, 0.0, 100.0, 0.0),
-            ..default()
-        }),
-        ..default()
-    });
+    // commands.spawn_bundle(PbrBundle {
+    //     transform: Transform::from_xyz(0.0, 60.0, 0.0),
+    //     mesh: meshes.add(Mesh::from(shape::UVSphere {
+    //         radius: 1.0,
+    //         ..default()
+    //     })),
+    //     material: materials.add(StandardMaterial {
+    //         base_color: Color::BLUE,
+    //         // emissive: Color::rgba_linear(0.0, 0.0, 100.0, 0.0),
+    //         ..default()
+    //     }),
+    //     ..default()
+    // });
 }
 
 fn add_crosshair(mut commands: Commands, asset_server: Res<AssetServer>) {
