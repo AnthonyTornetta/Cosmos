@@ -40,5 +40,96 @@ Cosmos, but in rust
 - [x] Support re-sizable window
 
 ## Release 0.0.2a
+- [ ] Ability to pilot Ship
+  - [ ] Mouse movements steer ship around center of mass
+  - [ ] Standard movement controls mapped to ship acceleration
+  - [ ] Interact with ship core to enter piloting mode, press interact button again to exit
+  - [ ] Create max ship speed
+- [ ] Ship core
+  - [ ] Once destroyed, the entire ship enters meltdown, becoming minable by mining beams and will be destroyed after a set amount of time
+  - [ ] Interact with this block to pilot the ship
+  - [ ] Create block
+- [ ] Align body with structure
+  - [ ] Switches to FPS Camera
+  - [ ] Aligns the player to that structure
+  - [ ] Left control
+  - [ ] De-align, switch back to free camera
+    - [ ] Create free camera
+- [ ] Localized planetary gravity
+  - [ ] All entities near planet's radius are subject to its gravity towards its relative downward vector
+    - [ ] The gravitational pull should scale inversely exponentially the farther the distance from a certain threshold (most likely the highest chunk) then remain constant past that point
 
-// todo
+## Everything that will still have to be done after 0.0.2a
+- [ ] Ship systems
+  - [ ] Energy system
+    - [ ] Energy producer block
+    - [ ] Energy storage block
+  - [ ] Camera system
+    - [ ] Camera block
+    - [ ] Use left/right to switch between ship cameras
+      - [ ] Changes where your view is
+  - [ ] Laser cannon system
+    - [ ] Laser cannon block
+      - [ ] Can be placed in lines to create more powerful lasers
+    - [ ] Click lmb/hold to fire the laser
+      - [ ] The laser is on a cooldown
+  - [ ] Mining beam system
+    - [ ] Mining beam block
+      - [ ] Can be placed in line to create more powerful miners
+    - [ ] Mines the first block hit by the beam after a given time
+      - [ ] Inserts the item into the ship's inventory
+      - [ ] Hold lmb to continually fire the laser
+    - [ ] Structure gets deleted when no more blocks are left
+  - [ ] Thruster system
+    - [ ] Thruster block
+    - [ ] Allows the ship to move + rotate
+      - [ ] Faster movement based on # of thrusters
+      - [ ] Faster rotation based on # of thrusters
+      - [ ] More energy consumption per thruster
+  - [ ] Storage system
+    - [ ] An interface into all the storage devices on the ship
+  - [ ] A way of selecting which systems to use preventing use of systems that are not meant to be actively used
+    - [ ] You can fire a laser cannon, but not actively use the power storage blocks
+- [ ] Items
+  - [ ] Non-block items
+  - [ ] Block items
+  - [ ] Dropped item entity
+- [ ] Inventory
+  - [ ] GUI to interact with the items
+  - [ ] Hotbar
+- [ ] Storage block
+  - [ ] A block that stores an amount of items
+  - [ ] Can be interacted with to view the items
+    - [ ] A GUI to view items
+- [ ] Sounds
+  - [ ] Laser cannon fire
+  - [ ] Block take damage
+  - [ ] Thrusters moving
+  - [ ] Space ship idle
+  - [ ] Background space ambiance?
+- [ ] Planet Generation
+  - [ ] New planet types
+  - [ ] Relies on bunch of new blocks
+- [ ] Galaxy Generation
+  - [ ] Stars procedurally generated in spiral-like pattern based on seed 
+  - [ ] Planets generate around stars, their biosphere depending on how close they are to the sun
+  - [ ] Asteroids
+    - [ ] Mineral deposits
+- [ ] Shops
+  - [ ] Sell blocks/items
+  - [ ] Buy blocks/items
+  - [ ] Generates randomly
+    - [ ] Implement random structure Generation
+  - [ ] Prices based on supply + rarity
+    - [ ] Keep supply relatively equal between nearby shops
+  - [ ] Each shop has its own supply of money that it cannot go below
+  - [ ] Implement currency system for player
+    - [ ] Money GUI
+    - [ ] Pay others
+  - [ ] Shop GUI
+- [ ] Block
+  - [ ] Store block damage
+  - [ ] Block resistances
+  - [ ] Light emitting blocks
+- [ ] Ability to save ships to disk + load them
+  - [ ] Maybe implement commands?
