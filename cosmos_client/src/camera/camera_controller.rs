@@ -1,6 +1,6 @@
 use std::f32::consts::PI;
 
-use bevy::{prelude::*, render::camera::RenderTarget};
+use bevy::prelude::*;
 use bevy_rapier3d::na::clamp;
 
 use crate::{state::game_state::GameState, window::setup::DeltaCursorPosition};

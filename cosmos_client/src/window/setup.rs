@@ -1,7 +1,6 @@
 use bevy::{
-    ecs::event::ManualEventReader,
     input::mouse::MouseMotion,
-    prelude::{App, EventReader, Events, Input, KeyCode, MouseButton, Res, ResMut, Vec2},
+    prelude::{App, EventReader, Input, KeyCode, MouseButton, Res, ResMut, Vec2},
     window::Windows,
 };
 
