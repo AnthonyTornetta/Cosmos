@@ -52,9 +52,8 @@ pub fn add_blocks_resource(mut commands: Commands) {
             .create(),
     );
 
-    // }
+    // TODO: Separate these into their own loading phase
 
-    // pub fn add_all_blocks(mut blocks: ResMut<Blocks>) {
     blocks.register_block(
         BlockBuilder::new("cosmos:stone".into())
             .add_property(BlockProperty::Opaque)

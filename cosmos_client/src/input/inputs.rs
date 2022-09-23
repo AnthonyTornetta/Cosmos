@@ -13,6 +13,29 @@ pub enum CosmosInputs {
     BreakBlock,
     PlaceBlock,
     Interact,
+
+    CreateShip,
+
+    UnlockMouse,
+}
+
+fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
+    // In future load these from settings
+    input_handler.set_keycode(CosmosInputs::MoveForward, KeyCode::W);
+    input_handler.set_keycode(CosmosInputs::MoveLeft, KeyCode::A);
+    input_handler.set_keycode(CosmosInputs::MoveBackward, KeyCode::S);
+    input_handler.set_keycode(CosmosInputs::MoveRight, KeyCode::D);
+    input_handler.set_keycode(CosmosInputs::SlowDown, KeyCode::LShift);
+    input_handler.set_keycode(CosmosInputs::MoveUpOrJump, KeyCode::Space);
+    input_handler.set_keycode(CosmosInputs::Sprint, KeyCode::LControl);
+
+    input_handler.set_mouse_button(CosmosInputs::BreakBlock, MouseButton::Left);
+    input_handler.set_mouse_button(CosmosInputs::PlaceBlock, MouseButton::Right);
+    input_handler.set_keycode(CosmosInputs::Interact, KeyCode::R);
+
+    input_handler.set_keycode(CosmosInputs::CreateShip, KeyCode::X);
+
+    input_handler.set_keycode(CosmosInputs::UnlockMouse, KeyCode::Escape);
 }
 
 pub struct CosmosInputHandler {
@@ -115,21 +138,6 @@ impl CosmosInputHandler {
 
         self.input_mapping[&input].1
     }
-}
-
-fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
-    // In future load these from settings
-    input_handler.set_keycode(CosmosInputs::MoveForward, KeyCode::W);
-    input_handler.set_keycode(CosmosInputs::MoveLeft, KeyCode::A);
-    input_handler.set_keycode(CosmosInputs::MoveBackward, KeyCode::S);
-    input_handler.set_keycode(CosmosInputs::MoveRight, KeyCode::D);
-    input_handler.set_keycode(CosmosInputs::SlowDown, KeyCode::LShift);
-    input_handler.set_keycode(CosmosInputs::MoveUpOrJump, KeyCode::Space);
-    input_handler.set_keycode(CosmosInputs::Sprint, KeyCode::LControl);
-
-    input_handler.set_mouse_button(CosmosInputs::BreakBlock, MouseButton::Left);
-    input_handler.set_mouse_button(CosmosInputs::PlaceBlock, MouseButton::Right);
-    input_handler.set_keycode(CosmosInputs::Interact, KeyCode::R);
 }
 
 pub fn register(app: &mut App) {

@@ -13,7 +13,6 @@ pub mod window;
 
 use asset::asset_loading;
 use camera::camera_controller;
-use events::block::block_events;
 use input::inputs::{self, CosmosInputHandler, CosmosInputs};
 use interactions::block_interactions;
 use netty::connect;
@@ -168,7 +167,7 @@ fn main() {
     inputs::register(&mut app);
     window::setup::register(&mut app);
     asset_loading::register(&mut app);
-    block_events::register(&mut app);
+    events::register(&mut app);
     block_interactions::register(&mut app);
     chunk_retreiver::register(&mut app);
     camera_controller::register(&mut app);

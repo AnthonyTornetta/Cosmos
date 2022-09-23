@@ -1,7 +1,7 @@
 use bevy::prelude::App;
 
-pub mod block_events;
+pub mod create_ship;
 
 pub fn register(app: &mut App) {
-    block_events::register(app);
+    create_ship::register(app);
 }

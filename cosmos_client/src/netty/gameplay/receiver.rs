@@ -219,23 +219,28 @@ fn client_sync_players(
                 structure_entity,
                 block_id,
             } => {
-                let mut structure = query_structure
-                    .get_mut(
-                        network_mapping
-                            .client_from_server(&structure_entity)
-                            .unwrap()
-                            .clone(),
-                    )
-                    .unwrap();
+                let client_ent = network_mapping.client_from_server(&structure_entity);
 
-                structure.set_block_at(
-                    x,
-                    y,
-                    z,
-                    blocks.block_from_numeric_id(block_id),
-                    &blocks,
-                    Some(&mut block_change_event_writer),
-                );
+                // Sometimes you'll get block updates for structures that don't exist
+                if client_ent.is_some() {
+                    let ent = client_ent.unwrap().clone();
+
+                    let structure = query_structure.get_mut(ent);
+
+                    if structure.is_ok() {
+                        structure.unwrap().set_block_at(
+                            x,
+                            y,
+                            z,
+                            blocks.block_from_numeric_id(block_id),
+                            &blocks,
+                            Some(&mut block_change_event_writer),
+                        );
+                    } else {
+                        println!("OH NO!");
+                        commands.entity(ent.clone()).log_components();
+                    }
+                }
             }
         }
     }

@@ -56,7 +56,7 @@ fn process_player_interaction(
                     let point = transform
                         .compute_matrix()
                         .inverse()
-                        .transform_vector3(moved_point);
+                        .transform_point3(moved_point);
 
                     let (x, y, z) = structure
                         .relative_coords_to_local_coords(point.x, point.y, point.z)
@@ -76,7 +76,7 @@ fn process_player_interaction(
                     let point = transform
                         .compute_matrix()
                         .inverse()
-                        .transform_vector3(moved_point);
+                        .transform_point3(moved_point);
 
                     let coords =
                         structure.relative_coords_to_local_coords(point.x, point.y, point.z);
@@ -98,12 +98,12 @@ fn process_player_interaction(
                 }
 
                 if input_handler.check_just_pressed(CosmosInputs::Interact, &keys, &mouse) {
-                    let moved_point = intersection.point + intersection.normal * 0.95;
+                    let moved_point = intersection.point - intersection.normal * 0.3;
 
                     let point = transform
                         .compute_matrix()
                         .inverse()
-                        .transform_vector3(moved_point);
+                        .transform_point3(moved_point);
 
                     let (x, y, z) = structure
                         .relative_coords_to_local_coords(point.x, point.y, point.z)

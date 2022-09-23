@@ -26,4 +26,7 @@ pub enum ClientReliableMessages {
         y: usize,
         z: usize,
     },
+    CreateShip {
+        name: String,
+    },
 }
