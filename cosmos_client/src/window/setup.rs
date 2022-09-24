@@ -53,8 +53,6 @@ fn unfreeze_mouse(
             }
         }
 
-        println!("Delta: {} {}", delta.x, delta.y);
-
         window.set_cursor_position(pos);
     }
 }

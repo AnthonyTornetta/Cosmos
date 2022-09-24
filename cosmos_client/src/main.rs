@@ -11,11 +11,13 @@ pub mod structure;
 pub mod ui;
 pub mod window;
 
+use std::env;
+
 use asset::asset_loading;
 use camera::camera_controller;
 use input::inputs::{self, CosmosInputHandler, CosmosInputs};
 use interactions::block_interactions;
-use netty::connect;
+use netty::connect::{self, ConnectionConfig};
 use netty::flags::LocalPlayer;
 use netty::gameplay::{receiver, sync};
 use netty::mapping::NetworkMapping;
@@ -133,7 +135,21 @@ fn create_sun(
 }
 
 fn main() {
+    let args: Vec<String> = env::args().collect();
+
+    let host_name = if args.len() > 1 {
+        args.get(1).unwrap()
+    } else {
+        "127.0.0.1"
+    };
+
+    println!("Host: {}", host_name);
+
     let mut app = App::new();
+
+    app.insert_resource(ConnectionConfig {
+        host_name: host_name.into(),
+    });
 
     game_state::register(&mut app);
 

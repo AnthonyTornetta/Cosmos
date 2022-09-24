@@ -17,11 +17,11 @@ use crate::{
 
 use super::flags::LocalPlayer;
 
-fn new_renet_client() -> RenetClient {
+fn new_renet_client(host: &str) -> RenetClient {
     let port: u16 = 1337;
 
-    let server_addr = format!("127.0.0.1:{}", port).parse().unwrap();
-    let socket = UdpSocket::bind("127.0.0.1:0").unwrap();
+    let server_addr = format!("{}:{}", host, port).parse().unwrap();
+    let socket = UdpSocket::bind(format!("{}:0", host)).unwrap();
 
     let connection_config = client_connection_config();
     let cur_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
@@ -37,11 +37,15 @@ fn new_renet_client() -> RenetClient {
     RenetClient::new(cur_time, socket, client_id, connection_config, auth).unwrap()
 }
 
-pub fn establish_connection(mut commands: Commands) {
+pub struct ConnectionConfig {
+    pub host_name: String,
+}
+
+pub fn establish_connection(mut commands: Commands, connection_config: Res<ConnectionConfig>) {
     println!("Establishing connection w/ server...");
     commands.insert_resource(ClientLobby::default());
     commands.insert_resource(MostRecentTick(None));
-    commands.insert_resource(new_renet_client());
+    commands.insert_resource(new_renet_client(connection_config.host_name.as_str()));
     commands.insert_resource(NetworkMapping::default());
 }
 
