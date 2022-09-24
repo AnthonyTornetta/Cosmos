@@ -21,7 +21,7 @@ fn new_renet_client(host: &str) -> RenetClient {
     let port: u16 = 1337;
 
     let server_addr = format!("{}:{}", host, port).parse().unwrap();
-    let socket = UdpSocket::bind("127.0.0.1:0").unwrap();
+    let socket = UdpSocket::bind("0.0.0.0:0").unwrap();
 
     socket
         .set_nonblocking(true)
@@ -37,6 +37,8 @@ fn new_renet_client(host: &str) -> RenetClient {
         server_addr,
         user_data: None,
     };
+
+    println!("Connecting to {}", server_addr);
 
     RenetClient::new(cur_time, socket, client_id, connection_config, auth).unwrap()
 }

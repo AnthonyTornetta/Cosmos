@@ -1,5 +1,5 @@
 use std::{
-    net::{Ipv4Addr, SocketAddr, UdpSocket},
+    net::{SocketAddr, UdpSocket},
     time::SystemTime,
 };
 
@@ -32,7 +32,7 @@ pub fn init(app: &mut App) {
     let local_addr = get_local_ipaddress().unwrap_or("127.0.0.1".to_owned());
 
     let address: SocketAddr = format!("{}:{}", local_addr, port).parse().unwrap();
-    let socket = UdpSocket::bind(format!("{}:{}", local_addr, port)).unwrap();
+    let socket = UdpSocket::bind(format!("0.0.0.0:{}", port)).unwrap();
     socket
         .set_nonblocking(true)
         .expect("Cannot set non-blocking mode!");
