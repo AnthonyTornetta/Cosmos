@@ -21,7 +21,11 @@ fn new_renet_client(host: &str) -> RenetClient {
     let port: u16 = 1337;
 
     let server_addr = format!("{}:{}", host, port).parse().unwrap();
-    let socket = UdpSocket::bind(format!("{}:0", host)).unwrap();
+    let socket = UdpSocket::bind("127.0.0.1:0").unwrap();
+
+    socket
+        .set_nonblocking(true)
+        .expect("Unable to make UDP non-blocking!");
 
     let connection_config = client_connection_config();
     let cur_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
