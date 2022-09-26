@@ -4,7 +4,7 @@ use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     block::blocks::Blocks,
     entities::player::Player,
-    events::block_events::BlockChangedEvent,
+    events::{block_events::BlockChangedEvent, structure::change_pilot_event::ChangePilotEvent},
     netty::{
         netty::*, server_reliable_messages::ServerReliableMessages,
         server_unreliable_messages::ServerUnreliableMessages,
@@ -38,6 +38,7 @@ fn client_sync_players(
     mut query_body: Query<(&mut Transform, &mut Velocity, Option<&LocalPlayer>)>,
     mut query_structure: Query<&mut Structure>,
     blocks: Res<Blocks>,
+    mut pilot_change_event_writer: EventWriter<ChangePilotEvent>,
 ) {
     let client_id = client.client_id();
 
@@ -69,6 +70,8 @@ fn client_sync_players(
                             query_body.get_mut(*entity).unwrap();
 
                         if local.is_none() {
+                            println!("Got {}", body.translation);
+
                             transform.translation = body.translation.into();
                             transform.rotation = body.rotation.into();
 
@@ -242,6 +245,13 @@ fn client_sync_players(
                     }
                 }
             }
+            ServerReliableMessages::PilotChange {
+                structure_entity,
+                pilot_entity,
+            } => pilot_change_event_writer.send(ChangePilotEvent {
+                structure_entity,
+                pilot_entity,
+            }),
         }
     }
 }

@@ -11,12 +11,14 @@ use crate::netty::netty::NetworkTick;
 pub fn server_sync_bodies(
     mut server: ResMut<RenetServer>,
     mut tick: ResMut<NetworkTick>,
-    players: Query<(Entity, &Transform, &Velocity)>,
+    entities: Query<(Entity, &Transform, &Velocity)>,
 ) {
     let mut bodies = Vec::new();
 
-    for (entity, transform, velocity) in players.iter() {
+    for (entity, transform, velocity) in entities.iter() {
         bodies.push((entity.clone(), NettyRigidBody::new(&velocity, &transform)));
+
+        //println!("Sending {}", transform.translation);
     }
 
     tick.0 += 1;

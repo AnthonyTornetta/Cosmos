@@ -21,6 +21,8 @@ fn send_position(
             body: NettyRigidBody::new(&velocity, &transform),
         };
 
+        println!("Sending {}", transform.translation);
+
         let serialized_message = bincode::serialize(&msg).unwrap();
 
         client.send_message(NettyChannel::Unreliable.id(), serialized_message);

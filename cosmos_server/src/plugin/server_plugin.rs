@@ -1,11 +1,12 @@
 use bevy::prelude::Plugin;
 
 use crate::{
+    blocks,
     events::{blocks::block_events, event_listeners, netty::netty_events},
     init::{init_server, init_world},
     netty::{server_listener, sync::sync_bodies},
     physics,
-    structure::planet::biosphere::grass_biosphere,
+    structure::{self, planet::biosphere::grass_biosphere},
 };
 
 pub struct ServerPlugin;
@@ -21,5 +22,7 @@ impl Plugin for ServerPlugin {
         event_listeners::register(app);
         physics::register(app);
         grass_biosphere::register(app); // move this to biospheres mod register function when more biospheres are created
+        blocks::register(app);
+        structure::register(app);
     }
 }

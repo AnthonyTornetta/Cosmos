@@ -38,4 +38,8 @@ pub enum ServerReliableMessages {
         z: usize,
         block_id: u16,
     },
+    PilotChange {
+        structure_entity: Entity,
+        pilot_entity: Option<Entity>,
+    },
 }

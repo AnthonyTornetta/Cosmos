@@ -15,6 +15,7 @@ use std::env;
 
 use asset::asset_loading;
 use camera::camera_controller;
+use cosmos_core::netty::netty::get_local_ipaddress;
 use input::inputs::{self, CosmosInputHandler, CosmosInputs};
 use interactions::block_interactions;
 use netty::connect::{self, ConnectionConfig};
@@ -138,9 +139,9 @@ fn main() {
     let args: Vec<String> = env::args().collect();
 
     let host_name = if args.len() > 1 {
-        args.get(1).unwrap()
+        args.get(1).unwrap().to_owned()
     } else {
-        "127.0.0.1"
+        get_local_ipaddress().expect("127.0.0.1").to_owned()
     };
 
     println!("Host: {}", host_name);

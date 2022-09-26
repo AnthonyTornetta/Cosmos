@@ -5,26 +5,9 @@ use std::{
 
 use bevy::prelude::*;
 use bevy_renet::renet::{RenetServer, ServerAuthentication, ServerConfig};
-use cosmos_core::netty::netty::{server_connection_config, PROTOCOL_ID};
+use cosmos_core::netty::netty::{get_local_ipaddress, server_connection_config, PROTOCOL_ID};
 
 use crate::netty::netty::{ClientTicks, NetworkTick, ServerLobby};
-
-fn get_local_ipaddress() -> Option<String> {
-    let socket = match UdpSocket::bind("0.0.0.0:0") {
-        Ok(s) => s,
-        Err(_) => return None,
-    };
-
-    match socket.connect("8.8.8.8:80") {
-        Ok(()) => (),
-        Err(_) => return None,
-    };
-
-    match socket.local_addr() {
-        Ok(addr) => return Some(addr.ip().to_string()),
-        Err(_) => return None,
-    };
-}
 
 pub fn init(app: &mut App) {
     let port: u16 = 1337;

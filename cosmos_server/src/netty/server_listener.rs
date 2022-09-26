@@ -45,6 +45,8 @@ fn server_listen_messages(
                             transform.rotation = body.rotation.into();
                             velocity.linvel = body.body_vel.linvel.into();
                             velocity.angvel = body.body_vel.angvel.into();
+
+                            println!("Got {}", transform.translation);
                         }
                     }
                 }
