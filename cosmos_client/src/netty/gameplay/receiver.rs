@@ -6,12 +6,13 @@ use cosmos_core::{
     entities::player::Player,
     events::{block_events::BlockChangedEvent, structure::change_pilot_event::ChangePilotEvent},
     netty::{
-        netty::*, server_reliable_messages::ServerReliableMessages,
+        client_reliable_messages::ClientReliableMessages, netty::*,
+        server_reliable_messages::ServerReliableMessages,
         server_unreliable_messages::ServerUnreliableMessages,
     },
     structure::{
         chunk::Chunk, events::ChunkSetEvent, planet::planet_builder::TPlanetBuilder,
-        structure::Structure,
+        ship::ship_builder::TShipBuilder, structure::Structure,
     },
 };
 
@@ -23,7 +24,10 @@ use crate::{
         mapping::NetworkMapping,
     },
     state::game_state::GameState,
-    structure::planet::client_planet_builder::ClientPlanetBuilder,
+    structure::{
+        planet::client_planet_builder::ClientPlanetBuilder,
+        ship::client_ship_builder::ClientShipBuilder,
+    },
 };
 
 fn client_sync_players(
@@ -172,6 +176,36 @@ fn client_sync_players(
                 //     entity: entity.id(),
                 // });
             }
+            ServerReliableMessages::ShipCreate {
+                entity: server_entity,
+                body,
+                width,
+                height,
+                length,
+            } => {
+                let mut entity = commands.spawn();
+                let mut structure = Structure::new(width, height, length, entity.id());
+
+                let builder = ClientShipBuilder::default();
+                builder.insert_ship(
+                    &mut entity,
+                    body.create_transform(),
+                    body.create_velocity(),
+                    &mut structure,
+                );
+
+                entity.insert(structure);
+
+                network_mapping.add_mapping(&entity.id(), &server_entity);
+
+                client.send_message(
+                    NettyChannel::Reliable.id(),
+                    bincode::serialize(&ClientReliableMessages::PilotQuery {
+                        ship_entity: server_entity,
+                    })
+                    .unwrap(),
+                );
+            }
             ServerReliableMessages::ChunkData {
                 structure_entity: server_structure_entity,
                 serialized_chunk,
@@ -191,8 +225,6 @@ fn client_sync_players(
                 );
 
                 structure.set_chunk(chunk);
-
-                println!("Got chunk!");
 
                 set_chunk_event_writer.send(ChunkSetEvent {
                     x,
@@ -250,10 +282,11 @@ fn client_sync_players(
                 structure_entity,
                 pilot_entity,
             } => {
-                println!("Sending change pilot event!");
-
                 pilot_change_event_writer.send(ChangePilotEvent {
-                    structure_entity,
+                    structure_entity: network_mapping
+                        .client_from_server(&structure_entity)
+                        .unwrap()
+                        .clone(),
                     pilot_entity,
                 });
             }

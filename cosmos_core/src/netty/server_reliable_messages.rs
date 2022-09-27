@@ -28,6 +28,13 @@ pub enum ServerReliableMessages {
         height: usize,
         length: usize,
     },
+    ShipCreate {
+        entity: Entity,
+        body: NettyRigidBody,
+        width: usize,
+        height: usize,
+        length: usize,
+    },
     MOTD {
         motd: String,
     },

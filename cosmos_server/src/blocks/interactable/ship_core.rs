@@ -20,19 +20,14 @@ fn handle_block_event(
     let block = blocks.block_from_id("cosmos:ship_core");
 
     for ev in interact_events.iter() {
-        println!("BLOCK INTERACTED!");
         let maybe_ship = s_query.get(ev.structure_entity);
 
         if maybe_ship.is_ok() {
-            println!("IT HAS A SHIP!");
-
             let structure = maybe_ship.unwrap();
 
             let block_id = ev.structure_block.block(&structure);
 
             if block_id == block.id() {
-                println!("IT WAS A SHIP CORE!");
-
                 // Only works on ships (maybe replace this with pilotable component instead of only checking ships)
                 // Cannot pilot a ship that already has a pilot
                 if pilot_query.get(ev.structure_entity).is_err() {

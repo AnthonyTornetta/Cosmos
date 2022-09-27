@@ -10,6 +10,7 @@ use bevy::render::RenderPlugin;
 use bevy::scene::ScenePlugin;
 use bevy::time::TimePlugin;
 use bevy::window::WindowPlugin;
+use bevy_inspector_egui::InspectableRegistry;
 use bevy_rapier3d::prelude::{NoUserData, RapierPhysicsPlugin};
 
 use crate::block::blocks::add_blocks_resource;
@@ -25,11 +26,13 @@ pub struct CosmosCorePlugin;
 
 impl Plugin for CosmosCorePlugin {
     fn build(&self, app: &mut App) {
+        app.insert_resource(InspectableRegistry::default());
         app.add_startup_system(add_blocks_resource);
 
         physics::register(app);
         structure::events::register(app);
         events::register(app);
+        structure::register(app);
     }
 }
 

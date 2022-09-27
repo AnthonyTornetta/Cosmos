@@ -367,11 +367,6 @@ pub fn monitor_needs_rendered_system(
 
             let mut entity_commands = commands.entity(entity);
 
-            println!(
-                "Created chunk's mesh! (Verts: {})",
-                chunk_mesh.mesh.count_vertices()
-            );
-
             let s = (CHUNK_DIMENSIONS) as f32;
 
             entity_commands.insert(meshes.add(chunk_mesh.mesh));

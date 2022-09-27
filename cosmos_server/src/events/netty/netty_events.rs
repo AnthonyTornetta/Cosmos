@@ -1,8 +1,9 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
-use bevy_rapier3d::rapier::prelude::RigidBodyPosition;
 use bevy_renet::renet::{RenetServer, ServerEvent};
 use cosmos_core::netty::server_reliable_messages::ServerReliableMessages;
+use cosmos_core::structure::planet::planet::Planet;
+use cosmos_core::structure::ship::ship::Ship;
 use cosmos_core::structure::structure::Structure;
 use cosmos_core::{
     entities::player::Player,
@@ -18,6 +19,7 @@ fn handle_events_system(
     mut lobby: ResMut<ServerLobby>,
     mut client_ticks: ResMut<ClientTicks>,
     players: Query<(Entity, &Player, &Transform, &Velocity)>,
+    structure_type: Query<(Option<&Ship>, Option<&Planet>)>,
     structures_query: Query<(Entity, &Structure, &Transform, &Velocity)>,
 ) {
     for event in server_events.iter() {
@@ -78,18 +80,35 @@ fn handle_events_system(
                 for (entity, structure, transform, velocity) in structures_query.iter() {
                     println!("Sending structure...");
 
-                    server.send_message(
-                        *id,
-                        NettyChannel::Reliable.id(),
-                        bincode::serialize(&ServerReliableMessages::PlanetCreate {
-                            entity: entity.clone(),
-                            body: NettyRigidBody::new(velocity, transform),
-                            width: structure.chunks_width(),
-                            height: structure.chunks_height(),
-                            length: structure.chunks_length(),
-                        })
-                        .unwrap(),
-                    );
+                    let (ship, planet) = structure_type.get(entity).unwrap();
+
+                    if planet.is_some() {
+                        server.send_message(
+                            *id,
+                            NettyChannel::Reliable.id(),
+                            bincode::serialize(&ServerReliableMessages::PlanetCreate {
+                                entity: entity.clone(),
+                                body: NettyRigidBody::new(velocity, transform),
+                                width: structure.chunks_width(),
+                                height: structure.chunks_height(),
+                                length: structure.chunks_length(),
+                            })
+                            .unwrap(),
+                        );
+                    } else if ship.is_some() {
+                        server.send_message(
+                            *id,
+                            NettyChannel::Reliable.id(),
+                            bincode::serialize(&ServerReliableMessages::ShipCreate {
+                                entity: entity.clone(),
+                                body: NettyRigidBody::new(velocity, transform),
+                                width: structure.chunks_width(),
+                                height: structure.chunks_height(),
+                                length: structure.chunks_length(),
+                            })
+                            .unwrap(),
+                        );
+                    }
                 }
             }
             ServerEvent::ClientDisconnected(id) => {

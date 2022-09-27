@@ -1,4 +1,4 @@
-use bevy::prelude::{App, Commands, EventReader, ResMut, SystemSet};
+use bevy::prelude::{App, Commands, EventReader, ResMut};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     events::structure::change_pilot_event::ChangePilotEvent,

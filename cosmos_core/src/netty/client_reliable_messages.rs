@@ -29,4 +29,7 @@ pub enum ClientReliableMessages {
     CreateShip {
         name: String,
     },
+    PilotQuery {
+        ship_entity: Entity,
+    },
 }

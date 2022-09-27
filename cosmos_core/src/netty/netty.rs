@@ -3,7 +3,7 @@ use bevy_renet::renet::{
     ChannelConfig, ReliableChannelConfig, RenetConnectionConfig, UnreliableChannelConfig,
 };
 use local_ip_address::local_ip;
-use std::{net::UdpSocket, time::Duration};
+use std::time::Duration;
 
 pub enum NettyChannel {
     Reliable,

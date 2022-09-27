@@ -8,7 +8,10 @@ use cosmos_core::{
         client_unreliable_messages::ClientUnreliableMessages, netty::NettyChannel,
         server_reliable_messages::ServerReliableMessages,
     },
-    structure::structure::{Structure, StructureBlock},
+    structure::{
+        ship::pilot::Pilot,
+        structure::{Structure, StructureBlock},
+    },
 };
 
 use crate::events::{
@@ -27,6 +30,7 @@ fn server_listen_messages(
     mut block_interact_event: EventWriter<BlockInteractEvent>,
     mut place_block_event: EventWriter<BlockPlaceEvent>,
     mut create_ship_event_writer: EventWriter<CreateShipEvent>,
+    pilot_query: Query<&Pilot>,
 ) {
     for client_id in server.clients_id().into_iter() {
         while let Some(message) = server.receive_message(client_id, NettyChannel::Unreliable.id()) {
@@ -110,7 +114,6 @@ fn server_listen_messages(
                     y,
                     z,
                 } => {
-                    println!("SENT EVENT!");
                     block_interact_event.send(BlockInteractEvent {
                         structure_entity,
                         structure_block: StructureBlock::new(x, y, z),
@@ -126,6 +129,22 @@ fn server_listen_messages(
                     ship_transform.translation.z += 4.0;
 
                     create_ship_event_writer.send(CreateShipEvent { ship_transform });
+                }
+                ClientReliableMessages::PilotQuery { ship_entity } => {
+                    let pilot = match pilot_query.get(ship_entity.clone()) {
+                        Ok(pilot) => Some(pilot.entity),
+                        _ => None,
+                    };
+
+                    server.send_message(
+                        client_id,
+                        NettyChannel::Reliable.id(),
+                        bincode::serialize(&ServerReliableMessages::PilotChange {
+                            structure_entity: ship_entity,
+                            pilot_entity: pilot,
+                        })
+                        .unwrap(),
+                    );
                 }
             }
         }

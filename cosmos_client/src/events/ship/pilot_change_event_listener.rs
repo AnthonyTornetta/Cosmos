@@ -7,7 +7,6 @@ use crate::state::game_state::GameState;
 
 fn event_listener(mut commands: Commands, mut event_reader: EventReader<ChangePilotEvent>) {
     for ev in event_reader.iter() {
-        println!("GOT PILOT CHANGE EVENT!");
         if let Some(entity) = ev.pilot_entity {
             commands
                 .entity(ev.structure_entity.clone())
