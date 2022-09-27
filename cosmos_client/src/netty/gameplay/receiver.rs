@@ -151,7 +151,7 @@ fn client_sync_players(
                     println!("Player {} ({}) disconnected", name, id);
                 }
             }
-            ServerReliableMessages::StructureCreate {
+            ServerReliableMessages::PlanetCreate {
                 entity: server_entity,
                 length,
                 height,

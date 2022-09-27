@@ -32,13 +32,10 @@ use crate::rendering::structure_renderer::monitor_block_updates_system;
 use crate::rendering::uv_mapper::UVMapper;
 use bevy::prelude::*;
 use bevy::render::texture::ImageSettings;
+use bevy_inspector_egui::WorldInspectorPlugin;
 use bevy_rapier3d::prelude::{Vect, Velocity};
 use bevy_renet::RenetClientPlugin;
-use cosmos_core::physics::structure_physics::{
-    listen_for_new_physics_event, listen_for_structure_event,
-};
 use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
-use bevy_inspector_egui::WorldInspectorPlugin;
 
 fn process_player_movement(
     keys: Res<Input<KeyCode>>,
@@ -171,16 +168,12 @@ fn main() {
         .add_system_set(
             SystemSet::on_update(GameState::LoadingWorld)
                 .with_system(connect::wait_for_done_loading)
-                .with_system(monitor_block_updates_system)
-                .with_system(listen_for_structure_event)
-                .with_system(listen_for_new_physics_event),
+                .with_system(monitor_block_updates_system),
         )
         .add_system_set(
             SystemSet::on_update(GameState::Playing)
                 .with_system(process_player_movement)
-                .with_system(monitor_block_updates_system)
-                .with_system(listen_for_structure_event)
-                .with_system(listen_for_new_physics_event),
+                .with_system(monitor_block_updates_system),
         );
 
     inputs::register(&mut app);

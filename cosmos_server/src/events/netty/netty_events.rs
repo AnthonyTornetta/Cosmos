@@ -81,7 +81,7 @@ fn handle_events_system(
                     server.send_message(
                         *id,
                         NettyChannel::Reliable.id(),
-                        bincode::serialize(&ServerReliableMessages::StructureCreate {
+                        bincode::serialize(&ServerReliableMessages::PlanetCreate {
                             entity: entity.clone(),
                             body: NettyRigidBody::new(velocity, transform),
                             width: structure.chunks_width(),

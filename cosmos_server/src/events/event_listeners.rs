@@ -27,7 +27,7 @@ fn delayed_add(
 
             server.broadcast_message(
                 NettyChannel::Reliable.id(),
-                bincode::serialize(&ServerReliableMessages::StructureCreate {
+                bincode::serialize(&ServerReliableMessages::PlanetCreate {
                     entity: ev.entity.clone(),
                     body: NettyRigidBody::new(velocity, transform),
                     width: structure.chunks_width(),
@@ -58,7 +58,7 @@ fn on_structure_created(
 
             server.broadcast_message(
                 NettyChannel::Reliable.id(),
-                bincode::serialize(&ServerReliableMessages::StructureCreate {
+                bincode::serialize(&ServerReliableMessages::PlanetCreate {
                     entity: ev.entity.clone(),
                     body: NettyRigidBody::new(velocity, transform),
                     width: structure.chunks_width(),

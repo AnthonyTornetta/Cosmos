@@ -13,8 +13,8 @@ use bevy::window::WindowPlugin;
 use bevy_rapier3d::prelude::{NoUserData, RapierPhysicsPlugin};
 
 use crate::block::blocks::add_blocks_resource;
-use crate::events::{self, block_events};
-use crate::physics::structure_physics;
+use crate::events;
+use crate::physics;
 use crate::structure;
 
 #[derive(Default)]
@@ -27,7 +27,7 @@ impl Plugin for CosmosCorePlugin {
     fn build(&self, app: &mut App) {
         app.add_startup_system(add_blocks_resource);
 
-        structure_physics::register(app);
+        physics::register(app);
         structure::events::register(app);
         events::register(app);
     }

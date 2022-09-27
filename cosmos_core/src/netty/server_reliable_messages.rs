@@ -21,7 +21,7 @@ pub enum ServerReliableMessages {
         structure_entity: Entity,
         serialized_chunk: Vec<u8>,
     },
-    StructureCreate {
+    PlanetCreate {
         entity: Entity,
         body: NettyRigidBody,
         width: usize,
