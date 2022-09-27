@@ -2,6 +2,7 @@ use bevy::utils::default;
 use bevy_renet::renet::{
     ChannelConfig, ReliableChannelConfig, RenetConnectionConfig, UnreliableChannelConfig,
 };
+use local_ip_address::local_ip;
 use std::{net::UdpSocket, time::Duration};
 
 pub enum NettyChannel {
@@ -54,14 +55,11 @@ pub fn server_connection_config() -> RenetConnectionConfig {
     client_connection_config() // this may differ in future
 }
 
-pub fn get_local_ipaddress() -> Option<String> {
-    let socket = match UdpSocket::bind("0.0.0.0:0") {
-        Ok(s) => s,
-        Err(_) => return None,
-    };
-
-    match socket.local_addr() {
-        Ok(addr) => return Some(addr.ip().to_string()),
-        Err(_) => return None,
-    };
+pub fn get_local_ipaddress() -> String {
+    let ip = local_ip();
+    if ip.is_ok() {
+        ip.unwrap().to_string()
+    } else {
+        "127.0.0.1".to_owned()
+    }
 }

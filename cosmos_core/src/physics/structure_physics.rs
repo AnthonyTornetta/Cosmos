@@ -3,7 +3,6 @@ use crate::events::block_events::BlockChangedEvent;
 use crate::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
 use crate::structure::events::ChunkSetEvent;
 use crate::structure::structure::Structure;
-use crate::utils::timer::UtilsTimer;
 use bevy::prelude::{App, Commands, Component, Entity, EventReader, EventWriter, Query, Res};
 use bevy::utils::HashSet;
 use bevy_rapier3d::math::Vect;
@@ -176,8 +175,6 @@ fn generate_colliders(
 fn generate_chunk_collider(chunk: &Chunk, blocks: &Res<Blocks>) -> Option<Collider> {
     let mut colliders: Vec<(Vect, Rot, Collider)> = Vec::new();
 
-    let mut timer = UtilsTimer::start();
-
     generate_colliders(
         chunk,
         blocks,
@@ -191,17 +188,11 @@ fn generate_chunk_collider(chunk: &Chunk, blocks: &Res<Blocks>) -> Option<Collid
         CHUNK_DIMENSIONS,
     );
 
-    timer.log_duration("Generated colliders in");
-
-    timer.reset();
-
     let res = if colliders.is_empty() {
         None
     } else {
         Some(Collider::compound(colliders))
     };
-
-    timer.log_duration("Converted colliders in");
 
     res
 }

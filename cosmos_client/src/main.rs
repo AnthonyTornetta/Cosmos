@@ -38,6 +38,7 @@ use cosmos_core::physics::structure_physics::{
     listen_for_new_physics_event, listen_for_structure_event,
 };
 use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
+use bevy_inspector_egui::WorldInspectorPlugin;
 
 fn process_player_movement(
     keys: Res<Input<KeyCode>>,
@@ -141,7 +142,7 @@ fn main() {
     let host_name = if args.len() > 1 {
         args.get(1).unwrap().to_owned()
     } else {
-        get_local_ipaddress().expect("127.0.0.1").to_owned()
+        get_local_ipaddress()
     };
 
     println!("Host: {}", host_name);
@@ -158,6 +159,7 @@ fn main() {
         .add_plugins(CosmosCorePluginGroup::default())
         .add_plugins(ClientPluginGroup::default())
         .add_plugin(RenetClientPlugin {})
+        .add_plugin(WorldInspectorPlugin::new())
         // .add_plugin(RapierDebugRenderPlugin::default())
         .add_system_set(
             SystemSet::on_enter(GameState::Connecting).with_system(connect::establish_connection),

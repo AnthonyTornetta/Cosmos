@@ -63,6 +63,7 @@ fn client_sync_players(
             } => {
                 for (server_entity, body) in bodies.iter() {
                     let maybe_exists = network_mapping.client_from_server(&server_entity);
+
                     if maybe_exists.is_some() {
                         let entity = maybe_exists.unwrap();
 
@@ -70,14 +71,14 @@ fn client_sync_players(
                             query_body.get_mut(*entity).unwrap();
 
                         if local.is_none() {
-                            println!("Got {}", body.translation);
-
                             transform.translation = body.translation.into();
                             transform.rotation = body.rotation.into();
 
                             velocity.linvel = body.body_vel.linvel.into();
                             velocity.angvel = body.body_vel.angvel.into();
                         }
+                    } else {
+                        println!("Entity no exist!");
                     }
                 }
             }
@@ -248,10 +249,14 @@ fn client_sync_players(
             ServerReliableMessages::PilotChange {
                 structure_entity,
                 pilot_entity,
-            } => pilot_change_event_writer.send(ChangePilotEvent {
-                structure_entity,
-                pilot_entity,
-            }),
+            } => {
+                println!("Sending change pilot event!");
+
+                pilot_change_event_writer.send(ChangePilotEvent {
+                    structure_entity,
+                    pilot_entity,
+                });
+            }
         }
     }
 }

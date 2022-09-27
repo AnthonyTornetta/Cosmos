@@ -56,7 +56,6 @@ pub fn establish_connection(mut commands: Commands, connection_config: Res<Conne
 }
 
 pub fn wait_for_connection(mut state: ResMut<State<GameState>>, client: Res<RenetClient>) {
-    println!("Waiting...");
     if client.is_connected() {
         println!("Loading server data...");
         state.set(GameState::LoadingWorld).unwrap();

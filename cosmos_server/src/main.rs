@@ -12,6 +12,7 @@ use bevy::winit::WinitPlugin;
 use bevy_renet::RenetServerPlugin;
 use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
 use plugin::server_plugin::ServerPlugin;
+use bevy_inspector_egui::WorldInspectorPlugin;
 
 fn main() {
     App::new()
@@ -19,5 +20,6 @@ fn main() {
         .add_plugin(RenetServerPlugin)
         .add_plugin(WinitPlugin::default())
         .add_plugin(ServerPlugin)
+        .add_plugin(WorldInspectorPlugin::new())
         .run();
 }

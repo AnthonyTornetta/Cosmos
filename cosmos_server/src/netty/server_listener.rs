@@ -2,26 +2,23 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
-    block::blocks::Blocks,
     entities::player::Player,
-    events::block_events::BlockChangedEvent,
     netty::{
         client_reliable_messages::ClientReliableMessages,
         client_unreliable_messages::ClientUnreliableMessages, netty::NettyChannel,
         server_reliable_messages::ServerReliableMessages,
     },
-    structure::{events::StructureCreated, ship::ship_builder::TShipBuilder, structure::Structure},
+    structure::structure::{Structure, StructureBlock},
 };
 
-use crate::{
-    events::blocks::block_events::{BlockBreakEvent, BlockInteractEvent, BlockPlaceEvent},
-    structure::ship::server_ship_builder::ServerShipBuilder,
+use crate::events::{
+    blocks::block_events::{BlockBreakEvent, BlockInteractEvent, BlockPlaceEvent},
+    create_ship_event::CreateShipEvent,
 };
 
 use super::netty::ServerLobby;
 
 fn server_listen_messages(
-    mut commands: Commands,
     mut server: ResMut<RenetServer>,
     lobby: ResMut<ServerLobby>,
     mut players: Query<(&mut Transform, &mut Velocity), With<Player>>,
@@ -29,9 +26,7 @@ fn server_listen_messages(
     mut break_block_event: EventWriter<BlockBreakEvent>,
     mut block_interact_event: EventWriter<BlockInteractEvent>,
     mut place_block_event: EventWriter<BlockPlaceEvent>,
-    blocks: Res<Blocks>,
-    mut block_changed_event_writer: EventWriter<BlockChangedEvent>,
-    mut structure_created_event: EventWriter<StructureCreated>,
+    mut create_ship_event_writer: EventWriter<CreateShipEvent>,
 ) {
     for client_id in server.clients_id().into_iter() {
         while let Some(message) = server.receive_message(client_id, NettyChannel::Unreliable.id()) {
@@ -41,12 +36,11 @@ fn server_listen_messages(
                 ClientUnreliableMessages::PlayerBody { body } => {
                     if let Some(player_entity) = lobby.players.get(&client_id) {
                         if let Ok((mut transform, mut velocity)) = players.get_mut(*player_entity) {
-                            transform.translation = body.translation.into();
-                            transform.rotation = body.rotation.into();
+                            transform.translation = body.translation.clone().into();
+                            transform.rotation = body.rotation.clone().into();
+
                             velocity.linvel = body.body_vel.linvel.into();
                             velocity.angvel = body.body_vel.angvel.into();
-
-                            println!("Got {}", transform.translation);
                         }
                     }
                 }
@@ -116,50 +110,22 @@ fn server_listen_messages(
                     y,
                     z,
                 } => {
+                    println!("SENT EVENT!");
                     block_interact_event.send(BlockInteractEvent {
                         structure_entity,
-                        x,
-                        y,
-                        z,
+                        structure_block: StructureBlock::new(x, y, z),
+                        interactor: lobby.players.get(&client_id).unwrap().clone(),
                     });
                 }
                 ClientReliableMessages::CreateShip { name: _name } => {
-                    let mut entity = commands.spawn();
-
                     let (transform, _) = players
                         .get(lobby.players.get(&client_id).unwrap().clone())
                         .unwrap();
 
-                    let mut structure = Structure::new(10, 10, 10, entity.id());
-
-                    let builder = ServerShipBuilder::default();
-
                     let mut ship_transform = transform.clone();
                     ship_transform.translation.z += 4.0;
 
-                    builder.insert_ship(
-                        &mut entity,
-                        ship_transform,
-                        Velocity::zero(),
-                        &mut structure,
-                    );
-
-                    let block = blocks.block_from_id("cosmos:ship_core");
-
-                    structure.set_block_at(
-                        structure.blocks_width() / 2,
-                        structure.blocks_height() / 2,
-                        structure.blocks_length() / 2,
-                        block,
-                        &blocks,
-                        Some(&mut block_changed_event_writer),
-                    );
-
-                    entity.insert(structure);
-
-                    structure_created_event.send(StructureCreated {
-                        entity: entity.id(),
-                    });
+                    create_ship_event_writer.send(CreateShipEvent { ship_transform });
                 }
             }
         }

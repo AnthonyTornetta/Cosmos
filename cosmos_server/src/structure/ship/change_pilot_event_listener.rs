@@ -22,6 +22,7 @@ fn event_listener(
                 .remove::<Pilot>();
         }
 
+        println!("Sending pilot event!");
         server.broadcast_message(
             NettyChannel::Reliable.id(),
             bincode::serialize(&ServerReliableMessages::PilotChange {

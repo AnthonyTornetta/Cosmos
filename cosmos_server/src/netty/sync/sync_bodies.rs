@@ -17,8 +17,6 @@ pub fn server_sync_bodies(
 
     for (entity, transform, velocity) in entities.iter() {
         bodies.push((entity.clone(), NettyRigidBody::new(&velocity, &transform)));
-
-        //println!("Sending {}", transform.translation);
     }
 
     tick.0 += 1;

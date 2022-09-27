@@ -12,7 +12,7 @@ use crate::netty::netty::{ClientTicks, NetworkTick, ServerLobby};
 pub fn init(app: &mut App) {
     let port: u16 = 1337;
 
-    let local_addr = get_local_ipaddress().unwrap_or("127.0.0.1".to_owned());
+    let local_addr = get_local_ipaddress();
 
     let address: SocketAddr = format!("{}:{}", local_addr, port).parse().unwrap();
     let socket = UdpSocket::bind(format!("0.0.0.0:{}", port)).unwrap();

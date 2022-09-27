@@ -103,8 +103,6 @@ pub fn generate_planet(
             y: ev.y,
             z: ev.z,
         });
-
-        println!("Generated grass chunk!");
     }
 }
 

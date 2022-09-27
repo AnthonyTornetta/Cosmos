@@ -4,7 +4,7 @@ use cosmos_core::{
     block::blocks::Blocks,
     events::block_events::BlockChangedEvent,
     netty::{netty::NettyChannel, server_reliable_messages::ServerReliableMessages},
-    structure::structure::Structure,
+    structure::structure::{Structure, StructureBlock},
 };
 
 pub struct BlockBreakEvent {
@@ -15,10 +15,9 @@ pub struct BlockBreakEvent {
 }
 
 pub struct BlockInteractEvent {
+    pub structure_block: StructureBlock,
     pub structure_entity: Entity,
-    pub x: usize,
-    pub y: usize,
-    pub z: usize,
+    pub interactor: Entity,
 }
 
 pub struct BlockPlaceEvent {
@@ -62,12 +61,6 @@ fn handle_block_place_events(
     }
 }
 
-fn handle_block_interact_events(mut event_reader: EventReader<BlockInteractEvent>) {
-    for _ev in event_reader.iter() {
-        println!("BLOCK INTERACTED! TODO: implement this.");
-    }
-}
-
 fn handle_block_changed_event(
     mut event_reader: EventReader<BlockChangedEvent>,
     mut server: ResMut<RenetServer>,
@@ -94,6 +87,5 @@ pub fn register(app: &mut App) {
 
     app.add_system(handle_block_break_events);
     app.add_system(handle_block_place_events);
-    app.add_system(handle_block_interact_events);
     app.add_system(handle_block_changed_event);
 }
