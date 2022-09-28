@@ -1,9 +1,7 @@
 use crate::block::block::{Block, BlockFace, BlockProperty};
 use crate::block::block_builder::BlockBuilder;
-use bevy::prelude::Commands;
+use bevy::prelude::{Commands, ResMut};
 use bevy::utils::HashMap;
-
-// TODO: Move this to bevy stuff
 
 #[derive(Default)]
 pub struct Blocks {
@@ -23,13 +21,12 @@ impl Blocks {
         &self.blocks[id as usize]
     }
 
-    pub fn block_from_id(&self, id: &str) -> &Block {
-        self.block_from_numeric_id(
-            *self
-                .blocks_to_string
-                .get(id)
-                .expect(format!("No block with unlocalized name '{}'", id).as_str()),
-        )
+    pub fn block_from_id(&self, id: &str) -> Option<&Block> {
+        if let Some(num_id) = self.blocks_to_string.get(id) {
+            Some(self.block_from_numeric_id(*num_id))
+        } else {
+            None
+        }
     }
 
     pub fn register_block(&mut self, mut block: Block) {
@@ -52,8 +49,10 @@ pub fn add_blocks_resource(mut commands: Commands) {
             .create(),
     );
 
-    // TODO: Separate these into their own loading phase
+    commands.insert_resource(blocks);
+}
 
+pub fn add_cosmos_blocks(mut blocks: ResMut<Blocks>) {
     blocks.register_block(
         BlockBuilder::new("cosmos:stone".into())
             .add_property(BlockProperty::Opaque)
@@ -106,5 +105,11 @@ pub fn add_blocks_resource(mut commands: Commands) {
             .create(),
     );
 
-    commands.insert_resource(blocks);
+    blocks.register_block(
+        BlockBuilder::new("cosmos:energy_cell".to_owned())
+            .add_property(BlockProperty::Opaque)
+            .add_property(BlockProperty::Full)
+            .set_all_uvs(0)
+            .create(),
+    );
 }

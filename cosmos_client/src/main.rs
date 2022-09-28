@@ -153,7 +153,7 @@ fn main() {
     game_state::register(&mut app);
 
     app.insert_resource(ImageSettings::default_nearest()) // MUST be before default plugins!
-        .add_plugins(CosmosCorePluginGroup::default())
+        .add_plugins(CosmosCorePluginGroup::new(GameState::PreLoading))
         .add_plugins(ClientPluginGroup::default())
         .add_plugin(RenetClientPlugin {})
         .add_plugin(WorldInspectorPlugin::new())

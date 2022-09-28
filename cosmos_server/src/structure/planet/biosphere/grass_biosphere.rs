@@ -57,9 +57,9 @@ pub fn generate_planet(
     blocks: Res<Blocks>,
 ) {
     for ev in events.iter() {
-        let grass = blocks.block_from_id("cosmos:grass");
-        let dirt = blocks.block_from_id("cosmos:dirt");
-        let stone = blocks.block_from_id("cosmos:stone");
+        let grass = blocks.block_from_id("cosmos:grass").unwrap();
+        let dirt = blocks.block_from_id("cosmos:dirt").unwrap();
+        let stone = blocks.block_from_id("cosmos:stone").unwrap();
 
         let mut structure = query.get_mut(ev.structure_entity.clone()).unwrap();
 

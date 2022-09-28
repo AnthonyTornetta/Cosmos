@@ -33,7 +33,9 @@ fn event_reader(
             &mut structure,
         );
 
-        let block = blocks.block_from_id("cosmos:ship_core");
+        let block = blocks
+            .block_from_id("cosmos:ship_core")
+            .expect("Ship core block missing!");
 
         structure.set_block_at(
             structure.blocks_width() / 2,

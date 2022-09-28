@@ -4,7 +4,7 @@ use crate::{
     blocks, events,
     init::{init_server, init_world},
     netty::{server_listener, sync::sync_bodies},
-    physics,
+    physics, state,
     structure::{self, planet::biosphere::grass_biosphere},
 };
 
@@ -13,6 +13,7 @@ pub struct ServerPlugin;
 impl Plugin for ServerPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         init_server::init(app);
+        state::register(app);
         init_world::register(app);
         sync_bodies::register(app);
         events::register(app);

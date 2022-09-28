@@ -5,18 +5,21 @@ pub mod netty;
 pub mod physics;
 pub mod plugin;
 pub mod server;
+pub mod state;
 pub mod structure;
 
 use bevy::prelude::*;
 use bevy::winit::WinitPlugin;
+use bevy_inspector_egui::WorldInspectorPlugin;
 use bevy_renet::RenetServerPlugin;
 use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
 use plugin::server_plugin::ServerPlugin;
-use bevy_inspector_egui::WorldInspectorPlugin;
+use state::GameState;
 
 fn main() {
     App::new()
-        .add_plugins(CosmosCorePluginGroup::default())
+        .add_state(GameState::Loading)
+        .add_plugins(CosmosCorePluginGroup::new(GameState::Loading))
         .add_plugin(RenetServerPlugin)
         .add_plugin(WinitPlugin::default())
         .add_plugin(ServerPlugin)

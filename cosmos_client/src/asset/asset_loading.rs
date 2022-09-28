@@ -3,7 +3,13 @@ use bevy::{
     render::render_resource::{Extent3d, TextureDimension, TextureFormat},
 };
 
-use crate::{rendering::uv_mapper::UVMapper, state::game_state::GameState};
+use crate::{
+    rendering::uv_mapper::UVMapper,
+    state::{
+        game_state::GameState,
+        loading_status::{DoneLoadingEvent, LoadingStatus},
+    },
+};
 
 enum AtlasName {
     Main,
@@ -31,14 +37,35 @@ fn setup(server: Res<AssetServer>, mut loading: ResMut<AssetsLoading>) {
     });
 }
 
+struct AssetsDoneLoadingEvent;
+struct AssetsLoadingID(usize);
+
+fn assets_done_loading(
+    mut commands: Commands,
+    event_listener: EventReader<AssetsDoneLoadingEvent>,
+    mut event_writer: EventWriter<DoneLoadingEvent>,
+    loading_id: Res<AssetsLoadingID>,
+) {
+    if !event_listener.is_empty() {
+        event_writer.send(DoneLoadingEvent {
+            loading_id: loading_id.0,
+        });
+
+        commands.remove_resource::<AssetsLoadingID>();
+    }
+}
+
 fn check_assets_ready(
     mut commands: Commands,
     server: Res<AssetServer>,
     loading: Res<AssetsLoading>,
-    mut state: ResMut<State<GameState>>,
     mut images: ResMut<Assets<Image>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut loader: ResMut<LoadingStatus>,
+    mut event_writer: EventWriter<AssetsDoneLoadingEvent>,
 ) {
+    commands.insert_resource(AssetsLoadingID(loader.register_loader()));
+
     use bevy::asset::LoadState;
 
     match server.get_group_load_state(loading.0.iter().map(|h| h.handle.id)) {
@@ -149,15 +176,11 @@ fn check_assets_ready(
                 }
             }
 
-            // this might be a good place to transition into your in-game state
-
-            // remove the resource to drop the tracking handles
-
             commands.remove_resource::<AssetsLoading>();
             // (note: if you don't have any other handles to the assets
             // elsewhere, they will get unloaded after this)
 
-            state.set(GameState::Connecting).unwrap();
+            event_writer.send(AssetsDoneLoadingEvent);
         }
         _ => {
             // NotLoaded/Loading: not fully ready yet
@@ -168,5 +191,9 @@ fn check_assets_ready(
 pub fn register(app: &mut App) {
     app.insert_resource(AssetsLoading { 0: Vec::new() })
         .add_startup_system(setup)
-        .add_system_set(SystemSet::on_update(GameState::Loading).with_system(check_assets_ready));
+        .add_system_set(
+            SystemSet::on_update(GameState::PostLoading)
+                .with_system(check_assets_ready)
+                .with_system(assets_done_loading),
+        );
 }

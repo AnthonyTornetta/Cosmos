@@ -84,7 +84,7 @@ fn process_player_interaction(
                     if coords.is_ok() {
                         let (x, y, z) = coords.unwrap();
                         if structure.is_within_blocks(x, y, z) {
-                            let stone = blocks.block_from_id("cosmos:stone");
+                            let stone = blocks.block_from_id("cosmos:stone").unwrap();
 
                             place_writer.send(BlockPlaceEvent {
                                 structure_entity: structure.get_entity().unwrap().clone(),
