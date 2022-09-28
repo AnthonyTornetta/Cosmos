@@ -1,4 +1,4 @@
-use bevy::prelude::{App, EventReader, EventWriter, Query, Res, With};
+use bevy::prelude::{App, EventReader, EventWriter, Query, Res, SystemSet, With};
 use cosmos_core::{
     block::blocks::Blocks,
     events::structure::change_pilot_event::ChangePilotEvent,
@@ -8,7 +8,7 @@ use cosmos_core::{
     },
 };
 
-use crate::events::blocks::block_events::BlockInteractEvent;
+use crate::{events::blocks::block_events::BlockInteractEvent, state::GameState};
 
 fn handle_block_event(
     mut interact_events: EventReader<BlockInteractEvent>,
@@ -44,6 +44,5 @@ fn handle_block_event(
 }
 
 pub fn register(app: &mut App) {
-    println!("REGISTERED!");
-    app.add_system(handle_block_event);
+    app.add_system_set(SystemSet::on_update(GameState::Playing).with_system(handle_block_event));
 }

@@ -7,6 +7,8 @@ use cosmos_core::{
     structure::structure::{Structure, StructureBlock},
 };
 
+use crate::GameState;
+
 pub struct BlockBreakEvent {
     pub structure_entity: Entity,
     pub x: usize,
@@ -85,7 +87,10 @@ pub fn register(app: &mut App) {
     app.add_event::<BlockPlaceEvent>();
     app.add_event::<BlockInteractEvent>();
 
-    app.add_system(handle_block_break_events);
-    app.add_system(handle_block_place_events);
-    app.add_system(handle_block_changed_event);
+    app.add_system_set(
+        SystemSet::on_update(GameState::Playing)
+            .with_system(handle_block_break_events)
+            .with_system(handle_block_place_events)
+            .with_system(handle_block_changed_event),
+    );
 }

@@ -1,6 +1,8 @@
 use crate::block::block::{Block, BlockFace, BlockProperty};
 use crate::block::block_builder::BlockBuilder;
-use bevy::prelude::{Commands, ResMut};
+use crate::loader::{AddLoadingEvent, DoneLoadingEvent, LoadingManager};
+use bevy::ecs::schedule::StateData;
+use bevy::prelude::{App, Commands, EventWriter, ResMut, SystemSet};
 use bevy::utils::HashMap;
 
 #[derive(Default)]
@@ -38,7 +40,14 @@ impl Blocks {
     }
 }
 
-pub fn add_blocks_resource(mut commands: Commands) {
+pub fn add_blocks_resource(
+    mut commands: Commands,
+    mut loading: ResMut<LoadingManager>,
+    mut end_writer: EventWriter<DoneLoadingEvent>,
+    mut start_writer: EventWriter<AddLoadingEvent>,
+) {
+    let loader_id = loading.register_loader(&mut start_writer);
+
     let mut blocks = Blocks::default();
 
     // Game will break without air & needs this at ID 0
@@ -50,9 +59,20 @@ pub fn add_blocks_resource(mut commands: Commands) {
     );
 
     commands.insert_resource(blocks);
+
+    println!("Added resource!");
+
+    loading.finish_loading(loader_id, &mut end_writer);
 }
 
-pub fn add_cosmos_blocks(mut blocks: ResMut<Blocks>) {
+pub fn add_cosmos_blocks(
+    mut blocks: ResMut<Blocks>,
+    mut loading: ResMut<LoadingManager>,
+    mut end_writer: EventWriter<DoneLoadingEvent>,
+    mut start_writer: EventWriter<AddLoadingEvent>,
+) {
+    let id = loading.register_loader(&mut start_writer);
+
     blocks.register_block(
         BlockBuilder::new("cosmos:stone".into())
             .add_property(BlockProperty::Opaque)
@@ -112,4 +132,13 @@ pub fn add_cosmos_blocks(mut blocks: ResMut<Blocks>) {
             .set_all_uvs(0)
             .create(),
     );
+
+    println!("Added blocks!");
+
+    loading.finish_loading(id, &mut end_writer);
+}
+
+pub fn register<T: StateData + Clone>(app: &mut App, pre_loading_state: T, loading_state: T) {
+    app.add_system_set(SystemSet::on_enter(pre_loading_state).with_system(add_blocks_resource))
+        .add_system_set(SystemSet::on_enter(loading_state).with_system(add_cosmos_blocks));
 }

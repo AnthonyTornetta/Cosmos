@@ -5,10 +5,14 @@ use cosmos_core::{
 };
 use noise::NoiseFn;
 
+use crate::structure::planet::generation::planet_generator::check_needs_generated_system;
+use crate::{GameState, SystemSet};
+
 use super::biosphere::{TBiosphere, TGenerateChunkEvent};
 
 #[derive(Component)]
 pub struct GrassBiosphereMarker;
+
 pub struct GrassChunkNeedsGeneratedEvent {
     x: usize,
     y: usize,
@@ -108,10 +112,9 @@ pub fn generate_planet(
 
 pub fn register(app: &mut App) {
     app.add_event::<GrassChunkNeedsGeneratedEvent>();
-    app.add_system(generate_planet);
-    app.add_system(
-        crate::structure::planet::generation::planet_generator::check_needs_generated_system::<
-            GrassChunkNeedsGeneratedEvent,
-        >,
+    app.add_system_set(
+        SystemSet::on_update(GameState::Playing)
+            .with_system(generate_planet)
+            .with_system(check_needs_generated_system::<GrassChunkNeedsGeneratedEvent>),
     );
 }

@@ -1,7 +1,5 @@
 use bevy::prelude::App;
 
-pub mod loading_status;
-
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub enum GameState {
     PreLoading,
@@ -11,5 +9,5 @@ pub enum GameState {
 }
 
 pub fn register(app: &mut App) {
-    loading_status::register(app);
+    app.add_state(GameState::PreLoading);
 }
