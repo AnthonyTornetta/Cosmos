@@ -82,6 +82,8 @@ fn monitor_loading<T: StateData + Clone>(
         } else {
             panic!("Missing state!");
         }
+
+        loading_status.done = false;
     }
 }
 
@@ -113,9 +115,15 @@ pub fn register<T: StateData + Clone>(
     app.add_event::<DoneLoadingEvent>()
         .add_event::<AddLoadingEvent>()
         // States cannot be changed during on_enter, and this prevents that from happening
-        .add_system_set(SystemSet::on_update(pre_loading_state.clone()).with_system(monitor_loading::<T>))
-        .add_system_set(SystemSet::on_update(loading_state.clone()).with_system(monitor_loading::<T>))
-        .add_system_set(SystemSet::on_update(post_loading_state.clone()).with_system(monitor_loading::<T>))
+        .add_system_set(
+            SystemSet::on_update(pre_loading_state.clone()).with_system(monitor_loading::<T>),
+        )
+        .add_system_set(
+            SystemSet::on_update(loading_state.clone()).with_system(monitor_loading::<T>),
+        )
+        .add_system_set(
+            SystemSet::on_update(post_loading_state.clone()).with_system(monitor_loading::<T>),
+        )
         .insert_resource(LoadingStatus::new(
             pre_loading_state,
             loading_state,

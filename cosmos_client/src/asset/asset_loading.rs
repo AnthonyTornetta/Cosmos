@@ -2,14 +2,9 @@ use bevy::{
     prelude::*,
     render::render_resource::{Extent3d, TextureDimension, TextureFormat},
 };
+use cosmos_core::loader::{AddLoadingEvent, DoneLoadingEvent, LoadingManager};
 
-use crate::{
-    rendering::uv_mapper::UVMapper,
-    state::{
-        game_state::GameState,
-        loading_status::{DoneLoadingEvent, LoadingStatus},
-    },
-};
+use crate::{rendering::uv_mapper::UVMapper, state::game_state::GameState};
 
 enum AtlasName {
     Main,
@@ -20,7 +15,10 @@ struct LoadingAsset {
     handle: Handle<Image>,
 }
 
-struct AssetsLoading(Vec<LoadingAsset>);
+struct AssetsDoneLoadingEvent;
+struct AssetsLoadingID(usize);
+
+struct AssetsLoading(Option<Vec<LoadingAsset>>);
 
 pub struct MainAtlas {
     //handle: Handle<Image>,
@@ -28,28 +26,34 @@ pub struct MainAtlas {
     pub uv_mapper: UVMapper,
 }
 
-fn setup(server: Res<AssetServer>, mut loading: ResMut<AssetsLoading>) {
+fn setup(
+    mut commands: Commands,
+    server: Res<AssetServer>,
+    mut loading: ResMut<AssetsLoading>,
+    mut loader: ResMut<LoadingManager>,
+    mut start_writer: EventWriter<AddLoadingEvent>,
+) {
+    println!("Setting up!!");
+
     let main_atlas = server.load("images/atlas/main.png");
 
-    loading.0.push(LoadingAsset {
+    (&mut loading.0).as_mut().unwrap().push(LoadingAsset {
         handle: main_atlas,
         atlas_name: AtlasName::Main,
     });
-}
 
-struct AssetsDoneLoadingEvent;
-struct AssetsLoadingID(usize);
+    commands.insert_resource(AssetsLoadingID(loader.register_loader(&mut start_writer)));
+}
 
 fn assets_done_loading(
     mut commands: Commands,
     event_listener: EventReader<AssetsDoneLoadingEvent>,
-    mut event_writer: EventWriter<DoneLoadingEvent>,
-    loading_id: Res<AssetsLoadingID>,
+    loading_id: Option<Res<AssetsLoadingID>>,
+    mut loader: ResMut<LoadingManager>,
+    mut end_writer: EventWriter<DoneLoadingEvent>,
 ) {
-    if !event_listener.is_empty() {
-        event_writer.send(DoneLoadingEvent {
-            loading_id: loading_id.0,
-        });
+    if loading_id.is_some() && !event_listener.is_empty() {
+        loader.finish_loading((&loading_id).as_ref().unwrap().0, &mut end_writer);
 
         commands.remove_resource::<AssetsLoadingID>();
     }
@@ -58,24 +62,29 @@ fn assets_done_loading(
 fn check_assets_ready(
     mut commands: Commands,
     server: Res<AssetServer>,
-    loading: Res<AssetsLoading>,
+    mut loading: ResMut<AssetsLoading>,
     mut images: ResMut<Assets<Image>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut loader: ResMut<LoadingStatus>,
     mut event_writer: EventWriter<AssetsDoneLoadingEvent>,
 ) {
-    commands.insert_resource(AssetsLoadingID(loader.register_loader()));
+    if loading.0.is_none() {
+        return;
+    }
 
     use bevy::asset::LoadState;
 
-    match server.get_group_load_state(loading.0.iter().map(|h| h.handle.id)) {
+    println!("Checking!");
+
+    match server.get_group_load_state((&loading.0).as_ref().unwrap().iter().map(|h| h.handle.id)) {
         LoadState::Failed => {
             panic!("Failed to load asset!!");
         }
         LoadState::Loaded => {
             // all assets are now ready
 
-            for asset in &loading.0 {
+            println!("Assets ready!");
+
+            for asset in (&loading.0).as_ref().unwrap() {
                 match asset.atlas_name {
                     AtlasName::Main => {
                         const PADDING: u32 = 2;
@@ -176,7 +185,9 @@ fn check_assets_ready(
                 }
             }
 
-            commands.remove_resource::<AssetsLoading>();
+            // Clear out handles to avoid continually checking
+            loading.0 = None;
+
             // (note: if you don't have any other handles to the assets
             // elsewhere, they will get unloaded after this)
 
@@ -189,11 +200,14 @@ fn check_assets_ready(
 }
 
 pub fn register(app: &mut App) {
-    app.insert_resource(AssetsLoading { 0: Vec::new() })
-        .add_startup_system(setup)
-        .add_system_set(
-            SystemSet::on_update(GameState::PostLoading)
-                .with_system(check_assets_ready)
-                .with_system(assets_done_loading),
-        );
+    app.insert_resource(AssetsLoading {
+        0: Some(Vec::new()),
+    })
+    .add_event::<AssetsDoneLoadingEvent>()
+    .add_system_set(SystemSet::on_enter(GameState::PostLoading).with_system(setup))
+    .add_system_set(
+        SystemSet::on_update(GameState::PostLoading)
+            .with_system(check_assets_ready)
+            .with_system(assets_done_loading),
+    );
 }

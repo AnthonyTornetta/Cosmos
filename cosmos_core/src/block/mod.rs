@@ -1,7 +1,4 @@
-use bevy::{
-    ecs::schedule::StateData,
-    prelude::{App, SystemSet},
-};
+use bevy::{ecs::schedule::StateData, prelude::App};
 
 pub mod block;
 pub mod block_builder;

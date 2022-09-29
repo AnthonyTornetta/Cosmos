@@ -163,6 +163,18 @@ fn main() {
         .add_plugins(ClientPluginGroup::default())
         .add_plugin(RenetClientPlugin {})
         .add_plugin(WorldInspectorPlugin::new())
+        .add_system_set(SystemSet::on_enter(GameState::PreLoading).with_system(|| {
+            println!("PRE LOADING ENTERED");
+        }))
+        .add_system_set(SystemSet::on_enter(GameState::Loading).with_system(|| {
+            println!("LOADING ENTERED");
+        }))
+        .add_system_set(SystemSet::on_enter(GameState::PostLoading).with_system(|| {
+            println!("POST LOADING ENTERED");
+        }))
+        .add_system_set(SystemSet::on_enter(GameState::Connecting).with_system(|| {
+            println!("CONNECTING ENTERED");
+        }))
         // .add_plugin(RapierDebugRenderPlugin::default())
         .add_system_set(
             SystemSet::on_enter(GameState::Connecting).with_system(connect::establish_connection),
