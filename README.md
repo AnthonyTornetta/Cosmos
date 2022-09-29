@@ -40,6 +40,13 @@ Cosmos, but in rust
 - [x] Support re-sizable window
 
 ## Release 0.0.2a
+- [x] Improved state management
+  - [x] Client state management
+  - [x] Server state management
+  - [x] Core able to utilize both states
+    - [x] Block resource loaded in PreLoading state
+    - [x] Blocks loaded in Loading state
+    - [x] Systems loaded in PostLoading state
 - [ ] Ability to pilot Ship
   - [ ] Mouse movements steer ship around center of mass
   - [ ] Standard movement controls mapped to ship acceleration
