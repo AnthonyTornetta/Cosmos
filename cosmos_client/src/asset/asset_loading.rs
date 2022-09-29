@@ -18,7 +18,7 @@ struct LoadingAsset {
 struct AssetsDoneLoadingEvent;
 struct AssetsLoadingID(usize);
 
-struct AssetsLoading(Option<Vec<LoadingAsset>>);
+struct AssetsLoading(Vec<LoadingAsset>);
 
 pub struct MainAtlas {
     //handle: Handle<Image>,
@@ -37,7 +37,7 @@ fn setup(
 
     let main_atlas = server.load("images/atlas/main.png");
 
-    (&mut loading.0).as_mut().unwrap().push(LoadingAsset {
+    loading.0.push(LoadingAsset {
         handle: main_atlas,
         atlas_name: AtlasName::Main,
     });
@@ -62,12 +62,12 @@ fn assets_done_loading(
 fn check_assets_ready(
     mut commands: Commands,
     server: Res<AssetServer>,
-    mut loading: ResMut<AssetsLoading>,
+    loading: Option<ResMut<AssetsLoading>>,
     mut images: ResMut<Assets<Image>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut event_writer: EventWriter<AssetsDoneLoadingEvent>,
 ) {
-    if loading.0.is_none() {
+    if loading.is_none() {
         return;
     }
 
@@ -75,7 +75,7 @@ fn check_assets_ready(
 
     println!("Checking!");
 
-    match server.get_group_load_state((&loading.0).as_ref().unwrap().iter().map(|h| h.handle.id)) {
+    match server.get_group_load_state((&loading).as_ref().unwrap().0.iter().map(|h| h.handle.id)) {
         LoadState::Failed => {
             panic!("Failed to load asset!!");
         }
@@ -84,7 +84,7 @@ fn check_assets_ready(
 
             println!("Assets ready!");
 
-            for asset in (&loading.0).as_ref().unwrap() {
+            for asset in &(&loading).as_ref().unwrap().0 {
                 match asset.atlas_name {
                     AtlasName::Main => {
                         const PADDING: u32 = 2;
@@ -186,7 +186,7 @@ fn check_assets_ready(
             }
 
             // Clear out handles to avoid continually checking
-            loading.0 = None;
+            commands.remove_resource::<AssetsLoading>();
 
             // (note: if you don't have any other handles to the assets
             // elsewhere, they will get unloaded after this)
@@ -200,14 +200,12 @@ fn check_assets_ready(
 }
 
 pub fn register(app: &mut App) {
-    app.insert_resource(AssetsLoading {
-        0: Some(Vec::new()),
-    })
-    .add_event::<AssetsDoneLoadingEvent>()
-    .add_system_set(SystemSet::on_enter(GameState::PostLoading).with_system(setup))
-    .add_system_set(
-        SystemSet::on_update(GameState::PostLoading)
-            .with_system(check_assets_ready)
-            .with_system(assets_done_loading),
-    );
+    app.insert_resource(AssetsLoading { 0: Vec::new() })
+        .add_event::<AssetsDoneLoadingEvent>()
+        .add_system_set(SystemSet::on_enter(GameState::PostLoading).with_system(setup))
+        .add_system_set(
+            SystemSet::on_update(GameState::PostLoading)
+                .with_system(check_assets_ready)
+                .with_system(assets_done_loading),
+        );
 }
