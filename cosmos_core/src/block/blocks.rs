@@ -60,8 +60,6 @@ pub fn add_blocks_resource(
 
     commands.insert_resource(blocks);
 
-    println!("Added resource!");
-
     loading.finish_loading(loader_id, &mut end_writer);
 }
 
@@ -132,8 +130,6 @@ pub fn add_cosmos_blocks(
             .set_all_uvs(0)
             .create(),
     );
-
-    println!("Added blocks!");
 
     loading.finish_loading(id, &mut end_writer);
 }

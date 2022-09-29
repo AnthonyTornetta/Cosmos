@@ -33,8 +33,6 @@ fn setup(
     mut loader: ResMut<LoadingManager>,
     mut start_writer: EventWriter<AddLoadingEvent>,
 ) {
-    println!("Setting up!!");
-
     let main_atlas = server.load("images/atlas/main.png");
 
     loading.0.push(LoadingAsset {
@@ -73,16 +71,12 @@ fn check_assets_ready(
 
     use bevy::asset::LoadState;
 
-    println!("Checking!");
-
     match server.get_group_load_state((&loading).as_ref().unwrap().0.iter().map(|h| h.handle.id)) {
         LoadState::Failed => {
             panic!("Failed to load asset!!");
         }
         LoadState::Loaded => {
             // all assets are now ready
-
-            println!("Assets ready!");
 
             for asset in &(&loading).as_ref().unwrap().0 {
                 match asset.atlas_name {
