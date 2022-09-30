@@ -56,21 +56,29 @@ Cosmos, but in rust
   - [ ] Once destroyed, the entire ship enters meltdown, becoming minable by mining beams and will be destroyed after a set amount of time
   - [ ] Interact with this block to pilot the ship
   - [ ] Create block
+- [ ] Localized planetary gravity
+  - [ ] All entities near planet's radius are subject to its gravity towards its relative downward vector
+    - [ ] The gravitational pull should scale inversely exponentially the farther the distance from a certain threshold (most likely the highest chunk) then remain constant past that point
+- [ ] Ship systems
+  - [ ] Energy system
+    - [ ] Energy producer block
+    - [ ] Energy storage block
+  - [ ] Thruster system
+  - [ ] Thruster block
+  - [ ] Allows the ship to move + rotate
+    - [ ] Faster movement based on # of thrusters
+    - [ ] Faster rotation based on # of thrusters
+    - [ ] More energy consumption per thruster
+    
+  
+## Everything that will still have to be done after 0.0.2a
 - [ ] Align body with structure
   - [ ] Switches to FPS Camera
   - [ ] Aligns the player to that structure
   - [ ] Left control
   - [ ] De-align, switch back to free camera
     - [ ] Create free camera
-- [ ] Localized planetary gravity
-  - [ ] All entities near planet's radius are subject to its gravity towards its relative downward vector
-    - [ ] The gravitational pull should scale inversely exponentially the farther the distance from a certain threshold (most likely the highest chunk) then remain constant past that point
-
-## Everything that will still have to be done after 0.0.2a
 - [ ] Ship systems
-  - [ ] Energy system
-    - [ ] Energy producer block
-    - [ ] Energy storage block
   - [ ] Camera system
     - [ ] Camera block
     - [ ] Use left/right to switch between ship cameras
@@ -87,12 +95,6 @@ Cosmos, but in rust
       - [ ] Inserts the item into the ship's inventory
       - [ ] Hold lmb to continually fire the laser
     - [ ] Structure gets deleted when no more blocks are left
-  - [ ] Thruster system
-    - [ ] Thruster block
-    - [ ] Allows the ship to move + rotate
-      - [ ] Faster movement based on # of thrusters
-      - [ ] Faster rotation based on # of thrusters
-      - [ ] More energy consumption per thruster
   - [ ] Storage system
     - [ ] An interface into all the storage devices on the ship
   - [ ] A way of selecting which systems to use preventing use of systems that are not meant to be actively used
