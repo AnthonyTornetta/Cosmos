@@ -1,8 +1,12 @@
 use bevy::{
-    ecs::schedule::StateData,
-    prelude::{App, Component, CoreStage, EventReader, Query, Res, ResMut, SystemSet},
+    ecs::schedule::{ShouldRun, StageLabelId, StateData},
+    prelude::{
+        App, Component, CoreStage, EventReader, Query, Res, ResMut, Stage, StageLabel, SystemSet,
+    },
     utils::HashMap,
 };
+use iyes_loopless::prelude::*;
+use std::any::TypeId;
 
 use crate::{
     block::{block::Block, blocks::Blocks},
@@ -53,46 +57,46 @@ fn block_update_system(
     mut system_query: Query<&mut EnergyStorageSystem>,
     structure_query: Query<&Structure>,
 ) {
-    // for ev in event.iter() {
-    //     let mut system = None;
-    //     if let Some(es) = energy_storage_blocks.get(blocks.block_from_numeric_id(ev.old_block)) {
-    //         system = Some(system_query.get_mut(ev.structure_entity.clone()).unwrap());
-    //         system.as_mut().unwrap().capacity -= es.capacity;
-    //     }
-    //
-    //     if let Some(es) = energy_storage_blocks.get(blocks.block_from_numeric_id(ev.new_block)) {
-    //         if system.is_none() {
-    //             system = Some(system_query.get_mut(ev.structure_entity.clone()).unwrap());
-    //         }
-    //         system.as_mut().unwrap().capacity += es.capacity;
-    //     }
-    // }
-    //
-    // // ChunkSetEvents should not overwrite existing blocks, so no need to check for that
-    // for ev in chunk_set_event.iter() {
-    //     let mut system = system_query.get_mut(ev.structure_entity).unwrap();
-    //     let structure = structure_query.get(ev.structure_entity).unwrap();
-    //
-    //     for z in ev.z * CHUNK_DIMENSIONS..(ev.z + 1) * CHUNK_DIMENSIONS {
-    //         for y in (ev.y * CHUNK_DIMENSIONS)..(ev.y + 1) * CHUNK_DIMENSIONS {
-    //             for x in ev.x * CHUNK_DIMENSIONS..(ev.x + 1) * CHUNK_DIMENSIONS {
-    //                 let b = structure.block_at(x, y, z);
-    //                 system.capacity += energy_storage_blocks
-    //                     .get(blocks.block_from_numeric_id(b))
-    //                     .unwrap()
-    //                     .capacity;
-    //             }
-    //         }
-    //     }
-    // }
+    for ev in event.iter() {
+        let mut system = None;
+        if let Some(es) = energy_storage_blocks.get(blocks.block_from_numeric_id(ev.old_block)) {
+            system = Some(system_query.get_mut(ev.structure_entity.clone()).unwrap());
+            system.as_mut().unwrap().capacity -= es.capacity;
+        }
+
+        if let Some(es) = energy_storage_blocks.get(blocks.block_from_numeric_id(ev.new_block)) {
+            if system.is_none() {
+                system = Some(system_query.get_mut(ev.structure_entity.clone()).unwrap());
+            }
+            system.as_mut().unwrap().capacity += es.capacity;
+        }
+    }
+
+    // ChunkSetEvents should not overwrite existing blocks, so no need to check for that
+    for ev in chunk_set_event.iter() {
+        let mut system = system_query.get_mut(ev.structure_entity).unwrap();
+        let structure = structure_query.get(ev.structure_entity).unwrap();
+
+        for z in ev.z * CHUNK_DIMENSIONS..(ev.z + 1) * CHUNK_DIMENSIONS {
+            for y in (ev.y * CHUNK_DIMENSIONS)..(ev.y + 1) * CHUNK_DIMENSIONS {
+                for x in ev.x * CHUNK_DIMENSIONS..(ev.x + 1) * CHUNK_DIMENSIONS {
+                    let b = structure.block_at(x, y, z);
+                    system.capacity += energy_storage_blocks
+                        .get(blocks.block_from_numeric_id(b))
+                        .unwrap()
+                        .capacity;
+                }
+            }
+        }
+    }
 }
 
-pub fn register<T: StateData + Clone>(app: &mut App, loading_state: T, playing_state: T) {
+pub fn register<T: StateData + Clone>(app: &mut App, post_loading_state: T, playing_state: T) {
     app.insert_resource(EnergyStorageBlocks::default())
-        // Hopefully this will get fixed? Currently doesn't work
-    // .add_system_set_to_stage(
-        //     CoreStage::PostUpdate,
-        //     SystemSet::on_update(playing_state).with_system(block_update_system),
-        // );
-        .add_system_set(SystemSet::on_update(playing_state).with_system(block_update_system));
+        .add_state_to_stage(CoreStage::PostUpdate, playing_state.clone())
+        .add_system_set(SystemSet::on_enter(post_loading_state).with_system(register_energy_blocks))
+        .add_system_to_stage(
+            CoreStage::PostUpdate,
+            block_update_system.run_in_state(playing_state.clone()),
+        );
 }

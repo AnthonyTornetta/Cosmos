@@ -297,6 +297,6 @@ fn client_sync_players(
 pub fn register(app: &mut App) {
     app.add_system_set(
         SystemSet::on_update(GameState::LoadingWorld).with_system(client_sync_players),
-    );
-    app.add_system_set(SystemSet::on_update(GameState::Playing).with_system(client_sync_players));
+    )
+    .add_system_set(SystemSet::on_update(GameState::Playing).with_system(client_sync_players));
 }

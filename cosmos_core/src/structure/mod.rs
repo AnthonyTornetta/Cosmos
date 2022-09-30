@@ -8,7 +8,7 @@ pub mod structure;
 pub mod structure_builder;
 pub mod systems;
 
-pub fn register<T: StateData + Clone>(app: &mut App, loading_state: T, playing_game_state: T) {
-    systems::register(app, loading_state, playing_game_state);
+pub fn register<T: StateData + Clone>(app: &mut App, post_loading_state: T, playing_game_state: T) {
+    systems::register(app, post_loading_state, playing_game_state);
     ship::register(app);
 }
