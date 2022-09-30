@@ -23,7 +23,7 @@ use netty::flags::LocalPlayer;
 use netty::gameplay::{receiver, sync};
 use netty::mapping::NetworkMapping;
 use rendering::structure_renderer;
-use state::game_state::{self, GameState};
+use state::game_state::GameState;
 use structure::chunk_retreiver;
 use ui::crosshair;
 
@@ -150,9 +150,10 @@ fn main() {
         host_name: host_name.into(),
     });
 
-    game_state::register(&mut app);
+    // game_state::register(&mut app);
 
     app.insert_resource(ImageSettings::default_nearest()) // MUST be before default plugins!
+        .add_state(GameState::PreLoading)
         .add_plugins(CosmosCorePluginGroup::new(
             GameState::PreLoading,
             GameState::Loading,

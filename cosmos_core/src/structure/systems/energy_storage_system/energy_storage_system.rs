@@ -1,12 +1,9 @@
 use bevy::{
-    ecs::schedule::{ShouldRun, StageLabelId, StateData},
-    prelude::{
-        App, Component, CoreStage, EventReader, Query, Res, ResMut, Stage, StageLabel, SystemSet,
-    },
+    ecs::schedule::StateData,
+    prelude::{App, Component, CoreStage, EventReader, Query, Res, ResMut, SystemSet},
     utils::HashMap,
 };
 use iyes_loopless::prelude::*;
-use std::any::TypeId;
 
 use crate::{
     block::{block::Block, blocks::Blocks},
@@ -93,10 +90,9 @@ fn block_update_system(
 
 pub fn register<T: StateData + Clone>(app: &mut App, post_loading_state: T, playing_state: T) {
     app.insert_resource(EnergyStorageBlocks::default())
-        .add_state_to_stage(CoreStage::PostUpdate, playing_state.clone())
         .add_system_set(SystemSet::on_enter(post_loading_state).with_system(register_energy_blocks))
         .add_system_to_stage(
             CoreStage::PostUpdate,
-            block_update_system.run_in_state(playing_state.clone()),
+            block_update_system.run_in_state(playing_state),
         );
 }
