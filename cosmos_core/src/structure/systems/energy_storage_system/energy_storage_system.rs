@@ -1,8 +1,6 @@
 use bevy::{
     ecs::schedule::StateData,
-    prelude::{
-        App, Commands, Component, CoreStage, EventReader, Query, Res, ResMut, SystemSet, Without,
-    },
+    prelude::{App, Commands, Component, CoreStage, EventReader, Query, Res, ResMut, SystemSet},
     utils::HashMap,
 };
 use bevy_inspector_egui::{Inspectable, RegisterInspectable};
@@ -14,8 +12,8 @@ use crate::{
     structure::{chunk::CHUNK_DIMENSIONS, events::ChunkSetEvent, structure::Structure},
 };
 
-struct EnergyStorageProperty {
-    capacity: f32,
+pub struct EnergyStorageProperty {
+    pub capacity: f32,
 }
 
 #[derive(Default)]
@@ -34,24 +32,27 @@ impl EnergyStorageBlocks {
 }
 
 #[derive(Component, Default, Inspectable)]
-struct EnergyStorageSystem {
+pub struct EnergyStorageSystem {
     energy: f32,
     capacity: f32,
 }
 
-fn debug_energy_system(energy_systems: Query<&EnergyStorageSystem>) {
-    // for system in energy_systems.iter() {
-    //     let percent = if system.capacity == 0.0 {
-    //         0.0
-    //     } else {
-    //         system.energy / system.capacity * 100.0
-    //     };
+impl EnergyStorageSystem {
+    pub fn increase_energy(&mut self, delta: f32) {
+        self.energy = self.capacity.min(self.energy + delta);
+    }
 
-    //     println!(
-    //         "Energy: {}/{} ({}%)",
-    //         system.energy, system.capacity, percent
-    //     );
-    // }
+    pub fn decrease_energy(&mut self, delta: f32) {
+        self.energy = (self.energy - delta).max(0.0);
+    }
+
+    pub fn get_energy(&self) -> f32 {
+        self.energy
+    }
+
+    pub fn get_capacity(&self) -> f32 {
+        self.capacity
+    }
 }
 
 fn register_energy_blocks(blocks: Res<Blocks>, mut storage: ResMut<EnergyStorageBlocks>) {
@@ -157,6 +158,5 @@ pub fn register<T: StateData + Clone>(app: &mut App, post_loading_state: T, play
             CoreStage::PostUpdate,
             block_update_system.run_in_bevy_state(playing_state.clone()),
         )
-        .add_system(debug_energy_system)
         .register_inspectable::<EnergyStorageSystem>();
 }
