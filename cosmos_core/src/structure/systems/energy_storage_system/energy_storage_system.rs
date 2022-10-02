@@ -1,8 +1,11 @@
 use bevy::{
     ecs::schedule::StateData,
-    prelude::{App, Component, CoreStage, EventReader, Query, Res, ResMut, SystemSet},
+    prelude::{
+        App, Commands, Component, CoreStage, EventReader, Query, Res, ResMut, SystemSet, Without,
+    },
     utils::HashMap,
 };
+use bevy_inspector_egui::{Inspectable, RegisterInspectable};
 use iyes_loopless::prelude::*;
 
 use crate::{
@@ -30,10 +33,25 @@ impl EnergyStorageBlocks {
     }
 }
 
-#[derive(Component)]
+#[derive(Component, Default, Inspectable)]
 struct EnergyStorageSystem {
     energy: f32,
     capacity: f32,
+}
+
+fn debug_energy_system(energy_systems: Query<&EnergyStorageSystem>) {
+    // for system in energy_systems.iter() {
+    //     let percent = if system.capacity == 0.0 {
+    //         0.0
+    //     } else {
+    //         system.energy / system.capacity * 100.0
+    //     };
+
+    //     println!(
+    //         "Energy: {}/{} ({}%)",
+    //         system.energy, system.capacity, percent
+    //     );
+    // }
 }
 
 fn register_energy_blocks(blocks: Res<Blocks>, mut storage: ResMut<EnergyStorageBlocks>) {
@@ -43,6 +61,17 @@ fn register_energy_blocks(blocks: Res<Blocks>, mut storage: ResMut<EnergyStorage
 
     if let Some(block) = blocks.block_from_id("cosmos:ship_core") {
         storage.insert(block, EnergyStorageProperty { capacity: 5000.0 })
+    }
+}
+
+fn monitor_added_structure(
+    mut commands: Commands,
+    structures: Query<&Structure, Without<EnergyStorageSystem>>,
+) {
+    for structure in structures.iter() {
+        commands
+            .entity(structure.get_entity().unwrap())
+            .insert(EnergyStorageSystem::default());
     }
 }
 
@@ -78,10 +107,13 @@ fn block_update_system(
             for y in (ev.y * CHUNK_DIMENSIONS)..(ev.y + 1) * CHUNK_DIMENSIONS {
                 for x in ev.x * CHUNK_DIMENSIONS..(ev.x + 1) * CHUNK_DIMENSIONS {
                     let b = structure.block_at(x, y, z);
-                    system.capacity += energy_storage_blocks
-                        .get(blocks.block_from_numeric_id(b))
-                        .unwrap()
-                        .capacity;
+
+                    if energy_storage_blocks.blocks.contains_key(&b) {
+                        system.capacity += energy_storage_blocks
+                            .get(blocks.block_from_numeric_id(b))
+                            .unwrap()
+                            .capacity;
+                    }
                 }
             }
         }
@@ -93,6 +125,9 @@ pub fn register<T: StateData + Clone>(app: &mut App, post_loading_state: T, play
         .add_system_set(SystemSet::on_enter(post_loading_state).with_system(register_energy_blocks))
         .add_system_to_stage(
             CoreStage::PostUpdate,
-            block_update_system.run_in_state(playing_state),
-        );
+            block_update_system.run_in_bevy_state(playing_state.clone()),
+        )
+        .add_system(debug_energy_system)
+        .add_system(monitor_added_structure)
+        .register_inspectable::<EnergyStorageSystem>();
 }

@@ -1,4 +1,5 @@
 use bevy::prelude::App;
+use iyes_loopless::prelude::AppLooplessStateExt;
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub enum GameState {
@@ -9,5 +10,6 @@ pub enum GameState {
 }
 
 pub fn register(app: &mut App) {
-    app.add_state(GameState::PreLoading);
+    app.add_state(GameState::PreLoading)
+        .add_loopless_state(GameState::PreLoading);
 }

@@ -18,6 +18,7 @@ use camera::camera_controller;
 use cosmos_core::netty::netty::get_local_ipaddress;
 use input::inputs::{self, CosmosInputHandler, CosmosInputs};
 use interactions::block_interactions;
+use iyes_loopless::prelude::AppLooplessStateExt;
 use netty::connect::{self, ConnectionConfig};
 use netty::flags::LocalPlayer;
 use netty::gameplay::{receiver, sync};
@@ -154,6 +155,7 @@ fn main() {
 
     app.insert_resource(ImageSettings::default_nearest()) // MUST be before default plugins!
         .add_state(GameState::PreLoading)
+        .add_loopless_state(GameState::PreLoading)
         .add_plugins(CosmosCorePluginGroup::new(
             GameState::PreLoading,
             GameState::Loading,
