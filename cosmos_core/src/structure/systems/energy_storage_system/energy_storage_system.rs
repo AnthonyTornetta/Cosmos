@@ -64,18 +64,8 @@ fn register_energy_blocks(blocks: Res<Blocks>, mut storage: ResMut<EnergyStorage
     }
 }
 
-fn monitor_added_structure(
-    mut commands: Commands,
-    structures: Query<&Structure, Without<EnergyStorageSystem>>,
-) {
-    for structure in structures.iter() {
-        commands
-            .entity(structure.get_entity().unwrap())
-            .insert(EnergyStorageSystem::default());
-    }
-}
-
 fn block_update_system(
+    mut commands: Commands,
     mut event: EventReader<BlockChangedEvent>,
     mut chunk_set_event: EventReader<ChunkSetEvent>,
     energy_storage_blocks: Res<EnergyStorageBlocks>,
@@ -84,38 +74,78 @@ fn block_update_system(
     structure_query: Query<&Structure>,
 ) {
     for ev in event.iter() {
-        let mut system = None;
-        if let Some(es) = energy_storage_blocks.get(blocks.block_from_numeric_id(ev.old_block)) {
-            system = Some(system_query.get_mut(ev.structure_entity.clone()).unwrap());
-            system.as_mut().unwrap().capacity -= es.capacity;
-        }
+        let sys = system_query.get_mut(ev.structure_entity.clone());
 
-        if let Some(es) = energy_storage_blocks.get(blocks.block_from_numeric_id(ev.new_block)) {
-            if system.is_none() {
-                system = Some(system_query.get_mut(ev.structure_entity.clone()).unwrap());
+        if sys.is_ok() {
+            let mut system = sys.unwrap();
+
+            if let Some(es) = energy_storage_blocks.get(blocks.block_from_numeric_id(ev.old_block))
+            {
+                system.capacity -= es.capacity;
             }
-            system.as_mut().unwrap().capacity += es.capacity;
+
+            if let Some(es) = energy_storage_blocks.get(blocks.block_from_numeric_id(ev.new_block))
+            {
+                system.capacity += es.capacity;
+            }
+        } else {
+            let mut system = EnergyStorageSystem::default();
+
+            if let Some(es) = energy_storage_blocks.get(blocks.block_from_numeric_id(ev.old_block))
+            {
+                system.capacity -= es.capacity;
+            }
+
+            if let Some(es) = energy_storage_blocks.get(blocks.block_from_numeric_id(ev.new_block))
+            {
+                system.capacity += es.capacity;
+            }
+
+            commands.entity(ev.structure_entity.clone()).insert(system);
         }
     }
 
     // ChunkSetEvents should not overwrite existing blocks, so no need to check for that
     for ev in chunk_set_event.iter() {
-        let mut system = system_query.get_mut(ev.structure_entity).unwrap();
+        let sys = system_query.get_mut(ev.structure_entity);
         let structure = structure_query.get(ev.structure_entity).unwrap();
 
-        for z in ev.z * CHUNK_DIMENSIONS..(ev.z + 1) * CHUNK_DIMENSIONS {
-            for y in (ev.y * CHUNK_DIMENSIONS)..(ev.y + 1) * CHUNK_DIMENSIONS {
-                for x in ev.x * CHUNK_DIMENSIONS..(ev.x + 1) * CHUNK_DIMENSIONS {
-                    let b = structure.block_at(x, y, z);
+        if sys.is_ok() {
+            let mut system = sys.unwrap();
 
-                    if energy_storage_blocks.blocks.contains_key(&b) {
-                        system.capacity += energy_storage_blocks
-                            .get(blocks.block_from_numeric_id(b))
-                            .unwrap()
-                            .capacity;
+            for z in ev.z * CHUNK_DIMENSIONS..(ev.z + 1) * CHUNK_DIMENSIONS {
+                for y in (ev.y * CHUNK_DIMENSIONS)..(ev.y + 1) * CHUNK_DIMENSIONS {
+                    for x in ev.x * CHUNK_DIMENSIONS..(ev.x + 1) * CHUNK_DIMENSIONS {
+                        let b = structure.block_at(x, y, z);
+
+                        if energy_storage_blocks.blocks.contains_key(&b) {
+                            system.capacity += energy_storage_blocks
+                                .get(blocks.block_from_numeric_id(b))
+                                .unwrap()
+                                .capacity;
+                        }
                     }
                 }
             }
+        } else {
+            let mut system = EnergyStorageSystem::default();
+
+            for z in ev.z * CHUNK_DIMENSIONS..(ev.z + 1) * CHUNK_DIMENSIONS {
+                for y in (ev.y * CHUNK_DIMENSIONS)..(ev.y + 1) * CHUNK_DIMENSIONS {
+                    for x in ev.x * CHUNK_DIMENSIONS..(ev.x + 1) * CHUNK_DIMENSIONS {
+                        let b = structure.block_at(x, y, z);
+
+                        if energy_storage_blocks.blocks.contains_key(&b) {
+                            system.capacity += energy_storage_blocks
+                                .get(blocks.block_from_numeric_id(b))
+                                .unwrap()
+                                .capacity;
+                        }
+                    }
+                }
+            }
+
+            commands.entity(ev.structure_entity.clone()).insert(system);
         }
     }
 }
@@ -128,6 +158,5 @@ pub fn register<T: StateData + Clone>(app: &mut App, post_loading_state: T, play
             block_update_system.run_in_bevy_state(playing_state.clone()),
         )
         .add_system(debug_energy_system)
-        .add_system(monitor_added_structure)
         .register_inspectable::<EnergyStorageSystem>();
 }

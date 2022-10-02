@@ -59,10 +59,12 @@ Cosmos, but in rust
 - [ ] Localized planetary gravity
   - [ ] All entities near planet's radius are subject to its gravity towards its relative downward vector
     - [ ] The gravitational pull should scale inversely exponentially the farther the distance from a certain threshold (most likely the highest chunk) then remain constant past that point
-- [ ] Ship systems
+- [x] Ship systems
   - [ ] Energy system
     - [ ] Energy producer block
     - [ ] Energy storage block
+    - [x] Energy storage system
+    - [ ] Energy generation system
   - [ ] Thruster system
   - [ ] Thruster block
   - [ ] Allows the ship to move + rotate
