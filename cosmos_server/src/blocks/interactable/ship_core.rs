@@ -22,20 +22,16 @@ fn handle_block_event(
         .expect("ship core block missing!");
 
     for ev in interact_events.iter() {
-        let maybe_ship = s_query.get(ev.structure_entity);
-
-        if maybe_ship.is_ok() {
-            let structure = maybe_ship.unwrap();
-
-            let block_id = ev.structure_block.block(&structure);
+        if let Ok(structure) = s_query.get(ev.structure_entity) {
+            let block_id = ev.structure_block.block(structure);
 
             if block_id == block.id() {
                 // Only works on ships (maybe replace this with pilotable component instead of only checking ships)
                 // Cannot pilot a ship that already has a pilot
                 if pilot_query.get(ev.structure_entity).is_err() {
                     change_pilot_event.send(ChangePilotEvent {
-                        structure_entity: ev.structure_entity.clone(),
-                        pilot_entity: Some(ev.interactor.clone()),
+                        structure_entity: ev.structure_entity,
+                        pilot_entity: Some(ev.interactor),
                     });
                 }
             }

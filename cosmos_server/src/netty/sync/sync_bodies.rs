@@ -2,11 +2,11 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::netty::{
-    netty::NettyChannel, netty_rigidbody::NettyRigidBody,
-    server_unreliable_messages::ServerUnreliableMessages,
+    netty_rigidbody::NettyRigidBody, server_unreliable_messages::ServerUnreliableMessages,
+    NettyChannel,
 };
 
-use crate::netty::netty::NetworkTick;
+use crate::netty::network_helpers::NetworkTick;
 
 pub fn server_sync_bodies(
     mut server: ResMut<RenetServer>,
@@ -16,7 +16,7 @@ pub fn server_sync_bodies(
     let mut bodies = Vec::new();
 
     for (entity, transform, velocity) in entities.iter() {
-        bodies.push((entity.clone(), NettyRigidBody::new(&velocity, &transform)));
+        bodies.push((entity, NettyRigidBody::new(velocity, transform)));
     }
 
     tick.0 += 1;

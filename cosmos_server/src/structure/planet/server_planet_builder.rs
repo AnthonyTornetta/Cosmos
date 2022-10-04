@@ -8,7 +8,7 @@ use cosmos_core::structure::planet::{
 use crate::structure::server_structure_builder::ServerStructureBuilder;
 
 use super::{
-    biosphere::biosphere::{TBiosphere, TGenerateChunkEvent},
+    biosphere::{TBiosphere, TGenerateChunkEvent},
     generation::planet_generator::NeedsGenerated,
 };
 

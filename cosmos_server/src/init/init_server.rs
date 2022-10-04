@@ -5,9 +5,9 @@ use std::{
 
 use bevy::prelude::*;
 use bevy_renet::renet::{RenetServer, ServerAuthentication, ServerConfig};
-use cosmos_core::netty::netty::{get_local_ipaddress, server_connection_config, PROTOCOL_ID};
+use cosmos_core::netty::{get_local_ipaddress, server_connection_config, PROTOCOL_ID};
 
-use crate::netty::netty::{ClientTicks, NetworkTick, ServerLobby};
+use crate::netty::network_helpers::{ClientTicks, NetworkTick, ServerLobby};
 
 pub fn init(app: &mut App) {
     let port: u16 = 1337;

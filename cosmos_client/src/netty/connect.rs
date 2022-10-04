@@ -5,7 +5,7 @@ use std::{
 
 use bevy::prelude::*;
 use bevy_renet::renet::{ClientAuthentication, RenetClient};
-use cosmos_core::{entities::player::Player, netty::netty::client_connection_config};
+use cosmos_core::{entities::player::Player, netty::client_connection_config};
 
 use crate::{
     netty::{
@@ -33,7 +33,7 @@ fn new_renet_client(host: &str) -> RenetClient {
 
     let auth = ClientAuthentication::Unsecure {
         client_id,
-        protocol_id: cosmos_core::netty::netty::PROTOCOL_ID,
+        protocol_id: cosmos_core::PROTOCOL_ID,
         server_addr,
         user_data: None,
     };

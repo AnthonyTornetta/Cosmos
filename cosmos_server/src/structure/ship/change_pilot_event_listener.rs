@@ -1,6 +1,6 @@
 use bevy::prelude::{App, Entity, EventReader, ResMut, SystemSet};
 use bevy_renet::renet::RenetServer;
-use cosmos_core::netty::{netty::NettyChannel, server_reliable_messages::ServerReliableMessages};
+use cosmos_core::netty::{server_reliable_messages::ServerReliableMessages, NettyChannel};
 
 use crate::state::GameState;
 
@@ -17,8 +17,8 @@ fn event_listener(
         server.broadcast_message(
             NettyChannel::Reliable.id(),
             bincode::serialize(&ServerReliableMessages::PilotChange {
-                structure_entity: ev.structure_entity.clone(),
-                pilot_entity: ev.pilot_entity.clone(),
+                structure_entity: ev.structure_entity,
+                pilot_entity: ev.pilot_entity,
             })
             .unwrap(),
         );

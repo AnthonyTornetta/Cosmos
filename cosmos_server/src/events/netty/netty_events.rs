@@ -7,10 +7,10 @@ use cosmos_core::structure::ship::ship::Ship;
 use cosmos_core::structure::structure::Structure;
 use cosmos_core::{
     entities::player::Player,
-    netty::{netty::NettyChannel, netty_rigidbody::NettyRigidBody},
+    netty::{netty_rigidbody::NettyRigidBody, NettyChannel},
 };
 
-use crate::netty::netty::{ClientTicks, ServerLobby};
+use crate::netty::network_helpers::{ClientTicks, ServerLobby};
 
 fn handle_events_system(
     mut commands: Commands,
@@ -28,7 +28,7 @@ fn handle_events_system(
                 println!("Client {} connected", id);
 
                 for (entity, player, transform, velocity) in players.iter() {
-                    let body = NettyRigidBody::new(&velocity, &transform);
+                    let body = NettyRigidBody::new(velocity, transform);
 
                     let msg = bincode::serialize(&ServerReliableMessages::PlayerCreate {
                         entity,
@@ -87,7 +87,7 @@ fn handle_events_system(
                             *id,
                             NettyChannel::Reliable.id(),
                             bincode::serialize(&ServerReliableMessages::PlanetCreate {
-                                entity: entity.clone(),
+                                entity,
                                 body: NettyRigidBody::new(velocity, transform),
                                 width: structure.chunks_width(),
                                 height: structure.chunks_height(),
@@ -100,7 +100,7 @@ fn handle_events_system(
                             *id,
                             NettyChannel::Reliable.id(),
                             bincode::serialize(&ServerReliableMessages::ShipCreate {
-                                entity: entity.clone(),
+                                entity,
                                 body: NettyRigidBody::new(velocity, transform),
                                 width: structure.chunks_width(),
                                 height: structure.chunks_height(),
@@ -115,10 +115,10 @@ fn handle_events_system(
                 println!("Client {} disconnected", id);
 
                 client_ticks.ticks.remove(id);
-                if let Some(player_entity) = lobby.players.remove(&id) {
+
+                if let Some(player_entity) = lobby.players.remove(id) {
                     commands.entity(player_entity).despawn();
                 }
-
                 let message =
                     bincode::serialize(&ServerReliableMessages::PlayerRemove { id: *id }).unwrap();
 

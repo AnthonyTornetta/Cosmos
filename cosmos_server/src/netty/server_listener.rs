@@ -5,8 +5,8 @@ use cosmos_core::{
     entities::player::Player,
     netty::{
         client_reliable_messages::ClientReliableMessages,
-        client_unreliable_messages::ClientUnreliableMessages, netty::NettyChannel,
-        server_reliable_messages::ServerReliableMessages,
+        client_unreliable_messages::ClientUnreliableMessages,
+        server_reliable_messages::ServerReliableMessages, NettyChannel,
     },
     structure::{
         ship::pilot::Pilot,
@@ -20,7 +20,7 @@ use crate::events::{
     structure::ship::ShipSetMovementEvent,
 };
 
-use super::netty::ServerLobby;
+use super::network_helpers::ServerLobby;
 
 fn server_listen_messages(
     mut server: ResMut<RenetServer>,
@@ -43,8 +43,8 @@ fn server_listen_messages(
                 ClientUnreliableMessages::PlayerBody { body } => {
                     if let Some(player_entity) = lobby.players.get(&client_id) {
                         if let Ok((mut transform, mut velocity)) = players.get_mut(*player_entity) {
-                            transform.translation = body.translation.clone().into();
-                            transform.rotation = body.rotation.clone().into();
+                            transform.translation = body.translation.into();
+                            transform.rotation = body.rotation.into();
 
                             velocity.linvel = body.body_vel.linvel.into();
                             velocity.angvel = body.body_vel.angvel.into();
@@ -53,7 +53,7 @@ fn server_listen_messages(
                 }
                 ClientUnreliableMessages::SetMovement { movement } => {
                     if let Some(player_entity) = lobby.players.get(&client_id) {
-                        if let Ok(pilot) = pilot_query.get(player_entity.clone()) {
+                        if let Ok(pilot) = pilot_query.get(*player_entity) {
                             let ship = pilot.entity;
 
                             ship_movement_event_writer
@@ -70,17 +70,13 @@ fn server_listen_messages(
             match command {
                 ClientReliableMessages::PlayerDisconnect => {}
                 ClientReliableMessages::SendChunk { server_entity } => {
-                    let entity = structure_query.get(server_entity.clone());
-
-                    if entity.is_ok() {
-                        let structure = entity.unwrap();
-
+                    if let Ok(structure) = structure_query.get(server_entity) {
                         for chunk in structure.chunks() {
                             server.send_message(
                                 client_id,
                                 NettyChannel::Reliable.id(),
                                 bincode::serialize(&ServerReliableMessages::ChunkData {
-                                    structure_entity: server_entity.clone(),
+                                    structure_entity: server_entity,
                                     serialized_chunk: bincode::serialize(chunk).unwrap(),
                                 })
                                 .unwrap(),
@@ -130,21 +126,21 @@ fn server_listen_messages(
                     block_interact_event.send(BlockInteractEvent {
                         structure_entity,
                         structure_block: StructureBlock::new(x, y, z),
-                        interactor: lobby.players.get(&client_id).unwrap().clone(),
+                        interactor: *lobby.players.get(&client_id).unwrap(),
                     });
                 }
                 ClientReliableMessages::CreateShip { name: _name } => {
                     let (transform, _) = players
-                        .get(lobby.players.get(&client_id).unwrap().clone())
+                        .get(*lobby.players.get(&client_id).unwrap())
                         .unwrap();
 
-                    let mut ship_transform = transform.clone();
+                    let mut ship_transform = *transform;
                     ship_transform.translation.z += 4.0;
 
                     create_ship_event_writer.send(CreateShipEvent { ship_transform });
                 }
                 ClientReliableMessages::PilotQuery { ship_entity } => {
-                    let pilot = match pilot_query.get(ship_entity.clone()) {
+                    let pilot = match pilot_query.get(ship_entity) {
                         Ok(pilot) => Some(pilot.entity),
                         _ => None,
                     };

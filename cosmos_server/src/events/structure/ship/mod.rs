@@ -3,8 +3,8 @@ use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     events::structure::change_pilot_event::ChangePilotEvent,
     netty::{
-        netty::NettyChannel, server_reliable_messages::ServerReliableMessages,
-        server_unreliable_messages::ServerUnreliableMessages,
+        server_reliable_messages::ServerReliableMessages,
+        server_unreliable_messages::ServerUnreliableMessages, NettyChannel,
     },
     structure::ship::ship_movement::ShipMovement,
 };
@@ -22,7 +22,7 @@ fn monitor_set_movement_events(
     mut server: ResMut<RenetServer>,
 ) {
     for ev in event_reader.iter() {
-        if let Ok(mut current_movement) = query.get_mut(ev.ship.clone()) {
+        if let Ok(mut current_movement) = query.get_mut(ev.ship) {
             current_movement.set(&ev.movement);
 
             println!("Sending movement 2 clients!");
@@ -31,7 +31,7 @@ fn monitor_set_movement_events(
                 NettyChannel::Unreliable.id(),
                 bincode::serialize(&ServerUnreliableMessages::SetMovement {
                     movement: ev.movement.clone(),
-                    ship_entity: ev.ship.clone(),
+                    ship_entity: ev.ship,
                 })
                 .unwrap(),
             );
@@ -47,8 +47,8 @@ fn monitor_pilot_changes(
         server.broadcast_message(
             NettyChannel::Reliable.id(),
             bincode::serialize(&ServerReliableMessages::PilotChange {
-                structure_entity: ev.structure_entity.clone(),
-                pilot_entity: ev.pilot_entity.clone(),
+                structure_entity: ev.structure_entity,
+                pilot_entity: ev.pilot_entity,
             })
             .unwrap(),
         );

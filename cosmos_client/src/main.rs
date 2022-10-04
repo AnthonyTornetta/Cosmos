@@ -17,7 +17,7 @@ use asset::asset_loading;
 use bevy_renet::renet::RenetClient;
 use camera::camera_controller;
 use cosmos_core::netty::client_unreliable_messages::ClientUnreliableMessages;
-use cosmos_core::netty::netty::{get_local_ipaddress, NettyChannel};
+use cosmos_core::netty::{get_local_ipaddress, NettyChannel};
 use cosmos_core::structure::ship::pilot::Pilot;
 use cosmos_core::structure::ship::ship_movement::ShipMovement;
 use input::inputs::{self, CosmosInputHandler, CosmosInputs};

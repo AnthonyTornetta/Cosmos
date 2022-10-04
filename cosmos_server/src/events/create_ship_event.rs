@@ -29,7 +29,7 @@ fn event_reader(
 
         builder.insert_ship(
             &mut entity,
-            ev.ship_transform.clone(),
+            ev.ship_transform,
             Velocity::zero(),
             &mut structure,
         );

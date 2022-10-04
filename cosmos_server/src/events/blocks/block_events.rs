@@ -3,7 +3,7 @@ use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::blocks::Blocks,
     events::block_events::BlockChangedEvent,
-    netty::{netty::NettyChannel, server_reliable_messages::ServerReliableMessages},
+    netty::{server_reliable_messages::ServerReliableMessages, NettyChannel},
     structure::structure::{Structure, StructureBlock},
 };
 

@@ -8,7 +8,7 @@ use noise::NoiseFn;
 use crate::structure::planet::generation::planet_generator::check_needs_generated_system;
 use crate::{GameState, SystemSet};
 
-use super::biosphere::{TBiosphere, TGenerateChunkEvent};
+use super::{TBiosphere, TGenerateChunkEvent};
 
 #[derive(Component)]
 pub struct GrassBiosphereMarker;
@@ -65,7 +65,7 @@ pub fn generate_planet(
         let dirt = blocks.block_from_id("cosmos:dirt").unwrap();
         let stone = blocks.block_from_id("cosmos:stone").unwrap();
 
-        let mut structure = query.get_mut(ev.structure_entity.clone()).unwrap();
+        let mut structure = query.get_mut(ev.structure_entity).unwrap();
 
         let (start_x, start_y, start_z) = (
             ev.x * CHUNK_DIMENSIONS,
@@ -90,11 +90,11 @@ pub fn generate_planet(
                 for y in start_y..((start_y + CHUNK_DIMENSIONS).min(y_here)) {
                     if !structure.has_block_at(x, y, z) {
                         if grass_range.contains(&y) {
-                            structure.set_block_at(x, y, z, &grass, &blocks, None);
+                            structure.set_block_at(x, y, z, grass, &blocks, None);
                         } else if dirt_range.contains(&y) {
-                            structure.set_block_at(x, y, z, &dirt, &blocks, None);
+                            structure.set_block_at(x, y, z, dirt, &blocks, None);
                         } else if stone_range.contains(&y) {
-                            structure.set_block_at(x, y, z, &stone, &blocks, None);
+                            structure.set_block_at(x, y, z, stone, &blocks, None);
                         }
                     }
                 }
@@ -102,7 +102,7 @@ pub fn generate_planet(
         }
 
         event_writer.send(ChunkSetEvent {
-            structure_entity: ev.structure_entity.clone(),
+            structure_entity: ev.structure_entity,
             x: ev.x,
             y: ev.y,
             z: ev.z,
