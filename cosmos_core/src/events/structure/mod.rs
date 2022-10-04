@@ -1,7 +1,9 @@
-use bevy::prelude::App;
+use bevy::{ecs::schedule::StateData, prelude::App};
 
 pub mod change_pilot_event;
+pub mod ship;
 
-pub fn register(app: &mut App) {
+pub fn register<T: StateData + Clone>(app: &mut App, playing_state: T) {
     change_pilot_event::register(app);
+    ship::register(app, playing_state);
 }

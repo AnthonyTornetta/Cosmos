@@ -3,7 +3,7 @@ use bevy_rapier3d::prelude::{RigidBody, Velocity};
 
 use crate::structure::{structure::Structure, structure_builder::TStructureBuilder};
 
-use super::ship::Ship;
+use super::{ship::Ship, ship_movement::ShipMovement};
 
 pub trait TShipBuilder {
     fn insert_ship(
@@ -36,6 +36,7 @@ impl<T: TStructureBuilder> TShipBuilder for ShipBuilder<T> {
         self.structure_builder
             .insert_structure(entity, transform, velocity, structure);
 
+        entity.insert(ShipMovement::default());
         entity.insert(Ship).insert(RigidBody::Dynamic);
     }
 }

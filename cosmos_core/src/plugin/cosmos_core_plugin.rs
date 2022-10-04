@@ -95,7 +95,7 @@ impl<T: StateData + Clone> Plugin for CosmosCorePlugin<T> {
         );
         physics::register(app);
         structure::events::register(app);
-        events::register(app);
+        events::register(app, self.playing_game_state.clone());
         structure::register(
             app,
             self.post_loading_state.clone(),

@@ -1,9 +1,7 @@
 use bevy::{ecs::schedule::StateData, prelude::App};
 
-pub mod block_events;
-pub mod structure;
+pub mod pilot_change_event_listener;
 
 pub fn register<T: StateData + Clone>(app: &mut App, playing_state: T) {
-    block_events::register(app);
-    structure::register(app, playing_state);
+    pilot_change_event_listener::register(app, playing_state);
 }

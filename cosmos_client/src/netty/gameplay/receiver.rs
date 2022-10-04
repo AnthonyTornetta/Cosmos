@@ -18,6 +18,7 @@ use cosmos_core::{
 
 use crate::{
     camera::camera_controller::CameraHelper,
+    events::ship::set_ship_event::SetShipMovementEvent,
     netty::{
         flags::LocalPlayer,
         lobby::{ClientLobby, PlayerInfo},
@@ -43,6 +44,7 @@ fn client_sync_players(
     mut query_structure: Query<&mut Structure>,
     blocks: Res<Blocks>,
     mut pilot_change_event_writer: EventWriter<ChangePilotEvent>,
+    mut set_ship_movement_event: EventWriter<SetShipMovementEvent>,
 ) {
     let client_id = client.client_id();
 
@@ -85,6 +87,15 @@ fn client_sync_players(
                         println!("Entity no exist!");
                     }
                 }
+            }
+            ServerUnreliableMessages::SetMovement {
+                movement,
+                ship_entity,
+            } => {
+                set_ship_movement_event.send(SetShipMovementEvent {
+                    ship_entity,
+                    ship_movement: movement,
+                });
             }
         }
     }
@@ -282,12 +293,18 @@ fn client_sync_players(
                 structure_entity,
                 pilot_entity,
             } => {
+                println!("GOT PILOT CHANGED EVENT!");
                 pilot_change_event_writer.send(ChangePilotEvent {
                     structure_entity: network_mapping
                         .client_from_server(&structure_entity)
                         .unwrap()
                         .clone(),
-                    pilot_entity,
+                    pilot_entity: match pilot_entity {
+                        Some(ent) => {
+                            Some(network_mapping.client_from_server(&ent).unwrap().clone())
+                        }
+                        None => None,
+                    },
                 });
             }
         }

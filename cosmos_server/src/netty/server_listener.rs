@@ -17,6 +17,7 @@ use cosmos_core::{
 use crate::events::{
     blocks::block_events::{BlockBreakEvent, BlockInteractEvent, BlockPlaceEvent},
     create_ship_event::CreateShipEvent,
+    structure::ship::ShipSetMovementEvent,
 };
 
 use super::netty::ServerLobby;
@@ -30,6 +31,8 @@ fn server_listen_messages(
     mut block_interact_event: EventWriter<BlockInteractEvent>,
     mut place_block_event: EventWriter<BlockPlaceEvent>,
     mut create_ship_event_writer: EventWriter<CreateShipEvent>,
+
+    mut ship_movement_event_writer: EventWriter<ShipSetMovementEvent>,
     pilot_query: Query<&Pilot>,
 ) {
     for client_id in server.clients_id().into_iter() {
@@ -45,6 +48,16 @@ fn server_listen_messages(
 
                             velocity.linvel = body.body_vel.linvel.into();
                             velocity.angvel = body.body_vel.angvel.into();
+                        }
+                    }
+                }
+                ClientUnreliableMessages::SetMovement { movement } => {
+                    if let Some(player_entity) = lobby.players.get(&client_id) {
+                        if let Ok(pilot) = pilot_query.get(player_entity.clone()) {
+                            let ship = pilot.entity;
+
+                            ship_movement_event_writer
+                                .send(ShipSetMovementEvent { movement, ship });
                         }
                     }
                 }

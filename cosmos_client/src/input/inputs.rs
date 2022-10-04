@@ -8,6 +8,7 @@ pub enum CosmosInputs {
     SlowDown,
     MoveLeft,
     MoveRight,
+    MoveDown,
     Sprint,
 
     BreakBlock,
@@ -27,6 +28,7 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     input_handler.set_keycode(CosmosInputs::MoveRight, KeyCode::D);
     input_handler.set_keycode(CosmosInputs::SlowDown, KeyCode::LShift);
     input_handler.set_keycode(CosmosInputs::MoveUpOrJump, KeyCode::Space);
+    input_handler.set_keycode(CosmosInputs::MoveDown, KeyCode::LShift);
     input_handler.set_keycode(CosmosInputs::Sprint, KeyCode::LControl);
 
     input_handler.set_mouse_button(CosmosInputs::BreakBlock, MouseButton::Left);

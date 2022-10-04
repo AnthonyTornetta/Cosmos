@@ -14,11 +14,14 @@ pub mod window;
 use std::env;
 
 use asset::asset_loading;
+use bevy_renet::renet::RenetClient;
 use camera::camera_controller;
-use cosmos_core::netty::netty::get_local_ipaddress;
+use cosmos_core::netty::client_unreliable_messages::ClientUnreliableMessages;
+use cosmos_core::netty::netty::{get_local_ipaddress, NettyChannel};
+use cosmos_core::structure::ship::pilot::Pilot;
+use cosmos_core::structure::ship::ship_movement::ShipMovement;
 use input::inputs::{self, CosmosInputHandler, CosmosInputs};
 use interactions::block_interactions;
-use iyes_loopless::prelude::AppLooplessStateExt;
 use netty::connect::{self, ConnectionConfig};
 use netty::flags::LocalPlayer;
 use netty::gameplay::{receiver, sync};
@@ -38,67 +41,105 @@ use bevy_rapier3d::prelude::{Vect, Velocity};
 use bevy_renet::RenetClientPlugin;
 use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
 
+fn process_ship_movement(
+    keys: Res<Input<KeyCode>>,
+    mouse: Res<Input<MouseButton>>,
+    input_handler: ResMut<CosmosInputHandler>,
+    query: Query<Entity, (With<LocalPlayer>, With<Pilot>)>,
+    mut client: ResMut<RenetClient>,
+) {
+    if query.get_single().is_ok() {
+        let mut movement = ShipMovement::default();
+
+        if input_handler.check_pressed(CosmosInputs::MoveForward, &keys, &mouse) {
+            movement.movement_z += 1.0;
+        }
+        if input_handler.check_pressed(CosmosInputs::MoveBackward, &keys, &mouse) {
+            movement.movement_z -= 1.0;
+        }
+        if input_handler.check_pressed(CosmosInputs::MoveUpOrJump, &keys, &mouse) {
+            movement.movement_y += 1.0;
+        }
+        if input_handler.check_pressed(CosmosInputs::MoveDown, &keys, &mouse) {
+            movement.movement_y -= 1.0;
+        }
+        if input_handler.check_pressed(CosmosInputs::MoveLeft, &keys, &mouse) {
+            movement.movement_x -= 1.0;
+        }
+        if input_handler.check_pressed(CosmosInputs::MoveRight, &keys, &mouse) {
+            movement.movement_x += 1.0;
+        }
+
+        client.send_message(
+            NettyChannel::Unreliable.id(),
+            bincode::serialize(&ClientUnreliableMessages::SetMovement { movement }).unwrap(),
+        );
+    }
+}
+
 fn process_player_movement(
     keys: Res<Input<KeyCode>>,
     mouse: Res<Input<MouseButton>>,
     time: Res<Time>,
     input_handler: ResMut<CosmosInputHandler>,
-    mut query: Query<&mut Velocity, With<LocalPlayer>>,
+    mut query: Query<&mut Velocity, (With<LocalPlayer>, Without<Pilot>)>,
     cam_query: Query<&Transform, With<Camera>>,
 ) {
-    let mut velocity = query.single_mut();
+    // This is in a loop even tho it'll only ever be one because of the without clause
+    for mut velocity in query.iter_mut() {
+        let cam_trans = cam_query.single();
 
-    let cam_trans = cam_query.single();
+        let max_speed: f32 = match input_handler.check_pressed(CosmosInputs::Sprint, &keys, &mouse)
+        {
+            false => 5.0,
+            true => 20.0,
+        };
 
-    let max_speed: f32 = match input_handler.check_pressed(CosmosInputs::Sprint, &keys, &mouse) {
-        false => 5.0,
-        true => 20.0,
-    };
+        let mut forward = cam_trans.forward().clone();
+        let mut right = cam_trans.right().clone();
+        let up = Vect::new(0.0, 1.0, 0.0);
 
-    let mut forward = cam_trans.forward().clone();
-    let mut right = cam_trans.right().clone();
-    let up = Vect::new(0.0, 1.0, 0.0);
+        forward.y = 0.0;
+        right.y = 0.0;
 
-    forward.y = 0.0;
-    right.y = 0.0;
+        forward = forward.normalize_or_zero() * 100.0;
+        right = right.normalize_or_zero() * 100.0;
 
-    forward = forward.normalize_or_zero() * 100.0;
-    right = right.normalize_or_zero() * 100.0;
+        let time = time.delta_seconds();
 
-    let time = time.delta_seconds();
-
-    if input_handler.check_pressed(CosmosInputs::MoveForward, &keys, &mouse) {
-        velocity.linvel += forward * time;
-    }
-    if input_handler.check_pressed(CosmosInputs::MoveBackward, &keys, &mouse) {
-        velocity.linvel -= forward * time;
-    }
-    if input_handler.check_just_pressed(CosmosInputs::MoveUpOrJump, &keys, &mouse) {
-        velocity.linvel += up * 5.0;
-    }
-    if input_handler.check_pressed(CosmosInputs::MoveLeft, &keys, &mouse) {
-        velocity.linvel -= right * time;
-    }
-    if input_handler.check_pressed(CosmosInputs::MoveRight, &keys, &mouse) {
-        velocity.linvel += right * time;
-    }
-    if input_handler.check_pressed(CosmosInputs::SlowDown, &keys, &mouse) {
-        let mut amt = velocity.linvel * 0.1;
-        if amt.dot(amt) > max_speed * max_speed {
-            amt = amt.normalize() * max_speed;
+        if input_handler.check_pressed(CosmosInputs::MoveForward, &keys, &mouse) {
+            velocity.linvel += forward * time;
         }
-        velocity.linvel -= amt;
+        if input_handler.check_pressed(CosmosInputs::MoveBackward, &keys, &mouse) {
+            velocity.linvel -= forward * time;
+        }
+        if input_handler.check_just_pressed(CosmosInputs::MoveUpOrJump, &keys, &mouse) {
+            velocity.linvel += up * 5.0;
+        }
+        if input_handler.check_pressed(CosmosInputs::MoveLeft, &keys, &mouse) {
+            velocity.linvel -= right * time;
+        }
+        if input_handler.check_pressed(CosmosInputs::MoveRight, &keys, &mouse) {
+            velocity.linvel += right * time;
+        }
+        if input_handler.check_pressed(CosmosInputs::SlowDown, &keys, &mouse) {
+            let mut amt = velocity.linvel * 0.1;
+            if amt.dot(amt) > max_speed * max_speed {
+                amt = amt.normalize() * max_speed;
+            }
+            velocity.linvel -= amt;
+        }
+
+        let y = velocity.linvel.y;
+
+        velocity.linvel.y = 0.0;
+
+        if velocity.linvel.dot(velocity.linvel.clone()) > max_speed * max_speed {
+            velocity.linvel = velocity.linvel.normalize() * max_speed;
+        }
+
+        velocity.linvel.y = y;
     }
-
-    let y = velocity.linvel.y;
-
-    velocity.linvel.y = 0.0;
-
-    if velocity.linvel.dot(velocity.linvel.clone()) > max_speed * max_speed {
-        velocity.linvel = velocity.linvel.normalize() * max_speed;
-    }
-
-    velocity.linvel.y = y;
 }
 
 fn create_sun(
@@ -151,11 +192,8 @@ fn main() {
         host_name: host_name.into(),
     });
 
-    // game_state::register(&mut app);
-
     app.insert_resource(ImageSettings::default_nearest()) // MUST be before default plugins!
         .add_state(GameState::PreLoading)
-        .add_loopless_state(GameState::PreLoading)
         .add_plugins(CosmosCorePluginGroup::new(
             GameState::PreLoading,
             GameState::Loading,
@@ -182,6 +220,7 @@ fn main() {
         .add_system_set(
             SystemSet::on_update(GameState::Playing)
                 .with_system(process_player_movement)
+                .with_system(process_ship_movement)
                 .with_system(monitor_block_updates_system),
         );
 
