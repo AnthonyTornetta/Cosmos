@@ -154,7 +154,7 @@ impl<'de> Deserialize<'de> for Field {
 
 struct ChunkVisitor;
 
-fn vec_into_chunk_array(blocks: &Vec<u16>) -> [u16; N_BLOCKS] {
+fn vec_into_chunk_array(blocks: &[u16]) -> [u16; N_BLOCKS] {
     let mut blocks_arr = [0; N_BLOCKS];
 
     let mut blocks_i = 1;

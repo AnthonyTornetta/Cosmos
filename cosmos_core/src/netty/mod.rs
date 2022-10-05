@@ -62,9 +62,8 @@ pub fn server_connection_config() -> RenetConnectionConfig {
 }
 
 pub fn get_local_ipaddress() -> String {
-    let ip = local_ip();
-    if ip.is_ok() {
-        ip.unwrap().to_string()
+    if let Ok(ip) = local_ip() {
+        ip.to_string()
     } else {
         "127.0.0.1".to_owned()
     }

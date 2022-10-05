@@ -190,8 +190,6 @@ fn generate_chunk_collider(chunk: &Chunk, blocks: &Res<Blocks>) -> Option<Collid
         CHUNK_DIMENSIONS,
     );
 
-    
-
     if colliders.is_empty() {
         None
     } else {
@@ -244,12 +242,13 @@ fn dew_it(
     query: &mut Query<&mut StructurePhysics>,
     event_writer: &mut EventWriter<NeedsNewPhysicsEvent>,
 ) {
-    if chunk_coords.is_some() {
-        let mut structure_physics = query.get_mut(entity).unwrap();
+    match chunk_coords {
+        Some(chunk_coords) => {
+            let mut structure_physics = query.get_mut(entity).unwrap();
 
-        structure_physics
-            .needs_changed
-            .insert(chunk_coords.unwrap());
+            structure_physics.needs_changed.insert(chunk_coords);
+        }
+        None => {}
     }
 
     if !done_structures.contains(&entity) {

@@ -23,7 +23,7 @@ fn event_listener(
                 .entity(prev_pilot.entity)
                 .remove::<Pilot>()
                 .remove::<Parent>()
-                .insert_bundle(TransformBundle::from_transform(transform.clone()));
+                .insert_bundle(TransformBundle::from_transform(*transform));
         }
 
         if let Some(entity) = ev.pilot_entity {
