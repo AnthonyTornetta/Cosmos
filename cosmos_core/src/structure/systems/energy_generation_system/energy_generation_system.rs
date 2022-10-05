@@ -67,9 +67,7 @@ fn block_update_system(
     for ev in event.iter() {
         let sys = system_query.get_mut(ev.structure_entity);
 
-        if sys.is_ok() {
-            let mut system = sys.unwrap();
-
+        if let Ok(mut system) = sys {
             if let Some(es) =
                 energy_generation_blocks.get(blocks.block_from_numeric_id(ev.old_block))
             {
@@ -105,9 +103,7 @@ fn block_update_system(
         let sys = system_query.get_mut(ev.structure_entity);
         let structure = structure_query.get(ev.structure_entity).unwrap();
 
-        if sys.is_ok() {
-            let mut system = sys.unwrap();
-
+        if let Ok(mut system) = sys {
             for z in ev.z * CHUNK_DIMENSIONS..(ev.z + 1) * CHUNK_DIMENSIONS {
                 for y in (ev.y * CHUNK_DIMENSIONS)..(ev.y + 1) * CHUNK_DIMENSIONS {
                     for x in ev.x * CHUNK_DIMENSIONS..(ev.x + 1) * CHUNK_DIMENSIONS {

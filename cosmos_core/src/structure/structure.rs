@@ -262,13 +262,15 @@ impl Structure {
             return;
         }
 
-        if self.self_entity.is_some() && event_writer.is_some() {
-            event_writer.unwrap().send(BlockChangedEvent {
-                new_block: block.id(),
-                old_block,
-                structure_entity: self.self_entity.unwrap(),
-                block: StructureBlock::new(x, y, z),
-            });
+        if let Some(self_entity) = self.self_entity {
+            if let Some(event_writer) = event_writer {
+                event_writer.send(BlockChangedEvent {
+                    new_block: block.id(),
+                    old_block,
+                    structure_entity: self_entity,
+                    block: StructureBlock::new(x, y, z),
+                });
+            }
         }
 
         self.mut_chunk_at_block_coordinates(x, y, z).set_block_at(

@@ -79,11 +79,7 @@ fn block_update_system(
     structure_query: Query<&Structure>,
 ) {
     for ev in event.iter() {
-        let sys = system_query.get_mut(ev.structure_entity);
-
-        if sys.is_ok() {
-            let mut system = sys.unwrap();
-
+        if let Ok(mut system) = system_query.get_mut(ev.structure_entity) {
             if let Some(es) = energy_storage_blocks.get(blocks.block_from_numeric_id(ev.old_block))
             {
                 system.energy_consumption -= es.energy_consupmtion;
@@ -116,12 +112,9 @@ fn block_update_system(
 
     // ChunkSetEvents should not overwrite existing blocks, so no need to check for that
     for ev in chunk_set_event.iter() {
-        let sys = system_query.get_mut(ev.structure_entity);
         let structure = structure_query.get(ev.structure_entity).unwrap();
 
-        if sys.is_ok() {
-            let mut system = sys.unwrap();
-
+        if let Ok(mut system) = system_query.get_mut(ev.structure_entity) {
             for z in ev.z * CHUNK_DIMENSIONS..(ev.z + 1) * CHUNK_DIMENSIONS {
                 for y in (ev.y * CHUNK_DIMENSIONS)..(ev.y + 1) * CHUNK_DIMENSIONS {
                     for x in ev.x * CHUNK_DIMENSIONS..(ev.x + 1) * CHUNK_DIMENSIONS {

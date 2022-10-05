@@ -242,13 +242,10 @@ fn dew_it(
     query: &mut Query<&mut StructurePhysics>,
     event_writer: &mut EventWriter<NeedsNewPhysicsEvent>,
 ) {
-    match chunk_coords {
-        Some(chunk_coords) => {
-            let mut structure_physics = query.get_mut(entity).unwrap();
+    if let Some(chunk_coords) = chunk_coords {
+        let mut structure_physics = query.get_mut(entity).unwrap();
 
-            structure_physics.needs_changed.insert(chunk_coords);
-        }
-        None => {}
+        structure_physics.needs_changed.insert(chunk_coords);
     }
 
     if !done_structures.contains(&entity) {

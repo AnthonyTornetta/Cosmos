@@ -212,7 +212,7 @@ impl<'de> Visitor<'de> for ChunkVisitor {
         let mut x = None;
         let mut y = None;
         let mut z = None;
-        let mut blocks = None;
+        let mut blocks: Option<Vec<u16>> = None;
         while let Some(key) = map.next_key()? {
             match key {
                 Field::X => {
