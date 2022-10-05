@@ -1,9 +1,10 @@
-use crate::block::block::{Block, BlockFace, BlockProperty};
 use crate::block::block_builder::BlockBuilder;
 use crate::loader::{AddLoadingEvent, DoneLoadingEvent, LoadingManager};
 use bevy::ecs::schedule::StateData;
 use bevy::prelude::{App, Commands, EventWriter, ResMut, SystemSet};
 use bevy::utils::HashMap;
+
+use super::{Block, BlockFace, BlockProperty};
 
 #[derive(Default)]
 pub struct Blocks {

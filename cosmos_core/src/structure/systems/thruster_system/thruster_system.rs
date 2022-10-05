@@ -12,7 +12,7 @@ use bevy_rapier3d::prelude::ExternalImpulse;
 use iyes_loopless::prelude::*;
 
 use crate::{
-    block::{block::Block, blocks::Blocks},
+    block::{blocks::Blocks, Block},
     events::block_events::BlockChangedEvent,
     structure::{
         chunk::CHUNK_DIMENSIONS, events::ChunkSetEvent, ship::ship_movement::ShipMovement,

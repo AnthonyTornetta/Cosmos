@@ -7,7 +7,7 @@ use bevy_inspector_egui::{Inspectable, RegisterInspectable};
 use iyes_loopless::prelude::*;
 
 use crate::{
-    block::{block::Block, blocks::Blocks},
+    block::{blocks::Blocks, Block},
     events::block_events::BlockChangedEvent,
     structure::{chunk::CHUNK_DIMENSIONS, events::ChunkSetEvent, structure::Structure},
 };

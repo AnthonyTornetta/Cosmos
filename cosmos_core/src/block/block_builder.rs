@@ -1,4 +1,4 @@
-use crate::block::block::{Block, BlockFace, BlockProperty};
+use crate::block::{Block, BlockFace, BlockProperty};
 
 pub struct BlockBuilder {
     uvs: [usize; 6],

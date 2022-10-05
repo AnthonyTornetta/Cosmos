@@ -1,5 +1,5 @@
-use crate::block::block::Block;
 use crate::block::blocks::{Blocks, AIR_BLOCK_ID};
+use crate::block::Block;
 use crate::events::block_events::BlockChangedEvent;
 use crate::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
 use crate::utils::array_utils::flatten;
@@ -127,8 +127,7 @@ impl Structure {
 
     pub fn chunk_entity(&self, cx: usize, cy: usize, cz: usize) -> Entity {
         // If this fails, that means the chunk entity ids were not set before being used
-        self.chunk_entities[flatten(cx, cy, cz, self.width, self.height)]
-            .unwrap()
+        self.chunk_entities[flatten(cx, cy, cz, self.width, self.height)].unwrap()
     }
 
     pub fn set_chunk_entity(&mut self, cx: usize, cy: usize, cz: usize, entity: Entity) {

@@ -1,5 +1,5 @@
-use crate::block::block::Block;
 use crate::block::blocks::{Blocks, AIR_BLOCK_ID};
+use crate::block::Block;
 use bevy::prelude::Res;
 use serde::de;
 use serde::de::Error;
