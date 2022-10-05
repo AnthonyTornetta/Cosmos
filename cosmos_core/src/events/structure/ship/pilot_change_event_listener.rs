@@ -1,9 +1,9 @@
 use bevy::ecs::schedule::StateData;
 use bevy::prelude::{
-    App, BuildChildren, Commands, EventReader, Parent, Query, SystemSet, Transform,
+    App, BuildChildren, Commands, EventReader, Parent, Quat, Query, SystemSet, Transform, Vec3,
 };
 use bevy::transform::TransformBundle;
-use bevy_rapier3d::prelude::Collider;
+use bevy_rapier3d::prelude::{Collider, RigidBody, Sensor};
 
 use crate::events::structure::change_pilot_event::ChangePilotEvent;
 use crate::structure::ship::pilot::Pilot;
@@ -17,13 +17,23 @@ fn event_listener(
     for ev in event_reader.iter() {
         // Make sure there is no other player thinking they are the pilot of this ship
         if let Ok(prev_pilot) = pilot_query.get(ev.structure_entity) {
-            let transform = transform_query.get(ev.structure_entity).unwrap();
+            let mut transform = transform_query.get(ev.structure_entity).unwrap().clone();
+
+            commands
+                .entity(ev.structure_entity)
+                .remove_children(&[prev_pilot.entity])
+                .remove::<Pilot>();
+
+            transform.rotation = Quat::IDENTITY;
+            transform.scale = Vec3::ONE;
 
             commands
                 .entity(prev_pilot.entity)
                 .remove::<Pilot>()
                 .remove::<Parent>()
-                .insert_bundle(TransformBundle::from_transform(*transform));
+                .remove::<Sensor>()
+                .insert(RigidBody::Dynamic)
+                .insert_bundle(TransformBundle::from_transform(transform));
         }
 
         if let Some(entity) = ev.pilot_entity {
@@ -37,7 +47,8 @@ fn event_listener(
                 .insert(Pilot {
                     entity: ev.structure_entity,
                 })
-                .remove::<Collider>()
+                .insert(Sensor)
+                .insert(RigidBody::Fixed)
                 .insert_bundle(TransformBundle::from_transform(Transform::from_xyz(
                     0.0, 0.0, 0.0,
                 )));

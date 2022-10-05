@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     entities::player::Player,
+    events::structure::change_pilot_event::ChangePilotEvent,
     netty::{
         client_reliable_messages::ClientReliableMessages,
         client_unreliable_messages::ClientUnreliableMessages,
@@ -34,6 +35,7 @@ fn server_listen_messages(
     mut create_ship_event_writer: EventWriter<CreateShipEvent>,
 
     mut ship_movement_event_writer: EventWriter<ShipSetMovementEvent>,
+    mut pilot_change_event_writer: EventWriter<ChangePilotEvent>,
     pilot_query: Query<&Pilot>,
 ) {
     for client_id in server.clients_id().into_iter() {
@@ -155,6 +157,16 @@ fn server_listen_messages(
                         })
                         .unwrap(),
                     );
+                }
+                ClientReliableMessages::StopPiloting => {
+                    if let Some(player_entity) = lobby.players.get(&client_id) {
+                        if let Ok(piloting) = pilot_query.get(*player_entity) {
+                            pilot_change_event_writer.send(ChangePilotEvent {
+                                structure_entity: piloting.entity,
+                                pilot_entity: None,
+                            });
+                        }
+                    }
                 }
             }
         }

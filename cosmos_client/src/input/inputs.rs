@@ -11,6 +11,8 @@ pub enum CosmosInputs {
     MoveDown,
     Sprint,
 
+    StopPiloting,
+
     BreakBlock,
     PlaceBlock,
     Interact,
@@ -34,6 +36,7 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     input_handler.set_mouse_button(CosmosInputs::BreakBlock, MouseButton::Left);
     input_handler.set_mouse_button(CosmosInputs::PlaceBlock, MouseButton::Right);
     input_handler.set_keycode(CosmosInputs::Interact, KeyCode::R);
+    input_handler.set_keycode(CosmosInputs::StopPiloting, KeyCode::R);
 
     input_handler.set_keycode(CosmosInputs::CreateShip, KeyCode::X);
 

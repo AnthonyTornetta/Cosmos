@@ -13,9 +13,9 @@ pub mod window;
 
 use std::env;
 
-use asset::asset_loading;
 use bevy_renet::renet::RenetClient;
 use camera::camera_controller;
+use cosmos_core::netty::client_reliable_messages::ClientReliableMessages;
 use cosmos_core::netty::client_unreliable_messages::ClientUnreliableMessages;
 use cosmos_core::netty::{get_local_ipaddress, NettyChannel};
 use cosmos_core::structure::ship::pilot::Pilot;
@@ -70,6 +70,12 @@ fn process_ship_movement(
             movement.movement_x -= 1.0;
         }
 
+        if input_handler.check_just_pressed(CosmosInputs::StopPiloting, &keys, &mouse) {
+            client.send_message(
+                NettyChannel::Reliable.id(),
+                bincode::serialize(&ClientReliableMessages::StopPiloting).unwrap(),
+            );
+        }
         client.send_message(
             NettyChannel::Unreliable.id(),
             bincode::serialize(&ClientUnreliableMessages::SetMovement { movement }).unwrap(),
@@ -226,7 +232,7 @@ fn main() {
 
     inputs::register(&mut app);
     window::setup::register(&mut app);
-    asset_loading::register(&mut app);
+    asset::register(&mut app);
     events::register(&mut app);
     block_interactions::register(&mut app);
     chunk_retreiver::register(&mut app);

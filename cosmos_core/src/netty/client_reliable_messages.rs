@@ -32,4 +32,5 @@ pub enum ClientReliableMessages {
     PilotQuery {
         ship_entity: Entity,
     },
+    StopPiloting,
 }
