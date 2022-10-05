@@ -25,8 +25,6 @@ fn monitor_set_movement_events(
         if let Ok(mut current_movement) = query.get_mut(ev.ship) {
             current_movement.set(&ev.movement);
 
-            println!("Sending movement 2 clients!");
-
             server.broadcast_message(
                 NettyChannel::Unreliable.id(),
                 bincode::serialize(&ServerUnreliableMessages::SetMovement {

@@ -62,7 +62,7 @@ fn monitor_loading<T: StateData + Clone>(
     }
 
     for ev in event_done_reader.iter() {
-        loading_status.done_loading(ev.loading_id.clone());
+        loading_status.done_loading(ev.loading_id);
     }
 
     if loading_status.done {
@@ -99,7 +99,7 @@ impl<T: StateData + Clone> LoadingStatus<T> {
     fn done_loading(&mut self, id: usize) {
         self.loaders.remove(&id);
 
-        if self.loaders.len() == 0 {
+        if self.loaders.is_empty() {
             self.done = true;
         }
     }

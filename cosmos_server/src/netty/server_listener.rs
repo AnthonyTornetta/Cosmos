@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     entities::player::Player,
@@ -23,9 +22,11 @@ use crate::events::{
 use super::network_helpers::ServerLobby;
 
 fn server_listen_messages(
+    mut commands: Commands,
     mut server: ResMut<RenetServer>,
     lobby: ResMut<ServerLobby>,
-    mut players: Query<(&mut Transform, &mut Velocity), With<Player>>,
+    players: Query<Entity, With<Player>>,
+    transform_query: Query<&Transform>,
     structure_query: Query<&Structure>,
     mut break_block_event: EventWriter<BlockBreakEvent>,
     mut block_interact_event: EventWriter<BlockInteractEvent>,
@@ -42,12 +43,12 @@ fn server_listen_messages(
             match command {
                 ClientUnreliableMessages::PlayerBody { body } => {
                     if let Some(player_entity) = lobby.players.get(&client_id) {
-                        if let Ok((mut transform, mut velocity)) = players.get_mut(*player_entity) {
-                            transform.translation = body.translation.into();
-                            transform.rotation = body.rotation.into();
-
-                            velocity.linvel = body.body_vel.linvel.into();
-                            velocity.angvel = body.body_vel.angvel.into();
+                        if let Ok(entity) = players.get(*player_entity) {
+                            commands
+                                .entity(entity)
+                                .insert_bundle(TransformBundle::from_transform(
+                                    body.create_transform(),
+                                ));
                         }
                     }
                 }
@@ -130,7 +131,7 @@ fn server_listen_messages(
                     });
                 }
                 ClientReliableMessages::CreateShip { name: _name } => {
-                    let (transform, _) = players
+                    let transform = transform_query
                         .get(*lobby.players.get(&client_id).unwrap())
                         .unwrap();
 

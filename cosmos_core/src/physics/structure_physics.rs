@@ -53,7 +53,7 @@ impl StructurePhysics {
                     structure.chunk_from_chunk_coordinates(c.x, c.y, c.z),
                     blocks,
                 ),
-                chunk_coords: c.clone(),
+                chunk_coords: *c,
             });
         }
 
@@ -190,13 +190,13 @@ fn generate_chunk_collider(chunk: &Chunk, blocks: &Res<Blocks>) -> Option<Collid
         CHUNK_DIMENSIONS,
     );
 
-    let res = if colliders.is_empty() {
+    
+
+    if colliders.is_empty() {
         None
     } else {
         Some(Collider::compound(colliders))
-    };
-
-    res
+    }
 }
 
 pub struct NeedsNewPhysicsEvent {
@@ -209,7 +209,7 @@ fn listen_for_new_physics_event(
     mut query: Query<(&Structure, &mut StructurePhysics)>,
     blocks: Res<Blocks>,
 ) {
-    if event.len() != 0 {
+    if !event.is_empty() {
         let mut done_structures = HashSet::new();
 
         for ev in event.iter() {

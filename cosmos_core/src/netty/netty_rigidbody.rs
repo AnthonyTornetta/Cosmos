@@ -14,24 +14,24 @@ pub struct NettyRigidBody {
 impl NettyRigidBody {
     pub fn new(body_vel: &Velocity, transform: &Transform) -> Self {
         Self {
-            body_vel: RigidBodyVelocity::new(body_vel.linvel.clone().into(), body_vel.angvel.clone().into()),
-            translation: transform.translation.clone().into(),
-            rotation: transform.rotation.clone().into()
+            body_vel: RigidBodyVelocity::new(body_vel.linvel.into(), body_vel.angvel.into()),
+            translation: transform.translation.into(),
+            rotation: transform.rotation.into()
         }
     }
 
     pub fn create_transform(&self) -> Transform {
         Transform {
-            rotation: self.rotation.clone().into(),
-            translation: self.translation.clone().into(),
+            rotation: self.rotation.into(),
+            translation: self.translation.into(),
             scale: Vec3::new(1.0, 1.0, 1.0)
         }
     }
 
     pub fn create_velocity(&self) -> Velocity {
         Velocity {
-            angvel: self.body_vel.angvel.clone().into(),
-            linvel: self.body_vel.linvel.clone().into()
+            angvel: self.body_vel.angvel.into(),
+            linvel: self.body_vel.linvel.into()
         }
     }
 }

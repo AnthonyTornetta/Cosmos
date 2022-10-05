@@ -65,7 +65,7 @@ fn block_update_system(
     structure_query: Query<&Structure>,
 ) {
     for ev in event.iter() {
-        let sys = system_query.get_mut(ev.structure_entity.clone());
+        let sys = system_query.get_mut(ev.structure_entity);
 
         if sys.is_ok() {
             let mut system = sys.unwrap();
@@ -96,7 +96,7 @@ fn block_update_system(
                 system.generation_rate += es.generation_rate;
             }
 
-            commands.entity(ev.structure_entity.clone()).insert(system);
+            commands.entity(ev.structure_entity).insert(system);
         }
     }
 
@@ -140,7 +140,7 @@ fn block_update_system(
                 }
             }
 
-            commands.entity(ev.structure_entity.clone()).insert(system);
+            commands.entity(ev.structure_entity).insert(system);
         }
     }
 }
@@ -161,6 +161,6 @@ pub fn register<T: StateData + Clone>(app: &mut App, post_loading_state: T, play
             CoreStage::PostUpdate,
             block_update_system.run_in_bevy_state(playing_state.clone()),
         )
-        .add_system_set(SystemSet::on_update(playing_state.clone()).with_system(update_energy))
+        .add_system_set(SystemSet::on_update(playing_state).with_system(update_energy))
         .register_inspectable::<EnergyGenerationSystem>();
 }

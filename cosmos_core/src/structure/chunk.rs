@@ -111,7 +111,7 @@ impl Serialize for Chunk {
     }
 }
 
-static FIELDS: &'static [&'static str] = &["x", "y", "z", "blocks"];
+static FIELDS: &[&str] = &["x", "y", "z", "blocks"];
 
 enum Field {
     X,
@@ -160,21 +160,13 @@ fn vec_into_chunk_array(blocks: &Vec<u16>) -> [u16; N_BLOCKS] {
     let mut blocks_i = 1;
     let mut n = blocks[0];
 
-    let mut xi = 0;
-    let mut sum = 0;
-    for x in blocks {
-        if xi % 2 == 0 {
-            sum += x;
-        }
-        xi += 1;
-    }
-
-    for i in 0..N_BLOCKS {
+    for block in blocks_arr.iter_mut().take(N_BLOCKS) {
         if n == 0 {
             n = blocks[blocks_i + 1];
             blocks_i += 2;
         }
-        blocks_arr[i] = blocks[blocks_i].clone();
+
+        *block = blocks[blocks_i];
         n -= 1;
     }
 

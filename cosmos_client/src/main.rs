@@ -64,10 +64,10 @@ fn process_ship_movement(
             movement.movement_y -= 1.0;
         }
         if input_handler.check_pressed(CosmosInputs::MoveLeft, &keys, &mouse) {
-            movement.movement_x -= 1.0;
+            movement.movement_x += 1.0;
         }
         if input_handler.check_pressed(CosmosInputs::MoveRight, &keys, &mouse) {
-            movement.movement_x += 1.0;
+            movement.movement_x -= 1.0;
         }
 
         client.send_message(

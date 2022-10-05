@@ -2,6 +2,7 @@ use bevy::{
     ecs::schedule::StateData,
     prelude::{
         App, Commands, Component, CoreStage, Entity, EventReader, Query, Res, ResMut, SystemSet,
+        Transform,
     },
     time::Time,
     utils::HashMap,
@@ -78,7 +79,7 @@ fn block_update_system(
     structure_query: Query<&Structure>,
 ) {
     for ev in event.iter() {
-        let sys = system_query.get_mut(ev.structure_entity.clone());
+        let sys = system_query.get_mut(ev.structure_entity);
 
         if sys.is_ok() {
             let mut system = sys.unwrap();
@@ -109,7 +110,7 @@ fn block_update_system(
                 system.thrust_total += es.strength;
             }
 
-            commands.entity(ev.structure_entity.clone()).insert(system);
+            commands.entity(ev.structure_entity).insert(system);
         }
     }
 
@@ -157,7 +158,7 @@ fn block_update_system(
                 }
             }
 
-            commands.entity(ev.structure_entity.clone()).insert(system);
+            commands.entity(ev.structure_entity).insert(system);
         }
     }
 }
@@ -169,20 +170,22 @@ fn update_movement(
         &ShipMovement,
         &ThrusterSystem,
         &mut EnergyStorageSystem,
+        &Transform,
     )>,
     time: Res<Time>,
 ) {
-    for (entity, movement, thruster_system, mut energy_system) in query.iter_mut() {
+    for (entity, movement, thruster_system, mut energy_system, transform) in query.iter_mut() {
         let normal = movement.into_normal_vector();
-
-        println!(
-            "Applying movement {} {} {} !",
-            movement.movement_x, movement.movement_y, movement.movement_z
-        );
 
         if normal.x == 0.0 && normal.y == 0.0 && normal.z == 0.0 {
             return;
         }
+
+        let mut movement_vector = transform.forward() * normal.z;
+        movement_vector += transform.right() * normal.x;
+        movement_vector += transform.up() * normal.y;
+
+        movement_vector = movement_vector.normalize();
 
         let delta = time.delta_seconds();
 
@@ -199,7 +202,7 @@ fn update_movement(
         energy_system.decrease_energy(energy_used);
 
         commands.entity(entity).insert(ExternalImpulse {
-            impulse: normal * (thruster_system.thrust_total * ratio),
+            impulse: movement_vector * (thruster_system.thrust_total * ratio),
             ..Default::default()
         });
     }
@@ -214,6 +217,6 @@ pub fn register<T: StateData + Clone>(app: &mut App, post_loading_state: T, play
             CoreStage::PostUpdate,
             block_update_system.run_in_bevy_state(playing_state.clone()),
         )
-        .add_system_set(SystemSet::on_update(playing_state.clone()).with_system(update_movement))
+        .add_system_set(SystemSet::on_update(playing_state).with_system(update_movement))
         .register_inspectable::<ThrusterSystem>();
 }

@@ -129,11 +129,10 @@ impl Structure {
         // If this fails, that means the chunk entity ids were not set before being used
         self.chunk_entities[flatten(cx, cy, cz, self.width, self.height)]
             .unwrap()
-            .clone()
     }
 
     pub fn set_chunk_entity(&mut self, cx: usize, cy: usize, cz: usize, entity: Entity) {
-        if self.chunk_entities.len() == 0 {
+        if self.chunk_entities.is_empty() {
             for _ in 0..(self.width * self.height * self.length) {
                 self.chunk_entities.push(None);
             }
@@ -146,7 +145,7 @@ impl Structure {
     }
 
     pub fn get_entity(&self) -> Option<Entity> {
-        self.self_entity.clone()
+        self.self_entity
     }
 
     /// (0, 0, 0) => chunk @ 0, 0, 0\
@@ -217,7 +216,7 @@ impl Structure {
             }
             return Err(true);
         }
-        return Err(false);
+        Err(false)
     }
 
     pub fn block_at(&self, x: usize, y: usize, z: usize) -> u16 {
@@ -268,7 +267,7 @@ impl Structure {
             event_writer.unwrap().send(BlockChangedEvent {
                 new_block: block.id(),
                 old_block,
-                structure_entity: self.self_entity.unwrap().clone(),
+                structure_entity: self.self_entity.unwrap(),
                 block: StructureBlock::new(x, y, z),
             });
         }

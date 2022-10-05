@@ -2,7 +2,7 @@ use bevy::prelude::{
     App, EventReader, EventWriter, Input, KeyCode, MouseButton, Res, ResMut, SystemSet,
 };
 use bevy_renet::renet::RenetClient;
-use cosmos_core::netty::{client_reliable_messages::ClientReliableMessages, netty::NettyChannel};
+use cosmos_core::netty::{client_reliable_messages::ClientReliableMessages, NettyChannel};
 
 use crate::{
     input::inputs::{CosmosInputHandler, CosmosInputs},

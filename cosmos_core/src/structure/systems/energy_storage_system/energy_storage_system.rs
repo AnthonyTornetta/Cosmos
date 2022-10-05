@@ -75,7 +75,7 @@ fn block_update_system(
     structure_query: Query<&Structure>,
 ) {
     for ev in event.iter() {
-        let sys = system_query.get_mut(ev.structure_entity.clone());
+        let sys = system_query.get_mut(ev.structure_entity);
 
         if sys.is_ok() {
             let mut system = sys.unwrap();
@@ -102,7 +102,7 @@ fn block_update_system(
                 system.capacity += es.capacity;
             }
 
-            commands.entity(ev.structure_entity.clone()).insert(system);
+            commands.entity(ev.structure_entity).insert(system);
         }
     }
 
@@ -146,7 +146,7 @@ fn block_update_system(
                 }
             }
 
-            commands.entity(ev.structure_entity.clone()).insert(system);
+            commands.entity(ev.structure_entity).insert(system);
         }
     }
 }
@@ -156,7 +156,7 @@ pub fn register<T: StateData + Clone>(app: &mut App, post_loading_state: T, play
         .add_system_set(SystemSet::on_enter(post_loading_state).with_system(register_energy_blocks))
         .add_system_to_stage(
             CoreStage::PostUpdate,
-            block_update_system.run_in_bevy_state(playing_state.clone()),
+            block_update_system.run_in_bevy_state(playing_state),
         )
         .register_inspectable::<EnergyStorageSystem>();
 }

@@ -6,9 +6,9 @@ use cosmos_core::{
     entities::player::Player,
     events::{block_events::BlockChangedEvent, structure::change_pilot_event::ChangePilotEvent},
     netty::{
-        client_reliable_messages::ClientReliableMessages, netty::*,
+        client_reliable_messages::ClientReliableMessages,
         server_reliable_messages::ServerReliableMessages,
-        server_unreliable_messages::ServerUnreliableMessages,
+        server_unreliable_messages::ServerUnreliableMessages, NettyChannel,
     },
     structure::{
         chunk::Chunk, events::ChunkSetEvent, planet::planet_builder::TPlanetBuilder,

@@ -4,8 +4,8 @@ use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     entities::player::Player,
     netty::{
-        client_unreliable_messages::ClientUnreliableMessages, netty::NettyChannel,
-        netty_rigidbody::NettyRigidBody,
+        client_unreliable_messages::ClientUnreliableMessages, netty_rigidbody::NettyRigidBody,
+        NettyChannel,
     },
 };
 
