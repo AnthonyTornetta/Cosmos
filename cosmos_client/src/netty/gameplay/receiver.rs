@@ -11,8 +11,11 @@ use cosmos_core::{
         server_unreliable_messages::ServerUnreliableMessages, NettyChannel,
     },
     structure::{
-        chunk::Chunk, events::ChunkSetEvent, planet::planet_builder::TPlanetBuilder,
-        ship::ship_builder::TShipBuilder, structure::Structure,
+        chunk::Chunk,
+        events::ChunkSetEvent,
+        planet::planet_builder::TPlanetBuilder,
+        ship::{pilot::Pilot, ship_builder::TShipBuilder},
+        structure::Structure,
     },
 };
 
@@ -29,6 +32,7 @@ use crate::{
         planet::client_planet_builder::ClientPlanetBuilder,
         ship::client_ship_builder::ClientShipBuilder,
     },
+    ui::crosshair::CrosshairOffset,
 };
 
 fn client_sync_players(
@@ -45,6 +49,9 @@ fn client_sync_players(
     blocks: Res<Blocks>,
     mut pilot_change_event_writer: EventWriter<ChangePilotEvent>,
     mut set_ship_movement_event: EventWriter<SetShipMovementEvent>,
+    pilot_query: Query<&Pilot>,
+    local_player_query: Query<&LocalPlayer>,
+    mut crosshair_offset: ResMut<CrosshairOffset>,
 ) {
     let client_id = client.client_id();
 
@@ -77,6 +84,25 @@ fn client_sync_players(
                             query_body.get_mut(*entity).unwrap();
 
                         if local.is_none() {
+                            if let Ok(pilot) = pilot_query.get(*entity) {
+                                if local_player_query.get(pilot.entity.clone()).is_ok() {
+                                    // if let Some(delta) =
+                                    //     body.rotation.right_div(&transform.rotation.clone().into())
+                                    // {
+                                    //     let q: Quat = delta.into();
+                                    //     let moved = q.inverse().mul_vec3(Vec3::new(
+                                    //         crosshair_offset.x,
+                                    //         crosshair_offset.y,
+                                    //         0.0,
+                                    //     ));
+
+                                    //     dbg!(moved);
+
+                                    //     crosshair_offset.x = moved.x;
+                                    //     crosshair_offset.y = moved.y;
+                                    // }
+                                }
+                            }
                             transform.translation = body.translation.into();
                             transform.rotation = body.rotation.into();
 
@@ -293,7 +319,6 @@ fn client_sync_players(
                 structure_entity,
                 pilot_entity,
             } => {
-                println!("GOT PILOT CHANGED EVENT!");
                 pilot_change_event_writer.send(ChangePilotEvent {
                     structure_entity: network_mapping
                         .client_from_server(&structure_entity)

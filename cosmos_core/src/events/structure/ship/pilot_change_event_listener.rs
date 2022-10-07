@@ -3,7 +3,7 @@ use bevy::prelude::{
     App, BuildChildren, Commands, EventReader, Parent, Quat, Query, SystemSet, Transform, Vec3,
 };
 use bevy::transform::TransformBundle;
-use bevy_rapier3d::prelude::{Collider, RigidBody, Sensor};
+use bevy_rapier3d::prelude::{RigidBody, Sensor};
 
 use crate::events::structure::change_pilot_event::ChangePilotEvent;
 use crate::structure::ship::pilot::Pilot;

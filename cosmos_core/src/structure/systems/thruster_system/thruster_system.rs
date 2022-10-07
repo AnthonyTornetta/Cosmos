@@ -8,7 +8,7 @@ use bevy::{
     utils::HashMap,
 };
 use bevy_inspector_egui::{Inspectable, RegisterInspectable};
-use bevy_rapier3d::prelude::ExternalImpulse;
+use bevy_rapier3d::prelude::{ExternalImpulse, Velocity};
 use iyes_loopless::prelude::*;
 
 use crate::{
@@ -164,14 +164,21 @@ fn update_movement(
         &ThrusterSystem,
         &mut EnergyStorageSystem,
         &Transform,
+        &mut Velocity,
     )>,
     time: Res<Time>,
 ) {
-    for (entity, movement, thruster_system, mut energy_system, transform) in query.iter_mut() {
+    for (entity, movement, thruster_system, mut energy_system, transform, mut velocity) in
+        query.iter_mut()
+    {
         let normal = movement.into_normal_vector();
 
+        velocity.angvel += transform.rotation.mul_vec3(movement.torque.clone());
+
+        velocity.angvel = velocity.angvel.clamp_length(0.0, 0.3);
+
         if normal.x == 0.0 && normal.y == 0.0 && normal.z == 0.0 {
-            return;
+            continue;
         }
 
         let mut movement_vector = transform.forward() * normal.z;

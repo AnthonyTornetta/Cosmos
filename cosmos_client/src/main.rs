@@ -12,9 +12,11 @@ pub mod ui;
 pub mod window;
 
 use std::env;
+use std::f32::consts::PI;
 
 use bevy_renet::renet::RenetClient;
 use camera::camera_controller;
+use cosmos_core::events::structure::change_pilot_event::ChangePilotEvent;
 use cosmos_core::netty::client_reliable_messages::ClientReliableMessages;
 use cosmos_core::netty::client_unreliable_messages::ClientUnreliableMessages;
 use cosmos_core::netty::{get_local_ipaddress, NettyChannel};
@@ -29,7 +31,8 @@ use netty::mapping::NetworkMapping;
 use rendering::structure_renderer;
 use state::game_state::GameState;
 use structure::chunk_retreiver;
-use ui::crosshair;
+use ui::crosshair::{self, CrosshairOffset};
+use window::setup::DeltaCursorPosition;
 
 use crate::plugin::client_plugin::ClientPluginGroup;
 use crate::rendering::structure_renderer::monitor_block_updates_system;
@@ -47,27 +50,30 @@ fn process_ship_movement(
     input_handler: ResMut<CosmosInputHandler>,
     query: Query<Entity, (With<LocalPlayer>, With<Pilot>)>,
     mut client: ResMut<RenetClient>,
+    mut crosshair_offset: ResMut<CrosshairOffset>,
+    cursor_delta_position: Res<DeltaCursorPosition>,
+    wnd: Res<Windows>,
 ) {
     if query.get_single().is_ok() {
         let mut movement = ShipMovement::default();
 
         if input_handler.check_pressed(CosmosInputs::MoveForward, &keys, &mouse) {
-            movement.movement_z += 1.0;
+            movement.movement.z += 1.0;
         }
         if input_handler.check_pressed(CosmosInputs::MoveBackward, &keys, &mouse) {
-            movement.movement_z -= 1.0;
+            movement.movement.z -= 1.0;
         }
         if input_handler.check_pressed(CosmosInputs::MoveUpOrJump, &keys, &mouse) {
-            movement.movement_y += 1.0;
+            movement.movement.y += 1.0;
         }
         if input_handler.check_pressed(CosmosInputs::MoveDown, &keys, &mouse) {
-            movement.movement_y -= 1.0;
+            movement.movement.y -= 1.0;
         }
         if input_handler.check_pressed(CosmosInputs::MoveLeft, &keys, &mouse) {
-            movement.movement_x += 1.0;
+            movement.movement.x -= 1.0;
         }
         if input_handler.check_pressed(CosmosInputs::MoveRight, &keys, &mouse) {
-            movement.movement_x -= 1.0;
+            movement.movement.x += 1.0;
         }
 
         if input_handler.check_just_pressed(CosmosInputs::StopPiloting, &keys, &mouse) {
@@ -76,10 +82,46 @@ fn process_ship_movement(
                 bincode::serialize(&ClientReliableMessages::StopPiloting).unwrap(),
             );
         }
+
+        let w = wnd.primary();
+        let hw = w.width() as f32 / 2.0;
+        let hh = w.height() as f32 / 2.0;
+        let p2 = PI / 2.0;
+
+        crosshair_offset.x += cursor_delta_position.x;
+        crosshair_offset.y += cursor_delta_position.y;
+
+        movement.torque = Vec3::new(
+            crosshair_offset.y / hh * p2,
+            -crosshair_offset.x / hw * p2,
+            0.0,
+        );
+
         client.send_message(
             NettyChannel::Unreliable.id(),
             bincode::serialize(&ClientUnreliableMessages::SetMovement { movement }).unwrap(),
         );
+    }
+}
+
+fn reset_cursor(
+    mut event_reader: EventReader<ChangePilotEvent>,
+    query: Query<&LocalPlayer>,
+    pilot_query: Query<&Pilot>,
+    mut crosshair_position: ResMut<CrosshairOffset>,
+) {
+    for ev in event_reader.iter() {
+        if let Some(pilot) = ev.pilot_entity {
+            if query.get(pilot).is_ok() {
+                crosshair_position.x = 0.0;
+                crosshair_position.y = 0.0;
+            }
+        } else if let Ok(pilot) = pilot_query.get(ev.structure_entity) {
+            if query.get(pilot.entity).is_ok() {
+                crosshair_position.x = 0.0;
+                crosshair_position.y = 0.0;
+            }
+        }
     }
 }
 
@@ -227,7 +269,8 @@ fn main() {
             SystemSet::on_update(GameState::Playing)
                 .with_system(process_player_movement)
                 .with_system(process_ship_movement)
-                .with_system(monitor_block_updates_system),
+                .with_system(monitor_block_updates_system)
+                .with_system(reset_cursor),
         );
 
     inputs::register(&mut app);
