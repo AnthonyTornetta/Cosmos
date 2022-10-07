@@ -86,6 +86,13 @@ fn client_sync_players(
                         if local.is_none() {
                             if let Ok(pilot) = pilot_query.get(*entity) {
                                 if local_player_query.get(pilot.entity.clone()).is_ok() {
+                                    let bevy_quat: Quat = body.rotation.clone().into();
+                                    let forward = bevy_quat.mul_vec3(Vec3::new(0.0, 0.0, -1.0));
+
+                                    let delta_forward = transform.forward() - forward;
+
+                                    dbg!(delta_forward);
+
                                     // if let Some(delta) =
                                     //     body.rotation.right_div(&transform.rotation.clone().into())
                                     // {
