@@ -49,7 +49,7 @@ fn update_cursor_pos(pos: Res<CrosshairOffset>, mut query: Query<&mut Style, Wit
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct CrosshairOffset {
     pub x: f32,
     pub y: f32,

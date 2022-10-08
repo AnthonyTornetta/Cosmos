@@ -16,6 +16,7 @@ use std::f32::consts::PI;
 
 use bevy_renet::renet::RenetClient;
 use camera::camera_controller;
+use cosmos_core::entities::player::Player;
 use cosmos_core::events::structure::change_pilot_event::ChangePilotEvent;
 use cosmos_core::netty::client_reliable_messages::ClientReliableMessages;
 use cosmos_core::netty::client_unreliable_messages::ClientUnreliableMessages;
@@ -122,6 +123,15 @@ fn reset_cursor(
                 crosshair_position.y = 0.0;
             }
         }
+    }
+}
+
+fn sync_pilot_to_ship(mut query: Query<&mut Transform, (With<Player>, With<Pilot>)>) {
+    for mut trans in query.iter_mut() {
+        trans.translation.x = 0.0;
+        trans.translation.y = 0.0;
+        trans.translation.z = 0.0;
+        trans.rotation = Quat::IDENTITY;
     }
 }
 
@@ -270,7 +280,8 @@ fn main() {
                 .with_system(process_player_movement)
                 .with_system(process_ship_movement)
                 .with_system(monitor_block_updates_system)
-                .with_system(reset_cursor),
+                .with_system(reset_cursor)
+                .with_system(sync_pilot_to_ship),
         );
 
     inputs::register(&mut app);

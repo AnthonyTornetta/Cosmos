@@ -1,4 +1,4 @@
-use bevy::{prelude::*, render::camera::Projection};
+use bevy::{ecs::query, prelude::*, render::camera::Projection};
 use bevy_rapier3d::prelude::*;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
@@ -14,7 +14,7 @@ use cosmos_core::{
         chunk::Chunk,
         events::ChunkSetEvent,
         planet::planet_builder::TPlanetBuilder,
-        ship::{pilot::Pilot, ship_builder::TShipBuilder},
+        ship::{pilot::Pilot, ship::Ship, ship_builder::TShipBuilder},
         structure::Structure,
     },
 };
@@ -35,6 +35,48 @@ use crate::{
     ui::crosshair::CrosshairOffset,
 };
 
+#[derive(Component)]
+struct LastRotation(Quat);
+
+fn insert_last_rotation(mut commands: Commands, query: Query<Entity, Added<Structure>>) {
+    for ent in query.iter() {
+        commands.entity(ent).insert(LastRotation(Quat::IDENTITY));
+    }
+}
+
+fn update_crosshair(
+    mut query: Query<(&Pilot, &mut LastRotation, &Transform), (With<Ship>, Changed<Transform>)>,
+    local_player_query: Query<Entity, With<LocalPlayer>>,
+    camera_query: Query<(Entity, &Camera)>,
+    transform_query: Query<&GlobalTransform>,
+    mut crosshair_offset: ResMut<CrosshairOffset>,
+    windows: Res<Windows>,
+) {
+    for (pilot, mut last_rotation, transform) in query.iter_mut() {
+        if local_player_query.get(pilot.entity.clone()).is_ok() {
+            // let (cam, global) = cam_query.get_single().unwrap();
+
+            let (cam_entity, camera) = camera_query.get_single().unwrap();
+
+            let cam_global = transform_query.get(cam_entity).unwrap();
+
+            let primary = windows.get_primary().unwrap();
+
+            if let Some(mut pos_on_screen) = camera.world_to_viewport(
+                cam_global,
+                last_rotation.0.mul_vec3(Vec3::new(0.0, 0.0, -1.0)) + cam_global.translation(),
+            ) {
+                pos_on_screen -= Vec2::new(primary.width() / 2.0, primary.height() / 2.0);
+
+                crosshair_offset.x += pos_on_screen.x;
+                crosshair_offset.y += pos_on_screen.y;
+            }
+
+            last_rotation.0 = transform.rotation.clone();
+        }
+    }
+}
+
 fn client_sync_players(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -49,9 +91,6 @@ fn client_sync_players(
     blocks: Res<Blocks>,
     mut pilot_change_event_writer: EventWriter<ChangePilotEvent>,
     mut set_ship_movement_event: EventWriter<SetShipMovementEvent>,
-    pilot_query: Query<&Pilot>,
-    local_player_query: Query<&LocalPlayer>,
-    mut crosshair_offset: ResMut<CrosshairOffset>,
 ) {
     let client_id = client.client_id();
 
@@ -84,32 +123,6 @@ fn client_sync_players(
                             query_body.get_mut(*entity).unwrap();
 
                         if local.is_none() {
-                            if let Ok(pilot) = pilot_query.get(*entity) {
-                                if local_player_query.get(pilot.entity.clone()).is_ok() {
-                                    let bevy_quat: Quat = body.rotation.clone().into();
-                                    let forward = bevy_quat.mul_vec3(Vec3::new(0.0, 0.0, -1.0));
-
-                                    let delta_forward = transform.forward() - forward;
-
-                                    dbg!(delta_forward);
-
-                                    // if let Some(delta) =
-                                    //     body.rotation.right_div(&transform.rotation.clone().into())
-                                    // {
-                                    //     let q: Quat = delta.into();
-                                    //     let moved = q.inverse().mul_vec3(Vec3::new(
-                                    //         crosshair_offset.x,
-                                    //         crosshair_offset.y,
-                                    //         0.0,
-                                    //     ));
-
-                                    //     dbg!(moved);
-
-                                    //     crosshair_offset.x = moved.x;
-                                    //     crosshair_offset.y = moved.y;
-                                    // }
-                                }
-                            }
                             transform.translation = body.translation.into();
                             transform.rotation = body.rotation.into();
 
@@ -347,5 +360,10 @@ pub fn register(app: &mut App) {
     app.add_system_set(
         SystemSet::on_update(GameState::LoadingWorld).with_system(client_sync_players),
     )
-    .add_system_set(SystemSet::on_update(GameState::Playing).with_system(client_sync_players));
+    .add_system_set(
+        SystemSet::on_update(GameState::Playing)
+            .with_system(client_sync_players)
+            .with_system(update_crosshair)
+            .with_system(insert_last_rotation),
+    );
 }
