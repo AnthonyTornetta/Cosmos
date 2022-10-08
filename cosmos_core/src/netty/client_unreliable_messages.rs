@@ -1,4 +1,4 @@
-use bevy::prelude::{Component, Vec2};
+use bevy::prelude::Component;
 use serde::{Deserialize, Serialize};
 
 use crate::structure::ship::ship_movement::ShipMovement;

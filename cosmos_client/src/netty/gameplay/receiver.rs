@@ -1,4 +1,4 @@
-use bevy::{ecs::query, prelude::*, render::camera::Projection};
+use bevy::{prelude::*, render::camera::Projection};
 use bevy_rapier3d::prelude::*;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{

@@ -6,8 +6,6 @@ use cosmos_core::loader::{AddLoadingEvent, DoneLoadingEvent, LoadingManager};
 
 use crate::{rendering::uv_mapper::UVMapper, state::game_state::GameState};
 
-use super::shaders::ArrayTextureMaterial;
-
 enum AtlasName {
     Main,
 }
