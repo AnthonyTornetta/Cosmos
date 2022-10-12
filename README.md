@@ -71,16 +71,6 @@ Cosmos, but in rust
     - [x] Faster movement based on # of thrusters
     - [x] Faster rotation based on # of thrusters
     - [x] More energy consumption per thruster
-    
-  
-## Everything that will still have to be done after 0.0.2a
-- [ ] Align body with structure
-  - [ ] Switches to FPS Camera
-  - [ ] Aligns the player to that structure
-  - [ ] Left control
-  - [ ] De-align, switch back to free camera
-    - [ ] Create free camera
-- [ ] Ship systems
   - [ ] Camera system
     - [ ] Camera block
     - [ ] Use left/right to switch between ship cameras
@@ -90,6 +80,18 @@ Cosmos, but in rust
       - [ ] Can be placed in lines to create more powerful lasers
     - [ ] Click lmb/hold to fire the laser
       - [ ] The laser is on a cooldown
+  - Ship hull block
+- [ ] Ability to place more than one block
+  - [ ] Way of select which block
+  - [ ] Selectable blocks include: Thruster, Energy Cell, Laser Cannon, Ship Hull, Stone
+  
+## Everything that will still have to be done after 0.0.2a
+- [ ] Align body with structure
+  - [ ] Switches to FPS Camera
+  - [ ] Aligns the player to that structure
+  - [ ] Left control
+  - [ ] De-align, switch back to free camera
+    - [ ] Create free camera
   - [ ] Mining beam system
     - [ ] Mining beam block
       - [ ] Can be placed in line to create more powerful miners

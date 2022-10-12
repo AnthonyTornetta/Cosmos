@@ -1,4 +1,4 @@
-use bevy::{ecs::schedule::StateData, prelude::App};
+use bevy::{ecs::schedule::StateData, prelude::*};
 
 pub mod energy_generation_system;
 pub mod energy_storage_system;

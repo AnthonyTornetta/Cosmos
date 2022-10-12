@@ -22,6 +22,7 @@ pub struct Structure {
     length: usize,
 }
 
+#[derive(Clone)]
 pub struct StructureBlock {
     x: usize,
     y: usize,

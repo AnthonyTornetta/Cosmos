@@ -132,6 +132,14 @@ pub fn add_cosmos_blocks(
             .create(),
     );
 
+    blocks.register_block(
+        BlockBuilder::new("cosmos:laser_cannon".to_owned(), 0.1)
+            .add_property(BlockProperty::Opaque)
+            .add_property(BlockProperty::Full)
+            .set_all_uvs(0)
+            .create(),
+    );
+
     loading.finish_loading(id, &mut end_writer);
 }
 
