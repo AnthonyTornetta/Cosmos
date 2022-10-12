@@ -47,30 +47,30 @@ Cosmos, but in rust
     - [x] Block resource loaded in PreLoading state
     - [x] Blocks loaded in Loading state
     - [x] Systems loaded in PostLoading state
-- [ ] Ability to pilot Ship
-  - [ ] Mouse movements steer ship around center of mass
-  - [ ] Standard movement controls mapped to ship acceleration
-  - [ ] Interact with ship core to enter piloting mode, press interact button again to exit
-  - [ ] Create max ship speed
+- [x] Ability to pilot Ship
+  - [x] Mouse movements steer ship around ship core
+  - [x] Standard movement controls mapped to ship acceleration
+  - [x] Interact with ship core to enter piloting mode, press interact button again to exit
+  - [x] Create max ship speed
 - [ ] Ship core
   - [ ] Once destroyed, the entire ship enters meltdown, becoming minable by mining beams and will be destroyed after a set amount of time
   - [ ] Interact with this block to pilot the ship
-  - [ ] Create block
+  - [x] Create block
 - [ ] Localized planetary gravity
   - [ ] All entities near planet's radius are subject to its gravity towards its relative downward vector
     - [ ] The gravitational pull should scale inversely exponentially the farther the distance from a certain threshold (most likely the highest chunk) then remain constant past that point
 - [x] Ship systems
-  - [ ] Energy system
-    - [ ] Energy producer block
-    - [ ] Energy storage block
+  - [x] Energy system
+    - [x] Energy producer block
+    - [x] Energy storage block
     - [x] Energy storage system
-    - [ ] Energy generation system
-  - [ ] Thruster system
+    - [x] Energy generation system
+  - [x] Thruster system
   - [ ] Thruster block
-  - [ ] Allows the ship to move + rotate
-    - [ ] Faster movement based on # of thrusters
+  - [x] Allows the ship to move + rotate
+    - [x] Faster movement based on # of thrusters
     - [ ] Faster rotation based on # of thrusters
-    - [ ] More energy consumption per thruster
+    - [x] More energy consumption per thruster
     
   
 ## Everything that will still have to be done after 0.0.2a

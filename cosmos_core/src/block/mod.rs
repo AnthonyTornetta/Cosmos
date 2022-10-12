@@ -60,6 +60,7 @@ pub struct Block {
     id: u16,
     unlocalized_name: String,
     uvs: [usize; 6],
+    density: f32,
 }
 
 impl Block {
@@ -68,31 +69,38 @@ impl Block {
         uvs: [usize; 6],
         id: u16,
         unlocalized_name: String,
+        density: f32,
     ) -> Self {
         Self {
             visibility: BlockProperty::create_id(properties),
             id,
             uvs,
             unlocalized_name,
+            density,
         }
     }
 
+    #[inline]
     pub fn is_see_through(&self) -> bool {
         self.is_transparent() || !self.is_full()
     }
 
+    #[inline]
     pub fn is_transparent(&self) -> bool {
         self.visibility & BlockProperty::Transparent.id() != 0
     }
 
+    #[inline]
     pub fn is_full(&self) -> bool {
         self.visibility & BlockProperty::Full.id() != 0
     }
 
+    #[inline]
     pub fn is_empty(&self) -> bool {
         self.visibility & BlockProperty::Empty.id() != 0
     }
 
+    #[inline]
     pub fn id(&self) -> u16 {
         self.id
     }
@@ -102,12 +110,19 @@ impl Block {
         self.id = id;
     }
 
+    #[inline]
     pub fn uv_index_for_side(&self, face: BlockFace) -> usize {
         self.uvs[face.index()]
     }
 
+    #[inline]
     pub fn unlocalized_name(&self) -> &String {
         &self.unlocalized_name
+    }
+
+    #[inline]
+    pub fn density(&self) -> f32 {
+        self.density
     }
 }
 

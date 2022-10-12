@@ -57,11 +57,11 @@ impl EnergyStorageSystem {
 
 fn register_energy_blocks(blocks: Res<Blocks>, mut storage: ResMut<EnergyStorageBlocks>) {
     if let Some(block) = blocks.block_from_id("cosmos:energy_cell") {
-        storage.insert(block, EnergyStorageProperty { capacity: 1000.0 });
+        storage.insert(block, EnergyStorageProperty { capacity: 10000.0 });
     }
 
     if let Some(block) = blocks.block_from_id("cosmos:ship_core") {
-        storage.insert(block, EnergyStorageProperty { capacity: 5000.0 })
+        storage.insert(block, EnergyStorageProperty { capacity: 1000.0 })
     }
 }
 

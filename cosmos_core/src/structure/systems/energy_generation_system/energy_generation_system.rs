@@ -40,7 +40,7 @@ fn register_energy_blocks(blocks: Res<Blocks>, mut generation: ResMut<EnergyGene
         generation.insert(
             block,
             EnergyGenerationProperty {
-                generation_rate: 100.0,
+                generation_rate: 1000.0,
             },
         );
     }

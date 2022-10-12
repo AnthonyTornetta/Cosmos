@@ -53,7 +53,7 @@ pub fn add_blocks_resource(
 
     // Game will break without air & needs this at ID 0
     blocks.register_block(
-        BlockBuilder::new("cosmos:air".into())
+        BlockBuilder::new("cosmos:air".into(), 0.0)
             .add_property(BlockProperty::Transparent)
             .add_property(BlockProperty::Empty)
             .create(),
@@ -73,7 +73,7 @@ pub fn add_cosmos_blocks(
     let id = loading.register_loader(&mut start_writer);
 
     blocks.register_block(
-        BlockBuilder::new("cosmos:stone".into())
+        BlockBuilder::new("cosmos:stone".into(), 1.0)
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .set_all_uvs(2)
@@ -81,7 +81,7 @@ pub fn add_cosmos_blocks(
     );
 
     blocks.register_block(
-        BlockBuilder::new("cosmos:grass".into())
+        BlockBuilder::new("cosmos:grass".into(), 0.3)
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .set_all_uvs(4)
@@ -91,7 +91,7 @@ pub fn add_cosmos_blocks(
     );
 
     blocks.register_block(
-        BlockBuilder::new("cosmos:dirt".into())
+        BlockBuilder::new("cosmos:dirt".into(), 0.3)
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .set_all_uvs(3)
@@ -99,14 +99,14 @@ pub fn add_cosmos_blocks(
     );
 
     blocks.register_block(
-        BlockBuilder::new("cosmos:cherry_leaf".into())
+        BlockBuilder::new("cosmos:cherry_leaf".into(), 0.01)
             .add_property(BlockProperty::Transparent)
             .set_all_uvs(35)
             .create(),
     );
 
     blocks.register_block(
-        BlockBuilder::new("cosmos:cherry_log".into())
+        BlockBuilder::new("cosmos:cherry_log".into(), 0.3)
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .set_all_uvs(34)
@@ -116,7 +116,7 @@ pub fn add_cosmos_blocks(
     );
 
     blocks.register_block(
-        BlockBuilder::new("cosmos:ship_core".into())
+        BlockBuilder::new("cosmos:ship_core".into(), 0.1)
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .add_property(BlockProperty::ShipOnly)
@@ -125,7 +125,7 @@ pub fn add_cosmos_blocks(
     );
 
     blocks.register_block(
-        BlockBuilder::new("cosmos:energy_cell".to_owned())
+        BlockBuilder::new("cosmos:energy_cell".to_owned(), 0.1)
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .set_all_uvs(0)

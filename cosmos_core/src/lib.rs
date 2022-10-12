@@ -7,6 +7,7 @@ pub mod physics;
 pub mod plugin;
 pub mod structure;
 pub mod utils;
+pub mod items;
 
 #[cfg(test)]
 mod tests {

@@ -4,12 +4,13 @@ use crate::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
 use crate::structure::events::ChunkSetEvent;
 use crate::structure::structure::Structure;
 use bevy::prelude::{
-    App, Commands, Component, CoreStage, Entity, EventReader, EventWriter, Query, Res,
+    App, Commands, Component, CoreStage, Entity, EventReader, EventWriter, Query, Res, Vec3,
 };
 use bevy::utils::HashSet;
 use bevy_rapier3d::math::Vect;
 use bevy_rapier3d::na::Vector3;
 use bevy_rapier3d::prelude::{Collider, Rot};
+use bevy_rapier3d::rapier::prelude::ColliderMassProps;
 
 pub struct ChunkPhysicsModel {
     pub collider: Option<Collider>,
@@ -70,12 +71,33 @@ fn generate_colliders(
     location: Vect,
     offset: Vector3<usize>,
     size: usize,
+    density: &mut f32,
+    com_divisor: &mut f32,
+    com_vec: &mut Vec3,
 ) {
     let mut last_seen_empty = None;
+
+    let mut temp_com_vec = Vec3::new(0.0, 0.0, 0.0);
+    let mut temp_com_divisor = 0.0;
+    let mut temp_density = 0.0;
+
+    let half_size = CHUNK_DIMENSIONS as f32 / 2.0;
+
     for z in offset.z..(offset.z + size) {
         for y in offset.y..(offset.y + size) {
             for x in offset.x..(offset.x + size) {
                 let b = blocks.block_from_numeric_id(chunk.block_at(x, y, z));
+
+                temp_density += b.density();
+
+                let mass = b.density(); // 1*1*1*density = density
+
+                temp_com_vec.x += mass * ((x - offset.x) as f32 - half_size);
+                temp_com_vec.y += mass * ((y - offset.y) as f32 - half_size);
+                temp_com_vec.z += mass * ((z - offset.z) as f32 - half_size);
+
+                temp_com_divisor += mass;
+
                 if last_seen_empty.is_none() {
                     last_seen_empty = Some(b.is_empty());
                 } else if last_seen_empty.unwrap() != b.is_empty() {
@@ -90,6 +112,9 @@ fn generate_colliders(
                         Vect::new(location.x - s4, location.y - s4, location.z - s4),
                         Vector3::new(offset.x, offset.y, offset.z),
                         s2,
+                        density,
+                        com_divisor,
+                        com_vec,
                     );
 
                     // right bottom back
@@ -100,6 +125,9 @@ fn generate_colliders(
                         Vect::new(location.x + s4, location.y - s4, location.z - s4),
                         Vector3::new(offset.x + s2, offset.y, offset.z),
                         s2,
+                        density,
+                        com_divisor,
+                        com_vec,
                     );
 
                     // left top back
@@ -110,6 +138,9 @@ fn generate_colliders(
                         Vect::new(location.x - s4, location.y + s4, location.z - s4),
                         Vector3::new(offset.x, offset.y + s2, offset.z),
                         s2,
+                        density,
+                        com_divisor,
+                        com_vec,
                     );
 
                     // left bottom front
@@ -120,6 +151,9 @@ fn generate_colliders(
                         Vect::new(location.x - s4, location.y - s4, location.z + s4),
                         Vector3::new(offset.x, offset.y, offset.z + s2),
                         s2,
+                        density,
+                        com_divisor,
+                        com_vec,
                     );
 
                     // right bottom front
@@ -130,6 +164,9 @@ fn generate_colliders(
                         Vect::new(location.x + s4, location.y - s4, location.z + s4),
                         Vector3::new(offset.x + s2, offset.y, offset.z + s2),
                         s2,
+                        density,
+                        com_divisor,
+                        com_vec,
                     );
 
                     // left top front
@@ -140,6 +177,9 @@ fn generate_colliders(
                         Vect::new(location.x - s4, location.y + s4, location.z + s4),
                         Vector3::new(offset.x, offset.y + s2, offset.z + s2),
                         s2,
+                        density,
+                        com_divisor,
+                        com_vec,
                     );
 
                     // right top front
@@ -150,6 +190,9 @@ fn generate_colliders(
                         Vect::new(location.x + s4, location.y + s4, location.z + s4),
                         Vector3::new(offset.x + s2, offset.y + s2, offset.z + s2),
                         s2,
+                        density,
+                        com_divisor,
+                        com_vec,
                     );
 
                     // right top back
@@ -160,6 +203,9 @@ fn generate_colliders(
                         Vect::new(location.x + s4, location.y + s4, location.z - s4),
                         Vector3::new(offset.x + s2, offset.y + s2, offset.z),
                         s2,
+                        density,
+                        com_divisor,
+                        com_vec,
                     );
                     return;
                 }
@@ -170,12 +216,20 @@ fn generate_colliders(
     if !last_seen_empty.unwrap() {
         let s2 = size as f32 / 2.0;
 
+        *density += temp_density;
+        *com_divisor += temp_com_divisor;
+        *com_vec += temp_com_vec;
+
         colliders.push((location, Rot::IDENTITY, Collider::cuboid(s2, s2, s2)));
     }
 }
 
 fn generate_chunk_collider(chunk: &Chunk, blocks: &Res<Blocks>) -> Option<Collider> {
     let mut colliders: Vec<(Vect, Rot, Collider)> = Vec::new();
+
+    let mut center_of_mass = Vec3::new(0.0, 0.0, 0.0);
+    let mut divisor: f32 = 0.0;
+    let mut density: f32 = 0.0;
 
     generate_colliders(
         chunk,
@@ -188,7 +242,16 @@ fn generate_chunk_collider(chunk: &Chunk, blocks: &Res<Blocks>) -> Option<Collid
         ),
         Vector3::new(0, 0, 0),
         CHUNK_DIMENSIONS,
+        &mut density,
+        &mut divisor,
+        &mut center_of_mass,
     );
+
+    if divisor != 0.0 {
+        center_of_mass.x /= divisor;
+        center_of_mass.y /= divisor;
+        center_of_mass.z /= divisor;
+    }
 
     if colliders.is_empty() {
         None
