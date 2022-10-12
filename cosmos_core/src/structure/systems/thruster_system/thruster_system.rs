@@ -186,8 +186,9 @@ fn update_movement(
     {
         let normal = movement.into_normal_vector();
         // velocity.angvel += transform.rotation.mul_vec3(movement.torque.clone());
-        velocity.angvel +=
-            transform.rotation.mul_vec3(movement.torque.clone()) / mass_props.0.principal_inertia;
+        velocity.angvel += transform.rotation.mul_vec3(movement.torque.clone())
+            / mass_props.0.principal_inertia
+            * thruster_system.thrust_total;
         // This is horrible, please find something better
         velocity.angvel = velocity
             .angvel

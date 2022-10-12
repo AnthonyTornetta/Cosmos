@@ -62,14 +62,14 @@ Cosmos, but in rust
 - [x] Ship systems
   - [x] Energy system
     - [x] Energy producer block
-    - [x] Energy storage block
+    - [ ] Energy storage block
     - [x] Energy storage system
-    - [x] Energy generation system
+    - [ ] Energy generation system
   - [x] Thruster system
   - [ ] Thruster block
   - [x] Allows the ship to move + rotate
     - [x] Faster movement based on # of thrusters
-    - [ ] Faster rotation based on # of thrusters
+    - [x] Faster rotation based on # of thrusters
     - [x] More energy consumption per thruster
     
   
