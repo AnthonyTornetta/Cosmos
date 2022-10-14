@@ -1,3 +1,5 @@
+use std::f32::consts::PI;
+
 use crate::block::blocks::{Blocks, AIR_BLOCK_ID};
 use crate::block::Block;
 use crate::events::block_events::BlockChangedEvent;
@@ -72,10 +74,21 @@ impl Structure {
     pub fn new(width: usize, height: usize, length: usize, self_entity: Entity) -> Self {
         let mut chunks = Vec::with_capacity(width * height * length);
 
+        let dz = 2.0 * PI / (length as f32);
+        let dx = 2.0 * PI / width as f32;
+
         for z in 0..length {
             for y in 0..height {
                 for x in 0..width {
-                    chunks.push(Chunk::new(x, y, z));
+                    chunks.push(Chunk::new(
+                        x,
+                        y,
+                        z,
+                        x as f32 * dx,
+                        (x + 1) as f32 * dx,
+                        z as f32 * dz,
+                        (z + 1) as f32 * dz,
+                    ));
                 }
             }
         }

@@ -15,15 +15,31 @@ pub struct Chunk {
     x: usize,
     y: usize,
     z: usize,
+    angle_start_x: f32,
+    angle_end_x: f32,
+    angle_start_z: f32,
+    angle_end_z: f32,
     blocks: [u16; N_BLOCKS],
 }
 
 impl Chunk {
-    pub fn new(x: usize, y: usize, z: usize) -> Self {
+    pub fn new(
+        x: usize,
+        y: usize,
+        z: usize,
+        angle_start_x: f32,
+        angle_end_x: f32,
+        angle_start_z: f32,
+        angle_end_z: f32,
+    ) -> Self {
         Self {
             x,
             y,
             z,
+            angle_start_x,
+            angle_end_x,
+            angle_start_z,
+            angle_end_z,
             blocks: [0; N_BLOCKS],
         }
     }
@@ -72,6 +88,20 @@ impl Chunk {
             .block_from_numeric_id(self.block_at(x, y, z))
             .is_full()
     }
+
+    pub fn angle_start_x(&self) -> f32 {
+        self.angle_start_x
+    }
+    pub fn angle_end_x(&self) -> f32 {
+        self.angle_end_x
+    }
+
+    pub fn angle_start_z(&self) -> f32 {
+        self.angle_start_z
+    }
+    pub fn angle_end_z(&self) -> f32 {
+        self.angle_end_z
+    }
 }
 
 impl Serialize for Chunk {
@@ -106,17 +136,34 @@ impl Serialize for Chunk {
         s.serialize_field("x", &self.x)?;
         s.serialize_field("y", &self.y)?;
         s.serialize_field("z", &self.z)?;
+        s.serialize_field("angle_start_x", &self.angle_start_x)?;
+        s.serialize_field("angle_end_x", &self.angle_end_x)?;
+        s.serialize_field("angle_start_z", &self.angle_start_z)?;
+        s.serialize_field("angle_end_z", &self.angle_end_z)?;
         s.serialize_field("blocks", &chunk_data)?;
         s.end()
     }
 }
 
-static FIELDS: &[&str] = &["x", "y", "z", "blocks"];
+static FIELDS: &[&str] = &[
+    "x",
+    "y",
+    "z",
+    "angle_start_x",
+    "angle_end_x",
+    "angle_start_z",
+    "angle_end_z",
+    "blocks",
+];
 
 enum Field {
     X,
     Y,
     Z,
+    AngleStartX,
+    AngleEndX,
+    AngleStartZ,
+    AngleEndZ,
     Blocks,
 }
 
@@ -137,6 +184,10 @@ impl<'de> Visitor<'de> for FieldVisitor {
             "x" => Ok(Field::X),
             "y" => Ok(Field::Y),
             "z" => Ok(Field::Z),
+            "angle_start_x" => Ok(Field::AngleStartX),
+            "angle_end_x" => Ok(Field::AngleEndX),
+            "angle_start_z" => Ok(Field::AngleStartZ),
+            "angle_end_z" => Ok(Field::AngleEndZ),
             "blocks" => Ok(Field::Blocks),
             _ => Err(de::Error::unknown_field(value, FIELDS)),
         }
@@ -193,14 +244,30 @@ impl<'de> Visitor<'de> for ChunkVisitor {
         let z = seq
             .next_element()?
             .ok_or_else(|| A::Error::invalid_length(2, &self))?;
-        let blocks: Vec<u16> = seq
+        let angle_start_x = seq
             .next_element()?
             .ok_or_else(|| A::Error::invalid_length(3, &self))?;
+        let angle_end_x = seq
+            .next_element()?
+            .ok_or_else(|| A::Error::invalid_length(4, &self))?;
+        let angle_start_z = seq
+            .next_element()?
+            .ok_or_else(|| A::Error::invalid_length(5, &self))?;
+        let angle_end_z = seq
+            .next_element()?
+            .ok_or_else(|| A::Error::invalid_length(6, &self))?;
+        let blocks: Vec<u16> = seq
+            .next_element()?
+            .ok_or_else(|| A::Error::invalid_length(7, &self))?;
 
         Ok(Chunk {
             x,
             y,
             z,
+            angle_start_x,
+            angle_end_x,
+            angle_start_z,
+            angle_end_z,
             blocks: vec_into_chunk_array(&blocks),
         })
     }
@@ -212,6 +279,10 @@ impl<'de> Visitor<'de> for ChunkVisitor {
         let mut x = None;
         let mut y = None;
         let mut z = None;
+        let mut angle_start_x = None;
+        let mut angle_end_x = None;
+        let mut angle_start_z = None;
+        let mut angle_end_z = None;
         let mut blocks: Option<Vec<u16>> = None;
         while let Some(key) = map.next_key()? {
             match key {
@@ -233,6 +304,30 @@ impl<'de> Visitor<'de> for ChunkVisitor {
                     }
                     z = Some(map.next_value()?);
                 }
+                Field::AngleStartX => {
+                    if angle_start_x.is_some() {
+                        return Err(A::Error::duplicate_field("angle_start_x"));
+                    }
+                    angle_start_x = Some(map.next_value()?);
+                }
+                Field::AngleEndX => {
+                    if angle_end_x.is_some() {
+                        return Err(A::Error::duplicate_field("angle_end_x"));
+                    }
+                    angle_end_x = Some(map.next_value()?);
+                }
+                Field::AngleStartZ => {
+                    if angle_start_z.is_some() {
+                        return Err(A::Error::duplicate_field("angle_start_z"));
+                    }
+                    angle_start_z = Some(map.next_value()?);
+                }
+                Field::AngleEndZ => {
+                    if angle_end_z.is_some() {
+                        return Err(A::Error::duplicate_field("angle_end_z"));
+                    }
+                    angle_end_z = Some(map.next_value()?);
+                }
                 Field::Blocks => {
                     if blocks.is_some() {
                         return Err(A::Error::duplicate_field("blocks"));
@@ -244,12 +339,22 @@ impl<'de> Visitor<'de> for ChunkVisitor {
         let x = x.ok_or_else(|| A::Error::missing_field("x"))?;
         let y = y.ok_or_else(|| A::Error::missing_field("y"))?;
         let z = z.ok_or_else(|| A::Error::missing_field("z"))?;
+        let angle_start_x =
+            angle_start_x.ok_or_else(|| A::Error::missing_field("angle_start_x"))?;
+        let angle_end_x = angle_end_x.ok_or_else(|| A::Error::missing_field("angle_end_x"))?;
+        let angle_start_z =
+            angle_start_z.ok_or_else(|| A::Error::missing_field("angle_start_z"))?;
+        let angle_end_z = angle_end_z.ok_or_else(|| A::Error::missing_field("angle_end_z"))?;
         let blocks = blocks.ok_or_else(|| A::Error::missing_field("blocks"))?;
 
         Ok(Chunk {
             x,
             y,
             z,
+            angle_start_x,
+            angle_end_x,
+            angle_start_z,
+            angle_end_z,
             blocks: vec_into_chunk_array(&blocks),
         })
     }

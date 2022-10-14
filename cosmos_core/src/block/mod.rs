@@ -1,4 +1,5 @@
 use bevy::{ecs::schedule::StateData, prelude::App};
+use bevy_inspector_egui::Inspectable;
 
 pub mod block_builder;
 pub mod blocks;
@@ -11,7 +12,10 @@ pub enum BlockProperty {
     ShipOnly,
 }
 
+// Default because Inspectable requires default to be implemented to work
+#[derive(Inspectable, Default, Clone, Copy)]
 pub enum BlockFace {
+    #[default]
     Front,
     Back,
     Left,

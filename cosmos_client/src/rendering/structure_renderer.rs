@@ -11,6 +11,7 @@ use cosmos_core::structure::events::ChunkSetEvent;
 use cosmos_core::structure::structure::Structure;
 use cosmos_core::utils::array_utils::flatten;
 use std::collections::HashSet;
+use std::f32::consts::PI;
 
 use crate::asset::asset_loading::MainAtlas;
 use crate::{Assets, Commands, Entity, EventWriter, Handle, Query, Res, ResMut, UVMapper};
@@ -415,10 +416,31 @@ impl ChunkRenderer {
 
         let mut last_index = 0;
 
+        let curve_per_block_x =
+            (chunk.angle_end_x() - chunk.angle_start_x()) / (CHUNK_DIMENSIONS as f32);
+        let theta_x = PI / 2.0 - curve_per_block_x;
+        let x_diff = theta_x.cos();
+
+        let curve_per_block_z =
+            (chunk.angle_end_z() - chunk.angle_start_z()) / (CHUNK_DIMENSIONS as f32);
+        let theta_z = PI / 2.0 - curve_per_block_z;
+        let z_diff = theta_z.cos();
+
         for z in 0..CHUNK_DIMENSIONS {
             for y in 0..CHUNK_DIMENSIONS {
                 for x in 0..CHUNK_DIMENSIONS {
                     if chunk.has_block_at(x, y, z) {
+                        let y_influence = (y + chunk.structure_y() * CHUNK_DIMENSIONS) as f32;
+
+                        let (bot_x, top_x, bot_y, top_y, bot_z, top_z) = (
+                            0.5 + x_diff * y_influence,
+                            0.5 + x_diff + x_diff * y_influence,
+                            0.5,
+                            0.5,
+                            0.5 + z_diff * y_influence,
+                            0.5 + z_diff + z_diff * y_influence,
+                        );
+
                         let block = blocks.block_from_numeric_id(chunk.block_at(x, y, z));
 
                         let (cx, cy, cz) = (x as f32, y as f32, z as f32);
@@ -430,10 +452,10 @@ impl ChunkRenderer {
                                 && (right.is_none()
                                     || right.unwrap().has_see_through_block_at(0, y, z, blocks)))
                         {
-                            self.positions.push([cx + 0.5, cy + -0.5, cz + -0.5]);
-                            self.positions.push([cx + 0.5, cy + 0.5, cz + -0.5]);
-                            self.positions.push([cx + 0.5, cy + 0.5, cz + 0.5]);
-                            self.positions.push([cx + 0.5, cy + -0.5, cz + 0.5]);
+                            self.positions.push([cx + bot_x, cy - bot_y, cz - bot_z]);
+                            self.positions.push([cx + top_x, cy + top_y, cz - top_z]);
+                            self.positions.push([cx + top_x, cy + top_y, cz + top_z]);
+                            self.positions.push([cx + bot_x, cy - bot_y, cz + bot_z]);
 
                             self.normals.push([1.0, 0.0, 0.0]);
                             self.normals.push([1.0, 0.0, 0.0]);
@@ -466,10 +488,10 @@ impl ChunkRenderer {
                                         blocks,
                                     )))
                         {
-                            self.positions.push([cx + -0.5, cy + -0.5, cz + 0.5]);
-                            self.positions.push([cx + -0.5, cy + 0.5, cz + 0.5]);
-                            self.positions.push([cx + -0.5, cy + 0.5, cz + -0.5]);
-                            self.positions.push([cx + -0.5, cy + -0.5, cz + -0.5]);
+                            self.positions.push([cx - bot_x, cy - bot_y, cz + bot_z]);
+                            self.positions.push([cx - top_x, cy + top_y, cz + top_z]);
+                            self.positions.push([cx - top_x, cy + top_y, cz - top_z]);
+                            self.positions.push([cx - bot_x, cy - bot_y, cz - bot_z]);
 
                             self.normals.push([-1.0, 0.0, 0.0]);
                             self.normals.push([-1.0, 0.0, 0.0]);
@@ -499,10 +521,10 @@ impl ChunkRenderer {
                                 && (top.is_none()
                                     || top.unwrap().has_see_through_block_at(x, 0, z, blocks)))
                         {
-                            self.positions.push([cx + 0.5, cy + 0.5, cz + -0.5]);
-                            self.positions.push([cx + -0.5, cy + 0.5, cz + -0.5]);
-                            self.positions.push([cx + -0.5, cy + 0.5, cz + 0.5]);
-                            self.positions.push([cx + 0.5, cy + 0.5, cz + 0.5]);
+                            self.positions.push([cx + top_x, cy + top_y, cz - top_z]);
+                            self.positions.push([cx - top_x, cy + top_y, cz - top_z]);
+                            self.positions.push([cx - top_x, cy + top_y, cz + top_z]);
+                            self.positions.push([cx + top_x, cy + top_y, cz + top_z]);
 
                             self.normals.push([0.0, 1.0, 0.0]);
                             self.normals.push([0.0, 1.0, 0.0]);
@@ -535,10 +557,10 @@ impl ChunkRenderer {
                                         blocks,
                                     )))
                         {
-                            self.positions.push([cx + 0.5, cy + -0.5, cz + 0.5]);
-                            self.positions.push([cx + -0.5, cy + -0.5, cz + 0.5]);
-                            self.positions.push([cx + -0.5, cy + -0.5, cz + -0.5]);
-                            self.positions.push([cx + 0.5, cy + -0.5, cz + -0.5]);
+                            self.positions.push([cx + bot_x, cy - bot_y, cz + bot_z]);
+                            self.positions.push([cx - bot_x, cy - bot_y, cz + bot_z]);
+                            self.positions.push([cx - bot_x, cy - bot_y, cz - bot_z]);
+                            self.positions.push([cx + bot_x, cy - bot_y, cz - bot_z]);
 
                             self.normals.push([0.0, -1.0, 0.0]);
                             self.normals.push([0.0, -1.0, 0.0]);
@@ -568,10 +590,10 @@ impl ChunkRenderer {
                                 && (front.is_none()
                                     || front.unwrap().has_see_through_block_at(x, y, 0, blocks)))
                         {
-                            self.positions.push([cx + -0.5, cy + -0.5, cz + 0.5]);
-                            self.positions.push([cx + 0.5, cy + -0.5, cz + 0.5]);
-                            self.positions.push([cx + 0.5, cy + 0.5, cz + 0.5]);
-                            self.positions.push([cx + -0.5, cy + 0.5, cz + 0.5]);
+                            self.positions.push([cx - bot_x, cy - bot_y, cz + bot_z]);
+                            self.positions.push([cx + bot_x, cy - bot_y, cz + bot_z]);
+                            self.positions.push([cx + top_x, cy + top_y, cz + top_z]);
+                            self.positions.push([cx - top_x, cy + top_y, cz + top_z]);
 
                             self.normals.push([0.0, 0.0, 1.0]);
                             self.normals.push([0.0, 0.0, 1.0]);
@@ -604,10 +626,10 @@ impl ChunkRenderer {
                                         blocks,
                                     )))
                         {
-                            self.positions.push([cx + -0.5, cy + 0.5, cz + -0.5]);
-                            self.positions.push([cx + 0.5, cy + 0.5, cz + -0.5]);
-                            self.positions.push([cx + 0.5, cy + -0.5, cz + -0.5]);
-                            self.positions.push([cx + -0.5, cy + -0.5, cz + -0.5]);
+                            self.positions.push([cx - top_x, cy + top_y, cz - top_z]);
+                            self.positions.push([cx + top_x, cy + top_y, cz - top_z]);
+                            self.positions.push([cx + bot_x, cy - bot_y, cz - bot_z]);
+                            self.positions.push([cx - bot_x, cy - bot_y, cz - bot_z]);
 
                             self.normals.push([0.0, 0.0, -1.0]);
                             self.normals.push([0.0, 0.0, -1.0]);

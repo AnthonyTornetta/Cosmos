@@ -84,7 +84,12 @@ Cosmos, but in rust
 - [ ] Ability to place more than one block
   - [ ] Way of select which block
   - [ ] Selectable blocks include: Thruster, Energy Cell, Laser Cannon, Ship Hull, Stone
-  
+
+## Release 0.0.3a
+- [ ] Non-flat planets
+  - [ ] Consider block stretching
+  - [ ] Consider cube planet if stretching doesn't work out
+
 ## Everything that will still have to be done after 0.0.2a
 - [ ] Align body with structure
   - [ ] Switches to FPS Camera
@@ -99,6 +104,7 @@ Cosmos, but in rust
       - [ ] Inserts the item into the ship's inventory
       - [ ] Hold lmb to continually fire the laser
     - [ ] Structure gets deleted when no more blocks are left
+  - [ ] 
   - [ ] Storage system
     - [ ] An interface into all the storage devices on the ship
   - [ ] A way of selecting which systems to use preventing use of systems that are not meant to be actively used
@@ -145,4 +151,4 @@ Cosmos, but in rust
   - [ ] Block resistances
   - [ ] Light emitting blocks
 - [ ] Ability to save ships to disk + load them
-  - [ ] Maybe implement commands?
+  - [ ] Maybe implement 

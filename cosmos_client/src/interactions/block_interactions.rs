@@ -84,14 +84,14 @@ fn process_player_interaction(
                     if coords.is_ok() {
                         let (x, y, z) = coords.unwrap();
                         if structure.is_within_blocks(x, y, z) {
-                            let stone = blocks.block_from_id("cosmos:stone").unwrap();
+                            let place_block = blocks.block_from_id("cosmos:laser_cannon").unwrap();
 
                             place_writer.send(BlockPlaceEvent {
                                 structure_entity: structure.get_entity().unwrap().clone(),
                                 x,
                                 y,
                                 z,
-                                block_id: stone.id(),
+                                block_id: place_block.id(),
                             });
                         }
                     }
