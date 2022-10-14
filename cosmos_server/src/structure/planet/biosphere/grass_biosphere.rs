@@ -5,7 +5,7 @@ use cosmos_core::{
 };
 use noise::NoiseFn;
 
-use crate::structure::planet::generation::planet_generator::check_needs_generated_system;
+use crate::structure::{self, planet::generation::planet_generator::check_needs_generated_system};
 use crate::{GameState, SystemSet};
 
 use super::{TBiosphere, TGenerateChunkEvent};
@@ -61,9 +61,11 @@ pub fn generate_planet(
     blocks: Res<Blocks>,
 ) {
     for ev in events.iter() {
-        let grass = blocks.block_from_id("cosmos:grass").unwrap();
-        let dirt = blocks.block_from_id("cosmos:dirt").unwrap();
         let stone = blocks.block_from_id("cosmos:stone").unwrap();
+
+        // let grass = blocks.block_from_id("cosmos:grass").unwrap();
+        // let dirt = blocks.block_from_id("cosmos:dirt").unwrap();
+        // let stone = blocks.block_from_id("cosmos:stone").unwrap();
 
         let mut structure = query.get_mut(ev.structure_entity).unwrap();
 
@@ -73,33 +75,41 @@ pub fn generate_planet(
             ev.z * CHUNK_DIMENSIONS,
         );
 
-        let s_height = structure.blocks_height();
-
-        let middle_air_start = s_height - 23;
-
-        for z in start_z..(start_z + CHUNK_DIMENSIONS) {
-            for x in start_x..(start_x + CHUNK_DIMENSIONS) {
-                let y_here = (middle_air_start as f64
-                    + noise_generastor.get([x as f64 * DELTA, z as f64 * DELTA]) * AMPLITUDE)
-                    .round() as usize;
-
-                let stone_range = 0..(y_here - 5);
-                let dirt_range = (y_here - 5)..(y_here - 1);
-                let grass_range = (y_here - 1)..y_here;
-
-                for y in start_y..((start_y + CHUNK_DIMENSIONS).min(y_here)) {
-                    if !structure.has_block_at(x, y, z) {
-                        if grass_range.contains(&y) {
-                            structure.set_block_at(x, y, z, grass, &blocks, None);
-                        } else if dirt_range.contains(&y) {
-                            structure.set_block_at(x, y, z, dirt, &blocks, None);
-                        } else if stone_range.contains(&y) {
-                            structure.set_block_at(x, y, z, stone, &blocks, None);
-                        }
-                    }
+        for z in start_z..start_z + CHUNK_DIMENSIONS {
+            for y in start_y..start_y + CHUNK_DIMENSIONS {
+                for x in start_x..start_x + CHUNK_DIMENSIONS {
+                    structure.set_block_at(x, y, z, stone, &blocks, None);
                 }
             }
         }
+
+        // let s_height = structure.blocks_height();
+
+        // let middle_air_start = s_height - 23;
+
+        // for z in start_z..(start_z + CHUNK_DIMENSIONS) {
+        //     for x in start_x..(start_x + CHUNK_DIMENSIONS) {
+        //         let y_here = (middle_air_start as f64
+        //             + noise_generastor.get([x as f64 * DELTA, z as f64 * DELTA]) * AMPLITUDE)
+        //             .round() as usize;
+
+        //         let stone_range = 0..(y_here - 5);
+        //         let dirt_range = (y_here - 5)..(y_here - 1);
+        //         let grass_range = (y_here - 1)..y_here;
+
+        //         for y in start_y..((start_y + CHUNK_DIMENSIONS).min(y_here)) {
+        //             if !structure.has_block_at(x, y, z) {
+        //                 if grass_range.contains(&y) {
+        //                     structure.set_block_at(x, y, z, grass, &blocks, None);
+        //                 } else if dirt_range.contains(&y) {
+        //                     structure.set_block_at(x, y, z, dirt, &blocks, None);
+        //                 } else if stone_range.contains(&y) {
+        //                     structure.set_block_at(x, y, z, stone, &blocks, None);
+        //                 }
+        //             }
+        //         }
+        //     }
+        // }
 
         event_writer.send(ChunkSetEvent {
             structure_entity: ev.structure_entity,

@@ -27,13 +27,13 @@ pub fn register(app: &mut App) {
 fn create_world(mut commands: Commands, mut event_writer: EventWriter<StructureCreated>) {
     let mut entity_cmd = commands.spawn();
 
-    let mut structure = Structure::new(16, 4, 16, entity_cmd.id());
+    let mut structure = Structure::new(1, 1, 1, entity_cmd.id());
 
     let builder = ServerPlanetBuilder::new(GrassBiosphere::default());
 
     builder.insert_planet(
         &mut entity_cmd,
-        Transform::from_xyz(1.0, 0.0, 0.0),
+        Transform::from_xyz(0.0, 0.0, 0.0),
         &mut structure,
     );
 

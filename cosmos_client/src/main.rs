@@ -14,6 +14,7 @@ pub mod window;
 use std::env;
 use std::f32::consts::PI;
 
+use bevy_rapier3d::render::RapierDebugRenderPlugin;
 use bevy_renet::renet::RenetClient;
 use camera::camera_controller;
 use cosmos_core::entities::player::Player;
@@ -262,7 +263,7 @@ fn main() {
         .add_plugins(ClientPluginGroup::default())
         .add_plugin(RenetClientPlugin {})
         .add_plugin(WorldInspectorPlugin::new())
-        // .add_plugin(RapierDebugRenderPlugin::default())
+        .add_plugin(RapierDebugRenderPlugin::default())
         .add_system_set(
             SystemSet::on_enter(GameState::Connecting).with_system(connect::establish_connection),
         )
