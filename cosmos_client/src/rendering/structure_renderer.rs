@@ -6,7 +6,7 @@ use bevy_rapier3d::na::Vector3;
 use cosmos_core::block::blocks::Blocks;
 use cosmos_core::block::BlockFace;
 use cosmos_core::events::block_events::BlockChangedEvent;
-use cosmos_core::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
+use cosmos_core::structure::chunk::{Chunk, CHUNK_DIMENSIONS, CHUNK_DIMENSIONSF};
 use cosmos_core::structure::events::ChunkSetEvent;
 use cosmos_core::structure::structure::Structure;
 use cosmos_core::utils::array_utils::flatten;
@@ -358,24 +358,24 @@ pub fn monitor_needs_rendered_system(
         let chunk_meshes: Vec<ChunkMesh> = renderer.create_meshes();
 
         for chunk_mesh in chunk_meshes {
-            let entity = structure.chunk_entity(chunk_mesh.x, chunk_mesh.y, chunk_mesh.z);
+            if let Some(entity) = structure.chunk_entity(chunk_mesh.x, chunk_mesh.y, chunk_mesh.z) {
+                let old_mesh_handle = mesh_query.get(entity.clone()).unwrap();
 
-            let old_mesh_handle = mesh_query.get(entity.clone()).unwrap();
+                if old_mesh_handle.is_some() {
+                    meshes.remove(old_mesh_handle.unwrap());
+                }
 
-            if old_mesh_handle.is_some() {
-                meshes.remove(old_mesh_handle.unwrap());
+                let mut entity_commands = commands.entity(entity);
+
+                let s = (CHUNK_DIMENSIONS) as f32;
+
+                entity_commands.insert(meshes.add(chunk_mesh.mesh));
+                entity_commands.insert(Aabb::from_min_max(
+                    Vec3::new(-s, -s, -s),
+                    Vec3::new(s, s, s),
+                ));
+                entity_commands.insert(atlas.material.clone());
             }
-
-            let mut entity_commands = commands.entity(entity);
-
-            let s = (CHUNK_DIMENSIONS) as f32;
-
-            entity_commands.insert(meshes.add(chunk_mesh.mesh));
-            entity_commands.insert(Aabb::from_min_max(
-                Vec3::new(-s, -s, -s),
-                Vec3::new(s, s, s),
-            ));
-            entity_commands.insert(atlas.material.clone());
         }
     }
 }
@@ -416,17 +416,28 @@ impl ChunkRenderer {
 
         let mut last_index = 0;
 
-        let curve_per_block_x = PI / 4.0 / CHUNK_DIMENSIONS as f32;
-        // (chunk.angle_end_x() - chunk.angle_start_x()) / (CHUNK_DIMENSIONS as f32);
-        let theta_x = PI / 2.0 - curve_per_block_x;
-        let x_diff = theta_x.cos() / 2.0;
+        // // (chunk.angle_end_x() - chunk.angle_start_x()) / (CHUNK_DIMENSIONS as f32);
+        // let theta_x = PI / 2.0 - curve_per_block_x;
+        // let x_diff = theta_x.cos() / 2.0;
 
-        let curve_per_block_z = PI / 4.0 / CHUNK_DIMENSIONS as f32;
-        // (chunk.angle_end_z() - chunk.angle_start_z()) / (CHUNK_DIMENSIONS as f32);
-        let theta_z = PI / 2.0 - curve_per_block_z;
-        let z_diff = theta_z.cos() / 2.0;
+        // let r_x: f32 = 0.0;
+        // let dr_x = theta_x / 2.0;
 
-        println!("Curve per block: {}", curve_per_block_x);
+        // let curve_per_block_z = PI / 2.0 / CHUNK_DIMENSIONS as f32;
+        // // (chunk.angle_end_z() - chunk.angle_start_z()) / (CHUNK_DIMENSIONS as f32);
+        // let theta_z = PI / 2.0 - curve_per_block_z;
+        // let z_diff = theta_z.cos() / 2.0;
+
+        let r_z: f32 = 0.0;
+        let r_x: f32 = 0.0;
+        let dr_z: f32 = (chunk.angle_end_z() - chunk.angle_start_z()) / 2.0;
+        let dr_x: f32 = (chunk.angle_end_x() - chunk.angle_start_x()) / 2.0;
+
+        let curve_per_block_x = dr_x / CHUNK_DIMENSIONSF;
+        let curve_per_block_z = dr_z / CHUNK_DIMENSIONSF;
+
+        let x_diff = (PI / 2.0 - curve_per_block_x).cos() / 2.0;
+        let z_diff = (PI / 2.0 - curve_per_block_z).cos() / 2.0;
 
         for z in 0..CHUNK_DIMENSIONS {
             for y in 0..CHUNK_DIMENSIONS {
@@ -434,22 +445,29 @@ impl ChunkRenderer {
                     if chunk.has_block_at(x, y, z) {
                         let y_influence = (y + chunk.structure_y() * CHUNK_DIMENSIONS) as f32;
 
-                        // let (bot_x, top_x, bot_y, top_y, bot_z, top_z) = (
-                        //     0.0 + x_diff * y_influence,
-                        //     0.0 + x_diff + x_diff * y_influence,
-                        //     0.5,
-                        //     0.5,
-                        //     0.0 + z_diff * y_influence,
-                        //     0.0 + z_diff + z_diff * y_influence,
-                        // );
+                        let (bot_x, top_x, bot_y, top_y, bot_z, top_z) = (
+                            0.5 - x_diff + x_diff * y_influence,
+                            0.5 + x_diff + x_diff * y_influence,
+                            0.5,
+                            0.5,
+                            0.5 - z_diff + z_diff * y_influence,
+                            0.5 + z_diff + z_diff * y_influence,
+                        );
 
-                        let (bot_x, top_x, bot_y, top_y, bot_z, top_z) =
-                            (0.5, 0.5, 0.5, 0.5, 0.5, 0.5);
+                        // let (bot_x, top_x, bot_y, top_y, bot_z, top_z) =
+                        //     (0.5, 0.5, 0.5, 0.5, 0.5, 0.5);
 
-                        let theta_x = -curve_per_block_x * x as f32 - curve_per_block_x / 2.0;
-                        let theta_z = curve_per_block_z * z as f32 + curve_per_block_z / 2.0;
+                        // let theta_x = -curve_per_block_x * x as f32 - curve_per_block_x / 2.0;
+                        // let theta_z = curve_per_block_z * z as f32 + curve_per_block_z / 2.0;
 
-                        println!("Theta X {}", theta_x);
+                        let theta_x = -(r_x
+                            + dr_x
+                                * ((2.0 * x as f32 - CHUNK_DIMENSIONS as f32)
+                                    / CHUNK_DIMENSIONS as f32));
+                        let theta_z = r_z
+                            + dr_z
+                                * ((2.0 * z as f32 - CHUNK_DIMENSIONS as f32)
+                                    / CHUNK_DIMENSIONS as f32);
 
                         let rotation = Quat::from_axis_angle(Vec3::Z, theta_x)
                             * Quat::from_axis_angle(Vec3::X, theta_z);
@@ -460,16 +478,12 @@ impl ChunkRenderer {
 
                         let (cx, cy, cz) = (x as f32, y as f32, z as f32);
 
-                        let cs = Vec3::new(
-                            0.0, //CHUNK_DIMENSIONS as f32 / 2.0,
-                            0.0, 0.0, //CHUNK_DIMENSIONS as f32 / 2.0,
-                        );
+                        let cs = Vec3::new(0.0, 0.0, 0.0);
 
                         let fixers = Vec3::new(
-                            rotation.mul_vec3(Vec3::new(x as f32, 0.0, z as f32)).x + 0.5,
-                            rotation.mul_vec3(Vec3::new(x as f32, 0.0, z as f32)).y,
-                            rotation.mul_vec3(Vec3::new(x as f32, 0.0, z as f32)).z + 0.5,
-                            // rotation.mul_vec3(Vec3::new(x as f32, y as f32, 0.0)).z,
+                            CHUNK_DIMENSIONSF / 2.0 - 0.5,
+                            CHUNK_DIMENSIONSF / 2.0 - 0.5,
+                            CHUNK_DIMENSIONSF / 2.0 - 0.5,
                         );
 
                         // right

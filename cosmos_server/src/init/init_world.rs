@@ -27,7 +27,7 @@ pub fn register(app: &mut App) {
 fn create_world(mut commands: Commands, mut event_writer: EventWriter<StructureCreated>) {
     let mut entity_cmd = commands.spawn();
 
-    let mut structure = Structure::new(1, 1, 1, entity_cmd.id());
+    let mut structure = Structure::new(20, 1, 20, false, entity_cmd.id());
 
     let builder = ServerPlanetBuilder::new(GrassBiosphere::default());
 

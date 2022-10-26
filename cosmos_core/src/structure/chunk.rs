@@ -8,7 +8,9 @@ use serde::ser::{Serialize, SerializeStruct, Serializer};
 use std::fmt;
 use std::fmt::Formatter;
 
-pub const CHUNK_DIMENSIONS: usize = 16;
+pub const CHUNK_DIMENSIONS: usize = 32;
+pub const CHUNK_DIMENSIONSF: f32 = CHUNK_DIMENSIONS as f32;
+
 const N_BLOCKS: usize = CHUNK_DIMENSIONS * CHUNK_DIMENSIONS * CHUNK_DIMENSIONS;
 
 pub struct Chunk {

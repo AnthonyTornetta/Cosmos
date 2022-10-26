@@ -10,7 +10,7 @@ use cosmos_core::{
     },
     structure::{
         ship::pilot::Pilot,
-        structure::{Structure, StructureBlock},
+        structure::{Structure, StructureBlock, StructureShape},
     },
 };
 
@@ -74,16 +74,36 @@ fn server_listen_messages(
                 ClientReliableMessages::PlayerDisconnect => {}
                 ClientReliableMessages::SendChunk { server_entity } => {
                     if let Ok(structure) = structure_query.get(server_entity) {
-                        for chunk in structure.chunks() {
-                            server.send_message(
-                                client_id,
-                                NettyChannel::Reliable.id(),
-                                bincode::serialize(&ServerReliableMessages::ChunkData {
-                                    structure_entity: server_entity,
-                                    serialized_chunk: bincode::serialize(chunk).unwrap(),
-                                })
-                                .unwrap(),
-                            );
+                        match structure.shape() {
+                            StructureShape::Flat => {
+                                for chunk in structure.chunks() {
+                                    server.send_message(
+                                        client_id,
+                                        NettyChannel::Reliable.id(),
+                                        bincode::serialize(&ServerReliableMessages::ChunkData {
+                                            structure_entity: server_entity,
+                                            serialized_chunk: bincode::serialize(chunk).unwrap(),
+                                        })
+                                        .unwrap(),
+                                    );
+                                }
+                            }
+                            StructureShape::Sphere { radius } => {
+                                let client_ent = lobby.players.get(&client_id).unwrap();
+                                let transform = transform_query.get(*client_ent).unwrap();
+
+                                for chunk in structure.chunks() {
+                                    server.send_message(
+                                        client_id,
+                                        NettyChannel::Reliable.id(),
+                                        bincode::serialize(&ServerReliableMessages::ChunkData {
+                                            structure_entity: server_entity,
+                                            serialized_chunk: bincode::serialize(chunk).unwrap(),
+                                        })
+                                        .unwrap(),
+                                    );
+                                }
+                            }
                         }
                     } else {
                         println!(

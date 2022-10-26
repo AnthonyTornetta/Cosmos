@@ -1,10 +1,14 @@
+use std::f32::consts::PI;
+
 use bevy::{
     ecs::system::EntityCommands,
-    prelude::{BuildChildren, PbrBundle, Transform},
+    prelude::{BuildChildren, PbrBundle, Quat, Transform, Vec3},
 };
 use bevy_rapier3d::prelude::Velocity;
 
 use crate::{physics::structure_physics::StructurePhysics, structure::structure::Structure};
+
+use super::chunk::CHUNK_DIMENSIONSF;
 
 pub trait TStructureBuilder {
     fn insert_structure(
@@ -35,15 +39,46 @@ impl TStructureBuilder for StructureBuilder {
             })
             .insert(velocity)
             .with_children(|parent| {
-                for z in 0..structure.chunks_length() {
+                let render_distance = 2;
+
+                let observer_x_chunk_coords = 0;
+                let observer_z_chunk_coords = 0;
+
+                for dz in -render_distance..(render_distance + 1) {
                     for y in 0..structure.chunks_height() {
-                        for x in 0..structure.chunks_width() {
+                        for dx in -render_distance..(render_distance + 1) {
+                            let mut xx =
+                                (dx + observer_x_chunk_coords) % structure.chunks_width() as i32;
+                            let mut zz =
+                                (dz + observer_z_chunk_coords) % structure.chunks_length() as i32;
+
+                            if xx < 0 {
+                                xx += structure.chunks_width() as i32;
+                            }
+
+                            if zz < 0 {
+                                zz += structure.chunks_length() as i32;
+                            }
+
+                            let z = zz as usize;
+                            let x = xx as usize;
+
+                            let (rotation, translation) = structure.chunk_relative_transform(
+                                x,
+                                y,
+                                z,
+                                observer_x_chunk_coords,
+                                observer_z_chunk_coords,
+                            );
+
                             let entity = parent
                                 .spawn()
                                 .insert_bundle(PbrBundle {
-                                    transform: Transform::from_translation(
-                                        structure.chunk_relative_position(x, y, z).into(),
-                                    ),
+                                    transform: Transform {
+                                        translation,
+                                        rotation,
+                                        ..Default::default()
+                                    },
                                     ..Default::default()
                                 })
                                 .id();

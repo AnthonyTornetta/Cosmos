@@ -1,4 +1,4 @@
-use std::f32::consts::PI;
+use std::f32::consts::{PI, TAU};
 
 use crate::block::blocks::{Blocks, AIR_BLOCK_ID};
 use crate::block::Block;
@@ -6,10 +6,18 @@ use crate::events::block_events::BlockChangedEvent;
 use crate::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
 use crate::utils::array_utils::flatten;
 use crate::utils::vec_math::add_vec;
-use bevy::prelude::{Component, Entity, EventWriter, Res};
+use bevy::prelude::{Component, Entity, EventWriter, Quat, Res, Vec3};
 use bevy_rapier3d::na::Vector3;
 use bevy_rapier3d::rapier::prelude::RigidBodyPosition;
 use serde::{Deserialize, Serialize};
+
+use super::chunk::CHUNK_DIMENSIONSF;
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Copy)]
+pub enum StructureShape {
+    Flat,
+    Sphere { radius: f32 },
+}
 
 #[derive(Serialize, Deserialize, Component)]
 pub struct Structure {
@@ -17,6 +25,7 @@ pub struct Structure {
     chunk_entities: Vec<Option<Entity>>,
     #[serde(skip)]
     self_entity: Option<Entity>,
+    shape: StructureShape,
 
     chunks: Vec<Chunk>,
     width: usize,
@@ -71,26 +80,71 @@ impl StructureBlock {
 }
 
 impl Structure {
-    pub fn new(width: usize, height: usize, length: usize, self_entity: Entity) -> Self {
+    pub fn new(
+        width: usize,
+        height: usize,
+        length: usize,
+        is_flat: bool,
+        self_entity: Entity,
+    ) -> Self {
         let mut chunks = Vec::with_capacity(width * height * length);
+        let shape;
 
-        let dz = 2.0 * PI / (length as f32);
-        let dx = 2.0 * PI / width as f32;
-
-        for z in 0..length {
-            for y in 0..height {
-                for x in 0..width {
-                    chunks.push(Chunk::new(
-                        x,
-                        y,
-                        z,
-                        x as f32 * dx,
-                        (x + 1) as f32 * dx,
-                        z as f32 * dz,
-                        (z + 1) as f32 * dz,
-                    ));
+        if is_flat {
+            shape = StructureShape::Flat;
+            for z in 0..length {
+                for y in 0..height {
+                    for x in 0..width {
+                        chunks.push(Chunk::new(x, y, z, 0.0, 0.0, 0.0, 0.0));
+                    }
                 }
             }
+        } else {
+            assert_eq!(
+                width, length,
+                "Width and length of spherical structure must be equal!"
+            );
+
+            let delta = TAU / width as f32;
+
+            shape = StructureShape::Sphere {
+                radius: CHUNK_DIMENSIONS as f32 / (1.0 - ((PI / 2.0 - delta) / 2.0).tan()),
+            };
+
+            for z in 0..length {
+                for x in 0..width {
+                    for y in 0..height {
+                        chunks.push(Chunk::new(x, y, z, 0.0, 0.0, 0.0, 0.0));
+                    }
+                }
+            }
+
+            // let pi_2 = PI / 2.0;
+            // let delta_y = 2.0 * PI / (length as f32);
+            // let radius_y = (CHUNK_DIMENSIONS as f32) / (1.0 - (((pi_2 - delta_y) / 2.0).tan()));
+
+            // let delta_z = 2.0 * PI / width as f32;
+            // let radius_z = (CHUNK_DIMENSIONS as f32) / (1.0 - (((pi_2 - delta_z) / 2.0).tan()));
+
+            // for i in 0..length {
+            //     let angle_y = (i as f32) * delta_y;
+
+            //     let quat = Quat::from_axis_angle(Vec3::Y, angle_y);
+            //     let center = quat.mul_vec3(Vec3::new(0.0, 0.0, radius_y));
+
+            //     let local_right = quat.mul_vec3(Vec3::X);
+
+            //     for j in 0..width {
+            //         let angle_z = (j as f32) * delta_z;
+
+            //         let local_quat = Quat::from_axis_angle(local_right, angle_z);
+
+            //         let chunk_center_position = center
+            //             + (local_quat.mul_vec3(quat.mul_vec3(Vec3::new(0.0, 0.0, radius_z))));
+
+            //         chunks.push(Chunk::new(j, 0.0, i, 0.0, 0.0, 0.0, 0.0));
+            //     }
+            // }
         }
 
         let mut chunk_entities = Vec::with_capacity(chunks.len());
@@ -106,6 +160,7 @@ impl Structure {
             width,
             height,
             length,
+            shape,
         }
     }
 
@@ -139,9 +194,8 @@ impl Structure {
         self.length * CHUNK_DIMENSIONS
     }
 
-    pub fn chunk_entity(&self, cx: usize, cy: usize, cz: usize) -> Entity {
-        // If this fails, that means the chunk entity ids were not set before being used
-        self.chunk_entities[flatten(cx, cy, cz, self.width, self.height)].unwrap()
+    pub fn chunk_entity(&self, cx: usize, cy: usize, cz: usize) -> Option<Entity> {
+        self.chunk_entities[flatten(cx, cy, cz, self.width, self.height)]
     }
 
     pub fn set_chunk_entity(&mut self, cx: usize, cy: usize, cz: usize, entity: Entity) {
@@ -295,16 +349,120 @@ impl Structure {
         );
     }
 
-    pub fn chunk_relative_position(&self, x: usize, y: usize, z: usize) -> Vector3<f32> {
-        let xoff = self.width as f32 / 2.0 * CHUNK_DIMENSIONS as f32;
-        let yoff = self.height as f32 / 2.0 * CHUNK_DIMENSIONS as f32;
-        let zoff = self.length as f32 / 2.0 * CHUNK_DIMENSIONS as f32;
+    pub fn chunk_relative_transform(
+        &self,
+        x: usize,
+        y: usize,
+        z: usize,
+        observer_relative_x: i32,
+        observer_relative_z: i32,
+    ) -> (Quat, Vec3) {
+        match self.shape {
+            StructureShape::Flat => {
+                let xoff = self.width as f32 / 2.0 * CHUNK_DIMENSIONS as f32;
+                let yoff = self.height as f32 / 2.0 * CHUNK_DIMENSIONS as f32;
+                let zoff = self.length as f32 / 2.0 * CHUNK_DIMENSIONS as f32;
 
-        let xx = x as f32 * CHUNK_DIMENSIONS as f32 - xoff;
-        let yy = y as f32 * CHUNK_DIMENSIONS as f32 - yoff;
-        let zz = z as f32 * CHUNK_DIMENSIONS as f32 - zoff;
+                let xx = x as f32 * CHUNK_DIMENSIONS as f32 - xoff;
+                let yy = y as f32 * CHUNK_DIMENSIONS as f32 - yoff;
+                let zz = z as f32 * CHUNK_DIMENSIONS as f32 - zoff;
 
-        Vector3::new(xx, yy, zz)
+                (Quat::IDENTITY, Vec3::new(xx, yy, zz))
+            }
+            StructureShape::Sphere { radius } => {
+                let center_rotation_z =
+                    -TAU * observer_relative_x as f32 / self.chunks_width() as f32;
+                let center_rotation_x =
+                    TAU * observer_relative_z as f32 / self.chunks_length() as f32;
+
+                let dz = z as f32 - observer_relative_z as f32;
+                let dx = x as f32 - observer_relative_x as f32;
+
+                let angle_x = TAU * dz / self.length as f32;
+                let angle_z = TAU * dx / self.width as f32;
+
+                let fixer = Quat::from_euler(
+                    bevy::prelude::EulerRot::XZY,
+                    center_rotation_x,
+                    center_rotation_z,
+                    0.0,
+                );
+
+                let quat = Quat::from_euler(bevy::prelude::EulerRot::XZY, angle_x, angle_z, 0.0);
+
+                let res = fixer.mul_vec3(quat.mul_vec3(Vec3::new(
+                    0.0,
+                    radius + (y * CHUNK_DIMENSIONS) as f32,
+                    0.0,
+                )));
+
+                (fixer * quat, res)
+            }
+        }
+    }
+
+    pub fn chunk_relative_rotation(
+        &self,
+        x: usize,
+        z: usize,
+        observer_relative_x: i32,
+        observer_relative_z: i32,
+    ) -> Quat {
+        match self.shape {
+            StructureShape::Flat => Quat::IDENTITY,
+            StructureShape::Sphere { radius: _radius } => {
+                let center_rotation_z =
+                    -TAU * observer_relative_x as f32 / self.chunks_width() as f32;
+                let center_rotation_x =
+                    TAU * observer_relative_z as f32 / self.chunks_length() as f32;
+
+                let dz = z as f32 - observer_relative_z as f32 / CHUNK_DIMENSIONSF;
+                let dx = x as f32 - observer_relative_x as f32 / CHUNK_DIMENSIONSF;
+
+                let angle_x = TAU * dz / self.length as f32;
+                let angle_z = TAU * dx / self.width as f32;
+
+                let q = Quat::from_euler(
+                    bevy::prelude::EulerRot::XZY,
+                    center_rotation_x,
+                    center_rotation_z,
+                    0.0,
+                );
+
+                q * Quat::from_euler(bevy::prelude::EulerRot::XZY, angle_x, angle_z, 0.0)
+            }
+        }
+    }
+
+    pub fn chunk_relative_position(
+        &self,
+        x: usize,
+        y: usize,
+        z: usize,
+        observer_relative_x: i32,
+        observer_relative_z: i32,
+    ) -> Vec3 {
+        match self.shape {
+            StructureShape::Flat => {
+                let xoff = self.width as f32 / 2.0 * CHUNK_DIMENSIONS as f32;
+                let yoff = self.height as f32 / 2.0 * CHUNK_DIMENSIONS as f32;
+                let zoff = self.length as f32 / 2.0 * CHUNK_DIMENSIONS as f32;
+
+                let xx = x as f32 * CHUNK_DIMENSIONS as f32 - xoff;
+                let yy = y as f32 * CHUNK_DIMENSIONS as f32 - yoff;
+                let zz = z as f32 * CHUNK_DIMENSIONS as f32 - zoff;
+
+                Vec3::new(xx, yy, zz)
+            }
+            StructureShape::Sphere { radius } => {
+                let rot =
+                    self.chunk_relative_rotation(x, z, observer_relative_x, observer_relative_z);
+
+                let res = rot * Vec3::new(0.0, radius + (y * CHUNK_DIMENSIONS) as f32, 0.0);
+
+                res
+            }
+        }
     }
 
     pub fn chunk_world_position(
@@ -313,13 +471,16 @@ impl Structure {
         y: usize,
         z: usize,
         body_position: &RigidBodyPosition,
+        observer_relative_x: i32,
+        observer_relative_z: i32,
     ) -> Vector3<f32> {
         add_vec(
             &body_position.position.translation.vector,
-            &body_position
-                .position
-                .rotation
-                .transform_vector(&self.chunk_relative_position(x, y, z)),
+            &body_position.position.rotation.transform_vector(
+                &self
+                    .chunk_relative_position(x, y, z, observer_relative_x, observer_relative_z)
+                    .into(),
+            ),
         )
     }
 
@@ -332,5 +493,10 @@ impl Structure {
             self.height,
         );
         self.chunks[i] = chunk;
+    }
+
+    #[inline]
+    pub fn shape(&self) -> StructureShape {
+        self.shape
     }
 }

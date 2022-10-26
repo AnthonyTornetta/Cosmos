@@ -235,11 +235,7 @@ fn generate_chunk_collider(chunk: &Chunk, blocks: &Res<Blocks>) -> Option<Collid
         chunk,
         blocks,
         &mut colliders,
-        Vect::new(
-            CHUNK_DIMENSIONS as f32 / 2.0 - 0.5,
-            CHUNK_DIMENSIONS as f32 / 2.0 - 0.5,
-            CHUNK_DIMENSIONS as f32 / 2.0 - 0.5,
-        ),
+        Vect::new(0.0, 0.0, 0.0),
         Vector3::new(0, 0, 0),
         CHUNK_DIMENSIONS,
         &mut density,
@@ -286,12 +282,13 @@ fn listen_for_new_physics_event(
 
             for chunk_collider in colliders {
                 let coords = &chunk_collider.chunk_coords;
-                let mut entity_commands =
-                    commands.entity(structure.chunk_entity(coords.x, coords.y, coords.z));
-                entity_commands.remove::<Collider>();
+                if let Some(chunk_entity) = structure.chunk_entity(coords.x, coords.y, coords.z) {
+                    let mut entity_commands = commands.entity(chunk_entity);
+                    entity_commands.remove::<Collider>();
 
-                if chunk_collider.collider.is_some() {
-                    entity_commands.insert(chunk_collider.collider.unwrap());
+                    if chunk_collider.collider.is_some() {
+                        entity_commands.insert(chunk_collider.collider.unwrap());
+                    }
                 }
             }
         }

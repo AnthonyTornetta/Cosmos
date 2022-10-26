@@ -14,6 +14,7 @@ pub mod window;
 use std::env;
 use std::f32::consts::PI;
 
+use bevy::prelude::shape::Cube;
 use bevy_rapier3d::render::RapierDebugRenderPlugin;
 use bevy_renet::renet::RenetClient;
 use camera::camera_controller;
@@ -206,9 +207,14 @@ fn create_sun(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
+    commands.spawn_bundle(PbrBundle {
+        mesh: meshes.add(Cube::new(1.0).into()),
+        ..Default::default()
+    });
+
     commands
         .spawn_bundle(PointLightBundle {
-            transform: Transform::from_xyz(0.0, 100.0, 0.0),
+            transform: Transform::from_xyz(0.0, 0.0, 0.0),
             point_light: PointLight {
                 intensity: 160000.0,
                 range: 16000.0,
