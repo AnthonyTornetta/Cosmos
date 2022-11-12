@@ -78,58 +78,83 @@ impl StructureRenderer {
             debug_assert!(change.x < self.width);
             debug_assert!(change.y < self.height);
             debug_assert!(change.z < self.length);
-
             let (x, y, z) = (change.x, change.y, change.z);
 
-            let left = match x {
-                0 => None,
-                x => Some(structure.chunk_from_chunk_coordinates(x - 1, y, z)),
-            };
+            if let Some(chunk) = structure.chunk_from_chunk_coordinates(x, y, z) {
+                let left = match x {
+                    0 => None,
+                    x => {
+                        if let Some(chunk) = structure.chunk_from_chunk_coordinates(x - 1, y, z) {
+                            Some(chunk)
+                        } else {
+                            None
+                        }
+                    }
+                };
 
-            let right;
-            if x == self.width - 1 {
-                right = None;
-            } else {
-                right = Some(structure.chunk_from_chunk_coordinates(x + 1, y, z));
+                let right;
+                if x == self.width - 1 {
+                    right = None;
+                } else {
+                    right = if let Some(chunk) = structure.chunk_from_chunk_coordinates(x + 1, y, z)
+                    {
+                        Some(chunk)
+                    } else {
+                        None
+                    }
+                }
+
+                let bottom = match y {
+                    0 => None,
+                    y => {
+                        if let Some(chunk) = structure.chunk_from_chunk_coordinates(x, y - 1, z) {
+                            Some(chunk)
+                        } else {
+                            None
+                        }
+                    }
+                };
+
+                let top;
+                if y == self.height - 1 {
+                    top = None;
+                } else {
+                    top = if let Some(chunk) = structure.chunk_from_chunk_coordinates(x, y + 1, z) {
+                        Some(chunk)
+                    } else {
+                        None
+                    }
+                }
+
+                let back = match z {
+                    0 => None,
+                    z => {
+                        if let Some(chunk) = structure.chunk_from_chunk_coordinates(x, y, z - 1) {
+                            Some(chunk)
+                        } else {
+                            None
+                        }
+                    }
+                };
+
+                let front;
+                if z == self.length - 1 {
+                    front = None;
+                } else {
+                    front = if let Some(chunk) = structure.chunk_from_chunk_coordinates(x, y, z + 1)
+                    {
+                        Some(chunk)
+                    } else {
+                        None
+                    }
+                }
+
+                self.chunk_renderers[flatten(x, y, z, self.width, self.height)].render(
+                    uv_mapper, chunk, left, right, bottom, top, back, front, blocks,
+                );
+
+                self.need_meshes.insert(change.clone());
             }
-
-            let bottom = match y {
-                0 => None,
-                y => Some(structure.chunk_from_chunk_coordinates(x, y - 1, z)),
-            };
-
-            let top;
-            if y == self.height - 1 {
-                top = None;
-            } else {
-                top = Some(structure.chunk_from_chunk_coordinates(x, y + 1, z));
-            }
-
-            let back = match z {
-                0 => None,
-                z => Some(structure.chunk_from_chunk_coordinates(x, y, z - 1)),
-            };
-
-            let front;
-            if z == self.length - 1 {
-                front = None;
-            } else {
-                front = Some(structure.chunk_from_chunk_coordinates(x, y, z + 1));
-            }
-
-            self.chunk_renderers[flatten(x, y, z, self.width, self.height)].render(
-                uv_mapper,
-                structure.chunk_from_chunk_coordinates(x, y, z),
-                left,
-                right,
-                bottom,
-                top,
-                back,
-                front,
-                blocks,
-            );
-
-            self.need_meshes.insert(change.clone());
         }
 
         self.changes.clear();

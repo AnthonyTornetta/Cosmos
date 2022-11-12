@@ -10,7 +10,6 @@ use bevy::utils::HashSet;
 use bevy_rapier3d::math::Vect;
 use bevy_rapier3d::na::Vector3;
 use bevy_rapier3d::prelude::{Collider, Rot};
-use bevy_rapier3d::rapier::prelude::ColliderMassProps;
 
 pub struct ChunkPhysicsModel {
     pub collider: Option<Collider>,
@@ -49,13 +48,12 @@ impl StructurePhysics {
         let mut colliders = Vec::with_capacity(self.needs_changed.len());
 
         for c in &self.needs_changed {
-            colliders.push(ChunkPhysicsModel {
-                collider: generate_chunk_collider(
-                    structure.chunk_from_chunk_coordinates(c.x, c.y, c.z),
-                    blocks,
-                ),
-                chunk_coords: *c,
-            });
+            if let Some(chunk) = structure.chunk_from_chunk_coordinates(c.x, c.y, c.z) {
+                colliders.push(ChunkPhysicsModel {
+                    collider: generate_chunk_collider(chunk, blocks),
+                    chunk_coords: *c,
+                });
+            }
         }
 
         self.needs_changed.clear();

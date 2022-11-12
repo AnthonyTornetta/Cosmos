@@ -25,6 +25,7 @@ use cosmos_core::netty::client_unreliable_messages::ClientUnreliableMessages;
 use cosmos_core::netty::{get_local_ipaddress, NettyChannel};
 use cosmos_core::structure::ship::pilot::Pilot;
 use cosmos_core::structure::ship::ship_movement::ShipMovement;
+use cosmos_core::structure::structure::Structure;
 use input::inputs::{self, CosmosInputHandler, CosmosInputs};
 use interactions::block_interactions;
 use netty::connect::{self, ConnectionConfig};
@@ -240,6 +241,18 @@ fn create_sun(
         });
 }
 
+fn debug_planets(player: Query<&Transform, With<Player>>, query: Query<(&Transform, &Structure)>) {
+    let player = player.get_single().unwrap();
+
+    for (transform, structure) in query.iter() {
+        if let Ok((x, y, z)) =
+            structure.world_position_to_block_position(transform, &player.translation)
+        {
+            println!("Your local pos: {} {} {}", x, y, z);
+        }
+    }
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -288,7 +301,8 @@ fn main() {
                 .with_system(process_ship_movement)
                 .with_system(monitor_block_updates_system)
                 .with_system(reset_cursor)
-                .with_system(sync_pilot_to_ship),
+                .with_system(sync_pilot_to_ship)
+                .with_system(debug_planets),
         );
 
     inputs::register(&mut app);

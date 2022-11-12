@@ -1,14 +1,10 @@
-use std::f32::consts::PI;
-
 use bevy::{
     ecs::system::EntityCommands,
-    prelude::{BuildChildren, PbrBundle, Quat, Transform, Vec3},
+    prelude::{BuildChildren, PbrBundle, Transform},
 };
 use bevy_rapier3d::prelude::Velocity;
 
 use crate::{physics::structure_physics::StructurePhysics, structure::structure::Structure};
-
-use super::chunk::CHUNK_DIMENSIONSF;
 
 pub trait TStructureBuilder {
     fn insert_structure(

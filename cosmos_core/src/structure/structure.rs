@@ -1,13 +1,15 @@
 use std::f32::consts::{PI, TAU};
+use std::fmt::Error;
 
 use crate::block::blocks::{Blocks, AIR_BLOCK_ID};
 use crate::block::Block;
 use crate::events::block_events::BlockChangedEvent;
 use crate::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
 use crate::utils::array_utils::flatten;
+use crate::utils::quat_math::quaternion_between_normalized_vectors;
 use crate::utils::vec_math::add_vec;
-use bevy::prelude::{Component, Entity, EventWriter, Quat, Res, Vec3};
-use bevy_rapier3d::na::Vector3;
+use bevy::prelude::{Component, Entity, EventWriter, Quat, Res, Transform, Vec3};
+use bevy_rapier3d::na::{Rotation, Vector3};
 use bevy_rapier3d::rapier::prelude::RigidBodyPosition;
 use serde::{Deserialize, Serialize};
 
@@ -217,23 +219,14 @@ impl Structure {
 
     /// (0, 0, 0) => chunk @ 0, 0, 0\
     /// (1, 0, 0) => chunk @ 1, 0, 0
-    pub fn chunk_from_chunk_coordinates(&self, cx: usize, cy: usize, cz: usize) -> &Chunk {
-        &self.chunks[flatten(cx, cy, cz, self.width, self.height)]
-    }
-
-    pub fn mut_chunk_from_chunk_coordinates(
-        &mut self,
-        cx: usize,
-        cy: usize,
-        cz: usize,
-    ) -> &mut Chunk {
-        &mut self.chunks[flatten(cx, cy, cz, self.width, self.height)]
+    pub fn chunk_from_chunk_coordinates(&self, cx: usize, cy: usize, cz: usize) -> Option<&Chunk> {
+        Some(&self.chunks[flatten(cx, cy, cz, self.width, self.height)])
     }
 
     /// (0, 0, 0) => chunk @ 0, 0, 0\
     /// (5, 0, 0) => chunk @ 0, 0, 0\
     /// (32, 0, 0) => chunk @ 1, 0, 0
-    pub fn chunk_at_block_coordinates(&self, x: usize, y: usize, z: usize) -> &Chunk {
+    pub fn chunk_at_block_coordinates(&self, x: usize, y: usize, z: usize) -> Option<&Chunk> {
         self.chunk_from_chunk_coordinates(
             x / CHUNK_DIMENSIONS,
             y / CHUNK_DIMENSIONS,
@@ -241,14 +234,21 @@ impl Structure {
         )
     }
 
-    fn mut_chunk_at_block_coordinates(&mut self, x: usize, y: usize, z: usize) -> &mut Chunk {
-        &mut self.chunks[flatten(
-            x / CHUNK_DIMENSIONS,
-            y / CHUNK_DIMENSIONS,
-            z / CHUNK_DIMENSIONS,
-            self.width,
-            self.height,
-        )]
+    fn mut_chunk_at_block_coordinates(
+        &mut self,
+        x: usize,
+        y: usize,
+        z: usize,
+    ) -> Option<&mut Chunk> {
+        Some(
+            &mut self.chunks[flatten(
+                x / CHUNK_DIMENSIONS,
+                y / CHUNK_DIMENSIONS,
+                z / CHUNK_DIMENSIONS,
+                self.width,
+                self.height,
+            )],
+        )
     }
 
     pub fn is_within_blocks(&self, x: usize, y: usize, z: usize) -> bool {
@@ -271,27 +271,123 @@ impl Structure {
         y: f32,
         z: f32,
     ) -> Result<(usize, usize, usize), bool> {
-        // replace the + 0.5 with .round() at some point to make it a bit cleaner
-        let xx = x + (self.blocks_width() as f32 / 2.0) + 0.5;
-        let yy = y + (self.blocks_height() as f32 / 2.0) + 0.5;
-        let zz = z + (self.blocks_length() as f32 / 2.0) + 0.5;
+        match self.shape {
+            StructureShape::Flat => {
+                let xx = x + (self.blocks_width() as f32 / 2.0) + 0.5;
+                let yy = y + (self.blocks_height() as f32 / 2.0) + 0.5;
+                let zz = z + (self.blocks_length() as f32 / 2.0) + 0.5;
 
-        if xx >= 0.0 && yy >= 0.0 && zz >= 0.0 {
-            let (xxx, yyy, zzz) = (xx as usize, yy as usize, zz as usize);
-            if self.is_within_blocks(xxx, yyy, zzz) {
-                return Ok((xxx, yyy, zzz));
+                if xx >= 0.0 && yy >= 0.0 && zz >= 0.0 {
+                    let (xxx, yyy, zzz) = (xx as usize, yy as usize, zz as usize);
+                    if self.is_within_blocks(xxx, yyy, zzz) {
+                        return Ok((xxx, yyy, zzz));
+                    }
+                    return Err(true);
+                }
+                Err(false)
             }
-            return Err(true);
+            StructureShape::Sphere { radius } => {
+                let pos = Vec3::new(x, y, z);
+                let normalized = Vec3::new(x, y, z).normalize_or_zero();
+
+                let (euler_x, _, euler_z) =
+                    quaternion_between_normalized_vectors(&Vec3::Y, &normalized)
+                        .to_euler(bevy::prelude::EulerRot::ZYX);
+
+                let delta_x = TAU / self.width as f32;
+                let delta_z = TAU / self.length as f32;
+
+                let theta_x = euler_z / delta_z;
+                let theta_z = euler_x / delta_x;
+
+                let mut cx = theta_x.round() as i32 % self.width as i32;
+                let mut cz = -theta_z.round() as i32 % self.length as i32;
+
+                if cx < 0 {
+                    cx += self.width as i32;
+                }
+                if cz < 0 {
+                    cz += self.length as i32;
+                }
+
+                let center_rotation_x = TAU * (cz as f32) / self.length as f32;
+                let center_rotation_z = TAU * (cx as f32) / self.width as f32;
+
+                let direction_fixer = Quat::from_euler(
+                    bevy::prelude::EulerRot::ZYX,
+                    center_rotation_x,
+                    0.0,
+                    center_rotation_z,
+                )
+                .inverse()
+                .normalize();
+
+                let (out_x, _, out_z) = direction_fixer.to_euler(bevy::prelude::EulerRot::ZYX);
+
+                let de_rotated_pos = direction_fixer.mul_vec3(pos);
+
+                let y_pos = de_rotated_pos.y - radius;
+                let chunk_y = (y_pos / CHUNK_DIMENSIONSF) as i32;
+
+                let block_relative_pos = Vec3::new(
+                    de_rotated_pos.x + (cz as f32 * CHUNK_DIMENSIONSF + CHUNK_DIMENSIONSF / 2.0),
+                    de_rotated_pos.y - radius + (chunk_y as f32 * CHUNK_DIMENSIONSF),
+                    de_rotated_pos.z + (cx as f32 * CHUNK_DIMENSIONSF + CHUNK_DIMENSIONSF / 2.0),
+                );
+
+                println!(
+                    "Was {:.4} {:.4} {:.4} | {} {} | {:.4} {:.4} | {:.4} {:.4}",
+                    block_relative_pos.x,
+                    block_relative_pos.y,
+                    block_relative_pos.z,
+                    cx,
+                    cz,
+                    euler_x,
+                    euler_z,
+                    out_x,
+                    out_z
+                );
+
+                if (block_relative_pos.x as i32) < 0
+                    || (block_relative_pos.y as i32) < 0
+                    || (block_relative_pos.z as i32) < 0
+                {
+                    Err(false)
+                } else if (block_relative_pos.x as usize) >= self.blocks_width()
+                    || (block_relative_pos.y as usize) >= self.blocks_height()
+                    || (block_relative_pos.z as usize) >= self.blocks_length()
+                {
+                    Err(true)
+                } else {
+                    Ok((
+                        block_relative_pos.x as usize,
+                        block_relative_pos.y as usize,
+                        block_relative_pos.z as usize,
+                    ))
+                }
+            }
         }
-        Err(false)
     }
 
+    /// Gets the block at a given (x,y,z).
+    /// For a flat structure, the coordinates are relative to the bottom, left, back corner of the structure.
+    /// For a spherical structure, the coordinates are relative to the top of the sphere, but bottom, left, back of that chunk.
+    ///
+    /// This will panic for coordinates given outside of the structure's total chunks.
+    ///
+    /// If this is given coordinates of a block in unloaded chunks, it will return air's ID, :warning: **but this will change in the future**.
+    /// ## FUTURE FUNCTIONALITY
+    /// In the future, if this gets a block in an unloaded chunk, that chunk will be read from disk (ideally cached somewhere for a bit) then read from disk.  If the chunk wasn't generated at the time of its loading, it will be NOT be generated.
     pub fn block_at(&self, x: usize, y: usize, z: usize) -> u16 {
-        self.chunk_at_block_coordinates(x, y, z).block_at(
-            x % CHUNK_DIMENSIONS,
-            y % CHUNK_DIMENSIONS,
-            z % CHUNK_DIMENSIONS,
-        )
+        if let Some(chunk) = self.chunk_at_block_coordinates(x, y, z) {
+            chunk.block_at(
+                x % CHUNK_DIMENSIONS,
+                y % CHUNK_DIMENSIONS,
+                z % CHUNK_DIMENSIONS,
+            )
+        } else {
+            AIR_BLOCK_ID // TODO: make this read from previously saved chunks
+        }
     }
 
     pub fn chunks(&self) -> &Vec<Chunk> {
@@ -316,6 +412,17 @@ impl Structure {
         )
     }
 
+    /// Sets the block at a given (x,y,z).
+    /// For a flat structure, the coordinates are relative to the bottom, left, back corner of the structure.
+    /// For a spherical structure, the coordinates are relative to the top of the sphere, but bottom, left, back of that chunk.
+    ///
+    /// This will panic for coordinates given outside of the structure's total chunks.
+    ///
+    /// If this is given coordinates of a block in unloaded chunks, this will do nothing, :warning: **but this will change in the future**.
+    /// ## FUTURE FUNCTIONALITY
+    /// In the future, if this gets a block in an unloaded chunk:
+    /// - Chunk has been generated - The chunk is loaded (and probably cached) then altered + saved next world save
+    /// - Chunk has not been generated - The chunk is created but NOT generated with the blocks being set, when it is generated those blocks should not be overridden
     pub fn set_block_at(
         &mut self,
         x: usize,
@@ -341,12 +448,16 @@ impl Structure {
             }
         }
 
-        self.mut_chunk_at_block_coordinates(x, y, z).set_block_at(
-            x % CHUNK_DIMENSIONS,
-            y % CHUNK_DIMENSIONS,
-            z % CHUNK_DIMENSIONS,
-            block,
-        );
+        if let Some(chunk) = self.mut_chunk_at_block_coordinates(x, y, z) {
+            chunk.set_block_at(
+                x % CHUNK_DIMENSIONS,
+                y % CHUNK_DIMENSIONS,
+                z % CHUNK_DIMENSIONS,
+                block,
+            );
+        } else {
+            println!("TODO: Set block in unloaded chunk!");
+        }
     }
 
     pub fn chunk_relative_transform(
@@ -432,6 +543,19 @@ impl Structure {
                 q * Quat::from_euler(bevy::prelude::EulerRot::XZY, angle_x, angle_z, 0.0)
             }
         }
+    }
+
+    pub fn world_position_to_block_position(
+        &self,
+        self_world_transform: &Transform,
+        world_position: &Vec3,
+    ) -> Result<(usize, usize, usize), bool> {
+        let point = self_world_transform
+            .compute_matrix()
+            .inverse()
+            .transform_point3(world_position.clone());
+
+        self.relative_coords_to_local_coords(point.x, point.y, point.z)
     }
 
     pub fn chunk_relative_position(

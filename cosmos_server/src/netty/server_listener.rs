@@ -91,6 +91,11 @@ fn server_listen_messages(
                             StructureShape::Sphere { radius } => {
                                 let client_ent = lobby.players.get(&client_id).unwrap();
                                 let transform = transform_query.get(*client_ent).unwrap();
+                                let structure_transform =
+                                    transform_query.get(server_entity).unwrap();
+
+                                let delta_location =
+                                    transform.translation - structure_transform.translation;
 
                                 for chunk in structure.chunks() {
                                     server.send_message(

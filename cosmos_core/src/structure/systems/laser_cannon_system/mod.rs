@@ -1,26 +1,15 @@
 use bevy::{
     ecs::schedule::StateData,
-    prelude::{
-        App, Commands, Component, CoreStage, Entity, EventReader, Query, Res, ResMut, SystemSet,
-        Transform, Vec3, With,
-    },
-    time::Time,
+    prelude::{App, Commands, Component, CoreStage, EventReader, Query, Res, ResMut, SystemSet},
     utils::HashMap,
 };
 use bevy_inspector_egui::{Inspectable, RegisterInspectable};
-use bevy_rapier3d::prelude::{ExternalImpulse, ReadMassProperties, Velocity};
 use iyes_loopless::prelude::*;
 
 use crate::{
     block::{blocks::Blocks, Block, BlockFace},
     events::block_events::BlockChangedEvent,
-    structure::{
-        chunk::CHUNK_DIMENSIONS,
-        events::ChunkSetEvent,
-        ship::{pilot::Pilot, ship_movement::ShipMovement},
-        structure::Structure,
-        systems::energy_storage_system::EnergyStorageSystem,
-    },
+    structure::{chunk::CHUNK_DIMENSIONS, events::ChunkSetEvent, structure::Structure},
 };
 
 pub struct LaserCannonProperty {
@@ -216,23 +205,23 @@ fn calculate_cannon_addition(
     system.energy_consumption += property.energy_consupmtion;
 
     for i in 0..system.cannon_locations.len() {
-        let (startX, startY, startZ) = system.cannon_locations[i].start;
+        let (start_x, start_y, start_z) = system.cannon_locations[i].start;
         let mut length = system.cannon_locations[i].length;
         let facing = system.cannon_locations[i].facing;
 
         match facing {
             BlockFace::Front => {
-                if x == startX && y == startY {
-                    if startZ != 0 && z == startZ - 1 {
+                if x == start_x && y == start_y {
+                    if start_z != 0 && z == start_z - 1 {
                         system.cannon_locations[i].start.2 -= 1;
                     }
                     system.cannon_locations[i].length += 1;
 
                     for j in 0..system.cannon_locations.len() {
                         let loc = &system.cannon_locations[j];
-                        if loc.start.0 == startX
-                            && loc.start.1 == startY
-                            && loc.start.2 == startZ + length
+                        if loc.start.0 == start_x
+                            && loc.start.1 == start_y
+                            && loc.start.2 == start_z + length
                         {
                             system.cannon_locations[i].length += loc.length;
                             system.cannon_locations.swap_remove(j);
@@ -243,8 +232,8 @@ fn calculate_cannon_addition(
                 }
             }
             BlockFace::Back => {
-                if x == startX && y == startY {
-                    if z == startZ + 1 {
+                if x == start_x && y == start_y {
+                    if z == start_z + 1 {
                         system.cannon_locations[i].start.2 += 1;
                         system.cannon_locations[i].length += 1;
                         length += 1;
@@ -255,8 +244,8 @@ fn calculate_cannon_addition(
                             }
 
                             let loc = &system.cannon_locations[j];
-                            if loc.start.0 == startX
-                                && loc.start.1 == startY
+                            if loc.start.0 == start_x
+                                && loc.start.1 == start_y
                                 && loc.start.2 + loc.length == z + 1
                             {
                                 system.cannon_locations[j].length += length;
@@ -265,7 +254,7 @@ fn calculate_cannon_addition(
                             }
                         }
                         return;
-                    } else if z == startZ - length {
+                    } else if z == start_z - length {
                         system.cannon_locations[i].length += 1;
                         length += 1;
 
@@ -275,9 +264,9 @@ fn calculate_cannon_addition(
                             }
 
                             let loc = &system.cannon_locations[j];
-                            if loc.start.0 == startX
-                                && loc.start.1 == startY
-                                && loc.start.2 == startZ - length
+                            if loc.start.0 == start_x
+                                && loc.start.1 == start_y
+                                && loc.start.2 == start_z - length
                             {
                                 system.cannon_locations[i].length += length;
                                 system.cannon_locations.swap_remove(j);
