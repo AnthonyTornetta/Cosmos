@@ -15,7 +15,7 @@ struct EnergyGenerationProperty {
     generation_rate: f32,
 }
 
-#[derive(Default)]
+#[derive(Default, Resource)]
 struct EnergyGenerationBlocks {
     blocks: HashMap<u16, EnergyGenerationProperty>,
 }

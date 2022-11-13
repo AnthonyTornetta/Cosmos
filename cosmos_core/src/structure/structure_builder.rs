@@ -68,8 +68,7 @@ impl TStructureBuilder for StructureBuilder {
                             );
 
                             let entity = parent
-                                .spawn()
-                                .insert_bundle(PbrBundle {
+                                .spawn(PbrBundle {
                                     transform: Transform {
                                         translation,
                                         rotation,

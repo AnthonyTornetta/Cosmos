@@ -46,6 +46,7 @@ fn new_renet_client(host: &str) -> RenetClient {
     RenetClient::new(cur_time, socket, client_id, connection_config, auth).unwrap()
 }
 
+#[derive(Resource)]
 pub struct ConnectionConfig {
     pub host_name: String,
 }

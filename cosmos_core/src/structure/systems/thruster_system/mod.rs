@@ -1,8 +1,8 @@
 use bevy::{
     ecs::schedule::StateData,
     prelude::{
-        App, Commands, Component, CoreStage, Entity, EventReader, Query, Res, ResMut, SystemSet,
-        Transform, Vec3, With,
+        App, Commands, Component, CoreStage, Entity, EventReader, Query, Res, ResMut, Resource,
+        SystemSet, Transform, Vec3, With,
     },
     time::Time,
     utils::HashMap,
@@ -28,7 +28,7 @@ pub struct ThrusterProperty {
     pub energy_consupmtion: f32,
 }
 
-#[derive(Default)]
+#[derive(Default, Resource)]
 struct ThrusterBlocks {
     blocks: HashMap<u16, ThrusterProperty>,
 }
@@ -158,77 +158,77 @@ fn block_update_system(
     }
 }
 
-fn update_movement(
-    mut commands: Commands,
-    mut query: Query<
-        (
-            Entity,
-            &ShipMovement,
-            &ThrusterSystem,
-            &mut EnergyStorageSystem,
-            &Transform,
-            &mut Velocity,
-            &ReadMassProperties,
-        ),
-        With<Pilot>,
-    >,
-    time: Res<Time>,
-) {
-    for (
-        entity,
-        movement,
-        thruster_system,
-        mut energy_system,
-        transform,
-        mut velocity,
-        mass_props,
-    ) in query.iter_mut()
-    {
-        let normal = movement.into_normal_vector();
-        // velocity.angvel += transform.rotation.mul_vec3(movement.torque.clone());
-        velocity.angvel += transform.rotation.mul_vec3(movement.torque.clone())
-            / mass_props.0.principal_inertia
-            * thruster_system.thrust_total;
-        // This is horrible, please find something better
-        velocity.angvel = velocity
-            .angvel
-            .clamp_length(0.0, movement.torque.length() * 4.0);
+// fn update_movement(
+//     mut commands: Commands,
+//     mut query: Query<
+//         (
+//             Entity,
+//             &ShipMovement,
+//             &ThrusterSystem,
+//             &mut EnergyStorageSystem,
+//             &Transform,
+//             &mut Velocity,
+//             &ReadMassProperties,
+//         ),
+//         With<Pilot>,
+//     >,
+//     time: Res<Time>,
+// ) {
+//     for (
+//         entity,
+//         movement,
+//         thruster_system,
+//         mut energy_system,
+//         transform,
+//         mut velocity,
+//         mass_props,
+//     ) in query.iter_mut()
+//     {
+//         let normal = movement.into_normal_vector();
+//         // velocity.angvel += transform.rotation.mul_vec3(movement.torque.clone());
+//         velocity.angvel += transform.rotation.mul_vec3(movement.torque.clone())
+//             / mass_props.0.principal_inertia
+//             * thruster_system.thrust_total;
+//         // This is horrible, please find something better
+//         velocity.angvel = velocity
+//             .angvel
+//             .clamp_length(0.0, movement.torque.length() * 4.0);
 
-        velocity.linvel = velocity.linvel.clamp_length(0.0, 256.0);
+//         velocity.linvel = velocity.linvel.clamp_length(0.0, 256.0);
 
-        let movement_vector = if normal.x == 0.0 && normal.y == 0.0 && normal.z == 0.0 {
-            Vec3::ZERO
-        } else {
-            let mut movement_vector = transform.forward() * normal.z;
-            movement_vector += transform.right() * normal.x;
-            movement_vector += transform.up() * normal.y;
+//         let movement_vector = if normal.x == 0.0 && normal.y == 0.0 && normal.z == 0.0 {
+//             Vec3::ZERO
+//         } else {
+//             let mut movement_vector = transform.forward() * normal.z;
+//             movement_vector += transform.right() * normal.x;
+//             movement_vector += transform.up() * normal.y;
 
-            movement_vector = movement_vector.normalize();
+//             movement_vector = movement_vector.normalize();
 
-            let delta = time.delta_seconds();
+//             let delta = time.delta_seconds();
 
-            let mut energy_used = thruster_system.energy_consumption * delta;
+//             let mut energy_used = thruster_system.energy_consumption * delta;
 
-            let ratio;
-            if energy_used > energy_system.get_energy() {
-                ratio = energy_system.get_energy() / energy_used;
-                energy_used = energy_system.get_energy();
-            } else {
-                ratio = 1.0;
-            }
+//             let ratio;
+//             if energy_used > energy_system.get_energy() {
+//                 ratio = energy_system.get_energy() / energy_used;
+//                 energy_used = energy_system.get_energy();
+//             } else {
+//                 ratio = 1.0;
+//             }
 
-            energy_system.decrease_energy(energy_used);
+//             energy_system.decrease_energy(energy_used);
 
-            movement_vector * (thruster_system.thrust_total * ratio)
-        };
+//             movement_vector * (thruster_system.thrust_total * ratio)
+//         };
 
-        commands.entity(entity).insert(ExternalImpulse {
-            impulse: movement_vector,
-            // torque_impulse: movement.torque,
-            ..Default::default()
-        });
-    }
-}
+//         commands.entity(entity).insert(ExternalImpulse {
+//             impulse: movement_vector,
+//             // torque_impulse: movement.torque,
+//             ..Default::default()
+//         });
+//     }
+// }
 
 pub fn register<T: StateData + Clone>(app: &mut App, post_loading_state: T, playing_state: T) {
     app.insert_resource(ThrusterBlocks::default())
@@ -239,6 +239,6 @@ pub fn register<T: StateData + Clone>(app: &mut App, post_loading_state: T, play
             CoreStage::PostUpdate,
             block_update_system.run_in_bevy_state(playing_state.clone()),
         )
-        .add_system_set(SystemSet::on_update(playing_state).with_system(update_movement))
+        .add_system_set(SystemSet::on_update(playing_state)) //.with_system(update_movement))
         .register_inspectable::<ThrusterSystem>();
 }

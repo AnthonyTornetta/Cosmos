@@ -270,8 +270,7 @@ fn main() {
         host_name: host_name.into(),
     });
 
-    app.insert_resource(ImageSettings::default_nearest()) // MUST be before default plugins!
-        .add_state(GameState::PreLoading)
+    app.add_state(GameState::PreLoading)
         .add_plugins(CosmosCorePluginGroup::new(
             GameState::PreLoading,
             GameState::Loading,

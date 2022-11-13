@@ -25,7 +25,7 @@ pub fn register(app: &mut App) {
 }
 
 fn create_world(mut commands: Commands, mut event_writer: EventWriter<StructureCreated>) {
-    let mut entity_cmd = commands.spawn();
+    let mut entity_cmd = commands.spawn_empty();
 
     let mut structure = Structure::new(20, 1, 20, false, entity_cmd.id());
 

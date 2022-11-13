@@ -6,7 +6,7 @@ use bevy::diagnostic::DiagnosticsPlugin;
 use bevy::ecs::schedule::StateData;
 use bevy::input::InputPlugin;
 use bevy::log::LogPlugin;
-use bevy::prelude::{App, HierarchyPlugin, Plugin, PluginGroup, TransformPlugin};
+use bevy::prelude::{App, HierarchyPlugin, Plugin, PluginGroup, TransformPlugin, ImagePlugin};
 use bevy::render::RenderPlugin;
 use bevy::scene::ScenePlugin;
 use bevy::time::TimePlugin;
@@ -110,11 +110,12 @@ impl<T: StateData + Clone> PluginGroup for CosmosCorePluginGroup<T> {
         group.add(CorePlugin::default());
         group.add(TimePlugin::default());
         group.add(TransformPlugin::default());
+        group.add(ImagePlugin::default_nearest());
         group.add(HierarchyPlugin::default());
         group.add(DiagnosticsPlugin::default());
         group.add(InputPlugin::default());
         group.add(WindowPlugin::default());
-
+        
         group.add(AssetPlugin::default());
 
         group.add(ScenePlugin::default());

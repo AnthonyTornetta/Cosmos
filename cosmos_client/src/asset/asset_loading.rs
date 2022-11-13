@@ -10,16 +10,20 @@ enum AtlasName {
     Main,
 }
 
+#[derive(Resource)]
 struct LoadingAsset {
     atlas_name: AtlasName,
     handle: Handle<Image>,
 }
 
 struct AssetsDoneLoadingEvent;
+
+#[derive(Resource)]
 struct AssetsLoadingID(usize);
 
 struct AssetsLoading(Vec<LoadingAsset>);
 
+#[derive(Resource)]
 pub struct MainAtlas {
     //handle: Handle<Image>,
     pub material: Handle<StandardMaterial>,

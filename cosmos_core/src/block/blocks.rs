@@ -1,12 +1,12 @@
 use crate::block::block_builder::BlockBuilder;
 use crate::loader::{AddLoadingEvent, DoneLoadingEvent, LoadingManager};
 use bevy::ecs::schedule::StateData;
-use bevy::prelude::{App, Commands, EventWriter, ResMut, SystemSet};
+use bevy::prelude::{App, Commands, EventWriter, ResMut, Resource, SystemSet};
 use bevy::utils::HashMap;
 
 use super::{Block, BlockFace, BlockProperty};
 
-#[derive(Default)]
+#[derive(Default, Resource)]
 pub struct Blocks {
     blocks: Vec<Block>,
     blocks_to_string: HashMap<String, u16>,

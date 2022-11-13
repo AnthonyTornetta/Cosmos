@@ -1,15 +1,17 @@
 use bevy::{
     input::mouse::MouseMotion,
-    prelude::{App, EventReader, Input, KeyCode, MouseButton, Res, ResMut, Vec2},
+    prelude::{App, EventReader, Input, KeyCode, MouseButton, Res, ResMut, Vec2, Resource},
     window::Windows,
 };
 
 use crate::input::inputs::{CosmosInputHandler, CosmosInputs};
 
+#[derive(Resource)]
 struct WindowLockedFlag {
     locked: bool,
 }
 
+#[derive(Resource)]
 pub struct DeltaCursorPosition {
     pub x: f32,
     pub y: f32,

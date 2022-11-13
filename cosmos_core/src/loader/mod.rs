@@ -1,7 +1,7 @@
 use bevy::{ecs::schedule::StateData, prelude::*, utils::HashSet};
 
 /// Using the LoadingManager struct avoids passing ugly generics around the code, rather than directly using the LoadingStatus struct
-#[derive(Default)]
+#[derive(Default, Resource)]
 pub struct LoadingManager {
     next_id: usize,
 }
@@ -22,6 +22,7 @@ impl LoadingManager {
     }
 }
 
+#[derive(Resource)]
 struct LoadingStatus<T: StateData + Clone> {
     loaders: HashSet<usize>,
     done: bool, // at least one thing has to be processed before this is true. Prevents loading state from being advanced before stuff has a chance to get registered

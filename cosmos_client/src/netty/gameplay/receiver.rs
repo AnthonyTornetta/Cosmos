@@ -219,7 +219,7 @@ fn client_sync_players(
                 width,
                 body,
             } => {
-                let mut entity = commands.spawn();
+                let mut entity = commands.spawn_empty();
                 let mut structure = Structure::new(width, height, length, false, entity.id());
 
                 let builder = ClientPlanetBuilder::default();
@@ -240,7 +240,7 @@ fn client_sync_players(
                 height,
                 length,
             } => {
-                let mut entity = commands.spawn();
+                let mut entity = commands.spawn_empty();
                 let mut structure = Structure::new(width, height, length, true, entity.id());
 
                 let builder = ClientShipBuilder::default();
