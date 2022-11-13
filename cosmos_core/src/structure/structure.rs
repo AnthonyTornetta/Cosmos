@@ -315,7 +315,7 @@ impl Structure {
 
                 let direction_fixer = Quat::from_euler(
                     bevy::prelude::EulerRot::ZYX,
-                    center_rotation_x,
+                    -center_rotation_x,
                     0.0,
                     center_rotation_z,
                 )
