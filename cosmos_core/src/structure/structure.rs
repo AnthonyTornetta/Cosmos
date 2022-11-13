@@ -331,7 +331,8 @@ impl Structure {
 
                 let block_relative_pos = Vec3::new(
                     de_rotated_pos.x + (cz as f32 * CHUNK_DIMENSIONSF + CHUNK_DIMENSIONSF / 2.0),
-                    de_rotated_pos.y - radius + (chunk_y as f32 * CHUNK_DIMENSIONSF),
+                    de_rotated_pos.y - radius
+                        + (chunk_y as f32 * CHUNK_DIMENSIONSF + CHUNK_DIMENSIONSF / 2.0),
                     de_rotated_pos.z + (cx as f32 * CHUNK_DIMENSIONSF + CHUNK_DIMENSIONSF / 2.0),
                 );
 
