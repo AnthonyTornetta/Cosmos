@@ -453,56 +453,38 @@ impl ChunkRenderer {
         // // (chunk.angle_end_z() - chunk.angle_start_z()) / (CHUNK_DIMENSIONS as f32);
         // let theta_z = PI / 2.0 - curve_per_block_z;
         // let z_diff = theta_z.cos() / 2.0;
-        let dr: f32 = TAU / structure.chunks_width() as f32;
-
         let fixers = Vec3::new(
             CHUNK_DIMENSIONSF / 2.0 - 0.5,
             CHUNK_DIMENSIONSF / 2.0 - 0.5,
             CHUNK_DIMENSIONSF / 2.0 - 0.5,
         );
 
-        // https://www.mathopenref.com/polygonsides.html
-        let base_apothm = (PI / (TAU / dr)).tan() * 2.0;
+        let curve_per_block_x =
+            (chunk.angle_end_x() - chunk.angle_start_x()) / (CHUNK_DIMENSIONS as f32);
+        let theta_x = PI / 2.0 - curve_per_block_x;
+        let x_diff = theta_x.cos();
 
-        let start = match structure.shape() {
-            StructureShape::Flat => 0.0,
-            StructureShape::Sphere { radius } => radius,
-        };
-        for y in 0..structure.blocks_height() {
-            println!(
-                "{}: {}",
-                y as f32 + start,
-                ((y as f32 + start) as f32 * base_apothm) / CHUNK_DIMENSIONSF / 2.0
-            );
-        }
+        let curve_per_block_z =
+            (chunk.angle_end_z() - chunk.angle_start_z()) / (CHUNK_DIMENSIONS as f32);
+        let theta_z = PI / 2.0 - curve_per_block_z;
+        let z_diff = theta_z.cos();
 
         for z in 0..CHUNK_DIMENSIONS {
             for y in 0..CHUNK_DIMENSIONS {
-                let radius = match structure.shape() {
-                    StructureShape::Flat => 0.0,
-                    StructureShape::Sphere { radius } => radius,
-                };
+                let (bot_x, top_x, bot_y, top_y, bot_z, top_z) = match structure.shape() {
+                    StructureShape::Sphere { radius: _ } => {
+                        let y_influence = (y + chunk.structure_y() * CHUNK_DIMENSIONS) as f32;
 
-                let y_influence = radius + (y + chunk.structure_y() * CHUNK_DIMENSIONS) as f32;
-
-                let chunk_apothm = y_influence * base_apothm;
-                let per_block_apothm = chunk_apothm / CHUNK_DIMENSIONSF / 2.0;
-
-                let next_chunk_apothm = (y_influence + 1.0) * base_apothm;
-                let per_block_apothm_next = chunk_apothm / CHUNK_DIMENSIONSF / 2.0;
-
-                // Flat planets have a dr of 0, so each block should be equal to 0.5 in all dimensions
-                let (bot_x, top_x, bot_y, top_y, bot_z, top_z) = if dr != 0.0 {
-                    (
-                        per_block_apothm,
-                        per_block_apothm_next,
-                        0.5,
-                        0.5,
-                        per_block_apothm,
-                        per_block_apothm_next,
-                    )
-                } else {
-                    (0.5, 0.5, 0.5, 0.5, 0.5, 0.5)
+                        (
+                            0.5 + x_diff * y_influence,
+                            0.5 + x_diff + x_diff * y_influence,
+                            0.5,
+                            0.5,
+                            0.5 + z_diff * y_influence,
+                            0.5 + z_diff + z_diff * y_influence,
+                        )
+                    }
+                    StructureShape::Flat => (0.5, 0.5, 0.5, 0.5, 0.5, 0.5),
                 };
 
                 // let (bot_x, top_x, bot_y, top_y, bot_z, top_z) =
