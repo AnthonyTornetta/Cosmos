@@ -113,10 +113,20 @@ impl Structure {
                 radius: CHUNK_DIMENSIONS as f32 / (1.0 - ((PI / 2.0 - delta) / 2.0).tan()),
             };
 
+            println!("MAKING CHUNKS {}", delta);
+
             for z in 0..length {
                 for x in 0..width {
                     for y in 0..height {
-                        chunks.push(Chunk::new(x, y, z, 0.0, 0.0, 0.0, 0.0));
+                        chunks.push(Chunk::new(
+                            x,
+                            y,
+                            z,
+                            delta * x as f32,
+                            delta * (x as f32 + 1.0),
+                            delta * z as f32,
+                            delta * (z as f32 + 1.0),
+                        ));
                     }
                 }
             }
@@ -336,18 +346,18 @@ impl Structure {
                     de_rotated_pos.z + (cx as f32 * CHUNK_DIMENSIONSF + CHUNK_DIMENSIONSF / 2.0),
                 );
 
-                println!(
-                    "Was {:.4} {:.4} {:.4} | {} {} | {:.4} {:.4} | {:.4} {:.4}",
-                    block_relative_pos.x,
-                    block_relative_pos.y,
-                    block_relative_pos.z,
-                    cx,
-                    cz,
-                    euler_x,
-                    euler_z,
-                    out_x,
-                    out_z
-                );
+                // println!(
+                //     "Was {:.4} {:.4} {:.4} | {} {} | {:.4} {:.4} | {:.4} {:.4}",
+                //     block_relative_pos.x,
+                //     block_relative_pos.y,
+                //     block_relative_pos.z,
+                //     cx,
+                //     cz,
+                //     euler_x,
+                //     euler_z,
+                //     out_x,
+                //     out_z
+                // );
 
                 if (block_relative_pos.x as i32) < 0
                     || (block_relative_pos.y as i32) < 0
@@ -625,3 +635,4 @@ impl Structure {
         self.shape
     }
 }
+ 

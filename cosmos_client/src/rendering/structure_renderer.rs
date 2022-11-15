@@ -8,10 +8,10 @@ use cosmos_core::block::BlockFace;
 use cosmos_core::events::block_events::BlockChangedEvent;
 use cosmos_core::structure::chunk::{Chunk, CHUNK_DIMENSIONS, CHUNK_DIMENSIONSF};
 use cosmos_core::structure::events::ChunkSetEvent;
-use cosmos_core::structure::structure::Structure;
+use cosmos_core::structure::structure::{Structure, StructureShape};
 use cosmos_core::utils::array_utils::flatten;
 use std::collections::HashSet;
-use std::f32::consts::PI;
+use std::f32::consts::{PI, TAU};
 
 use crate::asset::asset_loading::MainAtlas;
 use crate::{Assets, Commands, Entity, EventWriter, Handle, Query, Res, ResMut, UVMapper};
@@ -150,7 +150,7 @@ impl StructureRenderer {
                 }
 
                 self.chunk_renderers[flatten(x, y, z, self.width, self.height)].render(
-                    uv_mapper, chunk, left, right, bottom, top, back, front, blocks,
+                    structure, uv_mapper, chunk, left, right, bottom, top, back, front, blocks,
                 );
 
                 self.need_meshes.insert(change.clone());
@@ -424,6 +424,7 @@ impl ChunkRenderer {
 
     pub fn render(
         &mut self,
+        structure: &Structure,
         uv_mapper: &UVMapper,
         chunk: &Chunk,
         left: Option<&Chunk>,
@@ -452,64 +453,66 @@ impl ChunkRenderer {
         // // (chunk.angle_end_z() - chunk.angle_start_z()) / (CHUNK_DIMENSIONS as f32);
         // let theta_z = PI / 2.0 - curve_per_block_z;
         // let z_diff = theta_z.cos() / 2.0;
+        let dr: f32 = TAU / structure.chunks_width() as f32;
 
-        let r_z: f32 = 0.0;
-        let r_x: f32 = 0.0;
-        let dr_z: f32 = (chunk.angle_end_z() - chunk.angle_start_z()) / 2.0;
-        let dr_x: f32 = (chunk.angle_end_x() - chunk.angle_start_x()) / 2.0;
+        let fixers = Vec3::new(
+            CHUNK_DIMENSIONSF / 2.0 - 0.5,
+            CHUNK_DIMENSIONSF / 2.0 - 0.5,
+            CHUNK_DIMENSIONSF / 2.0 - 0.5,
+        );
 
-        let curve_per_block_x = dr_x / CHUNK_DIMENSIONSF;
-        let curve_per_block_z = dr_z / CHUNK_DIMENSIONSF;
+        // https://www.mathopenref.com/polygonsides.html
+        let base_apothm = (PI / (TAU / dr)).tan() * 2.0;
 
-        let x_diff = (PI / 2.0 - curve_per_block_x).cos() / 2.0;
-        let z_diff = (PI / 2.0 - curve_per_block_z).cos() / 2.0;
+        let start = match structure.shape() {
+            StructureShape::Flat => 0.0,
+            StructureShape::Sphere { radius } => radius,
+        };
+        for y in 0..structure.blocks_height() {
+            println!(
+                "{}: {}",
+                y as f32 + start,
+                ((y as f32 + start) as f32 * base_apothm) / CHUNK_DIMENSIONSF / 2.0
+            );
+        }
 
         for z in 0..CHUNK_DIMENSIONS {
             for y in 0..CHUNK_DIMENSIONS {
+                let radius = match structure.shape() {
+                    StructureShape::Flat => 0.0,
+                    StructureShape::Sphere { radius } => radius,
+                };
+
+                let y_influence = radius + (y + chunk.structure_y() * CHUNK_DIMENSIONS) as f32;
+
+                let chunk_apothm = y_influence * base_apothm;
+                let per_block_apothm = chunk_apothm / CHUNK_DIMENSIONSF / 2.0;
+
+                let next_chunk_apothm = (y_influence + 1.0) * base_apothm;
+                let per_block_apothm_next = chunk_apothm / CHUNK_DIMENSIONSF / 2.0;
+
+                // Flat planets have a dr of 0, so each block should be equal to 0.5 in all dimensions
+                let (bot_x, top_x, bot_y, top_y, bot_z, top_z) = if dr != 0.0 {
+                    (
+                        per_block_apothm,
+                        per_block_apothm_next,
+                        0.5,
+                        0.5,
+                        per_block_apothm,
+                        per_block_apothm_next,
+                    )
+                } else {
+                    (0.5, 0.5, 0.5, 0.5, 0.5, 0.5)
+                };
+
+                // let (bot_x, top_x, bot_y, top_y, bot_z, top_z) =
+                //     (0.5, 0.5, 0.5, 0.5, 0.5, 0.5);
+
                 for x in 0..CHUNK_DIMENSIONS {
                     if chunk.has_block_at(x, y, z) {
-                        let y_influence = (y + chunk.structure_y() * CHUNK_DIMENSIONS) as f32;
-
-                        let (bot_x, top_x, bot_y, top_y, bot_z, top_z) = (
-                            0.5 - x_diff + x_diff * y_influence,
-                            0.5 + x_diff + x_diff * y_influence,
-                            0.5,
-                            0.5,
-                            0.5 - z_diff + z_diff * y_influence,
-                            0.5 + z_diff + z_diff * y_influence,
-                        );
-
-                        // let (bot_x, top_x, bot_y, top_y, bot_z, top_z) =
-                        //     (0.5, 0.5, 0.5, 0.5, 0.5, 0.5);
-
-                        // let theta_x = -curve_per_block_x * x as f32 - curve_per_block_x / 2.0;
-                        // let theta_z = curve_per_block_z * z as f32 + curve_per_block_z / 2.0;
-
-                        let theta_x = -(r_x
-                            + dr_x
-                                * ((2.0 * x as f32 - CHUNK_DIMENSIONS as f32)
-                                    / CHUNK_DIMENSIONS as f32));
-                        let theta_z = r_z
-                            + dr_z
-                                * ((2.0 * z as f32 - CHUNK_DIMENSIONS as f32)
-                                    / CHUNK_DIMENSIONS as f32);
-
-                        let rotation = Quat::from_axis_angle(Vec3::Z, theta_x)
-                            * Quat::from_axis_angle(Vec3::X, theta_z);
-                        // * Quat::from_axis_angle(Vec3::X, theta_z);
-                        //Quat::from_axis_angle(Vec3::X, theta_x);
-                        // Quat::IDENTITY;
                         let block = blocks.block_from_numeric_id(chunk.block_at(x, y, z));
 
                         let (cx, cy, cz) = (x as f32, y as f32, z as f32);
-
-                        let cs = Vec3::new(0.0, 0.0, 0.0);
-
-                        let fixers = Vec3::new(
-                            CHUNK_DIMENSIONSF / 2.0 - 0.5,
-                            CHUNK_DIMENSIONSF / 2.0 - 0.5,
-                            CHUNK_DIMENSIONSF / 2.0 - 0.5,
-                        );
 
                         // right
                         if (x != CHUNK_DIMENSIONS - 1
@@ -519,36 +522,26 @@ impl ChunkRenderer {
                                     || right.unwrap().has_see_through_block_at(0, y, z, blocks)))
                         {
                             self.positions.push(
-                                (rotation.mul_vec3(
-                                    [cx + bot_x - cs.x, cy - bot_y - cs.y, cz - bot_z - cs.z]
-                                        .into(),
-                                ) + cs
-                                    - fixers)
-                                    .into(),
+                                ([
+                                    cx + bot_x - fixers.x,
+                                    cy - bot_y - fixers.y,
+                                    cz - bot_z - fixers.z,
+                                ])
+                                .into(),
                             );
                             self.positions.push(
-                                (rotation.mul_vec3(
-                                    [cx + top_x - cs.x, cy + top_y - cs.y, cz - top_z - cs.z]
-                                        .into(),
-                                ) + cs
-                                    - fixers)
-                                    .into(),
+                                ([
+                                    cx + top_x - fixers.x,
+                                    cy + top_y - fixers.y,
+                                    cz - top_z - fixers.z,
+                                ])
+                                .into(),
                             );
                             self.positions.push(
-                                (rotation.mul_vec3(
-                                    [cx + top_x - cs.x, cy + top_y - cs.y, cz + top_z - cs.z]
-                                        .into(),
-                                ) + cs
-                                    - fixers)
-                                    .into(),
+                                ([cx + top_x - fixers.x, cy + top_y - fixers.y, cz + top_z]).into(),
                             );
                             self.positions.push(
-                                (rotation.mul_vec3(
-                                    [cx + bot_x - cs.x, cy - bot_y - cs.y, cz + bot_z - cs.z]
-                                        .into(),
-                                ) + cs
-                                    - fixers)
-                                    .into(),
+                                ([cx + bot_x - fixers.x, cy - bot_y - fixers.y, cz + bot_z]).into(),
                             );
 
                             self.normals.push([1.0, 0.0, 0.0]);
@@ -583,36 +576,26 @@ impl ChunkRenderer {
                                     )))
                         {
                             self.positions.push(
-                                (rotation.mul_vec3(
-                                    [cx - bot_x - cs.x, cy - bot_y - cs.y, cz + bot_z - cs.z]
-                                        .into(),
-                                ) + cs
-                                    - fixers)
-                                    .into(),
+                                ([cx - bot_x - fixers.x, cy - bot_y - fixers.y, cz + bot_z]).into(),
                             );
                             self.positions.push(
-                                (rotation.mul_vec3(
-                                    [cx - top_x - cs.x, cy + top_y - cs.y, cz + top_z - cs.z]
-                                        .into(),
-                                ) + cs
-                                    - fixers)
-                                    .into(),
+                                ([cx - top_x - fixers.x, cy + top_y - fixers.y, cz + top_z]).into(),
                             );
                             self.positions.push(
-                                (rotation.mul_vec3(
-                                    [cx - top_x - cs.x, cy + top_y - cs.y, cz - top_z - cs.z]
-                                        .into(),
-                                ) + cs
-                                    - fixers)
-                                    .into(),
+                                ([
+                                    cx - top_x - fixers.x,
+                                    cy + top_y - fixers.y,
+                                    cz - top_z - fixers.z,
+                                ])
+                                .into(),
                             );
                             self.positions.push(
-                                (rotation.mul_vec3(
-                                    [cx - bot_x - cs.x, cy - bot_y - cs.y, cz - bot_z - cs.z]
-                                        .into(),
-                                ) + cs
-                                    - fixers)
-                                    .into(),
+                                ([
+                                    cx - bot_x - fixers.x,
+                                    cy - bot_y - fixers.y,
+                                    cz - bot_z - fixers.z,
+                                ])
+                                .into(),
                             );
 
                             self.normals.push([-1.0, 0.0, 0.0]);
@@ -644,36 +627,26 @@ impl ChunkRenderer {
                                     || top.unwrap().has_see_through_block_at(x, 0, z, blocks)))
                         {
                             self.positions.push(
-                                (rotation.mul_vec3(
-                                    [cx + top_x - cs.x, cy + top_y - cs.y, cz - top_z - cs.z]
-                                        .into(),
-                                ) + cs
-                                    - fixers)
-                                    .into(),
+                                ([
+                                    cx + top_x - fixers.x,
+                                    cy + top_y - fixers.y,
+                                    cz - top_z - fixers.z,
+                                ])
+                                .into(),
                             );
                             self.positions.push(
-                                (rotation.mul_vec3(
-                                    [cx - top_x - cs.x, cy + top_y - cs.y, cz - top_z - cs.z]
-                                        .into(),
-                                ) + cs
-                                    - fixers)
-                                    .into(),
+                                ([
+                                    cx - top_x - fixers.x,
+                                    cy + top_y - fixers.y,
+                                    cz - top_z - fixers.z,
+                                ])
+                                .into(),
                             );
                             self.positions.push(
-                                (rotation.mul_vec3(
-                                    [cx - top_x - cs.x, cy + top_y - cs.y, cz + top_z - cs.z]
-                                        .into(),
-                                ) + cs
-                                    - fixers)
-                                    .into(),
+                                ([cx - top_x - fixers.x, cy + top_y - fixers.y, cz + top_z]).into(),
                             );
                             self.positions.push(
-                                (rotation.mul_vec3(
-                                    [cx + top_x - cs.x, cy + top_y - cs.y, cz + top_z - cs.z]
-                                        .into(),
-                                ) + cs
-                                    - fixers)
-                                    .into(),
+                                ([cx + top_x - fixers.x, cy + top_y - fixers.y, cz + top_z]).into(),
                             );
 
                             self.normals.push([0.0, 1.0, 0.0]);
@@ -708,36 +681,26 @@ impl ChunkRenderer {
                                     )))
                         {
                             self.positions.push(
-                                (rotation.mul_vec3(
-                                    [cx + bot_x - cs.x, cy - bot_y - cs.y, cz + bot_z - cs.z]
-                                        .into(),
-                                ) + cs
-                                    - fixers)
-                                    .into(),
+                                ([cx + bot_x - fixers.x, cy - bot_y - fixers.y, cz + bot_z]).into(),
                             );
                             self.positions.push(
-                                (rotation.mul_vec3(
-                                    [cx - bot_x - cs.x, cy - bot_y - cs.y, cz + bot_z - cs.z]
-                                        .into(),
-                                ) + cs
-                                    - fixers)
-                                    .into(),
+                                ([cx - bot_x - fixers.x, cy - bot_y - fixers.y, cz + bot_z]).into(),
                             );
                             self.positions.push(
-                                (rotation.mul_vec3(
-                                    [cx - bot_x - cs.x, cy - bot_y - cs.y, cz - bot_z - cs.z]
-                                        .into(),
-                                ) + cs
-                                    - fixers)
-                                    .into(),
+                                ([
+                                    cx - bot_x - fixers.x,
+                                    cy - bot_y - fixers.y,
+                                    cz - bot_z - fixers.z,
+                                ])
+                                .into(),
                             );
                             self.positions.push(
-                                (rotation.mul_vec3(
-                                    [cx + bot_x - cs.x, cy - bot_y - cs.y, cz - bot_z - cs.z]
-                                        .into(),
-                                ) + cs
-                                    - fixers)
-                                    .into(),
+                                ([
+                                    cx + bot_x - fixers.x,
+                                    cy - bot_y - fixers.y,
+                                    cz - bot_z - fixers.z,
+                                ])
+                                .into(),
                             );
 
                             self.normals.push([0.0, -1.0, 0.0]);
@@ -769,36 +732,16 @@ impl ChunkRenderer {
                                     || front.unwrap().has_see_through_block_at(x, y, 0, blocks)))
                         {
                             self.positions.push(
-                                (rotation.mul_vec3(
-                                    [cx - bot_x - cs.x, cy - bot_y - cs.y, cz + bot_z - cs.z]
-                                        .into(),
-                                ) + cs
-                                    - fixers)
-                                    .into(),
+                                ([cx - bot_x - fixers.x, cy - bot_y - fixers.y, cz + bot_z]).into(),
                             );
                             self.positions.push(
-                                (rotation.mul_vec3(
-                                    [cx + bot_x - cs.x, cy - bot_y - cs.y, cz + bot_z - cs.z]
-                                        .into(),
-                                ) + cs
-                                    - fixers)
-                                    .into(),
+                                ([cx + bot_x - fixers.x, cy - bot_y - fixers.y, cz + bot_z]).into(),
                             );
                             self.positions.push(
-                                (rotation.mul_vec3(
-                                    [cx + top_x - cs.x, cy + top_y - cs.y, cz + top_z - cs.z]
-                                        .into(),
-                                ) + cs
-                                    - fixers)
-                                    .into(),
+                                ([cx + top_x - fixers.x, cy + top_y - fixers.y, cz + top_z]).into(),
                             );
                             self.positions.push(
-                                (rotation.mul_vec3(
-                                    [cx - top_x - cs.x, cy + top_y - cs.y, cz + top_z - cs.z]
-                                        .into(),
-                                ) + cs
-                                    - fixers)
-                                    .into(),
+                                ([cx - top_x - fixers.x, cy + top_y - fixers.y, cz + top_z]).into(),
                             );
 
                             self.normals.push([0.0, 0.0, 1.0]);
@@ -833,36 +776,36 @@ impl ChunkRenderer {
                                     )))
                         {
                             self.positions.push(
-                                (rotation.mul_vec3(
-                                    [cx - top_x - cs.x, cy + top_y - cs.y, cz - top_z - cs.z]
-                                        .into(),
-                                ) + cs
-                                    - fixers)
-                                    .into(),
+                                ([
+                                    cx - top_x - fixers.x,
+                                    cy + top_y - fixers.y,
+                                    cz - top_z - fixers.z,
+                                ])
+                                .into(),
                             );
                             self.positions.push(
-                                (rotation.mul_vec3(
-                                    [cx + top_x - cs.x, cy + top_y - cs.y, cz - top_z - cs.z]
-                                        .into(),
-                                ) + cs
-                                    - fixers)
-                                    .into(),
+                                ([
+                                    cx + top_x - fixers.x,
+                                    cy + top_y - fixers.y,
+                                    cz - top_z - fixers.z,
+                                ])
+                                .into(),
                             );
                             self.positions.push(
-                                (rotation.mul_vec3(
-                                    [cx + bot_x - cs.x, cy - bot_y - cs.y, cz - bot_z - cs.z]
-                                        .into(),
-                                ) + cs
-                                    - fixers)
-                                    .into(),
+                                ([
+                                    cx + bot_x - fixers.x,
+                                    cy - bot_y - fixers.y,
+                                    cz - bot_z - fixers.z,
+                                ])
+                                .into(),
                             );
                             self.positions.push(
-                                (rotation.mul_vec3(
-                                    [cx - bot_x - cs.x, cy - bot_y - cs.y, cz - bot_z - cs.z]
-                                        .into(),
-                                ) + cs
-                                    - fixers)
-                                    .into(),
+                                ([
+                                    cx - bot_x - fixers.x,
+                                    cy - bot_y - fixers.y,
+                                    cz - bot_z - fixers.z,
+                                ])
+                                .into(),
                             );
 
                             self.normals.push([0.0, 0.0, -1.0]);
