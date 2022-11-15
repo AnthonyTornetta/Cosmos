@@ -453,14 +453,11 @@ impl ChunkRenderer {
         // // (chunk.angle_end_z() - chunk.angle_start_z()) / (CHUNK_DIMENSIONS as f32);
         // let theta_z = PI / 2.0 - curve_per_block_z;
         // let z_diff = theta_z.cos() / 2.0;
-        let fixers = Vec3::new(
-            CHUNK_DIMENSIONSF / 2.0 - 0.5,
-            CHUNK_DIMENSIONSF / 2.0 - 0.5,
-            CHUNK_DIMENSIONSF / 2.0 - 0.5,
-        );
 
-        let curve_per_block_x =
-            (chunk.angle_end_x() - chunk.angle_start_x()) / (CHUNK_DIMENSIONS as f32);
+        let curve_per_block_x = (chunk.angle_end_x() - chunk.angle_start_x()) / CHUNK_DIMENSIONSF;
+
+        let half_curve = (chunk.angle_end_x() - chunk.angle_start_x()) / 2.0;
+
         let theta_x = PI / 2.0 - curve_per_block_x;
         let x_diff = theta_x.cos();
 
@@ -471,19 +468,16 @@ impl ChunkRenderer {
 
         for z in 0..CHUNK_DIMENSIONS {
             for y in 0..CHUNK_DIMENSIONS {
+                let y_influence = (y + chunk.structure_y() * CHUNK_DIMENSIONS) as f32;
                 let (bot_x, top_x, bot_y, top_y, bot_z, top_z) = match structure.shape() {
-                    StructureShape::Sphere { radius: _ } => {
-                        let y_influence = (y + chunk.structure_y() * CHUNK_DIMENSIONS) as f32;
-
-                        (
-                            0.5 + x_diff * y_influence,
-                            0.5 + x_diff + x_diff * y_influence,
-                            0.5,
-                            0.5,
-                            0.5 + z_diff * y_influence,
-                            0.5 + z_diff + z_diff * y_influence,
-                        )
-                    }
+                    StructureShape::Sphere { radius: _ } => (
+                        0.5 + (x_diff * y_influence) / 2.0,
+                        0.5 + (x_diff + x_diff * y_influence) / 2.0,
+                        0.5,
+                        0.5,
+                        0.5 + (z_diff * y_influence) / 2.0,
+                        0.5 + (z_diff + z_diff * y_influence) / 2.0,
+                    ),
                     StructureShape::Flat => (0.5, 0.5, 0.5, 0.5, 0.5, 0.5),
                 };
 
@@ -494,7 +488,30 @@ impl ChunkRenderer {
                     if chunk.has_block_at(x, y, z) {
                         let block = blocks.block_from_numeric_id(chunk.block_at(x, y, z));
 
-                        let (cx, cy, cz) = (x as f32, y as f32, z as f32);
+                        let ratio = (0.5 + (x_diff * (y_influence)) / 2.0) / 0.5;
+
+                        let quat = Quat::from_euler(
+                            bevy::prelude::EulerRot::ZYX,
+                            half_curve + curve_per_block_x * x as f32,
+                            0.0,
+                            half_curve + curve_per_block_z * z as f32,
+                        );
+
+                        let fixers = Vec3::new(
+                            0.0, 0.0,
+                            0.0, //CHUNK_DIMENSIONSF / 2.0 - 0.5,
+                                //CHUNK_DIMENSIONSF / 2.0 - 0.5,
+                                //CHUNK_DIMENSIONSF / 2.0 - 0.5,
+                        );
+
+                        let (cx, cy, cz) = (
+                            (x as f32 - CHUNK_DIMENSIONSF / 2.0 + 0.5) * ratio,
+                            y as f32 - CHUNK_DIMENSIONSF / 2.0 + 0.5,
+                            (z as f32 - CHUNK_DIMENSIONSF / 2.0 + 0.5) * ratio,
+                        );
+
+                        let bot_vec = quat.mul_vec3(Vec3::new(0.0, cy - bot_y, 0.0));
+                        let top_vec = quat.mul_vec3(Vec3::new(0.0, cy + top_y, 0.0));
 
                         // right
                         if (x != CHUNK_DIMENSIONS - 1
@@ -504,19 +521,13 @@ impl ChunkRenderer {
                                     || right.unwrap().has_see_through_block_at(0, y, z, blocks)))
                         {
                             self.positions.push(
-                                ([
-                                    cx + bot_x - fixers.x,
-                                    cy - bot_y - fixers.y,
-                                    cz - bot_z - fixers.z,
-                                ])
+                                (bot_vec
+                                    + Vec3::new(cx + bot_x - fixers.x, 0.0, cz - bot_z - fixers.z))
                                 .into(),
                             );
                             self.positions.push(
-                                ([
-                                    cx + top_x - fixers.x,
-                                    cy + top_y - fixers.y,
-                                    cz - top_z - fixers.z,
-                                ])
+                                (top_vec
+                                    + Vec3::new(cx + top_x - fixers.x, 0.0, cz - top_z - fixers.z))
                                 .into(),
                             );
                             self.positions.push(

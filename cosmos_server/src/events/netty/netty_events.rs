@@ -43,7 +43,7 @@ fn handle_events_system(
 
                 let name = "epic nameo";
                 let player = Player::new(String::from(name), *id);
-                let transform = Transform::from_xyz(0.0, 60.0, 0.0);
+                let transform = Transform::from_xyz(0.0, 180.0, 0.0);
                 let velocity = Velocity::default();
 
                 let netty_body = NettyRigidBody::new(&velocity, &transform);

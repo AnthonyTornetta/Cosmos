@@ -215,7 +215,7 @@ fn create_sun(
 
     commands
         .spawn_bundle(PointLightBundle {
-            transform: Transform::from_xyz(0.0, 0.0, 0.0),
+            transform: Transform::from_xyz(0.0, 180.0, 0.0),
             point_light: PointLight {
                 intensity: 160000.0,
                 range: 16000.0,
@@ -270,8 +270,7 @@ fn main() {
         host_name: host_name.into(),
     });
 
-    app.insert_resource(ImageSettings::default_nearest()) // MUST be before default plugins!
-        .add_state(GameState::PreLoading)
+    app.add_state(GameState::PreLoading)
         .add_plugins(CosmosCorePluginGroup::new(
             GameState::PreLoading,
             GameState::Loading,
