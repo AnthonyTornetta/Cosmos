@@ -492,9 +492,9 @@ impl ChunkRenderer {
 
                         let quat = Quat::from_euler(
                             bevy::prelude::EulerRot::ZYX,
-                            -(-half_curve + curve_per_block_x * x as f32) * 2.0,
+                            -(-half_curve + curve_per_block_x * x as f32),
                             0.0,
-                            (-half_curve + curve_per_block_z * z as f32) * 2.0,
+                            (-half_curve + curve_per_block_z * z as f32),
                         );
 
                         let fixers = Vec3::new(
@@ -510,8 +510,18 @@ impl ChunkRenderer {
                             (z as f32 - CHUNK_DIMENSIONSF / 2.0 + 0.5) * ratio,
                         );
 
-                        let bot_vec = quat.mul_vec3(Vec3::new(0.0, cy - bot_y, 0.0));
-                        let top_vec = quat.mul_vec3(Vec3::new(0.0, cy + top_y, 0.0));
+                        let bot_vec = Vec3::new(0.0, -CHUNK_DIMENSIONSF / 2.0, 0.0)
+                            + quat.mul_vec3(Vec3::new(
+                                0.0,
+                                cy - bot_y + CHUNK_DIMENSIONSF / 2.0,
+                                0.0,
+                            ));
+                        let top_vec = Vec3::new(0.0, -CHUNK_DIMENSIONSF / 2.0, 0.0)
+                            + quat.mul_vec3(Vec3::new(
+                                0.0,
+                                cy + top_y + CHUNK_DIMENSIONSF / 2.0,
+                                0.0,
+                            ));
 
                         // right
                         if (x != CHUNK_DIMENSIONS - 1
