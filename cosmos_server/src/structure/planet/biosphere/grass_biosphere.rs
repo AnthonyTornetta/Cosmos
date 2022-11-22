@@ -78,7 +78,9 @@ pub fn generate_planet(
         for z in start_z..start_z + CHUNK_DIMENSIONS {
             for y in start_y..start_y + CHUNK_DIMENSIONS {
                 for x in start_x..start_x + CHUNK_DIMENSIONS {
-                    structure.set_block_at(x, y, z, stone, &blocks, None);
+                    // if x == y && y == z {
+                        structure.set_block_at(x, y, z, stone, &blocks, None);
+                    // }
                 }
             }
         }

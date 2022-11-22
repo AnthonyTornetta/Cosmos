@@ -481,33 +481,21 @@ impl ChunkRenderer {
                     StructureShape::Flat => (0.5, 0.5, 0.5, 0.5, 0.5, 0.5),
                 };
 
-                // let (bot_x, top_x, bot_y, top_y, bot_z, top_z) =
-                //     (0.5, 0.5, 0.5, 0.5, 0.5, 0.5);
-
                 for x in 0..CHUNK_DIMENSIONS {
                     if chunk.has_block_at(x, y, z) {
                         let block = blocks.block_from_numeric_id(chunk.block_at(x, y, z));
-
-                        let ratio = 1.0; //0.5 + (x_diff * (y_influence)) / 2.0) / 0.5;
 
                         let quat = Quat::from_euler(
                             bevy::prelude::EulerRot::ZYX,
                             -(-half_curve + curve_per_block_x * x as f32),
                             0.0,
-                            (-half_curve + curve_per_block_z * z as f32),
-                        );
-
-                        let fixers = Vec3::new(
-                            0.0, 0.0,
-                            0.0, //CHUNK_DIMENSIONSF / 2.0 - 0.5,
-                                //CHUNK_DIMENSIONSF / 2.0 - 0.5,
-                                //CHUNK_DIMENSIONSF / 2.0 - 0.5,
+                            -half_curve + curve_per_block_z * z as f32,
                         );
 
                         let (cx, cy, cz) = (
-                            (x as f32 - CHUNK_DIMENSIONSF / 2.0 + 0.5) * ratio,
+                            (x as f32 - CHUNK_DIMENSIONSF / 2.0 + 0.5),
                             y as f32 - CHUNK_DIMENSIONSF / 2.0 + 0.5,
-                            (z as f32 - CHUNK_DIMENSIONSF / 2.0 + 0.5) * ratio,
+                            (z as f32 - CHUNK_DIMENSIONSF / 2.0 + 0.5),
                         );
 
                         let bot_vec = Vec3::new(0.0, -CHUNK_DIMENSIONSF / 2.0, 0.0)
@@ -530,24 +518,14 @@ impl ChunkRenderer {
                                 && (right.is_none()
                                     || right.unwrap().has_see_through_block_at(0, y, z, blocks)))
                         {
-                            self.positions.push(
-                                (bot_vec
-                                    + Vec3::new(cx + bot_x - fixers.x, 0.0, cz - bot_z - fixers.z))
-                                .into(),
-                            );
-                            self.positions.push(
-                                (top_vec
-                                    + Vec3::new(cx + top_x - fixers.x, 0.0, cz - top_z - fixers.z))
-                                .into(),
-                            );
-                            self.positions.push(
-                                (top_vec + Vec3::new(cx + top_x - fixers.x, 0.0, cz + top_z))
-                                    .into(),
-                            );
-                            self.positions.push(
-                                (bot_vec + Vec3::new(cx + bot_x - fixers.x, 0.0, cz + bot_z))
-                                    .into(),
-                            );
+                            self.positions
+                                .push((bot_vec + Vec3::new(cx + bot_x, 0.0, cz - bot_z)).into());
+                            self.positions
+                                .push((top_vec + Vec3::new(cx + top_x, 0.0, cz - top_z)).into());
+                            self.positions
+                                .push((top_vec + Vec3::new(cx + top_x, 0.0, cz + top_z)).into());
+                            self.positions
+                                .push((bot_vec + Vec3::new(cx + bot_x, 0.0, cz + bot_z)).into());
 
                             self.normals.push([1.0, 0.0, 0.0]);
                             self.normals.push([1.0, 0.0, 0.0]);
@@ -580,24 +558,14 @@ impl ChunkRenderer {
                                         blocks,
                                     )))
                         {
-                            self.positions.push(
-                                (bot_vec + Vec3::new(cx - bot_x - fixers.x, 0.0, cz + bot_z))
-                                    .into(),
-                            );
-                            self.positions.push(
-                                (top_vec + Vec3::new(cx - top_x - fixers.x, 0.0, cz + top_z))
-                                    .into(),
-                            );
-                            self.positions.push(
-                                (top_vec
-                                    + Vec3::new(cx - top_x - fixers.x, 0.0, cz - top_z - fixers.z))
-                                .into(),
-                            );
-                            self.positions.push(
-                                (bot_vec
-                                    + Vec3::new(cx - bot_x - fixers.x, 0.0, cz - bot_z - fixers.z))
-                                .into(),
-                            );
+                            self.positions
+                                .push((bot_vec + Vec3::new(cx - bot_x, 0.0, cz + bot_z)).into());
+                            self.positions
+                                .push((top_vec + Vec3::new(cx - top_x, 0.0, cz + top_z)).into());
+                            self.positions
+                                .push((top_vec + Vec3::new(cx - top_x, 0.0, cz - top_z)).into());
+                            self.positions
+                                .push((bot_vec + Vec3::new(cx - bot_x, 0.0, cz - bot_z)).into());
 
                             self.normals.push([-1.0, 0.0, 0.0]);
                             self.normals.push([-1.0, 0.0, 0.0]);
@@ -627,24 +595,14 @@ impl ChunkRenderer {
                                 && (top.is_none()
                                     || top.unwrap().has_see_through_block_at(x, 0, z, blocks)))
                         {
-                            self.positions.push(
-                                (top_vec
-                                    + Vec3::new(cx + top_x - fixers.x, 0.0, cz - top_z - fixers.z))
-                                .into(),
-                            );
-                            self.positions.push(
-                                (top_vec
-                                    + Vec3::new(cx - top_x - fixers.x, 0.0, cz - top_z - fixers.z))
-                                .into(),
-                            );
-                            self.positions.push(
-                                (top_vec + Vec3::new(cx - top_x - fixers.x, 0.0, cz + top_z))
-                                    .into(),
-                            );
-                            self.positions.push(
-                                (top_vec + Vec3::new(cx + top_x - fixers.x, 0.0, cz + top_z))
-                                    .into(),
-                            );
+                            self.positions
+                                .push((top_vec + Vec3::new(cx + top_x, 0.0, cz - top_z)).into());
+                            self.positions
+                                .push((top_vec + Vec3::new(cx - top_x, 0.0, cz - top_z)).into());
+                            self.positions
+                                .push((top_vec + Vec3::new(cx - top_x, 0.0, cz + top_z)).into());
+                            self.positions
+                                .push((top_vec + Vec3::new(cx + top_x, 0.0, cz + top_z)).into());
 
                             self.normals.push([0.0, 1.0, 0.0]);
                             self.normals.push([0.0, 1.0, 0.0]);
@@ -677,24 +635,14 @@ impl ChunkRenderer {
                                         blocks,
                                     )))
                         {
-                            self.positions.push(
-                                (bot_vec + Vec3::new(cx + bot_x - fixers.x, 0.0, cz + bot_z))
-                                    .into(),
-                            );
-                            self.positions.push(
-                                (bot_vec + Vec3::new(cx - bot_x - fixers.x, 0.0, cz + bot_z))
-                                    .into(),
-                            );
-                            self.positions.push(
-                                (bot_vec
-                                    + Vec3::new(cx - bot_x - fixers.x, 0.0, cz - bot_z - fixers.z))
-                                .into(),
-                            );
-                            self.positions.push(
-                                (bot_vec
-                                    + Vec3::new(cx + bot_x - fixers.x, 0.0, cz - bot_z - fixers.z))
-                                .into(),
-                            );
+                            self.positions
+                                .push((bot_vec + Vec3::new(cx + bot_x, 0.0, cz + bot_z)).into());
+                            self.positions
+                                .push((bot_vec + Vec3::new(cx - bot_x, 0.0, cz + bot_z)).into());
+                            self.positions
+                                .push((bot_vec + Vec3::new(cx - bot_x, 0.0, cz - bot_z)).into());
+                            self.positions
+                                .push((bot_vec + Vec3::new(cx + bot_x, 0.0, cz - bot_z)).into());
 
                             self.normals.push([0.0, -1.0, 0.0]);
                             self.normals.push([0.0, -1.0, 0.0]);
@@ -724,22 +672,14 @@ impl ChunkRenderer {
                                 && (front.is_none()
                                     || front.unwrap().has_see_through_block_at(x, y, 0, blocks)))
                         {
-                            self.positions.push(
-                                (bot_vec + Vec3::new(cx - bot_x - fixers.x, 0.0, cz + bot_z))
-                                    .into(),
-                            );
-                            self.positions.push(
-                                (bot_vec + Vec3::new(cx + bot_x - fixers.x, 0.0, cz + bot_z))
-                                    .into(),
-                            );
-                            self.positions.push(
-                                (top_vec + Vec3::new(cx + top_x - fixers.x, 0.0, cz + top_z))
-                                    .into(),
-                            );
-                            self.positions.push(
-                                (top_vec + Vec3::new(cx - top_x - fixers.x, 0.0, cz + top_z))
-                                    .into(),
-                            );
+                            self.positions
+                                .push((bot_vec + Vec3::new(cx - bot_x, 0.0, cz + bot_z)).into());
+                            self.positions
+                                .push((bot_vec + Vec3::new(cx + bot_x, 0.0, cz + bot_z)).into());
+                            self.positions
+                                .push((top_vec + Vec3::new(cx + top_x, 0.0, cz + top_z)).into());
+                            self.positions
+                                .push((top_vec + Vec3::new(cx - top_x, 0.0, cz + top_z)).into());
 
                             self.normals.push([0.0, 0.0, 1.0]);
                             self.normals.push([0.0, 0.0, 1.0]);
@@ -772,26 +712,14 @@ impl ChunkRenderer {
                                         blocks,
                                     )))
                         {
-                            self.positions.push(
-                                (top_vec
-                                    + Vec3::new(cx - top_x - fixers.x, 0.0, cz - top_z - fixers.z))
-                                .into(),
-                            );
-                            self.positions.push(
-                                (top_vec
-                                    + Vec3::new(cx + top_x - fixers.x, 0.0, cz - top_z - fixers.z))
-                                .into(),
-                            );
-                            self.positions.push(
-                                (bot_vec
-                                    + Vec3::new(cx + bot_x - fixers.x, 0.0, cz - bot_z - fixers.z))
-                                .into(),
-                            );
-                            self.positions.push(
-                                (bot_vec
-                                    + Vec3::new(cx - bot_x - fixers.x, 0.0, cz - bot_z - fixers.z))
-                                .into(),
-                            );
+                            self.positions
+                                .push((top_vec + Vec3::new(cx - top_x, 0.0, cz - top_z)).into());
+                            self.positions
+                                .push((top_vec + Vec3::new(cx + top_x, 0.0, cz - top_z)).into());
+                            self.positions
+                                .push((bot_vec + Vec3::new(cx + bot_x, 0.0, cz - bot_z)).into());
+                            self.positions
+                                .push((bot_vec + Vec3::new(cx - bot_x, 0.0, cz - bot_z)).into());
 
                             self.normals.push([0.0, 0.0, -1.0]);
                             self.normals.push([0.0, 0.0, -1.0]);
