@@ -1,6 +1,7 @@
 use std::f32::consts::PI;
 
 use crate::block::blocks::Blocks;
+use crate::block::BlockFace;
 use crate::events::block_events::BlockChangedEvent;
 use crate::structure::chunk::{Chunk, CHUNK_DIMENSIONS, CHUNK_DIMENSIONSF};
 use crate::structure::events::ChunkSetEvent;
@@ -12,7 +13,6 @@ use bevy::utils::HashSet;
 use bevy_rapier3d::math::Vect;
 use bevy_rapier3d::na::Vector3;
 use bevy_rapier3d::prelude::{Collider, Rot};
-use crate::block::BlockFace;
 
 pub struct ChunkPhysicsModel {
     pub collider: Option<Collider>,
@@ -239,13 +239,13 @@ fn generate_colliders(
                 let (left, bottom, back) = (
                     (location.x + c2 - s2) as usize,
                     (location.y + c2 - s2) as usize,
-                    (location.z + c2 - s2) as usize
+                    (location.z + c2 - s2) as usize,
                 );
 
                 let (right, top, front) = (
                     (location.x + c2 - s2) as usize + size - 1,
                     (location.y + c2 - s2) as usize + size - 1,
-                    (location.z + c2 - s2) as usize + size - 1
+                    (location.z + c2 - s2) as usize + size - 1,
                 );
 
                 let nnn = get_block_coords(chunk, left, bottom, back, false, false, false);
@@ -258,61 +258,42 @@ fn generate_colliders(
                 let ppn = get_block_coords(chunk, right, top, back, true, true, false);
                 let ppp = get_block_coords(chunk, right, top, front, true, true, true);
 
-                println!("{} -> {}", location, ppp);
-
                 colliders.push((
                     Vec3::ZERO,
                     Rot::IDENTITY,
                     Collider::convex_hull(&[
                         // right
-                        pnn,
-                        ppn,
-                        ppp,
-                        pnp,
+                        pnn, ppn, ppp, pnp,
                         // bot_vec + Vec3::new(cx + bot_x, 0.0, cz - bot_z),
                         // top_vec + Vec3::new(cx + top_x, 0.0, cz - top_z),
                         // top_vec_pos + Vec3::new(cx + top_x, 0.0, cz + top_z),
                         // bot_vec_pos + Vec3::new(cx + bot_x, 0.0, cz + bot_z),
                         // left
-                        nnp,
-                        npp,
-                        npn,
-                        nnn,
+                        nnp, npp, npn, nnn,
                         // bot_vec_pos + Vec3::new(cx - bot_x, 0.0, cz + bot_z),
                         // top_vec_pos + Vec3::new(cx - top_x, 0.0, cz + top_z),
                         // top_vec + Vec3::new(cx - top_x, 0.0, cz - top_z),
                         // bot_vec + Vec3::new(cx - bot_x, 0.0, cz - bot_z),
                         // top
-                        ppn,
-                        npn,
-                        npp,
-                        ppp,
+                        ppn, npn, npp, ppp,
                         // top_vec + Vec3::new(cx + top_x, 0.0, cz - top_z),
                         // top_vec + Vec3::new(cx - top_x, 0.0, cz - top_z),
                         // top_vec + Vec3::new(cx - top_x, 0.0, cz + top_z),
                         // top_vec + Vec3::new(cx + top_x, 0.0, cz + top_z),
                         // bottom
-                        pnp,
-                        nnp,
-                        nnn,
-                        pnn,
+                        pnp, nnp, nnn, pnn,
                         // bot_vec + Vec3::new(cx + bot_x, 0.0, cz + bot_z),
                         // bot_vec + Vec3::new(cx - bot_x, 0.0, cz + bot_z),
                         // bot_vec + Vec3::new(cx - bot_x, 0.0, cz - bot_z),
                         // bot_vec + Vec3::new(cx + bot_x, 0.0, cz - bot_z),
                         // back
-                        nnn,
-                        pnn,
-                        ppn,
-                        npn,
+                        nnn, pnn, ppn, npn,
                         // bot_vec + Vec3::new(cx - bot_x, 0.0, cz + bot_z),
                         // bot_vec + Vec3::new(cx + bot_x, 0.0, cz + bot_z),
                         // top_vec + Vec3::new(cx + top_x, 0.0, cz + top_z),
                         // top_vec + Vec3::new(cx - top_x, 0.0, cz + top_z),
                         // front
-                        npp,
-                        ppp,
-                        pnp,
+                        npp, ppp, pnp,
                         nnp,
                         // top_vec_pos + Vec3::new(cx - top_x, 0.0, cz - top_z),
                         // top_vec + Vec3::new(cx + top_x, 0.0, cz - top_z),
@@ -328,13 +309,20 @@ fn generate_colliders(
 
 /// Gets the vertex for a block at the given coordinates in a given corner
 /// This assumes the chunk is a part of a spherical structure
-fn get_block_coords(chunk: &Chunk, x: usize, y: usize, z: usize, pos_x: bool, pos_y: bool, pos_z: bool) -> Vec3 {
+fn get_block_coords(
+    chunk: &Chunk,
+    x: usize,
+    y: usize,
+    z: usize,
+    pos_x: bool,
+    pos_y: bool,
+    pos_z: bool,
+) -> Vec3 {
     let y_influence = (y + chunk.structure_y() * CHUNK_DIMENSIONS) as f32;
 
     let half_curve = (chunk.angle_end_x() - chunk.angle_start_x()) / 2.0;
 
-    let curve_per_block =
-        (chunk.angle_end_z() - chunk.angle_start_z()) / (CHUNK_DIMENSIONSF);
+    let curve_per_block = (chunk.angle_end_z() - chunk.angle_start_z()) / (CHUNK_DIMENSIONSF);
 
     let theta = PI / 2.0 - curve_per_block;
     let theta_diff = theta.cos();
@@ -362,45 +350,38 @@ fn get_block_coords(chunk: &Chunk, x: usize, y: usize, z: usize, pos_x: bool, po
         (z as f32 - CHUNK_DIMENSIONSF / 2.0 + 0.5),
     );
 
-    let cxi = cx;//.floor();
-    let cyi = cy;//.floor();
-    let czi = cz;//.floor();
+    let cxi = cx; //.floor();
+    let cyi = cy; //.floor();
+    let czi = cz; //.floor();
 
     let bot_vec = Vec3::new(0.0, -CHUNK_DIMENSIONSF / 2.0, 0.0)
-        + quat.mul_vec3(Vec3::new(
-        0.0,
-        cyi - bot_y + CHUNK_DIMENSIONSF / 2.0,
-        0.0,
-    ));
+        + quat.mul_vec3(Vec3::new(0.0, cyi - bot_y + CHUNK_DIMENSIONSF / 2.0, 0.0));
     let top_vec = Vec3::new(0.0, -CHUNK_DIMENSIONSF / 2.0, 0.0)
-        + quat.mul_vec3(Vec3::new(
-        0.0,
-        cyi + top_y + CHUNK_DIMENSIONSF / 2.0,
-        0.0,
-    ));
+        + quat.mul_vec3(Vec3::new(0.0, cyi + top_y + CHUNK_DIMENSIONSF / 2.0, 0.0));
 
-    if pos_x && pos_y && pos_z { // +x +y +z
+    if pos_x && pos_y && pos_z {
+        // +x +y +z
         top_vec + Vec3::new(cxi + top_x, 0.0, czi + top_z)
-    }
-    else if pos_x && pos_y && !pos_z { // +x +y -z
+    } else if pos_x && pos_y && !pos_z {
+        // +x +y -z
         top_vec + Vec3::new(cxi + top_x, 0.0, czi - top_z)
-    }
-    else if pos_x && !pos_y && pos_z { // +x -y +z
+    } else if pos_x && !pos_y && pos_z {
+        // +x -y +z
         bot_vec + Vec3::new(cxi + bot_x, 0.0, czi + bot_z)
-    }
-    else if pos_x && !pos_y && !pos_z { // +x -y -z
+    } else if pos_x && !pos_y && !pos_z {
+        // +x -y -z
         bot_vec + Vec3::new(cxi + bot_x, 0.0, czi - bot_z)
-    }
-    else if !pos_x && pos_y && pos_z { // -x +y +z
+    } else if !pos_x && pos_y && pos_z {
+        // -x +y +z
         top_vec + Vec3::new(cxi - top_x, 0.0, czi + top_z)
-    }
-    else if !pos_x && pos_y && !pos_z { // -x +y -z
+    } else if !pos_x && pos_y && !pos_z {
+        // -x +y -z
         top_vec + Vec3::new(cxi - top_x, 0.0, czi - top_z)
-    }
-    else if !pos_y && !pos_y && pos_z { // -x -y +z
+    } else if !pos_y && !pos_y && pos_z {
+        // -x -y +z
         bot_vec + Vec3::new(cxi - bot_x, 0.0, czi + bot_z)
-    }
-    else { // -x -y -z
+    } else {
+        // -x -y -z
         bot_vec + Vec3::new(cxi - bot_x, 0.0, czi - bot_z)
     }
 }

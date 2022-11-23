@@ -170,7 +170,9 @@ fn client_sync_players(
                     .insert(LockedAxes::ROTATION_LOCKED)
                     .insert(RigidBody::Dynamic)
                     .insert(body.create_velocity())
-                    .insert(Player::new(name, id));
+                    .insert(Player::new(name, id))
+                    .insert(ReadMassProperties::default())
+                    .insert(ExternalForce::default());
 
                 if client_id == id {
                     client_entity

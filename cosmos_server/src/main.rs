@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use bevy::winit::WinitPlugin;
 use bevy_inspector_egui::WorldInspectorPlugin;
+use bevy_rapier3d::prelude::RapierConfiguration;
 use bevy_renet::RenetServerPlugin;
 use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
 
@@ -19,6 +20,10 @@ pub mod structure;
 
 fn main() {
     App::new()
+        .insert_resource(RapierConfiguration {
+            gravity: Vec3::ZERO,
+            ..default()
+        })
         .add_plugins(CosmosCorePluginGroup::new(
             GameState::PreLoading,
             GameState::Loading,

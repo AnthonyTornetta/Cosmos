@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy_rapier3d::prelude::ReadMassProperties;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     entities::player::Player,
@@ -50,7 +51,8 @@ fn server_listen_messages(
                                 .entity(entity)
                                 .insert_bundle(TransformBundle::from_transform(
                                     body.create_transform(),
-                                ));
+                                ))
+                                .insert(ReadMassProperties::default());
                         }
                     }
                 }

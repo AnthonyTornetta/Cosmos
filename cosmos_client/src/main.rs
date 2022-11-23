@@ -1,5 +1,6 @@
 pub mod asset;
 pub mod camera;
+pub mod chunk_loading;
 pub mod events;
 pub mod input;
 pub mod interactions;
@@ -44,7 +45,7 @@ use crate::rendering::uv_mapper::UVMapper;
 use bevy::prelude::*;
 use bevy::render::texture::ImageSettings;
 use bevy_inspector_egui::WorldInspectorPlugin;
-use bevy_rapier3d::prelude::{Vect, Velocity};
+use bevy_rapier3d::prelude::{RapierConfiguration, Vect, Velocity};
 use bevy_renet::RenetClientPlugin;
 use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
 
@@ -271,6 +272,10 @@ fn main() {
     });
 
     app.insert_resource(ImageSettings::default_nearest())
+        .insert_resource(RapierConfiguration {
+            gravity: Vec3::ZERO,
+            ..default()
+        })
         .add_state(GameState::PreLoading)
         .add_plugins(CosmosCorePluginGroup::new(
             GameState::PreLoading,

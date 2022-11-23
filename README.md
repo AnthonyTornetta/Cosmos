@@ -52,25 +52,42 @@ Cosmos, but in rust
   - [x] Standard movement controls mapped to ship acceleration
   - [x] Interact with ship core to enter piloting mode, press interact button again to exit
   - [x] Create max ship speed
-- [ ] Ship core
-  - [ ] Once destroyed, the entire ship enters meltdown, becoming minable by mining beams and will be destroyed after a set amount of time
-  - [ ] Interact with this block to pilot the ship
-  - [x] Create block
+- [ ] Non-flat planets
+  - [ ] Implement block stretching
+    - [x] More stretching based on how high the block is, 0 stretching at y of 0
+    - [x] Physics account for stretching
+    - [ ] Relative coords -> block coords must account for stretching
+  - [ ] Dynamic planet loading
+    - [x] Allow for client to ask server for chunks
+    - [ ] Make client ask for chunks as it travels around planet
+    - [ ] Re-render chunks as player enters new one
+    - [ ] Refactor game to not have all chunks at once
 - [ ] Localized planetary gravity
-  - [ ] All entities near planet's radius are subject to its gravity towards its relative downward vector
-    - [ ] The gravitational pull should scale inversely exponentially the farther the distance from a certain threshold (most likely the highest chunk) then remain constant past that point
+  - [ ] All entities near planet's radius are subject to its gravity towards the planet's center
 - [x] Ship systems
   - [x] Energy system
     - [x] Energy producer block
-    - [ ] Energy storage block
+    - [x] Energy storage block
     - [x] Energy storage system
-    - [ ] Energy generation system
+    - [x] Energy generation system
   - [x] Thruster system
-  - [ ] Thruster block
+  - [x] Thruster block
   - [x] Allows the ship to move + rotate
     - [x] Faster movement based on # of thrusters
     - [x] Faster rotation based on # of thrusters
     - [x] More energy consumption per thruster
+- [ ] Ability to place more than one block
+  - [ ] Way of selecting which block
+    - [ ] Show GUI of all available block
+    - [ ] The selected block will be highlighted in some way
+- [ ] Update to bevy 0.9
+
+## Release 0.0.3a
+- [ ] Ship core
+  - [ ] Once destroyed, the entire ship enters meltdown, becoming minable by mining beams and will be destroyed after a set amount of time
+  - [ ] Interact with this block to pilot the ship
+  - [x] Create block
+- [ ] Ship Systems
   - [ ] Camera system
     - [ ] Camera block
     - [ ] Use left/right to switch between ship cameras
@@ -81,15 +98,6 @@ Cosmos, but in rust
     - [ ] Click lmb/hold to fire the laser
       - [ ] The laser is on a cooldown
   - Ship hull block
-- [ ] Ability to place more than one block
-  - [ ] Way of select which block
-  - [ ] Selectable blocks include: Thruster, Energy Cell, Laser Cannon, Ship Hull, Stone
-
-## Release 0.0.3a
-- [ ] Non-flat planets
-  - [ ] Consider block stretching
-  - [ ] Consider cube planet if stretching doesn't work out
-
 ## Everything that will still have to be done after 0.0.2a
 - [ ] Align body with structure
   - [ ] Switches to FPS Camera
@@ -104,7 +112,6 @@ Cosmos, but in rust
       - [ ] Inserts the item into the ship's inventory
       - [ ] Hold lmb to continually fire the laser
     - [ ] Structure gets deleted when no more blocks are left
-  - [ ] 
   - [ ] Storage system
     - [ ] An interface into all the storage devices on the ship
   - [ ] A way of selecting which systems to use preventing use of systems that are not meant to be actively used
