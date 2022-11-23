@@ -62,8 +62,9 @@ Cosmos, but in rust
     - [ ] Make client ask for chunks as it travels around planet
     - [ ] Re-render chunks as player enters new one
     - [ ] Refactor game to not have all chunks at once
-- [ ] Localized planetary gravity
-  - [ ] All entities near planet's radius are subject to its gravity towards the planet's center
+- [x] Localized planetary gravity
+  - [x] All entities near planet's radius are subject to its gravity towards the planet's center
+- [ ] Align entities to planet's downwards direction
 - [x] Ship systems
   - [x] Energy system
     - [x] Energy producer block
@@ -80,8 +81,9 @@ Cosmos, but in rust
   - [ ] Way of selecting which block
     - [ ] Show GUI of all available block
     - [ ] The selected block will be highlighted in some way
-- [ ] Update to bevy 0.9
-
+- [x] Update to bevy 0.9
+  - [x] Update all dependencies to latest versions
+  - [x] Update cargo to use workspaces
 ## Release 0.0.3a
 - [ ] Ship core
   - [ ] Once destroyed, the entire ship enters meltdown, becoming minable by mining beams and will be destroyed after a set amount of time
@@ -112,6 +114,7 @@ Cosmos, but in rust
       - [ ] Inserts the item into the ship's inventory
       - [ ] Hold lmb to continually fire the laser
     - [ ] Structure gets deleted when no more blocks are left
+  - [ ] 
   - [ ] Storage system
     - [ ] An interface into all the storage devices on the ship
   - [ ] A way of selecting which systems to use preventing use of systems that are not meant to be actively used
@@ -158,4 +161,4 @@ Cosmos, but in rust
   - [ ] Block resistances
   - [ ] Light emitting blocks
 - [ ] Ability to save ships to disk + load them
-  - [ ] Maybe implement 
+  - [ ] Maybe i
