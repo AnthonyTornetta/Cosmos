@@ -106,14 +106,11 @@ impl<T: StateData + Clone> Plugin for CosmosCorePlugin<T> {
 
 impl<T: StateData + Clone> PluginGroup for CosmosCorePluginGroup<T> {
     fn build(self) -> PluginGroupBuilder {
-        let mut group = PluginGroupBuilder::start::<Self>();
-
-        group
+        PluginGroupBuilder::start::<Self>()
             .add(LogPlugin::default())
             .add(CorePlugin::default())
             .add(TimePlugin::default())
             .add(TransformPlugin::default())
-            .add(ImagePlugin::default_nearest())
             .add(HierarchyPlugin::default())
             .add(DiagnosticsPlugin::default())
             .add(InputPlugin::default())
@@ -123,6 +120,7 @@ impl<T: StateData + Clone> PluginGroup for CosmosCorePluginGroup<T> {
             .add(RenderPlugin::default())
             .add(CorePipelinePlugin::default())
             .add(RapierPhysicsPlugin::<NoUserData>::default())
+            .add(ImagePlugin::default_nearest())
             .add(CosmosCorePlugin::new(
                 self.pre_loading_state.clone(),
                 self.loading_state.clone(),

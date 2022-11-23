@@ -1,4 +1,4 @@
-use bevy::{prelude::*, render::camera::Projection};
+use bevy::{core_pipeline::bloom::BloomSettings, prelude::*, render::camera::Projection};
 use bevy_rapier3d::prelude::*;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
@@ -179,13 +179,20 @@ fn client_sync_players(
                         .insert(LocalPlayer::default())
                         .with_children(|parent| {
                             parent
-                                .spawn_bundle(Camera3dBundle {
+                                .spawn(Camera3dBundle {
+                                    camera: Camera {
+                                        hdr: true,
+                                        ..Default::default()
+                                    },
                                     transform: Transform::from_xyz(0.0, 0.75, 0.0),
                                     projection: Projection::from(PerspectiveProjection {
                                         fov: (90.0 / 360.0) * (std::f32::consts::PI * 2.0),
                                         ..default()
                                     }),
                                     ..default()
+                                })
+                                .insert(BloomSettings {
+                                    ..Default::default()
                                 })
                                 .insert(CameraHelper::default());
                         });
