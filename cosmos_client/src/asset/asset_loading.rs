@@ -21,6 +21,7 @@ struct AssetsDoneLoadingEvent;
 #[derive(Resource)]
 struct AssetsLoadingID(usize);
 
+#[derive(Resource)]
 struct AssetsLoading(Vec<LoadingAsset>);
 
 #[derive(Resource)]
@@ -75,7 +76,8 @@ fn check_assets_ready(
 
     use bevy::asset::LoadState;
 
-    match server.get_group_load_state((&loading).as_ref().unwrap().0.iter().map(|h| h.handle.id)) {
+    match server.get_group_load_state((&loading).as_ref().unwrap().0.iter().map(|h| h.handle.id()))
+    {
         LoadState::Failed => {
             panic!("Failed to load asset!!");
         }

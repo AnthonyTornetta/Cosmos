@@ -29,7 +29,7 @@ impl TStructureBuilder for StructureBuilder {
         let physics_updater = StructurePhysics::new(structure);
 
         entity
-            .insert_bundle(PbrBundle {
+            .insert(PbrBundle {
                 transform,
                 ..Default::default()
             })

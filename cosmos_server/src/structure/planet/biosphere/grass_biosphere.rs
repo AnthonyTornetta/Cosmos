@@ -2,6 +2,7 @@ use bevy::prelude::{App, Component, Entity, EventReader, EventWriter, Query, Res
 use cosmos_core::{
     block::blocks::Blocks,
     structure::{chunk::CHUNK_DIMENSIONS, events::ChunkSetEvent, structure::Structure},
+    utils::resource_wrapper::ResourceWrapper,
 };
 use noise::NoiseFn;
 
@@ -57,7 +58,7 @@ pub fn generate_planet(
     mut query: Query<&mut Structure>,
     mut events: EventReader<GrassChunkNeedsGeneratedEvent>,
     mut event_writer: EventWriter<ChunkSetEvent>,
-    noise_generastor: Res<noise::OpenSimplex>,
+    noise_generastor: Res<ResourceWrapper<noise::OpenSimplex>>,
     blocks: Res<Blocks>,
 ) {
     for ev in events.iter() {
@@ -78,7 +79,9 @@ pub fn generate_planet(
         for z in start_z..start_z + CHUNK_DIMENSIONS {
             for y in start_y..start_y + CHUNK_DIMENSIONS {
                 for x in start_x..start_x + CHUNK_DIMENSIONS {
+                    // if x == y && y == z {
                     structure.set_block_at(x, y, z, stone, &blocks, None);
+                    // }
                 }
             }
         }
@@ -90,7 +93,7 @@ pub fn generate_planet(
         // for z in start_z..(start_z + CHUNK_DIMENSIONS) {
         //     for x in start_x..(start_x + CHUNK_DIMENSIONS) {
         //         let y_here = (middle_air_start as f64
-        //             + noise_generastor.get([x as f64 * DELTA, z as f64 * DELTA]) * AMPLITUDE)
+        //             + noise_generastor.0.get([x as f64 * DELTA, z as f64 * DELTA]) * AMPLITUDE)
         //             .round() as usize;
 
         //         let stone_range = 0..(y_here - 5);

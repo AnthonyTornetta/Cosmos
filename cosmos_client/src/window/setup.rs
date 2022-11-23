@@ -1,7 +1,7 @@
 use bevy::{
     input::mouse::MouseMotion,
-    prelude::{App, EventReader, Input, KeyCode, MouseButton, Res, ResMut, Vec2, Resource},
-    window::Windows,
+    prelude::{App, EventReader, Input, KeyCode, MouseButton, Res, ResMut, Resource, Vec2},
+    window::{CursorGrabMode, Windows},
 };
 
 use crate::input::inputs::{CosmosInputHandler, CosmosInputs};
@@ -20,7 +20,7 @@ pub struct DeltaCursorPosition {
 fn setup_window(mut windows: ResMut<Windows>) {
     let window = windows.primary_mut();
     window.set_title("Cosmos".into());
-    window.set_cursor_lock_mode(true);
+    window.set_cursor_grab_mode(CursorGrabMode::Locked);
     window.set_cursor_visibility(false);
 }
 
@@ -38,7 +38,12 @@ fn unfreeze_mouse(
     if input_handler.check_just_pressed(CosmosInputs::UnlockMouse, &inputs, &mouse) {
         is_locked.locked = !is_locked.locked;
 
-        window.set_cursor_lock_mode(is_locked.locked);
+        window.set_cursor_grab_mode(if is_locked.locked {
+            CursorGrabMode::Locked
+        } else {
+            CursorGrabMode::None
+        });
+
         window.set_cursor_visibility(!is_locked.locked);
     }
 
@@ -48,14 +53,14 @@ fn unfreeze_mouse(
     if is_locked.locked {
         let pos = Vec2::new(window.width() / 2.0, window.height() / 2.0);
         for ev in event_reader.iter() {
-            if window.cursor_locked() {
+            if window.cursor_grab_mode() == CursorGrabMode::Locked {
                 // Using smallest of height or width ensures equal vertical and horizontal sensitivity
                 delta.x += ev.delta.x;
                 delta.y += -ev.delta.y;
             }
         }
 
-        window.set_cursor_position(pos);
+        // window.set_cursor_position(pos);
     }
 }
 

@@ -1,8 +1,11 @@
 use std::time::SystemTime;
 
 use bevy::prelude::*;
-use cosmos_core::structure::{
-    events::StructureCreated, planet::planet_builder::TPlanetBuilder, structure::Structure,
+use cosmos_core::{
+    structure::{
+        events::StructureCreated, planet::planet_builder::TPlanetBuilder, structure::Structure,
+    },
+    utils::resource_wrapper::ResourceWrapper,
 };
 use noise::Seedable;
 
@@ -21,7 +24,8 @@ pub fn register(app: &mut App) {
             % u32::MAX as u128) as u32,
     );
 
-    app.insert_resource(noise).add_startup_system(create_world);
+    app.insert_resource(ResourceWrapper(noise))
+        .add_startup_system(create_world);
 }
 
 fn create_world(mut commands: Commands, mut event_writer: EventWriter<StructureCreated>) {

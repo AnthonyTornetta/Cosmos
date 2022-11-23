@@ -158,10 +158,10 @@ fn client_sync_players(
             } => {
                 println!("Player {} ({}) connected!", name.as_str(), id);
 
-                let mut client_entity = commands.spawn();
+                let mut client_entity = commands.spawn_empty();
 
                 client_entity
-                    .insert_bundle(PbrBundle {
+                    .insert(PbrBundle {
                         transform: body.create_transform(),
                         mesh: meshes.add(shape::Capsule::default().into()),
                         ..default()
@@ -170,7 +170,9 @@ fn client_sync_players(
                     .insert(LockedAxes::ROTATION_LOCKED)
                     .insert(RigidBody::Dynamic)
                     .insert(body.create_velocity())
-                    .insert(Player::new(name, id));
+                    .insert(Player::new(name, id))
+                    .insert(ReadMassProperties::default())
+                    .insert(ExternalForce::default());
 
                 if client_id == id {
                     client_entity

@@ -6,7 +6,7 @@ use bevy::diagnostic::DiagnosticsPlugin;
 use bevy::ecs::schedule::StateData;
 use bevy::input::InputPlugin;
 use bevy::log::LogPlugin;
-use bevy::prelude::{App, HierarchyPlugin, Plugin, PluginGroup, TransformPlugin, ImagePlugin};
+use bevy::prelude::{App, HierarchyPlugin, ImagePlugin, Plugin, PluginGroup, TransformPlugin};
 use bevy::render::RenderPlugin;
 use bevy::scene::ScenePlugin;
 use bevy::time::TimePlugin;
@@ -105,32 +105,30 @@ impl<T: StateData + Clone> Plugin for CosmosCorePlugin<T> {
 }
 
 impl<T: StateData + Clone> PluginGroup for CosmosCorePluginGroup<T> {
-    fn build(&mut self, group: &mut PluginGroupBuilder) {
-        group.add(LogPlugin::default());
-        group.add(CorePlugin::default());
-        group.add(TimePlugin::default());
-        group.add(TransformPlugin::default());
-        group.add(ImagePlugin::default_nearest());
-        group.add(HierarchyPlugin::default());
-        group.add(DiagnosticsPlugin::default());
-        group.add(InputPlugin::default());
-        group.add(WindowPlugin::default());
-        
-        group.add(AssetPlugin::default());
+    fn build(self) -> PluginGroupBuilder {
+        let mut group = PluginGroupBuilder::start::<Self>();
 
-        group.add(ScenePlugin::default());
-
-        group.add(RenderPlugin::default());
-
-        group.add(CorePipelinePlugin::default());
-
-        group.add(RapierPhysicsPlugin::<NoUserData>::default());
-        group.add(CosmosCorePlugin::new(
-            self.pre_loading_state.clone(),
-            self.loading_state.clone(),
-            self.post_loading_state.clone(),
-            self.done_loading_state.clone(),
-            self.playing_game_state.clone(),
-        ));
+        group
+            .add(LogPlugin::default())
+            .add(CorePlugin::default())
+            .add(TimePlugin::default())
+            .add(TransformPlugin::default())
+            .add(ImagePlugin::default_nearest())
+            .add(HierarchyPlugin::default())
+            .add(DiagnosticsPlugin::default())
+            .add(InputPlugin::default())
+            .add(WindowPlugin::default())
+            .add(AssetPlugin::default())
+            .add(ScenePlugin::default())
+            .add(RenderPlugin::default())
+            .add(CorePipelinePlugin::default())
+            .add(RapierPhysicsPlugin::<NoUserData>::default())
+            .add(CosmosCorePlugin::new(
+                self.pre_loading_state.clone(),
+                self.loading_state.clone(),
+                self.post_loading_state.clone(),
+                self.done_loading_state.clone(),
+                self.playing_game_state.clone(),
+            ))
     }
 }

@@ -1,7 +1,10 @@
 use bevy::{ecs::system::EntityCommands, prelude::Transform};
 use bevy_rapier3d::prelude::{RigidBody, Velocity};
 
-use crate::structure::{structure::Structure, structure_builder::TStructureBuilder};
+use crate::{
+    physics::gravity_system::GravityEmitter,
+    structure::{structure::Structure, structure_builder::TStructureBuilder},
+};
 
 use super::planet::Planet;
 
@@ -34,6 +37,9 @@ impl<T: TStructureBuilder> TPlanetBuilder for PlanetBuilder<T> {
         self.structure_builder
             .insert_structure(entity, transform, Velocity::default(), structure);
 
-        entity.insert(Planet).insert(RigidBody::Fixed);
+        entity
+            .insert(Planet)
+            .insert(RigidBody::Fixed)
+            .insert(GravityEmitter { mass: 5.972e24 });
     }
 }

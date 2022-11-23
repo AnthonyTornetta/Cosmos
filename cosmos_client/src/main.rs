@@ -1,5 +1,6 @@
 pub mod asset;
 pub mod camera;
+pub mod chunk_loading;
 pub mod events;
 pub mod input;
 pub mod interactions;
@@ -42,9 +43,8 @@ use crate::plugin::client_plugin::ClientPluginGroup;
 use crate::rendering::structure_renderer::monitor_block_updates_system;
 use crate::rendering::uv_mapper::UVMapper;
 use bevy::prelude::*;
-use bevy::render::texture::ImageSettings;
 use bevy_inspector_egui::WorldInspectorPlugin;
-use bevy_rapier3d::prelude::{Vect, Velocity};
+use bevy_rapier3d::prelude::{RapierConfiguration, Vect, Velocity};
 use bevy_renet::RenetClientPlugin;
 use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
 
@@ -208,14 +208,14 @@ fn create_sun(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    commands.spawn_bundle(PbrBundle {
+    commands.spawn(PbrBundle {
         mesh: meshes.add(Cube::new(1.0).into()),
         ..Default::default()
     });
 
     commands
-        .spawn_bundle(PointLightBundle {
-            transform: Transform::from_xyz(0.0, 0.0, 0.0),
+        .spawn(PointLightBundle {
+            transform: Transform::from_xyz(0.0, 180.0, 0.0),
             point_light: PointLight {
                 intensity: 160000.0,
                 range: 16000.0,
@@ -226,7 +226,7 @@ fn create_sun(
             ..default()
         })
         .with_children(|builder| {
-            builder.spawn_bundle(PbrBundle {
+            builder.spawn(PbrBundle {
                 mesh: meshes.add(Mesh::from(shape::UVSphere {
                     radius: 0.1,
                     ..default()
@@ -271,6 +271,11 @@ fn main() {
     });
 
     app.add_state(GameState::PreLoading)
+        .insert_resource(RapierConfiguration {
+            gravity: Vec3::ZERO,
+            ..default()
+        })
+        .add_state(GameState::PreLoading)
         .add_plugins(CosmosCorePluginGroup::new(
             GameState::PreLoading,
             GameState::Loading,
@@ -279,7 +284,7 @@ fn main() {
             GameState::Playing,
         ))
         .add_plugins(ClientPluginGroup::default())
-        .add_plugin(RenetClientPlugin {})
+        .add_plugin(RenetClientPlugin::default())
         .add_plugin(WorldInspectorPlugin::new())
         .add_plugin(RapierDebugRenderPlugin::default())
         .add_system_set(

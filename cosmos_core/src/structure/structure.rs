@@ -113,10 +113,20 @@ impl Structure {
                 radius: CHUNK_DIMENSIONS as f32 / (1.0 - ((PI / 2.0 - delta) / 2.0).tan()),
             };
 
+            println!("MAKING CHUNKS {}", delta);
+
             for z in 0..length {
                 for x in 0..width {
                     for y in 0..height {
-                        chunks.push(Chunk::new(x, y, z, 0.0, 0.0, 0.0, 0.0));
+                        chunks.push(Chunk::new(
+                            x,
+                            y,
+                            z,
+                            delta * x as f32,
+                            delta * (x as f32 + 1.0),
+                            delta * z as f32,
+                            delta * (z as f32 + 1.0),
+                        ));
                     }
                 }
             }
@@ -315,7 +325,7 @@ impl Structure {
 
                 let direction_fixer = Quat::from_euler(
                     bevy::prelude::EulerRot::ZYX,
-                    center_rotation_x,
+                    -center_rotation_x,
                     0.0,
                     center_rotation_z,
                 )
@@ -331,22 +341,23 @@ impl Structure {
 
                 let block_relative_pos = Vec3::new(
                     de_rotated_pos.x + (cz as f32 * CHUNK_DIMENSIONSF + CHUNK_DIMENSIONSF / 2.0),
-                    de_rotated_pos.y - radius + (chunk_y as f32 * CHUNK_DIMENSIONSF),
+                    de_rotated_pos.y - radius
+                        + (chunk_y as f32 * CHUNK_DIMENSIONSF + CHUNK_DIMENSIONSF / 2.0),
                     de_rotated_pos.z + (cx as f32 * CHUNK_DIMENSIONSF + CHUNK_DIMENSIONSF / 2.0),
                 );
 
-                println!(
-                    "Was {:.4} {:.4} {:.4} | {} {} | {:.4} {:.4} | {:.4} {:.4}",
-                    block_relative_pos.x,
-                    block_relative_pos.y,
-                    block_relative_pos.z,
-                    cx,
-                    cz,
-                    euler_x,
-                    euler_z,
-                    out_x,
-                    out_z
-                );
+                // println!(
+                //     "Was {:.4} {:.4} {:.4} | {} {} | {:.4} {:.4} | {:.4} {:.4}",
+                //     block_relative_pos.x,
+                //     block_relative_pos.y,
+                //     block_relative_pos.z,
+                //     cx,
+                //     cz,
+                //     euler_x,
+                //     euler_z,
+                //     out_x,
+                //     out_z
+                // );
 
                 if (block_relative_pos.x as i32) < 0
                     || (block_relative_pos.y as i32) < 0
@@ -368,6 +379,55 @@ impl Structure {
             }
         }
     }
+
+    fn has_loaded_chunk(&self, cx: usize, cy: usize, cz: usize) -> bool {
+        cx < self.chunks_width() && cy < self.chunks_height() && cz < self.chunks_length()
+    }
+
+    fn chunk(&self, x: usize, y: usize, z: usize) -> Option<&Chunk> {
+        let (cx, cy, cz) = (
+            x / CHUNK_DIMENSIONS,
+            y / CHUNK_DIMENSIONS,
+            z / CHUNK_DIMENSIONS,
+        );
+
+        if self.has_loaded_chunk(cx, cy, cz) {
+            Some(&self.chunks[flatten(cx, cy, cz, self.width, self.height)]);
+        }
+
+        None
+    }
+
+    /// Gets the block's relative location to its Chunk's center
+    pub fn block_relative_rotation(&self, x: usize, y: usize, z: usize) -> Quat {
+        match self.shape {
+            StructureShape::Flat => Quat::IDENTITY,
+            StructureShape::Sphere { radius } => {
+                let curve_per_block = TAU / self.chunks_width() as f32;
+                let half_curve = TAU / (self.chunks_width() as f32 * CHUNK_DIMENSIONSF / 2.0);
+
+                Quat::from_euler(
+                    bevy::prelude::EulerRot::ZYX,
+                    -(-half_curve + curve_per_block * x as f32),
+                    0.0,
+                    -half_curve + curve_per_block * z as f32,
+                )
+            }
+        }
+    }
+
+    // pub fn block_relative_position(&self, x: usize, y: usize, z: usize) -> Vec3 {
+    //     match self.shape {
+    //         StructureShape::Flat => Vec3::new(
+    //             x as f32 - self.blocks_width() as f32 / 2.0,
+    //             y as f32 - self.blocks_height() as f32 / 2.0,
+    //             z as f32 - self.blocks_length() as f32 / 2.0,
+    //         ),
+    //         StructureShape::Sphere { radius } => {
+    //             let block_rot = self.block_relative_rotation(x, y, z);
+    //         }
+    //     }
+    // }
 
     /// Gets the block at a given (x,y,z).
     /// For a flat structure, the coordinates are relative to the bottom, left, back corner of the structure.
