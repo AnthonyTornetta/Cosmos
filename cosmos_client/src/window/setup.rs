@@ -51,16 +51,12 @@ fn unfreeze_mouse(
     delta.y = 0.0;
 
     if is_locked.locked {
-        // let pos = Vec2::new(window.width() / 2.0, window.height() / 2.0);
         for ev in event_reader.iter() {
             if window.cursor_grab_mode() == CursorGrabMode::Locked {
-                // Using smallest of height or width ensures equal vertical and horizontal sensitivity
                 delta.x += ev.delta.x;
                 delta.y += -ev.delta.y;
             }
         }
-
-        //window.set_cursor_position(pos);
     }
 }
 
