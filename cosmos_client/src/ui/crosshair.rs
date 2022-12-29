@@ -4,7 +4,7 @@ use crate::state::game_state::GameState;
 
 fn add_crosshair(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
-        .spawn_bundle(NodeBundle {
+        .spawn(NodeBundle {
             style: Style {
                 display: Display::Flex,
                 justify_content: JustifyContent::Center,
@@ -12,13 +12,12 @@ fn add_crosshair(mut commands: Commands, asset_server: Res<AssetServer>) {
                 size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
                 ..default()
             },
-            color: Color::NONE.into(),
-
+            // color: Color::NONE.into(),
             ..default()
         })
         .with_children(|parent| {
             parent
-                .spawn_bundle(NodeBundle {
+                .spawn(ImageBundle {
                     image: asset_server.load("images/ui/crosshair.png").into(),
                     style: Style {
                         size: Size::new(Val::Px(8.0), Val::Px(8.0)),
@@ -49,7 +48,7 @@ fn update_cursor_pos(pos: Res<CrosshairOffset>, mut query: Query<&mut Style, Wit
     }
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Resource)]
 pub struct CrosshairOffset {
     pub x: f32,
     pub y: f32,

@@ -2,6 +2,7 @@ use bevy::prelude::{App, Component, Entity, EventReader, EventWriter, Query, Res
 use cosmos_core::{
     block::blocks::Blocks,
     structure::{chunk::CHUNK_DIMENSIONS, events::ChunkSetEvent, structure::Structure},
+    utils::resource_wrapper::ResourceWrapper,
 };
 use noise::NoiseFn;
 
@@ -57,14 +58,11 @@ pub fn generate_planet(
     mut query: Query<&mut Structure>,
     mut events: EventReader<GrassChunkNeedsGeneratedEvent>,
     mut event_writer: EventWriter<ChunkSetEvent>,
-    noise_generastor: Res<noise::OpenSimplex>,
+    noise_generastor: Res<ResourceWrapper<noise::OpenSimplex>>,
     blocks: Res<Blocks>,
 ) {
     for ev in events.iter() {
-        let grass = blocks.block_from_id("cosmos:grass").unwrap();
-        let dirt = blocks.block_from_id("cosmos:dirt").unwrap();
-        let stone = blocks.block_from_id("cosmos:stone").unwrap();
-
+        println!("Generating grass chunk for {} {} {}!", ev.x, ev.y, ev.z);
         let mut structure = query.get_mut(ev.structure_entity).unwrap();
 
         let (start_x, start_y, start_z) = (
@@ -73,6 +71,22 @@ pub fn generate_planet(
             ev.z * CHUNK_DIMENSIONS,
         );
 
+        // let stone = blocks.block_from_id("cosmos:stone").unwrap();
+
+        // for z in start_z..start_z + CHUNK_DIMENSIONS {
+        //     for y in start_y..start_y + CHUNK_DIMENSIONS {
+        //         for x in start_x..start_x + CHUNK_DIMENSIONS {
+        //             // if x == y && y == z {
+        //             structure.set_block_at(x, y, z, stone, &blocks, None);
+        //             // }
+        //         }
+        //     }
+        // }
+
+        let grass = blocks.block_from_id("cosmos:grass").unwrap();
+        let dirt = blocks.block_from_id("cosmos:dirt").unwrap();
+        let stone = blocks.block_from_id("cosmos:stone").unwrap();
+
         let s_height = structure.blocks_height();
 
         let middle_air_start = s_height - 23;
@@ -80,7 +94,7 @@ pub fn generate_planet(
         for z in start_z..(start_z + CHUNK_DIMENSIONS) {
             for x in start_x..(start_x + CHUNK_DIMENSIONS) {
                 let y_here = (middle_air_start as f64
-                    + noise_generastor.get([x as f64 * DELTA, z as f64 * DELTA]) * AMPLITUDE)
+                    + noise_generastor.0.get([x as f64 * DELTA, z as f64 * DELTA]) * AMPLITUDE)
                     .round() as usize;
 
                 let stone_range = 0..(y_here - 5);
@@ -101,6 +115,7 @@ pub fn generate_planet(
             }
         }
 
+        println!("Done generating {} {} {}!", ev.x, ev.y, ev.z);
         event_writer.send(ChunkSetEvent {
             structure_entity: ev.structure_entity,
             x: ev.x,

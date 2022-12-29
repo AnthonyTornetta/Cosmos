@@ -1,6 +1,8 @@
 use bevy::{
     ecs::schedule::StateData,
-    prelude::{App, Commands, Component, CoreStage, EventReader, Query, Res, ResMut, SystemSet},
+    prelude::{
+        App, Commands, Component, CoreStage, EventReader, Query, Res, ResMut, Resource, SystemSet,
+    },
     utils::HashMap,
 };
 use bevy_inspector_egui::{Inspectable, RegisterInspectable};
@@ -16,7 +18,7 @@ pub struct EnergyStorageProperty {
     pub capacity: f32,
 }
 
-#[derive(Default)]
+#[derive(Default, Resource)]
 struct EnergyStorageBlocks {
     blocks: HashMap<u16, EnergyStorageProperty>,
 }

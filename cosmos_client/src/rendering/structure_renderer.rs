@@ -190,8 +190,8 @@ fn dew_it(
         ));
     }
 
-    if !done_structures.contains(&entity.id()) {
-        done_structures.insert(entity.id());
+    if !done_structures.contains(&entity.index()) {
+        done_structures.insert(entity.index());
 
         event_writer.send(NeedsNewRenderingEvent(entity));
     }
@@ -344,11 +344,11 @@ pub fn monitor_needs_rendered_system(
 ) {
     let mut done_structures = HashSet::new();
     for ev in event.iter() {
-        if done_structures.contains(&ev.0.id()) {
+        if done_structures.contains(&ev.0.index()) {
             continue;
         }
 
-        done_structures.insert(ev.0.id());
+        done_structures.insert(ev.0.index());
 
         let (structure, mut renderer) = query.get_mut(ev.0).unwrap();
 

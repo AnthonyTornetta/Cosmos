@@ -39,8 +39,7 @@ impl TStructureBuilder for StructureBuilder {
                     for y in 0..structure.chunks_height() {
                         for x in 0..structure.chunks_width() {
                             let entity = parent
-                                .spawn()
-                                .insert_bundle(PbrBundle {
+                                .spawn(PbrBundle {
                                     transform: Transform::from_translation(
                                         structure.chunk_relative_position(x, y, z).into(),
                                     ),

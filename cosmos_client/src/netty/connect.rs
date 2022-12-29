@@ -43,9 +43,10 @@ fn new_renet_client(host: &str) -> RenetClient {
 
     println!("Connecting to {}", server_addr);
 
-    RenetClient::new(cur_time, socket, client_id, connection_config, auth).unwrap()
+    RenetClient::new(cur_time, socket, connection_config, auth).unwrap()
 }
 
+#[derive(Resource)]
 pub struct ConnectionConfig {
     pub host_name: String,
 }

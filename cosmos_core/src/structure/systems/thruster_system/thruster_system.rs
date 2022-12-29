@@ -1,8 +1,8 @@
 use bevy::{
     ecs::schedule::StateData,
     prelude::{
-        App, Commands, Component, CoreStage, Entity, EventReader, Query, Res, ResMut, SystemSet,
-        Transform, Vec3, With,
+        App, Commands, Component, CoreStage, Entity, EventReader, Query, Res, ResMut, Resource,
+        SystemSet, Transform, Vec3, With,
     },
     time::Time,
     utils::HashMap,
@@ -28,7 +28,7 @@ pub struct ThrusterProperty {
     pub energy_consupmtion: f32,
 }
 
-#[derive(Default)]
+#[derive(Default, Resource)]
 struct ThrusterBlocks {
     blocks: HashMap<u16, ThrusterProperty>,
 }

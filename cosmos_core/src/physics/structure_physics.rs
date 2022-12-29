@@ -274,11 +274,11 @@ fn listen_for_new_physics_event(
         let mut done_structures = HashSet::new();
 
         for ev in event.iter() {
-            if done_structures.contains(&ev.structure_entity.id()) {
+            if done_structures.contains(&ev.structure_entity) {
                 continue;
             }
 
-            done_structures.insert(ev.structure_entity.id());
+            done_structures.insert(ev.structure_entity);
 
             let (structure, mut physics) = query.get_mut(ev.structure_entity).unwrap();
 

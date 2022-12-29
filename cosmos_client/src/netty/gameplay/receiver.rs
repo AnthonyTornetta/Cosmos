@@ -158,10 +158,10 @@ fn client_sync_players(
             } => {
                 println!("Player {} ({}) connected!", name.as_str(), id);
 
-                let mut client_entity = commands.spawn();
+                let mut client_entity = commands.spawn_empty();
 
                 client_entity
-                    .insert_bundle(PbrBundle {
+                    .insert(PbrBundle {
                         transform: body.create_transform(),
                         mesh: meshes.add(shape::Capsule::default().into()),
                         ..default()
@@ -219,7 +219,7 @@ fn client_sync_players(
                 width,
                 body,
             } => {
-                let mut entity = commands.spawn();
+                let mut entity = commands.spawn_empty();
                 let mut structure = Structure::new(width, height, length, entity.id());
 
                 let builder = ClientPlanetBuilder::default();
@@ -240,7 +240,7 @@ fn client_sync_players(
                 height,
                 length,
             } => {
-                let mut entity = commands.spawn();
+                let mut entity = commands.spawn_empty();
                 let mut structure = Structure::new(width, height, length, entity.id());
 
                 let builder = ClientShipBuilder::default();

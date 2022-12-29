@@ -1,6 +1,9 @@
-use bevy::{prelude::Entity, utils::HashMap};
+use bevy::{
+    prelude::{Entity, Resource},
+    utils::HashMap,
+};
 
-#[derive(Default)]
+#[derive(Default, Resource)]
 pub struct NetworkMapping {
     server_to_client: HashMap<Entity, Entity>,
     client_to_server: HashMap<Entity, Entity>,

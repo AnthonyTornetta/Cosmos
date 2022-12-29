@@ -14,6 +14,8 @@ pub mod window;
 use std::env;
 use std::f32::consts::PI;
 
+use bevy::prelude::shape::Cube;
+use bevy_rapier3d::render::RapierDebugRenderPlugin;
 use bevy_renet::renet::RenetClient;
 use camera::camera_controller;
 use cosmos_core::entities::player::Player;
@@ -23,6 +25,7 @@ use cosmos_core::netty::client_unreliable_messages::ClientUnreliableMessages;
 use cosmos_core::netty::{get_local_ipaddress, NettyChannel};
 use cosmos_core::structure::ship::pilot::Pilot;
 use cosmos_core::structure::ship::ship_movement::ShipMovement;
+use cosmos_core::structure::structure::Structure;
 use input::inputs::{self, CosmosInputHandler, CosmosInputs};
 use interactions::block_interactions;
 use netty::connect::{self, ConnectionConfig};
@@ -39,9 +42,8 @@ use crate::plugin::client_plugin::ClientPluginGroup;
 use crate::rendering::structure_renderer::monitor_block_updates_system;
 use crate::rendering::uv_mapper::UVMapper;
 use bevy::prelude::*;
-use bevy::render::texture::ImageSettings;
 use bevy_inspector_egui::WorldInspectorPlugin;
-use bevy_rapier3d::prelude::{Vect, Velocity};
+use bevy_rapier3d::prelude::{RapierConfiguration, Vect, Velocity};
 use bevy_renet::RenetClientPlugin;
 use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
 
@@ -205,9 +207,14 @@ fn create_sun(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
+    commands.spawn(PbrBundle {
+        mesh: meshes.add(Cube::new(1.0).into()),
+        ..Default::default()
+    });
+
     commands
-        .spawn_bundle(PointLightBundle {
-            transform: Transform::from_xyz(0.0, 100.0, 0.0),
+        .spawn(PointLightBundle {
+            transform: Transform::from_xyz(0.0, 180.0, 0.0),
             point_light: PointLight {
                 intensity: 160000.0,
                 range: 16000.0,
@@ -218,7 +225,7 @@ fn create_sun(
             ..default()
         })
         .with_children(|builder| {
-            builder.spawn_bundle(PbrBundle {
+            builder.spawn(PbrBundle {
                 mesh: meshes.add(Mesh::from(shape::UVSphere {
                     radius: 0.1,
                     ..default()
@@ -232,6 +239,18 @@ fn create_sun(
             });
         });
 }
+
+// fn debug_planets(player: Query<&Transform, With<Player>>, query: Query<(&Transform, &Structure)>) {
+//     let player = player.get_single().unwrap();
+
+//     for (transform, structure) in query.iter() {
+//         if let Ok((x, y, z)) =
+//             structure.world_position_to_block_position(transform, &player.translation)
+//         {
+//             println!("Your local pos: {} {} {}", x, y, z);
+//         }
+//     }
+// }
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -250,51 +269,53 @@ fn main() {
         host_name: host_name.into(),
     });
 
-    app.insert_resource(ImageSettings::default_nearest()) // MUST be before default plugins!
-        .add_state(GameState::PreLoading)
-        .add_plugins(CosmosCorePluginGroup::new(
-            GameState::PreLoading,
-            GameState::Loading,
-            GameState::PostLoading,
-            GameState::Connecting,
-            GameState::Playing,
-        ))
-        .add_plugins(ClientPluginGroup::default())
-        .add_plugin(RenetClientPlugin {})
-        .add_plugin(WorldInspectorPlugin::new())
-        // .add_plugin(RapierDebugRenderPlugin::default())
-        .add_system_set(
-            SystemSet::on_enter(GameState::Connecting).with_system(connect::establish_connection),
-        )
-        .add_system_set(
-            SystemSet::on_update(GameState::Connecting).with_system(connect::wait_for_connection),
-        )
-        .add_system_set(SystemSet::on_enter(GameState::LoadingWorld).with_system(create_sun))
-        .add_system_set(
-            SystemSet::on_update(GameState::LoadingWorld)
-                .with_system(connect::wait_for_done_loading)
-                .with_system(monitor_block_updates_system),
-        )
-        .add_system_set(
-            SystemSet::on_update(GameState::Playing)
-                .with_system(process_player_movement)
-                .with_system(process_ship_movement)
-                .with_system(monitor_block_updates_system)
-                .with_system(reset_cursor)
-                .with_system(sync_pilot_to_ship),
-        );
+    app.insert_resource(RapierConfiguration {
+        gravity: Vec3::ZERO,
+        ..default()
+    })
+    .add_state(GameState::PreLoading)
+    .add_plugins(CosmosCorePluginGroup::new(
+        GameState::PreLoading,
+        GameState::Loading,
+        GameState::PostLoading,
+        GameState::Connecting,
+        GameState::Playing,
+    ))
+    .add_plugins(ClientPluginGroup::default())
+    .add_plugin(RenetClientPlugin::default())
+    .add_plugin(WorldInspectorPlugin::new())
+    .add_plugin(RapierDebugRenderPlugin::default())
+    .add_system_set(
+        SystemSet::on_enter(GameState::Connecting).with_system(connect::establish_connection),
+    )
+    .add_system_set(
+        SystemSet::on_update(GameState::Connecting).with_system(connect::wait_for_connection),
+    )
+    .add_system_set(SystemSet::on_enter(GameState::LoadingWorld).with_system(create_sun))
+    .add_system_set(
+        SystemSet::on_update(GameState::LoadingWorld)
+            .with_system(connect::wait_for_done_loading)
+            .with_system(monitor_block_updates_system),
+    )
+    .add_system_set(
+        SystemSet::on_update(GameState::Playing)
+            .with_system(process_player_movement)
+            .with_system(process_ship_movement)
+            .with_system(monitor_block_updates_system)
+            .with_system(reset_cursor)
+            .with_system(sync_pilot_to_ship), // .with_system(debug_planets),
+    );
 
     inputs::register(&mut app);
     window::setup::register(&mut app);
     asset::register(&mut app);
     events::register(&mut app);
     block_interactions::register(&mut app);
-    chunk_retreiver::register(&mut app);
+    // chunk_retreiver::register(&mut app);
     camera_controller::register(&mut app);
     crosshair::register(&mut app);
     receiver::register(&mut app);
     structure_renderer::register(&mut app);
-    sync::register(&mut app);
 
     app.run();
 }
