@@ -3,10 +3,10 @@ use bevy_rapier3d::prelude::{RigidBody, Velocity};
 
 use crate::{
     physics::gravity_system::GravityEmitter,
-    structure::{structure::Structure, structure_builder::TStructureBuilder},
+    structure::{structure_builder::TStructureBuilder, Structure},
 };
 
-use super::planet::Planet;
+use super::Planet;
 
 pub trait TPlanetBuilder {
     fn insert_planet(

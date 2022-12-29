@@ -3,7 +3,7 @@ use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
     block::blocks::Blocks,
     events::block_events::BlockChangedEvent,
-    structure::{events::StructureCreated, ship::ship_builder::TShipBuilder, structure::Structure},
+    structure::{events::StructureCreated, ship::ship_builder::TShipBuilder, Structure},
 };
 
 use crate::structure::ship::server_ship_builder::ServerShipBuilder;

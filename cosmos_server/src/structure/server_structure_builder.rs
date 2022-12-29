@@ -11,7 +11,7 @@ impl TStructureBuilder for ServerStructureBuilder {
         entity: &mut bevy::ecs::system::EntityCommands,
         transform: bevy::prelude::Transform,
         velocity: bevy_rapier3d::prelude::Velocity,
-        structure: &mut cosmos_core::structure::structure::Structure,
+        structure: &mut cosmos_core::structure::Structure,
     ) {
         self.structure_builder
             .insert_structure(entity, transform, velocity, structure);

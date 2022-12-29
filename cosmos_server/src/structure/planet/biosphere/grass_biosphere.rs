@@ -1,7 +1,7 @@
 use bevy::prelude::{App, Component, Entity, EventReader, EventWriter, Query, Res};
 use cosmos_core::{
     block::blocks::Blocks,
-    structure::{chunk::CHUNK_DIMENSIONS, events::ChunkSetEvent, structure::Structure},
+    structure::{chunk::CHUNK_DIMENSIONS, events::ChunkSetEvent, Structure},
     utils::resource_wrapper::ResourceWrapper,
 };
 use noise::NoiseFn;

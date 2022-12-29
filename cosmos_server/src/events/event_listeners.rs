@@ -6,9 +6,7 @@ use cosmos_core::{
         netty_rigidbody::NettyRigidBody, server_reliable_messages::ServerReliableMessages,
         NettyChannel,
     },
-    structure::{
-        events::StructureCreated, planet::planet::Planet, ship::ship::Ship, structure::Structure,
-    },
+    structure::{events::StructureCreated, planet::Planet, ship::Ship, Structure},
 };
 
 fn on_structure_created(

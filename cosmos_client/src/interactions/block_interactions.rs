@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::{QueryFilter, RapierContext};
-use cosmos_core::{block::blocks::Blocks, structure::structure::Structure};
+use cosmos_core::{block::blocks::Blocks, structure::Structure};
 
 use crate::{
     events::block::block_events::*,

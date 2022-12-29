@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::netty::client_reliable_messages::ClientReliableMessages;
-use cosmos_core::{netty::NettyChannel, structure::structure::Structure};
+use cosmos_core::{netty::NettyChannel, structure::Structure};
 
 use crate::state::game_state::GameState;
 use crate::NetworkMapping;

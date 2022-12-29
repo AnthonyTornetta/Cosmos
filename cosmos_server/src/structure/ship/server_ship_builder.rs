@@ -22,7 +22,7 @@ impl TShipBuilder for ServerShipBuilder {
         entity: &mut bevy::ecs::system::EntityCommands,
         transform: Transform,
         velocity: Velocity,
-        structure: &mut cosmos_core::structure::structure::Structure,
+        structure: &mut cosmos_core::structure::Structure,
     ) {
         self.builder
             .insert_ship(entity, transform, velocity, structure);

@@ -2,9 +2,9 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use bevy_renet::renet::{RenetServer, ServerEvent};
 use cosmos_core::netty::server_reliable_messages::ServerReliableMessages;
-use cosmos_core::structure::planet::planet::Planet;
-use cosmos_core::structure::ship::ship::Ship;
-use cosmos_core::structure::structure::Structure;
+use cosmos_core::structure::planet::Planet;
+use cosmos_core::structure::ship::Ship;
+use cosmos_core::structure::Structure;
 use cosmos_core::{
     entities::player::Player,
     netty::{netty_rigidbody::NettyRigidBody, NettyChannel},
@@ -120,6 +120,7 @@ fn handle_events_system(
                 if let Some(player_entity) = lobby.players.remove(id) {
                     commands.entity(player_entity).despawn();
                 }
+
                 let message =
                     bincode::serialize(&ServerReliableMessages::PlayerRemove { id: *id }).unwrap();
 

@@ -14,8 +14,8 @@ use cosmos_core::{
         chunk::Chunk,
         events::ChunkSetEvent,
         planet::planet_builder::TPlanetBuilder,
-        ship::{pilot::Pilot, ship::Ship, ship_builder::TShipBuilder},
-        structure::Structure,
+        ship::{pilot::Pilot, ship_builder::TShipBuilder, Ship},
+        Structure,
     },
 };
 
@@ -304,11 +304,7 @@ fn client_sync_players(
                 entity: server_entity,
             } => {
                 commands
-                    .entity(
-                        *network_mapping
-                            .client_from_server(&server_entity)
-                            .unwrap(),
-                    )
+                    .entity(*network_mapping.client_from_server(&server_entity).unwrap())
                     .despawn_recursive();
             }
             ServerReliableMessages::MOTD { motd } => {
@@ -352,7 +348,8 @@ fn client_sync_players(
                     structure_entity: *network_mapping
                         .client_from_server(&structure_entity)
                         .unwrap(),
-                    pilot_entity: pilot_entity.map(|ent| *network_mapping.client_from_server(&ent).unwrap()),
+                    pilot_entity: pilot_entity
+                        .map(|ent| *network_mapping.client_from_server(&ent).unwrap()),
                 });
             }
         }

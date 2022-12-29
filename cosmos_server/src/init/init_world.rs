@@ -2,9 +2,7 @@ use std::time::SystemTime;
 
 use bevy::prelude::*;
 use cosmos_core::{
-    structure::{
-        events::StructureCreated, planet::planet_builder::TPlanetBuilder, structure::Structure,
-    },
+    structure::{events::StructureCreated, planet::planet_builder::TPlanetBuilder, Structure},
     utils::resource_wrapper::ResourceWrapper,
 };
 use noise::Seedable;

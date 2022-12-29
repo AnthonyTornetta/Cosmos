@@ -3,8 +3,8 @@ use cosmos_core::{
     block::blocks::Blocks,
     events::structure::change_pilot_event::ChangePilotEvent,
     structure::{
-        ship::{pilot::Pilot, ship::Ship},
-        structure::Structure,
+        ship::{pilot::Pilot, Ship},
+        Structure,
     },
 };
 

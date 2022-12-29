@@ -38,7 +38,7 @@ impl<K: Component, V: TGenerateChunkEvent, T: TBiosphere<K, V>> TPlanetBuilder
         &self,
         entity: &mut bevy::ecs::system::EntityCommands,
         transform: bevy::prelude::Transform,
-        structure: &mut cosmos_core::structure::structure::Structure,
+        structure: &mut cosmos_core::structure::Structure,
     ) {
         self.builder.insert_planet(entity, transform, structure);
 

@@ -1,5 +1,5 @@
 use bevy::{ecs::event::Event, prelude::*};
-use cosmos_core::structure::structure::Structure;
+use cosmos_core::structure::Structure;
 
 use crate::structure::planet::biosphere::TGenerateChunkEvent;
 

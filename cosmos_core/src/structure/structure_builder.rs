@@ -4,7 +4,7 @@ use bevy::{
 };
 use bevy_rapier3d::prelude::Velocity;
 
-use crate::{physics::structure_physics::StructurePhysics, structure::structure::Structure};
+use crate::{physics::structure_physics::StructurePhysics, structure::Structure};
 
 pub trait TStructureBuilder {
     fn insert_structure(

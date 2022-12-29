@@ -10,7 +10,7 @@ use cosmos_core::{
     },
     structure::{
         ship::pilot::Pilot,
-        structure::{Structure, StructureBlock},
+        {Structure, StructureBlock},
     },
 };
 

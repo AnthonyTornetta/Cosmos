@@ -2,7 +2,7 @@ use crate::block::blocks::Blocks;
 use crate::events::block_events::BlockChangedEvent;
 use crate::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
 use crate::structure::events::ChunkSetEvent;
-use crate::structure::structure::Structure;
+use crate::structure::Structure;
 use bevy::prelude::{
     App, Commands, Component, CoreStage, Entity, EventReader, EventWriter, Query, Res, Vec3,
 };

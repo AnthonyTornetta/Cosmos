@@ -1,9 +1,9 @@
 use bevy::{ecs::system::EntityCommands, prelude::Transform};
 use bevy_rapier3d::prelude::{Ccd, ReadMassProperties, RigidBody, Velocity};
 
-use crate::structure::{structure::Structure, structure_builder::TStructureBuilder};
+use crate::structure::{structure_builder::TStructureBuilder, Structure};
 
-use super::{ship::Ship, ship_movement::ShipMovement};
+use super::{ship_movement::ShipMovement, Ship};
 
 pub trait TShipBuilder {
     fn insert_ship(

@@ -4,7 +4,7 @@ use cosmos_core::{
     block::blocks::Blocks,
     events::block_events::BlockChangedEvent,
     netty::{server_reliable_messages::ServerReliableMessages, NettyChannel},
-    structure::structure::{Structure, StructureBlock},
+    structure::{Structure, StructureBlock},
 };
 
 use crate::GameState;

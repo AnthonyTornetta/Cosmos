@@ -1,7 +1,7 @@
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::structure::{
     ship::ship_builder::{ShipBuilder, TShipBuilder},
-    structure::Structure,
+    Structure,
 };
 
 use crate::structure::client_structure_builder::ClientStructureBuilder;

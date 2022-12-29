@@ -1,6 +1,6 @@
 use cosmos_core::structure::{
     planet::{planet_builder::PlanetBuilder, planet_builder::TPlanetBuilder},
-    structure::Structure,
+    Structure,
 };
 
 use crate::structure::client_structure_builder::ClientStructureBuilder;

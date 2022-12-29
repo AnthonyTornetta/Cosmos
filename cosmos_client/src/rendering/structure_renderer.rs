@@ -8,7 +8,7 @@ use cosmos_core::block::BlockFace;
 use cosmos_core::events::block_events::BlockChangedEvent;
 use cosmos_core::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
 use cosmos_core::structure::events::ChunkSetEvent;
-use cosmos_core::structure::structure::Structure;
+use cosmos_core::structure::Structure;
 use cosmos_core::utils::array_utils::flatten;
 use std::collections::HashSet;
 
