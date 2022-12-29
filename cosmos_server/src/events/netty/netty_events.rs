@@ -49,11 +49,13 @@ fn handle_events_system(
                 let netty_body = NettyRigidBody::new(&velocity, &transform);
 
                 let mut player_entity = commands.spawn(transform);
-                player_entity.insert(LockedAxes::ROTATION_LOCKED);
-                player_entity.insert(RigidBody::Dynamic);
-                player_entity.insert(velocity);
-                player_entity.insert(Collider::capsule_y(0.5, 0.25));
-                player_entity.insert(player);
+                player_entity
+                    .insert(LockedAxes::ROTATION_LOCKED)
+                    .insert(RigidBody::Dynamic)
+                    .insert(velocity)
+                    .insert(Collider::capsule_y(0.5, 0.25))
+                    .insert(player)
+                    .insert(ReadMassProperties::default());
 
                 lobby.players.insert(*id, player_entity.id());
 

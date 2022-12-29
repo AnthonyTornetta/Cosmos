@@ -55,16 +55,17 @@ Cosmos, but in rust
 - [ ] Ship core
   - [ ] Once destroyed, the entire ship enters meltdown, becoming minable by mining beams and will be destroyed after a set amount of time
   - [ ] Interact with this block to pilot the ship
+  - [ ] Cannot be mined while other blocks are present on the ship
   - [x] Create block
-- [ ] Localized planetary gravity
+- [x] Localized planetary gravity
   - [ ] All entities near planet's radius are subject to its gravity towards its relative downward vector
-    - [ ] The gravitational pull should scale inversely exponentially the farther the distance from a certain threshold (most likely the highest chunk) then remain constant past that point
+    - [x] The gravitational pull should scale inversely exponentially the farther the distance from a certain threshold (most likely the highest chunk) then remain constant past that point
 - [x] Ship systems
   - [x] Energy system
     - [x] Energy producer block
-    - [ ] Energy storage block
+    - [x] Energy storage block
     - [x] Energy storage system
-    - [ ] Energy generation system
+    - [x] Energy generation system
   - [x] Thruster system
   - [ ] Thruster block
   - [x] Allows the ship to move + rotate
@@ -122,7 +123,7 @@ Cosmos, but in rust
   - [ ] Background space ambiance?
 - [ ] Planet Generation
   - [ ] New planet types
-  - [ ] Relies on bunch of new blocks
+  - [ ] A bunch of new blocks
 - [ ] Galaxy Generation
   - [ ] Stars procedurally generated in spiral-like pattern based on seed 
   - [ ] Planets generate around stars, their biosphere depending on how close they are to the sun

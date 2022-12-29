@@ -7,8 +7,6 @@ fn gravity_system(
     receiver: Query<(Entity, &GlobalTransform, &ReadMassProperties, &RigidBody)>,
     mut commands: Commands,
 ) {
-    println!("ASDF");
-
     let mut gravs: Vec<(f32, f32, Vec3, Vec3)> = Vec::with_capacity(emitters.iter().len());
 
     for (emitter, trans) in emitters.iter() {
@@ -19,6 +17,8 @@ fn gravity_system(
             trans.down(),
         ));
     }
+
+    println!("Receivers: {}", receiver.iter().len());
 
     for (ent, trans, prop, rb) in receiver.iter() {
         if *rb == RigidBody::Dynamic {
