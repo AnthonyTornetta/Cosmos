@@ -284,7 +284,7 @@ fn main() {
     .add_plugins(ClientPluginGroup::default())
     .add_plugin(RenetClientPlugin::default())
     .add_plugin(WorldInspectorPlugin::new())
-    .add_plugin(RapierDebugRenderPlugin::default())
+    // .add_plugin(RapierDebugRenderPlugin::default())
     .add_system_set(
         SystemSet::on_enter(GameState::Connecting).with_system(connect::establish_connection),
     )
@@ -311,7 +311,7 @@ fn main() {
     asset::register(&mut app);
     events::register(&mut app);
     block_interactions::register(&mut app);
-    // chunk_retreiver::register(&mut app);
+    chunk_retreiver::register(&mut app);
     camera_controller::register(&mut app);
     crosshair::register(&mut app);
     receiver::register(&mut app);

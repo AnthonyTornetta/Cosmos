@@ -1,4 +1,4 @@
-use bevy::{prelude::*, render::camera::Projection};
+use bevy::{core_pipeline::bloom::BloomSettings, prelude::*, render::camera::Projection};
 use bevy_rapier3d::prelude::*;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
@@ -29,7 +29,7 @@ use crate::{
     },
     state::game_state::GameState,
     structure::{
-        planet::client_planet_builder::ClientPlanetBuilder,
+        chunk_retreiver::NeedsPopulated, planet::client_planet_builder::ClientPlanetBuilder,
         ship::client_ship_builder::ClientShipBuilder,
     },
     ui::crosshair::CrosshairOffset,
@@ -177,13 +177,20 @@ fn client_sync_players(
                         .insert(LocalPlayer::default())
                         .with_children(|parent| {
                             parent
-                                .spawn_bundle(Camera3dBundle {
+                                .spawn(Camera3dBundle {
+                                    camera: Camera {
+                                        hdr: true,
+                                        ..Default::default()
+                                    },
                                     transform: Transform::from_xyz(0.0, 0.75, 0.0),
                                     projection: Projection::from(PerspectiveProjection {
                                         fov: (90.0 / 360.0) * (std::f32::consts::PI * 2.0),
                                         ..default()
                                     }),
                                     ..default()
+                                })
+                                .insert(BloomSettings {
+                                    ..Default::default()
                                 })
                                 .insert(CameraHelper::default());
                         });
@@ -225,7 +232,7 @@ fn client_sync_players(
                 let builder = ClientPlanetBuilder::default();
                 builder.insert_planet(&mut entity, body.create_transform(), &mut structure);
 
-                entity.insert(structure);
+                entity.insert(structure).insert(NeedsPopulated);
 
                 network_mapping.add_mapping(&entity.id(), &server_entity);
 
@@ -267,6 +274,8 @@ fn client_sync_players(
                 structure_entity: server_structure_entity,
                 serialized_chunk,
             } => {
+                println!("Got chunk!");
+
                 let s_entity = network_mapping
                     .client_from_server(&server_structure_entity)
                     .expect("Got chunk data for structure that doesn't exist on client");
