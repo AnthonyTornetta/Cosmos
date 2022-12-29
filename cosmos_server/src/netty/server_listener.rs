@@ -48,9 +48,7 @@ fn server_listen_messages(
                         if let Ok(entity) = players.get(*player_entity) {
                             commands
                                 .entity(entity)
-                                .insert_bundle(TransformBundle::from_transform(
-                                    body.create_transform(),
-                                ));
+                                .insert(TransformBundle::from_transform(body.create_transform()));
                         }
                     }
                 }

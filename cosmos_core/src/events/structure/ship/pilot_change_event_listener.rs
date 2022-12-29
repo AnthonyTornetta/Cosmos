@@ -33,7 +33,7 @@ fn event_listener(
                 .remove::<Parent>()
                 .remove::<Sensor>()
                 .insert(RigidBody::Dynamic)
-                .insert_bundle(TransformBundle::from_transform(transform));
+                .insert(TransformBundle::from_transform(transform));
         }
 
         if let Some(entity) = ev.pilot_entity {
@@ -49,7 +49,7 @@ fn event_listener(
                 })
                 .insert(Sensor)
                 .insert(RigidBody::Fixed)
-                .insert_bundle(TransformBundle::from_transform(Transform::from_xyz(
+                .insert(TransformBundle::from_transform(Transform::from_xyz(
                     0.0, 0.0, 0.0,
                 )));
         } else {

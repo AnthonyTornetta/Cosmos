@@ -10,7 +10,6 @@ use bevy::utils::HashSet;
 use bevy_rapier3d::math::Vect;
 use bevy_rapier3d::na::Vector3;
 use bevy_rapier3d::prelude::{Collider, Rot};
-use bevy_rapier3d::rapier::prelude::ColliderMassProps;
 
 pub struct ChunkPhysicsModel {
     pub collider: Option<Collider>,

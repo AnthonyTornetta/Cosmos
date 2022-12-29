@@ -1,9 +1,7 @@
 use std::f64::consts::PI;
 
-use bevy::prelude::{Quat, Vec3};
+use bevy::prelude::Vec3;
 use bevy_rapier3d::na::{Quaternion, UnitVector3, Vector3};
-
-use super::vec_math::{cross, dot};
 
 // https://stackoverflow.com/questions/1171849/finding-quaternion-representing-the-rotation-from-one-vector-to-another
 pub fn quaternion_between_normalized_vectors(

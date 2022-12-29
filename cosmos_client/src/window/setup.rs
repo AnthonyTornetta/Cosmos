@@ -1,6 +1,6 @@
 use bevy::{
     input::mouse::MouseMotion,
-    prelude::{App, EventReader, Input, KeyCode, MouseButton, Res, ResMut, Resource, Vec2},
+    prelude::{App, EventReader, Input, KeyCode, MouseButton, Res, ResMut, Resource},
     window::{CursorGrabMode, Windows},
 };
 
@@ -51,7 +51,7 @@ fn unfreeze_mouse(
     delta.y = 0.0;
 
     if is_locked.locked {
-        let pos = Vec2::new(window.width() / 2.0, window.height() / 2.0);
+        // let pos = Vec2::new(window.width() / 2.0, window.height() / 2.0);
         for ev in event_reader.iter() {
             if window.cursor_grab_mode() == CursorGrabMode::Locked {
                 // Using smallest of height or width ensures equal vertical and horizontal sensitivity
@@ -60,7 +60,7 @@ fn unfreeze_mouse(
             }
         }
 
-        // window.set_cursor_position(pos);
+        //window.set_cursor_position(pos);
     }
 }
 
