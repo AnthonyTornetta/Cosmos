@@ -43,13 +43,8 @@ fn process_player_interaction(
         true,
         QueryFilter::new().exclude_rigid_body(player_body), // don't want to hit yourself
     ) {
-        let parent = parent_query.get(entity);
-        if parent.is_ok() {
-            let structure_maybe = structure_query.get(parent.unwrap().get());
-
-            if structure_maybe.is_ok() {
-                let (structure, transform) = structure_maybe.unwrap();
-
+        if let Ok(parent) = parent_query.get(entity) {
+            if let Ok((structure, transform)) = structure_query.get(parent.get()) {
                 if input_handler.check_just_pressed(CosmosInputs::BreakBlock, &keys, &mouse) {
                     let moved_point = intersection.point - intersection.normal * 0.3;
 
@@ -78,11 +73,9 @@ fn process_player_interaction(
                         .inverse()
                         .transform_point3(moved_point);
 
-                    let coords =
-                        structure.relative_coords_to_local_coords(point.x, point.y, point.z);
-
-                    if coords.is_ok() {
-                        let (x, y, z) = coords.unwrap();
+                    if let Ok((x, y, z)) =
+                        structure.relative_coords_to_local_coords(point.x, point.y, point.z)
+                    {
                         if structure.is_within_blocks(x, y, z) {
                             let stone = blocks.block_from_id("cosmos:stone").unwrap();
 

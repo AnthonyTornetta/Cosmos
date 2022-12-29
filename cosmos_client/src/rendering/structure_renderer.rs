@@ -85,36 +85,33 @@ impl StructureRenderer {
                 x => Some(structure.chunk_from_chunk_coordinates(x - 1, y, z)),
             };
 
-            let right;
-            if x == self.width - 1 {
-                right = None;
+            let right = if x == self.width - 1 {
+                None
             } else {
-                right = Some(structure.chunk_from_chunk_coordinates(x + 1, y, z));
-            }
+                Some(structure.chunk_from_chunk_coordinates(x + 1, y, z))
+            };
 
             let bottom = match y {
                 0 => None,
                 y => Some(structure.chunk_from_chunk_coordinates(x, y - 1, z)),
             };
 
-            let top;
-            if y == self.height - 1 {
-                top = None;
+            let top = if y == self.height - 1 {
+                None
             } else {
-                top = Some(structure.chunk_from_chunk_coordinates(x, y + 1, z));
-            }
+                Some(structure.chunk_from_chunk_coordinates(x, y + 1, z))
+            };
 
             let back = match z {
                 0 => None,
                 z => Some(structure.chunk_from_chunk_coordinates(x, y, z - 1)),
             };
 
-            let front;
-            if z == self.length - 1 {
-                front = None;
+            let front = if z == self.length - 1 {
+                None
             } else {
-                front = Some(structure.chunk_from_chunk_coordinates(x, y, z + 1));
-            }
+                Some(structure.chunk_from_chunk_coordinates(x, y, z + 1))
+            };
 
             self.chunk_renderers[flatten(x, y, z, self.width, self.height)].render(
                 uv_mapper,
@@ -180,13 +177,13 @@ fn dew_it(
     query: &mut Query<&mut StructureRenderer>,
     event_writer: &mut EventWriter<NeedsNewRenderingEvent>,
 ) {
-    if chunk_coords.is_some() {
+    if let Some(chunk_coords) = chunk_coords {
         let mut structure_renderer = query.get_mut(entity).unwrap();
 
         structure_renderer.changes.insert(Vector3::new(
-            chunk_coords.unwrap().x,
-            chunk_coords.unwrap().y,
-            chunk_coords.unwrap().z,
+            chunk_coords.x,
+            chunk_coords.y,
+            chunk_coords.z,
         ));
     }
 
@@ -361,8 +358,8 @@ pub fn monitor_needs_rendered_system(
 
             let old_mesh_handle = mesh_query.get(entity).unwrap();
 
-            if old_mesh_handle.is_some() {
-                meshes.remove(old_mesh_handle.unwrap());
+            if let Some(old_mesh_handle) = old_mesh_handle {
+                meshes.remove(old_mesh_handle);
             }
 
             let mut entity_commands = commands.entity(entity);
@@ -379,6 +376,7 @@ pub fn monitor_needs_rendered_system(
     }
 }
 
+#[derive(Default)]
 pub struct ChunkRenderer {
     pub indices: Vec<u32>,
     pub uvs: Vec<[f32; 2]>,
@@ -388,12 +386,7 @@ pub struct ChunkRenderer {
 
 impl ChunkRenderer {
     pub fn new() -> Self {
-        Self {
-            indices: Vec::new(),
-            uvs: Vec::new(),
-            positions: Vec::new(),
-            normals: Vec::new(),
-        }
+        Self::default()
     }
 
     pub fn render(

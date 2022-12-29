@@ -114,11 +114,7 @@ fn client_sync_players(
                 time_stamp: _,
             } => {
                 for (server_entity, body) in bodies.iter() {
-                    let maybe_exists = network_mapping.client_from_server(server_entity);
-
-                    if maybe_exists.is_some() {
-                        let entity = maybe_exists.unwrap();
-
+                    if let Some(entity) = network_mapping.client_from_server(server_entity) {
                         let (mut transform, mut velocity, local) =
                             query_body.get_mut(*entity).unwrap();
 
@@ -317,16 +313,10 @@ fn client_sync_players(
                 structure_entity,
                 block_id,
             } => {
-                let client_ent = network_mapping.client_from_server(&structure_entity);
-
                 // Sometimes you'll get block updates for structures that don't exist
-                if client_ent.is_some() {
-                    let ent = *client_ent.unwrap();
-
-                    let structure = query_structure.get_mut(ent);
-
-                    if structure.is_ok() {
-                        structure.unwrap().set_block_at(
+                if let Some(client_ent) = network_mapping.client_from_server(&structure_entity) {
+                    if let Ok(mut structure) = query_structure.get_mut(*client_ent) {
+                        structure.set_block_at(
                             x,
                             y,
                             z,
@@ -336,7 +326,7 @@ fn client_sync_players(
                         );
                     } else {
                         println!("OH NO!");
-                        commands.entity(ent).log_components();
+                        commands.entity(*client_ent).log_components();
                     }
                 }
             }

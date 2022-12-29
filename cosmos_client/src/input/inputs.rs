@@ -43,16 +43,14 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     input_handler.set_keycode(CosmosInputs::UnlockMouse, KeyCode::Escape);
 }
 
-#[derive(Resource)]
+#[derive(Resource, Default)]
 pub struct CosmosInputHandler {
     input_mapping: HashMap<CosmosInputs, (Option<KeyCode>, Option<MouseButton>)>,
 }
 
 impl CosmosInputHandler {
     pub fn new() -> Self {
-        Self {
-            input_mapping: HashMap::new(),
-        }
+        Self::default()
     }
 
     pub fn check_just_released(
