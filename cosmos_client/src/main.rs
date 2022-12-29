@@ -153,8 +153,8 @@ fn process_player_movement(
             true => 20.0,
         };
 
-        let mut forward = cam_trans.forward().clone();
-        let mut right = cam_trans.right().clone();
+        let mut forward = cam_trans.forward();
+        let mut right = cam_trans.right();
         let up = Vect::new(0.0, 1.0, 0.0);
 
         forward.y = 0.0;
@@ -192,7 +192,7 @@ fn process_player_movement(
 
         velocity.linvel.y = 0.0;
 
-        if velocity.linvel.dot(velocity.linvel.clone()) > max_speed * max_speed {
+        if velocity.linvel.dot(velocity.linvel) > max_speed * max_speed {
             velocity.linvel = velocity.linvel.normalize() * max_speed;
         }
 
@@ -264,7 +264,7 @@ fn main() {
     let mut app = App::new();
 
     app.insert_resource(ConnectionConfig {
-        host_name: host_name.into(),
+        host_name,
     });
 
     app.insert_resource(RapierConfiguration {

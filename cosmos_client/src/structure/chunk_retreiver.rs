@@ -23,7 +23,7 @@ fn populate_structures(
         client.send_message(
             NettyChannel::Reliable.id(),
             bincode::serialize(&ClientReliableMessages::SendChunk {
-                server_entity: server_ent.clone(),
+                server_entity: *server_ent,
             })
             .unwrap(),
         );

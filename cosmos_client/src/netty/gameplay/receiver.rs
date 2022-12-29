@@ -53,7 +53,7 @@ fn update_crosshair(
     windows: Res<Windows>,
 ) {
     for (pilot, mut last_rotation, transform) in query.iter_mut() {
-        if local_player_query.get(pilot.entity.clone()).is_ok() {
+        if local_player_query.get(pilot.entity).is_ok() {
             // let (cam, global) = cam_query.get_single().unwrap();
 
             let (cam_entity, camera) = camera_query.get_single().unwrap();
@@ -72,7 +72,7 @@ fn update_crosshair(
                 crosshair_offset.y += pos_on_screen.y;
             }
 
-            last_rotation.0 = transform.rotation.clone();
+            last_rotation.0 = transform.rotation;
         }
     }
 }
@@ -99,7 +99,7 @@ fn client_sync_players(
 
         match msg {
             ServerUnreliableMessages::PlayerBody { id, body } => {
-                let entity = lobby.players.get(&id).unwrap().client_entity.clone();
+                let entity = lobby.players.get(&id).unwrap().client_entity;
 
                 let (mut transform, mut velocity, _) = query_body.get_mut(entity).unwrap();
 
@@ -114,7 +114,7 @@ fn client_sync_players(
                 time_stamp: _,
             } => {
                 for (server_entity, body) in bodies.iter() {
-                    let maybe_exists = network_mapping.client_from_server(&server_entity);
+                    let maybe_exists = network_mapping.client_from_server(server_entity);
 
                     if maybe_exists.is_some() {
                         let entity = maybe_exists.unwrap();
@@ -281,7 +281,7 @@ fn client_sync_players(
                     .client_from_server(&server_structure_entity)
                     .expect("Got chunk data for structure that doesn't exist on client");
 
-                let mut structure = query_structure.get_mut(s_entity.clone()).unwrap();
+                let mut structure = query_structure.get_mut(*s_entity).unwrap();
 
                 let chunk: Chunk = bincode::deserialize(&serialized_chunk).unwrap();
 
@@ -297,7 +297,7 @@ fn client_sync_players(
                     x,
                     y,
                     z,
-                    structure_entity: s_entity.clone(),
+                    structure_entity: *s_entity,
                 });
             }
             ServerReliableMessages::StructureRemove {
@@ -305,10 +305,9 @@ fn client_sync_players(
             } => {
                 commands
                     .entity(
-                        network_mapping
+                        *network_mapping
                             .client_from_server(&server_entity)
-                            .unwrap()
-                            .clone(),
+                            .unwrap(),
                     )
                     .despawn_recursive();
             }
@@ -326,7 +325,7 @@ fn client_sync_players(
 
                 // Sometimes you'll get block updates for structures that don't exist
                 if client_ent.is_some() {
-                    let ent = client_ent.unwrap().clone();
+                    let ent = *client_ent.unwrap();
 
                     let structure = query_structure.get_mut(ent);
 
@@ -341,7 +340,7 @@ fn client_sync_players(
                         );
                     } else {
                         println!("OH NO!");
-                        commands.entity(ent.clone()).log_components();
+                        commands.entity(ent).log_components();
                     }
                 }
             }
@@ -350,16 +349,10 @@ fn client_sync_players(
                 pilot_entity,
             } => {
                 pilot_change_event_writer.send(ChangePilotEvent {
-                    structure_entity: network_mapping
+                    structure_entity: *network_mapping
                         .client_from_server(&structure_entity)
-                        .unwrap()
-                        .clone(),
-                    pilot_entity: match pilot_entity {
-                        Some(ent) => {
-                            Some(network_mapping.client_from_server(&ent).unwrap().clone())
-                        }
-                        None => None,
-                    },
+                        .unwrap(),
+                    pilot_entity: pilot_entity.map(|ent| *network_mapping.client_from_server(&ent).unwrap()),
                 });
             }
         }

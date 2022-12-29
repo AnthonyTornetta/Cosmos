@@ -12,9 +12,9 @@ pub struct NetworkMapping {
 impl NetworkMapping {
     pub fn add_mapping(&mut self, client_entity: &Entity, server_entity: &Entity) {
         self.server_to_client
-            .insert(server_entity.clone(), client_entity.clone());
+            .insert(*server_entity, *client_entity);
         self.client_to_server
-            .insert(client_entity.clone(), server_entity.clone());
+            .insert(*client_entity, *server_entity);
     }
 
     pub fn client_from_server(&self, server_entity: &Entity) -> Option<&Entity> {

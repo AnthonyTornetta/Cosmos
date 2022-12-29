@@ -19,19 +19,19 @@ pub fn quaternion_between_normalized_vectors(
         normalized_to.z as f64,
     );
 
-    let dot = normalized_from_f64.dot(&normalized_to_f64);
+    let dot = normalized_from_f64.dot(normalized_to_f64);
 
     if dot < -0.999999 {
-        return Quaternion::from_polar_decomposition(
+        Quaternion::from_polar_decomposition(
             1.0,
             PI,
             UnitVector3::new_unchecked(Vector3::new(1.0, 0.0, 0.0)),
-        );
+        )
     } else if dot > 0.999999 {
-        return Quaternion::identity();
+        Quaternion::identity()
     } else {
-        let cross = normalized_from_f64.cross(&normalized_to_f64);
+        let cross = normalized_from_f64.cross(normalized_to_f64);
 
-        return Quaternion::from_parts(1.0 + dot, Vector3::new(cross.x, cross.y, cross.z));
+        Quaternion::from_parts(1.0 + dot, Vector3::new(cross.x, cross.y, cross.z))
     }
 }

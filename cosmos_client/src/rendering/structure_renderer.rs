@@ -128,7 +128,7 @@ impl StructureRenderer {
                 blocks,
             );
 
-            self.need_meshes.insert(change.clone());
+            self.need_meshes.insert(*change);
         }
 
         self.changes.clear();
@@ -359,7 +359,7 @@ pub fn monitor_needs_rendered_system(
         for chunk_mesh in chunk_meshes {
             let entity = structure.chunk_entity(chunk_mesh.x, chunk_mesh.y, chunk_mesh.z);
 
-            let old_mesh_handle = mesh_query.get(entity.clone()).unwrap();
+            let old_mesh_handle = mesh_query.get(entity).unwrap();
 
             if old_mesh_handle.is_some() {
                 meshes.remove(old_mesh_handle.unwrap());
@@ -446,12 +446,12 @@ impl ChunkRenderer {
                             self.uvs.push([uvs[1].x, uvs[0].y]);
                             self.uvs.push([uvs[1].x, uvs[1].y]);
 
-                            self.indices.push(0 + last_index);
+                            self.indices.push(last_index);
                             self.indices.push(1 + last_index);
                             self.indices.push(2 + last_index);
                             self.indices.push(2 + last_index);
                             self.indices.push(3 + last_index);
-                            self.indices.push(0 + last_index);
+                            self.indices.push(last_index);
 
                             last_index += 4;
                         }
@@ -482,12 +482,12 @@ impl ChunkRenderer {
                             self.uvs.push([uvs[1].x, uvs[0].y]); //swap
                             self.uvs.push([uvs[1].x, uvs[1].y]);
 
-                            self.indices.push(0 + last_index);
+                            self.indices.push(last_index);
                             self.indices.push(1 + last_index);
                             self.indices.push(2 + last_index);
                             self.indices.push(2 + last_index);
                             self.indices.push(3 + last_index);
-                            self.indices.push(0 + last_index);
+                            self.indices.push(last_index);
 
                             last_index += 4;
                         }
@@ -515,12 +515,12 @@ impl ChunkRenderer {
                             self.uvs.push([uvs[0].x, uvs[0].y]);
                             self.uvs.push([uvs[1].x, uvs[0].y]);
 
-                            self.indices.push(0 + last_index);
+                            self.indices.push(last_index);
                             self.indices.push(1 + last_index);
                             self.indices.push(2 + last_index);
                             self.indices.push(2 + last_index);
                             self.indices.push(3 + last_index);
-                            self.indices.push(0 + last_index);
+                            self.indices.push(last_index);
 
                             last_index += 4;
                         }
@@ -551,12 +551,12 @@ impl ChunkRenderer {
                             self.uvs.push([uvs[0].x, uvs[1].y]);
                             self.uvs.push([uvs[1].x, uvs[1].y]);
 
-                            self.indices.push(0 + last_index);
+                            self.indices.push(last_index);
                             self.indices.push(1 + last_index);
                             self.indices.push(2 + last_index);
                             self.indices.push(2 + last_index);
                             self.indices.push(3 + last_index);
-                            self.indices.push(0 + last_index);
+                            self.indices.push(last_index);
 
                             last_index += 4;
                         }
@@ -584,12 +584,12 @@ impl ChunkRenderer {
                             self.uvs.push([uvs[1].x, uvs[0].y]);
                             self.uvs.push([uvs[0].x, uvs[0].y]);
 
-                            self.indices.push(0 + last_index);
+                            self.indices.push(last_index);
                             self.indices.push(1 + last_index);
                             self.indices.push(2 + last_index);
                             self.indices.push(2 + last_index);
                             self.indices.push(3 + last_index);
-                            self.indices.push(0 + last_index);
+                            self.indices.push(last_index);
 
                             last_index += 4;
                         }
@@ -621,12 +621,12 @@ impl ChunkRenderer {
                             self.uvs.push([uvs[1].x, uvs[1].y]);
                             self.uvs.push([uvs[0].x, uvs[1].y]);
 
-                            self.indices.push(0 + last_index);
+                            self.indices.push(last_index);
                             self.indices.push(1 + last_index);
                             self.indices.push(2 + last_index);
                             self.indices.push(2 + last_index);
                             self.indices.push(3 + last_index);
-                            self.indices.push(0 + last_index);
+                            self.indices.push(last_index);
 
                             last_index += 4;
                         }

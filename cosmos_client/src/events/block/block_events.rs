@@ -35,10 +35,9 @@ fn handle_block_break(
         client.send_message(
             NettyChannel::Reliable.id(),
             bincode::serialize(&ClientReliableMessages::BreakBlock {
-                structure_entity: network_mapping
+                structure_entity: *network_mapping
                     .server_from_client(&ev.structure_entity)
-                    .unwrap()
-                    .clone(),
+                    .unwrap(),
                 x: ev.x,
                 y: ev.y,
                 z: ev.z,
@@ -57,10 +56,9 @@ fn handle_block_place(
         client.send_message(
             NettyChannel::Reliable.id(),
             bincode::serialize(&ClientReliableMessages::PlaceBlock {
-                structure_entity: network_mapping
+                structure_entity: *network_mapping
                     .server_from_client(&ev.structure_entity)
-                    .unwrap()
-                    .clone(),
+                    .unwrap(),
                 x: ev.x,
                 y: ev.y,
                 z: ev.z,
@@ -80,10 +78,9 @@ fn handle_block_interact(
         client.send_message(
             NettyChannel::Reliable.id(),
             bincode::serialize(&ClientReliableMessages::InteractWithBlock {
-                structure_entity: network_mapping
+                structure_entity: *network_mapping
                     .server_from_client(&ev.structure_entity)
-                    .unwrap()
-                    .clone(),
+                    .unwrap(),
                 x: ev.x,
                 y: ev.y,
                 z: ev.z,

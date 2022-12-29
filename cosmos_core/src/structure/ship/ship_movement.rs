@@ -18,8 +18,8 @@ impl ShipMovement {
     }
 
     pub fn set(&mut self, other: &Self) {
-        self.movement = other.movement.clone();
-        self.torque = other.torque.clone();
+        self.movement = other.movement;
+        self.torque = other.torque;
     }
 }
 

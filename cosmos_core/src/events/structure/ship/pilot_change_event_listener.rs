@@ -17,7 +17,7 @@ fn event_listener(
     for ev in event_reader.iter() {
         // Make sure there is no other player thinking they are the pilot of this ship
         if let Ok(prev_pilot) = pilot_query.get(ev.structure_entity) {
-            let mut transform = transform_query.get(ev.structure_entity).unwrap().clone();
+            let mut transform = *transform_query.get(ev.structure_entity).unwrap();
 
             commands
                 .entity(ev.structure_entity)

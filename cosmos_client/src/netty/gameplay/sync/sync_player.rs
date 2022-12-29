@@ -18,7 +18,7 @@ fn send_position(
 ) {
     if let Ok((velocity, transform)) = query.get_single() {
         let msg = ClientUnreliableMessages::PlayerBody {
-            body: NettyRigidBody::new(&velocity, &transform),
+            body: NettyRigidBody::new(velocity, transform),
         };
 
         let serialized_message = bincode::serialize(&msg).unwrap();

@@ -87,7 +87,7 @@ fn process_player_interaction(
                             let stone = blocks.block_from_id("cosmos:stone").unwrap();
 
                             place_writer.send(BlockPlaceEvent {
-                                structure_entity: structure.get_entity().unwrap().clone(),
+                                structure_entity: structure.get_entity().unwrap(),
                                 x,
                                 y,
                                 z,
@@ -110,7 +110,7 @@ fn process_player_interaction(
                         .unwrap();
 
                     interact_writer.send(BlockInteractEvent {
-                        structure_entity: structure.get_entity().unwrap().clone(),
+                        structure_entity: structure.get_entity().unwrap(),
                         x,
                         y,
                         z,

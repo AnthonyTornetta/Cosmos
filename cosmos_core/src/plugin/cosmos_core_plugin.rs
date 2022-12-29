@@ -126,7 +126,7 @@ impl<T: StateData + Clone> PluginGroup for CosmosCorePluginGroup<T> {
                 self.loading_state.clone(),
                 self.post_loading_state.clone(),
                 self.done_loading_state.clone(),
-                self.playing_game_state.clone(),
+                self.playing_game_state,
             ))
     }
 }

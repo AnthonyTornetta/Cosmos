@@ -56,7 +56,7 @@ fn assets_done_loading(
     mut end_writer: EventWriter<DoneLoadingEvent>,
 ) {
     if loading_id.is_some() && !event_listener.is_empty() {
-        loader.finish_loading((&loading_id).as_ref().unwrap().0, &mut end_writer);
+        loader.finish_loading(loading_id.as_ref().unwrap().0, &mut end_writer);
 
         commands.remove_resource::<AssetsLoadingID>();
     }
@@ -76,7 +76,7 @@ fn check_assets_ready(
 
     use bevy::asset::LoadState;
 
-    match server.get_group_load_state((&loading).as_ref().unwrap().0.iter().map(|h| h.handle.id()))
+    match server.get_group_load_state(loading.as_ref().unwrap().0.iter().map(|h| h.handle.id()))
     {
         LoadState::Failed => {
             panic!("Failed to load asset!!");
@@ -84,7 +84,7 @@ fn check_assets_ready(
         LoadState::Loaded => {
             // all assets are now ready
 
-            for asset in &(&loading).as_ref().unwrap().0 {
+            for asset in &loading.as_ref().unwrap().0 {
                 match asset.atlas_name {
                     AtlasName::Main => {
                         const PADDING: u32 = 2;
@@ -200,7 +200,7 @@ fn check_assets_ready(
 }
 
 pub fn register(app: &mut App) {
-    app.insert_resource(AssetsLoading { 0: Vec::new() })
+    app.insert_resource(AssetsLoading(Vec::new()))
         .add_event::<AssetsDoneLoadingEvent>()
         .add_system_set(SystemSet::on_enter(GameState::PostLoading).with_system(setup))
         .add_system_set(
