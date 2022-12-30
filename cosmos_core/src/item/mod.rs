@@ -1,3 +1,5 @@
+pub mod items;
+
 use crate::registry::identifiable::Identifiable;
 
 pub struct Item {

@@ -21,7 +21,7 @@ use crate::{events, loader};
 
 pub struct CosmosCorePluginGroup<T>
 where
-    T: StateData + Clone,
+    T: StateData + Clone + Copy,
 {
     pre_loading_state: T,
     loading_state: T,
@@ -32,7 +32,7 @@ where
 
 pub struct CosmosCorePlugin<T>
 where
-    T: StateData + Clone,
+    T: StateData + Clone + Copy,
 {
     pre_loading_state: T,
     loading_state: T,
@@ -41,7 +41,7 @@ where
     playing_game_state: T,
 }
 
-impl<T: StateData + Clone> CosmosCorePlugin<T> {
+impl<T: StateData + Clone + Copy> CosmosCorePlugin<T> {
     pub fn new(
         pre_loading_state: T,
         loading_state: T,
@@ -59,7 +59,7 @@ impl<T: StateData + Clone> CosmosCorePlugin<T> {
     }
 }
 
-impl<T: StateData + Clone> CosmosCorePluginGroup<T> {
+impl<T: StateData + Clone + Copy> CosmosCorePluginGroup<T> {
     pub fn new(
         pre_loading_state: T,
         loading_state: T,
@@ -77,7 +77,7 @@ impl<T: StateData + Clone> CosmosCorePluginGroup<T> {
     }
 }
 
-impl<T: StateData + Clone> Plugin for CosmosCorePlugin<T> {
+impl<T: StateData + Clone + Copy> Plugin for CosmosCorePlugin<T> {
     fn build(&self, app: &mut App) {
         app.insert_resource(InspectableRegistry::default());
 
@@ -104,7 +104,7 @@ impl<T: StateData + Clone> Plugin for CosmosCorePlugin<T> {
     }
 }
 
-impl<T: StateData + Clone> PluginGroup for CosmosCorePluginGroup<T> {
+impl<T: StateData + Clone + Copy> PluginGroup for CosmosCorePluginGroup<T> {
     fn build(self) -> PluginGroupBuilder {
         PluginGroupBuilder::start::<Self>()
             .add(LogPlugin::default())

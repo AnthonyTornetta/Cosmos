@@ -1,6 +1,10 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::{QueryFilter, RapierContext};
-use cosmos_core::{block::blocks::Blocks, structure::Structure};
+use cosmos_core::{
+    block::Block,
+    registry::{identifiable::Identifiable, Registry},
+    structure::Structure,
+};
 
 use crate::{
     events::block::block_events::*,
@@ -28,7 +32,7 @@ fn process_player_interaction(
     rapier_context: Res<RapierContext>,
     parent_query: Query<&Parent>,
     structure_query: Query<(&Structure, &GlobalTransform)>,
-    blocks: Res<Blocks>,
+    blocks: Res<Registry<Block>>,
     mut break_writer: EventWriter<BlockBreakEvent>,
     mut place_writer: EventWriter<BlockPlaceEvent>,
     mut interact_writer: EventWriter<BlockInteractEvent>,
@@ -77,7 +81,7 @@ fn process_player_interaction(
                         structure.relative_coords_to_local_coords(point.x, point.y, point.z)
                     {
                         if structure.is_within_blocks(x, y, z) {
-                            let stone = blocks.block_from_id("cosmos:stone").unwrap();
+                            let stone = blocks.from_id("cosmos:stone").unwrap();
 
                             place_writer.send(BlockPlaceEvent {
                                 structure_entity: structure.get_entity().unwrap(),

@@ -1,6 +1,6 @@
 use bevy::prelude::App;
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Copy)]
 pub enum GameState {
     PreLoading, // Initial resources are created
     Loading,

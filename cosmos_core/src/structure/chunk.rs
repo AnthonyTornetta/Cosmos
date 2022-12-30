@@ -1,5 +1,7 @@
-use crate::block::blocks::{Blocks, AIR_BLOCK_ID};
+use crate::block::blocks::AIR_BLOCK_ID;
 use crate::block::Block;
+use crate::registry::identifiable::Identifiable;
+use crate::registry::Registry;
 use bevy::prelude::Res;
 use serde::de;
 use serde::de::Error;
@@ -52,10 +54,10 @@ impl Chunk {
         x: usize,
         y: usize,
         z: usize,
-        blocks: &Res<Blocks>,
+        blocks: &Res<Registry<Block>>,
     ) -> bool {
         blocks
-            .block_from_numeric_id(self.block_at(x, y, z))
+            .from_numeric_id(self.block_at(x, y, z))
             .is_see_through()
     }
 
@@ -67,10 +69,14 @@ impl Chunk {
         self.blocks[z * CHUNK_DIMENSIONS * CHUNK_DIMENSIONS + y * CHUNK_DIMENSIONS + x]
     }
 
-    pub fn has_full_block_at(&self, x: usize, y: usize, z: usize, blocks: &Res<Blocks>) -> bool {
-        blocks
-            .block_from_numeric_id(self.block_at(x, y, z))
-            .is_full()
+    pub fn has_full_block_at(
+        &self,
+        x: usize,
+        y: usize,
+        z: usize,
+        blocks: &Res<Registry<Block>>,
+    ) -> bool {
+        blocks.from_numeric_id(self.block_at(x, y, z)).is_full()
     }
 }
 

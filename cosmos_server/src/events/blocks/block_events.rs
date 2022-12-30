@@ -1,9 +1,10 @@
 use bevy::prelude::*;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
-    block::blocks::Blocks,
+    block::Block,
     events::block_events::BlockChangedEvent,
     netty::{server_reliable_messages::ServerReliableMessages, NettyChannel},
+    registry::Registry,
     structure::{Structure, StructureBlock},
 };
 
@@ -33,7 +34,7 @@ pub struct BlockPlaceEvent {
 fn handle_block_break_events(
     mut query: Query<&mut Structure>,
     mut event_reader: EventReader<BlockBreakEvent>,
-    blocks: Res<Blocks>,
+    blocks: Res<Registry<Block>>,
     mut event_writer: EventWriter<BlockChangedEvent>,
 ) {
     for ev in event_reader.iter() {
@@ -46,7 +47,7 @@ fn handle_block_break_events(
 fn handle_block_place_events(
     mut query: Query<&mut Structure>,
     mut event_reader: EventReader<BlockPlaceEvent>,
-    blocks: Res<Blocks>,
+    blocks: Res<Registry<Block>>,
     mut event_writer: EventWriter<BlockChangedEvent>,
 ) {
     for ev in event_reader.iter() {
@@ -56,7 +57,7 @@ fn handle_block_place_events(
             ev.x,
             ev.y,
             ev.z,
-            blocks.block_from_numeric_id(ev.block_id),
+            blocks.from_numeric_id(ev.block_id),
             &blocks,
             Some(&mut event_writer),
         );

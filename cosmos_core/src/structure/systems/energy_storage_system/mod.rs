@@ -9,8 +9,9 @@ use bevy_inspector_egui::{Inspectable, RegisterInspectable};
 use iyes_loopless::prelude::*;
 
 use crate::{
-    block::{blocks::Blocks, Block},
+    block::Block,
     events::block_events::BlockChangedEvent,
+    registry::{identifiable::Identifiable, Registry},
     structure::{chunk::CHUNK_DIMENSIONS, events::ChunkSetEvent, Structure},
 };
 
@@ -57,12 +58,12 @@ impl EnergyStorageSystem {
     }
 }
 
-fn register_energy_blocks(blocks: Res<Blocks>, mut storage: ResMut<EnergyStorageBlocks>) {
-    if let Some(block) = blocks.block_from_id("cosmos:energy_cell") {
+fn register_energy_blocks(blocks: Res<Registry<Block>>, mut storage: ResMut<EnergyStorageBlocks>) {
+    if let Some(block) = blocks.from_id("cosmos:energy_cell") {
         storage.insert(block, EnergyStorageProperty { capacity: 10000.0 });
     }
 
-    if let Some(block) = blocks.block_from_id("cosmos:ship_core") {
+    if let Some(block) = blocks.from_id("cosmos:ship_core") {
         storage.insert(block, EnergyStorageProperty { capacity: 1000.0 })
     }
 }
@@ -72,31 +73,27 @@ fn block_update_system(
     mut event: EventReader<BlockChangedEvent>,
     mut chunk_set_event: EventReader<ChunkSetEvent>,
     energy_storage_blocks: Res<EnergyStorageBlocks>,
-    blocks: Res<Blocks>,
+    blocks: Res<Registry<Block>>,
     mut system_query: Query<&mut EnergyStorageSystem>,
     structure_query: Query<&Structure>,
 ) {
     for ev in event.iter() {
         if let Ok(mut system) = system_query.get_mut(ev.structure_entity) {
-            if let Some(es) = energy_storage_blocks.get(blocks.block_from_numeric_id(ev.old_block))
-            {
+            if let Some(es) = energy_storage_blocks.get(blocks.from_numeric_id(ev.old_block)) {
                 system.capacity -= es.capacity;
             }
 
-            if let Some(es) = energy_storage_blocks.get(blocks.block_from_numeric_id(ev.new_block))
-            {
+            if let Some(es) = energy_storage_blocks.get(blocks.from_numeric_id(ev.new_block)) {
                 system.capacity += es.capacity;
             }
         } else {
             let mut system = EnergyStorageSystem::default();
 
-            if let Some(es) = energy_storage_blocks.get(blocks.block_from_numeric_id(ev.old_block))
-            {
+            if let Some(es) = energy_storage_blocks.get(blocks.from_numeric_id(ev.old_block)) {
                 system.capacity -= es.capacity;
             }
 
-            if let Some(es) = energy_storage_blocks.get(blocks.block_from_numeric_id(ev.new_block))
-            {
+            if let Some(es) = energy_storage_blocks.get(blocks.from_numeric_id(ev.new_block)) {
                 system.capacity += es.capacity;
             }
 
@@ -116,7 +113,7 @@ fn block_update_system(
 
                         if energy_storage_blocks.blocks.contains_key(&b) {
                             system.capacity += energy_storage_blocks
-                                .get(blocks.block_from_numeric_id(b))
+                                .get(blocks.from_numeric_id(b))
                                 .unwrap()
                                 .capacity;
                         }
@@ -133,7 +130,7 @@ fn block_update_system(
 
                         if energy_storage_blocks.blocks.contains_key(&b) {
                             system.capacity += energy_storage_blocks
-                                .get(blocks.block_from_numeric_id(b))
+                                .get(blocks.from_numeric_id(b))
                                 .unwrap()
                                 .capacity;
                         }
@@ -146,7 +143,11 @@ fn block_update_system(
     }
 }
 
-pub fn register<T: StateData + Clone>(app: &mut App, post_loading_state: T, playing_state: T) {
+pub fn register<T: StateData + Clone + Copy>(
+    app: &mut App,
+    post_loading_state: T,
+    playing_state: T,
+) {
     app.insert_resource(EnergyStorageBlocks::default())
         .add_system_set(SystemSet::on_enter(post_loading_state).with_system(register_energy_blocks))
         .add_system_to_stage(

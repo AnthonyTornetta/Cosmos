@@ -1,7 +1,7 @@
 use bevy::prelude::App;
 use iyes_loopless::prelude::AppLooplessStateExt;
 
-#[derive(Clone, PartialEq, Eq, Debug, Hash)]
+#[derive(Clone, PartialEq, Eq, Debug, Hash, Copy)]
 pub enum GameState {
     PreLoading,
     Loading,

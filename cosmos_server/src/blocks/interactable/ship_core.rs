@@ -1,7 +1,8 @@
 use bevy::prelude::{App, EventReader, EventWriter, Query, Res, SystemSet, With};
 use cosmos_core::{
-    block::blocks::Blocks,
+    block::Block,
     events::structure::change_pilot_event::ChangePilotEvent,
+    registry::{identifiable::Identifiable, Registry},
     structure::{
         ship::{pilot::Pilot, Ship},
         Structure,
@@ -15,10 +16,10 @@ fn handle_block_event(
     mut change_pilot_event: EventWriter<ChangePilotEvent>,
     s_query: Query<&Structure, With<Ship>>,
     pilot_query: Query<&Pilot>,
-    blocks: Res<Blocks>,
+    blocks: Res<Registry<Block>>,
 ) {
     let block = blocks
-        .block_from_id("cosmos:ship_core")
+        .from_id("cosmos:ship_core")
         .expect("ship core block missing!");
 
     for ev in interact_events.iter() {

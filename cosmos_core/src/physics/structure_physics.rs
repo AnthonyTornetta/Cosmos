@@ -1,5 +1,6 @@
-use crate::block::blocks::Blocks;
+use crate::block::Block;
 use crate::events::block_events::BlockChangedEvent;
+use crate::registry::Registry;
 use crate::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
 use crate::structure::events::ChunkSetEvent;
 use crate::structure::Structure;
@@ -43,7 +44,7 @@ impl StructurePhysics {
     pub fn create_colliders(
         &mut self,
         structure: &Structure,
-        blocks: &Res<Blocks>,
+        blocks: &Res<Registry<Block>>,
     ) -> Vec<ChunkPhysicsModel> {
         let mut colliders = Vec::with_capacity(self.needs_changed.len());
 
@@ -65,7 +66,7 @@ impl StructurePhysics {
 
 fn generate_colliders(
     chunk: &Chunk,
-    blocks: &Res<Blocks>,
+    blocks: &Res<Registry<Block>>,
     colliders: &mut Vec<(Vect, Rot, Collider)>,
     location: Vect,
     offset: Vector3<usize>,
@@ -85,7 +86,7 @@ fn generate_colliders(
     for z in offset.z..(offset.z + size) {
         for y in offset.y..(offset.y + size) {
             for x in offset.x..(offset.x + size) {
-                let b = blocks.block_from_numeric_id(chunk.block_at(x, y, z));
+                let b = blocks.from_numeric_id(chunk.block_at(x, y, z));
 
                 temp_density += b.density();
 
@@ -223,7 +224,7 @@ fn generate_colliders(
     }
 }
 
-fn generate_chunk_collider(chunk: &Chunk, blocks: &Res<Blocks>) -> Option<Collider> {
+fn generate_chunk_collider(chunk: &Chunk, blocks: &Res<Registry<Block>>) -> Option<Collider> {
     let mut colliders: Vec<(Vect, Rot, Collider)> = Vec::new();
 
     let mut center_of_mass = Vec3::new(0.0, 0.0, 0.0);
@@ -267,7 +268,7 @@ fn listen_for_new_physics_event(
     mut commands: Commands,
     mut event: EventReader<NeedsNewPhysicsEvent>,
     mut query: Query<(&Structure, &mut StructurePhysics)>,
-    blocks: Res<Blocks>,
+    blocks: Res<Registry<Block>>,
 ) {
     if !event.is_empty() {
         let mut done_structures = HashSet::new();

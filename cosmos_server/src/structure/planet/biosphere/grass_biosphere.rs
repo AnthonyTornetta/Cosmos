@@ -1,6 +1,7 @@
 use bevy::prelude::{App, Component, Entity, EventReader, EventWriter, Query, Res};
 use cosmos_core::{
-    block::blocks::Blocks,
+    block::Block,
+    registry::Registry,
     structure::{chunk::CHUNK_DIMENSIONS, events::ChunkSetEvent, Structure},
     utils::resource_wrapper::ResourceWrapper,
 };
@@ -59,7 +60,7 @@ pub fn generate_planet(
     mut events: EventReader<GrassChunkNeedsGeneratedEvent>,
     mut event_writer: EventWriter<ChunkSetEvent>,
     noise_generastor: Res<ResourceWrapper<noise::OpenSimplex>>,
-    blocks: Res<Blocks>,
+    blocks: Res<Registry<Block>>,
 ) {
     for ev in events.iter() {
         println!("Generating grass chunk for {} {} {}!", ev.x, ev.y, ev.z);
@@ -83,9 +84,9 @@ pub fn generate_planet(
         //     }
         // }
 
-        let grass = blocks.block_from_id("cosmos:grass").unwrap();
-        let dirt = blocks.block_from_id("cosmos:dirt").unwrap();
-        let stone = blocks.block_from_id("cosmos:stone").unwrap();
+        let grass = blocks.from_id("cosmos:grass").unwrap();
+        let dirt = blocks.from_id("cosmos:dirt").unwrap();
+        let stone = blocks.from_id("cosmos:stone").unwrap();
 
         let s_height = structure.blocks_height();
 

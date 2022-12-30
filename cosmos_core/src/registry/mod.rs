@@ -45,7 +45,7 @@ impl<T: Identifiable + Sync + Send> Registry<T> {
     }
 }
 
-fn add_registry_resource<T: Identifiable + Sync + Send>(
+pub fn add_registry_resource<T: Identifiable + Sync + Send + 'static>(
     mut commands: Commands,
     mut loading: ResMut<LoadingManager>,
     mut end_writer: EventWriter<DoneLoadingEvent>,
@@ -53,17 +53,16 @@ fn add_registry_resource<T: Identifiable + Sync + Send>(
 ) {
     let loader_id = loading.register_loader(&mut start_writer);
 
-    let mut registry = Registry::<T>::new();
+    let registry = Registry::<T>::new();
 
     commands.insert_resource(registry);
 
     loading.finish_loading(loader_id, &mut end_writer);
 }
 
-pub fn register<T: StateData + Clone, K: Identifiable + Sync + Send>(
+pub fn register<T: StateData + Clone + Copy, K: Identifiable + Sync + Send + 'static>(
     app: &mut App,
     pre_loading_state: T,
-    loading_state: T,
 ) {
     app.add_system_set(
         SystemSet::on_enter(pre_loading_state).with_system(add_registry_resource::<K>),

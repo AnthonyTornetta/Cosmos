@@ -2,7 +2,7 @@ pub mod block;
 pub mod entities;
 pub mod events;
 pub mod inventory;
-pub mod items;
+pub mod item;
 pub mod loader;
 pub mod netty;
 pub mod physics;

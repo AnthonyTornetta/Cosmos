@@ -2,7 +2,7 @@ use bevy::{core_pipeline::bloom::BloomSettings, prelude::*, render::camera::Proj
 use bevy_rapier3d::prelude::*;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
-    block::blocks::Blocks,
+    block::Block,
     entities::player::Player,
     events::{block_events::BlockChangedEvent, structure::change_pilot_event::ChangePilotEvent},
     netty::{
@@ -10,6 +10,7 @@ use cosmos_core::{
         server_reliable_messages::ServerReliableMessages,
         server_unreliable_messages::ServerUnreliableMessages, NettyChannel,
     },
+    registry::Registry,
     structure::{
         chunk::Chunk,
         events::ChunkSetEvent,
@@ -88,7 +89,7 @@ fn client_sync_players(
     query_player: Query<&Player>,
     mut query_body: Query<(&mut Transform, &mut Velocity, Option<&LocalPlayer>)>,
     mut query_structure: Query<&mut Structure>,
-    blocks: Res<Blocks>,
+    blocks: Res<Registry<Block>>,
     mut pilot_change_event_writer: EventWriter<ChangePilotEvent>,
     mut set_ship_movement_event: EventWriter<SetShipMovementEvent>,
 ) {
@@ -320,7 +321,7 @@ fn client_sync_players(
                             x,
                             y,
                             z,
-                            blocks.block_from_numeric_id(block_id),
+                            blocks.from_numeric_id(block_id),
                             &blocks,
                             Some(&mut block_change_event_writer),
                         );
