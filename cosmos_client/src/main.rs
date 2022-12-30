@@ -33,7 +33,7 @@ use netty::mapping::NetworkMapping;
 use rendering::structure_renderer;
 use state::game_state::GameState;
 use structure::chunk_retreiver;
-use ui::crosshair::{self, CrosshairOffset};
+use ui::crosshair::CrosshairOffset;
 use window::setup::DeltaCursorPosition;
 
 use crate::plugin::client_plugin::ClientPluginGroup;
@@ -238,18 +238,6 @@ fn create_sun(
         });
 }
 
-// fn debug_planets(player: Query<&Transform, With<Player>>, query: Query<(&Transform, &Structure)>) {
-//     let player = player.get_single().unwrap();
-
-//     for (transform, structure) in query.iter() {
-//         if let Ok((x, y, z)) =
-//             structure.world_position_to_block_position(transform, &player.translation)
-//         {
-//             println!("Your local pos: {} {} {}", x, y, z);
-//         }
-//     }
-// }
-
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -263,9 +251,7 @@ fn main() {
 
     let mut app = App::new();
 
-    app.insert_resource(ConnectionConfig {
-        host_name,
-    });
+    app.insert_resource(ConnectionConfig { host_name });
 
     app.insert_resource(RapierConfiguration {
         gravity: Vec3::ZERO,
@@ -301,7 +287,7 @@ fn main() {
             .with_system(process_ship_movement)
             .with_system(monitor_block_updates_system)
             .with_system(reset_cursor)
-            .with_system(sync_pilot_to_ship), // .with_system(debug_planets),
+            .with_system(sync_pilot_to_ship),
     );
 
     inputs::register(&mut app);
@@ -311,7 +297,7 @@ fn main() {
     block_interactions::register(&mut app);
     chunk_retreiver::register(&mut app);
     camera_controller::register(&mut app);
-    crosshair::register(&mut app);
+    ui::register(&mut app);
     receiver::register(&mut app);
     structure_renderer::register(&mut app);
 

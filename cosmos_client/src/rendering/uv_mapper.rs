@@ -8,13 +8,18 @@ pub struct UVMapper {
     individual_height: usize,
 
     padding_x: usize,
-    padding_y: usize
+    padding_y: usize,
 }
 
 impl UVMapper {
-    pub fn new(atlas_width: usize, atlas_height: usize,
-               individual_width: usize, individual_height: usize,
-               padding_x: usize, padding_y: usize) -> Self {
+    pub fn new(
+        atlas_width: usize,
+        atlas_height: usize,
+        individual_width: usize,
+        individual_height: usize,
+        padding_x: usize,
+        padding_y: usize,
+    ) -> Self {
         Self {
             atlas_width,
             atlas_height,
@@ -37,7 +42,15 @@ impl UVMapper {
         let y_end = y + self.individual_height;
         let x_end = x + self.individual_width;
 
-        [Vec2::new(x as f32 / self.atlas_width as f32, y as f32 / self.atlas_height as f32),
-            Vec2::new(x_end as f32 / self.atlas_width as f32, y_end as f32 / self.atlas_height as f32)]
+        [
+            Vec2::new(
+                x as f32 / self.atlas_width as f32,
+                y as f32 / self.atlas_height as f32,
+            ),
+            Vec2::new(
+                x_end as f32 / self.atlas_width as f32,
+                y_end as f32 / self.atlas_height as f32,
+            ),
+        ]
     }
 }

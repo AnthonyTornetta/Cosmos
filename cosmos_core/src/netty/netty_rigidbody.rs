@@ -2,7 +2,7 @@ use bevy::prelude::{Transform, Vec3};
 use bevy_rapier3d::na::{Quaternion, Vector3};
 use bevy_rapier3d::prelude::Velocity;
 use bevy_rapier3d::rapier::prelude::RigidBodyVelocity;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct NettyRigidBody {
@@ -16,7 +16,7 @@ impl NettyRigidBody {
         Self {
             body_vel: RigidBodyVelocity::new(body_vel.linvel.into(), body_vel.angvel.into()),
             translation: transform.translation.into(),
-            rotation: transform.rotation.into()
+            rotation: transform.rotation.into(),
         }
     }
 
@@ -24,14 +24,14 @@ impl NettyRigidBody {
         Transform {
             rotation: self.rotation.into(),
             translation: self.translation.into(),
-            scale: Vec3::new(1.0, 1.0, 1.0)
+            scale: Vec3::new(1.0, 1.0, 1.0),
         }
     }
 
     pub fn create_velocity(&self) -> Velocity {
         Velocity {
             angvel: self.body_vel.angvel.into(),
-            linvel: self.body_vel.linvel.into()
+            linvel: self.body_vel.linvel.into(),
         }
     }
 }
