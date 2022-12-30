@@ -1,4 +1,5 @@
 use bevy::prelude::Component;
+use serde::{Deserialize, Serialize};
 
 use crate::{item::Item, registry::identifiable::Identifiable};
 
@@ -12,7 +13,7 @@ pub mod itemstack;
 //     NormalInventory, // These inventories are organizable by the player
 // }
 
-#[derive(Default, Component)]
+#[derive(Default, Component, Serialize, Deserialize, Debug)]
 pub struct Inventory {
     items: Vec<Option<ItemStack>>,
 }
@@ -93,6 +94,24 @@ impl Inventory {
     /// Swaps the ItemStack's places in the inventory
     pub fn swap(&mut self, slot_a: usize, slot_b: usize) {
         self.items.swap(slot_a, slot_b);
+    }
+
+    pub fn set_itemstack_at(&mut self, slot: usize, item_stack: Option<ItemStack>) {
+        self.items[slot] = item_stack;
+    }
+
+    pub fn insert_at(&mut self, slot: usize, item: &Item, quantity: u16) -> u16 {
+        if let Some(slot) = &mut self.items[slot] {
+            if slot.item_id() != item.id() {
+                quantity
+            } else {
+                slot.increase_quantity(quantity)
+            }
+        } else {
+            self.items[slot] = Some(ItemStack::with_quantity(item, quantity));
+
+            0
+        }
     }
 
     pub fn quantity_of(&self, item: &Item) -> usize {

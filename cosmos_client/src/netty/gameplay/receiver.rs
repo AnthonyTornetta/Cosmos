@@ -5,6 +5,7 @@ use cosmos_core::{
     block::Block,
     entities::player::Player,
     events::{block_events::BlockChangedEvent, structure::change_pilot_event::ChangePilotEvent},
+    inventory::Inventory,
     netty::{
         client_reliable_messages::ClientReliableMessages,
         server_reliable_messages::ServerReliableMessages,
@@ -152,10 +153,13 @@ fn client_sync_players(
                 id,
                 entity,
                 name,
+                inventory_serialized,
             } => {
                 println!("Player {} ({}) connected!", name.as_str(), id);
 
                 let mut client_entity = commands.spawn_empty();
+
+                let inventory: Inventory = bincode::deserialize(&inventory_serialized).unwrap();
 
                 client_entity
                     .insert(PbrBundle {
@@ -168,7 +172,8 @@ fn client_sync_players(
                     .insert(RigidBody::Dynamic)
                     .insert(body.create_velocity())
                     .insert(Player::new(name, id))
-                    .insert(ReadMassProperties::default());
+                    .insert(ReadMassProperties::default())
+                    .insert(inventory);
 
                 if client_id == id {
                     client_entity

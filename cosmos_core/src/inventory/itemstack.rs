@@ -1,5 +1,8 @@
+use serde::{Deserialize, Serialize};
+
 use crate::{item::Item, registry::identifiable::Identifiable};
 
+#[derive(Serialize, Deserialize, Debug)]
 pub struct ItemStack {
     item_id: u16,
     quantity: u16,

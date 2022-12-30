@@ -14,10 +14,10 @@ use bevy::window::WindowPlugin;
 use bevy_inspector_egui::InspectableRegistry;
 use bevy_rapier3d::prelude::{NoUserData, RapierPhysicsPlugin};
 
-use crate::block::blocks;
-use crate::physics;
-use crate::structure;
+use crate::block::{self, blocks};
+use crate::{blockitems, structure};
 use crate::{events, loader};
+use crate::{item, physics};
 
 pub struct CosmosCorePluginGroup<T>
 where
@@ -83,24 +83,18 @@ impl<T: StateData + Clone + Copy> Plugin for CosmosCorePlugin<T> {
 
         loader::register(
             app,
-            self.pre_loading_state.clone(),
-            self.loading_state.clone(),
-            self.post_loading_state.clone(),
-            self.done_loading_state.clone(),
+            self.pre_loading_state,
+            self.loading_state,
+            self.post_loading_state,
+            self.done_loading_state,
         );
-        blocks::register(
-            app,
-            self.pre_loading_state.clone(),
-            self.loading_state.clone(),
-        );
+        block::register(app, self.pre_loading_state, self.loading_state);
+        item::register(app, self.pre_loading_state, self.loading_state);
+        blockitems::register(app, self.pre_loading_state, self.loading_state);
         physics::register(app);
         structure::events::register(app);
-        events::register(app, self.playing_game_state.clone());
-        structure::register(
-            app,
-            self.post_loading_state.clone(),
-            self.playing_game_state.clone(),
-        );
+        events::register(app, self.playing_game_state);
+        structure::register(app, self.post_loading_state, self.playing_game_state);
     }
 }
 
@@ -122,10 +116,10 @@ impl<T: StateData + Clone + Copy> PluginGroup for CosmosCorePluginGroup<T> {
             .add(RapierPhysicsPlugin::<NoUserData>::default())
             .add(ImagePlugin::default_nearest())
             .add(CosmosCorePlugin::new(
-                self.pre_loading_state.clone(),
-                self.loading_state.clone(),
-                self.post_loading_state.clone(),
-                self.done_loading_state.clone(),
+                self.pre_loading_state,
+                self.loading_state,
+                self.post_loading_state,
+                self.done_loading_state,
                 self.playing_game_state,
             ))
     }

@@ -10,6 +10,7 @@ pub enum ServerReliableMessages {
         name: String,
         id: u64,
         body: NettyRigidBody,
+        inventory_serialized: Vec<u8>,
     },
     PlayerRemove {
         id: u64,

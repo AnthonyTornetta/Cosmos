@@ -1,7 +1,10 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use bevy_renet::renet::{RenetServer, ServerEvent};
+use cosmos_core::inventory::Inventory;
+use cosmos_core::item::Item;
 use cosmos_core::netty::server_reliable_messages::ServerReliableMessages;
+use cosmos_core::registry::Registry;
 use cosmos_core::structure::planet::Planet;
 use cosmos_core::structure::ship::Ship;
 use cosmos_core::structure::Structure;
@@ -11,6 +14,7 @@ use cosmos_core::{
 };
 
 use crate::netty::network_helpers::{ClientTicks, ServerLobby};
+use crate::state::GameState;
 
 fn handle_events_system(
     mut commands: Commands,
@@ -18,16 +22,17 @@ fn handle_events_system(
     mut server_events: EventReader<ServerEvent>,
     mut lobby: ResMut<ServerLobby>,
     mut client_ticks: ResMut<ClientTicks>,
-    players: Query<(Entity, &Player, &Transform, &Velocity)>,
+    players: Query<(Entity, &Player, &Transform, &Velocity, &Inventory)>,
     structure_type: Query<(Option<&Ship>, Option<&Planet>)>,
     structures_query: Query<(Entity, &Structure, &Transform, &Velocity)>,
+    items: Res<Registry<Item>>,
 ) {
     for event in server_events.iter() {
         match event {
             ServerEvent::ClientConnected(id, _user_data) => {
                 println!("Client {} connected", id);
 
-                for (entity, player, transform, velocity) in players.iter() {
+                for (entity, player, transform, velocity, inventory) in players.iter() {
                     let body = NettyRigidBody::new(velocity, transform);
 
                     let msg = bincode::serialize(&ServerReliableMessages::PlayerCreate {
@@ -35,6 +40,7 @@ fn handle_events_system(
                         id: player.id,
                         body,
                         name: player.name.clone(),
+                        inventory_serialized: bincode::serialize(inventory).unwrap(),
                     })
                     .unwrap();
 
@@ -45,8 +51,17 @@ fn handle_events_system(
                 let player = Player::new(String::from(name), *id);
                 let transform = Transform::from_xyz(0.0, 60.0, 0.0);
                 let velocity = Velocity::default();
+                let mut inventory = Inventory::new(9 * 4);
+
+                inventory.insert_at(
+                    9 * 3,
+                    items.from_id("cosmos:stone").expect("Stone to exist"),
+                    64,
+                );
 
                 let netty_body = NettyRigidBody::new(&velocity, &transform);
+
+                let inventory_serialized = bincode::serialize(&inventory).unwrap();
 
                 let mut player_entity = commands.spawn(transform);
                 player_entity
@@ -55,7 +70,8 @@ fn handle_events_system(
                     .insert(velocity)
                     .insert(Collider::capsule_y(0.5, 0.25))
                     .insert(player)
-                    .insert(ReadMassProperties::default());
+                    .insert(ReadMassProperties::default())
+                    .insert(inventory);
 
                 lobby.players.insert(*id, player_entity.id());
 
@@ -64,6 +80,7 @@ fn handle_events_system(
                     id: *id,
                     name: String::from(name),
                     body: netty_body,
+                    inventory_serialized,
                 })
                 .unwrap();
 
@@ -131,5 +148,5 @@ fn handle_events_system(
 }
 
 pub fn register(app: &mut App) {
-    app.add_system(handle_events_system);
+    app.add_system_set(SystemSet::on_update(GameState::Playing).with_system(handle_events_system));
 }
