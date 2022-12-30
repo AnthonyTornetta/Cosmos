@@ -5,15 +5,16 @@ use crate::registry::identifiable::Identifiable;
 pub struct Item {
     unlocalized_name: String,
     numeric_id: u16,
-    // This is Some(block id) if this item represents a block, it is None if it does not correspond to a block.
-    block: Option<u16>,
+    max_stack_size: u16,
 }
 
 impl Identifiable for Item {
+    #[inline]
     fn unlocalized_name(&self) -> &str {
         &self.unlocalized_name
     }
 
+    #[inline]
     fn id(&self) -> u16 {
         self.numeric_id
     }
@@ -23,13 +24,18 @@ impl Identifiable for Item {
     }
 }
 
+const DEFAULT_MAX_STACK_SIZE: u16 = 64;
+
 impl Item {
-    pub fn represents_block(&self) -> bool {
-        self.block.is_some()
+    pub fn new(unlocalized_name: String, max_stack_size: u16) -> Self {
+        Self {
+            unlocalized_name,
+            numeric_id: 0, // this will get set when this item is registered
+            max_stack_size,
+        }
     }
 
-    /// Returns the block id this item represents, or None if this item represents no block
-    pub fn get_block_id(&self) -> Option<u16> {
-        self.block
+    pub fn max_stack_size(&self) -> u16 {
+        self.max_stack_size
     }
 }

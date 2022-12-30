@@ -3,7 +3,7 @@ use crate::registry::{self, Registry};
 use bevy::ecs::schedule::StateData;
 use bevy::prelude::{App, EventWriter, ResMut, SystemSet};
 
-use super::Item;
+use super::{Item, DEFAULT_MAX_STACK_SIZE};
 
 pub fn add_cosmos_items(
     mut items: ResMut<Registry<Item>>,
@@ -12,6 +12,22 @@ pub fn add_cosmos_items(
     mut start_writer: EventWriter<AddLoadingEvent>,
 ) {
     let id = loading.register_loader(&mut start_writer);
+
+    let item_ids = [
+        "stone",
+        "grass",
+        "dirt",
+        "cherry_leaf",
+        "cherry_log",
+        "ship_core",
+        "energy_cell",
+        "laser_cannon",
+    ];
+
+    for id in item_ids {
+        let cid = format!("cosmos:{}", id);
+        items.register(Item::new(cid, DEFAULT_MAX_STACK_SIZE));
+    }
 
     loading.finish_loading(id, &mut end_writer);
 }
