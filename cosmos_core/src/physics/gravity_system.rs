@@ -18,8 +18,6 @@ fn gravity_system(
         ));
     }
 
-    println!("Receivers: {}", receiver.iter().len());
-
     for (ent, trans, prop, rb) in receiver.iter() {
         if *rb == RigidBody::Dynamic {
             if let Some(mut entity) = commands.get_entity(ent) {

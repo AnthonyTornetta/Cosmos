@@ -1,0 +1,4 @@
+﻿license: SIL Open Font License (OFL)
+link: https://www.fontspace.com/pixeloid-font-f69232
+
+https://ggbot.itch.io/pixeloid-font

@@ -54,7 +54,7 @@ Cosmos, but in rust
   - [x] Create max ship speed
 - [ ] Ship core
   - [ ] Once destroyed, the entire ship enters meltdown, becoming minable by mining beams and will be destroyed after a set amount of time
-  - [ ] Interact with this block to pilot the ship
+  - [x] Interact with this block to pilot the ship
   - [ ] Cannot be mined while other blocks are present on the ship
   - [x] Create block
 - [x] Localized planetary gravity
@@ -81,10 +81,16 @@ Cosmos, but in rust
       - [ ] Can be placed in lines to create more powerful lasers
     - [ ] Click lmb/hold to fire the laser
       - [ ] The laser is on a cooldown
-  - Ship hull block
+  - [ ] Ship hull block
 - [ ] Ability to place more than one block
-  - [ ] Way of select which block
-  - [ ] Selectable blocks include: Thruster, Energy Cell, Laser Cannon, Ship Hull, Stone
+  - [ ] Hotbar
+    - [ ] Rendering of hotbar
+    - [ ] Reads items from inventory
+  - [x] Inventory
+  - [x] Items
+    - [ ] Item stacks
+  - [ ] Way of select which item
+    - [ ] Selectable items include: Thruster, Energy Cell, Laser Cannon, Ship Hull, Stone
   
 ## Everything that will still have to be done after 0.0.2a
 - [ ] Align body with structure
@@ -104,13 +110,8 @@ Cosmos, but in rust
     - [ ] An interface into all the storage devices on the ship
   - [ ] A way of selecting which systems to use preventing use of systems that are not meant to be actively used
     - [ ] You can fire a laser cannon, but not actively use the power storage blocks
-- [ ] Items
-  - [ ] Non-block items
-  - [ ] Block items
-  - [ ] Dropped item entity
-- [ ] Inventory
-  - [ ] GUI to interact with the items
-  - [ ] Hotbar
+- [ ] Dropped item entity
+- [ ] GUI to interact with inventory
 - [ ] Storage block
   - [ ] A block that stores an amount of items
   - [ ] Can be interacted with to view the items

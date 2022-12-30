@@ -28,6 +28,10 @@ impl Inventory {
         Self { items }
     }
 
+    pub fn len(&self) -> usize {
+        self.items.len()
+    }
+
     /// Returns the overflow that could not fit
     pub fn insert(&mut self, item: &Item, mut quantity: u16) -> u16 {
         // Search for existing stacks, if none found that make new one(s)

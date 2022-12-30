@@ -1,4 +1,7 @@
-use bevy::prelude::*;
+use bevy::{
+    prelude::*,
+    text::{Text2dBounds, Text2dSize},
+};
 use cosmos_core::inventory::Inventory;
 
 use crate::{
@@ -9,7 +12,8 @@ use crate::{
 
 #[derive(Component)]
 struct Hotbar {
-    slots: Vec<Entity>,
+    // slot, slot text
+    slots: Vec<(Entity, Entity)>,
     pub selected_slot: usize,
     prev_slot: usize,
     max_slots: usize,
@@ -97,21 +101,34 @@ fn listen_for_change_events(
     mut query_hb: Query<&mut Hotbar>,
     query_inventory: Query<&Inventory, (Changed<Inventory>, With<LocalPlayer>)>,
     asset_server: Res<AssetServer>,
+    mut text_query: Query<&mut Text>,
     mut commands: Commands,
 ) {
     if let Ok(mut hb) = query_hb.get_single_mut() {
         if hb.selected_slot != hb.prev_slot {
             commands
-                .entity(hb.slots[hb.prev_slot])
-                .remove::<UiImage>()
+                .entity(hb.slots[hb.prev_slot].0)
                 .insert(UiImage(asset_server.load(image_path(false)).into()));
 
             commands
-                .entity(hb.slots[hb.selected_slot])
-                .remove::<UiImage>()
+                .entity(hb.slots[hb.selected_slot].0)
                 .insert(UiImage(asset_server.load(image_path(true)).into()));
 
             hb.prev_slot = hb.selected_slot;
+        }
+
+        if let Ok(inv) = query_inventory.get_single() {
+            for hb_slot in 0..hb.max_slots {
+                let is = inv.itemstack_at(inv.len() - hb.max_slots + hb_slot);
+
+                if let Ok(mut text) = text_query.get_mut(hb.slots[hb_slot].1) {
+                    if let Some(is) = is {
+                        text.sections[0].value = format!("{}", is.quantity());
+                    } else {
+                        text.sections[0].value = "".into();
+                    }
+                }
+            }
         }
     }
 }
@@ -146,18 +163,54 @@ fn add_hotbar(mut commands: Commands, asset_server: Res<AssetServer>) {
                 for slot_num in 0..hotbar.max_slots {
                     let path = image_path(hotbar.selected_slot == slot_num);
 
-                    hotbar.slots.push(
-                        parent
-                            .spawn(ImageBundle {
-                                image: asset_server.load(path).into(),
+                    let mut slot = parent.spawn(ImageBundle {
+                        image: asset_server.load(path).into(),
+                        style: Style {
+                            size: Size::new(Val::Px(64.0), Val::Px(64.0)),
+                            ..default()
+                        },
+                        ..default()
+                    });
+
+                    let mut text_entity = None;
+
+                    slot.with_children(|slot| {
+                        // https://github.com/bevyengine/bevy/pull/5070
+                        // In bevy 0.10 there will be a TextureAtlasLayout that can be used in GUIs to render the item's texture
+                        // Until bevy 0.10, the hotbar will show no textures
+
+                        text_entity = Some(
+                            slot.spawn(TextBundle {
                                 style: Style {
-                                    size: Size::new(Val::Px(64.0), Val::Px(64.0)),
+                                    position: UiRect {
+                                        bottom: Val::Px(5.0),
+                                        right: Val::Px(5.0),
+                                        ..default()
+                                    },
+                                    position_type: PositionType::Absolute,
+
                                     ..default()
                                 },
+                                text: Text::from_section(
+                                    "",
+                                    TextStyle {
+                                        color: Color::BLACK,
+                                        font_size: 32.0,
+                                        font: asset_server.load("fonts/PixeloidSans.ttf"),
+                                        ..default()
+                                    },
+                                )
+                                .with_alignment(TextAlignment::BOTTOM_RIGHT),
                                 ..default()
                             })
                             .id(),
-                    );
+                        );
+                    });
+
+                    hotbar.slots.push((
+                        slot.id(),
+                        text_entity.expect("This should have been set in the closure above"),
+                    ));
                 }
             });
 
