@@ -109,6 +109,7 @@ fn server_listen_messages(
                     y,
                     z,
                     block_id,
+                    inventory_slot,
                 } => {
                     place_block_event.send(BlockPlaceEvent {
                         structure_entity,
@@ -116,6 +117,8 @@ fn server_listen_messages(
                         y,
                         z,
                         block_id,
+                        inventory_slot,
+                        placer_id: client_id,
                     });
                 }
                 ClientReliableMessages::InteractWithBlock {

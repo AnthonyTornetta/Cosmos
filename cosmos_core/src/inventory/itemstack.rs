@@ -1,8 +1,10 @@
+use bevy::prelude::App;
+use bevy_inspector_egui::{Inspectable, RegisterInspectable};
 use serde::{Deserialize, Serialize};
 
 use crate::{item::Item, registry::identifiable::Identifiable};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Inspectable)]
 pub struct ItemStack {
     item_id: u16,
     quantity: u16,
@@ -26,12 +28,19 @@ impl ItemStack {
         }
     }
 
+    #[inline]
     pub fn item_id(&self) -> u16 {
         self.item_id
     }
 
+    #[inline]
     pub fn quantity(&self) -> u16 {
         self.quantity
+    }
+
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.quantity() == 0
     }
 
     /// Returns the overflow quantity
@@ -64,7 +73,12 @@ impl ItemStack {
         }
     }
 
+    #[inline]
     pub fn is_full(&self) -> bool {
         self.quantity >= self.max_stack_size
     }
+}
+
+pub fn register(app: &mut App) {
+    app.register_inspectable::<ItemStack>();
 }

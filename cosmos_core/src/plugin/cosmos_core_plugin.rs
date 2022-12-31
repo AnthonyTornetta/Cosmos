@@ -14,7 +14,7 @@ use bevy::window::WindowPlugin;
 use bevy_inspector_egui::InspectableRegistry;
 use bevy_rapier3d::prelude::{NoUserData, RapierPhysicsPlugin};
 
-use crate::block;
+use crate::{block, inventory};
 use crate::{blockitems, structure};
 use crate::{events, loader};
 use crate::{item, physics};
@@ -95,6 +95,7 @@ impl<T: StateData + Clone + Copy> Plugin for CosmosCorePlugin<T> {
         structure::events::register(app);
         events::register(app, self.playing_game_state);
         structure::register(app, self.post_loading_state, self.playing_game_state);
+        inventory::register(app);
     }
 }
 

@@ -43,8 +43,8 @@ impl BlockItems {
     /// - true if that item & block did not already have a link & a link was successfully created
     /// - false if either the item or block was already linked to something else, and no link was created
     pub fn create_link(&mut self, item: &Item, block: &Block) -> bool {
-        let block_id = item.id();
-        let item_id = block.id();
+        let block_id = block.id();
+        let item_id = item.id();
 
         if self.blocks_to_items.contains_key(&block_id) {
             return false;
@@ -55,6 +55,8 @@ impl BlockItems {
 
         self.blocks_to_items.insert(block_id, item_id);
         self.items_to_blocks.insert(item_id, block_id);
+
+        println!("Linked {} with {}", block_id, item_id);
 
         return true;
     }

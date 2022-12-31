@@ -11,7 +11,7 @@ use crate::{
 const ITEM_NAME_FADE_DURATION_SEC: f32 = 5.0;
 
 #[derive(Component)]
-struct Hotbar {
+pub struct Hotbar {
     // slot, slot text
     slots: Vec<(Entity, Entity)>,
     pub selected_slot: usize,
@@ -33,6 +33,16 @@ impl Hotbar {
             prev_slot: 0,
             slots: Vec::with_capacity(max_slots),
         }
+    }
+
+    #[inline]
+    pub fn item_at_inventory_slot(&self, slot: usize, inv: &Inventory) -> usize {
+        inv.len() - self.max_slots + slot
+    }
+
+    #[inline]
+    pub fn item_at_selected_inventory_slot(&self, inv: &Inventory) -> usize {
+        self.item_at_inventory_slot(self.selected_slot, inv)
     }
 }
 
@@ -138,8 +148,7 @@ fn listen_for_change_events(
             if let Ok(inv) = inventory_unchanged.get_single() {
                 if let Ok(ent) = item_name_query.get_single() {
                     if let Ok(mut name_text) = text_query.get_mut(ent) {
-                        if let Some(is) =
-                            inv.itemstack_at(inv.len() - hb.max_slots + hb.selected_slot)
+                        if let Some(is) = inv.itemstack_at(hb.item_at_selected_inventory_slot(inv))
                         {
                             name_text.sections[0].value = names
                                 .get_name_from_numeric_id(is.item_id())
@@ -157,7 +166,7 @@ fn listen_for_change_events(
 
         if let Ok(inv) = query_inventory.get_single() {
             for hb_slot in 0..hb.max_slots {
-                let is = inv.itemstack_at(inv.len() - hb.max_slots + hb_slot);
+                let is = inv.itemstack_at(hb.item_at_inventory_slot(hb_slot, inv));
 
                 if let Ok(mut text) = text_query.get_mut(hb.slots[hb_slot].1) {
                     if let Some(is) = is {

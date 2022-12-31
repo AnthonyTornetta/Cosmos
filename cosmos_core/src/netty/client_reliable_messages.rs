@@ -18,7 +18,9 @@ pub enum ClientReliableMessages {
         x: usize,
         y: usize,
         z: usize,
+        // block_id is passed along with inventory_slot to verify that the client+server are still in sync
         block_id: u16,
+        inventory_slot: usize,
     },
     InteractWithBlock {
         structure_entity: Entity,

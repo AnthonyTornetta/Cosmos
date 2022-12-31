@@ -1,6 +1,6 @@
 pub mod load_langs;
 
-use std::{env, fs, marker::PhantomData};
+use std::{fs, marker::PhantomData};
 
 use bevy::{
     prelude::{App, Resource},

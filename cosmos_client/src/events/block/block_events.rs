@@ -13,6 +13,7 @@ pub struct BlockBreakEvent {
 
 pub struct BlockPlaceEvent {
     pub structure_entity: Entity,
+    pub inventory_slot: usize,
     pub block_id: u16,
     pub x: usize,
     pub y: usize,
@@ -63,6 +64,7 @@ fn handle_block_place(
                 y: ev.y,
                 z: ev.z,
                 block_id: ev.block_id,
+                inventory_slot: ev.inventory_slot,
             })
             .unwrap(),
         );

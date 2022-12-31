@@ -1,4 +1,5 @@
-use bevy::prelude::Component;
+use bevy::prelude::{App, Component};
+use bevy_inspector_egui::{Inspectable, RegisterInspectable};
 use serde::{Deserialize, Serialize};
 
 use crate::{item::Item, registry::identifiable::Identifiable};
@@ -13,7 +14,7 @@ pub mod itemstack;
 //     NormalInventory, // These inventories are organizable by the player
 // }
 
-#[derive(Default, Component, Serialize, Deserialize, Debug)]
+#[derive(Default, Component, Serialize, Deserialize, Debug, Inspectable)]
 pub struct Inventory {
     items: Vec<Option<ItemStack>>,
 }
@@ -75,8 +76,14 @@ impl Inventory {
 
     /// Returns the overflow quantity
     pub fn decrease_quantity_at(&mut self, slot: usize, amount: u16) -> u16 {
-        if let Some(slot) = &mut self.items[slot] {
-            slot.decrease_quantity(amount)
+        if let Some(is) = &mut self.items[slot] {
+            let res = is.decrease_quantity(amount);
+
+            if is.is_empty() {
+                self.items[slot] = None;
+            }
+
+            res
         } else {
             amount
         }
@@ -123,4 +130,9 @@ impl Inventory {
             .map(|x| x.quantity() as usize)
             .sum()
     }
+}
+
+pub fn register(app: &mut App) {
+    itemstack::register(app);
+    app.register_inspectable::<Inventory>();
 }

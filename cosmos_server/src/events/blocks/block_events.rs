@@ -2,7 +2,11 @@ use bevy::prelude::*;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::Block,
+    blockitems::BlockItems,
+    entities::player::Player,
     events::block_events::BlockChangedEvent,
+    inventory::Inventory,
+    item::Item,
     netty::{server_reliable_messages::ServerReliableMessages, NettyChannel},
     registry::Registry,
     structure::{Structure, StructureBlock},
@@ -29,6 +33,8 @@ pub struct BlockPlaceEvent {
     pub y: usize,
     pub z: usize,
     pub block_id: u16,
+    pub inventory_slot: usize,
+    pub placer_id: u64,
 }
 
 fn handle_block_break_events(
@@ -47,20 +53,47 @@ fn handle_block_break_events(
 fn handle_block_place_events(
     mut query: Query<&mut Structure>,
     mut event_reader: EventReader<BlockPlaceEvent>,
-    blocks: Res<Registry<Block>>,
     mut event_writer: EventWriter<BlockChangedEvent>,
+    mut inventory_query: Query<(&mut Inventory, &Player)>,
+    items: Res<Registry<Item>>,
+    blocks: Res<Registry<Block>>,
+    block_items: Res<BlockItems>,
 ) {
     for ev in event_reader.iter() {
-        let mut structure = query.get_mut(ev.structure_entity).unwrap();
+        for (mut inv, player) in inventory_query.iter_mut() {
+            if player.id == ev.placer_id {
+                if let Some(is) = inv.itemstack_at(ev.inventory_slot) {
+                    let item = items.from_numeric_id(is.item_id());
 
-        structure.set_block_at(
-            ev.x,
-            ev.y,
-            ev.z,
-            blocks.from_numeric_id(ev.block_id),
-            &blocks,
-            Some(&mut event_writer),
-        );
+                    if let Some(block_id) = block_items.block_from_item(item) {
+                        if block_id != ev.block_id {
+                            eprintln!(
+                                "WARNING: Inventory out of sync between client {}!",
+                                ev.placer_id
+                            );
+                            break;
+                        }
+
+                        let block = blocks.from_numeric_id(block_id);
+
+                        let mut structure = query.get_mut(ev.structure_entity).unwrap();
+
+                        inv.decrease_quantity_at(ev.inventory_slot, 1);
+
+                        structure.set_block_at(
+                            ev.x,
+                            ev.y,
+                            ev.z,
+                            block,
+                            &blocks,
+                            Some(&mut event_writer),
+                        );
+                    }
+                }
+
+                break;
+            }
+        }
     }
 }
 
