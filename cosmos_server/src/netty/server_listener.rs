@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
-    entities::player::{self, Player},
+    entities::player::Player,
     events::structure::change_pilot_event::ChangePilotEvent,
     netty::{
         client_reliable_messages::ClientReliableMessages,
