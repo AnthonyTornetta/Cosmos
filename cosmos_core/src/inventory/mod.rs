@@ -44,7 +44,7 @@ impl Inventory {
                     quantity = is.increase_quantity(quantity);
 
                     if quantity == 0 {
-                        break;
+                        return 0;
                     }
                 }
             }
@@ -60,7 +60,7 @@ impl Inventory {
                 self.items[i] = Some(is);
 
                 if quantity == 0 {
-                    break;
+                    return 0;
                 }
             }
         }
