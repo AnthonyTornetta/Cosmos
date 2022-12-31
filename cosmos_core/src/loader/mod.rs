@@ -67,19 +67,19 @@ fn monitor_loading<T: StateData + Clone + Copy>(
     }
 
     if loading_status.done {
-        let cur_state = state.current().clone();
+        let cur_state = *state.current();
 
         if cur_state == loading_status.pre_loading_state {
             println!("Transitioning to loading state!");
-            state.set(loading_status.loading_state.clone()).unwrap();
+            state.set(loading_status.loading_state).unwrap();
         } else if cur_state == loading_status.loading_state {
             println!("Transitioning to post loading state!");
             state
-                .set(loading_status.post_loading_state.clone())
+                .set(loading_status.post_loading_state)
                 .unwrap();
         } else if cur_state == loading_status.post_loading_state {
             println!("Transitioning to done state!");
-            state.set(loading_status.done_state.clone()).unwrap();
+            state.set(loading_status.done_state).unwrap();
         } else {
             panic!("Missing state!");
         }
@@ -117,13 +117,13 @@ pub fn register<T: StateData + Clone + Copy>(
         .add_event::<AddLoadingEvent>()
         // States cannot be changed during on_enter, and this prevents that from happening
         .add_system_set(
-            SystemSet::on_update(pre_loading_state.clone()).with_system(monitor_loading::<T>),
+            SystemSet::on_update(pre_loading_state).with_system(monitor_loading::<T>),
         )
         .add_system_set(
-            SystemSet::on_update(loading_state.clone()).with_system(monitor_loading::<T>),
+            SystemSet::on_update(loading_state).with_system(monitor_loading::<T>),
         )
         .add_system_set(
-            SystemSet::on_update(post_loading_state.clone()).with_system(monitor_loading::<T>),
+            SystemSet::on_update(post_loading_state).with_system(monitor_loading::<T>),
         )
         .insert_resource(LoadingStatus::new(
             pre_loading_state,

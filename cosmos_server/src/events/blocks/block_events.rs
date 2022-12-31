@@ -8,7 +8,7 @@ use cosmos_core::{
     inventory::Inventory,
     item::Item,
     netty::{server_reliable_messages::ServerReliableMessages, NettyChannel},
-    registry::{identifiable::Identifiable, Registry},
+    registry::Registry,
     structure::{Structure, StructureBlock},
 };
 

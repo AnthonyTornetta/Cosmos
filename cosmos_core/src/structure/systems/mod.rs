@@ -9,7 +9,7 @@ pub fn register<T: StateData + Clone + Copy>(
     post_loading_state: T,
     playing_state: T,
 ) {
-    energy_storage_system::register(app, post_loading_state.clone(), playing_state.clone());
-    energy_generation_system::register(app, post_loading_state.clone(), playing_state.clone());
+    energy_storage_system::register(app, post_loading_state, playing_state);
+    energy_generation_system::register(app, post_loading_state, playing_state);
     thruster_system::register(app, post_loading_state, playing_state);
 }

@@ -112,7 +112,7 @@ fn listen_button_presses(
 
 fn tick_text_alpha_down(mut query: Query<&mut Text, With<ItemNameDisplay>>, time: Res<Time>) {
     if let Ok(mut text) = query.get_single_mut() {
-        let col = text.sections[0].style.color.clone();
+        let col = text.sections[0].style.color;
 
         text.sections[0].style.color = Color::rgba(
             col.r(),
@@ -137,11 +137,11 @@ fn listen_for_change_events(
         if hb.selected_slot != hb.prev_slot {
             commands
                 .entity(hb.slots[hb.prev_slot].0)
-                .insert(UiImage(asset_server.load(image_path(false)).into()));
+                .insert(UiImage(asset_server.load(image_path(false))));
 
             commands
                 .entity(hb.slots[hb.selected_slot].0)
-                .insert(UiImage(asset_server.load(image_path(true)).into()));
+                .insert(UiImage(asset_server.load(image_path(true))));
 
             hb.prev_slot = hb.selected_slot;
 
@@ -286,7 +286,6 @@ fn add_hotbar(mut commands: Commands, asset_server: Res<AssetServer>) {
                                         color: Color::WHITE,
                                         font_size: 24.0,
                                         font: asset_server.load("fonts/PixeloidSans.ttf"),
-                                        ..default()
                                     },
                                 )
                                 .with_alignment(TextAlignment::BOTTOM_RIGHT),

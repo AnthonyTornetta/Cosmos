@@ -155,7 +155,7 @@ pub fn register<T: StateData + Clone + Copy>(
         .add_system_set(SystemSet::on_enter(post_loading_state).with_system(register_energy_blocks))
         .add_system_to_stage(
             CoreStage::PostUpdate,
-            block_update_system.run_in_bevy_state(playing_state.clone()),
+            block_update_system.run_in_bevy_state(playing_state),
         )
         .add_system_set(SystemSet::on_update(playing_state).with_system(update_energy))
         .register_inspectable::<EnergyGenerationSystem>();

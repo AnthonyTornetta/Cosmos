@@ -56,7 +56,7 @@ impl BlockItems {
         self.blocks_to_items.insert(block_id, item_id);
         self.items_to_blocks.insert(item_id, block_id);
 
-        return true;
+        true
     }
 }
 

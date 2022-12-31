@@ -86,8 +86,8 @@ fn process_ship_movement(
         }
 
         let w = wnd.primary();
-        let hw = w.width() as f32 / 2.0;
-        let hh = w.height() as f32 / 2.0;
+        let hw = w.width() / 2.0;
+        let hh = w.height() / 2.0;
         let p2 = PI / 2.0;
 
         crosshair_offset.x += cursor_delta_position.x;

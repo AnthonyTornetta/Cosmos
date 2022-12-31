@@ -34,19 +34,24 @@ impl Inventory {
         self.items.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.items.iter().any(|x| x.is_some())
+    }
+
     /// Returns the overflow that could not fit
     pub fn insert(&mut self, item: &Item, mut quantity: u16) -> u16 {
         // Search for existing stacks, if none found that make new one(s)
 
-        for space in &mut self.items {
-            if let Some(is) = space {
-                if is.item_id() == item.id() {
-                    quantity = is.increase_quantity(quantity);
+        for is in &mut self
+            .items
+            .iter_mut()
+            .flatten()
+            .filter(|x| x.item_id() == item.id())
+        {
+            quantity = is.increase_quantity(quantity);
 
-                    if quantity == 0 {
-                        return 0;
-                    }
-                }
+            if quantity == 0 {
+                return 0;
             }
         }
 
@@ -124,8 +129,7 @@ impl Inventory {
     pub fn quantity_of(&self, item: &Item) -> usize {
         self.items
             .iter()
-            .filter(|x| x.is_some())
-            .map(|x| x.as_ref().unwrap())
+            .filter_map(|x| x.as_ref())
             .filter(|x| x.item_id() == item.id())
             .map(|x| x.quantity() as usize)
             .sum()
