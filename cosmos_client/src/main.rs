@@ -3,6 +3,7 @@ pub mod camera;
 pub mod events;
 pub mod input;
 pub mod interactions;
+pub mod lang;
 pub mod netty;
 pub mod plugin;
 pub mod rendering;
@@ -300,6 +301,7 @@ fn main() {
     ui::register(&mut app);
     receiver::register(&mut app);
     structure_renderer::register(&mut app);
+    lang::register(&mut app);
 
     app.run();
 }

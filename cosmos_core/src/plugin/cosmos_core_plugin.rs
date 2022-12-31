@@ -14,7 +14,7 @@ use bevy::window::WindowPlugin;
 use bevy_inspector_egui::InspectableRegistry;
 use bevy_rapier3d::prelude::{NoUserData, RapierPhysicsPlugin};
 
-use crate::block::{self, blocks};
+use crate::block;
 use crate::{blockitems, structure};
 use crate::{events, loader};
 use crate::{item, physics};

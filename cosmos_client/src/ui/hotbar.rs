@@ -1,14 +1,14 @@
-use bevy::{
-    prelude::*,
-    text::{Text2dBounds, Text2dSize},
-};
-use cosmos_core::inventory::Inventory;
+use bevy::prelude::*;
+use cosmos_core::{inventory::Inventory, item::Item};
 
 use crate::{
     input::inputs::{CosmosInputHandler, CosmosInputs},
+    lang::Lang,
     netty::flags::LocalPlayer,
     state::game_state::GameState,
 };
+
+const ITEM_NAME_FADE_DURATION_SEC: f32 = 5.0;
 
 #[derive(Component)]
 struct Hotbar {
@@ -35,6 +35,9 @@ impl Hotbar {
         }
     }
 }
+
+#[derive(Component)]
+struct ItemNameDisplay;
 
 fn image_path(selected: bool) -> &'static str {
     if selected {
@@ -97,12 +100,28 @@ fn listen_button_presses(
     }
 }
 
+fn tick_text_alpha_down(mut query: Query<&mut Text, With<ItemNameDisplay>>, time: Res<Time>) {
+    if let Ok(mut text) = query.get_single_mut() {
+        let col = text.sections[0].style.color.clone();
+
+        text.sections[0].style.color = Color::rgba(
+            col.r(),
+            col.g(),
+            col.b(),
+            (col.a() - time.delta_seconds() / ITEM_NAME_FADE_DURATION_SEC).max(0.0),
+        );
+    }
+}
+
 fn listen_for_change_events(
     mut query_hb: Query<&mut Hotbar>,
     query_inventory: Query<&Inventory, (Changed<Inventory>, With<LocalPlayer>)>,
+    inventory_unchanged: Query<&Inventory, With<LocalPlayer>>,
     asset_server: Res<AssetServer>,
     mut text_query: Query<&mut Text>,
+    item_name_query: Query<Entity, With<ItemNameDisplay>>,
     mut commands: Commands,
+    names: Res<Lang<Item>>,
 ) {
     if let Ok(mut hb) = query_hb.get_single_mut() {
         if hb.selected_slot != hb.prev_slot {
@@ -115,6 +134,25 @@ fn listen_for_change_events(
                 .insert(UiImage(asset_server.load(image_path(true)).into()));
 
             hb.prev_slot = hb.selected_slot;
+
+            if let Ok(inv) = inventory_unchanged.get_single() {
+                if let Ok(ent) = item_name_query.get_single() {
+                    if let Ok(mut name_text) = text_query.get_mut(ent) {
+                        if let Some(is) =
+                            inv.itemstack_at(inv.len() - hb.max_slots + hb.selected_slot)
+                        {
+                            name_text.sections[0].value = names
+                                .get_name_from_numeric_id(is.item_id())
+                                .unwrap_or(&" ".to_owned())
+                                .to_owned();
+
+                            name_text.sections[0].style.color = Color::WHITE;
+                        } else {
+                            name_text.sections[0].value = "".to_owned();
+                        }
+                    }
+                }
+            }
         }
 
         if let Ok(inv) = query_inventory.get_single() {
@@ -131,6 +169,48 @@ fn listen_for_change_events(
             }
         }
     }
+}
+
+fn add_item_text(mut commands: Commands, asset_server: Res<AssetServer>) {
+    println!("OOGA");
+    commands
+        .spawn(NodeBundle {
+            style: Style {
+                position_type: PositionType::Absolute,
+                display: Display::Flex,
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::FlexEnd,
+                size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
+                ..default()
+            },
+            ..default()
+        })
+        .with_children(|parent| {
+            parent
+                .spawn(TextBundle {
+                    style: Style {
+                        position: UiRect {
+                            bottom: Val::Px(75.0),
+                            ..default()
+                        },
+
+                        position_type: PositionType::Absolute,
+
+                        ..default()
+                    },
+                    text: Text::from_section(
+                        "",
+                        TextStyle {
+                            color: Color::WHITE,
+                            font_size: 24.0,
+                            font: asset_server.load("fonts/PixeloidSans.ttf"),
+                        },
+                    )
+                    .with_alignment(TextAlignment::CENTER),
+                    ..default()
+                })
+                .insert(ItemNameDisplay);
+        });
 }
 
 fn add_hotbar(mut commands: Commands, asset_server: Res<AssetServer>) {
@@ -194,8 +274,8 @@ fn add_hotbar(mut commands: Commands, asset_server: Res<AssetServer>) {
                                 text: Text::from_section(
                                     "",
                                     TextStyle {
-                                        color: Color::BLACK,
-                                        font_size: 32.0,
+                                        color: Color::WHITE,
+                                        font_size: 24.0,
                                         font: asset_server.load("fonts/PixeloidSans.ttf"),
                                         ..default()
                                     },
@@ -219,10 +299,15 @@ fn add_hotbar(mut commands: Commands, asset_server: Res<AssetServer>) {
 }
 
 pub fn register(app: &mut App) {
-    app.add_system_set(SystemSet::on_enter(GameState::Playing).with_system(add_hotbar))
-        .add_system_set(
-            SystemSet::on_update(GameState::Playing)
-                .with_system(listen_for_change_events)
-                .with_system(listen_button_presses),
-        );
+    app.add_system_set(
+        SystemSet::on_enter(GameState::Playing)
+            .with_system(add_hotbar)
+            .with_system(add_item_text),
+    )
+    .add_system_set(
+        SystemSet::on_update(GameState::Playing)
+            .with_system(listen_for_change_events)
+            .with_system(listen_button_presses)
+            .with_system(tick_text_alpha_down),
+    );
 }

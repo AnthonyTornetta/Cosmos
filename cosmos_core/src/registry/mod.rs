@@ -1,5 +1,7 @@
 pub mod identifiable;
 
+use std::slice::Iter;
+
 use crate::loader::{AddLoadingEvent, DoneLoadingEvent, LoadingManager};
 use bevy::ecs::schedule::StateData;
 use bevy::prelude::{App, Commands, EventWriter, ResMut, Resource, SystemSet};
@@ -42,6 +44,10 @@ impl<T: Identifiable + Sync + Send> Registry<T> {
         self.unlocalized_name_to_id
             .insert(item.unlocalized_name().to_owned(), id);
         self.contents.push(item);
+    }
+
+    pub fn iter(&self) -> Iter<T> {
+        self.contents.iter()
     }
 }
 

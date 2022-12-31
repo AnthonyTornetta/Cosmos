@@ -2,7 +2,7 @@ use crate::block::block_builder::BlockBuilder;
 use crate::loader::{AddLoadingEvent, DoneLoadingEvent, LoadingManager};
 use crate::registry::{self, Registry};
 use bevy::ecs::schedule::StateData;
-use bevy::prelude::{App, EventWriter, IntoSystemDescriptor, ResMut, SystemSet};
+use bevy::prelude::{App, EventWriter, ResMut, SystemSet};
 
 use super::{Block, BlockFace, BlockProperty};
 

@@ -14,6 +14,47 @@ use cosmos_core::{
 };
 
 use crate::netty::network_helpers::{ClientTicks, ServerLobby};
+
+fn generate_player_inventory(items: &Registry<Item>) -> Inventory {
+    let mut inventory = Inventory::new(9 * 4);
+
+    inventory.insert_at(
+        9 * 3,
+        items.from_id("cosmos:stone").expect("Stone item to exist"),
+        64,
+    );
+
+    inventory.insert_at(
+        9 * 3 + 1,
+        items.from_id("cosmos:dirt").expect("Dirt item to exist"),
+        64,
+    );
+
+    inventory.insert_at(
+        9 * 3 + 2,
+        items.from_id("cosmos:grass").expect("Grass item to exist"),
+        64,
+    );
+
+    inventory.insert_at(
+        9 * 3 + 3,
+        items
+            .from_id("cosmos:energy_cell")
+            .expect("Energy cell item to exist"),
+        64,
+    );
+
+    inventory.insert_at(
+        9 * 3 + 4,
+        items
+            .from_id("cosmos:laser_cannon")
+            .expect("Laser cannon item to exist"),
+        64,
+    );
+
+    inventory
+}
+
 use crate::state::GameState;
 
 fn handle_events_system(
@@ -51,13 +92,7 @@ fn handle_events_system(
                 let player = Player::new(String::from(name), *id);
                 let transform = Transform::from_xyz(0.0, 60.0, 0.0);
                 let velocity = Velocity::default();
-                let mut inventory = Inventory::new(9 * 4);
-
-                inventory.insert_at(
-                    9 * 3,
-                    items.from_id("cosmos:stone").expect("Stone to exist"),
-                    64,
-                );
+                let inventory = generate_player_inventory(&items);
 
                 let netty_body = NettyRigidBody::new(&velocity, &transform);
 

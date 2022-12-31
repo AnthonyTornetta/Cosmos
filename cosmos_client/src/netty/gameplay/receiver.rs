@@ -277,8 +277,6 @@ fn client_sync_players(
                 structure_entity: server_structure_entity,
                 serialized_chunk,
             } => {
-                println!("Got chunk!");
-
                 let s_entity = network_mapping
                     .client_from_server(&server_structure_entity)
                     .expect("Got chunk data for structure that doesn't exist on client");

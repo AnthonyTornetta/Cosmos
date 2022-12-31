@@ -1,5 +1,5 @@
 # CosmosRust
-Cosmos, but in rust
+A multiplayer block-based space exploration game, written in rust using the [Bevy](bevyengine.org/) engine.
 
 # Cosmos Roadmap
 
