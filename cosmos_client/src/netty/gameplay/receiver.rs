@@ -346,6 +346,21 @@ fn client_sync_players(
                         .map(|ent| *network_mapping.client_from_server(&ent).unwrap()),
                 });
             }
+            ServerReliableMessages::EntityInventory {
+                serialized_inventory,
+                owner,
+            } => {
+                if let Some(client_entity) = network_mapping.client_from_server(&owner) {
+                    let inventory: Inventory = bincode::deserialize(&serialized_inventory).unwrap();
+
+                    commands.entity(*client_entity).insert(inventory);
+                } else {
+                    eprintln!(
+                        "Error: unrecognized entity {} received from server!",
+                        owner.index()
+                    );
+                }
+            }
         }
     }
 }

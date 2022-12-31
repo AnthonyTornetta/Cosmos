@@ -11,6 +11,7 @@ use state::GameState;
 pub mod blocks;
 pub mod events;
 pub mod init;
+pub mod inventory;
 pub mod netty;
 pub mod physics;
 pub mod plugin;

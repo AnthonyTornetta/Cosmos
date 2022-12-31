@@ -63,7 +63,6 @@ pub fn generate_planet(
     blocks: Res<Registry<Block>>,
 ) {
     for ev in events.iter() {
-        println!("Generating grass chunk for {} {} {}!", ev.x, ev.y, ev.z);
         let mut structure = query.get_mut(ev.structure_entity).unwrap();
 
         let (start_x, start_y, start_z) = (
@@ -116,7 +115,6 @@ pub fn generate_planet(
             }
         }
 
-        println!("Done generating {} {} {}!", ev.x, ev.y, ev.z);
         event_writer.send(ChunkSetEvent {
             structure_entity: ev.structure_entity,
             x: ev.x,

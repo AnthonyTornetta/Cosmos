@@ -36,6 +36,10 @@ pub enum ServerReliableMessages {
         height: usize,
         length: usize,
     },
+    EntityInventory {
+        serialized_inventory: Vec<u8>,
+        owner: Entity,
+    },
     MOTD {
         motd: String,
     },

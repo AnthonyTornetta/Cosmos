@@ -8,7 +8,7 @@ use cosmos_core::{
     inventory::Inventory,
     item::Item,
     netty::{server_reliable_messages::ServerReliableMessages, NettyChannel},
-    registry::Registry,
+    registry::{identifiable::Identifiable, Registry},
     structure::{Structure, StructureBlock},
 };
 
@@ -16,6 +16,7 @@ use crate::GameState;
 
 pub struct BlockBreakEvent {
     pub structure_entity: Entity,
+    pub breaker: Entity,
     pub x: usize,
     pub y: usize,
     pub z: usize,
@@ -34,17 +35,32 @@ pub struct BlockPlaceEvent {
     pub z: usize,
     pub block_id: u16,
     pub inventory_slot: usize,
-    pub placer_id: u64,
+    pub placer: Entity,
 }
 
 fn handle_block_break_events(
     mut query: Query<&mut Structure>,
     mut event_reader: EventReader<BlockBreakEvent>,
     blocks: Res<Registry<Block>>,
+    items: Res<Registry<Item>>,
+    block_items: Res<BlockItems>, // TODO: Replace this with drop table
+    mut inventory_query: Query<&mut Inventory>,
     mut event_writer: EventWriter<BlockChangedEvent>,
 ) {
     for ev in event_reader.iter() {
         let mut structure = query.get_mut(ev.structure_entity).unwrap();
+
+        let block_id = structure.block_at(ev.x, ev.y, ev.z);
+
+        if let Ok(mut inventory) = inventory_query.get_mut(ev.breaker) {
+            let block = blocks.from_numeric_id(block_id);
+
+            if let Some(item_id) = block_items.item_from_block(block) {
+                let item = items.from_numeric_id(item_id);
+
+                inventory.insert(item, 1);
+            }
+        }
 
         structure.remove_block_at(ev.x, ev.y, ev.z, &blocks, Some(&mut event_writer));
     }
@@ -60,35 +76,33 @@ fn handle_block_place_events(
     block_items: Res<BlockItems>,
 ) {
     for ev in event_reader.iter() {
-        for (mut inv, player) in inventory_query.iter_mut() {
-            if player.id == ev.placer_id {
-                if let Some(is) = inv.itemstack_at(ev.inventory_slot) {
-                    let item = items.from_numeric_id(is.item_id());
+        if let Ok((mut inv, player)) = inventory_query.get_mut(ev.placer) {
+            if let Some(is) = inv.itemstack_at(ev.inventory_slot) {
+                let item = items.from_numeric_id(is.item_id());
 
-                    if let Some(block_id) = block_items.block_from_item(item) {
-                        if block_id != ev.block_id {
-                            eprintln!(
-                                "WARNING: Inventory out of sync between client {}!",
-                                ev.placer_id
-                            );
-                            break;
-                        }
-
-                        let block = blocks.from_numeric_id(block_id);
-
-                        let mut structure = query.get_mut(ev.structure_entity).unwrap();
-
-                        inv.decrease_quantity_at(ev.inventory_slot, 1);
-
-                        structure.set_block_at(
-                            ev.x,
-                            ev.y,
-                            ev.z,
-                            block,
-                            &blocks,
-                            Some(&mut event_writer),
+                if let Some(block_id) = block_items.block_from_item(item) {
+                    if block_id != ev.block_id {
+                        eprintln!(
+                            "WARNING: Inventory out of sync between client {}!",
+                            player.name
                         );
+                        break;
                     }
+
+                    let block = blocks.from_numeric_id(block_id);
+
+                    let mut structure = query.get_mut(ev.structure_entity).unwrap();
+
+                    inv.decrease_quantity_at(ev.inventory_slot, 1);
+
+                    structure.set_block_at(
+                        ev.x,
+                        ev.y,
+                        ev.z,
+                        block,
+                        &blocks,
+                        Some(&mut event_writer),
+                    );
                 }
 
                 break;
