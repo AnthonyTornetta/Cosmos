@@ -24,7 +24,7 @@ fn handle_block_event(
 
     for ev in interact_events.iter() {
         if let Ok(structure) = s_query.get(ev.structure_entity) {
-            let block_id = ev.structure_block.block(structure);
+            let block_id = ev.structure_block.block_id(structure);
 
             if block_id == block.id() {
                 // Only works on ships (maybe replace this with pilotable component instead of only checking ships)

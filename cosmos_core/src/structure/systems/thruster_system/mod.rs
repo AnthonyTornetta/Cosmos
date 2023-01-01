@@ -16,7 +16,6 @@ use crate::{
     events::block_events::BlockChangedEvent,
     registry::{identifiable::Identifiable, Registry},
     structure::{
-        chunk::CHUNK_DIMENSIONS,
         events::ChunkSetEvent,
         ship::{pilot::Pilot, ship_movement::ShipMovement},
         systems::energy_storage_system::EnergyStorageSystem,
@@ -48,6 +47,18 @@ impl ThrusterBlocks {
 pub struct ThrusterSystem {
     thrust_total: f32,
     energy_consumption: f32,
+}
+
+impl ThrusterSystem {
+    fn block_removed(&mut self, old_prop: &ThrusterProperty) {
+        self.energy_consumption -= old_prop.energy_consupmtion;
+        self.thrust_total -= old_prop.strength;
+    }
+
+    fn block_added(&mut self, prop: &ThrusterProperty) {
+        self.energy_consumption += prop.energy_consupmtion;
+        self.thrust_total += prop.strength;
+    }
 }
 
 fn register_thruster_blocks(blocks: Res<Registry<Block>>, mut storage: ResMut<ThrusterBlocks>) {
@@ -83,26 +94,22 @@ fn block_update_system(
 ) {
     for ev in event.iter() {
         if let Ok(mut system) = system_query.get_mut(ev.structure_entity) {
-            if let Some(es) = energy_storage_blocks.get(blocks.from_numeric_id(ev.old_block)) {
-                system.energy_consumption -= es.energy_consupmtion;
-                system.thrust_total -= es.strength;
+            if let Some(prop) = energy_storage_blocks.get(blocks.from_numeric_id(ev.old_block)) {
+                system.block_removed(prop);
             }
 
-            if let Some(es) = energy_storage_blocks.get(blocks.from_numeric_id(ev.new_block)) {
-                system.energy_consumption += es.energy_consupmtion;
-                system.thrust_total += es.strength;
+            if let Some(prop) = energy_storage_blocks.get(blocks.from_numeric_id(ev.new_block)) {
+                system.block_added(prop);
             }
         } else {
             let mut system = ThrusterSystem::default();
 
-            if let Some(es) = energy_storage_blocks.get(blocks.from_numeric_id(ev.old_block)) {
-                system.energy_consumption -= es.energy_consupmtion;
-                system.thrust_total -= es.strength;
+            if let Some(prop) = energy_storage_blocks.get(blocks.from_numeric_id(ev.old_block)) {
+                system.block_removed(prop);
             }
 
-            if let Some(es) = energy_storage_blocks.get(blocks.from_numeric_id(ev.new_block)) {
-                system.energy_consumption += es.energy_consupmtion;
-                system.thrust_total += es.strength;
+            if let Some(prop) = energy_storage_blocks.get(blocks.from_numeric_id(ev.new_block)) {
+                system.block_added(prop);
             }
 
             commands.entity(ev.structure_entity).insert(system);
@@ -114,39 +121,17 @@ fn block_update_system(
         let structure = structure_query.get(ev.structure_entity).unwrap();
 
         if let Ok(mut system) = system_query.get_mut(ev.structure_entity) {
-            for z in ev.z * CHUNK_DIMENSIONS..(ev.z + 1) * CHUNK_DIMENSIONS {
-                for y in (ev.y * CHUNK_DIMENSIONS)..(ev.y + 1) * CHUNK_DIMENSIONS {
-                    for x in ev.x * CHUNK_DIMENSIONS..(ev.x + 1) * CHUNK_DIMENSIONS {
-                        let b = structure.block_at(x, y, z);
-
-                        if energy_storage_blocks.blocks.contains_key(&b) {
-                            let prop = energy_storage_blocks
-                                .get(blocks.from_numeric_id(b))
-                                .unwrap();
-
-                            system.thrust_total += prop.strength;
-                            system.energy_consumption += prop.energy_consupmtion;
-                        }
-                    }
+            for block in ev.iter_blocks(structure) {
+                if let Some(prop) = energy_storage_blocks.get(&block.block(structure, &blocks)) {
+                    system.block_added(prop);
                 }
             }
         } else {
             let mut system = ThrusterSystem::default();
 
-            for z in ev.z * CHUNK_DIMENSIONS..(ev.z + 1) * CHUNK_DIMENSIONS {
-                for y in (ev.y * CHUNK_DIMENSIONS)..(ev.y + 1) * CHUNK_DIMENSIONS {
-                    for x in ev.x * CHUNK_DIMENSIONS..(ev.x + 1) * CHUNK_DIMENSIONS {
-                        let b = structure.block_at(x, y, z);
-
-                        if energy_storage_blocks.blocks.contains_key(&b) {
-                            let prop = energy_storage_blocks
-                                .get(blocks.from_numeric_id(b))
-                                .unwrap();
-
-                            system.thrust_total += prop.strength;
-                            system.energy_consumption += prop.energy_consupmtion;
-                        }
-                    }
+            for block in ev.iter_blocks(structure) {
+                if let Some(prop) = energy_storage_blocks.get(&block.block(structure, &blocks)) {
+                    system.block_added(prop);
                 }
             }
 

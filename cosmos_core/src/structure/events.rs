@@ -1,5 +1,7 @@
 use bevy::prelude::{App, Entity};
 
+use super::{structure_iterator::BlockIterator, Structure};
+
 pub struct StructureCreated {
     pub entity: Entity,
 }
@@ -21,6 +23,12 @@ pub struct ChunkSetEvent {
     pub y: usize,
     /// Chunk's coordinate in the structure    
     pub z: usize,
+}
+
+impl ChunkSetEvent {
+    pub fn iter_blocks<'a>(&'a self, structure: &'a Structure) -> BlockIterator {
+        structure.block_iter_for_chunk((self.x, self.y, self.z))
+    }
 }
 
 pub fn register(app: &mut App) {

@@ -7,8 +7,8 @@ use crate::{
     events::block_events::BlockChangedEvent,
     registry::{identifiable::Identifiable, Registry},
     structure::{
-        chunk::CHUNK_DIMENSIONS, events::ChunkSetEvent,
-        systems::energy_storage_system::EnergyStorageSystem, Structure, StructureBlock,
+        events::ChunkSetEvent, systems::energy_storage_system::EnergyStorageSystem, Structure,
+        StructureBlock,
     },
 };
 
@@ -45,9 +45,9 @@ struct LaserCannonSystem {
 }
 
 impl LaserCannonSystem {
-    fn laser_cannon_removed(&mut self, old_prop: &LaserCannonProperty, sb: &StructureBlock) {}
+    fn block_removed(&mut self, old_prop: &LaserCannonProperty, sb: &StructureBlock) {}
 
-    fn laser_cannon_added(&mut self, prop: &LaserCannonProperty, sb: &StructureBlock) {}
+    fn block_added(&mut self, prop: &LaserCannonProperty, sb: &StructureBlock) {}
 }
 
 fn register_laser_blocks(blocks: Res<Registry<Block>>, mut cannon: ResMut<LaserCannonBlocks>) {
@@ -73,17 +73,17 @@ fn block_update_system(
     for ev in event.iter() {
         if let Ok(mut system) = system_query.get_mut(ev.structure_entity) {
             if let Some(property) = laser_cannon_blocks.get(blocks.from_numeric_id(ev.old_block)) {
-                system.laser_cannon_removed(property, &ev.block);
+                system.block_removed(property, &ev.block);
             }
 
             if let Some(property) = laser_cannon_blocks.get(blocks.from_numeric_id(ev.new_block)) {
-                system.laser_cannon_added(property, &ev.block);
+                system.block_added(property, &ev.block);
             }
         } else {
             let mut system = LaserCannonSystem::default();
 
             if let Some(property) = laser_cannon_blocks.get(blocks.from_numeric_id(ev.new_block)) {
-                system.laser_cannon_added(property, &ev.block);
+                system.block_added(property, &ev.block);
             }
 
             commands.entity(ev.structure_entity).insert(system);
@@ -92,39 +92,20 @@ fn block_update_system(
 
     // ChunkSetEvents should not overwrite existing blocks, so no need to check for that
     for ev in chunk_set_event.iter() {
-        let sys = system_query.get_mut(ev.structure_entity);
         let structure = structure_query.get(ev.structure_entity).unwrap();
 
-        if let Ok(mut system) = sys {
-            for z in ev.z * CHUNK_DIMENSIONS..(ev.z + 1) * CHUNK_DIMENSIONS {
-                for y in (ev.y * CHUNK_DIMENSIONS)..(ev.y + 1) * CHUNK_DIMENSIONS {
-                    for x in ev.x * CHUNK_DIMENSIONS..(ev.x + 1) * CHUNK_DIMENSIONS {
-                        let b = structure.block_at(x, y, z);
-
-                        if laser_cannon_blocks.blocks.contains_key(&b) {
-                            system.cannon_rate += laser_cannon_blocks
-                                .get(blocks.from_numeric_id(b))
-                                .unwrap()
-                                .cannon_rate;
-                        }
-                    }
+        if let Ok(mut system) = system_query.get_mut(ev.structure_entity) {
+            for block in ev.iter_blocks(structure) {
+                if let Some(prop) = laser_cannon_blocks.get(block.block(structure, &blocks)) {
+                    system.block_added(prop, &block);
                 }
             }
         } else {
             let mut system = LaserCannonSystem::default();
 
-            for z in ev.z * CHUNK_DIMENSIONS..(ev.z + 1) * CHUNK_DIMENSIONS {
-                for y in (ev.y * CHUNK_DIMENSIONS)..(ev.y + 1) * CHUNK_DIMENSIONS {
-                    for x in ev.x * CHUNK_DIMENSIONS..(ev.x + 1) * CHUNK_DIMENSIONS {
-                        let b = structure.block_at(x, y, z);
-
-                        if laser_cannon_blocks.blocks.contains_key(&b) {
-                            system.cannon_rate += laser_cannon_blocks
-                                .get(blocks.from_numeric_id(b))
-                                .unwrap()
-                                .cannon_rate;
-                        }
-                    }
+            for block in ev.iter_blocks(structure) {
+                if let Some(prop) = laser_cannon_blocks.get(&block.block(structure, &blocks)) {
+                    system.block_added(prop, &block);
                 }
             }
 
@@ -133,11 +114,8 @@ fn block_update_system(
     }
 }
 
-fn update_laser(mut query: Query<(&LaserCannonSystem, &mut EnergyStorageSystem)>, time: Res<Time>) {
-    for (sys, mut storage) in query.iter_mut() {
-        storage.increase_laser(sys.cannon_rate * time.delta_seconds());
-    }
-}
+// fn update_laser(mut query: Query<(&LaserCannonSystem, &mut EnergyStorageSystem)>, time: Res<Time>) {
+// }
 
 pub fn register<T: StateData + Clone + Copy>(
     app: &mut App,
@@ -150,6 +128,7 @@ pub fn register<T: StateData + Clone + Copy>(
             CoreStage::PostUpdate,
             block_update_system.run_in_bevy_state(playing_state),
         )
-        .add_system_set(SystemSet::on_update(playing_state).with_system(update_laser))
+        // .add_system_set(SystemSet::on_update(playing_state).with_system(update_laser))
         .register_inspectable::<LaserCannonSystem>();
 }
+//

@@ -7,8 +7,7 @@ use crate::{
     events::block_events::BlockChangedEvent,
     registry::{identifiable::Identifiable, Registry},
     structure::{
-        chunk::CHUNK_DIMENSIONS, events::ChunkSetEvent,
-        systems::energy_storage_system::EnergyStorageSystem, Structure,
+        events::ChunkSetEvent, systems::energy_storage_system::EnergyStorageSystem, Structure,
     },
 };
 
@@ -34,6 +33,16 @@ impl EnergyGenerationBlocks {
 #[derive(Component, Default, Inspectable)]
 struct EnergyGenerationSystem {
     generation_rate: f32,
+}
+
+impl EnergyGenerationSystem {
+    pub fn block_added(&mut self, prop: &EnergyGenerationProperty) {
+        self.generation_rate += prop.generation_rate;
+    }
+
+    pub fn block_removed(&mut self, prop: &EnergyGenerationProperty) {
+        self.generation_rate -= prop.generation_rate;
+    }
 }
 
 fn register_energy_blocks(
@@ -72,22 +81,22 @@ fn block_update_system(
         let sys = system_query.get_mut(ev.structure_entity);
 
         if let Ok(mut system) = sys {
-            if let Some(es) = energy_generation_blocks.get(blocks.from_numeric_id(ev.old_block)) {
-                system.generation_rate -= es.generation_rate;
+            if let Some(prop) = energy_generation_blocks.get(blocks.from_numeric_id(ev.old_block)) {
+                system.block_removed(prop);
             }
 
-            if let Some(es) = energy_generation_blocks.get(blocks.from_numeric_id(ev.new_block)) {
-                system.generation_rate += es.generation_rate;
+            if let Some(prop) = energy_generation_blocks.get(blocks.from_numeric_id(ev.new_block)) {
+                system.block_added(prop);
             }
         } else {
             let mut system = EnergyGenerationSystem::default();
 
-            if let Some(es) = energy_generation_blocks.get(blocks.from_numeric_id(ev.old_block)) {
-                system.generation_rate -= es.generation_rate;
+            if let Some(prop) = energy_generation_blocks.get(blocks.from_numeric_id(ev.old_block)) {
+                system.block_removed(prop);
             }
 
-            if let Some(es) = energy_generation_blocks.get(blocks.from_numeric_id(ev.new_block)) {
-                system.generation_rate += es.generation_rate;
+            if let Some(prop) = energy_generation_blocks.get(blocks.from_numeric_id(ev.new_block)) {
+                system.block_added(prop);
             }
 
             commands.entity(ev.structure_entity).insert(system);
@@ -96,39 +105,20 @@ fn block_update_system(
 
     // ChunkSetEvents should not overwrite existing blocks, so no need to check for that
     for ev in chunk_set_event.iter() {
-        let sys = system_query.get_mut(ev.structure_entity);
         let structure = structure_query.get(ev.structure_entity).unwrap();
 
-        if let Ok(mut system) = sys {
-            for z in ev.z * CHUNK_DIMENSIONS..(ev.z + 1) * CHUNK_DIMENSIONS {
-                for y in (ev.y * CHUNK_DIMENSIONS)..(ev.y + 1) * CHUNK_DIMENSIONS {
-                    for x in ev.x * CHUNK_DIMENSIONS..(ev.x + 1) * CHUNK_DIMENSIONS {
-                        let b = structure.block_at(x, y, z);
-
-                        if energy_generation_blocks.blocks.contains_key(&b) {
-                            system.generation_rate += energy_generation_blocks
-                                .get(blocks.from_numeric_id(b))
-                                .unwrap()
-                                .generation_rate;
-                        }
-                    }
+        if let Ok(mut system) = system_query.get_mut(ev.structure_entity) {
+            for block in ev.iter_blocks(structure) {
+                if let Some(prop) = energy_generation_blocks.get(&block.block(structure, &blocks)) {
+                    system.block_added(prop);
                 }
             }
         } else {
             let mut system = EnergyGenerationSystem::default();
 
-            for z in ev.z * CHUNK_DIMENSIONS..(ev.z + 1) * CHUNK_DIMENSIONS {
-                for y in (ev.y * CHUNK_DIMENSIONS)..(ev.y + 1) * CHUNK_DIMENSIONS {
-                    for x in ev.x * CHUNK_DIMENSIONS..(ev.x + 1) * CHUNK_DIMENSIONS {
-                        let b = structure.block_at(x, y, z);
-
-                        if energy_generation_blocks.blocks.contains_key(&b) {
-                            system.generation_rate += energy_generation_blocks
-                                .get(blocks.from_numeric_id(b))
-                                .unwrap()
-                                .generation_rate;
-                        }
-                    }
+            for block in ev.iter_blocks(structure) {
+                if let Some(prop) = energy_generation_blocks.get(&block.block(structure, &blocks)) {
+                    system.block_added(prop);
                 }
             }
 

@@ -1,11 +1,12 @@
 use bevy::{ecs::schedule::StateData, prelude::App};
-use bevy_inspector_egui::Inspectable;
 
 pub mod chunk;
 pub mod events;
 pub mod planet;
 pub mod ship;
+pub mod structure_block;
 pub mod structure_builder;
+pub mod structure_iterator;
 pub mod systems;
 
 use crate::block::blocks::AIR_BLOCK_ID;
@@ -21,6 +22,9 @@ use bevy_rapier3d::na::Vector3;
 use bevy_rapier3d::rapier::prelude::RigidBodyPosition;
 use serde::{Deserialize, Serialize};
 
+use self::structure_block::StructureBlock;
+use self::structure_iterator::{BlockIterator, ChunkIterator};
+
 #[derive(Serialize, Deserialize, Component)]
 pub struct Structure {
     #[serde(skip)]
@@ -32,52 +36,6 @@ pub struct Structure {
     width: usize,
     height: usize,
     length: usize,
-}
-
-#[derive(Clone, Debug, Inspectable, Copy, PartialEq, Eq, Default)]
-pub struct StructureBlock {
-    x: usize,
-    y: usize,
-    z: usize,
-}
-
-impl StructureBlock {
-    #[inline]
-    pub fn x(&self) -> usize {
-        self.x
-    }
-    #[inline]
-    pub fn y(&self) -> usize {
-        self.y
-    }
-    #[inline]
-    pub fn z(&self) -> usize {
-        self.z
-    }
-
-    pub fn new(x: usize, y: usize, z: usize) -> Self {
-        Self { x, y, z }
-    }
-
-    #[inline]
-    pub fn block(&self, structure: &Structure) -> u16 {
-        structure.block_at(self.x, self.y, self.z)
-    }
-
-    #[inline]
-    pub fn chunk_coord_x(&self) -> usize {
-        self.x / CHUNK_DIMENSIONS
-    }
-
-    #[inline]
-    pub fn chunk_coord_y(&self) -> usize {
-        self.y / CHUNK_DIMENSIONS
-    }
-
-    #[inline]
-    pub fn chunk_coord_z(&self) -> usize {
-        self.z / CHUNK_DIMENSIONS
-    }
 }
 
 impl Structure {
@@ -201,7 +159,7 @@ impl Structure {
     }
 
     pub fn has_block_at(&self, x: usize, y: usize, z: usize) -> bool {
-        self.block_at(x, y, z) != AIR_BLOCK_ID
+        self.block_id_at(x, y, z) != AIR_BLOCK_ID
     }
 
     /// # Arguments
@@ -231,7 +189,7 @@ impl Structure {
         Err(false)
     }
 
-    pub fn block_at(&self, x: usize, y: usize, z: usize) -> u16 {
+    pub fn block_id_at(&self, x: usize, y: usize, z: usize) -> u16 {
         self.chunk_at_block_coordinates(x, y, z).block_at(
             x % CHUNK_DIMENSIONS,
             y % CHUNK_DIMENSIONS,
@@ -270,7 +228,7 @@ impl Structure {
         blocks: &Res<Registry<Block>>,
         event_writer: Option<&mut EventWriter<BlockChangedEvent>>,
     ) {
-        let old_block = self.block_at(x, y, z);
+        let old_block = self.block_id_at(x, y, z);
         if blocks.from_numeric_id(old_block) == block {
             return;
         }
@@ -331,6 +289,27 @@ impl Structure {
             self.height,
         );
         self.chunks[i] = chunk;
+    }
+
+    /// Will fail assertion if chunk positions are out of bounds
+    pub fn block_iter_for_chunk<'a>(&self, (cx, cy, cz): (usize, usize, usize)) -> BlockIterator {
+        assert!(cx < self.width && cy < self.height && cz < self.length);
+
+        BlockIterator::new(
+            (cx * CHUNK_DIMENSIONS) as i32,
+            (cy * CHUNK_DIMENSIONS) as i32,
+            (cz * CHUNK_DIMENSIONS) as i32,
+            ((cx + 1) * CHUNK_DIMENSIONS) as i32 - 1,
+            ((cy + 1) * CHUNK_DIMENSIONS) as i32 - 1,
+            ((cz + 1) * CHUNK_DIMENSIONS) as i32 - 1,
+            self,
+        )
+    }
+
+    /// Iterate over blocks in a given range. Will skip over any out of bounds positions.
+    /// Coordinates are inclusive
+    pub fn block_iter(&self, start: (i32, i32, i32), end: (i32, i32, i32)) -> ChunkIterator {
+        ChunkIterator::new(start.0, start.1, start.2, end.0, end.1, end.2, self)
     }
 }
 

@@ -12,7 +12,7 @@ use crate::{
     block::Block,
     events::block_events::BlockChangedEvent,
     registry::{identifiable::Identifiable, Registry},
-    structure::{chunk::CHUNK_DIMENSIONS, events::ChunkSetEvent, Structure},
+    structure::{events::ChunkSetEvent, Structure},
 };
 
 pub struct EnergyStorageProperty {
@@ -41,6 +41,14 @@ pub struct EnergyStorageSystem {
 }
 
 impl EnergyStorageSystem {
+    pub fn block_added(&mut self, prop: &EnergyStorageProperty) {
+        self.capacity += prop.capacity;
+    }
+
+    pub fn block_removed(&mut self, prop: &EnergyStorageProperty) {
+        self.capacity -= prop.capacity;
+    }
+
     pub fn increase_energy(&mut self, delta: f32) {
         self.energy = self.capacity.min(self.energy + delta);
     }
@@ -79,22 +87,22 @@ fn block_update_system(
 ) {
     for ev in event.iter() {
         if let Ok(mut system) = system_query.get_mut(ev.structure_entity) {
-            if let Some(es) = energy_storage_blocks.get(blocks.from_numeric_id(ev.old_block)) {
-                system.capacity -= es.capacity;
+            if let Some(prop) = energy_storage_blocks.get(blocks.from_numeric_id(ev.old_block)) {
+                system.block_removed(prop);
             }
 
-            if let Some(es) = energy_storage_blocks.get(blocks.from_numeric_id(ev.new_block)) {
-                system.capacity += es.capacity;
+            if let Some(prop) = energy_storage_blocks.get(blocks.from_numeric_id(ev.new_block)) {
+                system.block_added(prop);
             }
         } else {
             let mut system = EnergyStorageSystem::default();
 
-            if let Some(es) = energy_storage_blocks.get(blocks.from_numeric_id(ev.old_block)) {
-                system.capacity -= es.capacity;
+            if let Some(prop) = energy_storage_blocks.get(blocks.from_numeric_id(ev.old_block)) {
+                system.block_removed(prop);
             }
 
-            if let Some(es) = energy_storage_blocks.get(blocks.from_numeric_id(ev.new_block)) {
-                system.capacity += es.capacity;
+            if let Some(prop) = energy_storage_blocks.get(blocks.from_numeric_id(ev.new_block)) {
+                system.block_added(prop);
             }
 
             commands.entity(ev.structure_entity).insert(system);
@@ -106,35 +114,17 @@ fn block_update_system(
         let structure = structure_query.get(ev.structure_entity).unwrap();
 
         if let Ok(mut system) = system_query.get_mut(ev.structure_entity) {
-            for z in ev.z * CHUNK_DIMENSIONS..(ev.z + 1) * CHUNK_DIMENSIONS {
-                for y in (ev.y * CHUNK_DIMENSIONS)..(ev.y + 1) * CHUNK_DIMENSIONS {
-                    for x in ev.x * CHUNK_DIMENSIONS..(ev.x + 1) * CHUNK_DIMENSIONS {
-                        let b = structure.block_at(x, y, z);
-
-                        if energy_storage_blocks.blocks.contains_key(&b) {
-                            system.capacity += energy_storage_blocks
-                                .get(blocks.from_numeric_id(b))
-                                .unwrap()
-                                .capacity;
-                        }
-                    }
+            for block in ev.iter_blocks(structure) {
+                if let Some(prop) = energy_storage_blocks.get(&block.block(structure, &blocks)) {
+                    system.block_added(prop);
                 }
             }
         } else {
             let mut system = EnergyStorageSystem::default();
 
-            for z in ev.z * CHUNK_DIMENSIONS..(ev.z + 1) * CHUNK_DIMENSIONS {
-                for y in (ev.y * CHUNK_DIMENSIONS)..(ev.y + 1) * CHUNK_DIMENSIONS {
-                    for x in ev.x * CHUNK_DIMENSIONS..(ev.x + 1) * CHUNK_DIMENSIONS {
-                        let b = structure.block_at(x, y, z);
-
-                        if energy_storage_blocks.blocks.contains_key(&b) {
-                            system.capacity += energy_storage_blocks
-                                .get(blocks.from_numeric_id(b))
-                                .unwrap()
-                                .capacity;
-                        }
-                    }
+            for block in ev.iter_blocks(structure) {
+                if let Some(prop) = energy_storage_blocks.get(&block.block(structure, &blocks)) {
+                    system.block_added(prop);
                 }
             }
 
