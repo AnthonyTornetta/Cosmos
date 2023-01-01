@@ -1,4 +1,4 @@
-# CosmosRust
+# Cosmos
 A multiplayer block-based space exploration game, written in rust using the [Bevy](bevyengine.org/) engine.
 
 # Cosmos Roadmap
@@ -53,7 +53,6 @@ A multiplayer block-based space exploration game, written in rust using the [Bev
   - [x] Interact with ship core to enter piloting mode, press interact button again to exit
   - [x] Create max ship speed
 - [ ] Ship core
-  <!-- - [ ] Once destroyed, the entire ship enters meltdown, becoming minable by mining beams and will be destroyed after a set amount of time -->
   - [x] Interact with this block to pilot the ship
   - [ ] Cannot be mined while other blocks are present on the ship
   - [x] Create block
