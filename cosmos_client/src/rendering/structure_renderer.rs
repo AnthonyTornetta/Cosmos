@@ -475,9 +475,9 @@ impl ChunkRenderer {
                             self.normals.push([-1.0, 0.0, 0.0]);
 
                             let uvs = uv_mapper.map(block.uv_index_for_side(BlockFace::Left));
-                            self.uvs.push([uvs[0].x, uvs[1].y]); //swap
+                            self.uvs.push([uvs[0].x, uvs[1].y]);
                             self.uvs.push([uvs[0].x, uvs[0].y]);
-                            self.uvs.push([uvs[1].x, uvs[0].y]); //swap
+                            self.uvs.push([uvs[1].x, uvs[0].y]);
                             self.uvs.push([uvs[1].x, uvs[1].y]);
 
                             self.indices.push(last_index);

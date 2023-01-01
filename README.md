@@ -1,4 +1,4 @@
-# CosmosRust
+# Cosmos
 A multiplayer block-based space exploration game, written in rust using the [Bevy](bevyengine.org/) engine.
 
 # Cosmos Roadmap
@@ -53,12 +53,11 @@ A multiplayer block-based space exploration game, written in rust using the [Bev
   - [x] Interact with ship core to enter piloting mode, press interact button again to exit
   - [x] Create max ship speed
 - [ ] Ship core
-  - [ ] Once destroyed, the entire ship enters meltdown, becoming minable by mining beams and will be destroyed after a set amount of time
   - [x] Interact with this block to pilot the ship
   - [ ] Cannot be mined while other blocks are present on the ship
   - [x] Create block
 - [x] Localized planetary gravity
-  - [ ] All entities near planet's radius are subject to its gravity towards its relative downward vector
+  - [x] All entities near planet's radius are subject to its gravity towards its relative downward vector
     - [x] The gravitational pull should scale inversely exponentially the farther the distance from a certain threshold (most likely the highest chunk) then remain constant past that point
 - [x] Ship systems
   - [x] Energy system
@@ -82,15 +81,14 @@ A multiplayer block-based space exploration game, written in rust using the [Bev
     - [ ] Click lmb/hold to fire the laser
       - [ ] The laser is on a cooldown
   - [ ] Ship hull block
-- [ ] Ability to place more than one block
-  - [ ] Hotbar
-    - [ ] Rendering of hotbar
-    - [ ] Reads items from inventory
+- [x] Ability to place more than one block
+  - [x] Hotbar
+    - [x] Rendering of hotbar
+    - [x] Reads items from inventory
   - [x] Inventory
   - [x] Items
-    - [ ] Item stacks
-  - [ ] Way of select which item
-    - [ ] Selectable items include: Thruster, Energy Cell, Laser Cannon, Ship Hull, Stone
+    - [x] Item stacks
+  - [x] Way of select which item
   
 ## Everything that will still have to be done after 0.0.2a
 - [ ] Align body with structure
