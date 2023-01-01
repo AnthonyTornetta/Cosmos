@@ -34,7 +34,7 @@ impl LaserCannonBlocks {
 #[derive(Inspectable, Default)]
 struct Line {
     start: StructureBlock,
-    direction: (usize, usize, usize),
+    direction: (i32, i32, i32),
     len: usize,
     energy_per_shot: f32,
 }
@@ -47,7 +47,49 @@ struct LaserCannonSystem {
 impl LaserCannonSystem {
     fn block_removed(&mut self, old_prop: &LaserCannonProperty, sb: &StructureBlock) {}
 
-    fn block_added(&mut self, prop: &LaserCannonProperty, sb: &StructureBlock) {}
+    fn block_added(&mut self, prop: &LaserCannonProperty, block: &StructureBlock) {
+        for line in self.lines.iter_mut() {
+            let (dx, dy, dz) = line.direction;
+
+            let (sx, sy, sz) = (
+                line.start.x as i32,
+                line.start.y as i32,
+                line.start.z as i32,
+            );
+
+            let (bx, by, bz) = (block.x as i32, block.y as i32, block.z as i32);
+
+            // Block is before start
+            if sx - dx == bx && sy - dy == by && sz - dz == bz {
+                line.start.x -= dx as usize;
+                line.start.y -= dy as usize;
+                line.start.z -= dz as usize;
+                line.len += 1;
+                line.energy_per_shot += prop.energy_per_shot;
+
+                return;
+            }
+            // Block is after end
+            else if sx + dx * (line.len as i32 + 1) == bx
+                && sy + dy * (line.len as i32 + 1) == by
+                && sz + dz * (line.len as i32 + 1) == bz
+            {
+                line.len += 1;
+                line.energy_per_shot += prop.energy_per_shot;
+
+                return;
+            }
+        }
+
+        // If gotten here, no suitable line was found
+
+        self.lines.push(Line {
+            start: *block,
+            direction: (0, 0, 1), // Always assume +z direction (for now) - eventually account for rotation?
+            len: 1,
+            energy_per_shot: prop.energy_per_shot,
+        });
+    }
 }
 
 fn register_laser_blocks(blocks: Res<Registry<Block>>, mut cannon: ResMut<LaserCannonBlocks>) {

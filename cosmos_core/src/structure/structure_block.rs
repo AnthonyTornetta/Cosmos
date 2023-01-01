@@ -11,6 +11,18 @@ pub struct StructureBlock {
     pub z: usize,
 }
 
+impl Into<(usize, usize, usize)> for StructureBlock {
+    fn into(self) -> (usize, usize, usize) {
+        (self.x, self.y, self.z)
+    }
+}
+
+impl Into<(usize, usize, usize)> for &StructureBlock {
+    fn into(self) -> (usize, usize, usize) {
+        (self.x, self.y, self.z)
+    }
+}
+
 impl StructureBlock {
     #[inline]
     pub fn x(&self) -> usize {
