@@ -20,6 +20,16 @@ pub enum CosmosInputs {
     CreateShip,
 
     UnlockMouse,
+
+    HotbarSlot1,
+    HotbarSlot2,
+    HotbarSlot3,
+    HotbarSlot4,
+    HotbarSlot5,
+    HotbarSlot6,
+    HotbarSlot7,
+    HotbarSlot8,
+    HotbarSlot9,
 }
 
 fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
@@ -41,6 +51,16 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     input_handler.set_keycode(CosmosInputs::CreateShip, KeyCode::X);
 
     input_handler.set_keycode(CosmosInputs::UnlockMouse, KeyCode::Escape);
+
+    input_handler.set_keycode(CosmosInputs::HotbarSlot1, KeyCode::Key1);
+    input_handler.set_keycode(CosmosInputs::HotbarSlot2, KeyCode::Key2);
+    input_handler.set_keycode(CosmosInputs::HotbarSlot3, KeyCode::Key3);
+    input_handler.set_keycode(CosmosInputs::HotbarSlot4, KeyCode::Key4);
+    input_handler.set_keycode(CosmosInputs::HotbarSlot5, KeyCode::Key5);
+    input_handler.set_keycode(CosmosInputs::HotbarSlot6, KeyCode::Key6);
+    input_handler.set_keycode(CosmosInputs::HotbarSlot7, KeyCode::Key7);
+    input_handler.set_keycode(CosmosInputs::HotbarSlot8, KeyCode::Key8);
+    input_handler.set_keycode(CosmosInputs::HotbarSlot9, KeyCode::Key9);
 }
 
 #[derive(Resource, Default)]

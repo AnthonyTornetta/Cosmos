@@ -14,14 +14,14 @@ use bevy::window::WindowPlugin;
 use bevy_inspector_egui::InspectableRegistry;
 use bevy_rapier3d::prelude::{NoUserData, RapierPhysicsPlugin};
 
-use crate::block::blocks;
-use crate::physics;
-use crate::structure;
+use crate::{block, inventory};
+use crate::{blockitems, structure};
 use crate::{events, loader};
+use crate::{item, physics};
 
 pub struct CosmosCorePluginGroup<T>
 where
-    T: StateData + Clone,
+    T: StateData + Clone + Copy,
 {
     pre_loading_state: T,
     loading_state: T,
@@ -32,7 +32,7 @@ where
 
 pub struct CosmosCorePlugin<T>
 where
-    T: StateData + Clone,
+    T: StateData + Clone + Copy,
 {
     pre_loading_state: T,
     loading_state: T,
@@ -41,7 +41,7 @@ where
     playing_game_state: T,
 }
 
-impl<T: StateData + Clone> CosmosCorePlugin<T> {
+impl<T: StateData + Clone + Copy> CosmosCorePlugin<T> {
     pub fn new(
         pre_loading_state: T,
         loading_state: T,
@@ -59,7 +59,7 @@ impl<T: StateData + Clone> CosmosCorePlugin<T> {
     }
 }
 
-impl<T: StateData + Clone> CosmosCorePluginGroup<T> {
+impl<T: StateData + Clone + Copy> CosmosCorePluginGroup<T> {
     pub fn new(
         pre_loading_state: T,
         loading_state: T,
@@ -77,34 +77,29 @@ impl<T: StateData + Clone> CosmosCorePluginGroup<T> {
     }
 }
 
-impl<T: StateData + Clone> Plugin for CosmosCorePlugin<T> {
+impl<T: StateData + Clone + Copy> Plugin for CosmosCorePlugin<T> {
     fn build(&self, app: &mut App) {
         app.insert_resource(InspectableRegistry::default());
 
         loader::register(
             app,
-            self.pre_loading_state.clone(),
-            self.loading_state.clone(),
-            self.post_loading_state.clone(),
-            self.done_loading_state.clone(),
+            self.pre_loading_state,
+            self.loading_state,
+            self.post_loading_state,
+            self.done_loading_state,
         );
-        blocks::register(
-            app,
-            self.pre_loading_state.clone(),
-            self.loading_state.clone(),
-        );
+        block::register(app, self.pre_loading_state, self.loading_state);
+        item::register(app, self.pre_loading_state, self.loading_state);
+        blockitems::register(app, self.pre_loading_state, self.loading_state);
         physics::register(app);
         structure::events::register(app);
-        events::register(app, self.playing_game_state.clone());
-        structure::register(
-            app,
-            self.post_loading_state.clone(),
-            self.playing_game_state.clone(),
-        );
+        events::register(app, self.playing_game_state);
+        structure::register(app, self.post_loading_state, self.playing_game_state);
+        inventory::register(app);
     }
 }
 
-impl<T: StateData + Clone> PluginGroup for CosmosCorePluginGroup<T> {
+impl<T: StateData + Clone + Copy> PluginGroup for CosmosCorePluginGroup<T> {
     fn build(self) -> PluginGroupBuilder {
         PluginGroupBuilder::start::<Self>()
             .add(LogPlugin::default())
@@ -122,10 +117,10 @@ impl<T: StateData + Clone> PluginGroup for CosmosCorePluginGroup<T> {
             .add(RapierPhysicsPlugin::<NoUserData>::default())
             .add(ImagePlugin::default_nearest())
             .add(CosmosCorePlugin::new(
-                self.pre_loading_state.clone(),
-                self.loading_state.clone(),
-                self.post_loading_state.clone(),
-                self.done_loading_state.clone(),
+                self.pre_loading_state,
+                self.loading_state,
+                self.post_loading_state,
+                self.done_loading_state,
                 self.playing_game_state,
             ))
     }

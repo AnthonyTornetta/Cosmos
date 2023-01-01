@@ -7,9 +7,11 @@ pub mod ship;
 pub mod structure_builder;
 pub mod systems;
 
-use crate::block::blocks::{Blocks, AIR_BLOCK_ID};
+use crate::block::blocks::AIR_BLOCK_ID;
 use crate::block::Block;
 use crate::events::block_events::BlockChangedEvent;
+use crate::registry::identifiable::Identifiable;
+use crate::registry::Registry;
 use crate::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
 use crate::utils::array_utils::flatten;
 use crate::utils::vec_math::add_vec;
@@ -245,14 +247,14 @@ impl Structure {
         x: usize,
         y: usize,
         z: usize,
-        blocks: &Res<Blocks>,
+        blocks: &Res<Registry<Block>>,
         event_writer: Option<&mut EventWriter<BlockChangedEvent>>,
     ) {
         self.set_block_at(
             x,
             y,
             z,
-            blocks.block_from_numeric_id(AIR_BLOCK_ID),
+            blocks.from_numeric_id(AIR_BLOCK_ID),
             blocks,
             event_writer,
         )
@@ -264,11 +266,11 @@ impl Structure {
         y: usize,
         z: usize,
         block: &Block,
-        blocks: &Res<Blocks>,
+        blocks: &Res<Registry<Block>>,
         event_writer: Option<&mut EventWriter<BlockChangedEvent>>,
     ) {
         let old_block = self.block_at(x, y, z);
-        if blocks.block_from_numeric_id(old_block) == block {
+        if blocks.from_numeric_id(old_block) == block {
             return;
         }
 
@@ -331,7 +333,11 @@ impl Structure {
     }
 }
 
-pub fn register<T: StateData + Clone>(app: &mut App, post_loading_state: T, playing_game_state: T) {
+pub fn register<T: StateData + Clone + Copy>(
+    app: &mut App,
+    post_loading_state: T,
+    playing_game_state: T,
+) {
     systems::register(app, post_loading_state, playing_game_state);
     ship::register(app);
 }

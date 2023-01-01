@@ -1,78 +1,22 @@
 use crate::block::block_builder::BlockBuilder;
 use crate::loader::{AddLoadingEvent, DoneLoadingEvent, LoadingManager};
+use crate::registry::{self, Registry};
 use bevy::ecs::schedule::StateData;
-use bevy::prelude::{App, Commands, EventWriter, ResMut, Resource, SystemSet};
-use bevy::utils::HashMap;
+use bevy::prelude::{App, EventWriter, ResMut, SystemSet};
 
 use super::{Block, BlockFace, BlockProperty};
 
-#[derive(Default, Resource)]
-pub struct Blocks {
-    blocks: Vec<Block>,
-    blocks_to_string: HashMap<String, u16>,
-}
-
 pub static AIR_BLOCK_ID: u16 = 0;
 
-impl Blocks {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// Prefer to use `Self::block_from_id` in general, numeric IDs may change, unlocalized names should not
-    pub fn block_from_numeric_id(&self, id: u16) -> &Block {
-        &self.blocks[id as usize]
-    }
-
-    pub fn block_from_id(&self, id: &str) -> Option<&Block> {
-        if let Some(num_id) = self.blocks_to_string.get(id) {
-            Some(self.block_from_numeric_id(*num_id))
-        } else {
-            None
-        }
-    }
-
-    pub fn register_block(&mut self, mut block: Block) {
-        let id = self.blocks.len() as u16;
-        block.set_numeric_id(id);
-        self.blocks_to_string
-            .insert(block.unlocalized_name().clone(), id);
-        self.blocks.push(block);
-    }
-}
-
-pub fn add_blocks_resource(
-    mut commands: Commands,
-    mut loading: ResMut<LoadingManager>,
-    mut end_writer: EventWriter<DoneLoadingEvent>,
-    mut start_writer: EventWriter<AddLoadingEvent>,
-) {
-    let loader_id = loading.register_loader(&mut start_writer);
-
-    let mut blocks = Blocks::default();
-
-    // Game will break without air & needs this at ID 0
-    blocks.register_block(
-        BlockBuilder::new("cosmos:air".into(), 0.0)
-            .add_property(BlockProperty::Transparent)
-            .add_property(BlockProperty::Empty)
-            .create(),
-    );
-
-    commands.insert_resource(blocks);
-
-    loading.finish_loading(loader_id, &mut end_writer);
-}
-
 pub fn add_cosmos_blocks(
-    mut blocks: ResMut<Blocks>,
+    mut blocks: ResMut<Registry<Block>>,
     mut loading: ResMut<LoadingManager>,
     mut end_writer: EventWriter<DoneLoadingEvent>,
     mut start_writer: EventWriter<AddLoadingEvent>,
 ) {
     let id = loading.register_loader(&mut start_writer);
 
-    blocks.register_block(
+    blocks.register(
         BlockBuilder::new("cosmos:stone".into(), 1.0)
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
@@ -80,7 +24,7 @@ pub fn add_cosmos_blocks(
             .create(),
     );
 
-    blocks.register_block(
+    blocks.register(
         BlockBuilder::new("cosmos:grass".into(), 0.3)
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
@@ -90,7 +34,7 @@ pub fn add_cosmos_blocks(
             .create(),
     );
 
-    blocks.register_block(
+    blocks.register(
         BlockBuilder::new("cosmos:dirt".into(), 0.3)
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
@@ -98,14 +42,14 @@ pub fn add_cosmos_blocks(
             .create(),
     );
 
-    blocks.register_block(
+    blocks.register(
         BlockBuilder::new("cosmos:cherry_leaf".into(), 0.01)
             .add_property(BlockProperty::Transparent)
             .set_all_uvs(35)
             .create(),
     );
 
-    blocks.register_block(
+    blocks.register(
         BlockBuilder::new("cosmos:cherry_log".into(), 0.3)
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
@@ -115,7 +59,7 @@ pub fn add_cosmos_blocks(
             .create(),
     );
 
-    blocks.register_block(
+    blocks.register(
         BlockBuilder::new("cosmos:ship_core".into(), 0.1)
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
@@ -124,7 +68,7 @@ pub fn add_cosmos_blocks(
             .create(),
     );
 
-    blocks.register_block(
+    blocks.register(
         BlockBuilder::new("cosmos:energy_cell".to_owned(), 0.1)
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
@@ -132,7 +76,7 @@ pub fn add_cosmos_blocks(
             .create(),
     );
 
-    blocks.register_block(
+    blocks.register(
         BlockBuilder::new("cosmos:laser_cannon".to_owned(), 0.1)
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
@@ -143,7 +87,25 @@ pub fn add_cosmos_blocks(
     loading.finish_loading(id, &mut end_writer);
 }
 
-pub fn register<T: StateData + Clone>(app: &mut App, pre_loading_state: T, loading_state: T) {
-    app.add_system_set(SystemSet::on_enter(pre_loading_state).with_system(add_blocks_resource))
-        .add_system_set(SystemSet::on_enter(loading_state).with_system(add_cosmos_blocks));
+// Game will break without air & needs this at ID 0
+fn add_air_block(mut blocks: ResMut<Registry<Block>>) {
+    blocks.register(
+        BlockBuilder::new("cosmos:air".into(), 0.0)
+            .add_property(BlockProperty::Transparent)
+            .add_property(BlockProperty::Empty)
+            .create(),
+    );
+}
+
+pub fn register<T: StateData + Clone + Copy>(
+    app: &mut App,
+    pre_loading_state: T,
+    loading_state: T,
+) {
+    registry::register::<T, Block>(app, pre_loading_state);
+
+    // Game will break without air & needs this at ID 0
+    app.add_system_set(SystemSet::on_exit(pre_loading_state).with_system(add_air_block));
+
+    app.add_system_set(SystemSet::on_enter(loading_state).with_system(add_cosmos_blocks));
 }

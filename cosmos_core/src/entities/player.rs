@@ -6,7 +6,7 @@ pub struct Player {
     pub name: String,
     pub id: u64,
 
-    pub self_velocity: Vect
+    pub self_velocity: Vect,
 }
 
 impl Player {
@@ -14,7 +14,7 @@ impl Player {
         Self {
             name,
             id,
-            self_velocity: Vect::new(0.0, 0.0, 0.0)
+            self_velocity: Vect::new(0.0, 0.0, 0.0),
         }
     }
 }

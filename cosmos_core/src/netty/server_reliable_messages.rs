@@ -10,6 +10,7 @@ pub enum ServerReliableMessages {
         name: String,
         id: u64,
         body: NettyRigidBody,
+        inventory_serialized: Vec<u8>,
     },
     PlayerRemove {
         id: u64,
@@ -34,6 +35,10 @@ pub enum ServerReliableMessages {
         width: usize,
         height: usize,
         length: usize,
+    },
+    EntityInventory {
+        serialized_inventory: Vec<u8>,
+        owner: Entity,
     },
     MOTD {
         motd: String,

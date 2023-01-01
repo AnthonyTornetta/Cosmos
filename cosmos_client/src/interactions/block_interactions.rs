@@ -1,11 +1,15 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::{QueryFilter, RapierContext};
-use cosmos_core::{block::blocks::Blocks, structure::Structure};
+use cosmos_core::{
+    blockitems::BlockItems, inventory::Inventory, item::Item, registry::Registry,
+    structure::Structure,
+};
 
 use crate::{
     events::block::block_events::*,
     input::inputs::{CosmosInputHandler, CosmosInputs},
     state::game_state::GameState,
+    ui::hotbar::Hotbar,
     LocalPlayer,
 };
 
@@ -28,10 +32,13 @@ fn process_player_interaction(
     rapier_context: Res<RapierContext>,
     parent_query: Query<&Parent>,
     structure_query: Query<(&Structure, &GlobalTransform)>,
-    blocks: Res<Blocks>,
     mut break_writer: EventWriter<BlockBreakEvent>,
     mut place_writer: EventWriter<BlockPlaceEvent>,
     mut interact_writer: EventWriter<BlockInteractEvent>,
+    hotbar: Query<&Hotbar>,
+    mut inventory: Query<&mut Inventory, With<LocalPlayer>>,
+    items: Res<Registry<Item>>,
+    block_items: Res<BlockItems>,
 ) {
     let trans = camera.get_single().unwrap();
     let player_body = player_body.get_single().unwrap();
@@ -66,26 +73,40 @@ fn process_player_interaction(
                 }
 
                 if input_handler.check_just_pressed(CosmosInputs::PlaceBlock, &keys, &mouse) {
-                    let moved_point = intersection.point + intersection.normal * 0.95;
+                    if let Ok(mut inventory) = inventory.get_single_mut() {
+                        if let Ok(hotbar) = hotbar.get_single() {
+                            let inventory_slot = hotbar.item_at_selected_inventory_slot(&inventory);
 
-                    let point = transform
-                        .compute_matrix()
-                        .inverse()
-                        .transform_point3(moved_point);
+                            if let Some(is) = inventory.itemstack_at(inventory_slot) {
+                                let item = items.from_numeric_id(is.item_id());
 
-                    if let Ok((x, y, z)) =
-                        structure.relative_coords_to_local_coords(point.x, point.y, point.z)
-                    {
-                        if structure.is_within_blocks(x, y, z) {
-                            let stone = blocks.block_from_id("cosmos:stone").unwrap();
+                                if let Some(block_id) = block_items.block_from_item(item) {
+                                    let moved_point =
+                                        intersection.point + intersection.normal * 0.95;
 
-                            place_writer.send(BlockPlaceEvent {
-                                structure_entity: structure.get_entity().unwrap(),
-                                x,
-                                y,
-                                z,
-                                block_id: stone.id(),
-                            });
+                                    let point = transform
+                                        .compute_matrix()
+                                        .inverse()
+                                        .transform_point3(moved_point);
+
+                                    if let Ok((x, y, z)) = structure
+                                        .relative_coords_to_local_coords(point.x, point.y, point.z)
+                                    {
+                                        if structure.is_within_blocks(x, y, z) {
+                                            inventory.decrease_quantity_at(inventory_slot, 1);
+
+                                            place_writer.send(BlockPlaceEvent {
+                                                structure_entity: structure.get_entity().unwrap(),
+                                                x,
+                                                y,
+                                                z,
+                                                inventory_slot,
+                                                block_id,
+                                            });
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }

@@ -3,9 +3,9 @@ use bevy::prelude::{App, Component, EventReader, Mesh, SystemSet, Vec3};
 use bevy::render::mesh::{Indices, PrimitiveTopology};
 use bevy::render::primitives::Aabb;
 use bevy_rapier3d::na::Vector3;
-use cosmos_core::block::blocks::Blocks;
-use cosmos_core::block::BlockFace;
+use cosmos_core::block::{Block, BlockFace};
 use cosmos_core::events::block_events::BlockChangedEvent;
+use cosmos_core::registry::Registry;
 use cosmos_core::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
 use cosmos_core::structure::events::ChunkSetEvent;
 use cosmos_core::structure::Structure;
@@ -72,7 +72,12 @@ impl StructureRenderer {
         }
     }
 
-    pub fn render(&mut self, structure: &Structure, uv_mapper: &UVMapper, blocks: &Res<Blocks>) {
+    pub fn render(
+        &mut self,
+        structure: &Structure,
+        uv_mapper: &UVMapper,
+        blocks: &Res<Registry<Block>>,
+    ) {
         for change in &self.changes {
             debug_assert!(change.x < self.width);
             debug_assert!(change.y < self.height);
@@ -337,7 +342,7 @@ pub fn monitor_needs_rendered_system(
     atlas: Res<MainAtlas>,
     mesh_query: Query<Option<&Handle<Mesh>>>,
     mut meshes: ResMut<Assets<Mesh>>,
-    blocks: Res<Blocks>,
+    blocks: Res<Registry<Block>>,
 ) {
     let mut done_structures = HashSet::new();
     for ev in event.iter() {
@@ -399,7 +404,7 @@ impl ChunkRenderer {
         top: Option<&Chunk>,
         back: Option<&Chunk>,
         front: Option<&Chunk>,
-        blocks: &Res<Blocks>,
+        blocks: &Res<Registry<Block>>,
     ) {
         self.indices.clear();
         self.uvs.clear();
@@ -412,7 +417,7 @@ impl ChunkRenderer {
             for y in 0..CHUNK_DIMENSIONS {
                 for x in 0..CHUNK_DIMENSIONS {
                     if chunk.has_block_at(x, y, z) {
-                        let block = blocks.block_from_numeric_id(chunk.block_at(x, y, z));
+                        let block = blocks.from_numeric_id(chunk.block_at(x, y, z));
 
                         let (cx, cy, cz) = (x as f32, y as f32, z as f32);
 

@@ -3,8 +3,9 @@ use bevy_inspector_egui::{Inspectable, RegisterInspectable};
 use iyes_loopless::prelude::*;
 
 use crate::{
-    block::{blocks::Blocks, Block},
+    block::Block,
     events::block_events::BlockChangedEvent,
+    registry::{identifiable::Identifiable, Registry},
     structure::{
         chunk::CHUNK_DIMENSIONS, events::ChunkSetEvent,
         systems::energy_storage_system::EnergyStorageSystem, Structure,
@@ -35,8 +36,11 @@ struct EnergyGenerationSystem {
     generation_rate: f32,
 }
 
-fn register_energy_blocks(blocks: Res<Blocks>, mut generation: ResMut<EnergyGenerationBlocks>) {
-    if let Some(block) = blocks.block_from_id("cosmos:reactor_block") {
+fn register_energy_blocks(
+    blocks: Res<Registry<Block>>,
+    mut generation: ResMut<EnergyGenerationBlocks>,
+) {
+    if let Some(block) = blocks.from_id("cosmos:reactor_block") {
         generation.insert(
             block,
             EnergyGenerationProperty {
@@ -45,7 +49,7 @@ fn register_energy_blocks(blocks: Res<Blocks>, mut generation: ResMut<EnergyGene
         );
     }
 
-    if let Some(block) = blocks.block_from_id("cosmos:ship_core") {
+    if let Some(block) = blocks.from_id("cosmos:ship_core") {
         generation.insert(
             block,
             EnergyGenerationProperty {
@@ -60,7 +64,7 @@ fn block_update_system(
     mut event: EventReader<BlockChangedEvent>,
     mut chunk_set_event: EventReader<ChunkSetEvent>,
     energy_generation_blocks: Res<EnergyGenerationBlocks>,
-    blocks: Res<Blocks>,
+    blocks: Res<Registry<Block>>,
     mut system_query: Query<&mut EnergyGenerationSystem>,
     structure_query: Query<&Structure>,
 ) {
@@ -68,29 +72,21 @@ fn block_update_system(
         let sys = system_query.get_mut(ev.structure_entity);
 
         if let Ok(mut system) = sys {
-            if let Some(es) =
-                energy_generation_blocks.get(blocks.block_from_numeric_id(ev.old_block))
-            {
+            if let Some(es) = energy_generation_blocks.get(blocks.from_numeric_id(ev.old_block)) {
                 system.generation_rate -= es.generation_rate;
             }
 
-            if let Some(es) =
-                energy_generation_blocks.get(blocks.block_from_numeric_id(ev.new_block))
-            {
+            if let Some(es) = energy_generation_blocks.get(blocks.from_numeric_id(ev.new_block)) {
                 system.generation_rate += es.generation_rate;
             }
         } else {
             let mut system = EnergyGenerationSystem::default();
 
-            if let Some(es) =
-                energy_generation_blocks.get(blocks.block_from_numeric_id(ev.old_block))
-            {
+            if let Some(es) = energy_generation_blocks.get(blocks.from_numeric_id(ev.old_block)) {
                 system.generation_rate -= es.generation_rate;
             }
 
-            if let Some(es) =
-                energy_generation_blocks.get(blocks.block_from_numeric_id(ev.new_block))
-            {
+            if let Some(es) = energy_generation_blocks.get(blocks.from_numeric_id(ev.new_block)) {
                 system.generation_rate += es.generation_rate;
             }
 
@@ -111,7 +107,7 @@ fn block_update_system(
 
                         if energy_generation_blocks.blocks.contains_key(&b) {
                             system.generation_rate += energy_generation_blocks
-                                .get(blocks.block_from_numeric_id(b))
+                                .get(blocks.from_numeric_id(b))
                                 .unwrap()
                                 .generation_rate;
                         }
@@ -128,7 +124,7 @@ fn block_update_system(
 
                         if energy_generation_blocks.blocks.contains_key(&b) {
                             system.generation_rate += energy_generation_blocks
-                                .get(blocks.block_from_numeric_id(b))
+                                .get(blocks.from_numeric_id(b))
                                 .unwrap()
                                 .generation_rate;
                         }
@@ -150,12 +146,16 @@ fn update_energy(
     }
 }
 
-pub fn register<T: StateData + Clone>(app: &mut App, post_loading_state: T, playing_state: T) {
+pub fn register<T: StateData + Clone + Copy>(
+    app: &mut App,
+    post_loading_state: T,
+    playing_state: T,
+) {
     app.insert_resource(EnergyGenerationBlocks::default())
         .add_system_set(SystemSet::on_enter(post_loading_state).with_system(register_energy_blocks))
         .add_system_to_stage(
             CoreStage::PostUpdate,
-            block_update_system.run_in_bevy_state(playing_state.clone()),
+            block_update_system.run_in_bevy_state(playing_state),
         )
         .add_system_set(SystemSet::on_update(playing_state).with_system(update_energy))
         .register_inspectable::<EnergyGenerationSystem>();

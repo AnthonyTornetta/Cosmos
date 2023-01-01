@@ -1,5 +1,7 @@
 use bevy::{ecs::schedule::StateData, prelude::App};
 
+use crate::registry::identifiable::Identifiable;
+
 pub mod block_builder;
 pub mod blocks;
 
@@ -63,6 +65,21 @@ pub struct Block {
     density: f32,
 }
 
+impl Identifiable for Block {
+    fn id(&self) -> u16 {
+        self.id
+    }
+
+    fn set_numeric_id(&mut self, id: u16) {
+        self.id = id;
+    }
+
+    #[inline]
+    fn unlocalized_name(&self) -> &str {
+        &self.unlocalized_name
+    }
+}
+
 impl Block {
     pub fn new(
         properties: &Vec<BlockProperty>,
@@ -101,23 +118,8 @@ impl Block {
     }
 
     #[inline]
-    pub fn id(&self) -> u16 {
-        self.id
-    }
-
-    /// Only use this if you know what you're doing.  Should really only be used in the Blocks struct
-    pub fn set_numeric_id(&mut self, id: u16) {
-        self.id = id;
-    }
-
-    #[inline]
     pub fn uv_index_for_side(&self, face: BlockFace) -> usize {
         self.uvs[face.index()]
-    }
-
-    #[inline]
-    pub fn unlocalized_name(&self) -> &String {
-        &self.unlocalized_name
     }
 
     #[inline]
@@ -132,6 +134,10 @@ impl PartialEq for Block {
     }
 }
 
-pub fn register<T: StateData + Clone>(app: &mut App, pre_loading_state: T, loading_state: T) {
+pub fn register<T: StateData + Clone + Copy>(
+    app: &mut App,
+    pre_loading_state: T,
+    loading_state: T,
+) {
     blocks::register(app, pre_loading_state, loading_state);
 }

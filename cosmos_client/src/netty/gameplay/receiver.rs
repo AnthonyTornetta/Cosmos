@@ -2,14 +2,16 @@ use bevy::{core_pipeline::bloom::BloomSettings, prelude::*, render::camera::Proj
 use bevy_rapier3d::prelude::*;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
-    block::blocks::Blocks,
+    block::Block,
     entities::player::Player,
     events::{block_events::BlockChangedEvent, structure::change_pilot_event::ChangePilotEvent},
+    inventory::Inventory,
     netty::{
         client_reliable_messages::ClientReliableMessages,
         server_reliable_messages::ServerReliableMessages,
         server_unreliable_messages::ServerUnreliableMessages, NettyChannel,
     },
+    registry::Registry,
     structure::{
         chunk::Chunk,
         events::ChunkSetEvent,
@@ -88,7 +90,7 @@ fn client_sync_players(
     query_player: Query<&Player>,
     mut query_body: Query<(&mut Transform, &mut Velocity, Option<&LocalPlayer>)>,
     mut query_structure: Query<&mut Structure>,
-    blocks: Res<Blocks>,
+    blocks: Res<Registry<Block>>,
     mut pilot_change_event_writer: EventWriter<ChangePilotEvent>,
     mut set_ship_movement_event: EventWriter<SetShipMovementEvent>,
 ) {
@@ -151,10 +153,13 @@ fn client_sync_players(
                 id,
                 entity,
                 name,
+                inventory_serialized,
             } => {
                 println!("Player {} ({}) connected!", name.as_str(), id);
 
                 let mut client_entity = commands.spawn_empty();
+
+                let inventory: Inventory = bincode::deserialize(&inventory_serialized).unwrap();
 
                 client_entity
                     .insert(PbrBundle {
@@ -167,7 +172,8 @@ fn client_sync_players(
                     .insert(RigidBody::Dynamic)
                     .insert(body.create_velocity())
                     .insert(Player::new(name, id))
-                    .insert(ReadMassProperties::default());
+                    .insert(ReadMassProperties::default())
+                    .insert(inventory);
 
                 if client_id == id {
                     client_entity
@@ -271,8 +277,6 @@ fn client_sync_players(
                 structure_entity: server_structure_entity,
                 serialized_chunk,
             } => {
-                println!("Got chunk!");
-
                 let s_entity = network_mapping
                     .client_from_server(&server_structure_entity)
                     .expect("Got chunk data for structure that doesn't exist on client");
@@ -320,7 +324,7 @@ fn client_sync_players(
                             x,
                             y,
                             z,
-                            blocks.block_from_numeric_id(block_id),
+                            blocks.from_numeric_id(block_id),
                             &blocks,
                             Some(&mut block_change_event_writer),
                         );
@@ -341,6 +345,21 @@ fn client_sync_players(
                     pilot_entity: pilot_entity
                         .map(|ent| *network_mapping.client_from_server(&ent).unwrap()),
                 });
+            }
+            ServerReliableMessages::EntityInventory {
+                serialized_inventory,
+                owner,
+            } => {
+                if let Some(client_entity) = network_mapping.client_from_server(&owner) {
+                    let inventory: Inventory = bincode::deserialize(&serialized_inventory).unwrap();
+
+                    commands.entity(*client_entity).insert(inventory);
+                } else {
+                    eprintln!(
+                        "Error: unrecognized entity {} received from server!",
+                        owner.index()
+                    );
+                }
             }
         }
     }

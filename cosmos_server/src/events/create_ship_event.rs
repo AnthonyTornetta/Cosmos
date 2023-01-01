@@ -1,8 +1,9 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
-    block::blocks::Blocks,
+    block::Block,
     events::block_events::BlockChangedEvent,
+    registry::Registry,
     structure::{events::StructureCreated, ship::ship_builder::TShipBuilder, Structure},
 };
 
@@ -18,7 +19,7 @@ fn event_reader(
     mut block_changed_writer: EventWriter<BlockChangedEvent>,
     mut event_reader: EventReader<CreateShipEvent>,
     mut commands: Commands,
-    blocks: Res<Blocks>,
+    blocks: Res<Registry<Block>>,
 ) {
     for ev in event_reader.iter() {
         let mut entity = commands.spawn_empty();
@@ -35,7 +36,7 @@ fn event_reader(
         );
 
         let block = blocks
-            .block_from_id("cosmos:ship_core")
+            .from_id("cosmos:ship_core")
             .expect("Ship core block missing!");
 
         structure.set_block_at(

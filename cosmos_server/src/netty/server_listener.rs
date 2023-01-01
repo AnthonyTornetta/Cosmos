@@ -96,12 +96,15 @@ fn server_listen_messages(
                     y,
                     z,
                 } => {
-                    break_block_event.send(BlockBreakEvent {
-                        structure_entity,
-                        x,
-                        y,
-                        z,
-                    });
+                    if let Some(player_entity) = lobby.players.get(&client_id) {
+                        break_block_event.send(BlockBreakEvent {
+                            structure_entity,
+                            breaker: *player_entity,
+                            x,
+                            y,
+                            z,
+                        });
+                    }
                 }
                 ClientReliableMessages::PlaceBlock {
                     structure_entity,
@@ -109,14 +112,19 @@ fn server_listen_messages(
                     y,
                     z,
                     block_id,
+                    inventory_slot,
                 } => {
-                    place_block_event.send(BlockPlaceEvent {
-                        structure_entity,
-                        x,
-                        y,
-                        z,
-                        block_id,
-                    });
+                    if let Some(player_entity) = lobby.players.get(&client_id) {
+                        place_block_event.send(BlockPlaceEvent {
+                            structure_entity,
+                            x,
+                            y,
+                            z,
+                            block_id,
+                            inventory_slot,
+                            placer: *player_entity,
+                        });
+                    }
                 }
                 ClientReliableMessages::InteractWithBlock {
                     structure_entity,

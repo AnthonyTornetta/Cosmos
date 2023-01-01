@@ -58,6 +58,6 @@ fn event_listener(
     }
 }
 
-pub fn register<T: StateData + Clone>(app: &mut App, playing_state: T) {
+pub fn register<T: StateData + Clone + Copy>(app: &mut App, playing_state: T) {
     app.add_system_set(SystemSet::on_update(playing_state).with_system(event_listener));
 }

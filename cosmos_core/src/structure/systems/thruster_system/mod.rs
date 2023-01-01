@@ -12,8 +12,9 @@ use bevy_rapier3d::prelude::{ExternalImpulse, ReadMassProperties, Velocity};
 use iyes_loopless::prelude::*;
 
 use crate::{
-    block::{blocks::Blocks, Block},
+    block::Block,
     events::block_events::BlockChangedEvent,
+    registry::{identifiable::Identifiable, Registry},
     structure::{
         chunk::CHUNK_DIMENSIONS,
         events::ChunkSetEvent,
@@ -49,8 +50,8 @@ pub struct ThrusterSystem {
     energy_consumption: f32,
 }
 
-fn register_thruster_blocks(blocks: Res<Blocks>, mut storage: ResMut<ThrusterBlocks>) {
-    if let Some(block) = blocks.block_from_id("cosmos:thruster") {
+fn register_thruster_blocks(blocks: Res<Registry<Block>>, mut storage: ResMut<ThrusterBlocks>) {
+    if let Some(block) = blocks.from_id("cosmos:thruster") {
         storage.insert(
             block,
             ThrusterProperty {
@@ -60,7 +61,7 @@ fn register_thruster_blocks(blocks: Res<Blocks>, mut storage: ResMut<ThrusterBlo
         );
     }
 
-    if let Some(block) = blocks.block_from_id("cosmos:ship_core") {
+    if let Some(block) = blocks.from_id("cosmos:ship_core") {
         storage.insert(
             block,
             ThrusterProperty {
@@ -76,34 +77,30 @@ fn block_update_system(
     mut event: EventReader<BlockChangedEvent>,
     mut chunk_set_event: EventReader<ChunkSetEvent>,
     energy_storage_blocks: Res<ThrusterBlocks>,
-    blocks: Res<Blocks>,
+    blocks: Res<Registry<Block>>,
     mut system_query: Query<&mut ThrusterSystem>,
     structure_query: Query<&Structure>,
 ) {
     for ev in event.iter() {
         if let Ok(mut system) = system_query.get_mut(ev.structure_entity) {
-            if let Some(es) = energy_storage_blocks.get(blocks.block_from_numeric_id(ev.old_block))
-            {
+            if let Some(es) = energy_storage_blocks.get(blocks.from_numeric_id(ev.old_block)) {
                 system.energy_consumption -= es.energy_consupmtion;
                 system.thrust_total -= es.strength;
             }
 
-            if let Some(es) = energy_storage_blocks.get(blocks.block_from_numeric_id(ev.new_block))
-            {
+            if let Some(es) = energy_storage_blocks.get(blocks.from_numeric_id(ev.new_block)) {
                 system.energy_consumption += es.energy_consupmtion;
                 system.thrust_total += es.strength;
             }
         } else {
             let mut system = ThrusterSystem::default();
 
-            if let Some(es) = energy_storage_blocks.get(blocks.block_from_numeric_id(ev.old_block))
-            {
+            if let Some(es) = energy_storage_blocks.get(blocks.from_numeric_id(ev.old_block)) {
                 system.energy_consumption -= es.energy_consupmtion;
                 system.thrust_total -= es.strength;
             }
 
-            if let Some(es) = energy_storage_blocks.get(blocks.block_from_numeric_id(ev.new_block))
-            {
+            if let Some(es) = energy_storage_blocks.get(blocks.from_numeric_id(ev.new_block)) {
                 system.energy_consumption += es.energy_consupmtion;
                 system.thrust_total += es.strength;
             }
@@ -124,7 +121,7 @@ fn block_update_system(
 
                         if energy_storage_blocks.blocks.contains_key(&b) {
                             let prop = energy_storage_blocks
-                                .get(blocks.block_from_numeric_id(b))
+                                .get(blocks.from_numeric_id(b))
                                 .unwrap();
 
                             system.thrust_total += prop.strength;
@@ -143,7 +140,7 @@ fn block_update_system(
 
                         if energy_storage_blocks.blocks.contains_key(&b) {
                             let prop = energy_storage_blocks
-                                .get(blocks.block_from_numeric_id(b))
+                                .get(blocks.from_numeric_id(b))
                                 .unwrap();
 
                             system.thrust_total += prop.strength;
@@ -230,14 +227,18 @@ fn update_movement(
     }
 }
 
-pub fn register<T: StateData + Clone>(app: &mut App, post_loading_state: T, playing_state: T) {
+pub fn register<T: StateData + Clone + Copy>(
+    app: &mut App,
+    post_loading_state: T,
+    playing_state: T,
+) {
     app.insert_resource(ThrusterBlocks::default())
         .add_system_set(
             SystemSet::on_enter(post_loading_state).with_system(register_thruster_blocks),
         )
         .add_system_to_stage(
             CoreStage::PostUpdate,
-            block_update_system.run_in_bevy_state(playing_state.clone()),
+            block_update_system.run_in_bevy_state(playing_state),
         )
         .add_system_set(SystemSet::on_update(playing_state).with_system(update_movement))
         .register_inspectable::<ThrusterSystem>();
