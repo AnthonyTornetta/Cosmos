@@ -1,4 +1,5 @@
 use bevy::{ecs::schedule::StateData, prelude::App};
+use bevy_inspector_egui::Inspectable;
 
 pub mod chunk;
 pub mod events;
@@ -33,7 +34,7 @@ pub struct Structure {
     length: usize,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Inspectable, Copy, PartialEq, Eq, Default)]
 pub struct StructureBlock {
     x: usize,
     y: usize,
