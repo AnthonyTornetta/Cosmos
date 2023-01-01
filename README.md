@@ -88,9 +88,8 @@ A multiplayer block-based space exploration game, written in rust using the [Bev
     - [ ] Reads items from inventory
   - [x] Inventory
   - [x] Items
-    - [ ] Item stacks
-  - [ ] Way of select which item
-    - [ ] Selectable items include: Thruster, Energy Cell, Laser Cannon, Ship Hull, Stone
+    - [x] Item stacks
+  - [x] Way of select which item
   
 ## Everything that will still have to be done after 0.0.2a
 - [ ] Align body with structure
