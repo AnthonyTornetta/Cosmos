@@ -3,7 +3,7 @@ use bevy_inspector_egui::{Inspectable, RegisterInspectable};
 use iyes_loopless::prelude::*;
 
 use crate::{
-    block::Block,
+    block::{Block, BlockFace},
     events::block_events::BlockChangedEvent,
     registry::{identifiable::Identifiable, Registry},
     structure::{
@@ -34,7 +34,7 @@ impl LaserCannonBlocks {
 #[derive(Inspectable, Default)]
 struct Line {
     start: StructureBlock,
-    direction: (i32, i32, i32),
+    direction: BlockFace,
     len: usize,
     energy_per_shot: f32,
 }
@@ -48,8 +48,19 @@ impl LaserCannonSystem {
     fn block_removed(&mut self, old_prop: &LaserCannonProperty, sb: &StructureBlock) {}
 
     fn block_added(&mut self, prop: &LaserCannonProperty, block: &StructureBlock) {
-        for line in self.lines.iter_mut() {
-            let (dx, dy, dz) = line.direction;
+        // Always assume +z direction (for now)
+        let block_direction = BlockFace::Front; // eventually take this as argument
+
+        let mut found_line = None;
+        let mut link_to = None;
+
+        for (i, line) in self
+            .lines
+            .iter_mut()
+            .filter(|x| x.direction == block_direction)
+            .enumerate()
+        {
+            let (dx, dy, dz) = line.direction.direction();
 
             let (sx, sy, sz) = (
                 line.start.x as i32,
@@ -59,33 +70,80 @@ impl LaserCannonSystem {
 
             let (bx, by, bz) = (block.x as i32, block.y as i32, block.z as i32);
 
+            // println!(
+            //     "Checking ({}, {}, {}) -> ({}, {}, {}) for ({}, {}, {})",
+            //     sx,
+            //     sy,
+            //     sz,
+            //     sx + line.len as i32 * dx,
+            //     sy + line.len as i32 * dy,
+            //     sz + line.len as i32 * dz,
+            //     bx,
+            //     by,
+            //     bz
+            // );
+
             // Block is before start
             if sx - dx == bx && sy - dy == by && sz - dz == bz {
-                line.start.x -= dx as usize;
-                line.start.y -= dy as usize;
-                line.start.z -= dz as usize;
-                line.len += 1;
-                line.energy_per_shot += prop.energy_per_shot;
+                if found_line.is_some() {
+                    link_to = Some(i);
+                    break;
+                } else {
+                    line.start.x -= dx as usize;
+                    line.start.y -= dy as usize;
+                    line.start.z -= dz as usize;
+                    line.len += 1;
+                    line.energy_per_shot += prop.energy_per_shot;
 
-                return;
+                    found_line = Some(i);
+                }
             }
             // Block is after end
-            else if sx + dx * (line.len as i32 + 1) == bx
-                && sy + dy * (line.len as i32 + 1) == by
-                && sz + dz * (line.len as i32 + 1) == bz
+            else if sx + dx * (line.len as i32) == bx
+                && sy + dy * (line.len as i32) == by
+                && sz + dz * (line.len as i32) == bz
             {
-                line.len += 1;
-                line.energy_per_shot += prop.energy_per_shot;
+                if found_line.is_some() {
+                    link_to = Some(i);
+                    break;
+                } else {
+                    line.len += 1;
+                    line.energy_per_shot += prop.energy_per_shot;
 
-                return;
+                    found_line = Some(i);
+                }
             }
+        }
+
+        if let Some(l1_i) = found_line {
+            if let Some(l2_i) = link_to {
+                let [l1, l2] = self
+                    .lines
+                    .get_many_mut([l1_i, l2_i])
+                    .expect("From and to should never be the same");
+
+                l1.len = l1.len.max(l2.len) + 1;
+                l1.energy_per_shot += l2.energy_per_shot + prop.energy_per_shot;
+
+                match l1.direction {
+                    BlockFace::Right => l1.start.x = l1.start.x.min(l2.start.x),
+                    BlockFace::Left => l1.start.x = l1.start.x.max(l2.start.x),
+                    BlockFace::Top => l1.start.y = l1.start.x.min(l2.start.y),
+                    BlockFace::Bottom => l1.start.y = l1.start.x.max(l2.start.y),
+                    BlockFace::Front => l1.start.z = l1.start.x.min(l2.start.z),
+                    BlockFace::Back => l1.start.z = l1.start.x.max(l2.start.z),
+                }
+
+                self.lines.swap_remove(l2_i);
+            }
+            return;
         }
 
         // If gotten here, no suitable line was found
 
         self.lines.push(Line {
             start: *block,
-            direction: (0, 0, 1), // Always assume +z direction (for now) - eventually account for rotation?
+            direction: block_direction,
             len: 1,
             energy_per_shot: prop.energy_per_shot,
         });

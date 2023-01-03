@@ -1,6 +1,25 @@
 # Cosmos
 A multiplayer block-based space exploration game, written in rust using the [Bevy](bevyengine.org/) engine.
 
+## Compilation
+This project requires the latest nightly rust to compile. To swap to nightly, run the command 
+
+`rustup default nightly`.
+
+To compile, navigate to the root directory of the repo and run 
+
+`cargo build`.
+
+To run the client, navigate to the cosmos_client directory and run
+
+`cargo run -p cosmos_client`
+
+For the server, navigate to the cosmos_server directory and run
+
+`cargo run -p cosmos_server`
+
+For release builds, append the `--release` flag to the build/run commands.
+
 # Cosmos Roadmap
 
 ## Release 0.0.1a
@@ -76,7 +95,7 @@ A multiplayer block-based space exploration game, written in rust using the [Bev
     - [ ] Use left/right to switch between ship cameras
       - [ ] Changes where your view is
   - [ ] Laser cannon system
-    - [ ] Laser cannon block
+    - [x] Laser cannon block
       - [ ] Can be placed in lines to create more powerful lasers
     - [ ] Click lmb/hold to fire the laser
       - [ ] The laser is on a cooldown

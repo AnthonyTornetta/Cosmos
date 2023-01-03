@@ -1,4 +1,5 @@
 use bevy::{ecs::schedule::StateData, prelude::App};
+use bevy_inspector_egui::Inspectable;
 
 use crate::registry::identifiable::Identifiable;
 
@@ -13,7 +14,9 @@ pub enum BlockProperty {
     ShipOnly,
 }
 
+#[derive(Debug, PartialEq, Eq, Inspectable, Default)]
 pub enum BlockFace {
+    #[default]
     Front,
     Back,
     Left,
@@ -31,6 +34,17 @@ impl BlockFace {
             BlockFace::Bottom => 3,
             BlockFace::Front => 4,
             BlockFace::Back => 5,
+        }
+    }
+
+    pub fn direction(&self) -> (i32, i32, i32) {
+        match *self {
+            Self::Front => (0, 0, 1),
+            Self::Back => (0, 0, -1),
+            Self::Left => (-1, 0, 0),
+            Self::Right => (1, 0, 0),
+            Self::Top => (0, 1, 0),
+            Self::Bottom => (0, -1, 0),
         }
     }
 }

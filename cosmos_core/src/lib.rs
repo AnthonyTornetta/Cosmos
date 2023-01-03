@@ -1,3 +1,5 @@
+#![feature(get_many_mut)]
+
 pub mod block;
 pub mod blockitems;
 pub mod entities;
