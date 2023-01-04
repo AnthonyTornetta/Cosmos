@@ -14,7 +14,7 @@ pub enum BlockProperty {
     ShipOnly,
 }
 
-#[derive(Debug, PartialEq, Eq, Inspectable, Default)]
+#[derive(Debug, PartialEq, Eq, Inspectable, Default, Copy, Clone)]
 pub enum BlockFace {
     #[default]
     Front,
