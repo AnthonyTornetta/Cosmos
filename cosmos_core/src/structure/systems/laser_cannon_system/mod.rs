@@ -14,6 +14,8 @@ use crate::{
     structure::{events::ChunkSetEvent, Structure, StructureBlock},
 };
 
+use super::energy_storage_system::EnergyStorageSystem;
+
 #[derive(Default, Inspectable, Clone, Copy)]
 struct LaserCannonProperty {
     energy_per_shot: f32,
@@ -385,8 +387,8 @@ fn block_update_system(
     }
 }
 
-// fn update_laser(mut query: Query<(&LaserCannonSystem, &mut EnergyStorageSystem)>, time: Res<Time>) {
-// }
+fn update_laser(mut query: Query<(&LaserCannonSystem, &mut EnergyStorageSystem)>, time: Res<Time>) {
+}
 
 pub fn register<T: StateData + Clone + Copy>(
     app: &mut App,
