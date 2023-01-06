@@ -111,13 +111,13 @@ impl CosmosInputHandler {
     pub fn check_pressed(
         &self,
         input_code: CosmosInputs,
-        inputs: &Input<KeyCode>,
+        keys: &Input<KeyCode>,
         mouse: &Input<MouseButton>,
     ) -> bool {
         let keycode = self.keycode_for(input_code);
         let mouse_button = self.mouse_button_for(input_code);
 
-        keycode.is_some() && inputs.pressed(keycode.unwrap())
+        keycode.is_some() && keys.pressed(keycode.unwrap())
             || mouse_button.is_some() && mouse.pressed(mouse_button.unwrap())
     }
 

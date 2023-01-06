@@ -9,4 +9,5 @@ use super::netty_rigidbody::NettyRigidBody;
 pub enum ClientUnreliableMessages {
     PlayerBody { body: NettyRigidBody },
     SetMovement { movement: ShipMovement },
+    ShipStatus { use_system: bool },
 }

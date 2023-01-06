@@ -1,15 +1,15 @@
 use bevy::{ecs::schedule::StateData, prelude::*};
-use bevy_inspector_egui::{Inspectable, RegisterInspectable};
 
 pub mod energy_generation_system;
 pub mod energy_storage_system;
 pub mod laser_cannon_system;
 pub mod thruster_system;
 
-#[derive(Component, Inspectable)]
-pub struct UsingSystem {
-    system_index: usize,
-}
+#[derive(Component)]
+#[component(storage = "SparseSet")]
+/// Used to tell if the selected system should be active
+/// (ie laser cannons firing)
+pub struct SystemActive;
 
 pub fn register<T: StateData + Clone + Copy>(
     app: &mut App,
@@ -20,6 +20,4 @@ pub fn register<T: StateData + Clone + Copy>(
     energy_generation_system::register(app, post_loading_state, playing_state);
     thruster_system::register(app, post_loading_state, playing_state);
     laser_cannon_system::register(app, post_loading_state, playing_state);
-
-    app.register_inspectable::<UsingSystem>();
 }

@@ -14,11 +14,9 @@ use crate::{
     structure::{events::ChunkSetEvent, Structure, StructureBlock},
 };
 
-use super::energy_storage_system::EnergyStorageSystem;
-
 #[derive(Default, Inspectable, Clone, Copy)]
-struct LaserCannonProperty {
-    energy_per_shot: f32,
+pub struct LaserCannonProperty {
+    pub energy_per_shot: f32,
 }
 
 impl SubAssign for LaserCannonProperty {
@@ -59,11 +57,11 @@ impl LaserCannonBlocks {
 }
 
 #[derive(Inspectable, Default)]
-struct Line {
-    start: StructureBlock,
-    direction: BlockFace,
-    len: usize,
-    energy_per_shot: LaserCannonProperty,
+pub struct Line {
+    pub start: StructureBlock,
+    pub direction: BlockFace,
+    pub len: usize,
+    pub property: LaserCannonProperty,
     properties: Vec<LaserCannonProperty>,
 }
 
@@ -116,8 +114,9 @@ impl Line {
 }
 
 #[derive(Component, Default, Inspectable)]
-struct LaserCannonSystem {
-    lines: Vec<Line>,
+pub struct LaserCannonSystem {
+    pub lines: Vec<Line>,
+    pub last_shot_time: f32,
 }
 
 impl LaserCannonSystem {
@@ -131,7 +130,7 @@ impl LaserCannonSystem {
                 line.start.z = (line.start.z as i32 + dz) as usize;
                 line.len -= 1;
 
-                line.energy_per_shot -= line.properties.remove(0);
+                line.property -= line.properties.remove(0);
 
                 if line.len == 0 {
                     self.lines.swap_remove(i);
@@ -140,7 +139,7 @@ impl LaserCannonSystem {
             } else if line.end() == *sb {
                 line.len -= 1;
 
-                line.energy_per_shot -= line.properties.pop().expect("At least one");
+                line.property -= line.properties.pop().expect("At least one");
 
                 if line.len == 0 {
                     self.lines.swap_remove(i);
@@ -180,7 +179,7 @@ impl LaserCannonSystem {
                         start: line.start,
                         direction: line.direction,
                         len: l1_len,
-                        energy_per_shot: l1_total_prop,
+                        property: l1_total_prop,
                         properties: l1_props,
                     };
 
@@ -196,7 +195,7 @@ impl LaserCannonSystem {
                         },
                         direction: line.direction,
                         len: line.len - l1_len - 1,
-                        energy_per_shot: l2_total_prop,
+                        property: l2_total_prop,
                         properties: l2_props,
                     };
 
@@ -255,7 +254,7 @@ impl LaserCannonSystem {
                     line.start.y -= dy as usize;
                     line.start.z -= dz as usize;
                     line.len += 1;
-                    line.energy_per_shot += *prop;
+                    line.property += *prop;
                     line.properties.insert(0, *prop);
 
                     found_line = Some(i);
@@ -271,7 +270,7 @@ impl LaserCannonSystem {
                     break;
                 } else {
                     line.len += 1;
-                    line.energy_per_shot += *prop;
+                    line.property += *prop;
                     line.properties.push(*prop);
 
                     found_line = Some(i);
@@ -299,7 +298,7 @@ impl LaserCannonSystem {
                 }
 
                 l1.len = l1.len + l2.len;
-                l1.energy_per_shot += l2.energy_per_shot;
+                l1.property += l2.property;
 
                 l1.properties.append(&mut l2.properties);
 
@@ -314,7 +313,7 @@ impl LaserCannonSystem {
             start: *block,
             direction: block_direction,
             len: 1,
-            energy_per_shot: *prop,
+            property: *prop,
             properties: vec![*prop],
         });
     }
@@ -385,9 +384,6 @@ fn block_update_system(
             commands.entity(ev.structure_entity).insert(system);
         }
     }
-}
-
-fn update_laser(mut query: Query<(&LaserCannonSystem, &mut EnergyStorageSystem)>, time: Res<Time>) {
 }
 
 pub fn register<T: StateData + Clone + Copy>(

@@ -302,6 +302,7 @@ fn main() {
     receiver::register(&mut app);
     structure_renderer::register(&mut app);
     lang::register(&mut app);
+    structure::register(&mut app);
 
     app.run();
 }
