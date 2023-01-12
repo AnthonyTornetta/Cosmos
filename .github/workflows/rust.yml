@@ -11,9 +11,10 @@ env:
 
 jobs:
   build:
-
+    name: build
     runs-on: ubuntu-latest
-
+    env:
+      RUSTFLAGS: -D warnings
     steps:
     - uses: actions/checkout@v3
     - name: Cache
@@ -24,11 +25,37 @@ jobs:
       run: rustup component add clippy
     - name: Build
       run: cargo build --verbose
-    - name: Clippy Check
-      uses: actions-rs/clippy-check@v1.0.7
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        args: --all-features
-      # imagine having tests
-#     - name: Run tests
-#       run: cargo test --verbose
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions-rs/toolchain@v1
+        with:
+            toolchain: nightly
+            components: clippy
+            override: true
+      # Note that there is no release tag available yet
+      # and the following code will use master branch HEAD
+      # all the time.
+      - uses: actions-rs/clippy@master
+        with:
+          args: --all-features --all-targets
+  rustfmt:
+    name: rustfmt
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          profile: minimal
+          components: rustfmt
+      - name: Check formatting
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: -- --check
