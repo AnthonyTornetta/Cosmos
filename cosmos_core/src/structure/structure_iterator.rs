@@ -12,6 +12,8 @@ struct Body<'a> {
     at_y: usize,
     at_z: usize,
 
+    include_air: bool,
+
     structure: &'a Structure,
 }
 
@@ -35,6 +37,7 @@ impl<'a> BlockIterator<'a> {
         end_x: i32,
         end_y: i32,
         end_z: i32,
+        include_air: bool,
         structure: &'a Structure,
     ) -> Self {
         if end_x < 0
@@ -63,6 +66,7 @@ impl<'a> BlockIterator<'a> {
                     at_x: (start_x.max(0) as usize).min(structure.blocks_width() - 1),
                     at_y: (start_y.max(0) as usize).min(structure.blocks_height() - 1),
                     at_z: (start_z.max(0) as usize).min(structure.blocks_length() - 1),
+                    include_air,
                     structure,
                 }),
             }
@@ -118,6 +122,7 @@ impl<'a> ChunkIterator<'a> {
         end_x: i32,
         end_y: i32,
         end_z: i32,
+        include_air: bool,
         structure: &'a Structure,
     ) -> Self {
         if end_x < 0
@@ -146,6 +151,7 @@ impl<'a> ChunkIterator<'a> {
                     at_x: (start_x.max(0) as usize).min(structure.chunks_width() - 1),
                     at_y: (start_y.max(0) as usize).min(structure.chunks_height() - 1),
                     at_z: (start_z.max(0) as usize).min(structure.chunks_length() - 1),
+                    include_air,
                     structure,
                 }),
             }

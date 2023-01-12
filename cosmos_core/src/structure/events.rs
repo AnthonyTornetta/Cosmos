@@ -6,6 +6,11 @@ pub struct StructureCreated {
     pub entity: Entity,
 }
 
+/// This will be created once all chunks have been populated
+pub struct StructureLoadedEvent {
+    pub structure_entity: Entity,
+}
+
 /// This should only be used to initially setup a structure.
 /// Do **not** overwrite existing blocks with this.
 /// Some systems will get out of sync if you misuse this.
@@ -26,12 +31,13 @@ pub struct ChunkSetEvent {
 }
 
 impl ChunkSetEvent {
-    pub fn iter_blocks<'a>(&'a self, structure: &'a Structure) -> BlockIterator {
-        structure.block_iter_for_chunk((self.x, self.y, self.z))
+    pub fn iter_blocks<'a>(&'a self, structure: &'a Structure, include_air: bool) -> BlockIterator {
+        structure.block_iter_for_chunk((self.x, self.y, self.z), include_air)
     }
 }
 
 pub fn register(app: &mut App) {
     app.add_event::<StructureCreated>()
-        .add_event::<ChunkSetEvent>();
+        .add_event::<ChunkSetEvent>()
+        .add_event::<StructureLoadedEvent>();
 }

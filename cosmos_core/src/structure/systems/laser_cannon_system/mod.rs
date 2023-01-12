@@ -3,7 +3,11 @@ use std::{
     ops::{Add, AddAssign, SubAssign},
 };
 
-use bevy::{ecs::schedule::StateData, prelude::*, utils::HashMap};
+use bevy::{
+    ecs::{schedule::StateData, system::EntityCommands},
+    prelude::*,
+    utils::HashMap,
+};
 use bevy_inspector_egui::{Inspectable, RegisterInspectable};
 use iyes_loopless::prelude::*;
 
@@ -11,8 +15,13 @@ use crate::{
     block::{Block, BlockFace},
     events::block_events::BlockChangedEvent,
     registry::{identifiable::Identifiable, Registry},
-    structure::{events::ChunkSetEvent, Structure, StructureBlock},
+    structure::{
+        events::{ChunkSetEvent, StructureLoadedEvent},
+        Structure, StructureBlock,
+    },
 };
+
+use super::Systems;
 
 #[derive(Default, Inspectable, Clone, Copy)]
 pub struct LaserCannonProperty {
@@ -319,6 +328,10 @@ impl LaserCannonSystem {
     }
 }
 
+fn add_system(ec: &mut EntityCommands, system: LaserCannonSystem) {
+    ec.insert(system); //.insert(SystemBlock("cosmos:laser_cannon_computer"));
+}
+
 fn register_laser_blocks(blocks: Res<Registry<Block>>, mut cannon: ResMut<LaserCannonBlocks>) {
     if let Some(block) = blocks.from_id("cosmos:laser_cannon") {
         cannon.insert(
@@ -337,7 +350,7 @@ fn block_update_system(
     laser_cannon_blocks: Res<LaserCannonBlocks>,
     blocks: Res<Registry<Block>>,
     mut system_query: Query<&mut LaserCannonSystem>,
-    structure_query: Query<&Structure>,
+    structure_query: Query<(&Structure, &Systems)>,
 ) {
     for ev in event.iter() {
         if let Ok(mut system) = system_query.get_mut(ev.structure_entity) {
@@ -358,7 +371,7 @@ fn block_update_system(
                 system.block_added(property, &ev.block);
             }
 
-            commands.entity(ev.structure_entity).insert(system);
+            add_system(&mut commands.entity(ev.structure_entity), system);
         }
     }
 
@@ -381,7 +394,23 @@ fn block_update_system(
                 }
             }
 
-            commands.entity(ev.structure_entity).insert(system);
+            add_system(&mut commands.entity(ev.structure_entity), system);
+        }
+    }
+}
+
+fn structure_loaded_event(
+    mut event_reader: EventReader<StructureLoadedEvent>,
+    structure_query: Query<(&Structure, &Systems)>,
+    blocks: Res<Registry<Block>>,
+) {
+    let system = LaserCannonSystem::default();
+
+    for ev in event_reader.iter() {
+        if let Ok((structure, system)) = structure_query.get(ev.structure_entity) {
+            for block in structure.all_blocks_iter(false) {
+                let block_type = block.block(structure, &blocks);
+            }
         }
     }
 }

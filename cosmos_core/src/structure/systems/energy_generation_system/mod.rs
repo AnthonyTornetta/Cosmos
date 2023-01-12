@@ -108,7 +108,7 @@ fn block_update_system(
         let structure = structure_query.get(ev.structure_entity).unwrap();
 
         if let Ok(mut system) = system_query.get_mut(ev.structure_entity) {
-            for block in ev.iter_blocks(structure) {
+            for block in ev.iter_blocks(structure, false) {
                 if let Some(prop) = energy_generation_blocks.get(&block.block(structure, &blocks)) {
                     system.block_added(prop);
                 }
@@ -116,7 +116,7 @@ fn block_update_system(
         } else {
             let mut system = EnergyGenerationSystem::default();
 
-            for block in ev.iter_blocks(structure) {
+            for block in ev.iter_blocks(structure, false) {
                 if let Some(prop) = energy_generation_blocks.get(&block.block(structure, &blocks)) {
                     system.block_added(prop);
                 }

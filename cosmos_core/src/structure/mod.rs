@@ -292,7 +292,11 @@ impl Structure {
     }
 
     /// Will fail assertion if chunk positions are out of bounds
-    pub fn block_iter_for_chunk<'a>(&self, (cx, cy, cz): (usize, usize, usize)) -> BlockIterator {
+    pub fn block_iter_for_chunk<'a>(
+        &self,
+        (cx, cy, cz): (usize, usize, usize),
+        include_air: bool,
+    ) -> BlockIterator {
         assert!(cx < self.width && cy < self.height && cz < self.length);
 
         BlockIterator::new(
@@ -302,14 +306,44 @@ impl Structure {
             ((cx + 1) * CHUNK_DIMENSIONS) as i32 - 1,
             ((cy + 1) * CHUNK_DIMENSIONS) as i32 - 1,
             ((cz + 1) * CHUNK_DIMENSIONS) as i32 - 1,
+            include_air,
             self,
         )
     }
 
     /// Iterate over blocks in a given range. Will skip over any out of bounds positions.
     /// Coordinates are inclusive
-    pub fn block_iter(&self, start: (i32, i32, i32), end: (i32, i32, i32)) -> ChunkIterator {
-        ChunkIterator::new(start.0, start.1, start.2, end.0, end.1, end.2, self)
+    pub fn all_blocks_iter(&self, include_air: bool) -> BlockIterator {
+        BlockIterator::new(
+            0 as i32,
+            0 as i32,
+            0 as i32,
+            self.blocks_width() as i32,
+            self.blocks_height() as i32,
+            self.blocks_length() as i32,
+            include_air,
+            self,
+        )
+    }
+
+    /// Iterate over blocks in a given range. Will skip over any out of bounds positions.
+    /// Coordinates are inclusive
+    pub fn block_iter(
+        &self,
+        start: (i32, i32, i32),
+        end: (i32, i32, i32),
+        include_air: bool,
+    ) -> BlockIterator {
+        BlockIterator::new(
+            start.0,
+            start.1,
+            start.2,
+            end.0,
+            end.1,
+            end.2,
+            include_air,
+            self,
+        )
     }
 }
 

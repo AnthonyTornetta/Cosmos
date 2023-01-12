@@ -71,18 +71,6 @@ pub fn generate_planet(
             ev.z * CHUNK_DIMENSIONS,
         );
 
-        // let stone = blocks.block_from_id("cosmos:stone").unwrap();
-
-        // for z in start_z..start_z + CHUNK_DIMENSIONS {
-        //     for y in start_y..start_y + CHUNK_DIMENSIONS {
-        //         for x in start_x..start_x + CHUNK_DIMENSIONS {
-        //             // if x == y && y == z {
-        //             structure.set_block_at(x, y, z, stone, &blocks, None);
-        //             // }
-        //         }
-        //     }
-        // }
-
         let grass = blocks.from_id("cosmos:grass").unwrap();
         let dirt = blocks.from_id("cosmos:dirt").unwrap();
         let stone = blocks.from_id("cosmos:stone").unwrap();
