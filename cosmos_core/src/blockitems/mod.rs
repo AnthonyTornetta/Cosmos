@@ -34,6 +34,7 @@ impl BlockItems {
     }
 
     pub fn block_from_item(&self, item: &Item) -> Option<u16> {
+        // println!("{}", self.items_to_blocks);
         self.items_to_blocks.get(&item.id()).copied()
     }
 
@@ -63,29 +64,15 @@ impl BlockItems {
 fn create_links(
     mut block_items: ResMut<BlockItems>,
     blocks: Res<Registry<Block>>,
-    items: Res<Registry<Item>>,
-) {
-    let ids = [
-        "stone",
-        "grass",
-        "dirt",
-        "cherry_leaf",
-        "cherry_log",
-        "ship_core",
-        "energy_cell",
-        "laser_cannon",
-    ];
-
-    for id in ids {
-        let cosmos_id = format!("cosmos:{}", id);
+    mut items: ResMut<Registry<Item>>,
+) { 
+    for block in blocks.iter() {
+        let cosmos_id = block.unlocalized_name();
         if let Some(item) = items.from_id(&cosmos_id) {
-            if let Some(block) = blocks.from_id(&cosmos_id) {
-                block_items.create_link(item, block);
-            } else {
-                println!("Warning: no block entry for {}", cosmos_id);
-            }
+            block_items.create_link(item, block);
         } else {
-            println!("Warning: no item entry for {}", cosmos_id);
+            items.register(Item::new(cosmos_id.to_owned(), 64));
+            block_items.create_link(items.from_id(cosmos_id).unwrap(), block);
         }
     }
 }

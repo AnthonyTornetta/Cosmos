@@ -80,7 +80,9 @@ fn process_player_interaction(
                             if let Some(is) = inventory.itemstack_at(inventory_slot) {
                                 let item = items.from_numeric_id(is.item_id());
 
+                                println!("Before Block ID");
                                 if let Some(block_id) = block_items.block_from_item(item) {
+                                    println!("After Block ID");
                                     let moved_point =
                                         intersection.point + intersection.normal * 0.95;
 
