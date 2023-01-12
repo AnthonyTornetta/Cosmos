@@ -21,6 +21,5 @@ fn sync(query: Query<(Entity, &Inventory), Changed<Inventory>>, mut server: ResM
 }
 
 pub fn register(app: &mut App) {
-    println!("BOOM WADDA");
     app.add_system_set(SystemSet::on_update(GameState::Playing).with_system(sync));
 }
