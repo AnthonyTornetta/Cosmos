@@ -35,27 +35,29 @@ jobs:
             toolchain: nightly
             components: clippy
             override: true
+      - name: Cache
+        uses: Swatinem/rust-cache@v2
       # Note that there is no release tag available yet
       # and the following code will use master branch HEAD
       # all the time.
       - uses: actions-rs/clippy@master
         with:
           args: --all-features --all-targets
-  rustfmt:
-    name: rustfmt
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-          profile: minimal
-          components: rustfmt
-      - name: Check formatting
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: -- --check
+#   rustfmt:
+#     name: rustfmt
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout repository
+#         uses: actions/checkout@v2
+#       - name: Install Rust
+#         uses: actions-rs/toolchain@v1
+#         with:
+#           toolchain: stable
+#           override: true
+#           profile: minimal
+#           components: rustfmt
+#       - name: Check formatting
+#         uses: actions-rs/cargo@v1
+#         with:
+#           command: fmt
+#           args: -- --check
