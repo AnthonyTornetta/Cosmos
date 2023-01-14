@@ -19,14 +19,14 @@ pub struct SystemActive;
 pub struct SystemBlock(String);
 
 #[derive(Component)]
-pub struct System {
+pub struct StructureSystem {
     pub structure_entity: Entity,
 }
 
 #[derive(Component)]
 pub struct Systems {
     /// These entities should have the "System" component
-    pub systems: Vec<Option<Entity>>,
+    pub systems: Vec<Entity>,
     /// More than just one system can be active at a time, but the pilot can only personally activate one system at a time
     /// Perhaps make this a component on the pilot entity in the future?
     /// Currently this limits a ship to one pilot, the above would fix this issue, but idk if it's worth it.
@@ -41,11 +41,13 @@ impl Systems {
         commands.entity(self.entity).with_children(|p| {
             ent = Some(
                 p.spawn(system)
-                    .insert(System {
+                    .insert(StructureSystem {
                         structure_entity: self.entity,
                     })
                     .id(),
             );
+
+            self.systems.push(ent.unwrap());
         });
 
         ent.expect("This should have been set in above closure.")
@@ -54,10 +56,8 @@ impl Systems {
     /// TODO: in future allow for this to take any number of components
     pub fn query<'a, T: Component>(&'a self, query: &'a Query<&T>) -> Result<&T, ()> {
         for ent in self.systems.iter() {
-            if let Some(ent) = ent {
-                if let Ok(res) = query.get(*ent) {
-                    return Ok(res);
-                }
+            if let Ok(res) = query.get(*ent) {
+                return Ok(res);
             }
         }
 
@@ -70,11 +70,9 @@ impl Systems {
         query: &'a mut Query<&mut T>,
     ) -> Result<Mut<T>, ()> {
         for ent in self.systems.iter() {
-            if let Some(ent) = ent {
-                // for some reason, the borrow checker gets mad when I do a get_mut in this if statement
-                if query.get(*ent).is_ok() {
-                    return Ok(query.get_mut(*ent).expect("This should be valid"));
-                }
+            // for some reason, the borrow checker gets mad when I do a get_mut in this if statement
+            if query.get(*ent).is_ok() {
+                return Ok(query.get_mut(*ent).expect("This should be valid"));
             }
         }
 
@@ -84,14 +82,8 @@ impl Systems {
 
 fn add_structure(mut commands: Commands, query: Query<Entity, Added<Structure>>) {
     for entity in query.iter() {
-        let mut systems = Vec::with_capacity(9 * 10);
-
-        for _ in 0..systems.capacity() {
-            systems.push(None);
-        }
-
         commands.entity(entity).insert(Systems {
-            systems,
+            systems: Vec::new(),
             entity,
             active_system: None,
         });

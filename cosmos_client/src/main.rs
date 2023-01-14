@@ -143,61 +143,61 @@ fn process_player_movement(
     mut query: Query<&mut Velocity, (With<LocalPlayer>, Without<Pilot>)>,
     cam_query: Query<&Transform, With<Camera>>,
 ) {
-    let mut velocity = query
-        .get_single_mut()
-        .expect("There should always be exactly one entity with local player");
+    // This will be err if the player is piloting a ship
+    if let Ok(mut velocity) = query.get_single_mut() {
+        let cam_trans = cam_query.single();
 
-    let cam_trans = cam_query.single();
+        let max_speed: f32 = match input_handler.check_pressed(CosmosInputs::Sprint, &keys, &mouse)
+        {
+            false => 5.0,
+            true => 20.0,
+        };
 
-    let max_speed: f32 = match input_handler.check_pressed(CosmosInputs::Sprint, &keys, &mouse) {
-        false => 5.0,
-        true => 20.0,
-    };
+        let mut forward = cam_trans.forward();
+        let mut right = cam_trans.right();
+        let up = Vect::new(0.0, 1.0, 0.0);
 
-    let mut forward = cam_trans.forward();
-    let mut right = cam_trans.right();
-    let up = Vect::new(0.0, 1.0, 0.0);
+        forward.y = 0.0;
+        right.y = 0.0;
 
-    forward.y = 0.0;
-    right.y = 0.0;
+        forward = forward.normalize_or_zero() * 100.0;
+        right = right.normalize_or_zero() * 100.0;
 
-    forward = forward.normalize_or_zero() * 100.0;
-    right = right.normalize_or_zero() * 100.0;
+        let time = time.delta_seconds();
 
-    let time = time.delta_seconds();
-
-    if input_handler.check_pressed(CosmosInputs::MoveForward, &keys, &mouse) {
-        velocity.linvel += forward * time;
-    }
-    if input_handler.check_pressed(CosmosInputs::MoveBackward, &keys, &mouse) {
-        velocity.linvel -= forward * time;
-    }
-    if input_handler.check_just_pressed(CosmosInputs::MoveUpOrJump, &keys, &mouse) {
-        velocity.linvel += up * 5.0;
-    }
-    if input_handler.check_pressed(CosmosInputs::MoveLeft, &keys, &mouse) {
-        velocity.linvel -= right * time;
-    }
-    if input_handler.check_pressed(CosmosInputs::MoveRight, &keys, &mouse) {
-        velocity.linvel += right * time;
-    }
-    if input_handler.check_pressed(CosmosInputs::SlowDown, &keys, &mouse) {
-        let mut amt = velocity.linvel * 0.1;
-        if amt.dot(amt) > max_speed * max_speed {
-            amt = amt.normalize() * max_speed;
+        if input_handler.check_pressed(CosmosInputs::MoveForward, &keys, &mouse) {
+            velocity.linvel += forward * time;
         }
-        velocity.linvel -= amt;
+        if input_handler.check_pressed(CosmosInputs::MoveBackward, &keys, &mouse) {
+            velocity.linvel -= forward * time;
+        }
+        if input_handler.check_just_pressed(CosmosInputs::MoveUpOrJump, &keys, &mouse) {
+            velocity.linvel += up * 5.0;
+        }
+        if input_handler.check_pressed(CosmosInputs::MoveLeft, &keys, &mouse) {
+            velocity.linvel -= right * time;
+        }
+        if input_handler.check_pressed(CosmosInputs::MoveRight, &keys, &mouse) {
+            velocity.linvel += right * time;
+        }
+        if input_handler.check_pressed(CosmosInputs::SlowDown, &keys, &mouse) {
+            let mut amt = velocity.linvel * 0.1;
+            if amt.dot(amt) > max_speed * max_speed {
+                amt = amt.normalize() * max_speed;
+            }
+            velocity.linvel -= amt;
+        }
+
+        let y = velocity.linvel.y;
+
+        velocity.linvel.y = 0.0;
+
+        if velocity.linvel.dot(velocity.linvel) > max_speed * max_speed {
+            velocity.linvel = velocity.linvel.normalize() * max_speed;
+        }
+
+        velocity.linvel.y = y;
     }
-
-    let y = velocity.linvel.y;
-
-    velocity.linvel.y = 0.0;
-
-    if velocity.linvel.dot(velocity.linvel) > max_speed * max_speed {
-        velocity.linvel = velocity.linvel.normalize() * max_speed;
-    }
-
-    velocity.linvel.y = y;
 }
 
 fn create_sun(

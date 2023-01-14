@@ -2,6 +2,7 @@ use bevy::{ecs::schedule::StateData, prelude::App};
 
 pub mod chunk;
 pub mod events;
+pub mod loading;
 pub mod planet;
 pub mod ship;
 pub mod structure_block;
@@ -375,4 +376,5 @@ pub fn register<T: StateData + Clone + Copy>(
     systems::register(app, post_loading_state, playing_game_state);
     ship::register(app);
     events::register(app);
+    loading::register(app);
 }

@@ -127,8 +127,6 @@ fn client_sync_players(
                             velocity.linvel = body.body_vel.linvel.into();
                             velocity.angvel = body.body_vel.angvel.into();
                         }
-                    } else {
-                        println!("Entity no exist!");
                     }
                 }
             }

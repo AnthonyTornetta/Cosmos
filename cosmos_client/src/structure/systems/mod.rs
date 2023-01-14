@@ -19,14 +19,11 @@ fn check_if_using_structure_system(
     input_handler: Res<CosmosInputHandler>,
     mut commands: Commands,
 ) {
-    println!("Checked!");
     if let Ok(pilot) = query.get_single() {
         if let Ok(structure_ent) = structure_query.get(pilot.entity) {
             if input_handler.check_pressed(CosmosInputs::PlaceBlock, &keys, &mouse) {
-                println!("Set system to active");
                 commands.entity(structure_ent).insert(SystemActive);
             } else {
-                println!("Set system to inactive");
                 commands.entity(structure_ent).remove::<SystemActive>();
             }
         }
@@ -38,10 +35,7 @@ fn send_structure_state(
     structure_query: Query<&SystemActive>,
     mut client: ResMut<RenetClient>,
 ) {
-    println!("Sending state??");
     if let Ok(pilot) = query.get_single() {
-        println!("Sending state!!");
-
         client.send_message(
             NettyChannel::Unreliable.id(),
             bincode::serialize(&ClientUnreliableMessages::ShipStatus {

@@ -98,8 +98,6 @@ fn block_update_system(
             if let Some(prop) = energy_storage_blocks.get(blocks.from_numeric_id(ev.new_block)) {
                 system.block_added(prop);
             }
-        } else {
-            println!("En storage system missing");
         }
     }
 }

@@ -1,8 +1,8 @@
 use bevy::{
     ecs::schedule::StateData,
     prelude::{
-        App, Commands, Component, CoreStage, Entity, EventReader, Query, Res, ResMut, Resource,
-        SystemSet, Transform, Vec3, With,
+        App, Commands, Component, CoreStage, EventReader, Query, Res, ResMut, Resource, SystemSet,
+        Transform, Vec3, With,
     },
     time::Time,
     utils::HashMap,
@@ -23,7 +23,7 @@ use crate::{
     },
 };
 
-use super::Systems;
+use super::{StructureSystem, Systems};
 
 pub struct ThrusterProperty {
     pub strength: f32,
@@ -105,80 +105,75 @@ fn block_update_system(
             if let Some(prop) = energy_storage_blocks.get(blocks.from_numeric_id(ev.new_block)) {
                 system.block_added(prop);
             }
-        } else {
-            println!("Thruster System missing?");
         }
     }
 }
 
 fn update_movement(
-    mut commands: Commands,
+    thrusters_query: Query<(&ThrusterSystem, &StructureSystem)>,
     mut query: Query<
         (
-            Entity,
             &ShipMovement,
-            &ThrusterSystem,
             &Systems,
             &Transform,
             &mut Velocity,
             &ReadMassProperties,
+            &mut ExternalImpulse,
         ),
         With<Pilot>,
     >,
     mut energy_query: Query<&mut EnergyStorageSystem>,
     time: Res<Time>,
 ) {
-    for (entity, movement, thruster_system, systems, transform, mut velocity, mass_props) in
-        query.iter_mut()
-    {
-        let normal = movement.into_normal_vector();
-        // velocity.angvel += transform.rotation.mul_vec3(movement.torque.clone());
-        velocity.angvel += transform.rotation.mul_vec3(movement.torque)
-            / mass_props.0.principal_inertia
-            * thruster_system.thrust_total;
-        // This is horrible, please find something better
-        velocity.angvel = velocity
-            .angvel
-            .clamp_length(0.0, movement.torque.length() * 4.0);
+    for (thruster_system, system) in thrusters_query.iter() {
+        if let Ok((movement, systems, transform, mut velocity, mass_props, mut external_impulse)) =
+            query.get_mut(system.structure_entity)
+        {
+            let normal = movement.into_normal_vector();
+            // velocity.angvel += transform.rotation.mul_vec3(movement.torque.clone());
+            velocity.angvel += transform.rotation.mul_vec3(movement.torque)
+                / mass_props.0.principal_inertia
+                * thruster_system.thrust_total;
+            // This is horrible, please find something better
+            velocity.angvel = velocity
+                .angvel
+                .clamp_length(0.0, movement.torque.length() * 4.0);
 
-        velocity.linvel = velocity.linvel.clamp_length(0.0, 256.0);
+            velocity.linvel = velocity.linvel.clamp_length(0.0, 256.0);
 
-        let movement_vector = if normal.x == 0.0 && normal.y == 0.0 && normal.z == 0.0 {
-            Vec3::ZERO
-        } else {
-            let mut movement_vector = transform.forward() * normal.z;
-            movement_vector += transform.right() * normal.x;
-            movement_vector += transform.up() * normal.y;
-
-            movement_vector = movement_vector.normalize();
-
-            let delta = time.delta_seconds();
-
-            let mut energy_used = thruster_system.energy_consumption * delta;
-
-            let ratio;
-
-            if let Ok(mut energy_system) = systems.query_mut(&mut energy_query) {
-                if energy_used > energy_system.get_energy() {
-                    ratio = energy_system.get_energy() / energy_used;
-                    energy_used = energy_system.get_energy();
-                } else {
-                    ratio = 1.0;
-                }
-
-                energy_system.decrease_energy(energy_used);
-
-                movement_vector * (thruster_system.thrust_total * ratio)
-            } else {
+            let movement_vector = if normal.x == 0.0 && normal.y == 0.0 && normal.z == 0.0 {
                 Vec3::ZERO
-            }
-        };
+            } else {
+                let mut movement_vector = transform.forward() * normal.z;
+                movement_vector += transform.right() * normal.x;
+                movement_vector += transform.up() * normal.y;
 
-        commands.entity(entity).insert(ExternalImpulse {
-            impulse: movement_vector,
-            // torque_impulse: movement.torque,
-            ..Default::default()
-        });
+                movement_vector = movement_vector.normalize();
+
+                let delta = time.delta_seconds();
+
+                let mut energy_used = thruster_system.energy_consumption * delta;
+
+                let ratio;
+
+                if let Ok(mut energy_system) = systems.query_mut(&mut energy_query) {
+                    if energy_used > energy_system.get_energy() {
+                        ratio = energy_system.get_energy() / energy_used;
+                        energy_used = energy_system.get_energy();
+                    } else {
+                        ratio = 1.0;
+                    }
+
+                    energy_system.decrease_energy(energy_used);
+
+                    movement_vector * (thruster_system.thrust_total * ratio)
+                } else {
+                    Vec3::ZERO
+                }
+            };
+
+            external_impulse.impulse += movement_vector;
+        }
     }
 }
 
@@ -190,11 +185,7 @@ fn structure_loaded_event(
     thruster_blocks: Res<ThrusterBlocks>,
 ) {
     for ev in event_reader.iter() {
-        println!("Thrusters Found event!");
-
         if let Ok((structure, mut systems)) = structure_query.get_mut(ev.structure_entity) {
-            println!("Systems found on structure!");
-
             let mut system = ThrusterSystem::default();
 
             for block in structure.all_blocks_iter(false) {
@@ -202,8 +193,6 @@ fn structure_loaded_event(
                     system.block_added(prop);
                 }
             }
-
-            println!("Added thruster system!");
 
             systems.add_system(&mut commands, system);
         }

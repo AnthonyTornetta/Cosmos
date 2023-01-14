@@ -12,7 +12,7 @@ use crate::{
     },
 };
 
-use super::Systems;
+use super::{StructureSystem, Systems};
 
 struct EnergyGenerationProperty {
     generation_rate: f32,
@@ -97,12 +97,12 @@ fn block_update_system(
 
 fn update_energy(
     sys_query: Query<&Systems>,
-    e_gen_query: Query<&EnergyGenerationSystem>,
+    e_gen_query: Query<(&EnergyGenerationSystem, &StructureSystem)>,
     mut e_storage_query: Query<&mut EnergyStorageSystem>,
     time: Res<Time>,
 ) {
-    for systems in sys_query.iter() {
-        if let Ok(gen) = systems.query(&e_gen_query) {
+    for (gen, system) in e_gen_query.iter() {
+        if let Ok(systems) = sys_query.get(system.structure_entity) {
             if let Ok(mut storage) = systems.query_mut(&mut e_storage_query) {
                 storage.increase_energy(gen.generation_rate * time.delta_seconds());
             }

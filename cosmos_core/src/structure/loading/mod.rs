@@ -1,8 +1,8 @@
-use bevy::prelude::{Added, App, Commands, Component, Entity, EventReader, EventWriter, Query};
-use cosmos_core::structure::{
+use crate::structure::{
     events::{ChunkSetEvent, StructureLoadedEvent},
     Structure,
 };
+use bevy::prelude::{Added, App, Commands, Component, Entity, EventReader, EventWriter, Query};
 
 #[derive(Component)]
 pub struct ChunksNeedLoaded {
@@ -24,8 +24,6 @@ fn listen_chunk_done_loading(
                     .entity(ev.structure_entity)
                     .remove::<ChunksNeedLoaded>();
 
-                println!("Sending event!");
-
                 event_writer.send(StructureLoadedEvent {
                     structure_entity: ev.structure_entity,
                 });
@@ -39,12 +37,6 @@ fn listen_structure_added(
     mut commands: Commands,
 ) {
     for (entity, structure) in query.iter() {
-        println!(
-            "Was {} should be {}",
-            structure.all_chunks_iter().len(),
-            structure.chunks().len()
-        );
-
         commands.entity(entity).insert(ChunksNeedLoaded {
             amount_needed: structure.all_chunks_iter().len(),
         });
