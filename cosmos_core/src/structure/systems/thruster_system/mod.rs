@@ -16,12 +16,14 @@ use crate::{
     events::block_events::BlockChangedEvent,
     registry::{identifiable::Identifiable, Registry},
     structure::{
-        events::ChunkSetEvent,
+        events::StructureLoadedEvent,
         ship::{pilot::Pilot, ship_movement::ShipMovement},
         systems::energy_storage_system::EnergyStorageSystem,
         Structure,
     },
 };
+
+use super::Systems;
 
 pub struct ThrusterProperty {
     pub strength: f32,
@@ -84,16 +86,18 @@ fn register_thruster_blocks(blocks: Res<Registry<Block>>, mut storage: ResMut<Th
 }
 
 fn block_update_system(
-    mut commands: Commands,
     mut event: EventReader<BlockChangedEvent>,
-    mut chunk_set_event: EventReader<ChunkSetEvent>,
     energy_storage_blocks: Res<ThrusterBlocks>,
     blocks: Res<Registry<Block>>,
     mut system_query: Query<&mut ThrusterSystem>,
-    structure_query: Query<&Structure>,
+    systems_query: Query<&Systems>,
 ) {
     for ev in event.iter() {
-        if let Ok(mut system) = system_query.get_mut(ev.structure_entity) {
+        if let Ok(mut system) = systems_query
+            .get(ev.structure_entity)
+            .expect("Structure should have Systems component")
+            .query_mut(&mut system_query)
+        {
             if let Some(prop) = energy_storage_blocks.get(blocks.from_numeric_id(ev.old_block)) {
                 system.block_removed(prop);
             }
@@ -102,40 +106,7 @@ fn block_update_system(
                 system.block_added(prop);
             }
         } else {
-            let mut system = ThrusterSystem::default();
-
-            if let Some(prop) = energy_storage_blocks.get(blocks.from_numeric_id(ev.old_block)) {
-                system.block_removed(prop);
-            }
-
-            if let Some(prop) = energy_storage_blocks.get(blocks.from_numeric_id(ev.new_block)) {
-                system.block_added(prop);
-            }
-
-            commands.entity(ev.structure_entity).insert(system);
-        }
-    }
-
-    // ChunkSetEvents should not overwrite existing blocks, so no need to check for that
-    for ev in chunk_set_event.iter() {
-        let structure = structure_query.get(ev.structure_entity).unwrap();
-
-        if let Ok(mut system) = system_query.get_mut(ev.structure_entity) {
-            for block in ev.iter_blocks(structure) {
-                if let Some(prop) = energy_storage_blocks.get(&block.block(structure, &blocks)) {
-                    system.block_added(prop);
-                }
-            }
-        } else {
-            let mut system = ThrusterSystem::default();
-
-            for block in ev.iter_blocks(structure) {
-                if let Some(prop) = energy_storage_blocks.get(&block.block(structure, &blocks)) {
-                    system.block_added(prop);
-                }
-            }
-
-            commands.entity(ev.structure_entity).insert(system);
+            println!("Thruster System missing?");
         }
     }
 }
@@ -147,24 +118,18 @@ fn update_movement(
             Entity,
             &ShipMovement,
             &ThrusterSystem,
-            &mut EnergyStorageSystem,
+            &Systems,
             &Transform,
             &mut Velocity,
             &ReadMassProperties,
         ),
         With<Pilot>,
     >,
+    mut energy_query: Query<&mut EnergyStorageSystem>,
     time: Res<Time>,
 ) {
-    for (
-        entity,
-        movement,
-        thruster_system,
-        mut energy_system,
-        transform,
-        mut velocity,
-        mass_props,
-    ) in query.iter_mut()
+    for (entity, movement, thruster_system, systems, transform, mut velocity, mass_props) in
+        query.iter_mut()
     {
         let normal = movement.into_normal_vector();
         // velocity.angvel += transform.rotation.mul_vec3(movement.torque.clone());
@@ -192,16 +157,21 @@ fn update_movement(
             let mut energy_used = thruster_system.energy_consumption * delta;
 
             let ratio;
-            if energy_used > energy_system.get_energy() {
-                ratio = energy_system.get_energy() / energy_used;
-                energy_used = energy_system.get_energy();
+
+            if let Ok(mut energy_system) = systems.query_mut(&mut energy_query) {
+                if energy_used > energy_system.get_energy() {
+                    ratio = energy_system.get_energy() / energy_used;
+                    energy_used = energy_system.get_energy();
+                } else {
+                    ratio = 1.0;
+                }
+
+                energy_system.decrease_energy(energy_used);
+
+                movement_vector * (thruster_system.thrust_total * ratio)
             } else {
-                ratio = 1.0;
+                Vec3::ZERO
             }
-
-            energy_system.decrease_energy(energy_used);
-
-            movement_vector * (thruster_system.thrust_total * ratio)
         };
 
         commands.entity(entity).insert(ExternalImpulse {
@@ -209,6 +179,34 @@ fn update_movement(
             // torque_impulse: movement.torque,
             ..Default::default()
         });
+    }
+}
+
+fn structure_loaded_event(
+    mut event_reader: EventReader<StructureLoadedEvent>,
+    mut structure_query: Query<(&Structure, &mut Systems)>,
+    blocks: Res<Registry<Block>>,
+    mut commands: Commands,
+    thruster_blocks: Res<ThrusterBlocks>,
+) {
+    for ev in event_reader.iter() {
+        println!("Thrusters Found event!");
+
+        if let Ok((structure, mut systems)) = structure_query.get_mut(ev.structure_entity) {
+            println!("Systems found on structure!");
+
+            let mut system = ThrusterSystem::default();
+
+            for block in structure.all_blocks_iter(false) {
+                if let Some(prop) = thruster_blocks.get(&block.block(structure, &blocks)) {
+                    system.block_added(prop);
+                }
+            }
+
+            println!("Added thruster system!");
+
+            systems.add_system(&mut commands, system);
+        }
     }
 }
 
@@ -225,6 +223,7 @@ pub fn register<T: StateData + Clone + Copy>(
             CoreStage::PostUpdate,
             block_update_system.run_in_bevy_state(playing_state),
         )
+        .add_system_set(SystemSet::on_update(playing_state).with_system(structure_loaded_event))
         .add_system_set(SystemSet::on_update(playing_state).with_system(update_movement))
         .register_inspectable::<ThrusterSystem>();
 }

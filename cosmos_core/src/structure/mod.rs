@@ -291,6 +291,26 @@ impl Structure {
         self.chunks[i] = chunk;
     }
 
+    /// Iterate over blocks in a given range. Will skip over any out of bounds positions.
+    /// Coordinates are inclusive
+    pub fn all_chunks_iter(&self) -> ChunkIterator {
+        ChunkIterator::new(
+            0 as i32,
+            0 as i32,
+            0 as i32,
+            self.blocks_width() as i32 - 1,
+            self.blocks_height() as i32 - 1,
+            self.blocks_length() as i32 - 1,
+            self,
+        )
+    }
+
+    /// Iterate over blocks in a given range. Will skip over any out of bounds positions.
+    /// Coordinates are inclusive
+    pub fn chunk_iter(&self, start: (i32, i32, i32), end: (i32, i32, i32)) -> ChunkIterator {
+        ChunkIterator::new(start.0, start.1, start.2, end.0, end.1, end.2, self)
+    }
+
     /// Will fail assertion if chunk positions are out of bounds
     pub fn block_iter_for_chunk<'a>(
         &self,
@@ -318,9 +338,9 @@ impl Structure {
             0 as i32,
             0 as i32,
             0 as i32,
-            self.blocks_width() as i32,
-            self.blocks_height() as i32,
-            self.blocks_length() as i32,
+            self.blocks_width() as i32 - 1,
+            self.blocks_height() as i32 - 1,
+            self.blocks_length() as i32 - 1,
             include_air,
             self,
         )
@@ -354,4 +374,5 @@ pub fn register<T: StateData + Clone + Copy>(
 ) {
     systems::register(app, post_loading_state, playing_game_state);
     ship::register(app);
+    events::register(app);
 }

@@ -4,7 +4,11 @@ use cosmos_core::{
     block::Block,
     events::block_events::BlockChangedEvent,
     registry::Registry,
-    structure::{events::StructureCreated, ship::ship_builder::TShipBuilder, Structure},
+    structure::{
+        events::{StructureCreated, StructureLoadedEvent},
+        ship::ship_builder::TShipBuilder,
+        Structure,
+    },
 };
 
 use crate::structure::ship::server_ship_builder::ServerShipBuilder;
@@ -17,6 +21,7 @@ pub struct CreateShipEvent {
 fn event_reader(
     mut created_event_writer: EventWriter<StructureCreated>,
     mut block_changed_writer: EventWriter<BlockChangedEvent>,
+    mut structure_loaded_writer: EventWriter<StructureLoadedEvent>,
     mut event_reader: EventReader<CreateShipEvent>,
     mut commands: Commands,
     blocks: Res<Registry<Block>>,
@@ -52,6 +57,10 @@ fn event_reader(
 
         created_event_writer.send(StructureCreated {
             entity: entity.id(),
+        });
+
+        structure_loaded_writer.send(StructureLoadedEvent {
+            structure_entity: entity.id(),
         });
     }
 }

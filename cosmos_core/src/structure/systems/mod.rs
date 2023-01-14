@@ -36,22 +36,53 @@ pub struct Systems {
 
 impl Systems {
     pub fn add_system<T: Component>(&mut self, commands: &mut Commands, system: T) -> Entity {
-        let ent;
+        let mut ent = None;
 
         commands.entity(self.entity).with_children(|p| {
-            ent = p
-                .spawn(system)
-                .insert(System {
-                    structure_entity: self.entity,
-                })
-                .id();
+            ent = Some(
+                p.spawn(system)
+                    .insert(System {
+                        structure_entity: self.entity,
+                    })
+                    .id(),
+            );
         });
 
-        ent
+        ent.expect("This should have been set in above closure.")
+    }
+
+    /// TODO: in future allow for this to take any number of components
+    pub fn query<'a, T: Component>(&'a self, query: &'a Query<&T>) -> Result<&T, ()> {
+        for ent in self.systems.iter() {
+            if let Some(ent) = ent {
+                if let Ok(res) = query.get(*ent) {
+                    return Ok(res);
+                }
+            }
+        }
+
+        return Err(());
+    }
+
+    /// TODO: in future allow for this to take any number of components
+    pub fn query_mut<'a, T: Component>(
+        &'a self,
+        query: &'a mut Query<&mut T>,
+    ) -> Result<Mut<T>, ()> {
+        for ent in self.systems.iter() {
+            if let Some(ent) = ent {
+                // for some reason, the borrow checker gets mad when I do a get_mut in this if statement
+                if query.get(*ent).is_ok() {
+                    return Ok(query.get_mut(*ent).expect("This should be valid"));
+                }
+            }
+        }
+
+        return Err(());
     }
 }
 
-pub fn add_structure(mut commands: Commands, query: Query<Entity, Added<Structure>>) {
+fn add_structure(mut commands: Commands, query: Query<Entity, Added<Structure>>) {
     for entity in query.iter() {
         let mut systems = Vec::with_capacity(9 * 10);
 
@@ -72,6 +103,8 @@ pub fn register<T: StateData + Clone + Copy>(
     post_loading_state: T,
     playing_state: T,
 ) {
+    app.add_system(add_structure);
+
     energy_storage_system::register(app, post_loading_state, playing_state);
     energy_generation_system::register(app, post_loading_state, playing_state);
     thruster_system::register(app, post_loading_state, playing_state);
