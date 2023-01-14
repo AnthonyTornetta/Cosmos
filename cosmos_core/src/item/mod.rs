@@ -26,7 +26,7 @@ impl Identifiable for Item {
     }
 }
 
-const DEFAULT_MAX_STACK_SIZE: u16 = 64;
+pub const DEFAULT_MAX_STACK_SIZE: u16 = 64;
 
 impl Item {
     pub fn new(unlocalized_name: String, max_stack_size: u16) -> Self {

@@ -83,6 +83,14 @@ pub fn add_cosmos_blocks(
             .set_all_uvs(0)
             .create(),
     );
+    
+    blocks.register(
+        BlockBuilder::new("cosmos:ship_hull".to_owned(), 0.5)
+            .add_property(BlockProperty::Opaque)
+            .add_property(BlockProperty::Full)
+            .set_all_uvs(20)
+            .create(),
+    );
 
     loading.finish_loading(id, &mut end_writer);
 }

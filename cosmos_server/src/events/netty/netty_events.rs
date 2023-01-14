@@ -51,6 +51,14 @@ fn generate_player_inventory(items: &Registry<Item>) -> Inventory {
             .expect("Laser cannon item to exist"),
         64,
     );
+        
+    inventory.insert_at(
+        9 * 3 + 5,
+        items
+            .from_id("cosmos:ship_hull")
+            .expect("Ship hull item to exist"),
+        64,
+    );
 
     inventory
 }

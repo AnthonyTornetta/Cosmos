@@ -34,8 +34,7 @@ fn add_crosshair(mut commands: Commands, asset_server: Res<AssetServer>) {
                     // color: Color::NONE.into(),
                     ..default()
                 })
-                .insert(Crosshair)
-                .log_components();
+                .insert(Crosshair);
         });
 }
 
