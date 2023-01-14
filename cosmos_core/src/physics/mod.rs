@@ -1,6 +1,5 @@
 use bevy::prelude::App;
 
-pub mod force;
 pub mod gravity_system;
 pub mod structure_physics;
 
