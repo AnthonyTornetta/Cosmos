@@ -1,5 +1,9 @@
-use bevy::prelude::{
-    App, Commands, Component, Entity, PbrBundle, Quat, Query, Transform, Vec3, With,
+use bevy::{
+    prelude::{
+        App, Commands, Component, DespawnRecursiveExt, Entity, PbrBundle, Quat, Query, Res,
+        Transform, Vec3, With,
+    },
+    time::Time,
 };
 use bevy_rapier3d::prelude::{
     Ccd, Collider, CollidingEntities, LockedAxes, RigidBody, Sensor, Velocity,
@@ -11,6 +15,11 @@ use bevy_rapier3d::prelude::{
 pub struct NoCollide {
     laser: Entity,
     fired: Entity,
+}
+
+#[derive(Component)]
+struct FireTime {
+    time: f32,
 }
 
 #[derive(Component)]
@@ -35,6 +44,7 @@ impl Laser {
         _strength: f32,
         no_collide_entity: Option<Entity>,
         mut pbr: PbrBundle,
+        time: &Time,
         commands: &mut Commands,
     ) -> Entity {
         pbr.transform = Transform {
@@ -64,6 +74,9 @@ impl Laser {
             .insert(Velocity {
                 linvel: laser_velocity + firer_velocity,
                 ..Default::default()
+            })
+            .insert(FireTime {
+                time: time.elapsed_seconds(),
             });
 
         if let Some(ent) = no_collide_entity {
@@ -85,6 +98,7 @@ impl Laser {
         firer_velocity: Vec3,
         strength: f32,
         no_collide_entity: Option<Entity>,
+        time: &Time,
         commands: &mut Commands,
     ) -> Entity {
         Self::spawn_custom_pbr(
@@ -96,6 +110,7 @@ impl Laser {
             PbrBundle {
                 ..Default::default()
             },
+            time,
             commands,
         )
     }
@@ -130,6 +145,18 @@ fn handle_events(
     }
 }
 
+fn despawn_lasers(
+    mut commands: Commands,
+    query: Query<(Entity, &FireTime), With<Laser>>,
+    time: Res<Time>,
+) {
+    for (ent, fire_time) in query.iter() {
+        if time.elapsed_seconds() - fire_time.time > 5.0 {
+            commands.entity(ent).despawn_recursive();
+        }
+    }
+}
+
 pub fn register(app: &mut App) {
-    app.add_system(handle_events);
+    app.add_system(handle_events).add_system(despawn_lasers);
 }

@@ -63,6 +63,7 @@ fn update_system(
                                 ship_velocity.linvel,
                                 strength,
                                 no_hit,
+                                &time,
                                 &mut commands,
                             );
 
@@ -78,8 +79,6 @@ fn update_system(
                                 })
                                 .unwrap(),
                             );
-
-                            println!("PEW!");
                         } else {
                             break;
                         }

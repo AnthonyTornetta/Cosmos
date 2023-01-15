@@ -94,6 +94,7 @@ fn client_sync_players(
     blocks: Res<Registry<Block>>,
     mut pilot_change_event_writer: EventWriter<ChangePilotEvent>,
     mut set_ship_movement_event: EventWriter<SetShipMovementEvent>,
+    time: Res<Time>,
 
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
@@ -373,8 +374,6 @@ fn client_sync_players(
                 strength,
                 no_hit,
             } => {
-                println!("Velocity: {}", laser_velocity);
-
                 Laser::spawn_custom_pbr(
                     position,
                     laser_velocity,
@@ -390,10 +389,9 @@ fn client_sync_players(
                         }),
                         ..Default::default()
                     },
+                    &time,
                     &mut commands,
                 );
-
-                println!("Pew @ {}", position);
 
                 // too laggy ;(
                 // commands.entity(laser_entity).with_children(|parent| {
