@@ -6,6 +6,7 @@ pub mod interactions;
 pub mod lang;
 pub mod netty;
 pub mod plugin;
+pub mod projectiles;
 pub mod rendering;
 pub mod state;
 pub mod structure;

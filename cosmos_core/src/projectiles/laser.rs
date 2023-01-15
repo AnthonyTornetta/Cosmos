@@ -1,7 +1,9 @@
 use bevy::prelude::{
     App, Commands, Component, Entity, PbrBundle, Quat, Query, Transform, Vec3, With,
 };
-use bevy_rapier3d::prelude::{Ccd, CollidingEntities, Sensor};
+use bevy_rapier3d::prelude::{
+    Ccd, Collider, CollidingEntities, LockedAxes, RigidBody, Sensor, Velocity,
+};
 
 #[derive(Component)]
 /// This is used to prevent the laser from colliding with the entity that fired it
@@ -19,45 +21,83 @@ pub struct Laser {
     active: bool,
 }
 
-/// Spawns a laser with the given position & velocity
-/// Base strength is 100
-///
-pub fn spawn_laser(
-    position: Vec3,
-    velocity: Vec3,
-    _strength: f32,
-    no_collide_entity: Option<Entity>,
-    commands: &mut Commands,
-) {
-    let mut transform = Transform {
-        translation: position,
-        rotation: Quat::IDENTITY,
-        scale: Vec3::ONE,
-    };
+impl Laser {
+    /// Spawns a laser with the given position & velocity
+    ///
+    /// This takes a PBR that contains mesh data. The transform field will be overwritten
+    ///
+    /// Base strength is 100
+    ///
+    pub fn spawn_custom_pbr(
+        position: Vec3,
+        laser_velocity: Vec3,
+        firer_velocity: Vec3,
+        _strength: f32,
+        no_collide_entity: Option<Entity>,
+        mut pbr: PbrBundle,
+        commands: &mut Commands,
+    ) -> Entity {
+        pbr.transform = Transform {
+            translation: position,
+            rotation: Quat::IDENTITY,
+            scale: Vec3::ONE,
+        };
 
-    transform.look_at(velocity, Vec3::Y);
+        pbr.transform.look_at(position + laser_velocity, Vec3::Y);
 
-    let mut ent_cmds = commands.spawn(PbrBundle {
-        transform,
-        ..Default::default()
-    });
+        let mut ent_cmds = commands.spawn_empty();
 
-    let laser_entity = ent_cmds.id();
+        let laser_entity = ent_cmds.id();
 
-    ent_cmds
-        .insert(Laser {
-            // strength,
-            active: true,
-        })
-        .insert(Ccd { enabled: true })
-        .insert(Sensor)
-        .insert(CollidingEntities::default());
+        ent_cmds
+            .insert(Laser {
+                // strength,
+                active: true,
+            })
+            .insert(pbr)
+            .insert(Ccd { enabled: true })
+            .insert(Sensor)
+            .insert(RigidBody::Dynamic)
+            .insert(LockedAxes::ROTATION_LOCKED)
+            .insert(CollidingEntities::default())
+            .insert(Collider::cuboid(0.05, 0.05, 1.0))
+            .insert(Velocity {
+                linvel: laser_velocity + firer_velocity,
+                ..Default::default()
+            });
 
-    if let Some(ent) = no_collide_entity {
-        ent_cmds.insert(NoCollide {
-            fired: ent,
-            laser: laser_entity,
-        });
+        if let Some(ent) = no_collide_entity {
+            ent_cmds.insert(NoCollide {
+                fired: ent,
+                laser: laser_entity,
+            });
+        }
+
+        laser_entity
+    }
+
+    /// Spawns a laser with the given position & velocity
+    /// Base strength is 100
+    ///
+    pub fn spawn(
+        position: Vec3,
+        laser_velocity: Vec3,
+        firer_velocity: Vec3,
+        strength: f32,
+        no_collide_entity: Option<Entity>,
+        commands: &mut Commands,
+    ) -> Entity {
+        Self::spawn_custom_pbr(
+            position,
+            laser_velocity,
+            firer_velocity,
+            strength,
+            no_collide_entity,
+            PbrBundle {
+                ..Default::default()
+            },
+            commands,
+        )
     }
 }
 

@@ -17,10 +17,7 @@ use crate::registry::identifiable::Identifiable;
 use crate::registry::Registry;
 use crate::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
 use crate::utils::array_utils::flatten;
-use crate::utils::vec_math::add_vec;
-use bevy::prelude::{Component, Entity, EventWriter, Res};
-use bevy_rapier3d::na::Vector3;
-use bevy_rapier3d::rapier::prelude::RigidBodyPosition;
+use bevy::prelude::{Component, Entity, EventWriter, GlobalTransform, Res, Vec3};
 use serde::{Deserialize, Serialize};
 
 use self::structure_block::StructureBlock;
@@ -253,16 +250,28 @@ impl Structure {
         );
     }
 
-    pub fn chunk_relative_position(&self, x: usize, y: usize, z: usize) -> Vector3<f32> {
-        let xoff = self.width as f32 / 2.0 * CHUNK_DIMENSIONS as f32;
-        let yoff = self.height as f32 / 2.0 * CHUNK_DIMENSIONS as f32;
-        let zoff = self.length as f32 / 2.0 * CHUNK_DIMENSIONS as f32;
+    pub fn chunk_relative_position(&self, x: usize, y: usize, z: usize) -> Vec3 {
+        let xoff = self.blocks_width() as f32 / 2.0;
+        let yoff = self.blocks_height() as f32 / 2.0;
+        let zoff = self.blocks_length() as f32 / 2.0;
 
         let xx = x as f32 * CHUNK_DIMENSIONS as f32 - xoff;
         let yy = y as f32 * CHUNK_DIMENSIONS as f32 - yoff;
         let zz = z as f32 * CHUNK_DIMENSIONS as f32 - zoff;
 
-        Vector3::new(xx, yy, zz)
+        Vec3::new(xx, yy, zz)
+    }
+
+    pub fn block_relative_position(&self, x: usize, y: usize, z: usize) -> Vec3 {
+        let xoff = self.blocks_width() as f32 / 2.0;
+        let yoff = self.blocks_height() as f32 / 2.0;
+        let zoff = self.blocks_length() as f32 / 2.0;
+
+        let xx = x as f32 - xoff;
+        let yy = y as f32 - yoff;
+        let zz = z as f32 - zoff;
+
+        Vec3::new(xx, yy, zz)
     }
 
     pub fn chunk_world_position(
@@ -270,15 +279,35 @@ impl Structure {
         x: usize,
         y: usize,
         z: usize,
-        body_position: &RigidBodyPosition,
-    ) -> Vector3<f32> {
-        add_vec(
-            &body_position.position.translation.vector,
-            &body_position
-                .position
-                .rotation
-                .transform_vector(&self.chunk_relative_position(x, y, z)),
-        )
+        body_position: &GlobalTransform,
+    ) -> Vec3 {
+        body_position.translation()
+            + body_position
+                .affine()
+                .matrix3
+                .mul_vec3(self.chunk_relative_position(x, y, z))
+
+        // add_vec(
+        //     &body_position.translation(),
+        //     &body_position
+        //         .position
+        //         .rotation
+        //         .transform_vector(&),
+        // )
+    }
+
+    pub fn block_world_position(
+        &self,
+        x: usize,
+        y: usize,
+        z: usize,
+        body_position: &GlobalTransform,
+    ) -> Vec3 {
+        body_position.translation()
+            + body_position
+                .affine()
+                .matrix3
+                .mul_vec3(self.block_relative_position(x, y, z))
     }
 
     pub fn set_chunk(&mut self, chunk: Chunk) {
