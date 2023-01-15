@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy_renet::renet::RenetServer;
-use cosmos_core::structure::systems::SystemActive;
+use cosmos_core::structure::systems::{SystemActive, Systems};
 use cosmos_core::{
     entities::player::Player,
     events::structure::change_pilot_event::ChangePilotEvent,
@@ -30,6 +30,7 @@ fn server_listen_messages(
     players: Query<Entity, With<Player>>,
     transform_query: Query<&Transform>,
     structure_query: Query<&Structure>,
+    mut systems_query: Query<&mut Systems>,
     mut break_block_event: EventWriter<BlockBreakEvent>,
     mut block_interact_event: EventWriter<BlockInteractEvent>,
     mut place_block_event: EventWriter<BlockPlaceEvent>,
@@ -66,6 +67,13 @@ fn server_listen_messages(
                                 commands.entity(pilot.entity).insert(SystemActive);
                             } else {
                                 commands.entity(pilot.entity).remove::<SystemActive>();
+                            }
+                        }
+                    }
+                    ClientUnreliableMessages::ShipActiveSystem { active_system } => {
+                        if let Ok(pilot) = pilot_query.get(*player_entity) {
+                            if let Ok(mut systems) = systems_query.get_mut(pilot.entity) {
+                                systems.set_active_system(active_system, &mut commands);
                             }
                         }
                     }

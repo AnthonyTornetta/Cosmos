@@ -1,3 +1,5 @@
+pub mod player_interactions;
+
 use bevy::prelude::*;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
@@ -52,4 +54,6 @@ pub fn register(app: &mut App) {
             .with_system(check_if_using_structure_system)
             .with_system(send_structure_state),
     );
+
+    player_interactions::register(app);
 }

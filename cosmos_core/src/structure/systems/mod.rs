@@ -30,11 +30,31 @@ pub struct Systems {
     /// More than just one system can be active at a time, but the pilot can only personally activate one system at a time
     /// Perhaps make this a component on the pilot entity in the future?
     /// Currently this limits a ship to one pilot, the above would fix this issue, but idk if it's worth it.
-    active_system: Option<usize>,
+    active_system: Option<u32>,
     entity: Entity,
 }
 
 impl Systems {
+    pub fn set_active_system(&mut self, active: Option<u32>, commands: &mut Commands) {
+        if active == self.active_system {
+            return;
+        }
+
+        if let Some(active_system) = self.active_system {
+            commands
+                .entity(self.systems[active_system as usize])
+                .remove::<SystemActive>();
+        }
+
+        if let Some(active_system) = active {
+            commands
+                .entity(self.systems[active_system as usize])
+                .insert(SystemActive);
+        }
+
+        self.active_system = active;
+    }
+
     pub fn add_system<T: Component>(&mut self, commands: &mut Commands, system: T) -> Entity {
         let mut ent = None;
 

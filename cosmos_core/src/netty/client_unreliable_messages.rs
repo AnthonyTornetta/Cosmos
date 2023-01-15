@@ -10,4 +10,6 @@ pub enum ClientUnreliableMessages {
     PlayerBody { body: NettyRigidBody },
     SetMovement { movement: ShipMovement },
     ShipStatus { use_system: bool },
+    /// Which system is the pilot currently settnig to active
+    ShipActiveSystem { active_system: Option<u32> }
 }
