@@ -30,9 +30,6 @@ image = { version = "0.24.5", default-features = false, features = ["png"]}
 
 bevy-inspector-egui = "0.15.0"
 
-# This can probably be removed
-serde_arrays = "0.1.0"
-
 # For any non workspace package
 [profile.dev.package."*"]
 opt-level = 3

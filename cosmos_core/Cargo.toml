@@ -15,7 +15,6 @@ noise = { workspace = true }
 rand = { workspace = true }
 local-ip-address = { workspace = true }
 iyes_loopless = { workspace = true }
-serde_arrays.workspace = true
 image = { workspace = true }
 
 bevy_rapier3d.workspace = true
