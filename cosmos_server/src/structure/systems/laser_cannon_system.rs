@@ -67,10 +67,12 @@ fn update_system(
                                 &mut commands,
                             );
 
+                            let color = Color::rgb(rand::random(), rand::random(), rand::random());
+
                             server.broadcast_message(
                                 NettyChannel::Reliable.id(),
                                 bincode::serialize(&ServerReliableMessages::CreateLaser {
-                                    color: Color::WHITE,
+                                    color,
                                     position,
                                     laser_velocity,
                                     firer_velocity: ship_velocity.linvel,

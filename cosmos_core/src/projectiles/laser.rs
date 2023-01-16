@@ -1,12 +1,13 @@
 use bevy::{
     prelude::{
-        App, Commands, Component, DespawnRecursiveExt, Entity, PbrBundle, Quat, Query, Res,
-        Transform, Vec3, With,
+        App, Commands, Component, DespawnRecursiveExt, Entity, EventReader, PbrBundle, Quat, Query,
+        Res, Transform, Vec3, With,
     },
     time::Time,
 };
 use bevy_rapier3d::prelude::{
-    Ccd, Collider, CollidingEntities, LockedAxes, RigidBody, Sensor, Velocity,
+    ActiveCollisionTypes, ActiveEvents, Ccd, Collider, CollidingEntities, CollisionEvent,
+    LockedAxes, RigidBody, Sensor, Velocity,
 };
 
 #[derive(Component)]
@@ -66,7 +67,6 @@ impl Laser {
             })
             .insert(pbr)
             .insert(Ccd { enabled: true })
-            .insert(Sensor)
             .insert(RigidBody::Dynamic)
             .insert(LockedAxes::ROTATION_LOCKED)
             .insert(CollidingEntities::default())
@@ -77,7 +77,9 @@ impl Laser {
             })
             .insert(FireTime {
                 time: time.elapsed_seconds(),
-            });
+            })
+            .insert(ActiveEvents::COLLISION_EVENTS)
+            .insert(Sensor);
 
         if let Some(ent) = no_collide_entity {
             ent_cmds.insert(NoCollide {
@@ -139,7 +141,7 @@ fn handle_events(
                     "BANG! Hit {}! Time to despawn self!",
                     collided_with_entity.index()
                 );
-                commands.entity(laser_entity).despawn();
+                commands.entity(laser_entity).despawn_recursive();
             }
         }
     }
@@ -157,6 +159,6 @@ fn despawn_lasers(
     }
 }
 
-pub fn register(app: &mut App) {
+pub(crate) fn register(app: &mut App) {
     app.add_system(handle_events).add_system(despawn_lasers);
 }

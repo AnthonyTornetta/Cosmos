@@ -374,7 +374,7 @@ fn client_sync_players(
                 strength,
                 no_hit,
             } => {
-                Laser::spawn_custom_pbr(
+                let laser_entity = Laser::spawn_custom_pbr(
                     position,
                     laser_velocity,
                     firer_velocity,
@@ -394,19 +394,19 @@ fn client_sync_players(
                 );
 
                 // too laggy ;(
-                // commands.entity(laser_entity).with_children(|parent| {
-                //     parent.spawn(PointLightBundle {
-                //         transform: Transform::from_xyz(0.0, 0.0, 0.0),
-                //         point_light: PointLight {
-                //             intensity: 100.0,
-                //             range: 10.0,
-                //             color,
-                //             shadows_enabled: true,
-                //             ..default()
-                //         },
-                //         ..default()
-                //     });
-                // });
+                commands.entity(laser_entity).with_children(|parent| {
+                    parent.spawn(PointLightBundle {
+                        transform: Transform::from_xyz(0.0, 0.0, 0.0),
+                        point_light: PointLight {
+                            intensity: 100.0,
+                            range: 10.0,
+                            color,
+                            shadows_enabled: false,
+                            ..default()
+                        },
+                        ..default()
+                    });
+                });
             }
         }
     }
