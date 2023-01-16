@@ -147,65 +147,63 @@ impl LaserCannonSystem {
                     self.lines.swap_remove(i);
                     return;
                 }
-            } else {
-                if line.within(sb) {
-                    let l1_len = match line.direction {
-                        BlockFace::Front => sb.z - line.start.z,
-                        BlockFace::Back => line.start.z - sb.z,
-                        BlockFace::Right => sb.x - line.start.x,
-                        BlockFace::Left => line.start.x - sb.x,
-                        BlockFace::Top => sb.y - line.start.y,
-                        BlockFace::Bottom => line.start.y - sb.y,
-                    };
+            } else if line.within(sb) {
+                let l1_len = match line.direction {
+                    BlockFace::Front => sb.z - line.start.z,
+                    BlockFace::Back => line.start.z - sb.z,
+                    BlockFace::Right => sb.x - line.start.x,
+                    BlockFace::Left => line.start.x - sb.x,
+                    BlockFace::Top => sb.y - line.start.y,
+                    BlockFace::Bottom => line.start.y - sb.y,
+                };
 
-                    let l2_len = line.len - l1_len - 1;
+                let l2_len = line.len - l1_len - 1;
 
-                    let mut l1_total_prop = LaserCannonProperty::default();
-                    let mut l2_total_prop = LaserCannonProperty::default();
+                let mut l1_total_prop = LaserCannonProperty::default();
+                let mut l2_total_prop = LaserCannonProperty::default();
 
-                    let mut l1_props = Vec::with_capacity(l1_len);
-                    let mut l2_props = Vec::with_capacity(l2_len);
+                let mut l1_props = Vec::with_capacity(l1_len);
+                let mut l2_props = Vec::with_capacity(l2_len);
 
-                    for prop in line.properties.iter().take(l1_len) {
-                        l1_total_prop.energy_per_shot += prop.energy_per_shot;
-                        l1_props.push(*prop);
-                    }
-
-                    for prop in line.properties.iter().skip(l1_len + 1) {
-                        l2_total_prop.energy_per_shot += prop.energy_per_shot;
-                        l2_props.push(*prop);
-                    }
-
-                    // we are within a line, so split it into two seperate ones
-                    let l1 = Line {
-                        start: line.start,
-                        direction: line.direction,
-                        len: l1_len,
-                        property: l1_total_prop,
-                        properties: l1_props,
-                    };
-
-                    let (dx, dy, dz) = line.direction.direction();
-
-                    let dist = l1_len as i32 + 1;
-
-                    let l2 = Line {
-                        start: StructureBlock {
-                            x: (line.start.x as i32 + dx * dist) as usize,
-                            y: (line.start.y as i32 + dy * dist) as usize,
-                            z: (line.start.z as i32 + dz * dist) as usize,
-                        },
-                        direction: line.direction,
-                        len: line.len - l1_len - 1,
-                        property: l2_total_prop,
-                        properties: l2_props,
-                    };
-
-                    self.lines[i] = l1;
-                    self.lines.push(l2);
-
-                    return;
+                for prop in line.properties.iter().take(l1_len) {
+                    l1_total_prop.energy_per_shot += prop.energy_per_shot;
+                    l1_props.push(*prop);
                 }
+
+                for prop in line.properties.iter().skip(l1_len + 1) {
+                    l2_total_prop.energy_per_shot += prop.energy_per_shot;
+                    l2_props.push(*prop);
+                }
+
+                // we are within a line, so split it into two seperate ones
+                let l1 = Line {
+                    start: line.start,
+                    direction: line.direction,
+                    len: l1_len,
+                    property: l1_total_prop,
+                    properties: l1_props,
+                };
+
+                let (dx, dy, dz) = line.direction.direction();
+
+                let dist = l1_len as i32 + 1;
+
+                let l2 = Line {
+                    start: StructureBlock {
+                        x: (line.start.x as i32 + dx * dist) as usize,
+                        y: (line.start.y as i32 + dy * dist) as usize,
+                        z: (line.start.z as i32 + dz * dist) as usize,
+                    },
+                    direction: line.direction,
+                    len: line.len - l1_len - 1,
+                    property: l2_total_prop,
+                    properties: l2_props,
+                };
+
+                self.lines[i] = l1;
+                self.lines.push(l2);
+
+                return;
             }
         }
     }
@@ -299,7 +297,7 @@ impl LaserCannonSystem {
                     swap(l1, l2);
                 }
 
-                l1.len = l1.len + l2.len;
+                l1.len += l2.len;
                 l1.property += l2.property;
 
                 l1.properties.append(&mut l2.properties);
@@ -371,7 +369,7 @@ fn structure_loaded_event(
             let mut system = LaserCannonSystem::default();
 
             for block in structure.all_blocks_iter(false) {
-                if let Some(prop) = laser_cannon_blocks.get(&block.block(structure, &blocks)) {
+                if let Some(prop) = laser_cannon_blocks.get(block.block(structure, &blocks)) {
                     system.block_added(prop, &block);
                 }
             }

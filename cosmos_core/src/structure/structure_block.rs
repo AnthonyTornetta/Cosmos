@@ -11,15 +11,15 @@ pub struct StructureBlock {
     pub z: usize,
 }
 
-impl Into<(usize, usize, usize)> for StructureBlock {
-    fn into(self) -> (usize, usize, usize) {
-        (self.x, self.y, self.z)
+impl From<StructureBlock> for (usize, usize, usize) {
+    fn from(val: StructureBlock) -> Self {
+        (val.x, val.y, val.z)
     }
 }
 
-impl Into<(usize, usize, usize)> for &StructureBlock {
-    fn into(self) -> (usize, usize, usize) {
-        (self.x, self.y, self.z)
+impl From<&StructureBlock> for (usize, usize, usize) {
+    fn from(val: &StructureBlock) -> Self {
+        (val.x, val.y, val.z)
     }
 }
 

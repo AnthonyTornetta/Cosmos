@@ -79,6 +79,10 @@ impl<'a> BlockIterator<'a> {
         }
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     pub fn len(&self) -> usize {
         match &self.state {
             ItrState::Valid(body) => {
@@ -102,7 +106,7 @@ impl<'a> Iterator for BlockIterator<'a> {
                     return None;
                 }
 
-                let (x, y, z) = (body.at_x as usize, body.at_y as usize, body.at_z as usize);
+                let (x, y, z) = (body.at_x, body.at_y, body.at_z);
 
                 body.at_x += 1;
 
@@ -180,6 +184,10 @@ impl<'a> ChunkIterator<'a> {
         }
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     pub fn len(&self) -> usize {
         match &self.state {
             ItrState::Valid(body) => {
@@ -203,7 +211,7 @@ impl<'a> Iterator for ChunkIterator<'a> {
                     return None;
                 }
 
-                let (cx, cy, cz) = (body.at_x as usize, body.at_y as usize, body.at_z as usize);
+                let (cx, cy, cz) = (body.at_x, body.at_y, body.at_z);
 
                 body.at_x += 1;
 

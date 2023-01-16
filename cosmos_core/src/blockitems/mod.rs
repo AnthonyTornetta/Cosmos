@@ -68,7 +68,7 @@ fn create_links(
 ) {
     for block in blocks.iter() {
         let cosmos_id = block.unlocalized_name();
-        if let Some(item) = items.from_id(&cosmos_id) {
+        if let Some(item) = items.from_id(cosmos_id) {
             block_items.create_link(item, block);
         } else {
             items.register(Item::new(cosmos_id.to_owned(), DEFAULT_MAX_STACK_SIZE));

@@ -221,7 +221,7 @@ fn client_sync_players(
                     entity.despawn();
                     network_mapping.remove_mapping_from_server_entity(&server_entity);
 
-                    println!("Player {} ({}) disconnected", name, id);
+                    println!("Player {name} ({id}) disconnected");
                 }
             }
             ServerReliableMessages::PlanetCreate {
@@ -310,7 +310,7 @@ fn client_sync_players(
                     .despawn_recursive();
             }
             ServerReliableMessages::MOTD { motd } => {
-                println!("Server MOTD: {}", motd);
+                println!("Server MOTD: {motd}");
             }
             ServerReliableMessages::BlockChange {
                 x,

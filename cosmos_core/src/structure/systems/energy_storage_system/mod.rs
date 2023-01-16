@@ -114,7 +114,7 @@ fn structure_loaded_event(
             let mut system = EnergyStorageSystem::default();
 
             for block in structure.all_blocks_iter(false) {
-                if let Some(prop) = thruster_blocks.get(&block.block(structure, &blocks)) {
+                if let Some(prop) = thruster_blocks.get(block.block(structure, &blocks)) {
                     system.block_added(prop);
                 }
             }

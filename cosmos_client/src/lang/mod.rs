@@ -19,7 +19,7 @@ pub struct Lang<T: Identifiable + Send + Sync> {
 fn load_data(lang_type: &str, lang_folder: &str, map: &mut HashMap<String, String>) {
     let path = format!("assets/lang/{lang_folder}/{lang_type}.lang");
     let str =
-        fs::read_to_string(path.clone()).unwrap_or_else(|_| panic!("Error reading lang file @ '{}'!", path));
+        fs::read_to_string(path.clone()).unwrap_or_else(|_| panic!("Error reading lang file @ '{path}'!"));
 
     for line in str
         .split('\n')
@@ -30,8 +30,7 @@ fn load_data(lang_type: &str, lang_folder: &str, map: &mut HashMap<String, Strin
 
         if split.len() == 1 {
             panic!(
-                "Error parsing lang file {}. Invalid line - {} (missing = sign)",
-                path, line
+                "Error parsing lang file {path}. Invalid line - {line} (missing = sign)"
             );
         }
 

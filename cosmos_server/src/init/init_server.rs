@@ -14,8 +14,8 @@ pub fn init(app: &mut App) {
 
     let local_addr = get_local_ipaddress();
 
-    let address: SocketAddr = format!("{}:{}", local_addr, port).parse().unwrap();
-    let socket = UdpSocket::bind(format!("0.0.0.0:{}", port)).unwrap();
+    let address: SocketAddr = format!("{local_addr}:{port}").parse().unwrap();
+    let socket = UdpSocket::bind(format!("0.0.0.0:{port}")).unwrap();
     socket
         .set_nonblocking(true)
         .expect("Cannot set non-blocking mode!");
@@ -33,5 +33,5 @@ pub fn init(app: &mut App) {
         .insert_resource(ClientTicks::default())
         .insert_resource(server);
 
-    println!("Setup server on {}:{}", local_addr, port);
+    println!("Setup server on {local_addr}:{port}");
 }

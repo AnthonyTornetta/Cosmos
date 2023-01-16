@@ -243,7 +243,7 @@ fn main() {
         get_local_ipaddress()
     };
 
-    println!("Host: {}", host_name);
+    println!("Host: {host_name}");
 
     let mut app = App::new();
 

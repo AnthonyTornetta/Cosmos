@@ -23,7 +23,7 @@ use super::flags::LocalPlayer;
 fn new_renet_client(host: &str) -> RenetClient {
     let port: u16 = 1337;
 
-    let server_addr = format!("{}:{}", host, port).parse().unwrap();
+    let server_addr = format!("{host}:{port}").parse().unwrap();
     let socket = UdpSocket::bind("0.0.0.0:0").unwrap();
 
     socket
@@ -41,7 +41,7 @@ fn new_renet_client(host: &str) -> RenetClient {
         user_data: None,
     };
 
-    println!("Connecting to {}", server_addr);
+    println!("Connecting to {server_addr}");
 
     RenetClient::new(cur_time, socket, connection_config, auth).unwrap()
 }

@@ -1,3 +1,5 @@
+use std::{error::Error, fmt::Formatter};
+
 use bevy::{ecs::schedule::StateData, prelude::*};
 
 use super::Structure;
@@ -22,6 +24,17 @@ pub struct SystemBlock(String);
 pub struct StructureSystem {
     pub structure_entity: Entity,
 }
+
+#[derive(Debug)]
+pub struct NoSystemFound;
+
+impl std::fmt::Display for NoSystemFound {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "No suitable system was found")
+    }
+}
+
+impl Error for NoSystemFound {}
 
 #[derive(Component)]
 pub struct Systems {
@@ -74,14 +87,14 @@ impl Systems {
     }
 
     /// TODO: in future allow for this to take any number of components
-    pub fn query<'a, T: Component>(&'a self, query: &'a Query<&T>) -> Result<&T, ()> {
+    pub fn query<'a, T: Component>(&'a self, query: &'a Query<&T>) -> Result<&T, NoSystemFound> {
         for ent in self.systems.iter() {
             if let Ok(res) = query.get(*ent) {
                 return Ok(res);
             }
         }
 
-        return Err(());
+        Err(NoSystemFound)
     }
 
     /// TODO: in future allow for this to take any number of components
@@ -96,7 +109,7 @@ impl Systems {
             }
         }
 
-        return Err(());
+        Err(())
     }
 }
 

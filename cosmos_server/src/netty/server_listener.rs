@@ -101,8 +101,7 @@ fn server_listen_messages(
                         }
                     } else {
                         println!(
-                            "!!! Server received invalid entity from client {}",
-                            client_id
+                            "!!! Server received invalid entity from client {client_id}"
                         );
                     }
                 }

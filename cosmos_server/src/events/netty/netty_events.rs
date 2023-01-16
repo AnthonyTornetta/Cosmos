@@ -79,7 +79,7 @@ fn handle_events_system(
     for event in server_events.iter() {
         match event {
             ServerEvent::ClientConnected(id, _user_data) => {
-                println!("Client {} connected", id);
+                println!("Client {id} connected");
 
                 for (entity, player, transform, velocity, inventory) in players.iter() {
                     let body = NettyRigidBody::new(velocity, transform);
@@ -173,7 +173,7 @@ fn handle_events_system(
                 }
             }
             ServerEvent::ClientDisconnected(id) => {
-                println!("Client {} disconnected", id);
+                println!("Client {id} disconnected");
 
                 client_ticks.ticks.remove(id);
 

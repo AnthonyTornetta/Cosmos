@@ -325,9 +325,9 @@ impl Structure {
     /// Coordinates are inclusive
     pub fn all_chunks_iter(&self) -> ChunkIterator {
         ChunkIterator::new(
-            0 as i32,
-            0 as i32,
-            0 as i32,
+            0_i32,
+            0_i32,
+            0_i32,
             self.blocks_width() as i32 - 1,
             self.blocks_height() as i32 - 1,
             self.blocks_length() as i32 - 1,
@@ -342,7 +342,7 @@ impl Structure {
     }
 
     /// Will fail assertion if chunk positions are out of bounds
-    pub fn block_iter_for_chunk<'a>(
+    pub fn block_iter_for_chunk(
         &self,
         (cx, cy, cz): (usize, usize, usize),
         include_air: bool,
@@ -365,9 +365,9 @@ impl Structure {
     /// Coordinates are inclusive
     pub fn all_blocks_iter(&self, include_air: bool) -> BlockIterator {
         BlockIterator::new(
-            0 as i32,
-            0 as i32,
-            0 as i32,
+            0_i32,
+            0_i32,
+            0_i32,
             self.blocks_width() as i32 - 1,
             self.blocks_height() as i32 - 1,
             self.blocks_length() as i32 - 1,
