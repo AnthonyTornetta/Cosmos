@@ -101,7 +101,7 @@ impl Systems {
     pub fn query_mut<'a, T: Component>(
         &'a self,
         query: &'a mut Query<&mut T>,
-    ) -> Result<Mut<T>, ()> {
+    ) -> Result<Mut<T>, NoSystemFound> {
         for ent in self.systems.iter() {
             // for some reason, the borrow checker gets mad when I do a get_mut in this if statement
             if query.get(*ent).is_ok() {
@@ -109,7 +109,7 @@ impl Systems {
             }
         }
 
-        Err(())
+        Err(NoSystemFound)
     }
 }
 
