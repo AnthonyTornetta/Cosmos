@@ -1,13 +1,12 @@
 use bevy::{
     prelude::{
-        App, Commands, Component, DespawnRecursiveExt, Entity, EventReader, PbrBundle, Quat, Query,
-        Res, Transform, Vec3, With,
+        App, Commands, Component, DespawnRecursiveExt, Entity, PbrBundle, Quat, Query, Res,
+        Transform, Vec3, With,
     },
     time::Time,
 };
 use bevy_rapier3d::prelude::{
-    ActiveCollisionTypes, ActiveEvents, Ccd, Collider, CollidingEntities, CollisionEvent,
-    LockedAxes, RigidBody, Sensor, Velocity,
+    ActiveEvents, Ccd, Collider, CollidingEntities, LockedAxes, RigidBody, Sensor, Velocity,
 };
 
 #[derive(Component)]
