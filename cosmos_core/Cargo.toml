@@ -17,5 +17,5 @@ local-ip-address = { workspace = true }
 iyes_loopless = { workspace = true }
 image = { workspace = true }
 
-bevy_rapier3d.workspace = true
-bevy-inspector-egui.workspace = true
+bevy_rapier3d = { workspace = true }
+bevy-inspector-egui = { workspace = true }
