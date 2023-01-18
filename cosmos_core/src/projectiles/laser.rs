@@ -1,13 +1,109 @@
 use bevy::{
     prelude::{
-        App, Commands, Component, DespawnRecursiveExt, Entity, PbrBundle, Quat, Query, Res,
-        Transform, Vec3, With,
+        App, Commands, Component, DespawnRecursiveExt, Entity, EventReader, EventWriter, Parent,
+        PbrBundle, Quat, Query, Res, Transform, Vec3, With,
     },
     time::Time,
 };
 use bevy_rapier3d::prelude::{
-    ActiveEvents, Ccd, Collider, CollidingEntities, LockedAxes, RigidBody, Sensor, Velocity,
+    ActiveEvents, ActiveHooks, Ccd, Collider, CollidingEntities, CollisionEvent,
+    ContactModificationContextView, LockedAxes, NoUserData, PhysicsHooksWithQuery,
+    PhysicsHooksWithQueryResource, RapierContext, RigidBody, Sensor, SolverFlags, Velocity,
 };
+
+#[derive(Debug)]
+pub struct LaserCollideEvent {
+    world_location: Vec3,
+    normal: Vec3,
+    hit: Entity,
+}
+
+/// NEW APPROACH
+/// Make bullet sensor
+/// Store its previous position as a component
+/// update that every frame
+///
+/// Listen for its collision event
+/// When one is found:
+/// Make a raycast from its previous position to its current position
+/// See what that intersects with, if nothing, then keep the laser alive, if something, then shazam!
+/// I don't like this much, but its better than the below method.
+
+/// This doesn't work
+// struct MyPhysicsHooks;
+
+/// HEY! IF YOU CHANGE THE DATA IN THE <>, MAKE SURE TO CHANGE IT IN THE COSMOS_CORE_PLUGIN.RS FILE TOO!
+/// It's the data in the rapier plugin.
+/// But why would I have to do such a silly thing?
+/// Who thought that was a good idea?
+/// I just don't know.
+/// But I do know, if you forget it, you won't get an error.
+/// In fact, you won't get any text at all.
+/// It will just silently do nothing, and make you sad.
+///  
+/// despite this clearing the contacts, it STILL collides with the ship
+/// ?????????????????????????????????????????????????????????????????/
+/// I give up on this stupidity for now, I just can't take it anymore.
+// impl PhysicsHooksWithQuery<(Option<&NoCollide>, Option<&Parent>)> for MyPhysicsHooks {
+//     fn modify_solver_contacts(
+//         &self,
+//         context: ContactModificationContextView,
+//         query: &Query<(Option<&NoCollide>, Option<&Parent>)>,
+//     ) {
+//         if let Ok((no_collide, _)) = query.get(context.collider1()) {
+//             if let Some(no_collide) = no_collide {
+//                 if no_collide.fired == context.collider2() {
+//                     context.raw.solver_contacts.clear();
+//                     println!("CLEARED!!!");
+//                 } else {
+//                     if let Ok((_, parent)) = query.get(context.collider2()) {
+//                         if let Some(parent) = parent {
+//                             if no_collide.fired == parent.get() {
+//                                 // despite this clearing the contacts, it STILL collides with the ship
+//                                 // ?????????????????????????????????????????????????????????????????/
+//                                 // I give up on this stupidity for now, I just can't take it anymore.
+//                                 context.raw.solver_contacts.clear();
+//                                 println!("CLEARED!!!");
+//                             } else {
+//                                 println!(
+//                                     "neq, wanted {}, but got {}",
+//                                     no_collide.fired.index(),
+//                                     parent.get().index()
+//                                 );
+//                             }
+//                         }
+//                     }
+//                 }
+//             }
+//         } else {
+//             if let Ok((no_collide, _)) = query.get(context.collider2()) {
+//                 if let Some(no_collide) = no_collide {
+//                     if no_collide.fired == context.collider1() {
+//                         context.raw.solver_contacts.clear();
+//                         println!("CLEARED!!!");
+//                     } else {
+//                         if let Ok((_, parent)) = query.get(context.collider1()) {
+//                             if let Some(parent) = parent {
+//                                 if no_collide.fired == parent.get() {
+//                                     context.raw.solver_contacts.clear();
+//                                     println!("CLEARED!!!");
+//                                 } else {
+//                                     println!(
+//                                         "neq, wanted {}, but got {}",
+//                                         no_collide.fired.index(),
+//                                         parent.get().index()
+//                                     );
+//                                 }
+//                             }
+//                         }
+//                     }
+//                 }
+//             } else {
+//                 println!("Err ;(");
+//             }
+//         }
+//     }
+// }
 
 #[derive(Component)]
 /// This is used to prevent the laser from colliding with the entity that fired it
@@ -78,7 +174,9 @@ impl Laser {
                 time: time.elapsed_seconds(),
             })
             .insert(ActiveEvents::COLLISION_EVENTS)
-            .insert(Sensor);
+            .insert(ActiveHooks::MODIFY_SOLVER_CONTACTS)
+            // .insert(Sensor)
+            ;
 
         if let Some(ent) = no_collide_entity {
             ent_cmds.insert(NoCollide {
@@ -120,6 +218,9 @@ impl Laser {
 fn handle_events(
     mut query: Query<(Entity, Option<&NoCollide>, &mut Laser, &CollidingEntities), With<Laser>>,
     mut commands: Commands,
+    mut event_reader: EventReader<CollisionEvent>,
+    mut event_writer: EventWriter<LaserCollideEvent>,
+    rapier_context: Res<RapierContext>,
 ) {
     for (laser_entity, no_collide_entity, mut laser, collided_with_entities) in query.iter_mut() {
         if laser.active {
@@ -135,11 +236,20 @@ fn handle_events(
                     break;
                 }
 
+                if let Some(contact_pair) =
+                    rapier_context.contact_pair(laser_entity, collided_with_entity)
+                {
+                    println!("Manifolds count: {}", contact_pair.manifolds_len());
+                    // contact_pair.manifold(0).unwrap().find_deepest_contact().unwrap().
+                }
+
                 laser.active = false;
                 println!(
                     "BANG! Hit {}! Time to despawn self!",
                     collided_with_entity.index()
                 );
+
+                // event_writer.send(LaserCollideEvent { world_location: , normal: (), hit: () })
                 commands.entity(laser_entity).despawn_recursive();
             }
         }
@@ -158,6 +268,13 @@ fn despawn_lasers(
     }
 }
 
+// fn startup_sys(mut commands: Commands) {
+//     commands.insert_resource(PhysicsHooksWithQueryResource(Box::new(MyPhysicsHooks)));
+// }
+
 pub(crate) fn register(app: &mut App) {
-    app.add_system(handle_events).add_system(despawn_lasers);
+    app.add_system(handle_events)
+        .add_system(despawn_lasers)
+        .add_event::<LaserCollideEvent>();
+    // .add_startup_system(startup_sys);
 }

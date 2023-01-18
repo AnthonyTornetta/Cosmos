@@ -15,6 +15,7 @@ pub mod inventory;
 pub mod netty;
 pub mod physics;
 pub mod plugin;
+pub mod projectiles;
 pub mod server;
 pub mod state;
 pub mod structure;

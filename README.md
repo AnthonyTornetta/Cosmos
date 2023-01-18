@@ -94,12 +94,12 @@ For release builds, append the `--release` flag to the build/run commands.
     - [ ] Camera block
     - [ ] Use left/right to switch between ship cameras
       - [ ] Changes where your view is
-  - [ ] Laser cannon system
+  - [x] Laser cannon system
     - [x] Laser cannon block
-      - [ ] Can be placed in lines to create more powerful lasers
-    - [ ] Click lmb/hold to fire the laser
-      - [ ] The laser is on a cooldown
-  - [ ] Ship hull block
+      - [x] Can be placed in lines to create more powerful lasers
+    - [x] Click lmb/hold to fire the laser
+      - [x] The laser is on a cooldown
+  - [x] Ship hull block
 - [x] Ability to place more than one block
   - [x] Hotbar
     - [x] Rendering of hotbar

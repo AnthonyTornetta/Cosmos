@@ -298,6 +298,7 @@ fn main() {
     structure_renderer::register(&mut app);
     lang::register(&mut app);
     structure::register(&mut app);
+    projectiles::register(&mut app);
 
     app.run();
 }
