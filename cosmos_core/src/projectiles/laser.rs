@@ -9,9 +9,9 @@ use bevy::{
 };
 use bevy_rapier3d::prelude::{
     ActiveEvents, ActiveHooks, Ccd, Collider, CollidingEntities, CollisionEvent,
-    ContactModificationContextView, LockedAxes, NoUserData, PhysicsHooksWithQuery,
-    PhysicsHooksWithQueryResource, QueryFilter, RapierContext, RigidBody, Sensor, SolverFlags,
-    TOIStatus, Toi, Velocity,
+    ContactModificationContextView, LockedAxes, PhysicsHooksWithQuery,
+    PhysicsHooksWithQueryResource, RapierContext, RigidBody, Sensor, SolverFlags, TOIStatus, Toi,
+    Velocity,
 };
 
 use crate::{
@@ -33,8 +33,7 @@ use crate::{
 ///     - (That entity's rotation quaternion * relative_location) + that entity's global transform position.
 pub struct LaserCollideEvent {
     entity_hit: Entity,
-    world_location: Vec3,
-    relative_location: Vec3,
+    local_position_hit: Vec3,
 }
 
 /// NEW APPROACH
@@ -49,7 +48,7 @@ pub struct LaserCollideEvent {
 /// I don't like this much, but its better than the below method.
 
 /// This doesn't work
-// struct MyPhysicsHooks;
+struct MyPhysicsHooks;
 
 /// HEY! IF YOU CHANGE THE DATA IN THE <>, MAKE SURE TO CHANGE IT IN THE COSMOS_CORE_PLUGIN.RS FILE TOO!
 /// It's the data in the rapier plugin.
@@ -63,66 +62,66 @@ pub struct LaserCollideEvent {
 /// despite this clearing the contacts, it STILL collides with the ship
 /// ?????????????????????????????????????????????????????????????????/
 /// I give up on this stupidity for now, I just can't take it anymore.
-// impl PhysicsHooksWithQuery<(Option<&NoCollide>, Option<&Parent>)> for MyPhysicsHooks {
-//     fn modify_solver_contacts(
-//         &self,
-//         context: ContactModificationContextView,
-//         query: &Query<(Option<&NoCollide>, Option<&Parent>)>,
-//     ) {
-//         if let Ok((no_collide, _)) = query.get(context.collider1()) {
-//             if let Some(no_collide) = no_collide {
-//                 if no_collide.fired == context.collider2() {
-//                     context.raw.solver_contacts.clear();
-//                     println!("CLEARED!!!");
-//                 } else {
-//                     if let Ok((_, parent)) = query.get(context.collider2()) {
-//                         if let Some(parent) = parent {
-//                             if no_collide.fired == parent.get() {
-//                                 // despite this clearing the contacts, it STILL collides with the ship
-//                                 // ?????????????????????????????????????????????????????????????????/
-//                                 // I give up on this stupidity for now, I just can't take it anymore.
-//                                 context.raw.solver_contacts.clear();
-//                                 println!("CLEARED!!!");
-//                             } else {
-//                                 println!(
-//                                     "neq, wanted {}, but got {}",
-//                                     no_collide.fired.index(),
-//                                     parent.get().index()
-//                                 );
-//                             }
-//                         }
-//                     }
-//                 }
-//             }
-//         } else {
-//             if let Ok((no_collide, _)) = query.get(context.collider2()) {
-//                 if let Some(no_collide) = no_collide {
-//                     if no_collide.fired == context.collider1() {
-//                         context.raw.solver_contacts.clear();
-//                         println!("CLEARED!!!");
-//                     } else {
-//                         if let Ok((_, parent)) = query.get(context.collider1()) {
-//                             if let Some(parent) = parent {
-//                                 if no_collide.fired == parent.get() {
-//                                     context.raw.solver_contacts.clear();
-//                                     println!("CLEARED!!!");
-//                                 } else {
-//                                     println!(
-//                                         "neq, wanted {}, but got {}",
-//                                         no_collide.fired.index(),
-//                                         parent.get().index()
-//                                     );
-//                                 }
-//                             }
-//                         }
-//                     }
-//                 }
-//             } else {
-//                 println!("Err ;(");
-//             }
-//         }
-//     }
-// }
+impl PhysicsHooksWithQuery<(Option<&NoCollide>, Option<&Parent>)> for MyPhysicsHooks {
+    fn modify_solver_contacts(
+        &self,
+        context: ContactModificationContextView,
+        query: &Query<(Option<&NoCollide>, Option<&Parent>)>,
+    ) {
+        if let Ok((no_collide, _)) = query.get(context.collider1()) {
+            if let Some(no_collide) = no_collide {
+                if no_collide.fired == context.collider2() {
+                    context.raw.solver_contacts.clear();
+                    println!("CLEARED!!!");
+                } else {
+                    if let Ok((_, parent)) = query.get(context.collider2()) {
+                        if let Some(parent) = parent {
+                            if no_collide.fired == parent.get() {
+                                // despite this clearing the contacts, it STILL collides with the ship
+                                // ?????????????????????????????????????????????????????????????????/
+                                // I give up on this stupidity for now, I just can't take it anymore.
+                                context.raw.solver_contacts.clear();
+                                println!("CLEARED!!!");
+                            } else {
+                                println!(
+                                    "neq, wanted {}, but got {}",
+                                    no_collide.fired.index(),
+                                    parent.get().index()
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            if let Ok((no_collide, _)) = query.get(context.collider2()) {
+                if let Some(no_collide) = no_collide {
+                    if no_collide.fired == context.collider1() {
+                        context.raw.solver_contacts.clear();
+                        println!("CLEARED!!!");
+                    } else {
+                        if let Ok((_, parent)) = query.get(context.collider1()) {
+                            if let Some(parent) = parent {
+                                if no_collide.fired == parent.get() {
+                                    context.raw.solver_contacts.clear();
+                                    println!("CLEARED!!!");
+                                } else {
+                                    println!(
+                                        "neq, wanted {}, but got {}",
+                                        no_collide.fired.index(),
+                                        parent.get().index()
+                                    );
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                println!("Err ;(");
+            }
+        }
+    }
+}
 
 #[derive(Component)]
 /// This is used to prevent the laser from colliding with the entity that fired it
@@ -194,7 +193,8 @@ impl Laser {
             })
             .insert(ActiveEvents::COLLISION_EVENTS)
             .insert(ActiveHooks::MODIFY_SOLVER_CONTACTS)
-            .insert(Sensor);
+            // .insert(Sensor)
+            ;
 
         if let Some(ent) = no_collide_entity {
             ent_cmds.insert(NoCollide {
@@ -241,17 +241,15 @@ fn handle_events(
             &mut Laser,
             &CollidingEntities,
             &Velocity,
-            &Collider,
         ),
         With<Laser>,
     >,
     mut commands: Commands,
-    mut event_reader: EventReader<CollisionEvent>,
+    // mut event_reader: EventReader<CollisionEvent>,
     mut event_writer: EventWriter<LaserCollideEvent>,
     rapier_context: Res<RapierContext>,
-    world_pos_query: Query<&GlobalTransform>,
 ) {
-    for (laser_entity, no_collide_entity, mut laser, collided_with_entities, velocity, collider) in
+    for (laser_entity, no_collide_entity, mut laser, collided_with_entities, velocity) in
         query.iter_mut()
     {
         if laser.active {
@@ -267,47 +265,73 @@ fn handle_events(
                     break;
                 }
 
-                let transform = world_pos_query
-                    .get(laser_entity)
-                    .expect("Every entity that collided must have a GlobalTransform");
+                for contact_pair in rapier_context.contacts_with(laser_entity) {
+                    if let Some((_, y)) = contact_pair.find_deepest_contact() {
+                        let (entity_hit, mut local_position_hit) =
+                            if contact_pair.collider1() == laser_entity {
+                                (contact_pair.collider2(), y.local_p2())
+                            } else {
+                                (contact_pair.collider1(), y.local_p1())
+                            };
 
-                if let Some((entity_hit, toi)) = rapier_context.cast_shape(
-                    transform.translation(),
-                    Quat::from_affine3(&transform.affine()),
-                    velocity.linvel,
-                    collider,
-                    1.0.into(),
-                    QueryFilter::default(),
-                ) {
-                    // The second one is being hit, the first one is the laser
-                    // (aka norm2 is the one being hit, norm1 is the laser)
+                        // This ensures that it's actually in the block and not 0.00001 above it or something stupid
+                        local_position_hit += velocity.linvel.normalize() * 0.01;
 
-                    match toi.status {
-                        TOIStatus::Converged | TOIStatus::Penetrating => {
-                            let trans = world_pos_query
-                                .get(entity_hit)
-                                .expect("Every entity that has collision has a global transform");
-
-                            let relative_location = Quat::from_affine3(&transform.affine())
-                                .inverse()
-                                .mul_vec3(transform.translation() - trans.translation());
-
+                        // Verify this is a valid collision, sometimes it returns NaN for invalid ones
+                        if local_position_hit.is_finite() {
                             event_writer.send(LaserCollideEvent {
                                 entity_hit,
-                                world_location: toi.witness2,
-                                relative_location,
+                                local_position_hit,
                             });
 
                             laser.active = false;
-                            println!(
-                                "BANG! Hit {}! Time to despawn self!",
-                                collided_with_entity.index()
-                            );
                             commands.entity(laser_entity).despawn_recursive();
+                            break;
                         }
-                        _ => {}
                     }
                 }
+
+                // let transform = world_pos_query
+                //     .get(laser_entity)
+                //     .expect("Every entity that collided must have a GlobalTransform");
+
+                // if let Some((entity_hit, toi)) = rapier_context.cast_shape(
+                //     transform.translation(),
+                //     Quat::from_affine3(&transform.affine()),
+                //     velocity.linvel,
+                //     collider,
+                //     1.0.into(),
+                //     QueryFilter::default(),
+                // ) {
+                //     // The second one is being hit, the first one is the laser
+                //     // (aka norm2 is the one being hit, norm1 is the laser)
+
+                //     match toi.status {
+                //         TOIStatus::Converged | TOIStatus::Penetrating => {
+                //             let trans = world_pos_query
+                //                 .get(entity_hit)
+                //                 .expect("Every entity that has collision has a global transform");
+
+                //             let relative_location = Quat::from_affine3(&transform.affine())
+                //                 .inverse()
+                //                 .mul_vec3(transform.translation() - trans.translation());
+
+                //             event_writer.send(LaserCollideEvent {
+                //                 entity_hit,
+                //                 world_location: toi.witness2,
+                //                 relative_location,
+                //             });
+
+                //             laser.active = false;
+                //             println!(
+                //                 "BANG! Hit {}! Time to despawn self!",
+                //                 collided_with_entity.index()
+                //             );
+                //             commands.entity(laser_entity).despawn_recursive();
+                //         }
+                //         _ => {}
+                //     }
+                // }
             }
         }
     }
@@ -325,9 +349,9 @@ fn despawn_lasers(
     }
 }
 
-// fn startup_sys(mut commands: Commands) {
-//     commands.insert_resource(PhysicsHooksWithQueryResource(Box::new(MyPhysicsHooks)));
-// }
+fn startup_sys(mut commands: Commands) {
+    commands.insert_resource(PhysicsHooksWithQueryResource(Box::new(MyPhysicsHooks)));
+}
 
 fn respond_event(
     mut reader: EventReader<LaserCollideEvent>,
@@ -340,12 +364,12 @@ fn respond_event(
         for ev in reader.iter() {
             if let Ok(parent) = parent_query.get(ev.entity_hit) {
                 if let Ok(mut structure) = structure_query.get_mut(parent.get()) {
-                    println!("Hit structure!");
+                    println!("Hit structure @ {}!", ev.local_position_hit);
                     if let Some(chunk) = structure.chunk_from_entity(&ev.entity_hit) {
                         let chunk_block_coords = (
-                            (ev.relative_location.x + CHUNK_DIMENSIONS as f32 / 2.0) as usize,
-                            (ev.relative_location.y + CHUNK_DIMENSIONS as f32 / 2.0) as usize,
-                            (ev.relative_location.z + CHUNK_DIMENSIONS as f32 / 2.0) as usize,
+                            (ev.local_position_hit.x + CHUNK_DIMENSIONS as f32 / 2.0) as usize,
+                            (ev.local_position_hit.y + CHUNK_DIMENSIONS as f32 / 2.0) as usize,
+                            (ev.local_position_hit.z + CHUNK_DIMENSIONS as f32 / 2.0) as usize,
                         );
 
                         let (bx, by, bz) = structure
@@ -353,14 +377,18 @@ fn respond_event(
 
                         println!("HIT {bx}, {by}, {bz} block coords of structure!");
 
-                        structure.set_block_at(
-                            bx,
-                            by,
-                            bz,
-                            blocks.from_id("cosmos:grass").unwrap(),
-                            &blocks,
-                            Some(&mut event_writer),
-                        );
+                        if structure.is_within_blocks(bx, by, bz) {
+                            structure.set_block_at(
+                                bx,
+                                by,
+                                bz,
+                                blocks.from_id("cosmos:grass").unwrap(),
+                                &blocks,
+                                Some(&mut event_writer),
+                            );
+                        } else {
+                            println!("Bad laser ;(");
+                        }
                     }
                 }
             }
@@ -372,6 +400,6 @@ pub(crate) fn register(app: &mut App) {
     app.add_system(handle_events)
         .add_system(despawn_lasers)
         .add_system(respond_event)
-        .add_event::<LaserCollideEvent>();
-    // .add_startup_system(startup_sys);
+        .add_event::<LaserCollideEvent>()
+        .add_startup_system(startup_sys);
 }

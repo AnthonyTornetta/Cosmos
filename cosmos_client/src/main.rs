@@ -30,7 +30,6 @@ use input::inputs::{self, CosmosInputHandler, CosmosInputs};
 use interactions::block_interactions;
 use netty::connect::{self, ConnectionConfig};
 use netty::flags::LocalPlayer;
-use netty::gameplay::receiver;
 use netty::mapping::NetworkMapping;
 use rendering::structure_renderer;
 use state::game_state::GameState;
