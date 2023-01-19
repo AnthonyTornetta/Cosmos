@@ -1,18 +1,23 @@
 use bevy::{
     prelude::{
-        App, Commands, Component, DespawnRecursiveExt, Entity, EventReader, EventWriter, Parent,
-        PbrBundle, Quat, Query, Res, Transform, Vec3, With,
+        App, Commands, Component, DespawnRecursiveExt, Entity, EventReader, EventWriter,
+        GlobalTransform, Parent, PbrBundle, Quat, Query, Res, Transform, Vec3, With,
     },
     time::Time,
 };
-use bevy_rapier3d::prelude::{
-    ActiveEvents, ActiveHooks, Ccd, Collider, CollidingEntities, CollisionEvent,
-    ContactModificationContextView, LockedAxes, NoUserData, PhysicsHooksWithQuery,
-    PhysicsHooksWithQueryResource, RapierContext, RigidBody, Sensor, SolverFlags, Velocity,
+use bevy_rapier3d::{
+    prelude::{
+        ActiveEvents, ActiveHooks, Ccd, Collider, CollidingEntities, CollisionEvent,
+        ContactModificationContextView, LockedAxes, NoUserData, PhysicsHooksWithQuery,
+        PhysicsHooksWithQueryResource, QueryFilter, RapierContext, RigidBody, Sensor, SolverFlags,
+        TOIStatus, Toi, Velocity,
+    },
+    rapier::prelude::Real,
 };
 
 #[derive(Debug)]
 pub struct LaserCollideEvent {
+    entity_hit: Entity,
     world_location: Vec3,
     normal: Vec3,
     hit: Entity,
@@ -175,8 +180,7 @@ impl Laser {
             })
             .insert(ActiveEvents::COLLISION_EVENTS)
             .insert(ActiveHooks::MODIFY_SOLVER_CONTACTS)
-            // .insert(Sensor)
-            ;
+            .insert(Sensor);
 
         if let Some(ent) = no_collide_entity {
             ent_cmds.insert(NoCollide {
@@ -216,13 +220,33 @@ impl Laser {
 }
 
 fn handle_events(
-    mut query: Query<(Entity, Option<&NoCollide>, &mut Laser, &CollidingEntities), With<Laser>>,
+    mut query: Query<
+        (
+            Entity,
+            Option<&NoCollide>,
+            &mut Laser,
+            &CollidingEntities,
+            &GlobalTransform,
+            &Velocity,
+            &Collider,
+        ),
+        With<Laser>,
+    >,
     mut commands: Commands,
     mut event_reader: EventReader<CollisionEvent>,
     mut event_writer: EventWriter<LaserCollideEvent>,
     rapier_context: Res<RapierContext>,
 ) {
-    for (laser_entity, no_collide_entity, mut laser, collided_with_entities) in query.iter_mut() {
+    for (
+        laser_entity,
+        no_collide_entity,
+        mut laser,
+        collided_with_entities,
+        transform,
+        velocity,
+        collider,
+    ) in query.iter_mut()
+    {
         if laser.active {
             for collided_with_entity in collided_with_entities.iter() {
                 if let Some(no_collide) = no_collide_entity {
@@ -236,12 +260,39 @@ fn handle_events(
                     break;
                 }
 
-                if let Some(contact_pair) =
-                    rapier_context.contact_pair(laser_entity, collided_with_entity)
-                {
-                    println!("Manifolds count: {}", contact_pair.manifolds_len());
-                    // contact_pair.manifold(0).unwrap().find_deepest_contact().unwrap().
+                if let Some((entity, toi)) = rapier_context.cast_shape(
+                    transform.translation(),
+                    Quat::from_affine3(&transform.affine()),
+                    velocity.linvel,
+                    collider,
+                    1.0.into(),
+                    QueryFilter::default(),
+                ) {
+                    // The second one is being hit, the first one is the laser
+                    // (aka norm2 is the one being hit, norm1 is the laser)
+
+                    match toi.status {
+                        TOIStatus::Converged => {
+                            println!("NORM 1: {}, NORM 2: {}", toi.normal1, toi.normal2);
+
+                            println!("{}", toi.witness2);
+                        }
+                        TOIStatus::Penetrating => {
+                            event_writer.send(LaserCollideEvent {
+                                world_location: (),
+                                normal: (),
+                                hit: (),
+                            });
+                        }
+                        _ => {}
+                    }
                 }
+                // if let Some(contact_pair) =
+                //     rapier_context.contact_pair(laser_entity, collided_with_entity)
+                // {
+                //     println!("Manifolds count: {}", contact_pair.manifolds_len());
+                //     // contact_pair.manifold(0).unwrap().find_deepest_contact().unwrap().
+                // }
 
                 laser.active = false;
                 println!(
