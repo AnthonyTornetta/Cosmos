@@ -76,7 +76,7 @@ impl StructureRenderer {
         &mut self,
         structure: &Structure,
         uv_mapper: &UVMapper,
-        blocks: &Res<Registry<Block>>,
+        blocks: &Registry<Block>,
     ) {
         for change in &self.changes {
             debug_assert!(change.x < self.width);
@@ -404,7 +404,7 @@ impl ChunkRenderer {
         top: Option<&Chunk>,
         back: Option<&Chunk>,
         front: Option<&Chunk>,
-        blocks: &Res<Registry<Block>>,
+        blocks: &Registry<Block>,
     ) {
         self.indices.clear();
         self.uvs.clear();

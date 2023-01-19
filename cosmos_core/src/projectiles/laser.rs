@@ -1,3 +1,5 @@
+use std::ops::Mul;
+
 use bevy::{
     prelude::{
         App, Commands, Component, DespawnRecursiveExt, Entity, EventReader, EventWriter,
@@ -5,22 +7,34 @@ use bevy::{
     },
     time::Time,
 };
-use bevy_rapier3d::{
-    prelude::{
-        ActiveEvents, ActiveHooks, Ccd, Collider, CollidingEntities, CollisionEvent,
-        ContactModificationContextView, LockedAxes, NoUserData, PhysicsHooksWithQuery,
-        PhysicsHooksWithQueryResource, QueryFilter, RapierContext, RigidBody, Sensor, SolverFlags,
-        TOIStatus, Toi, Velocity,
-    },
-    rapier::prelude::Real,
+use bevy_rapier3d::prelude::{
+    ActiveEvents, ActiveHooks, Ccd, Collider, CollidingEntities, CollisionEvent,
+    ContactModificationContextView, LockedAxes, NoUserData, PhysicsHooksWithQuery,
+    PhysicsHooksWithQueryResource, QueryFilter, RapierContext, RigidBody, Sensor, SolverFlags,
+    TOIStatus, Toi, Velocity,
+};
+
+use crate::{
+    block::Block,
+    events::block_events::BlockChangedEvent,
+    registry::Registry,
+    structure::{chunk::CHUNK_DIMENSIONS, Structure},
 };
 
 #[derive(Debug)]
+/// The entity hit represents the entity hit by the laser
+///
+/// The world location the exact position the world this collision happened
+///
+/// The relative location is based off the hit entity's world view
+/// - The relative location is how that object would perceive the point based on how it views the world
+/// - This means that the relative counts the hit entity's rotation
+/// - To get the world point (assuming this entity hasn't moved), simply do
+///     - (That entity's rotation quaternion * relative_location) + that entity's global transform position.
 pub struct LaserCollideEvent {
     entity_hit: Entity,
     world_location: Vec3,
-    normal: Vec3,
-    hit: Entity,
+    relative_location: Vec3,
 }
 
 /// NEW APPROACH
@@ -226,7 +240,6 @@ fn handle_events(
             Option<&NoCollide>,
             &mut Laser,
             &CollidingEntities,
-            &GlobalTransform,
             &Velocity,
             &Collider,
         ),
@@ -236,16 +249,10 @@ fn handle_events(
     mut event_reader: EventReader<CollisionEvent>,
     mut event_writer: EventWriter<LaserCollideEvent>,
     rapier_context: Res<RapierContext>,
+    world_pos_query: Query<&GlobalTransform>,
 ) {
-    for (
-        laser_entity,
-        no_collide_entity,
-        mut laser,
-        collided_with_entities,
-        transform,
-        velocity,
-        collider,
-    ) in query.iter_mut()
+    for (laser_entity, no_collide_entity, mut laser, collided_with_entities, velocity, collider) in
+        query.iter_mut()
     {
         if laser.active {
             for collided_with_entity in collided_with_entities.iter() {
@@ -260,7 +267,11 @@ fn handle_events(
                     break;
                 }
 
-                if let Some((entity, toi)) = rapier_context.cast_shape(
+                let transform = world_pos_query
+                    .get(laser_entity)
+                    .expect("Every entity that collided must have a GlobalTransform");
+
+                if let Some((entity_hit, toi)) = rapier_context.cast_shape(
                     transform.translation(),
                     Quat::from_affine3(&transform.affine()),
                     velocity.linvel,
@@ -272,36 +283,31 @@ fn handle_events(
                     // (aka norm2 is the one being hit, norm1 is the laser)
 
                     match toi.status {
-                        TOIStatus::Converged => {
-                            println!("NORM 1: {}, NORM 2: {}", toi.normal1, toi.normal2);
+                        TOIStatus::Converged | TOIStatus::Penetrating => {
+                            let trans = world_pos_query
+                                .get(entity_hit)
+                                .expect("Every entity that has collision has a global transform");
 
-                            println!("{}", toi.witness2);
-                        }
-                        TOIStatus::Penetrating => {
+                            let relative_location = Quat::from_affine3(&transform.affine())
+                                .inverse()
+                                .mul_vec3(transform.translation() - trans.translation());
+
                             event_writer.send(LaserCollideEvent {
-                                world_location: (),
-                                normal: (),
-                                hit: (),
+                                entity_hit,
+                                world_location: toi.witness2,
+                                relative_location,
                             });
+
+                            laser.active = false;
+                            println!(
+                                "BANG! Hit {}! Time to despawn self!",
+                                collided_with_entity.index()
+                            );
+                            commands.entity(laser_entity).despawn_recursive();
                         }
                         _ => {}
                     }
                 }
-                // if let Some(contact_pair) =
-                //     rapier_context.contact_pair(laser_entity, collided_with_entity)
-                // {
-                //     println!("Manifolds count: {}", contact_pair.manifolds_len());
-                //     // contact_pair.manifold(0).unwrap().find_deepest_contact().unwrap().
-                // }
-
-                laser.active = false;
-                println!(
-                    "BANG! Hit {}! Time to despawn self!",
-                    collided_with_entity.index()
-                );
-
-                // event_writer.send(LaserCollideEvent { world_location: , normal: (), hit: () })
-                commands.entity(laser_entity).despawn_recursive();
             }
         }
     }
@@ -323,9 +329,49 @@ fn despawn_lasers(
 //     commands.insert_resource(PhysicsHooksWithQueryResource(Box::new(MyPhysicsHooks)));
 // }
 
+fn respond_event(
+    mut reader: EventReader<LaserCollideEvent>,
+    parent_query: Query<&Parent>,
+    mut structure_query: Query<&mut Structure>,
+    blocks: Option<Res<Registry<Block>>>,
+    mut event_writer: EventWriter<BlockChangedEvent>,
+) {
+    if let Some(blocks) = blocks {
+        for ev in reader.iter() {
+            if let Ok(parent) = parent_query.get(ev.entity_hit) {
+                if let Ok(mut structure) = structure_query.get_mut(parent.get()) {
+                    println!("Hit structure!");
+                    if let Some(chunk) = structure.chunk_from_entity(&ev.entity_hit) {
+                        let chunk_block_coords = (
+                            (ev.relative_location.x + CHUNK_DIMENSIONS as f32 / 2.0) as usize,
+                            (ev.relative_location.y + CHUNK_DIMENSIONS as f32 / 2.0) as usize,
+                            (ev.relative_location.z + CHUNK_DIMENSIONS as f32 / 2.0) as usize,
+                        );
+
+                        let (bx, by, bz) = structure
+                            .block_coords_for_chunk_block_coords(chunk, chunk_block_coords);
+
+                        println!("HIT {bx}, {by}, {bz} block coords of structure!");
+
+                        structure.set_block_at(
+                            bx,
+                            by,
+                            bz,
+                            blocks.from_id("cosmos:grass").unwrap(),
+                            &blocks,
+                            Some(&mut event_writer),
+                        );
+                    }
+                }
+            }
+        }
+    }
+}
+
 pub(crate) fn register(app: &mut App) {
     app.add_system(handle_events)
         .add_system(despawn_lasers)
+        .add_system(respond_event)
         .add_event::<LaserCollideEvent>();
     // .add_startup_system(startup_sys);
 }

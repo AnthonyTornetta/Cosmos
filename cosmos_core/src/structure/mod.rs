@@ -1,3 +1,4 @@
+use bevy::utils::HashMap;
 use bevy::{ecs::schedule::StateData, prelude::App};
 
 pub mod chunk;
@@ -27,6 +28,8 @@ use self::structure_iterator::{BlockIterator, ChunkIterator};
 pub struct Structure {
     #[serde(skip)]
     chunk_entities: Vec<Option<Entity>>,
+    #[serde(skip)]
+    chunk_entity_map: HashMap<Entity, usize>,
     #[serde(skip)]
     self_entity: Option<Entity>,
 
@@ -61,6 +64,7 @@ impl Structure {
             width,
             height,
             length,
+            chunk_entity_map: HashMap::default(),
         }
     }
 
@@ -105,7 +109,39 @@ impl Structure {
                 self.chunk_entities.push(None);
             }
         }
-        self.chunk_entities[flatten(cx, cy, cz, self.width, self.height)] = Some(entity);
+
+        let index = flatten(cx, cy, cz, self.width, self.height);
+
+        self.chunk_entity_map.insert(entity, index);
+        self.chunk_entities[index] = Some(entity);
+    }
+
+    pub fn chunk_from_entity(&self, entity: &Entity) -> Option<&Chunk> {
+        if let Some(index) = self.chunk_entity_map.get(entity) {
+            Some(&self.chunks[*index])
+        } else {
+            None
+        }
+    }
+
+    pub fn block_coords_for_chunk(&self, chunk: &Chunk) -> (usize, usize, usize) {
+        (
+            CHUNK_DIMENSIONS * chunk.structure_x(),
+            CHUNK_DIMENSIONS * chunk.structure_y(),
+            CHUNK_DIMENSIONS * chunk.structure_z(),
+        )
+    }
+
+    pub fn block_coords_for_chunk_block_coords(
+        &self,
+        chunk: &Chunk,
+        block_coords: (usize, usize, usize),
+    ) -> (usize, usize, usize) {
+        (
+            CHUNK_DIMENSIONS * chunk.structure_x() + block_coords.0,
+            CHUNK_DIMENSIONS * chunk.structure_y() + block_coords.1,
+            CHUNK_DIMENSIONS * chunk.structure_z() + block_coords.2,
+        )
     }
 
     pub fn set_entity(&mut self, entity: Entity) {
@@ -204,7 +240,7 @@ impl Structure {
         x: usize,
         y: usize,
         z: usize,
-        blocks: &Res<Registry<Block>>,
+        blocks: &Registry<Block>,
         event_writer: Option<&mut EventWriter<BlockChangedEvent>>,
     ) {
         self.set_block_at(
@@ -223,7 +259,7 @@ impl Structure {
         y: usize,
         z: usize,
         block: &Block,
-        blocks: &Res<Registry<Block>>,
+        blocks: &Registry<Block>,
         event_writer: Option<&mut EventWriter<BlockChangedEvent>>,
     ) {
         let old_block = self.block_id_at(x, y, z);

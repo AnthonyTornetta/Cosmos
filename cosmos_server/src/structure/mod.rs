@@ -8,4 +8,5 @@ pub mod systems;
 pub(crate) fn register(app: &mut App) {
     ship::register(app);
     systems::register(app);
+    planet::register(app);
 }

@@ -55,7 +55,7 @@ impl TBiosphere<GrassBiosphereMarker, GrassChunkNeedsGeneratedEvent> for GrassBi
 const AMPLITUDE: f64 = 30.0;
 const DELTA: f64 = 0.05;
 
-pub fn generate_planet(
+pub(crate) fn generate_planet(
     mut query: Query<&mut Structure>,
     mut events: EventReader<GrassChunkNeedsGeneratedEvent>,
     mut event_writer: EventWriter<ChunkSetEvent>,
@@ -117,6 +117,8 @@ pub fn register(app: &mut App) {
     app.add_system_set(
         SystemSet::on_update(GameState::Playing)
             .with_system(generate_planet)
-            .with_system(check_needs_generated_system::<GrassChunkNeedsGeneratedEvent>),
+            .with_system(
+                check_needs_generated_system::<GrassChunkNeedsGeneratedEvent, GrassBiosphereMarker>,
+            ),
     );
 }

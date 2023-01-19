@@ -6,9 +6,7 @@ use bevy::diagnostic::DiagnosticsPlugin;
 use bevy::ecs::schedule::StateData;
 use bevy::input::InputPlugin;
 use bevy::log::LogPlugin;
-use bevy::prelude::{
-    App, Entity, HierarchyPlugin, ImagePlugin, Parent, Plugin, PluginGroup, TransformPlugin,
-};
+use bevy::prelude::{App, HierarchyPlugin, ImagePlugin, Plugin, PluginGroup, TransformPlugin};
 use bevy::render::RenderPlugin;
 use bevy::scene::ScenePlugin;
 use bevy::time::TimePlugin;
@@ -16,7 +14,6 @@ use bevy::window::WindowPlugin;
 use bevy_inspector_egui::InspectableRegistry;
 use bevy_rapier3d::prelude::{NoUserData, RapierPhysicsPlugin};
 
-use crate::projectiles::laser::NoCollide;
 use crate::{block, inventory, projectiles};
 use crate::{blockitems, structure};
 use crate::{events, loader};
@@ -120,7 +117,8 @@ impl<T: StateData + Clone + Copy> PluginGroup for CosmosCorePluginGroup<T> {
             .add(CorePipelinePlugin::default())
             // See the laser.rs file in projectiles for why &NoCollide is here.
             // I hope one day rapier updates and I don't have to use this stupidity
-            .add(RapierPhysicsPlugin::<(Option<&NoCollide>, Option<&Parent>)>::default())
+            // .add(RapierPhysicsPlugin::<(Option<&NoCollide>, Option<&Parent>)>::default())
+            .add(RapierPhysicsPlugin::<NoUserData>::default())
             .add(ImagePlugin::default_nearest())
             .add(CosmosCorePlugin::new(
                 self.pre_loading_state,

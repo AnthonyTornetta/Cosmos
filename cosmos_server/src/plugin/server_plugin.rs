@@ -5,8 +5,7 @@ use crate::{
     init::{init_server, init_world},
     inventory,
     netty::{server_listener, sync::sync_bodies},
-    physics, state,
-    structure::{self, planet::biosphere::grass_biosphere},
+    physics, state, structure,
 };
 
 pub struct ServerPlugin;
@@ -20,7 +19,6 @@ impl Plugin for ServerPlugin {
         events::register(app);
         server_listener::register(app);
         physics::register(app);
-        grass_biosphere::register(app); // move this to biospheres mod register function when more biospheres are created
         blocks::register(app);
         structure::register(app);
         inventory::register(app);

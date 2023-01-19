@@ -294,7 +294,7 @@ fn main() {
     chunk_retreiver::register(&mut app);
     camera_controller::register(&mut app);
     ui::register(&mut app);
-    receiver::register(&mut app);
+    netty::register(&mut app);
     structure_renderer::register(&mut app);
     lang::register(&mut app);
     structure::register(&mut app);
