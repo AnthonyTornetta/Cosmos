@@ -208,10 +208,9 @@ impl Structure {
         y: f32,
         z: f32,
     ) -> Result<(usize, usize, usize), bool> {
-        // replace the + 0.5 with .round() at some point to make it a bit cleaner
-        let xx = x + (self.blocks_width() as f32 / 2.0) + 0.5;
-        let yy = y + (self.blocks_height() as f32 / 2.0) + 0.5;
-        let zz = z + (self.blocks_length() as f32 / 2.0) + 0.5;
+        let xx = x + (self.blocks_width() as f32 / 2.0);
+        let yy = y + (self.blocks_height() as f32 / 2.0);
+        let zz = z + (self.blocks_length() as f32 / 2.0);
 
         if xx >= 0.0 && yy >= 0.0 && zz >= 0.0 {
             let (xxx, yyy, zzz) = (xx as usize, yy as usize, zz as usize);
@@ -287,13 +286,13 @@ impl Structure {
     }
 
     pub fn chunk_relative_position(&self, x: usize, y: usize, z: usize) -> Vec3 {
-        let xoff = self.blocks_width() as f32 / 2.0;
-        let yoff = self.blocks_height() as f32 / 2.0;
-        let zoff = self.blocks_length() as f32 / 2.0;
+        let xoff = (self.width as f32 - 1.0) / 2.0;
+        let yoff = (self.height as f32 - 1.0) / 2.0;
+        let zoff = (self.length as f32 - 1.0) / 2.0;
 
-        let xx = x as f32 * CHUNK_DIMENSIONS as f32 - xoff;
-        let yy = y as f32 * CHUNK_DIMENSIONS as f32 - yoff;
-        let zz = z as f32 * CHUNK_DIMENSIONS as f32 - zoff;
+        let xx = CHUNK_DIMENSIONS as f32 * (x as f32 - xoff as f32);
+        let yy = CHUNK_DIMENSIONS as f32 * (y as f32 - yoff as f32);
+        let zz = CHUNK_DIMENSIONS as f32 * (z as f32 - zoff as f32);
 
         Vec3::new(xx, yy, zz)
     }

@@ -413,13 +413,19 @@ impl ChunkRenderer {
 
         let mut last_index = 0;
 
+        let cd2 = CHUNK_DIMENSIONS as f32 / 2.0;
+
         for z in 0..CHUNK_DIMENSIONS {
             for y in 0..CHUNK_DIMENSIONS {
                 for x in 0..CHUNK_DIMENSIONS {
                     if chunk.has_block_at(x, y, z) {
                         let block = blocks.from_numeric_id(chunk.block_at(x, y, z));
 
-                        let (cx, cy, cz) = (x as f32, y as f32, z as f32);
+                        let (cx, cy, cz) = (
+                            x as f32 - cd2 + 0.5,
+                            y as f32 - cd2 + 0.5,
+                            z as f32 - cd2 + 0.5,
+                        );
 
                         // right
                         if (x != CHUNK_DIMENSIONS - 1

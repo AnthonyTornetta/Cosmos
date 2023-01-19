@@ -235,11 +235,7 @@ fn generate_chunk_collider(chunk: &Chunk, blocks: &Registry<Block>) -> Option<Co
         chunk,
         blocks,
         &mut colliders,
-        Vect::new(
-            CHUNK_DIMENSIONS as f32 / 2.0 - 0.5,
-            CHUNK_DIMENSIONS as f32 / 2.0 - 0.5,
-            CHUNK_DIMENSIONS as f32 / 2.0 - 0.5,
-        ),
+        Vect::new(0.0, 0.0, 0.0),
         Vector3::new(0, 0, 0),
         CHUNK_DIMENSIONS,
         &mut density,

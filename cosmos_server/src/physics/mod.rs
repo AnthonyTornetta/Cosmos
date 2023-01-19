@@ -1,3 +1,3 @@
 use bevy::prelude::App;
 
-pub fn register(_app: &mut App) {}
+pub(crate) fn register(_app: &mut App) {}
