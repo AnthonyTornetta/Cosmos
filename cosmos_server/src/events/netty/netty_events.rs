@@ -51,7 +51,7 @@ fn generate_player_inventory(items: &Registry<Item>) -> Inventory {
             .expect("Laser cannon item to exist"),
         64,
     );
-        
+
     inventory.insert_at(
         9 * 3 + 5,
         items

@@ -18,7 +18,7 @@ use crate::registry::identifiable::Identifiable;
 use crate::registry::Registry;
 use crate::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
 use crate::utils::array_utils::flatten;
-use bevy::prelude::{Component, Entity, EventWriter, GlobalTransform, Res, Vec3};
+use bevy::prelude::{Component, Entity, EventWriter, GlobalTransform, Vec3};
 use serde::{Deserialize, Serialize};
 
 use self::structure_block::StructureBlock;

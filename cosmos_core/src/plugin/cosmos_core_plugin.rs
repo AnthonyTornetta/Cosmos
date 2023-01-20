@@ -14,7 +14,7 @@ use bevy::scene::ScenePlugin;
 use bevy::time::TimePlugin;
 use bevy::window::WindowPlugin;
 use bevy_inspector_egui::InspectableRegistry;
-use bevy_rapier3d::prelude::{NoUserData, RapierPhysicsPlugin};
+use bevy_rapier3d::prelude::RapierPhysicsPlugin;
 
 use crate::projectiles::laser::NoCollide;
 use crate::{block, inventory, projectiles};
@@ -91,7 +91,13 @@ impl<T: StateData + Clone + Copy> Plugin for CosmosCorePlugin<T> {
             self.post_loading_state,
             self.done_loading_state,
         );
-        block::register(app, self.pre_loading_state, self.loading_state);
+
+        block::register(
+            app,
+            self.pre_loading_state,
+            self.loading_state,
+            self.post_loading_state,
+        );
         item::register(app, self.pre_loading_state, self.loading_state);
         blockitems::register(app, self.pre_loading_state, self.loading_state);
         physics::register(app);

@@ -5,7 +5,7 @@ use crate::{
     init::{init_server, init_world},
     inventory,
     netty::{server_listener, sync::sync_bodies},
-    physics, state, structure,
+    physics, projectiles, state, structure,
 };
 
 pub struct ServerPlugin;
@@ -22,5 +22,6 @@ impl Plugin for ServerPlugin {
         blocks::register(app);
         structure::register(app);
         inventory::register(app);
+        projectiles::register(app);
     }
 }

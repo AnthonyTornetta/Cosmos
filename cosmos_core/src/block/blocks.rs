@@ -4,7 +4,7 @@ use crate::registry::{self, Registry};
 use bevy::ecs::schedule::StateData;
 use bevy::prelude::{App, EventWriter, ResMut, SystemSet};
 
-use super::{Block, BlockFace, BlockProperty};
+use super::{hardness, Block, BlockFace, BlockProperty};
 
 pub static AIR_BLOCK_ID: u16 = 0;
 
@@ -83,7 +83,7 @@ pub fn add_cosmos_blocks(
             .set_all_uvs(0)
             .create(),
     );
-    
+
     blocks.register(
         BlockBuilder::new("cosmos:ship_hull".to_owned(), 0.5)
             .add_property(BlockProperty::Opaque)
@@ -105,7 +105,7 @@ fn add_air_block(mut blocks: ResMut<Registry<Block>>) {
     );
 }
 
-pub fn register<T: StateData + Clone + Copy>(
+pub(crate) fn register<T: StateData + Clone + Copy>(
     app: &mut App,
     pre_loading_state: T,
     loading_state: T,

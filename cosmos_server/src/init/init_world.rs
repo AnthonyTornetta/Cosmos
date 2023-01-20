@@ -8,7 +8,7 @@ use cosmos_core::{
 use noise::Seedable;
 
 use crate::structure::planet::{
-    biosphere::{grass_biosphere::GrassBiosphere, test_all_stone_biosphere::TestStoneBiosphere},
+    biosphere::test_all_stone_biosphere::TestStoneBiosphere,
     server_planet_builder::ServerPlanetBuilder,
 };
 

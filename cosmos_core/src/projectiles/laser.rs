@@ -1,24 +1,14 @@
-use std::ops::Mul;
-
 use bevy::{
     prelude::{
-        App, Commands, Component, DespawnRecursiveExt, Entity, EventReader, EventWriter,
-        GlobalTransform, Parent, PbrBundle, Quat, Query, Res, Transform, Vec3, With,
+        App, Commands, Component, DespawnRecursiveExt, Entity, EventWriter, Parent, PbrBundle,
+        Quat, Query, Res, Transform, Vec3, With,
     },
     time::Time,
 };
 use bevy_rapier3d::prelude::{
-    ActiveEvents, ActiveHooks, Ccd, Collider, CollidingEntities, CollisionEvent,
-    ContactModificationContextView, LockedAxes, PhysicsHooksWithQuery,
-    PhysicsHooksWithQueryResource, RapierContext, RigidBody, Sensor, SolverFlags, TOIStatus, Toi,
+    ActiveEvents, ActiveHooks, Ccd, Collider, CollidingEntities, ContactModificationContextView,
+    LockedAxes, PhysicsHooksWithQuery, PhysicsHooksWithQueryResource, RapierContext, RigidBody,
     Velocity,
-};
-
-use crate::{
-    block::Block,
-    events::block_events::BlockChangedEvent,
-    registry::Registry,
-    structure::{chunk::CHUNK_DIMENSIONS, Structure},
 };
 
 #[derive(Debug)]
@@ -36,18 +26,16 @@ pub struct LaserCollideEvent {
     local_position_hit: Vec3,
 }
 
-/// NEW APPROACH
-/// Make bullet sensor
-/// Store its previous position as a component
-/// update that every frame
-///
-/// Listen for its collision event
-/// When one is found:
-/// Make a raycast from its previous position to its current position
-/// See what that intersects with, if nothing, then keep the laser alive, if something, then shazam!
-/// I don't like this much, but its better than the below method.
+impl LaserCollideEvent {
+    pub fn entity_hit(&self) -> Entity {
+        self.entity_hit
+    }
 
-/// This doesn't work
+    pub fn local_position_hit(&self) -> Vec3 {
+        self.local_position_hit
+    }
+}
+
 struct MyPhysicsHooks;
 
 /// HEY! IF YOU CHANGE THE DATA IN THE <>, MAKE SURE TO CHANGE IT IN THE COSMOS_CORE_PLUGIN.RS FILE TOO!
@@ -142,6 +130,7 @@ pub struct Laser {
     /// commands despawning entity isn't instant, but changing this field is.
     /// Thus, this field should always be checked when determining if a laser should break/damage something.
     active: bool,
+    strength: f32,
 }
 
 impl Laser {
@@ -155,7 +144,7 @@ impl Laser {
         position: Vec3,
         laser_velocity: Vec3,
         firer_velocity: Vec3,
-        _strength: f32,
+        strength: f32,
         no_collide_entity: Option<Entity>,
         mut pbr: PbrBundle,
         time: &Time,
@@ -175,7 +164,7 @@ impl Laser {
 
         ent_cmds
             .insert(Laser {
-                // strength,
+                strength,
                 active: true,
             })
             .insert(pbr)
@@ -290,48 +279,6 @@ fn handle_events(
                         }
                     }
                 }
-
-                // let transform = world_pos_query
-                //     .get(laser_entity)
-                //     .expect("Every entity that collided must have a GlobalTransform");
-
-                // if let Some((entity_hit, toi)) = rapier_context.cast_shape(
-                //     transform.translation(),
-                //     Quat::from_affine3(&transform.affine()),
-                //     velocity.linvel,
-                //     collider,
-                //     1.0.into(),
-                //     QueryFilter::default(),
-                // ) {
-                //     // The second one is being hit, the first one is the laser
-                //     // (aka norm2 is the one being hit, norm1 is the laser)
-
-                //     match toi.status {
-                //         TOIStatus::Converged | TOIStatus::Penetrating => {
-                //             let trans = world_pos_query
-                //                 .get(entity_hit)
-                //                 .expect("Every entity that has collision has a global transform");
-
-                //             let relative_location = Quat::from_affine3(&transform.affine())
-                //                 .inverse()
-                //                 .mul_vec3(transform.translation() - trans.translation());
-
-                //             event_writer.send(LaserCollideEvent {
-                //                 entity_hit,
-                //                 world_location: toi.witness2,
-                //                 relative_location,
-                //             });
-
-                //             laser.active = false;
-                //             println!(
-                //                 "BANG! Hit {}! Time to despawn self!",
-                //                 collided_with_entity.index()
-                //             );
-                //             commands.entity(laser_entity).despawn_recursive();
-                //         }
-                //         _ => {}
-                //     }
-                // }
             }
         }
     }
@@ -353,53 +300,9 @@ fn startup_sys(mut commands: Commands) {
     commands.insert_resource(PhysicsHooksWithQueryResource(Box::new(MyPhysicsHooks)));
 }
 
-fn respond_event(
-    mut reader: EventReader<LaserCollideEvent>,
-    parent_query: Query<&Parent>,
-    mut structure_query: Query<&mut Structure>,
-    blocks: Option<Res<Registry<Block>>>,
-    mut event_writer: EventWriter<BlockChangedEvent>,
-) {
-    if let Some(blocks) = blocks {
-        for ev in reader.iter() {
-            if let Ok(parent) = parent_query.get(ev.entity_hit) {
-                if let Ok(mut structure) = structure_query.get_mut(parent.get()) {
-                    println!("Hit structure @ {}!", ev.local_position_hit);
-                    if let Some(chunk) = structure.chunk_from_entity(&ev.entity_hit) {
-                        let chunk_block_coords = (
-                            (ev.local_position_hit.x + CHUNK_DIMENSIONS as f32 / 2.0) as usize,
-                            (ev.local_position_hit.y + CHUNK_DIMENSIONS as f32 / 2.0) as usize,
-                            (ev.local_position_hit.z + CHUNK_DIMENSIONS as f32 / 2.0) as usize,
-                        );
-
-                        let (bx, by, bz) = structure
-                            .block_coords_for_chunk_block_coords(chunk, chunk_block_coords);
-
-                        println!("HIT {bx}, {by}, {bz} block coords of structure!");
-
-                        if structure.is_within_blocks(bx, by, bz) {
-                            structure.set_block_at(
-                                bx,
-                                by,
-                                bz,
-                                blocks.from_id("cosmos:grass").unwrap(),
-                                &blocks,
-                                Some(&mut event_writer),
-                            );
-                        } else {
-                            println!("Bad laser ;(");
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
 pub(crate) fn register(app: &mut App) {
     app.add_system(handle_events)
         .add_system(despawn_lasers)
-        .add_system(respond_event)
         .add_event::<LaserCollideEvent>()
         .add_startup_system(startup_sys);
 }
