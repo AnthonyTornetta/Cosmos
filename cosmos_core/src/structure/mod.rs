@@ -230,6 +230,17 @@ impl Structure {
         )
     }
 
+    pub fn block_at<'a>(
+        &'a self,
+        x: usize,
+        y: usize,
+        z: usize,
+        blocks: &'a Registry<Block>,
+    ) -> &'a Block {
+        let id = self.block_id_at(x, y, z);
+        blocks.from_numeric_id(id)
+    }
+
     pub fn chunks(&self) -> &Vec<Chunk> {
         &self.chunks
     }

@@ -24,6 +24,8 @@ fn on_laser_hit_structure(
         println!("HIT {bx}, {by}, {bz} block coords of structure!");
 
         if structure.is_within_blocks(bx, by, bz) {
+            let block = structure.block_at(bx, by, bz, &blocks);
+
             structure.remove_block_at(bx, by, bz, &blocks, Some(event_writer));
         } else {
             println!("Bad laser ;(");

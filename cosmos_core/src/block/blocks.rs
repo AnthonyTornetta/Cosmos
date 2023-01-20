@@ -4,7 +4,7 @@ use crate::registry::{self, Registry};
 use bevy::ecs::schedule::StateData;
 use bevy::prelude::{App, EventWriter, ResMut, SystemSet};
 
-use super::{hardness, Block, BlockFace, BlockProperty};
+use super::{Block, BlockFace, BlockProperty};
 
 pub static AIR_BLOCK_ID: u16 = 0;
 
