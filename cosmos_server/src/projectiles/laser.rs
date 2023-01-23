@@ -1,7 +1,10 @@
 use bevy::prelude::*;
 use cosmos_core::{
-    block::Block, events::block_events::BlockChangedEvent, projectiles::laser::LaserCollideEvent,
-    registry::Registry, structure::Structure,
+    block::{hardness::BlockHardness, Block},
+    events::block_events::BlockChangedEvent,
+    projectiles::laser::LaserCollideEvent,
+    registry::{identifiable::Identifiable, Registry},
+    structure::Structure,
 };
 
 use crate::state::GameState;
@@ -15,6 +18,8 @@ fn on_laser_hit_structure(
     local_position_hit: Vec3,
     blocks: &Registry<Block>,
     event_writer: &mut EventWriter<BlockChangedEvent>,
+    hardness_registry: &Registry<BlockHardness>,
+    strength: f32,
 ) {
     if let Some(chunk) = structure.chunk_from_entity(&entity_hit) {
         let chunk_block_coords = chunk.relative_coords_to_block_coords(&local_position_hit);
@@ -24,9 +29,18 @@ fn on_laser_hit_structure(
         println!("HIT {bx}, {by}, {bz} block coords of structure from {local_position_hit}!");
 
         if structure.is_within_blocks(bx, by, bz) {
-            // let block = structure.block_at(bx, by, bz, &blocks);
+            let block = structure.block_at(bx, by, bz, &blocks);
 
-            structure.remove_block_at(bx, by, bz, &blocks, Some(event_writer));
+            let break_block =
+                if let Some(block_hardness) = hardness_registry.from_id(block.unlocalized_name()) {
+                    rand::random::<f32>() * block_hardness.hardness() <= strength
+                } else {
+                    true
+                };
+
+            if break_block {
+                structure.remove_block_at(bx, by, bz, &blocks, Some(event_writer));
+            }
         } else {
             println!("Bad laser ;(");
         }
@@ -39,6 +53,7 @@ fn respond_laser_hit_event(
     mut structure_query: Query<&mut Structure>,
     blocks: Res<Registry<Block>>,
     mut event_writer: EventWriter<BlockChangedEvent>,
+    hardness: Res<Registry<BlockHardness>>,
 ) {
     for ev in reader.iter() {
         let entity_hit = ev.entity_hit();
@@ -52,6 +67,8 @@ fn respond_laser_hit_event(
                     local_position_hit,
                     &blocks,
                     &mut event_writer,
+                    &hardness,
+                    ev.laser_strength(),
                 );
             }
         }

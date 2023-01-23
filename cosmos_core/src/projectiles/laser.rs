@@ -1,14 +1,14 @@
 use bevy::{
     prelude::{
         App, Commands, Component, DespawnRecursiveExt, Entity, EventWriter, GlobalTransform,
-        Parent, PbrBundle, Quat, Query, Res, Transform, Vec3, With, Without,
+        Parent, PbrBundle, Quat, Query, Res, Transform, Vec3, With,
     },
     time::Time,
 };
 use bevy_rapier3d::prelude::{
-    ActiveEvents, ActiveHooks, Ccd, Collider, CollidingEntities, ContactModificationContextView,
-    LockedAxes, PhysicsHooksWithQuery, PhysicsHooksWithQueryResource, QueryFilter, RapierContext,
-    RigidBody, Sensor, Velocity,
+    ActiveEvents, ActiveHooks, Collider, ContactModificationContextView, LockedAxes,
+    PhysicsHooksWithQuery, PhysicsHooksWithQueryResource, QueryFilter, RapierContext, RigidBody,
+    Sensor, Velocity,
 };
 
 #[derive(Debug)]
@@ -24,11 +24,16 @@ use bevy_rapier3d::prelude::{
 pub struct LaserCollideEvent {
     entity_hit: Entity,
     local_position_hit: Vec3,
+    laser_strength: f32,
 }
 
 impl LaserCollideEvent {
     pub fn entity_hit(&self) -> Entity {
         self.entity_hit
+    }
+
+    pub fn laser_strength(&self) -> f32 {
+        self.laser_strength
     }
 
     pub fn local_position_hit(&self) -> Vec3 {
@@ -58,12 +63,12 @@ impl PhysicsHooksWithQuery<(Option<&NoCollide>, Option<&Parent>)> for MyPhysicsH
     ) {
         if let Ok((no_collide, _)) = query.get(context.collider1()) {
             if let Some(no_collide) = no_collide {
-                if no_collide.fired == context.collider2() {
+                if no_collide.0 == context.collider2() {
                     context.raw.solver_contacts.clear();
                 } else {
                     if let Ok((_, parent)) = query.get(context.collider2()) {
                         if let Some(parent) = parent {
-                            if no_collide.fired == parent.get() {
+                            if no_collide.0 == parent.get() {
                                 // despite this clearing the contacts, it STILL collides with the ship
                                 // ?????????????????????????????????????????????????????????????????/
                                 // I give up on this stupidity for now, I just can't take it anymore.
@@ -76,12 +81,12 @@ impl PhysicsHooksWithQuery<(Option<&NoCollide>, Option<&Parent>)> for MyPhysicsH
         } else {
             if let Ok((no_collide, _)) = query.get(context.collider2()) {
                 if let Some(no_collide) = no_collide {
-                    if no_collide.fired == context.collider1() {
+                    if no_collide.0 == context.collider1() {
                         context.raw.solver_contacts.clear();
                     } else {
                         if let Ok((_, parent)) = query.get(context.collider1()) {
                             if let Some(parent) = parent {
-                                if no_collide.fired == parent.get() {
+                                if no_collide.0 == parent.get() {
                                     context.raw.solver_contacts.clear();
                                 }
                             }
@@ -96,10 +101,7 @@ impl PhysicsHooksWithQuery<(Option<&NoCollide>, Option<&Parent>)> for MyPhysicsH
 #[derive(Component)]
 /// This is used to prevent the laser from colliding with the entity that fired it
 /// If this component is found on the object that it was fired on, then no collision will be registered
-pub struct NoCollide {
-    laser: Entity,
-    fired: Entity,
-}
+pub struct NoCollide(Entity);
 
 #[derive(Component)]
 struct FireTime {
@@ -112,7 +114,7 @@ pub struct Laser {
     /// commands despawning entity isn't instant, but changing this field is.
     /// Thus, this field should always be checked when determining if a laser should break/damage something.
     active: bool,
-    strength: f32,
+    pub strength: f32,
 }
 
 impl Laser {
@@ -120,7 +122,7 @@ impl Laser {
     ///
     /// This takes a PBR that contains mesh data. The transform field will be overwritten
     ///
-    /// Base strength is 100
+    /// Base strength is 100?
     ///
     pub fn spawn_custom_pbr(
         position: Vec3,
@@ -165,10 +167,7 @@ impl Laser {
             .insert(Sensor);
 
         if let Some(ent) = no_collide_entity {
-            ent_cmds.insert(NoCollide {
-                fired: ent,
-                laser: laser_entity,
-            });
+            ent_cmds.insert(NoCollide(ent));
         }
 
         laser_entity
@@ -231,11 +230,11 @@ fn handle_events(
                 velocity.linvel.dot(velocity.linvel),
                 QueryFilter::predicate(QueryFilter::default(), &|entity| {
                     if let Some(no_collide_entity) = no_collide_entity {
-                        if no_collide_entity.fired == entity {
+                        if no_collide_entity.0 == entity {
                             false
                         } else {
                             if let Ok(parent) = parent_query.get(entity) {
-                                if parent.get() == no_collide_entity.fired {
+                                if parent.get() == no_collide_entity.0 {
                                     false
                                 } else {
                                     true
@@ -254,6 +253,7 @@ fn handle_events(
                 event_writer.send(LaserCollideEvent {
                     entity_hit: entity,
                     local_position_hit: toi.witness1 + velocity.linvel.normalize() * 0.01,
+                    laser_strength: laser.strength,
                 });
 
                 laser.active = false;
