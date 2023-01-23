@@ -54,7 +54,7 @@ fn update_system(
                                 .mul_vec3(-line.direction.direction_vec3())
                                 * 200.0;
 
-                            let strength = 10.0;
+                            let strength = (5.0 * line.len as f32).powf(1.2);
                             let no_hit = Some(system.structure_entity);
 
                             Laser::spawn(
