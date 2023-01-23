@@ -1,7 +1,7 @@
 use bevy::{
     prelude::{
         App, Commands, Component, DespawnRecursiveExt, Entity, EventWriter, Parent, PbrBundle,
-        Quat, Query, Res, Transform, Vec3, With,
+        Quat, Query, Res, Transform, Vec3, With, Without,
     },
     time::Time,
 };
@@ -60,7 +60,6 @@ impl PhysicsHooksWithQuery<(Option<&NoCollide>, Option<&Parent>)> for MyPhysicsH
             if let Some(no_collide) = no_collide {
                 if no_collide.fired == context.collider2() {
                     context.raw.solver_contacts.clear();
-                    println!("CLEARED!!!");
                 } else {
                     if let Ok((_, parent)) = query.get(context.collider2()) {
                         if let Some(parent) = parent {
@@ -69,13 +68,6 @@ impl PhysicsHooksWithQuery<(Option<&NoCollide>, Option<&Parent>)> for MyPhysicsH
                                 // ?????????????????????????????????????????????????????????????????/
                                 // I give up on this stupidity for now, I just can't take it anymore.
                                 context.raw.solver_contacts.clear();
-                                println!("CLEARED!!!");
-                            } else {
-                                println!(
-                                    "neq, wanted {}, but got {}",
-                                    no_collide.fired.index(),
-                                    parent.get().index()
-                                );
                             }
                         }
                     }
@@ -86,26 +78,16 @@ impl PhysicsHooksWithQuery<(Option<&NoCollide>, Option<&Parent>)> for MyPhysicsH
                 if let Some(no_collide) = no_collide {
                     if no_collide.fired == context.collider1() {
                         context.raw.solver_contacts.clear();
-                        println!("CLEARED!!!");
                     } else {
                         if let Ok((_, parent)) = query.get(context.collider1()) {
                             if let Some(parent) = parent {
                                 if no_collide.fired == parent.get() {
                                     context.raw.solver_contacts.clear();
-                                    println!("CLEARED!!!");
-                                } else {
-                                    println!(
-                                        "neq, wanted {}, but got {}",
-                                        no_collide.fired.index(),
-                                        parent.get().index()
-                                    );
                                 }
                             }
                         }
                     }
                 }
-            } else {
-                println!("Err ;(");
             }
         }
     }
@@ -237,6 +219,7 @@ fn handle_events(
     // mut event_reader: EventReader<CollisionEvent>,
     mut event_writer: EventWriter<LaserCollideEvent>,
     rapier_context: Res<RapierContext>,
+    collider_query: Query<&Collider, Without<Laser>>,
 ) {
     for (laser_entity, no_collide_entity, mut laser, collided_with_entities, velocity) in
         query.iter_mut()
@@ -255,12 +238,14 @@ fn handle_events(
                 }
 
                 for contact_pair in rapier_context.contacts_with(laser_entity) {
-                    if let Some((_, y)) = contact_pair.find_deepest_contact() {
+                    if let Some((x, y)) = contact_pair.find_deepest_contact() {
                         let (entity_hit, mut local_position_hit) =
                             if contact_pair.collider1() == laser_entity {
                                 (contact_pair.collider2(), y.local_p2())
                             } else {
-                                (contact_pair.collider1(), y.local_p1())
+                                // local_p1 is local to the shape, not the entity's position
+                                let c1 = collider_query.get(contact_pair.collider1()).unwrap();
+                                (contact_pair.collider1(), c1.position() + y.local_p1())
                             };
 
                         // This ensures that it's actually in the block and not 0.00001 above it or something stupid
