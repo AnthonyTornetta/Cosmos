@@ -1,14 +1,14 @@
 use bevy::{
     prelude::{
-        App, Commands, Component, DespawnRecursiveExt, Entity, EventWriter, Parent, PbrBundle,
-        Quat, Query, Res, Transform, Vec3, With, Without,
+        App, Commands, Component, DespawnRecursiveExt, Entity, EventWriter, GlobalTransform,
+        Parent, PbrBundle, Quat, Query, Res, Transform, Vec3, With, Without,
     },
     time::Time,
 };
 use bevy_rapier3d::prelude::{
     ActiveEvents, ActiveHooks, Ccd, Collider, CollidingEntities, ContactModificationContextView,
-    LockedAxes, PhysicsHooksWithQuery, PhysicsHooksWithQueryResource, RapierContext, RigidBody,
-    Velocity,
+    LockedAxes, PhysicsHooksWithQuery, PhysicsHooksWithQueryResource, QueryFilter, RapierContext,
+    RigidBody, Sensor, Velocity,
 };
 
 #[derive(Debug)]
@@ -150,10 +150,8 @@ impl Laser {
                 active: true,
             })
             .insert(pbr)
-            .insert(Ccd { enabled: true })
             .insert(RigidBody::Dynamic)
             .insert(LockedAxes::ROTATION_LOCKED)
-            .insert(CollidingEntities::default())
             .insert(Collider::cuboid(0.05, 0.05, 1.0))
             .insert(Velocity {
                 linvel: laser_velocity + firer_velocity,
@@ -164,8 +162,7 @@ impl Laser {
             })
             .insert(ActiveEvents::COLLISION_EVENTS)
             .insert(ActiveHooks::MODIFY_SOLVER_CONTACTS)
-            // .insert(Sensor)
-            ;
+            .insert(Sensor);
 
         if let Some(ent) = no_collide_entity {
             ent_cmds.insert(NoCollide {
@@ -207,11 +204,12 @@ impl Laser {
 fn handle_events(
     mut query: Query<
         (
+            &GlobalTransform,
             Entity,
             Option<&NoCollide>,
             &mut Laser,
-            &CollidingEntities,
             &Velocity,
+            &Collider,
         ),
         With<Laser>,
     >,
@@ -219,51 +217,47 @@ fn handle_events(
     // mut event_reader: EventReader<CollisionEvent>,
     mut event_writer: EventWriter<LaserCollideEvent>,
     rapier_context: Res<RapierContext>,
-    collider_query: Query<&Collider, Without<Laser>>,
+    parent_query: Query<&Parent>,
 ) {
-    for (laser_entity, no_collide_entity, mut laser, collided_with_entities, velocity) in
+    for (transform, laser_entity, no_collide_entity, mut laser, velocity, collider) in
         query.iter_mut()
     {
         if laser.active {
-            for collided_with_entity in collided_with_entities.iter() {
-                if let Some(no_collide) = no_collide_entity {
-                    if no_collide.fired == collided_with_entity && laser_entity == no_collide.laser
-                    {
-                        continue;
-                    }
-                }
-
-                if !laser.active {
-                    break;
-                }
-
-                for contact_pair in rapier_context.contacts_with(laser_entity) {
-                    if let Some((x, y)) = contact_pair.find_deepest_contact() {
-                        let (entity_hit, mut local_position_hit) =
-                            if contact_pair.collider1() == laser_entity {
-                                (contact_pair.collider2(), y.local_p2())
+            if let Some((entity, toi)) = rapier_context.cast_shape(
+                transform.translation(),
+                Quat::from_affine3(&transform.affine()),
+                velocity.linvel,
+                collider,
+                velocity.linvel.dot(velocity.linvel),
+                QueryFilter::predicate(QueryFilter::default(), &|entity| {
+                    if let Some(no_collide_entity) = no_collide_entity {
+                        if no_collide_entity.fired == entity {
+                            false
+                        } else {
+                            if let Ok(parent) = parent_query.get(entity) {
+                                if parent.get() == no_collide_entity.fired {
+                                    false
+                                } else {
+                                    true
+                                }
                             } else {
-                                // local_p1 is local to the shape, not the entity's position
-                                let c1 = collider_query.get(contact_pair.collider1()).unwrap();
-                                (contact_pair.collider1(), c1.position() + y.local_p1())
-                            };
-
-                        // This ensures that it's actually in the block and not 0.00001 above it or something stupid
-                        local_position_hit += velocity.linvel.normalize() * 0.01;
-
-                        // Verify this is a valid collision, sometimes it returns NaN for invalid ones
-                        if local_position_hit.is_finite() {
-                            event_writer.send(LaserCollideEvent {
-                                entity_hit,
-                                local_position_hit,
-                            });
-
-                            laser.active = false;
-                            commands.entity(laser_entity).despawn_recursive();
-                            break;
+                                false
+                            }
                         }
+                    } else {
+                        true
                     }
-                }
+                }),
+            ) {
+                println!("HIT {} @ {}", entity.index(), toi.witness1);
+
+                event_writer.send(LaserCollideEvent {
+                    entity_hit: entity,
+                    local_position_hit: toi.witness1 + velocity.linvel.normalize() * 0.01,
+                });
+
+                laser.active = false;
+                commands.entity(laser_entity).despawn_recursive();
             }
         }
     }
