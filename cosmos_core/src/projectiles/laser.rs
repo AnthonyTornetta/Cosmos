@@ -6,9 +6,8 @@ use bevy::{
     time::Time,
 };
 use bevy_rapier3d::prelude::{
-    ActiveEvents, ActiveHooks, Collider, ContactModificationContextView, LockedAxes,
-    PhysicsHooksWithQuery, PhysicsHooksWithQueryResource, QueryFilter, RapierContext, RigidBody,
-    Sensor, Velocity,
+    ActiveEvents, ActiveHooks, Collider, LockedAxes, QueryFilter, RapierContext, RigidBody, Sensor,
+    Velocity,
 };
 
 #[derive(Debug)]
@@ -38,63 +37,6 @@ impl LaserCollideEvent {
 
     pub fn local_position_hit(&self) -> Vec3 {
         self.local_position_hit
-    }
-}
-
-struct MyPhysicsHooks;
-
-/// HEY! IF YOU CHANGE THE DATA IN THE <>, MAKE SURE TO CHANGE IT IN THE COSMOS_CORE_PLUGIN.RS FILE TOO!
-/// It's the data in the rapier plugin.
-/// But why would I have to do such a silly thing?
-/// Who thought that was a good idea?
-/// I just don't know.
-/// But I do know, if you forget it, you won't get an error.
-/// In fact, you won't get any text at all.
-/// It will just silently do nothing, and make you sad.
-///  
-/// despite this clearing the contacts, it STILL collides with the ship
-/// ?????????????????????????????????????????????????????????????????/
-/// I give up on this stupidity for now, I just can't take it anymore.
-impl PhysicsHooksWithQuery<(Option<&NoCollide>, Option<&Parent>)> for MyPhysicsHooks {
-    fn modify_solver_contacts(
-        &self,
-        context: ContactModificationContextView,
-        query: &Query<(Option<&NoCollide>, Option<&Parent>)>,
-    ) {
-        if let Ok((no_collide, _)) = query.get(context.collider1()) {
-            if let Some(no_collide) = no_collide {
-                if no_collide.0 == context.collider2() {
-                    context.raw.solver_contacts.clear();
-                } else {
-                    if let Ok((_, parent)) = query.get(context.collider2()) {
-                        if let Some(parent) = parent {
-                            if no_collide.0 == parent.get() {
-                                // despite this clearing the contacts, it STILL collides with the ship
-                                // ?????????????????????????????????????????????????????????????????/
-                                // I give up on this stupidity for now, I just can't take it anymore.
-                                context.raw.solver_contacts.clear();
-                            }
-                        }
-                    }
-                }
-            }
-        } else {
-            if let Ok((no_collide, _)) = query.get(context.collider2()) {
-                if let Some(no_collide) = no_collide {
-                    if no_collide.0 == context.collider1() {
-                        context.raw.solver_contacts.clear();
-                    } else {
-                        if let Ok((_, parent)) = query.get(context.collider1()) {
-                            if let Some(parent) = parent {
-                                if no_collide.0 == parent.get() {
-                                    context.raw.solver_contacts.clear();
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
     }
 }
 
@@ -232,16 +174,10 @@ fn handle_events(
                     if let Some(no_collide_entity) = no_collide_entity {
                         if no_collide_entity.0 == entity {
                             false
+                        } else if let Ok(parent) = parent_query.get(entity) {
+                            parent.get() != no_collide_entity.0
                         } else {
-                            if let Ok(parent) = parent_query.get(entity) {
-                                if parent.get() == no_collide_entity.0 {
-                                    false
-                                } else {
-                                    true
-                                }
-                            } else {
-                                false
-                            }
+                            false
                         }
                     } else {
                         true
@@ -275,13 +211,8 @@ fn despawn_lasers(
     }
 }
 
-fn startup_sys(mut commands: Commands) {
-    commands.insert_resource(PhysicsHooksWithQueryResource(Box::new(MyPhysicsHooks)));
-}
-
 pub(crate) fn register(app: &mut App) {
     app.add_system(handle_events)
         .add_system(despawn_lasers)
-        .add_event::<LaserCollideEvent>()
-        .add_startup_system(startup_sys);
+        .add_event::<LaserCollideEvent>();
 }

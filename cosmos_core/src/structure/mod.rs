@@ -301,9 +301,9 @@ impl Structure {
         let yoff = (self.height as f32 - 1.0) / 2.0;
         let zoff = (self.length as f32 - 1.0) / 2.0;
 
-        let xx = CHUNK_DIMENSIONS as f32 * (x as f32 - xoff as f32);
-        let yy = CHUNK_DIMENSIONS as f32 * (y as f32 - yoff as f32);
-        let zz = CHUNK_DIMENSIONS as f32 * (z as f32 - zoff as f32);
+        let xx = CHUNK_DIMENSIONS as f32 * (x as f32 - xoff);
+        let yy = CHUNK_DIMENSIONS as f32 * (y as f32 - yoff);
+        let zz = CHUNK_DIMENSIONS as f32 * (z as f32 - zoff);
 
         Vec3::new(xx, yy, zz)
     }

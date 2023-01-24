@@ -27,7 +27,7 @@ fn on_laser_hit_structure(
         let (bx, by, bz) = structure.block_coords_for_chunk_block_coords(chunk, chunk_block_coords);
 
         if structure.is_within_blocks(bx, by, bz) {
-            let block = structure.block_at(bx, by, bz, &blocks);
+            let block = structure.block_at(bx, by, bz, blocks);
 
             let break_block =
                 if let Some(block_hardness) = hardness_registry.from_id(block.unlocalized_name()) {
@@ -37,7 +37,7 @@ fn on_laser_hit_structure(
                 };
 
             if break_block {
-                structure.remove_block_at(bx, by, bz, &blocks, Some(event_writer));
+                structure.remove_block_at(bx, by, bz, blocks, Some(event_writer));
             }
         } else {
             println!("Bad laser hit spot that isn't actually on structure ;(");
