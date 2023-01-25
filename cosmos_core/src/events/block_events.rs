@@ -1,4 +1,4 @@
-use crate::structure::StructureBlock;
+use crate::structure::structure_block::StructureBlock;
 use bevy::prelude::App;
 use bevy::prelude::Entity;
 

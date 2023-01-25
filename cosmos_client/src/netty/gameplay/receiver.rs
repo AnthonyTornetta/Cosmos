@@ -11,6 +11,7 @@ use cosmos_core::{
         server_reliable_messages::ServerReliableMessages,
         server_unreliable_messages::ServerUnreliableMessages, NettyChannel,
     },
+    projectiles::laser::Laser,
     registry::Registry,
     structure::{
         chunk::Chunk,
@@ -93,6 +94,9 @@ fn client_sync_players(
     blocks: Res<Registry<Block>>,
     mut pilot_change_event_writer: EventWriter<ChangePilotEvent>,
     mut set_ship_movement_event: EventWriter<SetShipMovementEvent>,
+    time: Res<Time>,
+
+    mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     let client_id = client.client_id();
 
@@ -127,8 +131,6 @@ fn client_sync_players(
                             velocity.linvel = body.body_vel.linvel.into();
                             velocity.angvel = body.body_vel.angvel.into();
                         }
-                    } else {
-                        println!("Entity no exist!");
                     }
                 }
             }
@@ -219,7 +221,7 @@ fn client_sync_players(
                     entity.despawn();
                     network_mapping.remove_mapping_from_server_entity(&server_entity);
 
-                    println!("Player {} ({}) disconnected", name, id);
+                    println!("Player {name} ({id}) disconnected");
                 }
             }
             ServerReliableMessages::PlanetCreate {
@@ -308,7 +310,7 @@ fn client_sync_players(
                     .despawn_recursive();
             }
             ServerReliableMessages::MOTD { motd } => {
-                println!("Server MOTD: {}", motd);
+                println!("Server MOTD: {motd}");
             }
             ServerReliableMessages::BlockChange {
                 x,
@@ -361,11 +363,56 @@ fn client_sync_players(
                     );
                 }
             }
+            ServerReliableMessages::LaserCannonFire {} => {
+                println!("A laser cannon was fired")
+            }
+            ServerReliableMessages::CreateLaser {
+                color,
+                position,
+                laser_velocity,
+                firer_velocity,
+                strength,
+                no_hit,
+            } => {
+                let laser_entity = Laser::spawn_custom_pbr(
+                    position,
+                    laser_velocity,
+                    firer_velocity,
+                    strength,
+                    no_hit,
+                    PbrBundle {
+                        mesh: meshes.add(Mesh::from(shape::Box::new(0.1, 0.1, 1.0))),
+                        material: materials.add(StandardMaterial {
+                            base_color: color,
+                            emissive: color,
+                            ..Default::default()
+                        }),
+                        ..Default::default()
+                    },
+                    &time,
+                    &mut commands,
+                );
+
+                // too laggy ;(
+                commands.entity(laser_entity).with_children(|parent| {
+                    parent.spawn(PointLightBundle {
+                        transform: Transform::from_xyz(0.0, 0.0, 0.0),
+                        point_light: PointLight {
+                            intensity: 100.0,
+                            range: 10.0,
+                            color,
+                            shadows_enabled: false,
+                            ..default()
+                        },
+                        ..default()
+                    });
+                });
+            }
         }
     }
 }
 
-pub fn register(app: &mut App) {
+pub(crate) fn register(app: &mut App) {
     app.add_system_set(
         SystemSet::on_update(GameState::LoadingWorld).with_system(client_sync_players),
     )

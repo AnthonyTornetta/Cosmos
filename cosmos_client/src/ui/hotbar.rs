@@ -181,7 +181,6 @@ fn listen_for_change_events(
 }
 
 fn add_item_text(mut commands: Commands, asset_server: Res<AssetServer>) {
-    println!("OOGA");
     commands
         .spawn(NodeBundle {
             style: Style {

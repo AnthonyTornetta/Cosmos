@@ -27,6 +27,6 @@ fn send_position(
     }
 }
 
-pub fn register(app: &mut App) {
+pub(crate) fn register(app: &mut App) {
     app.add_system_set(SystemSet::on_update(GameState::Playing).with_system(send_position));
 }

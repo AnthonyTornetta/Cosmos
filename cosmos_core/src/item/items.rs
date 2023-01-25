@@ -1,9 +1,9 @@
-use crate::loader::{AddLoadingEvent, DoneLoadingEvent, LoadingManager};
-use crate::registry::{self, Registry};
+// use crate::loader::{AddLoadingEvent, DoneLoadingEvent, LoadingManager};
+use crate::registry::{self};
 use bevy::ecs::schedule::StateData;
-use bevy::prelude::{App, EventWriter, ResMut, SystemSet};
+use bevy::prelude::App;
 
-use super::{Item, DEFAULT_MAX_STACK_SIZE};
+use super::Item;
 
 // pub fn add_cosmos_items(
 //     mut items: ResMut<Registry<Item>>,
@@ -18,7 +18,7 @@ use super::{Item, DEFAULT_MAX_STACK_SIZE};
 pub fn register<T: StateData + Clone + Copy>(
     app: &mut App,
     pre_loading_state: T,
-    loading_state: T,
+    _loading_state: T,
 ) {
     registry::register::<T, Item>(app, pre_loading_state);
 

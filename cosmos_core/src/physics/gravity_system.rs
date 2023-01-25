@@ -4,7 +4,13 @@ use bevy_rapier3d::prelude::{ExternalImpulse, ReadMassProperties, RigidBody};
 
 fn gravity_system(
     emitters: Query<(&GravityEmitter, &GlobalTransform)>,
-    receiver: Query<(Entity, &GlobalTransform, &ReadMassProperties, &RigidBody)>,
+    mut receiver: Query<(
+        Entity,
+        &GlobalTransform,
+        &ReadMassProperties,
+        &RigidBody,
+        Option<&mut ExternalImpulse>,
+    )>,
     mut commands: Commands,
 ) {
     let mut gravs: Vec<(f32, f32, Vec3, Vec3)> = Vec::with_capacity(emitters.iter().len());
@@ -18,25 +24,27 @@ fn gravity_system(
         ));
     }
 
-    for (ent, trans, prop, rb) in receiver.iter() {
+    for (ent, trans, prop, rb, external_force) in receiver.iter_mut() {
         if *rb == RigidBody::Dynamic {
-            if let Some(mut entity) = commands.get_entity(ent) {
-                let mut force = Vec3::ZERO;
-                let translation = trans.translation();
+            let mut force = Vec3::ZERO;
+            let translation = trans.translation();
 
-                for (force_per_kilogram, radius, pos, down) in gravs.iter() {
-                    let r_sqrd = radius * radius;
-                    let dist_sqrd = translation.distance_squared(*pos);
+            for (force_per_kilogram, radius, pos, down) in gravs.iter() {
+                let r_sqrd = radius * radius;
+                let dist_sqrd = translation.distance_squared(*pos);
 
-                    let ratio = if dist_sqrd < r_sqrd {
-                        1.0
-                    } else {
-                        r_sqrd / dist_sqrd
-                    };
+                let ratio = if dist_sqrd < r_sqrd {
+                    1.0
+                } else {
+                    r_sqrd / dist_sqrd
+                };
 
-                    force += (prop.0.mass * force_per_kilogram * ratio) / 100.0 * *down;
-                }
+                force += (prop.0.mass * force_per_kilogram * ratio) / 100.0 * *down;
+            }
 
+            if let Some(mut external_force) = external_force {
+                external_force.impulse += force;
+            } else if let Some(mut entity) = commands.get_entity(ent) {
                 entity.insert(ExternalImpulse {
                     impulse: force,
                     ..Default::default()

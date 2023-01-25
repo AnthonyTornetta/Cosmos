@@ -55,7 +55,7 @@ impl TBiosphere<GrassBiosphereMarker, GrassChunkNeedsGeneratedEvent> for GrassBi
 const AMPLITUDE: f64 = 30.0;
 const DELTA: f64 = 0.05;
 
-pub fn generate_planet(
+pub(crate) fn generate_planet(
     mut query: Query<&mut Structure>,
     mut events: EventReader<GrassChunkNeedsGeneratedEvent>,
     mut event_writer: EventWriter<ChunkSetEvent>,
@@ -70,18 +70,6 @@ pub fn generate_planet(
             ev.y * CHUNK_DIMENSIONS,
             ev.z * CHUNK_DIMENSIONS,
         );
-
-        // let stone = blocks.block_from_id("cosmos:stone").unwrap();
-
-        // for z in start_z..start_z + CHUNK_DIMENSIONS {
-        //     for y in start_y..start_y + CHUNK_DIMENSIONS {
-        //         for x in start_x..start_x + CHUNK_DIMENSIONS {
-        //             // if x == y && y == z {
-        //             structure.set_block_at(x, y, z, stone, &blocks, None);
-        //             // }
-        //         }
-        //     }
-        // }
 
         let grass = blocks.from_id("cosmos:grass").unwrap();
         let dirt = blocks.from_id("cosmos:dirt").unwrap();
@@ -129,6 +117,8 @@ pub fn register(app: &mut App) {
     app.add_system_set(
         SystemSet::on_update(GameState::Playing)
             .with_system(generate_planet)
-            .with_system(check_needs_generated_system::<GrassChunkNeedsGeneratedEvent>),
+            .with_system(
+                check_needs_generated_system::<GrassChunkNeedsGeneratedEvent, GrassBiosphereMarker>,
+            ),
     );
 }

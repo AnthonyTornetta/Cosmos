@@ -1,4 +1,4 @@
-use bevy::prelude::{Component, Entity};
+use bevy::prelude::{Color, Component, Entity, Vec3};
 use serde::{Deserialize, Serialize};
 
 use super::netty_rigidbody::NettyRigidBody;
@@ -53,5 +53,14 @@ pub enum ServerReliableMessages {
     PilotChange {
         structure_entity: Entity,
         pilot_entity: Option<Entity>,
+    },
+    LaserCannonFire {},
+    CreateLaser {
+        color: Color,
+        position: Vec3,
+        laser_velocity: Vec3,
+        firer_velocity: Vec3,
+        strength: f32,
+        no_hit: Option<Entity>,
     },
 }

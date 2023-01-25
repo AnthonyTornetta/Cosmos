@@ -2,7 +2,7 @@ use crate::block::blocks::AIR_BLOCK_ID;
 use crate::block::Block;
 use crate::registry::identifiable::Identifiable;
 use crate::registry::Registry;
-use bevy::prelude::Res;
+use bevy::prelude::Vec3;
 use serde::de;
 use serde::de::Error;
 use serde::de::{Deserialize, Deserializer, MapAccess, SeqAccess, Visitor};
@@ -54,7 +54,7 @@ impl Chunk {
         x: usize,
         y: usize,
         z: usize,
-        blocks: &Res<Registry<Block>>,
+        blocks: &Registry<Block>,
     ) -> bool {
         blocks
             .from_numeric_id(self.block_at(x, y, z))
@@ -74,9 +74,17 @@ impl Chunk {
         x: usize,
         y: usize,
         z: usize,
-        blocks: &Res<Registry<Block>>,
+        blocks: &Registry<Block>,
     ) -> bool {
         blocks.from_numeric_id(self.block_at(x, y, z)).is_full()
+    }
+
+    pub fn relative_coords_to_block_coords(&self, relative: &Vec3) -> (usize, usize, usize) {
+        (
+            (relative.x + CHUNK_DIMENSIONS as f32 / 2.0) as usize,
+            (relative.y + CHUNK_DIMENSIONS as f32 / 2.0) as usize,
+            (relative.z + CHUNK_DIMENSIONS as f32 / 2.0) as usize,
+        )
     }
 }
 

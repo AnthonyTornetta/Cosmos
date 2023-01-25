@@ -6,7 +6,7 @@ use bevy::{
 
 use crate::{
     block::Block,
-    item::Item,
+    item::{Item, DEFAULT_MAX_STACK_SIZE},
     registry::{identifiable::Identifiable, Registry},
 };
 
@@ -65,13 +65,13 @@ fn create_links(
     mut block_items: ResMut<BlockItems>,
     blocks: Res<Registry<Block>>,
     mut items: ResMut<Registry<Item>>,
-) { 
+) {
     for block in blocks.iter() {
         let cosmos_id = block.unlocalized_name();
-        if let Some(item) = items.from_id(&cosmos_id) {
+        if let Some(item) = items.from_id(cosmos_id) {
             block_items.create_link(item, block);
         } else {
-            items.register(Item::new(cosmos_id.to_owned(), 64));
+            items.register(Item::new(cosmos_id.to_owned(), DEFAULT_MAX_STACK_SIZE));
             block_items.create_link(items.from_id(cosmos_id).unwrap(), block);
         }
     }

@@ -1,13 +1,10 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
-use cosmos_core::{
-    block::Block,
-    events::block_events::BlockChangedEvent,
-    registry::Registry,
-    structure::{events::StructureCreated, ship::ship_builder::TShipBuilder, Structure},
+use cosmos_core::structure::{
+    events::StructureCreated, ship::ship_builder::TShipBuilder, Structure,
 };
 
-use crate::structure::ship::server_ship_builder::ServerShipBuilder;
+use crate::structure::ship::{loading::ShipNeedsCreated, server_ship_builder::ServerShipBuilder};
 use crate::GameState;
 
 pub struct CreateShipEvent {
@@ -16,10 +13,8 @@ pub struct CreateShipEvent {
 
 fn event_reader(
     mut created_event_writer: EventWriter<StructureCreated>,
-    mut block_changed_writer: EventWriter<BlockChangedEvent>,
     mut event_reader: EventReader<CreateShipEvent>,
     mut commands: Commands,
-    blocks: Res<Registry<Block>>,
 ) {
     for ev in event_reader.iter() {
         let mut entity = commands.spawn_empty();
@@ -35,20 +30,7 @@ fn event_reader(
             &mut structure,
         );
 
-        let block = blocks
-            .from_id("cosmos:ship_core")
-            .expect("Ship core block missing!");
-
-        structure.set_block_at(
-            structure.blocks_width() / 2,
-            structure.blocks_height() / 2,
-            structure.blocks_length() / 2,
-            block,
-            &blocks,
-            Some(&mut block_changed_writer),
-        );
-
-        entity.insert(structure);
+        entity.insert(structure).insert(ShipNeedsCreated);
 
         created_event_writer.send(StructureCreated {
             entity: entity.id(),

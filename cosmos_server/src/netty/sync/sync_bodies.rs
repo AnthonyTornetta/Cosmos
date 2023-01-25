@@ -13,21 +13,36 @@ pub fn server_sync_bodies(
     mut tick: ResMut<NetworkTick>,
     entities: Query<(Entity, &Transform, &Velocity)>,
 ) {
+    tick.0 += 1;
+
     let mut bodies = Vec::new();
 
     for (entity, transform, velocity) in entities.iter() {
         bodies.push((entity, NettyRigidBody::new(velocity, transform)));
+
+        // The packet size can only be so big, so limit syncing to 20 per packet
+        if bodies.len() > 20 {
+            let sync_message = ServerUnreliableMessages::BulkBodies {
+                time_stamp: tick.0,
+                bodies,
+            };
+            let message = bincode::serialize(&sync_message).unwrap();
+
+            server.broadcast_message(NettyChannel::Unreliable.id(), message);
+
+            bodies = Vec::new();
+        }
     }
 
-    tick.0 += 1;
+    if !bodies.is_empty() {
+        let sync_message = ServerUnreliableMessages::BulkBodies {
+            time_stamp: tick.0,
+            bodies,
+        };
+        let message = bincode::serialize(&sync_message).unwrap();
 
-    let sync_message = ServerUnreliableMessages::BulkBodies {
-        time_stamp: tick.0,
-        bodies,
-    };
-    let message = bincode::serialize(&sync_message).unwrap();
-
-    server.broadcast_message(NettyChannel::Unreliable.id(), message);
+        server.broadcast_message(NettyChannel::Unreliable.id(), message);
+    }
 }
 
 pub fn register(app: &mut App) {

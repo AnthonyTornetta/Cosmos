@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy_renet::renet::RenetServer;
+use cosmos_core::structure::systems::{SystemActive, Systems};
 use cosmos_core::{
     entities::player::Player,
     events::structure::change_pilot_event::ChangePilotEvent,
@@ -10,7 +11,7 @@ use cosmos_core::{
     },
     structure::{
         ship::pilot::Pilot,
-        {Structure, StructureBlock},
+        {structure_block::StructureBlock, Structure},
     },
 };
 
@@ -29,6 +30,7 @@ fn server_listen_messages(
     players: Query<Entity, With<Player>>,
     transform_query: Query<&Transform>,
     structure_query: Query<&Structure>,
+    mut systems_query: Query<&mut Systems>,
     mut break_block_event: EventWriter<BlockBreakEvent>,
     mut block_interact_event: EventWriter<BlockInteractEvent>,
     mut place_block_event: EventWriter<BlockPlaceEvent>,
@@ -40,25 +42,39 @@ fn server_listen_messages(
 ) {
     for client_id in server.clients_id().into_iter() {
         while let Some(message) = server.receive_message(client_id, NettyChannel::Unreliable.id()) {
-            let command: ClientUnreliableMessages = bincode::deserialize(&message).unwrap();
+            if let Some(player_entity) = lobby.players.get(&client_id) {
+                let command: ClientUnreliableMessages = bincode::deserialize(&message).unwrap();
 
-            match command {
-                ClientUnreliableMessages::PlayerBody { body } => {
-                    if let Some(player_entity) = lobby.players.get(&client_id) {
+                match command {
+                    ClientUnreliableMessages::PlayerBody { body } => {
                         if let Ok(entity) = players.get(*player_entity) {
                             commands
                                 .entity(entity)
                                 .insert(TransformBundle::from_transform(body.create_transform()));
                         }
                     }
-                }
-                ClientUnreliableMessages::SetMovement { movement } => {
-                    if let Some(player_entity) = lobby.players.get(&client_id) {
+                    ClientUnreliableMessages::SetMovement { movement } => {
                         if let Ok(pilot) = pilot_query.get(*player_entity) {
                             let ship = pilot.entity;
 
                             ship_movement_event_writer
                                 .send(ShipSetMovementEvent { movement, ship });
+                        }
+                    }
+                    ClientUnreliableMessages::ShipStatus { use_system } => {
+                        if let Ok(pilot) = pilot_query.get(*player_entity) {
+                            if use_system {
+                                commands.entity(pilot.entity).insert(SystemActive);
+                            } else {
+                                commands.entity(pilot.entity).remove::<SystemActive>();
+                            }
+                        }
+                    }
+                    ClientUnreliableMessages::ShipActiveSystem { active_system } => {
+                        if let Ok(pilot) = pilot_query.get(*player_entity) {
+                            if let Ok(mut systems) = systems_query.get_mut(pilot.entity) {
+                                systems.set_active_system(active_system, &mut commands);
+                            }
                         }
                     }
                 }
@@ -84,10 +100,7 @@ fn server_listen_messages(
                             );
                         }
                     } else {
-                        println!(
-                            "!!! Server received invalid entity from client {}",
-                            client_id
-                        );
+                        println!("!!! Server received invalid entity from client {client_id}");
                     }
                 }
                 ClientReliableMessages::BreakBlock {

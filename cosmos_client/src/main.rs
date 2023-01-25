@@ -6,6 +6,7 @@ pub mod interactions;
 pub mod lang;
 pub mod netty;
 pub mod plugin;
+pub mod projectiles;
 pub mod rendering;
 pub mod state;
 pub mod structure;
@@ -15,7 +16,7 @@ pub mod window;
 use std::env;
 use std::f32::consts::PI;
 
-use bevy::prelude::shape::Cube;
+use bevy_rapier3d::render::RapierDebugRenderPlugin;
 use bevy_renet::renet::RenetClient;
 use camera::camera_controller;
 use cosmos_core::entities::player::Player;
@@ -29,7 +30,6 @@ use input::inputs::{self, CosmosInputHandler, CosmosInputs};
 use interactions::block_interactions;
 use netty::connect::{self, ConnectionConfig};
 use netty::flags::LocalPlayer;
-use netty::gameplay::receiver;
 use netty::mapping::NetworkMapping;
 use rendering::structure_renderer;
 use state::game_state::GameState;
@@ -144,8 +144,8 @@ fn process_player_movement(
     mut query: Query<&mut Velocity, (With<LocalPlayer>, Without<Pilot>)>,
     cam_query: Query<&Transform, With<Camera>>,
 ) {
-    // This is in a loop even tho it'll only ever be one because of the without clause
-    for mut velocity in query.iter_mut() {
+    // This will be err if the player is piloting a ship
+    if let Ok(mut velocity) = query.get_single_mut() {
         let cam_trans = cam_query.single();
 
         let max_speed: f32 = match input_handler.check_pressed(CosmosInputs::Sprint, &keys, &mouse)
@@ -206,17 +206,12 @@ fn create_sun(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    commands.spawn(PbrBundle {
-        mesh: meshes.add(Cube::new(1.0).into()),
-        ..Default::default()
-    });
-
     commands
         .spawn(PointLightBundle {
-            transform: Transform::from_xyz(0.0, 180.0, 0.0),
+            transform: Transform::from_xyz(0.0, 1000.0, 0.0),
             point_light: PointLight {
                 intensity: 160000.0,
-                range: 16000.0,
+                range: 160000.0,
                 color: Color::WHITE,
                 shadows_enabled: true,
                 ..default()
@@ -248,7 +243,7 @@ fn main() {
         get_local_ipaddress()
     };
 
-    println!("Host: {}", host_name);
+    println!("Host: {host_name}");
 
     let mut app = App::new();
 
@@ -269,7 +264,7 @@ fn main() {
     .add_plugins(ClientPluginGroup::default())
     .add_plugin(RenetClientPlugin::default())
     .add_plugin(WorldInspectorPlugin::new())
-    // .add_plugin(RapierDebugRenderPlugin::default())
+    .add_plugin(RapierDebugRenderPlugin::default())
     .add_system_set(
         SystemSet::on_enter(GameState::Connecting).with_system(connect::establish_connection),
     )
@@ -299,9 +294,11 @@ fn main() {
     chunk_retreiver::register(&mut app);
     camera_controller::register(&mut app);
     ui::register(&mut app);
-    receiver::register(&mut app);
+    netty::register(&mut app);
     structure_renderer::register(&mut app);
     lang::register(&mut app);
+    structure::register(&mut app);
+    projectiles::register(&mut app);
 
     app.run();
 }

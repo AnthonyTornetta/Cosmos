@@ -1,10 +1,14 @@
+use bevy::utils::HashMap;
 use bevy::{ecs::schedule::StateData, prelude::App};
 
 pub mod chunk;
 pub mod events;
+pub mod loading;
 pub mod planet;
 pub mod ship;
+pub mod structure_block;
 pub mod structure_builder;
+pub mod structure_iterator;
 pub mod systems;
 
 use crate::block::blocks::AIR_BLOCK_ID;
@@ -14,16 +18,18 @@ use crate::registry::identifiable::Identifiable;
 use crate::registry::Registry;
 use crate::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
 use crate::utils::array_utils::flatten;
-use crate::utils::vec_math::add_vec;
-use bevy::prelude::{Component, Entity, EventWriter, Res};
-use bevy_rapier3d::na::Vector3;
-use bevy_rapier3d::rapier::prelude::RigidBodyPosition;
+use bevy::prelude::{Component, Entity, EventWriter, GlobalTransform, Vec3};
 use serde::{Deserialize, Serialize};
+
+use self::structure_block::StructureBlock;
+use self::structure_iterator::{BlockIterator, ChunkIterator};
 
 #[derive(Serialize, Deserialize, Component)]
 pub struct Structure {
     #[serde(skip)]
     chunk_entities: Vec<Option<Entity>>,
+    #[serde(skip)]
+    chunk_entity_map: HashMap<Entity, usize>,
     #[serde(skip)]
     self_entity: Option<Entity>,
 
@@ -31,52 +37,6 @@ pub struct Structure {
     width: usize,
     height: usize,
     length: usize,
-}
-
-#[derive(Clone)]
-pub struct StructureBlock {
-    x: usize,
-    y: usize,
-    z: usize,
-}
-
-impl StructureBlock {
-    #[inline]
-    pub fn x(&self) -> usize {
-        self.x
-    }
-    #[inline]
-    pub fn y(&self) -> usize {
-        self.y
-    }
-    #[inline]
-    pub fn z(&self) -> usize {
-        self.z
-    }
-
-    pub fn new(x: usize, y: usize, z: usize) -> Self {
-        Self { x, y, z }
-    }
-
-    #[inline]
-    pub fn block(&self, structure: &Structure) -> u16 {
-        structure.block_at(self.x, self.y, self.z)
-    }
-
-    #[inline]
-    pub fn chunk_coord_x(&self) -> usize {
-        self.x / CHUNK_DIMENSIONS
-    }
-
-    #[inline]
-    pub fn chunk_coord_y(&self) -> usize {
-        self.y / CHUNK_DIMENSIONS
-    }
-
-    #[inline]
-    pub fn chunk_coord_z(&self) -> usize {
-        self.z / CHUNK_DIMENSIONS
-    }
 }
 
 impl Structure {
@@ -104,6 +64,7 @@ impl Structure {
             width,
             height,
             length,
+            chunk_entity_map: HashMap::default(),
         }
     }
 
@@ -148,7 +109,39 @@ impl Structure {
                 self.chunk_entities.push(None);
             }
         }
-        self.chunk_entities[flatten(cx, cy, cz, self.width, self.height)] = Some(entity);
+
+        let index = flatten(cx, cy, cz, self.width, self.height);
+
+        self.chunk_entity_map.insert(entity, index);
+        self.chunk_entities[index] = Some(entity);
+    }
+
+    pub fn chunk_from_entity(&self, entity: &Entity) -> Option<&Chunk> {
+        if let Some(index) = self.chunk_entity_map.get(entity) {
+            Some(&self.chunks[*index])
+        } else {
+            None
+        }
+    }
+
+    pub fn block_coords_for_chunk(&self, chunk: &Chunk) -> (usize, usize, usize) {
+        (
+            CHUNK_DIMENSIONS * chunk.structure_x(),
+            CHUNK_DIMENSIONS * chunk.structure_y(),
+            CHUNK_DIMENSIONS * chunk.structure_z(),
+        )
+    }
+
+    pub fn block_coords_for_chunk_block_coords(
+        &self,
+        chunk: &Chunk,
+        block_coords: (usize, usize, usize),
+    ) -> (usize, usize, usize) {
+        (
+            CHUNK_DIMENSIONS * chunk.structure_x() + block_coords.0,
+            CHUNK_DIMENSIONS * chunk.structure_y() + block_coords.1,
+            CHUNK_DIMENSIONS * chunk.structure_z() + block_coords.2,
+        )
     }
 
     pub fn set_entity(&mut self, entity: Entity) {
@@ -200,7 +193,7 @@ impl Structure {
     }
 
     pub fn has_block_at(&self, x: usize, y: usize, z: usize) -> bool {
-        self.block_at(x, y, z) != AIR_BLOCK_ID
+        self.block_id_at(x, y, z) != AIR_BLOCK_ID
     }
 
     /// # Arguments
@@ -215,10 +208,9 @@ impl Structure {
         y: f32,
         z: f32,
     ) -> Result<(usize, usize, usize), bool> {
-        // replace the + 0.5 with .round() at some point to make it a bit cleaner
-        let xx = x + (self.blocks_width() as f32 / 2.0) + 0.5;
-        let yy = y + (self.blocks_height() as f32 / 2.0) + 0.5;
-        let zz = z + (self.blocks_length() as f32 / 2.0) + 0.5;
+        let xx = x + (self.blocks_width() as f32 / 2.0);
+        let yy = y + (self.blocks_height() as f32 / 2.0);
+        let zz = z + (self.blocks_length() as f32 / 2.0);
 
         if xx >= 0.0 && yy >= 0.0 && zz >= 0.0 {
             let (xxx, yyy, zzz) = (xx as usize, yy as usize, zz as usize);
@@ -230,12 +222,23 @@ impl Structure {
         Err(false)
     }
 
-    pub fn block_at(&self, x: usize, y: usize, z: usize) -> u16 {
+    pub fn block_id_at(&self, x: usize, y: usize, z: usize) -> u16 {
         self.chunk_at_block_coordinates(x, y, z).block_at(
             x % CHUNK_DIMENSIONS,
             y % CHUNK_DIMENSIONS,
             z % CHUNK_DIMENSIONS,
         )
+    }
+
+    pub fn block_at<'a>(
+        &'a self,
+        x: usize,
+        y: usize,
+        z: usize,
+        blocks: &'a Registry<Block>,
+    ) -> &'a Block {
+        let id = self.block_id_at(x, y, z);
+        blocks.from_numeric_id(id)
     }
 
     pub fn chunks(&self) -> &Vec<Chunk> {
@@ -247,7 +250,7 @@ impl Structure {
         x: usize,
         y: usize,
         z: usize,
-        blocks: &Res<Registry<Block>>,
+        blocks: &Registry<Block>,
         event_writer: Option<&mut EventWriter<BlockChangedEvent>>,
     ) {
         self.set_block_at(
@@ -266,10 +269,10 @@ impl Structure {
         y: usize,
         z: usize,
         block: &Block,
-        blocks: &Res<Registry<Block>>,
+        blocks: &Registry<Block>,
         event_writer: Option<&mut EventWriter<BlockChangedEvent>>,
     ) {
-        let old_block = self.block_at(x, y, z);
+        let old_block = self.block_id_at(x, y, z);
         if blocks.from_numeric_id(old_block) == block {
             return;
         }
@@ -293,16 +296,28 @@ impl Structure {
         );
     }
 
-    pub fn chunk_relative_position(&self, x: usize, y: usize, z: usize) -> Vector3<f32> {
-        let xoff = self.width as f32 / 2.0 * CHUNK_DIMENSIONS as f32;
-        let yoff = self.height as f32 / 2.0 * CHUNK_DIMENSIONS as f32;
-        let zoff = self.length as f32 / 2.0 * CHUNK_DIMENSIONS as f32;
+    pub fn chunk_relative_position(&self, x: usize, y: usize, z: usize) -> Vec3 {
+        let xoff = (self.width as f32 - 1.0) / 2.0;
+        let yoff = (self.height as f32 - 1.0) / 2.0;
+        let zoff = (self.length as f32 - 1.0) / 2.0;
 
-        let xx = x as f32 * CHUNK_DIMENSIONS as f32 - xoff;
-        let yy = y as f32 * CHUNK_DIMENSIONS as f32 - yoff;
-        let zz = z as f32 * CHUNK_DIMENSIONS as f32 - zoff;
+        let xx = CHUNK_DIMENSIONS as f32 * (x as f32 - xoff);
+        let yy = CHUNK_DIMENSIONS as f32 * (y as f32 - yoff);
+        let zz = CHUNK_DIMENSIONS as f32 * (z as f32 - zoff);
 
-        Vector3::new(xx, yy, zz)
+        Vec3::new(xx, yy, zz)
+    }
+
+    pub fn block_relative_position(&self, x: usize, y: usize, z: usize) -> Vec3 {
+        let xoff = self.blocks_width() as f32 / 2.0;
+        let yoff = self.blocks_height() as f32 / 2.0;
+        let zoff = self.blocks_length() as f32 / 2.0;
+
+        let xx = x as f32 - xoff;
+        let yy = y as f32 - yoff;
+        let zz = z as f32 - zoff;
+
+        Vec3::new(xx, yy, zz)
     }
 
     pub fn chunk_world_position(
@@ -310,15 +325,35 @@ impl Structure {
         x: usize,
         y: usize,
         z: usize,
-        body_position: &RigidBodyPosition,
-    ) -> Vector3<f32> {
-        add_vec(
-            &body_position.position.translation.vector,
-            &body_position
-                .position
-                .rotation
-                .transform_vector(&self.chunk_relative_position(x, y, z)),
-        )
+        body_position: &GlobalTransform,
+    ) -> Vec3 {
+        body_position.translation()
+            + body_position
+                .affine()
+                .matrix3
+                .mul_vec3(self.chunk_relative_position(x, y, z))
+
+        // add_vec(
+        //     &body_position.translation(),
+        //     &body_position
+        //         .position
+        //         .rotation
+        //         .transform_vector(&),
+        // )
+    }
+
+    pub fn block_world_position(
+        &self,
+        x: usize,
+        y: usize,
+        z: usize,
+        body_position: &GlobalTransform,
+    ) -> Vec3 {
+        body_position.translation()
+            + body_position
+                .affine()
+                .matrix3
+                .mul_vec3(self.block_relative_position(x, y, z))
     }
 
     pub fn set_chunk(&mut self, chunk: Chunk) {
@@ -331,6 +366,81 @@ impl Structure {
         );
         self.chunks[i] = chunk;
     }
+
+    /// Iterate over blocks in a given range. Will skip over any out of bounds positions.
+    /// Coordinates are inclusive
+    pub fn all_chunks_iter(&self) -> ChunkIterator {
+        ChunkIterator::new(
+            0_i32,
+            0_i32,
+            0_i32,
+            self.blocks_width() as i32 - 1,
+            self.blocks_height() as i32 - 1,
+            self.blocks_length() as i32 - 1,
+            self,
+        )
+    }
+
+    /// Iterate over blocks in a given range. Will skip over any out of bounds positions.
+    /// Coordinates are inclusive
+    pub fn chunk_iter(&self, start: (i32, i32, i32), end: (i32, i32, i32)) -> ChunkIterator {
+        ChunkIterator::new(start.0, start.1, start.2, end.0, end.1, end.2, self)
+    }
+
+    /// Will fail assertion if chunk positions are out of bounds
+    pub fn block_iter_for_chunk(
+        &self,
+        (cx, cy, cz): (usize, usize, usize),
+        include_air: bool,
+    ) -> BlockIterator {
+        assert!(cx < self.width && cy < self.height && cz < self.length);
+
+        BlockIterator::new(
+            (cx * CHUNK_DIMENSIONS) as i32,
+            (cy * CHUNK_DIMENSIONS) as i32,
+            (cz * CHUNK_DIMENSIONS) as i32,
+            ((cx + 1) * CHUNK_DIMENSIONS) as i32 - 1,
+            ((cy + 1) * CHUNK_DIMENSIONS) as i32 - 1,
+            ((cz + 1) * CHUNK_DIMENSIONS) as i32 - 1,
+            include_air,
+            self,
+        )
+    }
+
+    /// Iterate over blocks in a given range. Will skip over any out of bounds positions.
+    /// Coordinates are inclusive
+    pub fn all_blocks_iter(&self, include_air: bool) -> BlockIterator {
+        BlockIterator::new(
+            0_i32,
+            0_i32,
+            0_i32,
+            self.blocks_width() as i32 - 1,
+            self.blocks_height() as i32 - 1,
+            self.blocks_length() as i32 - 1,
+            include_air,
+            self,
+        )
+    }
+
+    /// Iterate over blocks in a given range. Will skip over any out of bounds positions.
+    /// Coordinates are inclusive
+    pub fn block_iter(
+        &self,
+        start: (i32, i32, i32),
+        end: (i32, i32, i32),
+        include_air: bool,
+    ) -> BlockIterator {
+        BlockIterator::new(
+            start.0,
+            start.1,
+            start.2,
+            end.0,
+            end.1,
+            end.2,
+            include_air,
+            self,
+        )
+    }
 }
 
 pub fn register<T: StateData + Clone + Copy>(
@@ -340,4 +450,6 @@ pub fn register<T: StateData + Clone + Copy>(
 ) {
     systems::register(app, post_loading_state, playing_game_state);
     ship::register(app);
+    events::register(app);
+    loading::register(app);
 }

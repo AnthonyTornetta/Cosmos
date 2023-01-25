@@ -12,6 +12,7 @@ pub enum CosmosInputs {
     Sprint,
 
     StopPiloting,
+    UseSelectedSystem,
 
     BreakBlock,
     PlaceBlock,
@@ -20,6 +21,16 @@ pub enum CosmosInputs {
     CreateShip,
 
     UnlockMouse,
+
+    SelectSystem1,
+    SelectSystem2,
+    SelectSystem3,
+    SelectSystem4,
+    SelectSystem5,
+    SelectSystem6,
+    SelectSystem7,
+    SelectSystem8,
+    SelectSystem9,
 
     HotbarSlot1,
     HotbarSlot2,
@@ -61,6 +72,18 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     input_handler.set_keycode(CosmosInputs::HotbarSlot7, KeyCode::Key7);
     input_handler.set_keycode(CosmosInputs::HotbarSlot8, KeyCode::Key8);
     input_handler.set_keycode(CosmosInputs::HotbarSlot9, KeyCode::Key9);
+
+    input_handler.set_keycode(CosmosInputs::SelectSystem1, KeyCode::Key1);
+    input_handler.set_keycode(CosmosInputs::SelectSystem2, KeyCode::Key2);
+    input_handler.set_keycode(CosmosInputs::SelectSystem3, KeyCode::Key3);
+    input_handler.set_keycode(CosmosInputs::SelectSystem4, KeyCode::Key4);
+    input_handler.set_keycode(CosmosInputs::SelectSystem5, KeyCode::Key5);
+    input_handler.set_keycode(CosmosInputs::SelectSystem6, KeyCode::Key6);
+    input_handler.set_keycode(CosmosInputs::SelectSystem7, KeyCode::Key7);
+    input_handler.set_keycode(CosmosInputs::SelectSystem8, KeyCode::Key8);
+    input_handler.set_keycode(CosmosInputs::SelectSystem9, KeyCode::Key9);
+
+    input_handler.set_mouse_button(CosmosInputs::UseSelectedSystem, MouseButton::Left);
 }
 
 #[derive(Resource, Default)]
@@ -111,13 +134,13 @@ impl CosmosInputHandler {
     pub fn check_pressed(
         &self,
         input_code: CosmosInputs,
-        inputs: &Input<KeyCode>,
+        keys: &Input<KeyCode>,
         mouse: &Input<MouseButton>,
     ) -> bool {
         let keycode = self.keycode_for(input_code);
         let mouse_button = self.mouse_button_for(input_code);
 
-        keycode.is_some() && inputs.pressed(keycode.unwrap())
+        keycode.is_some() && keys.pressed(keycode.unwrap())
             || mouse_button.is_some() && mouse.pressed(mouse_button.unwrap())
     }
 

@@ -16,7 +16,7 @@ rand = { workspace = true }
 local-ip-address = { workspace = true }
 iyes_loopless = { workspace = true }
 
-bevy_rapier3d.workspace = true
+bevy_rapier3d = { workspace = true }
 cosmos_core = { version = "0.0.2", path = "../cosmos_core" }
 
-bevy-inspector-egui.workspace = true
+bevy-inspector-egui = { workspace = true }

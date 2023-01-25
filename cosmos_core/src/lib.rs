@@ -1,3 +1,5 @@
+#![feature(get_many_mut)]
+
 pub mod block;
 pub mod blockitems;
 pub mod entities;
@@ -8,6 +10,7 @@ pub mod loader;
 pub mod netty;
 pub mod physics;
 pub mod plugin;
+pub mod projectiles;
 pub mod registry;
 pub mod structure;
 pub mod utils;

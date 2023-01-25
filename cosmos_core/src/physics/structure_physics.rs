@@ -44,7 +44,7 @@ impl StructurePhysics {
     pub fn create_colliders(
         &mut self,
         structure: &Structure,
-        blocks: &Res<Registry<Block>>,
+        blocks: &Registry<Block>,
     ) -> Vec<ChunkPhysicsModel> {
         let mut colliders = Vec::with_capacity(self.needs_changed.len());
 
@@ -66,7 +66,7 @@ impl StructurePhysics {
 
 fn generate_colliders(
     chunk: &Chunk,
-    blocks: &Res<Registry<Block>>,
+    blocks: &Registry<Block>,
     colliders: &mut Vec<(Vect, Rot, Collider)>,
     location: Vect,
     offset: Vector3<usize>,
@@ -224,7 +224,7 @@ fn generate_colliders(
     }
 }
 
-fn generate_chunk_collider(chunk: &Chunk, blocks: &Res<Registry<Block>>) -> Option<Collider> {
+fn generate_chunk_collider(chunk: &Chunk, blocks: &Registry<Block>) -> Option<Collider> {
     let mut colliders: Vec<(Vect, Rot, Collider)> = Vec::new();
 
     let mut center_of_mass = Vec3::new(0.0, 0.0, 0.0);
@@ -235,11 +235,7 @@ fn generate_chunk_collider(chunk: &Chunk, blocks: &Res<Registry<Block>>) -> Opti
         chunk,
         blocks,
         &mut colliders,
-        Vect::new(
-            CHUNK_DIMENSIONS as f32 / 2.0 - 0.5,
-            CHUNK_DIMENSIONS as f32 / 2.0 - 0.5,
-            CHUNK_DIMENSIONS as f32 / 2.0 - 0.5,
-        ),
+        Vect::new(0.0, 0.0, 0.0),
         Vector3::new(0, 0, 0),
         CHUNK_DIMENSIONS,
         &mut density,

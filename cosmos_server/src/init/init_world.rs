@@ -8,7 +8,8 @@ use cosmos_core::{
 use noise::Seedable;
 
 use crate::structure::planet::{
-    biosphere::grass_biosphere::GrassBiosphere, server_planet_builder::ServerPlanetBuilder,
+    biosphere::test_all_stone_biosphere::TestStoneBiosphere,
+    server_planet_builder::ServerPlanetBuilder,
 };
 
 pub fn register(app: &mut App) {
@@ -29,13 +30,13 @@ pub fn register(app: &mut App) {
 fn create_world(mut commands: Commands, mut event_writer: EventWriter<StructureCreated>) {
     let mut entity_cmd = commands.spawn_empty();
 
-    let mut structure = Structure::new(16, 4, 16, entity_cmd.id());
+    let mut structure = Structure::new(1, 1, 1, entity_cmd.id());
 
-    let builder = ServerPlanetBuilder::new(GrassBiosphere::default());
+    let builder = ServerPlanetBuilder::new(TestStoneBiosphere::default());
 
     builder.insert_planet(
         &mut entity_cmd,
-        Transform::from_xyz(1.0, 0.0, 0.0),
+        Transform::from_xyz(0.0, 0.0, 0.0),
         &mut structure,
     );
 

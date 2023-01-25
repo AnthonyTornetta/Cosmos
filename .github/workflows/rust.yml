@@ -17,12 +17,15 @@ jobs:
       RUSTFLAGS: -D warnings
     steps:
     - uses: actions/checkout@v3
+    - uses: actions-rs/toolchain@v1
+      with:
+        toolchain: nightly
+        components: clippy
+        override: true
     - name: Cache
       uses: Swatinem/rust-cache@v2
     - name: Install Bevy Dependencies
       run: sudo apt-get install -y g++ pkg-config libx11-dev libasound2-dev libudev-dev
-    - name: Get Clippy
-      run: rustup component add clippy
     - name: Build
       run: cargo build --verbose
   clippy:
@@ -40,9 +43,12 @@ jobs:
       # Note that there is no release tag available yet
       # and the following code will use master branch HEAD
       # all the time.
+      - name: Install Bevy Dependencies
+        run: sudo apt-get install -y g++ pkg-config libx11-dev libasound2-dev libudev-dev
       - uses: actions-rs/clippy@master
         with:
-          args: --all-features --all-targets
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --all-features --all-targets --no-deps -- --deny "warnings"
 #   rustfmt:
 #     name: rustfmt
 #     runs-on: ubuntu-latest

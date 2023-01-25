@@ -9,7 +9,7 @@ use cosmos_core::{
     item::Item,
     netty::{server_reliable_messages::ServerReliableMessages, NettyChannel},
     registry::Registry,
-    structure::{Structure, StructureBlock},
+    structure::{structure_block::StructureBlock, Structure},
 };
 
 use crate::GameState;
@@ -50,7 +50,7 @@ fn handle_block_break_events(
     for ev in event_reader.iter() {
         let mut structure = query.get_mut(ev.structure_entity).unwrap();
 
-        let block_id = structure.block_at(ev.x, ev.y, ev.z);
+        let block_id = structure.block_id_at(ev.x, ev.y, ev.z);
 
         if let Ok(mut inventory) = inventory_query.get_mut(ev.breaker) {
             let block = blocks.from_numeric_id(block_id);
