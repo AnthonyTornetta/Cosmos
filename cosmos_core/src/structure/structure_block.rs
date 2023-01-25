@@ -1,10 +1,11 @@
 use bevy_inspector_egui::Inspectable;
+use serde::{Deserialize, Serialize};
 
 use crate::{block::Block, registry::Registry};
 
 use super::{chunk::CHUNK_DIMENSIONS, Structure};
 
-#[derive(Clone, Debug, Inspectable, Copy, PartialEq, Eq, Default)]
+#[derive(Clone, Debug, Inspectable, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct StructureBlock {
     pub x: usize,
     pub y: usize,

@@ -1,6 +1,7 @@
 use bevy::utils::HashMap;
 use bevy::{ecs::schedule::StateData, prelude::App};
 
+pub mod block_health;
 pub mod chunk;
 pub mod events;
 pub mod loading;
@@ -12,6 +13,7 @@ pub mod structure_iterator;
 pub mod systems;
 
 use crate::block::blocks::AIR_BLOCK_ID;
+use crate::block::hardness::BlockHardness;
 use crate::block::Block;
 use crate::events::block_events::BlockChangedEvent;
 use crate::registry::identifiable::Identifiable;
@@ -21,6 +23,7 @@ use crate::utils::array_utils::flatten;
 use bevy::prelude::{Component, Entity, EventWriter, GlobalTransform, Vec3};
 use serde::{Deserialize, Serialize};
 
+use self::block_health::block_destroyed_event::BlockDestroyedEvent;
 use self::structure_block::StructureBlock;
 use self::structure_iterator::{BlockIterator, ChunkIterator};
 
@@ -441,6 +444,71 @@ impl Structure {
             self,
         )
     }
+
+    /// Gets the block's health at that given coordinate
+    /// - x/y/z: block coordinate
+    /// - block_hardness: The hardness for the block at those coordinates
+    pub fn get_block_health(
+        &mut self,
+        bx: usize,
+        by: usize,
+        bz: usize,
+        block_hardness: &BlockHardness,
+    ) -> f32 {
+        self.chunk_at_block_coordinates(bx, by, bz)
+            .get_block_health(
+                bx % CHUNK_DIMENSIONS,
+                by % CHUNK_DIMENSIONS,
+                bz % CHUNK_DIMENSIONS,
+                block_hardness,
+            )
+    }
+
+    /// Causes a block at the given coordinates to take damage
+    ///
+    /// - x/y/z: Block coordinates
+    /// - block_hardness: The hardness for that block
+    /// - amount: The amount of damage to take - cannot be negative
+    ///
+    /// Returns: true if that block was destroyed, false if not
+    pub fn block_take_damage(
+        &mut self,
+        bx: usize,
+        by: usize,
+        bz: usize,
+        block_hardness: &BlockHardness,
+        amount: f32,
+        event_writer: Option<&mut EventWriter<BlockDestroyedEvent>>,
+    ) -> bool {
+        let destroyed = self
+            .mut_chunk_at_block_coordinates(bx, by, bz)
+            .block_take_damage(
+                bx % CHUNK_DIMENSIONS,
+                by % CHUNK_DIMENSIONS,
+                bz % CHUNK_DIMENSIONS,
+                block_hardness,
+                amount,
+            );
+
+        println!(
+            "Bang! Block took damage, health is now {}",
+            self.get_block_health(bx, by, bz, block_hardness)
+        );
+
+        if destroyed {
+            println!("Block dead!");
+            if let Some(structure_entity) = self.get_entity() {
+                if let Some(event_writer) = event_writer {
+                    event_writer.send(BlockDestroyedEvent {
+                        block: StructureBlock::new(bx, by, bz),
+                        structure_entity,
+                    });
+                }
+            }
+        }
+
+        destroyed
+    }
 }
 
 pub fn register<T: StateData + Clone + Copy>(
@@ -452,4 +520,5 @@ pub fn register<T: StateData + Clone + Copy>(
     ship::register(app);
     events::register(app);
     loading::register(app);
+    block_health::register(app);
 }

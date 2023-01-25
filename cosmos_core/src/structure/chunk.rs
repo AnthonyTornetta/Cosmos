@@ -1,4 +1,5 @@
 use crate::block::blocks::AIR_BLOCK_ID;
+use crate::block::hardness::BlockHardness;
 use crate::block::Block;
 use crate::registry::identifiable::Identifiable;
 use crate::registry::Registry;
@@ -10,6 +11,8 @@ use serde::ser::{Serialize, SerializeStruct, Serializer};
 use std::fmt;
 use std::fmt::Formatter;
 
+use super::block_health::BlockHealth;
+
 pub const CHUNK_DIMENSIONS: usize = 16;
 const N_BLOCKS: usize = CHUNK_DIMENSIONS * CHUNK_DIMENSIONS * CHUNK_DIMENSIONS;
 
@@ -18,6 +21,8 @@ pub struct Chunk {
     y: usize,
     z: usize,
     blocks: [u16; N_BLOCKS],
+
+    block_health: BlockHealth,
 }
 
 impl Chunk {
@@ -27,6 +32,7 @@ impl Chunk {
             y,
             z,
             blocks: [0; N_BLOCKS],
+            block_health: BlockHealth::default(),
         }
     }
 
@@ -47,6 +53,7 @@ impl Chunk {
 
     pub fn set_block_at(&mut self, x: usize, y: usize, z: usize, b: &Block) {
         self.blocks[z * CHUNK_DIMENSIONS * CHUNK_DIMENSIONS + y * CHUNK_DIMENSIONS + x] = b.id();
+        self.block_health.reset_health(x, y, z);
     }
 
     pub fn has_see_through_block_at(
@@ -86,6 +93,38 @@ impl Chunk {
             (relative.z + CHUNK_DIMENSIONS as f32 / 2.0) as usize,
         )
     }
+
+    /// Gets the block's health at that given coordinate
+    /// - x/y/z: block coordinate
+    /// - block_hardness: The hardness for the block at those coordinates
+    pub fn get_block_health(
+        &self,
+        x: usize,
+        y: usize,
+        z: usize,
+        block_hardness: &BlockHardness,
+    ) -> f32 {
+        self.block_health.get_health(x, y, z, block_hardness)
+    }
+
+    /// Causes a block at the given coordinates to take damage
+    ///
+    /// - x/y/z: Block coordinates
+    /// - block_hardness: The hardness for that block
+    /// - amount: The amount of damage to take - cannot be negative
+    ///
+    /// Returns: true if that block was destroyed, false if not
+    pub fn block_take_damage(
+        &mut self,
+        x: usize,
+        y: usize,
+        z: usize,
+        block_hardness: &BlockHardness,
+        amount: f32,
+    ) -> bool {
+        self.block_health
+            .take_damage(x, y, z, block_hardness, amount)
+    }
 }
 
 impl Serialize for Chunk {
@@ -121,17 +160,19 @@ impl Serialize for Chunk {
         s.serialize_field("y", &self.y)?;
         s.serialize_field("z", &self.z)?;
         s.serialize_field("blocks", &chunk_data)?;
+        s.serialize_field("block_health", &self.block_health)?;
         s.end()
     }
 }
 
-static FIELDS: &[&str] = &["x", "y", "z", "blocks"];
+static FIELDS: &[&str] = &["x", "y", "z", "blocks", "block_health"];
 
 enum Field {
     X,
     Y,
     Z,
     Blocks,
+    BlockHealth,
 }
 
 struct FieldVisitor;
@@ -140,7 +181,7 @@ impl<'de> Visitor<'de> for FieldVisitor {
     type Value = Field;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("x, y, z, or blocks")
+        formatter.write_str("x, y, z, blocks, or block_health")
     }
 
     fn visit_str<E>(self, value: &str) -> Result<Field, E>
@@ -152,6 +193,7 @@ impl<'de> Visitor<'de> for FieldVisitor {
             "y" => Ok(Field::Y),
             "z" => Ok(Field::Z),
             "blocks" => Ok(Field::Blocks),
+            "block_health" => Ok(Field::BlockHealth),
             _ => Err(de::Error::unknown_field(value, FIELDS)),
         }
     }
@@ -210,12 +252,16 @@ impl<'de> Visitor<'de> for ChunkVisitor {
         let blocks: Vec<u16> = seq
             .next_element()?
             .ok_or_else(|| A::Error::invalid_length(3, &self))?;
+        let block_health: BlockHealth = seq
+            .next_element()?
+            .ok_or_else(|| A::Error::invalid_length(4, &self))?;
 
         Ok(Chunk {
             x,
             y,
             z,
             blocks: vec_into_chunk_array(&blocks),
+            block_health,
         })
     }
 
@@ -227,6 +273,7 @@ impl<'de> Visitor<'de> for ChunkVisitor {
         let mut y = None;
         let mut z = None;
         let mut blocks: Option<Vec<u16>> = None;
+        let mut block_health: Option<BlockHealth> = None;
         while let Some(key) = map.next_key()? {
             match key {
                 Field::X => {
@@ -253,18 +300,26 @@ impl<'de> Visitor<'de> for ChunkVisitor {
                     }
                     blocks = Some(map.next_value()?);
                 }
+                Field::BlockHealth => {
+                    if block_health.is_some() {
+                        return Err(A::Error::duplicate_field("block_health"));
+                    }
+                    block_health = Some(map.next_value()?);
+                }
             }
         }
         let x = x.ok_or_else(|| A::Error::missing_field("x"))?;
         let y = y.ok_or_else(|| A::Error::missing_field("y"))?;
         let z = z.ok_or_else(|| A::Error::missing_field("z"))?;
         let blocks = blocks.ok_or_else(|| A::Error::missing_field("blocks"))?;
+        let block_health = block_health.ok_or_else(|| A::Error::missing_field("block_health"))?;
 
         Ok(Chunk {
             x,
             y,
             z,
             blocks: vec_into_chunk_array(&blocks),
+            block_health,
         })
     }
 }
