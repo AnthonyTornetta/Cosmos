@@ -16,7 +16,7 @@ pub mod window;
 use std::env;
 use std::f32::consts::PI;
 
-use bevy_rapier3d::render::RapierDebugRenderPlugin;
+// use bevy_rapier3d::render::RapierDebugRenderPlugin;
 use bevy_renet::renet::RenetClient;
 use camera::camera_controller;
 use cosmos_core::entities::player::Player;
@@ -208,7 +208,7 @@ fn create_sun(
 ) {
     commands
         .spawn(PointLightBundle {
-            transform: Transform::from_xyz(0.0, 1000.0, 0.0),
+            transform: Transform::from_xyz(0.0, 100.0, 0.0),
             point_light: PointLight {
                 intensity: 160000.0,
                 range: 160000.0,
@@ -264,7 +264,7 @@ fn main() {
     .add_plugins(ClientPluginGroup::default())
     .add_plugin(RenetClientPlugin::default())
     .add_plugin(WorldInspectorPlugin::new())
-    .add_plugin(RapierDebugRenderPlugin::default())
+    // .add_plugin(RapierDebugRenderPlugin::default())
     .add_system_set(
         SystemSet::on_enter(GameState::Connecting).with_system(connect::establish_connection),
     )
