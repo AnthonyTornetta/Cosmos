@@ -1,6 +1,7 @@
 use bevy::utils::HashMap;
 use bevy::{ecs::schedule::StateData, prelude::App};
 
+pub mod block_health;
 pub mod chunk;
 pub mod events;
 pub mod loading;
