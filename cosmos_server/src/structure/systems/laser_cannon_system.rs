@@ -23,6 +23,8 @@ fn update_system(
     mut commands: Commands,
     mut server: ResMut<RenetServer>,
 ) {
+    let abc = 5;
+
     for (mut cannon_system, system) in query.iter_mut() {
         if let Ok((systems, structure, global_transform, ship_velocity)) =
             systems.get(system.structure_entity)

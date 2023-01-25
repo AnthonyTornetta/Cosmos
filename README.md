@@ -4,19 +4,19 @@ A multiplayer block-based space exploration game, written in rust using the [Bev
 ## Compilation
 This project requires the latest nightly rust to compile. To swap to nightly, run the command 
 
-`rustup default nightly`.
+> `rustup default nightly`.
 
 To compile, navigate to the root directory of the repo and run 
 
-`cargo build`.
+> `cargo build`.
 
 To run the client, navigate to the cosmos_client directory and run
 
-`cargo run -p cosmos_client`
+> `cargo run`
 
 For the server, navigate to the cosmos_server directory and run
 
-`cargo run -p cosmos_server`
+> `cargo run`
 
 For release builds, append the `--release` flag to the build/run commands.
 
