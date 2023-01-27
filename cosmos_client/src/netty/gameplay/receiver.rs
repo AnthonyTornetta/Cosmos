@@ -372,8 +372,15 @@ fn client_sync_players(
                 laser_velocity,
                 firer_velocity,
                 strength,
-                no_hit,
+                mut no_hit,
             } => {
+                if let Some(server_entity) = no_hit {
+                    if let Some(client_entity) = network_mapping.client_from_server(&server_entity)
+                    {
+                        no_hit = Some(*client_entity);
+                    }
+                }
+
                 let laser_entity = Laser::spawn_custom_pbr(
                     position,
                     laser_velocity,

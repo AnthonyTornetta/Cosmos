@@ -19,6 +19,8 @@ fn event_listener(
         if let Ok(prev_pilot) = pilot_query.get(ev.structure_entity) {
             let mut transform = *transform_query.get(ev.structure_entity).unwrap();
 
+            transform.translation += transform.back() * 1.0 + Vec3::new(0.5, 1.5, 0.5);
+
             commands
                 .entity(ev.structure_entity)
                 .remove_children(&[prev_pilot.entity])
@@ -50,7 +52,7 @@ fn event_listener(
                 .insert(Sensor)
                 .insert(RigidBody::Fixed)
                 .insert(TransformBundle::from_transform(Transform::from_xyz(
-                    0.0, 0.0, 0.0,
+                    0.5, 0.5, 0.5,
                 )));
         } else {
             commands.entity(ev.structure_entity).remove::<Pilot>();

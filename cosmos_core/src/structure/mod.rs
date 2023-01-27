@@ -320,7 +320,7 @@ impl Structure {
         let yy = y as f32 - yoff;
         let zz = z as f32 - zoff;
 
-        Vec3::new(xx, yy, zz)
+        Vec3::new(xx + 0.5, yy + 0.5, zz + 0.5)
     }
 
     pub fn chunk_world_position(
