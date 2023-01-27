@@ -1,12 +1,14 @@
 use std::fmt::Display;
 
-use bevy::prelude::{App, Component, Query, Vec3, Without};
-use bevy_inspector_egui::{Inspectable, RegisterInspectable};
+use bevy::{
+    prelude::{App, Component, Query, Vec3, Without},
+    reflect::{FromReflect, Reflect},
+};
 use serde::{Deserialize, Serialize};
 
 use super::pilot::Pilot;
 
-#[derive(Component, Inspectable, Default, Serialize, Deserialize, Debug, Clone)]
+#[derive(Component, Default, Serialize, Deserialize, Debug, Clone, FromReflect, Reflect)]
 pub struct ShipMovement {
     pub movement: Vec3,
     pub torque: Vec3,
@@ -42,6 +44,6 @@ fn clear_movement_when_no_pilot(mut query: Query<&mut ShipMovement, Without<Pilo
 }
 
 pub fn register(app: &mut App) {
-    app.register_inspectable::<ShipMovement>()
+    app.register_type::<ShipMovement>()
         .add_system(clear_movement_when_no_pilot);
 }

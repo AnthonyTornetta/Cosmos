@@ -1,6 +1,5 @@
 use bevy::prelude::*;
 use bevy::winit::WinitPlugin;
-use bevy_inspector_egui::WorldInspectorPlugin;
 use bevy_rapier3d::prelude::RapierConfiguration;
 use bevy_renet::RenetServerPlugin;
 use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
@@ -36,6 +35,5 @@ fn main() {
         .add_plugin(RenetServerPlugin::default())
         .add_plugin(WinitPlugin::default())
         .add_plugin(ServerPlugin)
-        .add_plugin(WorldInspectorPlugin::new())
         .run();
 }
