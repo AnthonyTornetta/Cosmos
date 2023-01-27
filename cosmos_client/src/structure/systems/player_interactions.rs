@@ -1,8 +1,10 @@
-use bevy::prelude::{
-    Added, App, Commands, Component, Entity, Input, KeyCode, MouseButton, Query, RemovedComponents,
-    Res, ResMut, SystemSet, With,
+use bevy::{
+    prelude::{
+        Added, App, Commands, Component, Entity, Input, KeyCode, MouseButton, Query,
+        RemovedComponents, Res, ResMut, SystemSet, With,
+    },
+    reflect::{FromReflect, Reflect},
 };
-use bevy_inspector_egui::{Inspectable, RegisterInspectable};
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     netty::{client_unreliable_messages::ClientUnreliableMessages, NettyChannel},
@@ -15,7 +17,7 @@ use crate::{
     state::game_state::GameState,
 };
 
-#[derive(Component, Default, Inspectable)]
+#[derive(Component, Default, Reflect, FromReflect)]
 struct HoveredSystem {
     system_index: usize,
     active: bool,
@@ -106,5 +108,5 @@ pub fn register(app: &mut App) {
             .with_system(check_removed_pilot)
             .with_system(swap_selected),
     )
-    .register_inspectable::<HoveredSystem>();
+    .register_type::<HoveredSystem>();
 }

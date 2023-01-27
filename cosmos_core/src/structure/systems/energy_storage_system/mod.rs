@@ -3,9 +3,9 @@ use bevy::{
     prelude::{
         App, Commands, Component, CoreStage, EventReader, Query, Res, ResMut, Resource, SystemSet,
     },
+    reflect::{FromReflect, Reflect},
     utils::HashMap,
 };
-use bevy_inspector_egui::{Inspectable, RegisterInspectable};
 use iyes_loopless::prelude::*;
 
 use crate::{
@@ -36,7 +36,7 @@ impl EnergyStorageBlocks {
     }
 }
 
-#[derive(Component, Default, Inspectable)]
+#[derive(Component, Default, Reflect, FromReflect)]
 pub struct EnergyStorageSystem {
     energy: f32,
     capacity: f32,
@@ -136,5 +136,5 @@ pub fn register<T: StateData + Clone + Copy>(
             block_update_system.run_in_bevy_state(playing_state),
         )
         .add_system_set(SystemSet::on_update(playing_state).with_system(structure_loaded_event))
-        .register_inspectable::<EnergyStorageSystem>();
+        .register_type::<EnergyStorageSystem>();
 }

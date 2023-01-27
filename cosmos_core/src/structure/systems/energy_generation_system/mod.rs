@@ -1,5 +1,4 @@
 use bevy::{ecs::schedule::StateData, prelude::*, utils::HashMap};
-use bevy_inspector_egui::{Inspectable, RegisterInspectable};
 use iyes_loopless::prelude::*;
 
 use crate::{
@@ -33,7 +32,7 @@ impl EnergyGenerationBlocks {
     }
 }
 
-#[derive(Component, Default, Inspectable)]
+#[derive(Component, Default, Reflect, FromReflect)]
 struct EnergyGenerationSystem {
     generation_rate: f32,
 }
@@ -145,5 +144,5 @@ pub fn register<T: StateData + Clone + Copy>(
         )
         .add_system_set(SystemSet::on_update(playing_state).with_system(update_energy))
         .add_system_set(SystemSet::on_update(playing_state).with_system(structure_loaded_event))
-        .register_inspectable::<EnergyGenerationSystem>();
+        .register_type::<EnergyGenerationSystem>();
 }

@@ -1,11 +1,16 @@
-use bevy_inspector_egui::Inspectable;
+use bevy::{
+    prelude::App,
+    reflect::{FromReflect, Reflect},
+};
 use serde::{Deserialize, Serialize};
 
 use crate::{block::Block, registry::Registry};
 
 use super::{chunk::CHUNK_DIMENSIONS, Structure};
 
-#[derive(Clone, Debug, Inspectable, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(
+    Clone, Debug, FromReflect, Reflect, Copy, PartialEq, Eq, Default, Serialize, Deserialize,
+)]
 pub struct StructureBlock {
     pub x: usize,
     pub y: usize,
@@ -66,4 +71,8 @@ impl StructureBlock {
     pub fn chunk_coord_z(&self) -> usize {
         self.z / CHUNK_DIMENSIONS
     }
+}
+
+pub(crate) fn register(app: &mut App) {
+    app.register_type::<StructureBlock>();
 }

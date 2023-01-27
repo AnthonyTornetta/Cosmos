@@ -41,7 +41,6 @@ use crate::plugin::client_plugin::ClientPluginGroup;
 use crate::rendering::structure_renderer::monitor_block_updates_system;
 use crate::rendering::uv_mapper::UVMapper;
 use bevy::prelude::*;
-use bevy_inspector_egui::WorldInspectorPlugin;
 use bevy_rapier3d::prelude::{RapierConfiguration, Vect, Velocity};
 use bevy_renet::RenetClientPlugin;
 use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
@@ -263,7 +262,6 @@ fn main() {
     ))
     .add_plugins(ClientPluginGroup::default())
     .add_plugin(RenetClientPlugin::default())
-    .add_plugin(WorldInspectorPlugin::new())
     // .add_plugin(RapierDebugRenderPlugin::default())
     .add_system_set(
         SystemSet::on_enter(GameState::Connecting).with_system(connect::establish_connection),

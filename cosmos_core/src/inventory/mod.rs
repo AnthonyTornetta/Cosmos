@@ -1,5 +1,7 @@
-use bevy::prelude::{App, Component};
-use bevy_inspector_egui::{Inspectable, RegisterInspectable};
+use bevy::{
+    prelude::{App, Component},
+    reflect::{FromReflect, Reflect},
+};
 use serde::{Deserialize, Serialize};
 
 use crate::{item::Item, registry::identifiable::Identifiable};
@@ -14,7 +16,7 @@ pub mod itemstack;
 //     NormalInventory, // These inventories are organizable by the player
 // }
 
-#[derive(Default, Component, Serialize, Deserialize, Debug, Inspectable)]
+#[derive(Default, Component, Serialize, Deserialize, Debug, Reflect, FromReflect)]
 pub struct Inventory {
     items: Vec<Option<ItemStack>>,
 }
@@ -138,5 +140,5 @@ impl Inventory {
 
 pub fn register(app: &mut App) {
     itemstack::register(app);
-    app.register_inspectable::<Inventory>();
+    app.register_type::<Inventory>();
 }

@@ -1,10 +1,12 @@
-use bevy::prelude::App;
-use bevy_inspector_egui::{Inspectable, RegisterInspectable};
+use bevy::{
+    prelude::App,
+    reflect::{FromReflect, Reflect},
+};
 use serde::{Deserialize, Serialize};
 
 use crate::{item::Item, registry::identifiable::Identifiable};
 
-#[derive(Serialize, Deserialize, Debug, Inspectable)]
+#[derive(Serialize, Deserialize, Debug, Reflect, FromReflect)]
 pub struct ItemStack {
     item_id: u16,
     quantity: u16,
@@ -80,5 +82,5 @@ impl ItemStack {
 }
 
 pub fn register(app: &mut App) {
-    app.register_inspectable::<ItemStack>();
+    app.register_type::<ItemStack>();
 }

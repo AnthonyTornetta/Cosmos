@@ -3,8 +3,12 @@ use std::{
     ops::{Add, AddAssign, SubAssign},
 };
 
-use bevy::{ecs::schedule::StateData, prelude::*, utils::HashMap};
-use bevy_inspector_egui::{Inspectable, RegisterInspectable};
+use bevy::{
+    ecs::schedule::StateData,
+    prelude::*,
+    reflect::{FromReflect, Reflect},
+    utils::HashMap,
+};
 use iyes_loopless::prelude::*;
 
 use crate::{
@@ -16,7 +20,7 @@ use crate::{
 
 use super::Systems;
 
-#[derive(Default, Inspectable, Clone, Copy)]
+#[derive(Default, FromReflect, Reflect, Clone, Copy)]
 pub struct LaserCannonProperty {
     pub energy_per_shot: f32,
 }
@@ -58,7 +62,7 @@ impl LaserCannonBlocks {
     }
 }
 
-#[derive(Inspectable, Default)]
+#[derive(FromReflect, Reflect, Default)]
 pub struct Line {
     pub start: StructureBlock,
     pub direction: BlockFace,
@@ -115,7 +119,7 @@ impl Line {
     }
 }
 
-#[derive(Component, Default, Inspectable)]
+#[derive(Component, Default, FromReflect, Reflect)]
 pub struct LaserCannonSystem {
     pub lines: Vec<Line>,
     pub last_shot_time: f32,
@@ -392,6 +396,6 @@ pub fn register<T: StateData + Clone + Copy>(
         )
         .add_system_set(SystemSet::on_update(playing_state).with_system(structure_loaded_event))
         // .add_system_set(SystemSet::on_update(playing_state).with_system(update_laser))
-        .register_inspectable::<LaserCannonSystem>();
+        .register_type::<LaserCannonSystem>();
 }
 //

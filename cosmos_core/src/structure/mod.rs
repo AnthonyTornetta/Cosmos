@@ -521,4 +521,5 @@ pub fn register<T: StateData + Clone + Copy>(
     events::register(app);
     loading::register(app);
     block_health::register(app);
+    structure_block::register(app);
 }
