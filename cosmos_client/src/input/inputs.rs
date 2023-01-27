@@ -4,11 +4,13 @@ use bevy::{prelude::*, utils::HashMap};
 pub enum CosmosInputs {
     MoveForward,
     MoveBackward,
-    MoveUpOrJump,
+    Jump,
     SlowDown,
     MoveLeft,
     MoveRight,
+    // For use in ships
     MoveDown,
+    MoveUp,
     Sprint,
 
     StopPiloting,
@@ -50,8 +52,9 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     input_handler.set_keycode(CosmosInputs::MoveBackward, KeyCode::S);
     input_handler.set_keycode(CosmosInputs::MoveRight, KeyCode::D);
     input_handler.set_keycode(CosmosInputs::SlowDown, KeyCode::LShift);
-    input_handler.set_keycode(CosmosInputs::MoveUpOrJump, KeyCode::Space);
-    input_handler.set_keycode(CosmosInputs::MoveDown, KeyCode::LShift);
+    input_handler.set_keycode(CosmosInputs::Jump, KeyCode::Space);
+    input_handler.set_keycode(CosmosInputs::MoveDown, KeyCode::Q);
+    input_handler.set_keycode(CosmosInputs::MoveUp, KeyCode::E);
     input_handler.set_keycode(CosmosInputs::Sprint, KeyCode::LControl);
 
     input_handler.set_mouse_button(CosmosInputs::BreakBlock, MouseButton::Left);
