@@ -184,8 +184,6 @@ fn handle_events(
                     }
                 }),
             ) {
-                println!("HIT {} @ {}", entity.index(), toi.witness1);
-
                 event_writer.send(LaserCollideEvent {
                     entity_hit: entity,
                     local_position_hit: toi.witness1 + velocity.linvel.normalize() * 0.01,

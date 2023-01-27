@@ -490,13 +490,7 @@ impl Structure {
                 amount,
             );
 
-        println!(
-            "Bang! Block took damage, health is now {}",
-            self.get_block_health(bx, by, bz, block_hardness)
-        );
-
         if destroyed {
-            println!("Block dead!");
             if let Some(structure_entity) = self.get_entity() {
                 if let Some(event_writer) = event_writer {
                     event_writer.send(BlockDestroyedEvent {
