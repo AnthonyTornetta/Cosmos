@@ -320,7 +320,7 @@ impl Structure {
         let yy = y as f32 - yoff;
         let zz = z as f32 - zoff;
 
-        Vec3::new(xx, yy, zz)
+        Vec3::new(xx + 0.5, yy + 0.5, zz + 0.5)
     }
 
     pub fn chunk_world_position(
@@ -490,13 +490,7 @@ impl Structure {
                 amount,
             );
 
-        println!(
-            "Bang! Block took damage, health is now {}",
-            self.get_block_health(bx, by, bz, block_hardness)
-        );
-
         if destroyed {
-            println!("Block dead!");
             if let Some(structure_entity) = self.get_entity() {
                 if let Some(event_writer) = event_writer {
                     event_writer.send(BlockDestroyedEvent {

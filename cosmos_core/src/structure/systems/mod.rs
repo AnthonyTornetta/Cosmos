@@ -54,15 +54,19 @@ impl Systems {
         }
 
         if let Some(active_system) = self.active_system {
-            commands
-                .entity(self.systems[active_system as usize])
-                .remove::<SystemActive>();
+            if (active_system as usize) < self.systems.len() {
+                commands
+                    .entity(self.systems[active_system as usize])
+                    .remove::<SystemActive>();
+            }
         }
 
         if let Some(active_system) = active {
-            commands
-                .entity(self.systems[active_system as usize])
-                .insert(SystemActive);
+            if (active_system as usize) < self.systems.len() {
+                commands
+                    .entity(self.systems[active_system as usize])
+                    .insert(SystemActive);
+            }
         }
 
         self.active_system = active;

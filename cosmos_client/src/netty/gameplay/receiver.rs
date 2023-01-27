@@ -372,9 +372,17 @@ fn client_sync_players(
                 laser_velocity,
                 firer_velocity,
                 strength,
-                no_hit,
+                mut no_hit,
             } => {
-                let laser_entity = Laser::spawn_custom_pbr(
+                if let Some(server_entity) = no_hit {
+                    if let Some(client_entity) = network_mapping.client_from_server(&server_entity)
+                    {
+                        no_hit = Some(*client_entity);
+                    }
+                }
+
+                // let laser_entity =
+                Laser::spawn_custom_pbr(
                     position,
                     laser_velocity,
                     firer_velocity,
@@ -393,20 +401,20 @@ fn client_sync_players(
                     &mut commands,
                 );
 
-                // too laggy ;(
-                commands.entity(laser_entity).with_children(|parent| {
-                    parent.spawn(PointLightBundle {
-                        transform: Transform::from_xyz(0.0, 0.0, 0.0),
-                        point_light: PointLight {
-                            intensity: 100.0,
-                            range: 10.0,
-                            color,
-                            shadows_enabled: false,
-                            ..default()
-                        },
-                        ..default()
-                    });
-                });
+                // too laggy (and strobey) ;(
+                // commands.entity(laser_entity).with_children(|parent| {
+                //     parent.spawn(PointLightBundle {
+                //         transform: Transform::from_xyz(0.0, 0.0, 0.0),
+                //         point_light: PointLight {
+                //             intensity: 100.0,
+                //             range: 10.0,
+                //             color,
+                //             shadows_enabled: false,
+                //             ..default()
+                //         },
+                //         ..default()
+                //     });
+                // });
             }
         }
     }

@@ -235,19 +235,6 @@ impl LaserCannonSystem {
 
             let (bx, by, bz) = (block.x as i32, block.y as i32, block.z as i32);
 
-            // println!(
-            //     "Checking ({}, {}, {}) -> ({}, {}, {}) for ({}, {}, {})",
-            //     sx,
-            //     sy,
-            //     sz,
-            //     sx + line.len as i32 * dx,
-            //     sy + line.len as i32 * dy,
-            //     sz + line.len as i32 * dz,
-            //     bx,
-            //     by,
-            //     bz
-            // );
-
             // Block is before start
             if sx - dx == bx && sy - dy == by && sz - dz == bz {
                 if found_line.is_some() {
@@ -395,7 +382,5 @@ pub fn register<T: StateData + Clone + Copy>(
             block_update_system.run_in_bevy_state(playing_state),
         )
         .add_system_set(SystemSet::on_update(playing_state).with_system(structure_loaded_event))
-        // .add_system_set(SystemSet::on_update(playing_state).with_system(update_laser))
         .register_type::<LaserCannonSystem>();
 }
-//
