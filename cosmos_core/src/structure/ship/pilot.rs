@@ -1,8 +1,10 @@
-use bevy::prelude::{App, Component, Entity};
-use bevy_inspector_egui::{Inspectable, RegisterInspectable};
+use bevy::{
+    prelude::{App, Component, Entity},
+    reflect::{FromReflect, Reflect},
+};
 
 /// A pilot component is bi-directional, if a player has the component then the entity it points to also has this component which points to the player.
-#[derive(Component, Inspectable)]
+#[derive(Component, FromReflect, Reflect)]
 pub struct Pilot {
     /// This will either be the ship the player is piloting, or the pilot of the ship
     ///
@@ -11,5 +13,5 @@ pub struct Pilot {
 }
 
 pub fn regiter(app: &mut App) {
-    app.register_inspectable::<Pilot>();
+    app.register_type::<Pilot>();
 }

@@ -1,8 +1,8 @@
 use bevy::{
     ecs::schedule::StateData,
     prelude::{App, Vec3},
+    reflect::{FromReflect, Reflect},
 };
-use bevy_inspector_egui::Inspectable;
 
 use crate::registry::identifiable::Identifiable;
 
@@ -18,7 +18,7 @@ pub enum BlockProperty {
     ShipOnly,
 }
 
-#[derive(Debug, PartialEq, Eq, Inspectable, Default, Copy, Clone)]
+#[derive(Debug, PartialEq, Eq, Reflect, FromReflect, Default, Copy, Clone)]
 pub enum BlockFace {
     #[default]
     Front,
@@ -171,4 +171,6 @@ pub fn register<T: StateData + Clone + Copy>(
 ) {
     blocks::register(app, pre_loading_state, loading_state);
     hardness::register(app, pre_loading_state, loading_state, post_loading_state);
+
+    app.register_type::<BlockFace>();
 }

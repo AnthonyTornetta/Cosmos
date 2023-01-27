@@ -11,7 +11,7 @@ use bevy::render::RenderPlugin;
 use bevy::scene::ScenePlugin;
 use bevy::time::TimePlugin;
 use bevy::window::WindowPlugin;
-use bevy_inspector_egui::InspectableRegistry;
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_rapier3d::prelude::{NoUserData, RapierPhysicsPlugin};
 
 use crate::{block, inventory, projectiles};
@@ -79,8 +79,6 @@ impl<T: StateData + Clone + Copy> CosmosCorePluginGroup<T> {
 
 impl<T: StateData + Clone + Copy> Plugin for CosmosCorePlugin<T> {
     fn build(&self, app: &mut App) {
-        app.insert_resource(InspectableRegistry::default());
-
         loader::register(
             app,
             self.pre_loading_state,
@@ -123,6 +121,7 @@ impl<T: StateData + Clone + Copy> PluginGroup for CosmosCorePluginGroup<T> {
             .add(CorePipelinePlugin::default())
             .add(RapierPhysicsPlugin::<NoUserData>::default())
             .add(ImagePlugin::default_nearest())
+            .add(WorldInspectorPlugin)
             .add(CosmosCorePlugin::new(
                 self.pre_loading_state,
                 self.loading_state,

@@ -4,10 +4,10 @@ use bevy::{
         App, Commands, Component, CoreStage, EventReader, Query, Res, ResMut, Resource, SystemSet,
         Transform, Vec3, With,
     },
+    reflect::{FromReflect, Reflect},
     time::Time,
     utils::HashMap,
 };
-use bevy_inspector_egui::{Inspectable, RegisterInspectable};
 use bevy_rapier3d::prelude::{ExternalImpulse, ReadMassProperties, Velocity};
 use iyes_loopless::prelude::*;
 
@@ -45,7 +45,7 @@ impl ThrusterBlocks {
     }
 }
 
-#[derive(Component, Default, Inspectable)]
+#[derive(Component, Default, Reflect, FromReflect)]
 pub struct ThrusterSystem {
     thrust_total: f32,
     energy_consumption: f32,
@@ -214,5 +214,5 @@ pub fn register<T: StateData + Clone + Copy>(
         )
         .add_system_set(SystemSet::on_update(playing_state).with_system(structure_loaded_event))
         .add_system_set(SystemSet::on_update(playing_state).with_system(update_movement))
-        .register_inspectable::<ThrusterSystem>();
+        .register_type::<ThrusterSystem>();
 }
