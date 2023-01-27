@@ -63,7 +63,7 @@ fn process_ship_movement(
         if input_handler.check_pressed(CosmosInputs::MoveBackward, &keys, &mouse) {
             movement.movement.z -= 1.0;
         }
-        if input_handler.check_pressed(CosmosInputs::MoveUpOrJump, &keys, &mouse) {
+        if input_handler.check_pressed(CosmosInputs::MoveUp, &keys, &mouse) {
             movement.movement.y += 1.0;
         }
         if input_handler.check_pressed(CosmosInputs::MoveDown, &keys, &mouse) {
@@ -75,6 +75,8 @@ fn process_ship_movement(
         if input_handler.check_pressed(CosmosInputs::MoveRight, &keys, &mouse) {
             movement.movement.x += 1.0;
         }
+
+        movement.breaking = input_handler.check_pressed(CosmosInputs::SlowDown, &keys, &mouse);
 
         if input_handler.check_just_pressed(CosmosInputs::StopPiloting, &keys, &mouse) {
             client.send_message(
@@ -170,7 +172,7 @@ fn process_player_movement(
         if input_handler.check_pressed(CosmosInputs::MoveBackward, &keys, &mouse) {
             velocity.linvel -= forward * time;
         }
-        if input_handler.check_just_pressed(CosmosInputs::MoveUpOrJump, &keys, &mouse) {
+        if input_handler.check_just_pressed(CosmosInputs::Jump, &keys, &mouse) {
             velocity.linvel += up * 5.0;
         }
         if input_handler.check_pressed(CosmosInputs::MoveLeft, &keys, &mouse) {

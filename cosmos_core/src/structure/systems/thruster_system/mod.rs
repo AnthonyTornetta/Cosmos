@@ -25,6 +25,8 @@ use crate::{
 
 use super::{StructureSystem, Systems};
 
+const MAX_SHIP_SPEED: f32 = 256.0;
+
 pub struct ThrusterProperty {
     pub strength: f32,
     pub energy_consupmtion: f32,
@@ -139,9 +141,9 @@ fn update_movement(
                 .angvel
                 .clamp_length(0.0, movement.torque.length() * 4.0);
 
-            velocity.linvel = velocity.linvel.clamp_length(0.0, 256.0);
+            velocity.linvel = velocity.linvel.clamp_length(0.0, MAX_SHIP_SPEED);
 
-            let movement_vector = if normal.x == 0.0 && normal.y == 0.0 && normal.z == 0.0 {
+            let mut movement_vector = if normal.x == 0.0 && normal.y == 0.0 && normal.z == 0.0 {
                 Vec3::ZERO
             } else {
                 let mut movement_vector = transform.forward() * normal.z;
@@ -171,6 +173,10 @@ fn update_movement(
                     Vec3::ZERO
                 }
             };
+
+            if movement.breaking {
+                movement_vector += -velocity.linvel * 0.1;
+            }
 
             external_impulse.impulse += movement_vector;
         }
