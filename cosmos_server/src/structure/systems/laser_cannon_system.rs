@@ -15,6 +15,8 @@ use cosmos_core::{
 
 use crate::state::GameState;
 
+const LASER_BASE_VELOCITY: f32 = 200.0;
+
 fn update_system(
     mut query: Query<(&mut LaserCannonSystem, &StructureSystem), With<SystemActive>>,
     mut es_query: Query<&mut EnergyStorageSystem>,
@@ -52,7 +54,7 @@ fn update_system(
                                 .affine()
                                 .matrix3
                                 .mul_vec3(-line.direction.direction_vec3())
-                                * 0.1;
+                                * LASER_BASE_VELOCITY;
 
                             let strength = (5.0 * line.len as f32).powf(1.2);
                             let no_hit = Some(system.structure_entity);

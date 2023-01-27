@@ -1,10 +1,12 @@
 use bevy::ecs::schedule::StateData;
 use bevy::prelude::{
     App, BuildChildren, Commands, EventReader, Parent, Quat, Query, SystemSet, Transform, Vec3,
+    With,
 };
 use bevy::transform::TransformBundle;
 use bevy_rapier3d::prelude::{RigidBody, Sensor};
 
+use crate::entities::player::Player;
 use crate::events::structure::change_pilot_event::ChangePilotEvent;
 use crate::structure::ship::pilot::Pilot;
 
@@ -60,6 +62,20 @@ fn event_listener(
     }
 }
 
+fn keep_pilot_in_place(mut query: Query<&mut Transform, (With<Pilot>, With<Player>)>) {
+    for mut transform in query.iter_mut() {
+        // This is the block core's location
+        // This should be moved to the camera system once that's added
+        transform.translation.x = 0.5;
+        transform.translation.y = 0.5;
+        transform.translation.z = 0.5;
+    }
+}
+
 pub fn register<T: StateData + Clone + Copy>(app: &mut App, playing_state: T) {
-    app.add_system_set(SystemSet::on_update(playing_state).with_system(event_listener));
+    app.add_system_set(
+        SystemSet::on_update(playing_state)
+            .with_system(event_listener)
+            .with_system(keep_pilot_in_place),
+    );
 }
