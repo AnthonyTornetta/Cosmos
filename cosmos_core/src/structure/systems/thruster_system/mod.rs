@@ -1,8 +1,10 @@
+use std::ops::Mul;
+
 use bevy::{
     ecs::schedule::StateData,
     prelude::{
-        App, Commands, Component, CoreStage, EventReader, Query, Res, ResMut, Resource, SystemSet,
-        Transform, Vec3, With,
+        App, Commands, Component, CoreStage, EventReader, Quat, Query, Res, ResMut, Resource,
+        SystemSet, Transform, Vec3, With,
     },
     reflect::{FromReflect, Reflect},
     time::Time,
@@ -133,13 +135,30 @@ fn update_movement(
         {
             let normal = movement.into_normal_vector();
             // velocity.angvel += transform.rotation.mul_vec3(movement.torque.clone());
-            velocity.angvel += transform.rotation.mul_vec3(movement.torque)
-                / mass_props.0.principal_inertia
-                * thruster_system.thrust_total;
-            // This is horrible, please find something better
-            velocity.angvel = velocity
-                .angvel
-                .clamp_length(0.0, movement.torque.length() * 4.0);
+            // velocity.angvel += transform.rotation.mul_vec3(movement.torque)
+            //     / mass_props.0.principal_inertia
+            //     * thruster_system.thrust_total;
+            // // This is horrible, please find something better
+            // velocity.angvel = velocity
+            //     .angvel
+            //     .clamp_length(0.0, movement.torque.length() * 4.0);
+
+            println!(
+                "Designed delta angle: {}, {}",
+                movement.torque.x.to_degrees(),
+                movement.torque.y.to_degrees()
+            );
+
+            let torque = Quat::from_affine3(&transform.compute_affine()).mul(movement.torque * 5.0);
+
+            const MAX_ANGLE_PER_SECOND: f32 = 100.0;
+
+            let max = MAX_ANGLE_PER_SECOND * time.delta_seconds();
+
+            // velocity.angvel.x
+            velocity.angvel = torque.clamp_length(0.0, max);
+
+            println!("ANGVEL NOW: {}", velocity.angvel);
 
             velocity.linvel = velocity.linvel.clamp_length(0.0, MAX_SHIP_SPEED);
 

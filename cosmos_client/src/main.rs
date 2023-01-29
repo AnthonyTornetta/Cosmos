@@ -88,14 +88,14 @@ fn process_ship_movement(
         let w = wnd.primary();
         let hw = w.width() / 2.0;
         let hh = w.height() / 2.0;
-        let p2 = PI / 2.0;
+        let p2 = PI / 2.0; // 45 deg (half of FOV)
 
         crosshair_offset.x += cursor_delta_position.x;
         crosshair_offset.y += cursor_delta_position.y;
 
         movement.torque = Vec3::new(
-            crosshair_offset.y / hh * p2,
-            -crosshair_offset.x / hw * p2,
+            crosshair_offset.y / hh * p2 / 2.0,
+            -crosshair_offset.x / hw * p2 / 2.0,
             0.0,
         );
 
