@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use cosmos_core::utils::smooth_clamp::SmoothClamp;
 
 use crate::state::game_state::GameState;
 
@@ -48,10 +49,33 @@ fn update_cursor_pos(pos: Res<CrosshairOffset>, mut query: Query<&mut Style, Wit
     }
 }
 
-#[derive(Default, Debug, Resource)]
+#[derive(Default, Debug, Resource, Clone, Copy, Reflect, FromReflect)]
 pub struct CrosshairOffset {
     pub x: f32,
     pub y: f32,
+}
+
+impl SmoothClamp for CrosshairOffset {
+    fn smooth_clamp(&self, min: &Self, max: &Self, lerp: f32) -> Self {
+        debug_assert!(min.x < max.x);
+        debug_assert!(min.y < max.y);
+
+        let mut res = *self;
+
+        if self.x < min.x {
+            res.x += (min.x - self.x) * lerp;
+        } else if self.x > max.x {
+            res.x += (max.x - self.x) * lerp;
+        }
+
+        if self.y < min.y {
+            res.y += (min.y - self.y) * lerp;
+        } else if self.y > max.y {
+            res.y += (max.y - self.y) * lerp;
+        }
+
+        res
+    }
 }
 
 pub fn register(app: &mut App) {

@@ -10,7 +10,7 @@ use bevy::{
     time::Time,
     utils::HashMap,
 };
-use bevy_rapier3d::prelude::{ExternalImpulse, ReadMassProperties, Velocity};
+use bevy_rapier3d::prelude::{ExternalImpulse, Velocity};
 use iyes_loopless::prelude::*;
 
 use crate::{
@@ -121,7 +121,6 @@ fn update_movement(
             &Systems,
             &Transform,
             &mut Velocity,
-            &ReadMassProperties,
             &mut ExternalImpulse,
         ),
         With<Pilot>,
@@ -130,37 +129,22 @@ fn update_movement(
     time: Res<Time>,
 ) {
     for (thruster_system, system) in thrusters_query.iter() {
-        if let Ok((movement, systems, transform, mut velocity, mass_props, mut external_impulse)) =
+        if let Ok((movement, systems, transform, mut velocity, mut external_impulse)) =
             query.get_mut(system.structure_entity)
         {
-            let normal = movement.into_normal_vector();
-            // velocity.angvel += transform.rotation.mul_vec3(movement.torque.clone());
-            // velocity.angvel += transform.rotation.mul_vec3(movement.torque)
-            //     / mass_props.0.principal_inertia
-            //     * thruster_system.thrust_total;
-            // // This is horrible, please find something better
-            // velocity.angvel = velocity
-            //     .angvel
-            //     .clamp_length(0.0, movement.torque.length() * 4.0);
-
-            println!(
-                "Designed delta angle: {}, {}",
-                movement.torque.x.to_degrees(),
-                movement.torque.y.to_degrees()
-            );
-
+            // Rotation
             let torque = Quat::from_affine3(&transform.compute_affine()).mul(movement.torque * 5.0);
 
             const MAX_ANGLE_PER_SECOND: f32 = 100.0;
 
             let max = MAX_ANGLE_PER_SECOND * time.delta_seconds();
 
-            // velocity.angvel.x
             velocity.angvel = torque.clamp_length(0.0, max);
 
-            println!("ANGVEL NOW: {}", velocity.angvel);
-
             velocity.linvel = velocity.linvel.clamp_length(0.0, MAX_SHIP_SPEED);
+
+            // Position
+            let normal = movement.into_normal_vector();
 
             let mut movement_vector = if normal.x == 0.0 && normal.y == 0.0 && normal.z == 0.0 {
                 Vec3::ZERO

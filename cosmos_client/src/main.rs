@@ -90,8 +90,18 @@ fn process_ship_movement(
         let hh = w.height() / 2.0;
         let p2 = PI / 2.0; // 45 deg (half of FOV)
 
-        crosshair_offset.x += cursor_delta_position.x;
-        crosshair_offset.y += cursor_delta_position.y;
+        let max_w = hw * 0.9;
+        let max_h = hh * 0.9;
+
+        // Prevents you from moving cursor off screen
+        // Reduces cursor movement the closer you get to edge of screen until it reaches 0 at hw/2 or hh/2
+        crosshair_offset.x += cursor_delta_position.x
+            - (cursor_delta_position.x * (crosshair_offset.x.abs() / max_w));
+        crosshair_offset.y += cursor_delta_position.y
+            - (cursor_delta_position.y * (crosshair_offset.y.abs() / max_h));
+
+        crosshair_offset.x = crosshair_offset.x.clamp(-hw, hw);
+        crosshair_offset.y = crosshair_offset.y.clamp(-hh, hh);
 
         movement.torque = Vec3::new(
             crosshair_offset.y / hh * p2 / 2.0,

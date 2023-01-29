@@ -340,12 +340,21 @@ fn client_sync_players(
                 structure_entity,
                 pilot_entity,
             } => {
+                let entity = if let Some(pilot_entity) = pilot_entity {
+                    if let Some(entity) = network_mapping.client_from_server(&pilot_entity) {
+                        Some(*entity)
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                };
+
                 pilot_change_event_writer.send(ChangePilotEvent {
                     structure_entity: *network_mapping
                         .client_from_server(&structure_entity)
                         .unwrap(),
-                    pilot_entity: pilot_entity
-                        .map(|ent| *network_mapping.client_from_server(&ent).unwrap()),
+                    pilot_entity: entity,
                 });
             }
             ServerReliableMessages::EntityInventory {
