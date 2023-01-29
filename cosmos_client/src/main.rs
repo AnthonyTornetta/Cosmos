@@ -247,43 +247,43 @@ fn main() {
 
     let mut app = App::new();
 
-    app.insert_resource(ConnectionConfig { host_name });
-
-    app.insert_resource(RapierConfiguration {
-        gravity: Vec3::ZERO,
-        ..default()
-    })
-    .add_state(GameState::PreLoading)
-    .add_plugins(CosmosCorePluginGroup::new(
-        GameState::PreLoading,
-        GameState::Loading,
-        GameState::PostLoading,
-        GameState::Connecting,
-        GameState::Playing,
-    ))
-    .add_plugins(ClientPluginGroup::default())
-    .add_plugin(RenetClientPlugin::default())
-    // .add_plugin(RapierDebugRenderPlugin::default())
-    .add_system_set(
-        SystemSet::on_enter(GameState::Connecting).with_system(connect::establish_connection),
-    )
-    .add_system_set(
-        SystemSet::on_update(GameState::Connecting).with_system(connect::wait_for_connection),
-    )
-    .add_system_set(SystemSet::on_enter(GameState::LoadingWorld).with_system(create_sun))
-    .add_system_set(
-        SystemSet::on_update(GameState::LoadingWorld)
-            .with_system(connect::wait_for_done_loading)
-            .with_system(monitor_block_updates_system),
-    )
-    .add_system_set(
-        SystemSet::on_update(GameState::Playing)
-            .with_system(process_player_movement)
-            .with_system(process_ship_movement)
-            .with_system(monitor_block_updates_system)
-            .with_system(reset_cursor)
-            .with_system(sync_pilot_to_ship),
-    );
+    app.insert_resource(ConnectionConfig { host_name })
+        .insert_resource(RapierConfiguration {
+            gravity: Vec3::ZERO,
+            ..default()
+        })
+        .insert_resource(ClearColor(Color::BLACK))
+        .add_state(GameState::PreLoading)
+        .add_plugins(CosmosCorePluginGroup::new(
+            GameState::PreLoading,
+            GameState::Loading,
+            GameState::PostLoading,
+            GameState::Connecting,
+            GameState::Playing,
+        ))
+        .add_plugins(ClientPluginGroup::default())
+        .add_plugin(RenetClientPlugin::default())
+        // .add_plugin(RapierDebugRenderPlugin::default())
+        .add_system_set(
+            SystemSet::on_enter(GameState::Connecting).with_system(connect::establish_connection),
+        )
+        .add_system_set(
+            SystemSet::on_update(GameState::Connecting).with_system(connect::wait_for_connection),
+        )
+        .add_system_set(SystemSet::on_enter(GameState::LoadingWorld).with_system(create_sun))
+        .add_system_set(
+            SystemSet::on_update(GameState::LoadingWorld)
+                .with_system(connect::wait_for_done_loading)
+                .with_system(monitor_block_updates_system),
+        )
+        .add_system_set(
+            SystemSet::on_update(GameState::Playing)
+                .with_system(process_player_movement)
+                .with_system(process_ship_movement)
+                .with_system(monitor_block_updates_system)
+                .with_system(reset_cursor)
+                .with_system(sync_pilot_to_ship),
+        );
 
     inputs::register(&mut app);
     window::setup::register(&mut app);
