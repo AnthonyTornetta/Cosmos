@@ -1,10 +1,17 @@
+use crate::block::lighting::{BlockLightProperties, BlockLighting};
 use crate::state::game_state::GameState;
-use bevy::prelude::{App, Component, EventReader, Mesh, SystemSet, Vec3};
+use bevy::prelude::{
+    App, BuildChildren, Color, Component, EventReader, Mesh, PointLight, PointLightBundle,
+    SystemSet, Transform, Vec3,
+};
+use bevy::reflect::{FromReflect, Reflect};
 use bevy::render::mesh::{Indices, PrimitiveTopology};
 use bevy::render::primitives::Aabb;
+use bevy::utils::HashMap;
 use bevy_rapier3d::na::Vector3;
 use cosmos_core::block::{Block, BlockFace};
 use cosmos_core::events::block_events::BlockChangedEvent;
+use cosmos_core::registry::identifiable::Identifiable;
 use cosmos_core::registry::Registry;
 use cosmos_core::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
 use cosmos_core::structure::events::ChunkSetEvent;
@@ -26,7 +33,7 @@ pub fn register(app: &mut App) {
         );
 }
 
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct StructureRenderer {
     width: usize,
     height: usize,
@@ -36,10 +43,12 @@ pub struct StructureRenderer {
     need_meshes: HashSet<Vector3<usize>>,
 }
 
+#[derive(Debug)]
 pub struct ChunkMesh {
     pub x: usize,
     pub y: usize,
     pub z: usize,
+    pub lights: HashMap<(usize, usize, usize), BlockLightProperties>,
     pub mesh: Mesh,
 }
 
@@ -77,6 +86,7 @@ impl StructureRenderer {
         structure: &Structure,
         uv_mapper: &UVMapper,
         blocks: &Registry<Block>,
+        lighting: &Registry<BlockLighting>,
     ) {
         for change in &self.changes {
             debug_assert!(change.x < self.width);
@@ -120,6 +130,7 @@ impl StructureRenderer {
 
             self.chunk_renderers[flatten(x, y, z, self.width, self.height)].render(
                 uv_mapper,
+                &lighting,
                 structure.chunk_from_chunk_coordinates(x, y, z),
                 left,
                 right,
@@ -163,6 +174,7 @@ impl StructureRenderer {
                 x: chunk.x,
                 y: chunk.y,
                 z: chunk.z,
+                lights: rend.lights,
                 mesh,
             });
         }
@@ -343,6 +355,7 @@ pub fn monitor_needs_rendered_system(
     mesh_query: Query<Option<&Handle<Mesh>>>,
     mut meshes: ResMut<Assets<Mesh>>,
     blocks: Res<Registry<Block>>,
+    lighting: Res<Registry<BlockLighting>>,
 ) {
     let mut done_structures = HashSet::new();
     for ev in event.iter() {
@@ -354,7 +367,7 @@ pub fn monitor_needs_rendered_system(
 
         let (structure, mut renderer) = query.get_mut(ev.0).unwrap();
 
-        renderer.render(structure, &atlas.uv_mapper, &blocks);
+        renderer.render(structure, &atlas.uv_mapper, &blocks, &lighting);
 
         let chunk_meshes: Vec<ChunkMesh> = renderer.create_meshes();
 
@@ -369,7 +382,34 @@ pub fn monitor_needs_rendered_system(
 
             let mut entity_commands = commands.entity(entity);
 
-            let s = (CHUNK_DIMENSIONS) as f32;
+            if !chunk_mesh.lights.is_empty() {
+                entity_commands.with_children(|p| {
+                    for light in chunk_mesh.lights {
+                        let (x, y, z) = light.0;
+                        let properties = light.1;
+
+                        println!("CREATE LIGHT @ {x}, {y}, {z}");
+
+                        p.spawn(PointLightBundle {
+                            point_light: PointLight {
+                                color: properties.color,
+                                intensity: properties.intensity,
+                                range: properties.range,
+                                shadows_enabled: !properties.shadows_disabled,
+                                ..Default::default()
+                            },
+                            transform: Transform::from_xyz(
+                                x as f32 + 0.5,
+                                y as f32 + 0.5,
+                                z as f32 + 0.5,
+                            ),
+                            ..Default::default()
+                        });
+                    }
+                });
+            }
+
+            let s = (CHUNK_DIMENSIONS / 2) as f32;
 
             entity_commands.insert(meshes.add(chunk_mesh.mesh));
             entity_commands.insert(Aabb::from_min_max(
@@ -381,12 +421,13 @@ pub fn monitor_needs_rendered_system(
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug, Reflect, FromReflect)]
 pub struct ChunkRenderer {
     pub indices: Vec<u32>,
     pub uvs: Vec<[f32; 2]>,
     pub positions: Vec<[f32; 3]>,
     pub normals: Vec<[f32; 3]>,
+    pub lights: HashMap<(usize, usize, usize), BlockLightProperties>,
 }
 
 impl ChunkRenderer {
@@ -397,6 +438,7 @@ impl ChunkRenderer {
     pub fn render(
         &mut self,
         uv_mapper: &UVMapper,
+        lighting: &Registry<BlockLighting>,
         chunk: &Chunk,
         left: Option<&Chunk>,
         right: Option<&Chunk>,
@@ -426,6 +468,8 @@ impl ChunkRenderer {
                             y as f32 - cd2 + 0.5,
                             z as f32 - cd2 + 0.5,
                         );
+
+                        let mut block_is_visible = false;
 
                         // right
                         if (x != CHUNK_DIMENSIONS - 1
@@ -458,6 +502,8 @@ impl ChunkRenderer {
                             self.indices.push(last_index);
 
                             last_index += 4;
+
+                            block_is_visible = true;
                         }
                         // left
                         if (x != 0 && chunk.has_see_through_block_at(x - 1, y, z, blocks))
@@ -494,6 +540,8 @@ impl ChunkRenderer {
                             self.indices.push(last_index);
 
                             last_index += 4;
+
+                            block_is_visible = true;
                         }
 
                         // top
@@ -527,6 +575,8 @@ impl ChunkRenderer {
                             self.indices.push(last_index);
 
                             last_index += 4;
+
+                            block_is_visible = true;
                         }
                         // bottom
                         if (y != 0 && chunk.has_see_through_block_at(x, y - 1, z, blocks))
@@ -563,6 +613,8 @@ impl ChunkRenderer {
                             self.indices.push(last_index);
 
                             last_index += 4;
+
+                            block_is_visible = true;
                         }
 
                         // back
@@ -596,6 +648,8 @@ impl ChunkRenderer {
                             self.indices.push(last_index);
 
                             last_index += 4;
+
+                            block_is_visible = true;
                         }
                         // front
                         if (z != 0 && chunk.has_see_through_block_at(x, y, z - 1, blocks))
@@ -633,6 +687,14 @@ impl ChunkRenderer {
                             self.indices.push(last_index);
 
                             last_index += 4;
+
+                            block_is_visible = true;
+                        }
+
+                        if block_is_visible {
+                            if let Some(lighting) = lighting.from_id(block.unlocalized_name()) {
+                                self.lights.insert((x, y, z), lighting.properties);
+                            }
                         }
                     }
                 }

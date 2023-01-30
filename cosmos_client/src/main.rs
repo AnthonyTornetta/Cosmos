@@ -1,4 +1,5 @@
 pub mod asset;
+pub mod block;
 pub mod camera;
 pub mod events;
 pub mod input;
@@ -216,13 +217,41 @@ fn create_sun(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
+    // commands
+    //     .spawn(PointLightBundle {
+    //         transform: Transform::from_xyz(0.0, 100.0, 0.0),
+    //         point_light: PointLight {
+    //             intensity: 160000.0,
+    //             range: 160000.0,
+    //             color: Color::WHITE,
+    //             shadows_enabled: true,
+    //             ..default()
+    //         },
+    //         ..default()
+    //     })
+    //     .with_children(|builder| {
+    //         builder.spawn(PbrBundle {
+    //             mesh: meshes.add(Mesh::from(shape::UVSphere {
+    //                 radius: 0.1,
+    //                 ..default()
+    //             })),
+    //             material: materials.add(StandardMaterial {
+    //                 base_color: Color::RED,
+    //                 emissive: Color::rgba_linear(100.0, 0.0, 0.0, 0.0),
+    //                 ..default()
+    //             }),
+    //             ..default()
+    //         });
+    //     });
+
     commands
         .spawn(PointLightBundle {
-            transform: Transform::from_xyz(0.0, 100.0, 0.0),
+            transform: Transform::from_xyz(0.5, 2.5, 0.5),
             point_light: PointLight {
-                intensity: 160000.0,
-                range: 160000.0,
+                intensity: 600.0,
+                range: 20.0,
                 color: Color::WHITE,
+                radius: 0.6,
                 shadows_enabled: true,
                 ..default()
             },
@@ -230,13 +259,10 @@ fn create_sun(
         })
         .with_children(|builder| {
             builder.spawn(PbrBundle {
-                mesh: meshes.add(Mesh::from(shape::UVSphere {
-                    radius: 0.1,
-                    ..default()
-                })),
+                mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
                 material: materials.add(StandardMaterial {
-                    base_color: Color::RED,
-                    emissive: Color::rgba_linear(100.0, 0.0, 0.0, 0.0),
+                    base_color: Color::WHITE,
+                    emissive: Color::rgba_linear(1.0, 1.0, 1.0, 0.0),
                     ..default()
                 }),
                 ..default()
@@ -307,6 +333,7 @@ fn main() {
     structure_renderer::register(&mut app);
     lang::register(&mut app);
     structure::register(&mut app);
+    block::register(&mut app);
 
     app.run();
 }

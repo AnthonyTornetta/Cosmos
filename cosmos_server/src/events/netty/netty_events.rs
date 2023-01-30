@@ -38,7 +38,9 @@ fn generate_player_inventory(items: &Registry<Item>) -> Inventory {
 
     inventory.insert_at(
         9 * 3 + 3,
-        items.from_id("cosmos:thruster").expect("Thruster item to exist"),
+        items
+            .from_id("cosmos:thruster")
+            .expect("Thruster item to exist"),
         64,
     );
 
@@ -70,6 +72,14 @@ fn generate_player_inventory(items: &Registry<Item>) -> Inventory {
         9 * 3 + 7,
         items
             .from_id("cosmos:ship_hull")
+            .expect("Ship hull item to exist"),
+        64,
+    );
+
+    inventory.insert_at(
+        9 * 3 + 8,
+        items
+            .from_id("cosmos:light")
             .expect("Ship hull item to exist"),
         64,
     );

@@ -60,7 +60,7 @@ pub fn add_cosmos_blocks(
     );
 
     blocks.register(
-        BlockBuilder::new("cosmos:ship_core".into(), 0.1)
+        BlockBuilder::new("cosmos:ship_core".into(), 0.3)
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .add_property(BlockProperty::ShipOnly)
@@ -69,7 +69,7 @@ pub fn add_cosmos_blocks(
     );
 
     blocks.register(
-        BlockBuilder::new("cosmos:energy_cell".to_owned(), 0.1)
+        BlockBuilder::new("cosmos:energy_cell".to_owned(), 0.3)
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .set_all_uvs(36)
@@ -77,7 +77,7 @@ pub fn add_cosmos_blocks(
     );
 
     blocks.register(
-        BlockBuilder::new("cosmos:reactor".to_owned(), 0.1)
+        BlockBuilder::new("cosmos:reactor".to_owned(), 0.3)
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .set_all_uvs(37)
@@ -85,7 +85,7 @@ pub fn add_cosmos_blocks(
     );
 
     blocks.register(
-        BlockBuilder::new("cosmos:laser_cannon".to_owned(), 0.1)
+        BlockBuilder::new("cosmos:laser_cannon".to_owned(), 0.3)
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .set_all_uvs(21)
@@ -105,7 +105,7 @@ pub fn add_cosmos_blocks(
     );
 
     blocks.register(
-        BlockBuilder::new("cosmos:thruster".to_owned(), 0.7)
+        BlockBuilder::new("cosmos:thruster".to_owned(), 0.3)
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .set_all_uvs(28)
@@ -113,6 +113,14 @@ pub fn add_cosmos_blocks(
             .set_side_uvs(BlockFace::Top, 27)
             .set_side_uvs(BlockFace::Back, 26)
             .set_side_uvs(BlockFace::Bottom, 27)
+            .create(),
+    );
+
+    blocks.register(
+        BlockBuilder::new("cosmos:light".to_owned(), 0.1)
+            .add_property(BlockProperty::Opaque)
+            .add_property(BlockProperty::Full)
+            .set_all_uvs(16)
             .create(),
     );
 
