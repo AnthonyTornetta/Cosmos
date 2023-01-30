@@ -9,3 +9,4 @@ cosmos:ship_core=Ship Core
 cosmos:energy_cell=Energy Cell
 cosmos:ship_hull=Ship Hull
 cosmos:reactor=Reactor
+cosmos:thruster=Thruster
