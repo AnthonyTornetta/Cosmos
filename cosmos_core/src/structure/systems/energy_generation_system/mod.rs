@@ -51,7 +51,7 @@ fn register_energy_blocks(
     blocks: Res<Registry<Block>>,
     mut generation: ResMut<EnergyGenerationBlocks>,
 ) {
-    if let Some(block) = blocks.from_id("cosmos:reactor_block") {
+    if let Some(block) = blocks.from_id("cosmos:reactor") {
         generation.insert(
             block,
             EnergyGenerationProperty {

@@ -77,6 +77,14 @@ pub fn add_cosmos_blocks(
     );
 
     blocks.register(
+        BlockBuilder::new("cosmos:reactor".to_owned(), 0.1)
+            .add_property(BlockProperty::Opaque)
+            .add_property(BlockProperty::Full)
+            .set_all_uvs(37)
+            .create(),
+    );
+
+    blocks.register(
         BlockBuilder::new("cosmos:laser_cannon".to_owned(), 0.1)
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)

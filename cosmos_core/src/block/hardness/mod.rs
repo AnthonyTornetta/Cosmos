@@ -71,6 +71,7 @@ fn register_block_hardness(
 
     register_hardness(&mut registry, 100.0, &blocks, "cosmos:ship_core");
     register_hardness(&mut registry, 20.0, &blocks, "cosmos:energy_cell");
+    register_hardness(&mut registry, 20.0, &blocks, "cosmos:reactor");
     register_hardness(&mut registry, 20.0, &blocks, "cosmos:laser_cannon");
     register_hardness(&mut registry, 20.0, &blocks, "cosmos:thruster");
 
