@@ -37,6 +37,12 @@ fn generate_player_inventory(items: &Registry<Item>) -> Inventory {
     );
 
     inventory.insert_at(
+        9 * 3 + 3,
+        items.from_id("cosmos:thruster").expect("Thruster item to exist"),
+        64,
+    );
+
+    inventory.insert_at(
         9 * 3 + 4,
         items
             .from_id("cosmos:laser_cannon")

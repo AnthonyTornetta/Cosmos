@@ -104,6 +104,18 @@ pub fn add_cosmos_blocks(
             .create(),
     );
 
+    blocks.register(
+        BlockBuilder::new("cosmos:thruster".to_owned(), 0.7)
+            .add_property(BlockProperty::Opaque)
+            .add_property(BlockProperty::Full)
+            .set_all_uvs(28)
+            .set_side_uvs(BlockFace::Front, 20)
+            .set_side_uvs(BlockFace::Top, 27)
+            .set_side_uvs(BlockFace::Back, 26)
+            .set_side_uvs(BlockFace::Bottom, 27)
+            .create(),
+    );
+
     loading.finish_loading(id, &mut end_writer);
 }
 
