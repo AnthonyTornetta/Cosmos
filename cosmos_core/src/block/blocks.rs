@@ -64,7 +64,7 @@ pub fn add_cosmos_blocks(
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .add_property(BlockProperty::ShipOnly)
-            .set_all_uvs(0)
+            .set_all_uvs(5)
             .create(),
     );
 
@@ -72,7 +72,7 @@ pub fn add_cosmos_blocks(
         BlockBuilder::new("cosmos:energy_cell".to_owned(), 0.1)
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
-            .set_all_uvs(0)
+            .set_all_uvs(36)
             .create(),
     );
 
@@ -80,7 +80,11 @@ pub fn add_cosmos_blocks(
         BlockBuilder::new("cosmos:laser_cannon".to_owned(), 0.1)
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
-            .set_all_uvs(0)
+            .set_all_uvs(21)
+            .set_side_uvs(BlockFace::Front, 22)
+            .set_side_uvs(BlockFace::Top, 23)
+            .set_side_uvs(BlockFace::Bottom, 23)
+            .set_side_uvs(BlockFace::Back, 24)
             .create(),
     );
 
