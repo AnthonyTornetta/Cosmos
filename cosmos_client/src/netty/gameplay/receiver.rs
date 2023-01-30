@@ -341,11 +341,7 @@ fn client_sync_players(
                 pilot_entity,
             } => {
                 let entity = if let Some(pilot_entity) = pilot_entity {
-                    if let Some(entity) = network_mapping.client_from_server(&pilot_entity) {
-                        Some(*entity)
-                    } else {
-                        None
-                    }
+                    network_mapping.client_from_server(&pilot_entity).copied()
                 } else {
                     None
                 };
