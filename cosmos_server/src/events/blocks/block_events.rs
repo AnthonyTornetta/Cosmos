@@ -120,9 +120,9 @@ fn handle_block_changed_event(
             NettyChannel::Reliable.id(),
             bincode::serialize(&ServerReliableMessages::BlockChange {
                 structure_entity: ev.structure_entity,
-                x: ev.block.x(),
-                y: ev.block.y(),
-                z: ev.block.z(),
+                x: ev.block.x() as u32,
+                y: ev.block.y() as u32,
+                z: ev.block.z() as u32,
                 block_id: ev.new_block,
             })
             .unwrap(),

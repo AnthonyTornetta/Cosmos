@@ -39,9 +39,9 @@ fn handle_block_break(
                 structure_entity: *network_mapping
                     .server_from_client(&ev.structure_entity)
                     .unwrap(),
-                x: ev.x,
-                y: ev.y,
-                z: ev.z,
+                x: ev.x as u32,
+                y: ev.y as u32,
+                z: ev.z as u32,
             })
             .unwrap(),
         );
@@ -60,11 +60,11 @@ fn handle_block_place(
                 structure_entity: *network_mapping
                     .server_from_client(&ev.structure_entity)
                     .unwrap(),
-                x: ev.x,
-                y: ev.y,
-                z: ev.z,
+                x: ev.x as u32,
+                y: ev.y as u32,
+                z: ev.z as u32,
                 block_id: ev.block_id,
-                inventory_slot: ev.inventory_slot,
+                inventory_slot: ev.inventory_slot as u32,
             })
             .unwrap(),
         );
@@ -83,9 +83,9 @@ fn handle_block_interact(
                 structure_entity: *network_mapping
                     .server_from_client(&ev.structure_entity)
                     .unwrap(),
-                x: ev.x,
-                y: ev.y,
-                z: ev.z,
+                x: ev.x as u32,
+                y: ev.y as u32,
+                z: ev.z as u32,
             })
             .unwrap(),
         );

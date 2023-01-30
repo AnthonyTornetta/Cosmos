@@ -25,16 +25,16 @@ pub enum ServerReliableMessages {
     PlanetCreate {
         entity: Entity,
         body: NettyRigidBody,
-        width: usize,
-        height: usize,
-        length: usize,
+        width: u32,
+        height: u32,
+        length: u32,
     },
     ShipCreate {
         entity: Entity,
         body: NettyRigidBody,
-        width: usize,
-        height: usize,
-        length: usize,
+        width: u32,
+        height: u32,
+        length: u32,
     },
     EntityInventory {
         serialized_inventory: Vec<u8>,
@@ -45,9 +45,9 @@ pub enum ServerReliableMessages {
     },
     BlockChange {
         structure_entity: Entity,
-        x: usize,
-        y: usize,
-        z: usize,
+        x: u32,
+        y: u32,
+        z: u32,
         block_id: u16,
     },
     PilotChange {
