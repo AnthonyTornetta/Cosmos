@@ -21,7 +21,7 @@ fn event_listener(
         if let Ok(prev_pilot) = pilot_query.get(ev.structure_entity) {
             let mut transform = *transform_query.get(ev.structure_entity).unwrap();
 
-            transform.translation += transform.back() * 1.0 + Vec3::new(0.5, 1.5, 0.5);
+            transform.translation += transform.back() * 2.0 + Vec3::new(0.5, 1.5, 0.5);
 
             commands
                 .entity(ev.structure_entity)
@@ -67,7 +67,7 @@ fn keep_pilot_in_place(mut query: Query<&mut Transform, (With<Pilot>, With<Playe
         // This is the block core's location
         // This should be moved to the camera system once that's added
         transform.translation.x = 0.5;
-        transform.translation.y = 0.5;
+        transform.translation.y = -0.25;
         transform.translation.z = 0.5;
     }
 }
