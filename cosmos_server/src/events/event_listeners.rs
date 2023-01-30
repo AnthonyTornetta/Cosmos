@@ -26,9 +26,9 @@ fn on_structure_created(
                 bincode::serialize(&ServerReliableMessages::PlanetCreate {
                     entity: ev.entity,
                     body: NettyRigidBody::new(velocity, transform),
-                    width: structure.chunks_width(),
-                    height: structure.chunks_height(),
-                    length: structure.chunks_length(),
+                    width: structure.chunks_width() as u32,
+                    height: structure.chunks_height() as u32,
+                    length: structure.chunks_length() as u32,
                 })
                 .unwrap(),
             );
@@ -38,9 +38,9 @@ fn on_structure_created(
                 bincode::serialize(&ServerReliableMessages::ShipCreate {
                     entity: ev.entity,
                     body: NettyRigidBody::new(velocity, transform),
-                    width: structure.chunks_width(),
-                    height: structure.chunks_height(),
-                    length: structure.chunks_length(),
+                    width: structure.chunks_width() as u32,
+                    height: structure.chunks_height() as u32,
+                    length: structure.chunks_length() as u32,
                 })
                 .unwrap(),
             );
