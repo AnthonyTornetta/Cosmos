@@ -511,7 +511,7 @@ pub fn register<T: StateData + Clone + Copy>(
     playing_game_state: T,
 ) {
     systems::register(app, post_loading_state, playing_game_state);
-    ship::register(app);
+    ship::register(app, playing_game_state);
     events::register(app);
     loading::register(app);
     block_health::register(app);
