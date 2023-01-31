@@ -107,8 +107,7 @@ fn client_sync_players(
             ServerUnreliableMessages::PlayerBody { id, body } => {
                 if let Some(entity) = lobby
                     .players
-                    .get(&id)
-                    .map_or(None, |x| Some(x.client_entity))
+                    .get(&id).map(|x| x.client_entity)
                 {
                     let (mut transform, mut velocity, _) = query_body.get_mut(entity).unwrap();
 
