@@ -35,7 +35,7 @@ fn create_world(mut commands: Commands, mut event_writer: EventWriter<StructureC
 
     builder.insert_planet(
         &mut entity_cmd,
-        Transform::from_xyz(10.0, 0.0, 0.0),
+        Transform::from_xyz(0.0, 0.0, 0.0),
         &mut structure,
     );
 
