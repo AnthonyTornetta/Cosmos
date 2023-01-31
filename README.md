@@ -85,15 +85,11 @@ For release builds, append the `--release` flag to the build/run commands.
     - [x] Energy storage system
     - [x] Energy generation system
   - [x] Thruster system
-  - [ ] Thruster block
+  - [x] Thruster block
   - [x] Allows the ship to move + rotate
     - [x] Faster movement based on # of thrusters
     - [x] Faster rotation based on # of thrusters
     - [x] More energy consumption per thruster
-  - [ ] Camera system
-    - [ ] Camera block
-    - [ ] Use left/right to switch between ship cameras
-      - [ ] Changes where your view is
   - [x] Laser cannon system
     - [x] Laser cannon block
       - [x] Can be placed in lines to create more powerful lasers
@@ -133,6 +129,10 @@ For release builds, append the `--release` flag to the build/run commands.
   - [ ] A block that stores an amount of items
   - [ ] Can be interacted with to view the items
     - [ ] A GUI to view items
+- [ ] Camera system
+  - [ ] Camera block
+  - [ ] Use left/right to switch between ship cameras
+    - [ ] Changes where your view is
 - [ ] Sounds
   - [ ] Laser cannon fire
   - [ ] Block take damage
