@@ -1,7 +1,7 @@
 use bevy::{
     prelude::{
         App, Commands, Component, DespawnRecursiveExt, Entity, EventWriter, GlobalTransform,
-        Parent, PbrBundle, Quat, Query, Res, Transform, Vec3, With,
+        Parent, PbrBundle, Quat, Query, Res, Transform, Vec3, With, Without,
     },
     time::Time,
 };
@@ -159,6 +159,7 @@ fn handle_events(
     mut event_writer: EventWriter<LaserCollideEvent>,
     rapier_context: Res<RapierContext>,
     parent_query: Query<&Parent>,
+    transform_query: Query<&GlobalTransform, Without<Laser>>,
 ) {
     for (transform, laser_entity, no_collide_entity, mut laser, velocity, collider) in
         query.iter_mut()
@@ -184,12 +185,34 @@ fn handle_events(
                     }
                 }),
             ) {
-                event_writer.send(LaserCollideEvent {
-                    entity_hit: entity,
-                    local_position_hit: toi.witness1 + velocity.linvel.normalize() * 0.01,
-                    laser_strength: laser.strength,
-                });
+                if let Ok(parent) = parent_query.get(entity) {
+                    if let Ok(transform) = transform_query.get(parent.get()) {
+                        let pos = toi.witness1 + velocity.linvel.normalize() * 0.01;
 
+                        let lph = Quat::from_affine3(&transform.affine())
+                            .inverse()
+                            .mul_vec3(pos - transform.translation());
+
+                        event_writer.send(LaserCollideEvent {
+                            entity_hit: entity,
+                            local_position_hit: lph,
+                            laser_strength: laser.strength,
+                        });
+                    }
+                } else {
+                    if let Ok(transform) = transform_query.get(entity) {
+                        let pos = toi.witness1 + velocity.linvel.normalize() * 0.01;
+                        let lph = Quat::from_affine3(&transform.affine())
+                            .inverse()
+                            .mul_vec3(pos - transform.translation());
+
+                        event_writer.send(LaserCollideEvent {
+                            entity_hit: entity,
+                            local_position_hit: lph,
+                            laser_strength: laser.strength,
+                        });
+                    }
+                }
                 laser.active = false;
                 commands.entity(laser_entity).despawn_recursive();
             }
