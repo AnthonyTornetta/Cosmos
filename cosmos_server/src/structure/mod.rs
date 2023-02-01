@@ -5,6 +5,7 @@ pub mod planet;
 pub mod server_structure_builder;
 pub mod ship;
 pub mod systems;
+pub mod saving;
 
 pub(crate) fn register(app: &mut App) {
     ship::register(app);

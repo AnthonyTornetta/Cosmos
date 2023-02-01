@@ -8,6 +8,7 @@ use plugin::server_plugin::ServerPlugin;
 use state::GameState;
 
 pub mod blocks;
+pub mod commands;
 pub mod events;
 pub mod init;
 pub mod inventory;
