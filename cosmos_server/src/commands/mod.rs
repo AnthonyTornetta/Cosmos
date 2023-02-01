@@ -1,7 +1,8 @@
 use std::time::Duration;
 
 use bevy::{
-    prelude::{App, EventWriter, Resource},
+    prelude::{App, EventWriter, ResMut, Resource},
+    reflect::{FromReflect, Reflect},
     utils::HashMap,
 };
 use crossterm::event::{poll, read, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
@@ -68,9 +69,13 @@ impl CosmosCommands {
     }
 }
 
-fn monitor_inputs(mut event_writer: EventWriter<CosmosCommandSent>) {
-    let mut text = String::default();
+#[derive(Resource, Reflect, FromReflect, Debug, Default)]
+struct CurrentlyWriting(String);
 
+fn monitor_inputs(
+    mut event_writer: EventWriter<CosmosCommandSent>,
+    mut text: ResMut<CurrentlyWriting>,
+) {
     while let Ok(event_available) = poll(Duration::ZERO) {
         if event_available {
             if let Ok(Event::Key(KeyEvent {
@@ -86,7 +91,9 @@ fn monitor_inputs(mut event_writer: EventWriter<CosmosCommandSent>) {
                             c = c.to_uppercase().next().unwrap();
                         }
 
-                        text.push(c);
+                        text.0.push(c);
+                    } else if KeyCode::Enter == code {
+                        text.0.push('\n');
                     }
                 }
             }
@@ -95,13 +102,18 @@ fn monitor_inputs(mut event_writer: EventWriter<CosmosCommandSent>) {
         }
     }
 
-    if !text.trim().is_empty() {
-        event_writer.send(CosmosCommandSent::new(text));
+    if !text.0.trim().is_empty() && text.0.ends_with('\n') {
+        event_writer.send(CosmosCommandSent::new(
+            text.0[0..text.0.len() - 1].to_owned(),
+        ));
+
+        text.0.clear();
     }
 }
 
 pub(crate) fn register(app: &mut App) {
     app.insert_resource(CosmosCommands::default())
+        .insert_resource(CurrentlyWriting::default())
         .add_system(monitor_inputs)
         .add_event::<CosmosCommandSent>();
 

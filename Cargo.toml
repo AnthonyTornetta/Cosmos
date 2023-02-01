@@ -33,7 +33,6 @@ bevy-inspector-egui = "0.17.0"
 bevy_atmosphere = "0.5.0"
 
 crossterm = {version = "0.26.0", features = [ "event-stream" ] }
-futures = "0.3.26"
 
 # For any non workspace package
 [profile.dev.package."*"]
