@@ -21,8 +21,6 @@ fn create_ships(
     for (mut structure, entity) in query.iter_mut() {
         commands.entity(entity).remove::<ShipNeedsCreated>();
 
-        // TODO: eventually load this from base ship file?
-
         let ship_core = blocks
             .from_id("cosmos:ship_core")
             .expect("Ship core block missing!");

@@ -1,7 +1,7 @@
 use bevy::prelude::Plugin;
 
 use crate::{
-    blocks, events,
+    blocks, commands, events,
     init::{init_server, init_world},
     inventory,
     netty::{server_listener, sync::sync_bodies},
@@ -14,6 +14,7 @@ impl Plugin for ServerPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         init_server::init(app);
         state::register(app);
+        commands::register(app);
         init_world::register(app);
         sync_bodies::register(app);
         events::register(app);

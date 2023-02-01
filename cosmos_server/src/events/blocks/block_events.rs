@@ -91,18 +91,18 @@ fn handle_block_place_events(
 
                     let block = blocks.from_numeric_id(block_id);
 
-                    let mut structure = query.get_mut(ev.structure_entity).unwrap();
+                    if let Ok(mut structure) = query.get_mut(ev.structure_entity) {
+                        inv.decrease_quantity_at(ev.inventory_slot, 1);
 
-                    inv.decrease_quantity_at(ev.inventory_slot, 1);
-
-                    structure.set_block_at(
-                        ev.x,
-                        ev.y,
-                        ev.z,
-                        block,
-                        &blocks,
-                        Some(&mut event_writer),
-                    );
+                        structure.set_block_at(
+                            ev.x,
+                            ev.y,
+                            ev.z,
+                            block,
+                            &blocks,
+                            Some(&mut event_writer),
+                        );
+                    }
                 }
 
                 break;
