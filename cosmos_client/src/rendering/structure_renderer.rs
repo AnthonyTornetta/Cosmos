@@ -1,8 +1,8 @@
 use crate::block::lighting::{BlockLightProperties, BlockLighting};
 use crate::state::game_state::GameState;
 use bevy::prelude::{
-    App, BuildChildren, Color, Component, EventReader, Mesh, PointLight, PointLightBundle,
-    SystemSet, Transform, Vec3,
+    shape, App, BuildChildren, Color, Component, EventReader, Mesh, PbrBundle, PointLight,
+    PointLightBundle, SystemSet, Transform, Vec3,
 };
 use bevy::reflect::{FromReflect, Reflect};
 use bevy::render::mesh::{Indices, PrimitiveTopology};
@@ -399,11 +399,25 @@ pub fn monitor_needs_rendered_system(
                                 ..Default::default()
                             },
                             transform: Transform::from_xyz(
-                                x as f32 + 0.5,
-                                y as f32 + 0.5,
-                                z as f32 + 0.5,
+                                x as f32 - 7.5,
+                                y as f32 - 7.5,
+                                z as f32 - 7.5,
                             ),
                             ..Default::default()
+                        })
+                        .with_children(|builder| {
+                            builder.spawn(PbrBundle {
+                                mesh: meshes.add(Mesh::from(shape::UVSphere {
+                                    radius: 0.55,
+                                    ..Default::default()
+                                })),
+                                // material: materials.add(StandardMaterial {
+                                //     base_color: Color::RED,
+                                //     emissive: Color::rgba_linear(100.0, 0.0, 0.0, 0.0),
+                                //     ..default()
+                                // }),
+                                ..Default::default()
+                            });
                         });
                     }
                 });
