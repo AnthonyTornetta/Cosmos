@@ -73,22 +73,20 @@ fn monitor_inputs(mut event_writer: EventWriter<CosmosCommandSent>) {
 
     while let Ok(event_available) = poll(Duration::ZERO) {
         if event_available {
-            if let Ok(event) = read() {
-                if let Event::Key(KeyEvent {
-                    code,
-                    modifiers,
-                    kind,
-                    ..
-                }) = event
-                {
-                    if kind != KeyEventKind::Release {
-                        if let KeyCode::Char(mut c) = code {
-                            if modifiers.intersects(KeyModifiers::SHIFT) {
-                                c = c.to_uppercase().next().unwrap();
-                            }
-
-                            text.push(c);
+            if let Ok(Event::Key(KeyEvent {
+                code,
+                modifiers,
+                kind,
+                ..
+            })) = read()
+            {
+                if kind != KeyEventKind::Release {
+                    if let KeyCode::Char(mut c) = code {
+                        if modifiers.intersects(KeyModifiers::SHIFT) {
+                            c = c.to_uppercase().next().unwrap();
                         }
+
+                        text.push(c);
                     }
                 }
             }
