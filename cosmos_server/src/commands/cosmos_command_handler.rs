@@ -104,88 +104,82 @@ fn cosmos_command_listener(
             "despawn" => {
                 if ev.args.len() != 1 {
                     display_help(Some("despawn"), &cosmos_commands);
-                } else {
-                    if let Ok(index) = ev.args[0].parse::<u64>() {
-                        let entity = Entity::from_bits(index);
+                } else if let Ok(index) = ev.args[0].parse::<u64>() {
+                    let entity = Entity::from_bits(index);
 
-                        if let Some(entity_commands) = commands.get_entity(entity) {
-                            entity_commands.despawn_recursive();
-                            println!("Despawned entity {index}");
-                        } else {
-                            println!("Entity not found");
-                        }
+                    if let Some(entity_commands) = commands.get_entity(entity) {
+                        entity_commands.despawn_recursive();
+                        println!("Despawned entity {index}");
                     } else {
-                        println!("This must be the entity's ID (positive whole number)");
+                        println!("Entity not found");
                     }
+                } else {
+                    println!("This must be the entity's ID (positive whole number)");
                 }
             }
             "load" => {
                 if ev.args.len() < 2 {
                     display_help(Some("load"), &cosmos_commands);
-                } else {
-                    if let Some(structure_type) = match ev.args[1].to_lowercase().as_str() {
-                        "ship" => Some(StructureType::Ship),
-                        "planet" => Some(StructureType::Planet),
-                        _ => {
-                            println!("Invalid structure type! Should be ship or planet");
-                            None
-                        }
-                    } {
-                        let mut transform = Transform::default();
-                        if ev.args.len() == 5 {
-                            if let Ok(x) = ev.args[2].parse::<f32>() {
-                                if let Ok(y) = ev.args[3].parse::<f32>() {
-                                    if let Ok(z) = ev.args[4].parse::<f32>() {
-                                        transform.translation.x = x;
-                                        transform.translation.y = y;
-                                        transform.translation.z = z;
-                                    }
+                } else if let Some(structure_type) = match ev.args[1].to_lowercase().as_str() {
+                    "ship" => Some(StructureType::Ship),
+                    "planet" => Some(StructureType::Planet),
+                    _ => {
+                        println!("Invalid structure type! Should be ship or planet");
+                        None
+                    }
+                } {
+                    let mut transform = Transform::default();
+                    if ev.args.len() == 5 {
+                        if let Ok(x) = ev.args[2].parse::<f32>() {
+                            if let Ok(y) = ev.args[3].parse::<f32>() {
+                                if let Ok(z) = ev.args[4].parse::<f32>() {
+                                    transform.translation.x = x;
+                                    transform.translation.y = y;
+                                    transform.translation.z = z;
                                 }
                             }
                         }
-
-                        load_structure(
-                            ev.args[0].as_str(),
-                            structure_type,
-                            transform,
-                            &mut commands,
-                            &mut structure_created,
-                            &mut structure_loaded,
-                            &mut chunk_set,
-                        );
                     }
+
+                    load_structure(
+                        ev.args[0].as_str(),
+                        structure_type,
+                        transform,
+                        &mut commands,
+                        &mut structure_created,
+                        &mut structure_loaded,
+                        &mut chunk_set,
+                    );
                 }
             }
             "save" => {
                 if ev.args.len() != 2 {
                     display_help(Some("save"), &cosmos_commands);
-                } else {
-                    if let Ok(index) = ev.args[0].parse::<u64>() {
-                        let entity = Entity::from_bits(index);
-                        if let Some(mut entity_cmds) = commands.get_entity(entity) {
-                            if let Ok((planet, ship)) = structure_query.get(entity) {
-                                if planet.is_some() {
-                                    entity_cmds.insert(SaveStructure {
-                                        structure_type: StructureType::Planet,
-                                        name: ev.args[1].clone(),
-                                    });
-                                } else if ship.is_some() {
-                                    entity_cmds.insert(SaveStructure {
-                                        structure_type: StructureType::Ship,
-                                        name: ev.args[1].clone(),
-                                    });
-                                } else {
-                                    println!("Error: No valid structure type (planet/ship) for this structure");
-                                }
+                } else if let Ok(index) = ev.args[0].parse::<u64>() {
+                    let entity = Entity::from_bits(index);
+                    if let Some(mut entity_cmds) = commands.get_entity(entity) {
+                        if let Ok((planet, ship)) = structure_query.get(entity) {
+                            if planet.is_some() {
+                                entity_cmds.insert(SaveStructure {
+                                    structure_type: StructureType::Planet,
+                                    name: ev.args[1].clone(),
+                                });
+                            } else if ship.is_some() {
+                                entity_cmds.insert(SaveStructure {
+                                    structure_type: StructureType::Ship,
+                                    name: ev.args[1].clone(),
+                                });
                             } else {
-                                println!("You can only save structures!");
+                                println!("Error: No valid structure type (planet/ship) for this structure");
                             }
                         } else {
-                            println!("Invalid entity index {index}");
+                            println!("You can only save structures!");
                         }
                     } else {
-                        println!("The first argument must be the entity's index (positive number)");
+                        println!("Invalid entity index {index}");
                     }
+                } else {
+                    println!("The first argument must be the entity's index (positive number)");
                 }
             }
             _ => {

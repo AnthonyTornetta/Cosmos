@@ -146,7 +146,7 @@ fn monitor_needs_saved(mut commands: Commands, query: Query<(Entity, &Structure,
             Err(e) => eprintln!(
                 "Error saving structure {} {}",
                 save_structure_component.name,
-                e.to_string()
+                e
             ),
         }
 
