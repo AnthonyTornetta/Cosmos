@@ -8,7 +8,7 @@ use cosmos_core::{
     inventory::Inventory,
     item::Item,
     netty::{server_reliable_messages::ServerReliableMessages, NettyChannel},
-    registry::Registry,
+    registry::{identifiable::Identifiable, Registry},
     structure::{structure_block::StructureBlock, Structure},
 };
 
@@ -51,6 +51,20 @@ fn handle_block_break_events(
         let mut structure = query.get_mut(ev.structure_entity).unwrap();
 
         let block_id = structure.block_id_at(ev.x, ev.y, ev.z);
+
+        let block = blocks.from_numeric_id(block_id);
+
+        // Eventually seperate this into another event lsitener that some how interacts with this one
+        // Idk if bevy supports this yet without some hacky stuff?
+        if block.unlocalized_name() == "cosmos:ship_core" {
+            let mut itr = structure.all_blocks_iter(false);
+
+            // ship core               some other block
+            if itr.next().is_some() && itr.next().is_some() {
+                // Do not allow player to mine ship core if another block exists on the ship
+                return;
+            }
+        }
 
         if let Ok(mut inventory) = inventory_query.get_mut(ev.breaker) {
             let block = blocks.from_numeric_id(block_id);
