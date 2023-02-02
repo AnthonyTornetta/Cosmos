@@ -103,10 +103,19 @@ fn process_ship_movement(
         crosshair_offset.x = crosshair_offset.x.clamp(-hw, hw);
         crosshair_offset.y = crosshair_offset.y.clamp(-hh, hh);
 
+        let mut roll = 0.0;
+
+        if input_handler.check_pressed(CosmosInputs::RollLeft, &keys, &mouse) {
+            roll += 0.25;
+        }
+        if input_handler.check_pressed(CosmosInputs::RollRight, &keys, &mouse) {
+            roll -= 0.25;
+        }
+
         movement.torque = Vec3::new(
             crosshair_offset.y / hh * p2 / 2.0,
             -crosshair_offset.x / hw * p2 / 2.0,
-            0.0,
+            roll,
         );
 
         client.send_message(
