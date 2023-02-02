@@ -40,8 +40,8 @@ impl NettyChannel {
             .into(),
             UnreliableChannelConfig {
                 channel_id: Self::Unreliable.id(),
-                message_send_queue_size: 4096 * 4,
-                message_receive_queue_size: 4096 * 4,
+                message_send_queue_size: 4096 * 16,
+                message_receive_queue_size: 4096 * 16,
                 ..default()
             }
             .into(),

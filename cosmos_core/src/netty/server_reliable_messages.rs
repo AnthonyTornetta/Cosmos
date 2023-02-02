@@ -55,12 +55,4 @@ pub enum ServerReliableMessages {
         pilot_entity: Option<Entity>,
     },
     LaserCannonFire {},
-    CreateLaser {
-        color: Color,
-        position: Vec3,
-        laser_velocity: Vec3,
-        firer_velocity: Vec3,
-        strength: f32,
-        no_hit: Option<Entity>,
-    },
 }

@@ -2,7 +2,10 @@ use bevy::{prelude::*, time::Time};
 use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
-    netty::{server_reliable_messages::ServerReliableMessages, NettyChannel},
+    netty::{
+        server_reliable_messages::ServerReliableMessages,
+        server_unreliable_messages::ServerUnreliableMessages, NettyChannel,
+    },
     projectiles::laser::Laser,
     structure::{
         systems::{
@@ -72,8 +75,8 @@ fn update_system(
                             let color = Color::rgb(rand::random(), rand::random(), rand::random());
 
                             server.broadcast_message(
-                                NettyChannel::Reliable.id(),
-                                bincode::serialize(&ServerReliableMessages::CreateLaser {
+                                NettyChannel::Unreliable.id(),
+                                bincode::serialize(&ServerUnreliableMessages::CreateLaser {
                                     color,
                                     position,
                                     laser_velocity,

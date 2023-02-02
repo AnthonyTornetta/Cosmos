@@ -18,6 +18,7 @@ iyes_loopless = { workspace = true }
 
 bevy_rapier3d = { workspace = true }
 crossterm = { workspace = true }
+renet_visualizer = { workspace = true }
 
 cosmos_core = { version = "0.0.2", path = "../cosmos_core" }
 

@@ -32,7 +32,9 @@ bevy-inspector-egui = "0.17.0"
 
 bevy_atmosphere = "0.5.0"
 
-crossterm = {version = "0.26.0", features = [ "event-stream" ] }
+crossterm = { version = "0.26.0", features = [ "event-stream" ] }
+
+renet_visualizer = { version = "0.0.3", features = ["bevy"] }
 
 # For any non workspace package
 [profile.dev.package."*"]

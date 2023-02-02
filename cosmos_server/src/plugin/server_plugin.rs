@@ -1,4 +1,5 @@
 use bevy::prelude::Plugin;
+use renet_visualizer::RenetServerVisualizer;
 
 use crate::{
     blocks, commands, events,
@@ -7,6 +8,8 @@ use crate::{
     netty::{server_listener, sync::sync_bodies},
     physics, projectiles, state, structure,
 };
+
+use super::vizualizer;
 
 pub struct ServerPlugin;
 
@@ -24,5 +27,6 @@ impl Plugin for ServerPlugin {
         structure::register(app);
         inventory::register(app);
         projectiles::register(app);
+        vizualizer::register(app);
     }
 }
