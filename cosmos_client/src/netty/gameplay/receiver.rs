@@ -105,15 +105,18 @@ fn client_sync_players(
 
         match msg {
             ServerUnreliableMessages::PlayerBody { id, body } => {
-                let entity = lobby.players.get(&id).unwrap().client_entity;
+                if let Some(entity) = lobby
+                    .players
+                    .get(&id).map(|x| x.client_entity)
+                {
+                    let (mut transform, mut velocity, _) = query_body.get_mut(entity).unwrap();
 
-                let (mut transform, mut velocity, _) = query_body.get_mut(entity).unwrap();
+                    transform.translation = body.translation.into();
+                    transform.rotation = body.rotation.into();
 
-                transform.translation = body.translation.into();
-                transform.rotation = body.rotation.into();
-
-                velocity.linvel = body.body_vel.linvel.into();
-                velocity.angvel = body.body_vel.angvel.into();
+                    velocity.linvel = body.body_vel.linvel.into();
+                    velocity.angvel = body.body_vel.angvel.into();
+                }
             }
             ServerUnreliableMessages::BulkBodies {
                 bodies,
@@ -121,15 +124,16 @@ fn client_sync_players(
             } => {
                 for (server_entity, body) in bodies.iter() {
                     if let Some(entity) = network_mapping.client_from_server(server_entity) {
-                        let (mut transform, mut velocity, local) =
-                            query_body.get_mut(*entity).unwrap();
+                        if let Ok((mut transform, mut velocity, local)) =
+                            query_body.get_mut(*entity)
+                        {
+                            if local.is_none() {
+                                transform.translation = body.translation.into();
+                                transform.rotation = body.rotation.into();
 
-                        if local.is_none() {
-                            transform.translation = body.translation.into();
-                            transform.rotation = body.rotation.into();
-
-                            velocity.linvel = body.body_vel.linvel.into();
-                            velocity.angvel = body.body_vel.angvel.into();
+                                velocity.linvel = body.body_vel.linvel.into();
+                                velocity.angvel = body.body_vel.angvel.into();
+                            }
                         }
                     }
                 }
@@ -232,7 +236,12 @@ fn client_sync_players(
                 body,
             } => {
                 let mut entity = commands.spawn_empty();
-                let mut structure = Structure::new(width as usize, height as usize, length as usize, entity.id());
+                let mut structure = Structure::new(
+                    width as usize,
+                    height as usize,
+                    length as usize,
+                    entity.id(),
+                );
 
                 let builder = ClientPlanetBuilder::default();
                 builder.insert_planet(&mut entity, body.create_transform(), &mut structure);
@@ -253,7 +262,12 @@ fn client_sync_players(
                 length,
             } => {
                 let mut entity = commands.spawn_empty();
-                let mut structure = Structure::new(width as usize, height as usize, length as usize, entity.id());
+                let mut structure = Structure::new(
+                    width as usize,
+                    height as usize,
+                    length as usize,
+                    entity.id(),
+                );
 
                 let builder = ClientShipBuilder::default();
                 builder.insert_ship(
@@ -305,9 +319,9 @@ fn client_sync_players(
             ServerReliableMessages::StructureRemove {
                 entity: server_entity,
             } => {
-                commands
-                    .entity(*network_mapping.client_from_server(&server_entity).unwrap())
-                    .despawn_recursive();
+                if let Some(entity) = network_mapping.client_from_server(&server_entity) {
+                    commands.entity(*entity).despawn_recursive();
+                }
             }
             ServerReliableMessages::MOTD { motd } => {
                 println!("Server MOTD: {motd}");
