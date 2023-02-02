@@ -8,10 +8,13 @@ pub enum CosmosInputs {
     SlowDown,
     MoveLeft,
     MoveRight,
+    Sprint,
+
     // For use in ships
     MoveDown,
     MoveUp,
-    Sprint,
+    RollLeft,
+    RollRight,
 
     StopPiloting,
     UseSelectedSystem,
@@ -56,6 +59,9 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     input_handler.set_keycode(CosmosInputs::MoveDown, KeyCode::Q);
     input_handler.set_keycode(CosmosInputs::MoveUp, KeyCode::E);
     input_handler.set_keycode(CosmosInputs::Sprint, KeyCode::LControl);
+
+    input_handler.set_keycode(CosmosInputs::RollLeft, KeyCode::Z);
+    input_handler.set_keycode(CosmosInputs::RollRight, KeyCode::C);
 
     input_handler.set_mouse_button(CosmosInputs::BreakBlock, MouseButton::Left);
     input_handler.set_mouse_button(CosmosInputs::PlaceBlock, MouseButton::Right);
