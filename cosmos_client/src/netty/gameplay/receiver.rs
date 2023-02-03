@@ -11,7 +11,6 @@ use cosmos_core::{
         server_reliable_messages::ServerReliableMessages,
         server_unreliable_messages::ServerUnreliableMessages, NettyChannel,
     },
-    projectiles::laser::Laser,
     registry::Registry,
     structure::{
         chunk::Chunk,
@@ -94,9 +93,6 @@ fn client_sync_players(
     blocks: Res<Registry<Block>>,
     mut pilot_change_event_writer: EventWriter<ChangePilotEvent>,
     mut set_ship_movement_event: EventWriter<SetShipMovementEvent>,
-    time: Res<Time>,
-
-    mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     let client_id = client.client_id();
 
@@ -105,10 +101,7 @@ fn client_sync_players(
 
         match msg {
             ServerUnreliableMessages::PlayerBody { id, body } => {
-                if let Some(entity) = lobby
-                    .players
-                    .get(&id).map(|x| x.client_entity)
-                {
+                if let Some(entity) = lobby.players.get(&id).map(|x| x.client_entity) {
                     let (mut transform, mut velocity, _) = query_body.get_mut(entity).unwrap();
 
                     transform.translation = body.translation.into();
@@ -384,56 +377,6 @@ fn client_sync_players(
             }
             ServerReliableMessages::LaserCannonFire {} => {
                 println!("A laser cannon was fired")
-            }
-            ServerReliableMessages::CreateLaser {
-                color,
-                position,
-                laser_velocity,
-                firer_velocity,
-                strength,
-                mut no_hit,
-            } => {
-                if let Some(server_entity) = no_hit {
-                    if let Some(client_entity) = network_mapping.client_from_server(&server_entity)
-                    {
-                        no_hit = Some(*client_entity);
-                    }
-                }
-
-                // let laser_entity =
-                Laser::spawn_custom_pbr(
-                    position,
-                    laser_velocity,
-                    firer_velocity,
-                    strength,
-                    no_hit,
-                    PbrBundle {
-                        mesh: meshes.add(Mesh::from(shape::Box::new(0.1, 0.1, 1.0))),
-                        material: materials.add(StandardMaterial {
-                            base_color: color,
-                            emissive: color,
-                            ..Default::default()
-                        }),
-                        ..Default::default()
-                    },
-                    &time,
-                    &mut commands,
-                );
-
-                // too laggy (and strobey) ;(
-                // commands.entity(laser_entity).with_children(|parent| {
-                //     parent.spawn(PointLightBundle {
-                //         transform: Transform::from_xyz(0.0, 0.0, 0.0),
-                //         point_light: PointLight {
-                //             intensity: 100.0,
-                //             range: 10.0,
-                //             color,
-                //             shadows_enabled: false,
-                //             ..default()
-                //         },
-                //         ..default()
-                //     });
-                // });
             }
         }
     }

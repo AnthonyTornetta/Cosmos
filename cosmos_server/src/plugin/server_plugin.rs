@@ -1,5 +1,4 @@
 use bevy::prelude::Plugin;
-use renet_visualizer::RenetServerVisualizer;
 
 use crate::{
     blocks, commands, events,

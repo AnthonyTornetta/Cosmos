@@ -1,4 +1,4 @@
-use bevy::prelude::{Color, Component, Entity, Vec3};
+use bevy::prelude::{Component, Entity};
 use serde::{Deserialize, Serialize};
 
 use super::netty_rigidbody::NettyRigidBody;

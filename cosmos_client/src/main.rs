@@ -6,6 +6,7 @@ pub mod interactions;
 pub mod lang;
 pub mod netty;
 pub mod plugin;
+pub mod projectiles;
 pub mod rendering;
 pub mod state;
 pub mod structure;
@@ -316,6 +317,7 @@ fn main() {
     structure_renderer::register(&mut app);
     lang::register(&mut app);
     structure::register(&mut app);
+    projectiles::register(&mut app);
 
     app.run();
 }
