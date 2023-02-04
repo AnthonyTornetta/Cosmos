@@ -16,6 +16,7 @@ use cosmos_core::{
 use crate::state::GameState;
 
 const LASER_BASE_VELOCITY: f32 = 200.0;
+const LASER_SHOOT_SECONDS: f32 = 0.2;
 
 fn update_system(
     mut query: Query<(&mut LaserCannonSystem, &StructureSystem), With<SystemActive>>,
@@ -32,7 +33,7 @@ fn update_system(
             if let Ok(mut energy_storage_system) = systems.query_mut(&mut es_query) {
                 let sec = time.elapsed_seconds();
 
-                if sec - cannon_system.last_shot_time > 0.1 {
+                if sec - cannon_system.last_shot_time > LASER_SHOOT_SECONDS {
                     cannon_system.last_shot_time = sec;
 
                     for line in cannon_system.lines.iter() {

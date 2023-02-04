@@ -43,7 +43,7 @@ pub struct Structure {
 }
 
 impl Structure {
-    pub fn new(width: usize, height: usize, length: usize, self_entity: Entity) -> Self {
+    pub fn new(width: usize, height: usize, length: usize) -> Self {
         let mut chunks = Vec::with_capacity(width * height * length);
 
         for z in 0..length {
@@ -62,7 +62,7 @@ impl Structure {
 
         Self {
             chunk_entities,
-            self_entity: Some(self_entity),
+            self_entity: None,
             chunks,
             width,
             height,

@@ -31,7 +31,7 @@ pub fn register(app: &mut App) {
 fn create_world(mut commands: Commands, mut event_writer: EventWriter<StructureCreated>) {
     let mut entity_cmd = commands.spawn_empty();
 
-    let mut structure = Structure::new(16, 4, 16, entity_cmd.id());
+    let mut structure = Structure::new(16, 4, 16);
 
     let biosphere = GrassBiosphere::default();
     let marker = biosphere.get_marker_component();

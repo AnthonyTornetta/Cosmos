@@ -1,9 +1,10 @@
 use std::{fs, io::ErrorKind};
 
-use bevy::prelude::{App, Commands, Component, Entity, EventWriter, Query, Transform};
+use bevy::prelude::{App, Commands, Component, Entity, EventReader, EventWriter, Query, Transform};
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::structure::{
-    events::{ChunkSetEvent, StructureCreated, StructureLoadedEvent},
+    events::{ChunkSetEvent, StructureCreated},
+    loading::ChunksNeedLoaded,
     planet::planet_builder::TPlanetBuilder,
     ship::ship_builder::TShipBuilder,
     Structure,
@@ -14,20 +15,61 @@ use super::{
     ship::server_ship_builder::ServerShipBuilder,
 };
 
+/// Loading loads the structure instantly + creates the events at the same time
+/// This can cause concurrency issues, so this allows the events to be generated 1 frame
+/// later to avoid those issues.
+#[derive(Debug)]
+pub struct SendDelayedStructureLoadEvent(Entity);
+
+#[derive(Debug)]
+pub struct EvenMoreDelayedSLE(Entity);
+
+fn send_actual_loaded_events_first(
+    mut event_reader: EventReader<SendDelayedStructureLoadEvent>,
+    mut event_writer: EventWriter<EvenMoreDelayedSLE>,
+) {
+    for ev in event_reader.iter() {
+        event_writer.send(EvenMoreDelayedSLE(ev.0));
+    }
+}
+
+fn send_actual_loaded_events(
+    mut event_reader: EventReader<EvenMoreDelayedSLE>,
+    mut chunk_set_event_writer: EventWriter<ChunkSetEvent>,
+    structure_query: Query<&Structure>,
+) {
+    for ev in event_reader.iter() {
+        if let Ok(structure) = structure_query.get(ev.0) {
+            for chunk in structure.all_chunks_iter() {
+                chunk_set_event_writer.send(ChunkSetEvent {
+                    structure_entity: ev.0,
+                    x: chunk.structure_x(),
+                    y: chunk.structure_y(),
+                    z: chunk.structure_z(),
+                });
+            }
+        } else {
+            println!("Error: structure still no exist");
+        }
+    }
+}
+
+/// TODO: Eventually turn this into event
 pub fn load_structure(
     structure_name: &str,
     structure_type: StructureType,
     spawn_at: Transform,
     commands: &mut Commands,
     event_writer: &mut EventWriter<StructureCreated>,
-    structure_loaded: &mut EventWriter<StructureLoadedEvent>,
-    chunk_set_event_writer: &mut EventWriter<ChunkSetEvent>,
+    structure_loaded: &mut EventWriter<SendDelayedStructureLoadEvent>,
 ) {
     if let Ok(structure_bin) = fs::read(format!(
         "saves/{}/{}.cstr",
         structure_type.name(),
         structure_name
     )) {
+        println!("Loading structure {structure_name}...");
+
         if let Ok(mut structure) = bincode::deserialize::<Structure>(&structure_bin) {
             let mut entity_cmd = commands.spawn_empty();
 
@@ -52,22 +94,17 @@ pub fn load_structure(
 
             event_writer.send(StructureCreated { entity });
 
-            for chunk in structure.all_chunks_iter() {
-                chunk_set_event_writer.send(ChunkSetEvent {
-                    structure_entity: entity,
-                    x: chunk.structure_x(),
-                    y: chunk.structure_y(),
-                    z: chunk.structure_z(),
-                });
-            }
+            entity_cmd
+                .insert(ChunksNeedLoaded {
+                    amount_needed: structure.all_chunks_iter().len(),
+                })
+                .insert(structure);
 
-            structure_loaded.send(StructureLoadedEvent {
-                structure_entity: entity,
-            });
+            structure_loaded.send(SendDelayedStructureLoadEvent(entity));
 
-            entity_cmd.insert(structure);
+            println!("Done with {structure_name}!");
         } else {
-            println!("Error parsing structure data -- is it a valid file?");
+            println!("Error parsing structure data for {structure_name} -- is it a valid file?");
         }
     } else {
         println!(
@@ -145,8 +182,7 @@ fn monitor_needs_saved(mut commands: Commands, query: Query<(Entity, &Structure,
             Ok(_) => println!("Saved structure {}", save_structure_component.name),
             Err(e) => eprintln!(
                 "Error saving structure {} {}",
-                save_structure_component.name,
-                e
+                save_structure_component.name, e
             ),
         }
 
@@ -155,5 +191,9 @@ fn monitor_needs_saved(mut commands: Commands, query: Query<(Entity, &Structure,
 }
 
 pub(crate) fn register(app: &mut App) {
-    app.add_system(monitor_needs_saved);
+    app.add_system(monitor_needs_saved)
+        .add_event::<SendDelayedStructureLoadEvent>()
+        .add_event::<EvenMoreDelayedSLE>()
+        .add_system(send_actual_loaded_events_first)
+        .add_system(send_actual_loaded_events);
 }

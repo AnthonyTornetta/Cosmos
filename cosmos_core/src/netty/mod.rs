@@ -50,8 +50,8 @@ impl NettyChannel {
             .into(),
             UnreliableChannelConfig {
                 channel_id: Self::LaserCannonSystem.id(),
-                packet_budget: 1000,
-                max_message_size: 50,
+                packet_budget: 7000,
+                max_message_size: 6000,
                 message_send_queue_size: 0,
                 message_receive_queue_size: 4096 * 16,
                 ..default()
@@ -81,8 +81,8 @@ impl NettyChannel {
             .into(),
             UnreliableChannelConfig {
                 channel_id: Self::LaserCannonSystem.id(),
-                packet_budget: 1000,
-                max_message_size: 50,
+                packet_budget: 7000,
+                max_message_size: 6000,
                 message_send_queue_size: 4096 * 16,
                 message_receive_queue_size: 0,
                 ..default()

@@ -2,14 +2,11 @@ use bevy::prelude::{
     App, Commands, DespawnRecursiveExt, Entity, EventReader, EventWriter, Parent, Query, Res,
     ResMut, Transform, With, Without,
 };
-use cosmos_core::structure::{
-    events::{ChunkSetEvent, StructureCreated, StructureLoadedEvent},
-    planet::Planet,
-    ship::Ship,
-    Structure,
-};
+use cosmos_core::structure::{events::StructureCreated, planet::Planet, ship::Ship, Structure};
 
-use crate::structure::saving::{load_structure, SaveStructure, StructureType};
+use crate::structure::saving::{
+    load_structure, SaveStructure, SendDelayedStructureLoadEvent, StructureType,
+};
 
 use super::{CosmosCommandInfo, CosmosCommandSent, CosmosCommands};
 
@@ -75,8 +72,7 @@ fn cosmos_command_listener(
     cosmos_commands: Res<CosmosCommands>,
 
     mut structure_created: EventWriter<StructureCreated>,
-    mut structure_loaded: EventWriter<StructureLoadedEvent>,
-    mut chunk_set: EventWriter<ChunkSetEvent>,
+    mut structure_loaded_delayed: EventWriter<SendDelayedStructureLoadEvent>,
 
     structure_query: Query<(Option<&Planet>, Option<&Ship>), With<Structure>>,
 
@@ -147,8 +143,7 @@ fn cosmos_command_listener(
                         transform,
                         &mut commands,
                         &mut structure_created,
-                        &mut structure_loaded,
-                        &mut chunk_set,
+                        &mut structure_loaded_delayed,
                     );
                 }
             }
