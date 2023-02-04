@@ -8,6 +8,8 @@ use crate::{
     physics, projectiles, state, structure,
 };
 
+use super::vizualizer;
+
 pub struct ServerPlugin;
 
 impl Plugin for ServerPlugin {
@@ -24,5 +26,6 @@ impl Plugin for ServerPlugin {
         structure::register(app);
         inventory::register(app);
         projectiles::register(app);
+        vizualizer::register(app);
     }
 }

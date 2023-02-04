@@ -1,4 +1,5 @@
 use bevy::{
+    pbr::{NotShadowCaster, NotShadowReceiver},
     prelude::{
         App, Commands, Component, DespawnRecursiveExt, Entity, EventWriter, GlobalTransform,
         Parent, PbrBundle, Quat, Query, Res, Transform, Vec3, With, Without,
@@ -106,7 +107,9 @@ impl Laser {
             })
             .insert(ActiveEvents::COLLISION_EVENTS)
             .insert(ActiveHooks::MODIFY_SOLVER_CONTACTS)
-            .insert(Sensor);
+            .insert(Sensor)
+            .insert(NotShadowCaster)
+            .insert(NotShadowReceiver);
 
         if let Some(ent) = no_collide_entity {
             ent_cmds.insert(NoCollide(ent));

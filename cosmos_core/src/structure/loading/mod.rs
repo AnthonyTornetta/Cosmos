@@ -6,7 +6,7 @@ use bevy::prelude::{Added, App, Commands, Component, Entity, EventReader, EventW
 
 #[derive(Component)]
 pub struct ChunksNeedLoaded {
-    amount_needed: usize,
+    pub amount_needed: usize,
 }
 
 fn listen_chunk_done_loading(

@@ -2,7 +2,7 @@ use bevy::{prelude::*, time::Time};
 use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
-    netty::{server_reliable_messages::ServerReliableMessages, NettyChannel},
+    netty::{server_laser_cannon_system_messages::ServerLaserCannonSystemMessages, NettyChannel},
     projectiles::laser::Laser,
     structure::{
         systems::{
@@ -16,6 +16,7 @@ use cosmos_core::{
 use crate::state::GameState;
 
 const LASER_BASE_VELOCITY: f32 = 200.0;
+const LASER_SHOOT_SECONDS: f32 = 0.2;
 
 fn update_system(
     mut query: Query<(&mut LaserCannonSystem, &StructureSystem), With<SystemActive>>,
@@ -32,7 +33,7 @@ fn update_system(
             if let Ok(mut energy_storage_system) = systems.query_mut(&mut es_query) {
                 let sec = time.elapsed_seconds();
 
-                if sec - cannon_system.last_shot_time > 0.1 {
+                if sec - cannon_system.last_shot_time > LASER_SHOOT_SECONDS {
                     cannon_system.last_shot_time = sec;
 
                     for line in cannon_system.lines.iter() {
@@ -72,8 +73,8 @@ fn update_system(
                             let color = Color::rgb(rand::random(), rand::random(), rand::random());
 
                             server.broadcast_message(
-                                NettyChannel::Reliable.id(),
-                                bincode::serialize(&ServerReliableMessages::CreateLaser {
+                                NettyChannel::LaserCannonSystem.id(),
+                                bincode::serialize(&ServerLaserCannonSystemMessages::CreateLaser {
                                     color,
                                     position,
                                     laser_velocity,

@@ -12,6 +12,7 @@ use cosmos_core::{
     entities::player::Player,
     netty::{netty_rigidbody::NettyRigidBody, NettyChannel},
 };
+use renet_visualizer::RenetServerVisualizer;
 
 use crate::netty::network_helpers::{ClientTicks, ServerLobby};
 
@@ -38,7 +39,9 @@ fn generate_player_inventory(items: &Registry<Item>) -> Inventory {
 
     inventory.insert_at(
         9 * 3 + 3,
-        items.from_id("cosmos:thruster").expect("Thruster item to exist"),
+        items
+            .from_id("cosmos:thruster")
+            .expect("Thruster item to exist"),
         64,
     );
 
@@ -89,11 +92,13 @@ fn handle_events_system(
     structure_type: Query<(Option<&Ship>, Option<&Planet>)>,
     structures_query: Query<(Entity, &Structure, &Transform, &Velocity)>,
     items: Res<Registry<Item>>,
+    mut visualizer: ResMut<RenetServerVisualizer<200>>,
 ) {
     for event in server_events.iter() {
         match event {
             ServerEvent::ClientConnected(id, _user_data) => {
                 println!("Client {id} connected");
+                visualizer.add_client(*id);
 
                 for (entity, player, transform, velocity, inventory) in players.iter() {
                     let body = NettyRigidBody::new(velocity, transform);
@@ -188,7 +193,7 @@ fn handle_events_system(
             }
             ServerEvent::ClientDisconnected(id) => {
                 println!("Client {id} disconnected");
-
+                visualizer.remove_client(*id);
                 client_ticks.ticks.remove(id);
 
                 if let Some(player_entity) = lobby.players.remove(id) {

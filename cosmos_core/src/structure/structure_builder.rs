@@ -26,6 +26,8 @@ impl TStructureBuilder for StructureBuilder {
         velocity: Velocity,
         structure: &mut Structure,
     ) {
+        structure.set_entity(entity.id());
+
         let physics_updater = StructurePhysics::new(structure);
 
         entity
