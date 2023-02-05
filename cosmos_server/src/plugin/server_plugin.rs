@@ -10,11 +10,13 @@ use crate::{
 
 use super::vizualizer;
 
-pub struct ServerPlugin;
+pub struct ServerPlugin {
+    pub ip: Option<String>,
+}
 
 impl Plugin for ServerPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
-        init_server::init(app);
+        init_server::init(app, self.ip.clone());
         state::register(app);
         commands::register(app);
         init_world::register(app);
