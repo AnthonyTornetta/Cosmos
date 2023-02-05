@@ -1,3 +1,5 @@
+use std::env;
+
 use bevy::prelude::*;
 use bevy::winit::WinitPlugin;
 use bevy_rapier3d::prelude::RapierConfiguration;
@@ -21,6 +23,14 @@ pub mod state;
 pub mod structure;
 
 fn main() {
+    let args: Vec<String> = env::args().collect();
+
+    let ip = if args.len() > 1 {
+        Some(args.get(1).unwrap().to_owned())
+    } else {
+        None
+    };
+
     App::new()
         .insert_resource(RapierConfiguration {
             gravity: Vec3::ZERO,
@@ -35,6 +45,6 @@ fn main() {
         ))
         .add_plugin(RenetServerPlugin::default())
         .add_plugin(WinitPlugin::default())
-        .add_plugin(ServerPlugin)
+        .add_plugin(ServerPlugin { ip })
         .run();
 }
