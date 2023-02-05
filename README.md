@@ -20,6 +20,19 @@ For the server, navigate to the cosmos_server directory and run
 
 For release builds, append the `--release` flag to the build/run commands.
 
+## Documentation
+
+To view the cosmos documentation, run the following commands
+
+```console
+cargo install mdbook
+cargo install mdbook-mermaid
+```
+
+Then navigate to the docs folder and run `mdbook-mermaid install`
+
+To view the documentation & have it update as you modify it, run `mdbook serve` and navigate to the URL it provides. Or, to just build it run `mdbook build`.
+
 # Cosmos Roadmap
 
 See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the list of current features/bugs in development.

@@ -9,3 +9,12 @@
 .idea/
 
 cosmos_server/saves/
+
+# Documentation auto-generated files
+
+# See README.md to see how to set this stuff up
+
+# Run `mdbook-mermaid install ./docs` to get these files
+docs/mermaid.min.js
+# 
+docs/book/
