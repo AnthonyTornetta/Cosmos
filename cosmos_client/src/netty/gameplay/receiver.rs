@@ -100,17 +100,6 @@ fn client_sync_players(
         let msg: ServerUnreliableMessages = bincode::deserialize(&message).unwrap();
 
         match msg {
-            ServerUnreliableMessages::PlayerBody { id, body } => {
-                if let Some(entity) = lobby.players.get(&id).map(|x| x.client_entity) {
-                    let (mut transform, mut velocity, _) = query_body.get_mut(entity).unwrap();
-
-                    transform.translation = body.translation.into();
-                    transform.rotation = body.rotation.into();
-
-                    velocity.linvel = body.body_vel.linvel.into();
-                    velocity.angvel = body.body_vel.angvel.into();
-                }
-            }
             ServerUnreliableMessages::BulkBodies {
                 bodies,
                 time_stamp: _,
