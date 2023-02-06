@@ -17,28 +17,28 @@ use renet_visualizer::RenetServerVisualizer;
 use crate::netty::network_helpers::{ClientTicks, ServerLobby};
 
 fn generate_player_inventory(items: &Registry<Item>) -> Inventory {
-    let mut inventory = Inventory::new(9 * 4);
+    let mut inventory = Inventory::new(9 * 1);
 
     inventory.insert_at(
-        9 * 3,
+        0,
         items.from_id("cosmos:stone").expect("Stone item to exist"),
         64,
     );
 
     inventory.insert_at(
-        9 * 3 + 1,
+        1,
         items.from_id("cosmos:dirt").expect("Dirt item to exist"),
         64,
     );
 
     inventory.insert_at(
-        9 * 3 + 2,
+        2,
         items.from_id("cosmos:grass").expect("Grass item to exist"),
         64,
     );
 
     inventory.insert_at(
-        9 * 3 + 3,
+        3,
         items
             .from_id("cosmos:thruster")
             .expect("Thruster item to exist"),
@@ -46,7 +46,7 @@ fn generate_player_inventory(items: &Registry<Item>) -> Inventory {
     );
 
     inventory.insert_at(
-        9 * 3 + 4,
+        4,
         items
             .from_id("cosmos:laser_cannon")
             .expect("Laser cannon item to exist"),
@@ -54,7 +54,7 @@ fn generate_player_inventory(items: &Registry<Item>) -> Inventory {
     );
 
     inventory.insert_at(
-        9 * 3 + 5,
+        5,
         items
             .from_id("cosmos:reactor")
             .expect("Reactor cannon item to exist"),
@@ -62,7 +62,7 @@ fn generate_player_inventory(items: &Registry<Item>) -> Inventory {
     );
 
     inventory.insert_at(
-        9 * 3 + 6,
+        6,
         items
             .from_id("cosmos:energy_cell")
             .expect("Energy cell item to exist"),
@@ -70,11 +70,11 @@ fn generate_player_inventory(items: &Registry<Item>) -> Inventory {
     );
 
     inventory.insert_at(
-        9 * 3 + 7,
+        7,
         items
             .from_id("cosmos:ship_hull")
             .expect("Ship hull item to exist"),
-        64,
+        999,
     );
 
     inventory

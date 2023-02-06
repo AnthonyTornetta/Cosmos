@@ -28,6 +28,7 @@ use crate::{
 use super::{StructureSystem, Systems};
 
 const MAX_SHIP_SPEED: f32 = 256.0;
+const MAX_BRAKE_DELTA_PER_THRUST: f32 = 300.0;
 
 pub struct ThrusterProperty {
     pub strength: f32,
@@ -72,7 +73,7 @@ fn register_thruster_blocks(blocks: Res<Registry<Block>>, mut storage: ResMut<Th
         storage.insert(
             block,
             ThrusterProperty {
-                strength: 2.0,
+                strength: 5.0,
                 energy_consupmtion: 100.0,
             },
         );
@@ -177,8 +178,17 @@ fn update_movement(
                 }
             };
 
-            if movement.breaking {
-                movement_vector += -velocity.linvel * 0.1;
+            if movement.braking {
+                let mut brake_vec = -velocity.linvel;
+                let delta = time.delta_seconds()
+                    * MAX_BRAKE_DELTA_PER_THRUST
+                    * thruster_system.thrust_total;
+
+                if brake_vec.length_squared() >= delta * delta {
+                    brake_vec = brake_vec.normalize() * delta;
+                }
+
+                movement_vector += brake_vec;
             }
 
             external_impulse.impulse += movement_vector;

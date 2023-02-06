@@ -1,7 +1,7 @@
 use bevy::ecs::schedule::StateData;
 use bevy::prelude::{
-    App, BuildChildren, Commands, EventReader, Parent, Quat, Query, SystemSet, Transform, Vec3,
-    With,
+    App, BuildChildren, Commands, Entity, EventReader, Parent, Quat, Query, SystemSet, Transform,
+    Vec3, With,
 };
 use bevy::transform::TransformBundle;
 use bevy_rapier3d::prelude::{RigidBody, Sensor};
@@ -31,13 +31,14 @@ fn event_listener(
             transform.rotation = Quat::IDENTITY;
             transform.scale = Vec3::ONE;
 
-            commands
-                .entity(prev_pilot.entity)
-                .remove::<Pilot>()
-                .remove::<Parent>()
-                .remove::<Sensor>()
-                .insert(RigidBody::Dynamic)
-                .insert(TransformBundle::from_transform(transform));
+            // The pilot may have disconnected
+            if let Some(mut ec) = commands.get_entity(prev_pilot.entity) {
+                ec.remove::<Pilot>()
+                    .remove::<Parent>()
+                    .remove::<Sensor>()
+                    .insert(RigidBody::Dynamic)
+                    .insert(TransformBundle::from_transform(transform));
+            }
         }
 
         if let Some(entity) = ev.pilot_entity {
@@ -72,10 +73,19 @@ fn keep_pilot_in_place(mut query: Query<&mut Transform, (With<Pilot>, With<Playe
     }
 }
 
+fn verify_pilot_exists(mut commands: Commands, query: Query<(Entity, &Pilot)>) {
+    for (entity, pilot) in query.iter() {
+        if commands.get_entity(pilot.entity).is_none() {
+            commands.entity(entity).remove::<Pilot>();
+        }
+    }
+}
+
 pub fn register<T: StateData + Clone + Copy>(app: &mut App, playing_state: T) {
     app.add_system_set(
         SystemSet::on_update(playing_state)
             .with_system(event_listener)
-            .with_system(keep_pilot_in_place),
+            .with_system(keep_pilot_in_place)
+            .with_system(verify_pilot_exists),
     );
 }

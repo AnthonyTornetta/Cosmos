@@ -77,7 +77,7 @@ fn process_ship_movement(
             movement.movement.x += 1.0;
         }
 
-        movement.breaking = input_handler.check_pressed(CosmosInputs::SlowDown, &keys, &mouse);
+        movement.braking = input_handler.check_pressed(CosmosInputs::SlowDown, &keys, &mouse);
 
         if input_handler.check_just_pressed(CosmosInputs::StopPiloting, &keys, &mouse) {
             client.send_message(
@@ -170,7 +170,7 @@ fn process_player_movement(
 
         let max_speed: f32 = match input_handler.check_pressed(CosmosInputs::Sprint, &keys, &mouse)
         {
-            false => 5.0,
+            false => 3.0,
             true => 20.0,
         };
 

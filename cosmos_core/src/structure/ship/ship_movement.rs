@@ -10,7 +10,7 @@ use super::pilot::Pilot;
 
 #[derive(Component, Default, Serialize, Deserialize, Debug, Clone, FromReflect, Reflect)]
 pub struct ShipMovement {
-    pub breaking: bool,
+    pub braking: bool,
     pub movement: Vec3,
     pub torque: Vec3,
 }
@@ -23,7 +23,7 @@ impl ShipMovement {
     pub fn set(&mut self, other: &Self) {
         self.movement = other.movement;
         self.torque = other.torque;
-        self.breaking = other.breaking;
+        self.braking = other.braking;
     }
 }
 
@@ -43,7 +43,7 @@ fn clear_movement_when_no_pilot(mut query: Query<&mut ShipMovement, Without<Pilo
         movement.torque.y = 0.0;
         movement.torque.z = 0.0;
 
-        movement.breaking = false;
+        movement.braking = false;
     }
 }
 
