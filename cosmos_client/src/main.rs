@@ -77,7 +77,7 @@ fn process_ship_movement(
             movement.movement.x += 1.0;
         }
 
-        movement.breaking = input_handler.check_pressed(CosmosInputs::SlowDown, &keys, &mouse);
+        movement.braking = input_handler.check_pressed(CosmosInputs::SlowDown, &keys, &mouse);
 
         if input_handler.check_just_pressed(CosmosInputs::StopPiloting, &keys, &mouse) {
             client.send_message(

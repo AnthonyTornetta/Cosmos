@@ -178,7 +178,7 @@ fn update_movement(
                 }
             };
 
-            if movement.breaking {
+            if movement.braking {
                 let mut brake_vec = -velocity.linvel;
                 let delta = time.delta_seconds()
                     * MAX_BRAKE_DELTA_PER_THRUST
