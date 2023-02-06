@@ -2,14 +2,15 @@ use crate::block::lighting::{BlockLightProperties, BlockLighting};
 use crate::state::game_state::GameState;
 use bevy::prelude::{
     shape, App, BuildChildren, Color, Component, DespawnRecursiveExt, EventReader, Mesh, PbrBundle,
-    PointLight, PointLightBundle, SystemSet, Transform, Vec3,
+    PointLight, PointLightBundle, SystemSet, Transform, Vec3, StandardMaterial,
 };
 use bevy::reflect::{FromReflect, Reflect};
 use bevy::render::mesh::{Indices, PrimitiveTopology};
 use bevy::render::primitives::Aabb;
 use bevy::utils::HashMap;
+use bevy::utils::hashbrown::HashMap;
 use bevy_rapier3d::na::Vector3;
-use cosmos_core::block::{Block, BlockFace};
+use cosmos_core::block::{Block, BlockFace, BlockProperty};
 use cosmos_core::events::block_events::BlockChangedEvent;
 use cosmos_core::registry::identifiable::Identifiable;
 use cosmos_core::registry::Registry;
@@ -522,8 +523,18 @@ pub struct ChunkRendererInstance {
 } 
 
 #[derive(Default, Debug, Reflect, FromReflect)]
+pub struct MeshInfo {
+    pub renderer: ChunkRendererInstance,
+    pub last_index: i32,
+    pub indices: Vec<u32>,
+    pub uvs: Vec<[f32; 2]>,
+    pub positions: Vec<[f32; 3]>,
+    pub normals: Vec<[f32; 3]>,
+}
+
+#[derive(Default, Debug, Reflect, FromReflect)]
 pub struct ChunkRenderer {
-    meshes: Vec<ChunkRendererInstance>,
+    meshes: HashMap<Handle<StandardMaterial>, MeshInfo>,
 }
 
 impl ChunkRenderer {
@@ -532,8 +543,7 @@ impl ChunkRenderer {
     }
     
     fn clear(&mut self) {
-        self.secondary_meshes = None;
-        self.base_mesh = None;
+        self.meshes.clear();
     }
 
     pub fn render(
@@ -550,8 +560,6 @@ impl ChunkRenderer {
         blocks: &Registry<Block>,
     ) {
         self.clear();
-
-        let mut last_index = 0;
 
         let cd2 = CHUNK_DIMENSIONS as f32 / 2.0;
 

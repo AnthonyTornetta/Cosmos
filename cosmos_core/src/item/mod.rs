@@ -1,6 +1,6 @@
 pub mod items;
 
-use bevy::{ecs::schedule::StateData, prelude::App};
+use bevy::prelude::App;
 
 use crate::registry::identifiable::Identifiable;
 
@@ -42,10 +42,6 @@ impl Item {
     }
 }
 
-pub fn register<T: StateData + Clone + Copy>(
-    app: &mut App,
-    pre_loading_state: T,
-    loading_state: T,
-) {
-    items::register(app, pre_loading_state, loading_state);
+pub fn register(app: &mut App) {
+    items::register(app);
 }

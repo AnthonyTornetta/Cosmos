@@ -91,11 +91,10 @@ fn sanity_check(blocks: Res<Registry<Block>>, hardness: Res<Registry<BlockHardne
 
 pub(crate) fn register<T: StateData + Clone + Copy>(
     app: &mut App,
-    pre_loading_state: T,
     loading_state: T,
     post_loading_state: T,
 ) {
-    registry::register::<T, BlockHardness>(app, pre_loading_state);
+    registry::create_registry::<BlockHardness>(app);
 
     app.add_system_set(SystemSet::on_exit(loading_state).with_system(register_block_hardness))
         .add_system_set(SystemSet::on_exit(post_loading_state).with_system(sanity_check));

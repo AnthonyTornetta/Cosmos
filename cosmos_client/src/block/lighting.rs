@@ -75,7 +75,7 @@ fn register_all_lights(
 }
 
 pub(crate) fn register(app: &mut App) {
-    registry::register::<GameState, BlockLighting>(app, GameState::PreLoading);
+    registry::create_registry::<BlockLighting>(app);
 
     app.add_system_set(SystemSet::on_exit(GameState::Loading).with_system(register_all_lights));
 }
