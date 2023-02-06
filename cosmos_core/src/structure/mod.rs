@@ -43,7 +43,7 @@ pub struct Structure {
 }
 
 impl Structure {
-    pub fn new(width: usize, height: usize, length: usize, self_entity: Entity) -> Self {
+    pub fn new(width: usize, height: usize, length: usize) -> Self {
         let mut chunks = Vec::with_capacity(width * height * length);
 
         for z in 0..length {
@@ -62,7 +62,7 @@ impl Structure {
 
         Self {
             chunk_entities,
-            self_entity: Some(self_entity),
+            self_entity: None,
             chunks,
             width,
             height,
@@ -511,7 +511,7 @@ pub fn register<T: StateData + Clone + Copy>(
     playing_game_state: T,
 ) {
     systems::register(app, post_loading_state, playing_game_state);
-    ship::register(app);
+    ship::register(app, playing_game_state);
     events::register(app);
     loading::register(app);
     block_health::register(app);

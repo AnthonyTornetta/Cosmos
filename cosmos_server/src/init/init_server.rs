@@ -9,10 +9,10 @@ use cosmos_core::netty::{get_local_ipaddress, server_connection_config, PROTOCOL
 
 use crate::netty::network_helpers::{ClientTicks, NetworkTick, ServerLobby};
 
-pub fn init(app: &mut App) {
+pub fn init(app: &mut App, address: Option<String>) {
     let port: u16 = 1337;
 
-    let local_addr = get_local_ipaddress();
+    let local_addr = address.unwrap_or(get_local_ipaddress());
 
     let address: SocketAddr = format!("{local_addr}:{port}").parse().unwrap();
     let socket = UdpSocket::bind(format!("0.0.0.0:{port}")).unwrap();

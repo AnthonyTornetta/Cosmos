@@ -12,32 +12,33 @@ use cosmos_core::{
     entities::player::Player,
     netty::{netty_rigidbody::NettyRigidBody, NettyChannel},
 };
+use renet_visualizer::RenetServerVisualizer;
 
 use crate::netty::network_helpers::{ClientTicks, ServerLobby};
 
 fn generate_player_inventory(items: &Registry<Item>) -> Inventory {
-    let mut inventory = Inventory::new(9 * 4);
+    let mut inventory = Inventory::new(9);
 
     inventory.insert_at(
-        9 * 3,
+        0,
         items.from_id("cosmos:stone").expect("Stone item to exist"),
         64,
     );
 
     inventory.insert_at(
-        9 * 3 + 1,
+        1,
         items.from_id("cosmos:dirt").expect("Dirt item to exist"),
         64,
     );
 
     inventory.insert_at(
-        9 * 3 + 2,
+        2,
         items.from_id("cosmos:grass").expect("Grass item to exist"),
         64,
     );
 
     inventory.insert_at(
-        9 * 3 + 3,
+        3,
         items
             .from_id("cosmos:thruster")
             .expect("Thruster item to exist"),
@@ -45,7 +46,7 @@ fn generate_player_inventory(items: &Registry<Item>) -> Inventory {
     );
 
     inventory.insert_at(
-        9 * 3 + 4,
+        4,
         items
             .from_id("cosmos:laser_cannon")
             .expect("Laser cannon item to exist"),
@@ -53,7 +54,7 @@ fn generate_player_inventory(items: &Registry<Item>) -> Inventory {
     );
 
     inventory.insert_at(
-        9 * 3 + 5,
+        5,
         items
             .from_id("cosmos:reactor")
             .expect("Reactor cannon item to exist"),
@@ -61,7 +62,7 @@ fn generate_player_inventory(items: &Registry<Item>) -> Inventory {
     );
 
     inventory.insert_at(
-        9 * 3 + 6,
+        6,
         items
             .from_id("cosmos:energy_cell")
             .expect("Energy cell item to exist"),
@@ -69,15 +70,15 @@ fn generate_player_inventory(items: &Registry<Item>) -> Inventory {
     );
 
     inventory.insert_at(
-        9 * 3 + 7,
+        7,
         items
             .from_id("cosmos:ship_hull")
             .expect("Ship hull item to exist"),
-        64,
+        999,
     );
 
     inventory.insert_at(
-        9 * 3 + 8,
+        8,
         items
             .from_id("cosmos:light")
             .expect("Ship hull item to exist"),
@@ -99,11 +100,13 @@ fn handle_events_system(
     structure_type: Query<(Option<&Ship>, Option<&Planet>)>,
     structures_query: Query<(Entity, &Structure, &Transform, &Velocity)>,
     items: Res<Registry<Item>>,
+    mut visualizer: ResMut<RenetServerVisualizer<200>>,
 ) {
     for event in server_events.iter() {
         match event {
             ServerEvent::ClientConnected(id, _user_data) => {
                 println!("Client {id} connected");
+                visualizer.add_client(*id);
 
                 for (entity, player, transform, velocity, inventory) in players.iter() {
                     let body = NettyRigidBody::new(velocity, transform);
@@ -198,7 +201,7 @@ fn handle_events_system(
             }
             ServerEvent::ClientDisconnected(id) => {
                 println!("Client {id} disconnected");
-
+                visualizer.remove_client(*id);
                 client_ticks.ticks.remove(id);
 
                 if let Some(player_entity) = lobby.players.remove(id) {

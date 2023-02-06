@@ -11,6 +11,8 @@ use cosmos_core::{
 
 use crate::state::GameState;
 
+pub mod core;
+
 pub struct ShipSetMovementEvent {
     pub ship: Entity,
     pub movement: ShipMovement,
@@ -53,7 +55,9 @@ fn monitor_pilot_changes(
     }
 }
 
-pub fn register(app: &mut App) {
+pub(crate) fn register(app: &mut App) {
+    core::register(app);
+
     app.add_event::<ShipSetMovementEvent>().add_system_set(
         SystemSet::on_update(GameState::Playing)
             .with_system(monitor_set_movement_events)

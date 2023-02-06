@@ -7,6 +7,7 @@ pub mod interactions;
 pub mod lang;
 pub mod netty;
 pub mod plugin;
+pub mod projectiles;
 pub mod rendering;
 pub mod state;
 pub mod structure;
@@ -77,7 +78,7 @@ fn process_ship_movement(
             movement.movement.x += 1.0;
         }
 
-        movement.breaking = input_handler.check_pressed(CosmosInputs::SlowDown, &keys, &mouse);
+        movement.braking = input_handler.check_pressed(CosmosInputs::SlowDown, &keys, &mouse);
 
         if input_handler.check_just_pressed(CosmosInputs::StopPiloting, &keys, &mouse) {
             client.send_message(
@@ -104,10 +105,19 @@ fn process_ship_movement(
         crosshair_offset.x = crosshair_offset.x.clamp(-hw, hw);
         crosshair_offset.y = crosshair_offset.y.clamp(-hh, hh);
 
+        let mut roll = 0.0;
+
+        if input_handler.check_pressed(CosmosInputs::RollLeft, &keys, &mouse) {
+            roll += 0.25;
+        }
+        if input_handler.check_pressed(CosmosInputs::RollRight, &keys, &mouse) {
+            roll -= 0.25;
+        }
+
         movement.torque = Vec3::new(
             crosshair_offset.y / hh * p2 / 2.0,
             -crosshair_offset.x / hw * p2 / 2.0,
-            0.0,
+            roll,
         );
 
         client.send_message(
@@ -161,7 +171,7 @@ fn process_player_movement(
 
         let max_speed: f32 = match input_handler.check_pressed(CosmosInputs::Sprint, &keys, &mouse)
         {
-            false => 5.0,
+            false => 3.0,
             true => 20.0,
         };
 
@@ -334,6 +344,7 @@ fn main() {
     lang::register(&mut app);
     structure::register(&mut app);
     block::register(&mut app);
+    projectiles::register(&mut app);
 
     app.run();
 }

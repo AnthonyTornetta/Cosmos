@@ -1,0 +1,16 @@
+[book]
+authors = ["AnthonyTornetta"]
+language = "en"
+multilingual = false
+src = "src"
+title = "Cosmos Documentation"
+
+[preprocessor]
+
+[preprocessor.mermaid]
+command = "mdbook-mermaid"
+
+[output]
+
+[output.html]
+additional-js = ["mermaid.min.js", "mermaid-init.js"]

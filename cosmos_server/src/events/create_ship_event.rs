@@ -19,7 +19,7 @@ fn event_reader(
     for ev in event_reader.iter() {
         let mut entity = commands.spawn_empty();
 
-        let mut structure = Structure::new(10, 10, 10, entity.id());
+        let mut structure = Structure::new(10, 10, 10);
 
         let builder = ServerShipBuilder::default();
 
