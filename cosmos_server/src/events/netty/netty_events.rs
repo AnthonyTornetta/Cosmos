@@ -17,7 +17,7 @@ use renet_visualizer::RenetServerVisualizer;
 use crate::netty::network_helpers::{ClientTicks, ServerLobby};
 
 fn generate_player_inventory(items: &Registry<Item>) -> Inventory {
-    let mut inventory = Inventory::new(9 * 1);
+    let mut inventory = Inventory::new(9);
 
     inventory.insert_at(
         0,
