@@ -170,7 +170,7 @@ fn process_player_movement(
 
         let max_speed: f32 = match input_handler.check_pressed(CosmosInputs::Sprint, &keys, &mouse)
         {
-            false => 5.0,
+            false => 3.0,
             true => 20.0,
         };
 

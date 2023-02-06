@@ -17,7 +17,7 @@ pub fn add_cosmos_blocks(
     let id = loading.register_loader(&mut start_writer);
 
     blocks.register(
-        BlockBuilder::new("cosmos:stone".into(), 1.0)
+        BlockBuilder::new("cosmos:stone".into(), 10.0)
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .set_all_uvs(2)
@@ -25,7 +25,7 @@ pub fn add_cosmos_blocks(
     );
 
     blocks.register(
-        BlockBuilder::new("cosmos:grass".into(), 0.3)
+        BlockBuilder::new("cosmos:grass".into(), 3.0)
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .set_all_uvs(4)
@@ -35,7 +35,7 @@ pub fn add_cosmos_blocks(
     );
 
     blocks.register(
-        BlockBuilder::new("cosmos:dirt".into(), 0.3)
+        BlockBuilder::new("cosmos:dirt".into(), 3.0)
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .set_all_uvs(3)
@@ -43,14 +43,14 @@ pub fn add_cosmos_blocks(
     );
 
     blocks.register(
-        BlockBuilder::new("cosmos:cherry_leaf".into(), 0.01)
+        BlockBuilder::new("cosmos:cherry_leaf".into(), 0.1)
             .add_property(BlockProperty::Transparent)
             .set_all_uvs(35)
             .create(),
     );
 
     blocks.register(
-        BlockBuilder::new("cosmos:cherry_log".into(), 0.3)
+        BlockBuilder::new("cosmos:cherry_log".into(), 3.0)
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .set_all_uvs(34)
@@ -60,7 +60,7 @@ pub fn add_cosmos_blocks(
     );
 
     blocks.register(
-        BlockBuilder::new("cosmos:ship_core".into(), 0.1)
+        BlockBuilder::new("cosmos:ship_core".into(), 2.0)
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .add_property(BlockProperty::ShipOnly)
@@ -69,7 +69,7 @@ pub fn add_cosmos_blocks(
     );
 
     blocks.register(
-        BlockBuilder::new("cosmos:energy_cell".to_owned(), 0.1)
+        BlockBuilder::new("cosmos:energy_cell".to_owned(), 2.0)
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .set_all_uvs(36)
@@ -77,7 +77,7 @@ pub fn add_cosmos_blocks(
     );
 
     blocks.register(
-        BlockBuilder::new("cosmos:reactor".to_owned(), 0.1)
+        BlockBuilder::new("cosmos:reactor".to_owned(), 2.0)
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .set_all_uvs(37)
@@ -85,7 +85,7 @@ pub fn add_cosmos_blocks(
     );
 
     blocks.register(
-        BlockBuilder::new("cosmos:laser_cannon".to_owned(), 0.1)
+        BlockBuilder::new("cosmos:laser_cannon".to_owned(), 2.0)
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .set_all_uvs(21)
@@ -97,7 +97,7 @@ pub fn add_cosmos_blocks(
     );
 
     blocks.register(
-        BlockBuilder::new("cosmos:ship_hull".to_owned(), 0.5)
+        BlockBuilder::new("cosmos:ship_hull".to_owned(), 6.0)
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .set_all_uvs(20)
@@ -105,7 +105,7 @@ pub fn add_cosmos_blocks(
     );
 
     blocks.register(
-        BlockBuilder::new("cosmos:thruster".to_owned(), 0.7)
+        BlockBuilder::new("cosmos:thruster".to_owned(), 2.0)
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .set_all_uvs(28)
