@@ -120,6 +120,7 @@ pub fn add_cosmos_blocks(
         BlockBuilder::new("cosmos:light".to_owned(), 0.1)
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
+            .add_property(BlockProperty::Illuminated)
             .set_all_uvs(16)
             .create(),
     );

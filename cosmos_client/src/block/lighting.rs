@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::state::game_state::GameState;
 
-#[derive(Debug, Reflect, FromReflect, Default, Serialize, Deserialize, Clone, Copy)]
+#[derive(Debug, Reflect, FromReflect, Default, Serialize, Deserialize, Clone, Copy, PartialEq)]
 pub struct BlockLightProperties {
     pub color: Color,
     pub intensity: f32,

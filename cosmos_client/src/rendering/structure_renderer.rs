@@ -1,8 +1,8 @@
 use crate::block::lighting::{BlockLightProperties, BlockLighting};
 use crate::state::game_state::GameState;
 use bevy::prelude::{
-    shape, App, BuildChildren, Color, Component, EventReader, Mesh, PbrBundle, PointLight,
-    PointLightBundle, SystemSet, Transform, Vec3,
+    shape, App, BuildChildren, Color, Component, DespawnRecursiveExt, EventReader, Mesh, PbrBundle,
+    PointLight, PointLightBundle, SystemSet, Transform, Vec3,
 };
 use bevy::reflect::{FromReflect, Reflect};
 use bevy::render::mesh::{Indices, PrimitiveTopology};
@@ -15,6 +15,7 @@ use cosmos_core::registry::identifiable::Identifiable;
 use cosmos_core::registry::Registry;
 use cosmos_core::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
 use cosmos_core::structure::events::ChunkSetEvent;
+use cosmos_core::structure::structure_block::StructureBlock;
 use cosmos_core::structure::Structure;
 use cosmos_core::utils::array_utils::flatten;
 use std::collections::HashSet;
@@ -30,7 +31,8 @@ pub fn register(app: &mut App) {
         )
         .add_system_set(
             SystemSet::on_update(GameState::Playing).with_system(monitor_needs_rendered_system),
-        );
+        )
+        .register_type::<LightsHolder>();
 }
 
 #[derive(Component, Debug)]
@@ -49,7 +51,7 @@ pub struct ChunkMesh {
     pub y: usize,
     pub z: usize,
     pub lights: HashMap<(usize, usize, usize), BlockLightProperties>,
-    pub mesh: Mesh,
+    pub meshes: Vec<Mesh>,
 }
 
 impl StructureRenderer {
@@ -347,7 +349,23 @@ pub fn monitor_block_updates_system(
     }
 }
 
-pub fn monitor_needs_rendered_system(
+#[derive(Debug, Reflect, FromReflect, Clone, Copy)]
+struct LightEntry {
+    entity: Entity,
+    light: BlockLightProperties,
+    position: StructureBlock,
+    valid: bool,
+}
+
+#[derive(Component, Debug, Reflect, FromReflect, Default)]
+struct LightsHolder {
+    lights: Vec<LightEntry>,
+}
+
+#[derive(Component, Debug, Reflect, FromReflect, Default)]
+struct ChunkMeshes(Vec<Entity>);
+
+fn monitor_needs_rendered_system(
     mut commands: Commands,
     mut event: EventReader<NeedsNewRenderingEvent>,
     mut query: Query<(&Structure, &mut StructureRenderer)>,
@@ -356,6 +374,8 @@ pub fn monitor_needs_rendered_system(
     mut meshes: ResMut<Assets<Mesh>>,
     blocks: Res<Registry<Block>>,
     lighting: Res<Registry<BlockLighting>>,
+    lights_query: Query<&LightsHolder>,
+    chunk_meshes_query: Query<&ChunkMeshes>,
 ) {
     let mut done_structures = HashSet::new();
     for ev in event.iter() {
@@ -374,79 +394,146 @@ pub fn monitor_needs_rendered_system(
         for chunk_mesh in chunk_meshes {
             let entity = structure.chunk_entity(chunk_mesh.x, chunk_mesh.y, chunk_mesh.z);
 
-            let old_mesh_handle = mesh_query.get(entity).unwrap();
+            if let Ok(chunk_meshes_component) = chunk_meshes_query.get(entity) {
+                for ent in chunk_meshes_component.0.iter() {
+                    let old_mesh_handle = mesh_query
+                        .get(*ent)
+                        .expect("This should have a mesh component.");
 
-            if let Some(old_mesh_handle) = old_mesh_handle {
-                meshes.remove(old_mesh_handle);
+                    if let Some(old_mesh_handle) = old_mesh_handle {
+                        meshes.remove(old_mesh_handle);
+                    }
+                }
             }
+
+            let mut new_lights = LightsHolder::default();
+
+            if let Ok(lights) = lights_query.get(entity) {
+                for light in lights.lights.iter() {
+                    let mut light = *light;
+                    light.valid = false;
+                    new_lights.lights.push(light);
+                }
+            }
+
+            let mut entities_to_add = Vec::new();
+
+            if !chunk_mesh.lights.is_empty() {
+                for light in chunk_mesh.lights {
+                    let (x, y, z) = light.0;
+                    let properties = light.1;
+
+                    println!("CREATE LIGHT @ {x}, {y}, {z}");
+
+                    let mut found = false;
+                    for light in new_lights.lights.iter_mut() {
+                        if light.position.x == x && light.position.y == y && light.position.z == z {
+                            if light.light == properties {
+                                light.valid = true;
+                                found = true;
+                            }
+                            break;
+                        }
+                    }
+
+                    if !found {
+                        let light_entity = commands
+                            .spawn(PointLightBundle {
+                                point_light: PointLight {
+                                    color: properties.color,
+                                    intensity: properties.intensity,
+                                    range: properties.range,
+                                    shadows_enabled: !properties.shadows_disabled,
+                                    ..Default::default()
+                                },
+                                transform: Transform::from_xyz(
+                                    x as f32 - 7.5,
+                                    y as f32 - 7.5,
+                                    z as f32 - 7.5,
+                                ),
+                                ..Default::default()
+                            })
+                            .with_children(|builder| {
+                                builder.spawn(PbrBundle {
+                                    mesh: meshes.add(Mesh::from(shape::UVSphere {
+                                        radius: 0.55,
+                                        ..Default::default()
+                                    })),
+                                    // material: materials.add(StandardMaterial {
+                                    //     base_color: Color::RED,
+                                    //     emissive: Color::rgba_linear(100.0, 0.0, 0.0, 0.0),
+                                    //     ..default()
+                                    // }),
+                                    ..Default::default()
+                                });
+                            })
+                            .id();
+
+                        new_lights.lights.push(LightEntry {
+                            entity: light_entity,
+                            light: properties,
+                            position: StructureBlock::new(x, y, z),
+                            valid: true,
+                        });
+                        entities_to_add.push(light_entity);
+                    }
+                }
+            }
+
+            for light in new_lights.lights.iter().filter(|x| !x.valid) {
+                commands.entity(light.entity).despawn_recursive();
+            }
+
+            new_lights.lights.retain(|x| x.valid);
+
+            // end lighting
+            // meshes
+            let chunk_meshes_component = ChunkMeshes::default();
+            chunk_mesh.mesh
 
             let mut entity_commands = commands.entity(entity);
 
-            if !chunk_mesh.lights.is_empty() {
-                entity_commands.with_children(|p| {
-                    for light in chunk_mesh.lights {
-                        let (x, y, z) = light.0;
-                        let properties = light.1;
-
-                        println!("CREATE LIGHT @ {x}, {y}, {z}");
-
-                        p.spawn(PointLightBundle {
-                            point_light: PointLight {
-                                color: properties.color,
-                                intensity: properties.intensity,
-                                range: properties.range,
-                                shadows_enabled: !properties.shadows_disabled,
-                                ..Default::default()
-                            },
-                            transform: Transform::from_xyz(
-                                x as f32 - 7.5,
-                                y as f32 - 7.5,
-                                z as f32 - 7.5,
-                            ),
-                            ..Default::default()
-                        })
-                        .with_children(|builder| {
-                            builder.spawn(PbrBundle {
-                                mesh: meshes.add(Mesh::from(shape::UVSphere {
-                                    radius: 0.55,
-                                    ..Default::default()
-                                })),
-                                // material: materials.add(StandardMaterial {
-                                //     base_color: Color::RED,
-                                //     emissive: Color::rgba_linear(100.0, 0.0, 0.0, 0.0),
-                                //     ..default()
-                                // }),
-                                ..Default::default()
-                            });
-                        });
-                    }
-                });
+            for ent in entities_to_add {
+                entity_commands.add_child(ent);
             }
 
             let s = (CHUNK_DIMENSIONS / 2) as f32;
 
-            entity_commands.insert(meshes.add(chunk_mesh.mesh));
-            entity_commands.insert(Aabb::from_min_max(
-                Vec3::new(-s, -s, -s),
-                Vec3::new(s, s, s),
-            ));
-            entity_commands.insert(atlas.material.clone());
+            entity_commands
+                .insert(meshes.add(chunk_mesh.mesh))
+                .insert(Aabb::from_min_max(
+                    Vec3::new(-s, -s, -s),
+                    Vec3::new(s, s, s),
+                ))
+                .insert(atlas.material.clone())
+                .insert(new_lights);
         }
     }
 }
 
+
 #[derive(Default, Debug, Reflect, FromReflect)]
-pub struct ChunkRenderer {
+pub struct ChunkRendererInstance {
     pub indices: Vec<u32>,
     pub uvs: Vec<[f32; 2]>,
     pub positions: Vec<[f32; 3]>,
     pub normals: Vec<[f32; 3]>,
     pub lights: HashMap<(usize, usize, usize), BlockLightProperties>,
+} 
+
+#[derive(Default, Debug, Reflect, FromReflect)]
+pub struct ChunkRenderer {
+    meshes: Vec<ChunkRendererInstance>,
 }
 
 impl ChunkRenderer {
     pub fn new() -> Self {
         Self::default()
+    }
+    
+    fn clear(&mut self) {
+        self.secondary_meshes = None;
+        self.base_mesh = None;
     }
 
     pub fn render(
@@ -462,10 +549,7 @@ impl ChunkRenderer {
         front: Option<&Chunk>,
         blocks: &Registry<Block>,
     ) {
-        self.indices.clear();
-        self.uvs.clear();
-        self.positions.clear();
-        self.normals.clear();
+        self.clear();
 
         let mut last_index = 0;
 
