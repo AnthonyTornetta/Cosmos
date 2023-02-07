@@ -186,19 +186,17 @@ fn check_assets_ready(
                             ),
                         });
 
-                        let material_handle = materials.add(StandardMaterial {
+                        let illuminated_material_handle = materials.add(StandardMaterial {
                             base_color_texture: Some(handle.clone()),
                             alpha_mode: AlphaMode::Mask(0.5),
-                            unlit: false,
-                            metallic: 0.0,
-                            reflectance: 0.0,
-                            emissive: Color::rgba_linear(1.0, 1.0, 1.0, 0.0),
+                            unlit: true,
+                            // emissive: Color::rgba_linear(1.0, 1.0, 1.0, 0.1),
                             double_sided: true,
                             ..default()
                         });
 
                         commands.insert_resource(IlluminatedAtlas {
-                            material: material_handle,
+                            material: illuminated_material_handle,
                             uv_mapper: UVMapper::new(
                                 width as usize,
                                 height as usize,

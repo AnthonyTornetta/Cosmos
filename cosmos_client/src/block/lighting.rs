@@ -64,8 +64,8 @@ fn register_all_lights(
     register_light(
         BlockLightProperties {
             color: Color::WHITE,
-            intensity: 1000.0,
-            range: 20.0,
+            intensity: 500.0,
+            range: 12.0,
             ..Default::default()
         },
         &mut registry,

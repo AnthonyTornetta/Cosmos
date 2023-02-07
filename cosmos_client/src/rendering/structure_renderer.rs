@@ -464,6 +464,7 @@ fn monitor_needs_rendered_system(
                                     color: properties.color,
                                     intensity: properties.intensity,
                                     range: properties.range,
+                                    radius: 1.0,
                                     // Shadows kill all performance
                                     shadows_enabled: false && !properties.shadows_disabled,
                                     ..Default::default()
@@ -475,20 +476,6 @@ fn monitor_needs_rendered_system(
                                 ),
                                 ..Default::default()
                             })
-                            // .with_children(|builder| {
-                            //     builder.spawn(PbrBundle {
-                            //         mesh: meshes.add(Mesh::from(shape::UVSphere {
-                            //             radius: 0.55,
-                            //             ..Default::default()
-                            //         })),
-                            //         // material: materials.add(StandardMaterial {
-                            //         //     base_color: Color::RED,
-                            //         //     emissive: Color::rgba_linear(100.0, 0.0, 0.0, 0.0),
-                            //         //     ..default()
-                            //         // }),
-                            //         ..Default::default()
-                            //     });
-                            // })
                             .id();
 
                         new_lights.lights.push(LightEntry {
@@ -515,25 +502,35 @@ fn monitor_needs_rendered_system(
             for mesh_material in chunk_mesh.mesh_materials {
                 let mesh = meshes.add(mesh_material.mesh);
 
-                if let Some(ent) = old_mesh_entities.pop() {
+                let ent = if let Some(ent) = old_mesh_entities.pop() {
                     println!("Overriding mesh!");
                     commands
                         .entity(ent)
                         .insert(mesh)
                         .insert(mesh_material.material);
-                    chunk_meshes_component.0.push(entity);
+
+                    ent
                 } else {
-                    let entity = commands
+                    let s = (CHUNK_DIMENSIONS / 2) as f32;
+
+                    let ent = commands
                         .spawn(PbrBundle {
                             mesh,
                             material: mesh_material.material,
                             ..Default::default()
                         })
+                        .insert(Aabb::from_min_max(
+                            Vec3::new(-s, -s, -s),
+                            Vec3::new(s, s, s),
+                        ))
                         .id();
 
-                    entities_to_add.push(entity);
-                    chunk_meshes_component.0.push(entity);
-                }
+                    entities_to_add.push(ent);
+
+                    ent
+                };
+
+                chunk_meshes_component.0.push(ent);
             }
 
             // Any leftovers are dead now
@@ -547,14 +544,8 @@ fn monitor_needs_rendered_system(
                 entity_commands.add_child(ent);
             }
 
-            let s = (CHUNK_DIMENSIONS / 2) as f32;
-
             entity_commands
                 // .insert(meshes.add(chunk_mesh.mesh))
-                .insert(Aabb::from_min_max(
-                    Vec3::new(-s, -s, -s),
-                    Vec3::new(s, s, s),
-                ))
                 .insert(new_lights)
                 .insert(chunk_meshes_component);
         }
