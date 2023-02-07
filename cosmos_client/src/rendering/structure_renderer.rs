@@ -444,8 +444,6 @@ fn monitor_needs_rendered_system(
                     let (x, y, z) = light.0;
                     let properties = light.1;
 
-                    println!("CREATE LIGHT @ {x}, {y}, {z}");
-
                     let mut found = false;
                     for light in new_lights.lights.iter_mut() {
                         if light.position.x == x && light.position.y == y && light.position.z == z {
@@ -503,7 +501,6 @@ fn monitor_needs_rendered_system(
                 let mesh = meshes.add(mesh_material.mesh);
 
                 let ent = if let Some(ent) = old_mesh_entities.pop() {
-                    println!("Overriding mesh!");
                     commands
                         .entity(ent)
                         .insert(mesh)
