@@ -1,5 +1,9 @@
-use bevy::prelude::Vec2;
+use bevy::{
+    prelude::Vec2,
+    reflect::{FromReflect, Reflect},
+};
 
+#[derive(Reflect, FromReflect)]
 pub struct UVMapper {
     atlas_width: usize,
     atlas_height: usize,

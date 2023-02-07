@@ -41,6 +41,14 @@ impl<K: Identifiable + Sync + Send, V: Identifiable + Sync + Send> MultiRegistry
         Err(())
     }
 
+    pub fn get_value(&self, key: &K) -> Option<&V> {
+        if let Some(index) = self.pointers.get(&key.id()) {
+            Some(&self.contents[*index])
+        } else {
+            None
+        }
+    }
+
     pub fn iter(&self) -> Iter<V> {
         self.contents.iter()
     }
