@@ -9,6 +9,7 @@ use super::netty_rigidbody::NettyRigidBody;
 pub enum ClientUnreliableMessages {
     PlayerBody {
         body: NettyRigidBody,
+        looking: Quat,
     },
     SetMovement {
         movement: ShipMovement,
@@ -19,8 +20,5 @@ pub enum ClientUnreliableMessages {
     /// Which system is the pilot currently settnig to active
     ShipActiveSystem {
         active_system: Option<u32>,
-    },
-    PlayerLooking {
-        player_looking: Quat,
     },
 }

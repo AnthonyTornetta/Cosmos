@@ -40,6 +40,7 @@ fn server_listen_messages(
     mut ship_movement_event_writer: EventWriter<ShipSetMovementEvent>,
     mut pilot_change_event_writer: EventWriter<ChangePilotEvent>,
     pilot_query: Query<&Pilot>,
+    player_looking_query: Query<&PlayerLooking>,
 ) {
     for client_id in server.clients_id().into_iter() {
         while let Some(message) = server.receive_message(client_id, NettyChannel::Unreliable.id()) {
@@ -47,11 +48,12 @@ fn server_listen_messages(
                 let command: ClientUnreliableMessages = bincode::deserialize(&message).unwrap();
 
                 match command {
-                    ClientUnreliableMessages::PlayerBody { body } => {
+                    ClientUnreliableMessages::PlayerBody { body, looking } => {
                         if let Ok(entity) = players.get(*player_entity) {
                             commands
                                 .entity(entity)
-                                .insert(TransformBundle::from_transform(body.create_transform()));
+                                .insert(TransformBundle::from_transform(body.create_transform()))
+                                .insert(PlayerLooking { rotation: looking });
                         }
                     }
                     ClientUnreliableMessages::SetMovement { movement } => {
@@ -77,11 +79,6 @@ fn server_listen_messages(
                                 systems.set_active_system(active_system, &mut commands);
                             }
                         }
-                    }
-                    ClientUnreliableMessages::PlayerLooking { player_looking } => {
-                        commands.entity(*player_entity).insert(PlayerLooking {
-                            rotation: player_looking,
-                        });
                     }
                 }
             }
@@ -158,14 +155,17 @@ fn server_listen_messages(
                     });
                 }
                 ClientReliableMessages::CreateShip { name: _name } => {
-                    let transform = transform_query
-                        .get(*lobby.players.get(&client_id).unwrap())
-                        .unwrap();
+                    if let Some(client) = lobby.players.get(&client_id) {
+                        let transform = transform_query.get(*client).unwrap();
 
-                    let mut ship_transform = *transform;
-                    ship_transform.translation.z += 4.0;
+                        let looking = player_looking_query.get(*client).unwrap();
 
-                    create_ship_event_writer.send(CreateShipEvent { ship_transform });
+                        let mut ship_transform = *transform;
+                        ship_transform.translation +=
+                            looking.rotation.mul_vec3(Vec3::new(0.0, 0.0, -4.0));
+
+                        create_ship_event_writer.send(CreateShipEvent { ship_transform });
+                    }
                 }
                 ClientReliableMessages::PilotQuery { ship_entity } => {
                     let pilot = match pilot_query.get(ship_entity) {
