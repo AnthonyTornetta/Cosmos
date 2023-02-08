@@ -15,6 +15,7 @@ use cosmos_core::{
     },
 };
 
+use crate::entities::player::PlayerLooking;
 use crate::events::{
     blocks::block_events::{BlockBreakEvent, BlockInteractEvent, BlockPlaceEvent},
     create_ship_event::CreateShipEvent,
@@ -76,6 +77,11 @@ fn server_listen_messages(
                                 systems.set_active_system(active_system, &mut commands);
                             }
                         }
+                    }
+                    ClientUnreliableMessages::PlayerLooking { player_looking } => {
+                        commands.entity(*player_entity).insert(PlayerLooking {
+                            rotation: player_looking,
+                        });
                     }
                 }
             }
