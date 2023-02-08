@@ -185,6 +185,7 @@ fn process_player_movement(
 
         forward = forward.normalize_or_zero() * 100.0;
         right = right.normalize_or_zero() * 100.0;
+        let movement_up = up * 2.0;
 
         let time = time.delta_seconds();
 
@@ -193,6 +194,12 @@ fn process_player_movement(
         }
         if input_handler.check_pressed(CosmosInputs::MoveBackward, &keys, &mouse) {
             velocity.linvel -= forward * time;
+        }
+        if input_handler.check_pressed(CosmosInputs::MoveUp, &keys, &mouse) {
+            velocity.linvel += movement_up * time;
+        }
+        if input_handler.check_pressed(CosmosInputs::MoveDown, &keys, &mouse) {
+            velocity.linvel -= movement_up * time;
         }
         if input_handler.check_just_pressed(CosmosInputs::Jump, &keys, &mouse) {
             velocity.linvel += up * 5.0;
@@ -204,7 +211,7 @@ fn process_player_movement(
             velocity.linvel += right * time;
         }
         if input_handler.check_pressed(CosmosInputs::SlowDown, &keys, &mouse) {
-            let mut amt = velocity.linvel * 0.1;
+            let mut amt = velocity.linvel * 0.5;
             if amt.dot(amt) > max_speed * max_speed {
                 amt = amt.normalize() * max_speed;
             }

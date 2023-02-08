@@ -33,7 +33,7 @@ fn generate_player_inventory(items: &Registry<Item>) -> Inventory {
 
     inventory.insert_at(
         2,
-        items.from_id("cosmos:grass").expect("Grass item to exist"),
+        items.from_id("cosmos:glass").expect("Glass item to exist"),
         64,
     );
 

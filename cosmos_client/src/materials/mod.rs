@@ -59,16 +59,24 @@ fn register_materials(
     // TODO: Automate this in file or something
 
     for block in blocks.iter() {
-        if block.unlocalized_name() != "cosmos:light" {
+        if block.unlocalized_name() != "cosmos:light"
+            && block.unlocalized_name() != "cosmos:ship_core"
+        {
             registry
                 .add_link(block, "cosmos:main")
                 .expect("Main material should exist");
         }
     }
 
-    if let Some(light) = blocks.from_id("cosmos:light") {
+    if let Some(block) = blocks.from_id("cosmos:light") {
         registry
-            .add_link(light, "cosmos:illuminated")
+            .add_link(block, "cosmos:illuminated")
+            .expect("Illuminated material should exist");
+    }
+
+    if let Some(block) = blocks.from_id("cosmos:ship_core") {
+        registry
+            .add_link(block, "cosmos:illuminated")
             .expect("Illuminated material should exist");
     }
 }

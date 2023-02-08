@@ -14,7 +14,6 @@ pub mod hardness;
 pub enum BlockProperty {
     Opaque,
     Transparent,
-    Illuminated,
     Full,
     Empty,
     ShipOnly,
@@ -74,7 +73,6 @@ impl BlockProperty {
             Self::Full => 0b100,
             Self::Empty => 0b1000,
             Self::ShipOnly => 0b10000,
-            Self::Illuminated => 0b100000,
         }
     }
 
