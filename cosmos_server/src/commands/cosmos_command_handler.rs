@@ -1,6 +1,6 @@
 use bevy::prelude::{
-    App, Commands, DespawnRecursiveExt, Entity, EventReader, EventWriter, Parent, Query, Res,
-    ResMut, Transform, With, Without,
+    App, Commands, DespawnRecursiveExt, Entity, EventReader, EventWriter, Query, Res, ResMut,
+    Transform, With,
 };
 use cosmos_core::structure::{events::StructureCreated, planet::Planet, ship::Ship, Structure};
 
@@ -76,7 +76,7 @@ fn cosmos_command_listener(
 
     structure_query: Query<(Option<&Planet>, Option<&Ship>), With<Structure>>,
 
-    all_top_entities: Query<Entity, Without<Parent>>,
+    all_saveable_entities: Query<Entity, With<Structure>>,
 ) {
     for ev in command_events.iter() {
         match ev.name.as_str() {
@@ -91,9 +91,9 @@ fn cosmos_command_listener(
                 println!("Pong");
             }
             "list" => {
-                println!("All top-level entities: ");
-                for entity in all_top_entities.iter() {
-                    print!("{} ", entity.to_bits());
+                println!("All saveable entities: ");
+                for entity in all_saveable_entities.iter() {
+                    print!("{} ", entity.index());
                 }
                 println!();
             }
@@ -150,9 +150,12 @@ fn cosmos_command_listener(
             "save" => {
                 if ev.args.len() != 2 {
                     display_help(Some("save"), &cosmos_commands);
-                } else if let Ok(index) = ev.args[0].parse::<u64>() {
-                    let entity = Entity::from_bits(index);
-                    if let Some(mut entity_cmds) = commands.get_entity(entity) {
+                } else if let Ok(index) = ev.args[0].parse::<u32>() {
+                    if let Some(entity) = all_saveable_entities
+                        .iter()
+                        .find(|ent| ent.index() == index)
+                    {
+                        let mut entity_cmds = commands.get_entity(entity).unwrap();
                         if let Ok((planet, ship)) = structure_query.get(entity) {
                             if planet.is_some() {
                                 entity_cmds.insert(SaveStructure {

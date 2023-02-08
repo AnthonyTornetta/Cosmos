@@ -39,7 +39,9 @@ fn gravity_system(
                     r_sqrd / dist_sqrd
                 };
 
-                force += (prop.0.mass * force_per_kilogram * ratio) / 100.0 * *down;
+                if ratio >= 0.1 {
+                    force += (prop.0.mass * force_per_kilogram * ratio) / 100.0 * *down;
+                }
             }
 
             if let Some(mut external_force) = external_force {

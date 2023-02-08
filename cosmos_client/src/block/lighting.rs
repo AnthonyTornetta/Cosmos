@@ -72,6 +72,18 @@ fn register_all_lights(
         &blocks,
         "cosmos:light",
     );
+
+    register_light(
+        BlockLightProperties {
+            color: Color::rgb(81.0 / 255.0, 143.0 / 255.0, 225.0 / 255.0),
+            intensity: 100.0,
+            range: 6.0,
+            ..Default::default()
+        },
+        &mut registry,
+        &blocks,
+        "cosmos:ship_core",
+    );
 }
 
 pub(crate) fn register(app: &mut App) {
