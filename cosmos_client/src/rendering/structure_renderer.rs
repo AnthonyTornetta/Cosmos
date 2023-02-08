@@ -464,7 +464,7 @@ fn monitor_needs_rendered_system(
                                     range: properties.range,
                                     radius: 1.0,
                                     // Shadows kill all performance
-                                    shadows_enabled: false && !properties.shadows_disabled,
+                                    shadows_enabled: false, // !properties.shadows_disabled,
                                     ..Default::default()
                                 },
                                 transform: Transform::from_xyz(
