@@ -170,7 +170,8 @@ fn handle_events(
         query.iter_mut()
     {
         if laser.active {
-            let delta_position = transform.translation() - laser.last_position;
+            let last_pos = *&laser.last_position;
+            let delta_position = transform.translation() - last_pos;
             laser.last_position = transform.translation();
 
             // Pass 1 second as the time & delta_position as the velocity because
@@ -178,9 +179,9 @@ fn handle_events(
             // and the time it takes is irrelevant.
 
             if let Some((entity, toi)) = rapier_context.cast_shape(
-                transform.translation(),
+                last_pos - delta_position, // sometimes lasers pass through things that are next to where they are spawned, thus we check starting a bit behind them
                 Quat::from_affine3(&transform.affine()),
-                delta_position,
+                delta_position * 2.0, // * 2.0 to account for checking behind the laser
                 collider,
                 1.0,
                 QueryFilter::predicate(QueryFilter::default(), &|entity| {
