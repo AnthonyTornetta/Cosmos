@@ -56,6 +56,7 @@ impl Chunk {
         self.block_health.reset_health(x, y, z);
     }
 
+    #[inline]
     pub fn has_see_through_block_at(
         &self,
         x: usize,
@@ -68,14 +69,17 @@ impl Chunk {
             .is_see_through()
     }
 
+    #[inline]
     pub fn has_block_at(&self, x: usize, y: usize, z: usize) -> bool {
         self.block_at(x, y, z) != AIR_BLOCK_ID
     }
 
+    #[inline]
     pub fn block_at(&self, x: usize, y: usize, z: usize) -> u16 {
         self.blocks[z * CHUNK_DIMENSIONS * CHUNK_DIMENSIONS + y * CHUNK_DIMENSIONS + x]
     }
 
+    #[inline]
     pub fn has_full_block_at(
         &self,
         x: usize,

@@ -77,6 +77,7 @@ fn register_block_hardness(
     register_hardness(&mut registry, 20.0, &blocks, "cosmos:light");
 
     register_hardness(&mut registry, 100.0, &blocks, "cosmos:ship_hull");
+    register_hardness(&mut registry, 100.0, &blocks, "cosmos:glass");
 }
 
 fn sanity_check(blocks: Res<Registry<Block>>, hardness: Res<Registry<BlockHardness>>) {

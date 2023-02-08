@@ -24,6 +24,7 @@ impl<T: Identifiable + Sync + Send> Registry<T> {
     }
 
     /// Prefer to use `Self::from_id` in general, numeric IDs may change, unlocalized names should not
+    #[inline]
     pub fn from_numeric_id(&self, id: u16) -> &T {
         &self.contents[id as usize]
     }
