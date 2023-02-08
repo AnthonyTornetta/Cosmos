@@ -58,6 +58,8 @@ pub struct Laser {
     /// Thus, this field should always be checked when determining if a laser should break/damage something.
     active: bool,
     pub strength: f32,
+
+    last_position: Vec3,
 }
 
 impl Laser {
@@ -93,6 +95,7 @@ impl Laser {
             .insert(Laser {
                 strength,
                 active: true,
+                last_position: position,
             })
             .insert(pbr)
             .insert(RigidBody::Dynamic)
@@ -158,7 +161,6 @@ fn handle_events(
         With<Laser>,
     >,
     mut commands: Commands,
-    // mut event_reader: EventReader<CollisionEvent>,
     mut event_writer: EventWriter<LaserCollideEvent>,
     rapier_context: Res<RapierContext>,
     parent_query: Query<&Parent>,
@@ -168,12 +170,19 @@ fn handle_events(
         query.iter_mut()
     {
         if laser.active {
+            let delta_position = transform.translation() - laser.last_position;
+            laser.last_position = transform.translation();
+
+            // Pass 1 second as the time & delta_position as the velocity because
+            // it simulates the laser moving over the perioid it moved in 1 second
+            // and the time it takes is irrelevant.
+
             if let Some((entity, toi)) = rapier_context.cast_shape(
                 transform.translation(),
                 Quat::from_affine3(&transform.affine()),
-                velocity.linvel,
+                delta_position,
                 collider,
-                velocity.linvel.dot(velocity.linvel),
+                1.0,
                 QueryFilter::predicate(QueryFilter::default(), &|entity| {
                     if let Some(no_collide_entity) = no_collide_entity {
                         if no_collide_entity.0 == entity {
