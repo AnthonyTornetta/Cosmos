@@ -74,9 +74,7 @@ fn monitor_loading<T: StateData + Clone + Copy>(
             state.set(loading_status.loading_state).unwrap();
         } else if cur_state == loading_status.loading_state {
             println!("Transitioning to post loading state!");
-            state
-                .set(loading_status.post_loading_state)
-                .unwrap();
+            state.set(loading_status.post_loading_state).unwrap();
         } else if cur_state == loading_status.post_loading_state {
             println!("Transitioning to done state!");
             state.set(loading_status.done_state).unwrap();
@@ -116,15 +114,9 @@ pub fn register<T: StateData + Clone + Copy>(
     app.add_event::<DoneLoadingEvent>()
         .add_event::<AddLoadingEvent>()
         // States cannot be changed during on_enter, and this prevents that from happening
-        .add_system_set(
-            SystemSet::on_update(pre_loading_state).with_system(monitor_loading::<T>),
-        )
-        .add_system_set(
-            SystemSet::on_update(loading_state).with_system(monitor_loading::<T>),
-        )
-        .add_system_set(
-            SystemSet::on_update(post_loading_state).with_system(monitor_loading::<T>),
-        )
+        .add_system_set(SystemSet::on_update(pre_loading_state).with_system(monitor_loading::<T>))
+        .add_system_set(SystemSet::on_update(loading_state).with_system(monitor_loading::<T>))
+        .add_system_set(SystemSet::on_update(post_loading_state).with_system(monitor_loading::<T>))
         .insert_resource(LoadingStatus::new(
             pre_loading_state,
             loading_state,

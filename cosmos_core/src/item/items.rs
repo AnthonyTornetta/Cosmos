@@ -1,6 +1,5 @@
 // use crate::loader::{AddLoadingEvent, DoneLoadingEvent, LoadingManager};
-use crate::registry::{self};
-use bevy::ecs::schedule::StateData;
+use crate::registry;
 use bevy::prelude::App;
 
 use super::Item;
@@ -15,12 +14,8 @@ use super::Item;
 //     loading.finish_loading(id, &mut end_writer);
 // }
 
-pub fn register<T: StateData + Clone + Copy>(
-    app: &mut App,
-    pre_loading_state: T,
-    _loading_state: T,
-) {
-    registry::register::<T, Item>(app, pre_loading_state);
+pub fn register(app: &mut App) {
+    registry::create_registry::<Item>(app);
 
     // app.add_system_set(SystemSet::on_enter(loading_state).with_system(add_cosmos_items));
 }

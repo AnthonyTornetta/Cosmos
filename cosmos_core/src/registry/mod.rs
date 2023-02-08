@@ -1,11 +1,9 @@
 pub mod identifiable;
+pub mod multi_registry;
 
-use std::slice::Iter;
-
-use crate::loader::{AddLoadingEvent, DoneLoadingEvent, LoadingManager};
-use bevy::ecs::schedule::StateData;
-use bevy::prelude::{App, Commands, EventWriter, ResMut, Resource, SystemSet};
+use bevy::prelude::{App, Resource};
 use bevy::utils::HashMap;
+use std::slice::Iter;
 
 use self::identifiable::Identifiable;
 
@@ -51,26 +49,6 @@ impl<T: Identifiable + Sync + Send> Registry<T> {
     }
 }
 
-pub fn add_registry_resource<T: Identifiable + Sync + Send + 'static>(
-    mut commands: Commands,
-    mut loading: ResMut<LoadingManager>,
-    mut end_writer: EventWriter<DoneLoadingEvent>,
-    mut start_writer: EventWriter<AddLoadingEvent>,
-) {
-    let loader_id = loading.register_loader(&mut start_writer);
-
-    let registry = Registry::<T>::new();
-
-    commands.insert_resource(registry);
-
-    loading.finish_loading(loader_id, &mut end_writer);
-}
-
-pub fn register<T: StateData + Clone + Copy, K: Identifiable + Sync + Send + 'static>(
-    app: &mut App,
-    pre_loading_state: T,
-) {
-    app.add_system_set(
-        SystemSet::on_enter(pre_loading_state).with_system(add_registry_resource::<K>),
-    );
+pub fn create_registry<T: Identifiable + Sync + Send + 'static>(app: &mut App) {
+    app.insert_resource(Registry::<T>::new());
 }

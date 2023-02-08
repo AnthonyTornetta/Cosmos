@@ -1,9 +1,11 @@
 pub mod asset;
+pub mod block;
 pub mod camera;
 pub mod events;
 pub mod input;
 pub mod interactions;
 pub mod lang;
+pub mod materials;
 pub mod netty;
 pub mod plugin;
 pub mod projectiles;
@@ -221,37 +223,82 @@ fn process_player_movement(
     }
 }
 
-fn create_sun(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-) {
-    commands
-        .spawn(PointLightBundle {
-            transform: Transform::from_xyz(0.0, 100.0, 0.0),
-            point_light: PointLight {
-                intensity: 160000.0,
-                range: 160000.0,
-                color: Color::WHITE,
-                shadows_enabled: true,
+fn create_sun(mut commands: Commands) {
+    const HALF_SIZE: f32 = 500.0;
+    commands.spawn(DirectionalLightBundle {
+        directional_light: DirectionalLight {
+            // Configure the projection to better fit the scene
+            shadow_projection: OrthographicProjection {
+                left: -HALF_SIZE,
+                right: HALF_SIZE,
+                bottom: -HALF_SIZE,
+                top: HALF_SIZE,
+                near: -10.0 * HALF_SIZE,
+                far: 10.0 * HALF_SIZE,
                 ..default()
             },
+            illuminance: 30000.0,
+            shadows_enabled: true,
             ..default()
-        })
-        .with_children(|builder| {
-            builder.spawn(PbrBundle {
-                mesh: meshes.add(Mesh::from(shape::UVSphere {
-                    radius: 0.1,
-                    ..default()
-                })),
-                material: materials.add(StandardMaterial {
-                    base_color: Color::RED,
-                    emissive: Color::rgba_linear(100.0, 0.0, 0.0, 0.0),
-                    ..default()
-                }),
-                ..default()
-            });
-        });
+        },
+        transform: Transform {
+            translation: Vec3::new(0.0, 300.0, 0.0),
+            rotation: Quat::from_euler(EulerRot::XYZ, -PI / 4.0, 0.1, 0.1),
+            ..default()
+        },
+        ..default()
+    });
+    // commands
+    //     .spawn(PointLightBundle {
+    //         transform: Transform::from_xyz(0.0, 100.0, 0.0),
+    //         point_light: PointLight {
+    //             intensity: 160000.0,
+    //             range: 160000.0,
+    //             color: Color::WHITE,
+    //             shadows_enabled: true,
+    //             ..default()
+    //         },
+    //         ..default()
+    //     })
+    //     .with_children(|builder| {
+    //         builder.spawn(PbrBundle {
+    //             mesh: meshes.add(Mesh::from(shape::UVSphere {
+    //                 radius: 0.1,
+    //                 ..default()
+    //             })),
+    //             material: materials.add(StandardMaterial {
+    //                 base_color: Color::RED,
+    //                 emissive: Color::rgba_linear(100.0, 0.0, 0.0, 0.0),
+    //                 ..default()
+    //             }),
+    //             ..default()
+    //         });
+    //     });
+
+    // commands
+    //     .spawn(PointLightBundle {
+    //         transform: Transform::from_xyz(0.5, 2.5, 0.5),
+    //         point_light: PointLight {
+    //             intensity: 600.0,
+    //             range: 20.0,
+    //             color: Color::WHITE,
+    //             radius: 0.6,
+    //             shadows_enabled: true,
+    //             ..default()
+    //         },
+    //         ..default()
+    //     })
+    //     .with_children(|builder| {
+    //         builder.spawn(PbrBundle {
+    //             mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
+    //             material: materials.add(StandardMaterial {
+    //                 base_color: Color::WHITE,
+    //                 emissive: Color::rgba_linear(1.0, 1.0, 1.0, 0.0),
+    //                 ..default()
+    //             }),
+    //             ..default()
+    //         });
+    //     });
 }
 
 fn main() {
@@ -317,7 +364,9 @@ fn main() {
     structure_renderer::register(&mut app);
     lang::register(&mut app);
     structure::register(&mut app);
+    block::register(&mut app);
     projectiles::register(&mut app);
+    materials::register(&mut app);
 
     app.run();
 }

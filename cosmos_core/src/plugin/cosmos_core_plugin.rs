@@ -93,8 +93,8 @@ impl<T: StateData + Clone + Copy> Plugin for CosmosCorePlugin<T> {
             self.loading_state,
             self.post_loading_state,
         );
-        item::register(app, self.pre_loading_state, self.loading_state);
-        blockitems::register(app, self.pre_loading_state, self.loading_state);
+        item::register(app);
+        blockitems::register(app, self.loading_state);
         physics::register(app);
         structure::events::register(app);
         events::register(app, self.playing_game_state);

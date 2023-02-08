@@ -10,9 +10,11 @@ pub mod block_builder;
 pub mod blocks;
 pub mod hardness;
 
+#[derive(Reflect, FromReflect, Debug, Eq, PartialEq, Clone, Copy, Hash)]
 pub enum BlockProperty {
     Opaque,
     Transparent,
+    Illuminated,
     Full,
     Empty,
     ShipOnly,
@@ -72,6 +74,7 @@ impl BlockProperty {
             Self::Full => 0b100,
             Self::Empty => 0b1000,
             Self::ShipOnly => 0b10000,
+            Self::Illuminated => 0b100000,
         }
     }
 
@@ -170,7 +173,7 @@ pub fn register<T: StateData + Clone + Copy>(
     post_loading_state: T,
 ) {
     blocks::register(app, pre_loading_state, loading_state);
-    hardness::register(app, pre_loading_state, loading_state, post_loading_state);
+    hardness::register(app, loading_state, post_loading_state);
 
     app.register_type::<BlockFace>();
 }

@@ -116,17 +116,35 @@ pub fn add_cosmos_blocks(
             .create(),
     );
 
+    blocks.register(
+        BlockBuilder::new("cosmos:light".to_owned(), 0.1)
+            .add_property(BlockProperty::Opaque)
+            .add_property(BlockProperty::Full)
+            .add_property(BlockProperty::Illuminated)
+            .set_all_uvs(16)
+            .create(),
+    );
+
     loading.finish_loading(id, &mut end_writer);
 }
 
 // Game will break without air & needs this at ID 0
-fn add_air_block(mut blocks: ResMut<Registry<Block>>) {
+fn add_air_block(
+    mut blocks: ResMut<Registry<Block>>,
+    mut add_loader_event: EventWriter<AddLoadingEvent>,
+    mut done_loading_event: EventWriter<DoneLoadingEvent>,
+    mut loader: ResMut<LoadingManager>,
+) {
+    let id = loader.register_loader(&mut add_loader_event);
+
     blocks.register(
         BlockBuilder::new("cosmos:air".into(), 0.0)
             .add_property(BlockProperty::Transparent)
             .add_property(BlockProperty::Empty)
             .create(),
     );
+
+    loader.finish_loading(id, &mut done_loading_event);
 }
 
 pub(crate) fn register<T: StateData + Clone + Copy>(
@@ -134,10 +152,10 @@ pub(crate) fn register<T: StateData + Clone + Copy>(
     pre_loading_state: T,
     loading_state: T,
 ) {
-    registry::register::<T, Block>(app, pre_loading_state);
+    registry::create_registry::<Block>(app);
 
     // Game will break without air & needs this at ID 0
-    app.add_system_set(SystemSet::on_exit(pre_loading_state).with_system(add_air_block));
+    app.add_system_set(SystemSet::on_enter(pre_loading_state).with_system(add_air_block));
 
     app.add_system_set(SystemSet::on_enter(loading_state).with_system(add_cosmos_blocks));
 }

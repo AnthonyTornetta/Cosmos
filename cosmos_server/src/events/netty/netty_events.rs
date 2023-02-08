@@ -77,6 +77,12 @@ fn generate_player_inventory(items: &Registry<Item>) -> Inventory {
         999,
     );
 
+    inventory.insert_at(
+        8,
+        items.from_id("cosmos:light").expect("Light item to exist"),
+        64,
+    );
+
     inventory
 }
 
