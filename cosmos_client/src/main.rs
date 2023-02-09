@@ -130,18 +130,18 @@ fn process_ship_movement(
 
 fn reset_cursor(
     mut event_reader: EventReader<ChangePilotEvent>,
-    query: Query<&LocalPlayer>,
+    local_player_query: Query<&LocalPlayer>,
     pilot_query: Query<&Pilot>,
     mut crosshair_position: ResMut<CrosshairOffset>,
 ) {
     for ev in event_reader.iter() {
         if let Some(pilot) = ev.pilot_entity {
-            if query.get(pilot).is_ok() {
+            if local_player_query.get(pilot).is_ok() {
                 crosshair_position.x = 0.0;
                 crosshair_position.y = 0.0;
             }
         } else if let Ok(pilot) = pilot_query.get(ev.structure_entity) {
-            if query.get(pilot.entity).is_ok() {
+            if local_player_query.get(pilot.entity).is_ok() {
                 crosshair_position.x = 0.0;
                 crosshair_position.y = 0.0;
             }
