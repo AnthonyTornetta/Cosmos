@@ -85,8 +85,8 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
     - [x] Item stacks
   - [x] Way of select which item
 - [x] Store block damage
-- [ ] Ability to save ships to disk + load them
-  - [ ] Implement console commands
+- [x] Ability to save ships to disk + load them
+  - [x] Implement console commands
 
 ## Release 0.0.1a
 - [x] Player Movement
