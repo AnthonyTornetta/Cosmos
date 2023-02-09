@@ -170,7 +170,7 @@ fn handle_events(
         query.iter_mut()
     {
         if laser.active {
-            let last_pos = *&laser.last_position;
+            let last_pos = laser.last_position;
             let delta_position = transform.translation() - last_pos;
             laser.last_position = transform.translation();
 
