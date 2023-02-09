@@ -37,6 +37,8 @@ To view the documentation & have it update as you modify it, run `mdbook serve` 
 
 See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the list of current features/bugs in development.
 
+## Release 0.0.3a
+- [ ] Infinite universe
 
 ## Release 0.0.2a
 - [x] Improved state management
