@@ -11,6 +11,7 @@ use state::GameState;
 
 pub mod blocks;
 pub mod commands;
+pub mod entities;
 pub mod events;
 pub mod init;
 pub mod inventory;

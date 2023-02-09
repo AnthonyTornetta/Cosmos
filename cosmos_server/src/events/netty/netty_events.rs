@@ -14,6 +14,7 @@ use cosmos_core::{
 };
 use renet_visualizer::RenetServerVisualizer;
 
+use crate::entities::player::PlayerLooking;
 use crate::netty::network_helpers::{ClientTicks, ServerLobby};
 
 fn generate_player_inventory(items: &Registry<Item>) -> Inventory {
@@ -139,7 +140,10 @@ fn handle_events_system(
                     .insert(Collider::capsule_y(0.5, 0.25))
                     .insert(player)
                     .insert(ReadMassProperties::default())
-                    .insert(inventory);
+                    .insert(inventory)
+                    .insert(PlayerLooking {
+                        rotation: Quat::IDENTITY,
+                    });
 
                 lobby.players.insert(*id, player_entity.id());
 

@@ -15,10 +15,18 @@ use crate::state::game_state::GameState;
 fn send_position(
     mut client: ResMut<RenetClient>,
     query: Query<(&Velocity, &Transform), (With<Player>, With<LocalPlayer>)>,
+    camera_query: Query<&Transform, With<Camera3d>>,
 ) {
     if let Ok((velocity, transform)) = query.get_single() {
+        let looking = if let Ok(trans) = camera_query.get_single() {
+            Quat::from_affine3(&trans.compute_affine())
+        } else {
+            Quat::IDENTITY
+        };
+
         let msg = ClientUnreliableMessages::PlayerBody {
             body: NettyRigidBody::new(velocity, transform),
+            looking,
         };
 
         let serialized_message = bincode::serialize(&msg).unwrap();
