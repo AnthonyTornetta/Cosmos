@@ -47,7 +47,8 @@ fn process_player_interaction(
 ) {
     let trans = camera.get_single().unwrap();
     if let Ok(player_body) = player_body.get_single() {
-        if let Some((entity, intersection)) = rapier_context.cast_ray_and_get_normal(
+        if let Ok(Some((entity, intersection))) = rapier_context.cast_ray_and_get_normal(
+            0,
             trans.translation(),
             trans.forward(),
             10.0,

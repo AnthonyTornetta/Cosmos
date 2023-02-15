@@ -60,6 +60,7 @@ fn lasers_netty(
                         ..Default::default()
                     },
                     &time,
+                    0,
                     &mut commands,
                 );
             }

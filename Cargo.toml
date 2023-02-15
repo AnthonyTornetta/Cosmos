@@ -3,7 +3,7 @@
 members = [
   "cosmos_client",
   "cosmos_core",
-  "cosmos_server"
+  "cosmos_server",
 ]
 
 # Fixed wgpu issue
@@ -11,7 +11,7 @@ resolver="2"
 
 [workspace.dependencies]
 bevy = "0.9.1"
-bevy_rapier3d = { version = "0.20.0", features = [ "simd-stable", "serde-serialize" ] }
+bevy_rapier3d = { git = "https://github.com/AnthonyTornetta/bevy_rapier/", version = "0.20.0", features = [ "simd-stable", "serde-serialize" ] }
 
 take_mut = "0.2.2"
 
