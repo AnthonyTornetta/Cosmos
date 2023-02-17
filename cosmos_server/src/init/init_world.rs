@@ -2,6 +2,7 @@ use std::time::SystemTime;
 
 use bevy::prelude::*;
 use cosmos_core::{
+    physics::location::Location,
     structure::{events::StructureCreated, planet::planet_builder::TPlanetBuilder, Structure},
     utils::resource_wrapper::ResourceWrapper,
 };
@@ -37,11 +38,7 @@ fn create_world(mut commands: Commands, mut event_writer: EventWriter<StructureC
     let marker = biosphere.get_marker_component();
     let builder = ServerPlanetBuilder::default();
 
-    builder.insert_planet(
-        &mut entity_cmd,
-        Transform::from_xyz(0.0, 0.0, 0.0),
-        &mut structure,
-    );
+    builder.insert_planet(&mut entity_cmd, Location::default(), &mut structure);
 
     entity_cmd
         .insert(structure)

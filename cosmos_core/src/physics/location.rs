@@ -1,5 +1,7 @@
+use std::ops::Add;
+
 use bevy::{
-    prelude::{App, Component, Vec3},
+    prelude::{App, Changed, Component, DetectChanges, Query, Transform, Vec3},
     reflect::{FromReflect, Reflect},
 };
 use serde::{Deserialize, Serialize};
@@ -7,15 +9,30 @@ use serde::{Deserialize, Serialize};
 /// This represents the diameter of a sector. So at a local
 /// of 0, 0, 0 you can travel `SECTOR_DIMENSIONS / 2.0` blocks in any direction and
 /// remain within it.
-pub const SECTOR_DIMENSIONS: f32 = 10_000.0;
+pub const SECTOR_DIMENSIONS: f32 = 5_000.0;
 
-#[derive(Default, Component, Debug, PartialEq, Serialize, Deserialize, Reflect, FromReflect)]
+#[derive(
+    Default, Component, Debug, PartialEq, Serialize, Deserialize, Reflect, FromReflect, Clone, Copy,
+)]
 pub struct Location {
     pub local: Vec3,
 
     pub sector_x: i64,
     pub sector_y: i64,
     pub sector_z: i64,
+}
+
+impl Add<Vec3> for Location {
+    type Output = Location;
+
+    fn add(self, rhs: Vec3) -> Self::Output {
+        Location::new(
+            self.local + rhs,
+            self.sector_x,
+            self.sector_y,
+            self.sector_z,
+        )
+    }
 }
 
 impl Location {
@@ -41,10 +58,32 @@ impl Location {
             SECTOR_DIMENSIONS * dsz + (other.local.z - self.local.z),
         )
     }
+
+    pub fn set_from(&mut self, other: &Location) {
+        self.local = other.local;
+        self.sector_x = other.sector_x;
+        self.sector_y = other.sector_y;
+        self.sector_z = other.sector_z;
+    }
+}
+
+fn sync_locations(mut query: Query<(&Transform, &mut Location), Changed<Transform>>) {
+    for (trans, mut loc) in query.iter_mut() {
+        // Really not that great, but I can't think of any other way of avoiding recursively changing each other
+        loc.bypass_change_detection().local = trans.translation;
+    }
+}
+
+/// This has to be put after specific systems in the server/client or jitter happens
+pub fn sync_translations(mut query: Query<(&mut Transform, &Location), Changed<Location>>) {
+    for (mut trans, loc) in query.iter_mut() {
+        // Really not that great, but I can't think of any other way of avoiding recursively changing each other
+        trans.bypass_change_detection().translation = loc.local;
+    }
 }
 
 pub(crate) fn register(app: &mut App) {
-    app.register_type::<Location>();
+    app.register_type::<Location>().add_system(sync_locations);
 }
 
 #[cfg(test)]

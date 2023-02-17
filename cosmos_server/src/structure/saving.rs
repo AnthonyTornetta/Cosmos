@@ -1,13 +1,16 @@
 use std::{fs, io::ErrorKind};
 
-use bevy::prelude::{App, Commands, Component, Entity, EventReader, EventWriter, Query, Transform};
+use bevy::prelude::{App, Commands, Component, Entity, EventReader, EventWriter, Query};
 use bevy_rapier3d::prelude::Velocity;
-use cosmos_core::structure::{
-    events::{ChunkSetEvent, StructureCreated},
-    loading::ChunksNeedLoaded,
-    planet::planet_builder::TPlanetBuilder,
-    ship::ship_builder::TShipBuilder,
-    Structure,
+use cosmos_core::{
+    physics::location::Location,
+    structure::{
+        events::{ChunkSetEvent, StructureCreated},
+        loading::ChunksNeedLoaded,
+        planet::planet_builder::TPlanetBuilder,
+        ship::ship_builder::TShipBuilder,
+        Structure,
+    },
 };
 
 use super::{
@@ -58,7 +61,7 @@ fn send_actual_loaded_events(
 pub fn load_structure(
     structure_name: &str,
     structure_type: StructureType,
-    spawn_at: Transform,
+    spawn_at: Location,
     commands: &mut Commands,
     event_writer: &mut EventWriter<StructureCreated>,
     structure_loaded: &mut EventWriter<SendDelayedStructureLoadEvent>,

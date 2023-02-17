@@ -4,13 +4,16 @@ use bevy::{
 };
 use bevy_rapier3d::prelude::Velocity;
 
-use crate::{physics::structure_physics::StructurePhysics, structure::Structure};
+use crate::{
+    physics::{location::Location, structure_physics::StructurePhysics},
+    structure::Structure,
+};
 
 pub trait TStructureBuilder {
     fn insert_structure(
         &self,
         entity: &mut EntityCommands,
-        transform: Transform,
+        location: Location,
         velocity: Velocity,
         structure: &mut Structure,
     );
@@ -22,7 +25,7 @@ impl TStructureBuilder for StructureBuilder {
     fn insert_structure(
         &self,
         entity: &mut EntityCommands,
-        transform: Transform,
+        location: Location,
         velocity: Velocity,
         structure: &mut Structure,
     ) {
@@ -32,10 +35,10 @@ impl TStructureBuilder for StructureBuilder {
 
         entity
             .insert(PbrBundle {
-                transform,
+                transform: Transform::from_translation(location.local),
                 ..Default::default()
             })
-            .insert(velocity)
+            .insert((velocity, location))
             .with_children(|parent| {
                 for z in 0..structure.chunks_length() {
                     for y in 0..structure.chunks_height() {

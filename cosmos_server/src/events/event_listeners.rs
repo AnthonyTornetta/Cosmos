@@ -6,17 +6,18 @@ use cosmos_core::{
         netty_rigidbody::NettyRigidBody, server_reliable_messages::ServerReliableMessages,
         NettyChannel,
     },
+    physics::location::Location,
     structure::{events::StructureCreated, planet::Planet, ship::Ship, Structure},
 };
 
 fn on_structure_created(
     mut server: ResMut<RenetServer>,
     mut event_reader: EventReader<StructureCreated>,
-    structure_query: Query<(&Structure, &Transform, &Velocity)>,
+    structure_query: Query<(&Structure, &Transform, &Velocity, &Location)>,
     type_query: Query<(Option<&Ship>, Option<&Planet>)>,
 ) {
     for ev in event_reader.iter() {
-        let (structure, transform, velocity) = structure_query.get(ev.entity).unwrap();
+        let (structure, transform, velocity, location) = structure_query.get(ev.entity).unwrap();
 
         let (ship, planet) = type_query.get(ev.entity).unwrap();
 
@@ -25,7 +26,7 @@ fn on_structure_created(
                 NettyChannel::Reliable.id(),
                 bincode::serialize(&ServerReliableMessages::PlanetCreate {
                     entity: ev.entity,
-                    body: NettyRigidBody::new(velocity, transform),
+                    body: NettyRigidBody::new(velocity, transform.rotation, *location),
                     width: structure.chunks_width() as u32,
                     height: structure.chunks_height() as u32,
                     length: structure.chunks_length() as u32,
@@ -37,7 +38,7 @@ fn on_structure_created(
                 NettyChannel::Reliable.id(),
                 bincode::serialize(&ServerReliableMessages::ShipCreate {
                     entity: ev.entity,
-                    body: NettyRigidBody::new(velocity, transform),
+                    body: NettyRigidBody::new(velocity, transform.rotation, *location),
                     width: structure.chunks_width() as u32,
                     height: structure.chunks_height() as u32,
                     length: structure.chunks_length() as u32,

@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
+use cosmos_core::physics::location::Location;
 use cosmos_core::structure::{
     events::StructureCreated, ship::ship_builder::TShipBuilder, Structure,
 };
@@ -8,7 +9,8 @@ use crate::structure::ship::{loading::ShipNeedsCreated, server_ship_builder::Ser
 use crate::GameState;
 
 pub struct CreateShipEvent {
-    pub ship_transform: Transform,
+    pub ship_location: Location,
+    pub rotation: Quat,
 }
 
 fn event_reader(
@@ -25,7 +27,7 @@ fn event_reader(
 
         builder.insert_ship(
             &mut entity,
-            ev.ship_transform,
+            ev.ship_location,
             Velocity::zero(),
             &mut structure,
         );

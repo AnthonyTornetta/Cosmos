@@ -1,8 +1,8 @@
-use bevy::{ecs::system::EntityCommands, prelude::Transform};
+use bevy::ecs::system::EntityCommands;
 use bevy_rapier3d::prelude::{RigidBody, Velocity};
 
 use crate::{
-    physics::gravity_system::GravityEmitter,
+    physics::{gravity_system::GravityEmitter, location::Location},
     structure::{structure_builder::TStructureBuilder, Structure},
 };
 
@@ -12,7 +12,7 @@ pub trait TPlanetBuilder {
     fn insert_planet(
         &self,
         entity: &mut EntityCommands,
-        transform: Transform,
+        location: Location,
         structure: &mut Structure,
     );
 }
@@ -31,11 +31,11 @@ impl<T: TStructureBuilder> TPlanetBuilder for PlanetBuilder<T> {
     fn insert_planet(
         &self,
         entity: &mut EntityCommands,
-        transform: Transform,
+        location: Location,
         structure: &mut Structure,
     ) {
         self.structure_builder
-            .insert_structure(entity, transform, Velocity::default(), structure);
+            .insert_structure(entity, location, Velocity::default(), structure);
 
         entity
             .insert(Planet)

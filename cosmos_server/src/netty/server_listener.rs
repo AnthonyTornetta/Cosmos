@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy_renet::renet::RenetServer;
+use cosmos_core::physics::location::{sync_translations, Location};
 use cosmos_core::structure::systems::{SystemActive, Systems};
 use cosmos_core::{
     entities::player::Player,
@@ -28,8 +29,6 @@ fn server_listen_messages(
     mut commands: Commands,
     mut server: ResMut<RenetServer>,
     lobby: ResMut<ServerLobby>,
-    players: Query<Entity, With<Player>>,
-    transform_query: Query<&Transform>,
     structure_query: Query<&Structure>,
     mut systems_query: Query<&mut Systems>,
     mut break_block_event: EventWriter<BlockBreakEvent>,
@@ -40,7 +39,7 @@ fn server_listen_messages(
     mut ship_movement_event_writer: EventWriter<ShipSetMovementEvent>,
     mut pilot_change_event_writer: EventWriter<ChangePilotEvent>,
     pilot_query: Query<&Pilot>,
-    player_looking_query: Query<&PlayerLooking>,
+    mut change_player_query: Query<(&mut Location, &mut PlayerLooking), With<Player>>,
 ) {
     for client_id in server.clients_id().into_iter() {
         while let Some(message) = server.receive_message(client_id, NettyChannel::Unreliable.id()) {
@@ -49,11 +48,11 @@ fn server_listen_messages(
 
                 match command {
                     ClientUnreliableMessages::PlayerBody { body, looking } => {
-                        if let Ok(entity) = players.get(*player_entity) {
-                            commands
-                                .entity(entity)
-                                .insert(TransformBundle::from_transform(body.create_transform()))
-                                .insert(PlayerLooking { rotation: looking });
+                        if let Ok((mut location, mut currently_looking)) =
+                            change_player_query.get_mut(*player_entity)
+                        {
+                            location.set_from(&body.location);
+                            currently_looking.rotation = looking;
                         }
                     }
                     ClientUnreliableMessages::SetMovement { movement } => {
@@ -156,15 +155,15 @@ fn server_listen_messages(
                 }
                 ClientReliableMessages::CreateShip { name: _name } => {
                     if let Some(client) = lobby.players.get(&client_id) {
-                        let transform = transform_query.get(*client).unwrap();
+                        let (location, looking) = change_player_query.get(*client).unwrap();
 
-                        let looking = player_looking_query.get(*client).unwrap();
+                        let ship_location =
+                            *location + looking.rotation.mul_vec3(Vec3::new(0.0, 0.0, -4.0));
 
-                        let mut ship_transform = *transform;
-                        ship_transform.translation +=
-                            looking.rotation.mul_vec3(Vec3::new(0.0, 0.0, -4.0));
-
-                        create_ship_event_writer.send(CreateShipEvent { ship_transform });
+                        create_ship_event_writer.send(CreateShipEvent {
+                            ship_location,
+                            rotation: looking.rotation,
+                        });
                     }
                 }
                 ClientReliableMessages::PilotQuery { ship_entity } => {
@@ -199,5 +198,7 @@ fn server_listen_messages(
 }
 
 pub fn register(app: &mut App) {
-    app.add_system(server_listen_messages);
+    app.add_system(server_listen_messages)
+        // If it's not after this system, some noticable jitter can happen
+        .add_system(sync_translations.after(server_listen_messages));
 }

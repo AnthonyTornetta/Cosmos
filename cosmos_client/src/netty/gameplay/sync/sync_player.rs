@@ -2,11 +2,11 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
-    entities::player::Player,
     netty::{
         client_unreliable_messages::ClientUnreliableMessages, netty_rigidbody::NettyRigidBody,
         NettyChannel,
     },
+    physics::location::Location,
 };
 
 use crate::netty::flags::LocalPlayer;
@@ -14,10 +14,10 @@ use crate::state::game_state::GameState;
 
 fn send_position(
     mut client: ResMut<RenetClient>,
-    query: Query<(&Velocity, &Transform), (With<Player>, With<LocalPlayer>)>,
+    query: Query<(&Velocity, &Transform, &Location), With<LocalPlayer>>,
     camera_query: Query<&Transform, With<Camera3d>>,
 ) {
-    if let Ok((velocity, transform)) = query.get_single() {
+    if let Ok((velocity, transform, location)) = query.get_single() {
         let looking = if let Ok(trans) = camera_query.get_single() {
             Quat::from_affine3(&trans.compute_affine())
         } else {
@@ -25,7 +25,7 @@ fn send_position(
         };
 
         let msg = ClientUnreliableMessages::PlayerBody {
-            body: NettyRigidBody::new(velocity, transform),
+            body: NettyRigidBody::new(velocity, transform.rotation, *location),
             looking,
         };
 

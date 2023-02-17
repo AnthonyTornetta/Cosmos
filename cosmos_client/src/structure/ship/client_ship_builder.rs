@@ -1,7 +1,11 @@
+use bevy::ecs::system::EntityCommands;
 use bevy_rapier3d::prelude::Velocity;
-use cosmos_core::structure::{
-    ship::ship_builder::{ShipBuilder, TShipBuilder},
-    Structure,
+use cosmos_core::{
+    physics::location::Location,
+    structure::{
+        ship::ship_builder::{ShipBuilder, TShipBuilder},
+        Structure,
+    },
 };
 
 use crate::structure::client_structure_builder::ClientStructureBuilder;
@@ -21,12 +25,12 @@ impl Default for ClientShipBuilder {
 impl TShipBuilder for ClientShipBuilder {
     fn insert_ship(
         &self,
-        entity: &mut bevy::ecs::system::EntityCommands,
-        transform: bevy::prelude::Transform,
+        entity: &mut EntityCommands,
+        location: Location,
         velocity: Velocity,
         structure: &mut Structure,
     ) {
         self.ship_bulder
-            .insert_ship(entity, transform, velocity, structure);
+            .insert_ship(entity, location, velocity, structure);
     }
 }

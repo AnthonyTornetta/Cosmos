@@ -11,6 +11,7 @@ use cosmos_core::{
         server_reliable_messages::ServerReliableMessages,
         server_unreliable_messages::ServerUnreliableMessages, NettyChannel,
     },
+    physics::location::Location,
     registry::Registry,
     structure::{
         chunk::Chunk,
@@ -88,7 +89,7 @@ fn client_sync_players(
     mut set_chunk_event_writer: EventWriter<ChunkSetEvent>,
     mut block_change_event_writer: EventWriter<BlockChangedEvent>,
     query_player: Query<&Player>,
-    mut query_body: Query<(&mut Transform, &mut Velocity, Option<&LocalPlayer>)>,
+    mut query_body: Query<(&mut Location, &mut Transform, &mut Velocity), Without<LocalPlayer>>,
     mut query_structure: Query<&mut Structure>,
     blocks: Res<Registry<Block>>,
     mut pilot_change_event_writer: EventWriter<ChangePilotEvent>,
@@ -106,16 +107,14 @@ fn client_sync_players(
             } => {
                 for (server_entity, body) in bodies.iter() {
                     if let Some(entity) = network_mapping.client_from_server(server_entity) {
-                        if let Ok((mut transform, mut velocity, local)) =
+                        if let Ok((mut location, mut transform, mut velocity)) =
                             query_body.get_mut(*entity)
                         {
-                            if local.is_none() {
-                                transform.translation = body.translation.into();
-                                transform.rotation = body.rotation.into();
+                            location.set_from(&body.location);
+                            transform.rotation = body.rotation.into();
 
-                                velocity.linvel = body.body_vel.linvel.into();
-                                velocity.angvel = body.body_vel.angvel.into();
-                            }
+                            velocity.linvel = body.body_vel.linvel.into();
+                            velocity.angvel = body.body_vel.angvel.into();
                         }
                     }
                 }
@@ -149,19 +148,25 @@ fn client_sync_players(
 
                 let inventory: Inventory = bincode::deserialize(&inventory_serialized).unwrap();
 
-                client_entity
-                    .insert(PbrBundle {
-                        transform: body.create_transform(),
+                client_entity.insert((
+                    PbrBundle {
+                        transform: Transform::with_rotation(
+                            // The player should always be at 0.0, 0.0, 0.0
+                            Transform::from_xyz(0.0, 0.0, 0.0),
+                            body.rotation,
+                        ),
                         mesh: meshes.add(shape::Capsule::default().into()),
                         ..default()
-                    })
-                    .insert(Collider::capsule_y(0.5, 0.25))
-                    .insert(LockedAxes::ROTATION_LOCKED)
-                    .insert(RigidBody::Dynamic)
-                    .insert(body.create_velocity())
-                    .insert(Player::new(name, id))
-                    .insert(ReadMassProperties::default())
-                    .insert(inventory);
+                    },
+                    body.location,
+                    Collider::capsule_y(0.5, 0.25),
+                    LockedAxes::ROTATION_LOCKED,
+                    RigidBody::Dynamic,
+                    body.create_velocity(),
+                    Player::new(name, id),
+                    ReadMassProperties::default(),
+                    inventory,
+                ));
 
                 if client_id == id {
                     client_entity
@@ -222,7 +227,7 @@ fn client_sync_players(
                     Structure::new(width as usize, height as usize, length as usize);
 
                 let builder = ClientPlanetBuilder::default();
-                builder.insert_planet(&mut entity, body.create_transform(), &mut structure);
+                builder.insert_planet(&mut entity, body.location, &mut structure);
 
                 entity.insert(structure).insert(NeedsPopulated);
 
@@ -246,7 +251,7 @@ fn client_sync_players(
                 let builder = ClientShipBuilder::default();
                 builder.insert_ship(
                     &mut entity,
-                    body.create_transform(),
+                    body.location,
                     body.create_velocity(),
                     &mut structure,
                 );
@@ -371,6 +376,9 @@ pub(crate) fn register(app: &mut App) {
         SystemSet::on_update(GameState::Playing)
             .with_system(client_sync_players)
             .with_system(update_crosshair)
-            .with_system(insert_last_rotation),
+            .with_system(insert_last_rotation)
+            .with_system(
+                cosmos_core::physics::location::sync_translations.after(client_sync_players),
+            ),
     );
 }
