@@ -1,7 +1,7 @@
 use std::ops::Add;
 
 use bevy::{
-    prelude::{App, Changed, Component, DetectChanges, Query, Transform, Vec3},
+    prelude::{App, Component, Vec3},
     reflect::{FromReflect, Reflect},
 };
 use serde::{Deserialize, Serialize};
@@ -20,6 +20,8 @@ pub struct Location {
     pub sector_x: i64,
     pub sector_y: i64,
     pub sector_z: i64,
+
+    pub last_transform_loc: Vec3,
 }
 
 impl Add<Vec3> for Location {
@@ -42,6 +44,7 @@ impl Location {
             sector_x,
             sector_y,
             sector_z,
+            last_transform_loc: local,
         }
     }
 
@@ -67,23 +70,8 @@ impl Location {
     }
 }
 
-fn sync_locations(mut query: Query<(&Transform, &mut Location), Changed<Transform>>) {
-    for (trans, mut loc) in query.iter_mut() {
-        // Really not that great, but I can't think of any other way of avoiding recursively changing each other
-        loc.bypass_change_detection().local = trans.translation;
-    }
-}
-
-/// This has to be put after specific systems in the server/client or jitter happens
-pub fn sync_translations(mut query: Query<(&mut Transform, &Location), Changed<Location>>) {
-    for (mut trans, loc) in query.iter_mut() {
-        // Really not that great, but I can't think of any other way of avoiding recursively changing each other
-        trans.bypass_change_detection().translation = loc.local;
-    }
-}
-
 pub(crate) fn register(app: &mut App) {
-    app.register_type::<Location>().add_system(sync_locations);
+    app.register_type::<Location>();
 }
 
 #[cfg(test)]

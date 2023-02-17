@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy_renet::renet::RenetServer;
-use cosmos_core::physics::location::{sync_translations, Location};
+use cosmos_core::physics::location::Location;
 use cosmos_core::structure::systems::{SystemActive, Systems};
 use cosmos_core::{
     entities::player::Player,
@@ -197,8 +197,24 @@ fn server_listen_messages(
     }
 }
 
+fn sync_locations(mut query: Query<(&Transform, &mut Location), Changed<Transform>>) {
+    for (trans, mut loc) in query.iter_mut() {
+        // Really not that great, but I can't think of any other way of avoiding recursively changing each other
+        loc.bypass_change_detection().local = trans.translation;
+    }
+}
+
+/// This has to be put after specific systems in the server/client or jitter happens
+fn sync_translations(mut query: Query<(&mut Transform, &Location), Changed<Location>>) {
+    for (mut trans, loc) in query.iter_mut() {
+        // Really not that great, but I can't think of any other way of avoiding recursively changing each other
+        trans.bypass_change_detection().translation = loc.local;
+    }
+}
+
 pub fn register(app: &mut App) {
-    app.add_system(server_listen_messages)
+    app.add_system(sync_locations)
+        .add_system(server_listen_messages.after(sync_locations))
         // If it's not after this system, some noticable jitter can happen
         .add_system(sync_translations.after(server_listen_messages));
 }

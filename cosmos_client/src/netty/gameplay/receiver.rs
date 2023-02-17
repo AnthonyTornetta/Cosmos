@@ -30,6 +30,7 @@ use crate::{
         lobby::{ClientLobby, PlayerInfo},
         mapping::NetworkMapping,
     },
+    physics::player_world::PlayerWorld,
     state::game_state::GameState,
     structure::{
         chunk_retreiver::NeedsPopulated, planet::client_planet_builder::ClientPlanetBuilder,
@@ -94,6 +95,8 @@ fn client_sync_players(
     blocks: Res<Registry<Block>>,
     mut pilot_change_event_writer: EventWriter<ChangePilotEvent>,
     mut set_ship_movement_event: EventWriter<SetShipMovementEvent>,
+
+    player_world: Query<Entity, With<PlayerWorld>>,
 ) {
     let client_id = client.client_id();
 
@@ -138,17 +141,17 @@ fn client_sync_players(
             ServerReliableMessages::PlayerCreate {
                 body,
                 id,
-                entity,
+                entity: server_entity,
                 name,
                 inventory_serialized,
             } => {
                 println!("Player {} ({}) connected!", name.as_str(), id);
 
-                let mut client_entity = commands.spawn_empty();
+                let mut entity_cmds = commands.spawn_empty();
 
                 let inventory: Inventory = bincode::deserialize(&inventory_serialized).unwrap();
 
-                client_entity.insert((
+                entity_cmds.insert((
                     PbrBundle {
                         transform: Transform::with_rotation(
                             // The player should always be at 0.0, 0.0, 0.0
@@ -168,8 +171,18 @@ fn client_sync_players(
                     inventory,
                 ));
 
+                let client_entity = entity_cmds.id();
+
+                let player_info = PlayerInfo {
+                    server_entity,
+                    client_entity,
+                };
+
+                lobby.players.insert(id, player_info);
+                network_mapping.add_mapping(&client_entity, &server_entity);
+
                 if client_id == id {
-                    client_entity
+                    entity_cmds
                         .insert(LocalPlayer::default())
                         .with_children(|parent| {
                             parent
@@ -190,15 +203,11 @@ fn client_sync_players(
                                 })
                                 .insert(CameraHelper::default());
                         });
+                } else {
+                    commands
+                        .entity(player_world.single())
+                        .add_child(client_entity);
                 }
-
-                let player_info = PlayerInfo {
-                    server_entity: entity,
-                    client_entity: client_entity.id(),
-                };
-
-                lobby.players.insert(id, player_info);
-                network_mapping.add_mapping(&client_entity.id(), &entity);
             }
             ServerReliableMessages::PlayerRemove { id } => {
                 if let Some(PlayerInfo {
@@ -206,10 +215,10 @@ fn client_sync_players(
                     server_entity,
                 }) = lobby.players.remove(&id)
                 {
-                    let mut entity = commands.entity(client_entity);
+                    let entity = commands.entity(client_entity);
 
                     let name = query_player.get(client_entity).unwrap().name.clone();
-                    entity.despawn();
+                    entity.despawn_recursive();
                     network_mapping.remove_mapping_from_server_entity(&server_entity);
 
                     println!("Player {name} ({id}) disconnected");
@@ -222,16 +231,20 @@ fn client_sync_players(
                 width,
                 body,
             } => {
-                let mut entity = commands.spawn_empty();
+                let mut entity_cmds = commands.spawn_empty();
                 let mut structure =
                     Structure::new(width as usize, height as usize, length as usize);
 
                 let builder = ClientPlanetBuilder::default();
-                builder.insert_planet(&mut entity, body.location, &mut structure);
+                builder.insert_planet(&mut entity_cmds, body.location, &mut structure);
 
-                entity.insert(structure).insert(NeedsPopulated);
+                entity_cmds.insert(structure).insert(NeedsPopulated);
 
-                network_mapping.add_mapping(&entity.id(), &server_entity);
+                let entity = entity_cmds.id();
+
+                commands.entity(player_world.single()).add_child(entity);
+
+                network_mapping.add_mapping(&entity, &server_entity);
 
                 // create_structure_writer.send(StructureCreated {
                 //     entity: entity.id(),
@@ -244,21 +257,25 @@ fn client_sync_players(
                 height,
                 length,
             } => {
-                let mut entity = commands.spawn_empty();
+                let mut entity_cmds = commands.spawn_empty();
                 let mut structure =
                     Structure::new(width as usize, height as usize, length as usize);
 
                 let builder = ClientShipBuilder::default();
                 builder.insert_ship(
-                    &mut entity,
+                    &mut entity_cmds,
                     body.location,
                     body.create_velocity(),
                     &mut structure,
                 );
 
-                entity.insert(structure);
+                entity_cmds.insert(structure);
 
-                network_mapping.add_mapping(&entity.id(), &server_entity);
+                let entity = entity_cmds.id();
+
+                commands.entity(player_world.single()).add_child(entity);
+
+                network_mapping.add_mapping(&entity, &server_entity);
 
                 client.send_message(
                     NettyChannel::Reliable.id(),
@@ -368,6 +385,41 @@ fn client_sync_players(
     }
 }
 
+fn sync_locations(mut query: Query<(&Transform, &mut Location), Changed<Transform>>) {
+    for (trans, mut loc) in query.iter_mut() {
+        // Really not that great, but I can't think of any other way of avoiding recursively changing each other
+        let loc = loc.bypass_change_detection();
+
+        let delta = trans.translation - loc.last_transform_loc;
+        loc.last_transform_loc = trans.translation;
+
+        loc.local += delta;
+    }
+}
+
+fn sync_translations(
+    mut local_player: Query<(&mut Transform, &mut Location), With<LocalPlayer>>,
+    mut query: Query<(&mut Transform, &Location), (Changed<Location>, Without<LocalPlayer>)>,
+) {
+    let (mut trans, mut local_loc) = local_player.single_mut();
+    let (trans, local_loc) = (
+        trans.bypass_change_detection(),
+        local_loc.bypass_change_detection(),
+    );
+
+    let delta = trans.translation - local_loc.last_transform_loc;
+    local_loc.last_transform_loc = trans.translation;
+
+    local_loc.local += delta;
+
+    trans.translation = Vec3::ZERO;
+
+    for (mut trans, loc) in query.iter_mut() {
+        // Really not that great, but I can't think of any other way of avoiding recursively changing each other
+        trans.bypass_change_detection().translation = local_loc.relativie_coords_to(loc);
+    }
+}
+
 pub(crate) fn register(app: &mut App) {
     app.add_system_set(
         SystemSet::on_update(GameState::LoadingWorld).with_system(client_sync_players),
@@ -377,8 +429,7 @@ pub(crate) fn register(app: &mut App) {
             .with_system(client_sync_players)
             .with_system(update_crosshair)
             .with_system(insert_last_rotation)
-            .with_system(
-                cosmos_core::physics::location::sync_translations.after(client_sync_players),
-            ),
+            .with_system(sync_translations.after(client_sync_players))
+            .with_system(sync_locations.before(client_sync_players)),
     );
 }
