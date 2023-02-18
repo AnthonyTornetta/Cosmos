@@ -1,7 +1,7 @@
 use std::ops::{Add, AddAssign};
 
 use bevy::{
-    prelude::{App, Component, Vec3},
+    prelude::{App, Children, Component, Entity, Parent, Query, Transform, Vec3, With, Without},
     reflect::{FromReflect, Reflect},
 };
 use serde::{Deserialize, Serialize};
@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 /// This represents the diameter of a sector. So at a local
 /// of 0, 0, 0 you can travel `SECTOR_DIMENSIONS / 2.0` blocks in any direction and
 /// remain within it.
-pub const SECTOR_DIMENSIONS: f32 = 5_000.0;
+pub const SECTOR_DIMENSIONS: f32 = 10_000.0;
 
 #[derive(
     Default, Component, Debug, PartialEq, Serialize, Deserialize, Reflect, FromReflect, Clone, Copy,
@@ -58,19 +58,19 @@ impl Location {
     }
 
     pub fn fix_bounds(&mut self) {
-        let over_x = (self.local.x / SECTOR_DIMENSIONS) as i64;
+        let over_x = (self.local.x / (SECTOR_DIMENSIONS / 2.0)) as i64;
         if over_x != 0 {
             self.local.x -= over_x as f32 * SECTOR_DIMENSIONS;
             self.sector_x += over_x as i64;
         }
 
-        let over_y = (self.local.y / SECTOR_DIMENSIONS) as i64;
+        let over_y = (self.local.y / (SECTOR_DIMENSIONS / 2.0)) as i64;
         if over_y != 0 {
             self.local.y -= over_y as f32 * SECTOR_DIMENSIONS;
             self.sector_y += over_y as i64;
         }
 
-        let over_z = (self.local.z / SECTOR_DIMENSIONS) as i64;
+        let over_z = (self.local.z / (SECTOR_DIMENSIONS / 2.0)) as i64;
         if over_z != 0 {
             self.local.z -= over_z as f32 * SECTOR_DIMENSIONS;
             self.sector_z += over_z;
@@ -103,6 +103,43 @@ impl Location {
         self.fix_bounds();
 
         self.last_transform_loc = translation;
+    }
+}
+
+fn bubble(
+    loc: &Location,
+    entity: Entity,
+    mut query: &mut Query<(&mut Location, &Transform, Option<&Children>), With<Parent>>,
+) {
+    let mut todos = Vec::new();
+
+    if let Ok((mut location, transform, children)) = query.get_mut(entity) {
+        location.set_from(loc);
+        location.local += transform.translation;
+        location.last_transform_loc = transform.translation;
+        location.fix_bounds();
+
+        if let Some(children) = children {
+            for child in children {
+                todos.push((*child, *location));
+            }
+        }
+    }
+
+    for (entity, loc) in todos {
+        bubble(&loc, entity, &mut query);
+    }
+}
+
+/// Makes sure children have proper locations, this should be added after syncing transforms & locations.
+pub fn bubble_down_locations(
+    tops: Query<(&Location, &Children), Without<Parent>>,
+    mut middles: Query<(&mut Location, &Transform, Option<&Children>), With<Parent>>,
+) {
+    for (loc, children) in tops.iter() {
+        for entity in children.iter() {
+            bubble(loc, *entity, &mut middles);
+        }
     }
 }
 

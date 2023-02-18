@@ -9,4 +9,5 @@ pub fn register(app: &mut App) {
     structure_physics::register(app);
     gravity_system::register(app);
     location::register(app);
+    player_world::register(app);
 }

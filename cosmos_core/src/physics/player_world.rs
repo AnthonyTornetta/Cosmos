@@ -1,7 +1,17 @@
 use bevy::{
-    prelude::{Component, Entity},
+    prelude::{App, Component, Entity},
     reflect::{FromReflect, Reflect},
 };
 
+/// Represents a world of objects that are based around a certain entity
 #[derive(Component, Reflect, FromReflect, Debug)]
 pub struct PlayerWorld(pub Entity);
+
+/// Represents the world this entity is within - make sure to double check this is still valid when using it
+#[derive(Component, Reflect, FromReflect, Debug)]
+pub struct WorldWithin(pub Entity);
+
+pub(crate) fn register(app: &mut App) {
+    app.register_type::<PlayerWorld>();
+    app.register_type::<WorldWithin>();
+}

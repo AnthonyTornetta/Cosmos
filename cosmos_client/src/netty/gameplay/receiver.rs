@@ -11,7 +11,10 @@ use cosmos_core::{
         server_reliable_messages::ServerReliableMessages,
         server_unreliable_messages::ServerUnreliableMessages, NettyChannel,
     },
-    physics::{location::Location, player_world::PlayerWorld},
+    physics::{
+        location::{bubble_down_locations, Location},
+        player_world::PlayerWorld,
+    },
     registry::Registry,
     structure::{
         chunk::Chunk,
@@ -438,42 +441,6 @@ fn sync_transforms_and_locations(
         //     transform.translation = world_location.relative_coords_to(&location);
         //     location.last_transform_loc = transform.translation;
         // }
-    }
-}
-
-fn bubble(
-    loc: &Location,
-    entity: Entity,
-    mut query: &mut Query<(&mut Location, &Transform, Option<&Children>), With<Parent>>,
-) {
-    let mut todos = Vec::new();
-
-    if let Ok((mut location, transform, children)) = query.get_mut(entity) {
-        location.set_from(loc);
-        location.local += transform.translation;
-        location.last_transform_loc = transform.translation;
-        location.fix_bounds();
-
-        if let Some(children) = children {
-            for child in children {
-                todos.push((*child, *location));
-            }
-        }
-    }
-
-    for (entity, loc) in todos {
-        bubble(&loc, entity, &mut query);
-    }
-}
-
-fn bubble_down_locations(
-    tops: Query<(&Location, &Children), Without<Parent>>,
-    mut middles: Query<(&mut Location, &Transform, Option<&Children>), With<Parent>>,
-) {
-    for (loc, children) in tops.iter() {
-        for entity in children.iter() {
-            bubble(loc, *entity, &mut middles);
-        }
     }
 }
 
