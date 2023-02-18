@@ -385,7 +385,9 @@ fn client_sync_players(
     }
 }
 
-fn sync_locations(mut query: Query<(&Transform, &mut Location), Changed<Transform>>) {
+fn sync_locations(
+    mut query: Query<(&Transform, &mut Location), (Changed<Transform>, Without<LocalPlayer>)>,
+) {
     for (trans, mut loc) in query.iter_mut() {
         // Really not that great, but I can't think of any other way of avoiding recursively changing each other
         let loc = loc.bypass_change_detection();
@@ -398,26 +400,40 @@ fn sync_locations(mut query: Query<(&Transform, &mut Location), Changed<Transfor
 }
 
 fn sync_translations(
-    mut local_player: Query<(&mut Transform, &mut Location), With<LocalPlayer>>,
+    local_player: Query<(&Transform, &Location), With<LocalPlayer>>,
     mut query: Query<(&mut Transform, &Location), (Changed<Location>, Without<LocalPlayer>)>,
 ) {
-    let (mut trans, mut local_loc) = local_player.single_mut();
-    let (trans, local_loc) = (
-        trans.bypass_change_detection(),
-        local_loc.bypass_change_detection(),
-    );
-
-    let delta = trans.translation - local_loc.last_transform_loc;
-    local_loc.last_transform_loc = trans.translation;
-
-    local_loc.local += delta;
-
-    trans.translation = Vec3::ZERO;
+    let (trans, local_loc) = local_player.single();
 
     for (mut trans, loc) in query.iter_mut() {
         // Really not that great, but I can't think of any other way of avoiding recursively changing each other
-        trans.bypass_change_detection().translation = local_loc.relativie_coords_to(loc);
+        // trans.bypass_change_detection().translation = local_loc.last_transform_loc(loc);
     }
+}
+
+fn sync_player(
+    mut local_player: Query<(&GlobalTransform, &mut Transform, &mut Location), With<LocalPlayer>>,
+    mut world: Query<(&mut Transform, &mut Location), (Without<LocalPlayer>, Without<PlayerWorld>)>,
+) {
+    let (g_trans, mut p_t, mut p_l) = local_player.single_mut();
+
+    let (mut p_t, mut p_l) = (p_t.bypass_change_detection(), p_l.bypass_change_detection());
+
+    let delta = g_trans.translation(); // + p_t.translation;
+
+    println!("{delta}");
+
+    // p_l.last_transform_loc = ;
+
+    // w_t.translation += p_t.translation;
+
+    for (mut transform, mut location) in world.iter_mut() {
+        transform.bypass_change_detection().translation -= delta;
+        location.bypass_change_detection().last_transform_loc -= delta;
+    }
+
+    p_l.last_transform_loc = Vec3::ZERO;
+    p_t.translation = Vec3::ZERO;
 }
 
 pub(crate) fn register(app: &mut App) {
@@ -430,6 +446,7 @@ pub(crate) fn register(app: &mut App) {
             .with_system(update_crosshair)
             .with_system(insert_last_rotation)
             .with_system(sync_translations.after(client_sync_players))
-            .with_system(sync_locations.before(client_sync_players)),
+            .with_system(sync_locations.after(sync_translations))
+            .with_system(sync_player.after(sync_locations)),
     );
 }

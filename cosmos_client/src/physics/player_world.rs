@@ -19,6 +19,7 @@ fn add_player_world(mut commands: Commands) {
             ..Default::default()
         },
         PlayerWorld,
+        Location::default(),
     ));
 }
 

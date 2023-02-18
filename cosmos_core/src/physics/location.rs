@@ -1,4 +1,4 @@
-use std::ops::Add;
+use std::ops::{Add, AddAssign};
 
 use bevy::{
     prelude::{App, Component, Vec3},
@@ -37,6 +37,30 @@ impl Add<Vec3> for Location {
     }
 }
 
+impl AddAssign<Vec3> for &mut Location {
+    fn add_assign(&mut self, rhs: Vec3) {
+        self.local += rhs;
+
+        let over_x = (self.local.x / SECTOR_DIMENSIONS) as i64;
+        if over_x != 0 {
+            self.local.x += over_x as f32 * SECTOR_DIMENSIONS;
+            self.sector_x += over_x as i64;
+        }
+
+        let over_y = (self.local.y / SECTOR_DIMENSIONS) as i64;
+        if over_y != 0 {
+            self.local.y += over_y as f32 * SECTOR_DIMENSIONS;
+            self.sector_y += over_y as i64;
+        }
+
+        let over_z = (self.local.z / SECTOR_DIMENSIONS) as i64;
+        if over_z != 0 {
+            self.local.z += over_z as f32 * SECTOR_DIMENSIONS;
+            self.sector_z += over_z;
+        }
+    }
+}
+
 impl Location {
     pub fn new(local: Vec3, sector_x: i64, sector_y: i64, sector_z: i64) -> Self {
         Self {
@@ -48,7 +72,7 @@ impl Location {
         }
     }
 
-    pub fn relativie_coords_to(&self, other: &Location) -> Vec3 {
+    pub fn relative_coords_to(&self, other: &Location) -> Vec3 {
         let (dsx, dsy, dsz) = (
             (other.sector_x - self.sector_x) as f32,
             (other.sector_y - self.sector_y) as f32,
@@ -89,7 +113,7 @@ mod tests {
 
         let result = Vec3::new(30.0, 30.0, 30.0);
 
-        assert_eq!(l1.relativie_coords_to(&l2), result);
+        assert_eq!(l1.relative_coords_to(&l2), result);
     }
 
     #[test]
@@ -99,7 +123,7 @@ mod tests {
 
         let result = Vec3::new(-30.0, -30.0, -30.0);
 
-        assert_eq!(l1.relativie_coords_to(&l2), result);
+        assert_eq!(l1.relative_coords_to(&l2), result);
     }
 
     #[test]
@@ -113,7 +137,7 @@ mod tests {
             -30.0 - SECTOR_DIMENSIONS,
         );
 
-        assert_eq!(l1.relativie_coords_to(&l2), result);
+        assert_eq!(l1.relative_coords_to(&l2), result);
     }
 
     #[test]
@@ -127,7 +151,7 @@ mod tests {
             -30.0 + SECTOR_DIMENSIONS,
         );
 
-        assert_eq!(l1.relativie_coords_to(&l2), result);
+        assert_eq!(l1.relative_coords_to(&l2), result);
     }
 
     #[test]
@@ -141,7 +165,7 @@ mod tests {
             -30.0 + SECTOR_DIMENSIONS * 10.0,
         );
 
-        assert_eq!(l1.relativie_coords_to(&l2), result);
+        assert_eq!(l1.relative_coords_to(&l2), result);
     }
 
     #[test]
@@ -155,6 +179,6 @@ mod tests {
             -30.0 - SECTOR_DIMENSIONS * 10.0,
         );
 
-        assert_eq!(l1.relativie_coords_to(&l2), result);
+        assert_eq!(l1.relative_coords_to(&l2), result);
     }
 }

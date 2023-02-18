@@ -24,7 +24,7 @@ impl NettyRigidBody {
     pub fn create_transform(&self, world_origin: &Location) -> Transform {
         Transform {
             rotation: self.rotation,
-            translation: world_origin.relativie_coords_to(&self.location),
+            translation: world_origin.relative_coords_to(&self.location),
             scale: Vec3::new(1.0, 1.0, 1.0),
         }
     }
