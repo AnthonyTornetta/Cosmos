@@ -28,36 +28,21 @@ impl Add<Vec3> for Location {
     type Output = Location;
 
     fn add(self, rhs: Vec3) -> Self::Output {
-        Location::new(
+        let mut loc = Location::new(
             self.local + rhs,
             self.sector_x,
             self.sector_y,
             self.sector_z,
-        )
+        );
+        loc.fix_bounds();
+        loc
     }
 }
 
 impl AddAssign<Vec3> for &mut Location {
     fn add_assign(&mut self, rhs: Vec3) {
         self.local += rhs;
-
-        let over_x = (self.local.x / SECTOR_DIMENSIONS) as i64;
-        if over_x != 0 {
-            self.local.x += over_x as f32 * SECTOR_DIMENSIONS;
-            self.sector_x += over_x as i64;
-        }
-
-        let over_y = (self.local.y / SECTOR_DIMENSIONS) as i64;
-        if over_y != 0 {
-            self.local.y += over_y as f32 * SECTOR_DIMENSIONS;
-            self.sector_y += over_y as i64;
-        }
-
-        let over_z = (self.local.z / SECTOR_DIMENSIONS) as i64;
-        if over_z != 0 {
-            self.local.z += over_z as f32 * SECTOR_DIMENSIONS;
-            self.sector_z += over_z;
-        }
+        self.fix_bounds();
     }
 }
 
@@ -69,6 +54,26 @@ impl Location {
             sector_y,
             sector_z,
             last_transform_loc: local,
+        }
+    }
+
+    pub fn fix_bounds(&mut self) {
+        let over_x = (self.local.x / SECTOR_DIMENSIONS) as i64;
+        if over_x != 0 {
+            self.local.x -= over_x as f32 * SECTOR_DIMENSIONS;
+            self.sector_x += over_x as i64;
+        }
+
+        let over_y = (self.local.y / SECTOR_DIMENSIONS) as i64;
+        if over_y != 0 {
+            self.local.y -= over_y as f32 * SECTOR_DIMENSIONS;
+            self.sector_y += over_y as i64;
+        }
+
+        let over_z = (self.local.z / SECTOR_DIMENSIONS) as i64;
+        if over_z != 0 {
+            self.local.z -= over_z as f32 * SECTOR_DIMENSIONS;
+            self.sector_z += over_z;
         }
     }
 
@@ -91,6 +96,13 @@ impl Location {
         self.sector_x = other.sector_x;
         self.sector_y = other.sector_y;
         self.sector_z = other.sector_z;
+    }
+
+    pub fn apply_updates(&mut self, translation: Vec3) {
+        self.local += translation - self.last_transform_loc;
+        self.fix_bounds();
+
+        self.last_transform_loc = translation;
     }
 }
 

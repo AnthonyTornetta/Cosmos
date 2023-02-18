@@ -11,7 +11,7 @@ use cosmos_core::{
         server_reliable_messages::ServerReliableMessages,
         server_unreliable_messages::ServerUnreliableMessages, NettyChannel,
     },
-    physics::location::Location,
+    physics::{location::Location, player_world::PlayerWorld},
     registry::Registry,
     structure::{
         chunk::Chunk,
@@ -30,7 +30,6 @@ use crate::{
         lobby::{ClientLobby, PlayerInfo},
         mapping::NetworkMapping,
     },
-    physics::player_world::PlayerWorld,
     state::game_state::GameState,
     structure::{
         chunk_retreiver::NeedsPopulated, planet::client_planet_builder::ClientPlanetBuilder,
@@ -95,8 +94,6 @@ fn client_sync_players(
     blocks: Res<Registry<Block>>,
     mut pilot_change_event_writer: EventWriter<ChangePilotEvent>,
     mut set_ship_movement_event: EventWriter<SetShipMovementEvent>,
-
-    player_world: Query<Entity, With<PlayerWorld>>,
 ) {
     let client_id = client.client_id();
 
@@ -203,10 +200,8 @@ fn client_sync_players(
                                 })
                                 .insert(CameraHelper::default());
                         });
-                } else {
-                    commands
-                        .entity(player_world.single())
-                        .add_child(client_entity);
+
+                    commands.spawn((PlayerWorld(client_entity), body.location));
                 }
             }
             ServerReliableMessages::PlayerRemove { id } => {
@@ -242,8 +237,6 @@ fn client_sync_players(
 
                 let entity = entity_cmds.id();
 
-                commands.entity(player_world.single()).add_child(entity);
-
                 network_mapping.add_mapping(&entity, &server_entity);
 
                 // create_structure_writer.send(StructureCreated {
@@ -272,8 +265,6 @@ fn client_sync_players(
                 entity_cmds.insert(structure);
 
                 let entity = entity_cmds.id();
-
-                commands.entity(player_world.single()).add_child(entity);
 
                 network_mapping.add_mapping(&entity, &server_entity);
 
@@ -385,55 +376,105 @@ fn client_sync_players(
     }
 }
 
-fn sync_locations(
-    mut query: Query<(&Transform, &mut Location), (Changed<Transform>, Without<LocalPlayer>)>,
+fn sync_transforms_and_locations(
+    mut trans_query_no_parent: Query<
+        (&mut Transform, &mut Location),
+        (Without<PlayerWorld>, Without<Parent>),
+    >,
+    mut trans_query_with_parent: Query<
+        (&mut Transform, &mut Location),
+        (Without<PlayerWorld>, With<Parent>),
+    >,
+    parent_query: Query<&Parent>,
+    player_query: Query<Entity, With<LocalPlayer>>,
+    // mut player_trans_query: Query<
+    //     (&mut Transform, &mut Location),
+    //     (Without<PlayerWorld>, With<LocalPlayer>),
+    // >,
+    mut world_query: Query<&mut Location, With<PlayerWorld>>,
 ) {
-    for (trans, mut loc) in query.iter_mut() {
-        // Really not that great, but I can't think of any other way of avoiding recursively changing each other
-        let loc = loc.bypass_change_detection();
+    if let Ok(mut world_location) = world_query.get_single_mut() {
+        for (transform, mut location) in trans_query_no_parent.iter_mut() {
+            location.apply_updates(transform.translation);
+        }
+        for (transform, mut location) in trans_query_with_parent.iter_mut() {
+            location.apply_updates(transform.translation);
+        }
 
-        let delta = trans.translation - loc.last_transform_loc;
-        loc.last_transform_loc = trans.translation;
+        let mut player_entity = player_query.single();
 
-        loc.local += delta;
+        while let Ok(parent) = parent_query.get(player_entity) {
+            let parent_entity = parent.get();
+            if trans_query_no_parent.contains(parent_entity) {
+                player_entity = parent.get();
+            } else {
+                break;
+            }
+        }
+
+        let (_, location) = trans_query_no_parent
+            .get(player_entity)
+            .or_else(|_| trans_query_with_parent.get(player_entity))
+            .expect("The above loop guarantees this is valid");
+
+        world_location.set_from(&location);
+
+        for (mut transform, mut location) in trans_query_no_parent.iter_mut() {
+            transform.translation = world_location.relative_coords_to(&location);
+            location.last_transform_loc = transform.translation;
+        }
+
+        // let (mut player_transform, mut player_location) = player_trans_query.single_mut();
+
+        // player_location.apply_updates(player_transform.translation);
+
+        // world_location.set_from(&player_location);
+
+        // player_transform.translation = world_location.relative_coords_to(&player_location);
+        // player_location.last_transform_loc = player_transform.translation;
+
+        // for (mut transform, mut location) in trans_query.iter_mut() {
+        //     location.apply_updates(transform.translation);
+        //     transform.translation = world_location.relative_coords_to(&location);
+        //     location.last_transform_loc = transform.translation;
+        // }
     }
 }
 
-fn sync_translations(
-    local_player: Query<(&Transform, &Location), With<LocalPlayer>>,
-    mut query: Query<(&mut Transform, &Location), (Changed<Location>, Without<LocalPlayer>)>,
+fn bubble(
+    loc: &Location,
+    entity: Entity,
+    mut query: &mut Query<(&mut Location, &Transform, Option<&Children>), With<Parent>>,
 ) {
-    let (trans, local_loc) = local_player.single();
+    let mut todos = Vec::new();
 
-    for (mut trans, loc) in query.iter_mut() {
-        // Really not that great, but I can't think of any other way of avoiding recursively changing each other
-        // trans.bypass_change_detection().translation = local_loc.last_transform_loc(loc);
+    if let Ok((mut location, transform, children)) = query.get_mut(entity) {
+        location.set_from(loc);
+        location.local += transform.translation;
+        location.last_transform_loc = transform.translation;
+        location.fix_bounds();
+
+        if let Some(children) = children {
+            for child in children {
+                todos.push((*child, *location));
+            }
+        }
+    }
+
+    for (entity, loc) in todos {
+        bubble(&loc, entity, &mut query);
     }
 }
 
-fn sync_player(
-    mut local_player: Query<(&GlobalTransform, &mut Transform, &mut Location), With<LocalPlayer>>,
-    mut world: Query<(&mut Transform, &mut Location), (Without<LocalPlayer>, Without<PlayerWorld>)>,
+fn bubble_down_locations(
+    tops: Query<(&Location, &Children), Without<Parent>>,
+    mut middles: Query<(&mut Location, &Transform, Option<&Children>), With<Parent>>,
 ) {
-    let (g_trans, mut p_t, mut p_l) = local_player.single_mut();
-
-    let (mut p_t, mut p_l) = (p_t.bypass_change_detection(), p_l.bypass_change_detection());
-
-    let delta = g_trans.translation(); // + p_t.translation;
-
-    println!("{delta}");
-
-    // p_l.last_transform_loc = ;
-
-    // w_t.translation += p_t.translation;
-
-    for (mut transform, mut location) in world.iter_mut() {
-        transform.bypass_change_detection().translation -= delta;
-        location.bypass_change_detection().last_transform_loc -= delta;
+    for (loc, children) in tops.iter() {
+        for entity in children.iter() {
+            bubble(loc, *entity, &mut middles);
+        }
     }
-
-    p_l.last_transform_loc = Vec3::ZERO;
-    p_t.translation = Vec3::ZERO;
 }
 
 pub(crate) fn register(app: &mut App) {
@@ -445,8 +486,7 @@ pub(crate) fn register(app: &mut App) {
             .with_system(client_sync_players)
             .with_system(update_crosshair)
             .with_system(insert_last_rotation)
-            .with_system(sync_translations.after(client_sync_players))
-            .with_system(sync_locations.after(sync_translations))
-            .with_system(sync_player.after(sync_locations)),
+            .with_system(sync_transforms_and_locations.after(client_sync_players))
+            .with_system(bubble_down_locations.after(sync_transforms_and_locations)),
     );
 }

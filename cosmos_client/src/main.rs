@@ -7,7 +7,6 @@ pub mod interactions;
 pub mod lang;
 pub mod materials;
 pub mod netty;
-pub mod physics;
 pub mod plugin;
 pub mod projectiles;
 pub mod rendering;
@@ -375,7 +374,6 @@ fn main() {
     block::register(&mut app);
     projectiles::register(&mut app);
     materials::register(&mut app);
-    physics::register(&mut app);
 
     app.run();
 }
