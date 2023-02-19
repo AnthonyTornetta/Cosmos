@@ -204,7 +204,13 @@ fn client_sync_players(
                                 .insert(CameraHelper::default());
                         });
 
-                    commands.spawn((PlayerWorld(client_entity), body.location));
+                    commands.spawn((
+                        PlayerWorld {
+                            player: client_entity,
+                            world_id: DEFAULT_WORLD_ID,
+                        },
+                        body.location,
+                    ));
                 }
             }
             ServerReliableMessages::PlayerRemove { id } => {
@@ -396,14 +402,14 @@ fn sync_transforms_and_locations(
     // >,
     mut world_query: Query<&mut Location, With<PlayerWorld>>,
 ) {
-    if let Ok(mut world_location) = world_query.get_single_mut() {
-        for (transform, mut location) in trans_query_no_parent.iter_mut() {
-            location.apply_updates(transform.translation);
-        }
-        for (transform, mut location) in trans_query_with_parent.iter_mut() {
-            location.apply_updates(transform.translation);
-        }
+    for (transform, mut location) in trans_query_no_parent.iter_mut() {
+        location.apply_updates(transform.translation);
+    }
+    for (transform, mut location) in trans_query_with_parent.iter_mut() {
+        location.apply_updates(transform.translation);
+    }
 
+    if let Ok(mut world_location) = world_query.get_single_mut() {
         let mut player_entity = player_query.single();
 
         while let Ok(parent) = parent_query.get(player_entity) {

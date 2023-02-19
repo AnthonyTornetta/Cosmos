@@ -1,4 +1,7 @@
-use std::ops::{Add, AddAssign};
+use std::{
+    fmt::Display,
+    ops::{Add, AddAssign},
+};
 
 use bevy::{
     prelude::{App, Children, Component, Entity, Parent, Query, Transform, Vec3, With, Without},
@@ -22,6 +25,16 @@ pub struct Location {
     pub sector_z: i64,
 
     pub last_transform_loc: Vec3,
+}
+
+impl Display for Location {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "({:.3}, {:.3}, {:.3}), [{}, {}, {}]",
+            self.local.x, self.local.y, self.local.z, self.sector_x, self.sector_y, self.sector_z
+        )
+    }
 }
 
 impl Add<Vec3> for Location {
@@ -77,6 +90,7 @@ impl Location {
         }
     }
 
+    /// Only usable over f32 distances - will return infinity for distances that are outside the bounds of f32 calculations
     pub fn relative_coords_to(&self, other: &Location) -> Vec3 {
         let (dsx, dsy, dsz) = (
             (other.sector_x - self.sector_x) as f32,
@@ -89,6 +103,13 @@ impl Location {
             SECTOR_DIMENSIONS * dsy + (other.local.y - self.local.y),
             SECTOR_DIMENSIONS * dsz + (other.local.z - self.local.z),
         )
+    }
+
+    /// Only usable over f32 distances - will return infinity for distances that are outside the bounds of f32 calculations
+    pub fn distance_sqrd(&self, other: &Location) -> f32 {
+        let rel = self.relative_coords_to(other);
+
+        rel.dot(rel)
     }
 
     pub fn set_from(&mut self, other: &Location) {

@@ -5,6 +5,7 @@ use cosmos_core::inventory::Inventory;
 use cosmos_core::item::Item;
 use cosmos_core::netty::server_reliable_messages::ServerReliableMessages;
 use cosmos_core::physics::location::Location;
+use cosmos_core::physics::player_world::WorldWithin;
 use cosmos_core::registry::Registry;
 use cosmos_core::structure::planet::Planet;
 use cosmos_core::structure::ship::Ship;
@@ -88,6 +89,7 @@ fn generate_player_inventory(items: &Registry<Item>) -> Inventory {
     inventory
 }
 
+use crate::physics::assign_player_world;
 use crate::state::GameState;
 
 fn handle_events_system(
@@ -104,10 +106,12 @@ fn handle_events_system(
         &Velocity,
         &Inventory,
     )>,
+    player_worlds: Query<(&Location, &WorldWithin), (With<Player>, Without<Parent>)>,
     structure_type: Query<(Option<&Ship>, Option<&Planet>)>,
     structures_query: Query<(Entity, &Structure, &Transform, &Velocity)>,
     items: Res<Registry<Item>>,
     mut visualizer: ResMut<RenetServerVisualizer<200>>,
+    mut rapier_context: ResMut<RapierContext>,
 ) {
     for event in server_events.iter() {
         match event {
@@ -142,7 +146,7 @@ fn handle_events_system(
 
                 let inventory_serialized = bincode::serialize(&inventory).unwrap();
 
-                let player_entity = commands.spawn((
+                let player_commands = commands.spawn((
                     transform,
                     location,
                     LockedAxes::ROTATION_LOCKED,
@@ -157,10 +161,20 @@ fn handle_events_system(
                     },
                 ));
 
-                lobby.players.insert(*id, player_entity.id());
+                let entity = player_commands.id();
+
+                lobby.players.insert(*id, entity);
+
+                assign_player_world(
+                    &player_worlds,
+                    entity,
+                    &location,
+                    &mut commands,
+                    &mut rapier_context,
+                );
 
                 let msg = bincode::serialize(&ServerReliableMessages::PlayerCreate {
-                    entity: player_entity.id(),
+                    entity,
                     id: *id,
                     name: String::from(name),
                     body: netty_body,

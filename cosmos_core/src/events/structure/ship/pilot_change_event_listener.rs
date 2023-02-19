@@ -67,9 +67,9 @@ fn keep_pilot_in_place(mut query: Query<&mut Transform, (With<Pilot>, With<Playe
     for mut transform in query.iter_mut() {
         // This is the block core's location
         // This should be moved to the camera system once that's added
-        transform.translation.x = 0.5;
-        transform.translation.y = -0.25;
-        transform.translation.z = 0.5;
+        // transform.translation.x = 0.5;
+        // transform.translation.y = -0.25;
+        // transform.translation.z = 0.5;
     }
 }
 
