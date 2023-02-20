@@ -1,37 +1,37 @@
-use bevy::prelude::Query;
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::{ExternalImpulse, ReadMassProperties, RigidBody};
 
+use super::location::Location;
+
 fn gravity_system(
-    emitters: Query<(&GravityEmitter, &GlobalTransform)>,
+    emitters: Query<(&GravityEmitter, &GlobalTransform, &Location)>,
     mut receiver: Query<(
         Entity,
-        &GlobalTransform,
+        &Location,
         &ReadMassProperties,
         &RigidBody,
         Option<&mut ExternalImpulse>,
     )>,
     mut commands: Commands,
 ) {
-    let mut gravs: Vec<(f32, f32, Vec3, Vec3)> = Vec::with_capacity(emitters.iter().len());
+    let mut gravs: Vec<(f32, f32, Location, Vec3)> = Vec::with_capacity(emitters.iter().len());
 
-    for (emitter, trans) in emitters.iter() {
+    for (emitter, trans, location) in emitters.iter() {
         gravs.push((
             emitter.force_per_kg,
             emitter.radius,
-            trans.translation(),
+            *location,
             trans.down(),
         ));
     }
 
-    for (ent, trans, prop, rb, external_force) in receiver.iter_mut() {
+    for (ent, location, prop, rb, external_force) in receiver.iter_mut() {
         if *rb == RigidBody::Dynamic {
             let mut force = Vec3::ZERO;
-            let translation = trans.translation();
 
             for (force_per_kilogram, radius, pos, down) in gravs.iter() {
                 let r_sqrd = radius * radius;
-                let dist_sqrd = translation.distance_squared(*pos);
+                let dist_sqrd = location.distance_sqrd(pos);
 
                 let ratio = if dist_sqrd < r_sqrd {
                     1.0

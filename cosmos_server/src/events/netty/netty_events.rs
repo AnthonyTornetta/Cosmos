@@ -106,7 +106,7 @@ fn handle_events_system(
         &Velocity,
         &Inventory,
     )>,
-    player_worlds: Query<(&Location, &WorldWithin), (With<Player>, Without<Parent>)>,
+    player_worlds: Query<(&Location, &WorldWithin, &BodyWorld), (With<Player>, Without<Parent>)>,
     structure_type: Query<(Option<&Ship>, Option<&Planet>)>,
     structures_query: Query<(Entity, &Structure, &Transform, &Velocity)>,
     items: Res<Registry<Item>>,

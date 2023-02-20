@@ -2,7 +2,6 @@ use bevy::{
     prelude::{App, Component, Entity},
     reflect::{FromReflect, Reflect},
 };
-use bevy_rapier3d::prelude::WorldId;
 
 /// Represents a world of objects that are based around a certain entity
 ///
@@ -12,7 +11,6 @@ use bevy_rapier3d::prelude::WorldId;
 #[derive(Component, Reflect, FromReflect, Debug, Clone, Copy)]
 pub struct PlayerWorld {
     pub player: Entity,
-    pub world_id: WorldId,
 }
 
 /// Represents the world this entity is within - make sure to double check this is still valid when using it
