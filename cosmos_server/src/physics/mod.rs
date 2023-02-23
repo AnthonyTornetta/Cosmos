@@ -306,8 +306,8 @@ fn sync_transforms_and_locations(
                 //     println!("Translating: {}", transform.translation);
                 // }
 
-                // transform.translation = world_location.relative_coords_to(&location);
-                // location.last_transform_loc = transform.translation;
+                transform.translation = world_location.relative_coords_to(&location);
+                location.last_transform_loc = transform.translation;
 
                 // if entity.index() == 1031 {
                 //     println!("Out: {}", transform.translation);

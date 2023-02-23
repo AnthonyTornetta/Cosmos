@@ -113,7 +113,7 @@ fn client_sync_players(
                         if let Ok((mut location, mut transform, mut velocity)) =
                             query_body.get_mut(*entity)
                         {
-                            // location.set_from(&body.location);
+                            location.set_from(&body.location);
                             transform.rotation = body.rotation.into();
 
                             velocity.linvel = body.body_vel.linvel.into();
