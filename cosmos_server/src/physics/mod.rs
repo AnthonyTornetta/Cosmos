@@ -167,8 +167,6 @@ fn move_non_players_between_worlds(
             }
         }
 
-        let best_world_id = Some(0);
-
         if let Some(ww) = best_ww {
             let world_id = best_world_id.expect("This should have a value if ww is some");
 
@@ -176,13 +174,13 @@ fn move_non_players_between_worlds(
                 let mut body_world = maybe_body_world
                     .expect("Something should have a BodyWorld if it has a WorldWithin.");
 
-                // if body_world.world_id != world_id {
-                //     println!("CHANGING WORLD!");
-                //     body_world.world_id = world_id;
-                // }
-                // if world_within.0 != ww.0 {
-                //     world_within.0 = ww.0;
-                // }
+                if body_world.world_id != world_id {
+                    println!("CHANGING WORLD!");
+                    body_world.world_id = world_id;
+                }
+                if world_within.0 != ww.0 {
+                    world_within.0 = ww.0;
+                }
             } else {
                 commands
                     .entity(entity)
@@ -243,25 +241,11 @@ fn sync_transforms_and_locations(
     entity_query: Query<Entity>,
     mut world_query: Query<(Entity, &PlayerWorld, &mut Location)>,
 ) {
-    // println!("=========== START ==============");
-    // for (entity, transform, _, _) in trans_query_no_parent.iter() {
-    //     if is_player.contains(entity) {
-    //         println!("{}", transform.translation);
-    //     }
-    // }
-
     for (entity, transform, mut location, _) in trans_query_no_parent.iter_mut() {
         // Server transforms for players should NOT be applied to the location.
         // The location the client sent should override it.
         if !is_player.contains(entity) {
-            // if entity.index() == 1031 {
-            //     println!("IN: {} [[{}]].", transform.translation, location.as_ref());
-            // }
             location.apply_updates(transform.translation);
-
-            // if entity.index() == 1031 {
-            //     println!("New loc: {}", location.as_ref());
-            // }
         }
     }
     for (entity, transform, mut location) in trans_query_with_parent.iter_mut() {
@@ -297,25 +281,11 @@ fn sync_transforms_and_locations(
 
         world_location.set_from(&location);
 
-        // println!("Player loc: {location}");
-
         // Update transforms of objects within this world.
         for (_, mut transform, mut location, world_within) in trans_query_no_parent.iter_mut() {
             if world_within.0 == world_entity {
-                // if entity.index() != 0 {
-                //     println!("Translating: {}", transform.translation);
-                // }
-
                 transform.translation = world_location.relative_coords_to(&location);
                 location.last_transform_loc = transform.translation;
-
-                // if entity.index() == 1031 {
-                //     println!("Out: {}", transform.translation);
-                // }
-
-                // if entity.index() != 0 {
-                //     println!("Final transform: {}", transform.translation);
-                // }
             }
         }
     }
@@ -328,6 +298,7 @@ pub(crate) fn register(app: &mut App) {
             .with_system(sync_transforms_and_locations.after(server_listen_messages))
             .with_system(bubble_down_locations.after(sync_transforms_and_locations))
             .with_system(move_players_between_worlds.after(bubble_down_locations))
-            .with_system(move_non_players_between_worlds.after(move_players_between_worlds)), // .with_system(remove_empty_worlds.after(move_non_players_between_worlds)),
+            .with_system(move_non_players_between_worlds.after(move_players_between_worlds))
+            .with_system(remove_empty_worlds.before(server_listen_messages)),
     );
 }
