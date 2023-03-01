@@ -43,7 +43,7 @@ use crate::plugin::client_plugin::ClientPluginGroup;
 use crate::rendering::structure_renderer::monitor_block_updates_system;
 use crate::rendering::uv_mapper::UVMapper;
 use bevy::prelude::*;
-use bevy_rapier3d::prelude::{RapierConfiguration, Vect, Velocity};
+use bevy_rapier3d::prelude::{RapierConfiguration, TimestepMode, Vect, Velocity};
 use bevy_renet::RenetClientPlugin;
 use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
 
@@ -231,7 +231,7 @@ fn process_player_movement(
 }
 
 fn create_sun(mut commands: Commands) {
-    const HALF_SIZE: f32 = 500.0;
+    const HALF_SIZE: f32 = 150.0;
     commands.spawn(DirectionalLightBundle {
         directional_light: DirectionalLight {
             // Configure the projection to better fit the scene
@@ -249,7 +249,7 @@ fn create_sun(mut commands: Commands) {
             ..default()
         },
         transform: Transform {
-            translation: Vec3::new(0.0, 300.0, 0.0),
+            translation: Vec3::new(0.0, 0.0, 0.0),
             rotation: Quat::from_euler(EulerRot::XYZ, -PI / 4.0, 0.1, 0.1),
             ..default()
         },
@@ -324,6 +324,11 @@ fn main() {
     app.insert_resource(ConnectionConfig { host_name })
         .insert_resource(RapierConfiguration {
             gravity: Vec3::ZERO,
+            timestep_mode: TimestepMode::Fixed {
+                dt: 1.0 / 60.0,
+                // time_scale: 1.0,
+                substeps: 2,
+            },
             ..default()
         })
         .insert_resource(ClearColor(Color::BLACK))
