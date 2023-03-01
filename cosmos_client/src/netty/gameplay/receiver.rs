@@ -470,15 +470,6 @@ fn sync_transforms_and_locations(
     mut world_query: Query<(&PlayerWorld, &mut Location)>,
 ) {
     for (transform, mut location) in trans_query_no_parent.iter_mut() {
-        println!(
-            "Applying updates -- {:.1}, {:.1}, {:.1} vs {:.1}, {:.1}, {:.1}",
-            transform.translation.x,
-            transform.translation.y,
-            transform.translation.z,
-            location.last_transform_loc.x,
-            location.last_transform_loc.y,
-            location.last_transform_loc.z
-        );
         location.apply_updates(transform.translation);
     }
     for (transform, mut location) in trans_query_with_parent.iter_mut() {
