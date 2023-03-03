@@ -335,14 +335,6 @@ impl Structure {
                 .affine()
                 .matrix3
                 .mul_vec3(self.chunk_relative_position(x, y, z))
-
-        // add_vec(
-        //     &body_position.translation(),
-        //     &body_position
-        //         .position
-        //         .rotation
-        //         .transform_vector(&),
-        // )
     }
 
     pub fn block_world_position(

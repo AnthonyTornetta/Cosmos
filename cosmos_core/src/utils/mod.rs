@@ -3,4 +3,3 @@ pub mod quat_math;
 pub mod resource_wrapper;
 pub mod smooth_clamp;
 pub mod timer;
-pub mod vec_math;
