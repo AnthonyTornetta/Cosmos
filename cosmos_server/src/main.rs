@@ -35,9 +35,9 @@ fn main() {
     App::new()
         .insert_resource(RapierConfiguration {
             gravity: Vec3::ZERO,
-            timestep_mode: TimestepMode::Fixed {
+            timestep_mode: TimestepMode::Interpolated {
                 dt: 1.0 / 60.0,
-                // time_scale: 1.0,
+                time_scale: 1.0,
                 substeps: 2,
             },
             ..default()
