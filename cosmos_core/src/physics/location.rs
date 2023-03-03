@@ -74,13 +74,13 @@ impl Location {
         let over_x = (self.local.x / (SECTOR_DIMENSIONS / 2.0)) as i64;
         if over_x != 0 {
             self.local.x -= over_x as f32 * SECTOR_DIMENSIONS;
-            self.sector_x += over_x as i64;
+            self.sector_x += over_x;
         }
 
         let over_y = (self.local.y / (SECTOR_DIMENSIONS / 2.0)) as i64;
         if over_y != 0 {
             self.local.y -= over_y as f32 * SECTOR_DIMENSIONS;
-            self.sector_y += over_y as i64;
+            self.sector_y += over_y;
         }
 
         let over_z = (self.local.z / (SECTOR_DIMENSIONS / 2.0)) as i64;
@@ -130,7 +130,7 @@ impl Location {
 fn bubble(
     loc: &Location,
     entity: Entity,
-    mut query: &mut Query<(&mut Location, &Transform, Option<&Children>), With<Parent>>,
+    query: &mut Query<(&mut Location, &Transform, Option<&Children>), With<Parent>>,
 ) {
     let mut todos = Vec::new();
 
@@ -148,7 +148,7 @@ fn bubble(
     }
 
     for (entity, loc) in todos {
-        bubble(&loc, entity, &mut query);
+        bubble(&loc, entity, query);
     }
 }
 

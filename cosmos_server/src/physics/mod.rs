@@ -107,10 +107,8 @@ pub fn move_players_between_worlds(
                         changed = true;
                     }
                     break;
-                } else {
-                    if world_currently_in.0 == other_world_entity {
-                        needs_new_world = true;
-                    }
+                } else if world_currently_in.0 == other_world_entity {
+                    needs_new_world = true;
                 }
             }
 
@@ -205,10 +203,8 @@ fn remove_empty_worlds(
 
     let mut to_remove = Vec::new();
     for (world_id, _) in context.worlds.iter() {
-        if *world_id != DEFAULT_WORLD_ID {
-            if !worlds.contains(world_id) {
-                to_remove.push(*world_id);
-            }
+        if *world_id != DEFAULT_WORLD_ID && !worlds.contains(world_id) {
+            to_remove.push(*world_id);
         }
     }
 
@@ -279,7 +275,7 @@ fn sync_transforms_and_locations(
             })
             .expect("The above loop guarantees this is valid");
 
-        world_location.set_from(&location);
+        world_location.set_from(location);
 
         // Update transforms of objects within this world.
         for (_, mut transform, mut location, world_within) in trans_query_no_parent.iter_mut() {

@@ -114,7 +114,7 @@ fn client_sync_players(
                             query_body.get_mut(*entity)
                         {
                             location.set_from(&body.location);
-                            transform.rotation = body.rotation.into();
+                            transform.rotation = body.rotation;
 
                             velocity.linvel = body.body_vel.linvel.into();
                             velocity.angvel = body.body_vel.angvel.into();
@@ -499,7 +499,7 @@ fn sync_transforms_and_locations(
             })
             .expect("The above loop guarantees this is valid");
 
-        world_location.set_from(&location);
+        world_location.set_from(location);
 
         // println!("Player loc: {location}");
 
