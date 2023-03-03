@@ -139,7 +139,7 @@ fn client_sync_players(
 
         match msg {
             ServerReliableMessages::PlayerCreate {
-                body,
+                mut body,
                 id,
                 entity: server_entity,
                 name,
@@ -151,11 +151,14 @@ fn client_sync_players(
 
                 let inventory: Inventory = bincode::deserialize(&inventory_serialized).unwrap();
 
+                // This should be set via the server, but just in case, 
+                // this will avoid any position mismatching
+                body.location.last_transform_loc = body.location.local;
+
                 entity_cmds.insert((
                     PbrBundle {
                         transform: Transform::with_rotation(
-                            // The player should always be at 0.0, 0.0, 0.0
-                            Transform::from_xyz(0.0, 0.0, 0.0),
+                            Transform::from_translation(body.location.local),
                             body.rotation,
                         ),
                         mesh: meshes.add(shape::Capsule::default().into()),

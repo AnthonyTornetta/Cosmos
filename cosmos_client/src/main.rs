@@ -249,7 +249,7 @@ fn create_sun(mut commands: Commands) {
             ..default()
         },
         transform: Transform {
-            translation: Vec3::new(0.0, 0.0, 0.0),
+            translation: Vec3::ZERO,
             rotation: Quat::from_euler(EulerRot::XYZ, -PI / 4.0, 0.1, 0.1),
             ..default()
         },
