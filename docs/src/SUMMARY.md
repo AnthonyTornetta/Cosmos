@@ -7,6 +7,8 @@ The mermaid markdown syntax highlighting + markdown preview mermaid plugins are 
 -->
 
 - [Cosmos](./index.md)
+- [Physics](./physics/index.md)
+  - [Location](./physics/location.md)
 - [Packets](./packets/index.md)
   - [Player movement](./packets/player-movement.md)
   - [Updating bodies of entities](./packets/bulk-bodies.md)

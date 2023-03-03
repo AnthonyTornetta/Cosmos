@@ -1,5 +1,5 @@
 # Cosmos
-A multiplayer block-based space exploration game, written in rust using the [Bevy](bevyengine.org/) engine.
+A multiplayer block-based space exploration game, written in rust using the [Bevy](https://www.bevyengine.org/) engine.
 
 ## Compilation
 This project requires the latest nightly rust to compile. To swap to nightly, run the command 
@@ -31,7 +31,7 @@ cargo install mdbook-mermaid
 
 Then navigate to the docs folder and run `mdbook-mermaid install`
 
-To view the documentation & have it update as you modify it, run `mdbook serve` and navigate to the URL it provides. Or, to just build it run `mdbook build`.
+To view the documentation, navigate to the `docs/` directory. To have it update as you modify it, run `mdbook serve` and navigate to the URL it provides, or to just build it run `mdbook build`.
 
 # Cosmos Roadmap
 

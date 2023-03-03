@@ -151,7 +151,7 @@ fn client_sync_players(
 
                 let inventory: Inventory = bincode::deserialize(&inventory_serialized).unwrap();
 
-                // This should be set via the server, but just in case, 
+                // This should be set via the server, but just in case,
                 // this will avoid any position mismatching
                 body.location.last_transform_loc = body.location.local;
 

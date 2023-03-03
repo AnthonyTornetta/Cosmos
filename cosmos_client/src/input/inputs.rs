@@ -46,6 +46,9 @@ pub enum CosmosInputs {
     HotbarSlot7,
     HotbarSlot8,
     HotbarSlot9,
+
+    // For testing - disconnects you from the server
+    Disconnect,
 }
 
 fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
@@ -91,6 +94,8 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     input_handler.set_keycode(CosmosInputs::SelectSystem7, KeyCode::Key7);
     input_handler.set_keycode(CosmosInputs::SelectSystem8, KeyCode::Key8);
     input_handler.set_keycode(CosmosInputs::SelectSystem9, KeyCode::Key9);
+
+    input_handler.set_keycode(CosmosInputs::Disconnect, KeyCode::P);
 
     input_handler.set_mouse_button(CosmosInputs::UseSelectedSystem, MouseButton::Left);
 }
