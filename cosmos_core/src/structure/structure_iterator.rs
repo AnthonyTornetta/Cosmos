@@ -206,7 +206,7 @@ impl<'a> Iterator for ChunkIterator<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         match &mut self.state {
             ItrState::Invalid => None,
-            ItrState::Valid(body) => {
+            ItrState::Valid(body) => loop {
                 if body.at_z > body.end_z {
                     return None;
                 }
@@ -227,8 +227,10 @@ impl<'a> Iterator for ChunkIterator<'a> {
                     }
                 }
 
-                Some(body.structure.chunk_from_chunk_coordinates(cx, cy, cz))
-            }
+                if let Some(chunk) = body.structure.chunk_from_chunk_coordinates(cx, cy, cz) {
+                    return Some(chunk);
+                }
+            },
         }
     }
 }

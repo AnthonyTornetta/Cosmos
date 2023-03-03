@@ -49,13 +49,12 @@ impl StructurePhysics {
         let mut colliders = Vec::with_capacity(self.needs_changed.len());
 
         for c in &self.needs_changed {
-            colliders.push(ChunkPhysicsModel {
-                collider: generate_chunk_collider(
-                    structure.chunk_from_chunk_coordinates(c.x, c.y, c.z),
-                    blocks,
-                ),
-                chunk_coords: *c,
-            });
+            if let Some(chunk) = structure.chunk_from_chunk_coordinates(c.x, c.y, c.z) {
+                colliders.push(ChunkPhysicsModel {
+                    collider: generate_chunk_collider(chunk, blocks),
+                    chunk_coords: *c,
+                });
+            }
         }
 
         self.needs_changed.clear();
@@ -282,12 +281,14 @@ fn listen_for_new_physics_event(
 
             for chunk_collider in colliders {
                 let coords = &chunk_collider.chunk_coords;
-                let mut entity_commands =
-                    commands.entity(structure.chunk_entity(coords.x, coords.y, coords.z));
-                entity_commands.remove::<Collider>();
 
-                if chunk_collider.collider.is_some() {
-                    entity_commands.insert(chunk_collider.collider.unwrap());
+                if let Some(chunk_entity) = structure.chunk_entity(coords.x, coords.y, coords.z) {
+                    let mut entity_commands = commands.entity(chunk_entity);
+                    entity_commands.remove::<Collider>();
+
+                    if chunk_collider.collider.is_some() {
+                        entity_commands.insert(chunk_collider.collider.unwrap());
+                    }
                 }
             }
         }

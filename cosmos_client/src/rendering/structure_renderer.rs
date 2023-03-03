@@ -106,54 +106,47 @@ impl StructureRenderer {
 
             let (x, y, z) = (change.x, change.y, change.z);
 
-            let left = match x {
-                0 => None,
-                x => Some(structure.chunk_from_chunk_coordinates(x - 1, y, z)),
-            };
+            if let Some(chunk) = structure.chunk_from_chunk_coordinates(x, y, z) {
+                let left = match x {
+                    0 => None,
+                    x => structure.chunk_from_chunk_coordinates(x - 1, y, z),
+                };
 
-            let right = if x == self.width - 1 {
-                None
-            } else {
-                Some(structure.chunk_from_chunk_coordinates(x + 1, y, z))
-            };
+                let right = if x == self.width - 1 {
+                    None
+                } else {
+                    structure.chunk_from_chunk_coordinates(x + 1, y, z)
+                };
 
-            let bottom = match y {
-                0 => None,
-                y => Some(structure.chunk_from_chunk_coordinates(x, y - 1, z)),
-            };
+                let bottom = match y {
+                    0 => None,
+                    y => structure.chunk_from_chunk_coordinates(x, y - 1, z),
+                };
 
-            let top = if y == self.height - 1 {
-                None
-            } else {
-                Some(structure.chunk_from_chunk_coordinates(x, y + 1, z))
-            };
+                let top = if y == self.height - 1 {
+                    None
+                } else {
+                    structure.chunk_from_chunk_coordinates(x, y + 1, z)
+                };
 
-            let back = match z {
-                0 => None,
-                z => Some(structure.chunk_from_chunk_coordinates(x, y, z - 1)),
-            };
+                let back = match z {
+                    0 => None,
+                    z => structure.chunk_from_chunk_coordinates(x, y, z - 1),
+                };
 
-            let front = if z == self.length - 1 {
-                None
-            } else {
-                Some(structure.chunk_from_chunk_coordinates(x, y, z + 1))
-            };
+                let front = if z == self.length - 1 {
+                    None
+                } else {
+                    structure.chunk_from_chunk_coordinates(x, y, z + 1)
+                };
 
-            self.chunk_renderers[flatten(x, y, z, self.width, self.height)].render(
-                uv_mapper,
-                materials,
-                lighting,
-                structure.chunk_from_chunk_coordinates(x, y, z),
-                left,
-                right,
-                bottom,
-                top,
-                back,
-                front,
-                blocks,
-            );
+                self.chunk_renderers[flatten(x, y, z, self.width, self.height)].render(
+                    uv_mapper, materials, lighting, chunk, left, right, bottom, top, back, front,
+                    blocks,
+                );
 
-            self.need_meshes.insert(*change);
+                self.need_meshes.insert(*change);
+            }
         }
 
         self.changes.clear();
@@ -409,142 +402,145 @@ fn monitor_needs_rendered_system(
         let chunk_meshes: Vec<ChunkMesh> = renderer.create_meshes();
 
         for chunk_mesh in chunk_meshes {
-            let entity = structure.chunk_entity(chunk_mesh.x, chunk_mesh.y, chunk_mesh.z);
+            if let Some(entity) = structure.chunk_entity(chunk_mesh.x, chunk_mesh.y, chunk_mesh.z) {
+                let mut old_mesh_entities = Vec::new();
 
-            let mut old_mesh_entities = Vec::new();
+                if let Ok(chunk_meshes_component) = chunk_meshes_query.get(entity) {
+                    for ent in chunk_meshes_component.0.iter() {
+                        let old_mesh_handle = mesh_query
+                            .get(*ent)
+                            .expect("This should have a mesh component.");
 
-            if let Ok(chunk_meshes_component) = chunk_meshes_query.get(entity) {
-                for ent in chunk_meshes_component.0.iter() {
-                    let old_mesh_handle = mesh_query
-                        .get(*ent)
-                        .expect("This should have a mesh component.");
+                        if let Some(old_mesh_handle) = old_mesh_handle {
+                            meshes.remove(old_mesh_handle);
+                        }
 
-                    if let Some(old_mesh_handle) = old_mesh_handle {
-                        meshes.remove(old_mesh_handle);
+                        old_mesh_entities.push(*ent);
                     }
-
-                    old_mesh_entities.push(*ent);
                 }
-            }
 
-            let mut new_lights = LightsHolder::default();
+                let mut new_lights = LightsHolder::default();
 
-            if let Ok(lights) = lights_query.get(entity) {
-                for light in lights.lights.iter() {
-                    let mut light = *light;
-                    light.valid = false;
-                    new_lights.lights.push(light);
+                if let Ok(lights) = lights_query.get(entity) {
+                    for light in lights.lights.iter() {
+                        let mut light = *light;
+                        light.valid = false;
+                        new_lights.lights.push(light);
+                    }
                 }
-            }
 
-            let mut entities_to_add = Vec::new();
+                let mut entities_to_add = Vec::new();
 
-            if !chunk_mesh.lights.is_empty() {
-                for light in chunk_mesh.lights {
-                    let (x, y, z) = light.0;
-                    let properties = light.1;
+                if !chunk_mesh.lights.is_empty() {
+                    for light in chunk_mesh.lights {
+                        let (x, y, z) = light.0;
+                        let properties = light.1;
 
-                    let mut found = false;
-                    for light in new_lights.lights.iter_mut() {
-                        if light.position.x == x && light.position.y == y && light.position.z == z {
-                            if light.light == properties {
-                                light.valid = true;
-                                found = true;
+                        let mut found = false;
+                        for light in new_lights.lights.iter_mut() {
+                            if light.position.x == x
+                                && light.position.y == y
+                                && light.position.z == z
+                            {
+                                if light.light == properties {
+                                    light.valid = true;
+                                    found = true;
+                                }
+                                break;
                             }
-                            break;
+                        }
+
+                        if !found {
+                            let light_entity = commands
+                                .spawn(PointLightBundle {
+                                    point_light: PointLight {
+                                        color: properties.color,
+                                        intensity: properties.intensity,
+                                        range: properties.range,
+                                        radius: 1.0,
+                                        // Shadows kill all performance
+                                        shadows_enabled: false, // !properties.shadows_disabled,
+                                        ..Default::default()
+                                    },
+                                    transform: Transform::from_xyz(
+                                        x as f32 - (CHUNK_DIMENSIONS as f32 / 2.0 - 0.5),
+                                        y as f32 - (CHUNK_DIMENSIONS as f32 / 2.0 - 0.5),
+                                        z as f32 - (CHUNK_DIMENSIONS as f32 / 2.0 - 0.5),
+                                    ),
+                                    ..Default::default()
+                                })
+                                .id();
+
+                            new_lights.lights.push(LightEntry {
+                                entity: light_entity,
+                                light: properties,
+                                position: StructureBlock::new(x, y, z),
+                                valid: true,
+                            });
+                            entities_to_add.push(light_entity);
                         }
                     }
+                }
 
-                    if !found {
-                        let light_entity = commands
-                            .spawn(PointLightBundle {
-                                point_light: PointLight {
-                                    color: properties.color,
-                                    intensity: properties.intensity,
-                                    range: properties.range,
-                                    radius: 1.0,
-                                    // Shadows kill all performance
-                                    shadows_enabled: false, // !properties.shadows_disabled,
-                                    ..Default::default()
-                                },
-                                transform: Transform::from_xyz(
-                                    x as f32 - (CHUNK_DIMENSIONS as f32 / 2.0 - 0.5),
-                                    y as f32 - (CHUNK_DIMENSIONS as f32 / 2.0 - 0.5),
-                                    z as f32 - (CHUNK_DIMENSIONS as f32 / 2.0 - 0.5),
-                                ),
+                for light in new_lights.lights.iter().filter(|x| !x.valid) {
+                    commands.entity(light.entity).despawn_recursive();
+                }
+
+                new_lights.lights.retain(|x| x.valid);
+
+                // end lighting
+                // meshes
+                let mut chunk_meshes_component = ChunkMeshes::default();
+
+                for mesh_material in chunk_mesh.mesh_materials {
+                    let mesh = meshes.add(mesh_material.mesh);
+
+                    let ent = if let Some(ent) = old_mesh_entities.pop() {
+                        commands
+                            .entity(ent)
+                            .insert(mesh)
+                            .insert(mesh_material.material);
+
+                        ent
+                    } else {
+                        let s = (CHUNK_DIMENSIONS / 2) as f32;
+
+                        let ent = commands
+                            .spawn(PbrBundle {
+                                mesh,
+                                material: mesh_material.material,
                                 ..Default::default()
                             })
+                            .insert(Aabb::from_min_max(
+                                Vec3::new(-s, -s, -s),
+                                Vec3::new(s, s, s),
+                            ))
                             .id();
 
-                        new_lights.lights.push(LightEntry {
-                            entity: light_entity,
-                            light: properties,
-                            position: StructureBlock::new(x, y, z),
-                            valid: true,
-                        });
-                        entities_to_add.push(light_entity);
-                    }
+                        entities_to_add.push(ent);
+
+                        ent
+                    };
+
+                    chunk_meshes_component.0.push(ent);
                 }
+
+                // Any leftovers are dead now
+                for mesh in old_mesh_entities {
+                    commands.entity(mesh).despawn_recursive();
+                }
+
+                let mut entity_commands = commands.entity(entity);
+
+                for ent in entities_to_add {
+                    entity_commands.add_child(ent);
+                }
+
+                entity_commands
+                    // .insert(meshes.add(chunk_mesh.mesh))
+                    .insert(new_lights)
+                    .insert(chunk_meshes_component);
             }
-
-            for light in new_lights.lights.iter().filter(|x| !x.valid) {
-                commands.entity(light.entity).despawn_recursive();
-            }
-
-            new_lights.lights.retain(|x| x.valid);
-
-            // end lighting
-            // meshes
-            let mut chunk_meshes_component = ChunkMeshes::default();
-
-            for mesh_material in chunk_mesh.mesh_materials {
-                let mesh = meshes.add(mesh_material.mesh);
-
-                let ent = if let Some(ent) = old_mesh_entities.pop() {
-                    commands
-                        .entity(ent)
-                        .insert(mesh)
-                        .insert(mesh_material.material);
-
-                    ent
-                } else {
-                    let s = (CHUNK_DIMENSIONS / 2) as f32;
-
-                    let ent = commands
-                        .spawn(PbrBundle {
-                            mesh,
-                            material: mesh_material.material,
-                            ..Default::default()
-                        })
-                        .insert(Aabb::from_min_max(
-                            Vec3::new(-s, -s, -s),
-                            Vec3::new(s, s, s),
-                        ))
-                        .id();
-
-                    entities_to_add.push(ent);
-
-                    ent
-                };
-
-                chunk_meshes_component.0.push(ent);
-            }
-
-            // Any leftovers are dead now
-            for mesh in old_mesh_entities {
-                commands.entity(mesh).despawn_recursive();
-            }
-
-            let mut entity_commands = commands.entity(entity);
-
-            for ent in entities_to_add {
-                entity_commands.add_child(ent);
-            }
-
-            entity_commands
-                // .insert(meshes.add(chunk_mesh.mesh))
-                .insert(new_lights)
-                .insert(chunk_meshes_component);
         }
     }
 }

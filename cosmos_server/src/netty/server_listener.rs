@@ -96,7 +96,7 @@ pub fn server_listen_messages(
                 ClientReliableMessages::PlayerDisconnect => {}
                 ClientReliableMessages::SendChunk { server_entity } => {
                     if let Ok(structure) = structure_query.get(server_entity) {
-                        for chunk in structure.chunks() {
+                        for (_, chunk) in structure.chunks() {
                             server.send_message(
                                 client_id,
                                 NettyChannel::Reliable.id(),

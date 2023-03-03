@@ -30,13 +30,13 @@ use self::structure_iterator::{BlockIterator, ChunkIterator};
 #[derive(Serialize, Deserialize, Component)]
 pub struct Structure {
     #[serde(skip)]
-    chunk_entities: Vec<Option<Entity>>,
+    chunk_entities: HashMap<usize, Entity>,
     #[serde(skip)]
     chunk_entity_map: HashMap<Entity, usize>,
     #[serde(skip)]
     self_entity: Option<Entity>,
 
-    chunks: Vec<Chunk>,
+    chunks: HashMap<usize, Chunk>,
     width: usize,
     height: usize,
     length: usize,
@@ -44,26 +44,10 @@ pub struct Structure {
 
 impl Structure {
     pub fn new(width: usize, height: usize, length: usize) -> Self {
-        let mut chunks = Vec::with_capacity(width * height * length);
-
-        for z in 0..length {
-            for y in 0..height {
-                for x in 0..width {
-                    chunks.push(Chunk::new(x, y, z));
-                }
-            }
-        }
-
-        let mut chunk_entities = Vec::with_capacity(chunks.len());
-
-        for _ in 0..(length * width * height) {
-            chunk_entities.push(None);
-        }
-
         Self {
-            chunk_entities,
+            chunk_entities: HashMap::default(),
             self_entity: None,
-            chunks,
+            chunks: HashMap::default(),
             width,
             height,
             length,
@@ -101,30 +85,25 @@ impl Structure {
         self.length * CHUNK_DIMENSIONS
     }
 
-    pub fn chunk_entity(&self, cx: usize, cy: usize, cz: usize) -> Entity {
-        // If this fails, that means the chunk entity ids were not set before being used
-        self.chunk_entities[flatten(cx, cy, cz, self.width, self.height)].unwrap()
+    /// Returns the entity for this chunk -- an empty chunk WILL NOT have an entity.
+    ///
+    /// If this returns none, that means the chunk entity was not set before being used.
+    /// Maybe the chunk is empty or unloaded?
+    pub fn chunk_entity(&self, cx: usize, cy: usize, cz: usize) -> Option<Entity> {
+        let index = flatten(cx, cy, cz, self.width, self.height);
+
+        self.chunk_entities.get(&index).map(|e| *e)
     }
 
     pub fn set_chunk_entity(&mut self, cx: usize, cy: usize, cz: usize, entity: Entity) {
-        if self.chunk_entities.is_empty() {
-            for _ in 0..(self.width * self.height * self.length) {
-                self.chunk_entities.push(None);
-            }
-        }
-
         let index = flatten(cx, cy, cz, self.width, self.height);
 
         self.chunk_entity_map.insert(entity, index);
-        self.chunk_entities[index] = Some(entity);
+        self.chunk_entities.insert(index, entity);
     }
 
     pub fn chunk_from_entity(&self, entity: &Entity) -> Option<&Chunk> {
-        if let Some(index) = self.chunk_entity_map.get(entity) {
-            Some(&self.chunks[*index])
-        } else {
-            None
-        }
+        self.chunk_entity_map.get(entity).map(|x| &self.chunks[x])
     }
 
     pub fn block_coords_for_chunk(&self, chunk: &Chunk) -> (usize, usize, usize) {
@@ -157,8 +136,13 @@ impl Structure {
 
     /// (0, 0, 0) => chunk @ 0, 0, 0\
     /// (1, 0, 0) => chunk @ 1, 0, 0
-    pub fn chunk_from_chunk_coordinates(&self, cx: usize, cy: usize, cz: usize) -> &Chunk {
-        &self.chunks[flatten(cx, cy, cz, self.width, self.height)]
+    ///
+    /// Returns None for empty chunks - panics for chunks that are out of bounds
+    pub fn chunk_from_chunk_coordinates(&self, cx: usize, cy: usize, cz: usize) -> Option<&Chunk> {
+        assert!(cx < self.width && cy < self.height && cz < self.length);
+
+        self.chunks
+            .get(&flatten(cx, cy, cz, self.width, self.height))
     }
 
     pub fn mut_chunk_from_chunk_coordinates(
@@ -166,14 +150,15 @@ impl Structure {
         cx: usize,
         cy: usize,
         cz: usize,
-    ) -> &mut Chunk {
-        &mut self.chunks[flatten(cx, cy, cz, self.width, self.height)]
+    ) -> Option<&mut Chunk> {
+        self.chunks
+            .get_mut(&flatten(cx, cy, cz, self.width, self.height))
     }
 
     /// (0, 0, 0) => chunk @ 0, 0, 0\
     /// (5, 0, 0) => chunk @ 0, 0, 0\
     /// (32, 0, 0) => chunk @ 1, 0, 0
-    pub fn chunk_at_block_coordinates(&self, x: usize, y: usize, z: usize) -> &Chunk {
+    pub fn chunk_at_block_coordinates(&self, x: usize, y: usize, z: usize) -> Option<&Chunk> {
         self.chunk_from_chunk_coordinates(
             x / CHUNK_DIMENSIONS,
             y / CHUNK_DIMENSIONS,
@@ -181,14 +166,17 @@ impl Structure {
         )
     }
 
-    fn mut_chunk_at_block_coordinates(&mut self, x: usize, y: usize, z: usize) -> &mut Chunk {
-        &mut self.chunks[flatten(
+    fn mut_chunk_at_block_coordinates(
+        &mut self,
+        x: usize,
+        y: usize,
+        z: usize,
+    ) -> Option<&mut Chunk> {
+        self.mut_chunk_from_chunk_coordinates(
             x / CHUNK_DIMENSIONS,
             y / CHUNK_DIMENSIONS,
             z / CHUNK_DIMENSIONS,
-            self.width,
-            self.height,
-        )]
+        )
     }
 
     pub fn is_within_blocks(&self, x: usize, y: usize, z: usize) -> bool {
@@ -225,12 +213,18 @@ impl Structure {
         Err(false)
     }
 
+    /// If the chunk is loaded/non-empty, returns the block at that coordinate.
+    /// Otherwise, returns AIR_BLOCK_ID
     pub fn block_id_at(&self, x: usize, y: usize, z: usize) -> u16 {
-        self.chunk_at_block_coordinates(x, y, z).block_at(
-            x % CHUNK_DIMENSIONS,
-            y % CHUNK_DIMENSIONS,
-            z % CHUNK_DIMENSIONS,
-        )
+        self.chunk_at_block_coordinates(x, y, z)
+            .map(|chunk| {
+                chunk.block_at(
+                    x % CHUNK_DIMENSIONS,
+                    y % CHUNK_DIMENSIONS,
+                    z % CHUNK_DIMENSIONS,
+                )
+            })
+            .unwrap_or(AIR_BLOCK_ID)
     }
 
     pub fn block_at<'a>(
@@ -244,7 +238,7 @@ impl Structure {
         blocks.from_numeric_id(id)
     }
 
-    pub fn chunks(&self) -> &Vec<Chunk> {
+    pub fn chunks(&self) -> &HashMap<usize, Chunk> {
         &self.chunks
     }
 
@@ -291,12 +285,23 @@ impl Structure {
             }
         }
 
-        self.mut_chunk_at_block_coordinates(x, y, z).set_block_at(
+        let (bx, by, bz) = (
             x % CHUNK_DIMENSIONS,
             y % CHUNK_DIMENSIONS,
             z % CHUNK_DIMENSIONS,
-            block,
         );
+
+        if let Some(chunk) = self.mut_chunk_at_block_coordinates(x, y, z) {
+            chunk.set_block_at(bx, by, bz, block);
+        } else {
+            if block.id() != AIR_BLOCK_ID {
+                let mut chunk = Chunk::new(x, y, z);
+                chunk.set_block_at(bx, by, bz, block);
+
+                self.chunks
+                    .insert(flatten(x, y, z, self.width, self.height), chunk);
+            }
+        }
     }
 
     pub fn chunk_relative_position(&self, x: usize, y: usize, z: usize) -> Vec3 {
@@ -359,7 +364,7 @@ impl Structure {
             self.width,
             self.height,
         );
-        self.chunks[i] = chunk;
+        self.chunks.insert(i, chunk);
     }
 
     /// Iterate over blocks in a given range. Will skip over any out of bounds positions.
@@ -448,12 +453,15 @@ impl Structure {
         block_hardness: &BlockHardness,
     ) -> f32 {
         self.chunk_at_block_coordinates(bx, by, bz)
-            .get_block_health(
-                bx % CHUNK_DIMENSIONS,
-                by % CHUNK_DIMENSIONS,
-                bz % CHUNK_DIMENSIONS,
-                block_hardness,
-            )
+            .map(|c| {
+                c.get_block_health(
+                    bx % CHUNK_DIMENSIONS,
+                    by % CHUNK_DIMENSIONS,
+                    bz % CHUNK_DIMENSIONS,
+                    block_hardness,
+                )
+            })
+            .unwrap_or(0.0)
     }
 
     /// Causes a block at the given coordinates to take damage
@@ -472,9 +480,8 @@ impl Structure {
         amount: f32,
         event_writer: Option<&mut EventWriter<BlockDestroyedEvent>>,
     ) -> bool {
-        let destroyed = self
-            .mut_chunk_at_block_coordinates(bx, by, bz)
-            .block_take_damage(
+        if let Some(chunk) = self.mut_chunk_at_block_coordinates(bx, by, bz) {
+            let destroyed = chunk.block_take_damage(
                 bx % CHUNK_DIMENSIONS,
                 by % CHUNK_DIMENSIONS,
                 bz % CHUNK_DIMENSIONS,
@@ -482,18 +489,21 @@ impl Structure {
                 amount,
             );
 
-        if destroyed {
-            if let Some(structure_entity) = self.get_entity() {
-                if let Some(event_writer) = event_writer {
-                    event_writer.send(BlockDestroyedEvent {
-                        block: StructureBlock::new(bx, by, bz),
-                        structure_entity,
-                    });
+            if destroyed {
+                if let Some(structure_entity) = self.get_entity() {
+                    if let Some(event_writer) = event_writer {
+                        event_writer.send(BlockDestroyedEvent {
+                            block: StructureBlock::new(bx, by, bz),
+                            structure_entity,
+                        });
+                    }
                 }
             }
-        }
 
-        destroyed
+            destroyed
+        } else {
+            false
+        }
     }
 }
 
