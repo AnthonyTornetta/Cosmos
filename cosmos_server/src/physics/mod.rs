@@ -232,29 +232,30 @@ fn sync_transforms_and_locations(
         (Entity, &mut Transform, &mut Location),
         (Without<PlayerWorld>, With<Parent>),
     >,
-    is_player: Query<(), With<Player>>,
+    players_query: Query<(&WorldWithin, Entity), With<Player>>,
+    everything_query: Query<(&WorldWithin, Entity)>,
     parent_query: Query<&Parent>,
     entity_query: Query<Entity>,
-    mut world_query: Query<(Entity, &PlayerWorld, &mut Location)>,
+    mut world_query: Query<(Entity, &mut PlayerWorld, &mut Location)>,
 
     mut commands: Commands,
 ) {
     for (entity, transform, mut location, _) in trans_query_no_parent.iter_mut() {
         // Server transforms for players should NOT be applied to the location.
         // The location the client sent should override it.
-        if !is_player.contains(entity) {
+        if !players_query.contains(entity) {
             location.apply_updates(transform.translation);
         }
     }
     for (entity, transform, mut location) in trans_query_with_parent.iter_mut() {
         // Server transforms for players should NOT be applied to the location.
         // The location the client sent should override it.
-        if !is_player.contains(entity) {
+        if !players_query.contains(entity) {
             location.apply_updates(transform.translation);
         }
     }
 
-    for (world_entity, world, mut world_location) in world_query.iter_mut() {
+    for (world_entity, mut world, mut world_location) in world_query.iter_mut() {
         if let Ok(mut player_entity) = entity_query.get(world.player) {
             while let Ok(parent) = parent_query.get(player_entity) {
                 let parent_entity = parent.get();
@@ -285,7 +286,28 @@ fn sync_transforms_and_locations(
             }
         } else {
             // The player has disconnected
-            commands.entity(world_entity).despawn_recursive();
+            // Either: Find a new player to have the world
+            // Or: Move everything over to the closest world by removing the WorldWithin component
+
+            let mut found = false;
+            // find player
+            for (world_within, entity) in players_query.iter() {
+                if world_within.0 == world_entity {
+                    world.player = entity;
+                    found = true;
+                    break;
+                }
+            }
+
+            // No suitable player found, find another world to move everything to
+            if !found {
+                for (world_within, entity) in everything_query.iter() {
+                    if world_within.0 == world_entity {
+                        commands.entity(entity).remove::<WorldWithin>();
+                    }
+                }
+                commands.entity(world_entity).despawn_recursive();
+            }
         }
     }
 }
