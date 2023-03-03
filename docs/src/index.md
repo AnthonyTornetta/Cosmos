@@ -1,3 +1,3 @@
-# Cosmos
+# Cosmos Documentation
 
-Documentation currently in progress.
+A multiplayer block-based space exploration game, written in rust using the [Bevy](https://www.bevyengine.org/) engine.

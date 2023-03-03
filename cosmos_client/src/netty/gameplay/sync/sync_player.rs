@@ -9,8 +9,8 @@ use cosmos_core::{
     physics::location::Location,
 };
 
-use crate::netty::flags::LocalPlayer;
-use crate::state::game_state::GameState;
+use crate::{input::inputs::CosmosInputHandler, state::game_state::GameState};
+use crate::{input::inputs::CosmosInputs, netty::flags::LocalPlayer};
 
 fn send_position(
     mut client: ResMut<RenetClient>,
@@ -35,6 +35,24 @@ fn send_position(
     }
 }
 
+// Just for testing
+fn send_disconnect(
+    inputs: Res<Input<KeyCode>>,
+    mouse: Res<Input<MouseButton>>,
+    input_handler: ResMut<CosmosInputHandler>,
+    client: Option<ResMut<RenetClient>>,
+) {
+    if input_handler.check_just_pressed(CosmosInputs::Disconnect, &inputs, &mouse) {
+        if let Some(mut client) = client {
+            if client.is_connected() {
+                println!("SENDING DC!");
+                client.disconnect();
+            }
+        }
+    }
+}
+
 pub(crate) fn register(app: &mut App) {
-    app.add_system_set(SystemSet::on_update(GameState::Playing).with_system(send_position));
+    app.add_system_set(SystemSet::on_update(GameState::Playing).with_system(send_position))
+        .add_system(send_disconnect);
 }

@@ -236,6 +236,8 @@ fn sync_transforms_and_locations(
     parent_query: Query<&Parent>,
     entity_query: Query<Entity>,
     mut world_query: Query<(Entity, &PlayerWorld, &mut Location)>,
+
+    mut commands: Commands,
 ) {
     for (entity, transform, mut location, _) in trans_query_no_parent.iter_mut() {
         // Server transforms for players should NOT be applied to the location.
@@ -253,36 +255,37 @@ fn sync_transforms_and_locations(
     }
 
     for (world_entity, world, mut world_location) in world_query.iter_mut() {
-        let mut player_entity = entity_query
-            .get(world.player)
-            .expect("This player should exist, but will break when someone disconnects.");
-
-        while let Ok(parent) = parent_query.get(player_entity) {
-            let parent_entity = parent.get();
-            if trans_query_no_parent.contains(parent_entity) {
-                player_entity = parent.get();
-            } else {
-                break;
+        if let Ok(mut player_entity) = entity_query.get(world.player) {
+            while let Ok(parent) = parent_query.get(player_entity) {
+                let parent_entity = parent.get();
+                if trans_query_no_parent.contains(parent_entity) {
+                    player_entity = parent.get();
+                } else {
+                    break;
+                }
             }
-        }
 
-        let location = trans_query_no_parent
-            .get(player_entity)
-            .map(|x| x.2)
-            .or_else(|_| match trans_query_with_parent.get(player_entity) {
-                Ok((_, _, loc)) => Ok(loc),
-                Err(x) => Err(x),
-            })
-            .expect("The above loop guarantees this is valid");
+            let location = trans_query_no_parent
+                .get(player_entity)
+                .map(|x| x.2)
+                .or_else(|_| match trans_query_with_parent.get(player_entity) {
+                    Ok((_, _, loc)) => Ok(loc),
+                    Err(x) => Err(x),
+                })
+                .expect("The above loop guarantees this is valid");
 
-        world_location.set_from(location);
+            world_location.set_from(location);
 
-        // Update transforms of objects within this world.
-        for (_, mut transform, mut location, world_within) in trans_query_no_parent.iter_mut() {
-            if world_within.0 == world_entity {
-                transform.translation = world_location.relative_coords_to(&location);
-                location.last_transform_loc = transform.translation;
+            // Update transforms of objects within this world.
+            for (_, mut transform, mut location, world_within) in trans_query_no_parent.iter_mut() {
+                if world_within.0 == world_entity {
+                    transform.translation = world_location.relative_coords_to(&location);
+                    location.last_transform_loc = transform.translation;
+                }
             }
+        } else {
+            // The player has disconnected
+            commands.entity(world_entity).despawn_recursive();
         }
     }
 }
