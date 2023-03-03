@@ -1,9 +1,12 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::RenetServer;
-use cosmos_core::netty::{
-    netty_rigidbody::NettyRigidBody, server_unreliable_messages::ServerUnreliableMessages,
-    NettyChannel,
+use cosmos_core::{
+    netty::{
+        netty_rigidbody::NettyRigidBody, server_unreliable_messages::ServerUnreliableMessages,
+        NettyChannel,
+    },
+    physics::location::Location,
 };
 
 use crate::netty::network_helpers::NetworkTick;
@@ -11,14 +14,17 @@ use crate::netty::network_helpers::NetworkTick;
 pub fn server_sync_bodies(
     mut server: ResMut<RenetServer>,
     mut tick: ResMut<NetworkTick>,
-    entities: Query<(Entity, &Transform, &Velocity)>,
+    entities: Query<(Entity, &Transform, &Location, &Velocity)>,
 ) {
     tick.0 += 1;
 
     let mut bodies = Vec::new();
 
-    for (entity, transform, velocity) in entities.iter() {
-        bodies.push((entity, NettyRigidBody::new(velocity, transform)));
+    for (entity, transform, location, velocity) in entities.iter() {
+        bodies.push((
+            entity,
+            NettyRigidBody::new(velocity, transform.rotation, *location),
+        ));
 
         // The packet size can only be so big, so limit syncing to 20 per packet
         if bodies.len() > 20 {

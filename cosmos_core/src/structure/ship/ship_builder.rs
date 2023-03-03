@@ -1,7 +1,10 @@
-use bevy::{ecs::system::EntityCommands, prelude::Transform};
+use bevy::ecs::system::EntityCommands;
 use bevy_rapier3d::prelude::{Ccd, ExternalImpulse, ReadMassProperties, RigidBody, Velocity};
 
-use crate::structure::{structure_builder::TStructureBuilder, Structure};
+use crate::{
+    physics::location::Location,
+    structure::{structure_builder::TStructureBuilder, Structure},
+};
 
 use super::{ship_movement::ShipMovement, Ship};
 
@@ -9,7 +12,7 @@ pub trait TShipBuilder {
     fn insert_ship(
         &self,
         entity: &mut EntityCommands,
-        transform: Transform,
+        location: Location,
         velocity: Velocity,
         structure: &mut Structure,
     );
@@ -29,12 +32,12 @@ impl<T: TStructureBuilder> TShipBuilder for ShipBuilder<T> {
     fn insert_ship(
         &self,
         entity: &mut EntityCommands,
-        transform: Transform,
+        location: Location,
         velocity: Velocity,
         structure: &mut Structure,
     ) {
         self.structure_builder
-            .insert_structure(entity, transform, velocity, structure);
+            .insert_structure(entity, location, velocity, structure);
 
         entity.insert(ShipMovement::default());
         entity

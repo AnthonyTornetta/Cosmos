@@ -1,5 +1,7 @@
-use cosmos_core::structure::{
-    structure_builder::StructureBuilder, structure_builder::TStructureBuilder,
+use bevy::ecs::system::EntityCommands;
+use cosmos_core::{
+    physics::location::Location,
+    structure::{structure_builder::StructureBuilder, structure_builder::TStructureBuilder},
 };
 
 use crate::rendering::structure_renderer::StructureRenderer;
@@ -14,13 +16,13 @@ pub struct ClientStructureBuilder {
 impl TStructureBuilder for ClientStructureBuilder {
     fn insert_structure(
         &self,
-        entity: &mut bevy::ecs::system::EntityCommands,
-        transform: bevy::prelude::Transform,
+        entity: &mut EntityCommands,
+        location: Location,
         velocity: bevy_rapier3d::prelude::Velocity,
         structure: &mut cosmos_core::structure::Structure,
     ) {
         self.structure_builder
-            .insert_structure(entity, transform, velocity, structure);
+            .insert_structure(entity, location, velocity, structure);
 
         let renderer = StructureRenderer::new(structure);
 

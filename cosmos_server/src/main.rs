@@ -2,7 +2,7 @@ use std::env;
 
 use bevy::prelude::*;
 use bevy::winit::WinitPlugin;
-use bevy_rapier3d::prelude::RapierConfiguration;
+use bevy_rapier3d::prelude::{RapierConfiguration, TimestepMode};
 use bevy_renet::RenetServerPlugin;
 use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
 
@@ -35,6 +35,11 @@ fn main() {
     App::new()
         .insert_resource(RapierConfiguration {
             gravity: Vec3::ZERO,
+            timestep_mode: TimestepMode::Interpolated {
+                dt: 1.0 / 60.0,
+                time_scale: 1.0,
+                substeps: 2,
+            },
             ..default()
         })
         .add_plugins(CosmosCorePluginGroup::new(

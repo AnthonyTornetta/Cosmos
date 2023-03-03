@@ -1,6 +1,10 @@
-use cosmos_core::structure::{
-    planet::{planet_builder::PlanetBuilder, planet_builder::TPlanetBuilder},
-    Structure,
+use bevy::ecs::system::EntityCommands;
+use cosmos_core::{
+    physics::location::Location,
+    structure::{
+        planet::{planet_builder::PlanetBuilder, planet_builder::TPlanetBuilder},
+        Structure,
+    },
 };
 
 use crate::structure::client_structure_builder::ClientStructureBuilder;
@@ -20,11 +24,11 @@ impl Default for ClientPlanetBuilder {
 impl TPlanetBuilder for ClientPlanetBuilder {
     fn insert_planet(
         &self,
-        entity: &mut bevy::ecs::system::EntityCommands,
-        transform: bevy::prelude::Transform,
+        entity: &mut EntityCommands,
+        location: Location,
         structure: &mut Structure,
     ) {
         self.planet_builder
-            .insert_planet(entity, transform, structure);
+            .insert_planet(entity, location, structure);
     }
 }

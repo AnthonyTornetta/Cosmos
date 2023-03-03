@@ -7,8 +7,8 @@ use bevy::{
     time::Time,
 };
 use bevy_rapier3d::prelude::{
-    ActiveEvents, ActiveHooks, Collider, LockedAxes, QueryFilter, RapierContext, RigidBody, Sensor,
-    Velocity,
+    ActiveEvents, ActiveHooks, BodyWorld, Collider, LockedAxes, QueryFilter, RapierContext,
+    RigidBody, Sensor, Velocity, WorldId,
 };
 
 #[derive(Debug)]
@@ -77,6 +77,7 @@ impl Laser {
         no_collide_entity: Option<Entity>,
         mut pbr: PbrBundle,
         time: &Time,
+        world_id: WorldId,
         commands: &mut Commands,
     ) -> Entity {
         pbr.transform = Transform {
@@ -108,6 +109,7 @@ impl Laser {
             .insert(FireTime {
                 time: time.elapsed_seconds(),
             })
+            .insert(BodyWorld { world_id })
             .insert(ActiveEvents::COLLISION_EVENTS)
             .insert(ActiveHooks::MODIFY_SOLVER_CONTACTS)
             .insert(Sensor)
@@ -131,6 +133,7 @@ impl Laser {
         strength: f32,
         no_collide_entity: Option<Entity>,
         time: &Time,
+        world_id: WorldId,
         commands: &mut Commands,
     ) -> Entity {
         Self::spawn_custom_pbr(
@@ -143,6 +146,7 @@ impl Laser {
                 ..Default::default()
             },
             time,
+            world_id,
             commands,
         )
     }
@@ -151,6 +155,7 @@ impl Laser {
 fn handle_events(
     mut query: Query<
         (
+            &BodyWorld,
             &GlobalTransform,
             Entity,
             Option<&NoCollide>,
@@ -166,7 +171,7 @@ fn handle_events(
     parent_query: Query<&Parent>,
     transform_query: Query<&GlobalTransform, Without<Laser>>,
 ) {
-    for (transform, laser_entity, no_collide_entity, mut laser, velocity, collider) in
+    for (world, transform, laser_entity, no_collide_entity, mut laser, velocity, collider) in
         query.iter_mut()
     {
         if laser.active {
@@ -178,7 +183,8 @@ fn handle_events(
             // it simulates the laser moving over the perioid it moved in 1 second
             // and the time it takes is irrelevant.
 
-            if let Some((entity, toi)) = rapier_context.cast_shape(
+            if let Ok(Some((entity, toi))) = rapier_context.cast_shape(
+                world.world_id,
                 last_pos - delta_position, // sometimes lasers pass through things that are next to where they are spawned, thus we check starting a bit behind them
                 Quat::from_affine3(&transform.affine()),
                 delta_position * 2.0, // * 2.0 to account for checking behind the laser

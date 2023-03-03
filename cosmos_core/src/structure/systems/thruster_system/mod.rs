@@ -27,7 +27,7 @@ use crate::{
 
 use super::{StructureSystem, Systems};
 
-const MAX_SHIP_SPEED: f32 = 256.0;
+const MAX_SHIP_SPEED: f32 = 1000.0;
 const MAX_BRAKE_DELTA_PER_THRUST: f32 = 300.0;
 
 pub struct ThrusterProperty {

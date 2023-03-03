@@ -1,8 +1,10 @@
 use bevy::prelude::{
-    App, Commands, DespawnRecursiveExt, Entity, EventReader, EventWriter, Query, Res, ResMut,
-    Transform, With,
+    App, Commands, DespawnRecursiveExt, Entity, EventReader, EventWriter, Query, Res, ResMut, With,
 };
-use cosmos_core::structure::{events::StructureCreated, planet::Planet, ship::Ship, Structure};
+use cosmos_core::{
+    physics::location::Location,
+    structure::{events::StructureCreated, planet::Planet, ship::Ship, Structure},
+};
 
 use crate::structure::saving::{
     load_structure, SaveStructure, SendDelayedStructureLoadEvent, StructureType,
@@ -124,14 +126,14 @@ fn cosmos_command_listener(
                         None
                     }
                 } {
-                    let mut transform = Transform::default();
+                    let mut spawn_at = Location::default();
                     if ev.args.len() == 5 {
                         if let Ok(x) = ev.args[2].parse::<f32>() {
                             if let Ok(y) = ev.args[3].parse::<f32>() {
                                 if let Ok(z) = ev.args[4].parse::<f32>() {
-                                    transform.translation.x = x;
-                                    transform.translation.y = y;
-                                    transform.translation.z = z;
+                                    spawn_at.local.x = x;
+                                    spawn_at.local.y = y;
+                                    spawn_at.local.z = z;
                                 }
                             }
                         }
@@ -140,7 +142,7 @@ fn cosmos_command_listener(
                     load_structure(
                         ev.args[0].as_str(),
                         structure_type,
-                        transform,
+                        spawn_at,
                         &mut commands,
                         &mut structure_created,
                         &mut structure_loaded_delayed,

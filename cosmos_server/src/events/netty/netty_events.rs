@@ -4,6 +4,8 @@ use bevy_renet::renet::{RenetServer, ServerEvent};
 use cosmos_core::inventory::Inventory;
 use cosmos_core::item::Item;
 use cosmos_core::netty::server_reliable_messages::ServerReliableMessages;
+use cosmos_core::physics::location::Location;
+use cosmos_core::physics::player_world::WorldWithin;
 use cosmos_core::registry::Registry;
 use cosmos_core::structure::planet::Planet;
 use cosmos_core::structure::ship::Ship;
@@ -87,6 +89,7 @@ fn generate_player_inventory(items: &Registry<Item>) -> Inventory {
     inventory
 }
 
+use crate::physics::assign_player_world;
 use crate::state::GameState;
 
 fn handle_events_system(
@@ -95,11 +98,20 @@ fn handle_events_system(
     mut server_events: EventReader<ServerEvent>,
     mut lobby: ResMut<ServerLobby>,
     mut client_ticks: ResMut<ClientTicks>,
-    players: Query<(Entity, &Player, &Transform, &Velocity, &Inventory)>,
+    players: Query<(
+        Entity,
+        &Player,
+        &Transform,
+        &Location,
+        &Velocity,
+        &Inventory,
+    )>,
+    player_worlds: Query<(&Location, &WorldWithin, &BodyWorld), (With<Player>, Without<Parent>)>,
     structure_type: Query<(Option<&Ship>, Option<&Planet>)>,
     structures_query: Query<(Entity, &Structure, &Transform, &Velocity)>,
     items: Res<Registry<Item>>,
     mut visualizer: ResMut<RenetServerVisualizer<200>>,
+    mut rapier_context: ResMut<RapierContext>,
 ) {
     for event in server_events.iter() {
         match event {
@@ -107,8 +119,8 @@ fn handle_events_system(
                 println!("Client {id} connected");
                 visualizer.add_client(*id);
 
-                for (entity, player, transform, velocity, inventory) in players.iter() {
-                    let body = NettyRigidBody::new(velocity, transform);
+                for (entity, player, transform, location, velocity, inventory) in players.iter() {
+                    let body = NettyRigidBody::new(velocity, transform.rotation, *location);
 
                     let msg = bincode::serialize(&ServerReliableMessages::PlayerCreate {
                         entity,
@@ -124,31 +136,45 @@ fn handle_events_system(
 
                 let name = "epic nameo";
                 let player = Player::new(String::from(name), *id);
-                let transform = Transform::from_xyz(0.0, 60.0, 0.0);
+                let starting_pos = Vec3::new(0.0, 60.0, 0.0);
+                let transform = Transform::from_translation(starting_pos);
+                let location = Location::new(starting_pos, 0, 0, 0);
                 let velocity = Velocity::default();
                 let inventory = generate_player_inventory(&items);
 
-                let netty_body = NettyRigidBody::new(&velocity, &transform);
+                let netty_body = NettyRigidBody::new(&velocity, transform.rotation, location);
 
                 let inventory_serialized = bincode::serialize(&inventory).unwrap();
 
-                let mut player_entity = commands.spawn(transform);
-                player_entity
-                    .insert(LockedAxes::ROTATION_LOCKED)
-                    .insert(RigidBody::Dynamic)
-                    .insert(velocity)
-                    .insert(Collider::capsule_y(0.5, 0.25))
-                    .insert(player)
-                    .insert(ReadMassProperties::default())
-                    .insert(inventory)
-                    .insert(PlayerLooking {
+                let player_commands = commands.spawn((
+                    transform,
+                    location,
+                    LockedAxes::ROTATION_LOCKED,
+                    RigidBody::Dynamic,
+                    velocity,
+                    Collider::capsule_y(0.5, 0.25),
+                    player,
+                    ReadMassProperties::default(),
+                    inventory,
+                    PlayerLooking {
                         rotation: Quat::IDENTITY,
-                    });
+                    },
+                ));
 
-                lobby.players.insert(*id, player_entity.id());
+                let entity = player_commands.id();
+
+                lobby.players.insert(*id, entity);
+
+                assign_player_world(
+                    &player_worlds,
+                    entity,
+                    &location,
+                    &mut commands,
+                    &mut rapier_context,
+                );
 
                 let msg = bincode::serialize(&ServerReliableMessages::PlayerCreate {
-                    entity: player_entity.id(),
+                    entity,
                     id: *id,
                     name: String::from(name),
                     body: netty_body,
@@ -178,7 +204,7 @@ fn handle_events_system(
                             NettyChannel::Reliable.id(),
                             bincode::serialize(&ServerReliableMessages::PlanetCreate {
                                 entity,
-                                body: NettyRigidBody::new(velocity, transform),
+                                body: NettyRigidBody::new(velocity, transform.rotation, location),
                                 width: structure.chunks_width() as u32,
                                 height: structure.chunks_height() as u32,
                                 length: structure.chunks_length() as u32,
@@ -191,7 +217,7 @@ fn handle_events_system(
                             NettyChannel::Reliable.id(),
                             bincode::serialize(&ServerReliableMessages::ShipCreate {
                                 entity,
-                                body: NettyRigidBody::new(velocity, transform),
+                                body: NettyRigidBody::new(velocity, transform.rotation, location),
                                 width: structure.chunks_width() as u32,
                                 height: structure.chunks_height() as u32,
                                 length: structure.chunks_length() as u32,

@@ -67,6 +67,7 @@ fn update_system(
                                 strength,
                                 no_hit,
                                 &time,
+                                0,
                                 &mut commands,
                             );
 

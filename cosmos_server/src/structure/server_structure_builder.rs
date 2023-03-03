@@ -1,4 +1,9 @@
-use cosmos_core::structure::structure_builder::{StructureBuilder, TStructureBuilder};
+use bevy::ecs::system::EntityCommands;
+use bevy_rapier3d::prelude::Velocity;
+use cosmos_core::{
+    physics::location::Location,
+    structure::structure_builder::{StructureBuilder, TStructureBuilder},
+};
 
 #[derive(Default)]
 pub struct ServerStructureBuilder {
@@ -8,12 +13,12 @@ pub struct ServerStructureBuilder {
 impl TStructureBuilder for ServerStructureBuilder {
     fn insert_structure(
         &self,
-        entity: &mut bevy::ecs::system::EntityCommands,
-        transform: bevy::prelude::Transform,
-        velocity: bevy_rapier3d::prelude::Velocity,
+        entity: &mut EntityCommands,
+        location: Location,
+        velocity: Velocity,
         structure: &mut cosmos_core::structure::Structure,
     ) {
         self.structure_builder
-            .insert_structure(entity, transform, velocity, structure);
+            .insert_structure(entity, location, velocity, structure);
     }
 }
