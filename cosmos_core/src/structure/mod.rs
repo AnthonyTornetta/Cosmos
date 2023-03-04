@@ -1,3 +1,4 @@
+use bevy::reflect::Reflect;
 use bevy::utils::HashMap;
 use bevy::{ecs::schedule::StateData, prelude::App};
 
@@ -27,7 +28,7 @@ use self::block_health::block_destroyed_event::BlockDestroyedEvent;
 use self::structure_block::StructureBlock;
 use self::structure_iterator::{BlockIterator, ChunkIterator};
 
-#[derive(Serialize, Deserialize, Component)]
+#[derive(Serialize, Deserialize, Component, Reflect)]
 pub struct Structure {
     #[serde(skip)]
     chunk_entities: HashMap<usize, Entity>,
@@ -512,6 +513,7 @@ pub fn register<T: StateData + Clone + Copy>(
     post_loading_state: T,
     playing_game_state: T,
 ) {
+    app.register_type::<Structure>().register_type::<Chunk>();
     systems::register(app, post_loading_state, playing_game_state);
     ship::register(app, playing_game_state);
     events::register(app);

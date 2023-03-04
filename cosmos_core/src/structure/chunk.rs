@@ -4,6 +4,7 @@ use crate::block::Block;
 use crate::registry::identifiable::Identifiable;
 use crate::registry::Registry;
 use bevy::prelude::Vec3;
+use bevy::reflect::{FromReflect, Reflect};
 use serde::de;
 use serde::de::Error;
 use serde::de::{Deserialize, Deserializer, MapAccess, SeqAccess, Visitor};
@@ -16,6 +17,7 @@ use super::block_health::BlockHealth;
 pub const CHUNK_DIMENSIONS: usize = 16;
 const N_BLOCKS: usize = CHUNK_DIMENSIONS * CHUNK_DIMENSIONS * CHUNK_DIMENSIONS;
 
+#[derive(Debug, Reflect, FromReflect)]
 pub struct Chunk {
     x: usize,
     y: usize,

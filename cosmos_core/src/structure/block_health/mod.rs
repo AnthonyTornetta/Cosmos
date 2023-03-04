@@ -1,4 +1,8 @@
-use bevy::{prelude::App, utils::HashMap};
+use bevy::{
+    prelude::App,
+    reflect::{FromReflect, Reflect},
+    utils::HashMap,
+};
 use serde::{Deserialize, Serialize};
 
 pub mod block_destroyed_event;
@@ -7,7 +11,7 @@ use crate::{block::hardness::BlockHardness, utils::array_utils::flatten};
 
 use super::chunk::CHUNK_DIMENSIONS;
 
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize, Reflect, FromReflect)]
 pub(crate) struct BlockHealth {
     block_healths: HashMap<u32, f32>,
 }
