@@ -2,9 +2,12 @@ use crate::structure::{
     events::{ChunkSetEvent, StructureLoadedEvent},
     Structure,
 };
-use bevy::prelude::{Added, App, Commands, Component, Entity, EventReader, EventWriter, Query};
+use bevy::{
+    prelude::{Added, App, Commands, Component, Entity, EventReader, EventWriter, Query},
+    reflect::{FromReflect, Reflect},
+};
 
-#[derive(Component)]
+#[derive(Component, Debug, Reflect, FromReflect)]
 pub struct ChunksNeedLoaded {
     pub amount_needed: usize,
 }
@@ -45,5 +48,6 @@ fn listen_structure_added(
 
 pub(crate) fn register(app: &mut App) {
     app.add_system(listen_structure_added)
-        .add_system(listen_chunk_done_loading);
+        .add_system(listen_chunk_done_loading)
+        .register_type::<ChunksNeedLoaded>();
 }

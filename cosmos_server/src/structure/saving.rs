@@ -104,7 +104,7 @@ pub fn load_structure(
 
             entity_cmd
                 .insert(ChunksNeedLoaded {
-                    amount_needed: structure.all_chunks_iter(true).len(),
+                    amount_needed: structure.all_chunks_iter(false).len(),
                 })
                 .insert(structure);
 

@@ -19,7 +19,7 @@ pub struct StructureLoadedEvent {
 /// - x | Chunk's coordinate in the structure
 /// - y | Chunk's coordinate in the structure
 /// - z | Chunk's coordinate in the structure
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub struct ChunkSetEvent {
     /// The entity of the structure this is a part of
     pub structure_entity: Entity,

@@ -88,9 +88,23 @@ impl<'a> BlockIterator<'a> {
     pub fn len(&self) -> usize {
         match &self.state {
             ItrState::Valid(body) => {
-                (body.end_x - body.start_x)
-                    * (body.end_y - body.start_y)
-                    * (body.end_z - body.start_z)
+                if body.include_empty {
+                    (body.end_x - body.start_x)
+                        * (body.end_y - body.start_y)
+                        * (body.end_z - body.start_z)
+                } else {
+                    Self::new(
+                        body.start_x as i32,
+                        body.start_y as i32,
+                        body.start_z as i32,
+                        body.end_x as i32,
+                        body.end_y as i32,
+                        body.end_z as i32,
+                        body.include_empty,
+                        body.structure,
+                    )
+                    .count()
+                }
             }
             ItrState::Invalid => 0,
         }
@@ -199,9 +213,23 @@ impl<'a> ChunkIterator<'a> {
     pub fn len(&self) -> usize {
         match &self.state {
             ItrState::Valid(body) => {
-                (body.end_x - body.start_x + 1)
-                    * (body.end_y - body.start_y + 1)
-                    * (body.end_z - body.start_z + 1)
+                if body.include_empty {
+                    (body.end_x - body.start_x + 1)
+                        * (body.end_y - body.start_y + 1)
+                        * (body.end_z - body.start_z + 1)
+                } else {
+                    Self::new(
+                        body.start_x as i32,
+                        body.start_y as i32,
+                        body.start_z as i32,
+                        body.end_x as i32,
+                        body.end_y as i32,
+                        body.end_z as i32,
+                        body.structure,
+                        body.include_empty,
+                    )
+                    .count()
+                }
             }
             ItrState::Invalid => 0,
         }

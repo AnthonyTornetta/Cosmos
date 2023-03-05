@@ -1,6 +1,7 @@
 use bevy::reflect::Reflect;
 use bevy::utils::{HashMap, HashSet};
 use bevy::{ecs::schedule::StateData, prelude::App};
+use bevy_rapier3d::prelude::BodyWorld;
 
 pub mod block_health;
 pub mod chunk;
@@ -562,11 +563,12 @@ pub struct ChunkInitEvent {
 fn add_chunks_system(
     mut chunk_init_reader: EventReader<ChunkInitEvent>,
     mut block_reader: EventReader<BlockChangedEvent>,
-    mut structure_query: Query<&mut Structure>,
+    mut structure_query: Query<(&mut Structure, Option<&BodyWorld>)>,
     mut chunk_set_event_writer: EventWriter<ChunkSetEvent>,
     mut commands: Commands,
 ) {
     let mut s_chunks = HashSet::new();
+    let mut chunk_set_events = HashSet::new();
 
     for ev in block_reader.iter() {
         s_chunks.insert((
@@ -581,37 +583,51 @@ fn add_chunks_system(
 
     for ev in chunk_init_reader.iter() {
         s_chunks.insert((ev.structure_entity, (ev.x, ev.y, ev.z)));
+        chunk_set_events.insert(ChunkSetEvent {
+            structure_entity: ev.structure_entity,
+            x: ev.x,
+            y: ev.y,
+            z: ev.z,
+        });
     }
 
     for (structure_entity, (x, y, z)) in s_chunks {
-        if let Ok(mut structure) = structure_query.get_mut(structure_entity) {
+        if let Ok((mut structure, body_world)) = structure_query.get_mut(structure_entity) {
             if let Some(chunk) = structure.chunk_from_chunk_coordinates(x, y, z) {
                 if !chunk.is_empty() {
                     if structure.chunk_entity(x, y, z).is_none() {
-                        let entity = commands
-                            .spawn(PbrBundle {
-                                transform: Transform::from_translation(
-                                    structure.chunk_relative_position(x, y, z),
-                                ),
-                                ..Default::default()
-                            })
-                            .id();
+                        let mut entity_cmds = commands.spawn(PbrBundle {
+                            transform: Transform::from_translation(
+                                structure.chunk_relative_position(x, y, z),
+                            ),
+                            ..Default::default()
+                        });
+
+                        if let Some(bw) = body_world {
+                            entity_cmds.insert(*bw);
+                        }
+
+                        let entity = entity_cmds.id();
 
                         commands.entity(structure_entity).add_child(entity);
 
                         structure.set_chunk_entity(x, y, z, entity);
+
+                        chunk_set_events.insert(ChunkSetEvent {
+                            structure_entity,
+                            x,
+                            y,
+                            z,
+                        });
                     }
                 }
             }
         }
+    }
 
+    for ev in chunk_set_events {
         println!("Sending chunk set event!");
-        chunk_set_event_writer.send(ChunkSetEvent {
-            structure_entity,
-            x,
-            y,
-            z,
-        });
+        chunk_set_event_writer.send(ev);
     }
 }
 
