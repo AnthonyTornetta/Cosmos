@@ -34,11 +34,20 @@ fn new_renet_client(host: &str) -> RenetClient {
     let cur_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
     let client_id = cur_time.as_millis() as u64;
 
+    let name = "CoolPlayer";
+
+    let mut token = [0; 256];
+
+    let serialized_name = bincode::serialize(name).unwrap();
+    for (i, byte) in serialized_name.iter().enumerate() {
+        token[i] = *byte;
+    }
+
     let auth = ClientAuthentication::Unsecure {
         client_id,
         protocol_id: PROTOCOL_ID,
         server_addr,
-        user_data: None,
+        user_data: Some(token),
     };
 
     println!("Connecting to {server_addr}");
