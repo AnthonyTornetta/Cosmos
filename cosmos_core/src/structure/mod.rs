@@ -1,5 +1,5 @@
 use bevy::reflect::Reflect;
-use bevy::utils::HashMap;
+use bevy::utils::{HashMap, HashSet};
 use bevy::{ecs::schedule::StateData, prelude::App};
 
 pub mod block_health;
@@ -21,14 +21,18 @@ use crate::registry::identifiable::Identifiable;
 use crate::registry::Registry;
 use crate::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
 use crate::utils::array_utils::flatten;
-use bevy::prelude::{Component, Entity, EventWriter, GlobalTransform, Vec3};
+use bevy::prelude::{
+    BuildChildren, Commands, Component, Entity, EventReader, EventWriter, GlobalTransform,
+    PbrBundle, Query, Transform, Vec3,
+};
 use serde::{Deserialize, Serialize};
 
 use self::block_health::block_destroyed_event::BlockDestroyedEvent;
+use self::events::ChunkSetEvent;
 use self::structure_block::StructureBlock;
 use self::structure_iterator::{BlockIterator, ChunkIterator};
 
-#[derive(Serialize, Deserialize, Component, Reflect)]
+#[derive(Serialize, Deserialize, Component, Reflect, Debug)]
 pub struct Structure {
     #[serde(skip)]
     chunk_entities: HashMap<usize, Entity>,
@@ -370,7 +374,10 @@ impl Structure {
 
     /// Iterate over blocks in a given range. Will skip over any out of bounds positions.
     /// Coordinates are inclusive
-    pub fn all_chunks_iter(&self) -> ChunkIterator {
+    ///
+    /// If include_empty is enabled, the value iterated over may be None OR Some(chunk).
+    /// If include_empty is disabled, the value iterated over may ONLY BE Some(chunk).
+    pub fn all_chunks_iter(&self, include_empty: bool) -> ChunkIterator {
         ChunkIterator::new(
             0_i32,
             0_i32,
@@ -379,13 +386,28 @@ impl Structure {
             self.blocks_height() as i32 - 1,
             self.blocks_length() as i32 - 1,
             self,
+            include_empty,
         )
     }
 
     /// Iterate over blocks in a given range. Will skip over any out of bounds positions.
     /// Coordinates are inclusive
-    pub fn chunk_iter(&self, start: (i32, i32, i32), end: (i32, i32, i32)) -> ChunkIterator {
-        ChunkIterator::new(start.0, start.1, start.2, end.0, end.1, end.2, self)
+    pub fn chunk_iter(
+        &self,
+        start: (i32, i32, i32),
+        end: (i32, i32, i32),
+        include_empty: bool,
+    ) -> ChunkIterator {
+        ChunkIterator::new(
+            start.0,
+            start.1,
+            start.2,
+            end.0,
+            end.1,
+            end.2,
+            self,
+            include_empty,
+        )
     }
 
     /// Will fail assertion if chunk positions are out of bounds
@@ -508,6 +530,55 @@ impl Structure {
     }
 }
 
+fn add_chunks_system(
+    mut chunk_set_reader: EventReader<ChunkSetEvent>,
+    mut block_reader: EventReader<BlockChangedEvent>,
+    mut structure_query: Query<&mut Structure>,
+    mut commands: Commands,
+) {
+    let mut s_chunks = HashSet::new();
+
+    for ev in block_reader.iter() {
+        s_chunks.insert((
+            ev.structure_entity,
+            (
+                ev.block.x / CHUNK_DIMENSIONS,
+                ev.block.y / CHUNK_DIMENSIONS,
+                ev.block.z / CHUNK_DIMENSIONS,
+            ),
+        ));
+    }
+
+    for ev in chunk_set_reader.iter() {
+        s_chunks.insert((ev.structure_entity, (ev.x, ev.y, ev.z)));
+    }
+
+    for (structure_entity, (x, y, z)) in s_chunks {
+        if let Ok(mut structure) = structure_query.get_mut(structure_entity) {
+            if let Some(chunk) = structure.chunk_from_chunk_coordinates(x, y, z) {
+                if !chunk.is_empty() {
+                    if structure.chunk_entity(x, y, z).is_none() {
+                        let entity = commands
+                            .spawn(PbrBundle {
+                                transform: Transform::from_translation(
+                                    structure.chunk_relative_position(x, y, z),
+                                ),
+                                ..Default::default()
+                            })
+                            .id();
+
+                        commands.entity(structure_entity).add_child(entity);
+
+                        structure.set_chunk_entity(x, y, z, entity);
+                    }
+                } else {
+                    println!("Chunk @ {x}, {y}, {z} was empty!");
+                }
+            }
+        }
+    }
+}
+
 pub fn register<T: StateData + Clone + Copy>(
     app: &mut App,
     post_loading_state: T,
@@ -520,4 +591,6 @@ pub fn register<T: StateData + Clone + Copy>(
     loading::register(app);
     block_health::register(app);
     structure_block::register(app);
+
+    app.add_system(add_chunks_system);
 }

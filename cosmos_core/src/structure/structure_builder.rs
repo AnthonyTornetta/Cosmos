@@ -1,6 +1,6 @@
 use bevy::{
     ecs::system::EntityCommands,
-    prelude::{BuildChildren, PbrBundle, Transform},
+    prelude::{PbrBundle, Transform},
 };
 use bevy_rapier3d::prelude::Velocity;
 
@@ -39,24 +39,6 @@ impl TStructureBuilder for StructureBuilder {
                 ..Default::default()
             })
             .insert((velocity, location))
-            .with_children(|parent| {
-                for z in 0..structure.chunks_length() {
-                    for y in 0..structure.chunks_height() {
-                        for x in 0..structure.chunks_width() {
-                            let entity = parent
-                                .spawn(PbrBundle {
-                                    transform: Transform::from_translation(
-                                        structure.chunk_relative_position(x, y, z),
-                                    ),
-                                    ..Default::default()
-                                })
-                                .id();
-
-                            structure.set_chunk_entity(x, y, z, entity);
-                        }
-                    }
-                }
-            })
             .insert(physics_updater);
     }
 }

@@ -52,7 +52,7 @@ impl TBiosphere<GrassBiosphereMarker, GrassChunkNeedsGeneratedEvent> for GrassBi
     }
 }
 
-const AMPLITUDE: f64 = 30.0;
+const AMPLITUDE: f64 = 0.0;
 const DELTA: f64 = 0.05;
 
 pub(crate) fn generate_planet(

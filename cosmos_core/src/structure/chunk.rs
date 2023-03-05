@@ -25,6 +25,8 @@ pub struct Chunk {
     blocks: [u16; N_BLOCKS],
 
     block_health: BlockHealth,
+
+    non_air_blocks: usize,
 }
 
 impl Chunk {
@@ -35,6 +37,7 @@ impl Chunk {
             z,
             blocks: [0; N_BLOCKS],
             block_health: BlockHealth::default(),
+            non_air_blocks: 0,
         }
     }
 
@@ -53,9 +56,26 @@ impl Chunk {
         self.z
     }
 
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.non_air_blocks == 0
+    }
+
     pub fn set_block_at(&mut self, x: usize, y: usize, z: usize, b: &Block) {
-        self.blocks[z * CHUNK_DIMENSIONS * CHUNK_DIMENSIONS + y * CHUNK_DIMENSIONS + x] = b.id();
+        let index = z * CHUNK_DIMENSIONS * CHUNK_DIMENSIONS + y * CHUNK_DIMENSIONS + x;
+        let id = b.id();
+
         self.block_health.reset_health(x, y, z);
+
+        if self.blocks[index] != id {
+            if self.blocks[index] == AIR_BLOCK_ID {
+                self.non_air_blocks += 1;
+            } else if id == AIR_BLOCK_ID {
+                self.non_air_blocks -= 1;
+            }
+
+            self.blocks[index] = b.id();
+        }
     }
 
     #[inline]
@@ -216,23 +236,29 @@ impl<'de> Deserialize<'de> for Field {
 
 struct ChunkVisitor;
 
-fn vec_into_chunk_array(blocks: &[u16]) -> [u16; N_BLOCKS] {
+fn vec_into_chunk_array(blocks: &[u16]) -> ([u16; N_BLOCKS], usize) {
     let mut blocks_arr = [0; N_BLOCKS];
 
     let mut blocks_i = 1;
     let mut n = blocks[0];
 
-    for block in blocks_arr.iter_mut().take(N_BLOCKS) {
+    let mut non_air_blocks = 0;
+
+    for block in blocks_arr.iter_mut() {
         if n == 0 {
             n = blocks[blocks_i + 1];
             blocks_i += 2;
         }
 
         *block = blocks[blocks_i];
+        if *block != AIR_BLOCK_ID {
+            non_air_blocks += 1;
+        }
+
         n -= 1;
     }
 
-    blocks_arr
+    (blocks_arr, non_air_blocks)
 }
 
 impl<'de> Visitor<'de> for ChunkVisitor {
@@ -262,12 +288,15 @@ impl<'de> Visitor<'de> for ChunkVisitor {
             .next_element()?
             .ok_or_else(|| A::Error::invalid_length(4, &self))?;
 
+        let (blocks, non_air_blocks) = vec_into_chunk_array(&blocks);
+
         Ok(Chunk {
             x,
             y,
             z,
-            blocks: vec_into_chunk_array(&blocks),
+            blocks,
             block_health,
+            non_air_blocks,
         })
     }
 
@@ -320,12 +349,15 @@ impl<'de> Visitor<'de> for ChunkVisitor {
         let blocks = blocks.ok_or_else(|| A::Error::missing_field("blocks"))?;
         let block_health = block_health.ok_or_else(|| A::Error::missing_field("block_health"))?;
 
+        let (blocks, non_air_blocks) = vec_into_chunk_array(&blocks);
+
         Ok(Chunk {
             x,
             y,
             z,
-            blocks: vec_into_chunk_array(&blocks),
+            blocks,
             block_health,
+            non_air_blocks,
         })
     }
 }

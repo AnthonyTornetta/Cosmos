@@ -2,7 +2,10 @@ use bevy::prelude::{App, Commands, Component, Entity, EventWriter, Query, Res, S
 use cosmos_core::{
     block::Block,
     registry::Registry,
-    structure::{events::ChunkSetEvent, loading::ChunksNeedLoaded, Structure},
+    structure::{
+        events::ChunkSetEvent, loading::ChunksNeedLoaded, structure_iterator::ChunkIteratorResult,
+        Structure,
+    },
 };
 
 use crate::state::GameState;
@@ -33,13 +36,20 @@ fn create_ships(
 
         structure.set_block_at(width / 2, height / 2, length / 2, ship_core, &blocks, None);
 
-        for chunk in structure.all_chunks_iter() {
-            chunk_set_event_writer.send(ChunkSetEvent {
-                structure_entity: entity,
-                x: chunk.structure_x(),
-                y: chunk.structure_y(),
-                z: chunk.structure_z(),
-            });
+        for res in structure.all_chunks_iter(false) {
+            // This will always be true because include_empty is false
+            if let ChunkIteratorResult::FilledChunk {
+                position: (x, y, z),
+                chunk: _,
+            } = res
+            {
+                chunk_set_event_writer.send(ChunkSetEvent {
+                    structure_entity: entity,
+                    x,
+                    y,
+                    z,
+                });
+            }
         }
     }
 }

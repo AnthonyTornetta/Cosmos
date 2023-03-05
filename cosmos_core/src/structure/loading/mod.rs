@@ -38,7 +38,7 @@ fn listen_structure_added(
 ) {
     for (entity, structure) in query.iter() {
         commands.entity(entity).insert(ChunksNeedLoaded {
-            amount_needed: structure.all_chunks_iter().len(),
+            amount_needed: structure.all_chunks_iter(true).len(),
         });
     }
 }

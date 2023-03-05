@@ -9,6 +9,7 @@ use cosmos_core::{
         loading::ChunksNeedLoaded,
         planet::planet_builder::TPlanetBuilder,
         ship::ship_builder::TShipBuilder,
+        structure_iterator::ChunkIteratorResult,
         Structure,
     },
 };
@@ -43,13 +44,20 @@ fn send_actual_loaded_events(
 ) {
     for ev in event_reader.iter() {
         if let Ok(structure) = structure_query.get(ev.0) {
-            for chunk in structure.all_chunks_iter() {
-                chunk_set_event_writer.send(ChunkSetEvent {
-                    structure_entity: ev.0,
-                    x: chunk.structure_x(),
-                    y: chunk.structure_y(),
-                    z: chunk.structure_z(),
-                });
+            for res in structure.all_chunks_iter(false) {
+                // This will always be true because include_empty is false
+                if let ChunkIteratorResult::FilledChunk {
+                    position: (x, y, z),
+                    chunk: _,
+                } = res
+                {
+                    chunk_set_event_writer.send(ChunkSetEvent {
+                        structure_entity: ev.0,
+                        x,
+                        y,
+                        z,
+                    });
+                }
             }
         } else {
             println!("Error: structure still no exist");
@@ -99,7 +107,7 @@ pub fn load_structure(
 
             entity_cmd
                 .insert(ChunksNeedLoaded {
-                    amount_needed: structure.all_chunks_iter().len(),
+                    amount_needed: structure.all_chunks_iter(true).len(),
                 })
                 .insert(structure);
 
