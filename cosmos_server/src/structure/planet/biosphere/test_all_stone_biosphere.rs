@@ -2,7 +2,7 @@ use bevy::prelude::{App, Component, Entity, EventReader, EventWriter, Query, Res
 use cosmos_core::{
     block::Block,
     registry::Registry,
-    structure::{chunk::CHUNK_DIMENSIONS, events::ChunkSetEvent, Structure},
+    structure::{chunk::CHUNK_DIMENSIONS, ChunkInitEvent, Structure},
 };
 
 use crate::structure::planet::generation::planet_generator::check_needs_generated_system;
@@ -55,7 +55,7 @@ impl TBiosphere<TestStoneBiosphereMarker, TestStoneChunkNeedsGeneratedEvent>
 pub fn generate_planet(
     mut query: Query<&mut Structure>,
     mut events: EventReader<TestStoneChunkNeedsGeneratedEvent>,
-    mut event_writer: EventWriter<ChunkSetEvent>,
+    mut event_writer: EventWriter<ChunkInitEvent>,
     blocks: Res<Registry<Block>>,
 ) {
     for ev in events.iter() {
@@ -77,7 +77,7 @@ pub fn generate_planet(
             }
         }
 
-        event_writer.send(ChunkSetEvent {
+        event_writer.send(ChunkInitEvent {
             structure_entity: ev.structure_entity,
             x: ev.x,
             y: ev.y,

@@ -2,7 +2,7 @@ use bevy::prelude::{App, Component, Entity, EventReader, EventWriter, Query, Res
 use cosmos_core::{
     block::Block,
     registry::Registry,
-    structure::{chunk::CHUNK_DIMENSIONS, events::ChunkSetEvent, Structure},
+    structure::{chunk::CHUNK_DIMENSIONS, ChunkInitEvent, Structure},
     utils::resource_wrapper::ResourceWrapper,
 };
 use noise::NoiseFn;
@@ -52,13 +52,13 @@ impl TBiosphere<GrassBiosphereMarker, GrassChunkNeedsGeneratedEvent> for GrassBi
     }
 }
 
-const AMPLITUDE: f64 = 0.0;
+const AMPLITUDE: f64 = 13.0;
 const DELTA: f64 = 0.05;
 
 pub(crate) fn generate_planet(
     mut query: Query<&mut Structure>,
     mut events: EventReader<GrassChunkNeedsGeneratedEvent>,
-    mut event_writer: EventWriter<ChunkSetEvent>,
+    mut event_writer: EventWriter<ChunkInitEvent>,
     noise_generastor: Res<ResourceWrapper<noise::OpenSimplex>>,
     blocks: Res<Registry<Block>>,
 ) {
@@ -103,7 +103,7 @@ pub(crate) fn generate_planet(
             }
         }
 
-        event_writer.send(ChunkSetEvent {
+        event_writer.send(ChunkInitEvent {
             structure_entity: ev.structure_entity,
             x: ev.x,
             y: ev.y,

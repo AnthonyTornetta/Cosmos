@@ -144,7 +144,13 @@ impl Structure {
     ///
     /// Returns None for empty chunks - panics for chunks that are out of bounds
     pub fn chunk_from_chunk_coordinates(&self, cx: usize, cy: usize, cz: usize) -> Option<&Chunk> {
-        assert!(cx < self.width && cy < self.height && cz < self.length);
+        assert!(
+            cx < self.width && cy < self.height && cz < self.length,
+            "{cx} < {} && {cy} < {} && {cz} < {} failed",
+            self.width,
+            self.height,
+            self.length
+        );
 
         self.chunks
             .get(&flatten(cx, cy, cz, self.width, self.height))
@@ -265,6 +271,14 @@ impl Structure {
         )
     }
 
+    fn create_chunk_at(&mut self, cx: usize, cy: usize, cz: usize) -> &mut Chunk {
+        let index = flatten(cx, cy, cz, self.width, self.height);
+
+        self.chunks.insert(index, Chunk::new(cx, cy, cz));
+
+        self.chunks.get_mut(&index).unwrap()
+    }
+
     pub fn set_block_at(
         &mut self,
         x: usize,
@@ -300,11 +314,14 @@ impl Structure {
             chunk.set_block_at(bx, by, bz, block);
         } else {
             if block.id() != AIR_BLOCK_ID {
-                let mut chunk = Chunk::new(x, y, z);
-                chunk.set_block_at(bx, by, bz, block);
+                let (cx, cy, cz) = (
+                    x / CHUNK_DIMENSIONS,
+                    y / CHUNK_DIMENSIONS,
+                    z / CHUNK_DIMENSIONS,
+                );
 
-                self.chunks
-                    .insert(flatten(x, y, z, self.width, self.height), chunk);
+                let chunk = self.create_chunk_at(cx, cy, cz);
+                chunk.set_block_at(bx, by, bz, block);
             }
         }
     }
@@ -530,10 +547,23 @@ impl Structure {
     }
 }
 
+#[derive(Debug)]
+pub struct ChunkInitEvent {
+    /// The entity of the structure this is a part of
+    pub structure_entity: Entity,
+    /// Chunk's coordinate in the structure
+    pub x: usize,
+    /// Chunk's coordinate in the structure    
+    pub y: usize,
+    /// Chunk's coordinate in the structure    
+    pub z: usize,
+}
+
 fn add_chunks_system(
-    mut chunk_set_reader: EventReader<ChunkSetEvent>,
+    mut chunk_init_reader: EventReader<ChunkInitEvent>,
     mut block_reader: EventReader<BlockChangedEvent>,
     mut structure_query: Query<&mut Structure>,
+    mut chunk_set_event_writer: EventWriter<ChunkSetEvent>,
     mut commands: Commands,
 ) {
     let mut s_chunks = HashSet::new();
@@ -549,7 +579,7 @@ fn add_chunks_system(
         ));
     }
 
-    for ev in chunk_set_reader.iter() {
+    for ev in chunk_init_reader.iter() {
         s_chunks.insert((ev.structure_entity, (ev.x, ev.y, ev.z)));
     }
 
@@ -571,11 +601,17 @@ fn add_chunks_system(
 
                         structure.set_chunk_entity(x, y, z, entity);
                     }
-                } else {
-                    println!("Chunk @ {x}, {y}, {z} was empty!");
                 }
             }
         }
+
+        println!("Sending chunk set event!");
+        chunk_set_event_writer.send(ChunkSetEvent {
+            structure_entity,
+            x,
+            y,
+            z,
+        });
     }
 }
 
@@ -584,7 +620,10 @@ pub fn register<T: StateData + Clone + Copy>(
     post_loading_state: T,
     playing_game_state: T,
 ) {
-    app.register_type::<Structure>().register_type::<Chunk>();
+    app.register_type::<Structure>()
+        .register_type::<Chunk>()
+        .add_event::<ChunkInitEvent>();
+
     systems::register(app, post_loading_state, playing_game_state);
     ship::register(app, playing_game_state);
     events::register(app);

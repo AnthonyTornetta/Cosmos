@@ -3,7 +3,7 @@ use cosmos_core::{
     block::Block,
     registry::Registry,
     structure::{
-        events::ChunkSetEvent, loading::ChunksNeedLoaded, structure_iterator::ChunkIteratorResult,
+        loading::ChunksNeedLoaded, structure_iterator::ChunkIteratorResult, ChunkInitEvent,
         Structure,
     },
 };
@@ -19,7 +19,7 @@ fn create_ships(
     mut query: Query<(&mut Structure, Entity), (With<ShipNeedsCreated>, With<ChunksNeedLoaded>)>,
     mut commands: Commands,
     blocks: Res<Registry<Block>>,
-    mut chunk_set_event_writer: EventWriter<ChunkSetEvent>,
+    mut chunk_set_event_writer: EventWriter<ChunkInitEvent>,
 ) {
     for (mut structure, entity) in query.iter_mut() {
         commands.entity(entity).remove::<ShipNeedsCreated>();
@@ -43,7 +43,8 @@ fn create_ships(
                 chunk: _,
             } = res
             {
-                chunk_set_event_writer.send(ChunkSetEvent {
+                println!("Sending init event!");
+                chunk_set_event_writer.send(ChunkInitEvent {
                     structure_entity: entity,
                     x,
                     y,

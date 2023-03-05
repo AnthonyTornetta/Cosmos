@@ -5,12 +5,9 @@ use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
     physics::location::Location,
     structure::{
-        events::{ChunkSetEvent, StructureCreated},
-        loading::ChunksNeedLoaded,
-        planet::planet_builder::TPlanetBuilder,
-        ship::ship_builder::TShipBuilder,
-        structure_iterator::ChunkIteratorResult,
-        Structure,
+        events::StructureCreated, loading::ChunksNeedLoaded,
+        planet::planet_builder::TPlanetBuilder, ship::ship_builder::TShipBuilder,
+        structure_iterator::ChunkIteratorResult, ChunkInitEvent, Structure,
     },
 };
 
@@ -39,7 +36,7 @@ fn send_actual_loaded_events_first(
 
 fn send_actual_loaded_events(
     mut event_reader: EventReader<EvenMoreDelayedSLE>,
-    mut chunk_set_event_writer: EventWriter<ChunkSetEvent>,
+    mut chunk_set_event_writer: EventWriter<ChunkInitEvent>,
     structure_query: Query<&Structure>,
 ) {
     for ev in event_reader.iter() {
@@ -51,7 +48,7 @@ fn send_actual_loaded_events(
                     chunk: _,
                 } = res
                 {
-                    chunk_set_event_writer.send(ChunkSetEvent {
+                    chunk_set_event_writer.send(ChunkInitEvent {
                         structure_entity: ev.0,
                         x,
                         y,

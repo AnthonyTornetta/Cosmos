@@ -2,6 +2,7 @@ use crate::structure::structure_block::StructureBlock;
 use bevy::prelude::App;
 use bevy::prelude::Entity;
 
+#[derive(Debug)]
 pub struct BlockChangedEvent {
     pub block: StructureBlock,
     pub structure_entity: Entity,
