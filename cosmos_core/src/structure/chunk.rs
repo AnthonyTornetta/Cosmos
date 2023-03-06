@@ -15,6 +15,8 @@ use std::fmt::Formatter;
 use super::block_health::BlockHealth;
 
 pub const CHUNK_DIMENSIONS: usize = 16;
+pub const CHUNK_DIMENSIONSF: f32 = CHUNK_DIMENSIONS as f32;
+
 const N_BLOCKS: usize = CHUNK_DIMENSIONS * CHUNK_DIMENSIONS * CHUNK_DIMENSIONS;
 
 #[derive(Debug, Reflect, FromReflect)]

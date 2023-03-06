@@ -44,6 +44,8 @@ fn gravity_system(
                 }
             }
 
+            // println!("Ur mass: {}", prop.0.mass);
+
             if let Some(mut external_force) = external_force {
                 external_force.impulse += force;
             } else if let Some(mut entity) = commands.get_entity(ent) {
