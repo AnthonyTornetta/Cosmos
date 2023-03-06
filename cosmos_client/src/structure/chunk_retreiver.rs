@@ -16,17 +16,17 @@ fn populate_structures(
     network_mapping: Res<NetworkMapping>,
 ) {
     for entity in query.iter() {
-        let server_ent = network_mapping.server_from_client(&entity).unwrap();
+        if let Some(server_ent) = network_mapping.server_from_client(&entity) {
+            commands.entity(entity).remove::<NeedsPopulated>();
 
-        commands.entity(entity).remove::<NeedsPopulated>();
-
-        client.send_message(
-            NettyChannel::Reliable.id(),
-            bincode::serialize(&ClientReliableMessages::SendChunk {
-                server_entity: *server_ent,
-            })
-            .unwrap(),
-        );
+            client.send_message(
+                NettyChannel::Reliable.id(),
+                bincode::serialize(&ClientReliableMessages::SendChunk {
+                    server_entity: *server_ent,
+                })
+                .unwrap(),
+            );
+        }
     }
 }
 

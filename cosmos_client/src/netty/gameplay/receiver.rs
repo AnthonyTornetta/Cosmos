@@ -18,6 +18,7 @@ use cosmos_core::{
     registry::Registry,
     structure::{
         chunk::Chunk,
+        loading::ChunksNeedLoaded,
         planet::planet_builder::TPlanetBuilder,
         ship::{pilot::Pilot, ship_builder::TShipBuilder, Ship},
         ChunkInitEvent, Structure,
