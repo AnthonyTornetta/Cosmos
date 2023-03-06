@@ -19,7 +19,11 @@ fn listen_chunk_done_loading(
     mut commands: Commands,
 ) {
     for ev in event.iter() {
-        if let Ok(mut chunks_needed) = query.get_mut(ev.structure_entity) {
+        let Ok(mut chunks_needed) = query.get_mut(ev.structure_entity) else {
+            continue;
+        };
+
+        if chunks_needed.amount_needed != 0 {
             chunks_needed.amount_needed -= 1;
 
             if chunks_needed.amount_needed == 0 {

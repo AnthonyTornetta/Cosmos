@@ -1,7 +1,10 @@
 use bevy::ecs::system::EntityCommands;
 use cosmos_core::{
     physics::location::Location,
-    structure::{structure_builder::StructureBuilder, structure_builder::TStructureBuilder},
+    structure::{
+        loading::ChunksNeedLoaded, structure_builder::StructureBuilder,
+        structure_builder::TStructureBuilder,
+    },
 };
 
 use crate::rendering::structure_renderer::StructureRenderer;
@@ -26,7 +29,10 @@ impl TStructureBuilder for ClientStructureBuilder {
 
         let renderer = StructureRenderer::new(structure);
 
-        entity.insert(renderer);
-        entity.insert(NeedsPopulated);
+        entity.insert((
+            renderer,
+            NeedsPopulated,
+            ChunksNeedLoaded { amount_needed: 1 }, // not the best solution, but it works
+        ));
     }
 }
