@@ -11,7 +11,7 @@ use bevy::utils::HashSet;
 use bevy_rapier3d::math::Vect;
 use bevy_rapier3d::na::Vector3;
 use bevy_rapier3d::prelude::{
-    Collider, ColliderMassProperties, MassProperties, ReadMassProperties, Rot,
+    Collider, ColliderMassProperties, RapierColliderHandle, ReadMassProperties, Rot,
 };
 
 type GenerateCollider = (Collider, f32, Vec3);
@@ -45,7 +45,7 @@ impl StructurePhysics {
         me
     }
 
-    pub fn create_colliders(
+    fn create_colliders(
         &mut self,
         structure: &Structure,
         blocks: &Registry<Block>,
@@ -96,11 +96,17 @@ fn generate_colliders(
                 if block_mass != 0.0 {
                     temp_mass += block_mass;
 
-                    println!("x/y/z: {x}/{y}/{z} offset: {offset} hs: {half_size}");
+                    let (xx, yy, zz) = (
+                        (x - offset.x) as f32 - half_size + 0.5,
+                        (y - offset.y) as f32 - half_size + 0.5,
+                        (z - offset.z) as f32 - half_size + 0.5,
+                    );
 
-                    temp_com_vec.x += block_mass * ((x - offset.x) as f32 - half_size + 0.5);
-                    temp_com_vec.y += block_mass * ((y - offset.y) as f32 - half_size + 0.5);
-                    temp_com_vec.z += block_mass * ((z - offset.z) as f32 - half_size + 0.5);
+                    println!("x/y/z: {xx}/{yy}/{zz}");
+
+                    temp_com_vec.x += block_mass * xx;
+                    temp_com_vec.y += block_mass * yy;
+                    temp_com_vec.z += block_mass * zz;
 
                     temp_com_divisor += block_mass;
                 }
@@ -259,6 +265,7 @@ fn generate_chunk_collider(chunk: &Chunk, blocks: &Registry<Block>) -> Option<Ge
     if colliders.is_empty() {
         None
     } else {
+        println!("Final COM: {center_of_mass}");
         Some((Collider::compound(colliders), mass, center_of_mass))
     }
 }
@@ -270,7 +277,7 @@ pub struct NeedsNewPhysicsEvent {
 fn listen_for_new_physics_event(
     mut commands: Commands,
     mut event: EventReader<NeedsNewPhysicsEvent>,
-    mut query: Query<(&Structure, &mut StructurePhysics)>,
+    mut query: Query<(&Structure, &mut ReadMassProperties, &mut StructurePhysics)>,
     blocks: Res<Registry<Block>>,
 ) {
     if !event.is_empty() {
@@ -283,7 +290,7 @@ fn listen_for_new_physics_event(
 
             done_structures.insert(ev.structure_entity);
 
-            let (structure, mut physics) = query.get_mut(ev.structure_entity).unwrap();
+            let (structure, mut props, mut physics) = query.get_mut(ev.structure_entity).unwrap();
 
             let colliders = physics.create_colliders(structure, &blocks);
 
@@ -292,25 +299,22 @@ fn listen_for_new_physics_event(
 
                 if let Some(chunk_entity) = structure.chunk_entity(coords.x, coords.y, coords.z) {
                     let mut entity_commands = commands.entity(chunk_entity);
-                    if let Some((collider, mass, local_center_of_mass)) = chunk_collider.collider {
-                        println!("{mass} | {local_center_of_mass}");
+                    if let Some((collider, mass, _)) = chunk_collider.collider {
+                        // center_of_mass needs custom torque calculations to work properly
 
-                        let density =
-                            mass / (CHUNK_DIMENSIONSF * CHUNK_DIMENSIONSF * CHUNK_DIMENSIONSF);
-
-                        let mass_props = MassProperties {
-                            mass,
-                            local_center_of_mass,
-                            ..Default::default()
-                        };
+                        // let mass_props = MassProperties {
+                        //     mass,
+                        //     // local_center_of_mass,
+                        //     ..Default::default()
+                        // };
 
                         entity_commands
+                            .remove::<RapierColliderHandle>() // causes it to recompute mass properties
                             .insert(collider)
-                            .insert(ColliderMassProperties::Density(density))
-                            .insert(ColliderMassProperties::Mass(mass))
-                            .insert(ColliderMassProperties::MassProperties(mass_props))
-                            // Sometimes this gets out-of-sync, so I update it manually here
-                            .insert(ReadMassProperties(mass_props));
+                            .insert(ColliderMassProperties::Mass(mass));
+                        // .insert(ColliderMassProperties::MassProperties(mass_props))
+                        // Sometimes this gets out-of-sync, so I update it manually here
+                        // .insert(ReadMassProperties(mass_props));
                     } else {
                         entity_commands.remove::<Collider>();
                     }
