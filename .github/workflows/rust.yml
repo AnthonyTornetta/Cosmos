@@ -24,6 +24,7 @@ jobs:
         override: true
     - name: Cache
       uses: Swatinem/rust-cache@v2
+    # Needed for certain dependencies
     - name: Update System
       run: sudo apt update -y && sudo apt upgrade -y
     - name: Install Bevy Dependencies
