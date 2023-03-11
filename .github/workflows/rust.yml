@@ -25,7 +25,7 @@ jobs:
     - name: Cache
       uses: Swatinem/rust-cache@v2
     - name: Install Bevy Dependencies
-      run: sudo apt-get install -y g++ pkg-config libx11-dev libasound2-dev libudev-dev
+      run: sudo apt-get install --fix-missing -y g++ pkg-config libx11-dev libasound2-dev libudev-dev
     - name: Build
       run: cargo build --verbose
   clippy:
@@ -44,7 +44,7 @@ jobs:
       # and the following code will use master branch HEAD
       # all the time.
       - name: Install Bevy Dependencies
-        run: sudo apt-get install -y g++ pkg-config libx11-dev libasound2-dev libudev-dev
+        run: sudo apt-get install --fix-missing -y g++ pkg-config libx11-dev libasound2-dev libudev-dev
       - uses: actions-rs/clippy@master
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
