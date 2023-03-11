@@ -24,7 +24,7 @@ use crate::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
 use crate::utils::array_utils::flatten;
 use bevy::prelude::{
     BuildChildren, Commands, Component, Entity, EventReader, EventWriter, GlobalTransform,
-    PbrBundle, Query, Transform, Vec3,
+    IntoSystemDescriptor, PbrBundle, Query, Transform, Vec3,
 };
 use serde::{Deserialize, Serialize};
 
@@ -280,6 +280,12 @@ impl Structure {
         self.chunks.get_mut(&index).unwrap()
     }
 
+    /// Removes the chunk at the given coordinate -- does NOT remove the chunk entity
+    fn unload_chunk(&mut self, cx: usize, cy: usize, cz: usize) {
+        self.chunks
+            .remove(&flatten(cx, cy, cz, self.width, self.height));
+    }
+
     pub fn set_block_at(
         &mut self,
         x: usize,
@@ -311,16 +317,20 @@ impl Structure {
             z % CHUNK_DIMENSIONS,
         );
 
+        let (cx, cy, cz) = (
+            x / CHUNK_DIMENSIONS,
+            y / CHUNK_DIMENSIONS,
+            z / CHUNK_DIMENSIONS,
+        );
+
         if let Some(chunk) = self.mut_chunk_at_block_coordinates(x, y, z) {
             chunk.set_block_at(bx, by, bz, block);
+
+            if chunk.is_empty() {
+                self.unload_chunk(cx, cy, cz);
+            }
         } else {
             if block.id() != AIR_BLOCK_ID {
-                let (cx, cy, cz) = (
-                    x / CHUNK_DIMENSIONS,
-                    y / CHUNK_DIMENSIONS,
-                    z / CHUNK_DIMENSIONS,
-                );
-
                 let chunk = self.create_chunk_at(cx, cy, cz);
                 chunk.set_block_at(bx, by, bz, block);
             }
@@ -560,6 +570,33 @@ pub struct ChunkInitEvent {
     pub z: usize,
 }
 
+// Removes chunk entities if they have no blocks
+fn remove_empty_chunks(
+    mut block_change_event: EventReader<BlockChangedEvent>,
+    mut structure_query: Query<&mut Structure>,
+    mut commands: Commands,
+) {
+    for bce in block_change_event.iter() {
+        let Ok(mut structure) = structure_query.get_mut(bce.structure_entity) else {
+            continue;
+        };
+
+        let (cx, cy, cz) = bce.block.chunk_coords();
+
+        if structure.chunk_from_chunk_coordinates(cx, cy, cz).is_none() {
+            if let Some(chunk_entity) = structure.chunk_entity(cx, cy, cz) {
+                commands.entity(chunk_entity).despawn();
+
+                let (width, height) = (structure.width, structure.height);
+
+                structure
+                    .chunk_entities
+                    .remove(&flatten(cx, cy, cz, width, height));
+            }
+        }
+    }
+}
+
 fn add_chunks_system(
     mut chunk_init_reader: EventReader<ChunkInitEvent>,
     mut block_reader: EventReader<BlockChangedEvent>,
@@ -647,5 +684,6 @@ pub fn register<T: StateData + Clone + Copy>(
     block_health::register(app);
     structure_block::register(app);
 
-    app.add_system(add_chunks_system);
+    app.add_system(add_chunks_system)
+        .add_system(remove_empty_chunks.after(add_chunks_system));
 }
