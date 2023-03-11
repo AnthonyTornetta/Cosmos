@@ -1,20 +1,20 @@
-use bevy::prelude::Component;
-use bevy_rapier3d::prelude::Vect;
+use bevy::{
+    prelude::{App, Component},
+    reflect::{FromReflect, Reflect},
+};
 
-#[derive(Component)]
+#[derive(Component, Reflect, FromReflect)]
 pub struct Player {
     pub name: String,
     pub id: u64,
-
-    pub self_velocity: Vect,
 }
 
 impl Player {
     pub fn new(name: String, id: u64) -> Self {
-        Self {
-            name,
-            id,
-            self_velocity: Vect::new(0.0, 0.0, 0.0),
-        }
+        Self { name, id }
     }
+}
+
+pub(crate) fn register(app: &mut App) {
+    app.register_type::<Player>();
 }

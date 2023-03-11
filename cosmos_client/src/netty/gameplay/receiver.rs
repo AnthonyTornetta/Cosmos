@@ -18,10 +18,9 @@ use cosmos_core::{
     registry::Registry,
     structure::{
         chunk::Chunk,
-        events::ChunkSetEvent,
         planet::planet_builder::TPlanetBuilder,
         ship::{pilot::Pilot, ship_builder::TShipBuilder, Ship},
-        Structure,
+        ChunkInitEvent, Structure,
     },
 };
 
@@ -89,7 +88,7 @@ fn client_sync_players(
     mut client: ResMut<RenetClient>,
     mut lobby: ResMut<ClientLobby>,
     mut network_mapping: ResMut<NetworkMapping>,
-    mut set_chunk_event_writer: EventWriter<ChunkSetEvent>,
+    mut set_chunk_event_writer: EventWriter<ChunkInitEvent>,
     mut block_change_event_writer: EventWriter<BlockChangedEvent>,
     query_player: Query<&Player>,
     mut query_body: Query<(&mut Location, &mut Transform, &mut Velocity), Without<LocalPlayer>>,
@@ -310,7 +309,7 @@ fn client_sync_players(
 
                 structure.set_chunk(chunk);
 
-                set_chunk_event_writer.send(ChunkSetEvent {
+                set_chunk_event_writer.send(ChunkInitEvent {
                     x,
                     y,
                     z,

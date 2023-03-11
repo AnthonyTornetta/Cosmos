@@ -5,11 +5,9 @@ use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
     physics::location::Location,
     structure::{
-        events::{ChunkSetEvent, StructureCreated},
-        loading::ChunksNeedLoaded,
-        planet::planet_builder::TPlanetBuilder,
-        ship::ship_builder::TShipBuilder,
-        Structure,
+        events::StructureCreated, loading::ChunksNeedLoaded,
+        planet::planet_builder::TPlanetBuilder, ship::ship_builder::TShipBuilder,
+        structure_iterator::ChunkIteratorResult, ChunkInitEvent, Structure,
     },
 };
 
@@ -38,18 +36,25 @@ fn send_actual_loaded_events_first(
 
 fn send_actual_loaded_events(
     mut event_reader: EventReader<EvenMoreDelayedSLE>,
-    mut chunk_set_event_writer: EventWriter<ChunkSetEvent>,
+    mut chunk_set_event_writer: EventWriter<ChunkInitEvent>,
     structure_query: Query<&Structure>,
 ) {
     for ev in event_reader.iter() {
         if let Ok(structure) = structure_query.get(ev.0) {
-            for chunk in structure.all_chunks_iter() {
-                chunk_set_event_writer.send(ChunkSetEvent {
-                    structure_entity: ev.0,
-                    x: chunk.structure_x(),
-                    y: chunk.structure_y(),
-                    z: chunk.structure_z(),
-                });
+            for res in structure.all_chunks_iter(false) {
+                // This will always be true because include_empty is false
+                if let ChunkIteratorResult::FilledChunk {
+                    position: (x, y, z),
+                    chunk: _,
+                } = res
+                {
+                    chunk_set_event_writer.send(ChunkInitEvent {
+                        structure_entity: ev.0,
+                        x,
+                        y,
+                        z,
+                    });
+                }
             }
         } else {
             println!("Error: structure still no exist");
@@ -99,7 +104,7 @@ pub fn load_structure(
 
             entity_cmd
                 .insert(ChunksNeedLoaded {
-                    amount_needed: structure.all_chunks_iter().len(),
+                    amount_needed: structure.all_chunks_iter(false).len(),
                 })
                 .insert(structure);
 

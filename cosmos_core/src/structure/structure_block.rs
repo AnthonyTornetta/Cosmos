@@ -71,6 +71,15 @@ impl StructureBlock {
     pub fn chunk_coord_z(&self) -> usize {
         self.z / CHUNK_DIMENSIONS
     }
+
+    #[inline]
+    pub fn chunk_coords(&self) -> (usize, usize, usize) {
+        (
+            self.chunk_coord_x(),
+            self.chunk_coord_y(),
+            self.chunk_coord_z(),
+        )
+    }
 }
 
 pub(crate) fn register(app: &mut App) {

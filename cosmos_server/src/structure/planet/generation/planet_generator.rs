@@ -1,5 +1,5 @@
 use bevy::{ecs::event::Event, prelude::*};
-use cosmos_core::structure::Structure;
+use cosmos_core::structure::{structure_iterator::ChunkIteratorResult, Structure};
 
 use crate::structure::planet::biosphere::TGenerateChunkEvent;
 
@@ -14,13 +14,13 @@ pub fn check_needs_generated_system<T: TGenerateChunkEvent + Event, K: Component
     mut event_writer: EventWriter<T>,
 ) {
     for s in query.iter() {
-        for chunk in s.all_chunks_iter() {
-            event_writer.send(T::new(
-                chunk.structure_x(),
-                chunk.structure_y(),
-                chunk.structure_z(),
-                s.get_entity().unwrap(),
-            ));
+        for chunk in s.all_chunks_iter(true) {
+            let (cx, cy, cz) = match chunk {
+                ChunkIteratorResult::EmptyChunk { position } => position,
+                ChunkIteratorResult::FilledChunk { position, chunk: _ } => position,
+            };
+
+            event_writer.send(T::new(cx, cy, cz, s.get_entity().unwrap()));
         }
 
         commands

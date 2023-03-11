@@ -2,7 +2,10 @@ use bevy::prelude::{App, Commands, Component, Entity, EventWriter, Query, Res, S
 use cosmos_core::{
     block::Block,
     registry::Registry,
-    structure::{events::ChunkSetEvent, loading::ChunksNeedLoaded, Structure},
+    structure::{
+        loading::ChunksNeedLoaded, structure_iterator::ChunkIteratorResult, ChunkInitEvent,
+        Structure,
+    },
 };
 
 use crate::state::GameState;
@@ -16,30 +19,45 @@ fn create_ships(
     mut query: Query<(&mut Structure, Entity), (With<ShipNeedsCreated>, With<ChunksNeedLoaded>)>,
     mut commands: Commands,
     blocks: Res<Registry<Block>>,
-    mut chunk_set_event_writer: EventWriter<ChunkSetEvent>,
+    mut chunk_set_event_writer: EventWriter<ChunkInitEvent>,
 ) {
     for (mut structure, entity) in query.iter_mut() {
-        commands.entity(entity).remove::<ShipNeedsCreated>();
-
         let ship_core = blocks
             .from_id("cosmos:ship_core")
             .expect("Ship core block missing!");
 
-        let (width, height, length) = (
-            structure.blocks_width(),
-            structure.blocks_height(),
-            structure.blocks_length(),
+        let (x, y, z) = (
+            structure.blocks_width() / 2,
+            structure.blocks_height() / 2,
+            structure.blocks_length() / 2,
         );
 
-        structure.set_block_at(width / 2, height / 2, length / 2, ship_core, &blocks, None);
+        structure.set_block_at(x, y, z, ship_core, &blocks, None);
 
-        for chunk in structure.all_chunks_iter() {
-            chunk_set_event_writer.send(ChunkSetEvent {
-                structure_entity: entity,
-                x: chunk.structure_x(),
-                y: chunk.structure_y(),
-                z: chunk.structure_z(),
+        let itr = structure.all_chunks_iter(false);
+
+        commands
+            .entity(entity)
+            .remove::<ShipNeedsCreated>()
+            .insert(ChunksNeedLoaded {
+                amount_needed: itr.len(),
             });
+
+        for res in itr {
+            // This will always be true because include_empty is false
+            if let ChunkIteratorResult::FilledChunk {
+                position: (x, y, z),
+                chunk: _,
+            } = res
+            {
+                println!("Sending init event!");
+                chunk_set_event_writer.send(ChunkInitEvent {
+                    structure_entity: entity,
+                    x,
+                    y,
+                    z,
+                });
+            }
         }
     }
 }
