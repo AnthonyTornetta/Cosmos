@@ -98,7 +98,7 @@ impl Structure {
     pub fn chunk_entity(&self, cx: usize, cy: usize, cz: usize) -> Option<Entity> {
         let index = flatten(cx, cy, cz, self.width, self.height);
 
-        self.chunk_entities.get(&index).map(|e| *e)
+        self.chunk_entities.get(&index).copied()
     }
 
     pub fn set_chunk_entity(&mut self, cx: usize, cy: usize, cz: usize, entity: Entity) {
@@ -329,11 +329,9 @@ impl Structure {
             if chunk.is_empty() {
                 self.unload_chunk(cx, cy, cz);
             }
-        } else {
-            if block.id() != AIR_BLOCK_ID {
-                let chunk = self.create_chunk_at(cx, cy, cz);
-                chunk.set_block_at(bx, by, bz, block);
-            }
+        } else if block.id() != AIR_BLOCK_ID {
+            let chunk = self.create_chunk_at(cx, cy, cz);
+            chunk.set_block_at(bx, by, bz, block);
         }
     }
 
@@ -631,32 +629,30 @@ fn add_chunks_system(
     for (structure_entity, (x, y, z)) in s_chunks {
         if let Ok((mut structure, body_world)) = structure_query.get_mut(structure_entity) {
             if let Some(chunk) = structure.chunk_from_chunk_coordinates(x, y, z) {
-                if !chunk.is_empty() {
-                    if structure.chunk_entity(x, y, z).is_none() {
-                        let mut entity_cmds = commands.spawn(PbrBundle {
-                            transform: Transform::from_translation(
-                                structure.chunk_relative_position(x, y, z),
-                            ),
-                            ..Default::default()
-                        });
+                if !chunk.is_empty() && structure.chunk_entity(x, y, z).is_none() {
+                    let mut entity_cmds = commands.spawn(PbrBundle {
+                        transform: Transform::from_translation(
+                            structure.chunk_relative_position(x, y, z),
+                        ),
+                        ..Default::default()
+                    });
 
-                        if let Some(bw) = body_world {
-                            entity_cmds.insert(*bw);
-                        }
-
-                        let entity = entity_cmds.id();
-
-                        commands.entity(structure_entity).add_child(entity);
-
-                        structure.set_chunk_entity(x, y, z, entity);
-
-                        chunk_set_events.insert(ChunkSetEvent {
-                            structure_entity,
-                            x,
-                            y,
-                            z,
-                        });
+                    if let Some(bw) = body_world {
+                        entity_cmds.insert(*bw);
                     }
+
+                    let entity = entity_cmds.id();
+
+                    commands.entity(structure_entity).add_child(entity);
+
+                    structure.set_chunk_entity(x, y, z, entity);
+
+                    chunk_set_events.insert(ChunkSetEvent {
+                        structure_entity,
+                        x,
+                        y,
+                        z,
+                    });
                 }
             }
         }
