@@ -45,6 +45,9 @@ pub fn assign_player_world(
             });
     } else {
         let world_id = rapier_context.add_world(RapierWorld::default());
+
+        println!("Added world!!!");
+
         let world_entity = commands
             .spawn((
                 PlayerWorld {
@@ -315,8 +318,8 @@ fn sync_transforms_and_locations(
 pub(crate) fn register(app: &mut App) {
     app.add_systems(
         (
+            // remove_empty_worlds,
             // If it's not after server_listen_messages, some noticable jitter can happen
-            remove_empty_worlds.before(server_listen_messages),
             sync_transforms_and_locations.after(server_listen_messages),
             bubble_down_locations.after(sync_transforms_and_locations),
             move_players_between_worlds.after(bubble_down_locations),

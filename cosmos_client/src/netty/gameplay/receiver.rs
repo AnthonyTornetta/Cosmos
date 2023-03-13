@@ -521,8 +521,7 @@ fn sync_transforms_and_locations(
 pub(crate) fn register(app: &mut App) {
     app.add_system(
         client_sync_players
-            .run_if(in_state(GameState::Playing))
-            .run_if(in_state(GameState::LoadingWorld)),
+            .run_if(in_state(GameState::Playing).or_else(in_state(GameState::LoadingWorld))),
     )
     .add_systems(
         (

@@ -116,9 +116,6 @@ pub fn register<T: States + Clone + Copy>(
 ) {
     app.add_event::<DoneLoadingEvent>()
         .add_event::<AddLoadingEvent>()
-        .add_system(|state: Res<State<T>>| {
-            println!("State: {:?}", state.0);
-        })
         .add_system(
             monitor_loading::<T>.run_if(
                 in_state(pre_loading_state)
