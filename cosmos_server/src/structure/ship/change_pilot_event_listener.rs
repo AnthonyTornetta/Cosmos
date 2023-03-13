@@ -1,4 +1,4 @@
-use bevy::prelude::{App, Entity, EventReader, ResMut, SystemSet};
+use bevy::prelude::{App, Entity, EventReader, IntoSystemConfig, OnUpdate, ResMut};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::netty::{server_reliable_messages::ServerReliableMessages, NettyChannel};
 
@@ -26,6 +26,6 @@ fn event_listener(
 }
 
 pub fn register(app: &mut App) {
-    app.add_system_set(SystemSet::on_update(GameState::Playing).with_system(event_listener))
+    app.add_system(event_listener.in_set(OnUpdate(GameState::Playing)))
         .add_event::<ClientChangePilotEvent>();
 }

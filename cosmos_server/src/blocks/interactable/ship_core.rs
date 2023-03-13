@@ -1,4 +1,4 @@
-use bevy::prelude::{App, EventReader, EventWriter, Query, Res, SystemSet, With};
+use bevy::prelude::{App, EventReader, EventWriter, IntoSystemConfig, OnUpdate, Query, Res, With};
 use cosmos_core::{
     block::Block,
     events::structure::change_pilot_event::ChangePilotEvent,
@@ -41,5 +41,5 @@ fn handle_block_event(
 }
 
 pub fn register(app: &mut App) {
-    app.add_system_set(SystemSet::on_update(GameState::Playing).with_system(handle_block_event));
+    app.add_system(handle_block_event.in_set(OnUpdate(GameState::Playing)));
 }

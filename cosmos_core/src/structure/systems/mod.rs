@@ -1,6 +1,6 @@
 use std::{error::Error, fmt::Formatter};
 
-use bevy::{ecs::schedule::StateData, prelude::*};
+use bevy::prelude::*;
 
 use super::Structure;
 
@@ -127,11 +127,7 @@ fn add_structure(mut commands: Commands, query: Query<Entity, Added<Structure>>)
     }
 }
 
-pub fn register<T: StateData + Clone + Copy>(
-    app: &mut App,
-    post_loading_state: T,
-    playing_state: T,
-) {
+pub fn register<T: States + Clone + Copy>(app: &mut App, post_loading_state: T, playing_state: T) {
     app.add_system(add_structure);
 
     energy_storage_system::register(app, post_loading_state, playing_state);

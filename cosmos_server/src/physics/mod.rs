@@ -313,13 +313,15 @@ fn sync_transforms_and_locations(
 }
 
 pub(crate) fn register(app: &mut App) {
-    app.add_system_set(
-        SystemSet::on_update(GameState::Playing)
+    app.add_systems(
+        (
             // If it's not after server_listen_messages, some noticable jitter can happen
-            .with_system(sync_transforms_and_locations.after(server_listen_messages))
-            .with_system(bubble_down_locations.after(sync_transforms_and_locations))
-            .with_system(move_players_between_worlds.after(bubble_down_locations))
-            .with_system(move_non_players_between_worlds.after(move_players_between_worlds))
-            .with_system(remove_empty_worlds.before(server_listen_messages)),
+            remove_empty_worlds.before(server_listen_messages),
+            sync_transforms_and_locations.after(server_listen_messages),
+            bubble_down_locations.after(sync_transforms_and_locations),
+            move_players_between_worlds.after(bubble_down_locations),
+            move_non_players_between_worlds.after(move_players_between_worlds),
+        )
+            .in_set(OnUpdate(GameState::Playing)),
     );
 }

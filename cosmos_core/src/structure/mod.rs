@@ -1,6 +1,6 @@
+use bevy::prelude::App;
 use bevy::reflect::Reflect;
 use bevy::utils::{HashMap, HashSet};
-use bevy::{ecs::schedule::StateData, prelude::App};
 use bevy_rapier3d::prelude::BodyWorld;
 
 pub mod block_health;
@@ -24,7 +24,7 @@ use crate::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
 use crate::utils::array_utils::flatten;
 use bevy::prelude::{
     BuildChildren, Commands, Component, Entity, EventReader, EventWriter, GlobalTransform,
-    IntoSystemDescriptor, PbrBundle, Query, Transform, Vec3,
+    IntoSystemConfig, PbrBundle, Query, States, Transform, Vec3,
 };
 use serde::{Deserialize, Serialize};
 
@@ -664,7 +664,7 @@ fn add_chunks_system(
     }
 }
 
-pub fn register<T: StateData + Clone + Copy>(
+pub fn register<T: States + Clone + Copy>(
     app: &mut App,
     post_loading_state: T,
     playing_game_state: T,

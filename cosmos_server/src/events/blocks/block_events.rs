@@ -145,14 +145,12 @@ fn handle_block_changed_event(
 }
 
 pub fn register(app: &mut App) {
-    app.add_event::<BlockBreakEvent>();
-    app.add_event::<BlockPlaceEvent>();
-    app.add_event::<BlockInteractEvent>();
-
-    app.add_system_set(
-        SystemSet::on_update(GameState::Playing)
-            .with_system(handle_block_break_events)
-            .with_system(handle_block_place_events)
-            .with_system(handle_block_changed_event),
-    );
+    app.add_event::<BlockBreakEvent>()
+        .add_event::<BlockPlaceEvent>()
+        .add_event::<BlockInteractEvent>()
+        .add_systems((
+            handle_block_break_events.in_set(OnUpdate(GameState::Playing)),
+            handle_block_place_events.in_set(OnUpdate(GameState::Playing)),
+            handle_block_changed_event.in_set(OnUpdate(GameState::Playing)),
+        ));
 }

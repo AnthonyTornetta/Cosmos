@@ -1,6 +1,5 @@
 use bevy::{
-    ecs::schedule::StateData,
-    prelude::{App, Res, ResMut, Resource, SystemSet},
+    prelude::{App, IntoSystemAppConfig, OnExit, Res, ResMut, Resource, States},
     utils::HashMap,
 };
 
@@ -77,9 +76,9 @@ fn create_links(
     }
 }
 
-pub fn register<T: StateData + Clone + Copy>(app: &mut App, loading_state: T) {
+pub fn register<T: States + Clone + Copy>(app: &mut App, loading_state: T) {
     app.insert_resource(BlockItems::default());
 
     // All blocks & items must be added before this system runs
-    app.add_system_set(SystemSet::on_exit(loading_state).with_system(create_links));
+    app.add_system(create_links.in_schedule(OnExit(loading_state)));
 }

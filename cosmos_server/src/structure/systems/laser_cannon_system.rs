@@ -96,5 +96,5 @@ fn update_system(
 }
 
 pub(crate) fn register(app: &mut App) {
-    app.add_system_set(SystemSet::on_update(GameState::Playing).with_system(update_system));
+    app.add_system(update_system.in_set(OnUpdate(GameState::Playing)));
 }

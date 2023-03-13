@@ -1,4 +1,4 @@
-use bevy::prelude::{App, EventReader, EventWriter, Query, Res, SystemSet};
+use bevy::prelude::{App, EventReader, EventWriter, IntoSystemConfig, OnUpdate, Query, Res};
 use cosmos_core::{
     block::Block,
     events::block_events::BlockChangedEvent,
@@ -28,7 +28,5 @@ fn monitor_block_destroyed(
 }
 
 pub(crate) fn register(app: &mut App) {
-    app.add_system_set(
-        SystemSet::on_update(GameState::Playing).with_system(monitor_block_destroyed),
-    );
+    app.add_system(monitor_block_destroyed.in_set(OnUpdate(GameState::Playing)));
 }

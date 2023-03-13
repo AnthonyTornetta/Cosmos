@@ -1,4 +1,4 @@
-use bevy::prelude::{App, Entity, EventReader, Query, ResMut, SystemSet};
+use bevy::prelude::{App, Entity, EventReader, IntoSystemConfig, OnUpdate, Query, ResMut};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     events::structure::change_pilot_event::ChangePilotEvent,
@@ -58,9 +58,8 @@ fn monitor_pilot_changes(
 pub(crate) fn register(app: &mut App) {
     core::register(app);
 
-    app.add_event::<ShipSetMovementEvent>().add_system_set(
-        SystemSet::on_update(GameState::Playing)
-            .with_system(monitor_set_movement_events)
-            .with_system(monitor_pilot_changes),
-    );
+    app.add_event::<ShipSetMovementEvent>().add_systems((
+        monitor_set_movement_events.in_set(OnUpdate(GameState::Playing)),
+        monitor_pilot_changes.in_set(OnUpdate(GameState::Playing)),
+    ));
 }

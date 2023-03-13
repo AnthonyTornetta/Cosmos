@@ -50,5 +50,5 @@ fn on_structure_created(
 }
 
 pub fn register(app: &mut App) {
-    app.add_system_to_stage(CoreStage::PostUpdate, on_structure_created);
+    app.add_system(on_structure_created);
 }

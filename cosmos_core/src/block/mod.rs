@@ -1,6 +1,5 @@
 use bevy::{
-    ecs::schedule::StateData,
-    prelude::{App, Vec3},
+    prelude::{App, States, Vec3},
     reflect::{FromReflect, Reflect},
 };
 
@@ -164,7 +163,7 @@ impl PartialEq for Block {
     }
 }
 
-pub fn register<T: StateData + Clone + Copy>(
+pub fn register<T: States + Clone + Copy>(
     app: &mut App,
     pre_loading_state: T,
     loading_state: T,

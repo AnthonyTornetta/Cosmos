@@ -58,5 +58,5 @@ fn on_melting_down(
 }
 
 pub(crate) fn register(app: &mut App) {
-    app.add_system_set(SystemSet::on_update(GameState::Playing).with_system(on_melting_down));
+    app.add_system(on_melting_down.in_set(OnUpdate(GameState::Playing)));
 }

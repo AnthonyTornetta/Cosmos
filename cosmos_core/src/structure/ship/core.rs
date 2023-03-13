@@ -1,8 +1,7 @@
 // Ship core handler
 
 use bevy::{
-    ecs::schedule::StateData,
-    prelude::{App, Commands, Component, EventReader, Res, SystemSet},
+    prelude::{App, Commands, Component, EventReader, IntoSystemConfig, OnUpdate, Res, States},
     reflect::{FromReflect, Reflect},
 };
 
@@ -32,6 +31,6 @@ fn monitor_block_events(
     }
 }
 
-pub(crate) fn register<T: StateData + Clone + Copy>(app: &mut App, playing_state: T) {
-    app.add_system_set(SystemSet::on_update(playing_state).with_system(monitor_block_events));
+pub(crate) fn register<T: States + Clone + Copy>(app: &mut App, playing_state: T) {
+    app.add_system(monitor_block_events.in_set(OnUpdate(playing_state)));
 }

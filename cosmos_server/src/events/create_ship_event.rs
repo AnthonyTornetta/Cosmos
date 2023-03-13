@@ -42,5 +42,5 @@ fn event_reader(
 
 pub fn register(app: &mut App) {
     app.add_event::<CreateShipEvent>()
-        .add_system_set(SystemSet::on_update(GameState::Playing).with_system(event_reader));
+        .add_system(event_reader.in_set(OnUpdate(GameState::Playing)));
 }

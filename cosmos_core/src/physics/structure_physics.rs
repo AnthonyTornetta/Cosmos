@@ -4,9 +4,7 @@ use crate::registry::Registry;
 use crate::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
 use crate::structure::events::ChunkSetEvent;
 use crate::structure::Structure;
-use bevy::prelude::{
-    App, Commands, Component, CoreStage, Entity, EventReader, EventWriter, Query, Res, Vec3,
-};
+use bevy::prelude::{App, Commands, Component, Entity, EventReader, EventWriter, Query, Res, Vec3};
 use bevy::reflect::{FromReflect, Reflect};
 use bevy::utils::HashSet;
 use bevy_rapier3d::math::Vect;
@@ -388,8 +386,7 @@ pub fn register(app: &mut App) {
         // This wasn't registered in bevy_rapier
         .register_type::<ReadMassProperties>()
         .register_type::<ColliderMassProperties>()
-        .add_system_to_stage(CoreStage::PostUpdate, listen_for_structure_event)
-        .add_system_to_stage(CoreStage::PostUpdate, listen_for_new_physics_event);
+        .add_systems((listen_for_structure_event, listen_for_new_physics_event));
 }
 
 #[cfg(test)]
