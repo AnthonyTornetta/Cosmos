@@ -160,8 +160,8 @@ pub(crate) fn register<T: States + Clone + Copy>(
 ) {
     registry::create_registry::<Block>(app);
 
-    // Game will break without air & needs this at ID 0
     app.add_systems((
+        // Game will break without air & needs this at ID 0, so load that first
         add_air_block.in_schedule(OnEnter(pre_loading_state)),
         add_cosmos_blocks.in_schedule(OnEnter(loading_state)),
     ));

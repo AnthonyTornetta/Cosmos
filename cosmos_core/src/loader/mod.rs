@@ -59,6 +59,8 @@ fn monitor_loading<T: States + Clone + Copy>(
     state: Res<State<T>>,
     mut state_changer: ResMut<NextState<T>>,
 ) {
+    println!("MOnitoring loading: {:?}!", state.0);
+
     for ev in event_start_reader.iter() {
         loading_status.loaders.insert(ev.loading_id);
     }
@@ -114,11 +116,14 @@ pub fn register<T: States + Clone + Copy>(
 ) {
     app.add_event::<DoneLoadingEvent>()
         .add_event::<AddLoadingEvent>()
+        .add_system(|state: Res<State<T>>| {
+            println!("State: {:?}", state.0);
+        })
         .add_system(
-            monitor_loading::<T>
-                .in_set(OnUpdate(pre_loading_state))
-                .in_set(OnUpdate(loading_state))
-                .in_set(OnUpdate(post_loading_state)),
+            monitor_loading::<T>.run_if(
+                in_state(pre_loading_state)
+                    .or_else(in_state(loading_state).or_else(in_state(post_loading_state))),
+            ),
         )
         .insert_resource(LoadingStatus::new(
             pre_loading_state,
