@@ -1,14 +1,10 @@
-use bevy::prelude::{App, States};
+use bevy::prelude::States;
 
-#[derive(Clone, PartialEq, Eq, Debug, Hash, Copy, Default, States)]
+#[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Hash, States)]
 pub enum GameState {
     #[default]
     PreLoading,
     Loading,
     PostLoading,
     Playing,
-}
-
-pub fn register(app: &mut App) {
-    app.add_state::<GameState>();
 }

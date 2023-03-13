@@ -1,6 +1,6 @@
+use bevy::a11y::AccessibilityPlugin;
 use bevy::app::PluginGroupBuilder;
 use bevy::asset::AssetPlugin;
-use bevy::core_pipeline::CorePipelinePlugin;
 use bevy::diagnostic::DiagnosticsPlugin;
 use bevy::input::InputPlugin;
 use bevy::log::LogPlugin;
@@ -122,10 +122,11 @@ impl<T: States + Clone + Copy> PluginGroup for CosmosCorePluginGroup<T> {
             .add(AssetPlugin::default())
             .add(ScenePlugin::default())
             .add(RenderPlugin::default())
-            .add(CorePipelinePlugin::default())
             .add(RapierPhysicsPlugin::<NoUserData>::default())
             .add(ImagePlugin::default_nearest())
             .add(WorldInspectorPlugin::default())
+            // AccessibilityPlugin is required by bevy core ecs for some reason
+            .add(AccessibilityPlugin)
             .add(CosmosCorePlugin::new(
                 self.pre_loading_state,
                 self.loading_state,

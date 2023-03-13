@@ -1,6 +1,7 @@
 use crate::PluginGroup;
 use bevy::app::PluginGroupBuilder;
 use bevy::audio::AudioPlugin;
+use bevy::core_pipeline::CorePipelinePlugin;
 use bevy::gltf::GltfPlugin;
 use bevy::pbr::PbrPlugin;
 use bevy::prelude::{AnimationPlugin, GilrsPlugin};
@@ -20,6 +21,7 @@ impl PluginGroup for ClientPluginGroup {
             .add(TextPlugin::default())
             .add(UiPlugin::default())
             .add(PbrPlugin::default())
+            .add(CorePipelinePlugin::default())
             // NOTE: Load this after renderer initialization so that it knows about the supported
             // compressed texture formats
             .add(GltfPlugin::default())

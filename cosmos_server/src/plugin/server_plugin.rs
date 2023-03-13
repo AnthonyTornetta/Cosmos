@@ -5,7 +5,7 @@ use crate::{
     init::{init_server, init_world},
     inventory,
     netty::{server_listener, sync::sync_bodies},
-    physics, projectiles, state, structure,
+    physics, projectiles, structure,
 };
 
 use super::vizualizer;
@@ -17,7 +17,6 @@ pub struct ServerPlugin {
 impl Plugin for ServerPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         init_server::init(app, self.ip.clone());
-        state::register(app);
         commands::register(app);
         init_world::register(app);
         sync_bodies::register(app);
