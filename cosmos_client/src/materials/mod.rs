@@ -84,5 +84,5 @@ fn register_materials(
 pub(crate) fn register(app: &mut App) {
     registry::multi_registry::create_multi_registry::<Block, CosmosMaterial>(app);
 
-    app.add_system_set(SystemSet::on_exit(GameState::PostLoading).with_system(register_materials));
+    app.add_system(register_materials.in_schedule(OnExit(GameState::PostLoading)));
 }

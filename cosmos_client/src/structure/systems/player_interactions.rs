@@ -1,7 +1,7 @@
 use bevy::{
     prelude::{
-        Added, App, Commands, Component, Entity, Input, KeyCode, MouseButton, Query,
-        RemovedComponents, Res, ResMut, SystemSet, With,
+        Added, App, Commands, Component, Entity, Input, IntoSystemConfigs, KeyCode, MouseButton,
+        OnUpdate, Query, RemovedComponents, Res, ResMut, With,
     },
     reflect::{FromReflect, Reflect},
 };
@@ -94,19 +94,21 @@ fn swap_selected(
     }
 }
 
-fn check_removed_pilot(mut commands: Commands, removed: RemovedComponents<Pilot>) {
+fn check_removed_pilot(mut commands: Commands, mut removed: RemovedComponents<Pilot>) {
     for ent in removed.iter() {
         commands.entity(ent).remove::<HoveredSystem>();
     }
 }
 
 pub fn register(app: &mut App) {
-    app.add_system_set(
-        SystemSet::on_update(GameState::Playing)
-            .with_system(check_system_in_use)
-            .with_system(check_became_pilot)
-            .with_system(check_removed_pilot)
-            .with_system(swap_selected),
+    app.add_systems(
+        (
+            check_system_in_use,
+            check_became_pilot,
+            check_removed_pilot,
+            swap_selected,
+        )
+            .in_set(OnUpdate(GameState::Playing)),
     )
     .register_type::<HoveredSystem>();
 }

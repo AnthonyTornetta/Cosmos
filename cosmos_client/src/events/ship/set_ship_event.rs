@@ -1,4 +1,4 @@
-use bevy::prelude::{App, Entity, EventReader, Query, SystemSet};
+use bevy::prelude::{App, Entity, EventReader, IntoSystemConfig, OnUpdate, Query};
 use cosmos_core::structure::ship::ship_movement::ShipMovement;
 
 use crate::state::game_state::GameState;
@@ -21,5 +21,5 @@ fn update_ship_movement(
 
 pub fn register(app: &mut App) {
     app.add_event::<SetShipMovementEvent>()
-        .add_system_set(SystemSet::on_update(GameState::Playing).with_system(update_ship_movement));
+        .add_system(update_ship_movement.in_set(OnUpdate(GameState::Playing)));
 }

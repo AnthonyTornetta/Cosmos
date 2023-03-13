@@ -68,21 +68,22 @@ pub fn establish_connection(mut commands: Commands, connection_config: Res<Conne
     commands.insert_resource(NetworkMapping::default());
 }
 
-pub fn wait_for_connection(mut state: ResMut<State<GameState>>, client: Res<RenetClient>) {
+pub fn wait_for_connection(
+    mut state_changer: ResMut<NextState<GameState>>,
+    client: Res<RenetClient>,
+) {
     if client.is_connected() {
         println!("Loading server data...");
-        state.set(GameState::LoadingWorld).unwrap();
+        state_changer.set(GameState::LoadingWorld);
     }
 }
 
 pub fn wait_for_done_loading(
-    mut state: ResMut<State<GameState>>,
+    mut state_changer: ResMut<NextState<GameState>>,
     query: Query<&Player, With<LocalPlayer>>,
 ) {
     if query.get_single().is_ok() {
         println!("Got local player, starting game!");
-        state
-            .set(GameState::Playing)
-            .expect("Unable to change state into playing");
+        state_changer.set(GameState::Playing);
     }
 }

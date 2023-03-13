@@ -9,11 +9,11 @@ use crate::{
 };
 
 pub fn register(app: &mut App) {
-    app.add_system_set(SystemSet::on_update(GameState::Playing).with_system(process_player_camera));
+    app.add_system(process_player_camera.in_set(OnUpdate(GameState::Playing)));
 }
 
 /// Attach this to the player to give it a first person camera
-#[derive(Component, Default)]
+#[derive(Component, Default, Debug)]
 pub struct CameraHelper {
     pub last_x: f32,
     pub last_y: f32,

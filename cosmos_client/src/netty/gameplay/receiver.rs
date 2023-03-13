@@ -1,4 +1,7 @@
-use bevy::{core_pipeline::bloom::BloomSettings, prelude::*, render::camera::Projection};
+use bevy::{
+    core_pipeline::bloom::BloomSettings, prelude::*, render::camera::Projection,
+    window::PrimaryWindow,
+};
 use bevy_rapier3d::prelude::*;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
@@ -55,7 +58,7 @@ fn update_crosshair(
     camera_query: Query<(Entity, &Camera)>,
     transform_query: Query<&GlobalTransform>,
     mut crosshair_offset: ResMut<CrosshairOffset>,
-    windows: Res<Windows>,
+    primary_query: Query<&Window, With<PrimaryWindow>>,
 ) {
     for (pilot, mut last_rotation, transform) in query.iter_mut() {
         if local_player_query.get(pilot.entity).is_ok() {
@@ -65,7 +68,7 @@ fn update_crosshair(
 
             let cam_global = transform_query.get(cam_entity).unwrap();
 
-            let primary = windows.get_primary().unwrap();
+            let primary = primary_query.get_single().expect("Missing primary window");
 
             if let Some(mut pos_on_screen) = camera.world_to_viewport(
                 cam_global,
@@ -516,15 +519,15 @@ fn sync_transforms_and_locations(
 }
 
 pub(crate) fn register(app: &mut App) {
-    app.add_system_set(
-        SystemSet::on_update(GameState::LoadingWorld).with_system(client_sync_players),
-    )
-    .add_system_set(
-        SystemSet::on_update(GameState::Playing)
-            .with_system(client_sync_players)
-            .with_system(update_crosshair)
-            .with_system(insert_last_rotation)
-            .with_system(sync_transforms_and_locations.after(client_sync_players))
-            .with_system(bubble_down_locations.after(sync_transforms_and_locations)),
-    );
+    app.add_system(client_sync_players.in_set(OnUpdate(GameState::LoadingWorld)))
+        .add_systems(
+            (
+                client_sync_players,
+                update_crosshair,
+                insert_last_rotation,
+                sync_transforms_and_locations.after(client_sync_players),
+                bubble_down_locations.after(sync_transforms_and_locations),
+            )
+                .in_set(OnUpdate(GameState::Playing)),
+        );
 }

@@ -49,10 +49,9 @@ fn send_structure_state(
 }
 
 pub fn register(app: &mut App) {
-    app.add_system_set(
-        SystemSet::on_update(GameState::Playing)
-            .with_system(check_if_using_structure_system)
-            .with_system(send_structure_state),
+    app.add_systems(
+        (check_if_using_structure_system, send_structure_state)
+            .in_set(OnUpdate(GameState::Playing)),
     );
 
     player_interactions::register(app);

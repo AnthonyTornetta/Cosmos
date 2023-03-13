@@ -149,7 +149,5 @@ fn process_player_interaction(
 pub fn register(app: &mut App) {
     app
         // .add_event::<BlockInteractionEvent>()
-        .add_system_set(
-            SystemSet::on_update(GameState::Playing).with_system(process_player_interaction),
-        );
+        .add_system(process_player_interaction.in_set(OnUpdate(GameState::Playing)));
 }

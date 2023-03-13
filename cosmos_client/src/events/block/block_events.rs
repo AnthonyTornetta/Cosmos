@@ -96,10 +96,12 @@ pub fn register(app: &mut App) {
     app.add_event::<BlockBreakEvent>()
         .add_event::<BlockPlaceEvent>()
         .add_event::<BlockInteractEvent>()
-        .add_system_set(
-            SystemSet::on_update(GameState::Playing)
-                .with_system(handle_block_break)
-                .with_system(handle_block_place)
-                .with_system(handle_block_interact),
+        .add_systems(
+            (
+                handle_block_break,
+                handle_block_place,
+                handle_block_interact,
+            )
+                .in_set(OnUpdate(GameState::Playing)),
         );
 }

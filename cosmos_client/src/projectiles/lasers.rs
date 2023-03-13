@@ -69,6 +69,6 @@ fn lasers_netty(
 }
 
 pub(crate) fn register(app: &mut App) {
-    app.add_system_set(SystemSet::on_enter(GameState::Loading).with_system(create_laser_mesh))
-        .add_system_set(SystemSet::on_update(GameState::Playing).with_system(lasers_netty));
+    app.add_system(create_laser_mesh.in_schedule(OnEnter(GameState::Loading)))
+        .add_system(lasers_netty.in_set(OnUpdate(GameState::Playing)));
 }
