@@ -5,7 +5,6 @@ use bevy::core_pipeline::CorePipelinePlugin;
 use bevy::gltf::GltfPlugin;
 use bevy::pbr::PbrPlugin;
 use bevy::prelude::{AnimationPlugin, GilrsPlugin};
-use bevy::sprite::SpritePlugin;
 use bevy::text::TextPlugin;
 use bevy::ui::UiPlugin;
 use bevy::winit::WinitPlugin;
@@ -17,7 +16,6 @@ impl PluginGroup for ClientPluginGroup {
     fn build(self) -> PluginGroupBuilder {
         PluginGroupBuilder::start::<Self>()
             .add(WinitPlugin::default())
-            .add(SpritePlugin::default())
             .add(TextPlugin::default())
             .add(UiPlugin::default())
             .add(PbrPlugin::default())

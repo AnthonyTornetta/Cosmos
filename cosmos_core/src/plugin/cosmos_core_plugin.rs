@@ -1,17 +1,5 @@
-use bevy::a11y::AccessibilityPlugin;
 use bevy::app::PluginGroupBuilder;
-use bevy::asset::AssetPlugin;
-use bevy::diagnostic::DiagnosticsPlugin;
-use bevy::input::InputPlugin;
-use bevy::log::LogPlugin;
-use bevy::prelude::{
-    App, FrameCountPlugin, HierarchyPlugin, ImagePlugin, Plugin, PluginGroup, States,
-    TaskPoolPlugin, TransformPlugin, TypeRegistrationPlugin,
-};
-use bevy::render::RenderPlugin;
-use bevy::scene::ScenePlugin;
-use bevy::time::TimePlugin;
-use bevy::window::WindowPlugin;
+use bevy::prelude::{App, Plugin, PluginGroup, States};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_rapier3d::prelude::{NoUserData, RapierPhysicsPlugin};
 
@@ -109,24 +97,23 @@ impl<T: States + Clone + Copy> Plugin for CosmosCorePlugin<T> {
 impl<T: States + Clone + Copy> PluginGroup for CosmosCorePluginGroup<T> {
     fn build(self) -> PluginGroupBuilder {
         PluginGroupBuilder::start::<Self>()
-            .add(LogPlugin::default())
-            .add(TaskPoolPlugin::default())
-            .add(TypeRegistrationPlugin::default())
-            .add(FrameCountPlugin::default())
-            .add(TimePlugin::default())
-            .add(TransformPlugin::default())
-            .add(HierarchyPlugin::default())
-            .add(DiagnosticsPlugin::default())
-            .add(InputPlugin::default())
-            .add(WindowPlugin::default())
-            .add(AssetPlugin::default())
-            .add(ScenePlugin::default())
-            .add(RenderPlugin::default())
+            // .add(LogPlugin::default())
+            // .add(TaskPoolPlugin::default())
+            // .add(TypeRegistrationPlugin::default())
+            // .add(FrameCountPlugin::default())
+            // .add(TimePlugin::default())
+            // .add(TransformPlugin::default())
+            // .add(HierarchyPlugin::default())
+            // .add(DiagnosticsPlugin::default())
+            // .add(InputPlugin::default())
+            // .add(WindowPlugin::default())
+            // .add(AccessibilityPlugin)
+            // .add(AssetPlugin::default())
+            // .add(ScenePlugin::default())
+            // .add(RenderPlugin::default())
             .add(RapierPhysicsPlugin::<NoUserData>::default())
-            .add(ImagePlugin::default_nearest())
+            // .add(ImagePlugin::default_nearest())
             .add(WorldInspectorPlugin::default())
-            // AccessibilityPlugin is required by bevy core ecs for some reason
-            .add(AccessibilityPlugin)
             .add(CosmosCorePlugin::new(
                 self.pre_loading_state,
                 self.loading_state,

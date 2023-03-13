@@ -40,7 +40,6 @@ use structure::chunk_retreiver;
 use ui::crosshair::CrosshairOffset;
 use window::setup::DeltaCursorPosition;
 
-use crate::plugin::client_plugin::ClientPluginGroup;
 use crate::rendering::structure_renderer::monitor_block_updates_system;
 use crate::rendering::uv_mapper::UVMapper;
 use bevy::prelude::*;
@@ -323,6 +322,7 @@ fn main() {
         })
         .insert_resource(ClearColor(Color::BLACK))
         .add_state::<GameState>()
+        .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))
         .add_plugins(CosmosCorePluginGroup::new(
             GameState::PreLoading,
             GameState::Loading,
@@ -330,7 +330,6 @@ fn main() {
             GameState::Connecting,
             GameState::Playing,
         ))
-        .add_plugins(ClientPluginGroup::default())
         .add_plugin(RenetClientPlugin::default())
         // .add_plugin(RapierDebugRenderPlugin::default())
         .add_systems((

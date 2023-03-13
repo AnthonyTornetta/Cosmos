@@ -519,15 +519,18 @@ fn sync_transforms_and_locations(
 }
 
 pub(crate) fn register(app: &mut App) {
-    app.add_system(client_sync_players.in_set(OnUpdate(GameState::LoadingWorld)))
-        .add_systems(
-            (
-                client_sync_players,
-                update_crosshair,
-                insert_last_rotation,
-                sync_transforms_and_locations.after(client_sync_players),
-                bubble_down_locations.after(sync_transforms_and_locations),
-            )
-                .in_set(OnUpdate(GameState::Playing)),
-        );
+    app.add_system(
+        client_sync_players
+            .run_if(in_state(GameState::Playing))
+            .run_if(in_state(GameState::LoadingWorld)),
+    )
+    .add_systems(
+        (
+            update_crosshair,
+            insert_last_rotation,
+            sync_transforms_and_locations.after(client_sync_players),
+            bubble_down_locations.after(sync_transforms_and_locations),
+        )
+            .in_set(OnUpdate(GameState::Playing)),
+    );
 }
