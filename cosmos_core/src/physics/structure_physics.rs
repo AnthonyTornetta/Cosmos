@@ -281,7 +281,6 @@ fn listen_for_new_physics_event(
     blocks: Res<Registry<Block>>,
 ) {
     if !event.is_empty() {
-        println!("Got physics event!");
         let mut done_structures = HashSet::new();
 
         for ev in event.iter() {
@@ -301,7 +300,6 @@ fn listen_for_new_physics_event(
                 if let Some(chunk_entity) = structure.chunk_entity(coords.x, coords.y, coords.z) {
                     let mut entity_commands = commands.entity(chunk_entity);
                     if let Some((collider, mass, _)) = chunk_collider.collider {
-                        println!("Got new collider!");
                         // center_of_mass needs custom torque calculations to work properly
 
                         // let mass_props = MassProperties {

@@ -59,8 +59,6 @@ fn monitor_loading<T: States + Clone + Copy>(
     state: Res<State<T>>,
     mut state_changer: ResMut<NextState<T>>,
 ) {
-    println!("MOnitoring loading: {:?}!", state.0);
-
     for ev in event_start_reader.iter() {
         loading_status.loaders.insert(ev.loading_id);
     }
