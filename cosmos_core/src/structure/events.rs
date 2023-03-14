@@ -2,10 +2,6 @@ use bevy::prelude::{App, Entity};
 
 use super::{structure_iterator::BlockIterator, Structure};
 
-pub struct StructureCreated {
-    pub entity: Entity,
-}
-
 /// This will be created once all chunks have been populated
 pub struct StructureLoadedEvent {
     pub structure_entity: Entity,
@@ -38,7 +34,6 @@ impl ChunkSetEvent {
 }
 
 pub fn register(app: &mut App) {
-    app.add_event::<StructureCreated>()
-        .add_event::<ChunkSetEvent>()
+    app.add_event::<ChunkSetEvent>()
         .add_event::<StructureLoadedEvent>();
 }

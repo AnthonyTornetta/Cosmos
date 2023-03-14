@@ -1,16 +1,16 @@
 use bevy::prelude::*;
+use bevy_inspector_egui::bevy_egui::EguiContexts;
 // use bevy_inspector_egui::bevy_egui::EguiContext;
 use bevy_renet::renet::RenetServer;
 use renet_visualizer::RenetServerVisualizer;
 
 fn update_visulizer_system(
-    // mut egui_context: ResMut<EguiContext>,
+    mut egui_context: EguiContexts,
     mut visualizer: ResMut<RenetServerVisualizer<200>>,
     server: Res<RenetServer>,
 ) {
     visualizer.update(&server);
-    // WAIT FOR EGUI TO UPDATE IN RENET VISUALIZER
-    // visualizer.show_window(egui_context.ctx_mut());
+    visualizer.show_window(egui_context.ctx_mut());
 }
 
 pub fn register(app: &mut App) {

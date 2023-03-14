@@ -254,10 +254,6 @@ fn client_sync_players(
                 let entity = entity_cmds.id();
 
                 network_mapping.add_mapping(&entity, &server_entity);
-
-                // create_structure_writer.send(StructureCreated {
-                //     entity: entity.id(),
-                // });
             }
             ServerReliableMessages::ShipCreate {
                 entity: server_entity,

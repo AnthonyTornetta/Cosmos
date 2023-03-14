@@ -1,9 +1,7 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::physics::location::Location;
-use cosmos_core::structure::{
-    events::StructureCreated, ship::ship_builder::TShipBuilder, Structure,
-};
+use cosmos_core::structure::{ship::ship_builder::TShipBuilder, Structure};
 
 use crate::structure::ship::{loading::ShipNeedsCreated, server_ship_builder::ServerShipBuilder};
 use crate::GameState;
@@ -13,11 +11,7 @@ pub struct CreateShipEvent {
     pub rotation: Quat,
 }
 
-fn event_reader(
-    mut created_event_writer: EventWriter<StructureCreated>,
-    mut event_reader: EventReader<CreateShipEvent>,
-    mut commands: Commands,
-) {
+fn event_reader(mut event_reader: EventReader<CreateShipEvent>, mut commands: Commands) {
     for ev in event_reader.iter() {
         let mut entity = commands.spawn_empty();
 
@@ -33,10 +27,6 @@ fn event_reader(
         );
 
         entity.insert(structure).insert(ShipNeedsCreated);
-
-        created_event_writer.send(StructureCreated {
-            entity: entity.id(),
-        });
     }
 }
 

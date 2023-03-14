@@ -7,25 +7,32 @@ use cosmos_core::{
         NettyChannel,
     },
     physics::location::Location,
-    structure::{events::StructureCreated, planet::Planet, ship::Ship, Structure},
+    structure::{planet::Planet, ship::Ship, Structure},
 };
 
 fn on_structure_created(
     mut server: ResMut<RenetServer>,
-    mut event_reader: EventReader<StructureCreated>,
-    structure_query: Query<(&Structure, &Transform, &Velocity, &Location)>,
-    type_query: Query<(Option<&Ship>, Option<&Planet>)>,
+    structure_query: Query<
+        (
+            Entity,
+            &Structure,
+            &Transform,
+            &Velocity,
+            &Location,
+            Option<&Planet>,
+            Option<&Ship>,
+        ),
+        Added<Structure>,
+    >,
 ) {
-    for ev in event_reader.iter() {
-        let (structure, transform, velocity, location) = structure_query.get(ev.entity).unwrap();
-
-        let (ship, planet) = type_query.get(ev.entity).unwrap();
-
-        if planet.is_some() {
+    for (entity, structure, transform, velocity, location, is_planet, is_ship) in
+        structure_query.iter()
+    {
+        if is_planet.is_some() {
             server.broadcast_message(
                 NettyChannel::Reliable.id(),
                 bincode::serialize(&ServerReliableMessages::PlanetCreate {
-                    entity: ev.entity,
+                    entity,
                     body: NettyRigidBody::new(velocity, transform.rotation, *location),
                     width: structure.chunks_width() as u32,
                     height: structure.chunks_height() as u32,
@@ -33,11 +40,11 @@ fn on_structure_created(
                 })
                 .unwrap(),
             );
-        } else if ship.is_some() {
+        } else if is_ship.is_some() {
             server.broadcast_message(
                 NettyChannel::Reliable.id(),
                 bincode::serialize(&ServerReliableMessages::ShipCreate {
-                    entity: ev.entity,
+                    entity,
                     body: NettyRigidBody::new(velocity, transform.rotation, *location),
                     width: structure.chunks_width() as u32,
                     height: structure.chunks_height() as u32,
