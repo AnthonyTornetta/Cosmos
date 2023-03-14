@@ -9,9 +9,7 @@ use bevy::reflect::{FromReflect, Reflect};
 use bevy::utils::HashSet;
 use bevy_rapier3d::math::Vect;
 use bevy_rapier3d::na::Vector3;
-use bevy_rapier3d::prelude::{
-    Collider, ColliderMassProperties, RapierColliderHandle, ReadMassProperties, Rot,
-};
+use bevy_rapier3d::prelude::{Collider, ColliderMassProperties, ReadMassProperties, Rot};
 
 type GenerateCollider = (Collider, f32, Vec3);
 
@@ -268,7 +266,6 @@ fn generate_chunk_collider(chunk: &Chunk, blocks: &Registry<Block>) -> Option<Ge
     if colliders.is_empty() {
         None
     } else {
-        println!("Final COM: {center_of_mass}");
         Some((Collider::compound(colliders), mass, center_of_mass))
     }
 }
@@ -284,6 +281,7 @@ fn listen_for_new_physics_event(
     blocks: Res<Registry<Block>>,
 ) {
     if !event.is_empty() {
+        println!("Got physics event!");
         let mut done_structures = HashSet::new();
 
         for ev in event.iter() {
@@ -303,6 +301,7 @@ fn listen_for_new_physics_event(
                 if let Some(chunk_entity) = structure.chunk_entity(coords.x, coords.y, coords.z) {
                     let mut entity_commands = commands.entity(chunk_entity);
                     if let Some((collider, mass, _)) = chunk_collider.collider {
+                        println!("Got new collider!");
                         // center_of_mass needs custom torque calculations to work properly
 
                         // let mass_props = MassProperties {
@@ -312,7 +311,6 @@ fn listen_for_new_physics_event(
                         // };
 
                         entity_commands
-                            .remove::<RapierColliderHandle>()
                             .insert(collider)
                             .insert(ColliderMassProperties::Mass(mass));
                         // .insert(ColliderMassProperties::MassProperties(mass_props))

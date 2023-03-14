@@ -659,7 +659,6 @@ fn add_chunks_system(
     }
 
     for ev in chunk_set_events {
-        println!("Sending chunk set event!");
         chunk_set_event_writer.send(ev);
     }
 }
