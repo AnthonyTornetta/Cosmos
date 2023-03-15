@@ -97,8 +97,6 @@ pub fn move_players_between_worlds(
 
                 let distance = location.distance_sqrd(other_location);
 
-                // println!("Distance: {distance} vs {WORLD_SWITCH_DISTANCE_SQRD}");
-
                 if distance < WORLD_SWITCH_DISTANCE_SQRD {
                     if world_currently_in.0 != other_world_entity {
                         world_currently_in.0 = other_world_entity;

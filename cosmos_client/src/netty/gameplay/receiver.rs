@@ -388,75 +388,6 @@ fn client_sync_players(
     }
 }
 
-// fn sync_transforms_and_locations(
-//     mut trans_query_no_parent: Query<
-//         (&mut Transform, &mut Location),
-//         (Without<PlayerWorld>, Without<Parent>),
-//     >,
-//     mut trans_query_with_parent: Query<
-//         (&mut Transform, &mut Location),
-//         (Without<PlayerWorld>, With<Parent>),
-//     >,
-//     parent_query: Query<&Parent>,
-//     player_query: Query<Entity, With<LocalPlayer>>,
-//     // mut player_trans_query: Query<
-//     //     (&mut Transform, &mut Location),
-//     //     (Without<PlayerWorld>, With<LocalPlayer>),
-//     // >,
-//     mut world_query: Query<&mut Location, With<PlayerWorld>>,
-// ) {
-//     for (transform, mut location) in trans_query_no_parent.iter_mut() {
-//         location.apply_updates(transform.translation);
-//     }
-//     for (transform, mut location) in trans_query_with_parent.iter_mut() {
-//         location.apply_updates(transform.translation);
-//     }
-
-//     if let Ok(mut world_location) = world_query.get_single_mut() {
-//         let mut player_entity = player_query.single();
-
-//         while let Ok(parent) = parent_query.get(player_entity) {
-//             let parent_entity = parent.get();
-//             if trans_query_no_parent.contains(parent_entity) {
-//                 player_entity = parent.get();
-//             } else {
-//                 break;
-//             }
-//         }
-
-//         let (_, player_location) = trans_query_no_parent
-//             .get(player_entity)
-//             .or_else(|_| trans_query_with_parent.get(player_entity))
-//             .expect("The above loop guarantees this is valid");
-
-//         world_location.set_from(&player_location);
-//         world_location.last_transform_loc = Vec3::ZERO;
-
-//         for (mut transform, mut location) in trans_query_no_parent.iter_mut() {
-//             let translation = world_location.relative_coords_to(&location);
-//             println!("Relative coords: {}", translation);
-
-//             transform.translation = translation;
-//             location.last_transform_loc = translation;
-//         }
-
-//         // let (mut player_transform, mut player_location) = player_trans_query.single_mut();
-
-//         // player_location.apply_updates(player_transform.translation);
-
-//         // world_location.set_from(&player_location);
-
-//         // player_transform.translation = world_location.relative_coords_to(&player_location);
-//         // player_location.last_transform_loc = player_transform.translation;
-
-//         // for (mut transform, mut location) in trans_query.iter_mut() {
-//         //     location.apply_updates(transform.translation);
-//         //     transform.translation = world_location.relative_coords_to(&location);
-//         //     location.last_transform_loc = transform.translation;
-//         // }
-//     }
-// }
-
 fn sync_transforms_and_locations(
     mut trans_query_no_parent: Query<
         (&mut Transform, &mut Location),
@@ -502,12 +433,9 @@ fn sync_transforms_and_locations(
 
         world_location.set_from(location);
 
-        // println!("Player loc: {location}");
-
         // Update transforms of objects within this world.
         for (mut transform, mut location) in trans_query_no_parent.iter_mut() {
             let trans = world_location.relative_coords_to(&location);
-            // println!("Trans: {trans}");
             transform.translation = trans;
             location.last_transform_loc = trans;
         }

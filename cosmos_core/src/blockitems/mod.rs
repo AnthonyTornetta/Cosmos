@@ -34,7 +34,6 @@ impl BlockItems {
     }
 
     pub fn block_from_item(&self, item: &Item) -> Option<u16> {
-        // println!("{}", self.items_to_blocks);
         self.items_to_blocks.get(&item.id()).copied()
     }
 

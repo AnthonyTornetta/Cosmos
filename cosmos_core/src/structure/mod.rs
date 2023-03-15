@@ -637,12 +637,8 @@ fn add_chunks_system(
                         ..Default::default()
                     });
 
-                    println!("Making chunk!");
-
                     if let Some(bw) = body_world {
                         entity_cmds.insert(*bw);
-                    } else {
-                        println!("No BW!");
                     }
 
                     let entity = entity_cmds.id();
