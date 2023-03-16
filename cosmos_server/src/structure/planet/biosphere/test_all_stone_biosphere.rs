@@ -1,4 +1,6 @@
-use bevy::prelude::{App, Component, Entity, EventReader, EventWriter, Query, Res};
+use bevy::prelude::{
+    App, Component, Entity, EventReader, EventWriter, IntoSystemConfigs, OnUpdate, Query, Res,
+};
 use cosmos_core::{
     block::Block,
     registry::Registry,
@@ -6,7 +8,7 @@ use cosmos_core::{
 };
 
 use crate::structure::planet::generation::planet_generator::check_needs_generated_system;
-use crate::{GameState, SystemSet};
+use crate::GameState;
 
 use super::{TBiosphere, TGenerateChunkEvent};
 
@@ -87,15 +89,15 @@ pub fn generate_planet(
 }
 
 pub(crate) fn register(app: &mut App) {
-    app.add_event::<TestStoneChunkNeedsGeneratedEvent>();
-    app.add_system_set(
-        SystemSet::on_update(GameState::Playing)
-            .with_system(generate_planet)
-            .with_system(
+    app.add_event::<TestStoneChunkNeedsGeneratedEvent>()
+        .add_systems(
+            (
+                generate_planet,
                 check_needs_generated_system::<
                     TestStoneChunkNeedsGeneratedEvent,
                     TestStoneBiosphereMarker,
                 >,
-            ),
-    );
+            )
+                .in_set(OnUpdate(GameState::Playing)),
+        );
 }

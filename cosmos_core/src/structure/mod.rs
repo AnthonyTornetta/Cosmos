@@ -1,6 +1,6 @@
+use bevy::prelude::{App, DespawnRecursiveExt};
 use bevy::reflect::Reflect;
 use bevy::utils::{HashMap, HashSet};
-use bevy::{ecs::schedule::StateData, prelude::App};
 use bevy_rapier3d::prelude::BodyWorld;
 
 pub mod block_health;
@@ -24,7 +24,7 @@ use crate::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
 use crate::utils::array_utils::flatten;
 use bevy::prelude::{
     BuildChildren, Commands, Component, Entity, EventReader, EventWriter, GlobalTransform,
-    IntoSystemDescriptor, PbrBundle, Query, Transform, Vec3,
+    IntoSystemConfig, PbrBundle, Query, States, Transform, Vec3,
 };
 use serde::{Deserialize, Serialize};
 
@@ -583,7 +583,7 @@ fn remove_empty_chunks(
 
         if structure.chunk_from_chunk_coordinates(cx, cy, cz).is_none() {
             if let Some(chunk_entity) = structure.chunk_entity(cx, cy, cz) {
-                commands.entity(chunk_entity).despawn();
+                commands.entity(chunk_entity).despawn_recursive();
 
                 let (width, height) = (structure.width, structure.height);
 
@@ -659,12 +659,11 @@ fn add_chunks_system(
     }
 
     for ev in chunk_set_events {
-        println!("Sending chunk set event!");
         chunk_set_event_writer.send(ev);
     }
 }
 
-pub fn register<T: StateData + Clone + Copy>(
+pub fn register<T: States + Clone + Copy>(
     app: &mut App,
     post_loading_state: T,
     playing_game_state: T,

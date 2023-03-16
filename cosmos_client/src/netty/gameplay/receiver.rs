@@ -1,4 +1,7 @@
-use bevy::{core_pipeline::bloom::BloomSettings, prelude::*, render::camera::Projection};
+use bevy::{
+    core_pipeline::bloom::BloomSettings, prelude::*, render::camera::Projection,
+    window::PrimaryWindow,
+};
 use bevy_rapier3d::prelude::*;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
@@ -55,7 +58,7 @@ fn update_crosshair(
     camera_query: Query<(Entity, &Camera)>,
     transform_query: Query<&GlobalTransform>,
     mut crosshair_offset: ResMut<CrosshairOffset>,
-    windows: Res<Windows>,
+    primary_query: Query<&Window, With<PrimaryWindow>>,
 ) {
     for (pilot, mut last_rotation, transform) in query.iter_mut() {
         if local_player_query.get(pilot.entity).is_ok() {
@@ -65,7 +68,7 @@ fn update_crosshair(
 
             let cam_global = transform_query.get(cam_entity).unwrap();
 
-            let primary = windows.get_primary().unwrap();
+            let primary = primary_query.get_single().expect("Missing primary window");
 
             if let Some(mut pos_on_screen) = camera.world_to_viewport(
                 cam_global,
@@ -251,10 +254,6 @@ fn client_sync_players(
                 let entity = entity_cmds.id();
 
                 network_mapping.add_mapping(&entity, &server_entity);
-
-                // create_structure_writer.send(StructureCreated {
-                //     entity: entity.id(),
-                // });
             }
             ServerReliableMessages::ShipCreate {
                 entity: server_entity,
@@ -389,75 +388,6 @@ fn client_sync_players(
     }
 }
 
-// fn sync_transforms_and_locations(
-//     mut trans_query_no_parent: Query<
-//         (&mut Transform, &mut Location),
-//         (Without<PlayerWorld>, Without<Parent>),
-//     >,
-//     mut trans_query_with_parent: Query<
-//         (&mut Transform, &mut Location),
-//         (Without<PlayerWorld>, With<Parent>),
-//     >,
-//     parent_query: Query<&Parent>,
-//     player_query: Query<Entity, With<LocalPlayer>>,
-//     // mut player_trans_query: Query<
-//     //     (&mut Transform, &mut Location),
-//     //     (Without<PlayerWorld>, With<LocalPlayer>),
-//     // >,
-//     mut world_query: Query<&mut Location, With<PlayerWorld>>,
-// ) {
-//     for (transform, mut location) in trans_query_no_parent.iter_mut() {
-//         location.apply_updates(transform.translation);
-//     }
-//     for (transform, mut location) in trans_query_with_parent.iter_mut() {
-//         location.apply_updates(transform.translation);
-//     }
-
-//     if let Ok(mut world_location) = world_query.get_single_mut() {
-//         let mut player_entity = player_query.single();
-
-//         while let Ok(parent) = parent_query.get(player_entity) {
-//             let parent_entity = parent.get();
-//             if trans_query_no_parent.contains(parent_entity) {
-//                 player_entity = parent.get();
-//             } else {
-//                 break;
-//             }
-//         }
-
-//         let (_, player_location) = trans_query_no_parent
-//             .get(player_entity)
-//             .or_else(|_| trans_query_with_parent.get(player_entity))
-//             .expect("The above loop guarantees this is valid");
-
-//         world_location.set_from(&player_location);
-//         world_location.last_transform_loc = Vec3::ZERO;
-
-//         for (mut transform, mut location) in trans_query_no_parent.iter_mut() {
-//             let translation = world_location.relative_coords_to(&location);
-//             println!("Relative coords: {}", translation);
-
-//             transform.translation = translation;
-//             location.last_transform_loc = translation;
-//         }
-
-//         // let (mut player_transform, mut player_location) = player_trans_query.single_mut();
-
-//         // player_location.apply_updates(player_transform.translation);
-
-//         // world_location.set_from(&player_location);
-
-//         // player_transform.translation = world_location.relative_coords_to(&player_location);
-//         // player_location.last_transform_loc = player_transform.translation;
-
-//         // for (mut transform, mut location) in trans_query.iter_mut() {
-//         //     location.apply_updates(transform.translation);
-//         //     transform.translation = world_location.relative_coords_to(&location);
-//         //     location.last_transform_loc = transform.translation;
-//         // }
-//     }
-// }
-
 fn sync_transforms_and_locations(
     mut trans_query_no_parent: Query<
         (&mut Transform, &mut Location),
@@ -503,12 +433,9 @@ fn sync_transforms_and_locations(
 
         world_location.set_from(location);
 
-        // println!("Player loc: {location}");
-
         // Update transforms of objects within this world.
         for (mut transform, mut location) in trans_query_no_parent.iter_mut() {
             let trans = world_location.relative_coords_to(&location);
-            // println!("Trans: {trans}");
             transform.translation = trans;
             location.last_transform_loc = trans;
         }
@@ -516,15 +443,17 @@ fn sync_transforms_and_locations(
 }
 
 pub(crate) fn register(app: &mut App) {
-    app.add_system_set(
-        SystemSet::on_update(GameState::LoadingWorld).with_system(client_sync_players),
+    app.add_system(
+        client_sync_players
+            .run_if(in_state(GameState::Playing).or_else(in_state(GameState::LoadingWorld))),
     )
-    .add_system_set(
-        SystemSet::on_update(GameState::Playing)
-            .with_system(client_sync_players)
-            .with_system(update_crosshair)
-            .with_system(insert_last_rotation)
-            .with_system(sync_transforms_and_locations.after(client_sync_players))
-            .with_system(bubble_down_locations.after(sync_transforms_and_locations)),
+    .add_systems(
+        (
+            update_crosshair,
+            insert_last_rotation,
+            sync_transforms_and_locations.after(client_sync_players),
+            bubble_down_locations.after(sync_transforms_and_locations),
+        )
+            .in_set(OnUpdate(GameState::Playing)),
     );
 }

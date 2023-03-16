@@ -12,6 +12,7 @@ fn gravity_system(
         &RigidBody,
         Option<&mut ExternalImpulse>,
     )>,
+    time: Res<Time>,
     mut commands: Commands,
 ) {
     let mut gravs: Vec<(f32, f32, Location, Vec3)> = Vec::with_capacity(emitters.iter().len());
@@ -40,11 +41,11 @@ fn gravity_system(
                 };
 
                 if ratio >= 0.1 {
-                    force += (prop.0.mass * force_per_kilogram * ratio) / 100.0 * *down;
+                    force += (prop.0.mass * force_per_kilogram * ratio) * *down;
                 }
             }
 
-            // println!("Ur mass: {}", prop.0.mass);
+            force *= time.delta_seconds();
 
             if let Some(mut external_force) = external_force {
                 external_force.impulse += force;

@@ -1,16 +1,5 @@
 use bevy::app::PluginGroupBuilder;
-use bevy::asset::AssetPlugin;
-use bevy::core::CorePlugin;
-use bevy::core_pipeline::CorePipelinePlugin;
-use bevy::diagnostic::DiagnosticsPlugin;
-use bevy::ecs::schedule::StateData;
-use bevy::input::InputPlugin;
-use bevy::log::LogPlugin;
-use bevy::prelude::{App, HierarchyPlugin, ImagePlugin, Plugin, PluginGroup, TransformPlugin};
-use bevy::render::RenderPlugin;
-use bevy::scene::ScenePlugin;
-use bevy::time::TimePlugin;
-use bevy::window::WindowPlugin;
+use bevy::prelude::{App, Plugin, PluginGroup, States};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_rapier3d::prelude::{NoUserData, RapierPhysicsPlugin};
 
@@ -21,7 +10,7 @@ use crate::{item, physics};
 
 pub struct CosmosCorePluginGroup<T>
 where
-    T: StateData + Clone + Copy,
+    T: States + Clone + Copy,
 {
     pre_loading_state: T,
     loading_state: T,
@@ -32,7 +21,7 @@ where
 
 pub struct CosmosCorePlugin<T>
 where
-    T: StateData + Clone + Copy,
+    T: States + Clone + Copy,
 {
     pre_loading_state: T,
     loading_state: T,
@@ -41,7 +30,7 @@ where
     playing_game_state: T,
 }
 
-impl<T: StateData + Clone + Copy> CosmosCorePlugin<T> {
+impl<T: States + Clone + Copy> CosmosCorePlugin<T> {
     pub fn new(
         pre_loading_state: T,
         loading_state: T,
@@ -59,7 +48,7 @@ impl<T: StateData + Clone + Copy> CosmosCorePlugin<T> {
     }
 }
 
-impl<T: StateData + Clone + Copy> CosmosCorePluginGroup<T> {
+impl<T: States + Clone + Copy> CosmosCorePluginGroup<T> {
     pub fn new(
         pre_loading_state: T,
         loading_state: T,
@@ -77,7 +66,7 @@ impl<T: StateData + Clone + Copy> CosmosCorePluginGroup<T> {
     }
 }
 
-impl<T: StateData + Clone + Copy> Plugin for CosmosCorePlugin<T> {
+impl<T: States + Clone + Copy> Plugin for CosmosCorePlugin<T> {
     fn build(&self, app: &mut App) {
         loader::register(
             app,
@@ -94,7 +83,7 @@ impl<T: StateData + Clone + Copy> Plugin for CosmosCorePlugin<T> {
             self.post_loading_state,
         );
         item::register(app);
-        blockitems::register(app, self.loading_state);
+        blockitems::register(app, self.post_loading_state);
         physics::register(app);
         structure::events::register(app);
         events::register(app, self.playing_game_state);
@@ -105,24 +94,26 @@ impl<T: StateData + Clone + Copy> Plugin for CosmosCorePlugin<T> {
     }
 }
 
-impl<T: StateData + Clone + Copy> PluginGroup for CosmosCorePluginGroup<T> {
+impl<T: States + Clone + Copy> PluginGroup for CosmosCorePluginGroup<T> {
     fn build(self) -> PluginGroupBuilder {
         PluginGroupBuilder::start::<Self>()
-            .add(LogPlugin::default())
-            .add(CorePlugin::default())
-            .add(TimePlugin::default())
-            .add(TransformPlugin::default())
-            .add(HierarchyPlugin::default())
-            .add(DiagnosticsPlugin::default())
-            .add(InputPlugin::default())
-            .add(WindowPlugin::default())
-            .add(AssetPlugin::default())
-            .add(ScenePlugin::default())
-            .add(RenderPlugin::default())
-            .add(CorePipelinePlugin::default())
+            // .add(LogPlugin::default())
+            // .add(TaskPoolPlugin::default())
+            // .add(TypeRegistrationPlugin::default())
+            // .add(FrameCountPlugin::default())
+            // .add(TimePlugin::default())
+            // .add(TransformPlugin::default())
+            // .add(HierarchyPlugin::default())
+            // .add(DiagnosticsPlugin::default())
+            // .add(InputPlugin::default())
+            // .add(WindowPlugin::default())
+            // .add(AccessibilityPlugin)
+            // .add(AssetPlugin::default())
+            // .add(ScenePlugin::default())
+            // .add(RenderPlugin::default())
             .add(RapierPhysicsPlugin::<NoUserData>::default())
-            .add(ImagePlugin::default_nearest())
-            .add(WorldInspectorPlugin)
+            // .add(ImagePlugin::default_nearest())
+            .add(WorldInspectorPlugin::default())
             .add(CosmosCorePlugin::new(
                 self.pre_loading_state,
                 self.loading_state,

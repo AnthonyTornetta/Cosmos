@@ -3,7 +3,7 @@ use bevy::prelude::{
 };
 use cosmos_core::{
     physics::location::Location,
-    structure::{events::StructureCreated, planet::Planet, ship::Ship, Structure},
+    structure::{planet::Planet, ship::Ship, Structure},
 };
 
 use crate::structure::saving::{
@@ -73,7 +73,6 @@ fn cosmos_command_listener(
     mut command_events: EventReader<CosmosCommandSent>,
     cosmos_commands: Res<CosmosCommands>,
 
-    mut structure_created: EventWriter<StructureCreated>,
     mut structure_loaded_delayed: EventWriter<SendDelayedStructureLoadEvent>,
 
     structure_query: Query<(Option<&Planet>, Option<&Ship>), With<Structure>>,
@@ -144,7 +143,6 @@ fn cosmos_command_listener(
                         structure_type,
                         spawn_at,
                         &mut commands,
-                        &mut structure_created,
                         &mut structure_loaded_delayed,
                     );
                 }

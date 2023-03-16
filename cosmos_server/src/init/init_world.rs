@@ -3,7 +3,7 @@ use std::time::SystemTime;
 use bevy::prelude::*;
 use cosmos_core::{
     physics::location::Location,
-    structure::{events::StructureCreated, planet::planet_builder::TPlanetBuilder, Structure},
+    structure::{planet::planet_builder::TPlanetBuilder, Structure},
     utils::resource_wrapper::ResourceWrapper,
 };
 use noise::Seedable;
@@ -29,7 +29,7 @@ pub fn register(app: &mut App) {
         .add_startup_system(create_world);
 }
 
-fn create_world(mut commands: Commands, mut event_writer: EventWriter<StructureCreated>) {
+fn create_world(mut commands: Commands) {
     let mut entity_cmd = commands.spawn_empty();
 
     let mut structure = Structure::new(16, 4, 16);
@@ -44,8 +44,4 @@ fn create_world(mut commands: Commands, mut event_writer: EventWriter<StructureC
         .insert(structure)
         .insert(NeedsGenerated)
         .insert(marker);
-
-    event_writer.send(StructureCreated {
-        entity: entity_cmd.id(),
-    });
 }

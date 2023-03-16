@@ -2,8 +2,8 @@ use crate::block::lighting::{BlockLightProperties, BlockLighting};
 use crate::materials::CosmosMaterial;
 use crate::state::game_state::GameState;
 use bevy::prelude::{
-    App, BuildChildren, Component, DespawnRecursiveExt, EventReader, Mesh, PbrBundle, PointLight,
-    PointLightBundle, StandardMaterial, SystemSet, Transform, Vec3,
+    App, BuildChildren, Component, DespawnRecursiveExt, EventReader, IntoSystemConfig, Mesh,
+    OnUpdate, PbrBundle, PointLight, PointLightBundle, StandardMaterial, Transform, Vec3,
 };
 use bevy::reflect::{FromReflect, Reflect};
 use bevy::render::mesh::{Indices, PrimitiveTopology};
@@ -24,18 +24,6 @@ use std::collections::HashSet;
 
 use crate::asset::asset_loading::MainAtlas;
 use crate::{Assets, Commands, Entity, EventWriter, Handle, Query, Res, ResMut, UVMapper};
-
-pub fn register(app: &mut App) {
-    app.add_event::<NeedsNewRenderingEvent>()
-        .add_system_set(
-            SystemSet::on_update(GameState::LoadingWorld)
-                .with_system(monitor_needs_rendered_system),
-        )
-        .add_system_set(
-            SystemSet::on_update(GameState::Playing).with_system(monitor_needs_rendered_system),
-        )
-        .register_type::<LightsHolder>();
-}
 
 #[derive(Component, Debug)]
 pub struct StructureRenderer {
@@ -854,4 +842,11 @@ impl ChunkRenderer {
             }
         }
     }
+}
+
+pub fn register(app: &mut App) {
+    app.add_event::<NeedsNewRenderingEvent>()
+        .add_system(monitor_needs_rendered_system.in_set(OnUpdate(GameState::LoadingWorld)))
+        .add_system(monitor_needs_rendered_system.in_set(OnUpdate(GameState::Playing)))
+        .register_type::<LightsHolder>();
 }

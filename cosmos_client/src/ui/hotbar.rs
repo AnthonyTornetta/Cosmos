@@ -137,11 +137,11 @@ fn listen_for_change_events(
         if hb.selected_slot != hb.prev_slot {
             commands
                 .entity(hb.slots[hb.prev_slot].0)
-                .insert(UiImage(asset_server.load(image_path(false))));
+                .insert(UiImage::new(asset_server.load(image_path(false))));
 
             commands
                 .entity(hb.slots[hb.selected_slot].0)
-                .insert(UiImage(asset_server.load(image_path(true))));
+                .insert(UiImage::new(asset_server.load(image_path(true))));
 
             hb.prev_slot = hb.selected_slot;
 
@@ -214,7 +214,7 @@ fn add_item_text(mut commands: Commands, asset_server: Res<AssetServer>) {
                             font: asset_server.load("fonts/PixeloidSans.ttf"),
                         },
                     )
-                    .with_alignment(TextAlignment::CENTER),
+                    .with_alignment(TextAlignment::Center),
                     ..default()
                 })
                 .insert(ItemNameDisplay);
@@ -287,7 +287,7 @@ fn add_hotbar(mut commands: Commands, asset_server: Res<AssetServer>) {
                                         font: asset_server.load("fonts/PixeloidSans.ttf"),
                                     },
                                 )
-                                .with_alignment(TextAlignment::BOTTOM_RIGHT),
+                                .with_alignment(TextAlignment::Right),
                                 ..default()
                             })
                             .id(),
@@ -306,15 +306,13 @@ fn add_hotbar(mut commands: Commands, asset_server: Res<AssetServer>) {
 }
 
 pub fn register(app: &mut App) {
-    app.add_system_set(
-        SystemSet::on_enter(GameState::Playing)
-            .with_system(add_hotbar)
-            .with_system(add_item_text),
-    )
-    .add_system_set(
-        SystemSet::on_update(GameState::Playing)
-            .with_system(listen_for_change_events)
-            .with_system(listen_button_presses)
-            .with_system(tick_text_alpha_down),
-    );
+    app.add_systems((add_hotbar, add_item_text).in_schedule(OnEnter(GameState::Playing)))
+        .add_systems(
+            (
+                listen_for_change_events,
+                listen_button_presses,
+                tick_text_alpha_down,
+            )
+                .in_set(OnUpdate(GameState::Playing)),
+        );
 }

@@ -1,7 +1,6 @@
-use bevy::ecs::schedule::StateData;
 use bevy::prelude::{
-    App, BuildChildren, Commands, Entity, EventReader, Parent, Quat, Query, SystemSet, Transform,
-    Vec3,
+    App, BuildChildren, Commands, Entity, EventReader, IntoSystemConfig, OnUpdate, Parent, Quat,
+    Query, States, Transform, Vec3,
 };
 use bevy::transform::TransformBundle;
 use bevy_rapier3d::prelude::{RigidBody, Sensor};
@@ -80,11 +79,11 @@ fn verify_pilot_exists(mut commands: Commands, query: Query<(Entity, &Pilot)>) {
     }
 }
 
-pub fn register<T: StateData + Clone + Copy>(app: &mut App, playing_state: T) {
-    app.add_system_set(
-        SystemSet::on_update(playing_state)
-            .with_system(event_listener)
-            // .with_system(keep_pilot_in_place)
-            .with_system(verify_pilot_exists),
-    );
+pub fn register<T: States + Clone + Copy>(app: &mut App, playing_state: T) {
+    app.add_systems((
+        verify_pilot_exists.in_set(OnUpdate(playing_state)),
+        event_listener
+            .in_set(OnUpdate(playing_state))
+            .after(verify_pilot_exists),
+    ));
 }

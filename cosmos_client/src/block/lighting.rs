@@ -1,5 +1,5 @@
 use bevy::{
-    prelude::{App, Color, Res, ResMut, SystemSet},
+    prelude::{App, Color, IntoSystemAppConfig, OnExit, Res, ResMut},
     reflect::{FromReflect, Reflect},
 };
 use cosmos_core::{
@@ -89,5 +89,5 @@ fn register_all_lights(
 pub(crate) fn register(app: &mut App) {
     registry::create_registry::<BlockLighting>(app);
 
-    app.add_system_set(SystemSet::on_exit(GameState::Loading).with_system(register_all_lights));
+    app.add_system(register_all_lights.in_schedule(OnExit(GameState::Loading)));
 }

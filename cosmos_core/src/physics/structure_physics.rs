@@ -4,16 +4,12 @@ use crate::registry::Registry;
 use crate::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
 use crate::structure::events::ChunkSetEvent;
 use crate::structure::Structure;
-use bevy::prelude::{
-    App, Commands, Component, CoreStage, Entity, EventReader, EventWriter, Query, Res, Vec3,
-};
+use bevy::prelude::{App, Commands, Component, Entity, EventReader, EventWriter, Query, Res, Vec3};
 use bevy::reflect::{FromReflect, Reflect};
 use bevy::utils::HashSet;
 use bevy_rapier3d::math::Vect;
 use bevy_rapier3d::na::Vector3;
-use bevy_rapier3d::prelude::{
-    Collider, ColliderMassProperties, RapierColliderHandle, ReadMassProperties, Rot,
-};
+use bevy_rapier3d::prelude::{Collider, ColliderMassProperties, ReadMassProperties, Rot};
 
 type GenerateCollider = (Collider, f32, Vec3);
 
@@ -270,7 +266,6 @@ fn generate_chunk_collider(chunk: &Chunk, blocks: &Registry<Block>) -> Option<Ge
     if colliders.is_empty() {
         None
     } else {
-        println!("Final COM: {center_of_mass}");
         Some((Collider::compound(colliders), mass, center_of_mass))
     }
 }
@@ -314,7 +309,6 @@ fn listen_for_new_physics_event(
                         // };
 
                         entity_commands
-                            .remove::<RapierColliderHandle>()
                             .insert(collider)
                             .insert(ColliderMassProperties::Mass(mass));
                         // .insert(ColliderMassProperties::MassProperties(mass_props))
@@ -388,8 +382,7 @@ pub fn register(app: &mut App) {
         // This wasn't registered in bevy_rapier
         .register_type::<ReadMassProperties>()
         .register_type::<ColliderMassProperties>()
-        .add_system_to_stage(CoreStage::PostUpdate, listen_for_structure_event)
-        .add_system_to_stage(CoreStage::PostUpdate, listen_for_new_physics_event);
+        .add_systems((listen_for_structure_event, listen_for_new_physics_event));
 }
 
 #[cfg(test)]

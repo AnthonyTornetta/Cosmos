@@ -1,17 +1,15 @@
 use std::ops::Mul;
 
 use bevy::{
-    ecs::schedule::StateData,
     prelude::{
-        App, Commands, Component, CoreStage, EventReader, Quat, Query, Res, ResMut, Resource,
-        SystemSet, Transform, Vec3, With,
+        App, Commands, Component, EventReader, IntoSystemAppConfig, IntoSystemConfig, OnEnter,
+        OnUpdate, Quat, Query, Res, ResMut, Resource, States, Transform, Vec3, With,
     },
     reflect::{FromReflect, Reflect},
     time::Time,
     utils::HashMap,
 };
 use bevy_rapier3d::prelude::{ExternalImpulse, Velocity};
-use iyes_loopless::prelude::*;
 
 use crate::{
     block::Block,
@@ -218,20 +216,14 @@ fn structure_loaded_event(
     }
 }
 
-pub fn register<T: StateData + Clone + Copy>(
-    app: &mut App,
-    post_loading_state: T,
-    playing_state: T,
-) {
+pub fn register<T: States + Clone + Copy>(app: &mut App, post_loading_state: T, playing_state: T) {
     app.insert_resource(ThrusterBlocks::default())
-        .add_system_set(
-            SystemSet::on_enter(post_loading_state).with_system(register_thruster_blocks),
-        )
-        .add_system_to_stage(
-            CoreStage::PostUpdate,
-            block_update_system.run_in_bevy_state(playing_state),
-        )
-        .add_system_set(SystemSet::on_update(playing_state).with_system(structure_loaded_event))
-        .add_system_set(SystemSet::on_update(playing_state).with_system(update_movement))
+        .add_systems((
+            register_thruster_blocks.in_schedule(OnEnter(post_loading_state)),
+            // block update system used to be in CoreState::PostUpdate
+            structure_loaded_event.in_set(OnUpdate(playing_state)),
+            block_update_system.in_set(OnUpdate(playing_state)),
+            update_movement.in_set(OnUpdate(playing_state)),
+        ))
         .register_type::<ThrusterSystem>();
 }

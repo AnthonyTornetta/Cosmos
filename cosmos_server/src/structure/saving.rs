@@ -5,9 +5,9 @@ use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
     physics::location::Location,
     structure::{
-        events::StructureCreated, loading::ChunksNeedLoaded,
-        planet::planet_builder::TPlanetBuilder, ship::ship_builder::TShipBuilder,
-        structure_iterator::ChunkIteratorResult, ChunkInitEvent, Structure,
+        loading::ChunksNeedLoaded, planet::planet_builder::TPlanetBuilder,
+        ship::ship_builder::TShipBuilder, structure_iterator::ChunkIteratorResult, ChunkInitEvent,
+        Structure,
     },
 };
 
@@ -68,7 +68,6 @@ pub fn load_structure(
     structure_type: StructureType,
     spawn_at: Location,
     commands: &mut Commands,
-    event_writer: &mut EventWriter<StructureCreated>,
     structure_loaded: &mut EventWriter<SendDelayedStructureLoadEvent>,
 ) {
     if let Ok(structure_bin) = fs::read(format!(
@@ -99,8 +98,6 @@ pub fn load_structure(
                 }
             }
             let entity = entity_cmd.id();
-
-            event_writer.send(StructureCreated { entity });
 
             entity_cmd
                 .insert(ChunksNeedLoaded {

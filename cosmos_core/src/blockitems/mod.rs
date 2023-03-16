@@ -1,12 +1,12 @@
 use bevy::{
-    ecs::schedule::StateData,
-    prelude::{App, Res, ResMut, Resource, SystemSet},
+    prelude::{App, EventWriter, IntoSystemAppConfig, OnEnter, Res, ResMut, Resource, States},
     utils::HashMap,
 };
 
 use crate::{
     block::Block,
     item::{Item, DEFAULT_MAX_STACK_SIZE},
+    loader::{AddLoadingEvent, DoneLoadingEvent, LoadingManager},
     registry::{identifiable::Identifiable, Registry},
 };
 
@@ -34,7 +34,6 @@ impl BlockItems {
     }
 
     pub fn block_from_item(&self, item: &Item) -> Option<u16> {
-        // println!("{}", self.items_to_blocks);
         self.items_to_blocks.get(&item.id()).copied()
     }
 
@@ -65,7 +64,12 @@ fn create_links(
     mut block_items: ResMut<BlockItems>,
     blocks: Res<Registry<Block>>,
     mut items: ResMut<Registry<Item>>,
+    mut loader: ResMut<LoadingManager>,
+    mut event_writer: EventWriter<AddLoadingEvent>,
+    mut done_event_writer: EventWriter<DoneLoadingEvent>,
 ) {
+    let id = loader.register_loader(&mut event_writer);
+
     for block in blocks.iter() {
         let cosmos_id = block.unlocalized_name();
         if let Some(item) = items.from_id(cosmos_id) {
@@ -75,11 +79,13 @@ fn create_links(
             block_items.create_link(items.from_id(cosmos_id).unwrap(), block);
         }
     }
+
+    loader.finish_loading(id, &mut done_event_writer);
 }
 
-pub fn register<T: StateData + Clone + Copy>(app: &mut App, loading_state: T) {
+pub(crate) fn register<T: States + Clone + Copy>(app: &mut App, post_loading_state: T) {
     app.insert_resource(BlockItems::default());
 
     // All blocks & items must be added before this system runs
-    app.add_system_set(SystemSet::on_exit(loading_state).with_system(create_links));
+    app.add_system(create_links.in_schedule(OnEnter(post_loading_state)));
 }

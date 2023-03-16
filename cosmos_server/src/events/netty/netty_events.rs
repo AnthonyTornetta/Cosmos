@@ -233,7 +233,7 @@ fn handle_events_system(
                 client_ticks.ticks.remove(id);
 
                 if let Some(player_entity) = lobby.players.remove(id) {
-                    commands.entity(player_entity).despawn();
+                    commands.entity(player_entity).despawn_recursive();
                 }
 
                 let message =
@@ -246,5 +246,5 @@ fn handle_events_system(
 }
 
 pub fn register(app: &mut App) {
-    app.add_system_set(SystemSet::on_update(GameState::Playing).with_system(handle_events_system));
+    app.add_system(handle_events_system.in_set(OnUpdate(GameState::Playing)));
 }

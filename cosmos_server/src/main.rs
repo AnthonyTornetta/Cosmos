@@ -1,7 +1,6 @@
 use std::env;
 
 use bevy::prelude::*;
-use bevy::winit::WinitPlugin;
 use bevy_rapier3d::prelude::{RapierConfiguration, TimestepMode};
 use bevy_renet::RenetServerPlugin;
 use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
@@ -33,6 +32,8 @@ fn main() {
     };
 
     App::new()
+        // This must be the first thing added or systems don't get added correctly
+        .add_state::<GameState>()
         .insert_resource(RapierConfiguration {
             gravity: Vec3::ZERO,
             timestep_mode: TimestepMode::Interpolated {
@@ -42,6 +43,7 @@ fn main() {
             },
             ..default()
         })
+        .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))
         .add_plugins(CosmosCorePluginGroup::new(
             GameState::PreLoading,
             GameState::Loading,
@@ -50,7 +52,6 @@ fn main() {
             GameState::Playing,
         ))
         .add_plugin(RenetServerPlugin::default())
-        .add_plugin(WinitPlugin::default())
         .add_plugin(ServerPlugin { ip })
         .run();
 }

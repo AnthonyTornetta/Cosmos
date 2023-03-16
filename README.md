@@ -46,6 +46,7 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
     - [x] Players can be a part of the same world if they are close enough
     - [x] Requires rewrite of bevy_rapier to support multiple physics worlds
       - [ ] Merge PR https://github.com/dimforge/bevy_rapier/pull/328
+- [ ] Update to bevy 0.10.0
 - [ ] Performant ships
   - [ ] Ability to have 50 small-sized ships loaded with minimal performance impact
 - [ ] Dynamic object loading

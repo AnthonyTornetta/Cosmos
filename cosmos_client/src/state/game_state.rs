@@ -1,10 +1,11 @@
 use bevy::{
-    prelude::App,
+    prelude::{App, States},
     reflect::{FromReflect, Reflect},
 };
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash, Copy, Reflect, FromReflect)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Copy, Reflect, FromReflect, Default, States)]
 pub enum GameState {
+    #[default]
     PreLoading, // Initial resources are created
     Loading,
     PostLoading,
@@ -14,6 +15,5 @@ pub enum GameState {
 }
 
 pub fn register(app: &mut App) {
-    app.add_state(GameState::PreLoading)
-        .register_type::<GameState>();
+    app.add_state::<GameState>().register_type::<GameState>();
 }

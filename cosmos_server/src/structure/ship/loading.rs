@@ -1,4 +1,6 @@
-use bevy::prelude::{App, Commands, Component, Entity, EventWriter, Query, Res, SystemSet, With};
+use bevy::prelude::{
+    App, Commands, Component, Entity, EventWriter, IntoSystemConfig, OnUpdate, Query, Res, With,
+};
 use cosmos_core::{
     block::Block,
     registry::Registry,
@@ -63,5 +65,5 @@ fn create_ships(
 }
 
 pub fn register(app: &mut App) {
-    app.add_system_set(SystemSet::on_update(GameState::Playing).with_system(create_ships));
+    app.add_system(create_ships.in_set(OnUpdate(GameState::Playing)));
 }

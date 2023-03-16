@@ -79,7 +79,5 @@ fn respond_laser_hit_event(
 }
 
 pub(crate) fn register(app: &mut App) {
-    app.add_system_set(
-        SystemSet::on_update(GameState::Playing).with_system(respond_laser_hit_event),
-    );
+    app.add_system(respond_laser_hit_event.in_set(OnUpdate(GameState::Playing)));
 }

@@ -1,5 +1,4 @@
-use bevy::{ecs::schedule::StateData, prelude::*, utils::HashMap};
-use iyes_loopless::prelude::*;
+use bevy::{prelude::*, utils::HashMap};
 
 use crate::{
     block::Block,
@@ -131,18 +130,14 @@ fn structure_loaded_event(
     }
 }
 
-pub fn register<T: StateData + Clone + Copy>(
-    app: &mut App,
-    post_loading_state: T,
-    playing_state: T,
-) {
+pub fn register<T: States + Clone + Copy>(app: &mut App, post_loading_state: T, playing_state: T) {
     app.insert_resource(EnergyGenerationBlocks::default())
-        .add_system_set(SystemSet::on_enter(post_loading_state).with_system(register_energy_blocks))
-        .add_system_to_stage(
-            CoreStage::PostUpdate,
-            block_update_system.run_in_bevy_state(playing_state),
-        )
-        .add_system_set(SystemSet::on_update(playing_state).with_system(update_energy))
-        .add_system_set(SystemSet::on_update(playing_state).with_system(structure_loaded_event))
+        .add_systems((
+            register_energy_blocks.in_schedule(OnEnter(post_loading_state)),
+            // block update system used to be in CoreState::PostUpdate
+            structure_loaded_event.in_set(OnUpdate(playing_state)),
+            block_update_system.in_set(OnUpdate(playing_state)),
+            update_energy.in_set(OnUpdate(playing_state)),
+        ))
         .register_type::<EnergyGenerationSystem>();
 }

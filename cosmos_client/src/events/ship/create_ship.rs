@@ -1,5 +1,6 @@
 use bevy::prelude::{
-    App, EventReader, EventWriter, Input, KeyCode, MouseButton, Res, ResMut, SystemSet,
+    App, EventReader, EventWriter, Input, IntoSystemConfigs, KeyCode, MouseButton, OnUpdate, Res,
+    ResMut,
 };
 use bevy_renet::renet::RenetClient;
 use cosmos_core::netty::{client_reliable_messages::ClientReliableMessages, NettyChannel};
@@ -39,10 +40,6 @@ fn event_handler(mut event_reader: EventReader<CreateShipEvent>, mut client: Res
 }
 
 pub fn register(app: &mut App) {
-    app.add_event::<CreateShipEvent>();
-    app.add_system_set(
-        SystemSet::on_update(GameState::Playing)
-            .with_system(event_handler)
-            .with_system(listener),
-    );
+    app.add_event::<CreateShipEvent>()
+        .add_systems((event_handler, listener).in_set(OnUpdate(GameState::Playing)));
 }

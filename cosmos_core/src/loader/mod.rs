@@ -1,4 +1,4 @@
-use bevy::{ecs::schedule::StateData, prelude::*, utils::HashSet};
+use bevy::{prelude::*, utils::HashSet};
 
 /// Using the LoadingManager struct avoids passing ugly generics around the code, rather than directly using the LoadingStatus struct
 #[derive(Default, Resource)]
@@ -23,7 +23,7 @@ impl LoadingManager {
 }
 
 #[derive(Resource)]
-struct LoadingStatus<T: StateData + Clone + Copy> {
+struct LoadingStatus<T: States + Clone + Copy> {
     loaders: HashSet<usize>,
     done: bool, // at least one thing has to be processed before this is true. Prevents loading state from being advanced before stuff has a chance to get registered
 
@@ -33,7 +33,7 @@ struct LoadingStatus<T: StateData + Clone + Copy> {
     done_state: T,
 }
 
-impl<T: StateData + Clone + Copy> LoadingStatus<T> {
+impl<T: States + Clone + Copy> LoadingStatus<T> {
     pub fn new(
         pre_loading_state: T,
         loading_state: T,
@@ -52,11 +52,12 @@ impl<T: StateData + Clone + Copy> LoadingStatus<T> {
     }
 }
 
-fn monitor_loading<T: StateData + Clone + Copy>(
+fn monitor_loading<T: States + Clone + Copy>(
     mut event_done_reader: EventReader<DoneLoadingEvent>,
     mut event_start_reader: EventReader<AddLoadingEvent>,
     mut loading_status: ResMut<LoadingStatus<T>>,
-    mut state: ResMut<State<T>>,
+    state: Res<State<T>>,
+    mut state_changer: ResMut<NextState<T>>,
 ) {
     for ev in event_start_reader.iter() {
         loading_status.loaders.insert(ev.loading_id);
@@ -67,17 +68,17 @@ fn monitor_loading<T: StateData + Clone + Copy>(
     }
 
     if loading_status.done {
-        let cur_state = *state.current();
+        let cur_state = state.0;
 
         if cur_state == loading_status.pre_loading_state {
             println!("Transitioning to loading state!");
-            state.set(loading_status.loading_state).unwrap();
+            state_changer.set(loading_status.loading_state);
         } else if cur_state == loading_status.loading_state {
             println!("Transitioning to post loading state!");
-            state.set(loading_status.post_loading_state).unwrap();
+            state_changer.set(loading_status.post_loading_state);
         } else if cur_state == loading_status.post_loading_state {
             println!("Transitioning to done state!");
-            state.set(loading_status.done_state).unwrap();
+            state_changer.set(loading_status.done_state);
         } else {
             panic!("Missing state!");
         }
@@ -94,7 +95,7 @@ pub struct AddLoadingEvent {
     loading_id: usize,
 }
 
-impl<T: StateData + Clone + Copy> LoadingStatus<T> {
+impl<T: States + Clone + Copy> LoadingStatus<T> {
     fn done_loading(&mut self, id: usize) {
         self.loaders.remove(&id);
 
@@ -104,7 +105,7 @@ impl<T: StateData + Clone + Copy> LoadingStatus<T> {
     }
 }
 
-pub fn register<T: StateData + Clone + Copy>(
+pub fn register<T: States + Clone + Copy>(
     app: &mut App,
     pre_loading_state: T,
     loading_state: T,
@@ -113,10 +114,12 @@ pub fn register<T: StateData + Clone + Copy>(
 ) {
     app.add_event::<DoneLoadingEvent>()
         .add_event::<AddLoadingEvent>()
-        // States cannot be changed during on_enter, and this prevents that from happening
-        .add_system_set(SystemSet::on_update(pre_loading_state).with_system(monitor_loading::<T>))
-        .add_system_set(SystemSet::on_update(loading_state).with_system(monitor_loading::<T>))
-        .add_system_set(SystemSet::on_update(post_loading_state).with_system(monitor_loading::<T>))
+        .add_system(
+            monitor_loading::<T>.run_if(
+                in_state(pre_loading_state)
+                    .or_else(in_state(loading_state).or_else(in_state(post_loading_state))),
+            ),
+        )
         .insert_resource(LoadingStatus::new(
             pre_loading_state,
             loading_state,

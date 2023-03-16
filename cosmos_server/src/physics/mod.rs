@@ -45,6 +45,9 @@ pub fn assign_player_world(
             });
     } else {
         let world_id = rapier_context.add_world(RapierWorld::default());
+
+        println!("Added world!!!");
+
         let world_entity = commands
             .spawn((
                 PlayerWorld {
@@ -93,8 +96,6 @@ pub fn move_players_between_worlds(
                     world_within_query.get_mut(entity).unwrap();
 
                 let distance = location.distance_sqrd(other_location);
-
-                // println!("Distance: {distance} vs {WORLD_SWITCH_DISTANCE_SQRD}");
 
                 if distance < WORLD_SWITCH_DISTANCE_SQRD {
                     if world_currently_in.0 != other_world_entity {
@@ -189,9 +190,13 @@ fn move_non_players_between_worlds(
     }
 }
 
+/// Removes worlds with nothing inside of them
+///
+/// This should be run not every frame because it can be expensive and not super necessary
 fn remove_empty_worlds(
     query: Query<&BodyWorld>,
     worlds_query: Query<(Entity, &BodyWorld), With<PlayerWorld>>,
+    everything_query: Query<&BodyWorld>,
     mut context: ResMut<RapierContext>,
     mut commands: Commands,
 ) {
@@ -208,7 +213,16 @@ fn remove_empty_worlds(
         }
     }
 
-    for world_id in to_remove {
+    'world_loop: for world_id in to_remove {
+        // Verify that nothing else is a part of this world before removing it.
+        println!("Len: {}", everything_query.iter().len());
+        for body_world in everything_query.iter().map(|bw| bw.world_id) {
+            println!("World ID: {world_id}");
+            if world_id == body_world {
+                continue 'world_loop;
+            }
+        }
+
         for (entity, bw) in worlds_query.iter() {
             if bw.world_id == world_id {
                 commands.entity(entity).despawn_recursive();
@@ -313,13 +327,16 @@ fn sync_transforms_and_locations(
 }
 
 pub(crate) fn register(app: &mut App) {
-    app.add_system_set(
-        SystemSet::on_update(GameState::Playing)
+    app.add_systems(
+        (
             // If it's not after server_listen_messages, some noticable jitter can happen
-            .with_system(sync_transforms_and_locations.after(server_listen_messages))
-            .with_system(bubble_down_locations.after(sync_transforms_and_locations))
-            .with_system(move_players_between_worlds.after(bubble_down_locations))
-            .with_system(move_non_players_between_worlds.after(move_players_between_worlds))
-            .with_system(remove_empty_worlds.before(server_listen_messages)),
-    );
+            sync_transforms_and_locations.after(server_listen_messages),
+            bubble_down_locations.after(sync_transforms_and_locations),
+            move_players_between_worlds.after(bubble_down_locations),
+            move_non_players_between_worlds.after(move_players_between_worlds),
+        )
+            .in_set(OnUpdate(GameState::Playing)),
+    )
+    // This must be last due to commands being delayed when adding BodyWorlds.
+    .add_system(remove_empty_worlds.in_base_set(CoreSet::Last));
 }

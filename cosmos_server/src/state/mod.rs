@@ -1,15 +1,10 @@
-use bevy::prelude::App;
-use iyes_loopless::prelude::AppLooplessStateExt;
+use bevy::prelude::States;
 
-#[derive(Clone, PartialEq, Eq, Debug, Hash, Copy)]
+#[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Hash, States)]
 pub enum GameState {
+    #[default]
     PreLoading,
     Loading,
     PostLoading,
     Playing,
-}
-
-pub fn register(app: &mut App) {
-    app.add_state(GameState::PreLoading)
-        .add_loopless_state(GameState::PreLoading);
 }

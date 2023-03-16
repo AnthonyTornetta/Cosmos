@@ -227,10 +227,8 @@ fn check_assets_ready(
 pub fn register(app: &mut App) {
     app.insert_resource(AssetsLoading(Vec::new()))
         .add_event::<AssetsDoneLoadingEvent>()
-        .add_system_set(SystemSet::on_enter(GameState::PostLoading).with_system(setup))
-        .add_system_set(
-            SystemSet::on_update(GameState::PostLoading)
-                .with_system(check_assets_ready)
-                .with_system(assets_done_loading),
-        );
+        .add_systems(
+            (check_assets_ready, assets_done_loading).in_set(OnUpdate(GameState::PostLoading)),
+        )
+        .add_system(setup.in_schedule(OnEnter(GameState::PostLoading)));
 }

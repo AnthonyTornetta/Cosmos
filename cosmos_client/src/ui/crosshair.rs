@@ -80,6 +80,8 @@ impl SmoothClamp for CrosshairOffset {
 
 pub fn register(app: &mut App) {
     app.insert_resource(CrosshairOffset::default())
-        .add_system_set(SystemSet::on_enter(GameState::Playing).with_system(add_crosshair))
-        .add_system_set(SystemSet::on_update(GameState::Playing).with_system(update_cursor_pos));
+        .add_systems((
+            add_crosshair.in_schedule(OnEnter(GameState::Playing)),
+            update_cursor_pos.run_if(in_state(GameState::Playing)),
+        ));
 }
