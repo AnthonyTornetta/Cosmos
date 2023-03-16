@@ -1,4 +1,4 @@
-use bevy::prelude::App;
+use bevy::prelude::{App, DespawnRecursiveExt};
 use bevy::reflect::Reflect;
 use bevy::utils::{HashMap, HashSet};
 use bevy_rapier3d::prelude::BodyWorld;
@@ -583,7 +583,7 @@ fn remove_empty_chunks(
 
         if structure.chunk_from_chunk_coordinates(cx, cy, cz).is_none() {
             if let Some(chunk_entity) = structure.chunk_entity(cx, cy, cz) {
-                commands.entity(chunk_entity).despawn();
+                commands.entity(chunk_entity).despawn_recursive();
 
                 let (width, height) = (structure.width, structure.height);
 
