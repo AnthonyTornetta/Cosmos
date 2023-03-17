@@ -8,7 +8,7 @@ use bevy::{
 };
 use bevy_rapier3d::prelude::{
     ActiveEvents, ActiveHooks, BodyWorld, Collider, LockedAxes, QueryFilter, RapierContext,
-    RigidBody, Sensor, Velocity, WorldId,
+    RigidBody, Sensor, Velocity, WorldId, DEFAULT_WORLD_ID,
 };
 
 #[derive(Debug)]
@@ -155,7 +155,7 @@ impl Laser {
 fn handle_events(
     mut query: Query<
         (
-            &BodyWorld,
+            Option<&BodyWorld>,
             &GlobalTransform,
             Entity,
             Option<&NoCollide>,
@@ -180,11 +180,11 @@ fn handle_events(
             laser.last_position = transform.translation();
 
             // Pass 1 second as the time & delta_position as the velocity because
-            // it simulates the laser moving over the perioid it moved in 1 second
+            // it simulates the laser moving over the period it moved in 1 second
             // and the time it takes is irrelevant.
 
             if let Ok(Some((entity, toi))) = rapier_context.cast_shape(
-                world.world_id,
+                world.map(|bw| bw.world_id).unwrap_or(DEFAULT_WORLD_ID),
                 last_pos - delta_position, // sometimes lasers pass through things that are next to where they are spawned, thus we check starting a bit behind them
                 Quat::from_affine3(&transform.affine()),
                 delta_position * 2.0, // * 2.0 to account for checking behind the laser

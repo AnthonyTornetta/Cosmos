@@ -1,5 +1,5 @@
 use bevy::{prelude::*, time::Time};
-use bevy_rapier3d::prelude::Velocity;
+use bevy_rapier3d::prelude::{BodyWorld, Velocity, DEFAULT_WORLD_ID};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     netty::{server_laser_cannon_system_messages::ServerLaserCannonSystemMessages, NettyChannel},
@@ -21,13 +21,19 @@ const LASER_SHOOT_SECONDS: f32 = 0.2;
 fn update_system(
     mut query: Query<(&mut LaserCannonSystem, &StructureSystem), With<SystemActive>>,
     mut es_query: Query<&mut EnergyStorageSystem>,
-    systems: Query<(&Systems, &Structure, &GlobalTransform, &Velocity)>,
+    systems: Query<(
+        &Systems,
+        &Structure,
+        &GlobalTransform,
+        &Velocity,
+        Option<&BodyWorld>,
+    )>,
     time: Res<Time>,
     mut commands: Commands,
     mut server: ResMut<RenetServer>,
 ) {
     for (mut cannon_system, system) in query.iter_mut() {
-        if let Ok((systems, structure, global_transform, ship_velocity)) =
+        if let Ok((systems, structure, global_transform, ship_velocity, body_world)) =
             systems.get(system.structure_entity)
         {
             if let Ok(mut energy_storage_system) = systems.query_mut(&mut es_query) {
@@ -60,6 +66,9 @@ fn update_system(
                             let strength = (5.0 * line.len as f32).powf(1.2);
                             let no_hit = Some(system.structure_entity);
 
+                            let world_id =
+                                body_world.map(|bw| bw.world_id).unwrap_or(DEFAULT_WORLD_ID);
+
                             Laser::spawn(
                                 position,
                                 laser_velocity,
@@ -67,7 +76,7 @@ fn update_system(
                                 strength,
                                 no_hit,
                                 &time,
-                                0,
+                                world_id,
                                 &mut commands,
                             );
 
