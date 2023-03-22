@@ -1,7 +1,7 @@
 use bevy::prelude::{App, DespawnRecursiveExt};
 use bevy::reflect::Reflect;
 use bevy::utils::{HashMap, HashSet};
-use bevy_rapier3d::prelude::BodyWorld;
+use bevy_rapier3d::prelude::PhysicsWorld;
 
 pub mod block_health;
 pub mod chunk;
@@ -598,7 +598,7 @@ fn remove_empty_chunks(
 fn add_chunks_system(
     mut chunk_init_reader: EventReader<ChunkInitEvent>,
     mut block_reader: EventReader<BlockChangedEvent>,
-    mut structure_query: Query<(&mut Structure, Option<&BodyWorld>)>,
+    mut structure_query: Query<(&mut Structure, Option<&PhysicsWorld>)>,
     mut chunk_set_event_writer: EventWriter<ChunkSetEvent>,
     mut commands: Commands,
 ) {

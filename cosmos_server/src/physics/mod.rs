@@ -1,5 +1,5 @@
 use bevy::{prelude::*, utils::HashSet};
-use bevy_rapier3d::prelude::{BodyWorld, RapierContext, RapierWorld, DEFAULT_WORLD_ID};
+use bevy_rapier3d::prelude::{PhysicsWorld, RapierContext, RapierWorld, DEFAULT_WORLD_ID};
 use cosmos_core::{
     entities::player::Player,
     physics::{
@@ -14,7 +14,10 @@ const WORLD_SWITCH_DISTANCE: f32 = SECTOR_DIMENSIONS / 2.0;
 const WORLD_SWITCH_DISTANCE_SQRD: f32 = WORLD_SWITCH_DISTANCE * WORLD_SWITCH_DISTANCE;
 
 pub fn assign_player_world(
-    player_worlds: &Query<(&Location, &WorldWithin, &BodyWorld), (With<Player>, Without<Parent>)>,
+    player_worlds: &Query<
+        (&Location, &WorldWithin, &PhysicsWorld),
+        (With<Player>, Without<Parent>),
+    >,
     player_entity: Entity,
     location: &Location,
     commands: &mut Commands,
@@ -40,7 +43,7 @@ pub fn assign_player_world(
         commands
             .entity(player_entity)
             .insert(world)
-            .insert(BodyWorld {
+            .insert(PhysicsWorld {
                 world_id: best_world_id.expect("This should never be None if world is some."),
             });
     } else {
@@ -54,20 +57,20 @@ pub fn assign_player_world(
                     player: player_entity,
                 },
                 *location,
-                BodyWorld { world_id },
+                PhysicsWorld { world_id },
             ))
             .id();
 
         commands
             .entity(player_entity)
             .insert(WorldWithin(world_entity))
-            .insert(BodyWorld { world_id });
+            .insert(PhysicsWorld { world_id });
     }
 }
 
 pub fn move_players_between_worlds(
     players: Query<(Entity, &Location), (With<WorldWithin>, With<Player>)>,
-    mut world_within_query: Query<(&mut WorldWithin, &mut BodyWorld)>,
+    mut world_within_query: Query<(&mut WorldWithin, &mut PhysicsWorld)>,
 
     mut commands: Commands,
     mut rapier_context: ResMut<RapierContext>,
@@ -122,7 +125,7 @@ pub fn move_players_between_worlds(
                     .spawn((
                         PlayerWorld { player: entity },
                         *location,
-                        BodyWorld { world_id },
+                        PhysicsWorld { world_id },
                     ))
                     .id();
 
@@ -144,11 +147,11 @@ fn move_non_players_between_worlds(
             Entity,
             &Location,
             Option<&mut WorldWithin>,
-            Option<&mut BodyWorld>,
+            Option<&mut PhysicsWorld>,
         ),
         (Without<Player>, Without<Parent>),
     >,
-    players_with_worlds: Query<(&WorldWithin, &Location, &BodyWorld), With<Player>>,
+    players_with_worlds: Query<(&WorldWithin, &Location, &PhysicsWorld), With<Player>>,
     mut commands: Commands,
 ) {
     for (entity, location, maybe_within, maybe_body_world) in needs_world.iter_mut() {
@@ -171,7 +174,7 @@ fn move_non_players_between_worlds(
 
             if let Some(mut world_within) = maybe_within {
                 let mut body_world = maybe_body_world
-                    .expect("Something should have a BodyWorld if it has a WorldWithin.");
+                    .expect("Something should have a PhysicsWorld if it has a WorldWithin.");
 
                 if body_world.world_id != world_id {
                     println!("CHANGING WORLD!");
@@ -184,7 +187,7 @@ fn move_non_players_between_worlds(
                 commands
                     .entity(entity)
                     .insert(ww)
-                    .insert(BodyWorld { world_id });
+                    .insert(PhysicsWorld { world_id });
             }
         }
     }
@@ -194,9 +197,9 @@ fn move_non_players_between_worlds(
 ///
 /// This should be run not every frame because it can be expensive and not super necessary
 fn remove_empty_worlds(
-    query: Query<&BodyWorld>,
-    worlds_query: Query<(Entity, &BodyWorld), With<PlayerWorld>>,
-    everything_query: Query<&BodyWorld>,
+    query: Query<&PhysicsWorld>,
+    worlds_query: Query<(Entity, &PhysicsWorld), With<PlayerWorld>>,
+    everything_query: Query<&PhysicsWorld>,
     mut context: ResMut<RapierContext>,
     mut commands: Commands,
 ) {
@@ -337,6 +340,6 @@ pub(crate) fn register(app: &mut App) {
         )
             .in_set(OnUpdate(GameState::Playing)),
     )
-    // This must be last due to commands being delayed when adding BodyWorlds.
+    // This must be last due to commands being delayed when adding PhysicsWorlds.
     .add_system(remove_empty_worlds.in_base_set(CoreSet::Last));
 }

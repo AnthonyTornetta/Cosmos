@@ -7,7 +7,7 @@ use bevy::{
     time::Time,
 };
 use bevy_rapier3d::prelude::{
-    ActiveEvents, ActiveHooks, BodyWorld, Collider, LockedAxes, QueryFilter, RapierContext,
+    ActiveEvents, ActiveHooks, Collider, LockedAxes, PhysicsWorld, QueryFilter, RapierContext,
     RigidBody, Sensor, Velocity, WorldId, DEFAULT_WORLD_ID,
 };
 
@@ -109,7 +109,7 @@ impl Laser {
             .insert(FireTime {
                 time: time.elapsed_seconds(),
             })
-            .insert(BodyWorld { world_id })
+            .insert(PhysicsWorld { world_id })
             .insert(ActiveEvents::COLLISION_EVENTS)
             .insert(ActiveHooks::MODIFY_SOLVER_CONTACTS)
             .insert(Sensor)
@@ -155,7 +155,7 @@ impl Laser {
 fn handle_events(
     mut query: Query<
         (
-            Option<&BodyWorld>,
+            Option<&PhysicsWorld>,
             &GlobalTransform,
             Entity,
             Option<&NoCollide>,

@@ -214,7 +214,7 @@ fn client_sync_players(
                             player: client_entity,
                         },
                         body.location,
-                        BodyWorld {
+                        PhysicsWorld {
                             world_id: DEFAULT_WORLD_ID,
                         },
                     ));

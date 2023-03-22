@@ -1,5 +1,5 @@
 use bevy::{prelude::*, time::Time};
-use bevy_rapier3d::prelude::{BodyWorld, Velocity, DEFAULT_WORLD_ID};
+use bevy_rapier3d::prelude::{PhysicsWorld, Velocity, DEFAULT_WORLD_ID};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     netty::{server_laser_cannon_system_messages::ServerLaserCannonSystemMessages, NettyChannel},
@@ -26,7 +26,7 @@ fn update_system(
         &Structure,
         &GlobalTransform,
         &Velocity,
-        Option<&BodyWorld>,
+        Option<&PhysicsWorld>,
     )>,
     time: Res<Time>,
     mut commands: Commands,
