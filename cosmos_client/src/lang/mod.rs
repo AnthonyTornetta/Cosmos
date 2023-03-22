@@ -85,6 +85,6 @@ impl<T: Identifiable + Send + Sync> Lang<T> {
     }
 }
 
-pub fn register(app: &mut App) {
+pub(crate) fn register(app: &mut App) {
     load_langs::register(app);
 }

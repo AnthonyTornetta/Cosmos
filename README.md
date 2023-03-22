@@ -46,9 +46,9 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
     - [x] Players can be a part of the same world if they are close enough
     - [x] Requires rewrite of bevy_rapier to support multiple physics worlds
       - [ ] Merge PR https://github.com/dimforge/bevy_rapier/pull/328
-- [ ] Update to bevy 0.10.0
-- [ ] Performant ships
-  - [ ] Ability to have 50 small-sized ships loaded with minimal performance impact
+- [x] Update to bevy 0.10.0
+- [x] Performant ships
+  - [x] Ability to have 50 small-sized ships loaded with minimal performance impact
 - [ ] Dynamic object loading
   - [ ] (**Client**)
     - [ ] Unload objects that are too far away
@@ -56,7 +56,7 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
     - [ ] Unload objects that are too far from any player
     - [ ] Load objects that are close to a player & send that info to client
     - [ ] Only send information about objects to clients that are close enough to have them loaded
-- [ ] Display coordinates in top right (sector, local)
+- [x] Display coordinates in top left (sector, local)
 
 ## Release 0.0.2a
 - [x] Improved state management
