@@ -7,6 +7,8 @@ use bevy::{
     prelude::{App, Children, Component, Entity, Parent, Query, Transform, Vec3, With, Without},
     reflect::{FromReflect, Reflect},
 };
+use bevy_rapier3d::na::Vector3;
+use bigdecimal::{BigDecimal, FromPrimitive};
 use serde::{Deserialize, Serialize};
 
 /// This represents the diameter of a sector. So at a local
@@ -124,6 +126,23 @@ impl Location {
         self.fix_bounds();
 
         self.last_transform_loc = translation;
+    }
+
+    /// Returns the coordinates of this location based of 0, 0, 0.
+    ///
+    /// Useful for very long-distance calculations/displaying
+    pub fn absolute_coords(&self) -> Vector3<BigDecimal> {
+        let sector_dims = BigDecimal::from_f32(SECTOR_DIMENSIONS).unwrap();
+
+        let local_x = BigDecimal::from_f32(self.local.x).unwrap();
+        let local_y = BigDecimal::from_f32(self.local.y).unwrap();
+        let local_z = BigDecimal::from_f32(self.local.z).unwrap();
+
+        Vector3::new(
+            BigDecimal::from_i64(self.sector_x).unwrap() * &sector_dims + local_x,
+            BigDecimal::from_i64(self.sector_y).unwrap() * &sector_dims + local_y,
+            BigDecimal::from_i64(self.sector_z).unwrap() * &sector_dims + local_z,
+        )
     }
 }
 

@@ -17,6 +17,7 @@ noise = { workspace = true }
 rand = { workspace = true }
 local-ip-address = { workspace = true }
 bevy_rapier3d = { workspace = true }
+bigdecimal = { workspace = true }
 
 image = { workspace = true }
 
