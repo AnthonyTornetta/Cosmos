@@ -152,12 +152,12 @@ fn listen_for_change_events(
                         {
                             name_text.sections[0].value = names
                                 .get_name_from_numeric_id(is.item_id())
-                                .unwrap_or(&" ".to_owned())
+                                .unwrap_or(&format!("[missing name] ID #{}", is.item_id()))
                                 .to_owned();
 
                             name_text.sections[0].style.color = Color::WHITE;
                         } else {
-                            name_text.sections[0].value = "".to_owned();
+                            name_text.sections[0].value = "[ no name ]".to_owned();
                         }
                     }
                 }
