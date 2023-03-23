@@ -72,7 +72,7 @@ fn add_text(mut commands: Commands, asset_server: Res<AssetServer>) {
 
                 ..default()
             },
-            text: Text::from_section("FPS: ", text_style.clone()),
+            text: Text::from_section("FPS: ", text_style),
             ..default()
         },
         FPSCounter::default(),

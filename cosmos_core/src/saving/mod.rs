@@ -81,7 +81,7 @@ pub fn done_saving(
         let full_directory = format!("saves/{directory}");
 
         if let Err(e) = fs::create_dir_all(&full_directory) {
-            eprintln!("{}", e.to_string());
+            eprintln!("{}", e);
             continue;
         }
 
@@ -101,7 +101,7 @@ pub fn done_saving(
 
         println!("WRITING FILE!");
         if let Err(e) = fs::write(format!("{full_directory}{file_name}.cent"), serialized) {
-            eprintln!("{}", e.to_string());
+            eprintln!("{}", e);
             continue;
         }
     }
