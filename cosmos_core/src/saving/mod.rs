@@ -90,7 +90,7 @@ pub fn done_saving(
         } else {
             let res: String = rand::thread_rng()
                 .sample_iter(&Alphanumeric)
-                .take(30)
+                .take(64)
                 .map(char::from)
                 .collect();
 
@@ -134,7 +134,7 @@ fn default_save(
 pub(crate) fn register(app: &mut App) {
     app.add_system(check_needs_saved)
         // Put all saving-related systems after this
-        .add_system(begin_saving.in_base_set(CoreSet::Last))
+        .add_system(begin_saving.in_base_set(CoreSet::First))
         // Put all saving-related systems before this
         .add_system(done_saving.after(begin_saving))
         // Like this:
