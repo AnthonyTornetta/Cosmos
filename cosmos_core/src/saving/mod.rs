@@ -78,10 +78,10 @@ pub fn done_saving(
             .map(|loc| format!("{}_{}_{}/", loc.sector_x, loc.sector_y, loc.sector_z))
             .unwrap_or("nowhere/".into());
 
-        let full_directory = format!("saves/{directory}");
+        let full_directory = format!("world/{directory}");
 
         if let Err(e) = fs::create_dir_all(&full_directory) {
-            eprintln!("{}", e);
+            eprintln!("{e}");
             continue;
         }
 
@@ -101,7 +101,7 @@ pub fn done_saving(
 
         println!("WRITING FILE!");
         if let Err(e) = fs::write(format!("{full_directory}{file_name}.cent"), serialized) {
-            eprintln!("{}", e);
+            eprintln!("{e}");
             continue;
         }
     }
