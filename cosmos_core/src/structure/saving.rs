@@ -1,6 +1,9 @@
 use bevy::prelude::*;
 
-use crate::saving::{begin_saving, done_saving, NeedsSaved, SerializedData};
+use crate::persistence::{
+    saving::{begin_saving, done_saving, NeedsSaved},
+    SerializedData,
+};
 
 use super::Structure;
 

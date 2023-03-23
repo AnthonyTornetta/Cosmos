@@ -3,7 +3,7 @@ use bevy::prelude::{App, Plugin, PluginGroup, States};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_rapier3d::prelude::{NoUserData, RapierPhysicsPlugin};
 
-use crate::{block, entities, inventory, projectiles, saving};
+use crate::{block, entities, inventory, persistence, projectiles};
 use crate::{blockitems, structure};
 use crate::{events, loader};
 use crate::{item, physics};
@@ -91,7 +91,7 @@ impl<T: States + Clone + Copy> Plugin for CosmosCorePlugin<T> {
         inventory::register(app);
         projectiles::register(app);
         entities::register(app);
-        saving::register(app);
+        persistence::register(app);
     }
 }
 

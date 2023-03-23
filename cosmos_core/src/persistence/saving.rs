@@ -1,46 +1,17 @@
 use bevy::{
     prelude::{App, Commands, Component, CoreSet, Entity, IntoSystemConfig, Query, With, Without},
     reflect::Reflect,
-    utils::HashMap,
 };
 use bevy_rapier3d::prelude::Velocity;
 use rand::{distributions::Alphanumeric, Rng};
-use serde::{Deserialize, Serialize};
 use std::fs;
 
-use crate::physics::location::Location;
+use crate::{persistence::get_save_file_path, physics::location::Location};
 
-#[derive(Component, Debug, Reflect, Serialize, Deserialize, PartialEq, Eq, Clone)]
-pub struct EntityId(String);
-
-#[derive(Component, Debug, Default, Reflect, Serialize, Deserialize)]
-pub struct SerializedData {
-    save_data: HashMap<String, Vec<u8>>,
-
-    location: Option<Location>,
-}
+use super::{EntityId, SerializedData};
 
 #[derive(Component, Debug, Default, Reflect)]
 pub struct NeedsSaved;
-
-#[derive(Component, Debug, Default, Reflect)]
-pub struct NeedsLoaded;
-
-impl SerializedData {
-    /// Saves the data to that data id. Will overwrite any existing data at that id.
-    pub fn save(&mut self, data_id: impl Into<String>, data: Vec<u8>) {
-        self.save_data.insert(data_id.into(), data);
-    }
-
-    /// Calls `bincode::serialize` on the passed in data.
-    /// Then sends that data into the `save` method, with the given data id.
-    pub fn serialize_data(&mut self, data_id: impl Into<String>, data: &impl Serialize) {
-        self.save(
-            data_id,
-            bincode::serialize(data).expect("Error serializing data!"),
-        );
-    }
-}
 
 fn check_needs_saved(
     query: Query<Entity, (With<NeedsSaved>, Without<SerializedData>)>,
@@ -73,20 +44,8 @@ pub fn done_saving(
 
         let serialized = bincode::serialize(&sd.save_data).unwrap();
 
-        let directory = sd
-            .location
-            .map(|loc| format!("{}_{}_{}/", loc.sector_x, loc.sector_y, loc.sector_z))
-            .unwrap_or("nowhere/".into());
-
-        let full_directory = format!("world/{directory}");
-
-        if let Err(e) = fs::create_dir_all(&full_directory) {
-            eprintln!("{e}");
-            continue;
-        }
-
-        let file_name: String = if let Some(id) = entity_id {
-            id.0.clone()
+        let entity_id = if let Some(id) = entity_id {
+            id.clone()
         } else {
             let res: String = rand::thread_rng()
                 .sample_iter(&Alphanumeric)
@@ -94,13 +53,27 @@ pub fn done_saving(
                 .map(char::from)
                 .collect();
 
-            commands.entity(entity).insert(EntityId(res.clone()));
+            let entity_id = EntityId(res);
 
-            res
+            commands.entity(entity).insert(entity_id.clone());
+
+            entity_id
         };
 
-        println!("WRITING FILE!");
-        if let Err(e) = fs::write(format!("{full_directory}{file_name}.cent"), serialized) {
+        let path = get_save_file_path(
+            sd.location.map(|l| (l.sector_x, l.sector_y, l.sector_z)),
+            &entity_id,
+        );
+
+        let directory = &path[0..path.rfind("/").expect("No / found in file path!")];
+
+        if let Err(e) = fs::create_dir_all(directory) {
+            eprintln!("{e}");
+            continue;
+        }
+
+        println!("WRITING FILE INTO {path}!");
+        if let Err(e) = fs::write(path, serialized) {
             eprintln!("{e}");
             continue;
         }
@@ -121,15 +94,6 @@ fn default_save(
         }
     }
 }
-
-// fn add_entity_ids(
-//     query: Query<Entity, (With<Location>, Without<EntityId>)>,
-//     mut commands: Commands,
-// ) {
-//     for entity in query.iter() {
-//         commands.entity(entity).insert(EntityId(5));
-//     }
-// }
 
 pub(crate) fn register(app: &mut App) {
     app.add_system(check_needs_saved)
