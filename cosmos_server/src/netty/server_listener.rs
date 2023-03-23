@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::physics::location::Location;
+use cosmos_core::saving::NeedsSaved;
 use cosmos_core::structure::systems::{SystemActive, Systems};
 use cosmos_core::{
     entities::player::Player,
@@ -96,6 +97,8 @@ pub fn server_listen_messages(
                 ClientReliableMessages::PlayerDisconnect => {}
                 ClientReliableMessages::SendChunk { server_entity } => {
                     if let Ok(structure) = structure_query.get(server_entity) {
+                        commands.entity(server_entity).insert(NeedsSaved);
+
                         for (_, chunk) in structure.chunks() {
                             server.send_message(
                                 client_id,
