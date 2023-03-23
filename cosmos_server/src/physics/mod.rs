@@ -218,9 +218,7 @@ fn remove_empty_worlds(
 
     'world_loop: for world_id in to_remove {
         // Verify that nothing else is a part of this world before removing it.
-        println!("Len: {}", everything_query.iter().len());
         for body_world in everything_query.iter().map(|bw| bw.world_id) {
-            println!("World ID: {world_id}");
             if world_id == body_world {
                 continue 'world_loop;
             }
