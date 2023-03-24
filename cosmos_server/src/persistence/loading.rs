@@ -33,7 +33,10 @@ fn check_needs_loaded(
         let serialized_data: SerializedData =
             bincode::deserialize(&data).expect(&format!("Error deserializing data for {path}"));
 
-        commands.entity(ent).insert(serialized_data);
+        commands
+            .entity(ent)
+            .insert(serialized_data)
+            .insert(nl.entity_id.clone());
     }
 }
 
@@ -66,9 +69,9 @@ fn default_load(
 }
 
 pub(crate) fn register(app: &mut App) {
-    app.add_system(check_needs_loaded)
+    app.add_system(check_needs_loaded.in_base_set(CoreSet::PreUpdate))
         // Put all loading-related systems after this
-        .add_system(begin_loading.in_base_set(CoreSet::First))
+        .add_system(begin_loading.in_base_set(CoreSet::Update))
         // Put all loading-related systems before this
         .add_system(done_loading.after(begin_loading))
         // Like this:

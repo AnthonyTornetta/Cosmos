@@ -49,8 +49,6 @@ pub fn assign_player_world(
     } else {
         let world_id = rapier_context.add_world(RapierWorld::default());
 
-        println!("Added world!!!");
-
         let world_entity = commands
             .spawn((
                 PlayerWorld {
@@ -105,8 +103,6 @@ pub fn move_players_between_worlds(
                         world_currently_in.0 = other_world_entity;
                         body_world.world_id = other_body_world;
 
-                        println!("Swapped to other player's world!");
-
                         needs_new_world = false;
                         changed = true;
                     }
@@ -134,8 +130,6 @@ pub fn move_players_between_worlds(
 
                 world_within.0 = world_entity;
                 body_world.world_id = world_id;
-
-                println!("BOOM! NEW WORLD CREATED -- world id: {world_id}!");
             }
         }
     }
@@ -177,7 +171,6 @@ fn move_non_players_between_worlds(
                     .expect("Something should have a PhysicsWorld if it has a WorldWithin.");
 
                 if body_world.world_id != world_id {
-                    println!("CHANGING WORLD!");
                     body_world.world_id = world_id;
                 }
                 if world_within.0 != ww.0 {
@@ -229,8 +222,6 @@ fn remove_empty_worlds(
                 commands.entity(entity).despawn_recursive();
             }
         }
-
-        println!("Removed world {world_id}");
 
         context
             .remove_world(world_id)

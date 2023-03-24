@@ -18,15 +18,42 @@ fn on_save_structure(
     mut query: Query<(&mut SerializedData, &Structure), (With<NeedsSaved>, With<Planet>)>,
 ) {
     for (mut s_data, structure) in query.iter_mut() {
-        println!("Saving planet!");
         s_data.serialize_data("cosmos:structure", structure);
         s_data.serialize_data("cosmos:is_planet", &true);
     }
 }
 
+struct DelayedStructureLoadEvent(Entity);
+
+fn delayed_structure_event(
+    mut event_reader: EventReader<DelayedStructureLoadEvent>,
+    mut chunk_set_event_writer: EventWriter<ChunkInitEvent>,
+    query: Query<&Structure>,
+) {
+    for ev in event_reader.iter() {
+        if let Ok(structure) = query.get(ev.0) {
+            for res in structure.all_chunks_iter(false) {
+                // This will always be true because include_empty is false
+                if let ChunkIteratorResult::FilledChunk {
+                    position: (x, y, z),
+                    chunk: _,
+                } = res
+                {
+                    chunk_set_event_writer.send(ChunkInitEvent {
+                        structure_entity: ev.0,
+                        x,
+                        y,
+                        z,
+                    });
+                }
+            }
+        }
+    }
+}
+
 fn on_load_structure(
     query: Query<(Entity, &SerializedData), With<NeedsLoaded>>,
-    mut chunk_set_event_writer: EventWriter<ChunkInitEvent>,
+    mut event_writer: EventWriter<DelayedStructureLoadEvent>,
     mut commands: Commands,
 ) {
     for (entity, s_data) in query.iter() {
@@ -50,25 +77,9 @@ fn on_load_structure(
                         amount_needed: structure.all_chunks_iter(false).len(),
                     });
 
-                    for res in structure.all_chunks_iter(false) {
-                        // This will always be true because include_empty is false
-                        if let ChunkIteratorResult::FilledChunk {
-                            position: (x, y, z),
-                            chunk: _,
-                        } = res
-                        {
-                            chunk_set_event_writer.send(ChunkInitEvent {
-                                structure_entity: entity,
-                                x,
-                                y,
-                                z,
-                            });
-                        }
-                    }
+                    event_writer.send(DelayedStructureLoadEvent(entity));
 
                     commands.entity(entity).insert(structure);
-
-                    println!("Done loading planet!");
                 }
             }
         }
@@ -77,5 +88,7 @@ fn on_load_structure(
 
 pub(crate) fn register(app: &mut App) {
     app.add_system(on_save_structure.after(begin_saving).before(done_saving))
-        .add_system(on_load_structure.after(begin_loading).before(done_loading));
+        .add_system(on_load_structure.after(begin_loading).before(done_loading))
+        .add_system(delayed_structure_event.in_base_set(CoreSet::PreUpdate))
+        .add_event::<DelayedStructureLoadEvent>();
 }

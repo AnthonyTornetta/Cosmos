@@ -42,7 +42,7 @@ fn load_world(mut commands: Commands) {
         SaveFileIdentifier {
             sector: Some((0, 0, 0)),
             entity_id: EntityId::new(
-                "ZVlVAJltNosfAhodKufxL6injza3A3C0WO18PvSuuUsDCc8VvDGiJ4qm4s0SSZqZ",
+                "2WErFbnBgQTDownNFElKPeTC6FJeLyTC0SU6DJXEPlgC0R7YysVYrS6DBgAlI1gR",
             ),
         },
         NeedsLoaded,

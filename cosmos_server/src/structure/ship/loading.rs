@@ -52,7 +52,6 @@ fn create_ships(
                 chunk: _,
             } = res
             {
-                println!("Sending init event!");
                 chunk_set_event_writer.send(ChunkInitEvent {
                     structure_entity: entity,
                     x,

@@ -41,9 +41,7 @@ pub fn done_saving(
             .remove::<NeedsSaved>()
             .remove::<SerializedData>();
 
-        println!("Finishing saving an entity!");
-
-        let serialized = bincode::serialize(&sd.save_data).unwrap();
+        let serialized = bincode::serialize(&sd).unwrap();
 
         let entity_id = if let Some(id) = entity_id {
             id.clone()
@@ -73,7 +71,6 @@ pub fn done_saving(
             continue;
         }
 
-        println!("WRITING FILE INTO {path}!");
         if let Err(e) = fs::write(path, serialized) {
             eprintln!("{e}");
             continue;
@@ -85,9 +82,12 @@ fn default_save(
     mut query: Query<(&mut SerializedData, Option<&Location>, Option<&Velocity>), With<NeedsSaved>>,
 ) {
     for (mut data, loc, vel) in query.iter_mut() {
-        println!("Saving base data!");
         if let Some(loc) = loc {
             data.location = Some(*loc);
+            // location is a private field, and may change in the future,
+            // so serialize it twice to make sure code doesn't break if
+            // the location field is changed to be something else.
+            data.serialize_data("cosmos:location", &loc);
         }
 
         if let Some(vel) = vel {
