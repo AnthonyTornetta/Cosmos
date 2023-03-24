@@ -5,7 +5,7 @@ use crate::{
     init::{init_server, init_world},
     inventory,
     netty::{server_listener, sync::sync_bodies},
-    physics, projectiles, structure,
+    persistence, physics, projectiles, structure,
 };
 
 use super::vizualizer;
@@ -28,5 +28,6 @@ impl Plugin for ServerPlugin {
         inventory::register(app);
         projectiles::register(app);
         vizualizer::register(app);
+        persistence::register(app);
     }
 }

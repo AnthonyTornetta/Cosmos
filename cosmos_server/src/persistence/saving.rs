@@ -3,10 +3,11 @@ use bevy::{
     reflect::Reflect,
 };
 use bevy_rapier3d::prelude::Velocity;
+use cosmos_core::physics::location::Location;
 use rand::{distributions::Alphanumeric, Rng};
 use std::fs;
 
-use crate::{persistence::get_save_file_path, physics::location::Location};
+use crate::persistence::get_save_file_path;
 
 use super::{EntityId, SerializedData};
 

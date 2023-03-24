@@ -15,6 +15,7 @@ pub mod events;
 pub mod init;
 pub mod inventory;
 pub mod netty;
+pub mod persistence;
 pub mod physics;
 pub mod plugin;
 pub mod projectiles;

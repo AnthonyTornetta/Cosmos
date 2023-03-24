@@ -8,7 +8,6 @@ pub mod chunk;
 pub mod events;
 pub mod loading;
 pub mod planet;
-pub mod saving;
 pub mod ship;
 pub mod structure_block;
 pub mod structure_builder;
@@ -679,7 +678,6 @@ pub(crate) fn register<T: States + Clone + Copy>(
     loading::register(app);
     block_health::register(app);
     structure_block::register(app);
-    saving::register(app);
 
     app.add_system(add_chunks_system)
         .add_system(remove_empty_chunks.after(add_chunks_system));

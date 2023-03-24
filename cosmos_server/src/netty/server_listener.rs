@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::RenetServer;
-use cosmos_core::persistence::saving::NeedsSaved;
 use cosmos_core::physics::location::Location;
 use cosmos_core::structure::systems::{SystemActive, Systems};
 use cosmos_core::{
@@ -24,6 +23,7 @@ use crate::events::{
     create_ship_event::CreateShipEvent,
     structure::ship::ShipSetMovementEvent,
 };
+use crate::persistence::saving::NeedsSaved;
 
 use super::network_helpers::ServerLobby;
 

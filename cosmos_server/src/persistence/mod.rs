@@ -5,7 +5,7 @@ use bevy::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::physics::location::Location;
+use cosmos_core::physics::location::Location;
 
 pub mod loading;
 pub mod saving;

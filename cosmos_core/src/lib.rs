@@ -8,7 +8,6 @@ pub mod inventory;
 pub mod item;
 pub mod loader;
 pub mod netty;
-pub mod persistence;
 pub mod physics;
 pub mod plugin;
 pub mod projectiles;

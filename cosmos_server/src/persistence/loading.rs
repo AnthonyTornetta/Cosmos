@@ -6,7 +6,7 @@ use bevy::{
 };
 use bevy_rapier3d::prelude::Velocity;
 
-use crate::physics::location::Location;
+use cosmos_core::physics::location::Location;
 
 use super::{get_save_file_path, EntityId, SerializedData};
 
