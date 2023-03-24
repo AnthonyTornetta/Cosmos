@@ -26,6 +26,7 @@ pub struct Location {
     pub sector_y: i64,
     pub sector_z: i64,
 
+    #[serde(skip)]
     pub last_transform_loc: Vec3,
 }
 

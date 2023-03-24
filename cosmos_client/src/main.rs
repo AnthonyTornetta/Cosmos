@@ -5,6 +5,7 @@ pub mod events;
 pub mod input;
 pub mod interactions;
 pub mod lang;
+pub mod loading;
 pub mod materials;
 pub mod netty;
 pub mod plugin;
@@ -367,6 +368,7 @@ fn main() {
     block::register(&mut app);
     projectiles::register(&mut app);
     materials::register(&mut app);
+    loading::register(&mut app);
 
     app.run();
 }

@@ -22,3 +22,5 @@ renet_visualizer = { workspace = true }
 cosmos_core = { version = "0.0.3", path = "../cosmos_core" }
 
 bevy-inspector-egui = { workspace = true }
+
+walkdir = { workspace = true }

@@ -1,3 +1,5 @@
+#![feature(fs_try_exists)]
+
 use std::env;
 
 use bevy::prelude::*;

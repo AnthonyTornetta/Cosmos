@@ -68,7 +68,7 @@ fn default_load(
     }
 }
 
-pub(crate) fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.add_system(check_needs_loaded.in_base_set(CoreSet::PreUpdate))
         // Put all loading-related systems after this
         .add_system(begin_loading.in_base_set(CoreSet::Update))

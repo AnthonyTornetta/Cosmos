@@ -1,5 +1,8 @@
 use bevy::{
-    prelude::{App, Commands, Component, CoreSet, Entity, IntoSystemConfig, Query, With, Without},
+    prelude::{
+        App, Commands, Component, CoreSet, DespawnRecursiveExt, Entity, IntoSystemConfig, Query,
+        With, Without,
+    },
     reflect::Reflect,
 };
 use bevy_rapier3d::prelude::Velocity;
@@ -11,8 +14,15 @@ use crate::persistence::get_save_file_path;
 
 use super::{EntityId, SerializedData};
 
+/// Denotes that this entity should be saved. Once this entity is saved,
+/// this component will be removed.
 #[derive(Component, Debug, Default, Reflect)]
 pub struct NeedsSaved;
+
+/// This flag will denote that once this entity is saved, it will be unloaded.
+/// To save this entity, make sure to also add `NeedsSaved`
+#[derive(Component, Debug, Default, Reflect)]
+pub struct NeedsUnloaded;
 
 fn check_needs_saved(
     query: Query<Entity, (With<NeedsSaved>, Without<SerializedData>)>,
@@ -32,10 +42,18 @@ pub fn begin_saving() {}
 ///
 /// Make sure those systems are run after `begin_saving` aswell.
 pub fn done_saving(
-    query: Query<(Entity, &SerializedData, Option<&EntityId>), With<NeedsSaved>>,
+    query: Query<
+        (
+            Entity,
+            &SerializedData,
+            Option<&EntityId>,
+            Option<&NeedsUnloaded>,
+        ),
+        With<NeedsSaved>,
+    >,
     mut commands: Commands,
 ) {
-    for (entity, sd, entity_id) in query.iter() {
+    for (entity, sd, entity_id, needs_unloaded) in query.iter() {
         commands
             .entity(entity)
             .remove::<NeedsSaved>()
@@ -75,6 +93,10 @@ pub fn done_saving(
             eprintln!("{e}");
             continue;
         }
+
+        if needs_unloaded.is_some() {
+            commands.entity(entity).despawn_recursive();
+        }
     }
 }
 
@@ -96,7 +118,7 @@ fn default_save(
     }
 }
 
-pub(crate) fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.add_system(check_needs_saved)
         // Put all saving-related systems after this
         .add_system(begin_saving.in_base_set(CoreSet::First))

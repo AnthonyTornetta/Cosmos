@@ -33,6 +33,8 @@ crossterm = { version = "0.26.1", features = [ "event-stream" ] }
 
 renet_visualizer = { version = "0.0.4", features = ["bevy"] }
 
+walkdir = "2.3.3"
+
 # For any non workspace package
 [profile.dev.package."*"]
 opt-level = 3

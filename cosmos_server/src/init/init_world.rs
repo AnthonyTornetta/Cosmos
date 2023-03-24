@@ -32,8 +32,9 @@ pub fn register(app: &mut App) {
     );
 
     app.insert_resource(ResourceWrapper(noise))
-        .add_startup_system(load_world);
-    // .add_startup_system(create_world);
+        // .add_startup_system(load_world);
+        // .add_startup_system(create_world);
+        ;
 }
 
 #[allow(dead_code)]
