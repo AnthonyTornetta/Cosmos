@@ -1,7 +1,7 @@
 use bevy::{
-    prelude::{App, Component},
+    prelude::{App, Component, Resource},
     reflect::Reflect,
-    utils::HashMap,
+    utils::{HashMap, HashSet},
 };
 use serde::{Deserialize, Serialize};
 
@@ -11,8 +11,11 @@ pub mod loading;
 pub mod player_loading;
 pub mod saving;
 
-#[derive(Component, Debug, Reflect, Serialize, Deserialize, PartialEq, Eq, Clone)]
+#[derive(Component, Debug, Reflect, Serialize, Deserialize, PartialEq, Eq, Clone, Hash)]
 pub struct EntityId(String);
+
+#[derive(Debug, Resource, Default)]
+pub struct SectorsCache(HashMap<(i64, i64, i64), HashSet<EntityId>>);
 
 impl EntityId {
     pub fn new(id: impl Into<String>) -> Self {

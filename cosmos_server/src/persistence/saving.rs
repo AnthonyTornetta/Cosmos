@@ -1,9 +1,10 @@
 use bevy::{
     prelude::{
         App, Commands, Component, CoreSet, DespawnRecursiveExt, Entity, IntoSystemConfig, Query,
-        With, Without,
+        ResMut, With, Without,
     },
     reflect::Reflect,
+    utils::HashSet,
 };
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::physics::location::Location;
@@ -12,7 +13,7 @@ use std::fs;
 
 use crate::persistence::get_save_file_path;
 
-use super::{EntityId, SerializedData};
+use super::{EntityId, SectorsCache, SerializedData};
 
 /// Denotes that this entity should be saved. Once this entity is saved,
 /// this component will be removed.
@@ -51,6 +52,7 @@ pub fn done_saving(
         ),
         With<NeedsSaved>,
     >,
+    mut sectors_cache: ResMut<SectorsCache>,
     mut commands: Commands,
 ) {
     for (entity, sd, entity_id, needs_unloaded) in query.iter() {
@@ -92,6 +94,15 @@ pub fn done_saving(
         if let Err(e) = fs::write(path, serialized) {
             eprintln!("{e}");
             continue;
+        }
+
+        if let Some(loc) = sd.location {
+            let key = (loc.sector_x, loc.sector_y, loc.sector_z);
+            if !sectors_cache.0.contains_key(&key) {
+                sectors_cache.0.insert(key, HashSet::new());
+            }
+
+            sectors_cache.0.get_mut(&key).unwrap().insert(entity_id);
         }
 
         if needs_unloaded.is_some() {

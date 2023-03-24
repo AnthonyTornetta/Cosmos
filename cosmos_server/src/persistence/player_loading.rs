@@ -5,7 +5,10 @@ use std::{
     fs::{self},
 };
 
-use bevy::prelude::{App, Commands, Entity, Query, With, Without};
+use bevy::{
+    prelude::{App, Commands, Entity, Query, ResMut, With, Without},
+    utils::HashSet,
+};
 use cosmos_core::{
     entities::player::Player,
     physics::location::{Location, SECTOR_DIMENSIONS},
@@ -15,7 +18,7 @@ use walkdir::WalkDir;
 use super::{
     loading::{NeedsLoaded, SaveFileIdentifier},
     saving::{NeedsSaved, NeedsUnloaded},
-    EntityId,
+    EntityId, SectorsCache,
 };
 
 const UNLOAD_DISTANCE: f32 = SECTOR_DIMENSIONS * 10.0;
@@ -42,6 +45,7 @@ fn unload_far(
 fn load_near(
     query: Query<&Location, With<Player>>,
     loaded_entities: Query<&EntityId>,
+    mut sectors_cache: ResMut<SectorsCache>,
     mut commands: Commands,
 ) {
     for loc in query.iter() {
@@ -50,37 +54,60 @@ fn load_near(
         for dz in -delta_ld..=delta_ld {
             for dy in -delta_ld..=delta_ld {
                 for dx in -delta_ld..delta_ld {
-                    let (x, y, z) = (dx + loc.sector_x, dy + loc.sector_y, dz + loc.sector_z);
-                    let dir = format!("world/{x}_{y}_{z}");
-                    if fs::try_exists(&dir).unwrap_or(false) {
-                        for file in WalkDir::new(&dir).into_iter() {
-                            if let Ok(file) = file {
-                                let path = file.path();
+                    let sector = (dx + loc.sector_x, dy + loc.sector_y, dz + loc.sector_z);
 
-                                if file.file_type().is_file()
-                                    && path.extension() == Some(OsStr::new("cent"))
-                                {
-                                    let entity_id = path
-                                        .file_stem()
-                                        .expect("Failed to get file stem")
-                                        .to_str()
-                                        .expect("Failed to convert to entity id")
-                                        .to_owned();
+                    if let Some(vec) = sectors_cache.0.get(&sector) {
+                        for entity_id in vec.iter() {
+                            if !loaded_entities.iter().any(|x| x == entity_id) {
+                                commands.spawn((
+                                    SaveFileIdentifier {
+                                        entity_id: entity_id.clone(),
+                                        sector: Some(sector),
+                                    },
+                                    NeedsLoaded,
+                                ));
+                            }
+                        }
+                    } else {
+                        let mut cache = HashSet::new();
 
-                                    let entity_id = EntityId::new(entity_id);
+                        let (x, y, z) = sector;
 
-                                    if !loaded_entities.iter().any(|x| x == &entity_id) {
-                                        commands.spawn((
-                                            SaveFileIdentifier {
-                                                entity_id,
-                                                sector: Some((x, y, z)),
-                                            },
-                                            NeedsLoaded,
-                                        ));
+                        let dir = format!("world/{x}_{y}_{z}");
+                        if fs::try_exists(&dir).unwrap_or(false) {
+                            for file in WalkDir::new(&dir).into_iter() {
+                                if let Ok(file) = file {
+                                    let path = file.path();
+
+                                    if file.file_type().is_file()
+                                        && path.extension() == Some(OsStr::new("cent"))
+                                    {
+                                        let entity_id = path
+                                            .file_stem()
+                                            .expect("Failed to get file stem")
+                                            .to_str()
+                                            .expect("Failed to convert to entity id")
+                                            .to_owned();
+
+                                        let entity_id = EntityId::new(entity_id);
+
+                                        cache.insert(entity_id.clone());
+
+                                        if !loaded_entities.iter().any(|x| x == &entity_id) {
+                                            commands.spawn((
+                                                SaveFileIdentifier {
+                                                    entity_id,
+                                                    sector: Some((x, y, z)),
+                                                },
+                                                NeedsLoaded,
+                                            ));
+                                        }
                                     }
                                 }
                             }
                         }
+
+                        sectors_cache.0.insert((x, y, z), cache);
                     }
                 }
             }
@@ -89,5 +116,7 @@ fn load_near(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(unload_far).add_system(load_near);
+    app.insert_resource(SectorsCache::default())
+        .add_system(unload_far)
+        .add_system(load_near);
 }
