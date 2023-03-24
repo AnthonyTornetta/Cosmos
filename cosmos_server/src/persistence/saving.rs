@@ -41,7 +41,7 @@ pub fn done_saving(
             .remove::<NeedsSaved>()
             .remove::<SerializedData>();
 
-        println!("GOT AMIGO!");
+        println!("Finishing saving an entity!");
 
         let serialized = bincode::serialize(&sd.save_data).unwrap();
 

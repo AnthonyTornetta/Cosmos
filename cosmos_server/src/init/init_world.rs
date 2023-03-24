@@ -8,10 +8,16 @@ use cosmos_core::{
 };
 use noise::Seedable;
 
-use crate::structure::planet::{
-    biosphere::{grass_biosphere::GrassBiosphere, TBiosphere},
-    generation::planet_generator::NeedsGenerated,
-    server_planet_builder::ServerPlanetBuilder,
+use crate::{
+    persistence::{
+        loading::{NeedsLoaded, SaveFileIdentifier},
+        EntityId,
+    },
+    structure::planet::{
+        biosphere::{grass_biosphere::GrassBiosphere, TBiosphere},
+        generation::planet_generator::NeedsGenerated,
+        server_planet_builder::ServerPlanetBuilder,
+    },
 };
 
 pub fn register(app: &mut App) {
@@ -26,9 +32,24 @@ pub fn register(app: &mut App) {
     );
 
     app.insert_resource(ResourceWrapper(noise))
-        .add_startup_system(create_world);
+        .add_startup_system(load_world);
+    // .add_startup_system(create_world);
 }
 
+#[allow(dead_code)]
+fn load_world(mut commands: Commands) {
+    commands.spawn((
+        SaveFileIdentifier {
+            sector: Some((0, 0, 0)),
+            entity_id: EntityId::new(
+                "ZVlVAJltNosfAhodKufxL6injza3A3C0WO18PvSuuUsDCc8VvDGiJ4qm4s0SSZqZ",
+            ),
+        },
+        NeedsLoaded,
+    ));
+}
+
+#[allow(dead_code)]
 fn create_world(mut commands: Commands) {
     let mut entity_cmd = commands.spawn_empty();
 

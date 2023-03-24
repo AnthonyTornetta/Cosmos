@@ -17,7 +17,7 @@ pub struct SaveFileIdentifier {
 }
 
 #[derive(Component, Debug, Reflect)]
-pub struct NeedsLoaded(pub EntityId);
+pub struct NeedsLoaded;
 
 fn check_needs_loaded(
     query: Query<(Entity, &SaveFileIdentifier), (Without<SerializedData>, With<NeedsLoaded>)>,
@@ -31,7 +31,7 @@ fn check_needs_loaded(
         };
 
         let serialized_data: SerializedData =
-            bincode::deserialize(&data).expect("Error deserializing data for {path}");
+            bincode::deserialize(&data).expect(&format!("Error deserializing data for {path}"));
 
         commands.entity(ent).insert(serialized_data);
     }

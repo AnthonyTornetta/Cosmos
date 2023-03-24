@@ -13,6 +13,12 @@ pub mod saving;
 #[derive(Component, Debug, Reflect, Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub struct EntityId(String);
 
+impl EntityId {
+    pub fn new(id: impl Into<String>) -> Self {
+        Self(id.into())
+    }
+}
+
 #[derive(Component, Debug, Default, Reflect, Serialize, Deserialize)]
 pub struct SerializedData {
     save_data: HashMap<String, Vec<u8>>,
