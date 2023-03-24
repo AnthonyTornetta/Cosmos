@@ -1,4 +1,4 @@
-use bevy::prelude::{App, DespawnRecursiveExt};
+use bevy::prelude::{App, CoreSet, DespawnRecursiveExt};
 use bevy::reflect::Reflect;
 use bevy::utils::{HashMap, HashSet};
 use bevy_rapier3d::prelude::PhysicsWorld;
@@ -679,6 +679,6 @@ pub(crate) fn register<T: States + Clone + Copy>(
     block_health::register(app);
     structure_block::register(app);
 
-    app.add_system(add_chunks_system)
+    app.add_system(add_chunks_system.in_base_set(CoreSet::PreUpdate))
         .add_system(remove_empty_chunks.after(add_chunks_system));
 }
