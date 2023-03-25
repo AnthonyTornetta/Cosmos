@@ -25,7 +25,7 @@ fn check_needs_loaded(
         };
 
         let serialized_data: SerializedData =
-            bincode::deserialize(&data).expect(&format!("Error deserializing data for {path}"));
+            bincode::deserialize(&data).unwrap_or_else(|_| panic!("Error deserializing data for {path}"));
 
         commands
             .entity(ent)

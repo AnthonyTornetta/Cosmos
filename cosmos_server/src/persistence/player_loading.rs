@@ -79,33 +79,31 @@ fn load_near(
 
                         let dir = format!("world/{x}_{y}_{z}");
                         if fs::try_exists(&dir).unwrap_or(false) {
-                            for file in WalkDir::new(&dir).into_iter() {
-                                if let Ok(file) = file {
-                                    let path = file.path();
+                            for file in WalkDir::new(&dir).into_iter().flatten() {
+                                let path = file.path();
 
-                                    if file.file_type().is_file()
-                                        && path.extension() == Some(OsStr::new("cent"))
-                                    {
-                                        let entity_id = path
-                                            .file_stem()
-                                            .expect("Failed to get file stem")
-                                            .to_str()
-                                            .expect("Failed to convert to entity id")
-                                            .to_owned();
+                                if file.file_type().is_file()
+                                    && path.extension() == Some(OsStr::new("cent"))
+                                {
+                                    let entity_id = path
+                                        .file_stem()
+                                        .expect("Failed to get file stem")
+                                        .to_str()
+                                        .expect("Failed to convert to entity id")
+                                        .to_owned();
 
-                                        let entity_id = EntityId::new(entity_id);
+                                    let entity_id = EntityId::new(entity_id);
 
-                                        cache.insert(entity_id.clone());
+                                    cache.insert(entity_id.clone());
 
-                                        if !loaded_entities.iter().any(|x| x == &entity_id) {
-                                            commands.spawn((
-                                                SaveFileIdentifier {
-                                                    entity_id,
-                                                    sector: Some((x, y, z)),
-                                                },
-                                                NeedsLoaded,
-                                            ));
-                                        }
+                                    if !loaded_entities.iter().any(|x| x == &entity_id) {
+                                        commands.spawn((
+                                            SaveFileIdentifier {
+                                                entity_id,
+                                                sector: Some((x, y, z)),
+                                            },
+                                            NeedsLoaded,
+                                        ));
                                     }
                                 }
                             }

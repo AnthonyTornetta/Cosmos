@@ -88,8 +88,7 @@ pub fn done_saving(
                 if let Some(sector) = &save_file_identifier.sector {
                     sectors_cache
                         .0
-                        .get_mut(sector)
-                        .and_then(|set| Some(set.remove(&save_file_identifier.entity_id)));
+                        .get_mut(sector).map(|set| set.remove(&save_file_identifier.entity_id));
                 }
             }
         } else {
@@ -105,7 +104,7 @@ pub fn done_saving(
 
         let path = save_identifier.get_save_file_path();
 
-        let directory = &path[0..path.rfind("/").expect("No / found in file path!")];
+        let directory = &path[0..path.rfind('/').expect("No / found in file path!")];
 
         if let Err(e) = fs::create_dir_all(directory) {
             eprintln!("{e}");
