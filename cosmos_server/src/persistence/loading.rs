@@ -8,13 +8,7 @@ use bevy_rapier3d::prelude::Velocity;
 
 use cosmos_core::physics::location::Location;
 
-use super::{get_save_file_path, EntityId, SerializedData};
-
-#[derive(Debug, Component)]
-pub struct SaveFileIdentifier {
-    pub sector: Option<(i64, i64, i64)>,
-    pub entity_id: EntityId,
-}
+use super::{SaveFileIdentifier, SerializedData};
 
 #[derive(Component, Debug, Reflect)]
 pub struct NeedsLoaded;
@@ -24,7 +18,7 @@ fn check_needs_loaded(
     mut commands: Commands,
 ) {
     for (ent, nl) in query.iter() {
-        let path = get_save_file_path(nl.sector.clone(), &nl.entity_id);
+        let path = nl.get_save_file_path();
         let Ok(data) = fs::read(&path) else {
             eprintln!("Error reading file at {path}");
             continue;
@@ -47,8 +41,7 @@ pub fn done_loading(query: Query<Entity, With<NeedsLoaded>>, mut commands: Comma
         commands
             .entity(ent)
             .remove::<NeedsLoaded>()
-            .remove::<SerializedData>()
-            .remove::<SaveFileIdentifier>();
+            .remove::<SerializedData>();
     }
 }
 

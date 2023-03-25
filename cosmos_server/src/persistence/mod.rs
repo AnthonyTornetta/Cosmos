@@ -23,6 +23,24 @@ impl EntityId {
     }
 }
 
+#[derive(Debug, Component, Reflect)]
+pub struct SaveFileIdentifier {
+    pub sector: Option<(i64, i64, i64)>,
+    pub entity_id: EntityId,
+}
+
+impl SaveFileIdentifier {
+    /// Gets the file path a given entity will be saved to.
+    pub fn get_save_file_path(&self) -> String {
+        let directory = self
+            .sector
+            .map(|(x, y, z)| format!("{x}_{y}_{z}"))
+            .unwrap_or("nowhere".into());
+
+        format!("world/{directory}/{}.cent", self.entity_id.0)
+    }
+}
+
 #[derive(Component, Debug, Default, Reflect, Serialize, Deserialize)]
 pub struct SerializedData {
     save_data: HashMap<String, Vec<u8>>,
@@ -59,17 +77,11 @@ impl SerializedData {
     }
 }
 
-/// Gets the file path a given entity will be saved to.
-pub fn get_save_file_path(sector_coords: Option<(i64, i64, i64)>, entity_id: &EntityId) -> String {
-    let directory = sector_coords
-        .map(|(x, y, z)| format!("{x}_{y}_{z}"))
-        .unwrap_or("nowhere".into());
-
-    format!("world/{directory}/{}.cent", entity_id.0)
-}
-
 pub(super) fn register(app: &mut App) {
     saving::register(app);
     loading::register(app);
     player_loading::register(app);
+
+    app.register_type::<EntityId>()
+        .register_type::<SaveFileIdentifier>();
 }

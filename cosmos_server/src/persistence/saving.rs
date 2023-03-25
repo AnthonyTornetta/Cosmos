@@ -11,9 +11,7 @@ use cosmos_core::physics::location::Location;
 use rand::{distributions::Alphanumeric, Rng};
 use std::fs;
 
-use crate::persistence::get_save_file_path;
-
-use super::{EntityId, SectorsCache, SerializedData};
+use super::{EntityId, SaveFileIdentifier, SectorsCache, SerializedData};
 
 /// Denotes that this entity should be saved. Once this entity is saved,
 /// this component will be removed.
@@ -49,19 +47,20 @@ pub fn done_saving(
             &SerializedData,
             Option<&EntityId>,
             Option<&NeedsUnloaded>,
+            Option<&SaveFileIdentifier>,
         ),
         With<NeedsSaved>,
     >,
     mut sectors_cache: ResMut<SectorsCache>,
     mut commands: Commands,
 ) {
-    for (entity, sd, entity_id, needs_unloaded) in query.iter() {
+    for (entity, sd, entity_id, needs_unloaded, save_file_identifier) in query.iter() {
         commands
             .entity(entity)
             .remove::<NeedsSaved>()
             .remove::<SerializedData>();
 
-        let serialized = bincode::serialize(&sd).unwrap();
+        let serialized = bincode::serialize(&sd).expect("Serialization failed");
 
         let entity_id = if let Some(id) = entity_id {
             id.clone()
@@ -79,10 +78,32 @@ pub fn done_saving(
             entity_id
         };
 
-        let path = get_save_file_path(
-            sd.location.map(|l| (l.sector_x, l.sector_y, l.sector_z)),
-            &entity_id,
-        );
+        if let Some(save_file_identifier) = save_file_identifier {
+            let path = save_file_identifier.get_save_file_path();
+            println!("Found @ {path}");
+            if fs::try_exists(&path).unwrap_or(false) {
+                println!("Removing old!");
+                fs::remove_file(path).expect("Error deleting old save file!");
+
+                if let Some(sector) = &save_file_identifier.sector {
+                    sectors_cache
+                        .0
+                        .get_mut(sector)
+                        .and_then(|set| Some(set.remove(&save_file_identifier.entity_id)));
+                }
+            }
+        } else {
+            println!("No previous path");
+        }
+
+        let save_identifier = SaveFileIdentifier {
+            entity_id: entity_id.clone(),
+            sector: sd.location.map(|l| (l.sector_x, l.sector_y, l.sector_z)),
+        };
+
+        println!("New save file ID: {save_identifier:?}");
+
+        let path = save_identifier.get_save_file_path();
 
         let directory = &path[0..path.rfind("/").expect("No / found in file path!")];
 
@@ -95,6 +116,8 @@ pub fn done_saving(
             eprintln!("{e}");
             continue;
         }
+
+        commands.entity(entity).insert(save_identifier);
 
         if let Some(loc) = sd.location {
             let key = (loc.sector_x, loc.sector_y, loc.sector_z);

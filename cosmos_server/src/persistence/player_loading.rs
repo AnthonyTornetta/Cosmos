@@ -16,9 +16,9 @@ use cosmos_core::{
 use walkdir::WalkDir;
 
 use super::{
-    loading::{NeedsLoaded, SaveFileIdentifier},
+    loading::NeedsLoaded,
     saving::{NeedsSaved, NeedsUnloaded},
-    EntityId, SectorsCache,
+    EntityId, SaveFileIdentifier, SectorsCache,
 };
 
 const UNLOAD_DISTANCE: f32 = SECTOR_DIMENSIONS * 10.0;

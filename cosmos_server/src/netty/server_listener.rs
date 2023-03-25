@@ -97,8 +97,6 @@ pub fn server_listen_messages(
                 ClientReliableMessages::PlayerDisconnect => {}
                 ClientReliableMessages::SendChunk { server_entity } => {
                     if let Ok(structure) = structure_query.get(server_entity) {
-                        commands.entity(server_entity).insert(NeedsSaved);
-
                         for (_, chunk) in structure.chunks() {
                             server.send_message(
                                 client_id,

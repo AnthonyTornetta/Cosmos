@@ -9,10 +9,7 @@ use cosmos_core::{
 use noise::Seedable;
 
 use crate::{
-    persistence::{
-        loading::{NeedsLoaded, SaveFileIdentifier},
-        EntityId,
-    },
+    persistence::{loading::NeedsLoaded, EntityId, SaveFileIdentifier},
     structure::planet::{
         biosphere::{grass_biosphere::GrassBiosphere, TBiosphere},
         generation::planet_generator::NeedsGenerated,
