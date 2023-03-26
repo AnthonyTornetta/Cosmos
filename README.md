@@ -37,7 +37,20 @@ To view the documentation, navigate to the `docs/` directory. To have it update 
 
 See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the list of current features/bugs in development.
 
-## Release 0.0.3a
+## Release 0.0.4a
+- [ ] Galaxy Generation
+  - [ ] Stars procedurally generated in spiral-like pattern based on seed 
+    - [ ] Create star
+  - [ ] Planets generate around stars 
+    - [ ] Biospheres depend on how close they are to the sun
+    - [ ] Dynamic biospheres based off temperature
+    - [ ] Only generate if planet is close enough to player ~ 10 sectors
+  - [ ] Asteroids
+    - [ ] Mineral deposits
+  - [ ] Save generated universe
+    - [ ] Save planet/star locations + colors
+
+## Release 0.0.3a (In Progress)
 - [x] Infinite universe
   - [x] (**Client**) Player can travel any distance from 0,0,0 with no noticable issues, and everything moves relaitve to player
   - [x] (**Server**) 
@@ -51,10 +64,11 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
   - [x] Ability to have 50 small-sized ships loaded with minimal performance impact
 - [ ] Dynamic object loading
   - [ ] (**Client**)
-    - [ ] Unload objects that are too far away
+    - [x] Unload objects that are too far away
+    - [ ] Request entities that server sends if they don't have the entity for them
   - [ ] (**Server**) 
-    - [ ] Unload objects that are too far from any player
-    - [ ] Load objects that are close to a player & send that info to client
+    - [x] Unload objects that are too far from any player
+    - [x] Load objects that are close to a player & send that info to client
     - [ ] Only send information about objects to clients that are close enough to have them loaded
 - [x] Display coordinates in top left (sector, local)
 
@@ -145,7 +159,7 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 - [x] Support re-sizable window
 
 
-## Everything that will still have to be done after 0.0.2a
+## Everything that will still have to be done after 0.0.3a
 - [ ] Align body with structure
   - [ ] Switches to FPS Camera
   - [ ] Aligns the player to that structure
@@ -182,11 +196,7 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 - [ ] Planet Generation
   - [ ] New planet types
   - [ ] A bunch of new blocks
-- [ ] Galaxy Generation
-  - [ ] Stars procedurally generated in spiral-like pattern based on seed 
-  - [ ] Planets generate around stars, their biosphere depending on how close they are to the sun
-  - [ ] Asteroids
-    - [ ] Mineral deposits
+
 - [ ] Shops
   - [ ] Sell blocks/items
   - [ ] Buy blocks/items
