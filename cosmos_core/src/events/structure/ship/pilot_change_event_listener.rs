@@ -56,7 +56,9 @@ fn event_listener(
                     0.5, 0.5, 0.5,
                 )));
         } else {
-            commands.entity(ev.structure_entity).remove::<Pilot>();
+            if let Some(mut ecmds) = commands.get_entity(ev.structure_entity) {
+                ecmds.remove::<Pilot>();
+            }
         }
     }
 }

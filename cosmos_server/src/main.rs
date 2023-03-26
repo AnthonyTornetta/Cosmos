@@ -26,6 +26,9 @@ pub mod state;
 pub mod structure;
 
 fn main() {
+    #[cfg(debug_assertions)]
+    env::set_var("RUST_BACKTRACE", "1");
+
     let args: Vec<String> = env::args().collect();
 
     let ip = if args.len() > 1 {

@@ -194,7 +194,10 @@ fn dew_it(
     event_writer: &mut EventWriter<NeedsNewRenderingEvent>,
 ) {
     if let Some(chunk_coords) = chunk_coords {
-        let mut structure_renderer = query.get_mut(entity).unwrap();
+        let Ok(mut structure_renderer) = query.get_mut(entity) else {
+            // This entity may have been unloaded.
+            return;
+        };
 
         structure_renderer.changes.insert(Vector3::new(
             chunk_coords.x,

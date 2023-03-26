@@ -23,5 +23,5 @@ fn unload_far_entities(
 }
 
 pub(crate) fn register(app: &mut App) {
-    app.add_system(unload_far_entities.in_base_set(CoreSet::PreUpdate));
+    app.add_system(unload_far_entities.in_base_set(CoreSet::First));
 }

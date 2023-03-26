@@ -299,6 +299,9 @@ fn create_sun(mut commands: Commands) {
 }
 
 fn main() {
+    #[cfg(debug_assertions)]
+    env::set_var("RUST_BACKTRACE", "1");
+
     let args: Vec<String> = env::args().collect();
 
     let host_name = if args.len() > 1 {

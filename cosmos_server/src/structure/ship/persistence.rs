@@ -1,7 +1,8 @@
 use bevy::prelude::*;
+use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::structure::{
     loading::ChunksNeedLoaded,
-    planet::{planet_builder::TPlanetBuilder, Planet},
+    ship::{ship_builder::TShipBuilder, Ship},
     Structure,
 };
 
@@ -14,14 +15,14 @@ use crate::{
     structure::persistence::DelayedStructureLoadEvent,
 };
 
-use super::server_planet_builder::ServerPlanetBuilder;
+use super::server_ship_builder::ServerShipBuilder;
 
 fn on_save_structure(
-    mut query: Query<(&mut SerializedData, &Structure), (With<NeedsSaved>, With<Planet>)>,
+    mut query: Query<(&mut SerializedData, &Structure), (With<NeedsSaved>, With<Ship>)>,
 ) {
     for (mut s_data, structure) in query.iter_mut() {
         s_data.serialize_data("cosmos:structure", structure);
-        s_data.serialize_data("cosmos:is_planet", &true);
+        s_data.serialize_data("cosmos:is_ship", &true);
     }
 }
 
@@ -31,19 +32,23 @@ fn on_load_structure(
     mut commands: Commands,
 ) {
     for (entity, s_data) in query.iter() {
-        if let Some(is_planet) = s_data.deserialize_data::<bool>("cosmos:is_planet") {
-            if is_planet {
+        if let Some(is_ship) = s_data.deserialize_data::<bool>("cosmos:is_ship") {
+            if is_ship {
                 if let Some(mut structure) =
                     s_data.deserialize_data::<Structure>("cosmos:structure")
                 {
                     let mut entity_cmd = commands.entity(entity);
-
-                    let builder = ServerPlanetBuilder::default();
                     let loc = s_data
                         .deserialize_data("cosmos:location")
-                        .expect("Every planet should have a location when saved!");
+                        .expect("Every ship should have a location when saved!");
 
-                    builder.insert_planet(&mut entity_cmd, loc, &mut structure);
+                    let vel = s_data
+                        .deserialize_data("cosmos:velocity")
+                        .unwrap_or(Velocity::zero());
+
+                    let builder = ServerShipBuilder::default();
+
+                    builder.insert_ship(&mut entity_cmd, loc, vel, &mut structure);
 
                     let entity = entity_cmd.id();
 
