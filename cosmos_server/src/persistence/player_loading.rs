@@ -3,10 +3,12 @@
 use std::{
     ffi::OsStr,
     fs::{self},
+    time::Duration,
 };
 
 use bevy::{
-    prelude::{App, Commands, Entity, Query, ResMut, With, Without},
+    prelude::{App, Commands, Entity, IntoSystemConfig, Query, ResMut, With, Without},
+    time::common_conditions::on_timer,
     utils::HashSet,
 };
 use cosmos_core::{
@@ -118,7 +120,10 @@ fn load_near(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.insert_resource(SectorsCache::default())
-        .add_system(unload_far)
-        .add_system(load_near);
+    app.insert_resource(SectorsCache::default()).add_systems(
+        (
+            unload_far.run_if(on_timer(Duration::from_millis(100))),
+            load_near.run_if(on_timer(Duration::from_millis(100))),
+        ), // .in_base_set(CoreSet::PreUpdate),
+    );
 }

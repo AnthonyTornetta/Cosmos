@@ -23,10 +23,25 @@ fn on_save_structure(
     }
 }
 
+// I hate this
+
+// The only way to prevent issues with events is to delay the sending of the chunk init events by 2 frames,
+// so two events are needed to do this. This is really horrible, but the only way I can think of
+// to get this to work ;(
 struct DelayedStructureLoadEvent(Entity);
+struct EvenMoreDelayedStructureLoadEvent(Entity);
 
 fn delayed_structure_event(
     mut event_reader: EventReader<DelayedStructureLoadEvent>,
+    mut event_writer: EventWriter<EvenMoreDelayedStructureLoadEvent>,
+) {
+    for ev in event_reader.iter() {
+        event_writer.send(EvenMoreDelayedStructureLoadEvent(ev.0));
+    }
+}
+
+fn even_more_delayed_structure_event(
+    mut event_reader: EventReader<EvenMoreDelayedStructureLoadEvent>,
     mut chunk_set_event_writer: EventWriter<ChunkInitEvent>,
     query: Query<&Structure>,
 ) {
@@ -89,6 +104,9 @@ fn on_load_structure(
 pub(crate) fn register(app: &mut App) {
     app.add_system(on_save_structure.after(begin_saving).before(done_saving))
         .add_system(on_load_structure.after(begin_loading).before(done_loading))
-        .add_system(delayed_structure_event.in_base_set(CoreSet::PreUpdate))
-        .add_event::<DelayedStructureLoadEvent>();
+        .add_system(even_more_delayed_structure_event.in_base_set(CoreSet::PreUpdate))
+        // After to ensure 1 frame delay
+        .add_system(delayed_structure_event.after(even_more_delayed_structure_event))
+        .add_event::<DelayedStructureLoadEvent>()
+        .add_event::<EvenMoreDelayedStructureLoadEvent>();
 }

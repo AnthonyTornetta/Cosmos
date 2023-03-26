@@ -292,28 +292,28 @@ fn client_sync_players(
                 structure_entity: server_structure_entity,
                 serialized_chunk,
             } => {
-                let s_entity = network_mapping
-                    .client_from_server(&server_structure_entity)
-                    .expect("Got chunk data for structure that doesn't exist on client");
+                if let Some(s_entity) = network_mapping.client_from_server(&server_structure_entity)
+                {
+                    if let Ok(mut structure) = query_structure.get_mut(*s_entity) {
+                        let chunk: Chunk = bincode::deserialize(&serialized_chunk)
+                            .expect("Unable to deserialize chunk from server");
 
-                let mut structure = query_structure.get_mut(*s_entity).unwrap();
+                        let (x, y, z) = (
+                            chunk.structure_x(),
+                            chunk.structure_y(),
+                            chunk.structure_z(),
+                        );
 
-                let chunk: Chunk = bincode::deserialize(&serialized_chunk).unwrap();
+                        structure.set_chunk(chunk);
 
-                let (x, y, z) = (
-                    chunk.structure_x(),
-                    chunk.structure_y(),
-                    chunk.structure_z(),
-                );
-
-                structure.set_chunk(chunk);
-
-                set_chunk_event_writer.send(ChunkInitEvent {
-                    x,
-                    y,
-                    z,
-                    structure_entity: *s_entity,
-                });
+                        set_chunk_event_writer.send(ChunkInitEvent {
+                            x,
+                            y,
+                            z,
+                            structure_entity: *s_entity,
+                        });
+                    }
+                }
             }
             ServerReliableMessages::StructureRemove {
                 entity: server_entity,
