@@ -41,27 +41,47 @@ impl SaveFileIdentifier {
     }
 }
 
-#[derive(Component, Debug, Default, Reflect, Serialize, Deserialize)]
+#[derive(Component, Debug, Reflect, Serialize, Deserialize)]
 pub struct SerializedData {
     save_data: HashMap<String, Vec<u8>>,
 
     /// Used to identify the location this should be saved under
     location: Option<Location>,
+    should_save: bool,
+}
+
+impl Default for SerializedData {
+    fn default() -> Self {
+        Self {
+            save_data: HashMap::default(),
+            location: None,
+            should_save: true,
+        }
+    }
 }
 
 impl SerializedData {
     /// Saves the data to that data id. Will overwrite any existing data at that id.
+    ///
+    /// Will only save if `should_save()` returns true.
     pub fn save(&mut self, data_id: impl Into<String>, data: Vec<u8>) {
-        self.save_data.insert(data_id.into(), data);
+        if self.should_save() {
+            self.save_data.insert(data_id.into(), data);
+        }
     }
 
     /// Calls `bincode::serialize` on the passed in data.
     /// Then sends that data into the `save` method, with the given data id.
+    ///
+    /// Will only serialize & save if `should_save()` returns true.
+
     pub fn serialize_data(&mut self, data_id: impl Into<String>, data: &impl Serialize) {
-        self.save(
-            data_id,
-            bincode::serialize(data).expect("Error serializing data!"),
-        );
+        if self.should_save() {
+            self.save(
+                data_id,
+                bincode::serialize(data).expect("Error serializing data!"),
+            );
+        }
     }
 
     /// Reads the data as raw bytes at the given data id. Use `deserialize_data` for a streamlined way to read the data.
@@ -74,6 +94,19 @@ impl SerializedData {
     pub fn deserialize_data<'a, T: Deserialize<'a>>(&'a self, data_id: &str) -> Option<T> {
         self.read_data(data_id)
             .map(|d| bincode::deserialize(d).expect("Error deserializing data!"))
+    }
+
+    /// Sets whether this should actually be saved - if false, when save and serialize_data is called,
+    /// nothing will happen.
+    pub fn set_should_save(&mut self, should_save: bool) {
+        self.should_save = should_save;
+    }
+
+    /// If this is false, no data will be saved/serialized when `save` and `serialize_data` is called.
+    ///
+    /// No data will be written to the disk either if this is false.
+    pub fn should_save(&self) -> bool {
+        self.should_save
     }
 }
 

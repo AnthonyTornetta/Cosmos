@@ -2,12 +2,18 @@ use bevy::prelude::*;
 use cosmos_core::{
     block::{hardness::BlockHardness, Block},
     events::block_events::BlockChangedEvent,
-    projectiles::laser::LaserCollideEvent,
+    projectiles::laser::{Laser, LaserCollideEvent},
     registry::{identifiable::Identifiable, Registry},
     structure::{block_health::block_destroyed_event::BlockDestroyedEvent, Structure},
 };
 
-use crate::state::GameState;
+use crate::{
+    persistence::{
+        saving::{begin_saving, done_saving, NeedsSaved},
+        SerializedData,
+    },
+    state::GameState,
+};
 
 /**
  * Called when the laser hits a structure at a given position
@@ -78,6 +84,14 @@ fn respond_laser_hit_event(
     }
 }
 
+// Don't bother saving lasers
+fn on_save_laser(mut query: Query<&mut SerializedData, (With<NeedsSaved>, With<Laser>)>) {
+    for mut sd in query.iter_mut() {
+        sd.set_should_save(false);
+    }
+}
+
 pub(crate) fn register(app: &mut App) {
-    app.add_system(respond_laser_hit_event.in_set(OnUpdate(GameState::Playing)));
+    app.add_system(respond_laser_hit_event.in_set(OnUpdate(GameState::Playing)))
+        .add_system(on_save_laser.after(begin_saving).before(done_saving));
 }

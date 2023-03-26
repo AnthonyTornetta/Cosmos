@@ -21,7 +21,6 @@ pub mod persistence;
 pub mod physics;
 pub mod plugin;
 pub mod projectiles;
-pub mod server;
 pub mod state;
 pub mod structure;
 

@@ -60,6 +60,10 @@ pub fn done_saving(
             .remove::<NeedsSaved>()
             .remove::<SerializedData>();
 
+        if !sd.should_save() {
+            continue;
+        }
+
         let serialized = bincode::serialize(&sd).expect("Serialization failed");
 
         let entity_id = if let Some(id) = entity_id {
@@ -88,11 +92,12 @@ pub fn done_saving(
                 if let Some(sector) = &save_file_identifier.sector {
                     sectors_cache
                         .0
-                        .get_mut(sector).map(|set| set.remove(&save_file_identifier.entity_id));
+                        .get_mut(sector)
+                        .map(|set| set.remove(&save_file_identifier.entity_id));
                 }
             }
         } else {
-            println!("No previous path");
+            println!("No previous path no delete.");
         }
 
         let save_identifier = SaveFileIdentifier {
