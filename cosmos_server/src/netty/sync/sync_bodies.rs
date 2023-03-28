@@ -5,7 +5,7 @@ use cosmos_core::{
     entities::player::{render_distance::RenderDistance, Player},
     netty::{
         netty_rigidbody::NettyRigidBody, server_unreliable_messages::ServerUnreliableMessages,
-        NettyChannel,
+        NettyChannel, NoSendEntity,
     },
     physics::location::{Location, SECTOR_DIMENSIONS},
 };
@@ -46,7 +46,7 @@ fn send_bodies(
 fn server_sync_bodies(
     mut server: ResMut<RenetServer>,
     mut tick: ResMut<NetworkTick>,
-    entities: Query<(Entity, &Transform, &Location, &Velocity)>,
+    entities: Query<(Entity, &Transform, &Location, &Velocity), Without<NoSendEntity>>,
     players: Query<(&Player, &RenderDistance, &Location)>,
 ) {
     tick.0 += 1;

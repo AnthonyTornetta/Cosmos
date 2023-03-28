@@ -18,6 +18,7 @@ use crate::block::blocks::AIR_BLOCK_ID;
 use crate::block::hardness::BlockHardness;
 use crate::block::Block;
 use crate::events::block_events::BlockChangedEvent;
+use crate::netty::NoSendEntity;
 use crate::registry::identifiable::Identifiable;
 use crate::registry::Registry;
 use crate::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
@@ -630,12 +631,13 @@ fn add_chunks_system(
         if let Ok((mut structure, body_world)) = structure_query.get_mut(structure_entity) {
             if let Some(chunk) = structure.chunk_from_chunk_coordinates(x, y, z) {
                 if !chunk.is_empty() && structure.chunk_entity(x, y, z).is_none() {
-                    let mut entity_cmds = commands.spawn(PbrBundle {
+                    let mut entity_cmds = commands.spawn((PbrBundle {
                         transform: Transform::from_translation(
                             structure.chunk_relative_position(x, y, z),
                         ),
                         ..Default::default()
-                    });
+                    },
+                    NoSendEntity));
 
                     if let Some(bw) = body_world {
                         entity_cmds.insert(*bw);
