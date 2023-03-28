@@ -27,7 +27,7 @@ pub struct Location {
     pub sector_z: i64,
 
     #[serde(skip)]
-    pub last_transform_loc: Vec3,
+    pub last_transform_loc: Option<Vec3>,
 }
 
 impl Display for Location {
@@ -69,7 +69,7 @@ impl Location {
             sector_x,
             sector_y,
             sector_z,
-            last_transform_loc: local,
+            last_transform_loc: Some(local),
         }
     }
 
@@ -123,10 +123,13 @@ impl Location {
     }
 
     pub fn apply_updates(&mut self, translation: Vec3) {
-        self.local += translation - self.last_transform_loc;
+        self.local += translation
+            - self
+                .last_transform_loc
+                .expect("last_transform_loc must be set for this to work properly.");
         self.fix_bounds();
 
-        self.last_transform_loc = translation;
+        self.last_transform_loc = Some(translation);
     }
 
     /// Returns the coordinates of this location based of 0, 0, 0.
@@ -157,7 +160,7 @@ fn bubble(
     if let Ok((mut location, transform, children)) = query.get_mut(entity) {
         location.set_from(loc);
         location.local += transform.translation;
-        location.last_transform_loc = transform.translation;
+        location.last_transform_loc = Some(transform.translation);
         location.fix_bounds();
 
         if let Some(children) = children {

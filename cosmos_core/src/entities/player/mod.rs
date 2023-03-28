@@ -1,3 +1,5 @@
+pub mod render_distance;
+
 use bevy::{
     prelude::{App, Component},
     reflect::{FromReflect, Reflect},

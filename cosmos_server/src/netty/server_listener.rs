@@ -56,7 +56,7 @@ pub fn server_listen_messages(
                             change_player_query.get_mut(*player_entity)
                         {
                             location.set_from(&body.location);
-                            location.last_transform_loc = transform.translation;
+                            location.last_transform_loc = Some(transform.translation);
                             currently_looking.rotation = looking;
                             velocity.linvel = body.body_vel.linvel.into();
                         }

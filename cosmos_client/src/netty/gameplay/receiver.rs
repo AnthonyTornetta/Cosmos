@@ -155,7 +155,7 @@ fn client_sync_players(
 
                 // This should be set via the server, but just in case,
                 // this will avoid any position mismatching
-                body.location.last_transform_loc = body.location.local;
+                body.location.last_transform_loc = Some(body.location.local);
 
                 entity_cmds.insert((
                     PbrBundle {
@@ -437,7 +437,7 @@ fn sync_transforms_and_locations(
         for (mut transform, mut location) in trans_query_no_parent.iter_mut() {
             let trans = world_location.relative_coords_to(&location);
             transform.translation = trans;
-            location.last_transform_loc = trans;
+            location.last_transform_loc = Some(trans);
         }
     }
 }
