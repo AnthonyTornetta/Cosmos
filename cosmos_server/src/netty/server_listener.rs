@@ -25,6 +25,7 @@ use crate::events::{
 };
 
 use super::network_helpers::ServerLobby;
+use super::sync::entities::RequestedEntityEvent;
 
 pub fn server_listen_messages(
     mut commands: Commands,
@@ -44,6 +45,7 @@ pub fn server_listen_messages(
         (&Transform, &mut Location, &mut PlayerLooking, &mut Velocity),
         With<Player>,
     >,
+    mut requested_entities_writer: EventWriter<RequestedEntityEvent>,
 ) {
     for client_id in server.clients_id().into_iter() {
         while let Some(message) = server.receive_message(client_id, NettyChannel::Unreliable.id()) {
@@ -208,6 +210,11 @@ pub fn server_listen_messages(
                             }
                             e.insert(render_distance);
                         }
+                    }
+                }
+                ClientReliableMessages::RequestEntityData { entity } => {
+                    if commands.get_entity(entity).is_some() {
+                        requested_entities_writer.send(RequestedEntityEvent { client_id, entity });
                     }
                 }
             }

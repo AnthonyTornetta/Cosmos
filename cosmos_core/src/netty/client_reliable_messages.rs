@@ -40,4 +40,8 @@ pub enum ClientReliableMessages {
     ChangeRenderDistance {
         render_distance: RenderDistance,
     },
+    /// This does NOT guarentee the entity will be sent - only requests it
+    RequestEntityData {
+        entity: Entity,
+    },
 }

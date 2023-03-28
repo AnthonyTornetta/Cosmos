@@ -85,6 +85,11 @@ fn update_crosshair(
     }
 }
 
+#[derive(Resource, Debug, Default)]
+struct RequestedEntities {
+    entities: Vec<(Entity, f32)>,
+}
+
 fn client_sync_players(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -99,8 +104,21 @@ fn client_sync_players(
     blocks: Res<Registry<Block>>,
     mut pilot_change_event_writer: EventWriter<ChangePilotEvent>,
     mut set_ship_movement_event: EventWriter<SetShipMovementEvent>,
+    mut requested_entities: ResMut<RequestedEntities>,
+    time: Res<Time>,
 ) {
     let client_id = client.client_id();
+
+    let mut new_entities = Vec::with_capacity(requested_entities.entities.len());
+
+    for ent in requested_entities.entities.iter_mut() {
+        ent.1 += time.delta_seconds();
+        if ent.1 < 2.0 {
+            new_entities.push(*ent);
+        }
+    }
+
+    requested_entities.entities = new_entities;
 
     while let Some(message) = client.receive_message(NettyChannel::Unreliable.id()) {
         let msg: ServerUnreliableMessages = bincode::deserialize(&message).unwrap();
@@ -121,6 +139,20 @@ fn client_sync_players(
                             velocity.linvel = body.body_vel.linvel.into();
                             velocity.angvel = body.body_vel.angvel.into();
                         }
+                    } else if !requested_entities
+                        .entities
+                        .iter()
+                        .any(|x| x.0 == *server_entity)
+                    {
+                        requested_entities.entities.push((*server_entity, 0.0));
+
+                        client.send_message(
+                            NettyChannel::Reliable.id(),
+                            bincode::serialize(&ClientReliableMessages::RequestEntityData {
+                                entity: *server_entity,
+                            })
+                            .unwrap(),
+                        );
                     }
                 }
             }
@@ -445,17 +477,18 @@ fn sync_transforms_and_locations(
 }
 
 pub(crate) fn register(app: &mut App) {
-    app.add_system(
-        client_sync_players
-            .run_if(in_state(GameState::Playing).or_else(in_state(GameState::LoadingWorld))),
-    )
-    .add_systems(
-        (
-            update_crosshair,
-            insert_last_rotation,
-            sync_transforms_and_locations.after(client_sync_players),
-            bubble_down_locations.after(sync_transforms_and_locations),
+    app.insert_resource(RequestedEntities::default())
+        .add_system(
+            client_sync_players
+                .run_if(in_state(GameState::Playing).or_else(in_state(GameState::LoadingWorld))),
         )
-            .in_set(OnUpdate(GameState::Playing)),
-    );
+        .add_systems(
+            (
+                update_crosshair,
+                insert_last_rotation,
+                sync_transforms_and_locations.after(client_sync_players),
+                bubble_down_locations.after(sync_transforms_and_locations),
+            )
+                .in_set(OnUpdate(GameState::Playing)),
+        );
 }
