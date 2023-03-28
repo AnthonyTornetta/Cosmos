@@ -1,6 +1,8 @@
 use bevy::prelude::{Component, Entity};
 use serde::{Deserialize, Serialize};
 
+use crate::entities::player::render_distance::RenderDistance;
+
 #[derive(Debug, Serialize, Deserialize, Component)]
 pub enum ClientReliableMessages {
     PlayerDisconnect,
@@ -35,4 +37,7 @@ pub enum ClientReliableMessages {
         ship_entity: Entity,
     },
     StopPiloting,
+    ChangeRenderDistance {
+        render_distance: RenderDistance,
+    },
 }

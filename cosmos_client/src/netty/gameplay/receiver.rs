@@ -6,7 +6,7 @@ use bevy_rapier3d::prelude::*;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     block::Block,
-    entities::player::Player,
+    entities::player::{render_distance::RenderDistance, Player},
     events::{block_events::BlockChangedEvent, structure::change_pilot_event::ChangePilotEvent},
     inventory::Inventory,
     netty::{
@@ -146,6 +146,7 @@ fn client_sync_players(
                 entity: server_entity,
                 name,
                 inventory_serialized,
+                render_distance: _,
             } => {
                 println!("Player {} ({}) connected!", name.as_str(), id);
 
@@ -189,6 +190,7 @@ fn client_sync_players(
                 if client_id == id {
                     entity_cmds
                         .insert(LocalPlayer::default())
+                        .insert(RenderDistance::default())
                         .with_children(|parent| {
                             parent
                                 .spawn(Camera3dBundle {

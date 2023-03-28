@@ -1,6 +1,8 @@
 use bevy::prelude::{Component, Entity};
 use serde::{Deserialize, Serialize};
 
+use crate::entities::player::render_distance::RenderDistance;
+
 use super::netty_rigidbody::NettyRigidBody;
 
 #[derive(Debug, Serialize, Deserialize, Component)]
@@ -11,6 +13,7 @@ pub enum ServerReliableMessages {
         id: u64,
         body: NettyRigidBody,
         inventory_serialized: Vec<u8>,
+        render_distance: Option<RenderDistance>,
     },
     PlayerRemove {
         id: u64,

@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use bevy_renet::renet::{RenetServer, ServerEvent};
+use cosmos_core::entities::player::render_distance::RenderDistance;
 use cosmos_core::inventory::Inventory;
 use cosmos_core::item::Item;
 use cosmos_core::netty::server_reliable_messages::ServerReliableMessages;
@@ -105,6 +106,7 @@ fn handle_events_system(
         &Location,
         &Velocity,
         &Inventory,
+        &RenderDistance,
     )>,
     player_worlds: Query<(&Location, &WorldWithin, &PhysicsWorld), (With<Player>, Without<Parent>)>,
     structure_type: Query<(Option<&Ship>, Option<&Planet>)>,
@@ -119,7 +121,9 @@ fn handle_events_system(
                 println!("Client {id} connected");
                 visualizer.add_client(*id);
 
-                for (entity, player, transform, location, velocity, inventory) in players.iter() {
+                for (entity, player, transform, location, velocity, inventory, render_distance) in
+                    players.iter()
+                {
                     let body = NettyRigidBody::new(velocity, transform.rotation, *location);
 
                     let msg = bincode::serialize(&ServerReliableMessages::PlayerCreate {
@@ -128,6 +132,7 @@ fn handle_events_system(
                         body,
                         name: player.name.clone(),
                         inventory_serialized: bincode::serialize(inventory).unwrap(),
+                        render_distance: Some(*render_distance),
                     })
                     .unwrap();
 
@@ -179,6 +184,7 @@ fn handle_events_system(
                     name: String::from(name),
                     body: netty_body,
                     inventory_serialized,
+                    render_distance: None,
                 })
                 .unwrap();
 

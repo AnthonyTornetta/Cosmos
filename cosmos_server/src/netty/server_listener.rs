@@ -198,6 +198,18 @@ pub fn server_listen_messages(
                         }
                     }
                 }
+                ClientReliableMessages::ChangeRenderDistance {
+                    mut render_distance,
+                } => {
+                    if let Some(player_entity) = lobby.players.get(&client_id) {
+                        if let Some(mut e) = commands.get_entity(*player_entity) {
+                            if render_distance.sector_range > 8 {
+                                render_distance.sector_range = 8;
+                            }
+                            e.insert(render_distance);
+                        }
+                    }
+                }
             }
         }
     }

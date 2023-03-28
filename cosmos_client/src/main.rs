@@ -1,6 +1,7 @@
 pub mod asset;
 pub mod block;
 pub mod camera;
+pub mod entities;
 pub mod events;
 pub mod input;
 pub mod interactions;
@@ -372,6 +373,7 @@ fn main() {
     projectiles::register(&mut app);
     materials::register(&mut app);
     loading::register(&mut app);
+    entities::register(&mut app);
 
     app.run();
 }
