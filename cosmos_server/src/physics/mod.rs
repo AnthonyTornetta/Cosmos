@@ -262,7 +262,7 @@ fn sync_transforms_and_locations(
         // The location the client sent should override it.
         if !players_query.contains(entity) {
             if location.last_transform_loc.is_none() {
-                location.last_transform_loc = Some(Vec3::ZERO);
+                location.last_transform_loc = Some(location.local);
             }
 
             location.apply_updates(transform.translation);
