@@ -38,9 +38,9 @@ fn unload_far(
             }
         }
         // uncomment if need to generate planet again
-        else {
-            continue;
-        }
+        // else {
+        //     continue;
+        // }
 
         println!("Flagged for saving + unloading!");
 

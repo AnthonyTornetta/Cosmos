@@ -235,7 +235,7 @@ fn sync_transforms_and_locations(
         (Without<PlayerWorld>, Without<Parent>),
     >,
     mut trans_query_with_parent: Query<
-        (Entity, &mut Transform, &mut Location, &WorldWithin),
+        (Entity, &mut Transform, &mut Location),
         (Without<PlayerWorld>, With<Parent>),
     >,
     players_query: Query<(&WorldWithin, Entity), With<Player>>,
@@ -246,44 +246,26 @@ fn sync_transforms_and_locations(
 
     mut commands: Commands,
 ) {
-    for (entity, transform, mut location, ww) in trans_query_no_parent.iter_mut() {
+    for (entity, transform, mut location, _) in trans_query_no_parent.iter_mut() {
         // Server transforms for players should NOT be applied to the location.
         // The location the client sent should override it.
         if !players_query.contains(entity) {
-            let apply_updates = if location.last_transform_loc.is_none() {
-                if let Ok((_, _, loc)) = world_query.get(ww.0) {
-                    location.last_transform_loc = Some(loc.relative_coords_to(&location));
-                    true
-                } else {
-                    false
-                }
-            } else {
-                false
-            };
-
-            if apply_updates {
-                location.apply_updates(transform.translation);
+            if location.last_transform_loc.is_none() {
+                location.last_transform_loc = Some(Vec3::ZERO);
             }
+
+            location.apply_updates(transform.translation);
         }
     }
-    for (entity, transform, mut location, ww) in trans_query_with_parent.iter_mut() {
+    for (entity, transform, mut location) in trans_query_with_parent.iter_mut() {
         // Server transforms for players should NOT be applied to the location.
         // The location the client sent should override it.
         if !players_query.contains(entity) {
-            let apply_updates = if location.last_transform_loc.is_none() {
-                if let Ok((_, _, loc)) = world_query.get(ww.0) {
-                    location.last_transform_loc = Some(loc.relative_coords_to(&location));
-                    true
-                } else {
-                    false
-                }
-            } else {
-                false
-            };
-
-            if apply_updates {
-                location.apply_updates(transform.translation);
+            if location.last_transform_loc.is_none() {
+                location.last_transform_loc = Some(Vec3::ZERO);
             }
+
+            location.apply_updates(transform.translation);
         }
     }
 
@@ -302,7 +284,7 @@ fn sync_transforms_and_locations(
                 .get(player_entity)
                 .map(|(_, _, loc, _)| loc)
                 .or_else(|_| match trans_query_with_parent.get(player_entity) {
-                    Ok((_, _, loc, _)) => Ok(loc),
+                    Ok((_, _, loc)) => Ok(loc),
                     Err(x) => Err(x),
                 })
                 .expect("The above loop guarantees this is valid");

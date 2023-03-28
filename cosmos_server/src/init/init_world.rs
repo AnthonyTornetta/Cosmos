@@ -26,7 +26,8 @@ pub fn register(app: &mut App) {
     );
 
     app.insert_resource(ResourceWrapper(noise))
-        .add_startup_system(create_world); // go to player_loading.rs and uncomment the section specified if this is active.
+        // .add_startup_system(create_world); // go to player_loading.rs and uncomment the section specified if this is active.
+        ;
 }
 
 #[allow(dead_code)]

@@ -429,7 +429,8 @@ fn added_location(
     if let Ok(local_loc) = local_player.get_single() {
         for mut loc in query.iter_mut() {
             if loc.last_transform_loc.is_none() {
-                loc.last_transform_loc = Some(local_loc.relative_coords_to(&loc));
+                let trans = local_loc.relative_coords_to(&loc);
+                loc.last_transform_loc = Some(trans);
             }
         }
     }
