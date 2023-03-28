@@ -25,8 +25,8 @@ pub fn register(app: &mut App) {
             % u32::MAX as u128) as u32,
     );
 
-    app.insert_resource(ResourceWrapper(noise));
-    // .add_startup_system(create_world);
+    app.insert_resource(ResourceWrapper(noise))
+        .add_startup_system(create_world); // go to player_loading.rs and uncomment the section specified if this is active.
 }
 
 #[allow(dead_code)]

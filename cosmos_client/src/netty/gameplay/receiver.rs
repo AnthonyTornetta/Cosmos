@@ -422,6 +422,19 @@ fn client_sync_players(
     }
 }
 
+fn added_location(
+    mut query: Query<&mut Location, (Without<LocalPlayer>, Added<Location>)>,
+    local_player: Query<&Location, With<LocalPlayer>>,
+) {
+    if let Ok(local_loc) = local_player.get_single() {
+        for mut loc in query.iter_mut() {
+            if loc.last_transform_loc.is_none() {
+                loc.last_transform_loc = Some(local_loc.relative_coords_to(&loc));
+            }
+        }
+    }
+}
+
 fn sync_transforms_and_locations(
     mut trans_query_no_parent: Query<
         (&mut Transform, &mut Location),
@@ -486,7 +499,8 @@ pub(crate) fn register(app: &mut App) {
             (
                 update_crosshair,
                 insert_last_rotation,
-                sync_transforms_and_locations.after(client_sync_players),
+                added_location.after(client_sync_players),
+                sync_transforms_and_locations.after(added_location),
                 bubble_down_locations.after(sync_transforms_and_locations),
             )
                 .in_set(OnUpdate(GameState::Playing)),
