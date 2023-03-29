@@ -131,7 +131,7 @@ pub fn done_saving(
     }
 }
 
-fn write_file(save_identifier: &SaveFileIdentifier, serialized: &Vec<u8>) -> io::Result<()> {
+fn write_file(save_identifier: &SaveFileIdentifier, serialized: &[u8]) -> io::Result<()> {
     println!("New save file ID: {save_identifier:?}");
 
     let path = save_identifier.get_save_file_path();
@@ -140,7 +140,7 @@ fn write_file(save_identifier: &SaveFileIdentifier, serialized: &Vec<u8>) -> io:
 
     fs::create_dir_all(directory)?;
 
-    let file = fs::File::create(format!("{path}"))?;
+    let file = fs::File::create(&path)?;
     let mut zipped = ZipWriter::new(file);
 
     let options = FileOptions::default()
