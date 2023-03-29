@@ -113,7 +113,7 @@ fn client_sync_players(
 
     for ent in requested_entities.entities.iter_mut() {
         ent.1 += time.delta_seconds();
-        if ent.1 < 2.0 {
+        if ent.1 < 10.0 {
             new_entities.push(*ent);
         }
     }
@@ -180,6 +180,12 @@ fn client_sync_players(
                 inventory_serialized,
                 render_distance: _,
             } => {
+                // Prevents creation of duplicate players
+                if lobby.players.contains_key(&id) {
+                    println!("WARNING - DUPLICATE PLAYER RECEIVED {id}");
+                    break;
+                }
+
                 println!("Player {} ({}) connected!", name.as_str(), id);
 
                 let mut entity_cmds = commands.spawn_empty();
@@ -276,6 +282,7 @@ fn client_sync_players(
                 width,
                 body,
             } => {
+                println!("GOT PLANET CREATE!");
                 let mut entity_cmds = commands.spawn_empty();
                 let mut structure =
                     Structure::new(width as usize, height as usize, length as usize);
@@ -296,6 +303,7 @@ fn client_sync_players(
                 height,
                 length,
             } => {
+                println!("GOT SHIP CREATE!");
                 let mut entity_cmds = commands.spawn_empty();
                 let mut structure =
                     Structure::new(width as usize, height as usize, length as usize);
