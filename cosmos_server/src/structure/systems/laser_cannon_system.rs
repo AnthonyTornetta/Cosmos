@@ -3,6 +3,7 @@ use bevy_rapier3d::prelude::{PhysicsWorld, Velocity, DEFAULT_WORLD_ID};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     netty::{server_laser_cannon_system_messages::ServerLaserCannonSystemMessages, NettyChannel},
+    physics::location::Location,
     projectiles::laser::Laser,
     structure::{
         systems::{
@@ -24,6 +25,7 @@ fn update_system(
     systems: Query<(
         &Systems,
         &Structure,
+        &Location,
         &GlobalTransform,
         &Velocity,
         Option<&PhysicsWorld>,
@@ -33,7 +35,7 @@ fn update_system(
     mut server: ResMut<RenetServer>,
 ) {
     for (mut cannon_system, system) in query.iter_mut() {
-        if let Ok((systems, structure, global_transform, ship_velocity, body_world)) =
+        if let Ok((systems, structure, location, global_transform, ship_velocity, body_world)) =
             systems.get(system.structure_entity)
         {
             if let Ok(mut energy_storage_system) = systems.query_mut(&mut es_query) {
@@ -46,11 +48,12 @@ fn update_system(
                         if energy_storage_system.get_energy() >= line.property.energy_per_shot {
                             energy_storage_system.decrease_energy(line.property.energy_per_shot);
 
-                            let position = structure.block_world_position(
+                            let location = structure.block_world_position(
                                 line.start.x,
                                 line.start.y,
                                 line.start.z,
                                 global_transform,
+                                &location,
                             );
 
                             // AT SOME POINT, THE NEGATIVE SIGN HAS TO BE REMOVED HERE!!!!!
@@ -70,7 +73,7 @@ fn update_system(
                                 body_world.map(|bw| bw.world_id).unwrap_or(DEFAULT_WORLD_ID);
 
                             Laser::spawn(
-                                position,
+                                location,
                                 laser_velocity,
                                 ship_velocity.linvel,
                                 strength,
@@ -86,7 +89,7 @@ fn update_system(
                                 NettyChannel::LaserCannonSystem.id(),
                                 bincode::serialize(&ServerLaserCannonSystemMessages::CreateLaser {
                                     color,
-                                    position,
+                                    location,
                                     laser_velocity,
                                     firer_velocity: ship_velocity.linvel,
                                     strength,

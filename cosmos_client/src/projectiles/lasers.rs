@@ -30,7 +30,7 @@ fn lasers_netty(
         match msg {
             ServerLaserCannonSystemMessages::CreateLaser {
                 color,
-                position,
+                location,
                 laser_velocity,
                 firer_velocity,
                 strength,
@@ -44,7 +44,7 @@ fn lasers_netty(
                 }
 
                 Laser::spawn_custom_pbr(
-                    position,
+                    location,
                     laser_velocity,
                     firer_velocity,
                     strength,

@@ -1,6 +1,6 @@
 use std::{
     fmt::Display,
-    ops::{Add, AddAssign},
+    ops::{Add, AddAssign, Sub},
 };
 
 use bevy::{
@@ -46,6 +46,21 @@ impl Add<Vec3> for Location {
     fn add(self, rhs: Vec3) -> Self::Output {
         let mut loc = Location::new(
             self.local + rhs,
+            self.sector_x,
+            self.sector_y,
+            self.sector_z,
+        );
+        loc.fix_bounds();
+        loc
+    }
+}
+
+impl Sub<Vec3> for Location {
+    type Output = Location;
+
+    fn sub(self, rhs: Vec3) -> Self::Output {
+        let mut loc = Location::new(
+            self.local - rhs,
             self.sector_x,
             self.sector_y,
             self.sector_z,
@@ -132,7 +147,7 @@ impl Location {
         self.last_transform_loc = Some(translation);
     }
 
-    /// Returns the coordinates of this location based of 0, 0, 0.
+    /// Returns the coordinates of this location based off 0, 0, 0.
     ///
     /// Useful for very long-distance calculations/displaying
     pub fn absolute_coords(&self) -> Vector3<BigDecimal> {
@@ -146,6 +161,17 @@ impl Location {
             BigDecimal::from_i64(self.sector_x).unwrap() * &sector_dims + local_x,
             BigDecimal::from_i64(self.sector_y).unwrap() * &sector_dims + local_y,
             BigDecimal::from_i64(self.sector_z).unwrap() * &sector_dims + local_z,
+        )
+    }
+
+    /// Returns the coordinates of this location based off 0, 0, 0.
+    ///
+    /// Useful for short/medium-distance calculations/displaying
+    pub fn absolute_coords_f32(&self) -> Vec3 {
+        Vec3::new(
+            self.sector_x as f32 * SECTOR_DIMENSIONS + self.local.x,
+            self.sector_y as f32 * SECTOR_DIMENSIONS + self.local.y,
+            self.sector_z as f32 * SECTOR_DIMENSIONS + self.local.z,
         )
     }
 }

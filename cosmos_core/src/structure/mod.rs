@@ -19,6 +19,7 @@ use crate::block::hardness::BlockHardness;
 use crate::block::Block;
 use crate::events::block_events::BlockChangedEvent;
 use crate::netty::NoSendEntity;
+use crate::physics::location::Location;
 use crate::registry::identifiable::Identifiable;
 use crate::registry::Registry;
 use crate::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
@@ -380,8 +381,9 @@ impl Structure {
         y: usize,
         z: usize,
         body_position: &GlobalTransform,
-    ) -> Vec3 {
-        body_position.translation()
+        this_location: &Location,
+    ) -> Location {
+        *this_location
             + body_position
                 .affine()
                 .matrix3

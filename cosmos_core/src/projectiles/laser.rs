@@ -1,8 +1,9 @@
 use bevy::{
     pbr::{NotShadowCaster, NotShadowReceiver},
     prelude::{
-        App, Commands, Component, DespawnRecursiveExt, Entity, EventWriter, GlobalTransform,
-        Parent, PbrBundle, Quat, Query, Res, Transform, Vec3, With, Without,
+        App, Commands, Component, CoreSet, DespawnRecursiveExt, Entity, EventWriter,
+        GlobalTransform, IntoSystemConfig, Parent, PbrBundle, Quat, Query, Res, Transform, Vec3,
+        With, Without,
     },
     time::Time,
 };
@@ -11,7 +12,7 @@ use bevy_rapier3d::prelude::{
     RigidBody, Sensor, Velocity, WorldId, DEFAULT_WORLD_ID,
 };
 
-use crate::netty::NoSendEntity;
+use crate::{netty::NoSendEntity, physics::location::Location};
 
 #[derive(Debug)]
 /// The entity hit represents the entity hit by the laser
@@ -61,7 +62,7 @@ pub struct Laser {
     active: bool,
     pub strength: f32,
 
-    last_position: Vec3,
+    last_position: Location,
 }
 
 impl Laser {
@@ -72,7 +73,7 @@ impl Laser {
     /// Base strength is 100?
     ///
     pub fn spawn_custom_pbr(
-        position: Vec3,
+        location: Location,
         laser_velocity: Vec3,
         firer_velocity: Vec3,
         strength: f32,
@@ -82,13 +83,9 @@ impl Laser {
         world_id: WorldId,
         commands: &mut Commands,
     ) -> Entity {
-        pbr.transform = Transform {
-            translation: position,
-            rotation: Quat::IDENTITY,
-            scale: Vec3::ONE,
-        };
+        pbr.transform = Transform::default();
 
-        pbr.transform.look_at(position + laser_velocity, Vec3::Y);
+        pbr.transform.look_at(laser_velocity, Vec3::Y);
 
         let mut ent_cmds = commands.spawn_empty();
 
@@ -98,8 +95,9 @@ impl Laser {
             Laser {
                 strength,
                 active: true,
-                last_position: position,
+                last_position: location,
             },
+            location,
             pbr,
             RigidBody::Dynamic,
             LockedAxes::ROTATION_LOCKED,
@@ -131,7 +129,7 @@ impl Laser {
     /// Base strength is 100
     ///
     pub fn spawn(
-        position: Vec3,
+        position: Location,
         laser_velocity: Vec3,
         firer_velocity: Vec3,
         strength: f32,
@@ -160,6 +158,7 @@ fn handle_events(
     mut query: Query<
         (
             Option<&PhysicsWorld>,
+            &Location,
             &GlobalTransform,
             Entity,
             Option<&NoCollide>,
@@ -175,13 +174,21 @@ fn handle_events(
     parent_query: Query<&Parent>,
     transform_query: Query<&GlobalTransform, Without<Laser>>,
 ) {
-    for (world, transform, laser_entity, no_collide_entity, mut laser, velocity, collider) in
-        query.iter_mut()
+    for (
+        world,
+        location,
+        transform,
+        laser_entity,
+        no_collide_entity,
+        mut laser,
+        velocity,
+        collider,
+    ) in query.iter_mut()
     {
         if laser.active {
             let last_pos = laser.last_position;
-            let delta_position = transform.translation() - last_pos;
-            laser.last_position = transform.translation();
+            let delta_position = last_pos.relative_coords_to(&location);
+            laser.last_position = *location;
 
             // Pass 1 second as the time & delta_position as the velocity because
             // it simulates the laser moving over the period it moved in 1 second
@@ -189,7 +196,7 @@ fn handle_events(
 
             if let Ok(Some((entity, toi))) = rapier_context.cast_shape(
                 world.map(|bw| bw.world_id).unwrap_or(DEFAULT_WORLD_ID),
-                last_pos - delta_position, // sometimes lasers pass through things that are next to where they are spawned, thus we check starting a bit behind them
+                (last_pos - delta_position).absolute_coords_f32(), // sometimes lasers pass through things that are next to where they are spawned, thus we check starting a bit behind them
                 Quat::from_affine3(&transform.affine()),
                 delta_position * 2.0, // * 2.0 to account for checking behind the laser
                 collider,
@@ -254,7 +261,7 @@ fn despawn_lasers(
 }
 
 pub(crate) fn register(app: &mut App) {
-    app.add_system(handle_events)
-        .add_system(despawn_lasers)
+    app.add_system(handle_events.in_base_set(CoreSet::PreUpdate))
+        .add_system(despawn_lasers.in_base_set(CoreSet::PreUpdate))
         .add_event::<LaserCollideEvent>();
 }
