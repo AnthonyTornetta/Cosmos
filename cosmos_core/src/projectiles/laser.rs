@@ -1,9 +1,8 @@
 use bevy::{
     pbr::{NotShadowCaster, NotShadowReceiver},
     prelude::{
-        App, Commands, Component, CoreSet, DespawnRecursiveExt, Entity, EventWriter,
-        GlobalTransform, IntoSystemConfig, Parent, PbrBundle, Quat, Query, Res, Transform, Vec3,
-        With, Without,
+        App, Commands, Component, DespawnRecursiveExt, Entity, EventWriter, GlobalTransform,
+        Parent, PbrBundle, Quat, Query, Res, Transform, Vec3, With, Without,
     },
     time::Time,
 };
@@ -261,7 +260,6 @@ fn despawn_lasers(
 }
 
 pub(crate) fn register(app: &mut App) {
-    app.add_system(handle_events.in_base_set(CoreSet::PreUpdate))
-        .add_system(despawn_lasers.in_base_set(CoreSet::PreUpdate))
+    app.add_systems((handle_events, despawn_lasers))
         .add_event::<LaserCollideEvent>();
 }
