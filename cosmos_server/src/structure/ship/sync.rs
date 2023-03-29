@@ -7,7 +7,7 @@ use cosmos_core::{
         NettyChannel,
     },
     physics::location::Location,
-    structure::{ship::Ship, Structure},
+    structure::{loading::ChunksNeedLoaded, ship::Ship, Structure},
 };
 
 use crate::netty::sync::entities::RequestedEntityEvent;
@@ -28,6 +28,9 @@ fn on_request_planet(
                     width: structure.chunks_width() as u32,
                     height: structure.chunks_height() as u32,
                     length: structure.chunks_length() as u32,
+                    chunks_needed: ChunksNeedLoaded {
+                        amount_needed: structure.all_chunks_iter(false).len(),
+                    },
                 })
                 .unwrap(),
             );

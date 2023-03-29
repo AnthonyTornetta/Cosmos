@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::structure::{
-    loading::ChunksNeedLoaded,
     ship::{ship_builder::TShipBuilder, Ship},
     Structure,
 };
@@ -51,10 +50,6 @@ fn on_load_structure(
                     builder.insert_ship(&mut entity_cmd, loc, vel, &mut structure);
 
                     let entity = entity_cmd.id();
-
-                    // entity_cmd.insert(ChunksNeedLoaded {
-                    //     amount_needed: structure.all_chunks_iter(false).len(),
-                    // });
 
                     event_writer.send(DelayedStructureLoadEvent(entity));
 

@@ -3,11 +3,12 @@ use crate::structure::{
     Structure,
 };
 use bevy::{
-    prelude::{Added, App, Commands, Component, Entity, EventReader, EventWriter, Query},
+    prelude::{Added, App, Commands, Component, Entity, EventReader, EventWriter, Query, Without},
     reflect::{FromReflect, Reflect},
 };
+use serde::{Deserialize, Serialize};
 
-#[derive(Component, Debug, Reflect, FromReflect)]
+#[derive(Component, Debug, Reflect, FromReflect, Serialize, Deserialize, Clone, Copy)]
 pub struct ChunksNeedLoaded {
     pub amount_needed: usize,
 }
@@ -19,7 +20,9 @@ fn listen_chunk_done_loading(
     mut commands: Commands,
 ) {
     for ev in event.iter() {
+        println!("Got Chunk Set Event");
         let Ok(mut chunks_needed) = query.get_mut(ev.structure_entity) else {
+            println!("No chunks need loaded!");
             continue;
         };
 
@@ -37,12 +40,14 @@ fn listen_chunk_done_loading(
                     structure_entity: ev.structure_entity,
                 });
             }
+        } else {
+            println!("Amount needed was 0!");
         }
     }
 }
 
 fn listen_structure_added(
-    query: Query<(Entity, &Structure), Added<Structure>>,
+    query: Query<(Entity, &Structure), (Added<Structure>, Without<ChunksNeedLoaded>)>,
     mut commands: Commands,
 ) {
     for (entity, structure) in query.iter() {

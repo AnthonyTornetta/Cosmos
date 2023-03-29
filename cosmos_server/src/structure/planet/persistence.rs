@@ -1,6 +1,5 @@
 use bevy::prelude::*;
 use cosmos_core::structure::{
-    loading::ChunksNeedLoaded,
     planet::{planet_builder::TPlanetBuilder, Planet},
     Structure,
 };

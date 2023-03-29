@@ -283,6 +283,7 @@ fn client_sync_players(
                 height,
                 width,
                 body,
+                chunks_needed,
             } => {
                 if network_mapping.contains_server_entity(server_entity) {
                     println!("Got duplicate planet! Is the server lagging?");
@@ -296,7 +297,7 @@ fn client_sync_players(
                 let builder = ClientPlanetBuilder::default();
                 builder.insert_planet(&mut entity_cmds, body.location, &mut structure);
 
-                entity_cmds.insert(structure).insert(NeedsPopulated);
+                entity_cmds.insert((structure, NeedsPopulated, chunks_needed));
 
                 let entity = entity_cmds.id();
 
@@ -308,6 +309,7 @@ fn client_sync_players(
                 width,
                 height,
                 length,
+                chunks_needed,
             } => {
                 if network_mapping.contains_server_entity(server_entity) {
                     println!("Got duplicate ship! Is the server lagging?");
@@ -326,7 +328,7 @@ fn client_sync_players(
                     &mut structure,
                 );
 
-                entity_cmds.insert(structure);
+                entity_cmds.insert((structure, chunks_needed));
 
                 let entity = entity_cmds.id();
 

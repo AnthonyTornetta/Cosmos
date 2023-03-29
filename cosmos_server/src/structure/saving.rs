@@ -5,9 +5,8 @@ use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
     physics::location::Location,
     structure::{
-        loading::ChunksNeedLoaded, planet::planet_builder::TPlanetBuilder,
-        ship::ship_builder::TShipBuilder, structure_iterator::ChunkIteratorResult, ChunkInitEvent,
-        Structure,
+        planet::planet_builder::TPlanetBuilder, ship::ship_builder::TShipBuilder,
+        structure_iterator::ChunkIteratorResult, ChunkInitEvent, Structure,
     },
 };
 

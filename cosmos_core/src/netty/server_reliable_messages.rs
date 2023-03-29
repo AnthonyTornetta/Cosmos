@@ -1,7 +1,9 @@
 use bevy::prelude::{Component, Entity};
 use serde::{Deserialize, Serialize};
 
-use crate::entities::player::render_distance::RenderDistance;
+use crate::{
+    entities::player::render_distance::RenderDistance, structure::loading::ChunksNeedLoaded,
+};
 
 use super::netty_rigidbody::NettyRigidBody;
 
@@ -31,6 +33,7 @@ pub enum ServerReliableMessages {
         width: u32,
         height: u32,
         length: u32,
+        chunks_needed: ChunksNeedLoaded,
     },
     ShipCreate {
         entity: Entity,
@@ -38,6 +41,7 @@ pub enum ServerReliableMessages {
         width: u32,
         height: u32,
         length: u32,
+        chunks_needed: ChunksNeedLoaded,
     },
     EntityInventory {
         serialized_inventory: Vec<u8>,
