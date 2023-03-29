@@ -80,9 +80,10 @@ impl Laser {
         mut pbr: PbrBundle,
         time: &Time,
         world_id: WorldId,
+        world_location: &Location,
         commands: &mut Commands,
     ) -> Entity {
-        pbr.transform = Transform::default();
+        pbr.transform = Transform::from_translation(world_location.relative_coords_to(&location));
 
         pbr.transform.look_at(laser_velocity, Vec3::Y);
 
@@ -135,6 +136,7 @@ impl Laser {
         no_collide_entity: Option<Entity>,
         time: &Time,
         world_id: WorldId,
+        world_location: &Location,
         commands: &mut Commands,
     ) -> Entity {
         Self::spawn_custom_pbr(
@@ -148,6 +150,7 @@ impl Laser {
             },
             time,
             world_id,
+            world_location,
             commands,
         )
     }
