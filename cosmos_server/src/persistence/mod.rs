@@ -39,6 +39,10 @@ impl SaveFileIdentifier {
 
         format!("world/{directory}/{}.cent", self.entity_id.0)
     }
+
+    pub fn get_save_file_name(&self) -> String {
+        format!("{}.cent", self.entity_id.0)
+    }
 }
 
 #[derive(Component, Debug, Reflect, Serialize, Deserialize)]
@@ -48,6 +52,15 @@ pub struct SerializedData {
     /// Used to identify the location this should be saved under
     location: Option<Location>,
     should_save: bool,
+}
+
+impl SerializedData {
+    /// Use this to set location. This will make sure the folder name
+    /// reflects the actual location.
+    pub fn set_location(&mut self, loc: &Location) {
+        self.serialize_data("cosmos:location", loc);
+        self.location = Some(*loc);
+    }
 }
 
 impl Default for SerializedData {

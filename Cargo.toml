@@ -35,6 +35,8 @@ renet_visualizer = { version = "0.0.4", features = ["bevy"] }
 
 walkdir = "2.3.3"
 
+zip = "0.6.4"
+
 # For any non workspace package
 [profile.dev.package."*"]
 opt-level = 3

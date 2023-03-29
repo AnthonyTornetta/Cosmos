@@ -9,7 +9,11 @@ use bevy::{
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::physics::location::Location;
 use rand::{distributions::Alphanumeric, Rng};
-use std::fs;
+use std::{
+    fs,
+    io::{self, Write},
+};
+use zip::{write::FileOptions, ZipWriter};
 
 use super::{EntityId, SaveFileIdentifier, SectorsCache, SerializedData};
 
@@ -105,18 +109,7 @@ pub fn done_saving(
             sector: sd.location.map(|l| (l.sector_x, l.sector_y, l.sector_z)),
         };
 
-        println!("New save file ID: {save_identifier:?}");
-
-        let path = save_identifier.get_save_file_path();
-
-        let directory = &path[0..path.rfind('/').expect("No / found in file path!")];
-
-        if let Err(e) = fs::create_dir_all(directory) {
-            eprintln!("{e}");
-            continue;
-        }
-
-        if let Err(e) = fs::write(path, serialized) {
+        if let Err(e) = write_file(&save_identifier, &serialized) {
             eprintln!("{e}");
             continue;
         }
@@ -138,16 +131,35 @@ pub fn done_saving(
     }
 }
 
+fn write_file(save_identifier: &SaveFileIdentifier, serialized: &Vec<u8>) -> io::Result<()> {
+    println!("New save file ID: {save_identifier:?}");
+
+    let path = save_identifier.get_save_file_path();
+
+    let directory = &path[0..path.rfind('/').expect("No / found in file path!")];
+
+    fs::create_dir_all(directory)?;
+
+    let file = fs::File::create(format!("{path}"))?;
+    let mut zipped = ZipWriter::new(file);
+
+    let options = FileOptions::default()
+        .compression_method(zip::CompressionMethod::Bzip2)
+        .unix_permissions(0o755);
+
+    zipped.start_file(save_identifier.get_save_file_name(), options)?;
+    zipped.write_all(serialized)?;
+    zipped.finish()?;
+
+    Ok(())
+}
+
 fn default_save(
     mut query: Query<(&mut SerializedData, Option<&Location>, Option<&Velocity>), With<NeedsSaved>>,
 ) {
     for (mut data, loc, vel) in query.iter_mut() {
         if let Some(loc) = loc {
-            data.location = Some(*loc);
-            // location is a private field, and may change in the future,
-            // so serialize it twice to make sure code doesn't break if
-            // the location field is changed to be something else.
-            data.serialize_data("cosmos:location", &loc);
+            data.set_location(loc);
         }
 
         if let Some(vel) = vel {

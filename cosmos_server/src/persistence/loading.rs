@@ -1,17 +1,35 @@
-use std::fs;
+use std::{
+    fs,
+    io::{self, Read},
+};
 
 use bevy::{
-    prelude::{App, Commands, Component, CoreSet, Entity, IntoSystemConfig, Query, With, Without},
+    prelude::{
+        App, Commands, Component, CoreSet, DespawnRecursiveExt, Entity, IntoSystemConfig, Query,
+        With, Without,
+    },
     reflect::Reflect,
 };
 use bevy_rapier3d::prelude::Velocity;
 
 use cosmos_core::physics::location::Location;
+use zip::ZipArchive;
 
 use super::{SaveFileIdentifier, SerializedData};
 
 #[derive(Component, Debug, Reflect)]
 pub struct NeedsLoaded;
+
+fn read_save(path: &String) -> io::Result<Vec<u8>> {
+    let mut archive = ZipArchive::new(fs::File::open(path)?)?;
+
+    let mut file = archive.by_index(0)?;
+
+    let mut buff = Vec::new();
+    file.read_to_end(&mut buff)?;
+
+    Ok(buff)
+}
 
 fn check_needs_loaded(
     query: Query<(Entity, &SaveFileIdentifier), (Without<SerializedData>, With<NeedsLoaded>)>,
@@ -19,13 +37,14 @@ fn check_needs_loaded(
 ) {
     for (ent, nl) in query.iter() {
         let path = nl.get_save_file_path();
-        let Ok(data) = fs::read(&path) else {
-            eprintln!("Error reading file at {path}");
+        let Ok(data) = read_save(&path) else {
+            eprintln!("Error reading zip record at '{path}'. Is it corrupted?");
+            commands.entity(ent).despawn_recursive();
             continue;
         };
 
         let serialized_data: SerializedData =
-            bincode::deserialize(&data).unwrap_or_else(|_| panic!("Error deserializing data for {path}"));
+            bincode::deserialize(&data).expect("Error deserializing data for {path}");
 
         commands
             .entity(ent)
