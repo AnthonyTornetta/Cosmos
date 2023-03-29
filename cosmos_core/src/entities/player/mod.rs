@@ -7,13 +7,21 @@ use bevy::{
 
 #[derive(Component, Reflect, FromReflect)]
 pub struct Player {
-    pub name: String,
-    pub id: u64,
+    name: String,
+    id: u64,
 }
 
 impl Player {
     pub fn new(name: String, id: u64) -> Self {
         Self { name, id }
+    }
+
+    pub fn name(&self) -> &String {
+        &self.name
+    }
+
+    pub fn id(&self) -> u64 {
+        self.id
     }
 }
 

@@ -98,7 +98,7 @@ fn handle_block_place_events(
                     if block_id != ev.block_id {
                         eprintln!(
                             "WARNING: Inventory out of sync between client {}!",
-                            player.name
+                            player.name()
                         );
                         break;
                     }

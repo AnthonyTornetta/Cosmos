@@ -99,11 +99,7 @@ pub fn load_structure(
             }
             let entity = entity_cmd.id();
 
-            entity_cmd
-                .insert(ChunksNeedLoaded {
-                    amount_needed: structure.all_chunks_iter(false).len(),
-                })
-                .insert(structure);
+            entity_cmd.insert(structure);
 
             structure_loaded.send(SendDelayedStructureLoadEvent(entity));
 

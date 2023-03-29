@@ -26,6 +26,8 @@ fn listen_chunk_done_loading(
         if chunks_needed.amount_needed != 0 {
             chunks_needed.amount_needed -= 1;
 
+            println!("Subtracted: is now {}", chunks_needed.amount_needed);
+
             if chunks_needed.amount_needed == 0 {
                 commands
                     .entity(ev.structure_entity)
@@ -44,13 +46,14 @@ fn listen_structure_added(
     mut commands: Commands,
 ) {
     for (entity, structure) in query.iter() {
+        println!("Added structure!");
         commands.entity(entity).insert(ChunksNeedLoaded {
-            amount_needed: structure.all_chunks_iter(true).len(),
+            amount_needed: structure.all_chunks_iter(false).len(),
         });
     }
 }
 
-pub(crate) fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.add_system(listen_structure_added)
         .add_system(listen_chunk_done_loading)
         .register_type::<ChunksNeedLoaded>();

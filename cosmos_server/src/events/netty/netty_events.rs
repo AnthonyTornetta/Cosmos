@@ -123,9 +123,9 @@ fn handle_events_system(
 
                     let msg = bincode::serialize(&ServerReliableMessages::PlayerCreate {
                         entity,
-                        id: player.id,
+                        id: player.id(),
                         body,
-                        name: player.name.clone(),
+                        name: player.name().clone(),
                         inventory_serialized: bincode::serialize(inventory).unwrap(),
                         render_distance: Some(*render_distance),
                     })

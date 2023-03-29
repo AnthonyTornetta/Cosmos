@@ -52,9 +52,9 @@ fn on_load_structure(
 
                     let entity = entity_cmd.id();
 
-                    entity_cmd.insert(ChunksNeedLoaded {
-                        amount_needed: structure.all_chunks_iter(false).len(),
-                    });
+                    // entity_cmd.insert(ChunksNeedLoaded {
+                    //     amount_needed: structure.all_chunks_iter(false).len(),
+                    // });
 
                     event_writer.send(DelayedStructureLoadEvent(entity));
 

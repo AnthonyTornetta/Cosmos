@@ -266,13 +266,15 @@ fn client_sync_players(
                     server_entity,
                 }) = lobby.players.remove(&id)
                 {
-                    let entity = commands.entity(client_entity);
+                    if let Some(entity) = commands.get_entity(client_entity) {
+                        if let Ok(player) = query_player.get(client_entity) {
+                            println!("Player {} ({id}) disconnected", player.name());
+                        }
 
-                    let name = query_player.get(client_entity).unwrap().name.clone();
-                    entity.despawn_recursive();
+                        entity.despawn_recursive();
+                    }
+
                     network_mapping.remove_mapping_from_server_entity(&server_entity);
-
-                    println!("Player {name} ({id}) disconnected");
                 }
             }
             ServerReliableMessages::PlanetCreate {

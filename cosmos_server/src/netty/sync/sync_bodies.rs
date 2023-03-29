@@ -37,7 +37,7 @@ fn send_bodies(
 
             let message = bincode::serialize(&sync_message).unwrap();
 
-            server.send_message(player.id, NettyChannel::Unreliable.id(), message.clone());
+            server.send_message(player.id(), NettyChannel::Unreliable.id(), message.clone());
         }
     }
 }

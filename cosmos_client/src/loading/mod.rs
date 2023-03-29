@@ -1,14 +1,18 @@
 use bevy::prelude::{
-    App, Commands, CoreSet, DespawnRecursiveExt, Entity, IntoSystemConfig, Query, With, Without,
+    App, Commands, CoreSet, DespawnRecursiveExt, Entity, IntoSystemConfig, Parent, Query, With,
+    Without,
 };
-use cosmos_core::physics::location::{Location, SECTOR_DIMENSIONS};
+use cosmos_core::{
+    entities::player::Player,
+    physics::location::{Location, SECTOR_DIMENSIONS},
+};
 
 use crate::netty::flags::LocalPlayer;
 
 const UNLOAD_DIST: f32 = SECTOR_DIMENSIONS * 10.0;
 
 fn unload_far_entities(
-    query: Query<(Entity, &Location), Without<LocalPlayer>>,
+    query: Query<(Entity, &Location), (Without<Player>, Without<Parent>)>,
     my_loc: Query<&Location, With<LocalPlayer>>,
     mut commands: Commands,
 ) {
