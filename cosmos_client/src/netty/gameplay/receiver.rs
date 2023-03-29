@@ -282,7 +282,11 @@ fn client_sync_players(
                 width,
                 body,
             } => {
-                println!("GOT PLANET CREATE!");
+                if network_mapping.contains_server_entity(server_entity) {
+                    println!("Got duplicate planet! Is the server lagging?");
+                    break;
+                }
+
                 let mut entity_cmds = commands.spawn_empty();
                 let mut structure =
                     Structure::new(width as usize, height as usize, length as usize);
@@ -303,7 +307,11 @@ fn client_sync_players(
                 height,
                 length,
             } => {
-                println!("GOT SHIP CREATE!");
+                if network_mapping.contains_server_entity(server_entity) {
+                    println!("Got duplicate ship! Is the server lagging?");
+                    break;
+                }
+
                 let mut entity_cmds = commands.spawn_empty();
                 let mut structure =
                     Structure::new(width as usize, height as usize, length as usize);

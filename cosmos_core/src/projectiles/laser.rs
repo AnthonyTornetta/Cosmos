@@ -11,6 +11,8 @@ use bevy_rapier3d::prelude::{
     RigidBody, Sensor, Velocity, WorldId, DEFAULT_WORLD_ID,
 };
 
+use crate::netty::NoSendEntity;
+
 #[derive(Debug)]
 /// The entity hit represents the entity hit by the laser
 ///
@@ -92,29 +94,31 @@ impl Laser {
 
         let laser_entity = ent_cmds.id();
 
-        ent_cmds
-            .insert(Laser {
+        ent_cmds.insert((
+            Laser {
                 strength,
                 active: true,
                 last_position: position,
-            })
-            .insert(pbr)
-            .insert(RigidBody::Dynamic)
-            .insert(LockedAxes::ROTATION_LOCKED)
-            .insert(Collider::cuboid(0.05, 0.05, 1.0))
-            .insert(Velocity {
+            },
+            pbr,
+            RigidBody::Dynamic,
+            LockedAxes::ROTATION_LOCKED,
+            Collider::cuboid(0.05, 0.05, 1.0),
+            Velocity {
                 linvel: laser_velocity + firer_velocity,
                 ..Default::default()
-            })
-            .insert(FireTime {
+            },
+            FireTime {
                 time: time.elapsed_seconds(),
-            })
-            .insert(PhysicsWorld { world_id })
-            .insert(ActiveEvents::COLLISION_EVENTS)
-            .insert(ActiveHooks::MODIFY_SOLVER_CONTACTS)
-            .insert(Sensor)
-            .insert(NotShadowCaster)
-            .insert(NotShadowReceiver);
+            },
+            PhysicsWorld { world_id },
+            ActiveEvents::COLLISION_EVENTS,
+            ActiveHooks::MODIFY_SOLVER_CONTACTS,
+            Sensor,
+            NotShadowCaster,
+            NotShadowReceiver,
+            NoSendEntity,
+        ));
 
         if let Some(ent) = no_collide_entity {
             ent_cmds.insert(NoCollide(ent));

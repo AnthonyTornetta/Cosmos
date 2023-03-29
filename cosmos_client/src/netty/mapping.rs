@@ -15,6 +15,10 @@ impl NetworkMapping {
         self.client_to_server.insert(*client_entity, *server_entity);
     }
 
+    pub fn contains_server_entity(&self, entity: Entity) -> bool {
+        self.server_to_client.contains_key(&entity)
+    }
+
     pub fn client_from_server(&self, server_entity: &Entity) -> Option<&Entity> {
         self.server_to_client.get(server_entity)
     }
