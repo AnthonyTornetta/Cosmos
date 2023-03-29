@@ -20,16 +20,12 @@ fn listen_chunk_done_loading(
     mut commands: Commands,
 ) {
     for ev in event.iter() {
-        println!("Got Chunk Set Event");
         let Ok(mut chunks_needed) = query.get_mut(ev.structure_entity) else {
-            println!("No chunks need loaded!");
             continue;
         };
 
         if chunks_needed.amount_needed != 0 {
             chunks_needed.amount_needed -= 1;
-
-            println!("Subtracted: is now {}", chunks_needed.amount_needed);
 
             if chunks_needed.amount_needed == 0 {
                 commands
@@ -40,8 +36,6 @@ fn listen_chunk_done_loading(
                     structure_entity: ev.structure_entity,
                 });
             }
-        } else {
-            println!("Amount needed was 0!");
         }
     }
 }
@@ -51,7 +45,6 @@ fn listen_structure_added(
     mut commands: Commands,
 ) {
     for (entity, structure) in query.iter() {
-        println!("Added structure!");
         commands.entity(entity).insert(ChunksNeedLoaded {
             amount_needed: structure.all_chunks_iter(false).len(),
         });

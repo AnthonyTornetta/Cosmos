@@ -397,9 +397,6 @@ fn client_sync_players(
                             &blocks,
                             Some(&mut block_change_event_writer),
                         );
-                    } else {
-                        println!("OH NO!");
-                        commands.entity(*client_ent).log_components();
                     }
                 }
             }

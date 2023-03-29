@@ -45,7 +45,7 @@ fn send_disconnect(
     if input_handler.check_just_pressed(CosmosInputs::Disconnect, &inputs, &mouse) {
         if let Some(mut client) = client {
             if client.is_connected() {
-                println!("SENDING DC!");
+                println!("SENDING DC MESSAGE!");
                 client.disconnect();
             }
         }
