@@ -134,7 +134,11 @@ fn handle_events_system(
                     server.send_message(*id, NettyChannel::Reliable.id(), msg);
                 }
 
-                let name = cosmos_encoder::deserialize::<String>(user_data.as_slice()).unwrap();
+                let Ok(name) = bincode::deserialize::<String>(user_data.as_slice()) else {
+                    println!("Unable to deserialize name!");
+                    continue;
+                };
+
                 let player = Player::new(name.clone(), *id);
                 let starting_pos = Vec3::new(0.0, 60.0, 0.0);
                 let transform = Transform::from_translation(starting_pos);

@@ -7,7 +7,7 @@ use bevy::prelude::*;
 use bevy_renet::renet::{ClientAuthentication, RenetClient};
 use cosmos_core::{
     entities::player::Player,
-    netty::{client_connection_config, cosmos_encoder, PROTOCOL_ID},
+    netty::{client_connection_config, PROTOCOL_ID},
 };
 
 use crate::{
@@ -38,7 +38,8 @@ fn new_renet_client(host: &str) -> RenetClient {
 
     let mut token = [0; 256];
 
-    let serialized_name = cosmos_encoder::serialize(&name);
+    // Bincode because this is stored un a u8, with a fixed length of 256
+    let serialized_name = bincode::serialize(&name).expect("Unable to serialize name");
     for (i, byte) in serialized_name.iter().enumerate() {
         token[i] = *byte;
     }
