@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::RenetServer;
+use cosmos_core::netty::network_encoder;
 use cosmos_core::physics::location::Location;
 use cosmos_core::structure::systems::{SystemActive, Systems};
 use cosmos_core::{
@@ -102,11 +103,10 @@ pub fn server_listen_messages(
                             server.send_message(
                                 client_id,
                                 NettyChannel::Reliable.id(),
-                                bincode::serialize(&ServerReliableMessages::ChunkData {
+                                network_encoder::serialize(&ServerReliableMessages::ChunkData {
                                     structure_entity: server_entity,
-                                    serialized_chunk: bincode::serialize(chunk).unwrap(),
-                                })
-                                .unwrap(),
+                                    serialized_chunk: network_encoder::serialize(chunk),
+                                }),
                             );
                         }
                     } else {
@@ -183,11 +183,10 @@ pub fn server_listen_messages(
                     server.send_message(
                         client_id,
                         NettyChannel::Reliable.id(),
-                        bincode::serialize(&ServerReliableMessages::PilotChange {
+                        network_encoder::serialize(&ServerReliableMessages::PilotChange {
                             structure_entity: ship_entity,
                             pilot_entity: pilot,
-                        })
-                        .unwrap(),
+                        }),
                     );
                 }
                 ClientReliableMessages::StopPiloting => {

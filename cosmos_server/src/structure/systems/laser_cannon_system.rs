@@ -2,7 +2,10 @@ use bevy::{prelude::*, time::Time};
 use bevy_rapier3d::prelude::{PhysicsWorld, Velocity, DEFAULT_WORLD_ID};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
-    netty::{server_laser_cannon_system_messages::ServerLaserCannonSystemMessages, NettyChannel},
+    netty::{
+        network_encoder, server_laser_cannon_system_messages::ServerLaserCannonSystemMessages,
+        NettyChannel,
+    },
     physics::{location::Location, player_world::PlayerWorld},
     projectiles::laser::Laser,
     structure::{
@@ -97,7 +100,7 @@ fn update_system(
 
                                 server.broadcast_message(
                                     NettyChannel::LaserCannonSystem.id(),
-                                    bincode::serialize(
+                                    network_encoder::serialize(
                                         &ServerLaserCannonSystemMessages::CreateLaser {
                                             color,
                                             location,
@@ -106,8 +109,7 @@ fn update_system(
                                             strength,
                                             no_hit,
                                         },
-                                    )
-                                    .unwrap(),
+                                    ),
                                 );
                             } else {
                                 break;

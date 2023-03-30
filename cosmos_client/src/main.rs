@@ -28,7 +28,7 @@ use cosmos_core::entities::player::Player;
 use cosmos_core::events::structure::change_pilot_event::ChangePilotEvent;
 use cosmos_core::netty::client_reliable_messages::ClientReliableMessages;
 use cosmos_core::netty::client_unreliable_messages::ClientUnreliableMessages;
-use cosmos_core::netty::{get_local_ipaddress, NettyChannel};
+use cosmos_core::netty::{get_local_ipaddress, network_encoder, NettyChannel};
 use cosmos_core::structure::ship::pilot::Pilot;
 use cosmos_core::structure::ship::ship_movement::ShipMovement;
 use input::inputs::{self, CosmosInputHandler, CosmosInputs};
@@ -86,7 +86,7 @@ fn process_ship_movement(
         if input_handler.check_just_pressed(CosmosInputs::StopPiloting, &keys, &mouse) {
             client.send_message(
                 NettyChannel::Reliable.id(),
-                bincode::serialize(&ClientReliableMessages::StopPiloting).unwrap(),
+                network_encoder::serialize(&ClientReliableMessages::StopPiloting),
             );
         }
 
@@ -125,7 +125,7 @@ fn process_ship_movement(
 
         client.send_message(
             NettyChannel::Unreliable.id(),
-            bincode::serialize(&ClientUnreliableMessages::SetMovement { movement }).unwrap(),
+            network_encoder::serialize(&ClientUnreliableMessages::SetMovement { movement }),
         );
     }
 }

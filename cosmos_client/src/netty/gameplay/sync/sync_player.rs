@@ -4,7 +4,7 @@ use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     netty::{
         client_unreliable_messages::ClientUnreliableMessages, netty_rigidbody::NettyRigidBody,
-        NettyChannel,
+        network_encoder, NettyChannel,
     },
     physics::location::Location,
 };
@@ -29,7 +29,7 @@ fn send_position(
             looking,
         };
 
-        let serialized_message = bincode::serialize(&msg).unwrap();
+        let serialized_message = network_encoder::serialize(&msg);
 
         client.send_message(NettyChannel::Unreliable.id(), serialized_message);
     }

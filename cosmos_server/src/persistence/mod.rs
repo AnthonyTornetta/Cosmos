@@ -5,7 +5,7 @@ use bevy::{
 };
 use serde::{Deserialize, Serialize};
 
-use cosmos_core::physics::location::Location;
+use cosmos_core::{netty::network_encoder, physics::location::Location};
 
 pub mod loading;
 pub mod player_loading;
@@ -83,17 +83,14 @@ impl SerializedData {
         }
     }
 
-    /// Calls `bincode::serialize` on the passed in data.
+    /// Calls `cosmos_encoder::serialize` on the passed in data.
     /// Then sends that data into the `save` method, with the given data id.
     ///
     /// Will only serialize & save if `should_save()` returns true.
 
     pub fn serialize_data(&mut self, data_id: impl Into<String>, data: &impl Serialize) {
         if self.should_save() {
-            self.save(
-                data_id,
-                bincode::serialize(data).expect("Error serializing data!"),
-            );
+            self.save(data_id, network_encoder::serialize(data));
         }
     }
 

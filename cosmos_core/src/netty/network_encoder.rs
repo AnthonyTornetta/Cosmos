@@ -14,10 +14,16 @@ pub fn serialize<T: Serialize>(x: &T) -> Vec<u8> {
 /// Deserializes the data - will decompress if needed
 ///
 /// Will change raw to be the uncompressed form if it is compressed.
-pub fn deserialize<'a, T: Deserialize<'a>>(raw: &'a mut Vec<u8>) -> T {
+pub fn deserialize<'a, T: Deserialize<'a>>(
+    raw: &'a mut Vec<u8>,
+) -> Result<T, Box<bincode::ErrorKind>> {
     if raw.len() > 50 {
-        *raw = zstd::decode_all(raw.as_slice()).expect("Error decompressing data!");
+        let Ok(decompressed) = zstd::decode_all(raw.as_slice()) else {
+            return Err(Box::new(bincode::ErrorKind::Custom("Unable to decompress".into())));
+        };
+
+        *raw = decompressed;
     }
 
-    bincode::deserialize::<T>(raw).expect("Error deserializing data!")
+    bincode::deserialize::<T>(raw)
 }

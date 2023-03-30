@@ -4,8 +4,8 @@ use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     entities::player::{render_distance::RenderDistance, Player},
     netty::{
-        netty_rigidbody::NettyRigidBody, server_unreliable_messages::ServerUnreliableMessages,
-        NettyChannel, NoSendEntity,
+        netty_rigidbody::NettyRigidBody, network_encoder,
+        server_unreliable_messages::ServerUnreliableMessages, NettyChannel, NoSendEntity,
     },
     physics::location::{Location, SECTOR_DIMENSIONS},
 };
@@ -35,7 +35,7 @@ fn send_bodies(
                 bodies: players_bodies,
             };
 
-            let message = bincode::serialize(&sync_message).unwrap();
+            let message = network_encoder::serialize(&sync_message);
 
             server.send_message(player.id(), NettyChannel::Unreliable.id(), message.clone());
         }
