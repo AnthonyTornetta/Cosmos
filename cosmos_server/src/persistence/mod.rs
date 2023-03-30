@@ -3,9 +3,9 @@ use bevy::{
     reflect::Reflect,
     utils::{HashMap, HashSet},
 };
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use cosmos_core::physics::location::Location;
+use cosmos_core::{netty::cosmos_encoder, physics::location::Location};
 
 pub mod loading;
 pub mod player_loading;
@@ -83,17 +83,14 @@ impl SerializedData {
         }
     }
 
-    /// Calls `bincode::serialize` on the passed in data.
+    /// Calls `cosmos_encoder::serialize` on the passed in data.
     /// Then sends that data into the `save` method, with the given data id.
     ///
     /// Will only serialize & save if `should_save()` returns true.
 
     pub fn serialize_data(&mut self, data_id: impl Into<String>, data: &impl Serialize) {
         if self.should_save() {
-            self.save(
-                data_id,
-                bincode::serialize(data).expect("Error serializing data!"),
-            );
+            self.save(data_id, cosmos_encoder::serialize(data));
         }
     }
 
@@ -102,11 +99,11 @@ impl SerializedData {
         self.save_data.get(data_id)
     }
 
-    /// Deserializes the data as the given type (via `bincode::deserialize`) at the given id. Will panic if the
+    /// Deserializes the data as the given type (via `cosmos_encoder::deserialize`) at the given id. Will panic if the
     /// data is not properly serialized.
-    pub fn deserialize_data<'a, T: Deserialize<'a>>(&'a self, data_id: &str) -> Option<T> {
+    pub fn deserialize_data<'a, T: DeserializeOwned>(&'a self, data_id: &str) -> Option<T> {
         self.read_data(data_id)
-            .map(|d| bincode::deserialize(d).expect("Error deserializing data!"))
+            .map(|d| cosmos_encoder::deserialize(d).expect("Error deserializing data!"))
     }
 
     /// Sets whether this should actually be saved - if false, when save and serialize_data is called,

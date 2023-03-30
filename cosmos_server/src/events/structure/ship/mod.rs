@@ -3,7 +3,7 @@ use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     events::structure::change_pilot_event::ChangePilotEvent,
     netty::{
-        server_reliable_messages::ServerReliableMessages,
+        cosmos_encoder, server_reliable_messages::ServerReliableMessages,
         server_unreliable_messages::ServerUnreliableMessages, NettyChannel,
     },
     structure::ship::ship_movement::ShipMovement,
@@ -29,11 +29,10 @@ fn monitor_set_movement_events(
 
             server.broadcast_message(
                 NettyChannel::Unreliable.id(),
-                bincode::serialize(&ServerUnreliableMessages::SetMovement {
+                cosmos_encoder::serialize(&ServerUnreliableMessages::SetMovement {
                     movement: ev.movement.clone(),
                     ship_entity: ev.ship,
-                })
-                .unwrap(),
+                }),
             );
         }
     }
@@ -46,11 +45,10 @@ fn monitor_pilot_changes(
     for ev in event_reader.iter() {
         server.broadcast_message(
             NettyChannel::Reliable.id(),
-            bincode::serialize(&ServerReliableMessages::PilotChange {
+            cosmos_encoder::serialize(&ServerReliableMessages::PilotChange {
                 structure_entity: ev.structure_entity,
                 pilot_entity: ev.pilot_entity,
-            })
-            .unwrap(),
+            }),
         );
     }
 }

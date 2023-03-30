@@ -4,6 +4,7 @@ use bevy_renet::renet::{RenetServer, ServerEvent};
 use cosmos_core::entities::player::render_distance::RenderDistance;
 use cosmos_core::inventory::Inventory;
 use cosmos_core::item::Item;
+use cosmos_core::netty::cosmos_encoder;
 use cosmos_core::netty::server_reliable_messages::ServerReliableMessages;
 use cosmos_core::physics::location::Location;
 use cosmos_core::physics::player_world::WorldWithin;
@@ -121,21 +122,24 @@ fn handle_events_system(
                 {
                     let body = NettyRigidBody::new(velocity, transform.rotation, *location);
 
-                    let msg = bincode::serialize(&ServerReliableMessages::PlayerCreate {
+                    let msg = cosmos_encoder::serialize(&ServerReliableMessages::PlayerCreate {
                         entity,
                         id: player.id(),
                         body,
                         name: player.name().clone(),
-                        inventory_serialized: bincode::serialize(inventory).unwrap(),
+                        inventory_serialized: cosmos_encoder::serialize(inventory),
                         render_distance: Some(*render_distance),
-                    })
-                    .unwrap();
+                    });
 
                     server.send_message(*id, NettyChannel::Reliable.id(), msg);
                 }
 
-                let name: &str = bincode::deserialize(user_data.as_slice()).unwrap();
-                let player = Player::new(String::from(name), *id);
+                let Ok(name) = bincode::deserialize::<String>(user_data.as_slice()) else {
+                    println!("Unable to deserialize name!");
+                    continue;
+                };
+
+                let player = Player::new(name.clone(), *id);
                 let starting_pos = Vec3::new(0.0, 60.0, 0.0);
                 let transform = Transform::from_translation(starting_pos);
                 let location = Location::new(starting_pos, 0, 0, 0);
@@ -144,7 +148,7 @@ fn handle_events_system(
 
                 let netty_body = NettyRigidBody::new(&velocity, transform.rotation, location);
 
-                let inventory_serialized = bincode::serialize(&inventory).unwrap();
+                let inventory_serialized = cosmos_encoder::serialize(&inventory);
 
                 let player_commands = commands.spawn((
                     transform,
@@ -173,23 +177,21 @@ fn handle_events_system(
                     &mut rapier_context,
                 );
 
-                let msg = bincode::serialize(&ServerReliableMessages::PlayerCreate {
+                let msg = cosmos_encoder::serialize(&ServerReliableMessages::PlayerCreate {
                     entity,
                     id: *id,
-                    name: String::from(name),
+                    name,
                     body: netty_body,
                     inventory_serialized,
                     render_distance: None,
-                })
-                .unwrap();
+                });
 
                 server.send_message(
                     *id,
                     NettyChannel::Reliable.id(),
-                    bincode::serialize(&ServerReliableMessages::MOTD {
+                    cosmos_encoder::serialize(&ServerReliableMessages::MOTD {
                         motd: "Welcome to the server!".into(),
-                    })
-                    .unwrap(),
+                    }),
                 );
 
                 server.broadcast_message(NettyChannel::Reliable.id(), msg);
@@ -204,7 +206,7 @@ fn handle_events_system(
                 }
 
                 let message =
-                    bincode::serialize(&ServerReliableMessages::PlayerRemove { id: *id }).unwrap();
+                    cosmos_encoder::serialize(&ServerReliableMessages::PlayerRemove { id: *id });
 
                 server.broadcast_message(NettyChannel::Reliable.id(), message);
             }

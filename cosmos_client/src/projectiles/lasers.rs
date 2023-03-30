@@ -2,7 +2,10 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::DEFAULT_WORLD_ID;
 use bevy_renet::renet::*;
 use cosmos_core::{
-    netty::{server_laser_cannon_system_messages::ServerLaserCannonSystemMessages, NettyChannel},
+    netty::{
+        cosmos_encoder, server_laser_cannon_system_messages::ServerLaserCannonSystemMessages,
+        NettyChannel,
+    },
     physics::{location::Location, player_world::PlayerWorld},
     projectiles::laser::Laser,
 };
@@ -28,7 +31,7 @@ fn lasers_netty(
     player_world: Query<&Location, With<PlayerWorld>>,
 ) {
     while let Some(message) = client.receive_message(NettyChannel::LaserCannonSystem.id()) {
-        let msg: ServerLaserCannonSystemMessages = bincode::deserialize(&message).unwrap();
+        let msg: ServerLaserCannonSystemMessages = cosmos_encoder::deserialize(&message).unwrap();
 
         match msg {
             ServerLaserCannonSystemMessages::CreateLaser {

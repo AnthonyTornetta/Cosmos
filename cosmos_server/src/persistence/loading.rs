@@ -12,7 +12,7 @@ use bevy::{
 };
 use bevy_rapier3d::prelude::Velocity;
 
-use cosmos_core::physics::location::Location;
+use cosmos_core::{netty::cosmos_encoder, physics::location::Location};
 use zip::ZipArchive;
 
 use super::{SaveFileIdentifier, SerializedData};
@@ -44,7 +44,7 @@ fn check_needs_loaded(
         };
 
         let serialized_data: SerializedData =
-            bincode::deserialize(&data).expect("Error deserializing data for {path}");
+            cosmos_encoder::deserialize(&data).expect("Error deserializing data for {path}");
 
         commands
             .entity(ent)

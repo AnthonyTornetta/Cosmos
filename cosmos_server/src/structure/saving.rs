@@ -3,6 +3,7 @@ use std::{fs, io::ErrorKind};
 use bevy::prelude::{App, Commands, Component, Entity, EventReader, EventWriter, Query};
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
+    netty::cosmos_encoder,
     physics::location::Location,
     structure::{
         planet::planet_builder::TPlanetBuilder, ship::ship_builder::TShipBuilder,
@@ -76,7 +77,7 @@ pub fn load_structure(
     )) {
         println!("Loading structure {structure_name}...");
 
-        if let Ok(mut structure) = bincode::deserialize::<Structure>(&structure_bin) {
+        if let Ok(mut structure) = cosmos_encoder::deserialize::<Structure>(&structure_bin) {
             let mut entity_cmd = commands.spawn_empty();
 
             match structure_type {
@@ -141,7 +142,7 @@ pub fn save_structure(
         }
     }
 
-    let serialized = bincode::serialize(structure).expect("Error serializing structure!");
+    let serialized = cosmos_encoder::serialize(structure);
 
     fs::write(
         format!("saves/{}/{file_name}.cstr", structure_type.name()),

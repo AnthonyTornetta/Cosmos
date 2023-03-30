@@ -10,7 +10,7 @@ use cosmos_core::{
     events::{block_events::BlockChangedEvent, structure::change_pilot_event::ChangePilotEvent},
     inventory::Inventory,
     netty::{
-        client_reliable_messages::ClientReliableMessages,
+        client_reliable_messages::ClientReliableMessages, cosmos_encoder,
         server_reliable_messages::ServerReliableMessages,
         server_unreliable_messages::ServerUnreliableMessages, NettyChannel,
     },
@@ -121,7 +121,7 @@ fn client_sync_players(
     requested_entities.entities = new_entities;
 
     while let Some(message) = client.receive_message(NettyChannel::Unreliable.id()) {
-        let msg: ServerUnreliableMessages = bincode::deserialize(&message).unwrap();
+        let msg: ServerUnreliableMessages = cosmos_encoder::deserialize(&message).unwrap();
 
         match msg {
             ServerUnreliableMessages::BulkBodies {
@@ -148,10 +148,9 @@ fn client_sync_players(
 
                         client.send_message(
                             NettyChannel::Reliable.id(),
-                            bincode::serialize(&ClientReliableMessages::RequestEntityData {
+                            cosmos_encoder::serialize(&ClientReliableMessages::RequestEntityData {
                                 entity: *server_entity,
-                            })
-                            .unwrap(),
+                            }),
                         );
                     }
                 }
@@ -169,7 +168,7 @@ fn client_sync_players(
     }
 
     while let Some(message) = client.receive_message(NettyChannel::Reliable.id()) {
-        let msg: ServerReliableMessages = bincode::deserialize(&message).unwrap();
+        let msg: ServerReliableMessages = cosmos_encoder::deserialize(&message).unwrap();
 
         match msg {
             ServerReliableMessages::PlayerCreate {
@@ -190,7 +189,8 @@ fn client_sync_players(
 
                 let mut entity_cmds = commands.spawn_empty();
 
-                let inventory: Inventory = bincode::deserialize(&inventory_serialized).unwrap();
+                let inventory: Inventory =
+                    cosmos_encoder::deserialize(&inventory_serialized).unwrap();
 
                 // This should be set via the server, but just in case,
                 // this will avoid any position mismatching
@@ -336,10 +336,9 @@ fn client_sync_players(
 
                 client.send_message(
                     NettyChannel::Reliable.id(),
-                    bincode::serialize(&ClientReliableMessages::PilotQuery {
+                    cosmos_encoder::serialize(&ClientReliableMessages::PilotQuery {
                         ship_entity: server_entity,
-                    })
-                    .unwrap(),
+                    }),
                 );
             }
             ServerReliableMessages::ChunkData {
@@ -349,7 +348,7 @@ fn client_sync_players(
                 if let Some(s_entity) = network_mapping.client_from_server(&server_structure_entity)
                 {
                     if let Ok(mut structure) = query_structure.get_mut(*s_entity) {
-                        let chunk: Chunk = bincode::deserialize(&serialized_chunk)
+                        let chunk: Chunk = cosmos_encoder::deserialize(&serialized_chunk)
                             .expect("Unable to deserialize chunk from server");
 
                         let (x, y, z) = (
@@ -422,7 +421,8 @@ fn client_sync_players(
                 owner,
             } => {
                 if let Some(client_entity) = network_mapping.client_from_server(&owner) {
-                    let inventory: Inventory = bincode::deserialize(&serialized_inventory).unwrap();
+                    let inventory: Inventory =
+                        cosmos_encoder::deserialize(&serialized_inventory).unwrap();
 
                     commands.entity(*client_entity).insert(inventory);
                 } else {
