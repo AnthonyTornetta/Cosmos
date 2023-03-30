@@ -5,7 +5,7 @@ use bevy::{
 };
 use serde::{Deserialize, Serialize};
 
-use cosmos_core::{netty::network_encoder, physics::location::Location};
+use cosmos_core::{netty::cosmos_encoder, physics::location::Location};
 
 pub mod loading;
 pub mod player_loading;
@@ -90,7 +90,7 @@ impl SerializedData {
 
     pub fn serialize_data(&mut self, data_id: impl Into<String>, data: &impl Serialize) {
         if self.should_save() {
-            self.save(data_id, network_encoder::serialize(data));
+            self.save(data_id, cosmos_encoder::serialize(data));
         }
     }
 

@@ -10,7 +10,7 @@ use cosmos_core::{
     events::{block_events::BlockChangedEvent, structure::change_pilot_event::ChangePilotEvent},
     inventory::Inventory,
     netty::{
-        client_reliable_messages::ClientReliableMessages, network_encoder,
+        client_reliable_messages::ClientReliableMessages, cosmos_encoder,
         server_reliable_messages::ServerReliableMessages,
         server_unreliable_messages::ServerUnreliableMessages, NettyChannel,
     },
@@ -148,11 +148,9 @@ fn client_sync_players(
 
                         client.send_message(
                             NettyChannel::Reliable.id(),
-                            network_encoder::serialize(
-                                &ClientReliableMessages::RequestEntityData {
-                                    entity: *server_entity,
-                                },
-                            ),
+                            cosmos_encoder::serialize(&ClientReliableMessages::RequestEntityData {
+                                entity: *server_entity,
+                            }),
                         );
                     }
                 }
@@ -337,7 +335,7 @@ fn client_sync_players(
 
                 client.send_message(
                     NettyChannel::Reliable.id(),
-                    network_encoder::serialize(&ClientReliableMessages::PilotQuery {
+                    cosmos_encoder::serialize(&ClientReliableMessages::PilotQuery {
                         ship_entity: server_entity,
                     }),
                 );

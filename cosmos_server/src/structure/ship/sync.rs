@@ -3,7 +3,7 @@ use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     netty::{
-        netty_rigidbody::NettyRigidBody, network_encoder,
+        cosmos_encoder, netty_rigidbody::NettyRigidBody,
         server_reliable_messages::ServerReliableMessages, NettyChannel,
     },
     physics::location::Location,
@@ -22,7 +22,7 @@ fn on_request_planet(
             server.send_message(
                 ev.client_id,
                 NettyChannel::Reliable.id(),
-                network_encoder::serialize(&ServerReliableMessages::ShipCreate {
+                cosmos_encoder::serialize(&ServerReliableMessages::ShipCreate {
                     entity: ev.entity,
                     body: NettyRigidBody::new(velocity, transform.rotation, *location),
                     width: structure.chunks_width() as u32,

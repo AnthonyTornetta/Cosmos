@@ -2,7 +2,7 @@ use bevy::prelude::{in_state, App, Changed, IntoSystemConfig, Query, ResMut, Wit
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     entities::player::render_distance::RenderDistance,
-    netty::{client_reliable_messages::ClientReliableMessages, network_encoder, NettyChannel},
+    netty::{client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannel},
 };
 
 use crate::{netty::flags::LocalPlayer, state::game_state::GameState};
@@ -14,7 +14,7 @@ fn send_render_distance(
     if let Ok(render_distance) = query.get_single() {
         client.send_message(
             NettyChannel::Reliable.id(),
-            network_encoder::serialize(&ClientReliableMessages::ChangeRenderDistance {
+            cosmos_encoder::serialize(&ClientReliableMessages::ChangeRenderDistance {
                 render_distance: *render_distance,
             }),
         );

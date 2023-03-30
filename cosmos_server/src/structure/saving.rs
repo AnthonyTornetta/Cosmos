@@ -3,7 +3,7 @@ use std::{fs, io::ErrorKind};
 use bevy::prelude::{App, Commands, Component, Entity, EventReader, EventWriter, Query};
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
-    netty::network_encoder,
+    netty::cosmos_encoder,
     physics::location::Location,
     structure::{
         planet::planet_builder::TPlanetBuilder, ship::ship_builder::TShipBuilder,
@@ -142,7 +142,7 @@ pub fn save_structure(
         }
     }
 
-    let serialized = network_encoder::serialize(structure);
+    let serialized = cosmos_encoder::serialize(structure);
 
     fs::write(
         format!("saves/{}/{file_name}.cstr", structure_type.name()),

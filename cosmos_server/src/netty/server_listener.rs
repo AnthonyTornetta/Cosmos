@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::RenetServer;
-use cosmos_core::netty::network_encoder;
+use cosmos_core::netty::cosmos_encoder;
 use cosmos_core::physics::location::Location;
 use cosmos_core::structure::systems::{SystemActive, Systems};
 use cosmos_core::{
@@ -103,9 +103,9 @@ pub fn server_listen_messages(
                             server.send_message(
                                 client_id,
                                 NettyChannel::Reliable.id(),
-                                network_encoder::serialize(&ServerReliableMessages::ChunkData {
+                                cosmos_encoder::serialize(&ServerReliableMessages::ChunkData {
                                     structure_entity: server_entity,
-                                    serialized_chunk: network_encoder::serialize(chunk),
+                                    serialized_chunk: cosmos_encoder::serialize(chunk),
                                 }),
                             );
                         }
@@ -183,7 +183,7 @@ pub fn server_listen_messages(
                     server.send_message(
                         client_id,
                         NettyChannel::Reliable.id(),
-                        network_encoder::serialize(&ServerReliableMessages::PilotChange {
+                        cosmos_encoder::serialize(&ServerReliableMessages::PilotChange {
                             structure_entity: ship_entity,
                             pilot_entity: pilot,
                         }),

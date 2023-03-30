@@ -3,8 +3,8 @@ use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     netty::{
-        client_unreliable_messages::ClientUnreliableMessages, netty_rigidbody::NettyRigidBody,
-        network_encoder, NettyChannel,
+        client_unreliable_messages::ClientUnreliableMessages, cosmos_encoder,
+        netty_rigidbody::NettyRigidBody, NettyChannel,
     },
     physics::location::Location,
 };
@@ -29,7 +29,7 @@ fn send_position(
             looking,
         };
 
-        let serialized_message = network_encoder::serialize(&msg);
+        let serialized_message = cosmos_encoder::serialize(&msg);
 
         client.send_message(NettyChannel::Unreliable.id(), serialized_message);
     }

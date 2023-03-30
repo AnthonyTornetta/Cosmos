@@ -4,7 +4,7 @@ use bevy::prelude::{
 };
 use bevy_renet::renet::RenetClient;
 use cosmos_core::netty::{
-    client_reliable_messages::ClientReliableMessages, network_encoder, NettyChannel,
+    client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannel,
 };
 
 use crate::{
@@ -33,7 +33,7 @@ fn event_handler(mut event_reader: EventReader<CreateShipEvent>, mut client: Res
     for ev in event_reader.iter() {
         client.send_message(
             NettyChannel::Reliable.id(),
-            network_encoder::serialize(&ClientReliableMessages::CreateShip {
+            cosmos_encoder::serialize(&ClientReliableMessages::CreateShip {
                 name: ev.name.clone(),
             }),
         );

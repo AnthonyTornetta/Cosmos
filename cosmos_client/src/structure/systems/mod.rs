@@ -3,7 +3,7 @@ pub mod player_interactions;
 use bevy::prelude::*;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
-    netty::{client_unreliable_messages::ClientUnreliableMessages, network_encoder, NettyChannel},
+    netty::{client_unreliable_messages::ClientUnreliableMessages, cosmos_encoder, NettyChannel},
     structure::{ship::pilot::Pilot, systems::SystemActive},
 };
 
@@ -40,7 +40,7 @@ fn send_structure_state(
     if let Ok(pilot) = query.get_single() {
         client.send_message(
             NettyChannel::Unreliable.id(),
-            network_encoder::serialize(&ClientUnreliableMessages::ShipStatus {
+            cosmos_encoder::serialize(&ClientUnreliableMessages::ShipStatus {
                 use_system: structure_query.get(pilot.entity).is_ok(),
             }),
         );

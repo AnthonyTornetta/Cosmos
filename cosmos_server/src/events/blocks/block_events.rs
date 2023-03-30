@@ -7,7 +7,7 @@ use cosmos_core::{
     events::block_events::BlockChangedEvent,
     inventory::Inventory,
     item::Item,
-    netty::{network_encoder, server_reliable_messages::ServerReliableMessages, NettyChannel},
+    netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannel},
     registry::{identifiable::Identifiable, Registry},
     structure::{structure_block::StructureBlock, Structure},
 };
@@ -132,7 +132,7 @@ fn handle_block_changed_event(
     for ev in event_reader.iter() {
         server.broadcast_message(
             NettyChannel::Reliable.id(),
-            network_encoder::serialize(&ServerReliableMessages::BlockChange {
+            cosmos_encoder::serialize(&ServerReliableMessages::BlockChange {
                 structure_entity: ev.structure_entity,
                 x: ev.block.x() as u32,
                 y: ev.block.y() as u32,

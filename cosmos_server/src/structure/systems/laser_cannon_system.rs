@@ -3,7 +3,7 @@ use bevy_rapier3d::prelude::{PhysicsWorld, Velocity, DEFAULT_WORLD_ID};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     netty::{
-        network_encoder, server_laser_cannon_system_messages::ServerLaserCannonSystemMessages,
+        cosmos_encoder, server_laser_cannon_system_messages::ServerLaserCannonSystemMessages,
         NettyChannel,
     },
     physics::{location::Location, player_world::PlayerWorld},
@@ -100,7 +100,7 @@ fn update_system(
 
                                 server.broadcast_message(
                                     NettyChannel::LaserCannonSystem.id(),
-                                    network_encoder::serialize(
+                                    cosmos_encoder::serialize(
                                         &ServerLaserCannonSystemMessages::CreateLaser {
                                             color,
                                             location,

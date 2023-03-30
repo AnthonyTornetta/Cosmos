@@ -7,7 +7,7 @@ use bevy::{
     utils::HashSet,
 };
 use bevy_rapier3d::prelude::Velocity;
-use cosmos_core::{netty::network_encoder, physics::location::Location};
+use cosmos_core::{netty::cosmos_encoder, physics::location::Location};
 use rand::{distributions::Alphanumeric, Rng};
 use std::{
     fs,
@@ -68,7 +68,7 @@ pub fn done_saving(
             continue;
         }
 
-        let serialized = network_encoder::serialize(&sd);
+        let serialized = cosmos_encoder::serialize(&sd);
 
         let entity_id = if let Some(id) = entity_id {
             id.clone()

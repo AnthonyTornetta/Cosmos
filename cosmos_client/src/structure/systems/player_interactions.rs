@@ -7,7 +7,7 @@ use bevy::{
 };
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
-    netty::{client_unreliable_messages::ClientUnreliableMessages, network_encoder, NettyChannel},
+    netty::{client_unreliable_messages::ClientUnreliableMessages, cosmos_encoder, NettyChannel},
     structure::ship::pilot::Pilot,
 };
 
@@ -42,7 +42,7 @@ fn check_system_in_use(
 
         client.send_message(
             NettyChannel::Unreliable.id(),
-            network_encoder::serialize(&ClientUnreliableMessages::ShipActiveSystem {
+            cosmos_encoder::serialize(&ClientUnreliableMessages::ShipActiveSystem {
                 active_system,
             }),
         );

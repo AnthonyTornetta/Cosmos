@@ -3,7 +3,7 @@ use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::Block,
     events::{block_events::BlockChangedEvent, structure::change_pilot_event::ChangePilotEvent},
-    netty::{network_encoder, server_reliable_messages::ServerReliableMessages, NettyChannel},
+    netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannel},
     registry::Registry,
     structure::{
         ship::{core::MeltingDown, pilot::Pilot},
@@ -47,7 +47,7 @@ fn on_melting_down(
 
                 server.broadcast_message(
                     NettyChannel::Reliable.id(),
-                    network_encoder::serialize(&ServerReliableMessages::StructureRemove { entity }),
+                    cosmos_encoder::serialize(&ServerReliableMessages::StructureRemove { entity }),
                 );
             }
         }

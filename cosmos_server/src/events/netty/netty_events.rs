@@ -4,7 +4,7 @@ use bevy_renet::renet::{RenetServer, ServerEvent};
 use cosmos_core::entities::player::render_distance::RenderDistance;
 use cosmos_core::inventory::Inventory;
 use cosmos_core::item::Item;
-use cosmos_core::netty::network_encoder;
+use cosmos_core::netty::cosmos_encoder;
 use cosmos_core::netty::server_reliable_messages::ServerReliableMessages;
 use cosmos_core::physics::location::Location;
 use cosmos_core::physics::player_world::WorldWithin;
@@ -122,12 +122,12 @@ fn handle_events_system(
                 {
                     let body = NettyRigidBody::new(velocity, transform.rotation, *location);
 
-                    let msg = network_encoder::serialize(&ServerReliableMessages::PlayerCreate {
+                    let msg = cosmos_encoder::serialize(&ServerReliableMessages::PlayerCreate {
                         entity,
                         id: player.id(),
                         body,
                         name: player.name().clone(),
-                        inventory_serialized: network_encoder::serialize(inventory),
+                        inventory_serialized: cosmos_encoder::serialize(inventory),
                         render_distance: Some(*render_distance),
                     });
 
@@ -144,7 +144,7 @@ fn handle_events_system(
 
                 let netty_body = NettyRigidBody::new(&velocity, transform.rotation, location);
 
-                let inventory_serialized = network_encoder::serialize(&inventory);
+                let inventory_serialized = cosmos_encoder::serialize(&inventory);
 
                 let player_commands = commands.spawn((
                     transform,
@@ -173,7 +173,7 @@ fn handle_events_system(
                     &mut rapier_context,
                 );
 
-                let msg = network_encoder::serialize(&ServerReliableMessages::PlayerCreate {
+                let msg = cosmos_encoder::serialize(&ServerReliableMessages::PlayerCreate {
                     entity,
                     id: *id,
                     name: String::from(name),
@@ -185,7 +185,7 @@ fn handle_events_system(
                 server.send_message(
                     *id,
                     NettyChannel::Reliable.id(),
-                    network_encoder::serialize(&ServerReliableMessages::MOTD {
+                    cosmos_encoder::serialize(&ServerReliableMessages::MOTD {
                         motd: "Welcome to the server!".into(),
                     }),
                 );
@@ -202,7 +202,7 @@ fn handle_events_system(
                 }
 
                 let message =
-                    network_encoder::serialize(&ServerReliableMessages::PlayerRemove { id: *id });
+                    cosmos_encoder::serialize(&ServerReliableMessages::PlayerRemove { id: *id });
 
                 server.broadcast_message(NettyChannel::Reliable.id(), message);
             }
