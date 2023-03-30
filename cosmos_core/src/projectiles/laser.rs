@@ -189,7 +189,7 @@ fn handle_events(
     {
         if laser.active {
             let last_pos = laser.last_position;
-            let delta_position = last_pos.relative_coords_to(&location);
+            let delta_position = last_pos.relative_coords_to(location);
             laser.last_position = *location;
 
             // Pass 1 second as the time & delta_position as the velocity because
