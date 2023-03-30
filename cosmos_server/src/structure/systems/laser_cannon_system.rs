@@ -64,7 +64,7 @@ fn update_system(
                                     line.start.y,
                                     line.start.z,
                                     global_transform,
-                                    &location,
+                                    location,
                                 );
 
                                 // AT SOME POINT, THE NEGATIVE SIGN HAS TO BE REMOVED HERE!!!!!
