@@ -77,7 +77,7 @@ pub fn load_structure(
     )) {
         println!("Loading structure {structure_name}...");
 
-        if let Ok(mut structure) = bincode::deserialize::<Structure>(&structure_bin) {
+        if let Ok(mut structure) = cosmos_encoder::deserialize::<Structure>(&structure_bin) {
             let mut entity_cmd = commands.spawn_empty();
 
             match structure_type {

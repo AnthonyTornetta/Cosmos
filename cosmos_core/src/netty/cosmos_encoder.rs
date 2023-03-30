@@ -1,4 +1,4 @@
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Serialize};
 
 /// Serializes the data to be sent - compresses it if needed
 pub fn serialize<T: Serialize>(x: &T) -> Vec<u8> {
@@ -12,18 +12,14 @@ pub fn serialize<T: Serialize>(x: &T) -> Vec<u8> {
 }
 
 /// Deserializes the data - will decompress if needed
-///
-/// Will change raw to be the uncompressed form if it is compressed.
-pub fn deserialize<'a, T: Deserialize<'a>>(
-    raw: &'a mut Vec<u8>,
-) -> Result<T, Box<bincode::ErrorKind>> {
+pub fn deserialize<'a, T: DeserializeOwned>(raw: &[u8]) -> Result<T, Box<bincode::ErrorKind>> {
     if raw.len() > 50 {
-        let Ok(decompressed) = zstd::decode_all(raw.as_slice()) else {
+        let Ok(decompressed) = zstd::decode_all(raw) else {
             return Err(Box::new(bincode::ErrorKind::Custom("Unable to decompress".into())));
         };
 
-        *raw = decompressed;
+        bincode::deserialize::<T>(&decompressed)
+    } else {
+        bincode::deserialize::<T>(raw)
     }
-
-    bincode::deserialize::<T>(raw)
 }

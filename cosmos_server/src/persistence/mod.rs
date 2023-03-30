@@ -3,7 +3,7 @@ use bevy::{
     reflect::Reflect,
     utils::{HashMap, HashSet},
 };
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use cosmos_core::{netty::cosmos_encoder, physics::location::Location};
 
@@ -99,11 +99,11 @@ impl SerializedData {
         self.save_data.get(data_id)
     }
 
-    /// Deserializes the data as the given type (via `bincode::deserialize`) at the given id. Will panic if the
+    /// Deserializes the data as the given type (via `cosmos_encoder::deserialize`) at the given id. Will panic if the
     /// data is not properly serialized.
-    pub fn deserialize_data<'a, T: Deserialize<'a>>(&'a self, data_id: &str) -> Option<T> {
+    pub fn deserialize_data<'a, T: DeserializeOwned>(&'a self, data_id: &str) -> Option<T> {
         self.read_data(data_id)
-            .map(|d| bincode::deserialize(d).expect("Error deserializing data!"))
+            .map(|d| cosmos_encoder::deserialize(d).expect("Error deserializing data!"))
     }
 
     /// Sets whether this should actually be saved - if false, when save and serialize_data is called,

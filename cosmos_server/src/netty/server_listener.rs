@@ -51,7 +51,8 @@ pub fn server_listen_messages(
     for client_id in server.clients_id().into_iter() {
         while let Some(message) = server.receive_message(client_id, NettyChannel::Unreliable.id()) {
             if let Some(player_entity) = lobby.players.get(&client_id) {
-                let command: ClientUnreliableMessages = bincode::deserialize(&message).unwrap();
+                let command: ClientUnreliableMessages =
+                    cosmos_encoder::deserialize(&message).unwrap();
 
                 match command {
                     ClientUnreliableMessages::PlayerBody { body, looking } => {
@@ -93,7 +94,7 @@ pub fn server_listen_messages(
         }
 
         while let Some(message) = server.receive_message(client_id, NettyChannel::Reliable.id()) {
-            let command: ClientReliableMessages = bincode::deserialize(&message).unwrap();
+            let command: ClientReliableMessages = cosmos_encoder::deserialize(&message).unwrap();
 
             match command {
                 ClientReliableMessages::PlayerDisconnect => {}

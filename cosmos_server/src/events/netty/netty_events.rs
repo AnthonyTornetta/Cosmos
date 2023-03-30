@@ -134,8 +134,8 @@ fn handle_events_system(
                     server.send_message(*id, NettyChannel::Reliable.id(), msg);
                 }
 
-                let name: &str = bincode::deserialize(user_data.as_slice()).unwrap();
-                let player = Player::new(String::from(name), *id);
+                let name = cosmos_encoder::deserialize::<String>(user_data.as_slice()).unwrap();
+                let player = Player::new(name.clone(), *id);
                 let starting_pos = Vec3::new(0.0, 60.0, 0.0);
                 let transform = Transform::from_translation(starting_pos);
                 let location = Location::new(starting_pos, 0, 0, 0);
@@ -176,7 +176,7 @@ fn handle_events_system(
                 let msg = cosmos_encoder::serialize(&ServerReliableMessages::PlayerCreate {
                     entity,
                     id: *id,
-                    name: String::from(name),
+                    name,
                     body: netty_body,
                     inventory_serialized,
                     render_distance: None,
