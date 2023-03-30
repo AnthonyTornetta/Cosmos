@@ -1,6 +1,6 @@
 use std::{
     fmt::Display,
-    ops::{Add, AddAssign},
+    ops::{Add, AddAssign, Sub},
 };
 
 use bevy::{
@@ -26,7 +26,8 @@ pub struct Location {
     pub sector_y: i64,
     pub sector_z: i64,
 
-    pub last_transform_loc: Vec3,
+    #[serde(skip)]
+    pub last_transform_loc: Option<Vec3>,
 }
 
 impl Display for Location {
@@ -54,6 +55,21 @@ impl Add<Vec3> for Location {
     }
 }
 
+impl Sub<Vec3> for Location {
+    type Output = Location;
+
+    fn sub(self, rhs: Vec3) -> Self::Output {
+        let mut loc = Location::new(
+            self.local - rhs,
+            self.sector_x,
+            self.sector_y,
+            self.sector_z,
+        );
+        loc.fix_bounds();
+        loc
+    }
+}
+
 impl AddAssign<Vec3> for &mut Location {
     fn add_assign(&mut self, rhs: Vec3) {
         self.local += rhs;
@@ -68,7 +84,7 @@ impl Location {
             sector_x,
             sector_y,
             sector_z,
-            last_transform_loc: local,
+            last_transform_loc: Some(local),
         }
     }
 
@@ -122,13 +138,16 @@ impl Location {
     }
 
     pub fn apply_updates(&mut self, translation: Vec3) {
-        self.local += translation - self.last_transform_loc;
+        self.local += translation
+            - self
+                .last_transform_loc
+                .expect("last_transform_loc must be set for this to work properly.");
         self.fix_bounds();
 
-        self.last_transform_loc = translation;
+        self.last_transform_loc = Some(translation);
     }
 
-    /// Returns the coordinates of this location based of 0, 0, 0.
+    /// Returns the coordinates of this location based off 0, 0, 0.
     ///
     /// Useful for very long-distance calculations/displaying
     pub fn absolute_coords(&self) -> Vector3<BigDecimal> {
@@ -144,6 +163,17 @@ impl Location {
             BigDecimal::from_i64(self.sector_z).unwrap() * &sector_dims + local_z,
         )
     }
+
+    /// Returns the coordinates of this location based off 0, 0, 0.
+    ///
+    /// Useful for short/medium-distance calculations/displaying
+    pub fn absolute_coords_f32(&self) -> Vec3 {
+        Vec3::new(
+            self.sector_x as f32 * SECTOR_DIMENSIONS + self.local.x,
+            self.sector_y as f32 * SECTOR_DIMENSIONS + self.local.y,
+            self.sector_z as f32 * SECTOR_DIMENSIONS + self.local.z,
+        )
+    }
 }
 
 fn bubble(
@@ -156,7 +186,7 @@ fn bubble(
     if let Ok((mut location, transform, children)) = query.get_mut(entity) {
         location.set_from(loc);
         location.local += transform.translation;
-        location.last_transform_loc = transform.translation;
+        location.last_transform_loc = Some(transform.translation);
         location.fix_bounds();
 
         if let Some(children) = children {

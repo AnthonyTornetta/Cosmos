@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::physics::location::Location;
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone, Copy)]
 pub struct NettyRigidBody {
     pub body_vel: RigidBodyVelocity,
     pub location: Location,

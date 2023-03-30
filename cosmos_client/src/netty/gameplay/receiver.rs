@@ -6,7 +6,7 @@ use bevy_rapier3d::prelude::*;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     block::Block,
-    entities::player::Player,
+    entities::player::{render_distance::RenderDistance, Player},
     events::{block_events::BlockChangedEvent, structure::change_pilot_event::ChangePilotEvent},
     inventory::Inventory,
     netty::{
@@ -85,6 +85,11 @@ fn update_crosshair(
     }
 }
 
+#[derive(Resource, Debug, Default)]
+struct RequestedEntities {
+    entities: Vec<(Entity, f32)>,
+}
+
 fn client_sync_players(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -99,8 +104,21 @@ fn client_sync_players(
     blocks: Res<Registry<Block>>,
     mut pilot_change_event_writer: EventWriter<ChangePilotEvent>,
     mut set_ship_movement_event: EventWriter<SetShipMovementEvent>,
+    mut requested_entities: ResMut<RequestedEntities>,
+    time: Res<Time>,
 ) {
     let client_id = client.client_id();
+
+    let mut new_entities = Vec::with_capacity(requested_entities.entities.len());
+
+    for ent in requested_entities.entities.iter_mut() {
+        ent.1 += time.delta_seconds();
+        if ent.1 < 10.0 {
+            new_entities.push(*ent);
+        }
+    }
+
+    requested_entities.entities = new_entities;
 
     while let Some(message) = client.receive_message(NettyChannel::Unreliable.id()) {
         let msg: ServerUnreliableMessages = bincode::deserialize(&message).unwrap();
@@ -121,6 +139,20 @@ fn client_sync_players(
                             velocity.linvel = body.body_vel.linvel.into();
                             velocity.angvel = body.body_vel.angvel.into();
                         }
+                    } else if !requested_entities
+                        .entities
+                        .iter()
+                        .any(|x| x.0 == *server_entity)
+                    {
+                        requested_entities.entities.push((*server_entity, 0.0));
+
+                        client.send_message(
+                            NettyChannel::Reliable.id(),
+                            bincode::serialize(&ClientReliableMessages::RequestEntityData {
+                                entity: *server_entity,
+                            })
+                            .unwrap(),
+                        );
                     }
                 }
             }
@@ -146,7 +178,14 @@ fn client_sync_players(
                 entity: server_entity,
                 name,
                 inventory_serialized,
+                render_distance: _,
             } => {
+                // Prevents creation of duplicate players
+                if lobby.players.contains_key(&id) {
+                    println!("WARNING - DUPLICATE PLAYER RECEIVED {id}");
+                    break;
+                }
+
                 println!("Player {} ({}) connected!", name.as_str(), id);
 
                 let mut entity_cmds = commands.spawn_empty();
@@ -155,7 +194,7 @@ fn client_sync_players(
 
                 // This should be set via the server, but just in case,
                 // this will avoid any position mismatching
-                body.location.last_transform_loc = body.location.local;
+                body.location.last_transform_loc = Some(body.location.local);
 
                 entity_cmds.insert((
                     PbrBundle {
@@ -189,6 +228,7 @@ fn client_sync_players(
                 if client_id == id {
                     entity_cmds
                         .insert(LocalPlayer::default())
+                        .insert(RenderDistance::default())
                         .with_children(|parent| {
                             parent
                                 .spawn(Camera3dBundle {
@@ -226,13 +266,15 @@ fn client_sync_players(
                     server_entity,
                 }) = lobby.players.remove(&id)
                 {
-                    let entity = commands.entity(client_entity);
+                    if let Some(entity) = commands.get_entity(client_entity) {
+                        if let Ok(player) = query_player.get(client_entity) {
+                            println!("Player {} ({id}) disconnected", player.name());
+                        }
 
-                    let name = query_player.get(client_entity).unwrap().name.clone();
-                    entity.despawn_recursive();
+                        entity.despawn_recursive();
+                    }
+
                     network_mapping.remove_mapping_from_server_entity(&server_entity);
-
-                    println!("Player {name} ({id}) disconnected");
                 }
             }
             ServerReliableMessages::PlanetCreate {
@@ -241,7 +283,13 @@ fn client_sync_players(
                 height,
                 width,
                 body,
+                chunks_needed,
             } => {
+                if network_mapping.contains_server_entity(server_entity) {
+                    println!("Got duplicate planet! Is the server lagging?");
+                    break;
+                }
+
                 let mut entity_cmds = commands.spawn_empty();
                 let mut structure =
                     Structure::new(width as usize, height as usize, length as usize);
@@ -249,7 +297,7 @@ fn client_sync_players(
                 let builder = ClientPlanetBuilder::default();
                 builder.insert_planet(&mut entity_cmds, body.location, &mut structure);
 
-                entity_cmds.insert(structure).insert(NeedsPopulated);
+                entity_cmds.insert((structure, NeedsPopulated, chunks_needed));
 
                 let entity = entity_cmds.id();
 
@@ -261,7 +309,13 @@ fn client_sync_players(
                 width,
                 height,
                 length,
+                chunks_needed,
             } => {
+                if network_mapping.contains_server_entity(server_entity) {
+                    println!("Got duplicate ship! Is the server lagging?");
+                    break;
+                }
+
                 let mut entity_cmds = commands.spawn_empty();
                 let mut structure =
                     Structure::new(width as usize, height as usize, length as usize);
@@ -274,7 +328,7 @@ fn client_sync_players(
                     &mut structure,
                 );
 
-                entity_cmds.insert(structure);
+                entity_cmds.insert((structure, chunks_needed));
 
                 let entity = entity_cmds.id();
 
@@ -292,28 +346,28 @@ fn client_sync_players(
                 structure_entity: server_structure_entity,
                 serialized_chunk,
             } => {
-                let s_entity = network_mapping
-                    .client_from_server(&server_structure_entity)
-                    .expect("Got chunk data for structure that doesn't exist on client");
+                if let Some(s_entity) = network_mapping.client_from_server(&server_structure_entity)
+                {
+                    if let Ok(mut structure) = query_structure.get_mut(*s_entity) {
+                        let chunk: Chunk = bincode::deserialize(&serialized_chunk)
+                            .expect("Unable to deserialize chunk from server");
 
-                let mut structure = query_structure.get_mut(*s_entity).unwrap();
+                        let (x, y, z) = (
+                            chunk.structure_x(),
+                            chunk.structure_y(),
+                            chunk.structure_z(),
+                        );
 
-                let chunk: Chunk = bincode::deserialize(&serialized_chunk).unwrap();
+                        structure.set_chunk(chunk);
 
-                let (x, y, z) = (
-                    chunk.structure_x(),
-                    chunk.structure_y(),
-                    chunk.structure_z(),
-                );
-
-                structure.set_chunk(chunk);
-
-                set_chunk_event_writer.send(ChunkInitEvent {
-                    x,
-                    y,
-                    z,
-                    structure_entity: *s_entity,
-                });
+                        set_chunk_event_writer.send(ChunkInitEvent {
+                            x,
+                            y,
+                            z,
+                            structure_entity: *s_entity,
+                        });
+                    }
+                }
             }
             ServerReliableMessages::StructureRemove {
                 entity: server_entity,
@@ -343,9 +397,6 @@ fn client_sync_players(
                             &blocks,
                             Some(&mut block_change_event_writer),
                         );
-                    } else {
-                        println!("OH NO!");
-                        commands.entity(*client_ent).log_components();
                     }
                 }
             }
@@ -383,6 +434,20 @@ fn client_sync_players(
             }
             ServerReliableMessages::LaserCannonFire {} => {
                 println!("A laser cannon was fired")
+            }
+        }
+    }
+}
+
+fn added_location(
+    mut query: Query<&mut Location, (Without<LocalPlayer>, Added<Location>)>,
+    local_player: Query<&Location, With<LocalPlayer>>,
+) {
+    if let Ok(local_loc) = local_player.get_single() {
+        for mut loc in query.iter_mut() {
+            if loc.last_transform_loc.is_none() {
+                let trans = local_loc.relative_coords_to(&loc);
+                loc.last_transform_loc = Some(trans);
             }
         }
     }
@@ -437,23 +502,25 @@ fn sync_transforms_and_locations(
         for (mut transform, mut location) in trans_query_no_parent.iter_mut() {
             let trans = world_location.relative_coords_to(&location);
             transform.translation = trans;
-            location.last_transform_loc = trans;
+            location.last_transform_loc = Some(trans);
         }
     }
 }
 
 pub(crate) fn register(app: &mut App) {
-    app.add_system(
-        client_sync_players
-            .run_if(in_state(GameState::Playing).or_else(in_state(GameState::LoadingWorld))),
-    )
-    .add_systems(
-        (
-            update_crosshair,
-            insert_last_rotation,
-            sync_transforms_and_locations.after(client_sync_players),
-            bubble_down_locations.after(sync_transforms_and_locations),
+    app.insert_resource(RequestedEntities::default())
+        .add_system(
+            client_sync_players
+                .run_if(in_state(GameState::Playing).or_else(in_state(GameState::LoadingWorld))),
         )
-            .in_set(OnUpdate(GameState::Playing)),
-    );
+        .add_systems(
+            (
+                update_crosshair,
+                insert_last_rotation,
+                added_location.after(client_sync_players),
+                sync_transforms_and_locations.after(added_location),
+                bubble_down_locations.after(sync_transforms_and_locations),
+            )
+                .in_set(OnUpdate(GameState::Playing)),
+        );
 }

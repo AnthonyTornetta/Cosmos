@@ -1,15 +1,13 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use bevy_renet::renet::{RenetServer, ServerEvent};
+use cosmos_core::entities::player::render_distance::RenderDistance;
 use cosmos_core::inventory::Inventory;
 use cosmos_core::item::Item;
 use cosmos_core::netty::server_reliable_messages::ServerReliableMessages;
 use cosmos_core::physics::location::Location;
 use cosmos_core::physics::player_world::WorldWithin;
 use cosmos_core::registry::Registry;
-use cosmos_core::structure::planet::Planet;
-use cosmos_core::structure::ship::Ship;
-use cosmos_core::structure::Structure;
 use cosmos_core::{
     entities::player::Player,
     netty::{netty_rigidbody::NettyRigidBody, NettyChannel},
@@ -105,10 +103,9 @@ fn handle_events_system(
         &Location,
         &Velocity,
         &Inventory,
+        &RenderDistance,
     )>,
     player_worlds: Query<(&Location, &WorldWithin, &PhysicsWorld), (With<Player>, Without<Parent>)>,
-    structure_type: Query<(Option<&Ship>, Option<&Planet>)>,
-    structures_query: Query<(Entity, &Structure, &Transform, &Velocity)>,
     items: Res<Registry<Item>>,
     mut visualizer: ResMut<RenetServerVisualizer<200>>,
     mut rapier_context: ResMut<RapierContext>,
@@ -119,15 +116,18 @@ fn handle_events_system(
                 println!("Client {id} connected");
                 visualizer.add_client(*id);
 
-                for (entity, player, transform, location, velocity, inventory) in players.iter() {
+                for (entity, player, transform, location, velocity, inventory, render_distance) in
+                    players.iter()
+                {
                     let body = NettyRigidBody::new(velocity, transform.rotation, *location);
 
                     let msg = bincode::serialize(&ServerReliableMessages::PlayerCreate {
                         entity,
-                        id: player.id,
+                        id: player.id(),
                         body,
-                        name: player.name.clone(),
+                        name: player.name().clone(),
                         inventory_serialized: bincode::serialize(inventory).unwrap(),
+                        render_distance: Some(*render_distance),
                     })
                     .unwrap();
 
@@ -179,6 +179,7 @@ fn handle_events_system(
                     name: String::from(name),
                     body: netty_body,
                     inventory_serialized,
+                    render_distance: None,
                 })
                 .unwrap();
 
@@ -192,40 +193,6 @@ fn handle_events_system(
                 );
 
                 server.broadcast_message(NettyChannel::Reliable.id(), msg);
-
-                for (entity, structure, transform, velocity) in structures_query.iter() {
-                    println!("Sending structure...");
-
-                    let (ship, planet) = structure_type.get(entity).unwrap();
-
-                    if planet.is_some() {
-                        server.send_message(
-                            *id,
-                            NettyChannel::Reliable.id(),
-                            bincode::serialize(&ServerReliableMessages::PlanetCreate {
-                                entity,
-                                body: NettyRigidBody::new(velocity, transform.rotation, location),
-                                width: structure.chunks_width() as u32,
-                                height: structure.chunks_height() as u32,
-                                length: structure.chunks_length() as u32,
-                            })
-                            .unwrap(),
-                        );
-                    } else if ship.is_some() {
-                        server.send_message(
-                            *id,
-                            NettyChannel::Reliable.id(),
-                            bincode::serialize(&ServerReliableMessages::ShipCreate {
-                                entity,
-                                body: NettyRigidBody::new(velocity, transform.rotation, location),
-                                width: structure.chunks_width() as u32,
-                                height: structure.chunks_height() as u32,
-                                length: structure.chunks_length() as u32,
-                            })
-                            .unwrap(),
-                        );
-                    }
-                }
             }
             ServerEvent::ClientDisconnected(id) => {
                 println!("Client {id} disconnected");

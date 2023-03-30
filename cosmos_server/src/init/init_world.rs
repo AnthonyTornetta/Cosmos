@@ -1,5 +1,3 @@
-use std::time::SystemTime;
-
 use bevy::prelude::*;
 use cosmos_core::{
     physics::location::Location,
@@ -17,18 +15,14 @@ use crate::structure::planet::{
 pub fn register(app: &mut App) {
     let noise = noise::OpenSimplex::default();
 
-    noise.set_seed(
-        (SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap()
-            .as_millis()
-            % u32::MAX as u128) as u32,
-    );
+    noise.set_seed(rand::random());
 
     app.insert_resource(ResourceWrapper(noise))
-        .add_startup_system(create_world);
+        // .add_startup_system(create_world); // go to player_loading.rs and uncomment the section specified if this is active.
+    ;
 }
 
+#[allow(dead_code)]
 fn create_world(mut commands: Commands) {
     let mut entity_cmd = commands.spawn_empty();
 

@@ -331,7 +331,10 @@ fn dew_it(
     event_writer: &mut EventWriter<NeedsNewPhysicsEvent>,
 ) {
     if let Some(chunk_coords) = chunk_coords {
-        let mut structure_physics = query.get_mut(entity).unwrap();
+        let Ok(mut structure_physics) = query.get_mut(entity) else {
+            // Entity may have been unloaded
+            return;
+        };
 
         structure_physics.needs_changed.insert(chunk_coords);
     }

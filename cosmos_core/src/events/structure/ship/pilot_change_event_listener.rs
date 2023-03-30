@@ -55,8 +55,8 @@ fn event_listener(
                 .insert(TransformBundle::from_transform(Transform::from_xyz(
                     0.5, 0.5, 0.5,
                 )));
-        } else {
-            commands.entity(ev.structure_entity).remove::<Pilot>();
+        } else if let Some(mut ecmds) = commands.get_entity(ev.structure_entity) {
+            ecmds.remove::<Pilot>();
         }
     }
 }

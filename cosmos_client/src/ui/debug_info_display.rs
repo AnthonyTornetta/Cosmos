@@ -28,7 +28,7 @@ fn add_text(mut commands: Commands, asset_server: Res<AssetServer>) {
         TextBundle {
             style: Style {
                 position: UiRect {
-                    top: Val::Px(5.0),
+                    bottom: Val::Px(5.0),
                     left: Val::Px(5.0),
                     ..default()
                 },
@@ -46,7 +46,7 @@ fn add_text(mut commands: Commands, asset_server: Res<AssetServer>) {
         TextBundle {
             style: Style {
                 position: UiRect {
-                    top: Val::Px(5.0 + text_gap),
+                    bottom: Val::Px(5.0 + text_gap),
                     left: Val::Px(5.0),
                     ..default()
                 },
@@ -64,7 +64,7 @@ fn add_text(mut commands: Commands, asset_server: Res<AssetServer>) {
         TextBundle {
             style: Style {
                 position: UiRect {
-                    top: Val::Px(5.0 + text_gap * 2.0),
+                    bottom: Val::Px(5.0 + text_gap * 2.0),
                     left: Val::Px(5.0),
                     ..default()
                 },
@@ -72,7 +72,7 @@ fn add_text(mut commands: Commands, asset_server: Res<AssetServer>) {
 
                 ..default()
             },
-            text: Text::from_section("FPS: ", text_style.clone()),
+            text: Text::from_section("FPS: ", text_style),
             ..default()
         },
         FPSCounter::default(),

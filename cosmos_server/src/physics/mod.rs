@@ -49,8 +49,6 @@ pub fn assign_player_world(
     } else {
         let world_id = rapier_context.add_world(RapierWorld::default());
 
-        println!("Added world!!!");
-
         let world_entity = commands
             .spawn((
                 PlayerWorld {
@@ -105,8 +103,6 @@ pub fn move_players_between_worlds(
                         world_currently_in.0 = other_world_entity;
                         body_world.world_id = other_body_world;
 
-                        println!("Swapped to other player's world!");
-
                         needs_new_world = false;
                         changed = true;
                     }
@@ -134,8 +130,6 @@ pub fn move_players_between_worlds(
 
                 world_within.0 = world_entity;
                 body_world.world_id = world_id;
-
-                println!("BOOM! NEW WORLD CREATED -- world id: {world_id}!");
             }
         }
     }
@@ -177,7 +171,6 @@ fn move_non_players_between_worlds(
                     .expect("Something should have a PhysicsWorld if it has a WorldWithin.");
 
                 if body_world.world_id != world_id {
-                    println!("CHANGING WORLD!");
                     body_world.world_id = world_id;
                 }
                 if world_within.0 != ww.0 {
@@ -218,9 +211,7 @@ fn remove_empty_worlds(
 
     'world_loop: for world_id in to_remove {
         // Verify that nothing else is a part of this world before removing it.
-        println!("Len: {}", everything_query.iter().len());
         for body_world in everything_query.iter().map(|bw| bw.world_id) {
-            println!("World ID: {world_id}");
             if world_id == body_world {
                 continue 'world_loop;
             }
@@ -231,8 +222,6 @@ fn remove_empty_worlds(
                 commands.entity(entity).despawn_recursive();
             }
         }
-
-        println!("Removed world {world_id}");
 
         context
             .remove_world(world_id)
@@ -261,6 +250,10 @@ fn sync_transforms_and_locations(
         // Server transforms for players should NOT be applied to the location.
         // The location the client sent should override it.
         if !players_query.contains(entity) {
+            if location.last_transform_loc.is_none() {
+                location.last_transform_loc = Some(location.local);
+            }
+
             location.apply_updates(transform.translation);
         }
     }
@@ -268,6 +261,10 @@ fn sync_transforms_and_locations(
         // Server transforms for players should NOT be applied to the location.
         // The location the client sent should override it.
         if !players_query.contains(entity) {
+            if location.last_transform_loc.is_none() {
+                location.last_transform_loc = Some(location.local);
+            }
+
             location.apply_updates(transform.translation);
         }
     }
@@ -285,7 +282,7 @@ fn sync_transforms_and_locations(
 
             let location = trans_query_no_parent
                 .get(player_entity)
-                .map(|x| x.2)
+                .map(|(_, _, loc, _)| loc)
                 .or_else(|_| match trans_query_with_parent.get(player_entity) {
                     Ok((_, _, loc)) => Ok(loc),
                     Err(x) => Err(x),
@@ -298,7 +295,7 @@ fn sync_transforms_and_locations(
             for (_, mut transform, mut location, world_within) in trans_query_no_parent.iter_mut() {
                 if world_within.0 == world_entity {
                     transform.translation = world_location.relative_coords_to(&location);
-                    location.last_transform_loc = transform.translation;
+                    location.last_transform_loc = Some(transform.translation);
                 }
             }
         } else {

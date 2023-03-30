@@ -1,10 +1,12 @@
 pub mod asset;
 pub mod block;
 pub mod camera;
+pub mod entities;
 pub mod events;
 pub mod input;
 pub mod interactions;
 pub mod lang;
+pub mod loading;
 pub mod materials;
 pub mod netty;
 pub mod plugin;
@@ -298,6 +300,9 @@ fn create_sun(mut commands: Commands) {
 }
 
 fn main() {
+    // #[cfg(debug_assertions)]
+    // env::set_var("RUST_BACKTRACE", "1");
+
     let args: Vec<String> = env::args().collect();
 
     let host_name = if args.len() > 1 {
@@ -367,6 +372,8 @@ fn main() {
     block::register(&mut app);
     projectiles::register(&mut app);
     materials::register(&mut app);
+    loading::register(&mut app);
+    entities::register(&mut app);
 
     app.run();
 }

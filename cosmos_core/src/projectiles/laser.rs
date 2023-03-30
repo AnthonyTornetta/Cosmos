@@ -11,6 +11,8 @@ use bevy_rapier3d::prelude::{
     RigidBody, Sensor, Velocity, WorldId, DEFAULT_WORLD_ID,
 };
 
+use crate::{netty::NoSendEntity, physics::location::Location};
+
 #[derive(Debug)]
 /// The entity hit represents the entity hit by the laser
 ///
@@ -59,7 +61,7 @@ pub struct Laser {
     active: bool,
     pub strength: f32,
 
-    last_position: Vec3,
+    last_position: Location,
 }
 
 impl Laser {
@@ -70,7 +72,7 @@ impl Laser {
     /// Base strength is 100?
     ///
     pub fn spawn_custom_pbr(
-        position: Vec3,
+        location: Location,
         laser_velocity: Vec3,
         firer_velocity: Vec3,
         strength: f32,
@@ -78,43 +80,43 @@ impl Laser {
         mut pbr: PbrBundle,
         time: &Time,
         world_id: WorldId,
+        world_location: &Location,
         commands: &mut Commands,
     ) -> Entity {
-        pbr.transform = Transform {
-            translation: position,
-            rotation: Quat::IDENTITY,
-            scale: Vec3::ONE,
-        };
+        pbr.transform = Transform::from_translation(world_location.relative_coords_to(&location));
 
-        pbr.transform.look_at(position + laser_velocity, Vec3::Y);
+        pbr.transform.look_at(laser_velocity, Vec3::Y);
 
         let mut ent_cmds = commands.spawn_empty();
 
         let laser_entity = ent_cmds.id();
 
-        ent_cmds
-            .insert(Laser {
+        ent_cmds.insert((
+            Laser {
                 strength,
                 active: true,
-                last_position: position,
-            })
-            .insert(pbr)
-            .insert(RigidBody::Dynamic)
-            .insert(LockedAxes::ROTATION_LOCKED)
-            .insert(Collider::cuboid(0.05, 0.05, 1.0))
-            .insert(Velocity {
+                last_position: location,
+            },
+            location,
+            pbr,
+            RigidBody::Dynamic,
+            LockedAxes::ROTATION_LOCKED,
+            Collider::cuboid(0.05, 0.05, 1.0),
+            Velocity {
                 linvel: laser_velocity + firer_velocity,
                 ..Default::default()
-            })
-            .insert(FireTime {
+            },
+            FireTime {
                 time: time.elapsed_seconds(),
-            })
-            .insert(PhysicsWorld { world_id })
-            .insert(ActiveEvents::COLLISION_EVENTS)
-            .insert(ActiveHooks::MODIFY_SOLVER_CONTACTS)
-            .insert(Sensor)
-            .insert(NotShadowCaster)
-            .insert(NotShadowReceiver);
+            },
+            PhysicsWorld { world_id },
+            ActiveEvents::COLLISION_EVENTS,
+            ActiveHooks::MODIFY_SOLVER_CONTACTS,
+            Sensor,
+            NotShadowCaster,
+            NotShadowReceiver,
+            NoSendEntity,
+        ));
 
         if let Some(ent) = no_collide_entity {
             ent_cmds.insert(NoCollide(ent));
@@ -127,13 +129,14 @@ impl Laser {
     /// Base strength is 100
     ///
     pub fn spawn(
-        position: Vec3,
+        position: Location,
         laser_velocity: Vec3,
         firer_velocity: Vec3,
         strength: f32,
         no_collide_entity: Option<Entity>,
         time: &Time,
         world_id: WorldId,
+        world_location: &Location,
         commands: &mut Commands,
     ) -> Entity {
         Self::spawn_custom_pbr(
@@ -147,6 +150,7 @@ impl Laser {
             },
             time,
             world_id,
+            world_location,
             commands,
         )
     }
@@ -156,6 +160,7 @@ fn handle_events(
     mut query: Query<
         (
             Option<&PhysicsWorld>,
+            &Location,
             &GlobalTransform,
             Entity,
             Option<&NoCollide>,
@@ -171,13 +176,21 @@ fn handle_events(
     parent_query: Query<&Parent>,
     transform_query: Query<&GlobalTransform, Without<Laser>>,
 ) {
-    for (world, transform, laser_entity, no_collide_entity, mut laser, velocity, collider) in
-        query.iter_mut()
+    for (
+        world,
+        location,
+        transform,
+        laser_entity,
+        no_collide_entity,
+        mut laser,
+        velocity,
+        collider,
+    ) in query.iter_mut()
     {
         if laser.active {
             let last_pos = laser.last_position;
-            let delta_position = transform.translation() - last_pos;
-            laser.last_position = transform.translation();
+            let delta_position = last_pos.relative_coords_to(&location);
+            laser.last_position = *location;
 
             // Pass 1 second as the time & delta_position as the velocity because
             // it simulates the laser moving over the period it moved in 1 second
@@ -185,7 +198,7 @@ fn handle_events(
 
             if let Ok(Some((entity, toi))) = rapier_context.cast_shape(
                 world.map(|bw| bw.world_id).unwrap_or(DEFAULT_WORLD_ID),
-                last_pos - delta_position, // sometimes lasers pass through things that are next to where they are spawned, thus we check starting a bit behind them
+                (last_pos - delta_position).absolute_coords_f32(), // sometimes lasers pass through things that are next to where they are spawned, thus we check starting a bit behind them
                 Quat::from_affine3(&transform.affine()),
                 delta_position * 2.0, // * 2.0 to account for checking behind the laser
                 collider,
@@ -250,7 +263,6 @@ fn despawn_lasers(
 }
 
 pub(crate) fn register(app: &mut App) {
-    app.add_system(handle_events)
-        .add_system(despawn_lasers)
+    app.add_systems((handle_events, despawn_lasers))
         .add_event::<LaserCollideEvent>();
 }

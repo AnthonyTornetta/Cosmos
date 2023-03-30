@@ -3,11 +3,12 @@ use crate::structure::{
     Structure,
 };
 use bevy::{
-    prelude::{Added, App, Commands, Component, Entity, EventReader, EventWriter, Query},
+    prelude::{Added, App, Commands, Component, Entity, EventReader, EventWriter, Query, Without},
     reflect::{FromReflect, Reflect},
 };
+use serde::{Deserialize, Serialize};
 
-#[derive(Component, Debug, Reflect, FromReflect)]
+#[derive(Component, Debug, Reflect, FromReflect, Serialize, Deserialize, Clone, Copy)]
 pub struct ChunksNeedLoaded {
     pub amount_needed: usize,
 }
@@ -40,17 +41,17 @@ fn listen_chunk_done_loading(
 }
 
 fn listen_structure_added(
-    query: Query<(Entity, &Structure), Added<Structure>>,
+    query: Query<(Entity, &Structure), (Added<Structure>, Without<ChunksNeedLoaded>)>,
     mut commands: Commands,
 ) {
     for (entity, structure) in query.iter() {
         commands.entity(entity).insert(ChunksNeedLoaded {
-            amount_needed: structure.all_chunks_iter(true).len(),
+            amount_needed: structure.all_chunks_iter(false).len(),
         });
     }
 }
 
-pub(crate) fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.add_system(listen_structure_added)
         .add_system(listen_chunk_done_loading)
         .register_type::<ChunksNeedLoaded>();

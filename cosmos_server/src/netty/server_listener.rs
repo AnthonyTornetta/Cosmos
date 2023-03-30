@@ -25,6 +25,7 @@ use crate::events::{
 };
 
 use super::network_helpers::ServerLobby;
+use super::sync::entities::RequestedEntityEvent;
 
 pub fn server_listen_messages(
     mut commands: Commands,
@@ -44,6 +45,7 @@ pub fn server_listen_messages(
         (&Transform, &mut Location, &mut PlayerLooking, &mut Velocity),
         With<Player>,
     >,
+    mut requested_entities_writer: EventWriter<RequestedEntityEvent>,
 ) {
     for client_id in server.clients_id().into_iter() {
         while let Some(message) = server.receive_message(client_id, NettyChannel::Unreliable.id()) {
@@ -56,7 +58,7 @@ pub fn server_listen_messages(
                             change_player_query.get_mut(*player_entity)
                         {
                             location.set_from(&body.location);
-                            location.last_transform_loc = transform.translation;
+                            location.last_transform_loc = Some(transform.translation);
                             currently_looking.rotation = looking;
                             velocity.linvel = body.body_vel.linvel.into();
                         }
@@ -196,6 +198,23 @@ pub fn server_listen_messages(
                                 pilot_entity: None,
                             });
                         }
+                    }
+                }
+                ClientReliableMessages::ChangeRenderDistance {
+                    mut render_distance,
+                } => {
+                    if let Some(player_entity) = lobby.players.get(&client_id) {
+                        if let Some(mut e) = commands.get_entity(*player_entity) {
+                            if render_distance.sector_range > 8 {
+                                render_distance.sector_range = 8;
+                            }
+                            e.insert(render_distance);
+                        }
+                    }
+                }
+                ClientReliableMessages::RequestEntityData { entity } => {
+                    if commands.get_entity(entity).is_some() {
+                        requested_entities_writer.send(RequestedEntityEvent { client_id, entity });
                     }
                 }
             }

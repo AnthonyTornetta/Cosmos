@@ -1,4 +1,4 @@
-use bevy::prelude::{App, DespawnRecursiveExt};
+use bevy::prelude::{App, CoreSet, DespawnRecursiveExt};
 use bevy::reflect::Reflect;
 use bevy::utils::{HashMap, HashSet};
 use bevy_rapier3d::prelude::PhysicsWorld;
@@ -18,6 +18,8 @@ use crate::block::blocks::AIR_BLOCK_ID;
 use crate::block::hardness::BlockHardness;
 use crate::block::Block;
 use crate::events::block_events::BlockChangedEvent;
+use crate::netty::NoSendEntity;
+use crate::physics::location::Location;
 use crate::registry::identifiable::Identifiable;
 use crate::registry::Registry;
 use crate::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
@@ -379,8 +381,9 @@ impl Structure {
         y: usize,
         z: usize,
         body_position: &GlobalTransform,
-    ) -> Vec3 {
-        body_position.translation()
+        this_location: &Location,
+    ) -> Location {
+        *this_location
             + body_position
                 .affine()
                 .matrix3
@@ -630,12 +633,15 @@ fn add_chunks_system(
         if let Ok((mut structure, body_world)) = structure_query.get_mut(structure_entity) {
             if let Some(chunk) = structure.chunk_from_chunk_coordinates(x, y, z) {
                 if !chunk.is_empty() && structure.chunk_entity(x, y, z).is_none() {
-                    let mut entity_cmds = commands.spawn(PbrBundle {
-                        transform: Transform::from_translation(
-                            structure.chunk_relative_position(x, y, z),
-                        ),
-                        ..Default::default()
-                    });
+                    let mut entity_cmds = commands.spawn((
+                        PbrBundle {
+                            transform: Transform::from_translation(
+                                structure.chunk_relative_position(x, y, z),
+                            ),
+                            ..Default::default()
+                        },
+                        NoSendEntity,
+                    ));
 
                     if let Some(bw) = body_world {
                         entity_cmds.insert(*bw);
@@ -663,7 +669,7 @@ fn add_chunks_system(
     }
 }
 
-pub fn register<T: States + Clone + Copy>(
+pub(crate) fn register<T: States + Clone + Copy>(
     app: &mut App,
     post_loading_state: T,
     playing_game_state: T,
@@ -679,6 +685,6 @@ pub fn register<T: States + Clone + Copy>(
     block_health::register(app);
     structure_block::register(app);
 
-    app.add_system(add_chunks_system)
+    app.add_system(add_chunks_system.in_base_set(CoreSet::PreUpdate))
         .add_system(remove_empty_chunks.after(add_chunks_system));
 }
