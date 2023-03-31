@@ -5,7 +5,7 @@ use bevy::{
     },
     utils::HashSet,
 };
-use bevy_rapier3d::prelude::Velocity;
+use bevy_rapier3d::prelude::{RigidBody, RigidBodyDisabled};
 
 use crate::{
     physics::location::Location,
@@ -22,7 +22,7 @@ struct LoadingSectors {
 }
 
 #[derive(Component)]
-struct OgRb((Location, Transform, Velocity));
+struct OgRb(RigidBody);
 
 fn monitor_sectors(
     query: Query<&Location, With<ChunksNeedLoaded>>,
@@ -56,38 +56,24 @@ fn monitor_sectors(
 fn freeze_sectors(
     loading_sectors: Res<LoadingSectors>,
 
-    mut query: Query<(
-        Entity,
-        &mut Location,
-        &mut Transform,
-        &mut Velocity,
-        Option<&OgRb>,
-    )>,
+    mut query: Query<(Entity, &Location, &RigidBody, Option<&OgRb>)>,
     mut commands: Commands,
 ) {
-    for (ent, mut loc, mut transform, mut vel, og_rb) in query.iter_mut() {
+    for (ent, loc, rb, og_rb) in query.iter_mut() {
         let coords = (loc.sector_x, loc.sector_y, loc.sector_z);
 
         if loading_sectors.added.contains(&coords) {
-            println!("Saving @ {}", loc.as_ref());
-            commands.entity(ent).insert(OgRb((*loc, *transform, *vel)));
+            println!("Saving @ {}", loc);
+            commands.entity(ent).insert(RigidBodyDisabled);
+            // .insert(OgRb(*rb))
+            // .insert(RigidBody::Fixed);
             println!("Locking!");
         } else if loading_sectors.removed.contains(&coords) {
-            if let Some(og_rb) = og_rb {
-                let (og_loc, og_transform, og_vel) = og_rb.0;
+            // if let Some(og_rb) = og_rb {
+            commands.entity(ent).remove::<RigidBodyDisabled>();
 
-                println!("Last loc was {:?}", loc.last_transform_loc);
-
-                loc.set_from(&og_loc);
-                transform.rotation = og_transform.rotation;
-                transform.translation = og_transform.translation;
-                vel.linvel = og_vel.linvel;
-                vel.angvel = og_vel.angvel;
-
-                commands.entity(ent).remove::<OgRb>();
-
-                println!("Unlocking!");
-            }
+            println!("Unlocking!");
+            // }
         }
     }
 }

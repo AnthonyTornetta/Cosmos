@@ -773,7 +773,7 @@ checksum = "a96c24da064370917b92c2a84527e6a73b620c50ac5ef8b1af8c04ccf5256a7c"
 [[package]]
 name = "bevy_rapier3d"
 version = "0.21.0"
-source = "git+https://github.com/AnthonyTornetta/bevy_rapier/#97b849e83f16bf1ab59c169830b9cd833a2828b4"
+source = "git+https://github.com/AnthonyTornetta/bevy_rapier/#52223757ff788f5d7dda3c552aa3849a7c2dbdd9"
 dependencies = [
  "bevy",
  "bitflags",
@@ -3340,8 +3340,7 @@ checksum = "9c8a99fddc9f0ba0a85884b8d14e3592853e787d581ca1816c91349b10e4eeab"
 [[package]]
 name = "rapier3d"
 version = "0.17.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "62a8a0bd9d3135f7b4eb45d0796540e7bab47b6b7c974f90567ccc5a0454f42b"
+source = "git+https://github.com/AnthonyTornetta/rapier#3ccb1f85c75fa3daf8db47f348561fd93e21796e"
 dependencies = [
  "approx",
  "arrayvec",
