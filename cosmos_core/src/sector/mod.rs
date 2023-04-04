@@ -1,11 +1,10 @@
 use bevy::{
     prelude::{
-        App, Commands, Component, Entity, IntoSystemConfigs, Query, Res, ResMut, Resource,
-        Transform, With,
+        App, Commands, Entity, IntoSystemConfigs, Query, Res, ResMut, Resource, Transform, With,
     },
     utils::HashSet,
 };
-use bevy_rapier3d::prelude::{RigidBody, RigidBodyDisabled};
+use bevy_rapier3d::prelude::RigidBodyDisabled;
 
 use crate::{
     physics::location::Location,
@@ -20,9 +19,6 @@ struct LoadingSectors {
     removed: HashSet<SectorLoc>,
     added: HashSet<SectorLoc>,
 }
-
-#[derive(Component)]
-struct OgRb(RigidBody);
 
 fn monitor_sectors(
     query: Query<&Location, With<ChunksNeedLoaded>>,
@@ -56,10 +52,10 @@ fn monitor_sectors(
 fn freeze_sectors(
     loading_sectors: Res<LoadingSectors>,
 
-    mut query: Query<(Entity, &Location, &RigidBody, Option<&OgRb>)>,
+    mut query: Query<(Entity, &Location)>,
     mut commands: Commands,
 ) {
-    for (ent, loc, rb, og_rb) in query.iter_mut() {
+    for (ent, loc) in query.iter_mut() {
         let coords = (loc.sector_x, loc.sector_y, loc.sector_z);
 
         if loading_sectors.added.contains(&coords) {
