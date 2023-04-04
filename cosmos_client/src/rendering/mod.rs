@@ -2,9 +2,8 @@ use bevy::prelude::*;
 use cosmos_core::{
     block::{Block, BlockFace},
     registry::{
-        self,
         identifiable::Identifiable,
-        multi_registry::{self, MultiRegistry},
+        many_to_one::{self, ManyToOneRegistry},
         Registry,
     },
 };
@@ -22,8 +21,19 @@ pub struct MeshInformation {
     pub normals: Vec<[f32; 3]>,
 }
 
+pub trait MeshBuilder {
+    fn add_mesh_information(
+        &mut self,
+        mesh_info: &MeshInformation,
+        position: [f32; 3],
+        min_uv: [f32; 2],
+        max_uv: [f32; 2],
+    );
+}
+
 #[derive(Default, Debug, Reflect, FromReflect)]
 pub struct BlockMeshInformation {
+    /// Make sure this is in the same order as the [`BlockFace::index`] method.
     mesh_info: [MeshInformation; 6],
 
     id: u16,
@@ -55,6 +65,14 @@ impl BlockMeshInformation {
         front: MeshInformation,
         back: MeshInformation,
     ) -> Self {
+        // If this ever fails, change the ordering + comment below
+        debug_assert!(BlockFace::Right.index() == 0);
+        debug_assert!(BlockFace::Left.index() == 1);
+        debug_assert!(BlockFace::Top.index() == 2);
+        debug_assert!(BlockFace::Bottom.index() == 3);
+        debug_assert!(BlockFace::Front.index() == 4);
+        debug_assert!(BlockFace::Back.index() == 5);
+
         Self {
             /*
                BlockFace::Right => 0,
@@ -148,67 +166,19 @@ fn register_meshes(mut registry: ResMut<Registry<BlockMeshInformation>>) {
     ));
 }
 
-#[derive(Debug)]
-pub struct BlockMeshInformationIndentifier {
-    unlocalized_name: String,
-    id: u16,
-
-    model_unlocalized_name: String,
-}
-
-impl BlockMeshInformationIndentifier {
-    pub fn new(
-        unlocalized_name: impl Into<String>,
-        model_unlocalized_name: impl Into<String>,
-    ) -> Self {
-        Self {
-            model_unlocalized_name: model_unlocalized_name.into(),
-            unlocalized_name: unlocalized_name.into(),
-            id: 0,
-        }
-    }
-
-    pub fn model_unlocalized_name(&self) -> &str {
-        &self.model_unlocalized_name
-    }
-}
-
-impl Identifiable for BlockMeshInformationIndentifier {
-    fn id(&self) -> u16 {
-        self.id
-    }
-
-    fn set_numeric_id(&mut self, id: u16) {
-        self.id = id;
-    }
-
-    fn unlocalized_name(&self) -> &str {
-        &self.unlocalized_name
-    }
-}
-
 fn register_block_meshes(
     blocks: Res<Registry<Block>>,
-    block_mesh_registry: Res<Registry<BlockMeshInformation>>,
-    mut model_registry: ResMut<MultiRegistry<Block, BlockMeshInformationIndentifier>>,
+    mut model_registry: ResMut<ManyToOneRegistry<Block, BlockMeshInformation>>,
 ) {
-    if let Some(base_model) = block_mesh_registry.from_id("cosmos:base_block") {
-        model_registry.insert_value(BlockMeshInformationIndentifier::new(
-            "cosmos:base_block",
-            base_model.unlocalized_name(),
-        ));
-
-        for block in blocks.iter() {
-            model_registry
-                .add_link(block, "cosmos:base_block")
-                .expect("cosmos:base_block model link wasn't inserted successfully!");
-        }
+    for block in blocks.iter() {
+        model_registry
+            .add_link(block, "cosmos:base_block")
+            .expect("cosmos:base_block model link wasn't inserted successfully!");
     }
 }
 
 pub(super) fn register(app: &mut App) {
-    registry::create_registry::<BlockMeshInformation>(app);
-    multi_registry::create_multi_registry::<Block, BlockMeshInformationIndentifier>(app);
+    many_to_one::create_many_to_one_registry::<Block, BlockMeshInformation>(app);
 
     app.add_systems((
         register_meshes.in_schedule(OnEnter(GameState::Loading)),
