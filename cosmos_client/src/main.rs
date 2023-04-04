@@ -37,13 +37,11 @@ use interactions::block_interactions;
 use netty::connect::{self, ConnectionConfig};
 use netty::flags::LocalPlayer;
 use netty::mapping::NetworkMapping;
-use rendering::structure_renderer;
 use state::game_state::GameState;
 use structure::chunk_retreiver;
 use ui::crosshair::CrosshairOffset;
 use window::setup::DeltaCursorPosition;
 
-use crate::rendering::structure_renderer::monitor_block_updates_system;
 use crate::rendering::uv_mapper::UVMapper;
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::{RapierConfiguration, TimestepMode, Vect, Velocity};
@@ -343,15 +341,11 @@ fn main() {
             connect::wait_for_connection.in_set(OnUpdate(GameState::Connecting)),
         ))
         .add_system(create_sun.in_schedule(OnEnter(GameState::LoadingWorld)))
-        .add_systems(
-            (connect::wait_for_done_loading, monitor_block_updates_system)
-                .in_set(OnUpdate(GameState::LoadingWorld)),
-        )
+        .add_system(connect::wait_for_done_loading.in_set(OnUpdate(GameState::LoadingWorld)))
         .add_systems(
             (
                 process_player_movement,
                 process_ship_movement,
-                monitor_block_updates_system,
                 reset_cursor,
                 sync_pilot_to_ship,
             )
@@ -367,7 +361,6 @@ fn main() {
     camera_controller::register(&mut app);
     ui::register(&mut app);
     netty::register(&mut app);
-    structure_renderer::register(&mut app);
     lang::register(&mut app);
     structure::register(&mut app);
     block::register(&mut app);

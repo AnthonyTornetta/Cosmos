@@ -179,6 +179,7 @@ fn register_block_meshes(
 
 pub(super) fn register(app: &mut App) {
     many_to_one::create_many_to_one_registry::<Block, BlockMeshInformation>(app);
+    structure_renderer::register(app);
 
     app.add_systems((
         register_meshes.in_schedule(OnEnter(GameState::Loading)),

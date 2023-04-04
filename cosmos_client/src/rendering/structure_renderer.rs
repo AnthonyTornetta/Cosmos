@@ -2,7 +2,7 @@ use crate::block::lighting::{BlockLightProperties, BlockLighting};
 use crate::materials::CosmosMaterial;
 use crate::state::game_state::GameState;
 use bevy::prelude::{
-    App, BuildChildren, Component, DespawnRecursiveExt, EventReader, IntoSystemConfig, Mesh,
+    App, BuildChildren, Component, DespawnRecursiveExt, EventReader, IntoSystemConfigs, Mesh,
     OnUpdate, PbrBundle, PointLight, PointLightBundle, StandardMaterial, Transform, Vec3,
 };
 use bevy::reflect::{FromReflect, Reflect};
@@ -28,6 +28,8 @@ use crate::{Assets, Commands, Entity, EventWriter, Handle, Query, Res, ResMut, U
 
 use super::{BlockMeshInformation, MeshBuilder, MeshInformation};
 
+/// This is responsible for rendering a structure.
+/// Put this on a structure if you want it rendered.
 #[derive(Component, Debug)]
 pub struct StructureRenderer {
     width: usize,
@@ -39,21 +41,24 @@ pub struct StructureRenderer {
 }
 
 #[derive(Debug)]
-pub struct MeshMaterial {
+struct MeshMaterial {
     mesh: Mesh,
     material: Handle<StandardMaterial>,
 }
 
 #[derive(Debug)]
-pub struct ChunkMesh {
-    pub x: usize,
-    pub y: usize,
-    pub z: usize,
-    pub mesh_materials: Vec<MeshMaterial>,
-    pub lights: HashMap<(usize, usize, usize), BlockLightProperties>,
+struct ChunkMesh {
+    x: usize,
+    y: usize,
+    z: usize,
+    mesh_materials: Vec<MeshMaterial>,
+    lights: HashMap<(usize, usize, usize), BlockLightProperties>,
 }
 
 impl StructureRenderer {
+    /// Initiates a StructureRenderer specifically for this structure.
+    ///
+    /// Make sure to add this as a component to the structure's entity.
     pub fn new(structure: &Structure) -> Self {
         let width = structure.chunks_width();
         let height = structure.chunks_height();
@@ -82,7 +87,7 @@ impl StructureRenderer {
         }
     }
 
-    pub fn render(
+    fn render(
         &mut self,
         structure: &Structure,
         uv_mapper: &UVMapper,
@@ -144,7 +149,7 @@ impl StructureRenderer {
         self.changes.clear();
     }
 
-    pub fn create_meshes(&mut self) -> Vec<ChunkMesh> {
+    fn create_meshes(&mut self) -> Vec<ChunkMesh> {
         let mut meshes = Vec::with_capacity(self.need_meshes.len());
 
         for chunk in &self.need_meshes {
@@ -188,9 +193,10 @@ impl StructureRenderer {
     }
 }
 
-pub struct NeedsNewRenderingEvent(Entity);
+struct NeedsNewRenderingEvent(Entity);
 
-fn dew_it(
+/// Queues a chunk to be rendered if it hasn't already been queued.
+fn maybe_queue_chunk_for_rendering(
     done_structures: &mut HashSet<u32>,
     entity: Entity,
     chunk_coords: Option<Vector3<usize>>,
@@ -217,7 +223,7 @@ fn dew_it(
     }
 }
 
-pub fn monitor_block_updates_system(
+fn monitor_block_updates_system(
     mut event: EventReader<BlockChangedEvent>,
     mut chunk_set_event: EventReader<ChunkSetEvent>,
     mut query: Query<&mut StructureRenderer>,
@@ -230,7 +236,7 @@ pub fn monitor_block_updates_system(
         let structure = structure_query.get(ev.structure_entity).unwrap();
 
         if ev.block.x() != 0 && ev.block.x() % CHUNK_DIMENSIONS == 0 {
-            dew_it(
+            maybe_queue_chunk_for_rendering(
                 &mut done_structures,
                 ev.structure_entity,
                 Some(Vector3::new(
@@ -246,7 +252,7 @@ pub fn monitor_block_updates_system(
         if ev.block.x() != structure.blocks_width() - 1
             && (ev.block.x() + 1) % CHUNK_DIMENSIONS == 0
         {
-            dew_it(
+            maybe_queue_chunk_for_rendering(
                 &mut done_structures,
                 ev.structure_entity,
                 Some(Vector3::new(
@@ -260,7 +266,7 @@ pub fn monitor_block_updates_system(
         }
 
         if ev.block.y() != 0 && ev.block.y() % CHUNK_DIMENSIONS == 0 {
-            dew_it(
+            maybe_queue_chunk_for_rendering(
                 &mut done_structures,
                 ev.structure_entity,
                 Some(Vector3::new(
@@ -276,7 +282,7 @@ pub fn monitor_block_updates_system(
         if ev.block.y() != structure.blocks_height() - 1
             && (ev.block.y() + 1) % CHUNK_DIMENSIONS == 0
         {
-            dew_it(
+            maybe_queue_chunk_for_rendering(
                 &mut done_structures,
                 ev.structure_entity,
                 Some(Vector3::new(
@@ -290,7 +296,7 @@ pub fn monitor_block_updates_system(
         }
 
         if ev.block.z() != 0 && ev.block.z() % CHUNK_DIMENSIONS == 0 {
-            dew_it(
+            maybe_queue_chunk_for_rendering(
                 &mut done_structures,
                 ev.structure_entity,
                 Some(Vector3::new(
@@ -306,7 +312,7 @@ pub fn monitor_block_updates_system(
         if ev.block.z() != structure.blocks_length() - 1
             && (ev.block.z() + 1) % CHUNK_DIMENSIONS == 0
         {
-            dew_it(
+            maybe_queue_chunk_for_rendering(
                 &mut done_structures,
                 ev.structure_entity,
                 Some(Vector3::new(
@@ -319,7 +325,7 @@ pub fn monitor_block_updates_system(
             );
         }
 
-        dew_it(
+        maybe_queue_chunk_for_rendering(
             &mut done_structures,
             ev.structure_entity,
             Some(Vector3::new(
@@ -332,18 +338,8 @@ pub fn monitor_block_updates_system(
         );
     }
 
-    // for ev in structure_created_event.iter() {
-    //     dew_it(
-    //         &mut done_structures,
-    //         ev.entity,
-    //         None,
-    //         &mut query,
-    //         &mut event_writer,
-    //     );
-    // }
-
     for ev in chunk_set_event.iter() {
-        dew_it(
+        maybe_queue_chunk_for_rendering(
             &mut done_structures,
             ev.structure_entity,
             Some(Vector3::new(ev.x, ev.y, ev.z)),
@@ -549,22 +545,22 @@ fn monitor_needs_rendered_system(
 }
 
 #[derive(Default, Debug, Reflect, FromReflect)]
-pub struct ChunkRendererInstance {
-    pub indices: Vec<u32>,
-    pub uvs: Vec<[f32; 2]>,
-    pub positions: Vec<[f32; 3]>,
-    pub normals: Vec<[f32; 3]>,
-    pub lights: HashMap<(usize, usize, usize), BlockLightProperties>,
+struct ChunkRendererInstance {
+    indices: Vec<u32>,
+    uvs: Vec<[f32; 2]>,
+    positions: Vec<[f32; 3]>,
+    normals: Vec<[f32; 3]>,
+    lights: HashMap<(usize, usize, usize), BlockLightProperties>,
 }
 
 #[derive(Default, Debug, Reflect, FromReflect)]
-pub struct MeshInfo {
-    pub renderer: ChunkRendererInstance,
-    pub last_index: u32,
-    pub indices: Vec<u32>,
-    pub uvs: Vec<[f32; 2]>,
-    pub positions: Vec<[f32; 3]>,
-    pub normals: Vec<[f32; 3]>,
+struct MeshInfo {
+    renderer: ChunkRendererInstance,
+    last_index: u32,
+    indices: Vec<u32>,
+    uvs: Vec<[f32; 2]>,
+    positions: Vec<[f32; 3]>,
+    normals: Vec<[f32; 3]>,
 }
 
 impl MeshBuilder for MeshInfo {
@@ -605,13 +601,13 @@ impl MeshBuilder for MeshInfo {
 }
 
 #[derive(Default, Debug, Reflect)]
-pub struct ChunkRenderer {
+struct ChunkRenderer {
     meshes: HashMap<Handle<StandardMaterial>, MeshInfo>,
     lights: HashMap<(usize, usize, usize), BlockLightProperties>,
 }
 
 impl ChunkRenderer {
-    pub fn new() -> Self {
+    fn new() -> Self {
         Self::default()
     }
 
@@ -619,7 +615,8 @@ impl ChunkRenderer {
         self.meshes.clear();
     }
 
-    pub fn render(
+    /// Renders a chunk into mesh information that can then be turned into a bevy mesh
+    fn render(
         &mut self,
         uv_mapper: &UVMapper,
         materials: &OneToManyRegistry<Block, CosmosMaterial>,
@@ -672,7 +669,7 @@ impl ChunkRenderer {
                             && chunk.has_see_through_block_at(x + 1, y, z, blocks))
                             || (x == CHUNK_DIMENSIONS - 1
                                 && (right
-                                    .map(|x| x.has_see_through_block_at(0, y, z, blocks))
+                                    .map(|c| c.has_see_through_block_at(0, y, z, blocks))
                                     .unwrap_or(true)))
                         {
                             faces.push(BlockFace::Right);
@@ -681,8 +678,8 @@ impl ChunkRenderer {
                         if (x != 0 && chunk.has_see_through_block_at(x - 1, y, z, blocks))
                             || (x == 0
                                 && (left
-                                    .map(|x| {
-                                        x.has_see_through_block_at(
+                                    .map(|c| {
+                                        c.has_see_through_block_at(
                                             CHUNK_DIMENSIONS - 1,
                                             y,
                                             z,
@@ -698,21 +695,25 @@ impl ChunkRenderer {
                         if (y != CHUNK_DIMENSIONS - 1
                             && chunk.has_see_through_block_at(x, y + 1, z, blocks))
                             || (y == CHUNK_DIMENSIONS - 1
-                                && (top.is_none()
-                                    || top.unwrap().has_see_through_block_at(x, 0, z, blocks)))
+                                && (top
+                                    .map(|c| c.has_see_through_block_at(x, 0, z, blocks))
+                                    .unwrap_or(true)))
                         {
                             faces.push(BlockFace::Top);
                         }
                         // bottom
                         if (y != 0 && chunk.has_see_through_block_at(x, y - 1, z, blocks))
                             || (y == 0
-                                && (bottom.is_none()
-                                    || bottom.unwrap().has_see_through_block_at(
-                                        x,
-                                        CHUNK_DIMENSIONS - 1,
-                                        z,
-                                        blocks,
-                                    )))
+                                && (bottom
+                                    .map(|c| {
+                                        c.has_see_through_block_at(
+                                            x,
+                                            CHUNK_DIMENSIONS - 1,
+                                            z,
+                                            blocks,
+                                        )
+                                    })
+                                    .unwrap_or(true)))
                         {
                             faces.push(BlockFace::Bottom);
                         }
@@ -721,21 +722,25 @@ impl ChunkRenderer {
                         if (z != CHUNK_DIMENSIONS - 1
                             && chunk.has_see_through_block_at(x, y, z + 1, blocks))
                             || (z == CHUNK_DIMENSIONS - 1
-                                && (front.is_none()
-                                    || front.unwrap().has_see_through_block_at(x, y, 0, blocks)))
+                                && (front
+                                    .map(|c| c.has_see_through_block_at(x, y, 0, blocks))
+                                    .unwrap_or(true)))
                         {
                             faces.push(BlockFace::Back);
                         }
                         // front
                         if (z != 0 && chunk.has_see_through_block_at(x, y, z - 1, blocks))
                             || (z == 0
-                                && (back.is_none()
-                                    || back.unwrap().has_see_through_block_at(
-                                        x,
-                                        y,
-                                        CHUNK_DIMENSIONS - 1,
-                                        blocks,
-                                    )))
+                                && (back
+                                    .map(|c| {
+                                        c.has_see_through_block_at(
+                                            x,
+                                            y,
+                                            CHUNK_DIMENSIONS - 1,
+                                            blocks,
+                                        )
+                                    })
+                                    .unwrap_or(true)))
                         {
                             faces.push(BlockFace::Front);
                         }
@@ -766,9 +771,15 @@ impl ChunkRenderer {
     }
 }
 
-pub fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.add_event::<NeedsNewRenderingEvent>()
-        .add_system(monitor_needs_rendered_system.in_set(OnUpdate(GameState::LoadingWorld)))
-        .add_system(monitor_needs_rendered_system.in_set(OnUpdate(GameState::Playing)))
+        .add_systems(
+            (monitor_needs_rendered_system, monitor_block_updates_system)
+                .in_set(OnUpdate(GameState::LoadingWorld)),
+        )
+        .add_systems(
+            (monitor_needs_rendered_system, monitor_block_updates_system)
+                .in_set(OnUpdate(GameState::Playing)),
+        )
         .register_type::<LightsHolder>();
 }
