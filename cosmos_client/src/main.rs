@@ -5,6 +5,7 @@ pub mod entities;
 pub mod events;
 pub mod input;
 pub mod interactions;
+pub mod inventory;
 pub mod lang;
 pub mod loading;
 pub mod materials;
@@ -374,6 +375,8 @@ fn main() {
     materials::register(&mut app);
     loading::register(&mut app);
     entities::register(&mut app);
+    inventory::register(&mut app);
+    rendering::register(&mut app);
 
     app.run();
 }
