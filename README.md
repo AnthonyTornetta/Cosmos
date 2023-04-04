@@ -62,14 +62,14 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 - [x] Update to bevy 0.10.0
 - [x] Performant ships
   - [x] Ability to have 50 small-sized ships loaded with minimal performance impact
-- [ ] Dynamic object loading
-  - [ ] (**Client**)
+- [x] Dynamic object loading
+  - [x] (**Client**)
     - [x] Unload objects that are too far away
-    - [ ] Request entities that server sends if they don't have the entity for them
-  - [ ] (**Server**) 
+    - [x] Request entities that server sends if they don't have the entity for them
+  - [x] (**Server**) 
     - [x] Unload objects that are too far from any player
     - [x] Load objects that are close to a player & send that info to client
-    - [ ] Only send information about objects to clients that are close enough to have them loaded
+    - [x] Only send information about objects to clients that are close enough to have them loaded
 - [x] Display coordinates in top left (sector, local)
 
 ## Release 0.0.2a
