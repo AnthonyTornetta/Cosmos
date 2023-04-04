@@ -2,8 +2,9 @@ use crate::block::lighting::{BlockLightProperties, BlockLighting};
 use crate::materials::CosmosMaterial;
 use crate::state::game_state::GameState;
 use bevy::prelude::{
-    App, BuildChildren, Component, DespawnRecursiveExt, EventReader, IntoSystemConfigs, Mesh,
-    OnUpdate, PbrBundle, PointLight, PointLightBundle, StandardMaterial, Transform, Vec3,
+    Added, App, BuildChildren, Component, DespawnRecursiveExt, EventReader, IntoSystemConfigs,
+    Mesh, OnUpdate, PbrBundle, PointLight, PointLightBundle, StandardMaterial, Transform, Vec3,
+    Without,
 };
 use bevy::reflect::{FromReflect, Reflect};
 use bevy::render::mesh::{Indices, PrimitiveTopology};
@@ -31,7 +32,7 @@ use super::{BlockMeshInformation, MeshBuilder, MeshInformation};
 /// This is responsible for rendering a structure.
 /// Put this on a structure if you want it rendered.
 #[derive(Component, Debug)]
-pub struct StructureRenderer {
+struct StructureRenderer {
     width: usize,
     height: usize,
     length: usize,
@@ -59,7 +60,7 @@ impl StructureRenderer {
     /// Initiates a StructureRenderer specifically for this structure.
     ///
     /// Make sure to add this as a component to the structure's entity.
-    pub fn new(structure: &Structure) -> Self {
+    fn new(structure: &Structure) -> Self {
         let width = structure.chunks_width();
         let height = structure.chunks_height();
         let length = structure.chunks_length();
@@ -771,6 +772,17 @@ impl ChunkRenderer {
     }
 }
 
+fn add_renderer(
+    query: Query<(Entity, &Structure), (Added<Structure>, Without<StructureRenderer>)>,
+    mut commands: Commands,
+) {
+    for (ent, structure) in query.iter() {
+        commands
+            .entity(ent)
+            .insert(StructureRenderer::new(structure));
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_event::<NeedsNewRenderingEvent>()
         .add_systems(
@@ -781,5 +793,6 @@ pub(super) fn register(app: &mut App) {
             (monitor_needs_rendered_system, monitor_block_updates_system)
                 .in_set(OnUpdate(GameState::Playing)),
         )
+        .add_system(add_renderer)
         .register_type::<LightsHolder>();
 }

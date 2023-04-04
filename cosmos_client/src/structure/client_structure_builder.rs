@@ -1,13 +1,8 @@
 use bevy::ecs::system::EntityCommands;
 use cosmos_core::{
     physics::location::Location,
-    structure::{
-        loading::ChunksNeedLoaded, structure_builder::StructureBuilder,
-        structure_builder::TStructureBuilder,
-    },
+    structure::{structure_builder::StructureBuilder, structure_builder::TStructureBuilder},
 };
-
-use crate::rendering::structure_renderer::StructureRenderer;
 
 use super::chunk_retreiver::NeedsPopulated;
 
@@ -27,12 +22,6 @@ impl TStructureBuilder for ClientStructureBuilder {
         self.structure_builder
             .insert_structure(entity, location, velocity, structure);
 
-        let renderer = StructureRenderer::new(structure);
-
-        entity.insert((
-            renderer,
-            NeedsPopulated,
-            ChunksNeedLoaded { amount_needed: 1 }, // not the best solution, but it works
-        ));
+        entity.insert(NeedsPopulated);
     }
 }
