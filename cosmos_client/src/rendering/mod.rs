@@ -93,15 +93,15 @@ impl BlockMeshInformation {
     }
 }
 
-fn register_meshes(mut registry: ResMut<Registry<BlockMeshInformation>>) {
+fn register_meshes(mut registry: ResMut<ManyToOneRegistry<Block, BlockMeshInformation>>) {
     // Model for a basic cube.
-    registry.register(BlockMeshInformation::new(
+    registry.insert_value(BlockMeshInformation::new(
         "cosmos:base_block",
         MeshInformation {
             indices: vec![0, 1, 2, 2, 3, 0],
             uvs: vec![[0.0, 1.0], [0.0, 0.0], [1.0, 0.0], [1.0, 1.0]],
             positions: vec![
-                [0.5, -0.5, 0.5],
+                [0.5, -0.5, -0.5],
                 [0.5, 0.5, -0.5],
                 [0.5, 0.5, 0.5],
                 [0.5, -0.5, 0.5],

@@ -89,6 +89,7 @@ impl StructureRenderer {
         blocks: &Registry<Block>,
         lighting: &Registry<BlockLighting>,
         materials: &OneToManyRegistry<Block, CosmosMaterial>,
+        meshes: &ManyToOneRegistry<Block, BlockMeshInformation>,
     ) {
         for change in &self.changes {
             debug_assert!(change.x < self.width);
@@ -133,7 +134,7 @@ impl StructureRenderer {
 
                 self.chunk_renderers[flatten(x, y, z, self.width, self.height)].render(
                     uv_mapper, materials, lighting, chunk, left, right, bottom, top, back, front,
-                    blocks,
+                    blocks, meshes,
                 );
 
                 self.need_meshes.insert(*change);
@@ -377,6 +378,7 @@ fn monitor_needs_rendered_system(
     mut meshes: ResMut<Assets<Mesh>>,
     blocks: Res<Registry<Block>>,
     materials: Res<OneToManyRegistry<Block, CosmosMaterial>>,
+    meshes_registry: Res<ManyToOneRegistry<Block, BlockMeshInformation>>,
     lighting: Res<Registry<BlockLighting>>,
     lights_query: Query<&LightsHolder>,
     chunk_meshes_query: Query<&ChunkMeshes>,
@@ -391,7 +393,14 @@ fn monitor_needs_rendered_system(
 
         let (structure, mut renderer) = query.get_mut(ev.0).unwrap();
 
-        renderer.render(structure, &atlas.uv_mapper, &blocks, &lighting, &materials);
+        renderer.render(
+            structure,
+            &atlas.uv_mapper,
+            &blocks,
+            &lighting,
+            &materials,
+            &meshes_registry,
+        );
 
         let chunk_meshes: Vec<ChunkMesh> = renderer.create_meshes();
 
@@ -591,7 +600,7 @@ impl MeshBuilder for MeshInfo {
             max_index = max_index.max(*index as i32);
         }
 
-        self.last_index = (max_index + 1) as u32;
+        self.last_index += (max_index + 1) as u32;
     }
 }
 
@@ -629,6 +638,8 @@ impl ChunkRenderer {
 
         let cd2 = CHUNK_DIMENSIONSF / 2.0;
 
+        let mut faces = Vec::with_capacity(6);
+
         for z in 0..CHUNK_DIMENSIONS {
             for y in 0..CHUNK_DIMENSIONS {
                 for x in 0..CHUNK_DIMENSIONS {
@@ -649,8 +660,6 @@ impl ChunkRenderer {
                             z as f32 - cd2 + 0.5,
                         );
 
-                        let mut block_is_visible = false;
-
                         if !self.meshes.contains_key(&material.handle) {
                             self.meshes
                                 .insert(material.handle.clone(), Default::default());
@@ -666,70 +675,23 @@ impl ChunkRenderer {
                                     .map(|x| x.has_see_through_block_at(0, y, z, blocks))
                                     .unwrap_or(true)))
                         {
-                            mesh_info.positions.push([cx + 0.5, cy + -0.5, cz + -0.5]);
-                            mesh_info.positions.push([cx + 0.5, cy + 0.5, cz + -0.5]);
-                            mesh_info.positions.push([cx + 0.5, cy + 0.5, cz + 0.5]);
-                            mesh_info.positions.push([cx + 0.5, cy + -0.5, cz + 0.5]);
-
-                            mesh_info.normals.push([1.0, 0.0, 0.0]);
-                            mesh_info.normals.push([1.0, 0.0, 0.0]);
-                            mesh_info.normals.push([1.0, 0.0, 0.0]);
-                            mesh_info.normals.push([1.0, 0.0, 0.0]);
-
-                            let uvs = uv_mapper.map(block.uv_index_for_side(BlockFace::Right));
-                            mesh_info.uvs.push([uvs[0].x, uvs[1].y]);
-                            mesh_info.uvs.push([uvs[0].x, uvs[0].y]);
-                            mesh_info.uvs.push([uvs[1].x, uvs[0].y]);
-                            mesh_info.uvs.push([uvs[1].x, uvs[1].y]);
-
-                            mesh_info.indices.push(mesh_info.last_index);
-                            mesh_info.indices.push(1 + mesh_info.last_index);
-                            mesh_info.indices.push(2 + mesh_info.last_index);
-                            mesh_info.indices.push(2 + mesh_info.last_index);
-                            mesh_info.indices.push(3 + mesh_info.last_index);
-                            mesh_info.indices.push(mesh_info.last_index);
-
-                            mesh_info.last_index += 4;
-
-                            block_is_visible = true;
+                            faces.push(BlockFace::Right);
                         }
                         // left
                         if (x != 0 && chunk.has_see_through_block_at(x - 1, y, z, blocks))
                             || (x == 0
-                                && (left.is_none()
-                                    || left.unwrap().has_see_through_block_at(
-                                        CHUNK_DIMENSIONS - 1,
-                                        y,
-                                        z,
-                                        blocks,
-                                    )))
+                                && (left
+                                    .map(|x| {
+                                        x.has_see_through_block_at(
+                                            CHUNK_DIMENSIONS - 1,
+                                            y,
+                                            z,
+                                            blocks,
+                                        )
+                                    })
+                                    .unwrap_or(true)))
                         {
-                            mesh_info.positions.push([cx + -0.5, cy + -0.5, cz + 0.5]);
-                            mesh_info.positions.push([cx + -0.5, cy + 0.5, cz + 0.5]);
-                            mesh_info.positions.push([cx + -0.5, cy + 0.5, cz + -0.5]);
-                            mesh_info.positions.push([cx + -0.5, cy + -0.5, cz + -0.5]);
-
-                            mesh_info.normals.push([-1.0, 0.0, 0.0]);
-                            mesh_info.normals.push([-1.0, 0.0, 0.0]);
-                            mesh_info.normals.push([-1.0, 0.0, 0.0]);
-                            mesh_info.normals.push([-1.0, 0.0, 0.0]);
-
-                            let uvs = uv_mapper.map(block.uv_index_for_side(BlockFace::Left));
-                            mesh_info.uvs.push([uvs[0].x, uvs[1].y]);
-                            mesh_info.uvs.push([uvs[0].x, uvs[0].y]);
-                            mesh_info.uvs.push([uvs[1].x, uvs[0].y]);
-                            mesh_info.uvs.push([uvs[1].x, uvs[1].y]);
-
-                            mesh_info.indices.push(mesh_info.last_index);
-                            mesh_info.indices.push(1 + mesh_info.last_index);
-                            mesh_info.indices.push(2 + mesh_info.last_index);
-                            mesh_info.indices.push(2 + mesh_info.last_index);
-                            mesh_info.indices.push(3 + mesh_info.last_index);
-                            mesh_info.indices.push(mesh_info.last_index);
-
-                            mesh_info.last_index += 4;
-
-                            block_is_visible = true;
+                            faces.push(BlockFace::Left);
                         }
 
                         // top
@@ -739,32 +701,7 @@ impl ChunkRenderer {
                                 && (top.is_none()
                                     || top.unwrap().has_see_through_block_at(x, 0, z, blocks)))
                         {
-                            mesh_info.positions.push([cx + 0.5, cy + 0.5, cz + -0.5]);
-                            mesh_info.positions.push([cx + -0.5, cy + 0.5, cz + -0.5]);
-                            mesh_info.positions.push([cx + -0.5, cy + 0.5, cz + 0.5]);
-                            mesh_info.positions.push([cx + 0.5, cy + 0.5, cz + 0.5]);
-
-                            mesh_info.normals.push([0.0, 1.0, 0.0]);
-                            mesh_info.normals.push([0.0, 1.0, 0.0]);
-                            mesh_info.normals.push([0.0, 1.0, 0.0]);
-                            mesh_info.normals.push([0.0, 1.0, 0.0]);
-
-                            let uvs = uv_mapper.map(block.uv_index_for_side(BlockFace::Top));
-                            mesh_info.uvs.push([uvs[1].x, uvs[1].y]);
-                            mesh_info.uvs.push([uvs[0].x, uvs[1].y]);
-                            mesh_info.uvs.push([uvs[0].x, uvs[0].y]);
-                            mesh_info.uvs.push([uvs[1].x, uvs[0].y]);
-
-                            mesh_info.indices.push(mesh_info.last_index);
-                            mesh_info.indices.push(1 + mesh_info.last_index);
-                            mesh_info.indices.push(2 + mesh_info.last_index);
-                            mesh_info.indices.push(2 + mesh_info.last_index);
-                            mesh_info.indices.push(3 + mesh_info.last_index);
-                            mesh_info.indices.push(mesh_info.last_index);
-
-                            mesh_info.last_index += 4;
-
-                            block_is_visible = true;
+                            faces.push(BlockFace::Top);
                         }
                         // bottom
                         if (y != 0 && chunk.has_see_through_block_at(x, y - 1, z, blocks))
@@ -777,32 +714,7 @@ impl ChunkRenderer {
                                         blocks,
                                     )))
                         {
-                            mesh_info.positions.push([cx + 0.5, cy + -0.5, cz + 0.5]);
-                            mesh_info.positions.push([cx + -0.5, cy + -0.5, cz + 0.5]);
-                            mesh_info.positions.push([cx + -0.5, cy + -0.5, cz + -0.5]);
-                            mesh_info.positions.push([cx + 0.5, cy + -0.5, cz + -0.5]);
-
-                            mesh_info.normals.push([0.0, -1.0, 0.0]);
-                            mesh_info.normals.push([0.0, -1.0, 0.0]);
-                            mesh_info.normals.push([0.0, -1.0, 0.0]);
-                            mesh_info.normals.push([0.0, -1.0, 0.0]);
-
-                            let uvs = uv_mapper.map(block.uv_index_for_side(BlockFace::Bottom));
-                            mesh_info.uvs.push([uvs[1].x, uvs[0].y]);
-                            mesh_info.uvs.push([uvs[0].x, uvs[0].y]);
-                            mesh_info.uvs.push([uvs[0].x, uvs[1].y]);
-                            mesh_info.uvs.push([uvs[1].x, uvs[1].y]);
-
-                            mesh_info.indices.push(mesh_info.last_index);
-                            mesh_info.indices.push(1 + mesh_info.last_index);
-                            mesh_info.indices.push(2 + mesh_info.last_index);
-                            mesh_info.indices.push(2 + mesh_info.last_index);
-                            mesh_info.indices.push(3 + mesh_info.last_index);
-                            mesh_info.indices.push(mesh_info.last_index);
-
-                            mesh_info.last_index += 4;
-
-                            block_is_visible = true;
+                            faces.push(BlockFace::Bottom);
                         }
 
                         // back
@@ -812,32 +724,7 @@ impl ChunkRenderer {
                                 && (front.is_none()
                                     || front.unwrap().has_see_through_block_at(x, y, 0, blocks)))
                         {
-                            mesh_info.positions.push([cx + -0.5, cy + -0.5, cz + 0.5]);
-                            mesh_info.positions.push([cx + 0.5, cy + -0.5, cz + 0.5]);
-                            mesh_info.positions.push([cx + 0.5, cy + 0.5, cz + 0.5]);
-                            mesh_info.positions.push([cx + -0.5, cy + 0.5, cz + 0.5]);
-
-                            mesh_info.normals.push([0.0, 0.0, 1.0]);
-                            mesh_info.normals.push([0.0, 0.0, 1.0]);
-                            mesh_info.normals.push([0.0, 0.0, 1.0]);
-                            mesh_info.normals.push([0.0, 0.0, 1.0]);
-
-                            let uvs = uv_mapper.map(block.uv_index_for_side(BlockFace::Back));
-                            mesh_info.uvs.push([uvs[0].x, uvs[1].y]);
-                            mesh_info.uvs.push([uvs[1].x, uvs[1].y]);
-                            mesh_info.uvs.push([uvs[1].x, uvs[0].y]);
-                            mesh_info.uvs.push([uvs[0].x, uvs[0].y]);
-
-                            mesh_info.indices.push(mesh_info.last_index);
-                            mesh_info.indices.push(1 + mesh_info.last_index);
-                            mesh_info.indices.push(2 + mesh_info.last_index);
-                            mesh_info.indices.push(2 + mesh_info.last_index);
-                            mesh_info.indices.push(3 + mesh_info.last_index);
-                            mesh_info.indices.push(mesh_info.last_index);
-
-                            mesh_info.last_index += 4;
-
-                            block_is_visible = true;
+                            faces.push(BlockFace::Back);
                         }
                         // front
                         if (z != 0 && chunk.has_see_through_block_at(x, y, z - 1, blocks))
@@ -850,34 +737,22 @@ impl ChunkRenderer {
                                         blocks,
                                     )))
                         {
-                            mesh_info.positions.push([cx + -0.5, cy + 0.5, cz + -0.5]);
-                            mesh_info.positions.push([cx + 0.5, cy + 0.5, cz + -0.5]);
-                            mesh_info.positions.push([cx + 0.5, cy + -0.5, cz + -0.5]);
-                            mesh_info.positions.push([cx + -0.5, cy + -0.5, cz + -0.5]);
-
-                            mesh_info.normals.push([0.0, 0.0, -1.0]);
-                            mesh_info.normals.push([0.0, 0.0, -1.0]);
-                            mesh_info.normals.push([0.0, 0.0, -1.0]);
-                            mesh_info.normals.push([0.0, 0.0, -1.0]);
-
-                            let uvs = uv_mapper.map(block.uv_index_for_side(BlockFace::Front));
-
-                            mesh_info.uvs.push([uvs[0].x, uvs[0].y]);
-                            mesh_info.uvs.push([uvs[1].x, uvs[0].y]);
-                            mesh_info.uvs.push([uvs[1].x, uvs[1].y]);
-                            mesh_info.uvs.push([uvs[0].x, uvs[1].y]);
-
-                            mesh_info.indices.push(mesh_info.last_index);
-                            mesh_info.indices.push(1 + mesh_info.last_index);
-                            mesh_info.indices.push(2 + mesh_info.last_index);
-                            mesh_info.indices.push(2 + mesh_info.last_index);
-                            mesh_info.indices.push(3 + mesh_info.last_index);
-                            mesh_info.indices.push(mesh_info.last_index);
-
-                            mesh_info.last_index += 4;
-
-                            block_is_visible = true;
+                            faces.push(BlockFace::Front);
                         }
+
+                        for face in faces.iter() {
+                            let uvs = uv_mapper.map(block.uv_index_for_side(*face));
+
+                            mesh_info.add_mesh_information(
+                                mesh.info_for_face(*face),
+                                [cx, cy, cz],
+                                [uvs[0].x, uvs[0].y],
+                                [uvs[1].x, uvs[1].y],
+                            );
+                        }
+
+                        let block_is_visible = !faces.is_empty();
+                        faces.clear();
 
                         if block_is_visible {
                             if let Some(lighting) = lighting.from_id(block.unlocalized_name()) {
