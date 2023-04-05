@@ -1,9 +1,12 @@
-use bevy::prelude::*;
+use std::fs;
+
+use bevy::{prelude::*, utils::HashMap};
 use cosmos_core::{
     block::{Block, BlockFace},
     loader::{AddLoadingEvent, DoneLoadingEvent, LoadingManager},
     registry::{self, identifiable::Identifiable, Registry},
 };
+use serde::{Deserialize, Serialize};
 
 use crate::{rendering::uv_mapper::UVMapper, state::game_state::GameState};
 
@@ -218,6 +221,11 @@ impl Identifiable for BlockTextureIndex {
     }
 }
 
+#[derive(Serialize, Deserialize)]
+struct BlockInfo {
+    texture: HashMap<String, String>,
+}
+
 fn load_block_textxures(
     blocks: Res<Registry<Block>>,
     atlas: Res<MainAtlas>,
@@ -230,19 +238,34 @@ fn load_block_textxures(
     {
         registry.register(BlockTextureIndex {
             id: 0,
-            unlocalized_name: "cosmos:missing".to_owned(),
+            unlocalized_name: "missing".to_owned(),
             indices: [index; 6],
         });
     }
 
     for block in blocks.iter() {
-        if let Some(index) = atlas.atlas.get_texture_index(&server.get_handle(&format!(
-            "images/blocks/{}.png",
-            block.unlocalized_name().replace(":", "_")
-        ))) {
+        let unlocalized_name = block.unlocalized_name();
+        let block_name = unlocalized_name
+            .split(":")
+            .nth(1)
+            .unwrap_or(unlocalized_name);
+
+        let block_info =
+            if let Ok(block_info) = fs::read(format!("assets/blocks/{block_name}.json")) {
+                serde_json::from_slice::<BlockInfo>(&block_info).expect("Error reading json data!")
+            } else {
+                let mut hh = HashMap::new();
+                hh.insert("all".into(), block_name.to_owned());
+                BlockInfo { texture: hh }
+            };
+
+        if let Some(index) = atlas
+            .atlas
+            .get_texture_index(&server.get_handle(&format!("images/blocks/{block_name}.png",)))
+        {
             registry.register(BlockTextureIndex {
                 id: 0,
-                unlocalized_name: block.unlocalized_name().to_owned(),
+                unlocalized_name: unlocalized_name.to_owned(),
                 indices: [index; 6],
             });
         }

@@ -766,7 +766,7 @@ impl ChunkRenderer {
                                 .from_id(block.unlocalized_name())
                                 .unwrap_or_else(|| {
                                     block_textures
-                                        .from_id("cosmos:missing")
+                                        .from_id("missing")
                                         .expect("Missing texture should exist.")
                                 });
 
