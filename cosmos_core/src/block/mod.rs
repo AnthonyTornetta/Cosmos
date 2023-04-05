@@ -90,7 +90,6 @@ pub struct Block {
     visibility: u8,
     id: u16,
     unlocalized_name: String,
-    uvs: [usize; 6],
     density: f32,
 }
 
@@ -112,7 +111,6 @@ impl Identifiable for Block {
 impl Block {
     pub fn new(
         properties: &Vec<BlockProperty>,
-        uvs: [usize; 6],
         id: u16,
         unlocalized_name: String,
         density: f32,
@@ -120,7 +118,6 @@ impl Block {
         Self {
             visibility: BlockProperty::create_id(properties),
             id,
-            uvs,
             unlocalized_name,
             density,
         }
@@ -144,11 +141,6 @@ impl Block {
     #[inline]
     pub fn is_empty(&self) -> bool {
         self.visibility & BlockProperty::Empty.id() != 0
-    }
-
-    #[inline]
-    pub fn uv_index_for_side(&self, face: BlockFace) -> usize {
-        self.uvs[face.index()]
     }
 
     #[inline]

@@ -1,8 +1,9 @@
-use bevy::{
-    prelude::*,
-    render::render_resource::{Extent3d, TextureDimension, TextureFormat},
+use bevy::prelude::*;
+use cosmos_core::{
+    block::{Block, BlockFace},
+    loader::{AddLoadingEvent, DoneLoadingEvent, LoadingManager},
+    registry::{self, identifiable::Identifiable, Registry},
 };
-use cosmos_core::loader::{AddLoadingEvent, DoneLoadingEvent, LoadingManager};
 
 use crate::{rendering::uv_mapper::UVMapper, state::game_state::GameState};
 
@@ -13,7 +14,7 @@ enum AtlasName {
 #[derive(Resource)]
 struct LoadingAsset {
     atlas_name: AtlasName,
-    handle: Handle<Image>,
+    handles: Vec<Handle<Image>>,
 }
 
 struct AssetsDoneLoadingEvent;
@@ -27,6 +28,7 @@ struct AssetsLoading(Vec<LoadingAsset>);
 #[derive(Resource, Reflect, FromReflect)]
 pub struct MainAtlas {
     pub material: Handle<StandardMaterial>,
+    pub atlas: TextureAtlas,
     pub uv_mapper: UVMapper,
 }
 
@@ -43,10 +45,13 @@ fn setup(
     mut loader: ResMut<LoadingManager>,
     mut start_writer: EventWriter<AddLoadingEvent>,
 ) {
-    let main_atlas = server.load("images/atlas/main.png");
-
     loading.0.push(LoadingAsset {
-        handle: main_atlas,
+        handles: server
+            .load_folder("images/blocks/")
+            .expect("error loading blocks textures")
+            .into_iter()
+            .map(|x| x.typed::<Image>())
+            .collect(),
         atlas_name: AtlasName::Main,
     });
 
@@ -75,96 +80,49 @@ fn check_assets_ready(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut event_writer: EventWriter<AssetsDoneLoadingEvent>,
 ) {
-    if loading.is_none() {
+    let Some(loading) = loading else {
         return;
-    }
+    };
 
     use bevy::asset::LoadState;
 
-    match server.get_group_load_state(loading.as_ref().unwrap().0.iter().map(|h| h.handle.id())) {
+    let mut handles = Vec::new();
+    for la in loading.0.iter().map(|h| &h.handles) {
+        for handle in la.iter() {
+            handles.push(handle.id());
+        }
+    }
+
+    match server.get_group_load_state(handles) {
         LoadState::Failed => {
             panic!("Failed to load asset!!");
         }
         LoadState::Loaded => {
             // all assets are now ready
 
-            for asset in &loading.as_ref().unwrap().0 {
+            for asset in loading.0.iter() {
                 match asset.atlas_name {
                     AtlasName::Main => {
-                        const PADDING: u32 = 2;
+                        const PADDING: u32 = 0;
                         const IMAGE_DIMENSIONS: u32 = 16;
 
-                        let image = images.get(&asset.handle).unwrap();
+                        let mut texture_atlas_builder = TextureAtlasBuilder::default();
 
-                        let img_size = image.size();
-
-                        let mut data: Vec<u8> = Vec::new();
-
-                        let mut i = 0;
-
-                        for y in 0..img_size.y as usize {
-                            let mut n = match y % IMAGE_DIMENSIONS as usize == 0
-                                || (y + 1) % IMAGE_DIMENSIONS as usize == 0
-                            {
-                                true => 1 + PADDING,
-                                false => 1,
+                        for handle in &asset.handles {
+                            let Some(texture) = images.get(&handle) else {
+                                warn!("{:?} did not resolve to an `Image` asset.", server.get_handle_path(handle));
+                                continue;
                             };
 
-                            while n > 0 {
-                                let og_i = i;
-
-                                for x in 0..img_size.x as usize {
-                                    if x % IMAGE_DIMENSIONS as usize == 0
-                                        || (x + 1) % IMAGE_DIMENSIONS as usize == 0
-                                    {
-                                        for _ in 0..(PADDING + 1) {
-                                            data.push(image.data[i]);
-                                            data.push(image.data[i + 1]);
-                                            data.push(image.data[i + 2]);
-                                            data.push(image.data[i + 3]);
-                                        }
-                                    } else {
-                                        data.push(image.data[i]);
-                                        data.push(image.data[i + 1]);
-                                        data.push(image.data[i + 2]);
-                                        data.push(image.data[i + 3]);
-                                    }
-
-                                    i += 4;
-                                }
-
-                                n -= 1;
-
-                                if n != 0 {
-                                    i = og_i;
-                                }
-                            }
+                            texture_atlas_builder.add_texture(handle.clone_weak(), texture);
                         }
 
-                        let y = img_size.y as u32;
-                        let x = img_size.x as u32;
-
-                        let height = (y / IMAGE_DIMENSIONS) * (IMAGE_DIMENSIONS + PADDING * 2);
-                        let width = (x / IMAGE_DIMENSIONS) * (IMAGE_DIMENSIONS + PADDING * 2);
-
-                        // debug save
-                        // image::save_buffer(&Path::new("image.png"), data.as_slice(), width, height, image::ColorType::Rgba8);
-
-                        let img = Image::new(
-                            Extent3d {
-                                height,
-                                width,
-                                depth_or_array_layers: 1,
-                            },
-                            TextureDimension::D2,
-                            data,
-                            TextureFormat::Rgba8UnormSrgb,
-                        );
-
-                        let handle = images.set(asset.handle.clone(), img);
+                        let atlas = texture_atlas_builder
+                            .finish(&mut images)
+                            .expect("Built atlas");
 
                         let material_handle = materials.add(StandardMaterial {
-                            base_color_texture: Some(handle.clone()),
+                            base_color_texture: Some(atlas.texture.clone()),
                             alpha_mode: AlphaMode::Mask(0.5),
                             unlit: false,
                             metallic: 0.0,
@@ -173,12 +131,17 @@ fn check_assets_ready(
                             ..default()
                         });
 
+                        let (width, height) = (atlas.size.x as usize, atlas.size.y as usize);
+
+                        let texture = atlas.texture.clone();
+
                         commands.insert_resource(MainAtlas {
                             //handle,
                             material: material_handle,
+                            atlas,
                             uv_mapper: UVMapper::new(
-                                width as usize,
-                                height as usize,
+                                width,
+                                height,
                                 IMAGE_DIMENSIONS as usize,
                                 IMAGE_DIMENSIONS as usize,
                                 PADDING as usize,
@@ -187,7 +150,7 @@ fn check_assets_ready(
                         });
 
                         let illuminated_material_handle = materials.add(StandardMaterial {
-                            base_color_texture: Some(handle.clone()),
+                            base_color_texture: Some(texture),
                             alpha_mode: AlphaMode::Mask(0.5),
                             unlit: true,
                             // emissive: Color::rgba_linear(1.0, 1.0, 1.0, 0.1),
@@ -198,8 +161,8 @@ fn check_assets_ready(
                         commands.insert_resource(IlluminatedAtlas {
                             material: illuminated_material_handle,
                             uv_mapper: UVMapper::new(
-                                width as usize,
-                                height as usize,
+                                width,
+                                height,
                                 IMAGE_DIMENSIONS as usize,
                                 IMAGE_DIMENSIONS as usize,
                                 PADDING as usize,
@@ -224,11 +187,76 @@ fn check_assets_ready(
     }
 }
 
+#[derive(Debug, PartialEq, Eq)]
+pub struct BlockTextureIndex {
+    indices: [usize; 6],
+    id: u16,
+    unlocalized_name: String,
+}
+
+impl BlockTextureIndex {
+    #[inline]
+    pub fn atlas_index(&self, face: BlockFace) -> usize {
+        self.indices[face.index()]
+    }
+}
+
+impl Identifiable for BlockTextureIndex {
+    #[inline]
+    fn id(&self) -> u16 {
+        self.id
+    }
+
+    #[inline]
+    fn set_numeric_id(&mut self, id: u16) {
+        self.id = id;
+    }
+
+    #[inline]
+    fn unlocalized_name(&self) -> &str {
+        &self.unlocalized_name
+    }
+}
+
+fn load_block_textxures(
+    blocks: Res<Registry<Block>>,
+    atlas: Res<MainAtlas>,
+    server: Res<AssetServer>,
+    mut registry: ResMut<Registry<BlockTextureIndex>>,
+) {
+    if let Some(index) = atlas
+        .atlas
+        .get_texture_index(&server.get_handle("images/blocks/cosmos_missing.png"))
+    {
+        registry.register(BlockTextureIndex {
+            id: 0,
+            unlocalized_name: "cosmos:missing".to_owned(),
+            indices: [index; 6],
+        });
+    }
+
+    for block in blocks.iter() {
+        if let Some(index) = atlas.atlas.get_texture_index(&server.get_handle(&format!(
+            "images/blocks/{}.png",
+            block.unlocalized_name().replace(":", "_")
+        ))) {
+            registry.register(BlockTextureIndex {
+                id: 0,
+                unlocalized_name: block.unlocalized_name().to_owned(),
+                indices: [index; 6],
+            });
+        }
+    }
+}
+
 pub fn register(app: &mut App) {
+    registry::create_registry::<BlockTextureIndex>(app);
+
     app.insert_resource(AssetsLoading(Vec::new()))
         .add_event::<AssetsDoneLoadingEvent>()
         .add_systems(
             (check_assets_ready, assets_done_loading).in_set(OnUpdate(GameState::PostLoading)),
         )
-        .add_system(setup.in_schedule(OnEnter(GameState::PostLoading)));
+        .add_system(setup.in_schedule(OnEnter(GameState::PostLoading)))
+        .add_system(load_block_textxures.in_schedule(OnExit(GameState::PostLoading)));
 }

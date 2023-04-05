@@ -24,7 +24,7 @@ use cosmos_core::structure::Structure;
 use cosmos_core::utils::array_utils::flatten;
 use std::collections::HashSet;
 
-use crate::asset::asset_loading::MainAtlas;
+use crate::asset::asset_loading::{BlockTextureIndex, MainAtlas};
 use crate::{Assets, Commands, Entity, EventWriter, Handle, Query, Res, ResMut, UVMapper};
 
 use super::{BlockMeshInformation, MeshBuilder, MeshInformation};
@@ -96,6 +96,7 @@ impl StructureRenderer {
         lighting: &Registry<BlockLighting>,
         materials: &OneToManyRegistry<Block, CosmosMaterial>,
         meshes: &ManyToOneRegistry<Block, BlockMeshInformation>,
+        block_textures: &Registry<BlockTextureIndex>,
     ) {
         for change in &self.changes {
             debug_assert!(change.x < self.width);
@@ -139,8 +140,19 @@ impl StructureRenderer {
                 };
 
                 self.chunk_renderers[flatten(x, y, z, self.width, self.height)].render(
-                    uv_mapper, materials, lighting, chunk, left, right, bottom, top, back, front,
-                    blocks, meshes,
+                    uv_mapper,
+                    materials,
+                    lighting,
+                    chunk,
+                    left,
+                    right,
+                    bottom,
+                    top,
+                    back,
+                    front,
+                    blocks,
+                    meshes,
+                    block_textures,
                 );
 
                 self.need_meshes.insert(*change);
@@ -379,6 +391,7 @@ fn monitor_needs_rendered_system(
     lighting: Res<Registry<BlockLighting>>,
     lights_query: Query<&LightsHolder>,
     chunk_meshes_query: Query<&ChunkMeshes>,
+    block_textures: Res<Registry<BlockTextureIndex>>,
 ) {
     let mut done_structures = HashSet::new();
     for ev in event.iter() {
@@ -397,6 +410,7 @@ fn monitor_needs_rendered_system(
             &lighting,
             &materials,
             &meshes_registry,
+            &block_textures,
         );
 
         let chunk_meshes: Vec<ChunkMesh> = renderer.create_meshes();
@@ -631,6 +645,7 @@ impl ChunkRenderer {
         front: Option<&Chunk>,
         blocks: &Registry<Block>,
         meshes: &ManyToOneRegistry<Block, BlockMeshInformation>,
+        block_textures: &Registry<BlockTextureIndex>,
     ) {
         self.clear();
 
@@ -747,7 +762,15 @@ impl ChunkRenderer {
                         }
 
                         for face in faces.iter() {
-                            let uvs = uv_mapper.map(block.uv_index_for_side(*face));
+                            let index = block_textures
+                                .from_id(block.unlocalized_name())
+                                .unwrap_or_else(|| {
+                                    block_textures
+                                        .from_id("cosmos:missing")
+                                        .expect("Missing texture should exist.")
+                                });
+
+                            let uvs = uv_mapper.map(index.atlas_index(*face));
 
                             mesh_info.add_mesh_information(
                                 mesh.info_for_face(*face),
