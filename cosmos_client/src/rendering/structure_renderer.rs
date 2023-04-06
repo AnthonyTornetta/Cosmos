@@ -25,7 +25,7 @@ use cosmos_core::utils::array_utils::flatten;
 use std::collections::HashSet;
 
 use crate::asset::asset_loading::{BlockTextureIndex, MainAtlas};
-use crate::{Assets, Commands, Entity, EventWriter, Handle, Query, Res, ResMut, UVMapper};
+use crate::{Assets, Commands, Entity, EventWriter, Handle, Query, Res, ResMut};
 
 use super::{BlockMeshInformation, MeshBuilder, MeshInformation};
 

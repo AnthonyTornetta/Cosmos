@@ -19,7 +19,7 @@ pub mod ui;
 pub mod window;
 
 use std::env;
-use std::f32::consts::PI;
+use std::f32::consts::{E, PI, TAU};
 
 use bevy::window::PrimaryWindow;
 // use bevy_rapier3d::render::RapierDebugRenderPlugin;
@@ -30,6 +30,7 @@ use cosmos_core::events::structure::change_pilot_event::ChangePilotEvent;
 use cosmos_core::netty::client_reliable_messages::ClientReliableMessages;
 use cosmos_core::netty::client_unreliable_messages::ClientUnreliableMessages;
 use cosmos_core::netty::{cosmos_encoder, get_local_ipaddress, NettyChannel};
+use cosmos_core::physics::location::Location;
 use cosmos_core::structure::ship::pilot::Pilot;
 use cosmos_core::structure::ship::ship_movement::ShipMovement;
 use input::inputs::{self, CosmosInputHandler, CosmosInputs};
@@ -37,12 +38,13 @@ use interactions::block_interactions;
 use netty::connect::{self, ConnectionConfig};
 use netty::flags::LocalPlayer;
 use netty::mapping::NetworkMapping;
+use rand::{Rng, SeedableRng};
+use rand_chacha::ChaCha8Rng;
 use state::game_state::GameState;
 use structure::chunk_retreiver;
 use ui::crosshair::CrosshairOffset;
 use window::setup::DeltaCursorPosition;
 
-use crate::rendering::uv_mapper::UVMapper;
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::{RapierConfiguration, TimestepMode, Vect, Velocity};
 use bevy_renet::RenetClientPlugin;
@@ -231,7 +233,40 @@ fn process_player_movement(
     }
 }
 
-fn create_sun(mut commands: Commands) {
+// Calculates the distance from the origin of a spiral arm given an angle.
+fn spiral_function(theta: f32) -> f32 {
+    E.powf(theta / 2.0)
+}
+
+// Calculates what offset must be necessary for spiral_function to output r given the angle (theta - offset).
+// Update this whenever spiral_function is changed.
+fn inverse_spiral_function(r: f32, theta: f32) -> f32 {
+    theta - 2.0 * r.ln()
+}
+
+fn distance_from_star_spiral(x: f32, y: f32) -> f32 {
+    // Number of spiral arms in the galaxy.
+    let num_spirals: f32 = 8.0;
+
+    let r: f32 = (x * x + y * y).sqrt();
+    if r.abs() < 0.0001 {
+        // Origin case, trig math gets messed up, but all arms are equally close anyways.
+        return spiral_function(0.0);
+    }
+    let theta: f32 = y.atan2(x);
+
+    let offset: f32 = inverse_spiral_function(r, theta);
+    let spiral_index: f32 = (offset * num_spirals / TAU).round();
+    let spiral_offset: f32 = spiral_index * TAU / num_spirals;
+
+    (spiral_function(theta - spiral_offset) - r).abs() * (r / 4.0)
+}
+
+fn create_sun(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
     commands.spawn(DirectionalLightBundle {
         directional_light: DirectionalLight {
             illuminance: 30000.0,
@@ -245,6 +280,61 @@ fn create_sun(mut commands: Commands) {
         },
         ..default()
     });
+
+    const MULT: f32 = 3.0;
+
+    let seed: u64 = rand::random();
+
+    let min = -22.0 * MULT;
+    let max = 22.0 * MULT;
+
+    let mut at_z = min;
+    while at_z <= max {
+        let mut at_x = min;
+
+        while at_x <= max {
+            let seed_x = (at_x + max + 2.0) as u64;
+            let seed_z = (at_z + max + 2.0) as u64;
+
+            let local_seed = seed
+                .wrapping_mul(seed_x)
+                .wrapping_add(seed_z)
+                .wrapping_mul(seed_z)
+                .wrapping_sub(seed_x);
+
+            let mut rng = ChaCha8Rng::seed_from_u64(local_seed);
+
+            let distance = distance_from_star_spiral(at_x / MULT, at_z / MULT);
+
+            let prob = 1.0 / (distance * distance);
+            let num = rng.gen_range(0..10_000) as f32 / 10_000.0;
+
+            if num < prob {
+                commands.spawn((
+                    PbrBundle {
+                        mesh: meshes.add(Mesh::from(shape::UVSphere {
+                            radius: 0.1,
+                            ..default()
+                        })),
+                        material: materials.add(StandardMaterial {
+                            base_color: Color::WHITE,
+                            emissive: Color::rgba_linear(100.0, 0.0, 0.0, 0.0),
+                            ..default()
+                        }),
+                        transform: Transform::from_xyz(at_x, 0.0, at_z),
+                        ..default()
+                    },
+                    Location::new(Vec3::new(at_x, 0.0, at_z), 0, 0, 0),
+                ));
+
+                println!("spawned one at {at_x}, {at_z}");
+            }
+
+            at_x += 1.0;
+        }
+
+        at_z += 1.0;
+    }
     // commands
     //     .spawn(PointLightBundle {
     //         transform: Transform::from_xyz(0.0, 100.0, 0.0),
