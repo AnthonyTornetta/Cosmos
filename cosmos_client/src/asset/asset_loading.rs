@@ -35,6 +35,19 @@ pub struct MainAtlas {
     pub uv_mapper: UVMapper,
 }
 
+impl MainAtlas {
+    pub fn uvs_for_index(&self, index: usize) -> Rect {
+        let rect = self.atlas.textures[index];
+
+        Rect::new(
+            rect.min.x / self.atlas.size.x,
+            rect.min.y / self.atlas.size.y,
+            rect.max.x / self.atlas.size.x,
+            rect.max.y / self.atlas.size.y,
+        )
+    }
+}
+
 #[derive(Resource, Reflect, FromReflect)]
 pub struct IlluminatedAtlas {
     pub material: Handle<StandardMaterial>,
@@ -112,6 +125,7 @@ fn check_assets_ready(
                         let mut texture_atlas_builder = TextureAtlasBuilder::default();
 
                         for handle in &asset.handles {
+                            println!("doing {:?}", server.get_handle_path(handle));
                             let Some(texture) = images.get(&handle) else {
                                 warn!("{:?} did not resolve to an `Image` asset.", server.get_handle_path(handle));
                                 continue;
@@ -122,7 +136,7 @@ fn check_assets_ready(
 
                         let atlas = texture_atlas_builder
                             .finish(&mut images)
-                            .expect("Built atlas");
+                            .expect("Failed to build atlas");
 
                         let material_handle = materials.add(StandardMaterial {
                             base_color_texture: Some(atlas.texture.clone()),
@@ -297,6 +311,8 @@ fn load_block_textxures(
                 map.insert(entry.to_owned(), index);
             }
         }
+
+        println!("{unlocalized_name}: {map:?}");
 
         registry.register(BlockTextureIndex {
             id: 0,

@@ -2,9 +2,9 @@ use crate::block::lighting::{BlockLightProperties, BlockLighting};
 use crate::materials::CosmosMaterial;
 use crate::state::game_state::GameState;
 use bevy::prelude::{
-    Added, App, BuildChildren, Component, DespawnRecursiveExt, EventReader, IntoSystemConfigs,
-    Mesh, OnUpdate, PbrBundle, PointLight, PointLightBundle, StandardMaterial, Transform, Vec3,
-    Without,
+    warn, Added, App, BuildChildren, Component, DespawnRecursiveExt, EventReader,
+    IntoSystemConfigs, Mesh, OnUpdate, PbrBundle, PointLight, PointLightBundle, StandardMaterial,
+    Transform, Vec3, Without,
 };
 use bevy::reflect::{FromReflect, Reflect};
 use bevy::render::mesh::{Indices, PrimitiveTopology};
@@ -91,7 +91,7 @@ impl StructureRenderer {
     fn render(
         &mut self,
         structure: &Structure,
-        uv_mapper: &UVMapper,
+        atlas: &MainAtlas,
         blocks: &Registry<Block>,
         lighting: &Registry<BlockLighting>,
         materials: &OneToManyRegistry<Block, CosmosMaterial>,
@@ -140,7 +140,7 @@ impl StructureRenderer {
                 };
 
                 self.chunk_renderers[flatten(x, y, z, self.width, self.height)].render(
-                    uv_mapper,
+                    atlas,
                     materials,
                     lighting,
                     chunk,
@@ -405,7 +405,7 @@ fn monitor_needs_rendered_system(
 
         renderer.render(
             structure,
-            &atlas.uv_mapper,
+            &atlas,
             &blocks,
             &lighting,
             &materials,
@@ -633,7 +633,7 @@ impl ChunkRenderer {
     /// Renders a chunk into mesh information that can then be turned into a bevy mesh
     fn render(
         &mut self,
-        uv_mapper: &UVMapper,
+        atlas: &MainAtlas,
         materials: &OneToManyRegistry<Block, CosmosMaterial>,
         lighting: &Registry<BlockLighting>,
         chunk: &Chunk,
@@ -771,16 +771,17 @@ impl ChunkRenderer {
                                 });
 
                             let Some(image_index) = index.atlas_index_from_face(*face) else {
+                                warn!("Missing image index -- {index:?}");
                                 continue;
                             };
 
-                            let uvs = uv_mapper.map(image_index);
+                            let uvs = atlas.uvs_for_index(image_index);
 
                             mesh_info.add_mesh_information(
                                 mesh.info_for_face(*face),
                                 [cx, cy, cz],
-                                [uvs[0].x, uvs[0].y],
-                                [uvs[1].x, uvs[1].y],
+                                [uvs.min.x, uvs.min.y],
+                                [uvs.max.x, uvs.max.y],
                             );
                         }
 
