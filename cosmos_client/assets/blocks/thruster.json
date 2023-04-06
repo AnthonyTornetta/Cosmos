@@ -1,0 +1,10 @@
+{
+    "texture": {
+        "back": "missing",
+        "front": "laser_cannon_front",
+        "left": "laser_cannon_left_right",
+        "right": "laser_cannon_left_right",
+        "top": "laser_cannon_top_bottom",
+        "bottom": "laser_cannon_top_bottom"
+    }
+}

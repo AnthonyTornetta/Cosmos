@@ -2,6 +2,6 @@
     "texture": {
         "all": "grass_side",
         "top": "grass_top",
-        "bottom": "grass_bottom"
+        "bottom": "dirt"
     }
 }

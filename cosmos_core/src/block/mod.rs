@@ -62,6 +62,17 @@ impl BlockFace {
             Self::Bottom => Vec3::NEG_Y,
         }
     }
+
+    pub fn as_str(&self) -> &'static str {
+        match *self {
+            Self::Front => "front",
+            Self::Back => "back",
+            Self::Left => "left",
+            Self::Right => "right",
+            Self::Top => "top",
+            Self::Bottom => "bottom",
+        }
+    }
 }
 
 impl BlockProperty {

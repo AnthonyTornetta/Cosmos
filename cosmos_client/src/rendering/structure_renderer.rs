@@ -770,7 +770,11 @@ impl ChunkRenderer {
                                         .expect("Missing texture should exist.")
                                 });
 
-                            let uvs = uv_mapper.map(index.atlas_index(*face));
+                            let Some(image_index) = index.atlas_index_from_face(*face) else {
+                                continue;
+                            };
+
+                            let uvs = uv_mapper.map(image_index);
 
                             mesh_info.add_mesh_information(
                                 mesh.info_for_face(*face),

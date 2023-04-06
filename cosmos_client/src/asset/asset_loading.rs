@@ -190,17 +190,41 @@ fn check_assets_ready(
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug)]
+pub struct BlockTextureIndicies(HashMap<String, usize>);
+
+impl BlockTextureIndicies {
+    pub fn all(index: usize) -> Self {
+        let mut map = HashMap::new();
+        map.insert("all".into(), index);
+        Self(map)
+    }
+
+    pub fn new(map: HashMap<String, usize>) -> Self {
+        Self(map)
+    }
+}
+
+#[derive(Debug)]
 pub struct BlockTextureIndex {
-    indices: [usize; 6],
+    indices: BlockTextureIndicies,
     id: u16,
     unlocalized_name: String,
 }
 
 impl BlockTextureIndex {
     #[inline]
-    pub fn atlas_index(&self, face: BlockFace) -> usize {
-        self.indices[face.index()]
+    pub fn atlas_index_from_face(&self, face: BlockFace) -> Option<usize> {
+        self.atlas_index(face.as_str())
+    }
+
+    #[inline]
+    pub fn atlas_index(&self, identifier: &str) -> Option<usize> {
+        if let Some(index) = self.indices.0.get(identifier) {
+            Some(*index)
+        } else {
+            self.indices.0.get("all").copied()
+        }
     }
 }
 
@@ -221,7 +245,7 @@ impl Identifiable for BlockTextureIndex {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 struct BlockInfo {
     texture: HashMap<String, String>,
 }
@@ -234,12 +258,12 @@ fn load_block_textxures(
 ) {
     if let Some(index) = atlas
         .atlas
-        .get_texture_index(&server.get_handle("images/blocks/cosmos_missing.png"))
+        .get_texture_index(&server.get_handle("images/blocks/missing.png"))
     {
         registry.register(BlockTextureIndex {
             id: 0,
             unlocalized_name: "missing".to_owned(),
-            indices: [index; 6],
+            indices: BlockTextureIndicies::all(index),
         });
     }
 
@@ -250,25 +274,35 @@ fn load_block_textxures(
             .nth(1)
             .unwrap_or(unlocalized_name);
 
-        let block_info =
-            if let Ok(block_info) = fs::read(format!("assets/blocks/{block_name}.json")) {
-                serde_json::from_slice::<BlockInfo>(&block_info).expect("Error reading json data!")
-            } else {
-                let mut hh = HashMap::new();
-                hh.insert("all".into(), block_name.to_owned());
-                BlockInfo { texture: hh }
-            };
+        let json_path = format!("assets/blocks/{block_name}.json");
 
-        if let Some(index) = atlas
-            .atlas
-            .get_texture_index(&server.get_handle(&format!("images/blocks/{block_name}.png",)))
-        {
-            registry.register(BlockTextureIndex {
-                id: 0,
-                unlocalized_name: unlocalized_name.to_owned(),
-                indices: [index; 6],
-            });
+        let block_info = if let Ok(block_info) = fs::read(&json_path) {
+            let res = serde_json::from_slice::<BlockInfo>(&block_info)
+                .expect(&format!("Error reading json data in {json_path}"));
+
+            println!("{res:?}");
+
+            res
+        } else {
+            let mut hh = HashMap::new();
+            hh.insert("all".into(), block_name.to_owned());
+            BlockInfo { texture: hh }
+        };
+
+        let mut map = HashMap::new();
+        for (entry, texture_name) in block_info.texture.iter() {
+            if let Some(index) = atlas.atlas.get_texture_index(
+                &server.get_handle(&format!("images/blocks/{texture_name}.png",)),
+            ) {
+                map.insert(entry.to_owned(), index);
+            }
         }
+
+        registry.register(BlockTextureIndex {
+            id: 0,
+            unlocalized_name: unlocalized_name.to_owned(),
+            indices: BlockTextureIndicies::new(map),
+        });
     }
 }
 
