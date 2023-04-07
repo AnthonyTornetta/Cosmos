@@ -14,7 +14,6 @@ use bevy_rapier3d::na::Vector3;
 use cosmos_core::block::{Block, BlockFace};
 use cosmos_core::events::block_events::BlockChangedEvent;
 use cosmos_core::registry::identifiable::Identifiable;
-use cosmos_core::registry::many_to_one::ManyToOneRegistry;
 use cosmos_core::registry::one_to_many::OneToManyRegistry;
 use cosmos_core::registry::Registry;
 use cosmos_core::structure::chunk::{Chunk, CHUNK_DIMENSIONS, CHUNK_DIMENSIONSF};
@@ -25,9 +24,9 @@ use cosmos_core::utils::array_utils::flatten;
 use std::collections::HashSet;
 
 use crate::asset::asset_loading::{BlockTextureIndex, MainAtlas};
-use crate::{Assets, Commands, Entity, EventWriter, Handle, Query, Res, ResMut, UVMapper};
+use crate::{Assets, Commands, Entity, EventWriter, Handle, Query, Res, ResMut};
 
-use super::{BlockMeshInformation, MeshBuilder, MeshInformation};
+use super::{BlockMeshRegistry, MeshBuilder, MeshInformation};
 
 /// This is responsible for rendering a structure.
 /// Put this on a structure if you want it rendered.
@@ -95,7 +94,7 @@ impl StructureRenderer {
         blocks: &Registry<Block>,
         lighting: &Registry<BlockLighting>,
         materials: &OneToManyRegistry<Block, CosmosMaterial>,
-        meshes: &ManyToOneRegistry<Block, BlockMeshInformation>,
+        meshes: &BlockMeshRegistry,
         block_textures: &Registry<BlockTextureIndex>,
     ) {
         for change in &self.changes {
@@ -387,7 +386,7 @@ fn monitor_needs_rendered_system(
     mut meshes: ResMut<Assets<Mesh>>,
     blocks: Res<Registry<Block>>,
     materials: Res<OneToManyRegistry<Block, CosmosMaterial>>,
-    meshes_registry: Res<ManyToOneRegistry<Block, BlockMeshInformation>>,
+    meshes_registry: Res<BlockMeshRegistry>,
     lighting: Res<Registry<BlockLighting>>,
     lights_query: Query<&LightsHolder>,
     chunk_meshes_query: Query<&ChunkMeshes>,
@@ -644,7 +643,7 @@ impl ChunkRenderer {
         back: Option<&Chunk>,
         front: Option<&Chunk>,
         blocks: &Registry<Block>,
-        meshes: &ManyToOneRegistry<Block, BlockMeshInformation>,
+        meshes: &BlockMeshRegistry,
         block_textures: &Registry<BlockTextureIndex>,
     ) {
         self.clear();

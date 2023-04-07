@@ -93,7 +93,7 @@ impl BlockMeshInformation {
     }
 }
 
-fn register_meshes(mut registry: ResMut<ManyToOneRegistry<Block, BlockMeshInformation>>) {
+fn register_meshes(mut registry: ResMut<BlockMeshRegistry>) {
     // Model for a basic cube.
     registry.insert_value(BlockMeshInformation::new(
         "cosmos:base_block",
@@ -168,7 +168,7 @@ fn register_meshes(mut registry: ResMut<ManyToOneRegistry<Block, BlockMeshInform
 
 fn register_block_meshes(
     blocks: Res<Registry<Block>>,
-    mut model_registry: ResMut<ManyToOneRegistry<Block, BlockMeshInformation>>,
+    mut model_registry: ResMut<BlockMeshRegistry>,
 ) {
     for block in blocks.iter() {
         model_registry
@@ -176,6 +176,8 @@ fn register_block_meshes(
             .expect("cosmos:base_block model link wasn't inserted successfully!");
     }
 }
+
+pub type BlockMeshRegistry = ManyToOneRegistry<Block, BlockMeshInformation>;
 
 pub(super) fn register(app: &mut App) {
     many_to_one::create_many_to_one_registry::<Block, BlockMeshInformation>(app);

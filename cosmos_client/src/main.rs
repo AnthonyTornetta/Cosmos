@@ -42,7 +42,6 @@ use structure::chunk_retreiver;
 use ui::crosshair::CrosshairOffset;
 use window::setup::DeltaCursorPosition;
 
-use crate::rendering::uv_mapper::UVMapper;
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::{RapierConfiguration, TimestepMode, Vect, Velocity};
 use bevy_renet::RenetClientPlugin;
