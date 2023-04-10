@@ -11,6 +11,7 @@ use cosmos_core::{
 use crate::{
     events::block::block_events::*,
     input::inputs::{CosmosInputHandler, CosmosInputs},
+    rendering::MainCamera,
     state::game_state::GameState,
     ui::hotbar::Hotbar,
     LocalPlayer,
@@ -31,7 +32,7 @@ fn process_player_interaction(
     keys: Res<Input<KeyCode>>,
     mouse: Res<Input<MouseButton>>,
     input_handler: Res<CosmosInputHandler>,
-    camera: Query<&GlobalTransform, With<Camera>>,
+    camera: Query<&GlobalTransform, With<MainCamera>>,
     // make sure pilots can't break/place/interact with blocks
     player_body: Query<Entity, (With<LocalPlayer>, Without<Pilot>)>,
     rapier_context: Res<RapierContext>,

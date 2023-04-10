@@ -1,4 +1,7 @@
-use bevy::prelude::*;
+use bevy::{
+    prelude::*,
+    render::{mesh::Indices, render_resource::PrimitiveTopology},
+};
 use cosmos_core::{
     block::{Block, BlockFace},
     registry::{
@@ -13,7 +16,10 @@ use crate::state::game_state::GameState;
 pub mod structure_renderer;
 pub mod uv_mapper;
 
-#[derive(Default, Debug, Reflect, FromReflect)]
+#[derive(Component, Debug)]
+pub struct MainCamera;
+
+#[derive(Default, Debug, Reflect, FromReflect, Clone)]
 pub struct MeshInformation {
     pub indices: Vec<u32>,
     pub uvs: Vec<[f32; 2]>,
@@ -21,14 +27,71 @@ pub struct MeshInformation {
     pub normals: Vec<[f32; 3]>,
 }
 
+impl MeshInformation {
+    pub fn scale(&mut self, scale: Vec3) {
+        self.positions.iter_mut().for_each(|x| {
+            x[0] *= scale.x;
+            x[1] *= scale.y;
+            x[2] *= scale.z;
+        });
+    }
+}
+
+#[derive(Default, Debug, Reflect, FromReflect)]
+pub struct CosmosMeshBuilder {
+    last_index: u32,
+    indices: Vec<u32>,
+    uvs: Vec<[f32; 2]>,
+    positions: Vec<[f32; 3]>,
+    normals: Vec<[f32; 3]>,
+}
+
 pub trait MeshBuilder {
-    fn add_mesh_information(
-        &mut self,
-        mesh_info: &MeshInformation,
-        position: [f32; 3],
-        min_uv: [f32; 2],
-        max_uv: [f32; 2],
-    );
+    fn add_mesh_information(&mut self, mesh_info: &MeshInformation, position: Vec3, uvs: Rect);
+
+    fn build_mesh(self) -> Mesh;
+}
+
+impl MeshBuilder for CosmosMeshBuilder {
+    #[inline]
+    fn add_mesh_information(&mut self, mesh_info: &MeshInformation, position: Vec3, uvs: Rect) {
+        let diff = [uvs.max.x - uvs.min.x, uvs.max.y - uvs.min.y];
+
+        let mut max_index = -1;
+
+        self.positions.extend(
+            mesh_info
+                .positions
+                .iter()
+                .map(|x| [x[0] + position.x, x[1] + position.y, x[2] + position.z]),
+        );
+        self.normals.extend(mesh_info.normals.iter());
+
+        self.uvs.extend(
+            mesh_info
+                .uvs
+                .iter()
+                .map(|x| [x[0] * diff[0] + uvs.min.x, x[1] * diff[1] + uvs.min.y]),
+        );
+
+        for index in mesh_info.indices.iter() {
+            self.indices.push(*index + self.last_index);
+            max_index = max_index.max(*index as i32);
+        }
+
+        self.last_index += (max_index + 1) as u32;
+    }
+
+    fn build_mesh(self) -> Mesh {
+        let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
+
+        mesh.set_indices(Some(Indices::U32(self.indices)));
+        mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, self.positions);
+        mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, self.normals);
+        mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, self.uvs);
+
+        mesh
+    }
 }
 
 #[derive(Default, Debug, Reflect, FromReflect)]

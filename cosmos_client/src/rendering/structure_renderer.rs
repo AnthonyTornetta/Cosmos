@@ -3,11 +3,10 @@ use crate::materials::CosmosMaterial;
 use crate::state::game_state::GameState;
 use bevy::prelude::{
     warn, Added, App, BuildChildren, Component, DespawnRecursiveExt, EventReader,
-    IntoSystemConfigs, Mesh, OnUpdate, PbrBundle, PointLight, PointLightBundle, StandardMaterial,
-    Transform, Vec3, Without,
+    IntoSystemConfigs, Mesh, OnUpdate, PbrBundle, PointLight, PointLightBundle, Rect,
+    StandardMaterial, Transform, Vec3, Without,
 };
 use bevy::reflect::{FromReflect, Reflect};
-use bevy::render::mesh::{Indices, PrimitiveTopology};
 use bevy::render::primitives::Aabb;
 use bevy::utils::hashbrown::HashMap;
 use bevy_rapier3d::na::Vector3;
@@ -26,7 +25,7 @@ use std::collections::HashSet;
 use crate::asset::asset_loading::{BlockTextureIndex, MainAtlas};
 use crate::{Assets, Commands, Entity, EventWriter, Handle, Query, Res, ResMut};
 
-use super::{BlockMeshRegistry, MeshBuilder, MeshInformation};
+use super::{BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder, MeshInformation};
 
 /// This is responsible for rendering a structure.
 /// Put this on a structure if you want it rendered.
@@ -180,12 +179,8 @@ impl StructureRenderer {
 
             let mut mesh_materials = Vec::new();
 
-            for (material, chunk_memsh) in rend.meshes {
-                let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
-                mesh.set_indices(Some(Indices::U32(chunk_memsh.indices)));
-                mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, chunk_memsh.positions);
-                mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, chunk_memsh.normals);
-                mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, chunk_memsh.uvs);
+            for (material, chunk_mesh_info) in rend.meshes {
+                let mesh = chunk_mesh_info.build_mesh();
 
                 mesh_materials.push(MeshMaterial { material, mesh });
             }
@@ -570,47 +565,18 @@ struct ChunkRendererInstance {
 #[derive(Default, Debug, Reflect, FromReflect)]
 struct MeshInfo {
     renderer: ChunkRendererInstance,
-    last_index: u32,
-    indices: Vec<u32>,
-    uvs: Vec<[f32; 2]>,
-    positions: Vec<[f32; 3]>,
-    normals: Vec<[f32; 3]>,
+    mesh_builder: CosmosMeshBuilder,
 }
 
 impl MeshBuilder for MeshInfo {
     #[inline]
-    fn add_mesh_information(
-        &mut self,
-        mesh_info: &MeshInformation,
-        position: [f32; 3],
-        min_uv: [f32; 2],
-        max_uv: [f32; 2],
-    ) {
-        let diff = [max_uv[0] - min_uv[0], max_uv[1] - min_uv[1]];
+    fn add_mesh_information(&mut self, mesh_info: &MeshInformation, position: Vec3, uvs: Rect) {
+        self.mesh_builder
+            .add_mesh_information(mesh_info, position, uvs);
+    }
 
-        let mut max_index = -1;
-
-        self.positions.extend(
-            mesh_info
-                .positions
-                .iter()
-                .map(|x| [x[0] + position[0], x[1] + position[1], x[2] + position[2]]),
-        );
-        self.normals.extend(mesh_info.normals.iter());
-
-        self.uvs.extend(
-            mesh_info
-                .uvs
-                .iter()
-                .map(|x| [x[0] * diff[0] + min_uv[0], x[1] * diff[1] + min_uv[1]]),
-        );
-
-        for index in mesh_info.indices.iter() {
-            self.indices.push(*index + self.last_index);
-            max_index = max_index.max(*index as i32);
-        }
-
-        self.last_index += (max_index + 1) as u32;
+    fn build_mesh(self) -> Mesh {
+        self.mesh_builder.build_mesh()
     }
 }
 
@@ -778,9 +744,8 @@ impl ChunkRenderer {
 
                             mesh_info.add_mesh_information(
                                 mesh.info_for_face(*face),
-                                [cx, cy, cz],
-                                [uvs.min.x, uvs.min.y],
-                                [uvs.max.x, uvs.max.y],
+                                Vec3::new(cx, cy, cz),
+                                uvs,
                             );
                         }
 

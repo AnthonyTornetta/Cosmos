@@ -37,6 +37,7 @@ use interactions::block_interactions;
 use netty::connect::{self, ConnectionConfig};
 use netty::flags::LocalPlayer;
 use netty::mapping::NetworkMapping;
+use rendering::MainCamera;
 use state::game_state::GameState;
 use structure::chunk_retreiver;
 use ui::crosshair::CrosshairOffset;
@@ -164,7 +165,7 @@ fn process_player_movement(
     time: Res<Time>,
     input_handler: ResMut<CosmosInputHandler>,
     mut query: Query<&mut Velocity, (With<LocalPlayer>, Without<Pilot>)>,
-    cam_query: Query<&Transform, With<Camera>>,
+    cam_query: Query<&Transform, With<MainCamera>>,
 ) {
     // This will be err if the player is piloting a ship
     if let Ok(mut velocity) = query.get_single_mut() {
