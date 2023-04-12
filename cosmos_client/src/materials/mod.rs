@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use cosmos_core::{
     block::Block,
-    registry::{self, identifiable::Identifiable, one_to_many::OneToManyRegistry, Registry},
+    registry::{self, identifiable::Identifiable, many_to_one::ManyToOneRegistry, Registry},
 };
 
 use crate::{
@@ -42,7 +42,7 @@ impl Identifiable for CosmosMaterial {
 
 fn register_materials(
     blocks: Res<Registry<Block>>,
-    mut registry: ResMut<OneToManyRegistry<Block, CosmosMaterial>>,
+    mut registry: ResMut<ManyToOneRegistry<Block, CosmosMaterial>>,
     main_atlas: Res<MainAtlas>,
     illum_atlas: Res<IlluminatedAtlas>,
 ) {
@@ -82,7 +82,7 @@ fn register_materials(
 }
 
 pub(crate) fn register(app: &mut App) {
-    registry::one_to_many::create_one_to_many_registry::<Block, CosmosMaterial>(app);
+    registry::many_to_one::create_many_to_one_registry::<Block, CosmosMaterial>(app);
 
     app.add_system(register_materials.in_schedule(OnExit(GameState::PostLoading)));
 }
