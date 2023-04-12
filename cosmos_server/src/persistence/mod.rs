@@ -101,7 +101,7 @@ impl SerializedData {
 
     /// Deserializes the data as the given type (via `cosmos_encoder::deserialize`) at the given id. Will panic if the
     /// data is not properly serialized.
-    pub fn deserialize_data<'a, T: DeserializeOwned>(&'a self, data_id: &str) -> Option<T> {
+    pub fn deserialize_data<T: DeserializeOwned>(&self, data_id: &str) -> Option<T> {
         self.read_data(data_id)
             .map(|d| cosmos_encoder::deserialize(d).expect("Error deserializing data!"))
     }

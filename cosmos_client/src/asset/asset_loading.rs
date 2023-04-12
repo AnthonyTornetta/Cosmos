@@ -127,7 +127,7 @@ fn check_assets_ready(
 
                         for handle in &asset.handles {
                             println!("doing {:?}", server.get_handle_path(handle));
-                            let Some(texture) = images.get(&handle) else {
+                            let Some(texture) = images.get(handle) else {
                                 warn!("{:?} did not resolve to an `Image` asset.", server.get_handle_path(handle));
                                 continue;
                             };
@@ -296,7 +296,7 @@ fn load_block_textxures(
     for block in blocks.iter() {
         let unlocalized_name = block.unlocalized_name();
         let block_name = unlocalized_name
-            .split(":")
+            .split(':')
             .nth(1)
             .unwrap_or(unlocalized_name);
 
@@ -304,7 +304,7 @@ fn load_block_textxures(
 
         let block_info = if let Ok(block_info) = fs::read(&json_path) {
             let res = serde_json::from_slice::<BlockInfo>(&block_info)
-                .expect(&format!("Error reading json data in {json_path}"));
+                .unwrap_or_else(|_| panic!("Error reading json data in {json_path}"));
 
             println!("{res:?}");
 
