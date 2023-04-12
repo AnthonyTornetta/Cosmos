@@ -1,3 +1,5 @@
+//! Responsible for determining how structures are added to the game when they are needed
+
 use bevy::{
     ecs::system::EntityCommands,
     prelude::{PbrBundle, Transform},

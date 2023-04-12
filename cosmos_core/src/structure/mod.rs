@@ -560,6 +560,7 @@ impl Structure {
 }
 
 #[derive(Debug)]
+/// This event is sent when a chunk is initially filled out
 pub struct ChunkInitEvent {
     /// The entity of the structure this is a part of
     pub structure_entity: Entity,
