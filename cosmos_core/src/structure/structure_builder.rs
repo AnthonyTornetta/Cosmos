@@ -9,7 +9,9 @@ use crate::{
     structure::Structure,
 };
 
+/// Used to instantiate structures
 pub trait TStructureBuilder {
+    /// Builds that structure
     fn insert_structure(
         &self,
         entity: &mut EntityCommands,
@@ -19,7 +21,8 @@ pub trait TStructureBuilder {
     );
 }
 #[derive(Default)]
-pub struct StructureBuilder {}
+/// The default structure builder
+pub struct StructureBuilder;
 
 impl TStructureBuilder for StructureBuilder {
     fn insert_structure(
