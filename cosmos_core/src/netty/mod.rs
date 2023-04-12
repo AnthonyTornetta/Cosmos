@@ -103,6 +103,7 @@ pub fn client_connection_config() -> RenetConnectionConfig {
     RenetConnectionConfig {
         send_channels_config: NettyChannel::client_channels_config(),
         receive_channels_config: NettyChannel::client_channels_config(),
+        heartbeat_time: Duration::from_millis(10_000),
         ..default()
     }
 }
@@ -111,6 +112,7 @@ pub fn server_connection_config() -> RenetConnectionConfig {
     RenetConnectionConfig {
         send_channels_config: NettyChannel::server_channels_config(),
         receive_channels_config: NettyChannel::server_channels_config(),
+        heartbeat_time: Duration::from_millis(10_000),
         ..default()
     }
 }

@@ -2,6 +2,7 @@ use bevy::{
     core_pipeline::clear_color::ClearColorConfig,
     prelude::*,
     render::{camera::ScalingMode, view::RenderLayers},
+    window::PrimaryWindow,
 };
 use cosmos_core::{
     block::{Block, BlockFace},
@@ -20,13 +21,19 @@ use crate::{
 
 const INVENTORY_SLOT_LAYER: u8 = 10;
 
+#[derive(Component)]
+struct UICamera;
+
 fn ui_camera(mut commands: Commands) {
     commands.spawn((
         Camera3dBundle {
             projection: Projection::Orthographic(OrthographicProjection {
-                scale: 3.0,
-                scaling_mode: ScalingMode::FixedVertical(2.0),
-                ..default()
+                // scaling_mode: ScalingMode::Fixed {
+                //     width: 100.0,
+                //     height: 100.0,
+                // },
+                scaling_mode: ScalingMode::WindowSize(0.025),
+                ..Default::default()
             }),
             camera_3d: Camera3d {
                 clear_color: ClearColorConfig::None,
@@ -40,7 +47,10 @@ fn ui_camera(mut commands: Commands) {
             transform: Transform::from_xyz(0.0, 0.0, 1.0).looking_at(Vec3::ZERO, Vec3::Y),
             ..Default::default()
         },
+        UICamera,
         RenderLayers::from_layers(&[INVENTORY_SLOT_LAYER]),
+        // No double-rendering UI
+        // UiCameraConfig { show_ui: false },
     ));
 }
 
@@ -65,7 +75,7 @@ fn render_hotbar(
 
     let amt = 9;
 
-    let size = 0.2;
+    let size = 0.8;
 
     let mut children = vec![];
 
@@ -91,7 +101,7 @@ fn render_hotbar(
             });
 
         let mult = size * 2.0;
-        let sx = -(amt as f32) / 2.0 * mult + mult * i as f32;
+        let sx = -(amt as f32) / 2.0 * mult + mult * (i as f32 + 0.5);
 
         let mut transform = Transform::from_xyz(sx, 0.0, 0.0); //.looking_at(Vec3::new(0.0, 0.0, 0.0), Vec3::Y);
 
@@ -132,28 +142,52 @@ fn render_hotbar(
         );
     }
 
-    commands.spawn((
-        DirectionalLightBundle {
-            transform: Transform::from_xyz(0.0, 0.0, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
-            directional_light: DirectionalLight {
-                ..Default::default()
-            },
+    let mut hotbar = commands.spawn((
+        PbrBundle {
+            transform: Transform::from_xyz(0.0, -8.22, 0.0),
             ..Default::default()
         },
-        RenderLayers::from_layers(&[INVENTORY_SLOT_LAYER]),
+        HotbarLocation,
     ));
-
-    let mut hotbar = commands.spawn(PbrBundle {
-        transform: Transform::from_xyz(0.0, -2.7, 0.0),
-        ..Default::default()
-    });
 
     for child in children {
         hotbar.add_child(child);
     }
 }
 
+#[derive(Component)]
+struct HotbarLocation;
+
 pub(super) fn register(app: &mut App) {
-    app.add_system(render_hotbar.in_schedule(OnEnter(GameState::Playing)))
-        .add_startup_system(ui_camera);
+    app.add_system(
+        |query: Query<&Window, With<PrimaryWindow>>,
+         mut cam: Query<&mut Transform, With<HotbarLocation>>| {
+            let Ok(window) = query.get_single() else {
+                return;
+            };
+            let Ok(mut transform) = cam.get_single_mut() else {
+                return;
+            };
+
+            // -0.7 = 120
+            // -8.22 = 720
+            // m =
+
+            transform.translation.y = -0.012533 * window.height() + 0.804;
+
+            // let ratio = x.height() / 720.0;
+
+            // proj.scale = 0.025 / ratio;
+
+            // let difference_ratio = 1280.0 / x.width();
+
+            // let new_x = 18.0 / difference_ratio;
+            // let aspect_ratio = x.width() / x.height();
+            // let new_y = new_x / aspect_ratio;
+
+            // proj.
+        },
+    )
+    .add_system(render_hotbar.in_schedule(OnEnter(GameState::Playing)))
+    .add_startup_system(ui_camera);
 }

@@ -249,6 +249,8 @@ fn client_sync_players(
                                 },
                                 CameraHelper::default(),
                                 MainCamera,
+                                // No double UI rendering
+                                UiCameraConfig { show_ui: false },
                             ));
                         });
 
