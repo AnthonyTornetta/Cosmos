@@ -35,6 +35,7 @@ use crate::{
         lobby::{ClientLobby, PlayerInfo},
         mapping::NetworkMapping,
     },
+    rendering::MainCamera,
     state::game_state::GameState,
     structure::{
         chunk_retreiver::NeedsPopulated, planet::client_planet_builder::ClientPlanetBuilder,
@@ -230,8 +231,8 @@ fn client_sync_players(
                         .insert(LocalPlayer::default())
                         .insert(RenderDistance::default())
                         .with_children(|parent| {
-                            parent
-                                .spawn(Camera3dBundle {
+                            parent.spawn((
+                                Camera3dBundle {
                                     camera: Camera {
                                         hdr: true,
                                         ..Default::default()
@@ -242,11 +243,15 @@ fn client_sync_players(
                                         ..default()
                                     }),
                                     ..default()
-                                })
-                                .insert(BloomSettings {
+                                },
+                                BloomSettings {
                                     ..Default::default()
-                                })
-                                .insert(CameraHelper::default());
+                                },
+                                CameraHelper::default(),
+                                MainCamera,
+                                // No double UI rendering
+                                UiCameraConfig { show_ui: false },
+                            ));
                         });
 
                     commands.spawn((

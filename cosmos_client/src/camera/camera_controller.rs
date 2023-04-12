@@ -5,7 +5,8 @@ use bevy_rapier3d::na::clamp;
 use cosmos_core::structure::ship::pilot::Pilot;
 
 use crate::{
-    netty::flags::LocalPlayer, state::game_state::GameState, window::setup::DeltaCursorPosition,
+    netty::flags::LocalPlayer, rendering::MainCamera, state::game_state::GameState,
+    window::setup::DeltaCursorPosition,
 };
 
 pub fn register(app: &mut App) {
@@ -24,7 +25,7 @@ pub struct CameraHelper {
 }
 
 fn process_player_camera(
-    mut query: Query<(&mut Transform, &mut CameraHelper), With<Camera>>,
+    mut query: Query<(&mut Transform, &mut CameraHelper), With<MainCamera>>,
     is_pilot_query: Query<&LocalPlayer, With<Pilot>>,
     cursor_delta: Res<DeltaCursorPosition>,
 ) {

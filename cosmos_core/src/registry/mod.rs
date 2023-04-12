@@ -1,12 +1,32 @@
 pub mod identifiable;
-pub mod multi_registry;
+pub mod many_to_one;
+pub mod one_to_many;
 
 use bevy::prelude::{App, Resource};
 use bevy::utils::HashMap;
+use std::fmt;
 use std::slice::Iter;
 
 use self::identifiable::Identifiable;
 
+#[derive(Debug)]
+pub enum AddLinkError {
+    UnlocalizedNameNotFound { name: String },
+}
+
+impl fmt::Display for AddLinkError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self {
+            &Self::UnlocalizedNameNotFound { name } => {
+                write!(f, "No link was found for the unlocalized name of {name}")
+            }
+        }
+    }
+}
+
+impl std::error::Error for AddLinkError {}
+
+/// Represents a one to one link
 #[derive(Default, Resource)]
 pub struct Registry<T: Identifiable + Sync + Send> {
     contents: Vec<T>,

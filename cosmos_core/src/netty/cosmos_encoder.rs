@@ -8,7 +8,7 @@ pub fn serialize<T: Serialize>(x: &T) -> Vec<u8> {
 }
 
 /// Deserializes the data - will decompress if needed
-pub fn deserialize<'a, T: DeserializeOwned>(raw: &[u8]) -> Result<T, Box<bincode::ErrorKind>> {
+pub fn deserialize<T: DeserializeOwned>(raw: &[u8]) -> Result<T, Box<bincode::ErrorKind>> {
     let Ok(decompressed) = zstd::decode_all(raw) else {
         return Err(Box::new(bincode::ErrorKind::Custom("Unable to decompress".into())));
     };

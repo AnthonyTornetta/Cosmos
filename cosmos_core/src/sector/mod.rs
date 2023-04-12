@@ -1,15 +1,10 @@
 use bevy::{
-    prelude::{
-        App, Commands, Entity, IntoSystemConfigs, Query, Res, ResMut, Resource, Transform, With,
-    },
+    prelude::{App, Commands, Entity, IntoSystemConfigs, Query, Res, ResMut, Resource, With},
     utils::HashSet,
 };
 use bevy_rapier3d::prelude::RigidBodyDisabled;
 
-use crate::{
-    physics::location::Location,
-    structure::{loading::ChunksNeedLoaded, ship::Ship},
-};
+use crate::{physics::location::Location, structure::loading::ChunksNeedLoaded};
 
 type SectorLoc = (i64, i64, i64);
 
@@ -59,29 +54,14 @@ fn freeze_sectors(
         let coords = (loc.sector_x, loc.sector_y, loc.sector_z);
 
         if loading_sectors.added.contains(&coords) {
-            println!("Saving @ {}", loc);
             commands.entity(ent).insert(RigidBodyDisabled);
-            // .insert(OgRb(*rb))
-            // .insert(RigidBody::Fixed);
-            println!("Locking!");
         } else if loading_sectors.removed.contains(&coords) {
-            // if let Some(og_rb) = og_rb {
             commands.entity(ent).remove::<RigidBodyDisabled>();
-
-            println!("Unlocking!");
-            // }
         }
-    }
-}
-
-fn print_ship_loc(query: Query<(&Location, &Transform), With<Ship>>) {
-    for (x, y) in query.iter() {
-        println!("{x} {:.1}", y.translation);
     }
 }
 
 pub(super) fn register(app: &mut App) {
     app.insert_resource(LoadingSectors::default())
-        .add_systems((monitor_sectors, freeze_sectors).chain())
-        .add_system(print_ship_loc);
+        .add_systems((monitor_sectors, freeze_sectors).chain());
 }

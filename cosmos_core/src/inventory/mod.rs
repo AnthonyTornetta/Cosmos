@@ -136,6 +136,10 @@ impl Inventory {
             .map(|x| x.quantity() as usize)
             .sum()
     }
+
+    pub fn iter(&self) -> std::slice::Iter<'_, std::option::Option<ItemStack>> {
+        self.items.iter()
+    }
 }
 
 pub fn register(app: &mut App) {

@@ -71,6 +71,8 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
     - [x] Load objects that are close to a player & send that info to client
     - [x] Only send information about objects to clients that are close enough to have them loaded
 - [x] Display coordinates in top left (sector, local)
+- [x] Display hotbar items
+  - [x] 3d models for blocks
 
 ## Release 0.0.2a
 - [x] Improved state management

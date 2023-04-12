@@ -10,7 +10,7 @@
 
 # Don't include any saved world files
 /cosmos_server/saves
-# /cosmos_server/world
+/cosmos_server/world
 
 # Documentation auto-generated files
 

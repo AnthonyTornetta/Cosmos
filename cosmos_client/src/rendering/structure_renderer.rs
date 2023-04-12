@@ -2,31 +2,35 @@ use crate::block::lighting::{BlockLightProperties, BlockLighting};
 use crate::materials::CosmosMaterial;
 use crate::state::game_state::GameState;
 use bevy::prelude::{
-    App, BuildChildren, Component, DespawnRecursiveExt, EventReader, IntoSystemConfig, Mesh,
-    OnUpdate, PbrBundle, PointLight, PointLightBundle, StandardMaterial, Transform, Vec3,
+    warn, Added, App, BuildChildren, Component, DespawnRecursiveExt, EventReader,
+    IntoSystemConfigs, Mesh, OnUpdate, PbrBundle, PointLight, PointLightBundle, Rect,
+    StandardMaterial, Transform, Vec3, Without,
 };
 use bevy::reflect::{FromReflect, Reflect};
-use bevy::render::mesh::{Indices, PrimitiveTopology};
 use bevy::render::primitives::Aabb;
 use bevy::utils::hashbrown::HashMap;
 use bevy_rapier3d::na::Vector3;
 use cosmos_core::block::{Block, BlockFace};
 use cosmos_core::events::block_events::BlockChangedEvent;
 use cosmos_core::registry::identifiable::Identifiable;
-use cosmos_core::registry::multi_registry::MultiRegistry;
+use cosmos_core::registry::one_to_many::OneToManyRegistry;
 use cosmos_core::registry::Registry;
-use cosmos_core::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
+use cosmos_core::structure::chunk::{Chunk, CHUNK_DIMENSIONS, CHUNK_DIMENSIONSF};
 use cosmos_core::structure::events::ChunkSetEvent;
 use cosmos_core::structure::structure_block::StructureBlock;
 use cosmos_core::structure::Structure;
 use cosmos_core::utils::array_utils::flatten;
 use std::collections::HashSet;
 
-use crate::asset::asset_loading::MainAtlas;
-use crate::{Assets, Commands, Entity, EventWriter, Handle, Query, Res, ResMut, UVMapper};
+use crate::asset::asset_loading::{BlockTextureIndex, MainAtlas};
+use crate::{Assets, Commands, Entity, EventWriter, Handle, Query, Res, ResMut};
 
+use super::{BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder, MeshInformation};
+
+/// This is responsible for rendering a structure.
+/// Put this on a structure if you want it rendered.
 #[derive(Component, Debug)]
-pub struct StructureRenderer {
+struct StructureRenderer {
     width: usize,
     height: usize,
     length: usize,
@@ -36,22 +40,25 @@ pub struct StructureRenderer {
 }
 
 #[derive(Debug)]
-pub struct MeshMaterial {
+struct MeshMaterial {
     mesh: Mesh,
     material: Handle<StandardMaterial>,
 }
 
 #[derive(Debug)]
-pub struct ChunkMesh {
-    pub x: usize,
-    pub y: usize,
-    pub z: usize,
-    pub mesh_materials: Vec<MeshMaterial>,
-    pub lights: HashMap<(usize, usize, usize), BlockLightProperties>,
+struct ChunkMesh {
+    x: usize,
+    y: usize,
+    z: usize,
+    mesh_materials: Vec<MeshMaterial>,
+    lights: HashMap<(usize, usize, usize), BlockLightProperties>,
 }
 
 impl StructureRenderer {
-    pub fn new(structure: &Structure) -> Self {
+    /// Initiates a StructureRenderer specifically for this structure.
+    ///
+    /// Make sure to add this as a component to the structure's entity.
+    fn new(structure: &Structure) -> Self {
         let width = structure.chunks_width();
         let height = structure.chunks_height();
         let length = structure.chunks_length();
@@ -79,13 +86,15 @@ impl StructureRenderer {
         }
     }
 
-    pub fn render(
+    fn render(
         &mut self,
         structure: &Structure,
-        uv_mapper: &UVMapper,
+        atlas: &MainAtlas,
         blocks: &Registry<Block>,
         lighting: &Registry<BlockLighting>,
-        materials: &MultiRegistry<Block, CosmosMaterial>,
+        materials: &OneToManyRegistry<Block, CosmosMaterial>,
+        meshes: &BlockMeshRegistry,
+        block_textures: &Registry<BlockTextureIndex>,
     ) {
         for change in &self.changes {
             debug_assert!(change.x < self.width);
@@ -129,8 +138,19 @@ impl StructureRenderer {
                 };
 
                 self.chunk_renderers[flatten(x, y, z, self.width, self.height)].render(
-                    uv_mapper, materials, lighting, chunk, left, right, bottom, top, back, front,
+                    atlas,
+                    materials,
+                    lighting,
+                    chunk,
+                    left,
+                    right,
+                    bottom,
+                    top,
+                    back,
+                    front,
                     blocks,
+                    meshes,
+                    block_textures,
                 );
 
                 self.need_meshes.insert(*change);
@@ -140,7 +160,7 @@ impl StructureRenderer {
         self.changes.clear();
     }
 
-    pub fn create_meshes(&mut self) -> Vec<ChunkMesh> {
+    fn create_meshes(&mut self) -> Vec<ChunkMesh> {
         let mut meshes = Vec::with_capacity(self.need_meshes.len());
 
         for chunk in &self.need_meshes {
@@ -159,12 +179,8 @@ impl StructureRenderer {
 
             let mut mesh_materials = Vec::new();
 
-            for (material, chunk_memsh) in rend.meshes {
-                let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
-                mesh.set_indices(Some(Indices::U32(chunk_memsh.indices)));
-                mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, chunk_memsh.positions);
-                mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, chunk_memsh.normals);
-                mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, chunk_memsh.uvs);
+            for (material, chunk_mesh_info) in rend.meshes {
+                let mesh = chunk_mesh_info.build_mesh();
 
                 mesh_materials.push(MeshMaterial { material, mesh });
             }
@@ -184,9 +200,10 @@ impl StructureRenderer {
     }
 }
 
-pub struct NeedsNewRenderingEvent(Entity);
+struct NeedsNewRenderingEvent(Entity);
 
-fn dew_it(
+/// Queues a chunk to be rendered if it hasn't already been queued.
+fn maybe_queue_chunk_for_rendering(
     done_structures: &mut HashSet<u32>,
     entity: Entity,
     chunk_coords: Option<Vector3<usize>>,
@@ -213,7 +230,7 @@ fn dew_it(
     }
 }
 
-pub fn monitor_block_updates_system(
+fn monitor_block_updates_system(
     mut event: EventReader<BlockChangedEvent>,
     mut chunk_set_event: EventReader<ChunkSetEvent>,
     mut query: Query<&mut StructureRenderer>,
@@ -226,7 +243,7 @@ pub fn monitor_block_updates_system(
         let structure = structure_query.get(ev.structure_entity).unwrap();
 
         if ev.block.x() != 0 && ev.block.x() % CHUNK_DIMENSIONS == 0 {
-            dew_it(
+            maybe_queue_chunk_for_rendering(
                 &mut done_structures,
                 ev.structure_entity,
                 Some(Vector3::new(
@@ -242,7 +259,7 @@ pub fn monitor_block_updates_system(
         if ev.block.x() != structure.blocks_width() - 1
             && (ev.block.x() + 1) % CHUNK_DIMENSIONS == 0
         {
-            dew_it(
+            maybe_queue_chunk_for_rendering(
                 &mut done_structures,
                 ev.structure_entity,
                 Some(Vector3::new(
@@ -256,7 +273,7 @@ pub fn monitor_block_updates_system(
         }
 
         if ev.block.y() != 0 && ev.block.y() % CHUNK_DIMENSIONS == 0 {
-            dew_it(
+            maybe_queue_chunk_for_rendering(
                 &mut done_structures,
                 ev.structure_entity,
                 Some(Vector3::new(
@@ -272,7 +289,7 @@ pub fn monitor_block_updates_system(
         if ev.block.y() != structure.blocks_height() - 1
             && (ev.block.y() + 1) % CHUNK_DIMENSIONS == 0
         {
-            dew_it(
+            maybe_queue_chunk_for_rendering(
                 &mut done_structures,
                 ev.structure_entity,
                 Some(Vector3::new(
@@ -286,7 +303,7 @@ pub fn monitor_block_updates_system(
         }
 
         if ev.block.z() != 0 && ev.block.z() % CHUNK_DIMENSIONS == 0 {
-            dew_it(
+            maybe_queue_chunk_for_rendering(
                 &mut done_structures,
                 ev.structure_entity,
                 Some(Vector3::new(
@@ -302,7 +319,7 @@ pub fn monitor_block_updates_system(
         if ev.block.z() != structure.blocks_length() - 1
             && (ev.block.z() + 1) % CHUNK_DIMENSIONS == 0
         {
-            dew_it(
+            maybe_queue_chunk_for_rendering(
                 &mut done_structures,
                 ev.structure_entity,
                 Some(Vector3::new(
@@ -315,7 +332,7 @@ pub fn monitor_block_updates_system(
             );
         }
 
-        dew_it(
+        maybe_queue_chunk_for_rendering(
             &mut done_structures,
             ev.structure_entity,
             Some(Vector3::new(
@@ -328,18 +345,8 @@ pub fn monitor_block_updates_system(
         );
     }
 
-    // for ev in structure_created_event.iter() {
-    //     dew_it(
-    //         &mut done_structures,
-    //         ev.entity,
-    //         None,
-    //         &mut query,
-    //         &mut event_writer,
-    //     );
-    // }
-
     for ev in chunk_set_event.iter() {
-        dew_it(
+        maybe_queue_chunk_for_rendering(
             &mut done_structures,
             ev.structure_entity,
             Some(Vector3::new(ev.x, ev.y, ev.z)),
@@ -373,10 +380,12 @@ fn monitor_needs_rendered_system(
     mesh_query: Query<Option<&Handle<Mesh>>>,
     mut meshes: ResMut<Assets<Mesh>>,
     blocks: Res<Registry<Block>>,
-    materials: Res<MultiRegistry<Block, CosmosMaterial>>,
+    materials: Res<OneToManyRegistry<Block, CosmosMaterial>>,
+    meshes_registry: Res<BlockMeshRegistry>,
     lighting: Res<Registry<BlockLighting>>,
     lights_query: Query<&LightsHolder>,
     chunk_meshes_query: Query<&ChunkMeshes>,
+    block_textures: Res<Registry<BlockTextureIndex>>,
 ) {
     let mut done_structures = HashSet::new();
     for ev in event.iter() {
@@ -388,7 +397,15 @@ fn monitor_needs_rendered_system(
 
         let (structure, mut renderer) = query.get_mut(ev.0).unwrap();
 
-        renderer.render(structure, &atlas.uv_mapper, &blocks, &lighting, &materials);
+        renderer.render(
+            structure,
+            &atlas,
+            &blocks,
+            &lighting,
+            &materials,
+            &meshes_registry,
+            &block_textures,
+        );
 
         let chunk_meshes: Vec<ChunkMesh> = renderer.create_meshes();
 
@@ -537,32 +554,40 @@ fn monitor_needs_rendered_system(
 }
 
 #[derive(Default, Debug, Reflect, FromReflect)]
-pub struct ChunkRendererInstance {
-    pub indices: Vec<u32>,
-    pub uvs: Vec<[f32; 2]>,
-    pub positions: Vec<[f32; 3]>,
-    pub normals: Vec<[f32; 3]>,
-    pub lights: HashMap<(usize, usize, usize), BlockLightProperties>,
+struct ChunkRendererInstance {
+    indices: Vec<u32>,
+    uvs: Vec<[f32; 2]>,
+    positions: Vec<[f32; 3]>,
+    normals: Vec<[f32; 3]>,
+    lights: HashMap<(usize, usize, usize), BlockLightProperties>,
 }
 
 #[derive(Default, Debug, Reflect, FromReflect)]
-pub struct MeshInfo {
-    pub renderer: ChunkRendererInstance,
-    pub last_index: u32,
-    pub indices: Vec<u32>,
-    pub uvs: Vec<[f32; 2]>,
-    pub positions: Vec<[f32; 3]>,
-    pub normals: Vec<[f32; 3]>,
+struct MeshInfo {
+    renderer: ChunkRendererInstance,
+    mesh_builder: CosmosMeshBuilder,
+}
+
+impl MeshBuilder for MeshInfo {
+    #[inline]
+    fn add_mesh_information(&mut self, mesh_info: &MeshInformation, position: Vec3, uvs: Rect) {
+        self.mesh_builder
+            .add_mesh_information(mesh_info, position, uvs);
+    }
+
+    fn build_mesh(self) -> Mesh {
+        self.mesh_builder.build_mesh()
+    }
 }
 
 #[derive(Default, Debug, Reflect)]
-pub struct ChunkRenderer {
+struct ChunkRenderer {
     meshes: HashMap<Handle<StandardMaterial>, MeshInfo>,
     lights: HashMap<(usize, usize, usize), BlockLightProperties>,
 }
 
 impl ChunkRenderer {
-    pub fn new() -> Self {
+    fn new() -> Self {
         Self::default()
     }
 
@@ -570,10 +595,11 @@ impl ChunkRenderer {
         self.meshes.clear();
     }
 
-    pub fn render(
+    /// Renders a chunk into mesh information that can then be turned into a bevy mesh
+    fn render(
         &mut self,
-        uv_mapper: &UVMapper,
-        materials: &MultiRegistry<Block, CosmosMaterial>,
+        atlas: &MainAtlas,
+        materials: &OneToManyRegistry<Block, CosmosMaterial>,
         lighting: &Registry<BlockLighting>,
         chunk: &Chunk,
         left: Option<&Chunk>,
@@ -583,10 +609,14 @@ impl ChunkRenderer {
         back: Option<&Chunk>,
         front: Option<&Chunk>,
         blocks: &Registry<Block>,
+        meshes: &BlockMeshRegistry,
+        block_textures: &Registry<BlockTextureIndex>,
     ) {
         self.clear();
 
-        let cd2 = CHUNK_DIMENSIONS as f32 / 2.0;
+        let cd2 = CHUNK_DIMENSIONSF / 2.0;
+
+        let mut faces = Vec::with_capacity(6);
 
         for z in 0..CHUNK_DIMENSIONS {
             for y in 0..CHUNK_DIMENSIONS {
@@ -594,250 +624,137 @@ impl ChunkRenderer {
                     if chunk.has_block_at(x, y, z) {
                         let block = blocks.from_numeric_id(chunk.block_at(x, y, z));
 
-                        if let Some(material) = materials.get_value(block) {
-                            let (cx, cy, cz) = (
-                                x as f32 - cd2 + 0.5,
-                                y as f32 - cd2 + 0.5,
-                                z as f32 - cd2 + 0.5,
+                        let Some(material) = materials.get_value(block) else {
+                            continue;
+                        };
+
+                        let Some(mesh) = meshes.get_value(block) else {
+                            continue;
+                        };
+
+                        let (cx, cy, cz) = (
+                            x as f32 - cd2 + 0.5,
+                            y as f32 - cd2 + 0.5,
+                            z as f32 - cd2 + 0.5,
+                        );
+
+                        if !self.meshes.contains_key(&material.handle) {
+                            self.meshes
+                                .insert(material.handle.clone(), Default::default());
+                        }
+
+                        let mesh_info = self.meshes.get_mut(&material.handle).unwrap();
+
+                        // right
+                        if (x != CHUNK_DIMENSIONS - 1
+                            && chunk.has_see_through_block_at(x + 1, y, z, blocks))
+                            || (x == CHUNK_DIMENSIONS - 1
+                                && (right
+                                    .map(|c| c.has_see_through_block_at(0, y, z, blocks))
+                                    .unwrap_or(true)))
+                        {
+                            faces.push(BlockFace::Right);
+                        }
+                        // left
+                        if (x != 0 && chunk.has_see_through_block_at(x - 1, y, z, blocks))
+                            || (x == 0
+                                && (left
+                                    .map(|c| {
+                                        c.has_see_through_block_at(
+                                            CHUNK_DIMENSIONS - 1,
+                                            y,
+                                            z,
+                                            blocks,
+                                        )
+                                    })
+                                    .unwrap_or(true)))
+                        {
+                            faces.push(BlockFace::Left);
+                        }
+
+                        // top
+                        if (y != CHUNK_DIMENSIONS - 1
+                            && chunk.has_see_through_block_at(x, y + 1, z, blocks))
+                            || (y == CHUNK_DIMENSIONS - 1
+                                && (top
+                                    .map(|c| c.has_see_through_block_at(x, 0, z, blocks))
+                                    .unwrap_or(true)))
+                        {
+                            faces.push(BlockFace::Top);
+                        }
+                        // bottom
+                        if (y != 0 && chunk.has_see_through_block_at(x, y - 1, z, blocks))
+                            || (y == 0
+                                && (bottom
+                                    .map(|c| {
+                                        c.has_see_through_block_at(
+                                            x,
+                                            CHUNK_DIMENSIONS - 1,
+                                            z,
+                                            blocks,
+                                        )
+                                    })
+                                    .unwrap_or(true)))
+                        {
+                            faces.push(BlockFace::Bottom);
+                        }
+
+                        // back
+                        if (z != CHUNK_DIMENSIONS - 1
+                            && chunk.has_see_through_block_at(x, y, z + 1, blocks))
+                            || (z == CHUNK_DIMENSIONS - 1
+                                && (front
+                                    .map(|c| c.has_see_through_block_at(x, y, 0, blocks))
+                                    .unwrap_or(true)))
+                        {
+                            faces.push(BlockFace::Back);
+                        }
+                        // front
+                        if (z != 0 && chunk.has_see_through_block_at(x, y, z - 1, blocks))
+                            || (z == 0
+                                && (back
+                                    .map(|c| {
+                                        c.has_see_through_block_at(
+                                            x,
+                                            y,
+                                            CHUNK_DIMENSIONS - 1,
+                                            blocks,
+                                        )
+                                    })
+                                    .unwrap_or(true)))
+                        {
+                            faces.push(BlockFace::Front);
+                        }
+
+                        for face in faces.iter() {
+                            let index = block_textures
+                                .from_id(block.unlocalized_name())
+                                .unwrap_or_else(|| {
+                                    block_textures
+                                        .from_id("missing")
+                                        .expect("Missing texture should exist.")
+                                });
+
+                            let Some(image_index) = index.atlas_index_from_face(*face) else {
+                                warn!("Missing image index -- {index:?}");
+                                continue;
+                            };
+
+                            let uvs = atlas.uvs_for_index(image_index);
+
+                            mesh_info.add_mesh_information(
+                                mesh.info_for_face(*face),
+                                Vec3::new(cx, cy, cz),
+                                uvs,
                             );
+                        }
 
-                            let mut block_is_visible = false;
+                        let block_is_visible = !faces.is_empty();
+                        faces.clear();
 
-                            if !self.meshes.contains_key(&material.handle) {
-                                self.meshes
-                                    .insert(material.handle.clone(), Default::default());
-                            }
-
-                            let mesh_info = self.meshes.get_mut(&material.handle).unwrap();
-
-                            // right
-                            if (x != CHUNK_DIMENSIONS - 1
-                                && chunk.has_see_through_block_at(x + 1, y, z, blocks))
-                                || (x == CHUNK_DIMENSIONS - 1
-                                    && (right.is_none()
-                                        || right
-                                            .unwrap()
-                                            .has_see_through_block_at(0, y, z, blocks)))
-                            {
-                                mesh_info.positions.push([cx + 0.5, cy + -0.5, cz + -0.5]);
-                                mesh_info.positions.push([cx + 0.5, cy + 0.5, cz + -0.5]);
-                                mesh_info.positions.push([cx + 0.5, cy + 0.5, cz + 0.5]);
-                                mesh_info.positions.push([cx + 0.5, cy + -0.5, cz + 0.5]);
-
-                                mesh_info.normals.push([1.0, 0.0, 0.0]);
-                                mesh_info.normals.push([1.0, 0.0, 0.0]);
-                                mesh_info.normals.push([1.0, 0.0, 0.0]);
-                                mesh_info.normals.push([1.0, 0.0, 0.0]);
-
-                                let uvs = uv_mapper.map(block.uv_index_for_side(BlockFace::Right));
-                                mesh_info.uvs.push([uvs[0].x, uvs[1].y]);
-                                mesh_info.uvs.push([uvs[0].x, uvs[0].y]);
-                                mesh_info.uvs.push([uvs[1].x, uvs[0].y]);
-                                mesh_info.uvs.push([uvs[1].x, uvs[1].y]);
-
-                                mesh_info.indices.push(mesh_info.last_index);
-                                mesh_info.indices.push(1 + mesh_info.last_index);
-                                mesh_info.indices.push(2 + mesh_info.last_index);
-                                mesh_info.indices.push(2 + mesh_info.last_index);
-                                mesh_info.indices.push(3 + mesh_info.last_index);
-                                mesh_info.indices.push(mesh_info.last_index);
-
-                                mesh_info.last_index += 4;
-
-                                block_is_visible = true;
-                            }
-                            // left
-                            if (x != 0 && chunk.has_see_through_block_at(x - 1, y, z, blocks))
-                                || (x == 0
-                                    && (left.is_none()
-                                        || left.unwrap().has_see_through_block_at(
-                                            CHUNK_DIMENSIONS - 1,
-                                            y,
-                                            z,
-                                            blocks,
-                                        )))
-                            {
-                                mesh_info.positions.push([cx + -0.5, cy + -0.5, cz + 0.5]);
-                                mesh_info.positions.push([cx + -0.5, cy + 0.5, cz + 0.5]);
-                                mesh_info.positions.push([cx + -0.5, cy + 0.5, cz + -0.5]);
-                                mesh_info.positions.push([cx + -0.5, cy + -0.5, cz + -0.5]);
-
-                                mesh_info.normals.push([-1.0, 0.0, 0.0]);
-                                mesh_info.normals.push([-1.0, 0.0, 0.0]);
-                                mesh_info.normals.push([-1.0, 0.0, 0.0]);
-                                mesh_info.normals.push([-1.0, 0.0, 0.0]);
-
-                                let uvs = uv_mapper.map(block.uv_index_for_side(BlockFace::Left));
-                                mesh_info.uvs.push([uvs[0].x, uvs[1].y]);
-                                mesh_info.uvs.push([uvs[0].x, uvs[0].y]);
-                                mesh_info.uvs.push([uvs[1].x, uvs[0].y]);
-                                mesh_info.uvs.push([uvs[1].x, uvs[1].y]);
-
-                                mesh_info.indices.push(mesh_info.last_index);
-                                mesh_info.indices.push(1 + mesh_info.last_index);
-                                mesh_info.indices.push(2 + mesh_info.last_index);
-                                mesh_info.indices.push(2 + mesh_info.last_index);
-                                mesh_info.indices.push(3 + mesh_info.last_index);
-                                mesh_info.indices.push(mesh_info.last_index);
-
-                                mesh_info.last_index += 4;
-
-                                block_is_visible = true;
-                            }
-
-                            // top
-                            if (y != CHUNK_DIMENSIONS - 1
-                                && chunk.has_see_through_block_at(x, y + 1, z, blocks))
-                                || (y == CHUNK_DIMENSIONS - 1
-                                    && (top.is_none()
-                                        || top.unwrap().has_see_through_block_at(x, 0, z, blocks)))
-                            {
-                                mesh_info.positions.push([cx + 0.5, cy + 0.5, cz + -0.5]);
-                                mesh_info.positions.push([cx + -0.5, cy + 0.5, cz + -0.5]);
-                                mesh_info.positions.push([cx + -0.5, cy + 0.5, cz + 0.5]);
-                                mesh_info.positions.push([cx + 0.5, cy + 0.5, cz + 0.5]);
-
-                                mesh_info.normals.push([0.0, 1.0, 0.0]);
-                                mesh_info.normals.push([0.0, 1.0, 0.0]);
-                                mesh_info.normals.push([0.0, 1.0, 0.0]);
-                                mesh_info.normals.push([0.0, 1.0, 0.0]);
-
-                                let uvs = uv_mapper.map(block.uv_index_for_side(BlockFace::Top));
-                                mesh_info.uvs.push([uvs[1].x, uvs[1].y]);
-                                mesh_info.uvs.push([uvs[0].x, uvs[1].y]);
-                                mesh_info.uvs.push([uvs[0].x, uvs[0].y]);
-                                mesh_info.uvs.push([uvs[1].x, uvs[0].y]);
-
-                                mesh_info.indices.push(mesh_info.last_index);
-                                mesh_info.indices.push(1 + mesh_info.last_index);
-                                mesh_info.indices.push(2 + mesh_info.last_index);
-                                mesh_info.indices.push(2 + mesh_info.last_index);
-                                mesh_info.indices.push(3 + mesh_info.last_index);
-                                mesh_info.indices.push(mesh_info.last_index);
-
-                                mesh_info.last_index += 4;
-
-                                block_is_visible = true;
-                            }
-                            // bottom
-                            if (y != 0 && chunk.has_see_through_block_at(x, y - 1, z, blocks))
-                                || (y == 0
-                                    && (bottom.is_none()
-                                        || bottom.unwrap().has_see_through_block_at(
-                                            x,
-                                            CHUNK_DIMENSIONS - 1,
-                                            z,
-                                            blocks,
-                                        )))
-                            {
-                                mesh_info.positions.push([cx + 0.5, cy + -0.5, cz + 0.5]);
-                                mesh_info.positions.push([cx + -0.5, cy + -0.5, cz + 0.5]);
-                                mesh_info.positions.push([cx + -0.5, cy + -0.5, cz + -0.5]);
-                                mesh_info.positions.push([cx + 0.5, cy + -0.5, cz + -0.5]);
-
-                                mesh_info.normals.push([0.0, -1.0, 0.0]);
-                                mesh_info.normals.push([0.0, -1.0, 0.0]);
-                                mesh_info.normals.push([0.0, -1.0, 0.0]);
-                                mesh_info.normals.push([0.0, -1.0, 0.0]);
-
-                                let uvs = uv_mapper.map(block.uv_index_for_side(BlockFace::Bottom));
-                                mesh_info.uvs.push([uvs[1].x, uvs[0].y]);
-                                mesh_info.uvs.push([uvs[0].x, uvs[0].y]);
-                                mesh_info.uvs.push([uvs[0].x, uvs[1].y]);
-                                mesh_info.uvs.push([uvs[1].x, uvs[1].y]);
-
-                                mesh_info.indices.push(mesh_info.last_index);
-                                mesh_info.indices.push(1 + mesh_info.last_index);
-                                mesh_info.indices.push(2 + mesh_info.last_index);
-                                mesh_info.indices.push(2 + mesh_info.last_index);
-                                mesh_info.indices.push(3 + mesh_info.last_index);
-                                mesh_info.indices.push(mesh_info.last_index);
-
-                                mesh_info.last_index += 4;
-
-                                block_is_visible = true;
-                            }
-
-                            // back
-                            if (z != CHUNK_DIMENSIONS - 1
-                                && chunk.has_see_through_block_at(x, y, z + 1, blocks))
-                                || (z == CHUNK_DIMENSIONS - 1
-                                    && (front.is_none()
-                                        || front
-                                            .unwrap()
-                                            .has_see_through_block_at(x, y, 0, blocks)))
-                            {
-                                mesh_info.positions.push([cx + -0.5, cy + -0.5, cz + 0.5]);
-                                mesh_info.positions.push([cx + 0.5, cy + -0.5, cz + 0.5]);
-                                mesh_info.positions.push([cx + 0.5, cy + 0.5, cz + 0.5]);
-                                mesh_info.positions.push([cx + -0.5, cy + 0.5, cz + 0.5]);
-
-                                mesh_info.normals.push([0.0, 0.0, 1.0]);
-                                mesh_info.normals.push([0.0, 0.0, 1.0]);
-                                mesh_info.normals.push([0.0, 0.0, 1.0]);
-                                mesh_info.normals.push([0.0, 0.0, 1.0]);
-
-                                let uvs = uv_mapper.map(block.uv_index_for_side(BlockFace::Back));
-                                mesh_info.uvs.push([uvs[0].x, uvs[1].y]);
-                                mesh_info.uvs.push([uvs[1].x, uvs[1].y]);
-                                mesh_info.uvs.push([uvs[1].x, uvs[0].y]);
-                                mesh_info.uvs.push([uvs[0].x, uvs[0].y]);
-
-                                mesh_info.indices.push(mesh_info.last_index);
-                                mesh_info.indices.push(1 + mesh_info.last_index);
-                                mesh_info.indices.push(2 + mesh_info.last_index);
-                                mesh_info.indices.push(2 + mesh_info.last_index);
-                                mesh_info.indices.push(3 + mesh_info.last_index);
-                                mesh_info.indices.push(mesh_info.last_index);
-
-                                mesh_info.last_index += 4;
-
-                                block_is_visible = true;
-                            }
-                            // front
-                            if (z != 0 && chunk.has_see_through_block_at(x, y, z - 1, blocks))
-                                || (z == 0
-                                    && (back.is_none()
-                                        || back.unwrap().has_see_through_block_at(
-                                            x,
-                                            y,
-                                            CHUNK_DIMENSIONS - 1,
-                                            blocks,
-                                        )))
-                            {
-                                mesh_info.positions.push([cx + -0.5, cy + 0.5, cz + -0.5]);
-                                mesh_info.positions.push([cx + 0.5, cy + 0.5, cz + -0.5]);
-                                mesh_info.positions.push([cx + 0.5, cy + -0.5, cz + -0.5]);
-                                mesh_info.positions.push([cx + -0.5, cy + -0.5, cz + -0.5]);
-
-                                mesh_info.normals.push([0.0, 0.0, -1.0]);
-                                mesh_info.normals.push([0.0, 0.0, -1.0]);
-                                mesh_info.normals.push([0.0, 0.0, -1.0]);
-                                mesh_info.normals.push([0.0, 0.0, -1.0]);
-
-                                let uvs = uv_mapper.map(block.uv_index_for_side(BlockFace::Front));
-
-                                mesh_info.uvs.push([uvs[0].x, uvs[0].y]);
-                                mesh_info.uvs.push([uvs[1].x, uvs[0].y]);
-                                mesh_info.uvs.push([uvs[1].x, uvs[1].y]);
-                                mesh_info.uvs.push([uvs[0].x, uvs[1].y]);
-
-                                mesh_info.indices.push(mesh_info.last_index);
-                                mesh_info.indices.push(1 + mesh_info.last_index);
-                                mesh_info.indices.push(2 + mesh_info.last_index);
-                                mesh_info.indices.push(2 + mesh_info.last_index);
-                                mesh_info.indices.push(3 + mesh_info.last_index);
-                                mesh_info.indices.push(mesh_info.last_index);
-
-                                mesh_info.last_index += 4;
-
-                                block_is_visible = true;
-                            }
-
-                            if block_is_visible {
-                                if let Some(lighting) = lighting.from_id(block.unlocalized_name()) {
-                                    self.lights.insert((x, y, z), lighting.properties);
-                                }
+                        if block_is_visible {
+                            if let Some(lighting) = lighting.from_id(block.unlocalized_name()) {
+                                self.lights.insert((x, y, z), lighting.properties);
                             }
                         }
                     }
@@ -847,9 +764,27 @@ impl ChunkRenderer {
     }
 }
 
-pub fn register(app: &mut App) {
+fn add_renderer(
+    query: Query<(Entity, &Structure), (Added<Structure>, Without<StructureRenderer>)>,
+    mut commands: Commands,
+) {
+    for (ent, structure) in query.iter() {
+        commands
+            .entity(ent)
+            .insert(StructureRenderer::new(structure));
+    }
+}
+
+pub(super) fn register(app: &mut App) {
     app.add_event::<NeedsNewRenderingEvent>()
-        .add_system(monitor_needs_rendered_system.in_set(OnUpdate(GameState::LoadingWorld)))
-        .add_system(monitor_needs_rendered_system.in_set(OnUpdate(GameState::Playing)))
+        .add_systems(
+            (monitor_needs_rendered_system, monitor_block_updates_system)
+                .in_set(OnUpdate(GameState::LoadingWorld)),
+        )
+        .add_systems(
+            (monitor_needs_rendered_system, monitor_block_updates_system)
+                .in_set(OnUpdate(GameState::Playing)),
+        )
+        .add_system(add_renderer)
         .register_type::<LightsHolder>();
 }
