@@ -1,3 +1,6 @@
+//! A laser is something that flies in a straight line & may collide with a block, causing
+//! it to take damage. Use `Laser::spawn` to create a laser.
+
 use bevy::{
     pbr::{NotShadowCaster, NotShadowReceiver},
     prelude::{
@@ -30,14 +33,19 @@ pub struct LaserCollideEvent {
 }
 
 impl LaserCollideEvent {
+    /// Gets the entity this laser hit
+    ///
+    /// *NOTE*: Make sure to verify this entity still exists before processing it
     pub fn entity_hit(&self) -> Entity {
         self.entity_hit
     }
 
+    /// The strength of this laser
     pub fn laser_strength(&self) -> f32 {
         self.laser_strength
     }
 
+    /// The location this laser hit relative to the entity it hit's transform.
     pub fn local_position_hit(&self) -> Vec3 {
         self.local_position_hit
     }
@@ -54,23 +62,26 @@ struct FireTime {
 }
 
 #[derive(Component)]
+/// A laser is something that flies in a straight line & may collide with a block, causing
+/// it to take damage. Use `Laser::spawn` to create a laser.
 pub struct Laser {
-    // strength: f32,
     /// commands despawning entity isn't instant, but changing this field is.
     /// Thus, this field should always be checked when determining if a laser should break/damage something.
     active: bool,
+
+    /// The strength of this laser, used to calculate block damage
     pub strength: f32,
 
+    /// Used to calculate an extra-big hitbox to account for hitting something right when it fires
     last_position: Location,
 }
 
 impl Laser {
     /// Spawns a laser with the given position & velocity
     ///
-    /// This takes a PBR that contains mesh data. The transform field will be overwritten
-    ///
-    /// Base strength is 100?
-    ///
+    /// * `laser_velocity` - The laser's velocity. Do not add the parent's velocity for this, use `firer_velocity` instead.
+    /// * `firer_velocity` - The laser's parent's velocity.
+    /// * `pbr` - This takes a PBR that contains mesh data. The transform field will be overwritten
     pub fn spawn_custom_pbr(
         location: Location,
         laser_velocity: Vec3,
@@ -126,8 +137,9 @@ impl Laser {
     }
 
     /// Spawns a laser with the given position & velocity
-    /// Base strength is 100
     ///
+    /// * `laser_velocity` - The laser's velocity. Do not add the parent's velocity for this, use `firer_velocity` instead.
+    /// * `firer_velocity` - The laser's parent's velocity.
     pub fn spawn(
         position: Location,
         laser_velocity: Vec3,
@@ -262,7 +274,7 @@ fn despawn_lasers(
     }
 }
 
-pub(crate) fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.add_systems((handle_events, despawn_lasers))
         .add_event::<LaserCollideEvent>();
 }
