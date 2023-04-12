@@ -1,3 +1,9 @@
+//!
+//! This whole module is pretty bad because it relies on a whole lot of magic numbers.
+//!
+//! This will need to be redone once more slots are added.
+//!
+
 use bevy::{
     core_pipeline::clear_color::ClearColorConfig,
     prelude::*,
@@ -28,11 +34,7 @@ fn ui_camera(mut commands: Commands) {
     commands.spawn((
         Camera3dBundle {
             projection: Projection::Orthographic(OrthographicProjection {
-                // scaling_mode: ScalingMode::Fixed {
-                //     width: 100.0,
-                //     height: 100.0,
-                // },
-                scaling_mode: ScalingMode::WindowSize(0.025),
+                scaling_mode: ScalingMode::WindowSize(40.0),
                 ..Default::default()
             }),
             camera_3d: Camera3d {
@@ -49,12 +51,8 @@ fn ui_camera(mut commands: Commands) {
         },
         UICamera,
         RenderLayers::from_layers(&[INVENTORY_SLOT_LAYER]),
-        // No double-rendering UI
-        // UiCameraConfig { show_ui: false },
     ));
 }
-
-struct Inventory3dModel {}
 
 fn render_hotbar(
     inventory: Query<&Inventory, With<LocalPlayer>>,
@@ -100,12 +98,12 @@ fn render_hotbar(
                     .expect("Missing texture should exist.")
             });
 
-        let mult = size * 2.0;
-        let sx = -(amt as f32) / 2.0 * mult + mult * (i as f32 + 0.5);
+        let multiplier = size * 2.0;
+        let slot_x = -(amt as f32) / 2.0 * multiplier + multiplier * (i as f32 + 0.5);
 
-        let mut transform = Transform::from_xyz(sx, 0.0, 0.0); //.looking_at(Vec3::new(0.0, 0.0, 0.0), Vec3::Y);
+        let mut transform = Transform::from_xyz(slot_x, 0.0, 0.0);
 
-        // These make it look cool
+        // This makes it look cool
         transform.rotation = Quat::from_xyzw(0.18354653, 0.37505528, 0.07602747, 0.90546346);
 
         let Some(block_mesh_info) = block_meshes.get_value(block) else {
@@ -132,7 +130,7 @@ fn render_hotbar(
                 .spawn((
                     PbrBundle {
                         mesh: meshes.add(mesh_builder.build_mesh()),
-                        material: atlas.material.clone(),
+                        material: atlas.unlit_material.clone(),
                         transform,
                         ..default()
                     },
@@ -169,23 +167,7 @@ pub(super) fn register(app: &mut App) {
                 return;
             };
 
-            // -0.7 = 120
-            // -8.22 = 720
-            // m =
-
             transform.translation.y = -0.012533 * window.height() + 0.804;
-
-            // let ratio = x.height() / 720.0;
-
-            // proj.scale = 0.025 / ratio;
-
-            // let difference_ratio = 1280.0 / x.width();
-
-            // let new_x = 18.0 / difference_ratio;
-            // let aspect_ratio = x.width() / x.height();
-            // let new_y = new_x / aspect_ratio;
-
-            // proj.
         },
     )
     .add_system(render_hotbar.in_schedule(OnEnter(GameState::Playing)))

@@ -31,6 +31,7 @@ struct AssetsLoading(Vec<LoadingAsset>);
 #[derive(Resource, Reflect, FromReflect)]
 pub struct MainAtlas {
     pub material: Handle<StandardMaterial>,
+    pub unlit_material: Handle<StandardMaterial>,
     pub atlas: TextureAtlas,
     pub uv_mapper: UVMapper,
 }
@@ -148,6 +149,16 @@ fn check_assets_ready(
                             ..default()
                         });
 
+                        let unlit_material_handle = materials.add(StandardMaterial {
+                            base_color_texture: Some(atlas.texture.clone()),
+                            alpha_mode: AlphaMode::Mask(0.5),
+                            unlit: true,
+                            metallic: 0.0,
+                            reflectance: 0.0,
+
+                            ..default()
+                        });
+
                         let (width, height) = (atlas.size.x as usize, atlas.size.y as usize);
 
                         let texture = atlas.texture.clone();
@@ -155,6 +166,7 @@ fn check_assets_ready(
                         commands.insert_resource(MainAtlas {
                             //handle,
                             material: material_handle,
+                            unlit_material: unlit_material_handle,
                             atlas,
                             uv_mapper: UVMapper::new(
                                 width,
