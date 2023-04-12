@@ -56,7 +56,7 @@ fn insert_last_rotation(mut commands: Commands, query: Query<Entity, Added<Struc
 fn update_crosshair(
     mut query: Query<(&Pilot, &mut LastRotation, &Transform), (With<Ship>, Changed<Transform>)>,
     local_player_query: Query<Entity, With<LocalPlayer>>,
-    camera_query: Query<(Entity, &Camera)>,
+    camera_query: Query<(Entity, &Camera), With<MainCamera>>,
     transform_query: Query<&GlobalTransform>,
     mut crosshair_offset: ResMut<CrosshairOffset>,
     primary_query: Query<&Window, With<PrimaryWindow>>,
