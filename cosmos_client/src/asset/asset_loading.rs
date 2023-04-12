@@ -361,10 +361,10 @@ fn load_block_textxures(
         let json_path = format!("assets/blocks/{block_name}.json");
 
         let block_info = if let Ok(block_info) = fs::read(&json_path) {
-            let res = serde_json::from_slice::<BlockInfo>(&block_info)
-                .unwrap_or_else(|_| panic!("Error reading json data in {json_path}"));
+            
 
-            res
+            serde_json::from_slice::<BlockInfo>(&block_info)
+                .unwrap_or_else(|_| panic!("Error reading json data in {json_path}"))
         } else {
             let mut hh = HashMap::new();
             hh.insert("all".into(), block_name.to_owned());
