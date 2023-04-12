@@ -1,3 +1,5 @@
+#![warn(missing_docs)]
+
 pub mod asset;
 pub mod block;
 pub mod camera;

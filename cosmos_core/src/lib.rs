@@ -1,5 +1,5 @@
-// #![warn(missing_docs)]
 #![feature(get_many_mut)]
+#![warn(missing_docs)]
 
 pub mod block;
 pub mod blockitems;

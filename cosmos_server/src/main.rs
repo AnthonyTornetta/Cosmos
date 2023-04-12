@@ -1,4 +1,5 @@
 #![feature(fs_try_exists)]
+#![warn(missing_docs)]
 
 use std::env;
 
