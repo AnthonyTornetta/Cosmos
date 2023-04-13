@@ -1,3 +1,5 @@
+//! This should contain everything needed for a cosmos application to run
+
 use bevy::app::PluginGroupBuilder;
 use bevy::prelude::{App, Plugin, PluginGroup, States};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
@@ -8,6 +10,7 @@ use crate::{blockitems, structure};
 use crate::{events, loader};
 use crate::{item, physics};
 
+/// This plugin group should contain everything needed for a cosmos application to run
 pub struct CosmosCorePluginGroup<T>
 where
     T: States + Clone + Copy,
@@ -19,6 +22,7 @@ where
     playing_game_state: T,
 }
 
+/// This plugin should contain everything needed for a cosmos application to run
 pub struct CosmosCorePlugin<T>
 where
     T: States + Clone + Copy,
@@ -31,6 +35,7 @@ where
 }
 
 impl<T: States + Clone + Copy> CosmosCorePlugin<T> {
+    /// Creates the plugin with the given states
     pub fn new(
         pre_loading_state: T,
         loading_state: T,
@@ -49,6 +54,7 @@ impl<T: States + Clone + Copy> CosmosCorePlugin<T> {
 }
 
 impl<T: States + Clone + Copy> CosmosCorePluginGroup<T> {
+    /// Creates the plugin group with the given states
     pub fn new(
         pre_loading_state: T,
         loading_state: T,
