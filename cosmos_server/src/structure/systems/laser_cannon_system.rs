@@ -62,7 +62,7 @@ fn update_system(
                                 energy_storage_system
                                     .decrease_energy(line.property.energy_per_shot);
 
-                                let location = structure.block_world_position(
+                                let location = structure.block_world_location(
                                     line.start.x,
                                     line.start.y,
                                     line.start.z,

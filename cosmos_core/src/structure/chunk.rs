@@ -1,3 +1,7 @@
+//! Represents a fixed region of blocks.
+//!
+//! These blocks can be updated.
+
 use crate::block::blocks::AIR_BLOCK_ID;
 use crate::block::hardness::BlockHardness;
 use crate::block::Block;

@@ -1,3 +1,5 @@
+//! Handles the loading of structures
+
 use crate::structure::{
     events::{ChunkSetEvent, StructureLoadedEvent},
     Structure,
@@ -9,7 +11,10 @@ use bevy::{
 use serde::{Deserialize, Serialize};
 
 #[derive(Component, Debug, Reflect, FromReflect, Serialize, Deserialize, Clone, Copy)]
+/// If a structure has this, not all its chunks have been filled out yet
+/// and they need to be loaded
 pub struct ChunksNeedLoaded {
+    /// The number of chunks that need loaded
     pub amount_needed: usize,
 }
 
