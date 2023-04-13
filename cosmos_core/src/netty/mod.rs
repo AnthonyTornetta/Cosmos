@@ -19,15 +19,25 @@ use std::time::Duration;
 #[derive(Component)]
 pub struct NoSendEntity;
 
+/// Different network channels have an enum here. Make sure to add any new ones here.
 pub enum NettyChannel {
+    /// These are reliably sent, so they are guarenteed to reach their destination.
+    /// Used for `ClientReliableMessages` and `ServerReliableMessages`
     Reliable,
+    /// These are unreliably sent, and may never reach their destination or become corrupted.
+    /// Used for `ClientUnreliableMessages` and `ServerUnreliableMessages`
     Unreliable,
+    /// Used for `ServerLaserCannonSystemMessages`
     LaserCannonSystem,
 }
 
+/// In the future, this should be based off the game version.
+///
+/// Must have the same protocol to connect to something
 pub const PROTOCOL_ID: u64 = 7;
 
 impl NettyChannel {
+    /// Gets the ID used in a netty channel
     pub fn id(&self) -> u8 {
         match self {
             Self::Reliable => 0,
@@ -36,6 +46,7 @@ impl NettyChannel {
         }
     }
 
+    /// Assembles & returns the configuration for all the client channels
     pub fn client_channels_config() -> Vec<ChannelConfig> {
         vec![
             ReliableChannelConfig {
@@ -67,6 +78,7 @@ impl NettyChannel {
         ]
     }
 
+    /// Assembles & returns the config for all the server channels
     pub fn server_channels_config() -> Vec<ChannelConfig> {
         vec![
             ReliableChannelConfig {
@@ -99,6 +111,7 @@ impl NettyChannel {
     }
 }
 
+/// Assembles the configuration for a client configuration
 pub fn client_connection_config() -> RenetConnectionConfig {
     RenetConnectionConfig {
         send_channels_config: NettyChannel::client_channels_config(),
@@ -108,6 +121,7 @@ pub fn client_connection_config() -> RenetConnectionConfig {
     }
 }
 
+/// Assembles the configuration for a server configuration
 pub fn server_connection_config() -> RenetConnectionConfig {
     RenetConnectionConfig {
         send_channels_config: NettyChannel::server_channels_config(),
@@ -117,10 +131,9 @@ pub fn server_connection_config() -> RenetConnectionConfig {
     }
 }
 
+/// Gets the local ip address, or returns `127.0.0.1` if it fails to find it.
 pub fn get_local_ipaddress() -> String {
-    if let Ok(ip) = local_ip() {
-        ip.to_string()
-    } else {
-        "127.0.0.1".to_owned()
-    }
+    local_ip()
+        .map(|x| x.to_string())
+        .unwrap_or("127.0.0.1".to_owned())
 }
