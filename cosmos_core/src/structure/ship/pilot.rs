@@ -1,3 +1,5 @@
+//! Manages the pilot of a ship
+
 use bevy::{
     prelude::{App, Component, Entity},
     reflect::{FromReflect, Reflect},
@@ -12,6 +14,6 @@ pub struct Pilot {
     pub entity: Entity,
 }
 
-pub fn regiter(app: &mut App) {
+pub(super) fn regiter(app: &mut App) {
     app.register_type::<Pilot>();
 }
