@@ -1,3 +1,7 @@
+//! Represents a link between blocks & their items.
+//!
+//! Used in something like an inventory.
+
 use bevy::{
     prelude::{App, EventWriter, IntoSystemAppConfig, OnEnter, Res, ResMut, Resource, States},
     utils::HashMap,
@@ -33,6 +37,7 @@ impl BlockItems {
         self.blocks_to_items.get(&block.id()).copied()
     }
 
+    /// Gets the block's id from that item
     pub fn block_from_item(&self, item: &Item) -> Option<u16> {
         self.items_to_blocks.get(&item.id()).copied()
     }
@@ -83,7 +88,7 @@ fn create_links(
     loader.finish_loading(id, &mut done_event_writer);
 }
 
-pub(crate) fn register<T: States + Clone + Copy>(app: &mut App, post_loading_state: T) {
+pub(super) fn register<T: States + Clone + Copy>(app: &mut App, post_loading_state: T) {
     app.insert_resource(BlockItems::default());
 
     // All blocks & items must be added before this system runs

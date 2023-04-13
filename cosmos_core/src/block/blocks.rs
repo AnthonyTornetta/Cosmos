@@ -1,3 +1,9 @@
+//! Represents all the blocks present in the game.
+//!
+//! This list is dynamic, and may grow & shrink at any time.
+//!
+//! The only guarenteed block is air ("cosmos:air").
+
 use crate::block::block_builder::BlockBuilder;
 use crate::loader::{AddLoadingEvent, DoneLoadingEvent, LoadingManager};
 use crate::registry::{self, Registry};
@@ -5,9 +11,10 @@ use bevy::prelude::{App, EventWriter, IntoSystemAppConfig, OnEnter, ResMut, Stat
 
 use super::{Block, BlockProperty};
 
+/// Air's ID - this block will always exist
 pub static AIR_BLOCK_ID: u16 = 0;
 
-pub fn add_cosmos_blocks(
+fn add_cosmos_blocks(
     mut blocks: ResMut<Registry<Block>>,
     mut loading: ResMut<LoadingManager>,
     mut end_writer: EventWriter<DoneLoadingEvent>,
@@ -128,7 +135,7 @@ fn add_air_block(
     loader.finish_loading(id, &mut done_loading_event);
 }
 
-pub(crate) fn register<T: States + Clone + Copy>(
+pub(super) fn register<T: States + Clone + Copy>(
     app: &mut App,
     pre_loading_state: T,
     loading_state: T,
