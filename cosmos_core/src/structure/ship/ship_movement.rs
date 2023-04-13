@@ -1,3 +1,5 @@
+//! Represents the movement of a ship
+
 use std::fmt::Display;
 
 use bevy::{
@@ -9,17 +11,23 @@ use serde::{Deserialize, Serialize};
 use super::pilot::Pilot;
 
 #[derive(Component, Default, Serialize, Deserialize, Debug, Clone, FromReflect, Reflect)]
+/// represents how the ship should be moving
 pub struct ShipMovement {
+    /// If true, the ship should be braking.
     pub braking: bool,
+    /// The direction of this movement - not the actual speed.
     pub movement: Vec3,
+    /// The rotational torque - this does represent speed but will be maxed out.
     pub torque: Vec3,
 }
 
 impl ShipMovement {
+    /// Normalizes the movement vector
     pub fn into_normal_vector(&self) -> Vec3 {
         self.movement.normalize_or_zero()
     }
 
+    /// Sets this from another movement
     pub fn set(&mut self, other: &Self) {
         self.movement = other.movement;
         self.torque = other.torque;
@@ -47,7 +55,7 @@ fn clear_movement_when_no_pilot(mut query: Query<&mut ShipMovement, Without<Pilo
     }
 }
 
-pub fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.register_type::<ShipMovement>()
         .add_system(clear_movement_when_no_pilot);
 }
