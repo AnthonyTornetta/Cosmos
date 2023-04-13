@@ -6,10 +6,7 @@ use bevy::{
 };
 use bevy_rapier3d::prelude::Velocity;
 
-use crate::{
-    physics::{location::Location, structure_physics::StructurePhysics},
-    structure::Structure,
-};
+use crate::{physics::location::Location, structure::Structure};
 
 /// Used to instantiate structures
 pub trait TStructureBuilder {
@@ -36,14 +33,11 @@ impl TStructureBuilder for StructureBuilder {
     ) {
         structure.set_entity(entity.id());
 
-        let physics_updater = StructurePhysics::new(structure);
-
         entity
             .insert(PbrBundle {
                 transform: Transform::from_translation(location.local),
                 ..Default::default()
             })
-            .insert((velocity, location))
-            .insert(physics_updater);
+            .insert((velocity, location));
     }
 }

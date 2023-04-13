@@ -1,3 +1,5 @@
+//! Handles gravity
+
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::{ExternalImpulse, ReadMassProperties, RigidBody};
 
@@ -63,12 +65,17 @@ fn gravity_system(
     }
 }
 
-#[derive(Component)]
+#[derive(Component, Reflect, FromReflect, Debug)]
+/// If something emits gravity, it should have this component.
 pub struct GravityEmitter {
-    pub force_per_kg: f32, // earth is 9.8
-    pub radius: f32, // make this something like max(struct width, struct length, struct height)
+    /// How much force to apply per kg (Earth is 9.8)
+    pub force_per_kg: f32,
+    /// Determines how far away you can be before gravity starts to deminish.
+    ///
+    /// For structures, make this something like max(struct width, struct length, struct height).
+    pub radius: f32,
 }
 
-pub fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.add_system(gravity_system);
 }
