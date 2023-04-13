@@ -12,7 +12,7 @@ use super::Planet;
 
 /// Implement this to add a custom way to build planets
 pub trait TPlanetBuilder {
-    /// Builds the planet entity
+    /// Adds everything to the entity needed to have a planet
     fn insert_planet(
         &self,
         entity: &mut EntityCommands,

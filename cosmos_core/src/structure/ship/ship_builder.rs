@@ -12,7 +12,7 @@ use super::{ship_movement::ShipMovement, Ship};
 
 /// Implement this to add a custom way to build ships
 pub trait TShipBuilder {
-    /// Builds a ship
+    /// Adds everything to the entity needed to have a ship
     fn insert_ship(
         &self,
         entity: &mut EntityCommands,
