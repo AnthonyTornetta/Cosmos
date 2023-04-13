@@ -1,3 +1,7 @@
+//! An inventory consists of a list of ItemStacks
+//!
+//! These ItemStacks can be modified freely. An inventory is owned by an entity.
+
 use bevy::{
     prelude::{App, Component},
     reflect::{FromReflect, Reflect},

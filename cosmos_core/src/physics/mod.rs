@@ -1,3 +1,5 @@
+//! Contains information need to have physics operate successfully
+
 use bevy::prelude::App;
 
 pub mod gravity_system;

@@ -1,3 +1,7 @@
+//! Contains all the functionality & information related to structures.
+//!
+//! Structures are the backbone of everything that contains blocks.
+
 use bevy::prelude::{App, CoreSet, DespawnRecursiveExt};
 use bevy::reflect::Reflect;
 use bevy::utils::{HashMap, HashSet};

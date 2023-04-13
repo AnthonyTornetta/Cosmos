@@ -1,3 +1,5 @@
+//! Handles the various types of registries you can use to register data.
+
 pub mod identifiable;
 pub mod many_to_one;
 

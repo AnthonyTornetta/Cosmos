@@ -1,3 +1,5 @@
+//! The core package contains common functionality that is shared between the client & the server.
+
 #![feature(get_many_mut)]
 #![warn(missing_docs)]
 
