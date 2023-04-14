@@ -1,3 +1,5 @@
+//! Handles the player's camera movement.
+
 use std::f32::consts::PI;
 
 use bevy::prelude::*;
@@ -9,19 +11,11 @@ use crate::{
     window::setup::DeltaCursorPosition,
 };
 
-pub fn register(app: &mut App) {
-    app.add_system(process_player_camera.in_set(OnUpdate(GameState::Playing)));
-}
-
 /// Attach this to the player to give it a first person camera
 #[derive(Component, Default, Debug)]
 pub struct CameraHelper {
-    pub last_x: f32,
-    pub last_y: f32,
-    pub ready: bool,
-
-    pub angle_y: f32,
-    pub angle_x: f32,
+    angle_y: f32,
+    angle_x: f32,
 }
 
 fn process_player_camera(
@@ -47,4 +41,8 @@ fn process_player_camera(
         camera_helper.angle_y = 0.0;
         camera_transform.rotation = Quat::IDENTITY;
     }
+}
+
+pub(super) fn register(app: &mut App) {
+    app.add_system(process_player_camera.in_set(OnUpdate(GameState::Playing)));
 }

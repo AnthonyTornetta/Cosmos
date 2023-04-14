@@ -1,3 +1,5 @@
+//! This just handles lighting for now.
+
 use bevy::prelude::App;
 
 pub mod lighting;
