@@ -2,7 +2,6 @@ use bevy::prelude::App;
 
 pub mod asset_loading;
 
-pub fn register(app: &mut App) {
-    // shaders::register(app);
+pub(super) fn register(app: &mut App) {
     asset_loading::register(app);
 }
