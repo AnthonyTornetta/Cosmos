@@ -1,3 +1,5 @@
+//! Represents how far the player can see entities
+
 use bevy::prelude::{in_state, App, Changed, IntoSystemConfig, Query, ResMut, With};
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
