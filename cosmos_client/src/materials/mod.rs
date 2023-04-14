@@ -5,7 +5,7 @@ use cosmos_core::{
 };
 
 use crate::{
-    asset::asset_loading::{IlluminatedAtlas, MainAtlas},
+    asset::asset_loading::{IlluminatedMaterial, MainAtlas},
     state::game_state::GameState,
 };
 
@@ -44,7 +44,7 @@ fn register_materials(
     blocks: Res<Registry<Block>>,
     mut registry: ResMut<ManyToOneRegistry<Block, CosmosMaterial>>,
     main_atlas: Res<MainAtlas>,
-    illum_atlas: Res<IlluminatedAtlas>,
+    illum_atlas: Res<IlluminatedMaterial>,
 ) {
     registry.insert_value(CosmosMaterial::new(
         "cosmos:main".to_owned(),

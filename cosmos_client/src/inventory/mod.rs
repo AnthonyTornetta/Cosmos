@@ -1,8 +1,6 @@
-//!
 //! This whole module is pretty bad because it relies on a whole lot of magic numbers.
 //!
 //! This will need to be redone once more slots are added.
-//!
 
 use bevy::{
     core_pipeline::clear_color::ClearColorConfig,

@@ -1,3 +1,7 @@
+//! Handles the loading of all texture assets.
+//!
+//! This also combines the textures into one big atlas.
+
 use std::fs;
 
 use bevy::{
@@ -14,11 +18,12 @@ use serde::{Deserialize, Serialize};
 
 use crate::state::game_state::GameState;
 
+#[derive(Debug)]
 enum AtlasName {
     Main,
 }
 
-#[derive(Resource)]
+#[derive(Resource, Debug)]
 struct LoadingAsset {
     atlas_name: AtlasName,
     handles: Vec<Handle<Image>>,
@@ -26,16 +31,25 @@ struct LoadingAsset {
 
 struct AssetsDoneLoadingEvent;
 
-#[derive(Resource)]
+#[derive(Resource, Debug)]
 struct AssetsLoadingID(usize);
 
-#[derive(Resource)]
+#[derive(Resource, Debug)]
 struct AssetsLoading(Vec<LoadingAsset>);
 
-#[derive(Resource, Reflect, FromReflect)]
+#[derive(Resource, Reflect, FromReflect, Debug)]
+/// This stores the texture atlas for all blocks in the game.
+///
+/// Eventually this will be redone to allow for multiple atlases, but for now this works fine.
 pub struct MainAtlas {
+    /// The main material used to draw blocks
     pub material: Handle<StandardMaterial>,
+    /// The unlit version of the main material
     pub unlit_material: Handle<StandardMaterial>,
+    /// All the textures packed into an atlas.
+    ///
+    /// Use the `MainAtlas::uvs_for_index` function to get the atlas index for a given block.
+    /// Calculate that index with the `Registry<BlockTextureIndex>`.
     pub atlas: TextureAtlas,
 
     padding: u32,
@@ -43,6 +57,9 @@ pub struct MainAtlas {
 
 impl MainAtlas {
     #[inline]
+    /// Returns the UV coordinates for the texture atlas given the block's index
+    ///
+    /// Get the block's index from `Registry<BlockTextureIndex>`.
     pub fn uvs_for_index(&self, index: usize) -> Rect {
         let rect = self.atlas.textures[index];
 
@@ -58,8 +75,10 @@ impl MainAtlas {
     }
 }
 
-#[derive(Resource, Reflect, FromReflect)]
-pub struct IlluminatedAtlas {
+#[derive(Resource, Reflect, FromReflect, Debug)]
+/// This contains the material for illuminated blocks.
+pub struct IlluminatedMaterial {
+    /// The material for unlit blocks
     pub material: Handle<StandardMaterial>,
 }
 
@@ -253,7 +272,7 @@ fn check_assets_ready(
                             ..default()
                         });
 
-                        commands.insert_resource(IlluminatedAtlas {
+                        commands.insert_resource(IlluminatedMaterial {
                             material: illuminated_material_handle,
                         });
                     }
@@ -275,21 +294,25 @@ fn check_assets_ready(
 }
 
 #[derive(Debug)]
-pub struct BlockTextureIndicies(HashMap<String, usize>);
+/// Contains information that links the block faces to their texture indices.
+///
+/// This could also link non-face imformation to their texture indices.
+struct BlockTextureIndicies(HashMap<String, usize>);
 
 impl BlockTextureIndicies {
-    pub fn all(index: usize) -> Self {
+    fn all(index: usize) -> Self {
         let mut map = HashMap::new();
         map.insert("all".into(), index);
         Self(map)
     }
 
-    pub fn new(map: HashMap<String, usize>) -> Self {
+    fn new(map: HashMap<String, usize>) -> Self {
         Self(map)
     }
 }
 
 #[derive(Debug)]
+/// Links blocks to their correspoding atlas index.
 pub struct BlockTextureIndex {
     indices: BlockTextureIndicies,
     id: u16,
@@ -298,11 +321,15 @@ pub struct BlockTextureIndex {
 
 impl BlockTextureIndex {
     #[inline]
+    /// Returns the index for that block face, if one exists
     pub fn atlas_index_from_face(&self, face: BlockFace) -> Option<usize> {
         self.atlas_index(face.as_str())
     }
 
     #[inline]
+    /// Returns the index for that specific identifier, if one exists.
+    ///
+    /// If none exists and an "all" identifier is present, "all" is returned.
     pub fn atlas_index(&self, identifier: &str) -> Option<usize> {
         if let Some(index) = self.indices.0.get(identifier) {
             Some(*index)
@@ -361,8 +388,6 @@ fn load_block_textxures(
         let json_path = format!("assets/blocks/{block_name}.json");
 
         let block_info = if let Ok(block_info) = fs::read(&json_path) {
-            
-
             serde_json::from_slice::<BlockInfo>(&block_info)
                 .unwrap_or_else(|_| panic!("Error reading json data in {json_path}"))
         } else {
@@ -388,7 +413,7 @@ fn load_block_textxures(
     }
 }
 
-pub fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     registry::create_registry::<BlockTextureIndex>(app);
 
     app.insert_resource(AssetsLoading(Vec::new()))
