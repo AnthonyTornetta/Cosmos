@@ -353,7 +353,7 @@ fn main() {
                 .in_set(OnUpdate(GameState::Playing)),
         );
 
-    inputs::register(&mut app);
+    input::register(&mut app);
     window::setup::register(&mut app);
     asset::register(&mut app);
     events::register(&mut app);

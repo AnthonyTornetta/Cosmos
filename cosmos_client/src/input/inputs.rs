@@ -1,53 +1,94 @@
+//! Represents the cosmos input systems
+
 use bevy::{prelude::*, utils::HashMap};
 
-#[derive(Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Clone, Copy, Eq, PartialEq, Hash, Debug)]
+/// This should be refactored into a registry, but for now, enjoy enum!
+///
+/// Use this for input handling to allow things to be automatically changed
 pub enum CosmosInputs {
+    /// Player/Ship move forward
     MoveForward,
+    /// Player/Ship move backward
     MoveBackward,
+    /// Player jump
     Jump,
+    /// Player/Ship slow down
     SlowDown,
+    /// Player/Ship move left
     MoveLeft,
+    /// Player/Ship move right
     MoveRight,
+    /// Player move faster
     Sprint,
 
     // For use in ships
+    /// Ship move down
     MoveDown,
+    /// Ship move up
     MoveUp,
+    /// Ship roll left
     RollLeft,
+    /// Ship roll right
     RollRight,
 
+    /// Stop piloting whatever ship they're in
     StopPiloting,
+    /// Use the ship's selected block system
     UseSelectedSystem,
 
+    /// Break the block the player is looking at
     BreakBlock,
+    /// Place the block the player is holding
     PlaceBlock,
+    /// Interact with the block the player is looking at
     Interact,
 
+    /// Create a ship with a ship core in the player's inventory
     CreateShip,
 
+    /// Unlocks the mouse from the window
     UnlockMouse,
 
+    /// Change the selected block system while piloting ship
     SelectSystem1,
+    /// Change the selected block system while piloting ship
     SelectSystem2,
+    /// Change the selected block system while piloting ship
     SelectSystem3,
+    /// Change the selected block system while piloting ship
     SelectSystem4,
+    /// Change the selected block system while piloting ship
     SelectSystem5,
+    /// Change the selected block system while piloting ship
     SelectSystem6,
+    /// Change the selected block system while piloting ship
     SelectSystem7,
+    /// Change the selected block system while piloting ship
     SelectSystem8,
+    /// Change the selected block system while piloting ship
     SelectSystem9,
 
+    /// Change the selected inventory item
     HotbarSlot1,
+    /// Change the selected inventory item
     HotbarSlot2,
+    /// Change the selected inventory item
     HotbarSlot3,
+    /// Change the selected inventory item
     HotbarSlot4,
+    /// Change the selected inventory item
     HotbarSlot5,
+    /// Change the selected inventory item
     HotbarSlot6,
+    /// Change the selected inventory item
     HotbarSlot7,
+    /// Change the selected inventory item
     HotbarSlot8,
+    /// Change the selected inventory item
     HotbarSlot9,
 
-    // For testing - disconnects you from the server
+    /// For testing - disconnects you from the server
     Disconnect,
 }
 
@@ -100,16 +141,21 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     input_handler.set_mouse_button(CosmosInputs::UseSelectedSystem, MouseButton::Left);
 }
 
-#[derive(Resource, Default)]
+#[derive(Resource, Default, Debug)]
+/// Use this to check if inputs are selected
 pub struct CosmosInputHandler {
     input_mapping: HashMap<CosmosInputs, (Option<KeyCode>, Option<MouseButton>)>,
 }
 
 impl CosmosInputHandler {
+    /// Default
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Check if the given input was just released.
+    ///
+    /// Use this to see if something was held in the last frame but is no longer being held.
     pub fn check_just_released(
         &self,
         input_code: CosmosInputs,
@@ -123,6 +169,7 @@ impl CosmosInputHandler {
             || mouse_button.is_some() && mouse.just_released(mouse_button.unwrap())
     }
 
+    /// Check if the given input is not being used.
     pub fn check_released(
         &self,
         input_code: CosmosInputs,
@@ -132,6 +179,9 @@ impl CosmosInputHandler {
         !self.check_pressed(input_code, inputs, mouse)
     }
 
+    /// Checks if the given input was just pressed.
+    ///
+    /// Use this to see if something was pressed just this frame.
     pub fn check_just_pressed(
         &self,
         input_code: CosmosInputs,
@@ -145,6 +195,7 @@ impl CosmosInputHandler {
             || mouse_button.is_some() && mouse.just_pressed(mouse_button.unwrap())
     }
 
+    /// Check if this input is currently being used.
     pub fn check_pressed(
         &self,
         input_code: CosmosInputs,
@@ -158,11 +209,7 @@ impl CosmosInputHandler {
             || mouse_button.is_some() && mouse.pressed(mouse_button.unwrap())
     }
 
-    pub fn clear_input(&mut self, input: CosmosInputs) {
-        self.input_mapping.remove(&input);
-    }
-
-    pub fn set_keycode(&mut self, input: CosmosInputs, keycode: KeyCode) {
+    fn set_keycode(&mut self, input: CosmosInputs, keycode: KeyCode) {
         if self.input_mapping.contains_key(&input) {
             let mapping = self.input_mapping.get_mut(&input).unwrap();
 
@@ -173,7 +220,7 @@ impl CosmosInputHandler {
         }
     }
 
-    pub fn set_mouse_button(&mut self, input: CosmosInputs, button: MouseButton) {
+    fn set_mouse_button(&mut self, input: CosmosInputs, button: MouseButton) {
         if self.input_mapping.contains_key(&input) {
             let mapping = self.input_mapping.get_mut(&input).unwrap();
 
@@ -184,7 +231,7 @@ impl CosmosInputHandler {
         }
     }
 
-    pub fn keycode_for(&self, input: CosmosInputs) -> Option<KeyCode> {
+    fn keycode_for(&self, input: CosmosInputs) -> Option<KeyCode> {
         if !self.input_mapping.contains_key(&input) {
             return None;
         }
@@ -192,7 +239,7 @@ impl CosmosInputHandler {
         self.input_mapping[&input].0
     }
 
-    pub fn mouse_button_for(&self, input: CosmosInputs) -> Option<MouseButton> {
+    fn mouse_button_for(&self, input: CosmosInputs) -> Option<MouseButton> {
         if !self.input_mapping.contains_key(&input) {
             return None;
         }
@@ -201,7 +248,7 @@ impl CosmosInputHandler {
     }
 }
 
-pub fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.insert_resource(CosmosInputHandler::new())
         .add_startup_system(init_input);
 }
