@@ -1,3 +1,5 @@
+//! All events that are related to blocks
+
 use bevy::prelude::*;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::netty::{
@@ -6,26 +8,46 @@ use cosmos_core::netty::{
 
 use crate::{netty::mapping::NetworkMapping, state::game_state::GameState};
 
+#[derive(Debug)]
+/// Sent when this client breaks a block
 pub struct BlockBreakEvent {
+    /// The structure this block was on
     pub structure_entity: Entity,
+    /// block x
     pub x: usize,
+    /// block y
     pub y: usize,
+    /// block z
     pub z: usize,
 }
 
+#[derive(Debug)]
+/// Sent when this client places a block
 pub struct BlockPlaceEvent {
+    /// The structure this block is on
     pub structure_entity: Entity,
-    pub inventory_slot: usize,
-    pub block_id: u16,
+    /// block x
     pub x: usize,
+    /// block y
     pub y: usize,
+    /// block z
     pub z: usize,
+    /// Which inventory slot it came from to make sure the inventory isn't out of sync
+    pub inventory_slot: usize,
+    /// The block's id
+    pub block_id: u16,
 }
 
+#[derive(Debug)]
+/// Sent whenever the player interacts with a block
 pub struct BlockInteractEvent {
+    /// The structure this block is on
     pub structure_entity: Entity,
+    /// block x
     pub x: usize,
+    /// block y
     pub y: usize,
+    /// block z
     pub z: usize,
 }
 
@@ -91,7 +113,7 @@ fn handle_block_interact(
     }
 }
 
-pub fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.add_event::<BlockBreakEvent>()
         .add_event::<BlockPlaceEvent>()
         .add_event::<BlockInteractEvent>()
