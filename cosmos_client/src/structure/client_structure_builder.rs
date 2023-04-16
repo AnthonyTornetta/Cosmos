@@ -1,3 +1,5 @@
+//! Responsible for building structures for the client
+
 use bevy::ecs::system::EntityCommands;
 use cosmos_core::{
     physics::location::Location,
@@ -7,6 +9,7 @@ use cosmos_core::{
 use super::chunk_retreiver::NeedsPopulated;
 
 #[derive(Default)]
+/// Responsible for building structures for the client
 pub struct ClientStructureBuilder {
     structure_builder: StructureBuilder,
 }

@@ -326,6 +326,7 @@ fn main() {
             ..default()
         })
         .insert_resource(ClearColor(Color::BLACK))
+        // This must be registered here, before it is used anywhere
         .add_state::<GameState>()
         .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))
         .add_plugins(CosmosCorePluginGroup::new(
@@ -358,7 +359,6 @@ fn main() {
     asset::register(&mut app);
     events::register(&mut app);
     interactions::register(&mut app);
-    chunk_retreiver::register(&mut app);
     camera::register(&mut app);
     ui::register(&mut app);
     netty::register(&mut app);
