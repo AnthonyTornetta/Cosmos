@@ -13,7 +13,7 @@ use cosmos_core::{
 
 use crate::state::game_state::GameState;
 
-pub mod structure_renderer;
+mod structure_renderer;
 pub mod uv_mapper;
 
 #[derive(Component, Debug)]
