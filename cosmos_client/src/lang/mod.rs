@@ -1,4 +1,4 @@
-pub mod load_langs;
+mod load_langs;
 
 use std::{fs, marker::PhantomData};
 
@@ -9,6 +9,7 @@ use bevy::{
 use cosmos_core::registry::identifiable::Identifiable;
 
 #[derive(Resource)]
+/// Used to get the human-readable + localized text to display for identifiable types
 pub struct Lang<T: Identifiable + Send + Sync> {
     map: HashMap<u16, String>,
     id_map: HashMap<String, u16>,
@@ -39,6 +40,10 @@ fn load_data(lang_type: &str, lang_folder: &str, map: &mut HashMap<String, Strin
 }
 
 impl<T: Identifiable + Send + Sync> Lang<T> {
+    /// Creates a language instance for from a specific file.
+    ///
+    /// * `lang_type` The language identifier, such as en_us
+    /// * `read_from` These are the files that should be read from for the language data. These should be sorted in order of importance - data found in the file N will override data found files N + X.
     pub fn new(lang_type: &str, read_from: Vec<&str>) -> Self {
         let mut lang_contents = HashMap::new();
 
@@ -54,6 +59,8 @@ impl<T: Identifiable + Send + Sync> Lang<T> {
         }
     }
 
+    /// This is used to add a usable entry
+    ///
     /// Returns true if a record existed for this or not, false if not
     pub fn register(&mut self, item: &T) -> bool {
         match self.lang_contents.get(item.unlocalized_name()) {
@@ -68,11 +75,17 @@ impl<T: Identifiable + Send + Sync> Lang<T> {
     }
 
     #[inline]
+    /// Gets the text for this specific entry
+    ///
+    /// Make sure `register(item)` was called first!
     pub fn get_name(&self, item: &T) -> Option<&String> {
-        self.map.get(&item.id())
+        self.get_name_from_numeric_id(item.id())
     }
 
     #[inline]
+    /// Gets the text for an entry based off its unlocalized name.
+    ///
+    /// Make sure `register(item)` was called first!
     pub fn get_name_from_id(&self, id: &str) -> Option<&String> {
         match self.id_map.get(id) {
             Some(id) => self.map.get(id),
@@ -80,11 +93,15 @@ impl<T: Identifiable + Send + Sync> Lang<T> {
         }
     }
 
+    #[inline]
+    /// Gets the text for this specific numerical id.
+    ///
+    /// Make sure `register(item)` was called first!
     pub fn get_name_from_numeric_id(&self, id: u16) -> Option<&String> {
         self.map.get(&id)
     }
 }
 
-pub(crate) fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     load_langs::register(app);
 }

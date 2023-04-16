@@ -1,3 +1,5 @@
+//! Used to handle client interactions with various blocks
+
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::{QueryFilter, RapierContext};
 use cosmos_core::{
@@ -17,7 +19,9 @@ use crate::{
     LocalPlayer,
 };
 
+/// How the player interacted with this block
 pub enum InteractionType {
+    /// Used the priamry interact key
     Primary,
 }
 
@@ -147,7 +151,7 @@ fn process_player_interaction(
     }
 }
 
-pub fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app
         // .add_event::<BlockInteractionEvent>()
         .add_system(process_player_interaction.in_set(OnUpdate(GameState::Playing)));

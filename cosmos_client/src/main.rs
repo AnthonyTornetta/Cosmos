@@ -33,7 +33,7 @@ use cosmos_core::netty::client_unreliable_messages::ClientUnreliableMessages;
 use cosmos_core::netty::{cosmos_encoder, get_local_ipaddress, NettyChannel};
 use cosmos_core::structure::ship::pilot::Pilot;
 use cosmos_core::structure::ship::ship_movement::ShipMovement;
-use input::inputs::{self, CosmosInputHandler, CosmosInputs};
+use input::inputs::{CosmosInputHandler, CosmosInputs};
 use interactions::block_interactions;
 use netty::connect::{self, ConnectionConfig};
 use netty::flags::LocalPlayer;
@@ -357,7 +357,7 @@ fn main() {
     window::setup::register(&mut app);
     asset::register(&mut app);
     events::register(&mut app);
-    block_interactions::register(&mut app);
+    interactions::register(&mut app);
     chunk_retreiver::register(&mut app);
     camera::register(&mut app);
     ui::register(&mut app);
