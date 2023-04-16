@@ -1,3 +1,5 @@
+//! Used to get human-readalbe & localized text for various identifiable types.
+
 mod load_langs;
 
 use std::{fs, marker::PhantomData};

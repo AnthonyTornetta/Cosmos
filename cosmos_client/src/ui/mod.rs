@@ -1,3 +1,5 @@
+//! Responsible for all the user interfaces the client can have
+
 use bevy::prelude::App;
 
 pub mod crosshair;

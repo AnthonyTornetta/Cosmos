@@ -1,3 +1,5 @@
+//! Responsible for all the network information the client has
+
 use bevy::prelude::App;
 
 pub mod connect;

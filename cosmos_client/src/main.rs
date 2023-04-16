@@ -1,3 +1,5 @@
+//! Contains all the logic for the client-side of Cosmos.
+
 #![warn(missing_docs)]
 
 pub mod asset;
@@ -34,13 +36,11 @@ use cosmos_core::netty::{cosmos_encoder, get_local_ipaddress, NettyChannel};
 use cosmos_core::structure::ship::pilot::Pilot;
 use cosmos_core::structure::ship::ship_movement::ShipMovement;
 use input::inputs::{CosmosInputHandler, CosmosInputs};
-use interactions::block_interactions;
 use netty::connect::{self, ConnectionConfig};
 use netty::flags::LocalPlayer;
 use netty::mapping::NetworkMapping;
 use rendering::MainCamera;
 use state::game_state::GameState;
-use structure::chunk_retreiver;
 use ui::crosshair::CrosshairOffset;
 use window::setup::DeltaCursorPosition;
 
@@ -355,7 +355,7 @@ fn main() {
         );
 
     input::register(&mut app);
-    window::setup::register(&mut app);
+    window::register(&mut app);
     asset::register(&mut app);
     events::register(&mut app);
     interactions::register(&mut app);

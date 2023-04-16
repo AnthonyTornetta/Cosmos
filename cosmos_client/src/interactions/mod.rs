@@ -1,3 +1,5 @@
+//! Used to handle client interactions with various blocks
+
 use bevy::prelude::App;
 
 pub mod block_interactions;
