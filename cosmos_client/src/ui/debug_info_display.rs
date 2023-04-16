@@ -1,3 +1,5 @@
+//! Displays debug info
+
 use bevy::prelude::*;
 use cosmos_core::physics::location::Location;
 
