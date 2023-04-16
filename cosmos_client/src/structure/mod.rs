@@ -1,3 +1,5 @@
+//! Handles client-related structure things
+
 use bevy::prelude::App;
 
 pub mod chunk_retreiver;
