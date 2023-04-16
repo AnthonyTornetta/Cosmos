@@ -1,3 +1,7 @@
+//! Contains all the connection functionality from client -> server
+//!
+//! This does not add them to the bevy systems by default, and they must be manually added when needed.
+
 use std::{
     net::UdpSocket,
     time::{SystemTime, UNIX_EPOCH},
@@ -57,10 +61,15 @@ fn new_renet_client(host: &str) -> RenetClient {
 }
 
 #[derive(Resource)]
+/// Used to setup the connection with the server
 pub struct ConnectionConfig {
+    /// The server's host
     pub host_name: String,
 }
 
+/// Establishes a connection with the server.
+///
+/// Make sure the `ConnectionConfig` resource was added first.
 pub fn establish_connection(mut commands: Commands, connection_config: Res<ConnectionConfig>) {
     println!("Establishing connection w/ server...");
     commands.insert_resource(ClientLobby::default());
@@ -69,6 +78,7 @@ pub fn establish_connection(mut commands: Commands, connection_config: Res<Conne
     commands.insert_resource(NetworkMapping::default());
 }
 
+/// Waits for a connection to be made, then changes the game state to `GameState::LoadingWorld`.
 pub fn wait_for_connection(
     mut state_changer: ResMut<NextState<GameState>>,
     client: Res<RenetClient>,
@@ -79,6 +89,7 @@ pub fn wait_for_connection(
     }
 }
 
+/// Waits for the `LoadingWorld` state to be done loading, then transitions to the `GameState::Playing`
 pub fn wait_for_done_loading(
     mut state_changer: ResMut<NextState<GameState>>,
     query: Query<&Player, With<LocalPlayer>>,

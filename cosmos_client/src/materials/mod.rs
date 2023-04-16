@@ -1,3 +1,5 @@
+//! Used to handle material registration
+
 use bevy::prelude::*;
 use cosmos_core::{
     block::Block,
@@ -9,7 +11,9 @@ use crate::{
     state::game_state::GameState,
 };
 
+/// An identifiable `StandardMaterial`
 pub struct CosmosMaterial {
+    /// The handle to the bevy `StandardMaterial`
     pub handle: Handle<StandardMaterial>,
 
     id: u16,
@@ -17,6 +21,7 @@ pub struct CosmosMaterial {
 }
 
 impl CosmosMaterial {
+    /// Creates an identifiable `StandardMaterial`
     pub fn new(unlocalized_name: String, handle: Handle<StandardMaterial>) -> Self {
         Self {
             unlocalized_name,
@@ -81,7 +86,7 @@ fn register_materials(
     }
 }
 
-pub(crate) fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     registry::many_to_one::create_many_to_one_registry::<Block, CosmosMaterial>(app);
 
     app.add_system(register_materials.in_schedule(OnExit(GameState::PostLoading)));

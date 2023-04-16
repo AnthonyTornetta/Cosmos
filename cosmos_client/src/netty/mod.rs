@@ -2,7 +2,7 @@ use bevy::prelude::App;
 
 pub mod connect;
 pub mod flags;
-pub mod gameplay;
+mod gameplay;
 pub mod lobby;
 pub mod mapping;
 

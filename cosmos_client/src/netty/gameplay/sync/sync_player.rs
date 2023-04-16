@@ -54,6 +54,6 @@ fn send_disconnect(
     }
 }
 
-pub(crate) fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.add_systems((send_position, send_disconnect).in_set(OnUpdate(GameState::Playing)));
 }

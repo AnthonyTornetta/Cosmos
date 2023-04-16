@@ -1,9 +1,9 @@
 use bevy::prelude::App;
 
-pub mod receiver;
-pub mod sync;
+mod receiver;
+mod sync;
 
-pub(crate) fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     sync::register(app);
     receiver::register(app);
 }
