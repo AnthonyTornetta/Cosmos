@@ -50,7 +50,7 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
   - [ ] Save generated universe
     - [ ] Save planet/star locations + colors
 
-## Release 0.0.3a (In Progress)
+## Release 0.0.3a
 - [x] Infinite universe
   - [x] (**Client**) Player can travel any distance from 0,0,0 with no noticable issues, and everything moves relaitve to player
   - [x] (**Server**) 
@@ -162,24 +162,24 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 - [x] Support re-sizable window
 
 
-## Everything that will still have to be done after 0.0.3a
+## Everything that will still have to be done after 0.0.4a
 - [ ] Align body with structure
   - [ ] Switches to FPS Camera
   - [ ] Aligns the player to that structure
   - [ ] Left control
   - [ ] De-align, switch back to free camera
     - [ ] Create free camera
-  - [ ] Mining beam system
-    - [ ] Mining beam block
-      - [ ] Can be placed in line to create more powerful miners
-    - [ ] Mines the first block hit by the beam after a given time
-      - [ ] Inserts the item into the ship's inventory
-      - [ ] Hold lmb to continually fire the laser
-    - [ ] Structure gets deleted when no more blocks are left
-  - [ ] Storage system
-    - [ ] An interface into all the storage devices on the ship
-  - [ ] A way of selecting which systems to use preventing use of systems that are not meant to be actively used
-    - [ ] You can fire a laser cannon, but not actively use the power storage blocks
+- [ ] Mining beam system
+  - [ ] Mining beam block
+    - [ ] Can be placed in line to create more powerful miners
+  - [ ] Mines the first block hit by the beam after a given time
+    - [ ] Inserts the item into the ship's inventory
+    - [ ] Hold lmb to continually fire the laser
+  - [ ] Structure gets deleted when no more blocks are left
+- [ ] Storage system
+  - [ ] An interface into all the storage devices on the ship
+- [ ] A way of selecting which systems to use preventing use of systems that are not meant to be actively used
+  - [ ] You can fire a laser cannon, but not actively use the power storage blocks
 - [ ] Dropped item entity
 - [ ] GUI to interact with inventory
 - [ ] Storage block
@@ -212,6 +212,3 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
     - [ ] Money GUI
     - [ ] Pay others
   - [ ] Shop GUI
-- [ ] Block
-  - [ ] Block resistances
-  - [ ] Light emitting blocks
