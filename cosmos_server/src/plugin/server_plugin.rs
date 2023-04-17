@@ -23,8 +23,8 @@ impl Plugin for ServerPlugin {
         blocks::register(app);
         structure::register(app);
         inventory::register(app);
-        projectiles::register(app);
         vizualizer::register(app);
+        projectiles::register(app);
         persistence::register(app);
     }
 }

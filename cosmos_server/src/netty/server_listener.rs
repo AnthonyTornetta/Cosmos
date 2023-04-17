@@ -124,9 +124,9 @@ pub fn server_listen_messages(
                         break_block_event.send(BlockBreakEvent {
                             structure_entity,
                             breaker: *player_entity,
-                            x: x as usize,
-                            y: y as usize,
-                            z: z as usize,
+                            structure_block: StructureBlock::new(
+                                x as usize, y as usize, z as usize,
+                            ),
                         });
                     }
                 }
@@ -141,9 +141,9 @@ pub fn server_listen_messages(
                     if let Some(player_entity) = lobby.players.get(&client_id) {
                         place_block_event.send(BlockPlaceEvent {
                             structure_entity,
-                            x: x as usize,
-                            y: y as usize,
-                            z: z as usize,
+                            structure_block: StructureBlock::new(
+                                x as usize, y as usize, z as usize,
+                            ),
                             block_id,
                             inventory_slot: inventory_slot as usize,
                             placer: *player_entity,

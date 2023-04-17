@@ -9,7 +9,7 @@ pub mod structure;
 
 pub fn register(app: &mut App) {
     create_ship_event::register(app);
-    netty_events::register(app);
-    block_events::register(app);
     structure::regsiter(app);
+    netty::register(app);
+    blocks::register(app);
 }

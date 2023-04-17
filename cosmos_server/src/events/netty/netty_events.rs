@@ -214,6 +214,6 @@ fn handle_events_system(
     }
 }
 
-pub fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.add_system(handle_events_system.in_set(OnUpdate(GameState::Playing)));
 }
