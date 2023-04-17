@@ -1,4 +1,4 @@
-// Handles client disconnects/connections
+//! Handles client disconnects/connections
 
 use bevy::prelude::App;
 
