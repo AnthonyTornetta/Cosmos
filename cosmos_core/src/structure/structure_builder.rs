@@ -19,7 +19,7 @@ pub trait TStructureBuilder {
         structure: &mut Structure,
     );
 }
-#[derive(Default)]
+#[derive(Default, Debug)]
 /// The default structure builder
 pub struct StructureBuilder;
 

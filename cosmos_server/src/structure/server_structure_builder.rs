@@ -1,3 +1,5 @@
+//! Builds structures on the server
+
 use bevy::ecs::system::EntityCommands;
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
@@ -5,7 +7,8 @@ use cosmos_core::{
     structure::structure_builder::{StructureBuilder, TStructureBuilder},
 };
 
-#[derive(Default)]
+#[derive(Default, Debug)]
+/// Builds structures on the server
 pub struct ServerStructureBuilder {
     structure_builder: StructureBuilder,
 }

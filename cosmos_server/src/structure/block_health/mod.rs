@@ -1,3 +1,5 @@
+//! This handles what to do when a block is destroyed
+
 use bevy::prelude::{App, EventReader, EventWriter, IntoSystemConfig, OnUpdate, Query, Res};
 use cosmos_core::{
     block::Block,

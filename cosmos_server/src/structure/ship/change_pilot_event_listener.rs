@@ -29,7 +29,7 @@ fn event_listener(
     }
 }
 
-pub fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.add_system(event_listener.in_set(OnUpdate(GameState::Playing)))
         .add_event::<ClientChangePilotEvent>();
 }

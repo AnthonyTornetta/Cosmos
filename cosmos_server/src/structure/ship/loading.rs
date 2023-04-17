@@ -1,3 +1,5 @@
+//! Handles the loading of ships
+
 use bevy::prelude::{
     App, Commands, Component, Entity, EventWriter, IntoSystemConfig, OnUpdate, Query, Res, With,
 };
@@ -63,6 +65,6 @@ fn create_ships(
     }
 }
 
-pub fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.add_system(create_ships.in_set(OnUpdate(GameState::Playing)));
 }

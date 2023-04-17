@@ -122,6 +122,6 @@ fn update_system(
     }
 }
 
-pub(crate) fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.add_system(update_system.in_set(OnUpdate(GameState::Playing)));
 }

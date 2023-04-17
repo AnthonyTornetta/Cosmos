@@ -1,7 +1,9 @@
+//! Contains projectile systems needed on the server
+
 use bevy::prelude::App;
 
-pub mod laser_cannon_system;
+mod laser_cannon_system;
 
-pub(crate) fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     laser_cannon_system::register(app);
 }

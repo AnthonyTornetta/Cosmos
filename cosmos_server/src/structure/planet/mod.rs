@@ -1,3 +1,5 @@
+//! Contains server-side logic for the planet
+
 use bevy::prelude::*;
 
 pub mod biosphere;
