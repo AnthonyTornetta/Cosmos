@@ -1,11 +1,11 @@
+//! Logic for the structure to be loaded on-the-fly
+
 use bevy::prelude::*;
 use cosmos_core::structure::{structure_iterator::ChunkIteratorResult, ChunkInitEvent, Structure};
 
-// I hate this
-
-// The only way to prevent issues with events is to delay the sending of the chunk init events by 2 frames,
-// so two events are needed to do this. This is really horrible, but the only way I can think of
-// to get this to work ;(
+/// I hate this, but the only way to prevent issues with events is to delay the sending of the chunk init events
+/// by 2 frames, so two events are needed to do this. This is really horrible, but the only way I can think of
+/// to get this to work ;(
 pub(crate) struct DelayedStructureLoadEvent(pub Entity);
 struct EvenMoreDelayedStructureLoadEvent(Entity);
 

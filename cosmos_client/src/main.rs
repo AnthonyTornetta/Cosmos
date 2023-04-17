@@ -1,3 +1,7 @@
+//! Contains all the logic for the client-side of Cosmos.
+
+#![warn(missing_docs)]
+
 pub mod asset;
 pub mod block;
 pub mod camera;
@@ -24,7 +28,6 @@ use std::f32::consts::PI;
 use bevy::window::PrimaryWindow;
 // use bevy_rapier3d::render::RapierDebugRenderPlugin;
 use bevy_renet::renet::RenetClient;
-use camera::camera_controller;
 use cosmos_core::entities::player::Player;
 use cosmos_core::events::structure::change_pilot_event::ChangePilotEvent;
 use cosmos_core::netty::client_reliable_messages::ClientReliableMessages;
@@ -32,14 +35,12 @@ use cosmos_core::netty::client_unreliable_messages::ClientUnreliableMessages;
 use cosmos_core::netty::{cosmos_encoder, get_local_ipaddress, NettyChannel};
 use cosmos_core::structure::ship::pilot::Pilot;
 use cosmos_core::structure::ship::ship_movement::ShipMovement;
-use input::inputs::{self, CosmosInputHandler, CosmosInputs};
-use interactions::block_interactions;
+use input::inputs::{CosmosInputHandler, CosmosInputs};
 use netty::connect::{self, ConnectionConfig};
 use netty::flags::LocalPlayer;
 use netty::mapping::NetworkMapping;
 use rendering::MainCamera;
 use state::game_state::GameState;
-use structure::chunk_retreiver;
 use ui::crosshair::CrosshairOffset;
 use window::setup::DeltaCursorPosition;
 
@@ -325,6 +326,7 @@ fn main() {
             ..default()
         })
         .insert_resource(ClearColor(Color::BLACK))
+        // This must be registered here, before it is used anywhere
         .add_state::<GameState>()
         .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))
         .add_plugins(CosmosCorePluginGroup::new(
@@ -352,13 +354,12 @@ fn main() {
                 .in_set(OnUpdate(GameState::Playing)),
         );
 
-    inputs::register(&mut app);
-    window::setup::register(&mut app);
+    input::register(&mut app);
+    window::register(&mut app);
     asset::register(&mut app);
     events::register(&mut app);
-    block_interactions::register(&mut app);
-    chunk_retreiver::register(&mut app);
-    camera_controller::register(&mut app);
+    interactions::register(&mut app);
+    camera::register(&mut app);
     ui::register(&mut app);
     netty::register(&mut app);
     lang::register(&mut app);

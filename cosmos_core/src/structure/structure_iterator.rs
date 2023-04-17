@@ -1,3 +1,5 @@
+//! Used to iterate over the blocks or chunks of a structure.
+
 use super::{chunk::Chunk, structure_block::StructureBlock, Structure};
 
 #[derive(Debug)]
@@ -25,14 +27,15 @@ enum ItrState<'a> {
     Invalid,
 }
 
-/// Block Iterator
-
+/// Iterates over the blocks of a structure
 pub struct BlockIterator<'a> {
     state: ItrState<'a>,
 }
 
 impl<'a> BlockIterator<'a> {
     /// ALL Coordinates are inclusive!
+    ///
+    /// * `include_empty` - If this is true, air blocks will be included. If false, air blocks will be excluded so some optimizations can be used.
     pub fn new(
         start_x: i32,
         start_y: i32,
@@ -81,10 +84,12 @@ impl<'a> BlockIterator<'a> {
         }
     }
 
+    /// Returns true if there are no blocks to iterate through with respect to the `include_empty`, false if not.
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
+    /// Returns the number of blocks left to iterate through, with respect to the `include_empty` flag.
     pub fn len(&self) -> usize {
         match &self.state {
             ItrState::Valid(body) => {
@@ -150,14 +155,16 @@ impl<'a> Iterator for BlockIterator<'a> {
 
 /// Iterates over the chunks of a structure
 ///
-/// If include_empty is enabled, the value iterated over may be None OR Some(chunk).
-/// If include_empty is disabled, the value iterated over may ONLY BE Some(chunk).
+/// * `include_empty` - If enabled, the value iterated over may be None OR Some(chunk). Otherwise, the value iterated over may ONLY BE Some(chunk).
 pub struct ChunkIterator<'a> {
     state: ItrState<'a>,
 }
 
 impl<'a> ChunkIterator<'a> {
-    /// Coordinates are inclusive!
+    /// Iterates over the chunks of a structure
+    /// Coordinates are invlusive!
+    ///
+    /// * `include_empty` - If enabled, the value iterated over may be `ChunkIteratorResult::EmptyChunk` OR `ChunkIteratorResult::FilledChunk`. Otherwise, the value iterated over may ONLY BE `ChunkIteratorResult::LoadedChunk`.
     pub fn new(
         start_x: i32,
         start_y: i32,
@@ -206,10 +213,12 @@ impl<'a> ChunkIterator<'a> {
         }
     }
 
+    /// Returns true if there are no chunks to iterate through with respect to the `include_empty`, false if not.
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
+    /// Returns the number of chunks left to iterate through, with respect to the `include_empty` flag.
     pub fn len(&self) -> usize {
         match &self.state {
             ItrState::Valid(body) => {
@@ -236,12 +245,21 @@ impl<'a> ChunkIterator<'a> {
     }
 }
 
+/// The result of the chunk iterator
+///
+/// If `include_empty` is true, this may return either variant (`ChunkIteratorResult::FilledChunk` or `ChunkIteratorResult::EmptyChunk`).
+/// If this is false, it will only return `ChunkIteratorResult::FilledChunk`.
 pub enum ChunkIteratorResult<'a> {
+    /// This represents a chunk that has no blocks in it, and is thus unloaded.
     EmptyChunk {
+        /// That chunk's position in the structure, can be used in `Structure::chunk_from_chunk_coordinates` once it is loaded.
         position: (usize, usize, usize),
     },
+    /// This represents a chunk that does have blocks in it, and is loaded.
     FilledChunk {
+        /// That chunk's position in the structure, can be used in `Structure::chunk_from_chunk_coordinates`.
         position: (usize, usize, usize),
+        /// The loaded chunk.
         chunk: &'a Chunk,
     },
 }

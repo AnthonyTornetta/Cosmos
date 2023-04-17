@@ -1,3 +1,5 @@
+//! Event & its processing for when a player wants to create a ship
+
 use bevy::prelude::{
     App, EventReader, EventWriter, Input, IntoSystemConfigs, KeyCode, MouseButton, OnUpdate, Res,
     ResMut,
@@ -12,6 +14,8 @@ use crate::{
     state::game_state::GameState,
 };
 
+#[derive(Debug)]
+/// Sent when the client wants the server to create a ship
 pub struct CreateShipEvent {
     name: String,
 }
@@ -40,7 +44,7 @@ fn event_handler(mut event_reader: EventReader<CreateShipEvent>, mut client: Res
     }
 }
 
-pub fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.add_event::<CreateShipEvent>()
         .add_systems((event_handler, listener).in_set(OnUpdate(GameState::Playing)));
 }

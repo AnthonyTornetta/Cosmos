@@ -1,4 +1,4 @@
-//! Represents a one to many link
+//! Represents a many to one link
 //!
 //! Add this as a bevy resource by calling
 //! [`create_many_to_one_registry`]
@@ -12,7 +12,7 @@ use bevy::utils::HashMap;
 use super::identifiable::Identifiable;
 use super::AddLinkError;
 
-/// Represents a one to many link
+/// Represents a many to one link
 #[derive(Resource, Default)]
 pub struct ManyToOneRegistry<K: Identifiable + Sync + Send, V: Identifiable + Sync + Send> {
     values: HashMap<u16, V>,
@@ -72,7 +72,7 @@ impl<K: Identifiable + Sync + Send, V: Identifiable + Sync + Send> ManyToOneRegi
         self.pointers.get(&key.id()).map(|id| {
             self.values
                 .get(id)
-                .expect("ManyToOne pointers should always be valid.")
+                .expect("ManyToOne pointers should always be valid, but this one wasn't.")
         })
     }
 
@@ -82,7 +82,7 @@ impl<K: Identifiable + Sync + Send, V: Identifiable + Sync + Send> ManyToOneRegi
     }
 }
 
-/// Initializes & adds the resource to bevy that can then be used in systems.
+/// Initializes & adds the resource to bevy that can then be used in systems via `Res<ManyToOneRegistry<K, V>>`
 pub fn create_many_to_one_registry<
     K: Identifiable + Sync + Send + 'static,
     V: Identifiable + Sync + Send + 'static,

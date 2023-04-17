@@ -1,3 +1,5 @@
+//! Syncs player inventories
+
 use bevy::prelude::{App, Changed, Entity, IntoSystemConfig, OnUpdate, Query, ResMut};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
@@ -19,6 +21,6 @@ fn sync(query: Query<(Entity, &Inventory), Changed<Inventory>>, mut server: ResM
     }
 }
 
-pub fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.add_system(sync.in_set(OnUpdate(GameState::Playing)));
 }

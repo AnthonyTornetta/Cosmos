@@ -1,3 +1,5 @@
+//! Responsible for building planets for the client.
+
 use bevy::ecs::system::EntityCommands;
 use cosmos_core::{
     physics::location::Location,
@@ -9,6 +11,7 @@ use cosmos_core::{
 
 use crate::structure::client_structure_builder::ClientStructureBuilder;
 
+/// Responsible for building planets for the client.
 pub struct ClientPlanetBuilder {
     planet_builder: PlanetBuilder<ClientStructureBuilder>,
 }

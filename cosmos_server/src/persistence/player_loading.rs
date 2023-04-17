@@ -120,10 +120,8 @@ fn load_near(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.insert_resource(SectorsCache::default()).add_systems(
-        (
-            unload_far.run_if(on_timer(Duration::from_millis(1000))),
-            load_near.run_if(on_timer(Duration::from_millis(1000))),
-        ), // .in_base_set(CoreSet::PreUpdate),
-    );
+    app.insert_resource(SectorsCache::default()).add_systems((
+        unload_far.run_if(on_timer(Duration::from_millis(1000))),
+        load_near.run_if(on_timer(Duration::from_millis(1000))),
+    ));
 }

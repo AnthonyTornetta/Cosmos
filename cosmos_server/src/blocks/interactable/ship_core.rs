@@ -40,6 +40,6 @@ fn handle_block_event(
     }
 }
 
-pub fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.add_system(handle_block_event.in_set(OnUpdate(GameState::Playing)));
 }

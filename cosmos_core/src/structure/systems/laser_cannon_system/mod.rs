@@ -1,3 +1,5 @@
+//! Represents all the laser cannons on this structure
+
 use std::{
     mem::swap,
     ops::{Add, AddAssign, SubAssign},
@@ -19,7 +21,9 @@ use crate::{
 use super::Systems;
 
 #[derive(Default, FromReflect, Reflect, Clone, Copy)]
+/// Every block that is a laser cannon should have this property
 pub struct LaserCannonProperty {
+    /// How much energy is consumed per shot
     pub energy_per_shot: f32,
 }
 
@@ -61,16 +65,26 @@ impl LaserCannonBlocks {
 }
 
 #[derive(FromReflect, Reflect, Default)]
+/// Represents a line of laser cannons.
+///
+/// All laser cannons in this line are facing the same direction.
 pub struct Line {
+    /// The block at the start
     pub start: StructureBlock,
+    /// The direction this line is facing
     pub direction: BlockFace,
+    /// How many blocks this line has
     pub len: usize,
+    /// The property of all the blocks in this line
     pub property: LaserCannonProperty,
+
+    /// All the properties of the laser cannons in this line
     properties: Vec<LaserCannonProperty>,
 }
 
 impl Line {
     #[inline]
+    /// Returns the ending structure block
     pub fn end(&self) -> StructureBlock {
         let (dx, dy, dz) = self.direction.direction();
         let delta = self.len as i32 - 1;
@@ -81,6 +95,7 @@ impl Line {
         }
     }
 
+    /// Returns true if a structure block is within this line
     pub fn within(&self, sb: &StructureBlock) -> bool {
         match self.direction {
             BlockFace::Front => {
@@ -118,8 +133,11 @@ impl Line {
 }
 
 #[derive(Component, Default, FromReflect, Reflect)]
+/// Represents all the laser cannons that are within this structure
 pub struct LaserCannonSystem {
+    /// All the lins that there are
     pub lines: Vec<Line>,
+    /// The time since this system was last fired.
     pub last_shot_time: f32,
 }
 
@@ -368,7 +386,11 @@ fn structure_loaded_event(
     }
 }
 
-pub fn register<T: States + Clone + Copy>(app: &mut App, post_loading_state: T, playing_state: T) {
+pub(super) fn register<T: States + Clone + Copy>(
+    app: &mut App,
+    post_loading_state: T,
+    playing_state: T,
+) {
     app.insert_resource(LaserCannonBlocks::default())
         .add_systems((
             register_laser_blocks.in_schedule(OnEnter(post_loading_state)),

@@ -1,3 +1,5 @@
+//! Displays the player's hotbar
+
 use bevy::prelude::*;
 use cosmos_core::{inventory::Inventory, item::Item};
 
@@ -11,9 +13,11 @@ use crate::{
 const ITEM_NAME_FADE_DURATION_SEC: f32 = 5.0;
 
 #[derive(Component)]
+/// The hotbar the player can see
 pub struct Hotbar {
-    // slot, slot text
+    /// Vec<(slot, slot text)>
     slots: Vec<(Entity, Entity)>,
+    /// This is the slot the player has currently selected
     pub selected_slot: usize,
     prev_slot: usize,
     max_slots: usize,
@@ -36,11 +40,13 @@ impl Hotbar {
     }
 
     #[inline]
+    /// Gets the item's inventory slot based on the hotbar slot
     pub fn item_at_inventory_slot(&self, slot: usize, inv: &Inventory) -> usize {
         inv.len() - self.max_slots + slot
     }
 
     #[inline]
+    /// Gets the item's inventory slot based off the item the player has selected
     pub fn item_at_selected_inventory_slot(&self, inv: &Inventory) -> usize {
         self.item_at_inventory_slot(self.selected_slot, inv)
     }
@@ -305,7 +311,7 @@ fn add_hotbar(mut commands: Commands, asset_server: Res<AssetServer>) {
         });
 }
 
-pub fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.add_systems((add_hotbar, add_item_text).in_schedule(OnEnter(GameState::Playing)))
         .add_systems(
             (

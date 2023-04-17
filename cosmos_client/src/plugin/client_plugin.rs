@@ -1,3 +1,5 @@
+//! Every plugin needed for the client to run.
+
 use crate::PluginGroup;
 use bevy::app::PluginGroupBuilder;
 use bevy::audio::AudioPlugin;
@@ -10,6 +12,7 @@ use bevy::ui::UiPlugin;
 use bevy::winit::WinitPlugin;
 
 #[derive(Default)]
+/// Every plugin needed for the client to run.
 pub struct ClientPluginGroup;
 
 impl PluginGroup for ClientPluginGroup {

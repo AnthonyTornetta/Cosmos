@@ -15,7 +15,7 @@ fn insert_resource(mut commands: Commands) {
     commands.insert_resource(Lang::<Item>::new("en_us", vec!["items", "blocks"]));
 }
 
-pub fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.add_system(insert_resource.in_schedule(OnEnter(GameState::PreLoading)))
         .add_system(insert_langs.in_schedule(OnExit(GameState::PostLoading)));
 }

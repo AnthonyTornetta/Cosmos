@@ -1,7 +1,9 @@
+//! This just handles lighting for now.
+
 use bevy::prelude::App;
 
 pub mod lighting;
 
-pub(crate) fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     lighting::register(app);
 }

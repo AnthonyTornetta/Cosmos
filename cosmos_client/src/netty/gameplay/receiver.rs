@@ -1,3 +1,7 @@
+//! A receiver + processor for a bunch of network packets.
+//!
+//! This should eventually be broken up
+
 use bevy::{
     core_pipeline::bloom::BloomSettings, prelude::*, render::camera::Projection,
     window::PrimaryWindow,
@@ -512,7 +516,7 @@ fn sync_transforms_and_locations(
     }
 }
 
-pub(crate) fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.insert_resource(RequestedEntities::default())
         .add_system(
             client_sync_players

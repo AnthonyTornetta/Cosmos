@@ -1,3 +1,5 @@
+//! Handles the event of ships being created by the player
+
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::physics::location::Location;
@@ -6,8 +8,11 @@ use cosmos_core::structure::{ship::ship_builder::TShipBuilder, Structure};
 use crate::structure::ship::{loading::ShipNeedsCreated, server_ship_builder::ServerShipBuilder};
 use crate::GameState;
 
+/// This event is done when a ship is being created
 pub struct CreateShipEvent {
+    /// Starting location of the ship
     pub ship_location: Location,
+    /// The rotation of the ship
     pub rotation: Quat,
 }
 
@@ -30,7 +35,7 @@ fn event_reader(mut event_reader: EventReader<CreateShipEvent>, mut commands: Co
     }
 }
 
-pub fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.add_event::<CreateShipEvent>()
         .add_system(event_reader.in_set(OnUpdate(GameState::Playing)));
 }

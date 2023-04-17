@@ -1,3 +1,10 @@
+//! Represents all the systems a structure has. You should access systems a specific structure has
+//! through this. It is, however, safe to query systems normally if you don't need a specific structure.
+//! If you need information about the structure a system belongs to and you are querying through systems, include
+//! the `StructureSystem` component to your query to get the structure's entity.
+//!
+//! Each system is stored as a child of this.
+
 use std::{error::Error, fmt::Formatter};
 
 use bevy::prelude::*;
@@ -20,12 +27,15 @@ pub struct SystemActive;
 /// This does not need to be provided if no controller is used
 pub struct SystemBlock(String);
 
-#[derive(Component)]
+#[derive(Component, Debug)]
+/// Every system has this as a component.
 pub struct StructureSystem {
+    /// The entity this system belongs to
     pub structure_entity: Entity,
 }
 
 #[derive(Debug)]
+/// If no system was found, this error will be returned.
 pub struct NoSystemFound;
 
 impl std::fmt::Display for NoSystemFound {
@@ -37,17 +47,19 @@ impl std::fmt::Display for NoSystemFound {
 impl Error for NoSystemFound {}
 
 #[derive(Component)]
+/// Stores all the systems a structure has
 pub struct Systems {
-    /// These entities should have the "System" component
+    /// These entities should have the `StructureSystem` component
     pub systems: Vec<Entity>,
     /// More than just one system can be active at a time, but the pilot can only personally activate one system at a time
     /// Perhaps make this a component on the pilot entity in the future?
-    /// Currently this limits a ship to one pilot, the above would fix this issue, but idk if it's worth it.
+    /// Currently this limits a ship to one pilot, the above would fix this issue, but this is a future concern.
     active_system: Option<u32>,
     entity: Entity,
 }
 
 impl Systems {
+    /// Sets the currently selected system
     pub fn set_active_system(&mut self, active: Option<u32>, commands: &mut Commands) {
         if active == self.active_system {
             return;
@@ -72,6 +84,7 @@ impl Systems {
         self.active_system = active;
     }
 
+    /// Adds a system to the structure. Use this instead of directly adding it with commands.
     pub fn add_system<T: Component>(&mut self, commands: &mut Commands, system: T) -> Entity {
         let mut ent = None;
 
@@ -90,6 +103,8 @@ impl Systems {
         ent.expect("This should have been set in above closure.")
     }
 
+    /// Queries all the systems of a structure with this specific query, or returns `Err(NoSystemFound)` if none matched this query.
+    ///
     /// TODO: in future allow for this to take any number of components
     pub fn query<'a, T: Component>(&'a self, query: &'a Query<&T>) -> Result<&T, NoSystemFound> {
         for ent in self.systems.iter() {
@@ -101,6 +116,8 @@ impl Systems {
         Err(NoSystemFound)
     }
 
+    /// Queries all the systems of a structure with this specific query, or returns `Err(NoSystemFound)` if none matched this query.
+    ///
     /// TODO: in future allow for this to take any number of components
     pub fn query_mut<'a, T: Component>(
         &'a self,
@@ -127,7 +144,11 @@ fn add_structure(mut commands: Commands, query: Query<Entity, Added<Structure>>)
     }
 }
 
-pub fn register<T: States + Clone + Copy>(app: &mut App, post_loading_state: T, playing_state: T) {
+pub(super) fn register<T: States + Clone + Copy>(
+    app: &mut App,
+    post_loading_state: T,
+    playing_state: T,
+) {
     app.add_system(add_structure);
 
     energy_storage_system::register(app, post_loading_state, playing_state);

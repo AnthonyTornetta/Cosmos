@@ -1,3 +1,5 @@
+//! Used to build ships
+
 use bevy::ecs::system::EntityCommands;
 use bevy_rapier3d::prelude::{Ccd, ExternalImpulse, ReadMassProperties, RigidBody, Velocity};
 
@@ -8,7 +10,9 @@ use crate::{
 
 use super::{ship_movement::ShipMovement, Ship};
 
+/// Implement this to add a custom way to build ships
 pub trait TShipBuilder {
+    /// Adds everything to the entity needed to have a ship
     fn insert_ship(
         &self,
         entity: &mut EntityCommands,
@@ -18,11 +22,13 @@ pub trait TShipBuilder {
     );
 }
 
+/// Default way to build a ship
 pub struct ShipBuilder<T: TStructureBuilder> {
     structure_builder: T,
 }
 
 impl<T: TStructureBuilder> ShipBuilder<T> {
+    /// Creates a ship builder that uses the given structure builder
     pub fn new(structure_builder: T) -> Self {
         Self { structure_builder }
     }

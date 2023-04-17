@@ -56,6 +56,6 @@ fn on_melting_down(
     }
 }
 
-pub(crate) fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.add_system(on_melting_down.in_set(OnUpdate(GameState::Playing)));
 }

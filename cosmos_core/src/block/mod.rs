@@ -1,3 +1,5 @@
+//! Blocks are the smallest thing found on any structure
+
 use bevy::{
     prelude::{App, States, Vec3},
     reflect::{FromReflect, Reflect},
@@ -10,26 +12,44 @@ pub mod blocks;
 pub mod hardness;
 
 #[derive(Reflect, FromReflect, Debug, Eq, PartialEq, Clone, Copy, Hash)]
+/// Represents different properties a block can has
 pub enum BlockProperty {
+    /// Is this block non-see-through
     Opaque,
+    /// Is this block see-through
     Transparent,
+    /// Does this block always take up the full 1x1x1 space.
     Full,
+    /// Does this block not take up any space (such as air)
     Empty,
+    /// Does this block only belong on a ship
     ShipOnly,
 }
 
 #[derive(Debug, PartialEq, Eq, Reflect, FromReflect, Default, Copy, Clone)]
+/// Represents the different faces of a block.
+///
+/// Even non-cube blocks will have this.
 pub enum BlockFace {
     #[default]
+    /// +Z
     Front,
+    /// -Z
     Back,
+    /// -X
     Left,
+    /// +X
     Right,
+    /// +Y
     Top,
+    /// -Y
     Bottom,
 }
 
 impl BlockFace {
+    /// Returns the index for each block face [0, 5].
+    ///
+    /// Useful for storing faces in an array
     pub fn index(&self) -> usize {
         match *self {
             BlockFace::Right => 0,
@@ -41,6 +61,7 @@ impl BlockFace {
         }
     }
 
+    /// Returns the integer direction each face represents
     pub fn direction(&self) -> (i32, i32, i32) {
         match *self {
             Self::Front => (0, 0, 1),
@@ -52,6 +73,7 @@ impl BlockFace {
         }
     }
 
+    /// Returns the direction each face represents as a Vec3
     pub fn direction_vec3(&self) -> Vec3 {
         match *self {
             Self::Front => Vec3::Z,
@@ -63,6 +85,7 @@ impl BlockFace {
         }
     }
 
+    /// Returns the string representation of this face.
     pub fn as_str(&self) -> &'static str {
         match *self {
             Self::Front => "front",
@@ -86,6 +109,7 @@ impl BlockProperty {
         }
     }
 
+    /// Creates a property id from a list of block properties
     pub fn create_id(properties: &Vec<Self>) -> u8 {
         let mut res = 0;
 
@@ -97,6 +121,9 @@ impl BlockProperty {
     }
 }
 
+/// A block is the smallest unit used on a structure.
+///
+/// A block takes a maximum of 1x1x1 meters of space, but can take up less than that.
 pub struct Block {
     visibility: u8,
     id: u16,
@@ -120,6 +147,9 @@ impl Identifiable for Block {
 }
 
 impl Block {
+    /// Creates a block
+    ///
+    /// * `unlocalized_name` This should be unique for that block with the following formatting: `mod_id:block_identifier`. Such as: `cosmos:laser_cannon`
     pub fn new(
         properties: &Vec<BlockProperty>,
         id: u16,
@@ -135,25 +165,30 @@ impl Block {
     }
 
     #[inline]
+    /// Returns true if this block can be seen through
     pub fn is_see_through(&self) -> bool {
         self.is_transparent() || !self.is_full()
     }
 
+    /// Returns true if this block is transparent
     #[inline]
     pub fn is_transparent(&self) -> bool {
         self.visibility & BlockProperty::Transparent.id() != 0
     }
 
+    /// Returns true if this block takes up the full 1x1x1 meters of space
     #[inline]
     pub fn is_full(&self) -> bool {
         self.visibility & BlockProperty::Full.id() != 0
     }
 
+    /// Returns true if this block takes up no space
     #[inline]
     pub fn is_empty(&self) -> bool {
         self.visibility & BlockProperty::Empty.id() != 0
     }
 
+    /// Returns the density of this block
     #[inline]
     pub fn density(&self) -> f32 {
         self.density
@@ -166,7 +201,7 @@ impl PartialEq for Block {
     }
 }
 
-pub fn register<T: States + Clone + Copy>(
+pub(super) fn register<T: States + Clone + Copy>(
     app: &mut App,
     pre_loading_state: T,
     loading_state: T,

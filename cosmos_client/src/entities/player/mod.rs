@@ -1,3 +1,5 @@
+//! Contains systems and components for the player
+
 use bevy::prelude::App;
 
 pub mod render_distance;

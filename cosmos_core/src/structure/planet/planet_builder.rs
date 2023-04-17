@@ -1,3 +1,5 @@
+//! Used to build a planet
+
 use bevy::ecs::system::EntityCommands;
 use bevy_rapier3d::prelude::{RigidBody, Velocity};
 
@@ -8,7 +10,9 @@ use crate::{
 
 use super::Planet;
 
+/// Implement this to add a custom way to build planets
 pub trait TPlanetBuilder {
+    /// Adds everything to the entity needed to have a planet
     fn insert_planet(
         &self,
         entity: &mut EntityCommands,
@@ -17,11 +21,13 @@ pub trait TPlanetBuilder {
     );
 }
 
+/// Default way to build a planet
 pub struct PlanetBuilder<T: TStructureBuilder> {
     structure_builder: T,
 }
 
 impl<T: TStructureBuilder> PlanetBuilder<T> {
+    /// Creates a planet builder that uses the given structure builder
     pub fn new(structure_builder: T) -> Self {
         Self { structure_builder }
     }

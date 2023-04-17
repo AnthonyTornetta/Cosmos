@@ -1,4 +1,4 @@
-// Ship core handler
+//! Ship core handler
 
 use bevy::{
     prelude::{App, Commands, Component, EventReader, IntoSystemConfig, OnUpdate, Res, States},
@@ -31,6 +31,6 @@ fn monitor_block_events(
     }
 }
 
-pub(crate) fn register<T: States + Clone + Copy>(app: &mut App, playing_state: T) {
+pub(super) fn register<T: States + Clone + Copy>(app: &mut App, playing_state: T) {
     app.add_system(monitor_block_events.in_set(OnUpdate(playing_state)));
 }

@@ -1,3 +1,5 @@
+//! Represents how far a player can see
+
 use bevy::prelude::Component;
 use serde::{Deserialize, Serialize};
 

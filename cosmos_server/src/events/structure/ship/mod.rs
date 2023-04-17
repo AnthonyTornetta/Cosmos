@@ -1,3 +1,5 @@
+//! Events for the ship
+
 use bevy::prelude::{App, Entity, EventReader, IntoSystemConfig, OnUpdate, Query, ResMut};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
@@ -11,10 +13,14 @@ use cosmos_core::{
 
 use crate::state::GameState;
 
-pub mod core;
+mod core;
 
+#[derive(Debug)]
+/// This event is sent when the ship's movement is set
 pub struct ShipSetMovementEvent {
+    /// The entity for the ship
     pub ship: Entity,
+    /// The ship's new movement
     pub movement: ShipMovement,
 }
 
@@ -53,7 +59,7 @@ fn monitor_pilot_changes(
     }
 }
 
-pub(crate) fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     core::register(app);
 
     app.add_event::<ShipSetMovementEvent>().add_systems((

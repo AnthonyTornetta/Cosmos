@@ -1,3 +1,5 @@
+//! Used to represent how much damage a block can take before it breaks
+
 use bevy::prelude::{App, IntoSystemAppConfig, OnExit, Res, ResMut, States};
 
 use crate::registry::{self, identifiable::Identifiable, Registry};
@@ -5,6 +7,7 @@ use crate::registry::{self, identifiable::Identifiable, Registry};
 use super::Block;
 
 #[derive(Debug)]
+/// Used to represent how much damage a block can take before it breaks
 pub struct BlockHardness {
     id: u16,
     unlocalized_name: String,
@@ -14,6 +17,9 @@ pub struct BlockHardness {
 }
 
 impl BlockHardness {
+    /// Creates a new hardness value for that block.
+    ///
+    /// This still needs to be registered!
     pub fn new(block: &Block, hardness: f32) -> BlockHardness {
         Self {
             id: 0,
@@ -22,6 +28,7 @@ impl BlockHardness {
         }
     }
 
+    /// Gets the hardness value
     pub fn hardness(&self) -> f32 {
         self.hardness
     }
@@ -88,7 +95,7 @@ fn sanity_check(blocks: Res<Registry<Block>>, hardness: Res<Registry<BlockHardne
     }
 }
 
-pub(crate) fn register<T: States + Clone + Copy>(
+pub(super) fn register<T: States + Clone + Copy>(
     app: &mut App,
     loading_state: T,
     post_loading_state: T,

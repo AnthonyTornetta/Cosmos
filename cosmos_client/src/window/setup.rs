@@ -1,3 +1,5 @@
+//! Responsible for the initial creation of the window
+
 use bevy::{
     input::mouse::MouseMotion,
     prelude::{App, EventReader, Input, KeyCode, MouseButton, Query, Res, ResMut, Resource, With},
@@ -12,8 +14,11 @@ struct WindowLockedFlag {
 }
 
 #[derive(Resource)]
+/// How much the cursor has moved since the last frame
 pub struct DeltaCursorPosition {
+    /// Delta cursor x
     pub x: f32,
+    /// Delta cursor y
     pub y: f32,
 }
 
@@ -65,7 +70,7 @@ fn unfreeze_mouse(
     }
 }
 
-pub fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.insert_resource(WindowLockedFlag { locked: true })
         .insert_resource(DeltaCursorPosition { x: 0.0, y: 0.0 })
         .add_startup_system(setup_window)

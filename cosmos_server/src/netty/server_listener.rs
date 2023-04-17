@@ -1,3 +1,7 @@
+//! Listens to almost all the messages received from the client
+//!
+//! Eventually this should be broken down into more specific functions
+
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::RenetServer;
@@ -28,6 +32,9 @@ use crate::events::{
 use super::network_helpers::ServerLobby;
 use super::sync::entities::RequestedEntityEvent;
 
+/// Bevy system that listens to almost all the messages received from the client
+///
+/// Eventually this should be broken down into more specific functions
 pub fn server_listen_messages(
     mut commands: Commands,
     mut server: ResMut<RenetServer>,
@@ -50,14 +57,14 @@ pub fn server_listen_messages(
 ) {
     for client_id in server.clients_id().into_iter() {
         while let Some(message) = server.receive_message(client_id, NettyChannel::Unreliable.id()) {
-            if let Some(player_entity) = lobby.players.get(&client_id) {
+            if let Some(player_entity) = lobby.player_from_id(client_id) {
                 let command: ClientUnreliableMessages =
                     cosmos_encoder::deserialize(&message).unwrap();
 
                 match command {
                     ClientUnreliableMessages::PlayerBody { body, looking } => {
                         if let Ok((transform, mut location, mut currently_looking, mut velocity)) =
-                            change_player_query.get_mut(*player_entity)
+                            change_player_query.get_mut(player_entity)
                         {
                             location.set_from(&body.location);
                             location.last_transform_loc = Some(transform.translation);
@@ -66,7 +73,7 @@ pub fn server_listen_messages(
                         }
                     }
                     ClientUnreliableMessages::SetMovement { movement } => {
-                        if let Ok(pilot) = pilot_query.get(*player_entity) {
+                        if let Ok(pilot) = pilot_query.get(player_entity) {
                             let ship = pilot.entity;
 
                             ship_movement_event_writer
@@ -74,7 +81,7 @@ pub fn server_listen_messages(
                         }
                     }
                     ClientUnreliableMessages::ShipStatus { use_system } => {
-                        if let Ok(pilot) = pilot_query.get(*player_entity) {
+                        if let Ok(pilot) = pilot_query.get(player_entity) {
                             if use_system {
                                 commands.entity(pilot.entity).insert(SystemActive);
                             } else {
@@ -83,7 +90,7 @@ pub fn server_listen_messages(
                         }
                     }
                     ClientUnreliableMessages::ShipActiveSystem { active_system } => {
-                        if let Ok(pilot) = pilot_query.get(*player_entity) {
+                        if let Ok(pilot) = pilot_query.get(player_entity) {
                             if let Ok(mut systems) = systems_query.get_mut(pilot.entity) {
                                 systems.set_active_system(active_system, &mut commands);
                             }
@@ -120,13 +127,13 @@ pub fn server_listen_messages(
                     y,
                     z,
                 } => {
-                    if let Some(player_entity) = lobby.players.get(&client_id) {
+                    if let Some(player_entity) = lobby.player_from_id(client_id) {
                         break_block_event.send(BlockBreakEvent {
                             structure_entity,
-                            breaker: *player_entity,
-                            x: x as usize,
-                            y: y as usize,
-                            z: z as usize,
+                            breaker: player_entity,
+                            structure_block: StructureBlock::new(
+                                x as usize, y as usize, z as usize,
+                            ),
                         });
                     }
                 }
@@ -138,15 +145,15 @@ pub fn server_listen_messages(
                     block_id,
                     inventory_slot,
                 } => {
-                    if let Some(player_entity) = lobby.players.get(&client_id) {
+                    if let Some(player_entity) = lobby.player_from_id(client_id) {
                         place_block_event.send(BlockPlaceEvent {
                             structure_entity,
-                            x: x as usize,
-                            y: y as usize,
-                            z: z as usize,
+                            structure_block: StructureBlock::new(
+                                x as usize, y as usize, z as usize,
+                            ),
                             block_id,
                             inventory_slot: inventory_slot as usize,
-                            placer: *player_entity,
+                            placer: player_entity,
                         });
                     }
                 }
@@ -159,20 +166,20 @@ pub fn server_listen_messages(
                     block_interact_event.send(BlockInteractEvent {
                         structure_entity,
                         structure_block: StructureBlock::new(x as usize, y as usize, z as usize),
-                        interactor: *lobby.players.get(&client_id).unwrap(),
+                        interactor: lobby.player_from_id(client_id).unwrap(),
                     });
                 }
                 ClientReliableMessages::CreateShip { name: _name } => {
-                    if let Some(client) = lobby.players.get(&client_id) {
-                        let (_, location, looking, _) = change_player_query.get(*client).unwrap();
+                    if let Some(client) = lobby.player_from_id(client_id) {
+                        if let Ok((_, location, looking, _)) = change_player_query.get(client) {
+                            let ship_location =
+                                *location + looking.rotation.mul_vec3(Vec3::new(0.0, 0.0, -4.0));
 
-                        let ship_location =
-                            *location + looking.rotation.mul_vec3(Vec3::new(0.0, 0.0, -4.0));
-
-                        create_ship_event_writer.send(CreateShipEvent {
-                            ship_location,
-                            rotation: looking.rotation,
-                        });
+                            create_ship_event_writer.send(CreateShipEvent {
+                                ship_location,
+                                rotation: looking.rotation,
+                            });
+                        }
                     }
                 }
                 ClientReliableMessages::PilotQuery { ship_entity } => {
@@ -191,8 +198,8 @@ pub fn server_listen_messages(
                     );
                 }
                 ClientReliableMessages::StopPiloting => {
-                    if let Some(player_entity) = lobby.players.get(&client_id) {
-                        if let Ok(piloting) = pilot_query.get(*player_entity) {
+                    if let Some(player_entity) = lobby.player_from_id(client_id) {
+                        if let Ok(piloting) = pilot_query.get(player_entity) {
                             pilot_change_event_writer.send(ChangePilotEvent {
                                 structure_entity: piloting.entity,
                                 pilot_entity: None,
@@ -203,8 +210,8 @@ pub fn server_listen_messages(
                 ClientReliableMessages::ChangeRenderDistance {
                     mut render_distance,
                 } => {
-                    if let Some(player_entity) = lobby.players.get(&client_id) {
-                        if let Some(mut e) = commands.get_entity(*player_entity) {
+                    if let Some(player_entity) = lobby.player_from_id(client_id) {
+                        if let Some(mut e) = commands.get_entity(player_entity) {
                             if render_distance.sector_range > 8 {
                                 render_distance.sector_range = 8;
                             }
@@ -222,6 +229,6 @@ pub fn server_listen_messages(
     }
 }
 
-pub fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.add_system(server_listen_messages);
 }

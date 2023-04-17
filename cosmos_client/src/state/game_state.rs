@@ -1,19 +1,26 @@
+//! Represents the client's state of the game
+
 use bevy::{
-    prelude::{App, States},
+    prelude::States,
     reflect::{FromReflect, Reflect},
 };
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Copy, Reflect, FromReflect, Default, States)]
+/// Represents the client's state of the game
 pub enum GameState {
     #[default]
-    PreLoading, // Initial resources are created
+    /// Initial resources are created
+    PreLoading,
+    /// Resources are filled out
     Loading,
+    /// Everything that needs to happen based on those filled out resources
     PostLoading,
+    /// Connecting to the server
     Connecting,
+    /// Loading the server's world
     LoadingWorld,
+    /// Playing the game
     Playing,
 }
 
-pub fn register(app: &mut App) {
-    app.add_state::<GameState>().register_type::<GameState>();
-}
+// This is registered in main.rs

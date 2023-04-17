@@ -1,7 +1,9 @@
+//! Server inventory management
+
 use bevy::prelude::App;
 
-pub mod sync;
+mod sync;
 
-pub fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     sync::register(app);
 }

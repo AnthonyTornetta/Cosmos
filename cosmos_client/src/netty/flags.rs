@@ -1,3 +1,7 @@
+//! Random flags for components
+//!
+//! This should be removed since it only contains LocalPlayer, which should be in the client's player.
+
 use bevy::prelude::Component;
 
 #[derive(Component, Default)]

@@ -79,7 +79,7 @@ fn verify_pilot_exists(mut commands: Commands, query: Query<(Entity, &Pilot)>) {
     }
 }
 
-pub fn register<T: States + Clone + Copy>(app: &mut App, playing_state: T) {
+pub(super) fn register<T: States + Clone + Copy>(app: &mut App, playing_state: T) {
     app.add_systems((
         verify_pilot_exists.in_set(OnUpdate(playing_state)),
         event_listener

@@ -1,3 +1,11 @@
+//! This is kinda stupid, but I don't have any better ideas right now.
+//!
+//! To make state transitions better, this is used to flag when states should be moved.
+//! You should be good to just ignore this, and let it do its thing.
+//!
+//! Just if you ever remove a call to `register_loader` or `finish_loading` you may have to add it to another
+//! system in that state.
+
 use bevy::{prelude::*, utils::HashSet};
 
 /// Using the LoadingManager struct avoids passing ugly generics around the code, rather than directly using the LoadingStatus struct
@@ -7,6 +15,9 @@ pub struct LoadingManager {
 }
 
 impl LoadingManager {
+    /// Registers that there is something loaded.
+    ///
+    /// Returns the ID that should be passed to `finish_loading` once this is done.
     pub fn register_loader(&mut self, event_writer: &mut EventWriter<AddLoadingEvent>) -> usize {
         self.next_id += 1;
 
@@ -17,6 +28,7 @@ impl LoadingManager {
         self.next_id
     }
 
+    /// Finishes loading for this id.
     pub fn finish_loading(&mut self, id: usize, event_writer: &mut EventWriter<DoneLoadingEvent>) {
         event_writer.send(DoneLoadingEvent { loading_id: id });
     }
@@ -87,10 +99,13 @@ fn monitor_loading<T: States + Clone + Copy>(
     }
 }
 
+/// Sent when something is done loading during the game's loading states.
 pub struct DoneLoadingEvent {
+    /// The loading id assigned by `register_loader`
     pub loading_id: usize,
 }
 
+/// Sent when something starts loading during the game's loading states.
 pub struct AddLoadingEvent {
     loading_id: usize,
 }
@@ -105,7 +120,7 @@ impl<T: States + Clone + Copy> LoadingStatus<T> {
     }
 }
 
-pub fn register<T: States + Clone + Copy>(
+pub(super) fn register<T: States + Clone + Copy>(
     app: &mut App,
     pre_loading_state: T,
     loading_state: T,

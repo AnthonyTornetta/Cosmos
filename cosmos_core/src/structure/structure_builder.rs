@@ -1,15 +1,16 @@
+//! Responsible for determining how structures are added to the game when they are needed
+
 use bevy::{
     ecs::system::EntityCommands,
     prelude::{PbrBundle, Transform},
 };
 use bevy_rapier3d::prelude::Velocity;
 
-use crate::{
-    physics::{location::Location, structure_physics::StructurePhysics},
-    structure::Structure,
-};
+use crate::{physics::location::Location, structure::Structure};
 
+/// Used to instantiate structures
 pub trait TStructureBuilder {
+    /// Builds that structure
     fn insert_structure(
         &self,
         entity: &mut EntityCommands,
@@ -18,8 +19,9 @@ pub trait TStructureBuilder {
         structure: &mut Structure,
     );
 }
-#[derive(Default)]
-pub struct StructureBuilder {}
+#[derive(Default, Debug)]
+/// The default structure builder
+pub struct StructureBuilder;
 
 impl TStructureBuilder for StructureBuilder {
     fn insert_structure(
@@ -31,14 +33,11 @@ impl TStructureBuilder for StructureBuilder {
     ) {
         structure.set_entity(entity.id());
 
-        let physics_updater = StructurePhysics::new(structure);
-
         entity
             .insert(PbrBundle {
                 transform: Transform::from_translation(location.local),
                 ..Default::default()
             })
-            .insert((velocity, location))
-            .insert(physics_updater);
+            .insert((velocity, location));
     }
 }

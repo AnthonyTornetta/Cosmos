@@ -1,3 +1,12 @@
+//! This handles the saving of different things in the world, such as planets & ships
+//!
+//! To add your own saving event, add a system after `begin_saving` and before `done_saving`.
+//!
+//! Use the query: `Query<(Entity, &SerializedData), With<NeedsSaved>>` to get all the data that will need
+//! loaded. From there, you can add any components necessary to the entity to fully load it in.
+//!
+//! See [`saving::default_save`] for an example.
+
 use bevy::{
     prelude::{
         App, Commands, Component, CoreSet, DespawnRecursiveExt, Entity, IntoSystemConfig, Query,

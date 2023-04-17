@@ -1,5 +1,7 @@
-// #![warn(missing_docs)]
+//! The core package contains common functionality that is shared between the client & the server.
+
 #![feature(get_many_mut)]
+#![warn(missing_docs)]
 
 pub mod block;
 pub mod blockitems;

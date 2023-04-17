@@ -1,3 +1,5 @@
+//! Handles all the server console commands
+
 use bevy::prelude::{
     App, Commands, DespawnRecursiveExt, Entity, EventReader, EventWriter, Query, Res, ResMut, With,
 };
@@ -187,7 +189,7 @@ fn cosmos_command_listener(
     }
 }
 
-pub(crate) fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.add_startup_system(register_commands)
         .add_system(cosmos_command_listener);
 }

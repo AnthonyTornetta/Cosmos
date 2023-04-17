@@ -1,3 +1,5 @@
+//! Responsible for building ships on the server-side
+
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
     physics::location::Location,
@@ -6,6 +8,7 @@ use cosmos_core::{
 
 use crate::structure::server_structure_builder::ServerStructureBuilder;
 
+/// Used to build a ship on the server
 pub struct ServerShipBuilder {
     builder: ShipBuilder<ServerStructureBuilder>,
 }

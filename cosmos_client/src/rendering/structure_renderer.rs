@@ -13,7 +13,7 @@ use bevy_rapier3d::na::Vector3;
 use cosmos_core::block::{Block, BlockFace};
 use cosmos_core::events::block_events::BlockChangedEvent;
 use cosmos_core::registry::identifiable::Identifiable;
-use cosmos_core::registry::one_to_many::OneToManyRegistry;
+use cosmos_core::registry::many_to_one::ManyToOneRegistry;
 use cosmos_core::registry::Registry;
 use cosmos_core::structure::chunk::{Chunk, CHUNK_DIMENSIONS, CHUNK_DIMENSIONSF};
 use cosmos_core::structure::events::ChunkSetEvent;
@@ -92,7 +92,7 @@ impl StructureRenderer {
         atlas: &MainAtlas,
         blocks: &Registry<Block>,
         lighting: &Registry<BlockLighting>,
-        materials: &OneToManyRegistry<Block, CosmosMaterial>,
+        materials: &ManyToOneRegistry<Block, CosmosMaterial>,
         meshes: &BlockMeshRegistry,
         block_textures: &Registry<BlockTextureIndex>,
     ) {
@@ -380,7 +380,7 @@ fn monitor_needs_rendered_system(
     mesh_query: Query<Option<&Handle<Mesh>>>,
     mut meshes: ResMut<Assets<Mesh>>,
     blocks: Res<Registry<Block>>,
-    materials: Res<OneToManyRegistry<Block, CosmosMaterial>>,
+    materials: Res<ManyToOneRegistry<Block, CosmosMaterial>>,
     meshes_registry: Res<BlockMeshRegistry>,
     lighting: Res<Registry<BlockLighting>>,
     lights_query: Query<&LightsHolder>,
@@ -599,7 +599,7 @@ impl ChunkRenderer {
     fn render(
         &mut self,
         atlas: &MainAtlas,
-        materials: &OneToManyRegistry<Block, CosmosMaterial>,
+        materials: &ManyToOneRegistry<Block, CosmosMaterial>,
         lighting: &Registry<BlockLighting>,
         chunk: &Chunk,
         left: Option<&Chunk>,

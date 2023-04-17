@@ -1,9 +1,13 @@
+//! Different math stuff for quaternions
+
 use std::f64::consts::PI;
 
 use bevy::prelude::Vec3;
 use bevy_rapier3d::na::{Quaternion, UnitVector3, Vector3};
 
-// https://stackoverflow.com/questions/1171849/finding-quaternion-representing-the-rotation-from-one-vector-to-another
+/// https://stackoverflow.com/questions/1171849/finding-quaternion-representing-the-rotation-from-one-vector-to-another
+///
+/// Calculates the quaternion between normalized vectors.
 pub fn quaternion_between_normalized_vectors(
     normalized_from: &Vec3,
     normalized_to: &Vec3,

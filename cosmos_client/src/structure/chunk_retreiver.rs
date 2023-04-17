@@ -1,3 +1,5 @@
+//! Used to get structure data from the server
+
 use bevy::prelude::*;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::netty::client_reliable_messages::ClientReliableMessages;
@@ -8,6 +10,7 @@ use crate::state::game_state::GameState;
 use crate::NetworkMapping;
 
 #[derive(Component, Default)]
+/// Put this on a structure that needs populated by the server
 pub struct NeedsPopulated;
 
 fn populate_structures(
@@ -30,7 +33,7 @@ fn populate_structures(
     }
 }
 
-pub fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.add_systems((
         populate_structures.in_set(OnUpdate(GameState::Playing)),
         populate_structures.in_set(OnUpdate(GameState::LoadingWorld)),

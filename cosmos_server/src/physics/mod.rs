@@ -1,3 +1,7 @@
+//! Handles interactions between various entities + the physics worlds.
+//!
+//! Mostly used to move entities between worlds & sync up locations to their transforms.
+
 use bevy::{prelude::*, utils::HashSet};
 use bevy_rapier3d::prelude::{PhysicsWorld, RapierContext, RapierWorld, DEFAULT_WORLD_ID};
 use cosmos_core::{
@@ -13,6 +17,7 @@ use crate::{netty::server_listener::server_listen_messages, state::GameState};
 const WORLD_SWITCH_DISTANCE: f32 = SECTOR_DIMENSIONS / 2.0;
 const WORLD_SWITCH_DISTANCE_SQRD: f32 = WORLD_SWITCH_DISTANCE * WORLD_SWITCH_DISTANCE;
 
+/// This is used to assign a player to a specific rapier world.
 pub fn assign_player_world(
     player_worlds: &Query<
         (&Location, &WorldWithin, &PhysicsWorld),
@@ -66,7 +71,7 @@ pub fn assign_player_world(
     }
 }
 
-pub fn move_players_between_worlds(
+fn move_players_between_worlds(
     players: Query<(Entity, &Location), (With<WorldWithin>, With<Player>)>,
     mut world_within_query: Query<(&mut WorldWithin, &mut PhysicsWorld)>,
 
@@ -326,7 +331,7 @@ fn sync_transforms_and_locations(
     }
 }
 
-pub(crate) fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.add_systems(
         (
             // If it's not after server_listen_messages, some noticable jitter can happen

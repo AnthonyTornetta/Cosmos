@@ -1,3 +1,8 @@
+//! Use this instead of bincode to serialize & deserialize things.
+//!
+//! This compresses items before their usage & decompresses them before deserializing to save a ton
+//! of space + bits sent over the network.
+
 use serde::{de::DeserializeOwned, Serialize};
 
 /// Serializes the data to be sent - compresses it if needed

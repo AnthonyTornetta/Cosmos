@@ -1,6 +1,8 @@
-pub mod lasers;
+//! Handles all the projectile client-side creation + systems
+
+mod lasers;
 use bevy::prelude::App;
 
-pub(crate) fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     lasers::register(app);
 }
