@@ -1,3 +1,5 @@
+//! Contains all the systems + resources needed for a server
+
 use bevy::prelude::Plugin;
 
 use crate::{
@@ -6,9 +8,11 @@ use crate::{
     inventory, netty, persistence, physics, projectiles, structure,
 };
 
-use super::vizualizer;
-
+/// The server's plugin
+///
+/// Contains all the systems + resources needed for a server
 pub struct ServerPlugin {
+    /// The server's IP because renet needs this for some dumb and annoying reason
     pub ip: Option<String>,
 }
 
@@ -23,7 +27,7 @@ impl Plugin for ServerPlugin {
         blocks::register(app);
         structure::register(app);
         inventory::register(app);
-        vizualizer::register(app);
+        super::register(app);
         projectiles::register(app);
         persistence::register(app);
     }
