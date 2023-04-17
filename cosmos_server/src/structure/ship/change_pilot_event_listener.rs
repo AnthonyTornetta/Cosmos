@@ -6,6 +6,9 @@ use cosmos_core::netty::{
 
 use crate::state::GameState;
 
+/// This event is sent whenever a ship's pilot is changed
+///
+/// If pilot_entity is None, then the ship now has no pilot
 pub struct ClientChangePilotEvent {
     structure_entity: Entity,
     pilot_entity: Option<Entity>,

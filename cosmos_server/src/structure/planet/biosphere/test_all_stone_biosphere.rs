@@ -1,3 +1,5 @@
+//! Used just for testing, this makes a planet all stone
+
 use bevy::prelude::{
     App, Component, Entity, EventReader, EventWriter, IntoSystemConfigs, OnUpdate, Query, Res,
 };
@@ -13,8 +15,10 @@ use crate::GameState;
 use super::{TBiosphere, TGenerateChunkEvent};
 
 #[derive(Component)]
+/// Used just for testing, this makes a planet all stone
 pub struct TestStoneBiosphereMarker;
 
+/// Used just for testing, this makes a planet all stone
 pub struct TestStoneChunkNeedsGeneratedEvent {
     x: usize,
     y: usize,
@@ -34,7 +38,8 @@ impl TGenerateChunkEvent for TestStoneChunkNeedsGeneratedEvent {
 }
 
 #[derive(Default)]
-pub struct TestStoneBiosphere {}
+/// Used just for testing, this makes a planet all stone
+pub struct TestStoneBiosphere;
 
 impl TBiosphere<TestStoneBiosphereMarker, TestStoneChunkNeedsGeneratedEvent>
     for TestStoneBiosphere
@@ -54,7 +59,7 @@ impl TBiosphere<TestStoneBiosphereMarker, TestStoneChunkNeedsGeneratedEvent>
     }
 }
 
-pub fn generate_planet(
+fn generate_planet(
     mut query: Query<&mut Structure>,
     mut events: EventReader<TestStoneChunkNeedsGeneratedEvent>,
     mut event_writer: EventWriter<ChunkInitEvent>,
@@ -88,7 +93,7 @@ pub fn generate_planet(
     }
 }
 
-pub(crate) fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.add_event::<TestStoneChunkNeedsGeneratedEvent>()
         .add_systems(
             (
