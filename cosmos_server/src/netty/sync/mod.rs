@@ -1,3 +1,5 @@
+//! Handles the syncing of various items
+
 use bevy::prelude::App;
 
 pub mod entities;
