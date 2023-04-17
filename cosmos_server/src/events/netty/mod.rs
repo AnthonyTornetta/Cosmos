@@ -1,3 +1,5 @@
+// Handles client disconnects/connections
+
 use bevy::prelude::App;
 
 pub mod netty_events;

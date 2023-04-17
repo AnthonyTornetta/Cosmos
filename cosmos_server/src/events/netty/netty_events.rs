@@ -1,3 +1,5 @@
+//! Handles client connecting and disconnecting
+
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use bevy_renet::renet::{RenetServer, ServerEvent};
