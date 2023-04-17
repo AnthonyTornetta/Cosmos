@@ -117,7 +117,7 @@ fn update_fps(mut query: Query<(&mut Text, &mut FPSCounter)>, time: Res<Time>) {
     }
 }
 
-pub(crate) fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.add_system(add_text.in_schedule(OnEnter(GameState::Playing)))
         .add_systems((update_coords, update_fps).in_set(OnUpdate(GameState::Playing)));
 }

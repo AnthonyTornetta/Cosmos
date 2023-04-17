@@ -331,7 +331,7 @@ fn sync_transforms_and_locations(
     }
 }
 
-pub(crate) fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.add_systems(
         (
             // If it's not after server_listen_messages, some noticable jitter can happen

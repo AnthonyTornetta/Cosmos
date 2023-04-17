@@ -8,6 +8,6 @@ mod gameplay;
 pub mod lobby;
 pub mod mapping;
 
-pub(crate) fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     gameplay::register(app);
 }

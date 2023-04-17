@@ -137,7 +137,7 @@ fn monitor_inputs(
     }
 }
 
-pub(crate) fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.insert_resource(CosmosCommands::default())
         .insert_resource(CurrentlyWriting::default())
         .add_system(monitor_inputs)

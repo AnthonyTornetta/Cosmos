@@ -29,6 +29,6 @@ fn monitor_block_destroyed(
     }
 }
 
-pub(crate) fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.add_system(monitor_block_destroyed.in_set(OnUpdate(GameState::Playing)));
 }

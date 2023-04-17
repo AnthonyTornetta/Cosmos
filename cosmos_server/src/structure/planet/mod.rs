@@ -8,7 +8,7 @@ mod persistence;
 pub mod server_planet_builder;
 mod sync;
 
-pub(crate) fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     biosphere::register(app);
     persistence::register(app);
     sync::register(app);

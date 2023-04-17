@@ -209,7 +209,7 @@ fn monitor_needs_saved(mut commands: Commands, query: Query<(Entity, &Structure,
     }
 }
 
-pub(crate) fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.add_system(monitor_needs_saved)
         .add_event::<SendDelayedStructureLoadEvent>()
         .add_event::<EvenMoreDelayedSLE>()
