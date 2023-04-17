@@ -1,3 +1,12 @@
+//! This handles the loading of different things in the world, such as planets & ships
+//!
+//! To add your own loading event, add a system after `begin_loading` and before `done_loading`.
+//!
+//! Use the query: `Query<(Entity, &SerializedData), With<NeedsLoaded>>` to get all the data that will need
+//! loaded. From there, you can add any components necessary to the entity to fully load it in.
+//!
+//! See [`loading::default_load`] for an example.
+
 use std::{
     fs,
     io::{self, Read},
@@ -18,6 +27,7 @@ use zip::ZipArchive;
 use super::{SaveFileIdentifier, SerializedData};
 
 #[derive(Component, Debug, Reflect)]
+/// An entity that currently has this is currently in the process of being loaded
 pub struct NeedsLoaded;
 
 fn read_save(path: &String) -> io::Result<Vec<u8>> {
@@ -53,8 +63,10 @@ fn check_needs_loaded(
     }
 }
 
+/// To add your own loading event, add a system after `begin_loading` and before `done_loading`.
 pub fn begin_loading() {}
 
+/// To add your own loading event, add a system after `begin_loading` and before `done_loading`.
 pub fn done_loading(query: Query<Entity, With<NeedsLoaded>>, mut commands: Commands) {
     for ent in query.iter() {
         commands
