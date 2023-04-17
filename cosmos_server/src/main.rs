@@ -1,3 +1,5 @@
+//! Contains all the logic for the server-side of Cosmos.
+
 #![feature(fs_try_exists)]
 #![warn(missing_docs)]
 
