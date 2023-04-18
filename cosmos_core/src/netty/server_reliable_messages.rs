@@ -30,6 +30,8 @@ pub enum ServerReliableMessages {
         /// The player's render distance
         render_distance: Option<RenderDistance>,
     },
+    /// This contains the information for a star entity
+    Star { entity: Entity, star: Star },
     /// A player has been removed, and the client should remove them.
     PlayerRemove {
         /// The id of the player removed
