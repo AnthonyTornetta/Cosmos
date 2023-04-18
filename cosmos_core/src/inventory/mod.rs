@@ -1,3 +1,7 @@
+//! An inventory consists of a list of ItemStacks
+//!
+//! These ItemStacks can be modified freely. An inventory is owned by an entity.
+
 use bevy::{
     prelude::{App, Component},
     reflect::{FromReflect, Reflect},
@@ -17,11 +21,13 @@ pub mod itemstack;
 // }
 
 #[derive(Default, Component, Serialize, Deserialize, Debug, Reflect, FromReflect)]
+/// A collection of ItemStacks, organized into slots
 pub struct Inventory {
     items: Vec<Option<ItemStack>>,
 }
 
 impl Inventory {
+    /// Creates an empty inventory with that number of slots
     pub fn new(n_slots: usize) -> Self {
         let mut items = Vec::with_capacity(n_slots);
 
@@ -32,10 +38,14 @@ impl Inventory {
         Self { items }
     }
 
+    /// The number of slots this inventory contains
     pub fn len(&self) -> usize {
         self.items.len()
     }
 
+    /// If this inventory contains no items
+    ///
+    /// **Note:** An inventory may be empty but have a non-zero `len()`!
     pub fn is_empty(&self) -> bool {
         self.items.iter().any(|x| x.is_some())
     }
@@ -77,6 +87,7 @@ impl Inventory {
         quantity
     }
 
+    /// Returns the ItemStack at that slot
     pub fn itemstack_at(&self, slot: usize) -> Option<&ItemStack> {
         self.items[slot].as_ref()
     }
@@ -110,10 +121,13 @@ impl Inventory {
         self.items.swap(slot_a, slot_b);
     }
 
+    /// Sets the ItemStack stored at that slot number. Will overwrite any previous stack
     pub fn set_itemstack_at(&mut self, slot: usize, item_stack: Option<ItemStack>) {
         self.items[slot] = item_stack;
     }
 
+    /// Inserts the items & quantity at that slot. Returns the number of items left over, or the full
+    /// quantity of items if that slot doesn't represent that item.
     pub fn insert_at(&mut self, slot: usize, item: &Item, quantity: u16) -> u16 {
         if let Some(slot) = &mut self.items[slot] {
             if slot.item_id() != item.id() {
@@ -128,6 +142,7 @@ impl Inventory {
         }
     }
 
+    /// Calculates the number of that specific item in this inventory.
     pub fn quantity_of(&self, item: &Item) -> usize {
         self.items
             .iter()
@@ -136,9 +151,14 @@ impl Inventory {
             .map(|x| x.quantity() as usize)
             .sum()
     }
+
+    /// Iterates over every slot in the inventory.
+    pub fn iter(&self) -> std::slice::Iter<'_, std::option::Option<ItemStack>> {
+        self.items.iter()
+    }
 }
 
-pub fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     itemstack::register(app);
     app.register_type::<Inventory>();
 }

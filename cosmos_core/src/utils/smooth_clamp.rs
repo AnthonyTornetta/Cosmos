@@ -1,6 +1,12 @@
+//! Lerp + clamp at the same time
+
 use bevy::prelude::Vec3;
 
+/// Lerp + clamp at the same time
 pub trait SmoothClamp {
+    /// Clamps this between two other values, but instead of immediately jumping to it,
+    ///
+    /// lerp is used to slowly move to be within the range.
     fn smooth_clamp(&self, min: &Self, max: &Self, lerp: f32) -> Self;
 }
 

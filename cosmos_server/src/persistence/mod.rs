@@ -1,3 +1,5 @@
+//! Handles both the saving & loading of entities on the server
+
 use bevy::{
     prelude::{App, Component, Resource},
     reflect::Reflect,
@@ -12,40 +14,61 @@ pub mod player_loading;
 pub mod saving;
 
 #[derive(Component, Debug, Reflect, Serialize, Deserialize, PartialEq, Eq, Clone, Hash)]
+/// NOT ALL ENTITIES WILL HAVE THIS ON THEM!
+///
+/// Only entities that have been loaded or saved will have this. This is a unique identifier for
+/// this entity.
 pub struct EntityId(String);
 
 #[derive(Debug, Resource, Default)]
+/// This is a resource that caches the saved entities of different sectors that a player has been near.
+///
+/// This is just used to prevent excessive IO operations.
 pub struct SectorsCache(HashMap<(i64, i64, i64), HashSet<EntityId>>);
 
 impl EntityId {
+    /// Creates a new EntityID.
+    ///
+    /// * `id` This should be unique to only this entity. If this isn't unique, the entity may not be loaded/saved correctly
     pub fn new(id: impl Into<String>) -> Self {
         Self(id.into())
     }
 }
 
 #[derive(Debug, Component, Reflect)]
+/// Used to track where the save file for a given entity is or should be.
 pub struct SaveFileIdentifier {
+    /// The sector the entity was in when it was saved
     pub sector: Option<(i64, i64, i64)>,
+    /// The entity's id
     pub entity_id: EntityId,
 }
 
 impl SaveFileIdentifier {
     /// Gets the file path a given entity will be saved to.
+    ///
+    /// `world/X_Y_Z/entity_id.cent`
     pub fn get_save_file_path(&self) -> String {
         let directory = self
             .sector
             .map(|(x, y, z)| format!("{x}_{y}_{z}"))
             .unwrap_or("nowhere".into());
 
-        format!("world/{directory}/{}.cent", self.entity_id.0)
+        format!("world/{directory}/{}", self.get_save_file_name())
     }
 
+    /// Gets the save file name, but not the whole path
+    ///
+    /// `entity_id.cent`
     pub fn get_save_file_name(&self) -> String {
         format!("{}.cent", self.entity_id.0)
     }
 }
 
 #[derive(Component, Debug, Reflect, Serialize, Deserialize)]
+/// Stores the serialized data for an entity.
+///
+/// This is either read from or written to a save file depending on if an entity is being loaded or saved.
 pub struct SerializedData {
     save_data: HashMap<String, Vec<u8>>,
 
@@ -101,7 +124,7 @@ impl SerializedData {
 
     /// Deserializes the data as the given type (via `cosmos_encoder::deserialize`) at the given id. Will panic if the
     /// data is not properly serialized.
-    pub fn deserialize_data<'a, T: DeserializeOwned>(&'a self, data_id: &str) -> Option<T> {
+    pub fn deserialize_data<T: DeserializeOwned>(&self, data_id: &str) -> Option<T> {
         self.read_data(data_id)
             .map(|d| cosmos_encoder::deserialize(d).expect("Error deserializing data!"))
     }

@@ -15,9 +15,7 @@ use crate::{
     state::GameState,
 };
 
-/**
- * Called when the laser hits a structure at a given position
- */
+/// Called when the laser hits a structure at a given position
 fn on_laser_hit_structure(
     structure: &mut Structure,
     local_position_hit: Vec3,
@@ -91,7 +89,7 @@ fn on_save_laser(mut query: Query<&mut SerializedData, (With<NeedsSaved>, With<L
     }
 }
 
-pub(crate) fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.add_system(respond_laser_hit_event.in_set(OnUpdate(GameState::Playing)))
         .add_system(on_save_laser.after(begin_saving).before(done_saving));
 }

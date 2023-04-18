@@ -1,3 +1,5 @@
+//! Used to handle client interactions with various blocks
+
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::{QueryFilter, RapierContext};
 use cosmos_core::{
@@ -11,12 +13,15 @@ use cosmos_core::{
 use crate::{
     events::block::block_events::*,
     input::inputs::{CosmosInputHandler, CosmosInputs},
+    rendering::MainCamera,
     state::game_state::GameState,
     ui::hotbar::Hotbar,
     LocalPlayer,
 };
 
+/// How the player interacted with this block
 pub enum InteractionType {
+    /// Used the priamry interact key
     Primary,
 }
 
@@ -31,7 +36,7 @@ fn process_player_interaction(
     keys: Res<Input<KeyCode>>,
     mouse: Res<Input<MouseButton>>,
     input_handler: Res<CosmosInputHandler>,
-    camera: Query<&GlobalTransform, With<Camera>>,
+    camera: Query<&GlobalTransform, With<MainCamera>>,
     // make sure pilots can't break/place/interact with blocks
     player_body: Query<Entity, (With<LocalPlayer>, Without<Pilot>)>,
     rapier_context: Res<RapierContext>,
@@ -146,7 +151,7 @@ fn process_player_interaction(
     }
 }
 
-pub fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app
         // .add_event::<BlockInteractionEvent>()
         .add_system(process_player_interaction.in_set(OnUpdate(GameState::Playing)));

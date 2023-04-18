@@ -1,3 +1,5 @@
+//! Displays the crosshair the player sees in & out of a ship
+
 use bevy::prelude::*;
 use cosmos_core::utils::smooth_clamp::SmoothClamp;
 
@@ -40,6 +42,7 @@ fn add_crosshair(mut commands: Commands, asset_server: Res<AssetServer>) {
 }
 
 #[derive(Component)]
+/// This is used for the UI element for the crosshair as an identifier
 pub struct Crosshair;
 
 fn update_cursor_pos(pos: Res<CrosshairOffset>, mut query: Query<&mut Style, With<Crosshair>>) {
@@ -50,8 +53,11 @@ fn update_cursor_pos(pos: Res<CrosshairOffset>, mut query: Query<&mut Style, Wit
 }
 
 #[derive(Default, Debug, Resource, Clone, Copy, Reflect, FromReflect)]
+/// This represents how far away from the center the crosshair is
 pub struct CrosshairOffset {
+    /// How far from the center x the crosshair is
     pub x: f32,
+    /// How far from the center y the crosshair is
     pub y: f32,
 }
 
@@ -78,7 +84,7 @@ impl SmoothClamp for CrosshairOffset {
     }
 }
 
-pub fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.insert_resource(CrosshairOffset::default())
         .add_systems((
             add_crosshair.in_schedule(OnEnter(GameState::Playing)),

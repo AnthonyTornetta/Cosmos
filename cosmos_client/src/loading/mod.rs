@@ -1,3 +1,5 @@
+//! Responsible for unloading far entities
+
 use bevy::prelude::{
     App, Commands, CoreSet, DespawnRecursiveExt, Entity, IntoSystemConfig, Parent, Query, With,
     Without,
@@ -26,6 +28,6 @@ fn unload_far_entities(
     }
 }
 
-pub(crate) fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.add_system(unload_far_entities.in_base_set(CoreSet::First));
 }

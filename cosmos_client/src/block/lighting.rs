@@ -1,3 +1,5 @@
+//! Handles all the blocks with lighting in the game
+
 use bevy::{
     prelude::{App, Color, IntoSystemAppConfig, OnExit, Res, ResMut},
     reflect::{FromReflect, Reflect},
@@ -11,15 +13,24 @@ use serde::{Deserialize, Serialize};
 use crate::state::game_state::GameState;
 
 #[derive(Debug, Reflect, FromReflect, Default, Serialize, Deserialize, Clone, Copy, PartialEq)]
+/// If a block has light, it will have a block light property
 pub struct BlockLightProperties {
+    /// The color of that light
     pub color: Color,
+    /// How intense it should be in lumens,
+    ///
+    /// See https://docs.rs/bevy/latest/bevy/pbr/struct.PointLight.html for a table of valus.
     pub intensity: f32,
+    /// How far this light will reach
     pub range: f32,
+    /// Ignored for now due to performance issues. Shadows are currently always disabled.
     pub shadows_disabled: bool,
 }
 
 #[derive(Debug, Reflect, FromReflect, Default, Serialize, Deserialize)]
+/// This links up a block to its block light properties
 pub struct BlockLighting {
+    /// The properties this block has
     pub properties: BlockLightProperties,
 
     id: u16,
@@ -86,7 +97,7 @@ fn register_all_lights(
     );
 }
 
-pub(crate) fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     registry::create_registry::<BlockLighting>(app);
 
     app.add_system(register_all_lights.in_schedule(OnExit(GameState::Loading)));

@@ -1,3 +1,5 @@
+//! An ItemStack represents an item & the quantity of that item.
+
 use bevy::{
     prelude::App,
     reflect::{FromReflect, Reflect},
@@ -7,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use crate::{item::Item, registry::identifiable::Identifiable};
 
 #[derive(Serialize, Deserialize, Debug, Reflect, FromReflect)]
+/// An item & the quantity of that item
 pub struct ItemStack {
     item_id: u16,
     quantity: u16,
@@ -14,6 +17,7 @@ pub struct ItemStack {
 }
 
 impl ItemStack {
+    /// Creates an ItemStack of that item with an initial quantity of 0.
     pub fn new(item: &Item) -> Self {
         Self {
             item_id: item.id(),
@@ -22,6 +26,7 @@ impl ItemStack {
         }
     }
 
+    /// Creates an ItemStack of that item with the given initial quantity
     pub fn with_quantity(item: &Item, quantity: u16) -> Self {
         Self {
             item_id: item.id(),
@@ -31,16 +36,19 @@ impl ItemStack {
     }
 
     #[inline]
+    /// Gets the item's id
     pub fn item_id(&self) -> u16 {
         self.item_id
     }
 
     #[inline]
+    /// Gets the quantity
     pub fn quantity(&self) -> u16 {
         self.quantity
     }
 
     #[inline]
+    /// Checks if the quantity is 0
     pub fn is_empty(&self) -> bool {
         self.quantity() == 0
     }
@@ -76,11 +84,12 @@ impl ItemStack {
     }
 
     #[inline]
+    /// Returns true if the ItemStack is at or above the max stack size.
     pub fn is_full(&self) -> bool {
         self.quantity >= self.max_stack_size
     }
 }
 
-pub fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.register_type::<ItemStack>();
 }

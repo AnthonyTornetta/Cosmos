@@ -1,3 +1,5 @@
+//! Responsible for building ships for the client.
+
 use bevy::ecs::system::EntityCommands;
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
@@ -10,6 +12,7 @@ use cosmos_core::{
 
 use crate::structure::client_structure_builder::ClientStructureBuilder;
 
+/// Responsible for building ships for the client.
 pub struct ClientShipBuilder {
     ship_bulder: ShipBuilder<ClientStructureBuilder>,
 }

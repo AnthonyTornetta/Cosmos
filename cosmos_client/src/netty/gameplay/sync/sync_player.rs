@@ -9,13 +9,15 @@ use cosmos_core::{
     physics::location::Location,
 };
 
-use crate::{input::inputs::CosmosInputHandler, state::game_state::GameState};
+use crate::{
+    input::inputs::CosmosInputHandler, rendering::MainCamera, state::game_state::GameState,
+};
 use crate::{input::inputs::CosmosInputs, netty::flags::LocalPlayer};
 
 fn send_position(
     mut client: ResMut<RenetClient>,
     query: Query<(&Velocity, &Transform, &Location), With<LocalPlayer>>,
-    camera_query: Query<&Transform, With<Camera3d>>,
+    camera_query: Query<&Transform, With<MainCamera>>,
 ) {
     if let Ok((velocity, transform, location)) = query.get_single() {
         let looking = if let Ok(trans) = camera_query.get_single() {
@@ -52,6 +54,6 @@ fn send_disconnect(
     }
 }
 
-pub(crate) fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.add_systems((send_position, send_disconnect).in_set(OnUpdate(GameState::Playing)));
 }

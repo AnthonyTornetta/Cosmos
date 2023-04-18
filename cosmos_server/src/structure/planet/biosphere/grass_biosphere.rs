@@ -1,3 +1,5 @@
+//! Creates a grass planet
+
 use bevy::prelude::{
     App, Component, Entity, EventReader, EventWriter, IntoSystemConfigs, OnUpdate, Query, Res,
 };
@@ -14,9 +16,11 @@ use crate::GameState;
 
 use super::{TBiosphere, TGenerateChunkEvent};
 
-#[derive(Component)]
+#[derive(Component, Debug)]
+/// Marks that this is for a grass biosphere
 pub struct GrassBiosphereMarker;
 
+/// Marks that a grass chunk needs generated
 pub struct GrassChunkNeedsGeneratedEvent {
     x: usize,
     y: usize,
@@ -35,8 +39,9 @@ impl TGenerateChunkEvent for GrassChunkNeedsGeneratedEvent {
     }
 }
 
-#[derive(Default)]
-pub struct GrassBiosphere {}
+#[derive(Default, Debug)]
+/// Creates a grass planet
+pub struct GrassBiosphere;
 
 impl TBiosphere<GrassBiosphereMarker, GrassChunkNeedsGeneratedEvent> for GrassBiosphere {
     fn get_marker_component(&self) -> GrassBiosphereMarker {
@@ -57,7 +62,7 @@ impl TBiosphere<GrassBiosphereMarker, GrassChunkNeedsGeneratedEvent> for GrassBi
 const AMPLITUDE: f64 = 13.0;
 const DELTA: f64 = 0.05;
 
-pub(crate) fn generate_planet(
+fn generate_planet(
     mut query: Query<&mut Structure>,
     mut events: EventReader<GrassChunkNeedsGeneratedEvent>,
     mut event_writer: EventWriter<ChunkInitEvent>,
@@ -114,7 +119,7 @@ pub(crate) fn generate_planet(
     }
 }
 
-pub fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.add_event::<GrassChunkNeedsGeneratedEvent>();
     app.add_systems(
         (

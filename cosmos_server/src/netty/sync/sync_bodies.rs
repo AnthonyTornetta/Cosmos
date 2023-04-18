@@ -1,3 +1,5 @@
+//! Handles the syncing of entity's rigidbodies + velocities
+
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::RenetServer;

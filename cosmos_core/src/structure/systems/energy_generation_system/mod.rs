@@ -1,3 +1,5 @@
+//! Represents all the energy generation in a structure
+
 use bevy::{prelude::*, utils::HashMap};
 
 use crate::{
@@ -12,20 +14,26 @@ use crate::{
 
 use super::{StructureSystem, Systems};
 
-struct EnergyGenerationProperty {
-    generation_rate: f32,
+#[derive(Default, FromReflect, Reflect, Clone, Copy)]
+/// Any block that can generate energy will have this property.
+pub struct EnergyGenerationProperty {
+    /// How much energy is generated
+    pub generation_rate: f32,
 }
 
 #[derive(Default, Resource)]
-struct EnergyGenerationBlocks {
+/// All the energy generation blocks - register them here.
+pub struct EnergyGenerationBlocks {
     blocks: HashMap<u16, EnergyGenerationProperty>,
 }
 
 impl EnergyGenerationBlocks {
+    /// Inserts a block with a property
     pub fn insert(&mut self, block: &Block, generation_property: EnergyGenerationProperty) {
         self.blocks.insert(block.id(), generation_property);
     }
 
+    /// Inserts a property form that block if it has one
     pub fn get(&self, block: &Block) -> Option<&EnergyGenerationProperty> {
         self.blocks.get(&block.id())
     }
@@ -130,7 +138,11 @@ fn structure_loaded_event(
     }
 }
 
-pub fn register<T: States + Clone + Copy>(app: &mut App, post_loading_state: T, playing_state: T) {
+pub(super) fn register<T: States + Clone + Copy>(
+    app: &mut App,
+    post_loading_state: T,
+    playing_state: T,
+) {
     app.insert_resource(EnergyGenerationBlocks::default())
         .add_systems((
             register_energy_blocks.in_schedule(OnEnter(post_loading_state)),

@@ -1,3 +1,5 @@
+//! This handles what to do when a block is destroyed
+
 use bevy::prelude::{App, EventReader, EventWriter, IntoSystemConfig, OnUpdate, Query, Res};
 use cosmos_core::{
     block::Block,
@@ -27,6 +29,6 @@ fn monitor_block_destroyed(
     }
 }
 
-pub(crate) fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.add_system(monitor_block_destroyed.in_set(OnUpdate(GameState::Playing)));
 }

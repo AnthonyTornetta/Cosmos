@@ -1,3 +1,17 @@
+//! Used to represent a point in a near-infinite space
+//!
+//! Rather than represent coordinates as imprecise f32, a location is used instead.
+//! A location contains sector coordinates (i64) and local coordinates (f32).
+//!
+//! The local coordinates are bound to be within [`-SECTOR_DIMENSIONS`, `SECTOR_DIMENSIONS`].
+//! If they leave this range at any time, the sector coordinates are incremented and decremented accordingly.
+//!
+//! This allows locations to store near-infinite unique points in space.
+//!
+//! Due to the physics engine + bevy using Transform (which uses f32s), locations will be updated
+//! from changes to transforms. However, to ensure everything works fine all the time, you should prefer
+//! to update the location component rather than the Transform where possible.
+
 use std::{
     fmt::Display,
     ops::{Add, AddAssign, Sub},
@@ -19,14 +33,34 @@ pub const SECTOR_DIMENSIONS: f32 = 10_000.0;
 #[derive(
     Default, Component, Debug, PartialEq, Serialize, Deserialize, Reflect, FromReflect, Clone, Copy,
 )]
+/// Used to represent a point in a near-infinite space
+///
+/// Rather than represent coordinates as imprecise f32, a location is used instead.
+/// A location contains sector coordinates (i64) and local coordinates (f32).
+///
+/// The local coordinates are bound to be within [`-SECTOR_DIMENSIONS/2.0`, `SECTOR_DIMENSIONS/2.0`].
+/// If they leave this range at any time, the sector coordinates are incremented and decremented accordingly.
+///
+/// This allows locations to store near-infinite unique points in space.
+///
+/// Due to the physics engine + bevy using Transform (which uses f32s), locations will be updated
+/// from changes to transforms. However, to ensure everything works fine all the time, you should prefer
+/// to update the location component rather than the Transform where possible.
 pub struct Location {
+    /// The local coordinates - bounded to be within [`-SECTOR_DIMENSIONS/2.0`, `SECTOR_DIMENSIONS/2.0`]
     pub local: Vec3,
 
+    /// The sector coordinates. One sector unit represents `SECTOR_DIMENSIONS` worth of blocks travelled.
     pub sector_x: i64,
+    /// The sector coordinates. One sector unit represents `SECTOR_DIMENSIONS` worth of blocks travelled.
     pub sector_y: i64,
+    /// The sector coordinates. One sector unit represents `SECTOR_DIMENSIONS` worth of blocks travelled.
     pub sector_z: i64,
 
     #[serde(skip)]
+    /// Tracks the last transform location. Do not set this unless you know what you're doing.
+    ///
+    /// This is used to calculate changes in the Transform object & adjust the location accordingly.
     pub last_transform_loc: Option<Vec3>,
 }
 
@@ -78,6 +112,7 @@ impl AddAssign<Vec3> for &mut Location {
 }
 
 impl Location {
+    /// Creates a new location at these coordinates
     pub fn new(local: Vec3, sector_x: i64, sector_y: i64, sector_z: i64) -> Self {
         Self {
             local,
@@ -88,6 +123,9 @@ impl Location {
         }
     }
 
+    /// Ensures `self.local` is within [`-SECTOR_DIMENSIONS/2.0`, `SECTOR_DIMENSIONS/2.0`]
+    ///
+    /// If not, the sector coordinates & `local` will be modified to maintain this
     pub fn fix_bounds(&mut self) {
         let over_x = (self.local.x / (SECTOR_DIMENSIONS / 2.0)) as i64;
         if over_x != 0 {
@@ -130,6 +168,9 @@ impl Location {
         rel.dot(rel)
     }
 
+    /// Sets this from another location.
+    ///
+    /// Does not update the `last_transform_loc`.
     pub fn set_from(&mut self, other: &Location) {
         self.local = other.local;
         self.sector_x = other.sector_x;
@@ -137,6 +178,9 @@ impl Location {
         self.sector_z = other.sector_z;
     }
 
+    /// Applies updates from the new translation of the transform.
+    ///
+    /// This is done automatically, so don't worry about it unless you're doing something fancy.
     pub fn apply_updates(&mut self, translation: Vec3) {
         self.local += translation
             - self
@@ -213,7 +257,7 @@ pub fn bubble_down_locations(
     }
 }
 
-pub(crate) fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.register_type::<Location>();
 }
 

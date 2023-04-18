@@ -1,3 +1,5 @@
+//! All server network-related code
+
 use bevy::prelude::App;
 
 pub mod network_helpers;

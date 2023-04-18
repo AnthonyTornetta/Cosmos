@@ -60,7 +60,7 @@ fn on_load_structure(
     }
 }
 
-pub(crate) fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.add_system(on_save_structure.after(begin_saving).before(done_saving))
         .add_system(on_load_structure.after(begin_loading).before(done_loading));
 }

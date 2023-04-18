@@ -1,3 +1,5 @@
+//! Handles client connecting and disconnecting
+
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use bevy_renet::renet::{RenetServer, ServerEvent};
@@ -167,7 +169,7 @@ fn handle_events_system(
 
                 let entity = player_commands.id();
 
-                lobby.players.insert(*id, entity);
+                lobby.add_player(*id, entity);
 
                 assign_player_world(
                     &player_worlds,
@@ -201,7 +203,7 @@ fn handle_events_system(
                 visualizer.remove_client(*id);
                 client_ticks.ticks.remove(id);
 
-                if let Some(player_entity) = lobby.players.remove(id) {
+                if let Some(player_entity) = lobby.remove_player(*id) {
                     commands.entity(player_entity).despawn_recursive();
                 }
 
@@ -214,6 +216,6 @@ fn handle_events_system(
     }
 }
 
-pub fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.add_system(handle_events_system.in_set(OnUpdate(GameState::Playing)));
 }

@@ -1,4 +1,4 @@
-pub mod player_interactions;
+mod player_interactions;
 
 use bevy::prelude::*;
 use bevy_renet::renet::RenetClient;
@@ -47,7 +47,7 @@ fn send_structure_state(
     }
 }
 
-pub fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.add_systems(
         (check_if_using_structure_system, send_structure_state)
             .in_set(OnUpdate(GameState::Playing)),

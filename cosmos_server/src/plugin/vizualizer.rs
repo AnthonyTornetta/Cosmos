@@ -1,6 +1,7 @@
+//! Lets you see the fancy network sent/received graph
+
 use bevy::prelude::*;
 use bevy_inspector_egui::bevy_egui::EguiContexts;
-// use bevy_inspector_egui::bevy_egui::EguiContext;
 use bevy_renet::renet::RenetServer;
 use renet_visualizer::RenetServerVisualizer;
 
@@ -13,7 +14,7 @@ fn update_visulizer_system(
     visualizer.show_window(egui_context.ctx_mut());
 }
 
-pub fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.insert_resource(RenetServerVisualizer::<200>::default())
         .add_system(update_visulizer_system);
 }

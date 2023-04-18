@@ -1,3 +1,5 @@
+//! Thruster block system
+
 use std::ops::Mul;
 
 use bevy::{
@@ -28,8 +30,11 @@ use super::{StructureSystem, Systems};
 const MAX_SHIP_SPEED: f32 = 1000.0;
 const MAX_BRAKE_DELTA_PER_THRUST: f32 = 300.0;
 
+/// A block that is a thruster will have a thruster property
 pub struct ThrusterProperty {
+    /// How much thrust this block generates
     pub strength: f32,
+    /// How much energy this block consumes
     pub energy_consupmtion: f32,
 }
 
@@ -49,6 +54,7 @@ impl ThrusterBlocks {
 }
 
 #[derive(Component, Default, Reflect, FromReflect)]
+/// Represents all the thruster blocks on this structure
 pub struct ThrusterSystem {
     thrust_total: f32,
     energy_consumption: f32,
@@ -216,7 +222,11 @@ fn structure_loaded_event(
     }
 }
 
-pub fn register<T: States + Clone + Copy>(app: &mut App, post_loading_state: T, playing_state: T) {
+pub(super) fn register<T: States + Clone + Copy>(
+    app: &mut App,
+    post_loading_state: T,
+    playing_state: T,
+) {
     app.insert_resource(ThrusterBlocks::default())
         .add_systems((
             register_thruster_blocks.in_schedule(OnEnter(post_loading_state)),

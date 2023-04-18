@@ -1,3 +1,5 @@
+//! Loads all the items for cosmos & adds the item registry.
+
 // use crate::loader::{AddLoadingEvent, DoneLoadingEvent, LoadingManager};
 use crate::registry;
 use bevy::prelude::App;
@@ -14,7 +16,7 @@ use super::Item;
 //     loading.finish_loading(id, &mut end_writer);
 // }
 
-pub fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     registry::create_registry::<Item>(app);
 
     // app.add_system_set(SystemSet::on_enter(loading_state).with_system(add_cosmos_items));

@@ -101,7 +101,7 @@ fn check_removed_pilot(mut commands: Commands, mut removed: RemovedComponents<Pi
     }
 }
 
-pub fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.add_systems(
         (
             check_system_in_use,

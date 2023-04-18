@@ -1,3 +1,5 @@
+//! Handles syncing entities
+
 use bevy::prelude::*;
 
 /// Entities requested are **NOT** guarenteed to exist!

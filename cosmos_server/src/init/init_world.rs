@@ -12,7 +12,7 @@ use crate::structure::planet::{
     server_planet_builder::ServerPlanetBuilder,
 };
 
-pub fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     let noise = noise::OpenSimplex::default();
 
     noise.set_seed(rand::random());

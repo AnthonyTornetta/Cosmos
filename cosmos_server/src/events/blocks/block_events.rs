@@ -1,3 +1,5 @@
+//! Contains the various types of block events
+
 use bevy::prelude::*;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
@@ -14,27 +16,37 @@ use cosmos_core::{
 
 use crate::GameState;
 
+/// This is sent whenever a player breaks a block
 pub struct BlockBreakEvent {
+    /// The entity that was targeted
     pub structure_entity: Entity,
+    /// The player breaking the block
     pub breaker: Entity,
-    pub x: usize,
-    pub y: usize,
-    pub z: usize,
+    /// The block broken with
+    pub structure_block: StructureBlock,
 }
 
+/// This is sent whenever a player interacts with a block
 pub struct BlockInteractEvent {
+    /// The block interacted with
     pub structure_block: StructureBlock,
+    /// The structure it is on
     pub structure_entity: Entity,
+    /// The player that interacted with the block
     pub interactor: Entity,
 }
 
+/// This is sent whenever a player places a block
 pub struct BlockPlaceEvent {
+    /// The structure the block was placed on
     pub structure_entity: Entity,
-    pub x: usize,
-    pub y: usize,
-    pub z: usize,
+    /// Where the block is placed
+    pub structure_block: StructureBlock,
+    /// The placed block's id
     pub block_id: u16,
+    /// The inventory slot this block came from
     pub inventory_slot: usize,
+    /// The player who placed this block
     pub placer: Entity,
 }
 
@@ -49,9 +61,8 @@ fn handle_block_break_events(
 ) {
     for ev in event_reader.iter() {
         if let Ok(mut structure) = query.get_mut(ev.structure_entity) {
-            let block_id = structure.block_id_at(ev.x, ev.y, ev.z);
-
-            let block = blocks.from_numeric_id(block_id);
+            let block_id = ev.structure_block.block_id(&structure);
+            let block = ev.structure_block.block(&structure, &blocks);
 
             // Eventually seperate this into another event lsitener that some how interacts with this one
             // Idk if bevy supports this yet without some hacky stuff?
@@ -75,7 +86,13 @@ fn handle_block_break_events(
                 }
             }
 
-            structure.remove_block_at(ev.x, ev.y, ev.z, &blocks, Some(&mut event_writer));
+            structure.remove_block_at(
+                ev.structure_block.x,
+                ev.structure_block.y,
+                ev.structure_block.z,
+                &blocks,
+                Some(&mut event_writer),
+            );
         }
     }
 }
@@ -109,9 +126,9 @@ fn handle_block_place_events(
                         inv.decrease_quantity_at(ev.inventory_slot, 1);
 
                         structure.set_block_at(
-                            ev.x,
-                            ev.y,
-                            ev.z,
+                            ev.structure_block.x,
+                            ev.structure_block.y,
+                            ev.structure_block.z,
                             block,
                             &blocks,
                             Some(&mut event_writer),
@@ -143,7 +160,7 @@ fn handle_block_changed_event(
     }
 }
 
-pub fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.add_event::<BlockBreakEvent>()
         .add_event::<BlockPlaceEvent>()
         .add_event::<BlockInteractEvent>()

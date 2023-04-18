@@ -1,3 +1,5 @@
+//! Handles the creation of lasers
+
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::DEFAULT_WORLD_ID;
 use bevy_renet::renet::*;
@@ -78,7 +80,7 @@ fn lasers_netty(
     }
 }
 
-pub(crate) fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.add_system(create_laser_mesh.in_schedule(OnEnter(GameState::Loading)))
         .add_system(lasers_netty.in_set(OnUpdate(GameState::Playing)));
 }

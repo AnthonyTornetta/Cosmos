@@ -1,3 +1,5 @@
+//! Contains all structure-related information for the server
+
 use bevy::prelude::App;
 
 pub mod block_health;
@@ -8,7 +10,7 @@ pub mod server_structure_builder;
 pub mod ship;
 pub mod systems;
 
-pub(crate) fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     ship::register(app);
     systems::register(app);
     planet::register(app);

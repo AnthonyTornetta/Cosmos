@@ -1,3 +1,7 @@
+//! This is an old way of saving structures and should be redone to use the newer way
+//!
+//! Don't expand on this file too much, and try not to use the methods in here
+
 use std::{fs, io::ErrorKind};
 
 use bevy::prelude::{App, Commands, Component, Entity, EventReader, EventWriter, Query};
@@ -23,6 +27,9 @@ use super::{
 pub struct SendDelayedStructureLoadEvent(Entity);
 
 #[derive(Debug)]
+/// This is horrible please done use this.
+///
+/// Used to send a structure load event in the next frame
 pub struct EvenMoreDelayedSLE(Entity);
 
 fn send_actual_loaded_events_first(
@@ -116,6 +123,10 @@ pub fn load_structure(
     }
 }
 
+/// Saves the given structure.
+///
+/// This is NOT how the structures are saved in the world, but rather used to get structure
+/// files that can be loaded through commands.
 pub fn save_structure(
     structure: &Structure,
     file_name: &str,
@@ -153,12 +164,16 @@ pub fn save_structure(
 }
 
 #[derive(Debug, Clone, Copy)]
+/// The type of structure
 pub enum StructureType {
+    /// This is a planet structure
     Planet,
+    /// This is a ship structure
     Ship,
 }
 
 impl StructureType {
+    /// Gets the name for this structure type
     pub fn name(&self) -> &'static str {
         match *self {
             Self::Planet => "planet",
@@ -168,8 +183,11 @@ impl StructureType {
 }
 
 #[derive(Component)]
+/// Details of a saved structure
 pub struct SaveStructure {
+    /// The save name
     pub name: String,
+    /// What type of structure it is
     pub structure_type: StructureType,
 }
 
@@ -191,7 +209,7 @@ fn monitor_needs_saved(mut commands: Commands, query: Query<(Entity, &Structure,
     }
 }
 
-pub(crate) fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.add_system(monitor_needs_saved)
         .add_event::<SendDelayedStructureLoadEvent>()
         .add_event::<EvenMoreDelayedSLE>()

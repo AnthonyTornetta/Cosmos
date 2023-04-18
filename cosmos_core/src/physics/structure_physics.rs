@@ -1,10 +1,14 @@
+//! Responsible for the collider generation of a structure.
+
 use crate::block::Block;
 use crate::events::block_events::BlockChangedEvent;
 use crate::registry::Registry;
 use crate::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
 use crate::structure::events::ChunkSetEvent;
 use crate::structure::Structure;
-use bevy::prelude::{App, Commands, Component, Entity, EventReader, EventWriter, Query, Res, Vec3};
+use bevy::prelude::{
+    Added, App, Commands, Component, Entity, EventReader, EventWriter, Query, Res, Vec3, Without,
+};
 use bevy::reflect::{FromReflect, Reflect};
 use bevy::utils::HashSet;
 use bevy_rapier3d::math::Vect;
@@ -13,20 +17,31 @@ use bevy_rapier3d::prelude::{Collider, ColliderMassProperties, ReadMassPropertie
 
 type GenerateCollider = (Collider, f32, Vec3);
 
-pub struct ChunkPhysicsModel {
-    pub collider: Option<GenerateCollider>,
-    pub chunk_coords: Vector3<usize>,
+struct ChunkPhysicsModel {
+    collider: Option<GenerateCollider>,
+    chunk_coords: Vector3<usize>,
 }
 
 #[derive(Component, Debug, Reflect, FromReflect)]
-pub struct StructurePhysics {
+struct StructurePhysics {
     needs_changed: HashSet<Vector3<usize>>,
+}
+
+fn add_physics(
+    query: Query<(Entity, &Structure), (Added<Structure>, Without<StructurePhysics>)>,
+    mut commands: Commands,
+) {
+    for (entity, structure) in query.iter() {
+        let physics_updater = StructurePhysics::new(structure);
+
+        commands.entity(entity).insert(physics_updater);
+    }
 }
 
 /// Sometimes the ReadMassProperties is wrong, so this component fixes it
 #[derive(Component, Debug, Reflect, FromReflect, PartialEq, Clone, Copy)]
-pub struct StructureMass {
-    pub mass: f32,
+struct StructureMass {
+    mass: f32,
 }
 
 impl StructurePhysics {
@@ -70,6 +85,14 @@ impl StructurePhysics {
     }
 }
 
+/// This works by first checking if the cube that is within its bounds contains either all solid or empty blocks
+///
+/// If it does, this exits either creating a single cube collider for that or no collider
+///
+/// Otherwise, this recursively calls itself 8 times breaking this large cube into 8 equally sized smaller
+/// cubes and repeating this process.
+///
+/// This prevents the creation of tons of small colliders while being relatively easy to implement.
 fn generate_colliders(
     chunk: &Chunk,
     blocks: &Registry<Block>,
@@ -94,7 +117,7 @@ fn generate_colliders(
             for x in offset.x..(offset.x + size) {
                 let b = blocks.from_numeric_id(chunk.block_at(x, y, z));
 
-                let block_mass = b.density(); // 1*1*1*density = density
+                let block_mass = b.density(); // mass = volume * density = 1*1*1*density = density
 
                 if block_mass != 0.0 {
                     temp_mass += block_mass;
@@ -227,6 +250,7 @@ fn generate_colliders(
         }
     }
 
+    // If this is true, then this cube was fully empty.
     if !last_seen_empty.unwrap() {
         let s2 = size as f32 / 2.0;
 
@@ -270,7 +294,8 @@ fn generate_chunk_collider(chunk: &Chunk, blocks: &Registry<Block>) -> Option<Ge
     }
 }
 
-pub struct NeedsNewPhysicsEvent {
+/// Sent when a structure needs new physics
+struct NeedsNewPhysicsEvent {
     structure_entity: Entity,
 }
 
@@ -323,7 +348,8 @@ fn listen_for_new_physics_event(
     }
 }
 
-fn dew_it(
+/// Marks a structure for change if it already hasn't been marked
+fn maybe_mark_structure_for_change(
     done_structures: &mut HashSet<Entity>,
     entity: Entity,
     chunk_coords: Option<Vector3<usize>>,
@@ -356,7 +382,7 @@ fn listen_for_structure_event(
 ) {
     let mut done_structures = HashSet::new();
     for ev in event.iter() {
-        dew_it(
+        maybe_mark_structure_for_change(
             &mut done_structures,
             ev.structure_entity,
             Some(Vector3::new(
@@ -370,7 +396,7 @@ fn listen_for_structure_event(
     }
 
     for ev in chunk_set_event.iter() {
-        dew_it(
+        maybe_mark_structure_for_change(
             &mut done_structures,
             ev.structure_entity,
             Some(Vector3::new(ev.x, ev.y, ev.z)),
@@ -380,12 +406,16 @@ fn listen_for_structure_event(
     }
 }
 
-pub fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.add_event::<NeedsNewPhysicsEvent>()
         // This wasn't registered in bevy_rapier
         .register_type::<ReadMassProperties>()
         .register_type::<ColliderMassProperties>()
-        .add_systems((listen_for_structure_event, listen_for_new_physics_event));
+        .add_systems((
+            listen_for_structure_event,
+            listen_for_new_physics_event,
+            add_physics,
+        ));
 }
 
 #[cfg(test)]

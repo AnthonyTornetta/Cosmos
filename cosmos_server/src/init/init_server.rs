@@ -1,3 +1,7 @@
+//! Sets up the server & makes it ready to be connected to.
+//!
+//! Use `init` to do this.
+
 use std::{
     net::{SocketAddr, UdpSocket},
     time::SystemTime,
@@ -9,6 +13,7 @@ use cosmos_core::netty::{get_local_ipaddress, server_connection_config, PROTOCOL
 
 use crate::netty::network_helpers::{ClientTicks, NetworkTick, ServerLobby};
 
+/// Sets up the server & makes it ready to be connected to
 pub fn init(app: &mut App, address: Option<String>) {
     let port: u16 = 1337;
 

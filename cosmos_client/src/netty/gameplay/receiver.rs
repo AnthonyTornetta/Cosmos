@@ -1,3 +1,7 @@
+//! A receiver + processor for a bunch of network packets.
+//!
+//! This should eventually be broken up
+
 use bevy::{
     core_pipeline::bloom::BloomSettings, prelude::*, render::camera::Projection,
     window::PrimaryWindow,
@@ -35,6 +39,7 @@ use crate::{
         lobby::{ClientLobby, PlayerInfo},
         mapping::NetworkMapping,
     },
+    rendering::MainCamera,
     state::game_state::GameState,
     structure::{
         chunk_retreiver::NeedsPopulated, planet::client_planet_builder::ClientPlanetBuilder,
@@ -55,7 +60,7 @@ fn insert_last_rotation(mut commands: Commands, query: Query<Entity, Added<Struc
 fn update_crosshair(
     mut query: Query<(&Pilot, &mut LastRotation, &Transform), (With<Ship>, Changed<Transform>)>,
     local_player_query: Query<Entity, With<LocalPlayer>>,
-    camera_query: Query<(Entity, &Camera)>,
+    camera_query: Query<(Entity, &Camera), With<MainCamera>>,
     transform_query: Query<&GlobalTransform>,
     mut crosshair_offset: ResMut<CrosshairOffset>,
     primary_query: Query<&Window, With<PrimaryWindow>>,
@@ -230,8 +235,8 @@ fn client_sync_players(
                         .insert(LocalPlayer::default())
                         .insert(RenderDistance::default())
                         .with_children(|parent| {
-                            parent
-                                .spawn(Camera3dBundle {
+                            parent.spawn((
+                                Camera3dBundle {
                                     camera: Camera {
                                         hdr: true,
                                         ..Default::default()
@@ -242,11 +247,15 @@ fn client_sync_players(
                                         ..default()
                                     }),
                                     ..default()
-                                })
-                                .insert(BloomSettings {
+                                },
+                                BloomSettings {
                                     ..Default::default()
-                                })
-                                .insert(CameraHelper::default());
+                                },
+                                CameraHelper::default(),
+                                MainCamera,
+                                // No double UI rendering
+                                UiCameraConfig { show_ui: false },
+                            ));
                         });
 
                     commands.spawn((
@@ -507,7 +516,7 @@ fn sync_transforms_and_locations(
     }
 }
 
-pub(crate) fn register(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.insert_resource(RequestedEntities::default())
         .add_system(
             client_sync_players
