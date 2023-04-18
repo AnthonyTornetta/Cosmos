@@ -136,7 +136,7 @@ fn client_sync_players(
                 for (server_entity, body) in bodies.iter() {
                     if let Some(entity) = network_mapping.client_from_server(server_entity) {
                         if let Ok((mut location, mut transform, mut velocity)) =
-                            query_body.get_mut(*entity)
+                            query_body.get_mut(entity)
                         {
                             location.set_from(&body.location);
                             transform.rotation = body.rotation;
@@ -228,7 +228,7 @@ fn client_sync_players(
                 };
 
                 lobby.players.insert(id, player_info);
-                network_mapping.add_mapping(&client_entity, &server_entity);
+                network_mapping.add_mapping(client_entity, server_entity);
 
                 if client_id == id {
                     entity_cmds
@@ -310,7 +310,7 @@ fn client_sync_players(
 
                 let entity = entity_cmds.id();
 
-                network_mapping.add_mapping(&entity, &server_entity);
+                network_mapping.add_mapping(entity, server_entity);
             }
             ServerReliableMessages::ShipCreate {
                 entity: server_entity,
@@ -341,7 +341,7 @@ fn client_sync_players(
 
                 let entity = entity_cmds.id();
 
-                network_mapping.add_mapping(&entity, &server_entity);
+                network_mapping.add_mapping(entity, server_entity);
 
                 client.send_message(
                     NettyChannel::Reliable.id(),
@@ -356,7 +356,7 @@ fn client_sync_players(
             } => {
                 if let Some(s_entity) = network_mapping.client_from_server(&server_structure_entity)
                 {
-                    if let Ok(mut structure) = query_structure.get_mut(*s_entity) {
+                    if let Ok(mut structure) = query_structure.get_mut(s_entity) {
                         let chunk: Chunk = cosmos_encoder::deserialize(&serialized_chunk)
                             .expect("Unable to deserialize chunk from server");
 
@@ -372,7 +372,7 @@ fn client_sync_players(
                             x,
                             y,
                             z,
-                            structure_entity: *s_entity,
+                            structure_entity: s_entity,
                         });
                     }
                 }
@@ -381,7 +381,7 @@ fn client_sync_players(
                 entity: server_entity,
             } => {
                 if let Some(entity) = network_mapping.client_from_server(&server_entity) {
-                    commands.entity(*entity).despawn_recursive();
+                    commands.entity(entity).despawn_recursive();
                 }
             }
             ServerReliableMessages::MOTD { motd } => {
@@ -396,7 +396,7 @@ fn client_sync_players(
             } => {
                 // Sometimes you'll get block updates for structures that don't exist
                 if let Some(client_ent) = network_mapping.client_from_server(&structure_entity) {
-                    if let Ok(mut structure) = query_structure.get_mut(*client_ent) {
+                    if let Ok(mut structure) = query_structure.get_mut(client_ent) {
                         structure.set_block_at(
                             x as usize,
                             y as usize,
@@ -412,17 +412,19 @@ fn client_sync_players(
                 structure_entity,
                 pilot_entity,
             } => {
-                let entity = if let Some(pilot_entity) = pilot_entity {
-                    network_mapping.client_from_server(&pilot_entity).copied()
+                let pilot_entity = if let Some(pilot_entity) = pilot_entity {
+                    network_mapping.client_from_server(&pilot_entity)
                 } else {
                     None
                 };
 
+                let Some(structure_entity) = network_mapping.client_from_server(&structure_entity) else {
+                    continue;
+                };
+
                 pilot_change_event_writer.send(ChangePilotEvent {
-                    structure_entity: *network_mapping
-                        .client_from_server(&structure_entity)
-                        .unwrap(),
-                    pilot_entity: entity,
+                    structure_entity,
+                    pilot_entity,
                 });
             }
             ServerReliableMessages::EntityInventory {
@@ -433,7 +435,7 @@ fn client_sync_players(
                     let inventory: Inventory =
                         cosmos_encoder::deserialize(&serialized_inventory).unwrap();
 
-                    commands.entity(*client_entity).insert(inventory);
+                    commands.entity(client_entity).insert(inventory);
                 } else {
                     eprintln!(
                         "Error: unrecognized entity {} received from server!",
@@ -443,6 +445,13 @@ fn client_sync_players(
             }
             ServerReliableMessages::LaserCannonFire {} => {
                 println!("A laser cannon was fired")
+            }
+            ServerReliableMessages::Star { entity, star } => {
+                if let Some(client_entity) = network_mapping.client_from_server(&entity) {
+                    commands.entity(client_entity).insert(star);
+                } else {
+                    network_mapping.add_mapping(commands.spawn(star).id(), entity);
+                }
             }
         }
     }

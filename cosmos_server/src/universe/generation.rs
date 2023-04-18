@@ -1,11 +1,11 @@
 use std::f32::consts::{E, TAU};
 
-use bevy::prelude::{Commands, Query, Res, Resource, With};
-use cosmos_core::{entities::player::Player, physics::location::Location};
+use bevy::prelude::{in_state, App, Commands, IntoSystemConfig, Query, Res, Resource, With};
+use cosmos_core::{entities::player::Player, physics::location::Location, universe::star::Star};
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 
-use super::star::Star;
+use crate::state::GameState;
 
 // Calculates the distance from the origin of a spiral arm given an angle.
 fn spiral_function(theta: f32) -> f32 {
@@ -92,4 +92,8 @@ fn load_stars_near_players(
             commands.spawn(star);
         }
     }
+}
+
+pub(super) fn register(app: &mut App) {
+    app.add_system(load_stars_near_players.run_if(in_state(GameState::Playing)));
 }

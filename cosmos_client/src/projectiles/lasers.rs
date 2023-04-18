@@ -49,7 +49,7 @@ fn lasers_netty(
                         if let Some(client_entity) =
                             network_mapping.client_from_server(&server_entity)
                         {
-                            no_hit = Some(*client_entity);
+                            no_hit = Some(client_entity);
                         }
                     }
 
