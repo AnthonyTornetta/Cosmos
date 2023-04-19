@@ -104,7 +104,15 @@ fn client_sync_players(
     mut set_chunk_event_writer: EventWriter<ChunkInitEvent>,
     mut block_change_event_writer: EventWriter<BlockChangedEvent>,
     query_player: Query<&Player>,
-    mut query_body: Query<(&mut Location, &mut Transform, &mut Velocity), Without<LocalPlayer>>,
+    mut query_body: Query<
+        (
+            Option<&mut Location>,
+            Option<&mut Transform>,
+            Option<&mut Velocity>,
+        ),
+        Without<LocalPlayer>,
+    >,
+    world_center: Query<&Location, With<LocalPlayer>>,
     mut query_structure: Query<&mut Structure>,
     blocks: Res<Registry<Block>>,
     mut pilot_change_event_writer: EventWriter<ChangePilotEvent>,
@@ -135,14 +143,32 @@ fn client_sync_players(
             } => {
                 for (server_entity, body) in bodies.iter() {
                     if let Some(entity) = network_mapping.client_from_server(server_entity) {
-                        if let Ok((mut location, mut transform, mut velocity)) =
-                            query_body.get_mut(entity)
-                        {
-                            location.set_from(&body.location);
-                            transform.rotation = body.rotation;
+                        if let Ok((location, transform, velocity)) = query_body.get_mut(entity) {
+                            if location.is_some() && transform.is_some() && velocity.is_some() {
+                                let mut location = location.unwrap();
+                                let mut transform = transform.unwrap();
+                                let mut velocity = velocity.unwrap();
 
-                            velocity.linvel = body.body_vel.linvel.into();
-                            velocity.angvel = body.body_vel.angvel.into();
+                                location.set_from(&body.location);
+
+                                transform.rotation = body.rotation;
+
+                                velocity.linvel = body.body_vel.linvel.into();
+                                velocity.angvel = body.body_vel.angvel.into();
+                            } else {
+                                let world_center = world_center.get_single().expect("There should only ever be one local player, and they should always exist.");
+
+                                let transform = body.create_transform(&world_center);
+
+                                let mut location = body.location;
+                                location.last_transform_loc = Some(transform.translation);
+
+                                commands.entity(entity).insert((
+                                    location,
+                                    TransformBundle::from_transform(transform),
+                                    body.create_velocity(),
+                                ));
+                            }
                         }
                     } else if !requested_entities
                         .entities
@@ -447,9 +473,12 @@ fn client_sync_players(
                 println!("A laser cannon was fired")
             }
             ServerReliableMessages::Star { entity, star } => {
+                println!("GOT STAR!!");
                 if let Some(client_entity) = network_mapping.client_from_server(&entity) {
+                    println!("Already exists! Inserting star.");
                     commands.entity(client_entity).insert(star);
                 } else {
+                    println!("Creating that star now!");
                     network_mapping.add_mapping(commands.spawn(star).id(), entity);
                 }
             }

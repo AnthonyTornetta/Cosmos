@@ -1,7 +1,14 @@
 use std::f32::consts::{E, TAU};
 
-use bevy::prelude::{in_state, App, Commands, IntoSystemConfig, Query, Res, Resource, With};
-use cosmos_core::{entities::player::Player, physics::location::Location, universe::star::Star};
+use bevy::prelude::{
+    in_state, App, Commands, IntoSystemConfig, PbrBundle, Query, Res, Resource, Vec3, With,
+};
+use bevy_rapier3d::prelude::Velocity;
+use cosmos_core::{
+    entities::player::Player,
+    physics::location::{Location, SYSTEM_SECTORS},
+    universe::star::Star,
+};
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 
@@ -74,7 +81,7 @@ pub fn get_star_in_system(sx: i64, sy: i64, sz: i64, seed: &ServerSeed) -> Optio
     let num = rng.gen_range(0..10_000) as f32 / 10_000.0;
 
     if num < prob {
-        Some(Star::new(1000.0))
+        Some(Star::new(5.772))
     } else {
         None
     }
@@ -83,17 +90,38 @@ pub fn get_star_in_system(sx: i64, sy: i64, sz: i64, seed: &ServerSeed) -> Optio
 fn load_stars_near_players(
     players: Query<&Location, With<Player>>,
     seed: Res<ServerSeed>,
+    stars: Query<&Location, With<Star>>,
     mut commands: Commands,
 ) {
-    for loc in players.iter() {
+    'start: for loc in players.iter() {
         let (sx, sy, sz) = loc.get_system_coordinates();
 
         if let Some(star) = get_star_in_system(sx, sy, sz, &seed) {
-            commands.spawn(star);
+            for loc in stars.iter() {
+                if loc.get_system_coordinates() == (sx, sy, sz) {
+                    continue 'start;
+                }
+            }
+
+            commands.spawn((
+                star,
+                PbrBundle {
+                    ..Default::default()
+                },
+                Location::new(
+                    Vec3::ZERO,
+                    // TODO: 0.0 should be 0.5
+                    ((sx as f32 + 0.1) * SYSTEM_SECTORS as f32) as i64,
+                    ((sy as f32 + 0.1) * SYSTEM_SECTORS as f32) as i64,
+                    ((sz as f32 + 0.1) * SYSTEM_SECTORS as f32) as i64,
+                ),
+                Velocity::zero(),
+            ));
         }
     }
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(load_stars_near_players.run_if(in_state(GameState::Playing)));
+    app.insert_resource(ServerSeed(1337))
+        .add_system(load_stars_near_players.run_if(in_state(GameState::Playing)));
 }

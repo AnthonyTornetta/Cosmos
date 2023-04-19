@@ -20,10 +20,11 @@ pub mod rendering;
 pub mod state;
 pub mod structure;
 pub mod ui;
+pub mod universe;
 pub mod window;
 
 use std::env;
-use std::f32::consts::{E, PI, TAU};
+use std::f32::consts::PI;
 
 use bevy::window::PrimaryWindow;
 // use bevy_rapier3d::render::RapierDebugRenderPlugin;
@@ -372,6 +373,7 @@ fn main() {
     entities::register(&mut app);
     inventory::register(&mut app);
     rendering::register(&mut app);
+    universe::register(&mut app);
 
     app.run();
 }

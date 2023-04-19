@@ -401,7 +401,6 @@ const COLOR_TABLE: [[f32; 3]; 391] = [
 
 #[derive(Debug, Component, Reflect, FromReflect, Serialize, Deserialize, Clone, Copy)]
 pub struct Star {
-    color: Color,
     temperature: f32,
 }
 
@@ -409,13 +408,14 @@ impl Star {
     pub fn new(temperature: f32) -> Self {
         let temperature = temperature.max(1000.0).min(40_000.0);
 
-        let temp_index = ((temperature - 1000.0) / 100.0) as usize;
+        Self { temperature }
+    }
+
+    pub fn color(&self) -> Color {
+        let temp_index = ((self.temperature - 1000.0) / 100.0) as usize;
 
         let rgb = COLOR_TABLE[temp_index];
 
-        Self {
-            color: Color::rgb(rgb[0], rgb[1], rgb[2]),
-            temperature,
-        }
+        Color::rgb(rgb[0], rgb[1], rgb[2])
     }
 }
