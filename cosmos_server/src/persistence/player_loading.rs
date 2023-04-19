@@ -7,7 +7,8 @@ use std::{
 };
 
 use bevy::{
-    prelude::{App, Commands, Entity, IntoSystemConfig, Query, ResMut, With, Without},
+    prelude::{App, Commands, Component, Entity, IntoSystemConfig, Query, ResMut, With, Without},
+    reflect::{FromReflect, Reflect},
     time::common_conditions::on_timer,
     utils::HashSet,
 };
@@ -23,17 +24,34 @@ use super::{
     EntityId, SaveFileIdentifier, SectorsCache,
 };
 
-const UNLOAD_DISTANCE: f32 = SECTOR_DIMENSIONS * 10.0;
 const LOAD_DISTANCE: f32 = SECTOR_DIMENSIONS * 8.0;
+
+#[derive(Component, Debug, Reflect, FromReflect)]
+/// Use this to have a custom distance for something to be unloaded.
+///
+/// This distance is in # of sectors. The default is 10.
+pub struct CustomUnloadDistance(u32);
+
+impl Default for CustomUnloadDistance {
+    fn default() -> Self {
+        Self(10)
+    }
+}
 
 fn unload_far(
     query: Query<&Location, With<Player>>,
-    others: Query<(&Location, Entity), (Without<Player>, Without<NeedsUnloaded>)>,
+    others: Query<
+        (&Location, Entity, Option<&CustomUnloadDistance>),
+        (Without<Player>, Without<NeedsUnloaded>),
+    >,
     mut commands: Commands,
 ) {
-    for (loc, ent) in others.iter() {
+    let default_dist = CustomUnloadDistance::default();
+
+    for (loc, ent, ul_distance) in others.iter() {
+        let ul_distance = ul_distance.unwrap_or(&default_dist).0 as f32 * SECTOR_DIMENSIONS;
         if let Some(min_dist) = query.iter().map(|l| l.distance_sqrd(loc)).reduce(f32::min) {
-            if min_dist < UNLOAD_DISTANCE * UNLOAD_DISTANCE {
+            if min_dist < ul_distance * ul_distance {
                 continue;
             }
         }
