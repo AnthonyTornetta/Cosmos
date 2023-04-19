@@ -473,12 +473,9 @@ fn client_sync_players(
                 println!("A laser cannon was fired")
             }
             ServerReliableMessages::Star { entity, star } => {
-                println!("GOT STAR!!");
                 if let Some(client_entity) = network_mapping.client_from_server(&entity) {
-                    println!("Already exists! Inserting star.");
                     commands.entity(client_entity).insert(star);
                 } else {
-                    println!("Creating that star now!");
                     network_mapping.add_mapping(commands.spawn(star).id(), entity);
                 }
             }
