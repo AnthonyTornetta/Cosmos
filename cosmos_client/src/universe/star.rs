@@ -23,8 +23,6 @@ fn create_added_star(
             material: materials.add(StandardMaterial {
                 base_color: star.color(),
                 emissive: star.color(),
-                unlit: true,
-                reflectance: 0.0,
                 ..Default::default()
             }),
             ..Default::default()

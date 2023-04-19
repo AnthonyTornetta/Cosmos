@@ -81,7 +81,7 @@ pub fn get_star_in_system(sx: i64, sy: i64, sz: i64, seed: &ServerSeed) -> Optio
     let num = rng.gen_range(0..10_000) as f32 / 10_000.0;
 
     if num < prob {
-        Some(Star::new(5.772))
+        Some(Star::new(5_772.0))
     } else {
         None
     }
