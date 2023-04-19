@@ -7,13 +7,13 @@ use std::{
 };
 
 use bevy::{
-    prelude::{App, Commands, Component, Entity, IntoSystemConfig, Query, ResMut, With, Without},
-    reflect::{FromReflect, Reflect},
+    prelude::{App, Commands, Entity, IntoSystemConfig, Query, ResMut, With, Without},
     time::common_conditions::on_timer,
     utils::HashSet,
 };
 use cosmos_core::{
     entities::player::Player,
+    persistence::{CustomUnloadDistance, LOAD_DISTANCE},
     physics::location::{Location, SECTOR_DIMENSIONS},
 };
 use walkdir::WalkDir;
@@ -24,34 +24,19 @@ use super::{
     EntityId, SaveFileIdentifier, SectorsCache,
 };
 
-const LOAD_DISTANCE: f32 = SECTOR_DIMENSIONS * 8.0;
-
-#[derive(Component, Debug, Reflect, FromReflect)]
-/// Use this to have a custom distance for something to be unloaded.
-///
-/// This distance is in # of sectors. The default is 10.
-pub struct CustomUnloadDistance(u32);
-
-impl Default for CustomUnloadDistance {
-    fn default() -> Self {
-        Self(10)
-    }
-}
-
 fn unload_far(
     query: Query<&Location, With<Player>>,
     others: Query<
-        (&Location, Entity, Option<&CustomUnloadDistance>),
+        (&Location, Entity, &CustomUnloadDistance),
         (Without<Player>, Without<NeedsUnloaded>),
     >,
     mut commands: Commands,
 ) {
-    let default_dist = CustomUnloadDistance::default();
-
     for (loc, ent, ul_distance) in others.iter() {
-        let ul_distance = ul_distance.unwrap_or(&default_dist).0 as f32 * SECTOR_DIMENSIONS;
+        let ul_distance = ul_distance.block_distance_squared();
+
         if let Some(min_dist) = query.iter().map(|l| l.distance_sqrd(loc)).reduce(f32::min) {
-            if min_dist < ul_distance * ul_distance {
+            if min_dist < ul_distance {
                 continue;
             }
         }

@@ -44,4 +44,26 @@ impl NetworkMapping {
             self.client_to_server.remove(&client_ent);
         }
     }
+
+    /// Removes a mapping given the client's entity.
+    pub fn remove_mapping_from_client_entity(&mut self, client_entity: &Entity) {
+        if let Some(server_ent) = self.client_to_server.remove(client_entity) {
+            self.server_to_client.remove(&server_ent);
+        }
+    }
+
+    pub fn only_keep_these(&mut self, entities: Vec<Entity>) {
+        let mut new_client_map = HashMap::new();
+        let mut new_server_map = HashMap::new();
+
+        for ent in entities {
+            if let Some(server_ent) = self.server_from_client(&ent) {
+                new_client_map.insert(ent, server_ent);
+                new_server_map.insert(server_ent, ent);
+            }
+        }
+
+        self.client_to_server = new_client_map;
+        self.server_to_client = new_server_map;
+    }
 }

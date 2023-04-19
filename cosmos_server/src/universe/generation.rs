@@ -6,6 +6,7 @@ use bevy::prelude::{
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
     entities::player::Player,
+    persistence::CustomUnloadDistance,
     physics::location::{Location, SYSTEM_SECTORS},
     universe::star::Star,
 };
@@ -110,12 +111,12 @@ fn load_stars_near_players(
                 },
                 Location::new(
                     Vec3::ZERO,
-                    // TODO: 0.0 should be 0.5
-                    ((sx as f32 + 0.1) * SYSTEM_SECTORS as f32) as i64,
-                    ((sy as f32 + 0.1) * SYSTEM_SECTORS as f32) as i64,
-                    ((sz as f32 + 0.1) * SYSTEM_SECTORS as f32) as i64,
+                    ((sx as f32 + 0.5) * SYSTEM_SECTORS as f32) as i64,
+                    ((sy as f32 + 0.5) * SYSTEM_SECTORS as f32) as i64,
+                    ((sz as f32 + 0.5) * SYSTEM_SECTORS as f32) as i64,
                 ),
                 Velocity::zero(),
+                CustomUnloadDistance::new(SYSTEM_SECTORS),
             ));
         }
     }

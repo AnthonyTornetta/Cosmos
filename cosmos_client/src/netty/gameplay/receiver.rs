@@ -18,8 +18,9 @@ use cosmos_core::{
         server_reliable_messages::ServerReliableMessages,
         server_unreliable_messages::ServerUnreliableMessages, NettyChannel,
     },
+    persistence::CustomUnloadDistance,
     physics::{
-        location::{bubble_down_locations, Location},
+        location::{bubble_down_locations, Location, SYSTEM_SECTORS},
         player_world::PlayerWorld,
     },
     registry::Registry,
@@ -474,9 +475,16 @@ fn client_sync_players(
             }
             ServerReliableMessages::Star { entity, star } => {
                 if let Some(client_entity) = network_mapping.client_from_server(&entity) {
-                    commands.entity(client_entity).insert(star);
+                    commands
+                        .entity(client_entity)
+                        .insert((star, CustomUnloadDistance::new(SYSTEM_SECTORS)));
                 } else {
-                    network_mapping.add_mapping(commands.spawn(star).id(), entity);
+                    network_mapping.add_mapping(
+                        commands
+                            .spawn((star, CustomUnloadDistance::new(SYSTEM_SECTORS)))
+                            .id(),
+                        entity,
+                    );
                 }
             }
         }

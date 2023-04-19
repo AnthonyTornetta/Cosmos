@@ -31,7 +31,7 @@ use serde::{Deserialize, Serialize};
 pub const SECTOR_DIMENSIONS: f32 = 10_000.0;
 
 /// This represents how many sectors make up one system
-pub const SYSTEM_SECTORS: usize = 25;
+pub const SYSTEM_SECTORS: u32 = 25;
 
 /// This is the size in blocks of one system
 pub const SYSTEM_DIMENSIONS: f32 = SYSTEM_SECTORS as f32 * SECTOR_DIMENSIONS;
