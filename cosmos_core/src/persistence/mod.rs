@@ -11,42 +11,55 @@ pub const LOAD_DISTANCE: f32 = SECTOR_DIMENSIONS * 8.0;
 /// Use this to have a custom distance for something to be unloaded.
 ///
 /// This distance is in # of sectors. The default is 10.
-pub struct CustomUnloadDistance(u32);
+pub struct UnloadDistance {
+    load_distance: u32,
+    unload_distance: u32,
+}
 
-impl Default for CustomUnloadDistance {
+impl Default for UnloadDistance {
     fn default() -> Self {
-        Self(10)
+        Self::new(8, 10)
     }
 }
 
-impl CustomUnloadDistance {
-    pub fn new(distance: u32) -> Self {
-        Self(distance)
+impl UnloadDistance {
+    pub fn new(load_distance: u32, unload_distance: u32) -> Self {
+        Self {
+            load_distance,
+            unload_distance,
+        }
     }
 
     #[inline]
-    pub fn distance(&self) -> u32 {
-        self.0
+    pub fn unload_distance(&self) -> u32 {
+        self.unload_distance
     }
 
     #[inline]
-    pub fn block_distance_squared(&self) -> f32 {
-        (self.distance() * self.distance()) as f32 * SECTOR_DIMENSIONS * SECTOR_DIMENSIONS
+    pub fn load_distance(&self) -> u32 {
+        self.load_distance
+    }
+
+    #[inline]
+    pub fn load_block_distance(&self) -> f32 {
+        self.load_distance as f32 * SECTOR_DIMENSIONS
+    }
+
+    #[inline]
+    pub fn unload_block_distance_squared(&self) -> f32 {
+        (self.unload_distance() * self.unload_distance()) as f32
+            * SECTOR_DIMENSIONS
+            * SECTOR_DIMENSIONS
     }
 }
 
-fn add_unload_distance(
-    query: Query<Entity, Without<CustomUnloadDistance>>,
-    mut commands: Commands,
-) {
+fn add_unload_distance(query: Query<Entity, Without<UnloadDistance>>, mut commands: Commands) {
     for entity in query.iter() {
-        commands
-            .entity(entity)
-            .insert(CustomUnloadDistance::default());
+        commands.entity(entity).insert(UnloadDistance::default());
     }
 }
 
 pub(super) fn register(app: &mut App) {
     app.add_system(add_unload_distance.in_base_set(CoreSet::First))
-        .register_type::<CustomUnloadDistance>();
+        .register_type::<UnloadDistance>();
 }

@@ -13,7 +13,6 @@ fn remove_despawned_entities(
     mapping: Option<ResMut<NetworkMapping>>,
 ) {
     if let Some(mut mapping) = mapping {
-        // only_keep_these
         mapping.only_keep_these(entities.iter().collect());
     }
 }

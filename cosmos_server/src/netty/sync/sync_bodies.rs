@@ -9,7 +9,7 @@ use cosmos_core::{
         cosmos_encoder, netty_rigidbody::NettyRigidBody,
         server_unreliable_messages::ServerUnreliableMessages, NettyChannel, NoSendEntity,
     },
-    persistence::CustomUnloadDistance,
+    persistence::UnloadDistance,
     physics::location::{Location, SECTOR_DIMENSIONS},
 };
 
@@ -18,7 +18,7 @@ use crate::netty::network_helpers::NetworkTick;
 /// Sends bodies to players only if it's within their render distance.
 fn send_bodies(
     players: &Query<(&Player, &RenderDistance, &Location)>,
-    bodies: &[(Entity, NettyRigidBody, Option<CustomUnloadDistance>)],
+    bodies: &[(Entity, NettyRigidBody, UnloadDistance)],
     server: &mut RenetServer,
     tick: &NetworkTick,
 ) {
@@ -27,14 +27,14 @@ fn send_bodies(
             .iter()
             .filter(|(_, rb, unload_distance)| {
                 rb.location.distance_sqrd(loc)
-                    < if let Some(unload_distance) = unload_distance {
-                        unload_distance.block_distance_squared()
-                    } else {
-                        rd.sector_range as f32
-                            * SECTOR_DIMENSIONS
-                            * rd.sector_range as f32
-                            * SECTOR_DIMENSIONS
-                    }
+                    // < if let Some(unload_distance) = unload_distance {
+                    < unload_distance.load_block_distance() * unload_distance.load_block_distance()
+                // } else {
+                //     rd.sector_range as f32
+                //         * SECTOR_DIMENSIONS
+                //         * rd.sector_range as f32
+                //         * SECTOR_DIMENSIONS
+                // }
             })
             .map(|(ent, net_rb, _)| (*ent, *net_rb))
             .collect();
@@ -57,13 +57,7 @@ fn server_sync_bodies(
     mut server: ResMut<RenetServer>,
     mut tick: ResMut<NetworkTick>,
     entities: Query<
-        (
-            Entity,
-            &Transform,
-            &Location,
-            &Velocity,
-            Option<&CustomUnloadDistance>,
-        ),
+        (Entity, &Transform, &Location, &Velocity, &UnloadDistance),
         Without<NoSendEntity>,
     >,
     players: Query<(&Player, &RenderDistance, &Location)>,
@@ -76,7 +70,7 @@ fn server_sync_bodies(
         bodies.push((
             entity,
             NettyRigidBody::new(velocity, transform.rotation, *location),
-            unload_distance.copied(),
+            *unload_distance,
         ));
 
         // The packet size can only be so big, so limit syncing to 20 per packet
