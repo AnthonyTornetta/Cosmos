@@ -11,18 +11,18 @@ pub const LOAD_DISTANCE: f32 = SECTOR_DIMENSIONS * 8.0;
 /// Use this to have a custom distance for something to be unloaded.
 ///
 /// This distance is in # of sectors. The default is 10.
-pub struct UnloadDistance {
+pub struct LoadingDistance {
     load_distance: u32,
     unload_distance: u32,
 }
 
-impl Default for UnloadDistance {
+impl Default for LoadingDistance {
     fn default() -> Self {
         Self::new(8, 10)
     }
 }
 
-impl UnloadDistance {
+impl LoadingDistance {
     pub fn new(load_distance: u32, unload_distance: u32) -> Self {
         Self {
             load_distance,
@@ -51,13 +51,13 @@ impl UnloadDistance {
     }
 }
 
-fn add_unload_distance(query: Query<Entity, Without<UnloadDistance>>, mut commands: Commands) {
+fn add_unload_distance(query: Query<Entity, Without<LoadingDistance>>, mut commands: Commands) {
     for entity in query.iter() {
-        commands.entity(entity).insert(UnloadDistance::default());
+        commands.entity(entity).insert(LoadingDistance::default());
     }
 }
 
 pub(super) fn register(app: &mut App) {
     app.add_system(add_unload_distance.in_base_set(CoreSet::First))
-        .register_type::<UnloadDistance>();
+        .register_type::<LoadingDistance>();
 }

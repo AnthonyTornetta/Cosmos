@@ -52,14 +52,15 @@ impl NetworkMapping {
         }
     }
 
-    pub fn only_keep_these(&mut self, entities: Vec<Entity>) {
+    /// Clears out any entity that isn't in this list
+    pub fn only_keep_these_entities(&mut self, entities: &[Entity]) {
         let mut new_client_map = HashMap::new();
         let mut new_server_map = HashMap::new();
 
         for ent in entities {
-            if let Some(server_ent) = self.server_from_client(&ent) {
-                new_client_map.insert(ent, server_ent);
-                new_server_map.insert(server_ent, ent);
+            if let Some(server_ent) = self.server_from_client(ent) {
+                new_client_map.insert(*ent, server_ent);
+                new_server_map.insert(server_ent, *ent);
             }
         }
 

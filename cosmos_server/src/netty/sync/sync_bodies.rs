@@ -9,7 +9,7 @@ use cosmos_core::{
         cosmos_encoder, netty_rigidbody::NettyRigidBody,
         server_unreliable_messages::ServerUnreliableMessages, NettyChannel, NoSendEntity,
     },
-    persistence::UnloadDistance,
+    persistence::LoadingDistance,
     physics::location::Location,
 };
 
@@ -18,11 +18,11 @@ use crate::netty::network_helpers::NetworkTick;
 /// Sends bodies to players only if it's within their render distance.
 fn send_bodies(
     players: &Query<(&Player, &RenderDistance, &Location)>,
-    bodies: &[(Entity, NettyRigidBody, UnloadDistance)],
+    bodies: &[(Entity, NettyRigidBody, LoadingDistance)],
     server: &mut RenetServer,
     tick: &NetworkTick,
 ) {
-    for (player, rd, loc) in players.iter() {
+    for (player, _, loc) in players.iter() {
         let players_bodies: Vec<(Entity, NettyRigidBody)> = bodies
             .iter()
             .filter(|(_, rb, unload_distance)| {
@@ -57,7 +57,7 @@ fn server_sync_bodies(
     mut server: ResMut<RenetServer>,
     mut tick: ResMut<NetworkTick>,
     entities: Query<
-        (Entity, &Transform, &Location, &Velocity, &UnloadDistance),
+        (Entity, &Transform, &Location, &Velocity, &LoadingDistance),
         Without<NoSendEntity>,
     >,
     players: Query<(&Player, &RenderDistance, &Location)>,

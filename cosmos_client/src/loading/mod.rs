@@ -5,13 +5,13 @@ use bevy::prelude::{
     Without,
 };
 use cosmos_core::{
-    entities::player::Player, persistence::UnloadDistance, physics::location::Location,
+    entities::player::Player, persistence::LoadingDistance, physics::location::Location,
 };
 
 use crate::netty::flags::LocalPlayer;
 
 fn unload_far_entities(
-    query: Query<(Entity, &Location, &UnloadDistance), (Without<Player>, Without<Parent>)>,
+    query: Query<(Entity, &Location, &LoadingDistance), (Without<Player>, Without<Parent>)>,
     my_loc: Query<&Location, With<LocalPlayer>>,
     mut commands: Commands,
 ) {

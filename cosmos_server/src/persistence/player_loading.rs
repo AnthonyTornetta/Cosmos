@@ -13,7 +13,7 @@ use bevy::{
 };
 use cosmos_core::{
     entities::player::Player,
-    persistence::{UnloadDistance, LOAD_DISTANCE},
+    persistence::{LoadingDistance, LOAD_DISTANCE},
     physics::location::{Location, SECTOR_DIMENSIONS},
 };
 use walkdir::WalkDir;
@@ -26,7 +26,7 @@ use super::{
 
 fn unload_far(
     query: Query<&Location, With<Player>>,
-    others: Query<(&Location, Entity, &UnloadDistance), (Without<Player>, Without<NeedsUnloaded>)>,
+    others: Query<(&Location, Entity, &LoadingDistance), (Without<Player>, Without<NeedsUnloaded>)>,
     mut commands: Commands,
 ) {
     for (loc, ent, ul_distance) in others.iter() {

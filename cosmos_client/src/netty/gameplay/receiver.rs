@@ -18,7 +18,7 @@ use cosmos_core::{
         server_reliable_messages::ServerReliableMessages,
         server_unreliable_messages::ServerUnreliableMessages, NettyChannel,
     },
-    persistence::UnloadDistance,
+    persistence::LoadingDistance,
     physics::{
         location::{bubble_down_locations, Location, SYSTEM_SECTORS},
         player_world::PlayerWorld,
@@ -477,14 +477,14 @@ fn client_sync_players(
                 if let Some(client_entity) = network_mapping.client_from_server(&entity) {
                     commands.entity(client_entity).insert((
                         star,
-                        UnloadDistance::new(SYSTEM_SECTORS / 2, SYSTEM_SECTORS / 2),
+                        LoadingDistance::new(SYSTEM_SECTORS / 2, SYSTEM_SECTORS / 2),
                     ));
                 } else {
                     network_mapping.add_mapping(
                         commands
                             .spawn((
                                 star,
-                                UnloadDistance::new(SYSTEM_SECTORS / 2, SYSTEM_SECTORS / 2),
+                                LoadingDistance::new(SYSTEM_SECTORS / 2, SYSTEM_SECTORS / 2),
                             ))
                             .id(),
                         entity,

@@ -1,6 +1,4 @@
-use bevy::prelude::{
-    App, Entity, IntoSystemConfig, Query, RemovedComponents, ResMut, Transform, Without,
-};
+use bevy::prelude::{App, Entity, Query, ResMut, Without};
 use cosmos_core::netty::NoSendEntity;
 
 use super::mapping::NetworkMapping;
@@ -13,7 +11,7 @@ fn remove_despawned_entities(
     mapping: Option<ResMut<NetworkMapping>>,
 ) {
     if let Some(mut mapping) = mapping {
-        mapping.only_keep_these(entities.iter().collect());
+        mapping.only_keep_these_entities(&entities.iter().collect::<Vec<Entity>>());
     }
 }
 
