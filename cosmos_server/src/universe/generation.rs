@@ -122,7 +122,7 @@ fn load_stars_near_players(
                     ((sz as f32 + 0.5) * SYSTEM_SECTORS as f32) as i64,
                 ),
                 Velocity::zero(),
-                LoadingDistance::new(SYSTEM_SECTORS / 2, SYSTEM_SECTORS / 2),
+                LoadingDistance::new(SYSTEM_SECTORS / 2 + 1, SYSTEM_SECTORS / 2 + 1),
             ));
         }
     }

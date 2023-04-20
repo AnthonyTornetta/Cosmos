@@ -18,11 +18,13 @@ fn point_light_from_sun(
     sun: Query<&Transform, With<Star>>,
     mut light: Query<(&mut Transform, &mut DirectionalLight), Without<Star>>,
 ) {
-    if let Ok(sun) = sun.get_single() {
-        if let Ok((mut transform, mut light)) = light.get_single_mut() {
+    if let Ok((mut transform, mut light)) = light.get_single_mut() {
+        if let Ok(sun) = sun.get_single() {
             transform.look_at(-sun.translation, Vec3::Y);
             let sun_dist_sqrd = sun.translation.dot(sun.translation);
             light.illuminance = LIGHT_INTENSITY_CONSTANT / sun_dist_sqrd;
+        } else {
+            light.illuminance = 0.0;
         }
     }
 }

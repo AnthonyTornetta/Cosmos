@@ -37,7 +37,7 @@ fn unload_far(
             .map(|l| l.relative_coords_to(loc).max_element())
             .reduce(f32::min)
         {
-            if min_dist < ul_distance {
+            if min_dist <= ul_distance {
                 continue;
             }
         }

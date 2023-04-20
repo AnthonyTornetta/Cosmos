@@ -74,6 +74,9 @@ pub fn done_saving(
             .remove::<SerializedData>();
 
         if !sd.should_save() {
+            if needs_unloaded.is_some() {
+                commands.entity(entity).despawn_recursive();
+            }
             continue;
         }
 
