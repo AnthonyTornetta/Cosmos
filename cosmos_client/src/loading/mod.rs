@@ -17,9 +17,9 @@ fn unload_far_entities(
 ) {
     if let Ok(my_loc) = my_loc.get_single() {
         for (ent, loc, unload_distance) in query.iter() {
-            let ul_distance = unload_distance.unload_block_distance_squared();
+            let ul_distance = unload_distance.unload_block_distance();
 
-            if loc.distance_sqrd(my_loc) > ul_distance {
+            if loc.relative_coords_to(my_loc).max_element() > ul_distance {
                 println!("Unloading entity at {loc}!");
                 commands.entity(ent).despawn_recursive();
             }

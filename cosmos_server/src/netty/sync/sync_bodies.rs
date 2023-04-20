@@ -10,7 +10,7 @@ use cosmos_core::{
         server_unreliable_messages::ServerUnreliableMessages, NettyChannel, NoSendEntity,
     },
     persistence::UnloadDistance,
-    physics::location::{Location, SECTOR_DIMENSIONS},
+    physics::location::Location,
 };
 
 use crate::netty::network_helpers::NetworkTick;
@@ -26,9 +26,9 @@ fn send_bodies(
         let players_bodies: Vec<(Entity, NettyRigidBody)> = bodies
             .iter()
             .filter(|(_, rb, unload_distance)| {
-                rb.location.distance_sqrd(loc)
+                rb.location.relative_coords_to(loc).max_element()
                     // < if let Some(unload_distance) = unload_distance {
-                    < unload_distance.load_block_distance() * unload_distance.load_block_distance()
+                    < unload_distance.load_block_distance()
                 // } else {
                 //     rd.sector_range as f32
                 //         * SECTOR_DIMENSIONS

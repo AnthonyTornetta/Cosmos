@@ -30,9 +30,13 @@ fn unload_far(
     mut commands: Commands,
 ) {
     for (loc, ent, ul_distance) in others.iter() {
-        let ul_distance = ul_distance.unload_block_distance_squared();
+        let ul_distance = ul_distance.unload_block_distance();
 
-        if let Some(min_dist) = query.iter().map(|l| l.distance_sqrd(loc)).reduce(f32::min) {
+        if let Some(min_dist) = query
+            .iter()
+            .map(|l| l.relative_coords_to(loc).max_element())
+            .reduce(f32::min)
+        {
             if min_dist < ul_distance {
                 continue;
             }

@@ -46,10 +46,8 @@ impl UnloadDistance {
     }
 
     #[inline]
-    pub fn unload_block_distance_squared(&self) -> f32 {
-        (self.unload_distance() * self.unload_distance()) as f32
-            * SECTOR_DIMENSIONS
-            * SECTOR_DIMENSIONS
+    pub fn unload_block_distance(&self) -> f32 {
+        self.unload_distance as f32 * SECTOR_DIMENSIONS
     }
 }
 
