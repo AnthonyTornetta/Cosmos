@@ -1,3 +1,5 @@
+//! Contains server-side logic for the universe & how it's generated
+
 use bevy::prelude::App;
 
 pub mod generation;

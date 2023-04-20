@@ -1,3 +1,5 @@
+//! Responsible for the generation of the stars
+
 use std::f32::consts::{E, TAU};
 
 use bevy::prelude::{
@@ -8,7 +10,7 @@ use cosmos_core::{
     entities::player::Player,
     persistence::LoadingDistance,
     physics::location::{Location, SYSTEM_SECTORS},
-    universe::star::Star,
+    universe::star::{Star, MAX_TEMPERATURE, MIN_TEMPERATURE},
 };
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
@@ -45,8 +47,10 @@ fn distance_from_star_spiral(x: f32, y: f32) -> f32 {
 }
 
 #[derive(Debug, Resource)]
+/// This sets the seed the server uses to generate the universe
 pub struct ServerSeed(u64);
 
+/// This gets the star - if there is one - in the system.
 pub fn get_star_in_system(sx: i64, sy: i64, sz: i64, seed: &ServerSeed) -> Option<Star> {
     if sy != 0 {
         return None;
@@ -82,7 +86,9 @@ pub fn get_star_in_system(sx: i64, sy: i64, sz: i64, seed: &ServerSeed) -> Optio
     let num = rng.gen_range(0..10_000) as f32 / 10_000.0;
 
     if num < prob {
-        Some(Star::new(5_772.0))
+        let temperature = rng.gen_range((MIN_TEMPERATURE as u32)..(MAX_TEMPERATURE as u32)) as f32;
+
+        Some(Star::new(temperature))
     } else {
         None
     }

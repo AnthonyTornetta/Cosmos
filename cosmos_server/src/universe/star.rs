@@ -1,3 +1,5 @@
+//! Contains server-side logic for stars
+
 use bevy::prelude::{in_state, App, EventReader, IntoSystemConfig, Query, ResMut, With};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{

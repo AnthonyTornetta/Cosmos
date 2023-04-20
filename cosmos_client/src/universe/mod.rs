@@ -1,3 +1,5 @@
+//! Contains client-side logic for the universe
+
 use bevy::prelude::App;
 
 pub mod star;

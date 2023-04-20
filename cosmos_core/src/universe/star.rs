@@ -1,5 +1,7 @@
+//! A light-emitting object in space
+
 use bevy::{
-    prelude::{Color, Component},
+    prelude::{App, Color, Component},
     reflect::{FromReflect, Reflect},
 };
 use serde::{Deserialize, Serialize};
@@ -400,17 +402,32 @@ const COLOR_TABLE: [[f32; 3]; 391] = [
 ];
 
 #[derive(Debug, Component, Reflect, FromReflect, Serialize, Deserialize, Clone, Copy)]
+/// Represents a light-emitting object in space.
+///
+/// This should be at the center of systems & are not saved/loaded to the disk
 pub struct Star {
     temperature: f32,
 }
 
+/// The minimum temperature a star can be
+pub const MIN_TEMPERATURE: f32 = 1_000.0;
+/// The maximum temperature a star can be
+pub const MAX_TEMPERATURE: f32 = 40_000.0;
+
 impl Star {
+    /// Creates a new star with the given temperature.
+    ///
+    /// * `temperature` In Kelvin. Our sun is 5,772.0K. This is clamped to be within `MIN_TEMPERATURE` and `MAX_TEMPERATURE`.
     pub fn new(temperature: f32) -> Self {
-        let temperature = temperature.max(1000.0).min(40_000.0);
+        let temperature = temperature.max(MIN_TEMPERATURE).min(MAX_TEMPERATURE);
 
         Self { temperature }
     }
 
+    /// Gets the color this star should be.
+    ///
+    /// This is based on the star's temperature. A chart can be found here:
+    /// http://www.vendian.org/mncharity/dir3/blackbody/UnstableURLs/bbr_color.html
     pub fn color(&self) -> Color {
         let temp_index = ((self.temperature - 1000.0) / 100.0) as usize;
 
@@ -418,4 +435,8 @@ impl Star {
 
         Color::rgb(rgb[0], rgb[1], rgb[2])
     }
+}
+
+pub(super) fn register(app: &mut App) {
+    app.register_type::<Star>();
 }

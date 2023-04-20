@@ -1,3 +1,5 @@
+//! Contains client-side logic for stars
+
 use bevy::{
     pbr::NotShadowCaster,
     prelude::{

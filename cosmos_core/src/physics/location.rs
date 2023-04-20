@@ -28,7 +28,7 @@ use serde::{Deserialize, Serialize};
 /// This represents the diameter of a sector. So at a local
 /// of 0, 0, 0 you can travel `SECTOR_DIMENSIONS / 2.0` blocks in any direction and
 /// remain within it.
-pub const SECTOR_DIMENSIONS: f32 = 10_000.0;
+pub const SECTOR_DIMENSIONS: f32 = 20_000.0;
 
 /// This represents how many sectors make up one system
 pub const SYSTEM_SECTORS: u32 = 100;
