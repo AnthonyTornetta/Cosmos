@@ -23,3 +23,5 @@ serde_json = { workspace = true }
 image = { workspace = true }
 
 bevy-inspector-egui = { workspace = true }
+
+rand_chacha = { workspace = true }

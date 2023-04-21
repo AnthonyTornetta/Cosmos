@@ -9,7 +9,8 @@ use cosmos_core::{
         cosmos_encoder, netty_rigidbody::NettyRigidBody,
         server_unreliable_messages::ServerUnreliableMessages, NettyChannel, NoSendEntity,
     },
-    physics::location::{Location, SECTOR_DIMENSIONS},
+    persistence::LoadingDistance,
+    physics::location::Location,
 };
 
 use crate::netty::network_helpers::NetworkTick;
@@ -17,18 +18,25 @@ use crate::netty::network_helpers::NetworkTick;
 /// Sends bodies to players only if it's within their render distance.
 fn send_bodies(
     players: &Query<(&Player, &RenderDistance, &Location)>,
-    bodies: &[(Entity, NettyRigidBody)],
+    bodies: &[(Entity, NettyRigidBody, LoadingDistance)],
     server: &mut RenetServer,
     tick: &NetworkTick,
 ) {
-    for (player, rd, loc) in players.iter() {
-        let rd =
-            rd.sector_range as f32 * SECTOR_DIMENSIONS * rd.sector_range as f32 * SECTOR_DIMENSIONS;
-
+    for (player, _, loc) in players.iter() {
         let players_bodies: Vec<(Entity, NettyRigidBody)> = bodies
             .iter()
-            .filter(|(_, rb)| rb.location.distance_sqrd(loc) < rd)
-            .copied()
+            .filter(|(_, rb, unload_distance)| {
+                rb.location.relative_coords_to(loc).max_element()
+                    // < if let Some(unload_distance) = unload_distance {
+                    < unload_distance.load_block_distance()
+                // } else {
+                //     rd.sector_range as f32
+                //         * SECTOR_DIMENSIONS
+                //         * rd.sector_range as f32
+                //         * SECTOR_DIMENSIONS
+                // }
+            })
+            .map(|(ent, net_rb, _)| (*ent, *net_rb))
             .collect();
 
         if !players_bodies.is_empty() {
@@ -48,17 +56,21 @@ fn send_bodies(
 fn server_sync_bodies(
     mut server: ResMut<RenetServer>,
     mut tick: ResMut<NetworkTick>,
-    entities: Query<(Entity, &Transform, &Location, &Velocity), Without<NoSendEntity>>,
+    entities: Query<
+        (Entity, &Transform, &Location, &Velocity, &LoadingDistance),
+        Without<NoSendEntity>,
+    >,
     players: Query<(&Player, &RenderDistance, &Location)>,
 ) {
     tick.0 += 1;
 
     let mut bodies = Vec::new();
 
-    for (entity, transform, location, velocity) in entities.iter() {
+    for (entity, transform, location, velocity, unload_distance) in entities.iter() {
         bodies.push((
             entity,
             NettyRigidBody::new(velocity, transform.rotation, *location),
+            *unload_distance,
         ));
 
         // The packet size can only be so big, so limit syncing to 20 per packet

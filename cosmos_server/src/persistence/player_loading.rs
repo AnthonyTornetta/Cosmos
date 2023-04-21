@@ -13,6 +13,7 @@ use bevy::{
 };
 use cosmos_core::{
     entities::player::Player,
+    persistence::{LoadingDistance, LOAD_DISTANCE},
     physics::location::{Location, SECTOR_DIMENSIONS},
 };
 use walkdir::WalkDir;
@@ -23,17 +24,20 @@ use super::{
     EntityId, SaveFileIdentifier, SectorsCache,
 };
 
-const UNLOAD_DISTANCE: f32 = SECTOR_DIMENSIONS * 10.0;
-const LOAD_DISTANCE: f32 = SECTOR_DIMENSIONS * 8.0;
-
 fn unload_far(
     query: Query<&Location, With<Player>>,
-    others: Query<(&Location, Entity), (Without<Player>, Without<NeedsUnloaded>)>,
+    others: Query<(&Location, Entity, &LoadingDistance), (Without<Player>, Without<NeedsUnloaded>)>,
     mut commands: Commands,
 ) {
-    for (loc, ent) in others.iter() {
-        if let Some(min_dist) = query.iter().map(|l| l.distance_sqrd(loc)).reduce(f32::min) {
-            if min_dist < UNLOAD_DISTANCE * UNLOAD_DISTANCE {
+    for (loc, ent, ul_distance) in others.iter() {
+        let ul_distance = ul_distance.unload_block_distance();
+
+        if let Some(min_dist) = query
+            .iter()
+            .map(|l| l.relative_coords_to(loc).max_element())
+            .reduce(f32::min)
+        {
+            if min_dist <= ul_distance {
                 continue;
             }
         }

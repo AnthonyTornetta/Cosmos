@@ -20,6 +20,7 @@ pub mod rendering;
 pub mod state;
 pub mod structure;
 pub mod ui;
+pub mod universe;
 pub mod window;
 
 use std::env;
@@ -246,6 +247,7 @@ fn create_sun(mut commands: Commands) {
         },
         ..default()
     });
+
     // commands
     //     .spawn(PointLightBundle {
     //         transform: Transform::from_xyz(0.0, 100.0, 0.0),
@@ -371,6 +373,7 @@ fn main() {
     entities::register(&mut app);
     inventory::register(&mut app);
     rendering::register(&mut app);
+    universe::register(&mut app);
 
     app.run();
 }

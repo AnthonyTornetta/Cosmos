@@ -37,7 +37,7 @@ To view the documentation, navigate to the `docs/` directory. To have it update 
 
 See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the list of current features/bugs in development.
 
-## Release 0.0.4a
+## Release 0.0.4a (In Progress)
 - [ ] Galaxy Generation
   - [ ] Stars procedurally generated in spiral-like pattern based on seed 
     - [ ] Create star

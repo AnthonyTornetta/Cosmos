@@ -21,6 +21,8 @@ pub struct ManyToOneRegistry<K: Identifiable + Sync + Send, V: Identifiable + Sy
     /// Each value of pointers is a key of contents
     pointers: HashMap<u16, u16>,
 
+    next_id: u16,
+
     _phantom: PhantomData<K>,
 }
 
@@ -31,6 +33,7 @@ impl<K: Identifiable + Sync + Send, V: Identifiable + Sync + Send> ManyToOneRegi
     /// added as a bevy resource.
     pub fn new() -> Self {
         Self {
+            next_id: 1,
             values: HashMap::default(),
             pointers: HashMap::default(),
             name_to_value_pointer: HashMap::default(),
@@ -41,8 +44,11 @@ impl<K: Identifiable + Sync + Send, V: Identifiable + Sync + Send> ManyToOneRegi
     /// Inserts a value into this relationship but does not link it to anything.
     ///
     /// Use [`ManyToOne::add_link`] to then link keys to this value.
-    pub fn insert_value(&mut self, value: V) {
-        let id = value.id();
+    pub fn insert_value(&mut self, mut value: V) {
+        let id = self.next_id;
+        value.set_numeric_id(id);
+        self.next_id += 1;
+
         self.name_to_value_pointer
             .insert(value.unlocalized_name().into(), id);
         self.values.insert(id, value);

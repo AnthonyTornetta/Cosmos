@@ -20,14 +20,12 @@ fn populate_structures(
     network_mapping: Res<NetworkMapping>,
 ) {
     for entity in query.iter() {
-        if let Some(server_ent) = network_mapping.server_from_client(&entity) {
+        if let Some(server_entity) = network_mapping.server_from_client(&entity) {
             commands.entity(entity).remove::<NeedsPopulated>();
 
             client.send_message(
                 NettyChannel::Reliable.id(),
-                cosmos_encoder::serialize(&ClientReliableMessages::SendChunk {
-                    server_entity: *server_ent,
-                }),
+                cosmos_encoder::serialize(&ClientReliableMessages::SendChunk { server_entity }),
             );
         }
     }

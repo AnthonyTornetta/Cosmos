@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     entities::player::render_distance::RenderDistance, structure::loading::ChunksNeedLoaded,
+    universe::star::Star,
 };
 
 use super::netty_rigidbody::NettyRigidBody;
@@ -29,6 +30,13 @@ pub enum ServerReliableMessages {
         inventory_serialized: Vec<u8>,
         /// The player's render distance
         render_distance: Option<RenderDistance>,
+    },
+    /// This contains the information for a star entity
+    Star {
+        /// The star's entity
+        entity: Entity,
+        /// The star
+        star: Star,
     },
     /// A player has been removed, and the client should remove them.
     PlayerRemove {

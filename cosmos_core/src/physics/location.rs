@@ -28,7 +28,13 @@ use serde::{Deserialize, Serialize};
 /// This represents the diameter of a sector. So at a local
 /// of 0, 0, 0 you can travel `SECTOR_DIMENSIONS / 2.0` blocks in any direction and
 /// remain within it.
-pub const SECTOR_DIMENSIONS: f32 = 10_000.0;
+pub const SECTOR_DIMENSIONS: f32 = 20_000.0;
+
+/// This represents how many sectors make up one system
+pub const SYSTEM_SECTORS: u32 = 100;
+
+/// This is the size in blocks of one system
+pub const SYSTEM_DIMENSIONS: f32 = SYSTEM_SECTORS as f32 * SECTOR_DIMENSIONS;
 
 #[derive(
     Default, Component, Debug, PartialEq, Serialize, Deserialize, Reflect, FromReflect, Clone, Copy,
@@ -121,6 +127,15 @@ impl Location {
             sector_z,
             last_transform_loc: Some(local),
         }
+    }
+
+    /// Gets the system coordinates this location is in
+    pub fn get_system_coordinates(&self) -> (i64, i64, i64) {
+        (
+            self.sector_x / SYSTEM_SECTORS as i64,
+            self.sector_y / SYSTEM_SECTORS as i64,
+            self.sector_z / SYSTEM_SECTORS as i64,
+        )
     }
 
     /// Ensures `self.local` is within [`-SECTOR_DIMENSIONS/2.0`, `SECTOR_DIMENSIONS/2.0`]
