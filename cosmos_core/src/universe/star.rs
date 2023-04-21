@@ -7,6 +7,8 @@ use bevy::{
 use serde::{Deserialize, Serialize};
 
 /// Taken from http://www.vendian.org/mncharity/dir3/blackbody/UnstableURLs/bbr_color.html
+// Clippy thinks some of these are random constants
+#[allow(clippy::approx_constant)]
 const COLOR_TABLE: [[f32; 3]; 391] = [
     [1.0000, 0.0337, 0.0000],
     [1.0000, 0.0592, 0.0000],

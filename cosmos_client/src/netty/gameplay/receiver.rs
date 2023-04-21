@@ -145,30 +145,29 @@ fn client_sync_players(
                 for (server_entity, body) in bodies.iter() {
                     if let Some(entity) = network_mapping.client_from_server(server_entity) {
                         if let Ok((location, transform, velocity)) = query_body.get_mut(entity) {
-                            if location.is_some() && transform.is_some() && velocity.is_some() {
-                                let mut location = location.unwrap();
-                                let mut transform = transform.unwrap();
-                                let mut velocity = velocity.unwrap();
+                            match (location, transform, velocity) {
+                                (Some(mut location), Some(mut transform), Some(mut velocity)) => {
+                                    location.set_from(&body.location);
 
-                                location.set_from(&body.location);
+                                    transform.rotation = body.rotation;
 
-                                transform.rotation = body.rotation;
+                                    velocity.linvel = body.body_vel.linvel.into();
+                                    velocity.angvel = body.body_vel.angvel.into();
+                                }
+                                _ => {
+                                    let world_center = world_center.get_single().expect("There should only ever be one local player, and they should always exist.");
 
-                                velocity.linvel = body.body_vel.linvel.into();
-                                velocity.angvel = body.body_vel.angvel.into();
-                            } else {
-                                let world_center = world_center.get_single().expect("There should only ever be one local player, and they should always exist.");
+                                    let transform = body.create_transform(world_center);
 
-                                let transform = body.create_transform(&world_center);
+                                    let mut location = body.location;
+                                    location.last_transform_loc = Some(transform.translation);
 
-                                let mut location = body.location;
-                                location.last_transform_loc = Some(transform.translation);
-
-                                commands.entity(entity).insert((
-                                    location,
-                                    TransformBundle::from_transform(transform),
-                                    body.create_velocity(),
-                                ));
+                                    commands.entity(entity).insert((
+                                        location,
+                                        TransformBundle::from_transform(transform),
+                                        body.create_velocity(),
+                                    ));
+                                }
                             }
                         }
                     } else if !requested_entities
