@@ -43,7 +43,7 @@ use crate::{
     rendering::MainCamera,
     state::game_state::GameState,
     structure::{
-        chunk_retreiver::NeedsPopulated, planet::client_planet_builder::ClientPlanetBuilder,
+        planet::client_planet_builder::ClientPlanetBuilder,
         ship::client_ship_builder::ClientShipBuilder,
     },
     ui::crosshair::CrosshairOffset,
@@ -318,7 +318,6 @@ fn client_sync_players(
                 height,
                 width,
                 body,
-                chunks_needed,
             } => {
                 if network_mapping.contains_server_entity(server_entity) {
                     println!("Got duplicate planet! Is the server lagging?");
@@ -332,7 +331,7 @@ fn client_sync_players(
                 let builder = ClientPlanetBuilder::default();
                 builder.insert_planet(&mut entity_cmds, body.location, &mut structure);
 
-                entity_cmds.insert((structure, NeedsPopulated, chunks_needed));
+                entity_cmds.insert(structure);
 
                 let entity = entity_cmds.id();
 

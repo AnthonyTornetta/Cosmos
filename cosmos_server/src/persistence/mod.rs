@@ -1,5 +1,7 @@
 //! Handles both the saving & loading of entities on the server
 
+use std::fs;
+
 use bevy::{
     prelude::{App, Component, Resource},
     reflect::Reflect,
@@ -51,10 +53,10 @@ impl SaveFileIdentifier {
     pub fn get_save_file_path(&self) -> String {
         let directory = self
             .sector
-            .map(|(x, y, z)| format!("{x}_{y}_{z}"))
-            .unwrap_or("nowhere".into());
+            .map(|sector| Self::get_sector_path(sector))
+            .unwrap_or("world/nowhere".into());
 
-        format!("world/{directory}/{}", self.get_save_file_name())
+        format!("{directory}/{}", self.get_save_file_name())
     }
 
     /// Gets the save file name, but not the whole path
@@ -62,6 +64,12 @@ impl SaveFileIdentifier {
     /// `entity_id.cent`
     pub fn get_save_file_name(&self) -> String {
         format!("{}.cent", self.entity_id.0)
+    }
+
+    pub fn get_sector_path(sector: (i64, i64, i64)) -> String {
+        let (x, y, z) = sector;
+
+        format!("world/{x}_{y}_{z}")
     }
 }
 
@@ -141,6 +149,10 @@ impl SerializedData {
     pub fn should_save(&self) -> bool {
         self.should_save
     }
+}
+
+pub fn is_sector_loaded(sector: (i64, i64, i64)) -> bool {
+    fs::try_exists(SaveFileIdentifier::get_sector_path(sector)).unwrap_or(false)
 }
 
 pub(super) fn register(app: &mut App) {

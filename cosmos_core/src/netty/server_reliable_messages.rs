@@ -68,8 +68,6 @@ pub enum ServerReliableMessages {
         height: u32,
         /// The length to be passed into the structure's constructor
         length: u32,
-        /// The number of chunks that need to be loaded from the server
-        chunks_needed: ChunksNeedLoaded,
     },
     /// A ship should be created on the client-side.
     /// This does NOT mean the ship was just created by the sever, just that one should be created on the client.
