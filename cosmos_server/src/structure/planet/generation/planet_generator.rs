@@ -4,7 +4,12 @@ use bevy::{ecs::event::Event, prelude::*};
 use cosmos_core::{
     entities::player::Player,
     physics::location::Location,
-    structure::{chunk::Chunk, planet::Planet, Structure},
+    structure::{
+        chunk::{Chunk, CHUNK_DIMENSIONSF},
+        planet::Planet,
+        structure_iterator::ChunkIteratorResult,
+        Structure,
+    },
 };
 
 use crate::{state::GameState, structure::planet::biosphere::TGenerateChunkEvent};
@@ -54,30 +59,51 @@ fn generate_chunks_near_players(
             let dist = location.distance_sqrd(player);
             if dist < best_dist {
                 best_dist = dist;
-                best_planet = Some((structure, entity));
+                best_planet = Some((location, structure, entity));
             }
         }
 
-        if let Some((mut best_planet, entity)) = best_planet {
-            for z in 0..best_planet.chunks_length() {
-                for y in 0..best_planet.chunks_height() {
-                    for x in 0..best_planet.chunks_width() {
-                        if !best_planet.is_chunk_loaded(x, y, z) {
-                            best_planet.set_chunk(Chunk::new(x, y, z));
+        if let Some((location, mut best_planet, entity)) = best_planet {
+            let player_relative_position: Vec3 = (*player - *location).into();
+            let (px, py, pz) = best_planet.relative_coords_to_local_coords(
+                player_relative_position.x,
+                player_relative_position.y,
+                player_relative_position.z,
+            );
 
-                            let needs_generated_flag = commands
-                                .spawn(NeedsGenerated {
-                                    chunk_coords: (x, y, z),
-                                    structure_entity: entity,
-                                })
-                                .id();
+            let (px, py, pz) = (
+                (px as f32 / CHUNK_DIMENSIONSF).floor() as i32,
+                (py as f32 / CHUNK_DIMENSIONSF).floor() as i32,
+                (pz as f32 / CHUNK_DIMENSIONSF).floor() as i32,
+            );
 
-                            commands.entity(entity).add_child(needs_generated_flag);
+            let mut chunks = vec![];
 
-                            println!("FOUND CHUNK THAT NEEDS GENERATED @ {x} {y} {z}!");
-                        }
+            for chunk in
+                best_planet.chunk_iter((px - 2, py - 2, pz - 2), (px + 2, py + 2, pz + 2), true)
+            {
+                if let ChunkIteratorResult::EmptyChunk {
+                    position: (x, y, z),
+                } = chunk
+                {
+                    if !best_planet.is_chunk_loaded(x, y, z) {
+                        chunks.push((x, y, z));
                     }
                 }
+            }
+
+            for (x, y, z) in chunks {
+                best_planet.set_chunk(Chunk::new(x, y, z));
+                let needs_generated_flag = commands
+                    .spawn(NeedsGenerated {
+                        chunk_coords: (x, y, z),
+                        structure_entity: entity,
+                    })
+                    .id();
+
+                commands.entity(entity).add_child(needs_generated_flag);
+
+                println!("FOUND CHUNK THAT NEEDS GENERATED @ {x} {y} {z}!");
             }
         }
     }

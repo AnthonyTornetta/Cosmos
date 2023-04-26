@@ -3,14 +3,12 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::{ExternalImpulse, ReadMassProperties, RigidBody};
 
-use crate::structure::loading::ChunksNeedLoaded;
-
 use super::location::Location;
 
 fn gravity_system(
     // Without<ChunksNeedLoaded> to prevent things from falling through
     // the world before it's done loading.
-    emitters: Query<(&GravityEmitter, &GlobalTransform, &Location), Without<ChunksNeedLoaded>>,
+    emitters: Query<(&GravityEmitter, &GlobalTransform, &Location)>,
     mut receiver: Query<(
         Entity,
         &Location,

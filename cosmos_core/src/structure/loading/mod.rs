@@ -1,11 +1,8 @@
 //! Handles the loading of structures
 
-use crate::structure::{
-    events::{ChunkSetEvent, StructureLoadedEvent},
-    Structure,
-};
+use crate::structure::events::{ChunkSetEvent, StructureLoadedEvent};
 use bevy::{
-    prelude::{Added, App, Commands, Component, Entity, EventReader, EventWriter, Query, Without},
+    prelude::{App, Commands, Component, EventReader, EventWriter, Query},
     reflect::{FromReflect, Reflect},
 };
 use serde::{Deserialize, Serialize};
@@ -45,19 +42,7 @@ fn listen_chunk_done_loading(
     }
 }
 
-fn listen_structure_added(
-    query: Query<(Entity, &Structure), (Added<Structure>, Without<ChunksNeedLoaded>)>,
-    mut commands: Commands,
-) {
-    for (entity, structure) in query.iter() {
-        commands.entity(entity).insert(ChunksNeedLoaded {
-            amount_needed: structure.all_chunks_iter(false).len(),
-        });
-    }
-}
-
 pub(super) fn register(app: &mut App) {
-    app.add_system(listen_structure_added)
-        .add_system(listen_chunk_done_loading)
+    app.add_system(listen_chunk_done_loading)
         .register_type::<ChunksNeedLoaded>();
 }

@@ -110,10 +110,35 @@ impl Sub<Vec3> for Location {
     }
 }
 
+impl Sub<Location> for Location {
+    type Output = Location;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        let mut loc = Location::new(
+            self.local - rhs.local,
+            self.sector_x - rhs.sector_x,
+            self.sector_y - rhs.sector_y,
+            self.sector_z - rhs.sector_z,
+        );
+        loc.fix_bounds();
+        loc
+    }
+}
+
 impl AddAssign<Vec3> for &mut Location {
     fn add_assign(&mut self, rhs: Vec3) {
         self.local += rhs;
         self.fix_bounds();
+    }
+}
+
+impl Into<Vec3> for Location {
+    fn into(self) -> Vec3 {
+        Vec3::new(
+            self.sector_x as f32 * SECTOR_DIMENSIONS + self.local.x,
+            self.sector_y as f32 * SECTOR_DIMENSIONS + self.local.y,
+            self.sector_z as f32 * SECTOR_DIMENSIONS + self.local.z,
+        )
     }
 }
 

@@ -71,7 +71,7 @@ fn process_player_interaction(
                             .transform_point3(moved_point);
 
                         let (x, y, z) = structure
-                            .relative_coords_to_local_coords(point.x, point.y, point.z)
+                            .relative_coords_to_local_coords_checked(point.x, point.y, point.z)
                             .expect("Tried to break block outside of structure?");
 
                         break_writer.send(BlockBreakEvent {
@@ -101,7 +101,7 @@ fn process_player_interaction(
                                             .transform_point3(moved_point);
 
                                         if let Ok((x, y, z)) = structure
-                                            .relative_coords_to_local_coords(
+                                            .relative_coords_to_local_coords_checked(
                                                 point.x, point.y, point.z,
                                             )
                                         {
@@ -135,7 +135,7 @@ fn process_player_interaction(
                             .transform_point3(moved_point);
 
                         let (x, y, z) = structure
-                            .relative_coords_to_local_coords(point.x, point.y, point.z)
+                            .relative_coords_to_local_coords_checked(point.x, point.y, point.z)
                             .unwrap();
 
                         interact_writer.send(BlockInteractEvent {

@@ -238,24 +238,36 @@ impl Structure {
     /// - Ok (x, y, z) of the block coordinates if the point is within the structure
     /// - Err(false) if one of the x/y/z coordinates are outside the structure in the negative direction
     /// - Err (true) if one of the x/y/z coordinates are outside the structure in the positive direction
-    pub fn relative_coords_to_local_coords(
+    pub fn relative_coords_to_local_coords_checked(
         &self,
         x: f32,
         y: f32,
         z: f32,
     ) -> Result<(usize, usize, usize), bool> {
-        let xx = x + (self.blocks_width() as f32 / 2.0);
-        let yy = y + (self.blocks_height() as f32 / 2.0);
-        let zz = z + (self.blocks_length() as f32 / 2.0);
+        let (xx, yy, zz) = self.relative_coords_to_local_coords(x, y, z);
 
-        if xx >= 0.0 && yy >= 0.0 && zz >= 0.0 {
-            let (xxx, yyy, zzz) = (xx as usize, yy as usize, zz as usize);
-            if self.is_within_blocks(xxx, yyy, zzz) {
-                return Ok((xxx, yyy, zzz));
+        if xx >= 0 && yy >= 0 && zz >= 0 {
+            let (xx, yy, zz) = (xx as usize, yy as usize, zz as usize);
+            if self.is_within_blocks(xx, yy, zz) {
+                return Ok((xx, yy, zz));
             }
             return Err(true);
         }
         Err(false)
+    }
+
+    /// # Arguments
+    /// Coordinates relative to the structure's 0, 0, 0 position in the world mapped to block coordinates.
+    ///
+    /// These coordinates may not be within the structure (too high or negative).
+    /// # Returns
+    /// - (x, y, z) of the block coordinates, even if they are outside the structure
+    pub fn relative_coords_to_local_coords(&self, x: f32, y: f32, z: f32) -> (i32, i32, i32) {
+        let xx: f32 = x + (self.blocks_width() as f32 / 2.0);
+        let yy = y + (self.blocks_height() as f32 / 2.0);
+        let zz = z + (self.blocks_length() as f32 / 2.0);
+
+        (xx.floor() as i32, yy.floor() as i32, zz.floor() as i32)
     }
 
     /// If the chunk is loaded/non-empty, returns the block at that coordinate.
