@@ -57,7 +57,7 @@ pub enum ServerReliableMessages {
     },
     /// A planet should be created on the client-side.
     /// This does NOT mean the planet was just created by the sever, just that one should be created on the client.
-    PlanetCreate {
+    Planet {
         /// The planet's server entity
         entity: Entity,
         /// The planet's rigidbody
@@ -71,7 +71,7 @@ pub enum ServerReliableMessages {
     },
     /// A ship should be created on the client-side.
     /// This does NOT mean the ship was just created by the sever, just that one should be created on the client.
-    ShipCreate {
+    Ship {
         /// The ship's server entity
         entity: Entity,
         /// The planet's rigidbody

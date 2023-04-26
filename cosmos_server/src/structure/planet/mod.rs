@@ -12,4 +12,5 @@ pub(super) fn register(app: &mut App) {
     biosphere::register(app);
     persistence::register(app);
     sync::register(app);
+    generation::register(app);
 }

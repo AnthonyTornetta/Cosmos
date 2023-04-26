@@ -312,7 +312,7 @@ fn client_sync_players(
                     network_mapping.remove_mapping_from_server_entity(&server_entity);
                 }
             }
-            ServerReliableMessages::PlanetCreate {
+            ServerReliableMessages::Planet {
                 entity: server_entity,
                 length,
                 height,
@@ -337,7 +337,7 @@ fn client_sync_players(
 
                 network_mapping.add_mapping(entity, server_entity);
             }
-            ServerReliableMessages::ShipCreate {
+            ServerReliableMessages::Ship {
                 entity: server_entity,
                 body,
                 width,

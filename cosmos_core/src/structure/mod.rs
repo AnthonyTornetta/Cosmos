@@ -592,6 +592,12 @@ impl Structure {
             false
         }
     }
+
+    /// Returns true if a chunk is loaded, false if not.
+    pub fn is_chunk_loaded(&self, cx: usize, cy: usize, cz: usize) -> bool {
+        self.chunks
+            .contains_key(&flatten(cx, cy, cz, self.width, self.height))
+    }
 }
 
 #[derive(Debug)]
