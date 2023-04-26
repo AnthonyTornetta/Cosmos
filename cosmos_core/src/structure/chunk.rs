@@ -7,7 +7,7 @@ use crate::block::hardness::BlockHardness;
 use crate::block::Block;
 use crate::registry::identifiable::Identifiable;
 use crate::registry::Registry;
-use bevy::prelude::Vec3;
+use bevy::prelude::{Component, Entity, Vec3};
 use bevy::reflect::{FromReflect, Reflect};
 use serde::de;
 use serde::de::Error;
@@ -186,6 +186,15 @@ impl Chunk {
         self.block_health
             .take_damage(x, y, z, block_hardness, amount)
     }
+}
+
+/// Represents a child of a structure that represents a chunk
+#[derive(Debug, Reflect, FromReflect, Component)]
+pub struct ChunkEntity {
+    /// The entity of the structure this is a part of
+    pub structure_entity: Entity,
+    /// The chunk's position in the structure (x, y, z)
+    pub chunk_location: (usize, usize, usize),
 }
 
 // Everything below here may no longer be necessary since data is now compressed automatically.

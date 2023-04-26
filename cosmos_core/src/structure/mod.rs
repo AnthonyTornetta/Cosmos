@@ -35,6 +35,7 @@ use bevy::prelude::{
 use serde::{Deserialize, Serialize};
 
 use self::block_health::block_destroyed_event::BlockDestroyedEvent;
+use self::chunk::ChunkEntity;
 use self::events::ChunkSetEvent;
 use self::structure_block::StructureBlock;
 use self::structure_iterator::{BlockIterator, ChunkIterator};
@@ -676,6 +677,10 @@ fn add_chunks_system(
                             ..Default::default()
                         },
                         NoSendEntity,
+                        ChunkEntity {
+                            structure_entity,
+                            chunk_location: (x, y, z),
+                        },
                     ));
 
                     if let Some(bw) = body_world {

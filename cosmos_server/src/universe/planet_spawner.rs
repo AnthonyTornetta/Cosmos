@@ -15,7 +15,6 @@ use crate::{
     state::GameState,
     structure::planet::{
         biosphere::{test_all_stone_biosphere::TestStoneBiosphere, TBiosphere},
-        generation::planet_generator::NeedsGenerated,
         server_planet_builder::ServerPlanetBuilder,
     },
 };
@@ -44,7 +43,7 @@ fn spawn_planet(
 
     let mut entity_cmd = commands.spawn_empty();
 
-    let mut structure = Structure::new(16, 4, 16);
+    let mut structure = Structure::new(16, 16, 16);
 
     let biosphere = TestStoneBiosphere::default();
     let marker = biosphere.get_marker_component();
@@ -52,10 +51,7 @@ fn spawn_planet(
 
     builder.insert_planet(&mut entity_cmd, Location::default(), &mut structure);
 
-    entity_cmd
-        .insert(structure)
-        .insert(NeedsGenerated)
-        .insert(marker);
+    entity_cmd.insert(structure).insert(marker);
 }
 
 pub(super) fn register(app: &mut App) {
