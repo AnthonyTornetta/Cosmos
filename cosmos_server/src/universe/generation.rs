@@ -110,6 +110,9 @@ fn load_stars_near_players(
                 }
             }
 
+            /// 0.5 is the center of system
+            const STAR_POS_OFFSET: f32 = 0.15;
+
             commands.spawn((
                 star,
                 PbrBundle {
@@ -117,9 +120,9 @@ fn load_stars_near_players(
                 },
                 Location::new(
                     Vec3::ZERO,
-                    ((sx as f32 + 0.5) * SYSTEM_SECTORS as f32) as i64,
-                    ((sy as f32 + 0.5) * SYSTEM_SECTORS as f32) as i64,
-                    ((sz as f32 + 0.5) * SYSTEM_SECTORS as f32) as i64,
+                    ((sx as f32 + STAR_POS_OFFSET) * SYSTEM_SECTORS as f32) as i64,
+                    ((sy as f32 + STAR_POS_OFFSET) * SYSTEM_SECTORS as f32) as i64,
+                    ((sz as f32 + STAR_POS_OFFSET) * SYSTEM_SECTORS as f32) as i64,
                 ),
                 Velocity::zero(),
                 LoadingDistance::new(SYSTEM_SECTORS / 2 + 1, SYSTEM_SECTORS / 2 + 1),
