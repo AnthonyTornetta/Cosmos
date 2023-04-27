@@ -6,7 +6,7 @@ use bevy::prelude::{
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     netty::{client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannel},
-    physics::location::Location,
+    physics::{location::Location, structure_physics::listen_for_new_physics_event},
     structure::{
         chunk::{Chunk, CHUNK_DIMENSIONSF},
         planet::Planet,
@@ -22,7 +22,7 @@ use crate::{
 
 pub mod client_planet_builder;
 
-const RENDER_DISTANCE: i32 = 3;
+const RENDER_DISTANCE: i32 = 6;
 
 fn load_planet_chunks(
     query: Query<&Location, With<LocalPlayer>>,
@@ -67,8 +67,6 @@ fn load_planet_chunks(
 
                 for (x, y, z) in chunks {
                     best_planet.set_chunk(Chunk::new(x, y, z));
-
-                    println!("REQUESTING CHUNK @ {x} {y} {z}!");
 
                     client.send_message(
                         NettyChannel::Reliable.id(),
@@ -129,7 +127,6 @@ pub fn unload_chunks_far_from_players(
             }
 
             for (cx, cy, cz) in chunks {
-                println!("Unloading chunk at {cx} {cy} {cz}");
                 planet.unload_chunk_at(cx, cy, cz, &mut commands);
             }
         }
@@ -138,6 +135,8 @@ pub fn unload_chunks_far_from_players(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        (load_planet_chunks, unload_chunks_far_from_players).in_set(OnUpdate(GameState::Playing)),
+        (load_planet_chunks, unload_chunks_far_from_players)
+            .after(listen_for_new_physics_event)
+            .in_set(OnUpdate(GameState::Playing)),
     );
 }

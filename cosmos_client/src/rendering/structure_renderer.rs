@@ -233,8 +233,6 @@ fn monitor_needs_rendered_system(
         let back = structure.chunk_from_chunk_coordinates_oob(xi, yi, zi - 1);
         let front = structure.chunk_from_chunk_coordinates_oob(xi, yi, zi + 1);
 
-        println!("RENDERING CHUNK!");
-
         let mut timer = UtilsTimer::start();
 
         renderer.render(

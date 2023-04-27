@@ -23,7 +23,7 @@ struct ChunkPhysicsModel {
 }
 
 #[derive(Component, Debug, Reflect, FromReflect)]
-struct StructurePhysics {
+pub struct StructurePhysics {
     needs_changed: HashSet<Vector3<usize>>,
 }
 
@@ -295,11 +295,11 @@ fn generate_chunk_collider(chunk: &Chunk, blocks: &Registry<Block>) -> Option<Ge
 }
 
 /// Sent when a structure needs new physics
-struct NeedsNewPhysicsEvent {
+pub struct NeedsNewPhysicsEvent {
     structure_entity: Entity,
 }
 
-fn listen_for_new_physics_event(
+pub fn listen_for_new_physics_event(
     mut commands: Commands,
     mut event: EventReader<NeedsNewPhysicsEvent>,
     mut query: Query<(&Structure, &mut StructurePhysics)>,

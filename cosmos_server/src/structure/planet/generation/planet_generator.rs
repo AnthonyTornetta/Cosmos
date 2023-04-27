@@ -74,7 +74,6 @@ fn bounce_events(
     mut event_writer: EventWriter<RequestChunkEvent>,
 ) {
     for ev in event_reader.iter() {
-        println!("Bouncing back...");
         event_writer.send(ev.0);
     }
 }
@@ -92,7 +91,6 @@ fn get_requested_chunk(
 
             match structure.get_chunk_state(cx, cy, cz) {
                 ChunkState::Loaded => {
-                    println!("Chunk was loaded! Sending!");
                     if let Some(chunk) = structure.chunk_from_chunk_coordinates(cx, cy, cz) {
                         server.send_message(
                             ev.requester_id,
@@ -118,10 +116,6 @@ fn get_requested_chunk(
                         .entity(ev.structure_entity)
                         .add_child(needs_generated_flag);
 
-                    println!(
-                        "FOUND CHUNK THAT NEEDS GENERATED @ {cx} {cy} {cz} (asked by client)!"
-                    );
-
                     event_writer.send(RequestChunkBouncer(*ev));
                 }
                 ChunkState::Invalid => {
@@ -132,7 +126,7 @@ fn get_requested_chunk(
     }
 }
 
-const RENDER_DISTANCE: i32 = 3;
+const RENDER_DISTANCE: i32 = 6;
 
 fn generate_chunks_near_players(
     players: Query<&Location, With<Player>>,
@@ -195,8 +189,6 @@ fn generate_chunks_near_players(
                     .id();
 
                 commands.entity(entity).add_child(needs_generated_flag);
-
-                println!("FOUND CHUNK THAT NEEDS GENERATED @ {x} {y} {z}!");
             }
         }
     }
@@ -271,7 +263,6 @@ fn unload_chunks_far_from_players(
     for (planet, set) in potential_chunks {
         if let Ok((_, mut structure, _)) = planets.get_mut(planet) {
             for (cx, cy, cz) in set {
-                println!("Unloading chunk at {cx} {cy} {cz}");
                 structure.unload_chunk_at(cx, cy, cz, &mut commands);
             }
         }
