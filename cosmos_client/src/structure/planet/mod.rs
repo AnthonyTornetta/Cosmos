@@ -1,6 +1,8 @@
 //! Handles client-related planet things
 
-use bevy::prelude::{in_state, App, Entity, IntoSystemConfig, Query, Res, ResMut, Vec3, With};
+use bevy::prelude::{
+    App, Commands, Entity, IntoSystemConfigs, OnUpdate, Query, Res, ResMut, Vec3, With,
+};
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     netty::{client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannel},
@@ -29,7 +31,6 @@ fn load_planet_chunks(
     if let Ok(player) = query.get_single() {
         for (entity, location, mut best_planet) in planet.iter_mut() {
             if let Some(server_entity) = mapper.server_from_client(&entity) {
-                println!("Player loc! {player} vs {location}");
                 let player_relative_position: Vec3 = (*player - *location).into();
                 let (px, py, pz) = best_planet.relative_coords_to_local_coords(
                     player_relative_position.x,
@@ -37,21 +38,21 @@ fn load_planet_chunks(
                     player_relative_position.z,
                 );
 
-                println!("Rel: {player_relative_position}");
-
                 let (px, py, pz) = (
                     (px as f32 / CHUNK_DIMENSIONSF).floor() as i32,
                     (py as f32 / CHUNK_DIMENSIONSF).floor() as i32,
                     (pz as f32 / CHUNK_DIMENSIONSF).floor() as i32,
                 );
 
-                println!("P: {px} {py} {pz}");
-
                 let mut chunks = vec![];
 
-                for chunk in
-                    best_planet.chunk_iter((px - 2, py - 2, pz - 2), (px + 2, py + 2, pz + 2), true)
-                {
+                let rd = 2;
+
+                for chunk in best_planet.chunk_iter(
+                    (px - rd, py - rd, pz - rd),
+                    (px + rd, py + rd, pz + rd),
+                    true,
+                ) {
                     if let ChunkIteratorResult::EmptyChunk {
                         position: (x, y, z),
                     } = chunk
@@ -80,6 +81,58 @@ fn load_planet_chunks(
     }
 }
 
+fn unload_chunks_far_from_players(
+    player: Query<&Location, With<LocalPlayer>>,
+    mut planets: Query<(&Location, &mut Structure), With<Planet>>,
+    mut commands: Commands,
+) {
+    if let Ok(player) = player.get_single() {
+        for (location, mut planet) in planets.iter_mut() {
+            let player_relative_position: Vec3 = (*player - *location).into();
+            let (px, py, pz) = planet.relative_coords_to_local_coords(
+                player_relative_position.x,
+                player_relative_position.y,
+                player_relative_position.z,
+            );
+
+            let (px, py, pz) = (
+                (px as f32 / CHUNK_DIMENSIONSF).floor() as i32,
+                (py as f32 / CHUNK_DIMENSIONSF).floor() as i32,
+                (pz as f32 / CHUNK_DIMENSIONSF).floor() as i32,
+            );
+
+            let rd = 3;
+
+            let mut chunks = Vec::new();
+
+            for chunk in planet.all_chunks_iter(false) {
+                if let ChunkIteratorResult::FilledChunk {
+                    position: (cx, cy, cz),
+                    chunk: _,
+                } = chunk
+                {
+                    if !(cx as i32 >= px - rd
+                        && cx as i32 <= px + rd
+                        && cy as i32 >= py - rd
+                        && cy as i32 <= py + rd
+                        && cz as i32 >= pz - rd
+                        && cz as i32 <= pz + rd)
+                    {
+                        chunks.push((cx, cy, cz));
+                    }
+                }
+            }
+
+            for (cx, cy, cz) in chunks {
+                println!("Unloading chunk at {cx} {cy} {cz}");
+                planet.unload_chunk_at(cx, cy, cz, &mut commands);
+            }
+        }
+    }
+}
+
 pub(super) fn register(app: &mut App) {
-    app.add_system(load_planet_chunks.run_if(in_state(GameState::Playing)));
+    app.add_systems(
+        (load_planet_chunks, unload_chunks_far_from_players).in_set(OnUpdate(GameState::Playing)),
+    );
 }

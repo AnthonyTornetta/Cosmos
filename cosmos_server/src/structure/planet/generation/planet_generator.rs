@@ -255,8 +255,6 @@ fn unload_chunks_far_from_players(
                     ChunkIteratorResult::FilledChunk { position, chunk: _ } => position,
                 };
 
-                println!("Not removing {chunk_position:?}");
-
                 set.remove(&chunk_position);
             }
         }
@@ -276,7 +274,7 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         (
             generate_chunks_near_players,
-            // unload_chunks_far_from_players,
+            unload_chunks_far_from_players,
             get_requested_chunk,
             bounce_events,
         )
