@@ -84,7 +84,6 @@ fn get_requested_chunk(
                 ChunkState::Loaded => {
                     println!("Chunk was loaded! Sending!");
                     if let Some(chunk) = structure.chunk_from_chunk_coordinates(cx, cy, cz) {
-                        println!(":D");
                         server.send_message(
                             ev.requester_id,
                             NettyChannel::Reliable.id(),
@@ -95,10 +94,7 @@ fn get_requested_chunk(
                         );
                     }
                 }
-                ChunkState::Loading => {
-                    println!("Bouncing!");
-                    event_writer.send(RequestChunkBouncer(*ev))
-                }
+                ChunkState::Loading => event_writer.send(RequestChunkBouncer(*ev)),
                 ChunkState::Unloaded => {
                     structure.set_chunk(Chunk::new(cx, cy, cz));
                     let needs_generated_flag = commands
@@ -116,7 +112,6 @@ fn get_requested_chunk(
                         "FOUND CHUNK THAT NEEDS GENERATED @ {cx} {cy} {cz} (asked by client)!"
                     );
 
-                    println!("Bouncing!");
                     event_writer.send(RequestChunkBouncer(*ev));
                 }
                 ChunkState::Invalid => {

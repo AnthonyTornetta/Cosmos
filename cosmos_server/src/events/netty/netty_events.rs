@@ -142,7 +142,7 @@ fn handle_events_system(
                 };
 
                 let player = Player::new(name.clone(), *id);
-                let starting_pos = Vec3::new(0.0, 60.0, 0.0);
+                let starting_pos = Vec3::new(0.0, 900.0, 0.0);
                 let transform = Transform::from_translation(starting_pos);
                 let location = Location::new(starting_pos, 0, 0, 0);
                 let velocity = Velocity::default();

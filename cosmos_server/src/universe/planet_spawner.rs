@@ -3,7 +3,7 @@
 use bevy::prelude::{in_state, App, Commands, IntoSystemConfig, Query, With};
 use cosmos_core::{
     entities::player::Player,
-    physics::location::Location,
+    physics::location::{Location, SECTOR_DIMENSIONS},
     structure::{
         planet::{planet_builder::TPlanetBuilder, Planet},
         Structure,
@@ -24,10 +24,9 @@ fn spawn_planet(
     players: Query<&Location, With<Player>>,
     mut commands: Commands,
 ) {
-    if !players
-        .iter()
-        .any(|l| l.distance_sqrd(&Location::default()) < 100000.0)
-    {
+    if !players.iter().any(|l| {
+        l.distance_sqrd(&Location::default()) < (SECTOR_DIMENSIONS * 5.0 * SECTOR_DIMENSIONS * 5.0)
+    }) {
         return;
     }
 
@@ -43,7 +42,7 @@ fn spawn_planet(
 
     let mut entity_cmd = commands.spawn_empty();
 
-    let mut structure = Structure::new(8, 8, 8);
+    let mut structure = Structure::new(100, 100, 100);
 
     let biosphere = TestStoneBiosphere::default();
     let marker = biosphere.get_marker_component();
