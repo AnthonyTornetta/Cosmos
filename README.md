@@ -39,12 +39,21 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 
 ## Release 0.0.4a (In Progress)
 - [ ] Galaxy Generation
-  - [ ] Stars procedurally generated in spiral-like pattern based on seed 
-    - [ ] Create star
+  - [x] Stars procedurally generated in spiral-like pattern based on seed 
+    - [x] Create star
+      - [x] Light emits from star
+      - [x] Load star within system
   - [ ] Planets generate around stars 
     - [ ] Biospheres depend on how close they are to the sun
     - [ ] Dynamic biospheres based off temperature
     - [ ] Only generate if planet is close enough to player ~ 10 sectors
+    - [ ] Cube planets
+      - [ ] Planets will now be cubes instead of flat planes, and will be about the size of the sector
+      - [ ] Redo saving/loading of planets
+      - [ ] Dynamically generate chunks & unload them based on players' positions close to planet
+      - [ ] Implement basic LOD rendering for client
+      - [ ] Make generation work on all faces of planet
+      - [ ] Block orientation for every block
   - [ ] Asteroids
     - [ ] Mineral deposits
   - [ ] Save generated universe
