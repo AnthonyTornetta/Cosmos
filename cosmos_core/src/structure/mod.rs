@@ -605,11 +605,38 @@ impl Structure {
         }
     }
 
-    /// Returns true if a chunk is loaded, false if not.
-    pub fn is_chunk_loaded(&self, cx: usize, cy: usize, cz: usize) -> bool {
-        self.chunks
+    /// Returns the chunk's state
+    pub fn get_chunk_state(&self, cx: usize, cy: usize, cz: usize) -> ChunkState {
+        if self
+            .chunks
             .contains_key(&flatten(cx, cy, cz, self.width, self.height))
+        {
+            if self.chunk_entity(cx, cy, cz).is_some() {
+                ChunkState::Loaded
+            } else {
+                ChunkState::Loading
+            }
+        } else {
+            if cx < self.width && cy < self.height && cz < self.length {
+                ChunkState::Unloaded
+            } else {
+                ChunkState::Invalid
+            }
+        }
     }
+}
+
+/// Represents the state a chunk is in for loading
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ChunkState {
+    /// The chunk does not exist in the structure
+    Invalid,
+    /// The chunk does is not loaded & not being loaded
+    Unloaded,
+    /// The chunk is currently being loaded, but is not ready for use
+    Loading,
+    /// The chunk is fully loaded & ready for use
+    Loaded,
 }
 
 #[derive(Debug)]

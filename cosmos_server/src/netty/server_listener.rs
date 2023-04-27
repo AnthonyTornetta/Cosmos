@@ -28,6 +28,7 @@ use crate::events::{
     create_ship_event::CreateShipEvent,
     structure::ship::ShipSetMovementEvent,
 };
+use crate::structure::planet::generation::planet_generator::RequestChunkEvent;
 
 use super::network_helpers::ServerLobby;
 use super::sync::entities::RequestedEntityEvent;
@@ -54,6 +55,7 @@ pub fn server_listen_messages(
         With<Player>,
     >,
     mut requested_entities_writer: EventWriter<RequestedEntityEvent>,
+    mut request_chunk_event_writer: EventWriter<RequestChunkEvent>,
 ) {
     for client_id in server.clients_id().into_iter() {
         while let Some(message) = server.receive_message(client_id, NettyChannel::Unreliable.id()) {
@@ -105,7 +107,7 @@ pub fn server_listen_messages(
 
             match command {
                 ClientReliableMessages::PlayerDisconnect => {}
-                ClientReliableMessages::SendChunk { server_entity } => {
+                ClientReliableMessages::SendAllChunks { server_entity } => {
                     if let Ok(structure) = structure_query.get(server_entity) {
                         for (_, chunk) in structure.chunks() {
                             server.send_message(
@@ -121,6 +123,14 @@ pub fn server_listen_messages(
                         println!("!!! Server received invalid entity from client {client_id}");
                     }
                 }
+                ClientReliableMessages::SendSingleChunk {
+                    structure_entity,
+                    chunk: (cx, cy, cz),
+                } => request_chunk_event_writer.send(RequestChunkEvent {
+                    requester_id: client_id,
+                    structure_entity,
+                    chunk_coords: (cx as usize, cy as usize, cz as usize),
+                }),
                 ClientReliableMessages::BreakBlock {
                     structure_entity,
                     x,

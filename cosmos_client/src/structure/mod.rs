@@ -11,4 +11,5 @@ mod systems;
 pub(super) fn register(app: &mut App) {
     systems::register(app);
     chunk_retreiver::register(app);
+    planet::register(app);
 }

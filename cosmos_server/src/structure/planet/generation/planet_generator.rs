@@ -1,14 +1,16 @@
 //! Used to generate planets
 
 use bevy::{ecs::event::Event, prelude::*};
+use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     entities::player::Player,
+    netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannel},
     physics::location::Location,
     structure::{
         chunk::{Chunk, CHUNK_DIMENSIONSF},
         planet::Planet,
         structure_iterator::ChunkIteratorResult,
-        Structure,
+        ChunkState, Structure,
     },
 };
 
@@ -42,6 +44,84 @@ pub fn check_needs_generated_system<T: TGenerateChunkEvent + Event, K: Component
                 event_writer.send(T::new(cx, cy, cz, chunk.structure_entity));
 
                 commands.entity(entity).despawn_recursive();
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct RequestChunkEvent {
+    pub requester_id: u64,
+    pub structure_entity: Entity,
+    pub chunk_coords: (usize, usize, usize),
+}
+
+#[derive(Debug, Clone, Copy)]
+struct RequestChunkBouncer(RequestChunkEvent);
+
+fn bounce_events(
+    mut event_reader: EventReader<RequestChunkBouncer>,
+    mut event_writer: EventWriter<RequestChunkEvent>,
+) {
+    for ev in event_reader.iter() {
+        println!("Bouncing back...");
+        event_writer.send(ev.0);
+    }
+}
+
+fn get_requested_chunk(
+    mut event_reader: EventReader<RequestChunkEvent>,
+    mut structure: Query<&mut Structure, With<Planet>>,
+    mut event_writer: EventWriter<RequestChunkBouncer>,
+    mut server: ResMut<RenetServer>,
+    mut commands: Commands,
+) {
+    for ev in event_reader.iter() {
+        if let Ok(mut structure) = structure.get_mut(ev.structure_entity) {
+            let (cx, cy, cz) = ev.chunk_coords;
+
+            match structure.get_chunk_state(cx, cy, cz) {
+                ChunkState::Loaded => {
+                    println!("Chunk was loaded! Sending!");
+                    if let Some(chunk) = structure.chunk_from_chunk_coordinates(cx, cy, cz) {
+                        println!(":D");
+                        server.send_message(
+                            ev.requester_id,
+                            NettyChannel::Reliable.id(),
+                            cosmos_encoder::serialize(&ServerReliableMessages::ChunkData {
+                                structure_entity: ev.structure_entity,
+                                serialized_chunk: cosmos_encoder::serialize(chunk),
+                            }),
+                        );
+                    }
+                }
+                ChunkState::Loading => {
+                    println!("Bouncing!");
+                    event_writer.send(RequestChunkBouncer(*ev))
+                }
+                ChunkState::Unloaded => {
+                    structure.set_chunk(Chunk::new(cx, cy, cz));
+                    let needs_generated_flag = commands
+                        .spawn(NeedsGenerated {
+                            chunk_coords: (cx, cy, cz),
+                            structure_entity: ev.structure_entity,
+                        })
+                        .id();
+
+                    commands
+                        .entity(ev.structure_entity)
+                        .add_child(needs_generated_flag);
+
+                    println!(
+                        "FOUND CHUNK THAT NEEDS GENERATED @ {cx} {cy} {cz} (asked by client)!"
+                    );
+
+                    println!("Bouncing!");
+                    event_writer.send(RequestChunkBouncer(*ev));
+                }
+                ChunkState::Invalid => {
+                    eprintln!("Client requested invalid chunk @ {cx} {cy} {cz}");
+                }
             }
         }
     }
@@ -86,7 +166,7 @@ fn generate_chunks_near_players(
                     position: (x, y, z),
                 } = chunk
                 {
-                    if !best_planet.is_chunk_loaded(x, y, z) {
+                    if best_planet.get_chunk_state(x, y, z) == ChunkState::Unloaded {
                         chunks.push((x, y, z));
                     }
                 }
@@ -110,5 +190,15 @@ fn generate_chunks_near_players(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(generate_chunks_near_players.run_if(in_state(GameState::Playing)));
+    app.add_systems(
+        (
+            generate_chunks_near_players,
+            get_requested_chunk,
+            bounce_events,
+        )
+            .chain()
+            .in_set(OnUpdate(GameState::Playing)),
+    )
+    .add_event::<RequestChunkEvent>()
+    .add_event::<RequestChunkBouncer>();
 }

@@ -12,9 +12,20 @@ pub enum ClientReliableMessages {
     /// Sent when a player wants to disconnect
     PlayerDisconnect,
     /// Requests chunk data to be sent from the server for that structure
-    SendChunk {
+    ///
+    /// This does nothing for planets, where you have to load each chunk individually
+    SendAllChunks {
         /// The structure to get information for
         server_entity: Entity,
+    },
+    /// Requests a single chunk of a structure.
+    ///
+    /// Useful for loading planets
+    SendSingleChunk {
+        /// The server's structure entity
+        structure_entity: Entity,
+        /// The chunk position you want
+        chunk: (u32, u32, u32),
     },
     /// The client broke a block
     BreakBlock {

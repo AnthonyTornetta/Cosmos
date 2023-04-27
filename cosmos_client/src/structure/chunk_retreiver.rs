@@ -25,7 +25,7 @@ fn populate_structures(
 
             client.send_message(
                 NettyChannel::Reliable.id(),
-                cosmos_encoder::serialize(&ClientReliableMessages::SendChunk { server_entity }),
+                cosmos_encoder::serialize(&ClientReliableMessages::SendAllChunks { server_entity }),
             );
         }
     }
