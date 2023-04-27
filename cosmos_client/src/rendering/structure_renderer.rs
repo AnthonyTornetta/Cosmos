@@ -372,6 +372,7 @@ struct LightsHolder {
 #[derive(Component, Debug, Reflect, FromReflect, Default)]
 struct ChunkMeshes(Vec<Entity>);
 
+/// Performance hot spot
 fn monitor_needs_rendered_system(
     mut commands: Commands,
     mut event: EventReader<NeedsNewRenderingEvent>,
@@ -764,6 +765,7 @@ impl ChunkRenderer {
     }
 }
 
+/// performance hot spot because of structure renderer constructor
 fn add_renderer(
     query: Query<(Entity, &Structure), (Added<Structure>, Without<StructureRenderer>)>,
     mut commands: Commands,
