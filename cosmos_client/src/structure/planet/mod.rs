@@ -83,7 +83,10 @@ fn load_planet_chunks(
     }
 }
 
-fn unload_chunks_far_from_players(
+/// This system unloads chunks that are too far for a player to see.
+///
+/// Put systems that mess with chunks before this.
+pub fn unload_chunks_far_from_players(
     player: Query<&Location, With<LocalPlayer>>,
     mut planets: Query<(&Location, &mut Structure), With<Planet>>,
     mut commands: Commands,

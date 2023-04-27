@@ -2,6 +2,8 @@
 //!
 //! These blocks can be updated.
 
+use std::slice::Iter;
+
 use crate::block::blocks::AIR_BLOCK_ID;
 use crate::block::hardness::BlockHardness;
 use crate::block::Block;
@@ -16,7 +18,7 @@ use super::block_health::BlockHealth;
 /// The number of blocks a chunk can have in the x/y/z directions.
 ///
 /// A chunk contains `CHUNK_DIMENSIONS`^3 blocks total.
-pub const CHUNK_DIMENSIONS: usize = 32;
+pub const CHUNK_DIMENSIONS: usize = 16;
 
 /// Short for `CHUNK_DIMENSIONS as f32`
 pub const CHUNK_DIMENSIONSF: f32 = CHUNK_DIMENSIONS as f32;
@@ -181,6 +183,11 @@ impl Chunk {
     ) -> bool {
         self.block_health
             .take_damage(x, y, z, block_hardness, amount)
+    }
+
+    /// Returns the iterator for every block in the chunk
+    pub fn blocks(&self) -> Iter<u16> {
+        self.blocks.iter()
     }
 }
 

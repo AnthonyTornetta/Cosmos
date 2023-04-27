@@ -54,9 +54,15 @@ pub fn check_needs_generated_system<T: TGenerateChunkEvent + Event, K: Component
 }
 
 #[derive(Debug, Clone, Copy)]
+/// Send this event when a client requests a chunk
+///
+/// This will either generate a chunk & send it or send it if it's already loaded.
 pub struct RequestChunkEvent {
+    /// The client's id
     pub requester_id: u64,
+    /// The structure's entity
     pub structure_entity: Entity,
+    /// The chunk's coordinates on that structure
     pub chunk_coords: (usize, usize, usize),
 }
 

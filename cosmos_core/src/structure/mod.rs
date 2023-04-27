@@ -150,10 +150,10 @@ impl Structure {
         self.self_entity
     }
 
+    /// Returns None for unloaded/empty chunks - panics for chunks that are out of bounds
+    ///  
     /// (0, 0, 0) => chunk @ 0, 0, 0\
     /// (1, 0, 0) => chunk @ 1, 0, 0
-    ///
-    /// Returns None for empty chunks - panics for chunks that are out of bounds
     pub fn chunk_from_chunk_coordinates(&self, cx: usize, cy: usize, cz: usize) -> Option<&Chunk> {
         assert!(
             cx < self.width && cy < self.height && cz < self.length,
@@ -165,6 +165,27 @@ impl Structure {
 
         self.chunks
             .get(&flatten(cx, cy, cz, self.width, self.height))
+    }
+
+    /// Returns None for unloaded/empty chunks AND for chunks that are out of bounds
+    ///
+    /// (0, 0, 0) => chunk @ 0, 0, 0\
+    /// (1, 0, 0) => chunk @ 1, 0, 0\
+    /// (-1, 0, 0) => None
+    pub fn chunk_from_chunk_coordinates_oob(&self, cx: i32, cy: i32, cz: i32) -> Option<&Chunk> {
+        if cx < 0 || cy < 0 || cz < 0 {
+            return None;
+        }
+
+        let cx = cx as usize;
+        let cy = cy as usize;
+        let cz = cz as usize;
+
+        if cx >= self.width || cy >= self.height || cz >= self.length {
+            None
+        } else {
+            self.chunk_from_chunk_coordinates(cx, cy, cz)
+        }
     }
 
     /// Gets the mutable chunk for these chunk coordinates.
@@ -180,6 +201,14 @@ impl Structure {
         cy: usize,
         cz: usize,
     ) -> Option<&mut Chunk> {
+        assert!(
+            cx < self.width && cy < self.height && cz < self.length,
+            "{cx} < {} && {cy} < {} && {cz} < {} failed",
+            self.width,
+            self.height,
+            self.length
+        );
+
         self.chunks
             .get_mut(&flatten(cx, cy, cz, self.width, self.height))
     }
