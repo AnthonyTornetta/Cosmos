@@ -16,7 +16,7 @@ use super::block_health::BlockHealth;
 /// The number of blocks a chunk can have in the x/y/z directions.
 ///
 /// A chunk contains `CHUNK_DIMENSIONS`^3 blocks total.
-pub const CHUNK_DIMENSIONS: usize = 16;
+pub const CHUNK_DIMENSIONS: usize = 32;
 
 /// Short for `CHUNK_DIMENSIONS as f32`
 pub const CHUNK_DIMENSIONSF: f32 = CHUNK_DIMENSIONS as f32;

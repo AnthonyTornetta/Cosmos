@@ -12,6 +12,8 @@
 /cosmos_server/saves
 cosmos_server/world/*
 
+trace-*.json
+
 # Documentation auto-generated files
 
 # See README.md to see how to set this stuff up

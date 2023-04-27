@@ -22,6 +22,8 @@ use crate::{
 
 pub mod client_planet_builder;
 
+const RENDER_DISTANCE: i32 = 3;
+
 fn load_planet_chunks(
     query: Query<&Location, With<LocalPlayer>>,
     mut planet: Query<(Entity, &Location, &mut Structure), With<Planet>>,
@@ -46,7 +48,7 @@ fn load_planet_chunks(
 
                 let mut chunks = vec![];
 
-                let rd = 2;
+                let rd = RENDER_DISTANCE;
 
                 for chunk in best_planet.chunk_iter(
                     (px - rd, py - rd, pz - rd),
@@ -101,7 +103,7 @@ fn unload_chunks_far_from_players(
                 (pz as f32 / CHUNK_DIMENSIONSF).floor() as i32,
             );
 
-            let rd = 3;
+            let rd = RENDER_DISTANCE + 1;
 
             let mut chunks = Vec::new();
 
