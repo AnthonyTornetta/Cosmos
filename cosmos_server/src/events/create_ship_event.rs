@@ -3,6 +3,7 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::physics::location::Location;
+use cosmos_core::physics::player_world::PlayerWorld;
 use cosmos_core::structure::{ship::ship_builder::TShipBuilder, Structure};
 
 use crate::structure::ship::{loading::ShipNeedsCreated, server_ship_builder::ServerShipBuilder};
@@ -16,22 +17,40 @@ pub struct CreateShipEvent {
     pub rotation: Quat,
 }
 
-fn event_reader(mut event_reader: EventReader<CreateShipEvent>, mut commands: Commands) {
+fn event_reader(
+    mut event_reader: EventReader<CreateShipEvent>,
+    player_worlds: Query<&Location, With<PlayerWorld>>,
+    mut commands: Commands,
+) {
     for ev in event_reader.iter() {
-        let mut entity = commands.spawn_empty();
+        let mut best_loc = None;
+        let mut best_dist = f32::INFINITY;
 
-        let mut structure = Structure::new(10, 10, 10);
+        for loc in player_worlds.iter() {
+            let dist = loc.distance_sqrd(&ev.ship_location);
+            if dist < best_dist {
+                best_dist = dist;
+                best_loc = Some(loc);
+            }
+        }
 
-        let builder = ServerShipBuilder::default();
+        if let Some(world_location) = best_loc {
+            let mut entity = commands.spawn_empty();
 
-        builder.insert_ship(
-            &mut entity,
-            ev.ship_location,
-            Velocity::zero(),
-            &mut structure,
-        );
+            let mut structure = Structure::new(10, 10, 10);
 
-        entity.insert(structure).insert(ShipNeedsCreated);
+            let builder = ServerShipBuilder::default();
+
+            builder.insert_ship(
+                &mut entity,
+                ev.ship_location,
+                world_location,
+                Velocity::zero(),
+                &mut structure,
+            );
+
+            entity.insert(structure).insert(ShipNeedsCreated);
+        }
     }
 }
 

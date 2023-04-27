@@ -17,6 +17,7 @@ pub trait TPlanetBuilder {
         &self,
         entity: &mut EntityCommands,
         location: Location,
+        world_location: &Location,
         structure: &mut Structure,
     );
 }
@@ -38,6 +39,7 @@ impl<T: TStructureBuilder> TPlanetBuilder for PlanetBuilder<T> {
         &self,
         entity: &mut EntityCommands,
         location: Location,
+        world_location: &Location,
         structure: &mut Structure,
     ) {
         assert!(
@@ -46,8 +48,13 @@ impl<T: TStructureBuilder> TPlanetBuilder for PlanetBuilder<T> {
             "Structure dimensions must all be the same for a planet."
         );
 
-        self.structure_builder
-            .insert_structure(entity, location, Velocity::default(), structure);
+        self.structure_builder.insert_structure(
+            entity,
+            location,
+            world_location,
+            Velocity::default(),
+            structure,
+        );
 
         entity
             .insert(Planet)

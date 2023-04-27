@@ -29,6 +29,7 @@ fn load_planet_chunks(
     if let Ok(player) = query.get_single() {
         for (entity, location, mut best_planet) in planet.iter_mut() {
             if let Some(server_entity) = mapper.server_from_client(&entity) {
+                println!("Player loc! {player} vs {location}");
                 let player_relative_position: Vec3 = (*player - *location).into();
                 let (px, py, pz) = best_planet.relative_coords_to_local_coords(
                     player_relative_position.x,
@@ -36,11 +37,15 @@ fn load_planet_chunks(
                     player_relative_position.z,
                 );
 
+                println!("Rel: {player_relative_position}");
+
                 let (px, py, pz) = (
                     (px as f32 / CHUNK_DIMENSIONSF).floor() as i32,
                     (py as f32 / CHUNK_DIMENSIONSF).floor() as i32,
                     (pz as f32 / CHUNK_DIMENSIONSF).floor() as i32,
                 );
+
+                println!("P: {px} {py} {pz}");
 
                 let mut chunks = vec![];
 

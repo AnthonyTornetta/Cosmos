@@ -624,6 +624,25 @@ impl Structure {
             }
         }
     }
+
+    /// Unloads the chunk at the given chunk position
+    pub fn unload_chunk_at(
+        &mut self,
+        cx: usize,
+        cy: usize,
+        cz: usize,
+        commands: &mut Commands,
+    ) -> Option<Chunk> {
+        let index = flatten(cx, cy, cz, self.width, self.height);
+
+        let chunk = self.chunks.remove(&index);
+
+        if let Some(entity) = self.chunk_entities.remove(&index) {
+            commands.entity(entity).despawn_recursive();
+        }
+
+        chunk
+    }
 }
 
 /// Represents the state a chunk is in for loading

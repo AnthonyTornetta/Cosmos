@@ -324,12 +324,21 @@ fn client_sync_players(
                     break;
                 }
 
+                let world_center = world_center.get_single().expect(
+                    "There should only ever be one local player, and they should always exist.",
+                );
+
                 let mut entity_cmds = commands.spawn_empty();
                 let mut structure =
                     Structure::new(width as usize, height as usize, length as usize);
 
                 let builder = ClientPlanetBuilder::default();
-                builder.insert_planet(&mut entity_cmds, body.location, &mut structure);
+                builder.insert_planet(
+                    &mut entity_cmds,
+                    body.location,
+                    world_center,
+                    &mut structure,
+                );
 
                 entity_cmds.insert(structure);
 
@@ -350,6 +359,10 @@ fn client_sync_players(
                     break;
                 }
 
+                let world_center = world_center.get_single().expect(
+                    "There should only ever be one local player, and they should always exist.",
+                );
+
                 let mut entity_cmds = commands.spawn_empty();
                 let mut structure =
                     Structure::new(width as usize, height as usize, length as usize);
@@ -358,6 +371,7 @@ fn client_sync_players(
                 builder.insert_ship(
                     &mut entity_cmds,
                     body.location,
+                    world_center,
                     body.create_velocity(),
                     &mut structure,
                 );

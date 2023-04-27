@@ -15,6 +15,7 @@ pub trait TStructureBuilder {
         &self,
         entity: &mut EntityCommands,
         location: Location,
+        world_location: &Location,
         velocity: Velocity,
         structure: &mut Structure,
     );
@@ -27,15 +28,20 @@ impl TStructureBuilder for StructureBuilder {
     fn insert_structure(
         &self,
         entity: &mut EntityCommands,
-        location: Location,
+        mut location: Location,
+        world_location: &Location,
         velocity: Velocity,
         structure: &mut Structure,
     ) {
         structure.set_entity(entity.id());
 
+        let relative_coords = world_location.relative_coords_to(&location);
+
+        location.last_transform_loc = Some(relative_coords);
+
         entity
             .insert(PbrBundle {
-                transform: Transform::from_translation(location.local),
+                transform: Transform::from_translation(relative_coords),
                 ..Default::default()
             })
             .insert((velocity, location));

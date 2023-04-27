@@ -33,8 +33,10 @@ impl TPlanetBuilder for ServerPlanetBuilder {
         &self,
         entity: &mut EntityCommands,
         location: Location,
+        world_location: &Location,
         structure: &mut cosmos_core::structure::Structure,
     ) {
-        self.builder.insert_planet(entity, location, structure);
+        self.builder
+            .insert_planet(entity, location, world_location, structure);
     }
 }

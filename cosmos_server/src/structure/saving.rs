@@ -4,11 +4,11 @@
 
 use std::{fs, io::ErrorKind};
 
-use bevy::prelude::{App, Commands, Component, Entity, EventReader, EventWriter, Query};
+use bevy::prelude::{App, Commands, Component, Entity, EventReader, EventWriter, Query, With};
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
     netty::cosmos_encoder,
-    physics::location::Location,
+    physics::{location::Location, player_world::PlayerWorld},
     structure::{
         planet::planet_builder::TPlanetBuilder, ship::ship_builder::TShipBuilder,
         structure_iterator::ChunkIteratorResult, ChunkInitEvent, Structure,
@@ -74,6 +74,7 @@ pub fn load_structure(
     structure_name: &str,
     structure_type: StructureType,
     spawn_at: Location,
+    player_worlds: &Query<&Location, With<PlayerWorld>>,
     commands: &mut Commands,
     structure_loaded: &mut EventWriter<SendDelayedStructureLoadEvent>,
 ) {
@@ -85,32 +86,51 @@ pub fn load_structure(
         println!("Loading structure {structure_name}...");
 
         if let Ok(mut structure) = cosmos_encoder::deserialize::<Structure>(&structure_bin) {
-            let mut entity_cmd = commands.spawn_empty();
+            let mut best_loc = None;
+            let mut best_dist = f32::INFINITY;
 
-            match structure_type {
-                StructureType::Planet => {
-                    let builder = ServerPlanetBuilder::default();
-
-                    builder.insert_planet(&mut entity_cmd, spawn_at, &mut structure);
-                }
-                StructureType::Ship => {
-                    let builder = ServerShipBuilder::default();
-
-                    builder.insert_ship(
-                        &mut entity_cmd,
-                        spawn_at,
-                        Velocity::zero(),
-                        &mut structure,
-                    );
+            for world_loc in player_worlds.iter() {
+                let dist = world_loc.distance_sqrd(&spawn_at);
+                if dist < best_dist {
+                    best_dist = dist;
+                    best_loc = Some(world_loc);
                 }
             }
-            let entity = entity_cmd.id();
 
-            entity_cmd.insert(structure);
+            if let Some(world_location) = best_loc {
+                let mut entity_cmd = commands.spawn_empty();
 
-            structure_loaded.send(SendDelayedStructureLoadEvent(entity));
+                match structure_type {
+                    StructureType::Planet => {
+                        let builder = ServerPlanetBuilder::default();
 
-            println!("Done with {structure_name}!");
+                        builder.insert_planet(
+                            &mut entity_cmd,
+                            spawn_at,
+                            world_location,
+                            &mut structure,
+                        );
+                    }
+                    StructureType::Ship => {
+                        let builder = ServerShipBuilder::default();
+
+                        builder.insert_ship(
+                            &mut entity_cmd,
+                            spawn_at,
+                            world_location,
+                            Velocity::zero(),
+                            &mut structure,
+                        );
+                    }
+                }
+                let entity = entity_cmd.id();
+
+                entity_cmd.insert(structure);
+
+                structure_loaded.send(SendDelayedStructureLoadEvent(entity));
+
+                println!("Done with {structure_name}!");
+            }
         } else {
             println!("Error parsing structure data for {structure_name} -- is it a valid file?");
         }

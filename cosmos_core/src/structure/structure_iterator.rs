@@ -1,5 +1,7 @@
 //! Used to iterate over the blocks or chunks of a structure.
 
+use bevy::utils::hashbrown::hash_map;
+
 use super::{chunk::Chunk, structure_block::StructureBlock, Structure};
 
 #[derive(Debug)]
@@ -17,19 +19,36 @@ struct Body<'a> {
     at_z: usize,
 
     structure: &'a Structure,
-
-    include_empty: bool,
 }
 
 #[derive(Debug)]
-enum ItrState<'a> {
-    Valid(Body<'a>),
+enum BlockItrState<'a> {
+    ExcludeEmpty(Body<'a>),
+    IncludeEmpty(Body<'a>),
+    Invalid,
+}
+
+#[derive(Debug)]
+struct ExcludeEmptyBody {
+    start_x: usize,
+    start_y: usize,
+    start_z: usize,
+
+    end_x: usize,
+    end_y: usize,
+    end_z: usize,
+}
+
+#[derive(Debug)]
+enum ChunkItrState<'a> {
+    ExcludeEmpty((ExcludeEmptyBody, hash_map::Iter<'a, usize, Chunk>)),
+    IncludeEmpty(Body<'a>),
     Invalid,
 }
 
 /// Iterates over the blocks of a structure
 pub struct BlockIterator<'a> {
-    state: ItrState<'a>,
+    state: BlockItrState<'a>,
 }
 
 impl<'a> BlockIterator<'a> {
@@ -61,25 +80,29 @@ impl<'a> BlockIterator<'a> {
             || start_z > end_z
         {
             Self {
-                state: ItrState::Invalid,
+                state: BlockItrState::Invalid,
             }
         } else {
+            let body = Body {
+                start_x: start_x.max(0) as usize,
+                start_y: start_y.max(0) as usize,
+                start_z: start_z.max(0) as usize,
+
+                end_x: end_x as usize,
+                end_y: end_y as usize,
+                end_z: end_z as usize,
+
+                at_x: (start_x.max(0) as usize).min(structure.blocks_width() - 1),
+                at_y: (start_y.max(0) as usize).min(structure.blocks_height() - 1),
+                at_z: (start_z.max(0) as usize).min(structure.blocks_length() - 1),
+                structure,
+            };
             Self {
-                state: ItrState::Valid(Body {
-                    start_x: start_x.max(0) as usize,
-                    start_y: start_y.max(0) as usize,
-                    start_z: start_z.max(0) as usize,
-
-                    end_x: end_x as usize,
-                    end_y: end_y as usize,
-                    end_z: end_z as usize,
-
-                    at_x: (start_x.max(0) as usize).min(structure.blocks_width() - 1),
-                    at_y: (start_y.max(0) as usize).min(structure.blocks_height() - 1),
-                    at_z: (start_z.max(0) as usize).min(structure.blocks_length() - 1),
-                    structure,
-                    include_empty,
-                }),
+                state: if include_empty {
+                    BlockItrState::IncludeEmpty(body)
+                } else {
+                    BlockItrState::ExcludeEmpty(body)
+                },
             }
         }
     }
@@ -92,26 +115,23 @@ impl<'a> BlockIterator<'a> {
     /// Returns the number of blocks left to iterate through, with respect to the `include_empty` flag.
     pub fn len(&self) -> usize {
         match &self.state {
-            ItrState::Valid(body) => {
-                if body.include_empty {
-                    (body.end_x - body.start_x)
-                        * (body.end_y - body.start_y)
-                        * (body.end_z - body.start_z)
-                } else {
-                    Self::new(
-                        body.start_x as i32,
-                        body.start_y as i32,
-                        body.start_z as i32,
-                        body.end_x as i32,
-                        body.end_y as i32,
-                        body.end_z as i32,
-                        body.include_empty,
-                        body.structure,
-                    )
-                    .count()
-                }
+            BlockItrState::IncludeEmpty(body) => {
+                (body.end_x - body.start_x)
+                    * (body.end_y - body.start_y)
+                    * (body.end_z - body.start_z)
             }
-            ItrState::Invalid => 0,
+            BlockItrState::ExcludeEmpty(body) => Self::new(
+                body.start_x as i32,
+                body.start_y as i32,
+                body.start_z as i32,
+                body.end_x as i32,
+                body.end_y as i32,
+                body.end_z as i32,
+                false,
+                body.structure,
+            )
+            .count(),
+            BlockItrState::Invalid => 0,
         }
     }
 }
@@ -121,8 +141,8 @@ impl<'a> Iterator for BlockIterator<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         match &mut self.state {
-            ItrState::Invalid => None,
-            ItrState::Valid(body) => loop {
+            BlockItrState::Invalid => None,
+            BlockItrState::IncludeEmpty(body) => {
                 if body.at_z > body.end_z {
                     return None;
                 }
@@ -143,7 +163,30 @@ impl<'a> Iterator for BlockIterator<'a> {
                     }
                 }
 
-                if body.include_empty || body.structure.has_block_at(x, y, z) {
+                return Some(StructureBlock { x, y, z });
+            }
+            BlockItrState::ExcludeEmpty(body) => loop {
+                if body.at_z > body.end_z {
+                    return None;
+                }
+
+                let (x, y, z) = (body.at_x, body.at_y, body.at_z);
+
+                body.at_x += 1;
+
+                if body.at_x > body.end_x {
+                    body.at_x = body.start_x;
+
+                    body.at_y += 1;
+
+                    if body.at_y > body.end_y {
+                        body.at_y = body.start_y;
+
+                        body.at_z += 1;
+                    }
+                }
+
+                if body.structure.has_block_at(x, y, z) {
                     return Some(StructureBlock { x, y, z });
                 }
             },
@@ -157,7 +200,7 @@ impl<'a> Iterator for BlockIterator<'a> {
 ///
 /// * `include_empty` - If enabled, the value iterated over may be None OR Some(chunk). Otherwise, the value iterated over may ONLY BE Some(chunk).
 pub struct ChunkIterator<'a> {
-    state: ItrState<'a>,
+    state: ChunkItrState<'a>,
 }
 
 impl<'a> ChunkIterator<'a> {
@@ -190,25 +233,47 @@ impl<'a> ChunkIterator<'a> {
             || start_z > end_z
         {
             Self {
-                state: ItrState::Invalid,
+                state: ChunkItrState::Invalid,
             }
         } else {
+            let start_x = start_x.max(0) as usize;
+            let start_y = start_y.max(0) as usize;
+            let start_z = start_z.max(0) as usize;
+
+            let end_x = end_x as usize;
+            let end_y = end_y as usize;
+            let end_z = end_z as usize;
+
             Self {
-                state: ItrState::Valid(Body {
-                    start_x: start_x.max(0) as usize,
-                    start_y: start_y.max(0) as usize,
-                    start_z: start_z.max(0) as usize,
+                state: if include_empty {
+                    ChunkItrState::IncludeEmpty(Body {
+                        start_x,
+                        start_y,
+                        start_z,
 
-                    end_x: end_x as usize,
-                    end_y: end_y as usize,
-                    end_z: end_z as usize,
+                        end_x,
+                        end_y,
+                        end_z,
 
-                    at_x: (start_x.max(0) as usize).min(structure.chunks_width() - 1),
-                    at_y: (start_y.max(0) as usize).min(structure.chunks_height() - 1),
-                    at_z: (start_z.max(0) as usize).min(structure.chunks_length() - 1),
-                    structure,
-                    include_empty,
-                }),
+                        at_x: (start_x.max(0) as usize).min(structure.chunks_width() - 1),
+                        at_y: (start_y.max(0) as usize).min(structure.chunks_height() - 1),
+                        at_z: (start_z.max(0) as usize).min(structure.chunks_length() - 1),
+                        structure,
+                    })
+                } else {
+                    ChunkItrState::ExcludeEmpty((
+                        ExcludeEmptyBody {
+                            start_x,
+                            start_y,
+                            start_z,
+
+                            end_x,
+                            end_y,
+                            end_z,
+                        },
+                        structure.chunks().iter(),
+                    ))
+                },
             }
         }
     }
@@ -221,26 +286,13 @@ impl<'a> ChunkIterator<'a> {
     /// Returns the number of chunks left to iterate through, with respect to the `include_empty` flag.
     pub fn len(&self) -> usize {
         match &self.state {
-            ItrState::Valid(body) => {
-                if body.include_empty {
-                    (body.end_x - body.start_x + 1)
-                        * (body.end_y - body.start_y + 1)
-                        * (body.end_z - body.start_z + 1)
-                } else {
-                    Self::new(
-                        body.start_x as i32,
-                        body.start_y as i32,
-                        body.start_z as i32,
-                        body.end_x as i32,
-                        body.end_y as i32,
-                        body.end_z as i32,
-                        body.structure,
-                        body.include_empty,
-                    )
-                    .count()
-                }
+            ChunkItrState::IncludeEmpty(body) => {
+                (body.end_x - body.start_x + 1)
+                    * (body.end_y - body.start_y + 1)
+                    * (body.end_z - body.start_z + 1)
             }
-            ItrState::Invalid => 0,
+            ChunkItrState::ExcludeEmpty((_, itr)) => itr.len(),
+            ChunkItrState::Invalid => 0,
         }
     }
 }
@@ -269,10 +321,10 @@ impl<'a> Iterator for ChunkIterator<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         match &mut self.state {
-            ItrState::Invalid => None,
-            ItrState::Valid(body) => loop {
+            ChunkItrState::Invalid => None,
+            ChunkItrState::IncludeEmpty(body) => {
                 if body.at_z > body.end_z {
-                    self.state = ItrState::Invalid;
+                    self.state = ChunkItrState::Invalid;
                     return None;
                 }
 
@@ -296,10 +348,36 @@ impl<'a> Iterator for ChunkIterator<'a> {
 
                 if let Some(chunk) = body.structure.chunk_from_chunk_coordinates(cx, cy, cz) {
                     return Some(ChunkIteratorResult::FilledChunk { position, chunk });
-                } else if body.include_empty {
+                } else {
                     return Some(ChunkIteratorResult::EmptyChunk { position });
                 }
-            },
+            }
+            ChunkItrState::ExcludeEmpty((body, itr)) => {
+                while let Some((_, chunk)) = itr.next() {
+                    let (cx, cy, cz) = (
+                        chunk.structure_x(),
+                        chunk.structure_y(),
+                        chunk.structure_z(),
+                    );
+
+                    if cx >= body.start_x
+                        && cx <= body.end_x
+                        && cy >= body.start_y
+                        && cy <= body.end_y
+                        && cz >= body.start_z
+                        && cz <= body.end_z
+                    {
+                        return Some(ChunkIteratorResult::FilledChunk {
+                            position: (cx, cy, cz),
+                            chunk,
+                        });
+                    }
+                }
+
+                self.state = ChunkItrState::Invalid;
+
+                return None;
+            }
         }
     }
 }

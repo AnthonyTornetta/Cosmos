@@ -1,6 +1,10 @@
 //! Used to generate planets
 
-use bevy::{ecs::event::Event, prelude::*};
+use bevy::{
+    ecs::event::Event,
+    prelude::*,
+    utils::{HashMap, HashSet},
+};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     entities::player::Player,
@@ -152,11 +156,17 @@ fn generate_chunks_near_players(
                 (pz as f32 / CHUNK_DIMENSIONSF).floor() as i32,
             );
 
-            let mut chunks = vec![];
+            let rd = 2 as i32;
 
-            for chunk in
-                best_planet.chunk_iter((px - 2, py - 2, pz - 2), (px + 2, py + 2, pz + 2), true)
-            {
+            let iterator = best_planet.chunk_iter(
+                (px - rd, py - rd, pz - rd),
+                (px + rd, py + rd, pz + rd),
+                true,
+            );
+
+            let mut chunks = Vec::with_capacity(iterator.len());
+
+            for chunk in iterator {
                 if let ChunkIteratorResult::EmptyChunk {
                     position: (x, y, z),
                 } = chunk
@@ -184,10 +194,89 @@ fn generate_chunks_near_players(
     }
 }
 
+fn unload_chunks_far_from_players(
+    players: Query<&Location, With<Player>>,
+    mut planets: Query<(&Location, &mut Structure, Entity), With<Planet>>,
+    mut commands: Commands,
+) {
+    let mut potential_chunks = HashMap::<Entity, HashSet<(usize, usize, usize)>>::new();
+    for (_, planet, entity) in planets.iter() {
+        let mut set = HashSet::new();
+
+        for chunk in planet.all_chunks_iter(false) {
+            if let ChunkIteratorResult::FilledChunk { position, chunk: _ } = chunk {
+                set.insert(position);
+            }
+        }
+
+        potential_chunks.insert(entity, set);
+    }
+
+    for player in players.iter() {
+        let mut best_planet = None;
+        let mut best_dist = f32::INFINITY;
+        for (location, structure, entity) in planets.iter_mut() {
+            let dist = location.distance_sqrd(player);
+            if dist < best_dist {
+                best_dist = dist;
+                best_planet = Some((location, structure, entity));
+            }
+        }
+
+        if let Some((location, best_planet, entity)) = best_planet {
+            let player_relative_position: Vec3 = (*player - *location).into();
+            let (px, py, pz) = best_planet.relative_coords_to_local_coords(
+                player_relative_position.x,
+                player_relative_position.y,
+                player_relative_position.z,
+            );
+
+            let (px, py, pz) = (
+                (px as f32 / CHUNK_DIMENSIONSF).floor() as i32,
+                (py as f32 / CHUNK_DIMENSIONSF).floor() as i32,
+                (pz as f32 / CHUNK_DIMENSIONSF).floor() as i32,
+            );
+
+            let rd = 3 as i32;
+
+            let iterator = best_planet.chunk_iter(
+                (px - rd, py - rd, pz - rd),
+                (px + rd, py + rd, pz + rd),
+                true,
+            );
+
+            let set: &mut bevy::utils::hashbrown::HashSet<(usize, usize, usize)> = potential_chunks
+                .get_mut(&entity)
+                .expect("This was just added");
+
+            for res in iterator {
+                let chunk_position = match res {
+                    ChunkIteratorResult::EmptyChunk { position } => position,
+                    ChunkIteratorResult::FilledChunk { position, chunk: _ } => position,
+                };
+
+                println!("Not removing {chunk_position:?}");
+
+                set.remove(&chunk_position);
+            }
+        }
+    }
+
+    for (planet, set) in potential_chunks {
+        if let Ok((_, mut structure, _)) = planets.get_mut(planet) {
+            for (cx, cy, cz) in set {
+                println!("Unloading chunk at {cx} {cy} {cz}");
+                structure.unload_chunk_at(cx, cy, cz, &mut commands);
+            }
+        }
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         (
             generate_chunks_near_players,
+            // unload_chunks_far_from_players,
             get_requested_chunk,
             bounce_events,
         )

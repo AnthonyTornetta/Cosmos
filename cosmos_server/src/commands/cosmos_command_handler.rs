@@ -4,7 +4,7 @@ use bevy::prelude::{
     App, Commands, DespawnRecursiveExt, Entity, EventReader, EventWriter, Query, Res, ResMut, With,
 };
 use cosmos_core::{
-    physics::location::Location,
+    physics::{location::Location, player_world::PlayerWorld},
     structure::{planet::Planet, ship::Ship, Structure},
 };
 
@@ -80,6 +80,8 @@ fn cosmos_command_listener(
     structure_query: Query<(Option<&Planet>, Option<&Ship>), With<Structure>>,
 
     all_saveable_entities: Query<Entity, With<Structure>>,
+
+    player_worlds: Query<&Location, With<PlayerWorld>>,
 ) {
     for ev in command_events.iter() {
         match ev.name.as_str() {
@@ -144,6 +146,7 @@ fn cosmos_command_listener(
                         ev.args[0].as_str(),
                         structure_type,
                         spawn_at,
+                        &player_worlds,
                         &mut commands,
                         &mut structure_loaded_delayed,
                     );

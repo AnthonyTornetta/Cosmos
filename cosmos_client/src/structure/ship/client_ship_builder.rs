@@ -32,11 +32,12 @@ impl TShipBuilder for ClientShipBuilder {
         &self,
         entity: &mut EntityCommands,
         location: Location,
+        world_location: &Location,
         velocity: Velocity,
         structure: &mut Structure,
     ) {
         self.ship_bulder
-            .insert_ship(entity, location, velocity, structure);
+            .insert_ship(entity, location, world_location, velocity, structure);
 
         entity.insert(NeedsPopulated);
     }

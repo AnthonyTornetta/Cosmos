@@ -1,7 +1,10 @@
 use bevy::prelude::*;
-use cosmos_core::structure::{
-    planet::{planet_builder::TPlanetBuilder, Planet},
-    Structure,
+use cosmos_core::{
+    physics::{location::Location, player_world::PlayerWorld},
+    structure::{
+        planet::{planet_builder::TPlanetBuilder, Planet},
+        Structure,
+    },
 };
 
 use crate::{
@@ -26,6 +29,7 @@ fn on_save_structure(
 
 fn on_load_structure(
     query: Query<(Entity, &SerializedData), With<NeedsLoaded>>,
+    player_worlds: Query<&Location, With<PlayerWorld>>,
     mut event_writer: EventWriter<DelayedStructureLoadEvent>,
     mut commands: Commands,
 ) {
@@ -35,20 +39,34 @@ fn on_load_structure(
                 if let Some(mut structure) =
                     s_data.deserialize_data::<Structure>("cosmos:structure")
                 {
-                    let mut entity_cmd = commands.entity(entity);
+                    let mut best_loc = None;
+                    let mut best_dist = f32::INFINITY;
 
-                    let builder = ServerPlanetBuilder::default();
                     let loc = s_data
                         .deserialize_data("cosmos:location")
                         .expect("Every planet should have a location when saved!");
 
-                    builder.insert_planet(&mut entity_cmd, loc, &mut structure);
+                    for world_loc in player_worlds.iter() {
+                        let dist = world_loc.distance_sqrd(&loc);
+                        if dist < best_dist {
+                            best_dist = dist;
+                            best_loc = Some(world_loc);
+                        }
+                    }
 
-                    let entity = entity_cmd.id();
+                    if let Some(world_location) = best_loc {
+                        let mut entity_cmd = commands.entity(entity);
 
-                    event_writer.send(DelayedStructureLoadEvent(entity));
+                        let builder = ServerPlanetBuilder::default();
 
-                    commands.entity(entity).insert(structure);
+                        builder.insert_planet(&mut entity_cmd, loc, world_location, &mut structure);
+
+                        let entity = entity_cmd.id();
+
+                        event_writer.send(DelayedStructureLoadEvent(entity));
+
+                        commands.entity(entity).insert(structure);
+                    }
                 }
             }
         }

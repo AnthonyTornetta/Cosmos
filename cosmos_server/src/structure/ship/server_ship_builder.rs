@@ -26,10 +26,11 @@ impl TShipBuilder for ServerShipBuilder {
         &self,
         entity: &mut bevy::ecs::system::EntityCommands,
         location: Location,
+        world_location: &Location,
         velocity: Velocity,
         structure: &mut cosmos_core::structure::Structure,
     ) {
         self.builder
-            .insert_ship(entity, location, velocity, structure);
+            .insert_ship(entity, location, world_location, velocity, structure);
     }
 }

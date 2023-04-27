@@ -1,8 +1,11 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
-use cosmos_core::structure::{
-    ship::{ship_builder::TShipBuilder, Ship},
-    Structure,
+use cosmos_core::{
+    physics::{location::Location, player_world::PlayerWorld},
+    structure::{
+        ship::{ship_builder::TShipBuilder, Ship},
+        Structure,
+    },
 };
 
 use crate::{
@@ -27,6 +30,7 @@ fn on_save_structure(
 
 fn on_load_structure(
     query: Query<(Entity, &SerializedData), With<NeedsLoaded>>,
+    player_worlds: Query<&Location, With<PlayerWorld>>,
     mut event_writer: EventWriter<DelayedStructureLoadEvent>,
     mut commands: Commands,
 ) {
@@ -36,24 +40,44 @@ fn on_load_structure(
                 if let Some(mut structure) =
                     s_data.deserialize_data::<Structure>("cosmos:structure")
                 {
-                    let mut entity_cmd = commands.entity(entity);
                     let loc = s_data
                         .deserialize_data("cosmos:location")
                         .expect("Every ship should have a location when saved!");
 
-                    let vel = s_data
-                        .deserialize_data("cosmos:velocity")
-                        .unwrap_or(Velocity::zero());
+                    let mut best_loc = None;
+                    let mut best_dist = f32::INFINITY;
 
-                    let builder = ServerShipBuilder::default();
+                    for world_loc in player_worlds.iter() {
+                        let dist = world_loc.distance_sqrd(&loc);
+                        if dist < best_dist {
+                            best_dist = dist;
+                            best_loc = Some(world_loc);
+                        }
+                    }
 
-                    builder.insert_ship(&mut entity_cmd, loc, vel, &mut structure);
+                    if let Some(world_location) = best_loc {
+                        let mut entity_cmd = commands.entity(entity);
 
-                    let entity = entity_cmd.id();
+                        let vel = s_data
+                            .deserialize_data("cosmos:velocity")
+                            .unwrap_or(Velocity::zero());
 
-                    event_writer.send(DelayedStructureLoadEvent(entity));
+                        let builder = ServerShipBuilder::default();
 
-                    commands.entity(entity).insert(structure);
+                        builder.insert_ship(
+                            &mut entity_cmd,
+                            loc,
+                            world_location,
+                            vel,
+                            &mut structure,
+                        );
+
+                        let entity = entity_cmd.id();
+
+                        event_writer.send(DelayedStructureLoadEvent(entity));
+
+                        commands.entity(entity).insert(structure);
+                    }
                 }
             }
         }
