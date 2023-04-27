@@ -22,6 +22,7 @@ use cosmos_core::structure::Structure;
 use cosmos_core::utils::array_utils::expand;
 use cosmos_core::utils::timer::UtilsTimer;
 use std::collections::HashSet;
+use std::sync::{Arc, Mutex};
 
 use crate::asset::asset_loading::{BlockTextureIndex, MainAtlas};
 use crate::{Assets, Commands, Entity, Handle, Query, Res, ResMut};
@@ -203,11 +204,16 @@ fn monitor_needs_rendered_system(
 
     chunks_need_rendered: Query<(Entity, &ChunkEntity), With<ChunkNeedsRendered>>,
 ) {
-    for (entity, ce) in chunks_need_rendered.iter().take(7) {
-        commands.entity(entity).remove::<ChunkNeedsRendered>();
+    let timer: UtilsTimer = UtilsTimer::start();
 
+    // by making the Vec an Option<Vec> I can take ownership of it later, which I cannot do with
+    // just a plain Mutex<Vec>.
+    // https://stackoverflow.com/questions/30573188/cannot-move-data-out-of-a-mutex
+    let to_process = Arc::new(Mutex::new(Some(Vec::new())));
+
+    chunks_need_rendered.par_iter().for_each(|(entity, ce)| {
         let Ok(structure) = structure_query.get(ce.structure_entity) else {
-            continue;
+            return;
         };
 
         let mut renderer = ChunkRenderer::new();
@@ -215,7 +221,7 @@ fn monitor_needs_rendered_system(
         let (cx, cy, cz) = ce.chunk_location;
 
         let Some(chunk) = structure.chunk_from_chunk_coordinates(cx, cy, cz) else {
-            continue;
+            return;
         };
 
         let (xi, yi, zi) = (cx as i32, cy as i32, cz as i32);
@@ -248,12 +254,32 @@ fn monitor_needs_rendered_system(
         );
 
         timer.log_duration("Initial rendering finished");
+
+        let mut mutex = to_process.lock().expect("Error locking to_process vec!");
+
         timer.reset();
-
-        let chunk_mesh = renderer.create_mesh();
-
+        mutex
+            .as_mut()
+            .unwrap()
+            .push((entity, renderer.create_mesh()));
         timer.log_duration("Finished converting mesh");
-        timer.reset();
+    });
+
+    let to_process_chunks = to_process
+        .lock()
+        .expect("This should be good.")
+        .take()
+        .unwrap();
+
+    if !to_process_chunks.is_empty() {
+        timer.log_duration(&format!(
+            "Rendering {} chunks took",
+            to_process_chunks.len()
+        ));
+    }
+
+    for (entity, chunk_mesh) in to_process_chunks {
+        commands.entity(entity).remove::<ChunkNeedsRendered>();
 
         let mut old_mesh_entities = Vec::new();
 
@@ -389,8 +415,6 @@ fn monitor_needs_rendered_system(
             // .insert(meshes.add(chunk_mesh.mesh))
             .insert(new_lights)
             .insert(chunk_meshes_component);
-
-        timer.log_duration("Did all the other stuff.");
     }
 }
 
