@@ -299,6 +299,7 @@ pub struct NeedsNewPhysicsEvent {
     structure_entity: Entity,
 }
 
+/// This system is responsible for adding colliders to chunks
 pub fn listen_for_new_physics_event(
     mut commands: Commands,
     mut event: EventReader<NeedsNewPhysicsEvent>,

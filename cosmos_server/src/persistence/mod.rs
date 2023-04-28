@@ -66,6 +66,7 @@ impl SaveFileIdentifier {
         format!("{}.cent", self.entity_id.0)
     }
 
+    /// Gets the directory for this sector's save folder
     pub fn get_sector_path(sector: (i64, i64, i64)) -> String {
         let (x, y, z) = sector;
 
@@ -151,6 +152,7 @@ impl SerializedData {
     }
 }
 
+/// Returns true if a sector has at some point been generated at this location
 pub fn is_sector_loaded(sector: (i64, i64, i64)) -> bool {
     fs::try_exists(SaveFileIdentifier::get_sector_path(sector)).unwrap_or(false)
 }
