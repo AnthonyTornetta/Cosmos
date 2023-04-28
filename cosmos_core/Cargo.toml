@@ -22,3 +22,4 @@ bevy_rapier3d = { workspace = true }
 bevy-inspector-egui = { workspace = true }
 
 zstd = { workspace = true }
+rayon = { workspace = true }
