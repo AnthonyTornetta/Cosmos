@@ -276,7 +276,7 @@ fn monitor_needs_rendered_system(
         ));
     }
 
-    for (entity, chunk_mesh) in to_process_chunks {
+    for (entity, mut chunk_mesh) in to_process_chunks {
         commands.entity(entity).remove::<ChunkNeedsRendered>();
 
         let mut old_mesh_entities = Vec::new();
@@ -363,42 +363,68 @@ fn monitor_needs_rendered_system(
 
         // end lighting
         // meshes
+
+        // If the chunk previously only had one chunk mesh, then it would be on
+        // the chunk entity instead of child entities
+        commands
+            .entity(entity)
+            .remove::<Handle<Mesh>>()
+            .remove::<Handle<StandardMaterial>>();
+
         let mut chunk_meshes_component = ChunkMeshes::default();
 
-        for mesh_material in chunk_mesh.mesh_materials {
+        if chunk_mesh.mesh_materials.len() > 1 {
+            for mesh_material in chunk_mesh.mesh_materials {
+                let mesh = meshes.add(mesh_material.mesh);
+
+                let ent = if let Some(ent) = old_mesh_entities.pop() {
+                    commands
+                        .entity(ent)
+                        .insert(mesh)
+                        .insert(mesh_material.material);
+
+                    ent
+                } else {
+                    let s = (CHUNK_DIMENSIONS / 2) as f32;
+
+                    let ent = commands
+                        .spawn((
+                            PbrBundle {
+                                mesh,
+                                material: mesh_material.material,
+                                ..Default::default()
+                            },
+                            Aabb::from_min_max(Vec3::new(-s, -s, -s), Vec3::new(s, s, s)),
+                        ))
+                        .id();
+
+                    entities_to_add.push(ent);
+
+                    ent
+                };
+
+                chunk_meshes_component.0.push(ent);
+            }
+        } else if !chunk_mesh.mesh_materials.is_empty() {
+            // To avoid making too many entities (and tanking performance), if only one mesh
+            // is present, just stick the mesh info onto the chunk itself.
+
+            let mesh_material = chunk_mesh
+                .mesh_materials
+                .pop()
+                .expect("This has one element in it");
+
             let mesh = meshes.add(mesh_material.mesh);
+            let s = (CHUNK_DIMENSIONS / 2) as f32;
 
-            let ent = if let Some(ent) = old_mesh_entities.pop() {
-                commands
-                    .entity(ent)
-                    .insert(mesh)
-                    .insert(mesh_material.material);
-
-                ent
-            } else {
-                let s = (CHUNK_DIMENSIONS / 2) as f32;
-
-                let ent = commands
-                    .spawn(PbrBundle {
-                        mesh,
-                        material: mesh_material.material,
-                        ..Default::default()
-                    })
-                    .insert(Aabb::from_min_max(
-                        Vec3::new(-s, -s, -s),
-                        Vec3::new(s, s, s),
-                    ))
-                    .id();
-
-                entities_to_add.push(ent);
-
-                ent
-            };
-
-            chunk_meshes_component.0.push(ent);
+            commands.entity(entity).insert((
+                mesh,
+                mesh_material.material,
+                Aabb::from_min_max(Vec3::new(-s, -s, -s), Vec3::new(s, s, s)),
+            ));
         }
 
-        // Any leftovers are dead now
+        // Any leftover entities are useless now, so kill them
         for mesh in old_mesh_entities {
             commands.entity(mesh).despawn_recursive();
         }
