@@ -5,8 +5,11 @@ use bevy::prelude::{
 };
 use cosmos_core::{
     block::Block,
-    registry::{identifiable::Identifiable, Registry},
-    structure::{chunk::Chunk, ChunkInitEvent, Structure},
+    registry::Registry,
+    structure::{
+        chunk::{Chunk, CHUNK_DIMENSIONS},
+        ChunkInitEvent, Structure,
+    },
     utils::timer::UtilsTimer,
 };
 use rayon::prelude::{IntoParallelRefMutIterator, ParallelIterator};
@@ -88,8 +91,12 @@ fn generate_planet(
     chunks.par_iter_mut().for_each(|(_, chunk)| {
         let stone = blocks.from_id("cosmos:stone").unwrap();
 
-        for block in chunk.blocks_mut() {
-            *block = stone.id();
+        for z in 0..CHUNK_DIMENSIONS {
+            for y in 0..CHUNK_DIMENSIONS {
+                for x in 0..CHUNK_DIMENSIONS {
+                    chunk.set_block_at(x, y, z, stone);
+                }
+            }
         }
     });
 

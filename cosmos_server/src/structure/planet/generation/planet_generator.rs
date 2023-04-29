@@ -81,6 +81,7 @@ fn bounce_events(
     }
 }
 
+/// Performance hot spot
 fn get_requested_chunk(
     mut event_reader: EventReader<RequestChunkEvent>,
     mut structure: Query<&mut Structure, With<Planet>>,

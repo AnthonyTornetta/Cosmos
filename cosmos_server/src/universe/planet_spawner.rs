@@ -60,7 +60,7 @@ fn spawn_planet(
     if let Some(world_location) = best_loc {
         let mut entity_cmd = commands.spawn_empty();
 
-        let mut structure = Structure::new(100, 100, 100);
+        let mut structure = Structure::new(50, 50, 50);
 
         let biosphere = TestStoneBiosphere::default();
         let marker = biosphere.get_marker_component();

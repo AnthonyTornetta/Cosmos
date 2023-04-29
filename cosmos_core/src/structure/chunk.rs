@@ -9,6 +9,7 @@ use crate::block::hardness::BlockHardness;
 use crate::block::Block;
 use crate::registry::identifiable::Identifiable;
 use crate::registry::Registry;
+use crate::utils::array_utils::flatten;
 use bevy::prelude::{Component, Entity, Vec3};
 use bevy::reflect::{FromReflect, Reflect};
 use serde::{Deserialize, Serialize};
@@ -87,7 +88,7 @@ impl Chunk {
     ///
     /// No events are generated from this.
     pub fn set_block_at(&mut self, x: usize, y: usize, z: usize, b: &Block) {
-        let index = z * CHUNK_DIMENSIONS * CHUNK_DIMENSIONS + y * CHUNK_DIMENSIONS + x;
+        let index = flatten(x, y, z, CHUNK_DIMENSIONS, CHUNK_DIMENSIONS);
         let id = b.id();
 
         self.block_health.reset_health(x, y, z);

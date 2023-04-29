@@ -233,8 +233,6 @@ fn monitor_needs_rendered_system(
         let back = structure.chunk_from_chunk_coordinates_oob(xi, yi, zi - 1);
         let front = structure.chunk_from_chunk_coordinates_oob(xi, yi, zi + 1);
 
-        let mut timer = UtilsTimer::start();
-
         renderer.render(
             &atlas,
             &materials,
@@ -251,16 +249,12 @@ fn monitor_needs_rendered_system(
             &block_textures,
         );
 
-        timer.log_duration("Initial rendering finished");
-
         let mut mutex = to_process.lock().expect("Error locking to_process vec!");
 
-        timer.reset();
         mutex
             .as_mut()
             .unwrap()
             .push((entity, renderer.create_mesh()));
-        timer.log_duration("Finished converting mesh");
     });
 
     let to_process_chunks = to_process
