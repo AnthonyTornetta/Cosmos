@@ -1,5 +1,7 @@
 //! Used to generate planets
 
+use std::sync::{Arc, Mutex};
+
 use bevy::{
     ecs::event::Event,
     prelude::*,
@@ -17,6 +19,7 @@ use cosmos_core::{
         ChunkState, Structure,
     },
 };
+use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 
 use crate::{state::GameState, structure::planet::biosphere::TGenerateChunkEvent};
 
@@ -85,44 +88,77 @@ fn get_requested_chunk(
     mut server: ResMut<RenetServer>,
     mut commands: Commands,
 ) {
-    for ev in event_reader.iter() {
-        if let Ok(mut structure) = structure.get_mut(ev.structure_entity) {
-            let (cx, cy, cz) = ev.chunk_coords;
+    let todo = Arc::new(Mutex::new(Some(Vec::new())));
+    let serialized = Arc::new(Mutex::new(Some(Vec::new())));
+    let bounced = Arc::new(Mutex::new(Some(Vec::new())));
 
-            match structure.get_chunk_state(cx, cy, cz) {
-                ChunkState::Loaded => {
-                    if let Some(chunk) = structure.chunk_from_chunk_coordinates(cx, cy, cz) {
-                        server.send_message(
-                            ev.requester_id,
-                            NettyChannel::Reliable.id(),
-                            cosmos_encoder::serialize(&ServerReliableMessages::ChunkData {
-                                structure_entity: ev.structure_entity,
-                                serialized_chunk: cosmos_encoder::serialize(chunk),
-                            }),
-                        );
+    // No par_iter() for event readers, so first convert to vec then par_iter() it.
+    event_reader
+        .iter()
+        .copied()
+        .collect::<Vec<RequestChunkEvent>>()
+        .par_iter()
+        .for_each(|ev| {
+            if let Ok(structure) = structure.get(ev.structure_entity) {
+                let (cx, cy, cz) = ev.chunk_coords;
+
+                match structure.get_chunk_state(cx, cy, cz) {
+                    ChunkState::Loaded => {
+                        if let Some(chunk) = structure.chunk_from_chunk_coordinates(cx, cy, cz) {
+                            let mut mutex = serialized.lock().expect("Failed to lock");
+
+                            mutex.as_mut().unwrap().push((
+                                ev.requester_id,
+                                cosmos_encoder::serialize(&ServerReliableMessages::ChunkData {
+                                    structure_entity: ev.structure_entity,
+                                    serialized_chunk: cosmos_encoder::serialize(chunk),
+                                }),
+                            ));
+                        }
+                    }
+                    ChunkState::Loading => bounced
+                        .lock()
+                        .expect("Failed to lock")
+                        .as_mut()
+                        .unwrap()
+                        .push(RequestChunkBouncer(*ev)),
+                    ChunkState::Unloaded => todo
+                        .lock()
+                        .expect("Failed to lock")
+                        .as_mut()
+                        .unwrap()
+                        .push((ev.structure_entity, (cx, cy, cz), *ev)),
+                    ChunkState::Invalid => {
+                        eprintln!("Client requested invalid chunk @ {cx} {cy} {cz}");
                     }
                 }
-                ChunkState::Loading => event_writer.send(RequestChunkBouncer(*ev)),
-                ChunkState::Unloaded => {
-                    structure.set_chunk(Chunk::new(cx, cy, cz));
-                    let needs_generated_flag = commands
-                        .spawn(NeedsGenerated {
-                            chunk_coords: (cx, cy, cz),
-                            structure_entity: ev.structure_entity,
-                        })
-                        .id();
-
-                    commands
-                        .entity(ev.structure_entity)
-                        .add_child(needs_generated_flag);
-
-                    event_writer.send(RequestChunkBouncer(*ev));
-                }
-                ChunkState::Invalid => {
-                    eprintln!("Client requested invalid chunk @ {cx} {cy} {cz}");
-                }
             }
-        }
+        });
+
+    for bounce in bounced.lock().expect("Failed to lock").take().unwrap() {
+        event_writer.send(bounce);
+    }
+
+    for (client_id, serialized) in serialized.lock().expect("Failed to lock").take().unwrap() {
+        server.send_message(client_id, NettyChannel::Reliable.id(), serialized);
+    }
+
+    for (entity, (cx, cy, cz), ev) in todo.lock().expect("Failed to lock").take().unwrap() {
+        let Ok(mut structure) = structure.get_mut(entity) else {
+            continue;
+        };
+
+        structure.set_chunk(Chunk::new(cx, cy, cz));
+        let needs_generated_flag = commands
+            .spawn(NeedsGenerated {
+                chunk_coords: (cx, cy, cz),
+                structure_entity: entity,
+            })
+            .id();
+
+        commands.entity(entity).add_child(needs_generated_flag);
+
+        event_writer.send(RequestChunkBouncer(ev));
     }
 }
 
