@@ -2,7 +2,7 @@
 //!
 //! These blocks can be updated.
 
-use std::slice::Iter;
+use std::slice::{Iter, IterMut};
 
 use crate::block::blocks::AIR_BLOCK_ID;
 use crate::block::hardness::BlockHardness;
@@ -32,8 +32,7 @@ pub struct Chunk {
     x: usize,
     y: usize,
     z: usize,
-    #[serde(with = "serde_arrays")]
-    blocks: [u16; N_BLOCKS],
+    blocks: Vec<u16>,
 
     block_health: BlockHealth,
 
@@ -51,7 +50,7 @@ impl Chunk {
             x,
             y,
             z,
-            blocks: [0; N_BLOCKS],
+            blocks: vec![0; N_BLOCKS],
             block_health: BlockHealth::default(),
             non_air_blocks: 0,
         }
@@ -188,6 +187,11 @@ impl Chunk {
     /// Returns the iterator for every block in the chunk
     pub fn blocks(&self) -> Iter<u16> {
         self.blocks.iter()
+    }
+
+    /// Returns the mut iterator for every block in the chunk
+    pub fn blocks_mut(&mut self) -> IterMut<u16> {
+        self.blocks.iter_mut()
     }
 }
 

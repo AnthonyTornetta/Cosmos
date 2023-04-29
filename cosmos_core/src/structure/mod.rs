@@ -475,6 +475,17 @@ impl Structure {
             self.height,
         );
         self.chunks.insert(i, chunk);
+
+        println!("Set chunk: {}", self.chunks.len());
+    }
+
+    /// # ONLY CALL THIS IF YOU THEN CALL SET_CHUNK IN THE SAME SYSTEM!
+    ///
+    /// This takes ownership of the chunk that was at this location. Useful for
+    /// multithreading stuff over multiple chunks.
+    pub fn take_chunk(&mut self, cx: usize, cy: usize, cz: usize) -> Option<Chunk> {
+        self.chunks
+            .remove(&flatten(cx, cy, cz, self.width, self.height))
     }
 
     /// Iterate over blocks in a given range. Will skip over any out of bounds positions.
