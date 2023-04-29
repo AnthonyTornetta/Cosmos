@@ -71,20 +71,14 @@ fn generate_planet(
 
     let mut chunks = events
         .iter()
-        .map(|ev| {
-            println!("GOT EVENT!");
+        .map(|ev: &TestStoneChunkNeedsGeneratedEvent| {
             if let Ok(mut structure) = query.get_mut(ev.structure_entity) {
-                println!("Structure ok");
                 if let Some(chunk) = structure.take_chunk(ev.x, ev.y, ev.z) {
                     Some((ev.structure_entity, chunk))
                 } else {
-                    println!("Bad chunk");
-
                     None
                 }
             } else {
-                println!("Bad structure");
-
                 None
             }
         })

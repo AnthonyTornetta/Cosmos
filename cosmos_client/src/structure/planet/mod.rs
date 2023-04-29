@@ -22,7 +22,7 @@ use crate::{
 
 pub mod client_planet_builder;
 
-const RENDER_DISTANCE: i32 = 6;
+const RENDER_DISTANCE: i32 = 3;
 
 fn load_planet_chunks(
     query: Query<&Location, With<LocalPlayer>>,

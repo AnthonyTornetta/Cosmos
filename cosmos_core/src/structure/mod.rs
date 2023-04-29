@@ -475,8 +475,6 @@ impl Structure {
             self.height,
         );
         self.chunks.insert(i, chunk);
-
-        println!("Set chunk: {}", self.chunks.len());
     }
 
     /// # ONLY CALL THIS IF YOU THEN CALL SET_CHUNK IN THE SAME SYSTEM!
