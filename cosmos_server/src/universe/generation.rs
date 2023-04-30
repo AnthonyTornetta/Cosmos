@@ -78,8 +78,6 @@ pub fn get_star_in_system(sx: i64, sy: i64, sz: i64, seed: &ServerSeed) -> Optio
         .wrapping_mul(seed_z)
         .wrapping_sub(seed_x);
 
-    println!("Local seed: {local_seed}");
-
     let mut rng = ChaCha8Rng::seed_from_u64(local_seed);
 
     let distance = distance_from_star_spiral(at_x, at_z);
