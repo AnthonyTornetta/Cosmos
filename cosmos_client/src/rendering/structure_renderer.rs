@@ -628,18 +628,6 @@ impl ChunkRenderer {
     }
 }
 
-// /// performance hot spot because of structure renderer constructor
-// fn add_renderer(
-//     query: Query<(Entity, &Structure), (Added<Structure>, Without<StructureRenderer>)>,
-//     mut commands: Commands,
-// ) {
-//     for (ent, structure) in query.iter() {
-//         commands
-//             .entity(ent)
-//             .insert(StructureRenderer::new(structure));
-//     }
-// }
-
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         (monitor_needs_rendered_system, monitor_block_updates_system)
