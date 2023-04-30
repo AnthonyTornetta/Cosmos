@@ -1,11 +1,12 @@
 use crate::block::lighting::{BlockLightProperties, BlockLighting};
 use crate::materials::CosmosMaterial;
+use crate::netty::flags::LocalPlayer;
 use crate::state::game_state::GameState;
 use crate::structure::planet::unload_chunks_far_from_players;
 use bevy::prelude::{
-    warn, App, BuildChildren, Component, DespawnRecursiveExt, EventReader, IntoSystemConfigs, Mesh,
-    OnUpdate, PbrBundle, PointLight, PointLightBundle, Rect, StandardMaterial, Transform, Vec3,
-    With,
+    warn, App, BuildChildren, Component, DespawnRecursiveExt, EventReader, GlobalTransform,
+    IntoSystemConfigs, Mesh, OnUpdate, PbrBundle, PointLight, PointLightBundle, Rect,
+    StandardMaterial, Transform, Vec3, With,
 };
 use bevy::reflect::{FromReflect, Reflect};
 use bevy::render::primitives::Aabb;
@@ -21,6 +22,7 @@ use cosmos_core::structure::structure_block::StructureBlock;
 use cosmos_core::structure::Structure;
 use cosmos_core::utils::array_utils::expand;
 use cosmos_core::utils::timer::UtilsTimer;
+use rayon::prelude::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use std::collections::HashSet;
 use std::sync::Mutex;
 
@@ -202,8 +204,14 @@ fn monitor_needs_rendered_system(
     chunk_meshes_query: Query<&ChunkMeshes>,
     block_textures: Res<Registry<BlockTextureIndex>>,
 
-    chunks_need_rendered: Query<(Entity, &ChunkEntity), With<ChunkNeedsRendered>>,
+    local_player: Query<&GlobalTransform, With<LocalPlayer>>,
+
+    chunks_need_rendered: Query<(Entity, &ChunkEntity, &GlobalTransform), With<ChunkNeedsRendered>>,
 ) {
+    let Ok(local_transform) = local_player.get_single() else {
+        return;
+    };
+
     let timer: UtilsTimer = UtilsTimer::start();
 
     // by making the Vec an Option<Vec> I can take ownership of it later, which I cannot do with
@@ -211,51 +219,87 @@ fn monitor_needs_rendered_system(
     // https://stackoverflow.com/questions/30573188/cannot-move-data-out-of-a-mutex
     let to_process = Mutex::new(Some(Vec::new()));
 
-    chunks_need_rendered.par_iter().for_each(|(entity, ce)| {
-        let Ok(structure) = structure_query.get(ce.structure_entity) else {
-            return;
-        };
+    let mut todo = chunks_need_rendered
+        .iter()
+        .map(|(x, y, transform)| {
+            (
+                x,
+                y,
+                transform
+                    .translation()
+                    .distance_squared(local_transform.translation()),
+            )
+        })
+        .collect::<Vec<(Entity, &ChunkEntity, f32)>>();
 
-        let mut renderer = ChunkRenderer::new();
+    let chunks_per_frame = 10;
 
-        let (cx, cy, cz) = ce.chunk_location;
+    // Only sort first `chunks_per_frame`, so no built-in sort algorithm
+    let n: usize = chunks_per_frame.min(todo.len());
 
-        let Some(chunk) = structure.chunk_from_chunk_coordinates(cx, cy, cz) else {
-            return;
-        };
+    for i in 0..n {
+        let mut min = todo[i].2;
+        let mut best_i = i;
 
-        let (xi, yi, zi) = (cx as i32, cy as i32, cz as i32);
+        for j in (i + 1)..todo.len() {
+            if todo[j].2 < min {
+                min = todo[j].2;
+                best_i = j;
+            }
+        }
 
-        let left = structure.chunk_from_chunk_coordinates_oob(xi - 1, yi, zi);
-        let right = structure.chunk_from_chunk_coordinates_oob(xi + 1, yi, zi);
-        let bottom = structure.chunk_from_chunk_coordinates_oob(xi, yi - 1, zi);
-        let top = structure.chunk_from_chunk_coordinates_oob(xi, yi + 1, zi);
-        let back = structure.chunk_from_chunk_coordinates_oob(xi, yi, zi - 1);
-        let front = structure.chunk_from_chunk_coordinates_oob(xi, yi, zi + 1);
+        todo.swap(i, best_i);
+    }
 
-        renderer.render(
-            &atlas,
-            &materials,
-            &lighting,
-            &chunk,
-            left,
-            right,
-            bottom,
-            top,
-            back,
-            front,
-            &blocks,
-            &meshes_registry,
-            &block_textures,
-        );
+    // Render chunks in parallel
+    todo.par_iter()
+        .take(chunks_per_frame)
+        .copied()
+        .for_each(|(entity, ce, _)| {
+            let Ok(structure) = structure_query.get(ce.structure_entity) else {
+                return;
+            };
 
-        let mut mutex = to_process.lock().expect("Error locking to_process vec!");
+            let mut renderer = ChunkRenderer::new();
 
-        mutex
-            .as_mut()
-            .unwrap()
-            .push((entity, renderer.create_mesh()));
-    });
+            let (cx, cy, cz) = ce.chunk_location;
+
+            let Some(chunk) = structure.chunk_from_chunk_coordinates(cx, cy, cz) else {
+                return;
+            };
+
+            let (xi, yi, zi) = (cx as i32, cy as i32, cz as i32);
+
+            let left = structure.chunk_from_chunk_coordinates_oob(xi - 1, yi, zi);
+            let right = structure.chunk_from_chunk_coordinates_oob(xi + 1, yi, zi);
+            let bottom = structure.chunk_from_chunk_coordinates_oob(xi, yi - 1, zi);
+            let top = structure.chunk_from_chunk_coordinates_oob(xi, yi + 1, zi);
+            let back = structure.chunk_from_chunk_coordinates_oob(xi, yi, zi - 1);
+            let front = structure.chunk_from_chunk_coordinates_oob(xi, yi, zi + 1);
+
+            renderer.render(
+                &atlas,
+                &materials,
+                &lighting,
+                &chunk,
+                left,
+                right,
+                bottom,
+                top,
+                back,
+                front,
+                &blocks,
+                &meshes_registry,
+                &block_textures,
+            );
+
+            let mut mutex = to_process.lock().expect("Error locking to_process vec!");
+
+            mutex
+                .as_mut()
+                .unwrap()
+                .push((entity, renderer.create_mesh()));
+        });
 
     let to_process_chunks = to_process
         .lock()

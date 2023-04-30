@@ -166,7 +166,7 @@ fn get_requested_chunk(
 #[cfg(debug_assertions)]
 const RENDER_DISTANCE: i32 = 2;
 #[cfg(not(debug_assertions))]
-const RENDER_DISTANCE: i32 = 6;
+const RENDER_DISTANCE: i32 = 10;
 
 fn generate_chunks_near_players(
     players: Query<&Location, With<Player>>,

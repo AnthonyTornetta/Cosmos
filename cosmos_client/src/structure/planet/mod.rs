@@ -25,7 +25,7 @@ pub mod client_planet_builder;
 #[cfg(debug_assertions)]
 const RENDER_DISTANCE: i32 = 2;
 #[cfg(not(debug_assertions))]
-const RENDER_DISTANCE: i32 = 6;
+const RENDER_DISTANCE: i32 = 10;
 
 fn load_planet_chunks(
     query: Query<&Location, With<LocalPlayer>>,
