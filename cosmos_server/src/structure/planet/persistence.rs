@@ -6,6 +6,7 @@ use cosmos_core::{
         Structure,
     },
 };
+use serde::{Deserialize, Serialize};
 
 use crate::{
     persistence::{
@@ -18,11 +19,25 @@ use crate::{
 
 use super::server_planet_builder::ServerPlanetBuilder;
 
+#[derive(Debug, Serialize, Deserialize)]
+struct PlanetSaveData {
+    width: usize,
+    height: usize,
+    length: usize,
+}
+
 fn on_save_structure(
     mut query: Query<(&mut SerializedData, &Structure), (With<NeedsSaved>, With<Planet>)>,
 ) {
     for (mut s_data, structure) in query.iter_mut() {
-        s_data.serialize_data("cosmos:structure", structure);
+        s_data.serialize_data(
+            "cosmos:planet",
+            &PlanetSaveData {
+                width: structure.chunks_width(),
+                height: structure.chunks_height(),
+                length: structure.chunks_length(),
+            },
+        );
         s_data.serialize_data("cosmos:is_planet", &true);
     }
 }
@@ -36,9 +51,15 @@ fn on_load_structure(
     for (entity, s_data) in query.iter() {
         if let Some(is_planet) = s_data.deserialize_data::<bool>("cosmos:is_planet") {
             if is_planet {
-                if let Some(mut structure) =
-                    s_data.deserialize_data::<Structure>("cosmos:structure")
+                if let Some(planet_save_data) =
+                    s_data.deserialize_data::<PlanetSaveData>("cosmos:planet")
                 {
+                    let mut structure = Structure::new(
+                        planet_save_data.width,
+                        planet_save_data.height,
+                        planet_save_data.length,
+                    );
+
                     let mut best_loc = None;
                     let mut best_dist = f32::INFINITY;
 

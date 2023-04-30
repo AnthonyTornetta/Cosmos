@@ -1509,7 +1509,6 @@ dependencies = [
  "rayon",
  "serde",
  "serde_json",
- "take_mut",
 ]
 
 [[package]]
@@ -1529,7 +1528,6 @@ dependencies = [
  "rayon",
  "serde",
  "serde_arrays",
- "take_mut",
  "zstd 0.12.3+zstd.1.5.2",
 ]
 
@@ -1551,7 +1549,6 @@ dependencies = [
  "rayon",
  "renet_visualizer",
  "serde",
- "take_mut",
  "walkdir",
  "zip",
 ]
@@ -3843,12 +3840,6 @@ dependencies = [
  "num-traits",
  "slotmap",
 ]
-
-[[package]]
-name = "take_mut"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f764005d11ee5f36500a149ace24e00e3da98b0158b3e2d53a7495660d3f4d60"
 
 [[package]]
 name = "termcolor"

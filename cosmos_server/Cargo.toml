@@ -7,7 +7,6 @@ edition = "2021"
 
 [dependencies]
 bevy = { workspace = true }
-take_mut = { workspace = true }
 bevy_renet = { workspace = true }
 serde = { workspace = true }
 bincode = { workspace = true }

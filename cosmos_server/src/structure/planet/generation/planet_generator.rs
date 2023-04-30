@@ -303,7 +303,9 @@ fn unload_chunks_far_from_players(
     for (planet, set) in potential_chunks {
         if let Ok((_, mut structure, _)) = planets.get_mut(planet) {
             for (cx, cy, cz) in set {
-                structure.unload_chunk_at(cx, cy, cz, &mut commands);
+                if let Some(chunk) = structure.unload_chunk_at(cx, cy, cz, &mut commands) {
+                    // save_chunk(chunk, structure);
+                }
             }
         }
     }

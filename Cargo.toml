@@ -13,8 +13,6 @@ resolver="2"
 bevy = "0.10.0"
 bevy_rapier3d = { git = "https://github.com/AnthonyTornetta/bevy_rapier/", version = "0.21.0", features = [ "simd-stable", "serde-serialize" ] }
 
-take_mut = "0.2.2"
-
 bevy_renet = "0.0.7"
 serde = "1.0.155"
 serde_arrays = "0.1.0"

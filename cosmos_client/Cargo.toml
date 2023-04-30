@@ -9,7 +9,6 @@ edition = "2021"
 cosmos_core = { version = "0.0.3", path = "../cosmos_core" }
 
 bevy = { workspace = true }
-take_mut = { workspace = true }
 bevy_renet = { workspace = true }
 serde = { workspace = true }
 bincode = { workspace = true }
