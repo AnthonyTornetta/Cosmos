@@ -1,5 +1,7 @@
 //! Responsible for the collider generation of a structure.
 
+use std::sync::Mutex;
+
 use crate::block::Block;
 use crate::events::block_events::BlockChangedEvent;
 use crate::registry::Registry;
@@ -7,82 +9,21 @@ use crate::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
 use crate::structure::events::ChunkSetEvent;
 use crate::structure::Structure;
 use bevy::prelude::{
-    Added, App, Commands, Component, Entity, EventReader, EventWriter, Query, Res, Vec3, Without,
+    App, Commands, Component, Entity, EventReader, EventWriter, IntoSystemConfigs, Query, Res, Vec3,
 };
 use bevy::reflect::{FromReflect, Reflect};
 use bevy::utils::HashSet;
 use bevy_rapier3d::math::Vect;
 use bevy_rapier3d::na::Vector3;
 use bevy_rapier3d::prelude::{Collider, ColliderMassProperties, ReadMassProperties, Rot};
+use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 
 type GenerateCollider = (Collider, f32, Vec3);
-
-struct ChunkPhysicsModel {
-    collider: Option<GenerateCollider>,
-    chunk_coords: Vector3<usize>,
-}
-
-#[derive(Component, Debug, Reflect, FromReflect)]
-pub struct StructurePhysics {
-    needs_changed: HashSet<Vector3<usize>>,
-}
-
-fn add_physics(
-    query: Query<(Entity, &Structure), (Added<Structure>, Without<StructurePhysics>)>,
-    mut commands: Commands,
-) {
-    for (entity, structure) in query.iter() {
-        let physics_updater = StructurePhysics::new(structure);
-
-        commands.entity(entity).insert(physics_updater);
-    }
-}
 
 /// Sometimes the ReadMassProperties is wrong, so this component fixes it
 #[derive(Component, Debug, Reflect, FromReflect, PartialEq, Clone, Copy)]
 struct StructureMass {
     mass: f32,
-}
-
-impl StructurePhysics {
-    pub fn new(structure: &Structure) -> Self {
-        let mut me = Self {
-            needs_changed: HashSet::with_capacity(
-                structure.chunks_width() * structure.chunks_height() * structure.chunks_length(),
-            ),
-        };
-
-        for z in 0..structure.chunks_length() {
-            for y in 0..structure.chunks_height() {
-                for x in 0..structure.chunks_width() {
-                    me.needs_changed.insert(Vector3::new(x, y, z));
-                }
-            }
-        }
-
-        me
-    }
-
-    fn create_colliders(
-        &mut self,
-        structure: &Structure,
-        blocks: &Registry<Block>,
-    ) -> Vec<ChunkPhysicsModel> {
-        let mut colliders = Vec::with_capacity(self.needs_changed.len());
-
-        for c in &self.needs_changed {
-            if let Some(chunk) = structure.chunk_from_chunk_coordinates(c.x, c.y, c.z) {
-                colliders.push(ChunkPhysicsModel {
-                    collider: generate_chunk_collider(chunk, blocks),
-                    chunk_coords: *c,
-                });
-            }
-        }
-
-        self.needs_changed.clear();
-
-        colliders
-    }
 }
 
 /// This works by first checking if the cube that is within its bounds contains either all solid or empty blocks
@@ -294,129 +235,103 @@ fn generate_chunk_collider(chunk: &Chunk, blocks: &Registry<Block>) -> Option<Ge
     }
 }
 
-/// Sent when a structure needs new physics
-pub struct NeedsNewPhysicsEvent {
+#[derive(Debug, Hash, PartialEq, Eq)]
+/// This event is sent when a chunk needs new physics applied to it.
+///
+/// You don't need to send this yourself, and is only public so rust is happy
+/// about [`listen_for_new_physics_event`] being public.
+pub struct ChunkNeedsPhysicsEvent {
+    chunk: (usize, usize, usize),
     structure_entity: Entity,
 }
 
 /// This system is responsible for adding colliders to chunks
 pub fn listen_for_new_physics_event(
-    mut commands: Commands,
-    mut event: EventReader<NeedsNewPhysicsEvent>,
-    mut query: Query<(&Structure, &mut StructurePhysics)>,
+    commands: Commands,
+    query: Query<&Structure>,
+    mut event_reader: EventReader<ChunkNeedsPhysicsEvent>,
     blocks: Res<Registry<Block>>,
 ) {
-    if !event.is_empty() {
-        let mut done_structures = HashSet::new();
+    let commands_mutex = Mutex::new(commands);
 
-        for ev in event.iter() {
-            if done_structures.contains(&ev.structure_entity) {
-                continue;
-            }
+    let mut to_process = event_reader
+        .iter()
+        .collect::<Vec<&ChunkNeedsPhysicsEvent>>();
 
-            done_structures.insert(ev.structure_entity);
+    to_process.dedup();
 
-            let (structure, mut physics) = query.get_mut(ev.structure_entity).unwrap();
-
-            let colliders = physics.create_colliders(structure, &blocks);
-
-            for chunk_collider in colliders {
-                let coords = &chunk_collider.chunk_coords;
-
-                if let Some(chunk_entity) = structure.chunk_entity(coords.x, coords.y, coords.z) {
-                    let mut entity_commands = commands.entity(chunk_entity);
-                    if let Some((collider, mass, _)) = chunk_collider.collider {
-                        // center_of_mass needs custom torque calculations to work properly
-
-                        // let mass_props = MassProperties {
-                        //     mass,
-                        //     // local_center_of_mass,
-                        //     ..Default::default()
-                        // };
-
-                        entity_commands
-                            .insert(collider)
-                            .insert(ColliderMassProperties::Mass(mass));
-                        // .insert(ColliderMassProperties::MassProperties(mass_props))
-                        // Sometimes this gets out-of-sync, so I update it manually here
-                        // .insert(ReadMassProperties(mass_props));
-                    } else {
-                        entity_commands.remove::<Collider>();
-                    }
-                }
-            }
-        }
-    }
-}
-
-/// Marks a structure for change if it already hasn't been marked
-fn maybe_mark_structure_for_change(
-    done_structures: &mut HashSet<Entity>,
-    entity: Entity,
-    chunk_coords: Option<Vector3<usize>>,
-    query: &mut Query<&mut StructurePhysics>,
-    event_writer: &mut EventWriter<NeedsNewPhysicsEvent>,
-) {
-    if let Some(chunk_coords) = chunk_coords {
-        let Ok(mut structure_physics) = query.get_mut(entity) else {
-            // Entity may have been unloaded
+    to_process.par_iter().for_each(|ev| {
+        let Ok(structure) = query.get(ev.structure_entity) else {
             return;
         };
 
-        structure_physics.needs_changed.insert(chunk_coords);
-    }
+        let (cx, cy, cz) = ev.chunk;
 
-    if !done_structures.contains(&entity) {
-        done_structures.insert(entity);
+        let Some(chunk) = structure.chunk_from_chunk_coordinates(cx, cy, cz) else {
+            return;
+        };
 
-        event_writer.send(NeedsNewPhysicsEvent {
-            structure_entity: entity,
-        });
-    }
+        let Some(entity) = structure.chunk_entity(cx, cy, cz) else {
+            return;
+        };
+
+        let chunk_collider = generate_chunk_collider(chunk, &blocks);
+
+        if let Some(mut entity_commands) = commands_mutex.lock().unwrap().get_entity(entity) {
+            if let Some((collider, mass, _)) = chunk_collider {
+                // center_of_mass needs custom torque calculations to work properly
+
+                // let mass_props = MassProperties {
+                //     mass,
+                //     // local_center_of_mass,
+                //     ..Default::default()
+                // };
+
+                entity_commands
+                    .insert(collider)
+                    .insert(ColliderMassProperties::Mass(mass));
+                // .insert(ColliderMassProperties::MassProperties(mass_props))
+                // Sometimes this gets out-of-sync, so I update it manually here
+                // .insert(ReadMassProperties(mass_props));
+            } else {
+                entity_commands.remove::<Collider>();
+            }
+        }
+    });
 }
 
 fn listen_for_structure_event(
     mut event: EventReader<BlockChangedEvent>,
     mut chunk_set_event: EventReader<ChunkSetEvent>,
-    mut query: Query<&mut StructurePhysics>,
-    mut event_writer: EventWriter<NeedsNewPhysicsEvent>,
+    mut event_writer: EventWriter<ChunkNeedsPhysicsEvent>,
 ) {
-    let mut done_structures = HashSet::new();
+    let mut to_do: HashSet<ChunkNeedsPhysicsEvent> = HashSet::new();
+
     for ev in event.iter() {
-        maybe_mark_structure_for_change(
-            &mut done_structures,
-            ev.structure_entity,
-            Some(Vector3::new(
-                ev.block.chunk_coord_x(),
-                ev.block.chunk_coord_y(),
-                ev.block.chunk_coord_z(),
-            )),
-            &mut query,
-            &mut event_writer,
-        );
+        to_do.insert(ChunkNeedsPhysicsEvent {
+            chunk: (ev.block.chunk_coords()),
+            structure_entity: ev.structure_entity,
+        });
     }
 
     for ev in chunk_set_event.iter() {
-        maybe_mark_structure_for_change(
-            &mut done_structures,
-            ev.structure_entity,
-            Some(Vector3::new(ev.x, ev.y, ev.z)),
-            &mut query,
-            &mut event_writer,
-        );
+        to_do.insert(ChunkNeedsPhysicsEvent {
+            chunk: (ev.x, ev.y, ev.z),
+            structure_entity: ev.structure_entity,
+        });
+    }
+
+    for event in to_do {
+        event_writer.send(event);
     }
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_event::<NeedsNewPhysicsEvent>()
+    app.add_event::<ChunkNeedsPhysicsEvent>()
         // This wasn't registered in bevy_rapier
         .register_type::<ReadMassProperties>()
         .register_type::<ColliderMassProperties>()
-        .add_systems((
-            listen_for_structure_event,
-            listen_for_new_physics_event,
-            add_physics,
-        ));
+        .add_systems((listen_for_structure_event, listen_for_new_physics_event).chain());
 }
 
 #[cfg(test)]

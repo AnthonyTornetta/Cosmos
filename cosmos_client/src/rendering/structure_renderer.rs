@@ -22,7 +22,7 @@ use cosmos_core::structure::Structure;
 use cosmos_core::utils::array_utils::expand;
 use cosmos_core::utils::timer::UtilsTimer;
 use std::collections::HashSet;
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
 
 use crate::asset::asset_loading::{BlockTextureIndex, MainAtlas};
 use crate::{Assets, Commands, Entity, Handle, Query, Res, ResMut};
@@ -209,7 +209,7 @@ fn monitor_needs_rendered_system(
     // by making the Vec an Option<Vec> I can take ownership of it later, which I cannot do with
     // just a plain Mutex<Vec>.
     // https://stackoverflow.com/questions/30573188/cannot-move-data-out-of-a-mutex
-    let to_process = Arc::new(Mutex::new(Some(Vec::new())));
+    let to_process = Mutex::new(Some(Vec::new()));
 
     chunks_need_rendered.par_iter().for_each(|(entity, ce)| {
         let Ok(structure) = structure_query.get(ce.structure_entity) else {

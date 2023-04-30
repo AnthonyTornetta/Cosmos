@@ -1,6 +1,6 @@
 //! Used to generate planets
 
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
 
 use bevy::{
     ecs::event::Event,
@@ -89,9 +89,9 @@ fn get_requested_chunk(
     mut server: ResMut<RenetServer>,
     mut commands: Commands,
 ) {
-    let todo = Arc::new(Mutex::new(Some(Vec::new())));
-    let serialized = Arc::new(Mutex::new(Some(Vec::new())));
-    let bounced = Arc::new(Mutex::new(Some(Vec::new())));
+    let todo = Mutex::new(Some(Vec::new()));
+    let serialized = Mutex::new(Some(Vec::new()));
+    let bounced = Mutex::new(Some(Vec::new()));
 
     // No par_iter() for event readers, so first convert to vec then par_iter() it.
     event_reader
