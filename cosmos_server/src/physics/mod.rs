@@ -234,7 +234,8 @@ fn remove_empty_worlds(
     }
 }
 
-fn sync_transforms_and_locations(
+/// This system syncs the locations up with their changes in transforms.
+pub fn sync_transforms_and_locations(
     mut trans_query_no_parent: Query<
         (Entity, &mut Transform, &mut Location, &WorldWithin),
         (Without<PlayerWorld>, Without<Parent>),

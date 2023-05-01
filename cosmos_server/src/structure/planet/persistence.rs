@@ -83,6 +83,7 @@ fn generate_planet(
 
         let builder = ServerPlanetBuilder::default();
 
+        println!("Inserted w/ planet builder.");
         builder.insert_planet(&mut entity_cmd, loc, world_location, &mut structure);
 
         let entity = entity_cmd.id();

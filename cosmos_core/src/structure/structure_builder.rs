@@ -35,13 +35,8 @@ impl TStructureBuilder for StructureBuilder {
     ) {
         structure.set_entity(entity.id());
 
-        let relative_coords = world_location.relative_coords_to(&location);
-
-        location.last_transform_loc = Some(relative_coords);
-
         entity
             .insert(PbrBundle {
-                transform: Transform::from_translation(relative_coords),
                 ..Default::default()
             })
             .insert((velocity, location));
