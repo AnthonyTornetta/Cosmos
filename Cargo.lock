@@ -1492,7 +1492,7 @@ dependencies = [
 
 [[package]]
 name = "cosmos_client"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "bevy",
  "bevy-inspector-egui",
@@ -1513,7 +1513,7 @@ dependencies = [
 
 [[package]]
 name = "cosmos_core"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "bevy",
  "bevy-inspector-egui",
@@ -1533,7 +1533,7 @@ dependencies = [
 
 [[package]]
 name = "cosmos_server"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "bevy",
  "bevy-inspector-egui",
