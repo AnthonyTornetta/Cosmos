@@ -163,7 +163,7 @@ impl<'a> Iterator for BlockIterator<'a> {
                     }
                 }
 
-                return Some(StructureBlock { x, y, z });
+                Some(StructureBlock { x, y, z })
             }
             BlockItrState::ExcludeEmpty(body) => loop {
                 if body.at_z > body.end_z {
@@ -255,9 +255,9 @@ impl<'a> ChunkIterator<'a> {
                         end_y,
                         end_z,
 
-                        at_x: (start_x.max(0) as usize).min(structure.chunks_width() - 1),
-                        at_y: (start_y.max(0) as usize).min(structure.chunks_height() - 1),
-                        at_z: (start_z.max(0) as usize).min(structure.chunks_length() - 1),
+                        at_x: start_x.max(0).min(structure.chunks_width() - 1),
+                        at_y: start_y.max(0).min(structure.chunks_height() - 1),
+                        at_z: start_z.max(0).min(structure.chunks_length() - 1),
                         structure,
                     })
                 } else {
@@ -347,13 +347,13 @@ impl<'a> Iterator for ChunkIterator<'a> {
                 let position = (cx, cy, cz);
 
                 if let Some(chunk) = body.structure.chunk_from_chunk_coordinates(cx, cy, cz) {
-                    return Some(ChunkIteratorResult::FilledChunk { position, chunk });
+                    Some(ChunkIteratorResult::FilledChunk { position, chunk })
                 } else {
-                    return Some(ChunkIteratorResult::EmptyChunk { position });
+                    Some(ChunkIteratorResult::EmptyChunk { position })
                 }
             }
             ChunkItrState::ExcludeEmpty((body, itr)) => {
-                while let Some((_, chunk)) = itr.next() {
+                for (_, chunk) in itr.by_ref() {
                     let (cx, cy, cz) = (
                         chunk.structure_x(),
                         chunk.structure_y(),
@@ -376,7 +376,7 @@ impl<'a> Iterator for ChunkIterator<'a> {
 
                 self.state = ChunkItrState::Invalid;
 
-                return None;
+                None
             }
         }
     }

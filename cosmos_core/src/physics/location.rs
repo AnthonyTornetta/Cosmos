@@ -132,12 +132,12 @@ impl AddAssign<Vec3> for &mut Location {
     }
 }
 
-impl Into<Vec3> for Location {
-    fn into(self) -> Vec3 {
+impl From<Location> for Vec3 {
+    fn from(val: Location) -> Self {
         Vec3::new(
-            self.sector_x as f32 * SECTOR_DIMENSIONS + self.local.x,
-            self.sector_y as f32 * SECTOR_DIMENSIONS + self.local.y,
-            self.sector_z as f32 * SECTOR_DIMENSIONS + self.local.z,
+            val.sector_x as f32 * SECTOR_DIMENSIONS + val.local.x,
+            val.sector_y as f32 * SECTOR_DIMENSIONS + val.local.y,
+            val.sector_z as f32 * SECTOR_DIMENSIONS + val.local.z,
         )
     }
 }

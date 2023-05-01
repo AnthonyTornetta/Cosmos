@@ -241,9 +241,9 @@ fn monitor_needs_rendered_system(
         let mut min = todo[i].2;
         let mut best_i = i;
 
-        for j in (i + 1)..todo.len() {
-            if todo[j].2 < min {
-                min = todo[j].2;
+        for (j, item) in todo.iter().enumerate().skip(i + 1) {
+            if item.2 < min {
+                min = item.2;
                 best_i = j;
             }
         }
@@ -281,7 +281,7 @@ fn monitor_needs_rendered_system(
                 &atlas,
                 &materials,
                 &lighting,
-                &chunk,
+                chunk,
                 left,
                 right,
                 bottom,

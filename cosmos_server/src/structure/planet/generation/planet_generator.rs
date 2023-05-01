@@ -209,7 +209,7 @@ fn generate_chunks_near_players(
                 (pz as f32 / CHUNK_DIMENSIONSF).floor() as i32,
             );
 
-            let rd = RENDER_DISTANCE as i32;
+            let rd = RENDER_DISTANCE;
 
             let iterator = best_planet.chunk_iter(
                 (px - rd, py - rd, pz - rd),

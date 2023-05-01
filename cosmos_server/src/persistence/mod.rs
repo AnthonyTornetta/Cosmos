@@ -135,7 +135,7 @@ impl SaveFileIdentifier {
         match &self.identifier_type {
             SaveFileIdentifierType::Base((_, sector)) => {
                 let directory = sector
-                    .map(|sector| Self::get_sector_path(sector))
+                    .map(Self::get_sector_path)
                     .unwrap_or("world/nowhere".into());
 
                 format!("{directory}/{}", self.get_save_file_name())

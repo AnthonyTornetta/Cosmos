@@ -73,18 +73,13 @@ fn generate_planet(
 
     let mut chunks = events
         .iter()
-        .map(|ev: &TestStoneChunkNeedsGeneratedEvent| {
+        .filter_map(|ev: &TestStoneChunkNeedsGeneratedEvent| {
             if let Ok(mut structure) = query.get_mut(ev.structure_entity) {
-                if let Some(chunk) = structure.take_chunk(ev.x, ev.y, ev.z) {
-                    Some((ev.structure_entity, chunk))
-                } else {
-                    None
-                }
+                structure.take_chunk(ev.x, ev.y, ev.z).map(|chunk| (ev.structure_entity, chunk))
             } else {
                 None
             }
         })
-        .flatten()
         .collect::<Vec<(Entity, Chunk)>>();
 
     chunks.par_iter_mut().for_each(|(_, chunk)| {

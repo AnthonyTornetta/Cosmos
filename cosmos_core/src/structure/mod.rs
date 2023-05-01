@@ -654,12 +654,10 @@ impl Structure {
             } else {
                 ChunkState::Loading
             }
+        } else if cx < self.width && cy < self.height && cz < self.length {
+            ChunkState::Unloaded
         } else {
-            if cx < self.width && cy < self.height && cz < self.length {
-                ChunkState::Unloaded
-            } else {
-                ChunkState::Invalid
-            }
+            ChunkState::Invalid
         }
     }
 

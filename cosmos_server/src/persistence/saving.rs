@@ -92,15 +92,13 @@ pub fn done_saving(
             if fs::try_exists(&path).unwrap_or(false) {
                 fs::remove_file(path).expect("Error deleting old save file!");
 
-                if let SaveFileIdentifierType::Base((entity_id, sector)) =
+                if let SaveFileIdentifierType::Base((entity_id, Some(sector))) =
                     &save_file_identifier.identifier_type
                 {
-                    if let Some(sector) = &sector {
-                        sectors_cache
-                            .0
-                            .get_mut(sector)
-                            .map(|set| set.remove(&entity_id));
-                    }
+                    sectors_cache
+                        .0
+                        .get_mut(sector)
+                        .map(|set| set.remove(entity_id));
                 }
             }
         }
