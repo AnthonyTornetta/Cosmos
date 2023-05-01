@@ -35,49 +35,42 @@ fn on_load_structure(
     mut commands: Commands,
 ) {
     for (entity, s_data) in query.iter() {
-        if let Some(is_ship) = s_data.deserialize_data::<bool>("cosmos:is_ship") {
-            if is_ship {
-                if let Some(mut structure) =
-                    s_data.deserialize_data::<Structure>("cosmos:structure")
-                {
-                    let loc = s_data
-                        .deserialize_data("cosmos:location")
-                        .expect("Every ship should have a location when saved!");
+        if s_data
+            .deserialize_data::<bool>("cosmos:is_ship")
+            .unwrap_or(false)
+        {
+            if let Some(mut structure) = s_data.deserialize_data::<Structure>("cosmos:structure") {
+                let loc = s_data
+                    .deserialize_data("cosmos:location")
+                    .expect("Every ship should have a location when saved!");
 
-                    let mut best_loc = None;
-                    let mut best_dist = f32::INFINITY;
+                let mut best_loc = None;
+                let mut best_dist = f32::INFINITY;
 
-                    for world_loc in player_worlds.iter() {
-                        let dist = world_loc.distance_sqrd(&loc);
-                        if dist < best_dist {
-                            best_dist = dist;
-                            best_loc = Some(world_loc);
-                        }
+                for world_loc in player_worlds.iter() {
+                    let dist = world_loc.distance_sqrd(&loc);
+                    if dist < best_dist {
+                        best_dist = dist;
+                        best_loc = Some(world_loc);
                     }
+                }
 
-                    if let Some(world_location) = best_loc {
-                        let mut entity_cmd = commands.entity(entity);
+                if let Some(world_location) = best_loc {
+                    let mut entity_cmd = commands.entity(entity);
 
-                        let vel = s_data
-                            .deserialize_data("cosmos:velocity")
-                            .unwrap_or(Velocity::zero());
+                    let vel = s_data
+                        .deserialize_data("cosmos:velocity")
+                        .unwrap_or(Velocity::zero());
 
-                        let builder = ServerShipBuilder::default();
+                    let builder = ServerShipBuilder::default();
 
-                        builder.insert_ship(
-                            &mut entity_cmd,
-                            loc,
-                            world_location,
-                            vel,
-                            &mut structure,
-                        );
+                    builder.insert_ship(&mut entity_cmd, loc, world_location, vel, &mut structure);
 
-                        let entity = entity_cmd.id();
+                    let entity = entity_cmd.id();
 
-                        event_writer.send(DelayedStructureLoadEvent(entity));
+                    event_writer.send(DelayedStructureLoadEvent(entity));
 
-                        commands.entity(entity).insert(structure);
-                    }
+                    commands.entity(entity).insert(structure);
                 }
             }
         }

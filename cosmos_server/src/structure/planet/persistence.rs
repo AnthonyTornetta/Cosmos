@@ -49,6 +49,50 @@ fn on_save_structure(
     }
 }
 
+fn generate_planet(
+    entity: Entity,
+    planet_save_data: PlanetSaveData,
+    s_data: &SerializedData,
+    commands: &mut Commands,
+    player_worlds: &Query<&Location, With<PlayerWorld>>,
+    event_writer: &mut EventWriter<DelayedStructureLoadEvent>,
+) {
+    let mut structure = Structure::new(
+        planet_save_data.width,
+        planet_save_data.height,
+        planet_save_data.length,
+    );
+
+    let mut best_loc = None;
+    let mut best_dist = f32::INFINITY;
+
+    let loc = s_data
+        .deserialize_data("cosmos:location")
+        .expect("Every planet should have a location when saved!");
+
+    for world_loc in player_worlds.iter() {
+        let dist = world_loc.distance_sqrd(&loc);
+        if dist < best_dist {
+            best_dist = dist;
+            best_loc = Some(world_loc);
+        }
+    }
+
+    if let Some(world_location) = best_loc {
+        let mut entity_cmd = commands.entity(entity);
+
+        let builder = ServerPlanetBuilder::default();
+
+        builder.insert_planet(&mut entity_cmd, loc, world_location, &mut structure);
+
+        let entity = entity_cmd.id();
+
+        event_writer.send(DelayedStructureLoadEvent(entity));
+
+        commands.entity(entity).insert(structure);
+    }
+}
+
 fn on_load_structure(
     query: Query<(Entity, &SerializedData), With<NeedsLoaded>>,
     player_worlds: Query<&Location, With<PlayerWorld>>,
@@ -56,46 +100,21 @@ fn on_load_structure(
     mut commands: Commands,
 ) {
     for (entity, s_data) in query.iter() {
-        if let Some(is_planet) = s_data.deserialize_data::<bool>("cosmos:is_planet") {
-            if is_planet {
-                if let Some(planet_save_data) =
-                    s_data.deserialize_data::<PlanetSaveData>("cosmos:planet")
-                {
-                    let mut structure = Structure::new(
-                        planet_save_data.width,
-                        planet_save_data.height,
-                        planet_save_data.length,
-                    );
-
-                    let mut best_loc = None;
-                    let mut best_dist = f32::INFINITY;
-
-                    let loc = s_data
-                        .deserialize_data("cosmos:location")
-                        .expect("Every planet should have a location when saved!");
-
-                    for world_loc in player_worlds.iter() {
-                        let dist = world_loc.distance_sqrd(&loc);
-                        if dist < best_dist {
-                            best_dist = dist;
-                            best_loc = Some(world_loc);
-                        }
-                    }
-
-                    if let Some(world_location) = best_loc {
-                        let mut entity_cmd = commands.entity(entity);
-
-                        let builder = ServerPlanetBuilder::default();
-
-                        builder.insert_planet(&mut entity_cmd, loc, world_location, &mut structure);
-
-                        let entity = entity_cmd.id();
-
-                        event_writer.send(DelayedStructureLoadEvent(entity));
-
-                        commands.entity(entity).insert(structure);
-                    }
-                }
+        if s_data
+            .deserialize_data::<bool>("cosmos:is_planet")
+            .unwrap_or(false)
+        {
+            if let Some(planet_save_data) =
+                s_data.deserialize_data::<PlanetSaveData>("cosmos:planet")
+            {
+                generate_planet(
+                    entity,
+                    planet_save_data,
+                    s_data,
+                    &mut commands,
+                    &player_worlds,
+                    &mut event_writer,
+                );
             }
         }
     }
