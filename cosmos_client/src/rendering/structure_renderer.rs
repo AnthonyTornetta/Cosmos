@@ -539,10 +539,14 @@ impl ChunkRenderer {
 
         let mut faces = Vec::with_capacity(6);
 
-        for (i, block) in chunk.blocks().copied().enumerate() {
-            let (x, y, z) = expand(i, CHUNK_DIMENSIONS, CHUNK_DIMENSIONS);
-
-            let (cx, cy, cz) = (
+        for ((x, y, z), block) in chunk
+            .blocks()
+            .copied()
+            .enumerate()
+            .map(|(i, block)| (expand(i, CHUNK_DIMENSIONS, CHUNK_DIMENSIONS), block))
+            .filter(|((x, y, z), _)| chunk.has_block_at(*x, *y, *z))
+        {
+            let (center_offset_x, center_offset_y, center_offset_z) = (
                 x as f32 - cd2 + 0.5,
                 y as f32 - cd2 + 0.5,
                 z as f32 - cd2 + 0.5,
@@ -640,7 +644,7 @@ impl ChunkRenderer {
 
                     mesh_info.add_mesh_information(
                         mesh.info_for_face(*face),
-                        Vec3::new(cx, cy, cz),
+                        Vec3::new(center_offset_x, center_offset_y, center_offset_z),
                         uvs,
                     );
                 }

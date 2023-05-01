@@ -17,7 +17,7 @@ use crate::{
     persistence::is_sector_loaded,
     state::GameState,
     structure::planet::{
-        biosphere::{test_all_stone_biosphere::TestStoneBiosphere, TBiosphere},
+        biosphere::{grass_biosphere::GrassBiosphere, TBiosphere},
         server_planet_builder::ServerPlanetBuilder,
     },
 };
@@ -62,7 +62,7 @@ fn spawn_planet(
 
         let mut structure = Structure::new(50, 50, 50);
 
-        let biosphere = TestStoneBiosphere::default();
+        let biosphere = GrassBiosphere::default();
         let marker = biosphere.get_marker_component();
         let builder = ServerPlanetBuilder::default();
 

@@ -22,7 +22,10 @@ use cosmos_core::{
 use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 
 use crate::{
-    persistence::{saving::NeedsSaved, EntityId, SaveFileIdentifier},
+    persistence::{
+        saving::{NeedsSaved, NeedsUnloaded},
+        EntityId, SaveFileIdentifier,
+    },
     state::GameState,
     structure::planet::{
         biosphere::TGenerateChunkEvent, chunk::SaveChunk, persistence::NeedsPopulated,
@@ -334,6 +337,7 @@ fn unload_chunks_far_from_players(
                             SaveFileIdentifier::new(Some(location.sector()), entity_id.clone()),
                         ),
                         NeedsSaved,
+                        NeedsUnloaded,
                     ));
                 }
             }

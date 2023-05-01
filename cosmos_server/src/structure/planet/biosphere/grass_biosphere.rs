@@ -6,10 +6,14 @@ use bevy::prelude::{
 use cosmos_core::{
     block::Block,
     registry::Registry,
-    structure::{chunk::CHUNK_DIMENSIONS, ChunkInitEvent, Structure},
-    utils::resource_wrapper::ResourceWrapper,
+    structure::{
+        chunk::{Chunk, CHUNK_DIMENSIONS},
+        ChunkInitEvent, Structure,
+    },
+    utils::{resource_wrapper::ResourceWrapper, timer::UtilsTimer},
 };
 use noise::NoiseFn;
+use rayon::prelude::{IntoParallelRefMutIterator, ParallelIterator};
 
 use crate::structure::planet::generation::planet_generator::check_needs_generated_system;
 use crate::GameState;
@@ -69,14 +73,28 @@ fn generate_planet(
     noise_generastor: Res<ResourceWrapper<noise::OpenSimplex>>,
     blocks: Res<Registry<Block>>,
 ) {
-    for ev in events.iter() {
-        let mut structure = query.get_mut(ev.structure_entity).unwrap();
+    let timer = UtilsTimer::start();
 
-        let (start_x, start_y, start_z) = (
-            ev.x * CHUNK_DIMENSIONS,
-            ev.y * CHUNK_DIMENSIONS,
-            ev.z * CHUNK_DIMENSIONS,
-        );
+    let mut chunks = events
+        .iter()
+        .map(|ev| {
+            if let Ok(mut structure) = query.get_mut(ev.structure_entity) {
+                if let Some(chunk) = structure.take_chunk(ev.x, ev.y, ev.z) {
+                    Some((ev.structure_entity, chunk))
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        })
+        .flatten()
+        .collect::<Vec<(Entity, Chunk)>>();
+
+    chunks.par_iter_mut().for_each(|(structure_entity, chunk)| {
+        let Ok(structure) = query.get(*structure_entity) else {
+            return;
+        };
 
         let grass = blocks.from_id("cosmos:grass").unwrap();
         let dirt = blocks.from_id("cosmos:dirt").unwrap();
@@ -86,36 +104,58 @@ fn generate_planet(
 
         let middle_air_start = s_height - 23;
 
-        for z in start_z..(start_z + CHUNK_DIMENSIONS) {
-            for x in start_x..(start_x + CHUNK_DIMENSIONS) {
-                let y_here = (middle_air_start as f64
-                    + noise_generastor.0.get([x as f64 * DELTA, z as f64 * DELTA]) * AMPLITUDE)
+        for z in 0..CHUNK_DIMENSIONS {
+            let actual_z = chunk.structure_z() * CHUNK_DIMENSIONS + z;
+            for x in 0..CHUNK_DIMENSIONS {
+                let actual_x = chunk.structure_x() * CHUNK_DIMENSIONS + x;
+
+                let max_y = (middle_air_start as f64
+                    + noise_generastor
+                        .0
+                        .get([actual_x as f64 * DELTA, actual_z as f64 * DELTA])
+                        * AMPLITUDE)
                     .round() as usize;
 
-                let stone_range = 0..(y_here - 5);
-                let dirt_range = (y_here - 5)..(y_here - 1);
-                let grass_range = (y_here - 1)..y_here;
+                let stone_range = 0..(max_y - 5);
+                let dirt_range = (max_y - 5)..(max_y - 1);
+                let grass_range = (max_y - 1)..max_y;
 
-                for y in start_y..((start_y + CHUNK_DIMENSIONS).min(y_here)) {
-                    if !structure.has_block_at(x, y, z) {
-                        if grass_range.contains(&y) {
-                            structure.set_block_at(x, y, z, grass, &blocks, None);
-                        } else if dirt_range.contains(&y) {
-                            structure.set_block_at(x, y, z, dirt, &blocks, None);
-                        } else if stone_range.contains(&y) {
-                            structure.set_block_at(x, y, z, stone, &blocks, None);
+                let actual_y = chunk.structure_y() * CHUNK_DIMENSIONS;
+
+                for y in 0..CHUNK_DIMENSIONS.min(max_y) {
+                    let actual_y = actual_y + y;
+
+                    if !chunk.has_block_at(x, y, z) {
+                        if grass_range.contains(&actual_y) {
+                            chunk.set_block_at(x, y, z, grass);
+                        } else if dirt_range.contains(&actual_y) {
+                            chunk.set_block_at(x, y, z, dirt);
+                        } else if stone_range.contains(&actual_y) {
+                            chunk.set_block_at(x, y, z, stone);
                         }
                     }
                 }
             }
         }
+    });
 
-        event_writer.send(ChunkInitEvent {
-            structure_entity: ev.structure_entity,
-            x: ev.x,
-            y: ev.y,
-            z: ev.z,
-        });
+    let len = chunks.len();
+
+    for (structure_entity, chunk) in chunks {
+        if let Ok(mut structure) = query.get_mut(structure_entity) {
+            event_writer.send(ChunkInitEvent {
+                structure_entity,
+                x: chunk.structure_x(),
+                y: chunk.structure_y(),
+                z: chunk.structure_z(),
+            });
+
+            structure.set_chunk(chunk);
+        }
+    }
+
+    if len != 0 {
+        timer.log_duration(&format!("Generated {len} grass chunks in"));
     }
 }
 

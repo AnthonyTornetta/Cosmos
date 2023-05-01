@@ -89,9 +89,7 @@ pub fn done_saving(
 
         if let Some(save_file_identifier) = save_file_identifier {
             let path = save_file_identifier.get_save_file_path();
-            println!("Found @ {path}");
             if fs::try_exists(&path).unwrap_or(false) {
-                println!("Removing old!");
                 fs::remove_file(path).expect("Error deleting old save file!");
 
                 if let SaveFileIdentifierType::Base((entity_id, sector)) =
@@ -105,8 +103,6 @@ pub fn done_saving(
                     }
                 }
             }
-        } else {
-            println!("No previous path no delete.");
         }
 
         let save_identifier = save_file_identifier.cloned().unwrap_or_else(|| {

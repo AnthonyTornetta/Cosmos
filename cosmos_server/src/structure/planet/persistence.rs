@@ -1,8 +1,9 @@
 use std::fs;
 
 use bevy::prelude::*;
+use bevy_rapier3d::prelude::PhysicsWorld;
 use cosmos_core::{
-    netty::cosmos_encoder,
+    netty::{cosmos_encoder, NoSendEntity},
     physics::{location::Location, player_world::PlayerWorld},
     structure::{
         chunk::{Chunk, ChunkEntity},
@@ -117,13 +118,18 @@ fn structure_created(
 
 fn populate_chunks(
     query: Query<(Entity, &NeedsPopulated)>,
-    structure_query: Query<(&EntityId, Option<&SaveFileIdentifier>, &Location)>,
+    structure_query: Query<(
+        &EntityId,
+        Option<&SaveFileIdentifier>,
+        &Location,
+        &PhysicsWorld,
+    )>,
     mut commands: Commands,
 ) {
     for (entity, needs) in query.iter() {
         commands.entity(entity).remove::<NeedsPopulated>();
 
-        let Ok((entity_id, structure_svi, loc)) = structure_query.get(needs.structure_entity) else {
+        let Ok((entity_id, structure_svi, loc, physics_world)) = structure_query.get(needs.structure_entity) else {
             continue;
         };
 
@@ -139,17 +145,18 @@ fn populate_chunks(
         };
 
         if let Ok(chunk) = fs::read(svi.get_save_file_path()) {
-            println!("Loading chunk @ {cx} {cy} {cz}");
             let serialized_data = cosmos_encoder::deserialize::<SerializedData>(&chunk)
                 .expect("Error parsing chunk - is the file corrupted?");
 
             commands.entity(entity).insert((
                 serialized_data,
                 NeedsLoaded,
+                NoSendEntity,
                 ChunkEntity {
                     structure_entity: needs.structure_entity,
                     chunk_location: needs.chunk_coords,
                 },
+                *physics_world,
             ));
         } else {
             commands.entity(entity).insert(NeedsGenerated {
@@ -164,6 +171,7 @@ fn load_chunk(
     query: Query<(Entity, &SerializedData, &ChunkEntity), With<NeedsLoaded>>,
     mut structure_query: Query<&mut Structure>,
     mut chunk_init_event: EventWriter<ChunkInitEvent>,
+    mut commands: Commands,
 ) {
     for (entity, sd, ce) in query.iter() {
         if let Some(chunk) = sd.deserialize_data::<Chunk>("cosmos:chunk") {
@@ -174,11 +182,16 @@ fn load_chunk(
                     chunk.structure_z(),
                 );
 
+                commands.entity(entity).insert(PbrBundle {
+                    transform: Transform::from_translation(
+                        structure.chunk_relative_position(cx, cy, cz),
+                    ),
+                    ..Default::default()
+                });
+
                 structure.set_chunk_entity(cx, cy, cz, entity);
 
                 structure.set_chunk(chunk);
-
-                println!("Loaded!! chunk @ {cx} {cy} {cz}");
 
                 chunk_init_event.send(ChunkInitEvent {
                     structure_entity: ce.structure_entity,
