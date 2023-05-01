@@ -1,7 +1,7 @@
 //! Creates a grass planet
 
 use bevy::prelude::{
-    App, Component, Entity, EventReader, EventWriter, IntoSystemConfigs, OnUpdate, Query, Res,
+    App, Component, Entity, EventReader, EventWriter, IntoSystemConfig, OnUpdate, Query, Res,
 };
 use cosmos_core::{
     block::Block,
@@ -15,12 +15,11 @@ use cosmos_core::{
 use noise::NoiseFn;
 use rayon::prelude::{IntoParallelRefMutIterator, ParallelIterator};
 
-use crate::structure::planet::generation::planet_generator::check_needs_generated_system;
 use crate::GameState;
 
-use super::{TBiosphere, TGenerateChunkEvent};
+use super::{register_biosphere, TBiosphere, TGenerateChunkEvent};
 
-#[derive(Component, Debug)]
+#[derive(Component, Debug, Default)]
 /// Marks that this is for a grass biosphere
 pub struct GrassBiosphereMarker;
 
@@ -160,12 +159,10 @@ fn generate_planet(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_event::<GrassChunkNeedsGeneratedEvent>();
-    app.add_systems(
-        (
-            generate_planet,
-            check_needs_generated_system::<GrassChunkNeedsGeneratedEvent, GrassBiosphereMarker>,
-        )
-            .in_set(OnUpdate(GameState::Playing)),
+    register_biosphere::<GrassBiosphereMarker, GrassChunkNeedsGeneratedEvent>(
+        app,
+        "cosmos:biosphere_grass",
     );
+
+    app.add_system(generate_planet.in_set(OnUpdate(GameState::Playing)));
 }

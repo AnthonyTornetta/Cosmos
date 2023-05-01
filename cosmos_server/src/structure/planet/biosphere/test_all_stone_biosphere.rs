@@ -1,7 +1,7 @@
 //! Used just for testing, this makes a planet all stone
 
 use bevy::prelude::{
-    App, Component, Entity, EventReader, EventWriter, IntoSystemConfigs, OnUpdate, Query, Res,
+    App, Component, Entity, EventReader, EventWriter, IntoSystemConfig, OnUpdate, Query, Res,
 };
 use cosmos_core::{
     block::Block,
@@ -14,12 +14,11 @@ use cosmos_core::{
 };
 use rayon::prelude::{IntoParallelRefMutIterator, ParallelIterator};
 
-use crate::structure::planet::generation::planet_generator::check_needs_generated_system;
 use crate::GameState;
 
-use super::{TBiosphere, TGenerateChunkEvent};
+use super::{register_biosphere, TBiosphere, TGenerateChunkEvent};
 
-#[derive(Component)]
+#[derive(Component, Debug, Default)]
 /// Used just for testing, this makes a planet all stone
 pub struct TestStoneBiosphereMarker;
 
@@ -121,15 +120,10 @@ fn generate_planet(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_event::<TestStoneChunkNeedsGeneratedEvent>()
-        .add_systems(
-            (
-                generate_planet,
-                check_needs_generated_system::<
-                    TestStoneChunkNeedsGeneratedEvent,
-                    TestStoneBiosphereMarker,
-                >,
-            )
-                .in_set(OnUpdate(GameState::Playing)),
-        );
+    register_biosphere::<TestStoneBiosphereMarker, TestStoneChunkNeedsGeneratedEvent>(
+        app,
+        "cosmos:biosphere_test_stone",
+    );
+
+    app.add_system(generate_planet.in_set(OnUpdate(GameState::Playing)));
 }
