@@ -102,11 +102,11 @@ impl SaveFileIdentifier {
     }
 
     /// Creates a new SaveFileIdentifier from this location & entity id
-    pub fn as_child(this_identifier: String, belongs_to: SaveFileIdentifier) -> Self {
+    pub fn as_child(this_identifier: impl Into<String>, belongs_to: SaveFileIdentifier) -> Self {
         Self {
             identifier_type: SaveFileIdentifierType::BelongsTo((
                 Box::new(belongs_to),
-                this_identifier,
+                this_identifier.into(),
             )),
         }
     }

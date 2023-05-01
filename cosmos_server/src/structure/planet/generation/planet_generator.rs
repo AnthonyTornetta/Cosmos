@@ -24,7 +24,9 @@ use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 use crate::{
     persistence::{saving::NeedsSaved, EntityId, SaveFileIdentifier},
     state::GameState,
-    structure::planet::{biosphere::TGenerateChunkEvent, chunk::SaveChunk},
+    structure::planet::{
+        biosphere::TGenerateChunkEvent, chunk::SaveChunk, persistence::NeedsPopulated,
+    },
 };
 
 #[derive(Component)]
@@ -32,8 +34,10 @@ use crate::{
 ///
 /// This entity should be used as a flag, and is NOT the same as the chunk's entity
 pub struct NeedsGenerated {
-    chunk_coords: (usize, usize, usize),
-    structure_entity: Entity,
+    /// The chunk's coordinates in the structure
+    pub chunk_coords: (usize, usize, usize),
+    /// The structure's entity
+    pub structure_entity: Entity,
 }
 
 /// T represents the event type to be generated
@@ -155,7 +159,7 @@ fn get_requested_chunk(
 
         structure.set_chunk(Chunk::new(cx, cy, cz));
         let needs_generated_flag = commands
-            .spawn(NeedsGenerated {
+            .spawn(NeedsPopulated {
                 chunk_coords: (cx, cy, cz),
                 structure_entity: entity,
             })
@@ -226,7 +230,7 @@ fn generate_chunks_near_players(
             for (x, y, z) in chunks {
                 best_planet.set_chunk(Chunk::new(x, y, z));
                 let needs_generated_flag = commands
-                    .spawn(NeedsGenerated {
+                    .spawn(NeedsPopulated {
                         chunk_coords: (x, y, z),
                         structure_entity: entity,
                     })
@@ -335,7 +339,7 @@ fn unload_chunks_far_from_players(
             }
 
             if needs_id {
-                commands.entity(planet).insert(entity_id);
+                commands.entity(planet).insert((entity_id, NeedsSaved));
             }
         }
     }
