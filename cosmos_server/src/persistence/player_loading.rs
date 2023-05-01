@@ -70,10 +70,7 @@ fn load_near(
                         for entity_id in vec.iter() {
                             if !loaded_entities.iter().any(|x| x == entity_id) {
                                 commands.spawn((
-                                    SaveFileIdentifier {
-                                        entity_id: entity_id.clone(),
-                                        sector: Some(sector),
-                                    },
+                                    SaveFileIdentifier::new(Some(sector), entity_id.clone()),
                                     NeedsLoaded,
                                 ));
                             }
@@ -104,10 +101,7 @@ fn load_near(
 
                                     if !loaded_entities.iter().any(|x| x == &entity_id) {
                                         commands.spawn((
-                                            SaveFileIdentifier {
-                                                entity_id,
-                                                sector: Some((x, y, z)),
-                                            },
+                                            SaveFileIdentifier::new(Some((x, y, z)), entity_id),
                                             NeedsLoaded,
                                         ));
                                     }

@@ -163,6 +163,12 @@ impl Location {
         )
     }
 
+    /// Gets the sector coordinates as a tuple
+    #[inline]
+    pub fn sector(&self) -> (i64, i64, i64) {
+        (self.sector_x, self.sector_y, self.sector_z)
+    }
+
     /// Ensures `self.local` is within [`-SECTOR_DIMENSIONS/2.0`, `SECTOR_DIMENSIONS/2.0`]
     ///
     /// If not, the sector coordinates & `local` will be modified to maintain this

@@ -21,7 +21,11 @@ use cosmos_core::{
 };
 use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 
-use crate::{state::GameState, structure::planet::biosphere::TGenerateChunkEvent};
+use crate::{
+    persistence::{saving::NeedsSaved, EntityId, SaveFileIdentifier},
+    state::GameState,
+    structure::planet::{biosphere::TGenerateChunkEvent, chunk::SaveChunk},
+};
 
 #[derive(Component)]
 /// This component will be in a planet's child entity if a chunk needs generated
@@ -236,11 +240,11 @@ fn generate_chunks_near_players(
 
 fn unload_chunks_far_from_players(
     players: Query<&Location, With<Player>>,
-    mut planets: Query<(&Location, &mut Structure, Entity), With<Planet>>,
+    mut planets: Query<(&Location, &mut Structure, Entity, Option<&EntityId>), With<Planet>>,
     mut commands: Commands,
 ) {
     let mut potential_chunks = HashMap::<Entity, HashSet<(usize, usize, usize)>>::new();
-    for (_, planet, entity) in planets.iter() {
+    for (_, planet, entity, _) in planets.iter() {
         let mut set = HashSet::new();
 
         for chunk in planet.all_chunks_iter(false) {
@@ -255,15 +259,15 @@ fn unload_chunks_far_from_players(
     for player in players.iter() {
         let mut best_planet = None;
         let mut best_dist = f32::INFINITY;
-        for (location, structure, entity) in planets.iter_mut() {
+        for (location, structure, entity, entity_id) in planets.iter_mut() {
             let dist = location.distance_sqrd(player);
             if dist < best_dist {
                 best_dist = dist;
-                best_planet = Some((location, structure, entity));
+                best_planet = Some((location, structure, entity, entity_id));
             }
         }
 
-        if let Some((location, best_planet, entity)) = best_planet {
+        if let Some((location, best_planet, entity, _)) = best_planet {
             let player_relative_position: Vec3 = (*player - *location).into();
             let (px, py, pz) = best_planet.relative_coords_to_local_coords(
                 player_relative_position.x,
@@ -301,11 +305,37 @@ fn unload_chunks_far_from_players(
     }
 
     for (planet, set) in potential_chunks {
-        if let Ok((_, mut structure, _)) = planets.get_mut(planet) {
+        if let Ok((location, mut structure, _, entity_id)) = planets.get_mut(planet) {
+            let mut needs_id = false;
+
+            let entity_id = if let Some(x) = entity_id {
+                x.clone()
+            } else {
+                needs_id = true;
+                EntityId::generate()
+            };
+
             for (cx, cy, cz) in set {
                 if let Some(chunk) = structure.unload_chunk_at(cx, cy, cz, &mut commands) {
-                    // save_chunk(chunk, structure);
+                    let (cx, cy, cz) = (
+                        chunk.structure_x(),
+                        chunk.structure_y(),
+                        chunk.structure_z(),
+                    );
+
+                    commands.spawn((
+                        SaveChunk(chunk),
+                        SaveFileIdentifier::as_child(
+                            format!("{cx}_{cy}_{cz}"),
+                            SaveFileIdentifier::new(Some(location.sector()), entity_id.clone()),
+                        ),
+                        NeedsSaved,
+                    ));
                 }
+            }
+
+            if needs_id {
+                commands.entity(planet).insert(entity_id);
             }
         }
     }

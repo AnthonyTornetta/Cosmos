@@ -7,10 +7,7 @@
 //!
 //! See [`loading::default_load`] for an example.
 
-use std::{
-    fs,
-    io::{self, Read},
-};
+use std::fs;
 
 use bevy::{
     prelude::{
@@ -22,24 +19,12 @@ use bevy::{
 use bevy_rapier3d::prelude::Velocity;
 
 use cosmos_core::{netty::cosmos_encoder, physics::location::Location};
-use zip::ZipArchive;
 
-use super::{SaveFileIdentifier, SerializedData};
+use super::{SaveFileIdentifier, SaveFileIdentifierType, SerializedData};
 
 #[derive(Component, Debug, Reflect)]
 /// An entity that currently has this is currently in the process of being loaded
 pub struct NeedsLoaded;
-
-fn read_save(path: &String) -> io::Result<Vec<u8>> {
-    let mut archive = ZipArchive::new(fs::File::open(path)?)?;
-
-    let mut file = archive.by_index(0)?;
-
-    let mut buff = Vec::new();
-    file.read_to_end(&mut buff)?;
-
-    Ok(buff)
-}
 
 fn check_needs_loaded(
     query: Query<(Entity, &SaveFileIdentifier), (Without<SerializedData>, With<NeedsLoaded>)>,
@@ -47,7 +32,7 @@ fn check_needs_loaded(
 ) {
     for (ent, nl) in query.iter() {
         let path = nl.get_save_file_path();
-        let Ok(data) = read_save(&path) else {
+        let Ok(data) = fs::read(&path) else {
             eprintln!("Error reading zip record at '{path}'. Is it corrupted?");
             commands.entity(ent).despawn_recursive();
             continue;
@@ -56,10 +41,11 @@ fn check_needs_loaded(
         let serialized_data: SerializedData =
             cosmos_encoder::deserialize(&data).expect("Error deserializing data for {path}");
 
-        commands
-            .entity(ent)
-            .insert(serialized_data)
-            .insert(nl.entity_id.clone());
+        commands.entity(ent).insert(serialized_data);
+
+        if let SaveFileIdentifierType::Base((entity_id, _)) = &nl.identifier_type {
+            commands.entity(ent).insert(entity_id.clone());
+        }
     }
 }
 

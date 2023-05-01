@@ -4,9 +4,10 @@ use std::fs;
 
 use bevy::{
     prelude::{App, Component, Resource},
-    reflect::Reflect,
+    reflect::{FromReflect, Reflect},
     utils::{HashMap, HashSet},
 };
+use rand::{distributions::Alphanumeric, Rng};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use cosmos_core::{netty::cosmos_encoder, physics::location::Location};
@@ -15,7 +16,9 @@ pub mod loading;
 pub mod player_loading;
 pub mod saving;
 
-#[derive(Component, Debug, Reflect, Serialize, Deserialize, PartialEq, Eq, Clone, Hash)]
+#[derive(
+    Component, Debug, Reflect, FromReflect, Serialize, Deserialize, PartialEq, Eq, Clone, Hash,
+)]
 /// NOT ALL ENTITIES WILL HAVE THIS ON THEM!
 ///
 /// Only entities that have been loaded or saved will have this. This is a unique identifier for
@@ -35,35 +38,116 @@ impl EntityId {
     pub fn new(id: impl Into<String>) -> Self {
         Self(id.into())
     }
+
+    /// Creates a new EntityId
+    pub fn generate() -> Self {
+        Self::new(
+            rand::thread_rng()
+                .sample_iter(&Alphanumeric)
+                .take(64)
+                .map(char::from)
+                .collect::<String>(),
+        )
+    }
+
+    /// Returns the entity id as a string
+    pub fn as_str(&self) -> &str {
+        self.0.as_str()
+    }
 }
 
-#[derive(Debug, Component, Reflect)]
+// /// Denotes that this entity belongs to another entity, and should be saved
+// /// in that entity's folder. Once this entity is saved, this component will be removed.
+// ///
+// /// ## Note:
+// /// While saving is handled for you, it is up to you to load this yourself.
+// ///
+// /// This will be saved to `world/x_y_z/belongsToEntityId/thisEntityId.cent`
+// #[derive(Component, Debug, Reflect, FromReflect, Clone)]
+// pub struct BelongsTo {
+//     /// The entity id this belongs to
+//     pub entity_id: EntityId,
+
+//     location: Location,
+// }
+
+// impl BelongsTo {
+//     /// Creates a belongs to relationship with this entity id
+//     pub fn new(entity_id: EntityId, location: Location) -> Self {
+//         Self {
+//             entity_id,
+//             location,
+//         }
+//     }
+// }
+
+#[derive(Debug, Clone)]
+pub(crate) enum SaveFileIdentifierType {
+    Base((EntityId, Option<(i64, i64, i64)>)),
+    BelongsTo((Box<SaveFileIdentifier>, String)),
+}
+
+#[derive(Debug, Component, Clone)]
 /// Used to track where the save file for a given entity is or should be.
 pub struct SaveFileIdentifier {
-    /// The sector the entity was in when it was saved
-    pub sector: Option<(i64, i64, i64)>,
-    /// The entity's id
-    pub entity_id: EntityId,
+    identifier_type: SaveFileIdentifierType,
 }
 
 impl SaveFileIdentifier {
+    /// Creates a new SaveFileIdentifier from this location & entity id
+    pub fn new(sector: Option<(i64, i64, i64)>, entity_id: EntityId) -> Self {
+        Self {
+            identifier_type: SaveFileIdentifierType::Base((entity_id, sector)),
+        }
+    }
+
+    /// Creates a new SaveFileIdentifier from this location & entity id
+    pub fn as_child(this_identifier: String, belongs_to: SaveFileIdentifier) -> Self {
+        Self {
+            identifier_type: SaveFileIdentifierType::BelongsTo((
+                Box::new(belongs_to),
+                this_identifier,
+            )),
+        }
+    }
+
     /// Gets the file path a given entity will be saved to.
     ///
     /// `world/X_Y_Z/entity_id.cent`
     pub fn get_save_file_path(&self) -> String {
-        let directory = self
-            .sector
-            .map(|sector| Self::get_sector_path(sector))
-            .unwrap_or("world/nowhere".into());
+        format!("{}.cent", self.get_save_file_directory(),)
+    }
 
-        format!("{directory}/{}", self.get_save_file_name())
+    /// Gets the save file name without the .cent extension, but not the whole path
+    ///
+    /// `entity_id`
+    pub fn get_save_file_name(&self) -> String {
+        match &self.identifier_type {
+            SaveFileIdentifierType::Base((entity, _)) => entity.as_str().to_owned(),
+            SaveFileIdentifierType::BelongsTo((_, name)) => name.to_owned(),
+        }
     }
 
     /// Gets the save file name, but not the whole path
     ///
     /// `entity_id.cent`
-    pub fn get_save_file_name(&self) -> String {
-        format!("{}.cent", self.entity_id.0)
+    pub fn get_save_file_directory(&self) -> String {
+        match &self.identifier_type {
+            SaveFileIdentifierType::Base((_, sector)) => {
+                let directory = sector
+                    .map(|sector| Self::get_sector_path(sector))
+                    .unwrap_or("world/nowhere".into());
+
+                format!("{directory}/{}", self.get_save_file_name())
+            }
+            SaveFileIdentifierType::BelongsTo((belongs_to, _)) => {
+                format!(
+                    "{}/{}",
+                    belongs_to.get_save_file_directory(),
+                    self.get_save_file_name()
+                )
+            }
+        }
     }
 
     /// Gets the directory for this sector's save folder
@@ -162,6 +246,5 @@ pub(super) fn register(app: &mut App) {
     loading::register(app);
     player_loading::register(app);
 
-    app.register_type::<EntityId>()
-        .register_type::<SaveFileIdentifier>();
+    app.register_type::<EntityId>();
 }
