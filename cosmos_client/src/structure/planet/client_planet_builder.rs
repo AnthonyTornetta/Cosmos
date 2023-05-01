@@ -29,10 +29,9 @@ impl TPlanetBuilder for ClientPlanetBuilder {
         &self,
         entity: &mut EntityCommands,
         location: Location,
-        world_location: &Location,
         structure: &mut Structure,
     ) {
         self.planet_builder
-            .insert_planet(entity, location, world_location, structure);
+            .insert_planet(entity, location, structure);
     }
 }

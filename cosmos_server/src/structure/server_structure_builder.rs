@@ -18,16 +18,10 @@ impl TStructureBuilder for ServerStructureBuilder {
         &self,
         entity: &mut EntityCommands,
         location: Location,
-        world_location: &Location,
         velocity: Velocity,
         structure: &mut cosmos_core::structure::Structure,
     ) {
-        self.structure_builder.insert_structure(
-            entity,
-            location,
-            world_location,
-            velocity,
-            structure,
-        );
+        self.structure_builder
+            .insert_structure(entity, location, velocity, structure);
     }
 }

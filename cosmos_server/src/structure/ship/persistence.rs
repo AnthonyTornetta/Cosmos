@@ -34,7 +34,6 @@ fn on_save_structure(
 
 fn on_load_structure(
     query: Query<(Entity, &SerializedData), With<NeedsLoaded>>,
-    player_worlds: Query<&Location, With<PlayerWorld>>,
     mut event_writer: EventWriter<DelayedStructureLoadEvent>,
     mut commands: Commands,
 ) {
@@ -48,34 +47,21 @@ fn on_load_structure(
                     .deserialize_data("cosmos:location")
                     .expect("Every ship should have a location when saved!");
 
-                let mut best_loc = None;
-                let mut best_dist = f32::INFINITY;
+                let mut entity_cmd = commands.entity(entity);
 
-                for world_loc in player_worlds.iter() {
-                    let dist = world_loc.distance_sqrd(&loc);
-                    if dist < best_dist {
-                        best_dist = dist;
-                        best_loc = Some(world_loc);
-                    }
-                }
+                let vel = s_data
+                    .deserialize_data("cosmos:velocity")
+                    .unwrap_or(Velocity::zero());
 
-                if let Some(world_location) = best_loc {
-                    let mut entity_cmd = commands.entity(entity);
+                let builder = ServerShipBuilder::default();
 
-                    let vel = s_data
-                        .deserialize_data("cosmos:velocity")
-                        .unwrap_or(Velocity::zero());
+                builder.insert_ship(&mut entity_cmd, loc, vel, &mut structure);
 
-                    let builder = ServerShipBuilder::default();
+                let entity = entity_cmd.id();
 
-                    builder.insert_ship(&mut entity_cmd, loc, world_location, vel, &mut structure);
+                event_writer.send(DelayedStructureLoadEvent(entity));
 
-                    let entity = entity_cmd.id();
-
-                    event_writer.send(DelayedStructureLoadEvent(entity));
-
-                    commands.entity(entity).insert(structure);
-                }
+                commands.entity(entity).insert(structure);
             }
         }
     }

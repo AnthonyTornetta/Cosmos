@@ -17,16 +17,10 @@ impl TStructureBuilder for ClientStructureBuilder {
         &self,
         entity: &mut EntityCommands,
         location: Location,
-        world_location: &Location,
         velocity: bevy_rapier3d::prelude::Velocity,
         structure: &mut cosmos_core::structure::Structure,
     ) {
-        self.structure_builder.insert_structure(
-            entity,
-            location,
-            world_location,
-            velocity,
-            structure,
-        );
+        self.structure_builder
+            .insert_structure(entity, location, velocity, structure);
     }
 }

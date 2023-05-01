@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::PhysicsWorld;
 use cosmos_core::{
     netty::{cosmos_encoder, NoSendEntity},
-    physics::{location::Location, player_world::PlayerWorld},
+    physics::location::Location,
     structure::{
         chunk::{Chunk, ChunkEntity},
         planet::{planet_builder::TPlanetBuilder, Planet},
@@ -54,7 +54,6 @@ fn generate_planet(
     planet_save_data: PlanetSaveData,
     s_data: &SerializedData,
     commands: &mut Commands,
-    player_worlds: &Query<&Location, With<PlayerWorld>>,
     event_writer: &mut EventWriter<DelayedStructureLoadEvent>,
 ) {
     let mut structure = Structure::new(
@@ -63,40 +62,25 @@ fn generate_planet(
         planet_save_data.length,
     );
 
-    let mut best_loc = None;
-    let mut best_dist = f32::INFINITY;
+    let mut entity_cmd = commands.entity(entity);
 
     let loc = s_data
         .deserialize_data("cosmos:location")
         .expect("Every planet should have a location when saved!");
 
-    for world_loc in player_worlds.iter() {
-        let dist = world_loc.distance_sqrd(&loc);
-        if dist < best_dist {
-            best_dist = dist;
-            best_loc = Some(world_loc);
-        }
-    }
+    let builder = ServerPlanetBuilder::default();
 
-    if let Some(world_location) = best_loc {
-        let mut entity_cmd = commands.entity(entity);
+    builder.insert_planet(&mut entity_cmd, loc, &mut structure);
 
-        let builder = ServerPlanetBuilder::default();
+    let entity = entity_cmd.id();
 
-        println!("Inserted w/ planet builder.");
-        builder.insert_planet(&mut entity_cmd, loc, world_location, &mut structure);
+    event_writer.send(DelayedStructureLoadEvent(entity));
 
-        let entity = entity_cmd.id();
-
-        event_writer.send(DelayedStructureLoadEvent(entity));
-
-        commands.entity(entity).insert(structure);
-    }
+    commands.entity(entity).insert(structure);
 }
 
 fn on_load_structure(
     query: Query<(Entity, &SerializedData), With<NeedsLoaded>>,
-    player_worlds: Query<&Location, With<PlayerWorld>>,
     mut event_writer: EventWriter<DelayedStructureLoadEvent>,
     mut commands: Commands,
 ) {
@@ -113,7 +97,6 @@ fn on_load_structure(
                     planet_save_data,
                     s_data,
                     &mut commands,
-                    &player_worlds,
                     &mut event_writer,
                 );
             }

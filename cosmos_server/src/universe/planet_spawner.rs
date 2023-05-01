@@ -3,10 +3,7 @@
 use bevy::prelude::{in_state, App, Commands, IntoSystemConfig, Query, With};
 use cosmos_core::{
     entities::player::Player,
-    physics::{
-        location::{Location, SECTOR_DIMENSIONS},
-        player_world::PlayerWorld,
-    },
+    physics::location::{Location, SECTOR_DIMENSIONS},
     structure::{
         planet::{planet_builder::TPlanetBuilder, Planet},
         Structure,
@@ -25,7 +22,6 @@ use crate::{
 fn spawn_planet(
     query: Query<&Location, With<Planet>>,
     players: Query<&Location, With<Player>>,
-    player_worlds: Query<&Location, With<PlayerWorld>>,
     mut commands: Commands,
 ) {
     if !players.iter().any(|l| {
@@ -46,30 +42,17 @@ fn spawn_planet(
 
     let loc = Location::default();
 
-    let mut best_loc = None;
-    let mut best_dist = f32::INFINITY;
+    let mut entity_cmd = commands.spawn_empty();
 
-    for world_loc in player_worlds.iter() {
-        let dist = world_loc.distance_sqrd(&loc);
-        if dist < best_dist {
-            best_dist = dist;
-            best_loc = Some(world_loc);
-        }
-    }
+    let mut structure = Structure::new(50, 50, 50);
 
-    if let Some(world_location) = best_loc {
-        let mut entity_cmd = commands.spawn_empty();
+    let biosphere = GrassBiosphere::default();
+    let marker = biosphere.get_marker_component();
+    let builder = ServerPlanetBuilder::default();
 
-        let mut structure = Structure::new(50, 50, 50);
+    builder.insert_planet(&mut entity_cmd, loc, &mut structure);
 
-        let biosphere = GrassBiosphere::default();
-        let marker = biosphere.get_marker_component();
-        let builder = ServerPlanetBuilder::default();
-
-        builder.insert_planet(&mut entity_cmd, loc, world_location, &mut structure);
-
-        entity_cmd.insert(structure).insert(marker);
-    }
+    entity_cmd.insert(structure).insert(marker);
 }
 
 pub(super) fn register(app: &mut App) {
