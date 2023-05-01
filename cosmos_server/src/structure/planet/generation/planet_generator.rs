@@ -177,7 +177,7 @@ fn get_requested_chunk(
 #[cfg(debug_assertions)]
 const RENDER_DISTANCE: i32 = 2;
 #[cfg(not(debug_assertions))]
-const RENDER_DISTANCE: i32 = 10;
+const RENDER_DISTANCE: i32 = 8;
 
 fn generate_chunks_near_players(
     players: Query<&Location, With<Player>>,
@@ -213,7 +213,7 @@ fn generate_chunks_near_players(
 
             let iterator = best_planet.chunk_iter(
                 (px - rd, py - rd, pz - rd),
-                (px + rd, py + rd, pz + rd),
+                (px + (rd + 1), py + (rd + 1), pz + (rd + 1)),
                 true,
             );
 
@@ -292,7 +292,7 @@ fn unload_chunks_far_from_players(
 
             let iterator = best_planet.chunk_iter(
                 (px - rd, py - rd, pz - rd),
-                (px + rd, py + rd, pz + rd),
+                (px + (rd + 1), py + (rd + 1), pz + (rd + 1)),
                 true,
             );
 
