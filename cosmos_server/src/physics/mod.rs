@@ -234,8 +234,53 @@ fn remove_empty_worlds(
     }
 }
 
+/// Handles any just-added locations that need to sync up to their transforms
+fn fix_location(
+    mut query: Query<(Entity, &mut Location), (Added<Location>, Without<PlayerWorld>)>,
+    player_worlds: Query<(&Location, &WorldWithin, &PhysicsWorld), With<PlayerWorld>>,
+    mut commands: Commands,
+    player_world_loc_query: Query<&Location, With<PlayerWorld>>,
+) {
+    for (entity, mut location) in query.iter_mut() {
+        let mut best_distance = None;
+        let mut best_world = None;
+        let mut best_world_id = None;
+
+        for (loc, ww, body_world) in player_worlds.iter() {
+            let distance = location.distance_sqrd(loc);
+
+            if best_distance.is_none() || distance < best_distance.unwrap() {
+                best_distance = Some(distance);
+                best_world = Some(*ww);
+                best_world_id = Some(body_world.world_id);
+            }
+        }
+
+        match (best_world, best_world_id) {
+            (Some(world), Some(world_id)) => {
+                if let Ok(loc) = player_world_loc_query.get(world.0) {
+                    let transform = Transform::from_translation(location.relative_coords_to(loc));
+
+                    location.last_transform_loc = Some(transform.translation);
+
+                    commands.entity(entity).insert((
+                        TransformBundle::from_transform(transform),
+                        world,
+                        PhysicsWorld { world_id },
+                    ));
+                } else {
+                    warn!("A player world was missing a location");
+                }
+            }
+            _ => {
+                warn!("Something was added with a location before a player world was registered.")
+            }
+        }
+    }
+}
+
 /// This system syncs the locations up with their changes in transforms.
-pub fn sync_transforms_and_locations(
+fn sync_transforms_and_locations(
     mut trans_query_no_parent: Query<
         (Entity, &mut Transform, &mut Location, &WorldWithin),
         (Without<PlayerWorld>, Without<Parent>),
@@ -336,11 +381,13 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         (
             // If it's not after server_listen_messages, some noticable jitter can happen
-            sync_transforms_and_locations.after(server_listen_messages),
-            bubble_down_locations.after(sync_transforms_and_locations),
-            move_players_between_worlds.after(bubble_down_locations),
-            move_non_players_between_worlds.after(move_players_between_worlds),
+            fix_location.after(server_listen_messages),
+            sync_transforms_and_locations,
+            bubble_down_locations,
+            move_players_between_worlds,
+            move_non_players_between_worlds,
         )
+            .chain()
             .in_set(OnUpdate(GameState::Playing)),
     )
     // This must be last due to commands being delayed when adding PhysicsWorlds.
