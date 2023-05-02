@@ -6,9 +6,45 @@ use bevy::{
     prelude::Component,
     reflect::{FromReflect, Reflect},
 };
+use bigdecimal::Signed;
+
+use crate::block::BlockFace;
+
+use super::Structure;
 
 pub mod planet_builder;
 
 #[derive(Component, Debug, Reflect, FromReflect)]
 /// If a structure has this, it is a planet.
 pub struct Planet;
+
+impl Planet {
+    /// Gets the face of a planet this block is on
+    pub fn planet_face(structure: &Structure, bx: usize, by: usize, bz: usize) -> BlockFace {
+        let normalized = structure
+            .block_relative_position(bx, by, bz)
+            .normalize_or_zero();
+
+        let abs = normalized.abs();
+
+        if abs.y > abs.x && abs.y > abs.z {
+            if normalized.y.is_positive() {
+                BlockFace::Top
+            } else {
+                BlockFace::Bottom
+            }
+        } else if abs.x > abs.y && abs.x > abs.z {
+            if normalized.x.is_positive() {
+                BlockFace::Right
+            } else {
+                BlockFace::Left
+            }
+        } else {
+            if normalized.z.is_positive() {
+                BlockFace::Front
+            } else {
+                BlockFace::Back
+            }
+        }
+    }
+}

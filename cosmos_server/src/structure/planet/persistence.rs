@@ -130,9 +130,9 @@ fn populate_chunks(
     mut commands: Commands,
 ) {
     for (entity, needs) in query.iter() {
-        commands.entity(entity).remove::<NeedsPopulated>();
-
         let Ok((entity_id, structure_svi, loc, physics_world)) = structure_query.get(needs.structure_entity) else {
+            commands.entity(entity).remove::<NeedsPopulated>();
+
             continue;
         };
 
@@ -148,24 +148,38 @@ fn populate_chunks(
         };
 
         if let Ok(chunk) = fs::read(svi.get_save_file_path()) {
-            let serialized_data = cosmos_encoder::deserialize::<SerializedData>(&chunk)
-                .expect("Error parsing chunk - is the file corrupted?");
+            if chunk.is_empty() {
+                // This can happen if the file is currently being saved, just try again next frame or whenever it's available
+                continue;
+            }
 
-            commands.entity(entity).insert((
-                serialized_data,
-                NeedsLoaded,
-                NoSendEntity,
-                ChunkEntity {
-                    structure_entity: needs.structure_entity,
-                    chunk_location: needs.chunk_coords,
-                },
-                *physics_world,
-            ));
+            let serialized_data =
+                cosmos_encoder::deserialize::<SerializedData>(&chunk).expect(&format!(
+                    "Error parsing chunk @ {cx} {cy} {cz} - is the file corrupted? File len: {}",
+                    chunk.len()
+                ));
+
+            commands
+                .entity(entity)
+                .insert((
+                    serialized_data,
+                    NeedsLoaded,
+                    NoSendEntity,
+                    ChunkEntity {
+                        structure_entity: needs.structure_entity,
+                        chunk_location: needs.chunk_coords,
+                    },
+                    *physics_world,
+                ))
+                .remove::<NeedsPopulated>();
         } else {
-            commands.entity(entity).insert(NeedsGenerated {
-                chunk_coords: needs.chunk_coords,
-                structure_entity: needs.structure_entity,
-            });
+            commands
+                .entity(entity)
+                .insert(NeedsGenerated {
+                    chunk_coords: needs.chunk_coords,
+                    structure_entity: needs.structure_entity,
+                })
+                .remove::<NeedsPopulated>();
         }
     }
 }
