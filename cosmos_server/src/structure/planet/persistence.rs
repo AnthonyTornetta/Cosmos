@@ -148,8 +148,6 @@ fn populate_chunks(
         };
 
         if let Ok(chunk) = fs::read(svi.get_save_file_path()) {
-            println!("Found @ {cx} {cy} {cz}.");
-
             let serialized_data = cosmos_encoder::deserialize::<SerializedData>(&chunk)
                 .expect("Error parsing chunk - is the file corrupted?");
 
@@ -164,7 +162,6 @@ fn populate_chunks(
                 *physics_world,
             ));
         } else {
-            println!("Not found - generating.");
             commands.entity(entity).insert(NeedsGenerated {
                 chunk_coords: needs.chunk_coords,
                 structure_entity: needs.structure_entity,

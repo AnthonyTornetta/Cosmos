@@ -493,15 +493,19 @@ fn client_sync_players(
     }
 }
 
-fn added_location(
-    mut query: Query<&mut Location, (Without<LocalPlayer>, Added<Location>)>,
-    local_player: Query<&Location, With<LocalPlayer>>,
+/// Handles any just-added locations that need to sync up to their transforms
+fn fix_location(
+    mut query: Query<(&mut Location, &mut Transform), (Added<Location>, Without<PlayerWorld>)>,
+    player_worlds: Query<&Location, With<PlayerWorld>>,
 ) {
-    if let Ok(local_loc) = local_player.get_single() {
-        for mut loc in query.iter_mut() {
-            if loc.last_transform_loc.is_none() {
-                let trans = local_loc.relative_coords_to(&loc);
-                loc.last_transform_loc = Some(trans);
+    for (mut location, mut transform) in query.iter_mut() {
+        match player_worlds.get_single() {
+            Ok(loc) => {
+                transform.translation = location.relative_coords_to(loc);
+                location.last_transform_loc = Some(transform.translation);
+            }
+            _ => {
+                warn!("Something was added with a location before a player world was registered.")
             }
         }
     }
@@ -563,18 +567,18 @@ fn sync_transforms_and_locations(
 
 pub(super) fn register(app: &mut App) {
     app.insert_resource(RequestedEntities::default())
+        .add_systems((update_crosshair, insert_last_rotation))
         .add_system(
             client_sync_players
                 .run_if(in_state(GameState::Playing).or_else(in_state(GameState::LoadingWorld))),
         )
         .add_systems(
             (
-                update_crosshair,
-                insert_last_rotation,
-                added_location.after(client_sync_players),
-                sync_transforms_and_locations.after(added_location),
-                bubble_down_locations.after(sync_transforms_and_locations),
+                fix_location.after(client_sync_players),
+                sync_transforms_and_locations,
+                bubble_down_locations,
             )
+                .chain()
                 .in_set(OnUpdate(GameState::Playing)),
         );
 }

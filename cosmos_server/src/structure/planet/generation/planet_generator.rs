@@ -213,7 +213,7 @@ fn generate_chunks_near_players(
 
             let iterator = best_planet.chunk_iter(
                 (px - rd, py - rd, pz - rd),
-                (px + (rd + 1), py + (rd + 1), pz + (rd + 1)),
+                (px + (rd), py + (rd), pz + (rd)),
                 true,
             );
 
@@ -292,7 +292,7 @@ fn unload_chunks_far_from_players(
 
             let iterator = best_planet.chunk_iter(
                 (px - rd, py - rd, pz - rd),
-                (px + (rd + 1), py + (rd + 1), pz + (rd + 1)),
+                (px + (rd), py + (rd), pz + (rd)),
                 true,
             );
 
