@@ -99,7 +99,7 @@ fn generate_planet(
 
         let s_height = structure.blocks_height();
 
-        let middle_air_start = s_height - 23;
+        let middle_air_start = s_height - structure.blocks_height() / 4;
 
         for z in 0..CHUNK_DIMENSIONS {
             let actual_z = chunk.structure_z() * CHUNK_DIMENSIONS + z;
