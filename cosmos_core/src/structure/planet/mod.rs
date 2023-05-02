@@ -3,7 +3,7 @@
 //! These are not made by the player but generated
 
 use bevy::{
-    prelude::Component,
+    prelude::{Component, Vec3},
     reflect::{FromReflect, Reflect},
 };
 use bigdecimal::Signed;
@@ -20,11 +20,17 @@ pub struct Planet;
 
 impl Planet {
     /// Gets the face of a planet this block is on
+    ///
+    /// * `bx` Block's x
+    /// * `by` Block's y
+    /// * `bz` Block's z
     pub fn planet_face(structure: &Structure, bx: usize, by: usize, bz: usize) -> BlockFace {
-        let normalized = structure
-            .block_relative_position(bx, by, bz)
-            .normalize_or_zero();
+        Self::planet_face_relative(structure.block_relative_position(bx, by, bz))
+    }
 
+    /// Gets the face of a planet this location is closest to
+    pub fn planet_face_relative(relative_position: Vec3) -> BlockFace {
+        let normalized = relative_position.normalize_or_zero();
         let abs = normalized.abs();
 
         if abs.y > abs.x && abs.y > abs.z {

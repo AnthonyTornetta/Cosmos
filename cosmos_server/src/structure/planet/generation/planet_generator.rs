@@ -255,8 +255,15 @@ fn unload_chunks_far_from_players(
         let mut set = HashSet::new();
 
         for chunk in planet.all_chunks_iter(false) {
-            if let ChunkIteratorResult::FilledChunk { position, chunk: _ } = chunk {
-                set.insert(position);
+            if let ChunkIteratorResult::FilledChunk {
+                position: (cx, cy, cz),
+                chunk: _,
+            } = chunk
+            {
+                // Unloading chunks that are currently loading leads to bad things
+                if planet.get_chunk_state(cx, cy, cz) == ChunkState::Loaded {
+                    set.insert((cx, cy, cz));
+                }
             }
         }
 

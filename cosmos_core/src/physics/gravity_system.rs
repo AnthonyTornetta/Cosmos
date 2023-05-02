@@ -3,6 +3,8 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::{ExternalImpulse, ReadMassProperties, RigidBody};
 
+use crate::structure::planet::Planet;
+
 use super::location::Location;
 
 fn gravity_system(
@@ -19,14 +21,14 @@ fn gravity_system(
     time: Res<Time>,
     mut commands: Commands,
 ) {
-    let mut gravs: Vec<(f32, f32, Location, Vec3)> = Vec::with_capacity(emitters.iter().len());
+    let mut gravs: Vec<(f32, f32, Location, Quat)> = Vec::with_capacity(emitters.iter().len());
 
     for (emitter, trans, location) in emitters.iter() {
         gravs.push((
             emitter.force_per_kg,
             emitter.radius,
             *location,
-            trans.down(),
+            Quat::from_affine3(&trans.affine()),
         ));
     }
 
@@ -34,18 +36,26 @@ fn gravity_system(
         if *rb == RigidBody::Dynamic {
             let mut force = Vec3::ZERO;
 
-            for (force_per_kilogram, radius, pos, down) in gravs.iter() {
-                let r_sqrd = radius * radius;
-                let dist_sqrd = location.distance_sqrd(pos);
+            for (force_per_kilogram, radius, pos, rotation) in gravs.iter() {
+                let relative_position = pos.relative_coords_to(location);
+                let dist = relative_position.max_element();
 
-                let ratio = if dist_sqrd < r_sqrd {
+                let ratio = if dist <= *radius {
                     1.0
                 } else {
-                    r_sqrd / dist_sqrd
+                    (radius * radius) / (dist * dist)
                 };
 
-                if ratio >= 0.1 {
-                    force += (prop.0.mass * force_per_kilogram * ratio) * *down;
+                if ratio >= 0.9 {
+                    let face = Planet::planet_face_relative(relative_position);
+
+                    let grav_dir = -rotation.mul_vec3(face.direction_vec3());
+
+                    force += (prop.0.mass * force_per_kilogram * ratio) * grav_dir;
+                } else if ratio >= 0.1 {
+                    let grav_dir = -relative_position.normalize();
+
+                    force += (prop.0.mass * force_per_kilogram * ratio) * grav_dir;
                 }
             }
 

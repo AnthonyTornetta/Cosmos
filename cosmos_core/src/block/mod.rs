@@ -1,5 +1,7 @@
 //! Blocks are the smallest thing found on any structure
 
+use std::fmt::Display;
+
 use bevy::{
     prelude::{App, States, Vec3},
     reflect::{FromReflect, Reflect},
@@ -95,6 +97,14 @@ impl BlockFace {
             Self::Top => "top",
             Self::Bottom => "bottom",
         }
+    }
+}
+
+impl Display for BlockFace {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())?;
+
+        Ok(())
     }
 }
 
