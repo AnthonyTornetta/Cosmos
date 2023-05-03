@@ -4,7 +4,7 @@
 use bevy::prelude::{Component, Entity};
 use serde::{Deserialize, Serialize};
 
-use crate::entities::player::render_distance::RenderDistance;
+use crate::{block::BlockFace, entities::player::render_distance::RenderDistance};
 
 #[derive(Debug, Serialize, Deserialize, Component)]
 /// All reliable messages a client can send
@@ -52,6 +52,8 @@ pub enum ClientReliableMessages {
         ///
         /// This is passed along with `inventory_slot` to verify that the client + server are still in sync
         block_id: u16,
+        /// The block's top face
+        block_up: BlockFace,
         /// The inventory slot the block came from
         inventory_slot: u32,
     },

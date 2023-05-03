@@ -20,7 +20,7 @@ pub mod systems;
 
 use crate::block::blocks::AIR_BLOCK_ID;
 use crate::block::hardness::BlockHardness;
-use crate::block::Block;
+use crate::block::{Block, BlockFace};
 use crate::events::block_events::BlockChangedEvent;
 use crate::netty::NoSendEntity;
 use crate::physics::location::Location;
@@ -299,6 +299,21 @@ impl Structure {
         (xx.floor() as i32, yy.floor() as i32, zz.floor() as i32)
     }
 
+    /// Gets the block's up facing face at this location.
+    ///
+    /// If no block was found, returns BlockFace::Top.
+    pub fn block_rotation(&self, x: usize, y: usize, z: usize) -> BlockFace {
+        self.chunk_at_block_coordinates(x, y, z)
+            .map(|chunk| {
+                chunk.block_rotation(
+                    x % CHUNK_DIMENSIONS,
+                    y % CHUNK_DIMENSIONS,
+                    z % CHUNK_DIMENSIONS,
+                )
+            })
+            .unwrap_or(BlockFace::Top)
+    }
+
     /// If the chunk is loaded/non-empty, returns the block at that coordinate.
     /// Otherwise, returns AIR_BLOCK_ID
     pub fn block_id_at(&self, x: usize, y: usize, z: usize) -> u16 {
@@ -348,6 +363,7 @@ impl Structure {
             y,
             z,
             blocks.from_numeric_id(AIR_BLOCK_ID),
+            BlockFace::Top,
             blocks,
             event_writer,
         )
@@ -376,6 +392,7 @@ impl Structure {
         y: usize,
         z: usize,
         block: &Block,
+        block_up: BlockFace,
         blocks: &Registry<Block>,
         event_writer: Option<&mut EventWriter<BlockChangedEvent>>,
     ) {
@@ -391,6 +408,8 @@ impl Structure {
                     old_block,
                     structure_entity: self_entity,
                     block: StructureBlock::new(x, y, z),
+                    old_block_up: self.block_rotation(x, y, z),
+                    new_block_up: block_up,
                 });
             }
         }
@@ -408,14 +427,14 @@ impl Structure {
         );
 
         if let Some(chunk) = self.mut_chunk_at_block_coordinates(x, y, z) {
-            chunk.set_block_at(bx, by, bz, block);
+            chunk.set_block_at(bx, by, bz, block, block_up);
 
             if chunk.is_empty() {
                 self.unload_chunk(cx, cy, cz);
             }
         } else if block.id() != AIR_BLOCK_ID {
             let chunk = self.create_chunk_at(cx, cy, cz);
-            chunk.set_block_at(bx, by, bz, block);
+            chunk.set_block_at(bx, by, bz, block, block_up);
         }
     }
 

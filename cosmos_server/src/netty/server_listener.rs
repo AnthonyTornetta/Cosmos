@@ -153,6 +153,7 @@ pub fn server_listen_messages(
                     y,
                     z,
                     block_id,
+                    block_up,
                     inventory_slot,
                 } => {
                     if let Some(player_entity) = lobby.player_from_id(client_id) {
@@ -162,6 +163,7 @@ pub fn server_listen_messages(
                                 x as usize, y as usize, z as usize,
                             ),
                             block_id,
+                            block_up,
                             inventory_slot: inventory_slot as usize,
                             placer: player_entity,
                         });

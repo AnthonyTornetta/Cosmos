@@ -418,6 +418,7 @@ fn client_sync_players(
                 z,
                 structure_entity,
                 block_id,
+                block_up,
             } => {
                 // Sometimes you'll get block updates for structures that don't exist
                 if let Some(client_ent) = network_mapping.client_from_server(&structure_entity) {
@@ -427,6 +428,7 @@ fn client_sync_players(
                             y as usize,
                             z as usize,
                             blocks.from_numeric_id(block_id),
+                            block_up,
                             &blocks,
                             Some(&mut block_change_event_writer),
                         );

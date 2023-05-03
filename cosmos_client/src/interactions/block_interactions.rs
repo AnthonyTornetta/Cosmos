@@ -3,11 +3,12 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::{QueryFilter, RapierContext};
 use cosmos_core::{
+    block::BlockFace,
     blockitems::BlockItems,
     inventory::Inventory,
     item::Item,
     registry::Registry,
-    structure::{ship::pilot::Pilot, Structure},
+    structure::{planet::Planet, ship::pilot::Pilot, Structure},
 };
 
 use crate::{
@@ -41,7 +42,7 @@ fn process_player_interaction(
     player_body: Query<Entity, (With<LocalPlayer>, Without<Pilot>)>,
     rapier_context: Res<RapierContext>,
     parent_query: Query<&Parent>,
-    structure_query: Query<(&Structure, &GlobalTransform)>,
+    structure_query: Query<(&Structure, &GlobalTransform, Option<&Planet>)>,
     mut break_writer: EventWriter<BlockBreakEvent>,
     mut place_writer: EventWriter<BlockPlaceEvent>,
     mut interact_writer: EventWriter<BlockInteractEvent>,
@@ -61,7 +62,7 @@ fn process_player_interaction(
             QueryFilter::new().exclude_rigid_body(player_body), // don't want to hit yourself
         ) {
             if let Ok(parent) = parent_query.get(entity) {
-                if let Ok((structure, transform)) = structure_query.get(parent.get()) {
+                if let Ok((structure, transform, is_planet)) = structure_query.get(parent.get()) {
                     if input_handler.check_just_pressed(CosmosInputs::BreakBlock, &keys, &mouse) {
                         let moved_point = intersection.point - intersection.normal * 0.3;
 
@@ -108,6 +109,12 @@ fn process_player_interaction(
                                             if structure.is_within_blocks(x, y, z) {
                                                 inventory.decrease_quantity_at(inventory_slot, 1);
 
+                                                let block_up = if is_planet.is_some() {
+                                                    BlockFace::Top
+                                                } else {
+                                                    BlockFace::Top
+                                                };
+
                                                 place_writer.send(BlockPlaceEvent {
                                                     structure_entity: structure
                                                         .get_entity()
@@ -117,6 +124,7 @@ fn process_player_interaction(
                                                     z,
                                                     inventory_slot,
                                                     block_id,
+                                                    block_up,
                                                 });
                                             }
                                         }

@@ -2,11 +2,11 @@
 //!
 //! These blocks can be updated.
 
-use std::slice::{Iter, IterMut};
+use std::slice::Iter;
 
 use crate::block::blocks::AIR_BLOCK_ID;
 use crate::block::hardness::BlockHardness;
-use crate::block::Block;
+use crate::block::{Block, BlockFace};
 use crate::registry::identifiable::Identifiable;
 use crate::registry::Registry;
 use crate::utils::array_utils::flatten;
@@ -34,6 +34,7 @@ pub struct Chunk {
     y: usize,
     z: usize,
     blocks: Vec<u16>,
+    block_info: Vec<u8>,
 
     block_health: BlockHealth,
 
@@ -52,6 +53,7 @@ impl Chunk {
             y,
             z,
             blocks: vec![0; N_BLOCKS],
+            block_info: vec![0; N_BLOCKS],
             block_health: BlockHealth::default(),
             non_air_blocks: 0,
         }
@@ -87,11 +89,13 @@ impl Chunk {
     /// You should only call this if you know what you're doing.
     ///
     /// No events are generated from this.
-    pub fn set_block_at(&mut self, x: usize, y: usize, z: usize, b: &Block) {
+    pub fn set_block_at(&mut self, x: usize, y: usize, z: usize, b: &Block, block_up: BlockFace) {
         let index = flatten(x, y, z, CHUNK_DIMENSIONS, CHUNK_DIMENSIONS);
         let id = b.id();
 
         self.block_health.reset_health(x, y, z);
+
+        self.block_info[index] = (self.block_info[index] & !0b111) | block_up.index() as u8;
 
         if self.blocks[index] != id {
             if self.blocks[index] == AIR_BLOCK_ID {
@@ -128,7 +132,16 @@ impl Chunk {
     #[inline]
     /// Gets the block at this location. Air is returned for empty blocks.
     pub fn block_at(&self, x: usize, y: usize, z: usize) -> u16 {
-        self.blocks[z * CHUNK_DIMENSIONS * CHUNK_DIMENSIONS + y * CHUNK_DIMENSIONS + x]
+        self.blocks[flatten(x, y, z, CHUNK_DIMENSIONS, CHUNK_DIMENSIONS)]
+    }
+
+    #[inline]
+    /// Gets the block's rotation at this location
+    pub fn block_rotation(&self, x: usize, y: usize, z: usize) -> BlockFace {
+        BlockFace::from_index(
+            (self.block_info[flatten(x, y, z, CHUNK_DIMENSIONS, CHUNK_DIMENSIONS)] & 0b111)
+                as usize,
+        )
     }
 
     #[inline]
@@ -188,11 +201,6 @@ impl Chunk {
     /// Returns the iterator for every block in the chunk
     pub fn blocks(&self) -> Iter<u16> {
         self.blocks.iter()
-    }
-
-    /// Returns the mut iterator for every block in the chunk
-    pub fn blocks_mut(&mut self) -> IterMut<u16> {
-        self.blocks.iter_mut()
     }
 }
 

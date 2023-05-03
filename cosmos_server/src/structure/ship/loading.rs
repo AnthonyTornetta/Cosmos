@@ -4,7 +4,7 @@ use bevy::prelude::{
     App, Commands, Component, Entity, EventWriter, IntoSystemConfig, OnUpdate, Query, Res, With,
 };
 use cosmos_core::{
-    block::Block,
+    block::{Block, BlockFace},
     registry::Registry,
     structure::{
         loading::ChunksNeedLoaded, structure_iterator::ChunkIteratorResult, ChunkInitEvent,
@@ -36,7 +36,7 @@ fn create_ships(
             structure.blocks_length() / 2,
         );
 
-        structure.set_block_at(x, y, z, ship_core, &blocks, None);
+        structure.set_block_at(x, y, z, ship_core, BlockFace::Top, &blocks, None);
 
         let itr = structure.all_chunks_iter(false);
 

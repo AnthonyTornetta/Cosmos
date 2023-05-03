@@ -1,5 +1,6 @@
 //! Events that are related to blocks
 
+use crate::block::BlockFace;
 use crate::structure::structure_block::StructureBlock;
 use bevy::prelude::App;
 use bevy::prelude::Entity;
@@ -17,6 +18,10 @@ pub struct BlockChangedEvent {
     pub old_block: u16,
     /// The block that is there now/will be there
     pub new_block: u16,
+    /// Old block's rotation
+    pub old_block_up: BlockFace,
+    /// New block's rotation
+    pub new_block_up: BlockFace,
 }
 
 pub(super) fn register(app: &mut App) {

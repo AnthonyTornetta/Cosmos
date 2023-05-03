@@ -7,8 +7,8 @@ use bevy::prelude::{Component, Entity};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    entities::player::render_distance::RenderDistance, structure::loading::ChunksNeedLoaded,
-    universe::star::Star,
+    block::BlockFace, entities::player::render_distance::RenderDistance,
+    structure::loading::ChunksNeedLoaded, universe::star::Star,
 };
 
 use super::netty_rigidbody::NettyRigidBody;
@@ -109,6 +109,8 @@ pub enum ServerReliableMessages {
         z: u32,
         /// The block it was changed to
         block_id: u16,
+        /// The block's up direction
+        block_up: BlockFace,
     },
     /// Sent when a pilot changes
     PilotChange {

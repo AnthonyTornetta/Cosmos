@@ -20,12 +20,13 @@ use crate::{
     state::game_state::GameState,
 };
 
+pub mod align_player;
 pub mod client_planet_builder;
 
 #[cfg(debug_assertions)]
 const RENDER_DISTANCE: i32 = 2;
 #[cfg(not(debug_assertions))]
-const RENDER_DISTANCE: i32 = 8;
+const RENDER_DISTANCE: i32 = 5;
 
 fn load_planet_chunks(
     query: Query<&Location, With<LocalPlayer>>,
@@ -137,6 +138,7 @@ pub fn unload_chunks_far_from_players(
 }
 
 pub(super) fn register(app: &mut App) {
+    align_player::register(app);
     app.add_systems(
         (load_planet_chunks, unload_chunks_far_from_players)
             .after(listen_for_new_physics_event)

@@ -339,7 +339,7 @@ mod test {
     use bevy::prelude::Vec3;
 
     use crate::{
-        block::{block_builder::BlockBuilder, Block},
+        block::{block_builder::BlockBuilder, Block, BlockFace},
         registry::Registry,
         structure::chunk::{Chunk, CHUNK_DIMENSIONS, CHUNK_DIMENSIONSF},
     };
@@ -356,7 +356,7 @@ mod test {
 
         let test_block = blocks.from_id("test").unwrap();
 
-        chunk.set_block_at(1, 2, 3, test_block);
+        chunk.set_block_at(1, 2, 3, test_block, BlockFace::Top);
 
         let (_, mass, center_of_mass) = generate_chunk_collider(&chunk, &blocks).unwrap();
 
@@ -374,13 +374,14 @@ mod test {
 
         let test_block = blocks.from_id("test").unwrap();
 
-        chunk.set_block_at(1, 2, 3, test_block);
+        chunk.set_block_at(1, 2, 3, test_block, BlockFace::Top);
 
         chunk.set_block_at(
             CHUNK_DIMENSIONS - 2,
             CHUNK_DIMENSIONS - 3,
             CHUNK_DIMENSIONS - 4,
             test_block,
+            BlockFace::Top,
         );
 
         let (_, mass, center_of_mass) = generate_chunk_collider(&chunk, &blocks).unwrap();
@@ -401,13 +402,14 @@ mod test {
         let test_block = blocks.from_id("test").unwrap();
         let test_block_2 = blocks.from_id("test2").unwrap();
 
-        chunk.set_block_at(0, 0, 0, test_block);
+        chunk.set_block_at(0, 0, 0, test_block, BlockFace::Top);
 
         chunk.set_block_at(
             CHUNK_DIMENSIONS - 1,
             CHUNK_DIMENSIONS - 1,
             CHUNK_DIMENSIONS - 1,
             test_block_2,
+            BlockFace::Top,
         );
 
         let (_, mass, center_of_mass) = generate_chunk_collider(&chunk, &blocks).unwrap();

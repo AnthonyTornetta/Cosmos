@@ -4,7 +4,7 @@ use bevy::prelude::{
     App, Component, Entity, EventReader, EventWriter, IntoSystemConfig, OnUpdate, Query, Res,
 };
 use cosmos_core::{
-    block::Block,
+    block::{Block, BlockFace},
     registry::Registry,
     structure::{
         chunk::{Chunk, CHUNK_DIMENSIONS},
@@ -75,7 +75,9 @@ fn generate_planet(
         .iter()
         .filter_map(|ev: &TestStoneChunkNeedsGeneratedEvent| {
             if let Ok(mut structure) = query.get_mut(ev.structure_entity) {
-                structure.take_chunk(ev.x, ev.y, ev.z).map(|chunk| (ev.structure_entity, chunk))
+                structure
+                    .take_chunk(ev.x, ev.y, ev.z)
+                    .map(|chunk| (ev.structure_entity, chunk))
             } else {
                 None
             }
@@ -88,7 +90,7 @@ fn generate_planet(
         for z in 0..CHUNK_DIMENSIONS {
             for y in 0..CHUNK_DIMENSIONS {
                 for x in 0..CHUNK_DIMENSIONS {
-                    chunk.set_block_at(x, y, z, stone);
+                    chunk.set_block_at(x, y, z, stone, BlockFace::Top);
                 }
             }
         }

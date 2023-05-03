@@ -6,6 +6,7 @@ use bevy::{
     prelude::{App, States, Vec3},
     reflect::{FromReflect, Reflect},
 };
+use serde::{Deserialize, Serialize};
 
 use crate::registry::identifiable::Identifiable;
 
@@ -28,7 +29,9 @@ pub enum BlockProperty {
     ShipOnly,
 }
 
-#[derive(Debug, PartialEq, Eq, Reflect, FromReflect, Default, Copy, Clone)]
+#[derive(
+    Debug, PartialEq, Eq, Reflect, FromReflect, Default, Copy, Clone, Serialize, Deserialize,
+)]
 /// Represents the different faces of a block.
 ///
 /// Even non-cube blocks will have this.
@@ -96,6 +99,21 @@ impl BlockFace {
             Self::Right => "right",
             Self::Top => "top",
             Self::Bottom => "bottom",
+        }
+    }
+
+    /// Get's this block face from its index.
+    ///
+    /// Note this will panic if index is not <= 5.
+    pub fn from_index(index: usize) -> Self {
+        match index {
+            0 => BlockFace::Right,
+            1 => BlockFace::Left,
+            2 => BlockFace::Top,
+            3 => BlockFace::Bottom,
+            4 => BlockFace::Front,
+            5 => BlockFace::Back,
+            _ => panic!("Index must be 0 <= index <= 5"),
         }
     }
 }
