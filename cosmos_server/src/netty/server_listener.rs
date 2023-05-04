@@ -51,7 +51,12 @@ pub fn server_listen_messages(
     mut pilot_change_event_writer: EventWriter<ChangePilotEvent>,
     pilot_query: Query<&Pilot>,
     mut change_player_query: Query<
-        (&Transform, &mut Location, &mut PlayerLooking, &mut Velocity),
+        (
+            &mut Transform,
+            &mut Location,
+            &mut PlayerLooking,
+            &mut Velocity,
+        ),
         With<Player>,
     >,
     mut requested_entities_writer: EventWriter<RequestedEntityEvent>,
@@ -65,13 +70,18 @@ pub fn server_listen_messages(
 
                 match command {
                     ClientUnreliableMessages::PlayerBody { body, looking } => {
-                        if let Ok((transform, mut location, mut currently_looking, mut velocity)) =
-                            change_player_query.get_mut(player_entity)
+                        if let Ok((
+                            mut transform,
+                            mut location,
+                            mut currently_looking,
+                            mut velocity,
+                        )) = change_player_query.get_mut(player_entity)
                         {
                             location.set_from(&body.location);
                             location.last_transform_loc = Some(transform.translation);
                             currently_looking.rotation = looking;
                             velocity.linvel = body.body_vel.linvel.into();
+                            transform.rotation = body.rotation;
                         }
                     }
                     ClientUnreliableMessages::SetMovement { movement } => {
