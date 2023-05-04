@@ -209,20 +209,27 @@ impl Chunk {
 #[derive(
     Debug, Default, Reflect, FromReflect, Serialize, Deserialize, Clone, Copy, PartialEq, Eq,
 )]
+/// This represents the information for a block. The first 3 bits are reserved for rotation data.
+///
+/// All other bits can be used for anything else
 pub struct BlockInfo(u8);
 
 impl BlockInfo {
     #[inline]
+    /// Gets the rotation data
+    ///
+    /// This will return which BlockFace represents the UP direction (no rotation is BlockFace::Top)
     pub fn get_rotation(&self) -> BlockFace {
         BlockFace::from_index((self.0 & 0b111) as usize)
     }
 
+    /// Sets the rotation data
+    ///
+    /// This should be the BlockFace that represents the UP direction (no rotation is BlockFace::Top)
     pub fn set_rotation(&mut self, rotation: BlockFace) {
         self.0 = self.0 & !0b111 | rotation.index() as u8;
     }
 }
-
-// fn bf_from_data(x: &u8) -> BlockFace {}
 
 /// Represents a child of a structure that represents a chunk
 #[derive(Debug, Reflect, FromReflect, Component)]

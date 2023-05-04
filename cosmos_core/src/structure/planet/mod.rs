@@ -45,12 +45,10 @@ impl Planet {
             } else {
                 BlockFace::Left
             }
+        } else if normalized.z.is_positive() {
+            BlockFace::Front
         } else {
-            if normalized.z.is_positive() {
-                BlockFace::Front
-            } else {
-                BlockFace::Back
-            }
+            BlockFace::Back
         }
     }
 }

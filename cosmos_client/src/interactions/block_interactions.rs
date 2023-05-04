@@ -110,7 +110,7 @@ fn process_player_interaction(
                                                 inventory.decrease_quantity_at(inventory_slot, 1);
 
                                                 let block_up = if is_planet.is_some() {
-                                                    BlockFace::Top
+                                                    Planet::planet_face(structure, x, y, z)
                                                 } else {
                                                     BlockFace::Top
                                                 };

@@ -154,10 +154,8 @@ fn populate_chunks(
             }
 
             let serialized_data =
-                cosmos_encoder::deserialize::<SerializedData>(&chunk).expect(&format!(
-                    "Error parsing chunk @ {cx} {cy} {cz} - is the file corrupted? File len: {}",
-                    chunk.len()
-                ));
+                cosmos_encoder::deserialize::<SerializedData>(&chunk).unwrap_or_else(|_| panic!("Error parsing chunk @ {cx} {cy} {cz} - is the file corrupted? File len: {}",
+                    chunk.len()));
 
             commands
                 .entity(entity)

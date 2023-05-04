@@ -244,11 +244,11 @@ impl Location {
         let sector_dims = BigDecimal::from_f32(SECTOR_DIMENSIONS).unwrap();
 
         let local_x =
-            BigDecimal::from_f32(self.local.x).expect(&format!("Died on {}", self.local.x));
+            BigDecimal::from_f32(self.local.x).unwrap_or_else(|| panic!("Died on {}", self.local.x));
         let local_y =
-            BigDecimal::from_f32(self.local.y).expect(&format!("Died on {}", self.local.y));
+            BigDecimal::from_f32(self.local.y).unwrap_or_else(|| panic!("Died on {}", self.local.y));
         let local_z =
-            BigDecimal::from_f32(self.local.z).expect(&format!("Died on {}", self.local.z));
+            BigDecimal::from_f32(self.local.z).unwrap_or_else(|| panic!("Died on {}", self.local.z));
 
         Vector3::new(
             BigDecimal::from_i64(self.sector_x).unwrap() * &sector_dims + local_x,
