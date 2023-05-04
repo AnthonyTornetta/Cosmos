@@ -74,6 +74,8 @@ fn align_player(
                             commands.entity(entity).insert(PlayerAlignment(Axis::Y));
 
                             match prev_orientation {
+                                // Fixes the player rotating in a weird direction when coming from
+                                // the left/right faces of a planet.
                                 Some(PreviousOrientation(Axis::X)) => {
                                     Quat::from_axis_angle(Vec3::Z, PI)
                                 }
