@@ -287,7 +287,7 @@ impl LaserCannonSystem {
 
         if let Some(l1_i) = found_line {
             if let Some(l2_i) = link_to {
-                let [mut l1, l2] = self
+                let [l1, l2] = self
                     .lines
                     .get_many_mut([l1_i, l2_i])
                     .expect("From and to should never be the same");
