@@ -5,7 +5,7 @@ use crate::state::game_state::GameState;
 use crate::structure::planet::unload_chunks_far_from_players;
 use bevy::prelude::{
     warn, App, BuildChildren, Component, DespawnRecursiveExt, EventReader, GlobalTransform,
-    IntoSystemConfigs, Mesh, OnUpdate, PbrBundle, PointLight, PointLightBundle, Rect,
+    IntoSystemConfigs, Mesh, OnUpdate, PbrBundle, PointLight, PointLightBundle, Quat, Rect,
     StandardMaterial, Transform, Vec3, With,
 };
 use bevy::reflect::{FromReflect, Reflect};
@@ -24,6 +24,7 @@ use cosmos_core::utils::array_utils::expand;
 use cosmos_core::utils::timer::UtilsTimer;
 use rayon::prelude::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use std::collections::HashSet;
+use std::f32::consts::PI;
 use std::sync::Mutex;
 
 use crate::asset::asset_loading::{BlockTextureIndex, MainAtlas};
@@ -539,9 +540,10 @@ impl ChunkRenderer {
 
         let mut faces = Vec::with_capacity(6);
 
-        for ((x, y, z), block) in chunk
+        for ((x, y, z), (block, block_info)) in chunk
             .blocks()
             .copied()
+            .zip(chunk.block_info_iterator().copied())
             .enumerate()
             .map(|(i, block)| (expand(i, CHUNK_DIMENSIONS, CHUNK_DIMENSIONS), block))
             .filter(|((x, y, z), _)| chunk.has_block_at(*x, *y, *z))
@@ -624,9 +626,11 @@ impl ChunkRenderer {
                         .insert(material.handle.clone(), Default::default());
                 }
 
-                let mesh_info = self.meshes.get_mut(&material.handle).unwrap();
+                let mesh_builder = self.meshes.get_mut(&material.handle).unwrap();
 
-                for face in faces.iter() {
+                let rotation = block_info.get_rotation();
+
+                for face in faces.iter().map(|x| BlockFace::rotate_face(*x, rotation)) {
                     let index = block_textures
                         .from_id(block.unlocalized_name())
                         .unwrap_or_else(|| {
@@ -635,15 +639,34 @@ impl ChunkRenderer {
                                 .expect("Missing texture should exist.")
                         });
 
-                    let Some(image_index) = index.atlas_index_from_face(*face) else {
-                    warn!("Missing image index -- {index:?}");
-                    continue;
-                };
+                    let Some(image_index) = index.atlas_index_from_face(face) else {
+                        warn!("Missing image index -- {index:?}");
+                        continue;
+                    };
 
                     let uvs = atlas.uvs_for_index(image_index);
 
-                    mesh_info.add_mesh_information(
-                        mesh.info_for_face(*face),
+                    let mut mesh_info = mesh.info_for_face(face).clone();
+
+                    let rotation = match rotation {
+                        BlockFace::Top => Quat::IDENTITY,
+                        BlockFace::Front => Quat::from_axis_angle(Vec3::X, PI / 2.0),
+                        BlockFace::Back => Quat::from_axis_angle(Vec3::X, -PI / 2.0),
+                        BlockFace::Left => Quat::from_axis_angle(Vec3::Z, PI / 2.0),
+                        BlockFace::Right => Quat::from_axis_angle(Vec3::Z, -PI / 2.0),
+                        BlockFace::Bottom => Quat::from_axis_angle(Vec3::X, PI),
+                    };
+
+                    for pos in mesh_info.positions.iter_mut() {
+                        *pos = rotation.mul_vec3((*pos).into()).into();
+                    }
+
+                    for norm in mesh_info.normals.iter_mut() {
+                        *norm = rotation.mul_vec3((*norm).into()).into();
+                    }
+
+                    mesh_builder.add_mesh_information(
+                        &mesh_info,
                         Vec3::new(center_offset_x, center_offset_y, center_offset_z),
                         uvs,
                     );

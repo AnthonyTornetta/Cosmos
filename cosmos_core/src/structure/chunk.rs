@@ -34,7 +34,7 @@ pub struct Chunk {
     y: usize,
     z: usize,
     blocks: Vec<u16>,
-    block_info: Vec<u8>,
+    block_info: Vec<BlockInfo>,
 
     block_health: BlockHealth,
 
@@ -53,7 +53,7 @@ impl Chunk {
             y,
             z,
             blocks: vec![0; N_BLOCKS],
-            block_info: vec![0; N_BLOCKS],
+            block_info: vec![BlockInfo::default(); N_BLOCKS],
             block_health: BlockHealth::default(),
             non_air_blocks: 0,
         }
@@ -95,7 +95,7 @@ impl Chunk {
 
         self.block_health.reset_health(x, y, z);
 
-        self.block_info[index] = (self.block_info[index] & !0b111) | block_up.index() as u8;
+        self.block_info[index].set_rotation(block_up);
 
         if self.blocks[index] != id {
             if self.blocks[index] == AIR_BLOCK_ID {
@@ -138,10 +138,7 @@ impl Chunk {
     #[inline]
     /// Gets the block's rotation at this location
     pub fn block_rotation(&self, x: usize, y: usize, z: usize) -> BlockFace {
-        BlockFace::from_index(
-            (self.block_info[flatten(x, y, z, CHUNK_DIMENSIONS, CHUNK_DIMENSIONS)] & 0b111)
-                as usize,
-        )
+        self.block_info[flatten(x, y, z, CHUNK_DIMENSIONS, CHUNK_DIMENSIONS)].get_rotation()
     }
 
     #[inline]
@@ -202,7 +199,30 @@ impl Chunk {
     pub fn blocks(&self) -> Iter<u16> {
         self.blocks.iter()
     }
+
+    /// Returns the iterator for all the block info of the chunk
+    pub fn block_info_iterator(&self) -> Iter<BlockInfo> {
+        self.block_info.iter()
+    }
 }
+
+#[derive(
+    Debug, Default, Reflect, FromReflect, Serialize, Deserialize, Clone, Copy, PartialEq, Eq,
+)]
+pub struct BlockInfo(u8);
+
+impl BlockInfo {
+    #[inline]
+    pub fn get_rotation(&self) -> BlockFace {
+        BlockFace::from_index((self.0 & 0b111) as usize)
+    }
+
+    pub fn set_rotation(&mut self, rotation: BlockFace) {
+        self.0 = self.0 & !0b111 | rotation.index() as u8;
+    }
+}
+
+// fn bf_from_data(x: &u8) -> BlockFace {}
 
 /// Represents a child of a structure that represents a chunk
 #[derive(Debug, Reflect, FromReflect, Component)]

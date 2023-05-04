@@ -105,6 +105,7 @@ impl BlockFace {
     /// Get's this block face from its index.
     ///
     /// Note this will panic if index is not <= 5.
+    #[inline]
     pub fn from_index(index: usize) -> Self {
         match index {
             0 => BlockFace::Right,
@@ -114,6 +115,48 @@ impl BlockFace {
             4 => BlockFace::Front,
             5 => BlockFace::Back,
             _ => panic!("Index must be 0 <= index <= 5"),
+        }
+    }
+
+    /// BlockFace::Top will result in no rotation being made
+    pub fn rotate_face(face: BlockFace, top_face: BlockFace) -> BlockFace {
+        match top_face {
+            Self::Top => face,
+            Self::Bottom => match face {
+                Self::Top => Self::Bottom,
+                Self::Bottom => Self::Top,
+                Self::Back => Self::Front,
+                Self::Front => Self::Back,
+                _ => face,
+            },
+            Self::Left => match face {
+                Self::Bottom => Self::Left,
+                Self::Right => Self::Bottom,
+                Self::Left => Self::Top,
+                Self::Top => Self::Right,
+                _ => face,
+            },
+            Self::Right => match face {
+                Self::Bottom => Self::Right,
+                Self::Right => Self::Top,
+                Self::Left => Self::Bottom,
+                Self::Top => Self::Left,
+                _ => face,
+            },
+            Self::Front => match face {
+                Self::Back => Self::Top,
+                Self::Bottom => Self::Back,
+                Self::Front => Self::Bottom,
+                Self::Top => Self::Front,
+                _ => face,
+            },
+            Self::Back => match face {
+                Self::Front => Self::Top,
+                Self::Back => Self::Bottom,
+                Self::Top => Self::Back,
+                Self::Bottom => Self::Front,
+                _ => face,
+            },
         }
     }
 }
