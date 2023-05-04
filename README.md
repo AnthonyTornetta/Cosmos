@@ -47,17 +47,18 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
     - [ ] Biospheres depend on how close they are to the sun
     - [ ] Dynamic biospheres based off temperature
     - [ ] Only generate if planet is close enough to player ~ 10 sectors
-    - [ ] Cube planets
-      - [ ] Planets will now be cubes instead of flat planes, and will be about the size of the sector
+    - [x] Cube planets
+      - [x] Planets will now be cubes instead of flat planes, and will be about the size of the sector
       - [x] Redo saving/loading of planets
       - [x] Dynamically generate chunks & unload them based on players' positions close to planet
-      - [ ] Implement basic LOD rendering for client
-      - [ ] Make generation work on all faces of planet
-      - [ ] Block orientation for every block
+      - [x] Make generation work on all faces of planet
+      - [x] Block orientation for every block
   - [ ] Asteroids
     - [ ] Mineral deposits
   - [ ] Save generated universe
-    - [ ] Save planet/star locations + temperatures
+    - [x] Save planet locations
+    - [ ] Save star locations & temperatures 
+  - [ ] Fix broken ship functionality
 
 ## Release 0.0.3a
 - [x] Infinite universe
