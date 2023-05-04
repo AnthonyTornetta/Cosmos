@@ -10,7 +10,10 @@ use bevy::{
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     entities::player::Player,
-    netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannel},
+    netty::{
+        cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannel,
+        NoSendEntity,
+    },
     physics::location::Location,
     structure::{
         chunk::{Chunk, CHUNK_DIMENSIONSF},
@@ -233,10 +236,13 @@ fn generate_chunks_near_players(
             for (x, y, z) in chunks {
                 best_planet.set_chunk(Chunk::new(x, y, z));
                 let needs_generated_flag = commands
-                    .spawn(NeedsPopulated {
-                        chunk_coords: (x, y, z),
-                        structure_entity: entity,
-                    })
+                    .spawn((
+                        NeedsPopulated {
+                            chunk_coords: (x, y, z),
+                            structure_entity: entity,
+                        },
+                        NoSendEntity,
+                    ))
                     .id();
 
                 commands.entity(entity).add_child(needs_generated_flag);
@@ -345,6 +351,7 @@ fn unload_chunks_far_from_players(
                         ),
                         NeedsSaved,
                         NeedsUnloaded,
+                        NoSendEntity,
                     ));
                 }
             }

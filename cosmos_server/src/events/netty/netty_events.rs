@@ -11,6 +11,7 @@ use cosmos_core::netty::server_reliable_messages::ServerReliableMessages;
 use cosmos_core::physics::location::Location;
 use cosmos_core::physics::player_world::WorldWithin;
 use cosmos_core::registry::Registry;
+use cosmos_core::structure::chunk::CHUNK_DIMENSIONSF;
 use cosmos_core::{
     entities::player::Player,
     netty::{netty_rigidbody::NettyRigidBody, NettyChannel},
@@ -142,7 +143,7 @@ fn handle_events_system(
                 };
 
                 let player = Player::new(name.clone(), *id);
-                let starting_pos = Vec3::new(0.0, 900.0, 0.0);
+                let starting_pos = Vec3::new(0.0, CHUNK_DIMENSIONSF * 250.0, 0.0);
                 let transform = Transform::from_translation(starting_pos);
                 let location = Location::new(starting_pos, 0, 0, 0);
                 let velocity = Velocity::default();
