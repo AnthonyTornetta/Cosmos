@@ -42,11 +42,12 @@ use netty::flags::LocalPlayer;
 use netty::mapping::NetworkMapping;
 use rendering::MainCamera;
 use state::game_state::GameState;
+use structure::planet::align_player::PlayerAlignment;
 use ui::crosshair::CrosshairOffset;
 use window::setup::DeltaCursorPosition;
 
 use bevy::prelude::*;
-use bevy_rapier3d::prelude::{RapierConfiguration, TimestepMode, Vect, Velocity};
+use bevy_rapier3d::prelude::{RapierConfiguration, TimestepMode, Velocity};
 use bevy_renet::RenetClientPlugin;
 use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
 
@@ -166,11 +167,14 @@ fn process_player_movement(
     mouse: Res<Input<MouseButton>>,
     time: Res<Time>,
     input_handler: ResMut<CosmosInputHandler>,
-    mut query: Query<&mut Velocity, (With<LocalPlayer>, Without<Pilot>)>,
-    cam_query: Query<&Transform, With<MainCamera>>,
+    mut query: Query<
+        (&mut Velocity, &GlobalTransform, Option<&PlayerAlignment>),
+        (With<LocalPlayer>, Without<Pilot>),
+    >,
+    cam_query: Query<&GlobalTransform, With<MainCamera>>,
 ) {
     // This will be err if the player is piloting a ship
-    if let Ok(mut velocity) = query.get_single_mut() {
+    if let Ok((mut velocity, player_transform, player_alignment)) = query.get_single_mut() {
         let cam_trans = cam_query.single();
 
         let max_speed: f32 = match input_handler.check_pressed(CosmosInputs::Sprint, &keys, &mouse)
@@ -181,10 +185,24 @@ fn process_player_movement(
 
         let mut forward = cam_trans.forward();
         let mut right = cam_trans.right();
-        let up = Vect::new(0.0, 1.0, 0.0);
+        let up = player_transform.up();
 
-        forward.y = 0.0;
-        right.y = 0.0;
+        if let Some(player_alignment) = player_alignment {
+            match player_alignment.0 {
+                structure::planet::align_player::Axis::X => {
+                    forward.x = 0.0;
+                    right.x = 0.0;
+                }
+                structure::planet::align_player::Axis::Y => {
+                    forward.y = 0.0;
+                    right.y = 0.0;
+                }
+                structure::planet::align_player::Axis::Z => {
+                    forward.z = 0.0;
+                    right.z = 0.0;
+                }
+            }
+        }
 
         forward = forward.normalize_or_zero() * 100.0;
         right = right.normalize_or_zero() * 100.0;
@@ -221,15 +239,43 @@ fn process_player_movement(
             velocity.linvel -= amt;
         }
 
-        let y = velocity.linvel.y;
+        if let Some(player_alignment) = player_alignment {
+            match player_alignment.0 {
+                structure::planet::align_player::Axis::X => {
+                    let x = velocity.linvel.x;
 
-        velocity.linvel.y = 0.0;
+                    velocity.linvel.x = 0.0;
 
-        if velocity.linvel.dot(velocity.linvel) > max_speed * max_speed {
-            velocity.linvel = velocity.linvel.normalize() * max_speed;
+                    if velocity.linvel.dot(velocity.linvel) > max_speed * max_speed {
+                        velocity.linvel = velocity.linvel.normalize() * max_speed;
+                    }
+
+                    velocity.linvel.x = x;
+                }
+                structure::planet::align_player::Axis::Y => {
+                    let y = velocity.linvel.y;
+
+                    velocity.linvel.y = 0.0;
+
+                    if velocity.linvel.dot(velocity.linvel) > max_speed * max_speed {
+                        velocity.linvel = velocity.linvel.normalize() * max_speed;
+                    }
+
+                    velocity.linvel.y = y;
+                }
+                structure::planet::align_player::Axis::Z => {
+                    let z = velocity.linvel.z;
+
+                    velocity.linvel.z = 0.0;
+
+                    if velocity.linvel.dot(velocity.linvel) > max_speed * max_speed {
+                        velocity.linvel = velocity.linvel.normalize() * max_speed;
+                    }
+
+                    velocity.linvel.z = z;
+                }
+            }
         }
-
-        velocity.linvel.y = y;
     }
 }
 

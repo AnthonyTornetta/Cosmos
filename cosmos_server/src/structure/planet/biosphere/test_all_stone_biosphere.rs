@@ -1,20 +1,24 @@
 //! Used just for testing, this makes a planet all stone
 
 use bevy::prelude::{
-    App, Component, Entity, EventReader, EventWriter, IntoSystemConfigs, OnUpdate, Query, Res,
+    App, Component, Entity, EventReader, EventWriter, IntoSystemConfig, OnUpdate, Query, Res,
 };
 use cosmos_core::{
-    block::Block,
+    block::{Block, BlockFace},
     registry::Registry,
-    structure::{chunk::CHUNK_DIMENSIONS, ChunkInitEvent, Structure},
+    structure::{
+        chunk::{Chunk, CHUNK_DIMENSIONS},
+        ChunkInitEvent, Structure,
+    },
+    utils::timer::UtilsTimer,
 };
+use rayon::prelude::{IntoParallelRefMutIterator, ParallelIterator};
 
-use crate::structure::planet::generation::planet_generator::check_needs_generated_system;
 use crate::GameState;
 
-use super::{TBiosphere, TGenerateChunkEvent};
+use super::{register_biosphere, TBiosphere, TGenerateChunkEvent};
 
-#[derive(Component)]
+#[derive(Component, Debug, Default)]
 /// Used just for testing, this makes a planet all stone
 pub struct TestStoneBiosphereMarker;
 
@@ -65,44 +69,58 @@ fn generate_planet(
     mut event_writer: EventWriter<ChunkInitEvent>,
     blocks: Res<Registry<Block>>,
 ) {
-    for ev in events.iter() {
-        let mut structure = query.get_mut(ev.structure_entity).unwrap();
+    let timer = UtilsTimer::start();
 
-        let (start_x, start_y, start_z) = (
-            ev.x * CHUNK_DIMENSIONS,
-            ev.y * CHUNK_DIMENSIONS,
-            ev.z * CHUNK_DIMENSIONS,
-        );
+    let mut chunks = events
+        .iter()
+        .filter_map(|ev: &TestStoneChunkNeedsGeneratedEvent| {
+            if let Ok(mut structure) = query.get_mut(ev.structure_entity) {
+                structure
+                    .take_chunk(ev.x, ev.y, ev.z)
+                    .map(|chunk| (ev.structure_entity, chunk))
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<(Entity, Chunk)>>();
 
+    chunks.par_iter_mut().for_each(|(_, chunk)| {
         let stone = blocks.from_id("cosmos:stone").unwrap();
 
-        for z in start_z..(start_z + CHUNK_DIMENSIONS) {
-            for x in start_x..(start_x + CHUNK_DIMENSIONS) {
-                for y in start_y..(start_y + CHUNK_DIMENSIONS) {
-                    structure.set_block_at(x, y, z, stone, &blocks, None);
+        for z in 0..CHUNK_DIMENSIONS {
+            for y in 0..CHUNK_DIMENSIONS {
+                for x in 0..CHUNK_DIMENSIONS {
+                    chunk.set_block_at(x, y, z, stone, BlockFace::Top);
                 }
             }
         }
+    });
 
-        event_writer.send(ChunkInitEvent {
-            structure_entity: ev.structure_entity,
-            x: ev.x,
-            y: ev.y,
-            z: ev.z,
-        });
+    let len = chunks.len();
+
+    for (structure_entity, chunk) in chunks {
+        if let Ok(mut structure) = query.get_mut(structure_entity) {
+            event_writer.send(ChunkInitEvent {
+                structure_entity,
+                x: chunk.structure_x(),
+                y: chunk.structure_y(),
+                z: chunk.structure_z(),
+            });
+
+            structure.set_chunk(chunk);
+        }
+    }
+
+    if len != 0 {
+        timer.log_duration(&format!("Generated {len} chunks in"));
     }
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_event::<TestStoneChunkNeedsGeneratedEvent>()
-        .add_systems(
-            (
-                generate_planet,
-                check_needs_generated_system::<
-                    TestStoneChunkNeedsGeneratedEvent,
-                    TestStoneBiosphereMarker,
-                >,
-            )
-                .in_set(OnUpdate(GameState::Playing)),
-        );
+    register_biosphere::<TestStoneBiosphereMarker, TestStoneChunkNeedsGeneratedEvent>(
+        app,
+        "cosmos:biosphere_test_stone",
+    );
+
+    app.add_system(generate_planet.in_set(OnUpdate(GameState::Playing)));
 }

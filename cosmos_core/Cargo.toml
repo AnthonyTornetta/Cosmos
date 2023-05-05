@@ -1,15 +1,15 @@
 [package]
 name = "cosmos_core"
-version = "0.0.3"
+version = "0.0.4"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 bevy = { workspace = true }
-take_mut = { workspace = true }
 bevy_renet = { workspace = true }
 serde = { workspace = true }
+serde_arrays = { workspace = true }
 bincode = { workspace = true }
 noise = { workspace = true }
 rand = { workspace = true }
@@ -21,3 +21,4 @@ bevy_rapier3d = { workspace = true }
 bevy-inspector-egui = { workspace = true }
 
 zstd = { workspace = true }
+rayon = { workspace = true }

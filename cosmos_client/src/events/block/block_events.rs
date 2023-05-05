@@ -2,8 +2,9 @@
 
 use bevy::prelude::*;
 use bevy_renet::renet::RenetClient;
-use cosmos_core::netty::{
-    client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannel,
+use cosmos_core::{
+    block::BlockFace,
+    netty::{client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannel},
 };
 
 use crate::{netty::mapping::NetworkMapping, state::game_state::GameState};
@@ -36,6 +37,8 @@ pub struct BlockPlaceEvent {
     pub inventory_slot: usize,
     /// The block's id
     pub block_id: u16,
+    /// The block's top face
+    pub block_up: BlockFace,
 }
 
 #[derive(Debug)]
@@ -87,6 +90,7 @@ fn handle_block_place(
                 y: ev.y as u32,
                 z: ev.z as u32,
                 block_id: ev.block_id,
+                block_up: ev.block_up,
                 inventory_slot: ev.inventory_slot as u32,
             }),
         );

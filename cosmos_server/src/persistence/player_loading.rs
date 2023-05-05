@@ -70,10 +70,7 @@ fn load_near(
                         for entity_id in vec.iter() {
                             if !loaded_entities.iter().any(|x| x == entity_id) {
                                 commands.spawn((
-                                    SaveFileIdentifier {
-                                        entity_id: entity_id.clone(),
-                                        sector: Some(sector),
-                                    },
+                                    SaveFileIdentifier::new(Some(sector), entity_id.clone()),
                                     NeedsLoaded,
                                 ));
                             }
@@ -85,12 +82,15 @@ fn load_near(
 
                         let dir = format!("world/{x}_{y}_{z}");
                         if fs::try_exists(&dir).unwrap_or(false) {
-                            for file in WalkDir::new(&dir).into_iter().flatten() {
+                            for file in WalkDir::new(&dir)
+                                .max_depth(1)
+                                .into_iter()
+                                .flatten()
+                                .filter(|x| x.file_type().is_file())
+                            {
                                 let path = file.path();
 
-                                if file.file_type().is_file()
-                                    && path.extension() == Some(OsStr::new("cent"))
-                                {
+                                if path.extension() == Some(OsStr::new("cent")) {
                                     let entity_id = path
                                         .file_stem()
                                         .expect("Failed to get file stem")
@@ -104,10 +104,7 @@ fn load_near(
 
                                     if !loaded_entities.iter().any(|x| x == &entity_id) {
                                         commands.spawn((
-                                            SaveFileIdentifier {
-                                                entity_id,
-                                                sector: Some((x, y, z)),
-                                            },
+                                            SaveFileIdentifier::new(Some((x, y, z)), entity_id),
                                             NeedsLoaded,
                                         ));
                                     }

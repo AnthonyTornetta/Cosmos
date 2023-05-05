@@ -22,7 +22,7 @@ fn on_request_planet(
             server.send_message(
                 ev.client_id,
                 NettyChannel::Reliable.id(),
-                cosmos_encoder::serialize(&ServerReliableMessages::ShipCreate {
+                cosmos_encoder::serialize(&ServerReliableMessages::Ship {
                     entity: ev.entity,
                     body: NettyRigidBody::new(velocity, transform.rotation, *location),
                     width: structure.chunks_width() as u32,

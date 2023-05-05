@@ -110,10 +110,35 @@ impl Sub<Vec3> for Location {
     }
 }
 
+impl Sub<Location> for Location {
+    type Output = Location;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        let mut loc = Location::new(
+            self.local - rhs.local,
+            self.sector_x - rhs.sector_x,
+            self.sector_y - rhs.sector_y,
+            self.sector_z - rhs.sector_z,
+        );
+        loc.fix_bounds();
+        loc
+    }
+}
+
 impl AddAssign<Vec3> for &mut Location {
     fn add_assign(&mut self, rhs: Vec3) {
         self.local += rhs;
         self.fix_bounds();
+    }
+}
+
+impl From<Location> for Vec3 {
+    fn from(val: Location) -> Self {
+        Vec3::new(
+            val.sector_x as f32 * SECTOR_DIMENSIONS + val.local.x,
+            val.sector_y as f32 * SECTOR_DIMENSIONS + val.local.y,
+            val.sector_z as f32 * SECTOR_DIMENSIONS + val.local.z,
+        )
     }
 }
 
@@ -136,6 +161,12 @@ impl Location {
             self.sector_y / SYSTEM_SECTORS as i64,
             self.sector_z / SYSTEM_SECTORS as i64,
         )
+    }
+
+    /// Gets the sector coordinates as a tuple
+    #[inline]
+    pub fn sector(&self) -> (i64, i64, i64) {
+        (self.sector_x, self.sector_y, self.sector_z)
     }
 
     /// Ensures `self.local` is within [`-SECTOR_DIMENSIONS/2.0`, `SECTOR_DIMENSIONS/2.0`]
@@ -212,9 +243,12 @@ impl Location {
     pub fn absolute_coords(&self) -> Vector3<BigDecimal> {
         let sector_dims = BigDecimal::from_f32(SECTOR_DIMENSIONS).unwrap();
 
-        let local_x = BigDecimal::from_f32(self.local.x).unwrap();
-        let local_y = BigDecimal::from_f32(self.local.y).unwrap();
-        let local_z = BigDecimal::from_f32(self.local.z).unwrap();
+        let local_x =
+            BigDecimal::from_f32(self.local.x).unwrap_or_else(|| panic!("Died on {}", self.local.x));
+        let local_y =
+            BigDecimal::from_f32(self.local.y).unwrap_or_else(|| panic!("Died on {}", self.local.y));
+        let local_z =
+            BigDecimal::from_f32(self.local.z).unwrap_or_else(|| panic!("Died on {}", self.local.z));
 
         Vector3::new(
             BigDecimal::from_i64(self.sector_x).unwrap() * &sector_dims + local_x,

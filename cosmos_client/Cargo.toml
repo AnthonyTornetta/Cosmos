@@ -1,15 +1,14 @@
 [package]
 name = "cosmos_client"
-version = "0.0.3"
+version = "0.0.4"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-cosmos_core = { version = "0.0.3", path = "../cosmos_core" }
+cosmos_core = { version = "0.0.4", path = "../cosmos_core" }
 
 bevy = { workspace = true }
-take_mut = { workspace = true }
 bevy_renet = { workspace = true }
 serde = { workspace = true }
 bincode = { workspace = true }
@@ -25,3 +24,4 @@ image = { workspace = true }
 bevy-inspector-egui = { workspace = true }
 
 rand_chacha = { workspace = true }
+rayon = { workspace = true }

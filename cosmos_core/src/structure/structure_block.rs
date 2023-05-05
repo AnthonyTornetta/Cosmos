@@ -6,7 +6,10 @@ use bevy::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{block::Block, registry::Registry};
+use crate::{
+    block::{Block, BlockFace},
+    registry::Registry,
+};
 
 use super::{chunk::CHUNK_DIMENSIONS, Structure};
 
@@ -57,6 +60,12 @@ impl StructureBlock {
     /// Creates a structure block
     pub fn new(x: usize, y: usize, z: usize) -> Self {
         Self { x, y, z }
+    }
+
+    #[inline]
+    /// Returns this block's top facing face
+    pub fn block_up(&self, structure: &Structure) -> BlockFace {
+        structure.block_rotation(self.x, self.y, self.z)
     }
 
     #[inline]

@@ -2,26 +2,24 @@
 //!
 //! These blocks can be updated.
 
+use std::slice::Iter;
+
 use crate::block::blocks::AIR_BLOCK_ID;
 use crate::block::hardness::BlockHardness;
-use crate::block::Block;
+use crate::block::{Block, BlockFace};
 use crate::registry::identifiable::Identifiable;
 use crate::registry::Registry;
-use bevy::prelude::Vec3;
+use crate::utils::array_utils::flatten;
+use bevy::prelude::{Component, Entity, Vec3};
 use bevy::reflect::{FromReflect, Reflect};
-use serde::de;
-use serde::de::Error;
-use serde::de::{Deserialize, Deserializer, MapAccess, SeqAccess, Visitor};
-use serde::ser::{Serialize, SerializeStruct, Serializer};
-use std::fmt;
-use std::fmt::Formatter;
+use serde::{Deserialize, Serialize};
 
 use super::block_health::BlockHealth;
 
 /// The number of blocks a chunk can have in the x/y/z directions.
 ///
 /// A chunk contains `CHUNK_DIMENSIONS`^3 blocks total.
-pub const CHUNK_DIMENSIONS: usize = 16;
+pub const CHUNK_DIMENSIONS: usize = 32;
 
 /// Short for `CHUNK_DIMENSIONS as f32`
 pub const CHUNK_DIMENSIONSF: f32 = CHUNK_DIMENSIONS as f32;
@@ -29,13 +27,14 @@ pub const CHUNK_DIMENSIONSF: f32 = CHUNK_DIMENSIONS as f32;
 /// The number of blocks a chunk contains (`CHUNK_DIMENSIONS^3`)
 const N_BLOCKS: usize = CHUNK_DIMENSIONS * CHUNK_DIMENSIONS * CHUNK_DIMENSIONS;
 
-#[derive(Debug, Reflect, FromReflect)]
+#[derive(Debug, Reflect, FromReflect, Serialize, Deserialize)]
 /// Stores a bunch of blocks, information about those blocks, and where they are in the structure.
 pub struct Chunk {
     x: usize,
     y: usize,
     z: usize,
-    blocks: [u16; N_BLOCKS],
+    blocks: Vec<u16>,
+    block_info: Vec<BlockInfo>,
 
     block_health: BlockHealth,
 
@@ -53,7 +52,8 @@ impl Chunk {
             x,
             y,
             z,
-            blocks: [0; N_BLOCKS],
+            blocks: vec![0; N_BLOCKS],
+            block_info: vec![BlockInfo::default(); N_BLOCKS],
             block_health: BlockHealth::default(),
             non_air_blocks: 0,
         }
@@ -89,11 +89,13 @@ impl Chunk {
     /// You should only call this if you know what you're doing.
     ///
     /// No events are generated from this.
-    pub fn set_block_at(&mut self, x: usize, y: usize, z: usize, b: &Block) {
-        let index = z * CHUNK_DIMENSIONS * CHUNK_DIMENSIONS + y * CHUNK_DIMENSIONS + x;
+    pub fn set_block_at(&mut self, x: usize, y: usize, z: usize, b: &Block, block_up: BlockFace) {
+        let index = flatten(x, y, z, CHUNK_DIMENSIONS, CHUNK_DIMENSIONS);
         let id = b.id();
 
         self.block_health.reset_health(x, y, z);
+
+        self.block_info[index].set_rotation(block_up);
 
         if self.blocks[index] != id {
             if self.blocks[index] == AIR_BLOCK_ID {
@@ -130,7 +132,13 @@ impl Chunk {
     #[inline]
     /// Gets the block at this location. Air is returned for empty blocks.
     pub fn block_at(&self, x: usize, y: usize, z: usize) -> u16 {
-        self.blocks[z * CHUNK_DIMENSIONS * CHUNK_DIMENSIONS + y * CHUNK_DIMENSIONS + x]
+        self.blocks[flatten(x, y, z, CHUNK_DIMENSIONS, CHUNK_DIMENSIONS)]
+    }
+
+    #[inline]
+    /// Gets the block's rotation at this location
+    pub fn block_rotation(&self, x: usize, y: usize, z: usize) -> BlockFace {
+        self.block_info[flatten(x, y, z, CHUNK_DIMENSIONS, CHUNK_DIMENSIONS)].get_rotation()
     }
 
     #[inline]
@@ -186,224 +194,48 @@ impl Chunk {
         self.block_health
             .take_damage(x, y, z, block_hardness, amount)
     }
-}
 
-// Everything below here may no longer be necessary since data is now compressed automatically.
+    /// Returns the iterator for every block in the chunk
+    pub fn blocks(&self) -> Iter<u16> {
+        self.blocks.iter()
+    }
 
-impl Serialize for Chunk {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut chunk_data: Vec<u16> = Vec::new();
-
-        let mut n: u16 = 1;
-        let mut last_block: u16 = self.blocks[0];
-
-        for i in 1..N_BLOCKS {
-            let here = self.blocks[i];
-            if here != last_block {
-                chunk_data.push(n);
-                chunk_data.push(last_block);
-
-                last_block = here;
-                n = 1;
-            } else {
-                n += 1;
-            }
-        }
-
-        if n != 0 {
-            chunk_data.push(n);
-            chunk_data.push(last_block);
-        }
-
-        let mut s = serializer.serialize_struct("Chunk", 4).unwrap();
-        s.serialize_field("x", &self.x)?;
-        s.serialize_field("y", &self.y)?;
-        s.serialize_field("z", &self.z)?;
-        s.serialize_field("blocks", &chunk_data)?;
-        s.serialize_field("block_health", &self.block_health)?;
-        s.end()
+    /// Returns the iterator for all the block info of the chunk
+    pub fn block_info_iterator(&self) -> Iter<BlockInfo> {
+        self.block_info.iter()
     }
 }
 
-static FIELDS: &[&str] = &["x", "y", "z", "blocks", "block_health"];
+#[derive(
+    Debug, Default, Reflect, FromReflect, Serialize, Deserialize, Clone, Copy, PartialEq, Eq,
+)]
+/// This represents the information for a block. The first 3 bits are reserved for rotation data.
+///
+/// All other bits can be used for anything else
+pub struct BlockInfo(u8);
 
-enum Field {
-    X,
-    Y,
-    Z,
-    Blocks,
-    BlockHealth,
-}
-
-struct FieldVisitor;
-
-impl<'de> Visitor<'de> for FieldVisitor {
-    type Value = Field;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("x, y, z, blocks, or block_health")
+impl BlockInfo {
+    #[inline]
+    /// Gets the rotation data
+    ///
+    /// This will return which BlockFace represents the UP direction (no rotation is BlockFace::Top)
+    pub fn get_rotation(&self) -> BlockFace {
+        BlockFace::from_index((self.0 & 0b111) as usize)
     }
 
-    fn visit_str<E>(self, value: &str) -> Result<Field, E>
-    where
-        E: de::Error,
-    {
-        match value {
-            "x" => Ok(Field::X),
-            "y" => Ok(Field::Y),
-            "z" => Ok(Field::Z),
-            "blocks" => Ok(Field::Blocks),
-            "block_health" => Ok(Field::BlockHealth),
-            _ => Err(de::Error::unknown_field(value, FIELDS)),
-        }
+    /// Sets the rotation data
+    ///
+    /// This should be the BlockFace that represents the UP direction (no rotation is BlockFace::Top)
+    pub fn set_rotation(&mut self, rotation: BlockFace) {
+        self.0 = self.0 & !0b111 | rotation.index() as u8;
     }
 }
 
-impl<'de> Deserialize<'de> for Field {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_identifier(FieldVisitor {})
-    }
-}
-
-struct ChunkVisitor;
-
-fn vec_into_chunk_array(blocks: &[u16]) -> ([u16; N_BLOCKS], usize) {
-    let mut blocks_arr = [0; N_BLOCKS];
-
-    let mut blocks_i = 1;
-    let mut n = blocks[0];
-
-    let mut non_air_blocks = 0;
-
-    for block in blocks_arr.iter_mut() {
-        if n == 0 {
-            n = blocks[blocks_i + 1];
-            blocks_i += 2;
-        }
-
-        *block = blocks[blocks_i];
-        if *block != AIR_BLOCK_ID {
-            non_air_blocks += 1;
-        }
-
-        n -= 1;
-    }
-
-    (blocks_arr, non_air_blocks)
-}
-
-impl<'de> Visitor<'de> for ChunkVisitor {
-    type Value = Chunk;
-
-    fn expecting(&self, formatter: &mut Formatter) -> fmt::Result {
-        formatter.write_str("struct Chunk")
-    }
-
-    fn visit_seq<A>(self, mut seq: A) -> Result<Chunk, A::Error>
-    where
-        A: SeqAccess<'de>,
-    {
-        let x = seq
-            .next_element()?
-            .ok_or_else(|| A::Error::invalid_length(0, &self))?;
-        let y = seq
-            .next_element()?
-            .ok_or_else(|| A::Error::invalid_length(1, &self))?;
-        let z = seq
-            .next_element()?
-            .ok_or_else(|| A::Error::invalid_length(2, &self))?;
-        let blocks: Vec<u16> = seq
-            .next_element()?
-            .ok_or_else(|| A::Error::invalid_length(3, &self))?;
-        let block_health: BlockHealth = seq
-            .next_element()?
-            .ok_or_else(|| A::Error::invalid_length(4, &self))?;
-
-        let (blocks, non_air_blocks) = vec_into_chunk_array(&blocks);
-
-        Ok(Chunk {
-            x,
-            y,
-            z,
-            blocks,
-            block_health,
-            non_air_blocks,
-        })
-    }
-
-    fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
-    where
-        A: MapAccess<'de>,
-    {
-        let mut x = None;
-        let mut y = None;
-        let mut z = None;
-        let mut blocks: Option<Vec<u16>> = None;
-        let mut block_health: Option<BlockHealth> = None;
-        while let Some(key) = map.next_key()? {
-            match key {
-                Field::X => {
-                    if x.is_some() {
-                        return Err(A::Error::duplicate_field("x"));
-                    }
-                    x = Some(map.next_value()?);
-                }
-                Field::Y => {
-                    if y.is_some() {
-                        return Err(A::Error::duplicate_field("y"));
-                    }
-                    y = Some(map.next_value()?);
-                }
-                Field::Z => {
-                    if z.is_some() {
-                        return Err(A::Error::duplicate_field("z"));
-                    }
-                    z = Some(map.next_value()?);
-                }
-                Field::Blocks => {
-                    if blocks.is_some() {
-                        return Err(A::Error::duplicate_field("blocks"));
-                    }
-                    blocks = Some(map.next_value()?);
-                }
-                Field::BlockHealth => {
-                    if block_health.is_some() {
-                        return Err(A::Error::duplicate_field("block_health"));
-                    }
-                    block_health = Some(map.next_value()?);
-                }
-            }
-        }
-        let x = x.ok_or_else(|| A::Error::missing_field("x"))?;
-        let y = y.ok_or_else(|| A::Error::missing_field("y"))?;
-        let z = z.ok_or_else(|| A::Error::missing_field("z"))?;
-        let blocks = blocks.ok_or_else(|| A::Error::missing_field("blocks"))?;
-        let block_health = block_health.ok_or_else(|| A::Error::missing_field("block_health"))?;
-
-        let (blocks, non_air_blocks) = vec_into_chunk_array(&blocks);
-
-        Ok(Chunk {
-            x,
-            y,
-            z,
-            blocks,
-            block_health,
-            non_air_blocks,
-        })
-    }
-}
-
-impl<'de> Deserialize<'de> for Chunk {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_struct("Chunk", FIELDS, ChunkVisitor)
-    }
+/// Represents a child of a structure that represents a chunk
+#[derive(Debug, Reflect, FromReflect, Component)]
+pub struct ChunkEntity {
+    /// The entity of the structure this is a part of
+    pub structure_entity: Entity,
+    /// The chunk's position in the structure (x, y, z)
+    pub chunk_location: (usize, usize, usize),
 }

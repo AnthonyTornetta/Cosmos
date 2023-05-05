@@ -4,7 +4,7 @@
 use bevy::prelude::{Component, Entity};
 use serde::{Deserialize, Serialize};
 
-use crate::entities::player::render_distance::RenderDistance;
+use crate::{block::BlockFace, entities::player::render_distance::RenderDistance};
 
 #[derive(Debug, Serialize, Deserialize, Component)]
 /// All reliable messages a client can send
@@ -12,9 +12,20 @@ pub enum ClientReliableMessages {
     /// Sent when a player wants to disconnect
     PlayerDisconnect,
     /// Requests chunk data to be sent from the server for that structure
-    SendChunk {
+    ///
+    /// This does nothing for planets, where you have to load each chunk individually
+    SendAllChunks {
         /// The structure to get information for
         server_entity: Entity,
+    },
+    /// Requests a single chunk of a structure.
+    ///
+    /// Useful for loading planets
+    SendSingleChunk {
+        /// The server's structure entity
+        structure_entity: Entity,
+        /// The chunk position you want
+        chunk: (u32, u32, u32),
     },
     /// The client broke a block
     BreakBlock {
@@ -41,6 +52,8 @@ pub enum ClientReliableMessages {
         ///
         /// This is passed along with `inventory_slot` to verify that the client + server are still in sync
         block_id: u16,
+        /// The block's top face
+        block_up: BlockFace,
         /// The inventory slot the block came from
         inventory_slot: u32,
     },

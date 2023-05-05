@@ -25,7 +25,7 @@ fn on_laser_hit_structure(
     hardness_registry: &Registry<BlockHardness>,
     strength: f32,
 ) {
-    if let Ok((bx, by, bz)) = structure.relative_coords_to_local_coords(
+    if let Ok((bx, by, bz)) = structure.relative_coords_to_local_coords_checked(
         local_position_hit.x,
         local_position_hit.y,
         local_position_hit.z,

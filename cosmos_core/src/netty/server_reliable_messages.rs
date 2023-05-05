@@ -7,8 +7,8 @@ use bevy::prelude::{Component, Entity};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    entities::player::render_distance::RenderDistance, structure::loading::ChunksNeedLoaded,
-    universe::star::Star,
+    block::BlockFace, entities::player::render_distance::RenderDistance,
+    structure::loading::ChunksNeedLoaded, universe::star::Star,
 };
 
 use super::netty_rigidbody::NettyRigidBody;
@@ -57,7 +57,7 @@ pub enum ServerReliableMessages {
     },
     /// A planet should be created on the client-side.
     /// This does NOT mean the planet was just created by the sever, just that one should be created on the client.
-    PlanetCreate {
+    Planet {
         /// The planet's server entity
         entity: Entity,
         /// The planet's rigidbody
@@ -68,12 +68,10 @@ pub enum ServerReliableMessages {
         height: u32,
         /// The length to be passed into the structure's constructor
         length: u32,
-        /// The number of chunks that need to be loaded from the server
-        chunks_needed: ChunksNeedLoaded,
     },
     /// A ship should be created on the client-side.
     /// This does NOT mean the ship was just created by the sever, just that one should be created on the client.
-    ShipCreate {
+    Ship {
         /// The ship's server entity
         entity: Entity,
         /// The planet's rigidbody
@@ -111,6 +109,8 @@ pub enum ServerReliableMessages {
         z: u32,
         /// The block it was changed to
         block_id: u16,
+        /// The block's up direction
+        block_up: BlockFace,
     },
     /// Sent when a pilot changes
     PilotChange {

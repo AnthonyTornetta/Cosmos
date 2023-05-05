@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
-    block::Block,
+    block::{Block, BlockFace},
     blockitems::BlockItems,
     entities::player::Player,
     events::block_events::BlockChangedEvent,
@@ -44,6 +44,8 @@ pub struct BlockPlaceEvent {
     pub structure_block: StructureBlock,
     /// The placed block's id
     pub block_id: u16,
+    /// The block's top face
+    pub block_up: BlockFace,
     /// The inventory slot this block came from
     pub inventory_slot: usize,
     /// The player who placed this block
@@ -130,6 +132,7 @@ fn handle_block_place_events(
                             ev.structure_block.y,
                             ev.structure_block.z,
                             block,
+                            ev.block_up,
                             &blocks,
                             Some(&mut event_writer),
                         );
@@ -155,6 +158,7 @@ fn handle_block_changed_event(
                 y: ev.block.y() as u32,
                 z: ev.block.z() as u32,
                 block_id: ev.new_block,
+                block_up: ev.new_block_up,
             }),
         );
     }

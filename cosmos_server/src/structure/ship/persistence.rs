@@ -31,30 +31,30 @@ fn on_load_structure(
     mut commands: Commands,
 ) {
     for (entity, s_data) in query.iter() {
-        if let Some(is_ship) = s_data.deserialize_data::<bool>("cosmos:is_ship") {
-            if is_ship {
-                if let Some(mut structure) =
-                    s_data.deserialize_data::<Structure>("cosmos:structure")
-                {
-                    let mut entity_cmd = commands.entity(entity);
-                    let loc = s_data
-                        .deserialize_data("cosmos:location")
-                        .expect("Every ship should have a location when saved!");
+        if s_data
+            .deserialize_data::<bool>("cosmos:is_ship")
+            .unwrap_or(false)
+        {
+            if let Some(mut structure) = s_data.deserialize_data::<Structure>("cosmos:structure") {
+                let loc = s_data
+                    .deserialize_data("cosmos:location")
+                    .expect("Every ship should have a location when saved!");
 
-                    let vel = s_data
-                        .deserialize_data("cosmos:velocity")
-                        .unwrap_or(Velocity::zero());
+                let mut entity_cmd = commands.entity(entity);
 
-                    let builder = ServerShipBuilder::default();
+                let vel = s_data
+                    .deserialize_data("cosmos:velocity")
+                    .unwrap_or(Velocity::zero());
 
-                    builder.insert_ship(&mut entity_cmd, loc, vel, &mut structure);
+                let builder = ServerShipBuilder::default();
 
-                    let entity = entity_cmd.id();
+                builder.insert_ship(&mut entity_cmd, loc, vel, &mut structure);
 
-                    event_writer.send(DelayedStructureLoadEvent(entity));
+                let entity = entity_cmd.id();
 
-                    commands.entity(entity).insert(structure);
-                }
+                event_writer.send(DelayedStructureLoadEvent(entity));
+
+                commands.entity(entity).insert(structure);
             }
         }
     }

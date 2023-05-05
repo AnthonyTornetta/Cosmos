@@ -1492,7 +1492,7 @@ dependencies = [
 
 [[package]]
 name = "cosmos_client"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "bevy",
  "bevy-inspector-egui",
@@ -1506,14 +1506,14 @@ dependencies = [
  "noise",
  "rand 0.8.5",
  "rand_chacha 0.3.1",
+ "rayon",
  "serde",
  "serde_json",
- "take_mut",
 ]
 
 [[package]]
 name = "cosmos_core"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "bevy",
  "bevy-inspector-egui",
@@ -1525,14 +1525,15 @@ dependencies = [
  "local-ip-address",
  "noise",
  "rand 0.8.5",
+ "rayon",
  "serde",
- "take_mut",
+ "serde_arrays",
  "zstd 0.12.3+zstd.1.5.2",
 ]
 
 [[package]]
 name = "cosmos_server"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "bevy",
  "bevy-inspector-egui",
@@ -1545,9 +1546,9 @@ dependencies = [
  "noise",
  "rand 0.8.5",
  "rand_chacha 0.3.1",
+ "rayon",
  "renet_visualizer",
  "serde",
- "take_mut",
  "walkdir",
  "zip",
 ]
@@ -2235,6 +2236,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "hermit-abi"
+version = "0.2.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ee512640fe35acbfb4bb779db6f0d80704c2cacfa2e39b601ef3e3f47d1ae4c7"
+dependencies = [
+ "libc",
+]
+
+[[package]]
 name = "hexasphere"
 version = "8.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2885,6 +2895,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "num_cpus"
+version = "1.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0fac9e2da13b5eb447a6ce3d392f23a29d8694bff781bf03a16cd9ac8697593b"
+dependencies = [
+ "hermit-abi",
+ "libc",
+]
+
+[[package]]
 name = "num_enum"
 version = "0.5.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3374,6 +3394,28 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "60a357793950651c4ed0f3f52338f53b2f809f32d83a07f72909fa13e4c6c1e3"
 
 [[package]]
+name = "rayon"
+version = "1.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1d2df5196e37bcc87abebc0053e20787d73847bb33134a69841207dd0a47f03b"
+dependencies = [
+ "either",
+ "rayon-core",
+]
+
+[[package]]
+name = "rayon-core"
+version = "1.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4b8f95bd6966f5c87776639160a66bd8ab9895d9d4ab01ddba9fc60661aebe8d"
+dependencies = [
+ "crossbeam-channel",
+ "crossbeam-deque",
+ "crossbeam-utils",
+ "num_cpus",
+]
+
+[[package]]
 name = "rechannel"
 version = "0.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3577,6 +3619,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "71f2b4817415c6d4210bfe1c7bfcf4801b2d904cb4d0e1a8fdb651013c9e86b8"
 dependencies = [
  "serde_derive",
+]
+
+[[package]]
+name = "serde_arrays"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "38636132857f68ec3d5f3eb121166d2af33cb55174c4d5ff645db6165cbef0fd"
+dependencies = [
+ "serde",
 ]
 
 [[package]]
@@ -3789,12 +3840,6 @@ dependencies = [
  "num-traits",
  "slotmap",
 ]
-
-[[package]]
-name = "take_mut"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f764005d11ee5f36500a149ace24e00e3da98b0158b3e2d53a7495660d3f4d60"
 
 [[package]]
 name = "termcolor"

@@ -287,7 +287,7 @@ impl LaserCannonSystem {
 
         if let Some(l1_i) = found_line {
             if let Some(l2_i) = link_to {
-                let [mut l1, l2] = self
+                let [l1, l2] = self
                     .lines
                     .get_many_mut([l1_i, l2_i])
                     .expect("From and to should never be the same");
@@ -345,20 +345,20 @@ fn block_update_system(
     systems_query: Query<&Systems>,
 ) {
     for ev in event.iter() {
-        if let Ok(mut system) = systems_query
-            .get(ev.structure_entity)
-            .expect("Structure should have Systems component")
-            .query_mut(&mut system_query)
-        {
-            if laser_cannon_blocks
-                .get(blocks.from_numeric_id(ev.old_block))
-                .is_some()
-            {
-                system.block_removed(&ev.block);
-            }
+        if let Ok(systems) = systems_query.get(ev.structure_entity) {
+            if let Ok(mut system) = systems.query_mut(&mut system_query) {
+                if laser_cannon_blocks
+                    .get(blocks.from_numeric_id(ev.old_block))
+                    .is_some()
+                {
+                    system.block_removed(&ev.block);
+                }
 
-            if let Some(property) = laser_cannon_blocks.get(blocks.from_numeric_id(ev.new_block)) {
-                system.block_added(property, &ev.block);
+                if let Some(property) =
+                    laser_cannon_blocks.get(blocks.from_numeric_id(ev.new_block))
+                {
+                    system.block_added(property, &ev.block);
+                }
             }
         }
     }

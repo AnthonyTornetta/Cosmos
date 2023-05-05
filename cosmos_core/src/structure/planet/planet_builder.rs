@@ -40,6 +40,12 @@ impl<T: TStructureBuilder> TPlanetBuilder for PlanetBuilder<T> {
         location: Location,
         structure: &mut Structure,
     ) {
+        assert!(
+            structure.chunks_width() == structure.chunks_height()
+                && structure.chunks_height() == structure.chunks_length(),
+            "Structure dimensions must all be the same for a planet."
+        );
+
         self.structure_builder
             .insert_structure(entity, location, Velocity::default(), structure);
 

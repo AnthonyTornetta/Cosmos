@@ -10,7 +10,9 @@ use cosmos_core::{
     },
 };
 
-use crate::structure::client_structure_builder::ClientStructureBuilder;
+use crate::structure::{
+    chunk_retreiver::NeedsPopulated, client_structure_builder::ClientStructureBuilder,
+};
 
 /// Responsible for building ships for the client.
 pub struct ClientShipBuilder {
@@ -35,5 +37,7 @@ impl TShipBuilder for ClientShipBuilder {
     ) {
         self.ship_bulder
             .insert_ship(entity, location, velocity, structure);
+
+        entity.insert(NeedsPopulated);
     }
 }

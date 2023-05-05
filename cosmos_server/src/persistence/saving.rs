@@ -17,14 +17,9 @@ use bevy::{
 };
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{netty::cosmos_encoder, physics::location::Location};
-use rand::{distributions::Alphanumeric, Rng};
-use std::{
-    fs,
-    io::{self, Write},
-};
-use zip::{write::FileOptions, ZipWriter};
+use std::{fs, io};
 
-use super::{EntityId, SaveFileIdentifier, SectorsCache, SerializedData};
+use super::{EntityId, SaveFileIdentifier, SaveFileIdentifierType, SectorsCache, SerializedData};
 
 /// Denotes that this entity should be saved. Once this entity is saved,
 /// this component will be removed.
@@ -80,18 +75,12 @@ pub fn done_saving(
             continue;
         }
 
-        let serialized = cosmos_encoder::serialize(&sd);
+        let serialized: Vec<u8> = cosmos_encoder::serialize(&sd);
 
         let entity_id = if let Some(id) = entity_id {
             id.clone()
         } else {
-            let res: String = rand::thread_rng()
-                .sample_iter(&Alphanumeric)
-                .take(64)
-                .map(char::from)
-                .collect();
-
-            let entity_id = EntityId(res);
+            let entity_id = EntityId::generate();
 
             commands.entity(entity).insert(entity_id.clone());
 
@@ -100,33 +89,32 @@ pub fn done_saving(
 
         if let Some(save_file_identifier) = save_file_identifier {
             let path = save_file_identifier.get_save_file_path();
-            println!("Found @ {path}");
             if fs::try_exists(&path).unwrap_or(false) {
-                println!("Removing old!");
                 fs::remove_file(path).expect("Error deleting old save file!");
 
-                if let Some(sector) = &save_file_identifier.sector {
+                if let SaveFileIdentifierType::Base((entity_id, Some(sector))) =
+                    &save_file_identifier.identifier_type
+                {
                     sectors_cache
                         .0
                         .get_mut(sector)
-                        .map(|set| set.remove(&save_file_identifier.entity_id));
+                        .map(|set| set.remove(entity_id));
                 }
             }
-        } else {
-            println!("No previous path no delete.");
         }
 
-        let save_identifier = SaveFileIdentifier {
-            entity_id: entity_id.clone(),
-            sector: sd.location.map(|l| (l.sector_x, l.sector_y, l.sector_z)),
-        };
+        let save_identifier = save_file_identifier.cloned().unwrap_or_else(|| {
+            let sfi = SaveFileIdentifier::new(sd.location.map(|l| l.sector()), entity_id.clone());
+
+            commands.entity(entity).insert(sfi.clone());
+
+            sfi
+        });
 
         if let Err(e) = write_file(&save_identifier, &serialized) {
             eprintln!("{e}");
             continue;
         }
-
-        commands.entity(entity).insert(save_identifier);
 
         if let Some(loc) = sd.location {
             let key = (loc.sector_x, loc.sector_y, loc.sector_z);
@@ -144,24 +132,13 @@ pub fn done_saving(
 }
 
 fn write_file(save_identifier: &SaveFileIdentifier, serialized: &[u8]) -> io::Result<()> {
-    println!("New save file ID: {save_identifier:?}");
-
     let path = save_identifier.get_save_file_path();
 
     let directory = &path[0..path.rfind('/').expect("No / found in file path!")];
 
     fs::create_dir_all(directory)?;
 
-    let file = fs::File::create(&path)?;
-    let mut zipped = ZipWriter::new(file);
-
-    let options = FileOptions::default()
-        .compression_method(zip::CompressionMethod::Bzip2)
-        .unix_permissions(0o755);
-
-    zipped.start_file(save_identifier.get_save_file_name(), options)?;
-    zipped.write_all(serialized)?;
-    zipped.finish()?;
+    fs::write(&path, serialized)?;
 
     Ok(())
 }

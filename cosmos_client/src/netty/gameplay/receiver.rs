@@ -43,7 +43,7 @@ use crate::{
     rendering::MainCamera,
     state::game_state::GameState,
     structure::{
-        chunk_retreiver::NeedsPopulated, planet::client_planet_builder::ClientPlanetBuilder,
+        planet::client_planet_builder::ClientPlanetBuilder,
         ship::client_ship_builder::ClientShipBuilder,
     },
     ui::crosshair::CrosshairOffset,
@@ -312,13 +312,12 @@ fn client_sync_players(
                     network_mapping.remove_mapping_from_server_entity(&server_entity);
                 }
             }
-            ServerReliableMessages::PlanetCreate {
+            ServerReliableMessages::Planet {
                 entity: server_entity,
                 length,
                 height,
                 width,
                 body,
-                chunks_needed,
             } => {
                 if network_mapping.contains_server_entity(server_entity) {
                     println!("Got duplicate planet! Is the server lagging?");
@@ -332,13 +331,13 @@ fn client_sync_players(
                 let builder = ClientPlanetBuilder::default();
                 builder.insert_planet(&mut entity_cmds, body.location, &mut structure);
 
-                entity_cmds.insert((structure, NeedsPopulated, chunks_needed));
+                entity_cmds.insert(structure);
 
                 let entity = entity_cmds.id();
 
                 network_mapping.add_mapping(entity, server_entity);
             }
-            ServerReliableMessages::ShipCreate {
+            ServerReliableMessages::Ship {
                 entity: server_entity,
                 body,
                 width,
@@ -419,6 +418,7 @@ fn client_sync_players(
                 z,
                 structure_entity,
                 block_id,
+                block_up,
             } => {
                 // Sometimes you'll get block updates for structures that don't exist
                 if let Some(client_ent) = network_mapping.client_from_server(&structure_entity) {
@@ -428,6 +428,7 @@ fn client_sync_players(
                             y as usize,
                             z as usize,
                             blocks.from_numeric_id(block_id),
+                            block_up,
                             &blocks,
                             Some(&mut block_change_event_writer),
                         );
@@ -494,15 +495,19 @@ fn client_sync_players(
     }
 }
 
-fn added_location(
-    mut query: Query<&mut Location, (Without<LocalPlayer>, Added<Location>)>,
-    local_player: Query<&Location, With<LocalPlayer>>,
+/// Handles any just-added locations that need to sync up to their transforms
+fn fix_location(
+    mut query: Query<(&mut Location, &mut Transform), (Added<Location>, Without<PlayerWorld>)>,
+    player_worlds: Query<&Location, With<PlayerWorld>>,
 ) {
-    if let Ok(local_loc) = local_player.get_single() {
-        for mut loc in query.iter_mut() {
-            if loc.last_transform_loc.is_none() {
-                let trans = local_loc.relative_coords_to(&loc);
-                loc.last_transform_loc = Some(trans);
+    for (mut location, mut transform) in query.iter_mut() {
+        match player_worlds.get_single() {
+            Ok(loc) => {
+                transform.translation = location.relative_coords_to(loc);
+                location.last_transform_loc = Some(transform.translation);
+            }
+            _ => {
+                warn!("Something was added with a location before a player world was registered.")
             }
         }
     }
@@ -564,18 +569,18 @@ fn sync_transforms_and_locations(
 
 pub(super) fn register(app: &mut App) {
     app.insert_resource(RequestedEntities::default())
+        .add_systems((update_crosshair, insert_last_rotation))
         .add_system(
             client_sync_players
                 .run_if(in_state(GameState::Playing).or_else(in_state(GameState::LoadingWorld))),
         )
         .add_systems(
             (
-                update_crosshair,
-                insert_last_rotation,
-                added_location.after(client_sync_players),
-                sync_transforms_and_locations.after(added_location),
-                bubble_down_locations.after(sync_transforms_and_locations),
+                fix_location.after(client_sync_players),
+                sync_transforms_and_locations,
+                bubble_down_locations,
             )
+                .chain()
                 .in_set(OnUpdate(GameState::Playing)),
         );
 }

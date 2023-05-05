@@ -6,8 +6,6 @@ use cosmos_core::{
     structure::{structure_builder::StructureBuilder, structure_builder::TStructureBuilder},
 };
 
-use super::chunk_retreiver::NeedsPopulated;
-
 #[derive(Default)]
 /// Responsible for building structures for the client
 pub struct ClientStructureBuilder {
@@ -24,7 +22,5 @@ impl TStructureBuilder for ClientStructureBuilder {
     ) {
         self.structure_builder
             .insert_structure(entity, location, velocity, structure);
-
-        entity.insert(NeedsPopulated);
     }
 }
