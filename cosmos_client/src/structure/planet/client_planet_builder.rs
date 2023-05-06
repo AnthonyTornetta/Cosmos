@@ -1,10 +1,17 @@
 //! Responsible for building planets for the client.
 
-use bevy::ecs::system::EntityCommands;
+use bevy::{
+    ecs::system::EntityCommands,
+    pbr::NotShadowCaster,
+    prelude::{
+        shape::UVSphere, Added, App, Assets, Color, Commands, ComputedVisibility, Entity, Mesh,
+        Query, ResMut, StandardMaterial, Visibility,
+    },
+};
 use cosmos_core::{
     physics::location::Location,
     structure::{
-        planet::{planet_builder::PlanetBuilder, planet_builder::TPlanetBuilder},
+        planet::{planet_builder::PlanetBuilder, planet_builder::TPlanetBuilder, Planet},
         Structure,
     },
 };
@@ -34,4 +41,35 @@ impl TPlanetBuilder for ClientPlanetBuilder {
         self.planet_builder
             .insert_planet(entity, location, structure);
     }
+}
+
+fn added_planet(
+    query: Query<(Entity, &Structure, &Planet), Added<Planet>>,
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    for (ent, structure, _) in query.iter() {
+        commands.entity(ent).insert((
+            meshes.add(
+                UVSphere {
+                    radius: structure.blocks_width() as f32 / 1.8,
+                    sectors: 128,
+                    stacks: 128,
+                }
+                .into(),
+            ),
+            materials.add(StandardMaterial {
+                base_color: Color::GREEN,
+                ..Default::default()
+            }),
+            Visibility::default(),
+            ComputedVisibility::default(),
+            NotShadowCaster,
+        ));
+    }
+}
+
+pub(super) fn register(app: &mut App) {
+    app.add_system(added_planet);
 }

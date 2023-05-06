@@ -98,7 +98,7 @@ fn bounce_events(
 /// Performance hot spot
 fn get_requested_chunk(
     mut event_reader: EventReader<RequestChunkEvent>,
-    mut structure: Query<&mut Structure, With<Planet>>,
+    mut structure: Query<(&mut Structure, &Location), With<Planet>>,
     mut event_writer: EventWriter<RequestChunkBouncer>,
     mut server: ResMut<RenetServer>,
     mut commands: Commands,
@@ -114,8 +114,10 @@ fn get_requested_chunk(
         .collect::<Vec<RequestChunkEvent>>()
         .par_iter()
         .for_each(|ev| {
-            if let Ok(structure) = structure.get(ev.structure_entity) {
+            if let Ok((structure, loc)) = structure.get(ev.structure_entity) {
                 let (cx, cy, cz) = ev.chunk_coords;
+
+                println!("{cx} {cy} {cz} requested @ {loc}!");
 
                 match structure.get_chunk_state(cx, cy, cz) {
                     ChunkState::Loaded => {
@@ -159,7 +161,7 @@ fn get_requested_chunk(
     }
 
     for (entity, (cx, cy, cz), ev) in todo.lock().expect("Failed to lock").take().unwrap() {
-        let Ok(mut structure) = structure.get_mut(entity) else {
+        let Ok((mut structure, _)) = structure.get_mut(entity) else {
             continue;
         };
 

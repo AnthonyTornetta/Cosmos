@@ -87,7 +87,7 @@ fn spawn_planet(
 
             let mut entity_cmd = commands.spawn_empty();
 
-            let mut structure = Structure::new(16, 16, 16);
+            let mut structure = Structure::new(500, 500, 500);
 
             let biosphere = GrassBiosphere::default();
             let marker = biosphere.get_marker_component();

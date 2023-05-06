@@ -66,6 +66,7 @@ impl TBiosphere<GrassBiosphereMarker, GrassChunkNeedsGeneratedEvent> for GrassBi
 
 const AMPLITUDE: f64 = 7.0;
 const DELTA: f64 = 0.05;
+const ITERATIONS: usize = 9;
 
 fn generate_planet(
     mut query: Query<(&mut Structure, &Location)>,
@@ -91,8 +92,8 @@ fn generate_planet(
 
     chunks.par_iter_mut().for_each(|(structure_entity, chunk)| {
         let Ok((structure, location)) = query.get(*structure_entity) else {
-                return;
-            };
+            return;
+        };
 
         let grass = blocks.from_id("cosmos:grass").unwrap();
         let dirt = blocks.from_id("cosmos:dirt").unwrap();
@@ -122,8 +123,8 @@ fn generate_planet(
 
                     let mut depth: f64 = 0.0;
 
-                    for x in 1..=9 {
-                        let iteration = x as f64;
+                    for iteration in 1..=ITERATIONS {
+                        let iteration = iteration as f64;
 
                         depth += noise_generastor.get([
                             (actual_x as f64 + structure_x) * (DELTA / iteration),

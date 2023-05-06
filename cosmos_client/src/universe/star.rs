@@ -7,7 +7,7 @@ use bevy::{
         ResMut, StandardMaterial, Transform, Vec3, With, Without,
     },
 };
-use cosmos_core::universe::star::Star;
+use cosmos_core::{physics::location::SECTOR_DIMENSIONS, universe::star::Star};
 
 /// Determines how bright light is based off your distance from a star.
 ///
@@ -43,7 +43,7 @@ fn create_added_star(
                     shape::UVSphere {
                         sectors: 256,
                         stacks: 256,
-                        radius: 5000.0,
+                        radius: SECTOR_DIMENSIONS * 2.0,
                     }
                     .into(),
                 ),
