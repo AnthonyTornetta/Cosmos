@@ -114,10 +114,10 @@ fn get_requested_chunk(
         .collect::<Vec<RequestChunkEvent>>()
         .par_iter()
         .for_each(|ev| {
-            if let Ok((structure, loc)) = structure.get(ev.structure_entity) {
+            if let Ok((structure, _)) = structure.get(ev.structure_entity) {
                 let (cx, cy, cz) = ev.chunk_coords;
 
-                println!("{cx} {cy} {cz} requested @ {loc}!");
+                // println!("{cx} {cy} {cz} requested @ {loc}!");
 
                 match structure.get_chunk_state(cx, cy, cz) {
                     ChunkState::Loaded => {

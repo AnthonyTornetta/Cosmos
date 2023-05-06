@@ -20,13 +20,8 @@ use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 
 use crate::{
-    init::init_world::ServerSeed,
-    persistence::is_sector_loaded,
-    state::GameState,
-    structure::planet::{
-        biosphere::{grass_biosphere::GrassBiosphere, TBiosphere},
-        server_planet_builder::ServerPlanetBuilder,
-    },
+    init::init_world::ServerSeed, persistence::is_sector_loaded, state::GameState,
+    structure::planet::server_planet_builder::ServerPlanetBuilder,
 };
 
 #[derive(Default, Resource, Deref, DerefMut)]
@@ -89,15 +84,12 @@ fn spawn_planet(
 
             let mut structure = Structure::new(500, 500, 500);
 
-            let biosphere = GrassBiosphere::default();
-            let marker = biosphere.get_marker_component();
             let builder = ServerPlanetBuilder::default();
 
-            builder.insert_planet(&mut entity_cmd, loc, &mut structure);
+            builder.insert_planet(&mut entity_cmd, loc, &mut structure, Planet::new(100.0));
 
             entity_cmd.insert((
                 structure,
-                marker,
                 LoadingDistance::new(PLANET_LOAD_RADIUS, PLANET_LOAD_RADIUS + 2),
             ));
         }

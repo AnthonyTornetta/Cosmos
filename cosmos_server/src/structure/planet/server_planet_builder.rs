@@ -3,7 +3,10 @@
 use bevy::ecs::system::EntityCommands;
 use cosmos_core::{
     physics::location::Location,
-    structure::planet::{planet_builder::PlanetBuilder, planet_builder::TPlanetBuilder},
+    structure::{
+        planet::{planet_builder::PlanetBuilder, planet_builder::TPlanetBuilder, Planet},
+        Structure,
+    },
 };
 
 use crate::structure::server_structure_builder::ServerStructureBuilder;
@@ -33,8 +36,10 @@ impl TPlanetBuilder for ServerPlanetBuilder {
         &self,
         entity: &mut EntityCommands,
         location: Location,
-        structure: &mut cosmos_core::structure::Structure,
+        structure: &mut Structure,
+        planet: Planet,
     ) {
-        self.builder.insert_planet(entity, location, structure);
+        self.builder
+            .insert_planet(entity, location, structure, planet);
     }
 }

@@ -14,11 +14,11 @@ use crate::netty::sync::entities::RequestedEntityEvent;
 
 fn on_request_planet(
     mut event_reader: EventReader<RequestedEntityEvent>,
-    query: Query<(&Structure, &Transform, &Location), With<Planet>>,
+    query: Query<(&Structure, &Transform, &Location, &Planet)>,
     mut server: ResMut<RenetServer>,
 ) {
     for ev in event_reader.iter() {
-        if let Ok((structure, transform, location)) = query.get(ev.entity) {
+        if let Ok((structure, transform, location, planet)) = query.get(ev.entity) {
             server.send_message(
                 ev.client_id,
                 NettyChannel::Reliable.id(),
@@ -28,6 +28,7 @@ fn on_request_planet(
                     width: structure.chunks_width() as u32,
                     height: structure.chunks_height() as u32,
                     length: structure.chunks_length() as u32,
+                    planet: *planet,
                 }),
             );
         }

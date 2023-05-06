@@ -18,6 +18,7 @@ pub trait TPlanetBuilder {
         entity: &mut EntityCommands,
         location: Location,
         structure: &mut Structure,
+        planet: Planet,
     );
 }
 
@@ -39,6 +40,7 @@ impl<T: TStructureBuilder> TPlanetBuilder for PlanetBuilder<T> {
         entity: &mut EntityCommands,
         location: Location,
         structure: &mut Structure,
+        planet: Planet,
     ) {
         assert!(
             structure.chunks_width() == structure.chunks_height()
@@ -49,16 +51,17 @@ impl<T: TStructureBuilder> TPlanetBuilder for PlanetBuilder<T> {
         self.structure_builder
             .insert_structure(entity, location, Velocity::default(), structure);
 
-        entity
-            .insert(Planet)
-            .insert(RigidBody::Fixed)
-            .insert(GravityEmitter {
+        entity.insert((
+            RigidBody::Fixed,
+            planet,
+            GravityEmitter {
                 force_per_kg: 9.8,
                 radius: structure
                     .blocks_width()
                     .max(structure.blocks_height())
                     .max(structure.blocks_length()) as f32
                     / 2.0,
-            });
+            },
+        ));
     }
 }

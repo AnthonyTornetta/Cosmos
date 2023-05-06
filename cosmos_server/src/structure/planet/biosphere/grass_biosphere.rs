@@ -19,7 +19,10 @@ use rayon::prelude::{IntoParallelRefMutIterator, ParallelIterator};
 
 use crate::GameState;
 
-use super::{register_biosphere, TBiosphere, TGenerateChunkEvent};
+use super::{
+    register_biosphere, TBiosphere, TGenerateChunkEvent,
+    TemperatureRange,
+};
 
 #[derive(Component, Debug, Default)]
 /// Marks that this is for a grass biosphere
@@ -228,6 +231,7 @@ pub(super) fn register(app: &mut App) {
     register_biosphere::<GrassBiosphereMarker, GrassChunkNeedsGeneratedEvent>(
         app,
         "cosmos:biosphere_grass",
+        TemperatureRange::new(0.0, 1000000000.0),
     );
 
     app.add_system(generate_planet.in_set(OnUpdate(GameState::Playing)));

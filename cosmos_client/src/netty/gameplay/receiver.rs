@@ -318,6 +318,7 @@ fn client_sync_players(
                 height,
                 width,
                 body,
+                planet,
             } => {
                 if network_mapping.contains_server_entity(server_entity) {
                     println!("Got duplicate planet! Is the server lagging?");
@@ -329,7 +330,7 @@ fn client_sync_players(
                     Structure::new(width as usize, height as usize, length as usize);
 
                 let builder = ClientPlanetBuilder::default();
-                builder.insert_planet(&mut entity_cmds, body.location, &mut structure);
+                builder.insert_planet(&mut entity_cmds, body.location, &mut structure, planet);
 
                 entity_cmds.insert((
                     structure,

@@ -7,6 +7,7 @@ use bevy::{
     reflect::{FromReflect, Reflect},
 };
 use bigdecimal::Signed;
+use serde::{Deserialize, Serialize};
 
 use crate::{block::BlockFace, physics::location::SYSTEM_SECTORS};
 
@@ -14,11 +15,23 @@ use super::Structure;
 
 pub mod planet_builder;
 
-#[derive(Component, Debug, Reflect, FromReflect)]
+#[derive(Component, Debug, Reflect, FromReflect, Serialize, Deserialize, Clone, Copy)]
 /// If a structure has this, it is a planet.
-pub struct Planet;
+pub struct Planet {
+    temperature: f32,
+}
 
 impl Planet {
+    /// Creates a new planet
+    pub fn new(temperature: f32) -> Self {
+        Self { temperature }
+    }
+
+    /// Gets this planet's temperature
+    pub fn temperature(&self) -> f32 {
+        self.temperature
+    }
+
     /// Gets the face of a planet this block is on
     ///
     /// * `bx` Block's x
