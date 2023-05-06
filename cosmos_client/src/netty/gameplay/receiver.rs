@@ -26,7 +26,7 @@ use cosmos_core::{
     registry::Registry,
     structure::{
         chunk::Chunk,
-        planet::planet_builder::TPlanetBuilder,
+        planet::{planet_builder::TPlanetBuilder, PLANET_LOAD_RADIUS},
         ship::{pilot::Pilot, ship_builder::TShipBuilder, Ship},
         ChunkInitEvent, Structure,
     },
@@ -331,7 +331,10 @@ fn client_sync_players(
                 let builder = ClientPlanetBuilder::default();
                 builder.insert_planet(&mut entity_cmds, body.location, &mut structure);
 
-                entity_cmds.insert(structure);
+                entity_cmds.insert((
+                    structure,
+                    LoadingDistance::new(PLANET_LOAD_RADIUS, PLANET_LOAD_RADIUS + 2),
+                ));
 
                 let entity = entity_cmds.id();
 

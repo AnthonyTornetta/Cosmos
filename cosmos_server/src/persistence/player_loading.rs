@@ -34,17 +34,13 @@ fn unload_far(
 
         if let Some(min_dist) = query
             .iter()
-            .map(|l| l.relative_coords_to(loc).max_element())
+            .map(|l| l.relative_coords_to(loc).abs().max_element())
             .reduce(f32::min)
         {
             if min_dist <= ul_distance {
                 continue;
             }
         }
-        // uncomment if need to generate planet again
-        // else {
-        //     continue;
-        // }
 
         println!("Flagged for saving + unloading!");
 

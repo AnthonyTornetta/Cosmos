@@ -2,9 +2,7 @@
 
 use std::f32::consts::{E, TAU};
 
-use bevy::prelude::{
-    in_state, App, Commands, IntoSystemConfig, PbrBundle, Query, Res, Resource, Vec3, With,
-};
+use bevy::prelude::{in_state, App, Commands, IntoSystemConfig, PbrBundle, Query, Res, Vec3, With};
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
     entities::player::Player,
@@ -15,7 +13,7 @@ use cosmos_core::{
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 
-use crate::state::GameState;
+use crate::{init::init_world::ServerSeed, state::GameState};
 
 // Calculates the distance from the origin of a spiral arm given an angle.
 fn spiral_function(theta: f32) -> f32 {
@@ -46,10 +44,6 @@ fn distance_from_star_spiral(x: f32, y: f32) -> f32 {
     (spiral_function(theta - spiral_offset) - r).abs() * (r / 4.0)
 }
 
-#[derive(Debug, Resource)]
-/// This sets the seed the server uses to generate the universe
-pub struct ServerSeed(u64);
-
 /// This gets the star - if there is one - in the system.
 pub fn get_star_in_system(sx: i64, sy: i64, sz: i64, seed: &ServerSeed) -> Option<Star> {
     if sy != 0 {
@@ -72,7 +66,6 @@ pub fn get_star_in_system(sx: i64, sy: i64, sz: i64, seed: &ServerSeed) -> Optio
     let seed_z = (at_z + max + 2.0) as u64;
 
     let local_seed = seed
-        .0
         .wrapping_mul(seed_x)
         .wrapping_add(seed_z)
         .wrapping_mul(seed_z)
@@ -132,6 +125,5 @@ fn load_stars_near_players(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.insert_resource(ServerSeed(1337))
-        .add_system(load_stars_near_players.run_if(in_state(GameState::Playing)));
+    app.add_system(load_stars_near_players.run_if(in_state(GameState::Playing)));
 }

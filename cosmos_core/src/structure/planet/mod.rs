@@ -8,7 +8,7 @@ use bevy::{
 };
 use bigdecimal::Signed;
 
-use crate::block::BlockFace;
+use crate::{block::BlockFace, physics::location::SYSTEM_SECTORS};
 
 use super::Structure;
 
@@ -52,3 +52,6 @@ impl Planet {
         }
     }
 }
+
+/// The distnace planets should be loaded
+pub const PLANET_LOAD_RADIUS: u32 = SYSTEM_SECTORS / 8;
