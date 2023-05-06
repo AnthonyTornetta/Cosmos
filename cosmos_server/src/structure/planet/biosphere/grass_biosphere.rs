@@ -5,6 +5,7 @@ use bevy::prelude::{
 };
 use cosmos_core::{
     block::{Block, BlockFace},
+    physics::location::{Location, SECTOR_DIMENSIONS},
     registry::Registry,
     structure::{
         chunk::{Chunk, CHUNK_DIMENSIONS},
@@ -67,7 +68,7 @@ const AMPLITUDE: f64 = 7.0;
 const DELTA: f64 = 0.05;
 
 fn generate_planet(
-    mut query: Query<&mut Structure>,
+    mut query: Query<(&mut Structure, &Location)>,
     mut events: EventReader<GrassChunkNeedsGeneratedEvent>,
     mut event_writer: EventWriter<ChunkInitEvent>,
     noise_generastor: Res<ResourceWrapper<noise::OpenSimplex>>,
@@ -78,7 +79,7 @@ fn generate_planet(
     let mut chunks = events
         .iter()
         .filter_map(|ev| {
-            if let Ok(mut structure) = query.get_mut(ev.structure_entity) {
+            if let Ok((mut structure, _)) = query.get_mut(ev.structure_entity) {
                 structure
                     .take_chunk(ev.x, ev.y, ev.z)
                     .map(|chunk| (ev.structure_entity, chunk))
@@ -89,9 +90,9 @@ fn generate_planet(
         .collect::<Vec<(Entity, Chunk)>>();
 
     chunks.par_iter_mut().for_each(|(structure_entity, chunk)| {
-        let Ok(structure) = query.get(*structure_entity) else {
-            return;
-        };
+        let Ok((structure, location)) = query.get(*structure_entity) else {
+                return;
+            };
 
         let grass = blocks.from_id("cosmos:grass").unwrap();
         let dirt = blocks.from_id("cosmos:dirt").unwrap();
@@ -100,6 +101,13 @@ fn generate_planet(
         let s_height = structure.blocks_height();
 
         let middle_air_start = s_height - CHUNK_DIMENSIONS * 5;
+
+        let structure_z =
+            (location.sector_z as f64) * SECTOR_DIMENSIONS as f64 + location.local.z as f64;
+        let structure_y =
+            (location.sector_y as f64) * SECTOR_DIMENSIONS as f64 + location.local.y as f64;
+        let structure_x =
+            (location.sector_x as f64) * SECTOR_DIMENSIONS as f64 + location.local.x as f64;
 
         for z in 0..CHUNK_DIMENSIONS {
             let actual_z = chunk.structure_z() * CHUNK_DIMENSIONS + z;
@@ -115,14 +123,14 @@ fn generate_planet(
                     let mut depth: f64 = 0.0;
 
                     for x in 1..=9 {
-                        let x = x as f64;
+                        let iteration = x as f64;
 
                         depth += noise_generastor.get([
-                            actual_x as f64 * (DELTA / x),
-                            actual_y as f64 * (DELTA / x),
-                            actual_z as f64 * (DELTA / x),
+                            (actual_x as f64 + structure_x) * (DELTA / iteration),
+                            (actual_y as f64 + structure_y) * (DELTA / iteration),
+                            (actual_z as f64 + structure_z) * (DELTA / iteration),
                         ]) * AMPLITUDE
-                            * x;
+                            * iteration;
                     }
 
                     let max_level = (middle_air_start as f64 + depth).round() as usize;
@@ -198,7 +206,7 @@ fn generate_planet(
     let len = chunks.len();
 
     for (structure_entity, chunk) in chunks {
-        if let Ok(mut structure) = query.get_mut(structure_entity) {
+        if let Ok((mut structure, _)) = query.get_mut(structure_entity) {
             event_writer.send(ChunkInitEvent {
                 structure_entity,
                 x: chunk.structure_x(),
