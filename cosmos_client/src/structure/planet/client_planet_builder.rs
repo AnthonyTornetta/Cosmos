@@ -5,18 +5,24 @@ use bevy::{
     pbr::NotShadowCaster,
     prelude::{
         shape::UVSphere, Added, App, Assets, Color, Commands, ComputedVisibility, Entity, Mesh,
-        Query, ResMut, StandardMaterial, Visibility,
+        Query, Res, ResMut, StandardMaterial, Visibility,
     },
 };
 use cosmos_core::{
     physics::location::Location,
+    registry::Registry,
     structure::{
-        planet::{planet_builder::PlanetBuilder, planet_builder::TPlanetBuilder, Planet},
+        planet::{
+            biosphere::BiosphereMarker, planet_builder::PlanetBuilder,
+            planet_builder::TPlanetBuilder, Planet,
+        },
         Structure,
     },
 };
 
 use crate::structure::client_structure_builder::ClientStructureBuilder;
+
+use super::biosphere::BiosphereColor;
 
 /// Responsible for building planets for the client.
 pub struct ClientPlanetBuilder {
@@ -45,23 +51,27 @@ impl TPlanetBuilder for ClientPlanetBuilder {
 }
 
 fn added_planet(
-    query: Query<(Entity, &Structure, &Planet), Added<Planet>>,
+    query: Query<(Entity, &Structure, &BiosphereMarker), Added<Planet>>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    color_registry: Res<Registry<BiosphereColor>>,
 ) {
-    for (ent, structure, _) in query.iter() {
+    for (ent, structure, marker) in query.iter() {
         commands.entity(ent).insert((
             meshes.add(
                 UVSphere {
-                    radius: structure.blocks_width() as f32 / 1.8,
+                    radius: structure.blocks_width() as f32 / 1.6,
                     sectors: 128,
                     stacks: 128,
                 }
                 .into(),
             ),
             materials.add(StandardMaterial {
-                base_color: Color::GREEN,
+                base_color: color_registry
+                    .from_id(marker.biosphere_name())
+                    .map(|x| x.color())
+                    .unwrap_or(Color::WHITE),
                 ..Default::default()
             }),
             Visibility::default(),

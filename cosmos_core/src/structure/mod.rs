@@ -839,6 +839,7 @@ pub(super) fn register<T: States + Clone + Copy>(
 
     systems::register(app, post_loading_state, playing_game_state);
     ship::register(app, playing_game_state);
+    planet::register(app);
     events::register(app);
     loading::register(app);
     block_health::register(app);

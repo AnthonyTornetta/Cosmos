@@ -6,7 +6,10 @@ use bevy::prelude::{
 };
 use cosmos_core::{
     physics::location::Location,
-    structure::{planet::Planet, Structure},
+    structure::{
+        planet::{biosphere::BiosphereMarker, Planet},
+        Structure,
+    },
 };
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
@@ -82,11 +85,13 @@ pub fn register_biosphere<
             .after(begin_saving)
             .before(done_saving),
             // Loads this biosphere when the structure is loaded
-            (|query: Query<(Entity, &SerializedData), With<NeedsLoaded>>,
-              mut commands: Commands| {
+            (move |query: Query<(Entity, &SerializedData), With<NeedsLoaded>>,
+                   mut commands: Commands| {
                 for (entity, sd) in query.iter() {
                     if sd.deserialize_data::<bool>(biosphere_id).unwrap_or(false) {
-                        commands.entity(entity).insert(T::default());
+                        commands
+                            .entity(entity)
+                            .insert((T::default(), BiosphereMarker::new(biosphere_id)));
                     }
                 }
             })
@@ -98,10 +103,11 @@ pub fn register_biosphere<
 }
 
 fn add_biosphere(
-    query: Query<(Entity, &Planet, &Location), (Added<Structure>, Without<NeedsLoaded>)>,
+    query: Query<(Entity, &Planet, &Location), (Added<Structure>, Without<BiosphereMarker>)>,
     mut event_writer: EventWriter<NeedsBiosphereEvent>,
     registry: Res<BiosphereTemperatureRegistry>,
     seed: Res<ServerSeed>,
+    mut commands: Commands,
 ) {
     for (entity, planet, location) in query.iter() {
         let biospheres = registry.get_biospheres_for(planet.temperature());
@@ -124,6 +130,10 @@ fn add_biosphere(
             let biosphere = biospheres[rng.gen_range(0..biospheres.len())];
 
             println!("Adding {biosphere} bioshpere!");
+
+            commands
+                .entity(entity)
+                .insert(BiosphereMarker::new(biosphere));
 
             event_writer.send(NeedsBiosphereEvent {
                 biosphere_id: biosphere.to_owned(),

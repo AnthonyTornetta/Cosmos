@@ -3,7 +3,7 @@
 //! These are not made by the player but generated
 
 use bevy::{
-    prelude::{Component, Vec3},
+    prelude::{App, Component, Vec3},
     reflect::{FromReflect, Reflect},
 };
 use bigdecimal::Signed;
@@ -13,6 +13,7 @@ use crate::{block::BlockFace, physics::location::SYSTEM_SECTORS};
 
 use super::Structure;
 
+pub mod biosphere;
 pub mod planet_builder;
 
 #[derive(Component, Debug, Reflect, FromReflect, Serialize, Deserialize, Clone, Copy)]
@@ -68,3 +69,7 @@ impl Planet {
 
 /// The distnace planets should be loaded
 pub const PLANET_LOAD_RADIUS: u32 = SYSTEM_SECTORS / 8;
+
+pub(super) fn register(app: &mut App) {
+    biosphere::register(app);
+}

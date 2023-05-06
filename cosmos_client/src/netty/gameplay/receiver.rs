@@ -26,7 +26,7 @@ use cosmos_core::{
     registry::Registry,
     structure::{
         chunk::Chunk,
-        planet::{planet_builder::TPlanetBuilder, PLANET_LOAD_RADIUS},
+        planet::{biosphere::BiosphereMarker, planet_builder::TPlanetBuilder, PLANET_LOAD_RADIUS},
         ship::{pilot::Pilot, ship_builder::TShipBuilder, Ship},
         ChunkInitEvent, Structure,
     },
@@ -319,6 +319,7 @@ fn client_sync_players(
                 width,
                 body,
                 planet,
+                biosphere,
             } => {
                 if network_mapping.contains_server_entity(server_entity) {
                     println!("Got duplicate planet! Is the server lagging?");
@@ -335,6 +336,7 @@ fn client_sync_players(
                 entity_cmds.insert((
                     structure,
                     LoadingDistance::new(PLANET_LOAD_RADIUS, PLANET_LOAD_RADIUS + 2),
+                    BiosphereMarker::new(biosphere),
                 ));
 
                 let entity = entity_cmds.id();
