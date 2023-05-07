@@ -4,8 +4,13 @@ use bevy::ecs::system::EntityCommands;
 use bevy_rapier3d::prelude::{RigidBody, Velocity};
 
 use crate::{
+    persistence::LoadingDistance,
     physics::{gravity_system::GravityEmitter, location::Location},
-    structure::{structure_builder::TStructureBuilder, Structure},
+    structure::{
+        planet::{PLANET_LOAD_RADIUS, PLANET_UNLOAD_RADIUS},
+        structure_builder::TStructureBuilder,
+        Structure,
+    },
 };
 
 use super::Planet;
@@ -62,6 +67,7 @@ impl<T: TStructureBuilder> TPlanetBuilder for PlanetBuilder<T> {
                     .max(structure.blocks_length()) as f32
                     / 2.0,
             },
+            LoadingDistance::new(PLANET_LOAD_RADIUS, PLANET_UNLOAD_RADIUS),
         ));
     }
 }

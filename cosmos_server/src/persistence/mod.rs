@@ -29,7 +29,7 @@ pub struct EntityId(String);
 /// This is a resource that caches the saved entities of different sectors that a player has been near.
 ///
 /// This is just used to prevent excessive IO operations.
-pub struct SectorsCache(HashMap<(i64, i64, i64), HashSet<EntityId>>);
+pub struct SectorsCache(HashMap<(i64, i64, i64), HashSet<(EntityId, Option<u32>)>>);
 
 impl EntityId {
     /// Creates a new EntityID.
@@ -56,34 +56,17 @@ impl EntityId {
     }
 }
 
-// /// Denotes that this entity belongs to another entity, and should be saved
-// /// in that entity's folder. Once this entity is saved, this component will be removed.
-// ///
-// /// ## Note:
-// /// While saving is handled for you, it is up to you to load this yourself.
-// ///
-// /// This will be saved to `world/x_y_z/belongsToEntityId/thisEntityId.cent`
-// #[derive(Component, Debug, Reflect, FromReflect, Clone)]
-// pub struct BelongsTo {
-//     /// The entity id this belongs to
-//     pub entity_id: EntityId,
-
-//     location: Location,
-// }
-
-// impl BelongsTo {
-//     /// Creates a belongs to relationship with this entity id
-//     pub fn new(entity_id: EntityId, location: Location) -> Self {
-//         Self {
-//             entity_id,
-//             location,
-//         }
-//     }
-// }
-
 #[derive(Debug, Clone)]
 pub(crate) enum SaveFileIdentifierType {
-    Base((EntityId, Option<(i64, i64, i64)>)),
+    /// This entity does not belong to any other entity
+    Base((EntityId, Option<(i64, i64, i64)>, Option<u32>)),
+    /// Denotes that this entity belongs to another entity, and should be saved
+    /// in that entity's folder. Once this entity is saved, this component will be removed.
+    ///
+    /// ## Note:
+    /// While saving is handled for you, it is up to you to load this yourself.
+    ///
+    /// This will be saved to `world/x_y_z/belongsToEntityId/thisEntityId.cent`
     BelongsTo((Box<SaveFileIdentifier>, String)),
 }
 
@@ -95,9 +78,13 @@ pub struct SaveFileIdentifier {
 
 impl SaveFileIdentifier {
     /// Creates a new SaveFileIdentifier from this location & entity id
-    pub fn new(sector: Option<(i64, i64, i64)>, entity_id: EntityId) -> Self {
+    pub fn new(
+        sector: Option<(i64, i64, i64)>,
+        entity_id: EntityId,
+        load_distance: Option<u32>,
+    ) -> Self {
         Self {
-            identifier_type: SaveFileIdentifierType::Base((entity_id, sector)),
+            identifier_type: SaveFileIdentifierType::Base((entity_id, sector, load_distance)),
         }
     }
 
@@ -123,7 +110,9 @@ impl SaveFileIdentifier {
     /// `entity_id`
     pub fn get_save_file_name(&self) -> String {
         match &self.identifier_type {
-            SaveFileIdentifierType::Base((entity, _)) => entity.as_str().to_owned(),
+            SaveFileIdentifierType::Base((entity, _, load_distance)) => load_distance
+                .map(|ld| format!("{ld}_{}", entity.as_str()))
+                .unwrap_or(entity.as_str().to_owned()),
             SaveFileIdentifierType::BelongsTo((_, name)) => name.to_owned(),
         }
     }
@@ -133,7 +122,7 @@ impl SaveFileIdentifier {
     /// `entity_id.cent`
     pub fn get_save_file_directory(&self) -> String {
         match &self.identifier_type {
-            SaveFileIdentifierType::Base((_, sector)) => {
+            SaveFileIdentifierType::Base((_, sector, _)) => {
                 let directory = sector
                     .map(Self::get_sector_path)
                     .unwrap_or("world/nowhere".into());

@@ -1,16 +1,17 @@
 //! Responsible for shared saving/loading logic
 
 use bevy::{
-    prelude::{App, Commands, Component, CoreSet, Entity, IntoSystemConfig, Query, Without},
+    prelude::{App, Component},
     reflect::{FromReflect, Reflect},
 };
+use serde::{Deserialize, Serialize};
 
 use crate::physics::location::SECTOR_DIMENSIONS;
 
 /// The default loading distance for structures
 pub const LOAD_DISTANCE: f32 = SECTOR_DIMENSIONS * 8.0;
 
-#[derive(Component, Debug, Reflect, FromReflect, Clone, Copy)]
+#[derive(Component, Debug, Reflect, FromReflect, Clone, Copy, Serialize, Deserialize)]
 /// Use this to have a custom distance for something to be unloaded.
 ///
 /// This distance is in # of sectors. The default is 10.
@@ -64,13 +65,6 @@ impl LoadingDistance {
     }
 }
 
-fn add_unload_distance(query: Query<Entity, Without<LoadingDistance>>, mut commands: Commands) {
-    for entity in query.iter() {
-        commands.entity(entity).insert(LoadingDistance::default());
-    }
-}
-
 pub(super) fn register(app: &mut App) {
-    app.add_system(add_unload_distance.in_base_set(CoreSet::First))
-        .register_type::<LoadingDistance>();
+    app.register_type::<LoadingDistance>();
 }
