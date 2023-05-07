@@ -120,7 +120,7 @@ pub(super) fn register(app: &mut App) {
     register_biosphere::<TestStoneBiosphereMarker, TestStoneChunkNeedsGeneratedEvent>(
         app,
         "cosmos:biosphere_test_stone",
-        TemperatureRange::new(0.0, 1000000.0),
+        TemperatureRange::new(0.0, 0.0),
     );
 
     app.add_system(generate_planet.in_set(OnUpdate(GameState::Playing)));

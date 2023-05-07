@@ -19,10 +19,7 @@ use rayon::prelude::{IntoParallelRefMutIterator, ParallelIterator};
 
 use crate::GameState;
 
-use super::{
-    register_biosphere, TBiosphere, TGenerateChunkEvent,
-    TemperatureRange,
-};
+use super::{register_biosphere, TBiosphere, TGenerateChunkEvent, TemperatureRange};
 
 #[derive(Component, Debug, Default)]
 /// Marks that this is for a grass biosphere
@@ -139,65 +136,65 @@ fn generate_planet(
 
                     let max_level = (middle_air_start as f64 + depth).round() as usize;
 
-                    let stone_range = 0..(max_level - 5);
-                    let dirt_range = (max_level - 5)..(max_level - 1);
-                    let grass_range = (max_level - 1)..max_level;
+                    let stone_range = 0..(max_level - 2);
+                    // let dirt_range = (max_level - 5)..(max_level - 1);
+                    // let grass_range = (max_level - 1)..max_level;
 
                     match Planet::planet_face(structure, actual_x, actual_y, actual_z) {
                         BlockFace::Top => {
-                            if grass_range.contains(&actual_y) {
-                                chunk.set_block_at(x, y, z, grass, BlockFace::Top);
-                            } else if dirt_range.contains(&actual_y) {
-                                chunk.set_block_at(x, y, z, dirt, BlockFace::Top);
-                            } else if stone_range.contains(&actual_y) {
+                            // if grass_range.contains(&actual_y) {
+                            //     chunk.set_block_at(x, y, z, grass, BlockFace::Top);
+                            // if dirt_range.contains(&actual_y) {
+                            //     chunk.set_block_at(x, y, z, dirt, BlockFace::Top);
+                            if stone_range.contains(&actual_y) {
                                 chunk.set_block_at(x, y, z, stone, BlockFace::Top);
                             }
                         }
                         BlockFace::Bottom => {
                             let actual_y = structure.blocks_height() - actual_y;
-                            if grass_range.contains(&actual_y) {
-                                chunk.set_block_at(x, y, z, grass, BlockFace::Bottom);
-                            } else if dirt_range.contains(&actual_y) {
-                                chunk.set_block_at(x, y, z, dirt, BlockFace::Bottom);
-                            } else if stone_range.contains(&actual_y) {
+                            // if grass_range.contains(&actual_y) {
+                            //     chunk.set_block_at(x, y, z, grass, BlockFace::Bottom);
+                            // } else if dirt_range.contains(&actual_y) {
+                            //     chunk.set_block_at(x, y, z, dirt, BlockFace::Bottom);
+                            if stone_range.contains(&actual_y) {
                                 chunk.set_block_at(x, y, z, stone, BlockFace::Bottom);
                             }
                         }
                         BlockFace::Front => {
-                            if grass_range.contains(&actual_z) {
-                                chunk.set_block_at(x, y, z, grass, BlockFace::Front);
-                            } else if dirt_range.contains(&actual_z) {
-                                chunk.set_block_at(x, y, z, dirt, BlockFace::Front);
-                            } else if stone_range.contains(&actual_z) {
+                            // if grass_range.contains(&actual_z) {
+                            //     chunk.set_block_at(x, y, z, grass, BlockFace::Front);
+                            // } else if dirt_range.contains(&actual_z) {
+                            //     chunk.set_block_at(x, y, z, dirt, BlockFace::Front);
+                            if stone_range.contains(&actual_z) {
                                 chunk.set_block_at(x, y, z, stone, BlockFace::Front);
                             }
                         }
                         BlockFace::Back => {
                             let actual_z = structure.blocks_length() - actual_z;
-                            if grass_range.contains(&actual_z) {
-                                chunk.set_block_at(x, y, z, grass, BlockFace::Back);
-                            } else if dirt_range.contains(&actual_z) {
-                                chunk.set_block_at(x, y, z, dirt, BlockFace::Back);
-                            } else if stone_range.contains(&actual_z) {
+                            // if grass_range.contains(&actual_z) {
+                            //     chunk.set_block_at(x, y, z, grass, BlockFace::Back);
+                            // } else if dirt_range.contains(&actual_z) {
+                            //     chunk.set_block_at(x, y, z, dirt, BlockFace::Back);
+                            if stone_range.contains(&actual_z) {
                                 chunk.set_block_at(x, y, z, stone, BlockFace::Back);
                             }
                         }
                         BlockFace::Right => {
-                            if grass_range.contains(&actual_x) {
-                                chunk.set_block_at(x, y, z, grass, BlockFace::Right);
-                            } else if dirt_range.contains(&actual_x) {
-                                chunk.set_block_at(x, y, z, dirt, BlockFace::Right);
-                            } else if stone_range.contains(&actual_x) {
+                            // if grass_range.contains(&actual_x) {
+                            //     chunk.set_block_at(x, y, z, grass, BlockFace::Right);
+                            // } else if dirt_range.contains(&actual_x) {
+                            //     chunk.set_block_at(x, y, z, dirt, BlockFace::Right);
+                            if stone_range.contains(&actual_x) {
                                 chunk.set_block_at(x, y, z, stone, BlockFace::Right);
                             }
                         }
                         BlockFace::Left => {
                             let actual_x = structure.blocks_width() - actual_x;
-                            if grass_range.contains(&actual_x) {
-                                chunk.set_block_at(x, y, z, grass, BlockFace::Left);
-                            } else if dirt_range.contains(&actual_x) {
-                                chunk.set_block_at(x, y, z, dirt, BlockFace::Left);
-                            } else if stone_range.contains(&actual_x) {
+                            // if grass_range.contains(&actual_x) {
+                            //     chunk.set_block_at(x, y, z, grass, BlockFace::Left);
+                            // } else if dirt_range.contains(&actual_x) {
+                            //     chunk.set_block_at(x, y, z, dirt, BlockFace::Left);
+                            if stone_range.contains(&actual_x) {
                                 chunk.set_block_at(x, y, z, stone, BlockFace::Left);
                             }
                         }
