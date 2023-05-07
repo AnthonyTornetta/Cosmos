@@ -58,10 +58,12 @@ fn added_planet(
     color_registry: Res<Registry<BiosphereColor>>,
 ) {
     for (ent, structure, marker) in query.iter() {
+        let blocks_radius = structure.blocks_width() as f32 / 2.0;
+
         commands.entity(ent).insert((
             meshes.add(
                 UVSphere {
-                    radius: structure.blocks_width() as f32 / 1.6,
+                    radius: (blocks_radius * blocks_radius * 2.0).sqrt() * 1.1,
                     sectors: 128,
                     stacks: 128,
                 }

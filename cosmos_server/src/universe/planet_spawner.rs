@@ -16,12 +16,11 @@ use cosmos_core::{
         Structure,
     },
 };
-use rand::{Rng, SeedableRng};
-use rand_chacha::ChaCha8Rng;
+use rand::Rng;
 
 use crate::{
-    init::init_world::ServerSeed, persistence::is_sector_loaded, state::GameState,
-    structure::planet::server_planet_builder::ServerPlanetBuilder,
+    init::init_world::ServerSeed, persistence::is_sector_loaded, rng::get_rng_for_sector,
+    state::GameState, structure::planet::server_planet_builder::ServerPlanetBuilder,
 };
 
 #[derive(Default, Resource, Deref, DerefMut)]
@@ -63,26 +62,22 @@ fn spawn_planet(
             continue;
         }
 
-        let rng = ChaCha8Rng::seed_from_u64(
-            (server_seed.as_u64() as i64)
-                .wrapping_add(sx)
-                .wrapping_mul(sy)
-                .wrapping_add(sy)
-                .wrapping_mul(sx)
-                .wrapping_add(sy)
-                .wrapping_mul(sz)
-                .wrapping_add(sz)
-                .abs() as u64,
-        )
-        .gen_range(0..1000);
+        let mut rng = get_rng_for_sector(&server_seed, (sx, sy, sz));
 
-        if (sx == 0 && sy == 0 && sz == 0) || rng == 9 {
-            println!("Genned {rng} for {sx} {sy} {sz}");
+        let is_origin = sx == 0 && sy == 0 && sz == 0;
+
+        if is_origin || rng.gen_range(0..1000) == 9 {
             let loc = Location::new(Vec3::ZERO, sx, sy, sz);
 
             let mut entity_cmd = commands.spawn_empty();
 
-            let mut structure = Structure::new(500, 500, 500);
+            let size: usize = if is_origin {
+                500
+            } else {
+                rng.gen_range(200..=500)
+            };
+
+            let mut structure = Structure::new(size, size, size);
 
             let builder = ServerPlanetBuilder::default();
 

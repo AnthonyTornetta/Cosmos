@@ -11,8 +11,7 @@ use cosmos_core::{
         Structure,
     },
 };
-use rand::{Rng, SeedableRng};
-use rand_chacha::ChaCha8Rng;
+use rand::Rng;
 
 use crate::{
     init::init_world::ServerSeed,
@@ -21,6 +20,7 @@ use crate::{
         saving::{begin_saving, done_saving, NeedsSaved},
         SerializedData,
     },
+    rng::get_rng_for_sector,
     state::GameState,
 };
 
@@ -106,7 +106,7 @@ fn add_biosphere(
     query: Query<(Entity, &Planet, &Location), (Added<Structure>, Without<BiosphereMarker>)>,
     mut event_writer: EventWriter<NeedsBiosphereEvent>,
     registry: Res<BiosphereTemperatureRegistry>,
-    seed: Res<ServerSeed>,
+    server_seed: Res<ServerSeed>,
     mut commands: Commands,
 ) {
     for (entity, planet, location) in query.iter() {
@@ -115,17 +115,7 @@ fn add_biosphere(
         if !biospheres.is_empty() {
             let (sx, sy, sz) = location.sector();
 
-            let mut rng = ChaCha8Rng::seed_from_u64(
-                (seed.as_u64() as i64)
-                    .wrapping_add(sx)
-                    .wrapping_mul(sy)
-                    .wrapping_add(sy)
-                    .wrapping_mul(sx)
-                    .wrapping_add(sy)
-                    .wrapping_mul(sz)
-                    .wrapping_add(sz)
-                    .abs() as u64,
-            );
+            let mut rng = get_rng_for_sector(&server_seed, (sx, sy, sz));
 
             let biosphere = biospheres[rng.gen_range(0..biospheres.len())];
 

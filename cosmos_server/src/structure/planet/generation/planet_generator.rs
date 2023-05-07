@@ -98,6 +98,7 @@ fn bounce_events(
 /// Performance hot spot
 fn get_requested_chunk(
     mut event_reader: EventReader<RequestChunkEvent>,
+    players: Query<&Location, With<Player>>,
     mut structure: Query<(&mut Structure, &Location), With<Planet>>,
     mut event_writer: EventWriter<RequestChunkBouncer>,
     mut server: ResMut<RenetServer>,
@@ -114,10 +115,20 @@ fn get_requested_chunk(
         .collect::<Vec<RequestChunkEvent>>()
         .par_iter()
         .for_each(|ev| {
-            if let Ok((structure, _)) = structure.get(ev.structure_entity) {
+            if let Ok((structure, loc)) = structure.get(ev.structure_entity) {
                 let (cx, cy, cz) = ev.chunk_coords;
 
-                // println!("{cx} {cy} {cz} requested @ {loc}!");
+                let cpos = structure.chunk_relative_position(cx, cy, cz);
+
+                let chunk_loc = *loc + cpos;
+
+                // If no players are in range, do not send this chunk.
+                if !players.iter().any(|player| {
+                    player.relative_coords_to(&chunk_loc).abs().max_element() / CHUNK_DIMENSIONSF
+                        < (RENDER_DISTANCE + 1) as f32
+                }) {
+                    return;
+                }
 
                 match structure.get_chunk_state(cx, cy, cz) {
                     ChunkState::Loaded => {

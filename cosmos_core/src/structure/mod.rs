@@ -61,6 +61,8 @@ impl Structure {
     ///
     /// All chunks are initially unloaded, and must be manually loaded.
     ///
+    /// ## Note: For planets, width, height, and length must all be equal
+    ///
     /// * `width` The number of chunks in the X direction
     /// * `height` The number of chunks in the Y direction
     /// * `length` The number of chunks in the Z direction
