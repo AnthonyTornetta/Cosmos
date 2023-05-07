@@ -1,10 +1,12 @@
 //! Handles the initialization of the server world
 
-use bevy::prelude::*;
-use cosmos_core::utils::resource_wrapper::ResourceWrapper;
-use noise::Seedable;
+use std::fs;
 
-#[derive(Debug, Resource, Deref)]
+use bevy::prelude::*;
+use cosmos_core::{netty::cosmos_encoder, utils::resource_wrapper::ResourceWrapper};
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Resource, Deref, Serialize, Deserialize)]
 /// This sets the seed the server uses to generate the universe
 pub struct ServerSeed(u64);
 
@@ -21,12 +23,21 @@ impl ServerSeed {
 }
 
 pub(super) fn register(app: &mut App) {
-    let noise = noise::OpenSimplex::default();
+    let server_seed = if let Ok(seed) = fs::read("./world/seed.dat") {
+        cosmos_encoder::deserialize::<ServerSeed>(&seed)
+            .expect("Unable to understand './world/seed.dat' seed file. Is it corrupted?")
+    } else {
+        let seed = ServerSeed(rand::random());
 
-    let server_seed = ServerSeed(rand::random());
+        fs::create_dir("./world/").expect("Error creating world directory!");
+        fs::write("./world/seed.dat", cosmos_encoder::serialize(&seed))
+            .expect("Error writing file './world/seed.dat'");
 
-    noise.set_seed(server_seed.as_u32());
+        seed
+    };
 
-    app.insert_resource(ResourceWrapper(noise))
-        .insert_resource(server_seed);
+    app.insert_resource(ResourceWrapper(noise::OpenSimplex::new(
+        server_seed.as_u32(),
+    )))
+    .insert_resource(server_seed);
 }

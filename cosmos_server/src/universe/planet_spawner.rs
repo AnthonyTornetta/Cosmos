@@ -77,7 +77,7 @@ fn spawn_planet(
         cache.insert((sx, sy, sz));
 
         if is_sector_loaded((sx, sy, sz)) {
-            // Load the planets of that sector
+            // This sector has already been loaded, don't regenerate stuff
             continue;
         }
 
