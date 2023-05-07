@@ -109,11 +109,6 @@ fn load_near(
                                         if let Ok(ld) = entity_id.parse::<u32>() {
                                             load_distance = Some(ld);
                                             entity_id = other_info;
-
-                                            println!(
-                                                "GOT LOAD DISTANCE: {ld}. Within? {}",
-                                                max_delta <= ld
-                                            );
                                         } else {
                                             warn!("Invalid load distance: {other_info}");
                                         }
