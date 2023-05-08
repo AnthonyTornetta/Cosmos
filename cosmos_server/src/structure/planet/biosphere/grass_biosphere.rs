@@ -1,7 +1,5 @@
 //! Creates a grass planet
 
-use std::ops::Range;
-
 use bevy::prelude::{
     App, Component, Entity, EventReader, EventWriter, IntoSystemConfig, OnUpdate, Query, Res,
 };
