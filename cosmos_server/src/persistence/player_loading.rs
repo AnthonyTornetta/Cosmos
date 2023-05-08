@@ -66,17 +66,15 @@ fn load_near(
 
                     if let Some(vec) = sectors_cache.0.get(&sector) {
                         for (entity_id, load_distance) in vec.iter() {
-                            if max_delta <= load_distance.unwrap_or(DEFAULT_LOAD_DISTANCE) {
-                                if !loaded_entities.iter().any(|x| x == entity_id) {
-                                    commands.spawn((
-                                        SaveFileIdentifier::new(
-                                            Some(sector),
-                                            entity_id.clone(),
-                                            *load_distance,
-                                        ),
-                                        NeedsLoaded,
-                                    ));
-                                }
+                            if max_delta <= load_distance.unwrap_or(DEFAULT_LOAD_DISTANCE) && !loaded_entities.iter().any(|x| x == entity_id) {
+                                commands.spawn((
+                                    SaveFileIdentifier::new(
+                                        Some(sector),
+                                        entity_id.clone(),
+                                        *load_distance,
+                                    ),
+                                    NeedsLoaded,
+                                ));
                             }
                         }
                     } else {
@@ -100,7 +98,7 @@ fn load_near(
                                         .expect("Failed to get file stem")
                                         .to_str()
                                         .expect("Failed to convert to entity id")
-                                        .split("_");
+                                        .split('_');
 
                                     let mut entity_id = entity_information.next().unwrap();
                                     let mut load_distance = None;
@@ -118,17 +116,15 @@ fn load_near(
 
                                     cache.insert((entity_id.clone(), load_distance));
 
-                                    if max_delta <= load_distance.unwrap_or(DEFAULT_LOAD_DISTANCE) {
-                                        if !loaded_entities.iter().any(|x| x == &entity_id) {
-                                            commands.spawn((
-                                                SaveFileIdentifier::new(
-                                                    Some((x, y, z)),
-                                                    entity_id,
-                                                    load_distance,
-                                                ),
-                                                NeedsLoaded,
-                                            ));
-                                        }
+                                    if max_delta <= load_distance.unwrap_or(DEFAULT_LOAD_DISTANCE) && !loaded_entities.iter().any(|x| x == &entity_id) {
+                                        commands.spawn((
+                                            SaveFileIdentifier::new(
+                                                Some((x, y, z)),
+                                                entity_id,
+                                                load_distance,
+                                            ),
+                                            NeedsLoaded,
+                                        ));
                                     }
                                 }
                             }

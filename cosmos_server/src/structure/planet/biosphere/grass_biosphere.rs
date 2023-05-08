@@ -90,7 +90,7 @@ fn get_max_level(
         ]) * AMPLITUDE
             * iteration;
     }
-    return (middle_air_start as f64 + depth).round() as usize;
+    (middle_air_start as f64 + depth).round() as usize
 }
 
 fn generate_planet(
@@ -157,37 +157,37 @@ fn generate_planet(
                         middle_air_start,
                     );
 
-                    let current_height: usize;
                     let mut cover_x = actual_x;
                     let mut cover_y = actual_y;
                     let mut cover_z = actual_z;
                     let block_up = Planet::planet_face(structure, actual_x, actual_y, actual_z);
-                    match block_up {
+
+                    let current_height = match block_up {
                         BlockFace::Top => {
                             cover_y += 1;
-                            current_height = actual_y;
+                            actual_y
                         }
                         BlockFace::Bottom => {
                             cover_y -= 1;
-                            current_height = structure.blocks_height() - actual_y;
+                            structure.blocks_height() - actual_y
                         }
                         BlockFace::Front => {
                             cover_z += 1;
-                            current_height = actual_z;
+                            actual_z
                         }
                         BlockFace::Back => {
                             cover_z -= 1;
-                            current_height = structure.blocks_length() - actual_z;
+                            structure.blocks_length() - actual_z
                         }
                         BlockFace::Right => {
                             cover_x += 1;
-                            current_height = actual_x;
+                            actual_x
                         }
                         BlockFace::Left => {
                             cover_x -= 1;
-                            current_height = structure.blocks_length() - actual_x;
+                            structure.blocks_length() - actual_x
                         }
-                    }
+                    };
 
                     if current_height < current_max - STONE_LIMIT {
                         chunk.set_block_at(x, y, z, stone, block_up);

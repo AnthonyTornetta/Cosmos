@@ -18,8 +18,7 @@ pub fn get_seed_for_sector_u64(server_seed: &ServerSeed, sector: (i64, i64, i64)
         .wrapping_mul(if sx != 0 { sx } else { 1 })
         .wrapping_add(sy)
         .wrapping_mul(if sy != 0 { sz } else { 1 })
-        .wrapping_add(sz)
-        .abs() as u64
+        .wrapping_add(sz).unsigned_abs()
 }
 
 /// Generates a seed given the sector & the server's base seed.
