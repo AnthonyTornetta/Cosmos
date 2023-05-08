@@ -3,22 +3,36 @@
 //! These are not made by the player but generated
 
 use bevy::{
-    prelude::{Component, Vec3},
+    prelude::{App, Component, Vec3},
     reflect::{FromReflect, Reflect},
 };
 use bigdecimal::Signed;
+use serde::{Deserialize, Serialize};
 
-use crate::block::BlockFace;
+use crate::{block::BlockFace, physics::location::SYSTEM_SECTORS};
 
 use super::Structure;
 
+pub mod biosphere;
 pub mod planet_builder;
 
-#[derive(Component, Debug, Reflect, FromReflect)]
+#[derive(Component, Debug, Reflect, FromReflect, Serialize, Deserialize, Clone, Copy)]
 /// If a structure has this, it is a planet.
-pub struct Planet;
+pub struct Planet {
+    temperature: f32,
+}
 
 impl Planet {
+    /// Creates a new planet
+    pub fn new(temperature: f32) -> Self {
+        Self { temperature }
+    }
+
+    /// Gets this planet's temperature
+    pub fn temperature(&self) -> f32 {
+        self.temperature
+    }
+
     /// Gets the face of a planet this block is on
     ///
     /// * `bx` Block's x
@@ -33,13 +47,13 @@ impl Planet {
         let normalized = relative_position.normalize_or_zero();
         let abs = normalized.abs();
 
-        if abs.y > abs.x && abs.y > abs.z {
+        if abs.y >= abs.x && abs.y >= abs.z {
             if normalized.y.is_positive() {
                 BlockFace::Top
             } else {
                 BlockFace::Bottom
             }
-        } else if abs.x > abs.y && abs.x > abs.z {
+        } else if abs.x >= abs.y && abs.x >= abs.z {
             if normalized.x.is_positive() {
                 BlockFace::Right
             } else {
@@ -51,4 +65,15 @@ impl Planet {
             BlockFace::Back
         }
     }
+}
+
+/// The distance planets should be loaded
+pub const PLANET_LOAD_RADIUS: u32 = SYSTEM_SECTORS / 8;
+/// The distance planets should be unloaded loaded
+pub const PLANET_UNLOAD_RADIUS: u32 = PLANET_LOAD_RADIUS + 2;
+
+pub(super) fn register(app: &mut App) {
+    biosphere::register(app);
+
+    app.register_type::<Planet>();
 }

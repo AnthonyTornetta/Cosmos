@@ -47,7 +47,7 @@ fn align_player(
         if let Some((loc, ge)) = best_planet {
             let relative_position = loc.relative_coords_to(location);
 
-            let dist = relative_position.max_element();
+            let dist = relative_position.abs().max_element();
 
             if dist <= ge.radius {
                 let face = Planet::planet_face_relative(relative_position);

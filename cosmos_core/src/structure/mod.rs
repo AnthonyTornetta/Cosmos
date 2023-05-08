@@ -61,6 +61,8 @@ impl Structure {
     ///
     /// All chunks are initially unloaded, and must be manually loaded.
     ///
+    /// ## Note: For planets, width, height, and length must all be equal
+    ///
     /// * `width` The number of chunks in the X direction
     /// * `height` The number of chunks in the Y direction
     /// * `length` The number of chunks in the Z direction
@@ -839,6 +841,7 @@ pub(super) fn register<T: States + Clone + Copy>(
 
     systems::register(app, post_loading_state, playing_game_state);
     ship::register(app, playing_game_state);
+    planet::register(app);
     events::register(app);
     loading::register(app);
     block_health::register(app);

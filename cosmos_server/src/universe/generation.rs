@@ -3,7 +3,7 @@
 use std::f32::consts::{E, TAU};
 
 use bevy::prelude::{
-    in_state, App, Commands, IntoSystemConfig, PbrBundle, Query, Res, Resource, Vec3, With,
+    in_state, App, Commands, CoreSet, IntoSystemConfig, PbrBundle, Query, Res, Vec3, With,
 };
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
@@ -15,7 +15,7 @@ use cosmos_core::{
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 
-use crate::state::GameState;
+use crate::{init::init_world::ServerSeed, state::GameState};
 
 // Calculates the distance from the origin of a spiral arm given an angle.
 fn spiral_function(theta: f32) -> f32 {
@@ -46,10 +46,6 @@ fn distance_from_star_spiral(x: f32, y: f32) -> f32 {
     (spiral_function(theta - spiral_offset) - r).abs() * (r / 4.0)
 }
 
-#[derive(Debug, Resource)]
-/// This sets the seed the server uses to generate the universe
-pub struct ServerSeed(u64);
-
 /// This gets the star - if there is one - in the system.
 pub fn get_star_in_system(sx: i64, sy: i64, sz: i64, seed: &ServerSeed) -> Option<Star> {
     if sy != 0 {
@@ -72,7 +68,6 @@ pub fn get_star_in_system(sx: i64, sy: i64, sz: i64, seed: &ServerSeed) -> Optio
     let seed_z = (at_z + max + 2.0) as u64;
 
     let local_seed = seed
-        .0
         .wrapping_mul(seed_x)
         .wrapping_add(seed_z)
         .wrapping_mul(seed_z)
@@ -86,7 +81,10 @@ pub fn get_star_in_system(sx: i64, sy: i64, sz: i64, seed: &ServerSeed) -> Optio
     let num = rng.gen_range(0..10_000) as f32 / 10_000.0;
 
     if num < prob {
-        let temperature = rng.gen_range((MIN_TEMPERATURE as u32)..(MAX_TEMPERATURE as u32)) as f32;
+        // More likely to be low than high random number
+        let rand = 1.0 - (1.0 - rng.gen::<f32>()).sqrt();
+
+        let temperature = (rand * (MAX_TEMPERATURE - MIN_TEMPERATURE)) + MIN_TEMPERATURE;
 
         Some(Star::new(temperature))
     } else {
@@ -132,6 +130,10 @@ fn load_stars_near_players(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.insert_resource(ServerSeed(1337))
-        .add_system(load_stars_near_players.run_if(in_state(GameState::Playing)));
+    app.add_system(
+        // planet_spawner::spawn_planet system requires stars to have been generated first
+        load_stars_near_players
+            .in_base_set(CoreSet::First)
+            .run_if(in_state(GameState::Playing)),
+    );
 }

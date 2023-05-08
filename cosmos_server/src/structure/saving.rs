@@ -10,15 +10,12 @@ use cosmos_core::{
     netty::cosmos_encoder,
     physics::location::Location,
     structure::{
-        planet::planet_builder::TPlanetBuilder, ship::ship_builder::TShipBuilder,
-        structure_iterator::ChunkIteratorResult, ChunkInitEvent, Structure,
+        ship::ship_builder::TShipBuilder, structure_iterator::ChunkIteratorResult, ChunkInitEvent,
+        Structure,
     },
 };
 
-use super::{
-    planet::server_planet_builder::ServerPlanetBuilder,
-    ship::server_ship_builder::ServerShipBuilder,
-};
+use super::ship::server_ship_builder::ServerShipBuilder;
 
 /// Loading loads the structure instantly + creates the events at the same time
 /// This can cause concurrency issues, so this allows the events to be generated 1 frame
@@ -89,9 +86,7 @@ pub fn load_structure(
 
             match structure_type {
                 StructureType::Planet => {
-                    let builder = ServerPlanetBuilder::default();
-
-                    builder.insert_planet(&mut entity_cmd, spawn_at, &mut structure);
+                    panic!("can no longer load planets.");
                 }
                 StructureType::Ship => {
                     let builder = ServerShipBuilder::default();

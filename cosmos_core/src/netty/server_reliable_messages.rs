@@ -7,8 +7,10 @@ use bevy::prelude::{Component, Entity};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    block::BlockFace, entities::player::render_distance::RenderDistance,
-    structure::loading::ChunksNeedLoaded, universe::star::Star,
+    block::BlockFace,
+    entities::player::render_distance::RenderDistance,
+    structure::{loading::ChunksNeedLoaded, planet::Planet},
+    universe::star::Star,
 };
 
 use super::netty_rigidbody::NettyRigidBody;
@@ -68,6 +70,10 @@ pub enum ServerReliableMessages {
         height: u32,
         /// The length to be passed into the structure's constructor
         length: u32,
+        /// The planet
+        planet: Planet,
+        /// The planet's biosphere
+        biosphere: String,
     },
     /// A ship should be created on the client-side.
     /// This does NOT mean the ship was just created by the sever, just that one should be created on the client.

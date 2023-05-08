@@ -16,7 +16,7 @@ use rayon::prelude::{IntoParallelRefMutIterator, ParallelIterator};
 
 use crate::GameState;
 
-use super::{register_biosphere, TBiosphere, TGenerateChunkEvent};
+use super::{register_biosphere, TBiosphere, TGenerateChunkEvent, TemperatureRange};
 
 #[derive(Component, Debug, Default)]
 /// Used just for testing, this makes a planet all stone
@@ -120,6 +120,7 @@ pub(super) fn register(app: &mut App) {
     register_biosphere::<TestStoneBiosphereMarker, TestStoneChunkNeedsGeneratedEvent>(
         app,
         "cosmos:biosphere_test_stone",
+        TemperatureRange::new(0.0, 0.0),
     );
 
     app.add_system(generate_planet.in_set(OnUpdate(GameState::Playing)));

@@ -38,13 +38,9 @@ fn gravity_system(
 
             for (force_per_kilogram, radius, pos, rotation) in gravs.iter() {
                 let relative_position = pos.relative_coords_to(location);
-                let dist = relative_position.max_element();
+                let dist = relative_position.abs().max_element();
 
-                let ratio = if dist <= *radius {
-                    1.0
-                } else {
-                    (radius * radius) / (dist * dist)
-                };
+                let ratio = ((radius * radius) / (dist * dist)).min(1.0);
 
                 if ratio >= 0.9 {
                     let face = Planet::planet_face_relative(relative_position);

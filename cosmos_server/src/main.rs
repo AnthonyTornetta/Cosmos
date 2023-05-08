@@ -27,6 +27,7 @@ pub mod projectiles;
 pub mod state;
 pub mod structure;
 pub mod universe;
+pub mod rng;
 
 fn main() {
     // #[cfg(debug_assertions)]

@@ -437,6 +437,11 @@ impl Star {
 
         Color::rgb(rgb[0], rgb[1], rgb[2])
     }
+
+    /// Gets this star's temperature in Kelvin
+    pub fn temperature(&self) -> f32 {
+        self.temperature
+    }
 }
 
 pub(super) fn register(app: &mut App) {

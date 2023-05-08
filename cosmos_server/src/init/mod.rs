@@ -5,7 +5,7 @@
 use bevy::prelude::App;
 
 pub mod init_server;
-mod init_world;
+pub mod init_world;
 
 pub(super) fn register(app: &mut App) {
     init_world::register(app);

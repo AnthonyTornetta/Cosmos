@@ -31,18 +31,20 @@ struct PlanetSaveData {
     width: usize,
     height: usize,
     length: usize,
+    temperature: f32,
 }
 
 fn on_save_structure(
-    mut query: Query<(&mut SerializedData, &Structure), (With<NeedsSaved>, With<Planet>)>,
+    mut query: Query<(&mut SerializedData, &Structure, &Planet), With<NeedsSaved>>,
 ) {
-    for (mut s_data, structure) in query.iter_mut() {
+    for (mut s_data, structure, planet) in query.iter_mut() {
         s_data.serialize_data(
             "cosmos:planet",
             &PlanetSaveData {
                 width: structure.chunks_width(),
                 height: structure.chunks_height(),
                 length: structure.chunks_length(),
+                temperature: planet.temperature(),
             },
         );
         s_data.serialize_data("cosmos:is_planet", &true);
@@ -70,7 +72,12 @@ fn generate_planet(
 
     let builder = ServerPlanetBuilder::default();
 
-    builder.insert_planet(&mut entity_cmd, loc, &mut structure);
+    builder.insert_planet(
+        &mut entity_cmd,
+        loc,
+        &mut structure,
+        Planet::new(planet_save_data.temperature),
+    );
 
     let entity = entity_cmd.id();
 
@@ -143,7 +150,7 @@ fn populate_chunks(
         } else {
             SaveFileIdentifier::as_child(
                 format!("{cx}_{cy}_{cz}"),
-                SaveFileIdentifier::new(Some(loc.sector()), entity_id.clone()),
+                SaveFileIdentifier::new(Some(loc.sector()), entity_id.clone(), None),
             )
         };
 

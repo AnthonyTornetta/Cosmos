@@ -7,7 +7,7 @@ use std::{
 };
 
 use bevy::{
-    prelude::{App, Commands, Entity, IntoSystemConfig, Query, ResMut, With, Without},
+    prelude::{warn, App, Commands, Entity, IntoSystemConfig, Query, ResMut, With, Without},
     time::common_conditions::on_timer,
     utils::HashSet,
 };
@@ -34,23 +34,22 @@ fn unload_far(
 
         if let Some(min_dist) = query
             .iter()
-            .map(|l| l.relative_coords_to(loc).max_element())
+            .map(|l| l.relative_coords_to(loc).abs().max_element())
             .reduce(f32::min)
         {
             if min_dist <= ul_distance {
                 continue;
             }
         }
-        // uncomment if need to generate planet again
-        // else {
-        //     continue;
-        // }
 
         println!("Flagged for saving + unloading!");
 
         commands.entity(ent).insert((NeedsSaved, NeedsUnloaded));
     }
 }
+
+const SEARCH_RANGE: i64 = 25;
+const DEFAULT_LOAD_DISTANCE: u32 = (LOAD_DISTANCE / SECTOR_DIMENSIONS) as u32;
 
 fn load_near(
     query: Query<&Location, With<Player>>,
@@ -59,18 +58,21 @@ fn load_near(
     mut commands: Commands,
 ) {
     for loc in query.iter() {
-        let delta_ld = (LOAD_DISTANCE / SECTOR_DIMENSIONS) as i64;
-
-        for dz in -delta_ld..=delta_ld {
-            for dy in -delta_ld..=delta_ld {
-                for dx in -delta_ld..delta_ld {
+        for dz in -SEARCH_RANGE..=SEARCH_RANGE {
+            for dy in -SEARCH_RANGE..=SEARCH_RANGE {
+                for dx in -SEARCH_RANGE..SEARCH_RANGE {
                     let sector = (dx + loc.sector_x, dy + loc.sector_y, dz + loc.sector_z);
+                    let max_delta = dz.abs().max(dy.abs()).max(dx.abs()) as u32;
 
                     if let Some(vec) = sectors_cache.0.get(&sector) {
-                        for entity_id in vec.iter() {
-                            if !loaded_entities.iter().any(|x| x == entity_id) {
+                        for (entity_id, load_distance) in vec.iter() {
+                            if max_delta <= load_distance.unwrap_or(DEFAULT_LOAD_DISTANCE) && !loaded_entities.iter().any(|x| x == entity_id) {
                                 commands.spawn((
-                                    SaveFileIdentifier::new(Some(sector), entity_id.clone()),
+                                    SaveFileIdentifier::new(
+                                        Some(sector),
+                                        entity_id.clone(),
+                                        *load_distance,
+                                    ),
                                     NeedsLoaded,
                                 ));
                             }
@@ -91,20 +93,36 @@ fn load_near(
                                 let path = file.path();
 
                                 if path.extension() == Some(OsStr::new("cent")) {
-                                    let entity_id = path
+                                    let mut entity_information = path
                                         .file_stem()
                                         .expect("Failed to get file stem")
                                         .to_str()
                                         .expect("Failed to convert to entity id")
-                                        .to_owned();
+                                        .split('_');
+
+                                    let mut entity_id = entity_information.next().unwrap();
+                                    let mut load_distance = None;
+
+                                    if let Some(other_info) = entity_information.next() {
+                                        if let Ok(ld) = entity_id.parse::<u32>() {
+                                            load_distance = Some(ld);
+                                            entity_id = other_info;
+                                        } else {
+                                            warn!("Invalid load distance: {other_info}");
+                                        }
+                                    }
 
                                     let entity_id = EntityId::new(entity_id);
 
-                                    cache.insert(entity_id.clone());
+                                    cache.insert((entity_id.clone(), load_distance));
 
-                                    if !loaded_entities.iter().any(|x| x == &entity_id) {
+                                    if max_delta <= load_distance.unwrap_or(DEFAULT_LOAD_DISTANCE) && !loaded_entities.iter().any(|x| x == &entity_id) {
                                         commands.spawn((
-                                            SaveFileIdentifier::new(Some((x, y, z)), entity_id),
+                                            SaveFileIdentifier::new(
+                                                Some((x, y, z)),
+                                                entity_id,
+                                                load_distance,
+                                            ),
                                             NeedsLoaded,
                                         ));
                                     }

@@ -26,7 +26,7 @@ fn send_bodies(
         let players_bodies: Vec<(Entity, NettyRigidBody)> = bodies
             .iter()
             .filter(|(_, rb, unload_distance)| {
-                rb.location.relative_coords_to(loc).max_element()
+                rb.location.relative_coords_to(loc).abs().max_element()
                     // < if let Some(unload_distance) = unload_distance {
                     < unload_distance.load_block_distance()
                 // } else {

@@ -4,8 +4,13 @@ use bevy::ecs::system::EntityCommands;
 use bevy_rapier3d::prelude::{RigidBody, Velocity};
 
 use crate::{
+    persistence::LoadingDistance,
     physics::{gravity_system::GravityEmitter, location::Location},
-    structure::{structure_builder::TStructureBuilder, Structure},
+    structure::{
+        planet::{PLANET_LOAD_RADIUS, PLANET_UNLOAD_RADIUS},
+        structure_builder::TStructureBuilder,
+        Structure,
+    },
 };
 
 use super::Planet;
@@ -18,6 +23,7 @@ pub trait TPlanetBuilder {
         entity: &mut EntityCommands,
         location: Location,
         structure: &mut Structure,
+        planet: Planet,
     );
 }
 
@@ -39,6 +45,7 @@ impl<T: TStructureBuilder> TPlanetBuilder for PlanetBuilder<T> {
         entity: &mut EntityCommands,
         location: Location,
         structure: &mut Structure,
+        planet: Planet,
     ) {
         assert!(
             structure.chunks_width() == structure.chunks_height()
@@ -49,16 +56,18 @@ impl<T: TStructureBuilder> TPlanetBuilder for PlanetBuilder<T> {
         self.structure_builder
             .insert_structure(entity, location, Velocity::default(), structure);
 
-        entity
-            .insert(Planet)
-            .insert(RigidBody::Fixed)
-            .insert(GravityEmitter {
+        entity.insert((
+            RigidBody::Fixed,
+            planet,
+            GravityEmitter {
                 force_per_kg: 9.8,
                 radius: structure
                     .blocks_width()
                     .max(structure.blocks_height())
                     .max(structure.blocks_length()) as f32
                     / 2.0,
-            });
+            },
+            LoadingDistance::new(PLANET_LOAD_RADIUS, PLANET_UNLOAD_RADIUS),
+        ));
     }
 }
