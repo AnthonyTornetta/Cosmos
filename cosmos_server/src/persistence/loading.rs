@@ -18,7 +18,9 @@ use bevy::{
 };
 use bevy_rapier3d::prelude::Velocity;
 
-use cosmos_core::{netty::cosmos_encoder, physics::location::Location};
+use cosmos_core::{
+    netty::cosmos_encoder, persistence::LoadingDistance, physics::location::Location,
+};
 
 use super::{SaveFileIdentifier, SaveFileIdentifierType, SerializedData};
 
@@ -43,7 +45,7 @@ fn check_needs_loaded(
 
         commands.entity(ent).insert(serialized_data);
 
-        if let SaveFileIdentifierType::Base((entity_id, _)) = &nl.identifier_type {
+        if let SaveFileIdentifierType::Base((entity_id, _, _)) = &nl.identifier_type {
             commands.entity(ent).insert(entity_id.clone());
         }
     }
@@ -74,6 +76,11 @@ fn default_load(
         }
         if let Some(velocity) = sd.deserialize_data::<Velocity>("cosmos:velocity") {
             ecmds.insert(velocity);
+        }
+        if let Some(loading_distance) =
+            sd.deserialize_data::<LoadingDistance>("cosmos:loading_distance")
+        {
+            ecmds.insert(loading_distance);
         }
     }
 }

@@ -360,7 +360,11 @@ fn unload_chunks_far_from_players(
                         SaveChunk(chunk),
                         SaveFileIdentifier::as_child(
                             format!("{cx}_{cy}_{cz}"),
-                            SaveFileIdentifier::new(Some(location.sector()), entity_id.clone()),
+                            SaveFileIdentifier::new(
+                                Some(location.sector()),
+                                entity_id.clone(),
+                                None,
+                            ),
                         ),
                         NeedsSaved,
                         NeedsUnloaded,

@@ -16,7 +16,9 @@ use bevy::{
     utils::HashSet,
 };
 use bevy_rapier3d::prelude::Velocity;
-use cosmos_core::{netty::cosmos_encoder, physics::location::Location};
+use cosmos_core::{
+    netty::cosmos_encoder, persistence::LoadingDistance, physics::location::Location,
+};
 use std::{fs, io};
 
 use super::{EntityId, SaveFileIdentifier, SaveFileIdentifierType, SectorsCache, SerializedData};
@@ -55,6 +57,7 @@ pub fn done_saving(
             &SerializedData,
             Option<&EntityId>,
             Option<&NeedsUnloaded>,
+            Option<&LoadingDistance>,
             Option<&SaveFileIdentifier>,
         ),
         With<NeedsSaved>,
@@ -62,20 +65,13 @@ pub fn done_saving(
     mut sectors_cache: ResMut<SectorsCache>,
     mut commands: Commands,
 ) {
-    for (entity, sd, entity_id, needs_unloaded, save_file_identifier) in query.iter() {
+    for (entity, sd, entity_id, needs_unloaded, loading_distance, save_file_identifier) in
+        query.iter()
+    {
         commands
             .entity(entity)
             .remove::<NeedsSaved>()
             .remove::<SerializedData>();
-
-        if !sd.should_save() {
-            if needs_unloaded.is_some() {
-                commands.entity(entity).despawn_recursive();
-            }
-            continue;
-        }
-
-        let serialized: Vec<u8> = cosmos_encoder::serialize(&sd);
 
         let entity_id = if let Some(id) = entity_id {
             id.clone()
@@ -92,19 +88,32 @@ pub fn done_saving(
             if fs::try_exists(&path).unwrap_or(false) {
                 fs::remove_file(path).expect("Error deleting old save file!");
 
-                if let SaveFileIdentifierType::Base((entity_id, Some(sector))) =
+                if let SaveFileIdentifierType::Base((entity_id, Some(sector), load_distance)) =
                     &save_file_identifier.identifier_type
                 {
                     sectors_cache
                         .0
                         .get_mut(sector)
-                        .map(|set| set.remove(entity_id));
+                        .map(|set| set.remove(&(entity_id.clone(), *load_distance)));
                 }
             }
         }
 
+        if !sd.should_save() {
+            if needs_unloaded.is_some() {
+                commands.entity(entity).despawn_recursive();
+            }
+            continue;
+        }
+
+        let serialized: Vec<u8> = cosmos_encoder::serialize(&sd);
+
         let save_identifier = save_file_identifier.cloned().unwrap_or_else(|| {
-            let sfi = SaveFileIdentifier::new(sd.location.map(|l| l.sector()), entity_id.clone());
+            let sfi = SaveFileIdentifier::new(
+                sd.location.map(|l| l.sector()),
+                entity_id.clone(),
+                loading_distance.map(|ld| ld.load_distance()),
+            );
 
             commands.entity(entity).insert(sfi.clone());
 
@@ -122,7 +131,11 @@ pub fn done_saving(
                 sectors_cache.0.insert(key, HashSet::new());
             }
 
-            sectors_cache.0.get_mut(&key).unwrap().insert(entity_id);
+            sectors_cache
+                .0
+                .get_mut(&key)
+                .unwrap()
+                .insert((entity_id, loading_distance.map(|ld| ld.load_distance())));
         }
 
         if needs_unloaded.is_some() {
@@ -144,15 +157,27 @@ fn write_file(save_identifier: &SaveFileIdentifier, serialized: &[u8]) -> io::Re
 }
 
 fn default_save(
-    mut query: Query<(&mut SerializedData, Option<&Location>, Option<&Velocity>), With<NeedsSaved>>,
+    mut query: Query<
+        (
+            &mut SerializedData,
+            Option<&Location>,
+            Option<&Velocity>,
+            Option<&LoadingDistance>,
+        ),
+        With<NeedsSaved>,
+    >,
 ) {
-    for (mut data, loc, vel) in query.iter_mut() {
+    for (mut data, loc, vel, loading_distance) in query.iter_mut() {
         if let Some(loc) = loc {
             data.set_location(loc);
         }
 
         if let Some(vel) = vel {
             data.serialize_data("cosmos:velocity", vel);
+        }
+
+        if let Some(val) = loading_distance {
+            data.serialize_data("cosmos:loading_distance", val);
         }
     }
 }

@@ -67,8 +67,10 @@ impl Planet {
     }
 }
 
-/// The distnace planets should be loaded
+/// The distance planets should be loaded
 pub const PLANET_LOAD_RADIUS: u32 = SYSTEM_SECTORS / 8;
+/// The distance planets should be unloaded loaded
+pub const PLANET_UNLOAD_RADIUS: u32 = PLANET_LOAD_RADIUS + 2;
 
 pub(super) fn register(app: &mut App) {
     biosphere::register(app);

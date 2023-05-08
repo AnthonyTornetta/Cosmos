@@ -9,10 +9,9 @@ use bevy::{
 };
 use cosmos_core::{
     entities::player::Player,
-    persistence::LoadingDistance,
     physics::location::Location,
     structure::{
-        planet::{planet_builder::TPlanetBuilder, Planet, PLANET_LOAD_RADIUS},
+        planet::{planet_builder::TPlanetBuilder, Planet, PLANET_UNLOAD_RADIUS},
         Structure,
     },
 };
@@ -33,19 +32,38 @@ fn spawn_planet(
     mut cache: ResMut<CachedSectors>,
     mut commands: Commands,
 ) {
-    let mut sectors = HashSet::new();
+    let mut to_check_sectors = HashSet::new();
 
     for l in players.iter() {
-        let range = -(PLANET_LOAD_RADIUS as i64)..=(PLANET_LOAD_RADIUS as i64);
+        let range = -(PLANET_UNLOAD_RADIUS as i64)..=(PLANET_UNLOAD_RADIUS as i64);
         for dsz in range.clone() {
             for dsy in range.clone() {
                 for dsx in range.clone() {
                     let sector = (dsx + l.sector_x, dsy + l.sector_y, dsz + l.sector_z);
-                    if !cache.contains(&sector) {
-                        sectors.insert(sector);
-                    }
+                    to_check_sectors.insert(sector);
                 }
             }
+        }
+    }
+
+    let mut dead_sectors = HashSet::new();
+
+    // Clear out unloaded sectors from the cache
+    for sector in cache.iter() {
+        if !to_check_sectors.contains(sector) {
+            dead_sectors.insert(*sector);
+        }
+    }
+
+    for dead_sector in dead_sectors {
+        cache.remove(&dead_sector);
+    }
+
+    let mut sectors = HashSet::new();
+
+    for sector in to_check_sectors {
+        if !cache.contains(&sector) {
+            sectors.insert(sector);
         }
     }
 
@@ -59,6 +77,7 @@ fn spawn_planet(
         cache.insert((sx, sy, sz));
 
         if is_sector_loaded((sx, sy, sz)) {
+            // This sector has already been loaded, don't regenerate stuff
             continue;
         }
 
@@ -83,10 +102,7 @@ fn spawn_planet(
 
             builder.insert_planet(&mut entity_cmd, loc, &mut structure, Planet::new(100.0));
 
-            entity_cmd.insert((
-                structure,
-                LoadingDistance::new(PLANET_LOAD_RADIUS, PLANET_LOAD_RADIUS + 2),
-            ));
+            entity_cmd.insert(structure);
         }
     }
 }

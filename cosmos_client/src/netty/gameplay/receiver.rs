@@ -26,7 +26,7 @@ use cosmos_core::{
     registry::Registry,
     structure::{
         chunk::Chunk,
-        planet::{biosphere::BiosphereMarker, planet_builder::TPlanetBuilder, PLANET_LOAD_RADIUS},
+        planet::{biosphere::BiosphereMarker, planet_builder::TPlanetBuilder},
         ship::{pilot::Pilot, ship_builder::TShipBuilder, Ship},
         ChunkInitEvent, Structure,
     },
@@ -333,11 +333,7 @@ fn client_sync_players(
                 let builder = ClientPlanetBuilder::default();
                 builder.insert_planet(&mut entity_cmds, body.location, &mut structure, planet);
 
-                entity_cmds.insert((
-                    structure,
-                    LoadingDistance::new(PLANET_LOAD_RADIUS, PLANET_LOAD_RADIUS + 2),
-                    BiosphereMarker::new(biosphere),
-                ));
+                entity_cmds.insert((structure, BiosphereMarker::new(biosphere)));
 
                 let entity = entity_cmds.id();
 
