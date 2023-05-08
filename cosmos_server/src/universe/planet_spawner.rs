@@ -14,6 +14,7 @@ use cosmos_core::{
         planet::{planet_builder::TPlanetBuilder, Planet, PLANET_UNLOAD_RADIUS},
         Structure,
     },
+    universe::star::Star,
 };
 use rand::Rng;
 
@@ -25,12 +26,16 @@ use crate::{
 #[derive(Default, Resource, Deref, DerefMut)]
 struct CachedSectors(HashSet<(i64, i64, i64)>);
 
+const BACKGROUND_TEMPERATURE: f32 = 50.0;
+const TEMPERATURE_CONSTANT: f32 = 5.3e9;
+
 fn spawn_planet(
     query: Query<&Location, With<Planet>>,
     players: Query<&Location, With<Player>>,
     server_seed: Res<ServerSeed>,
     mut cache: ResMut<CachedSectors>,
     mut commands: Commands,
+    stars: Query<(&Location, &Star), With<Star>>,
 ) {
     let mut to_check_sectors = HashSet::new();
 
@@ -88,21 +93,50 @@ fn spawn_planet(
         if is_origin || rng.gen_range(0..1000) == 9 {
             let loc = Location::new(Vec3::ZERO, sx, sy, sz);
 
-            let mut entity_cmd = commands.spawn_empty();
+            let mut closest_star = None;
+            let mut best_dist = None;
 
-            let size: usize = if is_origin {
-                50
-            } else {
-                rng.gen_range(200..=500)
-            };
+            for (star_loc, star) in stars.iter() {
+                let dist = loc.distance_sqrd(star_loc);
 
-            let mut structure = Structure::new(size, size, size);
+                if closest_star.is_none() || best_dist.unwrap() < dist {
+                    closest_star = Some(star);
+                    best_dist = Some(dist);
+                }
+            }
 
-            let builder = ServerPlanetBuilder::default();
+            if let Some(star) = closest_star {
+                let mut entity_cmd = commands.spawn_empty();
 
-            builder.insert_planet(&mut entity_cmd, loc, &mut structure, Planet::new(100.0));
+                let size: usize = if is_origin {
+                    50
+                } else {
+                    rng.gen_range(200..=500)
+                };
 
-            entity_cmd.insert(structure);
+                let mut structure = Structure::new(size, size, size);
+
+                let builder = ServerPlanetBuilder::default();
+
+                let temperature = (TEMPERATURE_CONSTANT
+                    * (star.temperature() / best_dist.unwrap()))
+                .max(BACKGROUND_TEMPERATURE);
+
+                println!(
+                    "{sx} {sy} {sz} {}; {} -> {temperature}",
+                    best_dist.unwrap(),
+                    star.temperature()
+                );
+
+                builder.insert_planet(
+                    &mut entity_cmd,
+                    loc,
+                    &mut structure,
+                    Planet::new(temperature),
+                );
+
+                entity_cmd.insert(structure);
+            }
         }
     }
 }

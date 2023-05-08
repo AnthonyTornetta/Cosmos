@@ -2,7 +2,9 @@
 
 use std::f32::consts::{E, TAU};
 
-use bevy::prelude::{in_state, App, Commands, IntoSystemConfig, PbrBundle, Query, Res, Vec3, With};
+use bevy::prelude::{
+    in_state, App, Commands, CoreSet, IntoSystemConfig, PbrBundle, Query, Res, Vec3, With,
+};
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
     entities::player::Player,
@@ -79,7 +81,10 @@ pub fn get_star_in_system(sx: i64, sy: i64, sz: i64, seed: &ServerSeed) -> Optio
     let num = rng.gen_range(0..10_000) as f32 / 10_000.0;
 
     if num < prob {
-        let temperature = rng.gen_range((MIN_TEMPERATURE as u32)..(MAX_TEMPERATURE as u32)) as f32;
+        // More likely to be low than high random number
+        let rand = 1.0 - (1.0 - rng.gen::<f32>()).sqrt();
+
+        let temperature = (rand * (MAX_TEMPERATURE - MIN_TEMPERATURE)) + MIN_TEMPERATURE;
 
         Some(Star::new(temperature))
     } else {
@@ -125,5 +130,10 @@ fn load_stars_near_players(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(load_stars_near_players.run_if(in_state(GameState::Playing)));
+    app.add_system(
+        // planet_spawner::spawn_planet system requires stars to have been generated first
+        load_stars_near_players
+            .in_base_set(CoreSet::First)
+            .run_if(in_state(GameState::Playing)),
+    );
 }
