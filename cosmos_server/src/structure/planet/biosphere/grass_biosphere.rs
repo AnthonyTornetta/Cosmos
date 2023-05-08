@@ -1,5 +1,7 @@
 //! Creates a grass planet
 
+use std::ops::Range;
+
 use bevy::prelude::{
     App, Component, Entity, EventReader, EventWriter, IntoSystemConfig, OnUpdate, Query, Res,
 };
@@ -68,6 +70,31 @@ const AMPLITUDE: f64 = 7.0;
 const DELTA: f64 = 0.05;
 const ITERATIONS: usize = 9;
 
+const STONE_LIMIT: usize = 4;
+
+fn get_max_level(
+    x: usize,
+    y: usize,
+    z: usize,
+    structure_x: f64,
+    structure_y: f64,
+    structure_z: f64,
+    noise_generastor: &Res<ResourceWrapper<noise::OpenSimplex>>,
+    middle_air_start: usize,
+) -> usize {
+    let mut depth: f64 = 0.0;
+    for iteration in 1..=ITERATIONS {
+        let iteration = iteration as f64;
+        depth += noise_generastor.get([
+            (x as f64 + structure_x) * (DELTA / iteration),
+            (y as f64 + structure_y) * (DELTA / iteration),
+            (z as f64 + structure_z) * (DELTA / iteration),
+        ]) * AMPLITUDE
+            * iteration;
+    }
+    return (middle_air_start as f64 + depth).round() as usize;
+}
+
 fn generate_planet(
     mut query: Query<(&mut Structure, &Location)>,
     mut events: EventReader<GrassChunkNeedsGeneratedEvent>,
@@ -121,82 +148,70 @@ fn generate_planet(
 
                     let actual_x = chunk.structure_x() * CHUNK_DIMENSIONS + x;
 
-                    let mut depth: f64 = 0.0;
+                    let current_max = get_max_level(
+                        actual_x,
+                        actual_y,
+                        actual_z,
+                        structure_x,
+                        structure_y,
+                        structure_z,
+                        &noise_generastor,
+                        middle_air_start,
+                    );
 
-                    for iteration in 1..=ITERATIONS {
-                        let iteration = iteration as f64;
-
-                        depth += noise_generastor.get([
-                            (actual_x as f64 + structure_x) * (DELTA / iteration),
-                            (actual_y as f64 + structure_y) * (DELTA / iteration),
-                            (actual_z as f64 + structure_z) * (DELTA / iteration),
-                        ]) * AMPLITUDE
-                            * iteration;
-                    }
-
-                    let max_level = (middle_air_start as f64 + depth).round() as usize;
-
-                    let stone_range = 0..(max_level - 2);
-                    // let dirt_range = (max_level - 5)..(max_level - 1);
-                    // let grass_range = (max_level - 1)..max_level;
-
-                    match Planet::planet_face(structure, actual_x, actual_y, actual_z) {
+                    let current_height: usize;
+                    let mut cover_x = actual_x;
+                    let mut cover_y = actual_y;
+                    let mut cover_z = actual_z;
+                    let block_up = Planet::planet_face(structure, actual_x, actual_y, actual_z);
+                    match block_up {
                         BlockFace::Top => {
-                            // if grass_range.contains(&actual_y) {
-                            //     chunk.set_block_at(x, y, z, grass, BlockFace::Top);
-                            // if dirt_range.contains(&actual_y) {
-                            //     chunk.set_block_at(x, y, z, dirt, BlockFace::Top);
-                            if stone_range.contains(&actual_y) {
-                                chunk.set_block_at(x, y, z, stone, BlockFace::Top);
-                            }
+                            cover_y += 1;
+                            current_height = actual_y;
                         }
                         BlockFace::Bottom => {
-                            let actual_y = structure.blocks_height() - actual_y;
-                            // if grass_range.contains(&actual_y) {
-                            //     chunk.set_block_at(x, y, z, grass, BlockFace::Bottom);
-                            // } else if dirt_range.contains(&actual_y) {
-                            //     chunk.set_block_at(x, y, z, dirt, BlockFace::Bottom);
-                            if stone_range.contains(&actual_y) {
-                                chunk.set_block_at(x, y, z, stone, BlockFace::Bottom);
-                            }
+                            cover_y -= 1;
+                            current_height = structure.blocks_height() - actual_y;
                         }
                         BlockFace::Front => {
-                            // if grass_range.contains(&actual_z) {
-                            //     chunk.set_block_at(x, y, z, grass, BlockFace::Front);
-                            // } else if dirt_range.contains(&actual_z) {
-                            //     chunk.set_block_at(x, y, z, dirt, BlockFace::Front);
-                            if stone_range.contains(&actual_z) {
-                                chunk.set_block_at(x, y, z, stone, BlockFace::Front);
-                            }
+                            cover_z += 1;
+                            current_height = actual_z;
                         }
                         BlockFace::Back => {
-                            let actual_z = structure.blocks_length() - actual_z;
-                            // if grass_range.contains(&actual_z) {
-                            //     chunk.set_block_at(x, y, z, grass, BlockFace::Back);
-                            // } else if dirt_range.contains(&actual_z) {
-                            //     chunk.set_block_at(x, y, z, dirt, BlockFace::Back);
-                            if stone_range.contains(&actual_z) {
-                                chunk.set_block_at(x, y, z, stone, BlockFace::Back);
-                            }
+                            cover_z -= 1;
+                            current_height = structure.blocks_length() - actual_z;
                         }
                         BlockFace::Right => {
-                            // if grass_range.contains(&actual_x) {
-                            //     chunk.set_block_at(x, y, z, grass, BlockFace::Right);
-                            // } else if dirt_range.contains(&actual_x) {
-                            //     chunk.set_block_at(x, y, z, dirt, BlockFace::Right);
-                            if stone_range.contains(&actual_x) {
-                                chunk.set_block_at(x, y, z, stone, BlockFace::Right);
-                            }
+                            cover_x += 1;
+                            current_height = actual_x;
                         }
                         BlockFace::Left => {
-                            let actual_x = structure.blocks_width() - actual_x;
-                            // if grass_range.contains(&actual_x) {
-                            //     chunk.set_block_at(x, y, z, grass, BlockFace::Left);
-                            // } else if dirt_range.contains(&actual_x) {
-                            //     chunk.set_block_at(x, y, z, dirt, BlockFace::Left);
-                            if stone_range.contains(&actual_x) {
-                                chunk.set_block_at(x, y, z, stone, BlockFace::Left);
-                            }
+                            cover_x -= 1;
+                            current_height = structure.blocks_length() - actual_x;
+                        }
+                    }
+
+                    if current_height < current_max - STONE_LIMIT {
+                        chunk.set_block_at(x, y, z, stone, block_up);
+                    } else if current_height < current_max {
+                        // Getting the noise values for the "covering" block.
+                        let cover_height = current_height + 1;
+                        let cover_max = get_max_level(
+                            cover_x,
+                            cover_y,
+                            cover_z,
+                            structure_x,
+                            structure_y,
+                            structure_z,
+                            &noise_generastor,
+                            middle_air_start,
+                        );
+                        if cover_height < cover_max {
+                            // In dirt range and covered -> dirt.
+                            chunk.set_block_at(x, y, z, dirt, block_up)
+                        } else {
+                            // In dirt range and uncovered -> grass.
+                            chunk.set_block_at(x, y, z, grass, block_up)
                         }
                     }
                 }

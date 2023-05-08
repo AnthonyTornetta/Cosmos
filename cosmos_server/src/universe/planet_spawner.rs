@@ -72,7 +72,7 @@ fn spawn_planet(
             let mut entity_cmd = commands.spawn_empty();
 
             let size: usize = if is_origin {
-                10
+                50
             } else {
                 rng.gen_range(200..=500)
             };
