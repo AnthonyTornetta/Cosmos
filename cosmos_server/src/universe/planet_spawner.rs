@@ -122,12 +122,6 @@ fn spawn_planet(
                     * (star.temperature() / best_dist.unwrap()))
                 .max(BACKGROUND_TEMPERATURE);
 
-                println!(
-                    "{sx} {sy} {sz} {}; {} -> {temperature}",
-                    best_dist.unwrap(),
-                    star.temperature()
-                );
-
                 builder.insert_planet(
                     &mut entity_cmd,
                     loc,
