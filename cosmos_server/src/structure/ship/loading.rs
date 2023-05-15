@@ -19,8 +19,7 @@ use crate::state::GameState;
 pub struct ShipNeedsCreated;
 
 fn create_ships(
-    // ChunksNeedLoaded has to be queried to ensure that the chunksetevents will trigger the structure loaded event.
-    mut query: Query<(&mut Structure, Entity), (With<ShipNeedsCreated>, With<ChunksNeedLoaded>)>,
+    mut query: Query<(&mut Structure, Entity), With<ShipNeedsCreated>>,
     mut commands: Commands,
     blocks: Res<Registry<Block>>,
     mut chunk_set_event_writer: EventWriter<ChunkInitEvent>,

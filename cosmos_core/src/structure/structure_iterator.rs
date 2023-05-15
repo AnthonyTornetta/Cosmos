@@ -2,7 +2,11 @@
 
 use bevy::utils::hashbrown::hash_map;
 
-use super::{chunk::Chunk, structure_block::StructureBlock, Structure};
+use super::{
+    chunk::{Chunk, CHUNK_DIMENSIONS},
+    structure_block::StructureBlock,
+    Structure,
+};
 
 #[derive(Debug)]
 struct Body<'a> {
@@ -170,7 +174,46 @@ impl<'a> Iterator for BlockIterator<'a> {
                     return None;
                 }
 
-                let (x, y, z) = (body.at_x, body.at_y, body.at_z);
+                let (mut x, mut y, mut z) = (body.at_x, body.at_y, body.at_z);
+
+                // Skip over empty chunks to increase performance
+                while !(body
+                    .structure
+                    .chunk_at_block_coordinates(x, y, z)
+                    .is_some_and(|c| !c.is_empty()))
+                {
+                    println!(
+                        "Checking {x} {y} {z}: {} {}",
+                        body.structure.chunk_at_block_coordinates(x, y, z).is_some(),
+                        body.structure
+                            .chunk_at_block_coordinates(x, y, z)
+                            .is_some_and(|c| !c.is_empty())
+                    );
+
+                    body.at_x = (body.at_x / CHUNK_DIMENSIONS + 1) * CHUNK_DIMENSIONS;
+
+                    if body.at_x > body.end_x {
+                        body.at_x = body.start_x;
+
+                        body.at_y = (body.at_y / CHUNK_DIMENSIONS + 1) * CHUNK_DIMENSIONS;
+
+                        if body.at_y > body.end_y {
+                            body.at_y = body.start_y;
+
+                            body.at_z = (body.at_z / CHUNK_DIMENSIONS + 1) * CHUNK_DIMENSIONS;
+                        }
+                    }
+
+                    (x, y, z) = (body.at_x, body.at_y, body.at_z);
+
+                    if body.at_z > body.end_z {
+                        println!("Nothing more.");
+
+                        return None;
+                    }
+                }
+
+                println!("Found {x} {y} {z}");
 
                 body.at_x += 1;
 

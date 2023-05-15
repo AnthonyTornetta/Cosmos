@@ -29,6 +29,13 @@ struct CachedSectors(HashSet<(i64, i64, i64)>);
 const BACKGROUND_TEMPERATURE: f32 = 50.0;
 const TEMPERATURE_CONSTANT: f32 = 5.3e9;
 
+#[derive(Resource, Debug)]
+/// Used to not check everything at once (too intensive), but rather divide
+/// the area it checks into multiple quadrants it can check individually
+struct Quadrant(f32, f32, f32);
+
+const SUBDIVISIONS: f32 = 8.0;
+
 fn spawn_planet(
     query: Query<&Location, With<Planet>>,
     players: Query<&Location, With<Player>>,
@@ -36,17 +43,39 @@ fn spawn_planet(
     mut cache: ResMut<CachedSectors>,
     mut commands: Commands,
     stars: Query<(&Location, &Star), With<Star>>,
+    mut quadrant: ResMut<Quadrant>,
 ) {
     let mut to_check_sectors = HashSet::new();
 
     for l in players.iter() {
-        let range = -(PLANET_UNLOAD_RADIUS as i64)..=(PLANET_UNLOAD_RADIUS as i64);
-        for dsz in range.clone() {
-            for dsy in range.clone() {
-                for dsx in range.clone() {
+        for dsz in -(((1.0 - quadrant.2 / SUBDIVISIONS) * PLANET_UNLOAD_RADIUS as f32) as i64)
+            ..=((quadrant.2 / SUBDIVISIONS * PLANET_UNLOAD_RADIUS as f32) as i64)
+        {
+            for dsy in -(((1.0 - quadrant.1 / SUBDIVISIONS) * PLANET_UNLOAD_RADIUS as f32) as i64)
+                ..=((quadrant.1 / SUBDIVISIONS * PLANET_UNLOAD_RADIUS as f32) as i64)
+            {
+                for dsx in -(((1.0 - quadrant.0 / SUBDIVISIONS) * PLANET_UNLOAD_RADIUS as f32)
+                    as i64)
+                    ..=((quadrant.0 / SUBDIVISIONS * PLANET_UNLOAD_RADIUS as f32) as i64)
+                {
                     let sector = (dsx + l.sector_x, dsy + l.sector_y, dsz + l.sector_z);
                     to_check_sectors.insert(sector);
                 }
+            }
+        }
+    }
+
+    quadrant.0 += 1.0;
+    if quadrant.0 > SUBDIVISIONS {
+        quadrant.0 = 0.0;
+
+        quadrant.1 += 1.0;
+        if quadrant.1 > SUBDIVISIONS {
+            quadrant.1 = 0.0;
+
+            quadrant.2 += 1.0;
+            if quadrant.2 > SUBDIVISIONS {
+                quadrant.2 = 0.0;
             }
         }
     }
@@ -137,5 +166,6 @@ fn spawn_planet(
 
 pub(super) fn register(app: &mut App) {
     app.add_system(spawn_planet.run_if(in_state(GameState::Playing)))
-        .insert_resource(CachedSectors::default());
+        .insert_resource(CachedSectors::default())
+        .insert_resource(Quadrant(0.0, 0.0, 0.0));
 }
