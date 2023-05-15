@@ -9,7 +9,7 @@ use std::{error::Error, fmt::Formatter};
 
 use bevy::prelude::*;
 
-use super::{planet::Planet, Structure};
+use super::{ship::Ship, Structure};
 
 pub mod energy_generation_system;
 pub mod energy_storage_system;
@@ -134,10 +134,7 @@ impl Systems {
     }
 }
 
-fn add_structure(
-    mut commands: Commands,
-    query: Query<Entity, (Added<Structure>, Without<Planet>)>,
-) {
+fn add_structure(mut commands: Commands, query: Query<Entity, (Added<Structure>, With<Ship>)>) {
     for entity in query.iter() {
         commands.entity(entity).insert(Systems {
             systems: Vec::new(),

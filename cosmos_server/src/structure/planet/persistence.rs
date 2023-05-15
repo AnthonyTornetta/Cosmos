@@ -13,13 +13,10 @@ use cosmos_core::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    persistence::{
-        loading::{begin_loading, done_loading, NeedsLoaded},
-        saving::{begin_saving, done_saving, NeedsSaved},
-        EntityId, SaveFileIdentifier, SerializedData,
-    },
-    structure::persistence::DelayedStructureLoadEvent,
+use crate::persistence::{
+    loading::{begin_loading, done_loading, NeedsLoaded},
+    saving::{begin_saving, done_saving, NeedsSaved},
+    EntityId, SaveFileIdentifier, SerializedData,
 };
 
 use super::{
@@ -56,7 +53,6 @@ fn generate_planet(
     planet_save_data: PlanetSaveData,
     s_data: &SerializedData,
     commands: &mut Commands,
-    event_writer: &mut EventWriter<DelayedStructureLoadEvent>,
 ) {
     let mut structure = Structure::new(
         planet_save_data.width,
@@ -81,14 +77,11 @@ fn generate_planet(
 
     let entity = entity_cmd.id();
 
-    event_writer.send(DelayedStructureLoadEvent(entity));
-
     commands.entity(entity).insert(structure);
 }
 
 fn on_load_structure(
     query: Query<(Entity, &SerializedData), With<NeedsLoaded>>,
-    mut event_writer: EventWriter<DelayedStructureLoadEvent>,
     mut commands: Commands,
 ) {
     for (entity, s_data) in query.iter() {
@@ -99,13 +92,7 @@ fn on_load_structure(
             if let Some(planet_save_data) =
                 s_data.deserialize_data::<PlanetSaveData>("cosmos:planet")
             {
-                generate_planet(
-                    entity,
-                    planet_save_data,
-                    s_data,
-                    &mut commands,
-                    &mut event_writer,
-                );
+                generate_planet(entity, planet_save_data, s_data, &mut commands);
             }
         }
     }
