@@ -1,7 +1,11 @@
 //! Creates a grass planet
 
-use bevy::prelude::{
-    App, Component, Entity, EventReader, EventWriter, IntoSystemConfig, OnUpdate, Query, Res,
+use bevy::{
+    prelude::{
+        App, Commands, Component, DespawnRecursiveExt, Entity, EventReader, EventWriter,
+        IntoSystemConfigs, OnUpdate, Query, Res,
+    },
+    tasks::{AsyncComputeTaskPool, Task},
 };
 use cosmos_core::{
     block::{Block, BlockFace},
@@ -12,10 +16,10 @@ use cosmos_core::{
         planet::Planet,
         ChunkInitEvent, Structure,
     },
-    utils::{resource_wrapper::ResourceWrapper, timer::UtilsTimer},
+    utils::resource_wrapper::ResourceWrapper,
 };
+use futures_lite::future;
 use noise::NoiseFn;
-use rayon::prelude::{IntoParallelRefMutIterator, ParallelIterator};
 
 use crate::GameState;
 
@@ -77,7 +81,7 @@ fn get_max_level(
     structure_x: f64,
     structure_y: f64,
     structure_z: f64,
-    noise_generastor: &Res<ResourceWrapper<noise::OpenSimplex>>,
+    noise_generastor: &noise::OpenSimplex,
     middle_air_start: usize,
 ) -> usize {
     let mut depth: f64 = 0.0;
@@ -93,21 +97,51 @@ fn get_max_level(
     (middle_air_start as f64 + depth).round() as usize
 }
 
+#[derive(Debug, Component)]
+struct GeneratingChunk {
+    task: Task<Chunk>,
+    structure_entity: Entity,
+    chunk: (usize, usize, usize),
+}
+
+fn notify_when_done_generating(
+    mut query: Query<(Entity, &mut GeneratingChunk)>,
+    mut commands: Commands,
+    mut event_writer: EventWriter<ChunkInitEvent>,
+    mut structure_query: Query<&mut Structure>,
+) {
+    for (entity, mut generating_chunk) in query.iter_mut() {
+        if let Some(chunk) = future::block_on(future::poll_once(&mut generating_chunk.task)) {
+            commands.entity(entity).despawn_recursive();
+
+            if let Ok(mut structure) = structure_query.get_mut(generating_chunk.structure_entity) {
+                structure.set_chunk(chunk);
+
+                let (x, y, z) = generating_chunk.chunk;
+                event_writer.send(ChunkInitEvent {
+                    structure_entity: generating_chunk.structure_entity,
+                    x,
+                    y,
+                    z,
+                });
+            }
+        }
+    }
+}
+
 fn generate_planet(
     mut query: Query<(&mut Structure, &Location)>,
     mut events: EventReader<GrassChunkNeedsGeneratedEvent>,
-    mut event_writer: EventWriter<ChunkInitEvent>,
-    noise_generastor: Res<ResourceWrapper<noise::OpenSimplex>>,
+    noise_generator: Res<ResourceWrapper<noise::OpenSimplex>>,
     blocks: Res<Registry<Block>>,
+    mut commands: Commands,
 ) {
-    let timer = UtilsTimer::start();
-
-    let mut chunks = events
+    let chunks = events
         .iter()
         .filter_map(|ev| {
             if let Ok((mut structure, _)) = query.get_mut(ev.structure_entity) {
                 structure
-                    .take_chunk(ev.x, ev.y, ev.z)
+                    .take_chunk_for_loading(ev.x, ev.y, ev.z)
                     .map(|chunk| (ev.structure_entity, chunk))
             } else {
                 None
@@ -115,125 +149,145 @@ fn generate_planet(
         })
         .collect::<Vec<(Entity, Chunk)>>();
 
-    chunks.par_iter_mut().for_each(|(structure_entity, chunk)| {
-        let Ok((structure, location)) = query.get(*structure_entity) else {
-            return;
+    let grass = blocks.from_id("cosmos:grass").unwrap();
+    let dirt = blocks.from_id("cosmos:dirt").unwrap();
+    let stone = blocks.from_id("cosmos:stone").unwrap();
+
+    for (structure_entity, mut chunk) in chunks {
+        let Ok((structure, location)) = query.get(structure_entity) else {
+            continue;
         };
 
-        let grass = blocks.from_id("cosmos:grass").unwrap();
-        let dirt = blocks.from_id("cosmos:dirt").unwrap();
-        let stone = blocks.from_id("cosmos:stone").unwrap();
+        let (cx, cy, cz) = (
+            chunk.structure_x(),
+            chunk.structure_y(),
+            chunk.structure_z(),
+        );
 
+        let thread_pool = AsyncComputeTaskPool::get();
+
+        let grass = grass.clone();
+        let dirt = dirt.clone();
+        let stone = stone.clone();
+        let s_width = structure.blocks_width();
         let s_height = structure.blocks_height();
+        let s_length = structure.blocks_length();
+        let location = *location;
+        // Not super expensive, only copies about 256 8 bit values.
+        // Still not ideal though.
+        let noise_generator = noise_generator.clone();
 
-        let middle_air_start = s_height - CHUNK_DIMENSIONS * 5;
+        let task = thread_pool.spawn(async move {
+            let grass = &grass;
+            let dirt = &dirt;
+            let stone = &stone;
 
-        let structure_z =
-            (location.sector_z as f64) * SECTOR_DIMENSIONS as f64 + location.local.z as f64;
-        let structure_y =
-            (location.sector_y as f64) * SECTOR_DIMENSIONS as f64 + location.local.y as f64;
-        let structure_x =
-            (location.sector_x as f64) * SECTOR_DIMENSIONS as f64 + location.local.x as f64;
+            let middle_air_start = s_height - CHUNK_DIMENSIONS * 5;
 
-        for z in 0..CHUNK_DIMENSIONS {
-            let actual_z = chunk.structure_z() * CHUNK_DIMENSIONS + z;
-            for y in 0..CHUNK_DIMENSIONS {
-                let actual_y: usize = chunk.structure_y() * CHUNK_DIMENSIONS + y;
-                for x in 0..CHUNK_DIMENSIONS {
-                    if chunk.has_block_at(x, y, z) {
-                        continue;
-                    }
+            let structure_z =
+                (location.sector_z as f64) * SECTOR_DIMENSIONS as f64 + location.local.z as f64;
+            let structure_y =
+                (location.sector_y as f64) * SECTOR_DIMENSIONS as f64 + location.local.y as f64;
+            let structure_x =
+                (location.sector_x as f64) * SECTOR_DIMENSIONS as f64 + location.local.x as f64;
 
-                    let actual_x = chunk.structure_x() * CHUNK_DIMENSIONS + x;
-
-                    let current_max = get_max_level(
-                        actual_x,
-                        actual_y,
-                        actual_z,
-                        structure_x,
-                        structure_y,
-                        structure_z,
-                        &noise_generastor,
-                        middle_air_start,
-                    );
-
-                    let mut cover_x = actual_x;
-                    let mut cover_y = actual_y;
-                    let mut cover_z = actual_z;
-                    let block_up = Planet::planet_face(structure, actual_x, actual_y, actual_z);
-
-                    let current_height = match block_up {
-                        BlockFace::Top => {
-                            cover_y += 1;
-                            actual_y
+            for z in 0..CHUNK_DIMENSIONS {
+                let actual_z = chunk.structure_z() * CHUNK_DIMENSIONS + z;
+                for y in 0..CHUNK_DIMENSIONS {
+                    let actual_y: usize = chunk.structure_y() * CHUNK_DIMENSIONS + y;
+                    for x in 0..CHUNK_DIMENSIONS {
+                        if chunk.has_block_at(x, y, z) {
+                            continue;
                         }
-                        BlockFace::Bottom => {
-                            cover_y -= 1;
-                            structure.blocks_height() - actual_y
-                        }
-                        BlockFace::Front => {
-                            cover_z += 1;
-                            actual_z
-                        }
-                        BlockFace::Back => {
-                            cover_z -= 1;
-                            structure.blocks_length() - actual_z
-                        }
-                        BlockFace::Right => {
-                            cover_x += 1;
-                            actual_x
-                        }
-                        BlockFace::Left => {
-                            cover_x -= 1;
-                            structure.blocks_length() - actual_x
-                        }
-                    };
 
-                    if current_height < current_max - STONE_LIMIT {
-                        chunk.set_block_at(x, y, z, stone, block_up);
-                    } else if current_height < current_max {
-                        // Getting the noise values for the "covering" block.
-                        let cover_height = current_height + 1;
-                        let cover_max = get_max_level(
-                            cover_x,
-                            cover_y,
-                            cover_z,
+                        let actual_x = chunk.structure_x() * CHUNK_DIMENSIONS + x;
+
+                        let current_max = get_max_level(
+                            actual_x,
+                            actual_y,
+                            actual_z,
                             structure_x,
                             structure_y,
                             structure_z,
-                            &noise_generastor,
+                            &noise_generator,
                             middle_air_start,
                         );
-                        if cover_height < cover_max {
-                            // In dirt range and covered -> dirt.
-                            chunk.set_block_at(x, y, z, dirt, block_up)
-                        } else {
-                            // In dirt range and uncovered -> grass.
-                            chunk.set_block_at(x, y, z, grass, block_up)
+
+                        let mut cover_x = actual_x as i64;
+                        let mut cover_y = actual_y as i64;
+                        let mut cover_z = actual_z as i64;
+                        let block_up = Planet::planet_face_without_structure(
+                            actual_x, actual_y, actual_z, s_width, s_height, s_length,
+                        );
+
+                        let current_height = match block_up {
+                            BlockFace::Top => {
+                                cover_y += 1;
+                                actual_y
+                            }
+                            BlockFace::Bottom => {
+                                cover_y -= 1;
+                                s_height - actual_y
+                            }
+                            BlockFace::Front => {
+                                cover_z += 1;
+                                actual_z
+                            }
+                            BlockFace::Back => {
+                                cover_z -= 1;
+                                s_height - actual_z
+                            }
+                            BlockFace::Right => {
+                                cover_x += 1;
+                                actual_x
+                            }
+                            BlockFace::Left => {
+                                cover_x -= 1;
+                                s_height - actual_x
+                            }
+                        };
+
+                        if current_height < current_max - STONE_LIMIT {
+                            chunk.set_block_at(x, y, z, stone, block_up);
+                        } else if current_height < current_max {
+                            // Getting the noise values for the "covering" block.
+                            let cover_height = current_height + 1;
+
+                            let cover_max = if cover_x < 0 || cover_y < 0 || cover_z < 0 {
+                                0
+                            } else {
+                                get_max_level(
+                                    cover_x as usize,
+                                    cover_y as usize,
+                                    cover_z as usize,
+                                    structure_x,
+                                    structure_y,
+                                    structure_z,
+                                    &noise_generator,
+                                    middle_air_start,
+                                )
+                            };
+
+                            if cover_height < cover_max {
+                                // In dirt range and covered -> dirt.
+                                chunk.set_block_at(x, y, z, dirt, block_up)
+                            } else {
+                                // In dirt range and uncovered -> grass.
+                                chunk.set_block_at(x, y, z, grass, block_up)
+                            }
                         }
                     }
                 }
             }
-        }
-    });
 
-    let len = chunks.len();
+            chunk
+        });
 
-    for (structure_entity, chunk) in chunks {
-        if let Ok((mut structure, _)) = query.get_mut(structure_entity) {
-            event_writer.send(ChunkInitEvent {
-                structure_entity,
-                x: chunk.structure_x(),
-                y: chunk.structure_y(),
-                z: chunk.structure_z(),
-            });
-
-            structure.set_chunk(chunk);
-        }
-    }
-
-    if len != 0 {
-        timer.log_duration(&format!("Generated {len} grass chunks in"));
+        commands.spawn(GeneratingChunk {
+            task,
+            structure_entity,
+            chunk: (cx, cy, cz),
+        });
     }
 }
 
@@ -244,5 +298,7 @@ pub(super) fn register(app: &mut App) {
         TemperatureRange::new(0.0, 1000000000.0),
     );
 
-    app.add_system(generate_planet.in_set(OnUpdate(GameState::Playing)));
+    app.add_systems(
+        (generate_planet, notify_when_done_generating).in_set(OnUpdate(GameState::Playing)),
+    );
 }

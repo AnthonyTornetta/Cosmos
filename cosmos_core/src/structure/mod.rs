@@ -51,6 +51,10 @@ pub struct Structure {
     self_entity: Option<Entity>,
 
     chunks: HashMap<usize, Chunk>,
+    #[serde(skip)]
+    /// This does not represent every loading chunk, only those that have been
+    /// specifically taken out via `take_chunk_for_loading` to be generated across multiple systems/frames.
+    loading_chunks: HashSet<usize>,
     width: usize,
     height: usize,
     length: usize,
@@ -71,6 +75,7 @@ impl Structure {
             chunk_entities: HashMap::default(),
             self_entity: None,
             chunks: HashMap::default(),
+            loading_chunks: HashSet::default(),
             width,
             height,
             length,
@@ -455,9 +460,26 @@ impl Structure {
 
     /// Gets the block's relative position to this structure's transform.
     pub fn block_relative_position(&self, x: usize, y: usize, z: usize) -> Vec3 {
-        let xoff = self.blocks_width() as f32 / 2.0;
-        let yoff = self.blocks_height() as f32 / 2.0;
-        let zoff = self.blocks_length() as f32 / 2.0;
+        Self::block_relative_position_static(x, y, z, self.width, self.height, self.length)
+    }
+
+    /// A static version of [`Structure::block_relative_position`]. This is useful if you know
+    /// the dimensions of the structure, but don't have access to the structure instance.
+    ///
+    /// Gets the block's relative position to any structure's transform.
+    ///
+    /// The width, height, and length should be that structure's width, height, and length.
+    pub fn block_relative_position_static(
+        x: usize,
+        y: usize,
+        z: usize,
+        width: usize,
+        height: usize,
+        length: usize,
+    ) -> Vec3 {
+        let xoff = width as f32 / 2.0;
+        let yoff = height as f32 / 2.0;
+        let zoff = length as f32 / 2.0;
 
         let xx = x as f32 - xoff;
         let yy = y as f32 - yoff;
@@ -495,6 +517,8 @@ impl Structure {
             self.width,
             self.height,
         );
+
+        self.loading_chunks.remove(&i);
         self.chunks.insert(i, chunk);
     }
 
@@ -505,6 +529,25 @@ impl Structure {
     pub fn take_chunk(&mut self, cx: usize, cy: usize, cz: usize) -> Option<Chunk> {
         self.chunks
             .remove(&flatten(cx, cy, cz, self.width, self.height))
+    }
+
+    /// # ONLY CALL THIS IF YOU THEN CALL SET_CHUNK IN THE FUTURE!
+    ///
+    /// This takes ownership of the chunk that was at this location. Useful for
+    /// multithreading stuff over multiple chunks & multiple systems + frames.
+    ///
+    /// This will also mark the chunk as being loaded, so [`get_chunk_state`] will return
+    /// `ChunkState::Loading`.
+    pub fn take_chunk_for_loading(&mut self, cx: usize, cy: usize, cz: usize) -> Option<Chunk> {
+        let idx = flatten(cx, cy, cz, self.width, self.height);
+
+        if let Some(c) = self.chunks.remove(&idx) {
+            self.loading_chunks.insert(idx);
+
+            Some(c)
+        } else {
+            None
+        }
     }
 
     /// Iterate over blocks in a given range. Will skip over any out of bounds positions.
@@ -666,10 +709,11 @@ impl Structure {
 
     /// Returns the chunk's state
     pub fn get_chunk_state(&self, cx: usize, cy: usize, cz: usize) -> ChunkState {
-        if self
-            .chunks
-            .contains_key(&flatten(cx, cy, cz, self.width, self.height))
-        {
+        let idx = flatten(cx, cy, cz, self.width, self.height);
+
+        if self.loading_chunks.contains(&idx) {
+            ChunkState::Loading
+        } else if self.chunks.contains_key(&idx) {
             if self.chunk_entity(cx, cy, cz).is_some() {
                 ChunkState::Loaded
             } else {

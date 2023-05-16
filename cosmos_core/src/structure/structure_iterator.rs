@@ -199,13 +199,9 @@ impl<'a> Iterator for BlockIterator<'a> {
                     (x, y, z) = (body.at_x, body.at_y, body.at_z);
 
                     if body.at_z > body.end_z {
-                        println!("Nothing more.");
-
                         return None;
                     }
                 }
-
-                println!("Found {x} {y} {z}");
 
                 body.at_x += 1;
 
