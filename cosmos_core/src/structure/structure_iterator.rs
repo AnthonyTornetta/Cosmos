@@ -182,14 +182,6 @@ impl<'a> Iterator for BlockIterator<'a> {
                     .chunk_at_block_coordinates(x, y, z)
                     .is_some_and(|c| !c.is_empty()))
                 {
-                    println!(
-                        "Checking {x} {y} {z}: {} {}",
-                        body.structure.chunk_at_block_coordinates(x, y, z).is_some(),
-                        body.structure
-                            .chunk_at_block_coordinates(x, y, z)
-                            .is_some_and(|c| !c.is_empty())
-                    );
-
                     body.at_x = (body.at_x / CHUNK_DIMENSIONS + 1) * CHUNK_DIMENSIONS;
 
                     if body.at_x > body.end_x {
