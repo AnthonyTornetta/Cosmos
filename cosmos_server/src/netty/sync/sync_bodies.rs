@@ -25,16 +25,9 @@ fn send_bodies(
     for (player, _, loc) in players.iter() {
         let players_bodies: Vec<(Entity, NettyRigidBody)> = bodies
             .iter()
-            .filter(|(_, rb, unload_distance)| {
+            .filter(|(_, rb, loading_distance)| {
                 rb.location.relative_coords_to(loc).abs().max_element()
-                    // < if let Some(unload_distance) = unload_distance {
-                    < unload_distance.load_block_distance()
-                // } else {
-                //     rd.sector_range as f32
-                //         * SECTOR_DIMENSIONS
-                //         * rd.sector_range as f32
-                //         * SECTOR_DIMENSIONS
-                // }
+                    < loading_distance.load_block_distance()
             })
             .map(|(ent, net_rb, _)| (*ent, *net_rb))
             .collect();

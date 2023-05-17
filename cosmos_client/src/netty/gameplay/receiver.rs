@@ -177,6 +177,8 @@ fn client_sync_players(
                     {
                         requested_entities.entities.push((*server_entity, 0.0));
 
+                        println!("Requesting entity {}!", server_entity.index());
+
                         client.send_message(
                             NettyChannel::Reliable.id(),
                             cosmos_encoder::serialize(&ClientReliableMessages::RequestEntityData {
@@ -258,7 +260,7 @@ fn client_sync_players(
 
                 if client_id == id {
                     entity_cmds
-                        .insert(LocalPlayer::default())
+                        .insert(LocalPlayer)
                         .insert(RenderDistance::default())
                         .with_children(|parent| {
                             parent.spawn((

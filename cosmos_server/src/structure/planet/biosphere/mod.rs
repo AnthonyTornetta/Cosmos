@@ -119,8 +119,6 @@ fn add_biosphere(
 
             let biosphere = biospheres[rng.gen_range(0..biospheres.len())];
 
-            println!("Adding {biosphere} bioshpere!");
-
             commands
                 .entity(entity)
                 .insert(BiosphereMarker::new(biosphere));

@@ -8,8 +8,6 @@ use crate::structure::planet::Planet;
 use super::location::Location;
 
 fn gravity_system(
-    // Without<ChunksNeedLoaded> to prevent things from falling through
-    // the world before it's done loading.
     emitters: Query<(&GravityEmitter, &GlobalTransform, &Location)>,
     mut receiver: Query<(
         Entity,

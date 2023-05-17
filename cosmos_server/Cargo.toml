@@ -18,6 +18,7 @@ local-ip-address = { workspace = true }
 bevy_rapier3d = { workspace = true }
 crossterm = { workspace = true }
 renet_visualizer = { workspace = true }
+futures-lite = { workspace = true }
 
 rayon = { workspace = true }
 

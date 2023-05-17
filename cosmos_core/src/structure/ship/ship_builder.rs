@@ -4,6 +4,7 @@ use bevy::ecs::system::EntityCommands;
 use bevy_rapier3d::prelude::{Ccd, ExternalImpulse, ReadMassProperties, RigidBody, Velocity};
 
 use crate::{
+    persistence::LoadingDistance,
     physics::location::Location,
     structure::{structure_builder::TStructureBuilder, Structure},
 };
@@ -51,6 +52,7 @@ impl<T: TStructureBuilder> TShipBuilder for ShipBuilder<T> {
             .insert(RigidBody::Dynamic)
             .insert(ReadMassProperties::default())
             .insert(Ccd::enabled())
-            .insert(ExternalImpulse::default());
+            .insert(ExternalImpulse::default())
+            .insert(LoadingDistance::new(6, 7));
     }
 }

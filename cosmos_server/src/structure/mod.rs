@@ -3,7 +3,6 @@
 use bevy::prelude::App;
 
 pub mod block_health;
-pub mod persistence;
 pub mod planet;
 pub mod saving;
 pub mod server_structure_builder;
@@ -16,5 +15,4 @@ pub(super) fn register(app: &mut App) {
     planet::register(app);
     block_health::register(app);
     saving::register(app);
-    persistence::register(app);
 }

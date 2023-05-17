@@ -12,7 +12,7 @@ use cosmos_core::{
 
 use crate::netty::sync::entities::RequestedEntityEvent;
 
-fn on_request_planet(
+fn on_request_ship(
     mut event_reader: EventReader<RequestedEntityEvent>,
     query: Query<(&Structure, &Transform, &Location, &Velocity), With<Ship>>,
     mut server: ResMut<RenetServer>,
@@ -38,5 +38,5 @@ fn on_request_planet(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(on_request_planet);
+    app.add_system(on_request_ship);
 }

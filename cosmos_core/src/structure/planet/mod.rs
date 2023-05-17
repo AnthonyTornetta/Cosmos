@@ -42,6 +42,32 @@ impl Planet {
         Self::planet_face_relative(structure.block_relative_position(bx, by, bz))
     }
 
+    /// Gets the face of a planet this block is on.
+    ///
+    /// Use this if you know the structure's dimensions but don't have
+    /// access to the structure instance.
+    ///
+    /// * `bx` Block's x
+    /// * `by` Block's y
+    /// * `bz` Block's z
+    pub fn planet_face_without_structure(
+        bx: usize,
+        by: usize,
+        bz: usize,
+        structure_width: usize,
+        structure_height: usize,
+        structure_length: usize,
+    ) -> BlockFace {
+        Self::planet_face_relative(Structure::block_relative_position_static(
+            bx,
+            by,
+            bz,
+            structure_width,
+            structure_height,
+            structure_length,
+        ))
+    }
+
     /// Gets the face of a planet this location is closest to
     pub fn planet_face_relative(relative_position: Vec3) -> BlockFace {
         let normalized = relative_position.normalize_or_zero();
