@@ -260,7 +260,7 @@ fn client_sync_players(
 
                 if client_id == id {
                     entity_cmds
-                        .insert(LocalPlayer::default())
+                        .insert(LocalPlayer)
                         .insert(RenderDistance::default())
                         .with_children(|parent| {
                             parent.spawn((
