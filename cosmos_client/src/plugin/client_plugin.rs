@@ -18,16 +18,16 @@ pub struct ClientPluginGroup;
 impl PluginGroup for ClientPluginGroup {
     fn build(self) -> PluginGroupBuilder {
         PluginGroupBuilder::start::<Self>()
-            .add(WinitPlugin)
-            .add(TextPlugin)
-            .add(UiPlugin)
+            .add(WinitPlugin::default())
+            .add(TextPlugin::default())
+            .add(UiPlugin::default())
             .add(PbrPlugin::default())
-            .add(CorePipelinePlugin)
+            .add(CorePipelinePlugin::default())
             // NOTE: Load this after renderer initialization so that it knows about the supported
             // compressed texture formats
-            .add(GltfPlugin)
-            .add(AudioPlugin)
-            .add(GilrsPlugin)
+            .add(GltfPlugin::default())
+            .add(AudioPlugin::default())
+            .add(GilrsPlugin::default())
             .add(AnimationPlugin::default())
     }
 }

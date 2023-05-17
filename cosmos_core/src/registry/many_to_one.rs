@@ -37,7 +37,7 @@ impl<K: Identifiable + Sync + Send, V: Identifiable + Sync + Send> ManyToOneRegi
             values: HashMap::default(),
             pointers: HashMap::default(),
             name_to_value_pointer: HashMap::default(),
-            _phantom: PhantomData,
+            _phantom: PhantomData::default(),
         }
     }
 
