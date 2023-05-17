@@ -175,7 +175,7 @@ fn generate_planet(
         let location = *location;
         // Not super expensive, only copies about 256 8 bit values.
         // Still not ideal though.
-        let noise_generator = noise_generator.clone();
+        let noise_generator = **noise_generator;
 
         let task = thread_pool.spawn(async move {
             let grass = &grass;
