@@ -10,7 +10,7 @@ members = [
 resolver="2"
 
 [workspace.dependencies]
-bevy = "0.10.0"
+bevy = "0.10.1"
 bevy_rapier3d = { git = "https://github.com/AnthonyTornetta/bevy_rapier/", version = "0.21.0", features = [ "simd-stable", "serde-serialize" ] }
 
 bevy_renet = "0.0.7"

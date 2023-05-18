@@ -18,7 +18,7 @@ pub enum ServerUnreliableMessages {
         /// All the entities with their corresponding rigidbody
         bodies: Vec<(Entity, NettyRigidBody)>,
         /// The server tick this was sent at
-        time_stamp: u32,
+        time_stamp: u64,
     },
     /// Sets the movement of a ship that a player is piloting
     SetMovement {
