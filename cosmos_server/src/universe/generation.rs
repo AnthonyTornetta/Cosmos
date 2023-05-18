@@ -109,7 +109,7 @@ fn load_stars_near_players(
             }
 
             /// 0.5 is the center of system
-            const STAR_POS_OFFSET: f32 = 0.15;
+            const STAR_POS_OFFSET: f32 = 0.5;
 
             commands.spawn((
                 star,

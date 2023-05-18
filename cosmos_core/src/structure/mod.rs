@@ -7,6 +7,7 @@ use bevy::reflect::Reflect;
 use bevy::utils::{HashMap, HashSet};
 use bevy_rapier3d::prelude::PhysicsWorld;
 
+pub mod asteroid;
 pub mod block_health;
 pub mod chunk;
 pub mod events;

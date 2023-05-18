@@ -21,4 +21,5 @@ pub(super) fn register<T: States + Clone + Copy>(app: &mut App, playing_state: T
     pilot::regiter(app);
     ship_movement::register(app);
     core::register(app, playing_state);
+    ship_builder::register(app);
 }

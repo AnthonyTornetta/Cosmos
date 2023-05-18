@@ -164,6 +164,13 @@ fn spawn_planet(
     }
 }
 
+/// Checks if there should be a planet in this sector.
+pub fn is_planet_in_sector(sector: (i64, i64, i64), seed: &ServerSeed) -> bool {
+    let mut rng: rand_chacha::ChaCha8Rng = get_rng_for_sector(&seed, sector);
+
+    (sector.0 == 0 && sector.1 == 0 && sector.2 == 0) || rng.gen_range(0..1000) == 9
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_system(spawn_planet.run_if(in_state(GameState::Playing)))
         .insert_resource(CachedSectors::default())

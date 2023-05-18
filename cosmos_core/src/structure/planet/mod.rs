@@ -100,6 +100,7 @@ pub const PLANET_UNLOAD_RADIUS: u32 = PLANET_LOAD_RADIUS + 2;
 
 pub(super) fn register(app: &mut App) {
     biosphere::register(app);
+    planet_builder::register(app);
 
     app.register_type::<Planet>();
 }

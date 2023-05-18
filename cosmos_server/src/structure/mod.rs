@@ -2,6 +2,7 @@
 
 use bevy::prelude::App;
 
+pub mod asteroid;
 pub mod block_health;
 pub mod planet;
 pub mod saving;
