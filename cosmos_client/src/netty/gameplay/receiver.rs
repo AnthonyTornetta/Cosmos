@@ -113,8 +113,8 @@ fn lerp_towards(mut query: Query<(&LerpTowards, &mut Location, &mut Transform, &
             location.set_from(&lerpped_loc);
         }
 
-        transform.rotation = lerp_towards.rotation;
-        // transform.rotation.lerp(lerp_towards.rotation, 0.1);
+        transform.rotation = //lerp_towards.rotation;
+            transform.rotation.lerp(lerp_towards.rotation, 0.1);
 
         velocity.linvel = lerp_towards.body_vel.linvel.into();
         // velocity
