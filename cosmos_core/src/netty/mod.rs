@@ -31,6 +31,9 @@ pub enum NettyChannel {
     Unreliable,
     /// Used for `ServerLaserCannonSystemMessages`
     LaserCannonSystem,
+
+    /// Used for asteroids
+    Asteroids,
 }
 
 /// In the future, this should be based off the game version.
@@ -45,6 +48,7 @@ impl NettyChannel {
             Self::Reliable => 0,
             Self::Unreliable => 1,
             Self::LaserCannonSystem => 2,
+            Self::Asteroids => 3,
         }
     }
 
@@ -77,6 +81,15 @@ impl NettyChannel {
                 ..default()
             }
             .into(),
+            ReliableChannelConfig {
+                channel_id: Self::Asteroids.id(),
+                message_send_queue_size: 1000,
+                message_receive_queue_size: 1024,
+                max_message_size: 6000,
+                packet_budget: 7000,
+                ..Default::default()
+            }
+            .into(),
         ]
     }
 
@@ -107,6 +120,15 @@ impl NettyChannel {
                 message_send_queue_size: 4096 * 16,
                 message_receive_queue_size: 0,
                 ..default()
+            }
+            .into(),
+            ReliableChannelConfig {
+                channel_id: Self::Asteroids.id(),
+                message_send_queue_size: 1024 * 16,
+                message_receive_queue_size: 1000,
+                max_message_size: 6000,
+                packet_budget: 7000,
+                ..Default::default()
             }
             .into(),
         ]

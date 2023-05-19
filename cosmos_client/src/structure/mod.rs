@@ -14,4 +14,5 @@ pub(super) fn register(app: &mut App) {
     chunk_retreiver::register(app);
     ship::register(app);
     planet::register(app);
+    asteroid::register(app);
 }

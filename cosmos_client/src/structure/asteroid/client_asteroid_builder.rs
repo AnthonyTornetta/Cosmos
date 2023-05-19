@@ -1,15 +1,23 @@
 //! Used to create asteroids on the client
 
-use bevy::ecs::system::EntityCommands;
+use bevy::{
+    ecs::system::EntityCommands,
+    prelude::{Added, App, Commands, Entity, Query},
+};
 use cosmos_core::{
     physics::location::Location,
     structure::{
-        asteroid::asteroid_builder::{AsteroidBuilder, TAsteroidBuilder},
+        asteroid::{
+            asteroid_builder::{AsteroidBuilder, TAsteroidBuilder},
+            Asteroid,
+        },
         Structure,
     },
 };
 
-use crate::structure::client_structure_builder::ClientStructureBuilder;
+use crate::structure::{
+    chunk_retreiver::NeedsPopulated, client_structure_builder::ClientStructureBuilder,
+};
 
 /// Builds a client asteroid
 pub struct ClientAsteroidBuilder {
@@ -40,4 +48,14 @@ impl TAsteroidBuilder for ClientAsteroidBuilder {
     ) {
         self.builder.insert_asteroid(entity, location, structure);
     }
+}
+
+fn on_add_asteroid(query: Query<Entity, Added<Asteroid>>, mut commands: Commands) {
+    for entity in query.iter() {
+        commands.entity(entity).insert(NeedsPopulated);
+    }
+}
+
+pub(super) fn register(app: &mut App) {
+    app.add_system(on_add_asteroid);
 }

@@ -10,7 +10,10 @@ use crate::state::game_state::GameState;
 use crate::NetworkMapping;
 
 #[derive(Component, Default)]
-/// Put this on a structure that needs populated by the server
+/// Put this on a structure that needs every single chunk populated by the server at once.
+///
+/// Useful for ships & asteroids. Do not use this for something that needs dynamically loaded
+/// chunks like planets.
 pub struct NeedsPopulated;
 
 fn populate_structures(

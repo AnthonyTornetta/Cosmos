@@ -6,6 +6,8 @@ use bevy::{
 };
 
 pub mod asteroid_builder;
+pub mod asteroid_netty;
+pub mod loading;
 
 /// How far away an asteroid should be loaded
 pub const ASTEROID_LOAD_RADIUS: u32 = 5;

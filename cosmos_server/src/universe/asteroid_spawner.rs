@@ -11,7 +11,10 @@ use cosmos_core::{
     entities::player::Player,
     physics::location::{Location, SECTOR_DIMENSIONS},
     structure::{
-        asteroid::{asteroid_builder::TAsteroidBuilder, Asteroid, ASTEROID_LOAD_RADIUS},
+        asteroid::{
+            asteroid_builder::TAsteroidBuilder, loading::AsteroidNeedsCreated, Asteroid,
+            ASTEROID_LOAD_RADIUS,
+        },
         Structure,
     },
 };
@@ -111,7 +114,7 @@ fn spawn_planet(
 
                 builder.insert_asteroid(&mut entity_cmd, loc, &mut structure);
 
-                entity_cmd.insert(structure);
+                entity_cmd.insert((structure, AsteroidNeedsCreated));
             }
         }
     }

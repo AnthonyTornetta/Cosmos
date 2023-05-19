@@ -1,9 +1,9 @@
 //! Represents the communications an asteroid needs
 
-use bevy::prelude::{Color, Component, Entity, Vec3};
+use bevy::prelude::Entity;
 use serde::{Deserialize, Serialize};
 
-use crate::physics::location::Location;
+use crate::netty::netty_rigidbody::NettyRigidBody;
 
 #[derive(Debug, Serialize, Deserialize)]
 /// All the asteroid server messages
