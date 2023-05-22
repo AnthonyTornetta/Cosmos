@@ -4,6 +4,7 @@ use bevy::{
     prelude::{Entity, Resource},
     utils::HashMap,
 };
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Default, Resource)]
 /// Maps each player's id to their player entity
@@ -31,9 +32,11 @@ impl ServerLobby {
     }
 }
 
-#[derive(Debug, Default, Resource)]
-/// Unused currently, but will eventually store the server's tick
-pub struct NetworkTick(pub u32);
+#[derive(
+    Debug, Default, Resource, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Clone, Copy,
+)]
+/// Store the server's tick
+pub struct NetworkTick(pub u64);
 
 #[derive(Default, Resource)]
 /// Unused currently, but will eventually store each client's individual ticks

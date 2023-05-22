@@ -52,6 +52,11 @@ pub struct Structure {
     self_entity: Option<Entity>,
 
     chunks: HashMap<usize, Chunk>,
+
+    /// Chunks that are just air should be removed from the chunks map above to conserve memory
+    /// and added into this to be stored instead.
+    empty_chunks: HashSet<usize>,
+
     #[serde(skip)]
     /// This does not represent every loading chunk, only those that have been
     /// specifically taken out via `take_chunk_for_loading` to be generated across multiple systems/frames.
@@ -76,6 +81,7 @@ impl Structure {
             chunk_entities: HashMap::default(),
             self_entity: None,
             chunks: HashMap::default(),
+            empty_chunks: HashSet::default(),
             loading_chunks: HashSet::default(),
             width,
             height,
@@ -142,6 +148,8 @@ impl Structure {
     }
 
     /// Gets the chunk from its entity, or return None if there is no loaded chunk for that entity.
+    ///
+    /// Remember that empty chunks will NOT have an entity.
     pub fn chunk_from_entity(&self, entity: &Entity) -> Option<&Chunk> {
         self.chunk_entity_map.get(entity).map(|x| &self.chunks[x])
     }
@@ -158,12 +166,12 @@ impl Structure {
         self.self_entity
     }
 
-    /// Returns None for unloaded/empty chunks - panics for chunks that are out of bounds
+    /// Returns None for unloaded/empty chunks - panics for chunks that are out of bounds in debug mode
     ///  
     /// (0, 0, 0) => chunk @ 0, 0, 0\
     /// (1, 0, 0) => chunk @ 1, 0, 0
     pub fn chunk_from_chunk_coordinates(&self, cx: usize, cy: usize, cz: usize) -> Option<&Chunk> {
-        assert!(
+        debug_assert!(
             cx < self.width && cy < self.height && cz < self.length,
             "{cx} < {} && {cy} < {} && {cz} < {} failed",
             self.width,
@@ -173,6 +181,14 @@ impl Structure {
 
         self.chunks
             .get(&flatten(cx, cy, cz, self.width, self.height))
+    }
+
+    /// Returns if the chunk at these chunk coordinates is fully loaded & empty.
+    pub fn has_empty_chunk_at(&self, cx: usize, cy: usize, cz: usize) -> bool {
+        self.get_chunk_state(cx, cy, cz) == ChunkState::Loaded
+            && self
+                .empty_chunks
+                .contains(&flatten(cx, cy, cz, self.width, self.height))
     }
 
     /// Returns None for unloaded/empty chunks AND for chunks that are out of bounds
@@ -196,7 +212,7 @@ impl Structure {
         }
     }
 
-    /// Gets the mutable chunk for these chunk coordinates.
+    /// Gets the mutable chunk for these chunk coordinates. If the chunk is unloaded OR empty, this will return None.
     ///
     /// ## Be careful with this!!
     ///
@@ -209,7 +225,7 @@ impl Structure {
         cy: usize,
         cz: usize,
     ) -> Option<&mut Chunk> {
-        assert!(
+        debug_assert!(
             cx < self.width && cy < self.height && cz < self.length,
             "{cx} < {} && {cy} < {} && {cz} < {} failed",
             self.width,
@@ -221,7 +237,7 @@ impl Structure {
             .get_mut(&flatten(cx, cy, cz, self.width, self.height))
     }
 
-    /// Returns the chunk at those block coordinates
+    /// Returns the chunk at those block coordinates if it is non-empty AND loaded.
     ///
     /// Ex:
     /// - (0, 0, 0) => chunk @ 0, 0, 0\
@@ -235,7 +251,7 @@ impl Structure {
         )
     }
 
-    /// Returns the mutable chunk at those block coordinates
+    /// Returns the mutable chunk at those block coordinates. If the chunk is unloaded OR empty, this will return None.
     ///
     /// Ex:
     /// - (0, 0, 0) => chunk @ 0, 0, 0\
@@ -260,6 +276,8 @@ impl Structure {
     }
 
     /// Returns true if these block coordinates are within the structure's bounds
+    ///
+    /// Note that this does not guarentee that this block location is loaded.
     pub fn is_within_blocks(&self, x: usize, y: usize, z: usize) -> bool {
         x < self.blocks_width() && y < self.blocks_height() && z < self.blocks_length()
     }
@@ -322,9 +340,13 @@ impl Structure {
             .unwrap_or(BlockFace::Top)
     }
 
-    /// If the chunk is loaded/non-empty, returns the block at that coordinate.
+    /// If the chunk is loaded, non-empty, returns the block at that coordinate.
     /// Otherwise, returns AIR_BLOCK_ID
     pub fn block_id_at(&self, x: usize, y: usize, z: usize) -> u16 {
+        debug_assert!(
+            x < self.blocks_width() && y < self.blocks_height() && z < self.blocks_length()
+        );
+
         self.chunk_at_block_coordinates(x, y, z)
             .map(|chunk| {
                 chunk.block_at(
@@ -348,7 +370,7 @@ impl Structure {
         blocks.from_numeric_id(id)
     }
 
-    /// Gets the hashmap for the chunks
+    /// Gets the hashmap for the loaded, non-empty chunks.
     ///
     /// This is going to be replaced with an iterator in the future
     pub fn chunks(&self) -> &HashMap<usize, Chunk> {
@@ -520,7 +542,27 @@ impl Structure {
         );
 
         self.loading_chunks.remove(&i);
-        self.chunks.insert(i, chunk);
+
+        if chunk.is_empty() {
+            self.empty_chunks.insert(i);
+            self.chunks.remove(&i);
+        } else {
+            self.chunks.insert(i, chunk);
+            self.empty_chunks.remove(&i);
+        }
+    }
+
+    /// Sets the chunk at this chunk location to be empty (all air).
+    ///
+    /// Used generally when loading stuff on client from server.
+    ///
+    /// This does not trigger any events, so make sure to handle those properly.
+    pub fn set_to_empty_chunk(&mut self, cx: usize, cy: usize, cz: usize) {
+        let i = flatten(cx, cy, cz, self.width, self.height);
+
+        self.chunks.remove(&i);
+        self.loading_chunks.remove(&i);
+        self.empty_chunks.insert(i);
     }
 
     /// # ONLY CALL THIS IF YOU THEN CALL SET_CHUNK IN THE SAME SYSTEM!
@@ -537,18 +579,32 @@ impl Structure {
     /// This takes ownership of the chunk that was at this location. Useful for
     /// multithreading stuff over multiple chunks & multiple systems + frames.
     ///
+    /// If no chunk was previously at this location, this creates a new chunk for you to
+    /// populate & then later insert into this structure via `set_chunk`.
+    ///
     /// This will also mark the chunk as being loaded, so [`get_chunk_state`] will return
     /// `ChunkState::Loading`.
-    pub fn take_chunk_for_loading(&mut self, cx: usize, cy: usize, cz: usize) -> Option<Chunk> {
+    pub fn take_or_create_chunk_for_loading(&mut self, cx: usize, cy: usize, cz: usize) -> Chunk {
+        debug_assert!(cx < self.width && cy < self.height && cz < self.height);
+
         let idx = flatten(cx, cy, cz, self.width, self.height);
+        self.loading_chunks.insert(idx);
 
         if let Some(c) = self.chunks.remove(&idx) {
-            self.loading_chunks.insert(idx);
-
-            Some(c)
+            c
         } else {
-            None
+            self.empty_chunks.insert(idx);
+
+            Chunk::new(cx, cy, cz)
         }
+    }
+
+    /// Marks a chunk as being loaded, useful for planet generation
+    pub fn mark_chunk_being_loaded(&mut self, cx: usize, cy: usize, cz: usize) {
+        debug_assert!(cx < self.width && cy < self.height && cz < self.height);
+
+        let idx = flatten(cx, cy, cz, self.width, self.height);
+        self.loading_chunks.insert(idx);
     }
 
     /// Iterate over blocks in a given range. Will skip over any out of bounds positions.
@@ -710,6 +766,10 @@ impl Structure {
 
     /// Returns the chunk's state
     pub fn get_chunk_state(&self, cx: usize, cy: usize, cz: usize) -> ChunkState {
+        if cx >= self.width || cy >= self.height || cz >= self.length {
+            return ChunkState::Invalid;
+        }
+
         let idx = flatten(cx, cy, cz, self.width, self.height);
 
         if self.loading_chunks.contains(&idx) {
@@ -720,10 +780,10 @@ impl Structure {
             } else {
                 ChunkState::Loading
             }
-        } else if cx < self.width && cy < self.height && cz < self.length {
-            ChunkState::Unloaded
+        } else if self.empty_chunks.contains(&idx) {
+            ChunkState::Loaded
         } else {
-            ChunkState::Invalid
+            ChunkState::Unloaded
         }
     }
 
@@ -737,6 +797,7 @@ impl Structure {
     ) -> Option<Chunk> {
         let index = flatten(cx, cy, cz, self.width, self.height);
 
+        self.empty_chunks.remove(&index);
         let chunk = self.chunks.remove(&index);
 
         if let Some(entity) = self.chunk_entities.remove(&index) {

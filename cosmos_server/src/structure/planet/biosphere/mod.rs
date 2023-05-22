@@ -1,12 +1,18 @@
 //! Represents how a planet will be generated
 
-use bevy::prelude::{
-    Added, App, Commands, Component, Entity, EventReader, EventWriter, IntoSystemConfig, OnUpdate,
-    Query, Res, ResMut, Resource, With, Without,
+use std::marker::PhantomData;
+
+use bevy::{
+    prelude::{
+        Added, App, Commands, Component, Entity, EventReader, EventWriter, IntoSystemConfig,
+        OnUpdate, Query, Res, ResMut, Resource, With, Without,
+    },
+    tasks::Task,
 };
 use cosmos_core::{
     physics::location::Location,
     structure::{
+        chunk::Chunk,
         planet::{biosphere::BiosphereMarker, Planet},
         Structure,
     },
@@ -49,6 +55,33 @@ pub trait TBiosphere<T: Component, E: TGenerateChunkEvent> {
     /// Gets a component for this specific generate chunk event
     fn get_generate_chunk_event(&self, x: usize, y: usize, z: usize, structure_entity: Entity)
         -> E;
+}
+
+#[derive(Debug, Component)]
+/// Use this to asynchronously generate chunks
+pub struct GeneratingChunk<T: Component> {
+    /// The task responsible for this chunk
+    pub task: Task<Chunk>,
+    /// The structure's entity
+    pub structure_entity: Entity,
+    /// The chunk's location in the structure
+    pub chunk: (usize, usize, usize),
+
+    phantom: PhantomData<T>,
+}
+
+impl<T: Component> GeneratingChunk<T> {
+    /// Creates a GeneratingChunk instance
+    ///
+    /// Make sure to add this to an entity & query it to check once it's finished.
+    pub fn new(task: Task<Chunk>, structure_entity: Entity, chunk: (usize, usize, usize)) -> Self {
+        Self {
+            task,
+            structure_entity,
+            chunk,
+            phantom: PhantomData::default(),
+        }
+    }
 }
 
 /// Use this to register a biosphere

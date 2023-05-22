@@ -51,6 +51,7 @@ fn unload_far(
 const SEARCH_RANGE: i64 = 25;
 const DEFAULT_LOAD_DISTANCE: u32 = (LOAD_DISTANCE / SECTOR_DIMENSIONS) as u32;
 
+/// Performance hot spot
 fn load_near(
     query: Query<&Location, With<Player>>,
     loaded_entities: Query<&EntityId>,
@@ -66,7 +67,9 @@ fn load_near(
 
                     if let Some(vec) = sectors_cache.0.get(&sector) {
                         for (entity_id, load_distance) in vec.iter() {
-                            if max_delta <= load_distance.unwrap_or(DEFAULT_LOAD_DISTANCE) && !loaded_entities.iter().any(|x| x == entity_id) {
+                            if max_delta <= load_distance.unwrap_or(DEFAULT_LOAD_DISTANCE)
+                                && !loaded_entities.iter().any(|x| x == entity_id)
+                            {
                                 commands.spawn((
                                     SaveFileIdentifier::new(
                                         Some(sector),
@@ -116,7 +119,9 @@ fn load_near(
 
                                     cache.insert((entity_id.clone(), load_distance));
 
-                                    if max_delta <= load_distance.unwrap_or(DEFAULT_LOAD_DISTANCE) && !loaded_entities.iter().any(|x| x == &entity_id) {
+                                    if max_delta <= load_distance.unwrap_or(DEFAULT_LOAD_DISTANCE)
+                                        && !loaded_entities.iter().any(|x| x == &entity_id)
+                                    {
                                         commands.spawn((
                                             SaveFileIdentifier::new(
                                                 Some((x, y, z)),
