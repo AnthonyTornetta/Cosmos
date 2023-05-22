@@ -13,6 +13,7 @@ use bevy::render::primitives::Aabb;
 use bevy::utils::hashbrown::HashMap;
 use cosmos_core::block::{Block, BlockFace};
 use cosmos_core::events::block_events::BlockChangedEvent;
+use cosmos_core::physics::location::SECTOR_DIMENSIONS;
 use cosmos_core::registry::identifiable::Identifiable;
 use cosmos_core::registry::many_to_one::ManyToOneRegistry;
 use cosmos_core::registry::Registry;
@@ -231,6 +232,8 @@ fn monitor_needs_rendered_system(
                     .distance_squared(local_transform.translation()),
             )
         })
+        // Only render chunks that are within a reasonable viewing distance
+        .filter(|(_, _, distance_sqrd)| *distance_sqrd < SECTOR_DIMENSIONS * SECTOR_DIMENSIONS)
         .collect::<Vec<(Entity, &ChunkEntity, f32)>>();
 
     let chunks_per_frame = 10;
@@ -302,11 +305,7 @@ fn monitor_needs_rendered_system(
                 .push((entity, renderer.create_mesh()));
         });
 
-    let to_process_chunks = to_process
-        .lock()
-        .expect("This should be good.")
-        .take()
-        .unwrap();
+    let to_process_chunks = to_process.lock().unwrap().take().unwrap();
 
     if !to_process_chunks.is_empty() {
         timer.log_duration(&format!(

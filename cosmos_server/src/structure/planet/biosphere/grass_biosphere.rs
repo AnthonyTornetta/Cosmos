@@ -135,9 +135,10 @@ fn generate_planet(
         .iter()
         .filter_map(|ev| {
             if let Ok((mut structure, _)) = query.get_mut(ev.structure_entity) {
-                structure
-                    .take_chunk_for_loading(ev.x, ev.y, ev.z)
-                    .map(|chunk| (ev.structure_entity, chunk))
+                Some((
+                    ev.structure_entity,
+                    structure.take_or_create_chunk_for_loading(ev.x, ev.y, ev.z),
+                ))
             } else {
                 None
             }

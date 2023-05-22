@@ -440,6 +440,25 @@ fn client_sync_players(
                     }
                 }
             }
+            ServerReliableMessages::EmptyChunk {
+                structure_entity,
+                cx,
+                cy,
+                cz,
+            } => {
+                if let Some(s_entity) = network_mapping.client_from_server(&structure_entity) {
+                    if let Ok(mut structure) = query_structure.get_mut(s_entity) {
+                        structure.set_to_empty_chunk(cx as usize, cy as usize, cz as usize);
+
+                        set_chunk_event_writer.send(ChunkInitEvent {
+                            x: cx as usize,
+                            y: cy as usize,
+                            z: cz as usize,
+                            structure_entity: s_entity,
+                        });
+                    }
+                }
+            }
             ServerReliableMessages::StructureRemove {
                 entity: server_entity,
             } => {

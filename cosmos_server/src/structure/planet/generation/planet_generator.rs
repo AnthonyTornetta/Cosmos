@@ -1,6 +1,9 @@
 //! Used to generate planets
 
-use std::sync::Mutex;
+use std::sync::{
+    atomic::{AtomicI32, Ordering},
+    Mutex,
+};
 
 use bevy::{
     ecs::event::Event,
@@ -16,11 +19,10 @@ use cosmos_core::{
     },
     physics::location::Location,
     structure::{
-        chunk::{Chunk, CHUNK_DIMENSIONSF},
-        planet::Planet,
-        structure_iterator::ChunkIteratorResult,
+        chunk::CHUNK_DIMENSIONSF, planet::Planet, structure_iterator::ChunkIteratorResult,
         ChunkState, Structure,
     },
+    utils::timer::UtilsTimer,
 };
 use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 
@@ -108,6 +110,11 @@ fn get_requested_chunk(
     let serialized = Mutex::new(Some(Vec::new()));
     let bounced = Mutex::new(Some(Vec::new()));
 
+    let non_empty_serializes = AtomicI32::new(0);
+    let empty_serializes = AtomicI32::new(0);
+
+    let timer = UtilsTimer::start();
+
     // No par_iter() for event readers, so first convert to vec then par_iter() it.
     event_reader
         .iter()
@@ -135,6 +142,13 @@ fn get_requested_chunk(
                         if let Some(chunk) = structure.chunk_from_chunk_coordinates(cx, cy, cz) {
                             let mut mutex = serialized.lock().expect("Failed to lock");
 
+                            let mut timer = UtilsTimer::start();
+                            let _ = cosmos_encoder::serialize(chunk);
+                            timer.log_duration("For bincode + compression:");
+                            timer.reset();
+                            let _ = bincode::serialize(chunk).unwrap();
+                            timer.log_duration("For just bincode:");
+
                             mutex.as_mut().unwrap().push((
                                 ev.requester_id,
                                 cosmos_encoder::serialize(&ServerReliableMessages::ChunkData {
@@ -142,6 +156,22 @@ fn get_requested_chunk(
                                     serialized_chunk: cosmos_encoder::serialize(chunk),
                                 }),
                             ));
+
+                            non_empty_serializes.fetch_add(1, Ordering::SeqCst);
+                        } else if structure.has_empty_chunk_at(cx, cy, cz) {
+                            let mut mutex = serialized.lock().expect("Failed to lock");
+
+                            mutex.as_mut().unwrap().push((
+                                ev.requester_id,
+                                cosmos_encoder::serialize(&ServerReliableMessages::EmptyChunk {
+                                    structure_entity: ev.structure_entity,
+                                    cx: cx as u32,
+                                    cy: cy as u32,
+                                    cz: cz as u32,
+                                }),
+                            ));
+
+                            empty_serializes.fetch_add(1, Ordering::SeqCst);
                         }
                     }
                     ChunkState::Loading => bounced
@@ -163,6 +193,13 @@ fn get_requested_chunk(
             }
         });
 
+    let non_empty_serializes = non_empty_serializes.into_inner();
+    let empty_serializes = empty_serializes.into_inner();
+
+    if non_empty_serializes != 0 || empty_serializes != 0 {
+        timer.log_duration(&format!("Time to serialize {non_empty_serializes} non-empty chunks & {empty_serializes} empty chunks:"));
+    }
+
     for bounce in bounced.lock().expect("Failed to lock").take().unwrap() {
         event_writer.send(bounce);
     }
@@ -176,15 +213,7 @@ fn get_requested_chunk(
             continue;
         };
 
-        structure.set_chunk(Chunk::new(cx, cy, cz));
-        let needs_generated_flag = commands
-            .spawn(NeedsPopulated {
-                chunk_coords: (cx, cy, cz),
-                structure_entity: entity,
-            })
-            .id();
-
-        commands.entity(entity).add_child(needs_generated_flag);
+        mark_chunk_for_generation(&mut structure, &mut commands, cx, cy, cz, entity);
 
         event_writer.send(RequestChunkBouncer(ev));
     }
@@ -247,21 +276,35 @@ fn generate_chunks_near_players(
             }
 
             for (x, y, z) in chunks {
-                best_planet.set_chunk(Chunk::new(x, y, z));
-                let needs_generated_flag = commands
-                    .spawn((
-                        NeedsPopulated {
-                            chunk_coords: (x, y, z),
-                            structure_entity: entity,
-                        },
-                        NoSendEntity,
-                    ))
-                    .id();
-
-                commands.entity(entity).add_child(needs_generated_flag);
+                mark_chunk_for_generation(&mut best_planet, &mut commands, x, y, z, entity);
             }
         }
     }
+}
+
+fn mark_chunk_for_generation(
+    structure: &mut Structure,
+    commands: &mut Commands,
+    cx: usize,
+    cy: usize,
+    cz: usize,
+    structure_entity: Entity,
+) {
+    structure.mark_chunk_being_loaded(cx, cy, cz);
+
+    let needs_generated_flag = commands
+        .spawn((
+            NeedsPopulated {
+                chunk_coords: (cx, cy, cz),
+                structure_entity,
+            },
+            NoSendEntity,
+        ))
+        .id();
+
+    commands
+        .entity(structure_entity)
+        .add_child(needs_generated_flag);
 }
 
 fn unload_chunks_far_from_players(
