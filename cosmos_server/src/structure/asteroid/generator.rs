@@ -128,7 +128,7 @@ fn start_generating_asteroid(
                             x_pos as f64 * 0.1 + cx,
                             y_pos as f64 * 0.1 + cy,
                             z_pos as f64 * 0.1 + cz,
-                        ]) * 15.0) as f32;
+                        ]) * 150.0) as f32;
 
                         let dist =
                             x_pos * x_pos + y_pos * y_pos + z_pos * z_pos + noise_here * noise_here;

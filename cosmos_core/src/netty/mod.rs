@@ -60,8 +60,8 @@ impl NettyChannel {
                 message_resend_time: Duration::from_millis(200),
                 message_send_queue_size: 4096 * 4,
                 message_receive_queue_size: 4096 * 4,
-                max_message_size: 6000,
-                packet_budget: 7000,
+                max_message_size: 12000,
+                packet_budget: 13000,
                 ..default()
             }
             .into(),
@@ -101,8 +101,8 @@ impl NettyChannel {
                 message_resend_time: Duration::from_millis(200),
                 message_send_queue_size: 4096 * 4,
                 message_receive_queue_size: 4096 * 4,
-                max_message_size: 6000,
-                packet_budget: 7000,
+                max_message_size: 12000,
+                packet_budget: 13000,
                 ..default()
             }
             .into(),
