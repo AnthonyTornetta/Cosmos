@@ -30,7 +30,7 @@ use super::planet_spawner::is_planet_in_sector;
 #[derive(Default, Resource, Deref, DerefMut)]
 struct CachedSectors(HashSet<(i64, i64, i64)>);
 
-fn spawn_planet(
+fn spawn_asteroid(
     query: Query<&Location, With<Asteroid>>,
     players: Query<&Location, With<Player>>,
     server_seed: Res<ServerSeed>,
@@ -121,6 +121,6 @@ fn spawn_planet(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(spawn_planet.run_if(in_state(GameState::Playing)))
+    app.add_system(spawn_asteroid.run_if(in_state(GameState::Playing)))
         .insert_resource(CachedSectors::default());
 }

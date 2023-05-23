@@ -2,20 +2,22 @@
 
 use bevy::{
     prelude::{
-        in_state, App, Commands, Deref, DerefMut, IntoSystemConfig, Query, Res, ResMut, Resource,
-        Vec3, With,
+        App, Commands, Component, Deref, DerefMut, DespawnRecursiveExt, Entity, IntoSystemConfigs,
+        OnUpdate, Query, Res, ResMut, Resource, Vec3, With,
     },
+    tasks::{AsyncComputeTaskPool, Task},
     utils::HashSet,
 };
 use cosmos_core::{
     entities::player::Player,
     physics::location::Location,
     structure::{
-        planet::{planet_builder::TPlanetBuilder, Planet, PLANET_UNLOAD_RADIUS},
+        planet::{planet_builder::TPlanetBuilder, Planet, PLANET_LOAD_RADIUS},
         Structure,
     },
     universe::star::Star,
 };
+use futures_lite::future;
 use rand::Rng;
 
 use crate::{
@@ -23,145 +25,159 @@ use crate::{
     state::GameState, structure::planet::server_planet_builder::ServerPlanetBuilder,
 };
 
-#[derive(Default, Resource, Deref, DerefMut)]
+#[derive(Debug, Default, Resource, Deref, DerefMut, Clone)]
 struct CachedSectors(HashSet<(i64, i64, i64)>);
 
 const BACKGROUND_TEMPERATURE: f32 = 50.0;
 const TEMPERATURE_CONSTANT: f32 = 5.3e9;
 
-#[derive(Resource, Debug)]
-/// Used to not check everything at once (too intensive), but rather divide
-/// the area it checks into multiple quadrants it can check individually
-struct Quadrant(f32, f32, f32);
+#[derive(Component, Debug)]
+struct PlanetSpawnerAsyncTask(Task<(CachedSectors, Vec<PlanetToSpawn>)>);
 
-const SUBDIVISIONS: f32 = 8.0;
+#[derive(Debug)]
+struct PlanetToSpawn {
+    temperature: f32,
+    location: Location,
+    size: usize,
+}
+
+fn monitor_planets_to_spawn(
+    mut query: Query<(Entity, &mut PlanetSpawnerAsyncTask)>,
+    mut commands: Commands,
+    mut sectors_cache: ResMut<CachedSectors>,
+) {
+    let Ok((entity, mut task)) = query.get_single_mut() else {
+        return;
+    };
+
+    if let Some((cache, planets)) = future::block_on(future::poll_once(&mut task.0)) {
+        println!("Finished async planet gen");
+        commands.entity(entity).despawn_recursive();
+
+        for planet in planets {
+            let (size, loc, temperature) = (planet.size, planet.location, planet.temperature);
+
+            let mut entity_cmd = commands.spawn_empty();
+
+            let mut structure = Structure::new(size, size, size);
+
+            let builder = ServerPlanetBuilder::default();
+
+            builder.insert_planet(
+                &mut entity_cmd,
+                loc,
+                &mut structure,
+                Planet::new(temperature),
+            );
+
+            entity_cmd.insert(structure);
+        }
+
+        *sectors_cache = cache;
+    }
+}
 
 fn spawn_planet(
     query: Query<&Location, With<Planet>>,
     players: Query<&Location, With<Player>>,
     server_seed: Res<ServerSeed>,
-    mut cache: ResMut<CachedSectors>,
     mut commands: Commands,
     stars: Query<(&Location, &Star), With<Star>>,
-    mut quadrant: ResMut<Quadrant>,
+    cache: Res<CachedSectors>,
+    is_already_generating: Query<(), With<PlanetSpawnerAsyncTask>>,
 ) {
-    let mut to_check_sectors = HashSet::new();
+    if !is_already_generating.is_empty() {
+        // an async task is already running, don't make another one
+        return;
+    }
 
-    for l in players.iter() {
-        for dsz in -(((1.0 - quadrant.2 / SUBDIVISIONS) * PLANET_UNLOAD_RADIUS as f32) as i64)
-            ..=((quadrant.2 / SUBDIVISIONS * PLANET_UNLOAD_RADIUS as f32) as i64)
-        {
-            for dsy in -(((1.0 - quadrant.1 / SUBDIVISIONS) * PLANET_UNLOAD_RADIUS as f32) as i64)
-                ..=((quadrant.1 / SUBDIVISIONS * PLANET_UNLOAD_RADIUS as f32) as i64)
-            {
-                for dsx in -(((1.0 - quadrant.0 / SUBDIVISIONS) * PLANET_UNLOAD_RADIUS as f32)
-                    as i64)
-                    ..=((quadrant.0 / SUBDIVISIONS * PLANET_UNLOAD_RADIUS as f32) as i64)
-                {
-                    let sector = (dsx + l.sector_x, dsy + l.sector_y, dsz + l.sector_z);
-                    to_check_sectors.insert(sector);
+    let thread_pool = AsyncComputeTaskPool::get();
+
+    println!("Starting async planet gen");
+
+    let locs = players.iter().copied().collect::<Vec<Location>>();
+
+    let mut cache = cache.clone();
+
+    query.iter().for_each(|l| {
+        cache.insert((l.sector_x, l.sector_y, l.sector_z));
+    });
+
+    let server_seed = server_seed.clone();
+    let stars = stars
+        .iter()
+        .map(|(x, y)| (*x, *y))
+        .collect::<Vec<(Location, Star)>>();
+
+    let task = thread_pool.spawn(async move {
+        let mut to_check_sectors = HashSet::new();
+
+        for l in locs {
+            for dsz in -(PLANET_LOAD_RADIUS as i64)..=(PLANET_LOAD_RADIUS as i64) {
+                for dsy in -(PLANET_LOAD_RADIUS as i64)..=(PLANET_LOAD_RADIUS as i64) {
+                    for dsx in -(PLANET_LOAD_RADIUS as i64)..=(PLANET_LOAD_RADIUS as i64) {
+                        let sector = (dsx + l.sector_x, dsy + l.sector_y, dsz + l.sector_z);
+                        if !cache.contains(&sector) {
+                            to_check_sectors.insert(sector);
+                        }
+                    }
                 }
             }
         }
-    }
 
-    quadrant.0 += 1.0;
-    if quadrant.0 > SUBDIVISIONS {
-        quadrant.0 = 0.0;
+        let mut made_stars = vec![];
 
-        quadrant.1 += 1.0;
-        if quadrant.1 > SUBDIVISIONS {
-            quadrant.1 = 0.0;
+        for (sx, sy, sz) in to_check_sectors {
+            cache.insert((sx, sy, sz));
 
-            quadrant.2 += 1.0;
-            if quadrant.2 > SUBDIVISIONS {
-                quadrant.2 = 0.0;
+            if is_sector_loaded((sx, sy, sz)) {
+                // This sector has already been loaded, don't regenerate stuff
+                continue;
             }
-        }
-    }
 
-    let mut dead_sectors = HashSet::new();
+            let mut rng = get_rng_for_sector(&server_seed, (sx, sy, sz));
 
-    // Clear out unloaded sectors from the cache
-    for sector in cache.iter() {
-        if !to_check_sectors.contains(sector) {
-            dead_sectors.insert(*sector);
-        }
-    }
+            let is_origin = sx == 0 && sy == 0 && sz == 0;
 
-    for dead_sector in dead_sectors {
-        cache.remove(&dead_sector);
-    }
+            if is_origin || rng.gen_range(0..1000) == 99999 {
+                let location = Location::new(Vec3::ZERO, sx, sy, sz);
 
-    let mut sectors = HashSet::new();
+                let mut closest_star = None;
+                let mut best_dist = None;
 
-    for sector in to_check_sectors {
-        if !cache.contains(&sector) {
-            sectors.insert(sector);
-        }
-    }
+                for (star_loc, star) in stars.iter() {
+                    let dist = location.distance_sqrd(star_loc);
 
-    for loc in query.iter() {
-        let sector = (loc.sector_x, loc.sector_y, loc.sector_z);
-        cache.insert(sector);
-        sectors.remove(&sector);
-    }
+                    if closest_star.is_none() || best_dist.unwrap() < dist {
+                        closest_star = Some(star);
+                        best_dist = Some(dist);
+                    }
+                }
 
-    for (sx, sy, sz) in sectors {
-        cache.insert((sx, sy, sz));
+                if let Some(star) = closest_star {
+                    let size: usize = if is_origin {
+                        50
+                    } else {
+                        rng.gen_range(200..=500)
+                    };
 
-        if is_sector_loaded((sx, sy, sz)) {
-            // This sector has already been loaded, don't regenerate stuff
-            continue;
-        }
+                    let temperature = (TEMPERATURE_CONSTANT
+                        * (star.temperature() / best_dist.unwrap()))
+                    .max(BACKGROUND_TEMPERATURE);
 
-        let mut rng = get_rng_for_sector(&server_seed, (sx, sy, sz));
-
-        let is_origin = sx == 0 && sy == 0 && sz == 0;
-
-        if is_origin || rng.gen_range(0..1000) == 99999 {
-            let loc = Location::new(Vec3::ZERO, sx, sy, sz);
-
-            let mut closest_star = None;
-            let mut best_dist = None;
-
-            for (star_loc, star) in stars.iter() {
-                let dist = loc.distance_sqrd(star_loc);
-
-                if closest_star.is_none() || best_dist.unwrap() < dist {
-                    closest_star = Some(star);
-                    best_dist = Some(dist);
+                    made_stars.push(PlanetToSpawn {
+                        size,
+                        temperature,
+                        location,
+                    });
                 }
             }
-
-            if let Some(star) = closest_star {
-                let mut entity_cmd = commands.spawn_empty();
-
-                let size: usize = if is_origin {
-                    50
-                } else {
-                    rng.gen_range(200..=500)
-                };
-
-                let mut structure = Structure::new(size, size, size);
-
-                let builder = ServerPlanetBuilder::default();
-
-                let temperature = (TEMPERATURE_CONSTANT
-                    * (star.temperature() / best_dist.unwrap()))
-                .max(BACKGROUND_TEMPERATURE);
-
-                builder.insert_planet(
-                    &mut entity_cmd,
-                    loc,
-                    &mut structure,
-                    Planet::new(temperature),
-                );
-
-                entity_cmd.insert(structure);
-            }
         }
-    }
+
+        (cache, made_stars)
+    });
+
+    commands.spawn(PlanetSpawnerAsyncTask(task));
 }
 
 /// Checks if there should be a planet in this sector.
@@ -172,7 +188,6 @@ pub fn is_planet_in_sector(sector: (i64, i64, i64), seed: &ServerSeed) -> bool {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(spawn_planet.run_if(in_state(GameState::Playing)))
-        .insert_resource(CachedSectors::default())
-        .insert_resource(Quadrant(0.0, 0.0, 0.0));
+    app.add_systems((monitor_planets_to_spawn, spawn_planet).in_set(OnUpdate(GameState::Playing)))
+        .insert_resource(CachedSectors::default());
 }

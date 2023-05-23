@@ -25,7 +25,7 @@ pub mod saving;
 /// this entity.
 pub struct EntityId(String);
 
-#[derive(Debug, Resource, Default)]
+#[derive(Debug, Resource, Default, Clone)]
 /// This is a resource that caches the saved entities of different sectors that a player has been near.
 ///
 /// This is just used to prevent excessive IO operations.

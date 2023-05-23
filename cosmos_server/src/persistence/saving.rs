@@ -91,10 +91,9 @@ pub fn done_saving(
                 if let SaveFileIdentifierType::Base((entity_id, Some(sector), load_distance)) =
                     &save_file_identifier.identifier_type
                 {
-                    sectors_cache
-                        .0
-                        .get_mut(sector)
-                        .map(|set| set.remove(&(entity_id.clone(), *load_distance)));
+                    if let Some(set) = sectors_cache.0.get_mut(sector) {
+                        set.remove(&(entity_id.clone(), *load_distance));
+                    }
                 }
             }
         }

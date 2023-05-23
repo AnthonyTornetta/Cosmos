@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use cosmos_core::{netty::cosmos_encoder, utils::resource_wrapper::ResourceWrapper};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Resource, Deref, Serialize, Deserialize)]
+#[derive(Debug, Resource, Deref, Serialize, Deserialize, Clone, Copy)]
 /// This sets the seed the server uses to generate the universe
 pub struct ServerSeed(u64);
 
