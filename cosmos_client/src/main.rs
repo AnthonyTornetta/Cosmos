@@ -27,6 +27,7 @@ use std::env;
 use std::f32::consts::PI;
 
 use bevy::window::PrimaryWindow;
+use bevy_rapier3d::render::RapierDebugRenderPlugin;
 // use bevy_rapier3d::render::RapierDebugRenderPlugin;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::entities::player::Player;
@@ -385,7 +386,7 @@ fn main() {
             GameState::Playing,
         ))
         .add_plugin(RenetClientPlugin::default())
-        // .add_plugin(RapierDebugRenderPlugin::default())
+        .add_plugin(RapierDebugRenderPlugin::default())
         .add_systems((
             connect::establish_connection.in_schedule(OnEnter(GameState::Connecting)),
             connect::wait_for_connection.in_set(OnUpdate(GameState::Connecting)),

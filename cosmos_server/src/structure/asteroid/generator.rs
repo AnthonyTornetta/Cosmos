@@ -114,40 +114,40 @@ fn start_generating_asteroid(
             for z in 0..bz {
                 for y in 0..by {
                     for x in 0..bx {
-                        let block_here = distance_threshold
-                            / (x as f64 - bx as f64 / 2.0)
-                                .max(y as f64 - by as f64 / 2.0)
-                                .max(z as f64 - bz as f64 / 2.0)
-                                .max(1.0);
+                        // let block_here = distance_threshold
+                        //     / (x as f64 - bx as f64 / 2.0)
+                        //         .max(y as f64 - by as f64 / 2.0)
+                        //         .max(z as f64 - bz as f64 / 2.0)
+                        //         .max(1.0);
 
-                        let noise_here = noise
-                            .get([
-                                x as f64 * 0.01 + cx,
-                                y as f64 * 0.01 + cy,
-                                z as f64 * 0.01 + cz,
-                            ])
-                            .abs()
-                            * block_here;
+                        // let noise_here = noise
+                        //     .get([
+                        //         x as f64 * 0.01 + cx,
+                        //         y as f64 * 0.01 + cy,
+                        //         z as f64 * 0.01 + cz,
+                        //     ])
+                        //     .abs()
+                        //     * block_here;
 
-                        if noise_here > 0.5 {
-                            let (cx, cy, cz) = (
-                                x / CHUNK_DIMENSIONS,
-                                y / CHUNK_DIMENSIONS,
-                                z / CHUNK_DIMENSIONS,
-                            );
+                        // if noise_here > 0.5 {
+                        let (cx, cy, cz) = (
+                            x / CHUNK_DIMENSIONS,
+                            y / CHUNK_DIMENSIONS,
+                            z / CHUNK_DIMENSIONS,
+                        );
 
-                            if !chunks.contains_key(&(cx, cy, cz)) {
-                                chunks.insert((cx, cy, cz), Chunk::new(cx, cy, cz));
-                            }
-
-                            chunks.get_mut(&(cx, cy, cz)).unwrap().set_block_at(
-                                x % CHUNK_DIMENSIONS,
-                                y % CHUNK_DIMENSIONS,
-                                z % CHUNK_DIMENSIONS,
-                                stone,
-                                BlockFace::Top,
-                            )
+                        if !chunks.contains_key(&(cx, cy, cz)) {
+                            chunks.insert((cx, cy, cz), Chunk::new(cx, cy, cz));
                         }
+
+                        chunks.get_mut(&(cx, cy, cz)).unwrap().set_block_at(
+                            x % CHUNK_DIMENSIONS,
+                            y % CHUNK_DIMENSIONS,
+                            z % CHUNK_DIMENSIONS,
+                            stone,
+                            BlockFace::Top,
+                        )
+                        // }
                     }
                 }
             }

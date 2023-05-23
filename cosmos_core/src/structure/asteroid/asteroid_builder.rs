@@ -1,7 +1,7 @@
 //! Used to build an asteroid
 
 use bevy::ecs::system::EntityCommands;
-use bevy_rapier3d::prelude::Velocity;
+use bevy_rapier3d::prelude::{RigidBody, Velocity};
 
 use crate::{
     persistence::LoadingDistance,
@@ -46,6 +46,7 @@ impl<T: TStructureBuilder> TAsteroidBuilder for AsteroidBuilder<T> {
 
         entity.insert((
             Asteroid,
+            RigidBody::Fixed,
             LoadingDistance::new(ASTEROID_LOAD_RADIUS, ASTEROID_UNLOAD_RADIUS),
         ));
     }
