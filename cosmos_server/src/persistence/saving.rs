@@ -13,7 +13,6 @@ use bevy::{
         ResMut, With, Without,
     },
     reflect::Reflect,
-    utils::HashSet,
 };
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
@@ -91,9 +90,7 @@ pub fn done_saving(
                 if let SaveFileIdentifierType::Base((entity_id, Some(sector), load_distance)) =
                     &save_file_identifier.identifier_type
                 {
-                    if let Some(set) = sectors_cache.0.get_mut(sector) {
-                        set.remove(&(entity_id.clone(), *load_distance));
-                    }
+                    sectors_cache.remove(entity_id, *sector, *load_distance);
                 }
             }
         }
@@ -125,16 +122,11 @@ pub fn done_saving(
         }
 
         if let Some(loc) = sd.location {
-            let key = (loc.sector_x, loc.sector_y, loc.sector_z);
-            if !sectors_cache.0.contains_key(&key) {
-                sectors_cache.0.insert(key, HashSet::new());
-            }
-
-            sectors_cache
-                .0
-                .get_mut(&key)
-                .unwrap()
-                .insert((entity_id, loading_distance.map(|ld| ld.load_distance())));
+            sectors_cache.insert(
+                (loc.sector_x, loc.sector_y, loc.sector_z),
+                entity_id,
+                loading_distance.map(|ld| ld.load_distance()),
+            );
         }
 
         if needs_unloaded.is_some() {

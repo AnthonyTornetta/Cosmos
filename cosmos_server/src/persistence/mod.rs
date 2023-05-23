@@ -29,7 +29,70 @@ pub struct EntityId(String);
 /// This is a resource that caches the saved entities of different sectors that a player has been near.
 ///
 /// This is just used to prevent excessive IO operations.
-pub struct SectorsCache(HashMap<(i64, i64, i64), HashSet<(EntityId, Option<u32>)>>);
+///
+/// This can be cloned pretty quickly when needed
+pub struct SectorsCache(HashMap<(i64, i64, i64), Option<Box<HashSet<(EntityId, Option<u32>)>>>>);
+// Option<Box<HashSet<(EntityId, Option<u32>)>>>> is used instead of just HashSet<(EntityId, Option<u32>)>
+// so that clone operations are fast.
+
+impl SectorsCache {
+    /// Gets all the entities that are saved for this sector in this cache.  This does NOT
+    /// perform any IO operations.
+    pub fn get(&self, sector: &(i64, i64, i64)) -> &Option<Box<HashSet<(EntityId, Option<u32>)>>> {
+        if let Some(set) = self.0.get(sector) {
+            set
+        } else {
+            &None
+        }
+    }
+
+    /// Removes a saved entity from this location - this does not do any IO operations,
+    /// and only removes it from the cache.
+    pub fn remove(
+        &mut self,
+        entity_id: &EntityId,
+        sector: (i64, i64, i64),
+        load_distance: Option<u32>,
+    ) {
+        if let Some(set) = self.0.get_mut(&sector) {
+            let Some(set) = set else {
+                return;
+            };
+
+            set.remove(&(entity_id.clone(), load_distance));
+
+            if set.is_empty() {
+                self.0.insert(sector, None);
+            }
+        }
+    }
+
+    /// Inserts an entity into this sector in this cache. This does not perform any IO operations.
+    pub fn insert(
+        &mut self,
+        sector: (i64, i64, i64),
+        entity_id: EntityId,
+        load_distance: Option<u32>,
+    ) {
+        if let Some(x) = self.0.get_mut(&sector) {
+            // helps out the lsp
+            let x: &mut Option<Box<HashSet<(EntityId, Option<u32>)>>> = x;
+
+            if x.is_none() {
+                *x = Some(Box::new(HashSet::new()));
+            }
+        } else {
+            self.0.insert(sector, Some(Box::new(HashSet::new())));
+        }
+
+        let x: Option<&mut Option<Box<HashSet<(EntityId, Option<u32>)>>>> = self.0.get_mut(&sector);
+
+        x.expect("Sector doesn't exist despite me just making it")
+            .as_mut()
+            .expect("Sector is None despite me just making it")
+            .insert((entity_id, load_distance));
+    }
+}
 
 impl EntityId {
     /// Creates a new EntityID.

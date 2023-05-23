@@ -41,7 +41,6 @@ fn notify_when_done_generating(
             commands.entity(async_entity).despawn_recursive();
 
             if let Ok(mut structure) = structure_query.get_mut(generating_chunk.structure_entity) {
-                println!("Finished async asteroid gen");
                 for chunk in chunks {
                     structure.set_chunk(chunk);
                 }
@@ -87,8 +86,9 @@ fn start_generating_asteroid(
 
         let (cx, cy, cz) = (loc.local.x as f64, loc.local.y as f64, loc.local.z as f64);
 
-        let distance_threshold =
-            structure.blocks_length() as f64 / 2.0 * (noise.get([cx, cy, cz]) + 1.0).min(25.0);
+        let distance_threshold = (structure.blocks_length() as f64 / 4.0
+            * (noise.get([cx, cy, cz]).abs() + 1.0).min(25.0))
+            as f32;
 
         let stone = blocks.from_id("cosmos:stone").unwrap().clone();
 
@@ -120,34 +120,38 @@ fn start_generating_asteroid(
                         //         .max(z as f64 - bz as f64 / 2.0)
                         //         .max(1.0);
 
-                        // let noise_here = noise
-                        //     .get([
-                        //         x as f64 * 0.01 + cx,
-                        //         y as f64 * 0.01 + cy,
-                        //         z as f64 * 0.01 + cz,
-                        //     ])
-                        //     .abs()
-                        //     * block_here;
+                        let x_pos = x as f32 - bx as f32 / 2.0;
+                        let y_pos = y as f32 - by as f32 / 2.0;
+                        let z_pos = z as f32 - bz as f32 / 2.0;
 
-                        // if noise_here > 0.5 {
-                        let (cx, cy, cz) = (
-                            x / CHUNK_DIMENSIONS,
-                            y / CHUNK_DIMENSIONS,
-                            z / CHUNK_DIMENSIONS,
-                        );
+                        let noise_here = (noise.get([
+                            x_pos as f64 * 0.1 + cx,
+                            y_pos as f64 * 0.1 + cy,
+                            z_pos as f64 * 0.1 + cz,
+                        ]) * 15.0) as f32;
 
-                        if !chunks.contains_key(&(cx, cy, cz)) {
-                            chunks.insert((cx, cy, cz), Chunk::new(cx, cy, cz));
+                        let dist =
+                            x_pos * x_pos + y_pos * y_pos + z_pos * z_pos + noise_here * noise_here;
+
+                        if dist < distance_threshold * distance_threshold {
+                            let (cx, cy, cz) = (
+                                x / CHUNK_DIMENSIONS,
+                                y / CHUNK_DIMENSIONS,
+                                z / CHUNK_DIMENSIONS,
+                            );
+
+                            if !chunks.contains_key(&(cx, cy, cz)) {
+                                chunks.insert((cx, cy, cz), Chunk::new(cx, cy, cz));
+                            }
+
+                            chunks.get_mut(&(cx, cy, cz)).unwrap().set_block_at(
+                                x % CHUNK_DIMENSIONS,
+                                y % CHUNK_DIMENSIONS,
+                                z % CHUNK_DIMENSIONS,
+                                stone,
+                                BlockFace::Top,
+                            )
                         }
-
-                        chunks.get_mut(&(cx, cy, cz)).unwrap().set_block_at(
-                            x % CHUNK_DIMENSIONS,
-                            y % CHUNK_DIMENSIONS,
-                            z % CHUNK_DIMENSIONS,
-                            stone,
-                            BlockFace::Top,
-                        )
-                        // }
                     }
                 }
             }

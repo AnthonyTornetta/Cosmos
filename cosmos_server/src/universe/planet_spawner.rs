@@ -51,7 +51,6 @@ fn monitor_planets_to_spawn(
     };
 
     if let Some((cache, planets)) = future::block_on(future::poll_once(&mut task.0)) {
-        println!("Finished async planet gen");
         commands.entity(entity).despawn_recursive();
 
         for planet in planets {
@@ -92,8 +91,6 @@ fn spawn_planet(
     }
 
     let thread_pool = AsyncComputeTaskPool::get();
-
-    println!("Starting async planet gen");
 
     let locs = players.iter().copied().collect::<Vec<Location>>();
 
@@ -139,7 +136,7 @@ fn spawn_planet(
 
             let is_origin = sx == 0 && sy == 0 && sz == 0;
 
-            if is_origin || rng.gen_range(0..1000) == 99999 {
+            if is_origin || rng.gen_range(0..1000) == 9 {
                 let location = Location::new(Vec3::ZERO, sx, sy, sz);
 
                 let mut closest_star = None;

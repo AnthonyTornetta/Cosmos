@@ -13,13 +13,11 @@ use bevy::{
     },
     tasks::{AsyncComputeTaskPool, Task},
     time::common_conditions::on_timer,
-    utils::HashSet,
 };
 use cosmos_core::{
     entities::player::Player,
     persistence::{LoadingDistance, LOAD_DISTANCE},
     physics::location::{Location, SECTOR_DIMENSIONS},
-    utils::timer::UtilsTimer,
 };
 use futures_lite::future;
 use walkdir::WalkDir;
@@ -70,11 +68,6 @@ fn monitor_loading_task(
     };
 
     if let Some((cache, save_file_ids)) = future::block_on(future::poll_once(&mut task.0)) {
-        println!(
-            "Finished async loading ({} to load)",
-            save_file_ids.iter().len()
-        );
-
         commands.entity(entity).despawn_recursive();
 
         for sfi in save_file_ids {
@@ -99,10 +92,6 @@ fn load_near(
         return;
     }
 
-    println!("Starting async loading");
-
-    let mut timer = UtilsTimer::start();
-
     let thread_pool = AsyncComputeTaskPool::get();
 
     let sectors = query
@@ -110,19 +99,9 @@ fn load_near(
         .map(|l| (l.sector_x, l.sector_y, l.sector_z))
         .collect::<Vec<(i64, i64, i64)>>();
 
-    timer.log_duration("Loc -> sector:");
-
-    timer.reset();
-
+    // If this ever gets laggy, either of these two clones could be the cause
     let mut sectors_cache = sectors_cache.clone();
-
-    timer.log_duration("Sectors cache cloning:");
-
-    timer.reset();
-    // If this ever gets laggy, this could be the cause
     let loaded_entities = loaded_entities.iter().cloned().collect::<Vec<EntityId>>();
-
-    timer.log_duration("entity cloning:");
 
     let task = thread_pool.spawn(async move {
         let mut to_load = vec![];
@@ -134,8 +113,8 @@ fn load_near(
                         let sector = (dx + sx, dy + sy, dz + sz);
                         let max_delta = dz.abs().max(dy.abs()).max(dx.abs()) as u32;
 
-                        if let Some(vec) = sectors_cache.0.get(&sector) {
-                            for (entity_id, load_distance) in vec.iter() {
+                        if let Some(entities) = sectors_cache.get(&sector) {
+                            for (entity_id, load_distance) in entities.iter() {
                                 if max_delta <= load_distance.unwrap_or(DEFAULT_LOAD_DISTANCE)
                                     && !loaded_entities.iter().any(|x| x == entity_id)
                                 {
@@ -147,8 +126,6 @@ fn load_near(
                                 }
                             }
                         } else {
-                            let mut cache = HashSet::new();
-
                             let (x, y, z) = sector;
 
                             let dir = format!("world/{x}_{y}_{z}");
@@ -183,7 +160,11 @@ fn load_near(
 
                                         let entity_id = EntityId::new(entity_id);
 
-                                        cache.insert((entity_id.clone(), load_distance));
+                                        sectors_cache.insert(
+                                            (x, y, z),
+                                            entity_id.clone(),
+                                            load_distance,
+                                        );
 
                                         if max_delta
                                             <= load_distance.unwrap_or(DEFAULT_LOAD_DISTANCE)
@@ -198,8 +179,6 @@ fn load_near(
                                     }
                                 }
                             }
-
-                            sectors_cache.0.insert((x, y, z), cache);
                         }
                     }
                 }
