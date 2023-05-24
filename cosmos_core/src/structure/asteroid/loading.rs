@@ -1,3 +1,5 @@
+//! Responsible for generating asteroids
+
 use bevy::prelude::Component;
 
 #[derive(Debug, Component)]

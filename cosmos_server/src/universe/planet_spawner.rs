@@ -100,7 +100,7 @@ fn spawn_planet(
         cache.insert((l.sector_x, l.sector_y, l.sector_z));
     });
 
-    let server_seed = server_seed.clone();
+    let server_seed = *server_seed;
     let stars = stars
         .iter()
         .map(|(x, y)| (*x, *y))
@@ -179,7 +179,7 @@ fn spawn_planet(
 
 /// Checks if there should be a planet in this sector.
 pub fn is_planet_in_sector(sector: (i64, i64, i64), seed: &ServerSeed) -> bool {
-    let mut rng: rand_chacha::ChaCha8Rng = get_rng_for_sector(&seed, sector);
+    let mut rng: rand_chacha::ChaCha8Rng = get_rng_for_sector(seed, sector);
 
     (sector.0 == 0 && sector.1 == 0 && sector.2 == 0) || rng.gen_range(0..1000) == 9
 }

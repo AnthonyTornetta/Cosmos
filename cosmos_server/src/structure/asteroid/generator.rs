@@ -94,7 +94,7 @@ fn start_generating_asteroid(
 
         let thread_pool = AsyncComputeTaskPool::get();
 
-        let noise = noise.clone();
+        let noise = **noise;
 
         let (bx, by, bz) = (
             structure.blocks_width(),
