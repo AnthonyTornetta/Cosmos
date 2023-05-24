@@ -5,7 +5,7 @@ use bevy::{
         App, Commands, Component, DespawnRecursiveExt, Entity, EventReader, EventWriter,
         IntoSystemConfigs, OnUpdate, Query, Res,
     },
-    tasks::{AsyncComputeTaskPool, Task},
+    tasks::AsyncComputeTaskPool,
 };
 use cosmos_core::{
     block::{Block, BlockFace},
@@ -23,7 +23,9 @@ use noise::NoiseFn;
 
 use crate::GameState;
 
-use super::{register_biosphere, TBiosphere, TGenerateChunkEvent, TemperatureRange};
+use super::{
+    register_biosphere, GeneratingChunk, TBiosphere, TGenerateChunkEvent, TemperatureRange,
+};
 
 #[derive(Component, Debug, Default)]
 /// Marks that this is for a grass biosphere
@@ -97,15 +99,8 @@ fn get_max_level(
     (middle_air_start as f64 + depth).round() as usize
 }
 
-#[derive(Debug, Component)]
-struct GeneratingChunk {
-    task: Task<Chunk>,
-    structure_entity: Entity,
-    chunk: (usize, usize, usize),
-}
-
 fn notify_when_done_generating(
-    mut query: Query<(Entity, &mut GeneratingChunk)>,
+    mut query: Query<(Entity, &mut GeneratingChunk<GrassBiosphereMarker>)>,
     mut commands: Commands,
     mut event_writer: EventWriter<ChunkInitEvent>,
     mut structure_query: Query<&mut Structure>,
@@ -140,9 +135,10 @@ fn generate_planet(
         .iter()
         .filter_map(|ev| {
             if let Ok((mut structure, _)) = query.get_mut(ev.structure_entity) {
-                structure
-                    .take_chunk_for_loading(ev.x, ev.y, ev.z)
-                    .map(|chunk| (ev.structure_entity, chunk))
+                Some((
+                    ev.structure_entity,
+                    structure.take_or_create_chunk_for_loading(ev.x, ev.y, ev.z),
+                ))
             } else {
                 None
             }
@@ -283,11 +279,11 @@ fn generate_planet(
             chunk
         });
 
-        commands.spawn(GeneratingChunk {
+        commands.spawn(GeneratingChunk::<GrassBiosphereMarker>::new(
             task,
             structure_entity,
-            chunk: (cx, cy, cz),
-        });
+            (cx, cy, cz),
+        ));
     }
 }
 

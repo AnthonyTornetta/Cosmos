@@ -15,7 +15,7 @@ use cosmos_core::{
     inventory::Inventory,
     netty::{
         client_reliable_messages::ClientReliableMessages, cosmos_encoder,
-        server_reliable_messages::ServerReliableMessages,
+        netty_rigidbody::NettyRigidBody, server_reliable_messages::ServerReliableMessages,
         server_unreliable_messages::ServerUnreliableMessages, NettyChannel,
     },
     persistence::LoadingDistance,
@@ -96,6 +96,37 @@ struct RequestedEntities {
     entities: Vec<(Entity, f32)>,
 }
 
+#[derive(Component, Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
+pub struct NetworkTick(pub u64);
+
+#[derive(Debug, Component, Deref)]
+struct LerpTowards(NettyRigidBody);
+
+fn lerp_towards(mut query: Query<(&LerpTowards, &mut Location, &mut Transform, &mut Velocity)>) {
+    for (lerp_towards, mut location, mut transform, mut velocity) in query.iter_mut() {
+        if lerp_towards.location.distance_sqrd(&location) > 100.0 {
+            location.set_from(&lerp_towards.location);
+        } else {
+            let lerpped_loc =
+                *location + (location.relative_coords_to(&lerp_towards.location)) * 0.1;
+
+            location.set_from(&lerpped_loc);
+        }
+
+        transform.rotation = //lerp_towards.rotation;
+            transform.rotation.lerp(lerp_towards.rotation, 0.1);
+
+        velocity.linvel = lerp_towards.body_vel.linvel.into();
+        // velocity
+        //     .linvel
+        //     .lerp(lerp_towards.body_vel.linvel.into(), 0.1);
+        velocity.angvel = lerp_towards.body_vel.angvel.into();
+        // velocity
+        //     .angvel
+        //     .lerp(lerp_towards.body_vel.angvel.into(), 0.1);
+    }
+}
+
 fn client_sync_players(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -107,9 +138,10 @@ fn client_sync_players(
     query_player: Query<&Player>,
     mut query_body: Query<
         (
-            Option<&mut Location>,
-            Option<&mut Transform>,
-            Option<&mut Velocity>,
+            Option<&Location>,
+            Option<&Transform>,
+            Option<&Velocity>,
+            Option<&mut NetworkTick>,
         ),
         Without<LocalPlayer>,
     >,
@@ -138,36 +170,38 @@ fn client_sync_players(
         let msg: ServerUnreliableMessages = cosmos_encoder::deserialize(&message).unwrap();
 
         match msg {
-            ServerUnreliableMessages::BulkBodies {
-                bodies,
-                time_stamp: _,
-            } => {
+            ServerUnreliableMessages::BulkBodies { bodies, time_stamp } => {
                 for (server_entity, body) in bodies.iter() {
                     if let Some(entity) = network_mapping.client_from_server(server_entity) {
-                        if let Ok((location, transform, velocity)) = query_body.get_mut(entity) {
-                            match (location, transform, velocity) {
-                                (Some(mut location), Some(mut transform), Some(mut velocity)) => {
-                                    location.set_from(&body.location);
-
-                                    transform.rotation = body.rotation;
-
-                                    velocity.linvel = body.body_vel.linvel.into();
-                                    velocity.angvel = body.body_vel.angvel.into();
+                        if let Ok((location, transform, velocity, net_tick)) =
+                            query_body.get_mut(entity)
+                        {
+                            if let Some(mut net_tick) = net_tick {
+                                if net_tick.0 >= time_stamp {
+                                    // Received position packet for previous time, disregard.
+                                    continue;
+                                } else {
+                                    net_tick.0 = time_stamp;
                                 }
-                                _ => {
-                                    let world_center = world_center.get_single().expect("There should only ever be one local player, and they should always exist.");
+                            } else {
+                                commands.entity(entity).insert(NetworkTick(time_stamp));
+                            }
 
-                                    let transform = body.create_transform(world_center);
+                            if location.is_some() && transform.is_some() && velocity.is_some() {
+                                commands.entity(entity).insert(LerpTowards(*body));
+                            } else {
+                                let world_center = world_center.get_single().expect("There should only ever be one local player, and they should always exist.");
 
-                                    let mut location = body.location;
-                                    location.last_transform_loc = Some(transform.translation);
+                                let transform = body.create_transform(world_center);
 
-                                    commands.entity(entity).insert((
-                                        location,
-                                        TransformBundle::from_transform(transform),
-                                        body.create_velocity(),
-                                    ));
-                                }
+                                let mut location = body.location;
+                                location.last_transform_loc = Some(transform.translation);
+
+                                commands.entity(entity).insert((
+                                    location,
+                                    TransformBundle::from_transform(transform),
+                                    body.create_velocity(),
+                                ));
                             }
                         }
                     } else if !requested_entities
@@ -406,6 +440,25 @@ fn client_sync_players(
                     }
                 }
             }
+            ServerReliableMessages::EmptyChunk {
+                structure_entity,
+                cx,
+                cy,
+                cz,
+            } => {
+                if let Some(s_entity) = network_mapping.client_from_server(&structure_entity) {
+                    if let Ok(mut structure) = query_structure.get_mut(s_entity) {
+                        structure.set_to_empty_chunk(cx as usize, cy as usize, cz as usize);
+
+                        set_chunk_event_writer.send(ChunkInitEvent {
+                            x: cx as usize,
+                            y: cy as usize,
+                            z: cz as usize,
+                            structure_entity: s_entity,
+                        });
+                    }
+                }
+            }
             ServerReliableMessages::StructureRemove {
                 entity: server_entity,
             } => {
@@ -580,7 +633,8 @@ pub(super) fn register(app: &mut App) {
         )
         .add_systems(
             (
-                fix_location.after(client_sync_players),
+                lerp_towards.after(client_sync_players),
+                fix_location,
                 sync_transforms_and_locations,
                 bubble_down_locations,
             )

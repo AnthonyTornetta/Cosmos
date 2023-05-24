@@ -57,6 +57,17 @@ pub enum ServerReliableMessages {
         /// The serialized version of the chunk
         serialized_chunk: Vec<u8>,
     },
+    /// This represents the data for an empty chunk
+    EmptyChunk {
+        /// The structure this chunk belongs to
+        structure_entity: Entity,
+        /// The empty chunk's x
+        cx: u32,
+        /// The empty chunk's y
+        cy: u32,
+        /// The empty chunk's z
+        cz: u32,
+    },
     /// A planet should be created on the client-side.
     /// This does NOT mean the planet was just created by the sever, just that one should be created on the client.
     Planet {
