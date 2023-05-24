@@ -125,7 +125,9 @@ fn monitor_block_updates_system(
     }
 
     for ev in chunk_set_event.iter() {
-        let structure: &Structure = structure_query.get(ev.structure_entity).unwrap();
+        let Ok(structure) = structure_query.get(ev.structure_entity) else {
+            continue;
+        };
 
         if !chunks_todo.contains_key(&ev.structure_entity) {
             chunks_todo.insert(ev.structure_entity, HashSet::default());

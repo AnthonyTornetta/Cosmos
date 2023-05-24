@@ -75,9 +75,7 @@ fn generate_planet(
         Planet::new(planet_save_data.temperature),
     );
 
-    let entity = entity_cmd.id();
-
-    commands.entity(entity).insert(structure);
+    entity_cmd.insert(structure);
 }
 
 fn on_load_structure(

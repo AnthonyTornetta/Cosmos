@@ -30,10 +30,12 @@ impl TStructureBuilder for StructureBuilder {
     ) {
         structure.set_entity(entity.id());
 
-        entity
-            .insert(PbrBundle {
+        entity.insert((
+            velocity,
+            location,
+            PbrBundle {
                 ..Default::default()
-            })
-            .insert((velocity, location));
+            },
+        ));
     }
 }

@@ -27,7 +27,6 @@ use std::env;
 use std::f32::consts::PI;
 
 use bevy::window::PrimaryWindow;
-// use bevy_rapier3d::render::RapierDebugRenderPlugin;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::entities::player::Player;
 use cosmos_core::events::structure::change_pilot_event::ChangePilotEvent;

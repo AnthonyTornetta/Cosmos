@@ -1,6 +1,9 @@
 //! Used to build a planet
 
-use bevy::ecs::system::EntityCommands;
+use bevy::{
+    ecs::system::EntityCommands,
+    prelude::{Added, App, Commands, Entity, Query},
+};
 use bevy_rapier3d::prelude::{RigidBody, Velocity};
 
 use crate::{
@@ -47,18 +50,23 @@ impl<T: TStructureBuilder> TPlanetBuilder for PlanetBuilder<T> {
         structure: &mut Structure,
         planet: Planet,
     ) {
+        self.structure_builder
+            .insert_structure(entity, location, Velocity::default(), structure);
+
+        entity.insert(planet);
+    }
+}
+
+fn on_add_planet(query: Query<(Entity, &Structure), Added<Planet>>, mut commands: Commands) {
+    for (entity, structure) in query.iter() {
         assert!(
             structure.chunks_width() == structure.chunks_height()
                 && structure.chunks_height() == structure.chunks_length(),
             "Structure dimensions must all be the same for a planet."
         );
 
-        self.structure_builder
-            .insert_structure(entity, location, Velocity::default(), structure);
-
-        entity.insert((
+        commands.entity(entity).insert((
             RigidBody::Fixed,
-            planet,
             GravityEmitter {
                 force_per_kg: 9.8,
                 radius: structure
@@ -70,4 +78,8 @@ impl<T: TStructureBuilder> TPlanetBuilder for PlanetBuilder<T> {
             LoadingDistance::new(PLANET_LOAD_RADIUS, PLANET_UNLOAD_RADIUS),
         ));
     }
+}
+
+pub(super) fn register(app: &mut App) {
+    app.add_system(on_add_planet);
 }

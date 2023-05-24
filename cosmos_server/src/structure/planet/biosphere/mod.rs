@@ -79,7 +79,7 @@ impl<T: Component> GeneratingChunk<T> {
             task,
             structure_entity,
             chunk,
-            phantom: PhantomData::default(),
+            phantom: PhantomData,
         }
     }
 }

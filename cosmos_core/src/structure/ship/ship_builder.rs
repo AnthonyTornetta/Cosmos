@@ -1,6 +1,9 @@
 //! Used to build ships
 
-use bevy::ecs::system::EntityCommands;
+use bevy::{
+    ecs::system::EntityCommands,
+    prelude::{Added, App, Commands, Entity, Query},
+};
 use bevy_rapier3d::prelude::{Ccd, ExternalImpulse, ReadMassProperties, RigidBody, Velocity};
 
 use crate::{
@@ -46,13 +49,23 @@ impl<T: TStructureBuilder> TShipBuilder for ShipBuilder<T> {
         self.structure_builder
             .insert_structure(entity, location, velocity, structure);
 
-        entity.insert(ShipMovement::default());
-        entity
-            .insert(Ship)
-            .insert(RigidBody::Dynamic)
-            .insert(ReadMassProperties::default())
-            .insert(Ccd::enabled())
-            .insert(ExternalImpulse::default())
-            .insert(LoadingDistance::new(6, 7));
+        entity.insert(Ship);
     }
+}
+
+fn on_add_ship(query: Query<Entity, Added<Ship>>, mut commands: Commands) {
+    for entity in query.iter() {
+        commands.entity(entity).insert((
+            ShipMovement::default(),
+            RigidBody::Dynamic,
+            ReadMassProperties::default(),
+            Ccd::enabled(),
+            ExternalImpulse::default(),
+            LoadingDistance::new(6, 7),
+        ));
+    }
+}
+
+pub(super) fn register(app: &mut App) {
+    app.add_system(on_add_ship);
 }
