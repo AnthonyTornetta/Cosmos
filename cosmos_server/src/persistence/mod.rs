@@ -140,6 +140,15 @@ impl SaveFileIdentifier {
         }
     }
 
+    /// If this SaveFileIdentifier is a base identifier (not child),
+    /// this will return its EntityId. Otherwise, returns None.
+    pub fn entity_id(&self) -> Option<&EntityId> {
+        match &self.identifier_type {
+            SaveFileIdentifierType::Base((entity_id, _, _)) => Some(entity_id),
+            _ => None,
+        }
+    }
+
     /// Creates a new SaveFileIdentifier from this location & entity id
     pub fn as_child(this_identifier: impl Into<String>, belongs_to: SaveFileIdentifier) -> Self {
         Self {

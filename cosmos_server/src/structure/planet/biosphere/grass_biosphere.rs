@@ -1,9 +1,11 @@
 //! Creates a grass planet
 
+use std::mem::swap;
+
 use bevy::{
     prelude::{
-        App, Commands, Component, DespawnRecursiveExt, Entity, EventReader, EventWriter,
-        IntoSystemConfigs, OnUpdate, Query, Res,
+        App, Component, Entity, EventReader, EventWriter, IntoSystemConfigs, OnUpdate, Query, Res,
+        ResMut,
     },
     tasks::AsyncComputeTaskPool,
 };
@@ -24,7 +26,8 @@ use noise::NoiseFn;
 use crate::GameState;
 
 use super::{
-    register_biosphere, GeneratingChunk, TBiosphere, TGenerateChunkEvent, TemperatureRange,
+    register_biosphere, GeneratingChunk, GeneratingChunks, TBiosphere, TGenerateChunkEvent,
+    TemperatureRange,
 };
 
 #[derive(Component, Debug, Default)]
@@ -100,47 +103,49 @@ fn get_max_level(
 }
 
 fn notify_when_done_generating(
-    mut query: Query<(Entity, &mut GeneratingChunk<GrassBiosphereMarker>)>,
-    mut commands: Commands,
+    mut generating: ResMut<GeneratingChunks<GrassBiosphereMarker>>,
     mut event_writer: EventWriter<ChunkInitEvent>,
     mut structure_query: Query<&mut Structure>,
 ) {
-    for (entity, mut generating_chunk) in query.iter_mut() {
-        if let Some(chunks) = future::block_on(future::poll_once(&mut generating_chunk.task)) {
-            commands.entity(entity).despawn_recursive();
+    let mut still_todo = Vec::with_capacity(generating.generating.len());
 
-            for (chunk, structure_entity) in chunks {
-                if let Ok(mut structure) = structure_query.get_mut(structure_entity) {
-                    let (x, y, z) = (
-                        chunk.structure_x(),
-                        chunk.structure_y(),
-                        chunk.structure_z(),
-                    );
+    swap(&mut generating.generating, &mut still_todo);
 
-                    structure.set_chunk(chunk);
+    for mut gg in still_todo {
+        if let Some(chunks) = future::block_on(future::poll_once(&mut gg.task)) {
+            let (chunk, structure_entity) = chunks;
 
-                    event_writer.send(ChunkInitEvent {
-                        structure_entity,
-                        x,
-                        y,
-                        z,
-                    });
-                }
+            if let Ok(mut structure) = structure_query.get_mut(structure_entity) {
+                let (x, y, z) = (
+                    chunk.structure_x(),
+                    chunk.structure_y(),
+                    chunk.structure_z(),
+                );
+
+                structure.set_chunk(chunk);
+
+                event_writer.send(ChunkInitEvent {
+                    structure_entity,
+                    x,
+                    y,
+                    z,
+                });
             }
+        } else {
+            generating.generating.push(gg);
         }
     }
 }
 
 fn generate_planet(
     mut query: Query<(&mut Structure, &Location)>,
+    mut generating: ResMut<GeneratingChunks<GrassBiosphereMarker>>,
     mut events: EventReader<GrassChunkNeedsGeneratedEvent>,
     noise_generator: Res<ResourceWrapper<noise::OpenSimplex>>,
     blocks: Res<Registry<Block>>,
-    mut commands: Commands,
 ) {
     let chunks = events
         .iter()
-        .take(200)
         .filter_map(|ev| {
             if let Ok((mut structure, _)) = query.get_mut(ev.structure_entity) {
                 Some((
@@ -158,13 +163,6 @@ fn generate_planet(
     let stone = blocks.from_id("cosmos:stone").unwrap();
 
     let thread_pool = AsyncComputeTaskPool::get();
-
-    let grass = grass.clone();
-    let dirt = dirt.clone();
-    let stone = stone.clone();
-    // Not super expensive, only copies about 256 8 bit values.
-    // Still not ideal though.
-    let noise_generator = **noise_generator;
 
     let chunks = chunks
         .into_iter()
@@ -190,12 +188,17 @@ fn generate_planet(
         .collect::<Vec<(Chunk, usize, usize, usize, Location, Entity)>>();
 
     if !chunks.is_empty() {
-        println!("Pooling {} chunks!", chunks.len());
+        println!("Doing {} chunks!", chunks.len());
 
-        let task = thread_pool.spawn(async move {
-            let mut done_chunks = Vec::with_capacity(chunks.len());
+        for (mut chunk, s_width, s_height, s_length, location, structure_entity) in chunks {
+            let grass = grass.clone();
+            let dirt = dirt.clone();
+            let stone = stone.clone();
+            // Not super expensive, only copies about 256 8 bit values.
+            // Still not ideal though.
+            let noise_generator = **noise_generator;
 
-            for (mut chunk, s_width, s_height, s_length, location, structure_entity) in chunks {
+            let task = thread_pool.spawn(async move {
                 let grass = &grass;
                 let dirt = &dirt;
                 let stone = &stone;
@@ -297,13 +300,11 @@ fn generate_planet(
                     }
                 }
 
-                done_chunks.push((chunk, structure_entity));
-            }
+                (chunk, structure_entity)
+            });
 
-            done_chunks
-        });
-
-        commands.spawn(GeneratingChunk::<GrassBiosphereMarker>::new(task));
+            generating.generating.push(GeneratingChunk::new(task));
+        }
     }
 }
 
