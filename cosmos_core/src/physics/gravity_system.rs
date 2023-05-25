@@ -8,7 +8,7 @@ use crate::structure::planet::Planet;
 use super::location::Location;
 
 fn gravity_system(
-    emitters: Query<(&GravityEmitter, &GlobalTransform, &Location)>,
+    emitters: Query<(Entity, &GravityEmitter, &GlobalTransform, &Location)>,
     mut receiver: Query<(
         Entity,
         &Location,
@@ -19,10 +19,12 @@ fn gravity_system(
     time: Res<Time>,
     mut commands: Commands,
 ) {
-    let mut gravs: Vec<(f32, f32, Location, Quat)> = Vec::with_capacity(emitters.iter().len());
+    let mut gravs: Vec<(Entity, f32, f32, Location, Quat)> =
+        Vec::with_capacity(emitters.iter().len());
 
-    for (emitter, trans, location) in emitters.iter() {
+    for (entity, emitter, trans, location) in emitters.iter() {
         gravs.push((
+            entity,
             emitter.force_per_kg,
             emitter.radius,
             *location,
@@ -32,9 +34,10 @@ fn gravity_system(
 
     for (ent, location, prop, rb, external_force) in receiver.iter_mut() {
         if *rb == RigidBody::Dynamic {
+            let mut x = 0;
             let mut force = Vec3::ZERO;
 
-            for (force_per_kilogram, radius, pos, rotation) in gravs.iter() {
+            for (entity, force_per_kilogram, radius, pos, rotation) in gravs.iter() {
                 let relative_position = pos.relative_coords_to(location);
                 let dist = relative_position.abs().max_element();
 
@@ -46,6 +49,10 @@ fn gravity_system(
                     let grav_dir = -rotation.mul_vec3(face.direction_vec3());
 
                     force += (prop.0.mass * force_per_kilogram * ratio) * grav_dir;
+
+                    x += 1;
+
+                    println!("{x} {}", entity.index());
                 } else if ratio >= 0.1 {
                     let grav_dir = -relative_position.normalize();
 

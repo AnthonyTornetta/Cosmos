@@ -61,12 +61,7 @@ pub trait TBiosphere<T: Component, E: TGenerateChunkEvent> {
 /// Use this to asynchronously generate chunks
 pub struct GeneratingChunk<T: Component> {
     /// The task responsible for this chunk
-    pub task: Task<Chunk>,
-    /// The structure's entity
-    pub structure_entity: Entity,
-    /// The chunk's location in the structure
-    pub chunk: (usize, usize, usize),
-
+    pub task: Task<Vec<(Chunk, Entity)>>,
     phantom: PhantomData<T>,
 }
 
@@ -74,11 +69,9 @@ impl<T: Component> GeneratingChunk<T> {
     /// Creates a GeneratingChunk instance
     ///
     /// Make sure to add this to an entity & query it to check once it's finished.
-    pub fn new(task: Task<Chunk>, structure_entity: Entity, chunk: (usize, usize, usize)) -> Self {
+    pub fn new(task: Task<Vec<(Chunk, Entity)>>) -> Self {
         Self {
             task,
-            structure_entity,
-            chunk,
             phantom: PhantomData,
         }
     }
