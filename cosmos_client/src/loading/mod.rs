@@ -5,7 +5,9 @@ use bevy::prelude::{
     Without,
 };
 use cosmos_core::{
-    entities::player::Player, persistence::LoadingDistance, physics::location::Location,
+    entities::player::Player,
+    persistence::LoadingDistance,
+    physics::location::{Location, SectorUnit},
 };
 
 use crate::netty::flags::LocalPlayer;
@@ -17,9 +19,9 @@ fn unload_far_entities(
 ) {
     if let Ok(my_loc) = my_loc.get_single() {
         for (ent, loc, unload_distance) in query.iter() {
-            let ul_distance = unload_distance.unload_block_distance();
+            let ul_distance = unload_distance.unload_distance() as SectorUnit;
 
-            if loc.relative_coords_to(my_loc).abs().max_element() > ul_distance {
+            if (loc.sector() - my_loc.sector()).abs().max_element() > ul_distance {
                 println!("Unloading entity at {loc}!");
                 commands.entity(ent).despawn_recursive();
             }

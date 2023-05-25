@@ -9,7 +9,7 @@ use bevy::{
 };
 use cosmos_core::{
     entities::player::Player,
-    physics::location::{Location, SECTOR_DIMENSIONS},
+    physics::location::{Location, Sector, SystemUnit, SECTOR_DIMENSIONS},
     structure::{
         asteroid::{
             asteroid_builder::TAsteroidBuilder, loading::AsteroidNeedsCreated, Asteroid,
@@ -28,7 +28,7 @@ use crate::{
 use super::planet_spawner::is_planet_in_sector;
 
 #[derive(Default, Resource, Deref, DerefMut)]
-struct CachedSectors(HashSet<(i64, i64, i64)>);
+struct CachedSectors(HashSet<Sector>);
 
 fn spawn_asteroid(
     query: Query<&Location, With<Asteroid>>,
@@ -40,10 +40,12 @@ fn spawn_asteroid(
     let mut to_check_sectors = HashSet::new();
 
     for l in players.iter() {
-        for dsz in -(ASTEROID_LOAD_RADIUS as i64)..=ASTEROID_LOAD_RADIUS as i64 {
-            for dsy in -(ASTEROID_LOAD_RADIUS as i64)..=ASTEROID_LOAD_RADIUS as i64 {
-                for dsx in -(ASTEROID_LOAD_RADIUS as i64)..=ASTEROID_LOAD_RADIUS as i64 {
-                    let sector = (dsx + l.sector_x, dsy + l.sector_y, dsz + l.sector_z);
+        for dsz in -(ASTEROID_LOAD_RADIUS as SystemUnit)..=ASTEROID_LOAD_RADIUS as SystemUnit {
+            for dsy in -(ASTEROID_LOAD_RADIUS as SystemUnit)..=ASTEROID_LOAD_RADIUS as SystemUnit {
+                for dsx in
+                    -(ASTEROID_LOAD_RADIUS as SystemUnit)..=ASTEROID_LOAD_RADIUS as SystemUnit
+                {
+                    let sector = l.sector() + Sector::new(dsx, dsy, dsz);
                     to_check_sectors.insert(sector);
                 }
             }
@@ -72,20 +74,20 @@ fn spawn_asteroid(
     }
 
     for loc in query.iter() {
-        let sector = (loc.sector_x, loc.sector_y, loc.sector_z);
+        let sector = loc.sector();
         cache.insert(sector);
         sectors.remove(&sector);
     }
 
-    for (sx, sy, sz) in sectors {
-        cache.insert((sx, sy, sz));
+    for sector in sectors {
+        cache.insert(sector);
 
-        if is_sector_loaded((sx, sy, sz)) || is_planet_in_sector((sx, sy, sz), &server_seed) {
+        if is_sector_loaded(sector) || is_planet_in_sector(&sector, &server_seed) {
             // This sector has already been loaded, don't regenerate stuff
             continue;
         }
 
-        let mut rng = get_rng_for_sector(&server_seed, (sx, sy, sz));
+        let mut rng = get_rng_for_sector(&server_seed, &sector);
 
         if rng.gen_range(0..100) == 0 {
             // Biased towards lower amounts
@@ -103,9 +105,7 @@ fn spawn_asteroid(
                         rng.gen::<f32>() * multiplier + adder,
                         rng.gen::<f32>() * multiplier + adder,
                     ),
-                    sx,
-                    sy,
-                    sz,
+                    sector,
                 );
 
                 let mut structure = Structure::new(size, size, size);

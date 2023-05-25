@@ -9,7 +9,7 @@ use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
     entities::player::Player,
     persistence::LoadingDistance,
-    physics::location::{Location, SYSTEM_SECTORS},
+    physics::location::{Location, Sector, SystemUnit, UniverseSystem, SYSTEM_SECTORS},
     universe::star::{Star, MAX_TEMPERATURE, MIN_TEMPERATURE},
 };
 use rand::{Rng, SeedableRng};
@@ -47,8 +47,8 @@ fn distance_from_star_spiral(x: f32, y: f32) -> f32 {
 }
 
 /// This gets the star - if there is one - in the system.
-pub fn get_star_in_system(sx: i64, sy: i64, sz: i64, seed: &ServerSeed) -> Option<Star> {
-    if sy != 0 {
+pub fn get_star_in_system(system: &UniverseSystem, seed: &ServerSeed) -> Option<Star> {
+    if system.y() != 0 {
         return None;
     }
 
@@ -57,8 +57,8 @@ pub fn get_star_in_system(sx: i64, sy: i64, sz: i64, seed: &ServerSeed) -> Optio
 
     let ratio = max / bounds;
 
-    let at_x = sx as f32 * ratio;
-    let at_z = sz as f32 * ratio;
+    let at_x = system.x() as f32 * ratio;
+    let at_z = system.z() as f32 * ratio;
 
     if at_x.abs() > 1.0 || at_z.abs() > 1.0 {
         return None;
@@ -99,11 +99,11 @@ fn load_stars_near_players(
     mut commands: Commands,
 ) {
     'start: for loc in players.iter() {
-        let (sx, sy, sz) = loc.get_system_coordinates();
+        let system = loc.get_system_coordinates();
 
-        if let Some(star) = get_star_in_system(sx, sy, sz, &seed) {
+        if let Some(star) = get_star_in_system(&system, &seed) {
             for loc in stars.iter() {
-                if loc.get_system_coordinates() == (sx, sy, sz) {
+                if loc.get_system_coordinates() == system {
                     continue 'start;
                 }
             }
@@ -118,9 +118,14 @@ fn load_stars_near_players(
                 },
                 Location::new(
                     Vec3::ZERO,
-                    ((sx as f32 + STAR_POS_OFFSET) * SYSTEM_SECTORS as f32) as i64,
-                    ((sy as f32 + STAR_POS_OFFSET) * SYSTEM_SECTORS as f32) as i64,
-                    ((sz as f32 + STAR_POS_OFFSET) * SYSTEM_SECTORS as f32) as i64,
+                    Sector::new(
+                        ((system.x() as f32 + STAR_POS_OFFSET) * SYSTEM_SECTORS as f32)
+                            as SystemUnit,
+                        ((system.y() as f32 + STAR_POS_OFFSET) * SYSTEM_SECTORS as f32)
+                            as SystemUnit,
+                        ((system.z() as f32 + STAR_POS_OFFSET) * SYSTEM_SECTORS as f32)
+                            as SystemUnit,
+                    ),
                 ),
                 Velocity::zero(),
                 LoadingDistance::new(SYSTEM_SECTORS / 2 + 1, SYSTEM_SECTORS / 2 + 1),

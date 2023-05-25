@@ -146,9 +146,9 @@ fn add_biosphere(
         let biospheres = registry.get_biospheres_for(planet.temperature());
 
         if !biospheres.is_empty() {
-            let (sx, sy, sz) = location.sector();
+            let sector = location.sector();
 
-            let mut rng = get_rng_for_sector(&server_seed, (sx, sy, sz));
+            let mut rng = get_rng_for_sector(&server_seed, &sector);
 
             let biosphere = biospheres[rng.gen_range(0..biospheres.len())];
 

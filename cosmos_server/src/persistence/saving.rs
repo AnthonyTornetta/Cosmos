@@ -123,7 +123,7 @@ pub fn done_saving(
 
         if let Some(loc) = sd.location {
             sectors_cache.insert(
-                (loc.sector_x, loc.sector_y, loc.sector_z),
+                loc.sector(),
                 entity_id,
                 loading_distance.map(|ld| ld.load_distance()),
             );

@@ -18,6 +18,7 @@ pub mod plugin;
 pub mod projectiles;
 pub mod rendering;
 pub mod state;
+pub mod skybox;
 pub mod structure;
 pub mod ui;
 pub mod universe;
@@ -419,6 +420,7 @@ fn main() {
     inventory::register(&mut app);
     rendering::register(&mut app);
     universe::register(&mut app);
+    skybox::register(&mut app);
 
     app.run();
 }

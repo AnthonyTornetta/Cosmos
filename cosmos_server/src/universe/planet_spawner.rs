@@ -1,16 +1,19 @@
 //! Responsible for spawning planets near stars, but for now just spawns a planet at 0, 0, 0.
 
+use std::time::Duration;
+
 use bevy::{
     prelude::{
-        App, Commands, Component, Deref, DerefMut, DespawnRecursiveExt, Entity, IntoSystemConfigs,
-        OnUpdate, Query, Res, ResMut, Resource, Vec3, With,
+        App, Commands, Component, Deref, DerefMut, DespawnRecursiveExt, Entity, IntoSystemConfig,
+        IntoSystemConfigs, OnUpdate, Query, Res, ResMut, Resource, Vec3, With,
     },
     tasks::{AsyncComputeTaskPool, Task},
+    time::common_conditions::on_timer,
     utils::HashSet,
 };
 use cosmos_core::{
     entities::player::Player,
-    physics::location::Location,
+    physics::location::{Location, Sector, SystemUnit},
     structure::{
         planet::{planet_builder::TPlanetBuilder, Planet, PLANET_LOAD_RADIUS},
         Structure,
@@ -26,7 +29,7 @@ use crate::{
 };
 
 #[derive(Debug, Default, Resource, Deref, DerefMut, Clone)]
-struct CachedSectors(HashSet<(i64, i64, i64)>);
+struct CachedSectors(HashSet<Sector>);
 
 const BACKGROUND_TEMPERATURE: f32 = 50.0;
 const TEMPERATURE_CONSTANT: f32 = 5.3e9;
@@ -97,7 +100,7 @@ fn spawn_planet(
     let mut cache = cache.clone();
 
     query.iter().for_each(|l| {
-        cache.insert((l.sector_x, l.sector_y, l.sector_z));
+        cache.insert(l.sector());
     });
 
     let server_seed = *server_seed;
@@ -110,10 +113,13 @@ fn spawn_planet(
         let mut to_check_sectors = HashSet::new();
 
         for l in locs {
-            for dsz in -(PLANET_LOAD_RADIUS as i64)..=(PLANET_LOAD_RADIUS as i64) {
-                for dsy in -(PLANET_LOAD_RADIUS as i64)..=(PLANET_LOAD_RADIUS as i64) {
-                    for dsx in -(PLANET_LOAD_RADIUS as i64)..=(PLANET_LOAD_RADIUS as i64) {
-                        let sector = (dsx + l.sector_x, dsy + l.sector_y, dsz + l.sector_z);
+            for dsz in -(PLANET_LOAD_RADIUS as SystemUnit)..=(PLANET_LOAD_RADIUS as SystemUnit) {
+                for dsy in -(PLANET_LOAD_RADIUS as SystemUnit)..=(PLANET_LOAD_RADIUS as SystemUnit)
+                {
+                    for dsx in
+                        -(PLANET_LOAD_RADIUS as SystemUnit)..=(PLANET_LOAD_RADIUS as SystemUnit)
+                    {
+                        let sector = l.sector() + Sector::new(dsx, dsy, dsz);
                         if !cache.contains(&sector) {
                             to_check_sectors.insert(sector);
                         }
@@ -124,20 +130,20 @@ fn spawn_planet(
 
         let mut made_stars = vec![];
 
-        for (sx, sy, sz) in to_check_sectors {
-            cache.insert((sx, sy, sz));
+        for sector in to_check_sectors {
+            cache.insert(sector);
 
-            if is_sector_loaded((sx, sy, sz)) {
+            if is_sector_loaded(sector) {
                 // This sector has already been loaded, don't regenerate stuff
                 continue;
             }
 
-            let mut rng = get_rng_for_sector(&server_seed, (sx, sy, sz));
+            let mut rng = get_rng_for_sector(&server_seed, &sector);
 
-            let is_origin = sx == 0 && sy == 0 && sz == 0;
+            let is_origin = sector.x() == 0 && sector.y() == 0 && sector.z() == 0;
 
             if is_origin || rng.gen_range(0..1000) == 9 {
-                let location = Location::new(Vec3::ZERO, sx, sy, sz);
+                let location = Location::new(Vec3::ZERO, sector);
 
                 let mut closest_star = None;
                 let mut best_dist = None;
@@ -178,13 +184,19 @@ fn spawn_planet(
 }
 
 /// Checks if there should be a planet in this sector.
-pub fn is_planet_in_sector(sector: (i64, i64, i64), seed: &ServerSeed) -> bool {
+pub fn is_planet_in_sector(sector: &Sector, seed: &ServerSeed) -> bool {
     let mut rng: rand_chacha::ChaCha8Rng = get_rng_for_sector(seed, sector);
 
-    (sector.0 == 0 && sector.1 == 0 && sector.2 == 0) || rng.gen_range(0..1000) == 9
+    (sector.x() == 0 && sector.y() == 0 && sector.z() == 0) || rng.gen_range(0..1000) == 9
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems((monitor_planets_to_spawn, spawn_planet).in_set(OnUpdate(GameState::Playing)))
-        .insert_resource(CachedSectors::default());
+    app.add_systems(
+        (
+            monitor_planets_to_spawn,
+            spawn_planet.run_if(on_timer(Duration::from_millis(1000))),
+        )
+            .in_set(OnUpdate(GameState::Playing)),
+    )
+    .insert_resource(CachedSectors::default());
 }

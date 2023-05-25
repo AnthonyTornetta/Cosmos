@@ -8,7 +8,7 @@ use cosmos_core::inventory::Inventory;
 use cosmos_core::item::Item;
 use cosmos_core::netty::cosmos_encoder;
 use cosmos_core::netty::server_reliable_messages::ServerReliableMessages;
-use cosmos_core::physics::location::Location;
+use cosmos_core::physics::location::{Location, Sector};
 use cosmos_core::physics::player_world::WorldWithin;
 use cosmos_core::registry::Registry;
 use cosmos_core::structure::chunk::CHUNK_DIMENSIONSF;
@@ -145,7 +145,7 @@ fn handle_events_system(
                 let player = Player::new(name.clone(), *id);
                 let starting_pos = Vec3::new(0.0, CHUNK_DIMENSIONSF * 50.0 / 2.0, 0.0);
                 let transform = Transform::from_translation(starting_pos);
-                let location = Location::new(starting_pos, 0, 0, 0);
+                let location = Location::new(starting_pos, Sector::new(0, 0, 0));
                 let velocity = Velocity::default();
                 let inventory = generate_player_inventory(&items);
 

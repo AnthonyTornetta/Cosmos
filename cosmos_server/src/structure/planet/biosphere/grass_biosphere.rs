@@ -9,7 +9,7 @@ use bevy::{
 };
 use cosmos_core::{
     block::{Block, BlockFace},
-    physics::location::{Location, SECTOR_DIMENSIONS},
+    physics::location::Location,
     registry::Registry,
     structure::{
         chunk::{Chunk, CHUNK_DIMENSIONS},
@@ -180,12 +180,11 @@ fn generate_planet(
 
             let middle_air_start = s_height - CHUNK_DIMENSIONS * 5;
 
-            let structure_z =
-                (location.sector_z as f64) * SECTOR_DIMENSIONS as f64 + location.local.z as f64;
-            let structure_y =
-                (location.sector_y as f64) * SECTOR_DIMENSIONS as f64 + location.local.y as f64;
-            let structure_x =
-                (location.sector_x as f64) * SECTOR_DIMENSIONS as f64 + location.local.x as f64;
+            let actual_pos = location.absolute_coords_f64();
+
+            let structure_z = actual_pos.z;
+            let structure_y = actual_pos.y;
+            let structure_x = actual_pos.x;
 
             for z in 0..CHUNK_DIMENSIONS {
                 let actual_z = chunk.structure_z() * CHUNK_DIMENSIONS + z;

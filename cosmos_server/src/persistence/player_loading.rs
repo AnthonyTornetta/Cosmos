@@ -17,7 +17,7 @@ use bevy::{
 use cosmos_core::{
     entities::player::Player,
     persistence::{LoadingDistance, LOAD_DISTANCE},
-    physics::location::{Location, SECTOR_DIMENSIONS},
+    physics::location::{Location, Sector, SectorUnit, SECTOR_DIMENSIONS},
 };
 use futures_lite::future;
 use walkdir::WalkDir;
@@ -52,7 +52,7 @@ fn unload_far(
     }
 }
 
-const SEARCH_RANGE: i64 = 25;
+const SEARCH_RANGE: SectorUnit = 25;
 const DEFAULT_LOAD_DISTANCE: u32 = (LOAD_DISTANCE / SECTOR_DIMENSIONS) as u32;
 
 #[derive(Component, Debug)]
@@ -94,10 +94,7 @@ fn load_near(
 
     let thread_pool = AsyncComputeTaskPool::get();
 
-    let sectors = query
-        .iter()
-        .map(|l| (l.sector_x, l.sector_y, l.sector_z))
-        .collect::<Vec<(i64, i64, i64)>>();
+    let sectors = query.iter().map(|l| l.sector()).collect::<Vec<Sector>>();
 
     // If this ever gets laggy, either of these two clones could be the cause
     let mut sectors_cache = sectors_cache.clone();
@@ -106,11 +103,11 @@ fn load_near(
     let task = thread_pool.spawn(async move {
         let mut to_load = vec![];
 
-        for (sx, sy, sz) in sectors {
+        for sector in sectors {
             for dz in -SEARCH_RANGE..=SEARCH_RANGE {
                 for dy in -SEARCH_RANGE..=SEARCH_RANGE {
                     for dx in -SEARCH_RANGE..SEARCH_RANGE {
-                        let sector = (dx + sx, dy + sy, dz + sz);
+                        let sector = Sector::new(dx + sector.x(), dy + sector.y(), dz + sector.z());
                         let max_delta = dz.abs().max(dy.abs()).max(dx.abs()) as u32;
 
                         if let Some(entities) = sectors_cache.get(&sector) {
@@ -126,9 +123,8 @@ fn load_near(
                                 }
                             }
                         } else {
-                            let (x, y, z) = sector;
+                            let dir = format!("world/{}_{}_{}", sector.x(), sector.y(), sector.z());
 
-                            let dir = format!("world/{x}_{y}_{z}");
                             if fs::try_exists(&dir).unwrap_or(false) {
                                 for file in WalkDir::new(&dir)
                                     .max_depth(1)
@@ -161,7 +157,7 @@ fn load_near(
                                         let entity_id = EntityId::new(entity_id);
 
                                         sectors_cache.insert(
-                                            (x, y, z),
+                                            sector,
                                             entity_id.clone(),
                                             load_distance,
                                         );
@@ -171,7 +167,7 @@ fn load_near(
                                             && !loaded_entities.iter().any(|x| x == &entity_id)
                                         {
                                             to_load.push(SaveFileIdentifier::new(
-                                                Some((x, y, z)),
+                                                Some(sector),
                                                 entity_id,
                                                 load_distance,
                                             ));
@@ -194,7 +190,7 @@ fn load_near(
 pub(super) fn register(app: &mut App) {
     app.insert_resource(SectorsCache::default()).add_systems((
         unload_far.run_if(on_timer(Duration::from_millis(1000))),
-        load_near, //.run_if(on_timer(Duration::from_millis(1000))),
+        load_near.run_if(on_timer(Duration::from_millis(1000))),
         monitor_loading_task,
     ));
 }

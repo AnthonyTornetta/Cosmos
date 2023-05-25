@@ -55,13 +55,8 @@ pub const SYSTEM_DIMENSIONS: f32 = SYSTEM_SECTORS as f32 * SECTOR_DIMENSIONS;
 pub struct Location {
     /// The local coordinates - bounded to be within [`-SECTOR_DIMENSIONS/2.0`, `SECTOR_DIMENSIONS/2.0`]
     pub local: Vec3,
-
-    /// The sector coordinates. One sector unit represents `SECTOR_DIMENSIONS` worth of blocks travelled.
-    pub sector_x: i64,
-    /// The sector coordinates. One sector unit represents `SECTOR_DIMENSIONS` worth of blocks travelled.
-    pub sector_y: i64,
-    /// The sector coordinates. One sector unit represents `SECTOR_DIMENSIONS` worth of blocks travelled.
-    pub sector_z: i64,
+    /// The sector coordinates
+    pub sector: Sector,
 
     #[serde(skip)]
     /// Tracks the last transform location. Do not set this unless you know what you're doing.
@@ -70,12 +65,173 @@ pub struct Location {
     pub last_transform_loc: Option<Vec3>,
 }
 
+/// Datatype used to store sector coordinates
+pub type SectorUnit = i64;
+
+#[derive(
+    Default,
+    Component,
+    Debug,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    Reflect,
+    FromReflect,
+    Clone,
+    Copy,
+    Hash,
+    Eq,
+)]
+/// Represents a large region of space
+pub struct Sector(SectorUnit, SectorUnit, SectorUnit);
+
+impl Sector {
+    #[inline]
+    /// Creates a new Sector at the given coordinates
+    pub fn new(x: SectorUnit, y: SectorUnit, z: SectorUnit) -> Self {
+        Self(x, y, z)
+    }
+
+    #[inline]
+    /// sector x
+    pub fn x(&self) -> SectorUnit {
+        self.0
+    }
+
+    #[inline]
+    /// sets sector x
+    pub fn set_x(&mut self, x: SectorUnit) {
+        self.0 = x;
+    }
+
+    #[inline]
+    /// sector y
+    pub fn y(&self) -> SectorUnit {
+        self.1
+    }
+
+    #[inline]
+    /// sets sector y
+    pub fn set_y(&mut self, y: SectorUnit) {
+        self.1 = y;
+    }
+
+    #[inline]
+    /// sector z
+    pub fn z(&self) -> SectorUnit {
+        self.2
+    }
+
+    #[inline]
+    /// sets sector z
+    pub fn set_z(&mut self, z: SectorUnit) {
+        self.2 = z;
+    }
+
+    /// Computes the absolute value of every coordinate
+    pub fn abs(&self) -> Self {
+        Self(self.0.abs(), self.1.abs(), self.2.abs())
+    }
+
+    /// Computes the maximum element
+    pub fn max_element(&self) -> SectorUnit {
+        self.0.max(self.1).max(self.2)
+    }
+}
+
+impl Add<Sector> for Sector {
+    type Output = Sector;
+
+    fn add(self, rhs: Sector) -> Self::Output {
+        Sector(self.0 + rhs.0, self.1 + rhs.1, self.2 + rhs.2)
+    }
+}
+
+/// Datatype used to store system coordinates
+pub type SystemUnit = i64;
+
+#[derive(
+    Default, Component, Debug, PartialEq, Serialize, Deserialize, Reflect, FromReflect, Clone, Copy,
+)]
+/// A universe system represents a large area of sectors
+pub struct UniverseSystem(SystemUnit, SystemUnit, SystemUnit);
+
+impl UniverseSystem {
+    #[inline]
+    /// Creates a new UniverseSystem at the given system coordinates
+    pub fn new(x: SystemUnit, y: SystemUnit, z: SystemUnit) -> Self {
+        Self(x, y, z)
+    }
+
+    #[inline]
+    /// system x
+    pub fn x(&self) -> SystemUnit {
+        self.0
+    }
+
+    #[inline]
+    /// sets system x
+    pub fn set_x(&mut self, x: SystemUnit) {
+        self.0 = x;
+    }
+
+    #[inline]
+    /// system y
+    pub fn y(&self) -> SystemUnit {
+        self.1
+    }
+
+    #[inline]
+    /// sets system y
+    pub fn set_y(&mut self, y: SystemUnit) {
+        self.1 = y;
+    }
+
+    #[inline]
+    /// system z
+    pub fn z(&self) -> SystemUnit {
+        self.2
+    }
+
+    #[inline]
+    /// sets system z
+    pub fn set_z(&mut self, z: SystemUnit) {
+        self.2 = z;
+    }
+
+    /// Computes the absolute value of every coordinate
+    pub fn abs(&self) -> Self {
+        Self(self.0.abs(), self.1.abs(), self.2.abs())
+    }
+
+    /// Computes the maximum element
+    pub fn max_element(&self) -> SystemUnit {
+        self.0.max(self.1).max(self.2)
+    }
+}
+
+impl Add<UniverseSystem> for UniverseSystem {
+    type Output = UniverseSystem;
+
+    fn add(self, rhs: UniverseSystem) -> Self::Output {
+        UniverseSystem(self.0 + rhs.0, self.1 + rhs.1, self.2 + rhs.2)
+    }
+}
+
+impl Display for Sector {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(format!("{}, {}, {}", self.0, self.1, self.2).as_str())?;
+
+        Ok(())
+    }
+}
+
 impl Display for Location {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "({:.3}, {:.3}, {:.3}), [{}, {}, {}]",
-            self.local.x, self.local.y, self.local.z, self.sector_x, self.sector_y, self.sector_z
+            "({:.3}, {:.3}, {:.3}), [{}]",
+            self.local.x, self.local.y, self.local.z, self.sector
         )
     }
 }
@@ -84,12 +240,7 @@ impl Add<Vec3> for Location {
     type Output = Location;
 
     fn add(self, rhs: Vec3) -> Self::Output {
-        let mut loc = Location::new(
-            self.local + rhs,
-            self.sector_x,
-            self.sector_y,
-            self.sector_z,
-        );
+        let mut loc = Location::new(self.local + rhs, self.sector);
         loc.fix_bounds();
         loc
     }
@@ -99,14 +250,17 @@ impl Sub<Vec3> for Location {
     type Output = Location;
 
     fn sub(self, rhs: Vec3) -> Self::Output {
-        let mut loc = Location::new(
-            self.local - rhs,
-            self.sector_x,
-            self.sector_y,
-            self.sector_z,
-        );
+        let mut loc = Location::new(self.local - rhs, self.sector);
         loc.fix_bounds();
         loc
+    }
+}
+
+impl Sub<Sector> for Sector {
+    type Output = Sector;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Self(self.0 - rhs.0, self.1 - rhs.1, self.2 - rhs.2)
     }
 }
 
@@ -114,12 +268,7 @@ impl Sub<Location> for Location {
     type Output = Location;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        let mut loc = Location::new(
-            self.local - rhs.local,
-            self.sector_x - rhs.sector_x,
-            self.sector_y - rhs.sector_y,
-            self.sector_z - rhs.sector_z,
-        );
+        let mut loc = Location::new(self.local - rhs.local, self.sector - rhs.sector);
         loc.fix_bounds();
         loc
     }
@@ -135,38 +284,36 @@ impl AddAssign<Vec3> for &mut Location {
 impl From<Location> for Vec3 {
     fn from(val: Location) -> Self {
         Vec3::new(
-            val.sector_x as f32 * SECTOR_DIMENSIONS + val.local.x,
-            val.sector_y as f32 * SECTOR_DIMENSIONS + val.local.y,
-            val.sector_z as f32 * SECTOR_DIMENSIONS + val.local.z,
+            val.sector.x() as f32 * SECTOR_DIMENSIONS + val.local.x,
+            val.sector.y() as f32 * SECTOR_DIMENSIONS + val.local.y,
+            val.sector.z() as f32 * SECTOR_DIMENSIONS + val.local.z,
         )
     }
 }
 
 impl Location {
     /// Creates a new location at these coordinates
-    pub fn new(local: Vec3, sector_x: i64, sector_y: i64, sector_z: i64) -> Self {
+    pub fn new(local: Vec3, sector: Sector) -> Self {
         Self {
             local,
-            sector_x,
-            sector_y,
-            sector_z,
+            sector,
             last_transform_loc: Some(local),
         }
     }
 
     /// Gets the system coordinates this location is in
-    pub fn get_system_coordinates(&self) -> (i64, i64, i64) {
-        (
-            self.sector_x / SYSTEM_SECTORS as i64,
-            self.sector_y / SYSTEM_SECTORS as i64,
-            self.sector_z / SYSTEM_SECTORS as i64,
+    pub fn get_system_coordinates(&self) -> UniverseSystem {
+        UniverseSystem(
+            (self.sector.x() / SYSTEM_SECTORS as SectorUnit) as SystemUnit,
+            (self.sector.y() / SYSTEM_SECTORS as SectorUnit) as SystemUnit,
+            (self.sector.z() / SYSTEM_SECTORS as SectorUnit) as SystemUnit,
         )
     }
 
     /// Gets the sector coordinates as a tuple
     #[inline]
-    pub fn sector(&self) -> (i64, i64, i64) {
-        (self.sector_x, self.sector_y, self.sector_z)
+    pub fn sector(&self) -> Sector {
+        self.sector
     }
 
     /// Ensures `self.local` is within [`-SECTOR_DIMENSIONS/2.0`, `SECTOR_DIMENSIONS/2.0`]
@@ -176,28 +323,28 @@ impl Location {
         let over_x = (self.local.x / (SECTOR_DIMENSIONS / 2.0)) as i64;
         if over_x != 0 {
             self.local.x -= over_x as f32 * SECTOR_DIMENSIONS;
-            self.sector_x += over_x;
+            self.sector.set_x(self.sector.x() + over_x);
         }
 
         let over_y = (self.local.y / (SECTOR_DIMENSIONS / 2.0)) as i64;
         if over_y != 0 {
             self.local.y -= over_y as f32 * SECTOR_DIMENSIONS;
-            self.sector_y += over_y;
+            self.sector.set_y(self.sector.y() + over_y);
         }
 
         let over_z = (self.local.z / (SECTOR_DIMENSIONS / 2.0)) as i64;
         if over_z != 0 {
             self.local.z -= over_z as f32 * SECTOR_DIMENSIONS;
-            self.sector_z += over_z;
+            self.sector.set_z(self.sector.z() + over_z);
         }
     }
 
     /// Only usable over f32 distances - will return infinity for distances that are outside the bounds of f32 calculations
     pub fn relative_coords_to(&self, other: &Location) -> Vec3 {
         let (dsx, dsy, dsz) = (
-            (other.sector_x - self.sector_x) as f32,
-            (other.sector_y - self.sector_y) as f32,
-            (other.sector_z - self.sector_z) as f32,
+            (other.sector.x() - self.sector.x()) as f32,
+            (other.sector.y() - self.sector.y()) as f32,
+            (other.sector.z() - self.sector.z()) as f32,
         );
 
         Vec3::new(
@@ -219,9 +366,7 @@ impl Location {
     /// Does not update the `last_transform_loc`.
     pub fn set_from(&mut self, other: &Location) {
         self.local = other.local;
-        self.sector_x = other.sector_x;
-        self.sector_y = other.sector_y;
-        self.sector_z = other.sector_z;
+        self.sector = other.sector;
     }
 
     /// Applies updates from the new translation of the transform.
@@ -251,9 +396,9 @@ impl Location {
             .unwrap_or_else(|| panic!("Died on {}", self.local.z));
 
         Vector3::new(
-            BigDecimal::from_i64(self.sector_x).unwrap() * &sector_dims + local_x,
-            BigDecimal::from_i64(self.sector_y).unwrap() * &sector_dims + local_y,
-            BigDecimal::from_i64(self.sector_z).unwrap() * &sector_dims + local_z,
+            BigDecimal::from_i64(self.sector.x()).unwrap() * &sector_dims + local_x,
+            BigDecimal::from_i64(self.sector.y()).unwrap() * &sector_dims + local_y,
+            BigDecimal::from_i64(self.sector.z()).unwrap() * &sector_dims + local_z,
         )
     }
 
@@ -262,9 +407,20 @@ impl Location {
     /// Useful for short/medium-distance calculations/displaying
     pub fn absolute_coords_f32(&self) -> Vec3 {
         Vec3::new(
-            self.sector_x as f32 * SECTOR_DIMENSIONS + self.local.x,
-            self.sector_y as f32 * SECTOR_DIMENSIONS + self.local.y,
-            self.sector_z as f32 * SECTOR_DIMENSIONS + self.local.z,
+            self.sector.x() as f32 * SECTOR_DIMENSIONS + self.local.x,
+            self.sector.y() as f32 * SECTOR_DIMENSIONS + self.local.y,
+            self.sector.z() as f32 * SECTOR_DIMENSIONS + self.local.z,
+        )
+    }
+
+    /// Returns the coordinates of this location based off 0, 0, 0.
+    ///
+    /// Useful for short/medium-distance/semi-large calculations/displaying
+    pub fn absolute_coords_f64(&self) -> Vector3<f64> {
+        Vector3::new(
+            self.sector.x() as f64 * SECTOR_DIMENSIONS as f64 + self.local.x as f64,
+            self.sector.y() as f64 * SECTOR_DIMENSIONS as f64 + self.local.y as f64,
+            self.sector.z() as f64 * SECTOR_DIMENSIONS as f64 + self.local.z as f64,
         )
     }
 }
@@ -314,14 +470,14 @@ pub(super) fn register(app: &mut App) {
 mod tests {
     use bevy::prelude::Vec3;
 
-    use crate::physics::location::SECTOR_DIMENSIONS;
+    use crate::physics::location::{Sector, SECTOR_DIMENSIONS};
 
     use super::Location;
 
     #[test]
     fn in_same_sector_pos() {
-        let l1 = Location::new(Vec3::new(-15.0, -15.0, -15.0), 20, -20, 20);
-        let l2 = Location::new(Vec3::new(15.0, 15.0, 15.0), 20, -20, 20);
+        let l1 = Location::new(Vec3::new(-15.0, -15.0, -15.0), Sector::new(20, -20, 20));
+        let l2 = Location::new(Vec3::new(15.0, 15.0, 15.0), Sector::new(20, -20, 20));
 
         let result = Vec3::new(30.0, 30.0, 30.0);
 
@@ -330,8 +486,8 @@ mod tests {
 
     #[test]
     fn in_same_sector_neg() {
-        let l1 = Location::new(Vec3::new(15.0, 15.0, 15.0), 20, -20, 20);
-        let l2 = Location::new(Vec3::new(-15.0, -15.0, -15.0), 20, -20, 20);
+        let l1 = Location::new(Vec3::new(15.0, 15.0, 15.0), Sector::new(20, -20, 20));
+        let l2 = Location::new(Vec3::new(-15.0, -15.0, -15.0), Sector::new(20, -20, 20));
 
         let result = Vec3::new(-30.0, -30.0, -30.0);
 
@@ -340,8 +496,8 @@ mod tests {
 
     #[test]
     fn in_diff_sector_neg() {
-        let l1 = Location::new(Vec3::new(15.0, 15.0, 15.0), 20, -20, 20);
-        let l2 = Location::new(Vec3::new(-15.0, -15.0, -15.0), 19, -21, 19);
+        let l1 = Location::new(Vec3::new(15.0, 15.0, 15.0), Sector::new(20, -20, 20));
+        let l2 = Location::new(Vec3::new(-15.0, -15.0, -15.0), Sector::new(19, -21, 19));
 
         let result = Vec3::new(
             -30.0 - SECTOR_DIMENSIONS,
@@ -354,8 +510,8 @@ mod tests {
 
     #[test]
     fn in_diff_sector_pos() {
-        let l1 = Location::new(Vec3::new(15.0, 15.0, 15.0), 20, -20, 20);
-        let l2 = Location::new(Vec3::new(-15.0, -15.0, -15.0), 21, -19, 21);
+        let l1 = Location::new(Vec3::new(15.0, 15.0, 15.0), Sector::new(20, -20, 20));
+        let l2 = Location::new(Vec3::new(-15.0, -15.0, -15.0), Sector::new(21, -19, 21));
 
         let result = Vec3::new(
             -30.0 + SECTOR_DIMENSIONS,
@@ -368,8 +524,8 @@ mod tests {
 
     #[test]
     fn in_far_sector_pos() {
-        let l1 = Location::new(Vec3::new(15.0, 15.0, 15.0), 20, -20, 20);
-        let l2 = Location::new(Vec3::new(-15.0, -15.0, -15.0), 30, -10, 30);
+        let l1 = Location::new(Vec3::new(15.0, 15.0, 15.0), Sector::new(20, -20, 20));
+        let l2 = Location::new(Vec3::new(-15.0, -15.0, -15.0), Sector::new(30, -10, 30));
 
         let result = Vec3::new(
             -30.0 + SECTOR_DIMENSIONS * 10.0,
@@ -382,8 +538,8 @@ mod tests {
 
     #[test]
     fn in_far_sector_neg() {
-        let l1 = Location::new(Vec3::new(15.0, 15.0, 15.0), 20, -20, 20);
-        let l2 = Location::new(Vec3::new(-15.0, -15.0, -15.0), 10, -30, 10);
+        let l1 = Location::new(Vec3::new(15.0, 15.0, 15.0), Sector::new(20, -20, 20));
+        let l2 = Location::new(Vec3::new(-15.0, -15.0, -15.0), Sector::new(10, -30, 10));
 
         let result = Vec3::new(
             -30.0 - SECTOR_DIMENSIONS * 10.0,
