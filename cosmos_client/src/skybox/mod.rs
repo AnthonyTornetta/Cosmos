@@ -1,10 +1,8 @@
 //! Load a cubemap texture onto a cube like a skybox and cycle through different compressed texture formats
 
-use std::f32::consts::PI;
-
 use bevy::{
     asset::LoadState,
-    pbr::{MaterialPipeline, MaterialPipelineKey},
+    pbr::{MaterialPipeline, MaterialPipelineKey, NotShadowCaster},
     prelude::*,
     reflect::TypeUuid,
     render::{
@@ -22,6 +20,8 @@ use bevy::{
     },
 };
 
+/// Order from top to bottom:
+/// Right, Left, Top, Bottom, Front, Back
 const CUBEMAP: &str = "skybox/skybox.png";
 
 #[derive(Resource)]
@@ -31,17 +31,6 @@ struct Cubemap {
 }
 
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
-    // directional 'sun' light
-    commands.spawn(DirectionalLightBundle {
-        directional_light: DirectionalLight {
-            illuminance: 32000.0,
-            ..default()
-        },
-        transform: Transform::from_xyz(0.0, 2.0, 0.0)
-            .with_rotation(Quat::from_rotation_x(-PI / 4.)),
-        ..default()
-    });
-
     let skybox_handle = asset_server.load(CUBEMAP);
 
     commands.insert_resource(Cubemap {
@@ -84,15 +73,20 @@ fn asset_loaded(
             }
         }
         if !updated {
-            commands.spawn(MaterialMeshBundle::<CubemapMaterial> {
-                mesh: meshes.add(Mesh::from(shape::Cube {
-                    size: 100_000_000.0,
-                })),
-                material: cubemap_materials.add(CubemapMaterial {
-                    base_color_texture: Some(cubemap.image_handle.clone()),
-                }),
-                ..default()
-            });
+            commands.spawn((
+                MaterialMeshBundle::<CubemapMaterial> {
+                    mesh: meshes.add(Mesh::from(shape::UVSphere {
+                        radius: 50_000_000.0,
+                        sectors: 1024,
+                        stacks: 1024,
+                    })),
+                    material: cubemap_materials.add(CubemapMaterial {
+                        base_color_texture: Some(cubemap.image_handle.clone()),
+                    }),
+                    ..default()
+                },
+                NotShadowCaster,
+            ));
         }
 
         cubemap.is_loaded = true;
