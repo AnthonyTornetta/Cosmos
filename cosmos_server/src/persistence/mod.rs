@@ -10,7 +10,10 @@ use bevy::{
 use rand::{distributions::Alphanumeric, Rng};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use cosmos_core::{netty::cosmos_encoder, physics::location::Location};
+use cosmos_core::{
+    netty::cosmos_encoder,
+    physics::location::{Location, Sector},
+};
 
 pub mod loading;
 pub mod player_loading;
@@ -31,14 +34,14 @@ pub struct EntityId(String);
 /// This is just used to prevent excessive IO operations.
 ///
 /// This can be cloned pretty quickly when needed
-pub struct SectorsCache(HashMap<(i64, i64, i64), Option<Box<HashSet<(EntityId, Option<u32>)>>>>);
+pub struct SectorsCache(HashMap<Sector, Option<Box<HashSet<(EntityId, Option<u32>)>>>>);
 // Option<Box<HashSet<(EntityId, Option<u32>)>>>> is used instead of just HashSet<(EntityId, Option<u32>)>
 // so that clone operations are fast.
 
 impl SectorsCache {
     /// Gets all the entities that are saved for this sector in this cache.  This does NOT
     /// perform any IO operations.
-    pub fn get(&self, sector: &(i64, i64, i64)) -> &Option<Box<HashSet<(EntityId, Option<u32>)>>> {
+    pub fn get(&self, sector: &Sector) -> &Option<Box<HashSet<(EntityId, Option<u32>)>>> {
         if let Some(set) = self.0.get(sector) {
             set
         } else {
@@ -48,12 +51,7 @@ impl SectorsCache {
 
     /// Removes a saved entity from this location - this does not do any IO operations,
     /// and only removes it from the cache.
-    pub fn remove(
-        &mut self,
-        entity_id: &EntityId,
-        sector: (i64, i64, i64),
-        load_distance: Option<u32>,
-    ) {
+    pub fn remove(&mut self, entity_id: &EntityId, sector: Sector, load_distance: Option<u32>) {
         if let Some(set) = self.0.get_mut(&sector) {
             let Some(set) = set else {
                 return;
@@ -68,12 +66,7 @@ impl SectorsCache {
     }
 
     /// Inserts an entity into this sector in this cache. This does not perform any IO operations.
-    pub fn insert(
-        &mut self,
-        sector: (i64, i64, i64),
-        entity_id: EntityId,
-        load_distance: Option<u32>,
-    ) {
+    pub fn insert(&mut self, sector: Sector, entity_id: EntityId, load_distance: Option<u32>) {
         if let Some(x) = self.0.get_mut(&sector) {
             // helps out the lsp
             let x: &mut Option<Box<HashSet<(EntityId, Option<u32>)>>> = x;
@@ -122,7 +115,7 @@ impl EntityId {
 #[derive(Debug, Clone)]
 pub(crate) enum SaveFileIdentifierType {
     /// This entity does not belong to any other entity
-    Base((EntityId, Option<(i64, i64, i64)>, Option<u32>)),
+    Base((EntityId, Option<Sector>, Option<u32>)),
     /// Denotes that this entity belongs to another entity, and should be saved
     /// in that entity's folder. Once this entity is saved, this component will be removed.
     ///
@@ -141,11 +134,7 @@ pub struct SaveFileIdentifier {
 
 impl SaveFileIdentifier {
     /// Creates a new SaveFileIdentifier from this location & entity id
-    pub fn new(
-        sector: Option<(i64, i64, i64)>,
-        entity_id: EntityId,
-        load_distance: Option<u32>,
-    ) -> Self {
+    pub fn new(sector: Option<Sector>, entity_id: EntityId, load_distance: Option<u32>) -> Self {
         Self {
             identifier_type: SaveFileIdentifierType::Base((entity_id, sector, load_distance)),
         }
@@ -203,8 +192,8 @@ impl SaveFileIdentifier {
     }
 
     /// Gets the directory for this sector's save folder
-    pub fn get_sector_path(sector: (i64, i64, i64)) -> String {
-        let (x, y, z) = sector;
+    pub fn get_sector_path(sector: Sector) -> String {
+        let (x, y, z) = (sector.x(), sector.y(), sector.z());
 
         format!("world/{x}_{y}_{z}")
     }
@@ -289,7 +278,7 @@ impl SerializedData {
 }
 
 /// Returns true if a sector has at some point been generated at this location
-pub fn is_sector_loaded(sector: (i64, i64, i64)) -> bool {
+pub fn is_sector_loaded(sector: Sector) -> bool {
     fs::try_exists(SaveFileIdentifier::get_sector_path(sector)).unwrap_or(false)
 }
 

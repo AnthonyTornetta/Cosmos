@@ -142,12 +142,12 @@ fn get_requested_chunk(
                         if let Some(chunk) = structure.chunk_from_chunk_coordinates(cx, cy, cz) {
                             let mut mutex = serialized.lock().expect("Failed to lock");
 
-                            let mut timer = UtilsTimer::start();
-                            let _ = cosmos_encoder::serialize(chunk);
-                            timer.log_duration("For bincode + compression:");
-                            timer.reset();
-                            let _ = bincode::serialize(chunk).unwrap();
-                            timer.log_duration("For just bincode:");
+                            // let mut timer = UtilsTimer::start();
+                            // let _ = cosmos_encoder::serialize(chunk);
+                            // timer.log_duration("For bincode + compression:");
+                            // timer.reset();
+                            // let _ = bincode::serialize(chunk).unwrap();
+                            // timer.log_duration("For just bincode:");
 
                             mutex.as_mut().unwrap().push((
                                 ev.requester_id,

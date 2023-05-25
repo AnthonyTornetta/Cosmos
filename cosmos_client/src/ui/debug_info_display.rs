@@ -89,8 +89,11 @@ fn update_coords(
     if let Ok(loc) = query.get_single() {
         for mut txt_coords in txt_coords.iter_mut() {
             txt_coords.sections[0].value = format!(
-                "({}, {}, {}), ({:.1}, {:.1}, {:.1})",
-                loc.sector_x, loc.sector_y, loc.sector_z, loc.local.x, loc.local.y, loc.local.z
+                "({}), ({:.1}, {:.1}, {:.1})",
+                loc.sector(),
+                loc.local.x,
+                loc.local.y,
+                loc.local.z
             );
         }
 
