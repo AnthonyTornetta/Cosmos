@@ -86,13 +86,13 @@ fn get_max_level(
     structure_x: f64,
     structure_y: f64,
     structure_z: f64,
-    noise_generastor: &noise::OpenSimplex,
+    noise_generator: &noise::OpenSimplex,
     middle_air_start: usize,
 ) -> usize {
     let mut depth: f64 = 0.0;
     for iteration in 1..=ITERATIONS {
         let iteration = iteration as f64;
-        depth += noise_generastor.get([
+        depth += noise_generator.get([
             (x as f64 + structure_x) * (DELTA / iteration),
             (y as f64 + structure_y) * (DELTA / iteration),
             (z as f64 + structure_z) * (DELTA / iteration),
