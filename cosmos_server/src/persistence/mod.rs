@@ -100,7 +100,7 @@ impl EntityId {
         Self::new(
             rand::thread_rng()
                 .sample_iter(&Alphanumeric)
-                .take(32)
+                .take(64)
                 .map(char::from)
                 .collect::<String>(),
         )
