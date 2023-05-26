@@ -33,7 +33,7 @@ use crate::{
     },
     state::GameState,
     structure::planet::{
-        biosphere::TGenerateChunkEvent, chunk::SaveChunk, persistence::NeedsPopulated,
+        biosphere::TGenerateChunkEvent, chunk::SaveChunk, persistence::ChunkNeedsPopulated,
     },
 };
 
@@ -41,7 +41,7 @@ use crate::{
 /// This component will be in a planet's child entity if a chunk needs generated
 ///
 /// This entity should be used as a flag, and is NOT the same as the chunk's entity
-pub struct NeedsGenerated {
+pub struct ChunkNeedsGenerated {
     /// The chunk's coordinates in the structure
     pub chunk_coords: (usize, usize, usize),
     /// The structure's entity
@@ -54,7 +54,7 @@ pub struct NeedsGenerated {
 /// Use this to register your own planet generator
 pub fn check_needs_generated_system<T: TGenerateChunkEvent + Event, K: Component>(
     mut commands: Commands,
-    needs_generated_query: Query<(Entity, &NeedsGenerated)>,
+    needs_generated_query: Query<(Entity, &ChunkNeedsGenerated)>,
     parent_query: Query<&Parent>,
     correct_type_query: Query<(), With<K>>,
     mut event_writer: EventWriter<T>,
@@ -222,7 +222,7 @@ fn get_requested_chunk(
 #[cfg(debug_assertions)]
 const RENDER_DISTANCE: i32 = 2;
 #[cfg(not(debug_assertions))]
-const RENDER_DISTANCE: i32 = 5;
+const RENDER_DISTANCE: i32 = 3;
 
 fn generate_chunks_near_players(
     players: Query<&Location, With<Player>>,
@@ -294,7 +294,7 @@ fn mark_chunk_for_generation(
 
     let needs_generated_flag = commands
         .spawn((
-            NeedsPopulated {
+            ChunkNeedsPopulated {
                 chunk_coords: (cx, cy, cz),
                 structure_entity,
             },

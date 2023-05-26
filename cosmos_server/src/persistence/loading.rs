@@ -35,7 +35,7 @@ fn check_needs_loaded(
     for (ent, nl) in query.iter() {
         let path = nl.get_save_file_path();
         let Ok(data) = fs::read(&path) else {
-            eprintln!("Error reading zip record at '{path}'. Is it corrupted?");
+            eprintln!("Error reading record at '{path}'. Is it corrupted?");
             commands.entity(ent).despawn_recursive();
             continue;
         };
