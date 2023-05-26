@@ -138,8 +138,6 @@ pub fn done_saving(
 fn write_file(save_identifier: &SaveFileIdentifier, serialized: &[u8]) -> io::Result<()> {
     let path = save_identifier.get_save_file_path();
 
-    println!("Got {path} for {save_identifier:?}");
-
     let directory = &path[0..path.rfind('/').expect("No / found in file path!")];
 
     fs::create_dir_all(directory)?;

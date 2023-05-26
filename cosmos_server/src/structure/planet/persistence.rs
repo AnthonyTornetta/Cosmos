@@ -140,8 +140,6 @@ fn populate_chunks(
             )
         };
 
-        println!("{} ||| {svi:?}", svi.get_save_file_path());
-
         if let Ok(chunk) = fs::read(svi.get_save_file_path()) {
             if chunk.is_empty() {
                 // This can happen if the file is currently being saved, just try again next frame or whenever it's available
