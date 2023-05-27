@@ -20,7 +20,7 @@ use crate::persistence::{
 };
 
 use super::{
-    generation::planet_generator::NeedsGenerated, server_planet_builder::ServerPlanetBuilder,
+    generation::planet_generator::ChunkNeedsGenerated, server_planet_builder::ServerPlanetBuilder,
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -97,7 +97,8 @@ fn on_load_structure(
 }
 
 #[derive(Debug, Component)]
-pub struct NeedsPopulated {
+/// This is responsible for signifying that a chunk needs either generated or loaded from disk
+pub(super) struct ChunkNeedsPopulated {
     pub chunk_coords: (usize, usize, usize),
     pub structure_entity: Entity,
 }
@@ -112,7 +113,7 @@ fn structure_created(
 }
 
 fn populate_chunks(
-    query: Query<(Entity, &NeedsPopulated)>,
+    query: Query<(Entity, &ChunkNeedsPopulated)>,
     structure_query: Query<(
         &EntityId,
         Option<&SaveFileIdentifier>,
@@ -123,7 +124,7 @@ fn populate_chunks(
 ) {
     for (entity, needs) in query.iter() {
         let Ok((entity_id, structure_svi, loc, physics_world)) = structure_query.get(needs.structure_entity) else {
-            commands.entity(entity).remove::<NeedsPopulated>();
+            commands.entity(entity).remove::<ChunkNeedsPopulated>();
 
             continue;
         };
@@ -161,15 +162,15 @@ fn populate_chunks(
                     },
                     *physics_world,
                 ))
-                .remove::<NeedsPopulated>();
+                .remove::<ChunkNeedsPopulated>();
         } else {
             commands
                 .entity(entity)
-                .insert(NeedsGenerated {
+                .insert(ChunkNeedsGenerated {
                     chunk_coords: needs.chunk_coords,
                     structure_entity: needs.structure_entity,
                 })
-                .remove::<NeedsPopulated>();
+                .remove::<ChunkNeedsPopulated>();
         }
     }
 }

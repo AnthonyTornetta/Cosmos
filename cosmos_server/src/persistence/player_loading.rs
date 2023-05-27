@@ -59,6 +59,9 @@ const DEFAULT_LOAD_DISTANCE: u32 = (LOAD_DISTANCE / SECTOR_DIMENSIONS) as u32;
 struct LoadingTask(Task<(SectorsCache, Vec<SaveFileIdentifier>)>);
 
 fn monitor_loading_task(
+    // Because entities can be added while the scan task is in progress,
+    // we need to re-check all the loaded entities before actually spawning them.
+    loaded_entities: Query<&EntityId>,
     mut query: Query<(Entity, &mut LoadingTask)>,
     mut commands: Commands,
     mut sectors_cache: ResMut<SectorsCache>,
@@ -71,7 +74,13 @@ fn monitor_loading_task(
         commands.entity(entity).despawn_recursive();
 
         for sfi in save_file_ids {
-            commands.spawn((sfi, NeedsLoaded));
+            if !loaded_entities.iter().any(|x| {
+                x == sfi
+                    .entity_id()
+                    .expect("A non-base SaveFileIdentifier was attempted to be loaded in load_near")
+            }) {
+                commands.spawn((sfi, NeedsLoaded));
+            }
         }
 
         *sectors_cache = cache;

@@ -140,6 +140,15 @@ impl SaveFileIdentifier {
         }
     }
 
+    /// If this SaveFileIdentifier is a base identifier (not child),
+    /// this will return its EntityId. Otherwise, returns None.
+    pub fn entity_id(&self) -> Option<&EntityId> {
+        match &self.identifier_type {
+            SaveFileIdentifierType::Base((entity_id, _, _)) => Some(entity_id),
+            _ => None,
+        }
+    }
+
     /// Creates a new SaveFileIdentifier from this location & entity id
     pub fn as_child(this_identifier: impl Into<String>, belongs_to: SaveFileIdentifier) -> Self {
         Self {
@@ -151,16 +160,15 @@ impl SaveFileIdentifier {
     }
 
     /// Gets the file path a given entity will be saved to.
-    ///
-    /// `world/X_Y_Z/entity_id.cent`
     pub fn get_save_file_path(&self) -> String {
-        format!("{}.cent", self.get_save_file_directory(),)
+        format!(
+            "{}.cent",
+            self.get_save_file_directory(Self::get_save_file_name)
+        )
     }
 
     /// Gets the save file name without the .cent extension, but not the whole path
-    ///
-    /// `entity_id`
-    pub fn get_save_file_name(&self) -> String {
+    fn get_save_file_name(&self) -> String {
         match &self.identifier_type {
             SaveFileIdentifierType::Base((entity, _, load_distance)) => load_distance
                 .map(|ld| format!("{ld}_{}", entity.as_str()))
@@ -169,30 +177,36 @@ impl SaveFileIdentifier {
         }
     }
 
+    /// Gets the save file name without the .cent extension, but not the whole path
+    fn get_save_file_name_no_load_distance(&self) -> String {
+        match &self.identifier_type {
+            SaveFileIdentifierType::Base((entity, _, _)) => entity.as_str().to_owned(),
+            SaveFileIdentifierType::BelongsTo((_, name)) => name.to_owned(),
+        }
+    }
+
     /// Gets the save file name, but not the whole path
-    ///
-    /// `entity_id.cent`
-    pub fn get_save_file_directory(&self) -> String {
+    fn get_save_file_directory(&self, base_get_save_file_name: impl Fn(&Self) -> String) -> String {
         match &self.identifier_type {
             SaveFileIdentifierType::Base((_, sector, _)) => {
                 let directory = sector
                     .map(Self::get_sector_path)
                     .unwrap_or("world/nowhere".into());
 
-                format!("{directory}/{}", self.get_save_file_name())
+                format!("{directory}/{}", base_get_save_file_name(self))
             }
             SaveFileIdentifierType::BelongsTo((belongs_to, _)) => {
                 format!(
                     "{}/{}",
-                    belongs_to.get_save_file_directory(),
-                    self.get_save_file_name()
+                    belongs_to.get_save_file_directory(Self::get_save_file_name_no_load_distance),
+                    base_get_save_file_name(self)
                 )
             }
         }
     }
 
     /// Gets the directory for this sector's save folder
-    pub fn get_sector_path(sector: Sector) -> String {
+    fn get_sector_path(sector: Sector) -> String {
         let (x, y, z) = (sector.x(), sector.y(), sector.z());
 
         format!("world/{x}_{y}_{z}")
