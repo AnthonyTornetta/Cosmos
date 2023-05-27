@@ -159,7 +159,7 @@ fn spawn_planet(
 
                 if let Some(star) = closest_star {
                     let size: usize = if is_origin {
-                        50
+                        5
                     } else {
                         rng.gen_range(200..=500)
                     };

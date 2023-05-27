@@ -17,8 +17,8 @@ pub mod netty;
 pub mod plugin;
 pub mod projectiles;
 pub mod rendering;
-pub mod state;
 pub mod skybox;
+pub mod state;
 pub mod structure;
 pub mod ui;
 pub mod universe;
@@ -274,6 +274,10 @@ fn process_player_movement(
 
                     velocity.linvel.z = z;
                 }
+            }
+        } else {
+            if velocity.linvel.dot(velocity.linvel) > max_speed * max_speed {
+                velocity.linvel = velocity.linvel.normalize() * max_speed;
             }
         }
     }
