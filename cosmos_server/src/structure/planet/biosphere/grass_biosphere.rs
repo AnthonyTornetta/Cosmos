@@ -527,7 +527,6 @@ fn generate_planet(
                 }
 
                 if all_air {
-                    // timer.log_duration("Generating air chunk took");
                     (chunk, structure_entity)
                 } else if all_stone {
                     for z in 0..CHUNK_DIMENSIONS {
@@ -540,7 +539,6 @@ fn generate_planet(
                             }
                         }
                     }
-                    // timer.log_duration("Generating stone chunk took");
                     (chunk, structure_entity)
                 } else {
                     for z in 0..CHUNK_DIMENSIONS {
@@ -576,7 +574,6 @@ fn generate_planet(
                             }
                         }
                     }
-                    // timer.log_duration("Generating normal chunk took");
                     (chunk, structure_entity)
                 }
             });
