@@ -204,6 +204,7 @@ pub struct Block {
 }
 
 impl Identifiable for Block {
+    #[inline]
     fn id(&self) -> u16 {
         self.id
     }
