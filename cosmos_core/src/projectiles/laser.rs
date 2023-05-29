@@ -4,7 +4,7 @@
 use bevy::{
     pbr::{NotShadowCaster, NotShadowReceiver},
     prelude::{
-        App, Commands, Component, DespawnRecursiveExt, Entity, EventWriter, GlobalTransform,
+        warn, App, Commands, Component, DespawnRecursiveExt, Entity, EventWriter, GlobalTransform,
         Parent, PbrBundle, Quat, Query, Res, Transform, Vec3, With, Without,
     },
     time::Time,
@@ -14,7 +14,13 @@ use bevy_rapier3d::prelude::{
     RigidBody, Sensor, Velocity, WorldId, DEFAULT_WORLD_ID,
 };
 
-use crate::{netty::NoSendEntity, physics::location::Location};
+use crate::{
+    netty::NoSendEntity,
+    physics::{
+        location::Location,
+        player_world::{PlayerWorld, WorldWithin},
+    },
+};
 
 #[derive(Debug)]
 /// The entity hit represents the entity hit by the laser
@@ -91,16 +97,17 @@ impl Laser {
         mut pbr: PbrBundle,
         time: &Time,
         world_id: WorldId,
-        world_location: &Location,
         commands: &mut Commands,
     ) -> Entity {
-        pbr.transform = Transform::from_translation(world_location.relative_coords_to(&location));
+        // pbr.transform = Transform::from_translation(world_location.relative_coords_to(&location));
 
         pbr.transform.look_at(laser_velocity, Vec3::Y);
 
         let mut ent_cmds = commands.spawn_empty();
 
         let laser_entity = ent_cmds.id();
+
+        println!("Spawning @ {location}");
 
         ent_cmds.insert((
             Laser {
@@ -148,7 +155,6 @@ impl Laser {
         no_collide_entity: Option<Entity>,
         time: &Time,
         world_id: WorldId,
-        world_location: &Location,
         commands: &mut Commands,
     ) -> Entity {
         Self::spawn_custom_pbr(
@@ -162,7 +168,6 @@ impl Laser {
             },
             time,
             world_id,
-            world_location,
             commands,
         )
     }
@@ -179,6 +184,7 @@ fn handle_events(
             &mut Laser,
             &Velocity,
             &Collider,
+            Option<&WorldWithin>,
         ),
         With<Laser>,
     >,
@@ -187,6 +193,7 @@ fn handle_events(
     rapier_context: Res<RapierContext>,
     parent_query: Query<&Parent>,
     transform_query: Query<&GlobalTransform, Without<Laser>>,
+    worlds: Query<(&Location, &PhysicsWorld, Entity), With<PlayerWorld>>,
 ) {
     for (
         world,
@@ -197,6 +204,7 @@ fn handle_events(
         mut laser,
         velocity,
         collider,
+        world_within,
     ) in query.iter_mut()
     {
         if laser.active {
@@ -204,13 +212,47 @@ fn handle_events(
             let delta_position = last_pos.relative_coords_to(location);
             laser.last_position = *location;
 
+            let world_id = world.map(|bw| bw.world_id).unwrap_or(DEFAULT_WORLD_ID);
+
+            let coords: Option<Vec3> = world_within
+                .map(|world_within| {
+                    if let Ok((loc, _, _)) = worlds.get(world_within.0) {
+                        Some(loc.relative_coords_to(location))
+                    } else {
+                        warn!("Laser playerworld not found!");
+                        None
+                    }
+                })
+                .unwrap_or_else(|| {
+                    // for (loc, pw, player_world_entity) in worlds.iter() {
+                    //     if pw.world_id == world_id {
+                    //         commands
+                    //             .entity(laser_entity)
+                    //             .insert(WorldWithin(player_world_entity));
+
+                    //         return Some(loc.relative_coords_to(location));
+                    //     };
+                    // }
+
+                    // warn!(
+                    //     "Suitable PlayerWorld for laser not found! Laser has world id {world_id}"
+                    // );
+                    None
+                });
+
+            let Some(coords) = coords else {
+                continue;
+            };
+
+            println!("Starting at: {}", coords - delta_position);
+
             // Pass 1 second as the time & delta_position as the velocity because
             // it simulates the laser moving over the period it moved in 1 second
             // and the time it takes is irrelevant.
 
             if let Ok(Some((entity, toi))) = rapier_context.cast_shape(
-                world.map(|bw| bw.world_id).unwrap_or(DEFAULT_WORLD_ID),
-                (last_pos - delta_position).absolute_coords_f32(), // sometimes lasers pass through things that are next to where they are spawned, thus we check starting a bit behind them
+                world_id,
+                coords - delta_position, // sometimes lasers pass through things that are next to where they are spawned, thus we check starting a bit behind them
                 Quat::from_affine3(&transform.affine()),
                 delta_position * 2.0, // * 2.0 to account for checking behind the laser
                 collider,
@@ -274,7 +316,13 @@ fn despawn_lasers(
     }
 }
 
+fn print_laser_pos(query: Query<(&Location, &Transform), With<Laser>>) {
+    for (loc, trans) in query.iter() {
+        println!("{} | {loc}", trans.translation);
+    }
+}
+
 pub(super) fn register(app: &mut App) {
-    app.add_systems((handle_events, despawn_lasers))
+    app.add_systems((handle_events, despawn_lasers, print_laser_pos))
         .add_event::<LaserCollideEvent>();
 }

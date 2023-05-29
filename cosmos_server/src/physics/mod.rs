@@ -12,7 +12,7 @@ use cosmos_core::{
     },
 };
 
-use crate::{netty::server_listener::server_listen_messages, state::GameState};
+use crate::state::GameState;
 
 const WORLD_SWITCH_DISTANCE: f32 = SECTOR_DIMENSIONS / 2.0;
 const WORLD_SWITCH_DISTANCE_SQRD: f32 = WORLD_SWITCH_DISTANCE * WORLD_SWITCH_DISTANCE;
@@ -381,15 +381,15 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         (
             // If it's not after server_listen_messages, some noticable jitter can happen
-            fix_location.after(server_listen_messages),
-            sync_transforms_and_locations,
+            fix_location, //.after(server_listen_messages),
             bubble_down_locations,
             move_players_between_worlds,
             move_non_players_between_worlds,
         )
             .chain()
-            .in_set(OnUpdate(GameState::Playing)),
+            .in_base_set(CoreSet::Last),
     )
+    .add_system(sync_transforms_and_locations.in_set(OnUpdate(GameState::Playing)))
     // This must be last due to commands being delayed when adding PhysicsWorlds.
     .add_system(remove_empty_worlds.in_base_set(CoreSet::Last));
 }

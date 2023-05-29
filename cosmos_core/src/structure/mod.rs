@@ -483,7 +483,14 @@ impl Structure {
 
     /// Gets the block's relative position to this structure's transform.
     pub fn block_relative_position(&self, x: usize, y: usize, z: usize) -> Vec3 {
-        Self::block_relative_position_static(x, y, z, self.width, self.height, self.length)
+        Self::block_relative_position_static(
+            x,
+            y,
+            z,
+            self.blocks_width(),
+            self.blocks_height(),
+            self.blocks_length(),
+        )
     }
 
     /// A static version of [`Structure::block_relative_position`]. This is useful if you know
@@ -496,13 +503,13 @@ impl Structure {
         x: usize,
         y: usize,
         z: usize,
-        width: usize,
-        height: usize,
-        length: usize,
+        structure_blocks_width: usize,
+        structure_blocks_height: usize,
+        structure_blocks_length: usize,
     ) -> Vec3 {
-        let xoff = width as f32 / 2.0;
-        let yoff = height as f32 / 2.0;
-        let zoff = length as f32 / 2.0;
+        let xoff = structure_blocks_width as f32 / 2.0;
+        let yoff = structure_blocks_height as f32 / 2.0;
+        let zoff = structure_blocks_length as f32 / 2.0;
 
         let xx = x as f32 - xoff;
         let yy = y as f32 - yoff;

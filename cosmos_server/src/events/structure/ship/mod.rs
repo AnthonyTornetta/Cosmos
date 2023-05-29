@@ -3,7 +3,11 @@
 use bevy::prelude::{App, Entity, EventReader, IntoSystemConfig, OnUpdate, Query, ResMut};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
-    netty::{cosmos_encoder, server_unreliable_messages::ServerUnreliableMessages, NettyChannel},
+    events::structure::change_pilot_event::ChangePilotEvent,
+    netty::{
+        cosmos_encoder, server_reliable_messages::ServerReliableMessages,
+        server_unreliable_messages::ServerUnreliableMessages, NettyChannel,
+    },
     structure::ship::ship_movement::ShipMovement,
 };
 
@@ -40,9 +44,26 @@ fn monitor_set_movement_events(
     }
 }
 
+fn monitor_pilot_changes(
+    mut event_reader: EventReader<ChangePilotEvent>,
+    mut server: ResMut<RenetServer>,
+) {
+    for ev in event_reader.iter() {
+        server.broadcast_message(
+            NettyChannel::Reliable.id(),
+            cosmos_encoder::serialize(&ServerReliableMessages::PilotChange {
+                structure_entity: ev.structure_entity,
+                pilot_entity: ev.pilot_entity,
+            }),
+        );
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     core::register(app);
 
-    app.add_event::<ShipSetMovementEvent>()
-        .add_systems((monitor_set_movement_events.in_set(OnUpdate(GameState::Playing)),));
+    app.add_event::<ShipSetMovementEvent>().add_systems((
+        monitor_pilot_changes.in_set(OnUpdate(GameState::Playing)),
+        monitor_set_movement_events.in_set(OnUpdate(GameState::Playing)),
+    ));
 }

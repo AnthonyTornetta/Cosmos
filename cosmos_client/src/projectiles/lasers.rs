@@ -8,7 +8,6 @@ use cosmos_core::{
         cosmos_encoder, server_laser_cannon_system_messages::ServerLaserCannonSystemMessages,
         NettyChannel,
     },
-    physics::{location::Location, player_world::PlayerWorld},
     projectiles::laser::Laser,
 };
 
@@ -30,7 +29,6 @@ fn lasers_netty(
     time: Res<Time>,
     network_mapping: Res<NetworkMapping>,
     laser_mesh: Res<LaserMesh>,
-    player_world: Query<&Location, With<PlayerWorld>>,
 ) {
     while let Some(message) = client.receive_message(NettyChannel::LaserCannonSystem.id()) {
         let msg: ServerLaserCannonSystemMessages = cosmos_encoder::deserialize(&message).unwrap();
@@ -44,37 +42,33 @@ fn lasers_netty(
                 strength,
                 mut no_hit,
             } => {
-                if let Ok(world_location) = player_world.get_single() {
-                    if let Some(server_entity) = no_hit {
-                        if let Some(client_entity) =
-                            network_mapping.client_from_server(&server_entity)
-                        {
-                            no_hit = Some(client_entity);
-                        }
+                if let Some(server_entity) = no_hit {
+                    if let Some(client_entity) = network_mapping.client_from_server(&server_entity)
+                    {
+                        no_hit = Some(client_entity);
                     }
-
-                    Laser::spawn_custom_pbr(
-                        location,
-                        laser_velocity,
-                        firer_velocity,
-                        strength,
-                        no_hit,
-                        PbrBundle {
-                            mesh: laser_mesh.0.clone(),
-                            material: materials.add(StandardMaterial {
-                                base_color: color,
-                                // emissive: color,
-                                unlit: true,
-                                ..Default::default()
-                            }),
-                            ..Default::default()
-                        },
-                        &time,
-                        DEFAULT_WORLD_ID,
-                        world_location,
-                        &mut commands,
-                    );
                 }
+
+                Laser::spawn_custom_pbr(
+                    location,
+                    laser_velocity,
+                    firer_velocity,
+                    strength,
+                    no_hit,
+                    PbrBundle {
+                        mesh: laser_mesh.0.clone(),
+                        material: materials.add(StandardMaterial {
+                            base_color: color,
+                            // emissive: color,
+                            unlit: true,
+                            ..Default::default()
+                        }),
+                        ..Default::default()
+                    },
+                    &time,
+                    DEFAULT_WORLD_ID,
+                    &mut commands,
+                );
             }
         }
     }

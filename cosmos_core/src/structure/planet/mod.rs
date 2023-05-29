@@ -54,17 +54,17 @@ impl Planet {
         bx: usize,
         by: usize,
         bz: usize,
-        structure_width: usize,
-        structure_height: usize,
-        structure_length: usize,
+        structure_blocks_width: usize,
+        structure_blocks_height: usize,
+        structure_blocks_length: usize,
     ) -> BlockFace {
         Self::planet_face_relative(Structure::block_relative_position_static(
             bx,
             by,
             bz,
-            structure_width,
-            structure_height,
-            structure_length,
+            structure_blocks_width,
+            structure_blocks_height,
+            structure_blocks_length,
         ))
     }
 
