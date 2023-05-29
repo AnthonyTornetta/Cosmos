@@ -5,7 +5,7 @@ use bevy::{
     pbr::{NotShadowCaster, NotShadowReceiver},
     prelude::{
         warn, App, Commands, Component, DespawnRecursiveExt, Entity, EventWriter, GlobalTransform,
-        Parent, PbrBundle, Quat, Query, Res, Transform, Vec3, With, Without,
+        Parent, PbrBundle, Quat, Query, Res, Vec3, With, Without,
     },
     time::Time,
 };
@@ -107,7 +107,7 @@ impl Laser {
 
         let laser_entity = ent_cmds.id();
 
-        println!("Spawning @ {location}");
+        // println!("Spawning @ {location}");
 
         ent_cmds.insert((
             Laser {
@@ -178,12 +178,10 @@ fn handle_events(
         (
             Option<&PhysicsWorld>,
             &Location,
-            &GlobalTransform,
             Entity,
             Option<&NoCollide>,
             &mut Laser,
             &Velocity,
-            &Collider,
             Option<&WorldWithin>,
         ),
         With<Laser>,
@@ -195,17 +193,8 @@ fn handle_events(
     transform_query: Query<&GlobalTransform, Without<Laser>>,
     worlds: Query<(&Location, &PhysicsWorld, Entity), With<PlayerWorld>>,
 ) {
-    for (
-        world,
-        location,
-        transform,
-        laser_entity,
-        no_collide_entity,
-        mut laser,
-        velocity,
-        collider,
-        world_within,
-    ) in query.iter_mut()
+    for (world, location, laser_entity, no_collide_entity, mut laser, velocity, world_within) in
+        query.iter_mut()
     {
         if laser.active {
             let last_pos = laser.last_position;
@@ -244,19 +233,21 @@ fn handle_events(
                 continue;
             };
 
-            println!("Starting at: {}", coords - delta_position);
+            let ray_start = coords - delta_position;
 
-            // Pass 1 second as the time & delta_position as the velocity because
-            // it simulates the laser moving over the period it moved in 1 second
-            // and the time it takes is irrelevant.
+            // * 2.0 to account for checking behind the laser
+            let ray_distance = ((delta_position * 2.0).dot(delta_position * 2.0)).sqrt();
 
-            if let Ok(Some((entity, toi))) = rapier_context.cast_shape(
+            // The transform's rotation may not accurately represent the direction the laser is travelling,
+            // so rather use its actual delta position for direction of travel calculations
+            let ray_direction = delta_position.normalize_or_zero();
+
+            if let Ok(Some((entity, toi))) = rapier_context.cast_ray(
                 world_id,
-                coords - delta_position, // sometimes lasers pass through things that are next to where they are spawned, thus we check starting a bit behind them
-                Quat::from_affine3(&transform.affine()),
-                delta_position * 2.0, // * 2.0 to account for checking behind the laser
-                collider,
-                1.0,
+                ray_start, // sometimes lasers pass through things that are next to where they are spawned, thus we check starting a bit behind them
+                ray_direction,
+                ray_distance,
+                false,
                 QueryFilter::predicate(QueryFilter::default(), &|entity| {
                     if let Some(no_collide_entity) = no_collide_entity {
                         if no_collide_entity.0 == entity {
@@ -271,13 +262,17 @@ fn handle_events(
                     }
                 }),
             ) {
+                let pos = ray_start + (toi * ray_direction) + (velocity.linvel.normalize() * 0.01);
+
+                println!("{toi} * {ray_direction} = {}", toi * delta_position);
+
                 if let Ok(parent) = parent_query.get(entity) {
                     if let Ok(transform) = transform_query.get(parent.get()) {
-                        let pos = toi.witness1 + velocity.linvel.normalize() * 0.01;
-
                         let lph = Quat::from_affine3(&transform.affine())
                             .inverse()
                             .mul_vec3(pos - transform.translation());
+
+                        println!("Hit {pos} -> {lph}");
 
                         event_writer.send(LaserCollideEvent {
                             entity_hit: entity,
@@ -286,10 +281,11 @@ fn handle_events(
                         });
                     }
                 } else if let Ok(transform) = transform_query.get(entity) {
-                    let pos = toi.witness1 + velocity.linvel.normalize() * 0.01;
                     let lph = Quat::from_affine3(&transform.affine())
                         .inverse()
                         .mul_vec3(pos - transform.translation());
+
+                    println!("Hit {pos} -> {lph}");
 
                     event_writer.send(LaserCollideEvent {
                         entity_hit: entity,
@@ -297,6 +293,7 @@ fn handle_events(
                         laser_strength: laser.strength,
                     });
                 }
+
                 laser.active = false;
                 commands.entity(laser_entity).despawn_recursive();
             }
@@ -316,13 +313,7 @@ fn despawn_lasers(
     }
 }
 
-fn print_laser_pos(query: Query<(&Location, &Transform), With<Laser>>) {
-    for (loc, trans) in query.iter() {
-        println!("{} | {loc}", trans.translation);
-    }
-}
-
 pub(super) fn register(app: &mut App) {
-    app.add_systems((handle_events, despawn_lasers, print_laser_pos))
+    app.add_systems((handle_events, despawn_lasers))
         .add_event::<LaserCollideEvent>();
 }

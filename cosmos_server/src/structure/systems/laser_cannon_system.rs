@@ -19,7 +19,7 @@ use cosmos_core::{
 
 use crate::state::GameState;
 
-const LASER_BASE_VELOCITY: f32 = 5.0;
+const LASER_BASE_VELOCITY: f32 = 200.0;
 const LASER_SHOOT_SECONDS: f32 = 0.2;
 
 fn update_system(
