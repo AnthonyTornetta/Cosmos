@@ -232,51 +232,9 @@ impl<'a> Iterator for BlockIterator<'a> {
                     .cur_chunk
                     .has_block_at(body.body.at_x, body.body.at_y, body.body.at_z)
                 {
-                    body.body.at_x += 1;
-                    if body.body.at_x >= CHUNK_DIMENSIONS {
-                        body.body.at_x = 0;
-
-                        body.body.at_y += 1;
-                        if body.body.at_y >= CHUNK_DIMENSIONS {
-                            body.body.at_y = 0;
-
-                            body.body.at_z += 1;
-                            if body.body.at_z >= CHUNK_DIMENSIONS {
-                                body.body.at_z = 0;
-                                if let Some(chunk) = body.chunk_itr.next() {
-                                    if let ChunkIteratorResult::FilledChunk { position: _, chunk } =
-                                        chunk
-                                    {
-                                        body.cur_chunk = chunk;
-
-                                        let (cx, cy, cz) = (
-                                            body.cur_chunk.structure_x() * CHUNK_DIMENSIONS,
-                                            body.cur_chunk.structure_y() * CHUNK_DIMENSIONS,
-                                            body.cur_chunk.structure_z() * CHUNK_DIMENSIONS,
-                                        );
-
-                                        let structure_x = body.body.at_x + cx;
-                                        let structure_y = body.body.at_y + cy;
-                                        let structure_z = body.body.at_z + cz;
-
-                                        if structure_x < body.body.start_x {
-                                            body.body.at_x = structure_x - cx;
-                                        }
-                                        if structure_y < body.body.start_y {
-                                            body.body.at_y = structure_y - cy;
-                                        }
-                                        if structure_z < body.body.start_z {
-                                            body.body.at_z = structure_z - cz;
-                                        }
-                                    } else {
-                                        panic!("This should never happen.");
-                                    }
-                                } else {
-                                    self.state = BlockItrState::Invalid;
-                                    return None;
-                                }
-                            }
-                        }
+                    if advance_body(body) {
+                        self.state = BlockItrState::Invalid;
+                        return None;
                     }
                 }
 
@@ -286,52 +244,8 @@ impl<'a> Iterator for BlockIterator<'a> {
                     body.body.at_z,
                 ));
 
-                body.body.at_x += 1;
-                if body.body.at_x >= CHUNK_DIMENSIONS {
-                    body.body.at_x = 0;
-
-                    body.body.at_y += 1;
-                    if body.body.at_y >= CHUNK_DIMENSIONS {
-                        body.body.at_y = 0;
-
-                        body.body.at_z += 1;
-                        if body.body.at_z >= CHUNK_DIMENSIONS {
-                            body.body.at_z = 0;
-
-                            if let Some(chunk) = body.chunk_itr.next() {
-                                if let ChunkIteratorResult::FilledChunk { position: _, chunk } =
-                                    chunk
-                                {
-                                    body.cur_chunk = chunk;
-
-                                    let (cx, cy, cz) = (
-                                        body.cur_chunk.structure_x() * CHUNK_DIMENSIONS,
-                                        body.cur_chunk.structure_y() * CHUNK_DIMENSIONS,
-                                        body.cur_chunk.structure_z() * CHUNK_DIMENSIONS,
-                                    );
-
-                                    let structure_x = body.body.at_x + cx;
-                                    let structure_y = body.body.at_y + cy;
-                                    let structure_z = body.body.at_z + cz;
-
-                                    if structure_x < body.body.start_x {
-                                        body.body.at_x = structure_x - cx;
-                                    }
-                                    if structure_y < body.body.start_y {
-                                        body.body.at_y = structure_y - cy;
-                                    }
-                                    if structure_z < body.body.start_z {
-                                        body.body.at_z = structure_z - cz;
-                                    }
-                                } else {
-                                    panic!("This should never happen.");
-                                }
-                            } else {
-                                self.state = BlockItrState::Invalid;
-                                return to_return;
-                            }
-                        }
-                    }
+                if advance_body(body) {
+                    self.state = BlockItrState::Invalid;
                 }
 
                 return to_return;
@@ -340,7 +254,55 @@ impl<'a> Iterator for BlockIterator<'a> {
     }
 }
 
-fn advance_body(body: &mut EmptyBody) {}
+/// Returns true if there are no available chunks left
+fn advance_body(body: &mut EmptyBody) -> bool {
+    body.body.at_x += 1;
+    if body.body.at_x >= CHUNK_DIMENSIONS {
+        body.body.at_x = 0;
+
+        body.body.at_y += 1;
+        if body.body.at_y >= CHUNK_DIMENSIONS {
+            body.body.at_y = 0;
+
+            body.body.at_z += 1;
+            if body.body.at_z >= CHUNK_DIMENSIONS {
+                body.body.at_z = 0;
+
+                if let Some(chunk) = body.chunk_itr.next() {
+                    if let ChunkIteratorResult::FilledChunk { position: _, chunk } = chunk {
+                        body.cur_chunk = chunk;
+
+                        let (cx, cy, cz) = (
+                            body.cur_chunk.structure_x() * CHUNK_DIMENSIONS,
+                            body.cur_chunk.structure_y() * CHUNK_DIMENSIONS,
+                            body.cur_chunk.structure_z() * CHUNK_DIMENSIONS,
+                        );
+
+                        let structure_x = body.body.at_x + cx;
+                        let structure_y = body.body.at_y + cy;
+                        let structure_z = body.body.at_z + cz;
+
+                        if structure_x < body.body.start_x {
+                            body.body.at_x = structure_x - cx;
+                        }
+                        if structure_y < body.body.start_y {
+                            body.body.at_y = structure_y - cy;
+                        }
+                        if structure_z < body.body.start_z {
+                            body.body.at_z = structure_z - cz;
+                        }
+                    } else {
+                        panic!("This should never happen.");
+                    }
+                } else {
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
+}
 
 /// Chunk Iterator
 

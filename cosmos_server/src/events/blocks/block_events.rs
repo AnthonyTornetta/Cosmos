@@ -70,16 +70,12 @@ fn handle_block_break_events(
             if block.unlocalized_name() == "cosmos:ship_core" {
                 let mut itr = structure.all_blocks_iter(false);
 
-                println!("COUNT: {}", itr.len());
-
                 // ship core               some other block
                 if itr.next().is_some() && itr.next().is_some() {
                     // Do not allow player to mine ship core if another block exists on the ship
                     return;
                 }
             }
-
-            println!("Killing {}", block.unlocalized_name());
 
             let block_id = ev.structure_block.block_id(&structure);
 
