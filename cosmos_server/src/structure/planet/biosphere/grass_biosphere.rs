@@ -14,10 +14,10 @@ use cosmos_core::{
     registry::{identifiable::Identifiable, Registry},
     structure::{
         chunk::{Chunk, CHUNK_DIMENSIONS},
-        planet::{self, Planet},
+        planet::Planet,
         ChunkInitEvent, Structure,
     },
-    utils::{resource_wrapper::ResourceWrapper, timer::UtilsTimer},
+    utils::resource_wrapper::ResourceWrapper,
 };
 use futures_lite::future;
 use noise::NoiseFn;
@@ -103,15 +103,9 @@ fn get_max_level(
 
 #[inline]
 fn generate_block(
-    x: usize,
-    y: usize,
-    z: usize,
-    actual_x: usize,
-    actual_y: usize,
-    actual_z: usize,
-    structure_x: f64,
-    structure_y: f64,
-    structure_z: f64,
+    (x, y, z): (usize, usize, usize),
+    (actual_x, actual_y, actual_z): (usize, usize, usize),
+    (structure_x, structure_y, structure_z): (f64, f64, f64),
     noise_generator: &noise::OpenSimplex,
     middle_air_start: usize,
     s_width: usize,
@@ -129,7 +123,7 @@ fn generate_block(
         structure_x,
         structure_y,
         structure_z,
-        &noise_generator,
+        noise_generator,
         middle_air_start,
     );
 
@@ -184,7 +178,7 @@ fn generate_block(
                 structure_x,
                 structure_y,
                 structure_z,
-                &noise_generator,
+                noise_generator,
                 middle_air_start,
             )
         };
@@ -351,15 +345,9 @@ fn generate_planet(
                             let actual_x = sx + x;
                             if !chunk.has_block_at(x, y, z_up) {
                                 generate_block(
-                                    x,
-                                    y,
-                                    z_up,
-                                    actual_x,
-                                    actual_y,
-                                    sz + z_up,
-                                    structure_x,
-                                    structure_y,
-                                    structure_z,
+                                    (x, y, z_up),
+                                    (actual_x, actual_y, sz + z_up),
+                                    (structure_x, structure_y, structure_z),
                                     &noise_generator,
                                     middle_air_start,
                                     s_width,
@@ -377,15 +365,9 @@ fn generate_planet(
 
                             if !chunk.has_block_at(x, y, z_down) {
                                 generate_block(
-                                    x,
-                                    y,
-                                    z_down,
-                                    actual_x,
-                                    actual_y,
-                                    sz + z_down,
-                                    structure_x,
-                                    structure_y,
-                                    structure_z,
+                                    (x, y, z_down),
+                                    (actual_x, actual_y, sz + z_down),
+                                    (structure_x, structure_y, structure_z),
                                     &noise_generator,
                                     middle_air_start,
                                     s_width,
@@ -412,15 +394,9 @@ fn generate_planet(
                             let actual_x = sx + x;
                             if !chunk.has_block_at(x, y_up, z) {
                                 generate_block(
-                                    x,
-                                    y_up,
-                                    z,
-                                    actual_x,
-                                    sy + y_up,
-                                    actual_z,
-                                    structure_x,
-                                    structure_y,
-                                    structure_z,
+                                    (x, y_up, z),
+                                    (actual_x, sy + y_up, actual_z),
+                                    (structure_x, structure_y, structure_z),
                                     &noise_generator,
                                     middle_air_start,
                                     s_width,
@@ -438,15 +414,9 @@ fn generate_planet(
 
                             if !chunk.has_block_at(x, y_down, z) {
                                 generate_block(
-                                    x,
-                                    y_down,
-                                    z,
-                                    actual_x,
-                                    sy + y_down,
-                                    actual_z,
-                                    structure_x,
-                                    structure_y,
-                                    structure_z,
+                                    (x, y_down, z),
+                                    (actual_x, sy + y_down, actual_z),
+                                    (structure_x, structure_y, structure_z),
                                     &noise_generator,
                                     middle_air_start,
                                     s_width,
@@ -473,15 +443,9 @@ fn generate_planet(
                             let actual_y = sy + y;
                             if !chunk.has_block_at(x_up, y, z) {
                                 generate_block(
-                                    x_up,
-                                    y,
-                                    z,
-                                    sx + x_up,
-                                    actual_y,
-                                    actual_z,
-                                    structure_x,
-                                    structure_y,
-                                    structure_z,
+                                    (x_up, y, z),
+                                    (sx + x_up, actual_y, actual_z),
+                                    (structure_x, structure_y, structure_z),
                                     &noise_generator,
                                     middle_air_start,
                                     s_width,
@@ -499,15 +463,9 @@ fn generate_planet(
 
                             if !chunk.has_block_at(x_down, y, z) {
                                 generate_block(
-                                    x_down,
-                                    y,
-                                    z,
-                                    sx + x_down,
-                                    actual_y,
-                                    actual_z,
-                                    structure_x,
-                                    structure_y,
-                                    structure_z,
+                                    (x_down, y, z),
+                                    (sx + x_down, actual_y, actual_z),
+                                    (structure_x, structure_y, structure_z),
                                     &noise_generator,
                                     middle_air_start,
                                     s_width,
@@ -552,15 +510,9 @@ fn generate_planet(
 
                                 let actual_x = sx + x;
                                 generate_block(
-                                    x,
-                                    y,
-                                    z,
-                                    actual_x,
-                                    actual_y,
-                                    actual_z,
-                                    structure_x,
-                                    structure_y,
-                                    structure_z,
+                                    (x, y, z),
+                                    (actual_x, actual_y, actual_z),
+                                    (structure_x, structure_y, structure_z),
                                     &noise_generator,
                                     middle_air_start,
                                     s_width,
