@@ -8,7 +8,7 @@ use super::{
     Structure,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Body<'a> {
     start_x: usize,
     start_y: usize,
@@ -25,14 +25,22 @@ struct Body<'a> {
     structure: &'a Structure,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
+struct EmptyBody<'a> {
+    chunk_itr: ChunkIterator<'a>,
+    cur_chunk: &'a Chunk,
+
+    body: Body<'a>,
+}
+
+#[derive(Debug, Clone)]
 enum BlockItrState<'a> {
-    ExcludeEmpty(Body<'a>),
+    ExcludeEmpty(EmptyBody<'a>),
     IncludeEmpty(Body<'a>),
     Invalid,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct ExcludeEmptyBody {
     start_x: usize,
     start_y: usize,
@@ -43,7 +51,7 @@ struct ExcludeEmptyBody {
     end_z: usize,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum ChunkItrState<'a> {
     ExcludeEmpty((ExcludeEmptyBody, hash_map::Iter<'a, usize, Chunk>)),
     IncludeEmpty(Body<'a>),
@@ -51,6 +59,7 @@ enum ChunkItrState<'a> {
 }
 
 /// Iterates over the blocks of a structure
+#[derive(Clone, Debug)]
 pub struct BlockIterator<'a> {
     state: BlockItrState<'a>,
 }
@@ -105,7 +114,27 @@ impl<'a> BlockIterator<'a> {
                 state: if include_empty {
                     BlockItrState::IncludeEmpty(body)
                 } else {
-                    BlockItrState::ExcludeEmpty(body)
+                    let cd = CHUNK_DIMENSIONS as i32;
+                    let mut chunk_itr = structure.chunk_iter(
+                        (start_x / cd, start_y / cd, start_z / cd),
+                        (end_x / cd, end_y / cd, end_z / cd),
+                        false,
+                    );
+                    let cur_chunk = chunk_itr.next();
+
+                    if let Some(cur_chunk) = cur_chunk {
+                        if let ChunkIteratorResult::FilledChunk { position: _, chunk } = cur_chunk {
+                            BlockItrState::ExcludeEmpty(EmptyBody {
+                                chunk_itr,
+                                cur_chunk: chunk,
+                                body,
+                            })
+                        } else {
+                            BlockItrState::Invalid
+                        }
+                    } else {
+                        BlockItrState::Invalid
+                    }
                 },
             }
         }
@@ -124,17 +153,7 @@ impl<'a> BlockIterator<'a> {
                     * (body.end_y - body.start_y)
                     * (body.end_z - body.start_z)
             }
-            BlockItrState::ExcludeEmpty(body) => Self::new(
-                body.start_x as i32,
-                body.start_y as i32,
-                body.start_z as i32,
-                body.end_x as i32,
-                body.end_y as i32,
-                body.end_z as i32,
-                false,
-                body.structure,
-            )
-            .count(),
+            BlockItrState::ExcludeEmpty(_) => self.clone().count(),
             BlockItrState::Invalid => 0,
         }
     }
@@ -169,67 +188,166 @@ impl<'a> Iterator for BlockIterator<'a> {
 
                 Some(StructureBlock { x, y, z })
             }
-            BlockItrState::ExcludeEmpty(body) => loop {
-                if body.at_z > body.end_z {
-                    return None;
+            BlockItrState::ExcludeEmpty(body) => {
+                let (cx, cy, cz) = (
+                    body.cur_chunk.structure_x() * CHUNK_DIMENSIONS,
+                    body.cur_chunk.structure_y() * CHUNK_DIMENSIONS,
+                    body.cur_chunk.structure_z() * CHUNK_DIMENSIONS,
+                );
+
+                let structure_x = body.body.at_x + cx;
+                let structure_y = body.body.at_y + cy;
+                let structure_z = body.body.at_z + cz;
+
+                if structure_x < body.body.start_x {
+                    body.body.at_x = structure_x - cx;
+                }
+                if structure_y < body.body.start_y {
+                    body.body.at_y = structure_y - cy;
+                }
+                if structure_z < body.body.start_z {
+                    body.body.at_z = structure_z - cz;
                 }
 
-                let (mut x, mut y, mut z) = (body.at_x, body.at_y, body.at_z);
-
-                // Skip over empty chunks to increase performance
-                while !(body
-                    .structure
-                    .chunk_at_block_coordinates(x, y, z)
-                    .is_some_and(|c| !c.is_empty()))
+                if body.body.at_x >= CHUNK_DIMENSIONS
+                    || body.body.at_y >= CHUNK_DIMENSIONS
+                    || body.body.at_z >= CHUNK_DIMENSIONS
                 {
-                    body.at_x = (body.at_x / CHUNK_DIMENSIONS + 1) * CHUNK_DIMENSIONS;
-
-                    if body.at_x > body.end_x {
-                        body.at_x = body.start_x;
-
-                        body.at_y = (body.at_y / CHUNK_DIMENSIONS + 1) * CHUNK_DIMENSIONS;
-
-                        if body.at_y > body.end_y {
-                            body.at_y = body.start_y;
-
-                            body.at_z = (body.at_z / CHUNK_DIMENSIONS + 1) * CHUNK_DIMENSIONS;
+                    if let Some(chunk) = body.chunk_itr.next() {
+                        if let ChunkIteratorResult::FilledChunk { position: _, chunk } = chunk {
+                            body.cur_chunk = chunk;
+                            body.body.at_x = 0;
+                            body.body.at_y = 0;
+                            body.body.at_z = 0;
+                        } else {
+                            panic!("This should never happen.");
                         }
-                    }
-
-                    (x, y, z) = (body.at_x, body.at_y, body.at_z);
-
-                    if body.at_z > body.end_z {
+                    } else {
+                        self.state = BlockItrState::Invalid;
                         return None;
                     }
                 }
 
-                body.at_x += 1;
+                while !body
+                    .cur_chunk
+                    .has_block_at(body.body.at_x, body.body.at_y, body.body.at_z)
+                {
+                    body.body.at_x += 1;
+                    if body.body.at_x >= CHUNK_DIMENSIONS {
+                        body.body.at_x = 0;
 
-                if body.at_x > body.end_x {
-                    body.at_x = body.start_x;
+                        body.body.at_y += 1;
+                        if body.body.at_y >= CHUNK_DIMENSIONS {
+                            body.body.at_y = 0;
 
-                    body.at_y += 1;
+                            body.body.at_z += 1;
+                            if body.body.at_z >= CHUNK_DIMENSIONS {
+                                body.body.at_z = 0;
+                                if let Some(chunk) = body.chunk_itr.next() {
+                                    if let ChunkIteratorResult::FilledChunk { position: _, chunk } =
+                                        chunk
+                                    {
+                                        body.cur_chunk = chunk;
 
-                    if body.at_y > body.end_y {
-                        body.at_y = body.start_y;
+                                        let (cx, cy, cz) = (
+                                            body.cur_chunk.structure_x() * CHUNK_DIMENSIONS,
+                                            body.cur_chunk.structure_y() * CHUNK_DIMENSIONS,
+                                            body.cur_chunk.structure_z() * CHUNK_DIMENSIONS,
+                                        );
 
-                        body.at_z += 1;
+                                        let structure_x = body.body.at_x + cx;
+                                        let structure_y = body.body.at_y + cy;
+                                        let structure_z = body.body.at_z + cz;
+
+                                        if structure_x < body.body.start_x {
+                                            body.body.at_x = structure_x - cx;
+                                        }
+                                        if structure_y < body.body.start_y {
+                                            body.body.at_y = structure_y - cy;
+                                        }
+                                        if structure_z < body.body.start_z {
+                                            body.body.at_z = structure_z - cz;
+                                        }
+                                    } else {
+                                        panic!("This should never happen.");
+                                    }
+                                } else {
+                                    self.state = BlockItrState::Invalid;
+                                    return None;
+                                }
+                            }
+                        }
                     }
                 }
 
-                if body.structure.has_block_at(x, y, z) {
-                    return Some(StructureBlock { x, y, z });
+                let to_return = Some(StructureBlock::new(
+                    body.body.at_x,
+                    body.body.at_y,
+                    body.body.at_z,
+                ));
+
+                body.body.at_x += 1;
+                if body.body.at_x >= CHUNK_DIMENSIONS {
+                    body.body.at_x = 0;
+
+                    body.body.at_y += 1;
+                    if body.body.at_y >= CHUNK_DIMENSIONS {
+                        body.body.at_y = 0;
+
+                        body.body.at_z += 1;
+                        if body.body.at_z >= CHUNK_DIMENSIONS {
+                            body.body.at_z = 0;
+
+                            if let Some(chunk) = body.chunk_itr.next() {
+                                if let ChunkIteratorResult::FilledChunk { position: _, chunk } =
+                                    chunk
+                                {
+                                    body.cur_chunk = chunk;
+
+                                    let (cx, cy, cz) = (
+                                        body.cur_chunk.structure_x() * CHUNK_DIMENSIONS,
+                                        body.cur_chunk.structure_y() * CHUNK_DIMENSIONS,
+                                        body.cur_chunk.structure_z() * CHUNK_DIMENSIONS,
+                                    );
+
+                                    let structure_x = body.body.at_x + cx;
+                                    let structure_y = body.body.at_y + cy;
+                                    let structure_z = body.body.at_z + cz;
+
+                                    if structure_x < body.body.start_x {
+                                        body.body.at_x = structure_x - cx;
+                                    }
+                                    if structure_y < body.body.start_y {
+                                        body.body.at_y = structure_y - cy;
+                                    }
+                                    if structure_z < body.body.start_z {
+                                        body.body.at_z = structure_z - cz;
+                                    }
+                                } else {
+                                    panic!("This should never happen.");
+                                }
+                            } else {
+                                self.state = BlockItrState::Invalid;
+                                return to_return;
+                            }
+                        }
+                    }
                 }
-            },
+
+                return to_return;
+            }
         }
     }
 }
+
+fn advance_body(body: &mut EmptyBody) {}
 
 /// Chunk Iterator
 
 /// Iterates over the chunks of a structure
 ///
 /// * `include_empty` - If enabled, the value iterated over may be None OR Some(chunk). Otherwise, the value iterated over may ONLY BE Some(chunk).
+#[derive(Debug, Clone)]
 pub struct ChunkIterator<'a> {
     state: ChunkItrState<'a>,
 }
