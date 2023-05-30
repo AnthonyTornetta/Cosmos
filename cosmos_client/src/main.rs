@@ -14,6 +14,7 @@ pub mod lang;
 pub mod loading;
 pub mod materials;
 pub mod netty;
+pub mod physics;
 pub mod plugin;
 pub mod projectiles;
 pub mod rendering;
@@ -426,6 +427,7 @@ fn main() {
     rendering::register(&mut app);
     universe::register(&mut app);
     skybox::register(&mut app);
+    physics::register(&mut app);
 
     app.run();
 }

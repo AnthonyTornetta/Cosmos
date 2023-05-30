@@ -16,7 +16,6 @@ fn remove_despawned_entities(
     mut mapping: ResMut<NetworkMapping>,
 ) {
     for removed in removed_entities.iter() {
-        println!("Removed {} from the mapping!", removed.index());
         mapping.remove_mapping_from_client_entity(&removed);
     }
 }

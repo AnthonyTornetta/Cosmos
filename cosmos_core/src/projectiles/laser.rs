@@ -10,8 +10,8 @@ use bevy::{
     time::Time,
 };
 use bevy_rapier3d::prelude::{
-    ActiveEvents, ActiveHooks, Collider, LockedAxes, PhysicsWorld, QueryFilter, RapierContext,
-    RigidBody, Sensor, Velocity, WorldId, DEFAULT_WORLD_ID,
+    ActiveEvents, ActiveHooks, LockedAxes, PhysicsWorld, QueryFilter, RapierContext, RigidBody,
+    Sensor, Velocity, WorldId, DEFAULT_WORLD_ID,
 };
 
 use crate::{
@@ -107,8 +107,6 @@ impl Laser {
 
         let laser_entity = ent_cmds.id();
 
-        // println!("Spawning @ {location}");
-
         ent_cmds.insert((
             Laser {
                 strength,
@@ -119,7 +117,6 @@ impl Laser {
             pbr,
             RigidBody::Dynamic,
             LockedAxes::ROTATION_LOCKED,
-            Collider::cuboid(0.05, 0.05, 1.0),
             Velocity {
                 linvel: laser_velocity + firer_velocity,
                 ..Default::default()
@@ -212,22 +209,7 @@ fn handle_events(
                         None
                     }
                 })
-                .unwrap_or_else(|| {
-                    // for (loc, pw, player_world_entity) in worlds.iter() {
-                    //     if pw.world_id == world_id {
-                    //         commands
-                    //             .entity(laser_entity)
-                    //             .insert(WorldWithin(player_world_entity));
-
-                    //         return Some(loc.relative_coords_to(location));
-                    //     };
-                    // }
-
-                    // warn!(
-                    //     "Suitable PlayerWorld for laser not found! Laser has world id {world_id}"
-                    // );
-                    None
-                });
+                .unwrap_or(None);
 
             let Some(coords) = coords else {
                 continue;
@@ -264,15 +246,11 @@ fn handle_events(
             ) {
                 let pos = ray_start + (toi * ray_direction) + (velocity.linvel.normalize() * 0.01);
 
-                println!("{toi} * {ray_direction} = {}", toi * delta_position);
-
                 if let Ok(parent) = parent_query.get(entity) {
                     if let Ok(transform) = transform_query.get(parent.get()) {
                         let lph = Quat::from_affine3(&transform.affine())
                             .inverse()
                             .mul_vec3(pos - transform.translation());
-
-                        println!("Hit {pos} -> {lph}");
 
                         event_writer.send(LaserCollideEvent {
                             entity_hit: entity,
@@ -284,8 +262,6 @@ fn handle_events(
                     let lph = Quat::from_affine3(&transform.affine())
                         .inverse()
                         .mul_vec3(pos - transform.translation());
-
-                    println!("Hit {pos} -> {lph}");
 
                     event_writer.send(LaserCollideEvent {
                         entity_hit: entity,
@@ -307,7 +283,7 @@ fn despawn_lasers(
     time: Res<Time>,
 ) {
     for (ent, fire_time) in query.iter() {
-        if time.elapsed_seconds() - fire_time.time > 5.0 {
+        if time.elapsed_seconds() - fire_time.time > 100.0 {
             commands.entity(ent).despawn_recursive();
         }
     }
