@@ -276,10 +276,8 @@ fn process_player_movement(
                     velocity.linvel.z = z;
                 }
             }
-        } else {
-            if velocity.linvel.dot(velocity.linvel) > max_speed * max_speed {
-                velocity.linvel = velocity.linvel.normalize() * max_speed;
-            }
+        } else if velocity.linvel.dot(velocity.linvel) > max_speed * max_speed {
+            velocity.linvel = velocity.linvel.normalize() * max_speed;
         }
     }
 }
