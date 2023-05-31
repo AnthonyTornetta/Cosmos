@@ -283,7 +283,7 @@ fn despawn_lasers(
     time: Res<Time>,
 ) {
     for (ent, fire_time) in query.iter() {
-        if time.elapsed_seconds() - fire_time.time > 100.0 {
+        if time.elapsed_seconds() - fire_time.time > 5.0 {
             commands.entity(ent).despawn_recursive();
         }
     }
