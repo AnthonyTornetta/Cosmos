@@ -15,10 +15,12 @@ use bevy::reflect::{FromReflect, Reflect};
 use bevy::utils::HashSet;
 use bevy_rapier3d::math::Vect;
 use bevy_rapier3d::na::Vector3;
-use bevy_rapier3d::prelude::{Collider, ColliderMassProperties, ReadMassProperties, Rot};
+use bevy_rapier3d::prelude::{
+    Collider, ColliderMassProperties, MassProperties, ReadMassProperties, RigidBody, Rot,
+};
 use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 
-type GenerateCollider = (Collider, f32, Vec3);
+type GenerateCollider = (Collider, f32, Vec3, Vec3);
 
 /// Sometimes the ReadMassProperties is wrong, so this component fixes it
 #[derive(Component, Debug, Reflect, FromReflect, PartialEq, Clone, Copy)]
@@ -231,7 +233,29 @@ fn generate_chunk_collider(chunk: &Chunk, blocks: &Registry<Block>) -> Option<Ge
     if colliders.is_empty() {
         None
     } else {
-        Some((Collider::compound(colliders), mass, center_of_mass))
+        // https://pressbooks.online.ucf.edu/osuniversityphysics/chapter/10-5-calculating-moments-of-inertia/
+        let mut inertia = Vec3::ZERO;
+
+        for z in 0..CHUNK_DIMENSIONS {
+            for y in 0..CHUNK_DIMENSIONS {
+                for x in 0..CHUNK_DIMENSIONS {
+                    let b = blocks.from_numeric_id(chunk.block_at(x, y, z));
+
+                    let block_mass = b.density(); // mass = volume * density = 1*1*1*density = density
+
+                    if block_mass != 0.0 {
+                        let (xx, yy, zz) = (
+                            x as f32 - center_of_mass.x,
+                            y as f32 - center_of_mass.y,
+                            z as f32 - center_of_mass.z,
+                        );
+
+                        inertia += block_mass * (xx * xx + yy * yy + zz * zz);
+                    }
+                }
+            }
+        }
+        Some((Collider::compound(colliders), mass, center_of_mass, inertia))
     }
 }
 
@@ -248,7 +272,7 @@ pub struct ChunkNeedsPhysicsEvent {
 /// This system is responsible for adding colliders to chunks
 pub fn listen_for_new_physics_event(
     commands: Commands,
-    query: Query<&Structure>,
+    query: Query<(&Structure, &RigidBody)>,
     mut event_reader: EventReader<ChunkNeedsPhysicsEvent>,
     blocks: Res<Registry<Block>>,
 ) {
@@ -261,10 +285,9 @@ pub fn listen_for_new_physics_event(
     to_process.dedup();
 
     to_process.par_iter().for_each(|ev| {
-        let Ok(structure) = query.get(ev.structure_entity) else {
+        let Ok((structure, rb)) = query.get(ev.structure_entity) else {
             return;
         };
-
         let (cx, cy, cz) = ev.chunk;
 
         let Some(chunk) = structure.chunk_from_chunk_coordinates(cx, cy, cz) else {
@@ -277,8 +300,16 @@ pub fn listen_for_new_physics_event(
 
         let chunk_collider = generate_chunk_collider(chunk, &blocks);
 
+        if let Some(mut structure_entity_commands) = commands_mutex
+            .lock()
+            .unwrap()
+            .get_entity(ev.structure_entity)
+        {
+            structure_entity_commands.remove::<RigidBody>().insert(*rb);
+        }
+
         if let Some(mut entity_commands) = commands_mutex.lock().unwrap().get_entity(entity) {
-            if let Some((collider, mass, _)) = chunk_collider {
+            if let Some((collider, mass, com, inertia)) = chunk_collider {
                 // center_of_mass needs custom torque calculations to work properly
 
                 // let mass_props = MassProperties {
@@ -287,14 +318,24 @@ pub fn listen_for_new_physics_event(
                 //     ..Default::default()
                 // };
 
+                // let m_props = MassProperties::from_rapier(
+                //     bevy_rapier3d::rapier::dynamics::MassProperties::new(
+                //         com.into(),
+                //         mass,
+                //         inertia.into(),
+                //     ),
+                //     1.0,
+                // );
+                // entity_commands.remove::<Collider>();
+
                 entity_commands
                     .insert(collider)
                     .insert(ColliderMassProperties::Mass(mass));
+                // .insert(ColliderMassProperties::MassProperties(m_props))
+                // .insert(ReadMassProperties(m_props));
                 // .insert(ColliderMassProperties::MassProperties(mass_props))
                 // Sometimes this gets out-of-sync, so I update it manually here
                 // .insert(ReadMassProperties(mass_props));
-            } else {
-                entity_commands.remove::<Collider>();
             }
         }
     });
@@ -358,7 +399,7 @@ mod test {
 
         chunk.set_block_at(1, 2, 3, test_block, BlockFace::Top);
 
-        let (_, mass, center_of_mass) = generate_chunk_collider(&chunk, &blocks).unwrap();
+        let (_, mass, center_of_mass, _) = generate_chunk_collider(&chunk, &blocks).unwrap();
 
         assert_eq!(mass, 4.0);
         assert_eq!(center_of_mass, Vec3::new(-6.5, -5.5, -4.5));
@@ -384,7 +425,7 @@ mod test {
             BlockFace::Top,
         );
 
-        let (_, mass, center_of_mass) = generate_chunk_collider(&chunk, &blocks).unwrap();
+        let (_, mass, center_of_mass, _) = generate_chunk_collider(&chunk, &blocks).unwrap();
 
         assert_eq!(mass, 8.0);
         assert_eq!(center_of_mass, Vec3::new(0.0, 0.0, 0.0));
@@ -412,7 +453,7 @@ mod test {
             BlockFace::Top,
         );
 
-        let (_, mass, center_of_mass) = generate_chunk_collider(&chunk, &blocks).unwrap();
+        let (_, mass, center_of_mass, _) = generate_chunk_collider(&chunk, &blocks).unwrap();
 
         assert_eq!(mass, 5.0);
         assert_eq!(
