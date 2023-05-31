@@ -239,9 +239,9 @@ impl<'a> Iterator for BlockIterator<'a> {
                 }
 
                 let to_return = Some(StructureBlock::new(
-                    body.body.at_x,
-                    body.body.at_y,
-                    body.body.at_z,
+                    body.body.at_x + body.cur_chunk.structure_x() * CHUNK_DIMENSIONS,
+                    body.body.at_y + body.cur_chunk.structure_y() * CHUNK_DIMENSIONS,
+                    body.body.at_z + body.cur_chunk.structure_z() * CHUNK_DIMENSIONS,
                 ));
 
                 if advance_body(body) {

@@ -137,6 +137,7 @@ fn update_movement(
         if let Ok((movement, systems, transform, mut velocity, mut external_impulse)) =
             query.get_mut(system.structure_entity)
         {
+            println!("Found thruster system!");
             // Rotation
             let torque = Quat::from_affine3(&transform.compute_affine()).mul(movement.torque * 5.0);
 
