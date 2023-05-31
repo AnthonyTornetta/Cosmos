@@ -65,8 +65,6 @@ fn gravity_system(
         if *rb == RigidBody::Dynamic {
             let mut force = Vec3::ZERO;
 
-            println!("Mass: {}", prop.0.mass);
-
             for (force_per_kilogram, radius, pos, rotation) in gravs.iter() {
                 let relative_position = pos.relative_coords_to(location);
                 let dist = relative_position.abs().max_element();
