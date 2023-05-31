@@ -20,7 +20,7 @@ use cosmos_core::{
     },
     persistence::LoadingDistance,
     physics::{
-        location::{bubble_down_locations, Location, SYSTEM_SECTORS},
+        location::{handle_child_syncing, Location, SYSTEM_SECTORS},
         player_world::PlayerWorld,
     },
     registry::Registry,
@@ -652,7 +652,7 @@ pub(super) fn register(app: &mut App) {
                 lerp_towards.after(client_sync_players),
                 fix_location,
                 sync_transforms_and_locations,
-                bubble_down_locations,
+                handle_child_syncing,
             )
                 .chain()
                 .in_set(OnUpdate(GameState::Playing)),

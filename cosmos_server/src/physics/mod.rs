@@ -7,7 +7,7 @@ use bevy_rapier3d::prelude::{PhysicsWorld, RapierContext, RapierWorld, DEFAULT_W
 use cosmos_core::{
     entities::player::Player,
     physics::{
-        location::{bubble_down_locations, Location, SECTOR_DIMENSIONS},
+        location::{handle_child_syncing, Location, SECTOR_DIMENSIONS},
         player_world::{PlayerWorld, WorldWithin},
     },
 };
@@ -301,22 +301,18 @@ fn sync_transforms_and_locations(
         // Server transforms for players should NOT be applied to the location.
         // The location the client sent should override it.
         if !players_query.contains(entity) {
-            if location.last_transform_loc.is_none() {
-                location.last_transform_loc = Some(location.local);
+            if location.last_transform_loc.is_some() {
+                location.apply_updates(transform.translation);
             }
-
-            location.apply_updates(transform.translation);
         }
     }
     for (entity, transform, mut location) in trans_query_with_parent.iter_mut() {
         // Server transforms for players should NOT be applied to the location.
         // The location the client sent should override it.
         if !players_query.contains(entity) {
-            if location.last_transform_loc.is_none() {
-                location.last_transform_loc = Some(location.local);
+            if location.last_transform_loc.is_some() {
+                location.apply_updates(transform.translation);
             }
-
-            location.apply_updates(transform.translation);
         }
     }
 
@@ -382,14 +378,17 @@ pub(super) fn register(app: &mut App) {
         (
             // If it's not after server_listen_messages, some noticable jitter can happen
             fix_location, //.after(server_listen_messages),
-            bubble_down_locations,
             move_players_between_worlds,
             move_non_players_between_worlds,
         )
             .chain()
             .in_base_set(CoreSet::Last),
     )
-    .add_system(sync_transforms_and_locations.in_set(OnUpdate(GameState::Playing)))
+    .add_systems(
+        (sync_transforms_and_locations, handle_child_syncing)
+            .chain()
+            .in_set(OnUpdate(GameState::Playing)),
+    )
     // This must be last due to commands being delayed when adding PhysicsWorlds.
     .add_system(remove_empty_worlds.in_base_set(CoreSet::Last));
 }

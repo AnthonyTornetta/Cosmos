@@ -67,7 +67,7 @@ fn event_listener(
                 .get_mut(entity)
                 .expect("Every pilot should have a location.");
 
-            // pilot_location.set_from(&(structure_location + Vec3::new(0.5, 0.5, 0.5)));
+            pilot_location.set_from(&(structure_location + Vec3::new(0.5, -0.25, 0.5)));
 
             commands
                 .entity(entity)
@@ -92,16 +92,9 @@ fn verify_pilot_exists(mut commands: Commands, query: Query<(Entity, &Pilot)>) {
 
 pub(super) fn register<T: States + Clone + Copy>(app: &mut App, playing_state: T) {
     app.add_systems((
-        print_pilot_locs,
         verify_pilot_exists.in_set(OnUpdate(playing_state)),
         event_listener
             .in_set(OnUpdate(playing_state))
             .after(verify_pilot_exists),
     ));
-}
-
-fn print_pilot_locs(q: Query<(&Location, &Transform), With<Player>>) {
-    for (loc, trans) in q.iter() {
-        println!("{loc} || {}", trans.translation);
-    }
 }
