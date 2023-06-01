@@ -189,20 +189,9 @@ fn client_sync_players(
                             if location.is_some() && transform.is_some() && velocity.is_some() {
                                 commands.entity(entity).insert(LerpTowards(*body));
                             } else {
-                                // let world_center = world_center.get_single().expect("There should only ever be one local player, and they should always exist.");
-
-                                // let transform = body.create_transform(world_center);
-
-                                let location = body.location;
-                                // location.last_transform_loc = Some(Vec3::ZERO);
-
-                                println!("Received {location}");
-
-                                commands.entity(entity).insert((
-                                    location,
-                                    TransformBundle::from_transform(Transform::default()),
-                                    body.create_velocity(),
-                                ));
+                                commands
+                                    .entity(entity)
+                                    .insert((body.location, body.create_velocity()));
                             }
                         }
                     } else if !requested_entities
