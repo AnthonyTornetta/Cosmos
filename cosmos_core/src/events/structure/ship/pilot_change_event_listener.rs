@@ -4,7 +4,6 @@ use bevy::prelude::{
 };
 use bevy_rapier3d::prelude::{RigidBody, Sensor};
 
-use crate::entities::player::Player;
 use crate::events::structure::change_pilot_event::ChangePilotEvent;
 use crate::physics::location::Location;
 use crate::structure::ship::pilot::Pilot;

@@ -7,7 +7,7 @@ use bevy_rapier3d::prelude::{PhysicsWorld, RapierContext, RapierWorld, DEFAULT_W
 use cosmos_core::{
     entities::player::Player,
     physics::{
-        location::{handle_child_syncing, Location, SECTOR_DIMENSIONS},
+        location::{add_previous_location, handle_child_syncing, Location, SECTOR_DIMENSIONS},
         player_world::{PlayerWorld, WorldWithin},
     },
 };
@@ -259,7 +259,7 @@ fn fix_location(
         match (best_world, best_world_id) {
             (Some(world), Some(world_id)) => {
                 if let Ok(loc) = player_world_loc_query.get(world.0) {
-                    let transform = Transform::from_translation(location.relative_coords_to(loc));
+                    let transform = Transform::from_translation(-location.relative_coords_to(loc));
 
                     location.last_transform_loc = Some(transform.translation);
 
@@ -375,17 +375,17 @@ fn sync_transforms_and_locations(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        (
-            // If it's not after server_listen_messages, some noticable jitter can happen
-            fix_location, //.after(server_listen_messages),
-            move_players_between_worlds,
-            move_non_players_between_worlds,
-        )
+        (move_players_between_worlds, move_non_players_between_worlds)
             .chain()
             .in_base_set(CoreSet::Last),
     )
     .add_systems(
-        (sync_transforms_and_locations, handle_child_syncing)
+        (
+            add_previous_location,
+            fix_location,
+            sync_transforms_and_locations,
+            handle_child_syncing,
+        )
             .chain()
             .in_set(OnUpdate(GameState::Playing)),
     )

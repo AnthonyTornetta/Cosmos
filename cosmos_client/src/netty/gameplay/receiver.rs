@@ -20,7 +20,7 @@ use cosmos_core::{
     },
     persistence::LoadingDistance,
     physics::{
-        location::{handle_child_syncing, Location, SYSTEM_SECTORS},
+        location::{add_previous_location, handle_child_syncing, Location, SYSTEM_SECTORS},
         player_world::PlayerWorld,
     },
     registry::Registry,
@@ -649,6 +649,7 @@ pub(super) fn register(app: &mut App) {
         )
         .add_systems(
             (
+                add_previous_location,
                 lerp_towards.after(client_sync_players),
                 fix_location,
                 sync_transforms_and_locations,

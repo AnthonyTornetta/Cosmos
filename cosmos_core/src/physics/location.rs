@@ -19,8 +19,8 @@ use std::{
 
 use bevy::{
     prelude::{
-        App, Children, Component, Entity, GlobalTransform, Parent, Query, Transform, Vec3, With,
-        Without,
+        App, Children, Commands, Component, Deref, DerefMut, Entity, GlobalTransform, Parent,
+        Query, Transform, Vec3, With, Without,
     },
     reflect::{FromReflect, Reflect},
 };
@@ -472,51 +472,66 @@ impl Location {
 //     }
 // }
 
+#[derive(Component, Debug, Reflect, FromReflect, Deref, DerefMut, Clone, Copy)]
+/// Stores the location from the previous frame
+pub struct PreviousLocation(Location);
+
 fn dew_it(
     this_entity: Entity,
-    parent_query: &Query<&Parent, With<Location>>,
-    data_query: &mut Query<(&mut Location, &mut Transform, &GlobalTransform)>,
-    // world_location_query: &Query<(&Location, Entity), With<PlayerWorld>>,
+    parent_query: &Query<&Parent>,
+    data_query: &mut Query<(&mut Location, &Transform, &PreviousLocation)>,
 ) {
     if let Ok(parent) = parent_query.get(this_entity).map(|p| p.get()) {
         dew_it(parent, parent_query, data_query);
 
-        let Ok(loc) = data_query.get(parent).map(|(loc, _, _)| *loc) else {
+        let Ok((loc, prev_loc)) = data_query.get(parent).map(|(loc, _, prev_loc)| (*loc, *prev_loc)) else {
             return;
         };
 
-        let Ok((mut my_loc, mut my_transform, my_global_transform)) = data_query.get_mut(this_entity) else {
+        let Ok((mut my_loc, transform, _)) = data_query.get_mut(this_entity) else {
             return;
         };
-
-        // let Some((world_location, _)) = world_location_query
-        //     .iter()
-        //     .find(|(_, world)| world_within.0 == *world)
-        // else {
-        //     return;
-        // };
 
         if let Some(last_transform_loc) = my_loc.last_transform_loc {
-            let my_global_translation = my_global_transform.translation();
-            let delta_pos = my_global_translation - last_transform_loc;
+            let parent_delta = (prev_loc.0 - loc).absolute_coords_f32();
 
-            my_loc.apply_updates(delta_pos);
-            my_loc.last_transform_loc = Some(my_global_translation);
 
-            let difference = (*my_loc - loc).absolute_coords_f32();
+            // println!("Moving loc!");
+            let local_translation = transform.translation;
+            println!("{local_translation} - {last_transform_loc}");
 
-            my_transform.translation = difference;
-            // world_location.relative_coords_to(&my_loc) - global_trans.translation();
+            let delta_pos: Vec3 = local_translation - last_transform_loc;
 
-            // let my_trans = my_global_translation - global_trans.translation();
+            println!("Delta was: {delta_pos}");
+
+            my_loc.apply_updates(local_translation);
+
+            // This will probably break for stuff that isn't the player as a child, but idk we'll see
+            let diff = *my_loc - parent_delta;
+            my_loc.set_from(&diff);
         }
     }
 }
 
+/// Adds the previous location component. Put this before the sync bodies & transform
+pub fn add_previous_location(
+    mut query: Query<(Entity, &Location, Option<&mut PreviousLocation>)>,
+    mut commands: Commands,
+) {
+    for (entity, loc, prev_loc) in query.iter_mut() {
+        if let Some(mut prev_loc) = prev_loc {
+            prev_loc.0 = *loc;
+        } else {
+            commands.entity(entity).insert(PreviousLocation(*loc));
+        }
+    }
+}
+
+/// Handles children and their locations.
 pub fn handle_child_syncing(
     initial_query: Query<Entity, (Without<Children>, Without<ChunkEntity>)>,
-    parent_query: Query<&Parent, With<Location>>,
-    mut data_query: Query<(&mut Location, &mut Transform, &GlobalTransform)>,
+    parent_query: Query<&Parent>,
+    mut data_query: Query<(&mut Location, &Transform, &PreviousLocation)>,
 ) {
     for entity in initial_query.iter() {
         dew_it(entity, &parent_query, &mut data_query);
@@ -524,7 +539,8 @@ pub fn handle_child_syncing(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.register_type::<Location>();
+    app.register_type::<Location>()
+        .register_type::<PreviousLocation>();
 }
 
 #[cfg(test)]
