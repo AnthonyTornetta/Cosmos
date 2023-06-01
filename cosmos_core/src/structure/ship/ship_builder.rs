@@ -47,9 +47,9 @@ impl<T: TStructureBuilder> TShipBuilder for ShipBuilder<T> {
         structure: &mut Structure,
     ) {
         self.structure_builder
-            .insert_structure(entity, location, velocity, structure);
+            .insert_structure(entity, velocity, structure);
 
-        entity.insert(Ship);
+        entity.insert((Ship, location));
     }
 }
 

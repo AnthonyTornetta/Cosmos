@@ -461,11 +461,11 @@ fn sync_self_with_parents(
 
             println!("{} - {} -> {my_delta}", my_loc.as_ref(), my_prev_loc.0);
 
-            my_loc.apply_updates(transform.translation);
-
             // This will probably break for stuff that isn't the player as a child, but idk we'll see
             let diff = *my_loc - parent_delta - my_delta;
             my_loc.set_from(&diff);
+
+            my_loc.apply_updates(transform.translation);
         }
     }
 }

@@ -145,7 +145,6 @@ fn client_sync_players(
         ),
         Without<LocalPlayer>,
     >,
-    world_center: Query<&Location, With<LocalPlayer>>,
     mut query_structure: Query<&mut Structure>,
     blocks: Res<Registry<Block>>,
     mut pilot_change_event_writer: EventWriter<ChangePilotEvent>,
@@ -190,16 +189,18 @@ fn client_sync_players(
                             if location.is_some() && transform.is_some() && velocity.is_some() {
                                 commands.entity(entity).insert(LerpTowards(*body));
                             } else {
-                                let world_center = world_center.get_single().expect("There should only ever be one local player, and they should always exist.");
+                                // let world_center = world_center.get_single().expect("There should only ever be one local player, and they should always exist.");
 
-                                let transform = body.create_transform(world_center);
+                                // let transform = body.create_transform(world_center);
 
-                                let mut location = body.location;
-                                location.last_transform_loc = Some(transform.translation);
+                                let location = body.location;
+                                // location.last_transform_loc = Some(Vec3::ZERO);
+
+                                println!("Received {location}");
 
                                 commands.entity(entity).insert((
                                     location,
-                                    TransformBundle::from_transform(transform),
+                                    TransformBundle::from_transform(Transform::default()),
                                     body.create_velocity(),
                                 ));
                             }
@@ -359,7 +360,6 @@ fn client_sync_players(
                 length,
                 height,
                 width,
-                body,
                 planet,
                 biosphere,
             } => {
@@ -373,7 +373,7 @@ fn client_sync_players(
                     Structure::new(width as usize, height as usize, length as usize);
 
                 let builder = ClientPlanetBuilder::default();
-                builder.insert_planet(&mut entity_cmds, body.location, &mut structure, planet);
+                builder.insert_planet(&mut entity_cmds, &mut structure, planet);
 
                 entity_cmds.insert((structure, BiosphereMarker::new(biosphere)));
 
@@ -570,14 +570,27 @@ fn client_sync_players(
 
 /// Handles any just-added locations that need to sync up to their transforms
 fn fix_location(
-    mut query: Query<(&mut Location, &mut Transform), (Added<Location>, Without<PlayerWorld>)>,
+    mut query: Query<
+        (Entity, &mut Location, Option<&mut Transform>),
+        (Added<Location>, Without<PlayerWorld>),
+    >,
     player_worlds: Query<&Location, With<PlayerWorld>>,
+    mut commands: Commands,
 ) {
-    for (mut location, mut transform) in query.iter_mut() {
+    for (entity, mut location, transform) in query.iter_mut() {
         match player_worlds.get_single() {
             Ok(loc) => {
-                transform.translation = loc.relative_coords_to(&location);
-                location.last_transform_loc = Some(transform.translation);
+                let translation = loc.relative_coords_to(&location);
+                if let Some(mut transform) = transform {
+                    transform.translation = translation;
+                } else {
+                    commands
+                        .entity(entity)
+                        .insert(TransformBundle::from_transform(
+                            Transform::from_translation(translation),
+                        ));
+                }
+                location.last_transform_loc = Some(translation);
             }
             _ => {
                 warn!("Something was added with a location before a player world was registered.")
@@ -649,8 +662,8 @@ pub(super) fn register(app: &mut App) {
         )
         .add_systems(
             (
+                fix_location.before(client_sync_players),
                 lerp_towards.after(client_sync_players),
-                fix_location,
                 sync_transforms_and_locations,
                 handle_child_syncing,
                 add_previous_location,

@@ -236,12 +236,15 @@ fn remove_empty_worlds(
 
 /// Handles any just-added locations that need to sync up to their transforms
 fn fix_location(
-    mut query: Query<(Entity, &mut Location), (Added<Location>, Without<PlayerWorld>)>,
+    mut query: Query<
+        (Entity, &mut Location, Option<&mut Transform>),
+        (Added<Location>, Without<PlayerWorld>),
+    >,
     player_worlds: Query<(&Location, &WorldWithin, &PhysicsWorld), With<PlayerWorld>>,
     mut commands: Commands,
     player_world_loc_query: Query<&Location, With<PlayerWorld>>,
 ) {
-    for (entity, mut location) in query.iter_mut() {
+    for (entity, mut location, my_trans) in query.iter_mut() {
         let mut best_distance = None;
         let mut best_world = None;
         let mut best_world_id = None;
@@ -259,15 +262,23 @@ fn fix_location(
         match (best_world, best_world_id) {
             (Some(world), Some(world_id)) => {
                 if let Ok(loc) = player_world_loc_query.get(world.0) {
-                    let transform = Transform::from_translation(-location.relative_coords_to(loc));
+                    let translation = -location.relative_coords_to(loc);
 
-                    location.last_transform_loc = Some(transform.translation);
+                    location.last_transform_loc = Some(translation);
 
-                    commands.entity(entity).insert((
-                        TransformBundle::from_transform(transform),
-                        world,
-                        PhysicsWorld { world_id },
-                    ));
+                    commands
+                        .entity(entity)
+                        .insert((world, PhysicsWorld { world_id }));
+
+                    if let Some(mut my_trans) = my_trans {
+                        my_trans.translation = translation;
+                    } else {
+                        commands
+                            .entity(entity)
+                            .insert((TransformBundle::from_transform(
+                                Transform::from_translation(translation),
+                            ),));
+                    }
                 } else {
                     warn!("A player world was missing a location");
                 }

@@ -48,12 +48,7 @@ fn on_save_structure(
     }
 }
 
-fn generate_planet(
-    entity: Entity,
-    planet_save_data: PlanetSaveData,
-    s_data: &SerializedData,
-    commands: &mut Commands,
-) {
+fn generate_planet(entity: Entity, planet_save_data: PlanetSaveData, commands: &mut Commands) {
     let mut structure = Structure::new(
         planet_save_data.width,
         planet_save_data.height,
@@ -62,15 +57,14 @@ fn generate_planet(
 
     let mut entity_cmd = commands.entity(entity);
 
-    let loc = s_data
-        .deserialize_data("cosmos:location")
-        .expect("Every planet should have a location when saved!");
+    // let loc: Location = s_data
+    //     .deserialize_data("cosmos:location")
+    //     .expect("Every planet should have a location when saved!");
 
     let builder = ServerPlanetBuilder::default();
 
     builder.insert_planet(
         &mut entity_cmd,
-        loc,
         &mut structure,
         Planet::new(planet_save_data.temperature),
     );
@@ -90,7 +84,7 @@ fn on_load_structure(
             if let Some(planet_save_data) =
                 s_data.deserialize_data::<PlanetSaveData>("cosmos:planet")
             {
-                generate_planet(entity, planet_save_data, s_data, &mut commands);
+                generate_planet(entity, planet_save_data, &mut commands);
             }
         }
     }
