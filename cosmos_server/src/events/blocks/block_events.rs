@@ -63,7 +63,6 @@ fn handle_block_break_events(
 ) {
     for ev in event_reader.iter() {
         if let Ok(mut structure) = query.get_mut(ev.structure_entity) {
-            let block_id = ev.structure_block.block_id(&structure);
             let block = ev.structure_block.block(&structure, &blocks);
 
             // Eventually seperate this into another event lsitener that some how interacts with this one
@@ -77,6 +76,8 @@ fn handle_block_break_events(
                     return;
                 }
             }
+
+            let block_id = ev.structure_block.block_id(&structure);
 
             if let Ok(mut inventory) = inventory_query.get_mut(ev.breaker) {
                 let block = blocks.from_numeric_id(block_id);

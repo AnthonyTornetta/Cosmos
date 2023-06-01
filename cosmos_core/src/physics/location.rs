@@ -18,12 +18,19 @@ use std::{
 };
 
 use bevy::{
-    prelude::{App, Children, Component, Entity, Parent, Query, Transform, Vec3, With, Without},
+    prelude::{
+        App, Children, Component, Entity, GlobalTransform, Parent, Query, Transform, Vec3, With,
+        Without,
+    },
     reflect::{FromReflect, Reflect},
 };
 use bevy_rapier3d::na::Vector3;
 use bigdecimal::{BigDecimal, FromPrimitive};
 use serde::{Deserialize, Serialize};
+
+use crate::structure::chunk::ChunkEntity;
+
+use super::player_world::{PlayerWorld, WorldWithin};
 
 /// This represents the diameter of a sector. So at a local
 /// of 0, 0, 0 you can travel `SECTOR_DIMENSIONS / 2.0` blocks in any direction and
@@ -425,40 +432,94 @@ impl Location {
     }
 }
 
-fn bubble(
-    loc: &Location,
-    entity: Entity,
-    query: &mut Query<(&mut Location, &Transform, Option<&Children>), With<Parent>>,
+// fn bubble(
+//     loc: &Location,
+//     entity: Entity,
+//     query: &mut Query<(&mut Location, &Transform, Option<&Children>), With<Parent>>,
+// ) {
+//     let mut todos = Vec::new();
+
+//     if let Ok((mut location, transform, children)) = query.get_mut(entity) {
+//         println!("Pre-bubble: {location:?}");
+//         location.set_from(loc);
+//         location.local += transform.translation;
+//         location.last_transform_loc = Some(transform.translation);
+//         location.fix_bounds();
+
+//         println!("Post-bubble: {location:?}");
+
+//         if let Some(children) = children {
+//             for child in children {
+//                 todos.push((*child, *location));
+//             }
+//         }
+//     }
+
+//     for (entity, loc) in todos {
+//         bubble(&loc, entity, query);
+//     }
+// }
+
+/// Makes sure children have proper locations, this should be added after syncing transforms & locations.
+// pub fn bubble_down_locations(
+//     tops: Query<(&Location, &Children), Without<Parent>>,
+//     mut middles: Query<(&mut Location, &Transform, Option<&Children>), With<Parent>>,
+// ) {
+//     for (loc, children) in tops.iter() {
+//         for entity in children.iter() {
+//             bubble(loc, *entity, &mut middles);
+//         }
+//     }
+// }
+
+fn dew_it(
+    this_entity: Entity,
+    parent_query: &Query<&Parent, With<Location>>,
+    data_query: &mut Query<(&mut Location, &mut Transform, &GlobalTransform)>,
+    // world_location_query: &Query<(&Location, Entity), With<PlayerWorld>>,
 ) {
-    let mut todos = Vec::new();
+    if let Ok(parent) = parent_query.get(this_entity).map(|p| p.get()) {
+        dew_it(parent, parent_query, data_query);
 
-    if let Ok((mut location, transform, children)) = query.get_mut(entity) {
-        location.set_from(loc);
-        location.local += transform.translation;
-        location.last_transform_loc = Some(transform.translation);
-        location.fix_bounds();
+        let Ok(loc) = data_query.get(parent).map(|(loc, _, _)| *loc) else {
+            return;
+        };
 
-        if let Some(children) = children {
-            for child in children {
-                todos.push((*child, *location));
-            }
+        let Ok((mut my_loc, mut my_transform, my_global_transform)) = data_query.get_mut(this_entity) else {
+            return;
+        };
+
+        // let Some((world_location, _)) = world_location_query
+        //     .iter()
+        //     .find(|(_, world)| world_within.0 == *world)
+        // else {
+        //     return;
+        // };
+
+        if let Some(last_transform_loc) = my_loc.last_transform_loc {
+            let my_global_translation = my_global_transform.translation();
+            let delta_pos = my_global_translation - last_transform_loc;
+
+            my_loc.apply_updates(delta_pos);
+            my_loc.last_transform_loc = Some(my_global_translation);
+
+            let difference = (*my_loc - loc).absolute_coords_f32();
+
+            my_transform.translation = difference;
+            // world_location.relative_coords_to(&my_loc) - global_trans.translation();
+
+            // let my_trans = my_global_translation - global_trans.translation();
         }
-    }
-
-    for (entity, loc) in todos {
-        bubble(&loc, entity, query);
     }
 }
 
-/// Makes sure children have proper locations, this should be added after syncing transforms & locations.
-pub fn bubble_down_locations(
-    tops: Query<(&Location, &Children), Without<Parent>>,
-    mut middles: Query<(&mut Location, &Transform, Option<&Children>), With<Parent>>,
+pub fn handle_child_syncing(
+    initial_query: Query<Entity, (Without<Children>, Without<ChunkEntity>)>,
+    parent_query: Query<&Parent, With<Location>>,
+    mut data_query: Query<(&mut Location, &mut Transform, &GlobalTransform)>,
 ) {
-    for (loc, children) in tops.iter() {
-        for entity in children.iter() {
-            bubble(loc, *entity, &mut middles);
-        }
+    for entity in initial_query.iter() {
+        dew_it(entity, &parent_query, &mut data_query);
     }
 }
 

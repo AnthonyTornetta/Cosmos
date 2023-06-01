@@ -14,11 +14,12 @@ pub mod lang;
 pub mod loading;
 pub mod materials;
 pub mod netty;
+pub mod physics;
 pub mod plugin;
 pub mod projectiles;
 pub mod rendering;
-pub mod state;
 pub mod skybox;
+pub mod state;
 pub mod structure;
 pub mod ui;
 pub mod universe;
@@ -29,7 +30,6 @@ use std::f32::consts::PI;
 
 use bevy::window::PrimaryWindow;
 use bevy_renet::renet::RenetClient;
-use cosmos_core::entities::player::Player;
 use cosmos_core::events::structure::change_pilot_event::ChangePilotEvent;
 use cosmos_core::netty::client_reliable_messages::ClientReliableMessages;
 use cosmos_core::netty::client_unreliable_messages::ClientUnreliableMessages;
@@ -153,15 +153,6 @@ fn reset_cursor(
     }
 }
 
-fn sync_pilot_to_ship(mut query: Query<&mut Transform, (With<Player>, With<Pilot>)>) {
-    for mut trans in query.iter_mut() {
-        trans.translation.x = 0.0;
-        trans.translation.y = 0.0;
-        trans.translation.z = 0.0;
-        trans.rotation = Quat::IDENTITY;
-    }
-}
-
 fn process_player_movement(
     keys: Res<Input<KeyCode>>,
     mouse: Res<Input<MouseButton>>,
@@ -275,6 +266,8 @@ fn process_player_movement(
                     velocity.linvel.z = z;
                 }
             }
+        } else if velocity.linvel.dot(velocity.linvel) > max_speed * max_speed {
+            velocity.linvel = velocity.linvel.normalize() * max_speed;
         }
     }
 }
@@ -393,12 +386,7 @@ fn main() {
         .add_system(create_sun.in_schedule(OnEnter(GameState::LoadingWorld)))
         .add_system(connect::wait_for_done_loading.in_set(OnUpdate(GameState::LoadingWorld)))
         .add_systems(
-            (
-                process_player_movement,
-                process_ship_movement,
-                reset_cursor,
-                sync_pilot_to_ship,
-            )
+            (process_player_movement, process_ship_movement, reset_cursor)
                 .in_set(OnUpdate(GameState::Playing)),
         );
 
@@ -421,6 +409,7 @@ fn main() {
     rendering::register(&mut app);
     universe::register(&mut app);
     skybox::register(&mut app);
+    physics::register(&mut app);
 
     app.run();
 }

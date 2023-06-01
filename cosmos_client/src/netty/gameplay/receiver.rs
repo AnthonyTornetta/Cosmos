@@ -20,7 +20,7 @@ use cosmos_core::{
     },
     persistence::LoadingDistance,
     physics::{
-        location::{bubble_down_locations, Location, SYSTEM_SECTORS},
+        location::{handle_child_syncing, Location, SYSTEM_SECTORS},
         player_world::PlayerWorld,
     },
     registry::Registry,
@@ -292,6 +292,12 @@ fn client_sync_players(
                 lobby.players.insert(id, player_info);
                 network_mapping.add_mapping(client_entity, server_entity);
 
+                println!(
+                    "Linking player (client {} to server {})",
+                    client_entity.index(),
+                    server_entity.index()
+                );
+
                 if client_id == id {
                     entity_cmds
                         .insert(LocalPlayer)
@@ -496,8 +502,18 @@ fn client_sync_players(
                 structure_entity,
                 pilot_entity,
             } => {
+                println!(
+                    "Got change pilot event! Pilot is one? {}",
+                    pilot_entity.is_some()
+                );
+
                 let pilot_entity = if let Some(pilot_entity) = pilot_entity {
-                    network_mapping.client_from_server(&pilot_entity)
+                    if let Some(mapping) = network_mapping.client_from_server(&pilot_entity) {
+                        Some(mapping)
+                    } else {
+                        warn!("Server mapping missing for pilot!");
+                        None
+                    }
                 } else {
                     None
                 };
@@ -560,7 +576,7 @@ fn fix_location(
     for (mut location, mut transform) in query.iter_mut() {
         match player_worlds.get_single() {
             Ok(loc) => {
-                transform.translation = location.relative_coords_to(loc);
+                transform.translation = loc.relative_coords_to(&location);
                 location.last_transform_loc = Some(transform.translation);
             }
             _ => {
@@ -636,7 +652,7 @@ pub(super) fn register(app: &mut App) {
                 lerp_towards.after(client_sync_players),
                 fix_location,
                 sync_transforms_and_locations,
-                bubble_down_locations,
+                handle_child_syncing,
             )
                 .chain()
                 .in_set(OnUpdate(GameState::Playing)),

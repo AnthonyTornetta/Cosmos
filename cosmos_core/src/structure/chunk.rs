@@ -104,7 +104,7 @@ impl Chunk {
                 self.non_air_blocks -= 1;
             }
 
-            self.blocks[index] = b.id();
+            self.blocks[index] = id;
         }
     }
 
