@@ -17,7 +17,7 @@ use cosmos_core::{
         planet::Planet,
         ChunkInitEvent, Structure,
     },
-    utils::resource_wrapper::ResourceWrapper,
+    utils::{resource_wrapper::ResourceWrapper, timer::UtilsTimer},
 };
 use futures_lite::future;
 use noise::NoiseFn;
@@ -290,6 +290,7 @@ fn generate_planet(
             let noise_generator = **noise_generator;
 
             let task = thread_pool.spawn(async move {
+                let timer = UtilsTimer::start();
                 let grass = &grass;
                 let dirt = &dirt;
                 let stone = &stone;
@@ -499,30 +500,171 @@ fn generate_planet(
                     }
                     (chunk, structure_entity)
                 } else {
-                    for z in 0..CHUNK_DIMENSIONS {
-                        let actual_z = sz + z;
-                        for y in 0..CHUNK_DIMENSIONS {
-                            let actual_y: usize = sy + y;
+                    // Interesting (non-uniform-block) chunk generation.
+                    // I'm sorry for the repetitive code I'm about to write.
+                    if y_up == CHUNK_DIMENSIONS - 1 && x_up == 1 && z_up == 1 {
+                        // Top-only chunks. Chunks with more than 1 up are too hard, for now that's block by block.
+                        for z in 0..CHUNK_DIMENSIONS {
+                            let actual_z = sz + z;
                             for x in 0..CHUNK_DIMENSIONS {
-                                if chunk.has_block_at(x, y, z) {
-                                    continue;
-                                }
-
                                 let actual_x = sx + x;
-                                generate_block(
-                                    (x, y, z),
-                                    (actual_x, actual_y, actual_z),
-                                    (structure_x, structure_y, structure_z),
+
+                                let mut air_start = get_max_level(
+                                    actual_x,
+                                    sy + y_up,
+                                    actual_z,
+                                    structure_x,
+                                    structure_y,
+                                    structure_z,
                                     &noise_generator,
                                     middle_air_start,
-                                    s_width,
-                                    s_height,
-                                    s_length,
-                                    grass,
-                                    dirt,
-                                    stone,
-                                    &mut chunk,
                                 );
+
+                                // While in a solid block, move up a step.
+                                while y_up < CHUNK_DIMENSIONS && sy + y_up < air_start {
+                                    y_up += 1;
+                                    air_start = get_max_level(
+                                        actual_x,
+                                        sy + y_up,
+                                        actual_z,
+                                        structure_x,
+                                        structure_y,
+                                        structure_z,
+                                        &noise_generator,
+                                        middle_air_start,
+                                    );
+                                }
+
+                                // While in an air block, move down a step.
+                                while y_up != 0 && sy + y_up >= air_start {
+                                    y_up -= 1;
+                                    air_start = get_max_level(
+                                        actual_x,
+                                        sy + y_up,
+                                        actual_z,
+                                        structure_x,
+                                        structure_y,
+                                        structure_z,
+                                        &noise_generator,
+                                        middle_air_start,
+                                    );
+                                }
+
+                                // At this point, we should always be at the top solid block, or at the top or bottom boundary.
+                                if y_up == 0 {
+                                    // All air column, except for possibly the bottom block.
+                                    generate_block(
+                                        (x, 0, z),
+                                        (actual_x, sy, actual_z),
+                                        (structure_x, structure_y, structure_z),
+                                        &noise_generator,
+                                        middle_air_start,
+                                        s_width,
+                                        s_height,
+                                        s_length,
+                                        grass,
+                                        dirt,
+                                        stone,
+                                        &mut chunk,
+                                    );
+                                    y_up = 1;
+                                } else if y_up >= CHUNK_DIMENSIONS {
+                                    // All solid column, generate the top 4 blocks the old fashion way (there might be a grass block 1 step up in a different chunk).
+                                    let stone_line = CHUNK_DIMENSIONS - STONE_LIMIT;
+                                    for y in stone_line..CHUNK_DIMENSIONS {
+                                        generate_block(
+                                            (x, y, z),
+                                            (actual_x, sy + y, actual_z),
+                                            (structure_x, structure_y, structure_z),
+                                            &noise_generator,
+                                            middle_air_start,
+                                            s_width,
+                                            s_height,
+                                            s_length,
+                                            grass,
+                                            dirt,
+                                            stone,
+                                            &mut chunk,
+                                        );
+                                    }
+
+                                    // All blocks below those 4 are definitely stone.
+                                    for y in 0..stone_line {
+                                        chunk.set_block_at(x, y, z, stone, BlockFace::Top);
+                                    }
+
+                                    y_up = CHUNK_DIMENSIONS - 1;
+                                } else {
+                                    // Mixed air and solid, we are on the dividing line. Set current to grass, next 5 dirt, then stone.
+                                    chunk.set_block_at(x, y_up, z, grass, BlockFace::Top);
+                                    let stone_line =
+                                        0.max(y_up as i32 - STONE_LIMIT as i32) as usize;
+                                    for y in 0..stone_line {
+                                        chunk.set_block_at(x, y, z, stone, BlockFace::Top);
+                                    }
+                                    for y in stone_line..y_up {
+                                        chunk.set_block_at(x, y, z, dirt, BlockFace::Top)
+                                    }
+                                }
+                            }
+                        }
+                    // } else if y_up == 0 && x_up == 1 && z_up == 1 {
+                    // for y in 0..4 {
+                    //     generate_block(
+                    //         (x, y, z),
+                    //         (actual_x, sy + y, actual_z),
+                    //         (structure_x, structure_y, structure_z),
+                    //         &noise_generator,
+                    //         middle_air_start,
+                    //         s_width,
+                    //         s_height,
+                    //         s_length,
+                    //         grass,
+                    //         dirt,
+                    //         stone,
+                    //         &mut chunk,
+                    //     );
+                    // }
+
+                    // // All blocks below those 4 are definitely stone.
+                    // for y in 4..CHUNK_DIMENSIONS {
+                    //     chunk.set_block_at(x, y, z, stone, BlockFace::Top);
+                    // }
+
+                    // let stone_line = CHUNK_DIMENSIONS.min(y_up + STONE_LIMIT);
+                    // for y in y_up..stone_line {
+                    //     chunk.set_block_at(x, y, z, dirt, BlockFace::Top);
+                    // }
+                    // for y in stone_line..CHUNK_DIMENSIONS {
+                    //     chunk.set_block_at(x, y, z, dirt, BlockFace::Top)
+                    // }
+                    // }
+                    } else {
+                        for z in 0..CHUNK_DIMENSIONS {
+                            let actual_z = sz + z;
+                            for y in 0..CHUNK_DIMENSIONS {
+                                let actual_y: usize = sy + y;
+                                for x in 0..CHUNK_DIMENSIONS {
+                                    if chunk.has_block_at(x, y, z) {
+                                        continue;
+                                    }
+
+                                    let actual_x = sx + x;
+                                    generate_block(
+                                        (x, y, z),
+                                        (actual_x, actual_y, actual_z),
+                                        (structure_x, structure_y, structure_z),
+                                        &noise_generator,
+                                        middle_air_start,
+                                        s_width,
+                                        s_height,
+                                        s_length,
+                                        grass,
+                                        dirt,
+                                        stone,
+                                        &mut chunk,
+                                    );
+                                }
                             }
                         }
                     }
