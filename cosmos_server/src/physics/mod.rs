@@ -381,10 +381,10 @@ pub(super) fn register(app: &mut App) {
     )
     .add_systems(
         (
-            add_previous_location,
             fix_location,
             sync_transforms_and_locations,
             handle_child_syncing,
+            add_previous_location,
         )
             .chain()
             .in_set(OnUpdate(GameState::Playing)),

@@ -19,8 +19,8 @@ use std::{
 
 use bevy::{
     prelude::{
-        App, Children, Commands, Component, Deref, DerefMut, Entity, GlobalTransform, Parent,
-        Query, Transform, Vec3, With, Without,
+        App, Children, Commands, Component, Deref, DerefMut, Entity, Parent, Query, Transform,
+        Vec3, Without,
     },
     reflect::{FromReflect, Reflect},
 };
@@ -29,8 +29,6 @@ use bigdecimal::{BigDecimal, FromPrimitive};
 use serde::{Deserialize, Serialize};
 
 use crate::structure::chunk::ChunkEntity;
-
-use super::player_world::{PlayerWorld, WorldWithin};
 
 /// This represents the diameter of a sector. So at a local
 /// of 0, 0, 0 you can travel `SECTOR_DIMENSIONS / 2.0` blocks in any direction and
@@ -432,82 +430,41 @@ impl Location {
     }
 }
 
-// fn bubble(
-//     loc: &Location,
-//     entity: Entity,
-//     query: &mut Query<(&mut Location, &Transform, Option<&Children>), With<Parent>>,
-// ) {
-//     let mut todos = Vec::new();
-
-//     if let Ok((mut location, transform, children)) = query.get_mut(entity) {
-//         println!("Pre-bubble: {location:?}");
-//         location.set_from(loc);
-//         location.local += transform.translation;
-//         location.last_transform_loc = Some(transform.translation);
-//         location.fix_bounds();
-
-//         println!("Post-bubble: {location:?}");
-
-//         if let Some(children) = children {
-//             for child in children {
-//                 todos.push((*child, *location));
-//             }
-//         }
-//     }
-
-//     for (entity, loc) in todos {
-//         bubble(&loc, entity, query);
-//     }
-// }
-
-/// Makes sure children have proper locations, this should be added after syncing transforms & locations.
-// pub fn bubble_down_locations(
-//     tops: Query<(&Location, &Children), Without<Parent>>,
-//     mut middles: Query<(&mut Location, &Transform, Option<&Children>), With<Parent>>,
-// ) {
-//     for (loc, children) in tops.iter() {
-//         for entity in children.iter() {
-//             bubble(loc, *entity, &mut middles);
-//         }
-//     }
-// }
-
 #[derive(Component, Debug, Reflect, FromReflect, Deref, DerefMut, Clone, Copy)]
 /// Stores the location from the previous frame
 pub struct PreviousLocation(Location);
 
-fn dew_it(
+/// Recursively goes from the top of the parent tree to the bottom and lines up all their locations.
+///
+/// This probably works.
+fn sync_self_with_parents(
     this_entity: Entity,
     parent_query: &Query<&Parent>,
-    data_query: &mut Query<(&mut Location, &Transform, &PreviousLocation)>,
+    data_query: &mut Query<(&mut Location, &mut Transform, &PreviousLocation)>,
 ) {
     if let Ok(parent) = parent_query.get(this_entity).map(|p| p.get()) {
-        dew_it(parent, parent_query, data_query);
+        sync_self_with_parents(parent, parent_query, data_query);
 
         let Ok((loc, prev_loc)) = data_query.get(parent).map(|(loc, _, prev_loc)| (*loc, *prev_loc)) else {
             return;
         };
 
-        let Ok((mut my_loc, transform, _)) = data_query.get_mut(this_entity) else {
+        let Ok((mut my_loc, mut transform, my_prev_loc)) = data_query.get_mut(this_entity) else {
             return;
         };
 
-        if let Some(last_transform_loc) = my_loc.last_transform_loc {
+        if my_loc.last_transform_loc.is_some() {
             let parent_delta = (prev_loc.0 - loc).absolute_coords_f32();
 
+            let my_delta = my_prev_loc.0.relative_coords_to(&my_loc);
+            transform.translation += my_delta;
 
-            // println!("Moving loc!");
-            let local_translation = transform.translation;
-            println!("{local_translation} - {last_transform_loc}");
+            println!("{} - {} -> {my_delta}", my_loc.as_ref(), my_prev_loc.0);
 
-            let delta_pos: Vec3 = local_translation - last_transform_loc;
-
-            println!("Delta was: {delta_pos}");
-
-            my_loc.apply_updates(local_translation);
+            my_loc.apply_updates(transform.translation);
 
             // This will probably break for stuff that isn't the player as a child, but idk we'll see
-            let diff = *my_loc - parent_delta;
+            let diff = *my_loc - parent_delta - my_delta;
             my_loc.set_from(&diff);
         }
     }
@@ -531,10 +488,10 @@ pub fn add_previous_location(
 pub fn handle_child_syncing(
     initial_query: Query<Entity, (Without<Children>, Without<ChunkEntity>)>,
     parent_query: Query<&Parent>,
-    mut data_query: Query<(&mut Location, &Transform, &PreviousLocation)>,
+    mut data_query: Query<(&mut Location, &mut Transform, &PreviousLocation)>,
 ) {
     for entity in initial_query.iter() {
-        dew_it(entity, &parent_query, &mut data_query);
+        sync_self_with_parents(entity, &parent_query, &mut data_query);
     }
 }
 
