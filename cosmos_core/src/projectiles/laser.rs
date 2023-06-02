@@ -99,8 +99,6 @@ impl Laser {
         world_id: WorldId,
         commands: &mut Commands,
     ) -> Entity {
-        // pbr.transform = Transform::from_translation(world_location.relative_coords_to(&location));
-
         pbr.transform.look_at(laser_velocity, Vec3::Y);
 
         let mut ent_cmds = commands.spawn_empty();

@@ -144,17 +144,15 @@ fn handle_events_system(
 
                 let player = Player::new(name.clone(), *id);
                 let starting_pos = Vec3::new(0.0, CHUNK_DIMENSIONSF * 50.0 / 2.0, 0.0);
-                let transform = Transform::from_translation(starting_pos);
                 let location = Location::new(starting_pos, Sector::new(0, 0, 0));
                 let velocity = Velocity::default();
                 let inventory = generate_player_inventory(&items);
 
-                let netty_body = NettyRigidBody::new(&velocity, transform.rotation, location);
+                let netty_body = NettyRigidBody::new(&velocity, Quat::IDENTITY, location);
 
                 let inventory_serialized = cosmos_encoder::serialize(&inventory);
 
                 let player_commands = commands.spawn((
-                    transform,
                     location,
                     LockedAxes::ROTATION_LOCKED,
                     RigidBody::Dynamic,

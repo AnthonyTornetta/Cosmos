@@ -20,7 +20,7 @@ use std::{
 use bevy::{
     prelude::{
         App, Children, Commands, Component, Deref, DerefMut, Entity, Parent, Query, Transform,
-        Vec3, Without,
+        Vec3, With, Without,
     },
     reflect::{FromReflect, Reflect},
 };
@@ -440,32 +440,40 @@ pub struct PreviousLocation(Location);
 fn sync_self_with_parents(
     this_entity: Entity,
     parent_query: &Query<&Parent>,
-    data_query: &mut Query<(&mut Location, &mut Transform, &PreviousLocation)>,
+    data_query: &mut Query<(&mut Location, &mut Transform, &mut PreviousLocation)>,
 ) {
     if let Ok(parent) = parent_query.get(this_entity).map(|p| p.get()) {
         sync_self_with_parents(parent, parent_query, data_query);
 
-        let Ok((loc, prev_loc)) = data_query.get(parent).map(|(loc, _, prev_loc)| (*loc, *prev_loc)) else {
+        let Ok((parent_loc, parent_prev_loc)) = data_query.get(parent).map(|(loc, _, prev_loc)| (*loc, *prev_loc)) else {
             return;
         };
 
-        let Ok((mut my_loc, mut transform, my_prev_loc)) = data_query.get_mut(this_entity) else {
+        let Ok((mut my_loc, mut my_transform, mut my_prev_loc)) = data_query.get_mut(this_entity) else {
             return;
         };
 
         if my_loc.last_transform_loc.is_some() {
-            let parent_delta = (prev_loc.0 - loc).absolute_coords_f32();
+            // let parent_delta: Vec3 = parent_prev_loc.0.relative_coords_to(&parent_loc);
 
-            let my_delta = my_prev_loc.0.relative_coords_to(&my_loc);
-            transform.translation += my_delta;
+            // let my_delta: Vec3 = my_prev_loc.0.relative_coords_to(&my_loc);
+            // println!("{} - {} -> {my_delta}", my_loc.as_ref(), my_prev_loc.0);
 
-            println!("{} - {} -> {my_delta}", my_loc.as_ref(), my_prev_loc.0);
+            println!("Transform is {}", my_transform.translation);
 
-            // This will probably break for stuff that isn't the player as a child, but idk we'll see
-            let diff = *my_loc - parent_delta - my_delta;
-            my_loc.set_from(&diff);
+            // my_loc.apply_updates(my_transform.translation);
 
-            my_loc.apply_updates(transform.translation);
+            // my_transform.translation += my_delta;
+
+            // my_loc.last_transform_loc = Some(my_transform.translation);
+
+            // // This will probably break for stuff that isn't the player as a child, but idk we'll see
+            // // let diff = *my_loc + parent_delta; // + my_delta;
+            // // my_loc.set_from(&diff);
+
+            // my_prev_loc.0 = *my_loc;
+
+            // println!("NF: {} | {}", my_loc.as_ref(), my_prev_loc.0);
         }
     }
 }
@@ -488,16 +496,23 @@ pub fn add_previous_location(
 pub fn handle_child_syncing(
     initial_query: Query<Entity, (Without<Children>, Without<ChunkEntity>)>,
     parent_query: Query<&Parent>,
-    mut data_query: Query<(&mut Location, &mut Transform, &PreviousLocation)>,
+    mut data_query: Query<(&mut Location, &mut Transform, &mut PreviousLocation)>,
 ) {
     for entity in initial_query.iter() {
         sync_self_with_parents(entity, &parent_query, &mut data_query);
     }
 }
 
+fn print_trans(query: Query<&Transform, (With<Location>, With<Parent>)>) {
+    for x in query.iter() {
+        println!("{}", x.translation);
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.register_type::<Location>()
-        .register_type::<PreviousLocation>();
+        .register_type::<PreviousLocation>()
+        .add_system(print_trans);
 }
 
 #[cfg(test)]

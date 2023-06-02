@@ -561,7 +561,7 @@ fn client_sync_players(
 fn fix_location(
     mut query: Query<
         (Entity, &mut Location, Option<&mut Transform>),
-        (Added<Location>, Without<PlayerWorld>),
+        (Added<Location>, Without<PlayerWorld>, Without<Parent>),
     >,
     player_worlds: Query<&Location, With<PlayerWorld>>,
     mut commands: Commands,
@@ -604,9 +604,9 @@ fn sync_transforms_and_locations(
     for (transform, mut location) in trans_query_no_parent.iter_mut() {
         location.apply_updates(transform.translation);
     }
-    for (transform, mut location) in trans_query_with_parent.iter_mut() {
-        location.apply_updates(transform.translation);
-    }
+    // for (transform, mut location) in trans_query_with_parent.iter_mut() {
+    //     location.apply_updates(transform.translation);
+    // }
 
     if let Ok((world, mut world_location)) = world_query.get_single_mut() {
         let mut player_entity = player_entity_query
@@ -653,9 +653,9 @@ pub(super) fn register(app: &mut App) {
             (
                 fix_location.before(client_sync_players),
                 lerp_towards.after(client_sync_players),
+                // add_previous_location,
                 sync_transforms_and_locations,
-                handle_child_syncing,
-                add_previous_location,
+                // handle_child_syncing,
             )
                 .chain()
                 .in_set(OnUpdate(GameState::Playing)),

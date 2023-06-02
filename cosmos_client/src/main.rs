@@ -286,58 +286,6 @@ fn create_sun(mut commands: Commands) {
         },
         ..default()
     });
-
-    // commands
-    //     .spawn(PointLightBundle {
-    //         transform: Transform::from_xyz(0.0, 100.0, 0.0),
-    //         point_light: PointLight {
-    //             intensity: 160000.0,
-    //             range: 160000.0,
-    //             color: Color::WHITE,
-    //             shadows_enabled: true,
-    //             ..default()
-    //         },
-    //         ..default()
-    //     })
-    //     .with_children(|builder| {
-    //         builder.spawn(PbrBundle {
-    //             mesh: meshes.add(Mesh::from(shape::UVSphere {
-    //                 radius: 0.1,
-    //                 ..default()
-    //             })),
-    //             material: materials.add(StandardMaterial {
-    //                 base_color: Color::RED,
-    //                 emissive: Color::rgba_linear(100.0, 0.0, 0.0, 0.0),
-    //                 ..default()
-    //             }),
-    //             ..default()
-    //         });
-    //     });
-
-    // commands
-    //     .spawn(PointLightBundle {
-    //         transform: Transform::from_xyz(0.5, 2.5, 0.5),
-    //         point_light: PointLight {
-    //             intensity: 600.0,
-    //             range: 20.0,
-    //             color: Color::WHITE,
-    //             radius: 0.6,
-    //             shadows_enabled: true,
-    //             ..default()
-    //         },
-    //         ..default()
-    //     })
-    //     .with_children(|builder| {
-    //         builder.spawn(PbrBundle {
-    //             mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
-    //             material: materials.add(StandardMaterial {
-    //                 base_color: Color::WHITE,
-    //                 emissive: Color::rgba_linear(1.0, 1.0, 1.0, 0.0),
-    //                 ..default()
-    //             }),
-    //             ..default()
-    //         });
-    //     });
 }
 
 fn main() {

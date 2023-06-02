@@ -238,7 +238,7 @@ fn remove_empty_worlds(
 fn fix_location(
     mut query: Query<
         (Entity, &mut Location, Option<&mut Transform>),
-        (Added<Location>, Without<PlayerWorld>),
+        (Added<Location>, Without<PlayerWorld>, Without<Parent>),
     >,
     player_worlds: Query<(&Location, &WorldWithin, &PhysicsWorld), With<PlayerWorld>>,
     mut commands: Commands,
@@ -258,6 +258,8 @@ fn fix_location(
                 best_world_id = Some(body_world.world_id);
             }
         }
+
+        println!("Fixing @ {}", location.as_ref());
 
         match (best_world, best_world_id) {
             (Some(world), Some(world_id)) => {
@@ -284,7 +286,7 @@ fn fix_location(
                 }
             }
             _ => {
-                warn!("Something was added with a location before a player world was registered.")
+                warn!("Something was added with a location before a player world was created.")
             }
         }
     }
@@ -338,14 +340,17 @@ fn sync_transforms_and_locations(
                 }
             }
 
-            let location = trans_query_no_parent
+            let Ok(location) = trans_query_no_parent
                 .get(player_entity)
                 .map(|(_, _, loc, _)| loc)
                 .or_else(|_| match trans_query_with_parent.get(player_entity) {
                     Ok((_, _, loc)) => Ok(loc),
                     Err(x) => Err(x),
                 })
-                .expect("The above loop guarantees this is valid");
+            else {
+                // The player was just added & doesn't have a transform yet - only a location.
+                continue;
+            };
 
             world_location.set_from(location);
 
@@ -393,9 +398,9 @@ pub(super) fn register(app: &mut App) {
     .add_systems(
         (
             fix_location,
+            // add_previous_location,
             sync_transforms_and_locations,
-            handle_child_syncing,
-            add_previous_location,
+            // handle_child_syncing,
         )
             .chain()
             .in_set(OnUpdate(GameState::Playing)),
