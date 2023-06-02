@@ -567,8 +567,8 @@ fn do_bottom_face(
     } else if y_up >= CHUNK_DIMENSIONS {
         // All air column, except for possibly the bottom block.
         generate_block(
-            (x, y_up - 1, z),
-            (actual_x, sy + y_up - 1, actual_z),
+            (x, CHUNK_DIMENSIONS - 1, z),
+            (actual_x, sy + CHUNK_DIMENSIONS - 1, actual_z),
             (structure_x, structure_y, structure_z),
             (s_width, s_height, s_length),
             noise_generator,
@@ -578,7 +578,7 @@ fn do_bottom_face(
             stone,
             chunk,
         );
-        CHUNK_DIMENSIONS - 1
+        CHUNK_DIMENSIONS
     } else {
         // Mixed air and solid, we are on the dividing line. Set current to grass, next 5 dirt, then stone.
         chunk.set_block_at(x, y_up - 1, z, grass, BlockFace::Bottom);
@@ -661,8 +661,8 @@ fn do_left_face(
     } else if x_up >= CHUNK_DIMENSIONS {
         // All air column, except for possibly the bottom block.
         generate_block(
-            (x_up - 1, y, z),
-            (sx + x_up - 1, actual_y, actual_z),
+            (CHUNK_DIMENSIONS - 1, y, z),
+            (sx + CHUNK_DIMENSIONS - 1, actual_y, actual_z),
             (structure_x, structure_y, structure_z),
             (s_width, s_height, s_length),
             noise_generator,
@@ -672,10 +672,10 @@ fn do_left_face(
             stone,
             chunk,
         );
-        CHUNK_DIMENSIONS - 1
+        CHUNK_DIMENSIONS
     } else {
         // Mixed air and solid, we are on the dividing line. Set current to grass, next 5 dirt, then stone.
-        chunk.set_block_at(x_up, y, z, grass, BlockFace::Left);
+        chunk.set_block_at(x_up - 1, y, z, grass, BlockFace::Left);
         let stone_line = CHUNK_DIMENSIONS.min(x_up - 1 + STONE_LIMIT);
         for x in x_up..stone_line {
             chunk.set_block_at(x, y, z, dirt, BlockFace::Left);
@@ -755,8 +755,8 @@ fn do_back_face(
     } else if z_up >= CHUNK_DIMENSIONS {
         // All air column, except for possibly the bottom block.
         generate_block(
-            (x, y, z_up - 1),
-            (actual_x, actual_y, sz + z_up - 1),
+            (x, y, CHUNK_DIMENSIONS - 1),
+            (actual_x, actual_y, sz + CHUNK_DIMENSIONS - 1),
             (structure_x, structure_y, structure_z),
             (s_width, s_height, s_length),
             noise_generator,
@@ -766,7 +766,7 @@ fn do_back_face(
             stone,
             chunk,
         );
-        CHUNK_DIMENSIONS - 1
+        CHUNK_DIMENSIONS
     } else {
         // Mixed air and solid, we are on the dividing line. Set current to grass, next 5 dirt, then stone.
         chunk.set_block_at(x, y, z_up - 1, grass, BlockFace::Back);
