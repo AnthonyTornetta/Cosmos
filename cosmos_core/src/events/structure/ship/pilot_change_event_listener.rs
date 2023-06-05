@@ -1,9 +1,10 @@
 use bevy::prelude::{
-    App, BuildChildren, Commands, Entity, EventReader, IntoSystemConfig, OnUpdate, Parent, Quat,
-    Query, States, Transform, Vec3, With, Without,
+    Added, App, BuildChildren, Commands, Entity, EventReader, IntoSystemConfig, OnUpdate, Parent,
+    Quat, Query, States, Transform, Vec3, With, Without,
 };
 use bevy_rapier3d::prelude::{RigidBody, Sensor};
 
+use crate::entities::player::Player;
 use crate::events::structure::change_pilot_event::ChangePilotEvent;
 use crate::physics::location::Location;
 use crate::structure::ship::pilot::Pilot;
@@ -58,16 +59,6 @@ fn event_listener(
                 .insert(Pilot { entity })
                 .add_child(entity);
 
-            let structure_location = *location_query
-                .get(ev.structure_entity)
-                .expect("Every structure should have a location.");
-
-            let mut pilot_location = location_query
-                .get_mut(entity)
-                .expect("Every pilot should have a location.");
-
-            pilot_location.set_from(&(structure_location + Vec3::new(0.5, -0.25, 0.5)));
-
             commands
                 .entity(entity)
                 .insert(Pilot {
@@ -81,6 +72,12 @@ fn event_listener(
     }
 }
 
+fn add_pilot(mut query: Query<&mut Transform, (Added<Pilot>, With<Player>)>) {
+    for mut trans in query.iter_mut() {
+        trans.translation = Vec3::new(0.5, -0.25, 0.5);
+    }
+}
+
 fn verify_pilot_exists(mut commands: Commands, query: Query<(Entity, &Pilot)>) {
     for (entity, pilot) in query.iter() {
         if commands.get_entity(pilot.entity).is_none() {
@@ -91,6 +88,7 @@ fn verify_pilot_exists(mut commands: Commands, query: Query<(Entity, &Pilot)>) {
 
 pub(super) fn register<T: States + Clone + Copy>(app: &mut App, playing_state: T) {
     app.add_systems((
+        add_pilot,
         verify_pilot_exists.in_set(OnUpdate(playing_state)),
         event_listener
             .in_set(OnUpdate(playing_state))

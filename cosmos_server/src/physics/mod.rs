@@ -298,7 +298,7 @@ fn sync_transforms_and_locations(
         (Entity, &mut Transform, &mut Location, &WorldWithin),
         (Without<PlayerWorld>, Without<Parent>),
     >,
-    mut trans_query_with_parent: Query<
+    trans_query_with_parent: Query<
         (Entity, &mut Transform, &mut Location),
         (Without<PlayerWorld>, With<Parent>),
     >,
@@ -311,15 +311,6 @@ fn sync_transforms_and_locations(
     mut commands: Commands,
 ) {
     for (entity, transform, mut location, _) in trans_query_no_parent.iter_mut() {
-        // Server transforms for players should NOT be applied to the location.
-        // The location the client sent should override it.
-        if !players_query.contains(entity) {
-            if location.last_transform_loc.is_some() {
-                location.apply_updates(transform.translation);
-            }
-        }
-    }
-    for (entity, transform, mut location) in trans_query_with_parent.iter_mut() {
         // Server transforms for players should NOT be applied to the location.
         // The location the client sent should override it.
         if !players_query.contains(entity) {
@@ -398,9 +389,9 @@ pub(super) fn register(app: &mut App) {
     .add_systems(
         (
             fix_location,
-            // add_previous_location,
+            add_previous_location,
             sync_transforms_and_locations,
-            // handle_child_syncing,
+            handle_child_syncing,
         )
             .chain()
             .in_set(OnUpdate(GameState::Playing)),
