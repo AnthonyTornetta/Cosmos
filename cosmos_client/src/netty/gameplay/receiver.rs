@@ -491,11 +491,6 @@ fn client_sync_players(
                 structure_entity,
                 pilot_entity,
             } => {
-                println!(
-                    "Got change pilot event! Pilot is one? {}",
-                    pilot_entity.is_some()
-                );
-
                 let pilot_entity = if let Some(pilot_entity) = pilot_entity {
                     if let Some(mapping) = network_mapping.client_from_server(&pilot_entity) {
                         Some(mapping)
