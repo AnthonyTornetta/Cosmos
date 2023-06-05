@@ -308,13 +308,11 @@ fn do_top_front_edge(
 
     for i in 0..CHUNK_DIMENSIONS {
         // Get smallest grass height that's on the 45 for both y and z.
-        let mut min_45 = s_height;
-        for j in 0..CHUNK_DIMENSIONS {
-            for k in 0..CHUNK_DIMENSIONS {
-                if y_grass[i][k] == k && z_grass[i][j] == j {
-                    min_45 = min_45.min(y_grass[i][j]);
-                }
-            }
+        let mut min_45 = 0;
+        while min_45 < CHUNK_DIMENSIONS
+            && !(y_grass[i][min_45] == min_45 && z_grass[i][min_45] == min_45)
+        {
+            min_45 += 1;
         }
 
         // Cap the grass height at the smallest 45 for every block that comes after.
@@ -327,20 +325,9 @@ fn do_top_front_edge(
         }
 
         for j in 0..CHUNK_DIMENSIONS {
-            // let (x, y, z) = (sx + i, sy + j, middle_air_start);
-
-            // let grass_height = get_max_level(
-            //     (x, y, z),
-            //     (structure_x, structure_y, structure_z),
-            //     noise_generator,
-            //     middle_air_start,
-            // )
-            // .max(y);
-
             let height1 = sy + j;
             for k in 0..CHUNK_DIMENSIONS {
                 let (x, y, z, height2) = (i, j, k, sz + k);
-                // if height1 < max_45 || height2 < max_45 {
                 let block_up = Planet::planet_face_without_structure(
                     sx + x,
                     sy + y,
@@ -367,10 +354,6 @@ fn do_top_front_edge(
                 } else if height1 == y_grass[i][k] && height2 < z_grass[i][j] {
                     chunk.set_block_at(x, y, z, grass, BlockFace::Top);
                 }
-                // }
-                // if grass_cache[i][j] == grass_height {
-                //     max_45 = max_45.min(grass_height);
-                // }
             }
         }
     }
