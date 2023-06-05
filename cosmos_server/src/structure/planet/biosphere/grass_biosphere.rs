@@ -267,7 +267,7 @@ fn do_face(
     }
 }
 
-fn do_edge(
+fn do_top_front_edge(
     (sx, sy, sz): (usize, usize, usize),
     (structure_x, structure_y, structure_z): (f64, f64, f64),
     (s_width, s_height, s_length): (usize, usize, usize),
@@ -277,90 +277,70 @@ fn do_edge(
     dirt: &Block,
     stone: &Block,
     chunk: &mut Chunk,
-    up1: BlockFace,
-    up2: BlockFace,
 ) {
-    let mut grass_cache = [[0; CHUNK_DIMENSIONS]; CHUNK_DIMENSIONS];
+    let mut y_grass = [[0; CHUNK_DIMENSIONS]; CHUNK_DIMENSIONS];
     for i in 0..CHUNK_DIMENSIONS {
-        for j in 0..CHUNK_DIMENSIONS {
-            let (x, y, z) = match up1 {
-                BlockFace::Top => (sx + i, middle_air_start, sz + j),
-                BlockFace::Bottom => (sx + i, s_height - middle_air_start, sz + j),
-                BlockFace::Front => (sx + i, sy + j, middle_air_start),
-                BlockFace::Back => (sx + i, sy + j, s_length - middle_air_start),
-                BlockFace::Right => (middle_air_start, sy + i, sz + j),
-                BlockFace::Left => (s_width - middle_air_start, sy + i, sz + j),
-            };
-
-            grass_cache[i][j] = get_max_level(
+        for k in 0..CHUNK_DIMENSIONS {
+            let (x, y, z) = (sx + i, middle_air_start, sz + k);
+            y_grass[i][k] = get_max_level(
                 (x, y, z),
                 (structure_x, structure_y, structure_z),
                 noise_generator,
                 middle_air_start,
             );
-
-            // // For testing the 45.
-            // match up1 {
-            //     BlockFace::Top | BlockFace::Bottom => y = grass_cache[i][j],
-            //     BlockFace::Front | BlockFace::Back => z = grass_cache[i][j],
-            //     BlockFace::Right | BlockFace::Left => x = grass_cache[i][j],
-            // }
-
-            // // Set the height to the 45 if it's below the 45.
-            // let grass_up =
-            //     Planet::planet_face_without_structure(x, y, z, s_width, s_height, s_length);
-            // if grass_up != up1 {
-            //     if 2 * y > s_height {
-            //         y = s_height - y;
-            //     }
-            //     if 2 * z > s_length {
-            //         z = s_length - z;
-            //     }
-            //     if 2 * x > s_width {
-            //         x = s_width - x;
-            //     }
-            //     grass_cache[i][j] = x.max(y).max(z);
-            // }
+            y_grass[i][k] = y_grass[i][k].max(z);
         }
     }
 
+    let mut z_grass = [[0; CHUNK_DIMENSIONS]; CHUNK_DIMENSIONS];
     for i in 0..CHUNK_DIMENSIONS {
         for j in 0..CHUNK_DIMENSIONS {
-            let seed_coordinates = match up2 {
-                BlockFace::Top => (sx + i, middle_air_start, sz + j),
-                BlockFace::Bottom => (sx + i, s_height - middle_air_start, sz + j),
-                BlockFace::Front => (sx + i, sy + j, middle_air_start),
-                BlockFace::Back => (sx + i, sy + j, s_length - middle_air_start),
-                BlockFace::Right => (middle_air_start, sy + i, sz + j),
-                BlockFace::Left => (s_width - middle_air_start, sy + i, sz + j),
-            };
-
-            let grass_height = get_max_level(
-                seed_coordinates,
+            let (x, y, z) = (sx + i, sy + j, middle_air_start);
+            z_grass[i][j] = get_max_level(
+                (x, y, z),
                 (structure_x, structure_y, structure_z),
                 noise_generator,
                 middle_air_start,
             );
+            z_grass[i][j] = z_grass[i][j].max(y);
+        }
+    }
 
-            let height1 = match up1 {
-                BlockFace::Top => sy + j,
-                BlockFace::Bottom => s_height - (sy + j),
-                BlockFace::Front => sz + j,
-                BlockFace::Back => s_length - (sz + j),
-                BlockFace::Right => sx + j,
-                BlockFace::Left => s_width - (sx + j),
-            };
-
+    for i in 0..CHUNK_DIMENSIONS {
+        // Get smallest grass height that's on the 45 for both y and z.
+        let mut min_45 = s_height;
+        for j in 0..CHUNK_DIMENSIONS {
             for k in 0..CHUNK_DIMENSIONS {
-                let (x, y, z, height2) = match up2 {
-                    BlockFace::Top => (i, k, j, sy + k),
-                    BlockFace::Bottom => (i, k, j, s_height - (sy + k)),
-                    BlockFace::Front => (i, j, k, sz + k),
-                    BlockFace::Back => (i, j, k, s_length - (sz + k)),
-                    BlockFace::Right => (k, i, j, sx + k),
-                    BlockFace::Left => (k, i, j, s_width - (sx + k)),
-                };
+                if y_grass[i][k] == k && z_grass[i][j] == j {
+                    min_45 = min_45.min(y_grass[i][j]);
+                }
+            }
+        }
 
+        // Cap the grass height at the smallest 45 for every block that comes after.
+        for j in (min_45 - sy)..CHUNK_DIMENSIONS {
+            z_grass[i][j] = z_grass[i][j].min(min_45);
+        }
+
+        for k in (min_45 - sz)..CHUNK_DIMENSIONS {
+            y_grass[i][k] = y_grass[i][k].min(min_45);
+        }
+
+        for j in 0..CHUNK_DIMENSIONS {
+            // let (x, y, z) = (sx + i, sy + j, middle_air_start);
+
+            // let grass_height = get_max_level(
+            //     (x, y, z),
+            //     (structure_x, structure_y, structure_z),
+            //     noise_generator,
+            //     middle_air_start,
+            // )
+            // .max(y);
+
+            let height1 = sy + j;
+            for k in 0..CHUNK_DIMENSIONS {
+                let (x, y, z, height2) = (i, j, k, sz + k);
+                // if height1 < max_45 || height2 < max_45 {
                 let block_up = Planet::planet_face_without_structure(
                     sx + x,
                     sy + y,
@@ -370,16 +350,27 @@ fn do_edge(
                     s_length,
                 );
 
-                if height1 < grass_cache[i][k] - STONE_LIMIT && height2 < grass_height - STONE_LIMIT
-                {
+                // if height1 == y_grass[i][k] {
+                //     chunk.set_block_at(x, y, z, stone, block_up)
+                // }
+
+                // if height2 == z_grass[i][j] {
+                //     chunk.set_block_at(x, y, z, dirt, block_up)
+                // }
+
+                if height1 < y_grass[i][k] - STONE_LIMIT && height2 < z_grass[i][j] - STONE_LIMIT {
                     chunk.set_block_at(x, y, z, stone, block_up);
-                } else if height1 < grass_cache[i][k] && height2 < grass_height {
+                } else if height1 < y_grass[i][k] && height2 < z_grass[i][j] {
                     chunk.set_block_at(x, y, z, dirt, block_up);
-                } else if height1 <= grass_cache[i][k] && height2 == grass_height
-                    || height1 == grass_cache[i][k] && height2 <= grass_height
-                {
-                    chunk.set_block_at(x, y, z, grass, block_up);
+                } else if height1 < y_grass[i][k] && height2 == z_grass[i][j] {
+                    chunk.set_block_at(x, y, z, grass, BlockFace::Front);
+                } else if height1 == y_grass[i][k] && height2 < z_grass[i][j] {
+                    chunk.set_block_at(x, y, z, grass, BlockFace::Top);
                 }
+                // }
+                // if grass_cache[i][j] == grass_height {
+                //     max_45 = max_45.min(grass_height);
+                // }
             }
         }
     }
@@ -497,8 +488,7 @@ fn generate_planet(
                         *planet_faces.iter().next().unwrap(),
                     );
                 } else if planet_faces.len() == 2 {
-                    let mut faces_iter = planet_faces.iter();
-                    do_edge(
+                    do_top_front_edge(
                         (sx, sy, sz),
                         (structure_x, structure_y, structure_z),
                         (s_width, s_height, s_length),
@@ -508,8 +498,6 @@ fn generate_planet(
                         dirt,
                         stone,
                         &mut chunk,
-                        *faces_iter.next().unwrap(),
-                        *faces_iter.next().unwrap(),
                     );
                 } else {
                     for z in 0..CHUNK_DIMENSIONS {
