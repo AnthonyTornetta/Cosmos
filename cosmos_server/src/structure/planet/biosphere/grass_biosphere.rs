@@ -254,12 +254,131 @@ fn do_face(
                     BlockFace::Right => (height, i, j, sx + height),
                     BlockFace::Left => (height, i, j, s_width - (sx + height)),
                 };
+
                 if actual_height < grass_height - STONE_LIMIT {
                     chunk.set_block_at(x, y, z, stone, up);
                 } else if actual_height < grass_height {
                     chunk.set_block_at(x, y, z, dirt, up);
                 } else if actual_height == grass_height {
-                    chunk.set_block_at(x, y, z, grass, up)
+                    chunk.set_block_at(x, y, z, grass, up);
+                }
+            }
+        }
+    }
+}
+
+fn do_edge(
+    (sx, sy, sz): (usize, usize, usize),
+    (structure_x, structure_y, structure_z): (f64, f64, f64),
+    (s_width, s_height, s_length): (usize, usize, usize),
+    noise_generator: &noise::OpenSimplex,
+    middle_air_start: usize,
+    grass: &Block,
+    dirt: &Block,
+    stone: &Block,
+    chunk: &mut Chunk,
+    up1: BlockFace,
+    up2: BlockFace,
+) {
+    let mut grass_cache = [[0; CHUNK_DIMENSIONS]; CHUNK_DIMENSIONS];
+    for i in 0..CHUNK_DIMENSIONS {
+        for j in 0..CHUNK_DIMENSIONS {
+            let (x, y, z) = match up1 {
+                BlockFace::Top => (sx + i, middle_air_start, sz + j),
+                BlockFace::Bottom => (sx + i, s_height - middle_air_start, sz + j),
+                BlockFace::Front => (sx + i, sy + j, middle_air_start),
+                BlockFace::Back => (sx + i, sy + j, s_length - middle_air_start),
+                BlockFace::Right => (middle_air_start, sy + i, sz + j),
+                BlockFace::Left => (s_width - middle_air_start, sy + i, sz + j),
+            };
+
+            grass_cache[i][j] = get_max_level(
+                (x, y, z),
+                (structure_x, structure_y, structure_z),
+                noise_generator,
+                middle_air_start,
+            );
+
+            // // For testing the 45.
+            // match up1 {
+            //     BlockFace::Top | BlockFace::Bottom => y = grass_cache[i][j],
+            //     BlockFace::Front | BlockFace::Back => z = grass_cache[i][j],
+            //     BlockFace::Right | BlockFace::Left => x = grass_cache[i][j],
+            // }
+
+            // // Set the height to the 45 if it's below the 45.
+            // let grass_up =
+            //     Planet::planet_face_without_structure(x, y, z, s_width, s_height, s_length);
+            // if grass_up != up1 {
+            //     if 2 * y > s_height {
+            //         y = s_height - y;
+            //     }
+            //     if 2 * z > s_length {
+            //         z = s_length - z;
+            //     }
+            //     if 2 * x > s_width {
+            //         x = s_width - x;
+            //     }
+            //     grass_cache[i][j] = x.max(y).max(z);
+            // }
+        }
+    }
+
+    for i in 0..CHUNK_DIMENSIONS {
+        for j in 0..CHUNK_DIMENSIONS {
+            let seed_coordinates = match up2 {
+                BlockFace::Top => (sx + i, middle_air_start, sz + j),
+                BlockFace::Bottom => (sx + i, s_height - middle_air_start, sz + j),
+                BlockFace::Front => (sx + i, sy + j, middle_air_start),
+                BlockFace::Back => (sx + i, sy + j, s_length - middle_air_start),
+                BlockFace::Right => (middle_air_start, sy + i, sz + j),
+                BlockFace::Left => (s_width - middle_air_start, sy + i, sz + j),
+            };
+
+            let grass_height = get_max_level(
+                seed_coordinates,
+                (structure_x, structure_y, structure_z),
+                noise_generator,
+                middle_air_start,
+            );
+
+            let height1 = match up1 {
+                BlockFace::Top => sy + j,
+                BlockFace::Bottom => s_height - (sy + j),
+                BlockFace::Front => sz + j,
+                BlockFace::Back => s_length - (sz + j),
+                BlockFace::Right => sx + j,
+                BlockFace::Left => s_width - (sx + j),
+            };
+
+            for k in 0..CHUNK_DIMENSIONS {
+                let (x, y, z, height2) = match up2 {
+                    BlockFace::Top => (i, k, j, sy + k),
+                    BlockFace::Bottom => (i, k, j, s_height - (sy + k)),
+                    BlockFace::Front => (i, j, k, sz + k),
+                    BlockFace::Back => (i, j, k, s_length - (sz + k)),
+                    BlockFace::Right => (k, i, j, sx + k),
+                    BlockFace::Left => (k, i, j, s_width - (sx + k)),
+                };
+
+                let block_up = Planet::planet_face_without_structure(
+                    sx + x,
+                    sy + y,
+                    sz + z,
+                    s_width,
+                    s_height,
+                    s_length,
+                );
+
+                if height1 < grass_cache[i][k] - STONE_LIMIT && height2 < grass_height - STONE_LIMIT
+                {
+                    chunk.set_block_at(x, y, z, stone, block_up);
+                } else if height1 < grass_cache[i][k] && height2 < grass_height {
+                    chunk.set_block_at(x, y, z, dirt, block_up);
+                } else if height1 <= grass_cache[i][k] && height2 == grass_height
+                    || height1 == grass_cache[i][k] && height2 <= grass_height
+                {
+                    chunk.set_block_at(x, y, z, grass, block_up);
                 }
             }
         }
@@ -376,6 +495,21 @@ fn generate_planet(
                         stone,
                         &mut chunk,
                         *planet_faces.iter().next().unwrap(),
+                    );
+                } else if planet_faces.len() == 2 {
+                    let mut faces_iter = planet_faces.iter();
+                    do_edge(
+                        (sx, sy, sz),
+                        (structure_x, structure_y, structure_z),
+                        (s_width, s_height, s_length),
+                        &noise_generator,
+                        middle_air_start,
+                        grass,
+                        dirt,
+                        stone,
+                        &mut chunk,
+                        *faces_iter.next().unwrap(),
+                        *faces_iter.next().unwrap(),
                     );
                 } else {
                     for z in 0..CHUNK_DIMENSIONS {
