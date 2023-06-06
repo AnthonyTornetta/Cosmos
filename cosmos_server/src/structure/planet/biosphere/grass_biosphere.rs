@@ -102,7 +102,7 @@ fn generate_block(
     (x, y, z): (usize, usize, usize),
     (actual_x, actual_y, actual_z): (usize, usize, usize),
     (structure_x, structure_y, structure_z): (f64, f64, f64),
-    (s_width, s_height, s_length): (usize, usize, usize),
+    s_dimensions: usize,
     noise_generator: &noise::OpenSimplex,
     middle_air_start: usize,
     grass: &Block,
@@ -122,7 +122,12 @@ fn generate_block(
     let mut cover_y = actual_y as i64;
     let mut cover_z = actual_z as i64;
     let block_up = Planet::planet_face_without_structure(
-        actual_x, actual_y, actual_z, s_width, s_height, s_length,
+        actual_x,
+        actual_y,
+        actual_z,
+        s_dimensions,
+        s_dimensions,
+        s_dimensions,
     );
 
     let current_height = match block_up {
@@ -132,7 +137,7 @@ fn generate_block(
         }
         BlockFace::Bottom => {
             cover_y -= 1;
-            s_height - actual_y
+            s_dimensions - actual_y
         }
         BlockFace::Front => {
             cover_z += 1;
@@ -140,7 +145,7 @@ fn generate_block(
         }
         BlockFace::Back => {
             cover_z -= 1;
-            s_height - actual_z
+            s_dimensions - actual_z
         }
         BlockFace::Right => {
             cover_x += 1;
@@ -148,7 +153,7 @@ fn generate_block(
         }
         BlockFace::Left => {
             cover_x -= 1;
-            s_height - actual_x
+            s_dimensions - actual_x
         }
     };
 
@@ -218,7 +223,7 @@ fn notify_when_done_generating(
 fn do_face(
     (sx, sy, sz): (usize, usize, usize),
     (structure_x, structure_y, structure_z): (f64, f64, f64),
-    (s_width, s_height, s_length): (usize, usize, usize),
+    s_dimensions: usize,
     noise_generator: &noise::OpenSimplex,
     middle_air_start: usize,
     grass: &Block,
@@ -231,11 +236,11 @@ fn do_face(
         for j in 0..CHUNK_DIMENSIONS {
             let seed_coordinates = match up {
                 BlockFace::Top => (sx + i, middle_air_start, sz + j),
-                BlockFace::Bottom => (sx + i, s_height - middle_air_start, sz + j),
+                BlockFace::Bottom => (sx + i, s_dimensions - middle_air_start, sz + j),
                 BlockFace::Front => (sx + i, sy + j, middle_air_start),
-                BlockFace::Back => (sx + i, sy + j, s_length - middle_air_start),
+                BlockFace::Back => (sx + i, sy + j, s_dimensions - middle_air_start),
                 BlockFace::Right => (middle_air_start, sy + i, sz + j),
-                BlockFace::Left => (s_width - middle_air_start, sy + i, sz + j),
+                BlockFace::Left => (s_dimensions - middle_air_start, sy + i, sz + j),
             };
 
             let grass_height = get_max_level(
@@ -248,11 +253,11 @@ fn do_face(
             for height in 0..CHUNK_DIMENSIONS {
                 let (x, y, z, actual_height) = match up {
                     BlockFace::Top => (i, height, j, sy + height),
-                    BlockFace::Bottom => (i, height, j, s_height - (sy + height)),
+                    BlockFace::Bottom => (i, height, j, s_dimensions - (sy + height)),
                     BlockFace::Front => (i, j, height, sz + height),
-                    BlockFace::Back => (i, j, height, s_length - (sz + height)),
+                    BlockFace::Back => (i, j, height, s_dimensions - (sz + height)),
                     BlockFace::Right => (height, i, j, sx + height),
-                    BlockFace::Left => (height, i, j, s_width - (sx + height)),
+                    BlockFace::Left => (height, i, j, s_dimensions - (sx + height)),
                 };
 
                 if actual_height < grass_height - STONE_LIMIT {
@@ -270,7 +275,7 @@ fn do_face(
 fn do_top_front_edge(
     (sx, sy, sz): (usize, usize, usize),
     (structure_x, structure_y, structure_z): (f64, f64, f64),
-    (s_width, s_height, s_length): (usize, usize, usize),
+    s_dimensions: usize,
     noise_generator: &noise::OpenSimplex,
     middle_air_start: usize,
     grass: &Block,
@@ -288,70 +293,48 @@ fn do_top_front_edge(
                 noise_generator,
                 middle_air_start,
             );
-            y_grass[i][k] = y_grass[i][k].max(z);
+            y_grass[i][k] = y_grass[i][k].max(z)
         }
     }
 
-    let mut z_grass = [[0; CHUNK_DIMENSIONS]; CHUNK_DIMENSIONS];
     for i in 0..CHUNK_DIMENSIONS {
+        let mut min_45 = s_dimensions;
         for j in 0..CHUNK_DIMENSIONS {
             let (x, y, z) = (sx + i, sy + j, middle_air_start);
-            z_grass[i][j] = get_max_level(
+            let z_grass = get_max_level(
                 (x, y, z),
                 (structure_x, structure_y, structure_z),
                 noise_generator,
                 middle_air_start,
-            );
-            z_grass[i][j] = z_grass[i][j].max(y);
-        }
-    }
+            )
+            .clamp(y, min_45);
 
-    for i in 0..CHUNK_DIMENSIONS {
-        // Get smallest grass height that's on the 45 for both y and z.
-        let mut min_45 = 0;
-        while min_45 < CHUNK_DIMENSIONS
-            && !(y_grass[i][min_45] == min_45 && z_grass[i][min_45] == min_45)
-        {
-            min_45 += 1;
-        }
+            // Get smallest grass height that's on the 45 for both y and z.
+            if y_grass[i][j] == j && z_grass == j && min_45 == s_dimensions {
+                min_45 = z_grass;
+            }
 
-        // Cap the grass height at the smallest 45 for every block that comes after.
-        for j in (min_45 - sy)..CHUNK_DIMENSIONS {
-            z_grass[i][j] = z_grass[i][j].min(min_45);
-        }
-
-        for k in (min_45 - sz)..CHUNK_DIMENSIONS {
-            y_grass[i][k] = y_grass[i][k].min(min_45);
-        }
-
-        for j in 0..CHUNK_DIMENSIONS {
             let height1 = sy + j;
             for k in 0..CHUNK_DIMENSIONS {
+                let y_grass = y_grass[i][k].min(min_45);
+
                 let (x, y, z, height2) = (i, j, k, sz + k);
                 let block_up = Planet::planet_face_without_structure(
                     sx + x,
                     sy + y,
                     sz + z,
-                    s_width,
-                    s_height,
-                    s_length,
+                    s_dimensions,
+                    s_dimensions,
+                    s_dimensions,
                 );
 
-                // if height1 == y_grass[i][k] {
-                //     chunk.set_block_at(x, y, z, stone, block_up)
-                // }
-
-                // if height2 == z_grass[i][j] {
-                //     chunk.set_block_at(x, y, z, dirt, block_up)
-                // }
-
-                if height1 < y_grass[i][k] - STONE_LIMIT && height2 < z_grass[i][j] - STONE_LIMIT {
+                if height1 < y_grass - STONE_LIMIT && height2 < z_grass - STONE_LIMIT {
                     chunk.set_block_at(x, y, z, stone, block_up);
-                } else if height1 < y_grass[i][k] && height2 < z_grass[i][j] {
+                } else if height1 < y_grass && height2 < z_grass {
                     chunk.set_block_at(x, y, z, dirt, block_up);
-                } else if height1 < y_grass[i][k] && height2 == z_grass[i][j] {
+                } else if height1 < y_grass && height2 == z_grass {
                     chunk.set_block_at(x, y, z, grass, BlockFace::Front);
-                } else if height1 == y_grass[i][k] && height2 < z_grass[i][j] {
+                } else if height1 == y_grass && height2 < z_grass {
                     chunk.set_block_at(x, y, z, grass, BlockFace::Top);
                 }
             }
@@ -461,7 +444,7 @@ fn generate_planet(
                     do_face(
                         (sx, sy, sz),
                         (structure_x, structure_y, structure_z),
-                        (s_width, s_height, s_length),
+                        s_height,
                         &noise_generator,
                         middle_air_start,
                         grass,
@@ -474,7 +457,7 @@ fn generate_planet(
                     do_top_front_edge(
                         (sx, sy, sz),
                         (structure_x, structure_y, structure_z),
-                        (s_width, s_height, s_length),
+                        s_height,
                         &noise_generator,
                         middle_air_start,
                         grass,
@@ -497,7 +480,7 @@ fn generate_planet(
                                     (x, y, z),
                                     (actual_x, actual_y, actual_z),
                                     (structure_x, structure_y, structure_z),
-                                    (s_width, s_height, s_length),
+                                    s_height,
                                     &noise_generator,
                                     middle_air_start,
                                     grass,
