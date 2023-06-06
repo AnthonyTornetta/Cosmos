@@ -30,7 +30,6 @@ use std::f32::consts::PI;
 
 use bevy::window::PrimaryWindow;
 use bevy_renet::renet::RenetClient;
-use cosmos_core::events::structure::change_pilot_event::ChangePilotEvent;
 use cosmos_core::netty::client_reliable_messages::ClientReliableMessages;
 use cosmos_core::netty::client_unreliable_messages::ClientUnreliableMessages;
 use cosmos_core::netty::{cosmos_encoder, get_local_ipaddress, NettyChannel};
