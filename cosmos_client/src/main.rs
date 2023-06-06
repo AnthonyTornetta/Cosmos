@@ -14,11 +14,12 @@ pub mod lang;
 pub mod loading;
 pub mod materials;
 pub mod netty;
+pub mod physics;
 pub mod plugin;
 pub mod projectiles;
 pub mod rendering;
-pub mod state;
 pub mod skybox;
+pub mod state;
 pub mod structure;
 pub mod ui;
 pub mod universe;
@@ -29,8 +30,6 @@ use std::f32::consts::PI;
 
 use bevy::window::PrimaryWindow;
 use bevy_renet::renet::RenetClient;
-use cosmos_core::entities::player::Player;
-use cosmos_core::events::structure::change_pilot_event::ChangePilotEvent;
 use cosmos_core::netty::client_reliable_messages::ClientReliableMessages;
 use cosmos_core::netty::client_unreliable_messages::ClientUnreliableMessages;
 use cosmos_core::netty::{cosmos_encoder, get_local_ipaddress, NettyChannel};
@@ -133,32 +132,12 @@ fn process_ship_movement(
 }
 
 fn reset_cursor(
-    mut event_reader: EventReader<ChangePilotEvent>,
-    local_player_query: Query<&LocalPlayer>,
-    pilot_query: Query<&Pilot>,
+    local_player_without_pilot: Query<(), (With<LocalPlayer>, Without<Pilot>)>,
     mut crosshair_position: ResMut<CrosshairOffset>,
 ) {
-    for ev in event_reader.iter() {
-        if let Some(pilot) = ev.pilot_entity {
-            if local_player_query.get(pilot).is_ok() {
-                crosshair_position.x = 0.0;
-                crosshair_position.y = 0.0;
-            }
-        } else if let Ok(pilot) = pilot_query.get(ev.structure_entity) {
-            if local_player_query.get(pilot.entity).is_ok() {
-                crosshair_position.x = 0.0;
-                crosshair_position.y = 0.0;
-            }
-        }
-    }
-}
-
-fn sync_pilot_to_ship(mut query: Query<&mut Transform, (With<Player>, With<Pilot>)>) {
-    for mut trans in query.iter_mut() {
-        trans.translation.x = 0.0;
-        trans.translation.y = 0.0;
-        trans.translation.z = 0.0;
-        trans.rotation = Quat::IDENTITY;
+    if !local_player_without_pilot.is_empty() {
+        crosshair_position.x = 0.0;
+        crosshair_position.y = 0.0;
     }
 }
 
@@ -275,6 +254,8 @@ fn process_player_movement(
                     velocity.linvel.z = z;
                 }
             }
+        } else if velocity.linvel.dot(velocity.linvel) > max_speed * max_speed {
+            velocity.linvel = velocity.linvel.normalize() * max_speed;
         }
     }
 }
@@ -293,58 +274,6 @@ fn create_sun(mut commands: Commands) {
         },
         ..default()
     });
-
-    // commands
-    //     .spawn(PointLightBundle {
-    //         transform: Transform::from_xyz(0.0, 100.0, 0.0),
-    //         point_light: PointLight {
-    //             intensity: 160000.0,
-    //             range: 160000.0,
-    //             color: Color::WHITE,
-    //             shadows_enabled: true,
-    //             ..default()
-    //         },
-    //         ..default()
-    //     })
-    //     .with_children(|builder| {
-    //         builder.spawn(PbrBundle {
-    //             mesh: meshes.add(Mesh::from(shape::UVSphere {
-    //                 radius: 0.1,
-    //                 ..default()
-    //             })),
-    //             material: materials.add(StandardMaterial {
-    //                 base_color: Color::RED,
-    //                 emissive: Color::rgba_linear(100.0, 0.0, 0.0, 0.0),
-    //                 ..default()
-    //             }),
-    //             ..default()
-    //         });
-    //     });
-
-    // commands
-    //     .spawn(PointLightBundle {
-    //         transform: Transform::from_xyz(0.5, 2.5, 0.5),
-    //         point_light: PointLight {
-    //             intensity: 600.0,
-    //             range: 20.0,
-    //             color: Color::WHITE,
-    //             radius: 0.6,
-    //             shadows_enabled: true,
-    //             ..default()
-    //         },
-    //         ..default()
-    //     })
-    //     .with_children(|builder| {
-    //         builder.spawn(PbrBundle {
-    //             mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
-    //             material: materials.add(StandardMaterial {
-    //                 base_color: Color::WHITE,
-    //                 emissive: Color::rgba_linear(1.0, 1.0, 1.0, 0.0),
-    //                 ..default()
-    //             }),
-    //             ..default()
-    //         });
-    //     });
 }
 
 fn main() {
@@ -393,12 +322,7 @@ fn main() {
         .add_system(create_sun.in_schedule(OnEnter(GameState::LoadingWorld)))
         .add_system(connect::wait_for_done_loading.in_set(OnUpdate(GameState::LoadingWorld)))
         .add_systems(
-            (
-                process_player_movement,
-                process_ship_movement,
-                reset_cursor,
-                sync_pilot_to_ship,
-            )
+            (process_player_movement, process_ship_movement, reset_cursor)
                 .in_set(OnUpdate(GameState::Playing)),
         );
 
@@ -421,6 +345,7 @@ fn main() {
     rendering::register(&mut app);
     universe::register(&mut app);
     skybox::register(&mut app);
+    physics::register(&mut app);
 
     app.run();
 }

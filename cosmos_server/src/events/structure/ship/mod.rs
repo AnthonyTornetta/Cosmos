@@ -63,7 +63,7 @@ pub(super) fn register(app: &mut App) {
     core::register(app);
 
     app.add_event::<ShipSetMovementEvent>().add_systems((
-        monitor_set_movement_events.in_set(OnUpdate(GameState::Playing)),
         monitor_pilot_changes.in_set(OnUpdate(GameState::Playing)),
+        monitor_set_movement_events.in_set(OnUpdate(GameState::Playing)),
     ));
 }

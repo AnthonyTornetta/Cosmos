@@ -1,12 +1,7 @@
 use bevy::prelude::*;
-use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
-    netty::{
-        cosmos_encoder, netty_rigidbody::NettyRigidBody,
-        server_reliable_messages::ServerReliableMessages, NettyChannel,
-    },
-    physics::location::Location,
+    netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannel},
     structure::{
         planet::{biosphere::BiosphereMarker, Planet},
         Structure,
@@ -17,18 +12,16 @@ use crate::netty::sync::entities::RequestedEntityEvent;
 
 fn on_request_planet(
     mut event_reader: EventReader<RequestedEntityEvent>,
-    query: Query<(&Structure, &Transform, &Location, &Planet, &BiosphereMarker)>,
+    query: Query<(&Structure, &Planet, &BiosphereMarker)>,
     mut server: ResMut<RenetServer>,
 ) {
     for ev in event_reader.iter() {
-        if let Ok((structure, transform, location, planet, biosphere_marker)) = query.get(ev.entity)
-        {
+        if let Ok((structure, planet, biosphere_marker)) = query.get(ev.entity) {
             server.send_message(
                 ev.client_id,
                 NettyChannel::Reliable.id(),
                 cosmos_encoder::serialize(&ServerReliableMessages::Planet {
                     entity: ev.entity,
-                    body: NettyRigidBody::new(&Velocity::default(), transform.rotation, *location),
                     width: structure.chunks_width() as u32,
                     height: structure.chunks_height() as u32,
                     length: structure.chunks_length() as u32,

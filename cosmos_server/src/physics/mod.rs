@@ -7,12 +7,12 @@ use bevy_rapier3d::prelude::{PhysicsWorld, RapierContext, RapierWorld, DEFAULT_W
 use cosmos_core::{
     entities::player::Player,
     physics::{
-        location::{bubble_down_locations, Location, SECTOR_DIMENSIONS},
+        location::{add_previous_location, handle_child_syncing, Location, SECTOR_DIMENSIONS},
         player_world::{PlayerWorld, WorldWithin},
     },
 };
 
-use crate::{netty::server_listener::server_listen_messages, state::GameState};
+use crate::state::GameState;
 
 const WORLD_SWITCH_DISTANCE: f32 = SECTOR_DIMENSIONS / 2.0;
 const WORLD_SWITCH_DISTANCE_SQRD: f32 = WORLD_SWITCH_DISTANCE * WORLD_SWITCH_DISTANCE;
@@ -236,12 +236,15 @@ fn remove_empty_worlds(
 
 /// Handles any just-added locations that need to sync up to their transforms
 fn fix_location(
-    mut query: Query<(Entity, &mut Location), (Added<Location>, Without<PlayerWorld>)>,
+    mut query: Query<
+        (Entity, &mut Location, Option<&mut Transform>),
+        (Added<Location>, Without<PlayerWorld>, Without<Parent>),
+    >,
     player_worlds: Query<(&Location, &WorldWithin, &PhysicsWorld), With<PlayerWorld>>,
     mut commands: Commands,
     player_world_loc_query: Query<&Location, With<PlayerWorld>>,
 ) {
-    for (entity, mut location) in query.iter_mut() {
+    for (entity, mut location, my_trans) in query.iter_mut() {
         let mut best_distance = None;
         let mut best_world = None;
         let mut best_world_id = None;
@@ -256,24 +259,34 @@ fn fix_location(
             }
         }
 
+        println!("Fixing @ {}", location.as_ref());
+
         match (best_world, best_world_id) {
             (Some(world), Some(world_id)) => {
                 if let Ok(loc) = player_world_loc_query.get(world.0) {
-                    let transform = Transform::from_translation(location.relative_coords_to(loc));
+                    let translation = -location.relative_coords_to(loc);
 
-                    location.last_transform_loc = Some(transform.translation);
+                    location.last_transform_loc = Some(translation);
 
-                    commands.entity(entity).insert((
-                        TransformBundle::from_transform(transform),
-                        world,
-                        PhysicsWorld { world_id },
-                    ));
+                    commands
+                        .entity(entity)
+                        .insert((world, PhysicsWorld { world_id }));
+
+                    if let Some(mut my_trans) = my_trans {
+                        my_trans.translation = translation;
+                    } else {
+                        commands
+                            .entity(entity)
+                            .insert((TransformBundle::from_transform(
+                                Transform::from_translation(translation),
+                            ),));
+                    }
                 } else {
                     warn!("A player world was missing a location");
                 }
             }
             _ => {
-                warn!("Something was added with a location before a player world was registered.")
+                warn!("Something was added with a location before a player world was created.")
             }
         }
     }
@@ -285,7 +298,7 @@ fn sync_transforms_and_locations(
         (Entity, &mut Transform, &mut Location, &WorldWithin),
         (Without<PlayerWorld>, Without<Parent>),
     >,
-    mut trans_query_with_parent: Query<
+    trans_query_with_parent: Query<
         (Entity, &mut Transform, &mut Location),
         (Without<PlayerWorld>, With<Parent>),
     >,
@@ -300,22 +313,7 @@ fn sync_transforms_and_locations(
     for (entity, transform, mut location, _) in trans_query_no_parent.iter_mut() {
         // Server transforms for players should NOT be applied to the location.
         // The location the client sent should override it.
-        if !players_query.contains(entity) {
-            if location.last_transform_loc.is_none() {
-                location.last_transform_loc = Some(location.local);
-            }
-
-            location.apply_updates(transform.translation);
-        }
-    }
-    for (entity, transform, mut location) in trans_query_with_parent.iter_mut() {
-        // Server transforms for players should NOT be applied to the location.
-        // The location the client sent should override it.
-        if !players_query.contains(entity) {
-            if location.last_transform_loc.is_none() {
-                location.last_transform_loc = Some(location.local);
-            }
-
+        if !players_query.contains(entity) && location.last_transform_loc.is_some() {
             location.apply_updates(transform.translation);
         }
     }
@@ -331,14 +329,17 @@ fn sync_transforms_and_locations(
                 }
             }
 
-            let location = trans_query_no_parent
+            let Ok(location) = trans_query_no_parent
                 .get(player_entity)
                 .map(|(_, _, loc, _)| loc)
                 .or_else(|_| match trans_query_with_parent.get(player_entity) {
                     Ok((_, _, loc)) => Ok(loc),
                     Err(x) => Err(x),
                 })
-                .expect("The above loop guarantees this is valid");
+            else {
+                // The player was just added & doesn't have a transform yet - only a location.
+                continue;
+            };
 
             world_location.set_from(location);
 
@@ -379,13 +380,16 @@ fn sync_transforms_and_locations(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
+        (move_players_between_worlds, move_non_players_between_worlds)
+            .chain()
+            .in_base_set(CoreSet::Last),
+    )
+    .add_systems(
         (
-            // If it's not after server_listen_messages, some noticable jitter can happen
-            fix_location.after(server_listen_messages),
+            fix_location,
+            add_previous_location,
             sync_transforms_and_locations,
-            bubble_down_locations,
-            move_players_between_worlds,
-            move_non_players_between_worlds,
+            handle_child_syncing,
         )
             .chain()
             .in_set(OnUpdate(GameState::Playing)),

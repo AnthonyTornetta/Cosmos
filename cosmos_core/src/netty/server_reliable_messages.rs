@@ -73,8 +73,6 @@ pub enum ServerReliableMessages {
     Planet {
         /// The planet's server entity
         entity: Entity,
-        /// The planet's rigidbody
-        body: NettyRigidBody,
         /// The width to be passed into the structure's constructor
         width: u32,
         /// The height to be passed into the structure's constructor

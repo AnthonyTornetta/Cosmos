@@ -20,7 +20,7 @@ use cosmos_core::{
     },
     persistence::LoadingDistance,
     physics::{
-        location::{bubble_down_locations, Location, SYSTEM_SECTORS},
+        location::{add_previous_location, handle_child_syncing, Location, SYSTEM_SECTORS},
         player_world::PlayerWorld,
     },
     registry::Registry,
@@ -145,7 +145,6 @@ fn client_sync_players(
         ),
         Without<LocalPlayer>,
     >,
-    world_center: Query<&Location, With<LocalPlayer>>,
     mut query_structure: Query<&mut Structure>,
     blocks: Res<Registry<Block>>,
     mut pilot_change_event_writer: EventWriter<ChangePilotEvent>,
@@ -190,18 +189,9 @@ fn client_sync_players(
                             if location.is_some() && transform.is_some() && velocity.is_some() {
                                 commands.entity(entity).insert(LerpTowards(*body));
                             } else {
-                                let world_center = world_center.get_single().expect("There should only ever be one local player, and they should always exist.");
-
-                                let transform = body.create_transform(world_center);
-
-                                let mut location = body.location;
-                                location.last_transform_loc = Some(transform.translation);
-
-                                commands.entity(entity).insert((
-                                    location,
-                                    TransformBundle::from_transform(transform),
-                                    body.create_velocity(),
-                                ));
+                                commands
+                                    .entity(entity)
+                                    .insert((body.location, body.create_velocity()));
                             }
                         }
                     } else if !requested_entities
@@ -292,6 +282,12 @@ fn client_sync_players(
                 lobby.players.insert(id, player_info);
                 network_mapping.add_mapping(client_entity, server_entity);
 
+                println!(
+                    "Linking player (client {} to server {})",
+                    client_entity.index(),
+                    server_entity.index()
+                );
+
                 if client_id == id {
                     entity_cmds
                         .insert(LocalPlayer)
@@ -353,7 +349,6 @@ fn client_sync_players(
                 length,
                 height,
                 width,
-                body,
                 planet,
                 biosphere,
             } => {
@@ -367,7 +362,7 @@ fn client_sync_players(
                     Structure::new(width as usize, height as usize, length as usize);
 
                 let builder = ClientPlanetBuilder::default();
-                builder.insert_planet(&mut entity_cmds, body.location, &mut structure, planet);
+                builder.insert_planet(&mut entity_cmds, &mut structure, planet);
 
                 entity_cmds.insert((structure, BiosphereMarker::new(biosphere)));
 
@@ -497,7 +492,12 @@ fn client_sync_players(
                 pilot_entity,
             } => {
                 let pilot_entity = if let Some(pilot_entity) = pilot_entity {
-                    network_mapping.client_from_server(&pilot_entity)
+                    if let Some(mapping) = network_mapping.client_from_server(&pilot_entity) {
+                        Some(mapping)
+                    } else {
+                        warn!("Server mapping missing for pilot!");
+                        None
+                    }
                 } else {
                     None
                 };
@@ -554,14 +554,27 @@ fn client_sync_players(
 
 /// Handles any just-added locations that need to sync up to their transforms
 fn fix_location(
-    mut query: Query<(&mut Location, &mut Transform), (Added<Location>, Without<PlayerWorld>)>,
+    mut query: Query<
+        (Entity, &mut Location, Option<&mut Transform>),
+        (Added<Location>, Without<PlayerWorld>, Without<Parent>),
+    >,
     player_worlds: Query<&Location, With<PlayerWorld>>,
+    mut commands: Commands,
 ) {
-    for (mut location, mut transform) in query.iter_mut() {
+    for (entity, mut location, transform) in query.iter_mut() {
         match player_worlds.get_single() {
             Ok(loc) => {
-                transform.translation = location.relative_coords_to(loc);
-                location.last_transform_loc = Some(transform.translation);
+                let translation = loc.relative_coords_to(&location);
+                if let Some(mut transform) = transform {
+                    transform.translation = translation;
+                } else {
+                    commands
+                        .entity(entity)
+                        .insert(TransformBundle::from_transform(
+                            Transform::from_translation(translation),
+                        ));
+                }
+                location.last_transform_loc = Some(translation);
             }
             _ => {
                 warn!("Something was added with a location before a player world was registered.")
@@ -575,7 +588,7 @@ fn sync_transforms_and_locations(
         (&mut Transform, &mut Location),
         (Without<PlayerWorld>, Without<Parent>),
     >,
-    mut trans_query_with_parent: Query<
+    trans_query_with_parent: Query<
         (&mut Transform, &mut Location),
         (Without<PlayerWorld>, With<Parent>),
     >,
@@ -584,9 +597,6 @@ fn sync_transforms_and_locations(
     mut world_query: Query<(&PlayerWorld, &mut Location)>,
 ) {
     for (transform, mut location) in trans_query_no_parent.iter_mut() {
-        location.apply_updates(transform.translation);
-    }
-    for (transform, mut location) in trans_query_with_parent.iter_mut() {
         location.apply_updates(transform.translation);
     }
 
@@ -633,10 +643,11 @@ pub(super) fn register(app: &mut App) {
         )
         .add_systems(
             (
+                fix_location.before(client_sync_players),
                 lerp_towards.after(client_sync_players),
-                fix_location,
+                add_previous_location,
                 sync_transforms_and_locations,
-                bubble_down_locations,
+                handle_child_syncing,
             )
                 .chain()
                 .in_set(OnUpdate(GameState::Playing)),

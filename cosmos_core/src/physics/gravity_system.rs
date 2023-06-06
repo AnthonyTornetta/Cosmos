@@ -1,12 +1,43 @@
 //! Handles gravity
 
 use bevy::prelude::*;
-use bevy_rapier3d::prelude::{ExternalImpulse, ReadMassProperties, RigidBody};
+use bevy_rapier3d::prelude::{
+    ExternalImpulse, PhysicsWorld, RapierContext, RapierRigidBodyHandle, ReadMassProperties,
+    RigidBody,
+};
 
 use crate::structure::planet::Planet;
 
 use super::location::Location;
 
+fn fix_read_mass_props(
+    mut query: Query<(
+        &GlobalTransform,
+        &mut ReadMassProperties,
+        &RapierRigidBodyHandle,
+        Option<&PhysicsWorld>,
+    )>,
+    context: Res<RapierContext>,
+) {
+    for (g_trans, mut prop, handle, physics_world) in query.iter_mut() {
+        let physics_world = physics_world.copied().unwrap_or_default();
+
+        // https://github.com/dimforge/bevy_rapier/issues/271
+        let info = &context
+            .get_world(physics_world.world_id)
+            .expect("Missing world")
+            .bodies[handle.0];
+
+        let mass = info.mass();
+        let world_com: Vec3 = (*info.center_of_mass()).into();
+        let local_com = g_trans.translation() - world_com;
+
+        prop.0.mass = mass;
+        prop.0.local_center_of_mass = local_com;
+    }
+}
+
+/// See https://github.com/dimforge/bevy_rapier/issues/271
 fn gravity_system(
     emitters: Query<(&GravityEmitter, &GlobalTransform, &Location)>,
     mut receiver: Query<(
@@ -79,5 +110,5 @@ pub struct GravityEmitter {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(gravity_system);
+    app.add_systems((fix_read_mass_props, gravity_system));
 }

@@ -42,9 +42,10 @@ impl<T: TStructureBuilder> TAsteroidBuilder for AsteroidBuilder<T> {
         structure: &mut Structure,
     ) {
         self.structure_builder
-            .insert_structure(entity, location, Velocity::default(), structure);
+            .insert_structure(entity, Velocity::default(), structure);
 
         entity.insert((
+            location,
             Asteroid,
             RigidBody::Fixed,
             LoadingDistance::new(ASTEROID_LOAD_RADIUS, ASTEROID_UNLOAD_RADIUS),
