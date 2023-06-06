@@ -11,7 +11,7 @@ use bevy::{
     time::Time,
     utils::HashMap,
 };
-use bevy_rapier3d::prelude::{ExternalImpulse, Velocity};
+use bevy_rapier3d::prelude::{ExternalImpulse, ReadMassProperties, Velocity};
 
 use crate::{
     block::Block,
@@ -127,6 +127,7 @@ fn update_movement(
             &Transform,
             &mut Velocity,
             &mut ExternalImpulse,
+            &ReadMassProperties,
         ),
         With<Pilot>,
     >,
@@ -134,7 +135,7 @@ fn update_movement(
     time: Res<Time>,
 ) {
     for (thruster_system, system) in thrusters_query.iter() {
-        if let Ok((movement, systems, transform, mut velocity, mut external_impulse)) =
+        if let Ok((movement, systems, transform, mut velocity, mut external_impulse, readmass)) =
             query.get_mut(system.structure_entity)
         {
             // Rotation
@@ -183,7 +184,7 @@ fn update_movement(
             };
 
             if movement.braking {
-                let mut brake_vec = -velocity.linvel;
+                let mut brake_vec = -velocity.linvel * readmass.0.mass;
                 let delta = time.delta_seconds()
                     * MAX_BRAKE_DELTA_PER_THRUST
                     * thruster_system.thrust_total;
