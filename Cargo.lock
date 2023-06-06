@@ -773,7 +773,7 @@ checksum = "0c4b88451d4c5a353bff67dbaa937b6886efd26ae114769c17f2b35099c7a4de"
 [[package]]
 name = "bevy_rapier3d"
 version = "0.21.0"
-source = "git+https://github.com/AnthonyTornetta/bevy_rapier/#ae56257172f3f24fefcfbb91342577ef5521381e"
+source = "git+https://github.com/AnthonyTornetta/bevy_rapier/#c85a9f141b4fcfbf1853eb820ae44c58f60326e5"
 dependencies = [
  "bevy",
  "bitflags",
@@ -4642,9 +4642,9 @@ checksum = "a67300977d3dc3f8034dae89778f502b6ba20b269527b3223ba59c0cf393bb8a"
 
 [[package]]
 name = "xml-rs"
-version = "0.8.14"
+version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "52839dc911083a8ef63efa4d039d1f58b5e409f923e44c80828f206f66e5541c"
+checksum = "d2d7d3948613f75c98fd9328cfdcc45acc4d360655289d0a7d4ec931392200a3"
 
 [[package]]
 name = "zeroize"
