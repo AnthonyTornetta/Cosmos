@@ -15,9 +15,7 @@ use bevy_rapier3d::prelude::{ExternalImpulse, ReadMassProperties, Velocity};
 
 use crate::{
     block::Block,
-    entities::player::Player,
     events::block_events::BlockChangedEvent,
-    physics::location::Location,
     registry::{identifiable::Identifiable, Registry},
     structure::{
         events::StructureLoadedEvent,
@@ -232,7 +230,6 @@ pub(super) fn register<T: States + Clone + Copy>(
 ) {
     app.insert_resource(ThrusterBlocks::default())
         .add_systems((
-            print_player_loc,
             register_thruster_blocks.in_schedule(OnEnter(post_loading_state)),
             // block update system used to be in CoreState::PostUpdate
             structure_loaded_event.in_set(OnUpdate(playing_state)),
@@ -240,10 +237,4 @@ pub(super) fn register<T: States + Clone + Copy>(
             update_movement.in_set(OnUpdate(playing_state)),
         ))
         .register_type::<ThrusterSystem>();
-}
-
-fn print_player_loc(query: Query<&Location, With<Player>>) {
-    for x in query.iter() {
-        println!("My loc: {x}");
-    }
 }
