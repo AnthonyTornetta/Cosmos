@@ -14,7 +14,7 @@ use cosmos_core::{
     registry::{identifiable::Identifiable, Registry},
     structure::{
         chunk::{Chunk, CHUNK_DIMENSIONS},
-        planet::Planet,
+        planet::{self, Planet},
         ChunkInitEvent, Structure,
     },
     utils::{resource_wrapper::ResourceWrapper, timer::UtilsTimer},
@@ -78,9 +78,16 @@ const ITERATIONS: usize = 9;
 
 const STONE_LIMIT: usize = 4;
 
-fn get_max_level(
-    (x, y, z): (usize, usize, usize),
+// Within (flattening_fraction * planet size) of the 45 starts the flattening.
+const FLAT_FRACTION: f64 = 0.25;
+
+// This fraction of the original depth always remains, even on the very edge of the world.
+const UNFLATTENED: f64 = 0.25;
+
+fn get_grass_height(
+    (mut x, mut y, mut z): (usize, usize, usize),
     (structure_x, structure_y, structure_z): (f64, f64, f64),
+    s_dimensions: usize,
     noise_generator: &noise::OpenSimplex,
     middle_air_start: usize,
 ) -> usize {
@@ -94,6 +101,21 @@ fn get_max_level(
         ]) * AMPLITUDE
             * iteration;
     }
+
+    // For the flattening (it's like the rumbling).
+    x = x.min(s_dimensions - x);
+    y = y.min(s_dimensions - y);
+    z = z.min(s_dimensions - z);
+
+    let initial_height = middle_air_start as f64 + depth;
+
+    // Min is height of the face you're on, second min is the closer to the 45 of the 2 remaining.
+    let dist_from_space = s_dimensions as f64 - initial_height;
+    let dist_from_45 = x.min(y).max(x.max(y).min(z)) as f64 - dist_from_space;
+    let flattening_limit = (s_dimensions as f64 - 2.0 * dist_from_space) * FLAT_FRACTION;
+    depth *=
+        dist_from_45.min(flattening_limit) / flattening_limit * (1.0 - UNFLATTENED) + UNFLATTENED;
+
     (middle_air_start as f64 + depth).round() as usize
 }
 
@@ -110,9 +132,10 @@ fn generate_block(
     stone: &Block,
     chunk: &mut Chunk,
 ) {
-    let current_max = get_max_level(
+    let current_max = get_grass_height(
         (actual_x, actual_y, actual_z),
         (structure_x, structure_y, structure_z),
+        s_dimensions,
         noise_generator,
         middle_air_start,
     );
@@ -166,9 +189,10 @@ fn generate_block(
         let cover_max = if cover_x < 0 || cover_y < 0 || cover_z < 0 {
             0
         } else {
-            get_max_level(
+            get_grass_height(
                 (cover_x as usize, cover_y as usize, cover_z as usize),
                 (structure_x, structure_y, structure_z),
+                s_dimensions,
                 noise_generator,
                 middle_air_start,
             )
@@ -243,9 +267,10 @@ fn do_face(
                 BlockFace::Left => (s_dimensions - middle_air_start, sy + i, sz + j),
             };
 
-            let grass_height = get_max_level(
+            let grass_height = get_grass_height(
                 seed_coordinates,
                 (structure_x, structure_y, structure_z),
+                s_dimensions,
                 noise_generator,
                 middle_air_start,
             );
@@ -287,9 +312,10 @@ fn do_top_front_edge(
     for i in 0..CHUNK_DIMENSIONS {
         for k in 0..CHUNK_DIMENSIONS {
             let (x, y, z) = (sx + i, middle_air_start, sz + k);
-            y_grass[i][k] = get_max_level(
+            y_grass[i][k] = get_grass_height(
                 (x, y, z),
                 (structure_x, structure_y, structure_z),
+                s_dimensions,
                 noise_generator,
                 middle_air_start,
             );
@@ -301,9 +327,10 @@ fn do_top_front_edge(
         let mut min_45 = s_dimensions;
         for j in 0..CHUNK_DIMENSIONS {
             let (x, y, z) = (sx + i, sy + j, middle_air_start);
-            let z_grass = get_max_level(
+            let z_grass = get_grass_height(
                 (x, y, z),
                 (structure_x, structure_y, structure_z),
+                s_dimensions,
                 noise_generator,
                 middle_air_start,
             )
