@@ -1,6 +1,17 @@
 # Cosmos
 A multiplayer block-based space exploration game, written in rust using the [Bevy](https://www.bevyengine.org/) engine.
 
+## Screenshots
+
+Cosmos has ships that you can pilot through space. (And yes those are working laser cannons.)
+![](./showcase/ship_in_space.png)
+
+Build your own ship block by block and walk inside while flying through space.
+![](./showcase/inside_ship.png)
+
+Once you reach your destination, make a *hopefully safer than this* landing.
+![](./showcase/ship_on_ground.png)
+
 ## Compilation
 This project requires the latest nightly rust to compile. To swap to nightly, run the command 
 
@@ -54,6 +65,7 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
       - [x] Make generation work on all faces of planet
       - [x] Block orientation for every block
   - [ ] Biospheres
+    - [ ] Speed up terrain generation
     - [ ] Make molten biosphere
     - [ ] Enhance grass biosphere
     - [ ] Create icy biosphere
@@ -61,7 +73,8 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
     - [ ] For now just floating rocks in space
   - [x] Save generated universe
     - [x] Save planet locations
-  - [ ] Fix broken ship functionality
+  - [x] Fix broken ship functionality
+    - [x] Make entities no longer pass through loading structures.
 
 ## Release 0.0.3a
 - [x] Infinite universe
