@@ -2,10 +2,12 @@
 
 use crate::structure::events::{ChunkSetEvent, StructureLoadedEvent};
 use bevy::{
-    prelude::{App, Commands, Component, EventReader, EventWriter, Query},
+    prelude::{App, Commands, Component, EventReader, EventWriter, Query, Without},
     reflect::{FromReflect, Reflect},
 };
 use serde::{Deserialize, Serialize};
+
+use super::{planet::Planet, Structure};
 
 #[derive(Component, Debug, Reflect, FromReflect, Serialize, Deserialize, Clone, Copy)]
 /// If a structure has this, not all its chunks have been filled out yet
@@ -42,7 +44,19 @@ fn listen_chunk_done_loading(
     }
 }
 
+fn set_structure_done_loading(
+    mut structure_query: Query<&mut Structure, Without<Planet>>,
+    mut event_reader: EventReader<StructureLoadedEvent>,
+) {
+    for ent in event_reader.iter() {
+        if let Ok(mut structure) = structure_query.get_mut(ent.structure_entity) {
+            structure.set_all_loaded(true);
+        }
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_system(listen_chunk_done_loading)
+        .add_system(set_structure_done_loading)
         .register_type::<ChunksNeedLoaded>();
 }
