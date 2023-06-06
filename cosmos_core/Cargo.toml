@@ -3,6 +3,10 @@ name = "cosmos_core"
 version = "0.0.4"
 edition = "2021"
 
+[features]
+server = []
+client = []
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
