@@ -122,16 +122,13 @@ impl<'a> BlockIterator<'a> {
                     );
                     let cur_chunk = chunk_itr.next();
 
-                    if let Some(cur_chunk) = cur_chunk {
-                        if let ChunkIteratorResult::FilledChunk { position: _, chunk } = cur_chunk {
-                            BlockItrState::ExcludeEmpty(EmptyBody {
-                                chunk_itr,
-                                cur_chunk: chunk,
-                                body,
-                            })
-                        } else {
-                            BlockItrState::Invalid
-                        }
+                    if let Some(ChunkIteratorResult::FilledChunk { position: _, chunk }) = cur_chunk
+                    {
+                        BlockItrState::ExcludeEmpty(EmptyBody {
+                            chunk_itr,
+                            cur_chunk: chunk,
+                            body,
+                        })
                     } else {
                         BlockItrState::Invalid
                     }
@@ -248,7 +245,7 @@ impl<'a> Iterator for BlockIterator<'a> {
                     self.state = BlockItrState::Invalid;
                 }
 
-                return to_return;
+                to_return
             }
         }
     }
@@ -301,7 +298,7 @@ fn advance_body(body: &mut EmptyBody) -> bool {
         }
     }
 
-    return false;
+    false
 }
 
 /// Chunk Iterator
