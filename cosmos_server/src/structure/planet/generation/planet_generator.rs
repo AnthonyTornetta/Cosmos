@@ -427,12 +427,16 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         (
             generate_chunks_near_players,
-            unload_chunks_far_from_players,
             get_requested_chunk,
             bounce_events,
         )
             .chain()
             .in_set(OnUpdate(GameState::Playing)),
+    )
+    .add_system(
+        unload_chunks_far_from_players
+            .run_if(in_state(GameState::Playing))
+            .in_base_set(CoreSet::PostUpdate),
     )
     .add_event::<RequestChunkEvent>()
     .add_event::<RequestChunkBouncer>();

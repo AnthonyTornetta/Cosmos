@@ -434,6 +434,7 @@ impl Location {
 /// Stores the location from the previous frame
 pub struct PreviousLocation(Location);
 
+#[allow(unused_variables, unused_mut)]
 /// Recursively goes from the top of the parent tree to the bottom and lines up all their locations.
 ///
 /// This probably works.
@@ -459,16 +460,17 @@ fn sync_self_with_parents(
         };
 
         if my_loc.last_transform_loc.is_some() {
-            let my_delta_loc = (*my_loc - my_prev_loc.0).absolute_coords_f32();
+            // let my_delta_loc = (*my_loc - my_prev_loc.0).absolute_coords_f32();
+            // println!("My delta: {my_delta_loc}");
 
-            my_transform.translation += my_delta_loc;
+            // my_transform.translation += my_delta_loc;
 
-            let delta_from_parent = my_global_trans.translation() - parent_global_trans;
+            // let delta_from_parent = my_global_trans.translation() - parent_global_trans;
 
-            let my_new_loc = parent_loc + delta_from_parent + my_delta_loc;
-            my_loc.set_from(&my_new_loc);
-            my_loc.last_transform_loc = Some(my_transform.translation);
-            my_prev_loc.0 = *my_loc;
+            // let my_new_loc = parent_loc + delta_from_parent + my_delta_loc;
+            my_loc.set_from(&parent_loc);
+            // my_loc.last_transform_loc = Some(my_transform.translation);
+            // my_prev_loc.0 = *my_loc;
         }
     }
 }

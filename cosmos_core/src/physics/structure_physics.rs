@@ -191,16 +191,13 @@ fn generate_chunk_collider(chunk: &Chunk, blocks: &Registry<Block>) -> Option<Ge
 
 #[derive(Debug, Hash, PartialEq, Eq)]
 /// This event is sent when a chunk needs new physics applied to it.
-///
-/// You don't need to send this yourself, and is only public so rust is happy
-/// about [`listen_for_new_physics_event`] being public.
-pub struct ChunkNeedsPhysicsEvent {
+struct ChunkNeedsPhysicsEvent {
     chunk: (usize, usize, usize),
     structure_entity: Entity,
 }
 
 /// This system is responsible for adding colliders to chunks
-pub fn listen_for_new_physics_event(
+fn listen_for_new_physics_event(
     commands: Commands,
     query: Query<(&Structure, &RigidBody)>,
     mut event_reader: EventReader<ChunkNeedsPhysicsEvent>,
