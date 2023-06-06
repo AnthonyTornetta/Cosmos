@@ -1,12 +1,13 @@
 //! Handles client-related planet things
 
 use bevy::prelude::{
-    App, Commands, Entity, IntoSystemConfigs, OnUpdate, Query, Res, ResMut, Vec3, With,
+    in_state, App, Commands, CoreSet, Entity, IntoSystemConfig, OnUpdate, Query, Res, ResMut, Vec3,
+    With,
 };
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     netty::{client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannel},
-    physics::{location::Location, structure_physics::listen_for_new_physics_event},
+    physics::location::Location,
     structure::{
         chunk::{Chunk, CHUNK_DIMENSIONSF},
         planet::Planet,
@@ -143,9 +144,10 @@ pub(super) fn register(app: &mut App) {
     client_planet_builder::register(app);
     biosphere::register(app);
 
-    app.add_systems(
-        (load_planet_chunks, unload_chunks_far_from_players)
-            .after(listen_for_new_physics_event)
-            .in_set(OnUpdate(GameState::Playing)),
-    );
+    app.add_system(load_planet_chunks.in_set(OnUpdate(GameState::Playing)))
+        .add_system(
+            unload_chunks_far_from_players
+                .in_base_set(CoreSet::PostUpdate)
+                .run_if(in_state(GameState::Playing)),
+        );
 }

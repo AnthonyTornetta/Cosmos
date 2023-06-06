@@ -1,6 +1,7 @@
 use bevy::prelude::{
     Added, App, BuildChildren, Commands, Component, Entity, EventReader, EventWriter,
-    IntoSystemConfig, OnUpdate, Parent, Query, RemovedComponents, States, Transform, Vec3, With,
+    IntoSystemConfig, OnUpdate, Parent, Quat, Query, RemovedComponents, States, Transform, Vec3,
+    With,
 };
 use bevy_rapier3d::prelude::{RigidBody, Sensor};
 
@@ -64,6 +65,7 @@ fn event_listener(
 fn add_pilot(mut query: Query<&mut Transform, (Added<Pilot>, With<Player>)>) {
     for mut trans in query.iter_mut() {
         trans.translation = Vec3::new(0.5, -0.25, 0.5);
+        trans.rotation = Quat::IDENTITY;
     }
 }
 
