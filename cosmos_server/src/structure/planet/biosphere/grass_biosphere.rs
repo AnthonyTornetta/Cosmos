@@ -349,14 +349,10 @@ fn do_edge(
             );
 
             // Don't let the grass fall "below" the 45.
-            j_grass[i][k] = match j_up {
-                BlockFace::Front | BlockFace::Right | BlockFace::Top => j_grass[i][k].max(dim_45),
-                BlockFace::Back | BlockFace::Left | BlockFace::Bottom => j_grass[i][k].min(dim_45),
-            };
+            j_grass[i][k] = j_grass[i][k].max(dim_45);
         }
     }
 
-    // Loop have to go CHUNK_DIMENSIONS..0 on the negative sides?
     for i in 0..CHUNK_DIMENSIONS {
         // The minimum (j, j) on the 45 where the two grass heights intersect.
         let mut first_both_45 = s_dimensions;
@@ -398,14 +394,7 @@ fn do_edge(
 
             // Don't let the grass fall "below" the 45, but also don't let it go "above" the first shared 45.
             // This probably won't interfere with anything before the first shared 45 is discovered bc of the loop order.
-            k_grass = match k_up {
-                BlockFace::Front | BlockFace::Right | BlockFace::Top => {
-                    k_grass.clamp(j_height, first_both_45)
-                }
-                BlockFace::Back | BlockFace::Left | BlockFace::Bottom => {
-                    k_grass.clamp(first_both_45, j_height)
-                }
-            };
+            k_grass = k_grass.clamp(j_height, first_both_45);
 
             // Get smallest grass height that's on the 45 for both y and z.
             if j_grass[i][j] == j && k_grass == j && first_both_45 == s_dimensions {
@@ -414,14 +403,7 @@ fn do_edge(
 
             for k in 0..CHUNK_DIMENSIONS {
                 // Don't let the grass rise "above" the first shared 45.
-                let j_grass = match j_up {
-                    BlockFace::Front | BlockFace::Right | BlockFace::Top => {
-                        j_grass[i][k].min(first_both_45)
-                    }
-                    BlockFace::Back | BlockFace::Left | BlockFace::Bottom => {
-                        j_grass[i][k].max(first_both_45)
-                    }
-                };
+                let j_grass = j_grass[i][k].min(first_both_45);
 
                 // This is super smart I promise, definitely no better way to decide which loop variables are x, y, z.
                 let (mut x, mut y, mut z) = (i, i, i);
@@ -581,6 +563,7 @@ fn generate_planet(
                         *planet_faces.iter().next().unwrap(),
                     );
                 } else if planet_faces.len() == 2 {
+                    // Chunks on an edge.
                     let mut face_iter = planet_faces.iter();
                     do_edge(
                         (sx, sy, sz),
