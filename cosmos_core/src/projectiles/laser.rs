@@ -4,8 +4,8 @@
 use bevy::{
     pbr::{NotShadowCaster, NotShadowReceiver},
     prelude::{
-        warn, App, Commands, Component, DespawnRecursiveExt, Entity, EventWriter, GlobalTransform,
-        Parent, PbrBundle, Quat, Query, Res, Vec3, With, Without,
+        warn, App, Commands, Component, Entity, EventWriter, GlobalTransform, Parent, PbrBundle,
+        Quat, Query, Res, Vec3, With, Without,
     },
     time::Time,
 };
@@ -15,6 +15,7 @@ use bevy_rapier3d::prelude::{
 };
 
 use crate::{
+    ecs::NeedsDespawned,
     netty::NoSendEntity,
     physics::{
         location::Location,
@@ -269,7 +270,7 @@ fn handle_events(
                 }
 
                 laser.active = false;
-                commands.entity(laser_entity).despawn_recursive();
+                commands.entity(laser_entity).insert(NeedsDespawned);
             }
         }
     }
@@ -282,7 +283,7 @@ fn despawn_lasers(
 ) {
     for (ent, fire_time) in query.iter() {
         if time.elapsed_seconds() - fire_time.time > 5.0 {
-            commands.entity(ent).despawn_recursive();
+            commands.entity(ent).insert(NeedsDespawned);
         }
     }
 }

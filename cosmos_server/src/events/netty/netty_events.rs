@@ -3,6 +3,7 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use bevy_renet::renet::{RenetServer, ServerEvent};
+use cosmos_core::ecs::NeedsDespawned;
 use cosmos_core::entities::player::render_distance::RenderDistance;
 use cosmos_core::inventory::Inventory;
 use cosmos_core::item::Item;
@@ -203,7 +204,7 @@ fn handle_events_system(
                 client_ticks.ticks.remove(id);
 
                 if let Some(player_entity) = lobby.remove_player(*id) {
-                    commands.entity(player_entity).despawn_recursive();
+                    commands.entity(player_entity).insert(NeedsDespawned);
                 }
 
                 let message =

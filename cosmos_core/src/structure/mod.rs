@@ -2,7 +2,7 @@
 //!
 //! Structures are the backbone of everything that contains blocks.
 
-use bevy::prelude::{App, CoreSet, DespawnRecursiveExt};
+use bevy::prelude::{App, CoreSet};
 use bevy::reflect::Reflect;
 use bevy::utils::{HashMap, HashSet};
 use bevy_rapier3d::prelude::PhysicsWorld;
@@ -22,6 +22,7 @@ pub mod systems;
 use crate::block::blocks::AIR_BLOCK_ID;
 use crate::block::hardness::BlockHardness;
 use crate::block::{Block, BlockFace};
+use crate::ecs::NeedsDespawned;
 use crate::events::block_events::BlockChangedEvent;
 use crate::netty::NoSendEntity;
 use crate::physics::location::Location;
@@ -817,7 +818,7 @@ impl Structure {
         let chunk = self.chunks.remove(&index);
 
         if let Some(entity) = self.chunk_entities.remove(&index) {
-            commands.entity(entity).despawn_recursive();
+            commands.entity(entity).insert(NeedsDespawned);
         }
 
         chunk
@@ -875,7 +876,7 @@ fn remove_empty_chunks(
 
         if structure.chunk_from_chunk_coordinates(cx, cy, cz).is_none() {
             if let Some(chunk_entity) = structure.chunk_entity(cx, cy, cz) {
-                commands.entity(chunk_entity).despawn_recursive();
+                commands.entity(chunk_entity).insert(NeedsDespawned);
 
                 let (width, height) = (structure.width, structure.height);
 

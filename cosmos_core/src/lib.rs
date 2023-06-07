@@ -5,6 +5,7 @@
 
 pub mod block;
 pub mod blockitems;
+pub mod ecs;
 pub mod entities;
 pub mod events;
 pub mod inventory;

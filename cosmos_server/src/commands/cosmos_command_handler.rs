@@ -1,9 +1,8 @@
 //! Handles all the server console commands
 
-use bevy::prelude::{
-    App, Commands, DespawnRecursiveExt, Entity, EventReader, EventWriter, Query, Res, ResMut, With,
-};
+use bevy::prelude::{App, Commands, Entity, EventReader, EventWriter, Query, Res, ResMut, With};
 use cosmos_core::{
+    ecs::NeedsDespawned,
     physics::location::Location,
     structure::{planet::Planet, ship::Ship, Structure},
 };
@@ -106,8 +105,8 @@ fn cosmos_command_listener(
                 } else if let Ok(index) = ev.args[0].parse::<u64>() {
                     let entity = Entity::from_bits(index);
 
-                    if let Some(entity_commands) = commands.get_entity(entity) {
-                        entity_commands.despawn_recursive();
+                    if let Some(mut entity_commands) = commands.get_entity(entity) {
+                        entity_commands.insert(NeedsDespawned);
                         println!("Despawned entity {index}");
                     } else {
                         println!("Entity not found");

@@ -10,6 +10,7 @@ use bevy_rapier3d::prelude::*;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     block::Block,
+    ecs::NeedsDespawned,
     entities::player::{render_distance::RenderDistance, Player},
     events::{block_events::BlockChangedEvent, structure::change_pilot_event::ChangePilotEvent},
     inventory::Inventory,
@@ -333,12 +334,12 @@ fn client_sync_players(
                     server_entity,
                 }) = lobby.players.remove(&id)
                 {
-                    if let Some(entity) = commands.get_entity(client_entity) {
+                    if let Some(mut entity) = commands.get_entity(client_entity) {
                         if let Ok(player) = query_player.get(client_entity) {
                             println!("Player {} ({id}) disconnected", player.name());
                         }
 
-                        entity.despawn_recursive();
+                        entity.insert(NeedsDespawned);
                     }
 
                     network_mapping.remove_mapping_from_server_entity(&server_entity);
@@ -458,7 +459,7 @@ fn client_sync_players(
                 entity: server_entity,
             } => {
                 if let Some(entity) = network_mapping.client_from_server(&server_entity) {
-                    commands.entity(entity).despawn_recursive();
+                    commands.entity(entity).insert(NeedsDespawned);
                 }
             }
             ServerReliableMessages::MOTD { motd } => {

@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::Block,
+    ecs::NeedsDespawned,
     events::{block_events::BlockChangedEvent, structure::change_pilot_event::ChangePilotEvent},
     netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannel},
     registry::Registry,
@@ -43,7 +44,7 @@ fn on_melting_down(
                     Some(&mut event_writer),
                 );
             } else {
-                commands.entity(entity).despawn_recursive();
+                commands.entity(entity).insert(NeedsDespawned);
 
                 server.broadcast_message(
                     NettyChannel::Reliable.id(),
