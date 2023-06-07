@@ -1,7 +1,6 @@
 use bevy::prelude::{
     Added, App, BuildChildren, Commands, Component, Entity, EventReader, EventWriter,
-    IntoSystemConfig, OnUpdate, Parent, Quat, Query, RemovedComponents, States, Transform, Vec3,
-    With,
+    IntoSystemConfig, OnUpdate, Quat, Query, RemovedComponents, States, Transform, Vec3, With,
 };
 use bevy_rapier3d::prelude::{RigidBody, Sensor};
 
@@ -22,14 +21,12 @@ fn event_listener(
     for ev in event_reader.iter() {
         // Make sure there is no other player thinking they are the pilot of this ship
         if let Ok(prev_pilot) = pilot_query.get(ev.structure_entity) {
-            commands
-                .entity(ev.structure_entity)
-                .remove_children(&[prev_pilot.entity])
-                .remove::<Pilot>();
+            if let Some(mut ec) = commands.get_entity(ev.structure_entity) {
+                ec.remove::<Pilot>();
+            }
 
-            // The pilot may have disconnected
             if let Some(mut ec) = commands.get_entity(prev_pilot.entity) {
-                ec.remove::<Pilot>().remove::<Parent>();
+                ec.remove::<Pilot>();
             }
         }
 

@@ -195,7 +195,7 @@ pub fn server_listen_messages(
                     if let Some(client) = lobby.player_from_id(client_id) {
                         if let Ok((_, location, looking, _)) = change_player_query.get(client) {
                             let ship_location =
-                                *location + looking.rotation.mul_vec3(Vec3::new(0.0, 0.0, 4.0));
+                                *location + looking.rotation.mul_vec3(Vec3::new(0.0, 0.0, -4.0));
 
                             create_ship_event_writer.send(CreateShipEvent {
                                 ship_location,
