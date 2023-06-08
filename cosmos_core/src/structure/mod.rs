@@ -50,6 +50,10 @@ pub struct Structure {
     chunk_entity_map: HashMap<Entity, usize>,
     #[serde(skip)]
     self_entity: Option<Entity>,
+    /// Signifies that every chunk has been loaded. This is not used
+    /// on planets, but is used on ships + asteroids
+    #[serde(skip)]
+    all_loaded: bool,
 
     chunks: HashMap<usize, Chunk>,
 
@@ -83,6 +87,7 @@ impl Structure {
             chunks: HashMap::default(),
             empty_chunks: HashSet::default(),
             loading_chunks: HashSet::default(),
+            all_loaded: false,
             width,
             height,
             length,
@@ -777,6 +782,10 @@ impl Structure {
             return ChunkState::Invalid;
         }
 
+        if self.all_loaded {
+            return ChunkState::Loaded;
+        }
+
         let idx = flatten(cx, cy, cz, self.width, self.height);
 
         if self.loading_chunks.contains(&idx) {
@@ -812,6 +821,16 @@ impl Structure {
         }
 
         chunk
+    }
+
+    /// Tells the structure that every chunk, empty or not, has been loaded. Do not call this
+    /// manually, this should be handled automatically when the StructureLoaded event is
+    /// sent. This is also not used on planets.
+    ///
+    /// Causes `get_chunk_state` to always return loaded unless the chunk is out of bounds.
+    pub fn set_all_loaded(&mut self, all_loaded: bool) {
+        self.loading_chunks.clear();
+        self.all_loaded = all_loaded;
     }
 }
 

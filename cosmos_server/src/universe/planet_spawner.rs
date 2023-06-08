@@ -65,14 +65,9 @@ fn monitor_planets_to_spawn(
 
             let builder = ServerPlanetBuilder::default();
 
-            builder.insert_planet(
-                &mut entity_cmd,
-                loc,
-                &mut structure,
-                Planet::new(temperature),
-            );
+            builder.insert_planet(&mut entity_cmd, &mut structure, Planet::new(temperature));
 
-            entity_cmd.insert(structure);
+            entity_cmd.insert((structure, loc));
         }
 
         *sectors_cache = cache;

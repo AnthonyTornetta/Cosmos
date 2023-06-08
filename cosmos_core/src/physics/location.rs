@@ -19,8 +19,8 @@ use std::{
 
 use bevy::{
     prelude::{
-        App, Children, Component, Entity, GlobalTransform, Parent, Query, Transform, Vec3, With,
-        Without,
+        App, Children, Commands, Component, Deref, DerefMut, Entity, GlobalTransform, Parent,
+        Query, Transform, Vec3, Without,
     },
     reflect::{FromReflect, Reflect},
 };
@@ -432,99 +432,84 @@ impl Location {
     }
 }
 
-// fn bubble(
-//     loc: &Location,
-//     entity: Entity,
-//     query: &mut Query<(&mut Location, &Transform, Option<&Children>), With<Parent>>,
-// ) {
-//     let mut todos = Vec::new();
+#[derive(Component, Debug, Reflect, FromReflect, Deref, DerefMut, Clone, Copy)]
+/// Stores the location from the previous frame
+pub struct PreviousLocation(Location);
 
-//     if let Ok((mut location, transform, children)) = query.get_mut(entity) {
-//         println!("Pre-bubble: {location:?}");
-//         location.set_from(loc);
-//         location.local += transform.translation;
-//         location.last_transform_loc = Some(transform.translation);
-//         location.fix_bounds();
-
-//         println!("Post-bubble: {location:?}");
-
-//         if let Some(children) = children {
-//             for child in children {
-//                 todos.push((*child, *location));
-//             }
-//         }
-//     }
-
-//     for (entity, loc) in todos {
-//         bubble(&loc, entity, query);
-//     }
-// }
-
-/// Makes sure children have proper locations, this should be added after syncing transforms & locations.
-// pub fn bubble_down_locations(
-//     tops: Query<(&Location, &Children), Without<Parent>>,
-//     mut middles: Query<(&mut Location, &Transform, Option<&Children>), With<Parent>>,
-// ) {
-//     for (loc, children) in tops.iter() {
-//         for entity in children.iter() {
-//             bubble(loc, *entity, &mut middles);
-//         }
-//     }
-// }
-
-fn dew_it(
+#[allow(unused_variables, unused_mut)]
+/// Recursively goes from the top of the parent tree to the bottom and lines up all their locations.
+///
+/// This probably works.
+fn sync_self_with_parents(
     this_entity: Entity,
-    parent_query: &Query<&Parent, With<Location>>,
-    data_query: &mut Query<(&mut Location, &mut Transform, &GlobalTransform)>,
-    // world_location_query: &Query<(&Location, Entity), With<PlayerWorld>>,
+    parent_query: &Query<&Parent>,
+    data_query: &mut Query<(
+        &mut Location,
+        &mut Transform,
+        &mut PreviousLocation,
+        &GlobalTransform,
+    )>,
 ) {
     if let Ok(parent) = parent_query.get(this_entity).map(|p| p.get()) {
-        dew_it(parent, parent_query, data_query);
+        sync_self_with_parents(parent, parent_query, data_query);
 
-        let Ok(loc) = data_query.get(parent).map(|(loc, _, _)| *loc) else {
+        let Ok((parent_loc, parent_global_trans)) = data_query.get(parent).map(|(loc, _, _, parent_global_trans)| (*loc, parent_global_trans.translation())) else {
             return;
         };
 
-        let Ok((mut my_loc, mut my_transform, my_global_transform)) = data_query.get_mut(this_entity) else {
+        let Ok((mut my_loc, mut my_transform, mut my_prev_loc, my_global_trans)) = data_query.get_mut(this_entity) else {
             return;
         };
 
-        // let Some((world_location, _)) = world_location_query
-        //     .iter()
-        //     .find(|(_, world)| world_within.0 == *world)
-        // else {
-        //     return;
-        // };
+        if my_loc.last_transform_loc.is_some() {
+            // let my_delta_loc = (*my_loc - my_prev_loc.0).absolute_coords_f32();
+            // println!("My delta: {my_delta_loc}");
 
-        if let Some(last_transform_loc) = my_loc.last_transform_loc {
-            let my_global_translation = my_global_transform.translation();
-            let delta_pos = my_global_translation - last_transform_loc;
+            // my_transform.translation += my_delta_loc;
 
-            my_loc.apply_updates(delta_pos);
-            my_loc.last_transform_loc = Some(my_global_translation);
+            // let delta_from_parent = my_global_trans.translation() - parent_global_trans;
 
-            let difference = (*my_loc - loc).absolute_coords_f32();
-
-            my_transform.translation = difference;
-            // world_location.relative_coords_to(&my_loc) - global_trans.translation();
-
-            // let my_trans = my_global_translation - global_trans.translation();
+            // let my_new_loc = parent_loc + delta_from_parent + my_delta_loc;
+            my_loc.set_from(&parent_loc);
+            // my_loc.last_transform_loc = Some(my_transform.translation);
+            // my_prev_loc.0 = *my_loc;
         }
     }
 }
 
+/// Adds the previous location component. Put this before the sync bodies & transform
+pub fn add_previous_location(
+    mut query: Query<(Entity, &Location, Option<&mut PreviousLocation>)>,
+    mut commands: Commands,
+) {
+    for (entity, loc, prev_loc) in query.iter_mut() {
+        if let Some(mut prev_loc) = prev_loc {
+            prev_loc.0 = *loc;
+        } else {
+            commands.entity(entity).insert(PreviousLocation(*loc));
+        }
+    }
+}
+
+/// Handles children and their locations.
 pub fn handle_child_syncing(
     initial_query: Query<Entity, (Without<Children>, Without<ChunkEntity>)>,
-    parent_query: Query<&Parent, With<Location>>,
-    mut data_query: Query<(&mut Location, &mut Transform, &GlobalTransform)>,
+    parent_query: Query<&Parent>,
+    mut data_query: Query<(
+        &mut Location,
+        &mut Transform,
+        &mut PreviousLocation,
+        &GlobalTransform,
+    )>,
 ) {
     for entity in initial_query.iter() {
-        dew_it(entity, &parent_query, &mut data_query);
+        sync_self_with_parents(entity, &parent_query, &mut data_query);
     }
 }
 
 pub(super) fn register(app: &mut App) {
-    app.register_type::<Location>();
+    app.register_type::<Location>()
+        .register_type::<PreviousLocation>();
 }
 
 #[cfg(test)]

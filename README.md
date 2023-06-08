@@ -1,6 +1,17 @@
 # Cosmos
 A multiplayer block-based space exploration game, written in rust using the [Bevy](https://www.bevyengine.org/) engine.
 
+## Screenshots
+
+Cosmos has ships that you can pilot through space. (And yes those are working laser cannons.)
+![](./showcase/ship_in_space.png)
+
+Build your own ship block by block and walk inside while flying through space.
+![](./showcase/inside_ship.png)
+
+Once you reach your destination, make a *hopefully safer than this* landing.
+![](./showcase/ship_on_ground.png)
+
 ## Compilation
 This project requires the latest nightly rust to compile. To swap to nightly, run the command 
 
@@ -54,14 +65,42 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
       - [x] Make generation work on all faces of planet
       - [x] Block orientation for every block
   - [ ] Biospheres
+    - [ ] Speed up terrain generation
     - [ ] Make molten biosphere
     - [ ] Enhance grass biosphere
     - [ ] Create icy biosphere
-  - [ ] Asteroids
-    - [ ] For now just floating rocks in space
+  - [x] Asteroids
+    - [x] For now just floating rocks in space
   - [x] Save generated universe
     - [x] Save planet locations
-  - [ ] Fix broken ship functionality
+  - [x] Fix broken ship functionality
+    - [x] Make entities no longer pass through loading structures.
+
+## Release 0.0.5a
+- [ ] Align body with structure
+  - [ ] Switches to FPS Camera
+  - [ ] Aligns the player to that structure
+    - [ ] Fix child locations being not updated based on transform relative to parent
+  - [ ] Add button to align to structure facing
+  - [ ] De-align, switch back to free camera
+    - [ ] Create free camera
+- [ ] Sounds
+  - [ ] Laser cannon fire
+  - [ ] Block take damage
+  - [ ] Thrusters moving
+  - [ ] Space ship idle
+  - [ ] Background space music
+  - [ ] Block break
+- [ ] Multiblock machines
+  - [ ] Revamp power generation to use reactor multiblock structure
+- [ ] GUI to interact with inventory
+  - [ ] Easier way of adding 3d blocks to GUI
+  - [ ] Move items around in inventory via mouse
+- [ ] Structure build mode
+  - [ ] Press B while piloting ship to enter build mode
+  - [ ] Build mode
+    - [ ] Camera becomes a noclip free cam and goes outside of player's body.
+    - [ ] Player no longer piloting ship, & is able to create + destroy blocks on the ship but ONLY the ship
 
 ## Release 0.0.3a
 - [x] Infinite universe
@@ -175,13 +214,7 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 - [x] Support re-sizable window
 
 
-## Everything that will still have to be done after 0.0.4a
-- [ ] Align body with structure
-  - [ ] Switches to FPS Camera
-  - [ ] Aligns the player to that structure
-  - [ ] Left control
-  - [ ] De-align, switch back to free camera
-    - [ ] Create free camera
+## Everything that will still have to be done after 0.0.5a
 - [ ] Mining beam system
   - [ ] Mining beam block
     - [ ] Can be placed in line to create more powerful miners
@@ -194,7 +227,6 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 - [ ] A way of selecting which systems to use preventing use of systems that are not meant to be actively used
   - [ ] You can fire a laser cannon, but not actively use the power storage blocks
 - [ ] Dropped item entity
-- [ ] GUI to interact with inventory
 - [ ] Storage block
   - [ ] A block that stores an amount of items
   - [ ] Can be interacted with to view the items
@@ -203,12 +235,6 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
   - [ ] Camera block
   - [ ] Use left/right to switch between ship cameras
     - [ ] Changes where your view is
-- [ ] Sounds
-  - [ ] Laser cannon fire
-  - [ ] Block take damage
-  - [ ] Thrusters moving
-  - [ ] Space ship idle
-  - [ ] Background space ambiance?
 - [ ] Planet Generation
   - [ ] New planet types
   - [ ] A bunch of new blocks

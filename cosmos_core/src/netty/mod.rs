@@ -7,8 +7,12 @@ pub mod netty_rigidbody;
 pub mod server_laser_cannon_system_messages;
 pub mod server_reliable_messages;
 pub mod server_unreliable_messages;
+pub mod world_tick;
 
-use bevy::{prelude::Component, utils::default};
+use bevy::{
+    prelude::{App, Component},
+    utils::default,
+};
 use bevy_renet::renet::{
     ChannelConfig, ReliableChannelConfig, RenetConnectionConfig, UnreliableChannelConfig,
 };
@@ -160,4 +164,8 @@ pub fn get_local_ipaddress() -> String {
     local_ip()
         .map(|x| x.to_string())
         .unwrap_or("127.0.0.1".to_owned())
+}
+
+pub(super) fn register(app: &mut App) {
+    world_tick::register(app);
 }

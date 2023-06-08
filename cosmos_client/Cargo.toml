@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-cosmos_core = { version = "0.0.4", path = "../cosmos_core" }
+cosmos_core = { version = "0.0.4", path = "../cosmos_core", features = [ "client" ] }
 
 bevy = { workspace = true }
 bevy_renet = { workspace = true }

@@ -9,7 +9,6 @@ use bevy::{
     },
 };
 use cosmos_core::{
-    physics::location::Location,
     registry::Registry,
     structure::{
         planet::{
@@ -41,12 +40,10 @@ impl TPlanetBuilder for ClientPlanetBuilder {
     fn insert_planet(
         &self,
         entity: &mut EntityCommands,
-        location: Location,
         structure: &mut Structure,
         planet: Planet,
     ) {
-        self.planet_builder
-            .insert_planet(entity, location, structure, planet);
+        self.planet_builder.insert_planet(entity, structure, planet);
     }
 }
 
