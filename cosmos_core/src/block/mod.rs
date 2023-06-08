@@ -30,7 +30,7 @@ pub enum BlockProperty {
 }
 
 #[derive(
-    Debug, PartialEq, Eq, Reflect, FromReflect, Default, Copy, Clone, Serialize, Deserialize,
+    Debug, PartialEq, Eq, Reflect, FromReflect, Default, Copy, Clone, Serialize, Deserialize, Hash,
 )]
 /// Represents the different faces of a block.
 ///
