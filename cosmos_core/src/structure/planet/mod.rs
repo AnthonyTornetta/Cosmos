@@ -50,7 +50,7 @@ impl Planet {
     /// * `bx` Block's x
     /// * `by` Block's y
     /// * `bz` Block's z
-    pub fn planet_face_without_structure(
+    pub fn get_planet_face_without_structure(
         bx: usize,
         by: usize,
         bz: usize,

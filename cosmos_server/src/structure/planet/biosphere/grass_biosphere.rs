@@ -78,11 +78,11 @@ const ITERATIONS: usize = 9;
 
 const STONE_LIMIT: usize = 4;
 
-// Some chunks might not be getting flattened, or maybe I'm just crazy.
-// Within (flattening_fraction * planet size) of the 45 starts the flattening.
+/// Some chunks might not be getting flattened, or maybe I'm just crazy.
+/// Within (flattening_fraction * planet size) of the 45 starts the flattening.
 const FLAT_FRACTION: f64 = 0.4;
 
-// This fraction of the original depth always remains, even on the very edge of the world.
+/// This fraction of the original depth always remains, even on the very edge of the world.
 const UNFLATTENED: f64 = 0.25;
 
 fn get_grass_height(
@@ -129,8 +129,8 @@ fn notify_when_done_generating(
 
     swap(&mut generating.generating, &mut still_todo);
 
-    for mut gg in still_todo {
-        if let Some(chunks) = future::block_on(future::poll_once(&mut gg.task)) {
+    for mut generating_chunk in still_todo {
+        if let Some(chunks) = future::block_on(future::poll_once(&mut generating_chunk.task)) {
             let (chunk, structure_entity) = chunks;
 
             if let Ok(mut structure) = structure_query.get_mut(structure_entity) {
@@ -150,7 +150,7 @@ fn notify_when_done_generating(
                 });
             }
         } else {
-            generating.generating.push(gg);
+            generating.generating.push(generating_chunk);
         }
     }
 }
@@ -328,7 +328,7 @@ fn do_edge(
                     BlockFace::Top | BlockFace::Bottom => y = k,
                 };
 
-                let block_up = Planet::planet_face_without_structure(
+                let block_up = Planet::get_planet_face_without_structure(
                     sx + x,
                     sy + y,
                     sz + z,
@@ -488,7 +488,7 @@ fn do_corner(
                 let y_grass = y_grass[i][k].min(first_all_45);
 
                 let z = sz + k;
-                let block_up = Planet::planet_face_without_structure(
+                let block_up = Planet::get_planet_face_without_structure(
                     x,
                     y,
                     z,
@@ -606,7 +606,7 @@ fn generate_planet(
                 for z in 0..=1 {
                     for y in 0..=1 {
                         for x in 0..=1 {
-                            planet_faces.insert(Planet::planet_face_without_structure(
+                            planet_faces.insert(Planet::get_planet_face_without_structure(
                                 sx + x * CHUNK_DIMENSIONS,
                                 sy + y * CHUNK_DIMENSIONS,
                                 sz + z * CHUNK_DIMENSIONS,
