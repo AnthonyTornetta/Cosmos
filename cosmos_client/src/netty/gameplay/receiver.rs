@@ -270,6 +270,7 @@ fn client_sync_players(
                     body.create_velocity(),
                     Player::new(name, id),
                     ReadMassProperties::default(),
+                    Ccd::enabled(),
                     inventory,
                 ));
 

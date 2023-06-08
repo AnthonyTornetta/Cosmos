@@ -24,10 +24,10 @@ pub mod persistence;
 pub mod physics;
 pub mod plugin;
 pub mod projectiles;
+pub mod rng;
 pub mod state;
 pub mod structure;
 pub mod universe;
-pub mod rng;
 
 fn main() {
     // #[cfg(debug_assertions)]

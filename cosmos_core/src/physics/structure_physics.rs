@@ -16,7 +16,7 @@ use bevy::utils::HashSet;
 use bevy_rapier3d::math::Vect;
 use bevy_rapier3d::na::Vector3;
 use bevy_rapier3d::prelude::{
-    Collider, ColliderMassProperties, ReadMassProperties, RigidBody, Rot,
+    Ccd, Collider, ColliderMassProperties, ReadMassProperties, RigidBody, Rot,
 };
 use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 
@@ -239,7 +239,8 @@ fn listen_for_new_physics_event(
             if let Some((collider, mass)) = chunk_collider {
                 entity_commands
                     .insert(collider)
-                    .insert(ColliderMassProperties::Mass(mass));
+                    .insert(ColliderMassProperties::Mass(mass))
+                    .insert(Ccd::enabled());
             }
         }
     });

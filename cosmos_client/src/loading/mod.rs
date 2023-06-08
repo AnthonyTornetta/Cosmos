@@ -20,7 +20,6 @@ fn unload_far_entities(
             let ul_distance = unload_distance.unload_distance() as SectorUnit;
 
             if (loc.sector() - my_loc.sector()).abs().max_element() > ul_distance {
-                println!("Unloading entity at {loc}!");
                 commands.entity(ent).insert(NeedsDespawned);
             }
         }

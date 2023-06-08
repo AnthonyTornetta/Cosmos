@@ -162,6 +162,7 @@ fn handle_events_system(
                     player,
                     ReadMassProperties::default(),
                     inventory,
+                    Ccd::enabled(),
                     PlayerLooking {
                         rotation: Quat::IDENTITY,
                     },

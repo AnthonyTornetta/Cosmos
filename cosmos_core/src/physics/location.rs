@@ -467,7 +467,7 @@ fn sync_self_with_parents(
             let delta_from_parent = my_global_trans.translation() - parent_global_trans;
 
             let my_new_loc = parent_loc + delta_from_parent + my_delta_loc;
-            my_loc.set_from(&parent_loc);
+            my_loc.set_from(&my_new_loc);
             my_loc.last_transform_loc = Some(my_transform.translation);
             my_prev_loc.0 = *my_loc;
         }
