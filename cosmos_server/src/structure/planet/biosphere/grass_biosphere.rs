@@ -78,7 +78,7 @@ const ITERATIONS: usize = 9;
 
 const STONE_LIMIT: usize = 4;
 
-// -y, high z, low positive x not flattening?
+// Some chunks might not be getting flattened, or maybe I'm just crazy.
 // Within (flattening_fraction * planet size) of the 45 starts the flattening.
 const FLAT_FRACTION: f64 = 0.4;
 
@@ -241,16 +241,6 @@ fn do_edge(
                 BlockFace::Top | BlockFace::Bottom => y = sy + k,
             };
 
-            // Height of the 45.
-            let dim_45 = match k_up {
-                BlockFace::Front => z,
-                BlockFace::Back => s_dimensions - z,
-                BlockFace::Left => s_dimensions - x,
-                BlockFace::Right => x,
-                BlockFace::Top => y,
-                BlockFace::Bottom => s_dimensions - y,
-            };
-
             // Unmodified grass height.
             j_grass[i][k] = get_grass_height(
                 (x, y, z),
@@ -261,6 +251,14 @@ fn do_edge(
             );
 
             // Don't let the grass fall "below" the 45.
+            let dim_45 = match k_up {
+                BlockFace::Front => z,
+                BlockFace::Back => s_dimensions - z,
+                BlockFace::Left => s_dimensions - x,
+                BlockFace::Right => x,
+                BlockFace::Top => y,
+                BlockFace::Bottom => s_dimensions - y,
+            };
             j_grass[i][k] = j_grass[i][k].max(dim_45);
         }
     }
