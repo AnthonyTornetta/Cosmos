@@ -9,12 +9,12 @@ use bevy::{
     tasks::AsyncComputeTaskPool,
 };
 use cosmos_core::{
-    block::{blocks::AIR_BLOCK_ID, Block, BlockFace},
+    block::{Block, BlockFace},
     physics::location::Location,
-    registry::{identifiable::Identifiable, Registry},
+    registry::Registry,
     structure::{
         chunk::{Chunk, CHUNK_DIMENSIONS},
-        planet::{self, Planet},
+        planet::Planet,
         ChunkInitEvent, Structure,
     },
     utils::{resource_wrapper::ResourceWrapper, timer::UtilsTimer},
@@ -78,8 +78,9 @@ const ITERATIONS: usize = 9;
 
 const STONE_LIMIT: usize = 4;
 
+// -y, high z, low positive x not flattening?
 // Within (flattening_fraction * planet size) of the 45 starts the flattening.
-const FLAT_FRACTION: f64 = 0.25;
+const FLAT_FRACTION: f64 = 0.4;
 
 // This fraction of the original depth always remains, even on the very edge of the world.
 const UNFLATTENED: f64 = 0.25;
@@ -117,95 +118,6 @@ fn get_grass_height(
         dist_from_45.min(flattening_limit) / flattening_limit * (1.0 - UNFLATTENED) + UNFLATTENED;
 
     (middle_air_start as f64 + depth).round() as usize
-}
-
-#[inline]
-fn generate_block(
-    (x, y, z): (usize, usize, usize),
-    (actual_x, actual_y, actual_z): (usize, usize, usize),
-    (structure_x, structure_y, structure_z): (f64, f64, f64),
-    s_dimensions: usize,
-    noise_generator: &noise::OpenSimplex,
-    middle_air_start: usize,
-    grass: &Block,
-    dirt: &Block,
-    stone: &Block,
-    chunk: &mut Chunk,
-) {
-    let current_max = get_grass_height(
-        (actual_x, actual_y, actual_z),
-        (structure_x, structure_y, structure_z),
-        s_dimensions,
-        noise_generator,
-        middle_air_start,
-    );
-
-    // Consider not doing this unless the cover data is needed.
-    let mut cover_x = actual_x as i64;
-    let mut cover_y = actual_y as i64;
-    let mut cover_z = actual_z as i64;
-    let block_up = Planet::planet_face_without_structure(
-        actual_x,
-        actual_y,
-        actual_z,
-        s_dimensions,
-        s_dimensions,
-        s_dimensions,
-    );
-
-    let current_height = match block_up {
-        BlockFace::Top => {
-            cover_y += 1;
-            actual_y
-        }
-        BlockFace::Bottom => {
-            cover_y -= 1;
-            s_dimensions - actual_y
-        }
-        BlockFace::Front => {
-            cover_z += 1;
-            actual_z
-        }
-        BlockFace::Back => {
-            cover_z -= 1;
-            s_dimensions - actual_z
-        }
-        BlockFace::Right => {
-            cover_x += 1;
-            actual_x
-        }
-        BlockFace::Left => {
-            cover_x -= 1;
-            s_dimensions - actual_x
-        }
-    };
-
-    if current_height < current_max - STONE_LIMIT {
-        chunk.set_block_at(x, y, z, stone, block_up);
-    } else if current_height < current_max {
-        // Getting the noise values for the "covering" block.
-        let cover_height = current_height + 1;
-
-        let cover_max = if cover_x < 0 || cover_y < 0 || cover_z < 0 {
-            0
-        } else {
-            get_grass_height(
-                (cover_x as usize, cover_y as usize, cover_z as usize),
-                (structure_x, structure_y, structure_z),
-                s_dimensions,
-                noise_generator,
-                middle_air_start,
-            )
-        };
-
-        if cover_height < cover_max {
-            // In dirt range and covered -> dirt.
-            chunk.set_block_at(x, y, z, dirt, block_up)
-        } else {
-            // In dirt range and uncovered -> grass.
-            chunk.set_block_at(x, y, z, grass, block_up)
-        }
-    }
 }
 
 fn notify_when_done_generating(
@@ -451,6 +363,166 @@ fn do_edge(
     }
 }
 
+fn do_corner(
+    (sx, sy, sz): (usize, usize, usize),
+    (structure_x, structure_y, structure_z): (f64, f64, f64),
+    s_dimensions: usize,
+    noise_generator: &noise::OpenSimplex,
+    middle_air_start: usize,
+    grass: &Block,
+    dirt: &Block,
+    stone: &Block,
+    chunk: &mut Chunk,
+    x_up: BlockFace,
+    y_up: BlockFace,
+    z_up: BlockFace,
+) {
+    // x grass height cache.
+    let mut x_grass = [[0; CHUNK_DIMENSIONS]; CHUNK_DIMENSIONS];
+    for j in 0..CHUNK_DIMENSIONS {
+        for k in 0..CHUNK_DIMENSIONS {
+            // Seed coordinates for the noise function.
+            let (x, y, z) = match x_up {
+                BlockFace::Right => (middle_air_start, sy + j, sz + k),
+                _ => (s_dimensions - middle_air_start, sy + j, sz + k),
+            };
+
+            // Unmodified grass height.
+            x_grass[j][k] = get_grass_height(
+                (x, y, z),
+                (structure_x, structure_y, structure_z),
+                s_dimensions,
+                noise_generator,
+                middle_air_start,
+            );
+
+            // Don't let the grass fall "below" the 45s.
+            let y_45 = match y_up {
+                BlockFace::Top => y,
+                _ => s_dimensions - y,
+            };
+            let z_45 = match z_up {
+                BlockFace::Front => z,
+                _ => s_dimensions - z,
+            };
+            x_grass[j][k] = x_grass[j][k].max(y_45).max(z_45);
+        }
+    }
+
+    // y grass height cache.
+    let mut y_grass = [[0; CHUNK_DIMENSIONS]; CHUNK_DIMENSIONS];
+    for i in 0..CHUNK_DIMENSIONS {
+        for k in 0..CHUNK_DIMENSIONS {
+            // Seed coordinates for the noise function. Which loop variable goes to which xyz must agree everywhere.
+            let (x, y, z) = match y_up {
+                BlockFace::Top => (sx + i, middle_air_start, sz + k),
+                _ => (sx + i, s_dimensions - middle_air_start, sz + k),
+            };
+
+            // Unmodified grass height.
+            y_grass[i][k] = get_grass_height(
+                (x, y, z),
+                (structure_x, structure_y, structure_z),
+                s_dimensions,
+                noise_generator,
+                middle_air_start,
+            );
+
+            // Don't let the grass fall "below" the 45s.
+            let x_45 = match x_up {
+                BlockFace::Right => x,
+                _ => s_dimensions - x,
+            };
+            let z_45 = match z_up {
+                BlockFace::Front => z,
+                _ => s_dimensions - z,
+            };
+            y_grass[i][k] = y_grass[i][k].max(x_45).max(z_45);
+        }
+    }
+
+    for i in 0..CHUNK_DIMENSIONS {
+        // The minimum (j, j, j) on the 45 where the three grass heights intersect.
+        let mut first_all_45 = s_dimensions;
+        for j in 0..CHUNK_DIMENSIONS {
+            // Seed coordinates for the noise function.
+            let (x, y, z) = match z_up {
+                BlockFace::Front => (sx + i, sy + j, middle_air_start),
+                _ => (sx + i, sy + j, s_dimensions - middle_air_start),
+            };
+
+            // Unmodified grass height.
+            let mut z_grass = get_grass_height(
+                (x, y, z),
+                (structure_x, structure_y, structure_z),
+                s_dimensions,
+                noise_generator,
+                middle_air_start,
+            );
+
+            let x_height = match x_up {
+                BlockFace::Right => x,
+                _ => s_dimensions - x,
+            };
+
+            let y_height = match y_up {
+                BlockFace::Top => y,
+                _ => s_dimensions - y,
+            };
+
+            // Don't let the grass fall "below" the 45, but also don't let it go "above" the first shared 45.
+            // This probably won't interfere with anything before the first shared 45 is discovered bc of the loop order.
+            z_grass = z_grass.max(x_height).max(y_height);
+            z_grass = z_grass.min(first_all_45);
+
+            // Get smallest grass height that's on the 45 for x, y, and z.
+            if x_grass[i][j] == j
+                && y_grass[i][j] == j
+                && z_grass == j
+                && first_all_45 == s_dimensions
+            {
+                first_all_45 = z_grass;
+            };
+
+            for k in 0..CHUNK_DIMENSIONS {
+                // Don't let the grass rise "above" the first shared 45.
+                let x_grass = x_grass[j][k].min(first_all_45);
+                let y_grass = y_grass[i][k].min(first_all_45);
+
+                let z = sz + k;
+                let block_up = Planet::planet_face_without_structure(
+                    x,
+                    y,
+                    z,
+                    s_dimensions,
+                    s_dimensions,
+                    s_dimensions,
+                );
+
+                let z_height = match z_up {
+                    BlockFace::Front => z,
+                    _ => s_dimensions - z,
+                };
+
+                if x_height < x_grass - STONE_LIMIT
+                    && y_height < y_grass - STONE_LIMIT
+                    && z_height < z_grass - STONE_LIMIT
+                {
+                    chunk.set_block_at(i, j, k, stone, block_up);
+                } else if x_height < x_grass && y_height < y_grass && z_height < z_grass {
+                    chunk.set_block_at(i, j, k, dirt, block_up);
+                } else if x_height == x_grass && y_height < y_grass && z_height < z_grass {
+                    chunk.set_block_at(i, j, k, grass, x_up);
+                } else if x_height < x_grass && y_height == y_grass && z_height < z_grass {
+                    chunk.set_block_at(i, j, k, grass, y_up);
+                } else if x_height < x_grass && y_height < y_grass && z_height == z_grass {
+                    chunk.set_block_at(i, j, k, grass, z_up);
+                }
+            }
+        }
+    }
+}
+
 fn generate_planet(
     mut query: Query<(&mut Structure, &Location)>,
     mut generating: ResMut<GeneratingChunks<GrassBiosphereMarker>>,
@@ -548,6 +620,17 @@ fn generate_planet(
                     }
                 }
 
+                // Support for the middle of the planet.
+                if planet_faces.contains(&BlockFace::Top) {
+                    planet_faces.remove(&BlockFace::Bottom);
+                }
+                if planet_faces.contains(&BlockFace::Right) {
+                    planet_faces.remove(&BlockFace::Left);
+                }
+                if planet_faces.contains(&BlockFace::Front) {
+                    planet_faces.remove(&BlockFace::Back);
+                }
+
                 if planet_faces.len() == 1 {
                     // Chunks on only one face.
                     do_face(
@@ -579,31 +662,35 @@ fn generate_planet(
                         *face_iter.next().unwrap(),
                     );
                 } else {
-                    for z in 0..CHUNK_DIMENSIONS {
-                        let actual_z = sz + z;
-                        for y in 0..CHUNK_DIMENSIONS {
-                            let actual_y: usize = sy + y;
-                            for x in 0..CHUNK_DIMENSIONS {
-                                if chunk.has_block_at(x, y, z) {
-                                    continue;
-                                }
-
-                                let actual_x = sx + x;
-                                generate_block(
-                                    (x, y, z),
-                                    (actual_x, actual_y, actual_z),
-                                    (structure_x, structure_y, structure_z),
-                                    s_height,
-                                    &noise_generator,
-                                    middle_air_start,
-                                    grass,
-                                    dirt,
-                                    stone,
-                                    &mut chunk,
-                                );
-                            }
-                        }
-                    }
+                    let x_face = if planet_faces.contains(&BlockFace::Right) {
+                        BlockFace::Right
+                    } else {
+                        BlockFace::Left
+                    };
+                    let y_face = if planet_faces.contains(&BlockFace::Top) {
+                        BlockFace::Top
+                    } else {
+                        BlockFace::Bottom
+                    };
+                    let z_face = if planet_faces.contains(&BlockFace::Front) {
+                        BlockFace::Front
+                    } else {
+                        BlockFace::Back
+                    };
+                    do_corner(
+                        (sx, sy, sz),
+                        (structure_x, structure_y, structure_z),
+                        s_height,
+                        &noise_generator,
+                        middle_air_start,
+                        grass,
+                        dirt,
+                        stone,
+                        &mut chunk,
+                        x_face,
+                        y_face,
+                        z_face,
+                    );
                 }
                 timer.log_duration("Chunk: ");
                 (chunk, structure_entity)
