@@ -30,7 +30,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::structure::chunk::ChunkEntity;
 
-use super::player_world::{PlayerWorld, WorldWithin};
+
 
 /// This represents the diameter of a sector. So at a local
 /// of 0, 0, 0 you can travel `SECTOR_DIMENSIONS / 2.0` blocks in any direction and

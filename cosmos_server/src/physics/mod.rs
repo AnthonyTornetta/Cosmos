@@ -300,19 +300,15 @@ fn sync_transforms_and_locations(
     for (entity, transform, mut location, _) in trans_query_no_parent.iter_mut() {
         // Server transforms for players should NOT be applied to the location.
         // The location the client sent should override it.
-        if !players_query.contains(entity) {
-            if location.last_transform_loc.is_some() {
-                location.apply_updates(transform.translation);
-            }
+        if !players_query.contains(entity) && location.last_transform_loc.is_some() {
+            location.apply_updates(transform.translation);
         }
     }
     for (entity, transform, mut location) in trans_query_with_parent.iter_mut() {
         // Server transforms for players should NOT be applied to the location.
         // The location the client sent should override it.
-        if !players_query.contains(entity) {
-            if location.last_transform_loc.is_some() {
-                location.apply_updates(transform.translation);
-            }
+        if !players_query.contains(entity) && location.last_transform_loc.is_some() {
+            location.apply_updates(transform.translation);
         }
     }
 

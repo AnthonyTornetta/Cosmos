@@ -223,7 +223,7 @@ fn do_edge(
     k_up: BlockFace,
 ) {
     let mut j_grass = [[0; CHUNK_DIMENSIONS]; CHUNK_DIMENSIONS];
-    for i in 0..CHUNK_DIMENSIONS {
+    for (i, layer) in j_grass.iter_mut().enumerate().take(CHUNK_DIMENSIONS) {
         for k in 0..CHUNK_DIMENSIONS {
             // Seed coordinates for the noise function. Which loop variable goes to which xyz must agree everywhere.
             let (mut x, mut y, mut z) = (sx + i, sy + i, sz + i);
@@ -242,7 +242,7 @@ fn do_edge(
             };
 
             // Unmodified grass height.
-            j_grass[i][k] = get_grass_height(
+            layer[k] = get_grass_height(
                 (x, y, z),
                 (structure_x, structure_y, structure_z),
                 s_dimensions,
@@ -259,7 +259,7 @@ fn do_edge(
                 BlockFace::Top => y,
                 BlockFace::Bottom => s_dimensions - y,
             };
-            j_grass[i][k] = j_grass[i][k].max(dim_45);
+            layer[k] = layer[k].max(dim_45);
         }
     }
 
@@ -377,7 +377,7 @@ fn do_corner(
 ) {
     // x grass height cache.
     let mut x_grass = [[0; CHUNK_DIMENSIONS]; CHUNK_DIMENSIONS];
-    for j in 0..CHUNK_DIMENSIONS {
+    for (j, layer) in x_grass.iter_mut().enumerate().take(CHUNK_DIMENSIONS) {
         for k in 0..CHUNK_DIMENSIONS {
             // Seed coordinates for the noise function.
             let (x, y, z) = match x_up {
@@ -386,7 +386,7 @@ fn do_corner(
             };
 
             // Unmodified grass height.
-            x_grass[j][k] = get_grass_height(
+            layer[k] = get_grass_height(
                 (x, y, z),
                 (structure_x, structure_y, structure_z),
                 s_dimensions,
@@ -403,13 +403,13 @@ fn do_corner(
                 BlockFace::Front => z,
                 _ => s_dimensions - z,
             };
-            x_grass[j][k] = x_grass[j][k].max(y_45).max(z_45);
+            layer[k] = layer[k].max(y_45).max(z_45);
         }
     }
 
     // y grass height cache.
     let mut y_grass = [[0; CHUNK_DIMENSIONS]; CHUNK_DIMENSIONS];
-    for i in 0..CHUNK_DIMENSIONS {
+    for (i, layer) in y_grass.iter_mut().enumerate().take(CHUNK_DIMENSIONS) {
         for k in 0..CHUNK_DIMENSIONS {
             // Seed coordinates for the noise function. Which loop variable goes to which xyz must agree everywhere.
             let (x, y, z) = match y_up {
@@ -418,7 +418,7 @@ fn do_corner(
             };
 
             // Unmodified grass height.
-            y_grass[i][k] = get_grass_height(
+            layer[k] = get_grass_height(
                 (x, y, z),
                 (structure_x, structure_y, structure_z),
                 s_dimensions,
@@ -435,7 +435,7 @@ fn do_corner(
                 BlockFace::Front => z,
                 _ => s_dimensions - z,
             };
-            y_grass[i][k] = y_grass[i][k].max(x_45).max(z_45);
+            layer[k] = layer[k].max(x_45).max(z_45);
         }
     }
 
