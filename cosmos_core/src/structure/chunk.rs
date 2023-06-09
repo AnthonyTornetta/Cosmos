@@ -90,6 +90,9 @@ impl Chunk {
     ///
     /// No events are generated from this.
     pub fn set_block_at(&mut self, x: usize, y: usize, z: usize, b: &Block, block_up: BlockFace) {
+        debug_assert!(x < CHUNK_DIMENSIONS);
+        debug_assert!(y < CHUNK_DIMENSIONS);
+        debug_assert!(z < CHUNK_DIMENSIONS);
         let index = flatten(x, y, z, CHUNK_DIMENSIONS, CHUNK_DIMENSIONS);
         let id = b.id();
 
