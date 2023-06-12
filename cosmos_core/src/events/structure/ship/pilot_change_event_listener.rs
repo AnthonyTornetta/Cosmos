@@ -1,8 +1,10 @@
 use bevy::prelude::{
     Added, App, BuildChildren, Commands, Component, Entity, EventReader, EventWriter,
-    IntoSystemConfig, OnUpdate, Quat, Query, RemovedComponents, States, Transform, Vec3, With,
+    IntoSystemConfig, OnUpdate, Parent, Quat, Query, RemovedComponents, States, Transform, Vec3,
+    With,
 };
-use bevy_rapier3d::prelude::{RigidBody, Sensor};
+use bevy_rapier3d::prelude::{GenericJointBuilder, ImpulseJoint, RigidBody, Sensor};
+use bevy_rapier3d::rapier::prelude::JointAxesMask;
 
 use crate::entities::player::Player;
 use crate::events::structure::change_pilot_event::ChangePilotEvent;
@@ -85,16 +87,19 @@ const BOUNCES: u8 = if cfg!(feature = "server") { 100 } else { 0 };
 
 fn pilot_removed(
     mut commands: Commands,
-    mut query: Query<(&mut Transform, &PilotStartingDelta)>,
+    mut query: Query<(&mut Transform, &Parent, &PilotStartingDelta)>,
     mut removed_pilots: RemovedComponents<Pilot>,
     mut event_writer: EventWriter<RemoveSensorFrom>,
 ) {
     for entity in removed_pilots.iter() {
-        if let Ok((mut loc, starting_delta)) = query.get_mut(entity) {
+        if let Ok((mut loc, parent, starting_delta)) = query.get_mut(entity) {
+            let joint = GenericJointBuilder::new(JointAxesMask::empty());
+
             commands
                 .entity(entity)
                 .remove::<PilotStartingDelta>()
-                .insert(RigidBody::Dynamic);
+                .insert(RigidBody::Dynamic)
+                .insert(ImpulseJoint::new(parent.get(), joint.build()));
 
             loc.translation += starting_delta.0;
             event_writer.send(RemoveSensorFrom(entity, 0));

@@ -3,7 +3,10 @@
 //! Mostly used to move entities between worlds & sync up locations to their transforms.
 
 use bevy::{prelude::*, utils::HashSet};
-use bevy_rapier3d::prelude::{PhysicsWorld, RapierContext, RapierWorld, DEFAULT_WORLD_ID};
+use bevy_rapier3d::{
+    prelude::{PhysicsWorld, RapierContext, RapierWorld, DEFAULT_WORLD_ID},
+    rapier::prelude::IntegrationParameters,
+};
 use cosmos_core::{
     entities::player::Player,
     physics::{
@@ -13,6 +16,8 @@ use cosmos_core::{
 };
 
 use crate::state::GameState;
+
+const CCD_SUBSTEPS: usize = 1;
 
 const WORLD_SWITCH_DISTANCE: f32 = SECTOR_DIMENSIONS / 2.0;
 const WORLD_SWITCH_DISTANCE_SQRD: f32 = WORLD_SWITCH_DISTANCE * WORLD_SWITCH_DISTANCE;
@@ -52,7 +57,12 @@ pub fn assign_player_world(
                 world_id: best_world_id.expect("This should never be None if world is some."),
             });
     } else {
-        let world_id = rapier_context.add_world(RapierWorld::default());
+        let mut world = RapierWorld::default();
+        world.integration_parameters = IntegrationParameters {
+            max_ccd_substeps: CCD_SUBSTEPS,
+            ..Default::default()
+        };
+        let world_id = rapier_context.add_world(world);
 
         let world_entity = commands
             .spawn((
@@ -120,7 +130,12 @@ fn move_players_between_worlds(
             if needs_new_world {
                 getting_new_world.push(entity);
 
-                let world_id = rapier_context.add_world(RapierWorld::default());
+                let mut world = RapierWorld::default();
+                world.integration_parameters = IntegrationParameters {
+                    max_ccd_substeps: CCD_SUBSTEPS,
+                    ..Default::default()
+                };
+                let world_id = rapier_context.add_world(world);
 
                 let world_entity = commands
                     .spawn((
