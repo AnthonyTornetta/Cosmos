@@ -39,6 +39,14 @@ impl TGenerateChunkEvent for TestStoneChunkNeedsGeneratedEvent {
             structure_entity,
         }
     }
+
+    fn get_structure_entity(&self) -> Entity {
+        self.structure_entity
+    }
+
+    fn get_chunk_coordinates(&self) -> (usize, usize, usize) {
+        (self.x, self.y, self.z)
+    }
 }
 
 #[derive(Default)]
