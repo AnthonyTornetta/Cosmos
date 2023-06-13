@@ -1,36 +1,22 @@
 //! Creates a grass planet
-use std::{collections::HashSet, mem::swap};
 
-use bevy::{
-    prelude::{
-        App, Component, Entity, EventReader, EventWriter, IntoSystemConfigs, OnUpdate, Query, Res,
-        ResMut,
-    },
-    tasks::AsyncComputeTaskPool,
+use bevy::prelude::{
+    App, Commands, Component, Entity, IntoSystemAppConfig, IntoSystemConfigs, OnEnter, OnUpdate,
+    Res,
 };
 use cosmos_core::{
-    block::{Block, BlockFace},
-    physics::location::Location,
+    block::{self, Block},
     registry::Registry,
-    structure::{
-        chunk::{Chunk, CHUNK_DIMENSIONS},
-        planet::Planet,
-        ChunkInitEvent, Structure,
-    },
-    utils::{resource_wrapper::ResourceWrapper, timer::UtilsTimer},
 };
-use futures_lite::future;
-use noise::NoiseFn;
 
 use crate::GameState;
 
 use super::{
-    biosphere_generation::{generate_planet, notify_when_done_generating},
-    register_biosphere, GeneratingChunk, GeneratingChunks, TBiosphere, TGenerateChunkEvent,
-    TemperatureRange,
+    biosphere_generation::{generate_planet, notify_when_done_generating, BlockRanges},
+    register_biosphere, TBiosphere, TGenerateChunkEvent, TemperatureRange,
 };
 
-#[derive(Component, Debug, Default)]
+#[derive(Component, Debug, Default, Clone)]
 /// Marks that this is for a grass biosphere
 pub struct GrassBiosphereMarker;
 
@@ -81,6 +67,32 @@ impl TBiosphere<GrassBiosphereMarker, GrassChunkNeedsGeneratedEvent> for GrassBi
     }
 }
 
+fn make_block_ranges(block_registry: Res<Registry<Block>>, mut commands: Commands) {
+    commands.insert_resource(BlockRanges::<GrassBiosphereMarker>::new(vec![
+        (
+            block_registry
+                .from_id("cosmos:stone")
+                .expect("Block missing")
+                .clone(),
+            5,
+        ),
+        (
+            block_registry
+                .from_id("cosmos:dirt")
+                .expect("Block missing")
+                .clone(),
+            1,
+        ),
+        (
+            block_registry
+                .from_id("cosmos:grass")
+                .expect("Block missing")
+                .clone(),
+            0,
+        ),
+    ]));
+}
+
 pub(super) fn register(app: &mut App) {
     register_biosphere::<GrassBiosphereMarker, GrassChunkNeedsGeneratedEvent>(
         app,
@@ -95,4 +107,6 @@ pub(super) fn register(app: &mut App) {
         )
             .in_set(OnUpdate(GameState::Playing)),
     );
+
+    app.add_system(make_block_ranges.in_schedule(OnEnter(GameState::PostLoading)));
 }
