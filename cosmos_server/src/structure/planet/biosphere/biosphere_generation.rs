@@ -479,7 +479,7 @@ impl<T: Component + Clone> BlockRanges<T> {
     pub fn new(ranges: Vec<(Block, usize)>) -> Self {
         BlockRanges::<T> {
             _phantom: Default::default(),
-            ranges: ranges,
+            ranges,
         }
     }
 
