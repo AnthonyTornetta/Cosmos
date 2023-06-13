@@ -1,3 +1,5 @@
+//! Responsible for the default generation of biospheres.
+
 use std::{collections::HashSet, marker::PhantomData, mem::swap};
 
 use bevy::{
@@ -5,9 +7,8 @@ use bevy::{
     tasks::AsyncComputeTaskPool,
 };
 use cosmos_core::{
-    block::{self, Block, BlockFace},
+    block::{Block, BlockFace},
     physics::location::Location,
-    registry::Registry,
     structure::{
         chunk::{Chunk, CHUNK_DIMENSIONS},
         planet::Planet,
@@ -23,8 +24,6 @@ use super::{GeneratingChunk, GeneratingChunks, TGenerateChunkEvent};
 const AMPLITUDE: f64 = 7.0;
 const DELTA: f64 = 0.05;
 const ITERATIONS: usize = 9;
-
-const STONE_LIMIT: usize = 4;
 
 /// Some chunks might not be getting flattened, or maybe I'm just crazy.
 /// Within (flattening_fraction * planet size) of the 45 starts the flattening.
@@ -68,6 +67,7 @@ fn get_top_height(
     (middle_air_start as f64 + depth).round() as usize
 }
 
+/// Sends a ChunkInitEvent for every chunk that's done generating, monitors when chunks are finished generating.
 pub fn notify_when_done_generating<T: Component>(
     mut generating: ResMut<GeneratingChunks<T>>,
     mut event_writer: EventWriter<ChunkInitEvent>,
@@ -475,6 +475,7 @@ pub struct BlockRanges<T: Component + Clone> {
 }
 
 impl<T: Component + Clone> BlockRanges<T> {
+    /// Creates a new block range, for each planet type to specify its blocks.
     pub fn new(ranges: Vec<(Block, usize)>) -> Self {
         BlockRanges::<T> {
             _phantom: Default::default(),

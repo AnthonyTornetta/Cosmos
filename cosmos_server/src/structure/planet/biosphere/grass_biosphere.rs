@@ -5,7 +5,7 @@ use bevy::prelude::{
     Res,
 };
 use cosmos_core::{
-    block::{self, Block},
+    block::{Block},
     registry::Registry,
 };
 

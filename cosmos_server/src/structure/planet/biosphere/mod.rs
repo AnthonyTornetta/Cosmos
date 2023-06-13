@@ -45,10 +45,13 @@ struct NeedsBiosphereEvent {
 
 /// This has to be redone.
 pub trait TGenerateChunkEvent {
-    /// Creates the generate chunk event
+    /// Creates the generate chunk event.
     fn new(x: usize, y: usize, z: usize, structure_entity: Entity) -> Self;
 
+    /// Get structure entity.
     fn get_structure_entity(&self) -> Entity;
+
+    /// Get coordinates.
     fn get_chunk_coordinates(&self) -> (usize, usize, usize);
 }
 
