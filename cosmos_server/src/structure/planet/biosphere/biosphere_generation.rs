@@ -143,8 +143,10 @@ fn do_face<T: Component + Clone>(
                     BlockFace::Left => (height, i, j, s_dimensions - (sx + height)),
                 };
 
-                let block = block_ranges.face_block(top_height - actual_height);
-                chunk.set_block_at(x, y, z, block, up);
+                if actual_height <= top_height {
+                    let block = block_ranges.face_block(top_height - actual_height);
+                    chunk.set_block_at(x, y, z, block, up);
+                }
             }
         }
     }
@@ -277,23 +279,27 @@ fn do_edge<T: Component + Clone>(
                     BlockFace::Bottom => s_dimensions - (sy + y),
                 };
 
-                // The top block needs different "top" to look good, the block can't tell which "up" looks good.
-                let mut block_up = Planet::get_planet_face_without_structure(
-                    sx + x,
-                    sy + y,
-                    sz + z,
-                    s_dimensions,
-                    s_dimensions,
-                    s_dimensions,
-                );
-                if j_height == j_top {
-                    block_up = j_up;
+                // Stops stairways to heaven.
+                let num_top: usize = (j_height == j_top) as usize + (k_height == k_top) as usize;
+                if j_height <= j_top && k_height <= k_top && num_top <= 1 {
+                    // The top block needs different "top" to look good, the block can't tell which "up" looks good.
+                    let mut block_up = Planet::get_planet_face_without_structure(
+                        sx + x,
+                        sy + y,
+                        sz + z,
+                        s_dimensions,
+                        s_dimensions,
+                        s_dimensions,
+                    );
+                    if j_height == j_top {
+                        block_up = j_up;
+                    }
+                    if k_height == k_top {
+                        block_up = k_up;
+                    }
+                    let block = block_ranges.edge_block(j_top - j_height, k_top - k_height);
+                    chunk.set_block_at(x, y, z, block, block_up);
                 }
-                if k_height == k_top {
-                    block_up = k_up;
-                }
-                let block = block_ranges.edge_block(j_top - j_height, k_top - k_height);
-                chunk.set_block_at(x, y, z, block, block_up);
             }
         }
     }
@@ -425,27 +431,36 @@ fn do_corner<T: Component + Clone>(
                     _ => s_dimensions - z,
                 };
 
-                // The top block needs different "top" to look good, the block can't tell which "up" looks good.
-                let mut block_up = Planet::get_planet_face_without_structure(
-                    x,
-                    y,
-                    z,
-                    s_dimensions,
-                    s_dimensions,
-                    s_dimensions,
-                );
-                if x_height == x_top {
-                    block_up = x_up;
+                // Stops stairways to heaven.
+                let num_top: usize = (x_height == x_top) as usize
+                    + (y_height == y_top) as usize
+                    + (z_height == z_top) as usize;
+                if x_height <= x_top && y_height <= y_top && z_height <= z_top && num_top <= 1 {
+                    // The top block needs different "top" to look good, the block can't tell which "up" looks good.
+                    let mut block_up = Planet::get_planet_face_without_structure(
+                        x,
+                        y,
+                        z,
+                        s_dimensions,
+                        s_dimensions,
+                        s_dimensions,
+                    );
+                    if x_height == x_top {
+                        block_up = x_up;
+                    }
+                    if y_height == y_top {
+                        block_up = y_up;
+                    }
+                    if z_height == z_top {
+                        block_up = z_up;
+                    }
+                    let block = block_ranges.corner_block(
+                        x_top - x_height,
+                        y_top - y_height,
+                        z_top - z_height,
+                    );
+                    chunk.set_block_at(i, j, k, block, block_up);
                 }
-                if y_height == y_top {
-                    block_up = y_up;
-                }
-                if z_height == z_top {
-                    block_up = z_up;
-                }
-                let block =
-                    block_ranges.corner_block(x_top - x_height, y_top - y_height, z_top - z_height);
-                chunk.set_block_at(x, y, z, block, block_up);
             }
         }
     }
@@ -469,7 +484,7 @@ impl<T: Component + Clone> BlockRanges<T> {
 
     fn face_block(&self, depth: usize) -> &Block {
         for (block, d) in self.ranges.iter() {
-            if depth <= *d {
+            if depth >= *d {
                 return block;
             }
         }
@@ -478,7 +493,7 @@ impl<T: Component + Clone> BlockRanges<T> {
 
     fn edge_block(&self, j_depth: usize, k_depth: usize) -> &Block {
         for (block, d) in self.ranges.iter() {
-            if j_depth <= *d || k_depth <= *d {
+            if j_depth >= *d && k_depth >= *d {
                 return block;
             }
         }
@@ -487,7 +502,7 @@ impl<T: Component + Clone> BlockRanges<T> {
 
     fn corner_block(&self, x_depth: usize, y_depth: usize, z_depth: usize) -> &Block {
         for (block, d) in self.ranges.iter() {
-            if x_depth <= *d || y_depth <= *d || z_depth <= *d {
+            if x_depth >= *d && y_depth >= *d && z_depth >= *d {
                 return block;
             }
         }
