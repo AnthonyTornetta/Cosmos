@@ -469,8 +469,12 @@ impl Structure {
                 self.unload_chunk(cx, cy, cz);
             }
         } else if block.id() != AIR_BLOCK_ID {
-            let chunk = self.create_chunk_at(cx, cy, cz);
-            chunk.set_block_at(bx, by, bz, block, block_up);
+            if self.get_chunk_state(cx, cy, cz) == ChunkState::Loaded {
+                let chunk = self.create_chunk_at(cx, cy, cz);
+                chunk.set_block_at(bx, by, bz, block, block_up);
+            } else {
+                // put into some chunk queue that will be put into the chunk once it's loaded
+            }
         }
     }
 

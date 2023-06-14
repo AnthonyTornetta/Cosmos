@@ -67,10 +67,16 @@ fn get_top_height(
     (middle_air_start as f64 + depth).round() as usize
 }
 
+pub struct GenerateChunkFeaturesEvent<T: Component> {
+    _phantom: PhantomData<T>,
+    pub chunk_coords: (usize, usize, usize),
+    pub structure_entity: Entity,
+}
+
 /// Sends a ChunkInitEvent for every chunk that's done generating, monitors when chunks are finished generating.
-pub fn notify_when_done_generating<T: Component>(
+pub fn notify_when_done_generating_terrain<T: Component>(
     mut generating: ResMut<GeneratingChunks<T>>,
-    mut event_writer: EventWriter<ChunkInitEvent>,
+    mut event_writer: EventWriter<GenerateChunkFeaturesEvent<T>>,
     mut structure_query: Query<&mut Structure>,
 ) {
     let mut still_todo = Vec::with_capacity(generating.generating.len());
@@ -90,11 +96,10 @@ pub fn notify_when_done_generating<T: Component>(
 
                 structure.set_chunk(chunk);
 
-                event_writer.send(ChunkInitEvent {
+                event_writer.send(GenerateChunkFeaturesEvent::<T> {
+                    _phantom: PhantomData::default(),
                     structure_entity,
-                    x,
-                    y,
-                    z,
+                    chunk_coords: (x, y, z),
                 });
             }
         } else {
