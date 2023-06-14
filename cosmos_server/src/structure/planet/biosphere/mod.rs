@@ -32,6 +32,7 @@ use crate::{
 
 use super::generation::planet_generator::check_needs_generated_system;
 
+pub mod biosphere_generation;
 pub mod grass_biosphere;
 pub mod test_all_stone_biosphere;
 
@@ -44,8 +45,14 @@ struct NeedsBiosphereEvent {
 
 /// This has to be redone.
 pub trait TGenerateChunkEvent {
-    /// Creates the generate chunk event
+    /// Creates the generate chunk event.
     fn new(x: usize, y: usize, z: usize, structure_entity: Entity) -> Self;
+
+    /// Get structure entity.
+    fn get_structure_entity(&self) -> Entity;
+
+    /// Get coordinates.
+    fn get_chunk_coordinates(&self) -> (usize, usize, usize);
 }
 
 /// This has to be redone.
