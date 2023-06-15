@@ -5,7 +5,7 @@ use bevy::prelude::{
     IntoSystemConfigs, OnEnter, OnUpdate, Query, Res,
 };
 use cosmos_core::{
-    block::Block,
+    block::{Block, BlockFace},
     registry::Registry,
     structure::{chunk::CHUNK_DIMENSIONS, ChunkInitEvent, Structure},
 };
@@ -102,16 +102,74 @@ pub fn generate_chunk_features(
     mut event_reader: EventReader<GenerateChunkFeaturesEvent<GrassBiosphereMarker>>,
     mut event_writer: EventWriter<ChunkInitEvent>,
     mut structure_query: Query<&mut Structure>,
+    blocks: Res<Registry<Block>>,
 ) {
     for ev in event_reader.iter() {
         if let Ok(mut structure) = structure_query.get_mut(ev.structure_entity) {
             let (cx, cy, cz) = ev.chunk_coords;
+            let sx = cx * CHUNK_DIMENSIONS;
+            let sy = cy * CHUNK_DIMENSIONS;
+            let sz = cz * CHUNK_DIMENSIONS;
+            // Add GenerateChunkFeaturesEvent to mod.rs register_biosphere.
 
             // [cx * CHUNK_DIMENSIONS, (cx + 1) * CHUNK_DIMENSIONS)
+            // #[serde(skip)]
 
-            // Generate chunk features
+            // Generate chunk features.
 
-            // structure.set_block_at(x, y, z, block, block_up, blocks, None)
+            let air = blocks.from_id("cosmos:air").unwrap();
+            let grass = blocks.from_id("cosmos:grass").unwrap();
+            let log = blocks.from_id("cosmos:cherry_log").unwrap();
+            let leaf = blocks.from_id("cosmos:cherry_leaf").unwrap();
+            for x in 0..CHUNK_DIMENSIONS {
+                for z in 0..CHUNK_DIMENSIONS {
+                    let mut y: i32 = 31;
+                    while y >= 0
+                        && structure.block_at(sx + x, sy + y as usize, sz + z, &blocks) == air
+                    {
+                        y -= 1;
+                    }
+
+                    if y >= 0
+                        && structure.block_at(sx + x, sy + y as usize, sz + z, &blocks) == grass
+                    {
+                        if rand::random::<f32>() > 0.99 {
+                            structure.set_block_at(
+                                sx + x,
+                                sy + y as usize + 1,
+                                sz + z,
+                                log,
+                                BlockFace::Top,
+                                &blocks,
+                                None,
+                            );
+
+                            structure.set_block_at(
+                                sx + x,
+                                sy + y as usize + 2,
+                                sz + z,
+                                leaf,
+                                BlockFace::Top,
+                                &blocks,
+                                None,
+                            );
+                        }
+                    }
+                }
+            }
+
+            // let x = structure.blocks_width() / 2;
+            // let y = structure.blocks_height() / 2 + 600;
+            // let z = structure.blocks_length() / 2;
+            // structure.set_block_at(
+            //     x,
+            //     y,
+            //     z,
+            //     &blocks.from_id("cosmos:grass").unwrap(),
+            //     BlockFace::Top,
+            //     &blocks,
+            //     None,
+            // );
 
             event_writer.send(ChunkInitEvent {
                 structure_entity: ev.structure_entity,

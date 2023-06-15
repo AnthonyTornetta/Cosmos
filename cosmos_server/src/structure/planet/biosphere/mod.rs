@@ -30,6 +30,8 @@ use crate::{
     state::GameState,
 };
 
+use self::biosphere_generation::GenerateChunkFeaturesEvent;
+
 use super::generation::planet_generator::check_needs_generated_system;
 
 pub mod biosphere_generation;
@@ -140,7 +142,8 @@ pub fn register_biosphere<
             // Checks if any blocks need generated for this biosphere
             check_needs_generated_system::<E, T>.in_set(OnUpdate(GameState::Playing)),
         ))
-        .insert_resource(GeneratingChunks::<T>::default());
+        .insert_resource(GeneratingChunks::<T>::default())
+        .add_event::<GenerateChunkFeaturesEvent<T>>();
 }
 
 fn add_biosphere(

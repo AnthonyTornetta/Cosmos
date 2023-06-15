@@ -570,19 +570,10 @@ pub fn generate_planet<T: Component + Clone, E: TGenerateChunkEvent + Send + Syn
 
         for (mut chunk, s_width, s_height, s_length, location, structure_entity) in chunks {
             let block_ranges = block_ranges.clone();
-            // let grass = grass.clone();
-            // let dirt = dirt.clone();
-            // let stone = stone.clone();
-            // Not super expensive, only copies about 256 8 bit values.
-            // Still not ideal though.
             let noise_generator = **noise_generator;
 
             let task = thread_pool.spawn(async move {
                 let timer = UtilsTimer::start();
-
-                // let grass = &grass;
-                // let dirt = &dirt;
-                // let stone = &stone;
 
                 let middle_air_start = s_height - CHUNK_DIMENSIONS * 5;
 
