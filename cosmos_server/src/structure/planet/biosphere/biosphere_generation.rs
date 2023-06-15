@@ -169,8 +169,8 @@ fn do_edge<T: Component + Clone>(
     k_up: BlockFace,
 ) {
     let mut j_top = [[0; CHUNK_DIMENSIONS]; CHUNK_DIMENSIONS];
-    for (i, layer) in j_top.iter_mut().enumerate().take(CHUNK_DIMENSIONS) {
-        for (k, height) in layer.iter_mut().enumerate().take(CHUNK_DIMENSIONS) {
+    for (i, layer) in j_top.iter_mut().enumerate() {
+        for (k, height) in layer.iter_mut().enumerate() {
             // Seed coordinates for the noise function. Which loop variable goes to which xyz must agree everywhere.
             let (mut x, mut y, mut z) = (sx + i, sy + i, sz + i);
             match j_up {
@@ -324,8 +324,8 @@ fn do_corner<T: Component + Clone>(
 ) {
     // x top height cache.
     let mut x_top = [[0; CHUNK_DIMENSIONS]; CHUNK_DIMENSIONS];
-    for (j, layer) in x_top.iter_mut().enumerate().take(CHUNK_DIMENSIONS) {
-        for (k, height) in layer.iter_mut().enumerate().take(CHUNK_DIMENSIONS) {
+    for (j, layer) in x_top.iter_mut().enumerate() {
+        for (k, height) in layer.iter_mut().enumerate() {
             // Seed coordinates for the noise function.
             let (x, y, z) = match x_up {
                 BlockFace::Right => (middle_air_start, sy + j, sz + k),
@@ -356,8 +356,8 @@ fn do_corner<T: Component + Clone>(
 
     // y top height cache.
     let mut y_top = [[0; CHUNK_DIMENSIONS]; CHUNK_DIMENSIONS];
-    for (i, layer) in y_top.iter_mut().enumerate().take(CHUNK_DIMENSIONS) {
-        for (k, height) in layer.iter_mut().enumerate().take(CHUNK_DIMENSIONS) {
+    for (i, layer) in y_top.iter_mut().enumerate() {
+        for (k, height) in layer.iter_mut().enumerate() {
             // Seed coordinates for the noise function. Which loop variable goes to which xyz must agree everywhere.
             let (x, y, z) = match y_up {
                 BlockFace::Top => (sx + i, middle_air_start, sz + k),
