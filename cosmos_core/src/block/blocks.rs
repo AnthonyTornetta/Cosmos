@@ -44,15 +44,28 @@ fn add_cosmos_blocks(
     );
 
     blocks.register(
+        BlockBuilder::new("cosmos:log".into(), 3.0)
+            .add_property(BlockProperty::Opaque)
+            .add_property(BlockProperty::Full)
+            .create(),
+    );
+
+    blocks.register(
         BlockBuilder::new("cosmos:cherry_leaf".into(), 0.1)
             .add_property(BlockProperty::Transparent)
             .create(),
     );
 
     blocks.register(
-        BlockBuilder::new("cosmos:cherry_log".into(), 3.0)
+        BlockBuilder::new("cosmos:redwood_log".into(), 3.0)
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
+            .create(),
+    );
+
+    blocks.register(
+        BlockBuilder::new("cosmos:redwood_leaf".into(), 0.1)
+            .add_property(BlockProperty::Transparent)
             .create(),
     );
 

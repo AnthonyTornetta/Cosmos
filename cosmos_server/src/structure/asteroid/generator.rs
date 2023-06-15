@@ -145,9 +145,9 @@ fn start_generating_asteroid(
                             }
 
                             chunks.get_mut(&(cx, cy, cz)).unwrap().set_block_at(
-                                x % CHUNK_DIMENSIONS,
-                                y % CHUNK_DIMENSIONS,
-                                z % CHUNK_DIMENSIONS,
+                                x & CHUNK_DIMENSIONS - 1,
+                                y & CHUNK_DIMENSIONS - 1,
+                                z & CHUNK_DIMENSIONS - 1,
                                 stone,
                                 BlockFace::Top,
                             )

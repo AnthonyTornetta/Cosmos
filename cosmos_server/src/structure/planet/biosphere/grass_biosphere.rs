@@ -6,6 +6,7 @@ use bevy::prelude::{
 };
 use cosmos_core::{
     block::{Block, BlockFace},
+    events::block_events::BlockChangedEvent,
     physics::location::Location,
     registry::Registry,
     structure::{chunk::CHUNK_DIMENSIONS, ChunkInitEvent, Structure},
@@ -13,7 +14,7 @@ use cosmos_core::{
 };
 use noise::NoiseFn;
 
-use crate::GameState;
+use crate::{init::init_world::ServerSeed, GameState};
 
 use super::{
     biosphere_generation::{
@@ -102,14 +103,17 @@ fn make_block_ranges(block_registry: Res<Registry<Block>>, mut commands: Command
 
 const DELTA: f64 = 0.1;
 const FOREST: f64 = 0.1;
+const DIST_BETWEEN_TREES: usize = 2;
 
 /// Sends a ChunkInitEvent for every chunk that's done generating, monitors when chunks are finished generating.
 pub fn generate_chunk_features(
     mut event_reader: EventReader<GenerateChunkFeaturesEvent<GrassBiosphereMarker>>,
-    mut event_writer: EventWriter<ChunkInitEvent>,
+    mut init_event_writer: EventWriter<ChunkInitEvent>,
+    mut block_changed_event_writer: EventWriter<BlockChangedEvent>,
     mut structure_query: Query<(&mut Structure, &Location)>,
     blocks: Res<Registry<Block>>,
     noise_generator: Res<ResourceWrapper<noise::OpenSimplex>>,
+    seed: Res<ServerSeed>,
 ) {
     for ev in event_reader.iter() {
         if let Ok((mut structure, location)) = structure_query.get_mut(ev.structure_entity) {
@@ -126,20 +130,21 @@ pub fn generate_chunk_features(
 
             let air = blocks.from_id("cosmos:air").unwrap();
             let grass = blocks.from_id("cosmos:grass").unwrap();
-            let log = blocks.from_id("cosmos:cherry_log").unwrap();
-            let leaf = blocks.from_id("cosmos:cherry_leaf").unwrap();
+            let log = blocks.from_id("cosmos:redwood_log").unwrap();
+            let leaf = blocks.from_id("cosmos:redwood_leaf").unwrap();
 
             let structure_coords = location.absolute_coords_f64();
 
             let noise_y = structure.blocks_height();
-            let mut noise_cache = [[0.0; CHUNK_DIMENSIONS + 2]; CHUNK_DIMENSIONS + 2];
+            let mut noise_cache = [[0.0; CHUNK_DIMENSIONS + DIST_BETWEEN_TREES * 2];
+                CHUNK_DIMENSIONS + DIST_BETWEEN_TREES * 2];
             for (z, slice) in noise_cache.iter_mut().enumerate() {
                 let bz = sz + z;
                 for (x, noise) in slice.iter_mut().enumerate() {
                     *noise = noise_generator.get([
-                        ((sx + x) as f64 - 1.0 + structure_coords.x) * DELTA,
+                        ((sx + x) as f64 - DIST_BETWEEN_TREES as f64 + structure_coords.x) * DELTA,
                         (noise_y as f64 + structure_coords.y) * DELTA,
-                        (bz as f64 - 1.0 + structure_coords.z) * DELTA,
+                        (bz as f64 - DIST_BETWEEN_TREES as f64 + structure_coords.z) * DELTA,
                     ]);
                 }
             }
@@ -153,56 +158,61 @@ pub fn generate_chunk_features(
                         y -= 1;
                     }
 
-                    let noise = noise_cache[z + 1][x + 1];
+                    let noise = noise_cache[z + DIST_BETWEEN_TREES][x + DIST_BETWEEN_TREES];
                     if y >= 0
                         && structure.block_at(sx + x, sy + y as usize, sz + z, &blocks) == grass
                         && noise * noise > FOREST
                     {
-                        for dz in 0..=2 {
-                            for dx in 0..=2 {
+                        for dz in 0..=DIST_BETWEEN_TREES * 2 {
+                            for dx in 0..=DIST_BETWEEN_TREES * 2 {
                                 if noise < noise_cache[z + dz][x + dx] {
                                     continue 'next;
                                 }
                             }
                         }
 
-                        structure.set_block_at(
-                            sx + x,
-                            sy + y as usize + 1,
-                            sz + z,
-                            log,
-                            BlockFace::Top,
-                            &blocks,
-                            None,
-                        );
+                        // Trunk.
+                        let height = 25 + (5.0 * noise) as usize;
+                        for dy in 1..=height {
+                            for dz in 0..=2 {
+                                structure.set_block_at(
+                                    sx + x,
+                                    sy + y as usize + dy,
+                                    sz + z + dz - 1,
+                                    log,
+                                    BlockFace::Top,
+                                    &blocks,
+                                    Some(&mut block_changed_event_writer),
+                                );
+                            }
+
+                            for dx in 0..=2 {
+                                structure.set_block_at(
+                                    sx + x + dx - 1,
+                                    sy + y as usize + dy,
+                                    sz + z,
+                                    log,
+                                    BlockFace::Top,
+                                    &blocks,
+                                    Some(&mut block_changed_event_writer),
+                                );
+                            }
+                        }
 
                         structure.set_block_at(
                             sx + x,
-                            sy + y as usize + 2,
+                            sy + y as usize + height + 1,
                             sz + z,
                             leaf,
                             BlockFace::Top,
                             &blocks,
-                            None,
+                            Some(&mut block_changed_event_writer),
                         );
                     }
                 }
             }
 
-            // let x = structure.blocks_width() / 2;
-            // let y = structure.blocks_height() / 2 + 600;
-            // let z = structure.blocks_length() / 2;
-            // structure.set_block_at(
-            //     x,
-            //     y,
-            //     z,
-            //     &blocks.from_id("cosmos:grass").unwrap(),
-            //     BlockFace::Top,
-            //     &blocks,
-            //     None,
-            // );
-
-            event_writer.send(ChunkInitEvent {
+            init_event_writer.send(ChunkInitEvent {
                 structure_entity: ev.structure_entity,
                 x: cx,
                 y: cy,

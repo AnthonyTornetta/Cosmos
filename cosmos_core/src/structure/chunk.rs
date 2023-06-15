@@ -60,27 +60,44 @@ impl Chunk {
     }
 
     #[inline]
-    /// The position in the structure x
+    /// The position in the structure.
+    pub fn structure_coords(&self) -> (usize, usize, usize) {
+        (self.x, self.y, self.z)
+    }
+
+    #[inline]
+    /// The position in the structure x.
     pub fn structure_x(&self) -> usize {
         self.x
     }
 
     #[inline]
-    /// The position in the structure y
+    /// The position in the structure y.
     pub fn structure_y(&self) -> usize {
         self.y
     }
 
     #[inline]
-    /// The position in the structure z
+    /// The position in the structure z.
     pub fn structure_z(&self) -> usize {
         self.z
     }
 
     #[inline]
-    /// Returns true if this chunk only contains air
+    /// Returns true if this chunk only contains air.
     pub fn is_empty(&self) -> bool {
         self.non_air_blocks == 0
+    }
+
+    #[inline]
+    /// Sets the block at the given location.
+    ///
+    /// Generally, you should use the structure's version of this because this doesn't handle everything the structure does.
+    /// You should only call this if you know what you're doing.
+    ///
+    /// No events are generated from this.
+    pub fn set_block_at(&mut self, x: usize, y: usize, z: usize, b: &Block, block_up: BlockFace) {
+        self.set_block_at_from_id(x, y, z, b.id(), block_up)
     }
 
     /// Sets the block at the given location.
@@ -89,12 +106,18 @@ impl Chunk {
     /// You should only call this if you know what you're doing.
     ///
     /// No events are generated from this.
-    pub fn set_block_at(&mut self, x: usize, y: usize, z: usize, b: &Block, block_up: BlockFace) {
+    pub fn set_block_at_from_id(
+        &mut self,
+        x: usize,
+        y: usize,
+        z: usize,
+        id: u16,
+        block_up: BlockFace,
+    ) {
         debug_assert!(x < CHUNK_DIMENSIONS);
         debug_assert!(y < CHUNK_DIMENSIONS);
         debug_assert!(z < CHUNK_DIMENSIONS);
         let index = flatten(x, y, z, CHUNK_DIMENSIONS, CHUNK_DIMENSIONS);
-        let id = b.id();
 
         self.block_health.reset_health(x, y, z);
 
