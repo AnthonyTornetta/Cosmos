@@ -93,13 +93,10 @@ fn pilot_removed(
 ) {
     for entity in removed_pilots.iter() {
         if let Ok((mut loc, parent, starting_delta)) = query.get_mut(entity) {
-            let joint = GenericJointBuilder::new(JointAxesMask::empty());
-
             commands
                 .entity(entity)
                 .remove::<PilotStartingDelta>()
-                .insert(RigidBody::Dynamic)
-                .insert(ImpulseJoint::new(parent.get(), joint.build()));
+                .insert(RigidBody::Dynamic);
 
             loc.translation += starting_delta.0;
             event_writer.send(RemoveSensorFrom(entity, 0));

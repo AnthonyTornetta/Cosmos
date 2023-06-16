@@ -295,11 +295,11 @@ fn main() {
     app.insert_resource(ConnectionConfig { host_name })
         .insert_resource(RapierConfiguration {
             gravity: Vec3::ZERO,
-            timestep_mode: TimestepMode::Interpolated {
-                dt: 1.0 / 60.0,
-                time_scale: 1.0,
-                substeps: 2,
-            },
+            // timestep_mode: TimestepMode::Interpolated {
+            //     dt: 1.0 / 60.0,
+            //     time_scale: 1.0,
+            //     substeps: 2,
+            // },
             ..default()
         })
         .insert_resource(ClearColor(Color::BLACK))
