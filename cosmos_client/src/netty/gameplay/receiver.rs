@@ -590,10 +590,7 @@ fn sync_transforms_and_locations(
         (&mut Transform, &mut Location),
         (Without<PlayerWorld>, Without<Parent>),
     >,
-    trans_query_with_parent: Query<
-        (&mut Transform, &mut Location),
-        (Without<PlayerWorld>, With<Parent>),
-    >,
+    trans_query_with_parent: Query<&Location, (Without<PlayerWorld>, With<Parent>)>,
     parent_query: Query<&Parent>,
     player_entity_query: Query<Entity, With<LocalPlayer>>,
     mut world_query: Query<(&PlayerWorld, &mut Location)>,
@@ -620,7 +617,7 @@ fn sync_transforms_and_locations(
             .get(player_entity)
             .map(|x| x.1)
             .or_else(|_| match trans_query_with_parent.get(player_entity) {
-                Ok((_, loc)) => Ok(loc),
+                Ok(loc) => Ok(loc),
                 Err(x) => Err(x),
             })
             .expect("The above loop guarantees this is valid");

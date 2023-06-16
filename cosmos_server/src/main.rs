@@ -46,11 +46,11 @@ fn main() {
         .add_state::<GameState>()
         .insert_resource(RapierConfiguration {
             gravity: Vec3::ZERO,
-            // timestep_mode: TimestepMode::Interpolated {
-            //     dt: 1.0 / 60.0,
-            //     time_scale: 1.0,
-            //     substeps: 2,
-            // },
+            timestep_mode: TimestepMode::Interpolated {
+                dt: 1.0 / 60.0,
+                time_scale: 1.0,
+                substeps: 2,
+            },
             ..default()
         })
         .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))

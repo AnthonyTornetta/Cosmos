@@ -255,7 +255,7 @@ fn process_player_movement(
                 }
             }
         } else if velocity.linvel.dot(velocity.linvel) > max_speed * max_speed {
-            velocity.linvel = velocity.linvel.normalize() * max_speed;
+            // velocity.linvel = velocity.linvel.normalize() * max_speed;
         }
     }
 }
@@ -295,11 +295,11 @@ fn main() {
     app.insert_resource(ConnectionConfig { host_name })
         .insert_resource(RapierConfiguration {
             gravity: Vec3::ZERO,
-            // timestep_mode: TimestepMode::Interpolated {
-            //     dt: 1.0 / 60.0,
-            //     time_scale: 1.0,
-            //     substeps: 2,
-            // },
+            timestep_mode: TimestepMode::Interpolated {
+                dt: 1.0 / 60.0,
+                time_scale: 1.0,
+                substeps: 2,
+            },
             ..default()
         })
         .insert_resource(ClearColor(Color::BLACK))

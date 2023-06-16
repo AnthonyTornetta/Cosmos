@@ -11,7 +11,8 @@ resolver="2"
 
 [workspace.dependencies]
 bevy = "0.10.1"
-bevy_rapier3d = { git = "https://github.com/AnthonyTornetta/bevy_rapier/", version = "0.21.0", features = [ "simd-stable", "serde-serialize" ] }
+# bevy_rapier3d = { git = "https://github.com/AnthonyTornetta/bevy_rapier/", version = "0.21.0", features = [ "simd-stable", "serde-serialize" ] }
+bevy_rapier3d = { path = "../bevy_rapier/bevy_rapier3d/", version = "0.21.0", features = [ "simd-stable", "serde-serialize" ] }
 
 bevy_renet = "0.0.7"
 serde = "1.0.155"

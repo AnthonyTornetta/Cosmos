@@ -259,8 +259,6 @@ fn fix_location(
             }
         }
 
-        println!("Fixing @ {}", location.as_ref());
-
         match (best_world, best_world_id) {
             (Some(world), Some(world_id)) => {
                 if let Ok(loc) = player_world_loc_query.get(world.0) {

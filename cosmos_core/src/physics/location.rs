@@ -434,7 +434,6 @@ impl Location {
 /// Stores the location from the previous frame
 pub struct PreviousLocation(Location);
 
-#[allow(unused_variables, unused_mut)]
 /// Recursively goes from the top of the parent tree to the bottom and lines up all their locations.
 ///
 /// This probably works.

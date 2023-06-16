@@ -1315,22 +1315,6 @@ dependencies = [
  "bindgen",
 ]
 
-[[package]]
-name = "cosmos_core"
-version = "0.0.2"
-dependencies = [
- "bevy",
- "bevy-inspector-egui",
- "bevy_rapier3d",
- "bevy_renet",
- "bincode",
- "iyes_loopless",
- "lazy_static",
- "local-ip-address",
- "noise",
- "serde",
- "take_mut",
-]
 
 [[package]]
 name = "cpal"
