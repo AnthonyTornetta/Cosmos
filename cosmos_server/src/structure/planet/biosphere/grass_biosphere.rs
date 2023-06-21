@@ -7,7 +7,7 @@ use bevy::prelude::{
 use cosmos_core::{
     block::{Block, BlockFace},
     events::block_events::BlockChangedEvent,
-    physics::location::Location,
+    physics::location::{Location, SECTOR_DIMENSIONS},
     registry::Registry,
     structure::{chunk::CHUNK_DIMENSIONS, ChunkInitEvent, Structure},
     utils::resource_wrapper::ResourceWrapper,
@@ -101,9 +101,10 @@ fn make_block_ranges(block_registry: Res<Registry<Block>>, mut commands: Command
     ]));
 }
 
-const DELTA: f64 = 0.1;
-const FOREST: f64 = 0.1;
-const DIST_BETWEEN_TREES: usize = 2;
+const DELTA: f64 = 1.0;
+const FOREST: f64 = 0.235;
+const DIST_BETWEEN_TREES: usize = 5;
+const SEGMENT_HEIGHT: usize = 10;
 
 /// Sends a ChunkInitEvent for every chunk that's done generating, monitors when chunks are finished generating.
 pub fn generate_chunk_features(
@@ -113,7 +114,6 @@ pub fn generate_chunk_features(
     mut structure_query: Query<(&mut Structure, &Location)>,
     blocks: Res<Registry<Block>>,
     noise_generator: Res<ResourceWrapper<noise::OpenSimplex>>,
-    seed: Res<ServerSeed>,
 ) {
     for ev in event_reader.iter() {
         if let Ok((mut structure, location)) = structure_query.get_mut(ev.structure_entity) {
@@ -121,12 +121,6 @@ pub fn generate_chunk_features(
             let sx = cx * CHUNK_DIMENSIONS;
             let sy = cy * CHUNK_DIMENSIONS;
             let sz = cz * CHUNK_DIMENSIONS;
-            // Add GenerateChunkFeaturesEvent to mod.rs register_biosphere.
-
-            // [cx * CHUNK_DIMENSIONS, (cx + 1) * CHUNK_DIMENSIONS)
-            // #[serde(skip)]
-
-            // Generate chunk features.
 
             let air = blocks.from_id("cosmos:air").unwrap();
             let grass = blocks.from_id("cosmos:grass").unwrap();
@@ -172,8 +166,139 @@ pub fn generate_chunk_features(
                         }
 
                         // Trunk.
-                        let height = 25 + (5.0 * noise) as usize;
-                        for dy in 1..=height {
+                        let height_noise = noise_generator.get([
+                            ((sx + x) as f64 as f64 + structure_coords.x) * DELTA,
+                            ((sy + y as usize) as f64 + structure_coords.y) * DELTA,
+                            (bz as f64 as f64 + structure_coords.z) * DELTA,
+                        ]);
+                        let mut height = (4.0 * SEGMENT_HEIGHT as f64
+                            + 4.0 * SEGMENT_HEIGHT as f64 * height_noise)
+                            as usize;
+                        println!("Tree Height: {}", height);
+                        let mut dy = 1;
+
+                        // 5x5 missing corners.
+                        if height - dy >= SEGMENT_HEIGHT * 4 && dy == 1 {
+                            height += SEGMENT_HEIGHT;
+                        }
+                        while height - dy >= SEGMENT_HEIGHT * 4 {
+                            for dz in 0..=4 {
+                                for dx in 0..=2 {
+                                    structure.set_block_at(
+                                        sx + x + dx - 1,
+                                        sy + y as usize + dy,
+                                        sz + z + dz - 2,
+                                        log,
+                                        BlockFace::Top,
+                                        &blocks,
+                                        Some(&mut block_changed_event_writer),
+                                    );
+                                }
+                            }
+
+                            for dx in 0..=4 {
+                                for dz in 0..=2 {
+                                    structure.set_block_at(
+                                        sx + x + dx - 2,
+                                        sy + y as usize + dy,
+                                        sz + z + dz - 1,
+                                        log,
+                                        BlockFace::Top,
+                                        &blocks,
+                                        Some(&mut block_changed_event_writer),
+                                    );
+                                }
+                            }
+                            dy += 1;
+                        }
+
+                        // 3x3 with extra centers.
+                        if height - dy >= SEGMENT_HEIGHT * 3 && dy == 1 {
+                            height += SEGMENT_HEIGHT;
+                        }
+                        while height - dy >= SEGMENT_HEIGHT * 3 {
+                            for dz in 0..=2 {
+                                for dx in 0..=2 {
+                                    structure.set_block_at(
+                                        sx + x + dx - 1,
+                                        sy + y as usize + dy,
+                                        sz + z + dz - 1,
+                                        log,
+                                        BlockFace::Top,
+                                        &blocks,
+                                        Some(&mut block_changed_event_writer),
+                                    );
+                                }
+                            }
+
+                            structure.set_block_at(
+                                sx + x + 2,
+                                sy + y as usize + dy,
+                                sz + z,
+                                log,
+                                BlockFace::Top,
+                                &blocks,
+                                Some(&mut block_changed_event_writer),
+                            );
+
+                            structure.set_block_at(
+                                sx + x - 2,
+                                sy + y as usize + dy,
+                                sz + z,
+                                log,
+                                BlockFace::Top,
+                                &blocks,
+                                Some(&mut block_changed_event_writer),
+                            );
+
+                            structure.set_block_at(
+                                sx + x,
+                                sy + y as usize + dy,
+                                sz + z + 2,
+                                log,
+                                BlockFace::Top,
+                                &blocks,
+                                Some(&mut block_changed_event_writer),
+                            );
+
+                            structure.set_block_at(
+                                sx + x,
+                                sy + y as usize + dy,
+                                sz + z - 2,
+                                log,
+                                BlockFace::Top,
+                                &blocks,
+                                Some(&mut block_changed_event_writer),
+                            );
+                            dy += 1;
+                        }
+
+                        // 3x3.
+                        if height - dy >= SEGMENT_HEIGHT * 2 && dy == 1 {
+                            height += SEGMENT_HEIGHT;
+                        }
+                        while height - dy >= SEGMENT_HEIGHT * 2 {
+                            for dz in 0..=2 {
+                                for dx in 0..=2 {
+                                    structure.set_block_at(
+                                        sx + x + dx - 1,
+                                        sy + y as usize + dy,
+                                        sz + z + dz - 1,
+                                        log,
+                                        BlockFace::Top,
+                                        &blocks,
+                                        Some(&mut block_changed_event_writer),
+                                    );
+                                }
+                            }
+                            dy += 1;
+                        }
+
+                        // plus sign.
+                        if height - dy >= SEGMENT_HEIGHT && dy == 1 {
+                            height += SEGMENT_HEIGHT;
+                        }
+                        while height - dy >= SEGMENT_HEIGHT {
                             for dz in 0..=2 {
                                 structure.set_block_at(
                                     sx + x,
@@ -197,6 +322,21 @@ pub fn generate_chunk_features(
                                     Some(&mut block_changed_event_writer),
                                 );
                             }
+                            dy += 1;
+                        }
+
+                        // 1x1.
+                        while dy <= height {
+                            structure.set_block_at(
+                                sx + x,
+                                sy + y as usize + dy,
+                                sz + z,
+                                log,
+                                BlockFace::Top,
+                                &blocks,
+                                Some(&mut block_changed_event_writer),
+                            );
+                            dy += 1;
                         }
 
                         structure.set_block_at(
