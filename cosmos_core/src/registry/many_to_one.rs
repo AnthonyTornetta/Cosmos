@@ -86,6 +86,11 @@ impl<K: Identifiable + Sync + Send, V: Identifiable + Sync + Send> ManyToOneRegi
     pub fn iter(&self) -> Values<'_, u16, V> {
         self.values.values()
     }
+
+    /// Returns true if this registry contains an entry for that key
+    pub fn contains(&self, key: &K) -> bool {
+        self.values.contains_key(&key.id())
+    }
 }
 
 /// Initializes & adds the resource to bevy that can then be used in systems via `Res<ManyToOneRegistry<K, V>>`

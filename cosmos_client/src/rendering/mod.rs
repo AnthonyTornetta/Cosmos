@@ -108,12 +108,20 @@ impl MeshBuilder for CosmosMeshBuilder {
     }
 }
 
-#[derive(Default, Debug, Reflect, FromReflect)]
+#[derive(Debug, Reflect, FromReflect)]
+enum MeshType {
+    /// The mesh is broken up into its 6 faces, which can all be stitched together to create the full mesh
+    ///
+    /// Make sure this is in the same order as the [`BlockFace::index`] method.
+    MultipleFaceMesh([MeshInformation; 6]),
+    /// This mesh contains the model data for every face
+    AllFacesMesh(MeshInformation),
+}
+
+#[derive(Debug, Reflect, FromReflect)]
 /// Stores all the mesh information for a block
 pub struct BlockMeshInformation {
-    /// Make sure this is in the same order as the [`BlockFace::index`] method.
-    mesh_info: [MeshInformation; 6],
-
+    mesh_info: MeshType,
     id: u16,
     unlocalized_name: String,
 }
@@ -136,7 +144,7 @@ impl BlockMeshInformation {
     /// Creates the mesh information for a block.
     ///
     /// Make sure the mesh information is given in the proper order
-    pub fn new(
+    pub fn new_multi_face(
         unlocalized_name: impl Into<String>,
 
         right: MeshInformation,
@@ -163,21 +171,59 @@ impl BlockMeshInformation {
                BlockFace::Front => 4,
                BlockFace::Back => 5,
             */
-            mesh_info: [right, left, top, bottom, front, back],
+            mesh_info: MeshType::MultipleFaceMesh([right, left, top, bottom, front, back]),
             id: 0,
             unlocalized_name: unlocalized_name.into(),
         }
     }
 
-    /// Gets the mesh information for that block face
-    pub fn info_for_face(&self, face: BlockFace) -> &MeshInformation {
-        &self.mesh_info[face.index()]
+    /// Creates the mesh information for a block.
+    pub fn new_single_mesh_info(
+        unlocalized_name: impl Into<String>,
+        mesh_info: MeshInformation,
+    ) -> Self {
+        Self {
+            mesh_info: MeshType::AllFacesMesh(mesh_info),
+            id: 0,
+            unlocalized_name: unlocalized_name.into(),
+        }
+    }
+
+    /// Returns true if the block has an individual mesh for each face of the block
+    pub fn has_multiple_face_meshes(&self) -> bool {
+        matches!(self.mesh_info, MeshType::MultipleFaceMesh(_))
+    }
+
+    /// Returns true if the block only one mesh and does not have meshes for each side of the block
+    pub fn has_single_mesh(&self) -> bool {
+        matches!(self.mesh_info, MeshType::AllFacesMesh(_))
+    }
+
+    /// Gets the mesh information for that block face if the model is divided into multiple faces.
+    ///
+    /// If the block only contains one mesh, None is returned.
+    pub fn info_for_face(&self, face: BlockFace) -> Option<&MeshInformation> {
+        match &self.mesh_info {
+            MeshType::MultipleFaceMesh(faces) => Some(&faces[face.index()]),
+            MeshType::AllFacesMesh(_) => None,
+        }
+    }
+
+    /// Gets the mesh information for that whole block if the block is made out of only one mesh,
+    /// and not divided into multiple (per-face) meshes.
+    ///
+    /// Note that if the block contains per-face meshes, None is returned.
+    pub fn info_for_whole_block(&self) -> Option<&MeshInformation> {
+        match &self.mesh_info {
+            MeshType::MultipleFaceMesh(_) => None,
+            MeshType::AllFacesMesh(mesh) => Some(&mesh),
+        }
     }
 }
 
 fn register_meshes(mut registry: ResMut<BlockMeshRegistry>) {
     // Model for a basic cube.
-    registry.insert_value(BlockMeshInformation::new(
+    registry.insert_value(BlockMeshInformation::new_multi_face(
         "cosmos:base_block",
         MeshInformation {
             indices: vec![0, 1, 2, 2, 3, 0],
@@ -253,9 +299,11 @@ fn register_block_meshes(
     mut model_registry: ResMut<BlockMeshRegistry>,
 ) {
     for block in blocks.iter() {
-        model_registry
-            .add_link(block, "cosmos:base_block")
-            .expect("cosmos:base_block model link wasn't inserted successfully!");
+        if !model_registry.contains(block) {
+            model_registry
+                .add_link(block, "cosmos:base_block")
+                .expect("cosmos:base_block model link wasn't inserted successfully!");
+        }
     }
 }
 

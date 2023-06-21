@@ -647,8 +647,6 @@ impl ChunkRenderer {
 
                     let uvs = atlas.uvs_for_index(image_index);
 
-                    let mut mesh_info = mesh.info_for_face(face).clone();
-
                     let rotation = match rotation {
                         BlockFace::Top => Quat::IDENTITY,
                         BlockFace::Front => Quat::from_axis_angle(Vec3::X, PI / 2.0),
@@ -657,6 +655,18 @@ impl ChunkRenderer {
                         BlockFace::Right => Quat::from_axis_angle(Vec3::Z, -PI / 2.0),
                         BlockFace::Bottom => Quat::from_axis_angle(Vec3::X, PI),
                     };
+
+                    let mut one_mesh_only = false;
+
+                    let mut mesh_info = mesh
+                        .info_for_face(face)
+                        .unwrap_or_else(|| {
+                            one_mesh_only = true;
+
+                            mesh.info_for_whole_block()
+                                .expect("Block must have either face or whole block meshes")
+                        })
+                        .clone();
 
                     for pos in mesh_info.positions.iter_mut() {
                         *pos = rotation.mul_vec3((*pos).into()).into();
@@ -671,6 +681,10 @@ impl ChunkRenderer {
                         Vec3::new(center_offset_x, center_offset_y, center_offset_z),
                         uvs,
                     );
+
+                    if one_mesh_only {
+                        break;
+                    }
                 }
 
                 faces.clear();

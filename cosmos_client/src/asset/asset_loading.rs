@@ -356,9 +356,10 @@ impl Identifiable for BlockTextureIndex {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 struct BlockInfo {
     texture: HashMap<String, String>,
+    model: Option<String>,
 }
 
 fn load_block_textxures(
@@ -389,11 +390,14 @@ fn load_block_textxures(
 
         let block_info = if let Ok(block_info) = fs::read(&json_path) {
             serde_json::from_slice::<BlockInfo>(&block_info)
-                .unwrap_or_else(|_| panic!("Error reading json data in {json_path}"))
+                .unwrap_or_else(|_| panic!("Error reading block json data in {json_path}"))
         } else {
             let mut hh = HashMap::new();
             hh.insert("all".into(), block_name.to_owned());
-            BlockInfo { texture: hh }
+            BlockInfo {
+                texture: hh,
+                model: None,
+            }
         };
 
         let mut map = HashMap::new();
