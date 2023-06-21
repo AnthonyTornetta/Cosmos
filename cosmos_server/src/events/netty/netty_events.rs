@@ -10,6 +10,7 @@ use cosmos_core::inventory::Inventory;
 use cosmos_core::item::Item;
 use cosmos_core::netty::server_reliable_messages::ServerReliableMessages;
 use cosmos_core::netty::{cosmos_encoder, NettyChannelServer};
+use cosmos_core::persistence::LoadingDistance;
 use cosmos_core::physics::location::{Location, Sector};
 use cosmos_core::physics::player_world::WorldWithin;
 use cosmos_core::registry::Registry;
@@ -172,6 +173,7 @@ fn handle_events_system(
                     PlayerLooking {
                         rotation: Quat::IDENTITY,
                     },
+                    LoadingDistance::new(2, 9999),
                 ));
 
                 let entity = player_commands.id();
