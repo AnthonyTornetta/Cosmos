@@ -147,7 +147,7 @@ fn process_player_movement(
     time: Res<Time>,
     input_handler: ResMut<CosmosInputHandler>,
     mut query: Query<
-        (&mut Velocity, &GlobalTransform, Option<&PlayerAlignment>),
+        (&mut Velocity, &Transform, Option<&PlayerAlignment>),
         (With<LocalPlayer>, Without<Pilot>),
     >,
     cam_query: Query<&GlobalTransform, With<MainCamera>>,
@@ -182,6 +182,8 @@ fn process_player_movement(
                 }
             }
         }
+
+        println!("Forward: {forward}");
 
         forward = forward.normalize_or_zero() * 100.0;
         right = right.normalize_or_zero() * 100.0;
@@ -255,7 +257,7 @@ fn process_player_movement(
                 }
             }
         } else if velocity.linvel.dot(velocity.linvel) > max_speed * max_speed {
-            // velocity.linvel = velocity.linvel.normalize() * max_speed;
+            velocity.linvel = velocity.linvel.normalize() * max_speed;
         }
     }
 }

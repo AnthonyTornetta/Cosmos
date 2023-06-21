@@ -1,9 +1,8 @@
 use bevy::prelude::{
     Added, App, BuildChildren, Commands, Component, Entity, EventReader, EventWriter,
-    IntoSystemConfig, OnUpdate, Parent, Quat, Query, RemovedComponents, States, Transform, Vec3,
-    With, Without,
+    IntoSystemConfig, OnUpdate, Quat, Query, RemovedComponents, States, Transform, Vec3, With,
 };
-use bevy_rapier3d::prelude::{RigidBody, Sensor, Velocity};
+use bevy_rapier3d::prelude::{RigidBody, Sensor};
 
 use crate::entities::player::Player;
 use crate::events::structure::change_pilot_event::ChangePilotEvent;
@@ -89,28 +88,16 @@ const BOUNCES: u8 = if cfg!(feature = "server") { 100 } else { 0 };
 
 fn pilot_removed(
     mut commands: Commands,
-    mut query: Query<(&mut Transform, &Parent, &PilotStartingDelta, &mut Velocity)>,
-    // ship_query: Query<(&Transform, &Velocity), Without<PilotStartingDelta>>,
+    mut query: Query<(&mut Transform, &PilotStartingDelta)>,
     mut removed_pilots: RemovedComponents<Pilot>,
     mut event_writer: EventWriter<RemoveSensorFrom>,
 ) {
     for entity in removed_pilots.iter() {
-        if let Ok((mut trans, parent, starting_delta, mut velocity)) = query.get_mut(entity) {
+        if let Ok((mut trans, starting_delta)) = query.get_mut(entity) {
             commands
                 .entity(entity)
-                // .remove::<(PilotStartingDelta, Parent)>()
                 .remove::<PilotStartingDelta>()
                 .insert(RigidBody::Dynamic);
-
-            // let ship_entity = parent.get();
-
-            // commands.entity(ship_entity).remove_children(&[entity]);
-
-            // let (ship_trans, ship_vel) = ship_query
-            //     .get(ship_entity)
-            //     .expect("All ships should have velocity & transform");
-
-            // velocity.linvel = ship_vel.linvel;
 
             println!("Starting delta: {}", starting_delta.0);
 
