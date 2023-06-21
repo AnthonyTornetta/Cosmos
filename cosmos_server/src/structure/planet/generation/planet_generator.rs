@@ -14,7 +14,7 @@ use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     entities::player::Player,
     netty::{
-        cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannel,
+        cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannelServer,
         NoSendEntity,
     },
     physics::location::Location,
@@ -205,7 +205,7 @@ fn get_requested_chunk(
     }
 
     for (client_id, serialized) in serialized.lock().expect("Failed to lock").take().unwrap() {
-        server.send_message(client_id, NettyChannel::Reliable.id(), serialized);
+        server.send_message(client_id, NettyChannelServer::Reliable, serialized);
     }
 
     for (entity, (cx, cy, cz), ev) in todo.lock().expect("Failed to lock").take().unwrap() {

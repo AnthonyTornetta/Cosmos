@@ -4,7 +4,7 @@ use cosmos_core::{
     block::Block,
     ecs::NeedsDespawned,
     events::{block_events::BlockChangedEvent, structure::change_pilot_event::ChangePilotEvent},
-    netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannel},
+    netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannelServer},
     registry::Registry,
     structure::{
         ship::{core::MeltingDown, pilot::Pilot},
@@ -47,7 +47,7 @@ fn on_melting_down(
                 commands.entity(entity).insert(NeedsDespawned);
 
                 server.broadcast_message(
-                    NettyChannel::Reliable.id(),
+                    NettyChannelServer::Reliable,
                     cosmos_encoder::serialize(&ServerReliableMessages::StructureRemove { entity }),
                 );
             }

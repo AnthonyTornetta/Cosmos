@@ -5,7 +5,7 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::RenetServer;
-use cosmos_core::netty::cosmos_encoder;
+use cosmos_core::netty::{cosmos_encoder, NettyChannelClient, NettyChannelServer};
 use cosmos_core::physics::location::Location;
 use cosmos_core::structure::systems::{SystemActive, Systems};
 use cosmos_core::{
@@ -14,7 +14,7 @@ use cosmos_core::{
     netty::{
         client_reliable_messages::ClientReliableMessages,
         client_unreliable_messages::ClientUnreliableMessages,
-        server_reliable_messages::ServerReliableMessages, NettyChannel,
+        server_reliable_messages::ServerReliableMessages,
     },
     structure::{
         ship::pilot::Pilot,
@@ -63,7 +63,8 @@ pub fn server_listen_messages(
     mut request_chunk_event_writer: EventWriter<RequestChunkEvent>,
 ) {
     for client_id in server.clients_id().into_iter() {
-        while let Some(message) = server.receive_message(client_id, NettyChannel::Unreliable.id()) {
+        while let Some(message) = server.receive_message(client_id, NettyChannelClient::Unreliable)
+        {
             if let Some(player_entity) = lobby.player_from_id(client_id) {
                 let command: ClientUnreliableMessages =
                     cosmos_encoder::deserialize(&message).unwrap();
@@ -77,6 +78,7 @@ pub fn server_listen_messages(
                             mut velocity,
                         )) = change_player_query.get_mut(player_entity)
                         {
+                            dbg!(&transform, &location);
                             location.set_from(&body.location);
                             location.last_transform_loc = Some(transform.translation);
                             currently_looking.rotation = looking;
@@ -112,7 +114,7 @@ pub fn server_listen_messages(
             }
         }
 
-        while let Some(message) = server.receive_message(client_id, NettyChannel::Reliable.id()) {
+        while let Some(message) = server.receive_message(client_id, NettyChannelClient::Reliable) {
             let command: ClientReliableMessages = cosmos_encoder::deserialize(&message).unwrap();
 
             match command {
@@ -122,7 +124,7 @@ pub fn server_listen_messages(
                         for (_, chunk) in structure.chunks() {
                             server.send_message(
                                 client_id,
-                                NettyChannel::Reliable.id(),
+                                NettyChannelServer::Reliable,
                                 cosmos_encoder::serialize(&ServerReliableMessages::ChunkData {
                                     structure_entity: server_entity,
                                     serialized_chunk: cosmos_encoder::serialize(chunk),
@@ -212,7 +214,7 @@ pub fn server_listen_messages(
 
                     server.send_message(
                         client_id,
-                        NettyChannel::Reliable.id(),
+                        NettyChannelServer::Reliable,
                         cosmos_encoder::serialize(&ServerReliableMessages::PilotChange {
                             structure_entity: ship_entity,
                             pilot_entity: pilot,
