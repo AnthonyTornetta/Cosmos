@@ -1,10 +1,10 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
-use bevy_renet::renet::RenetClient;
+use bevy_renet::renet::{transport::NetcodeClientTransport, RenetClient};
 use cosmos_core::{
     netty::{
         client_unreliable_messages::ClientUnreliableMessages, cosmos_encoder,
-        netty_rigidbody::NettyRigidBody, NettyChannel,
+        netty_rigidbody::NettyRigidBody, NettyChannelClient,
     },
     physics::location::Location,
 };
@@ -33,7 +33,7 @@ fn send_position(
 
         let serialized_message = cosmos_encoder::serialize(&msg);
 
-        client.send_message(NettyChannel::Unreliable.id(), serialized_message);
+        client.send_message(NettyChannelClient::Unreliable, serialized_message);
     }
 }
 
@@ -42,13 +42,13 @@ fn send_disconnect(
     inputs: Res<Input<KeyCode>>,
     mouse: Res<Input<MouseButton>>,
     input_handler: ResMut<CosmosInputHandler>,
-    client: Option<ResMut<RenetClient>>,
+    transport: Option<ResMut<NetcodeClientTransport>>,
 ) {
     if input_handler.check_just_pressed(CosmosInputs::Disconnect, &inputs, &mouse) {
-        if let Some(mut client) = client {
-            if client.is_connected() {
+        if let Some(mut transport) = transport {
+            if transport.is_connected() {
                 println!("SENDING DC MESSAGE!");
-                client.disconnect();
+                transport.disconnect();
             }
         }
     }

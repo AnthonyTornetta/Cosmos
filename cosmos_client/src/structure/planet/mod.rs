@@ -6,7 +6,7 @@ use bevy::prelude::{
 };
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
-    netty::{client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannel},
+    netty::{client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannelClient},
     physics::location::Location,
     structure::{
         chunk::{Chunk, CHUNK_DIMENSIONSF},
@@ -75,7 +75,7 @@ fn load_planet_chunks(
                     best_planet.set_chunk(Chunk::new(x, y, z));
 
                     client.send_message(
-                        NettyChannel::Reliable.id(),
+                        NettyChannelClient::Reliable,
                         cosmos_encoder::serialize(&ClientReliableMessages::SendSingleChunk {
                             structure_entity: server_entity,
                             chunk: (x as u32, y as u32, z as u32),

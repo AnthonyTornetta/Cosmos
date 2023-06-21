@@ -4,10 +4,7 @@ use bevy::prelude::{
     App, Commands, Component, Entity, IntoSystemAppConfig, IntoSystemConfigs, OnEnter, OnUpdate,
     Res,
 };
-use cosmos_core::{
-    block::{Block},
-    registry::Registry,
-};
+use cosmos_core::{block::Block, registry::Registry};
 
 use crate::GameState;
 

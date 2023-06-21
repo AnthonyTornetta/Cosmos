@@ -3,9 +3,9 @@
 use bevy::prelude::*;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::netty::client_reliable_messages::ClientReliableMessages;
-use cosmos_core::netty::cosmos_encoder;
+use cosmos_core::netty::{cosmos_encoder, NettyChannelClient};
 use cosmos_core::physics::location::{Location, SECTOR_DIMENSIONS};
-use cosmos_core::{netty::NettyChannel, structure::Structure};
+use cosmos_core::structure::Structure;
 
 use crate::netty::flags::LocalPlayer;
 use crate::state::game_state::GameState;
@@ -42,7 +42,7 @@ fn populate_structures(
             println!("Populating @ {loc}");
 
             client.send_message(
-                NettyChannel::Reliable.id(),
+                NettyChannelClient::Reliable,
                 cosmos_encoder::serialize(&ClientReliableMessages::SendAllChunks { server_entity }),
             );
         }

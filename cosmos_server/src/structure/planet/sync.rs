@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
-    netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannel},
+    netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannelServer},
     structure::{
         planet::{biosphere::BiosphereMarker, Planet},
         Structure,
@@ -19,7 +19,7 @@ fn on_request_planet(
         if let Ok((structure, planet, biosphere_marker)) = query.get(ev.entity) {
             server.send_message(
                 ev.client_id,
-                NettyChannel::Reliable.id(),
+                NettyChannelServer::Reliable,
                 cosmos_encoder::serialize(&ServerReliableMessages::Planet {
                     entity: ev.entity,
                     width: structure.chunks_width() as u32,

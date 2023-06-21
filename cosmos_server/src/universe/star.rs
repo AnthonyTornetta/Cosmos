@@ -3,7 +3,7 @@
 use bevy::prelude::{in_state, App, EventReader, IntoSystemConfig, Query, ResMut, With};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
-    netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannel},
+    netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannelServer},
     universe::star::Star,
 };
 
@@ -25,7 +25,7 @@ fn on_request_star(
         if let Ok(star) = query.get(ev.entity) {
             server.send_message(
                 ev.client_id,
-                NettyChannel::Reliable.id(),
+                NettyChannelServer::Reliable,
                 cosmos_encoder::serialize(&ServerReliableMessages::Star {
                     entity: ev.entity,
                     star: *star,

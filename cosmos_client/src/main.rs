@@ -30,13 +30,14 @@ use std::f32::consts::PI;
 
 use bevy::window::PrimaryWindow;
 use bevy_renet::renet::RenetClient;
+use bevy_renet::transport::NetcodeClientPlugin;
 use cosmos_core::netty::client_reliable_messages::ClientReliableMessages;
 use cosmos_core::netty::client_unreliable_messages::ClientUnreliableMessages;
-use cosmos_core::netty::{cosmos_encoder, get_local_ipaddress, NettyChannel};
+use cosmos_core::netty::{cosmos_encoder, get_local_ipaddress, NettyChannelClient};
 use cosmos_core::structure::ship::pilot::Pilot;
 use cosmos_core::structure::ship::ship_movement::ShipMovement;
 use input::inputs::{CosmosInputHandler, CosmosInputs};
-use netty::connect::{self, ConnectionConfig};
+use netty::connect::{self, HostConfig};
 use netty::flags::LocalPlayer;
 use netty::mapping::NetworkMapping;
 use rendering::MainCamera;
@@ -86,7 +87,7 @@ fn process_ship_movement(
 
         if input_handler.check_just_pressed(CosmosInputs::StopPiloting, &keys, &mouse) {
             client.send_message(
-                NettyChannel::Reliable.id(),
+                NettyChannelClient::Reliable,
                 cosmos_encoder::serialize(&ClientReliableMessages::StopPiloting),
             );
         }
@@ -125,7 +126,7 @@ fn process_ship_movement(
         );
 
         client.send_message(
-            NettyChannel::Unreliable.id(),
+            NettyChannelClient::Unreliable,
             cosmos_encoder::serialize(&ClientUnreliableMessages::SetMovement { movement }),
         );
     }
@@ -292,7 +293,7 @@ fn main() {
 
     let mut app = App::new();
 
-    app.insert_resource(ConnectionConfig { host_name })
+    app.insert_resource(HostConfig { host_name })
         .insert_resource(RapierConfiguration {
             gravity: Vec3::ZERO,
             timestep_mode: TimestepMode::Interpolated {
@@ -313,7 +314,8 @@ fn main() {
             GameState::Connecting,
             GameState::Playing,
         ))
-        .add_plugin(RenetClientPlugin::default())
+        .add_plugin(RenetClientPlugin)
+        .add_plugin(NetcodeClientPlugin)
         // .add_plugin(RapierDebugRenderPlugin::default())
         .add_systems((
             connect::establish_connection.in_schedule(OnEnter(GameState::Connecting)),

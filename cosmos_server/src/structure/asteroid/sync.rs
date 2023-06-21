@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
-    netty::{cosmos_encoder, netty_rigidbody::NettyRigidBody, NettyChannel},
+    netty::{cosmos_encoder, netty_rigidbody::NettyRigidBody, NettyChannelServer},
     physics::location::Location,
     structure::{
         asteroid::{asteroid_netty::AsteroidServerMessages, Asteroid},
@@ -21,7 +21,7 @@ fn on_request_asteroid(
         if let Ok((structure, transform, location, velocity)) = query.get(ev.entity) {
             server.send_message(
                 ev.client_id,
-                NettyChannel::Asteroids.id(),
+                NettyChannelServer::Asteroid,
                 cosmos_encoder::serialize(&AsteroidServerMessages::Asteroid {
                     body: NettyRigidBody::new(velocity, transform.rotation, *location),
                     entity: ev.entity,

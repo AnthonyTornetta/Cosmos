@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     block::BlockFace,
-    netty::{client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannel},
+    netty::{client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannelClient},
 };
 
 use crate::{netty::mapping::NetworkMapping, state::game_state::GameState};
@@ -61,7 +61,7 @@ fn handle_block_break(
 ) {
     for ev in event_reader.iter() {
         client.send_message(
-            NettyChannel::Reliable.id(),
+            NettyChannelClient::Reliable,
             cosmos_encoder::serialize(&ClientReliableMessages::BreakBlock {
                 structure_entity: network_mapping
                     .server_from_client(&ev.structure_entity)
@@ -81,7 +81,7 @@ fn handle_block_place(
 ) {
     for ev in event_reader.iter() {
         client.send_message(
-            NettyChannel::Reliable.id(),
+            NettyChannelClient::Reliable,
             cosmos_encoder::serialize(&ClientReliableMessages::PlaceBlock {
                 structure_entity: network_mapping
                     .server_from_client(&ev.structure_entity)
@@ -104,7 +104,7 @@ fn handle_block_interact(
 ) {
     for ev in event_reader.iter() {
         client.send_message(
-            NettyChannel::Reliable.id(),
+            NettyChannelClient::Reliable,
             cosmos_encoder::serialize(&ClientReliableMessages::InteractWithBlock {
                 structure_entity: network_mapping
                     .server_from_client(&ev.structure_entity)
