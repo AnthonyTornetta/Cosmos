@@ -78,7 +78,6 @@ pub fn server_listen_messages(
                             mut velocity,
                         )) = change_player_query.get_mut(player_entity)
                         {
-                            dbg!(&transform, &location);
                             location.set_from(&body.location);
                             location.last_transform_loc = Some(transform.translation);
                             currently_looking.rotation = looking;
