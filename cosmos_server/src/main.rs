@@ -7,7 +7,7 @@ use std::env;
 
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::{RapierConfiguration, TimestepMode};
-use bevy_renet::RenetServerPlugin;
+use bevy_renet::{transport::NetcodeServerPlugin, RenetServerPlugin};
 use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
 
 use plugin::server_plugin::ServerPlugin;
@@ -24,10 +24,10 @@ pub mod persistence;
 pub mod physics;
 pub mod plugin;
 pub mod projectiles;
+pub mod rng;
 pub mod state;
 pub mod structure;
 pub mod universe;
-pub mod rng;
 
 fn main() {
     // #[cfg(debug_assertions)]
@@ -61,7 +61,8 @@ fn main() {
             GameState::Playing,
             GameState::Playing,
         ))
-        .add_plugin(RenetServerPlugin::default())
+        .add_plugin(RenetServerPlugin)
+        .add_plugin(NetcodeServerPlugin)
         .add_plugin(ServerPlugin { ip })
         .run();
 }

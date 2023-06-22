@@ -3,7 +3,7 @@
 use bevy::prelude::{resource_exists, App, Commands, IntoSystemConfig, ResMut};
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
-    netty::{cosmos_encoder, NettyChannel},
+    netty::{cosmos_encoder, NettyChannelServer},
     structure::{
         asteroid::{asteroid_builder::TAsteroidBuilder, asteroid_netty::AsteroidServerMessages},
         Structure,
@@ -19,7 +19,7 @@ fn receive_asteroids(
     mut commands: Commands,
     mut network_mapping: ResMut<NetworkMapping>,
 ) {
-    while let Some(message) = client.receive_message(NettyChannel::Asteroids.id()) {
+    while let Some(message) = client.receive_message(NettyChannelServer::Asteroid) {
         let msg: AsteroidServerMessages = cosmos_encoder::deserialize(&message).unwrap();
 
         match msg {

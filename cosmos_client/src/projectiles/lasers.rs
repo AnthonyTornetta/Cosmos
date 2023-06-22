@@ -6,7 +6,7 @@ use bevy_renet::renet::*;
 use cosmos_core::{
     netty::{
         cosmos_encoder, server_laser_cannon_system_messages::ServerLaserCannonSystemMessages,
-        NettyChannel,
+        NettyChannelServer,
     },
     projectiles::laser::Laser,
 };
@@ -30,7 +30,7 @@ fn lasers_netty(
     network_mapping: Res<NetworkMapping>,
     laser_mesh: Res<LaserMesh>,
 ) {
-    while let Some(message) = client.receive_message(NettyChannel::LaserCannonSystem.id()) {
+    while let Some(message) = client.receive_message(NettyChannelServer::LaserCannonSystem) {
         let msg: ServerLaserCannonSystemMessages = cosmos_encoder::deserialize(&message).unwrap();
 
         match msg {
