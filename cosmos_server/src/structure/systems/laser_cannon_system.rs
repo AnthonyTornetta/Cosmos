@@ -4,7 +4,7 @@ use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     netty::{
         cosmos_encoder, server_laser_cannon_system_messages::ServerLaserCannonSystemMessages,
-        NettyChannel,
+        NettyChannelServer,
     },
     physics::location::Location,
     projectiles::laser::Laser,
@@ -90,7 +90,7 @@ fn update_system(
                             let color = Color::rgb(rand::random(), rand::random(), rand::random());
 
                             server.broadcast_message(
-                                NettyChannel::LaserCannonSystem.id(),
+                                NettyChannelServer::LaserCannonSystem,
                                 cosmos_encoder::serialize(
                                     &ServerLaserCannonSystemMessages::CreateLaser {
                                         color,

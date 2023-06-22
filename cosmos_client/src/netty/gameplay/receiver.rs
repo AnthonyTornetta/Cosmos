@@ -7,7 +7,7 @@ use bevy::{
     window::PrimaryWindow,
 };
 use bevy_rapier3d::prelude::*;
-use bevy_renet::renet::RenetClient;
+use bevy_renet::renet::{transport::NetcodeClientTransport, RenetClient};
 use cosmos_core::{
     block::Block,
     ecs::NeedsDespawned,
@@ -17,7 +17,8 @@ use cosmos_core::{
     netty::{
         client_reliable_messages::ClientReliableMessages, cosmos_encoder,
         netty_rigidbody::NettyRigidBody, server_reliable_messages::ServerReliableMessages,
-        server_unreliable_messages::ServerUnreliableMessages, NettyChannel,
+        server_unreliable_messages::ServerUnreliableMessages, NettyChannelClient,
+        NettyChannelServer,
     },
     persistence::LoadingDistance,
     physics::{
@@ -132,6 +133,7 @@ fn client_sync_players(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut client: ResMut<RenetClient>,
+    transport: Res<NetcodeClientTransport>,
     mut lobby: ResMut<ClientLobby>,
     mut network_mapping: ResMut<NetworkMapping>,
     mut set_chunk_event_writer: EventWriter<ChunkInitEvent>,
@@ -153,7 +155,7 @@ fn client_sync_players(
     mut requested_entities: ResMut<RequestedEntities>,
     time: Res<Time>,
 ) {
-    let client_id = client.client_id();
+    let client_id = transport.client_id();
 
     let mut new_entities = Vec::with_capacity(requested_entities.entities.len());
 
@@ -166,7 +168,7 @@ fn client_sync_players(
 
     requested_entities.entities = new_entities;
 
-    while let Some(message) = client.receive_message(NettyChannel::Unreliable.id()) {
+    while let Some(message) = client.receive_message(NettyChannelServer::Unreliable) {
         let msg: ServerUnreliableMessages = cosmos_encoder::deserialize(&message).unwrap();
 
         match msg {
@@ -205,7 +207,7 @@ fn client_sync_players(
                         println!("Requesting entity {}!", server_entity.index());
 
                         client.send_message(
-                            NettyChannel::Reliable.id(),
+                            NettyChannelClient::Reliable,
                             cosmos_encoder::serialize(&ClientReliableMessages::RequestEntityData {
                                 entity: *server_entity,
                             }),
@@ -225,7 +227,7 @@ fn client_sync_players(
         }
     }
 
-    while let Some(message) = client.receive_message(NettyChannel::Reliable.id()) {
+    while let Some(message) = client.receive_message(NettyChannelServer::Reliable) {
         let msg: ServerReliableMessages = cosmos_encoder::deserialize(&message).unwrap();
 
         match msg {
@@ -404,7 +406,7 @@ fn client_sync_players(
                 network_mapping.add_mapping(entity, server_entity);
 
                 client.send_message(
-                    NettyChannel::Reliable.id(),
+                    NettyChannelClient::Reliable,
                     cosmos_encoder::serialize(&ClientReliableMessages::PilotQuery {
                         ship_entity: server_entity,
                     }),

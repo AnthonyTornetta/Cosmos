@@ -2,7 +2,7 @@
 
 **Packet**: ServerUnreliableMessages::BulkBodies
 
-**Channel**: NettyChannel::Unreliable
+**Channel**: NettyChannelServer::Unreliable
 
 ## Abstract
 

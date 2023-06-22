@@ -4,7 +4,7 @@ use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     netty::{
         cosmos_encoder, netty_rigidbody::NettyRigidBody,
-        server_reliable_messages::ServerReliableMessages, NettyChannel,
+        server_reliable_messages::ServerReliableMessages, NettyChannelServer,
     },
     physics::location::Location,
     structure::{loading::ChunksNeedLoaded, ship::Ship, Structure},
@@ -21,7 +21,7 @@ fn on_request_ship(
         if let Ok((structure, transform, location, velocity)) = query.get(ev.entity) {
             server.send_message(
                 ev.client_id,
-                NettyChannel::Reliable.id(),
+                NettyChannelServer::Reliable,
                 cosmos_encoder::serialize(&ServerReliableMessages::Ship {
                     entity: ev.entity,
                     body: NettyRigidBody::new(velocity, transform.rotation, *location),

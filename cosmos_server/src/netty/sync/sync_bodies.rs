@@ -7,7 +7,7 @@ use cosmos_core::{
     entities::player::{render_distance::RenderDistance, Player},
     netty::{
         cosmos_encoder, netty_rigidbody::NettyRigidBody,
-        server_unreliable_messages::ServerUnreliableMessages, NettyChannel, NoSendEntity,
+        server_unreliable_messages::ServerUnreliableMessages, NettyChannelServer, NoSendEntity,
     },
     persistence::LoadingDistance,
     physics::location::Location,
@@ -40,7 +40,7 @@ fn send_bodies(
 
             let message = cosmos_encoder::serialize(&sync_message);
 
-            server.send_message(player.id(), NettyChannel::Unreliable.id(), message.clone());
+            server.send_message(player.id(), NettyChannelServer::Unreliable, message.clone());
         }
     }
 }
