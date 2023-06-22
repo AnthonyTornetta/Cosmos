@@ -531,9 +531,6 @@ fn client_sync_players(
                     );
                 }
             }
-            ServerReliableMessages::LaserCannonFire {} => {
-                println!("A laser cannon was fired")
-            }
             ServerReliableMessages::Star { entity, star } => {
                 if let Some(client_entity) = network_mapping.client_from_server(&entity) {
                     commands.entity(client_entity).insert((
@@ -550,6 +547,11 @@ fn client_sync_players(
                             .id(),
                         entity,
                     );
+                }
+            }
+            ServerReliableMessages::PlayerLeaveShip { player_entity } => {
+                if let Some(mut ecmds) = commands.get_entity(player_entity) {
+                    ecmds.remove_parent();
                 }
             }
         }

@@ -184,8 +184,6 @@ fn process_player_movement(
             }
         }
 
-        println!("Forward: {forward}");
-
         forward = forward.normalize_or_zero() * 100.0;
         right = right.normalize_or_zero() * 100.0;
         let movement_up = up * 2.0;

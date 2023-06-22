@@ -31,6 +31,8 @@ pub enum CosmosInputs {
     RollLeft,
     /// Ship roll right
     RollRight,
+    /// Leaves the ship the player is a child of
+    LeaveShip,
 
     /// Stop piloting whatever ship they're in
     StopPiloting,
@@ -139,6 +141,8 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     input_handler.set_keycode(CosmosInputs::Disconnect, KeyCode::P);
 
     input_handler.set_mouse_button(CosmosInputs::UseSelectedSystem, MouseButton::Left);
+
+    input_handler.set_keycode(CosmosInputs::LeaveShip, KeyCode::L);
 }
 
 #[derive(Resource, Default, Debug)]
