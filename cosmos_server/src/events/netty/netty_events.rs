@@ -171,6 +171,7 @@ fn handle_events_system(
                         rotation: Quat::IDENTITY,
                     },
                     LoadingDistance::new(2, 9999),
+                    ActiveEvents::COLLISION_EVENTS,
                 ));
 
                 let entity = player_commands.id();

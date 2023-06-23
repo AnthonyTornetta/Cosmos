@@ -139,4 +139,11 @@ pub enum ServerReliableMessages {
         /// The player that exited the ship
         player_entity: Entity,
     },
+    /// Sent when a player is now walking on a specific ship
+    PlayerWalkOnShip {
+        /// The player that is now walking on the ship
+        player_entity: Entity,
+        /// The ship the player is walking on
+        ship_entity: Entity,
+    },
 }

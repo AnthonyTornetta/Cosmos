@@ -273,6 +273,7 @@ fn client_sync_players(
                     Player::new(name, id),
                     ReadMassProperties::default(),
                     Ccd::enabled(),
+                    ActiveEvents::COLLISION_EVENTS,
                     inventory,
                 ));
 
@@ -552,6 +553,16 @@ fn client_sync_players(
             ServerReliableMessages::PlayerLeaveShip { player_entity } => {
                 if let Some(mut ecmds) = commands.get_entity(player_entity) {
                     ecmds.remove_parent();
+                }
+            }
+            ServerReliableMessages::PlayerWalkOnShip {
+                player_entity,
+                ship_entity,
+            } => {
+                if let Some(mut ecmds) = commands.get_entity(player_entity) {
+                    if let Some(ship_entity) = network_mapping.client_from_server(&ship_entity) {
+                        ecmds.set_parent(ship_entity);
+                    }
                 }
             }
         }

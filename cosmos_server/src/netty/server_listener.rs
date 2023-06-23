@@ -263,6 +263,25 @@ pub fn server_listen_messages(
                         }
                     }
                 }
+                ClientReliableMessages::WalkOnShip { ship_entity } => {
+                    if let Some(player_entity) = lobby.player_from_id(client_id) {
+                        if let Some(mut e) = commands.get_entity(player_entity) {
+                            // This should be verified in the future to make sure the entity is actually a ship
+                            e.set_parent(ship_entity);
+
+                            server.broadcast_message_except(
+                                client_id,
+                                NettyChannelServer::Reliable,
+                                cosmos_encoder::serialize(
+                                    &ServerReliableMessages::PlayerWalkOnShip {
+                                        player_entity,
+                                        ship_entity,
+                                    },
+                                ),
+                            );
+                        }
+                    }
+                }
             }
         }
     }
