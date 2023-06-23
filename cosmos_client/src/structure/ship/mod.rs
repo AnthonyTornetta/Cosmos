@@ -37,15 +37,13 @@ fn remove_self_from_ship(
     mut renet_client: ResMut<RenetClient>,
 ) {
     if let Ok((entity, parent)) = has_parent.get_single() {
-        if ship_is_parent.contains(parent.get()) {
-            if input_handler.check_just_pressed(CosmosInputs::LeaveShip, &inputs, &mouse) {
-                commands.entity(entity).remove_parent();
+        if ship_is_parent.contains(parent.get()) && input_handler.check_just_pressed(CosmosInputs::LeaveShip, &inputs, &mouse) {
+            commands.entity(entity).remove_parent();
 
-                renet_client.send_message(
-                    NettyChannelClient::Reliable,
-                    cosmos_encoder::serialize(&ClientReliableMessages::LeaveShip),
-                );
-            }
+            renet_client.send_message(
+                NettyChannelClient::Reliable,
+                cosmos_encoder::serialize(&ClientReliableMessages::LeaveShip),
+            );
         }
     }
 }
