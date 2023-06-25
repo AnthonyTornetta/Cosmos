@@ -123,8 +123,6 @@ fn respond_to_collisions(
                                         .inverse()
                                         .mul_vec3((*player_loc - ship_loc).absolute_coords_f32());
 
-                                    println!("Set player trans for {}", player_trans.translation);
-
                                     if let Some(server_ship_ent) =
                                         mapping.server_from_client(&structure_hit_entity)
                                     {
