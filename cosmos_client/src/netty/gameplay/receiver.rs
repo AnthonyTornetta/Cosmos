@@ -70,8 +70,6 @@ fn update_crosshair(
 ) {
     for (pilot, mut last_rotation, transform) in query.iter_mut() {
         if local_player_query.get(pilot.entity).is_ok() {
-            // let (cam, global) = cam_query.get_single().unwrap();
-
             let (cam_entity, camera) = camera_query.get_single().unwrap();
 
             let cam_global = transform_query.get(cam_entity).unwrap();
@@ -145,6 +143,7 @@ fn client_sync_players(
             Option<&Transform>,
             Option<&Velocity>,
             Option<&mut NetworkTick>,
+            Option<&mut LerpTowards>,
         ),
         Without<LocalPlayer>,
     >,
@@ -175,7 +174,7 @@ fn client_sync_players(
             ServerUnreliableMessages::BulkBodies { bodies, time_stamp } => {
                 for (server_entity, body) in bodies.iter() {
                     if let Some(entity) = network_mapping.client_from_server(server_entity) {
-                        if let Ok((location, transform, velocity, net_tick)) =
+                        if let Ok((location, transform, velocity, net_tick, lerp_towards)) =
                             query_body.get_mut(entity)
                         {
                             if let Some(mut net_tick) = net_tick {
@@ -190,11 +189,17 @@ fn client_sync_players(
                             }
 
                             if location.is_some() && transform.is_some() && velocity.is_some() {
-                                commands.entity(entity).insert(LerpTowards(*body));
+                                if let Some(mut lerp_towards) = lerp_towards {
+                                    lerp_towards.0 = *body;
+                                } else {
+                                    commands.entity(entity).insert(LerpTowards(*body));
+                                }
                             } else {
-                                commands
-                                    .entity(entity)
-                                    .insert((body.location, body.create_velocity()));
+                                commands.entity(entity).insert((
+                                    body.location,
+                                    body.create_velocity(),
+                                    LerpTowards(*body),
+                                ));
                             }
                         }
                     } else if !requested_entities

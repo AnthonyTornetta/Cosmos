@@ -1,13 +1,14 @@
 //! Handles client-related ship things
 
 use bevy::prelude::{
-    App, BuildChildren, Commands, Entity, EventReader, Input, IntoSystemConfigs, KeyCode,
-    MouseButton, OnUpdate, Parent, Query, Res, ResMut, With, Without,
+    App, BuildChildren, Commands, Entity, EventReader, Input, IntoSystemConfig, IntoSystemConfigs,
+    KeyCode, MouseButton, OnUpdate, Parent, Query, Res, ResMut, Transform, With, Without,
 };
 use bevy_rapier3d::prelude::CollisionEvent;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     netty::{client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannelClient},
+    physics::location::{handle_child_syncing, Location},
     structure::{
         ship::{pilot::Pilot, Ship},
         Structure,
@@ -26,7 +27,11 @@ pub(super) fn register(app: &mut App) {
     client_ship_builder::register(app);
 
     app.add_systems(
-        (remove_self_from_ship, respond_to_collisions).in_set(OnUpdate(GameState::Playing)),
+        (
+            remove_self_from_ship,
+            respond_to_collisions.after(handle_child_syncing),
+        )
+            .in_set(OnUpdate(GameState::Playing)),
     );
 }
 
@@ -62,6 +67,7 @@ fn respond_to_collisions(
     is_local_player: Query<(), (With<LocalPlayer>, Without<Pilot>)>,
     is_structure: Query<(), With<Structure>>,
     is_ship: Query<(), With<Ship>>,
+    mut trans_query: Query<(&mut Transform, &Location)>,
     mut commands: Commands,
     mut renet_client: ResMut<RenetClient>,
     mapping: Res<NetworkMapping>,
@@ -98,6 +104,26 @@ fn respond_to_collisions(
                                     commands
                                         .entity(player_entity)
                                         .set_parent(structure_hit_entity);
+
+                                    let (ship_trans, ship_loc) = trans_query
+                                        .get(structure_hit_entity)
+                                        .expect("All structures must have a transform");
+
+                                    // Even though these will always be seperate from the trans + loc below, the borrow checker doesn't know that
+                                    let (ship_trans, ship_loc) = (*ship_trans, *ship_loc);
+
+                                    let (mut player_trans, player_loc) = trans_query
+                                        .get_mut(player_entity)
+                                        .expect("The player should have a transform + location");
+
+                                    // Because the player's translation is always 0, 0, 0 we need to adjust it so the player is put into the
+                                    // right spot in its parent.
+                                    player_trans.translation = ship_trans
+                                        .rotation
+                                        .inverse()
+                                        .mul_vec3((*player_loc - ship_loc).absolute_coords_f32());
+
+                                    println!("Set player trans for {}", player_trans.translation);
 
                                     if let Some(server_ship_ent) =
                                         mapping.server_from_client(&structure_hit_entity)
