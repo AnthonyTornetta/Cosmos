@@ -432,7 +432,7 @@ impl Location {
 
 #[derive(Component, Debug, Reflect, FromReflect, Deref, DerefMut, Clone, Copy)]
 /// Stores the location from the previous frame
-pub struct PreviousLocation(Location);
+pub struct PreviousLocation(pub Location);
 
 /// Recursively goes from the top of the parent tree to the bottom and lines up all their locations.
 ///

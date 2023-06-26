@@ -10,6 +10,7 @@ use cosmos_core::{
     netty::{client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannelClient},
     physics::location::{handle_child_syncing, Location},
     structure::{
+        chunk::{ChunkEntity, CHUNK_DIMENSIONSF},
         ship::{pilot::Pilot, Ship},
         Structure,
     },
@@ -30,6 +31,7 @@ pub(super) fn register(app: &mut App) {
         (
             remove_self_from_ship,
             respond_to_collisions.after(handle_child_syncing),
+            remove_parent_when_too_far,
         )
             .in_set(OnUpdate(GameState::Playing)),
     );
@@ -63,9 +65,9 @@ fn remove_self_from_ship(
 
 fn respond_to_collisions(
     mut ev_reader: EventReader<CollisionEvent>,
-    parent_query: Query<&Parent>,
+    chunk_parent_query: Query<&Parent, With<ChunkEntity>>,
     is_local_player: Query<(), (With<LocalPlayer>, Without<Pilot>)>,
-    is_structure: Query<(), With<Structure>>,
+    is_structure: Query<&Structure>,
     is_ship: Query<(), With<Ship>>,
     mut trans_query: Query<(&mut Transform, &Location)>,
     mut commands: Commands,
@@ -84,20 +86,20 @@ fn respond_to_collisions(
                 } {
                     // the player would collide with the chunk entity, not the actual ship entity, so see if parent
                     // of hit entity is a structure
-                    if let Ok(hit_parent) = parent_query.get(hit) {
+                    if let Ok(hit_parent) = chunk_parent_query.get(hit) {
                         if is_structure.contains(hit_parent.get()) {
                             // At this point we have verified they hit a structure, now see if they are already a child
                             // of that structure.
                             let structure_hit_entity = hit_parent.get();
 
-                            let hitting_current_parent = parent_query
+                            let hitting_current_parent = chunk_parent_query
                                 .get(player_entity)
                                 .is_ok_and(|p| p.get() == structure_hit_entity);
 
                             // If they are a child of that structure, do nothing.
                             if !hitting_current_parent {
                                 // Otherwise, either remove your current parent (if you hit a non-ship) or become the child of the
-                                // different ship you touched.
+                                // different ship you touched if the ship has >= 10 blocks on it.
 
                                 if is_ship.contains(structure_hit_entity) {
                                     // if they hit a ship, make them a part of that one instead
@@ -152,6 +154,20 @@ fn respond_to_collisions(
                 }
             }
             _ => {}
+        }
+    }
+}
+
+fn remove_parent_when_too_far(
+    query: Query<(Entity, &Parent, &Location), With<LocalPlayer>>,
+    is_ship: Query<&Location, With<Ship>>,
+    mut commands: Commands,
+) {
+    if let Ok((player_entity, parent, loc)) = query.get_single() {
+        if let Ok(ship_loc) = is_ship.get(parent.get()) {
+            if loc.distance_sqrd(ship_loc).sqrt() >= CHUNK_DIMENSIONSF * 2.0 {
+                commands.entity(player_entity).remove_parent();
+            }
         }
     }
 }

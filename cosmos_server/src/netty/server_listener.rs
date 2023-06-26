@@ -59,6 +59,7 @@ pub fn server_listen_messages(
         ),
         With<Player>,
     >,
+    non_player_transform_query: Query<&Transform, Without<Player>>,
     mut requested_entities_writer: EventWriter<RequestedEntityEvent>,
     mut request_chunk_event_writer: EventWriter<RequestChunkEvent>,
 ) {
@@ -268,6 +269,18 @@ pub fn server_listen_messages(
                         if let Some(mut e) = commands.get_entity(player_entity) {
                             // This should be verified in the future to make sure the entity is actually a ship
                             e.set_parent(ship_entity);
+
+                            // This is stupid, but when a parent changes the transform isn't properly updated for the player, which is super cool.
+                            // At some point this should be fixed in a way that doesn't require this stuck everywhere
+                            if let Ok((mut trans, _, _, _)) =
+                                change_player_query.get_mut(player_entity)
+                            {
+                                trans.translation = trans.translation
+                                    - non_player_transform_query
+                                        .get(ship_entity)
+                                        .expect("A ship should always have a transform.")
+                                        .translation;
+                            }
 
                             server.broadcast_message_except(
                                 client_id,
