@@ -8,7 +8,7 @@ use std::env;
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::{RapierConfiguration, TimestepMode};
 use bevy_renet::{transport::NetcodeServerPlugin, RenetServerPlugin};
-use cosmos_core::{entities::player::Player, plugin::cosmos_core_plugin::CosmosCorePluginGroup};
+use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
 
 use plugin::server_plugin::ServerPlugin;
 use state::GameState;
@@ -64,12 +64,5 @@ fn main() {
         .add_plugin(RenetServerPlugin)
         .add_plugin(NetcodeServerPlugin)
         .add_plugin(ServerPlugin { ip })
-        .add_system(print_transforms)
         .run();
-}
-
-fn print_transforms(query: Query<&Transform, With<Player>>) {
-    for trans in query.iter() {
-        println!("{}", trans.translation);
-    }
 }
