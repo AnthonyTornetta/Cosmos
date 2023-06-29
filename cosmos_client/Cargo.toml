@@ -12,8 +12,6 @@ bevy = { workspace = true }
 bevy_renet = { workspace = true }
 serde = { workspace = true }
 bincode = { workspace = true }
-noise = { workspace = true }
-rand = { workspace = true }
 local-ip-address = { workspace = true }
 bevy_rapier3d = { workspace = true }
 bigdecimal = { workspace = true }
@@ -23,5 +21,4 @@ image = { workspace = true }
 
 bevy-inspector-egui = { workspace = true }
 
-rand_chacha = { workspace = true }
 rayon = { workspace = true }

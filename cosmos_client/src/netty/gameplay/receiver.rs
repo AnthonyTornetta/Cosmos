@@ -702,9 +702,9 @@ pub(super) fn register(app: &mut App) {
             (
                 fix_location.before(client_sync_players),
                 lerp_towards.after(client_sync_players),
-                add_previous_location,
                 sync_transforms_and_locations,
                 handle_child_syncing,
+                add_previous_location,
             )
                 .chain()
                 .in_set(OnUpdate(GameState::Playing)),

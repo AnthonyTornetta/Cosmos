@@ -10,7 +10,7 @@ use cosmos_core::{
     netty::{client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannelClient},
     physics::location::{handle_child_syncing, Location},
     structure::{
-        chunk::{ChunkEntity, CHUNK_DIMENSIONSF},
+        chunk::CHUNK_DIMENSIONSF,
         ship::{pilot::Pilot, Ship},
         Structure,
     },
@@ -65,7 +65,7 @@ fn remove_self_from_ship(
 
 fn respond_to_collisions(
     mut ev_reader: EventReader<CollisionEvent>,
-    chunk_parent_query: Query<&Parent, With<ChunkEntity>>,
+    parent_query: Query<&Parent>,
     is_local_player: Query<(), (With<LocalPlayer>, Without<Pilot>)>,
     is_structure: Query<&Structure>,
     is_ship: Query<(), With<Ship>>,
@@ -86,13 +86,13 @@ fn respond_to_collisions(
                 } {
                     // the player would collide with the chunk entity, not the actual ship entity, so see if parent
                     // of hit entity is a structure
-                    if let Ok(hit_parent) = chunk_parent_query.get(hit) {
+                    if let Ok(hit_parent) = parent_query.get(hit) {
                         if is_structure.contains(hit_parent.get()) {
                             // At this point we have verified they hit a structure, now see if they are already a child
                             // of that structure.
                             let structure_hit_entity = hit_parent.get();
 
-                            let hitting_current_parent = chunk_parent_query
+                            let hitting_current_parent = parent_query
                                 .get(player_entity)
                                 .is_ok_and(|p| p.get() == structure_hit_entity);
 
