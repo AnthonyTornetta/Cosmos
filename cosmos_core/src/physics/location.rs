@@ -20,7 +20,7 @@ use std::{
 use bevy::{
     prelude::{
         App, Children, Commands, Component, Deref, DerefMut, Entity, GlobalTransform, Parent, Quat,
-        Query, Transform, Vec3, With, Without,
+        Query, Transform, Vec3, Without,
     },
     reflect::{FromReflect, Reflect},
 };
@@ -450,20 +450,18 @@ fn sync_self_with_parents(
     if let Ok(parent) = parent_query.get(this_entity).map(|p| p.get()) {
         sync_self_with_parents(parent, parent_query, data_query);
 
-        let Ok((parent_loc, parent_global_trans)) = data_query.get(parent).map(|(loc, _, _, parent_global_trans)| (*loc, *parent_global_trans)) else {
+        let Ok((parent_loc, parent_global_trans)) = 
+            data_query.get(parent).map(|(loc, _, _, parent_global_trans)| (*loc, *parent_global_trans)) else {
             return;
         };
 
-        let Ok((mut my_loc, mut my_transform, my_prev_loc, my_global_trans)) = data_query.get_mut(this_entity) else {
+        let Ok((mut my_loc, mut my_transform, my_prev_loc, _)) = 
+            data_query.get_mut(this_entity) else {
             return;
         };
 
         // Calculates the change in location since the last time this ran
         let delta_loc = (*my_loc - my_prev_loc.0).absolute_coords_f32();
-
-        if delta_loc.dot(delta_loc).sqrt() > 4.0 {
-            println!("BIG DELTA_LOC CHANGE: {delta_loc} for {}", my_loc.as_ref());
-        }
 
         let parent_rot = Quat::from_affine3(&parent_global_trans.affine());
 

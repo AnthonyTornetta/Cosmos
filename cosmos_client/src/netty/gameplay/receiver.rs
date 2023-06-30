@@ -62,14 +62,14 @@ fn insert_last_rotation(mut commands: Commands, query: Query<Entity, Added<Struc
 
 fn update_crosshair(
     mut query: Query<(&Pilot, &mut LastRotation, &Transform), (With<Ship>, Changed<Transform>)>,
-    local_player_query: Query<Entity, With<LocalPlayer>>,
+    local_player_query: Query<(), With<LocalPlayer>>,
     camera_query: Query<(Entity, &Camera), With<MainCamera>>,
     transform_query: Query<&GlobalTransform>,
     mut crosshair_offset: ResMut<CrosshairOffset>,
     primary_query: Query<&Window, With<PrimaryWindow>>,
 ) {
     for (pilot, mut last_rotation, transform) in query.iter_mut() {
-        if local_player_query.get(pilot.entity).is_ok() {
+        if local_player_query.contains(pilot.entity) {
             let (cam_entity, camera) = camera_query.get_single().unwrap();
 
             let cam_global = transform_query.get(cam_entity).unwrap();
