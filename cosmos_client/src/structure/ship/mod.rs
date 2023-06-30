@@ -75,85 +75,80 @@ fn respond_to_collisions(
     mapping: Res<NetworkMapping>,
 ) {
     for ev in ev_reader.iter() {
-        match ev {
-            CollisionEvent::Started(e1, e2, _) => {
-                if let Some((player_entity, hit)) = if is_local_player.contains(*e1) {
-                    Some((*e1, *e2))
-                } else if is_local_player.contains(*e2) {
-                    Some((*e2, *e1))
-                } else {
-                    None
-                } {
-                    // the player would collide with the chunk entity, not the actual ship entity, so see if parent
-                    // of hit entity is a structure
-                    if let Ok(hit_parent) = parent_query.get(hit) {
-                        if is_structure.contains(hit_parent.get()) {
-                            // At this point we have verified they hit a structure, now see if they are already a child
-                            // of that structure.
-                            let structure_hit_entity = hit_parent.get();
+        if let CollisionEvent::Started(e1, e2, _) = ev {
+            if let Some((player_entity, hit)) = if is_local_player.contains(*e1) {
+                Some((*e1, *e2))
+            } else if is_local_player.contains(*e2) {
+                Some((*e2, *e1))
+            } else {
+                None
+            } {
+                // the player would collide with the chunk entity, not the actual ship entity, so see if parent
+                // of hit entity is a structure
+                if let Ok(hit_parent) = parent_query.get(hit) {
+                    if is_structure.contains(hit_parent.get()) {
+                        // At this point we have verified they hit a structure, now see if they are already a child
+                        // of that structure.
+                        let structure_hit_entity = hit_parent.get();
 
-                            let hitting_current_parent = parent_query
-                                .get(player_entity)
-                                .is_ok_and(|p| p.get() == structure_hit_entity);
+                        let hitting_current_parent = parent_query
+                            .get(player_entity)
+                            .is_ok_and(|p| p.get() == structure_hit_entity);
 
-                            // If they are a child of that structure, do nothing.
-                            if !hitting_current_parent {
-                                // Otherwise, either remove your current parent (if you hit a non-ship) or become the child of the
-                                // different ship you touched if the ship has >= 10 blocks on it.
+                        // If they are a child of that structure, do nothing.
+                        if !hitting_current_parent {
+                            // Otherwise, either remove your current parent (if you hit a non-ship) or become the child of the
+                            // different ship you touched if the ship has >= 10 blocks on it.
 
-                                if is_ship.contains(structure_hit_entity) {
-                                    // if they hit a ship, make them a part of that one instead
-                                    commands
-                                        .entity(player_entity)
-                                        .set_parent(structure_hit_entity);
+                            if is_ship.contains(structure_hit_entity) {
+                                // if they hit a ship, make them a part of that one instead
+                                commands
+                                    .entity(player_entity)
+                                    .set_parent(structure_hit_entity);
 
-                                    let (ship_trans, ship_loc) = trans_query
-                                        .get(structure_hit_entity)
-                                        .expect("All structures must have a transform");
+                                let (ship_trans, ship_loc) = trans_query
+                                    .get(structure_hit_entity)
+                                    .expect("All structures must have a transform");
 
-                                    // Even though these will always be seperate from the trans + loc below, the borrow checker doesn't know that
-                                    let (ship_trans, ship_loc) = (*ship_trans, *ship_loc);
+                                // Even though these will always be seperate from the trans + loc below, the borrow checker doesn't know that
+                                let (ship_trans, ship_loc) = (*ship_trans, *ship_loc);
 
-                                    let (mut player_trans, player_loc) = trans_query
-                                        .get_mut(player_entity)
-                                        .expect("The player should have a transform + location");
+                                let (mut player_trans, player_loc) = trans_query
+                                    .get_mut(player_entity)
+                                    .expect("The player should have a transform + location");
 
-                                    // Because the player's translation is always 0, 0, 0 we need to adjust it so the player is put into the
-                                    // right spot in its parent.
-                                    player_trans.translation = ship_trans
-                                        .rotation
-                                        .inverse()
-                                        .mul_vec3((*player_loc - ship_loc).absolute_coords_f32());
+                                // Because the player's translation is always 0, 0, 0 we need to adjust it so the player is put into the
+                                // right spot in its parent.
+                                player_trans.translation = ship_trans
+                                    .rotation
+                                    .inverse()
+                                    .mul_vec3((*player_loc - ship_loc).absolute_coords_f32());
 
-                                    if let Some(server_ship_ent) =
-                                        mapping.server_from_client(&structure_hit_entity)
-                                    {
-                                        renet_client.send_message(
-                                            NettyChannelClient::Reliable,
-                                            cosmos_encoder::serialize(
-                                                &ClientReliableMessages::WalkOnShip {
-                                                    ship_entity: server_ship_ent,
-                                                },
-                                            ),
-                                        );
-                                    }
-                                } else {
-                                    // Otherwise just remove the parent if they hit a different structure
-                                    commands.entity(player_entity).remove_parent();
-
+                                if let Some(server_ship_ent) =
+                                    mapping.server_from_client(&structure_hit_entity)
+                                {
                                     renet_client.send_message(
                                         NettyChannelClient::Reliable,
                                         cosmos_encoder::serialize(
-                                            &ClientReliableMessages::LeaveShip,
+                                            &ClientReliableMessages::WalkOnShip {
+                                                ship_entity: server_ship_ent,
+                                            },
                                         ),
                                     );
                                 }
+                            } else {
+                                // Otherwise just remove the parent if they hit a different structure
+                                commands.entity(player_entity).remove_parent();
+
+                                renet_client.send_message(
+                                    NettyChannelClient::Reliable,
+                                    cosmos_encoder::serialize(&ClientReliableMessages::LeaveShip),
+                                );
                             }
                         }
                     }
                 }
             }
-            _ => {}
         }
     }
 }

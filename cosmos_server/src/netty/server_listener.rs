@@ -275,8 +275,7 @@ pub fn server_listen_messages(
                             if let Ok((mut trans, _, _, _)) =
                                 change_player_query.get_mut(player_entity)
                             {
-                                trans.translation = trans.translation
-                                    - non_player_transform_query
+                                trans.translation -= non_player_transform_query
                                         .get(ship_entity)
                                         .expect("A ship should always have a transform.")
                                         .translation;
