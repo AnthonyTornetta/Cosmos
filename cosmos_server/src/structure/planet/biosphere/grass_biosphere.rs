@@ -101,20 +101,413 @@ fn make_block_ranges(block_registry: Res<Registry<Block>>, mut commands: Command
     ]));
 }
 
+#[inline]
+fn three_by_three_no_corners(
+    (x, y, z): (usize, usize, usize),
+    structure: &mut Structure,
+    block: &Block,
+    block_up: BlockFace,
+    blocks: &Registry<Block>,
+    event_writer: &mut EventWriter<BlockChangedEvent>,
+) {
+    structure.set_block_at(x, y, z, block, block_up, blocks, Some(event_writer));
+    structure.set_block_at(x + 1, y, z, block, block_up, blocks, Some(event_writer));
+    structure.set_block_at(x - 1, y, z, block, block_up, blocks, Some(event_writer));
+    structure.set_block_at(x, y, z + 1, block, block_up, blocks, Some(event_writer));
+    structure.set_block_at(x, y, z - 1, block, block_up, blocks, Some(event_writer));
+}
+
+#[inline]
+fn three_by_three(
+    (x, y, z): (usize, usize, usize),
+    structure: &mut Structure,
+    block: &Block,
+    block_up: BlockFace,
+    blocks: &Registry<Block>,
+    event_writer: &mut EventWriter<BlockChangedEvent>,
+) {
+    for dz in 0..=2 {
+        for dx in 0..=2 {
+            structure.set_block_at(
+                x + dx - 1,
+                y,
+                z + dz - 1,
+                block,
+                block_up,
+                blocks,
+                Some(event_writer),
+            );
+        }
+    }
+}
+
+#[inline]
+fn three_by_three_plus(
+    (x, y, z): (usize, usize, usize),
+    structure: &mut Structure,
+    block: &Block,
+    block_up: BlockFace,
+    blocks: &Registry<Block>,
+    event_writer: &mut EventWriter<BlockChangedEvent>,
+) {
+    three_by_three((x, y, z), structure, block, block_up, blocks, event_writer);
+    structure.set_block_at(x + 2, y, z, block, block_up, blocks, Some(event_writer));
+    structure.set_block_at(x - 2, y, z, block, block_up, blocks, Some(event_writer));
+    structure.set_block_at(x, y, z + 2, block, block_up, blocks, Some(event_writer));
+    structure.set_block_at(x, y, z - 2, block, block_up, blocks, Some(event_writer));
+}
+
+#[inline]
+fn five_by_five_no_corners(
+    (x, y, z): (usize, usize, usize),
+    structure: &mut Structure,
+    block: &Block,
+    block_up: BlockFace,
+    blocks: &Registry<Block>,
+    event_writer: &mut EventWriter<BlockChangedEvent>,
+) {
+    three_by_three_plus((x, y, z), structure, block, block_up, blocks, event_writer);
+    structure.set_block_at(x + 2, y, z + 1, block, block_up, blocks, Some(event_writer));
+    structure.set_block_at(x + 2, y, z - 1, block, block_up, blocks, Some(event_writer));
+    structure.set_block_at(x - 2, y, z + 1, block, block_up, blocks, Some(event_writer));
+    structure.set_block_at(x - 2, y, z - 1, block, block_up, blocks, Some(event_writer));
+    structure.set_block_at(x + 1, y, z + 2, block, block_up, blocks, Some(event_writer));
+    structure.set_block_at(x - 1, y, z + 2, block, block_up, blocks, Some(event_writer));
+    structure.set_block_at(x + 1, y, z - 2, block, block_up, blocks, Some(event_writer));
+    structure.set_block_at(x - 1, y, z - 2, block, block_up, blocks, Some(event_writer));
+}
+
+#[inline]
+// Log covered in leaves in all 4 y and z directions.
+fn x_branch_step(
+    (x, y, z): (usize, usize, usize),
+    structure: &mut Structure,
+    log: &Block,
+    leaf: &Block,
+    block_up: BlockFace,
+    blocks: &Registry<Block>,
+    event_writer: &mut EventWriter<BlockChangedEvent>,
+) {
+    // Log.
+    structure.set_block_at(x, y, z, log, block_up, blocks, Some(event_writer));
+
+    // Leaves.
+    structure.set_block_at(x, y + 1, z, leaf, block_up, blocks, Some(event_writer));
+    structure.set_block_at(x, y - 1, z, leaf, block_up, blocks, Some(event_writer));
+    structure.set_block_at(x, y, z + 1, leaf, block_up, blocks, Some(event_writer));
+    structure.set_block_at(x, y, z - 1, leaf, block_up, blocks, Some(event_writer));
+}
+
+#[inline]
+// Log covered in leaves in all 4 y and x directions.
+fn z_branch_step(
+    (x, y, z): (usize, usize, usize),
+    structure: &mut Structure,
+    log: &Block,
+    leaf: &Block,
+    block_up: BlockFace,
+    blocks: &Registry<Block>,
+    event_writer: &mut EventWriter<BlockChangedEvent>,
+) {
+    // Log.
+    structure.set_block_at(x, y, z, log, block_up, blocks, Some(event_writer));
+
+    // Leaves.
+    structure.set_block_at(x, y + 1, z, leaf, block_up, blocks, Some(event_writer));
+    structure.set_block_at(x, y - 1, z, leaf, block_up, blocks, Some(event_writer));
+    structure.set_block_at(x + 1, y, z, leaf, block_up, blocks, Some(event_writer));
+    structure.set_block_at(x - 1, y, z, leaf, block_up, blocks, Some(event_writer));
+}
+
+#[inline]
+// Plus-sign with the middle pushed up 1.
+fn crown(
+    (x, y, z): (usize, usize, usize),
+    structure: &mut Structure,
+    block: &Block,
+    block_up: BlockFace,
+    blocks: &Registry<Block>,
+    event_writer: &mut EventWriter<BlockChangedEvent>,
+) {
+    structure.set_block_at(x, y + 1, z, block, block_up, blocks, Some(event_writer));
+    structure.set_block_at(x + 1, y, z, block, block_up, blocks, Some(event_writer));
+    structure.set_block_at(x - 1, y, z, block, block_up, blocks, Some(event_writer));
+    structure.set_block_at(x, y, z + 1, block, block_up, blocks, Some(event_writer));
+    structure.set_block_at(x, y, z - 1, block, block_up, blocks, Some(event_writer));
+}
+
+#[inline]
+// 4 1x1 branches covered in leaves.
+fn branch1(
+    (x, y, z): (usize, usize, usize),
+    structure: &mut Structure,
+    log: &Block,
+    leaf: &Block,
+    block_up: BlockFace,
+    blocks: &Registry<Block>,
+    event_writer: &mut EventWriter<BlockChangedEvent>,
+) {
+    // +x
+    x_branch_step(
+        (x + 1, y, z),
+        structure,
+        log,
+        leaf,
+        BlockFace::Right,
+        blocks,
+        event_writer,
+    );
+    structure.set_block_at(x + 2, y, z, leaf, block_up, blocks, Some(event_writer));
+
+    // -x
+    x_branch_step(
+        (x - 1, y, z),
+        structure,
+        log,
+        leaf,
+        BlockFace::Left,
+        blocks,
+        event_writer,
+    );
+    structure.set_block_at(x - 2, y, z, leaf, block_up, blocks, Some(event_writer));
+
+    // +z
+    z_branch_step(
+        (x, y, z + 1),
+        structure,
+        log,
+        leaf,
+        BlockFace::Front,
+        blocks,
+        event_writer,
+    );
+    structure.set_block_at(x, y, z + 2, leaf, block_up, blocks, Some(event_writer));
+
+    // -z
+    z_branch_step(
+        (x, y, z - 1),
+        structure,
+        log,
+        leaf,
+        BlockFace::Back,
+        blocks,
+        event_writer,
+    );
+    structure.set_block_at(x, y, z - 2, leaf, block_up, blocks, Some(event_writer));
+}
+
+#[inline]
+// 4 1x1 branches covered in leaves.
+fn branch2(
+    (x, y, z): (usize, usize, usize),
+    structure: &mut Structure,
+    log: &Block,
+    leaf: &Block,
+    block_up: BlockFace,
+    blocks: &Registry<Block>,
+    event_writer: &mut EventWriter<BlockChangedEvent>,
+) {
+    // +x
+    x_branch_step(
+        (x + 1, y, z),
+        structure,
+        log,
+        leaf,
+        BlockFace::Right,
+        blocks,
+        event_writer,
+    );
+    x_branch_step(
+        (x + 2, y - 1, z),
+        structure,
+        log,
+        leaf,
+        BlockFace::Right,
+        blocks,
+        event_writer,
+    );
+    structure.set_block_at(x + 3, y - 1, z, leaf, block_up, blocks, Some(event_writer));
+
+    // -x
+    x_branch_step(
+        (x - 1, y, z),
+        structure,
+        log,
+        leaf,
+        BlockFace::Left,
+        blocks,
+        event_writer,
+    );
+    x_branch_step(
+        (x - 2, y - 1, z),
+        structure,
+        log,
+        leaf,
+        BlockFace::Left,
+        blocks,
+        event_writer,
+    );
+    structure.set_block_at(x - 3, y - 1, z, leaf, block_up, blocks, Some(event_writer));
+
+    // +z
+    z_branch_step(
+        (x, y, z + 1),
+        structure,
+        log,
+        leaf,
+        BlockFace::Front,
+        blocks,
+        event_writer,
+    );
+    z_branch_step(
+        (x, y - 1, z + 2),
+        structure,
+        log,
+        leaf,
+        BlockFace::Front,
+        blocks,
+        event_writer,
+    );
+    structure.set_block_at(x, y - 1, z + 3, leaf, block_up, blocks, Some(event_writer));
+
+    // -z
+    z_branch_step(
+        (x, y, z - 1),
+        structure,
+        log,
+        leaf,
+        BlockFace::Back,
+        blocks,
+        event_writer,
+    );
+    z_branch_step(
+        (x, y - 1, z - 2),
+        structure,
+        log,
+        leaf,
+        BlockFace::Back,
+        blocks,
+        event_writer,
+    );
+    structure.set_block_at(x, y - 1, z - 3, leaf, block_up, blocks, Some(event_writer));
+}
+
+#[inline]
+// 4 1x1 branches covered in leaves.
+fn branch3(
+    (x, y, z): (usize, usize, usize),
+    structure: &mut Structure,
+    log: &Block,
+    leaf: &Block,
+    block_up: BlockFace,
+    blocks: &Registry<Block>,
+    event_writer: &mut EventWriter<BlockChangedEvent>,
+) {
+    // +x
+    x_branch_step(
+        (x + 2, y, z),
+        structure,
+        log,
+        leaf,
+        BlockFace::Right,
+        blocks,
+        event_writer,
+    );
+    x_branch_step(
+        (x + 3, y - 1, z),
+        structure,
+        log,
+        leaf,
+        BlockFace::Right,
+        blocks,
+        event_writer,
+    );
+    structure.set_block_at(x + 4, y - 1, z, leaf, block_up, blocks, Some(event_writer));
+
+    // -x
+    x_branch_step(
+        (x - 2, y, z),
+        structure,
+        log,
+        leaf,
+        BlockFace::Left,
+        blocks,
+        event_writer,
+    );
+    x_branch_step(
+        (x - 3, y - 1, z),
+        structure,
+        log,
+        leaf,
+        BlockFace::Left,
+        blocks,
+        event_writer,
+    );
+    structure.set_block_at(x - 4, y - 1, z, leaf, block_up, blocks, Some(event_writer));
+
+    // +z
+    z_branch_step(
+        (x, y, z + 2),
+        structure,
+        log,
+        leaf,
+        BlockFace::Front,
+        blocks,
+        event_writer,
+    );
+    z_branch_step(
+        (x, y - 1, z + 3),
+        structure,
+        log,
+        leaf,
+        BlockFace::Front,
+        blocks,
+        event_writer,
+    );
+    structure.set_block_at(x, y - 1, z + 4, leaf, block_up, blocks, Some(event_writer));
+
+    // -z
+    z_branch_step(
+        (x, y, z - 2),
+        structure,
+        log,
+        leaf,
+        BlockFace::Back,
+        blocks,
+        event_writer,
+    );
+    z_branch_step(
+        (x, y - 1, z - 3),
+        structure,
+        log,
+        leaf,
+        BlockFace::Back,
+        blocks,
+        event_writer,
+    );
+    structure.set_block_at(x, y - 1, z - 4, leaf, block_up, blocks, Some(event_writer));
+}
+
 const DELTA: f64 = 1.0;
 const FOREST: f64 = 0.235;
 const DIST_BETWEEN_TREES: usize = 5;
 const SEGMENT_HEIGHT: usize = 10;
+const BRANCH_START: f64 = 0.5;
+const BETWEEN_BRANCHES: usize = 3;
+
+// Diagonals on branch3.
+// Why so few branch3 spawning? Not above branch height?
 
 /// Sends a ChunkInitEvent for every chunk that's done generating, monitors when chunks are finished generating.
 pub fn generate_chunk_features(
     mut event_reader: EventReader<GenerateChunkFeaturesEvent<GrassBiosphereMarker>>,
     mut init_event_writer: EventWriter<ChunkInitEvent>,
-    mut block_changed_event_writer: EventWriter<BlockChangedEvent>,
+    mut block_event_writer: EventWriter<BlockChangedEvent>,
     mut structure_query: Query<(&mut Structure, &Location)>,
     blocks: Res<Registry<Block>>,
     noise_generator: Res<ResourceWrapper<noise::OpenSimplex>>,
 ) {
+    let block_up = BlockFace::Top;
     for ev in event_reader.iter() {
         if let Ok((mut structure, location)) = structure_query.get_mut(ev.structure_entity) {
             let (cx, cy, cz) = ev.chunk_coords;
@@ -154,7 +547,7 @@ pub fn generate_chunk_features(
 
                     let noise = noise_cache[z + DIST_BETWEEN_TREES][x + DIST_BETWEEN_TREES];
                     if y >= 0
-                        && structure.block_at(sx + x, sy + y as usize, sz + z, &blocks) == grass
+                        && structure.block_at(bx, sy + y as usize, bz, &blocks) == grass
                         && noise * noise > FOREST
                     {
                         for dz in 0..=DIST_BETWEEN_TREES * 2 {
@@ -164,16 +557,19 @@ pub fn generate_chunk_features(
                                 }
                             }
                         }
+                        let by = sy + y as usize;
 
                         // Trunk.
                         let height_noise = noise_generator.get([
-                            ((sx + x) as f64 as f64 + structure_coords.x) * DELTA,
-                            ((sy + y as usize) as f64 + structure_coords.y) * DELTA,
+                            (bx as f64 as f64 + structure_coords.x) * DELTA,
+                            (by as f64 + structure_coords.y) * DELTA,
                             (bz as f64 as f64 + structure_coords.z) * DELTA,
                         ]);
                         let mut height = (4.0 * SEGMENT_HEIGHT as f64
                             + 4.0 * SEGMENT_HEIGHT as f64 * height_noise)
                             as usize;
+                        // Branches start the branch height from the bottom and spawn every 3 vertical blocks from the top.
+                        let branch_height = (height as f64 * BRANCH_START) as usize;
                         println!("Tree Height: {}", height);
                         let mut dy = 1;
 
@@ -182,171 +578,136 @@ pub fn generate_chunk_features(
                             height += SEGMENT_HEIGHT;
                         }
                         while height - dy >= SEGMENT_HEIGHT * 4 {
-                            for dz in 0..=4 {
-                                for dx in 0..=2 {
-                                    structure.set_block_at(
-                                        sx + x + dx - 1,
-                                        sy + y as usize + dy,
-                                        sz + z + dz - 2,
-                                        log,
-                                        BlockFace::Top,
-                                        &blocks,
-                                        Some(&mut block_changed_event_writer),
-                                    );
-                                }
-                            }
-
-                            for dx in 0..=4 {
-                                for dz in 0..=2 {
-                                    structure.set_block_at(
-                                        sx + x + dx - 2,
-                                        sy + y as usize + dy,
-                                        sz + z + dz - 1,
-                                        log,
-                                        BlockFace::Top,
-                                        &blocks,
-                                        Some(&mut block_changed_event_writer),
-                                    );
-                                }
-                            }
+                            five_by_five_no_corners(
+                                (bx, by + dy, bz),
+                                &mut structure,
+                                log,
+                                BlockFace::Top,
+                                &blocks,
+                                &mut block_event_writer,
+                            );
                             dy += 1;
                         }
 
-                        // 3x3 with extra centers.
-                        if height - dy >= SEGMENT_HEIGHT * 3 && dy == 1 {
-                            height += SEGMENT_HEIGHT;
+                        // 3x3 with plus sign.
+                        if height - dy >= SEGMENT_HEIGHT * 3 {
+                            if dy == 1 {
+                                height += SEGMENT_HEIGHT;
+                            }
                         }
                         while height - dy >= SEGMENT_HEIGHT * 3 {
-                            for dz in 0..=2 {
-                                for dx in 0..=2 {
-                                    structure.set_block_at(
-                                        sx + x + dx - 1,
-                                        sy + y as usize + dy,
-                                        sz + z + dz - 1,
-                                        log,
-                                        BlockFace::Top,
-                                        &blocks,
-                                        Some(&mut block_changed_event_writer),
-                                    );
-                                }
-                            }
-
-                            structure.set_block_at(
-                                sx + x + 2,
-                                sy + y as usize + dy,
-                                sz + z,
+                            three_by_three_plus(
+                                (bx, by + dy, bz),
+                                &mut structure,
                                 log,
                                 BlockFace::Top,
                                 &blocks,
-                                Some(&mut block_changed_event_writer),
-                            );
-
-                            structure.set_block_at(
-                                sx + x - 2,
-                                sy + y as usize + dy,
-                                sz + z,
-                                log,
-                                BlockFace::Top,
-                                &blocks,
-                                Some(&mut block_changed_event_writer),
-                            );
-
-                            structure.set_block_at(
-                                sx + x,
-                                sy + y as usize + dy,
-                                sz + z + 2,
-                                log,
-                                BlockFace::Top,
-                                &blocks,
-                                Some(&mut block_changed_event_writer),
-                            );
-
-                            structure.set_block_at(
-                                sx + x,
-                                sy + y as usize + dy,
-                                sz + z - 2,
-                                log,
-                                BlockFace::Top,
-                                &blocks,
-                                Some(&mut block_changed_event_writer),
+                                &mut block_event_writer,
                             );
                             dy += 1;
                         }
 
                         // 3x3.
-                        if height - dy >= SEGMENT_HEIGHT * 2 && dy == 1 {
-                            height += SEGMENT_HEIGHT;
+                        if height - dy >= SEGMENT_HEIGHT * 2 {
+                            if dy == 1 {
+                                height += SEGMENT_HEIGHT;
+                            }
                         }
                         while height - dy >= SEGMENT_HEIGHT * 2 {
-                            for dz in 0..=2 {
-                                for dx in 0..=2 {
-                                    structure.set_block_at(
-                                        sx + x + dx - 1,
-                                        sy + y as usize + dy,
-                                        sz + z + dz - 1,
-                                        log,
-                                        BlockFace::Top,
-                                        &blocks,
-                                        Some(&mut block_changed_event_writer),
-                                    );
-                                }
-                            }
+                            three_by_three(
+                                (bx, by + dy, bz),
+                                &mut structure,
+                                log,
+                                block_up,
+                                &blocks,
+                                &mut block_event_writer,
+                            );
                             dy += 1;
                         }
 
-                        // plus sign.
-                        if height - dy >= SEGMENT_HEIGHT && dy == 1 {
-                            height += SEGMENT_HEIGHT;
+                        // Plus-sign.
+                        if height - dy >= SEGMENT_HEIGHT {
+                            if dy == 1 {
+                                height += SEGMENT_HEIGHT;
+                            }
                         }
                         while height - dy >= SEGMENT_HEIGHT {
-                            for dz in 0..=2 {
-                                structure.set_block_at(
-                                    sx + x,
-                                    sy + y as usize + dy,
-                                    sz + z + dz - 1,
+                            three_by_three_no_corners(
+                                (bx, by + dy, bz),
+                                &mut structure,
+                                log,
+                                block_up,
+                                &blocks,
+                                &mut block_event_writer,
+                            );
+
+                            if dy >= branch_height && (height - dy) % BETWEEN_BRANCHES == 0 {
+                                branch3(
+                                    (bx, by + height - BETWEEN_BRANCHES * 3, bz),
+                                    &mut structure,
                                     log,
-                                    BlockFace::Top,
+                                    leaf,
+                                    block_up,
                                     &blocks,
-                                    Some(&mut block_changed_event_writer),
+                                    &mut block_event_writer,
                                 );
                             }
 
-                            for dx in 0..=2 {
-                                structure.set_block_at(
-                                    sx + x + dx - 1,
-                                    sy + y as usize + dy,
-                                    sz + z,
-                                    log,
-                                    BlockFace::Top,
-                                    &blocks,
-                                    Some(&mut block_changed_event_writer),
-                                );
-                            }
                             dy += 1;
                         }
 
                         // 1x1.
                         while dy <= height {
                             structure.set_block_at(
-                                sx + x,
-                                sy + y as usize + dy,
-                                sz + z,
+                                bx,
+                                by + dy,
+                                bz,
                                 log,
-                                BlockFace::Top,
+                                block_up,
                                 &blocks,
-                                Some(&mut block_changed_event_writer),
+                                Some(&mut block_event_writer),
                             );
                             dy += 1;
                         }
 
-                        structure.set_block_at(
-                            sx + x,
-                            sy + y as usize + height + 1,
-                            sz + z,
+                        // Top Segment Branches
+                        crown(
+                            (bx, by + height, bz),
+                            &mut structure,
                             leaf,
-                            BlockFace::Top,
+                            block_up,
                             &blocks,
-                            Some(&mut block_changed_event_writer),
+                            &mut block_event_writer,
+                        );
+
+                        branch1(
+                            (bx, by + height - BETWEEN_BRANCHES, bz),
+                            &mut structure,
+                            log,
+                            leaf,
+                            block_up,
+                            &blocks,
+                            &mut block_event_writer,
+                        );
+
+                        branch2(
+                            (bx, by + height - BETWEEN_BRANCHES * 2, bz),
+                            &mut structure,
+                            log,
+                            leaf,
+                            block_up,
+                            &blocks,
+                            &mut block_event_writer,
+                        );
+
+                        branch2(
+                            (bx, by + height - BETWEEN_BRANCHES * 3, bz),
+                            &mut structure,
+                            log,
+                            leaf,
+                            block_up,
+                            &blocks,
+                            &mut block_event_writer,
                         );
                     }
                 }
