@@ -195,9 +195,13 @@ pub fn server_listen_messages(
                 }
                 ClientReliableMessages::CreateShip { name: _name } => {
                     if let Some(client) = lobby.player_from_id(client_id) {
-                        if let Ok((_, location, looking, _)) = change_player_query.get(client) {
-                            let ship_location =
-                                *location + looking.rotation.mul_vec3(Vec3::new(0.0, 0.0, -4.0));
+                        if let Ok((transform, location, looking, _)) =
+                            change_player_query.get(client)
+                        {
+                            let ship_location = *location
+                                + transform
+                                    .rotation
+                                    .mul_vec3(looking.rotation.mul_vec3(Vec3::new(0.0, 0.0, -4.0)));
 
                             create_ship_event_writer.send(CreateShipEvent {
                                 ship_location,
@@ -276,9 +280,9 @@ pub fn server_listen_messages(
                                 change_player_query.get_mut(player_entity)
                             {
                                 trans.translation -= non_player_transform_query
-                                        .get(ship_entity)
-                                        .expect("A ship should always have a transform.")
-                                        .translation;
+                                    .get(ship_entity)
+                                    .expect("A ship should always have a transform.")
+                                    .translation;
                             }
 
                             server.broadcast_message_except(
