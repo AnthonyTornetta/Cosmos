@@ -69,7 +69,7 @@ fn respond_to_collisions(
     is_local_player: Query<(), (With<LocalPlayer>, Without<Pilot>)>,
     is_structure: Query<&Structure>,
     is_ship: Query<(), With<Ship>>,
-    mut trans_query: Query<(&mut Transform, &Location)>,
+    mut trans_query: Query<(&mut Transform, &mut Location)>,
     mut commands: Commands,
     mut renet_client: ResMut<RenetClient>,
     mapping: Res<NetworkMapping>,
@@ -100,22 +100,22 @@ fn respond_to_collisions(
                             // Otherwise, either remove your current parent (if you hit a non-ship) or become the child of the
                             // different ship you touched if the ship has >= 10 blocks on it.
 
+                            let (ship_trans, ship_loc) = trans_query
+                                .get(structure_hit_entity)
+                                .expect("All structures must have a transform");
+
+                            // Even though these will always be seperate from the trans + loc below, the borrow checker doesn't know that
+                            let (ship_trans, ship_loc) = (*ship_trans, *ship_loc);
+
+                            let (mut player_trans, mut player_loc) = trans_query
+                                .get_mut(player_entity)
+                                .expect("The player should have a transform + location");
+
                             if is_ship.contains(structure_hit_entity) {
                                 // if they hit a ship, make them a part of that one instead
                                 commands
                                     .entity(player_entity)
                                     .set_parent(structure_hit_entity);
-
-                                let (ship_trans, ship_loc) = trans_query
-                                    .get(structure_hit_entity)
-                                    .expect("All structures must have a transform");
-
-                                // Even though these will always be seperate from the trans + loc below, the borrow checker doesn't know that
-                                let (ship_trans, ship_loc) = (*ship_trans, *ship_loc);
-
-                                let (mut player_trans, player_loc) = trans_query
-                                    .get_mut(player_entity)
-                                    .expect("The player should have a transform + location");
 
                                 // Because the player's translation is always 0, 0, 0 we need to adjust it so the player is put into the
                                 // right spot in its parent.
@@ -136,9 +136,11 @@ fn respond_to_collisions(
                                         ),
                                     );
                                 }
-                            } else {
+                            } else if parent_query.contains(player_entity) {
                                 // Otherwise just remove the parent if they hit a different structure
                                 commands.entity(player_entity).remove_parent();
+
+                                player_loc.last_transform_loc = Some(player_trans.translation);
 
                                 renet_client.send_message(
                                     NettyChannelClient::Reliable,
