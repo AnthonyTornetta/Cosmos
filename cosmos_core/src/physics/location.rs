@@ -450,13 +450,11 @@ fn sync_self_with_parents(
     if let Ok(parent) = parent_query.get(this_entity).map(|p| p.get()) {
         sync_self_with_parents(parent, parent_query, data_query);
 
-        let Ok((parent_loc, parent_global_trans)) = 
-            data_query.get(parent).map(|(loc, _, _, parent_global_trans)| (*loc, *parent_global_trans)) else {
+        let Ok((parent_loc, parent_global_trans)) = data_query.get(parent).map(|(loc, _, _, parent_global_trans)| (*loc, *parent_global_trans)) else {
             return;
         };
 
-        let Ok((mut my_loc, mut my_transform, my_prev_loc, _)) = 
-            data_query.get_mut(this_entity) else {
+        let Ok((mut my_loc, mut my_transform, my_prev_loc, _)) = data_query.get_mut(this_entity) else {
             return;
         };
 
