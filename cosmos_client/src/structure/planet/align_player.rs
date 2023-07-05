@@ -8,7 +8,7 @@ use bevy::prelude::{
 use cosmos_core::{
     block::BlockFace,
     physics::{gravity_system::GravityEmitter, location::Location},
-    structure::planet::Planet,
+    structure::{planet::Planet, ship::pilot::Pilot},
 };
 
 use crate::netty::flags::LocalPlayer;
@@ -101,8 +101,16 @@ fn align_player(
                     },
                     0.1,
                 );
+            } else {
+                commands.entity(entity).remove::<PlayerAlignment>();
             }
         }
+    }
+}
+
+fn align_on_ship(query: Query<Entity, (With<LocalPlayer>, With<Pilot>)>, mut commands: Commands) {
+    if let Ok(ent) = query.get_single() {
+        commands.entity(ent).insert(PlayerAlignment(Axis::Y));
     }
 }
 
@@ -125,5 +133,5 @@ pub enum Axis {
 pub struct PlayerAlignment(pub Axis);
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(align_player);
+    app.add_systems((align_player, align_on_ship));
 }

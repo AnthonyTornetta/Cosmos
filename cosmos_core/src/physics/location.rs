@@ -19,7 +19,7 @@ use std::{
 
 use bevy::{
     prelude::{
-        App, Children, Commands, Component, Deref, DerefMut, Entity, GlobalTransform, Parent,
+        App, Children, Commands, Component, Deref, DerefMut, Entity, GlobalTransform, Parent, Quat,
         Query, Transform, Vec3, Without,
     },
     reflect::{FromReflect, Reflect},
@@ -432,12 +432,11 @@ impl Location {
 
 #[derive(Component, Debug, Reflect, FromReflect, Deref, DerefMut, Clone, Copy)]
 /// Stores the location from the previous frame
-pub struct PreviousLocation(Location);
+pub struct PreviousLocation(pub Location);
 
-#[allow(unused_variables, unused_mut)]
 /// Recursively goes from the top of the parent tree to the bottom and lines up all their locations.
 ///
-/// This probably works.
+/// This needs tests written for it.
 fn sync_self_with_parents(
     this_entity: Entity,
     parent_query: &Query<&Parent>,
@@ -451,26 +450,29 @@ fn sync_self_with_parents(
     if let Ok(parent) = parent_query.get(this_entity).map(|p| p.get()) {
         sync_self_with_parents(parent, parent_query, data_query);
 
-        let Ok((parent_loc, parent_global_trans)) = data_query.get(parent).map(|(loc, _, _, parent_global_trans)| (*loc, parent_global_trans.translation())) else {
+        let Ok((parent_loc, parent_global_trans)) = data_query.get(parent).map(|(loc, _, _, parent_global_trans)| (*loc, *parent_global_trans)) else {
             return;
         };
 
-        let Ok((mut my_loc, mut my_transform, mut my_prev_loc, my_global_trans)) = data_query.get_mut(this_entity) else {
+        let Ok((mut my_loc, mut my_transform, my_prev_loc, _)) = data_query.get_mut(this_entity) else {
             return;
         };
 
-        if my_loc.last_transform_loc.is_some() {
-            let my_delta_loc = (*my_loc - my_prev_loc.0).absolute_coords_f32();
+        // Calculates the change in location since the last time this ran
+        let delta_loc = (*my_loc - my_prev_loc.0).absolute_coords_f32();
 
-            my_transform.translation += my_delta_loc;
+        let parent_rot = Quat::from_affine3(&parent_global_trans.affine());
 
-            let delta_from_parent = my_global_trans.translation() - parent_global_trans;
+        // Applies that change to the transform
+        my_transform.translation += parent_rot.inverse().mul_vec3(delta_loc);
 
-            let my_new_loc = parent_loc + delta_from_parent + my_delta_loc;
-            my_loc.set_from(&parent_loc);
-            my_loc.last_transform_loc = Some(my_transform.translation);
-            my_prev_loc.0 = *my_loc;
-        }
+        // Calculates how far away the entity was from its parent + its delta location.
+        let transform_delta_parent = parent_rot.mul_vec3(my_transform.translation);
+
+        // Updates the location to be based on the parent's location + your absolute coordinates to your parent.
+        my_loc.set_from(&(parent_loc + transform_delta_parent));
+        my_loc.last_transform_loc =
+            Some(transform_delta_parent + parent_global_trans.translation());
     }
 }
 

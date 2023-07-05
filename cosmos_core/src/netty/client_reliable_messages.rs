@@ -94,4 +94,11 @@ pub enum ClientReliableMessages {
         /// The entity they want to know about
         entity: Entity,
     },
+    /// Sent when a player no longer is a part of a ship
+    LeaveShip,
+    /// Sent when a player is now apart on a specific ship
+    JoinShip {
+        /// The ship the player wants to walk on
+        ship_entity: Entity,
+    },
 }

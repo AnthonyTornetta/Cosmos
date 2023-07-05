@@ -434,6 +434,7 @@ fn monitor_needs_rendered_system(
                                 material: mesh_material.material,
                                 ..Default::default()
                             },
+                            // Remove this once https://github.com/bevyengine/bevy/issues/4294 is done (bevy 0.11 released)
                             Aabb::from_min_max(Vec3::new(-s, -s, -s), Vec3::new(s, s, s)),
                         ))
                         .id();
@@ -460,6 +461,7 @@ fn monitor_needs_rendered_system(
             commands.entity(entity).insert((
                 mesh,
                 mesh_material.material,
+                // Remove this once https://github.com/bevyengine/bevy/issues/4294 is done (bevy 0.11 released)
                 Aabb::from_min_max(Vec3::new(-s, -s, -s), Vec3::new(s, s, s)),
             ));
         }

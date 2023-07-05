@@ -134,6 +134,16 @@ pub enum ServerReliableMessages {
         /// The new pilot or None if the pilot is removed
         pilot_entity: Option<Entity>,
     },
-    /// Sent when the laser cannon system fires - not used currently, will eventually generate a sound on the client.
-    LaserCannonFire {},
+    /// Sent whenever a player leaves the ship they were a part of. (aka the player was walking on a ship)
+    PlayerLeaveShip {
+        /// The player that exited the ship
+        player_entity: Entity,
+    },
+    /// Sent when a player is now walking on a specific ship
+    PlayerJoinShip {
+        /// The player that is now walking on the ship
+        player_entity: Entity,
+        /// The ship the player is walking on
+        ship_entity: Entity,
+    },
 }

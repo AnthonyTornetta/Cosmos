@@ -148,13 +148,15 @@ fn process_player_movement(
     time: Res<Time>,
     input_handler: ResMut<CosmosInputHandler>,
     mut query: Query<
-        (&mut Velocity, &GlobalTransform, Option<&PlayerAlignment>),
+        (Entity, &mut Velocity, &Transform, Option<&PlayerAlignment>),
         (With<LocalPlayer>, Without<Pilot>),
     >,
-    cam_query: Query<&GlobalTransform, With<MainCamera>>,
+    cam_query: Query<&Transform, With<MainCamera>>,
+    parent_query: Query<&Parent>,
+    global_transform_query: Query<&GlobalTransform>,
 ) {
     // This will be err if the player is piloting a ship
-    if let Ok((mut velocity, player_transform, player_alignment)) = query.get_single_mut() {
+    if let Ok((ent, mut velocity, player_transform, player_alignment)) = query.get_single_mut() {
         let cam_trans = cam_query.single();
 
         let max_speed: f32 = match input_handler.check_pressed(CosmosInputs::Sprint, &keys, &mouse)
@@ -163,6 +165,7 @@ fn process_player_movement(
             true => 20.0,
         };
 
+        // All relative to player
         let mut forward = cam_trans.forward();
         let mut right = cam_trans.right();
         let up = player_transform.up();
@@ -190,74 +193,88 @@ fn process_player_movement(
 
         let time = time.delta_seconds();
 
+        let parent_rot = parent_query
+            .get(ent)
+            .map(|p| {
+                global_transform_query
+                    .get(p.get())
+                    .map(|x| Quat::from_affine3(&x.affine()))
+                    .unwrap_or(Quat::IDENTITY)
+            })
+            .unwrap_or(Quat::IDENTITY);
+
+        let mut new_linvel = parent_rot.inverse().mul_vec3(velocity.linvel);
+
         if input_handler.check_pressed(CosmosInputs::MoveForward, &keys, &mouse) {
-            velocity.linvel += forward * time;
+            new_linvel += forward * time;
         }
         if input_handler.check_pressed(CosmosInputs::MoveBackward, &keys, &mouse) {
-            velocity.linvel -= forward * time;
+            new_linvel -= forward * time;
         }
         if input_handler.check_pressed(CosmosInputs::MoveUp, &keys, &mouse) {
-            velocity.linvel += movement_up * time;
+            new_linvel += movement_up * time;
         }
         if input_handler.check_pressed(CosmosInputs::MoveDown, &keys, &mouse) {
-            velocity.linvel -= movement_up * time;
+            new_linvel -= movement_up * time;
         }
         if input_handler.check_just_pressed(CosmosInputs::Jump, &keys, &mouse) {
-            velocity.linvel += up * 5.0;
+            new_linvel += up * 5.0;
         }
         if input_handler.check_pressed(CosmosInputs::MoveLeft, &keys, &mouse) {
-            velocity.linvel -= right * time;
+            new_linvel -= right * time;
         }
         if input_handler.check_pressed(CosmosInputs::MoveRight, &keys, &mouse) {
-            velocity.linvel += right * time;
+            new_linvel += right * time;
         }
         if input_handler.check_pressed(CosmosInputs::SlowDown, &keys, &mouse) {
-            let mut amt = velocity.linvel * 0.5;
+            let mut amt = new_linvel * 0.5;
             if amt.dot(amt) > max_speed * max_speed {
                 amt = amt.normalize() * max_speed;
             }
-            velocity.linvel -= amt;
+            new_linvel -= amt;
         }
 
         if let Some(player_alignment) = player_alignment {
             match player_alignment.0 {
                 structure::planet::align_player::Axis::X => {
-                    let x = velocity.linvel.x;
+                    let x = new_linvel.x;
 
-                    velocity.linvel.x = 0.0;
+                    new_linvel.x = 0.0;
 
-                    if velocity.linvel.dot(velocity.linvel) > max_speed * max_speed {
-                        velocity.linvel = velocity.linvel.normalize() * max_speed;
+                    if new_linvel.dot(new_linvel) > max_speed * max_speed {
+                        new_linvel = new_linvel.normalize() * max_speed;
                     }
 
-                    velocity.linvel.x = x;
+                    new_linvel.x = x;
                 }
                 structure::planet::align_player::Axis::Y => {
-                    let y = velocity.linvel.y;
+                    let y = new_linvel.y;
 
-                    velocity.linvel.y = 0.0;
+                    new_linvel.y = 0.0;
 
-                    if velocity.linvel.dot(velocity.linvel) > max_speed * max_speed {
-                        velocity.linvel = velocity.linvel.normalize() * max_speed;
+                    if new_linvel.dot(new_linvel) > max_speed * max_speed {
+                        new_linvel = new_linvel.normalize() * max_speed;
                     }
 
-                    velocity.linvel.y = y;
+                    new_linvel.y = y;
                 }
                 structure::planet::align_player::Axis::Z => {
-                    let z = velocity.linvel.z;
+                    let z = new_linvel.z;
 
-                    velocity.linvel.z = 0.0;
+                    new_linvel.z = 0.0;
 
-                    if velocity.linvel.dot(velocity.linvel) > max_speed * max_speed {
-                        velocity.linvel = velocity.linvel.normalize() * max_speed;
+                    if new_linvel.dot(new_linvel) > max_speed * max_speed {
+                        new_linvel = new_linvel.normalize() * max_speed;
                     }
 
-                    velocity.linvel.z = z;
+                    new_linvel.z = z;
                 }
             }
-        } else if velocity.linvel.dot(velocity.linvel) > max_speed * max_speed {
-            velocity.linvel = velocity.linvel.normalize() * max_speed;
+        } else if new_linvel.dot(new_linvel) > max_speed * max_speed {
+            new_linvel = new_linvel.normalize() * max_speed;
         }
+
+        velocity.linvel = parent_rot.mul_vec3(new_linvel);
     }
 }
 

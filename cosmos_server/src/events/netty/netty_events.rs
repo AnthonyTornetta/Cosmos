@@ -91,6 +91,7 @@ fn generate_player_inventory(items: &Registry<Item>) -> Inventory {
     inventory
 }
 
+use crate::netty::sync::entities::RequestedEntityEvent;
 use crate::physics::assign_player_world;
 use crate::state::GameState;
 
@@ -114,12 +115,14 @@ fn handle_events_system(
     items: Res<Registry<Item>>,
     mut visualizer: ResMut<RenetServerVisualizer<200>>,
     mut rapier_context: ResMut<RapierContext>,
+    mut requested_entity: EventWriter<RequestedEntityEvent>,
 ) {
     for event in server_events.iter() {
         match event {
             ServerEvent::ClientConnected { client_id } => {
+                let client_id = *client_id;
                 println!("Client {client_id} connected");
-                visualizer.add_client(*client_id);
+                visualizer.add_client(client_id);
 
                 for (entity, player, transform, location, velocity, inventory, render_distance) in
                     players.iter()
@@ -135,10 +138,11 @@ fn handle_events_system(
                         render_distance: Some(*render_distance),
                     });
 
-                    server.send_message(*client_id, NettyChannelServer::Reliable, msg);
+                    server.send_message(client_id, NettyChannelServer::Reliable, msg);
+                    requested_entity.send(RequestedEntityEvent { client_id, entity });
                 }
 
-                let Some(user_data) = transport.user_data(*client_id) else {
+                let Some(user_data) = transport.user_data(client_id) else {
                     println!("Unable to user data!");
                     continue;
                 };
@@ -147,7 +151,7 @@ fn handle_events_system(
                     continue;
                 };
 
-                let player = Player::new(name.clone(), *client_id);
+                let player = Player::new(name.clone(), client_id);
                 let starting_pos = Vec3::new(0.0, CHUNK_DIMENSIONSF * 50.0 / 2.0, 0.0);
                 let location = Location::new(starting_pos, Sector::new(0, 0, 0));
                 let velocity = Velocity::default();
@@ -166,15 +170,17 @@ fn handle_events_system(
                     player,
                     ReadMassProperties::default(),
                     inventory,
+                    Ccd::enabled(),
                     PlayerLooking {
                         rotation: Quat::IDENTITY,
                     },
                     LoadingDistance::new(2, 9999),
+                    ActiveEvents::COLLISION_EVENTS,
                 ));
 
                 let entity = player_commands.id();
 
-                lobby.add_player(*client_id, entity);
+                lobby.add_player(client_id, entity);
 
                 assign_player_world(
                     &player_worlds,
@@ -186,7 +192,7 @@ fn handle_events_system(
 
                 let msg = cosmos_encoder::serialize(&ServerReliableMessages::PlayerCreate {
                     entity,
-                    id: *client_id,
+                    id: client_id,
                     name,
                     body: netty_body,
                     inventory_serialized,
@@ -194,7 +200,7 @@ fn handle_events_system(
                 });
 
                 server.send_message(
-                    *client_id,
+                    client_id,
                     NettyChannelServer::Reliable,
                     cosmos_encoder::serialize(&ServerReliableMessages::MOTD {
                         motd: "Welcome to the server!".into(),

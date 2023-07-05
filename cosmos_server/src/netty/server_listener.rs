@@ -59,6 +59,7 @@ pub fn server_listen_messages(
         ),
         With<Player>,
     >,
+    non_player_transform_query: Query<&Transform, Without<Player>>,
     mut requested_entities_writer: EventWriter<RequestedEntityEvent>,
     mut request_chunk_event_writer: EventWriter<RequestChunkEvent>,
 ) {
@@ -194,9 +195,13 @@ pub fn server_listen_messages(
                 }
                 ClientReliableMessages::CreateShip { name: _name } => {
                     if let Some(client) = lobby.player_from_id(client_id) {
-                        if let Ok((_, location, looking, _)) = change_player_query.get(client) {
-                            let ship_location =
-                                *location + looking.rotation.mul_vec3(Vec3::new(0.0, 0.0, 4.0));
+                        if let Ok((transform, location, looking, _)) =
+                            change_player_query.get(client)
+                        {
+                            let ship_location = *location
+                                + transform
+                                    .rotation
+                                    .mul_vec3(looking.rotation.mul_vec3(Vec3::new(0.0, 0.0, -4.0)));
 
                             create_ship_event_writer.send(CreateShipEvent {
                                 ship_location,
@@ -245,6 +250,52 @@ pub fn server_listen_messages(
                 ClientReliableMessages::RequestEntityData { entity } => {
                     if commands.get_entity(entity).is_some() {
                         requested_entities_writer.send(RequestedEntityEvent { client_id, entity });
+                    }
+                }
+                ClientReliableMessages::LeaveShip => {
+                    if let Some(player_entity) = lobby.player_from_id(client_id) {
+                        if let Some(mut e) = commands.get_entity(player_entity) {
+                            // This should be verified in the future to make sure the parent of the player is actually a ship
+                            e.remove_parent();
+
+                            server.broadcast_message_except(
+                                client_id,
+                                NettyChannelServer::Reliable,
+                                cosmos_encoder::serialize(
+                                    &ServerReliableMessages::PlayerLeaveShip { player_entity },
+                                ),
+                            );
+                        }
+                    }
+                }
+                ClientReliableMessages::JoinShip { ship_entity } => {
+                    if let Some(player_entity) = lobby.player_from_id(client_id) {
+                        if let Some(mut e) = commands.get_entity(player_entity) {
+                            // This should be verified in the future to make sure the entity is actually a ship
+                            e.set_parent(ship_entity);
+
+                            // This is stupid, but when a parent changes the transform isn't properly updated for the player, which is super cool.
+                            // At some point this should be fixed in a way that doesn't require this stuck everywhere
+                            if let Ok((mut trans, _, _, _)) =
+                                change_player_query.get_mut(player_entity)
+                            {
+                                trans.translation -= non_player_transform_query
+                                    .get(ship_entity)
+                                    .expect("A ship should always have a transform.")
+                                    .translation;
+                            }
+
+                            server.broadcast_message_except(
+                                client_id,
+                                NettyChannelServer::Reliable,
+                                cosmos_encoder::serialize(
+                                    &ServerReliableMessages::PlayerJoinShip {
+                                        player_entity,
+                                        ship_entity,
+                                    },
+                                ),
+                            );
+                        }
                     }
                 }
             }
