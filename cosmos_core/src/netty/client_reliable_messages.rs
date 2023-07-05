@@ -96,8 +96,8 @@ pub enum ClientReliableMessages {
     },
     /// Sent when a player no longer is a part of a ship
     LeaveShip,
-    /// Sent when a player is now walking on a specific ship
-    WalkOnShip {
+    /// Sent when a player is now apart on a specific ship
+    JoinShip {
         /// The ship the player wants to walk on
         ship_entity: Entity,
     },

@@ -130,7 +130,7 @@ fn respond_to_collisions(
                                     renet_client.send_message(
                                         NettyChannelClient::Reliable,
                                         cosmos_encoder::serialize(
-                                            &ClientReliableMessages::WalkOnShip {
+                                            &ClientReliableMessages::JoinShip {
                                                 ship_entity: server_ship_ent,
                                             },
                                         ),

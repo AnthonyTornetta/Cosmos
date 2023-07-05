@@ -32,6 +32,9 @@ pub enum CosmosInputs {
     /// Ship roll right
     RollRight,
     /// Leaves the ship the player is a child of
+    ///
+    /// This does not remove you as the pilot, but rather makes you no longer
+    /// move with the ship
     LeaveShip,
 
     /// Stop piloting whatever ship they're in
