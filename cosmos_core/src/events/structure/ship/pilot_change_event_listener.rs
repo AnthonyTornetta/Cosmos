@@ -38,10 +38,12 @@ fn event_listener(
                 .get(entity)
                 .expect("Every pilot should have a location & transform");
 
-            let delta = structure_loc.relative_coords_to(pilot_loc);
-            let delta_rot = pilot_transform.rotation * structure_transform.rotation.inverse();
+            let delta = structure_transform
+                .rotation
+                .inverse()
+                .mul_vec3(structure_loc.relative_coords_to(pilot_loc));
 
-            println!("{delta_rot}");
+            let delta_rot = pilot_transform.rotation * structure_transform.rotation.inverse();
 
             commands
                 .entity(ev.structure_entity)
@@ -99,9 +101,7 @@ fn pilot_removed(
                 .remove::<PilotStartingDelta>()
                 .insert(RigidBody::Dynamic);
 
-            println!("Starting delta: {}", starting_delta.0);
-
-            trans.translation += starting_delta.0;
+            trans.translation = starting_delta.0;
             trans.rotation = starting_delta.1;
 
             event_writer.send(RemoveSensorFrom(entity, 0));
