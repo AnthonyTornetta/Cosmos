@@ -140,7 +140,7 @@ pub enum ServerReliableMessages {
         player_entity: Entity,
     },
     /// Sent when a player is now walking on a specific ship
-    PlayerWalkOnShip {
+    PlayerJoinShip {
         /// The player that is now walking on the ship
         player_entity: Entity,
         /// The ship the player is walking on

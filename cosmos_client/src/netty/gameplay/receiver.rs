@@ -581,7 +581,7 @@ fn client_sync_players(
                     }
                 }
             }
-            ServerReliableMessages::PlayerWalkOnShip {
+            ServerReliableMessages::PlayerJoinShip {
                 player_entity,
                 ship_entity,
             } => {

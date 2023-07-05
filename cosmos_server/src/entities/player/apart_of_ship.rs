@@ -17,7 +17,7 @@ fn send_netty_info(
             server.send_message(
                 ev.client_id,
                 NettyChannelServer::Reliable,
-                cosmos_encoder::serialize(&ServerReliableMessages::PlayerWalkOnShip {
+                cosmos_encoder::serialize(&ServerReliableMessages::PlayerJoinShip {
                     player_entity: ev.entity,
                     ship_entity: apart_of.ship_entity,
                 }),

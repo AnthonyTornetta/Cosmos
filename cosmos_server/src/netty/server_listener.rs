@@ -289,7 +289,7 @@ pub fn server_listen_messages(
                                 client_id,
                                 NettyChannelServer::Reliable,
                                 cosmos_encoder::serialize(
-                                    &ServerReliableMessages::PlayerWalkOnShip {
+                                    &ServerReliableMessages::PlayerJoinShip {
                                         player_entity,
                                         ship_entity,
                                     },
