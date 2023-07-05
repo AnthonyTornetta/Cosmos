@@ -30,8 +30,6 @@ fn fix_read_mass_props(
             .bodies
             .get(handle.0)
         {
-            // .bodies[handle.0];
-
             let mass = info.mass();
             let world_com: Vec3 = (*info.center_of_mass()).into();
             let local_com = g_trans.translation() - world_com;

@@ -156,14 +156,25 @@ fn respond_to_collisions(
 }
 
 fn remove_parent_when_too_far(
-    query: Query<(Entity, &Parent, &Location), With<LocalPlayer>>,
+    mut query: Query<
+        (Entity, &Parent, &mut Location, &Transform),
+        (With<LocalPlayer>, Without<Ship>),
+    >,
     is_ship: Query<&Location, With<Ship>>,
     mut commands: Commands,
+    mut renet_client: ResMut<RenetClient>,
 ) {
-    if let Ok((player_entity, parent, loc)) = query.get_single() {
+    if let Ok((player_entity, parent, mut player_loc, player_trans)) = query.get_single_mut() {
         if let Ok(ship_loc) = is_ship.get(parent.get()) {
-            if loc.distance_sqrd(ship_loc).sqrt() >= CHUNK_DIMENSIONSF * 2.0 {
+            if player_loc.distance_sqrd(ship_loc).sqrt() >= CHUNK_DIMENSIONSF * 2.0 {
                 commands.entity(player_entity).remove_parent();
+
+                player_loc.last_transform_loc = Some(player_trans.translation);
+
+                renet_client.send_message(
+                    NettyChannelClient::Reliable,
+                    cosmos_encoder::serialize(&ClientReliableMessages::LeaveShip),
+                );
             }
         }
     }
