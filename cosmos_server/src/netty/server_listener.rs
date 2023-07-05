@@ -257,6 +257,12 @@ pub fn server_listen_messages(
                         if let Some(mut e) = commands.get_entity(player_entity) {
                             // This should be verified in the future to make sure the parent of the player is actually a ship
                             e.remove_parent();
+                            if let Ok((player_trans, mut player_loc)) = change_player_query
+                                .get_mut(player_entity)
+                                .map(|(x, y, _, _)| (x, y))
+                            {
+                                player_loc.last_transform_loc = Some(player_trans.translation);
+                            }
 
                             server.broadcast_message_except(
                                 client_id,

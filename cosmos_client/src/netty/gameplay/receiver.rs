@@ -139,7 +139,7 @@ fn client_sync_players(
     (query_player, parent_query): (Query<&Player>, Query<&Parent>),
     mut query_body: Query<
         (
-            Option<&Location>,
+            Option<&mut Location>,
             Option<&mut Transform>,
             Option<&Velocity>,
             Option<&mut NetworkTick>,
@@ -572,11 +572,14 @@ fn client_sync_players(
 
                         let ship_translation = ship_trans.translation;
 
-                        if let Ok(Some(mut trans)) = query_body.get_mut(player_entity).map(|x| x.1)
+                        if let Ok((Some(mut loc), Some(mut trans))) =
+                            query_body.get_mut(player_entity).map(|x| (x.0, x.1))
                         {
                             let cur_trans = trans.translation;
 
                             trans.translation = cur_trans + ship_translation;
+
+                            loc.last_transform_loc = Some(trans.translation);
                         }
                     }
                 }
@@ -597,12 +600,11 @@ fn client_sync_players(
                                 continue;
                             };
 
-                            if let Ok((loc, trans, _, _, _)) = query_body.get_mut(player_entity) {
-                                trans
-                                    .expect("A player should always have a transform.")
-                                    .translation =
-                                    (*loc.expect("A player should always have a loc") - ship_loc)
-                                        .absolute_coords_f32()
+                            if let Ok((Some(mut loc), Some(mut trans), _, _, _)) =
+                                query_body.get_mut(player_entity)
+                            {
+                                trans.translation = (*loc - ship_loc).absolute_coords_f32();
+                                loc.last_transform_loc = Some(trans.translation);
                             }
                         }
                     }
