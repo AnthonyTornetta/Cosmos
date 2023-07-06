@@ -9,8 +9,6 @@ use crate::{block::BlockFace, entities::player::render_distance::RenderDistance}
 #[derive(Debug, Serialize, Deserialize, Component)]
 /// All reliable messages a client can send
 pub enum ClientReliableMessages {
-    /// Sent when a player wants to disconnect
-    PlayerDisconnect,
     /// Requests chunk data to be sent from the server for that structure
     ///
     /// This does nothing for planets, where you have to load each chunk individually

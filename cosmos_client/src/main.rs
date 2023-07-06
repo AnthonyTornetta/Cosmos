@@ -5,6 +5,7 @@
 pub mod asset;
 pub mod block;
 pub mod camera;
+mod ecs;
 pub mod entities;
 pub mod events;
 pub mod input;
@@ -365,6 +366,7 @@ fn main() {
     universe::register(&mut app);
     skybox::register(&mut app);
     physics::register(&mut app);
+    ecs::register(&mut app);
 
     app.run();
 }

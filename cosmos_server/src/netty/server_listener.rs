@@ -67,8 +67,10 @@ pub fn server_listen_messages(
         while let Some(message) = server.receive_message(client_id, NettyChannelClient::Unreliable)
         {
             if let Some(player_entity) = lobby.player_from_id(client_id) {
-                let command: ClientUnreliableMessages =
-                    cosmos_encoder::deserialize(&message).unwrap();
+                let Ok(command) = cosmos_encoder::deserialize::<ClientUnreliableMessages>(&message) else {
+                    eprintln!("ERROR DECODING CLIENT MESSAGE!");
+                    break;
+                };
 
                 match command {
                     ClientUnreliableMessages::PlayerBody { body, looking } => {
@@ -115,10 +117,12 @@ pub fn server_listen_messages(
         }
 
         while let Some(message) = server.receive_message(client_id, NettyChannelClient::Reliable) {
-            let command: ClientReliableMessages = cosmos_encoder::deserialize(&message).unwrap();
+            let Ok(command) = cosmos_encoder::deserialize::<ClientReliableMessages>(&message) else {
+                eprintln!("ERROR DECODING CLIENT MESSAGE!");
+                break;
+            };
 
             match command {
-                ClientReliableMessages::PlayerDisconnect => {}
                 ClientReliableMessages::SendAllChunks { server_entity } => {
                     if let Ok(structure) = structure_query.get(server_entity) {
                         for (_, chunk) in structure.chunks() {

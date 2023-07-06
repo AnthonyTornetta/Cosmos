@@ -11,7 +11,8 @@ use bevy::prelude::{
 /// The entity will be despawned in the PostUpdate base set to avoid crashes.
 pub struct NeedsDespawned;
 
-fn despawn_needed(
+/// Recursively despawns all entities that need despawned in the PostUpdate set.
+pub fn despawn_needed(
     mut commands: Commands,
     needs_despawned_query: Query<Entity, With<NeedsDespawned>>,
 ) {

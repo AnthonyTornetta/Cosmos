@@ -340,7 +340,7 @@ fn client_sync_players(
             ServerReliableMessages::PlayerRemove { id } => {
                 if let Some(PlayerInfo {
                     client_entity,
-                    server_entity,
+                    server_entity: _,
                 }) = lobby.players.remove(&id)
                 {
                     if let Some(mut entity) = commands.get_entity(client_entity) {
@@ -350,8 +350,6 @@ fn client_sync_players(
 
                         entity.insert(NeedsDespawned);
                     }
-
-                    network_mapping.remove_mapping_from_server_entity(&server_entity);
                 }
             }
             ServerReliableMessages::Planet {
