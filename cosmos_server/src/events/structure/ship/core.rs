@@ -26,6 +26,7 @@ fn on_melting_down(
 ) {
     for (entity, mut structure, mut melting_down) in query.iter_mut() {
         if pilot_query.contains(entity) {
+            println!("Removing pilot!");
             change_pilot_event.send(ChangePilotEvent {
                 structure_entity: entity,
                 pilot_entity: None,

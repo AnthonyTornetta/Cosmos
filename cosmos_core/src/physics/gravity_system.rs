@@ -1,6 +1,8 @@
 //! Handles gravity
 
-use bevy::prelude::*;
+use std::time::Duration;
+
+use bevy::{prelude::*, time::common_conditions::on_fixed_timer};
 use bevy_rapier3d::prelude::{
     ExternalImpulse, PhysicsWorld, RapierContext, RapierRigidBodyHandle, ReadMassProperties,
     RigidBody,
@@ -50,7 +52,7 @@ fn gravity_system(
         &RigidBody,
         Option<&mut ExternalImpulse>,
     )>,
-    time: Res<Time>,
+    // time: Res<Time>,
     mut commands: Commands,
 ) {
     let mut gravs: Vec<(f32, f32, Location, Quat)> = Vec::with_capacity(emitters.iter().len());
@@ -87,7 +89,13 @@ fn gravity_system(
                 }
             }
 
-            force *= time.delta_seconds();
+            // for some reason, unkown to me, multiplying by time.delta_seconds seems to send the client
+            // upwards after a lag spike. I've tested and delta isn't negative or an otherwise unexpected
+            // value. To "fix" this I just run this system once every 20 frames and assume delta is 1/20 sec.
+            // If your FPS is < 20 then gravity is the least of your problems.
+
+            force *= 1.0 / 20.0;
+            // force *= time.delta_seconds();
 
             if let Some(mut external_force) = external_force {
                 external_force.impulse += force;
@@ -113,5 +121,8 @@ pub struct GravityEmitter {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems((fix_read_mass_props, gravity_system));
+    app.add_systems((
+        fix_read_mass_props,
+        gravity_system.run_if(on_fixed_timer(Duration::from_millis(1000 / 20))),
+    ));
 }
