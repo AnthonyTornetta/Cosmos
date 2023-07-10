@@ -1,11 +1,9 @@
 //! Handles gravity
 
-use std::time::Duration;
-
-use bevy::{prelude::*, time::common_conditions::on_fixed_timer};
+use bevy::prelude::*;
 use bevy_rapier3d::prelude::{
     ExternalImpulse, PhysicsWorld, RapierContext, RapierRigidBodyHandle, ReadMassProperties,
-    RigidBody,
+    RigidBody, RigidBodyDisabled,
 };
 
 use crate::structure::planet::Planet;
@@ -45,14 +43,17 @@ fn fix_read_mass_props(
 /// See https://github.com/dimforge/bevy_rapier/issues/271
 fn gravity_system(
     emitters: Query<(&GravityEmitter, &GlobalTransform, &Location)>,
-    mut receiver: Query<(
-        Entity,
-        &Location,
-        &ReadMassProperties,
-        &RigidBody,
-        Option<&mut ExternalImpulse>,
-    )>,
-    // time: Res<Time>,
+    mut receiver: Query<
+        (
+            Entity,
+            &Location,
+            &ReadMassProperties,
+            &RigidBody,
+            Option<&mut ExternalImpulse>,
+        ),
+        Without<RigidBodyDisabled>,
+    >,
+    time: Res<Time>,
     mut commands: Commands,
 ) {
     let mut gravs: Vec<(f32, f32, Location, Quat)> = Vec::with_capacity(emitters.iter().len());
@@ -89,13 +90,7 @@ fn gravity_system(
                 }
             }
 
-            // for some reason, unkown to me, multiplying by time.delta_seconds seems to send the client
-            // upwards after a lag spike. I've tested and delta isn't negative or an otherwise unexpected
-            // value. To "fix" this I just run this system once every 20 frames and assume delta is 1/20 sec.
-            // If your FPS is < 20 then gravity is the least of your problems.
-
-            force *= 1.0 / 20.0;
-            // force *= time.delta_seconds();
+            force *= time.delta_seconds();
 
             if let Some(mut external_force) = external_force {
                 external_force.impulse += force;
@@ -121,8 +116,5 @@ pub struct GravityEmitter {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems((
-        fix_read_mass_props,
-        gravity_system.run_if(on_fixed_timer(Duration::from_millis(1000 / 20))),
-    ));
+    app.add_systems((fix_read_mass_props, gravity_system));
 }

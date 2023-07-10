@@ -2,7 +2,10 @@
 //!
 //! Mostly used to move entities between worlds & sync up locations to their transforms.
 
-use bevy::{prelude::*, utils::HashSet};
+use bevy::{
+    prelude::*,
+    utils::{tracing::span::Entered, HashSet},
+};
 use bevy_rapier3d::prelude::{PhysicsWorld, RapierContext, RapierWorld, DEFAULT_WORLD_ID};
 use cosmos_core::{
     entities::player::Player,
@@ -392,6 +395,7 @@ pub(super) fn register(app: &mut App) {
             .chain()
             .in_set(OnUpdate(GameState::Playing)),
     )
+    .add_system(fix_location.in_base_set(CoreSet::UpdateFlush))
     // This must be last due to commands being delayed when adding PhysicsWorlds.
     .add_system(remove_empty_worlds.in_base_set(CoreSet::Last));
 }
