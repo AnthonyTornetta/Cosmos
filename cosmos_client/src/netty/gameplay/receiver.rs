@@ -466,6 +466,7 @@ fn client_sync_players(
                 entity: server_entity,
             } => {
                 if let Some(entity) = network_mapping.client_from_server(&server_entity) {
+                    println!("Structure marked for removal!");
                     commands.entity(entity).insert(NeedsDespawned);
                 }
             }
