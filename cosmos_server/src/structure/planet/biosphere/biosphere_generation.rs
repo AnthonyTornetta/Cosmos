@@ -1,6 +1,6 @@
 //! Responsible for the default generation of biospheres.
 
-use std::{collections::HashSet, marker::PhantomData, mem::swap};
+use std::{marker::PhantomData, mem::swap};
 
 use bevy::{
     prelude::{Component, Entity, EventReader, EventWriter, Query, Res, ResMut, Resource},

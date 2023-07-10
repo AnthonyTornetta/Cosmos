@@ -137,30 +137,34 @@ fn five_by_five_no_corners(
 }
 
 #[inline]
-// Log covered in leaves in all 4 y and z directions.
-fn branch_step(
-    (x, y, z): (usize, usize, usize),
+fn branch(
+    (x, y, z): (i32, i32, i32),
+    offsets: Vec<(i32, i32, i32, BlockFace)>,
     structure: &mut Structure,
     log: &Block,
     leaf: &Block,
-    direction: BlockFace,
     blocks: &Registry<Block>,
     event_writer: &mut EventWriter<BlockChangedEvent>,
 ) {
-    // Log.
-    structure.set_block_at(x, y, z, log, direction, blocks, Some(event_writer));
+    // Leaves. Must go first so they don't overwrite the logs.
+    for (dx, dy, dz, block_up) in offsets.iter() {
+        let (nx, ny, nz) = ((x + dx) as usize, (y + dy) as usize, (z + dz) as usize);
+        structure.set_block_at(nx + 1, ny, nz, leaf, *block_up, blocks, Some(event_writer));
+        structure.set_block_at(nx - 1, ny, nz, leaf, *block_up, blocks, Some(event_writer));
+        structure.set_block_at(nx, ny + 1, nz, leaf, *block_up, blocks, Some(event_writer));
+        structure.set_block_at(nx, ny - 1, nz, leaf, *block_up, blocks, Some(event_writer));
+        structure.set_block_at(nx, ny, nz + 1, leaf, *block_up, blocks, Some(event_writer));
+        structure.set_block_at(nx, ny, nz - 1, leaf, *block_up, blocks, Some(event_writer));
+    }
 
-    // Leaves.
-    structure.set_block_at(x + 1, y, z, leaf, direction, blocks, Some(event_writer));
-    structure.set_block_at(x - 1, y, z, leaf, direction, blocks, Some(event_writer));
-    structure.set_block_at(x, y + 1, z, leaf, direction, blocks, Some(event_writer));
-    structure.set_block_at(x, y - 1, z, leaf, direction, blocks, Some(event_writer));
-    structure.set_block_at(x, y, z + 1, leaf, direction, blocks, Some(event_writer));
-    structure.set_block_at(x, y, z - 1, leaf, direction, blocks, Some(event_writer));
+    for (dx, dy, dz, block_up) in offsets {
+        let (nx, ny, nz) = ((x + dx) as usize, (y + dy) as usize, (z + dz) as usize);
+        structure.set_block_at(nx, ny, nz, log, block_up, blocks, Some(event_writer));
+    }
 }
 
 #[inline]
-// Plus-sign with the middle pushed up 1.
+// Plus-sign with the middle pushed up 1. Uses fewer lines to put this in a function bc of the formatter.
 fn crown(
     (x, y, z): (usize, usize, usize),
     structure: &mut Structure,
@@ -176,146 +180,6 @@ fn crown(
     structure.set_block_at(x, y, z - 1, block, block_up, blocks, Some(event_writer));
 }
 
-#[inline]
-// 4 1x1 branches covered in leaves.
-fn branch1(
-    (x, y, z): (usize, usize, usize),
-    structure: &mut Structure,
-    log: &Block,
-    leaf: &Block,
-    blocks: &Registry<Block>,
-    event_writer: &mut EventWriter<BlockChangedEvent>,
-) {
-    // +x
-    branch_step((x + 1, y, z), structure, log, leaf, BlockFace::Right, blocks, event_writer);
-
-    // -x
-    branch_step((x - 1, y, z), structure, log, leaf, BlockFace::Left, blocks, event_writer);
-
-    // +z
-    branch_step((x, y, z + 1), structure, log, leaf, BlockFace::Front, blocks, event_writer);
-
-    // -z
-    branch_step((x, y, z - 1), structure, log, leaf, BlockFace::Back, blocks, event_writer);
-}
-
-#[inline]
-// for 1x1 trunk. Two branch steps in each cardinal direction.
-fn branch2(
-    (x, y, z): (usize, usize, usize),
-    structure: &mut Structure,
-    log: &Block,
-    leaf: &Block,
-    blocks: &Registry<Block>,
-    event_writer: &mut EventWriter<BlockChangedEvent>,
-) {
-    // +x
-    branch_step((x + 1, y, z), structure, log, leaf, BlockFace::Right, blocks, event_writer);
-    branch_step((x + 2, y - 1, z), structure, log, leaf, BlockFace::Right, blocks, event_writer);
-
-    // -x
-    branch_step((x - 1, y, z), structure, log, leaf, BlockFace::Left, blocks, event_writer);
-    branch_step((x - 2, y - 1, z), structure, log, leaf, BlockFace::Left, blocks, event_writer);
-
-    // +z
-    branch_step((x, y, z + 1), structure, log, leaf, BlockFace::Front, blocks, event_writer);
-    branch_step((x, y - 1, z + 2), structure, log, leaf, BlockFace::Front, blocks, event_writer);
-
-    // -z
-    branch_step((x, y, z - 1), structure, log, leaf, BlockFace::Back, blocks, event_writer);
-    branch_step((x, y - 1, z - 2), structure, log, leaf, BlockFace::Back, blocks, event_writer);
-}
-
-#[inline]
-// For 3x3 missing corners. 2 branch steps in each cardinal direction and 2 on each diagonal.
-fn branch3(
-    (x, y, z): (usize, usize, usize),
-    structure: &mut Structure,
-    log: &Block,
-    leaf: &Block,
-    blocks: &Registry<Block>,
-    event_writer: &mut EventWriter<BlockChangedEvent>,
-) {
-    // +x
-    branch_step((x + 2, y, z), structure, log, leaf, BlockFace::Right, blocks, event_writer);
-    branch_step((x + 3, y - 1, z), structure, log, leaf, BlockFace::Right, blocks, event_writer);
-
-    // -x
-    branch_step((x - 2, y, z), structure, log, leaf, BlockFace::Left, blocks, event_writer);
-    branch_step((x - 3, y - 1, z), structure, log, leaf, BlockFace::Left, blocks, event_writer);
-
-    // +z
-    branch_step((x, y, z + 2), structure, log, leaf, BlockFace::Front, blocks, event_writer);
-    branch_step((x, y - 1, z + 3), structure, log, leaf, BlockFace::Front, blocks, event_writer);
-
-    // -z
-    branch_step((x, y, z - 2), structure, log, leaf, BlockFace::Back, blocks, event_writer);
-    branch_step((x, y - 1, z - 3), structure, log, leaf, BlockFace::Back, blocks, event_writer);
-
-    // +x, +z
-    branch_step((x + 1, y, z + 1), structure, log, leaf, BlockFace::Right, blocks, event_writer);
-    branch_step((x + 2, y - 1, z + 2), structure, log, leaf, BlockFace::Right, blocks, event_writer);
-
-    // -x, +z
-    branch_step((x - 1, y, z + 1), structure, log, leaf, BlockFace::Left, blocks, event_writer);
-    branch_step((x - 2, y - 1, z + 2), structure, log, leaf, BlockFace::Left, blocks, event_writer);
-
-    // +x, -z
-    branch_step((x + 1, y, z - 1), structure, log, leaf, BlockFace::Front, blocks, event_writer);
-    branch_step((x + 2, y - 1, z - 2), structure, log, leaf, BlockFace::Front, blocks, event_writer);
-
-    // -x, -z
-    branch_step((x - 1, y, z - 1), structure, log, leaf, BlockFace::Back, blocks, event_writer);
-    branch_step((x - 2, y - 1, z - 2), structure, log, leaf, BlockFace::Back, blocks, event_writer);
-}
-
-#[inline]
-// For 3x3 trunk. 3 branch steps in each cardinal direction and 2 on each diagonal.
-fn branch4(
-    (x, y, z): (usize, usize, usize),
-    structure: &mut Structure,
-    log: &Block,
-    leaf: &Block,
-    blocks: &Registry<Block>,
-    event_writer: &mut EventWriter<BlockChangedEvent>,
-) {
-    // +x
-    branch_step((x + 2, y, z), structure, log, leaf, BlockFace::Right, blocks, event_writer);
-    branch_step((x + 3, y, z), structure, log, leaf, BlockFace::Right, blocks, event_writer);
-    branch_step((x + 4, y - 1, z), structure, log, leaf, BlockFace::Right, blocks, event_writer);
-
-    // -x
-    branch_step((x - 2, y, z), structure, log, leaf, BlockFace::Left, blocks, event_writer);
-    branch_step((x - 3, y, z), structure, log, leaf, BlockFace::Left, blocks, event_writer);
-    branch_step((x - 4, y - 1, z), structure, log, leaf, BlockFace::Right, blocks, event_writer);
-
-    // +z
-    branch_step((x, y, z + 2), structure, log, leaf, BlockFace::Front, blocks, event_writer);
-    branch_step((x, y, z + 3), structure, log, leaf, BlockFace::Front, blocks, event_writer);
-    branch_step((x, y - 1, z + 4), structure, log, leaf, BlockFace::Right, blocks, event_writer);
-
-    // -z
-    branch_step((x, y, z - 2), structure, log, leaf, BlockFace::Back, blocks, event_writer);
-    branch_step((x, y, z - 3), structure, log, leaf, BlockFace::Back, blocks, event_writer);
-    branch_step((x, y - 1, z - 4), structure, log, leaf, BlockFace::Right, blocks, event_writer);
-
-    // +x, +z
-    branch_step((x + 2, y, z + 2), structure, log, leaf, BlockFace::Right, blocks, event_writer);
-    branch_step((x + 3, y - 1, z + 3), structure, log, leaf, BlockFace::Right, blocks, event_writer);
-
-    // -x, +z
-    branch_step((x - 2, y, z + 2), structure, log, leaf, BlockFace::Left, blocks, event_writer);
-    branch_step((x - 3, y - 1, z + 3), structure, log, leaf, BlockFace::Left, blocks, event_writer);
-
-    // +x, -z
-    branch_step((x + 2, y, z - 2), structure, log, leaf, BlockFace::Front, blocks, event_writer);
-    branch_step((x + 3, y - 1, z - 3), structure, log, leaf, BlockFace::Front, blocks, event_writer);
-
-    // -x, -z
-    branch_step((x - 2, y, z - 2), structure, log, leaf, BlockFace::Back, blocks, event_writer);
-    branch_step((x - 3, y - 1, z - 3), structure, log, leaf, BlockFace::Back, blocks, event_writer);
-}
-
 const DELTA: f64 = 1.0;
 const FOREST: f64 = 0.235;
 const DIST_BETWEEN_TREES: usize = 5;
@@ -323,7 +187,7 @@ const SEGMENT_HEIGHT: usize = 10;
 const BRANCH_START: f64 = 0.5;
 const BETWEEN_BRANCHES: usize = 3;
 
-// branch_step leaves overwriting nearby logs...
+// branch_leaves leaves overwriting nearby logs...
 
 /// Sends a ChunkInitEvent for every chunk that's done generating, monitors when chunks are finished generating.
 pub fn generate_chunk_features(
@@ -338,170 +202,238 @@ pub fn generate_chunk_features(
     for ev in event_reader.iter() {
         if let Ok((mut structure, location)) = structure_query.get_mut(ev.structure_entity) {
             let (cx, cy, cz) = ev.chunk_coords;
-            // let sx = cx * CHUNK_DIMENSIONS;
-            // let sy = cy * CHUNK_DIMENSIONS;
-            // let sz = cz * CHUNK_DIMENSIONS;
+            let sx = cx * CHUNK_DIMENSIONS;
+            let sy = cy * CHUNK_DIMENSIONS;
+            let sz = cz * CHUNK_DIMENSIONS;
 
-            //         let air = blocks.from_id("cosmos:air").unwrap();
-            //         let grass = blocks.from_id("cosmos:grass").unwrap();
-            //         let log = blocks.from_id("cosmos:redwood_log").unwrap();
-            //         let leaf = blocks.from_id("cosmos:redwood_leaf").unwrap();
+            let air = blocks.from_id("cosmos:air").unwrap();
+            let grass = blocks.from_id("cosmos:grass").unwrap();
+            let log = blocks.from_id("cosmos:redwood_log").unwrap();
+            let leaf = blocks.from_id("cosmos:redwood_leaf").unwrap();
 
-            //         let structure_coords = location.absolute_coords_f64();
+            let structure_coords = location.absolute_coords_f64();
 
-            //         let noise_y = structure.blocks_height();
-            //         let mut noise_cache = [[0.0; CHUNK_DIMENSIONS + DIST_BETWEEN_TREES * 2]; CHUNK_DIMENSIONS + DIST_BETWEEN_TREES * 2];
-            //         for (z, slice) in noise_cache.iter_mut().enumerate() {
-            //             let bz = sz + z;
-            //             for (x, noise) in slice.iter_mut().enumerate() {
-            //                 *noise = noise_generator.get([
-            //                     ((sx + x) as f64 - DIST_BETWEEN_TREES as f64 + structure_coords.x) * DELTA,
-            //                     (noise_y as f64 + structure_coords.y) * DELTA,
-            //                     (bz as f64 - DIST_BETWEEN_TREES as f64 + structure_coords.z) * DELTA,
-            //                 ]);
-            //             }
-            //         }
+            let noise_y = structure.blocks_height();
+            let mut noise_cache = [[0.0; CHUNK_DIMENSIONS + DIST_BETWEEN_TREES * 2]; CHUNK_DIMENSIONS + DIST_BETWEEN_TREES * 2];
+            for (z, slice) in noise_cache.iter_mut().enumerate() {
+                let bz = sz + z;
+                for (x, noise) in slice.iter_mut().enumerate() {
+                    *noise = noise_generator.get([
+                        ((sx + x) as f64 - DIST_BETWEEN_TREES as f64 + structure_coords.x) * DELTA,
+                        (noise_y as f64 + structure_coords.y) * DELTA,
+                        (bz as f64 - DIST_BETWEEN_TREES as f64 + structure_coords.z) * DELTA,
+                    ]);
+                }
+            }
 
-            //         for z in 0..CHUNK_DIMENSIONS {
-            //             let bz = sz + z;
-            //             'next: for x in 0..CHUNK_DIMENSIONS {
-            //                 let bx = sx + x;
-            //                 let mut y: i32 = CHUNK_DIMENSIONS as i32 - 1;
-            //                 while y >= 0 && structure.block_at(bx, sy + y as usize, bz, &blocks) == air {
-            //                     y -= 1;
-            //                 }
+            for z in 0..CHUNK_DIMENSIONS {
+                let bz = sz + z;
+                'next: for x in 0..CHUNK_DIMENSIONS {
+                    let bx = sx + x;
+                    let mut y: i32 = CHUNK_DIMENSIONS as i32 - 1;
+                    while y >= 0 && structure.block_at(bx, sy + y as usize, bz, &blocks) == air {
+                        y -= 1;
+                    }
 
-            //                 let noise = noise_cache[z + DIST_BETWEEN_TREES][x + DIST_BETWEEN_TREES];
-            //                 if y >= 0 && structure.block_at(bx, sy + y as usize, bz, &blocks) == grass && noise * noise > FOREST {
-            //                     for dz in 0..=DIST_BETWEEN_TREES * 2 {
-            //                         for dx in 0..=DIST_BETWEEN_TREES * 2 {
-            //                             if noise < noise_cache[z + dz][x + dx] {
-            //                                 continue 'next;
-            //                             }
-            //                         }
-            //                     }
-            //                     let by = sy + y as usize;
+                    let noise = noise_cache[z + DIST_BETWEEN_TREES][x + DIST_BETWEEN_TREES];
+                    if y >= 0 && structure.block_at(bx, sy + y as usize, bz, &blocks) == grass && noise * noise > FOREST {
+                        for dz in 0..=DIST_BETWEEN_TREES * 2 {
+                            for dx in 0..=DIST_BETWEEN_TREES * 2 {
+                                if noise < noise_cache[z + dz][x + dx] {
+                                    continue 'next;
+                                }
+                            }
+                        }
+                        let by = sy + y as usize;
 
-            //                     let height_noise = noise_generator.get([
-            //                         (bx as f64 as f64 + structure_coords.x) * DELTA,
-            //                         (by as f64 + structure_coords.y) * DELTA,
-            //                         (bz as f64 as f64 + structure_coords.z) * DELTA,
-            //                     ]);
-            //                     let mut height = (4.0 * SEGMENT_HEIGHT as f64 + 4.0 * SEGMENT_HEIGHT as f64 * height_noise) as usize;
-            //                     // Branches start the branch height from the bottom and spawn every 3 vertical blocks from the top.
-            //                     let branch_height = (height as f64 * BRANCH_START) as usize;
-            //                     println!("Tree Height: {}", height);
+                        let height_noise = noise_generator.get([
+                            (bx as f64 as f64 + structure_coords.x) * DELTA,
+                            (by as f64 + structure_coords.y) * DELTA,
+                            (bz as f64 as f64 + structure_coords.z) * DELTA,
+                        ]);
+                        let mut height = (4.0 * SEGMENT_HEIGHT as f64 + 4.0 * SEGMENT_HEIGHT as f64 * height_noise) as usize;
+                        // Branches start the branch height from the bottom and spawn every 3 vertical blocks from the top.
+                        let branch_height = (height as f64 * BRANCH_START) as usize;
 
-            //                     // Trunk.
-            //                     let mut dy = 1;
+                        // Trunk.
+                        let mut dy = 1;
 
-            //                     // 5x5 missing corners.
-            //                     if height - dy >= SEGMENT_HEIGHT * 4 && dy == 1 {
-            //                         height += SEGMENT_HEIGHT;
-            //                     }
-            //                     while height - dy >= SEGMENT_HEIGHT * 4 {
-            //                         five_by_five_no_corners(
-            //                             (bx, by + dy, bz),
-            //                             &mut structure,
-            //                             log,
-            //                             BlockFace::Top,
-            //                             &blocks,
-            //                             &mut block_event_writer,
-            //                         );
-            //                         dy += 1;
-            //                     }
+                        // 5x5 missing corners.
+                        if height - dy >= SEGMENT_HEIGHT * 4 && dy == 1 {
+                            height += SEGMENT_HEIGHT;
+                        }
+                        while height - dy >= SEGMENT_HEIGHT * 4 {
+                            five_by_five_no_corners(
+                                (bx, by + dy, bz),
+                                &mut structure,
+                                log,
+                                BlockFace::Top,
+                                &blocks,
+                                &mut block_event_writer,
+                            );
+                            dy += 1;
+                        }
 
-            //                     // 3x3 with plus sign.
-            //                     if height - dy >= SEGMENT_HEIGHT * 3 {
-            //                         if dy == 1 {
-            //                             height += SEGMENT_HEIGHT;
-            //                         }
-            //                     }
-            //                     while height - dy >= SEGMENT_HEIGHT * 3 {
-            //                         three_by_three_plus(
-            //                             (bx, by + dy, bz),
-            //                             &mut structure,
-            //                             log,
-            //                             BlockFace::Top,
-            //                             &blocks,
-            //                             &mut block_event_writer,
-            //                         );
-            //                         dy += 1;
-            //                     }
+                        // 3x3 with plus sign.
+                        if height - dy >= SEGMENT_HEIGHT * 3 {
+                            if dy == 1 {
+                                height += SEGMENT_HEIGHT;
+                            }
+                        }
+                        while height - dy >= SEGMENT_HEIGHT * 3 {
+                            three_by_three_plus(
+                                (bx, by + dy, bz),
+                                &mut structure,
+                                log,
+                                BlockFace::Top,
+                                &blocks,
+                                &mut block_event_writer,
+                            );
+                            dy += 1;
+                        }
 
-            //                     // 3x3.
-            //                     if height - dy >= SEGMENT_HEIGHT * 2 {
-            //                         if dy == 1 {
-            //                             height += SEGMENT_HEIGHT;
-            //                         }
-            //                     }
-            //                     while height - dy >= SEGMENT_HEIGHT * 2 {
-            //                         if dy >= branch_height && (height - dy) % BETWEEN_BRANCHES == 0 {
-            //                             branch4((bx, by + dy, bz), &mut structure, log, leaf, &blocks, &mut block_event_writer);
-            //                         }
-            //                         three_by_three((bx, by + dy, bz), &mut structure, log, block_up, &blocks, &mut block_event_writer);
-            //                         dy += 1;
-            //                     }
+                        // 3x3.
+                        if height - dy >= SEGMENT_HEIGHT * 2 {
+                            if dy == 1 {
+                                height += SEGMENT_HEIGHT;
+                            }
+                        }
+                        while height - dy >= SEGMENT_HEIGHT * 2 {
+                            if dy >= branch_height && (height - dy) % BETWEEN_BRANCHES == 0 {
+                                // 3 branch steps in each cardinal direction and 2 on each diagonal.
+                                println!("Branch 4");
+                                branch(
+                                    (bx as i32, (by + dy) as i32, bz as i32),
+                                    vec![
+                                        (2, 0, 0, BlockFace::Right),
+                                        (3, 0, 0, BlockFace::Right),
+                                        (4, -1, 0, BlockFace::Right),
+                                        (-2, 0, 0, BlockFace::Left),
+                                        (-3, 0, 0, BlockFace::Left),
+                                        (-4, -1, 0, BlockFace::Left),
+                                        (0, 0, 2, BlockFace::Front),
+                                        (0, 0, 3, BlockFace::Front),
+                                        (0, -1, 4, BlockFace::Front),
+                                        (0, 0, -2, BlockFace::Back),
+                                        (0, 0, -3, BlockFace::Back),
+                                        (0, -1, -4, BlockFace::Back),
+                                        (2, 0, 2, BlockFace::Right),
+                                        (3, -1, 3, BlockFace::Right),
+                                        (-2, 0, 2, BlockFace::Front),
+                                        (-3, -1, 3, BlockFace::Front),
+                                        (2, 0, -2, BlockFace::Back),
+                                        (3, -1, -3, BlockFace::Back),
+                                        (-2, 0, -2, BlockFace::Left),
+                                        (-3, -1, -3, BlockFace::Left),
+                                    ],
+                                    &mut structure,
+                                    log,
+                                    leaf,
+                                    &blocks,
+                                    &mut block_event_writer,
+                                );
+                            }
+                            three_by_three((bx, by + dy, bz), &mut structure, log, block_up, &blocks, &mut block_event_writer);
+                            dy += 1;
+                        }
 
-            //                     // 3x3 missing corners.
-            //                     if height - dy >= SEGMENT_HEIGHT {
-            //                         if dy == 1 {
-            //                             height += SEGMENT_HEIGHT;
-            //                         }
-            //                     }
-            //                     while height - dy >= SEGMENT_HEIGHT {
-            //                         if dy >= branch_height && (height - dy) % BETWEEN_BRANCHES == 0 {
-            //                             branch3((bx, by + dy, bz), &mut structure, log, leaf, &blocks, &mut block_event_writer);
-            //                         }
-            //                         three_by_three_no_corners((bx, by + dy, bz), &mut structure, log, block_up, &blocks, &mut block_event_writer);
-            //                         dy += 1;
-            //                     }
+                        // 3x3 missing corners.
+                        if height - dy >= SEGMENT_HEIGHT {
+                            if dy == 1 {
+                                height += SEGMENT_HEIGHT;
+                            }
+                        }
+                        while height - dy >= SEGMENT_HEIGHT {
+                            if dy >= branch_height && (height - dy) % BETWEEN_BRANCHES == 0 {
+                                // 2 branch steps in each cardinal direction and 2 on each diagonal.
+                                println!("Branch 3");
+                                branch(
+                                    (bx as i32, (by + dy) as i32, bz as i32),
+                                    vec![
+                                        (2, 0, 0, BlockFace::Right),
+                                        (3, -1, 0, BlockFace::Right),
+                                        (-2, 0, 0, BlockFace::Left),
+                                        (-3, -1, 0, BlockFace::Left),
+                                        (0, 0, 2, BlockFace::Front),
+                                        (0, -1, 3, BlockFace::Front),
+                                        (0, 0, -2, BlockFace::Back),
+                                        (0, -1, -3, BlockFace::Back),
+                                        (1, 0, 1, BlockFace::Right),
+                                        (2, -1, 2, BlockFace::Right),
+                                        (-1, 0, 1, BlockFace::Front),
+                                        (-2, -1, 2, BlockFace::Front),
+                                        (1, 0, -1, BlockFace::Back),
+                                        (2, -1, -2, BlockFace::Back),
+                                        (-1, 0, -1, BlockFace::Left),
+                                        (-2, -1, -2, BlockFace::Left),
+                                    ],
+                                    &mut structure,
+                                    log,
+                                    leaf,
+                                    &blocks,
+                                    &mut block_event_writer,
+                                );
+                            }
+                            three_by_three_no_corners((bx, by + dy, bz), &mut structure, log, block_up, &blocks, &mut block_event_writer);
+                            dy += 1;
+                        }
 
-            //                     // 1x1.
-            //                     while dy <= height {
-            //                         structure.set_block_at(bx, by + dy, bz, log, block_up, &blocks, Some(&mut block_event_writer));
-            //                         dy += 1;
-            //                     }
+                        // 1x1.
+                        while dy <= height {
+                            structure.set_block_at(bx, by + dy, bz, log, block_up, &blocks, Some(&mut block_event_writer));
+                            dy += 1;
+                        }
 
-            //                     // Top Segment Branches
-            //                     crown(
-            //                         (bx, by + height, bz),
-            //                         &mut structure,
-            //                         leaf,
-            //                         block_up,
-            //                         &blocks,
-            //                         &mut block_event_writer,
-            //                     );
+                        // Top Segment Branches
+                        crown(
+                            (bx, by + height, bz),
+                            &mut structure,
+                            leaf,
+                            block_up,
+                            &blocks,
+                            &mut block_event_writer,
+                        );
 
-            //                     branch1(
-            //                         (bx, by + height - BETWEEN_BRANCHES, bz),
-            //                         &mut structure,
-            //                         log,
-            //                         leaf,
-            //                         &blocks,
-            //                         &mut block_event_writer,
-            //                     );
+                        // 4 1x1 branches.
+                        branch(
+                            (bx as i32, (by + height - BETWEEN_BRANCHES) as i32, bz as i32),
+                            vec![
+                                (1, 0, 0, BlockFace::Right),
+                                (-1, 0, 0, BlockFace::Left),
+                                (0, 0, 1, BlockFace::Front),
+                                (0, 0, -1, BlockFace::Back),
+                            ],
+                            &mut structure,
+                            log,
+                            leaf,
+                            &blocks,
+                            &mut block_event_writer,
+                        );
 
-            //                     branch2(
-            //                         (bx, by + height - BETWEEN_BRANCHES * 2, bz),
-            //                         &mut structure,
-            //                         log,
-            //                         leaf,
-            //                         &blocks,
-            //                         &mut block_event_writer,
-            //                     );
-
-            //                     branch2(
-            //                         (bx, by + height - BETWEEN_BRANCHES * 3, bz),
-            //                         &mut structure,
-            //                         log,
-            //                         leaf,
-            //                         &blocks,
-            //                         &mut block_event_writer,
-            //                     );
-            //                 }
-            //             }
-            //         }
+                        // for 1x1 trunk. Two branch steps in each cardinal direction.
+                        for i in 2..=3 {
+                            branch(
+                                (bx as i32, (by + height - BETWEEN_BRANCHES * i) as i32, bz as i32),
+                                vec![
+                                    (1, 0, 0, BlockFace::Right),
+                                    (2, -1, 0, BlockFace::Right),
+                                    (-1, 0, 0, BlockFace::Left),
+                                    (-2, -1, 0, BlockFace::Left),
+                                    (0, 0, 1, BlockFace::Front),
+                                    (0, -1, 2, BlockFace::Front),
+                                    (0, 0, -1, BlockFace::Back),
+                                    (0, -1, -2, BlockFace::Back),
+                                ],
+                                &mut structure,
+                                log,
+                                leaf,
+                                &blocks,
+                                &mut block_event_writer,
+                            );
+                        }
+                    }
+                }
+            }
 
             init_event_writer.send(ChunkInitEvent {
                 structure_entity: ev.structure_entity,
