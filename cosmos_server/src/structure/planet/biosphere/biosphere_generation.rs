@@ -61,8 +61,7 @@ fn get_top_height(
     let dist_from_space = s_dimensions as f64 - initial_height;
     let dist_from_45 = x.min(y).max(x.max(y).min(z)) as f64 - dist_from_space;
     let flattening_limit = (s_dimensions as f64 - 2.0 * dist_from_space) * FLAT_FRACTION;
-    depth *=
-        dist_from_45.min(flattening_limit) / flattening_limit * (1.0 - UNFLATTENED) + UNFLATTENED;
+    depth *= dist_from_45.min(flattening_limit) / flattening_limit * (1.0 - UNFLATTENED) + UNFLATTENED;
 
     (middle_air_start as f64 + depth).round() as usize
 }
@@ -88,11 +87,7 @@ pub fn notify_when_done_generating_terrain<T: Component>(
             let (chunk, structure_entity) = chunks;
 
             if let Ok(mut structure) = structure_query.get_mut(structure_entity) {
-                let (x, y, z) = (
-                    chunk.structure_x(),
-                    chunk.structure_y(),
-                    chunk.structure_z(),
-                );
+                let (x, y, z) = (chunk.structure_x(), chunk.structure_y(), chunk.structure_z());
 
                 structure.set_chunk(chunk);
 
@@ -288,14 +283,7 @@ fn do_edge<T: Component + Clone>(
                 let num_top: usize = (j_height == j_top) as usize + (k_height == k_top) as usize;
                 if j_height <= j_top && k_height <= k_top && num_top <= 1 {
                     // The top block needs different "top" to look good, the block can't tell which "up" looks good.
-                    let mut block_up = Planet::get_planet_face_without_structure(
-                        sx + x,
-                        sy + y,
-                        sz + z,
-                        s_dimensions,
-                        s_dimensions,
-                        s_dimensions,
-                    );
+                    let mut block_up = Planet::get_planet_face_without_structure(sx + x, sy + y, sz + z, s_dimensions);
                     if j_height == j_top {
                         block_up = j_up;
                     }
@@ -437,19 +425,10 @@ fn do_corner<T: Component + Clone>(
                 };
 
                 // Stops stairways to heaven.
-                let num_top: usize = (x_height == x_top) as usize
-                    + (y_height == y_top) as usize
-                    + (z_height == z_top) as usize;
+                let num_top: usize = (x_height == x_top) as usize + (y_height == y_top) as usize + (z_height == z_top) as usize;
                 if x_height <= x_top && y_height <= y_top && z_height <= z_top && num_top <= 1 {
                     // The top block needs different "top" to look good, the block can't tell which "up" looks good.
-                    let mut block_up = Planet::get_planet_face_without_structure(
-                        x,
-                        y,
-                        z,
-                        s_dimensions,
-                        s_dimensions,
-                        s_dimensions,
-                    );
+                    let mut block_up = Planet::get_planet_face_without_structure(x, y, z, s_dimensions);
                     if x_height == x_top {
                         block_up = x_up;
                     }
@@ -459,11 +438,7 @@ fn do_corner<T: Component + Clone>(
                     if z_height == z_top {
                         block_up = z_up;
                     }
-                    let block = block_ranges.corner_block(
-                        x_top - x_height,
-                        y_top - y_height,
-                        z_top - z_height,
-                    );
+                    let block = block_ranges.corner_block(x_top - x_height, y_top - y_height, z_top - z_height);
                     chunk.set_block_at(i, j, k, block, block_up);
                 }
             }
@@ -530,10 +505,7 @@ pub fn generate_planet<T: Component + Clone, E: TGenerateChunkEvent + Send + Syn
             let structure_entity = ev.get_structure_entity();
             let (x, y, z) = ev.get_chunk_coordinates();
             if let Ok((mut structure, _)) = query.get_mut(structure_entity) {
-                Some((
-                    structure_entity,
-                    structure.take_or_create_chunk_for_loading(x, y, z),
-                ))
+                Some((structure_entity, structure.take_or_create_chunk_for_loading(x, y, z)))
             } else {
                 None
             }
@@ -549,33 +521,24 @@ pub fn generate_planet<T: Component + Clone, E: TGenerateChunkEvent + Send + Syn
                 return None;
             };
 
-            let s_width = structure.blocks_width();
-            let s_height = structure.blocks_height();
-            let s_length = structure.blocks_length();
+            let s_dimensions = structure.blocks_length();
             let location = *location;
 
-            Some((
-                chunk,
-                s_width,
-                s_height,
-                s_length,
-                location,
-                structure_entity,
-            ))
+            Some((chunk, s_dimensions, location, structure_entity))
         })
-        .collect::<Vec<(Chunk, usize, usize, usize, Location, Entity)>>();
+        .collect::<Vec<(Chunk, usize, Location, Entity)>>();
 
     if !chunks.is_empty() {
         println!("Doing {} chunks!", chunks.len());
 
-        for (mut chunk, s_width, s_height, s_length, location, structure_entity) in chunks {
+        for (mut chunk, s_dimensions, location, structure_entity) in chunks {
             let block_ranges = block_ranges.clone();
             let noise_generator = **noise_generator;
 
             let task = thread_pool.spawn(async move {
                 let timer = UtilsTimer::start();
 
-                let middle_air_start = s_height - CHUNK_DIMENSIONS * 5;
+                let middle_air_start = s_dimensions - CHUNK_DIMENSIONS * 5;
 
                 let actual_pos = location.absolute_coords_f64();
 
@@ -589,86 +552,62 @@ pub fn generate_planet<T: Component + Clone, E: TGenerateChunkEvent + Send + Syn
                 let sx = chunk.structure_x() * CHUNK_DIMENSIONS;
 
                 // Get all possible planet faces from the chunk corners.
-                let mut planet_faces = HashSet::new();
-                for z in 0..=1 {
-                    for y in 0..=1 {
-                        for x in 0..=1 {
-                            planet_faces.insert(Planet::get_planet_face_without_structure(
-                                sx + x * CHUNK_DIMENSIONS,
-                                sy + y * CHUNK_DIMENSIONS,
-                                sz + z * CHUNK_DIMENSIONS,
-                                s_width,
-                                s_height,
-                                s_length,
-                            ));
-                        }
-                    }
-                }
+                let (x_up, y_up, z_up) = Planet::chunk_planet_faces((sx, sy, sz), s_dimensions);
+                let num_up = (x_up != None) as usize + (y_up != None) as usize + (z_up != None) as usize;
 
-                // Support for the middle of the planet.
-                if planet_faces.contains(&BlockFace::Top) {
-                    planet_faces.remove(&BlockFace::Bottom);
-                }
-                if planet_faces.contains(&BlockFace::Right) {
-                    planet_faces.remove(&BlockFace::Left);
-                }
-                if planet_faces.contains(&BlockFace::Front) {
-                    planet_faces.remove(&BlockFace::Back);
-                }
-
-                if planet_faces.len() == 1 {
+                if num_up == 1 {
                     // Chunks on only one face.
+                    let up = if x_up != None {
+                        x_up
+                    } else if y_up != None {
+                        y_up
+                    } else {
+                        z_up
+                    }
+                    .unwrap();
+
                     do_face(
                         (sx, sy, sz),
                         (structure_x, structure_y, structure_z),
-                        s_height,
+                        s_dimensions,
                         &noise_generator,
                         middle_air_start,
                         &block_ranges,
                         &mut chunk,
-                        *planet_faces.iter().next().unwrap(),
+                        up,
                     );
-                } else if planet_faces.len() == 2 {
+                } else if num_up == 2 {
                     // Chunks on an edge.
-                    let mut face_iter = planet_faces.iter();
+                    let (j_up, k_up) = if x_up == None {
+                        (y_up.unwrap(), z_up.unwrap())
+                    } else if y_up == None {
+                        (x_up.unwrap(), z_up.unwrap())
+                    } else {
+                        (x_up.unwrap(), y_up.unwrap())
+                    };
                     do_edge(
                         (sx, sy, sz),
                         (structure_x, structure_y, structure_z),
-                        s_height,
+                        s_dimensions,
                         &noise_generator,
                         middle_air_start,
                         &block_ranges,
                         &mut chunk,
-                        *face_iter.next().unwrap(),
-                        *face_iter.next().unwrap(),
+                        j_up,
+                        k_up,
                     );
                 } else {
-                    let x_face = if planet_faces.contains(&BlockFace::Right) {
-                        BlockFace::Right
-                    } else {
-                        BlockFace::Left
-                    };
-                    let y_face = if planet_faces.contains(&BlockFace::Top) {
-                        BlockFace::Top
-                    } else {
-                        BlockFace::Bottom
-                    };
-                    let z_face = if planet_faces.contains(&BlockFace::Front) {
-                        BlockFace::Front
-                    } else {
-                        BlockFace::Back
-                    };
                     do_corner(
                         (sx, sy, sz),
                         (structure_x, structure_y, structure_z),
-                        s_height,
+                        s_dimensions,
                         &noise_generator,
                         middle_air_start,
                         &block_ranges,
                         &mut chunk,
-                        x_face,
-                        y_face,
-                        z_face,
+                        x_up.unwrap(),
+                        y_up.unwrap(),
+                        z_up.unwrap(),
                     );
                 }
                 timer.log_duration("Chunk: ");
