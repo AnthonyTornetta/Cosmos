@@ -1,6 +1,8 @@
 //! Contains utilities that make interacting with the bevy ECS easier & less
 //! prone to problems.
 
+pub mod bundles;
+
 use bevy::prelude::{
     App, Commands, Component, CoreSet, DespawnRecursiveExt, Entity, IntoSystemConfig, Query, With,
 };

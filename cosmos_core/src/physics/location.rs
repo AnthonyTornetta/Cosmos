@@ -19,16 +19,19 @@ use std::{
 
 use bevy::{
     prelude::{
-        App, Children, Commands, Component, Deref, DerefMut, Entity, GlobalTransform, Parent, Quat,
-        Query, Transform, Vec3, Without,
+        warn, Added, App, Children, Commands, Component, Deref, DerefMut, Entity, GlobalTransform,
+        Parent, Quat, Query, Transform, Vec3, With, Without,
     },
     reflect::{FromReflect, Reflect},
+    transform::TransformBundle,
 };
-use bevy_rapier3d::na::Vector3;
+use bevy_rapier3d::{na::Vector3, prelude::PhysicsWorld};
 use bigdecimal::{BigDecimal, FromPrimitive};
 use serde::{Deserialize, Serialize};
 
-use crate::structure::chunk::ChunkEntity;
+use crate::{ecs::bundles::BundleStartingRotation, structure::chunk::ChunkEntity};
+
+use super::player_world::PlayerWorld;
 
 /// This represents the diameter of a sector. So at a local
 /// of 0, 0, 0 you can travel `SECTOR_DIMENSIONS / 2.0` blocks in any direction and
@@ -506,9 +509,62 @@ pub fn handle_child_syncing(
     }
 }
 
+fn on_add_location_without_transform(
+    mut query: Query<
+        (Entity, &mut Location, Option<&BundleStartingRotation>),
+        (Added<Location>, Without<Transform>, Without<PlayerWorld>),
+    >,
+    worlds: Query<(&Location, &PhysicsWorld), With<PlayerWorld>>,
+    mut commands: Commands,
+) {
+    for (needs_transform_entity, mut my_loc, starting_rotation) in query.iter_mut() {
+        let mut best_dist = f32::MAX;
+        let mut best_physics_world = None;
+        let mut best_player_world_loc = None;
+
+        for (world_loc, phys_world) in worlds.iter() {
+            let dist = world_loc.distance_sqrd(&my_loc);
+
+            if dist < best_dist {
+                best_dist = dist;
+                best_physics_world = Some(*phys_world);
+                best_player_world_loc = Some(world_loc);
+            }
+        }
+
+        let rotation = starting_rotation.map(|x| x.0).unwrap_or(Quat::IDENTITY);
+
+        if let (Some(best_physics_world), Some(best_player_world_loc)) =
+            (best_physics_world, best_player_world_loc)
+        {
+            let transform =
+                Transform::from_translation(best_player_world_loc.relative_coords_to(&my_loc))
+                    .with_rotation(rotation);
+
+            my_loc.last_transform_loc = Some(transform.translation);
+
+            commands.entity(needs_transform_entity).insert((
+                TransformBundle::from_transform(transform),
+                best_physics_world,
+            ));
+        } else {
+            warn!("Location bundle added before there was a player world!");
+            let transform =
+                Transform::from_translation(my_loc.absolute_coords_f32()).with_rotation(rotation);
+
+            my_loc.last_transform_loc = Some(transform.translation);
+
+            commands
+                .entity(needs_transform_entity)
+                .insert(TransformBundle::from_transform(transform));
+        }
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.register_type::<Location>()
-        .register_type::<PreviousLocation>();
+        .register_type::<PreviousLocation>()
+        .add_system(on_add_location_without_transform);
 }
 
 #[cfg(test)]

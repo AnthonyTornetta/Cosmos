@@ -10,7 +10,7 @@ use bevy_rapier3d::prelude::*;
 use bevy_renet::renet::{transport::NetcodeClientTransport, RenetClient};
 use cosmos_core::{
     block::Block,
-    ecs::NeedsDespawned,
+    ecs::{bundles::CosmosPbrBundle, NeedsDespawned},
     entities::player::{render_distance::RenderDistance, Player},
     events::{block_events::BlockChangedEvent, structure::change_pilot_event::ChangePilotEvent},
     inventory::Inventory,
@@ -262,15 +262,12 @@ fn client_sync_players(
                 body.location.last_transform_loc = Some(body.location.local);
 
                 entity_cmds.insert((
-                    PbrBundle {
-                        transform: Transform::with_rotation(
-                            Transform::from_translation(body.location.local),
-                            body.rotation,
-                        ),
+                    CosmosPbrBundle {
+                        location: body.location,
+                        rotation: body.rotation.into(),
                         mesh: meshes.add(shape::Capsule::default().into()),
                         ..default()
                     },
-                    body.location,
                     Collider::capsule_y(0.5, 0.25),
                     LockedAxes::ROTATION_LOCKED,
                     RigidBody::Dynamic,
@@ -352,6 +349,8 @@ fn client_sync_players(
                     }
                 }
             }
+            // This could cause issues in the future if a client receives a planet's position first then this packet.
+            // Please restructure this + the ship to use the new requesting system.
             ServerReliableMessages::Planet {
                 entity: server_entity,
                 length,
@@ -359,6 +358,7 @@ fn client_sync_players(
                 width,
                 planet,
                 biosphere,
+                location,
             } => {
                 if network_mapping.contains_server_entity(server_entity) {
                     println!("Got duplicate planet! Is the server lagging?");
@@ -370,7 +370,7 @@ fn client_sync_players(
                     Structure::new(width as usize, height as usize, length as usize);
 
                 let builder = ClientPlanetBuilder::default();
-                builder.insert_planet(&mut entity_cmds, &mut structure, planet);
+                builder.insert_planet(&mut entity_cmds, location, &mut structure, planet);
 
                 entity_cmds.insert((structure, BiosphereMarker::new(biosphere)));
 
@@ -654,7 +654,9 @@ fn sync_transforms_and_locations(
     mut world_query: Query<(&PlayerWorld, &mut Location)>,
 ) {
     for (transform, mut location) in trans_query_no_parent.iter_mut() {
-        location.apply_updates(transform.translation);
+        if location.last_transform_loc.is_some() {
+            location.apply_updates(transform.translation);
+        }
     }
 
     if let Ok((world, mut world_location)) = world_query.get_single_mut() {

@@ -4,8 +4,8 @@
 use bevy::{
     pbr::{NotShadowCaster, NotShadowReceiver},
     prelude::{
-        warn, App, Commands, Component, Entity, EventWriter, GlobalTransform, Parent, PbrBundle,
-        Quat, Query, Res, Vec3, With, Without,
+        warn, App, Commands, Component, Entity, EventWriter, GlobalTransform, Parent, Quat, Query,
+        Res, Transform, Vec3, With, Without,
     },
     time::Time,
 };
@@ -15,7 +15,7 @@ use bevy_rapier3d::prelude::{
 };
 
 use crate::{
-    ecs::NeedsDespawned,
+    ecs::{bundles::CosmosPbrBundle, NeedsDespawned},
     netty::NoSendEntity,
     physics::{
         location::Location,
@@ -88,19 +88,23 @@ impl Laser {
     ///
     /// * `laser_velocity` - The laser's velocity. Do not add the parent's velocity for this, use `firer_velocity` instead.
     /// * `firer_velocity` - The laser's parent's velocity.
-    /// * `pbr` - This takes a PBR that contains mesh data. The transform field will be overwritten
+    /// * `pbr` - This takes a PBR that contains mesh data. The location & rotation fields will be overwritten
     pub fn spawn_custom_pbr(
         location: Location,
         laser_velocity: Vec3,
         firer_velocity: Vec3,
         strength: f32,
         no_collide_entity: Option<Entity>,
-        mut pbr: PbrBundle,
+        mut pbr: CosmosPbrBundle,
         time: &Time,
         world_id: WorldId,
         commands: &mut Commands,
     ) -> Entity {
-        pbr.transform.look_at(laser_velocity, Vec3::Y);
+        pbr.rotation = Transform::from_xyz(0.0, 0.0, 0.0)
+            .looking_at(laser_velocity, Vec3::Y)
+            .rotation
+            .into();
+        pbr.location = location;
 
         let mut ent_cmds = commands.spawn_empty();
 
@@ -112,7 +116,6 @@ impl Laser {
                 active: true,
                 last_position: location,
             },
-            location,
             pbr,
             RigidBody::Dynamic,
             LockedAxes::ROTATION_LOCKED,
@@ -159,7 +162,7 @@ impl Laser {
             firer_velocity,
             strength,
             no_collide_entity,
-            PbrBundle {
+            CosmosPbrBundle {
                 ..Default::default()
             },
             time,

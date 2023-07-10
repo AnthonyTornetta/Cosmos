@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::{
     ExternalImpulse, PhysicsWorld, RapierContext, RapierRigidBodyHandle, ReadMassProperties,
-    RigidBody,
+    RigidBody, RigidBodyDisabled,
 };
 
 use crate::structure::planet::Planet;
@@ -43,13 +43,16 @@ fn fix_read_mass_props(
 /// See https://github.com/dimforge/bevy_rapier/issues/271
 fn gravity_system(
     emitters: Query<(&GravityEmitter, &GlobalTransform, &Location)>,
-    mut receiver: Query<(
-        Entity,
-        &Location,
-        &ReadMassProperties,
-        &RigidBody,
-        Option<&mut ExternalImpulse>,
-    )>,
+    mut receiver: Query<
+        (
+            Entity,
+            &Location,
+            &ReadMassProperties,
+            &RigidBody,
+            Option<&mut ExternalImpulse>,
+        ),
+        Without<RigidBodyDisabled>,
+    >,
     time: Res<Time>,
     mut commands: Commands,
 ) {

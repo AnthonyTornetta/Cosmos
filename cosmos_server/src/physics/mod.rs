@@ -392,6 +392,7 @@ pub(super) fn register(app: &mut App) {
             .chain()
             .in_set(OnUpdate(GameState::Playing)),
     )
+    .add_system(fix_location.in_base_set(CoreSet::UpdateFlush))
     // This must be last due to commands being delayed when adding PhysicsWorlds.
     .add_system(remove_empty_worlds.in_base_set(CoreSet::Last));
 }

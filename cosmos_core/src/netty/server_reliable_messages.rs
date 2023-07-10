@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     block::BlockFace,
     entities::player::render_distance::RenderDistance,
+    physics::location::Location,
     structure::{loading::ChunksNeedLoaded, planet::Planet},
     universe::star::Star,
 };
@@ -83,6 +84,8 @@ pub enum ServerReliableMessages {
         planet: Planet,
         /// The planet's biosphere
         biosphere: String,
+        /// Planet's location
+        location: Location,
     },
     /// A ship should be created on the client-side.
     /// This does NOT mean the ship was just created by the sever, just that one should be created on the client.

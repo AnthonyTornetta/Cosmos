@@ -1,9 +1,9 @@
 //! Responsible for determining how structures are added to the game when they are needed
 
-use bevy::{ecs::system::EntityCommands, prelude::PbrBundle};
+use bevy::ecs::system::EntityCommands;
 use bevy_rapier3d::prelude::Velocity;
 
-use crate::structure::Structure;
+use crate::{ecs::bundles::CosmosPbrBundle, physics::location::Location, structure::Structure};
 
 /// Used to instantiate structures
 pub trait TStructureBuilder {
@@ -11,6 +11,7 @@ pub trait TStructureBuilder {
     fn insert_structure(
         &self,
         entity: &mut EntityCommands,
+        location: Location,
         velocity: Velocity,
         structure: &mut Structure,
     );
@@ -23,6 +24,7 @@ impl TStructureBuilder for StructureBuilder {
     fn insert_structure(
         &self,
         entity: &mut EntityCommands,
+        location: Location,
         velocity: Velocity,
         structure: &mut Structure,
     ) {
@@ -30,7 +32,8 @@ impl TStructureBuilder for StructureBuilder {
 
         entity.insert((
             velocity,
-            PbrBundle {
+            CosmosPbrBundle {
+                location,
                 ..Default::default()
             },
         ));
