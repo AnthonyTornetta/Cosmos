@@ -2,10 +2,7 @@
 //!
 //! Mostly used to move entities between worlds & sync up locations to their transforms.
 
-use bevy::{
-    prelude::*,
-    utils::{tracing::span::Entered, HashSet},
-};
+use bevy::{prelude::*, utils::HashSet};
 use bevy_rapier3d::prelude::{PhysicsWorld, RapierContext, RapierWorld, DEFAULT_WORLD_ID};
 use cosmos_core::{
     entities::player::Player,

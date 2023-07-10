@@ -4,6 +4,7 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::DEFAULT_WORLD_ID;
 use bevy_renet::renet::*;
 use cosmos_core::{
+    ecs::bundles::CosmosPbrBundle,
     netty::{
         cosmos_encoder, server_laser_cannon_system_messages::ServerLaserCannonSystemMessages,
         NettyChannelServer,
@@ -55,7 +56,7 @@ fn lasers_netty(
                     firer_velocity,
                     strength,
                     no_hit,
-                    PbrBundle {
+                    CosmosPbrBundle {
                         mesh: laser_mesh.0.clone(),
                         material: materials.add(StandardMaterial {
                             base_color: color,

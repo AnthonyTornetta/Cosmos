@@ -10,7 +10,7 @@ use bevy_rapier3d::prelude::*;
 use bevy_renet::renet::{transport::NetcodeClientTransport, RenetClient};
 use cosmos_core::{
     block::Block,
-    ecs::NeedsDespawned,
+    ecs::{bundles::CosmosPbrBundle, NeedsDespawned},
     entities::player::{render_distance::RenderDistance, Player},
     events::{block_events::BlockChangedEvent, structure::change_pilot_event::ChangePilotEvent},
     inventory::Inventory,
@@ -262,15 +262,12 @@ fn client_sync_players(
                 body.location.last_transform_loc = Some(body.location.local);
 
                 entity_cmds.insert((
-                    PbrBundle {
-                        transform: Transform::with_rotation(
-                            Transform::from_translation(body.location.local),
-                            body.rotation,
-                        ),
+                    CosmosPbrBundle {
+                        location: body.location,
+                        rotation: body.rotation.into(),
                         mesh: meshes.add(shape::Capsule::default().into()),
                         ..default()
                     },
-                    body.location,
                     Collider::capsule_y(0.5, 0.25),
                     LockedAxes::ROTATION_LOCKED,
                     RigidBody::Dynamic,

@@ -13,6 +13,12 @@ pub type CosmosPbrBundle = CosmosMaterialMeshBundle<StandardMaterial>;
 /// This will be removed as soon as the transform is constructed
 pub struct BundleStartingRotation(pub Quat);
 
+impl From<Quat> for BundleStartingRotation {
+    fn from(value: Quat) -> Self {
+        Self(value)
+    }
+}
+
 /// A component bundle for entities with a [`Mesh`] and a [`Material`].
 #[derive(Bundle, Clone, Debug, Reflect, Default)]
 pub struct CosmosMaterialMeshBundle<M: Material> {
