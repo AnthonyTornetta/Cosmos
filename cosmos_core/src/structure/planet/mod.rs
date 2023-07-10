@@ -104,9 +104,9 @@ impl Planet {
                         s_dimension,
                     );
                     match up {
-                        BlockFace::Front | BlockFace::Back => x_up = Some(up),
+                        BlockFace::Front | BlockFace::Back => z_up = Some(up),
                         BlockFace::Top | BlockFace::Bottom => y_up = Some(up),
-                        BlockFace::Right | BlockFace::Left => z_up = Some(up),
+                        BlockFace::Right | BlockFace::Left => x_up = Some(up),
                     }
                 }
             }
