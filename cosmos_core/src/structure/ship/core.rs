@@ -1,15 +1,22 @@
 //! Ship core handler
 
 use bevy::{
-    prelude::{App, Commands, Component, EventReader, IntoSystemConfig, OnUpdate, Res, States},
+    prelude::{
+        App, BuildChildren, Children, Commands, Component, CoreSet, EventReader, IntoSystemConfig,
+        OnUpdate, Or, Query, Res, States, With,
+    },
     reflect::{FromReflect, Reflect},
 };
 
 use crate::{
     block::Block,
+    ecs::{despawn_needed, NeedsDespawned},
     events::block_events::BlockChangedEvent,
     registry::{identifiable::Identifiable, Registry},
+    structure::{chunk::ChunkEntity, systems::StructureSystem},
 };
+
+use super::Ship;
 
 #[derive(Component, Default, FromReflect, Reflect, Debug, Copy, Clone)]
 /// Represents the time since the last block was broken
@@ -31,6 +38,29 @@ fn monitor_block_events(
     }
 }
 
+/// Makes sure that when the ship is despawned, only that ship is despawned and not
+/// any of the things docked to it (like the player walking on it)
+fn save_the_kids(
+    query: Query<&Children, (With<NeedsDespawned>, With<Ship>)>,
+    is_this_structure: Query<(), Or<(With<ChunkEntity>, With<StructureSystem>)>>,
+    mut commands: Commands,
+) {
+    for children in query.iter() {
+        for child in children
+            .iter()
+            .copied()
+            .filter(|x| !is_this_structure.contains(*x))
+        {
+            commands.entity(child).remove_parent();
+        }
+    }
+}
+
 pub(super) fn register<T: States + Clone + Copy>(app: &mut App, playing_state: T) {
-    app.add_system(monitor_block_events.in_set(OnUpdate(playing_state)));
+    app.add_system(monitor_block_events.in_set(OnUpdate(playing_state)))
+        .add_system(
+            save_the_kids
+                .in_base_set(CoreSet::PostUpdate)
+                .before(despawn_needed),
+        );
 }

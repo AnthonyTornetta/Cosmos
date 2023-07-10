@@ -1,4 +1,7 @@
-use bevy::prelude::*;
+use bevy::{
+    prelude::{App, Commands, Entity, EventWriter, IntoSystemConfig, OnUpdate, Query, Res, ResMut},
+    time::Time,
+};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::Block,
@@ -26,7 +29,6 @@ fn on_melting_down(
 ) {
     for (entity, mut structure, mut melting_down) in query.iter_mut() {
         if pilot_query.contains(entity) {
-            println!("Removing pilot!");
             change_pilot_event.send(ChangePilotEvent {
                 structure_entity: entity,
                 pilot_entity: None,
