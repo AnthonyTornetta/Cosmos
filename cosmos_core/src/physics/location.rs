@@ -164,6 +164,12 @@ pub type SystemUnit = i64;
 /// A universe system represents a large area of sectors
 pub struct UniverseSystem(SystemUnit, SystemUnit, SystemUnit);
 
+impl Display for UniverseSystem {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(format!("{}, {}, {}", self.0, self.1, self.2).as_str())
+    }
+}
+
 impl UniverseSystem {
     #[inline]
     /// Creates a new UniverseSystem at the given system coordinates
@@ -312,9 +318,9 @@ impl Location {
     /// Gets the system coordinates this location is in
     pub fn get_system_coordinates(&self) -> UniverseSystem {
         UniverseSystem(
-            (self.sector.x() / SYSTEM_SECTORS as SectorUnit) as SystemUnit,
-            (self.sector.y() / SYSTEM_SECTORS as SectorUnit) as SystemUnit,
-            (self.sector.z() / SYSTEM_SECTORS as SectorUnit) as SystemUnit,
+            (self.sector.x() as f32 / SYSTEM_SECTORS as f32).floor() as SystemUnit,
+            (self.sector.y() as f32 / SYSTEM_SECTORS as f32).floor() as SystemUnit,
+            (self.sector.z() as f32 / SYSTEM_SECTORS as f32).floor() as SystemUnit,
         )
     }
 
