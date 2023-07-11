@@ -35,7 +35,7 @@ pub(super) fn register(app: &mut App) {
     app.add_system(
         remove_mappings
             .in_base_set(CoreSet::First)
-            .before(despawn_needed)
+            .after(despawn_needed)
             .run_if(resource_exists::<NetworkMapping>()),
     );
 }

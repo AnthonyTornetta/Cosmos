@@ -1,8 +1,7 @@
 //! Handles client-related planet things
 
 use bevy::prelude::{
-    in_state, App, Commands, CoreSet, Entity, IntoSystemConfig, OnUpdate, Query, Res, ResMut, Vec3,
-    With,
+    in_state, App, Commands, Entity, IntoSystemConfig, OnUpdate, Query, Res, ResMut, Vec3, With,
 };
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{

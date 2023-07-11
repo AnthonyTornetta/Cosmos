@@ -58,9 +58,5 @@ fn save_the_kids(
 
 pub(super) fn register<T: States + Clone + Copy>(app: &mut App, playing_state: T) {
     app.add_system(monitor_block_events.in_set(OnUpdate(playing_state)))
-        .add_system(
-            save_the_kids
-                .in_base_set(CoreSet::First)
-                .before(despawn_needed),
-        );
+        .add_system(save_the_kids.in_base_set(CoreSet::PostUpdate));
 }
