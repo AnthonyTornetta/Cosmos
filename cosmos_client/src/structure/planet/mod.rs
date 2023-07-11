@@ -145,9 +145,5 @@ pub(super) fn register(app: &mut App) {
     biosphere::register(app);
 
     app.add_system(load_planet_chunks.in_set(OnUpdate(GameState::Playing)))
-        .add_system(
-            unload_chunks_far_from_players
-                .in_base_set(CoreSet::PostUpdate)
-                .run_if(in_state(GameState::Playing)),
-        );
+        .add_system(unload_chunks_far_from_players.run_if(in_state(GameState::Playing)));
 }

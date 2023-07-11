@@ -5,7 +5,7 @@ use cosmos_core::ecs::{despawn_needed, NeedsDespawned};
 
 use crate::netty::mapping::NetworkMapping;
 
-/// Recursively despawns all entities that need despawned in the PostUpdate set.
+/// Recursively removes the networking mappings to all entities that are about to be despawned
 pub fn remove_mappings(
     needs_despawned_query: Query<Entity, With<NeedsDespawned>>,
     children_query: Query<&Children>,
@@ -34,8 +34,8 @@ fn recursively_remove(
 pub(super) fn register(app: &mut App) {
     app.add_system(
         remove_mappings
-            .in_base_set(CoreSet::PostUpdate)
-            .after(despawn_needed)
+            .in_base_set(CoreSet::First)
+            .before(despawn_needed)
             .run_if(resource_exists::<NetworkMapping>()),
     );
 }

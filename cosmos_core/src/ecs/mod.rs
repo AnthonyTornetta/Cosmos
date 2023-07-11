@@ -10,10 +10,18 @@ use bevy::prelude::{
 #[derive(Component, Debug)]
 /// Marks an entity that needs to be recurisvely despawned.
 ///
-/// The entity will be despawned in the PostUpdate base set to avoid crashes.
+/// This does NOT make the entity get saved. Add `NeedsSaved` in addition to this component
+/// to save & despawn the entity. If you just want to save the entity, but not despawn it, you can just
+/// add `NeedsSaved`.
+///
+/// ## NOTE:
+/// If an entity is marked with `NeedsDespawned` and was previously saved, the save file will be deleted.
+/// To prevent this, mark it with `NeedsSaved`.
+///
+/// The entity will be despawned in `CoreSet::First` base set to avoid crashes.
 pub struct NeedsDespawned;
 
-/// Recursively despawns all entities that need despawned in the PostUpdate set.
+/// Recursively despawns all entities that need despawned in `CoreSet::First`.
 pub fn despawn_needed(
     mut commands: Commands,
     needs_despawned_query: Query<Entity, With<NeedsDespawned>>,
@@ -24,5 +32,5 @@ pub fn despawn_needed(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(despawn_needed.in_base_set(CoreSet::PostUpdate));
+    app.add_system(despawn_needed.in_base_set(CoreSet::First));
 }

@@ -1,10 +1,6 @@
 //! Loads/unloads entities that are close to/far away from players
 
-use std::{
-    ffi::OsStr,
-    fs::{self},
-    time::Duration,
-};
+use std::{ffi::OsStr, fs, time::Duration};
 
 use bevy::{
     prelude::{
@@ -15,6 +11,7 @@ use bevy::{
     time::common_conditions::on_timer,
 };
 use cosmos_core::{
+    ecs::NeedsDespawned,
     entities::player::Player,
     persistence::{LoadingDistance, LOAD_DISTANCE},
     physics::location::{Location, Sector, SectorUnit, SECTOR_DIMENSIONS},
@@ -22,15 +19,14 @@ use cosmos_core::{
 use futures_lite::future;
 use walkdir::WalkDir;
 
-use super::{
-    loading::NeedsLoaded,
-    saving::{NeedsSaved, NeedsUnloaded},
-    EntityId, SaveFileIdentifier, SectorsCache,
-};
+use super::{loading::NeedsLoaded, saving::NeedsSaved, EntityId, SaveFileIdentifier, SectorsCache};
 
 fn unload_far(
     query: Query<&Location, With<Player>>,
-    others: Query<(&Location, Entity, &LoadingDistance), (Without<Player>, Without<NeedsUnloaded>)>,
+    others: Query<
+        (&Location, Entity, &LoadingDistance),
+        (Without<Player>, Without<NeedsDespawned>),
+    >,
     mut commands: Commands,
 ) {
     for (loc, ent, ul_distance) in others.iter() {
@@ -48,7 +44,7 @@ fn unload_far(
 
         println!("Flagged for saving + unloading!");
 
-        commands.entity(ent).insert((NeedsSaved, NeedsUnloaded));
+        commands.entity(ent).insert((NeedsSaved, NeedsDespawned));
     }
 }
 

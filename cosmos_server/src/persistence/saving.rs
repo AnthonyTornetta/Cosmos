@@ -9,14 +9,16 @@
 
 use bevy::{
     prelude::{
-        App, Commands, Component, CoreSet, DespawnRecursiveExt, Entity, IntoSystemConfig, Query,
-        ResMut, With, Without,
+        App, Commands, Component, CoreSet, Entity, IntoSystemConfig, Query, ResMut, With, Without,
     },
     reflect::Reflect,
 };
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
-    netty::cosmos_encoder, persistence::LoadingDistance, physics::location::Location,
+    ecs::{despawn_needed, NeedsDespawned},
+    netty::cosmos_encoder,
+    persistence::LoadingDistance,
+    physics::location::Location,
 };
 use std::{fs, io};
 
@@ -26,11 +28,6 @@ use super::{EntityId, SaveFileIdentifier, SaveFileIdentifierType, SectorsCache, 
 /// this component will be removed.
 #[derive(Component, Debug, Default, Reflect)]
 pub struct NeedsSaved;
-
-/// This flag will denote that once this entity is saved, it will be unloaded.
-/// To save this entity, make sure to also add `NeedsSaved`
-#[derive(Component, Debug, Default, Reflect)]
-pub struct NeedsUnloaded;
 
 fn check_needs_saved(
     query: Query<Entity, (With<NeedsSaved>, Without<SerializedData>)>,
@@ -55,22 +52,37 @@ pub fn done_saving(
             Entity,
             &SerializedData,
             Option<&EntityId>,
-            Option<&NeedsUnloaded>,
             Option<&LoadingDistance>,
             Option<&SaveFileIdentifier>,
         ),
         With<NeedsSaved>,
     >,
+    dead_saves_query: Query<&SaveFileIdentifier, (With<NeedsDespawned>, Without<NeedsSaved>)>,
     mut sectors_cache: ResMut<SectorsCache>,
     mut commands: Commands,
 ) {
-    for (entity, sd, entity_id, needs_unloaded, loading_distance, save_file_identifier) in
-        query.iter()
-    {
+    for dead_save in dead_saves_query.iter() {
+        let path = dead_save.get_save_file_path();
+        if fs::try_exists(&path).unwrap_or(false) {
+            fs::remove_file(path).expect("Error deleting old save file!");
+
+            if let SaveFileIdentifierType::Base((entity_id, Some(sector), load_distance)) =
+                &dead_save.identifier_type
+            {
+                sectors_cache.remove(entity_id, *sector, *load_distance);
+            }
+        }
+    }
+
+    for (entity, sd, entity_id, loading_distance, save_file_identifier) in query.iter() {
         commands
             .entity(entity)
             .remove::<NeedsSaved>()
             .remove::<SerializedData>();
+
+        if !sd.should_save() {
+            continue;
+        }
 
         let entity_id = if let Some(id) = entity_id {
             id.clone()
@@ -93,13 +105,6 @@ pub fn done_saving(
                     sectors_cache.remove(entity_id, *sector, *load_distance);
                 }
             }
-        }
-
-        if !sd.should_save() {
-            if needs_unloaded.is_some() {
-                commands.entity(entity).despawn_recursive();
-            }
-            continue;
         }
 
         let serialized: Vec<u8> = cosmos_encoder::serialize(&sd);
@@ -127,10 +132,6 @@ pub fn done_saving(
                 entity_id,
                 loading_distance.map(|ld| ld.load_distance()),
             );
-        }
-
-        if needs_unloaded.is_some() {
-            commands.entity(entity).despawn_recursive();
         }
     }
 }
@@ -174,11 +175,25 @@ fn default_save(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(check_needs_saved)
+    app.add_system(check_needs_saved.in_base_set(CoreSet::PostUpdate))
         // Put all saving-related systems after this
-        .add_system(begin_saving.in_base_set(CoreSet::First))
+        .add_system(
+            begin_saving
+                .in_base_set(CoreSet::First)
+                .before(despawn_needed),
+        )
         // Put all saving-related systems before this
-        .add_system(done_saving.after(begin_saving))
+        .add_system(
+            done_saving
+                .in_base_set(CoreSet::First)
+                .after(begin_saving)
+                .before(despawn_needed),
+        )
         // Like this:
-        .add_system(default_save.after(begin_saving).before(done_saving));
+        .add_system(
+            default_save
+                .in_base_set(CoreSet::First)
+                .after(begin_saving)
+                .before(done_saving),
+        );
 }
