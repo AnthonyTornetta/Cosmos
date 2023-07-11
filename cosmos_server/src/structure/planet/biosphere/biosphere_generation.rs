@@ -104,7 +104,7 @@ pub fn notify_when_done_generating_terrain<T: Component>(
 }
 
 #[inline]
-fn do_face<T: Component + Clone>(
+fn generate_face_chunk<T: Component + Clone>(
     (sx, sy, sz): (usize, usize, usize),
     (structure_x, structure_y, structure_z): (f64, f64, f64),
     s_dimensions: usize,
@@ -152,7 +152,7 @@ fn do_face<T: Component + Clone>(
     }
 }
 
-fn do_edge<T: Component + Clone>(
+fn generate_edge_chunk<T: Component + Clone>(
     (sx, sy, sz): (usize, usize, usize),
     (structure_x, structure_y, structure_z): (f64, f64, f64),
     s_dimensions: usize,
@@ -298,7 +298,7 @@ fn do_edge<T: Component + Clone>(
     }
 }
 
-fn do_corner<T: Component + Clone>(
+fn generate_corner_chunk<T: Component + Clone>(
     (sx, sy, sz): (usize, usize, usize),
     (structure_x, structure_y, structure_z): (f64, f64, f64),
     s_dimensions: usize,
@@ -491,7 +491,7 @@ impl<T: Component + Clone> BlockRanges<T> {
     }
 }
 
-/// Calls do_face, do_edge, and do_corner to generate the chunks of a planet.
+/// Calls generate_face_chunk, generate_edge_chunk, and generate_corner_chunk to generate the chunks of a planet.
 pub fn generate_planet<T: Component + Clone, E: TGenerateChunkEvent + Send + Sync + 'static>(
     mut query: Query<(&mut Structure, &Location)>,
     mut generating: ResMut<GeneratingChunks<T>>,
@@ -566,7 +566,7 @@ pub fn generate_planet<T: Component + Clone, E: TGenerateChunkEvent + Send + Syn
                     }
                     .unwrap();
 
-                    do_face(
+                    generate_face_chunk(
                         (sx, sy, sz),
                         (structure_x, structure_y, structure_z),
                         s_dimensions,
@@ -585,7 +585,7 @@ pub fn generate_planet<T: Component + Clone, E: TGenerateChunkEvent + Send + Syn
                     } else {
                         (x_up.unwrap(), y_up.unwrap())
                     };
-                    do_edge(
+                    generate_edge_chunk(
                         (sx, sy, sz),
                         (structure_x, structure_y, structure_z),
                         s_dimensions,
@@ -597,7 +597,7 @@ pub fn generate_planet<T: Component + Clone, E: TGenerateChunkEvent + Send + Syn
                         k_up,
                     );
                 } else {
-                    do_corner(
+                    generate_corner_chunk(
                         (sx, sy, sz),
                         (structure_x, structure_y, structure_z),
                         s_dimensions,
