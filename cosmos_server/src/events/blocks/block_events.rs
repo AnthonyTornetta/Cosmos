@@ -1,6 +1,6 @@
 //! Contains the various types of block events
 
-use bevy::prelude::*;
+use bevy::{prelude::*, utils::HashMap};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::{Block, BlockFace},
@@ -9,7 +9,11 @@ use cosmos_core::{
     events::block_events::BlockChangedEvent,
     inventory::Inventory,
     item::Item,
-    netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannelServer},
+    netty::{
+        cosmos_encoder,
+        server_reliable_messages::{BlockChanged, BlocksChangedPacket, ServerReliableMessages},
+        NettyChannelServer,
+    },
     registry::{identifiable::Identifiable, Registry},
     structure::{structure_block::StructureBlock, Structure},
 };
@@ -116,10 +120,7 @@ fn handle_block_place_events(
 
                 if let Some(block_id) = block_items.block_from_item(item) {
                     if block_id != ev.block_id {
-                        eprintln!(
-                            "WARNING: Inventory out of sync between client {}!",
-                            player.name()
-                        );
+                        eprintln!("WARNING: Inventory out of sync between client {}!", player.name());
                         break;
                     }
 
@@ -146,20 +147,28 @@ fn handle_block_place_events(
     }
 }
 
-fn handle_block_changed_event(
-    mut event_reader: EventReader<BlockChangedEvent>,
-    mut server: ResMut<RenetServer>,
-) {
+fn handle_block_changed_event(mut event_reader: EventReader<BlockChangedEvent>, mut server: ResMut<RenetServer>) {
+    let iter_len = event_reader.iter().len();
+    let mut map = HashMap::new();
     for ev in event_reader.iter() {
+        if !map.contains_key(&ev.structure_entity) {
+            map.insert(ev.structure_entity, Vec::with_capacity(iter_len));
+        }
+        map.get_mut(&ev.structure_entity).expect("Set above").push(BlockChanged {
+            x: ev.block.x() as u32,
+            y: ev.block.y() as u32,
+            z: ev.block.z() as u32,
+            block_id: ev.new_block,
+            block_up: ev.new_block_up,
+        });
+    }
+
+    for (entity, v) in map {
         server.broadcast_message(
             NettyChannelServer::Reliable,
             cosmos_encoder::serialize(&ServerReliableMessages::BlockChange {
-                structure_entity: ev.structure_entity,
-                x: ev.block.x() as u32,
-                y: ev.block.y() as u32,
-                z: ev.block.z() as u32,
-                block_id: ev.new_block,
-                block_up: ev.new_block_up,
+                structure_entity: entity,
+                blocks_changed_packet: BlocksChangedPacket(v),
             }),
         );
     }

@@ -16,6 +16,23 @@ use crate::{
 use super::netty_rigidbody::NettyRigidBody;
 
 #[derive(Debug, Serialize, Deserialize, Component)]
+pub struct BlockChanged {
+    /// The x of the block
+    pub x: u32,
+    /// The y of the block
+    pub y: u32,
+    /// The z of the block
+    pub z: u32,
+    /// The block it was changed to
+    pub block_id: u16,
+    /// The block's up direction
+    pub block_up: BlockFace,
+}
+
+#[derive(Debug, Serialize, Deserialize, Component)]
+pub struct BlocksChangedPacket(pub Vec<BlockChanged>);
+
+#[derive(Debug, Serialize, Deserialize, Component)]
 /// A mash of a bunch of different packets the server reliably sends.
 pub enum ServerReliableMessages {
     /// A player has been created, and the client should add them.
@@ -116,16 +133,7 @@ pub enum ServerReliableMessages {
     BlockChange {
         /// The structure that was changed
         structure_entity: Entity,
-        /// The x of the block
-        x: u32,
-        /// The y of the block
-        y: u32,
-        /// The z of the block
-        z: u32,
-        /// The block it was changed to
-        block_id: u16,
-        /// The block's up direction
-        block_up: BlockFace,
+        blocks_changed_packet: BlocksChangedPacket,
     },
     /// Sent when a pilot changes
     PilotChange {

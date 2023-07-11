@@ -92,8 +92,9 @@ fn fill(
 
 #[inline]
 fn branch(
-    (x, y, z): (i32, i32, i32),
+    origin: (usize, usize, usize),
     logs: Vec<(i32, i32, i32, BlockFace)>,
+    planet_face: BlockFace,
     structure: &mut Structure,
     log: &Block,
     leaf: &Block,
@@ -101,21 +102,30 @@ fn branch(
     event_writer: &mut EventWriter<BlockChangedEvent>,
 ) {
     // Leaves. Must go first so they don't overwrite the logs.
-    // for (dx, dy, dz, block_up) in logs.iter() {
-    //     let (nx, ny, nz) = ((x + dx) as usize, (y + dy) as usize, (z + dz) as usize);
-    //     structure.set_block_at(nx + 1, ny, nz, leaf, *block_up, blocks, Some(event_writer));
-    //     structure.set_block_at(nx - 1, ny, nz, leaf, *block_up, blocks, Some(event_writer));
-    //     structure.set_block_at(nx, ny + 1, nz, leaf, *block_up, blocks, Some(event_writer));
-    //     structure.set_block_at(nx, ny - 1, nz, leaf, *block_up, blocks, Some(event_writer));
-    //     structure.set_block_at(nx, ny, nz + 1, leaf, *block_up, blocks, Some(event_writer));
-    //     structure.set_block_at(nx, ny, nz - 1, leaf, *block_up, blocks, Some(event_writer));
-    // }
+    for (dx, dy, dz, block_up) in logs.iter().copied() {
+        let rotated = rotate(origin, (dx, dy, dz), planet_face);
+        fill(
+            rotated,
+            vec![(1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1)],
+            leaf,
+            block_up,
+            planet_face,
+            structure,
+            blocks,
+            event_writer,
+        );
+    }
 
     // Logs, like the map from BTD6.
-    // for (dx, dy, dz, block_up) in logs {
-    //     let (nx, ny, nz) = ((x + dx) as usize, (y + dy) as usize, (z + dz) as usize);
-    //     structure.set_block_at(nx, ny, nz, log, block_up, blocks, Some(event_writer));
-    // }
+    for (dx, dy, dz, block_up) in logs {
+        structure.set_block_at_tuple(
+            rotate(origin, (dx, dy, dz), planet_face),
+            log,
+            BlockFace::rotate_face(block_up, planet_face),
+            blocks,
+            Some(event_writer),
+        );
+    }
 }
 
 /// Takes block coordinates, offsets, and the side of the planet you're on. Returns the result of applying the offsets.
@@ -135,7 +145,7 @@ pub fn rotate((bx, by, bz): (usize, usize, usize), (dx, dy, dz): (i32, i32, i32)
 // Generates a redwood tree at the given coordinates.
 fn redwood_tree(
     (bx, by, bz): (usize, usize, usize),
-    block_up: BlockFace,
+    planet_face: BlockFace,
     structure: &mut Structure,
     location: &Location,
     block_event_writer: &mut EventWriter<BlockChangedEvent>,
@@ -159,8 +169,9 @@ fn redwood_tree(
     // Top Segment Branches - Shifted up one segment bc the height gets shifted somewhere later between segments.
     // Leaf crown at the top of the tree.
     branch(
-        (bx as i32, (by + height + SEGMENT_HEIGHT) as i32, bz as i32),
-        vec![(1, 0, 0, BlockFace::Top)],
+        (bx, by, bz),
+        vec![(0, (height + SEGMENT_HEIGHT) as i32, 0, BlockFace::Top)],
+        planet_face,
         structure,
         log,
         leaf,
@@ -169,14 +180,16 @@ fn redwood_tree(
     );
 
     // 4 1x1 branches.
+    let h = (height + SEGMENT_HEIGHT - BETWEEN_BRANCHES) as i32;
     branch(
-        (bx as i32, (by + height + SEGMENT_HEIGHT - BETWEEN_BRANCHES) as i32, bz as i32),
+        (bx, by, bz),
         vec![
-            (1, 0, 0, BlockFace::Right),
-            (-1, 0, 0, BlockFace::Left),
-            (0, 0, 1, BlockFace::Front),
-            (0, 0, -1, BlockFace::Back),
+            (1, h, 0, BlockFace::Right),
+            (-1, h, 0, BlockFace::Left),
+            (0, h, 1, BlockFace::Front),
+            (0, h, -1, BlockFace::Back),
         ],
+        planet_face,
         structure,
         log,
         leaf,
@@ -186,18 +199,20 @@ fn redwood_tree(
 
     // for 1x1 trunk. Two branch steps in each cardinal direction.
     for i in 2..=3 {
+        let h = (height + SEGMENT_HEIGHT - BETWEEN_BRANCHES * i) as i32;
         branch(
-            (bx as i32, (by + height + SEGMENT_HEIGHT - BETWEEN_BRANCHES * i) as i32, bz as i32),
+            (bx, by, bz),
             vec![
-                (1, 0, 0, BlockFace::Right),
-                (2, -1, 0, BlockFace::Right),
-                (-1, 0, 0, BlockFace::Left),
-                (-2, -1, 0, BlockFace::Left),
-                (0, 0, 1, BlockFace::Front),
-                (0, -1, 2, BlockFace::Front),
-                (0, 0, -1, BlockFace::Back),
-                (0, -1, -2, BlockFace::Back),
+                (1, h, 0, BlockFace::Right),
+                (2, h - 1, 0, BlockFace::Right),
+                (-1, h, 0, BlockFace::Left),
+                (-2, h - 1, 0, BlockFace::Left),
+                (0, h, 1, BlockFace::Front),
+                (0, h - 1, 2, BlockFace::Front),
+                (0, h, -1, BlockFace::Back),
+                (0, h - 1, -2, BlockFace::Back),
             ],
+            planet_face,
             structure,
             log,
             leaf,
@@ -242,7 +257,7 @@ fn redwood_tree(
             ],
             log,
             BlockFace::Top,
-            block_up,
+            planet_face,
             structure,
             blocks,
             block_event_writer,
@@ -275,7 +290,7 @@ fn redwood_tree(
             ],
             log,
             BlockFace::Top,
-            block_up,
+            planet_face,
             structure,
             blocks,
             block_event_writer,
@@ -290,30 +305,32 @@ fn redwood_tree(
     while height - dy >= SEGMENT_HEIGHT * 2 {
         if dy >= branch_height && (height - dy) % BETWEEN_BRANCHES == 0 {
             // 3 branch steps in each cardinal direction and 2 on each diagonal.
+            let h: i32 = dy as i32;
             branch(
-                (bx as i32, (by + dy) as i32, bz as i32),
+                (bx, by, bz),
                 vec![
-                    (2, 0, 0, BlockFace::Right),
-                    (3, 0, 0, BlockFace::Right),
-                    (4, -1, 0, BlockFace::Right),
-                    (-2, 0, 0, BlockFace::Left),
-                    (-3, 0, 0, BlockFace::Left),
-                    (-4, -1, 0, BlockFace::Left),
-                    (0, 0, 2, BlockFace::Front),
-                    (0, 0, 3, BlockFace::Front),
-                    (0, -1, 4, BlockFace::Front),
-                    (0, 0, -2, BlockFace::Back),
-                    (0, 0, -3, BlockFace::Back),
-                    (0, -1, -4, BlockFace::Back),
-                    (2, 0, 2, BlockFace::Right),
-                    (3, -1, 3, BlockFace::Right),
-                    (-2, 0, 2, BlockFace::Front),
-                    (-3, -1, 3, BlockFace::Front),
-                    (2, 0, -2, BlockFace::Back),
-                    (3, -1, -3, BlockFace::Back),
-                    (-2, 0, -2, BlockFace::Left),
-                    (-3, -1, -3, BlockFace::Left),
+                    (2, h, 0, BlockFace::Right),
+                    (3, h, 0, BlockFace::Right),
+                    (4, h - 1, 0, BlockFace::Right),
+                    (-2, h, 0, BlockFace::Left),
+                    (-3, h, 0, BlockFace::Left),
+                    (-4, h - 1, 0, BlockFace::Left),
+                    (0, h, 2, BlockFace::Front),
+                    (0, h, 3, BlockFace::Front),
+                    (0, h - 1, 4, BlockFace::Front),
+                    (0, h, -2, BlockFace::Back),
+                    (0, h, -3, BlockFace::Back),
+                    (0, h - 1, -4, BlockFace::Back),
+                    (2, h, 2, BlockFace::Right),
+                    (3, h - 1, 3, BlockFace::Right),
+                    (-2, h, 2, BlockFace::Front),
+                    (-3, h - 1, 3, BlockFace::Front),
+                    (2, h, -2, BlockFace::Back),
+                    (3, h - 1, -3, BlockFace::Back),
+                    (-2, h, -2, BlockFace::Left),
+                    (-3, h - 1, -3, BlockFace::Left),
                 ],
+                planet_face,
                 structure,
                 log,
                 leaf,
@@ -337,7 +354,7 @@ fn redwood_tree(
             ],
             log,
             BlockFace::Top,
-            block_up,
+            planet_face,
             structure,
             blocks,
             block_event_writer,
@@ -352,26 +369,28 @@ fn redwood_tree(
     while height - dy >= SEGMENT_HEIGHT {
         if dy >= branch_height && (height - dy) % BETWEEN_BRANCHES == 0 {
             // 2 branch steps in each cardinal direction and 2 on each diagonal.
+            let h = dy as i32;
             branch(
-                (bx as i32, (by + dy) as i32, bz as i32),
+                (bx, by, bz),
                 vec![
-                    (2, 0, 0, BlockFace::Right),
-                    (3, -1, 0, BlockFace::Right),
-                    (-2, 0, 0, BlockFace::Left),
-                    (-3, -1, 0, BlockFace::Left),
-                    (0, 0, 2, BlockFace::Front),
-                    (0, -1, 3, BlockFace::Front),
-                    (0, 0, -2, BlockFace::Back),
-                    (0, -1, -3, BlockFace::Back),
-                    (1, 0, 1, BlockFace::Right),
-                    (2, -1, 2, BlockFace::Right),
-                    (-1, 0, 1, BlockFace::Front),
-                    (-2, -1, 2, BlockFace::Front),
-                    (1, 0, -1, BlockFace::Back),
-                    (2, -1, -2, BlockFace::Back),
-                    (-1, 0, -1, BlockFace::Left),
-                    (-2, -1, -2, BlockFace::Left),
+                    (2, h, 0, BlockFace::Right),
+                    (3, h - 1, 0, BlockFace::Right),
+                    (-2, h, 0, BlockFace::Left),
+                    (-3, h - 1, 0, BlockFace::Left),
+                    (0, h, 2, BlockFace::Front),
+                    (0, h - 1, 3, BlockFace::Front),
+                    (0, h, -2, BlockFace::Back),
+                    (0, h - 1, -3, BlockFace::Back),
+                    (1, h, 1, BlockFace::Right),
+                    (2, h - 1, 2, BlockFace::Right),
+                    (-1, h, 1, BlockFace::Front),
+                    (-2, h - 1, 2, BlockFace::Front),
+                    (1, h, -1, BlockFace::Back),
+                    (2, h - 1, -2, BlockFace::Back),
+                    (-1, h, -1, BlockFace::Left),
+                    (-2, h - 1, -2, BlockFace::Left),
                 ],
+                planet_face,
                 structure,
                 log,
                 leaf,
@@ -385,7 +404,7 @@ fn redwood_tree(
             vec![(0, h, 0), (1, h, 0), (-1, h, 0), (0, h, 1), (0, h, -1)],
             log,
             BlockFace::Top,
-            block_up,
+            planet_face,
             structure,
             blocks,
             block_event_writer,
@@ -396,9 +415,9 @@ fn redwood_tree(
     // 1x1 trunk.
     while dy <= height {
         structure.set_block_at_tuple(
-            rotate((bx, by, bz), (0, dy as i32, 0), block_up),
+            rotate((bx, by, bz), (0, dy as i32, 0), planet_face),
             log,
-            block_up,
+            BlockFace::rotate_face(BlockFace::Top, planet_face),
             &blocks,
             Some(block_event_writer),
         );
