@@ -3,7 +3,7 @@
 use bevy::prelude::Plugin;
 
 use crate::{
-    blocks, commands, events,
+    blocks, commands, entities, events,
     init::{self, init_server},
     inventory, netty, persistence, physics, projectiles, structure, universe,
 };
@@ -27,6 +27,7 @@ impl Plugin for ServerPlugin {
         blocks::register(app);
         structure::register(app);
         inventory::register(app);
+        entities::register(app);
         super::register(app);
         projectiles::register(app);
         persistence::register(app);

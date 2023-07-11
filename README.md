@@ -1,6 +1,9 @@
 # Cosmos
 A multiplayer block-based space exploration game, written in rust using the [Bevy](https://www.bevyengine.org/) engine.
 
+If you're interested, join our new discord server here:
+[![Join Cosmos's Discord server here!](https://dcbadge.vercel.app/api/server/VeuqvnxsZb)](https://discord.gg/VeuqvnxsZb)
+
 ## Screenshots
 
 Cosmos has ships that you can pilot through space. (And yes those are working laser cannons.)

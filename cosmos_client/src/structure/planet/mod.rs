@@ -1,8 +1,7 @@
 //! Handles client-related planet things
 
 use bevy::prelude::{
-    in_state, App, Commands, CoreSet, Entity, IntoSystemConfig, OnUpdate, Query, Res, ResMut, Vec3,
-    With,
+    in_state, App, Commands, Entity, IntoSystemConfig, OnUpdate, Query, Res, ResMut, Vec3, With,
 };
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
@@ -145,9 +144,5 @@ pub(super) fn register(app: &mut App) {
     biosphere::register(app);
 
     app.add_system(load_planet_chunks.in_set(OnUpdate(GameState::Playing)))
-        .add_system(
-            unload_chunks_far_from_players
-                .in_base_set(CoreSet::PostUpdate)
-                .run_if(in_state(GameState::Playing)),
-        );
+        .add_system(unload_chunks_far_from_players.run_if(in_state(GameState::Playing)));
 }

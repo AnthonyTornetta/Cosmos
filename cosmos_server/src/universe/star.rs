@@ -1,6 +1,6 @@
 //! Contains server-side logic for stars
 
-use bevy::prelude::{in_state, App, EventReader, IntoSystemConfig, Query, ResMut, With};
+use bevy::prelude::{in_state, App, CoreSet, EventReader, IntoSystemConfig, Query, ResMut, With};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannelServer},
@@ -43,5 +43,10 @@ fn on_save_star(mut query: Query<&mut SerializedData, (With<NeedsSaved>, With<St
 
 pub(super) fn register(app: &mut App) {
     app.add_system(on_request_star.run_if(in_state(GameState::Playing)))
-        .add_system(on_save_star.after(begin_saving).before(done_saving));
+        .add_system(
+            on_save_star
+                .in_base_set(CoreSet::First)
+                .after(begin_saving)
+                .before(done_saving),
+        );
 }

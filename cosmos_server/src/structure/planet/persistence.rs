@@ -48,7 +48,12 @@ fn on_save_structure(
     }
 }
 
-fn generate_planet(entity: Entity, planet_save_data: PlanetSaveData, commands: &mut Commands) {
+fn generate_planet(
+    entity: Entity,
+    s_data: &SerializedData,
+    planet_save_data: PlanetSaveData,
+    commands: &mut Commands,
+) {
     let mut structure = Structure::new(
         planet_save_data.width,
         planet_save_data.height,
@@ -57,14 +62,15 @@ fn generate_planet(entity: Entity, planet_save_data: PlanetSaveData, commands: &
 
     let mut entity_cmd = commands.entity(entity);
 
-    // let loc: Location = s_data
-    //     .deserialize_data("cosmos:location")
-    //     .expect("Every planet should have a location when saved!");
+    let location: Location = s_data
+        .deserialize_data("cosmos:location")
+        .expect("Every planet should have a location when saved!");
 
     let builder = ServerPlanetBuilder::default();
 
     builder.insert_planet(
         &mut entity_cmd,
+        location,
         &mut structure,
         Planet::new(planet_save_data.temperature),
     );
@@ -84,7 +90,7 @@ fn on_load_structure(
             if let Some(planet_save_data) =
                 s_data.deserialize_data::<PlanetSaveData>("cosmos:planet")
             {
-                generate_planet(entity, planet_save_data, &mut commands);
+                generate_planet(entity, s_data, planet_save_data, &mut commands);
             }
         }
     }
@@ -208,7 +214,12 @@ fn load_chunk(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems((structure_created, populate_chunks).chain())
-        .add_system(on_save_structure.after(begin_saving).before(done_saving))
+        .add_system(
+            on_save_structure
+                .in_base_set(CoreSet::First)
+                .after(begin_saving)
+                .before(done_saving),
+        )
         .add_system(on_load_structure.after(begin_loading).before(done_loading))
         .add_system(load_chunk.after(begin_loading).before(done_loading));
 }

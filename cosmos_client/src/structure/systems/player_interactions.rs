@@ -99,7 +99,9 @@ fn swap_selected(
 
 fn check_removed_pilot(mut commands: Commands, mut removed: RemovedComponents<Pilot>) {
     for ent in removed.iter() {
-        commands.entity(ent).remove::<HoveredSystem>();
+        if let Some(mut ecmds) = commands.get_entity(ent) {
+            ecmds.remove::<HoveredSystem>();
+        }
     }
 }
 

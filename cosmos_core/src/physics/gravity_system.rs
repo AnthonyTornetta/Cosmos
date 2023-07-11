@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::{
     ExternalImpulse, PhysicsWorld, RapierContext, RapierRigidBodyHandle, ReadMassProperties,
-    RigidBody,
+    RigidBody, RigidBodyDisabled,
 };
 
 use crate::structure::planet::Planet;
@@ -23,30 +23,36 @@ fn fix_read_mass_props(
         let physics_world = physics_world.copied().unwrap_or_default();
 
         // https://github.com/dimforge/bevy_rapier/issues/271
-        let info = &context
+
+        if let Some(info) = &context
             .get_world(physics_world.world_id)
             .expect("Missing world")
-            .bodies[handle.0];
+            .bodies
+            .get(handle.0)
+        {
+            let mass = info.mass();
+            let world_com: Vec3 = (*info.center_of_mass()).into();
+            let local_com = g_trans.translation() - world_com;
 
-        let mass = info.mass();
-        let world_com: Vec3 = (*info.center_of_mass()).into();
-        let local_com = g_trans.translation() - world_com;
-
-        prop.0.mass = mass;
-        prop.0.local_center_of_mass = local_com;
+            prop.0.mass = mass;
+            prop.0.local_center_of_mass = local_com;
+        }
     }
 }
 
 /// See https://github.com/dimforge/bevy_rapier/issues/271
 fn gravity_system(
     emitters: Query<(&GravityEmitter, &GlobalTransform, &Location)>,
-    mut receiver: Query<(
-        Entity,
-        &Location,
-        &ReadMassProperties,
-        &RigidBody,
-        Option<&mut ExternalImpulse>,
-    )>,
+    mut receiver: Query<
+        (
+            Entity,
+            &Location,
+            &ReadMassProperties,
+            &RigidBody,
+            Option<&mut ExternalImpulse>,
+        ),
+        Without<RigidBodyDisabled>,
+    >,
     time: Res<Time>,
     mut commands: Commands,
 ) {

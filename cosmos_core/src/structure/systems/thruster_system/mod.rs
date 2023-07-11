@@ -27,7 +27,7 @@ use crate::{
 
 use super::{StructureSystem, Systems};
 
-const MAX_SHIP_SPEED: f32 = 150.0;
+const MAX_SHIP_SPEED: f32 = 100.0;
 const MAX_BRAKE_DELTA_PER_THRUST: f32 = 300.0;
 
 /// A block that is a thruster will have a thruster property
@@ -231,7 +231,6 @@ pub(super) fn register<T: States + Clone + Copy>(
     app.insert_resource(ThrusterBlocks::default())
         .add_systems((
             register_thruster_blocks.in_schedule(OnEnter(post_loading_state)),
-            // block update system used to be in CoreState::PostUpdate
             structure_loaded_event.in_set(OnUpdate(playing_state)),
             block_update_system.in_set(OnUpdate(playing_state)),
             update_movement.in_set(OnUpdate(playing_state)),

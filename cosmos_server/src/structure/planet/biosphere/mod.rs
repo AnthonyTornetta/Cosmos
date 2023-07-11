@@ -4,8 +4,8 @@ use std::marker::PhantomData;
 
 use bevy::{
     prelude::{
-        Added, App, Commands, Component, Entity, EventReader, EventWriter, IntoSystemConfig,
-        OnUpdate, Query, Res, ResMut, Resource, With, Without,
+        Added, App, Commands, Component, CoreSet, Entity, EventReader, EventWriter,
+        IntoSystemConfig, OnUpdate, Query, Res, ResMut, Resource, With, Without,
     },
     tasks::Task,
 };
@@ -124,6 +124,7 @@ pub fn register_biosphere<
                     sd.serialize_data(biosphere_id.to_string(), &true);
                 }
             })
+            .in_base_set(CoreSet::First)
             .after(begin_saving)
             .before(done_saving),
             // Loads this biosphere when the structure is loaded

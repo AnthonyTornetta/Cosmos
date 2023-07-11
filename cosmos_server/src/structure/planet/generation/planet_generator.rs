@@ -12,6 +12,7 @@ use bevy::{
 };
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
+    ecs::NeedsDespawned,
     entities::player::Player,
     netty::{
         cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannelServer,
@@ -27,10 +28,7 @@ use cosmos_core::{
 use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 
 use crate::{
-    persistence::{
-        saving::{NeedsSaved, NeedsUnloaded},
-        EntityId, SaveFileIdentifier,
-    },
+    persistence::{saving::NeedsSaved, EntityId, SaveFileIdentifier},
     state::GameState,
     structure::planet::{
         biosphere::TGenerateChunkEvent, chunk::SaveChunk, persistence::ChunkNeedsPopulated,
@@ -410,7 +408,7 @@ fn unload_chunks_far_from_players(
                             ),
                         ),
                         NeedsSaved,
-                        NeedsUnloaded,
+                        NeedsDespawned,
                         NoSendEntity,
                     ));
                 }
@@ -433,11 +431,7 @@ pub(super) fn register(app: &mut App) {
             .chain()
             .in_set(OnUpdate(GameState::Playing)),
     )
-    .add_system(
-        unload_chunks_far_from_players
-            .run_if(in_state(GameState::Playing))
-            .in_base_set(CoreSet::PostUpdate),
-    )
+    .add_system(unload_chunks_far_from_players.run_if(in_state(GameState::Playing)))
     .add_event::<RequestChunkEvent>()
     .add_event::<RequestChunkBouncer>();
 }

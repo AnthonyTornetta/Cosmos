@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     block::BlockFace,
     entities::player::render_distance::RenderDistance,
+    physics::location::Location,
     structure::{loading::ChunksNeedLoaded, planet::Planet},
     universe::star::Star,
 };
@@ -102,6 +103,8 @@ pub enum ServerReliableMessages {
         planet: Planet,
         /// The planet's biosphere.
         biosphere: String,
+        /// Planet's location
+        location: Location,
     },
     /// A ship should be created on the client-side.
     /// This does NOT mean the ship was just created by the sever, just that one should be created on the client.
@@ -145,6 +148,16 @@ pub enum ServerReliableMessages {
         /// The new pilot or None if the pilot is removed.
         pilot_entity: Option<Entity>,
     },
-    /// Sent when the laser cannon system fires - not used currently, will eventually generate a sound on the client.
-    LaserCannonFire {},
+    /// Sent whenever a player leaves the ship they were a part of. (aka the player was walking on a ship)
+    PlayerLeaveShip {
+        /// The player that exited the ship
+        player_entity: Entity,
+    },
+    /// Sent when a player is now walking on a specific ship
+    PlayerJoinShip {
+        /// The player that is now walking on the ship
+        player_entity: Entity,
+        /// The ship the player is walking on
+        ship_entity: Entity,
+    },
 }
