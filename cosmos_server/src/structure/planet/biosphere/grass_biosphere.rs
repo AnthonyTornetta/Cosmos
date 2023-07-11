@@ -8,7 +8,7 @@ use cosmos_core::{
     events::block_events::BlockChangedEvent,
     physics::location::Location,
     registry::Registry,
-    structure::{chunk::CHUNK_DIMENSIONS, planet::Planet, ChunkInitEvent, Structure},
+    structure::{chunk::CHUNK_DIMENSIONS, planet::Planet, rotate, ChunkInitEvent, Structure},
     utils::resource_wrapper::ResourceWrapper,
 };
 use noise::NoiseFn;
@@ -71,7 +71,7 @@ fn make_block_ranges(block_registry: Res<Registry<Block>>, mut commands: Command
 /// Sets the given block with the given relative rotation at the correct offsets, taking planet face into account.
 fn fill(
     origin: (usize, usize, usize),
-    offsets: Vec<(i32, i32, i32)>,
+    offsets: &[(i32, i32, i32)],
     block: &Block,
     block_up: BlockFace,
     planet_face: BlockFace,
@@ -81,7 +81,7 @@ fn fill(
 ) {
     for offset in offsets {
         structure.set_block_at_tuple(
-            rotate(origin, offset, planet_face),
+            rotate(origin, *offset, planet_face),
             block,
             BlockFace::rotate_face(block_up, planet_face),
             blocks,
@@ -106,7 +106,7 @@ fn branch(
         let rotated = rotate(origin, (dx, dy, dz), planet_face);
         fill(
             rotated,
-            vec![(1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1)],
+            &[(1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1)],
             leaf,
             block_up,
             planet_face,
@@ -128,21 +128,7 @@ fn branch(
     }
 }
 
-/// Takes block coordinates, offsets, and the side of the planet you're on. Returns the result of applying the offsets.
-/// On the +y (Top) side, the offsets affect their corresponding coordinate.
-/// On other sides, the offsets affect non-corresponding coordinates and may be flipped negative.
-pub fn rotate((bx, by, bz): (usize, usize, usize), (dx, dy, dz): (i32, i32, i32), block_up: BlockFace) -> (usize, usize, usize) {
-    match block_up {
-        BlockFace::Front => ((bx as i32 + dx) as usize, (by as i32 + dz) as usize, (bz as i32 + dy) as usize),
-        BlockFace::Back => ((bx as i32 + dx) as usize, (by as i32 + dz) as usize, (bz as i32 - dy) as usize),
-        BlockFace::Top => ((bx as i32 + dx) as usize, (by as i32 + dy) as usize, (bz as i32 + dz) as usize),
-        BlockFace::Bottom => ((bx as i32 + dx) as usize, (by as i32 - dy) as usize, (bz as i32 + dz) as usize),
-        BlockFace::Right => ((bx as i32 + dy) as usize, (by as i32 + dx) as usize, (bz as i32 + dz) as usize),
-        BlockFace::Left => ((bx as i32 - dy) as usize, (by as i32 + dx) as usize, (bz as i32 + dz) as usize),
-    }
-}
-
-// Generates a redwood tree at the given coordinates.
+/// Generates a redwood tree at the given coordinates.
 fn redwood_tree(
     (bx, by, bz): (usize, usize, usize),
     planet_face: BlockFace,
@@ -232,7 +218,7 @@ fn redwood_tree(
         let h = dy as i32;
         fill(
             (bx, by, bz),
-            vec![
+            &[
                 (0, h, 0),
                 (1, h, 0),
                 (-1, h, 0),
@@ -273,7 +259,7 @@ fn redwood_tree(
         let h = dy as i32;
         fill(
             (bx, by, bz),
-            vec![
+            &[
                 (0, h, 0),
                 (1, h, 0),
                 (-1, h, 0),
@@ -341,7 +327,7 @@ fn redwood_tree(
         let h = dy as i32;
         fill(
             (bx, by, bz),
-            vec![
+            &[
                 (0, h, 0),
                 (1, h, 0),
                 (-1, h, 0),
@@ -401,7 +387,7 @@ fn redwood_tree(
         let h = dy as i32;
         fill(
             (bx, by, bz),
-            vec![(0, h, 0), (1, h, 0), (-1, h, 0), (0, h, 1), (0, h, -1)],
+            &[(0, h, 0), (1, h, 0), (-1, h, 0), (0, h, 1), (0, h, -1)],
             log,
             BlockFace::Top,
             planet_face,
@@ -434,7 +420,6 @@ fn trees(
     blocks: &Registry<Block>,
     noise_generator: &ResourceWrapper<noise::OpenSimplex>,
 ) {
-    // let timer = UtilsTimer::start();
     let (sx, sy, sz) = (cx * CHUNK_DIMENSIONS, cy * CHUNK_DIMENSIONS, cz * CHUNK_DIMENSIONS);
     let s_dimension = structure.blocks_height();
 
@@ -480,7 +465,6 @@ fn trees(
         }
 
         for z in 0..CHUNK_DIMENSIONS {
-            // let bz = sz + z;
             'next: for x in 0..CHUNK_DIMENSIONS {
                 let noise = noise_cache[z + DIST_BETWEEN_TREES][x + DIST_BETWEEN_TREES];
 
@@ -517,7 +501,6 @@ fn trees(
                 redwood_tree(rotated, block_up, structure, location, block_event_writer, blocks, noise_generator);
             }
         }
-        // timer.log_duration("Trees: ");
     }
 }
 

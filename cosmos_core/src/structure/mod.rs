@@ -884,6 +884,20 @@ fn add_chunks_system(
     }
 }
 
+/// Takes block coordinates, offsets, and the side of the planet you're on. Returns the result of applying the offsets.
+/// On the +y (Top) side, the offsets affect their corresponding coordinate.
+/// On other sides, the offsets affect non-corresponding coordinates and may be flipped negative.
+pub fn rotate((bx, by, bz): (usize, usize, usize), (dx, dy, dz): (i32, i32, i32), block_up: BlockFace) -> (usize, usize, usize) {
+    match block_up {
+        BlockFace::Front => ((bx as i32 + dx) as usize, (by as i32 + dz) as usize, (bz as i32 + dy) as usize),
+        BlockFace::Back => ((bx as i32 + dx) as usize, (by as i32 + dz) as usize, (bz as i32 - dy) as usize),
+        BlockFace::Top => ((bx as i32 + dx) as usize, (by as i32 + dy) as usize, (bz as i32 + dz) as usize),
+        BlockFace::Bottom => ((bx as i32 + dx) as usize, (by as i32 - dy) as usize, (bz as i32 + dz) as usize),
+        BlockFace::Right => ((bx as i32 + dy) as usize, (by as i32 + dx) as usize, (bz as i32 + dz) as usize),
+        BlockFace::Left => ((bx as i32 - dy) as usize, (by as i32 + dx) as usize, (bz as i32 + dz) as usize),
+    }
+}
+
 pub(super) fn register<T: States + Clone + Copy>(app: &mut App, post_loading_state: T, playing_game_state: T) {
     app.register_type::<Structure>()
         .register_type::<Chunk>()
