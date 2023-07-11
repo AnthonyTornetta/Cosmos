@@ -129,7 +129,11 @@ impl Planet {
                                 chunk_faces = ChunkFaces::Corner(x_up, y_up, z_up);
                             }
                         }
-                        ChunkFaces::Corner(_, _, _) => panic!("Chunk with more than 3 \"up\" directions (center of the planet)."),
+                        ChunkFaces::Corner(up1, up2, up3) => {
+                            if up1 != up && up2 != up && up3 != up {
+                                panic!("Chunk with more than 3 \"up\" directions (center of the planet).");
+                            }
+                        }
                     }
                 }
             }
