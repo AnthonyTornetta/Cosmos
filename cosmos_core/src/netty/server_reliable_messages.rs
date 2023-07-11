@@ -16,20 +16,22 @@ use crate::{
 use super::netty_rigidbody::NettyRigidBody;
 
 #[derive(Debug, Serialize, Deserialize, Component)]
+/// The data for a singular block changed.
 pub struct BlockChanged {
-    /// The x of the block
+    /// The x of the block.
     pub x: u32,
-    /// The y of the block
+    /// The y of the block.
     pub y: u32,
-    /// The z of the block
+    /// The z of the block.
     pub z: u32,
-    /// The block it was changed to
+    /// The block it was changed to.
     pub block_id: u16,
-    /// The block's up direction
+    /// The block's up direction.
     pub block_up: BlockFace,
 }
 
 #[derive(Debug, Serialize, Deserialize, Component)]
+/// Should probably just be a vector.
 pub struct BlocksChangedPacket(pub Vec<BlockChanged>);
 
 #[derive(Debug, Serialize, Deserialize, Component)]

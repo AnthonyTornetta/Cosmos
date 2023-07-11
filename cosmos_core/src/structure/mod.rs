@@ -314,7 +314,7 @@ impl Structure {
     /// If no block was found, returns BlockFace::Top.
     pub fn block_rotation(&self, x: usize, y: usize, z: usize) -> BlockFace {
         self.chunk_at_block_coordinates(x, y, z)
-            .map(|chunk| chunk.block_rotation(x & CHUNK_DIMENSIONS - 1, y & CHUNK_DIMENSIONS - 1, z & CHUNK_DIMENSIONS - 1))
+            .map(|chunk| chunk.block_rotation(x & (CHUNK_DIMENSIONS - 1), y & (CHUNK_DIMENSIONS - 1), z & (CHUNK_DIMENSIONS - 1)))
             .unwrap_or(BlockFace::Top)
     }
 
@@ -329,7 +329,7 @@ impl Structure {
         debug_assert!(x < self.blocks_width() && y < self.blocks_height() && z < self.blocks_length());
 
         self.chunk_at_block_coordinates(x, y, z)
-            .map(|chunk| chunk.block_at(x & CHUNK_DIMENSIONS - 1, y & CHUNK_DIMENSIONS - 1, z & CHUNK_DIMENSIONS - 1))
+            .map(|chunk| chunk.block_at(x & (CHUNK_DIMENSIONS - 1), y & (CHUNK_DIMENSIONS - 1), z & (CHUNK_DIMENSIONS - 1)))
             .unwrap_or(AIR_BLOCK_ID)
     }
 
@@ -398,7 +398,7 @@ impl Structure {
 
         let (cx, cy, cz) = (x / CHUNK_DIMENSIONS, y / CHUNK_DIMENSIONS, z / CHUNK_DIMENSIONS);
 
-        let (bx, by, bz) = (x & CHUNK_DIMENSIONS - 1, y & CHUNK_DIMENSIONS - 1, z & CHUNK_DIMENSIONS - 1);
+        let (bx, by, bz) = (x & (CHUNK_DIMENSIONS - 1), y & (CHUNK_DIMENSIONS - 1), z & (CHUNK_DIMENSIONS - 1));
 
         let mut send_event = true;
         if let Some(chunk) = self.mut_chunk_at_block_coordinates(x, y, z) {
@@ -662,9 +662,9 @@ impl Structure {
         self.chunk_at_block_coordinates(bx, by, bz)
             .map(|c| {
                 c.get_block_health(
-                    bx & CHUNK_DIMENSIONS - 1,
-                    by & CHUNK_DIMENSIONS - 1,
-                    bz & CHUNK_DIMENSIONS - 1,
+                    bx & (CHUNK_DIMENSIONS - 1),
+                    by & (CHUNK_DIMENSIONS - 1),
+                    bz & (CHUNK_DIMENSIONS - 1),
                     block_hardness,
                 )
             })
@@ -689,9 +689,9 @@ impl Structure {
     ) -> bool {
         if let Some(chunk) = self.mut_chunk_at_block_coordinates(bx, by, bz) {
             let destroyed = chunk.block_take_damage(
-                bx & CHUNK_DIMENSIONS - 1,
-                by & CHUNK_DIMENSIONS - 1,
-                bz & CHUNK_DIMENSIONS - 1,
+                bx & (CHUNK_DIMENSIONS - 1),
+                by & (CHUNK_DIMENSIONS - 1),
+                bz & (CHUNK_DIMENSIONS - 1),
                 block_hardness,
                 amount,
             );

@@ -12,7 +12,7 @@ use cosmos_core::{
     structure::{
         chunk::{Chunk, CHUNK_DIMENSIONS},
         planet::Planet,
-        ChunkInitEvent, Structure,
+        Structure,
     },
     utils::{resource_wrapper::ResourceWrapper, timer::UtilsTimer},
 };
@@ -66,9 +66,12 @@ fn get_top_height(
     (middle_air_start as f64 + depth).round() as usize
 }
 
+/// Tells the chunk to generate its features.
 pub struct GenerateChunkFeaturesEvent<T: Component> {
     _phantom: PhantomData<T>,
+    /// cx, cy, cz.
     pub chunk_coords: (usize, usize, usize),
+    /// The structure entity that contains this chunk.
     pub structure_entity: Entity,
 }
 
@@ -92,7 +95,7 @@ pub fn notify_when_done_generating_terrain<T: Component>(
                 structure.set_chunk(chunk);
 
                 event_writer.send(GenerateChunkFeaturesEvent::<T> {
-                    _phantom: PhantomData::default(),
+                    _phantom: PhantomData,
                     structure_entity,
                     chunk_coords: (x, y, z),
                 });
@@ -553,13 +556,13 @@ pub fn generate_planet<T: Component + Clone, E: TGenerateChunkEvent + Send + Syn
 
                 // Get all possible planet faces from the chunk corners.
                 let (x_up, y_up, z_up) = Planet::chunk_planet_faces((sx, sy, sz), s_dimensions);
-                let num_up = (x_up != None) as usize + (y_up != None) as usize + (z_up != None) as usize;
+                let num_up = x_up.is_some() as usize + y_up.is_some() as usize + z_up.is_some() as usize;
 
                 if num_up == 1 {
                     // Chunks on only one face.
-                    let up = if x_up != None {
+                    let up = if x_up.is_some() {
                         x_up
-                    } else if y_up != None {
+                    } else if y_up.is_some() {
                         y_up
                     } else {
                         z_up
@@ -578,9 +581,9 @@ pub fn generate_planet<T: Component + Clone, E: TGenerateChunkEvent + Send + Syn
                     );
                 } else if num_up == 2 {
                     // Chunks on an edge.
-                    let (j_up, k_up) = if x_up == None {
+                    let (j_up, k_up) = if x_up.is_none() {
                         (y_up.unwrap(), z_up.unwrap())
-                    } else if y_up == None {
+                    } else if y_up.is_none() {
                         (x_up.unwrap(), z_up.unwrap())
                     } else {
                         (x_up.unwrap(), y_up.unwrap())

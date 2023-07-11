@@ -6,14 +6,14 @@ use bevy::prelude::{
 use cosmos_core::{
     block::{Block, BlockFace},
     events::block_events::BlockChangedEvent,
-    physics::location::{Location, SECTOR_DIMENSIONS},
+    physics::location::Location,
     registry::Registry,
     structure::{chunk::CHUNK_DIMENSIONS, planet::Planet, ChunkInitEvent, Structure},
-    utils::{resource_wrapper::ResourceWrapper, timer::UtilsTimer},
+    utils::resource_wrapper::ResourceWrapper,
 };
 use noise::NoiseFn;
 
-use crate::{init::init_world::ServerSeed, GameState};
+use crate::GameState;
 
 use super::{
     biosphere_generation::{generate_planet, notify_when_done_generating_terrain, BlockRanges, GenerateChunkFeaturesEvent},
@@ -158,9 +158,9 @@ fn redwood_tree(
     let structure_coords = location.absolute_coords_f64();
 
     let height_noise = noise_generator.get([
-        (bx as f64 as f64 + structure_coords.x) * DELTA,
+        (bx as f64 + structure_coords.x) * DELTA,
         (by as f64 + structure_coords.y) * DELTA,
-        (bz as f64 as f64 + structure_coords.z) * DELTA,
+        (bz as f64 + structure_coords.z) * DELTA,
     ]);
     let mut height = (4.0 * SEGMENT_HEIGHT as f64 + 4.0 * SEGMENT_HEIGHT as f64 * height_noise) as usize;
     // Branches start the branch height from the bottom and spawn every 3 vertical blocks from the top.
@@ -334,7 +334,7 @@ fn redwood_tree(
                 structure,
                 log,
                 leaf,
-                &blocks,
+                blocks,
                 block_event_writer,
             );
         }
@@ -394,7 +394,7 @@ fn redwood_tree(
                 structure,
                 log,
                 leaf,
-                &blocks,
+                blocks,
                 block_event_writer,
             );
         }
@@ -418,7 +418,7 @@ fn redwood_tree(
             rotate((bx, by, bz), (0, dy as i32, 0), planet_face),
             log,
             BlockFace::rotate_face(BlockFace::Top, planet_face),
-            &blocks,
+            blocks,
             Some(block_event_writer),
         );
         dy += 1;
@@ -505,7 +505,7 @@ fn trees(
                     BlockFace::Right | BlockFace::Left => (sx, sy + x, sz + z),
                 };
                 let mut height: i32 = CHUNK_DIMENSIONS as i32 - 1;
-                while height >= 0 && structure.block_at_tuple(rotate((bx, by, bz), (0, height, 0), block_up), &blocks) == air {
+                while height >= 0 && structure.block_at_tuple(rotate((bx, by, bz), (0, height, 0), block_up), blocks) == air {
                     height -= 1;
                 }
 
@@ -544,7 +544,7 @@ pub fn generate_chunk_features(
             trees(
                 (cx, cy, cz),
                 &mut structure,
-                &location,
+                location,
                 &mut block_event_writer,
                 &blocks,
                 &noise_generator,
