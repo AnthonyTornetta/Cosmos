@@ -10,7 +10,7 @@ use bevy::{
 
 use crate::{
     block::Block,
-    ecs::{despawn_needed, NeedsDespawned},
+    ecs::NeedsDespawned,
     events::block_events::BlockChangedEvent,
     registry::{identifiable::Identifiable, Registry},
     structure::{chunk::ChunkEntity, systems::StructureSystem},
@@ -58,9 +58,5 @@ fn save_the_kids(
 
 pub(super) fn register<T: States + Clone + Copy>(app: &mut App, playing_state: T) {
     app.add_system(monitor_block_events.in_set(OnUpdate(playing_state)))
-        .add_system(
-            save_the_kids
-                .in_base_set(CoreSet::PostUpdate)
-                .before(despawn_needed),
-        );
+        .add_system(save_the_kids.in_base_set(CoreSet::PostUpdate));
 }

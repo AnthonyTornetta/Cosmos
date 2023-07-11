@@ -111,6 +111,11 @@ pub(super) fn register(app: &mut App) {
         .add_system(delayed_structure_event.after(even_more_delayed_structure_event))
         .add_event::<DelayedStructureLoadEvent>()
         .add_event::<EvenMoreDelayedStructureLoadEvent>()
-        .add_system(on_save_structure.after(begin_saving).before(done_saving))
+        .add_system(
+            on_save_structure
+                .in_base_set(CoreSet::First)
+                .after(begin_saving)
+                .before(done_saving),
+        )
         .add_system(on_load_structure.after(begin_loading).before(done_loading));
 }

@@ -231,7 +231,6 @@ pub(super) fn register<T: States + Clone + Copy>(
     app.insert_resource(ThrusterBlocks::default())
         .add_systems((
             register_thruster_blocks.in_schedule(OnEnter(post_loading_state)),
-            // block update system used to be in CoreState::PostUpdate
             structure_loaded_event.in_set(OnUpdate(playing_state)),
             block_update_system.in_set(OnUpdate(playing_state)),
             update_movement.in_set(OnUpdate(playing_state)),
