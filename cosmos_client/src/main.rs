@@ -19,6 +19,7 @@ pub mod physics;
 pub mod plugin;
 pub mod projectiles;
 pub mod rendering;
+pub mod settings;
 pub mod skybox;
 pub mod state;
 pub mod structure;
@@ -365,6 +366,7 @@ fn main() {
     rendering::register(&mut app);
     universe::register(&mut app);
     skybox::register(&mut app);
+    settings::register(&mut app);
     physics::register(&mut app);
     ecs::register(&mut app);
 
