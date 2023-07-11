@@ -31,8 +31,8 @@ use crate::registry::Registry;
 use crate::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
 use crate::utils::array_utils::flatten;
 use bevy::prelude::{
-    BuildChildren, Commands, Component, Entity, EventReader, EventWriter, GlobalTransform,
-    IntoSystemConfig, PbrBundle, Query, States, Transform, Vec3,
+    BuildChildren, Commands, Component, Entity, EventReader, EventWriter, GlobalTransform, IntoSystemConfig, PbrBundle, Query, States,
+    Transform, Vec3,
 };
 use serde::{Deserialize, Serialize};
 
@@ -54,8 +54,6 @@ pub struct Structure {
     /// Signifies that every chunk has been loaded. This is not used
     /// on planets, but is used on ships + asteroids
     #[serde(skip)]
-    all_loaded: bool,
-
     chunks: HashMap<usize, Chunk>,
 
     /// Chunks that are just air should be removed from the chunks map above to conserve memory
@@ -66,6 +64,13 @@ pub struct Structure {
     /// This does not represent every loading chunk, only those that have been
     /// specifically taken out via `take_chunk_for_loading` to be generated across multiple systems/frames.
     loading_chunks: HashSet<usize>,
+
+    all_loaded: bool,
+
+    /// Outer hashmap maps coordinates of a chunk to a hashmap that maps coordinates in that chunk to block ids.
+    #[serde(skip)]
+    unloaded_chunk_blocks: HashMap<(usize, usize, usize), HashMap<(usize, usize, usize), (u16, BlockFace)>>,
+
     width: usize,
     height: usize,
     length: usize,
@@ -84,15 +89,16 @@ impl Structure {
     pub fn new(width: usize, height: usize, length: usize) -> Self {
         Self {
             chunk_entities: HashMap::default(),
+            chunk_entity_map: HashMap::default(),
             self_entity: None,
             chunks: HashMap::default(),
             empty_chunks: HashSet::default(),
             loading_chunks: HashSet::default(),
             all_loaded: false,
+            unloaded_chunk_blocks: HashMap::default(),
             width,
             height,
             length,
-            chunk_entity_map: HashMap::default(),
         }
     }
 
@@ -185,16 +191,12 @@ impl Structure {
             self.length
         );
 
-        self.chunks
-            .get(&flatten(cx, cy, cz, self.width, self.height))
+        self.chunks.get(&flatten(cx, cy, cz, self.width, self.height))
     }
 
     /// Returns if the chunk at these chunk coordinates is fully loaded & empty.
     pub fn has_empty_chunk_at(&self, cx: usize, cy: usize, cz: usize) -> bool {
-        self.get_chunk_state(cx, cy, cz) == ChunkState::Loaded
-            && self
-                .empty_chunks
-                .contains(&flatten(cx, cy, cz, self.width, self.height))
+        self.get_chunk_state(cx, cy, cz) == ChunkState::Loaded && self.empty_chunks.contains(&flatten(cx, cy, cz, self.width, self.height))
     }
 
     /// Returns None for unloaded/empty chunks AND for chunks that are out of bounds
@@ -225,12 +227,7 @@ impl Structure {
     /// Modifying a chunk will not update the structure or chunks surrounding it and it won't send any events.
     /// Unless you know what you're doing, you should use a mutable structure instead
     /// of a mutable chunk to make changes!
-    pub fn mut_chunk_from_chunk_coordinates(
-        &mut self,
-        cx: usize,
-        cy: usize,
-        cz: usize,
-    ) -> Option<&mut Chunk> {
+    pub fn mut_chunk_from_chunk_coordinates(&mut self, cx: usize, cy: usize, cz: usize) -> Option<&mut Chunk> {
         debug_assert!(
             cx < self.width && cy < self.height && cz < self.length,
             "{cx} < {} && {cy} < {} && {cz} < {} failed",
@@ -239,8 +236,7 @@ impl Structure {
             self.length
         );
 
-        self.chunks
-            .get_mut(&flatten(cx, cy, cz, self.width, self.height))
+        self.chunks.get_mut(&flatten(cx, cy, cz, self.width, self.height))
     }
 
     /// Returns the chunk at those block coordinates if it is non-empty AND loaded.
@@ -250,11 +246,7 @@ impl Structure {
     /// - (5, 0, 0) => chunk @ 0, 0, 0\
     /// - (`CHUNK_DIMENSIONS`, 0, 0) => chunk @ 1, 0, 0
     pub fn chunk_at_block_coordinates(&self, x: usize, y: usize, z: usize) -> Option<&Chunk> {
-        self.chunk_from_chunk_coordinates(
-            x / CHUNK_DIMENSIONS,
-            y / CHUNK_DIMENSIONS,
-            z / CHUNK_DIMENSIONS,
-        )
+        self.chunk_from_chunk_coordinates(x / CHUNK_DIMENSIONS, y / CHUNK_DIMENSIONS, z / CHUNK_DIMENSIONS)
     }
 
     /// Returns the mutable chunk at those block coordinates. If the chunk is unloaded OR empty, this will return None.
@@ -268,17 +260,8 @@ impl Structure {
     /// Modifying a chunk will not update the structure or chunks surrounding it and it won't send any events.
     /// Unless you know what you're doing, you should use a mutable structure instead
     /// of a mutable chunk to make changes!
-    fn mut_chunk_at_block_coordinates(
-        &mut self,
-        x: usize,
-        y: usize,
-        z: usize,
-    ) -> Option<&mut Chunk> {
-        self.mut_chunk_from_chunk_coordinates(
-            x / CHUNK_DIMENSIONS,
-            y / CHUNK_DIMENSIONS,
-            z / CHUNK_DIMENSIONS,
-        )
+    fn mut_chunk_at_block_coordinates(&mut self, x: usize, y: usize, z: usize) -> Option<&mut Chunk> {
+        self.mut_chunk_from_chunk_coordinates(x / CHUNK_DIMENSIONS, y / CHUNK_DIMENSIONS, z / CHUNK_DIMENSIONS)
     }
 
     /// Returns true if these block coordinates are within the structure's bounds
@@ -299,12 +282,7 @@ impl Structure {
     /// - Ok (x, y, z) of the block coordinates if the point is within the structure
     /// - Err(false) if one of the x/y/z coordinates are outside the structure in the negative direction
     /// - Err (true) if one of the x/y/z coordinates are outside the structure in the positive direction
-    pub fn relative_coords_to_local_coords_checked(
-        &self,
-        x: f32,
-        y: f32,
-        z: f32,
-    ) -> Result<(usize, usize, usize), bool> {
+    pub fn relative_coords_to_local_coords_checked(&self, x: f32, y: f32, z: f32) -> Result<(usize, usize, usize), bool> {
         let (xx, yy, zz) = self.relative_coords_to_local_coords(x, y, z);
 
         if xx >= 0 && yy >= 0 && zz >= 0 {
@@ -336,44 +314,34 @@ impl Structure {
     /// If no block was found, returns BlockFace::Top.
     pub fn block_rotation(&self, x: usize, y: usize, z: usize) -> BlockFace {
         self.chunk_at_block_coordinates(x, y, z)
-            .map(|chunk| {
-                chunk.block_rotation(
-                    x % CHUNK_DIMENSIONS,
-                    y % CHUNK_DIMENSIONS,
-                    z % CHUNK_DIMENSIONS,
-                )
-            })
+            .map(|chunk| chunk.block_rotation(x & (CHUNK_DIMENSIONS - 1), y & (CHUNK_DIMENSIONS - 1), z & (CHUNK_DIMENSIONS - 1)))
             .unwrap_or(BlockFace::Top)
+    }
+
+    /// Gets the rotation at this block coordinate tuple.
+    pub fn block_rotation_tuple(&self, (x, y, z): (usize, usize, usize)) -> BlockFace {
+        self.block_rotation(x, y, z)
     }
 
     /// If the chunk is loaded, non-empty, returns the block at that coordinate.
     /// Otherwise, returns AIR_BLOCK_ID
     pub fn block_id_at(&self, x: usize, y: usize, z: usize) -> u16 {
-        debug_assert!(
-            x < self.blocks_width() && y < self.blocks_height() && z < self.blocks_length()
-        );
+        debug_assert!(x < self.blocks_width() && y < self.blocks_height() && z < self.blocks_length());
 
         self.chunk_at_block_coordinates(x, y, z)
-            .map(|chunk| {
-                chunk.block_at(
-                    x % CHUNK_DIMENSIONS,
-                    y % CHUNK_DIMENSIONS,
-                    z % CHUNK_DIMENSIONS,
-                )
-            })
+            .map(|chunk| chunk.block_at(x & (CHUNK_DIMENSIONS - 1), y & (CHUNK_DIMENSIONS - 1), z & (CHUNK_DIMENSIONS - 1)))
             .unwrap_or(AIR_BLOCK_ID)
     }
 
     /// Gets the block at these block coordinates
-    pub fn block_at<'a>(
-        &'a self,
-        x: usize,
-        y: usize,
-        z: usize,
-        blocks: &'a Registry<Block>,
-    ) -> &'a Block {
+    pub fn block_at<'a>(&'a self, x: usize, y: usize, z: usize, blocks: &'a Registry<Block>) -> &'a Block {
         let id = self.block_id_at(x, y, z);
         blocks.from_numeric_id(id)
+    }
+
+    /// Gets the block at this block coordinate tuple.
+    pub fn block_at_tuple<'a>(&'a self, (x, y, z): (usize, usize, usize), blocks: &'a Registry<Block>) -> &'a Block {
+        self.block_at(x, y, z, blocks)
     }
 
     /// Gets the hashmap for the loaded, non-empty chunks.
@@ -394,15 +362,7 @@ impl Structure {
         blocks: &Registry<Block>,
         event_writer: Option<&mut EventWriter<BlockChangedEvent>>,
     ) {
-        self.set_block_at(
-            x,
-            y,
-            z,
-            blocks.from_numeric_id(AIR_BLOCK_ID),
-            BlockFace::Top,
-            blocks,
-            event_writer,
-        )
+        self.set_block_at(x, y, z, blocks.from_numeric_id(AIR_BLOCK_ID), BlockFace::Top, blocks, event_writer)
     }
 
     fn create_chunk_at(&mut self, cx: usize, cy: usize, cz: usize) -> &mut Chunk {
@@ -415,8 +375,7 @@ impl Structure {
 
     /// Removes the chunk at the given coordinate -- does NOT remove the chunk entity
     fn unload_chunk(&mut self, cx: usize, cy: usize, cz: usize) {
-        self.chunks
-            .remove(&flatten(cx, cy, cz, self.width, self.height));
+        self.chunks.remove(&flatten(cx, cy, cz, self.width, self.height));
     }
 
     /// Sets the block at the given block coordinates.
@@ -437,31 +396,11 @@ impl Structure {
             return;
         }
 
-        if let Some(self_entity) = self.self_entity {
-            if let Some(event_writer) = event_writer {
-                event_writer.send(BlockChangedEvent {
-                    new_block: block.id(),
-                    old_block,
-                    structure_entity: self_entity,
-                    block: StructureBlock::new(x, y, z),
-                    old_block_up: self.block_rotation(x, y, z),
-                    new_block_up: block_up,
-                });
-            }
-        }
+        let (cx, cy, cz) = (x / CHUNK_DIMENSIONS, y / CHUNK_DIMENSIONS, z / CHUNK_DIMENSIONS);
 
-        let (bx, by, bz) = (
-            x % CHUNK_DIMENSIONS,
-            y % CHUNK_DIMENSIONS,
-            z % CHUNK_DIMENSIONS,
-        );
+        let (bx, by, bz) = (x & (CHUNK_DIMENSIONS - 1), y & (CHUNK_DIMENSIONS - 1), z & (CHUNK_DIMENSIONS - 1));
 
-        let (cx, cy, cz) = (
-            x / CHUNK_DIMENSIONS,
-            y / CHUNK_DIMENSIONS,
-            z / CHUNK_DIMENSIONS,
-        );
-
+        let mut send_event = true;
         if let Some(chunk) = self.mut_chunk_at_block_coordinates(x, y, z) {
             chunk.set_block_at(bx, by, bz, block, block_up);
 
@@ -469,9 +408,48 @@ impl Structure {
                 self.unload_chunk(cx, cy, cz);
             }
         } else if block.id() != AIR_BLOCK_ID {
-            let chunk = self.create_chunk_at(cx, cy, cz);
-            chunk.set_block_at(bx, by, bz, block, block_up);
+            if self.get_chunk_state(cx, cy, cz) == ChunkState::Loaded {
+                let chunk = self.create_chunk_at(cx, cy, cz);
+                chunk.set_block_at(bx, by, bz, block, block_up);
+            } else {
+                // put into some chunk queue that will be put into the chunk once it's loaded
+                if !self.unloaded_chunk_blocks.contains_key(&(cx, cy, cz)) {
+                    self.unloaded_chunk_blocks.insert((cx, cy, cz), HashMap::new());
+                }
+                self.unloaded_chunk_blocks
+                    .get_mut(&(cx, cy, cz))
+                    .expect("Chunk hashmap insert above failed")
+                    .insert((bx, by, bz), (block.id(), block_up));
+                send_event = false;
+            }
         }
+
+        if send_event {
+            if let Some(self_entity) = self.self_entity {
+                if let Some(event_writer) = event_writer {
+                    event_writer.send(BlockChangedEvent {
+                        new_block: block.id(),
+                        old_block,
+                        structure_entity: self_entity,
+                        block: StructureBlock::new(x, y, z),
+                        old_block_up: self.block_rotation(x, y, z),
+                        new_block_up: block_up,
+                    });
+                }
+            }
+        }
+    }
+
+    /// Tuple coordinates convenience function.
+    pub fn set_block_at_tuple(
+        &mut self,
+        (x, y, z): (usize, usize, usize),
+        block: &Block,
+        block_up: BlockFace,
+        blocks: &Registry<Block>,
+        event_writer: Option<&mut EventWriter<BlockChangedEvent>>,
+    ) {
+        self.set_block_at(x, y, z, block, block_up, blocks, event_writer);
     }
 
     /// Gets the chunk's relative position to this structure's transform.
@@ -489,14 +467,7 @@ impl Structure {
 
     /// Gets the block's relative position to this structure's transform.
     pub fn block_relative_position(&self, x: usize, y: usize, z: usize) -> Vec3 {
-        Self::block_relative_position_static(
-            x,
-            y,
-            z,
-            self.blocks_width(),
-            self.blocks_height(),
-            self.blocks_length(),
-        )
+        Self::block_relative_position_static(x, y, z, self.blocks_width(), self.blocks_height(), self.blocks_length())
     }
 
     /// A static version of [`Structure::block_relative_position`]. This is useful if you know
@@ -533,11 +504,7 @@ impl Structure {
         body_position: &GlobalTransform,
         this_location: &Location,
     ) -> Location {
-        *this_location
-            + body_position
-                .affine()
-                .matrix3
-                .mul_vec3(self.block_relative_position(x, y, z))
+        *this_location + body_position.affine().matrix3.mul_vec3(self.block_relative_position(x, y, z))
     }
 
     /// Sets the chunk, overwriting what may have been there before.
@@ -545,7 +512,7 @@ impl Structure {
     /// Used generally when loading stuff on client from server.
     ///
     /// This does not trigger any events, so make sure to handle those properly.
-    pub fn set_chunk(&mut self, chunk: Chunk) {
+    pub fn set_chunk(&mut self, mut chunk: Chunk) {
         let i = flatten(
             chunk.structure_x(),
             chunk.structure_y(),
@@ -553,6 +520,14 @@ impl Structure {
             self.width,
             self.height,
         );
+
+        // Add blocks from hashmap.
+        // chunk.set_block_at();
+        if let Some(block_map) = self.unloaded_chunk_blocks.remove(&chunk.structure_coords()) {
+            for ((x, y, z), (block_id, block_up)) in block_map {
+                chunk.set_block_at_from_id(x, y, z, block_id, block_up);
+            }
+        }
 
         self.loading_chunks.remove(&i);
 
@@ -583,8 +558,7 @@ impl Structure {
     /// This takes ownership of the chunk that was at this location. Useful for
     /// multithreading stuff over multiple chunks.
     pub fn take_chunk(&mut self, cx: usize, cy: usize, cz: usize) -> Option<Chunk> {
-        self.chunks
-            .remove(&flatten(cx, cy, cz, self.width, self.height))
+        self.chunks.remove(&flatten(cx, cy, cz, self.width, self.height))
     }
 
     /// # ONLY CALL THIS IF YOU THEN CALL SET_CHUNK IN THE FUTURE!
@@ -640,30 +614,12 @@ impl Structure {
 
     /// Iterate over blocks in a given range. Will skip over any out of bounds positions.
     /// Coordinates are inclusive
-    pub fn chunk_iter(
-        &self,
-        start: (i32, i32, i32),
-        end: (i32, i32, i32),
-        include_empty: bool,
-    ) -> ChunkIterator {
-        ChunkIterator::new(
-            start.0,
-            start.1,
-            start.2,
-            end.0,
-            end.1,
-            end.2,
-            self,
-            include_empty,
-        )
+    pub fn chunk_iter(&self, start: (i32, i32, i32), end: (i32, i32, i32), include_empty: bool) -> ChunkIterator {
+        ChunkIterator::new(start.0, start.1, start.2, end.0, end.1, end.2, self, include_empty)
     }
 
     /// Will fail assertion if chunk positions are out of bounds
-    pub fn block_iter_for_chunk(
-        &self,
-        (cx, cy, cz): (usize, usize, usize),
-        include_air: bool,
-    ) -> BlockIterator {
+    pub fn block_iter_for_chunk(&self, (cx, cy, cz): (usize, usize, usize), include_air: bool) -> BlockIterator {
         assert!(cx < self.width && cy < self.height && cz < self.length);
 
         BlockIterator::new(
@@ -695,40 +651,20 @@ impl Structure {
 
     /// Iterate over blocks in a given range. Will skip over any out of bounds positions.
     /// Coordinates are inclusive
-    pub fn block_iter(
-        &self,
-        start: (i32, i32, i32),
-        end: (i32, i32, i32),
-        include_air: bool,
-    ) -> BlockIterator {
-        BlockIterator::new(
-            start.0,
-            start.1,
-            start.2,
-            end.0,
-            end.1,
-            end.2,
-            include_air,
-            self,
-        )
+    pub fn block_iter(&self, start: (i32, i32, i32), end: (i32, i32, i32), include_air: bool) -> BlockIterator {
+        BlockIterator::new(start.0, start.1, start.2, end.0, end.1, end.2, include_air, self)
     }
 
     /// Gets the block's health at that given coordinate
     /// - x/y/z: block coordinate
     /// - block_hardness: The hardness for the block at those coordinates
-    pub fn get_block_health(
-        &mut self,
-        bx: usize,
-        by: usize,
-        bz: usize,
-        block_hardness: &BlockHardness,
-    ) -> f32 {
+    pub fn get_block_health(&mut self, bx: usize, by: usize, bz: usize, block_hardness: &BlockHardness) -> f32 {
         self.chunk_at_block_coordinates(bx, by, bz)
             .map(|c| {
                 c.get_block_health(
-                    bx % CHUNK_DIMENSIONS,
-                    by % CHUNK_DIMENSIONS,
-                    bz % CHUNK_DIMENSIONS,
+                    bx & (CHUNK_DIMENSIONS - 1),
+                    by & (CHUNK_DIMENSIONS - 1),
+                    bz & (CHUNK_DIMENSIONS - 1),
                     block_hardness,
                 )
             })
@@ -753,9 +689,9 @@ impl Structure {
     ) -> bool {
         if let Some(chunk) = self.mut_chunk_at_block_coordinates(bx, by, bz) {
             let destroyed = chunk.block_take_damage(
-                bx % CHUNK_DIMENSIONS,
-                by % CHUNK_DIMENSIONS,
-                bz % CHUNK_DIMENSIONS,
+                bx & (CHUNK_DIMENSIONS - 1),
+                by & (CHUNK_DIMENSIONS - 1),
+                bz & (CHUNK_DIMENSIONS - 1),
                 block_hardness,
                 amount,
             );
@@ -805,13 +741,7 @@ impl Structure {
     }
 
     /// Unloads the chunk at the given chunk position
-    pub fn unload_chunk_at(
-        &mut self,
-        cx: usize,
-        cy: usize,
-        cz: usize,
-        commands: &mut Commands,
-    ) -> Option<Chunk> {
+    pub fn unload_chunk_at(&mut self, cx: usize, cy: usize, cz: usize, commands: &mut Commands) -> Option<Chunk> {
         let index = flatten(cx, cy, cz, self.width, self.height);
 
         self.empty_chunks.remove(&index);
@@ -880,9 +810,7 @@ fn remove_empty_chunks(
 
                 let (width, height) = (structure.width, structure.height);
 
-                structure
-                    .chunk_entities
-                    .remove(&flatten(cx, cy, cz, width, height));
+                structure.chunk_entities.remove(&flatten(cx, cy, cz, width, height));
             }
         }
     }
@@ -925,9 +853,7 @@ fn add_chunks_system(
                 if !chunk.is_empty() && structure.chunk_entity(x, y, z).is_none() {
                     let mut entity_cmds = commands.spawn((
                         PbrBundle {
-                            transform: Transform::from_translation(
-                                structure.chunk_relative_position(x, y, z),
-                            ),
+                            transform: Transform::from_translation(structure.chunk_relative_position(x, y, z)),
                             ..Default::default()
                         },
                         NoSendEntity,
@@ -947,12 +873,7 @@ fn add_chunks_system(
 
                     structure.set_chunk_entity(x, y, z, entity);
 
-                    chunk_set_events.insert(ChunkSetEvent {
-                        structure_entity,
-                        x,
-                        y,
-                        z,
-                    });
+                    chunk_set_events.insert(ChunkSetEvent { structure_entity, x, y, z });
                 }
             }
         }
@@ -963,11 +884,21 @@ fn add_chunks_system(
     }
 }
 
-pub(super) fn register<T: States + Clone + Copy>(
-    app: &mut App,
-    post_loading_state: T,
-    playing_game_state: T,
-) {
+/// Takes block coordinates, offsets, and the side of the planet you're on. Returns the result of applying the offsets.
+/// On the +y (Top) side, the offsets affect their corresponding coordinate.
+/// On other sides, the offsets affect non-corresponding coordinates and may be flipped negative.
+pub fn rotate((bx, by, bz): (usize, usize, usize), (dx, dy, dz): (i32, i32, i32), block_up: BlockFace) -> (usize, usize, usize) {
+    match block_up {
+        BlockFace::Front => ((bx as i32 + dx) as usize, (by as i32 + dz) as usize, (bz as i32 + dy) as usize),
+        BlockFace::Back => ((bx as i32 + dx) as usize, (by as i32 + dz) as usize, (bz as i32 - dy) as usize),
+        BlockFace::Top => ((bx as i32 + dx) as usize, (by as i32 + dy) as usize, (bz as i32 + dz) as usize),
+        BlockFace::Bottom => ((bx as i32 + dx) as usize, (by as i32 - dy) as usize, (bz as i32 + dz) as usize),
+        BlockFace::Right => ((bx as i32 + dy) as usize, (by as i32 + dx) as usize, (bz as i32 + dz) as usize),
+        BlockFace::Left => ((bx as i32 - dy) as usize, (by as i32 + dx) as usize, (bz as i32 + dz) as usize),
+    }
+}
+
+pub(super) fn register<T: States + Clone + Copy>(app: &mut App, post_loading_state: T, playing_game_state: T) {
     app.register_type::<Structure>()
         .register_type::<Chunk>()
         .add_event::<ChunkInitEvent>();

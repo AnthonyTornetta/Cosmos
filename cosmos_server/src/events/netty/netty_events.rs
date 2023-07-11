@@ -26,14 +26,18 @@ fn generate_player_inventory(items: &Registry<Item>) -> Inventory {
 
     inventory.insert_at(
         0,
-        items.from_id("cosmos:stone").expect("Stone item to exist"),
-        64,
+        items
+            .from_id("cosmos:redwood_log")
+            .expect("Redwood log item to exist"),
+        999,
     );
 
     inventory.insert_at(
         1,
-        items.from_id("cosmos:dirt").expect("Dirt item to exist"),
-        64,
+        items
+            .from_id("cosmos:redwood_leaf")
+            .expect("Redwood leaf item to exist"),
+        999,
     );
 
     inventory.insert_at(

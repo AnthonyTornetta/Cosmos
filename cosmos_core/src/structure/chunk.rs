@@ -60,27 +60,44 @@ impl Chunk {
     }
 
     #[inline]
-    /// The position in the structure x
+    /// The position in the structure.
+    pub fn structure_coords(&self) -> (usize, usize, usize) {
+        (self.x, self.y, self.z)
+    }
+
+    #[inline]
+    /// The position in the structure x.
     pub fn structure_x(&self) -> usize {
         self.x
     }
 
     #[inline]
-    /// The position in the structure y
+    /// The position in the structure y.
     pub fn structure_y(&self) -> usize {
         self.y
     }
 
     #[inline]
-    /// The position in the structure z
+    /// The position in the structure z.
     pub fn structure_z(&self) -> usize {
         self.z
     }
 
     #[inline]
-    /// Returns true if this chunk only contains air
+    /// Returns true if this chunk only contains air.
     pub fn is_empty(&self) -> bool {
         self.non_air_blocks == 0
+    }
+
+    #[inline]
+    /// Sets the block at the given location.
+    ///
+    /// Generally, you should use the structure's version of this because this doesn't handle everything the structure does.
+    /// You should only call this if you know what you're doing.
+    ///
+    /// No events are generated from this.
+    pub fn set_block_at(&mut self, x: usize, y: usize, z: usize, b: &Block, block_up: BlockFace) {
+        self.set_block_at_from_id(x, y, z, b.id(), block_up)
     }
 
     /// Sets the block at the given location.
@@ -89,12 +106,11 @@ impl Chunk {
     /// You should only call this if you know what you're doing.
     ///
     /// No events are generated from this.
-    pub fn set_block_at(&mut self, x: usize, y: usize, z: usize, b: &Block, block_up: BlockFace) {
+    pub fn set_block_at_from_id(&mut self, x: usize, y: usize, z: usize, id: u16, block_up: BlockFace) {
         debug_assert!(x < CHUNK_DIMENSIONS);
         debug_assert!(y < CHUNK_DIMENSIONS);
         debug_assert!(z < CHUNK_DIMENSIONS);
         let index = flatten(x, y, z, CHUNK_DIMENSIONS, CHUNK_DIMENSIONS);
-        let id = b.id();
 
         self.block_health.reset_health(x, y, z);
 
@@ -114,16 +130,8 @@ impl Chunk {
     #[inline]
     /// Returns true if the block at this location is see-through. This is not determined from the block's texture, but
     /// rather the flags the block was constructed with.
-    pub fn has_see_through_block_at(
-        &self,
-        x: usize,
-        y: usize,
-        z: usize,
-        blocks: &Registry<Block>,
-    ) -> bool {
-        blocks
-            .from_numeric_id(self.block_at(x, y, z))
-            .is_see_through()
+    pub fn has_see_through_block_at(&self, x: usize, y: usize, z: usize, blocks: &Registry<Block>) -> bool {
+        blocks.from_numeric_id(self.block_at(x, y, z)).is_see_through()
     }
 
     #[inline]
@@ -147,13 +155,7 @@ impl Chunk {
     #[inline]
     /// Returns true if the block at these coordinates is a full block (1x1x1 cube). This is not determined
     /// by the model, but rather the flags the block is constructed with.
-    pub fn has_full_block_at(
-        &self,
-        x: usize,
-        y: usize,
-        z: usize,
-        blocks: &Registry<Block>,
-    ) -> bool {
+    pub fn has_full_block_at(&self, x: usize, y: usize, z: usize, blocks: &Registry<Block>) -> bool {
         blocks.from_numeric_id(self.block_at(x, y, z)).is_full()
     }
 
@@ -169,13 +171,7 @@ impl Chunk {
     /// Gets the block's health at that given coordinate
     /// * `x/y/z`: block coordinate
     /// * `block_hardness`: The hardness for the block at those coordinates
-    pub fn get_block_health(
-        &self,
-        x: usize,
-        y: usize,
-        z: usize,
-        block_hardness: &BlockHardness,
-    ) -> f32 {
+    pub fn get_block_health(&self, x: usize, y: usize, z: usize, block_hardness: &BlockHardness) -> f32 {
         self.block_health.get_health(x, y, z, block_hardness)
     }
 
@@ -186,16 +182,8 @@ impl Chunk {
     /// * `amount` The amount of damage to take - cannot be negative
     ///
     /// **Returns:** true if that block was destroyed, false if not
-    pub fn block_take_damage(
-        &mut self,
-        x: usize,
-        y: usize,
-        z: usize,
-        block_hardness: &BlockHardness,
-        amount: f32,
-    ) -> bool {
-        self.block_health
-            .take_damage(x, y, z, block_hardness, amount)
+    pub fn block_take_damage(&mut self, x: usize, y: usize, z: usize, block_hardness: &BlockHardness, amount: f32) -> bool {
+        self.block_health.take_damage(x, y, z, block_hardness, amount)
     }
 
     /// Returns the iterator for every block in the chunk
@@ -209,9 +197,7 @@ impl Chunk {
     }
 }
 
-#[derive(
-    Debug, Default, Reflect, FromReflect, Serialize, Deserialize, Clone, Copy, PartialEq, Eq,
-)]
+#[derive(Debug, Default, Reflect, FromReflect, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
 /// This represents the information for a block. The first 3 bits are reserved for rotation data.
 ///
 /// All other bits can be used for anything else

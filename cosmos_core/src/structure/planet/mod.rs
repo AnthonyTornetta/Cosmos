@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{block::BlockFace, physics::location::SYSTEM_SECTORS};
 
-use super::Structure;
+use super::{chunk::CHUNK_DIMENSIONS, Structure};
 
 pub mod biosphere;
 pub mod planet_builder;
@@ -50,21 +50,14 @@ impl Planet {
     /// * `bx` Block's x
     /// * `by` Block's y
     /// * `bz` Block's z
-    pub fn get_planet_face_without_structure(
-        bx: usize,
-        by: usize,
-        bz: usize,
-        structure_blocks_width: usize,
-        structure_blocks_height: usize,
-        structure_blocks_length: usize,
-    ) -> BlockFace {
+    pub fn get_planet_face_without_structure(bx: usize, by: usize, bz: usize, structure_blocks_dimensions: usize) -> BlockFace {
         Self::planet_face_relative(Structure::block_relative_position_static(
             bx,
             by,
             bz,
-            structure_blocks_width,
-            structure_blocks_height,
-            structure_blocks_length,
+            structure_blocks_dimensions,
+            structure_blocks_dimensions,
+            structure_blocks_dimensions,
         ))
     }
 
@@ -89,6 +82,108 @@ impl Planet {
             BlockFace::Front
         } else {
             BlockFace::Back
+        }
+    }
+
+    /// Given the coordinates of a chunk, returns a tuple of 3 perpendicular chunk's "up" directions, None elements for no up on that axis.
+    pub fn chunk_planet_faces((sx, sy, sz): (usize, usize, usize), s_dimension: usize) -> ChunkFaces {
+        let mut chunk_faces = ChunkFaces::Face(Planet::get_planet_face_without_structure(sx, sy, sz, s_dimension));
+        for z in 0..=1 {
+            for y in 0..=1 {
+                for x in 0..=1 {
+                    let up = Planet::get_planet_face_without_structure(
+                        sx + x * CHUNK_DIMENSIONS,
+                        sy + y * CHUNK_DIMENSIONS,
+                        sz + z * CHUNK_DIMENSIONS,
+                        s_dimension,
+                    );
+                    match chunk_faces {
+                        ChunkFaces::Face(up1) => {
+                            if up1 != up {
+                                chunk_faces = ChunkFaces::Edge(up1, up);
+                            }
+                        }
+                        ChunkFaces::Edge(up1, up2) => {
+                            if up1 != up && up2 != up {
+                                let x_up = if matches!(up1, BlockFace::Right | BlockFace::Left) {
+                                    up1
+                                } else if matches!(up2, BlockFace::Right | BlockFace::Left) {
+                                    up2
+                                } else {
+                                    up
+                                };
+                                let y_up = if matches!(up1, BlockFace::Top | BlockFace::Bottom) {
+                                    up1
+                                } else if matches!(up2, BlockFace::Top | BlockFace::Bottom) {
+                                    up2
+                                } else {
+                                    up
+                                };
+                                let z_up = if matches!(up1, BlockFace::Front | BlockFace::Back) {
+                                    up1
+                                } else if matches!(up2, BlockFace::Front | BlockFace::Back) {
+                                    up2
+                                } else {
+                                    up
+                                };
+                                chunk_faces = ChunkFaces::Corner(x_up, y_up, z_up);
+                            }
+                        }
+                        ChunkFaces::Corner(_, _, _) => panic!("Chunk with more than 3 \"up\" directions (center of the planet)."),
+                    }
+                }
+            }
+        }
+        chunk_faces
+    }
+}
+
+/// Stores whether the chunk is on the planet face, edge, or corner, and which directions.
+pub enum ChunkFaces {
+    /// On the planet's face (1 "up").
+    Face(BlockFace),
+    /// On the planet's edge (between 2 "up"s).
+    Edge(BlockFace, BlockFace),
+    /// On the planet's corner (between 3 "up"s).
+    Corner(BlockFace, BlockFace, BlockFace),
+}
+
+impl ChunkFaces {
+    /// Makes an iter???
+    pub fn iter(&self) -> ChunkFacesIter {
+        ChunkFacesIter {
+            chunk_faces: self,
+            position: 0,
+        }
+    }
+}
+
+/// Iterates over the "up" directions of a ChunkFaces.
+pub struct ChunkFacesIter<'a> {
+    chunk_faces: &'a ChunkFaces,
+    position: usize,
+}
+
+impl<'a> Iterator for ChunkFacesIter<'a> {
+    type Item = BlockFace;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.position += 1;
+        match self.chunk_faces {
+            ChunkFaces::Face(up) => match self.position {
+                1 => Some(*up),
+                _ => None,
+            },
+            ChunkFaces::Edge(up1, up2) => match self.position {
+                1 => Some(*up1),
+                2 => Some(*up2),
+                _ => None,
+            },
+            ChunkFaces::Corner(up1, up2, up3) => match self.position {
+                1 => Some(*up1),
+                2 => Some(*up2),
+                3 => Some(*up3),
+                _ => None,
+            },
         }
     }
 }

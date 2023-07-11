@@ -8,26 +8,14 @@ use crate::{ecs::bundles::CosmosPbrBundle, physics::location::Location, structur
 /// Used to instantiate structures
 pub trait TStructureBuilder {
     /// Builds that structure
-    fn insert_structure(
-        &self,
-        entity: &mut EntityCommands,
-        location: Location,
-        velocity: Velocity,
-        structure: &mut Structure,
-    );
+    fn insert_structure(&self, entity: &mut EntityCommands, location: Location, velocity: Velocity, structure: &mut Structure);
 }
 #[derive(Default, Debug)]
 /// The default structure builder
 pub struct StructureBuilder;
 
 impl TStructureBuilder for StructureBuilder {
-    fn insert_structure(
-        &self,
-        entity: &mut EntityCommands,
-        location: Location,
-        velocity: Velocity,
-        structure: &mut Structure,
-    ) {
+    fn insert_structure(&self, entity: &mut EntityCommands, location: Location, velocity: Velocity, structure: &mut Structure) {
         structure.set_entity(entity.id());
 
         entity.insert((

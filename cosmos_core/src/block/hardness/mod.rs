@@ -70,8 +70,12 @@ fn register_block_hardness(
     register_hardness(&mut registry, 10.0, &blocks, "cosmos:dirt");
     register_hardness(&mut registry, 50.0, &blocks, "cosmos:stone");
 
-    register_hardness(&mut registry, 30.0, &blocks, "cosmos:cherry_log");
+    register_hardness(&mut registry, 30.0, &blocks, "cosmos:log");
+
     register_hardness(&mut registry, 1.0, &blocks, "cosmos:cherry_leaf");
+
+    register_hardness(&mut registry, 30.0, &blocks, "cosmos:redwood_log");
+    register_hardness(&mut registry, 1.0, &blocks, "cosmos:redwood_leaf");
 
     register_hardness(&mut registry, 100.0, &blocks, "cosmos:ship_core");
     register_hardness(&mut registry, 20.0, &blocks, "cosmos:energy_cell");

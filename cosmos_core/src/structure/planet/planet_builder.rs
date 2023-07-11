@@ -21,13 +21,7 @@ use super::Planet;
 /// Implement this to add a custom way to build planets
 pub trait TPlanetBuilder {
     /// Adds everything to the entity needed to have a planet
-    fn insert_planet(
-        &self,
-        entity: &mut EntityCommands,
-        location: Location,
-        structure: &mut Structure,
-        planet: Planet,
-    );
+    fn insert_planet(&self, entity: &mut EntityCommands, location: Location, structure: &mut Structure, planet: Planet);
 }
 
 /// Default way to build a planet
@@ -43,13 +37,7 @@ impl<T: TStructureBuilder> PlanetBuilder<T> {
 }
 
 impl<T: TStructureBuilder> TPlanetBuilder for PlanetBuilder<T> {
-    fn insert_planet(
-        &self,
-        entity: &mut EntityCommands,
-        location: Location,
-        structure: &mut Structure,
-        planet: Planet,
-    ) {
+    fn insert_planet(&self, entity: &mut EntityCommands, location: Location, structure: &mut Structure, planet: Planet) {
         self.structure_builder
             .insert_structure(entity, location, Velocity::default(), structure);
 
@@ -60,8 +48,7 @@ impl<T: TStructureBuilder> TPlanetBuilder for PlanetBuilder<T> {
 fn on_add_planet(query: Query<(Entity, &Structure), Added<Planet>>, mut commands: Commands) {
     for (entity, structure) in query.iter() {
         assert!(
-            structure.chunks_width() == structure.chunks_height()
-                && structure.chunks_height() == structure.chunks_length(),
+            structure.chunks_width() == structure.chunks_height() && structure.chunks_height() == structure.chunks_length(),
             "Structure dimensions must all be the same for a planet."
         );
 

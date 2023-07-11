@@ -29,9 +29,7 @@ pub enum BlockProperty {
     ShipOnly,
 }
 
-#[derive(
-    Debug, PartialEq, Eq, Reflect, FromReflect, Default, Copy, Clone, Serialize, Deserialize, Hash,
-)]
+#[derive(Debug, PartialEq, Eq, Reflect, FromReflect, Default, Copy, Clone, Serialize, Deserialize, Hash)]
 /// Represents the different faces of a block.
 ///
 /// Even non-cube blocks will have this.
@@ -41,14 +39,14 @@ pub enum BlockFace {
     Front,
     /// -Z
     Back,
-    /// -X
-    Left,
-    /// +X
-    Right,
     /// +Y
     Top,
     /// -Y
     Bottom,
+    /// +X
+    Right,
+    /// -X
+    Left,
 }
 
 impl BlockFace {
@@ -223,12 +221,7 @@ impl Block {
     /// Creates a block
     ///
     /// * `unlocalized_name` This should be unique for that block with the following formatting: `mod_id:block_identifier`. Such as: `cosmos:laser_cannon`
-    pub fn new(
-        properties: &Vec<BlockProperty>,
-        id: u16,
-        unlocalized_name: String,
-        density: f32,
-    ) -> Self {
+    pub fn new(properties: &Vec<BlockProperty>, id: u16, unlocalized_name: String, density: f32) -> Self {
         Self {
             visibility: BlockProperty::create_id(properties),
             id,
@@ -274,12 +267,7 @@ impl PartialEq for Block {
     }
 }
 
-pub(super) fn register<T: States + Clone + Copy>(
-    app: &mut App,
-    pre_loading_state: T,
-    loading_state: T,
-    post_loading_state: T,
-) {
+pub(super) fn register<T: States + Clone + Copy>(app: &mut App, pre_loading_state: T, loading_state: T, post_loading_state: T) {
     blocks::register(app, pre_loading_state, loading_state);
     hardness::register(app, loading_state, post_loading_state);
 
