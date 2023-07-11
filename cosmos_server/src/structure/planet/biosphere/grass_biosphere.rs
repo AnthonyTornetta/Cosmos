@@ -443,9 +443,8 @@ fn trees(
 
     let structure_coords = location.absolute_coords_f64();
 
-    let faces = Planet::chunk_planet_faces_set((sx, sy, sz), s_dimension);
-
-    for block_up in faces {
+    let faces = Planet::chunk_planet_faces((sx, sy, sz), s_dimension);
+    for block_up in faces.iter() {
         // Getting the noise value for every block in the chunk, to find where to put trees.
         let noise_height = match block_up {
             BlockFace::Front | BlockFace::Top | BlockFace::Right => structure.blocks_height(),
