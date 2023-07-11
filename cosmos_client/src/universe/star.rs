@@ -3,8 +3,8 @@
 use bevy::{
     pbr::NotShadowCaster,
     prelude::{
-        shape, Added, App, Assets, Commands, DirectionalLight, Entity, Mesh, PbrBundle, Query,
-        ResMut, StandardMaterial, Transform, Vec3, With, Without,
+        shape, Added, App, Assets, Commands, DirectionalLight, Entity, Mesh, PbrBundle, Query, ResMut, StandardMaterial, Transform, Vec3,
+        With, Without,
     },
 };
 use cosmos_core::{physics::location::SECTOR_DIMENSIONS, universe::star::Star};
@@ -14,10 +14,7 @@ use cosmos_core::{physics::location::SECTOR_DIMENSIONS, universe::star::Star};
 /// This is a random number I made up, but looks nice enough
 const LIGHT_INTENSITY_CONSTANT: f32 = 3_000_000_000_000_000.0;
 
-fn point_light_from_sun(
-    sun: Query<&Transform, With<Star>>,
-    mut light: Query<(&mut Transform, &mut DirectionalLight), Without<Star>>,
-) {
+fn point_light_from_sun(sun: Query<&Transform, With<Star>>, mut light: Query<(&mut Transform, &mut DirectionalLight), Without<Star>>) {
     if let Ok((mut transform, mut light)) = light.get_single_mut() {
         if let Some(sun) = sun.iter().next() {
             transform.look_at(-sun.translation, Vec3::Y);
@@ -60,6 +57,5 @@ fn create_added_star(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(create_added_star)
-        .add_system(point_light_from_sun);
+    app.add_system(create_added_star).add_system(point_light_from_sun);
 }

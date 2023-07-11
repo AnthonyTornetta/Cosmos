@@ -64,6 +64,8 @@ fn added_planet(
                     .from_id(marker.biosphere_name())
                     .map(|x| x.color())
                     .unwrap_or(Color::WHITE),
+
+                perceptual_roughness: 1.0,
                 ..Default::default()
             }),
             Visibility::default(),
