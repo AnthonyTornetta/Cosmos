@@ -558,60 +558,65 @@ pub fn generate_planet<T: Component + Clone, E: TGenerateChunkEvent + Send + Syn
                 let (x_up, y_up, z_up) = Planet::chunk_planet_faces((sx, sy, sz), s_dimensions);
                 let num_up = x_up.is_some() as usize + y_up.is_some() as usize + z_up.is_some() as usize;
 
-                if num_up == 1 {
-                    // Chunks on only one face.
-                    let up = if x_up.is_some() {
-                        x_up
-                    } else if y_up.is_some() {
-                        y_up
-                    } else {
-                        z_up
-                    }
-                    .unwrap();
+                match num_up {
+                    1 => {
+                        // Chunks on only one face.
+                        let up = if let Some(x_up) = x_up {
+                            x_up
+                        } else if let Some(y_up) = y_up {
+                            y_up
+                        } else if let Some(z_up) = z_up {
+                            z_up
+                        } else {
+                            panic!("Up count was 1, but there were no non-None up values.");
+                        };
 
-                    generate_face_chunk(
-                        (sx, sy, sz),
-                        (structure_x, structure_y, structure_z),
-                        s_dimensions,
-                        &noise_generator,
-                        middle_air_start,
-                        &block_ranges,
-                        &mut chunk,
-                        up,
-                    );
-                } else if num_up == 2 {
-                    // Chunks on an edge.
-                    let (j_up, k_up) = if x_up.is_none() {
-                        (y_up.unwrap(), z_up.unwrap())
-                    } else if y_up.is_none() {
-                        (x_up.unwrap(), z_up.unwrap())
-                    } else {
-                        (x_up.unwrap(), y_up.unwrap())
-                    };
-                    generate_edge_chunk(
-                        (sx, sy, sz),
-                        (structure_x, structure_y, structure_z),
-                        s_dimensions,
-                        &noise_generator,
-                        middle_air_start,
-                        &block_ranges,
-                        &mut chunk,
-                        j_up,
-                        k_up,
-                    );
-                } else {
-                    generate_corner_chunk(
-                        (sx, sy, sz),
-                        (structure_x, structure_y, structure_z),
-                        s_dimensions,
-                        &noise_generator,
-                        middle_air_start,
-                        &block_ranges,
-                        &mut chunk,
-                        x_up.unwrap(),
-                        y_up.unwrap(),
-                        z_up.unwrap(),
-                    );
+                        generate_face_chunk(
+                            (sx, sy, sz),
+                            (structure_x, structure_y, structure_z),
+                            s_dimensions,
+                            &noise_generator,
+                            middle_air_start,
+                            &block_ranges,
+                            &mut chunk,
+                            up,
+                        );
+                    }
+                    2 => {
+                        // Chunks on an edge.
+                        let (j_up, k_up) = match (x_up, y_up, z_up) {
+                            (None, Some(y_up), Some(z_up)) => (y_up, z_up),
+                            (Some(x_up), None, Some(z_up)) => (x_up, z_up),
+                            (Some(x_up), Some(y_up), None) => (x_up, y_up),
+                            _ => panic!("Up count was 2, but there were not 2 non-None up values."),
+                        };
+                        generate_edge_chunk(
+                            (sx, sy, sz),
+                            (structure_x, structure_y, structure_z),
+                            s_dimensions,
+                            &noise_generator,
+                            middle_air_start,
+                            &block_ranges,
+                            &mut chunk,
+                            j_up,
+                            k_up,
+                        );
+                    }
+                    3 => {
+                        generate_corner_chunk(
+                            (sx, sy, sz),
+                            (structure_x, structure_y, structure_z),
+                            s_dimensions,
+                            &noise_generator,
+                            middle_air_start,
+                            &block_ranges,
+                            &mut chunk,
+                            x_up.unwrap(),
+                            y_up.unwrap(),
+                            z_up.unwrap(),
+                        );
+                    }
+                    _ => panic!("Chunk to be generated was not on any face of the planet."),
                 }
                 timer.log_duration("Chunk: ");
                 (chunk, structure_entity)
