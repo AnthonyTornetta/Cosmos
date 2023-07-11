@@ -10,7 +10,7 @@ use bevy::{
 
 use crate::{
     block::Block,
-    ecs::{despawn_needed, NeedsDespawned},
+    ecs::NeedsDespawned,
     events::block_events::BlockChangedEvent,
     registry::{identifiable::Identifiable, Registry},
     structure::{chunk::ChunkEntity, systems::StructureSystem},
