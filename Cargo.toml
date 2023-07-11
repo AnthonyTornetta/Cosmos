@@ -39,6 +39,8 @@ walkdir = "2.3.3"
 
 zstd = "0.12.3"
 
+toml = "0.7.6"
+
 # For any non workspace package
 [profile.dev.package."*"]
 opt-level = 3

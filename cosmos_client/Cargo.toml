@@ -22,3 +22,5 @@ image = { workspace = true }
 bevy-inspector-egui = { workspace = true }
 
 rayon = { workspace = true }
+
+toml = { workspace = true }
