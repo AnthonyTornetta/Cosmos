@@ -20,7 +20,6 @@ impl TStructureBuilder for ClientStructureBuilder {
         velocity: bevy_rapier3d::prelude::Velocity,
         structure: &mut cosmos_core::structure::Structure,
     ) {
-        self.structure_builder
-            .insert_structure(entity, location, velocity, structure);
+        self.structure_builder.insert_structure(entity, location, velocity, structure);
     }
 }

@@ -1,8 +1,6 @@
 //! If a player is locked to a ship (ie walking on it) then they will have this component.
 
-use bevy::prelude::{
-    App, Changed, Commands, Component, Entity, Parent, Query, RemovedComponents, With,
-};
+use bevy::prelude::{App, Changed, Commands, Component, Entity, Parent, Query, RemovedComponents, With};
 
 use crate::structure::ship::Ship;
 
@@ -32,9 +30,7 @@ fn add_or_remove_component(
 
     for (entity, parent) in query.iter() {
         if is_ship.contains(parent.get()) {
-            commands.entity(entity).insert(ApartOfShip {
-                ship_entity: parent.get(),
-            });
+            commands.entity(entity).insert(ApartOfShip { ship_entity: parent.get() });
         } else {
             commands.entity(entity).remove::<ApartOfShip>();
         }

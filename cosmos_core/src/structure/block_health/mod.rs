@@ -30,13 +30,7 @@ impl BlockHealth {
     /// - x/y/z: block coordinate
     /// - block_hardness: The hardness for the block at those coordinates
     #[inline]
-    pub(crate) fn get_health(
-        &self,
-        x: usize,
-        y: usize,
-        z: usize,
-        block_hardness: &BlockHardness,
-    ) -> f32 {
+    pub(crate) fn get_health(&self, x: usize, y: usize, z: usize, block_hardness: &BlockHardness) -> f32 {
         if let Some(health) = self.block_healths.get(&self.index(x, y, z)) {
             *health
         } else {
@@ -54,22 +48,14 @@ impl BlockHealth {
     /// - x/y/z: block coordinate
     /// - block_hardness: The hardness for the block at those coordinates
     /// - value: Any value, is clamped to always be 0.0 or above.
-    pub(crate) fn set_health(
-        &mut self,
-        x: usize,
-        y: usize,
-        z: usize,
-        block_hardness: &BlockHardness,
-        value: f32,
-    ) {
+    pub(crate) fn set_health(&mut self, x: usize, y: usize, z: usize, block_hardness: &BlockHardness, value: f32) {
         debug_assert!(x < CHUNK_DIMENSIONS);
         debug_assert!(y < CHUNK_DIMENSIONS);
 
         if block_hardness.hardness() == value {
             self.reset_health(x, y, z);
         } else {
-            self.block_healths
-                .insert(self.index(x, y, z), value.max(0.0));
+            self.block_healths.insert(self.index(x, y, z), value.max(0.0));
         }
     }
 
@@ -80,14 +66,7 @@ impl BlockHealth {
     /// - amount: The amount of damage to take - cannot be negative
     ///
     /// Returns: true if that block was destroyed, false if not
-    pub fn take_damage(
-        &mut self,
-        x: usize,
-        y: usize,
-        z: usize,
-        block_hardness: &BlockHardness,
-        amount: f32,
-    ) -> bool {
+    pub fn take_damage(&mut self, x: usize, y: usize, z: usize, block_hardness: &BlockHardness, amount: f32) -> bool {
         debug_assert!(amount >= 0.0);
         let value = self.get_health(x, y, z, block_hardness);
         let amount = value - amount;

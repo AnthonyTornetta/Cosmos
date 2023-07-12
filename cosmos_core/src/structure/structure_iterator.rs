@@ -122,8 +122,7 @@ impl<'a> BlockIterator<'a> {
                     );
                     let cur_chunk = chunk_itr.next();
 
-                    if let Some(ChunkIteratorResult::FilledChunk { position: _, chunk }) = cur_chunk
-                    {
+                    if let Some(ChunkIteratorResult::FilledChunk { position: _, chunk }) = cur_chunk {
                         BlockItrState::ExcludeEmpty(EmptyBody {
                             chunk_itr,
                             cur_chunk: chunk,
@@ -145,11 +144,7 @@ impl<'a> BlockIterator<'a> {
     /// Returns the number of blocks left to iterate through, with respect to the `include_empty` flag.
     pub fn len(&self) -> usize {
         match &self.state {
-            BlockItrState::IncludeEmpty(body) => {
-                (body.end_x - body.start_x)
-                    * (body.end_y - body.start_y)
-                    * (body.end_z - body.start_z)
-            }
+            BlockItrState::IncludeEmpty(body) => (body.end_x - body.start_x) * (body.end_y - body.start_y) * (body.end_z - body.start_z),
             BlockItrState::ExcludeEmpty(_) => self.clone().count(),
             BlockItrState::Invalid => 0,
         }
@@ -206,10 +201,7 @@ impl<'a> Iterator for BlockIterator<'a> {
                     body.body.at_z = structure_z - cz;
                 }
 
-                if body.body.at_x >= CHUNK_DIMENSIONS
-                    || body.body.at_y >= CHUNK_DIMENSIONS
-                    || body.body.at_z >= CHUNK_DIMENSIONS
-                {
+                if body.body.at_x >= CHUNK_DIMENSIONS || body.body.at_y >= CHUNK_DIMENSIONS || body.body.at_z >= CHUNK_DIMENSIONS {
                     if let Some(chunk) = body.chunk_itr.next() {
                         if let ChunkIteratorResult::FilledChunk { position: _, chunk } = chunk {
                             body.cur_chunk = chunk;
@@ -225,10 +217,7 @@ impl<'a> Iterator for BlockIterator<'a> {
                     }
                 }
 
-                while !body
-                    .cur_chunk
-                    .has_block_at(body.body.at_x, body.body.at_y, body.body.at_z)
-                {
+                while !body.cur_chunk.has_block_at(body.body.at_x, body.body.at_y, body.body.at_z) {
                     if advance_body(body) {
                         self.state = BlockItrState::Invalid;
                         return None;
@@ -395,9 +384,7 @@ impl<'a> ChunkIterator<'a> {
     pub fn len(&self) -> usize {
         match &self.state {
             ChunkItrState::IncludeEmpty(body) => {
-                (body.end_x - body.start_x + 1)
-                    * (body.end_y - body.start_y + 1)
-                    * (body.end_z - body.start_z + 1)
+                (body.end_x - body.start_x + 1) * (body.end_y - body.start_y + 1) * (body.end_z - body.start_z + 1)
             }
             ChunkItrState::ExcludeEmpty((_, itr)) => itr.len(),
             ChunkItrState::Invalid => 0,
@@ -462,11 +449,7 @@ impl<'a> Iterator for ChunkIterator<'a> {
             }
             ChunkItrState::ExcludeEmpty((body, itr)) => {
                 for (_, chunk) in itr.by_ref() {
-                    let (cx, cy, cz) = (
-                        chunk.structure_x(),
-                        chunk.structure_y(),
-                        chunk.structure_z(),
-                    );
+                    let (cx, cy, cz) = (chunk.structure_x(), chunk.structure_y(), chunk.structure_z());
 
                     if cx >= body.start_x
                         && cx <= body.end_x

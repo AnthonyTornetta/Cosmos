@@ -25,12 +25,7 @@ fn add_crosshair(mut commands: Commands, asset_server: Res<AssetServer>) {
                     image: asset_server.load("images/ui/crosshair.png").into(),
                     style: Style {
                         size: Size::new(Val::Px(8.0), Val::Px(8.0)),
-                        position: UiRect::new(
-                            Val::Px(0.0),
-                            Val::Px(0.0),
-                            Val::Px(0.0),
-                            Val::Px(0.0),
-                        ),
+                        position: UiRect::new(Val::Px(0.0), Val::Px(0.0), Val::Px(0.0), Val::Px(0.0)),
                         ..default()
                     },
 
@@ -86,9 +81,8 @@ impl SmoothClamp for CrosshairOffset {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.insert_resource(CrosshairOffset::default())
-        .add_systems((
-            add_crosshair.in_schedule(OnEnter(GameState::Playing)),
-            update_cursor_pos.run_if(in_state(GameState::Playing)),
-        ));
+    app.insert_resource(CrosshairOffset::default()).add_systems((
+        add_crosshair.in_schedule(OnEnter(GameState::Playing)),
+        update_cursor_pos.run_if(in_state(GameState::Playing)),
+    ));
 }

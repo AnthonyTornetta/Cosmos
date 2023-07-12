@@ -8,9 +8,7 @@
 //! See [`saving::default_save`] for an example.
 
 use bevy::{
-    prelude::{
-        App, Commands, Component, CoreSet, Entity, IntoSystemConfig, Query, ResMut, With, Without,
-    },
+    prelude::{App, Commands, Component, CoreSet, Entity, IntoSystemConfig, Query, ResMut, With, Without},
     reflect::Reflect,
 };
 use bevy_rapier3d::prelude::Velocity;
@@ -29,10 +27,7 @@ use super::{EntityId, SaveFileIdentifier, SaveFileIdentifierType, SectorsCache, 
 #[derive(Component, Debug, Default, Reflect)]
 pub struct NeedsSaved;
 
-fn check_needs_saved(
-    query: Query<Entity, (With<NeedsSaved>, Without<SerializedData>)>,
-    mut commands: Commands,
-) {
+fn check_needs_saved(query: Query<Entity, (With<NeedsSaved>, Without<SerializedData>)>, mut commands: Commands) {
     for ent in query.iter() {
         commands.entity(ent).insert(SerializedData::default());
     }
@@ -66,19 +61,14 @@ pub fn done_saving(
         if fs::try_exists(&path).unwrap_or(false) {
             fs::remove_file(path).expect("Error deleting old save file!");
 
-            if let SaveFileIdentifierType::Base((entity_id, Some(sector), load_distance)) =
-                &dead_save.identifier_type
-            {
+            if let SaveFileIdentifierType::Base((entity_id, Some(sector), load_distance)) = &dead_save.identifier_type {
                 sectors_cache.remove(entity_id, *sector, *load_distance);
             }
         }
     }
 
     for (entity, sd, entity_id, loading_distance, save_file_identifier) in query.iter() {
-        commands
-            .entity(entity)
-            .remove::<NeedsSaved>()
-            .remove::<SerializedData>();
+        commands.entity(entity).remove::<NeedsSaved>().remove::<SerializedData>();
 
         if !sd.should_save() {
             continue;
@@ -99,9 +89,7 @@ pub fn done_saving(
             if fs::try_exists(&path).unwrap_or(false) {
                 fs::remove_file(path).expect("Error deleting old save file!");
 
-                if let SaveFileIdentifierType::Base((entity_id, Some(sector), load_distance)) =
-                    &save_file_identifier.identifier_type
-                {
+                if let SaveFileIdentifierType::Base((entity_id, Some(sector), load_distance)) = &save_file_identifier.identifier_type {
                     sectors_cache.remove(entity_id, *sector, *load_distance);
                 }
             }
@@ -127,11 +115,7 @@ pub fn done_saving(
         }
 
         if let Some(loc) = sd.location {
-            sectors_cache.insert(
-                loc.sector(),
-                entity_id,
-                loading_distance.map(|ld| ld.load_distance()),
-            );
+            sectors_cache.insert(loc.sector(), entity_id, loading_distance.map(|ld| ld.load_distance()));
         }
     }
 }
@@ -148,17 +132,7 @@ fn write_file(save_identifier: &SaveFileIdentifier, serialized: &[u8]) -> io::Re
     Ok(())
 }
 
-fn default_save(
-    mut query: Query<
-        (
-            &mut SerializedData,
-            Option<&Location>,
-            Option<&Velocity>,
-            Option<&LoadingDistance>,
-        ),
-        With<NeedsSaved>,
-    >,
-) {
+fn default_save(mut query: Query<(&mut SerializedData, Option<&Location>, Option<&Velocity>, Option<&LoadingDistance>), With<NeedsSaved>>) {
     for (mut data, loc, vel, loading_distance) in query.iter_mut() {
         if let Some(loc) = loc {
             data.set_location(loc);
@@ -177,23 +151,9 @@ fn default_save(
 pub(super) fn register(app: &mut App) {
     app.add_system(check_needs_saved.in_base_set(CoreSet::PostUpdate))
         // Put all saving-related systems after this
-        .add_system(
-            begin_saving
-                .in_base_set(CoreSet::First)
-                .before(despawn_needed),
-        )
+        .add_system(begin_saving.in_base_set(CoreSet::First).before(despawn_needed))
         // Put all saving-related systems before this
-        .add_system(
-            done_saving
-                .in_base_set(CoreSet::First)
-                .after(begin_saving)
-                .before(despawn_needed),
-        )
+        .add_system(done_saving.in_base_set(CoreSet::First).after(begin_saving).before(despawn_needed))
         // Like this:
-        .add_system(
-            default_save
-                .in_base_set(CoreSet::First)
-                .after(begin_saving)
-                .before(done_saving),
-        );
+        .add_system(default_save.in_base_set(CoreSet::First).after(begin_saving).before(done_saving));
 }

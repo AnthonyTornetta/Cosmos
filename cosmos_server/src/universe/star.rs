@@ -16,11 +16,7 @@ use crate::{
     state::GameState,
 };
 
-fn on_request_star(
-    mut event_reader: EventReader<RequestedEntityEvent>,
-    query: Query<&Star>,
-    mut server: ResMut<RenetServer>,
-) {
+fn on_request_star(mut event_reader: EventReader<RequestedEntityEvent>, query: Query<&Star>, mut server: ResMut<RenetServer>) {
     for ev in event_reader.iter() {
         if let Ok(star) = query.get(ev.entity) {
             server.send_message(
@@ -43,10 +39,5 @@ fn on_save_star(mut query: Query<&mut SerializedData, (With<NeedsSaved>, With<St
 
 pub(super) fn register(app: &mut App) {
     app.add_system(on_request_star.run_if(in_state(GameState::Playing)))
-        .add_system(
-            on_save_star
-                .in_base_set(CoreSet::First)
-                .after(begin_saving)
-                .before(done_saving),
-        );
+        .add_system(on_save_star.in_base_set(CoreSet::First).after(begin_saving).before(done_saving));
 }

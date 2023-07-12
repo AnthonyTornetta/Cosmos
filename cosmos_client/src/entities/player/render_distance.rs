@@ -9,10 +9,7 @@ use cosmos_core::{
 
 use crate::{netty::flags::LocalPlayer, state::game_state::GameState};
 
-fn send_render_distance(
-    query: Query<&RenderDistance, (With<LocalPlayer>, Changed<RenderDistance>)>,
-    mut client: ResMut<RenetClient>,
-) {
+fn send_render_distance(query: Query<&RenderDistance, (With<LocalPlayer>, Changed<RenderDistance>)>, mut client: ResMut<RenetClient>) {
     if let Ok(render_distance) = query.get_single() {
         client.send_message(
             NettyChannelClient::Reliable,

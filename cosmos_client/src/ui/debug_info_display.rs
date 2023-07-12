@@ -88,21 +88,12 @@ fn update_coords(
 ) {
     if let Ok(loc) = query.get_single() {
         for mut txt_coords in txt_coords.iter_mut() {
-            txt_coords.sections[0].value = format!(
-                "({}), ({:.1}, {:.1}, {:.1})",
-                loc.sector(),
-                loc.local.x,
-                loc.local.y,
-                loc.local.z
-            );
+            txt_coords.sections[0].value = format!("({}), ({:.1}, {:.1}, {:.1})", loc.sector(), loc.local.x, loc.local.y, loc.local.z);
         }
 
         for mut txt_coords_actual in txt_coords_actual.iter_mut() {
             let absolute_coords = loc.absolute_coords();
-            txt_coords_actual.sections[0].value = format!(
-                "({:.1}, {:.1}, {:.1})",
-                absolute_coords.x, absolute_coords.y, absolute_coords.z
-            );
+            txt_coords_actual.sections[0].value = format!("({:.1}, {:.1}, {:.1})", absolute_coords.x, absolute_coords.y, absolute_coords.z);
         }
     }
 }

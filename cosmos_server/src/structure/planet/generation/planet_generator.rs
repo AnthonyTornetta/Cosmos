@@ -14,15 +14,9 @@ use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     ecs::NeedsDespawned,
     entities::player::Player,
-    netty::{
-        cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannelServer,
-        NoSendEntity,
-    },
+    netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannelServer, NoSendEntity},
     physics::location::Location,
-    structure::{
-        chunk::CHUNK_DIMENSIONSF, planet::Planet, structure_iterator::ChunkIteratorResult,
-        ChunkState, Structure,
-    },
+    structure::{chunk::CHUNK_DIMENSIONSF, planet::Planet, structure_iterator::ChunkIteratorResult, ChunkState, Structure},
     utils::timer::UtilsTimer,
 };
 use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
@@ -30,9 +24,7 @@ use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 use crate::{
     persistence::{saving::NeedsSaved, EntityId, SaveFileIdentifier},
     state::GameState,
-    structure::planet::{
-        biosphere::TGenerateChunkEvent, chunk::SaveChunk, persistence::ChunkNeedsPopulated,
-    },
+    structure::planet::{biosphere::TGenerateChunkEvent, chunk::SaveChunk, persistence::ChunkNeedsPopulated},
 };
 
 #[derive(Component)]
@@ -86,10 +78,7 @@ pub struct RequestChunkEvent {
 #[derive(Debug, Clone, Copy)]
 struct RequestChunkBouncer(RequestChunkEvent);
 
-fn bounce_events(
-    mut event_reader: EventReader<RequestChunkBouncer>,
-    mut event_writer: EventWriter<RequestChunkEvent>,
-) {
+fn bounce_events(mut event_reader: EventReader<RequestChunkBouncer>, mut event_writer: EventWriter<RequestChunkEvent>) {
     for ev in event_reader.iter() {
         event_writer.send(ev.0);
     }
@@ -129,8 +118,7 @@ fn get_requested_chunk(
 
                 // If no players are in range, do not send this chunk.
                 if !players.iter().any(|player| {
-                    player.relative_coords_to(&chunk_loc).abs().max_element() / CHUNK_DIMENSIONSF
-                        < (RENDER_DISTANCE + 1) as f32
+                    player.relative_coords_to(&chunk_loc).abs().max_element() / CHUNK_DIMENSIONSF < (RENDER_DISTANCE + 1) as f32
                 }) {
                     return;
                 }
@@ -178,12 +166,13 @@ fn get_requested_chunk(
                         .as_mut()
                         .unwrap()
                         .push(RequestChunkBouncer(*ev)),
-                    ChunkState::Unloaded => todo
-                        .lock()
-                        .expect("Failed to lock")
-                        .as_mut()
-                        .unwrap()
-                        .push((ev.structure_entity, (cx, cy, cz), *ev)),
+                    ChunkState::Unloaded => {
+                        todo.lock()
+                            .expect("Failed to lock")
+                            .as_mut()
+                            .unwrap()
+                            .push((ev.structure_entity, (cx, cy, cz), *ev))
+                    }
                     ChunkState::Invalid => {
                         eprintln!("Client requested invalid chunk @ {cx} {cy} {cz}");
                     }
@@ -195,7 +184,9 @@ fn get_requested_chunk(
     let empty_serializes = empty_serializes.into_inner();
 
     if non_empty_serializes != 0 || empty_serializes != 0 {
-        timer.log_duration(&format!("Time to serialize {non_empty_serializes} non-empty chunks & {empty_serializes} empty chunks:"));
+        timer.log_duration(&format!(
+            "Time to serialize {non_empty_serializes} non-empty chunks & {empty_serializes} empty chunks:"
+        ));
     }
 
     for bounce in bounced.lock().expect("Failed to lock").take().unwrap() {
@@ -254,19 +245,12 @@ fn generate_chunks_near_players(
 
             let rd = RENDER_DISTANCE;
 
-            let iterator = best_planet.chunk_iter(
-                (px - rd, py - rd, pz - rd),
-                (px + (rd), py + (rd), pz + (rd)),
-                true,
-            );
+            let iterator = best_planet.chunk_iter((px - rd, py - rd, pz - rd), (px + (rd), py + (rd), pz + (rd)), true);
 
             let mut chunks = Vec::with_capacity(iterator.len());
 
             for chunk in iterator {
-                if let ChunkIteratorResult::EmptyChunk {
-                    position: (x, y, z),
-                } = chunk
-                {
+                if let ChunkIteratorResult::EmptyChunk { position: (x, y, z) } = chunk {
                     if best_planet.get_chunk_state(x, y, z) == ChunkState::Unloaded {
                         chunks.push((x, y, z));
                     }
@@ -300,9 +284,7 @@ fn mark_chunk_for_generation(
         ))
         .id();
 
-    commands
-        .entity(structure_entity)
-        .add_child(needs_generated_flag);
+    commands.entity(structure_entity).add_child(needs_generated_flag);
 }
 
 fn unload_chunks_far_from_players(
@@ -357,15 +339,10 @@ fn unload_chunks_far_from_players(
 
             let rd = RENDER_DISTANCE + 1;
 
-            let iterator = best_planet.chunk_iter(
-                (px - rd, py - rd, pz - rd),
-                (px + (rd), py + (rd), pz + (rd)),
-                true,
-            );
+            let iterator = best_planet.chunk_iter((px - rd, py - rd, pz - rd), (px + (rd), py + (rd), pz + (rd)), true);
 
-            let set: &mut bevy::utils::hashbrown::HashSet<(usize, usize, usize)> = potential_chunks
-                .get_mut(&entity)
-                .expect("This was just added");
+            let set: &mut bevy::utils::hashbrown::HashSet<(usize, usize, usize)> =
+                potential_chunks.get_mut(&entity).expect("This was just added");
 
             for res in iterator {
                 let chunk_position = match res {
@@ -391,21 +368,13 @@ fn unload_chunks_far_from_players(
 
             for (cx, cy, cz) in set {
                 if let Some(chunk) = structure.unload_chunk_at(cx, cy, cz, &mut commands) {
-                    let (cx, cy, cz) = (
-                        chunk.structure_x(),
-                        chunk.structure_y(),
-                        chunk.structure_z(),
-                    );
+                    let (cx, cy, cz) = (chunk.structure_x(), chunk.structure_y(), chunk.structure_z());
 
                     commands.spawn((
                         SaveChunk(chunk),
                         SaveFileIdentifier::as_child(
                             format!("{cx}_{cy}_{cz}"),
-                            SaveFileIdentifier::new(
-                                Some(location.sector()),
-                                entity_id.clone(),
-                                None,
-                            ),
+                            SaveFileIdentifier::new(Some(location.sector()), entity_id.clone(), None),
                         ),
                         NeedsSaved,
                         NeedsDespawned,
@@ -423,11 +392,7 @@ fn unload_chunks_far_from_players(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        (
-            generate_chunks_near_players,
-            get_requested_chunk,
-            bounce_events,
-        )
+        (generate_chunks_near_players, get_requested_chunk, bounce_events)
             .chain()
             .in_set(OnUpdate(GameState::Playing)),
     )

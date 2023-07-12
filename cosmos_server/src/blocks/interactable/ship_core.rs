@@ -18,9 +18,7 @@ fn handle_block_event(
     pilot_query: Query<&Pilot>,
     blocks: Res<Registry<Block>>,
 ) {
-    let block = blocks
-        .from_id("cosmos:ship_core")
-        .expect("ship core block missing!");
+    let block = blocks.from_id("cosmos:ship_core").expect("ship core block missing!");
 
     for ev in interact_events.iter() {
         if let Ok(structure) = s_query.get(ev.structure_entity) {

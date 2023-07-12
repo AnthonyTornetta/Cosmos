@@ -2,8 +2,8 @@
 
 use bevy::{
     prelude::{
-        App, Commands, Component, EventReader, IntoSystemAppConfig, IntoSystemConfig, OnEnter,
-        OnUpdate, Query, Res, ResMut, Resource, States,
+        App, Commands, Component, EventReader, IntoSystemAppConfig, IntoSystemConfig, OnEnter, OnUpdate, Query, Res, ResMut, Resource,
+        States,
     },
     reflect::{FromReflect, Reflect},
     utils::HashMap,
@@ -99,13 +99,11 @@ fn block_update_system(
     for ev in event.iter() {
         if let Ok(systems) = systems_query.get(ev.structure_entity) {
             if let Ok(mut system) = systems.query_mut(&mut system_query) {
-                if let Some(prop) = energy_storage_blocks.get(blocks.from_numeric_id(ev.old_block))
-                {
+                if let Some(prop) = energy_storage_blocks.get(blocks.from_numeric_id(ev.old_block)) {
                     system.block_removed(prop);
                 }
 
-                if let Some(prop) = energy_storage_blocks.get(blocks.from_numeric_id(ev.new_block))
-                {
+                if let Some(prop) = energy_storage_blocks.get(blocks.from_numeric_id(ev.new_block)) {
                     system.block_added(prop);
                 }
             }
@@ -135,11 +133,7 @@ fn structure_loaded_event(
     }
 }
 
-pub(super) fn register<T: States + Clone + Copy>(
-    app: &mut App,
-    post_loading_state: T,
-    playing_state: T,
-) {
+pub(super) fn register<T: States + Clone + Copy>(app: &mut App, post_loading_state: T, playing_state: T) {
     app.insert_resource(EnergyStorageBlocks::default())
         .add_systems((
             register_energy_blocks.in_schedule(OnEnter(post_loading_state)),

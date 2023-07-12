@@ -6,8 +6,8 @@ use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     entities::player::{render_distance::RenderDistance, Player},
     netty::{
-        cosmos_encoder, netty_rigidbody::NettyRigidBody,
-        server_unreliable_messages::ServerUnreliableMessages, NettyChannelServer, NoSendEntity,
+        cosmos_encoder, netty_rigidbody::NettyRigidBody, server_unreliable_messages::ServerUnreliableMessages, NettyChannelServer,
+        NoSendEntity,
     },
     persistence::LoadingDistance,
     physics::location::Location,
@@ -26,8 +26,7 @@ fn send_bodies(
         let players_bodies: Vec<(Entity, NettyRigidBody)> = bodies
             .iter()
             .filter(|(_, rb, loading_distance)| {
-                rb.location.relative_coords_to(loc).abs().max_element()
-                    < loading_distance.load_block_distance()
+                rb.location.relative_coords_to(loc).abs().max_element() < loading_distance.load_block_distance()
             })
             .map(|(ent, net_rb, _)| (*ent, *net_rb))
             .collect();
@@ -49,10 +48,7 @@ fn send_bodies(
 fn server_sync_bodies(
     mut server: ResMut<RenetServer>,
     mut tick: ResMut<NetworkTick>,
-    entities: Query<
-        (Entity, &Transform, &Location, &Velocity, &LoadingDistance),
-        Without<NoSendEntity>,
-    >,
+    entities: Query<(Entity, &Transform, &Location, &Velocity, &LoadingDistance), Without<NoSendEntity>>,
     players: Query<(&Player, &RenderDistance, &Location)>,
 ) {
     tick.0 += 1;

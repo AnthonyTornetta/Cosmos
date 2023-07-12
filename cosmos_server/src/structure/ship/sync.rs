@@ -2,10 +2,7 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
-    netty::{
-        cosmos_encoder, netty_rigidbody::NettyRigidBody,
-        server_reliable_messages::ServerReliableMessages, NettyChannelServer,
-    },
+    netty::{cosmos_encoder, netty_rigidbody::NettyRigidBody, server_reliable_messages::ServerReliableMessages, NettyChannelServer},
     physics::location::Location,
     structure::{loading::ChunksNeedLoaded, ship::Ship, Structure},
 };

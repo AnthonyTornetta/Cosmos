@@ -3,9 +3,7 @@
 
 pub mod bundles;
 
-use bevy::prelude::{
-    App, Commands, Component, CoreSet, DespawnRecursiveExt, Entity, IntoSystemConfig, Query, With,
-};
+use bevy::prelude::{App, Commands, Component, CoreSet, DespawnRecursiveExt, Entity, IntoSystemConfig, Query, With};
 
 #[derive(Component, Debug)]
 /// Marks an entity that needs to be recurisvely despawned.
@@ -22,10 +20,7 @@ use bevy::prelude::{
 pub struct NeedsDespawned;
 
 /// Recursively despawns all entities that need despawned in `CoreSet::First`.
-pub fn despawn_needed(
-    mut commands: Commands,
-    needs_despawned_query: Query<Entity, With<NeedsDespawned>>,
-) {
+pub fn despawn_needed(mut commands: Commands, needs_despawned_query: Query<Entity, With<NeedsDespawned>>) {
     for ent in needs_despawned_query.iter() {
         commands.entity(ent).despawn_recursive();
     }

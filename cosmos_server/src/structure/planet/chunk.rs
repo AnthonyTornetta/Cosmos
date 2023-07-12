@@ -16,10 +16,5 @@ fn save_chunks(mut query: Query<(&mut SerializedData, &SaveChunk), With<NeedsSav
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(
-        save_chunks
-            .in_base_set(CoreSet::First)
-            .after(begin_saving)
-            .before(done_saving),
-    );
+    app.add_system(save_chunks.in_base_set(CoreSet::First).after(begin_saving).before(done_saving));
 }

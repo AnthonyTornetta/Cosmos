@@ -9,11 +9,10 @@ use bevy::{
         mesh::MeshVertexBufferLayout,
         render_asset::RenderAssets,
         render_resource::{
-            AsBindGroup, AsBindGroupError, BindGroupDescriptor, BindGroupEntry, BindGroupLayout,
-            BindGroupLayoutDescriptor, BindGroupLayoutEntry, BindingResource, BindingType,
-            OwnedBindingResource, PreparedBindGroup, RenderPipelineDescriptor, SamplerBindingType,
-            ShaderRef, ShaderStages, SpecializedMeshPipelineError, TextureSampleType,
-            TextureViewDescriptor, TextureViewDimension,
+            AsBindGroup, AsBindGroupError, BindGroupDescriptor, BindGroupEntry, BindGroupLayout, BindGroupLayoutDescriptor,
+            BindGroupLayoutEntry, BindingResource, BindingType, OwnedBindingResource, PreparedBindGroup, RenderPipelineDescriptor,
+            SamplerBindingType, ShaderRef, ShaderStages, SpecializedMeshPipelineError, TextureSampleType, TextureViewDescriptor,
+            TextureViewDimension,
         },
         renderer::RenderDevice,
         texture::FallbackImage,
@@ -48,16 +47,12 @@ fn asset_loaded(
     mut cubemap: ResMut<Cubemap>,
     cubes: Query<&Handle<CubemapMaterial>>,
 ) {
-    if !cubemap.is_loaded
-        && asset_server.get_load_state(cubemap.image_handle.clone_weak()) == LoadState::Loaded
-    {
+    if !cubemap.is_loaded && asset_server.get_load_state(cubemap.image_handle.clone_weak()) == LoadState::Loaded {
         let image = images.get_mut(&cubemap.image_handle).unwrap();
         // NOTE: PNGs do not have any metadata that could indicate they contain a cubemap texture,
         // so they appear as one texture. The following code reconfigures the texture as necessary.
         if image.texture_descriptor.array_layer_count() == 1 {
-            image.reinterpret_stacked_2d_as_array(
-                image.texture_descriptor.size.height / image.texture_descriptor.size.width,
-            );
+            image.reinterpret_stacked_2d_as_array(image.texture_descriptor.size.height / image.texture_descriptor.size.width);
             image.texture_view_descriptor = Some(TextureViewDescriptor {
                 dimension: Some(TextureViewDimension::Cube),
                 ..default()
@@ -125,13 +120,8 @@ impl AsBindGroup for CubemapMaterial {
         images: &RenderAssets<Image>,
         _fallback_image: &FallbackImage,
     ) -> Result<PreparedBindGroup<()>, AsBindGroupError> {
-        let base_color_texture = self
-            .base_color_texture
-            .as_ref()
-            .ok_or(AsBindGroupError::RetryNextUpdate)?;
-        let image = images
-            .get(base_color_texture)
-            .ok_or(AsBindGroupError::RetryNextUpdate)?;
+        let base_color_texture = self.base_color_texture.as_ref().ok_or(AsBindGroupError::RetryNextUpdate)?;
+        let image = images.get(base_color_texture).ok_or(AsBindGroupError::RetryNextUpdate)?;
         let bind_group = render_device.create_bind_group(&BindGroupDescriptor {
             entries: &[
                 BindGroupEntry {

@@ -16,9 +16,7 @@ use cosmos_core::{
     },
 };
 
-use crate::structure::{
-    chunk_retreiver::NeedsPopulated, client_structure_builder::ClientStructureBuilder,
-};
+use crate::structure::{chunk_retreiver::NeedsPopulated, client_structure_builder::ClientStructureBuilder};
 
 /// Responsible for building ships for the client.
 pub struct ClientShipBuilder {
@@ -34,15 +32,8 @@ impl Default for ClientShipBuilder {
 }
 
 impl TShipBuilder for ClientShipBuilder {
-    fn insert_ship(
-        &self,
-        entity: &mut EntityCommands,
-        location: Location,
-        velocity: Velocity,
-        structure: &mut Structure,
-    ) {
-        self.ship_bulder
-            .insert_ship(entity, location, velocity, structure);
+    fn insert_ship(&self, entity: &mut EntityCommands, location: Location, velocity: Velocity, structure: &mut Structure) {
+        self.ship_bulder.insert_ship(entity, location, velocity, structure);
     }
 }
 

@@ -98,36 +98,12 @@ impl Line {
     /// Returns true if a structure block is within this line
     pub fn within(&self, sb: &StructureBlock) -> bool {
         match self.direction {
-            BlockFace::Front => {
-                sb.x == self.start.x
-                    && sb.y == self.start.y
-                    && (sb.z >= self.start.z && sb.z < self.start.z + self.len)
-            }
-            BlockFace::Back => {
-                sb.x == self.start.x
-                    && sb.y == self.start.y
-                    && (sb.z <= self.start.z && sb.z > self.start.z - self.len)
-            }
-            BlockFace::Right => {
-                sb.z == self.start.z
-                    && sb.y == self.start.y
-                    && (sb.x >= self.start.x && sb.x < self.start.x + self.len)
-            }
-            BlockFace::Left => {
-                sb.z == self.start.z
-                    && sb.y == self.start.y
-                    && (sb.x <= self.start.x && sb.x > self.start.x - self.len)
-            }
-            BlockFace::Top => {
-                sb.x == self.start.x
-                    && sb.z == self.start.z
-                    && (sb.y >= self.start.y && sb.y < self.start.y + self.len)
-            }
-            BlockFace::Bottom => {
-                sb.x == self.start.x
-                    && sb.z == self.start.z
-                    && (sb.y <= self.start.y && sb.y > self.start.y - self.len)
-            }
+            BlockFace::Front => sb.x == self.start.x && sb.y == self.start.y && (sb.z >= self.start.z && sb.z < self.start.z + self.len),
+            BlockFace::Back => sb.x == self.start.x && sb.y == self.start.y && (sb.z <= self.start.z && sb.z > self.start.z - self.len),
+            BlockFace::Right => sb.z == self.start.z && sb.y == self.start.y && (sb.x >= self.start.x && sb.x < self.start.x + self.len),
+            BlockFace::Left => sb.z == self.start.z && sb.y == self.start.y && (sb.x <= self.start.x && sb.x > self.start.x - self.len),
+            BlockFace::Top => sb.x == self.start.x && sb.z == self.start.z && (sb.y >= self.start.y && sb.y < self.start.y + self.len),
+            BlockFace::Bottom => sb.x == self.start.x && sb.z == self.start.z && (sb.y <= self.start.y && sb.y > self.start.y - self.len),
         }
     }
 }
@@ -235,19 +211,10 @@ impl LaserCannonSystem {
         let mut found_line = None;
         let mut link_to = None;
 
-        for (i, line) in self
-            .lines
-            .iter_mut()
-            .filter(|x| x.direction == block_direction)
-            .enumerate()
-        {
+        for (i, line) in self.lines.iter_mut().filter(|x| x.direction == block_direction).enumerate() {
             let (dx, dy, dz) = line.direction.direction();
 
-            let (sx, sy, sz) = (
-                line.start.x as i32,
-                line.start.y as i32,
-                line.start.z as i32,
-            );
+            let (sx, sy, sz) = (line.start.x as i32, line.start.y as i32, line.start.z as i32);
 
             let (bx, by, bz) = (block.x as i32, block.y as i32, block.z as i32);
 
@@ -268,10 +235,7 @@ impl LaserCannonSystem {
                 }
             }
             // Block is after end
-            else if sx + dx * (line.len as i32) == bx
-                && sy + dy * (line.len as i32) == by
-                && sz + dz * (line.len as i32) == bz
-            {
+            else if sx + dx * (line.len as i32) == bx && sy + dy * (line.len as i32) == by && sz + dz * (line.len as i32) == bz {
                 if found_line.is_some() {
                     link_to = Some(i);
                     break;
@@ -287,10 +251,7 @@ impl LaserCannonSystem {
 
         if let Some(l1_i) = found_line {
             if let Some(l2_i) = link_to {
-                let [l1, l2] = self
-                    .lines
-                    .get_many_mut([l1_i, l2_i])
-                    .expect("From and to should never be the same");
+                let [l1, l2] = self.lines.get_many_mut([l1_i, l2_i]).expect("From and to should never be the same");
 
                 // Must use the one before the other in the line so the properties line up
                 if match l1.direction {
@@ -328,12 +289,7 @@ impl LaserCannonSystem {
 
 fn register_laser_blocks(blocks: Res<Registry<Block>>, mut cannon: ResMut<LaserCannonBlocks>) {
     if let Some(block) = blocks.from_id("cosmos:laser_cannon") {
-        cannon.insert(
-            block,
-            LaserCannonProperty {
-                energy_per_shot: 100.0,
-            },
-        )
+        cannon.insert(block, LaserCannonProperty { energy_per_shot: 100.0 })
     }
 }
 
@@ -347,16 +303,11 @@ fn block_update_system(
     for ev in event.iter() {
         if let Ok(systems) = systems_query.get(ev.structure_entity) {
             if let Ok(mut system) = systems.query_mut(&mut system_query) {
-                if laser_cannon_blocks
-                    .get(blocks.from_numeric_id(ev.old_block))
-                    .is_some()
-                {
+                if laser_cannon_blocks.get(blocks.from_numeric_id(ev.old_block)).is_some() {
                     system.block_removed(&ev.block);
                 }
 
-                if let Some(property) =
-                    laser_cannon_blocks.get(blocks.from_numeric_id(ev.new_block))
-                {
+                if let Some(property) = laser_cannon_blocks.get(blocks.from_numeric_id(ev.new_block)) {
                     system.block_added(property, &ev.block);
                 }
             }
@@ -386,11 +337,7 @@ fn structure_loaded_event(
     }
 }
 
-pub(super) fn register<T: States + Clone + Copy>(
-    app: &mut App,
-    post_loading_state: T,
-    playing_state: T,
-) {
+pub(super) fn register<T: States + Clone + Copy>(app: &mut App, post_loading_state: T, playing_state: T) {
     app.insert_resource(LaserCannonBlocks::default())
         .add_systems((
             register_laser_blocks.in_schedule(OnEnter(post_loading_state)),

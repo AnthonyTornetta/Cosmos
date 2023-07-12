@@ -63,9 +63,7 @@ fn handle_block_break(
         client.send_message(
             NettyChannelClient::Reliable,
             cosmos_encoder::serialize(&ClientReliableMessages::BreakBlock {
-                structure_entity: network_mapping
-                    .server_from_client(&ev.structure_entity)
-                    .unwrap(),
+                structure_entity: network_mapping.server_from_client(&ev.structure_entity).unwrap(),
                 x: ev.x as u32,
                 y: ev.y as u32,
                 z: ev.z as u32,
@@ -83,9 +81,7 @@ fn handle_block_place(
         client.send_message(
             NettyChannelClient::Reliable,
             cosmos_encoder::serialize(&ClientReliableMessages::PlaceBlock {
-                structure_entity: network_mapping
-                    .server_from_client(&ev.structure_entity)
-                    .unwrap(),
+                structure_entity: network_mapping.server_from_client(&ev.structure_entity).unwrap(),
                 x: ev.x as u32,
                 y: ev.y as u32,
                 z: ev.z as u32,
@@ -106,9 +102,7 @@ fn handle_block_interact(
         client.send_message(
             NettyChannelClient::Reliable,
             cosmos_encoder::serialize(&ClientReliableMessages::InteractWithBlock {
-                structure_entity: network_mapping
-                    .server_from_client(&ev.structure_entity)
-                    .unwrap(),
+                structure_entity: network_mapping.server_from_client(&ev.structure_entity).unwrap(),
                 x: ev.x as u32,
                 y: ev.y as u32,
                 z: ev.z as u32,
@@ -121,12 +115,5 @@ pub(super) fn register(app: &mut App) {
     app.add_event::<BlockBreakEvent>()
         .add_event::<BlockPlaceEvent>()
         .add_event::<BlockInteractEvent>()
-        .add_systems(
-            (
-                handle_block_break,
-                handle_block_place,
-                handle_block_interact,
-            )
-                .in_set(OnUpdate(GameState::Playing)),
-        );
+        .add_systems((handle_block_break, handle_block_place, handle_block_interact).in_set(OnUpdate(GameState::Playing)));
 }

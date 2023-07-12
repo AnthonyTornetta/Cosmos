@@ -6,8 +6,7 @@ use bevy_rapier3d::prelude::RigidBodyDisabled;
 use crate::{
     physics::location::SECTOR_DIMENSIONS,
     structure::{
-        asteroid::Asteroid, chunk::CHUNK_DIMENSIONS, planet::Planet,
-        structure_iterator::ChunkIteratorResult, ChunkState, Structure,
+        asteroid::Asteroid, chunk::CHUNK_DIMENSIONS, planet::Planet, structure_iterator::ChunkIteratorResult, ChunkState, Structure,
     },
 };
 
@@ -35,17 +34,9 @@ fn stop_near_unloaded_chunks(
                 continue;
             }
 
-            let relative_coords = g_trans
-                .to_scale_rotation_translation()
-                .1
-                .inverse()
-                .mul_vec3(abs_coords);
+            let relative_coords = g_trans.to_scale_rotation_translation().1.inverse().mul_vec3(abs_coords);
 
-            let (bx, by, bz) = structure.relative_coords_to_local_coords(
-                relative_coords.x,
-                relative_coords.y,
-                relative_coords.z,
-            );
+            let (bx, by, bz) = structure.relative_coords_to_local_coords(relative_coords.x, relative_coords.y, relative_coords.z);
 
             let (cx, cy, cz) = (
                 bx / CHUNK_DIMENSIONS as i32,
@@ -60,9 +51,9 @@ fn stop_near_unloaded_chunks(
                     true,
                 )
                 .any(|x| match x {
-                    ChunkIteratorResult::EmptyChunk {
-                        position: (cx, cy, cz),
-                    } => structure.get_chunk_state(cx, cy, cz) != ChunkState::Loaded,
+                    ChunkIteratorResult::EmptyChunk { position: (cx, cy, cz) } => {
+                        structure.get_chunk_state(cx, cy, cz) != ChunkState::Loaded
+                    }
                     _ => false,
                 });
 

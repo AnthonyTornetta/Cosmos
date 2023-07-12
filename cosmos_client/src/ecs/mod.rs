@@ -1,6 +1,4 @@
-use bevy::prelude::{
-    resource_exists, App, Children, CoreSet, Entity, IntoSystemConfig, Query, ResMut, With,
-};
+use bevy::prelude::{resource_exists, App, Children, CoreSet, Entity, IntoSystemConfig, Query, ResMut, With};
 use cosmos_core::ecs::{despawn_needed, NeedsDespawned};
 
 use crate::netty::mapping::NetworkMapping;
@@ -16,11 +14,7 @@ pub fn remove_mappings(
     }
 }
 
-fn recursively_remove(
-    entity: Entity,
-    children_query: &Query<&Children>,
-    network_mapping: &mut NetworkMapping,
-) {
+fn recursively_remove(entity: Entity, children_query: &Query<&Children>, network_mapping: &mut NetworkMapping) {
     if let Ok(children) = children_query.get(entity) {
         children
             .iter()

@@ -36,13 +36,7 @@ where
 
 impl<T: States + Clone + Copy> CosmosCorePlugin<T> {
     /// Creates the plugin with the given states
-    pub fn new(
-        pre_loading_state: T,
-        loading_state: T,
-        post_loading_state: T,
-        done_loading_state: T,
-        playing_game_state: T,
-    ) -> Self {
+    pub fn new(pre_loading_state: T, loading_state: T, post_loading_state: T, done_loading_state: T, playing_game_state: T) -> Self {
         Self {
             pre_loading_state,
             loading_state,
@@ -55,13 +49,7 @@ impl<T: States + Clone + Copy> CosmosCorePlugin<T> {
 
 impl<T: States + Clone + Copy> CosmosCorePluginGroup<T> {
     /// Creates the plugin group with the given states
-    pub fn new(
-        pre_loading_state: T,
-        loading_state: T,
-        post_loading_state: T,
-        done_loading_state: T,
-        playing_game_state: T,
-    ) -> Self {
+    pub fn new(pre_loading_state: T, loading_state: T, post_loading_state: T, done_loading_state: T, playing_game_state: T) -> Self {
         Self {
             pre_loading_state,
             loading_state,
@@ -82,12 +70,7 @@ impl<T: States + Clone + Copy> Plugin for CosmosCorePlugin<T> {
             self.done_loading_state,
         );
 
-        block::register(
-            app,
-            self.pre_loading_state,
-            self.loading_state,
-            self.post_loading_state,
-        );
+        block::register(app, self.pre_loading_state, self.loading_state, self.post_loading_state);
         item::register(app);
         blockitems::register(app, self.post_loading_state);
         physics::register(app);

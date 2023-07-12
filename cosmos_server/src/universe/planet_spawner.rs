@@ -4,8 +4,8 @@ use std::time::Duration;
 
 use bevy::{
     prelude::{
-        App, Commands, Component, Deref, DerefMut, DespawnRecursiveExt, Entity, IntoSystemConfig,
-        IntoSystemConfigs, OnUpdate, Query, Res, ResMut, Resource, Vec3, With,
+        App, Commands, Component, Deref, DerefMut, DespawnRecursiveExt, Entity, IntoSystemConfig, IntoSystemConfigs, OnUpdate, Query, Res,
+        ResMut, Resource, Vec3, With,
     },
     tasks::{AsyncComputeTaskPool, Task},
     time::common_conditions::on_timer,
@@ -24,8 +24,8 @@ use futures_lite::future;
 use rand::Rng;
 
 use crate::{
-    init::init_world::ServerSeed, persistence::is_sector_loaded, rng::get_rng_for_sector,
-    state::GameState, structure::planet::server_planet_builder::ServerPlanetBuilder,
+    init::init_world::ServerSeed, persistence::is_sector_loaded, rng::get_rng_for_sector, state::GameState,
+    structure::planet::server_planet_builder::ServerPlanetBuilder,
 };
 
 #[derive(Debug, Default, Resource, Deref, DerefMut, Clone)]
@@ -65,12 +65,7 @@ fn monitor_planets_to_spawn(
 
             let builder = ServerPlanetBuilder::default();
 
-            builder.insert_planet(
-                &mut entity_cmd,
-                loc,
-                &mut structure,
-                Planet::new(temperature),
-            );
+            builder.insert_planet(&mut entity_cmd, loc, &mut structure, Planet::new(temperature));
 
             entity_cmd.insert(structure);
         }
@@ -104,21 +99,15 @@ fn spawn_planet(
     });
 
     let server_seed = *server_seed;
-    let stars = stars
-        .iter()
-        .map(|(x, y)| (*x, *y))
-        .collect::<Vec<(Location, Star)>>();
+    let stars = stars.iter().map(|(x, y)| (*x, *y)).collect::<Vec<(Location, Star)>>();
 
     let task = thread_pool.spawn(async move {
         let mut to_check_sectors = HashSet::new();
 
         for l in locs {
             for dsz in -(PLANET_LOAD_RADIUS as SystemUnit)..=(PLANET_LOAD_RADIUS as SystemUnit) {
-                for dsy in -(PLANET_LOAD_RADIUS as SystemUnit)..=(PLANET_LOAD_RADIUS as SystemUnit)
-                {
-                    for dsx in
-                        -(PLANET_LOAD_RADIUS as SystemUnit)..=(PLANET_LOAD_RADIUS as SystemUnit)
-                    {
+                for dsy in -(PLANET_LOAD_RADIUS as SystemUnit)..=(PLANET_LOAD_RADIUS as SystemUnit) {
+                    for dsx in -(PLANET_LOAD_RADIUS as SystemUnit)..=(PLANET_LOAD_RADIUS as SystemUnit) {
                         let sector = l.sector() + Sector::new(dsx, dsy, dsz);
                         if !cache.contains(&sector) {
                             to_check_sectors.insert(sector);
@@ -158,15 +147,9 @@ fn spawn_planet(
                 }
 
                 if let Some(star) = closest_star {
-                    let size: usize = if is_origin {
-                        50
-                    } else {
-                        rng.gen_range(200..=500)
-                    };
+                    let size: usize = if is_origin { 50 } else { rng.gen_range(200..=500) };
 
-                    let temperature = (TEMPERATURE_CONSTANT
-                        * (star.temperature() / best_dist.unwrap()))
-                    .max(BACKGROUND_TEMPERATURE);
+                    let temperature = (TEMPERATURE_CONSTANT * (star.temperature() / best_dist.unwrap())).max(BACKGROUND_TEMPERATURE);
 
                     made_stars.push(PlanetToSpawn {
                         size,
@@ -192,11 +175,7 @@ pub fn is_planet_in_sector(sector: &Sector, seed: &ServerSeed) -> bool {
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        (
-            monitor_planets_to_spawn,
-            spawn_planet.run_if(on_timer(Duration::from_millis(1000))),
-        )
-            .in_set(OnUpdate(GameState::Playing)),
+        (monitor_planets_to_spawn, spawn_planet.run_if(on_timer(Duration::from_millis(1000)))).in_set(OnUpdate(GameState::Playing)),
     )
     .insert_resource(CachedSectors::default());
 }

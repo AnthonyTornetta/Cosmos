@@ -48,12 +48,7 @@ impl Identifiable for BlockHardness {
     }
 }
 
-fn register_hardness(
-    registry: &mut Registry<BlockHardness>,
-    value: f32,
-    blocks: &Registry<Block>,
-    name: &str,
-) {
+fn register_hardness(registry: &mut Registry<BlockHardness>, value: f32, blocks: &Registry<Block>, name: &str) {
     if let Some(block) = blocks.from_id(name) {
         registry.register(BlockHardness::new(block, value));
     } else {
@@ -61,10 +56,7 @@ fn register_hardness(
     }
 }
 
-fn register_block_hardness(
-    blocks: Res<Registry<Block>>,
-    mut registry: ResMut<Registry<BlockHardness>>,
-) {
+fn register_block_hardness(blocks: Res<Registry<Block>>, mut registry: ResMut<Registry<BlockHardness>>) {
     register_hardness(&mut registry, 0.0, &blocks, "cosmos:air");
     register_hardness(&mut registry, 10.0, &blocks, "cosmos:grass");
     register_hardness(&mut registry, 10.0, &blocks, "cosmos:dirt");
@@ -91,19 +83,12 @@ fn register_block_hardness(
 fn sanity_check(blocks: Res<Registry<Block>>, hardness: Res<Registry<BlockHardness>>) {
     for block in blocks.iter() {
         if hardness.from_id(block.unlocalized_name()).is_none() {
-            eprintln!(
-                "!!! WARNING !!! Missing block hardness value for {}",
-                block.unlocalized_name()
-            );
+            eprintln!("!!! WARNING !!! Missing block hardness value for {}", block.unlocalized_name());
         }
     }
 }
 
-pub(super) fn register<T: States + Clone + Copy>(
-    app: &mut App,
-    loading_state: T,
-    post_loading_state: T,
-) {
+pub(super) fn register<T: States + Clone + Copy>(app: &mut App, loading_state: T, post_loading_state: T) {
     registry::create_registry::<BlockHardness>(app);
 
     app.add_systems((

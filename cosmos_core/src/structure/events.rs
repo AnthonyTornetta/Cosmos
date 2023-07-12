@@ -35,6 +35,5 @@ impl ChunkSetEvent {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_event::<ChunkSetEvent>()
-        .add_event::<StructureLoadedEvent>();
+    app.add_event::<ChunkSetEvent>().add_event::<StructureLoadedEvent>();
 }

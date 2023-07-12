@@ -1,28 +1,22 @@
 //! Responsible for spawning planets near stars, but for now just spawns a planet at 0, 0, 0.
 
 use bevy::{
-    prelude::{
-        in_state, App, Commands, Deref, DerefMut, IntoSystemConfig, Query, Res, ResMut, Resource,
-        Vec3, With,
-    },
+    prelude::{in_state, App, Commands, Deref, DerefMut, IntoSystemConfig, Query, Res, ResMut, Resource, Vec3, With},
     utils::HashSet,
 };
 use cosmos_core::{
     entities::player::Player,
     physics::location::{Location, Sector, SystemUnit, SECTOR_DIMENSIONS},
     structure::{
-        asteroid::{
-            asteroid_builder::TAsteroidBuilder, loading::AsteroidNeedsCreated, Asteroid,
-            ASTEROID_LOAD_RADIUS,
-        },
+        asteroid::{asteroid_builder::TAsteroidBuilder, loading::AsteroidNeedsCreated, Asteroid, ASTEROID_LOAD_RADIUS},
         Structure,
     },
 };
 use rand::Rng;
 
 use crate::{
-    init::init_world::ServerSeed, persistence::is_sector_loaded, rng::get_rng_for_sector,
-    state::GameState, structure::asteroid::server_asteroid_builder::ServerAsteroidBuilder,
+    init::init_world::ServerSeed, persistence::is_sector_loaded, rng::get_rng_for_sector, state::GameState,
+    structure::asteroid::server_asteroid_builder::ServerAsteroidBuilder,
 };
 
 use super::planet_spawner::is_planet_in_sector;
@@ -42,9 +36,7 @@ fn spawn_asteroid(
     for l in players.iter() {
         for dsz in -(ASTEROID_LOAD_RADIUS as SystemUnit)..=ASTEROID_LOAD_RADIUS as SystemUnit {
             for dsy in -(ASTEROID_LOAD_RADIUS as SystemUnit)..=ASTEROID_LOAD_RADIUS as SystemUnit {
-                for dsx in
-                    -(ASTEROID_LOAD_RADIUS as SystemUnit)..=ASTEROID_LOAD_RADIUS as SystemUnit
-                {
+                for dsx in -(ASTEROID_LOAD_RADIUS as SystemUnit)..=ASTEROID_LOAD_RADIUS as SystemUnit {
                     let sector = l.sector() + Sector::new(dsx, dsy, dsz);
                     to_check_sectors.insert(sector);
                 }

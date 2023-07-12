@@ -19,9 +19,7 @@ use crate::persistence::{
     EntityId, SaveFileIdentifier, SerializedData,
 };
 
-use super::{
-    generation::planet_generator::ChunkNeedsGenerated, server_planet_builder::ServerPlanetBuilder,
-};
+use super::{generation::planet_generator::ChunkNeedsGenerated, server_planet_builder::ServerPlanetBuilder};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct PlanetSaveData {
@@ -31,9 +29,7 @@ struct PlanetSaveData {
     temperature: f32,
 }
 
-fn on_save_structure(
-    mut query: Query<(&mut SerializedData, &Structure, &Planet), With<NeedsSaved>>,
-) {
+fn on_save_structure(mut query: Query<(&mut SerializedData, &Structure, &Planet), With<NeedsSaved>>) {
     for (mut s_data, structure, planet) in query.iter_mut() {
         s_data.serialize_data(
             "cosmos:planet",
@@ -48,17 +44,8 @@ fn on_save_structure(
     }
 }
 
-fn generate_planet(
-    entity: Entity,
-    s_data: &SerializedData,
-    planet_save_data: PlanetSaveData,
-    commands: &mut Commands,
-) {
-    let mut structure = Structure::new(
-        planet_save_data.width,
-        planet_save_data.height,
-        planet_save_data.length,
-    );
+fn generate_planet(entity: Entity, s_data: &SerializedData, planet_save_data: PlanetSaveData, commands: &mut Commands) {
+    let mut structure = Structure::new(planet_save_data.width, planet_save_data.height, planet_save_data.length);
 
     let mut entity_cmd = commands.entity(entity);
 
@@ -68,28 +55,15 @@ fn generate_planet(
 
     let builder = ServerPlanetBuilder::default();
 
-    builder.insert_planet(
-        &mut entity_cmd,
-        location,
-        &mut structure,
-        Planet::new(planet_save_data.temperature),
-    );
+    builder.insert_planet(&mut entity_cmd, location, &mut structure, Planet::new(planet_save_data.temperature));
 
     entity_cmd.insert(structure);
 }
 
-fn on_load_structure(
-    query: Query<(Entity, &SerializedData), With<NeedsLoaded>>,
-    mut commands: Commands,
-) {
+fn on_load_structure(query: Query<(Entity, &SerializedData), With<NeedsLoaded>>, mut commands: Commands) {
     for (entity, s_data) in query.iter() {
-        if s_data
-            .deserialize_data::<bool>("cosmos:is_planet")
-            .unwrap_or(false)
-        {
-            if let Some(planet_save_data) =
-                s_data.deserialize_data::<PlanetSaveData>("cosmos:planet")
-            {
+        if s_data.deserialize_data::<bool>("cosmos:is_planet").unwrap_or(false) {
+            if let Some(planet_save_data) = s_data.deserialize_data::<PlanetSaveData>("cosmos:planet") {
                 generate_planet(entity, s_data, planet_save_data, &mut commands);
             }
         }
@@ -103,10 +77,7 @@ pub(super) struct ChunkNeedsPopulated {
     pub structure_entity: Entity,
 }
 
-fn structure_created(
-    created: Query<Entity, (Added<Structure>, Without<EntityId>)>,
-    mut commands: Commands,
-) {
+fn structure_created(created: Query<Entity, (Added<Structure>, Without<EntityId>)>, mut commands: Commands) {
     for ent in created.iter() {
         commands.entity(ent).insert(EntityId::generate());
     }
@@ -114,12 +85,7 @@ fn structure_created(
 
 fn populate_chunks(
     query: Query<(Entity, &ChunkNeedsPopulated)>,
-    structure_query: Query<(
-        &EntityId,
-        Option<&SaveFileIdentifier>,
-        &Location,
-        &PhysicsWorld,
-    )>,
+    structure_query: Query<(&EntityId, Option<&SaveFileIdentifier>, &Location, &PhysicsWorld)>,
     mut commands: Commands,
 ) {
     for (entity, needs) in query.iter() {
@@ -146,9 +112,12 @@ fn populate_chunks(
                 continue;
             }
 
-            let serialized_data =
-                cosmos_encoder::deserialize::<SerializedData>(&chunk).unwrap_or_else(|_| panic!("Error parsing chunk @ {cx} {cy} {cz} - is the file corrupted? File len: {}",
-                    chunk.len()));
+            let serialized_data = cosmos_encoder::deserialize::<SerializedData>(&chunk).unwrap_or_else(|_| {
+                panic!(
+                    "Error parsing chunk @ {cx} {cy} {cz} - is the file corrupted? File len: {}",
+                    chunk.len()
+                )
+            });
 
             commands
                 .entity(entity)
@@ -184,16 +153,10 @@ fn load_chunk(
     for (entity, sd, ce) in query.iter() {
         if let Some(chunk) = sd.deserialize_data::<Chunk>("cosmos:chunk") {
             if let Ok(mut structure) = structure_query.get_mut(ce.structure_entity) {
-                let (cx, cy, cz) = (
-                    chunk.structure_x(),
-                    chunk.structure_y(),
-                    chunk.structure_z(),
-                );
+                let (cx, cy, cz) = (chunk.structure_x(), chunk.structure_y(), chunk.structure_z());
 
                 commands.entity(entity).insert(PbrBundle {
-                    transform: Transform::from_translation(
-                        structure.chunk_relative_position(cx, cy, cz),
-                    ),
+                    transform: Transform::from_translation(structure.chunk_relative_position(cx, cy, cz)),
                     ..Default::default()
                 });
 

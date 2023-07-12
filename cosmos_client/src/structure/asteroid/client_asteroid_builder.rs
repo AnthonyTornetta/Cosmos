@@ -15,9 +15,7 @@ use cosmos_core::{
     },
 };
 
-use crate::structure::{
-    chunk_retreiver::NeedsPopulated, client_structure_builder::ClientStructureBuilder,
-};
+use crate::structure::{chunk_retreiver::NeedsPopulated, client_structure_builder::ClientStructureBuilder};
 
 /// Builds a client asteroid
 pub struct ClientAsteroidBuilder {
@@ -40,12 +38,7 @@ impl Default for ClientAsteroidBuilder {
 }
 
 impl TAsteroidBuilder for ClientAsteroidBuilder {
-    fn insert_asteroid(
-        &self,
-        entity: &mut EntityCommands,
-        location: Location,
-        structure: &mut Structure,
-    ) {
+    fn insert_asteroid(&self, entity: &mut EntityCommands, location: Location, structure: &mut Structure) {
         self.builder.insert_asteroid(entity, location, structure);
     }
 }

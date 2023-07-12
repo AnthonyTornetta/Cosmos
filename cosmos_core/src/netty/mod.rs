@@ -132,9 +132,7 @@ pub fn connection_config() -> ConnectionConfig {
 
 /// Gets the local ip address, or returns `127.0.0.1` if it fails to find it.
 pub fn get_local_ipaddress() -> String {
-    local_ip()
-        .map(|x| x.to_string())
-        .unwrap_or("127.0.0.1".to_owned())
+    local_ip().map(|x| x.to_string()).unwrap_or("127.0.0.1".to_owned())
 }
 
 pub(super) fn register(app: &mut App) {

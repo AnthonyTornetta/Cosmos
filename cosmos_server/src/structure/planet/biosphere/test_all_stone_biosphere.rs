@@ -1,8 +1,6 @@
 //! Used just for testing, this makes a planet all stone
 
-use bevy::prelude::{
-    App, Component, Entity, EventReader, EventWriter, IntoSystemConfig, OnUpdate, Query, Res,
-};
+use bevy::prelude::{App, Component, Entity, EventReader, EventWriter, IntoSystemConfig, OnUpdate, Query, Res};
 use cosmos_core::{
     block::{Block, BlockFace},
     registry::Registry,
@@ -32,12 +30,7 @@ pub struct TestStoneChunkNeedsGeneratedEvent {
 
 impl TGenerateChunkEvent for TestStoneChunkNeedsGeneratedEvent {
     fn new(x: usize, y: usize, z: usize, structure_entity: Entity) -> Self {
-        Self {
-            x,
-            y,
-            z,
-            structure_entity,
-        }
+        Self { x, y, z, structure_entity }
     }
 
     fn get_structure_entity(&self) -> Entity {
@@ -53,20 +46,12 @@ impl TGenerateChunkEvent for TestStoneChunkNeedsGeneratedEvent {
 /// Used just for testing, this makes a planet all stone
 pub struct TestStoneBiosphere;
 
-impl TBiosphere<TestStoneBiosphereMarker, TestStoneChunkNeedsGeneratedEvent>
-    for TestStoneBiosphere
-{
+impl TBiosphere<TestStoneBiosphereMarker, TestStoneChunkNeedsGeneratedEvent> for TestStoneBiosphere {
     fn get_marker_component(&self) -> TestStoneBiosphereMarker {
         TestStoneBiosphereMarker
     }
 
-    fn get_generate_chunk_event(
-        &self,
-        x: usize,
-        y: usize,
-        z: usize,
-        structure_entity: Entity,
-    ) -> TestStoneChunkNeedsGeneratedEvent {
+    fn get_generate_chunk_event(&self, x: usize, y: usize, z: usize, structure_entity: Entity) -> TestStoneChunkNeedsGeneratedEvent {
         TestStoneChunkNeedsGeneratedEvent::new(x, y, z, structure_entity)
     }
 }
@@ -83,9 +68,7 @@ fn generate_planet(
         .iter()
         .filter_map(|ev: &TestStoneChunkNeedsGeneratedEvent| {
             if let Ok(mut structure) = query.get_mut(ev.structure_entity) {
-                structure
-                    .take_chunk(ev.x, ev.y, ev.z)
-                    .map(|chunk| (ev.structure_entity, chunk))
+                structure.take_chunk(ev.x, ev.y, ev.z).map(|chunk| (ev.structure_entity, chunk))
             } else {
                 None
             }

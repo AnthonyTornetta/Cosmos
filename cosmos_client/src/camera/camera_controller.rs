@@ -6,10 +6,7 @@ use bevy::prelude::*;
 use bevy_rapier3d::na::clamp;
 use cosmos_core::structure::ship::pilot::Pilot;
 
-use crate::{
-    netty::flags::LocalPlayer, rendering::MainCamera, state::game_state::GameState,
-    window::setup::DeltaCursorPosition,
-};
+use crate::{netty::flags::LocalPlayer, rendering::MainCamera, state::game_state::GameState, window::setup::DeltaCursorPosition};
 
 /// Attach this to the player to give it a first person camera
 #[derive(Component, Default, Debug)]
@@ -34,8 +31,8 @@ fn process_player_camera(
         // looking straight down/up breaks movement - too lazy to make better fix
         camera_helper.angle_x = clamp(camera_helper.angle_x, -PI / 2.0 + 0.001, PI / 2.0 - 0.001);
 
-        camera_transform.rotation = Quat::from_axis_angle(Vec3::Y, camera_helper.angle_y)
-            * Quat::from_axis_angle(Vec3::X, camera_helper.angle_x);
+        camera_transform.rotation =
+            Quat::from_axis_angle(Vec3::Y, camera_helper.angle_y) * Quat::from_axis_angle(Vec3::X, camera_helper.angle_x);
     } else {
         camera_helper.angle_x = 0.0;
         camera_helper.angle_y = 0.0;

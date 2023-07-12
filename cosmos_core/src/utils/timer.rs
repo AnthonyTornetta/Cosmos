@@ -12,9 +12,7 @@ pub struct UtilsTimer {
 impl UtilsTimer {
     /// Starts the timer
     pub fn start() -> Self {
-        Self {
-            start: SystemTime::now(),
-        }
+        Self { start: SystemTime::now() }
     }
 
     /// Resets the timer
@@ -27,10 +25,7 @@ impl UtilsTimer {
         println!(
             "{} {}ms",
             message,
-            SystemTime::now()
-                .duration_since(self.start)
-                .unwrap()
-                .as_millis()
+            SystemTime::now().duration_since(self.start).unwrap().as_millis()
         )
     }
 }

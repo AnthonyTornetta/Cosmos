@@ -1,8 +1,6 @@
 use bevy::prelude::{App, Entity, EventReader, IntoSystemConfig, OnUpdate, ResMut};
 use bevy_renet::renet::RenetServer;
-use cosmos_core::netty::{
-    cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannelServer,
-};
+use cosmos_core::netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannelServer};
 
 use crate::state::GameState;
 
@@ -14,10 +12,7 @@ pub struct ClientChangePilotEvent {
     pilot_entity: Option<Entity>,
 }
 
-fn event_listener(
-    mut event_reader: EventReader<ClientChangePilotEvent>,
-    mut server: ResMut<RenetServer>,
-) {
+fn event_listener(mut event_reader: EventReader<ClientChangePilotEvent>, mut server: ResMut<RenetServer>) {
     for ev in event_reader.iter() {
         server.broadcast_message(
             NettyChannelServer::Reliable,

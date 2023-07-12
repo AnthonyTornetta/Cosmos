@@ -24,73 +24,23 @@ use crate::netty::network_helpers::{ClientTicks, ServerLobby};
 fn generate_player_inventory(items: &Registry<Item>) -> Inventory {
     let mut inventory = Inventory::new(9);
 
-    inventory.insert_at(
-        0,
-        items
-            .from_id("cosmos:redwood_log")
-            .expect("Redwood log item to exist"),
-        999,
-    );
+    inventory.insert_at(0, items.from_id("cosmos:redwood_log").expect("Redwood log item to exist"), 999);
 
-    inventory.insert_at(
-        1,
-        items
-            .from_id("cosmos:redwood_leaf")
-            .expect("Redwood leaf item to exist"),
-        999,
-    );
+    inventory.insert_at(1, items.from_id("cosmos:redwood_leaf").expect("Redwood leaf item to exist"), 999);
 
-    inventory.insert_at(
-        2,
-        items.from_id("cosmos:glass").expect("Glass item to exist"),
-        64,
-    );
+    inventory.insert_at(2, items.from_id("cosmos:glass").expect("Glass item to exist"), 64);
 
-    inventory.insert_at(
-        3,
-        items
-            .from_id("cosmos:thruster")
-            .expect("Thruster item to exist"),
-        64,
-    );
+    inventory.insert_at(3, items.from_id("cosmos:thruster").expect("Thruster item to exist"), 64);
 
-    inventory.insert_at(
-        4,
-        items
-            .from_id("cosmos:laser_cannon")
-            .expect("Laser cannon item to exist"),
-        64,
-    );
+    inventory.insert_at(4, items.from_id("cosmos:laser_cannon").expect("Laser cannon item to exist"), 64);
 
-    inventory.insert_at(
-        5,
-        items
-            .from_id("cosmos:reactor")
-            .expect("Reactor cannon item to exist"),
-        64,
-    );
+    inventory.insert_at(5, items.from_id("cosmos:reactor").expect("Reactor cannon item to exist"), 64);
 
-    inventory.insert_at(
-        6,
-        items
-            .from_id("cosmos:energy_cell")
-            .expect("Energy cell item to exist"),
-        64,
-    );
+    inventory.insert_at(6, items.from_id("cosmos:energy_cell").expect("Energy cell item to exist"), 64);
 
-    inventory.insert_at(
-        7,
-        items
-            .from_id("cosmos:ship_hull")
-            .expect("Ship hull item to exist"),
-        999,
-    );
+    inventory.insert_at(7, items.from_id("cosmos:ship_hull").expect("Ship hull item to exist"), 999);
 
-    inventory.insert_at(
-        8,
-        items.from_id("cosmos:light").expect("Light item to exist"),
-        64,
-    );
+    inventory.insert_at(8, items.from_id("cosmos:light").expect("Light item to exist"), 64);
 
     inventory
 }
@@ -106,15 +56,7 @@ fn handle_events_system(
     mut server_events: EventReader<ServerEvent>,
     mut lobby: ResMut<ServerLobby>,
     mut client_ticks: ResMut<ClientTicks>,
-    players: Query<(
-        Entity,
-        &Player,
-        &Transform,
-        &Location,
-        &Velocity,
-        &Inventory,
-        &RenderDistance,
-    )>,
+    players: Query<(Entity, &Player, &Transform, &Location, &Velocity, &Inventory, &RenderDistance)>,
     player_worlds: Query<(&Location, &WorldWithin, &PhysicsWorld), (With<Player>, Without<Parent>)>,
     items: Res<Registry<Item>>,
     mut visualizer: ResMut<RenetServerVisualizer<200>>,
@@ -128,9 +70,7 @@ fn handle_events_system(
                 println!("Client {client_id} connected");
                 visualizer.add_client(client_id);
 
-                for (entity, player, transform, location, velocity, inventory, render_distance) in
-                    players.iter()
-                {
+                for (entity, player, transform, location, velocity, inventory, render_distance) in players.iter() {
                     let body = NettyRigidBody::new(velocity, transform.rotation, *location);
 
                     let msg = cosmos_encoder::serialize(&ServerReliableMessages::PlayerCreate {
@@ -175,9 +115,7 @@ fn handle_events_system(
                     ReadMassProperties::default(),
                     inventory,
                     Ccd::enabled(),
-                    PlayerLooking {
-                        rotation: Quat::IDENTITY,
-                    },
+                    PlayerLooking { rotation: Quat::IDENTITY },
                     LoadingDistance::new(2, 9999),
                     ActiveEvents::COLLISION_EVENTS,
                 ));
@@ -186,13 +124,7 @@ fn handle_events_system(
 
                 lobby.add_player(client_id, entity);
 
-                assign_player_world(
-                    &player_worlds,
-                    entity,
-                    &location,
-                    &mut commands,
-                    &mut rapier_context,
-                );
+                assign_player_world(&player_worlds, entity, &location, &mut commands, &mut rapier_context);
 
                 let msg = cosmos_encoder::serialize(&ServerReliableMessages::PlayerCreate {
                     entity,
@@ -222,9 +154,7 @@ fn handle_events_system(
                     commands.entity(player_entity).insert(NeedsDespawned);
                 }
 
-                let message = cosmos_encoder::serialize(&ServerReliableMessages::PlayerRemove {
-                    id: *client_id,
-                });
+                let message = cosmos_encoder::serialize(&ServerReliableMessages::PlayerRemove { id: *client_id });
 
                 server.broadcast_message(NettyChannelServer::Reliable, message);
             }

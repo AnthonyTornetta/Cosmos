@@ -66,10 +66,7 @@ fn process_player_interaction(
                     if input_handler.check_just_pressed(CosmosInputs::BreakBlock, &keys, &mouse) {
                         let moved_point = intersection.point - intersection.normal * 0.3;
 
-                        let point = transform
-                            .compute_matrix()
-                            .inverse()
-                            .transform_point3(moved_point);
+                        let point = transform.compute_matrix().inverse().transform_point3(moved_point);
 
                         let (x, y, z) = structure
                             .relative_coords_to_local_coords_checked(point.x, point.y, point.z)
@@ -86,25 +83,17 @@ fn process_player_interaction(
                     if input_handler.check_just_pressed(CosmosInputs::PlaceBlock, &keys, &mouse) {
                         if let Ok(mut inventory) = inventory.get_single_mut() {
                             if let Ok(hotbar) = hotbar.get_single() {
-                                let inventory_slot =
-                                    hotbar.item_at_selected_inventory_slot(&inventory);
+                                let inventory_slot = hotbar.item_at_selected_inventory_slot(&inventory);
 
                                 if let Some(is) = inventory.itemstack_at(inventory_slot) {
                                     let item = items.from_numeric_id(is.item_id());
 
                                     if let Some(block_id) = block_items.block_from_item(item) {
-                                        let moved_point =
-                                            intersection.point + intersection.normal * 0.95;
+                                        let moved_point = intersection.point + intersection.normal * 0.95;
 
-                                        let point = transform
-                                            .compute_matrix()
-                                            .inverse()
-                                            .transform_point3(moved_point);
+                                        let point = transform.compute_matrix().inverse().transform_point3(moved_point);
 
-                                        if let Ok((x, y, z)) = structure
-                                            .relative_coords_to_local_coords_checked(
-                                                point.x, point.y, point.z,
-                                            )
+                                        if let Ok((x, y, z)) = structure.relative_coords_to_local_coords_checked(point.x, point.y, point.z)
                                         {
                                             if structure.is_within_blocks(x, y, z) {
                                                 inventory.decrease_quantity_at(inventory_slot, 1);
@@ -116,9 +105,7 @@ fn process_player_interaction(
                                                 };
 
                                                 place_writer.send(BlockPlaceEvent {
-                                                    structure_entity: structure
-                                                        .get_entity()
-                                                        .unwrap(),
+                                                    structure_entity: structure.get_entity().unwrap(),
                                                     x,
                                                     y,
                                                     z,
@@ -137,10 +124,7 @@ fn process_player_interaction(
                     if input_handler.check_just_pressed(CosmosInputs::Interact, &keys, &mouse) {
                         let moved_point = intersection.point - intersection.normal * 0.3;
 
-                        let point = transform
-                            .compute_matrix()
-                            .inverse()
-                            .transform_point3(moved_point);
+                        let point = transform.compute_matrix().inverse().transform_point3(moved_point);
 
                         let (x, y, z) = structure
                             .relative_coords_to_local_coords_checked(point.x, point.y, point.z)

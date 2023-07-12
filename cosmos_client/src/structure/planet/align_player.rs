@@ -2,9 +2,7 @@
 
 use std::f32::consts::PI;
 
-use bevy::prelude::{
-    App, Commands, Component, Entity, Parent, Quat, Query, Transform, Vec3, With, Without,
-};
+use bevy::prelude::{App, Commands, Component, Entity, Parent, Quat, Query, Transform, Vec3, With, Without};
 use cosmos_core::{
     block::BlockFace,
     physics::{gravity_system::GravityEmitter, location::Location},
@@ -30,9 +28,7 @@ fn align_player(
     planets: Query<(&Location, &GravityEmitter), With<Planet>>,
     mut commands: Commands,
 ) {
-    if let Ok((entity, location, mut transform, alignment, prev_orientation)) =
-        player.get_single_mut()
-    {
+    if let Ok((entity, location, mut transform, alignment, prev_orientation)) = player.get_single_mut() {
         let mut best_planet = None;
         let mut best_dist = f32::INFINITY;
 
@@ -76,9 +72,7 @@ fn align_player(
                             match prev_orientation {
                                 // Fixes the player rotating in a weird direction when coming from
                                 // the left/right faces of a planet.
-                                Some(PreviousOrientation(Axis::X)) => {
-                                    Quat::from_axis_angle(Vec3::Z, PI)
-                                }
+                                Some(PreviousOrientation(Axis::X)) => Quat::from_axis_angle(Vec3::Z, PI),
                                 _ => Quat::from_axis_angle(Vec3::X, PI),
                             }
                         }

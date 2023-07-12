@@ -51,12 +51,7 @@ impl Identifiable for BlockLighting {
     }
 }
 
-fn register_light(
-    lighting: BlockLightProperties,
-    registry: &mut Registry<BlockLighting>,
-    blocks: &Registry<Block>,
-    name: &str,
-) {
+fn register_light(lighting: BlockLightProperties, registry: &mut Registry<BlockLighting>, blocks: &Registry<Block>, name: &str) {
     if let Some(block) = blocks.from_id(name) {
         registry.register(BlockLighting {
             properties: lighting,
@@ -68,10 +63,7 @@ fn register_light(
     }
 }
 
-fn register_all_lights(
-    blocks: Res<Registry<Block>>,
-    mut registry: ResMut<Registry<BlockLighting>>,
-) {
+fn register_all_lights(blocks: Res<Registry<Block>>, mut registry: ResMut<Registry<BlockLighting>>) {
     register_light(
         BlockLightProperties {
             color: Color::WHITE,

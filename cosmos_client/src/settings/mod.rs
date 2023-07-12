@@ -13,12 +13,8 @@ struct Settings {
 }
 
 fn change_gamma(mut ambient_light: ResMut<AmbientLight>) {
-    let settings = toml::from_str::<Settings>(
-        fs::read_to_string("settings/settings.toml")
-            .unwrap_or("".to_string())
-            .as_str(),
-    )
-    .unwrap_or(Settings { brightness: 0.2 });
+    let settings = toml::from_str::<Settings>(fs::read_to_string("settings/settings.toml").unwrap_or("".to_string()).as_str())
+        .unwrap_or(Settings { brightness: 0.2 });
 
     _ = fs::create_dir("settings");
 

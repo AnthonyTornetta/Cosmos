@@ -32,14 +32,7 @@ impl Default for ServerPlanetBuilder {
 }
 
 impl TPlanetBuilder for ServerPlanetBuilder {
-    fn insert_planet(
-        &self,
-        entity: &mut EntityCommands,
-        location: Location,
-        structure: &mut Structure,
-        planet: Planet,
-    ) {
-        self.builder
-            .insert_planet(entity, location, structure, planet);
+    fn insert_planet(&self, entity: &mut EntityCommands, location: Location, structure: &mut Structure, planet: Planet) {
+        self.builder.insert_planet(entity, location, structure, planet);
     }
 }

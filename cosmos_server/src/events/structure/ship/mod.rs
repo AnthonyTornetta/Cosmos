@@ -5,8 +5,8 @@ use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     events::structure::change_pilot_event::ChangePilotEvent,
     netty::{
-        cosmos_encoder, server_reliable_messages::ServerReliableMessages,
-        server_unreliable_messages::ServerUnreliableMessages, NettyChannelServer,
+        cosmos_encoder, server_reliable_messages::ServerReliableMessages, server_unreliable_messages::ServerUnreliableMessages,
+        NettyChannelServer,
     },
     structure::ship::ship_movement::ShipMovement,
 };
@@ -44,10 +44,7 @@ fn monitor_set_movement_events(
     }
 }
 
-fn monitor_pilot_changes(
-    mut event_reader: EventReader<ChangePilotEvent>,
-    mut server: ResMut<RenetServer>,
-) {
+fn monitor_pilot_changes(mut event_reader: EventReader<ChangePilotEvent>, mut server: ResMut<RenetServer>) {
     for ev in event_reader.iter() {
         server.broadcast_message(
             NettyChannelServer::Reliable,

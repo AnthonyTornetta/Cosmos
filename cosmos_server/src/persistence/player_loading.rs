@@ -3,10 +3,7 @@
 use std::{ffi::OsStr, fs, time::Duration};
 
 use bevy::{
-    prelude::{
-        warn, App, Commands, Component, DespawnRecursiveExt, Entity, IntoSystemConfig, Query, Res,
-        ResMut, With, Without,
-    },
+    prelude::{warn, App, Commands, Component, DespawnRecursiveExt, Entity, IntoSystemConfig, Query, Res, ResMut, With, Without},
     tasks::{AsyncComputeTaskPool, Task},
     time::common_conditions::on_timer,
 };
@@ -23,20 +20,13 @@ use super::{loading::NeedsLoaded, saving::NeedsSaved, EntityId, SaveFileIdentifi
 
 fn unload_far(
     query: Query<&Location, With<Player>>,
-    others: Query<
-        (&Location, Entity, &LoadingDistance),
-        (Without<Player>, Without<NeedsDespawned>),
-    >,
+    others: Query<(&Location, Entity, &LoadingDistance), (Without<Player>, Without<NeedsDespawned>)>,
     mut commands: Commands,
 ) {
     for (loc, ent, ul_distance) in others.iter() {
         let ul_distance = ul_distance.unload_block_distance();
 
-        if let Some(min_dist) = query
-            .iter()
-            .map(|l| l.relative_coords_to(loc).abs().max_element())
-            .reduce(f32::min)
-        {
+        if let Some(min_dist) = query.iter().map(|l| l.relative_coords_to(loc).abs().max_element()).reduce(f32::min) {
             if min_dist <= ul_distance {
                 continue;
             }
@@ -120,11 +110,7 @@ fn load_near(
                                 if max_delta <= load_distance.unwrap_or(DEFAULT_LOAD_DISTANCE)
                                     && !loaded_entities.iter().any(|x| x == entity_id)
                                 {
-                                    to_load.push(SaveFileIdentifier::new(
-                                        Some(sector),
-                                        entity_id.clone(),
-                                        *load_distance,
-                                    ));
+                                    to_load.push(SaveFileIdentifier::new(Some(sector), entity_id.clone(), *load_distance));
                                 }
                             }
                         } else {
@@ -161,21 +147,12 @@ fn load_near(
 
                                         let entity_id = EntityId::new(entity_id);
 
-                                        sectors_cache.insert(
-                                            sector,
-                                            entity_id.clone(),
-                                            load_distance,
-                                        );
+                                        sectors_cache.insert(sector, entity_id.clone(), load_distance);
 
-                                        if max_delta
-                                            <= load_distance.unwrap_or(DEFAULT_LOAD_DISTANCE)
+                                        if max_delta <= load_distance.unwrap_or(DEFAULT_LOAD_DISTANCE)
                                             && !loaded_entities.iter().any(|x| x == &entity_id)
                                         {
-                                            to_load.push(SaveFileIdentifier::new(
-                                                Some(sector),
-                                                entity_id,
-                                                load_distance,
-                                            ));
+                                            to_load.push(SaveFileIdentifier::new(Some(sector), entity_id, load_distance));
                                         }
                                     }
                                 }

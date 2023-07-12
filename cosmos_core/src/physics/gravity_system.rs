@@ -2,8 +2,7 @@
 
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::{
-    ExternalImpulse, PhysicsWorld, RapierContext, RapierRigidBodyHandle, ReadMassProperties,
-    RigidBody, RigidBodyDisabled,
+    ExternalImpulse, PhysicsWorld, RapierContext, RapierRigidBodyHandle, ReadMassProperties, RigidBody, RigidBodyDisabled,
 };
 
 use crate::structure::planet::Planet;
@@ -43,28 +42,14 @@ fn fix_read_mass_props(
 /// See https://github.com/dimforge/bevy_rapier/issues/271
 fn gravity_system(
     emitters: Query<(&GravityEmitter, &GlobalTransform, &Location)>,
-    mut receiver: Query<
-        (
-            Entity,
-            &Location,
-            &ReadMassProperties,
-            &RigidBody,
-            Option<&mut ExternalImpulse>,
-        ),
-        Without<RigidBodyDisabled>,
-    >,
+    mut receiver: Query<(Entity, &Location, &ReadMassProperties, &RigidBody, Option<&mut ExternalImpulse>), Without<RigidBodyDisabled>>,
     time: Res<Time>,
     mut commands: Commands,
 ) {
     let mut gravs: Vec<(f32, f32, Location, Quat)> = Vec::with_capacity(emitters.iter().len());
 
     for (emitter, trans, location) in emitters.iter() {
-        gravs.push((
-            emitter.force_per_kg,
-            emitter.radius,
-            *location,
-            Quat::from_affine3(&trans.affine()),
-        ));
+        gravs.push((emitter.force_per_kg, emitter.radius, *location, Quat::from_affine3(&trans.affine())));
     }
 
     for (ent, location, prop, rb, external_force) in receiver.iter_mut() {
