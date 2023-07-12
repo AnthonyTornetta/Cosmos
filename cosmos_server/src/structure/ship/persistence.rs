@@ -15,9 +15,7 @@ use crate::persistence::{
 
 use super::server_ship_builder::ServerShipBuilder;
 
-fn on_save_structure(
-    mut query: Query<(&mut SerializedData, &Structure), (With<NeedsSaved>, With<Ship>)>,
-) {
+fn on_save_structure(mut query: Query<(&mut SerializedData, &Structure), (With<NeedsSaved>, With<Ship>)>) {
     for (mut s_data, structure) in query.iter_mut() {
         s_data.serialize_data("cosmos:structure", structure);
         s_data.serialize_data("cosmos:is_ship", &true);
@@ -30,10 +28,7 @@ fn on_load_structure(
     mut commands: Commands,
 ) {
     for (entity, s_data) in query.iter() {
-        if s_data
-            .deserialize_data::<bool>("cosmos:is_ship")
-            .unwrap_or(false)
-        {
+        if s_data.deserialize_data::<bool>("cosmos:is_ship").unwrap_or(false) {
             if let Some(mut structure) = s_data.deserialize_data::<Structure>("cosmos:structure") {
                 let loc = s_data
                     .deserialize_data("cosmos:location")
@@ -41,9 +36,7 @@ fn on_load_structure(
 
                 let mut entity_cmd = commands.entity(entity);
 
-                let vel = s_data
-                    .deserialize_data("cosmos:velocity")
-                    .unwrap_or(Velocity::zero());
+                let vel = s_data.deserialize_data("cosmos:velocity").unwrap_or(Velocity::zero());
 
                 let builder = ServerShipBuilder::default();
 
@@ -99,9 +92,7 @@ fn even_more_delayed_structure_event(
             }
         }
 
-        structure_loaded_event_writer.send(StructureLoadedEvent {
-            structure_entity: ev.0,
-        });
+        structure_loaded_event_writer.send(StructureLoadedEvent { structure_entity: ev.0 });
     }
 }
 

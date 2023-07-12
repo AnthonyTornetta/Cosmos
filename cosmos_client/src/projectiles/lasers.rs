@@ -5,10 +5,7 @@ use bevy_rapier3d::prelude::DEFAULT_WORLD_ID;
 use bevy_renet::renet::*;
 use cosmos_core::{
     ecs::bundles::CosmosPbrBundle,
-    netty::{
-        cosmos_encoder, server_laser_cannon_system_messages::ServerLaserCannonSystemMessages,
-        NettyChannelServer,
-    },
+    netty::{cosmos_encoder, server_laser_cannon_system_messages::ServerLaserCannonSystemMessages, NettyChannelServer},
     projectiles::laser::Laser,
 };
 
@@ -18,9 +15,7 @@ use crate::{netty::mapping::NetworkMapping, state::game_state::GameState};
 struct LaserMesh(Handle<Mesh>);
 
 fn create_laser_mesh(mut meshes: ResMut<Assets<Mesh>>, mut commands: Commands) {
-    commands.insert_resource(LaserMesh(
-        meshes.add(Mesh::from(shape::Box::new(0.1, 0.1, 1.0))),
-    ));
+    commands.insert_resource(LaserMesh(meshes.add(Mesh::from(shape::Box::new(0.1, 0.1, 1.0)))));
 }
 
 fn lasers_netty(
@@ -44,8 +39,7 @@ fn lasers_netty(
                 mut no_hit,
             } => {
                 if let Some(server_entity) = no_hit {
-                    if let Some(client_entity) = network_mapping.client_from_server(&server_entity)
-                    {
+                    if let Some(client_entity) = network_mapping.client_from_server(&server_entity) {
                         no_hit = Some(client_entity);
                     }
                 }

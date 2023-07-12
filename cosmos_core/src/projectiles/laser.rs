@@ -4,14 +4,12 @@
 use bevy::{
     pbr::{NotShadowCaster, NotShadowReceiver},
     prelude::{
-        warn, App, Commands, Component, Entity, EventWriter, GlobalTransform, Parent, Quat, Query,
-        Res, Transform, Vec3, With, Without,
+        warn, App, Commands, Component, Entity, EventWriter, GlobalTransform, Parent, Quat, Query, Res, Transform, Vec3, With, Without,
     },
     time::Time,
 };
 use bevy_rapier3d::prelude::{
-    ActiveEvents, ActiveHooks, LockedAxes, PhysicsWorld, QueryFilter, RapierContext, RigidBody,
-    Sensor, Velocity, WorldId, DEFAULT_WORLD_ID,
+    ActiveEvents, ActiveHooks, LockedAxes, PhysicsWorld, QueryFilter, RapierContext, RigidBody, Sensor, Velocity, WorldId, DEFAULT_WORLD_ID,
 };
 
 use crate::{
@@ -162,9 +160,7 @@ impl Laser {
             firer_velocity,
             strength,
             no_collide_entity,
-            CosmosPbrBundle {
-                ..Default::default()
-            },
+            CosmosPbrBundle { ..Default::default() },
             time,
             world_id,
             commands,
@@ -192,9 +188,7 @@ fn handle_events(
     transform_query: Query<&GlobalTransform, Without<Laser>>,
     worlds: Query<(&Location, &PhysicsWorld, Entity), With<PlayerWorld>>,
 ) {
-    for (world, location, laser_entity, no_collide_entity, mut laser, velocity, world_within) in
-        query.iter_mut()
-    {
+    for (world, location, laser_entity, no_collide_entity, mut laser, velocity, world_within) in query.iter_mut() {
         if laser.active {
             let last_pos = laser.last_position;
             let delta_position = last_pos.relative_coords_to(location);
@@ -279,11 +273,7 @@ fn handle_events(
     }
 }
 
-fn despawn_lasers(
-    mut commands: Commands,
-    query: Query<(Entity, &FireTime), With<Laser>>,
-    time: Res<Time>,
-) {
+fn despawn_lasers(mut commands: Commands, query: Query<(Entity, &FireTime), With<Laser>>, time: Res<Time>) {
     for (ent, fire_time) in query.iter() {
         if time.elapsed_seconds() - fire_time.time > 5.0 {
             commands.entity(ent).insert(NeedsDespawned);
@@ -292,6 +282,5 @@ fn despawn_lasers(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems((handle_events, despawn_lasers))
-        .add_event::<LaserCollideEvent>();
+    app.add_systems((handle_events, despawn_lasers)).add_event::<LaserCollideEvent>();
 }

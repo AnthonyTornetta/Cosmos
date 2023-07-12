@@ -4,8 +4,8 @@ use std::marker::PhantomData;
 
 use bevy::{
     prelude::{
-        Added, App, Commands, Component, CoreSet, Entity, EventReader, EventWriter,
-        IntoSystemConfig, OnUpdate, Query, Res, ResMut, Resource, With, Without,
+        Added, App, Commands, Component, CoreSet, Entity, EventReader, EventWriter, IntoSystemConfig, OnUpdate, Query, Res, ResMut,
+        Resource, With, Without,
     },
     tasks::Task,
 };
@@ -62,8 +62,7 @@ pub trait TBiosphere<T: Component, E: TGenerateChunkEvent> {
     /// Gets the marker component used to flag this planet's type
     fn get_marker_component(&self) -> T;
     /// Gets a component for this specific generate chunk event
-    fn get_generate_chunk_event(&self, x: usize, y: usize, z: usize, structure_entity: Entity)
-        -> E;
+    fn get_generate_chunk_event(&self, x: usize, y: usize, z: usize, structure_entity: Entity) -> E;
 }
 
 #[derive(Debug)]
@@ -97,10 +96,7 @@ impl<T: Component> GeneratingChunk<T> {
 ///
 /// T: The biosphere's marker component type
 /// E: The biosphere's generate chunk event type
-pub fn register_biosphere<
-    T: Component + Default,
-    E: Send + Sync + 'static + TGenerateChunkEvent,
->(
+pub fn register_biosphere<T: Component + Default, E: Send + Sync + 'static + TGenerateChunkEvent>(
     app: &mut App,
     biosphere_id: &'static str,
     temperature_range: TemperatureRange,
@@ -128,13 +124,10 @@ pub fn register_biosphere<
             .after(begin_saving)
             .before(done_saving),
             // Loads this biosphere when the structure is loaded
-            (move |query: Query<(Entity, &SerializedData), With<NeedsLoaded>>,
-                   mut commands: Commands| {
+            (move |query: Query<(Entity, &SerializedData), With<NeedsLoaded>>, mut commands: Commands| {
                 for (entity, sd) in query.iter() {
                     if sd.deserialize_data::<bool>(biosphere_id).unwrap_or(false) {
-                        commands
-                            .entity(entity)
-                            .insert((T::default(), BiosphereMarker::new(biosphere_id)));
+                        commands.entity(entity).insert((T::default(), BiosphereMarker::new(biosphere_id)));
                     }
                 }
             })
@@ -164,9 +157,7 @@ fn add_biosphere(
 
             let biosphere = biospheres[rng.gen_range(0..biospheres.len())];
 
-            commands
-                .entity(entity)
-                .insert(BiosphereMarker::new(biosphere));
+            commands.entity(entity).insert(BiosphereMarker::new(biosphere));
 
             event_writer.send(NeedsBiosphereEvent {
                 biosphere_id: biosphere.to_owned(),

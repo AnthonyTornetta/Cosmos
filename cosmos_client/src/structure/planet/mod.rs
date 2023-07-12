@@ -1,8 +1,6 @@
 //! Handles client-related planet things
 
-use bevy::prelude::{
-    in_state, App, Commands, Entity, IntoSystemConfig, OnUpdate, Query, Res, ResMut, Vec3, With,
-};
+use bevy::prelude::{in_state, App, Commands, Entity, IntoSystemConfig, OnUpdate, Query, Res, ResMut, Vec3, With};
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     netty::{client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannelClient},
@@ -55,15 +53,8 @@ fn load_planet_chunks(
 
                 let rd = RENDER_DISTANCE;
 
-                for chunk in best_planet.chunk_iter(
-                    (px - rd, py - rd, pz - rd),
-                    (px + rd, py + rd, pz + rd),
-                    true,
-                ) {
-                    if let ChunkIteratorResult::EmptyChunk {
-                        position: (x, y, z),
-                    } = chunk
-                    {
+                for chunk in best_planet.chunk_iter((px - rd, py - rd, pz - rd), (px + rd, py + rd, pz + rd), true) {
+                    if let ChunkIteratorResult::EmptyChunk { position: (x, y, z) } = chunk {
                         if best_planet.get_chunk_state(x, y, z) == ChunkState::Unloaded {
                             chunks.push((x, y, z));
                         }
@@ -97,11 +88,8 @@ pub fn unload_chunks_far_from_players(
     if let Ok(player) = player.get_single() {
         for (location, mut planet) in planets.iter_mut() {
             let player_relative_position: Vec3 = (*player - *location).into();
-            let (px, py, pz) = planet.relative_coords_to_local_coords(
-                player_relative_position.x,
-                player_relative_position.y,
-                player_relative_position.z,
-            );
+            let (px, py, pz) =
+                planet.relative_coords_to_local_coords(player_relative_position.x, player_relative_position.y, player_relative_position.z);
 
             let (px, py, pz) = (
                 (px as f32 / CHUNK_DIMENSIONSF).floor() as i32,

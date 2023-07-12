@@ -14,11 +14,7 @@ use crate::netty::mapping::NetworkMapping;
 
 use super::client_asteroid_builder::ClientAsteroidBuilder;
 
-fn receive_asteroids(
-    mut client: ResMut<RenetClient>,
-    mut commands: Commands,
-    mut network_mapping: ResMut<NetworkMapping>,
-) {
+fn receive_asteroids(mut client: ResMut<RenetClient>, mut commands: Commands, mut network_mapping: ResMut<NetworkMapping>) {
     while let Some(message) = client.receive_message(NettyChannelServer::Asteroid) {
         let msg: AsteroidServerMessages = cosmos_encoder::deserialize(&message).unwrap();
 
@@ -32,8 +28,7 @@ fn receive_asteroids(
             } => {
                 let mut entity_cmds = commands.spawn_empty();
 
-                let mut structure =
-                    Structure::new(width as usize, height as usize, length as usize);
+                let mut structure = Structure::new(width as usize, height as usize, length as usize);
 
                 let builder = ClientAsteroidBuilder::default();
 

@@ -11,10 +11,7 @@ mod sync;
 /// Thus, removing any location from anything will make the game think it was despawned
 ///
 /// Please come up with a better solution
-fn remove_despawned_entities(
-    mut removed_entities: RemovedComponents<Location>,
-    mut mapping: ResMut<NetworkMapping>,
-) {
+fn remove_despawned_entities(mut removed_entities: RemovedComponents<Location>, mut mapping: ResMut<NetworkMapping>) {
     for removed in removed_entities.iter() {
         mapping.remove_mapping_from_client_entity(&removed);
     }

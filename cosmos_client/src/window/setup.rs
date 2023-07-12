@@ -31,9 +31,7 @@ pub struct DeltaCursorPosition {
 }
 
 fn setup_window(mut primary_query: Query<&mut Window, With<PrimaryWindow>>) {
-    let mut window = primary_query
-        .get_single_mut()
-        .expect("Missing primary window.");
+    let mut window = primary_query.get_single_mut().expect("Missing primary window.");
 
     window.title = "Cosmos".into();
     window.cursor.visible = false;
@@ -46,9 +44,7 @@ fn update_mouse_deltas(
     mut ev_mouse_motion: EventReader<MouseMotion>,
     mut primary_query: Query<&mut Window, With<PrimaryWindow>>,
 ) {
-    let window = primary_query
-        .get_single_mut()
-        .expect("Missing primary window.");
+    let window = primary_query.get_single_mut().expect("Missing primary window.");
 
     delta.x = 0.0;
     delta.y = 0.0;
@@ -71,9 +67,7 @@ fn toggle_mouse_freeze(
     mut primary_query: Query<&mut Window, With<PrimaryWindow>>,
 ) {
     if input_handler.check_just_pressed(CosmosInputs::UnlockMouse, &inputs, &mouse) {
-        let mut window = primary_query
-            .get_single_mut()
-            .expect("Missing primary window.");
+        let mut window = primary_query.get_single_mut().expect("Missing primary window.");
 
         cursor_flags.toggle();
         apply_cursor_flags(&mut window, *cursor_flags);
@@ -85,9 +79,7 @@ fn window_focus_changed(
     mut ev_focus: EventReader<WindowFocused>,
     cursor_flags: Res<CursorFlags>,
 ) {
-    let (window_entity, mut window) = primary_query
-        .get_single_mut()
-        .expect("Missing primary window.");
+    let (window_entity, mut window) = primary_query.get_single_mut().expect("Missing primary window.");
 
     if let Some(ev) = ev_focus.iter().find(|e| e.window == window_entity) {
         if ev.focused {

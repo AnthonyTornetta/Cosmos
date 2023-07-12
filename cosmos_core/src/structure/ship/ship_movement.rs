@@ -56,6 +56,5 @@ fn clear_movement_when_no_pilot(mut query: Query<&mut ShipMovement, Without<Pilo
 }
 
 pub(super) fn register(app: &mut App) {
-    app.register_type::<ShipMovement>()
-        .add_system(clear_movement_when_no_pilot);
+    app.register_type::<ShipMovement>().add_system(clear_movement_when_no_pilot);
 }

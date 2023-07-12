@@ -43,10 +43,7 @@ impl Identifiable for BiosphereColor {
 
 fn register_biospheres(mut reigstry: ResMut<Registry<BiosphereColor>>) {
     reigstry.register(BiosphereColor::new("cosmos:biosphere_grass", Color::GREEN));
-    reigstry.register(BiosphereColor::new(
-        "cosmos:biosphere_test_stone",
-        Color::GRAY,
-    ));
+    reigstry.register(BiosphereColor::new("cosmos:biosphere_test_stone", Color::GRAY));
 }
 
 pub(super) fn register(app: &mut App) {

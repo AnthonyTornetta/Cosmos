@@ -1,8 +1,8 @@
 //! Handles client-related ship things
 
 use bevy::prelude::{
-    App, BuildChildren, Commands, Entity, EventReader, Input, IntoSystemConfig, IntoSystemConfigs,
-    KeyCode, MouseButton, OnUpdate, Parent, Query, Res, ResMut, Transform, With, Without,
+    App, BuildChildren, Commands, Entity, EventReader, Input, IntoSystemConfig, IntoSystemConfigs, KeyCode, MouseButton, OnUpdate, Parent,
+    Query, Res, ResMut, Transform, With, Without,
 };
 use bevy_rapier3d::prelude::CollisionEvent;
 use bevy_renet::renet::RenetClient;
@@ -50,9 +50,7 @@ fn remove_self_from_ship(
     mut renet_client: ResMut<RenetClient>,
 ) {
     if let Ok((entity, parent)) = has_parent.get_single() {
-        if ship_is_parent.contains(parent.get())
-            && input_handler.check_just_pressed(CosmosInputs::LeaveShip, &inputs, &mouse)
-        {
+        if ship_is_parent.contains(parent.get()) && input_handler.check_just_pressed(CosmosInputs::LeaveShip, &inputs, &mouse) {
             commands.entity(entity).remove_parent();
 
             renet_client.send_message(
@@ -91,18 +89,15 @@ fn respond_to_collisions(
                         // of that structure.
                         let structure_hit_entity = hit_parent.get();
 
-                        let hitting_current_parent = parent_query
-                            .get(player_entity)
-                            .is_ok_and(|p| p.get() == structure_hit_entity);
+                        let hitting_current_parent = parent_query.get(player_entity).is_ok_and(|p| p.get() == structure_hit_entity);
 
                         // If they are a child of that structure, do nothing.
                         if !hitting_current_parent {
                             // Otherwise, either remove your current parent (if you hit a non-ship) or become the child of the
                             // different ship you touched if the ship has >= 10 blocks on it.
 
-                            let (ship_trans, ship_loc) = trans_query
-                                .get(structure_hit_entity)
-                                .expect("All structures must have a transform");
+                            let (ship_trans, ship_loc) =
+                                trans_query.get(structure_hit_entity).expect("All structures must have a transform");
 
                             // Even though these will always be seperate from the trans + loc below, the borrow checker doesn't know that
                             let (ship_trans, ship_loc) = (*ship_trans, *ship_loc);
@@ -113,9 +108,7 @@ fn respond_to_collisions(
 
                             if is_ship.contains(structure_hit_entity) {
                                 // if they hit a ship, make them a part of that one instead
-                                commands
-                                    .entity(player_entity)
-                                    .set_parent(structure_hit_entity);
+                                commands.entity(player_entity).set_parent(structure_hit_entity);
 
                                 // Because the player's translation is always 0, 0, 0 we need to adjust it so the player is put into the
                                 // right spot in its parent.
@@ -124,16 +117,12 @@ fn respond_to_collisions(
                                     .inverse()
                                     .mul_vec3((*player_loc - ship_loc).absolute_coords_f32());
 
-                                if let Some(server_ship_ent) =
-                                    mapping.server_from_client(&structure_hit_entity)
-                                {
+                                if let Some(server_ship_ent) = mapping.server_from_client(&structure_hit_entity) {
                                     renet_client.send_message(
                                         NettyChannelClient::Reliable,
-                                        cosmos_encoder::serialize(
-                                            &ClientReliableMessages::JoinShip {
-                                                ship_entity: server_ship_ent,
-                                            },
-                                        ),
+                                        cosmos_encoder::serialize(&ClientReliableMessages::JoinShip {
+                                            ship_entity: server_ship_ent,
+                                        }),
                                     );
                                 }
                             } else if parent_query.contains(player_entity) {
@@ -156,10 +145,7 @@ fn respond_to_collisions(
 }
 
 fn remove_parent_when_too_far(
-    mut query: Query<
-        (Entity, &Parent, &mut Location, &Transform),
-        (With<LocalPlayer>, Without<Ship>),
-    >,
+    mut query: Query<(Entity, &Parent, &mut Location, &Transform), (With<LocalPlayer>, Without<Ship>)>,
     is_ship: Query<&Location, With<Ship>>,
     mut commands: Commands,
     mut renet_client: ResMut<RenetClient>,

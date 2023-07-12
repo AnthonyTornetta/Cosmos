@@ -13,9 +13,7 @@ use crate::{
 
 use super::{chunk::CHUNK_DIMENSIONS, Structure};
 
-#[derive(
-    Clone, Debug, FromReflect, Reflect, Copy, PartialEq, Eq, Default, Serialize, Deserialize,
-)]
+#[derive(Clone, Debug, FromReflect, Reflect, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 /// A block that is a part of a structure
 ///
 /// This may not be valid when it is used.
@@ -101,11 +99,7 @@ impl StructureBlock {
     #[inline]
     /// The chunk that contains this block's coordinates as (x, y, z).
     pub fn chunk_coords(&self) -> (usize, usize, usize) {
-        (
-            self.chunk_coord_x(),
-            self.chunk_coord_y(),
-            self.chunk_coord_z(),
-        )
+        (self.chunk_coord_x(), self.chunk_coord_y(), self.chunk_coord_z())
     }
 }
 

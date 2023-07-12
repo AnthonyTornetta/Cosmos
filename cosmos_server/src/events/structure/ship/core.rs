@@ -39,13 +39,7 @@ fn on_melting_down(
             melting_down.0 -= 1.0;
 
             if let Some(block) = structure.all_blocks_iter(false).next() {
-                structure.remove_block_at(
-                    block.x,
-                    block.y,
-                    block.z,
-                    &blocks,
-                    Some(&mut event_writer),
-                );
+                structure.remove_block_at(block.x, block.y, block.z, &blocks, Some(&mut event_writer));
             } else {
                 commands.entity(entity).insert(NeedsDespawned);
 

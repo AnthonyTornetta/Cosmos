@@ -154,8 +154,7 @@ fn listen_for_change_events(
             if let Ok(inv) = inventory_unchanged.get_single() {
                 if let Ok(ent) = item_name_query.get_single() {
                     if let Ok(mut name_text) = text_query.get_mut(ent) {
-                        if let Some(is) = inv.itemstack_at(hb.item_at_selected_inventory_slot(inv))
-                        {
+                        if let Some(is) = inv.itemstack_at(hb.item_at_selected_inventory_slot(inv)) {
                             name_text.sections[0].value = names
                                 .get_name_from_numeric_id(is.item_id())
                                 .unwrap_or(&format!("[missing name] ID #{}", is.item_id()))
@@ -300,10 +299,9 @@ fn add_hotbar(mut commands: Commands, asset_server: Res<AssetServer>) {
                         );
                     });
 
-                    hotbar.slots.push((
-                        slot.id(),
-                        text_entity.expect("This should have been set in the closure above"),
-                    ));
+                    hotbar
+                        .slots
+                        .push((slot.id(), text_entity.expect("This should have been set in the closure above")));
                 }
             });
 
@@ -313,12 +311,5 @@ fn add_hotbar(mut commands: Commands, asset_server: Res<AssetServer>) {
 
 pub(super) fn register(app: &mut App) {
     app.add_systems((add_hotbar, add_item_text).in_schedule(OnEnter(GameState::Playing)))
-        .add_systems(
-            (
-                listen_for_change_events,
-                listen_button_presses,
-                tick_text_alpha_down,
-            )
-                .in_set(OnUpdate(GameState::Playing)),
-        );
+        .add_systems((listen_for_change_events, listen_button_presses, tick_text_alpha_down).in_set(OnUpdate(GameState::Playing)));
 }

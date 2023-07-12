@@ -21,7 +21,6 @@ impl TStructureBuilder for ServerStructureBuilder {
         velocity: Velocity,
         structure: &mut cosmos_core::structure::Structure,
     ) {
-        self.structure_builder
-            .insert_structure(entity, location, velocity, structure);
+        self.structure_builder.insert_structure(entity, location, velocity, structure);
     }
 }

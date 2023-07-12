@@ -2,16 +2,11 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::{transport::NetcodeClientTransport, RenetClient};
 use cosmos_core::{
-    netty::{
-        client_unreliable_messages::ClientUnreliableMessages, cosmos_encoder,
-        netty_rigidbody::NettyRigidBody, NettyChannelClient,
-    },
+    netty::{client_unreliable_messages::ClientUnreliableMessages, cosmos_encoder, netty_rigidbody::NettyRigidBody, NettyChannelClient},
     physics::location::Location,
 };
 
-use crate::{
-    input::inputs::CosmosInputHandler, rendering::MainCamera, state::game_state::GameState,
-};
+use crate::{input::inputs::CosmosInputHandler, rendering::MainCamera, state::game_state::GameState};
 use crate::{input::inputs::CosmosInputs, netty::flags::LocalPlayer};
 
 fn send_position(

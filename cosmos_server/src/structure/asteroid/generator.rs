@@ -1,8 +1,5 @@
 use bevy::{
-    prelude::{
-        App, Commands, Component, DespawnRecursiveExt, Entity, EventWriter, IntoSystemConfigs,
-        OnUpdate, Query, Res, With,
-    },
+    prelude::{App, Commands, Component, DespawnRecursiveExt, Entity, EventWriter, IntoSystemConfigs, OnUpdate, Query, Res, With},
     tasks::{AsyncComputeTaskPool, Task},
     utils::HashMap,
 };
@@ -45,13 +42,13 @@ fn notify_when_done_generating(
                     structure.set_chunk(chunk);
                 }
 
+                structure.set_all_loaded(true);
+
                 let itr = structure.all_chunks_iter(false);
 
                 commands
                     .entity(generating_chunk.structure_entity)
-                    .insert(ChunksNeedLoaded {
-                        amount_needed: itr.len(),
-                    });
+                    .insert(ChunksNeedLoaded { amount_needed: itr.len() });
 
                 for res in itr {
                     // This will always be true because include_empty is false
@@ -80,15 +77,11 @@ fn start_generating_asteroid(
     mut commands: Commands,
 ) {
     for (structure_entity, structure, loc) in query.iter() {
-        commands
-            .entity(structure_entity)
-            .remove::<AsteroidNeedsCreated>();
+        commands.entity(structure_entity).remove::<AsteroidNeedsCreated>();
 
         let (cx, cy, cz) = (loc.local.x as f64, loc.local.y as f64, loc.local.z as f64);
 
-        let distance_threshold = (structure.blocks_length() as f64 / 4.0
-            * (noise.get([cx, cy, cz]).abs() + 1.0).min(25.0))
-            as f32;
+        let distance_threshold = (structure.blocks_length() as f64 / 4.0 * (noise.get([cx, cy, cz]).abs() + 1.0).min(25.0)) as f32;
 
         let stone = blocks.from_id("cosmos:stone").unwrap().clone();
 
@@ -96,11 +89,7 @@ fn start_generating_asteroid(
 
         let noise = **noise;
 
-        let (bx, by, bz) = (
-            structure.blocks_width(),
-            structure.blocks_height(),
-            structure.blocks_length(),
-        );
+        let (bx, by, bz) = (structure.blocks_width(), structure.blocks_height(), structure.blocks_length());
 
         println!("Starting async asteroid gen");
 
@@ -124,21 +113,13 @@ fn start_generating_asteroid(
                         let y_pos = y as f32 - by as f32 / 2.0;
                         let z_pos = z as f32 - bz as f32 / 2.0;
 
-                        let noise_here = (noise.get([
-                            x_pos as f64 * 0.1 + cx,
-                            y_pos as f64 * 0.1 + cy,
-                            z_pos as f64 * 0.1 + cz,
-                        ]) * 150.0) as f32;
+                        let noise_here =
+                            (noise.get([x_pos as f64 * 0.1 + cx, y_pos as f64 * 0.1 + cy, z_pos as f64 * 0.1 + cz]) * 150.0) as f32;
 
-                        let dist =
-                            x_pos * x_pos + y_pos * y_pos + z_pos * z_pos + noise_here * noise_here;
+                        let dist = x_pos * x_pos + y_pos * y_pos + z_pos * z_pos + noise_here * noise_here;
 
                         if dist < distance_threshold * distance_threshold {
-                            let (cx, cy, cz) = (
-                                x / CHUNK_DIMENSIONS,
-                                y / CHUNK_DIMENSIONS,
-                                z / CHUNK_DIMENSIONS,
-                            );
+                            let (cx, cy, cz) = (x / CHUNK_DIMENSIONS, y / CHUNK_DIMENSIONS, z / CHUNK_DIMENSIONS);
 
                             if !chunks.contains_key(&(cx, cy, cz)) {
                                 chunks.insert((cx, cy, cz), Chunk::new(cx, cy, cz));
@@ -161,16 +142,10 @@ fn start_generating_asteroid(
             chunks.into_iter().map(|(_, c)| c).collect::<Vec<Chunk>>()
         });
 
-        commands.spawn(AsyncStructureGeneration {
-            structure_entity,
-            task,
-        });
+        commands.spawn(AsyncStructureGeneration { structure_entity, task });
     }
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(
-        (start_generating_asteroid, notify_when_done_generating)
-            .in_set(OnUpdate(GameState::Playing)),
-    );
+    app.add_systems((start_generating_asteroid, notify_when_done_generating).in_set(OnUpdate(GameState::Playing)));
 }

@@ -4,9 +4,8 @@ use crate::netty::flags::LocalPlayer;
 use crate::state::game_state::GameState;
 use crate::structure::planet::unload_chunks_far_from_players;
 use bevy::prelude::{
-    warn, App, BuildChildren, Component, DespawnRecursiveExt, EventReader, GlobalTransform,
-    IntoSystemConfigs, Mesh, OnUpdate, PbrBundle, PointLight, PointLightBundle, Quat, Rect,
-    StandardMaterial, Transform, Vec3, With,
+    warn, App, BuildChildren, Component, DespawnRecursiveExt, EventReader, GlobalTransform, IntoSystemConfigs, Mesh, OnUpdate, PbrBundle,
+    PointLight, PointLightBundle, Quat, Rect, StandardMaterial, Transform, Vec3, With,
 };
 use bevy::reflect::{FromReflect, Reflect};
 use bevy::render::primitives::Aabb;
@@ -59,69 +58,33 @@ fn monitor_block_updates_system(
             chunks_todo.insert(ev.structure_entity, HashSet::default());
         }
 
-        let chunks = chunks_todo
-            .get_mut(&ev.structure_entity)
-            .expect("This was just added");
+        let chunks = chunks_todo.get_mut(&ev.structure_entity).expect("This was just added");
 
         if ev.block.x() != 0 && ev.block.x() % CHUNK_DIMENSIONS == 0 {
-            chunks.insert((
-                ev.block.chunk_coord_x() - 1,
-                ev.block.chunk_coord_y(),
-                ev.block.chunk_coord_z(),
-            ));
+            chunks.insert((ev.block.chunk_coord_x() - 1, ev.block.chunk_coord_y(), ev.block.chunk_coord_z()));
         }
 
-        if ev.block.x() != structure.blocks_width() - 1
-            && (ev.block.x() + 1) % CHUNK_DIMENSIONS == 0
-        {
-            chunks.insert((
-                ev.block.chunk_coord_x() + 1,
-                ev.block.chunk_coord_y(),
-                ev.block.chunk_coord_z(),
-            ));
+        if ev.block.x() != structure.blocks_width() - 1 && (ev.block.x() + 1) % CHUNK_DIMENSIONS == 0 {
+            chunks.insert((ev.block.chunk_coord_x() + 1, ev.block.chunk_coord_y(), ev.block.chunk_coord_z()));
         }
 
         if ev.block.y() != 0 && ev.block.y() % CHUNK_DIMENSIONS == 0 {
-            chunks.insert((
-                ev.block.chunk_coord_x(),
-                ev.block.chunk_coord_y() - 1,
-                ev.block.chunk_coord_z(),
-            ));
+            chunks.insert((ev.block.chunk_coord_x(), ev.block.chunk_coord_y() - 1, ev.block.chunk_coord_z()));
         }
 
-        if ev.block.y() != structure.blocks_height() - 1
-            && (ev.block.y() + 1) % CHUNK_DIMENSIONS == 0
-        {
-            chunks.insert((
-                ev.block.chunk_coord_x(),
-                ev.block.chunk_coord_y() + 1,
-                ev.block.chunk_coord_z(),
-            ));
+        if ev.block.y() != structure.blocks_height() - 1 && (ev.block.y() + 1) % CHUNK_DIMENSIONS == 0 {
+            chunks.insert((ev.block.chunk_coord_x(), ev.block.chunk_coord_y() + 1, ev.block.chunk_coord_z()));
         }
 
         if ev.block.z() != 0 && ev.block.z() % CHUNK_DIMENSIONS == 0 {
-            chunks.insert((
-                ev.block.chunk_coord_x(),
-                ev.block.chunk_coord_y(),
-                ev.block.chunk_coord_z() - 1,
-            ));
+            chunks.insert((ev.block.chunk_coord_x(), ev.block.chunk_coord_y(), ev.block.chunk_coord_z() - 1));
         }
 
-        if ev.block.z() != structure.blocks_length() - 1
-            && (ev.block.z() + 1) % CHUNK_DIMENSIONS == 0
-        {
-            chunks.insert((
-                ev.block.chunk_coord_x(),
-                ev.block.chunk_coord_y(),
-                ev.block.chunk_coord_z() + 1,
-            ));
+        if ev.block.z() != structure.blocks_length() - 1 && (ev.block.z() + 1) % CHUNK_DIMENSIONS == 0 {
+            chunks.insert((ev.block.chunk_coord_x(), ev.block.chunk_coord_y(), ev.block.chunk_coord_z() + 1));
         }
 
-        chunks.insert((
-            ev.block.chunk_coord_x(),
-            ev.block.chunk_coord_y(),
-            ev.block.chunk_coord_z(),
-        ));
+        chunks.insert((ev.block.chunk_coord_x(), ev.block.chunk_coord_y(), ev.block.chunk_coord_z()));
     }
 
     for ev in chunk_set_event.iter() {
@@ -133,9 +96,7 @@ fn monitor_block_updates_system(
             chunks_todo.insert(ev.structure_entity, HashSet::default());
         }
 
-        let chunks = chunks_todo
-            .get_mut(&ev.structure_entity)
-            .expect("This was just added");
+        let chunks = chunks_todo.get_mut(&ev.structure_entity).expect("This was just added");
 
         let (x, y, z) = (ev.x, ev.y, ev.z);
 
@@ -225,15 +186,7 @@ fn monitor_needs_rendered_system(
 
     let mut todo = chunks_need_rendered
         .iter()
-        .map(|(x, y, transform)| {
-            (
-                x,
-                y,
-                transform
-                    .translation()
-                    .distance_squared(local_transform.translation()),
-            )
-        })
+        .map(|(x, y, transform)| (x, y, transform.translation().distance_squared(local_transform.translation())))
         // Only render chunks that are within a reasonable viewing distance
         .filter(|(_, _, distance_sqrd)| *distance_sqrd < SECTOR_DIMENSIONS * SECTOR_DIMENSIONS)
         .collect::<Vec<(Entity, &ChunkEntity, f32)>>();
@@ -258,62 +211,53 @@ fn monitor_needs_rendered_system(
     }
 
     // Render chunks in parallel
-    todo.par_iter()
-        .take(chunks_per_frame)
-        .copied()
-        .for_each(|(entity, ce, _)| {
-            let Ok(structure) = structure_query.get(ce.structure_entity) else {
+    todo.par_iter().take(chunks_per_frame).copied().for_each(|(entity, ce, _)| {
+        let Ok(structure) = structure_query.get(ce.structure_entity) else {
                 return;
             };
 
-            let mut renderer = ChunkRenderer::new();
+        let mut renderer = ChunkRenderer::new();
 
-            let (cx, cy, cz) = ce.chunk_location;
+        let (cx, cy, cz) = ce.chunk_location;
 
-            let Some(chunk) = structure.chunk_from_chunk_coordinates(cx, cy, cz) else {
+        let Some(chunk) = structure.chunk_from_chunk_coordinates(cx, cy, cz) else {
                 return;
             };
 
-            let (xi, yi, zi) = (cx as i32, cy as i32, cz as i32);
+        let (xi, yi, zi) = (cx as i32, cy as i32, cz as i32);
 
-            let left = structure.chunk_from_chunk_coordinates_oob(xi - 1, yi, zi);
-            let right = structure.chunk_from_chunk_coordinates_oob(xi + 1, yi, zi);
-            let bottom = structure.chunk_from_chunk_coordinates_oob(xi, yi - 1, zi);
-            let top = structure.chunk_from_chunk_coordinates_oob(xi, yi + 1, zi);
-            let back = structure.chunk_from_chunk_coordinates_oob(xi, yi, zi - 1);
-            let front = structure.chunk_from_chunk_coordinates_oob(xi, yi, zi + 1);
+        let left = structure.chunk_from_chunk_coordinates_oob(xi - 1, yi, zi);
+        let right = structure.chunk_from_chunk_coordinates_oob(xi + 1, yi, zi);
+        let bottom = structure.chunk_from_chunk_coordinates_oob(xi, yi - 1, zi);
+        let top = structure.chunk_from_chunk_coordinates_oob(xi, yi + 1, zi);
+        let back = structure.chunk_from_chunk_coordinates_oob(xi, yi, zi - 1);
+        let front = structure.chunk_from_chunk_coordinates_oob(xi, yi, zi + 1);
 
-            renderer.render(
-                &atlas,
-                &materials,
-                &lighting,
-                chunk,
-                left,
-                right,
-                bottom,
-                top,
-                back,
-                front,
-                &blocks,
-                &meshes_registry,
-                &block_textures,
-            );
+        renderer.render(
+            &atlas,
+            &materials,
+            &lighting,
+            chunk,
+            left,
+            right,
+            bottom,
+            top,
+            back,
+            front,
+            &blocks,
+            &meshes_registry,
+            &block_textures,
+        );
 
-            let mut mutex = to_process.lock().expect("Error locking to_process vec!");
+        let mut mutex = to_process.lock().expect("Error locking to_process vec!");
 
-            mutex
-                .as_mut()
-                .unwrap()
-                .push((entity, renderer.create_mesh()));
-        });
+        mutex.as_mut().unwrap().push((entity, renderer.create_mesh()));
+    });
 
     let to_process_chunks = to_process.lock().unwrap().take().unwrap();
 
     if !to_process_chunks.is_empty() {
-        timer.log_duration(&format!(
-            "Rendering {} chunks took",
-            to_process_chunks.len()
-        ));
+        timer.log_duration(&format!("Rendering {} chunks took", to_process_chunks.len()));
     }
 
     for (entity, mut chunk_mesh) in to_process_chunks {
@@ -323,9 +267,7 @@ fn monitor_needs_rendered_system(
 
         if let Ok(chunk_meshes_component) = chunk_meshes_query.get(entity) {
             for ent in chunk_meshes_component.0.iter() {
-                let old_mesh_handle = mesh_query
-                    .get(*ent)
-                    .expect("This should have a mesh component.");
+                let old_mesh_handle = mesh_query.get(*ent).expect("This should have a mesh component.");
 
                 if let Some(old_mesh_handle) = old_mesh_handle {
                     meshes.remove(old_mesh_handle);
@@ -418,10 +360,7 @@ fn monitor_needs_rendered_system(
                 let mesh = meshes.add(mesh_material.mesh);
 
                 let ent = if let Some(ent) = old_mesh_entities.pop() {
-                    commands
-                        .entity(ent)
-                        .insert(mesh)
-                        .insert(mesh_material.material);
+                    commands.entity(ent).insert(mesh).insert(mesh_material.material);
 
                     ent
                 } else {
@@ -450,10 +389,7 @@ fn monitor_needs_rendered_system(
             // To avoid making too many entities (and tanking performance), if only one mesh
             // is present, just stick the mesh info onto the chunk itself.
 
-            let mesh_material = chunk_mesh
-                .mesh_materials
-                .pop()
-                .expect("This has one element in it");
+            let mesh_material = chunk_mesh.mesh_materials.pop().expect("This has one element in it");
 
             let mesh = meshes.add(mesh_material.mesh);
             let s = (CHUNK_DIMENSIONS / 2) as f32;
@@ -502,8 +438,7 @@ struct MeshInfo {
 impl MeshBuilder for MeshInfo {
     #[inline]
     fn add_mesh_information(&mut self, mesh_info: &MeshInformation, position: Vec3, uvs: Rect) {
-        self.mesh_builder
-            .add_mesh_information(mesh_info, position, uvs);
+        self.mesh_builder.add_mesh_information(mesh_info, position, uvs);
     }
 
     fn build_mesh(self) -> Mesh {
@@ -551,17 +486,10 @@ impl ChunkRenderer {
             .map(|(i, block)| (expand(i, CHUNK_DIMENSIONS, CHUNK_DIMENSIONS), block))
             .filter(|((x, y, z), _)| chunk.has_block_at(*x, *y, *z))
         {
-            let (center_offset_x, center_offset_y, center_offset_z) = (
-                x as f32 - cd2 + 0.5,
-                y as f32 - cd2 + 0.5,
-                z as f32 - cd2 + 0.5,
-            );
+            let (center_offset_x, center_offset_y, center_offset_z) = (x as f32 - cd2 + 0.5, y as f32 - cd2 + 0.5, z as f32 - cd2 + 0.5);
             // right
             if (x != CHUNK_DIMENSIONS - 1 && chunk.has_see_through_block_at(x + 1, y, z, blocks))
-                || (x == CHUNK_DIMENSIONS - 1
-                    && (right
-                        .map(|c| c.has_see_through_block_at(0, y, z, blocks))
-                        .unwrap_or(true)))
+                || (x == CHUNK_DIMENSIONS - 1 && (right.map(|c| c.has_see_through_block_at(0, y, z, blocks)).unwrap_or(true)))
             {
                 faces.push(BlockFace::Right);
             }
@@ -577,10 +505,7 @@ impl ChunkRenderer {
 
             // top
             if (y != CHUNK_DIMENSIONS - 1 && chunk.has_see_through_block_at(x, y + 1, z, blocks))
-                || (y == CHUNK_DIMENSIONS - 1
-                    && (top
-                        .map(|c| c.has_see_through_block_at(x, 0, z, blocks))
-                        .unwrap_or(true)))
+                || (y == CHUNK_DIMENSIONS - 1 && (top.map(|c| c.has_see_through_block_at(x, 0, z, blocks)).unwrap_or(true)))
             {
                 faces.push(BlockFace::Top);
             }
@@ -596,10 +521,7 @@ impl ChunkRenderer {
 
             // back
             if (z != CHUNK_DIMENSIONS - 1 && chunk.has_see_through_block_at(x, y, z + 1, blocks))
-                || (z == CHUNK_DIMENSIONS - 1
-                    && (front
-                        .map(|c| c.has_see_through_block_at(x, y, 0, blocks))
-                        .unwrap_or(true)))
+                || (z == CHUNK_DIMENSIONS - 1 && (front.map(|c| c.has_see_through_block_at(x, y, 0, blocks)).unwrap_or(true)))
             {
                 faces.push(BlockFace::Back);
             }
@@ -625,8 +547,7 @@ impl ChunkRenderer {
                 };
 
                 if !self.meshes.contains_key(&material.handle) {
-                    self.meshes
-                        .insert(material.handle.clone(), Default::default());
+                    self.meshes.insert(material.handle.clone(), Default::default());
                 }
 
                 let mesh_builder = self.meshes.get_mut(&material.handle).unwrap();
@@ -636,11 +557,7 @@ impl ChunkRenderer {
                 for face in faces.iter().map(|x| BlockFace::rotate_face(*x, rotation)) {
                     let index = block_textures
                         .from_id(block.unlocalized_name())
-                        .unwrap_or_else(|| {
-                            block_textures
-                                .from_id("missing")
-                                .expect("Missing texture should exist.")
-                        });
+                        .unwrap_or_else(|| block_textures.from_id("missing").expect("Missing texture should exist."));
 
                     let Some(image_index) = index.atlas_index_from_face(face) else {
                         warn!("Missing image index -- {index:?}");
@@ -668,11 +585,7 @@ impl ChunkRenderer {
                         *norm = rotation.mul_vec3((*norm).into()).into();
                     }
 
-                    mesh_builder.add_mesh_information(
-                        &mesh_info,
-                        Vec3::new(center_offset_x, center_offset_y, center_offset_z),
-                        uvs,
-                    );
+                    mesh_builder.add_mesh_information(&mesh_info, Vec3::new(center_offset_x, center_offset_y, center_offset_z), uvs);
                 }
 
                 faces.clear();
@@ -695,10 +608,7 @@ impl ChunkRenderer {
 
         let lights = self.lights;
 
-        ChunkMesh {
-            lights,
-            mesh_materials,
-        }
+        ChunkMesh { lights, mesh_materials }
     }
 }
 

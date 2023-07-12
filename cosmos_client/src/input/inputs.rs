@@ -163,57 +163,34 @@ impl CosmosInputHandler {
     /// Check if the given input was just released.
     ///
     /// Use this to see if something was held in the last frame but is no longer being held.
-    pub fn check_just_released(
-        &self,
-        input_code: CosmosInputs,
-        inputs: &Input<KeyCode>,
-        mouse: &Input<MouseButton>,
-    ) -> bool {
+    pub fn check_just_released(&self, input_code: CosmosInputs, inputs: &Input<KeyCode>, mouse: &Input<MouseButton>) -> bool {
         let keycode = self.keycode_for(input_code);
         let mouse_button = self.mouse_button_for(input_code);
 
-        keycode.is_some() && inputs.just_released(keycode.unwrap())
-            || mouse_button.is_some() && mouse.just_released(mouse_button.unwrap())
+        keycode.is_some() && inputs.just_released(keycode.unwrap()) || mouse_button.is_some() && mouse.just_released(mouse_button.unwrap())
     }
 
     /// Check if the given input is not being used.
-    pub fn check_released(
-        &self,
-        input_code: CosmosInputs,
-        inputs: &Input<KeyCode>,
-        mouse: &Input<MouseButton>,
-    ) -> bool {
+    pub fn check_released(&self, input_code: CosmosInputs, inputs: &Input<KeyCode>, mouse: &Input<MouseButton>) -> bool {
         !self.check_pressed(input_code, inputs, mouse)
     }
 
     /// Checks if the given input was just pressed.
     ///
     /// Use this to see if something was pressed just this frame.
-    pub fn check_just_pressed(
-        &self,
-        input_code: CosmosInputs,
-        inputs: &Input<KeyCode>,
-        mouse: &Input<MouseButton>,
-    ) -> bool {
+    pub fn check_just_pressed(&self, input_code: CosmosInputs, inputs: &Input<KeyCode>, mouse: &Input<MouseButton>) -> bool {
         let keycode = self.keycode_for(input_code);
         let mouse_button = self.mouse_button_for(input_code);
 
-        keycode.is_some() && inputs.just_pressed(keycode.unwrap())
-            || mouse_button.is_some() && mouse.just_pressed(mouse_button.unwrap())
+        keycode.is_some() && inputs.just_pressed(keycode.unwrap()) || mouse_button.is_some() && mouse.just_pressed(mouse_button.unwrap())
     }
 
     /// Check if this input is currently being used.
-    pub fn check_pressed(
-        &self,
-        input_code: CosmosInputs,
-        keys: &Input<KeyCode>,
-        mouse: &Input<MouseButton>,
-    ) -> bool {
+    pub fn check_pressed(&self, input_code: CosmosInputs, keys: &Input<KeyCode>, mouse: &Input<MouseButton>) -> bool {
         let keycode = self.keycode_for(input_code);
         let mouse_button = self.mouse_button_for(input_code);
 
-        keycode.is_some() && keys.pressed(keycode.unwrap())
-            || mouse_button.is_some() && mouse.pressed(mouse_button.unwrap())
+        keycode.is_some() && keys.pressed(keycode.unwrap()) || mouse_button.is_some() && mouse.pressed(mouse_button.unwrap())
     }
 
     fn set_keycode(&mut self, input: CosmosInputs, keycode: KeyCode) {
@@ -256,6 +233,5 @@ impl CosmosInputHandler {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.insert_resource(CosmosInputHandler::new())
-        .add_startup_system(init_input);
+    app.insert_resource(CosmosInputHandler::new()).add_startup_system(init_input);
 }

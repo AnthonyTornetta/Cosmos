@@ -54,12 +54,7 @@ impl Inventory {
     pub fn insert(&mut self, item: &Item, mut quantity: u16) -> u16 {
         // Search for existing stacks, if none found that make new one(s)
 
-        for is in &mut self
-            .items
-            .iter_mut()
-            .flatten()
-            .filter(|x| x.item_id() == item.id())
-        {
+        for is in &mut self.items.iter_mut().flatten().filter(|x| x.item_id() == item.id()) {
             quantity = is.increase_quantity(quantity);
 
             if quantity == 0 {

@@ -24,12 +24,7 @@ fn event_reader(mut event_reader: EventReader<CreateShipEvent>, mut commands: Co
 
         let builder = ServerShipBuilder::default();
 
-        builder.insert_ship(
-            &mut entity,
-            ev.ship_location,
-            Velocity::zero(),
-            &mut structure,
-        );
+        builder.insert_ship(&mut entity, ev.ship_location, Velocity::zero(), &mut structure);
 
         entity.insert(structure).insert(ShipNeedsCreated);
     }

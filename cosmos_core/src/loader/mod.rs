@@ -21,9 +21,7 @@ impl LoadingManager {
     pub fn register_loader(&mut self, event_writer: &mut EventWriter<AddLoadingEvent>) -> usize {
         self.next_id += 1;
 
-        event_writer.send(AddLoadingEvent {
-            loading_id: self.next_id,
-        });
+        event_writer.send(AddLoadingEvent { loading_id: self.next_id });
 
         self.next_id
     }
@@ -46,12 +44,7 @@ struct LoadingStatus<T: States + Clone + Copy> {
 }
 
 impl<T: States + Clone + Copy> LoadingStatus<T> {
-    pub fn new(
-        pre_loading_state: T,
-        loading_state: T,
-        post_loading_state: T,
-        done_state: T,
-    ) -> Self {
+    pub fn new(pre_loading_state: T, loading_state: T, post_loading_state: T, done_state: T) -> Self {
         Self {
             loaders: HashSet::new(),
             done: false,
@@ -130,16 +123,8 @@ pub(super) fn register<T: States + Clone + Copy>(
     app.add_event::<DoneLoadingEvent>()
         .add_event::<AddLoadingEvent>()
         .add_system(
-            monitor_loading::<T>.run_if(
-                in_state(pre_loading_state)
-                    .or_else(in_state(loading_state).or_else(in_state(post_loading_state))),
-            ),
+            monitor_loading::<T>.run_if(in_state(pre_loading_state).or_else(in_state(loading_state).or_else(in_state(post_loading_state)))),
         )
-        .insert_resource(LoadingStatus::new(
-            pre_loading_state,
-            loading_state,
-            post_loading_state,
-            done_state,
-        ))
+        .insert_resource(LoadingStatus::new(pre_loading_state, loading_state, post_loading_state, done_state))
         .insert_resource(LoadingManager::default());
 }

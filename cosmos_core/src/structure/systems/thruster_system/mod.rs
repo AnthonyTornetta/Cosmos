@@ -4,8 +4,8 @@ use std::ops::Mul;
 
 use bevy::{
     prelude::{
-        App, Commands, Component, EventReader, IntoSystemAppConfig, IntoSystemConfig, OnEnter,
-        OnUpdate, Quat, Query, Res, ResMut, Resource, States, Transform, Vec3, With,
+        App, Commands, Component, EventReader, IntoSystemAppConfig, IntoSystemConfig, OnEnter, OnUpdate, Quat, Query, Res, ResMut,
+        Resource, States, Transform, Vec3, With,
     },
     reflect::{FromReflect, Reflect},
     time::Time,
@@ -104,13 +104,11 @@ fn block_update_system(
     for ev in event.iter() {
         if let Ok(systems) = systems_query.get(ev.structure_entity) {
             if let Ok(mut system) = systems.query_mut(&mut system_query) {
-                if let Some(prop) = energy_storage_blocks.get(blocks.from_numeric_id(ev.old_block))
-                {
+                if let Some(prop) = energy_storage_blocks.get(blocks.from_numeric_id(ev.old_block)) {
                     system.block_removed(prop);
                 }
 
-                if let Some(prop) = energy_storage_blocks.get(blocks.from_numeric_id(ev.new_block))
-                {
+                if let Some(prop) = energy_storage_blocks.get(blocks.from_numeric_id(ev.new_block)) {
                     system.block_added(prop);
                 }
             }
@@ -135,9 +133,7 @@ fn update_movement(
     time: Res<Time>,
 ) {
     for (thruster_system, system) in thrusters_query.iter() {
-        if let Ok((movement, systems, transform, mut velocity, mut external_impulse, readmass)) =
-            query.get_mut(system.structure_entity)
-        {
+        if let Ok((movement, systems, transform, mut velocity, mut external_impulse, readmass)) = query.get_mut(system.structure_entity) {
             // Rotation
             let torque = Quat::from_affine3(&transform.compute_affine()).mul(movement.torque * 5.0);
 
@@ -185,9 +181,7 @@ fn update_movement(
 
             if movement.braking {
                 let mut brake_vec = -velocity.linvel * readmass.0.mass;
-                let delta = time.delta_seconds()
-                    * MAX_BRAKE_DELTA_PER_THRUST
-                    * thruster_system.thrust_total;
+                let delta = time.delta_seconds() * MAX_BRAKE_DELTA_PER_THRUST * thruster_system.thrust_total;
 
                 if brake_vec.length_squared() >= delta * delta {
                     brake_vec = brake_vec.normalize() * delta;
@@ -223,11 +217,7 @@ fn structure_loaded_event(
     }
 }
 
-pub(super) fn register<T: States + Clone + Copy>(
-    app: &mut App,
-    post_loading_state: T,
-    playing_state: T,
-) {
+pub(super) fn register<T: States + Clone + Copy>(app: &mut App, post_loading_state: T, playing_state: T) {
     app.insert_resource(ThrusterBlocks::default())
         .add_systems((
             register_thruster_blocks.in_schedule(OnEnter(post_loading_state)),

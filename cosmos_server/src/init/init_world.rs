@@ -24,20 +24,16 @@ impl ServerSeed {
 
 pub(super) fn register(app: &mut App) {
     let server_seed = if let Ok(seed) = fs::read("./world/seed.dat") {
-        cosmos_encoder::deserialize::<ServerSeed>(&seed)
-            .expect("Unable to understand './world/seed.dat' seed file. Is it corrupted?")
+        cosmos_encoder::deserialize::<ServerSeed>(&seed).expect("Unable to understand './world/seed.dat' seed file. Is it corrupted?")
     } else {
         let seed = ServerSeed(rand::random());
 
         fs::create_dir("./world/").expect("Error creating world directory!");
-        fs::write("./world/seed.dat", cosmos_encoder::serialize(&seed))
-            .expect("Error writing file './world/seed.dat'");
+        fs::write("./world/seed.dat", cosmos_encoder::serialize(&seed)).expect("Error writing file './world/seed.dat'");
 
         seed
     };
 
-    app.insert_resource(ResourceWrapper(noise::OpenSimplex::new(
-        server_seed.as_u32(),
-    )))
-    .insert_resource(server_seed);
+    app.insert_resource(ResourceWrapper(noise::OpenSimplex::new(server_seed.as_u32())))
+        .insert_resource(server_seed);
 }

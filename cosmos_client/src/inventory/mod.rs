@@ -90,11 +90,7 @@ fn render_hotbar(
 
         let index = block_textures
             .from_id(block.unlocalized_name())
-            .unwrap_or_else(|| {
-                block_textures
-                    .from_id("missing")
-                    .expect("Missing texture should exist.")
-            });
+            .unwrap_or_else(|| block_textures.from_id("missing").expect("Missing texture should exist."));
 
         let multiplier = size * 2.0;
         let slot_x = -(amt as f32) / 2.0 * multiplier + multiplier * (i as f32 + 0.5);
@@ -156,8 +152,7 @@ struct HotbarLocation;
 
 pub(super) fn register(app: &mut App) {
     app.add_system(
-        |query: Query<&Window, With<PrimaryWindow>>,
-         mut cam: Query<&mut Transform, With<HotbarLocation>>| {
+        |query: Query<&Window, With<PrimaryWindow>>, mut cam: Query<&mut Transform, With<HotbarLocation>>| {
             let Ok(window) = query.get_single() else {
                 return;
             };

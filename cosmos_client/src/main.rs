@@ -104,10 +104,8 @@ fn process_ship_movement(
 
         // Prevents you from moving cursor off screen
         // Reduces cursor movement the closer you get to edge of screen until it reaches 0 at hw/2 or hh/2
-        crosshair_offset.x += cursor_delta_position.x
-            - (cursor_delta_position.x * (crosshair_offset.x.abs() / max_w));
-        crosshair_offset.y += cursor_delta_position.y
-            - (cursor_delta_position.y * (crosshair_offset.y.abs() / max_h));
+        crosshair_offset.x += cursor_delta_position.x - (cursor_delta_position.x * (crosshair_offset.x.abs() / max_w));
+        crosshair_offset.y += cursor_delta_position.y - (cursor_delta_position.y * (crosshair_offset.y.abs() / max_h));
 
         crosshair_offset.x = crosshair_offset.x.clamp(-hw, hw);
         crosshair_offset.y = crosshair_offset.y.clamp(-hh, hh);
@@ -121,11 +119,7 @@ fn process_ship_movement(
             roll -= 0.25;
         }
 
-        movement.torque = Vec3::new(
-            crosshair_offset.y / hh * p2 / 2.0,
-            -crosshair_offset.x / hw * p2 / 2.0,
-            roll,
-        );
+        movement.torque = Vec3::new(crosshair_offset.y / hh * p2 / 2.0, -crosshair_offset.x / hw * p2 / 2.0, roll);
 
         client.send_message(
             NettyChannelClient::Unreliable,
@@ -149,10 +143,7 @@ fn process_player_movement(
     mouse: Res<Input<MouseButton>>,
     time: Res<Time>,
     input_handler: ResMut<CosmosInputHandler>,
-    mut query: Query<
-        (Entity, &mut Velocity, &Transform, Option<&PlayerAlignment>),
-        (With<LocalPlayer>, Without<Pilot>),
-    >,
+    mut query: Query<(Entity, &mut Velocity, &Transform, Option<&PlayerAlignment>), (With<LocalPlayer>, Without<Pilot>)>,
     cam_query: Query<&Transform, With<MainCamera>>,
     parent_query: Query<&Parent>,
     global_transform_query: Query<&GlobalTransform>,
@@ -161,8 +152,7 @@ fn process_player_movement(
     if let Ok((ent, mut velocity, player_transform, player_alignment)) = query.get_single_mut() {
         let cam_trans = cam_query.single();
 
-        let max_speed: f32 = match input_handler.check_pressed(CosmosInputs::Sprint, &keys, &mouse)
-        {
+        let max_speed: f32 = match input_handler.check_pressed(CosmosInputs::Sprint, &keys, &mouse) {
             false => 3.0,
             true => 20.0,
         };
@@ -342,10 +332,7 @@ fn main() {
         ))
         .add_system(create_sun.in_schedule(OnEnter(GameState::LoadingWorld)))
         .add_system(connect::wait_for_done_loading.in_set(OnUpdate(GameState::LoadingWorld)))
-        .add_systems(
-            (process_player_movement, process_ship_movement, reset_cursor)
-                .in_set(OnUpdate(GameState::Playing)),
-        );
+        .add_systems((process_player_movement, process_ship_movement, reset_cursor).in_set(OnUpdate(GameState::Playing)));
 
     input::register(&mut app);
     window::register(&mut app);

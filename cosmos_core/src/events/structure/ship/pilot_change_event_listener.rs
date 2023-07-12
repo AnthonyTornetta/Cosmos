@@ -1,6 +1,6 @@
 use bevy::prelude::{
-    Added, App, BuildChildren, Commands, Component, Entity, EventReader, EventWriter,
-    IntoSystemConfig, OnUpdate, Quat, Query, RemovedComponents, States, Transform, Vec3, With,
+    Added, App, BuildChildren, Commands, Component, Entity, EventReader, EventWriter, IntoSystemConfig, OnUpdate, Quat, Query,
+    RemovedComponents, States, Transform, Vec3, With,
 };
 use bevy_rapier3d::prelude::{RigidBody, Sensor};
 
@@ -34,9 +34,7 @@ fn event_listener(
             let (structure_loc, structure_transform) = location_query
                 .get(ev.structure_entity)
                 .expect("Every structure should have a location & transform.");
-            let (pilot_loc, pilot_transform) = location_query
-                .get(entity)
-                .expect("Every pilot should have a location & transform");
+            let (pilot_loc, pilot_transform) = location_query.get(entity).expect("Every pilot should have a location & transform");
 
             let delta = structure_transform
                 .rotation
@@ -45,10 +43,7 @@ fn event_listener(
 
             let delta_rot = pilot_transform.rotation * structure_transform.rotation.inverse();
 
-            commands
-                .entity(ev.structure_entity)
-                .insert(Pilot { entity })
-                .add_child(entity);
+            commands.entity(ev.structure_entity).insert(Pilot { entity }).add_child(entity);
 
             commands.entity(entity).insert((
                 Pilot {
@@ -96,10 +91,7 @@ fn pilot_removed(
 ) {
     for entity in removed_pilots.iter() {
         if let Ok((mut trans, starting_delta)) = query.get_mut(entity) {
-            commands
-                .entity(entity)
-                .remove::<PilotStartingDelta>()
-                .insert(RigidBody::Dynamic);
+            commands.entity(entity).remove::<PilotStartingDelta>().insert(RigidBody::Dynamic);
 
             trans.translation = starting_delta.0;
             trans.rotation = starting_delta.1;
@@ -115,11 +107,7 @@ fn bouncer(mut reader: EventReader<Bouncer>, mut event_writer: EventWriter<Remov
     }
 }
 
-fn remove_sensor(
-    mut reader: EventReader<RemoveSensorFrom>,
-    mut event_writer: EventWriter<Bouncer>,
-    mut commands: Commands,
-) {
+fn remove_sensor(mut reader: EventReader<RemoveSensorFrom>, mut event_writer: EventWriter<Bouncer>, mut commands: Commands) {
     for ev in reader.iter() {
         if ev.1 >= BOUNCES {
             if let Some(mut e) = commands.get_entity(ev.0) {

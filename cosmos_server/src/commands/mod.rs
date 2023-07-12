@@ -78,8 +78,7 @@ impl CosmosCommands {
 
     /// Adds information for a command, based on the `command_info` argument's name
     pub fn add_command_info(&mut self, command_info: CosmosCommandInfo) {
-        self.commands
-            .insert(command_info.name.clone(), command_info);
+        self.commands.insert(command_info.name.clone(), command_info);
     }
 
     /// Removes the command info for the given command
@@ -98,19 +97,10 @@ impl CosmosCommands {
 #[derive(Resource, Reflect, FromReflect, Debug, Default)]
 struct CurrentlyWriting(String);
 
-fn monitor_inputs(
-    mut event_writer: EventWriter<CosmosCommandSent>,
-    mut text: ResMut<CurrentlyWriting>,
-) {
+fn monitor_inputs(mut event_writer: EventWriter<CosmosCommandSent>, mut text: ResMut<CurrentlyWriting>) {
     while let Ok(event_available) = poll(Duration::ZERO) {
         if event_available {
-            if let Ok(Event::Key(KeyEvent {
-                code,
-                modifiers,
-                kind,
-                ..
-            })) = read()
-            {
+            if let Ok(Event::Key(KeyEvent { code, modifiers, kind, .. })) = read() {
                 if kind != KeyEventKind::Release {
                     if let KeyCode::Char(mut c) = code {
                         if modifiers.intersects(KeyModifiers::SHIFT) {
@@ -129,9 +119,7 @@ fn monitor_inputs(
     }
 
     if !text.0.trim().is_empty() && text.0.ends_with('\n') {
-        event_writer.send(CosmosCommandSent::new(
-            text.0[0..text.0.len() - 1].to_owned(),
-        ));
+        event_writer.send(CosmosCommandSent::new(text.0[0..text.0.len() - 1].to_owned()));
 
         text.0.clear();
     }

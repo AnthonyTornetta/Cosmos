@@ -32,9 +32,7 @@ fn listen_chunk_done_loading(
             chunks_needed.amount_needed -= 1;
 
             if chunks_needed.amount_needed == 0 {
-                commands
-                    .entity(ev.structure_entity)
-                    .remove::<ChunksNeedLoaded>();
+                commands.entity(ev.structure_entity).remove::<ChunksNeedLoaded>();
 
                 event_writer.send(StructureLoadedEvent {
                     structure_entity: ev.structure_entity,

@@ -17,13 +17,7 @@ use super::{ship_movement::ShipMovement, Ship};
 /// Implement this to add a custom way to build ships
 pub trait TShipBuilder {
     /// Adds everything to the entity needed to have a ship
-    fn insert_ship(
-        &self,
-        entity: &mut EntityCommands,
-        location: Location,
-        velocity: Velocity,
-        structure: &mut Structure,
-    );
+    fn insert_ship(&self, entity: &mut EntityCommands, location: Location, velocity: Velocity, structure: &mut Structure);
 }
 
 /// Default way to build a ship
@@ -39,15 +33,8 @@ impl<T: TStructureBuilder> ShipBuilder<T> {
 }
 
 impl<T: TStructureBuilder> TShipBuilder for ShipBuilder<T> {
-    fn insert_ship(
-        &self,
-        entity: &mut EntityCommands,
-        location: Location,
-        velocity: Velocity,
-        structure: &mut Structure,
-    ) {
-        self.structure_builder
-            .insert_structure(entity, location, velocity, structure);
+    fn insert_ship(&self, entity: &mut EntityCommands, location: Location, velocity: Velocity, structure: &mut Structure) {
+        self.structure_builder.insert_structure(entity, location, velocity, structure);
 
         entity.insert(Ship);
     }

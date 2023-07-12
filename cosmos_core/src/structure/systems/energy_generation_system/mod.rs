@@ -6,10 +6,7 @@ use crate::{
     block::Block,
     events::block_events::BlockChangedEvent,
     registry::{identifiable::Identifiable, Registry},
-    structure::{
-        events::StructureLoadedEvent, systems::energy_storage_system::EnergyStorageSystem,
-        Structure,
-    },
+    structure::{events::StructureLoadedEvent, systems::energy_storage_system::EnergyStorageSystem, Structure},
 };
 
 use super::{StructureSystem, Systems};
@@ -54,26 +51,13 @@ impl EnergyGenerationSystem {
     }
 }
 
-fn register_energy_blocks(
-    blocks: Res<Registry<Block>>,
-    mut generation: ResMut<EnergyGenerationBlocks>,
-) {
+fn register_energy_blocks(blocks: Res<Registry<Block>>, mut generation: ResMut<EnergyGenerationBlocks>) {
     if let Some(block) = blocks.from_id("cosmos:reactor") {
-        generation.insert(
-            block,
-            EnergyGenerationProperty {
-                generation_rate: 1000.0,
-            },
-        );
+        generation.insert(block, EnergyGenerationProperty { generation_rate: 1000.0 });
     }
 
     if let Some(block) = blocks.from_id("cosmos:ship_core") {
-        generation.insert(
-            block,
-            EnergyGenerationProperty {
-                generation_rate: 100.0,
-            },
-        )
+        generation.insert(block, EnergyGenerationProperty { generation_rate: 100.0 })
     }
 }
 
@@ -87,15 +71,11 @@ fn block_update_system(
     for ev in event.iter() {
         if let Ok(systems) = systems_query.get(ev.structure_entity) {
             if let Ok(mut system) = systems.query_mut(&mut system_query) {
-                if let Some(prop) =
-                    energy_generation_blocks.get(blocks.from_numeric_id(ev.old_block))
-                {
+                if let Some(prop) = energy_generation_blocks.get(blocks.from_numeric_id(ev.old_block)) {
                     system.block_removed(prop);
                 }
 
-                if let Some(prop) =
-                    energy_generation_blocks.get(blocks.from_numeric_id(ev.new_block))
-                {
+                if let Some(prop) = energy_generation_blocks.get(blocks.from_numeric_id(ev.new_block)) {
                     system.block_added(prop);
                 }
             }
@@ -140,11 +120,7 @@ fn structure_loaded_event(
     }
 }
 
-pub(super) fn register<T: States + Clone + Copy>(
-    app: &mut App,
-    post_loading_state: T,
-    playing_state: T,
-) {
+pub(super) fn register<T: States + Clone + Copy>(app: &mut App, post_loading_state: T, playing_state: T) {
     app.insert_resource(EnergyGenerationBlocks::default())
         .add_systems((
             register_energy_blocks.in_schedule(OnEnter(post_loading_state)),

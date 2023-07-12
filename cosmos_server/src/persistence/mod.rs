@@ -19,9 +19,7 @@ pub mod loading;
 pub mod player_loading;
 pub mod saving;
 
-#[derive(
-    Component, Debug, Reflect, FromReflect, Serialize, Deserialize, PartialEq, Eq, Clone, Hash,
-)]
+#[derive(Component, Debug, Reflect, FromReflect, Serialize, Deserialize, PartialEq, Eq, Clone, Hash)]
 /// NOT ALL ENTITIES WILL HAVE THIS ON THEM!
 ///
 /// Only entities that have been loaded or saved will have this. This is a unique identifier for
@@ -152,19 +150,13 @@ impl SaveFileIdentifier {
     /// Creates a new SaveFileIdentifier from this location & entity id
     pub fn as_child(this_identifier: impl Into<String>, belongs_to: SaveFileIdentifier) -> Self {
         Self {
-            identifier_type: SaveFileIdentifierType::BelongsTo((
-                Box::new(belongs_to),
-                this_identifier.into(),
-            )),
+            identifier_type: SaveFileIdentifierType::BelongsTo((Box::new(belongs_to), this_identifier.into())),
         }
     }
 
     /// Gets the file path a given entity will be saved to.
     pub fn get_save_file_path(&self) -> String {
-        format!(
-            "{}.cent",
-            self.get_save_file_directory(Self::get_save_file_name)
-        )
+        format!("{}.cent", self.get_save_file_directory(Self::get_save_file_name))
     }
 
     /// Gets the save file name without the .cent extension, but not the whole path
@@ -189,9 +181,7 @@ impl SaveFileIdentifier {
     fn get_save_file_directory(&self, base_get_save_file_name: impl Fn(&Self) -> String) -> String {
         match &self.identifier_type {
             SaveFileIdentifierType::Base((_, sector, _)) => {
-                let directory = sector
-                    .map(Self::get_sector_path)
-                    .unwrap_or("world/nowhere".into());
+                let directory = sector.map(Self::get_sector_path).unwrap_or("world/nowhere".into());
 
                 format!("{directory}/{}", base_get_save_file_name(self))
             }

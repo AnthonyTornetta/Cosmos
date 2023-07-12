@@ -116,12 +116,9 @@ fn load_stars_near_players(
                     location: Location::new(
                         Vec3::ZERO,
                         Sector::new(
-                            ((system.x() as f32 + STAR_POS_OFFSET) * SYSTEM_SECTORS as f32)
-                                as SystemUnit,
-                            ((system.y() as f32 + STAR_POS_OFFSET) * SYSTEM_SECTORS as f32)
-                                as SystemUnit,
-                            ((system.z() as f32 + STAR_POS_OFFSET) * SYSTEM_SECTORS as f32)
-                                as SystemUnit,
+                            ((system.x() as f32 + STAR_POS_OFFSET) * SYSTEM_SECTORS as f32) as SystemUnit,
+                            ((system.y() as f32 + STAR_POS_OFFSET) * SYSTEM_SECTORS as f32) as SystemUnit,
+                            ((system.z() as f32 + STAR_POS_OFFSET) * SYSTEM_SECTORS as f32) as SystemUnit,
                         ),
                     ),
                     ..Default::default()

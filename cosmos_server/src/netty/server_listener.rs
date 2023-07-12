@@ -12,8 +12,7 @@ use cosmos_core::{
     entities::player::Player,
     events::structure::change_pilot_event::ChangePilotEvent,
     netty::{
-        client_reliable_messages::ClientReliableMessages,
-        client_unreliable_messages::ClientUnreliableMessages,
+        client_reliable_messages::ClientReliableMessages, client_unreliable_messages::ClientUnreliableMessages,
         server_reliable_messages::ServerReliableMessages,
     },
     structure::{
@@ -50,22 +49,13 @@ pub fn server_listen_messages(
     mut ship_movement_event_writer: EventWriter<ShipSetMovementEvent>,
     mut pilot_change_event_writer: EventWriter<ChangePilotEvent>,
     pilot_query: Query<&Pilot>,
-    mut change_player_query: Query<
-        (
-            &mut Transform,
-            &mut Location,
-            &mut PlayerLooking,
-            &mut Velocity,
-        ),
-        With<Player>,
-    >,
+    mut change_player_query: Query<(&mut Transform, &mut Location, &mut PlayerLooking, &mut Velocity), With<Player>>,
     non_player_transform_query: Query<&Transform, Without<Player>>,
     mut requested_entities_writer: EventWriter<RequestedEntityEvent>,
     mut request_chunk_event_writer: EventWriter<RequestChunkEvent>,
 ) {
     for client_id in server.clients_id().into_iter() {
-        while let Some(message) = server.receive_message(client_id, NettyChannelClient::Unreliable)
-        {
+        while let Some(message) = server.receive_message(client_id, NettyChannelClient::Unreliable) {
             if let Some(player_entity) = lobby.player_from_id(client_id) {
                 let Ok(command) = cosmos_encoder::deserialize::<ClientUnreliableMessages>(&message) else {
                     eprintln!("ERROR DECODING CLIENT MESSAGE!");
@@ -74,12 +64,8 @@ pub fn server_listen_messages(
 
                 match command {
                     ClientUnreliableMessages::PlayerBody { body, looking } => {
-                        if let Ok((
-                            mut transform,
-                            mut location,
-                            mut currently_looking,
-                            mut velocity,
-                        )) = change_player_query.get_mut(player_entity)
+                        if let Ok((mut transform, mut location, mut currently_looking, mut velocity)) =
+                            change_player_query.get_mut(player_entity)
                         {
                             location.set_from(&body.location);
                             location.last_transform_loc = Some(transform.translation);
@@ -92,8 +78,7 @@ pub fn server_listen_messages(
                         if let Ok(pilot) = pilot_query.get(player_entity) {
                             let ship = pilot.entity;
 
-                            ship_movement_event_writer
-                                .send(ShipSetMovementEvent { movement, ship });
+                            ship_movement_event_writer.send(ShipSetMovementEvent { movement, ship });
                         }
                     }
                     ClientUnreliableMessages::ShipStatus { use_system } => {
@@ -147,19 +132,12 @@ pub fn server_listen_messages(
                     structure_entity,
                     chunk_coords: (cx as usize, cy as usize, cz as usize),
                 }),
-                ClientReliableMessages::BreakBlock {
-                    structure_entity,
-                    x,
-                    y,
-                    z,
-                } => {
+                ClientReliableMessages::BreakBlock { structure_entity, x, y, z } => {
                     if let Some(player_entity) = lobby.player_from_id(client_id) {
                         break_block_event.send(BlockBreakEvent {
                             structure_entity,
                             breaker: player_entity,
-                            structure_block: StructureBlock::new(
-                                x as usize, y as usize, z as usize,
-                            ),
+                            structure_block: StructureBlock::new(x as usize, y as usize, z as usize),
                         });
                     }
                 }
@@ -175,9 +153,7 @@ pub fn server_listen_messages(
                     if let Some(player_entity) = lobby.player_from_id(client_id) {
                         place_block_event.send(BlockPlaceEvent {
                             structure_entity,
-                            structure_block: StructureBlock::new(
-                                x as usize, y as usize, z as usize,
-                            ),
+                            structure_block: StructureBlock::new(x as usize, y as usize, z as usize),
                             block_id,
                             block_up,
                             inventory_slot: inventory_slot as usize,
@@ -185,12 +161,7 @@ pub fn server_listen_messages(
                         });
                     }
                 }
-                ClientReliableMessages::InteractWithBlock {
-                    structure_entity,
-                    x,
-                    y,
-                    z,
-                } => {
+                ClientReliableMessages::InteractWithBlock { structure_entity, x, y, z } => {
                     block_interact_event.send(BlockInteractEvent {
                         structure_entity,
                         structure_block: StructureBlock::new(x as usize, y as usize, z as usize),
@@ -199,13 +170,9 @@ pub fn server_listen_messages(
                 }
                 ClientReliableMessages::CreateShip { name: _name } => {
                     if let Some(client) = lobby.player_from_id(client_id) {
-                        if let Ok((transform, location, looking, _)) =
-                            change_player_query.get(client)
-                        {
-                            let ship_location = *location
-                                + transform
-                                    .rotation
-                                    .mul_vec3(looking.rotation.mul_vec3(Vec3::new(0.0, 0.0, -4.0)));
+                        if let Ok((transform, location, looking, _)) = change_player_query.get(client) {
+                            let ship_location =
+                                *location + transform.rotation.mul_vec3(looking.rotation.mul_vec3(Vec3::new(0.0, 0.0, -4.0)));
 
                             create_ship_event_writer.send(CreateShipEvent {
                                 ship_location,
@@ -239,9 +206,7 @@ pub fn server_listen_messages(
                         }
                     }
                 }
-                ClientReliableMessages::ChangeRenderDistance {
-                    mut render_distance,
-                } => {
+                ClientReliableMessages::ChangeRenderDistance { mut render_distance } => {
                     if let Some(player_entity) = lobby.player_from_id(client_id) {
                         if let Some(mut e) = commands.get_entity(player_entity) {
                             if render_distance.sector_range > 8 {
@@ -261,9 +226,8 @@ pub fn server_listen_messages(
                         if let Some(mut e) = commands.get_entity(player_entity) {
                             // This should be verified in the future to make sure the parent of the player is actually a ship
                             e.remove_parent();
-                            if let Ok((player_trans, mut player_loc)) = change_player_query
-                                .get_mut(player_entity)
-                                .map(|(x, y, _, _)| (x, y))
+                            if let Ok((player_trans, mut player_loc)) =
+                                change_player_query.get_mut(player_entity).map(|(x, y, _, _)| (x, y))
                             {
                                 player_loc.last_transform_loc = Some(player_trans.translation);
                             }
@@ -271,9 +235,7 @@ pub fn server_listen_messages(
                             server.broadcast_message_except(
                                 client_id,
                                 NettyChannelServer::Reliable,
-                                cosmos_encoder::serialize(
-                                    &ServerReliableMessages::PlayerLeaveShip { player_entity },
-                                ),
+                                cosmos_encoder::serialize(&ServerReliableMessages::PlayerLeaveShip { player_entity }),
                             );
                         }
                     }
@@ -286,9 +248,7 @@ pub fn server_listen_messages(
 
                             // This is stupid, but when a parent changes the transform isn't properly updated for the player, which is super cool.
                             // At some point this should be fixed in a way that doesn't require this stuck everywhere
-                            if let Ok((mut trans, _, _, _)) =
-                                change_player_query.get_mut(player_entity)
-                            {
+                            if let Ok((mut trans, _, _, _)) = change_player_query.get_mut(player_entity) {
                                 trans.translation -= non_player_transform_query
                                     .get(ship_entity)
                                     .expect("A ship should always have a transform.")
@@ -298,12 +258,10 @@ pub fn server_listen_messages(
                             server.broadcast_message_except(
                                 client_id,
                                 NettyChannelServer::Reliable,
-                                cosmos_encoder::serialize(
-                                    &ServerReliableMessages::PlayerJoinShip {
-                                        player_entity,
-                                        ship_entity,
-                                    },
-                                ),
+                                cosmos_encoder::serialize(&ServerReliableMessages::PlayerJoinShip {
+                                    player_entity,
+                                    ship_entity,
+                                }),
                             );
                         }
                     }

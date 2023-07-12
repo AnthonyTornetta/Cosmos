@@ -19,8 +19,8 @@ use std::{
 
 use bevy::{
     prelude::{
-        warn, Added, App, Children, Commands, Component, Deref, DerefMut, Entity, GlobalTransform,
-        Parent, Quat, Query, Transform, Vec3, With, Without,
+        warn, Added, App, Children, Commands, Component, Deref, DerefMut, Entity, GlobalTransform, Parent, Quat, Query, Transform, Vec3,
+        With, Without,
     },
     reflect::{FromReflect, Reflect},
     transform::TransformBundle,
@@ -44,9 +44,7 @@ pub const SYSTEM_SECTORS: u32 = 100;
 /// This is the size in blocks of one system
 pub const SYSTEM_DIMENSIONS: f32 = SYSTEM_SECTORS as f32 * SECTOR_DIMENSIONS;
 
-#[derive(
-    Default, Component, Debug, PartialEq, Serialize, Deserialize, Reflect, FromReflect, Clone, Copy,
-)]
+#[derive(Default, Component, Debug, PartialEq, Serialize, Deserialize, Reflect, FromReflect, Clone, Copy)]
 /// Used to represent a point in a near-infinite space
 ///
 /// Rather than represent coordinates as imprecise f32, a location is used instead.
@@ -76,20 +74,7 @@ pub struct Location {
 /// Datatype used to store sector coordinates
 pub type SectorUnit = i64;
 
-#[derive(
-    Default,
-    Component,
-    Debug,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    Reflect,
-    FromReflect,
-    Clone,
-    Copy,
-    Hash,
-    Eq,
-)]
+#[derive(Default, Component, Debug, PartialEq, Serialize, Deserialize, Reflect, FromReflect, Clone, Copy, Hash, Eq)]
 /// Represents a large region of space
 pub struct Sector(SectorUnit, SectorUnit, SectorUnit);
 
@@ -158,9 +143,7 @@ impl Add<Sector> for Sector {
 /// Datatype used to store system coordinates
 pub type SystemUnit = i64;
 
-#[derive(
-    Default, Component, Debug, PartialEq, Serialize, Deserialize, Reflect, FromReflect, Clone, Copy,
-)]
+#[derive(Default, Component, Debug, PartialEq, Serialize, Deserialize, Reflect, FromReflect, Clone, Copy)]
 /// A universe system represents a large area of sectors
 pub struct UniverseSystem(SystemUnit, SystemUnit, SystemUnit);
 
@@ -402,12 +385,9 @@ impl Location {
     pub fn absolute_coords(&self) -> Vector3<BigDecimal> {
         let sector_dims = BigDecimal::from_f32(SECTOR_DIMENSIONS).unwrap();
 
-        let local_x = BigDecimal::from_f32(self.local.x)
-            .unwrap_or_else(|| panic!("Died on {}", self.local.x));
-        let local_y = BigDecimal::from_f32(self.local.y)
-            .unwrap_or_else(|| panic!("Died on {}", self.local.y));
-        let local_z = BigDecimal::from_f32(self.local.z)
-            .unwrap_or_else(|| panic!("Died on {}", self.local.z));
+        let local_x = BigDecimal::from_f32(self.local.x).unwrap_or_else(|| panic!("Died on {}", self.local.x));
+        let local_y = BigDecimal::from_f32(self.local.y).unwrap_or_else(|| panic!("Died on {}", self.local.y));
+        let local_z = BigDecimal::from_f32(self.local.z).unwrap_or_else(|| panic!("Died on {}", self.local.z));
 
         Vector3::new(
             BigDecimal::from_i64(self.sector.x()).unwrap() * &sector_dims + local_x,
@@ -449,12 +429,7 @@ pub struct PreviousLocation(pub Location);
 fn sync_self_with_parents(
     this_entity: Entity,
     parent_query: &Query<&Parent>,
-    data_query: &mut Query<(
-        &mut Location,
-        &mut Transform,
-        &mut PreviousLocation,
-        &GlobalTransform,
-    )>,
+    data_query: &mut Query<(&mut Location, &mut Transform, &mut PreviousLocation, &GlobalTransform)>,
 ) {
     if let Ok(parent) = parent_query.get(this_entity).map(|p| p.get()) {
         sync_self_with_parents(parent, parent_query, data_query);
@@ -480,16 +455,12 @@ fn sync_self_with_parents(
 
         // Updates the location to be based on the parent's location + your absolute coordinates to your parent.
         my_loc.set_from(&(parent_loc + transform_delta_parent));
-        my_loc.last_transform_loc =
-            Some(transform_delta_parent + parent_global_trans.translation());
+        my_loc.last_transform_loc = Some(transform_delta_parent + parent_global_trans.translation());
     }
 }
 
 /// Adds the previous location component. Put this before the sync bodies & transform
-pub fn add_previous_location(
-    mut query: Query<(Entity, &Location, Option<&mut PreviousLocation>)>,
-    mut commands: Commands,
-) {
+pub fn add_previous_location(mut query: Query<(Entity, &Location, Option<&mut PreviousLocation>)>, mut commands: Commands) {
     for (entity, loc, prev_loc) in query.iter_mut() {
         if let Some(mut prev_loc) = prev_loc {
             prev_loc.0 = *loc;
@@ -503,12 +474,7 @@ pub fn add_previous_location(
 pub fn handle_child_syncing(
     initial_query: Query<Entity, (Without<Children>, Without<ChunkEntity>)>,
     parent_query: Query<&Parent>,
-    mut data_query: Query<(
-        &mut Location,
-        &mut Transform,
-        &mut PreviousLocation,
-        &GlobalTransform,
-    )>,
+    mut data_query: Query<(&mut Location, &mut Transform, &mut PreviousLocation, &GlobalTransform)>,
 ) {
     for entity in initial_query.iter() {
         sync_self_with_parents(entity, &parent_query, &mut data_query);
@@ -516,10 +482,7 @@ pub fn handle_child_syncing(
 }
 
 fn on_add_location_without_transform(
-    mut query: Query<
-        (Entity, &mut Location, Option<&BundleStartingRotation>),
-        (Added<Location>, Without<Transform>, Without<PlayerWorld>),
-    >,
+    mut query: Query<(Entity, &mut Location, Option<&BundleStartingRotation>), (Added<Location>, Without<Transform>, Without<PlayerWorld>)>,
     worlds: Query<(&Location, &PhysicsWorld), With<PlayerWorld>>,
     mut commands: Commands,
 ) {
@@ -540,23 +503,17 @@ fn on_add_location_without_transform(
 
         let rotation = starting_rotation.map(|x| x.0).unwrap_or(Quat::IDENTITY);
 
-        if let (Some(best_physics_world), Some(best_player_world_loc)) =
-            (best_physics_world, best_player_world_loc)
-        {
-            let transform =
-                Transform::from_translation(best_player_world_loc.relative_coords_to(&my_loc))
-                    .with_rotation(rotation);
+        if let (Some(best_physics_world), Some(best_player_world_loc)) = (best_physics_world, best_player_world_loc) {
+            let transform = Transform::from_translation(best_player_world_loc.relative_coords_to(&my_loc)).with_rotation(rotation);
 
             my_loc.last_transform_loc = Some(transform.translation);
 
-            commands.entity(needs_transform_entity).insert((
-                TransformBundle::from_transform(transform),
-                best_physics_world,
-            ));
+            commands
+                .entity(needs_transform_entity)
+                .insert((TransformBundle::from_transform(transform), best_physics_world));
         } else {
             warn!("Location bundle added before there was a player world!");
-            let transform =
-                Transform::from_translation(my_loc.absolute_coords_f32()).with_rotation(rotation);
+            let transform = Transform::from_translation(my_loc.absolute_coords_f32()).with_rotation(rotation);
 
             my_loc.last_transform_loc = Some(transform.translation);
 
@@ -606,11 +563,7 @@ mod tests {
         let l1 = Location::new(Vec3::new(15.0, 15.0, 15.0), Sector::new(20, -20, 20));
         let l2 = Location::new(Vec3::new(-15.0, -15.0, -15.0), Sector::new(19, -21, 19));
 
-        let result = Vec3::new(
-            -30.0 - SECTOR_DIMENSIONS,
-            -30.0 - SECTOR_DIMENSIONS,
-            -30.0 - SECTOR_DIMENSIONS,
-        );
+        let result = Vec3::new(-30.0 - SECTOR_DIMENSIONS, -30.0 - SECTOR_DIMENSIONS, -30.0 - SECTOR_DIMENSIONS);
 
         assert_eq!(l1.relative_coords_to(&l2), result);
     }
@@ -620,11 +573,7 @@ mod tests {
         let l1 = Location::new(Vec3::new(15.0, 15.0, 15.0), Sector::new(20, -20, 20));
         let l2 = Location::new(Vec3::new(-15.0, -15.0, -15.0), Sector::new(21, -19, 21));
 
-        let result = Vec3::new(
-            -30.0 + SECTOR_DIMENSIONS,
-            -30.0 + SECTOR_DIMENSIONS,
-            -30.0 + SECTOR_DIMENSIONS,
-        );
+        let result = Vec3::new(-30.0 + SECTOR_DIMENSIONS, -30.0 + SECTOR_DIMENSIONS, -30.0 + SECTOR_DIMENSIONS);
 
         assert_eq!(l1.relative_coords_to(&l2), result);
     }

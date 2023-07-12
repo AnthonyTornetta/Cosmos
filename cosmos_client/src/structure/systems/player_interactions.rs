@@ -1,15 +1,13 @@
 use bevy::{
     prelude::{
-        Added, App, Commands, Component, Entity, Input, IntoSystemConfigs, KeyCode, MouseButton,
-        OnUpdate, Query, RemovedComponents, Res, ResMut, With,
+        Added, App, Commands, Component, Entity, Input, IntoSystemConfigs, KeyCode, MouseButton, OnUpdate, Query, RemovedComponents, Res,
+        ResMut, With,
     },
     reflect::{FromReflect, Reflect},
 };
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
-    netty::{
-        client_unreliable_messages::ClientUnreliableMessages, cosmos_encoder, NettyChannelClient,
-    },
+    netty::{client_unreliable_messages::ClientUnreliableMessages, cosmos_encoder, NettyChannelClient},
     structure::ship::pilot::Pilot,
 };
 
@@ -33,8 +31,7 @@ fn check_system_in_use(
     mut client: ResMut<RenetClient>,
 ) {
     if let Ok(mut hovered_system) = query.get_single_mut() {
-        hovered_system.active =
-            input_handler.check_pressed(CosmosInputs::UseSelectedSystem, &keys, &mouse);
+        hovered_system.active = input_handler.check_pressed(CosmosInputs::UseSelectedSystem, &keys, &mouse);
 
         let active_system = if hovered_system.active {
             Some(hovered_system.system_index as u32)
@@ -44,17 +41,12 @@ fn check_system_in_use(
 
         client.send_message(
             NettyChannelClient::Unreliable,
-            cosmos_encoder::serialize(&ClientUnreliableMessages::ShipActiveSystem {
-                active_system,
-            }),
+            cosmos_encoder::serialize(&ClientUnreliableMessages::ShipActiveSystem { active_system }),
         );
     }
 }
 
-fn check_became_pilot(
-    mut commands: Commands,
-    query: Query<Entity, (Added<Pilot>, With<LocalPlayer>)>,
-) {
+fn check_became_pilot(mut commands: Commands, query: Query<Entity, (Added<Pilot>, With<LocalPlayer>)>) {
     for ent in query.iter() {
         commands.entity(ent).insert(HoveredSystem::default());
     }
@@ -106,14 +98,6 @@ fn check_removed_pilot(mut commands: Commands, mut removed: RemovedComponents<Pi
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(
-        (
-            check_system_in_use,
-            check_became_pilot,
-            check_removed_pilot,
-            swap_selected,
-        )
-            .in_set(OnUpdate(GameState::Playing)),
-    )
-    .register_type::<HoveredSystem>();
+    app.add_systems((check_system_in_use, check_became_pilot, check_removed_pilot, swap_selected).in_set(OnUpdate(GameState::Playing)))
+        .register_type::<HoveredSystem>();
 }

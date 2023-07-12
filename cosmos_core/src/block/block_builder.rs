@@ -37,11 +37,6 @@ impl BlockBuilder {
 
     /// Creates that block
     pub fn create(&self) -> Block {
-        Block::new(
-            &self.properties,
-            u16::MAX,
-            self.unlocalized_name.clone(),
-            self.density,
-        )
+        Block::new(&self.properties, u16::MAX, self.unlocalized_name.clone(), self.density)
     }
 }

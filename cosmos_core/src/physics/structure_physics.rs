@@ -8,16 +8,12 @@ use crate::registry::Registry;
 use crate::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
 use crate::structure::events::ChunkSetEvent;
 use crate::structure::Structure;
-use bevy::prelude::{
-    App, Commands, Component, Entity, EventReader, EventWriter, IntoSystemConfigs, Query, Res,
-};
+use bevy::prelude::{App, Commands, Component, Entity, EventReader, EventWriter, IntoSystemConfigs, Query, Res};
 use bevy::reflect::{FromReflect, Reflect};
 use bevy::utils::HashSet;
 use bevy_rapier3d::math::Vect;
 use bevy_rapier3d::na::Vector3;
-use bevy_rapier3d::prelude::{
-    Ccd, Collider, ColliderMassProperties, ReadMassProperties, RigidBody, Rot,
-};
+use bevy_rapier3d::prelude::{Ccd, Collider, ColliderMassProperties, ReadMassProperties, RigidBody, Rot};
 use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 
 type GenerateCollider = (Collider, f32);
@@ -205,9 +201,7 @@ fn listen_for_new_physics_event(
 ) {
     let commands_mutex = Mutex::new(commands);
 
-    let mut to_process = event_reader
-        .iter()
-        .collect::<Vec<&ChunkNeedsPhysicsEvent>>();
+    let mut to_process = event_reader.iter().collect::<Vec<&ChunkNeedsPhysicsEvent>>();
 
     to_process.dedup();
 
@@ -227,11 +221,7 @@ fn listen_for_new_physics_event(
 
         let chunk_collider = generate_chunk_collider(chunk, &blocks);
 
-        if let Some(mut structure_entity_commands) = commands_mutex
-            .lock()
-            .unwrap()
-            .get_entity(ev.structure_entity)
-        {
+        if let Some(mut structure_entity_commands) = commands_mutex.lock().unwrap().get_entity(ev.structure_entity) {
             structure_entity_commands.remove::<RigidBody>().insert(*rb);
         }
 
