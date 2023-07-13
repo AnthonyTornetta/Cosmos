@@ -61,11 +61,15 @@ impl TBiosphere<GrassBiosphereMarker, GrassChunkNeedsGeneratedEvent> for GrassBi
 }
 
 fn make_block_ranges(block_registry: Res<Registry<Block>>, mut commands: Commands) {
-    commands.insert_resource(BlockRanges::<GrassBiosphereMarker>::new(vec![
-        (block_registry.from_id("cosmos:stone").expect("Block missing").clone(), 5),
-        (block_registry.from_id("cosmos:dirt").expect("Block missing").clone(), 1),
-        (block_registry.from_id("cosmos:grass").expect("Block missing").clone(), 0),
-    ]));
+    commands.insert_resource(
+        BlockRanges::<GrassBiosphereMarker>::default()
+            .with_range("cosmos:stone", &block_registry, 5)
+            .expect("Stone missing")
+            .with_range("cosmos:dirt", &block_registry, 1)
+            .expect("Dirt missing")
+            .with_range("cosmos:grass", &block_registry, 0)
+            .expect("Grass missing"),
+    );
 }
 
 /// Sets the given block with the given relative rotation at the correct offsets, taking planet face into account.

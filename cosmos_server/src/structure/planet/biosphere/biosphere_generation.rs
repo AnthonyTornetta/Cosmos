@@ -9,6 +9,7 @@ use bevy::{
 use cosmos_core::{
     block::{Block, BlockFace},
     physics::location::Location,
+    registry::Registry,
     structure::{
         chunk::{Chunk, CHUNK_DIMENSIONS},
         planet::{ChunkFaces, Planet},
@@ -107,7 +108,7 @@ pub fn notify_when_done_generating_terrain<T: Component>(
 }
 
 #[inline]
-fn generate_face_chunk<T: Component + Clone>(
+fn generate_face_chunk<T: Component + Clone + Default>(
     (sx, sy, sz): (usize, usize, usize),
     (structure_x, structure_y, structure_z): (f64, f64, f64),
     s_dimensions: usize,
@@ -155,7 +156,7 @@ fn generate_face_chunk<T: Component + Clone>(
     }
 }
 
-fn generate_edge_chunk<T: Component + Clone>(
+fn generate_edge_chunk<T: Component + Clone + Default>(
     (sx, sy, sz): (usize, usize, usize),
     (structure_x, structure_y, structure_z): (f64, f64, f64),
     s_dimensions: usize,
@@ -301,7 +302,7 @@ fn generate_edge_chunk<T: Component + Clone>(
     }
 }
 
-fn generate_corner_chunk<T: Component + Clone>(
+fn generate_corner_chunk<T: Component + Clone + Default>(
     (sx, sy, sz): (usize, usize, usize),
     (structure_x, structure_y, structure_z): (f64, f64, f64),
     s_dimensions: usize,
@@ -451,18 +452,66 @@ fn generate_corner_chunk<T: Component + Clone>(
 
 /// Stores which blocks make up each biosphere, and how far below the top solid block each block generates.
 /// Blocks in ascending order ("stone" = 5 first, "grass" = 0 last).
-#[derive(Resource, Clone)]
-pub struct BlockRanges<T: Component + Clone> {
+#[derive(Resource, Clone, Default, Debug)]
+pub struct BlockRanges<T: Component + Clone + Default> {
     _phantom: PhantomData<T>,
     ranges: Vec<(Block, usize)>,
 }
 
-impl<T: Component + Clone> BlockRanges<T> {
+#[derive(Debug)]
+/// Errors generated when initally setting up the block ranges
+pub enum BlockRangeError<T: Component + Clone + Default> {
+    /// This means the block id provided was not found in the block registry
+    MissingBlock(BlockRanges<T>),
+}
+
+impl<T: Component + Clone + Default> BlockRanges<T> {
     /// Creates a new block range, for each planet type to specify its blocks.
-    pub fn new(ranges: Vec<(Block, usize)>) -> Self {
-        BlockRanges::<T> {
-            _phantom: Default::default(),
-            ranges,
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Use this to construct the various ranges of the blocks.
+    ///
+    /// The order you add the ranges in does not matter.
+    ///
+    /// n_blocks_from_top represents how many blocks down this block will appear.
+    /// For example, If grass was 0, dirt was 1, and stone was 5, it would generate as:
+    ///
+    /// - Grass
+    /// - Dirt
+    /// - Dirt
+    /// - Dirt
+    /// - Dirt
+    /// - Stone
+    /// - Stone
+    /// - Stone
+    /// - ... stone down to the bottom
+    pub fn with_range(
+        mut self,
+        block_id: &str,
+        block_registry: &Registry<Block>,
+        n_blocks_from_top: usize,
+    ) -> Result<Self, BlockRangeError<T>> {
+        if let Some(block) = block_registry.from_id(block_id) {
+            let first_smaller_idx = self
+                .ranges
+                .iter()
+                .enumerate()
+                .find(|(_, (_, other_n_from_top))| *other_n_from_top < n_blocks_from_top)
+                .map(|x| x.0);
+
+            let new_val = (block.clone(), n_blocks_from_top);
+
+            if let Some(first_smaller_idx) = first_smaller_idx {
+                self.ranges.insert(first_smaller_idx, new_val);
+            } else {
+                self.ranges.push(new_val);
+            }
+
+            Ok(self)
+        } else {
+            Err(BlockRangeError::MissingBlock(self))
         }
     }
 
@@ -495,7 +544,7 @@ impl<T: Component + Clone> BlockRanges<T> {
 }
 
 /// Calls generate_face_chunk, generate_edge_chunk, and generate_corner_chunk to generate the chunks of a planet.
-pub fn generate_planet<T: Component + Clone, E: TGenerateChunkEvent + Send + Sync + 'static>(
+pub fn generate_planet<T: Component + Clone + Default, E: TGenerateChunkEvent + Send + Sync + 'static>(
     mut query: Query<(&mut Structure, &Location)>,
     mut generating: ResMut<GeneratingChunks<T>>,
     mut events: EventReader<E>,
