@@ -17,6 +17,7 @@ use crate::GameState;
 
 use super::{
     biosphere_generation::{generate_planet, notify_when_done_generating_terrain, BlockRanges, GenerateChunkFeaturesEvent},
+    generation_tools::fill,
     register_biosphere, TBiosphere, TGenerateChunkEvent, TemperatureRange,
 };
 
@@ -70,28 +71,6 @@ fn make_block_ranges(block_registry: Res<Registry<Block>>, mut commands: Command
             .with_range("cosmos:grass", &block_registry, 0)
             .expect("Grass missing"),
     );
-}
-
-/// Sets the given block with the given relative rotation at the correct offsets, taking planet face into account.
-fn fill(
-    origin: (usize, usize, usize),
-    offsets: &[(i32, i32, i32)],
-    block: &Block,
-    block_up: BlockFace,
-    planet_face: BlockFace,
-    structure: &mut Structure,
-    blocks: &Registry<Block>,
-    event_writer: &mut EventWriter<BlockChangedEvent>,
-) {
-    for offset in offsets {
-        structure.set_block_at_tuple(
-            rotate(origin, *offset, planet_face),
-            block,
-            BlockFace::rotate_face(block_up, planet_face),
-            blocks,
-            Some(event_writer),
-        );
-    }
 }
 
 #[inline]

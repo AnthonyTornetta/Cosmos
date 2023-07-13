@@ -35,6 +35,7 @@ use self::biosphere_generation::GenerateChunkFeaturesEvent;
 use super::generation::planet_generator::check_needs_generated_system;
 
 pub mod biosphere_generation;
+pub mod generation_tools;
 pub mod grass_biosphere;
 pub mod test_all_stone_biosphere;
 
