@@ -1,15 +1,11 @@
 //! Some useful utilities for generating terrain
 
-use bevy::prelude::{
-    App, Commands, Component, Entity, EventReader, EventWriter, IntoSystemAppConfig, IntoSystemConfigs, OnEnter, OnUpdate, Query, Res,
-};
+use bevy::prelude::EventWriter;
 use cosmos_core::{
     block::{Block, BlockFace},
     events::block_events::BlockChangedEvent,
-    physics::location::Location,
     registry::Registry,
-    structure::{chunk::CHUNK_DIMENSIONS, planet::Planet, rotate, ChunkInitEvent, Structure},
-    utils::resource_wrapper::ResourceWrapper,
+    structure::{rotate, Structure},
 };
 
 /// Sets the given block with the given relative rotation at the correct offsets, taking planet face into account.
