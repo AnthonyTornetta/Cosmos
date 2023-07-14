@@ -22,10 +22,6 @@ use noise::NoiseFn;
 
 use super::{GeneratingChunk, GeneratingChunks, TGenerateChunkEvent};
 
-const AMPLITUDE: f64 = 7.0;
-const DELTA: f64 = 0.05;
-const ITERATIONS: usize = 9;
-
 /// Some chunks might not be getting flattened, or maybe I'm just crazy.
 /// Within (flattening_fraction * planet size) of the 45 starts the flattening.
 const FLAT_FRACTION: f64 = 0.4;
@@ -39,15 +35,18 @@ fn get_top_height(
     s_dimensions: usize,
     noise_generator: &noise::OpenSimplex,
     middle_air_start: usize,
+    amplitude: f64,
+    delta: f64,
+    iterations: usize,
 ) -> usize {
     let mut depth: f64 = 0.0;
-    for iteration in 1..=ITERATIONS {
+    for iteration in 1..=iterations {
         let iteration = iteration as f64;
         depth += noise_generator.get([
-            (x as f64 + structure_x) * (DELTA / iteration),
-            (y as f64 + structure_y) * (DELTA / iteration),
-            (z as f64 + structure_z) * (DELTA / iteration),
-        ]) * AMPLITUDE
+            (x as f64 + structure_x) * (delta / iteration),
+            (y as f64 + structure_y) * (delta / iteration),
+            (z as f64 + structure_z) * (delta / iteration),
+        ]) * amplitude
             * iteration;
     }
 
@@ -117,6 +116,9 @@ fn generate_face_chunk<T: Component + Clone + Default>(
     block_ranges: &BlockRanges<T>,
     chunk: &mut Chunk,
     up: BlockFace,
+    amplitude: f64,
+    delta: f64,
+    iterations: usize,
 ) {
     for i in 0..CHUNK_DIMENSIONS {
         for j in 0..CHUNK_DIMENSIONS {
@@ -135,6 +137,9 @@ fn generate_face_chunk<T: Component + Clone + Default>(
                 s_dimensions,
                 noise_generator,
                 middle_air_start,
+                amplitude,
+                delta,
+                iterations,
             );
 
             for height in 0..CHUNK_DIMENSIONS {
@@ -166,6 +171,9 @@ fn generate_edge_chunk<T: Component + Clone + Default>(
     chunk: &mut Chunk,
     j_up: BlockFace,
     k_up: BlockFace,
+    amplitude: f64,
+    delta: f64,
+    iterations: usize,
 ) {
     let mut j_top = [[0; CHUNK_DIMENSIONS]; CHUNK_DIMENSIONS];
     for (i, layer) in j_top.iter_mut().enumerate() {
@@ -193,6 +201,9 @@ fn generate_edge_chunk<T: Component + Clone + Default>(
                 s_dimensions,
                 noise_generator,
                 middle_air_start,
+                amplitude,
+                delta,
+                iterations,
             );
 
             // Don't let the top fall "below" the 45.
@@ -235,6 +246,9 @@ fn generate_edge_chunk<T: Component + Clone + Default>(
                 s_dimensions,
                 noise_generator,
                 middle_air_start,
+                amplitude,
+                delta,
+                iterations,
             );
 
             // First height, and also the height of the other 45 bc of math.
@@ -313,6 +327,9 @@ fn generate_corner_chunk<T: Component + Clone + Default>(
     x_up: BlockFace,
     y_up: BlockFace,
     z_up: BlockFace,
+    amplitude: f64,
+    delta: f64,
+    iterations: usize,
 ) {
     // x top height cache.
     let mut x_top = [[0; CHUNK_DIMENSIONS]; CHUNK_DIMENSIONS];
@@ -331,6 +348,9 @@ fn generate_corner_chunk<T: Component + Clone + Default>(
                 s_dimensions,
                 noise_generator,
                 middle_air_start,
+                amplitude,
+                delta,
+                iterations,
             );
 
             // Don't let the top height fall "below" the 45s.
@@ -363,6 +383,9 @@ fn generate_corner_chunk<T: Component + Clone + Default>(
                 s_dimensions,
                 noise_generator,
                 middle_air_start,
+                amplitude,
+                delta,
+                iterations,
             );
 
             // Don't let the top height fall "below" the 45s.
@@ -395,6 +418,9 @@ fn generate_corner_chunk<T: Component + Clone + Default>(
                 s_dimensions,
                 noise_generator,
                 middle_air_start,
+                amplitude,
+                delta,
+                iterations,
             );
 
             let x_height = match x_up {
@@ -446,6 +472,43 @@ fn generate_corner_chunk<T: Component + Clone + Default>(
                     chunk.set_block_at(i, j, k, block, block_up);
                 }
             }
+        }
+    }
+}
+
+#[derive(Debug, Resource, Clone, Copy)]
+/// Stores the information required by the noise-function terrain generation to create your terrain.
+pub struct GenerationParemeters<T: Component + Clone + Default> {
+    /// How big of a difference each x/y/z coordinate makes. Higher values
+    /// procude more jagged-looking terrain.
+    pub delta: f64,
+    /// How many times the noise function will be applied. 9 is generally a good number,
+    /// but experiment. Higher values will result in higher/lower extremes.
+    pub iterations: usize,
+    /// This determines how high/low the terrain can generate. If `iterations` != 1 then
+    /// this does not exactly correlate to how tall the terrain will be.
+    pub amplitude: f64,
+    _phantom: PhantomData<T>,
+}
+
+impl<T: Component + Clone + Default> GenerationParemeters<T> {
+    /// Stores the information required by the noise-function terrain generation to create your terrain.
+    /// * `delta`
+    /// How big of a difference each x/y/z coordinate makes. Higher values
+    /// procude more jagged-looking terrain.
+    /// * `amplitude`
+    /// This determines how high/low the terrain can generate. If `iterations` != 1 then
+    /// this does not exactly correlate to how tall the terrain will be.
+    /// * `iterations`
+    /// How many times the noise function will be applied. 9 is generally a good number,
+    /// but experiment. Higher values will result in higher/lower extremes.
+
+    pub fn new(delta: f64, amplitude: f64, iterations: usize) -> Self {
+        Self {
+            _phantom: PhantomData::default(),
+            delta,
+            amplitude,
+            iterations,
         }
     }
 }
@@ -550,6 +613,7 @@ pub fn generate_planet<T: Component + Clone + Default, E: TGenerateChunkEvent + 
     mut events: EventReader<E>,
     noise_generator: Res<ResourceWrapper<noise::OpenSimplex>>,
     block_ranges: Res<BlockRanges<T>>,
+    generation_parameters: Res<GenerationParemeters<T>>,
 ) {
     let chunks = events
         .iter()
@@ -586,6 +650,7 @@ pub fn generate_planet<T: Component + Clone + Default, E: TGenerateChunkEvent + 
         for (mut chunk, s_dimensions, location, structure_entity) in chunks {
             let block_ranges = block_ranges.clone();
             let noise_generator = **noise_generator;
+            let generation_parameters = generation_parameters.clone();
 
             let task = thread_pool.spawn(async move {
                 let timer = UtilsTimer::start();
@@ -616,6 +681,9 @@ pub fn generate_planet<T: Component + Clone + Default, E: TGenerateChunkEvent + 
                             &block_ranges,
                             &mut chunk,
                             up,
+                            generation_parameters.amplitude,
+                            generation_parameters.delta,
+                            generation_parameters.iterations,
                         );
                     }
                     ChunkFaces::Edge(j_up, k_up) => {
@@ -629,6 +697,9 @@ pub fn generate_planet<T: Component + Clone + Default, E: TGenerateChunkEvent + 
                             &mut chunk,
                             j_up,
                             k_up,
+                            generation_parameters.amplitude,
+                            generation_parameters.delta,
+                            generation_parameters.iterations,
                         );
                     }
                     ChunkFaces::Corner(x_up, y_up, z_up) => {
@@ -643,6 +714,9 @@ pub fn generate_planet<T: Component + Clone + Default, E: TGenerateChunkEvent + 
                             x_up,
                             y_up,
                             z_up,
+                            generation_parameters.amplitude,
+                            generation_parameters.delta,
+                            generation_parameters.iterations,
                         );
                     }
                 }

@@ -37,7 +37,7 @@ use super::generation::planet_generator::check_needs_generated_system;
 pub mod biosphere_generation;
 pub mod generation_tools;
 pub mod grass_biosphere;
-pub mod test_all_stone_biosphere;
+pub mod molten_biosphere;
 
 #[derive(Debug)]
 /// This event is generated whenever a structure needs a biosphere
@@ -221,5 +221,5 @@ pub(super) fn register(app: &mut App) {
         .add_system(add_biosphere);
 
     grass_biosphere::register(app);
-    test_all_stone_biosphere::register(app);
+    molten_biosphere::register(app);
 }
