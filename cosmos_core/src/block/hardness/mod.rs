@@ -61,6 +61,7 @@ fn register_block_hardness(blocks: Res<Registry<Block>>, mut registry: ResMut<Re
     register_hardness(&mut registry, 10.0, &blocks, "cosmos:grass");
     register_hardness(&mut registry, 10.0, &blocks, "cosmos:dirt");
     register_hardness(&mut registry, 50.0, &blocks, "cosmos:stone");
+    register_hardness(&mut registry, 50.0, &blocks, "cosmos:molten_stone");
 
     register_hardness(&mut registry, 30.0, &blocks, "cosmos:log");
 

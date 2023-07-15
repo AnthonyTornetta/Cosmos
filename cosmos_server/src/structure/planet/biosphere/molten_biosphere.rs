@@ -64,12 +64,8 @@ impl TBiosphere<MoltenBiosphereMarker, MoltenChunkNeedsGeneratedEvent> for Molte
 fn make_block_ranges(block_registry: Res<Registry<Block>>, mut commands: Commands) {
     commands.insert_resource(
         BlockRanges::<MoltenBiosphereMarker>::default()
-            .with_range("cosmos:stone", &block_registry, 5)
-            .expect("Stone missing")
-            .with_range("cosmos:dirt", &block_registry, 1)
-            .expect("Dirt missing")
-            .with_range("cosmos:glass", &block_registry, 0)
-            .expect("Glass missing"),
+            .with_range("cosmos:molten_stone", &block_registry, 0)
+            .expect("Molten Stone missing"),
     );
 }
 

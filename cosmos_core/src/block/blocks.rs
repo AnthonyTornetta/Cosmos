@@ -126,6 +126,13 @@ fn add_cosmos_blocks(
             .create(),
     );
 
+    blocks.register(
+        BlockBuilder::new("cosmos:molten_stone".to_owned(), 10.0)
+            .add_property(BlockProperty::Opaque)
+            .add_property(BlockProperty::Full)
+            .create(),
+    );
+
     loading.finish_loading(id, &mut end_writer);
 }
 
