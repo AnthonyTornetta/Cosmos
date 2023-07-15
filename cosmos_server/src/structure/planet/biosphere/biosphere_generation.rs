@@ -29,43 +29,6 @@ const FLAT_FRACTION: f64 = 0.4;
 /// This fraction of the original depth always remains, even on the very edge of the world.
 const UNFLATTENED: f64 = 0.25;
 
-fn get_top_height(
-    (mut x, mut y, mut z): (usize, usize, usize),
-    (structure_x, structure_y, structure_z): (f64, f64, f64),
-    s_dimensions: usize,
-    noise_generator: &noise::OpenSimplex,
-    middle_air_start: usize,
-    amplitude: f64,
-    delta: f64,
-    iterations: usize,
-) -> usize {
-    let mut depth: f64 = 0.0;
-    for iteration in 1..=iterations {
-        let iteration = iteration as f64;
-        depth += noise_generator.get([
-            (x as f64 + structure_x) * (delta / iteration),
-            (y as f64 + structure_y) * (delta / iteration),
-            (z as f64 + structure_z) * (delta / iteration),
-        ]) * amplitude
-            * iteration;
-    }
-
-    // For the flattening (it's like the rumbling).
-    x = x.min(s_dimensions - x);
-    y = y.min(s_dimensions - y);
-    z = z.min(s_dimensions - z);
-
-    let initial_height = middle_air_start as f64 + depth;
-
-    // Min is height of the face you're on, second min is the closer to the 45 of the 2 remaining.
-    let dist_from_space = s_dimensions as f64 - initial_height;
-    let dist_from_45 = x.min(y).max(x.max(y).min(z)) as f64 - dist_from_space;
-    let flattening_limit = (s_dimensions as f64 - 2.0 * dist_from_space) * FLAT_FRACTION;
-    depth *= dist_from_45.min(flattening_limit) / flattening_limit * (1.0 - UNFLATTENED) + UNFLATTENED;
-
-    (middle_air_start as f64 + depth).round() as usize
-}
-
 /// Tells the chunk to generate its features.
 pub struct GenerateChunkFeaturesEvent<T: Component> {
     _phantom: PhantomData<T>,
@@ -107,7 +70,7 @@ pub fn notify_when_done_generating_terrain<T: Component>(
 }
 
 #[inline]
-fn generate_face_chunk<T: Component + Clone + Default>(
+fn generate_face_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + Default>(
     (sx, sy, sz): (usize, usize, usize),
     (structure_x, structure_y, structure_z): (f64, f64, f64),
     s_dimensions: usize,
@@ -131,7 +94,7 @@ fn generate_face_chunk<T: Component + Clone + Default>(
                 BlockFace::Left => (s_dimensions - middle_air_start, sy + i, sz + j),
             };
 
-            let top_height = get_top_height(
+            let top_height = S::get_top_height(
                 seed_coordinates,
                 (structure_x, structure_y, structure_z),
                 s_dimensions,
@@ -161,7 +124,7 @@ fn generate_face_chunk<T: Component + Clone + Default>(
     }
 }
 
-fn generate_edge_chunk<T: Component + Clone + Default>(
+fn generate_edge_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + Default>(
     (sx, sy, sz): (usize, usize, usize),
     (structure_x, structure_y, structure_z): (f64, f64, f64),
     s_dimensions: usize,
@@ -195,7 +158,7 @@ fn generate_edge_chunk<T: Component + Clone + Default>(
             };
 
             // Unmodified top height.
-            *height = get_top_height(
+            *height = S::get_top_height(
                 (x, y, z),
                 (structure_x, structure_y, structure_z),
                 s_dimensions,
@@ -240,7 +203,7 @@ fn generate_edge_chunk<T: Component + Clone + Default>(
             };
 
             // Unmodified top height.
-            let mut k_top = get_top_height(
+            let mut k_top = S::get_top_height(
                 (x, y, z),
                 (structure_x, structure_y, structure_z),
                 s_dimensions,
@@ -316,7 +279,7 @@ fn generate_edge_chunk<T: Component + Clone + Default>(
     }
 }
 
-fn generate_corner_chunk<T: Component + Clone + Default>(
+fn generate_corner_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + Default>(
     (sx, sy, sz): (usize, usize, usize),
     (structure_x, structure_y, structure_z): (f64, f64, f64),
     s_dimensions: usize,
@@ -342,7 +305,7 @@ fn generate_corner_chunk<T: Component + Clone + Default>(
             };
 
             // Unmodified top height.
-            *height = get_top_height(
+            *height = S::get_top_height(
                 (x, y, z),
                 (structure_x, structure_y, structure_z),
                 s_dimensions,
@@ -377,7 +340,7 @@ fn generate_corner_chunk<T: Component + Clone + Default>(
             };
 
             // Unmodified top height.
-            *height = get_top_height(
+            *height = S::get_top_height(
                 (x, y, z),
                 (structure_x, structure_y, structure_z),
                 s_dimensions,
@@ -412,7 +375,7 @@ fn generate_corner_chunk<T: Component + Clone + Default>(
             };
 
             // Unmodified top height.
-            let mut z_top = get_top_height(
+            let mut z_top = S::get_top_height(
                 (x, y, z),
                 (structure_x, structure_y, structure_z),
                 s_dimensions,
@@ -475,6 +438,110 @@ fn generate_corner_chunk<T: Component + Clone + Default>(
         }
     }
 }
+
+/// Used to change the algorithm used for base terrain generation.
+///
+/// Try tweaking the values of GenerationParemeters first before making your own custom generation function.
+///
+/// For most cases, the `DefaultBiosphereGenerationStrategy` strategy will work.
+pub trait BiosphereGenerationStrategy {
+    /// Gets the "y" value of a block on the planet. This "y" value is relative to the face the block is on.
+    ///
+    /// * `noise_generator` Used to generate noise values. Seeded for this world seed.
+    /// * `(x, y, z)` Block x/y/z in the structure
+    /// * `(structure_x, structure_y, structure_z)` Where the structure is in the universe - used to offset the noise values so no two structures are the same.
+    /// * `(middle_air_start)` The midpoint of the extremes of heights. Aka if noise generates 0, then this should return middle_air_start.
+    /// * `amplitude` Value passed in by the `GenerationParemeters`. Represents how tall the terrain will be
+    /// * `delta` Value passed in by the `GenerationParemeters`. Represents how much each change in x/y/z will effect the terrain. Small values = lesser effect
+    /// * `iterations` Value passed in by the `GenerationParemeters`. Represents how many times the noise function will be run
+    fn get_block_depth(
+        noise_generator: &noise::OpenSimplex,
+        (x, y, z): (usize, usize, usize),
+        (structure_x, structure_y, structure_z): (f64, f64, f64),
+        middle_air_start: usize,
+        amplitude: f64,
+        delta: f64,
+        iterations: usize,
+    ) -> f64 {
+        let mut depth: f64 = 0.0;
+        for iteration in 1..=iterations {
+            let iteration = iteration as f64;
+            depth += noise_generator.get([
+                (x as f64 + structure_x) * (delta / iteration),
+                (y as f64 + structure_y) * (delta / iteration),
+                (z as f64 + structure_z) * (delta / iteration),
+            ]) * amplitude
+                * iteration;
+        }
+
+        middle_air_start as f64 + depth
+    }
+
+    /// In order to combat artifacts near the edges of planets, this function is called to flatten out the terrain near the corners/edges.
+    ///
+    /// Unless you're doing something really wacky, you should generally keep this as is.
+    ///
+    /// * `initial_height` The value returned by `get_block_depth`
+    /// * `(x, y, z)` Block x/y/z in the structure
+    /// * `(s_dimensions)` The width/height/length of the structure this is on.
+    fn flatten(initial_height: f64, middle_air_start: usize, (mut x, mut y, mut z): (usize, usize, usize), s_dimensions: usize) -> usize {
+        // For the flattening (it's like the rumbling).
+        x = x.min(s_dimensions - x);
+        y = y.min(s_dimensions - y);
+        z = z.min(s_dimensions - z);
+
+        let mut depth = initial_height - middle_air_start as f64;
+
+        // Min is height of the face you're on, second min is the closer to the 45 of the 2 remaining.
+        let dist_from_space = s_dimensions as f64 - initial_height;
+        let dist_from_45 = x.min(y).max(x.max(y).min(z)) as f64 - dist_from_space;
+        let flattening_limit = (s_dimensions as f64 - 2.0 * dist_from_space) * FLAT_FRACTION;
+        depth *= dist_from_45.min(flattening_limit) / flattening_limit * (1.0 - UNFLATTENED) + UNFLATTENED;
+
+        (middle_air_start as f64 + depth).round() as usize
+    }
+
+    /// Gets the top block's height
+    ///
+    /// * `(x, y, z)` Block x/y/z in the structure
+    /// * `(structure_x, structure_y, structure_z)` Where the structure is in the universe - used to offset the noise values so no two structures are the same.
+    /// * `(s_dimensions)` The width/height/length of the structure this is on.
+    /// * `noise_generator` Used to generate noise values. Seeded for this world seed.
+    /// * `(middle_air_start)` The midpoint of the extremes of heights. Aka if noise generates 0, then this should return middle_air_start.
+    /// * `amplitude` Value passed in by the `GenerationParemeters`. Represents how tall the terrain will be
+    /// * `delta` Value passed in by the `GenerationParemeters`. Represents how much each change in x/y/z will effect the terrain. Small values = lesser effect
+    /// * `iterations` Value passed in by the `GenerationParemeters`. Represents how many times the noise function will be run
+    fn get_top_height(
+        (x, y, z): (usize, usize, usize),
+        (structure_x, structure_y, structure_z): (f64, f64, f64),
+        s_dimensions: usize,
+        noise_generator: &noise::OpenSimplex,
+        middle_air_start: usize,
+        amplitude: f64,
+        delta: f64,
+        iterations: usize,
+    ) -> usize {
+        Self::flatten(
+            Self::get_block_depth(
+                noise_generator,
+                (x, y, z),
+                (structure_x, structure_y, structure_z),
+                middle_air_start,
+                amplitude,
+                delta,
+                iterations,
+            ),
+            middle_air_start,
+            (x, y, z),
+            s_dimensions,
+        )
+    }
+}
+
+/// The default implementation for the `BiosphereGenerationStrategy` that will work for most biospheres.
+pub struct DefaultBiosphereGenerationStrategy;
+
+impl BiosphereGenerationStrategy for DefaultBiosphereGenerationStrategy {}
 
 #[derive(Debug, Resource, Clone, Copy)]
 /// Stores the information required by the noise-function terrain generation to create your terrain.
@@ -607,7 +674,7 @@ impl<T: Component + Clone + Default> BlockRanges<T> {
 }
 
 /// Calls generate_face_chunk, generate_edge_chunk, and generate_corner_chunk to generate the chunks of a planet.
-pub fn generate_planet<T: Component + Clone + Default, E: TGenerateChunkEvent + Send + Sync + 'static>(
+pub fn generate_planet<T: Component + Clone + Default, E: TGenerateChunkEvent + Send + Sync + 'static, S: BiosphereGenerationStrategy>(
     mut query: Query<(&mut Structure, &Location)>,
     mut generating: ResMut<GeneratingChunks<T>>,
     mut events: EventReader<E>,
@@ -672,7 +739,7 @@ pub fn generate_planet<T: Component + Clone + Default, E: TGenerateChunkEvent + 
                 let chunk_faces = Planet::chunk_planet_faces((sx, sy, sz), s_dimensions);
                 match chunk_faces {
                     ChunkFaces::Face(up) => {
-                        generate_face_chunk(
+                        generate_face_chunk::<S, T>(
                             (sx, sy, sz),
                             (structure_x, structure_y, structure_z),
                             s_dimensions,
@@ -687,7 +754,7 @@ pub fn generate_planet<T: Component + Clone + Default, E: TGenerateChunkEvent + 
                         );
                     }
                     ChunkFaces::Edge(j_up, k_up) => {
-                        generate_edge_chunk(
+                        generate_edge_chunk::<S, T>(
                             (sx, sy, sz),
                             (structure_x, structure_y, structure_z),
                             s_dimensions,
@@ -703,7 +770,7 @@ pub fn generate_planet<T: Component + Clone + Default, E: TGenerateChunkEvent + 
                         );
                     }
                     ChunkFaces::Corner(x_up, y_up, z_up) => {
-                        generate_corner_chunk(
+                        generate_corner_chunk::<S, T>(
                             (sx, sy, sz),
                             (structure_x, structure_y, structure_z),
                             s_dimensions,

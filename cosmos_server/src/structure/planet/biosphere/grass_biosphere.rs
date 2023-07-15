@@ -17,7 +17,8 @@ use crate::GameState;
 
 use super::{
     biosphere_generation::{
-        generate_planet, notify_when_done_generating_terrain, BlockRanges, GenerateChunkFeaturesEvent, GenerationParemeters,
+        generate_planet, notify_when_done_generating_terrain, BlockRanges, DefaultBiosphereGenerationStrategy, GenerateChunkFeaturesEvent,
+        GenerationParemeters,
     },
     generation_tools::fill,
     register_biosphere, TBiosphere, TGenerateChunkEvent, TemperatureRange,
@@ -536,7 +537,7 @@ pub(super) fn register(app: &mut App) {
 
     app.add_systems(
         (
-            generate_planet::<GrassBiosphereMarker, GrassChunkNeedsGeneratedEvent>,
+            generate_planet::<GrassBiosphereMarker, GrassChunkNeedsGeneratedEvent, DefaultBiosphereGenerationStrategy>,
             notify_when_done_generating_terrain::<GrassBiosphereMarker>,
             generate_chunk_features,
         )
