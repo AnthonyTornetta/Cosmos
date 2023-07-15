@@ -69,6 +69,7 @@ fn register_block_hardness(blocks: Res<Registry<Block>>, mut registry: ResMut<Re
 
     register_hardness(&mut registry, 30.0, &blocks, "cosmos:redwood_log");
     register_hardness(&mut registry, 1.0, &blocks, "cosmos:redwood_leaf");
+    register_hardness(&mut registry, 10.0, &blocks, "cosmos:cheese");
 
     register_hardness(&mut registry, 100.0, &blocks, "cosmos:ship_core");
     register_hardness(&mut registry, 20.0, &blocks, "cosmos:energy_cell");

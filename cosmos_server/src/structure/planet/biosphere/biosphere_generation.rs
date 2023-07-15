@@ -118,6 +118,13 @@ fn generate_face_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
                 if actual_height <= top_height {
                     let block = block_ranges.face_block(top_height - actual_height);
                     chunk.set_block_at(x, y, z, block, up);
+                } else if block_ranges
+                    .sea_level
+                    .map(|sea_level| actual_height as f32 <= (middle_air_start as f32 + sea_level as f32))
+                    .unwrap_or(false)
+                {
+                    let block = block_ranges.sea_level_block().expect("Sea level set without sea block being set!");
+                    chunk.set_block_at(x, y, z, block, up);
                 }
             }
         }
@@ -272,6 +279,21 @@ fn generate_edge_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
                         block_up = k_up;
                     }
                     let block = block_ranges.edge_block(j_top - j_height, k_top - k_height);
+                    chunk.set_block_at(x, y, z, block, block_up);
+                } else if block_ranges
+                    .sea_level
+                    .map(|sea_level| j_height.min(k_height) as f32 <= (middle_air_start as f32 + sea_level as f32))
+                    .unwrap_or(false)
+                {
+                    let mut block_up = Planet::get_planet_face_without_structure(sx + x, sy + y, sz + z, s_dimensions);
+                    if j_height == j_top {
+                        block_up = j_up;
+                    }
+                    if k_height == k_top {
+                        block_up = k_up;
+                    }
+
+                    let block = block_ranges.sea_level_block().expect("Sea level set without sea block being set!");
                     chunk.set_block_at(x, y, z, block, block_up);
                 }
             }
@@ -433,6 +455,24 @@ fn generate_corner_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + 
                     }
                     let block = block_ranges.corner_block(x_top - x_height, y_top - y_height, z_top - z_height);
                     chunk.set_block_at(i, j, k, block, block_up);
+                } else if block_ranges
+                    .sea_level
+                    .map(|sea_level| x_height.min(y_height).min(z_height) as f32 <= (middle_air_start as f32 + sea_level as f32))
+                    .unwrap_or(false)
+                {
+                    let mut block_up = Planet::get_planet_face_without_structure(x, y, z, s_dimensions);
+                    if x_height == x_top {
+                        block_up = x_up;
+                    }
+                    if y_height == y_top {
+                        block_up = y_up;
+                    }
+                    if z_height == z_top {
+                        block_up = z_up;
+                    }
+
+                    let block = block_ranges.sea_level_block().expect("Sea level set without sea block being set!");
+                    chunk.set_block_at(x, y, z, block, block_up);
                 }
             }
         }
@@ -586,6 +626,8 @@ impl<T: Component + Clone + Default> GenerationParemeters<T> {
 pub struct BlockRanges<T: Component + Clone + Default> {
     _phantom: PhantomData<T>,
     ranges: Vec<(Block, usize)>,
+    sea_level_block: Option<Block>,
+    sea_level: Option<i32>,
 }
 
 #[derive(Debug)]
@@ -643,6 +685,28 @@ impl<T: Component + Clone + Default> BlockRanges<T> {
         } else {
             Err(BlockRangeError::MissingBlock(self))
         }
+    }
+
+    /// Sets the sea level and the block that goes along with it
+    pub fn with_sea_level_block(
+        mut self,
+        block_id: &str,
+        block_registry: &Registry<Block>,
+        sea_level: i32,
+    ) -> Result<Self, BlockRangeError<T>> {
+        if let Some(block) = block_registry.from_id(block_id).cloned() {
+            self.sea_level_block = Some(block);
+            self.sea_level = Some(sea_level);
+
+            Ok(self)
+        } else {
+            Err(BlockRangeError::MissingBlock(self))
+        }
+    }
+
+    #[inline]
+    fn sea_level_block(&self) -> Option<&Block> {
+        self.sea_level_block.as_ref()
     }
 
     fn face_block(&self, depth: usize) -> &Block {
