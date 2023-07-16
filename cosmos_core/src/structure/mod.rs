@@ -326,7 +326,13 @@ impl Structure {
     /// If the chunk is loaded, non-empty, returns the block at that coordinate.
     /// Otherwise, returns AIR_BLOCK_ID
     pub fn block_id_at(&self, x: usize, y: usize, z: usize) -> u16 {
-        debug_assert!(x < self.blocks_width() && y < self.blocks_height() && z < self.blocks_length());
+        debug_assert!(
+            x < self.blocks_width() && y < self.blocks_height() && z < self.blocks_length(),
+            "{x} < {} && {y} < {} && {z} < {} failed!",
+            self.blocks_width(),
+            self.blocks_height(),
+            self.blocks_length()
+        );
 
         self.chunk_at_block_coordinates(x, y, z)
             .map(|chunk| chunk.block_at(x & (CHUNK_DIMENSIONS - 1), y & (CHUNK_DIMENSIONS - 1), z & (CHUNK_DIMENSIONS - 1)))
