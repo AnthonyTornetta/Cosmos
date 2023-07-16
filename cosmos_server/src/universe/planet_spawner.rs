@@ -149,7 +149,9 @@ fn spawn_planet(
                 if let Some(star) = closest_star {
                     let size: usize = if is_origin { 50 } else { rng.gen_range(200..=500) };
 
-                    let temperature = (TEMPERATURE_CONSTANT * (star.temperature() / best_dist.unwrap())).max(BACKGROUND_TEMPERATURE);
+                    let distance_scaling = best_dist.expect("This would have been set at this point.") / 2.0;
+
+                    let temperature = (TEMPERATURE_CONSTANT * (star.temperature() / distance_scaling)).max(BACKGROUND_TEMPERATURE);
 
                     made_stars.push(PlanetToSpawn {
                         size,

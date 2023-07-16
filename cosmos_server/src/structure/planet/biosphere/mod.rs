@@ -149,6 +149,7 @@ fn add_biosphere(
     mut commands: Commands,
 ) {
     for (entity, planet, location) in query.iter() {
+        println!("Planet temperature: {}", planet.temperature());
         let biospheres = registry.get_biospheres_for(planet.temperature());
 
         if !biospheres.is_empty() {

@@ -532,7 +532,7 @@ pub(super) fn register(app: &mut App) {
     register_biosphere::<GrassBiosphereMarker, GrassChunkNeedsGeneratedEvent>(
         app,
         "cosmos:biosphere_grass",
-        TemperatureRange::new(0.0, 0.0),
+        TemperatureRange::new(255.0, 500.0),
     );
 
     app.add_systems(

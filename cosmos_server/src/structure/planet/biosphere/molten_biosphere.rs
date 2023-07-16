@@ -171,7 +171,7 @@ pub(super) fn register(app: &mut App) {
     register_biosphere::<MoltenBiosphereMarker, MoltenChunkNeedsGeneratedEvent>(
         app,
         "cosmos:biosphere_molten",
-        TemperatureRange::new(0.0, 1000000000.0),
+        TemperatureRange::new(450.0, 1000000000.0),
     );
 
     app.add_systems(

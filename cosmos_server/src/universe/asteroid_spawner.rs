@@ -86,7 +86,7 @@ fn spawn_asteroid(
             let n_asteroids = (6.0 * (1.0 - (1.0 - rng.gen::<f32>()).sqrt())) as usize;
 
             let multiplier = SECTOR_DIMENSIONS - 600.0;
-            let adder = 300.0 + SECTOR_DIMENSIONS / 2.0;
+            let adder = 300.0 + SECTOR_DIMENSIONS / 3.0;
 
             for _ in 0..n_asteroids {
                 let size = rng.gen_range(2..=5);
