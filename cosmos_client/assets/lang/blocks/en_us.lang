@@ -16,3 +16,5 @@ cosmos:light=Light
 cosmos:glass=Glass
 cosmos:molten_stone=Molten Stone
 cosmos:cheese=Cheese (Lava)
+cosmos:ice=Ice
+cosmos:water=Water
