@@ -150,7 +150,7 @@ fn process_player_movement(
 ) {
     // This will be err if the player is piloting a ship
     if let Ok((ent, mut velocity, player_transform, player_alignment)) = query.get_single_mut() {
-        let cam_trans = cam_query.single();
+        let cam_trans = player_transform.mul_transform(*cam_query.single());
 
         let max_speed: f32 = match input_handler.check_pressed(CosmosInputs::Sprint, &keys, &mouse) {
             false => 3.0,
