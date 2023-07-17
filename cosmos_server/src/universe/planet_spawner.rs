@@ -129,7 +129,7 @@ fn spawn_planet(
 
             let mut rng = get_rng_for_sector(&server_seed, &sector);
 
-            let is_origin = sector.x() == 40 && sector.y() == 40 && sector.z() == 40;
+            let is_origin = sector.x() == 0 && sector.y() == 0 && sector.z() == 0;
 
             if is_origin || rng.gen_range(0..1000) == 9 {
                 let location = Location::new(Vec3::ZERO, sector);
