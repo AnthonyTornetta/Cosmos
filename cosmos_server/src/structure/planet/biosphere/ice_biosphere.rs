@@ -64,7 +64,9 @@ impl TBiosphere<IceBiosphereMarker, IceChunkNeedsGeneratedEvent> for IceBiospher
 fn make_block_ranges(block_registry: Res<Registry<Block>>, mut commands: Commands) {
     commands.insert_resource(
         BlockRanges::<IceBiosphereMarker>::default()
-            .with_range("cosmos:molten_stone", &block_registry, 0)
+            .with_range("cosmos:stone", &block_registry, 300)
+            .expect("Molten Stone missing"),
+            .with_range("cosmos:water", &block_registry, 10)
             .expect("Molten Stone missing"),
     );
 }
