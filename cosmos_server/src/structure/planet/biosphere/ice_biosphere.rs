@@ -15,8 +15,8 @@ use crate::{init::init_world::ServerSeed, GameState};
 
 use super::{
     biosphere_generation::{
-        generate_planet, notify_when_done_generating_terrain, BlockRanges, DefaultBiosphereGenerationStrategy, GenerateChunkFeaturesEvent,
-        GenerationParemeters,
+        generate_planet, notify_when_done_generating_terrain, BlockLevel, BlockRanges, DefaultBiosphereGenerationStrategy,
+        GenerateChunkFeaturesEvent,
     },
     register_biosphere, TBiosphere, TGenerateChunkEvent, TemperatureRange,
 };
@@ -64,10 +64,12 @@ impl TBiosphere<IceBiosphereMarker, IceChunkNeedsGeneratedEvent> for IceBiospher
 fn make_block_ranges(block_registry: Res<Registry<Block>>, mut commands: Commands) {
     commands.insert_resource(
         BlockRanges::<IceBiosphereMarker>::default()
-            .with_range("cosmos:stone", &block_registry, 300)
-            .expect("Molten Stone missing"),
-            .with_range("cosmos:water", &block_registry, 10)
-            .expect("Molten Stone missing"),
+            .with_range("cosmos:stone", &block_registry, BlockLevel::fixed_level(300))
+            .expect("Stone missing")
+            .with_range("cosmos:water", &block_registry, BlockLevel::fixed_level(4))
+            .expect("Water missing")
+            .with_range("cosmos:ice", &block_registry, BlockLevel::noise_level(0, 0.01, 4.0, 1))
+            .expect("Ice missing"),
     );
 }
 
@@ -183,8 +185,7 @@ pub(super) fn register(app: &mut App) {
             generate_chunk_features,
         )
             .in_set(OnUpdate(GameState::Playing)),
-    )
-    .insert_resource(GenerationParemeters::<IceBiosphereMarker>::new(0.10, 7.0, 9));
+    );
 
     app.add_system(make_block_ranges.in_schedule(OnEnter(GameState::PostLoading)));
 }

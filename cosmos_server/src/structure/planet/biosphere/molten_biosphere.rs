@@ -15,8 +15,8 @@ use crate::{init::init_world::ServerSeed, GameState};
 
 use super::{
     biosphere_generation::{
-        generate_planet, notify_when_done_generating_terrain, BlockRanges, DefaultBiosphereGenerationStrategy, GenerateChunkFeaturesEvent,
-        GenerationParemeters,
+        generate_planet, notify_when_done_generating_terrain, BlockLevel, BlockRanges, DefaultBiosphereGenerationStrategy,
+        GenerateChunkFeaturesEvent,
     },
     register_biosphere, TBiosphere, TGenerateChunkEvent, TemperatureRange,
 };
@@ -66,7 +66,7 @@ fn make_block_ranges(block_registry: Res<Registry<Block>>, mut commands: Command
         BlockRanges::<MoltenBiosphereMarker>::default()
             .with_sea_level_block("cosmos:cheese", &block_registry, -20)
             .expect("Cheese missing!")
-            .with_range("cosmos:molten_stone", &block_registry, 0)
+            .with_range("cosmos:molten_stone", &block_registry, BlockLevel::noise_level(0, 0.10, 7.0, 9))
             .expect("Molten Stone missing"),
     );
 }
@@ -134,13 +134,7 @@ fn generate_spikes(
                                         if let Ok(rel_pos) =
                                             rotate(start_checking, (0, dy as i32 - dy_down as i32, 0), s_dimensions, block_up)
                                         {
-                                            structure.set_block_at_tuple(
-                                                rel_pos,
-                                                molten_stone,
-                                                block_up,
-                                                blocks,
-                                                Some(block_event_writer),
-                                            );
+                                            structure.set_block_at_tuple(rel_pos, molten_stone, block_up, blocks, Some(block_event_writer));
                                         }
                                     }
                                     break 'spike_placement;
@@ -193,8 +187,7 @@ pub(super) fn register(app: &mut App) {
             generate_chunk_features,
         )
             .in_set(OnUpdate(GameState::Playing)),
-    )
-    .insert_resource(GenerationParemeters::<MoltenBiosphereMarker>::new(0.10, 7.0, 9));
+    );
 
     app.add_system(make_block_ranges.in_schedule(OnEnter(GameState::PostLoading)));
 }
