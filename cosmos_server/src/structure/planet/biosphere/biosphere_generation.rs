@@ -282,7 +282,7 @@ fn generate_edge_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
                     chunk.set_block_at(x, y, z, block, block_up);
                 } else if block_ranges
                     .sea_level
-                    .map(|sea_level| j_height.min(k_height) as f32 <= (middle_air_start as f32 + sea_level as f32))
+                    .map(|sea_level| j_height.max(k_height) as f32 <= (middle_air_start as f32 + sea_level as f32))
                     .unwrap_or(false)
                 {
                     let mut block_up = Planet::get_planet_face_without_structure(sx + x, sy + y, sz + z, s_dimensions);
@@ -457,7 +457,7 @@ fn generate_corner_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + 
                     chunk.set_block_at(i, j, k, block, block_up);
                 } else if block_ranges
                     .sea_level
-                    .map(|sea_level| x_height.min(y_height).min(z_height) as f32 <= (middle_air_start as f32 + sea_level as f32))
+                    .map(|sea_level| x_height.max(y_height).max(z_height) as f32 <= (middle_air_start as f32 + sea_level as f32))
                     .unwrap_or(false)
                 {
                     let mut block_up = Planet::get_planet_face_without_structure(x, y, z, s_dimensions);

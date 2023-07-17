@@ -124,16 +124,28 @@ fn generate_spikes(
                         BlockFace::Right | BlockFace::Left => (sx, sy + x, sz + z),
                     };
 
-                    let start_checking = rotate((bx, by, bz), (0, CHUNK_DIMENSIONS as i32 - 1, 0), block_up);
+                    let s_dimensions = (s_dimension, s_dimension, s_dimension);
 
-                    'spike_placement: for dy_down in 0..CHUNK_DIMENSIONS {
-                        let rotated = rotate(start_checking, (0, -(dy_down as i32), 0), block_up);
-                        if structure.block_at_tuple(rotated, &blocks) == molten_stone {
-                            for dy in 1..=rng {
-                                let rel_pos = rotate(start_checking, (0, dy as i32 - dy_down as i32, 0), block_up);
-                                structure.set_block_at_tuple(rel_pos, molten_stone, block_up, &blocks, Some(block_event_writer));
+                    if let Ok(start_checking) = rotate((bx, by, bz), (0, CHUNK_DIMENSIONS as i32 - 1, 0), s_dimensions, block_up) {
+                        'spike_placement: for dy_down in 0..CHUNK_DIMENSIONS {
+                            if let Ok(rotated) = rotate(start_checking, (0, -(dy_down as i32), 0), s_dimensions, block_up) {
+                                if structure.block_at_tuple(rotated, &blocks) == molten_stone {
+                                    for dy in 1..=rng {
+                                        if let Ok(rel_pos) =
+                                            rotate(start_checking, (0, dy as i32 - dy_down as i32, 0), s_dimensions, block_up)
+                                        {
+                                            structure.set_block_at_tuple(
+                                                rel_pos,
+                                                molten_stone,
+                                                block_up,
+                                                &blocks,
+                                                Some(block_event_writer),
+                                            );
+                                        }
+                                    }
+                                    break 'spike_placement;
+                                }
                             }
-                            break 'spike_placement;
                         }
                     }
                 }
