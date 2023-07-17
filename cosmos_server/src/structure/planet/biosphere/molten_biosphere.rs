@@ -129,7 +129,7 @@ fn generate_spikes(
                     if let Ok(start_checking) = rotate((bx, by, bz), (0, CHUNK_DIMENSIONS as i32 - 1, 0), s_dimensions, block_up) {
                         'spike_placement: for dy_down in 0..CHUNK_DIMENSIONS {
                             if let Ok(rotated) = rotate(start_checking, (0, -(dy_down as i32), 0), s_dimensions, block_up) {
-                                if structure.block_at_tuple(rotated, &blocks) == molten_stone {
+                                if structure.block_at_tuple(rotated, blocks) == molten_stone {
                                     for dy in 1..=rng {
                                         if let Ok(rel_pos) =
                                             rotate(start_checking, (0, dy as i32 - dy_down as i32, 0), s_dimensions, block_up)
@@ -138,7 +138,7 @@ fn generate_spikes(
                                                 rel_pos,
                                                 molten_stone,
                                                 block_up,
-                                                &blocks,
+                                                blocks,
                                                 Some(block_event_writer),
                                             );
                                         }

@@ -31,7 +31,7 @@ impl ServerSeed {
             wrapping_seed + (Wrapping((x * 374761393.0) as i64) + Wrapping((y * 668265263.0) as i64) + Wrapping((z * 1610612741.0) as i64)); //all constants are prime
 
         h = (h ^ (h >> 13)) * Wrapping(1274126177);
-        return (h ^ Wrapping(h.0 >> 16)).0;
+        (h ^ Wrapping(h.0 >> 16)).0
     }
 }
 

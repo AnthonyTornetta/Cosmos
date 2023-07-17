@@ -612,7 +612,7 @@ impl<T: Component + Clone + Default> GenerationParemeters<T> {
 
     pub fn new(delta: f64, amplitude: f64, iterations: usize) -> Self {
         Self {
-            _phantom: PhantomData::default(),
+            _phantom: PhantomData,
             delta,
             amplitude,
             iterations,
