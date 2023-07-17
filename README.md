@@ -69,7 +69,7 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
       - [x] Block orientation for every block
   - [ ] Biospheres
     - [x] Speed up terrain generation
-    - [ ] Make molten biosphere
+    - [x] Make molten biosphere
     - [x] Enhance grass biosphere
     - [ ] Create icy biosphere
   - [x] Asteroids
@@ -119,6 +119,11 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
   - [ ] Revamp power generation to use reactor multiblock structure
   - [ ] Colored laser
     - [ ] Colored glass placed in front of laser
+- [ ] Inventory GUI
+  - [ ] Able to open inventory
+  - [ ] Abstract the 3d block GUI camera
+  - [ ] Fix the 3d block GUI camera to not render anything except GUI blocks
+- [ ] Fix seeing through cracks in blocks
 
 ## Release 0.0.3a
 - [x] Infinite universe

@@ -2,6 +2,8 @@
 //!
 //! Structures are the backbone of everything that contains blocks.
 
+use std::fmt::Display;
+
 use bevy::prelude::{App, CoreSet};
 use bevy::reflect::Reflect;
 use bevy::utils::{HashMap, HashSet};
@@ -326,7 +328,13 @@ impl Structure {
     /// If the chunk is loaded, non-empty, returns the block at that coordinate.
     /// Otherwise, returns AIR_BLOCK_ID
     pub fn block_id_at(&self, x: usize, y: usize, z: usize) -> u16 {
-        debug_assert!(x < self.blocks_width() && y < self.blocks_height() && z < self.blocks_length());
+        debug_assert!(
+            x < self.blocks_width() && y < self.blocks_height() && z < self.blocks_length(),
+            "{x} < {} && {y} < {} && {z} < {} failed!",
+            self.blocks_width(),
+            self.blocks_height(),
+            self.blocks_length()
+        );
 
         self.chunk_at_block_coordinates(x, y, z)
             .map(|chunk| chunk.block_at(x & (CHUNK_DIMENSIONS - 1), y & (CHUNK_DIMENSIONS - 1), z & (CHUNK_DIMENSIONS - 1)))
@@ -884,17 +892,52 @@ fn add_chunks_system(
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+/// Represents something that went wrong when calculating the rotated coordinate for a block
+pub enum RotationError {
+    /// At least one of the coordinates are outside of the structure in the negative direction.
+    ///
+    /// Each entry represents the coordinates, even those outside.
+    NegativeResult(i32, i32, i32),
+    /// At least one of the coordinates are outside of the structure in the positive direction.
+    ///
+    /// Each entry represents the coordinates, even those outside.
+    PositiveResult(i32, i32, i32),
+}
+
+impl Display for RotationError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match *self {
+            RotationError::NegativeResult(x, y, z) => f.write_str(format!("NegativeResult[{x},{y}{z}]").as_str()),
+            RotationError::PositiveResult(x, y, z) => f.write_str(format!("PositiveResult[{x},{y}{z}]").as_str()),
+        }
+    }
+}
+
 /// Takes block coordinates, offsets, and the side of the planet you're on. Returns the result of applying the offsets.
 /// On the +y (Top) side, the offsets affect their corresponding coordinate.
 /// On other sides, the offsets affect non-corresponding coordinates and may be flipped negative.
-pub fn rotate((bx, by, bz): (usize, usize, usize), (dx, dy, dz): (i32, i32, i32), block_up: BlockFace) -> (usize, usize, usize) {
-    match block_up {
-        BlockFace::Front => ((bx as i32 + dx) as usize, (by as i32 + dz) as usize, (bz as i32 + dy) as usize),
-        BlockFace::Back => ((bx as i32 + dx) as usize, (by as i32 + dz) as usize, (bz as i32 - dy) as usize),
-        BlockFace::Top => ((bx as i32 + dx) as usize, (by as i32 + dy) as usize, (bz as i32 + dz) as usize),
-        BlockFace::Bottom => ((bx as i32 + dx) as usize, (by as i32 - dy) as usize, (bz as i32 + dz) as usize),
-        BlockFace::Right => ((bx as i32 + dy) as usize, (by as i32 + dx) as usize, (bz as i32 + dz) as usize),
-        BlockFace::Left => ((bx as i32 - dy) as usize, (by as i32 + dx) as usize, (bz as i32 + dz) as usize),
+pub fn rotate(
+    (bx, by, bz): (usize, usize, usize),
+    (dx, dy, dz): (i32, i32, i32),
+    (blocks_width, blocks_height, blocks_length): (usize, usize, usize),
+    block_up: BlockFace,
+) -> Result<(usize, usize, usize), RotationError> {
+    let (xi32, yi32, zi32) = match block_up {
+        BlockFace::Front => ((bx as i32 + dx), (by as i32 + dz), (bz as i32 + dy)),
+        BlockFace::Back => ((bx as i32 + dx), (by as i32 + dz), (bz as i32 - dy)),
+        BlockFace::Top => ((bx as i32 + dx), (by as i32 + dy), (bz as i32 + dz)),
+        BlockFace::Bottom => ((bx as i32 + dx), (by as i32 - dy), (bz as i32 + dz)),
+        BlockFace::Right => ((bx as i32 + dy), (by as i32 + dx), (bz as i32 + dz)),
+        BlockFace::Left => ((bx as i32 - dy), (by as i32 + dx), (bz as i32 + dz)),
+    };
+
+    if xi32 < 0 || yi32 < 0 || zi32 < 0 {
+        Err(RotationError::NegativeResult(xi32, yi32, zi32))
+    } else if xi32 >= blocks_width as i32 || yi32 >= blocks_height as i32 || zi32 >= blocks_length as i32 {
+        Err(RotationError::PositiveResult(xi32, yi32, zi32))
+    } else {
+        Ok((xi32 as usize, yi32 as usize, zi32 as usize))
     }
 }
 

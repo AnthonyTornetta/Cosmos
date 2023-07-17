@@ -14,3 +14,5 @@ cosmos:reactor=Reactor
 cosmos:thruster=Thruster
 cosmos:light=Light
 cosmos:glass=Glass
+cosmos:molten_stone=Molten Stone
+cosmos:cheese=Cheese (Lava)

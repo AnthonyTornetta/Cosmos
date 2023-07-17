@@ -1,6 +1,6 @@
 //! Handles the initialization of the server world
 
-use std::fs;
+use std::{fs, num::Wrapping};
 
 use bevy::prelude::*;
 use cosmos_core::{netty::cosmos_encoder, utils::resource_wrapper::ResourceWrapper};
@@ -19,6 +19,19 @@ impl ServerSeed {
     /// Gets the u32 representation of this seed
     pub fn as_u32(&self) -> u32 {
         self.0 as u32
+    }
+
+    /// Computes a "random" number at the given x, y, z coordinates.
+    ///
+    /// This randomness is based off a hash of the coordinates with this seed.
+    pub fn chaos_hash(&self, x: f64, y: f64, z: f64) -> i64 {
+        let wrapping_seed = Wrapping(self.0 as i64);
+
+        let mut h =
+            wrapping_seed + (Wrapping((x * 374761393.0) as i64) + Wrapping((y * 668265263.0) as i64) + Wrapping((z * 1610612741.0) as i64)); //all constants are prime
+
+        h = (h ^ (h >> 13)) * Wrapping(1274126177);
+        (h ^ Wrapping(h.0 >> 16)).0
     }
 }
 

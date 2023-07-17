@@ -20,12 +20,19 @@ pub(crate) fn fill(
     event_writer: &mut EventWriter<BlockChangedEvent>,
 ) {
     for offset in offsets {
-        structure.set_block_at_tuple(
-            rotate(origin, *offset, planet_face),
-            block,
-            BlockFace::rotate_face(block_up, planet_face),
-            blocks,
-            Some(event_writer),
-        );
+        if let Ok(rotated_block_pos) = rotate(
+            origin,
+            *offset,
+            (structure.blocks_width(), structure.blocks_height(), structure.blocks_length()),
+            planet_face,
+        ) {
+            structure.set_block_at_tuple(
+                rotated_block_pos,
+                block,
+                BlockFace::rotate_face(block_up, planet_face),
+                blocks,
+                Some(event_writer),
+            );
+        }
     }
 }

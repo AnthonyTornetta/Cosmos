@@ -16,7 +16,10 @@ use noise::NoiseFn;
 use crate::GameState;
 
 use super::{
-    biosphere_generation::{generate_planet, notify_when_done_generating_terrain, BlockRanges, GenerateChunkFeaturesEvent},
+    biosphere_generation::{
+        generate_planet, notify_when_done_generating_terrain, BlockRanges, DefaultBiosphereGenerationStrategy, GenerateChunkFeaturesEvent,
+        GenerationParemeters,
+    },
     generation_tools::fill,
     register_biosphere, TBiosphere, TGenerateChunkEvent, TemperatureRange,
 };
@@ -84,30 +87,35 @@ fn branch(
     blocks: &Registry<Block>,
     event_writer: &mut EventWriter<BlockChangedEvent>,
 ) {
+    let s_dims = (structure.blocks_width(), structure.blocks_height(), structure.blocks_length());
+
     // Leaves. Must go first so they don't overwrite the logs.
     for (dx, dy, dz, block_up) in logs.iter().copied() {
-        let rotated = rotate(origin, (dx, dy, dz), planet_face);
-        fill(
-            rotated,
-            &[(1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1)],
-            leaf,
-            block_up,
-            planet_face,
-            structure,
-            blocks,
-            event_writer,
-        );
+        if let Ok(rotated) = rotate(origin, (dx, dy, dz), s_dims, planet_face) {
+            fill(
+                rotated,
+                &[(1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1)],
+                leaf,
+                block_up,
+                planet_face,
+                structure,
+                blocks,
+                event_writer,
+            );
+        }
     }
 
-    // Logs, like the map from BTD6.
+    // Logs, like the map from BTD6. dan you have a problem seek help
     for (dx, dy, dz, block_up) in logs {
-        structure.set_block_at_tuple(
-            rotate(origin, (dx, dy, dz), planet_face),
-            log,
-            BlockFace::rotate_face(block_up, planet_face),
-            blocks,
-            Some(event_writer),
-        );
+        if let Ok(rotated) = rotate(origin, (dx, dy, dz), s_dims, planet_face) {
+            structure.set_block_at_tuple(
+                rotated,
+                log,
+                BlockFace::rotate_face(block_up, planet_face),
+                blocks,
+                Some(event_writer),
+            );
+        }
     }
 }
 
@@ -381,15 +389,19 @@ fn redwood_tree(
         dy += 1;
     }
 
+    let s_dims = (structure.blocks_width(), structure.blocks_height(), structure.blocks_length());
+
     // 1x1 trunk.
     while dy <= height {
-        structure.set_block_at_tuple(
-            rotate((bx, by, bz), (0, dy as i32, 0), planet_face),
-            log,
-            BlockFace::rotate_face(BlockFace::Top, planet_face),
-            blocks,
-            Some(block_event_writer),
-        );
+        if let Ok(rotated) = rotate((bx, by, bz), (0, dy as i32, 0), s_dims, planet_face) {
+            structure.set_block_at_tuple(
+                rotated,
+                log,
+                BlockFace::rotate_face(BlockFace::Top, planet_face),
+                blocks,
+                Some(block_event_writer),
+            );
+        }
         dy += 1;
     }
 }
@@ -405,6 +417,7 @@ fn trees(
 ) {
     let (sx, sy, sz) = (cx * CHUNK_DIMENSIONS, cy * CHUNK_DIMENSIONS, cz * CHUNK_DIMENSIONS);
     let s_dimension = structure.blocks_height();
+    let s_dims = (s_dimension, s_dimension, s_dimension);
 
     let air = blocks.from_id("cosmos:air").unwrap();
     let grass = blocks.from_id("cosmos:grass").unwrap();
@@ -471,17 +484,25 @@ fn trees(
                     BlockFace::Right | BlockFace::Left => (sx, sy + x, sz + z),
                 };
                 let mut height: i32 = CHUNK_DIMENSIONS as i32 - 1;
-                while height >= 0 && structure.block_at_tuple(rotate((bx, by, bz), (0, height, 0), block_up), blocks) == air {
+                while height >= 0
+                    && rotate((bx, by, bz), (0, height, 0), s_dims, block_up)
+                        .map(|rotated| structure.block_at_tuple(rotated, blocks) == air)
+                        .unwrap_or(false)
+                {
                     height -= 1;
                 }
 
                 // No grass block to grow tree from.
-                let rotated = rotate((bx, by, bz), (0, height, 0), block_up);
-                if height < 0 || structure.block_at_tuple(rotated, blocks) != grass || structure.block_rotation_tuple(rotated) != block_up {
-                    continue 'next;
-                }
+                if let Ok(rotated) = rotate((bx, by, bz), (0, height, 0), s_dims, block_up) {
+                    if height < 0
+                        || structure.block_at_tuple(rotated, blocks) != grass
+                        || structure.block_rotation_tuple(rotated) != block_up
+                    {
+                        continue 'next;
+                    }
 
-                redwood_tree(rotated, block_up, structure, location, block_event_writer, blocks, noise_generator);
+                    redwood_tree(rotated, block_up, structure, location, block_event_writer, blocks, noise_generator);
+                }
             }
         }
     }
@@ -529,17 +550,18 @@ pub(super) fn register(app: &mut App) {
     register_biosphere::<GrassBiosphereMarker, GrassChunkNeedsGeneratedEvent>(
         app,
         "cosmos:biosphere_grass",
-        TemperatureRange::new(0.0, 1000000000.0),
+        TemperatureRange::new(255.0, 500.0),
     );
 
     app.add_systems(
         (
-            generate_planet::<GrassBiosphereMarker, GrassChunkNeedsGeneratedEvent>,
+            generate_planet::<GrassBiosphereMarker, GrassChunkNeedsGeneratedEvent, DefaultBiosphereGenerationStrategy>,
             notify_when_done_generating_terrain::<GrassBiosphereMarker>,
             generate_chunk_features,
         )
             .in_set(OnUpdate(GameState::Playing)),
-    );
+    )
+    .insert_resource(GenerationParemeters::<GrassBiosphereMarker>::new(0.05, 7.0, 9));
 
     app.add_system(make_block_ranges.in_schedule(OnEnter(GameState::PostLoading)));
 }

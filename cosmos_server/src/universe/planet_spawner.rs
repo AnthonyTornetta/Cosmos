@@ -129,7 +129,7 @@ fn spawn_planet(
 
             let mut rng = get_rng_for_sector(&server_seed, &sector);
 
-            let is_origin = sector.x() == 0 && sector.y() == 0 && sector.z() == 0;
+            let is_origin = sector.x() == 40 && sector.y() == 40 && sector.z() == 40;
 
             if is_origin || rng.gen_range(0..1000) == 9 {
                 let location = Location::new(Vec3::ZERO, sector);
@@ -149,7 +149,9 @@ fn spawn_planet(
                 if let Some(star) = closest_star {
                     let size: usize = if is_origin { 50 } else { rng.gen_range(200..=500) };
 
-                    let temperature = (TEMPERATURE_CONSTANT * (star.temperature() / best_dist.unwrap())).max(BACKGROUND_TEMPERATURE);
+                    let distance_scaling = best_dist.expect("This would have been set at this point.") / 2.0;
+
+                    let temperature = (TEMPERATURE_CONSTANT * (star.temperature() / distance_scaling)).max(BACKGROUND_TEMPERATURE);
 
                     made_stars.push(PlanetToSpawn {
                         size,
