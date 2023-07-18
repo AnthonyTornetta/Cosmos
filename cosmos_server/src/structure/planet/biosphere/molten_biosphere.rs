@@ -64,9 +64,9 @@ impl TBiosphere<MoltenBiosphereMarker, MoltenChunkNeedsGeneratedEvent> for Molte
 fn make_block_ranges(block_registry: Res<Registry<Block>>, mut commands: Commands) {
     commands.insert_resource(
         BlockRanges::<MoltenBiosphereMarker>::default()
-            .with_sea_level_block("cosmos:cheese", &block_registry, -20)
+            .with_sea_level_block("cosmos:cheese", &block_registry, 620)
             .expect("Cheese missing!")
-            .with_range("cosmos:molten_stone", &block_registry, BlockLevel::noise_level(0, 0.10, 7.0, 9))
+            .with_range("cosmos:molten_stone", &block_registry, BlockLevel::noise_level(160, 0.10, 7.0, 9))
             .expect("Molten Stone missing"),
     );
 }
