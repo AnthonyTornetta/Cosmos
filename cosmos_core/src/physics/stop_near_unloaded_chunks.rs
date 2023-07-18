@@ -1,7 +1,7 @@
 //! Freezes entities that are near unloaded chunks so they don't fly into unloaded areas.
 
-use bevy::prelude::{App, Commands, Entity, GlobalTransform, Query, Without};
-use bevy_rapier3d::prelude::RigidBodyDisabled;
+use bevy::prelude::{App, Commands, Entity, GlobalTransform, Query, With, Without};
+use bevy_rapier3d::prelude::{Collider, RigidBodyDisabled};
 
 use crate::{
     physics::location::SECTOR_DIMENSIONS,
@@ -18,6 +18,7 @@ const FREEZE_RADIUS: i32 = 1;
 fn stop_near_unloaded_chunks(
     query: Query<(Entity, &Location), (Without<Asteroid>, Without<Planet>)>,
     structures: Query<(Entity, &Structure, &Location, &GlobalTransform)>,
+    has_collider: Query<(), With<Collider>>,
     mut commands: Commands,
 ) {
     for (ent, loc) in query.iter() {
@@ -54,7 +55,16 @@ fn stop_near_unloaded_chunks(
                     ChunkIteratorResult::EmptyChunk { position: (cx, cy, cz) } => {
                         structure.get_chunk_state(cx, cy, cz) != ChunkState::Loaded
                     }
-                    _ => false,
+                    ChunkIteratorResult::FilledChunk {
+                        position: (cx, cy, cz),
+                        chunk: _,
+                    } => {
+                        if let Some(chunk_entity) = structure.chunk_entity(cx, cy, cz) {
+                            !has_collider.contains(chunk_entity)
+                        } else {
+                            true
+                        }
+                    }
                 });
 
             if near_unloaded_chunk {
