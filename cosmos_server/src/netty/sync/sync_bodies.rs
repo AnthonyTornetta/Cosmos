@@ -6,8 +6,10 @@ use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     entities::player::{render_distance::RenderDistance, Player},
     netty::{
-        cosmos_encoder, netty_rigidbody::NettyRigidBody, server_unreliable_messages::ServerUnreliableMessages, NettyChannelServer,
-        NoSendEntity,
+        cosmos_encoder,
+        netty_rigidbody::{NettyRigidBody, NettyRigidBodyLocation},
+        server_unreliable_messages::ServerUnreliableMessages,
+        NettyChannelServer, NoSendEntity,
     },
     persistence::LoadingDistance,
     physics::location::Location,
@@ -18,17 +20,17 @@ use crate::netty::network_helpers::NetworkTick;
 /// Sends bodies to players only if it's within their render distance.
 fn send_bodies(
     players: &Query<(&Player, &RenderDistance, &Location)>,
-    bodies: &[(Entity, NettyRigidBody, LoadingDistance)],
+    bodies: &[(Entity, NettyRigidBody, Location, LoadingDistance)],
     server: &mut RenetServer,
     tick: &NetworkTick,
 ) {
     for (player, _, loc) in players.iter() {
         let players_bodies: Vec<(Entity, NettyRigidBody)> = bodies
             .iter()
-            .filter(|(_, rb, loading_distance)| {
-                rb.location.relative_coords_to(loc).abs().max_element() < loading_distance.load_block_distance()
+            .filter(|(_, _, location, loading_distance)| {
+                location.relative_coords_to(loc).abs().max_element() < loading_distance.load_block_distance()
             })
-            .map(|(ent, net_rb, _)| (*ent, *net_rb))
+            .map(|(ent, net_rb, _, _)| (*ent, *net_rb))
             .collect();
 
         if !players_bodies.is_empty() {
@@ -44,21 +46,32 @@ fn send_bodies(
     }
 }
 
-/// Only sends entities that changed locations
 fn server_sync_bodies(
     mut server: ResMut<RenetServer>,
     mut tick: ResMut<NetworkTick>,
-    entities: Query<(Entity, &Transform, &Location, &Velocity, &LoadingDistance), Without<NoSendEntity>>,
+    location_query: Query<&Location>,
+    entities: Query<(Entity, &Transform, &Location, &Velocity, &LoadingDistance, Option<&Parent>), Without<NoSendEntity>>,
     players: Query<(&Player, &RenderDistance, &Location)>,
 ) {
     tick.0 += 1;
 
     let mut bodies = Vec::new();
 
-    for (entity, transform, location, velocity, unload_distance) in entities.iter() {
+    for (entity, transform, location, velocity, unload_distance, parent) in entities.iter() {
         bodies.push((
             entity,
-            NettyRigidBody::new(velocity, transform.rotation, *location),
+            NettyRigidBody::new(
+                velocity,
+                transform.rotation,
+                match parent.map(|p| p.get()) {
+                    Some(parent_entity) => NettyRigidBodyLocation::Relative(
+                        (*location - location_query.get(parent_entity).copied().unwrap_or(Location::default())).absolute_coords_f32(),
+                        parent_entity,
+                    ),
+                    None => NettyRigidBodyLocation::Absolute(*location),
+                },
+            ),
+            *location,
             *unload_distance,
         ));
 

@@ -4,6 +4,7 @@ use bevy::{
     prelude::{Entity, Resource},
     utils::HashMap,
 };
+use cosmos_core::netty::netty_rigidbody::{NettyRigidBody, NettyRigidBodyLocation};
 
 #[derive(Default, Resource)]
 /// Used to map server entities to client entities and client entities to server entities.
@@ -49,6 +50,39 @@ impl NetworkMapping {
     pub fn remove_mapping_from_client_entity(&mut self, client_entity: &Entity) {
         if let Some(server_ent) = self.client_to_server.remove(client_entity) {
             self.server_to_client.remove(&server_ent);
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum MappingError<T> {
+    MissingRecord(T),
+}
+
+pub trait Mappable {
+    fn map(self, network_mapping: &NetworkMapping) -> Result<Self, MappingError<Self>>
+    where
+        Self: Sized;
+}
+
+impl Mappable for NettyRigidBody {
+    fn map(self, network_mapping: &NetworkMapping) -> Result<Self, MappingError<Self>>
+    where
+        Self: Sized,
+    {
+        match self.location {
+            NettyRigidBodyLocation::Relative(rel_pos, parent_ent) => {
+                let Some(client_ent) = network_mapping.client_from_server(&parent_ent) else {
+                    return Err(MappingError::MissingRecord(self));
+                };
+
+                Ok(NettyRigidBody {
+                    body_vel: self.body_vel,
+                    location: NettyRigidBodyLocation::Relative(rel_pos, client_ent),
+                    rotation: self.rotation,
+                })
+            }
+            NettyRigidBodyLocation::Absolute(_) => Ok(self),
         }
     }
 }
