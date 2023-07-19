@@ -15,7 +15,7 @@ use crate::{init::init_world::ServerSeed, GameState};
 
 use super::{
     biosphere_generation::{
-        generate_planet, notify_when_done_generating_terrain, BlockLevel, BlockRanges, DefaultBiosphereGenerationStrategy,
+        generate_planet, notify_when_done_generating_terrain, BlockLayer, BlockLayers, DefaultBiosphereGenerationStrategy,
         GenerateChunkFeaturesEvent,
     },
     register_biosphere, TBiosphere, TGenerateChunkEvent, TemperatureRange,
@@ -63,10 +63,10 @@ impl TBiosphere<MoltenBiosphereMarker, MoltenChunkNeedsGeneratedEvent> for Molte
 
 fn make_block_ranges(block_registry: Res<Registry<Block>>, mut commands: Commands) {
     commands.insert_resource(
-        BlockRanges::<MoltenBiosphereMarker>::default()
+        BlockLayers::<MoltenBiosphereMarker>::default()
             .with_sea_level_block("cosmos:cheese", &block_registry, 620)
             .expect("Cheese missing!")
-            .with_range("cosmos:molten_stone", &block_registry, BlockLevel::noise_level(160, 0.10, 7.0, 9))
+            .add_noise_layer("cosmos:molten_stone", &block_registry, 160, 0.10, 7.0, 9)
             .expect("Molten Stone missing"),
     );
 }

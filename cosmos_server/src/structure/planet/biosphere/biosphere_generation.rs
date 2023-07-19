@@ -111,7 +111,7 @@ fn generate_face_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
     structure_coords: (f64, f64, f64),
     s_dimensions: usize,
     noise_generator: &noise::OpenSimplex,
-    block_ranges: &BlockRanges<T>,
+    block_ranges: &BlockLayers<T>,
     chunk: &mut Chunk,
     up: BlockFace,
 ) {
@@ -172,12 +172,12 @@ fn generate_edge_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
     structure_coords: (f64, f64, f64),
     s_dimensions: usize,
     noise_generator: &noise::OpenSimplex,
-    block_ranges: &BlockRanges<T>,
+    block_ranges: &BlockLayers<T>,
     chunk: &mut Chunk,
     j_up: BlockFace,
     k_up: BlockFace,
 ) {
-    let mut j_ranges: Vec<Vec<(&Block, usize)>> = vec![vec![]; CHUNK_DIMENSIONS * CHUNK_DIMENSIONS];
+    let mut j_layers: Vec<Vec<(&Block, usize)>> = vec![vec![]; CHUNK_DIMENSIONS * CHUNK_DIMENSIONS];
     for i in 0..CHUNK_DIMENSIONS {
         for k in 0..CHUNK_DIMENSIONS {
             let index = flatten_2d(i, k, CHUNK_DIMENSIONS);
@@ -210,7 +210,7 @@ fn generate_edge_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
                     level.delta,
                     level.iterations,
                 ) as usize;
-                j_ranges[index].push((block, level_top));
+                j_layers[index].push((block, level_top));
                 height = level_top;
             }
 
@@ -223,7 +223,7 @@ fn generate_edge_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
                 BlockFace::Right => x,
                 BlockFace::Left => s_dimensions - x,
             };
-            j_ranges[index][0].1 = j_ranges[index][0].1.max(dim_45);
+            j_layers[index][0].1 = j_layers[index][0].1.max(dim_45);
         }
     }
 
@@ -249,7 +249,7 @@ fn generate_edge_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
 
             // Unmodified top height.
             let mut height = s_dimensions;
-            let mut k_ranges = vec![];
+            let mut k_layers = vec![];
             for (block, level) in block_ranges.ranges.iter() {
                 let level_top = get_block_depth(
                     noise_generator,
@@ -260,7 +260,7 @@ fn generate_edge_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
                     level.delta,
                     level.iterations,
                 ) as usize;
-                k_ranges.push((block, level_top));
+                k_layers.push((block, level_top));
                 height = level_top;
             }
 
@@ -268,49 +268,49 @@ fn generate_edge_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
             let j_height = match j_up {
                 BlockFace::Front => z,
                 BlockFace::Back => s_dimensions - z,
-                BlockFace::Left => s_dimensions - x,
-                BlockFace::Right => x,
                 BlockFace::Top => y,
                 BlockFace::Bottom => s_dimensions - y,
+                BlockFace::Right => s_dimensions - x,
+                BlockFace::Left => x,
             };
 
             // Don't let the top height fall "below" the 45, but also don't let it go "above" the first shared 45.
             // This probably won't interfere with anything before the first shared 45 is discovered bc of the loop order.
-            k_ranges[0].1 = k_ranges[0].1.clamp(j_height, first_both_45);
-            let k_top = k_ranges[0].1;
+            k_layers[0].1 = k_layers[0].1.clamp(j_height, first_both_45);
+            let k_top = k_layers[0].1;
 
             // Get smallest top height that's on the 45 for both y and z.
-            if j_ranges[flatten_2d(i, j, CHUNK_DIMENSIONS)][0].1 == j && k_top == j && first_both_45 == s_dimensions {
+            if j_layers[flatten_2d(i, j, CHUNK_DIMENSIONS)][0].1 == j && k_top == j && first_both_45 == s_dimensions {
                 first_both_45 = k_top;
             };
 
             for k in 0..CHUNK_DIMENSIONS {
                 // Don't let the top height rise "above" the first shared 45.
                 let index = flatten_2d(i, k, CHUNK_DIMENSIONS);
-                j_ranges[index][0].1 = j_ranges[index][0].1.min(first_both_45);
-                let j_top = j_ranges[index][0].1;
+                j_layers[index][0].1 = j_layers[index][0].1.min(first_both_45);
+                let j_top = j_layers[index][0].1;
 
                 // This is super smart I promise, definitely no better way to decide which loop variables are x, y, z.
                 let (mut x, mut y, mut z) = (i, i, i);
                 match j_up {
                     BlockFace::Front | BlockFace::Back => z = j,
-                    BlockFace::Left | BlockFace::Right => x = j,
                     BlockFace::Top | BlockFace::Bottom => y = j,
+                    BlockFace::Right | BlockFace::Left => x = j,
                 };
                 match k_up {
                     BlockFace::Front | BlockFace::Back => z = k,
-                    BlockFace::Left | BlockFace::Right => x = k,
                     BlockFace::Top | BlockFace::Bottom => y = k,
+                    BlockFace::Right | BlockFace::Left => x = k,
                 };
 
                 // Second height, and also the height of the other 45 (dim_45 in the upper loop must be recalculated here).
                 let k_height = match k_up {
                     BlockFace::Front => sz + z,
                     BlockFace::Back => s_dimensions - (sz + z),
-                    BlockFace::Left => s_dimensions - (sx + x),
-                    BlockFace::Right => sx + x,
                     BlockFace::Top => sy + y,
                     BlockFace::Bottom => s_dimensions - (sy + y),
+                    BlockFace::Right => sx + x,
+                    BlockFace::Left => s_dimensions - (sx + x),
                 };
 
                 // num_top check stops stairways to heaven.
@@ -327,8 +327,8 @@ fn generate_edge_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
                     let block = block_ranges.edge_block(
                         j_height,
                         k_height,
-                        &j_ranges[index],
-                        &k_ranges,
+                        &j_layers[index],
+                        &k_layers,
                         block_ranges.sea_level,
                         block_ranges.sea_block.as_ref(),
                     );
@@ -343,38 +343,42 @@ fn generate_edge_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
 
 fn generate_corner_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + Default>(
     (sx, sy, sz): (usize, usize, usize),
-    (structure_x, structure_y, structure_z): (f64, f64, f64),
+    structure_coords: (f64, f64, f64),
     s_dimensions: usize,
     noise_generator: &noise::OpenSimplex,
-    middle_air_start: usize,
-    block_ranges: &BlockRanges<T>,
+    block_ranges: &BlockLayers<T>,
     chunk: &mut Chunk,
     x_up: BlockFace,
     y_up: BlockFace,
     z_up: BlockFace,
 ) {
-    let top_level = block_ranges.ranges.first().expect("Block ranges empty").1.clone();
     // x top height cache.
-    let mut x_top = [[0; CHUNK_DIMENSIONS]; CHUNK_DIMENSIONS];
-    for (j, layer) in x_top.iter_mut().enumerate() {
-        for (k, height) in layer.iter_mut().enumerate() {
+    let mut x_layers: Vec<Vec<(&Block, usize)>> = vec![vec![]; CHUNK_DIMENSIONS * CHUNK_DIMENSIONS];
+    for j in 0..CHUNK_DIMENSIONS {
+        for k in 0..CHUNK_DIMENSIONS {
+            let index = flatten_2d(j, k, CHUNK_DIMENSIONS);
+
             // Seed coordinates for the noise function.
             let (x, y, z) = match x_up {
-                BlockFace::Right => (middle_air_start, sy + j, sz + k),
-                _ => (s_dimensions - middle_air_start, sy + j, sz + k),
+                BlockFace::Right => (s_dimensions, sy + j, sz + k),
+                _ => (0, sy + j, sz + k),
             };
 
             // Unmodified top height.
-            *height = S::get_top_height(
-                (x, y, z),
-                (structure_x, structure_y, structure_z),
-                s_dimensions,
-                noise_generator,
-                middle_air_start,
-                top_level.delta,
-                top_level.amplitude,
-                top_level.iterations,
-            );
+            let mut height = s_dimensions;
+            for (block, level) in block_ranges.ranges.iter() {
+                let level_top = get_block_depth(
+                    noise_generator,
+                    (x, y, z),
+                    structure_coords,
+                    height - level.middle_depth,
+                    level.amplitude,
+                    level.delta,
+                    level.iterations,
+                ) as usize;
+                x_layers[index].push((block, level_top));
+                height = level_top;
+            }
 
             // Don't let the top height fall "below" the 45s.
             let y_45 = match y_up {
@@ -385,31 +389,37 @@ fn generate_corner_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + 
                 BlockFace::Front => z,
                 _ => s_dimensions - z,
             };
-            *height = (*height).max(y_45).max(z_45);
+            x_layers[index][0].1 = x_layers[index][0].1.max(y_45).max(z_45);
         }
     }
 
     // y top height cache.
-    let mut y_top = [[0; CHUNK_DIMENSIONS]; CHUNK_DIMENSIONS];
-    for (i, layer) in y_top.iter_mut().enumerate() {
-        for (k, height) in layer.iter_mut().enumerate() {
+    let mut y_layers: Vec<Vec<(&Block, usize)>> = vec![vec![]; CHUNK_DIMENSIONS * CHUNK_DIMENSIONS];
+    for i in 0..CHUNK_DIMENSIONS {
+        for k in 0..CHUNK_DIMENSIONS {
+            let index = flatten_2d(i, k, CHUNK_DIMENSIONS);
+
             // Seed coordinates for the noise function. Which loop variable goes to which xyz must agree everywhere.
             let (x, y, z) = match y_up {
-                BlockFace::Top => (sx + i, middle_air_start, sz + k),
-                _ => (sx + i, s_dimensions - middle_air_start, sz + k),
+                BlockFace::Top => (sx + i, s_dimensions, sz + k),
+                _ => (sx + i, 0, sz + k),
             };
 
             // Unmodified top height.
-            *height = S::get_top_height(
-                (x, y, z),
-                (structure_x, structure_y, structure_z),
-                s_dimensions,
-                noise_generator,
-                middle_air_start,
-                top_level.delta,
-                top_level.amplitude,
-                top_level.iterations,
-            );
+            let mut height = s_dimensions;
+            for (block, level) in block_ranges.ranges.iter() {
+                let level_top = get_block_depth(
+                    noise_generator,
+                    (x, y, z),
+                    structure_coords,
+                    height - level.middle_depth,
+                    level.amplitude,
+                    level.delta,
+                    level.iterations,
+                ) as usize;
+                y_layers[index].push((block, level_top));
+                height = level_top;
+            }
 
             // Don't let the top height fall "below" the 45s.
             let x_45 = match x_up {
@@ -420,7 +430,7 @@ fn generate_corner_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + 
                 BlockFace::Front => z,
                 _ => s_dimensions - z,
             };
-            *height = (*height).max(x_45).max(z_45);
+            y_layers[index][0].1 = y_layers[index][0].1.max(x_45).max(z_45);
         }
     }
 
@@ -430,21 +440,26 @@ fn generate_corner_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + 
         for j in 0..CHUNK_DIMENSIONS {
             // Seed coordinates for the noise function.
             let (x, y, z) = match z_up {
-                BlockFace::Front => (sx + i, sy + j, middle_air_start),
-                _ => (sx + i, sy + j, s_dimensions - middle_air_start),
+                BlockFace::Front => (sx + i, sy + j, s_dimensions),
+                _ => (sx + i, sy + j, 0),
             };
 
             // Unmodified top height.
-            let mut z_top = S::get_top_height(
-                (x, y, z),
-                (structure_x, structure_y, structure_z),
-                s_dimensions,
-                noise_generator,
-                middle_air_start,
-                top_level.delta,
-                top_level.amplitude,
-                top_level.iterations,
-            );
+            let mut height = s_dimensions;
+            let mut z_layers = vec![];
+            for (block, level) in block_ranges.ranges.iter() {
+                let level_top = get_block_depth(
+                    noise_generator,
+                    (x, y, z),
+                    structure_coords,
+                    height - level.middle_depth,
+                    level.amplitude,
+                    level.delta,
+                    level.iterations,
+                ) as usize;
+                z_layers.push((block, level_top));
+                height = level_top;
+            }
 
             let x_height = match x_up {
                 BlockFace::Right => x,
@@ -458,18 +473,20 @@ fn generate_corner_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + 
 
             // Don't let the top height fall "below" the 45, but also don't let it go "above" the first shared 45.
             // This probably won't interfere with anything before the first shared 45 is discovered bc of the loop order.
-            z_top = z_top.max(x_height).max(y_height);
-            z_top = z_top.min(first_all_45);
+            z_layers[0].1 = z_layers[0].1.max(x_height).max(y_height);
+            z_layers[0].1 = z_layers[0].1.min(first_all_45);
+            let z_top = z_layers[0].1;
 
             // Get smallest top height that's on the 45 for x, y, and z.
-            if x_top[i][j] == j && y_top[i][j] == j && z_top == j && first_all_45 == s_dimensions {
+            let index = flatten_2d(i, j, CHUNK_DIMENSIONS);
+            if x_layers[index][0].1 == j && y_layers[index][0].1 == j && z_top == j && first_all_45 == s_dimensions {
                 first_all_45 = z_top;
             };
 
             for k in 0..CHUNK_DIMENSIONS {
                 // Don't let the top rise "above" the first shared 45.
-                let x_top = x_top[j][k].min(first_all_45);
-                let y_top = y_top[i][k].min(first_all_45);
+                let x_top = x_layers[flatten_2d(j, k, CHUNK_DIMENSIONS)][0].1.min(first_all_45);
+                let y_top = y_layers[flatten_2d(i, k, CHUNK_DIMENSIONS)][0].1.min(first_all_45);
 
                 let z = sz + k;
                 let z_height = match z_up {
@@ -479,7 +496,7 @@ fn generate_corner_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + 
 
                 // Stops stairways to heaven.
                 let num_top: usize = (x_height == x_top) as usize + (y_height == y_top) as usize + (z_height == z_top) as usize;
-                if x_height <= x_top && y_height <= y_top && z_height <= z_top && num_top <= 1 {
+                if num_top <= 1 {
                     // The top block needs different "top" to look good, the block can't tell which "up" looks good.
                     let mut block_up = Planet::get_planet_face_without_structure(x, y, z, s_dimensions);
                     if x_height == x_top {
@@ -492,32 +509,18 @@ fn generate_corner_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + 
                         block_up = z_up;
                     }
                     let block = block_ranges.corner_block(
-                        (sx + i, sy + j, sz + k),
-                        (structure_x, structure_y, structure_z),
-                        x_top - x_height,
-                        y_top - y_height,
-                        z_top - z_height,
-                        noise_generator,
+                        x_height,
+                        y_height,
+                        z_height,
+                        &x_layers[flatten_2d(j, k, CHUNK_DIMENSIONS)],
+                        &y_layers[flatten_2d(i, k, CHUNK_DIMENSIONS)],
+                        &z_layers,
+                        block_ranges.sea_level,
+                        block_ranges.sea_block.as_ref(),
                     );
-                    chunk.set_block_at(i, j, k, block, block_up);
-                } else if block_ranges
-                    .sea_level
-                    .map(|sea_level| x_height.max(y_height).max(z_height) as f32 <= (middle_air_start as f32 + sea_level as f32))
-                    .unwrap_or(false)
-                {
-                    let mut block_up = Planet::get_planet_face_without_structure(x, y, z, s_dimensions);
-                    if x_height == x_top {
-                        block_up = x_up;
+                    if let Some(block) = block {
+                        chunk.set_block_at(i, j, k, block, block_up);
                     }
-                    if y_height == y_top {
-                        block_up = y_up;
-                    }
-                    if z_height == z_top {
-                        block_up = z_up;
-                    }
-
-                    let block = block_ranges.sea_block().expect("Sea level set without sea block being set!");
-                    chunk.set_block_at(x, y, z, block, block_up);
                 }
             }
         }
@@ -628,9 +631,9 @@ impl BiosphereGenerationStrategy for DefaultBiosphereGenerationStrategy {}
 /// Stores which blocks make up each biosphere, and how far below the top solid block each block generates.
 /// Blocks in ascending order ("stone" = 5 first, "grass" = 0 last).
 #[derive(Resource, Clone, Default, Debug)]
-pub struct BlockRanges<T: Component + Clone + Default> {
+pub struct BlockLayers<T: Component + Clone + Default> {
     _phantom: PhantomData<T>,
-    ranges: Vec<(Block, BlockLevel)>,
+    ranges: Vec<(Block, BlockLayer)>,
     sea_block: Option<Block>,
     sea_level: Option<usize>,
 }
@@ -638,15 +641,15 @@ pub struct BlockRanges<T: Component + Clone + Default> {
 /// Stores the blocks and all the noise information for creating the top of their layer.
 /// For example, the "stone" BlockLevel has the noise paramters that create the boundry between dirt and stone.
 #[derive(Clone, Debug)]
-pub struct BlockLevel {
+pub struct BlockLayer {
     middle_depth: usize,
     delta: f64,
     amplitude: f64,
     iterations: usize,
 }
 
-impl BlockLevel {
-    pub fn fixed_level(middle_depth: usize) -> Self {
+impl BlockLayer {
+    pub fn fixed_layer(middle_depth: usize) -> Self {
         Self {
             middle_depth,
             delta: 0.0,
@@ -655,7 +658,7 @@ impl BlockLevel {
         }
     }
 
-    pub fn noise_level(middle_depth: usize, delta: f64, amplitude: f64, iterations: usize) -> Self {
+    pub fn noise_layer(middle_depth: usize, delta: f64, amplitude: f64, iterations: usize) -> Self {
         Self {
             middle_depth,
             delta,
@@ -669,10 +672,10 @@ impl BlockLevel {
 /// Errors generated when initally setting up the block ranges
 pub enum BlockRangeError<T: Component + Clone + Default> {
     /// This means the block id provided was not found in the block registry
-    MissingBlock(BlockRanges<T>),
+    MissingBlock(BlockLayers<T>),
 }
 
-impl<T: Component + Clone + Default> BlockRanges<T> {
+impl<T: Component + Clone + Default> BlockLayers<T> {
     /// Creates a new block range, for each planet type to specify its blocks.
     pub fn new() -> Self {
         Self::default()
@@ -694,11 +697,34 @@ impl<T: Component + Clone + Default> BlockRanges<T> {
     /// - Stone
     /// - Stone
     /// - ... stone down to the bottom
-    pub fn with_range(mut self, block_id: &str, block_registry: &Registry<Block>, level: BlockLevel) -> Result<Self, BlockRangeError<T>> {
+    pub fn add_noise_layer(
+        mut self,
+        block_id: &str,
+        block_registry: &Registry<Block>,
+        middle_depth: usize,
+        delta: f64,
+        amplitude: f64,
+        iterations: usize,
+    ) -> Result<Self, BlockRangeError<T>> {
         let Some(block) = block_registry.from_id(block_id) else {
-            return Err(BlockRangeError::MissingBlock(self))
+            return Err(BlockRangeError::MissingBlock(self));
         };
-        self.ranges.push((block.clone(), level));
+        let layer = BlockLayer::noise_layer(middle_depth, delta, amplitude, iterations);
+        self.ranges.push((block.clone(), layer));
+        Ok(self)
+    }
+
+    pub fn add_fixed_layer(
+        mut self,
+        block_id: &str,
+        block_registry: &Registry<Block>,
+        middle_depth: usize,
+    ) -> Result<Self, BlockRangeError<T>> {
+        let Some(block) = block_registry.from_id(block_id) else {
+            return Err(BlockRangeError::MissingBlock(self));
+        };
+        let layer = BlockLayer::fixed_layer(middle_depth);
+        self.ranges.push((block.clone(), layer));
         Ok(self)
     }
 
@@ -709,14 +735,12 @@ impl<T: Component + Clone + Default> BlockRanges<T> {
         block_registry: &Registry<Block>,
         sea_level: usize,
     ) -> Result<Self, BlockRangeError<T>> {
-        if let Some(block) = block_registry.from_id(block_id).cloned() {
-            self.sea_block = Some(block);
-            self.sea_level = Some(sea_level);
-
-            Ok(self)
-        } else {
-            Err(BlockRangeError::MissingBlock(self))
-        }
+        let Some(block) = block_registry.from_id(block_id).cloned() else {
+            return Err(BlockRangeError::MissingBlock(self));
+        };
+        self.sea_block = Some(block);
+        self.sea_level = Some(sea_level);
+        Ok(self)
     }
 
     #[inline]
@@ -724,72 +748,73 @@ impl<T: Component + Clone + Default> BlockRanges<T> {
         self.sea_block.as_ref()
     }
 
-    fn face_block(
+    fn face_block<'a>(
         &self,
         height: usize,
-        concrete_ranges: &Vec<(&Block, usize)>,
+        block_layers: &Vec<(&'a Block, usize)>,
         sea_level: Option<usize>,
-        sea_block: Option<&Block>,
-    ) -> Option<Block> {
-        for (block, level_top) in concrete_ranges.iter().rev() {
+        sea_block: Option<&'a Block>,
+    ) -> Option<&'a Block> {
+        for (block, level_top) in block_layers.iter().rev() {
             if height <= *level_top {
-                return Some((*block).clone());
+                return Some(*block);
             }
         }
         // No land blocks, must be sea or air.
         if sea_level.map(|sea_level| height <= sea_level).unwrap_or(false) {
-            Some((*sea_block.expect("Set sea level without setting a sea block.")).clone())
+            Some(sea_block.expect("Set sea level without setting a sea block."))
         } else {
             None
         }
     }
 
-    fn edge_block(
+    fn edge_block<'a>(
         &self,
         j_height: usize,
         k_height: usize,
-        j_ranges: &Vec<(&Block, usize)>,
-        k_ranges: &Vec<(&Block, usize)>,
+        j_layers: &Vec<(&'a Block, usize)>,
+        k_layers: &Vec<(&'a Block, usize)>,
         sea_level: Option<usize>,
-        sea_block: Option<&Block>,
-    ) -> Option<Block> {
-        for (index, (block, j_level)) in j_ranges.iter().enumerate().rev() {
-            if j_height <= *j_level && k_height <= k_ranges[index].1 {
-                return Some((*block).clone());
+        sea_block: Option<&'a Block>,
+    ) -> Option<&'a Block> {
+        for (index, (block, j_layer_top)) in j_layers.iter().enumerate().rev() {
+            if j_height <= *j_layer_top && k_height <= k_layers[index].1 {
+                return Some(*block);
             }
         }
         // No land blocks, must be sea or air.
         if sea_level.map(|sea_level| j_height.max(k_height) <= sea_level).unwrap_or(false) {
-            Some((*sea_block.expect("Set sea level without setting a sea block.")).clone())
+            Some(sea_block.expect("Set sea level without setting a sea block."))
         } else {
             None
         }
     }
 
-    fn corner_block(
+    fn corner_block<'a>(
         &self,
-        block_coords: (usize, usize, usize),
-        structure_coords: (f64, f64, f64),
-        x_depth: usize,
-        y_depth: usize,
-        z_depth: usize,
-        noise_generator: &noise::OpenSimplex,
-    ) -> &Block {
-        for (block, level) in self.ranges.iter() {
-            let level_top = get_block_depth(
-                noise_generator,
-                block_coords,
-                structure_coords,
-                level.middle_depth,
-                level.amplitude,
-                level.delta,
-                level.iterations,
-            );
-            if x_depth as f64 >= level_top && y_depth as f64 >= level_top && z_depth as f64 >= level_top {
-                return block;
+        x_height: usize,
+        y_height: usize,
+        z_height: usize,
+        x_layers: &Vec<(&'a Block, usize)>,
+        y_layers: &Vec<(&'a Block, usize)>,
+        z_layers: &Vec<(&'a Block, usize)>,
+        sea_level: Option<usize>,
+        sea_block: Option<&'a Block>,
+    ) -> Option<&'a Block> {
+        for (index, (block, x_layer_top)) in x_layers.iter().enumerate().rev() {
+            if x_height <= *x_layer_top && y_height <= y_layers[index].1 && z_height <= z_layers[index].1 {
+                return Some(*block);
             }
         }
-        panic!("No matching block range for depths {x_depth}, {y_depth}, and {z_depth}.");
+        // No land blocks, must be sea or air.
+        if sea_level
+            .map(|sea_level| x_height.max(y_height).max(z_height) <= sea_level)
+            .unwrap_or(false)
+        {
+            Some(sea_block.expect("Set sea level without setting a sea block."))
+        } else {
+            None
+        }
     }
 }
 
@@ -799,7 +824,7 @@ pub fn generate_planet<T: Component + Clone + Default, E: TGenerateChunkEvent + 
     mut generating: ResMut<GeneratingChunks<T>>,
     mut events: EventReader<E>,
     noise_generator: Res<ResourceWrapper<noise::OpenSimplex>>,
-    block_ranges: Res<BlockRanges<T>>,
+    block_ranges: Res<BlockLayers<T>>,
 ) {
     let chunks = events
         .iter()
@@ -882,17 +907,17 @@ pub fn generate_planet<T: Component + Clone + Default, E: TGenerateChunkEvent + 
                         );
                     }
                     ChunkFaces::Corner(x_up, y_up, z_up) => {
-                        // generate_corner_chunk::<S, T>(
-                        //     (sx, sy, sz),
-                        //     (structure_x, structure_y, structure_z),
-                        //     s_dimensions,
-                        //     &noise_generator,
-                        //     &block_ranges,
-                        //     &mut chunk,
-                        //     x_up,
-                        //     y_up,
-                        //     z_up,
-                        // );
+                        generate_corner_chunk::<S, T>(
+                            (sx, sy, sz),
+                            (structure_x, structure_y, structure_z),
+                            s_dimensions,
+                            &noise_generator,
+                            &block_ranges,
+                            &mut chunk,
+                            x_up,
+                            y_up,
+                            z_up,
+                        );
                     }
                 }
                 timer.log_duration("Chunk: ");

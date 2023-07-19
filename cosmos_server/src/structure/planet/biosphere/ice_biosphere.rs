@@ -15,7 +15,7 @@ use crate::{init::init_world::ServerSeed, GameState};
 
 use super::{
     biosphere_generation::{
-        generate_planet, notify_when_done_generating_terrain, BlockLevel, BlockRanges, DefaultBiosphereGenerationStrategy,
+        generate_planet, notify_when_done_generating_terrain, BlockLayer, BlockLayers, DefaultBiosphereGenerationStrategy,
         GenerateChunkFeaturesEvent,
     },
     register_biosphere, TBiosphere, TGenerateChunkEvent, TemperatureRange,
@@ -63,12 +63,12 @@ impl TBiosphere<IceBiosphereMarker, IceChunkNeedsGeneratedEvent> for IceBiospher
 
 fn make_block_ranges(block_registry: Res<Registry<Block>>, mut commands: Commands) {
     commands.insert_resource(
-        BlockRanges::<IceBiosphereMarker>::default()
-            .with_range("cosmos:ice", &block_registry, BlockLevel::noise_level(160, 0.01, 4.0, 1))
+        BlockLayers::<IceBiosphereMarker>::default()
+            .add_noise_layer("cosmos:ice", &block_registry, 160, 0.01, 4.0, 1)
             .expect("Ice missing")
-            .with_range("cosmos:water", &block_registry, BlockLevel::fixed_level(4))
+            .add_fixed_layer("cosmos:water", &block_registry, 4)
             .expect("Water missing")
-            .with_range("cosmos:stone", &block_registry, BlockLevel::fixed_level(296))
+            .add_fixed_layer("cosmos:stone", &block_registry, 296)
             .expect("Stone missing"),
     );
 }
