@@ -134,13 +134,7 @@ fn generate_spikes(
                                         if let Ok(rel_pos) =
                                             rotate(start_checking, (0, dy as i32 - dy_down as i32, 0), s_dimensions, block_up)
                                         {
-                                            structure.set_block_at_tuple(
-                                                rel_pos,
-                                                molten_stone,
-                                                block_up,
-                                                blocks,
-                                                Some(block_event_writer),
-                                            );
+                                            structure.set_block_at_tuple(rel_pos, molten_stone, block_up, blocks, Some(block_event_writer));
                                         }
                                     }
                                     break 'spike_placement;

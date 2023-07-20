@@ -487,49 +487,56 @@ impl ChunkRenderer {
             .filter(|((x, y, z), _)| chunk.has_block_at(*x, *y, *z))
         {
             let (center_offset_x, center_offset_y, center_offset_z) = (x as f32 - cd2 + 0.5, y as f32 - cd2 + 0.5, z as f32 - cd2 + 0.5);
+            let actual_block = blocks.from_numeric_id(block);
+
+            #[inline(always)]
+            fn check(c: &Chunk, block: u16, actual_block: &Block, blocks: &Registry<Block>, x: usize, y: usize, z: usize) -> bool {
+                (block != c.block_at(x, y, z) || !actual_block.is_full()) && c.has_see_through_block_at(x, y, z, blocks)
+            }
+
             // right
-            if (x != CHUNK_DIMENSIONS - 1 && chunk.has_see_through_block_at(x + 1, y, z, blocks))
-                || (x == CHUNK_DIMENSIONS - 1 && (right.map(|c| c.has_see_through_block_at(0, y, z, blocks)).unwrap_or(true)))
+            if (x != CHUNK_DIMENSIONS - 1 && check(chunk, block, actual_block, blocks, x + 1, y, z))
+                || (x == CHUNK_DIMENSIONS - 1 && (right.map(|c| check(c, block, actual_block, blocks, 0, y, z)).unwrap_or(true)))
             {
                 faces.push(BlockFace::Right);
             }
             // left
-            if (x != 0 && chunk.has_see_through_block_at(x - 1, y, z, blocks))
+            if (x != 0 && check(chunk, block, actual_block, blocks, x - 1, y, z))
                 || (x == 0
                     && (left
-                        .map(|c| c.has_see_through_block_at(CHUNK_DIMENSIONS - 1, y, z, blocks))
+                        .map(|c| check(c, block, actual_block, blocks, CHUNK_DIMENSIONS - 1, y, z))
                         .unwrap_or(true)))
             {
                 faces.push(BlockFace::Left);
             }
 
             // top
-            if (y != CHUNK_DIMENSIONS - 1 && chunk.has_see_through_block_at(x, y + 1, z, blocks))
-                || (y == CHUNK_DIMENSIONS - 1 && (top.map(|c| c.has_see_through_block_at(x, 0, z, blocks)).unwrap_or(true)))
+            if (y != CHUNK_DIMENSIONS - 1 && check(chunk, block, actual_block, blocks, x, y + 1, z))
+                || (y == CHUNK_DIMENSIONS - 1 && top.map(|c| check(c, block, actual_block, blocks, x, 0, z)).unwrap_or(true))
             {
                 faces.push(BlockFace::Top);
             }
             // bottom
-            if (y != 0 && chunk.has_see_through_block_at(x, y - 1, z, blocks))
+            if (y != 0 && check(chunk, block, actual_block, blocks, x, y - 1, z))
                 || (y == 0
                     && (bottom
-                        .map(|c| c.has_see_through_block_at(x, CHUNK_DIMENSIONS - 1, z, blocks))
+                        .map(|c| check(c, block, actual_block, blocks, x, CHUNK_DIMENSIONS - 1, z))
                         .unwrap_or(true)))
             {
                 faces.push(BlockFace::Bottom);
             }
 
             // back
-            if (z != CHUNK_DIMENSIONS - 1 && chunk.has_see_through_block_at(x, y, z + 1, blocks))
-                || (z == CHUNK_DIMENSIONS - 1 && (front.map(|c| c.has_see_through_block_at(x, y, 0, blocks)).unwrap_or(true)))
+            if (z != CHUNK_DIMENSIONS - 1 && check(chunk, block, actual_block, blocks, x, y, z + 1))
+                || (z == CHUNK_DIMENSIONS - 1 && (front.map(|c| check(c, block, actual_block, blocks, x, y, 0)).unwrap_or(true)))
             {
                 faces.push(BlockFace::Back);
             }
             // front
-            if (z != 0 && chunk.has_see_through_block_at(x, y, z - 1, blocks))
+            if (z != 0 && check(chunk, block, actual_block, blocks, x, y, z - 1))
                 || (z == 0
                     && (back
-                        .map(|c| c.has_see_through_block_at(x, y, CHUNK_DIMENSIONS - 1, blocks))
+                        .map(|c| check(c, block, actual_block, blocks, x, y, CHUNK_DIMENSIONS - 1))
                         .unwrap_or(true)))
             {
                 faces.push(BlockFace::Front);
