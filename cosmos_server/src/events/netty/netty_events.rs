@@ -16,7 +16,6 @@ use cosmos_core::physics::player_world::WorldWithin;
 use cosmos_core::registry::Registry;
 use cosmos_core::structure::chunk::CHUNK_DIMENSIONSF;
 use cosmos_core::{entities::player::Player, netty::netty_rigidbody::NettyRigidBody};
-use renet_visualizer::RenetServerVisualizer;
 
 use crate::entities::player::PlayerLooking;
 use crate::netty::network_helpers::{ClientTicks, ServerLobby};
@@ -59,7 +58,7 @@ fn handle_events_system(
     players: Query<(Entity, &Player, &Transform, &Location, &Velocity, &Inventory, &RenderDistance)>,
     player_worlds: Query<(&Location, &WorldWithin, &PhysicsWorld), (With<Player>, Without<Parent>)>,
     items: Res<Registry<Item>>,
-    mut visualizer: ResMut<RenetServerVisualizer<200>>,
+    // mut visualizer: ResMut<RenetServerVisualizer<200>>,
     mut rapier_context: ResMut<RapierContext>,
     mut requested_entity: EventWriter<RequestedEntityEvent>,
 ) {
@@ -68,7 +67,7 @@ fn handle_events_system(
             ServerEvent::ClientConnected { client_id } => {
                 let client_id = *client_id;
                 println!("Client {client_id} connected");
-                visualizer.add_client(client_id);
+                // visualizer.add_client(client_id);
 
                 for (entity, player, transform, location, velocity, inventory, render_distance) in players.iter() {
                     let body = NettyRigidBody::new(velocity, transform.rotation, *location);
@@ -147,8 +146,8 @@ fn handle_events_system(
             }
             ServerEvent::ClientDisconnected { client_id, reason } => {
                 println!("Client {client_id} disconnected: {reason}");
-                visualizer.remove_client(*client_id);
-                client_ticks.ticks.remove(&client_id);
+                // visualizer.remove_client(*client_id);
+                // client_ticks.ticks.remove(&client_id);
 
                 if let Some(player_entity) = lobby.remove_player(*client_id) {
                     commands.entity(player_entity).insert(NeedsDespawned);
