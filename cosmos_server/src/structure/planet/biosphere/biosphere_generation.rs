@@ -51,7 +51,7 @@ pub struct GenerateChunkFeaturesEvent<T: Component> {
 /// * `amplitude` Value passed in by the `GenerationParemeters`. Represents how tall the terrain will be
 /// * `delta` Value passed in by the `GenerationParemeters`. Represents how much each change in x/y/z will effect the terrain. Small values = lesser effect
 /// * `iterations` Value passed in by the `GenerationParemeters`. Represents how many times the noise function will be run
-fn get_block_depth(
+fn get_block_height(
     noise_generator: &noise::OpenSimplex,
     (bx, by, bz): (usize, usize, usize),
     (structure_x, structure_y, structure_z): (f64, f64, f64),
@@ -129,15 +129,17 @@ fn generate_face_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
             let mut height = s_dimensions;
             let mut concrete_ranges = Vec::new();
             for (block, level) in block_ranges.ranges.iter() {
-                let level_top = get_block_depth(
-                    noise_generator,
+                let level_top = S::get_top_height(
                     seed_coords,
                     structure_coords,
+                    s_dimensions,
+                    noise_generator,
                     height - level.middle_depth,
                     level.amplitude,
                     level.delta,
                     level.iterations,
                 ) as usize;
+                // println!("{height} {level_top}");
                 concrete_ranges.push((block, level_top));
                 height = level_top;
             }
@@ -192,10 +194,11 @@ fn generate_edge_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
             };
             let mut height = s_dimensions;
             for (block, layer) in block_ranges.ranges.iter() {
-                let layer_top = get_block_depth(
-                    noise_generator,
+                let layer_top = S::get_top_height(
                     (x, y, z),
                     structure_coords,
+                    s_dimensions,
+                    noise_generator,
                     height - layer.middle_depth,
                     layer.amplitude,
                     layer.delta,
@@ -221,10 +224,11 @@ fn generate_edge_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
             };
             let mut height = s_dimensions;
             for (block, layer) in block_ranges.ranges.iter() {
-                let layer_top = get_block_depth(
-                    noise_generator,
+                let layer_top = S::get_top_height(
                     (x, y, z),
                     structure_coords,
+                    s_dimensions,
+                    noise_generator,
                     height - layer.middle_depth,
                     layer.amplitude,
                     layer.delta,
@@ -235,13 +239,29 @@ fn generate_edge_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
             }
 
             // Mixing to hopefully prevent falling below the 45.
-            let mix_coefficient = 0.5 * (j as f64 / 31.0);
-            for index in 0..j_layers[j].len() {
-                let j_height = j_layers[j][index].1;
-                let k_height = k_layers[j][index].1;
-                j_layers[j][index].1 = (j_height as f64 * (1.0 - mix_coefficient) + k_height as f64 * mix_coefficient) as usize;
-                k_layers[j][index].1 = (k_height as f64 * (1.0 - mix_coefficient) + j_height as f64 * mix_coefficient) as usize;
-            }
+            // let mix_coefficient = 0.5 * (j as f64 / 31.0);
+            // for index in 0..j_layers[j].len() {
+            //     let j_height = j_layers[j][index].1;
+            //     let k_height = k_layers[j][index].1;
+            //     j_layers[j][index].1 = (j_height as f64 * (1.0 - mix_coefficient) + k_height as f64 * mix_coefficient) as usize;
+            //     k_layers[j][index].1 = (k_height as f64 * (1.0 - mix_coefficient) + j_height as f64 * mix_coefficient) as usize;
+            // }
+
+            //             let min = x_height.max(y_height).max(z_height);
+            //             if min == x_height {
+            //                 x_coefficient += 0.5;
+            //             } else if min == y_height {
+            //                 y_coefficient += 0.5;
+            //             } else {
+            //                 z_coefficient += 0.5;
+            //             }
+            // // Tend towards smaller coordinates to chop off at 45.
+            //             for index in 0..j_layers[j].len() {
+            //                 let j_height = j_layers[j][index].1;
+            //                 let k_height = k_layers[j][index].1;
+            //                 j_layers[j][index].1 = (j_height as f64 * (1.0 - mix_coefficient) + k_height as f64 * mix_coefficient) as usize;
+            //                 k_layers[j][index].1 = (k_height as f64 * (1.0 - mix_coefficient) + j_height as f64 * mix_coefficient) as usize;
+            //             }
         }
 
         // The minimum (j, j) on the 45 where the two top heights intersect.
@@ -328,7 +348,7 @@ fn generate_corner_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + 
             // Unmodified top height.
             let mut height = s_dimensions;
             for (block, level) in block_ranges.ranges.iter() {
-                let level_top = get_block_depth(
+                let level_top = get_block_height(
                     noise_generator,
                     (x, y, z),
                     structure_coords,
@@ -375,7 +395,7 @@ fn generate_corner_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + 
             // Unmodified top height.
             let mut height = s_dimensions;
             for (block, level) in block_ranges.ranges.iter() {
-                let level_top = get_block_depth(
+                let level_top = get_block_height(
                     noise_generator,
                     (x, y, z),
                     structure_coords,
@@ -421,7 +441,7 @@ fn generate_corner_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + 
             let mut height = s_dimensions;
             let mut z_layers = vec![];
             for (block, level) in block_ranges.ranges.iter() {
-                let level_top = get_block_depth(
+                let level_top = get_block_height(
                     noise_generator,
                     (x, y, z),
                     structure_coords,
@@ -506,6 +526,8 @@ fn generate_corner_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + 
     }
 }
 
+const MIRROR_MIN: usize = 100;
+const MIRROR_MAX: usize = 1400;
 /// Used to change the algorithm used for base terrain generation.
 ///
 /// Try tweaking the values of GenerationParemeters first before making your own custom generation function.
@@ -521,7 +543,7 @@ pub trait BiosphereGenerationStrategy {
     /// * `amplitude` Value passed in by the `GenerationParemeters`. Represents how tall the terrain will be
     /// * `delta` Value passed in by the `GenerationParemeters`. Represents how much each change in x/y/z will effect the terrain. Small values = lesser effect
     /// * `iterations` Value passed in by the `GenerationParemeters`. Represents how many times the noise function will be run
-    fn get_block_depth(
+    fn get_block_height(
         noise_generator: &noise::OpenSimplex,
         block_coords: (usize, usize, usize),
         structure_coords: (f64, f64, f64),
@@ -530,7 +552,7 @@ pub trait BiosphereGenerationStrategy {
         delta: f64,
         iterations: usize,
     ) -> f64 {
-        get_block_depth(
+        get_block_height(
             noise_generator,
             block_coords,
             structure_coords,
@@ -541,28 +563,117 @@ pub trait BiosphereGenerationStrategy {
         )
     }
 
-    /// In order to combat artifacts near the edges of planets, this function is called to flatten out the terrain near the corners/edges.
-    ///
-    /// Unless you're doing something really wacky, you should generally keep this as is.
-    ///
-    /// * `initial_height` The value returned by `get_block_depth`
-    /// * `(x, y, z)` Block x/y/z in the structure
-    /// * `(s_dimensions)` The width/height/length of the structure this is on.
-    fn mirror(initial_height: f64, middle_air_start: usize, (mut x, mut y, mut z): (usize, usize, usize), s_dimensions: usize) -> usize {
-        // For the flattening (it's like the rumbling).
-        x = x.min(s_dimensions - x);
-        y = y.min(s_dimensions - y);
-        z = z.min(s_dimensions - z);
+    fn get_mirror_coefficient_height(
+        a: usize,
+        seed_coords: (usize, usize, usize),
+        structure_coords: (f64, f64, f64),
+        middle_air_start: usize,
+        s_dimensions: usize,
+        noise_generator: &noise::OpenSimplex,
+        delta: f64,
+        amplitude: f64,
+        iterations: usize,
+    ) -> (f64, f64) {
+        let mut coefficient = 0.0;
+        if a > MIRROR_MAX {
+            coefficient = 1.0;
+        } else if a > MIRROR_MAX - MIRROR_MIN {
+            coefficient = 1.0 - (MIRROR_MAX - a) as f64 / MIRROR_MIN as f64;
+        } else if a < s_dimensions - MIRROR_MAX {
+            coefficient = 1.0;
+        } else if a < s_dimensions - MIRROR_MAX + MIRROR_MIN {
+            coefficient = 1.0 - ((a - (s_dimensions - MIRROR_MAX)) as f64 / MIRROR_MIN as f64);
+        }
 
-        let mut depth = initial_height - middle_air_start as f64;
+        let height = self::get_block_height(
+            noise_generator,
+            seed_coords,
+            structure_coords,
+            middle_air_start,
+            amplitude,
+            delta,
+            iterations,
+        ) as f64;
+        (coefficient, height)
+    }
 
-        // Min is height of the face you're on, second min is the closer to the 45 of the 2 remaining.
-        let dist_from_space = s_dimensions as f64 - initial_height;
-        let dist_from_45 = x.min(y).max(x.max(y).min(z)) as f64 - dist_from_space;
-        let flattening_limit = (s_dimensions as f64 - 2.0 * dist_from_space) * FLAT_FRACTION;
-        depth *= dist_from_45.min(flattening_limit) / flattening_limit * (1.0 - UNFLATTENED) + UNFLATTENED;
+    // Negative sides should use different seed coordinates, for now only test on positive edges.
+    // Works perfectly when 2 sides are specified explicitly (as y and x are now).
+    fn mirror(
+        noise_generator: &noise::OpenSimplex,
+        (bx, by, bz): (usize, usize, usize),
+        structure_coords: (f64, f64, f64),
+        middle_air_start: usize,
+        amplitude: f64,
+        delta: f64,
+        iterations: usize,
+        s_dimensions: usize,
+    ) -> usize {
+        // println!("{bx}, {by}, {bz}");
 
-        (middle_air_start as f64 + depth).round() as usize
+        // X.
+        let x_seed = if by == s_dimensions || by == 0 {
+            (by, bx, bz)
+        } else if bz == s_dimensions || bz == 0 {
+            (bz, by, bx)
+        } else {
+            (bx, by, bz)
+        };
+        let (x_coefficient, x_height) = Self::get_mirror_coefficient_height(
+            bx,
+            x_seed,
+            structure_coords,
+            middle_air_start,
+            s_dimensions,
+            noise_generator,
+            delta,
+            amplitude,
+            iterations,
+        );
+
+        // Y.
+        let y_seed = if bx == s_dimensions || bx == 0 {
+            (by, bx, bz)
+        } else if bz == s_dimensions || bz == 0 {
+            (bx, bz, by)
+        } else {
+            (bx, by, bz)
+        };
+        let (y_coefficient, y_height) = Self::get_mirror_coefficient_height(
+            by,
+            y_seed,
+            structure_coords,
+            middle_air_start,
+            s_dimensions,
+            noise_generator,
+            delta,
+            amplitude,
+            iterations,
+        );
+
+        // Z.
+        let z_seed = if bx == s_dimensions || bx == 0 {
+            (bz, by, bx)
+        } else if by == s_dimensions || by == 0 {
+            (bx, bz, by)
+        } else {
+            (bx, by, bz)
+        };
+        let (z_coefficient, z_height) = Self::get_mirror_coefficient_height(
+            bz,
+            z_seed,
+            structure_coords,
+            middle_air_start,
+            s_dimensions,
+            noise_generator,
+            delta,
+            amplitude,
+            iterations,
+        );
+
+        // ((x_height * x_coefficient + y_height * y_coefficient + z_height * z_coefficient) / (x_coefficient + y_coefficient + z_coefficient))
+        //     .round() as usize
+        ((x_height * x_coefficient + y_height * y_coefficient) / (x_coefficient + y_coefficient)).round() as usize
     }
 
     /// Gets the top block's height
@@ -586,17 +697,13 @@ pub trait BiosphereGenerationStrategy {
         iterations: usize,
     ) -> usize {
         Self::mirror(
-            Self::get_block_depth(
-                noise_generator,
-                (x, y, z),
-                (structure_x, structure_y, structure_z),
-                middle_air_start,
-                amplitude,
-                delta,
-                iterations,
-            ),
-            middle_air_start,
+            noise_generator,
             (x, y, z),
+            (structure_x, structure_y, structure_z),
+            middle_air_start,
+            amplitude,
+            delta,
+            iterations,
             s_dimensions,
         )
     }
