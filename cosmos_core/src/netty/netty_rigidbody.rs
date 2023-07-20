@@ -8,8 +8,13 @@ use serde::{Deserialize, Serialize};
 use crate::physics::location::Location;
 
 #[derive(Deserialize, Serialize, Debug, Clone, Copy)]
+/// There are two ways of sending your position - relative to something or absolute.
 pub enum NettyRigidBodyLocation {
+    /// Absolute is just the entity's location, relative to nothing
     Absolute(Location),
+    /// The Vec3 passed in is relative to the entity provided, but is not relative to the entity provided's location.
+    ///
+    /// To calculate this, just subtract your location from the entity you're relative to's location
     Relative(Vec3, Entity),
 }
 

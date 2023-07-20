@@ -55,21 +55,24 @@ impl NetworkMapping {
 }
 
 #[derive(Debug)]
+/// This error is returned if there is an issue extracting the proper entity from the network mapping provided.
 pub enum MappingError<T> {
+    /// This error is returned if the proper entity is missing from the network mapping provided.
     MissingRecord(T),
 }
 
+/// Used to convert structs with server entities into structs with client entities
 pub trait Mappable {
+    /// Converts all instances of server entities into their respective client entities based off the mapping.
+    ///
+    /// Returns Err if it is unable to find the proper mapping
     fn map(self, network_mapping: &NetworkMapping) -> Result<Self, MappingError<Self>>
     where
         Self: Sized;
 }
 
 impl Mappable for NettyRigidBody {
-    fn map(self, network_mapping: &NetworkMapping) -> Result<Self, MappingError<Self>>
-    where
-        Self: Sized,
-    {
+    fn map(self, network_mapping: &NetworkMapping) -> Result<Self, MappingError<Self>> {
         match self.location {
             NettyRigidBodyLocation::Relative(rel_pos, parent_ent) => {
                 let Some(client_ent) = network_mapping.client_from_server(&parent_ent) else {

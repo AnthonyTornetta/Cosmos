@@ -100,27 +100,32 @@ struct LerpTowards(NettyRigidBody);
 
 fn lerp_towards(
     mut location_query: Query<&mut Location>,
+    global_transform_query: Query<&GlobalTransform>,
     mut query: Query<(Entity, &LerpTowards, &mut Transform, &mut Velocity), With<Location>>,
 ) {
     for (entity, lerp_towards, mut transform, mut velocity) in query.iter_mut() {
-        let to_location = match lerp_towards.location {
-            NettyRigidBodyLocation::Absolute(location) => location,
-            NettyRigidBodyLocation::Relative(rel_trans, entity) => {
-                let parent_loc = location_query.get(entity).copied().unwrap_or(Location::default());
+        match lerp_towards.location {
+            NettyRigidBodyLocation::Absolute(location) => {
+                let to_location = location;
+                let mut location = location_query.get_mut(entity).expect("The above With statement guarentees this");
 
-                parent_loc + rel_trans
+                if to_location.distance_sqrd(&location) > 100.0 {
+                    location.set_from(&to_location);
+                } else {
+                    let lerpped_loc = *location + (location.relative_coords_to(&to_location)) * 0.1;
+
+                    location.set_from(&lerpped_loc);
+                }
+            }
+            NettyRigidBodyLocation::Relative(rel_trans, entity) => {
+                if let Ok(g_trans) = global_transform_query.get(entity) {
+                    let parent_rot = Quat::from_affine3(&g_trans.affine());
+                    let final_trans = parent_rot.inverse().mul_vec3(rel_trans);
+
+                    transform.translation = transform.translation.lerp(final_trans, 0.1);
+                }
             }
         };
-
-        let mut location = location_query.get_mut(entity).expect("The above With statement guarentees this");
-
-        if to_location.distance_sqrd(&location) > 100.0 {
-            location.set_from(&to_location);
-        } else {
-            let lerpped_loc = *location + (location.relative_coords_to(&to_location)) * 0.1;
-
-            location.set_from(&lerpped_loc);
-        }
 
         transform.rotation = //lerp_towards.rotation;
             transform.rotation.lerp(lerp_towards.rotation, 0.1);
