@@ -12,7 +12,7 @@ use cosmos_core::{
         NettyChannelServer, NoSendEntity,
     },
     persistence::LoadingDistance,
-    physics::location::Location,
+    physics::location::{add_previous_location, Location},
 };
 
 use crate::netty::network_helpers::NetworkTick;
@@ -88,5 +88,5 @@ fn server_sync_bodies(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(server_sync_bodies);
+    app.add_system(server_sync_bodies.after(add_previous_location));
 }

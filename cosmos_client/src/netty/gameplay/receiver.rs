@@ -122,7 +122,7 @@ fn lerp_towards(
                     let parent_rot = Quat::from_affine3(&g_trans.affine());
                     let final_trans = parent_rot.inverse().mul_vec3(rel_trans);
 
-                    transform.translation = transform.translation.lerp(final_trans, 0.1);
+                    transform.translation = final_trans;
                 }
             }
         };
