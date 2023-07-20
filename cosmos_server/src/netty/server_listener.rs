@@ -272,5 +272,5 @@ pub fn server_listen_messages(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(server_listen_messages);
+    app.add_systems(Update, server_listen_messages);
 }

@@ -5,7 +5,7 @@ use std::marker::PhantomData;
 use bevy::{
     prelude::{
         in_state, Added, App, Commands, Component, Entity, Event, EventReader, EventWriter, First, IntoSystemConfigs, Query, Res, ResMut,
-        Resource, Update, With, Without,
+        Resource, Startup, Update, With, Without,
     },
     tasks::Task,
 };
@@ -103,7 +103,7 @@ pub fn register_biosphere<T: Component + Default, E: Send + Sync + 'static + TGe
     temperature_range: TemperatureRange,
 ) {
     app.add_event::<E>()
-        .add_startup_system(move |mut registry: ResMut<BiosphereTemperatureRegistry>| {
+        .add_systems(Startup, move |mut registry: ResMut<BiosphereTemperatureRegistry>| {
             registry.register(biosphere_id.to_owned(), temperature_range);
         })
         .add_systems(
@@ -226,7 +226,7 @@ impl BiosphereTemperatureRegistry {
 pub(super) fn register(app: &mut App) {
     app.add_event::<NeedsBiosphereEvent>()
         .insert_resource(BiosphereTemperatureRegistry::default())
-        .add_system(add_biosphere);
+        .add_systems(Update, add_biosphere);
 
     grass_biosphere::register(app);
     molten_biosphere::register(app);

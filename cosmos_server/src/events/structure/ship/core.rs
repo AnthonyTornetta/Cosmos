@@ -1,5 +1,5 @@
 use bevy::{
-    prelude::{in_state, App, Commands, Entity, EventWriter, Query, Res, ResMut, Update},
+    prelude::{in_state, App, Commands, Entity, EventWriter, IntoSystemConfigs, Query, Res, ResMut, Update},
     time::Time,
 };
 use bevy_renet::renet::RenetServer;

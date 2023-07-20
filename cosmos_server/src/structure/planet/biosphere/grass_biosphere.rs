@@ -565,5 +565,5 @@ pub(super) fn register(app: &mut App) {
     )
     .insert_resource(GenerationParemeters::<GrassBiosphereMarker>::new(0.05, 7.0, 9));
 
-    app.add_system(make_block_ranges.in_schedule(OnEnter(GameState::PostLoading)));
+    app.add_systems(OnEnter(GameState::PostLoading), make_block_ranges);
 }

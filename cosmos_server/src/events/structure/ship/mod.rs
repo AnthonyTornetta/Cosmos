@@ -1,6 +1,6 @@
 //! Events for the ship
 
-use bevy::prelude::{in_state, App, Entity, Event, EventReader, Query, ResMut, Update};
+use bevy::prelude::{in_state, App, Entity, Event, EventReader, IntoSystemConfigs, Query, ResMut, Update};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     events::structure::change_pilot_event::ChangePilotEvent,

@@ -183,7 +183,6 @@ pub(super) fn register(app: &mut App) {
         .add_event::<BlockInteractEvent>()
         .add_systems(
             Update,
-            (handle_block_break_events, handle_block_place_events, handle_block_changed_event),
-        )
-        .run_if(in_state(GameState::Playing));
+            (handle_block_break_events, handle_block_place_events, handle_block_changed_event).run_if(in_state(GameState::Playing)),
+        );
 }

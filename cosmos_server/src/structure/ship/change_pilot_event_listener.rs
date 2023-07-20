@@ -1,4 +1,4 @@
-use bevy::prelude::{in_state, App, Entity, Event, EventReader, ResMut, Update};
+use bevy::prelude::{in_state, App, Entity, Event, EventReader, IntoSystemConfigs, ResMut, Update};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannelServer};
 

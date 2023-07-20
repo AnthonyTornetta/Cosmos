@@ -1,7 +1,7 @@
 //! Responsible for spawning planets near stars, but for now just spawns a planet at 0, 0, 0.
 
 use bevy::{
-    prelude::{in_state, App, Commands, Deref, DerefMut, Query, Res, ResMut, Resource, Update, Vec3, With},
+    prelude::{in_state, App, Commands, Deref, DerefMut, IntoSystemConfigs, Query, Res, ResMut, Resource, Update, Vec3, With},
     utils::HashSet,
 };
 use cosmos_core::{

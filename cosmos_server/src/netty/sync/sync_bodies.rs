@@ -75,5 +75,5 @@ fn server_sync_bodies(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(server_sync_bodies);
+    app.add_systems(Update, server_sync_bodies);
 }

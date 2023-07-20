@@ -1,6 +1,6 @@
 //! Syncs player inventories
 
-use bevy::prelude::{in_state, App, Changed, Entity, Query, ResMut, Update};
+use bevy::prelude::{in_state, App, Changed, Entity, IntoSystemConfigs, Query, ResMut, Update};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     inventory::Inventory,

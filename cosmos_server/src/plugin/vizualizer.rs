@@ -10,7 +10,7 @@ use bevy::prelude::*;
 //     visualizer.show_window(egui_context.ctx_mut());
 // }
 
-pub(super) fn register(app: &mut App) {
+pub(super) fn register(_app: &mut App) {
     // app.insert_resource(RenetServerVisualizer::<200>::default())
     // .add_systems(Update, update_visulizer_system);
 }

@@ -1,4 +1,4 @@
-use bevy::prelude::{in_state, App, EventReader, EventWriter, Query, Res, Update, With};
+use bevy::prelude::{in_state, App, EventReader, EventWriter, IntoSystemConfigs, Query, Res, Update, With};
 use cosmos_core::{
     block::Block,
     events::structure::change_pilot_event::ChangePilotEvent,

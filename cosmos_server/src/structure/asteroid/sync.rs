@@ -35,5 +35,5 @@ fn on_request_asteroid(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(on_request_asteroid);
+    app.add_systems(Update, on_request_asteroid);
 }

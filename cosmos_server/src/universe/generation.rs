@@ -2,7 +2,7 @@
 
 use std::f32::consts::{E, TAU};
 
-use bevy::prelude::{in_state, App, Commands, Query, Res, Update, Vec3, With};
+use bevy::prelude::{in_state, App, Commands, IntoSystemConfigs, Query, Res, Update, Vec3, With};
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
     ecs::bundles::CosmosPbrBundle,

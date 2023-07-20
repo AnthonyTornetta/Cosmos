@@ -54,7 +54,7 @@ fn handle_events_system(
     transport: Res<NetcodeServerTransport>,
     mut server_events: EventReader<ServerEvent>,
     mut lobby: ResMut<ServerLobby>,
-    mut client_ticks: ResMut<ClientTicks>,
+    mut _client_ticks: ResMut<ClientTicks>,
     players: Query<(Entity, &Player, &Transform, &Location, &Velocity, &Inventory, &RenderDistance)>,
     player_worlds: Query<(&Location, &WorldWithin, &PhysicsWorld), (With<Player>, Without<Parent>)>,
     items: Res<Registry<Item>>,

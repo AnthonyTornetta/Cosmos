@@ -1,4 +1,4 @@
-use bevy::prelude::{in_state, App, EventReader, Query, ResMut, Update};
+use bevy::prelude::{in_state, App, EventReader, IntoSystemConfigs, Query, ResMut, Update};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     entities::player::apart_of_ship::ApartOfShip,

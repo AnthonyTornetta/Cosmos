@@ -1,6 +1,6 @@
 //! Contains server-side logic for stars
 
-use bevy::prelude::{in_state, App, EventReader, First, Query, ResMut, Update, With};
+use bevy::prelude::{in_state, App, EventReader, First, IntoSystemConfigs, Query, ResMut, Update, With};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannelServer},

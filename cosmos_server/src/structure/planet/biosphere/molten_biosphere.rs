@@ -192,5 +192,5 @@ pub(super) fn register(app: &mut App) {
     )
     .insert_resource(GenerationParemeters::<MoltenBiosphereMarker>::new(0.10, 7.0, 9));
 
-    app.add_system(make_block_ranges.in_schedule(OnEnter(GameState::PostLoading)));
+    app.add_systems(OnEnter(GameState::PostLoading), make_block_ranges);
 }
