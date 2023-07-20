@@ -1,4 +1,4 @@
-use bevy::prelude::{resource_exists, App, RemovedComponents, ResMut, Update};
+use bevy::prelude::{resource_exists, App, IntoSystemConfigs, RemovedComponents, ResMut, Update};
 use cosmos_core::physics::location::Location;
 
 use super::mapping::NetworkMapping;

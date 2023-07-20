@@ -1,6 +1,6 @@
 //! Represents how far the player can see entities
 
-use bevy::prelude::{in_state, App, Changed, Query, ResMut, Update, With};
+use bevy::prelude::{in_state, App, Changed, IntoSystemConfigs, Query, ResMut, Update, With};
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     entities::player::render_distance::RenderDistance,

@@ -1,4 +1,4 @@
-use bevy::prelude::{resource_exists, App, Children, Entity, First, Query, ResMut, With};
+use bevy::prelude::{resource_exists, App, Children, Entity, First, IntoSystemConfigs, Query, ResMut, With};
 use cosmos_core::ecs::{despawn_needed, NeedsDespawned};
 
 use crate::netty::mapping::NetworkMapping;

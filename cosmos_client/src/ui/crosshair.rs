@@ -47,9 +47,9 @@ pub struct Crosshair;
 
 fn update_cursor_pos(pos: Res<CrosshairOffset>, mut query: Query<&mut Style, With<Crosshair>>) {
     if let Ok(mut crosshair) = query.get_single_mut() {
-        crosshair.position.left = Val::Px(pos.x);
+        crosshair.left = Val::Px(pos.x);
         // bottom doesn't seem to work, so -pos.y is used.
-        crosshair.position.top = Val::Px(-pos.y);
+        crosshair.top = Val::Px(-pos.y);
     }
 }
 

@@ -3,8 +3,8 @@
 use bevy::{
     pbr::NotShadowCaster,
     prelude::{
-        shape, Added, App, Assets, Commands, DirectionalLight, Entity, Mesh, PbrBundle, Query, ResMut, StandardMaterial, Transform, Vec3,
-        With, Without,
+        shape, Added, App, Assets, Commands, DirectionalLight, Entity, Mesh, PbrBundle, Query, ResMut, StandardMaterial, Transform, Update,
+        Vec3, With, Without,
     },
 };
 use cosmos_core::{physics::location::SECTOR_DIMENSIONS, universe::star::Star};
@@ -57,5 +57,5 @@ fn create_added_star(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(create_added_star).add_system(point_light_from_sun);
+    app.add_systems(Update, (create_added_star, point_light_from_sun));
 }

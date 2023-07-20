@@ -326,7 +326,7 @@ fn main() {
         .add_plugins(RenetClientPlugin)
         .add_plugins(NetcodeClientPlugin)
         // .add_plugin(RapierDebugRenderPlugin::default())
-        .add_systems(OnEnter(GameState::Connecting), connect::establish_connection.in_schedule)
+        .add_systems(OnEnter(GameState::Connecting), connect::establish_connection)
         .add_systems(Update, connect::wait_for_connection.run_if(in_state(GameState::Connecting)))
         .add_systems(OnEnter(GameState::LoadingWorld), create_sun)
         .add_systems(Update, connect::wait_for_done_loading.run_if(in_state(GameState::LoadingWorld)))

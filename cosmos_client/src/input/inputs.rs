@@ -103,11 +103,11 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     input_handler.set_keycode(CosmosInputs::MoveLeft, KeyCode::A);
     input_handler.set_keycode(CosmosInputs::MoveBackward, KeyCode::S);
     input_handler.set_keycode(CosmosInputs::MoveRight, KeyCode::D);
-    input_handler.set_keycode(CosmosInputs::SlowDown, KeyCode::LShift);
+    input_handler.set_keycode(CosmosInputs::SlowDown, KeyCode::ShiftLeft);
     input_handler.set_keycode(CosmosInputs::Jump, KeyCode::Space);
     input_handler.set_keycode(CosmosInputs::MoveDown, KeyCode::Q);
     input_handler.set_keycode(CosmosInputs::MoveUp, KeyCode::E);
-    input_handler.set_keycode(CosmosInputs::Sprint, KeyCode::LControl);
+    input_handler.set_keycode(CosmosInputs::Sprint, KeyCode::ControlLeft);
 
     input_handler.set_keycode(CosmosInputs::RollLeft, KeyCode::Z);
     input_handler.set_keycode(CosmosInputs::RollRight, KeyCode::C);
@@ -233,5 +233,5 @@ impl CosmosInputHandler {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.insert_resource(CosmosInputHandler::new()).add_startup_system(init_input);
+    app.insert_resource(CosmosInputHandler::new()).add_systems(Startup, init_input);
 }
