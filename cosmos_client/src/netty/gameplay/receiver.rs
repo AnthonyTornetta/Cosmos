@@ -2,7 +2,12 @@
 //!
 //! This should eventually be broken up
 
-use bevy::{core_pipeline::bloom::BloomSettings, prelude::*, render::camera::Projection, window::PrimaryWindow};
+use bevy::{
+    core_pipeline::{bloom::BloomSettings, Skybox},
+    prelude::*,
+    render::camera::Projection,
+    window::PrimaryWindow,
+};
 use bevy_rapier3d::prelude::*;
 use bevy_renet::renet::{transport::NetcodeClientTransport, RenetClient};
 use cosmos_core::{
@@ -286,13 +291,14 @@ fn client_sync_players(
                                     },
                                     transform: Transform::from_xyz(0.0, 0.75, 0.0),
                                     projection: Projection::from(PerspectiveProjection {
-                                        fov: (90.0 / 360.0) * (std::f32::consts::PI * 2.0),
+                                        fov: (90.0 / 180.0) * std::f32::consts::PI,
                                         ..default()
                                     }),
                                     ..default()
                                 },
                                 BloomSettings { ..Default::default() },
                                 CameraHelper::default(),
+                                Skybox(Handle::default()),
                                 MainCamera,
                                 // No double UI rendering
                                 UiCameraConfig { show_ui: false },
