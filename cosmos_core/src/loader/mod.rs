@@ -93,12 +93,14 @@ fn monitor_loading<T: States + Clone + Copy>(
 }
 
 /// Sent when something is done loading during the game's loading states.
+#[derive(Event, Debug)]
 pub struct DoneLoadingEvent {
     /// The loading id assigned by `register_loader`
     pub loading_id: usize,
 }
 
 /// Sent when something starts loading during the game's loading states.
+#[derive(Event, Debug)]
 pub struct AddLoadingEvent {
     loading_id: usize,
 }

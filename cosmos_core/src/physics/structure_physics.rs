@@ -8,7 +8,7 @@ use crate::registry::Registry;
 use crate::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
 use crate::structure::events::ChunkSetEvent;
 use crate::structure::Structure;
-use bevy::prelude::{App, Commands, Component, Entity, EventReader, EventWriter, IntoSystemConfigs, Query, Res, Update};
+use bevy::prelude::{App, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, Query, Res, Update};
 use bevy::reflect::Reflect;
 use bevy::utils::HashSet;
 use bevy_rapier3d::math::Vect;
@@ -185,7 +185,7 @@ fn generate_chunk_collider(chunk: &Chunk, blocks: &Registry<Block>) -> Option<Ge
     }
 }
 
-#[derive(Debug, Hash, PartialEq, Eq)]
+#[derive(Debug, Hash, PartialEq, Eq, Event)]
 /// This event is sent when a chunk needs new physics applied to it.
 struct ChunkNeedsPhysicsEvent {
     chunk: (usize, usize, usize),

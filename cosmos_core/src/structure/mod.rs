@@ -4,7 +4,7 @@
 
 use std::fmt::Display;
 
-use bevy::prelude::{App, PreUpdate};
+use bevy::prelude::{App, Event, PreUpdate};
 use bevy::reflect::Reflect;
 use bevy::utils::{HashMap, HashSet};
 use bevy_rapier3d::prelude::PhysicsWorld;
@@ -785,8 +785,8 @@ pub enum ChunkState {
     Loaded,
 }
 
-#[derive(Debug)]
 /// This event is sent when a chunk is initially filled out
+#[derive(Debug, Event)]
 pub struct ChunkInitEvent {
     /// The entity of the structure this is a part of
     pub structure_entity: Entity,
