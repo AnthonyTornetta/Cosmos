@@ -3,7 +3,7 @@
 use std::time::Duration;
 
 use bevy::{
-    prelude::{resource_exists, App, IntoSystemConfig, ResMut, Resource},
+    prelude::{resource_exists, App, ResMut, Resource},
     time::common_conditions::on_timer,
 };
 

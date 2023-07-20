@@ -4,7 +4,7 @@
 
 use bevy::{
     prelude::{App, Component, Vec3},
-    reflect::{FromReflect, Reflect},
+    reflect::Reflect,
 };
 use bigdecimal::Signed;
 use serde::{Deserialize, Serialize};
@@ -16,7 +16,7 @@ use super::{chunk::CHUNK_DIMENSIONS, Structure};
 pub mod biosphere;
 pub mod planet_builder;
 
-#[derive(Component, Debug, Reflect, FromReflect, Serialize, Deserialize, Clone, Copy)]
+#[derive(Component, Debug, Reflect, Serialize, Deserialize, Clone, Copy)]
 /// If a structure has this, it is a planet.
 pub struct Planet {
     temperature: f32,

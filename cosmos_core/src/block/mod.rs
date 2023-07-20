@@ -4,7 +4,7 @@ use std::fmt::Display;
 
 use bevy::{
     prelude::{App, States, Vec3},
-    reflect::{FromReflect, Reflect},
+    reflect::Reflect,
 };
 use serde::{Deserialize, Serialize};
 
@@ -14,7 +14,7 @@ pub mod block_builder;
 pub mod blocks;
 pub mod hardness;
 
-#[derive(Reflect, FromReflect, Debug, Eq, PartialEq, Clone, Copy, Hash)]
+#[derive(Reflect, Debug, Eq, PartialEq, Clone, Copy, Hash)]
 /// Represents different properties a block can has
 pub enum BlockProperty {
     /// Is this block non-see-through
@@ -29,7 +29,7 @@ pub enum BlockProperty {
     ShipOnly,
 }
 
-#[derive(Debug, PartialEq, Eq, Reflect, FromReflect, Default, Copy, Clone, Serialize, Deserialize, Hash)]
+#[derive(Debug, PartialEq, Eq, Reflect, Default, Copy, Clone, Serialize, Deserialize, Hash)]
 /// Represents the different faces of a block.
 ///
 /// Even non-cube blocks will have this.
@@ -190,7 +190,7 @@ impl BlockProperty {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Reflect, FromReflect)]
+#[derive(Debug, Clone, Serialize, Deserialize, Reflect)]
 /// A block is the smallest unit used on a structure.
 ///
 /// A block takes a maximum of 1x1x1 meters of space, but can take up less than that.

@@ -5,11 +5,7 @@ use std::{
     ops::{Add, AddAssign, SubAssign},
 };
 
-use bevy::{
-    prelude::*,
-    reflect::{FromReflect, Reflect},
-    utils::HashMap,
-};
+use bevy::{prelude::*, reflect::Reflect, utils::HashMap};
 
 use crate::{
     block::{Block, BlockFace},
@@ -20,7 +16,7 @@ use crate::{
 
 use super::Systems;
 
-#[derive(Default, FromReflect, Reflect, Clone, Copy)]
+#[derive(Default, Reflect, Clone, Copy)]
 /// Every block that is a laser cannon should have this property
 pub struct LaserCannonProperty {
     /// How much energy is consumed per shot
@@ -64,7 +60,7 @@ impl LaserCannonBlocks {
     }
 }
 
-#[derive(FromReflect, Reflect, Default)]
+#[derive(Reflect, Default)]
 /// Represents a line of laser cannons.
 ///
 /// All laser cannons in this line are facing the same direction.
@@ -108,7 +104,7 @@ impl Line {
     }
 }
 
-#[derive(Component, Default, FromReflect, Reflect)]
+#[derive(Component, Default, Reflect)]
 /// Represents all the laser cannons that are within this structure
 pub struct LaserCannonSystem {
     /// All the lins that there are
@@ -339,10 +335,7 @@ fn structure_loaded_event(
 
 pub(super) fn register<T: States + Clone + Copy>(app: &mut App, post_loading_state: T, playing_state: T) {
     app.insert_resource(LaserCannonBlocks::default())
-        .add_systems((
-            register_laser_blocks.in_schedule(OnEnter(post_loading_state)),
-            structure_loaded_event.in_set(OnUpdate(playing_state)),
-            block_update_system.in_set(OnUpdate(playing_state)),
-        ))
+        .add_systems(OnEnter(post_loading_state), register_laser_blocks)
+        .add_systems(Update(playing_state), (structure_loaded_event, block_update_system))
         .register_type::<LaserCannonSystem>();
 }

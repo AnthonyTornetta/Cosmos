@@ -4,7 +4,7 @@
 
 use std::fmt::Display;
 
-use bevy::prelude::{App, CoreSet};
+use bevy::prelude::{App, PreUpdate};
 use bevy::reflect::Reflect;
 use bevy::utils::{HashMap, HashSet};
 use bevy_rapier3d::prelude::PhysicsWorld;
@@ -33,8 +33,7 @@ use crate::registry::Registry;
 use crate::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
 use crate::utils::array_utils::flatten;
 use bevy::prelude::{
-    BuildChildren, Commands, Component, Entity, EventReader, EventWriter, GlobalTransform, IntoSystemConfig, PbrBundle, Query, States,
-    Transform, Vec3,
+    BuildChildren, Commands, Component, Entity, EventReader, EventWriter, GlobalTransform, PbrBundle, Query, States, Transform, Vec3,
 };
 use serde::{Deserialize, Serialize};
 
@@ -954,6 +953,5 @@ pub(super) fn register<T: States + Clone + Copy>(app: &mut App, post_loading_sta
     block_health::register(app);
     structure_block::register(app);
 
-    app.add_system(add_chunks_system.in_base_set(CoreSet::PreUpdate))
-        .add_system(remove_empty_chunks.after(add_chunks_system));
+    app.add_systems(PreUpdate, (add_chunks_system, remove_empty_chunks).chain());
 }

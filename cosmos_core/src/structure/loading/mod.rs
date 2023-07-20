@@ -3,13 +3,13 @@
 use crate::structure::events::{ChunkSetEvent, StructureLoadedEvent};
 use bevy::{
     prelude::{App, Commands, Component, EventReader, EventWriter, Query, Without},
-    reflect::{FromReflect, Reflect},
+    reflect::Reflect,
 };
 use serde::{Deserialize, Serialize};
 
 use super::{planet::Planet, Structure};
 
-#[derive(Component, Debug, Reflect, FromReflect, Serialize, Deserialize, Clone, Copy)]
+#[derive(Component, Debug, Reflect, Serialize, Deserialize, Clone, Copy)]
 /// If a structure has this, not all its chunks have been filled out yet
 /// and they need to be loaded
 pub struct ChunksNeedLoaded {

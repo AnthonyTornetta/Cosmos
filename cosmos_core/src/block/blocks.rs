@@ -7,7 +7,7 @@
 use crate::block::block_builder::BlockBuilder;
 use crate::loader::{AddLoadingEvent, DoneLoadingEvent, LoadingManager};
 use crate::registry::{self, Registry};
-use bevy::prelude::{App, EventWriter, IntoSystemAppConfig, OnEnter, ResMut, States};
+use bevy::prelude::{App, EventWriter, OnEnter, ResMut, States};
 
 use super::{Block, BlockProperty};
 
@@ -165,9 +165,6 @@ fn add_air_block(
 pub(super) fn register<T: States + Clone + Copy>(app: &mut App, pre_loading_state: T, loading_state: T) {
     registry::create_registry::<Block>(app);
 
-    app.add_systems((
-        // Game will break without air & needs this at ID 0, so load that first
-        add_air_block.in_schedule(OnEnter(pre_loading_state)),
-        add_cosmos_blocks.in_schedule(OnEnter(loading_state)),
-    ));
+    app.add_systems(OnEnter(pre_loading_state), add_air_block);
+    app.add_systems(OnEnter(loading_state), add_cosmos_blocks);
 }

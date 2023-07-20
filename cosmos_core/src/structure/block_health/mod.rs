@@ -1,10 +1,6 @@
 //! Blocks have health, and this module is used to represent that.
 
-use bevy::{
-    prelude::App,
-    reflect::{FromReflect, Reflect},
-    utils::HashMap,
-};
+use bevy::{prelude::App, reflect::Reflect, utils::HashMap};
 use serde::{Deserialize, Serialize};
 
 pub mod block_destroyed_event;
@@ -13,7 +9,7 @@ use crate::{block::hardness::BlockHardness, utils::array_utils::flatten};
 
 use super::chunk::CHUNK_DIMENSIONS;
 
-#[derive(Debug, Default, Serialize, Deserialize, Reflect, FromReflect)]
+#[derive(Debug, Default, Serialize, Deserialize, Reflect)]
 /// Each block's health is represented here
 pub struct BlockHealth {
     /// Block index -> block health

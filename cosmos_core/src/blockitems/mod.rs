@@ -3,7 +3,7 @@
 //! Used in something like an inventory.
 
 use bevy::{
-    prelude::{App, EventWriter, IntoSystemAppConfig, OnEnter, Res, ResMut, Resource, States},
+    prelude::{App, EventWriter, OnEnter, Res, ResMut, Resource, States},
     utils::HashMap,
 };
 
@@ -92,5 +92,5 @@ pub(super) fn register<T: States + Clone + Copy>(app: &mut App, post_loading_sta
     app.insert_resource(BlockItems::default());
 
     // All blocks & items must be added before this system runs
-    app.add_system(create_links.in_schedule(OnEnter(post_loading_state)));
+    app.add_systems(OnEnter(post_loading_state), create_links);
 }

@@ -1,6 +1,6 @@
 use bevy::prelude::{
-    Added, App, BuildChildren, Commands, Component, Entity, EventReader, EventWriter, IntoSystemConfig, OnUpdate, Quat, Query,
-    RemovedComponents, States, Transform, Vec3, With,
+    Added, App, BuildChildren, Commands, Component, Entity, EventReader, EventWriter, Quat, Query, RemovedComponents, States, Transform,
+    Update, Vec3, With,
 };
 use bevy_rapier3d::prelude::{RigidBody, Sensor};
 
@@ -128,17 +128,17 @@ fn verify_pilot_exists(mut commands: Commands, query: Query<(Entity, &Pilot)>) {
 }
 
 pub(super) fn register<T: States + Clone + Copy>(app: &mut App, playing_state: T) {
-    app.add_systems((
-        add_pilot,
-        pilot_removed.after(handle_child_syncing),
-        remove_sensor,
-        bouncer,
-        verify_pilot_exists.in_set(OnUpdate(playing_state)),
-        event_listener
-            .in_set(OnUpdate(playing_state))
-            .after(handle_child_syncing)
-            .after(verify_pilot_exists),
-    ))
+    app.add_systems(
+        Update(playing_state),
+        (
+            add_pilot,
+            pilot_removed.after(handle_child_syncing),
+            remove_sensor,
+            bouncer,
+            verify_pilot_exists,
+            event_listener.after(handle_child_syncing).after(verify_pilot_exists),
+        ),
+    )
     .add_event::<RemoveSensorFrom>()
     .add_event::<Bouncer>();
 }

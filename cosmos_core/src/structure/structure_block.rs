@@ -1,9 +1,6 @@
 //! Represents a block that is a part of a structure
 
-use bevy::{
-    prelude::App,
-    reflect::{FromReflect, Reflect},
-};
+use bevy::{prelude::App, reflect::Reflect};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -13,7 +10,7 @@ use crate::{
 
 use super::{chunk::CHUNK_DIMENSIONS, Structure};
 
-#[derive(Clone, Debug, FromReflect, Reflect, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Reflect, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 /// A block that is a part of a structure
 ///
 /// This may not be valid when it is used.

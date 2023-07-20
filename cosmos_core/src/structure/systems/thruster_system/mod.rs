@@ -3,11 +3,8 @@
 use std::ops::Mul;
 
 use bevy::{
-    prelude::{
-        App, Commands, Component, EventReader, IntoSystemAppConfig, IntoSystemConfig, OnEnter, OnUpdate, Quat, Query, Res, ResMut,
-        Resource, States, Transform, Vec3, With,
-    },
-    reflect::{FromReflect, Reflect},
+    prelude::{App, Commands, Component, EventReader, OnEnter, Quat, Query, Res, ResMut, Resource, States, Transform, Update, Vec3, With},
+    reflect::Reflect,
     time::Time,
     utils::HashMap,
 };
@@ -53,7 +50,7 @@ impl ThrusterBlocks {
     }
 }
 
-#[derive(Component, Default, Reflect, FromReflect)]
+#[derive(Component, Default, Reflect)]
 /// Represents all the thruster blocks on this structure
 pub struct ThrusterSystem {
     thrust_total: f32,
@@ -219,11 +216,10 @@ fn structure_loaded_event(
 
 pub(super) fn register<T: States + Clone + Copy>(app: &mut App, post_loading_state: T, playing_state: T) {
     app.insert_resource(ThrusterBlocks::default())
-        .add_systems((
-            register_thruster_blocks.in_schedule(OnEnter(post_loading_state)),
-            structure_loaded_event.in_set(OnUpdate(playing_state)),
-            block_update_system.in_set(OnUpdate(playing_state)),
-            update_movement.in_set(OnUpdate(playing_state)),
-        ))
+        .add_systems(OnEnter(post_loading_state), register_thruster_blocks)
+        .add_systems(
+            Update(playing_state),
+            (structure_loaded_event, block_update_system, update_movement),
+        )
         .register_type::<ThrusterSystem>();
 }
