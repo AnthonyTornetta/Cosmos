@@ -148,7 +148,7 @@ fn handle_events_system(
             ServerEvent::ClientDisconnected { client_id, reason } => {
                 println!("Client {client_id} disconnected: {reason}");
                 visualizer.remove_client(*client_id);
-                client_ticks.ticks.remove(client_id);
+                client_ticks.ticks.remove(&client_id);
 
                 if let Some(player_entity) = lobby.remove_player(*client_id) {
                     commands.entity(player_entity).insert(NeedsDespawned);
@@ -163,5 +163,5 @@ fn handle_events_system(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(handle_events_system.in_set(OnUpdate(GameState::Playing)));
+    app.add_systems(Update, handle_events_system.run_if(in_state(GameState::Playing)));
 }

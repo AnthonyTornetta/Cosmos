@@ -62,7 +62,7 @@ pub fn check_needs_generated_system<T: TGenerateChunkEvent + Event, K: Component
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Event)]
 /// Send this event when a client requests a chunk
 ///
 /// This will either generate a chunk & send it or send it if it's already loaded.
@@ -75,7 +75,7 @@ pub struct RequestChunkEvent {
     pub chunk_coords: (usize, usize, usize),
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Event)]
 struct RequestChunkBouncer(RequestChunkEvent);
 
 fn bounce_events(mut event_reader: EventReader<RequestChunkBouncer>, mut event_writer: EventWriter<RequestChunkEvent>) {
@@ -392,11 +392,12 @@ fn unload_chunks_far_from_players(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
+        Update,
         (generate_chunks_near_players, get_requested_chunk, bounce_events)
             .chain()
-            .in_set(OnUpdate(GameState::Playing)),
+            .run_if(in_state(GameState::Playing)),
     )
-    .add_system(unload_chunks_far_from_players.run_if(in_state(GameState::Playing)))
+    .add_systems(Update, unload_chunks_far_from_players.run_if(in_state(GameState::Playing)))
     .add_event::<RequestChunkEvent>()
     .add_event::<RequestChunkBouncer>();
 }

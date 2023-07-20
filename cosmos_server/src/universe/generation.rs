@@ -2,7 +2,7 @@
 
 use std::f32::consts::{E, TAU};
 
-use bevy::prelude::{in_state, App, Commands, IntoSystemConfig, Query, Res, Vec3, With};
+use bevy::prelude::{in_state, App, Commands, Query, Res, Update, Vec3, With};
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
     ecs::bundles::CosmosPbrBundle,
@@ -131,7 +131,8 @@ fn load_stars_near_players(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(
+    app.add_systems(
+        Update,
         // planet_spawner::spawn_planet system requires stars to have been generated first
         load_stars_near_players.run_if(in_state(GameState::Playing)),
     );

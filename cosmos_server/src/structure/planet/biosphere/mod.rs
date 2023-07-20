@@ -4,8 +4,8 @@ use std::marker::PhantomData;
 
 use bevy::{
     prelude::{
-        Added, App, Commands, Component, CoreSet, Entity, EventReader, EventWriter, IntoSystemConfig, OnUpdate, Query, Res, ResMut,
-        Resource, With, Without,
+        in_state, Added, App, Commands, Component, Entity, Event, EventReader, EventWriter, First, IntoSystemConfigs, Query, Res, ResMut,
+        Resource, Update, With, Without,
     },
     tasks::Task,
 };
@@ -39,7 +39,7 @@ pub mod generation_tools;
 pub mod grass_biosphere;
 pub mod molten_biosphere;
 
-#[derive(Debug)]
+#[derive(Debug, Event)]
 /// This event is generated whenever a structure needs a biosphere
 struct NeedsBiosphereEvent {
     biosphere_id: String,
@@ -47,7 +47,7 @@ struct NeedsBiosphereEvent {
 }
 
 /// This has to be redone.
-pub trait TGenerateChunkEvent {
+pub trait TGenerateChunkEvent: Event {
     /// Creates the generate chunk event.
     fn new(x: usize, y: usize, z: usize, structure_entity: Entity) -> Self;
 
@@ -106,37 +106,44 @@ pub fn register_biosphere<T: Component + Default, E: Send + Sync + 'static + TGe
         .add_startup_system(move |mut registry: ResMut<BiosphereTemperatureRegistry>| {
             registry.register(biosphere_id.to_owned(), temperature_range);
         })
-        .add_systems((
-            // Adds this biosphere's marker component to anything that needs generated
-            (move |mut event_reader: EventReader<NeedsBiosphereEvent>, mut commands: Commands| {
-                for ev in event_reader.iter() {
-                    if ev.biosphere_id == biosphere_id {
-                        commands.entity(ev.entity).insert(T::default());
+        .add_systems(
+            First,
+            (
+                // Adds this biosphere's marker component to anything that needs generated
+                (move |mut event_reader: EventReader<NeedsBiosphereEvent>, mut commands: Commands| {
+                    for ev in event_reader.iter() {
+                        if ev.biosphere_id == biosphere_id {
+                            commands.entity(ev.entity).insert(T::default());
+                        }
                     }
-                }
-            }),
-            // Saves this biosphere when the structure is saved
-            (|mut query: Query<&mut SerializedData, (With<NeedsSaved>, With<T>)>| {
-                for mut sd in query.iter_mut() {
-                    sd.serialize_data(biosphere_id.to_string(), &true);
-                }
-            })
-            .in_base_set(CoreSet::First)
-            .after(begin_saving)
-            .before(done_saving),
-            // Loads this biosphere when the structure is loaded
-            (move |query: Query<(Entity, &SerializedData), With<NeedsLoaded>>, mut commands: Commands| {
-                for (entity, sd) in query.iter() {
-                    if sd.deserialize_data::<bool>(biosphere_id).unwrap_or(false) {
-                        commands.entity(entity).insert((T::default(), BiosphereMarker::new(biosphere_id)));
+                }),
+                // Saves this biosphere when the structure is saved
+                (|mut query: Query<&mut SerializedData, (With<NeedsSaved>, With<T>)>| {
+                    for mut sd in query.iter_mut() {
+                        sd.serialize_data(biosphere_id.to_string(), &true);
                     }
-                }
-            })
-            .after(begin_loading)
-            .before(done_loading),
-            // Checks if any blocks need generated for this biosphere
-            check_needs_generated_system::<E, T>.in_set(OnUpdate(GameState::Playing)),
-        ))
+                })
+                .after(begin_saving)
+                .before(done_saving),
+            ),
+        )
+        .add_systems(
+            Update,
+            (
+                // Loads this biosphere when the structure is loaded
+                (move |query: Query<(Entity, &SerializedData), With<NeedsLoaded>>, mut commands: Commands| {
+                    for (entity, sd) in query.iter() {
+                        if sd.deserialize_data::<bool>(biosphere_id).unwrap_or(false) {
+                            commands.entity(entity).insert((T::default(), BiosphereMarker::new(biosphere_id)));
+                        }
+                    }
+                })
+                .after(begin_loading)
+                .before(done_loading),
+                // Checks if any blocks need generated for this biosphere
+                check_needs_generated_system::<E, T>.run_if(in_state(GameState::Playing)),
+            ),
+        )
         .insert_resource(GeneratingChunks::<T>::default())
         .add_event::<GenerateChunkFeaturesEvent<T>>();
 }

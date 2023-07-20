@@ -78,6 +78,6 @@ fn on_save_laser(mut query: Query<&mut SerializedData, (With<NeedsSaved>, With<L
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(respond_laser_hit_event.in_set(OnUpdate(GameState::Playing)))
-        .add_system(on_save_laser.in_base_set(CoreSet::First).after(begin_saving).before(done_saving));
+    app.add_systems(Update, respond_laser_hit_event.run_if(in_state(GameState::Playing)))
+        .add_systems(First, on_save_laser.after(begin_saving).before(done_saving));
 }

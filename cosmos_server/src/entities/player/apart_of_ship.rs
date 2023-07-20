@@ -1,4 +1,4 @@
-use bevy::prelude::{App, EventReader, IntoSystemConfig, OnUpdate, Query, ResMut};
+use bevy::prelude::{in_state, App, EventReader, Query, ResMut, Update};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     entities::player::apart_of_ship::ApartOfShip,
@@ -27,5 +27,5 @@ fn send_netty_info(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(send_netty_info.in_set(OnUpdate(GameState::Playing)));
+    app.add_systems(Update, send_netty_info.run_if(in_state(GameState::Playing)));
 }

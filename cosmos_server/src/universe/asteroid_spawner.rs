@@ -1,7 +1,7 @@
 //! Responsible for spawning planets near stars, but for now just spawns a planet at 0, 0, 0.
 
 use bevy::{
-    prelude::{in_state, App, Commands, Deref, DerefMut, IntoSystemConfig, Query, Res, ResMut, Resource, Vec3, With},
+    prelude::{in_state, App, Commands, Deref, DerefMut, Query, Res, ResMut, Resource, Update, Vec3, With},
     utils::HashSet,
 };
 use cosmos_core::{
@@ -113,6 +113,6 @@ fn spawn_asteroid(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(spawn_asteroid.run_if(in_state(GameState::Playing)))
+    app.add_systems(Update, spawn_asteroid.run_if(in_state(GameState::Playing)))
         .insert_resource(CachedSectors::default());
 }

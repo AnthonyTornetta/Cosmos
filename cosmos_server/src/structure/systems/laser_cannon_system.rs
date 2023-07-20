@@ -88,5 +88,5 @@ fn update_system(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(update_system.in_set(OnUpdate(GameState::Playing)));
+    app.add_systems(Update, update_system.run_if(in_state(GameState::Playing)));
 }

@@ -176,13 +176,8 @@ fn load_chunk(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems((structure_created, populate_chunks).chain())
-        .add_system(
-            on_save_structure
-                .in_base_set(CoreSet::First)
-                .after(begin_saving)
-                .before(done_saving),
-        )
-        .add_system(on_load_structure.after(begin_loading).before(done_loading))
-        .add_system(load_chunk.after(begin_loading).before(done_loading));
+    app.add_systems(Update, (structure_created, populate_chunks).chain())
+        .add_systems(First, on_save_structure.after(begin_saving).before(done_saving))
+        .add_systems(Update, on_load_structure.after(begin_loading).before(done_loading))
+        .add_systems(Update, load_chunk.after(begin_loading).before(done_loading));
 }

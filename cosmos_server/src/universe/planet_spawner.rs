@@ -4,8 +4,8 @@ use std::time::Duration;
 
 use bevy::{
     prelude::{
-        App, Commands, Component, Deref, DerefMut, DespawnRecursiveExt, Entity, IntoSystemConfig, IntoSystemConfigs, OnUpdate, Query, Res,
-        ResMut, Resource, Vec3, With,
+        in_state, App, Commands, Component, Deref, DerefMut, DespawnRecursiveExt, Entity, IntoSystemConfigs, Query, Res, ResMut, Resource,
+        Update, Vec3, With,
     },
     tasks::{AsyncComputeTaskPool, Task},
     time::common_conditions::on_timer,
@@ -177,7 +177,8 @@ pub fn is_planet_in_sector(sector: &Sector, seed: &ServerSeed) -> bool {
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        (monitor_planets_to_spawn, spawn_planet.run_if(on_timer(Duration::from_millis(1000)))).in_set(OnUpdate(GameState::Playing)),
+        Update,
+        (monitor_planets_to_spawn, spawn_planet.run_if(on_timer(Duration::from_millis(1000)))).run_if(in_state(GameState::Playing)),
     )
     .insert_resource(CachedSectors::default());
 }

@@ -1,5 +1,5 @@
 use bevy::{
-    prelude::{App, Commands, Component, DespawnRecursiveExt, Entity, EventWriter, IntoSystemConfigs, OnUpdate, Query, Res, With},
+    prelude::{in_state, App, Commands, Component, DespawnRecursiveExt, Entity, EventWriter, IntoSystemConfigs, Query, Res, Update, With},
     tasks::{AsyncComputeTaskPool, Task},
     utils::HashMap,
 };
@@ -147,5 +147,8 @@ fn start_generating_asteroid(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems((start_generating_asteroid, notify_when_done_generating).in_set(OnUpdate(GameState::Playing)));
+    app.add_systems(
+        Update,
+        (start_generating_asteroid, notify_when_done_generating).run_if(in_state(GameState::Playing)),
+    );
 }

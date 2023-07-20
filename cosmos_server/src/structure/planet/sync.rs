@@ -36,5 +36,5 @@ fn on_request_planet(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(on_request_planet);
+    app.add_systems(Update, on_request_planet);
 }

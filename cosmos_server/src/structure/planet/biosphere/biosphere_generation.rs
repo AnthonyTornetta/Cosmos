@@ -3,7 +3,7 @@
 use std::{marker::PhantomData, mem::swap};
 
 use bevy::{
-    prelude::{Component, Entity, EventReader, EventWriter, Query, Res, ResMut, Resource},
+    prelude::{Component, Entity, Event, EventReader, EventWriter, Query, Res, ResMut, Resource},
     tasks::AsyncComputeTaskPool,
 };
 use cosmos_core::{
@@ -30,6 +30,7 @@ const FLAT_FRACTION: f64 = 0.4;
 const UNFLATTENED: f64 = 0.25;
 
 /// Tells the chunk to generate its features.
+#[derive(Debug, Event)]
 pub struct GenerateChunkFeaturesEvent<T: Component> {
     _phantom: PhantomData<T>,
     /// cx, cy, cz.
