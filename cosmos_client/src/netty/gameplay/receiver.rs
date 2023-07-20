@@ -76,7 +76,7 @@ fn update_crosshair(
                 pos_on_screen -= Vec2::new(primary.width() / 2.0, primary.height() / 2.0);
 
                 crosshair_offset.x += pos_on_screen.x;
-                crosshair_offset.y += pos_on_screen.y;
+                crosshair_offset.y -= pos_on_screen.y;
             }
 
             last_rotation.0 = transform.rotation;
