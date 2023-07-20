@@ -12,9 +12,12 @@ use cosmos_core::{
     events::{block_events::BlockChangedEvent, structure::change_pilot_event::ChangePilotEvent},
     inventory::Inventory,
     netty::{
-        client_reliable_messages::ClientReliableMessages, cosmos_encoder, netty_rigidbody::NettyRigidBody,
-        server_reliable_messages::ServerReliableMessages, server_unreliable_messages::ServerUnreliableMessages, NettyChannelClient,
-        NettyChannelServer,
+        client_reliable_messages::ClientReliableMessages,
+        cosmos_encoder,
+        netty_rigidbody::{NettyRigidBody, NettyRigidBodyLocation},
+        server_reliable_messages::ServerReliableMessages,
+        server_unreliable_messages::ServerUnreliableMessages,
+        NettyChannelClient, NettyChannelServer,
     },
     persistence::LoadingDistance,
     physics::{
@@ -36,7 +39,7 @@ use crate::{
     netty::{
         flags::LocalPlayer,
         lobby::{ClientLobby, PlayerInfo},
-        mapping::NetworkMapping,
+        mapping::{Mappable, NetworkMapping},
     },
     rendering::MainCamera,
     state::game_state::GameState,
@@ -95,15 +98,34 @@ pub struct NetworkTick(pub u64);
 #[derive(Debug, Component, Deref)]
 struct LerpTowards(NettyRigidBody);
 
-fn lerp_towards(mut query: Query<(&LerpTowards, &mut Location, &mut Transform, &mut Velocity)>) {
-    for (lerp_towards, mut location, mut transform, mut velocity) in query.iter_mut() {
-        if lerp_towards.location.distance_sqrd(&location) > 100.0 {
-            location.set_from(&lerp_towards.location);
-        } else {
-            let lerpped_loc = *location + (location.relative_coords_to(&lerp_towards.location)) * 0.1;
+fn lerp_towards(
+    mut location_query: Query<&mut Location>,
+    global_transform_query: Query<&GlobalTransform>,
+    mut query: Query<(Entity, &LerpTowards, &mut Transform, &mut Velocity), With<Location>>,
+) {
+    for (entity, lerp_towards, mut transform, mut velocity) in query.iter_mut() {
+        match lerp_towards.location {
+            NettyRigidBodyLocation::Absolute(location) => {
+                let to_location = location;
+                let mut location = location_query.get_mut(entity).expect("The above With statement guarentees this");
 
-            location.set_from(&lerpped_loc);
-        }
+                if to_location.distance_sqrd(&location) > 100.0 {
+                    location.set_from(&to_location);
+                } else {
+                    let lerpped_loc = *location + (location.relative_coords_to(&to_location)) * 0.1;
+
+                    location.set_from(&lerpped_loc);
+                }
+            }
+            NettyRigidBodyLocation::Relative(rel_trans, entity) => {
+                if let Ok(g_trans) = global_transform_query.get(entity) {
+                    let parent_rot = Quat::from_affine3(&g_trans.affine());
+                    let final_trans = parent_rot.inverse().mul_vec3(rel_trans);
+
+                    transform.translation = final_trans;
+                }
+            }
+        };
 
         transform.rotation = //lerp_towards.rotation;
             transform.rotation.lerp(lerp_towards.rotation, 0.1);
@@ -165,6 +187,10 @@ fn client_sync_players(
         match msg {
             ServerUnreliableMessages::BulkBodies { bodies, time_stamp } => {
                 for (server_entity, body) in bodies.iter() {
+                    let Ok(body) = body.map(&network_mapping) else {
+                        continue;
+                    };
+
                     if let Some(entity) = network_mapping.client_from_server(server_entity) {
                         if let Ok((location, transform, velocity, net_tick, lerp_towards)) = query_body.get_mut(entity) {
                             if let Some(mut net_tick) = net_tick {
@@ -180,14 +206,25 @@ fn client_sync_players(
 
                             if location.is_some() && transform.is_some() && velocity.is_some() {
                                 if let Some(mut lerp_towards) = lerp_towards {
-                                    lerp_towards.0 = *body;
+                                    lerp_towards.0 = body;
                                 } else {
-                                    commands.entity(entity).insert(LerpTowards(*body));
+                                    commands.entity(entity).insert(LerpTowards(body));
                                 }
                             } else {
-                                commands
-                                    .entity(entity)
-                                    .insert((body.location, body.create_velocity(), LerpTowards(*body)));
+                                let loc = match body.location {
+                                    NettyRigidBodyLocation::Absolute(location) => location,
+                                    NettyRigidBodyLocation::Relative(rel_trans, parent_ent) => {
+                                        let parent_loc = query_body
+                                            .get(parent_ent)
+                                            .map(|x| x.0.copied())
+                                            .unwrap_or(None)
+                                            .unwrap_or(Location::default());
+
+                                        parent_loc + rel_trans
+                                    }
+                                };
+
+                                commands.entity(entity).insert((loc, body.create_velocity(), LerpTowards(body)));
                             }
                         }
                     } else if !requested_entities.entities.iter().any(|x| x.0 == *server_entity) {
@@ -216,7 +253,7 @@ fn client_sync_players(
 
         match msg {
             ServerReliableMessages::PlayerCreate {
-                mut body,
+                body,
                 id,
                 entity: server_entity,
                 name,
@@ -229,19 +266,37 @@ fn client_sync_players(
                     break;
                 }
 
+                let Ok(body) = body.map(&network_mapping) else {
+                    continue;
+                };
+
                 println!("Player {} ({}) connected!", name.as_str(), id);
 
                 let mut entity_cmds = commands.spawn_empty();
 
                 let inventory: Inventory = cosmos_encoder::deserialize(&inventory_serialized).unwrap();
 
+                let mut loc = match body.location {
+                    NettyRigidBodyLocation::Absolute(location) => location,
+                    NettyRigidBodyLocation::Relative(rel_trans, entity) => {
+                        let parent_loc = query_body
+                            .get(entity)
+                            .map(|x| x.0.copied())
+                            .unwrap_or(None)
+                            .unwrap_or(Location::default());
+
+                        parent_loc + rel_trans
+                    }
+                };
+
                 // This should be set via the server, but just in case,
                 // this will avoid any position mismatching
-                body.location.last_transform_loc = Some(body.location.local);
+                // ** future note: this may not be needed??
+                loc.last_transform_loc = Some(loc.local);
 
                 entity_cmds.insert((
                     CosmosPbrBundle {
-                        location: body.location,
+                        location: loc,
                         rotation: body.rotation.into(),
                         mesh: meshes.add(shape::Capsule::default().into()),
                         ..default()
@@ -301,7 +356,7 @@ fn client_sync_players(
 
                     commands.spawn((
                         PlayerWorld { player: client_entity },
-                        body.location,
+                        loc,
                         PhysicsWorld {
                             world_id: DEFAULT_WORLD_ID,
                         },
@@ -364,11 +419,28 @@ fn client_sync_players(
                     break;
                 }
 
+                let Ok(body) = body.map(&network_mapping) else {
+                    continue;
+                };
+
+                let location = match body.location {
+                    NettyRigidBodyLocation::Absolute(location) => location,
+                    NettyRigidBodyLocation::Relative(rel_trans, entity) => {
+                        let parent_loc = query_body
+                            .get(entity)
+                            .map(|x| x.0.copied())
+                            .unwrap_or(None)
+                            .unwrap_or(Location::default());
+
+                        parent_loc + rel_trans
+                    }
+                };
+
                 let mut entity_cmds = commands.spawn_empty();
                 let mut structure = Structure::new(width as usize, height as usize, length as usize);
 
                 let builder = ClientShipBuilder::default();
-                builder.insert_ship(&mut entity_cmds, body.location, body.create_velocity(), &mut structure);
+                builder.insert_ship(&mut entity_cmds, location, body.create_velocity(), &mut structure);
 
                 entity_cmds.insert((structure, chunks_needed));
 

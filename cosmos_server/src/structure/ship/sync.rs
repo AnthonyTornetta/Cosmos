@@ -2,7 +2,12 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
-    netty::{cosmos_encoder, netty_rigidbody::NettyRigidBody, server_reliable_messages::ServerReliableMessages, NettyChannelServer},
+    netty::{
+        cosmos_encoder,
+        netty_rigidbody::{NettyRigidBody, NettyRigidBodyLocation},
+        server_reliable_messages::ServerReliableMessages,
+        NettyChannelServer,
+    },
     physics::location::Location,
     structure::{loading::ChunksNeedLoaded, ship::Ship, Structure},
 };
@@ -21,7 +26,7 @@ fn on_request_ship(
                 NettyChannelServer::Reliable,
                 cosmos_encoder::serialize(&ServerReliableMessages::Ship {
                     entity: ev.entity,
-                    body: NettyRigidBody::new(velocity, transform.rotation, *location),
+                    body: NettyRigidBody::new(velocity, transform.rotation, NettyRigidBodyLocation::Absolute(*location)),
                     width: structure.chunks_width() as u32,
                     height: structure.chunks_height() as u32,
                     length: structure.chunks_length() as u32,

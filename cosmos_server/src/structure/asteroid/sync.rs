@@ -2,7 +2,11 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
-    netty::{cosmos_encoder, netty_rigidbody::NettyRigidBody, NettyChannelServer},
+    netty::{
+        cosmos_encoder,
+        netty_rigidbody::{NettyRigidBody, NettyRigidBodyLocation},
+        NettyChannelServer,
+    },
     physics::location::Location,
     structure::{
         asteroid::{asteroid_netty::AsteroidServerMessages, Asteroid},
@@ -23,7 +27,7 @@ fn on_request_asteroid(
                 ev.client_id,
                 NettyChannelServer::Asteroid,
                 cosmos_encoder::serialize(&AsteroidServerMessages::Asteroid {
-                    body: NettyRigidBody::new(velocity, transform.rotation, *location),
+                    body: NettyRigidBody::new(velocity, transform.rotation, NettyRigidBodyLocation::Absolute(*location)),
                     entity: ev.entity,
                     width: structure.chunks_width() as u32,
                     height: structure.chunks_height() as u32,
