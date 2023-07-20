@@ -21,7 +21,7 @@ mod structure_renderer;
 /// The player's active camera will have this component
 pub struct MainCamera;
 
-#[derive(Default, Debug, Reflect, FromReflect, Clone)]
+#[derive(Default, Debug, Reflect, Clone)]
 /// Stores all the needed information for a mesh
 pub struct MeshInformation {
     /// The indicies of the model
@@ -45,7 +45,7 @@ impl MeshInformation {
     }
 }
 
-#[derive(Default, Debug, Reflect, FromReflect)]
+#[derive(Default, Debug, Reflect)]
 /// Default way to create a mesh from many different combined `MeshInformation` objects.
 pub struct CosmosMeshBuilder {
     last_index: u32,
@@ -108,7 +108,7 @@ impl MeshBuilder for CosmosMeshBuilder {
     }
 }
 
-#[derive(Default, Debug, Reflect, FromReflect)]
+#[derive(Default, Debug, Reflect)]
 /// Stores all the mesh information for a block
 pub struct BlockMeshInformation {
     /// Make sure this is in the same order as the [`BlockFace::index`] method.
@@ -233,8 +233,6 @@ pub(super) fn register(app: &mut App) {
     many_to_one::create_many_to_one_registry::<Block, BlockMeshInformation>(app);
     structure_renderer::register(app);
 
-    app.add_systems((
-        register_meshes.in_schedule(OnEnter(GameState::Loading)),
-        register_block_meshes.in_schedule(OnExit(GameState::PostLoading)),
-    ));
+    app.add_systems(OnEnter(GameState::Loading), register_meshes)
+        .add_systems(OnExit(GameState::PostLoading), register_block_meshes);
 }

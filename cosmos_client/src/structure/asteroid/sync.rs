@@ -1,6 +1,6 @@
 //! Syncs the client with the server for asteroids
 
-use bevy::prelude::{resource_exists, App, Commands, IntoSystemConfig, ResMut};
+use bevy::prelude::{resource_exists, App, Commands, ResMut, Update};
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     netty::{cosmos_encoder, NettyChannelServer},
@@ -43,5 +43,5 @@ fn receive_asteroids(mut client: ResMut<RenetClient>, mut commands: Commands, mu
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(receive_asteroids.run_if(resource_exists::<RenetClient>()));
+    app.add_systems(Update, receive_asteroids.run_if(resource_exists::<RenetClient>()));
 }

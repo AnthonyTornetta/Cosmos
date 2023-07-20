@@ -13,7 +13,8 @@ fn add_crosshair(mut commands: Commands, asset_server: Res<AssetServer>) {
                 display: Display::Flex,
                 justify_content: JustifyContent::Center,
                 align_items: AlignItems::Center,
-                size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
                 ..default()
             },
             // color: Color::NONE.into(),
@@ -24,8 +25,12 @@ fn add_crosshair(mut commands: Commands, asset_server: Res<AssetServer>) {
                 .spawn(ImageBundle {
                     image: asset_server.load("images/ui/crosshair.png").into(),
                     style: Style {
-                        size: Size::new(Val::Px(8.0), Val::Px(8.0)),
-                        position: UiRect::new(Val::Px(0.0), Val::Px(0.0), Val::Px(0.0), Val::Px(0.0)),
+                        width: Val::Px(8.0),
+                        height: Val::Px(8.0),
+                        left: Val::Px(0.0),
+                        right: Val::Px(0.0),
+                        top: Val::Px(0.0),
+                        bottom: Val::Px(0.0),
                         ..default()
                     },
 
@@ -48,7 +53,7 @@ fn update_cursor_pos(pos: Res<CrosshairOffset>, mut query: Query<&mut Style, Wit
     }
 }
 
-#[derive(Default, Debug, Resource, Clone, Copy, Reflect, FromReflect)]
+#[derive(Default, Debug, Resource, Clone, Copy, Reflect)]
 /// This represents how far away from the center the crosshair is
 pub struct CrosshairOffset {
     /// How far from the center x the crosshair is
@@ -81,8 +86,7 @@ impl SmoothClamp for CrosshairOffset {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.insert_resource(CrosshairOffset::default()).add_systems((
-        add_crosshair.in_schedule(OnEnter(GameState::Playing)),
-        update_cursor_pos.run_if(in_state(GameState::Playing)),
-    ));
+    app.insert_resource(CrosshairOffset::default())
+        .add_systems(OnEnter(GameState::Playing), add_crosshair)
+        .add_systems(Update, update_cursor_pos.run_if(in_state(GameState::Playing)));
 }

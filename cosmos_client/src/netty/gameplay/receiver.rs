@@ -629,9 +629,13 @@ fn sync_transforms_and_locations(
 
 pub(super) fn register(app: &mut App) {
     app.insert_resource(RequestedEntities::default())
-        .add_systems((update_crosshair, insert_last_rotation))
-        .add_system(client_sync_players.run_if(in_state(GameState::Playing).or_else(in_state(GameState::LoadingWorld))))
+        .add_systems(Update, (update_crosshair, insert_last_rotation))
         .add_systems(
+            Update,
+            client_sync_players.run_if(in_state(GameState::Playing).or_else(in_state(GameState::LoadingWorld))),
+        )
+        .add_systems(
+            Update,
             (
                 fix_location.before(client_sync_players),
                 lerp_towards.after(client_sync_players),
@@ -640,6 +644,6 @@ pub(super) fn register(app: &mut App) {
                 add_previous_location,
             )
                 .chain()
-                .in_set(OnUpdate(GameState::Playing)),
+                .run_if(in_state(GameState::Playing)),
         );
 }

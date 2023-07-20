@@ -1,11 +1,8 @@
 //! Represents the client's state of the game
 
-use bevy::{
-    prelude::States,
-    reflect::{FromReflect, Reflect},
-};
+use bevy::{prelude::States, reflect::Reflect};
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash, Copy, Reflect, FromReflect, Default, States)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Copy, Reflect, Default, States)]
 /// Represents the client's state of the game
 pub enum GameState {
     #[default]

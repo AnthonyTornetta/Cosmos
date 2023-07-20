@@ -323,16 +323,17 @@ fn main() {
             GameState::Connecting,
             GameState::Playing,
         ))
-        .add_plugin(RenetClientPlugin)
-        .add_plugin(NetcodeClientPlugin)
+        .add_plugins(RenetClientPlugin)
+        .add_plugins(NetcodeClientPlugin)
         // .add_plugin(RapierDebugRenderPlugin::default())
-        .add_systems((
-            connect::establish_connection.in_schedule(OnEnter(GameState::Connecting)),
-            connect::wait_for_connection.in_set(OnUpdate(GameState::Connecting)),
-        ))
-        .add_system(create_sun.in_schedule(OnEnter(GameState::LoadingWorld)))
-        .add_system(connect::wait_for_done_loading.in_set(OnUpdate(GameState::LoadingWorld)))
-        .add_systems((process_player_movement, process_ship_movement, reset_cursor).in_set(OnUpdate(GameState::Playing)));
+        .add_systems(OnEnter(GameState::Connecting), connect::establish_connection.in_schedule)
+        .add_systems(Update, connect::wait_for_connection.run_if(in_state(GameState::Connecting)))
+        .add_systems(OnEnter(GameState::LoadingWorld), create_sun)
+        .add_systems(Update, connect::wait_for_done_loading.run_if(in_state(GameState::LoadingWorld)))
+        .add_systems(
+            Update,
+            (process_player_movement, process_ship_movement, reset_cursor).run_if(in_state(GameState::Playing)),
+        );
 
     input::register(&mut app);
     window::register(&mut app);

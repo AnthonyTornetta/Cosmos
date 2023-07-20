@@ -1,4 +1,4 @@
-use bevy::prelude::{App, Commands, IntoSystemAppConfig, OnEnter, OnExit, Res, ResMut};
+use bevy::prelude::{App, Commands, OnEnter, OnExit, Res, ResMut};
 use cosmos_core::{item::Item, registry::Registry};
 
 use crate::state::game_state::GameState;
@@ -16,6 +16,6 @@ fn insert_resource(mut commands: Commands) {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(insert_resource.in_schedule(OnEnter(GameState::PreLoading)))
-        .add_system(insert_langs.in_schedule(OnExit(GameState::PostLoading)));
+    app.add_systems(OnEnter(GameState::PreLoading), insert_resource)
+        .add_systems(OnExit(GameState::PostLoading), insert_langs);
 }
