@@ -15,7 +15,7 @@ use cosmos_core::{
     physics::location::{add_previous_location, Location},
 };
 
-use crate::netty::network_helpers::NetworkTick;
+use crate::netty::{network_helpers::NetworkTick, server_listener::server_listen_messages};
 
 /// Sends bodies to players only if it's within their render distance.
 fn send_bodies(
@@ -88,5 +88,10 @@ fn server_sync_bodies(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, server_sync_bodies.after(add_previous_location));
+    app.add_systems(
+        Update,
+        // This really needs to run immediately after `add_previous_location` to make sure nothing causes any desync
+        // in location + transform, but for now it's fine.
+        server_sync_bodies.after(add_previous_location).before(server_listen_messages),
+    );
 }

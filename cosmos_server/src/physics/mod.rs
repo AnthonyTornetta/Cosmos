@@ -12,7 +12,7 @@ use cosmos_core::{
     },
 };
 
-use crate::state::GameState;
+use crate::{netty::server_listener::server_listen_messages, state::GameState};
 
 const WORLD_SWITCH_DISTANCE: f32 = SECTOR_DIMENSIONS / 2.0;
 const WORLD_SWITCH_DISTANCE_SQRD: f32 = WORLD_SWITCH_DISTANCE * WORLD_SWITCH_DISTANCE;
@@ -342,7 +342,8 @@ pub(super) fn register(app: &mut App) {
                 add_previous_location,
             )
                 .chain()
-                .run_if(in_state(GameState::Playing)),
+                .run_if(in_state(GameState::Playing))
+                .before(server_listen_messages),
         )
         // Used to be UpdateFlush
         .add_systems(PostUpdate, fix_location)
