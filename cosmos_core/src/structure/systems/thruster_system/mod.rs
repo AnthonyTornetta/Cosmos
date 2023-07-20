@@ -27,7 +27,7 @@ use crate::{
 
 use super::{StructureSystem, Systems};
 
-const MAX_SHIP_SPEED: f32 = 100.0;
+const MAX_SHIP_SPEED: f32 = 200.0;
 const MAX_BRAKE_DELTA_PER_THRUST: f32 = 300.0;
 
 /// A block that is a thruster will have a thruster property
@@ -77,7 +77,7 @@ fn register_thruster_blocks(blocks: Res<Registry<Block>>, mut storage: ResMut<Th
         storage.insert(
             block,
             ThrusterProperty {
-                strength: 5.0,
+                strength: 10.0,
                 energy_consupmtion: 100.0,
             },
         );
