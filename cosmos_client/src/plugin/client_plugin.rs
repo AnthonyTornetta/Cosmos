@@ -28,6 +28,6 @@ impl PluginGroup for ClientPluginGroup {
             .add(GltfPlugin::default())
             .add(AudioPlugin::default())
             .add(GilrsPlugin)
-            .add(AnimationPlugin::default())
+            .add(AnimationPlugin)
     }
 }
