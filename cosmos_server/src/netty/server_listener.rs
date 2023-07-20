@@ -5,6 +5,7 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::RenetServer;
+use cosmos_core::netty::netty_rigidbody::NettyRigidBodyLocation;
 use cosmos_core::netty::{cosmos_encoder, NettyChannelClient, NettyChannelServer};
 use cosmos_core::physics::location::Location;
 use cosmos_core::structure::systems::{SystemActive, Systems};
@@ -46,9 +47,9 @@ pub fn server_listen_messages(
     mut place_block_event: EventWriter<BlockPlaceEvent>,
     mut create_ship_event_writer: EventWriter<CreateShipEvent>,
 
-    mut ship_movement_event_writer: EventWriter<ShipSetMovementEvent>,
-    mut pilot_change_event_writer: EventWriter<ChangePilotEvent>,
+    (mut ship_movement_event_writer, mut pilot_change_event_writer): (EventWriter<ShipSetMovementEvent>, EventWriter<ChangePilotEvent>),
     pilot_query: Query<&Pilot>,
+    player_parent_location: Query<&Location, Without<Player>>,
     mut change_player_query: Query<(&mut Transform, &mut Location, &mut PlayerLooking, &mut Velocity), With<Player>>,
     non_player_transform_query: Query<&Transform, Without<Player>>,
     mut requested_entities_writer: EventWriter<RequestedEntityEvent>,
@@ -67,7 +68,16 @@ pub fn server_listen_messages(
                         if let Ok((mut transform, mut location, mut currently_looking, mut velocity)) =
                             change_player_query.get_mut(player_entity)
                         {
-                            location.set_from(&body.location);
+                            let new_loc = match body.location {
+                                NettyRigidBodyLocation::Absolute(location) => location,
+                                NettyRigidBodyLocation::Relative(rel_trans, entity) => {
+                                    let parent_loc = player_parent_location.get(entity).copied().unwrap_or(Location::default());
+
+                                    parent_loc + rel_trans
+                                }
+                            };
+
+                            location.set_from(&new_loc);
                             location.last_transform_loc = Some(transform.translation);
                             currently_looking.rotation = looking;
                             velocity.linvel = body.body_vel.linvel.into();

@@ -28,7 +28,6 @@ fn create_ships(
             structure.blocks_length() / 2,
         );
 
-        println!("SET BLOCK!");
         structure.set_all_loaded(true);
         structure.set_block_at(x, y, z, ship_core, BlockFace::Top, &blocks, None);
 

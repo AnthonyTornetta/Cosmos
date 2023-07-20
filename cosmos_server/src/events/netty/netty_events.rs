@@ -8,6 +8,7 @@ use cosmos_core::ecs::NeedsDespawned;
 use cosmos_core::entities::player::render_distance::RenderDistance;
 use cosmos_core::inventory::Inventory;
 use cosmos_core::item::Item;
+use cosmos_core::netty::netty_rigidbody::NettyRigidBodyLocation;
 use cosmos_core::netty::server_reliable_messages::ServerReliableMessages;
 use cosmos_core::netty::{cosmos_encoder, NettyChannelServer};
 use cosmos_core::persistence::LoadingDistance;
@@ -70,7 +71,7 @@ fn handle_events_system(
                 // visualizer.add_client(client_id);
 
                 for (entity, player, transform, location, velocity, inventory, render_distance) in players.iter() {
-                    let body = NettyRigidBody::new(velocity, transform.rotation, *location);
+                    let body = NettyRigidBody::new(velocity, transform.rotation, NettyRigidBodyLocation::Absolute(*location));
 
                     let msg = cosmos_encoder::serialize(&ServerReliableMessages::PlayerCreate {
                         entity,
@@ -100,7 +101,7 @@ fn handle_events_system(
                 let velocity = Velocity::default();
                 let inventory = generate_player_inventory(&items);
 
-                let netty_body = NettyRigidBody::new(&velocity, Quat::IDENTITY, location);
+                let netty_body = NettyRigidBody::new(&velocity, Quat::IDENTITY, NettyRigidBodyLocation::Absolute(location));
 
                 let inventory_serialized = cosmos_encoder::serialize(&inventory);
 
