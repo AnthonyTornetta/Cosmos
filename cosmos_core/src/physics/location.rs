@@ -19,8 +19,8 @@ use std::{
 
 use bevy::{
     prelude::{
-        warn, Added, App, Children, Commands, Component, Deref, DerefMut, Entity, GlobalTransform, Parent, Quat, Query, Transform, Vec3,
-        With, Without,
+        warn, Added, App, Children, Commands, Component, Deref, DerefMut, Entity, GlobalTransform, Parent, Quat, Query, Transform, Update,
+        Vec3, With, Without,
     },
     reflect::Reflect,
     transform::TransformBundle,
@@ -527,7 +527,7 @@ fn on_add_location_without_transform(
 pub(super) fn register(app: &mut App) {
     app.register_type::<Location>()
         .register_type::<PreviousLocation>()
-        .add_system(on_add_location_without_transform);
+        .add_systems(Update, on_add_location_without_transform);
 }
 
 #[cfg(test)]

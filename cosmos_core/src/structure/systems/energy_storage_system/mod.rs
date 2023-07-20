@@ -1,7 +1,7 @@
 //! Represents all the energy stored on a structure
 
 use bevy::{
-    prelude::{App, Commands, Component, EventReader, OnEnter, Query, Res, ResMut, Resource, States, Update},
+    prelude::{in_state, App, Commands, Component, EventReader, IntoSystemConfigs, OnEnter, Query, Res, ResMut, Resource, States, Update},
     reflect::Reflect,
     utils::HashMap,
 };
@@ -133,6 +133,9 @@ fn structure_loaded_event(
 pub(super) fn register<T: States + Clone + Copy>(app: &mut App, post_loading_state: T, playing_state: T) {
     app.insert_resource(EnergyStorageBlocks::default())
         .add_systems(OnEnter(post_loading_state), register_energy_blocks)
-        .add_systems(Update(playing_state), (structure_loaded_event, block_update_system))
+        .add_systems(
+            Update,
+            (structure_loaded_event, block_update_system).run_if(in_state(playing_state)),
+        )
         .register_type::<EnergyStorageSystem>();
 }

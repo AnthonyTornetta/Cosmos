@@ -73,7 +73,7 @@ fn monitor_loading<T: States + Clone + Copy>(
     }
 
     if loading_status.done {
-        let cur_state = state.0;
+        let cur_state = *state.get();
 
         if cur_state == loading_status.pre_loading_state {
             println!("Transitioning to loading state!");
@@ -124,7 +124,8 @@ pub(super) fn register<T: States + Clone + Copy>(
 ) {
     app.add_event::<DoneLoadingEvent>()
         .add_event::<AddLoadingEvent>()
-        .add_system(
+        .add_systems(
+            Update,
             monitor_loading::<T>.run_if(in_state(pre_loading_state).or_else(in_state(loading_state).or_else(in_state(post_loading_state)))),
         )
         .insert_resource(LoadingStatus::new(pre_loading_state, loading_state, post_loading_state, done_state))

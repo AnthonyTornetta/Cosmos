@@ -123,6 +123,9 @@ fn structure_loaded_event(
 pub(super) fn register<T: States + Clone + Copy>(app: &mut App, post_loading_state: T, playing_state: T) {
     app.insert_resource(EnergyGenerationBlocks::default())
         .add_systems(OnEnter(post_loading_state), register_energy_blocks)
-        .add_systems(Update(playing_state), (structure_loaded_event, block_update_system, update_energy))
+        .add_systems(
+            Update,
+            (structure_loaded_event, block_update_system, update_energy).run_if(in_state(playing_state)),
+        )
         .register_type::<EnergyGenerationSystem>();
 }

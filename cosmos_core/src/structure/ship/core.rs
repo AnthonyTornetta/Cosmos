@@ -1,7 +1,10 @@
 //! Ship core handler
 
 use bevy::{
-    prelude::{App, BuildChildren, Children, Commands, Component, EventReader, Or, PostUpdate, Query, Res, States, Update, With},
+    prelude::{
+        in_state, App, BuildChildren, Children, Commands, Component, EventReader, IntoSystemConfigs, Or, PostUpdate, Query, Res, States,
+        Update, With,
+    },
     reflect::Reflect,
 };
 
@@ -44,7 +47,7 @@ fn save_the_kids(
 }
 
 pub(super) fn register<T: States + Clone + Copy>(app: &mut App, playing_state: T) {
-    app.add_systems(Update(playing_state), monitor_block_events)
+    app.add_systems(Update, monitor_block_events.run_if(in_state(playing_state)))
         .add_systems(PostUpdate, save_the_kids)
         .register_type::<MeltingDown>();
 }

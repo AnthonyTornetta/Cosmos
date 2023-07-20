@@ -3,7 +3,10 @@
 use std::ops::Mul;
 
 use bevy::{
-    prelude::{App, Commands, Component, EventReader, OnEnter, Quat, Query, Res, ResMut, Resource, States, Transform, Update, Vec3, With},
+    prelude::{
+        in_state, App, Commands, Component, EventReader, IntoSystemConfigs, OnEnter, Quat, Query, Res, ResMut, Resource, States, Transform,
+        Update, Vec3, With,
+    },
     reflect::Reflect,
     time::Time,
     utils::HashMap,
@@ -218,8 +221,8 @@ pub(super) fn register<T: States + Clone + Copy>(app: &mut App, post_loading_sta
     app.insert_resource(ThrusterBlocks::default())
         .add_systems(OnEnter(post_loading_state), register_thruster_blocks)
         .add_systems(
-            Update(playing_state),
-            (structure_loaded_event, block_update_system, update_movement),
+            Update,
+            (structure_loaded_event, block_update_system, update_movement).run_if(in_state(playing_state)),
         )
         .register_type::<ThrusterSystem>();
 }

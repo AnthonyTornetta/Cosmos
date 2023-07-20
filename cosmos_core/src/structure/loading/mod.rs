@@ -2,7 +2,7 @@
 
 use crate::structure::events::{ChunkSetEvent, StructureLoadedEvent};
 use bevy::{
-    prelude::{App, Commands, Component, EventReader, EventWriter, Query, Without},
+    prelude::{App, Commands, Component, EventReader, EventWriter, Query, Update, Without},
     reflect::Reflect,
 };
 use serde::{Deserialize, Serialize};
@@ -54,7 +54,6 @@ fn set_structure_done_loading(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(listen_chunk_done_loading)
-        .add_system(set_structure_done_loading)
+    app.add_systems(Update, (listen_chunk_done_loading, set_structure_done_loading))
         .register_type::<ChunksNeedLoaded>();
 }

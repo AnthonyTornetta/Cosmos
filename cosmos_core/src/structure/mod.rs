@@ -4,7 +4,7 @@
 
 use std::fmt::Display;
 
-use bevy::prelude::{App, Event, PreUpdate};
+use bevy::prelude::{App, Event, IntoSystemConfigs, PreUpdate};
 use bevy::reflect::Reflect;
 use bevy::utils::{HashMap, HashSet};
 use bevy_rapier3d::prelude::PhysicsWorld;
