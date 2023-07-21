@@ -4,8 +4,9 @@ use crate::block::BlockFace;
 use crate::structure::structure_block::StructureBlock;
 use bevy::prelude::App;
 use bevy::prelude::Entity;
+use bevy::prelude::Event;
 
-#[derive(Debug)]
+#[derive(Debug, Event)]
 /// Sent when a block is changed (destroyed or placed)
 pub struct BlockChangedEvent {
     /// The block that was changed

@@ -8,8 +8,8 @@ use crate::registry::Registry;
 use crate::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
 use crate::structure::events::ChunkSetEvent;
 use crate::structure::Structure;
-use bevy::prelude::{App, Commands, Component, Entity, EventReader, EventWriter, IntoSystemConfigs, Query, Res};
-use bevy::reflect::{FromReflect, Reflect};
+use bevy::prelude::{App, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, Query, Res, Update};
+use bevy::reflect::Reflect;
 use bevy::utils::HashSet;
 use bevy_rapier3d::math::Vect;
 use bevy_rapier3d::na::Vector3;
@@ -19,7 +19,7 @@ use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 type GenerateCollider = (Collider, f32);
 
 /// Sometimes the ReadMassProperties is wrong, so this component fixes it
-#[derive(Component, Debug, Reflect, FromReflect, PartialEq, Clone, Copy)]
+#[derive(Component, Debug, Reflect, PartialEq, Clone, Copy)]
 struct StructureMass {
     mass: f32,
 }
@@ -185,7 +185,7 @@ fn generate_chunk_collider(chunk: &Chunk, blocks: &Registry<Block>) -> Option<Ge
     }
 }
 
-#[derive(Debug, Hash, PartialEq, Eq)]
+#[derive(Debug, Hash, PartialEq, Eq, Event)]
 /// This event is sent when a chunk needs new physics applied to it.
 struct ChunkNeedsPhysicsEvent {
     chunk: (usize, usize, usize),
@@ -267,7 +267,7 @@ pub(super) fn register(app: &mut App) {
         // This wasn't registered in bevy_rapier
         .register_type::<ReadMassProperties>()
         .register_type::<ColliderMassProperties>()
-        .add_systems((listen_for_structure_event, listen_for_new_physics_event).chain());
+        .add_systems(Update, (listen_for_structure_event, listen_for_new_physics_event).chain());
 }
 
 #[cfg(test)]

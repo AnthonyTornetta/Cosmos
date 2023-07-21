@@ -2,7 +2,7 @@
 
 use bevy::{
     prelude::{App, Component},
-    reflect::{FromReflect, Reflect},
+    reflect::Reflect,
 };
 use serde::{Deserialize, Serialize};
 
@@ -11,7 +11,7 @@ use crate::physics::location::SECTOR_DIMENSIONS;
 /// The default loading distance for structures
 pub const LOAD_DISTANCE: f32 = SECTOR_DIMENSIONS * 8.0;
 
-#[derive(Component, Debug, Reflect, FromReflect, Clone, Copy, Serialize, Deserialize)]
+#[derive(Component, Debug, Reflect, Clone, Copy, Serialize, Deserialize)]
 /// Use this to have a custom distance for something to be unloaded.
 ///
 /// This distance is in # of sectors. The default is 10.

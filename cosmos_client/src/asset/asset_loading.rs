@@ -29,15 +29,16 @@ struct LoadingAsset {
     handles: Vec<Handle<Image>>,
 }
 
+#[derive(Debug, Event)]
 struct AssetsDoneLoadingEvent;
 
 #[derive(Resource, Debug)]
 struct AssetsLoadingID(usize);
 
-#[derive(Resource, Debug)]
+#[derive(Resource, Debug, Default)]
 struct AssetsLoading(Vec<LoadingAsset>);
 
-#[derive(Resource, Reflect, FromReflect, Debug)]
+#[derive(Resource, Reflect, Debug)]
 /// This stores the texture atlas for all blocks in the game.
 ///
 /// Eventually this will be redone to allow for multiple atlases, but for now this works fine.
@@ -75,7 +76,7 @@ impl MainAtlas {
     }
 }
 
-#[derive(Resource, Reflect, FromReflect, Debug)]
+#[derive(Resource, Reflect, Debug)]
 /// This contains the material for illuminated blocks.
 pub struct IlluminatedMaterial {
     /// The material for unlit blocks
@@ -410,9 +411,12 @@ fn load_block_textxures(
 pub(super) fn register(app: &mut App) {
     registry::create_registry::<BlockTextureIndex>(app);
 
-    app.insert_resource(AssetsLoading(Vec::new()))
+    app.insert_resource(AssetsLoading::default())
         .add_event::<AssetsDoneLoadingEvent>()
-        .add_systems((check_assets_ready, assets_done_loading).in_set(OnUpdate(GameState::PostLoading)))
-        .add_system(setup.in_schedule(OnEnter(GameState::PostLoading)))
-        .add_system(load_block_textxures.in_schedule(OnExit(GameState::PostLoading)));
+        .add_systems(
+            Update,
+            (check_assets_ready, assets_done_loading).run_if(in_state(GameState::PostLoading)),
+        )
+        .add_systems(OnEnter(GameState::PostLoading), setup)
+        .add_systems(OnExit(GameState::PostLoading), load_block_textxures);
 }

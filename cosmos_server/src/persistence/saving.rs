@@ -8,7 +8,7 @@
 //! See [`saving::default_save`] for an example.
 
 use bevy::{
-    prelude::{App, Commands, Component, CoreSet, Entity, IntoSystemConfig, Query, ResMut, With, Without},
+    prelude::{App, Commands, Component, Entity, First, IntoSystemConfigs, PostUpdate, Query, ResMut, With, Without},
     reflect::Reflect,
 };
 use bevy_rapier3d::prelude::Velocity;
@@ -149,11 +149,11 @@ fn default_save(mut query: Query<(&mut SerializedData, Option<&Location>, Option
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(check_needs_saved.in_base_set(CoreSet::PostUpdate))
+    app.add_systems(PostUpdate, check_needs_saved)
         // Put all saving-related systems after this
-        .add_system(begin_saving.in_base_set(CoreSet::First).before(despawn_needed))
+        .add_systems(First, begin_saving.before(despawn_needed))
         // Put all saving-related systems before this
-        .add_system(done_saving.in_base_set(CoreSet::First).after(begin_saving).before(despawn_needed))
+        .add_systems(First, done_saving.after(begin_saving).before(despawn_needed))
         // Like this:
-        .add_system(default_save.in_base_set(CoreSet::First).after(begin_saving).before(done_saving));
+        .add_systems(First, default_save.after(begin_saving).before(done_saving));
 }

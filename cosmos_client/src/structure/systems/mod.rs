@@ -44,7 +44,10 @@ fn send_structure_state(query: Query<&Pilot, With<LocalPlayer>>, structure_query
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems((check_if_using_structure_system, send_structure_state).in_set(OnUpdate(GameState::Playing)));
+    app.add_systems(
+        Update,
+        (check_if_using_structure_system, send_structure_state).run_if(in_state(GameState::Playing)),
+    );
 
     player_interactions::register(app);
 }

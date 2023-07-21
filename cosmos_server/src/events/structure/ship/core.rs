@@ -1,5 +1,5 @@
 use bevy::{
-    prelude::{App, Commands, Entity, EventWriter, IntoSystemConfig, OnUpdate, Query, Res, ResMut},
+    prelude::{in_state, App, Commands, Entity, EventWriter, IntoSystemConfigs, Query, Res, ResMut, Update},
     time::Time,
 };
 use bevy_renet::renet::RenetServer;
@@ -55,5 +55,5 @@ fn on_melting_down(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(on_melting_down.in_set(OnUpdate(GameState::Playing)));
+    app.add_systems(Update, on_melting_down.run_if(in_state(GameState::Playing)));
 }

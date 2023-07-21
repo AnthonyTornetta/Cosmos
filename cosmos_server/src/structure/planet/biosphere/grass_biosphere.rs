@@ -1,7 +1,7 @@
 //! Creates a grass planet
 
 use bevy::prelude::{
-    App, Commands, Component, Entity, EventReader, EventWriter, IntoSystemAppConfig, IntoSystemConfigs, OnEnter, OnUpdate, Query, Res,
+    in_state, App, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, OnEnter, Query, Res, Update,
 };
 use cosmos_core::{
     block::{Block, BlockFace},
@@ -29,6 +29,7 @@ use super::{
 pub struct GrassBiosphereMarker;
 
 /// Marks that a grass chunk needs generated
+#[derive(Debug, Event)]
 pub struct GrassChunkNeedsGeneratedEvent {
     x: usize,
     y: usize,
@@ -554,14 +555,15 @@ pub(super) fn register(app: &mut App) {
     );
 
     app.add_systems(
+        Update,
         (
             generate_planet::<GrassBiosphereMarker, GrassChunkNeedsGeneratedEvent, DefaultBiosphereGenerationStrategy>,
             notify_when_done_generating_terrain::<GrassBiosphereMarker>,
             generate_chunk_features,
         )
-            .in_set(OnUpdate(GameState::Playing)),
+            .run_if(in_state(GameState::Playing)),
     )
     .insert_resource(GenerationParemeters::<GrassBiosphereMarker>::new(0.05, 7.0, 9));
 
-    app.add_system(make_block_ranges.in_schedule(OnEnter(GameState::PostLoading)));
+    app.add_systems(OnEnter(GameState::PostLoading), make_block_ranges);
 }

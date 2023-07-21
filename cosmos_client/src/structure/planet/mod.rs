@@ -1,6 +1,6 @@
 //! Handles client-related planet things
 
-use bevy::prelude::{in_state, App, Commands, Entity, IntoSystemConfig, OnUpdate, Query, Res, ResMut, Vec3, With};
+use bevy::prelude::{in_state, App, Commands, Entity, IntoSystemConfigs, Query, Res, ResMut, Update, Vec3, With};
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     netty::{client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannelClient},
@@ -131,6 +131,8 @@ pub(super) fn register(app: &mut App) {
     client_planet_builder::register(app);
     biosphere::register(app);
 
-    app.add_system(load_planet_chunks.in_set(OnUpdate(GameState::Playing)))
-        .add_system(unload_chunks_far_from_players.run_if(in_state(GameState::Playing)));
+    app.add_systems(
+        Update,
+        (load_planet_chunks, unload_chunks_far_from_players).run_if(in_state(GameState::Playing)),
+    );
 }

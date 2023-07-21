@@ -2,7 +2,7 @@
 
 use bevy::{
     ecs::system::EntityCommands,
-    prelude::{Added, App, Commands, Entity, Query},
+    prelude::{Added, App, Commands, Entity, Query, Update},
 };
 use bevy_rapier3d::prelude::{RigidBody, Velocity};
 
@@ -68,5 +68,5 @@ fn on_add_planet(query: Query<(Entity, &Structure), Added<Planet>>, mut commands
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(on_add_planet);
+    app.add_systems(Update, on_add_planet);
 }

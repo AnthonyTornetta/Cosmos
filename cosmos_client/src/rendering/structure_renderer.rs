@@ -4,10 +4,10 @@ use crate::netty::flags::LocalPlayer;
 use crate::state::game_state::GameState;
 use crate::structure::planet::unload_chunks_far_from_players;
 use bevy::prelude::{
-    warn, App, BuildChildren, Component, DespawnRecursiveExt, EventReader, GlobalTransform, IntoSystemConfigs, Mesh, OnUpdate, PbrBundle,
-    PointLight, PointLightBundle, Quat, Rect, StandardMaterial, Transform, Vec3, With,
+    in_state, warn, App, BuildChildren, Component, DespawnRecursiveExt, EventReader, GlobalTransform, IntoSystemConfigs, Mesh, PbrBundle,
+    PointLight, PointLightBundle, Quat, Rect, StandardMaterial, Transform, Update, Vec3, With,
 };
-use bevy::reflect::{FromReflect, Reflect};
+use bevy::reflect::Reflect;
 use bevy::render::primitives::Aabb;
 use bevy::utils::hashbrown::HashMap;
 use cosmos_core::block::{Block, BlockFace};
@@ -138,7 +138,7 @@ fn monitor_block_updates_system(
 #[derive(Component)]
 struct ChunkNeedsRendered;
 
-#[derive(Debug, Reflect, FromReflect, Clone, Copy)]
+#[derive(Debug, Reflect, Clone, Copy)]
 struct LightEntry {
     entity: Entity,
     light: BlockLightProperties,
@@ -146,12 +146,12 @@ struct LightEntry {
     valid: bool,
 }
 
-#[derive(Component, Debug, Reflect, FromReflect, Default)]
+#[derive(Component, Debug, Reflect, Default)]
 struct LightsHolder {
     lights: Vec<LightEntry>,
 }
 
-#[derive(Component, Debug, Reflect, FromReflect, Default)]
+#[derive(Component, Debug, Reflect, Default)]
 struct ChunkMeshes(Vec<Entity>);
 
 /// Performance hot spot
@@ -373,7 +373,7 @@ fn monitor_needs_rendered_system(
                                 material: mesh_material.material,
                                 ..Default::default()
                             },
-                            // Remove this once https://github.com/bevyengine/bevy/issues/4294 is done (bevy 0.11 released)
+                            // Remove this once https://github.com/bevyengine/bevy/issues/4294 is done (bevy 0.12 released)
                             Aabb::from_min_max(Vec3::new(-s, -s, -s), Vec3::new(s, s, s)),
                         ))
                         .id();
@@ -397,7 +397,7 @@ fn monitor_needs_rendered_system(
             commands.entity(entity).insert((
                 mesh,
                 mesh_material.material,
-                // Remove this once https://github.com/bevyengine/bevy/issues/4294 is done (bevy 0.11 released)
+                // Remove this once https://github.com/bevyengine/bevy/issues/4294 is done (bevy 0.12 released)
                 Aabb::from_min_max(Vec3::new(-s, -s, -s), Vec3::new(s, s, s)),
             ));
         }
@@ -420,7 +420,7 @@ fn monitor_needs_rendered_system(
     }
 }
 
-#[derive(Default, Debug, Reflect, FromReflect)]
+#[derive(Default, Debug, Reflect)]
 struct ChunkRendererInstance {
     indices: Vec<u32>,
     uvs: Vec<[f32; 2]>,
@@ -429,7 +429,7 @@ struct ChunkRendererInstance {
     lights: HashMap<(usize, usize, usize), BlockLightProperties>,
 }
 
-#[derive(Default, Debug, Reflect, FromReflect)]
+#[derive(Default, Debug, Reflect)]
 struct MeshInfo {
     renderer: ChunkRendererInstance,
     mesh_builder: CosmosMeshBuilder,
@@ -621,8 +621,9 @@ impl ChunkRenderer {
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
+        Update,
         (monitor_needs_rendered_system, monitor_block_updates_system)
-            .in_set(OnUpdate(GameState::Playing))
+            .run_if(in_state(GameState::Playing))
             .before(unload_chunks_far_from_players),
     )
     // .add_system(add_renderer)

@@ -1,10 +1,11 @@
 //! Represents various structure events
 
-use bevy::prelude::{App, Entity};
+use bevy::prelude::{App, Entity, Event};
 
 use super::{structure_iterator::BlockIterator, Structure};
 
 /// This will be created once all chunks have been populated
+#[derive(Debug, Event)]
 pub struct StructureLoadedEvent {
     /// The entity that contains this structure - make sure this entity is still valid before using!
     pub structure_entity: Entity,
@@ -13,7 +14,7 @@ pub struct StructureLoadedEvent {
 /// This should only be used to initially setup a structure.
 /// Do **not** overwrite existing blocks with this.
 /// Some systems will get out of sync if you misuse this.
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, PartialEq, Eq, Hash, Event)]
 pub struct ChunkSetEvent {
     /// The entity of the structure this is a part of - make sure this is valid before using!
     pub structure_entity: Entity,

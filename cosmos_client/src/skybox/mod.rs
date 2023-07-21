@@ -2,21 +2,9 @@
 
 use bevy::{
     asset::LoadState,
-    pbr::{MaterialPipeline, MaterialPipelineKey, NotShadowCaster},
+    core_pipeline::Skybox,
     prelude::*,
-    reflect::TypeUuid,
-    render::{
-        mesh::MeshVertexBufferLayout,
-        render_asset::RenderAssets,
-        render_resource::{
-            AsBindGroup, AsBindGroupError, BindGroupDescriptor, BindGroupEntry, BindGroupLayout, BindGroupLayoutDescriptor,
-            BindGroupLayoutEntry, BindingResource, BindingType, OwnedBindingResource, PreparedBindGroup, RenderPipelineDescriptor,
-            SamplerBindingType, ShaderRef, ShaderStages, SpecializedMeshPipelineError, TextureSampleType, TextureViewDescriptor,
-            TextureViewDimension,
-        },
-        renderer::RenderDevice,
-        texture::FallbackImage,
-    },
+    render::render_resource::{TextureViewDescriptor, TextureViewDimension},
 };
 
 /// Order from top to bottom:
@@ -38,14 +26,19 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     });
 }
 
+fn added_skybox(mut query: Query<&mut Skybox, Added<Skybox>>, cubemap: Res<Cubemap>) {
+    for mut skybox in query.iter_mut() {
+        if cubemap.is_loaded {
+            skybox.0 = cubemap.image_handle.clone();
+        }
+    }
+}
+
 fn asset_loaded(
-    mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut images: ResMut<Assets<Image>>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut cubemap_materials: ResMut<Assets<CubemapMaterial>>,
     mut cubemap: ResMut<Cubemap>,
-    cubes: Query<&Handle<CubemapMaterial>>,
+    mut skyboxes: Query<&mut Skybox>,
 ) {
     if !cubemap.is_loaded && asset_server.get_load_state(cubemap.image_handle.clone_weak()) == LoadState::Loaded {
         let image = images.get_mut(&cubemap.image_handle).unwrap();
@@ -59,123 +52,16 @@ fn asset_loaded(
             });
         }
 
-        // spawn cube
-        let mut updated = false;
-        for handle in cubes.iter() {
-            if let Some(material) = cubemap_materials.get_mut(handle) {
-                updated = true;
-                material.base_color_texture = Some(cubemap.image_handle.clone_weak());
-            }
-        }
-        if !updated {
-            commands.spawn((
-                MaterialMeshBundle::<CubemapMaterial> {
-                    mesh: meshes.add(Mesh::from(shape::UVSphere {
-                        radius: 50_000_000.0,
-                        sectors: 1024,
-                        stacks: 1024,
-                    })),
-                    material: cubemap_materials.add(CubemapMaterial {
-                        base_color_texture: Some(cubemap.image_handle.clone()),
-                    }),
-                    ..default()
-                },
-                NotShadowCaster,
-            ));
+        for mut skybox in skyboxes.iter_mut() {
+            skybox.0 = cubemap.image_handle.clone();
         }
 
         cubemap.is_loaded = true;
     }
 }
 
-#[derive(Debug, Clone, TypeUuid)]
-#[uuid = "9509a0f8-3c05-48ee-a13e-a93226c7f488"]
-struct CubemapMaterial {
-    base_color_texture: Option<Handle<Image>>,
-}
-
-impl Material for CubemapMaterial {
-    fn fragment_shader() -> ShaderRef {
-        "shaders/cubemap_unlit.wgsl".into()
-    }
-
-    fn specialize(
-        _pipeline: &MaterialPipeline<Self>,
-        descriptor: &mut RenderPipelineDescriptor,
-        _layout: &MeshVertexBufferLayout,
-        _key: MaterialPipelineKey<Self>,
-    ) -> Result<(), SpecializedMeshPipelineError> {
-        descriptor.primitive.cull_mode = None;
-        Ok(())
-    }
-}
-
-impl AsBindGroup for CubemapMaterial {
-    type Data = ();
-
-    fn as_bind_group(
-        &self,
-        layout: &BindGroupLayout,
-        render_device: &RenderDevice,
-        images: &RenderAssets<Image>,
-        _fallback_image: &FallbackImage,
-    ) -> Result<PreparedBindGroup<()>, AsBindGroupError> {
-        let base_color_texture = self.base_color_texture.as_ref().ok_or(AsBindGroupError::RetryNextUpdate)?;
-        let image = images.get(base_color_texture).ok_or(AsBindGroupError::RetryNextUpdate)?;
-        let bind_group = render_device.create_bind_group(&BindGroupDescriptor {
-            entries: &[
-                BindGroupEntry {
-                    binding: 0,
-                    resource: BindingResource::TextureView(&image.texture_view),
-                },
-                BindGroupEntry {
-                    binding: 1,
-                    resource: BindingResource::Sampler(&image.sampler),
-                },
-            ],
-            label: Some("cubemap_texture_material_bind_group"),
-            layout,
-        });
-
-        Ok(PreparedBindGroup {
-            bind_group,
-            bindings: vec![
-                OwnedBindingResource::TextureView(image.texture_view.clone()),
-                OwnedBindingResource::Sampler(image.sampler.clone()),
-            ],
-            data: (),
-        })
-    }
-
-    fn bind_group_layout(render_device: &RenderDevice) -> BindGroupLayout {
-        render_device.create_bind_group_layout(&BindGroupLayoutDescriptor {
-            entries: &[
-                // Cubemap Base Color Texture
-                BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: ShaderStages::FRAGMENT,
-                    ty: BindingType::Texture {
-                        multisampled: false,
-                        sample_type: TextureSampleType::Float { filterable: true },
-                        view_dimension: TextureViewDimension::Cube,
-                    },
-                    count: None,
-                },
-                // Cubemap Base Color Texture Sampler
-                BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: ShaderStages::FRAGMENT,
-                    ty: BindingType::Sampler(SamplerBindingType::Filtering),
-                    count: None,
-                },
-            ],
-            label: None,
-        })
-    }
-}
-
 pub(super) fn register(app: &mut App) {
-    app.add_plugin(MaterialPlugin::<CubemapMaterial>::default())
-        .add_startup_system(setup)
-        .add_system(asset_loaded);
+    app //.add_plugin(MaterialPlugin::<CubemapMaterial>::default())
+        .add_systems(Startup, setup)
+        .add_systems(Update, (added_skybox, asset_loaded));
 }

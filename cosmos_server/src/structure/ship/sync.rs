@@ -40,5 +40,5 @@ fn on_request_ship(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(on_request_ship);
+    app.add_systems(Update, on_request_ship);
 }

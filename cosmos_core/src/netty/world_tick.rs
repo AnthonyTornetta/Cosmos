@@ -3,7 +3,7 @@
 use std::time::Duration;
 
 use bevy::{
-    prelude::{resource_exists, App, IntoSystemConfig, ResMut, Resource},
+    prelude::{resource_exists, App, IntoSystemConfigs, ResMut, Resource, Update},
     time::common_conditions::on_timer,
 };
 
@@ -19,7 +19,8 @@ fn tick(mut world_ticks: ResMut<WorldTick>) {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(
+    app.add_systems(
+        Update,
         tick.run_if(resource_exists::<WorldTick>())
             .run_if(on_timer(Duration::from_millis(1000 / MAX_TPS))),
     );

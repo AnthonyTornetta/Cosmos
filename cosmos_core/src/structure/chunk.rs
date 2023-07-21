@@ -11,7 +11,7 @@ use crate::registry::identifiable::Identifiable;
 use crate::registry::Registry;
 use crate::utils::array_utils::flatten;
 use bevy::prelude::{Component, Entity, Vec3};
-use bevy::reflect::{FromReflect, Reflect};
+use bevy::reflect::Reflect;
 use serde::{Deserialize, Serialize};
 
 use super::block_health::BlockHealth;
@@ -27,7 +27,7 @@ pub const CHUNK_DIMENSIONSF: f32 = CHUNK_DIMENSIONS as f32;
 /// The number of blocks a chunk contains (`CHUNK_DIMENSIONS^3`)
 const N_BLOCKS: usize = CHUNK_DIMENSIONS * CHUNK_DIMENSIONS * CHUNK_DIMENSIONS;
 
-#[derive(Debug, Reflect, FromReflect, Serialize, Deserialize)]
+#[derive(Debug, Reflect, Serialize, Deserialize)]
 /// Stores a bunch of blocks, information about those blocks, and where they are in the structure.
 pub struct Chunk {
     x: usize,
@@ -197,7 +197,7 @@ impl Chunk {
     }
 }
 
-#[derive(Debug, Default, Reflect, FromReflect, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Reflect, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
 /// This represents the information for a block. The first 3 bits are reserved for rotation data.
 ///
 /// All other bits can be used for anything else
@@ -221,7 +221,7 @@ impl BlockInfo {
 }
 
 /// Represents a child of a structure that represents a chunk
-#[derive(Debug, Reflect, FromReflect, Component)]
+#[derive(Debug, Reflect, Component)]
 pub struct ChunkEntity {
     /// The entity of the structure this is a part of
     pub structure_entity: Entity,

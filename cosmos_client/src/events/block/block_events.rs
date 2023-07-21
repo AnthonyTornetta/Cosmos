@@ -9,7 +9,7 @@ use cosmos_core::{
 
 use crate::{netty::mapping::NetworkMapping, state::game_state::GameState};
 
-#[derive(Debug)]
+#[derive(Debug, Event)]
 /// Sent when this client breaks a block
 pub struct BlockBreakEvent {
     /// The structure this block was on
@@ -22,7 +22,7 @@ pub struct BlockBreakEvent {
     pub z: usize,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Event)]
 /// Sent when this client places a block
 pub struct BlockPlaceEvent {
     /// The structure this block is on
@@ -41,7 +41,7 @@ pub struct BlockPlaceEvent {
     pub block_up: BlockFace,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Event)]
 /// Sent whenever the player interacts with a block
 pub struct BlockInteractEvent {
     /// The structure this block is on
@@ -115,5 +115,8 @@ pub(super) fn register(app: &mut App) {
     app.add_event::<BlockBreakEvent>()
         .add_event::<BlockPlaceEvent>()
         .add_event::<BlockInteractEvent>()
-        .add_systems((handle_block_break, handle_block_place, handle_block_interact).in_set(OnUpdate(GameState::Playing)));
+        .add_systems(
+            Update,
+            (handle_block_break, handle_block_place, handle_block_interact).run_if(in_state(GameState::Playing)),
+        );
 }

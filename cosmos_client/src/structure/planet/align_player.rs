@@ -2,7 +2,7 @@
 
 use std::f32::consts::PI;
 
-use bevy::prelude::{App, Commands, Component, Entity, Parent, Quat, Query, Transform, Vec3, With, Without};
+use bevy::prelude::{App, Commands, Component, Entity, Parent, Quat, Query, Transform, Update, Vec3, With, Without};
 use cosmos_core::{
     block::BlockFace,
     physics::{gravity_system::GravityEmitter, location::Location},
@@ -127,5 +127,5 @@ pub enum Axis {
 pub struct PlayerAlignment(pub Axis);
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems((align_player, align_on_ship));
+    app.add_systems(Update, (align_player, align_on_ship));
 }

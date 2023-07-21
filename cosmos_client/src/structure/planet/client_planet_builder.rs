@@ -5,7 +5,7 @@ use bevy::{
     pbr::NotShadowCaster,
     prelude::{
         shape::UVSphere, Added, App, Assets, Color, Commands, ComputedVisibility, Entity, Mesh, Query, Res, ResMut, StandardMaterial,
-        Visibility,
+        Update, Visibility,
     },
 };
 use cosmos_core::{
@@ -76,5 +76,5 @@ fn added_planet(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(added_planet);
+    app.add_systems(Update, added_planet);
 }

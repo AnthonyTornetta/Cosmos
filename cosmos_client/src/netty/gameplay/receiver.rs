@@ -2,7 +2,12 @@
 //!
 //! This should eventually be broken up
 
-use bevy::{core_pipeline::bloom::BloomSettings, prelude::*, render::camera::Projection, window::PrimaryWindow};
+use bevy::{
+    core_pipeline::{bloom::BloomSettings, Skybox},
+    prelude::*,
+    render::camera::Projection,
+    window::PrimaryWindow,
+};
 use bevy_rapier3d::prelude::*;
 use bevy_renet::renet::{transport::NetcodeClientTransport, RenetClient};
 use cosmos_core::{
@@ -79,7 +84,7 @@ fn update_crosshair(
                 pos_on_screen -= Vec2::new(primary.width() / 2.0, primary.height() / 2.0);
 
                 crosshair_offset.x += pos_on_screen.x;
-                crosshair_offset.y += pos_on_screen.y;
+                crosshair_offset.y -= pos_on_screen.y;
             }
 
             last_rotation.0 = transform.rotation;
@@ -341,13 +346,14 @@ fn client_sync_players(
                                     },
                                     transform: Transform::from_xyz(0.0, 0.75, 0.0),
                                     projection: Projection::from(PerspectiveProjection {
-                                        fov: (90.0 / 360.0) * (std::f32::consts::PI * 2.0),
+                                        fov: (90.0 / 180.0) * std::f32::consts::PI,
                                         ..default()
                                     }),
                                     ..default()
                                 },
                                 BloomSettings { ..Default::default() },
                                 CameraHelper::default(),
+                                Skybox(Handle::default()),
                                 MainCamera,
                                 // No double UI rendering
                                 UiCameraConfig { show_ui: false },
@@ -701,9 +707,13 @@ fn sync_transforms_and_locations(
 
 pub(super) fn register(app: &mut App) {
     app.insert_resource(RequestedEntities::default())
-        .add_systems((update_crosshair, insert_last_rotation))
-        .add_system(client_sync_players.run_if(in_state(GameState::Playing).or_else(in_state(GameState::LoadingWorld))))
+        .add_systems(Update, (update_crosshair, insert_last_rotation))
         .add_systems(
+            Update,
+            client_sync_players.run_if(in_state(GameState::Playing).or_else(in_state(GameState::LoadingWorld))),
+        )
+        .add_systems(
+            Update,
             (
                 fix_location.before(client_sync_players),
                 lerp_towards.after(client_sync_players),
@@ -712,6 +722,6 @@ pub(super) fn register(app: &mut App) {
                 add_previous_location,
             )
                 .chain()
-                .in_set(OnUpdate(GameState::Playing)),
+                .run_if(in_state(GameState::Playing)),
         );
 }

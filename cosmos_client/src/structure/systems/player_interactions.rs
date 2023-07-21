@@ -1,9 +1,9 @@
 use bevy::{
     prelude::{
-        Added, App, Commands, Component, Entity, Input, IntoSystemConfigs, KeyCode, MouseButton, OnUpdate, Query, RemovedComponents, Res,
-        ResMut, With,
+        in_state, Added, App, Commands, Component, Entity, Input, IntoSystemConfigs, KeyCode, MouseButton, Query, RemovedComponents, Res,
+        ResMut, Update, With,
     },
-    reflect::{FromReflect, Reflect},
+    reflect::Reflect,
 };
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
@@ -17,7 +17,7 @@ use crate::{
     state::game_state::GameState,
 };
 
-#[derive(Component, Default, Reflect, FromReflect)]
+#[derive(Component, Default, Reflect)]
 struct HoveredSystem {
     system_index: usize,
     active: bool,
@@ -98,6 +98,9 @@ fn check_removed_pilot(mut commands: Commands, mut removed: RemovedComponents<Pi
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems((check_system_in_use, check_became_pilot, check_removed_pilot, swap_selected).in_set(OnUpdate(GameState::Playing)))
-        .register_type::<HoveredSystem>();
+    app.add_systems(
+        Update,
+        (check_system_in_use, check_became_pilot, check_removed_pilot, swap_selected).run_if(in_state(GameState::Playing)),
+    )
+    .register_type::<HoveredSystem>();
 }

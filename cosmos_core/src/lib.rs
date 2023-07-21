@@ -17,7 +17,6 @@ pub mod physics;
 pub mod plugin;
 pub mod projectiles;
 pub mod registry;
-pub mod sector;
 pub mod structure;
 pub mod universe;
 pub mod utils;

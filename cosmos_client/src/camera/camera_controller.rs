@@ -41,5 +41,5 @@ fn process_player_camera(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(process_player_camera.in_set(OnUpdate(GameState::Playing)));
+    app.add_systems(Update, process_player_camera.run_if(in_state(GameState::Playing)));
 }

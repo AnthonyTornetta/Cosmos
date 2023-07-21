@@ -12,7 +12,7 @@ use cosmos_core::{
     },
 };
 
-use crate::state::GameState;
+use crate::{netty::server_listener::server_listen_messages, state::GameState};
 
 const WORLD_SWITCH_DISTANCE: f32 = SECTOR_DIMENSIONS / 2.0;
 const WORLD_SWITCH_DISTANCE_SQRD: f32 = WORLD_SWITCH_DISTANCE * WORLD_SWITCH_DISTANCE;
@@ -332,22 +332,21 @@ fn sync_transforms_and_locations(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(
-        (move_players_between_worlds, move_non_players_between_worlds)
-            .chain()
-            .in_base_set(CoreSet::Last),
-    )
-    .add_systems(
-        (
-            fix_location,
-            sync_transforms_and_locations,
-            handle_child_syncing,
-            add_previous_location,
+    app.add_systems(Last, (move_players_between_worlds, move_non_players_between_worlds).chain())
+        .add_systems(
+            Update,
+            (
+                fix_location,
+                sync_transforms_and_locations,
+                handle_child_syncing,
+                add_previous_location,
+            )
+                .chain()
+                .run_if(in_state(GameState::Playing))
+                .before(server_listen_messages),
         )
-            .chain()
-            .in_set(OnUpdate(GameState::Playing)),
-    )
-    .add_system(fix_location.in_base_set(CoreSet::UpdateFlush))
-    // This must be last due to commands being delayed when adding PhysicsWorlds.
-    .add_system(remove_empty_worlds.in_base_set(CoreSet::Last));
+        // Used to be UpdateFlush
+        .add_systems(PostUpdate, fix_location)
+        // This must be last due to commands being delayed when adding PhysicsWorlds.
+        .add_systems(Last, remove_empty_worlds);
 }

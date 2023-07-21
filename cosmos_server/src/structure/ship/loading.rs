@@ -1,6 +1,6 @@
 //! Handles the loading of ships
 
-use bevy::prelude::{App, Commands, Component, Entity, EventWriter, IntoSystemConfig, OnUpdate, Query, Res, With};
+use bevy::prelude::{in_state, App, Commands, Component, Entity, EventWriter, IntoSystemConfigs, Query, Res, Update, With};
 use cosmos_core::{
     block::{Block, BlockFace},
     registry::Registry,
@@ -58,5 +58,5 @@ fn create_ships(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(create_ships.in_set(OnUpdate(GameState::Playing)));
+    app.add_systems(Update, create_ships.run_if(in_state(GameState::Playing)));
 }

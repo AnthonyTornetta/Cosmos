@@ -1,4 +1,4 @@
-use bevy::prelude::{App, Entity, EventReader, IntoSystemConfig, OnUpdate, ResMut};
+use bevy::prelude::{in_state, App, Entity, Event, EventReader, IntoSystemConfigs, ResMut, Update};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannelServer};
 
@@ -7,6 +7,7 @@ use crate::state::GameState;
 /// This event is sent whenever a ship's pilot is changed
 ///
 /// If pilot_entity is None, then the ship now has no pilot
+#[derive(Debug, Event)]
 pub struct ClientChangePilotEvent {
     structure_entity: Entity,
     pilot_entity: Option<Entity>,
@@ -25,6 +26,6 @@ fn event_listener(mut event_reader: EventReader<ClientChangePilotEvent>, mut ser
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(event_listener.in_set(OnUpdate(GameState::Playing)))
+    app.add_systems(Update, event_listener.run_if(in_state(GameState::Playing)))
         .add_event::<ClientChangePilotEvent>();
 }

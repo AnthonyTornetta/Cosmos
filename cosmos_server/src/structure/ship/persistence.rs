@@ -55,7 +55,9 @@ fn on_load_structure(
 /// I hate this, but the only way to prevent issues with events is to delay the sending of the chunk init events
 /// by 2 frames, so two events are needed to do this. This is really horrible, but the only way I can think of
 /// to get this to work ;(
+#[derive(Debug, Event)]
 struct DelayedStructureLoadEvent(pub Entity);
+#[derive(Debug, Event)]
 struct EvenMoreDelayedStructureLoadEvent(Entity);
 
 fn delayed_structure_event(
@@ -97,16 +99,12 @@ fn even_more_delayed_structure_event(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(even_more_delayed_structure_event.in_base_set(CoreSet::PreUpdate))
+    app.add_systems(PreUpdate, even_more_delayed_structure_event)
         // After to ensure 1 frame delay
-        .add_system(delayed_structure_event.after(even_more_delayed_structure_event))
+        // Used to have `.after(even_more_delayed_structure_event)`
+        .add_systems(Update, delayed_structure_event)
         .add_event::<DelayedStructureLoadEvent>()
         .add_event::<EvenMoreDelayedStructureLoadEvent>()
-        .add_system(
-            on_save_structure
-                .in_base_set(CoreSet::First)
-                .after(begin_saving)
-                .before(done_saving),
-        )
-        .add_system(on_load_structure.after(begin_loading).before(done_loading));
+        .add_systems(First, on_save_structure.after(begin_saving).before(done_saving))
+        .add_systems(Update, on_load_structure.after(begin_loading).before(done_loading));
 }

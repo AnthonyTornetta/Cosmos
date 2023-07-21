@@ -1,6 +1,6 @@
 //! Freezes entities that are near unloaded chunks so they don't fly into unloaded areas.
 
-use bevy::prelude::{App, Commands, Entity, GlobalTransform, Query, With, Without};
+use bevy::prelude::{App, Commands, Entity, GlobalTransform, Query, Update, With, Without};
 use bevy_rapier3d::prelude::{Collider, RigidBodyDisabled};
 
 use crate::{
@@ -81,5 +81,5 @@ fn stop_near_unloaded_chunks(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(stop_near_unloaded_chunks);
+    app.add_systems(Update, stop_near_unloaded_chunks);
 }
