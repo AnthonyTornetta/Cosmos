@@ -136,7 +136,11 @@ macro_rules! create_coordinate {
         impl From<(usize, usize, usize)> for $name {
             #[inline(always)]
             fn from((x, y, z): (usize, usize, usize)) -> Self {
-                Self { x as CoordinateType, y as CoordinateType, z as CoordinateType }
+                Self {
+                    x: x as CoordinateType,
+                    y: y as CoordinateType,
+                    z: z as CoordinateType,
+                }
             }
         }
 

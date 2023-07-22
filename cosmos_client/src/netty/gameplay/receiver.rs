@@ -32,6 +32,7 @@ use cosmos_core::{
     registry::Registry,
     structure::{
         chunk::Chunk,
+        coordinates::{ChunkCoordinate, CoordinateType},
         planet::{biosphere::BiosphereMarker, planet_builder::TPlanetBuilder},
         ship::{pilot::Pilot, ship_builder::TShipBuilder, Ship},
         ChunkInitEvent, Structure,
@@ -443,7 +444,7 @@ fn client_sync_players(
                 };
 
                 let mut entity_cmds = commands.spawn_empty();
-                let mut structure = Structure::new(width as usize, height as usize, length as usize);
+                let mut structure = Structure::new(width, height, length);
 
                 let builder = ClientShipBuilder::default();
                 builder.insert_ship(&mut entity_cmds, location, body.create_velocity(), &mut structure);
@@ -469,33 +470,22 @@ fn client_sync_players(
                     if let Ok(mut structure) = query_structure.get_mut(s_entity) {
                         let chunk: Chunk = cosmos_encoder::deserialize(&serialized_chunk).expect("Unable to deserialize chunk from server");
 
-                        let (x, y, z) = (chunk.structure_x(), chunk.structure_y(), chunk.structure_z());
-
                         structure.set_chunk(chunk);
 
                         set_chunk_event_writer.send(ChunkInitEvent {
-                            x,
-                            y,
-                            z,
+                            coords: chunk.structure_coords(),
                             structure_entity: s_entity,
                         });
                     }
                 }
             }
-            ServerReliableMessages::EmptyChunk {
-                structure_entity,
-                cx,
-                cy,
-                cz,
-            } => {
+            ServerReliableMessages::EmptyChunk { structure_entity, coords } => {
                 if let Some(s_entity) = network_mapping.client_from_server(&structure_entity) {
                     if let Ok(mut structure) = query_structure.get_mut(s_entity) {
-                        structure.set_to_empty_chunk(cx as usize, cy as usize, cz as usize);
+                        structure.set_to_empty_chunk(coords);
 
                         set_chunk_event_writer.send(ChunkInitEvent {
-                            x: cx as usize,
-                            y: cy as usize,
-                            z: cz as usize,
+                            coords,
                             structure_entity: s_entity,
                         });
                     }
@@ -518,9 +508,7 @@ fn client_sync_players(
                     if let Ok(mut structure) = query_structure.get_mut(client_ent) {
                         for block_changed in blocks_changed_packet.0 {
                             structure.set_block_at(
-                                block_changed.x as usize,
-                                block_changed.y as usize,
-                                block_changed.z as usize,
+                                block_changed.coordinates,
                                 blocks.from_numeric_id(block_changed.block_id),
                                 block_changed.block_up,
                                 &blocks,

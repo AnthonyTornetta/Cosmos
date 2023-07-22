@@ -10,7 +10,11 @@ use crate::{
     block::BlockFace,
     entities::player::render_distance::RenderDistance,
     physics::location::Location,
-    structure::{loading::ChunksNeedLoaded, planet::Planet},
+    structure::{
+        coordinates::{BlockCoordinate, ChunkCoordinate, CoordinateType},
+        loading::ChunksNeedLoaded,
+        planet::Planet,
+    },
     universe::star::Star,
 };
 
@@ -19,12 +23,8 @@ use super::netty_rigidbody::NettyRigidBody;
 #[derive(Debug, Serialize, Deserialize, Component)]
 /// The data for a singular block changed.
 pub struct BlockChanged {
-    /// The x of the block.
-    pub x: u32,
-    /// The y of the block.
-    pub y: u32,
-    /// The z of the block.
-    pub z: u32,
+    /// The block's coordinates
+    pub coordinates: BlockCoordinate,
     /// The block it was changed to.
     pub block_id: u16,
     /// The block's up direction.
@@ -81,12 +81,8 @@ pub enum ServerReliableMessages {
     EmptyChunk {
         /// The structure this chunk belongs to.
         structure_entity: Entity,
-        /// The empty chunk's x.
-        cx: u32,
-        /// The empty chunk's y.
-        cy: u32,
-        /// The empty chunk's z.
-        cz: u32,
+        /// The empty chunk's coords
+        coords: ChunkCoordinate,
     },
     /// A planet should be created on the client-side.
     /// This does NOT mean the planet was just created by the sever, just that one should be created on the client.
@@ -114,11 +110,11 @@ pub enum ServerReliableMessages {
         /// The planet's rigidbody.
         body: NettyRigidBody,
         /// The width to be passed into the structure's constructor.
-        width: u32,
+        width: CoordinateType,
         /// The height to be passed into the structure's constructor.
-        height: u32,
+        height: CoordinateType,
         /// The length to be passed into the structure's constructor.
-        length: u32,
+        length: CoordinateType,
         /// The number of chunks that need to be loaded from the server.
         chunks_needed: ChunksNeedLoaded,
     },

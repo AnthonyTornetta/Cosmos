@@ -17,9 +17,8 @@ use cosmos_core::registry::identifiable::Identifiable;
 use cosmos_core::registry::many_to_one::ManyToOneRegistry;
 use cosmos_core::registry::Registry;
 use cosmos_core::structure::chunk::{Chunk, ChunkEntity, CHUNK_DIMENSIONS, CHUNK_DIMENSIONSF};
-use cosmos_core::structure::coordinates::{ChunkBlockCoordinate, ChunkCoordinate, CoordinateType, UnboundChunkCoordinate};
+use cosmos_core::structure::coordinates::{ChunkBlockCoordinate, ChunkCoordinate, UnboundChunkCoordinate};
 use cosmos_core::structure::events::ChunkSetEvent;
-use cosmos_core::structure::structure_block::StructureBlock;
 use cosmos_core::structure::Structure;
 use cosmos_core::utils::array_utils::expand;
 use cosmos_core::utils::timer::UtilsTimer;
@@ -494,7 +493,7 @@ impl ChunkRenderer {
                     block,
                 )
             })
-            .filter(|coords, _| chunk.has_block_at(coords))
+            .filter(|(coords, _)| chunk.has_block_at(*coords))
         {
             // helps the lsp out
             let coords: ChunkBlockCoordinate = coords;
@@ -511,11 +510,13 @@ impl ChunkRenderer {
                 (block != c.block_at(coords) || !actual_block.is_full()) && c.has_see_through_block_at(coords, blocks)
             }
 
+            let (x, y, z) = (coords.x, coords.y, coords.z);
+
             // right
             if (x != CHUNK_DIMENSIONS - 1 && check(chunk, block, actual_block, blocks, coords.right()))
                 || (x == CHUNK_DIMENSIONS - 1
                     && (right
-                        .map(|c| check(c, block, actual_block, blocks, ChunkCoordinate::new(0, y, z)))
+                        .map(|c| check(c, block, actual_block, blocks, ChunkBlockCoordinate::new(0, y, z)))
                         .unwrap_or(true)))
             {
                 faces.push(BlockFace::Right);
