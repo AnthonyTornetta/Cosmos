@@ -16,7 +16,10 @@ use cosmos_core::{
     entities::player::Player,
     netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannelServer, NoSendEntity},
     physics::location::Location,
-    structure::{chunk::CHUNK_DIMENSIONSF, planet::Planet, structure_iterator::ChunkIteratorResult, ChunkState, Structure},
+    structure::{
+        chunk::CHUNK_DIMENSIONSF, coordinates::ChunkCoordinate, planet::Planet, structure_iterator::ChunkIteratorResult, ChunkState,
+        Structure,
+    },
     utils::timer::UtilsTimer,
 };
 use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
@@ -72,7 +75,7 @@ pub struct RequestChunkEvent {
     /// The structure's entity
     pub structure_entity: Entity,
     /// The chunk's coordinates on that structure
-    pub chunk_coords: (usize, usize, usize),
+    pub chunk_coords: ChunkCoordinate,
 }
 
 #[derive(Debug, Clone, Copy, Event)]
@@ -110,9 +113,7 @@ fn get_requested_chunk(
         .par_iter()
         .for_each(|ev| {
             if let Ok((structure, loc)) = structure.get(ev.structure_entity) {
-                let (cx, cy, cz) = ev.chunk_coords;
-
-                let cpos = structure.chunk_relative_position(cx, cy, cz);
+                let cpos = structure.chunk_relative_position(ev.chunk_coords);
 
                 let chunk_loc = *loc + cpos;
 
@@ -123,9 +124,9 @@ fn get_requested_chunk(
                     return;
                 }
 
-                match structure.get_chunk_state(cx, cy, cz) {
+                match structure.get_chunk_state(ev.chunk_coords) {
                     ChunkState::Loaded => {
-                        if let Some(chunk) = structure.chunk_from_chunk_coordinates(cx, cy, cz) {
+                        if let Some(chunk) = structure.chunk_from_chunk_coordinates(ev.chunk_coords) {
                             let mut mutex = serialized.lock().expect("Failed to lock");
 
                             // let mut timer = UtilsTimer::start();
@@ -144,16 +145,14 @@ fn get_requested_chunk(
                             ));
 
                             non_empty_serializes.fetch_add(1, Ordering::SeqCst);
-                        } else if structure.has_empty_chunk_at(cx, cy, cz) {
+                        } else if structure.has_empty_chunk_at(ev.chunk_coords) {
                             let mut mutex = serialized.lock().expect("Failed to lock");
 
                             mutex.as_mut().unwrap().push((
                                 ev.requester_id,
                                 cosmos_encoder::serialize(&ServerReliableMessages::EmptyChunk {
                                     structure_entity: ev.structure_entity,
-                                    cx: cx as u32,
-                                    cy: cy as u32,
-                                    cz: cz as u32,
+                                    coords: ev.chunk_coords,
                                 }),
                             ));
 
@@ -171,10 +170,10 @@ fn get_requested_chunk(
                             .expect("Failed to lock")
                             .as_mut()
                             .unwrap()
-                            .push((ev.structure_entity, (cx, cy, cz), *ev))
+                            .push((ev.structure_entity, ev.chunk_coords, *ev))
                     }
                     ChunkState::Invalid => {
-                        eprintln!("Client requested invalid chunk @ {cx} {cy} {cz}");
+                        eprintln!("Client requested invalid chunk @ {}", ev.chunk_coords);
                     }
                 }
             }

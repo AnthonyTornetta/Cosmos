@@ -14,6 +14,7 @@ use crate::{
         coordinates::{BlockCoordinate, ChunkCoordinate, CoordinateType},
         loading::ChunksNeedLoaded,
         planet::Planet,
+        structure_block::StructureBlock,
     },
     universe::star::Star,
 };
@@ -24,7 +25,7 @@ use super::netty_rigidbody::NettyRigidBody;
 /// The data for a singular block changed.
 pub struct BlockChanged {
     /// The block's coordinates
-    pub coordinates: BlockCoordinate,
+    pub coordinates: StructureBlock,
     /// The block it was changed to.
     pub block_id: u16,
     /// The block's up direction.
@@ -90,11 +91,11 @@ pub enum ServerReliableMessages {
         /// The planet's server entity.
         entity: Entity,
         /// The width to be passed into the structure's constructor.
-        width: u32,
+        width: CoordinateType,
         /// The height to be passed into the structure's constructor.
-        height: u32,
+        height: CoordinateType,
         /// The length to be passed into the structure's constructor.
-        length: u32,
+        length: CoordinateType,
         /// The planet.
         planet: Planet,
         /// The planet's biosphere.

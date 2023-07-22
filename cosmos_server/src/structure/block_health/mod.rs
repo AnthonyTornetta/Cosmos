@@ -18,7 +18,7 @@ fn monitor_block_destroyed(
 ) {
     for ev in event_reader.iter() {
         if let Ok(mut structure) = structure_query.get_mut(ev.structure_entity) {
-            structure.remove_block_at(ev.block.x, ev.block.y, ev.block.z, &blocks, Some(&mut event_writer));
+            structure.remove_block_at(ev.block.coords(), &blocks, Some(&mut event_writer));
         }
     }
 }

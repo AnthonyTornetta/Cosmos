@@ -113,6 +113,12 @@ macro_rules! create_coordinate {
             }
         }
 
+        impl std::fmt::Display for $name {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                f.write_str(format!("{}, {}, {}", self.x, self.y, self.z).as_str())
+            }
+        }
+
         impl Coordinate for $name {
             #[inline(always)]
             fn flatten(&self, width: CoordinateType, height: CoordinateType) -> usize {
@@ -202,6 +208,12 @@ macro_rules! create_coordinate {
             }
         }
 
+        impl std::fmt::Display for $unbounded {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                f.write_str(format!("{}, {}, {}", self.x, self.y, self.z).as_str())
+            }
+        }
+
         impl From<$name> for $unbounded {
             #[inline(always)]
             fn from(value: $name) -> Self {
@@ -210,6 +222,13 @@ macro_rules! create_coordinate {
                     value.y as UnboundCoordinateType,
                     value.z as UnboundCoordinateType,
                 )
+            }
+        }
+
+        impl From<(UnboundCoordinateType, UnboundCoordinateType, UnboundCoordinateType)> for $unbounded {
+            #[inline(always)]
+            fn from((x, y, z): (UnboundCoordinateType, UnboundCoordinateType, UnboundCoordinateType)) -> Self {
+                Self::new(x, y, z)
             }
         }
 

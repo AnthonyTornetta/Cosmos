@@ -16,10 +16,7 @@ use cosmos_core::{
         client_reliable_messages::ClientReliableMessages, client_unreliable_messages::ClientUnreliableMessages,
         server_reliable_messages::ServerReliableMessages,
     },
-    structure::{
-        ship::pilot::Pilot,
-        {structure_block::StructureBlock, Structure},
-    },
+    structure::{ship::pilot::Pilot, Structure},
 };
 
 use crate::entities::player::PlayerLooking;
@@ -134,28 +131,23 @@ pub fn server_listen_messages(
                         println!("!!! Server received invalid entity from client {client_id}");
                     }
                 }
-                ClientReliableMessages::SendSingleChunk {
-                    structure_entity,
-                    chunk: (cx, cy, cz),
-                } => request_chunk_event_writer.send(RequestChunkEvent {
+                ClientReliableMessages::SendSingleChunk { structure_entity, chunk } => request_chunk_event_writer.send(RequestChunkEvent {
                     requester_id: client_id,
                     structure_entity,
-                    chunk_coords: (cx as usize, cy as usize, cz as usize),
+                    chunk_coords: chunk,
                 }),
-                ClientReliableMessages::BreakBlock { structure_entity, x, y, z } => {
+                ClientReliableMessages::BreakBlock { structure_entity, block } => {
                     if let Some(player_entity) = lobby.player_from_id(client_id) {
                         break_block_event.send(BlockBreakEvent {
                             structure_entity,
                             breaker: player_entity,
-                            structure_block: StructureBlock::new(x as usize, y as usize, z as usize),
+                            structure_block: block,
                         });
                     }
                 }
                 ClientReliableMessages::PlaceBlock {
                     structure_entity,
-                    x,
-                    y,
-                    z,
+                    block,
                     block_id,
                     block_up,
                     inventory_slot,
@@ -163,7 +155,7 @@ pub fn server_listen_messages(
                     if let Some(player_entity) = lobby.player_from_id(client_id) {
                         place_block_event.send(BlockPlaceEvent {
                             structure_entity,
-                            structure_block: StructureBlock::new(x as usize, y as usize, z as usize),
+                            structure_block: block,
                             block_id,
                             block_up,
                             inventory_slot: inventory_slot as usize,
@@ -171,10 +163,10 @@ pub fn server_listen_messages(
                         });
                     }
                 }
-                ClientReliableMessages::InteractWithBlock { structure_entity, x, y, z } => {
+                ClientReliableMessages::InteractWithBlock { structure_entity, block } => {
                     block_interact_event.send(BlockInteractEvent {
                         structure_entity,
-                        structure_block: StructureBlock::new(x as usize, y as usize, z as usize),
+                        structure_block: block,
                         interactor: lobby.player_from_id(client_id).unwrap(),
                     });
                 }

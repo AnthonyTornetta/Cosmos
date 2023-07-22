@@ -852,18 +852,18 @@ pub enum RotationError {
     /// At least one of the coordinates are outside of the structure in the negative direction.
     ///
     /// Each entry represents the coordinates, even those outside.
-    NegativeResult(i32, i32, i32),
+    NegativeResult(UnboundBlockCoordinate),
     /// At least one of the coordinates are outside of the structure in the positive direction.
     ///
     /// Each entry represents the coordinates, even those outside.
-    PositiveResult(i32, i32, i32),
+    PositiveResult(BlockCoordinate),
 }
 
 impl Display for RotationError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match *self {
-            RotationError::NegativeResult(x, y, z) => f.write_str(format!("NegativeResult[{x},{y}{z}]").as_str()),
-            RotationError::PositiveResult(x, y, z) => f.write_str(format!("PositiveResult[{x},{y}{z}]").as_str()),
+            RotationError::NegativeResult(ub_coords) => f.write_str(format!("NegativeResult[{ub_coords}]").as_str()),
+            RotationError::PositiveResult(coords) => f.write_str(format!("PositiveResult[{coords}]").as_str()),
         }
     }
 }
@@ -872,26 +872,54 @@ impl Display for RotationError {
 /// On the +y (Top) side, the offsets affect their corresponding coordinate.
 /// On other sides, the offsets affect non-corresponding coordinates and may be flipped negative.
 pub fn rotate(
-    (bx, by, bz): (usize, usize, usize),
-    (dx, dy, dz): (i32, i32, i32),
-    (blocks_width, blocks_height, blocks_length): (usize, usize, usize),
+    block_coord: BlockCoordinate,
+    delta: UnboundBlockCoordinate,
+    (blocks_width, blocks_height, blocks_length): (CoordinateType, CoordinateType, CoordinateType),
     block_up: BlockFace,
-) -> Result<(usize, usize, usize), RotationError> {
-    let (xi32, yi32, zi32) = match block_up {
-        BlockFace::Front => ((bx as i32 + dx), (by as i32 + dz), (bz as i32 + dy)),
-        BlockFace::Back => ((bx as i32 + dx), (by as i32 + dz), (bz as i32 - dy)),
-        BlockFace::Top => ((bx as i32 + dx), (by as i32 + dy), (bz as i32 + dz)),
-        BlockFace::Bottom => ((bx as i32 + dx), (by as i32 - dy), (bz as i32 + dz)),
-        BlockFace::Right => ((bx as i32 + dy), (by as i32 + dx), (bz as i32 + dz)),
-        BlockFace::Left => ((bx as i32 - dy), (by as i32 + dx), (bz as i32 + dz)),
-    };
+) -> Result<BlockCoordinate, RotationError> {
+    let ub_block_coord = UnboundBlockCoordinate::from(block_coord);
 
-    if xi32 < 0 || yi32 < 0 || zi32 < 0 {
-        Err(RotationError::NegativeResult(xi32, yi32, zi32))
-    } else if xi32 >= blocks_width as i32 || yi32 >= blocks_height as i32 || zi32 >= blocks_length as i32 {
-        Err(RotationError::PositiveResult(xi32, yi32, zi32))
+    let ub_coords = UnboundBlockCoordinate::from(match block_up {
+        BlockFace::Front => (
+            (ub_block_coord.x + delta.x),
+            (ub_block_coord.y + delta.y),
+            (ub_block_coord.z + delta.z),
+        ),
+        BlockFace::Back => (
+            (ub_block_coord.x + delta.x),
+            (ub_block_coord.y + delta.y),
+            (ub_block_coord.z - delta.z),
+        ),
+        BlockFace::Top => (
+            (ub_block_coord.x + delta.x),
+            (ub_block_coord.y + delta.y),
+            (ub_block_coord.z + delta.z),
+        ),
+        BlockFace::Bottom => (
+            (ub_block_coord.x + delta.x),
+            (ub_block_coord.y - delta.y),
+            (ub_block_coord.z + delta.z),
+        ),
+        BlockFace::Right => (
+            (ub_block_coord.x + delta.x),
+            (ub_block_coord.y + delta.y),
+            (ub_block_coord.z + delta.z),
+        ),
+        BlockFace::Left => (
+            (ub_block_coord.x - delta.x),
+            (ub_block_coord.y + delta.y),
+            (ub_block_coord.z + delta.z),
+        ),
+    });
+
+    if let Ok(coords) = BlockCoordinate::try_from(ub_coords) {
+        if coords.x >= blocks_width || coords.y >= blocks_height || coords.z >= blocks_length {
+            Err(RotationError::PositiveResult(coords))
+        } else {
+            Ok(coords)
+        }
     } else {
-        Ok((xi32 as usize, yi32 as usize, zi32 as usize))
+        Err(RotationError::NegativeResult(ub_coords))
     }
 }
 

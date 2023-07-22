@@ -12,6 +12,7 @@ use cosmos_core::{
     registry::Registry,
     structure::{
         chunk::{Chunk, CHUNK_DIMENSIONS},
+        coordinates::{BlockCoordinate, ChunkBlockCoordinate, ChunkCoordinate, CoordinateType},
         planet::{ChunkFaces, Planet},
         Structure,
     },
@@ -34,7 +35,7 @@ const UNFLATTENED: f64 = 0.25;
 pub struct GenerateChunkFeaturesEvent<T: Component> {
     _phantom: PhantomData<T>,
     /// cx, cy, cz.
-    pub chunk_coords: (usize, usize, usize),
+    pub chunk_coords: ChunkCoordinate,
     /// The structure entity that contains this chunk.
     pub structure_entity: Entity,
 }
@@ -54,14 +55,14 @@ pub fn notify_when_done_generating_terrain<T: Component>(
             let (chunk, structure_entity) = chunks;
 
             if let Ok(mut structure) = structure_query.get_mut(structure_entity) {
-                let (x, y, z) = (chunk.structure_x(), chunk.structure_y(), chunk.structure_z());
+                let chunk_coords = chunk.structure_coords();
 
                 structure.set_chunk(chunk);
 
                 event_writer.send(GenerateChunkFeaturesEvent::<T> {
                     _phantom: PhantomData,
                     structure_entity,
-                    chunk_coords: (x, y, z),
+                    chunk_coords,
                 });
             }
         } else {
@@ -72,11 +73,11 @@ pub fn notify_when_done_generating_terrain<T: Component>(
 
 #[inline]
 fn generate_face_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + Default>(
-    (sx, sy, sz): (usize, usize, usize),
+    block_coords: BlockCoordinate,
     (structure_x, structure_y, structure_z): (f64, f64, f64),
-    s_dimensions: usize,
+    s_dimensions: CoordinateType,
     noise_generator: &noise::OpenSimplex,
-    middle_air_start: usize,
+    middle_air_start: CoordinateType,
     block_ranges: &BlockRanges<T>,
     chunk: &mut Chunk,
     up: BlockFace,
@@ -84,16 +85,19 @@ fn generate_face_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
     delta: f64,
     iterations: usize,
 ) {
+    let (sx, sy, sz) = (block_coords.x, block_coords.y, block_coords.z);
+
     for i in 0..CHUNK_DIMENSIONS {
         for j in 0..CHUNK_DIMENSIONS {
-            let seed_coordinates = match up {
+            let seed_coordinates: BlockCoordinate = match up {
                 BlockFace::Top => (sx + i, middle_air_start, sz + j),
                 BlockFace::Bottom => (sx + i, s_dimensions - middle_air_start, sz + j),
                 BlockFace::Front => (sx + i, sy + j, middle_air_start),
                 BlockFace::Back => (sx + i, sy + j, s_dimensions - middle_air_start),
                 BlockFace::Right => (middle_air_start, sy + i, sz + j),
                 BlockFace::Left => (s_dimensions - middle_air_start, sy + i, sz + j),
-            };
+            }
+            .into();
 
             let top_height = S::get_top_height(
                 seed_coordinates,
@@ -116,16 +120,18 @@ fn generate_face_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
                     BlockFace::Left => (height, i, j, s_dimensions - (sx + height)),
                 };
 
+                let coords = ChunkBlockCoordinate::new(x, y, z);
+
                 if actual_height <= top_height {
                     let block = block_ranges.face_block(top_height - actual_height);
-                    chunk.set_block_at(x, y, z, block, up);
+                    chunk.set_block_at(coords, block, up);
                 } else if block_ranges
                     .sea_level
                     .map(|sea_level| actual_height as f32 <= (middle_air_start as f32 + sea_level as f32))
                     .unwrap_or(false)
                 {
                     let block = block_ranges.sea_level_block().expect("Sea level set without sea block being set!");
-                    chunk.set_block_at(x, y, z, block, up);
+                    chunk.set_block_at(coords, block, up);
                 }
             }
         }
@@ -497,7 +503,7 @@ pub trait BiosphereGenerationStrategy {
     /// * `iterations` Value passed in by the `GenerationParemeters`. Represents how many times the noise function will be run
     fn get_block_depth(
         noise_generator: &noise::OpenSimplex,
-        (x, y, z): (usize, usize, usize),
+        coordinate: BlockCoordinate,
         (structure_x, structure_y, structure_z): (f64, f64, f64),
         middle_air_start: usize,
         amplitude: f64,
@@ -508,9 +514,9 @@ pub trait BiosphereGenerationStrategy {
         for iteration in 1..=iterations {
             let iteration = iteration as f64;
             depth += noise_generator.get([
-                (x as f64 + structure_x) * (delta / iteration),
-                (y as f64 + structure_y) * (delta / iteration),
-                (z as f64 + structure_z) * (delta / iteration),
+                (coordinate.x as f64 + structure_x) * (delta / iteration),
+                (coordinate.y as f64 + structure_y) * (delta / iteration),
+                (coordinate.z as f64 + structure_z) * (delta / iteration),
             ]) * amplitude
                 * iteration;
         }
@@ -525,21 +531,26 @@ pub trait BiosphereGenerationStrategy {
     /// * `initial_height` The value returned by `get_block_depth`
     /// * `(x, y, z)` Block x/y/z in the structure
     /// * `(s_dimensions)` The width/height/length of the structure this is on.
-    fn flatten(initial_height: f64, middle_air_start: usize, (mut x, mut y, mut z): (usize, usize, usize), s_dimensions: usize) -> usize {
+    fn flatten(
+        initial_height: f64,
+        middle_air_start: CoordinateType,
+        mut coords: BlockCoordinate,
+        s_dimensions: CoordinateType,
+    ) -> CoordinateType {
         // For the flattening (it's like the rumbling).
-        x = x.min(s_dimensions - x);
-        y = y.min(s_dimensions - y);
-        z = z.min(s_dimensions - z);
+        coords.x = coords.x.min(s_dimensions - coords.x);
+        coords.y = coords.y.min(s_dimensions - coords.y);
+        coords.z = coords.z.min(s_dimensions - coords.z);
 
         let mut depth = initial_height - middle_air_start as f64;
 
         // Min is height of the face you're on, second min is the closer to the 45 of the 2 remaining.
         let dist_from_space = s_dimensions as f64 - initial_height;
-        let dist_from_45 = x.min(y).max(x.max(y).min(z)) as f64 - dist_from_space;
+        let dist_from_45 = coords.x.min(coords.y).max(coords.x.max(coords.y).min(coords.z)) as f64 - dist_from_space;
         let flattening_limit = (s_dimensions as f64 - 2.0 * dist_from_space) * FLAT_FRACTION;
         depth *= dist_from_45.min(flattening_limit) / flattening_limit * (1.0 - UNFLATTENED) + UNFLATTENED;
 
-        (middle_air_start as f64 + depth).round() as usize
+        (middle_air_start as f64 + depth).round() as CoordinateType
     }
 
     /// Gets the top block's height
@@ -553,19 +564,19 @@ pub trait BiosphereGenerationStrategy {
     /// * `delta` Value passed in by the `GenerationParemeters`. Represents how much each change in x/y/z will effect the terrain. Small values = lesser effect
     /// * `iterations` Value passed in by the `GenerationParemeters`. Represents how many times the noise function will be run
     fn get_top_height(
-        (x, y, z): (usize, usize, usize),
+        coordinate: BlockCoordinate,
         (structure_x, structure_y, structure_z): (f64, f64, f64),
-        s_dimensions: usize,
+        s_dimensions: CoordinateType,
         noise_generator: &noise::OpenSimplex,
-        middle_air_start: usize,
+        middle_air_start: CoordinateType,
         amplitude: f64,
         delta: f64,
         iterations: usize,
-    ) -> usize {
+    ) -> CoordinateType {
         Self::flatten(
             Self::get_block_depth(
                 noise_generator,
-                (x, y, z),
+                coordinate,
                 (structure_x, structure_y, structure_z),
                 middle_air_start,
                 amplitude,
@@ -573,7 +584,7 @@ pub trait BiosphereGenerationStrategy {
                 iterations,
             ),
             middle_air_start,
-            (x, y, z),
+            coordinate,
             s_dimensions,
         )
     }
@@ -626,7 +637,7 @@ impl<T: Component + Clone + Default> GenerationParemeters<T> {
 #[derive(Resource, Clone, Default, Debug)]
 pub struct BlockRanges<T: Component + Clone + Default> {
     _phantom: PhantomData<T>,
-    ranges: Vec<(Block, usize)>,
+    ranges: Vec<(Block, CoordinateType)>,
     sea_level_block: Option<Block>,
     sea_level: Option<i32>,
 }
@@ -710,7 +721,7 @@ impl<T: Component + Clone + Default> BlockRanges<T> {
         self.sea_level_block.as_ref()
     }
 
-    fn face_block(&self, depth: usize) -> &Block {
+    fn face_block(&self, depth: CoordinateType) -> &Block {
         for (block, d) in self.ranges.iter() {
             if depth >= *d {
                 return block;
@@ -719,7 +730,7 @@ impl<T: Component + Clone + Default> BlockRanges<T> {
         panic!("No matching block range for depth {depth}.");
     }
 
-    fn edge_block(&self, j_depth: usize, k_depth: usize) -> &Block {
+    fn edge_block(&self, j_depth: CoordinateType, k_depth: CoordinateType) -> &Block {
         for (block, d) in self.ranges.iter() {
             if j_depth >= *d && k_depth >= *d {
                 return block;
@@ -728,7 +739,7 @@ impl<T: Component + Clone + Default> BlockRanges<T> {
         panic!("No matching block range for depths {j_depth} and {k_depth}.");
     }
 
-    fn corner_block(&self, x_depth: usize, y_depth: usize, z_depth: usize) -> &Block {
+    fn corner_block(&self, x_depth: CoordinateType, y_depth: CoordinateType, z_depth: CoordinateType) -> &Block {
         for (block, d) in self.ranges.iter() {
             if x_depth >= *d && y_depth >= *d && z_depth >= *d {
                 return block;

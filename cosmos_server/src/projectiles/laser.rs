@@ -25,16 +25,15 @@ fn on_laser_hit_structure(
     hardness_registry: &Registry<BlockHardness>,
     strength: f32,
 ) {
-    if let Ok((bx, by, bz)) =
-        structure.relative_coords_to_local_coords_checked(local_position_hit.x, local_position_hit.y, local_position_hit.z)
+    if let Ok(coords) = structure.relative_coords_to_local_coords_checked(local_position_hit.x, local_position_hit.y, local_position_hit.z)
     {
-        let block = structure.block_at(bx, by, bz, blocks);
+        let block = structure.block_at(coords, blocks);
 
         if let Some(hardness) = hardness_registry.from_id(block.unlocalized_name()) {
-            structure.block_take_damage(bx, by, bz, hardness, strength, Some(block_destroy_event_writer));
+            structure.block_take_damage(coords, hardness, strength, Some(block_destroy_event_writer));
         } else {
             println!("WARNING: Missing block hardness for {}", block.unlocalized_name());
-            structure.remove_block_at(bx, by, bz, blocks, Some(block_change_event_writer));
+            structure.remove_block_at(coords, blocks, Some(block_change_event_writer));
         }
     } else {
         println!("Bad laser hit spot that isn't actually on structure ;(");

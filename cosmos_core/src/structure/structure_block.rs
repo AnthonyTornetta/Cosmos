@@ -76,6 +76,12 @@ impl StructureBlock {
 
     #[inline]
     /// The chunk that contains this block's coordinates as (x, y, z).
+    pub fn coords(&self) -> BlockCoordinate {
+        self.0
+    }
+
+    #[inline]
+    /// The chunk that contains this block's coordinates as (x, y, z).
     pub fn chunk_coords(&self) -> ChunkCoordinate {
         ChunkCoordinate::for_block_coordinate(self.0)
     }
