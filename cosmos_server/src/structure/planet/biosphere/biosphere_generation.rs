@@ -152,7 +152,7 @@ fn generate_edge_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
     delta: f64,
     iterations: usize,
 ) {
-    let mut j_top = [[0; CHUNK_DIMENSIONS]; CHUNK_DIMENSIONS];
+    let mut j_top = [[0; CHUNK_DIMENSIONS as usize]; CHUNK_DIMENSIONS as usize];
     for (i, layer) in j_top.iter_mut().enumerate() {
         for (k, height) in layer.iter_mut().enumerate() {
             // Seed coordinates for the noise function. Which loop variable goes to which xyz must agree everywhere.
