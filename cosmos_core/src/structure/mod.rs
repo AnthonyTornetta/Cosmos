@@ -40,7 +40,9 @@ use serde::{Deserialize, Serialize};
 
 use self::block_health::block_destroyed_event::BlockDestroyedEvent;
 use self::chunk::ChunkEntity;
-use self::coordinates::{BlockCoordinate, ChunkBlockCoordinate, ChunkCoordinate, Coordinate, CoordinateType};
+use self::coordinates::{
+    BlockCoordinate, ChunkBlockCoordinate, ChunkCoordinate, Coordinate, CoordinateType, UnboundBlockCoordinate, UnboundChunkCoordinate,
+};
 use self::events::ChunkSetEvent;
 use self::structure_block::StructureBlock;
 use self::structure_iterator::{BlockIterator, ChunkIterator};
@@ -577,12 +579,8 @@ impl Structure {
     /// If include_empty is disabled, the value iterated over may ONLY BE Some(chunk).
     pub fn all_chunks_iter(&self, include_empty: bool) -> ChunkIterator {
         ChunkIterator::new(
-            0_i32,
-            0_i32,
-            0_i32,
-            self.blocks_width() as i32 - 1,
-            self.blocks_height() as i32 - 1,
-            self.blocks_length() as i32 - 1,
+            ChunkCoordinate::new(0, 0, 0).into(),
+            ChunkCoordinate::new(self.chunks_width() - 1, self.chunks_height() - 1, self.chunks_length() - 1).into(),
             self,
             include_empty,
         )
@@ -590,8 +588,8 @@ impl Structure {
 
     /// Iterate over blocks in a given range. Will skip over any out of bounds positions.
     /// Coordinates are inclusive
-    pub fn chunk_iter(&self, start: (i32, i32, i32), end: (i32, i32, i32), include_empty: bool) -> ChunkIterator {
-        ChunkIterator::new(start.0, start.1, start.2, end.0, end.1, end.2, self, include_empty)
+    pub fn chunk_iter(&self, start: UnboundChunkCoordinate, end: UnboundChunkCoordinate, include_empty: bool) -> ChunkIterator {
+        ChunkIterator::new(start, end, self, include_empty)
     }
 
     /// Will fail assertion if chunk positions are out of bounds
@@ -599,12 +597,8 @@ impl Structure {
         self.debug_assert_coords_within(coords);
 
         BlockIterator::new(
-            (coords.x * CHUNK_DIMENSIONS) as i32,
-            (coords.y * CHUNK_DIMENSIONS) as i32,
-            (coords.z * CHUNK_DIMENSIONS) as i32,
-            ((coords.x + 1) * CHUNK_DIMENSIONS) as i32 - 1,
-            ((coords.y + 1) * CHUNK_DIMENSIONS) as i32 - 1,
-            ((coords.z + 1) * CHUNK_DIMENSIONS) as i32 - 1,
+            coords.first_structure_block().into(),
+            coords.last_structure_block().into(),
             include_air,
             self,
         )
@@ -614,12 +608,8 @@ impl Structure {
     /// Coordinates are inclusive
     pub fn all_blocks_iter(&self, include_air: bool) -> BlockIterator {
         BlockIterator::new(
-            0_i32,
-            0_i32,
-            0_i32,
-            self.blocks_width() as i32 - 1,
-            self.blocks_height() as i32 - 1,
-            self.blocks_length() as i32 - 1,
+            BlockCoordinate::new(0, 0, 0).into(),
+            BlockCoordinate::new(self.blocks_width() - 1, self.blocks_height() - 1, self.blocks_length() - 1).into(),
             include_air,
             self,
         )
@@ -627,8 +617,8 @@ impl Structure {
 
     /// Iterate over blocks in a given range. Will skip over any out of bounds positions.
     /// Coordinates are inclusive
-    pub fn block_iter(&self, start: (i32, i32, i32), end: (i32, i32, i32), include_air: bool) -> BlockIterator {
-        BlockIterator::new(start.0, start.1, start.2, end.0, end.1, end.2, include_air, self)
+    pub fn block_iter(&self, start: UnboundBlockCoordinate, end: UnboundBlockCoordinate, include_air: bool) -> BlockIterator {
+        BlockIterator::new(start, end, include_air, self)
     }
 
     /// Gets the block's health at that given coordinate
@@ -675,7 +665,8 @@ impl Structure {
     }
 
     #[inline]
-    fn chunk_coords_within(&self, coords: ChunkCoordinate) -> bool {
+    /// Returns true if these chunk coordinates are within the structure
+    pub fn chunk_coords_within(&self, coords: ChunkCoordinate) -> bool {
         coords.x < self.chunks_width() && coords.y < self.chunks_height() && coords.z < self.chunks_length()
     }
 

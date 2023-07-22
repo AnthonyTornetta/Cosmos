@@ -11,7 +11,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::{block::BlockFace, physics::location::SYSTEM_SECTORS};
 
-use super::{chunk::CHUNK_DIMENSIONS, Structure};
+use super::{
+    chunk::CHUNK_DIMENSIONS,
+    coordinates::{BlockCoordinate, CoordinateType},
+    Structure,
+};
 
 pub mod biosphere;
 pub mod planet_builder;
@@ -38,8 +42,8 @@ impl Planet {
     /// * `bx` Block's x
     /// * `by` Block's y
     /// * `bz` Block's z
-    pub fn planet_face(structure: &Structure, bx: usize, by: usize, bz: usize) -> BlockFace {
-        Self::planet_face_relative(structure.block_relative_position(bx, by, bz))
+    pub fn planet_face(structure: &Structure, coords: BlockCoordinate) -> BlockFace {
+        Self::planet_face_relative(structure.block_relative_position(coords))
     }
 
     /// Gets the face of a planet this block is on.
@@ -50,11 +54,9 @@ impl Planet {
     /// * `bx` Block's x
     /// * `by` Block's y
     /// * `bz` Block's z
-    pub fn get_planet_face_without_structure(bx: usize, by: usize, bz: usize, structure_blocks_dimensions: usize) -> BlockFace {
+    pub fn get_planet_face_without_structure(coords: BlockCoordinate, structure_blocks_dimensions: CoordinateType) -> BlockFace {
         Self::planet_face_relative(Structure::block_relative_position_static(
-            bx,
-            by,
-            bz,
+            coords,
             structure_blocks_dimensions,
             structure_blocks_dimensions,
             structure_blocks_dimensions,
@@ -86,15 +88,17 @@ impl Planet {
     }
 
     /// Given the coordinates of a chunk, returns a tuple of 3 perpendicular chunk's "up" directions, None elements for no up on that axis.
-    pub fn chunk_planet_faces((sx, sy, sz): (usize, usize, usize), s_dimension: usize) -> ChunkFaces {
-        let mut chunk_faces = ChunkFaces::Face(Planet::get_planet_face_without_structure(sx, sy, sz, s_dimension));
+    pub fn chunk_planet_faces(coords: BlockCoordinate, s_dimension: CoordinateType) -> ChunkFaces {
+        let mut chunk_faces = ChunkFaces::Face(Planet::get_planet_face_without_structure(coords, s_dimension));
         for z in 0..=1 {
             for y in 0..=1 {
                 for x in 0..=1 {
                     let up = Planet::get_planet_face_without_structure(
-                        sx + x * CHUNK_DIMENSIONS,
-                        sy + y * CHUNK_DIMENSIONS,
-                        sz + z * CHUNK_DIMENSIONS,
+                        BlockCoordinate::new(
+                            coords.x + x * CHUNK_DIMENSIONS,
+                            coords.y + y * CHUNK_DIMENSIONS,
+                            coords.z + z * CHUNK_DIMENSIONS,
+                        ),
                         s_dimension,
                     );
                     match chunk_faces {
