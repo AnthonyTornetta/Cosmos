@@ -13,6 +13,7 @@ use cosmos_core::{
     physics::location::Location,
     structure::{
         chunk::Chunk,
+        coordinates::ChunkCoordinate,
         planet::{biosphere::BiosphereMarker, Planet},
         Structure,
     },
@@ -55,7 +56,7 @@ pub trait TGenerateChunkEvent: Event {
     fn get_structure_entity(&self) -> Entity;
 
     /// Get coordinates.
-    fn get_chunk_coordinates(&self) -> (usize, usize, usize);
+    fn get_chunk_coordinates(&self) -> ChunkCoordinate;
 }
 
 /// This has to be redone.
