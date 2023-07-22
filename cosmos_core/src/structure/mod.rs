@@ -42,6 +42,7 @@ use self::block_health::block_destroyed_event::BlockDestroyedEvent;
 use self::chunk::ChunkEntity;
 use self::coordinates::{
     BlockCoordinate, ChunkBlockCoordinate, ChunkCoordinate, Coordinate, CoordinateType, UnboundBlockCoordinate, UnboundChunkCoordinate,
+    UnboundCoordinateType,
 };
 use self::events::ChunkSetEvent;
 use self::structure_block::StructureBlock;
@@ -208,15 +209,13 @@ impl Structure {
     /// (0, 0, 0) => chunk @ 0, 0, 0\
     /// (1, 0, 0) => chunk @ 1, 0, 0\
     /// (-1, 0, 0) => None
-    pub fn chunk_from_chunk_coordinates_oob(&self, cx: i32, cy: i32, cz: i32) -> Option<&Chunk> {
-        if cx < 0 || cy < 0 || cz < 0 {
+    pub fn chunk_from_chunk_coordinates_unbound(&self, unbound_coords: UnboundChunkCoordinate) -> Option<&Chunk> {
+        let Ok(bounded) = ChunkCoordinate::try_from(unbound_coords) else {
             return None;
-        }
+        };
 
-        let chunk_coords = ChunkCoordinate::new(cx as CoordinateType, cy as CoordinateType, cz as CoordinateType);
-
-        if self.chunk_coords_within(chunk_coords) {
-            self.chunk_from_chunk_coordinates(chunk_coords)
+        if self.chunk_coords_within(bounded) {
+            self.chunk_from_chunk_coordinates(bounded)
         } else {
             None
         }
@@ -293,18 +292,17 @@ impl Structure {
     /// - Err(false) if one of the x/y/z coordinates are outside the structure in the negative direction
     /// - Err (true) if one of the x/y/z coordinates are outside the structure in the positive direction
     pub fn relative_coords_to_local_coords_checked(&self, x: f32, y: f32, z: f32) -> Result<BlockCoordinate, bool> {
-        let (xx, yy, zz) = self.relative_coords_to_local_coords(x, y, z);
+        let unbound_coords = self.relative_coords_to_local_coords(x, y, z);
 
-        if xx >= 0 && yy >= 0 && zz >= 0 {
-            let (xx, yy, zz) = (xx as CoordinateType, yy as CoordinateType, zz as CoordinateType);
-
-            let block_coords = BlockCoordinate::new(xx, yy, zz);
+        if let Ok(block_coords) = BlockCoordinate::try_from(unbound_coords) {
             if self.is_within_blocks(block_coords) {
-                return Ok(block_coords);
+                Ok(block_coords)
+            } else {
+                Err(true)
             }
-            return Err(true);
+        } else {
+            Err(false)
         }
-        Err(false)
     }
 
     /// # Arguments
@@ -313,12 +311,16 @@ impl Structure {
     /// These coordinates may not be within the structure (too high or negative).
     /// # Returns
     /// - (x, y, z) of the block coordinates, even if they are outside the structure
-    pub fn relative_coords_to_local_coords(&self, x: f32, y: f32, z: f32) -> (i32, i32, i32) {
+    pub fn relative_coords_to_local_coords(&self, x: f32, y: f32, z: f32) -> UnboundBlockCoordinate {
         let xx: f32 = x + (self.blocks_width() as f32 / 2.0);
         let yy = y + (self.blocks_height() as f32 / 2.0);
         let zz = z + (self.blocks_length() as f32 / 2.0);
 
-        (xx.floor() as i32, yy.floor() as i32, zz.floor() as i32)
+        UnboundBlockCoordinate::new(
+            xx.floor() as UnboundCoordinateType,
+            yy.floor() as UnboundCoordinateType,
+            zz.floor() as UnboundCoordinateType,
+        )
     }
 
     /// Gets the block's up facing face at this location.

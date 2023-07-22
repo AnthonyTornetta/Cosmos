@@ -5,6 +5,7 @@ use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     block::BlockFace,
     netty::{client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannelClient},
+    structure::{coordinates::BlockCoordinate, structure_block::StructureBlock},
 };
 
 use crate::{netty::mapping::NetworkMapping, state::game_state::GameState};
@@ -14,12 +15,8 @@ use crate::{netty::mapping::NetworkMapping, state::game_state::GameState};
 pub struct BlockBreakEvent {
     /// The structure this block was on
     pub structure_entity: Entity,
-    /// block x
-    pub x: usize,
-    /// block y
-    pub y: usize,
-    /// block z
-    pub z: usize,
+    /// block coords
+    pub coords: StructureBlock,
 }
 
 #[derive(Debug, Event)]
@@ -27,12 +24,8 @@ pub struct BlockBreakEvent {
 pub struct BlockPlaceEvent {
     /// The structure this block is on
     pub structure_entity: Entity,
-    /// block x
-    pub x: usize,
-    /// block y
-    pub y: usize,
-    /// block z
-    pub z: usize,
+    /// block coords
+    pub coords: StructureBlock,
     /// Which inventory slot it came from to make sure the inventory isn't out of sync
     pub inventory_slot: usize,
     /// The block's id
@@ -46,12 +39,8 @@ pub struct BlockPlaceEvent {
 pub struct BlockInteractEvent {
     /// The structure this block is on
     pub structure_entity: Entity,
-    /// block x
-    pub x: usize,
-    /// block y
-    pub y: usize,
-    /// block z
-    pub z: usize,
+    /// block coords
+    pub coords: StructureBlock,
 }
 
 fn handle_block_break(

@@ -4,7 +4,7 @@
 use bevy::prelude::{Component, Entity};
 use serde::{Deserialize, Serialize};
 
-use crate::{block::BlockFace, entities::player::render_distance::RenderDistance};
+use crate::{block::BlockFace, entities::player::render_distance::RenderDistance, structure::coordinates::ChunkCoordinate};
 
 #[derive(Debug, Serialize, Deserialize, Component)]
 /// All reliable messages a client can send
@@ -23,7 +23,7 @@ pub enum ClientReliableMessages {
         /// The server's structure entity
         structure_entity: Entity,
         /// The chunk position you want
-        chunk: (u32, u32, u32),
+        chunk: ChunkCoordinate,
     },
     /// The client broke a block
     BreakBlock {

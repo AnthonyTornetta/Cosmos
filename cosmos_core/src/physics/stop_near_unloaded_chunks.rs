@@ -7,7 +7,6 @@ use crate::{
     physics::location::SECTOR_DIMENSIONS,
     structure::{
         asteroid::Asteroid,
-        chunk::CHUNK_DIMENSIONS,
         coordinates::{UnboundChunkCoordinate, UnboundCoordinateType},
         planet::Planet,
         structure_iterator::ChunkIteratorResult,
@@ -42,18 +41,28 @@ fn stop_near_unloaded_chunks(
 
             let relative_coords = g_trans.to_scale_rotation_translation().1.inverse().mul_vec3(abs_coords);
 
-            let (bx, by, bz) = structure.relative_coords_to_local_coords(relative_coords.x, relative_coords.y, relative_coords.z);
+            let ub_coords = structure.relative_coords_to_local_coords(relative_coords.x, relative_coords.y, relative_coords.z);
 
-            let (cx, cy, cz) = (
-                bx as UnboundCoordinateType / CHUNK_DIMENSIONS as UnboundCoordinateType,
-                by as UnboundCoordinateType / CHUNK_DIMENSIONS as UnboundCoordinateType,
-                bz as UnboundCoordinateType / CHUNK_DIMENSIONS as UnboundCoordinateType,
-            );
+            let ub_chunk_coords = UnboundChunkCoordinate::for_unbound_block_coordinate(ub_coords);
+
+            // let (cx, cy, cz) = (
+            //     bx as UnboundCoordinateType / CHUNK_DIMENSIONS as UnboundCoordinateType,
+            //     by as UnboundCoordinateType / CHUNK_DIMENSIONS as UnboundCoordinateType,
+            //     bz as UnboundCoordinateType / CHUNK_DIMENSIONS as UnboundCoordinateType,
+            // );
 
             let near_unloaded_chunk = structure
                 .chunk_iter(
-                    UnboundChunkCoordinate::new(cx - FREEZE_RADIUS, cy - FREEZE_RADIUS, cz - FREEZE_RADIUS),
-                    UnboundChunkCoordinate::new(cx + FREEZE_RADIUS, cy + FREEZE_RADIUS, cz + FREEZE_RADIUS),
+                    UnboundChunkCoordinate::new(
+                        ub_chunk_coords.x - FREEZE_RADIUS,
+                        ub_chunk_coords.y - FREEZE_RADIUS,
+                        ub_chunk_coords.z - FREEZE_RADIUS,
+                    ),
+                    UnboundChunkCoordinate::new(
+                        ub_chunk_coords.x + FREEZE_RADIUS,
+                        ub_chunk_coords.y + FREEZE_RADIUS,
+                        ub_chunk_coords.z + FREEZE_RADIUS,
+                    ),
                     true,
                 )
                 .any(|x| match x {

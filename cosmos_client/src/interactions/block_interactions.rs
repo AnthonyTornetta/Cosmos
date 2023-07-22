@@ -8,7 +8,7 @@ use cosmos_core::{
     inventory::Inventory,
     item::Item,
     registry::Registry,
-    structure::{planet::Planet, ship::pilot::Pilot, Structure},
+    structure::{planet::Planet, ship::pilot::Pilot, structure_block::StructureBlock, Structure},
 };
 
 use crate::{
@@ -68,16 +68,12 @@ fn process_player_interaction(
 
                         let point = transform.compute_matrix().inverse().transform_point3(moved_point);
 
-                        let (x, y, z) = structure
-                            .relative_coords_to_local_coords_checked(point.x, point.y, point.z)
-                            .expect("Tried to break block outside of structure?");
-
-                        break_writer.send(BlockBreakEvent {
-                            structure_entity: structure.get_entity().unwrap(),
-                            x,
-                            y,
-                            z,
-                        });
+                        if let Ok(coords) = structure.relative_coords_to_local_coords_checked(point.x, point.y, point.z) {
+                            break_writer.send(BlockBreakEvent {
+                                structure_entity: structure.get_entity().unwrap(),
+                                coords: StructureBlock::new(coords),
+                            });
+                        }
                     }
 
                     if input_handler.check_just_pressed(CosmosInputs::PlaceBlock, &keys, &mouse) {
@@ -93,22 +89,19 @@ fn process_player_interaction(
 
                                         let point = transform.compute_matrix().inverse().transform_point3(moved_point);
 
-                                        if let Ok((x, y, z)) = structure.relative_coords_to_local_coords_checked(point.x, point.y, point.z)
-                                        {
-                                            if structure.is_within_blocks(x, y, z) {
+                                        if let Ok(coords) = structure.relative_coords_to_local_coords_checked(point.x, point.y, point.z) {
+                                            if structure.is_within_blocks(coords) {
                                                 inventory.decrease_quantity_at(inventory_slot, 1);
 
                                                 let block_up = if is_planet.is_some() {
-                                                    Planet::planet_face(structure, x, y, z)
+                                                    Planet::planet_face(structure, coords)
                                                 } else {
                                                     BlockFace::Top
                                                 };
 
                                                 place_writer.send(BlockPlaceEvent {
                                                     structure_entity: structure.get_entity().unwrap(),
-                                                    x,
-                                                    y,
-                                                    z,
+                                                    coords: StructureBlock::new(coords),
                                                     inventory_slot,
                                                     block_id,
                                                     block_up,
@@ -126,16 +119,12 @@ fn process_player_interaction(
 
                         let point = transform.compute_matrix().inverse().transform_point3(moved_point);
 
-                        let (x, y, z) = structure
-                            .relative_coords_to_local_coords_checked(point.x, point.y, point.z)
-                            .unwrap();
-
-                        interact_writer.send(BlockInteractEvent {
-                            structure_entity: structure.get_entity().unwrap(),
-                            x,
-                            y,
-                            z,
-                        });
+                        if let Ok(coords) = structure.relative_coords_to_local_coords_checked(point.x, point.y, point.z) {
+                            interact_writer.send(BlockInteractEvent {
+                                structure_entity: structure.get_entity().unwrap(),
+                                coords: StructureBlock::new(coords),
+                            });
+                        }
                     }
                 }
             }

@@ -47,7 +47,7 @@ fn receive_asteroids(
 
                 let mut entity_cmds = commands.spawn_empty();
 
-                let mut structure = Structure::new(width as usize, height as usize, length as usize);
+                let mut structure = Structure::new(width, height, length);
 
                 let builder = ClientAsteroidBuilder::default();
 

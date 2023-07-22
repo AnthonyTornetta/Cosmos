@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::utils::array_utils;
 
-use super::chunk::CHUNK_DIMENSIONS;
+use super::chunk::{CHUNK_DIMENSIONS, CHUNK_DIMENSIONSF};
 
 /// Common functionality of structure-based coordinates
 pub trait Coordinate {
@@ -15,11 +15,22 @@ pub trait Coordinate {
     fn flatten(&self, width: CoordinateType, height: CoordinateType) -> usize;
 }
 
+/// This represents the coordinate type for representing things on structures + chunk.
+///
+/// Make sure this is serializable (aka don't use usize or any other type that varies per system. u32 or u64 are really the only options)
 pub type CoordinateType = u64;
+
+/// This represents the coordinate type for representing things on structures + chunk, but with the posibility of being negative.
+///
+/// This should be the signed version of CoordinateType
 pub type UnboundCoordinateType = i64;
 
 #[derive(Debug)]
+/// This will be returned if an error occurs when converting from an unbound coordinate to a normal coordinate.
+///
+/// Note that this will only error if one of the coordinates is negative - not if one of the coordinates is outside the structure.
 pub enum BoundsError {
+    /// If one of the coordinates was negative
     Negative,
 }
 
@@ -37,8 +48,68 @@ macro_rules! create_coordinate {
         }
 
         impl $name {
+            #[doc=$structComment]
+            ///
+            /// - `x` The x coordinate
+            /// - `y` The y coordinate
+            /// - `z` The z coordinate
+            #[inline(always)]
             pub fn new(x: CoordinateType, y: CoordinateType, z: CoordinateType) -> Self {
                 Self { x, y, z }
+            }
+
+            /// Computes self - (1, 0, 0)
+            ///
+            /// Will return an err if the result would be negative
+            #[inline(always)]
+            pub fn left(&self) -> Result<Self, BoundsError> {
+                if self.x == 0 {
+                    Err(BoundsError::Negative)
+                } else {
+                    Ok(Self::new(self.x - 1, self.y, self.z))
+                }
+            }
+
+            /// Computes self + (1, 0, 0)
+            #[inline(always)]
+            pub fn right(&self) -> Self {
+                Self::new(self.x + 1, self.y, self.z)
+            }
+
+            /// Computes self - (0, 1, 0)
+            ///
+            /// Will return an err if the result would be negative
+            #[inline(always)]
+            pub fn bottom(&self) -> Result<Self, BoundsError> {
+                if self.y == 0 {
+                    Err(BoundsError::Negative)
+                } else {
+                    Ok(Self::new(self.x, self.y - 1, self.z))
+                }
+            }
+
+            /// Computes self + (0, 1, 0)
+            #[inline(always)]
+            pub fn top(&self) -> Self {
+                Self::new(self.x, self.y + 1, self.z)
+            }
+
+            /// Computes self - (0, 0, 1)
+            ///
+            /// Will return an err if the result would be negative
+            #[inline(always)]
+            pub fn back(&self) -> Result<Self, BoundsError> {
+                if self.z == 0 {
+                    Err(BoundsError::Negative)
+                } else {
+                    Ok(Self::new(self.x, self.y, self.z - 1))
+                }
+            }
+
+            /// Computes self + (0, 0, 1)
+            #[inline(always)]
+            pub fn front(&self) -> Self {
+                Self::new(self.x, self.y, self.z + 1)
             }
         }
 
@@ -62,6 +133,13 @@ macro_rules! create_coordinate {
             }
         }
 
+        impl From<(usize, usize, usize)> for $name {
+            #[inline(always)]
+            fn from((x, y, z): (usize, usize, usize)) -> Self {
+                Self { x as CoordinateType, y as CoordinateType, z as CoordinateType }
+            }
+        }
+
         #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Reflect, Hash)]
         #[doc=$structComment]
         ///
@@ -78,8 +156,45 @@ macro_rules! create_coordinate {
 
         impl $unbounded {
             #[inline(always)]
+            /// Creates a new unbounded version that can have negative as well as positive values.
             pub fn new(x: UnboundCoordinateType, y: UnboundCoordinateType, z: UnboundCoordinateType) -> Self {
                 Self { x, y, z }
+            }
+
+            /// Computes self - (1, 0, 0)
+            #[inline(always)]
+            pub fn left(&self) -> Self {
+                Self::new(self.x - 1, self.y, self.z)
+            }
+
+            /// Computes self + (1, 0, 0)
+            #[inline(always)]
+            pub fn right(&self) -> Self {
+                Self::new(self.x + 1, self.y, self.z)
+            }
+
+            /// Computes self - (0, 1, 0)
+            #[inline(always)]
+            pub fn bottom(&self) -> Self {
+                Self::new(self.x, self.y - 1, self.z)
+            }
+
+            /// Computes self + (0, 1, 0)
+            #[inline(always)]
+            pub fn top(&self) -> Self {
+                Self::new(self.x, self.y + 1, self.z)
+            }
+
+            /// Computes self - (0, 0, 1)
+            #[inline(always)]
+            pub fn back(&self) -> Self {
+                Self::new(self.x, self.y, self.z - 1)
+            }
+
+            /// Computes self + (0, 0, 1)
+            #[inline(always)]
+            pub fn front(&self) -> Self {
+                Self::new(self.x, self.y, self.z + 1)
             }
         }
 
@@ -135,8 +250,8 @@ impl ChunkBlockCoordinate {
     /// ```rs
     /// ChunkBlockCoordinate {
     ///     x: blockCoord.x % CHUNK_DIMENSIONS,
-    ///     y: blockCoord.x % CHUNK_DIMENSIONS,
-    ///     z: blockCoord.x % CHUNK_DIMENSIONS,
+    ///     y: blockCoord.y % CHUNK_DIMENSIONS,
+    ///     z: blockCoord.z % CHUNK_DIMENSIONS,
     /// }
     /// ```
     ///
@@ -146,8 +261,8 @@ impl ChunkBlockCoordinate {
         // & (CHUNK_DIMENSIONS - 1) == % CHUNK_DIMENSIONS
         Self {
             x: value.x & (CHUNK_DIMENSIONS - 1),
-            y: value.x & (CHUNK_DIMENSIONS - 1),
-            z: value.x & (CHUNK_DIMENSIONS - 1),
+            y: value.y & (CHUNK_DIMENSIONS - 1),
+            z: value.z & (CHUNK_DIMENSIONS - 1),
         }
     }
 }
@@ -159,8 +274,8 @@ impl UnboundChunkBlockCoordinate {
     /// ```rs
     /// UnboundBlockCoordinate {
     ///     x: blockCoord.x % CHUNK_DIMENSIONS,
-    ///     y: blockCoord.x % CHUNK_DIMENSIONS,
-    ///     z: blockCoord.x % CHUNK_DIMENSIONS,
+    ///     y: blockCoord.y % CHUNK_DIMENSIONS,
+    ///     z: blockCoord.z % CHUNK_DIMENSIONS,
     /// }
     /// ```
     ///
@@ -168,9 +283,9 @@ impl UnboundChunkBlockCoordinate {
     #[inline(always)]
     pub fn for_unbound_block_coordinate(value: UnboundBlockCoordinate) -> Self {
         Self {
-            x: value.x % (CHUNK_DIMENSIONS as i64),
-            y: value.x % (CHUNK_DIMENSIONS as i64),
-            z: value.x % (CHUNK_DIMENSIONS as i64),
+            x: value.x % (CHUNK_DIMENSIONS as UnboundCoordinateType),
+            y: value.y % (CHUNK_DIMENSIONS as UnboundCoordinateType),
+            z: value.z % (CHUNK_DIMENSIONS as UnboundCoordinateType),
         }
     }
 }
@@ -189,8 +304,8 @@ impl ChunkCoordinate {
     /// ```rs
     /// ChunkCoordinate {
     ///     x: blockCoord.x / CHUNK_DIMENSIONS,
-    ///     y: blockCoord.x / CHUNK_DIMENSIONS,
-    ///     z: blockCoord.x / CHUNK_DIMENSIONS,
+    ///     y: blockCoord.y / CHUNK_DIMENSIONS,
+    ///     z: blockCoord.z / CHUNK_DIMENSIONS,
     /// }
     /// ```
     ///
@@ -199,8 +314,8 @@ impl ChunkCoordinate {
     pub fn for_block_coordinate(value: BlockCoordinate) -> Self {
         Self {
             x: value.x / CHUNK_DIMENSIONS,
-            y: value.x / CHUNK_DIMENSIONS,
-            z: value.x / CHUNK_DIMENSIONS,
+            y: value.y / CHUNK_DIMENSIONS,
+            z: value.z / CHUNK_DIMENSIONS,
         }
     }
 
@@ -225,9 +340,9 @@ impl UnboundChunkCoordinate {
     /// Shorthand for
     /// ```rs
     /// UnboundChunkCoordinate {
-    ///     x: blockCoord.x / CHUNK_DIMENSIONS,
-    ///     y: blockCoord.x / CHUNK_DIMENSIONS,
-    ///     z: blockCoord.x / CHUNK_DIMENSIONS,
+    ///     x: (blockCoord.x as f32 / CHUNK_DIMENSIONSF).floor(),
+    ///     y: (blockCoord.y as f32 / CHUNK_DIMENSIONSF).floor(),
+    ///     z: (blockCoord.z as f32 / CHUNK_DIMENSIONSF).floor(),
     /// }
     /// ```
     ///
@@ -235,9 +350,9 @@ impl UnboundChunkCoordinate {
     #[inline(always)]
     pub fn for_unbound_block_coordinate(value: UnboundBlockCoordinate) -> Self {
         Self {
-            x: value.x / (CHUNK_DIMENSIONS as i64),
-            y: value.x / (CHUNK_DIMENSIONS as i64),
-            z: value.x / (CHUNK_DIMENSIONS as i64),
+            x: (value.x as f32 / CHUNK_DIMENSIONSF).floor() as UnboundCoordinateType,
+            y: (value.y as f32 / CHUNK_DIMENSIONSF).floor() as UnboundCoordinateType,
+            z: (value.z as f32 / CHUNK_DIMENSIONSF).floor() as UnboundCoordinateType,
         }
     }
 }
