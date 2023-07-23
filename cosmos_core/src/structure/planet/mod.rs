@@ -66,13 +66,13 @@ impl Planet {
         let normalized = relative_position.normalize_or_zero();
         let abs = normalized.abs();
 
-        if abs.y >= abs.x && abs.y >= abs.z {
+        if abs.y > abs.x && abs.y > abs.z {
             if normalized.y.is_positive() {
                 BlockFace::Top
             } else {
                 BlockFace::Bottom
             }
-        } else if abs.x >= abs.y && abs.x >= abs.z {
+        } else if abs.x > abs.y && abs.x > abs.z {
             if normalized.x.is_positive() {
                 BlockFace::Right
             } else {
