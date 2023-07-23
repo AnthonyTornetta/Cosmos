@@ -376,7 +376,7 @@ impl<'a> Iterator for ChunkIterator<'a> {
                     return None;
                 }
 
-                let position = body.start;
+                let position = body.at;
 
                 body.at.x += 1;
 

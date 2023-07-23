@@ -1,9 +1,10 @@
 //! Freezes entities that are near unloaded chunks so they don't fly into unloaded areas.
 
-use bevy::prelude::{App, Commands, Entity, GlobalTransform, Query, Update, With, Without};
+use bevy::prelude::{App, Commands, Entity, GlobalTransform, PostUpdate, Query, With, Without};
 use bevy_rapier3d::prelude::{Collider, RigidBodyDisabled};
 
 use crate::{
+    ecs::NeedsDespawned,
     physics::location::SECTOR_DIMENSIONS,
     structure::{
         asteroid::Asteroid,
@@ -20,7 +21,7 @@ use super::location::Location;
 const FREEZE_RADIUS: UnboundCoordinateType = 1;
 
 fn stop_near_unloaded_chunks(
-    query: Query<(Entity, &Location), (Without<Asteroid>, Without<Planet>)>,
+    query: Query<(Entity, &Location), (Without<Asteroid>, Without<Planet>, Without<NeedsDespawned>)>,
     structures: Query<(Entity, &Structure, &Location, &GlobalTransform)>,
     has_collider: Query<(), With<Collider>>,
     mut commands: Commands,
@@ -44,12 +45,6 @@ fn stop_near_unloaded_chunks(
             let ub_coords = structure.relative_coords_to_local_coords(relative_coords.x, relative_coords.y, relative_coords.z);
 
             let ub_chunk_coords = UnboundChunkCoordinate::for_unbound_block_coordinate(ub_coords);
-
-            // let (cx, cy, cz) = (
-            //     bx as UnboundCoordinateType / CHUNK_DIMENSIONS as UnboundCoordinateType,
-            //     by as UnboundCoordinateType / CHUNK_DIMENSIONS as UnboundCoordinateType,
-            //     bz as UnboundCoordinateType / CHUNK_DIMENSIONS as UnboundCoordinateType,
-            // );
 
             let near_unloaded_chunk = structure
                 .chunk_iter(
@@ -90,5 +85,5 @@ fn stop_near_unloaded_chunks(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, stop_near_unloaded_chunks);
+    app.add_systems(PostUpdate, stop_near_unloaded_chunks);
 }

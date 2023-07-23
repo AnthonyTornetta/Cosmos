@@ -795,6 +795,7 @@ pub fn generate_planet<T: Component + Clone + Default, E: TGenerateChunkEvent + 
         .filter_map(|ev| {
             let structure_entity = ev.get_structure_entity();
             let coords = ev.get_chunk_coordinates();
+
             if let Ok((mut structure, _)) = query.get_mut(structure_entity) {
                 Some((structure_entity, structure.take_or_create_chunk_for_loading(coords)))
             } else {
@@ -893,7 +894,7 @@ pub fn generate_planet<T: Component + Clone + Default, E: TGenerateChunkEvent + 
                         );
                     }
                 }
-                timer.log_duration("Chunk: ");
+                timer.log_duration("Chunk:");
                 (chunk, structure_entity)
             });
 
