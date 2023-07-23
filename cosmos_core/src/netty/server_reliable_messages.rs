@@ -11,7 +11,7 @@ use crate::{
     entities::player::render_distance::RenderDistance,
     physics::location::Location,
     structure::{
-        coordinates::{BlockCoordinate, ChunkCoordinate, CoordinateType},
+        coordinates::{ChunkCoordinate, CoordinateType},
         loading::ChunksNeedLoaded,
         planet::Planet,
         structure_block::StructureBlock,

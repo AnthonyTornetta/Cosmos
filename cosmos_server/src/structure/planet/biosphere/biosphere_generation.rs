@@ -55,7 +55,7 @@ pub fn notify_when_done_generating_terrain<T: Component>(
             let (chunk, structure_entity) = chunks;
 
             if let Ok(mut structure) = structure_query.get_mut(structure_entity) {
-                let chunk_coords = chunk.structure_coords();
+                let chunk_coords = chunk.chunk_coordinates();
 
                 structure.set_chunk(chunk);
 
@@ -839,7 +839,7 @@ pub fn generate_planet<T: Component + Clone + Default, E: TGenerateChunkEvent + 
                 let structure_x = actual_pos.x;
 
                 // To save multiplication operations later.
-                let first_block_coord = chunk.structure_coords().first_structure_block();
+                let first_block_coord = chunk.chunk_coordinates().first_structure_block();
 
                 // Get all possible planet faces from the chunk corners.
                 let chunk_faces = Planet::chunk_planet_faces(first_block_coord, s_dimensions);

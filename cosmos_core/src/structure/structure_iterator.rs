@@ -96,7 +96,6 @@ impl<'a> BlockIterator<'a> {
                 state: if include_empty {
                     BlockItrState::IncludeEmpty(body)
                 } else {
-                    let cd = CHUNK_DIMENSIONS as i32;
                     let mut chunk_itr = structure.chunk_iter(
                         UnboundChunkCoordinate::for_unbound_block_coordinate(start.into()),
                         UnboundChunkCoordinate::for_unbound_block_coordinate(end.into()),
@@ -165,7 +164,7 @@ impl<'a> Iterator for BlockIterator<'a> {
                 Some(StructureBlock::new(position))
             }
             BlockItrState::ExcludeEmpty(body) => {
-                let first_block_coordinate = body.cur_chunk.structure_coords().first_structure_block();
+                let first_block_coordinate = body.cur_chunk.chunk_coordinates().first_structure_block();
 
                 let structure_x = body.body.at.x + first_block_coordinate.x;
                 let structure_y = body.body.at.y + first_block_coordinate.y;
@@ -401,7 +400,7 @@ impl<'a> Iterator for ChunkIterator<'a> {
             }
             ChunkItrState::ExcludeEmpty((body, itr)) => {
                 for (_, chunk) in itr.by_ref() {
-                    let position = chunk.structure_coords();
+                    let position = chunk.chunk_coordinates();
 
                     if position.x >= body.start.x
                         && position.x <= body.end.x

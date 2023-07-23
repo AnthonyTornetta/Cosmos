@@ -56,9 +56,8 @@ impl Chunk {
     }
 
     #[inline]
-    /// The position in the structure.
-    #[deprecated = "rename this to structure_position"]
-    pub fn structure_coords(&self) -> ChunkCoordinate {
+    /// The position of this chunk in the structure.
+    pub fn chunk_coordinates(&self) -> ChunkCoordinate {
         self.structure_position
     }
 

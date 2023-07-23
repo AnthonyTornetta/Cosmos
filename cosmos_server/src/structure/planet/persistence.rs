@@ -154,7 +154,7 @@ fn load_chunk(
     for (entity, sd, ce) in query.iter() {
         if let Some(chunk) = sd.deserialize_data::<Chunk>("cosmos:chunk") {
             if let Ok(mut structure) = structure_query.get_mut(ce.structure_entity) {
-                let coords = chunk.structure_coords();
+                let coords = chunk.chunk_coordinates();
 
                 commands.entity(entity).insert(PbrBundle {
                     transform: Transform::from_translation(structure.chunk_relative_position(coords)),

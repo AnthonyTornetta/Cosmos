@@ -32,7 +32,6 @@ use crate::physics::location::Location;
 use crate::registry::identifiable::Identifiable;
 use crate::registry::Registry;
 use crate::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
-use crate::utils::array_utils::flatten;
 use bevy::prelude::{
     BuildChildren, Commands, Component, Entity, EventReader, EventWriter, GlobalTransform, PbrBundle, Query, States, Transform, Vec3,
 };
@@ -141,13 +140,8 @@ impl Structure {
     }
 
     #[inline(always)]
-    fn flatten_c(&self, c: ChunkCoordinate) -> usize {
+    fn flatten(&self, c: ChunkCoordinate) -> usize {
         c.flatten(self.chunks_width(), self.chunks_height())
-    }
-
-    #[inline(always)]
-    fn flatten_b(&self, b: BlockCoordinate) -> usize {
-        b.flatten(self.blocks_width(), self.blocks_height())
     }
 
     /// Returns the entity for this chunk -- an empty chunk WILL NOT have an entity.
@@ -156,7 +150,7 @@ impl Structure {
     /// Maybe the chunk is empty or unloaded?
     #[inline]
     pub fn chunk_entity(&self, coords: ChunkCoordinate) -> Option<Entity> {
-        self.chunk_entities.get(&self.flatten_c(coords)).copied()
+        self.chunk_entities.get(&self.flatten(coords)).copied()
     }
 
     /// Sets the entity for the chunk at those chunk coordinates.
@@ -164,7 +158,7 @@ impl Structure {
     /// This should be handled automatically, so you shouldn't have to call this unless
     /// you're doing some crazy stuff.
     pub fn set_chunk_entity(&mut self, coords: ChunkCoordinate, entity: Entity) {
-        let index = self.flatten_c(coords);
+        let index = self.flatten(coords);
 
         self.chunk_entity_map.insert(entity, index);
         self.chunk_entities.insert(index, entity);
@@ -196,12 +190,12 @@ impl Structure {
     pub fn chunk_from_chunk_coordinates(&self, coords: ChunkCoordinate) -> Option<&Chunk> {
         self.debug_assert_coords_within(coords);
 
-        self.chunks.get(&self.flatten_c(coords))
+        self.chunks.get(&self.flatten(coords))
     }
 
     /// Returns if the chunk at these chunk coordinates is fully loaded & empty.
     pub fn has_empty_chunk_at(&self, coords: ChunkCoordinate) -> bool {
-        self.get_chunk_state(coords) == ChunkState::Loaded && self.empty_chunks.contains(&self.flatten_c(coords))
+        self.get_chunk_state(coords) == ChunkState::Loaded && self.empty_chunks.contains(&self.flatten(coords))
     }
 
     /// Returns None for unloaded/empty chunks AND for chunks that are out of bounds
@@ -231,7 +225,7 @@ impl Structure {
     pub fn mut_chunk_from_chunk_coordinates(&mut self, coords: ChunkCoordinate) -> Option<&mut Chunk> {
         self.debug_assert_coords_within(coords);
 
-        self.chunks.get_mut(&self.flatten_c(coords))
+        self.chunks.get_mut(&self.flatten(coords))
     }
 
     /// Returns the chunk at those block coordinates if it is non-empty AND loaded.
@@ -374,7 +368,7 @@ impl Structure {
     }
 
     fn create_chunk_at(&mut self, coords: ChunkCoordinate) -> &mut Chunk {
-        let index = self.flatten_c(coords);
+        let index = self.flatten(coords);
 
         self.chunks.insert(index, Chunk::new(coords));
 
@@ -383,7 +377,7 @@ impl Structure {
 
     /// Removes the chunk at the given coordinate -- does NOT remove the chunk entity
     fn unload_chunk(&mut self, coords: ChunkCoordinate) {
-        self.chunks.remove(&self.flatten_c(coords));
+        self.chunks.remove(&self.flatten(coords));
     }
 
     /// Sets the block at the given block coordinates.
@@ -498,11 +492,11 @@ impl Structure {
     ///
     /// This does not trigger any events, so make sure to handle those properly.
     pub fn set_chunk(&mut self, mut chunk: Chunk) {
-        let i = self.flatten_c(chunk.structure_coords());
+        let i = self.flatten(chunk.chunk_coordinates());
 
         // Add blocks from hashmap.
         // chunk.set_block_at();
-        if let Some(block_map) = self.unloaded_chunk_blocks.remove(&chunk.structure_coords()) {
+        if let Some(block_map) = self.unloaded_chunk_blocks.remove(&chunk.chunk_coordinates()) {
             for (coords, (block_id, block_up)) in block_map {
                 chunk.set_block_at_from_id(coords, block_id, block_up);
             }
@@ -525,7 +519,7 @@ impl Structure {
     ///
     /// This does not trigger any events, so make sure to handle those properly.
     pub fn set_to_empty_chunk(&mut self, coords: ChunkCoordinate) {
-        let i = self.flatten_c(coords);
+        let i = self.flatten(coords);
 
         self.chunks.remove(&i);
         self.loading_chunks.remove(&i);
@@ -538,7 +532,7 @@ impl Structure {
     /// multithreading stuff over multiple chunks.
     pub fn take_chunk(&mut self, coords: ChunkCoordinate) -> Option<Chunk> {
         self.debug_assert_coords_within(coords);
-        self.chunks.remove(&self.flatten_c(coords))
+        self.chunks.remove(&self.flatten(coords))
     }
 
     /// # ONLY CALL THIS IF YOU THEN CALL SET_CHUNK IN THE FUTURE!
@@ -554,7 +548,7 @@ impl Structure {
     pub fn take_or_create_chunk_for_loading(&mut self, coords: ChunkCoordinate) -> Chunk {
         self.debug_assert_coords_within(coords);
 
-        let idx = self.flatten_c(coords);
+        let idx = self.flatten(coords);
         self.loading_chunks.insert(idx);
 
         if let Some(c) = self.chunks.remove(&idx) {
@@ -570,7 +564,7 @@ impl Structure {
     pub fn mark_chunk_being_loaded(&mut self, coords: ChunkCoordinate) {
         self.debug_assert_coords_within(coords);
 
-        let idx = self.flatten_c(coords);
+        let idx = self.flatten(coords);
         self.loading_chunks.insert(idx);
     }
 
@@ -696,7 +690,7 @@ impl Structure {
             return ChunkState::Loaded;
         }
 
-        let idx = self.flatten_c(coords);
+        let idx = self.flatten(coords);
 
         if self.loading_chunks.contains(&idx) {
             ChunkState::Loading
@@ -715,7 +709,7 @@ impl Structure {
 
     /// Unloads the chunk at the given chunk position
     pub fn unload_chunk_at(&mut self, coords: ChunkCoordinate, commands: &mut Commands) -> Option<Chunk> {
-        let index = self.flatten_c(coords);
+        let index = self.flatten(coords);
 
         self.empty_chunks.remove(&index);
         let chunk = self.chunks.remove(&index);
@@ -777,7 +771,7 @@ fn remove_empty_chunks(
             if let Some(chunk_entity) = structure.chunk_entity(chunk_coords) {
                 commands.entity(chunk_entity).insert(NeedsDespawned);
 
-                let idx = structure.flatten_c(chunk_coords);
+                let idx = structure.flatten(chunk_coords);
                 structure.chunk_entities.remove(&idx);
             }
         }

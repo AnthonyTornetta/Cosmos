@@ -468,7 +468,7 @@ fn client_sync_players(
                 if let Some(s_entity) = network_mapping.client_from_server(&server_structure_entity) {
                     if let Ok(mut structure) = query_structure.get_mut(s_entity) {
                         let chunk: Chunk = cosmos_encoder::deserialize(&serialized_chunk).expect("Unable to deserialize chunk from server");
-                        let chunk_coords = chunk.structure_coords();
+                        let chunk_coords = chunk.chunk_coordinates();
 
                         structure.set_chunk(chunk);
 
