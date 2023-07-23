@@ -209,7 +209,7 @@ fn generate_edge_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
         }
 
         // The minimum (j, j) on the 45 where the two top heights intersect.
-        // let mut first_both_45 = s_dimensions;
+        let mut first_both_45 = s_dimensions;
         for j in 0..CHUNK_DIMENSIONS {
             // Seed coordinates and k-direction noise functions.
             let (mut x, mut y, mut z) = (sx + i, sy + i, sz + i);
@@ -253,9 +253,9 @@ fn generate_edge_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
                 height = layer_top;
             }
 
-            // if j_layers[j][0].1 == j_height && k_layers[0].1 == j_height {
-            //     first_both_45 = j;
-            // }
+            if j_layers[j][0].1 == j_height && k_layers[0].1 == j_height && first_both_45 == s_dimensions {
+                first_both_45 = j_height;
+            }
 
             for k in 0..CHUNK_DIMENSIONS {
                 let (mut x, mut y, mut z) = (i, i, i);
@@ -279,20 +279,20 @@ fn generate_edge_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
                     BlockFace::Left => s_dimensions - (sx + x),
                 };
 
-                // The top block needs different "top" to look good, the block can't tell which "up" looks good.
-                let block_up = Planet::get_planet_face_without_structure(sx + x, sy + y, sz + z, s_dimensions);
-                let block = block_ranges.edge_block(
-                    j_height,
-                    k_height,
-                    // if k < first_both_45 { Some(&j_layers[k]) } else { None },
-                    // if j < first_both_45 { Some(&k_layers) } else { None },
-                    Some(&j_layers[k]),
-                    Some(&k_layers),
-                    block_ranges.sea_level,
-                    block_ranges.sea_block(),
-                );
-                if let Some(block) = block {
-                    chunk.set_block_at(x, y, z, block, block_up);
+                if j_height < first_both_45 || k_height < first_both_45 {
+                    // The top block needs different "top" to look good, the block can't tell which "up" looks good.
+                    let block_up = Planet::get_planet_face_without_structure(sx + x, sy + y, sz + z, s_dimensions);
+                    let block = block_ranges.edge_block(
+                        j_height,
+                        k_height,
+                        Some(&j_layers[k]),
+                        Some(&k_layers),
+                        block_ranges.sea_level,
+                        block_ranges.sea_block(),
+                    );
+                    if let Some(block) = block {
+                        chunk.set_block_at(x, y, z, block, block_up);
+                    }
                 }
             }
         }
