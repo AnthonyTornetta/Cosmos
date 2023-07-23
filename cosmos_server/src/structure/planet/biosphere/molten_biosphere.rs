@@ -8,7 +8,12 @@ use cosmos_core::{
     events::block_events::BlockChangedEvent,
     physics::location::Location,
     registry::Registry,
-    structure::{chunk::CHUNK_DIMENSIONS, planet::Planet, rotate, ChunkInitEvent, Structure},
+    structure::{
+        chunk::CHUNK_DIMENSIONS,
+        coordinates::{BlockCoordinate, ChunkCoordinate, UnboundBlockCoordinate, UnboundCoordinateType},
+        planet::Planet,
+        rotate, ChunkInitEvent, Structure,
+    },
 };
 
 use crate::{init::init_world::ServerSeed, GameState};
@@ -28,23 +33,21 @@ pub struct MoltenBiosphereMarker;
 /// Marks that a grass chunk needs generated
 #[derive(Debug, Event)]
 pub struct MoltenChunkNeedsGeneratedEvent {
-    x: usize,
-    y: usize,
-    z: usize,
+    coords: ChunkCoordinate,
     structure_entity: Entity,
 }
 
 impl TGenerateChunkEvent for MoltenChunkNeedsGeneratedEvent {
-    fn new(x: usize, y: usize, z: usize, structure_entity: Entity) -> Self {
-        Self { x, y, z, structure_entity }
+    fn new(coords: ChunkCoordinate, structure_entity: Entity) -> Self {
+        Self { coords, structure_entity }
     }
 
     fn get_structure_entity(&self) -> Entity {
         self.structure_entity
     }
 
-    fn get_chunk_coordinates(&self) -> (usize, usize, usize) {
-        (self.x, self.y, self.z)
+    fn get_chunk_coordinates(&self) -> ChunkCoordinate {
+        self.coords
     }
 }
 
@@ -57,8 +60,8 @@ impl TBiosphere<MoltenBiosphereMarker, MoltenChunkNeedsGeneratedEvent> for Molte
         MoltenBiosphereMarker {}
     }
 
-    fn get_generate_chunk_event(&self, x: usize, y: usize, z: usize, structure_entity: Entity) -> MoltenChunkNeedsGeneratedEvent {
-        MoltenChunkNeedsGeneratedEvent::new(x, y, z, structure_entity)
+    fn get_generate_chunk_event(&self, coords: ChunkCoordinate, structure_entity: Entity) -> MoltenChunkNeedsGeneratedEvent {
+        MoltenChunkNeedsGeneratedEvent::new(coords, structure_entity)
     }
 }
 
@@ -74,21 +77,22 @@ fn make_block_ranges(block_registry: Res<Registry<Block>>, mut commands: Command
 
 // Fills the chunk at the given coordinates with spikes
 fn generate_spikes(
-    (cx, cy, cz): (usize, usize, usize),
+    coords: ChunkCoordinate,
     structure: &mut Structure,
     location: &Location,
     block_event_writer: &mut EventWriter<BlockChangedEvent>,
     blocks: &Registry<Block>,
     seed: ServerSeed,
 ) {
-    let (sx, sy, sz) = (cx * CHUNK_DIMENSIONS, cy * CHUNK_DIMENSIONS, cz * CHUNK_DIMENSIONS);
+    let sc = coords.first_structure_block();
+
     let s_dimension = structure.blocks_height();
 
     let molten_stone = blocks.from_id("cosmos:molten_stone").expect("Missing molten_stone");
 
     let structure_coords = location.absolute_coords_f64();
 
-    let faces = Planet::chunk_planet_faces((sx, sy, sz), s_dimension);
+    let faces = Planet::chunk_planet_faces(sc, s_dimension);
     for block_up in faces.iter() {
         // Getting the noise value for every block in the chunk, to find where to put trees.
         let noise_height = match block_up {
@@ -99,9 +103,9 @@ fn generate_spikes(
         for z in 0..CHUNK_DIMENSIONS {
             for x in 0..CHUNK_DIMENSIONS {
                 let (nx, ny, nz) = match block_up {
-                    BlockFace::Front | BlockFace::Back => ((sx + x) as f64, (sy + z) as f64, noise_height as f64),
-                    BlockFace::Top | BlockFace::Bottom => ((sx + x) as f64, noise_height as f64, (sz + z) as f64),
-                    BlockFace::Right | BlockFace::Left => (noise_height as f64, (sy + x) as f64, (sz + z) as f64),
+                    BlockFace::Front | BlockFace::Back => ((sc.x + x) as f64, (sc.y + z) as f64, noise_height as f64),
+                    BlockFace::Top | BlockFace::Bottom => ((sc.x + x) as f64, noise_height as f64, (sc.z + z) as f64),
+                    BlockFace::Right | BlockFace::Left => (noise_height as f64, (sc.y + x) as f64, (sc.z + z) as f64),
                 };
 
                 let rng = seed
@@ -119,23 +123,33 @@ fn generate_spikes(
                         .abs()
                         % 4;
 
-                    let (bx, by, bz) = match block_up {
-                        BlockFace::Front | BlockFace::Back => (sx + x, sy + z, sz),
-                        BlockFace::Top | BlockFace::Bottom => (sx + x, sy, sz + z),
-                        BlockFace::Right | BlockFace::Left => (sx, sy + x, sz + z),
-                    };
+                    let coords: BlockCoordinate = match block_up {
+                        BlockFace::Front | BlockFace::Back => (sc.x + x, sc.y + z, sc.z),
+                        BlockFace::Top | BlockFace::Bottom => (sc.x + x, sc.y, sc.z + z),
+                        BlockFace::Right | BlockFace::Left => (sc.x, sc.y + x, sc.z + z),
+                    }
+                    .into();
 
                     let s_dimensions = (s_dimension, s_dimension, s_dimension);
 
-                    if let Ok(start_checking) = rotate((bx, by, bz), (0, CHUNK_DIMENSIONS as i32 - 1, 0), s_dimensions, block_up) {
-                        'spike_placement: for dy_down in 0..CHUNK_DIMENSIONS {
-                            if let Ok(rotated) = rotate(start_checking, (0, -(dy_down as i32), 0), s_dimensions, block_up) {
-                                if structure.block_at_tuple(rotated, blocks) == molten_stone {
+                    if let Ok(start_checking) = rotate(
+                        coords,
+                        UnboundBlockCoordinate::new(0, CHUNK_DIMENSIONS as UnboundCoordinateType - 1, 0),
+                        s_dimensions,
+                        block_up,
+                    ) {
+                        'spike_placement: for dy_down in 0..CHUNK_DIMENSIONS as UnboundCoordinateType {
+                            if let Ok(rotated) = rotate(start_checking, UnboundBlockCoordinate::new(0, -dy_down, 0), s_dimensions, block_up)
+                            {
+                                if structure.block_at(rotated, blocks) == molten_stone {
                                     for dy in 1..=rng {
-                                        if let Ok(rel_pos) =
-                                            rotate(start_checking, (0, dy as i32 - dy_down as i32, 0), s_dimensions, block_up)
-                                        {
-                                            structure.set_block_at_tuple(rel_pos, molten_stone, block_up, blocks, Some(block_event_writer));
+                                        if let Ok(rel_pos) = rotate(
+                                            start_checking,
+                                            UnboundBlockCoordinate::new(0, dy as UnboundCoordinateType - dy_down, 0),
+                                            s_dimensions,
+                                            block_up,
+                                        ) {
+                                            structure.set_block_at(rel_pos, molten_stone, block_up, blocks, Some(block_event_writer));
                                         }
                                     }
                                     break 'spike_placement;
@@ -160,15 +174,13 @@ pub fn generate_chunk_features(
 ) {
     for ev in event_reader.iter() {
         if let Ok((mut structure, location)) = structure_query.get_mut(ev.structure_entity) {
-            let (cx, cy, cz) = ev.chunk_coords;
+            let coords = ev.chunk_coords;
 
-            generate_spikes((cx, cy, cz), &mut structure, location, &mut block_event_writer, &blocks, *seed);
+            generate_spikes(coords, &mut structure, location, &mut block_event_writer, &blocks, *seed);
 
             init_event_writer.send(ChunkInitEvent {
                 structure_entity: ev.structure_entity,
-                x: cx,
-                y: cy,
-                z: cz,
+                coords,
             });
         }
     }
