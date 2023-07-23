@@ -33,7 +33,7 @@ bevy-inspector-egui = "0.19"
 
 crossterm = { version = "0.26.1", features = [ "event-stream" ] }
 
-renet_visualizer = { version = "0.0.5", features = ["bevy"] }
+renet_visualizer = { version = "0.0.6", features = ["bevy"] }
 
 walkdir = "2.3.3"
 
