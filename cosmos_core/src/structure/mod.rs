@@ -876,13 +876,13 @@ pub fn rotate(
     let ub_coords = UnboundBlockCoordinate::from(match block_up {
         BlockFace::Front => (
             (ub_block_coord.x + delta.x),
-            (ub_block_coord.y + delta.y),
-            (ub_block_coord.z + delta.z),
+            (ub_block_coord.y + delta.z),
+            (ub_block_coord.z + delta.y),
         ),
         BlockFace::Back => (
             (ub_block_coord.x + delta.x),
-            (ub_block_coord.y + delta.y),
-            (ub_block_coord.z - delta.z),
+            (ub_block_coord.y + delta.z),
+            (ub_block_coord.z - delta.y),
         ),
         BlockFace::Top => (
             (ub_block_coord.x + delta.x),
@@ -895,13 +895,13 @@ pub fn rotate(
             (ub_block_coord.z + delta.z),
         ),
         BlockFace::Right => (
-            (ub_block_coord.x + delta.x),
-            (ub_block_coord.y + delta.y),
+            (ub_block_coord.x + delta.y),
+            (ub_block_coord.y + delta.x),
             (ub_block_coord.z + delta.z),
         ),
         BlockFace::Left => (
-            (ub_block_coord.x - delta.x),
-            (ub_block_coord.y + delta.y),
+            (ub_block_coord.x - delta.y),
+            (ub_block_coord.y + delta.x),
             (ub_block_coord.z + delta.z),
         ),
     });
