@@ -50,7 +50,7 @@ struct NeedsBiosphereEvent {
 /// This has to be redone.
 pub trait TGenerateChunkEvent: Event {
     /// Creates the generate chunk event.
-    fn new(x: usize, y: usize, z: usize, structure_entity: Entity) -> Self;
+    fn new(coords: ChunkCoordinate, structure_entity: Entity) -> Self;
 
     /// Get structure entity.
     fn get_structure_entity(&self) -> Entity;
@@ -64,7 +64,7 @@ pub trait TBiosphere<T: Component, E: TGenerateChunkEvent> {
     /// Gets the marker component used to flag this planet's type
     fn get_marker_component(&self) -> T;
     /// Gets a component for this specific generate chunk event
-    fn get_generate_chunk_event(&self, x: usize, y: usize, z: usize, structure_entity: Entity) -> E;
+    fn get_generate_chunk_event(&self, coords: ChunkCoordinate, structure_entity: Entity) -> E;
 }
 
 #[derive(Debug)]
