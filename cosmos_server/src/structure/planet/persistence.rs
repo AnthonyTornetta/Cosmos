@@ -7,6 +7,7 @@ use cosmos_core::{
     physics::location::Location,
     structure::{
         chunk::{Chunk, ChunkEntity},
+        coordinates::{ChunkCoordinate, CoordinateType},
         planet::{planet_builder::TPlanetBuilder, Planet},
         ChunkInitEvent, Structure,
     },
@@ -23,9 +24,9 @@ use super::{generation::planet_generator::ChunkNeedsGenerated, server_planet_bui
 
 #[derive(Debug, Serialize, Deserialize)]
 struct PlanetSaveData {
-    width: usize,
-    height: usize,
-    length: usize,
+    width: CoordinateType,
+    height: CoordinateType,
+    length: CoordinateType,
     temperature: f32,
 }
 
@@ -73,7 +74,7 @@ fn on_load_structure(query: Query<(Entity, &SerializedData), With<NeedsLoaded>>,
 #[derive(Debug, Component)]
 /// This is responsible for signifying that a chunk needs either generated or loaded from disk
 pub(super) struct ChunkNeedsPopulated {
-    pub chunk_coords: (usize, usize, usize),
+    pub chunk_coords: ChunkCoordinate,
     pub structure_entity: Entity,
 }
 
@@ -95,7 +96,7 @@ fn populate_chunks(
             continue;
         };
 
-        let (cx, cy, cz) = needs.chunk_coords;
+        let (cx, cy, cz): (CoordinateType, CoordinateType, CoordinateType) = needs.chunk_coords.into();
 
         let svi = if let Some(structure_svi) = structure_svi {
             SaveFileIdentifier::as_child(format!("{cx}_{cy}_{cz}"), structure_svi.clone())
@@ -136,7 +137,7 @@ fn populate_chunks(
             commands
                 .entity(entity)
                 .insert(ChunkNeedsGenerated {
-                    chunk_coords: needs.chunk_coords,
+                    coords: needs.chunk_coords,
                     structure_entity: needs.structure_entity,
                 })
                 .remove::<ChunkNeedsPopulated>();
@@ -153,22 +154,20 @@ fn load_chunk(
     for (entity, sd, ce) in query.iter() {
         if let Some(chunk) = sd.deserialize_data::<Chunk>("cosmos:chunk") {
             if let Ok(mut structure) = structure_query.get_mut(ce.structure_entity) {
-                let (cx, cy, cz) = (chunk.structure_x(), chunk.structure_y(), chunk.structure_z());
+                let coords = chunk.structure_coords();
 
                 commands.entity(entity).insert(PbrBundle {
-                    transform: Transform::from_translation(structure.chunk_relative_position(cx, cy, cz)),
+                    transform: Transform::from_translation(structure.chunk_relative_position(coords)),
                     ..Default::default()
                 });
 
-                structure.set_chunk_entity(cx, cy, cz, entity);
+                structure.set_chunk_entity(coords, entity);
 
                 structure.set_chunk(chunk);
 
                 chunk_init_event.send(ChunkInitEvent {
                     structure_entity: ce.structure_entity,
-                    x: cx,
-                    y: cy,
-                    z: cz,
+                    coords,
                 });
             }
         }

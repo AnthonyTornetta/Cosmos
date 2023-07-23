@@ -15,6 +15,7 @@ use cosmos_core::{
     entities::player::Player,
     physics::location::{Location, Sector, SystemUnit},
     structure::{
+        coordinates::CoordinateType,
         planet::{planet_builder::TPlanetBuilder, Planet, PLANET_LOAD_RADIUS},
         Structure,
     },
@@ -41,7 +42,7 @@ struct PlanetSpawnerAsyncTask(Task<(CachedSectors, Vec<PlanetToSpawn>)>);
 struct PlanetToSpawn {
     temperature: f32,
     location: Location,
-    size: usize,
+    size: CoordinateType,
 }
 
 fn monitor_planets_to_spawn(
@@ -147,7 +148,7 @@ fn spawn_planet(
                 }
 
                 if let Some(star) = closest_star {
-                    let size: usize = if is_origin { 50 } else { rng.gen_range(200..=500) };
+                    let size = if is_origin { 50 } else { rng.gen_range(200..=500) };
 
                     let distance_scaling = best_dist.expect("This would have been set at this point.") / 2.0;
 

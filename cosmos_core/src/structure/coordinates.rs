@@ -139,6 +139,13 @@ macro_rules! create_coordinate {
             }
         }
 
+        impl From<$name> for (CoordinateType, CoordinateType, CoordinateType) {
+            #[inline(always)]
+            fn from(coords: $name) -> Self {
+                (coords.x, coords.y, coords.z)
+            }
+        }
+
         impl From<(usize, usize, usize)> for $name {
             #[inline(always)]
             fn from((x, y, z): (usize, usize, usize)) -> Self {
@@ -229,6 +236,13 @@ macro_rules! create_coordinate {
             #[inline(always)]
             fn from((x, y, z): (UnboundCoordinateType, UnboundCoordinateType, UnboundCoordinateType)) -> Self {
                 Self::new(x, y, z)
+            }
+        }
+
+        impl From<$unbounded> for (UnboundCoordinateType, UnboundCoordinateType, UnboundCoordinateType) {
+            #[inline(always)]
+            fn from(coords: $unbounded) -> Self {
+                (coords.x, coords.y, coords.z)
             }
         }
 

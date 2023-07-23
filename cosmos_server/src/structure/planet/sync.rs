@@ -23,9 +23,9 @@ fn on_request_planet(
                 NettyChannelServer::Reliable,
                 cosmos_encoder::serialize(&ServerReliableMessages::Planet {
                     entity: ev.entity,
-                    width: structure.chunks_width() as u32,
-                    height: structure.chunks_height() as u32,
-                    length: structure.chunks_length() as u32,
+                    width: structure.chunks_width(),
+                    height: structure.chunks_height(),
+                    length: structure.chunks_length(),
                     planet: *planet,
                     biosphere: biosphere_marker.biosphere_name().to_owned(),
                     location: *location,

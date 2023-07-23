@@ -4,7 +4,9 @@ use bevy::prelude::{in_state, App, Commands, Component, Entity, EventWriter, Int
 use cosmos_core::{
     block::{Block, BlockFace},
     registry::Registry,
-    structure::{loading::ChunksNeedLoaded, structure_iterator::ChunkIteratorResult, ChunkInitEvent, Structure},
+    structure::{
+        coordinates::BlockCoordinate, loading::ChunksNeedLoaded, structure_iterator::ChunkIteratorResult, ChunkInitEvent, Structure,
+    },
 };
 
 use crate::state::GameState;
@@ -22,14 +24,14 @@ fn create_ships(
     for (mut structure, entity) in query.iter_mut() {
         let ship_core = blocks.from_id("cosmos:ship_core").expect("Ship core block missing!");
 
-        let (x, y, z) = (
+        let coords = BlockCoordinate::new(
             structure.blocks_width() / 2,
             structure.blocks_height() / 2,
             structure.blocks_length() / 2,
         );
 
         structure.set_all_loaded(true);
-        structure.set_block_at(x, y, z, ship_core, BlockFace::Top, &blocks, None);
+        structure.set_block_at(coords, ship_core, BlockFace::Top, &blocks, None);
 
         let itr = structure.all_chunks_iter(false);
 
@@ -41,16 +43,14 @@ fn create_ships(
         for res in itr {
             // This will always be true because include_empty is false
             if let ChunkIteratorResult::FilledChunk {
-                position: (x, y, z),
+                position: coords,
                 chunk: _,
             } = res
             {
                 println!("Sending chunk init event!");
                 chunk_set_event_writer.send(ChunkInitEvent {
                     structure_entity: entity,
-                    x,
-                    y,
-                    z,
+                    coords,
                 });
             }
         }

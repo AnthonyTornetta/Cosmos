@@ -40,8 +40,7 @@ fn update_system(
                         if energy_storage_system.get_energy() >= line.property.energy_per_shot {
                             energy_storage_system.decrease_energy(line.property.energy_per_shot);
 
-                            let location =
-                                structure.block_world_location(line.start.x, line.start.y, line.start.z, global_transform, location);
+                            let location = structure.block_world_location(line.start.coords(), global_transform, location);
 
                             // AT SOME POINT, THE NEGATIVE SIGN HAS TO BE REMOVED HERE!!!!!
                             // I SHOULD NOT HAVE TO NEGATE THE DIRECTION

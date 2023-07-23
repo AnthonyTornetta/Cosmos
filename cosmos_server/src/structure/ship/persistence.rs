@@ -80,15 +80,13 @@ fn even_more_delayed_structure_event(
             for res in structure.all_chunks_iter(false) {
                 // This will always be true because include_empty is false
                 if let ChunkIteratorResult::FilledChunk {
-                    position: (x, y, z),
+                    position: coords,
                     chunk: _,
                 } = res
                 {
                     chunk_set_event_writer.send(ChunkInitEvent {
                         structure_entity: ev.0,
-                        x,
-                        y,
-                        z,
+                        coords,
                     });
                 }
             }
