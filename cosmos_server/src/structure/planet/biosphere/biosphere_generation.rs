@@ -253,6 +253,10 @@ fn generate_edge_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
                 height = layer_top;
             }
 
+            // if j_layers[j][0].1 == j_height && k_layers[0].1 == j_height {
+            //     first_both_45 = j;
+            // }
+
             for k in 0..CHUNK_DIMENSIONS {
                 let (mut x, mut y, mut z) = (i, i, i);
                 match j_up {
@@ -280,8 +284,10 @@ fn generate_edge_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
                 let block = block_ranges.edge_block(
                     j_height,
                     k_height,
-                    &j_layers[k],
-                    &k_layers,
+                    // if k < first_both_45 { Some(&j_layers[k]) } else { None },
+                    // if j < first_both_45 { Some(&k_layers) } else { None },
+                    Some(&j_layers[k]),
+                    Some(&k_layers),
                     block_ranges.sea_level,
                     block_ranges.sea_block(),
                 );
@@ -446,8 +452,8 @@ fn generate_corner_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + 
     }
 }
 
-const MIRROR_MIN: usize = 100;
-const MIRROR_MAX: usize = 30;
+const MIRROR_MIN: usize = 48;
+const MIRROR_MAX: usize = 32;
 /// Used to change the algorithm used for base terrain generation.
 ///
 /// Try tweaking the values of GenerationParemeters first before making your own custom generation function.
@@ -483,40 +489,18 @@ pub trait BiosphereGenerationStrategy {
         )
     }
 
-    fn get_mirror_coefficient_height(
-        a: usize,
-        seed_coords: (usize, usize, usize),
-        structure_coords: (f64, f64, f64),
-        middle_air_start: usize,
-        s_dimensions: usize,
-        noise_generator: &noise::OpenSimplex,
-        delta: f64,
-        amplitude: f64,
-        iterations: usize,
-    ) -> (f64, f64) {
+    fn get_mirror_coefficient(a: usize, middle_air_start: usize, s_dimensions: usize) -> f64 {
         let max = middle_air_start - MIRROR_MAX;
         let min = middle_air_start - MIRROR_MIN;
-        let mut coefficient = 0.0;
-        if a > max {
-            coefficient = 1.0;
+        if a > max || a < s_dimensions - max {
+            1.0
         } else if a > min {
-            coefficient = 1.0 - (max - a) as f64 / (max - min) as f64;
-        } else if a < s_dimensions - max {
-            coefficient = 1.0;
+            1.0 - (max - a) as f64 / (max - min) as f64
         } else if a < s_dimensions - min {
-            coefficient = 1.0 - ((a - (s_dimensions - max)) as f64 / (max - min) as f64);
+            1.0 - ((a - (s_dimensions - max)) as f64 / (max - min) as f64)
+        } else {
+            0.0
         }
-
-        let height = self::get_block_height(
-            noise_generator,
-            seed_coords,
-            structure_coords,
-            middle_air_start,
-            amplitude,
-            delta,
-            iterations,
-        ) as f64;
-        (coefficient, height)
     }
 
     fn mirror(
@@ -531,103 +515,109 @@ pub trait BiosphereGenerationStrategy {
         s_dimensions: usize,
     ) -> usize {
         // X.
-        let x_face: BlockFace = if bx > s_dimensions / 2 { BlockFace::Right } else { BlockFace::Left };
-        let x_seed = match x_face {
-            BlockFace::Right => match block_up {
-                BlockFace::Front => (s_dimensions, by, bx),
-                BlockFace::Back => (s_dimensions, by, s_dimensions - bx),
-                BlockFace::Top => (s_dimensions, bx, bz),
-                BlockFace::Bottom => (s_dimensions, s_dimensions - bx, bz),
-                BlockFace::Right => (s_dimensions, by, bz),
-                BlockFace::Left => panic!("Right side adjacent to left side."),
-            },
-            BlockFace::Left => match block_up {
-                BlockFace::Front => (0, by, s_dimensions - bx),
-                BlockFace::Back => (0, by, bx),
-                BlockFace::Top => (0, s_dimensions - bx, bz),
-                BlockFace::Bottom => (0, bx, bz),
-                BlockFace::Right => panic!("Left side adjacent to right side."),
-                BlockFace::Left => (0, by, bz),
-            },
-            _ => panic!("X face assigned a BlockFace other than right or left."),
-        };
-        let (x_coefficient, x_height) = Self::get_mirror_coefficient_height(
-            bx,
-            x_seed,
-            structure_coords,
-            middle_air_start,
-            s_dimensions,
-            noise_generator,
-            delta,
-            amplitude,
-            iterations,
-        );
+        let x_coefficient = Self::get_mirror_coefficient(bx, middle_air_start, s_dimensions);
+        let mut x_height = 0.0;
+        if x_coefficient > 0.0 {
+            let x_face: BlockFace = if bx > s_dimensions / 2 { BlockFace::Right } else { BlockFace::Left };
+            let x_seed = match x_face {
+                BlockFace::Right => match block_up {
+                    BlockFace::Front => (s_dimensions, by, bx),
+                    BlockFace::Back => (s_dimensions, by, s_dimensions - bx),
+                    BlockFace::Top => (s_dimensions, bx, bz),
+                    BlockFace::Bottom => (s_dimensions, s_dimensions - bx, bz),
+                    BlockFace::Right => (s_dimensions, by, bz),
+                    BlockFace::Left => panic!("Right side adjacent to left side."),
+                },
+                BlockFace::Left => match block_up {
+                    BlockFace::Front => (0, by, s_dimensions - bx),
+                    BlockFace::Back => (0, by, bx),
+                    BlockFace::Top => (0, s_dimensions - bx, bz),
+                    BlockFace::Bottom => (0, bx, bz),
+                    BlockFace::Right => panic!("Left side adjacent to right side."),
+                    BlockFace::Left => (0, by, bz),
+                },
+                _ => panic!("X face assigned a BlockFace other than right or left."),
+            };
+            x_height = self::get_block_height(
+                noise_generator,
+                x_seed,
+                structure_coords,
+                middle_air_start,
+                amplitude,
+                delta,
+                iterations,
+            ) as f64;
+        }
 
         // Y.
-        let y_face: BlockFace = if by > s_dimensions / 2 { BlockFace::Top } else { BlockFace::Bottom };
-        let y_seed = match y_face {
-            BlockFace::Top => match block_up {
-                BlockFace::Front => (bx, s_dimensions, by),
-                BlockFace::Back => (bx, s_dimensions, s_dimensions - by),
-                BlockFace::Top => (bx, s_dimensions, bz),
-                BlockFace::Bottom => panic!("Top side adjacent to bottom side."),
-                BlockFace::Right => (by, s_dimensions, bz),
-                BlockFace::Left => (s_dimensions - by, s_dimensions, bz),
-            },
-            BlockFace::Bottom => match block_up {
-                BlockFace::Front => (bx, 0, s_dimensions - by),
-                BlockFace::Back => (bx, 0, by),
-                BlockFace::Top => panic!("Bottom side adjacent to top side."),
-                BlockFace::Bottom => (bx, 0, bz),
-                BlockFace::Right => (s_dimensions - by, 0, bz),
-                BlockFace::Left => (by, 0, bz),
-            },
-            _ => panic!("Y face assigned a BlockFace other than top or bottom."),
-        };
-        let (y_coefficient, y_height) = Self::get_mirror_coefficient_height(
-            by,
-            y_seed,
-            structure_coords,
-            middle_air_start,
-            s_dimensions,
-            noise_generator,
-            delta,
-            amplitude,
-            iterations,
-        );
+        let y_coefficient = Self::get_mirror_coefficient(by, middle_air_start, s_dimensions);
+        let mut y_height = 0.0;
+        if y_coefficient > 0.0 {
+            let y_face: BlockFace = if by > s_dimensions / 2 { BlockFace::Top } else { BlockFace::Bottom };
+            let y_seed = match y_face {
+                BlockFace::Top => match block_up {
+                    BlockFace::Front => (bx, s_dimensions, by),
+                    BlockFace::Back => (bx, s_dimensions, s_dimensions - by),
+                    BlockFace::Top => (bx, s_dimensions, bz),
+                    BlockFace::Bottom => panic!("Top side adjacent to bottom side."),
+                    BlockFace::Right => (by, s_dimensions, bz),
+                    BlockFace::Left => (s_dimensions - by, s_dimensions, bz),
+                },
+                BlockFace::Bottom => match block_up {
+                    BlockFace::Front => (bx, 0, s_dimensions - by),
+                    BlockFace::Back => (bx, 0, by),
+                    BlockFace::Top => panic!("Bottom side adjacent to top side."),
+                    BlockFace::Bottom => (bx, 0, bz),
+                    BlockFace::Right => (s_dimensions - by, 0, bz),
+                    BlockFace::Left => (by, 0, bz),
+                },
+                _ => panic!("Y face assigned a BlockFace other than top or bottom."),
+            };
+            y_height = self::get_block_height(
+                noise_generator,
+                y_seed,
+                structure_coords,
+                middle_air_start,
+                amplitude,
+                delta,
+                iterations,
+            ) as f64;
+        }
 
         // Z.
-        let z_face: BlockFace = if bz > s_dimensions / 2 { BlockFace::Front } else { BlockFace::Back };
-        let z_seed = match z_face {
-            BlockFace::Front => match block_up {
-                BlockFace::Front => (bx, by, s_dimensions),
-                BlockFace::Back => panic!("Front side adjacent to back side."),
-                BlockFace::Top => (bx, bz, s_dimensions),
-                BlockFace::Bottom => (bx, s_dimensions - bz, s_dimensions),
-                BlockFace::Right => (bz, by, s_dimensions),
-                BlockFace::Left => (s_dimensions - bz, by, s_dimensions),
-            },
-            BlockFace::Back => match block_up {
-                BlockFace::Front => panic!("Back side adjacent to front side."),
-                BlockFace::Back => (bx, by, s_dimensions),
-                BlockFace::Top => (bx, s_dimensions - bz, s_dimensions),
-                BlockFace::Bottom => (bx, bz, s_dimensions),
-                BlockFace::Right => (s_dimensions - bz, by, s_dimensions),
-                BlockFace::Left => (bz, by, s_dimensions),
-            },
-            _ => panic!("Y face assigned a BlockFace other than top or bottom."),
-        };
-        let (z_coefficient, z_height) = Self::get_mirror_coefficient_height(
-            bz,
-            z_seed,
-            structure_coords,
-            middle_air_start,
-            s_dimensions,
-            noise_generator,
-            delta,
-            amplitude,
-            iterations,
-        );
+        let z_coefficient = Self::get_mirror_coefficient(bz, middle_air_start, s_dimensions);
+        let mut z_height = 0.0;
+        if z_coefficient > 0.0 {
+            let z_face: BlockFace = if bz > s_dimensions / 2 { BlockFace::Front } else { BlockFace::Back };
+            let z_seed = match z_face {
+                BlockFace::Front => match block_up {
+                    BlockFace::Front => (bx, by, s_dimensions),
+                    BlockFace::Back => panic!("Front side adjacent to back side."),
+                    BlockFace::Top => (bx, bz, s_dimensions),
+                    BlockFace::Bottom => (bx, s_dimensions - bz, s_dimensions),
+                    BlockFace::Right => (bz, by, s_dimensions),
+                    BlockFace::Left => (s_dimensions - bz, by, s_dimensions),
+                },
+                BlockFace::Back => match block_up {
+                    BlockFace::Front => panic!("Back side adjacent to front side."),
+                    BlockFace::Back => (bx, by, 0),
+                    BlockFace::Top => (bx, s_dimensions - bz, 0),
+                    BlockFace::Bottom => (bx, bz, 0),
+                    BlockFace::Right => (s_dimensions - bz, by, 0),
+                    BlockFace::Left => (bz, by, 0),
+                },
+                _ => panic!("Z face assigned a BlockFace other than front or back."),
+            };
+            z_height = self::get_block_height(
+                noise_generator,
+                z_seed,
+                structure_coords,
+                middle_air_start,
+                amplitude,
+                delta,
+                iterations,
+            ) as f64;
+        }
 
         ((x_height * x_coefficient + y_height * y_coefficient + z_coefficient * z_height) / (x_coefficient + y_coefficient + z_coefficient))
             .round() as usize
@@ -817,16 +807,36 @@ impl<T: Component + Clone + Default> BlockLayers<T> {
         &self,
         j_height: usize,
         k_height: usize,
-        j_layers: &Vec<(&'a Block, usize)>,
-        k_layers: &Vec<(&'a Block, usize)>,
+        j_layers: Option<&Vec<(&'a Block, usize)>>,
+        k_layers: Option<&Vec<(&'a Block, usize)>>,
         sea_level: Option<usize>,
         sea_block: Option<&'a Block>,
     ) -> Option<&'a Block> {
-        for (index, (block, j_layer_top)) in j_layers.iter().enumerate().rev() {
-            if j_height <= *j_layer_top && k_height <= k_layers[index].1 {
-                return Some(*block);
+        match (j_layers, k_layers) {
+            (Some(j_layers), Some(k_layers)) => {
+                for (index, (block, j_layer_top)) in j_layers.iter().enumerate().rev() {
+                    if j_height <= *j_layer_top && k_height <= k_layers[index].1 {
+                        return Some(*block);
+                    }
+                }
             }
+            (Some(j_layers), None) => {
+                for (block, j_layer_top) in j_layers.iter().rev() {
+                    if j_height <= *j_layer_top {
+                        return Some(*block);
+                    }
+                }
+            }
+            (None, Some(k_layers)) => {
+                for (block, k_layer_top) in k_layers.iter().rev() {
+                    if k_height <= *k_layer_top {
+                        return Some(*block);
+                    }
+                }
+            }
+            (None, None) => {}
         }
+
         // No land blocks, must be sea or air.
         if sea_level.map(|sea_level| j_height.max(k_height) <= sea_level).unwrap_or(false) {
             Some(sea_block.expect("Set sea level without setting a sea block."))
