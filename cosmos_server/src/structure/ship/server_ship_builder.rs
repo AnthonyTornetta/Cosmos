@@ -29,7 +29,6 @@ impl TShipBuilder for ServerShipBuilder {
         velocity: Velocity,
         structure: &mut cosmos_core::structure::Structure,
     ) {
-        self.builder
-            .insert_ship(entity, location, velocity, structure);
+        self.builder.insert_ship(entity, location, velocity, structure);
     }
 }

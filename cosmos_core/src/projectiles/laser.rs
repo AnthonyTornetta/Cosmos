@@ -4,18 +4,17 @@
 use bevy::{
     pbr::{NotShadowCaster, NotShadowReceiver},
     prelude::{
-        warn, App, Commands, Component, Entity, EventWriter, GlobalTransform, Parent, PbrBundle,
-        Quat, Query, Res, Vec3, With, Without,
+        warn, App, Commands, Component, Entity, Event, EventWriter, GlobalTransform, Parent, Quat, Query, Res, Transform, Update, Vec3,
+        With, Without,
     },
     time::Time,
 };
 use bevy_rapier3d::prelude::{
-    ActiveEvents, ActiveHooks, LockedAxes, PhysicsWorld, QueryFilter, RapierContext, RigidBody,
-    Sensor, Velocity, WorldId, DEFAULT_WORLD_ID,
+    ActiveEvents, ActiveHooks, LockedAxes, PhysicsWorld, QueryFilter, RapierContext, RigidBody, Sensor, Velocity, WorldId, DEFAULT_WORLD_ID,
 };
 
 use crate::{
-    ecs::NeedsDespawned,
+    ecs::{bundles::CosmosPbrBundle, NeedsDespawned},
     netty::NoSendEntity,
     physics::{
         location::Location,
@@ -23,7 +22,7 @@ use crate::{
     },
 };
 
-#[derive(Debug)]
+#[derive(Debug, Event)]
 /// The entity hit represents the entity hit by the laser
 ///
 /// The world location the exact position the world this collision happened
@@ -88,19 +87,23 @@ impl Laser {
     ///
     /// * `laser_velocity` - The laser's velocity. Do not add the parent's velocity for this, use `firer_velocity` instead.
     /// * `firer_velocity` - The laser's parent's velocity.
-    /// * `pbr` - This takes a PBR that contains mesh data. The transform field will be overwritten
+    /// * `pbr` - This takes a PBR that contains mesh data. The location & rotation fields will be overwritten
     pub fn spawn_custom_pbr(
         location: Location,
         laser_velocity: Vec3,
         firer_velocity: Vec3,
         strength: f32,
         no_collide_entity: Option<Entity>,
-        mut pbr: PbrBundle,
+        mut pbr: CosmosPbrBundle,
         time: &Time,
         world_id: WorldId,
         commands: &mut Commands,
     ) -> Entity {
-        pbr.transform.look_at(laser_velocity, Vec3::Y);
+        pbr.rotation = Transform::from_xyz(0.0, 0.0, 0.0)
+            .looking_at(laser_velocity, Vec3::Y)
+            .rotation
+            .into();
+        pbr.location = location;
 
         let mut ent_cmds = commands.spawn_empty();
 
@@ -112,7 +115,6 @@ impl Laser {
                 active: true,
                 last_position: location,
             },
-            location,
             pbr,
             RigidBody::Dynamic,
             LockedAxes::ROTATION_LOCKED,
@@ -159,9 +161,7 @@ impl Laser {
             firer_velocity,
             strength,
             no_collide_entity,
-            PbrBundle {
-                ..Default::default()
-            },
+            CosmosPbrBundle { ..Default::default() },
             time,
             world_id,
             commands,
@@ -189,9 +189,7 @@ fn handle_events(
     transform_query: Query<&GlobalTransform, Without<Laser>>,
     worlds: Query<(&Location, &PhysicsWorld, Entity), With<PlayerWorld>>,
 ) {
-    for (world, location, laser_entity, no_collide_entity, mut laser, velocity, world_within) in
-        query.iter_mut()
-    {
+    for (world, location, laser_entity, no_collide_entity, mut laser, velocity, world_within) in query.iter_mut() {
         if laser.active {
             let last_pos = laser.last_position;
             let delta_position = last_pos.relative_coords_to(location);
@@ -276,11 +274,7 @@ fn handle_events(
     }
 }
 
-fn despawn_lasers(
-    mut commands: Commands,
-    query: Query<(Entity, &FireTime), With<Laser>>,
-    time: Res<Time>,
-) {
+fn despawn_lasers(mut commands: Commands, query: Query<(Entity, &FireTime), With<Laser>>, time: Res<Time>) {
     for (ent, fire_time) in query.iter() {
         if time.elapsed_seconds() - fire_time.time > 5.0 {
             commands.entity(ent).insert(NeedsDespawned);
@@ -289,6 +283,6 @@ fn despawn_lasers(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems((handle_events, despawn_lasers))
+    app.add_systems(Update, (handle_events, despawn_lasers))
         .add_event::<LaserCollideEvent>();
 }

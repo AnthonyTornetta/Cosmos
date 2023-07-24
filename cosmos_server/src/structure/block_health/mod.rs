@@ -1,6 +1,6 @@
 //! This handles what to do when a block is destroyed
 
-use bevy::prelude::{App, EventReader, EventWriter, IntoSystemConfig, OnUpdate, Query, Res};
+use bevy::prelude::{in_state, App, EventReader, EventWriter, IntoSystemConfigs, Query, Res, Update};
 use cosmos_core::{
     block::Block,
     events::block_events::BlockChangedEvent,
@@ -18,17 +18,11 @@ fn monitor_block_destroyed(
 ) {
     for ev in event_reader.iter() {
         if let Ok(mut structure) = structure_query.get_mut(ev.structure_entity) {
-            structure.remove_block_at(
-                ev.block.x,
-                ev.block.y,
-                ev.block.z,
-                &blocks,
-                Some(&mut event_writer),
-            );
+            structure.remove_block_at(ev.block.coords(), &blocks, Some(&mut event_writer));
         }
     }
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(monitor_block_destroyed.in_set(OnUpdate(GameState::Playing)));
+    app.add_systems(Update, monitor_block_destroyed.run_if(in_state(GameState::Playing)));
 }

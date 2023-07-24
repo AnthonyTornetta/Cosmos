@@ -3,9 +3,7 @@ mod player_interactions;
 use bevy::prelude::*;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
-    netty::{
-        client_unreliable_messages::ClientUnreliableMessages, cosmos_encoder, NettyChannelClient,
-    },
+    netty::{client_unreliable_messages::ClientUnreliableMessages, cosmos_encoder, NettyChannelClient},
     structure::{ship::pilot::Pilot, systems::SystemActive},
 };
 
@@ -34,11 +32,7 @@ fn check_if_using_structure_system(
     }
 }
 
-fn send_structure_state(
-    query: Query<&Pilot, With<LocalPlayer>>,
-    structure_query: Query<&SystemActive>,
-    mut client: ResMut<RenetClient>,
-) {
+fn send_structure_state(query: Query<&Pilot, With<LocalPlayer>>, structure_query: Query<&SystemActive>, mut client: ResMut<RenetClient>) {
     if let Ok(pilot) = query.get_single() {
         client.send_message(
             NettyChannelClient::Unreliable,
@@ -51,8 +45,8 @@ fn send_structure_state(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        (check_if_using_structure_system, send_structure_state)
-            .in_set(OnUpdate(GameState::Playing)),
+        Update,
+        (check_if_using_structure_system, send_structure_state).run_if(in_state(GameState::Playing)),
     );
 
     player_interactions::register(app);

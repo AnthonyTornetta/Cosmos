@@ -6,7 +6,7 @@
 
 use bevy::{
     prelude::{App, Component, Entity},
-    reflect::{FromReflect, Reflect},
+    reflect::Reflect,
 };
 
 /// Represents a world of objects that are based around a certain entity
@@ -14,14 +14,14 @@ use bevy::{
 /// This entity must be:
 /// - On the server, a player
 /// - On the client, the local player
-#[derive(Component, Reflect, FromReflect, Debug, Clone, Copy)]
+#[derive(Component, Reflect, Debug, Clone, Copy)]
 pub struct PlayerWorld {
     /// The player this is centered around.
     pub player: Entity,
 }
 
 /// Represents the world this entity is within - make sure to double check this is still valid when using it
-#[derive(Component, Reflect, FromReflect, Debug, Clone, Copy)]
+#[derive(Component, Reflect, Debug, Clone, Copy)]
 pub struct WorldWithin(pub Entity);
 
 pub(super) fn register(app: &mut App) {

@@ -21,14 +21,9 @@ pub struct Lang<T: Identifiable + Send + Sync> {
 
 fn load_data(lang_type: &str, lang_folder: &str, map: &mut HashMap<String, String>) {
     let path = format!("assets/lang/{lang_folder}/{lang_type}.lang");
-    let str = fs::read_to_string(path.clone())
-        .unwrap_or_else(|_| panic!("Error reading lang file @ '{path}'!"));
+    let str = fs::read_to_string(path.clone()).unwrap_or_else(|_| panic!("Error reading lang file @ '{path}'!"));
 
-    for line in str
-        .split('\n')
-        .map(|x| x.trim())
-        .filter(|x| !x.is_empty() && !x.starts_with('#'))
-    {
+    for line in str.split('\n').map(|x| x.trim()).filter(|x| !x.is_empty() && !x.starts_with('#')) {
         let split: Vec<&str> = line.split('=').collect();
 
         if split.len() == 1 {
@@ -68,8 +63,7 @@ impl<T: Identifiable + Send + Sync> Lang<T> {
         match self.lang_contents.get(item.unlocalized_name()) {
             Some(name) => {
                 self.map.insert(item.id(), name.clone());
-                self.id_map
-                    .insert(item.unlocalized_name().to_owned(), item.id());
+                self.id_map.insert(item.unlocalized_name().to_owned(), item.id());
                 true
             }
             None => false,

@@ -24,9 +24,7 @@ pub fn init(app: &mut App, address: Option<String>) {
 
     let public_addr: SocketAddr = format!("{local_addr}:{port}").parse().unwrap();
     let socket = UdpSocket::bind(format!("0.0.0.0:{port}")).unwrap();
-    socket
-        .set_nonblocking(true)
-        .expect("Cannot set non-blocking mode!");
+    socket.set_nonblocking(true).expect("Cannot set non-blocking mode!");
 
     let server_config = ServerConfig {
         max_clients: 20,
@@ -34,9 +32,7 @@ pub fn init(app: &mut App, address: Option<String>) {
         public_addr,
         authentication: ServerAuthentication::Unsecure,
     };
-    let current_time = SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .unwrap();
+    let current_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap();
 
     let transport = NetcodeServerTransport::new(current_time, server_config, socket).unwrap();
     let server = RenetServer::new(connection_config());

@@ -4,13 +4,15 @@
 use bevy::prelude::{Component, Entity};
 use serde::{Deserialize, Serialize};
 
-use crate::{block::BlockFace, entities::player::render_distance::RenderDistance};
+use crate::{
+    block::BlockFace,
+    entities::player::render_distance::RenderDistance,
+    structure::{coordinates::ChunkCoordinate, structure_block::StructureBlock},
+};
 
 #[derive(Debug, Serialize, Deserialize, Component)]
 /// All reliable messages a client can send
 pub enum ClientReliableMessages {
-    /// Sent when a player wants to disconnect
-    PlayerDisconnect,
     /// Requests chunk data to be sent from the server for that structure
     ///
     /// This does nothing for planets, where you have to load each chunk individually
@@ -25,31 +27,21 @@ pub enum ClientReliableMessages {
         /// The server's structure entity
         structure_entity: Entity,
         /// The chunk position you want
-        chunk: (u32, u32, u32),
+        chunk: ChunkCoordinate,
     },
     /// The client broke a block
     BreakBlock {
         /// The structure they broke it on
         structure_entity: Entity,
-        /// The block's x
-        x: u32,
-        /// The block's y
-        y: u32,
-        /// The block's z
-        z: u32,
+        /// The block they broke
+        block: StructureBlock,
     },
     /// The client placed a block
     PlaceBlock {
         /// The structure they placed it on
         structure_entity: Entity,
-        /// The block's x
-        x: u32,
-        /// The block's y
-        y: u32,
-        /// The block's z
-        z: u32,
         /// The block they placed
-        ///
+        block: StructureBlock,
         /// This is passed along with `inventory_slot` to verify that the client + server are still in sync
         block_id: u16,
         /// The block's top face
@@ -61,12 +53,8 @@ pub enum ClientReliableMessages {
     InteractWithBlock {
         /// The structure
         structure_entity: Entity,
-        /// The block's x
-        x: u32,
-        /// The block's y
-        y: u32,
-        /// The block's z
-        z: u32,
+        /// The block they interacted with
+        block: StructureBlock,
     },
     /// Asks the server to create a ship
     CreateShip {
@@ -93,5 +81,12 @@ pub enum ClientReliableMessages {
     RequestEntityData {
         /// The entity they want to know about
         entity: Entity,
+    },
+    /// Sent when a player no longer is a part of a ship
+    LeaveShip,
+    /// Sent when a player is now apart on a specific ship
+    JoinShip {
+        /// The ship the player wants to walk on
+        ship_entity: Entity,
     },
 }

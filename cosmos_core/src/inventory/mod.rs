@@ -4,7 +4,7 @@
 
 use bevy::{
     prelude::{App, Component},
-    reflect::{FromReflect, Reflect},
+    reflect::Reflect,
 };
 use serde::{Deserialize, Serialize};
 
@@ -20,7 +20,7 @@ pub mod itemstack;
 //     NormalInventory, // These inventories are organizable by the player
 // }
 
-#[derive(Default, Component, Serialize, Deserialize, Debug, Reflect, FromReflect)]
+#[derive(Default, Component, Serialize, Deserialize, Debug, Reflect)]
 /// A collection of ItemStacks, organized into slots
 pub struct Inventory {
     items: Vec<Option<ItemStack>>,
@@ -54,12 +54,7 @@ impl Inventory {
     pub fn insert(&mut self, item: &Item, mut quantity: u16) -> u16 {
         // Search for existing stacks, if none found that make new one(s)
 
-        for is in &mut self
-            .items
-            .iter_mut()
-            .flatten()
-            .filter(|x| x.item_id() == item.id())
-        {
+        for is in &mut self.items.iter_mut().flatten().filter(|x| x.item_id() == item.id()) {
             quantity = is.increase_quantity(quantity);
 
             if quantity == 0 {

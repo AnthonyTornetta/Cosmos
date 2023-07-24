@@ -1,7 +1,6 @@
 use bevy::prelude::{
-    Added, App, BuildChildren, Commands, Component, Entity, EventReader, EventWriter,
-    IntoSystemConfig, OnUpdate, Parent, Quat, Query, RemovedComponents, States, Transform, Vec3,
-    With,
+    in_state, Added, App, BuildChildren, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, Quat, Query,
+    RemovedComponents, States, Transform, Update, Vec3, With,
 };
 use bevy_rapier3d::prelude::{RigidBody, Sensor};
 
@@ -11,48 +10,46 @@ use crate::physics::location::{handle_child_syncing, Location};
 use crate::structure::ship::pilot::Pilot;
 
 #[derive(Component, Debug)]
-struct PilotStartingDelta(Vec3);
+struct PilotStartingDelta(Vec3, Quat);
 
 fn event_listener(
     mut commands: Commands,
     mut event_reader: EventReader<ChangePilotEvent>,
-    location_query: Query<&Location>,
+    location_query: Query<(&Location, &Transform)>,
     pilot_query: Query<&Pilot>,
 ) {
     for ev in event_reader.iter() {
         // Make sure there is no other player thinking they are the pilot of this ship
         if let Ok(prev_pilot) = pilot_query.get(ev.structure_entity) {
-            commands
-                .entity(ev.structure_entity)
-                .remove_children(&[prev_pilot.entity])
-                .remove::<Pilot>();
+            if let Some(mut ec) = commands.get_entity(ev.structure_entity) {
+                ec.remove::<Pilot>();
+            }
 
-            // The pilot may have disconnected
             if let Some(mut ec) = commands.get_entity(prev_pilot.entity) {
-                ec.remove::<Pilot>().remove::<Parent>();
+                ec.remove::<Pilot>();
             }
         }
 
         if let Some(entity) = ev.pilot_entity {
-            let structure_loc = location_query
+            let (structure_loc, structure_transform) = location_query
                 .get(ev.structure_entity)
-                .expect("Every structure should have a location.");
-            let pilot_loc = location_query
-                .get(entity)
-                .expect("Every pilot should have a location");
+                .expect("Every structure should have a location & transform.");
+            let (pilot_loc, pilot_transform) = location_query.get(entity).expect("Every pilot should have a location & transform");
 
-            let delta = structure_loc.relative_coords_to(pilot_loc);
+            let delta = structure_transform
+                .rotation
+                .inverse()
+                .mul_vec3(structure_loc.relative_coords_to(pilot_loc));
 
-            commands
-                .entity(ev.structure_entity)
-                .insert(Pilot { entity })
-                .add_child(entity);
+            let delta_rot = pilot_transform.rotation * structure_transform.rotation.inverse();
+
+            commands.entity(ev.structure_entity).insert(Pilot { entity }).add_child(entity);
 
             commands.entity(entity).insert((
                 Pilot {
                     entity: ev.structure_entity,
                 },
-                PilotStartingDelta(delta),
+                PilotStartingDelta(delta, delta_rot),
                 RigidBody::Fixed,
                 Sensor,
             ));
@@ -69,8 +66,9 @@ fn add_pilot(mut query: Query<&mut Transform, (Added<Pilot>, With<Player>)>) {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Event)]
 struct RemoveSensorFrom(Entity, u8);
+
 /// This is stupid. But the only actual solution to this would require a ton of work.
 ///
 /// What happens is that the player leaves the ship & the client and server both move the player
@@ -81,7 +79,7 @@ struct RemoveSensorFrom(Entity, u8);
 /// To fix this we would need to some how set the player's position to a later game tick than
 /// the next couple player packets it would receive, but that would require a decent bit of work.
 /// So for now, we just delay the repositioning for quite a while on the server.
-#[derive(Debug)]
+#[derive(Debug, Event)]
 struct Bouncer(Entity, u8);
 
 const BOUNCES: u8 = if cfg!(feature = "server") { 100 } else { 0 };
@@ -93,13 +91,12 @@ fn pilot_removed(
     mut event_writer: EventWriter<RemoveSensorFrom>,
 ) {
     for entity in removed_pilots.iter() {
-        if let Ok((mut loc, starting_delta)) = query.get_mut(entity) {
-            commands
-                .entity(entity)
-                .remove::<PilotStartingDelta>()
-                .insert(RigidBody::Dynamic);
+        if let Ok((mut trans, starting_delta)) = query.get_mut(entity) {
+            commands.entity(entity).remove::<PilotStartingDelta>().insert(RigidBody::Dynamic);
 
-            loc.translation += starting_delta.0;
+            trans.translation = starting_delta.0;
+            trans.rotation = starting_delta.1;
+
             event_writer.send(RemoveSensorFrom(entity, 0));
         }
     }
@@ -111,11 +108,7 @@ fn bouncer(mut reader: EventReader<Bouncer>, mut event_writer: EventWriter<Remov
     }
 }
 
-fn remove_sensor(
-    mut reader: EventReader<RemoveSensorFrom>,
-    mut event_writer: EventWriter<Bouncer>,
-    mut commands: Commands,
-) {
+fn remove_sensor(mut reader: EventReader<RemoveSensorFrom>, mut event_writer: EventWriter<Bouncer>, mut commands: Commands) {
     for ev in reader.iter() {
         if ev.1 >= BOUNCES {
             if let Some(mut e) = commands.get_entity(ev.0) {
@@ -136,17 +129,18 @@ fn verify_pilot_exists(mut commands: Commands, query: Query<(Entity, &Pilot)>) {
 }
 
 pub(super) fn register<T: States + Clone + Copy>(app: &mut App, playing_state: T) {
-    app.add_systems((
-        add_pilot,
-        pilot_removed,
-        remove_sensor,
-        bouncer,
-        verify_pilot_exists.in_set(OnUpdate(playing_state)),
-        event_listener
-            .in_set(OnUpdate(playing_state))
-            .after(handle_child_syncing)
-            .after(verify_pilot_exists),
-    ))
+    app.add_systems(
+        Update,
+        (
+            add_pilot,
+            pilot_removed.after(handle_child_syncing),
+            remove_sensor,
+            bouncer,
+            verify_pilot_exists,
+            event_listener.after(handle_child_syncing).after(verify_pilot_exists),
+        )
+            .run_if(in_state(playing_state)),
+    )
     .add_event::<RemoveSensorFrom>()
     .add_event::<Bouncer>();
 }

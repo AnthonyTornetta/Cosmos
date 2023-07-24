@@ -1,14 +1,11 @@
 //! Handles the loading of ships
 
-use bevy::prelude::{
-    App, Commands, Component, Entity, EventWriter, IntoSystemConfig, OnUpdate, Query, Res, With,
-};
+use bevy::prelude::{in_state, App, Commands, Component, Entity, EventWriter, IntoSystemConfigs, Query, Res, Update, With};
 use cosmos_core::{
     block::{Block, BlockFace},
     registry::Registry,
     structure::{
-        loading::ChunksNeedLoaded, structure_iterator::ChunkIteratorResult, ChunkInitEvent,
-        Structure,
+        coordinates::BlockCoordinate, loading::ChunksNeedLoaded, structure_iterator::ChunkIteratorResult, ChunkInitEvent, Structure,
     },
 };
 
@@ -25,39 +22,35 @@ fn create_ships(
     mut chunk_set_event_writer: EventWriter<ChunkInitEvent>,
 ) {
     for (mut structure, entity) in query.iter_mut() {
-        let ship_core = blocks
-            .from_id("cosmos:ship_core")
-            .expect("Ship core block missing!");
+        let ship_core = blocks.from_id("cosmos:ship_core").expect("Ship core block missing!");
 
-        let (x, y, z) = (
+        let coords = BlockCoordinate::new(
             structure.blocks_width() / 2,
             structure.blocks_height() / 2,
             structure.blocks_length() / 2,
         );
 
-        structure.set_block_at(x, y, z, ship_core, BlockFace::Top, &blocks, None);
+        structure.set_all_loaded(true);
+        structure.set_block_at(coords, ship_core, BlockFace::Top, &blocks, None);
 
         let itr = structure.all_chunks_iter(false);
 
         commands
             .entity(entity)
             .remove::<ShipNeedsCreated>()
-            .insert(ChunksNeedLoaded {
-                amount_needed: itr.len(),
-            });
+            .insert(ChunksNeedLoaded { amount_needed: itr.len() });
 
         for res in itr {
             // This will always be true because include_empty is false
             if let ChunkIteratorResult::FilledChunk {
-                position: (x, y, z),
+                position: coords,
                 chunk: _,
             } = res
             {
+                println!("Sending chunk init event!");
                 chunk_set_event_writer.send(ChunkInitEvent {
                     structure_entity: entity,
-                    x,
-                    y,
-                    z,
+                    coords,
                 });
             }
         }
@@ -65,5 +58,5 @@ fn create_ships(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(create_ships.in_set(OnUpdate(GameState::Playing)));
+    app.add_systems(Update, create_ships.run_if(in_state(GameState::Playing)));
 }

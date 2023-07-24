@@ -50,8 +50,11 @@ fn populate_structures(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems((
-        populate_structures.in_set(OnUpdate(GameState::Playing)),
-        populate_structures.in_set(OnUpdate(GameState::LoadingWorld)),
-    ));
+    app.add_systems(
+        Update,
+        (
+            populate_structures.run_if(in_state(GameState::Playing)),
+            populate_structures.run_if(in_state(GameState::LoadingWorld)),
+        ),
+    );
 }

@@ -29,15 +29,16 @@ struct LoadingAsset {
     handles: Vec<Handle<Image>>,
 }
 
+#[derive(Debug, Event)]
 struct AssetsDoneLoadingEvent;
 
 #[derive(Resource, Debug)]
 struct AssetsLoadingID(usize);
 
-#[derive(Resource, Debug)]
+#[derive(Resource, Debug, Default)]
 struct AssetsLoading(Vec<LoadingAsset>);
 
-#[derive(Resource, Reflect, FromReflect, Debug)]
+#[derive(Resource, Reflect, Debug)]
 /// This stores the texture atlas for all blocks in the game.
 ///
 /// Eventually this will be redone to allow for multiple atlases, but for now this works fine.
@@ -75,7 +76,7 @@ impl MainAtlas {
     }
 }
 
-#[derive(Resource, Reflect, FromReflect, Debug)]
+#[derive(Resource, Reflect, Debug)]
 /// This contains the material for illuminated blocks.
 pub struct IlluminatedMaterial {
     /// The material for unlit blocks
@@ -225,15 +226,11 @@ fn check_assets_ready(
 
                             texture_atlas_builder.add_texture(
                                 handle.clone_weak(),
-                                images
-                                    .get(&handle)
-                                    .expect("This image was just added, but doesn't exist."),
+                                images.get(&handle).expect("This image was just added, but doesn't exist."),
                             );
                         }
 
-                        let atlas = texture_atlas_builder
-                            .finish(&mut images)
-                            .expect("Failed to build atlas");
+                        let atlas = texture_atlas_builder.finish(&mut images).expect("Failed to build atlas");
 
                         let material_handle = materials.add(StandardMaterial {
                             base_color_texture: Some(atlas.texture.clone()),
@@ -241,6 +238,7 @@ fn check_assets_ready(
                             unlit: false,
                             metallic: 0.0,
                             reflectance: 0.0,
+                            perceptual_roughness: 1.0,
 
                             ..default()
                         });
@@ -251,6 +249,7 @@ fn check_assets_ready(
                             unlit: true,
                             metallic: 0.0,
                             reflectance: 0.0,
+                            perceptual_roughness: 1.0,
 
                             ..default()
                         });
@@ -269,6 +268,8 @@ fn check_assets_ready(
                             alpha_mode: AlphaMode::Mask(0.5),
                             unlit: true,
                             double_sided: true,
+                            perceptual_roughness: 1.0,
+
                             ..default()
                         });
 
@@ -368,10 +369,7 @@ fn load_block_textxures(
     server: Res<AssetServer>,
     mut registry: ResMut<Registry<BlockTextureIndex>>,
 ) {
-    if let Some(index) = atlas
-        .atlas
-        .get_texture_index(&server.get_handle("images/blocks/missing.png"))
-    {
+    if let Some(index) = atlas.atlas.get_texture_index(&server.get_handle("images/blocks/missing.png")) {
         registry.register(BlockTextureIndex {
             id: 0,
             unlocalized_name: "missing".to_owned(),
@@ -381,30 +379,24 @@ fn load_block_textxures(
 
     for block in blocks.iter() {
         let unlocalized_name = block.unlocalized_name();
-        let block_name = unlocalized_name
-            .split(':')
-            .nth(1)
-            .unwrap_or(unlocalized_name);
+        let block_name = unlocalized_name.split(':').nth(1).unwrap_or(unlocalized_name);
 
         let json_path = format!("assets/blocks/{block_name}.json");
 
         let block_info = if let Ok(block_info) = fs::read(&json_path) {
-            serde_json::from_slice::<BlockInfo>(&block_info)
-                .unwrap_or_else(|_| panic!("Error reading block json data in {json_path}"))
+            serde_json::from_slice::<BlockInfo>(&block_info).unwrap_or_else(|_| panic!("Error reading json data in {json_path}"))
         } else {
             let mut hh = HashMap::new();
             hh.insert("all".into(), block_name.to_owned());
-            BlockInfo {
-                texture: hh,
-                model: None,
-            }
+            BlockInfo { texture: hh, model: None }
         };
 
         let mut map = HashMap::new();
         for (entry, texture_name) in block_info.texture.iter() {
-            if let Some(index) = atlas.atlas.get_texture_index(
-                &server.get_handle(&format!("images/blocks/{texture_name}.png",)),
-            ) {
+            if let Some(index) = atlas
+                .atlas
+                .get_texture_index(&server.get_handle(&format!("images/blocks/{texture_name}.png",)))
+            {
                 map.insert(entry.to_owned(), index);
             }
         }
@@ -420,11 +412,12 @@ fn load_block_textxures(
 pub(super) fn register(app: &mut App) {
     registry::create_registry::<BlockTextureIndex>(app);
 
-    app.insert_resource(AssetsLoading(Vec::new()))
+    app.insert_resource(AssetsLoading::default())
         .add_event::<AssetsDoneLoadingEvent>()
         .add_systems(
-            (check_assets_ready, assets_done_loading).in_set(OnUpdate(GameState::PostLoading)),
+            Update,
+            (check_assets_ready, assets_done_loading).run_if(in_state(GameState::PostLoading)),
         )
-        .add_system(setup.in_schedule(OnEnter(GameState::PostLoading)))
-        .add_system(load_block_textxures.in_schedule(OnExit(GameState::PostLoading)));
+        .add_systems(OnEnter(GameState::PostLoading), setup)
+        .add_systems(OnExit(GameState::PostLoading), load_block_textxures);
 }

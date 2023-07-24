@@ -1,6 +1,6 @@
 //! Contains the various types of block events
 
-use bevy::prelude::*;
+use bevy::{prelude::*, utils::HashMap};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::{Block, BlockFace},
@@ -9,7 +9,11 @@ use cosmos_core::{
     events::block_events::BlockChangedEvent,
     inventory::Inventory,
     item::Item,
-    netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannelServer},
+    netty::{
+        cosmos_encoder,
+        server_reliable_messages::{BlockChanged, BlocksChangedPacket, ServerReliableMessages},
+        NettyChannelServer,
+    },
     registry::{identifiable::Identifiable, Registry},
     structure::{structure_block::StructureBlock, Structure},
 };
@@ -17,6 +21,7 @@ use cosmos_core::{
 use crate::GameState;
 
 /// This is sent whenever a player breaks a block
+#[derive(Debug, Event)]
 pub struct BlockBreakEvent {
     /// The entity that was targeted
     pub structure_entity: Entity,
@@ -27,6 +32,7 @@ pub struct BlockBreakEvent {
 }
 
 /// This is sent whenever a player interacts with a block
+#[derive(Debug, Event)]
 pub struct BlockInteractEvent {
     /// The block interacted with
     pub structure_block: StructureBlock,
@@ -37,6 +43,7 @@ pub struct BlockInteractEvent {
 }
 
 /// This is sent whenever a player places a block
+#[derive(Debug, Event)]
 pub struct BlockPlaceEvent {
     /// The structure the block was placed on
     pub structure_entity: Entity,
@@ -89,13 +96,7 @@ fn handle_block_break_events(
                 }
             }
 
-            structure.remove_block_at(
-                ev.structure_block.x,
-                ev.structure_block.y,
-                ev.structure_block.z,
-                &blocks,
-                Some(&mut event_writer),
-            );
+            structure.remove_block_at(ev.structure_block.coords(), &blocks, Some(&mut event_writer));
         }
     }
 }
@@ -116,10 +117,7 @@ fn handle_block_place_events(
 
                 if let Some(block_id) = block_items.block_from_item(item) {
                     if block_id != ev.block_id {
-                        eprintln!(
-                            "WARNING: Inventory out of sync between client {}!",
-                            player.name()
-                        );
+                        eprintln!("WARNING: Inventory out of sync between client {}!", player.name());
                         break;
                     }
 
@@ -128,15 +126,7 @@ fn handle_block_place_events(
                     if let Ok(mut structure) = query.get_mut(ev.structure_entity) {
                         inv.decrease_quantity_at(ev.inventory_slot, 1);
 
-                        structure.set_block_at(
-                            ev.structure_block.x,
-                            ev.structure_block.y,
-                            ev.structure_block.z,
-                            block,
-                            ev.block_up,
-                            &blocks,
-                            Some(&mut event_writer),
-                        );
+                        structure.set_block_at(ev.structure_block.coords(), block, ev.block_up, &blocks, Some(&mut event_writer));
                     }
                 }
 
@@ -146,20 +136,26 @@ fn handle_block_place_events(
     }
 }
 
-fn handle_block_changed_event(
-    mut event_reader: EventReader<BlockChangedEvent>,
-    mut server: ResMut<RenetServer>,
-) {
+fn handle_block_changed_event(mut event_reader: EventReader<BlockChangedEvent>, mut server: ResMut<RenetServer>) {
+    let iter_len = event_reader.iter().len();
+    let mut map = HashMap::new();
     for ev in event_reader.iter() {
+        if !map.contains_key(&ev.structure_entity) {
+            map.insert(ev.structure_entity, Vec::with_capacity(iter_len));
+        }
+        map.get_mut(&ev.structure_entity).expect("Set above").push(BlockChanged {
+            coordinates: ev.block,
+            block_id: ev.new_block,
+            block_up: ev.new_block_up,
+        });
+    }
+
+    for (entity, v) in map {
         server.broadcast_message(
             NettyChannelServer::Reliable,
             cosmos_encoder::serialize(&ServerReliableMessages::BlockChange {
-                structure_entity: ev.structure_entity,
-                x: ev.block.x() as u32,
-                y: ev.block.y() as u32,
-                z: ev.block.z() as u32,
-                block_id: ev.new_block,
-                block_up: ev.new_block_up,
+                structure_entity: entity,
+                blocks_changed_packet: BlocksChangedPacket(v),
             }),
         );
     }
@@ -169,9 +165,8 @@ pub(super) fn register(app: &mut App) {
     app.add_event::<BlockBreakEvent>()
         .add_event::<BlockPlaceEvent>()
         .add_event::<BlockInteractEvent>()
-        .add_systems((
-            handle_block_break_events.in_set(OnUpdate(GameState::Playing)),
-            handle_block_place_events.in_set(OnUpdate(GameState::Playing)),
-            handle_block_changed_event.in_set(OnUpdate(GameState::Playing)),
-        ));
+        .add_systems(
+            Update,
+            (handle_block_break_events, handle_block_place_events, handle_block_changed_event).run_if(in_state(GameState::Playing)),
+        );
 }

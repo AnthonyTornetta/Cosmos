@@ -3,14 +3,14 @@
 use std::fmt::Display;
 
 use bevy::{
-    prelude::{App, Component, Query, Vec3, Without},
-    reflect::{FromReflect, Reflect},
+    prelude::{App, Component, Query, Update, Vec3, Without},
+    reflect::Reflect,
 };
 use serde::{Deserialize, Serialize};
 
 use super::pilot::Pilot;
 
-#[derive(Component, Default, Serialize, Deserialize, Debug, Clone, FromReflect, Reflect)]
+#[derive(Component, Default, Serialize, Deserialize, Debug, Clone, Reflect)]
 /// represents how the ship should be moving
 pub struct ShipMovement {
     /// If true, the ship should be braking.
@@ -57,5 +57,5 @@ fn clear_movement_when_no_pilot(mut query: Query<&mut ShipMovement, Without<Pilo
 
 pub(super) fn register(app: &mut App) {
     app.register_type::<ShipMovement>()
-        .add_system(clear_movement_when_no_pilot);
+        .add_systems(Update, clear_movement_when_no_pilot);
 }

@@ -10,17 +10,12 @@
 use std::fs;
 
 use bevy::{
-    prelude::{
-        App, Commands, Component, CoreSet, DespawnRecursiveExt, Entity, IntoSystemConfig, Query,
-        With, Without,
-    },
+    prelude::{App, Commands, Component, DespawnRecursiveExt, Entity, IntoSystemConfigs, PreUpdate, Query, Update, With, Without},
     reflect::Reflect,
 };
 use bevy_rapier3d::prelude::Velocity;
 
-use cosmos_core::{
-    netty::cosmos_encoder, persistence::LoadingDistance, physics::location::Location,
-};
+use cosmos_core::{netty::cosmos_encoder, persistence::LoadingDistance, physics::location::Location};
 
 use super::{SaveFileIdentifier, SaveFileIdentifierType, SerializedData};
 
@@ -28,10 +23,7 @@ use super::{SaveFileIdentifier, SaveFileIdentifierType, SerializedData};
 /// An entity that currently has this is currently in the process of being loaded
 pub struct NeedsLoaded;
 
-fn check_needs_loaded(
-    query: Query<(Entity, &SaveFileIdentifier), (Without<SerializedData>, With<NeedsLoaded>)>,
-    mut commands: Commands,
-) {
+fn check_needs_loaded(query: Query<(Entity, &SaveFileIdentifier), (Without<SerializedData>, With<NeedsLoaded>)>, mut commands: Commands) {
     for (ent, nl) in query.iter() {
         let path = nl.get_save_file_path();
         let Ok(data) = fs::read(&path) else {
@@ -40,8 +32,7 @@ fn check_needs_loaded(
             continue;
         };
 
-        let serialized_data: SerializedData =
-            cosmos_encoder::deserialize(&data).expect("Error deserializing data for {path}");
+        let serialized_data: SerializedData = cosmos_encoder::deserialize(&data).expect("Error deserializing data for {path}");
 
         commands.entity(ent).insert(serialized_data);
 
@@ -57,17 +48,11 @@ pub fn begin_loading() {}
 /// To add your own loading event, add a system after `begin_loading` and before `done_loading`.
 pub fn done_loading(query: Query<Entity, With<NeedsLoaded>>, mut commands: Commands) {
     for ent in query.iter() {
-        commands
-            .entity(ent)
-            .remove::<NeedsLoaded>()
-            .remove::<SerializedData>();
+        commands.entity(ent).remove::<NeedsLoaded>().remove::<SerializedData>();
     }
 }
 
-fn default_load(
-    query: Query<(Entity, &SerializedData), With<NeedsLoaded>>,
-    mut commands: Commands,
-) {
+fn default_load(query: Query<(Entity, &SerializedData), With<NeedsLoaded>>, mut commands: Commands) {
     for (ent, sd) in query.iter() {
         let mut ecmds = commands.entity(ent);
 
@@ -77,20 +62,18 @@ fn default_load(
         if let Some(velocity) = sd.deserialize_data::<Velocity>("cosmos:velocity") {
             ecmds.insert(velocity);
         }
-        if let Some(loading_distance) =
-            sd.deserialize_data::<LoadingDistance>("cosmos:loading_distance")
-        {
+        if let Some(loading_distance) = sd.deserialize_data::<LoadingDistance>("cosmos:loading_distance") {
             ecmds.insert(loading_distance);
         }
     }
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(check_needs_loaded.in_base_set(CoreSet::PreUpdate))
+    app.add_systems(PreUpdate, check_needs_loaded)
         // Put all loading-related systems after this
-        .add_system(begin_loading.in_base_set(CoreSet::Update))
+        .add_systems(Update, begin_loading)
         // Put all loading-related systems before this
-        .add_system(done_loading.after(begin_loading))
+        .add_systems(Update, done_loading.after(begin_loading))
         // Like this:
-        .add_system(default_load.after(begin_loading).before(done_loading));
+        .add_systems(Update, default_load.after(begin_loading).before(done_loading));
 }

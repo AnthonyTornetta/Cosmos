@@ -154,8 +154,7 @@ fn listen_for_change_events(
             if let Ok(inv) = inventory_unchanged.get_single() {
                 if let Ok(ent) = item_name_query.get_single() {
                     if let Ok(mut name_text) = text_query.get_mut(ent) {
-                        if let Some(is) = inv.itemstack_at(hb.item_at_selected_inventory_slot(inv))
-                        {
+                        if let Some(is) = inv.itemstack_at(hb.item_at_selected_inventory_slot(inv)) {
                             name_text.sections[0].value = names
                                 .get_name_from_numeric_id(is.item_id())
                                 .unwrap_or(&format!("[missing name] ID #{}", is.item_id()))
@@ -194,7 +193,8 @@ fn add_item_text(mut commands: Commands, asset_server: Res<AssetServer>) {
                 display: Display::Flex,
                 justify_content: JustifyContent::Center,
                 align_items: AlignItems::FlexEnd,
-                size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
                 ..default()
             },
             ..default()
@@ -203,11 +203,7 @@ fn add_item_text(mut commands: Commands, asset_server: Res<AssetServer>) {
             parent
                 .spawn(TextBundle {
                     style: Style {
-                        position: UiRect {
-                            bottom: Val::Px(75.0),
-                            ..default()
-                        },
-
+                        bottom: Val::Px(75.0),
                         position_type: PositionType::Absolute,
 
                         ..default()
@@ -235,7 +231,8 @@ fn add_hotbar(mut commands: Commands, asset_server: Res<AssetServer>) {
                 display: Display::Flex,
                 justify_content: JustifyContent::Center,
                 align_items: AlignItems::FlexEnd,
-                size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
                 ..default()
             },
             ..default()
@@ -260,7 +257,8 @@ fn add_hotbar(mut commands: Commands, asset_server: Res<AssetServer>) {
                     let mut slot = parent.spawn(ImageBundle {
                         image: asset_server.load(path).into(),
                         style: Style {
-                            size: Size::new(Val::Px(64.0), Val::Px(64.0)),
+                            width: Val::Px(64.0),
+                            height: Val::Px(64.0),
                             ..default()
                         },
                         ..default()
@@ -276,11 +274,8 @@ fn add_hotbar(mut commands: Commands, asset_server: Res<AssetServer>) {
                         text_entity = Some(
                             slot.spawn(TextBundle {
                                 style: Style {
-                                    position: UiRect {
-                                        bottom: Val::Px(5.0),
-                                        right: Val::Px(5.0),
-                                        ..default()
-                                    },
+                                    bottom: Val::Px(5.0),
+                                    right: Val::Px(5.0),
                                     position_type: PositionType::Absolute,
 
                                     ..default()
@@ -300,10 +295,9 @@ fn add_hotbar(mut commands: Commands, asset_server: Res<AssetServer>) {
                         );
                     });
 
-                    hotbar.slots.push((
-                        slot.id(),
-                        text_entity.expect("This should have been set in the closure above"),
-                    ));
+                    hotbar
+                        .slots
+                        .push((slot.id(), text_entity.expect("This should have been set in the closure above")));
                 }
             });
 
@@ -312,13 +306,9 @@ fn add_hotbar(mut commands: Commands, asset_server: Res<AssetServer>) {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems((add_hotbar, add_item_text).in_schedule(OnEnter(GameState::Playing)))
+    app.add_systems(OnEnter(GameState::Playing), (add_hotbar, add_item_text))
         .add_systems(
-            (
-                listen_for_change_events,
-                listen_button_presses,
-                tick_text_alpha_down,
-            )
-                .in_set(OnUpdate(GameState::Playing)),
+            Update,
+            (listen_for_change_events, listen_button_presses, tick_text_alpha_down).run_if(in_state(GameState::Playing)),
         );
 }

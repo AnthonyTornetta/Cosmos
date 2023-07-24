@@ -21,7 +21,7 @@ mod structure_renderer;
 /// The player's active camera will have this component
 pub struct MainCamera;
 
-#[derive(Default, Debug, Reflect, FromReflect, Clone)]
+#[derive(Default, Debug, Reflect, Clone)]
 /// Stores all the needed information for a mesh
 pub struct MeshInformation {
     /// The indicies of the model
@@ -45,7 +45,7 @@ impl MeshInformation {
     }
 }
 
-#[derive(Default, Debug, Reflect, FromReflect)]
+#[derive(Default, Debug, Reflect)]
 /// Default way to create a mesh from many different combined `MeshInformation` objects.
 pub struct CosmosMeshBuilder {
     last_index: u32,
@@ -108,7 +108,7 @@ impl MeshBuilder for CosmosMeshBuilder {
     }
 }
 
-#[derive(Debug, Reflect, FromReflect)]
+#[derive(Debug, Reflect)]
 enum MeshType {
     /// The mesh is broken up into its 6 faces, which can all be stitched together to create the full mesh
     ///
@@ -118,7 +118,7 @@ enum MeshType {
     AllFacesMesh(MeshInformation),
 }
 
-#[derive(Debug, Reflect, FromReflect)]
+#[derive(Debug, Reflect)]
 /// Stores all the mesh information for a block
 pub struct BlockMeshInformation {
     mesh_info: MeshType,
@@ -178,10 +178,7 @@ impl BlockMeshInformation {
     }
 
     /// Creates the mesh information for a block.
-    pub fn new_single_mesh_info(
-        unlocalized_name: impl Into<String>,
-        mesh_info: MeshInformation,
-    ) -> Self {
+    pub fn new_single_mesh_info(unlocalized_name: impl Into<String>, mesh_info: MeshInformation) -> Self {
         Self {
             mesh_info: MeshType::AllFacesMesh(mesh_info),
             id: 0,
@@ -228,76 +225,43 @@ fn register_meshes(mut registry: ResMut<BlockMeshRegistry>) {
         MeshInformation {
             indices: vec![0, 1, 2, 2, 3, 0],
             uvs: vec![[0.0, 1.0], [0.0, 0.0], [1.0, 0.0], [1.0, 1.0]],
-            positions: vec![
-                [0.5, -0.5, -0.5],
-                [0.5, 0.5, -0.5],
-                [0.5, 0.5, 0.5],
-                [0.5, -0.5, 0.5],
-            ],
+            positions: vec![[0.5, -0.5, -0.5], [0.5, 0.5, -0.5], [0.5, 0.5, 0.5], [0.5, -0.5, 0.5]],
             normals: [[1.0, 0.0, 0.0]; 4].to_vec(),
         },
         MeshInformation {
             indices: vec![0, 1, 2, 2, 3, 0],
             uvs: vec![[0.0, 1.0], [0.0, 0.0], [1.0, 0.0], [1.0, 1.0]],
-            positions: vec![
-                [-0.5, -0.5, 0.5],
-                [-0.5, 0.5, 0.5],
-                [-0.5, 0.5, -0.5],
-                [-0.5, -0.5, -0.5],
-            ],
+            positions: vec![[-0.5, -0.5, 0.5], [-0.5, 0.5, 0.5], [-0.5, 0.5, -0.5], [-0.5, -0.5, -0.5]],
             normals: [[-1.0, 0.0, 0.0]; 4].to_vec(),
         },
         MeshInformation {
             indices: vec![0, 1, 2, 2, 3, 0],
             uvs: vec![[1.0, 1.0], [0.0, 1.0], [0.0, 0.0], [1.0, 0.0]],
-            positions: vec![
-                [0.5, 0.5, -0.5],
-                [-0.5, 0.5, -0.5],
-                [-0.5, 0.5, 0.5],
-                [0.5, 0.5, 0.5],
-            ],
+            positions: vec![[0.5, 0.5, -0.5], [-0.5, 0.5, -0.5], [-0.5, 0.5, 0.5], [0.5, 0.5, 0.5]],
             normals: [[0.0, 1.0, 0.0]; 4].to_vec(),
         },
         MeshInformation {
             indices: vec![0, 1, 2, 2, 3, 0],
             uvs: vec![[1.0, 0.0], [0.0, 0.0], [0.0, 1.0], [1.0, 1.0]],
-            positions: vec![
-                [0.5, -0.5, 0.5],
-                [-0.5, -0.5, 0.5],
-                [-0.5, -0.5, -0.5],
-                [0.5, -0.5, -0.5],
-            ],
+            positions: vec![[0.5, -0.5, 0.5], [-0.5, -0.5, 0.5], [-0.5, -0.5, -0.5], [0.5, -0.5, -0.5]],
             normals: [[0.0, -1.0, 0.0]; 4].to_vec(),
         },
         MeshInformation {
             indices: vec![0, 1, 2, 2, 3, 0],
             uvs: vec![[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]],
-            positions: vec![
-                [-0.5, 0.5, -0.5],
-                [0.5, 0.5, -0.5],
-                [0.5, -0.5, -0.5],
-                [-0.5, -0.5, -0.5],
-            ],
+            positions: vec![[-0.5, 0.5, -0.5], [0.5, 0.5, -0.5], [0.5, -0.5, -0.5], [-0.5, -0.5, -0.5]],
             normals: [[0.0, 0.0, -1.0]; 4].to_vec(),
         },
         MeshInformation {
             indices: vec![0, 1, 2, 2, 3, 0],
             uvs: vec![[0.0, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0]],
-            positions: vec![
-                [-0.5, -0.5, 0.5],
-                [0.5, -0.5, 0.5],
-                [0.5, 0.5, 0.5],
-                [-0.5, 0.5, 0.5],
-            ],
+            positions: vec![[-0.5, -0.5, 0.5], [0.5, -0.5, 0.5], [0.5, 0.5, 0.5], [-0.5, 0.5, 0.5]],
             normals: [[0.0, 0.0, 1.0]; 4].to_vec(),
         },
     ));
 }
 
-fn register_block_meshes(
-    blocks: Res<Registry<Block>>,
-    mut model_registry: ResMut<BlockMeshRegistry>,
-) {
+fn register_block_meshes(blocks: Res<Registry<Block>>, mut model_registry: ResMut<BlockMeshRegistry>) {
     for block in blocks.iter() {
         if !model_registry.contains(block) {
             model_registry
@@ -314,8 +278,6 @@ pub(super) fn register(app: &mut App) {
     many_to_one::create_many_to_one_registry::<Block, BlockMeshInformation>(app);
     structure_renderer::register(app);
 
-    app.add_systems((
-        register_meshes.in_schedule(OnEnter(GameState::Loading)),
-        register_block_meshes.in_schedule(OnExit(GameState::PostLoading)),
-    ));
+    app.add_systems(OnEnter(GameState::Loading), register_meshes)
+        .add_systems(OnExit(GameState::PostLoading), register_block_meshes);
 }

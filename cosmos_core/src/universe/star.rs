@@ -2,7 +2,7 @@
 
 use bevy::{
     prelude::{App, Color, Component},
-    reflect::{FromReflect, Reflect},
+    reflect::Reflect,
 };
 use serde::{Deserialize, Serialize};
 
@@ -403,7 +403,7 @@ const COLOR_TABLE: [[f32; 3]; 391] = [
     [0.3563, 0.4745, 1.0000],
 ];
 
-#[derive(Debug, Component, Reflect, FromReflect, Serialize, Deserialize, Clone, Copy)]
+#[derive(Debug, Component, Reflect, Serialize, Deserialize, Clone, Copy)]
 /// Represents a light-emitting object in space.
 ///
 /// This should be at the center of systems & are not saved/loaded to the disk

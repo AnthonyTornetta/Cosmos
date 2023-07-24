@@ -8,7 +8,7 @@ use cosmos_core::{
     inventory::Inventory,
     item::Item,
     registry::Registry,
-    structure::{planet::Planet, ship::pilot::Pilot, Structure},
+    structure::{planet::Planet, ship::pilot::Pilot, structure_block::StructureBlock, Structure},
 };
 
 use crate::{
@@ -66,62 +66,42 @@ fn process_player_interaction(
                     if input_handler.check_just_pressed(CosmosInputs::BreakBlock, &keys, &mouse) {
                         let moved_point = intersection.point - intersection.normal * 0.3;
 
-                        let point = transform
-                            .compute_matrix()
-                            .inverse()
-                            .transform_point3(moved_point);
+                        let point = transform.compute_matrix().inverse().transform_point3(moved_point);
 
-                        let (x, y, z) = structure
-                            .relative_coords_to_local_coords_checked(point.x, point.y, point.z)
-                            .expect("Tried to break block outside of structure?");
-
-                        break_writer.send(BlockBreakEvent {
-                            structure_entity: structure.get_entity().unwrap(),
-                            x,
-                            y,
-                            z,
-                        });
+                        if let Ok(coords) = structure.relative_coords_to_local_coords_checked(point.x, point.y, point.z) {
+                            break_writer.send(BlockBreakEvent {
+                                structure_entity: structure.get_entity().unwrap(),
+                                coords: StructureBlock::new(coords),
+                            });
+                        }
                     }
 
                     if input_handler.check_just_pressed(CosmosInputs::PlaceBlock, &keys, &mouse) {
                         if let Ok(mut inventory) = inventory.get_single_mut() {
                             if let Ok(hotbar) = hotbar.get_single() {
-                                let inventory_slot =
-                                    hotbar.item_at_selected_inventory_slot(&inventory);
+                                let inventory_slot = hotbar.item_at_selected_inventory_slot(&inventory);
 
                                 if let Some(is) = inventory.itemstack_at(inventory_slot) {
                                     let item = items.from_numeric_id(is.item_id());
 
                                     if let Some(block_id) = block_items.block_from_item(item) {
-                                        let moved_point =
-                                            intersection.point + intersection.normal * 0.95;
+                                        let moved_point = intersection.point + intersection.normal * 0.95;
 
-                                        let point = transform
-                                            .compute_matrix()
-                                            .inverse()
-                                            .transform_point3(moved_point);
+                                        let point = transform.compute_matrix().inverse().transform_point3(moved_point);
 
-                                        if let Ok((x, y, z)) = structure
-                                            .relative_coords_to_local_coords_checked(
-                                                point.x, point.y, point.z,
-                                            )
-                                        {
-                                            if structure.is_within_blocks(x, y, z) {
+                                        if let Ok(coords) = structure.relative_coords_to_local_coords_checked(point.x, point.y, point.z) {
+                                            if structure.is_within_blocks(coords) {
                                                 inventory.decrease_quantity_at(inventory_slot, 1);
 
                                                 let block_up = if is_planet.is_some() {
-                                                    Planet::planet_face(structure, x, y, z)
+                                                    Planet::planet_face(structure, coords)
                                                 } else {
                                                     BlockFace::Top
                                                 };
 
                                                 place_writer.send(BlockPlaceEvent {
-                                                    structure_entity: structure
-                                                        .get_entity()
-                                                        .unwrap(),
-                                                    x,
-                                                    y,
-                                                    z,
+                                                    structure_entity: structure.get_entity().unwrap(),
+                                                    coords: StructureBlock::new(coords),
                                                     inventory_slot,
                                                     block_id,
                                                     block_up,
@@ -137,21 +117,14 @@ fn process_player_interaction(
                     if input_handler.check_just_pressed(CosmosInputs::Interact, &keys, &mouse) {
                         let moved_point = intersection.point - intersection.normal * 0.3;
 
-                        let point = transform
-                            .compute_matrix()
-                            .inverse()
-                            .transform_point3(moved_point);
+                        let point = transform.compute_matrix().inverse().transform_point3(moved_point);
 
-                        let (x, y, z) = structure
-                            .relative_coords_to_local_coords_checked(point.x, point.y, point.z)
-                            .unwrap();
-
-                        interact_writer.send(BlockInteractEvent {
-                            structure_entity: structure.get_entity().unwrap(),
-                            x,
-                            y,
-                            z,
-                        });
+                        if let Ok(coords) = structure.relative_coords_to_local_coords_checked(point.x, point.y, point.z) {
+                            interact_writer.send(BlockInteractEvent {
+                                structure_entity: structure.get_entity().unwrap(),
+                                coords: StructureBlock::new(coords),
+                            });
+                        }
                     }
                 }
             }
@@ -162,5 +135,5 @@ fn process_player_interaction(
 pub(super) fn register(app: &mut App) {
     app
         // .add_event::<BlockInteractionEvent>()
-        .add_system(process_player_interaction.in_set(OnUpdate(GameState::Playing)));
+        .add_systems(Update, process_player_interaction.run_if(in_state(GameState::Playing)));
 }

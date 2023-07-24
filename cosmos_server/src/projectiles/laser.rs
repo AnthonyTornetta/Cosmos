@@ -25,28 +25,15 @@ fn on_laser_hit_structure(
     hardness_registry: &Registry<BlockHardness>,
     strength: f32,
 ) {
-    if let Ok((bx, by, bz)) = structure.relative_coords_to_local_coords_checked(
-        local_position_hit.x,
-        local_position_hit.y,
-        local_position_hit.z,
-    ) {
-        let block = structure.block_at(bx, by, bz, blocks);
+    if let Ok(coords) = structure.relative_coords_to_local_coords_checked(local_position_hit.x, local_position_hit.y, local_position_hit.z)
+    {
+        let block = structure.block_at(coords, blocks);
 
         if let Some(hardness) = hardness_registry.from_id(block.unlocalized_name()) {
-            structure.block_take_damage(
-                bx,
-                by,
-                bz,
-                hardness,
-                strength,
-                Some(block_destroy_event_writer),
-            );
+            structure.block_take_damage(coords, hardness, strength, Some(block_destroy_event_writer));
         } else {
-            println!(
-                "WARNING: Missing block hardness for {}",
-                block.unlocalized_name()
-            );
-            structure.remove_block_at(bx, by, bz, blocks, Some(block_change_event_writer));
+            println!("WARNING: Missing block hardness for {}", block.unlocalized_name());
+            structure.remove_block_at(coords, blocks, Some(block_change_event_writer));
         }
     } else {
         println!("Bad laser hit spot that isn't actually on structure ;(");
@@ -90,6 +77,6 @@ fn on_save_laser(mut query: Query<&mut SerializedData, (With<NeedsSaved>, With<L
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(respond_laser_hit_event.in_set(OnUpdate(GameState::Playing)))
-        .add_system(on_save_laser.after(begin_saving).before(done_saving));
+    app.add_systems(Update, respond_laser_hit_event.run_if(in_state(GameState::Playing)))
+        .add_systems(First, on_save_laser.after(begin_saving).before(done_saving));
 }

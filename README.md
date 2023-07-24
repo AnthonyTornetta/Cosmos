@@ -1,6 +1,9 @@
 # Cosmos
 A multiplayer block-based space exploration game, written in rust using the [Bevy](https://www.bevyengine.org/) engine.
 
+If you're interested, join our new discord server here:
+[![Join Cosmos's Discord server here!](https://dcbadge.vercel.app/api/server/VeuqvnxsZb)](https://discord.gg/VeuqvnxsZb)
+
 ## Screenshots
 
 Cosmos has ships that you can pilot through space. (And yes those are working laser cannons.)
@@ -65,9 +68,9 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
       - [x] Make generation work on all faces of planet
       - [x] Block orientation for every block
   - [ ] Biospheres
-    - [ ] Speed up terrain generation
-    - [ ] Make molten biosphere
-    - [ ] Enhance grass biosphere
+    - [x] Speed up terrain generation
+    - [x] Make molten biosphere
+    - [x] Enhance grass biosphere
     - [ ] Create icy biosphere
   - [x] Asteroids
     - [x] For now just floating rocks in space
@@ -75,15 +78,35 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
     - [x] Save planet locations
   - [x] Fix broken ship functionality
     - [x] Make entities no longer pass through loading structures.
+- [x] Align body with structure
+  - [x] Switches to FPS Camera
+  - [x] Aligns the player to that structure
+    - [x] Fix child locations being not updated based on transform relative to parent
+  - [x] Add button to align to structure facing
+  - [x] De-align, switch back to free camera
+    - [x] Create free camera
 
-## Release 0.0.5a
-- [ ] Align body with structure
-  - [ ] Switches to FPS Camera
-  - [ ] Aligns the player to that structure
-    - [ ] Fix child locations being not updated based on transform relative to parent
-  - [ ] Add button to align to structure facing
-  - [ ] De-align, switch back to free camera
-    - [ ] Create free camera
+## Release 0.0.5a - The Aesthetic Release
+- [ ] Biosphere Improvements
+  - [ ] Water block
+  - [ ] Lava block
+  - [ ] Structures
+    - [ ] Rocks spawning
+    - [ ] Undergrowth
+    - [ ] 1 More tree type
+  - [ ] Groundwork for biomes
+    - [ ] Plane, 
+    - [ ] Redwood forest, 
+    - [ ] 1 Additional forest
+    - [ ] Ocean
+  - [ ] On-planet skybox
+    - [ ] Sun-side skybox
+      - [ ] Perhaps done via a sphere surrounding the planet that always faces the nearest star
+    - [ ] Sun-set skybox
+    - [ ] Night-side skybox
+  - [ ] Caves
+    - [ ] Lit up underground blocks
+- [ ] Animated textures
 - [ ] Sounds
   - [ ] Laser cannon fire
   - [ ] Block take damage
@@ -91,16 +114,16 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
   - [ ] Space ship idle
   - [ ] Background space music
   - [ ] Block break
-- [ ] Multiblock machines
+- [ ] Place rotated blocks
+- [ ] Multiblock machines (if enough time)
   - [ ] Revamp power generation to use reactor multiblock structure
-- [ ] GUI to interact with inventory
-  - [ ] Easier way of adding 3d blocks to GUI
-  - [ ] Move items around in inventory via mouse
-- [ ] Structure build mode
-  - [ ] Press B while piloting ship to enter build mode
-  - [ ] Build mode
-    - [ ] Camera becomes a noclip free cam and goes outside of player's body.
-    - [ ] Player no longer piloting ship, & is able to create + destroy blocks on the ship but ONLY the ship
+  - [ ] Colored laser
+    - [ ] Colored glass placed in front of laser
+- [ ] Inventory GUI
+  - [ ] Able to open inventory
+  - [ ] Abstract the 3d block GUI camera
+  - [ ] Fix the 3d block GUI camera to not render anything except GUI blocks
+- [ ] Fix seeing through cracks in blocks
 
 ## Release 0.0.3a
 - [x] Infinite universe
@@ -215,6 +238,15 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 
 
 ## Everything that will still have to be done after 0.0.5a
+
+- [ ] GUI to interact with inventory
+  - [ ] Easier way of adding 3d blocks to GUI
+  - [ ] Move items around in inventory via mouse
+- [ ] Structure build mode
+  - [ ] Press B while piloting ship to enter build mode
+  - [ ] Build mode
+    - [ ] Camera becomes a noclip free cam and goes outside of player's body.
+    - [ ] Player no longer piloting ship, & is able to create + destroy blocks on the ship but ONLY the ship
 - [ ] Mining beam system
   - [ ] Mining beam block
     - [ ] Can be placed in line to create more powerful miners
@@ -238,7 +270,6 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 - [ ] Planet Generation
   - [ ] New planet types
   - [ ] A bunch of new blocks
-
 - [ ] Shops
   - [ ] Sell blocks/items
   - [ ] Buy blocks/items

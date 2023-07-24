@@ -51,25 +51,15 @@ fn register_materials(
     main_atlas: Res<MainAtlas>,
     illum_atlas: Res<IlluminatedMaterial>,
 ) {
-    registry.insert_value(CosmosMaterial::new(
-        "cosmos:main".to_owned(),
-        main_atlas.material.clone(),
-    ));
+    registry.insert_value(CosmosMaterial::new("cosmos:main".to_owned(), main_atlas.material.clone()));
 
-    registry.insert_value(CosmosMaterial::new(
-        "cosmos:illuminated".to_owned(),
-        illum_atlas.material.clone(),
-    ));
+    registry.insert_value(CosmosMaterial::new("cosmos:illuminated".to_owned(), illum_atlas.material.clone()));
 
     // TODO: Automate this in file or something
 
     for block in blocks.iter() {
-        if block.unlocalized_name() != "cosmos:light"
-            && block.unlocalized_name() != "cosmos:ship_core"
-        {
-            registry
-                .add_link(block, "cosmos:main")
-                .expect("Main material should exist");
+        if block.unlocalized_name() != "cosmos:light" && block.unlocalized_name() != "cosmos:ship_core" {
+            registry.add_link(block, "cosmos:main").expect("Main material should exist");
         }
     }
 
@@ -89,5 +79,5 @@ fn register_materials(
 pub(super) fn register(app: &mut App) {
     registry::many_to_one::create_many_to_one_registry::<Block, CosmosMaterial>(app);
 
-    app.add_system(register_materials.in_schedule(OnExit(GameState::PostLoading)));
+    app.add_systems(OnExit(GameState::PostLoading), register_materials);
 }

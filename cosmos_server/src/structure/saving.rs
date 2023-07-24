@@ -4,15 +4,12 @@
 
 use std::{fs, io::ErrorKind};
 
-use bevy::prelude::{App, Commands, Component, Entity, EventReader, EventWriter, Query};
+use bevy::prelude::{App, Commands, Component, Entity, Event, EventReader, EventWriter, Query, Update};
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
     netty::cosmos_encoder,
     physics::location::Location,
-    structure::{
-        ship::ship_builder::TShipBuilder, structure_iterator::ChunkIteratorResult, ChunkInitEvent,
-        Structure,
-    },
+    structure::{ship::ship_builder::TShipBuilder, structure_iterator::ChunkIteratorResult, ChunkInitEvent, Structure},
 };
 
 use super::ship::server_ship_builder::ServerShipBuilder;
@@ -20,13 +17,13 @@ use super::ship::server_ship_builder::ServerShipBuilder;
 /// Loading loads the structure instantly + creates the events at the same time
 /// This can cause concurrency issues, so this allows the events to be generated 1 frame
 /// later to avoid those issues.
-#[derive(Debug)]
+#[derive(Debug, Event)]
 pub struct SendDelayedStructureLoadEvent(Entity);
 
-#[derive(Debug)]
 /// This is horrible please done use this.
 ///
 /// Used to send a structure load event in the next frame
+#[derive(Debug, Event)]
 pub struct EvenMoreDelayedSLE(Entity);
 
 fn send_actual_loaded_events_first(
@@ -48,15 +45,13 @@ fn send_actual_loaded_events(
             for res in structure.all_chunks_iter(false) {
                 // This will always be true because include_empty is false
                 if let ChunkIteratorResult::FilledChunk {
-                    position: (x, y, z),
+                    position: coords,
                     chunk: _,
                 } = res
                 {
                     chunk_set_event_writer.send(ChunkInitEvent {
                         structure_entity: ev.0,
-                        x,
-                        y,
-                        z,
+                        coords,
                     });
                 }
             }
@@ -74,11 +69,7 @@ pub fn load_structure(
     commands: &mut Commands,
     structure_loaded: &mut EventWriter<SendDelayedStructureLoadEvent>,
 ) {
-    if let Ok(structure_bin) = fs::read(format!(
-        "saves/{}/{}.cstr",
-        structure_type.name(),
-        structure_name
-    )) {
+    if let Ok(structure_bin) = fs::read(format!("saves/{}/{}.cstr", structure_type.name(), structure_name)) {
         println!("Loading structure {structure_name}...");
 
         if let Ok(mut structure) = cosmos_encoder::deserialize::<Structure>(&structure_bin) {
@@ -91,12 +82,7 @@ pub fn load_structure(
                 StructureType::Ship => {
                     let builder = ServerShipBuilder::default();
 
-                    builder.insert_ship(
-                        &mut entity_cmd,
-                        spawn_at,
-                        Velocity::zero(),
-                        &mut structure,
-                    );
+                    builder.insert_ship(&mut entity_cmd, spawn_at, Velocity::zero(), &mut structure);
                 }
             }
             let entity = entity_cmd.id();
@@ -110,11 +96,7 @@ pub fn load_structure(
             println!("Error parsing structure data for {structure_name} -- is it a valid file?");
         }
     } else {
-        println!(
-            "No {} structure found with the name of {}!",
-            structure_type.name(),
-            structure_name
-        );
+        println!("No {} structure found with the name of {}!", structure_type.name(), structure_name);
     }
 }
 
@@ -122,11 +104,7 @@ pub fn load_structure(
 ///
 /// This is NOT how the structures are saved in the world, but rather used to get structure
 /// files that can be loaded through commands.
-pub fn save_structure(
-    structure: &Structure,
-    file_name: &str,
-    structure_type: StructureType,
-) -> std::io::Result<()> {
+pub fn save_structure(structure: &Structure, file_name: &str, structure_type: StructureType) -> std::io::Result<()> {
     if let Err(e) = fs::create_dir("saves") {
         match e.kind() {
             ErrorKind::AlreadyExists => {}
@@ -150,10 +128,7 @@ pub fn save_structure(
 
     let serialized = cosmos_encoder::serialize(structure);
 
-    fs::write(
-        format!("saves/{}/{file_name}.cstr", structure_type.name()),
-        serialized,
-    )?;
+    fs::write(format!("saves/{}/{file_name}.cstr", structure_type.name()), serialized)?;
 
     Ok(())
 }
@@ -188,16 +163,9 @@ pub struct SaveStructure {
 
 fn monitor_needs_saved(mut commands: Commands, query: Query<(Entity, &Structure, &SaveStructure)>) {
     for (entity, structure, save_structure_component) in query.iter() {
-        match save_structure(
-            structure,
-            &save_structure_component.name,
-            save_structure_component.structure_type,
-        ) {
+        match save_structure(structure, &save_structure_component.name, save_structure_component.structure_type) {
             Ok(_) => println!("Saved structure {}", save_structure_component.name),
-            Err(e) => eprintln!(
-                "Error saving structure {} {}",
-                save_structure_component.name, e
-            ),
+            Err(e) => eprintln!("Error saving structure {} {}", save_structure_component.name, e),
         }
 
         commands.entity(entity).remove::<SaveStructure>();
@@ -205,9 +173,10 @@ fn monitor_needs_saved(mut commands: Commands, query: Query<(Entity, &Structure,
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(monitor_needs_saved)
-        .add_event::<SendDelayedStructureLoadEvent>()
-        .add_event::<EvenMoreDelayedSLE>()
-        .add_system(send_actual_loaded_events_first)
-        .add_system(send_actual_loaded_events);
+    app.add_systems(
+        Update,
+        (monitor_needs_saved, send_actual_loaded_events_first, send_actual_loaded_events),
+    )
+    .add_event::<SendDelayedStructureLoadEvent>()
+    .add_event::<EvenMoreDelayedSLE>();
 }

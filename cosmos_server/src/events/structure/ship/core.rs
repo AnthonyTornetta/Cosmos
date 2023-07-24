@@ -1,4 +1,7 @@
-use bevy::prelude::*;
+use bevy::{
+    prelude::{in_state, App, Commands, Entity, EventWriter, IntoSystemConfigs, Query, Res, ResMut, Update},
+    time::Time,
+};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::Block,
@@ -36,13 +39,7 @@ fn on_melting_down(
             melting_down.0 -= 1.0;
 
             if let Some(block) = structure.all_blocks_iter(false).next() {
-                structure.remove_block_at(
-                    block.x,
-                    block.y,
-                    block.z,
-                    &blocks,
-                    Some(&mut event_writer),
-                );
+                structure.remove_block_at(block.coords(), &blocks, Some(&mut event_writer));
             } else {
                 commands.entity(entity).insert(NeedsDespawned);
 
@@ -58,5 +55,5 @@ fn on_melting_down(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(on_melting_down.in_set(OnUpdate(GameState::Playing)));
+    app.add_systems(Update, on_melting_down.run_if(in_state(GameState::Playing)));
 }

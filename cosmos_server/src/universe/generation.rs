@@ -2,11 +2,10 @@
 
 use std::f32::consts::{E, TAU};
 
-use bevy::prelude::{
-    in_state, App, Commands, CoreSet, IntoSystemConfig, PbrBundle, Query, Res, Vec3, With,
-};
+use bevy::prelude::{in_state, App, Commands, IntoSystemConfigs, Query, Res, Update, Vec3, With};
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
+    ecs::bundles::CosmosPbrBundle,
     entities::player::Player,
     persistence::LoadingDistance,
     physics::location::{Location, Sector, SystemUnit, UniverseSystem, SYSTEM_SECTORS},
@@ -113,20 +112,17 @@ fn load_stars_near_players(
 
             commands.spawn((
                 star,
-                PbrBundle {
+                CosmosPbrBundle {
+                    location: Location::new(
+                        Vec3::ZERO,
+                        Sector::new(
+                            ((system.x() as f32 + STAR_POS_OFFSET) * SYSTEM_SECTORS as f32) as SystemUnit,
+                            ((system.y() as f32 + STAR_POS_OFFSET) * SYSTEM_SECTORS as f32) as SystemUnit,
+                            ((system.z() as f32 + STAR_POS_OFFSET) * SYSTEM_SECTORS as f32) as SystemUnit,
+                        ),
+                    ),
                     ..Default::default()
                 },
-                Location::new(
-                    Vec3::ZERO,
-                    Sector::new(
-                        ((system.x() as f32 + STAR_POS_OFFSET) * SYSTEM_SECTORS as f32)
-                            as SystemUnit,
-                        ((system.y() as f32 + STAR_POS_OFFSET) * SYSTEM_SECTORS as f32)
-                            as SystemUnit,
-                        ((system.z() as f32 + STAR_POS_OFFSET) * SYSTEM_SECTORS as f32)
-                            as SystemUnit,
-                    ),
-                ),
                 Velocity::zero(),
                 LoadingDistance::new(SYSTEM_SECTORS / 2 + 1, SYSTEM_SECTORS / 2 + 1),
             ));
@@ -135,10 +131,9 @@ fn load_stars_near_players(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(
+    app.add_systems(
+        Update,
         // planet_spawner::spawn_planet system requires stars to have been generated first
-        load_stars_near_players
-            .in_base_set(CoreSet::First)
-            .run_if(in_state(GameState::Playing)),
+        load_stars_near_players.run_if(in_state(GameState::Playing)),
     );
 }

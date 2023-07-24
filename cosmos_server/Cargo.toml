@@ -27,5 +27,3 @@ cosmos_core = { version = "0.0.4", path = "../cosmos_core", features = [ "server
 bevy-inspector-egui = { workspace = true }
 
 walkdir = { workspace = true }
-
-zip = { workspace = true }

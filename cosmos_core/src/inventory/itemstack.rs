@@ -1,14 +1,11 @@
 //! An ItemStack represents an item & the quantity of that item.
 
-use bevy::{
-    prelude::App,
-    reflect::{FromReflect, Reflect},
-};
+use bevy::{prelude::App, reflect::Reflect};
 use serde::{Deserialize, Serialize};
 
 use crate::{item::Item, registry::identifiable::Identifiable};
 
-#[derive(Serialize, Deserialize, Debug, Reflect, FromReflect)]
+#[derive(Serialize, Deserialize, Debug, Reflect)]
 /// An item & the quantity of that item
 pub struct ItemStack {
     item_id: u16,

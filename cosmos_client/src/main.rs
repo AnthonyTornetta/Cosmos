@@ -5,6 +5,7 @@
 pub mod asset;
 pub mod block;
 pub mod camera;
+mod ecs;
 pub mod entities;
 pub mod events;
 pub mod input;
@@ -18,6 +19,7 @@ pub mod physics;
 pub mod plugin;
 pub mod projectiles;
 pub mod rendering;
+pub mod settings;
 pub mod skybox;
 pub mod state;
 pub mod structure;
@@ -102,10 +104,8 @@ fn process_ship_movement(
 
         // Prevents you from moving cursor off screen
         // Reduces cursor movement the closer you get to edge of screen until it reaches 0 at hw/2 or hh/2
-        crosshair_offset.x += cursor_delta_position.x
-            - (cursor_delta_position.x * (crosshair_offset.x.abs() / max_w));
-        crosshair_offset.y += cursor_delta_position.y
-            - (cursor_delta_position.y * (crosshair_offset.y.abs() / max_h));
+        crosshair_offset.x += cursor_delta_position.x - (cursor_delta_position.x * (crosshair_offset.x.abs() / max_w));
+        crosshair_offset.y += cursor_delta_position.y - (cursor_delta_position.y * (crosshair_offset.y.abs() / max_h));
 
         crosshair_offset.x = crosshair_offset.x.clamp(-hw, hw);
         crosshair_offset.y = crosshair_offset.y.clamp(-hh, hh);
@@ -119,11 +119,7 @@ fn process_ship_movement(
             roll -= 0.25;
         }
 
-        movement.torque = Vec3::new(
-            crosshair_offset.y / hh * p2 / 2.0,
-            -crosshair_offset.x / hw * p2 / 2.0,
-            roll,
-        );
+        movement.torque = Vec3::new(crosshair_offset.y / hh * p2 / 2.0, -crosshair_offset.x / hw * p2 / 2.0, roll);
 
         client.send_message(
             NettyChannelClient::Unreliable,
@@ -147,22 +143,21 @@ fn process_player_movement(
     mouse: Res<Input<MouseButton>>,
     time: Res<Time>,
     input_handler: ResMut<CosmosInputHandler>,
-    mut query: Query<
-        (&mut Velocity, &GlobalTransform, Option<&PlayerAlignment>),
-        (With<LocalPlayer>, Without<Pilot>),
-    >,
-    cam_query: Query<&GlobalTransform, With<MainCamera>>,
+    mut query: Query<(Entity, &mut Velocity, &Transform, Option<&PlayerAlignment>), (With<LocalPlayer>, Without<Pilot>)>,
+    cam_query: Query<&Transform, With<MainCamera>>,
+    parent_query: Query<&Parent>,
+    global_transform_query: Query<&GlobalTransform>,
 ) {
     // This will be err if the player is piloting a ship
-    if let Ok((mut velocity, player_transform, player_alignment)) = query.get_single_mut() {
-        let cam_trans = cam_query.single();
+    if let Ok((ent, mut velocity, player_transform, player_alignment)) = query.get_single_mut() {
+        let cam_trans = player_transform.mul_transform(*cam_query.single());
 
-        let max_speed: f32 = match input_handler.check_pressed(CosmosInputs::Sprint, &keys, &mouse)
-        {
+        let max_speed: f32 = match input_handler.check_pressed(CosmosInputs::Sprint, &keys, &mouse) {
             false => 3.0,
             true => 20.0,
         };
 
+        // All relative to player
         let mut forward = cam_trans.forward();
         let mut right = cam_trans.right();
         let up = player_transform.up();
@@ -190,74 +185,88 @@ fn process_player_movement(
 
         let time = time.delta_seconds();
 
+        let parent_rot = parent_query
+            .get(ent)
+            .map(|p| {
+                global_transform_query
+                    .get(p.get())
+                    .map(|x| Quat::from_affine3(&x.affine()))
+                    .unwrap_or(Quat::IDENTITY)
+            })
+            .unwrap_or(Quat::IDENTITY);
+
+        let mut new_linvel = parent_rot.inverse().mul_vec3(velocity.linvel);
+
         if input_handler.check_pressed(CosmosInputs::MoveForward, &keys, &mouse) {
-            velocity.linvel += forward * time;
+            new_linvel += forward * time;
         }
         if input_handler.check_pressed(CosmosInputs::MoveBackward, &keys, &mouse) {
-            velocity.linvel -= forward * time;
+            new_linvel -= forward * time;
         }
         if input_handler.check_pressed(CosmosInputs::MoveUp, &keys, &mouse) {
-            velocity.linvel += movement_up * time;
+            new_linvel += movement_up * time;
         }
         if input_handler.check_pressed(CosmosInputs::MoveDown, &keys, &mouse) {
-            velocity.linvel -= movement_up * time;
+            new_linvel -= movement_up * time;
         }
         if input_handler.check_just_pressed(CosmosInputs::Jump, &keys, &mouse) {
-            velocity.linvel += up * 5.0;
+            new_linvel += up * 5.0;
         }
         if input_handler.check_pressed(CosmosInputs::MoveLeft, &keys, &mouse) {
-            velocity.linvel -= right * time;
+            new_linvel -= right * time;
         }
         if input_handler.check_pressed(CosmosInputs::MoveRight, &keys, &mouse) {
-            velocity.linvel += right * time;
+            new_linvel += right * time;
         }
         if input_handler.check_pressed(CosmosInputs::SlowDown, &keys, &mouse) {
-            let mut amt = velocity.linvel * 0.5;
+            let mut amt = new_linvel * 0.5;
             if amt.dot(amt) > max_speed * max_speed {
                 amt = amt.normalize() * max_speed;
             }
-            velocity.linvel -= amt;
+            new_linvel -= amt;
         }
 
         if let Some(player_alignment) = player_alignment {
             match player_alignment.0 {
                 structure::planet::align_player::Axis::X => {
-                    let x = velocity.linvel.x;
+                    let x = new_linvel.x;
 
-                    velocity.linvel.x = 0.0;
+                    new_linvel.x = 0.0;
 
-                    if velocity.linvel.dot(velocity.linvel) > max_speed * max_speed {
-                        velocity.linvel = velocity.linvel.normalize() * max_speed;
+                    if new_linvel.dot(new_linvel) > max_speed * max_speed {
+                        new_linvel = new_linvel.normalize() * max_speed;
                     }
 
-                    velocity.linvel.x = x;
+                    new_linvel.x = x;
                 }
                 structure::planet::align_player::Axis::Y => {
-                    let y = velocity.linvel.y;
+                    let y = new_linvel.y;
 
-                    velocity.linvel.y = 0.0;
+                    new_linvel.y = 0.0;
 
-                    if velocity.linvel.dot(velocity.linvel) > max_speed * max_speed {
-                        velocity.linvel = velocity.linvel.normalize() * max_speed;
+                    if new_linvel.dot(new_linvel) > max_speed * max_speed {
+                        new_linvel = new_linvel.normalize() * max_speed;
                     }
 
-                    velocity.linvel.y = y;
+                    new_linvel.y = y;
                 }
                 structure::planet::align_player::Axis::Z => {
-                    let z = velocity.linvel.z;
+                    let z = new_linvel.z;
 
-                    velocity.linvel.z = 0.0;
+                    new_linvel.z = 0.0;
 
-                    if velocity.linvel.dot(velocity.linvel) > max_speed * max_speed {
-                        velocity.linvel = velocity.linvel.normalize() * max_speed;
+                    if new_linvel.dot(new_linvel) > max_speed * max_speed {
+                        new_linvel = new_linvel.normalize() * max_speed;
                     }
 
-                    velocity.linvel.z = z;
+                    new_linvel.z = z;
                 }
             }
-        } else if velocity.linvel.dot(velocity.linvel) > max_speed * max_speed {
-            velocity.linvel = velocity.linvel.normalize() * max_speed;
+        } else if new_linvel.dot(new_linvel) > max_speed * max_speed {
+            new_linvel = new_linvel.normalize() * max_speed;
         }
+
+        velocity.linvel = parent_rot.mul_vec3(new_linvel);
     }
 }
 
@@ -314,18 +323,16 @@ fn main() {
             GameState::Connecting,
             GameState::Playing,
         ))
-        .add_plugin(RenetClientPlugin)
-        .add_plugin(NetcodeClientPlugin)
+        .add_plugins(RenetClientPlugin)
+        .add_plugins(NetcodeClientPlugin)
         // .add_plugin(RapierDebugRenderPlugin::default())
-        .add_systems((
-            connect::establish_connection.in_schedule(OnEnter(GameState::Connecting)),
-            connect::wait_for_connection.in_set(OnUpdate(GameState::Connecting)),
-        ))
-        .add_system(create_sun.in_schedule(OnEnter(GameState::LoadingWorld)))
-        .add_system(connect::wait_for_done_loading.in_set(OnUpdate(GameState::LoadingWorld)))
+        .add_systems(OnEnter(GameState::Connecting), connect::establish_connection)
+        .add_systems(Update, connect::wait_for_connection.run_if(in_state(GameState::Connecting)))
+        .add_systems(OnEnter(GameState::LoadingWorld), create_sun)
+        .add_systems(Update, connect::wait_for_done_loading.run_if(in_state(GameState::LoadingWorld)))
         .add_systems(
-            (process_player_movement, process_ship_movement, reset_cursor)
-                .in_set(OnUpdate(GameState::Playing)),
+            Update,
+            (process_player_movement, process_ship_movement, reset_cursor).run_if(in_state(GameState::Playing)),
         );
 
     input::register(&mut app);
@@ -347,7 +354,9 @@ fn main() {
     rendering::register(&mut app);
     universe::register(&mut app);
     skybox::register(&mut app);
+    settings::register(&mut app);
     physics::register(&mut app);
+    ecs::register(&mut app);
 
     app.run();
 }

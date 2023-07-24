@@ -1,8 +1,8 @@
 //! Handles all the blocks with lighting in the game
 
 use bevy::{
-    prelude::{App, Color, IntoSystemAppConfig, OnExit, Res, ResMut},
-    reflect::{FromReflect, Reflect},
+    prelude::{App, Color, OnExit, Res, ResMut},
+    reflect::Reflect,
 };
 use cosmos_core::{
     block::Block,
@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::state::game_state::GameState;
 
-#[derive(Debug, Reflect, FromReflect, Default, Serialize, Deserialize, Clone, Copy, PartialEq)]
+#[derive(Debug, Reflect, Default, Serialize, Deserialize, Clone, Copy, PartialEq)]
 /// If a block has light, it will have a block light property
 pub struct BlockLightProperties {
     /// The color of that light
@@ -27,7 +27,7 @@ pub struct BlockLightProperties {
     pub shadows_disabled: bool,
 }
 
-#[derive(Debug, Reflect, FromReflect, Default, Serialize, Deserialize)]
+#[derive(Debug, Reflect, Default, Serialize, Deserialize)]
 /// This links up a block to its block light properties
 pub struct BlockLighting {
     /// The properties this block has
@@ -51,12 +51,7 @@ impl Identifiable for BlockLighting {
     }
 }
 
-fn register_light(
-    lighting: BlockLightProperties,
-    registry: &mut Registry<BlockLighting>,
-    blocks: &Registry<Block>,
-    name: &str,
-) {
+fn register_light(lighting: BlockLightProperties, registry: &mut Registry<BlockLighting>, blocks: &Registry<Block>, name: &str) {
     if let Some(block) = blocks.from_id(name) {
         registry.register(BlockLighting {
             properties: lighting,
@@ -68,10 +63,7 @@ fn register_light(
     }
 }
 
-fn register_all_lights(
-    blocks: Res<Registry<Block>>,
-    mut registry: ResMut<Registry<BlockLighting>>,
-) {
+fn register_all_lights(blocks: Res<Registry<Block>>, mut registry: ResMut<Registry<BlockLighting>>) {
     register_light(
         BlockLightProperties {
             color: Color::WHITE,
@@ -100,5 +92,5 @@ fn register_all_lights(
 pub(super) fn register(app: &mut App) {
     registry::create_registry::<BlockLighting>(app);
 
-    app.add_system(register_all_lights.in_schedule(OnExit(GameState::Loading)));
+    app.add_systems(OnExit(GameState::Loading), register_all_lights);
 }

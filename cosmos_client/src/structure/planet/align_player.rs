@@ -2,13 +2,11 @@
 
 use std::f32::consts::PI;
 
-use bevy::prelude::{
-    App, Commands, Component, Entity, Parent, Quat, Query, Transform, Vec3, With, Without,
-};
+use bevy::prelude::{App, Commands, Component, Entity, Parent, Quat, Query, Transform, Update, Vec3, With, Without};
 use cosmos_core::{
     block::BlockFace,
     physics::{gravity_system::GravityEmitter, location::Location},
-    structure::planet::Planet,
+    structure::{planet::Planet, ship::pilot::Pilot},
 };
 
 use crate::netty::flags::LocalPlayer;
@@ -30,9 +28,7 @@ fn align_player(
     planets: Query<(&Location, &GravityEmitter), With<Planet>>,
     mut commands: Commands,
 ) {
-    if let Ok((entity, location, mut transform, alignment, prev_orientation)) =
-        player.get_single_mut()
-    {
+    if let Ok((entity, location, mut transform, alignment, prev_orientation)) = player.get_single_mut() {
         let mut best_planet = None;
         let mut best_dist = f32::INFINITY;
 
@@ -76,9 +72,7 @@ fn align_player(
                             match prev_orientation {
                                 // Fixes the player rotating in a weird direction when coming from
                                 // the left/right faces of a planet.
-                                Some(PreviousOrientation(Axis::X)) => {
-                                    Quat::from_axis_angle(Vec3::Z, PI)
-                                }
+                                Some(PreviousOrientation(Axis::X)) => Quat::from_axis_angle(Vec3::Z, PI),
                                 _ => Quat::from_axis_angle(Vec3::X, PI),
                             }
                         }
@@ -101,8 +95,16 @@ fn align_player(
                     },
                     0.1,
                 );
+            } else {
+                commands.entity(entity).remove::<PlayerAlignment>();
             }
         }
+    }
+}
+
+fn align_on_ship(query: Query<Entity, (With<LocalPlayer>, With<Pilot>)>, mut commands: Commands) {
+    if let Ok(ent) = query.get_single() {
+        commands.entity(ent).insert(PlayerAlignment(Axis::Y));
     }
 }
 
@@ -125,5 +127,5 @@ pub enum Axis {
 pub struct PlayerAlignment(pub Axis);
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(align_player);
+    app.add_systems(Update, (align_player, align_on_ship));
 }

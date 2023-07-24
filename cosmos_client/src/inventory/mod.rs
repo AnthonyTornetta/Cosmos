@@ -90,11 +90,7 @@ fn render_hotbar(
 
         let index = block_textures
             .from_id(block.unlocalized_name())
-            .unwrap_or_else(|| {
-                block_textures
-                    .from_id("missing")
-                    .expect("Missing texture should exist.")
-            });
+            .unwrap_or_else(|| block_textures.from_id("missing").expect("Missing texture should exist."));
 
         let multiplier = size * 2.0;
         let slot_x = -(amt as f32) / 2.0 * multiplier + multiplier * (i as f32 + 0.5);
@@ -111,7 +107,10 @@ fn render_hotbar(
         let mut mesh_builder = CosmosMeshBuilder::default();
 
         for face in [BlockFace::Top, BlockFace::Left, BlockFace::Back] {
-            let mut mesh_info = block_mesh_info.info_for_face(face).clone();
+            let Some(mut mesh_info) = block_mesh_info.info_for_face(face).cloned() else {
+                break;
+            };
+
             mesh_info.scale(Vec3::new(size, size, size));
 
             let Some(image_index) = index.atlas_index_from_face(face) else {
@@ -155,9 +154,9 @@ fn render_hotbar(
 struct HotbarLocation;
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(
-        |query: Query<&Window, With<PrimaryWindow>>,
-         mut cam: Query<&mut Transform, With<HotbarLocation>>| {
+    app.add_systems(
+        Update,
+        |query: Query<&Window, With<PrimaryWindow>>, mut cam: Query<&mut Transform, With<HotbarLocation>>| {
             let Ok(window) = query.get_single() else {
                 return;
             };
@@ -168,6 +167,6 @@ pub(super) fn register(app: &mut App) {
             transform.translation.y = -0.012533 * window.height() + 0.804;
         },
     )
-    .add_system(render_hotbar.in_schedule(OnEnter(GameState::Playing)))
-    .add_startup_system(ui_camera);
+    .add_systems(OnEnter(GameState::Playing), render_hotbar)
+    .add_systems(Startup, ui_camera);
 }

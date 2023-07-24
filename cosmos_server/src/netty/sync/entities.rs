@@ -5,7 +5,7 @@ use bevy::prelude::*;
 /// Entities requested are **NOT** guarenteed to exist!
 ///
 /// Used to send information about an entity to the player.
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Event)]
 pub struct RequestedEntityEvent {
     /// The client who requested this's id
     pub client_id: u64,

@@ -76,8 +76,7 @@ impl<T: Identifiable + Sync + Send> Registry<T> {
     pub fn register(&mut self, mut item: T) {
         let id = self.contents.len() as u16;
         item.set_numeric_id(id);
-        self.unlocalized_name_to_id
-            .insert(item.unlocalized_name().to_owned(), id);
+        self.unlocalized_name_to_id.insert(item.unlocalized_name().to_owned(), id);
         self.contents.push(item);
     }
 

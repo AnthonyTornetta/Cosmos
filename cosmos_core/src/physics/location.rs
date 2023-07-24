@@ -19,16 +19,19 @@ use std::{
 
 use bevy::{
     prelude::{
-        App, Children, Commands, Component, Deref, DerefMut, Entity, GlobalTransform, Parent,
-        Query, Transform, Vec3, Without,
+        warn, Added, App, Children, Commands, Component, Deref, DerefMut, Entity, GlobalTransform, Parent, Quat, Query, Transform, Update,
+        Vec3, With, Without,
     },
-    reflect::{FromReflect, Reflect},
+    reflect::Reflect,
+    transform::TransformBundle,
 };
-use bevy_rapier3d::na::Vector3;
+use bevy_rapier3d::{na::Vector3, prelude::PhysicsWorld};
 use bigdecimal::{BigDecimal, FromPrimitive};
 use serde::{Deserialize, Serialize};
 
-use crate::structure::chunk::ChunkEntity;
+use crate::{ecs::bundles::BundleStartingRotation, structure::chunk::ChunkEntity};
+
+use super::player_world::PlayerWorld;
 
 /// This represents the diameter of a sector. So at a local
 /// of 0, 0, 0 you can travel `SECTOR_DIMENSIONS / 2.0` blocks in any direction and
@@ -41,9 +44,7 @@ pub const SYSTEM_SECTORS: u32 = 100;
 /// This is the size in blocks of one system
 pub const SYSTEM_DIMENSIONS: f32 = SYSTEM_SECTORS as f32 * SECTOR_DIMENSIONS;
 
-#[derive(
-    Default, Component, Debug, PartialEq, Serialize, Deserialize, Reflect, FromReflect, Clone, Copy,
-)]
+#[derive(Default, Component, Debug, PartialEq, Serialize, Deserialize, Reflect, Clone, Copy)]
 /// Used to represent a point in a near-infinite space
 ///
 /// Rather than represent coordinates as imprecise f32, a location is used instead.
@@ -73,20 +74,7 @@ pub struct Location {
 /// Datatype used to store sector coordinates
 pub type SectorUnit = i64;
 
-#[derive(
-    Default,
-    Component,
-    Debug,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    Reflect,
-    FromReflect,
-    Clone,
-    Copy,
-    Hash,
-    Eq,
-)]
+#[derive(Default, Component, Debug, PartialEq, Serialize, Deserialize, Reflect, Clone, Copy, Hash, Eq)]
 /// Represents a large region of space
 pub struct Sector(SectorUnit, SectorUnit, SectorUnit);
 
@@ -155,11 +143,15 @@ impl Add<Sector> for Sector {
 /// Datatype used to store system coordinates
 pub type SystemUnit = i64;
 
-#[derive(
-    Default, Component, Debug, PartialEq, Serialize, Deserialize, Reflect, FromReflect, Clone, Copy,
-)]
+#[derive(Default, Component, Debug, PartialEq, Serialize, Deserialize, Reflect, Clone, Copy)]
 /// A universe system represents a large area of sectors
 pub struct UniverseSystem(SystemUnit, SystemUnit, SystemUnit);
+
+impl Display for UniverseSystem {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(format!("{}, {}, {}", self.0, self.1, self.2).as_str())
+    }
+}
 
 impl UniverseSystem {
     #[inline]
@@ -309,9 +301,9 @@ impl Location {
     /// Gets the system coordinates this location is in
     pub fn get_system_coordinates(&self) -> UniverseSystem {
         UniverseSystem(
-            (self.sector.x() / SYSTEM_SECTORS as SectorUnit) as SystemUnit,
-            (self.sector.y() / SYSTEM_SECTORS as SectorUnit) as SystemUnit,
-            (self.sector.z() / SYSTEM_SECTORS as SectorUnit) as SystemUnit,
+            (self.sector.x() as f32 / SYSTEM_SECTORS as f32).floor() as SystemUnit,
+            (self.sector.y() as f32 / SYSTEM_SECTORS as f32).floor() as SystemUnit,
+            (self.sector.z() as f32 / SYSTEM_SECTORS as f32).floor() as SystemUnit,
         )
     }
 
@@ -393,12 +385,9 @@ impl Location {
     pub fn absolute_coords(&self) -> Vector3<BigDecimal> {
         let sector_dims = BigDecimal::from_f32(SECTOR_DIMENSIONS).unwrap();
 
-        let local_x = BigDecimal::from_f32(self.local.x)
-            .unwrap_or_else(|| panic!("Died on {}", self.local.x));
-        let local_y = BigDecimal::from_f32(self.local.y)
-            .unwrap_or_else(|| panic!("Died on {}", self.local.y));
-        let local_z = BigDecimal::from_f32(self.local.z)
-            .unwrap_or_else(|| panic!("Died on {}", self.local.z));
+        let local_x = BigDecimal::from_f32(self.local.x).unwrap_or_else(|| panic!("Died on {}", self.local.x));
+        let local_y = BigDecimal::from_f32(self.local.y).unwrap_or_else(|| panic!("Died on {}", self.local.y));
+        let local_z = BigDecimal::from_f32(self.local.z).unwrap_or_else(|| panic!("Died on {}", self.local.z));
 
         Vector3::new(
             BigDecimal::from_i64(self.sector.x()).unwrap() * &sector_dims + local_x,
@@ -430,55 +419,48 @@ impl Location {
     }
 }
 
-#[derive(Component, Debug, Reflect, FromReflect, Deref, DerefMut, Clone, Copy)]
+#[derive(Component, Debug, Reflect, Deref, DerefMut, Clone, Copy)]
 /// Stores the location from the previous frame
-pub struct PreviousLocation(Location);
+pub struct PreviousLocation(pub Location);
 
-#[allow(unused_variables, unused_mut)]
 /// Recursively goes from the top of the parent tree to the bottom and lines up all their locations.
 ///
-/// This probably works.
+/// This needs tests written for it.
 fn sync_self_with_parents(
     this_entity: Entity,
     parent_query: &Query<&Parent>,
-    data_query: &mut Query<(
-        &mut Location,
-        &mut Transform,
-        &mut PreviousLocation,
-        &GlobalTransform,
-    )>,
+    data_query: &mut Query<(&mut Location, &mut Transform, &mut PreviousLocation, &GlobalTransform)>,
 ) {
     if let Ok(parent) = parent_query.get(this_entity).map(|p| p.get()) {
         sync_self_with_parents(parent, parent_query, data_query);
 
-        let Ok((parent_loc, parent_global_trans)) = data_query.get(parent).map(|(loc, _, _, parent_global_trans)| (*loc, parent_global_trans.translation())) else {
+        let Ok((parent_loc, parent_global_trans)) = data_query.get(parent).map(|(loc, _, _, parent_global_trans)| (*loc, *parent_global_trans)) else {
             return;
         };
 
-        let Ok((mut my_loc, mut my_transform, mut my_prev_loc, my_global_trans)) = data_query.get_mut(this_entity) else {
+        let Ok((mut my_loc, mut my_transform, my_prev_loc, _)) = data_query.get_mut(this_entity) else {
             return;
         };
 
-        if my_loc.last_transform_loc.is_some() {
-            let my_delta_loc = (*my_loc - my_prev_loc.0).absolute_coords_f32();
+        // Calculates the change in location since the last time this ran
+        let delta_loc = (*my_loc - my_prev_loc.0).absolute_coords_f32();
 
-            my_transform.translation += my_delta_loc;
+        let parent_rot = Quat::from_affine3(&parent_global_trans.affine());
 
-            let delta_from_parent = my_global_trans.translation() - parent_global_trans;
+        // Applies that change to the transform
+        my_transform.translation += parent_rot.inverse().mul_vec3(delta_loc);
 
-            let my_new_loc = parent_loc + delta_from_parent + my_delta_loc;
-            my_loc.set_from(&parent_loc);
-            my_loc.last_transform_loc = Some(my_transform.translation);
-            my_prev_loc.0 = *my_loc;
-        }
+        // Calculates how far away the entity was from its parent + its delta location.
+        let transform_delta_parent = parent_rot.mul_vec3(my_transform.translation);
+
+        // Updates the location to be based on the parent's location + your absolute coordinates to your parent.
+        my_loc.set_from(&(parent_loc + transform_delta_parent));
+        my_loc.last_transform_loc = Some(transform_delta_parent + parent_global_trans.translation());
     }
 }
 
 /// Adds the previous location component. Put this before the sync bodies & transform
-pub fn add_previous_location(
-    mut query: Query<(Entity, &Location, Option<&mut PreviousLocation>)>,
-    mut commands: Commands,
-) {
+pub fn add_previous_location(mut query: Query<(Entity, &Location, Option<&mut PreviousLocation>)>, mut commands: Commands) {
     for (entity, loc, prev_loc) in query.iter_mut() {
         if let Some(mut prev_loc) = prev_loc {
             prev_loc.0 = *loc;
@@ -492,21 +474,60 @@ pub fn add_previous_location(
 pub fn handle_child_syncing(
     initial_query: Query<Entity, (Without<Children>, Without<ChunkEntity>)>,
     parent_query: Query<&Parent>,
-    mut data_query: Query<(
-        &mut Location,
-        &mut Transform,
-        &mut PreviousLocation,
-        &GlobalTransform,
-    )>,
+    mut data_query: Query<(&mut Location, &mut Transform, &mut PreviousLocation, &GlobalTransform)>,
 ) {
     for entity in initial_query.iter() {
         sync_self_with_parents(entity, &parent_query, &mut data_query);
     }
 }
 
+fn on_add_location_without_transform(
+    mut query: Query<(Entity, &mut Location, Option<&BundleStartingRotation>), (Added<Location>, Without<Transform>, Without<PlayerWorld>)>,
+    worlds: Query<(&Location, &PhysicsWorld), With<PlayerWorld>>,
+    mut commands: Commands,
+) {
+    for (needs_transform_entity, mut my_loc, starting_rotation) in query.iter_mut() {
+        let mut best_dist = f32::MAX;
+        let mut best_physics_world = None;
+        let mut best_player_world_loc = None;
+
+        for (world_loc, phys_world) in worlds.iter() {
+            let dist = world_loc.distance_sqrd(&my_loc);
+
+            if dist < best_dist {
+                best_dist = dist;
+                best_physics_world = Some(*phys_world);
+                best_player_world_loc = Some(world_loc);
+            }
+        }
+
+        let rotation = starting_rotation.map(|x| x.0).unwrap_or(Quat::IDENTITY);
+
+        if let (Some(best_physics_world), Some(best_player_world_loc)) = (best_physics_world, best_player_world_loc) {
+            let transform = Transform::from_translation(best_player_world_loc.relative_coords_to(&my_loc)).with_rotation(rotation);
+
+            my_loc.last_transform_loc = Some(transform.translation);
+
+            commands
+                .entity(needs_transform_entity)
+                .insert((TransformBundle::from_transform(transform), best_physics_world));
+        } else {
+            warn!("Location bundle added before there was a player world!");
+            let transform = Transform::from_translation(my_loc.absolute_coords_f32()).with_rotation(rotation);
+
+            my_loc.last_transform_loc = Some(transform.translation);
+
+            commands
+                .entity(needs_transform_entity)
+                .insert(TransformBundle::from_transform(transform));
+        }
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.register_type::<Location>()
-        .register_type::<PreviousLocation>();
+        .register_type::<PreviousLocation>()
+        .add_systems(Update, on_add_location_without_transform);
 }
 
 #[cfg(test)]
@@ -542,11 +563,7 @@ mod tests {
         let l1 = Location::new(Vec3::new(15.0, 15.0, 15.0), Sector::new(20, -20, 20));
         let l2 = Location::new(Vec3::new(-15.0, -15.0, -15.0), Sector::new(19, -21, 19));
 
-        let result = Vec3::new(
-            -30.0 - SECTOR_DIMENSIONS,
-            -30.0 - SECTOR_DIMENSIONS,
-            -30.0 - SECTOR_DIMENSIONS,
-        );
+        let result = Vec3::new(-30.0 - SECTOR_DIMENSIONS, -30.0 - SECTOR_DIMENSIONS, -30.0 - SECTOR_DIMENSIONS);
 
         assert_eq!(l1.relative_coords_to(&l2), result);
     }
@@ -556,11 +573,7 @@ mod tests {
         let l1 = Location::new(Vec3::new(15.0, 15.0, 15.0), Sector::new(20, -20, 20));
         let l2 = Location::new(Vec3::new(-15.0, -15.0, -15.0), Sector::new(21, -19, 21));
 
-        let result = Vec3::new(
-            -30.0 + SECTOR_DIMENSIONS,
-            -30.0 + SECTOR_DIMENSIONS,
-            -30.0 + SECTOR_DIMENSIONS,
-        );
+        let result = Vec3::new(-30.0 + SECTOR_DIMENSIONS, -30.0 + SECTOR_DIMENSIONS, -30.0 + SECTOR_DIMENSIONS);
 
         assert_eq!(l1.relative_coords_to(&l2), result);
     }

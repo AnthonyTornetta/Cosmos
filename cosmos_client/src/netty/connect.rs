@@ -33,9 +33,7 @@ fn new_netcode_transport(host: &str) -> NetcodeClientTransport {
     let server_addr = format!("{host}:{port}").parse().unwrap();
     let socket = UdpSocket::bind("0.0.0.0:0").unwrap();
 
-    socket
-        .set_nonblocking(true)
-        .expect("Unable to make UDP non-blocking!");
+    socket.set_nonblocking(true).expect("Unable to make UDP non-blocking!");
 
     let current_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
     let client_id = current_time.as_millis() as u64;
@@ -82,10 +80,7 @@ pub fn establish_connection(mut commands: Commands, host_config: Res<HostConfig>
 }
 
 /// Waits for a connection to be made, then changes the game state to `GameState::LoadingWorld`.
-pub fn wait_for_connection(
-    mut state_changer: ResMut<NextState<GameState>>,
-    transport: Res<NetcodeClientTransport>,
-) {
+pub fn wait_for_connection(mut state_changer: ResMut<NextState<GameState>>, transport: Res<NetcodeClientTransport>) {
     if transport.is_connected() {
         println!("Loading server data...");
         state_changer.set(GameState::LoadingWorld);
@@ -93,10 +88,7 @@ pub fn wait_for_connection(
 }
 
 /// Waits for the `LoadingWorld` state to be done loading, then transitions to the `GameState::Playing`
-pub fn wait_for_done_loading(
-    mut state_changer: ResMut<NextState<GameState>>,
-    query: Query<&Player, With<LocalPlayer>>,
-) {
+pub fn wait_for_done_loading(mut state_changer: ResMut<NextState<GameState>>, query: Query<&Player, With<LocalPlayer>>) {
     if query.get_single().is_ok() {
         println!("Got local player, starting game!");
         state_changer.set(GameState::Playing);

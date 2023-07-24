@@ -21,9 +21,7 @@ impl LoadingManager {
     pub fn register_loader(&mut self, event_writer: &mut EventWriter<AddLoadingEvent>) -> usize {
         self.next_id += 1;
 
-        event_writer.send(AddLoadingEvent {
-            loading_id: self.next_id,
-        });
+        event_writer.send(AddLoadingEvent { loading_id: self.next_id });
 
         self.next_id
     }
@@ -46,12 +44,7 @@ struct LoadingStatus<T: States + Clone + Copy> {
 }
 
 impl<T: States + Clone + Copy> LoadingStatus<T> {
-    pub fn new(
-        pre_loading_state: T,
-        loading_state: T,
-        post_loading_state: T,
-        done_state: T,
-    ) -> Self {
+    pub fn new(pre_loading_state: T, loading_state: T, post_loading_state: T, done_state: T) -> Self {
         Self {
             loaders: HashSet::new(),
             done: false,
@@ -80,7 +73,7 @@ fn monitor_loading<T: States + Clone + Copy>(
     }
 
     if loading_status.done {
-        let cur_state = state.0;
+        let cur_state = *state.get();
 
         if cur_state == loading_status.pre_loading_state {
             println!("Transitioning to loading state!");
@@ -100,12 +93,14 @@ fn monitor_loading<T: States + Clone + Copy>(
 }
 
 /// Sent when something is done loading during the game's loading states.
+#[derive(Event, Debug)]
 pub struct DoneLoadingEvent {
     /// The loading id assigned by `register_loader`
     pub loading_id: usize,
 }
 
 /// Sent when something starts loading during the game's loading states.
+#[derive(Event, Debug)]
 pub struct AddLoadingEvent {
     loading_id: usize,
 }
@@ -129,17 +124,10 @@ pub(super) fn register<T: States + Clone + Copy>(
 ) {
     app.add_event::<DoneLoadingEvent>()
         .add_event::<AddLoadingEvent>()
-        .add_system(
-            monitor_loading::<T>.run_if(
-                in_state(pre_loading_state)
-                    .or_else(in_state(loading_state).or_else(in_state(post_loading_state))),
-            ),
+        .add_systems(
+            Update,
+            monitor_loading::<T>.run_if(in_state(pre_loading_state).or_else(in_state(loading_state).or_else(in_state(post_loading_state)))),
         )
-        .insert_resource(LoadingStatus::new(
-            pre_loading_state,
-            loading_state,
-            post_loading_state,
-            done_state,
-        ))
+        .insert_resource(LoadingStatus::new(pre_loading_state, loading_state, post_loading_state, done_state))
         .insert_resource(LoadingManager::default());
 }

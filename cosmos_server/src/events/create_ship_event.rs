@@ -9,6 +9,7 @@ use crate::structure::ship::{loading::ShipNeedsCreated, server_ship_builder::Ser
 use crate::GameState;
 
 /// This event is done when a ship is being created
+#[derive(Debug, Event)]
 pub struct CreateShipEvent {
     /// Starting location of the ship
     pub ship_location: Location,
@@ -24,12 +25,7 @@ fn event_reader(mut event_reader: EventReader<CreateShipEvent>, mut commands: Co
 
         let builder = ServerShipBuilder::default();
 
-        builder.insert_ship(
-            &mut entity,
-            ev.ship_location,
-            Velocity::zero(),
-            &mut structure,
-        );
+        builder.insert_ship(&mut entity, ev.ship_location, Velocity::zero(), &mut structure);
 
         entity.insert(structure).insert(ShipNeedsCreated);
     }
@@ -37,5 +33,5 @@ fn event_reader(mut event_reader: EventReader<CreateShipEvent>, mut commands: Co
 
 pub(super) fn register(app: &mut App) {
     app.add_event::<CreateShipEvent>()
-        .add_system(event_reader.in_set(OnUpdate(GameState::Playing)));
+        .add_systems(Update, event_reader.run_if(in_state(GameState::Playing)));
 }
