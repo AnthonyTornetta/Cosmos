@@ -71,10 +71,12 @@ impl TBiosphere<GrassBiosphereMarker, GrassChunkNeedsGeneratedEvent> for GrassBi
 fn make_block_ranges(block_registry: Res<Registry<Block>>, mut commands: Commands) {
     commands.insert_resource(
         BlockRanges::<GrassBiosphereMarker>::default()
-            .with_range("cosmos:stone", &block_registry, 5)
+            .with_range("cosmos:stone", &block_registry, 6)
             .expect("Stone missing")
-            .with_range("cosmos:dirt", &block_registry, 1)
+            .with_range("cosmos:dirt", &block_registry, 2)
             .expect("Dirt missing")
+            .with_range("cosmos:grass", &block_registry, 1)
+            .expect("Grass missing")
             .with_range("cosmos:short_grass", &block_registry, 0)
             .expect("Grass missing"),
     );
@@ -566,7 +568,7 @@ pub(super) fn register(app: &mut App) {
     register_biosphere::<GrassBiosphereMarker, GrassChunkNeedsGeneratedEvent>(
         app,
         "cosmos:biosphere_grass",
-        TemperatureRange::new(255.0, 500000.0),
+        TemperatureRange::new(255.0, 50000.0),
     );
 
     app.add_systems(

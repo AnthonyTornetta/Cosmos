@@ -268,7 +268,7 @@ fn stupid_parse(file: &str) -> Option<MeshInformation> {
     if let Ok(obj) = obj {
         let split = obj
             .split("\n")
-            .filter(|x| !x.trim().starts_with("#"))
+            .filter(|x| !x.trim().starts_with("#") && !x.trim().is_empty())
             .map(|x| x.to_owned())
             .collect::<Vec<String>>();
 
@@ -286,7 +286,7 @@ fn stupid_parse(file: &str) -> Option<MeshInformation> {
                         .map(|x| x.parse::<f32>().expect("bad parse"))
                         .collect::<Vec<f32>>()
                         .chunks(2)
-                        .map(|x| [x[0] / 16.0, x[1] / 16.0])
+                        .map(|x| [x[0], x[1]])
                         .collect::<Vec<[f32; 2]>>(),
                     arr[2]
                         .split(" ")
@@ -326,10 +326,172 @@ fn stupid_parse(file: &str) -> Option<MeshInformation> {
     }
 }
 
-fn register_custom_meshes(mut model_registry: ResMut<BlockMeshRegistry>) {
-    if let Some(mesh_info) = stupid_parse("assets/models/blocks/short_grass.stupid") {
-        model_registry.insert_value(BlockMeshInformation::new_single_mesh_info("cosmos:short_grass", mesh_info));
+fn txt_to_stupid(txt: String) -> MeshInformation {
+    let mut index_off = 0;
+
+    let mut done_colors = Vec::new();
+    let mut u_off = 0.0;
+    let mut v_off = 0.0;
+
+    const UV_OFF: f32 = 1.0 / 16.0;
+
+    let mut indices = vec![];
+    let mut uvs: Vec<[f32; 2]> = vec![];
+    let mut positions: Vec<[f32; 3]> = vec![];
+    let mut normals: Vec<[f32; 3]> = vec![];
+
+    for line in txt.split("\n").filter(|x| !x.starts_with("#") && !x.trim().is_empty()) {
+        let mut data = line.split(" ");
+        let (x, z, y) = (
+            data.next().expect("invalid txt").parse::<f32>().expect("invalid txt"),
+            data.next().expect("invalid txt").parse::<f32>().expect("invalid txt"),
+            data.next().expect("invalid txt").parse::<f32>().expect("invalid txt"),
+        );
+
+        let color = data.next().expect("invalid txt");
+        if done_colors.is_empty() {
+            done_colors.push(color.to_owned());
+        } else if !done_colors.contains(&color.to_owned()) {
+            done_colors.push(color.to_owned());
+            u_off += UV_OFF;
+            if u_off >= 0.998 {
+                u_off = 0.0;
+                v_off += UV_OFF;
+            }
+        }
+
+        let mut poses = Vec::with_capacity(24);
+        let mut local_uvs = Vec::new();
+
+        indices.append(&mut vec![
+            0 + index_off,
+            1 + index_off,
+            2 + index_off,
+            2 + index_off,
+            3 + index_off,
+            0 + index_off,
+        ]);
+        local_uvs.append(&mut vec![[0.0, 1.0], [0.0, 0.0], [1.0, 0.0], [1.0, 1.0]]);
+        poses.append(&mut vec![[0.5, -0.5, -0.5], [0.5, 0.5, -0.5], [0.5, 0.5, 0.5], [0.5, -0.5, 0.5]]);
+        normals.append(&mut [[1.0, 0.0, 0.0]; 4].to_vec());
+
+        index_off += 4;
+
+        indices.append(&mut vec![
+            0 + index_off,
+            1 + index_off,
+            2 + index_off,
+            2 + index_off,
+            3 + index_off,
+            0 + index_off,
+        ]);
+        local_uvs.append(&mut vec![[0.0, 1.0], [0.0, 0.0], [1.0, 0.0], [1.0, 1.0]]);
+        poses.append(&mut vec![
+            [-0.5, -0.5, 0.5],
+            [-0.5, 0.5, 0.5],
+            [-0.5, 0.5, -0.5],
+            [-0.5, -0.5, -0.5],
+        ]);
+        normals.append(&mut [[-1.0, 0.0, 0.0]; 4].to_vec());
+
+        index_off += 4;
+
+        indices.append(&mut vec![
+            0 + index_off,
+            1 + index_off,
+            2 + index_off,
+            2 + index_off,
+            3 + index_off,
+            0 + index_off,
+        ]);
+        local_uvs.append(&mut vec![[1.0, 1.0], [0.0, 1.0], [0.0, 0.0], [1.0, 0.0]]);
+        poses.append(&mut vec![[0.5, 0.5, -0.5], [-0.5, 0.5, -0.5], [-0.5, 0.5, 0.5], [0.5, 0.5, 0.5]]);
+        normals.append(&mut [[0.0, 1.0, 0.0]; 4].to_vec());
+
+        index_off += 4;
+
+        indices.append(&mut vec![
+            0 + index_off,
+            1 + index_off,
+            2 + index_off,
+            2 + index_off,
+            3 + index_off,
+            0 + index_off,
+        ]);
+        local_uvs.append(&mut vec![[1.0, 0.0], [0.0, 0.0], [0.0, 1.0], [1.0, 1.0]]);
+        poses.append(&mut vec![
+            [0.5, -0.5, 0.5],
+            [-0.5, -0.5, 0.5],
+            [-0.5, -0.5, -0.5],
+            [0.5, -0.5, -0.5],
+        ]);
+        normals.append(&mut [[0.0, -1.0, 0.0]; 4].to_vec());
+
+        index_off += 4;
+
+        indices.append(&mut vec![
+            0 + index_off,
+            1 + index_off,
+            2 + index_off,
+            2 + index_off,
+            3 + index_off,
+            0 + index_off,
+        ]);
+        local_uvs.append(&mut vec![[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]);
+        poses.append(&mut vec![
+            [-0.5, 0.5, -0.5],
+            [0.5, 0.5, -0.5],
+            [0.5, -0.5, -0.5],
+            [-0.5, -0.5, -0.5],
+        ]);
+        normals.append(&mut [[0.0, 0.0, -1.0]; 4].to_vec());
+
+        index_off += 4;
+
+        indices.append(&mut vec![
+            0 + index_off,
+            1 + index_off,
+            2 + index_off,
+            2 + index_off,
+            3 + index_off,
+            0 + index_off,
+        ]);
+        local_uvs.append(&mut vec![[0.0, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0]]);
+        poses.append(&mut vec![[-0.5, -0.5, 0.5], [0.5, -0.5, 0.5], [0.5, 0.5, 0.5], [-0.5, 0.5, 0.5]]);
+        normals.append(&mut [[0.0, 0.0, 1.0]; 4].to_vec());
+
+        index_off += 4;
+
+        for uv in local_uvs.iter_mut() {
+            uv[0] = uv[0] * UV_OFF + u_off;
+            uv[1] = uv[1] * UV_OFF + v_off;
+        }
+
+        for pos in poses.iter_mut() {
+            pos[0] = x / 16.0 + (pos[0] + 0.5) / 16.0;
+            pos[1] = y / 16.0 + (pos[1] + 0.5) / 16.0;
+            pos[2] = z / 16.0 + (pos[2] + 0.5) / 16.0;
+        }
+
+        println!("New pos: {poses:?}");
+        println!("UVS: {local_uvs:?}");
+
+        uvs.append(&mut local_uvs);
+        positions.append(&mut poses);
     }
+
+    MeshInformation {
+        indices,
+        normals,
+        positions,
+        uvs,
+    }
+}
+
+fn register_custom_meshes(mut model_registry: ResMut<BlockMeshRegistry>) {
+    let mesh_info = txt_to_stupid(fs::read_to_string("assets/models/blocks/test.txt").expect("missing file"));
+
+    model_registry.insert_value(BlockMeshInformation::new_single_mesh_info("cosmos:short_grass", mesh_info));
 }
 
 fn register_block_meshes(blocks: Res<Registry<Block>>, mut model_registry: ResMut<BlockMeshRegistry>) {
