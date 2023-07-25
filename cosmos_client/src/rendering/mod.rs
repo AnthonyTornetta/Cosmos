@@ -263,13 +263,16 @@ fn register_meshes(mut registry: ResMut<BlockMeshRegistry>) {
     ));
 }
 
-fn register_custom_meshes(mut model_registry: ResMut<BlockMeshRegistry>) {
-    let path = "assets/models/blocks/short_grass.stupid";
-
-    let obj = fs::read_to_string(path);
+fn stupid_parse(file: &str) -> Option<MeshInformation> {
+    let obj = fs::read_to_string(file);
     if let Ok(obj) = obj {
-        let split = obj.split("\n").map(|x| x.to_owned()).collect::<Vec<String>>();
+        let split = obj
+            .split("\n")
+            .filter(|x| !x.trim().starts_with("#"))
+            .map(|x| x.to_owned())
+            .collect::<Vec<String>>();
 
+        // parses a .stupid file the way it was intended - stupidly
         let x = split
             .chunks(4)
             .map(|arr| {
@@ -312,25 +315,20 @@ fn register_custom_meshes(mut model_registry: ResMut<BlockMeshRegistry>) {
             normals.append(&mut d);
         }
 
-        println!(
-            "IDCS: {}, UVS: {}, POSS: {}, NORMS: {}",
-            indices.len(),
-            uvs.len(),
-            positions.len(),
-            normals.len()
-        );
-
-        model_registry.insert_value(BlockMeshInformation::new_single_mesh_info(
-            "cosmos:short_grass",
-            MeshInformation {
-                indices,
-                uvs,
-                positions,
-                normals,
-            },
-        ));
+        Some(MeshInformation {
+            indices,
+            uvs,
+            positions,
+            normals,
+        })
     } else {
-        error!("Unable to load obj file at {path}");
+        None
+    }
+}
+
+fn register_custom_meshes(mut model_registry: ResMut<BlockMeshRegistry>) {
+    if let Some(mesh_info) = stupid_parse("assets/models/blocks/short_grass.stupid") {
+        model_registry.insert_value(BlockMeshInformation::new_single_mesh_info("cosmos:short_grass", mesh_info));
     }
 }
 
