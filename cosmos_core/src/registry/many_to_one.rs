@@ -13,7 +13,7 @@ use super::identifiable::Identifiable;
 use super::AddLinkError;
 
 /// Represents a many to one link
-#[derive(Resource, Default)]
+#[derive(Resource, Default, Debug)]
 pub struct ManyToOneRegistry<K: Identifiable + Sync + Send, V: Identifiable + Sync + Send> {
     values: HashMap<u16, V>,
 
@@ -65,6 +65,8 @@ impl<K: Identifiable + Sync + Send, V: Identifiable + Sync + Send> ManyToOneRegi
                 name: unlocalized_name.to_owned(),
             })?;
 
+        println!("Inserting {} : {unlocalized_name}", key.id());
+
         self.pointers.insert(key.id(), ptr);
 
         Ok(())
@@ -88,7 +90,7 @@ impl<K: Identifiable + Sync + Send, V: Identifiable + Sync + Send> ManyToOneRegi
 
     /// Returns true if this registry contains an entry for that key
     pub fn contains(&self, key: &K) -> bool {
-        self.values.contains_key(&key.id())
+        self.pointers.contains_key(&key.id())
     }
 }
 

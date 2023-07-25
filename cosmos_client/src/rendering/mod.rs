@@ -1,5 +1,7 @@
 //! Handles most of the rendering logic
 
+use std::fs;
+
 use bevy::{
     prelude::*,
     render::{mesh::Indices, render_resource::PrimitiveTopology},
@@ -261,8 +263,88 @@ fn register_meshes(mut registry: ResMut<BlockMeshRegistry>) {
     ));
 }
 
+fn register_custom_meshes(mut model_registry: ResMut<BlockMeshRegistry>) {
+    let path = "assets/models/blocks/short_grass.stupid";
+
+    let obj = fs::read_to_string(path);
+    if let Ok(obj) = obj {
+        let split = obj.split("\n").map(|x| x.to_owned()).collect::<Vec<String>>();
+
+        let x = split
+            .chunks(4)
+            .map(|arr| {
+                (
+                    arr[0]
+                        .split(" ")
+                        .map(|x| x.parse::<u32>().expect("bad parse"))
+                        .collect::<Vec<u32>>(),
+                    arr[1]
+                        .split(" ")
+                        .map(|x| x.parse::<f32>().expect("bad parse"))
+                        .collect::<Vec<f32>>()
+                        .chunks(2)
+                        .map(|x| [x[0] / 16.0, x[1] / 16.0])
+                        .collect::<Vec<[f32; 2]>>(),
+                    arr[2]
+                        .split(" ")
+                        .map(|x| x.parse::<f32>().expect("bad parse"))
+                        .collect::<Vec<f32>>()
+                        .chunks(3)
+                        .map(|x| [x[0], x[1], x[2]])
+                        .collect::<Vec<[f32; 3]>>(),
+                    arr[3]
+                        .split(" ")
+                        .map(|x| x.parse::<f32>().expect("bad parse"))
+                        .collect::<Vec<f32>>()
+                        .chunks(3)
+                        .map(|x| [x[0], x[1], x[2]])
+                        .collect::<Vec<[f32; 3]>>(),
+                )
+            })
+            .collect::<Vec<(Vec<u32>, Vec<[f32; 2]>, Vec<[f32; 3]>, Vec<[f32; 3]>)>>();
+
+        let (mut indices, mut uvs, mut positions, mut normals) = (Vec::new(), Vec::new(), Vec::new(), Vec::new());
+
+        for (mut a, mut b, mut c, mut d) in x {
+            indices.append(&mut a);
+            uvs.append(&mut b);
+            positions.append(&mut c);
+            normals.append(&mut d);
+        }
+
+        println!(
+            "IDCS: {}, UVS: {}, POSS: {}, NORMS: {}",
+            indices.len(),
+            uvs.len(),
+            positions.len(),
+            normals.len()
+        );
+
+        model_registry.insert_value(BlockMeshInformation::new_single_mesh_info(
+            "cosmos:short_grass",
+            MeshInformation {
+                indices,
+                uvs,
+                positions,
+                normals,
+            },
+        ));
+    } else {
+        error!("Unable to load obj file at {path}");
+    }
+}
+
 fn register_block_meshes(blocks: Res<Registry<Block>>, mut model_registry: ResMut<BlockMeshRegistry>) {
+    if let Some(grass_block) = blocks.from_id("cosmos:short_grass") {
+        println!("Doing {}", grass_block.unlocalized_name());
+        model_registry
+            .add_link(grass_block, "cosmos:short_grass")
+            .expect("Missing cosmos:short_grass model!");
+    }
+
     for block in blocks.iter() {
+        println!("Doing {} ({})", block.unlocalized_name(), block.id());
+
         if !model_registry.contains(block) {
             model_registry
                 .add_link(block, "cosmos:base_block")
@@ -278,6 +360,6 @@ pub(super) fn register(app: &mut App) {
     many_to_one::create_many_to_one_registry::<Block, BlockMeshInformation>(app);
     structure_renderer::register(app);
 
-    app.add_systems(OnEnter(GameState::Loading), register_meshes)
+    app.add_systems(OnEnter(GameState::Loading), (register_meshes, register_custom_meshes))
         .add_systems(OnExit(GameState::PostLoading), register_block_meshes);
 }

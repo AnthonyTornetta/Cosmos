@@ -75,7 +75,7 @@ fn make_block_ranges(block_registry: Res<Registry<Block>>, mut commands: Command
             .expect("Stone missing")
             .with_range("cosmos:dirt", &block_registry, 1)
             .expect("Dirt missing")
-            .with_range("cosmos:grass", &block_registry, 0)
+            .with_range("cosmos:short_grass", &block_registry, 0)
             .expect("Grass missing"),
     );
 }
@@ -566,7 +566,7 @@ pub(super) fn register(app: &mut App) {
     register_biosphere::<GrassBiosphereMarker, GrassChunkNeedsGeneratedEvent>(
         app,
         "cosmos:biosphere_grass",
-        TemperatureRange::new(255.0, 500.0),
+        TemperatureRange::new(255.0, 500000.0),
     );
 
     app.add_systems(

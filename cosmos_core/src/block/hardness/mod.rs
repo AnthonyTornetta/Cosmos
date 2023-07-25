@@ -77,6 +77,7 @@ fn register_block_hardness(blocks: Res<Registry<Block>>, mut registry: ResMut<Re
     register_hardness(&mut registry, 20.0, &blocks, "cosmos:laser_cannon");
     register_hardness(&mut registry, 20.0, &blocks, "cosmos:thruster");
     register_hardness(&mut registry, 20.0, &blocks, "cosmos:light");
+    register_hardness(&mut registry, 0.1, &blocks, "cosmos:short_grass");
 
     register_hardness(&mut registry, 100.0, &blocks, "cosmos:ship_hull");
     register_hardness(&mut registry, 100.0, &blocks, "cosmos:glass");
