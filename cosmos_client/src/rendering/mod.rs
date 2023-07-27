@@ -13,6 +13,7 @@ use cosmos_core::{
         many_to_one::{self, ManyToOneRegistry},
         Registry,
     },
+    structure::chunk::BlockInfo,
 };
 
 use crate::state::game_state::GameState;
@@ -326,7 +327,9 @@ fn stupid_parse(file: &str) -> Option<MeshInformation> {
     }
 }
 
-fn txt_to_stupid(txt: String) -> MeshInformation {
+#[allow(dead_code)]
+/// converts a goxel export txt file to mesh code
+fn txt_to_mesh_info(txt: String) -> MeshInformation {
     let mut index_off = 0;
 
     let mut done_colors = Vec::new();
@@ -521,7 +524,7 @@ fn register_custom_meshes(mut model_registry: ResMut<BlockMeshRegistry>) {
     model_registry.insert_value(BlockMeshInformation::new_single_mesh_info("cosmos:short_grass", mesh_info));
 }
 
-fn register_block_meshes(blocks: Res<Registry<Block>>, mut model_registry: ResMut<BlockMeshRegistry>) {
+fn register_block_meshes(blocks: Res<Registry<Block>>, block_info: Res<BlockInfo>, mut model_registry: ResMut<BlockMeshRegistry>) {
     if let Some(grass_block) = blocks.from_id("cosmos:short_grass") {
         println!("Doing {}", grass_block.unlocalized_name());
         model_registry

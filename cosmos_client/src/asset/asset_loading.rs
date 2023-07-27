@@ -368,6 +368,7 @@ fn load_block_textxures(
     atlas: Res<MainAtlas>,
     server: Res<AssetServer>,
     mut registry: ResMut<Registry<BlockTextureIndex>>,
+    mut info_registry: ResMut<Registry<BlockInfo>>,
 ) {
     if let Some(index) = atlas.atlas.get_texture_index(&server.get_handle("images/blocks/missing.png")) {
         registry.register(BlockTextureIndex {
