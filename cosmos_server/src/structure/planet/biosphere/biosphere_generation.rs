@@ -448,8 +448,8 @@ fn generate_corner_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + 
     }
 }
 
-const MIRROR_MIN: usize = 48;
-const MIRROR_MAX: usize = 32;
+const MIRROR_MIN: usize = 100;
+const MIRROR_MAX: usize = 0;
 /// Used to change the algorithm used for base terrain generation.
 ///
 /// Try tweaking the values of GenerationParemeters first before making your own custom generation function.
@@ -485,9 +485,9 @@ pub trait BiosphereGenerationStrategy {
         )
     }
 
-    fn get_mirror_coefficient(a: usize, middle_air_start: usize, s_dimensions: usize) -> f64 {
-        let max = middle_air_start - MIRROR_MAX;
-        let min = middle_air_start - MIRROR_MIN;
+    fn get_mirror_coefficient(a: usize, intersection: usize, s_dimensions: usize) -> f64 {
+        let max = intersection - MIRROR_MAX;
+        let min = intersection - MIRROR_MIN;
         if a > max || a < s_dimensions - max {
             1.0
         } else if a > min {
@@ -497,6 +497,11 @@ pub trait BiosphereGenerationStrategy {
         } else {
             0.0
         }
+    }
+
+    fn merge(height: f64, c1: f64, c1_height: f64, c2: f64, c2_height: f64) -> usize {
+        let c = if c1 + c2 == 0.0 { 0.0 } else { c1.max(c2) / (c1 + c2) };
+        (height * (1.0 - c * (c1 + c2)) + c * (c1 * c1_height + c2 * c2_height)) as usize
     }
 
     fn mirror(
@@ -510,30 +515,26 @@ pub trait BiosphereGenerationStrategy {
         iterations: usize,
         s_dimensions: usize,
     ) -> usize {
+        let min = middle_air_start - (amplitude * iterations as f64) as usize - MIRROR_MIN;
+
         // X.
-        let x_coefficient = Self::get_mirror_coefficient(bx, middle_air_start, s_dimensions);
+        let mut x_coefficient = 0.0;
         let mut x_height = 0.0;
-        if x_coefficient > 0.0 {
-            let x_face: BlockFace = if bx > s_dimensions / 2 { BlockFace::Right } else { BlockFace::Left };
-            let x_seed = match x_face {
-                BlockFace::Right => match block_up {
-                    BlockFace::Front => (s_dimensions, by, bx),
-                    BlockFace::Back => (s_dimensions, by, s_dimensions - bx),
-                    BlockFace::Top => (s_dimensions, bx, bz),
-                    BlockFace::Bottom => (s_dimensions, s_dimensions - bx, bz),
-                    BlockFace::Right => (s_dimensions, by, bz),
-                    BlockFace::Left => panic!("Right side adjacent to left side."),
-                },
-                BlockFace::Left => match block_up {
-                    BlockFace::Front => (0, by, s_dimensions - bx),
-                    BlockFace::Back => (0, by, bx),
-                    BlockFace::Top => (0, s_dimensions - bx, bz),
-                    BlockFace::Bottom => (0, bx, bz),
-                    BlockFace::Right => panic!("Left side adjacent to right side."),
-                    BlockFace::Left => (0, by, bz),
-                },
-                _ => panic!("X face assigned a BlockFace other than right or left."),
+        if bx > min || bx < s_dimensions - min {
+            let x_coord = if bx > s_dimensions / 2 {
+                middle_air_start
+            } else {
+                s_dimensions - middle_air_start
             };
+            let x_seed = match block_up {
+                BlockFace::Front => (x_coord, by, middle_air_start),
+                BlockFace::Back => (x_coord, by, s_dimensions - middle_air_start),
+                BlockFace::Top => (x_coord, middle_air_start, bz),
+                BlockFace::Bottom => (x_coord, s_dimensions - middle_air_start, bz),
+                BlockFace::Right => (x_coord, by, bz),
+                BlockFace::Left => (x_coord, by, bz),
+            };
+
             x_height = self::get_block_height(
                 noise_generator,
                 x_seed,
@@ -543,31 +544,25 @@ pub trait BiosphereGenerationStrategy {
                 delta,
                 iterations,
             ) as f64;
+            x_coefficient = Self::get_mirror_coefficient(bx, x_height as usize, s_dimensions);
         }
 
         // Y.
-        let y_coefficient = Self::get_mirror_coefficient(by, middle_air_start, s_dimensions);
+        let mut y_coefficient = 0.0;
         let mut y_height = 0.0;
-        if y_coefficient > 0.0 {
-            let y_face: BlockFace = if by > s_dimensions / 2 { BlockFace::Top } else { BlockFace::Bottom };
-            let y_seed = match y_face {
-                BlockFace::Top => match block_up {
-                    BlockFace::Front => (bx, s_dimensions, by),
-                    BlockFace::Back => (bx, s_dimensions, s_dimensions - by),
-                    BlockFace::Top => (bx, s_dimensions, bz),
-                    BlockFace::Bottom => panic!("Top side adjacent to bottom side."),
-                    BlockFace::Right => (by, s_dimensions, bz),
-                    BlockFace::Left => (s_dimensions - by, s_dimensions, bz),
-                },
-                BlockFace::Bottom => match block_up {
-                    BlockFace::Front => (bx, 0, s_dimensions - by),
-                    BlockFace::Back => (bx, 0, by),
-                    BlockFace::Top => panic!("Bottom side adjacent to top side."),
-                    BlockFace::Bottom => (bx, 0, bz),
-                    BlockFace::Right => (s_dimensions - by, 0, bz),
-                    BlockFace::Left => (by, 0, bz),
-                },
-                _ => panic!("Y face assigned a BlockFace other than top or bottom."),
+        if by > min || by < s_dimensions - min {
+            let y_coord = if by > s_dimensions / 2 {
+                middle_air_start
+            } else {
+                s_dimensions - middle_air_start
+            };
+            let y_seed = match block_up {
+                BlockFace::Front => (bx, y_coord, middle_air_start),
+                BlockFace::Back => (bx, y_coord, s_dimensions - middle_air_start),
+                BlockFace::Top => (bx, y_coord, bz),
+                BlockFace::Bottom => (bx, y_coord, bz),
+                BlockFace::Right => (middle_air_start, y_coord, bz),
+                BlockFace::Left => (s_dimensions - middle_air_start, y_coord, bz),
             };
             y_height = self::get_block_height(
                 noise_generator,
@@ -578,31 +573,25 @@ pub trait BiosphereGenerationStrategy {
                 delta,
                 iterations,
             ) as f64;
+            y_coefficient = Self::get_mirror_coefficient(by, y_height as usize, s_dimensions);
         }
 
         // Z.
-        let z_coefficient = Self::get_mirror_coefficient(bz, middle_air_start, s_dimensions);
+        let mut z_coefficient = 0.0;
         let mut z_height = 0.0;
-        if z_coefficient > 0.0 {
-            let z_face: BlockFace = if bz > s_dimensions / 2 { BlockFace::Front } else { BlockFace::Back };
-            let z_seed = match z_face {
-                BlockFace::Front => match block_up {
-                    BlockFace::Front => (bx, by, s_dimensions),
-                    BlockFace::Back => panic!("Front side adjacent to back side."),
-                    BlockFace::Top => (bx, bz, s_dimensions),
-                    BlockFace::Bottom => (bx, s_dimensions - bz, s_dimensions),
-                    BlockFace::Right => (bz, by, s_dimensions),
-                    BlockFace::Left => (s_dimensions - bz, by, s_dimensions),
-                },
-                BlockFace::Back => match block_up {
-                    BlockFace::Front => panic!("Back side adjacent to front side."),
-                    BlockFace::Back => (bx, by, 0),
-                    BlockFace::Top => (bx, s_dimensions - bz, 0),
-                    BlockFace::Bottom => (bx, bz, 0),
-                    BlockFace::Right => (s_dimensions - bz, by, 0),
-                    BlockFace::Left => (bz, by, 0),
-                },
-                _ => panic!("Z face assigned a BlockFace other than front or back."),
+        if bz > min || bz < s_dimensions - min {
+            let z_coord = if bz > s_dimensions / 2 {
+                middle_air_start
+            } else {
+                s_dimensions - middle_air_start
+            };
+            let z_seed = match block_up {
+                BlockFace::Front => (bx, by, z_coord),
+                BlockFace::Back => (bx, by, z_coord),
+                BlockFace::Top => (bx, middle_air_start, z_coord),
+                BlockFace::Bottom => (bx, s_dimensions - middle_air_start, z_coord),
+                BlockFace::Right => (middle_air_start, by, z_coord),
+                BlockFace::Left => (s_dimensions - middle_air_start, by, z_coord),
             };
             z_height = self::get_block_height(
                 noise_generator,
@@ -613,10 +602,19 @@ pub trait BiosphereGenerationStrategy {
                 delta,
                 iterations,
             ) as f64;
+            z_coefficient = Self::get_mirror_coefficient(bz, z_height as usize, s_dimensions);
         }
 
-        ((x_height * x_coefficient + y_height * y_coefficient + z_coefficient * z_height) / (x_coefficient + y_coefficient + z_coefficient))
-            .round() as usize
+        let height = match block_up {
+            BlockFace::Front | BlockFace::Back => Self::merge(z_height, x_coefficient, x_height, y_coefficient, y_height),
+            BlockFace::Top | BlockFace::Bottom => Self::merge(y_height, x_coefficient, x_height, z_coefficient, z_height),
+            BlockFace::Right | BlockFace::Left => Self::merge(x_height, y_coefficient, y_height, z_coefficient, z_height),
+        };
+        if height < 100 {
+            panic!("Low height ({height}) for coordinates ({bx}, {by}, {bz}). cx = {x_coefficient}, hx = {x_height}. cy = {y_coefficient}, hy = {y_height}. cz = {z_coefficient}, hz = {z_height}.");
+        } else {
+            height
+        }
     }
 
     /// Gets the top block's height
