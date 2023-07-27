@@ -1,10 +1,6 @@
 //! Responsible for the default generation of biospheres.
 
-// Fix corners (try fitting it all into an outer for-loop to reduce space usage).
-// Fix grass on top of grass around pulled-down edges.
-// Fix short stairways to heaven exactly on the 45 by limiting the number of grass blocks exactly on the 45.
-//   - Only one "top" block on the 45 per slice of the chunk, after that set the top values of all layers to 0 to ensure no block is below them.
-// Optimize (only compute noise function if coefficient is non-zero).
+// Fix corners.
 
 use std::{marker::PhantomData, mem::swap};
 
