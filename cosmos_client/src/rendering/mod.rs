@@ -340,15 +340,26 @@ fn txt_to_stupid(txt: String) -> MeshInformation {
     let mut positions: Vec<[f32; 3]> = vec![];
     let mut normals: Vec<[f32; 3]> = vec![];
 
-    for line in txt.split("\n").filter(|x| !x.starts_with("#") && !x.trim().is_empty()) {
-        let mut data = line.split(" ");
-        let (x, z, y) = (
-            data.next().expect("invalid txt").parse::<f32>().expect("invalid txt"),
-            data.next().expect("invalid txt").parse::<f32>().expect("invalid txt"),
-            data.next().expect("invalid txt").parse::<f32>().expect("invalid txt"),
-        );
+    let data = txt
+        .split("\n")
+        .filter(|x| !x.starts_with("#") && !x.trim().is_empty())
+        .map(|line| {
+            let mut data = line.split(" ");
+            let (x, z, y) = (
+                data.next().expect("invalid txt").parse::<f32>().expect("invalid txt"),
+                data.next().expect("invalid txt").parse::<f32>().expect("invalid txt"),
+                data.next().expect("invalid txt").parse::<f32>().expect("invalid txt"),
+            );
 
-        let color = data.next().expect("invalid txt");
+            let color = data.next().expect("invalid txt");
+
+            (x, y, z, color)
+        })
+        .collect::<Vec<(f32, f32, f32, &str)>>();
+
+    for (x, y, z, color) in data.iter() {
+        let (x, y, z) = (*x, *y, *z);
+
         if done_colors.is_empty() {
             done_colors.push(color.to_owned());
         } else if !done_colors.contains(&color.to_owned()) {
@@ -363,104 +374,122 @@ fn txt_to_stupid(txt: String) -> MeshInformation {
         let mut poses = Vec::with_capacity(24);
         let mut local_uvs = Vec::new();
 
-        indices.append(&mut vec![
-            0 + index_off,
-            1 + index_off,
-            2 + index_off,
-            2 + index_off,
-            3 + index_off,
-            0 + index_off,
-        ]);
-        local_uvs.append(&mut vec![[0.0, 1.0], [0.0, 0.0], [1.0, 0.0], [1.0, 1.0]]);
-        poses.append(&mut vec![[0.5, -0.5, -0.5], [0.5, 0.5, -0.5], [0.5, 0.5, 0.5], [0.5, -0.5, 0.5]]);
-        normals.append(&mut [[1.0, 0.0, 0.0]; 4].to_vec());
+        // right
+        if !data.iter().any(|(xx, yy, zz, _)| *xx + 1.0 == x && *yy == y && *zz == z) {
+            indices.append(&mut vec![
+                0 + index_off,
+                1 + index_off,
+                2 + index_off,
+                2 + index_off,
+                3 + index_off,
+                0 + index_off,
+            ]);
+            local_uvs.append(&mut vec![[0.0, 1.0], [0.0, 0.0], [1.0, 0.0], [1.0, 1.0]]);
+            poses.append(&mut vec![[0.5, -0.5, -0.5], [0.5, 0.5, -0.5], [0.5, 0.5, 0.5], [0.5, -0.5, 0.5]]);
+            normals.append(&mut [[1.0, 0.0, 0.0]; 4].to_vec());
 
-        index_off += 4;
+            index_off += 4;
+        }
 
-        indices.append(&mut vec![
-            0 + index_off,
-            1 + index_off,
-            2 + index_off,
-            2 + index_off,
-            3 + index_off,
-            0 + index_off,
-        ]);
-        local_uvs.append(&mut vec![[0.0, 1.0], [0.0, 0.0], [1.0, 0.0], [1.0, 1.0]]);
-        poses.append(&mut vec![
-            [-0.5, -0.5, 0.5],
-            [-0.5, 0.5, 0.5],
-            [-0.5, 0.5, -0.5],
-            [-0.5, -0.5, -0.5],
-        ]);
-        normals.append(&mut [[-1.0, 0.0, 0.0]; 4].to_vec());
+        // left
+        if !data.iter().any(|(xx, yy, zz, _)| *xx - 1.0 == x && *yy == y && *zz == z) {
+            indices.append(&mut vec![
+                0 + index_off,
+                1 + index_off,
+                2 + index_off,
+                2 + index_off,
+                3 + index_off,
+                0 + index_off,
+            ]);
+            local_uvs.append(&mut vec![[0.0, 1.0], [0.0, 0.0], [1.0, 0.0], [1.0, 1.0]]);
+            poses.append(&mut vec![
+                [-0.5, -0.5, 0.5],
+                [-0.5, 0.5, 0.5],
+                [-0.5, 0.5, -0.5],
+                [-0.5, -0.5, -0.5],
+            ]);
+            normals.append(&mut [[-1.0, 0.0, 0.0]; 4].to_vec());
 
-        index_off += 4;
+            index_off += 4;
+        }
 
-        indices.append(&mut vec![
-            0 + index_off,
-            1 + index_off,
-            2 + index_off,
-            2 + index_off,
-            3 + index_off,
-            0 + index_off,
-        ]);
-        local_uvs.append(&mut vec![[1.0, 1.0], [0.0, 1.0], [0.0, 0.0], [1.0, 0.0]]);
-        poses.append(&mut vec![[0.5, 0.5, -0.5], [-0.5, 0.5, -0.5], [-0.5, 0.5, 0.5], [0.5, 0.5, 0.5]]);
-        normals.append(&mut [[0.0, 1.0, 0.0]; 4].to_vec());
+        // top
+        if !data.iter().any(|(xx, yy, zz, _)| *xx == x && *yy + 1.0 == y && *zz == z) {
+            indices.append(&mut vec![
+                0 + index_off,
+                1 + index_off,
+                2 + index_off,
+                2 + index_off,
+                3 + index_off,
+                0 + index_off,
+            ]);
+            local_uvs.append(&mut vec![[1.0, 1.0], [0.0, 1.0], [0.0, 0.0], [1.0, 0.0]]);
+            poses.append(&mut vec![[0.5, 0.5, -0.5], [-0.5, 0.5, -0.5], [-0.5, 0.5, 0.5], [0.5, 0.5, 0.5]]);
+            normals.append(&mut [[0.0, 1.0, 0.0]; 4].to_vec());
 
-        index_off += 4;
+            index_off += 4;
+        }
 
-        indices.append(&mut vec![
-            0 + index_off,
-            1 + index_off,
-            2 + index_off,
-            2 + index_off,
-            3 + index_off,
-            0 + index_off,
-        ]);
-        local_uvs.append(&mut vec![[1.0, 0.0], [0.0, 0.0], [0.0, 1.0], [1.0, 1.0]]);
-        poses.append(&mut vec![
-            [0.5, -0.5, 0.5],
-            [-0.5, -0.5, 0.5],
-            [-0.5, -0.5, -0.5],
-            [0.5, -0.5, -0.5],
-        ]);
-        normals.append(&mut [[0.0, -1.0, 0.0]; 4].to_vec());
+        // bottom
+        if !data.iter().any(|(xx, yy, zz, _)| *xx == x && *yy - 1.0 == y && *zz == z) {
+            indices.append(&mut vec![
+                0 + index_off,
+                1 + index_off,
+                2 + index_off,
+                2 + index_off,
+                3 + index_off,
+                0 + index_off,
+            ]);
+            local_uvs.append(&mut vec![[1.0, 0.0], [0.0, 0.0], [0.0, 1.0], [1.0, 1.0]]);
+            poses.append(&mut vec![
+                [0.5, -0.5, 0.5],
+                [-0.5, -0.5, 0.5],
+                [-0.5, -0.5, -0.5],
+                [0.5, -0.5, -0.5],
+            ]);
+            normals.append(&mut [[0.0, -1.0, 0.0]; 4].to_vec());
 
-        index_off += 4;
+            index_off += 4;
+        }
 
-        indices.append(&mut vec![
-            0 + index_off,
-            1 + index_off,
-            2 + index_off,
-            2 + index_off,
-            3 + index_off,
-            0 + index_off,
-        ]);
-        local_uvs.append(&mut vec![[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]);
-        poses.append(&mut vec![
-            [-0.5, 0.5, -0.5],
-            [0.5, 0.5, -0.5],
-            [0.5, -0.5, -0.5],
-            [-0.5, -0.5, -0.5],
-        ]);
-        normals.append(&mut [[0.0, 0.0, -1.0]; 4].to_vec());
+        // front
+        if !data.iter().any(|(xx, yy, zz, _)| *xx == x && *yy == y && *zz + 1.0 == z) {
+            indices.append(&mut vec![
+                0 + index_off,
+                1 + index_off,
+                2 + index_off,
+                2 + index_off,
+                3 + index_off,
+                0 + index_off,
+            ]);
+            local_uvs.append(&mut vec![[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]);
+            poses.append(&mut vec![
+                [-0.5, 0.5, -0.5],
+                [0.5, 0.5, -0.5],
+                [0.5, -0.5, -0.5],
+                [-0.5, -0.5, -0.5],
+            ]);
+            normals.append(&mut [[0.0, 0.0, -1.0]; 4].to_vec());
 
-        index_off += 4;
+            index_off += 4;
+        }
 
-        indices.append(&mut vec![
-            0 + index_off,
-            1 + index_off,
-            2 + index_off,
-            2 + index_off,
-            3 + index_off,
-            0 + index_off,
-        ]);
-        local_uvs.append(&mut vec![[0.0, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0]]);
-        poses.append(&mut vec![[-0.5, -0.5, 0.5], [0.5, -0.5, 0.5], [0.5, 0.5, 0.5], [-0.5, 0.5, 0.5]]);
-        normals.append(&mut [[0.0, 0.0, 1.0]; 4].to_vec());
+        // back
+        if !data.iter().any(|(xx, yy, zz, _)| *xx == x && *yy == y && *zz - 1.0 == z) {
+            indices.append(&mut vec![
+                0 + index_off,
+                1 + index_off,
+                2 + index_off,
+                2 + index_off,
+                3 + index_off,
+                0 + index_off,
+            ]);
+            local_uvs.append(&mut vec![[0.0, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0]]);
+            poses.append(&mut vec![[-0.5, -0.5, 0.5], [0.5, -0.5, 0.5], [0.5, 0.5, 0.5], [-0.5, 0.5, 0.5]]);
+            normals.append(&mut [[0.0, 0.0, 1.0]; 4].to_vec());
 
-        index_off += 4;
+            index_off += 4;
+        }
 
         for uv in local_uvs.iter_mut() {
             uv[0] = uv[0] * UV_OFF + u_off;
@@ -472,9 +501,6 @@ fn txt_to_stupid(txt: String) -> MeshInformation {
             pos[1] = y / 16.0 + (pos[1] + 0.5) / 16.0;
             pos[2] = z / 16.0 + (pos[2] + 0.5) / 16.0;
         }
-
-        println!("New pos: {poses:?}");
-        println!("UVS: {local_uvs:?}");
 
         uvs.append(&mut local_uvs);
         positions.append(&mut poses);
@@ -489,7 +515,8 @@ fn txt_to_stupid(txt: String) -> MeshInformation {
 }
 
 fn register_custom_meshes(mut model_registry: ResMut<BlockMeshRegistry>) {
-    let mesh_info = txt_to_stupid(fs::read_to_string("assets/models/blocks/test.txt").expect("missing file"));
+    // let mesh_info = txt_to_stupid(fs::read_to_string("assets/models/blocks/test.txt").expect("missing file"));
+    let mesh_info = stupid_parse("assets/models/blocks/short_grass.stupid").expect("missing file");
 
     model_registry.insert_value(BlockMeshInformation::new_single_mesh_info("cosmos:short_grass", mesh_info));
 }
