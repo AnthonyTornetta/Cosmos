@@ -16,13 +16,11 @@ Once you reach your destination, make a *hopefully safer than this* landing.
 ![](./showcase/ship_on_ground.png)
 
 ## Compilation
+Bevy, and thus Cosmos, requires the gcc compiler installed on your system to compile properly. If you are running Windows, you can install it with [Cygwin](https://www.mingw-w64.org/downloads/#cygwin).
+
 This project requires the latest nightly rust to compile. To swap to nightly, run the command 
 
 `rustup default nightly`.
-
-To compile, navigate to the root directory of the repo and run 
-
-`cargo build`.
 
 To run the client, navigate to the cosmos_client directory and run
 
@@ -33,6 +31,11 @@ For the server, navigate to the cosmos_server directory and run
 `cargo run`
 
 For release builds, append the `--release` flag to the build/run commands.
+
+To compile the workspace (not normally necessary), navigate to the root directory of the repo and run 
+
+`cargo build`
+
 
 ## Documentation
 
