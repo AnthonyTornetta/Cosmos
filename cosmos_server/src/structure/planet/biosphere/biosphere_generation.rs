@@ -515,26 +515,23 @@ pub trait BiosphereGenerationStrategy {
         iterations: usize,
         s_dimensions: usize,
     ) -> usize {
-        let min = middle_air_start - (amplitude * iterations as f64) as usize - MIRROR_MIN;
+        let top = middle_air_start - (amplitude * iterations as f64) as usize;
+        let bottom = s_dimensions - top;
+        let min = top - MIRROR_MIN;
 
         // X.
         let mut x_coefficient = 0.0;
         let mut x_height = 0.0;
         if bx > min || bx < s_dimensions - min {
-            let x_coord = if bx > s_dimensions / 2 {
-                middle_air_start
-            } else {
-                s_dimensions - middle_air_start
-            };
+            let x_coord = if bx > s_dimensions / 2 { top } else { bottom };
             let x_seed = match block_up {
-                BlockFace::Front => (x_coord, by, middle_air_start),
-                BlockFace::Back => (x_coord, by, s_dimensions - middle_air_start),
-                BlockFace::Top => (x_coord, middle_air_start, bz),
-                BlockFace::Bottom => (x_coord, s_dimensions - middle_air_start, bz),
+                BlockFace::Front => (x_coord, by.clamp(bottom, top), top),
+                BlockFace::Back => (x_coord, by.clamp(bottom, top), bottom),
+                BlockFace::Top => (x_coord, top, bz.clamp(bottom, top)),
+                BlockFace::Bottom => (x_coord, bottom, bz.clamp(bottom, top)),
                 BlockFace::Right => (x_coord, by, bz),
                 BlockFace::Left => (x_coord, by, bz),
             };
-
             x_height = self::get_block_height(
                 noise_generator,
                 x_seed,
@@ -551,18 +548,14 @@ pub trait BiosphereGenerationStrategy {
         let mut y_coefficient = 0.0;
         let mut y_height = 0.0;
         if by > min || by < s_dimensions - min {
-            let y_coord = if by > s_dimensions / 2 {
-                middle_air_start
-            } else {
-                s_dimensions - middle_air_start
-            };
+            let y_coord = if by > s_dimensions / 2 { top } else { bottom };
             let y_seed = match block_up {
-                BlockFace::Front => (bx, y_coord, middle_air_start),
-                BlockFace::Back => (bx, y_coord, s_dimensions - middle_air_start),
+                BlockFace::Front => (bx.clamp(bottom, top), y_coord, top),
+                BlockFace::Back => (bx.clamp(bottom, top), y_coord, bottom),
                 BlockFace::Top => (bx, y_coord, bz),
                 BlockFace::Bottom => (bx, y_coord, bz),
-                BlockFace::Right => (middle_air_start, y_coord, bz),
-                BlockFace::Left => (s_dimensions - middle_air_start, y_coord, bz),
+                BlockFace::Right => (top, y_coord, bz.clamp(bottom, top)),
+                BlockFace::Left => (bottom, y_coord, bz.clamp(bottom, top)),
             };
             y_height = self::get_block_height(
                 noise_generator,
@@ -580,18 +573,14 @@ pub trait BiosphereGenerationStrategy {
         let mut z_coefficient = 0.0;
         let mut z_height = 0.0;
         if bz > min || bz < s_dimensions - min {
-            let z_coord = if bz > s_dimensions / 2 {
-                middle_air_start
-            } else {
-                s_dimensions - middle_air_start
-            };
+            let z_coord = if bz > s_dimensions / 2 { top } else { bottom };
             let z_seed = match block_up {
                 BlockFace::Front => (bx, by, z_coord),
                 BlockFace::Back => (bx, by, z_coord),
-                BlockFace::Top => (bx, middle_air_start, z_coord),
-                BlockFace::Bottom => (bx, s_dimensions - middle_air_start, z_coord),
-                BlockFace::Right => (middle_air_start, by, z_coord),
-                BlockFace::Left => (s_dimensions - middle_air_start, by, z_coord),
+                BlockFace::Top => (bx.clamp(bottom, top), top, z_coord),
+                BlockFace::Bottom => (bx.clamp(bottom, top), bottom, z_coord),
+                BlockFace::Right => (top, by.clamp(bottom, top), z_coord),
+                BlockFace::Left => (bottom, by.clamp(bottom, top), z_coord),
             };
             z_height = self::get_block_height(
                 noise_generator,

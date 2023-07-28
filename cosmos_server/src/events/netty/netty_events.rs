@@ -96,7 +96,7 @@ fn handle_events_system(
                 };
 
                 let player = Player::new(name.clone(), client_id);
-                let starting_pos = Vec3::new(0.0, CHUNK_DIMENSIONSF * 50.0 / 2.0, 0.0);
+                let starting_pos = Vec3::new(600.0, CHUNK_DIMENSIONSF * 50.0 / 2.0, 600.0);
                 let location = Location::new(starting_pos, Sector::new(31, 31, 31));
                 let velocity = Velocity::default();
                 let inventory = generate_player_inventory(&items);
