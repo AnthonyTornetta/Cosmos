@@ -12,7 +12,7 @@ use bevy::{
 use cosmos_core::{
     block::{Block, BlockFace},
     loader::{AddLoadingEvent, DoneLoadingEvent, LoadingManager},
-    registry::{self, identifiable::Identifiable, Registry},
+    registry::{self, create_registry, identifiable::Identifiable, Registry},
 };
 use serde::{Deserialize, Serialize};
 
@@ -83,7 +83,7 @@ pub struct IlluminatedMaterial {
     pub material: Handle<StandardMaterial>,
 }
 
-fn setup(
+fn setup_textures(
     mut commands: Commands,
     server: Res<AssetServer>,
     mut loading: ResMut<AssetsLoading>,
@@ -357,18 +357,44 @@ impl Identifiable for BlockTextureIndex {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Default)]
-struct BlockInfo {
-    texture: HashMap<String, String>,
+#[derive(Serialize, Deserialize, Debug)]
+struct ReadBlockInfo {
+    texture: Option<HashMap<String, String>>,
     model: Option<String>,
 }
 
-fn load_block_textxures(
+#[derive(Debug)]
+/// Every block will have information about how to render it -- even air
+pub struct BlockRenderingInfo {
+    /// This maps textures ids to the various parts of its model.
+    pub texture: HashMap<String, String>,
+    /// This is the model id this block has
+    pub model: String,
+    unlocalized_name: String,
+    id: u16,
+}
+
+impl Identifiable for BlockRenderingInfo {
+    fn id(&self) -> u16 {
+        self.id
+    }
+
+    fn set_numeric_id(&mut self, id: u16) {
+        self.id = id;
+    }
+
+    fn unlocalized_name(&self) -> &str {
+        self.unlocalized_name.as_str()
+    }
+}
+
+/// Loads al the block rendering information from their json files.
+pub fn load_block_rendering_information(
     blocks: Res<Registry<Block>>,
     atlas: Res<MainAtlas>,
     server: Res<AssetServer>,
     mut registry: ResMut<Registry<BlockTextureIndex>>,
-    mut info_registry: ResMut<Registry<BlockInfo>>,
+    mut info_registry: ResMut<Registry<BlockRenderingInfo>>,
 ) {
     if let Some(index) = atlas.atlas.get_texture_index(&server.get_handle("images/blocks/missing.png")) {
         registry.register(BlockTextureIndex {
@@ -385,11 +411,29 @@ fn load_block_textxures(
         let json_path = format!("assets/blocks/{block_name}.json");
 
         let block_info = if let Ok(block_info) = fs::read(&json_path) {
-            serde_json::from_slice::<BlockInfo>(&block_info).unwrap_or_else(|_| panic!("Error reading json data in {json_path}"))
+            let read_info =
+                serde_json::from_slice::<ReadBlockInfo>(&block_info).unwrap_or_else(|_| panic!("Error reading json data in {json_path}"));
+
+            BlockRenderingInfo {
+                id: 0,
+                unlocalized_name: block.unlocalized_name().to_owned(),
+                model: read_info.model.unwrap_or("cosmos:base_block".into()),
+                texture: read_info.texture.unwrap_or_else(|| {
+                    let mut default_hashmap = HashMap::new();
+                    default_hashmap.insert("all".into(), block_name.to_owned());
+                    default_hashmap
+                }),
+            }
         } else {
-            let mut hh = HashMap::new();
-            hh.insert("all".into(), block_name.to_owned());
-            BlockInfo { texture: hh, model: None }
+            let mut default_hashmap = HashMap::new();
+            default_hashmap.insert("all".into(), block_name.to_owned());
+
+            BlockRenderingInfo {
+                texture: default_hashmap.clone(),
+                model: "cosmos:base_block".into(),
+                id: 0,
+                unlocalized_name: block.unlocalized_name().to_owned(),
+            }
         };
 
         let mut map = HashMap::new();
@@ -407,11 +451,15 @@ fn load_block_textxures(
             unlocalized_name: unlocalized_name.to_owned(),
             indices: BlockTextureIndicies::new(map),
         });
+
+        info_registry.register(block_info);
     }
 }
 
 pub(super) fn register(app: &mut App) {
     registry::create_registry::<BlockTextureIndex>(app);
+
+    create_registry::<BlockRenderingInfo>(app);
 
     app.insert_resource(AssetsLoading::default())
         .add_event::<AssetsDoneLoadingEvent>()
@@ -419,6 +467,6 @@ pub(super) fn register(app: &mut App) {
             Update,
             (check_assets_ready, assets_done_loading).run_if(in_state(GameState::PostLoading)),
         )
-        .add_systems(OnEnter(GameState::PostLoading), setup)
-        .add_systems(OnExit(GameState::PostLoading), load_block_textxures);
+        .add_systems(OnEnter(GameState::PostLoading), setup_textures)
+        .add_systems(OnExit(GameState::PostLoading), load_block_rendering_information);
 }

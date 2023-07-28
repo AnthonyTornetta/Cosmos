@@ -13,10 +13,12 @@ use cosmos_core::{
         many_to_one::{self, ManyToOneRegistry},
         Registry,
     },
-    structure::chunk::BlockInfo,
 };
 
-use crate::state::game_state::GameState;
+use crate::{
+    asset::asset_loading::{load_block_rendering_information, BlockRenderingInfo},
+    state::game_state::GameState,
+};
 
 mod structure_renderer;
 
@@ -517,28 +519,44 @@ fn txt_to_mesh_info(txt: String) -> MeshInformation {
     }
 }
 
-fn register_custom_meshes(mut model_registry: ResMut<BlockMeshRegistry>) {
-    // let mesh_info = txt_to_stupid(fs::read_to_string("assets/models/blocks/test.txt").expect("missing file"));
-    let mesh_info = stupid_parse("assets/models/blocks/short_grass.stupid").expect("missing file");
-
-    model_registry.insert_value(BlockMeshInformation::new_single_mesh_info("cosmos:short_grass", mesh_info));
-}
-
-fn register_block_meshes(blocks: Res<Registry<Block>>, block_info: Res<BlockInfo>, mut model_registry: ResMut<BlockMeshRegistry>) {
-    if let Some(grass_block) = blocks.from_id("cosmos:short_grass") {
-        println!("Doing {}", grass_block.unlocalized_name());
-        model_registry
-            .add_link(grass_block, "cosmos:short_grass")
-            .expect("Missing cosmos:short_grass model!");
-    }
-
+fn register_block_meshes(
+    blocks: Res<Registry<Block>>,
+    block_info: Res<Registry<BlockRenderingInfo>>,
+    mut model_registry: ResMut<BlockMeshRegistry>,
+) {
     for block in blocks.iter() {
         println!("Doing {} ({})", block.unlocalized_name(), block.id());
 
         if !model_registry.contains(block) {
-            model_registry
-                .add_link(block, "cosmos:base_block")
-                .expect("cosmos:base_block model link wasn't inserted successfully!");
+            if let Some(mesh_name) = block_info.from_id(block.unlocalized_name()).map(|x| x.model.as_ref()) {
+                println!("WOAH! Cool mesh name: {mesh_name} for {}", block.unlocalized_name());
+                if model_registry.add_link(block, mesh_name).is_err() {
+                    println!("WAS ERROR!");
+                    // model doesn't exist yet - add it
+                    let mut split = mesh_name.split(":");
+                    if let (Some(mod_id), Some(model_name), None) = (split.next(), split.next(), split.next()) {
+                        let path = format!("assets/{mod_id}/models/blocks/{model_name}.stupid");
+                        let mesh_info = stupid_parse(&path).expect(&format!("Unable to read/find file at {path}"));
+
+                        model_registry.insert_value(BlockMeshInformation {
+                            mesh_info: MeshType::AllFacesMesh(mesh_info),
+                            id: 0,
+                            unlocalized_name: mesh_name.into(),
+                        });
+
+                        model_registry
+                            .add_link(block, mesh_name)
+                            .expect("This was just added, so should always work.");
+                    } else {
+                        panic!("Invalid model name: {mesh_name}. Must be mod_id:model_name");
+                    }
+                }
+            } else {
+                warn!("Missing block info for {}", block.unlocalized_name());
+                model_registry
+                    .add_link(block, "cosmos:base_block")
+                    .expect("cosmos:base_block model link wasn't inserted successfully!");
+            }
         }
     }
 }
@@ -550,6 +568,8 @@ pub(super) fn register(app: &mut App) {
     many_to_one::create_many_to_one_registry::<Block, BlockMeshInformation>(app);
     structure_renderer::register(app);
 
-    app.add_systems(OnEnter(GameState::Loading), (register_meshes, register_custom_meshes))
-        .add_systems(OnExit(GameState::PostLoading), register_block_meshes);
+    app.add_systems(OnEnter(GameState::Loading), register_meshes).add_systems(
+        OnExit(GameState::PostLoading),
+        register_block_meshes.after(load_block_rendering_information),
+    );
 }
