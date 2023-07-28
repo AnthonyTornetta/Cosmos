@@ -16,7 +16,7 @@ Once you reach your destination, make a *hopefully safer than this* landing.
 ![](./showcase/ship_on_ground.png)
 
 ## Compilation
-Bevy, and thus Cosmos, requires the gcc compiler installed on your system to compile properly. If you are running Windows, you can install it with [Cygwin](https://www.mingw-w64.org/downloads/#cygwin).
+To get started, install your OS dependencies [here](https://bevyengine.org/learn/book/getting-started/setup/#install-os-dependencies). The dependencies section is all you need to do.
 
 This project requires the latest nightly rust to compile. To swap to nightly, run the command 
 
