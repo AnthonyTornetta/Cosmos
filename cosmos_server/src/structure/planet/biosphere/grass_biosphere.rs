@@ -17,8 +17,7 @@ use crate::GameState;
 
 use super::{
     biosphere_generation::{
-        generate_planet, notify_when_done_generating_terrain, BlockRanges, DefaultBiosphereGenerationStrategy, GenerateChunkFeaturesEvent,
-        GenerationParemeters,
+        generate_planet, notify_when_done_generating_terrain, BlockLayers, DefaultBiosphereGenerationStrategy, GenerateChunkFeaturesEvent,
     },
     generation_tools::fill,
     register_biosphere, TBiosphere, TGenerateChunkEvent, TemperatureRange,
@@ -66,13 +65,13 @@ impl TBiosphere<GrassBiosphereMarker, GrassChunkNeedsGeneratedEvent> for GrassBi
 
 fn make_block_ranges(block_registry: Res<Registry<Block>>, mut commands: Commands) {
     commands.insert_resource(
-        BlockRanges::<GrassBiosphereMarker>::default()
-            .with_range("cosmos:stone", &block_registry, 5)
-            .expect("Stone missing")
-            .with_range("cosmos:dirt", &block_registry, 1)
+        BlockLayers::<GrassBiosphereMarker>::default()
+            .add_noise_layer("cosmos:grass", &block_registry, 160, 0.05, 7.0, 9)
+            .expect("Grass missing")
+            .add_fixed_layer("cosmos:dirt", &block_registry, 1)
             .expect("Dirt missing")
-            .with_range("cosmos:grass", &block_registry, 0)
-            .expect("Grass missing"),
+            .add_fixed_layer("cosmos:stone", &block_registry, 4)
+            .expect("Stone missing"),
     );
 }
 
@@ -550,7 +549,7 @@ pub(super) fn register(app: &mut App) {
     register_biosphere::<GrassBiosphereMarker, GrassChunkNeedsGeneratedEvent>(
         app,
         "cosmos:biosphere_grass",
-        TemperatureRange::new(255.0, 500.0),
+        TemperatureRange::new(200.0, 500.0),
     );
 
     app.add_systems(
@@ -560,8 +559,7 @@ pub(super) fn register(app: &mut App) {
             generate_chunk_features,
         )
             .in_set(OnUpdate(GameState::Playing)),
-    )
-    .insert_resource(GenerationParemeters::<GrassBiosphereMarker>::new(0.05, 7.0, 9));
+    );
 
     app.add_system(make_block_ranges.in_schedule(OnEnter(GameState::PostLoading)));
 }

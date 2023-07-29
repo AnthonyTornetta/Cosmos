@@ -61,27 +61,25 @@ impl Planet {
         ))
     }
 
-    /// Gets the face of a planet this location is closest to
+    /// Gets the face of a planet this location is closest to. Prioritizes negative sides to make positive-to-negative edges look ok.
     pub fn planet_face_relative(relative_position: Vec3) -> BlockFace {
         let normalized = relative_position.normalize_or_zero();
         let abs = normalized.abs();
 
-        if abs.y >= abs.x && abs.y >= abs.z {
-            if normalized.y.is_positive() {
-                BlockFace::Top
-            } else {
-                BlockFace::Bottom
-            }
-        } else if abs.x >= abs.y && abs.x >= abs.z {
-            if normalized.x.is_positive() {
-                BlockFace::Right
-            } else {
-                BlockFace::Left
-            }
-        } else if normalized.z.is_positive() {
-            BlockFace::Front
-        } else {
+        let max = abs.x.max(abs.y).max(abs.z);
+
+        if normalized.z.is_negative() && abs.z == max {
             BlockFace::Back
+        } else if normalized.y.is_negative() && abs.y == max {
+            BlockFace::Bottom
+        } else if normalized.x.is_negative() && abs.x == max {
+            BlockFace::Left
+        } else if abs.z == max {
+            BlockFace::Front
+        } else if abs.y == max {
+            BlockFace::Top
+        } else {
+            BlockFace::Right
         }
     }
 

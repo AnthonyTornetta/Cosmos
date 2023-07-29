@@ -1,4 +1,4 @@
-//! Creates a molten planet
+//! Creates a ice planet
 
 use bevy::prelude::{
     App, Commands, Component, Entity, EventReader, EventWriter, IntoSystemAppConfig, IntoSystemConfigs, OnEnter, OnUpdate, Query, Res,
@@ -22,17 +22,17 @@ use super::{
 
 #[derive(Component, Debug, Default, Clone)]
 /// Marks that this is for a grass biosphere
-pub struct MoltenBiosphereMarker;
+pub struct IceBiosphereMarker;
 
 /// Marks that a grass chunk needs generated
-pub struct MoltenChunkNeedsGeneratedEvent {
+pub struct IceChunkNeedsGeneratedEvent {
     x: usize,
     y: usize,
     z: usize,
     structure_entity: Entity,
 }
 
-impl TGenerateChunkEvent for MoltenChunkNeedsGeneratedEvent {
+impl TGenerateChunkEvent for IceChunkNeedsGeneratedEvent {
     fn new(x: usize, y: usize, z: usize, structure_entity: Entity) -> Self {
         Self { x, y, z, structure_entity }
     }
@@ -47,26 +47,28 @@ impl TGenerateChunkEvent for MoltenChunkNeedsGeneratedEvent {
 }
 
 #[derive(Default, Debug)]
-/// Creates a molten planet
-pub struct MoltenBiosphere;
+/// Creates a ice planet
+pub struct IceBiosphere;
 
-impl TBiosphere<MoltenBiosphereMarker, MoltenChunkNeedsGeneratedEvent> for MoltenBiosphere {
-    fn get_marker_component(&self) -> MoltenBiosphereMarker {
-        MoltenBiosphereMarker {}
+impl TBiosphere<IceBiosphereMarker, IceChunkNeedsGeneratedEvent> for IceBiosphere {
+    fn get_marker_component(&self) -> IceBiosphereMarker {
+        IceBiosphereMarker {}
     }
 
-    fn get_generate_chunk_event(&self, x: usize, y: usize, z: usize, structure_entity: Entity) -> MoltenChunkNeedsGeneratedEvent {
-        MoltenChunkNeedsGeneratedEvent::new(x, y, z, structure_entity)
+    fn get_generate_chunk_event(&self, x: usize, y: usize, z: usize, structure_entity: Entity) -> IceChunkNeedsGeneratedEvent {
+        IceChunkNeedsGeneratedEvent::new(x, y, z, structure_entity)
     }
 }
 
 fn make_block_ranges(block_registry: Res<Registry<Block>>, mut commands: Commands) {
     commands.insert_resource(
-        BlockLayers::<MoltenBiosphereMarker>::default()
-            .with_sea_level_block("cosmos:cheese", &block_registry, 620)
-            .expect("Cheese missing!")
-            .add_noise_layer("cosmos:molten_stone", &block_registry, 160, 0.10, 7.0, 9)
-            .expect("Molten Stone missing"),
+        BlockLayers::<IceBiosphereMarker>::default()
+            .add_noise_layer("cosmos:ice", &block_registry, 160, 0.01, 4.0, 1)
+            .expect("Ice missing")
+            .add_fixed_layer("cosmos:water", &block_registry, 4)
+            .expect("Water missing")
+            .add_fixed_layer("cosmos:stone", &block_registry, 296)
+            .expect("Stone missing"),
     );
 }
 
@@ -149,7 +151,7 @@ fn generate_spikes(
 
 /// Sends a ChunkInitEvent for every chunk that's done generating, monitors when chunks are finished generating, makes trees.
 pub fn generate_chunk_features(
-    mut event_reader: EventReader<GenerateChunkFeaturesEvent<MoltenBiosphereMarker>>,
+    mut event_reader: EventReader<GenerateChunkFeaturesEvent<IceBiosphereMarker>>,
     mut init_event_writer: EventWriter<ChunkInitEvent>,
     mut block_event_writer: EventWriter<BlockChangedEvent>,
     mut structure_query: Query<(&mut Structure, &Location)>,
@@ -173,16 +175,12 @@ pub fn generate_chunk_features(
 }
 
 pub(super) fn register(app: &mut App) {
-    register_biosphere::<MoltenBiosphereMarker, MoltenChunkNeedsGeneratedEvent>(
-        app,
-        "cosmos:biosphere_molten",
-        TemperatureRange::new(450.0, 1000000000.0),
-    );
+    register_biosphere::<IceBiosphereMarker, IceChunkNeedsGeneratedEvent>(app, "cosmos:biosphere_ice", TemperatureRange::new(0.0, 250.0));
 
     app.add_systems(
         (
-            generate_planet::<MoltenBiosphereMarker, MoltenChunkNeedsGeneratedEvent, DefaultBiosphereGenerationStrategy>,
-            notify_when_done_generating_terrain::<MoltenBiosphereMarker>,
+            generate_planet::<IceBiosphereMarker, IceChunkNeedsGeneratedEvent, DefaultBiosphereGenerationStrategy>,
+            notify_when_done_generating_terrain::<IceBiosphereMarker>,
             generate_chunk_features,
         )
             .in_set(OnUpdate(GameState::Playing)),
