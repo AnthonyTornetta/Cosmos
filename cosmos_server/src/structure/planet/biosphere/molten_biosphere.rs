@@ -15,8 +15,7 @@ use crate::{init::init_world::ServerSeed, GameState};
 
 use super::{
     biosphere_generation::{
-        generate_planet, notify_when_done_generating_terrain, BlockLayer, BlockLayers, DefaultBiosphereGenerationStrategy,
-        GenerateChunkFeaturesEvent,
+        generate_planet, notify_when_done_generating_terrain, BlockLayers, DefaultBiosphereGenerationStrategy, GenerateChunkFeaturesEvent,
     },
     register_biosphere, TBiosphere, TGenerateChunkEvent, TemperatureRange,
 };

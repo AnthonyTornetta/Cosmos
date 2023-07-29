@@ -9,7 +9,7 @@ use bevy::{
     tasks::AsyncComputeTaskPool,
 };
 use cosmos_core::{
-    block::{self, Block, BlockFace},
+    block::{Block, BlockFace},
     physics::location::Location,
     registry::Registry,
     structure::{
@@ -17,11 +17,7 @@ use cosmos_core::{
         planet::{ChunkFaces, Planet},
         Structure,
     },
-    utils::{
-        array_utils::{flatten, flatten_2d},
-        resource_wrapper::ResourceWrapper,
-        timer::UtilsTimer,
-    },
+    utils::{array_utils::flatten_2d, resource_wrapper::ResourceWrapper, timer::UtilsTimer},
 };
 use futures_lite::future;
 use noise::NoiseFn;
@@ -485,6 +481,13 @@ pub trait BiosphereGenerationStrategy {
         )
     }
 
+    /// Returns how much the edge height should be averaged in from the other side it's approaching.
+    ///
+    /// Don't touch this unless you're doing something extremely crazy
+    ///
+    /// - `a` x, y, or z but generalized
+    /// - `intersection` is where the two edges are projected to meet, which is used as the limit to your height
+    /// - `s_dimensions` structure width/height/length
     fn get_mirror_coefficient(a: usize, intersection: usize, s_dimensions: usize) -> f64 {
         let max = intersection - MIRROR_MAX;
         let min = intersection - MIRROR_MIN;
@@ -499,11 +502,23 @@ pub trait BiosphereGenerationStrategy {
         }
     }
 
+    /// "Where the math happens" - Dan
+    ///
+    /// Combining two linear gradients so that they have the same end behaviors is "a little difficult". Thus the max functions.
+    ///
+    /// No touchy
+    ///
+    /// - `height` If you were at the center of the face of a planet - that's how tall this column would be
+    /// - `c1` The first edge coefficient (from `get_mirror_coefficient`)
+    /// - `c1_height` The height on c1's edge
+    /// - `c2` The second edge coefficient (from `get_mirror_coefficient`)
+    /// - `c2_height` The height on c2's edge
     fn merge(height: f64, c1: f64, c1_height: f64, c2: f64, c2_height: f64) -> usize {
         let c = if c1 + c2 == 0.0 { 0.0 } else { c1.max(c2) / (c1 + c2) };
         (height * (1.0 - c * (c1 + c2)) + c * (c1 * c1_height + c2 * c2_height)) as usize
     }
 
+    /// brownie points to whoever documents this
     fn mirror(
         noise_generator: &noise::OpenSimplex,
         block_up: BlockFace,
@@ -667,6 +682,7 @@ pub struct BlockLayer {
 }
 
 impl BlockLayer {
+    /// This layer doesn't use a noise function to generate its span, and is thus fixed at a certain depth.
     pub fn fixed_layer(middle_depth: usize) -> Self {
         Self {
             middle_depth,
@@ -676,6 +692,7 @@ impl BlockLayer {
         }
     }
 
+    /// This layer is based off a noise function and will appear at a varying depth based on the parameters
     pub fn noise_layer(middle_depth: usize, delta: f64, amplitude: f64, iterations: usize) -> Self {
         Self {
             middle_depth,
@@ -699,22 +716,7 @@ impl<T: Component + Clone + Default> BlockLayers<T> {
         Self::default()
     }
 
-    /// Use this to construct the various ranges of the blocks.
-    ///
-    /// The order you add the ranges in does not matter.
-    ///
-    /// n_blocks_from_top represents how many blocks down this block will appear.
-    /// For example, If grass was 0, dirt was 1, and stone was 5, it would generate as:
-    ///
-    /// - Grass
-    /// - Dirt
-    /// - Dirt
-    /// - Dirt
-    /// - Dirt
-    /// - Stone
-    /// - Stone
-    /// - Stone
-    /// - ... stone down to the bottom
+    /// Does what `add_fixed_layer` does, but makes the layer depth vary based off the noise parameters.
     pub fn add_noise_layer(
         mut self,
         block_id: &str,
@@ -732,6 +734,22 @@ impl<T: Component + Clone + Default> BlockLayers<T> {
         Ok(self)
     }
 
+    /// Use this to construct the various ranges of the blocks.
+    ///
+    /// The order you add the ranges in DOES matter.
+    ///
+    /// middle_depth represents how many blocks from the previous layer this block will appear.
+    /// For example, If grass was 100, dirt was 1, and stone was 4, it would generate as:
+    /// - 100 blocks of air
+    /// - Grass
+    /// - Dirt
+    /// - Dirt
+    /// - Dirt
+    /// - Dirt
+    /// - Stone
+    /// - Stone
+    /// - Stone
+    /// - ... stone down to the bottom
     pub fn add_fixed_layer(
         mut self,
         block_id: &str,
