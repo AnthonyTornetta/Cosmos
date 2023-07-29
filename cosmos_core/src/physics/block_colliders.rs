@@ -45,7 +45,7 @@ fn register_custom_colliders(blocks: Res<Registry<Block>>, mut registry: ResMut<
 
 fn register_all_colliders(blocks: Res<Registry<Block>>, mut registry: ResMut<Registry<BlockCollider>>) {
     for block in blocks.iter() {
-        if !registry.from_id(block.unlocalized_name()).is_some() {
+        if registry.from_id(block.unlocalized_name()).is_none() {
             registry.register(BlockCollider {
                 collider: BlockColliderType::Full,
                 id: 0,

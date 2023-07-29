@@ -113,17 +113,17 @@ impl MeshBuilder for CosmosMeshBuilder {
     }
 }
 
-#[derive(Debug, Reflect)]
+#[derive(Debug)]
 enum MeshType {
     /// The mesh is broken up into its 6 faces, which can all be stitched together to create the full mesh
     ///
     /// Make sure this is in the same order as the [`BlockFace::index`] method.
-    MultipleFaceMesh([MeshInformation; 6]),
+    MultipleFaceMesh(Box<[MeshInformation; 6]>),
     /// This mesh contains the model data for every face
-    AllFacesMesh(MeshInformation),
+    AllFacesMesh(Box<MeshInformation>),
 }
 
-#[derive(Debug, Reflect)]
+#[derive(Debug)]
 /// Stores all the mesh information for a block
 pub struct BlockMeshInformation {
     mesh_info: MeshType,
@@ -176,7 +176,7 @@ impl BlockMeshInformation {
                BlockFace::Front => 4,
                BlockFace::Back => 5,
             */
-            mesh_info: MeshType::MultipleFaceMesh([right, left, top, bottom, front, back]),
+            mesh_info: MeshType::MultipleFaceMesh(Box::new([right, left, top, bottom, front, back])),
             id: 0,
             unlocalized_name: unlocalized_name.into(),
         }
@@ -185,7 +185,7 @@ impl BlockMeshInformation {
     /// Creates the mesh information for a block.
     pub fn new_single_mesh_info(unlocalized_name: impl Into<String>, mesh_info: MeshInformation) -> Self {
         Self {
-            mesh_info: MeshType::AllFacesMesh(mesh_info),
+            mesh_info: MeshType::AllFacesMesh(Box::new(mesh_info)),
             id: 0,
             unlocalized_name: unlocalized_name.into(),
         }
@@ -218,7 +218,7 @@ impl BlockMeshInformation {
     pub fn info_for_whole_block(&self) -> Option<&MeshInformation> {
         match &self.mesh_info {
             MeshType::MultipleFaceMesh(_) => None,
-            MeshType::AllFacesMesh(mesh) => Some(&mesh),
+            MeshType::AllFacesMesh(mesh) => Some(mesh),
         }
     }
 }
@@ -270,8 +270,8 @@ fn stupid_parse(file: &str) -> Option<MeshInformation> {
     let obj = fs::read_to_string(file);
     if let Ok(obj) = obj {
         let split = obj
-            .split("\n")
-            .filter(|x| !x.trim().starts_with("#") && !x.trim().is_empty())
+            .split('\n')
+            .filter(|x| !x.trim().starts_with('#') && !x.trim().is_empty())
             .map(|x| x.to_owned())
             .collect::<Vec<String>>();
 
@@ -281,25 +281,25 @@ fn stupid_parse(file: &str) -> Option<MeshInformation> {
             .map(|arr| {
                 (
                     arr[0]
-                        .split(" ")
+                        .split(' ')
                         .map(|x| x.parse::<u32>().expect("bad parse"))
                         .collect::<Vec<u32>>(),
                     arr[1]
-                        .split(" ")
+                        .split(' ')
                         .map(|x| x.parse::<f32>().expect("bad parse"))
                         .collect::<Vec<f32>>()
                         .chunks(2)
                         .map(|x| [x[0], x[1]])
                         .collect::<Vec<[f32; 2]>>(),
                     arr[2]
-                        .split(" ")
+                        .split(' ')
                         .map(|x| x.parse::<f32>().expect("bad parse"))
                         .collect::<Vec<f32>>()
                         .chunks(3)
                         .map(|x| [x[0], x[1], x[2]])
                         .collect::<Vec<[f32; 3]>>(),
                     arr[3]
-                        .split(" ")
+                        .split(' ')
                         .map(|x| x.parse::<f32>().expect("bad parse"))
                         .collect::<Vec<f32>>()
                         .chunks(3)
@@ -346,10 +346,10 @@ fn txt_to_mesh_info(txt: String) -> MeshInformation {
     let mut normals: Vec<[f32; 3]> = vec![];
 
     let data = txt
-        .split("\n")
-        .filter(|x| !x.starts_with("#") && !x.trim().is_empty())
+        .split('\n')
+        .filter(|x| !x.starts_with('#') && !x.trim().is_empty())
         .map(|line| {
-            let mut data = line.split(" ");
+            let mut data = line.split(' ');
             let (x, z, y) = (
                 data.next().expect("invalid txt").parse::<f32>().expect("invalid txt"),
                 data.next().expect("invalid txt").parse::<f32>().expect("invalid txt"),
@@ -367,7 +367,7 @@ fn txt_to_mesh_info(txt: String) -> MeshInformation {
 
         if done_colors.is_empty() {
             done_colors.push(color.to_owned());
-        } else if !done_colors.contains(&color.to_owned()) {
+        } else if !done_colors.contains(color) {
             done_colors.push(color.to_owned());
             u_off += UV_OFF;
             if u_off >= 0.998 {
@@ -382,12 +382,12 @@ fn txt_to_mesh_info(txt: String) -> MeshInformation {
         // right
         if !data.iter().any(|(xx, yy, zz, _)| *xx + 1.0 == x && *yy == y && *zz == z) {
             indices.append(&mut vec![
-                0 + index_off,
+                index_off,
                 1 + index_off,
                 2 + index_off,
                 2 + index_off,
                 3 + index_off,
-                0 + index_off,
+                index_off,
             ]);
             local_uvs.append(&mut vec![[0.0, 1.0], [0.0, 0.0], [1.0, 0.0], [1.0, 1.0]]);
             poses.append(&mut vec![[0.5, -0.5, -0.5], [0.5, 0.5, -0.5], [0.5, 0.5, 0.5], [0.5, -0.5, 0.5]]);
@@ -399,12 +399,12 @@ fn txt_to_mesh_info(txt: String) -> MeshInformation {
         // left
         if !data.iter().any(|(xx, yy, zz, _)| *xx - 1.0 == x && *yy == y && *zz == z) {
             indices.append(&mut vec![
-                0 + index_off,
+                index_off,
                 1 + index_off,
                 2 + index_off,
                 2 + index_off,
                 3 + index_off,
-                0 + index_off,
+                index_off,
             ]);
             local_uvs.append(&mut vec![[0.0, 1.0], [0.0, 0.0], [1.0, 0.0], [1.0, 1.0]]);
             poses.append(&mut vec![
@@ -421,12 +421,12 @@ fn txt_to_mesh_info(txt: String) -> MeshInformation {
         // top
         if !data.iter().any(|(xx, yy, zz, _)| *xx == x && *yy + 1.0 == y && *zz == z) {
             indices.append(&mut vec![
-                0 + index_off,
+                index_off,
                 1 + index_off,
                 2 + index_off,
                 2 + index_off,
                 3 + index_off,
-                0 + index_off,
+                index_off,
             ]);
             local_uvs.append(&mut vec![[1.0, 1.0], [0.0, 1.0], [0.0, 0.0], [1.0, 0.0]]);
             poses.append(&mut vec![[0.5, 0.5, -0.5], [-0.5, 0.5, -0.5], [-0.5, 0.5, 0.5], [0.5, 0.5, 0.5]]);
@@ -438,12 +438,12 @@ fn txt_to_mesh_info(txt: String) -> MeshInformation {
         // bottom
         if !data.iter().any(|(xx, yy, zz, _)| *xx == x && *yy - 1.0 == y && *zz == z) {
             indices.append(&mut vec![
-                0 + index_off,
+                index_off,
                 1 + index_off,
                 2 + index_off,
                 2 + index_off,
                 3 + index_off,
-                0 + index_off,
+                index_off,
             ]);
             local_uvs.append(&mut vec![[1.0, 0.0], [0.0, 0.0], [0.0, 1.0], [1.0, 1.0]]);
             poses.append(&mut vec![
@@ -460,12 +460,12 @@ fn txt_to_mesh_info(txt: String) -> MeshInformation {
         // front
         if !data.iter().any(|(xx, yy, zz, _)| *xx == x && *yy == y && *zz + 1.0 == z) {
             indices.append(&mut vec![
-                0 + index_off,
+                index_off,
                 1 + index_off,
                 2 + index_off,
                 2 + index_off,
                 3 + index_off,
-                0 + index_off,
+                index_off,
             ]);
             local_uvs.append(&mut vec![[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]);
             poses.append(&mut vec![
@@ -482,12 +482,12 @@ fn txt_to_mesh_info(txt: String) -> MeshInformation {
         // back
         if !data.iter().any(|(xx, yy, zz, _)| *xx == x && *yy == y && *zz - 1.0 == z) {
             indices.append(&mut vec![
-                0 + index_off,
+                index_off,
                 1 + index_off,
                 2 + index_off,
                 2 + index_off,
                 3 + index_off,
-                0 + index_off,
+                index_off,
             ]);
             local_uvs.append(&mut vec![[0.0, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0]]);
             poses.append(&mut vec![[-0.5, -0.5, 0.5], [0.5, -0.5, 0.5], [0.5, 0.5, 0.5], [-0.5, 0.5, 0.5]]);
@@ -533,13 +533,13 @@ fn register_block_meshes(
                 if model_registry.add_link(block, mesh_name).is_err() {
                     println!("WAS ERROR!");
                     // model doesn't exist yet - add it
-                    let mut split = mesh_name.split(":");
+                    let mut split = mesh_name.split(':');
                     if let (Some(mod_id), Some(model_name), None) = (split.next(), split.next(), split.next()) {
                         let path = format!("assets/{mod_id}/models/blocks/{model_name}.stupid");
-                        let mesh_info = stupid_parse(&path).expect(&format!("Unable to read/find file at {path}"));
+                        let mesh_info = stupid_parse(&path).unwrap_or_else(|| panic!("Unable to parse/read/find file at {path}"));
 
                         model_registry.insert_value(BlockMeshInformation {
-                            mesh_info: MeshType::AllFacesMesh(mesh_info),
+                            mesh_info: MeshType::AllFacesMesh(Box::new(mesh_info)),
                             id: 0,
                             unlocalized_name: mesh_name.into(),
                         });
