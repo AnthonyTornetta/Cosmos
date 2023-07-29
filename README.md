@@ -55,7 +55,7 @@ To view the documentation, navigate to the `docs/` directory. To have it update 
 See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the list of current features/bugs in development.
 
 ## Release 0.0.4a (In Progress)
-- [ ] Galaxy Generation
+- [x] Galaxy Generation
   - [x] Stars procedurally generated in spiral-like pattern based on seed 
     - [x] Create star
       - [x] Light emits from star
@@ -70,11 +70,11 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
       - [x] Dynamically generate chunks & unload them based on players' positions close to planet
       - [x] Make generation work on all faces of planet
       - [x] Block orientation for every block
-  - [ ] Biospheres
+  - [x] Biospheres
     - [x] Speed up terrain generation
     - [x] Make molten biosphere
     - [x] Enhance grass biosphere
-    - [ ] Create icy biosphere
+    - [x] Create icy biosphere
   - [x] Asteroids
     - [x] For now just floating rocks in space
   - [x] Save generated universe
@@ -91,6 +91,7 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 
 ## Release 0.0.5a - The Aesthetic Release
 - [ ] Biosphere Improvements
+  - [ ] Ice biosphere glaciers
   - [ ] Water block
   - [ ] Lava block
   - [ ] Structures
