@@ -31,7 +31,7 @@ where
     loading_state: T,
     post_loading_state: T,
     done_loading_state: T,
-    playing_game_state: T,
+    playing_state: T,
 }
 
 impl<T: States + Clone + Copy> CosmosCorePlugin<T> {
@@ -42,7 +42,7 @@ impl<T: States + Clone + Copy> CosmosCorePlugin<T> {
             loading_state,
             post_loading_state,
             done_loading_state,
-            playing_game_state,
+            playing_state: playing_game_state,
         }
     }
 }
@@ -73,9 +73,9 @@ impl<T: States + Clone + Copy> Plugin for CosmosCorePlugin<T> {
         block::register(app, self.pre_loading_state, self.loading_state, self.post_loading_state);
         item::register(app);
         blockitems::register(app, self.post_loading_state);
-        physics::register(app);
-        events::register(app, self.playing_game_state);
-        structure::register(app, self.post_loading_state, self.playing_game_state);
+        physics::register(app, self.post_loading_state);
+        events::register(app, self.playing_state);
+        structure::register(app, self.post_loading_state, self.playing_state);
         inventory::register(app);
         projectiles::register(app);
         entities::register(app);

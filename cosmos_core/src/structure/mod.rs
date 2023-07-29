@@ -917,13 +917,13 @@ pub fn rotate(
     }
 }
 
-pub(super) fn register<T: States + Clone + Copy>(app: &mut App, post_loading_state: T, playing_game_state: T) {
+pub(super) fn register<T: States + Clone + Copy>(app: &mut App, post_loading_state: T, playing_state: T) {
     app.register_type::<Structure>()
         .register_type::<Chunk>()
         .add_event::<ChunkInitEvent>();
 
-    systems::register(app, post_loading_state, playing_game_state);
-    ship::register(app, playing_game_state);
+    systems::register(app, post_loading_state, playing_state);
+    ship::register(app, playing_state);
     planet::register(app);
     events::register(app);
     loading::register(app);

@@ -43,7 +43,7 @@ struct LoadingStatus<T: States + Clone + Copy> {
     done_state: T,
 }
 
-impl<T: States + Clone + Copy> LoadingStatus<T> {
+impl<T: States + Copy> LoadingStatus<T> {
     pub fn new(pre_loading_state: T, loading_state: T, post_loading_state: T, done_state: T) -> Self {
         Self {
             loaders: HashSet::new(),

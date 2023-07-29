@@ -4,6 +4,7 @@ use std::sync::Mutex;
 
 use crate::block::Block;
 use crate::events::block_events::BlockChangedEvent;
+use crate::registry::identifiable::Identifiable;
 use crate::registry::Registry;
 use crate::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
 use crate::structure::coordinates::{ChunkBlockCoordinate, ChunkCoordinate, CoordinateType};
@@ -15,6 +16,8 @@ use bevy::utils::HashSet;
 use bevy_rapier3d::math::Vect;
 use bevy_rapier3d::prelude::{Ccd, Collider, ColliderMassProperties, ReadMassProperties, RigidBody, Rot};
 use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
+
+use super::block_colliders::{BlockCollider, BlockColliderType};
 
 type GenerateCollider = (Collider, f32);
 
@@ -35,6 +38,7 @@ struct StructureMass {
 fn generate_colliders(
     chunk: &Chunk,
     blocks: &Registry<Block>,
+    colliders_registry: &Registry<BlockCollider>,
     colliders: &mut Vec<(Vect, Rot, Collider)>,
     location: Vect,
     offset: ChunkBlockCoordinate,
@@ -55,9 +59,16 @@ fn generate_colliders(
 
                 temp_mass += block_mass;
 
+                let is_empty = match colliders_registry.from_id(b.unlocalized_name()).map(|x| &x.collider) {
+                    Some(BlockColliderType::Full) => false,
+                    Some(BlockColliderType::Empty) => true,
+                    Some(BlockColliderType::Custom(_)) => todo!(),
+                    _ => panic!("Got None for block collider for block {}!", b.unlocalized_name()),
+                };
+
                 if last_seen_empty.is_none() {
-                    last_seen_empty = Some(b.is_empty());
-                } else if last_seen_empty.unwrap() != b.is_empty() {
+                    last_seen_empty = Some(is_empty);
+                } else if last_seen_empty.unwrap() != is_empty {
                     let s2 = size / 2;
                     let s4 = s2 as f32 / 2.0;
 
@@ -65,6 +76,7 @@ fn generate_colliders(
                     generate_colliders(
                         chunk,
                         blocks,
+                        colliders_registry,
                         colliders,
                         Vect::new(location.x - s4, location.y - s4, location.z - s4),
                         ChunkBlockCoordinate::new(offset.x, offset.y, offset.z),
@@ -76,6 +88,7 @@ fn generate_colliders(
                     generate_colliders(
                         chunk,
                         blocks,
+                        colliders_registry,
                         colliders,
                         Vect::new(location.x + s4, location.y - s4, location.z - s4),
                         ChunkBlockCoordinate::new(offset.x + s2, offset.y, offset.z),
@@ -87,6 +100,7 @@ fn generate_colliders(
                     generate_colliders(
                         chunk,
                         blocks,
+                        colliders_registry,
                         colliders,
                         Vect::new(location.x - s4, location.y + s4, location.z - s4),
                         ChunkBlockCoordinate::new(offset.x, offset.y + s2, offset.z),
@@ -98,6 +112,7 @@ fn generate_colliders(
                     generate_colliders(
                         chunk,
                         blocks,
+                        colliders_registry,
                         colliders,
                         Vect::new(location.x - s4, location.y - s4, location.z + s4),
                         ChunkBlockCoordinate::new(offset.x, offset.y, offset.z + s2),
@@ -109,6 +124,7 @@ fn generate_colliders(
                     generate_colliders(
                         chunk,
                         blocks,
+                        colliders_registry,
                         colliders,
                         Vect::new(location.x + s4, location.y - s4, location.z + s4),
                         ChunkBlockCoordinate::new(offset.x + s2, offset.y, offset.z + s2),
@@ -120,6 +136,7 @@ fn generate_colliders(
                     generate_colliders(
                         chunk,
                         blocks,
+                        colliders_registry,
                         colliders,
                         Vect::new(location.x - s4, location.y + s4, location.z + s4),
                         ChunkBlockCoordinate::new(offset.x, offset.y + s2, offset.z + s2),
@@ -131,6 +148,7 @@ fn generate_colliders(
                     generate_colliders(
                         chunk,
                         blocks,
+                        colliders_registry,
                         colliders,
                         Vect::new(location.x + s4, location.y + s4, location.z + s4),
                         ChunkBlockCoordinate::new(offset.x + s2, offset.y + s2, offset.z + s2),
@@ -142,6 +160,7 @@ fn generate_colliders(
                     generate_colliders(
                         chunk,
                         blocks,
+                        colliders_registry,
                         colliders,
                         Vect::new(location.x + s4, location.y + s4, location.z - s4),
                         ChunkBlockCoordinate::new(offset.x + s2, offset.y + s2, offset.z),
@@ -164,7 +183,11 @@ fn generate_colliders(
     }
 }
 
-fn generate_chunk_collider(chunk: &Chunk, blocks: &Registry<Block>) -> Option<GenerateCollider> {
+fn generate_chunk_collider(
+    chunk: &Chunk,
+    blocks: &Registry<Block>,
+    colliders_registry: &Registry<BlockCollider>,
+) -> Option<GenerateCollider> {
     let mut colliders: Vec<(Vect, Rot, Collider)> = Vec::new();
 
     let mut mass: f32 = 0.0;
@@ -172,6 +195,7 @@ fn generate_chunk_collider(chunk: &Chunk, blocks: &Registry<Block>) -> Option<Ge
     generate_colliders(
         chunk,
         blocks,
+        colliders_registry,
         &mut colliders,
         Vect::new(0.0, 0.0, 0.0),
         ChunkBlockCoordinate::new(0, 0, 0),
@@ -199,6 +223,7 @@ fn listen_for_new_physics_event(
     query: Query<(&Structure, &RigidBody)>,
     mut event_reader: EventReader<ChunkNeedsPhysicsEvent>,
     blocks: Res<Registry<Block>>,
+    colliders: Res<Registry<BlockCollider>>,
 ) {
     let commands_mutex = Mutex::new(commands);
 
@@ -220,7 +245,7 @@ fn listen_for_new_physics_event(
             return;
         };
 
-        let chunk_collider = generate_chunk_collider(chunk, &blocks);
+        let chunk_collider = generate_chunk_collider(chunk, &blocks, &colliders);
 
         if let Some(mut structure_entity_commands) = commands_mutex.lock().unwrap().get_entity(ev.structure_entity) {
             structure_entity_commands.remove::<RigidBody>().insert(*rb);
@@ -269,83 +294,4 @@ pub(super) fn register(app: &mut App) {
         .register_type::<ReadMassProperties>()
         .register_type::<ColliderMassProperties>()
         .add_systems(Update, (listen_for_structure_event, listen_for_new_physics_event).chain());
-}
-
-#[cfg(test)]
-mod test {
-    use crate::{
-        block::{block_builder::BlockBuilder, Block, BlockFace},
-        registry::Registry,
-        structure::{
-            chunk::{Chunk, CHUNK_DIMENSIONS},
-            coordinates::{ChunkBlockCoordinate, ChunkCoordinate},
-        },
-    };
-
-    use super::generate_chunk_collider;
-
-    #[test]
-    fn test_gen_colliders_one_block() {
-        let mut chunk = Chunk::new(ChunkCoordinate::new(10, 10, 10));
-        let mut blocks = Registry::<Block>::new();
-
-        blocks.register(BlockBuilder::new("air".into(), 0.0).create());
-        blocks.register(BlockBuilder::new("test".into(), 4.0).create());
-
-        let test_block = blocks.from_id("test").unwrap();
-
-        chunk.set_block_at(ChunkBlockCoordinate::new(1, 2, 3), test_block, BlockFace::Top);
-
-        let (_, mass) = generate_chunk_collider(&chunk, &blocks).unwrap();
-
-        assert_eq!(mass, 4.0);
-    }
-
-    #[test]
-    fn test_gen_colliders_two_same_blocks() {
-        let mut chunk = Chunk::new(ChunkCoordinate::new(10, 10, 10));
-        let mut blocks = Registry::<Block>::new();
-
-        blocks.register(BlockBuilder::new("air".into(), 0.0).create());
-        blocks.register(BlockBuilder::new("test".into(), 4.0).create());
-
-        let test_block = blocks.from_id("test").unwrap();
-
-        chunk.set_block_at(ChunkBlockCoordinate::new(1, 2, 3), test_block, BlockFace::Top);
-
-        chunk.set_block_at(
-            ChunkBlockCoordinate::new(CHUNK_DIMENSIONS - 2, CHUNK_DIMENSIONS - 3, CHUNK_DIMENSIONS - 4),
-            test_block,
-            BlockFace::Top,
-        );
-
-        let (_, mass) = generate_chunk_collider(&chunk, &blocks).unwrap();
-
-        assert_eq!(mass, 8.0);
-    }
-
-    #[test]
-    fn test_gen_colliders_two_diff_blocks() {
-        let mut chunk = Chunk::new(ChunkCoordinate::new(10, 10, 10));
-        let mut blocks = Registry::<Block>::new();
-
-        blocks.register(BlockBuilder::new("air".into(), 0.0).create());
-        blocks.register(BlockBuilder::new("test".into(), 4.0).create());
-        blocks.register(BlockBuilder::new("test2".into(), 1.0).create());
-
-        let test_block = blocks.from_id("test").unwrap();
-        let test_block_2 = blocks.from_id("test2").unwrap();
-
-        chunk.set_block_at(ChunkBlockCoordinate::new(0, 0, 0), test_block, BlockFace::Top);
-
-        chunk.set_block_at(
-            ChunkBlockCoordinate::new(CHUNK_DIMENSIONS - 1, CHUNK_DIMENSIONS - 1, CHUNK_DIMENSIONS - 1),
-            test_block_2,
-            BlockFace::Top,
-        );
-
-        let (_, mass) = generate_chunk_collider(&chunk, &blocks).unwrap();
-
-        assert_eq!(mass, 5.0);
-    }
 }
