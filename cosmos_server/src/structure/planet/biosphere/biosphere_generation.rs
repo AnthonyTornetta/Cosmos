@@ -1,7 +1,5 @@
 //! Responsible for the default generation of biospheres.
 
-// Fix corners.
-
 use std::{marker::PhantomData, mem::swap};
 
 use bevy::{
@@ -291,6 +289,7 @@ fn generate_edge_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
     }
 }
 
+// Might trim 45s, see generate_edge_chunk.
 fn generate_corner_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + Default>(
     (sx, sy, sz): (usize, usize, usize),
     structure_coords: (f64, f64, f64),
@@ -367,8 +366,6 @@ fn generate_corner_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + 
     }
 
     for i in 0..CHUNK_DIMENSIONS {
-        // The minimum (j, j, j) on the 45 where the three top heights intersect.
-        // let mut first_all_45 = s_dimensions;
         for j in 0..CHUNK_DIMENSIONS {
             // Seed coordinates for the noise function.
             let (x, y, z) = match z_up {
@@ -394,20 +391,8 @@ fn generate_corner_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + 
                 z_layers.push((block, level_top));
                 height = level_top;
             }
-            // z_layers[0].1 = z_layers[0].1.min(first_all_45);
-            // let z_top = z_layers[0].1;
-
-            // Get smallest top height that's on the 45 for x, y, and z.
-            // let index = flatten_2d(i, j, CHUNK_DIMENSIONS);
-            // if x_layers[index][0].1 == j && y_layers[index][0].1 == j && z_top == j && first_all_45 == s_dimensions {
-            //     first_all_45 = z_top;
-            // };
 
             for k in 0..CHUNK_DIMENSIONS {
-                // Don't let the top rise "above" the first shared 45.
-                // let x_top = x_layers[flatten_2d(j, k, CHUNK_DIMENSIONS)][0].1.min(first_all_45);
-                // let y_top = y_layers[flatten_2d(i, k, CHUNK_DIMENSIONS)][0].1.min(first_all_45);
-
                 let z_height = match z_up {
                     BlockFace::Front => sz + k,
                     _ => s_dimensions - (sz + k),
@@ -421,9 +406,6 @@ fn generate_corner_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + 
                     _ => s_dimensions - (sx + i),
                 };
 
-                // Stops stairways to heaven.
-                // let num_top: usize = (x_height == x_top) as usize + (y_height == y_top) as usize + (z_height == z_top) as usize;
-                // if num_top <= 1 {
                 let block_up = Planet::get_planet_face_without_structure(sx + i, sy + j, sz + k, s_dimensions);
                 let block = block_ranges.corner_block(
                     x_height,
@@ -438,7 +420,6 @@ fn generate_corner_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + 
                 if let Some(block) = block {
                     chunk.set_block_at(i, j, k, block, block_up);
                 }
-                // }
             }
         }
     }
