@@ -8,17 +8,20 @@ use crate::{
 };
 
 #[derive(Debug)]
+/// The type of collider a block has
 pub enum BlockColliderType {
     /// Takes an entire block
     Full,
-    /// Unsupported - will panic
+    /// Not yet supported - will panic
     Custom(Box<()>),
     /// No collider at all
     Empty,
 }
 
 #[derive(Debug)]
+/// Determines how a block interacts with its physics environment
 pub struct BlockCollider {
+    /// What type of collider this is
     pub collider: BlockColliderType,
     id: u16,
     unlocalized_name: String,
