@@ -444,8 +444,7 @@ fn generate_corner_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + 
     }
 }
 
-const MIRROR_MIN: usize = 100;
-const MIRROR_MAX: usize = 0;
+const GUIDE_MIN: usize = 100;
 /// Used to change the algorithm used for base terrain generation.
 ///
 /// Try tweaking the values of GenerationParemeters first before making your own custom generation function.
@@ -483,14 +482,14 @@ pub trait BiosphereGenerationStrategy {
 
     /// Returns how much the edge height should be averaged in from the other side it's approaching.
     ///
-    /// Don't touch this unless you're doing something extremely crazy
+    /// Don't touch this unless you're doing something extremely crazy.
     ///
-    /// - `a` x, y, or z but generalized
-    /// - `intersection` is where the two edges are projected to meet, which is used as the limit to your height
-    /// - `s_dimensions` structure width/height/length
+    /// - `a` x, y, or z but generalized.
+    /// - `intersection` is where the two edges are projected to meet, which is used as the limit to your height.
+    /// - `s_dimensions` structure width/height/length.
     fn get_mirror_coefficient(a: usize, intersection: usize, s_dimensions: usize) -> f64 {
-        let max = intersection - MIRROR_MAX;
-        let min = intersection - MIRROR_MIN;
+        let max = intersection;
+        let min = intersection - GUIDE_MIN;
         if a > max || a < s_dimensions - max {
             1.0
         } else if a > min {
@@ -502,24 +501,26 @@ pub trait BiosphereGenerationStrategy {
         }
     }
 
-    /// "Where the math happens" - Dan
+    /// "Where the math happens" - Dan.
     ///
     /// Combining two linear gradients so that they have the same end behaviors is "a little difficult". Thus the max functions.
     ///
-    /// No touchy
+    /// No touchy.
     ///
-    /// - `height` If you were at the center of the face of a planet - that's how tall this column would be
-    /// - `c1` The first edge coefficient (from `get_mirror_coefficient`)
-    /// - `c1_height` The height on c1's edge
-    /// - `c2` The second edge coefficient (from `get_mirror_coefficient`)
-    /// - `c2_height` The height on c2's edge
+    /// - `height` If you were at the center of the face of a planet - that's how tall this column would be.
+    /// - `c1` The first edge coefficient (from `get_mirror_coefficient`).
+    /// - `c1_height` The height on c1's edge.
+    /// - `c2` The second edge coefficient (from `get_mirror_coefficient`).
+    /// - `c2_height` The height on c2's edge.
     fn merge(height: f64, c1: f64, c1_height: f64, c2: f64, c2_height: f64) -> usize {
         let c = if c1 + c2 == 0.0 { 0.0 } else { c1.max(c2) / (c1 + c2) };
         (height * (1.0 - c * (c1 + c2)) + c * (c1 * c1_height + c2 * c2_height)) as usize
     }
 
-    /// brownie points to whoever documents this
-    fn mirror(
+    /// Generates the "old" height, the one that's used if you're in the middle of a face.
+    /// Also generates the height at any edge within GUIDE_MIN distance.
+    /// Averages the "old" height with the edge heights with coefficients based on how close you are to the edge intersection.
+    fn guide(
         noise_generator: &noise::OpenSimplex,
         block_up: BlockFace,
         (bx, by, bz): (usize, usize, usize),
@@ -530,9 +531,11 @@ pub trait BiosphereGenerationStrategy {
         iterations: usize,
         s_dimensions: usize,
     ) -> usize {
+        // The amplitude * iterations is an approximation to account for needing to guide the terrain farther from the edge
+        // the bumpier the terrain is. Terrain may still get too bumpy.
         let top = middle_air_start - (amplitude * iterations as f64) as usize;
         let bottom = s_dimensions - top;
-        let min = top - MIRROR_MIN;
+        let min = top - GUIDE_MIN;
 
         // X.
         let mut x_coefficient = 0.0;
@@ -642,7 +645,7 @@ pub trait BiosphereGenerationStrategy {
         delta: f64,
         iterations: usize,
     ) -> usize {
-        Self::mirror(
+        Self::guide(
             noise_generator,
             block_up,
             (x, y, z),
