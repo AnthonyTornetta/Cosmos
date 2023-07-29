@@ -130,7 +130,7 @@ fn generate_face_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
                     level.amplitude,
                     level.delta,
                     level.iterations,
-                ) as usize;
+                );
                 concrete_ranges.push((block, level_top));
                 height = level_top;
             }
@@ -166,7 +166,7 @@ fn generate_edge_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
 ) {
     for i in 0..CHUNK_DIMENSIONS {
         let mut j_layers: Vec<Vec<(&Block, usize)>> = vec![vec![]; CHUNK_DIMENSIONS];
-        for j in 0..CHUNK_DIMENSIONS {
+        for (j, vec) in j_layers.iter_mut().enumerate() {
             // Seed coordinates and j-direction noise functions.
             let (mut x, mut y, mut z) = (sx + i, sy + i, sz + i);
             match j_up {
@@ -194,8 +194,8 @@ fn generate_edge_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
                     layer.amplitude,
                     layer.delta,
                     layer.iterations,
-                ) as usize;
-                j_layers[j].push((block, layer_top));
+                );
+                vec.push((block, layer_top));
                 height = layer_top;
             }
         }
@@ -240,7 +240,7 @@ fn generate_edge_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
                     layer.amplitude,
                     layer.delta,
                     layer.iterations,
-                ) as usize;
+                );
                 k_layers.push((block, layer_top));
                 height = layer_top;
             }
@@ -249,7 +249,7 @@ fn generate_edge_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
                 first_both_45 = j_height;
             }
 
-            for k in 0..CHUNK_DIMENSIONS {
+            for (k, vec) in j_layers.iter().enumerate() {
                 let (mut x, mut y, mut z) = (i, i, i);
                 match j_up {
                     BlockFace::Front | BlockFace::Back => z = j,
@@ -277,7 +277,7 @@ fn generate_edge_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
                     let block = block_ranges.edge_block(
                         j_height,
                         k_height,
-                        Some(&j_layers[k]),
+                        Some(vec),
                         Some(&k_layers),
                         block_ranges.sea_level,
                         block_ranges.sea_block(),
@@ -327,7 +327,7 @@ fn generate_corner_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + 
                     level.amplitude,
                     level.delta,
                     level.iterations,
-                ) as usize;
+                );
                 x_layers[index].push((block, level_top));
                 height = level_top;
             }
@@ -359,7 +359,7 @@ fn generate_corner_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + 
                     level.amplitude,
                     level.delta,
                     level.iterations,
-                ) as usize;
+                );
                 y_layers[index].push((block, level_top));
                 height = level_top;
             }
@@ -390,7 +390,7 @@ fn generate_corner_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + 
                     level.amplitude,
                     level.delta,
                     level.iterations,
-                ) as usize;
+                );
                 z_layers.push((block, level_top));
                 height = level_top;
             }
@@ -555,7 +555,7 @@ pub trait BiosphereGenerationStrategy {
                 amplitude,
                 delta,
                 iterations,
-            ) as f64;
+            );
             x_coefficient = Self::get_mirror_coefficient(bx, x_height as usize, s_dimensions);
         }
 
@@ -580,7 +580,7 @@ pub trait BiosphereGenerationStrategy {
                 amplitude,
                 delta,
                 iterations,
-            ) as f64;
+            );
             y_coefficient = Self::get_mirror_coefficient(by, y_height as usize, s_dimensions);
         }
 
@@ -605,7 +605,7 @@ pub trait BiosphereGenerationStrategy {
                 amplitude,
                 delta,
                 iterations,
-            ) as f64;
+            );
             z_coefficient = Self::get_mirror_coefficient(bz, z_height as usize, s_dimensions);
         }
 
@@ -787,7 +787,7 @@ impl<T: Component + Clone + Default> BlockLayers<T> {
     fn face_block<'a>(
         &self,
         height: usize,
-        block_layers: &Vec<(&'a Block, usize)>,
+        block_layers: &[(&'a Block, usize)],
         sea_level: Option<usize>,
         sea_block: Option<&'a Block>,
     ) -> Option<&'a Block> {
@@ -808,8 +808,8 @@ impl<T: Component + Clone + Default> BlockLayers<T> {
         &self,
         j_height: usize,
         k_height: usize,
-        j_layers: Option<&Vec<(&'a Block, usize)>>,
-        k_layers: Option<&Vec<(&'a Block, usize)>>,
+        j_layers: Option<&[(&'a Block, usize)]>,
+        k_layers: Option<&[(&'a Block, usize)]>,
         sea_level: Option<usize>,
         sea_block: Option<&'a Block>,
     ) -> Option<&'a Block> {
@@ -851,9 +851,9 @@ impl<T: Component + Clone + Default> BlockLayers<T> {
         x_height: usize,
         y_height: usize,
         z_height: usize,
-        x_layers: &Vec<(&'a Block, usize)>,
-        y_layers: &Vec<(&'a Block, usize)>,
-        z_layers: &Vec<(&'a Block, usize)>,
+        x_layers: &[(&'a Block, usize)],
+        y_layers: &[(&'a Block, usize)],
+        z_layers: &[(&'a Block, usize)],
         sea_level: Option<usize>,
         sea_block: Option<&'a Block>,
     ) -> Option<&'a Block> {
