@@ -31,6 +31,7 @@ use std::env;
 use std::f32::consts::PI;
 
 use bevy::window::PrimaryWindow;
+use bevy_rapier3d::render::RapierDebugRenderPlugin;
 use bevy_renet::renet::RenetClient;
 use bevy_renet::transport::NetcodeClientPlugin;
 use cosmos_core::netty::client_reliable_messages::ClientReliableMessages;
@@ -325,7 +326,7 @@ fn main() {
         ))
         .add_plugins(RenetClientPlugin)
         .add_plugins(NetcodeClientPlugin)
-        // .add_plugin(RapierDebugRenderPlugin::default())
+        .add_plugins(RapierDebugRenderPlugin::default())
         .add_systems(OnEnter(GameState::Connecting), connect::establish_connection)
         .add_systems(Update, connect::wait_for_connection.run_if(in_state(GameState::Connecting)))
         .add_systems(OnEnter(GameState::LoadingWorld), create_sun)

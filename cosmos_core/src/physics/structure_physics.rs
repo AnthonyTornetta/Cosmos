@@ -10,21 +10,36 @@ use crate::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
 use crate::structure::coordinates::{ChunkBlockCoordinate, ChunkCoordinate, CoordinateType};
 use crate::structure::events::ChunkSetEvent;
 use crate::structure::Structure;
-use bevy::prelude::{App, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, Query, Res, Update};
+use bevy::prelude::{
+    App, BuildChildren, Commands, Component, Deref, DerefMut, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, Query, Res,
+    Transform, Update,
+};
 use bevy::reflect::Reflect;
 use bevy::utils::HashSet;
 use bevy_rapier3d::math::Vect;
 use bevy_rapier3d::prelude::{Ccd, Collider, ColliderMassProperties, ReadMassProperties, RigidBody, Rot};
 use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 
-use super::block_colliders::{BlockCollider, BlockColliderType};
+use super::block_colliders::{BlockCollider, BlockColliderMode, BlockColliderType};
 
-type GenerateCollider = (Collider, f32);
+type GenerateCollider = (Collider, f32, BlockColliderMode);
 
 /// Sometimes the ReadMassProperties is wrong, so this component fixes it
 #[derive(Component, Debug, Reflect, PartialEq, Clone, Copy)]
 struct StructureMass {
     mass: f32,
+}
+
+#[derive(Component, Debug, Reflect, Default, Clone, Deref, DerefMut)]
+struct ChunkColliderEntities(Vec<Entity>);
+
+#[derive(Component, Debug, Reflect, Clone, Copy)]
+/// This means that this entity should be treated as if it were the chunk itself.
+///
+/// This entity stores chunk colliders
+pub struct ChunkPhysicsPart {
+    /// The chunk this belongs to
+    pub chunk_entity: Entity,
 }
 
 /// This works by first checking if the cube that is within its bounds contains either all solid or empty blocks
@@ -40,6 +55,7 @@ fn generate_colliders(
     blocks: &Registry<Block>,
     colliders_registry: &Registry<BlockCollider>,
     colliders: &mut Vec<(Vect, Rot, Collider)>,
+    sensor_colliders: &mut Vec<(Vect, Rot, Collider)>,
     location: Vect,
     offset: ChunkBlockCoordinate,
     size: CoordinateType,
@@ -59,12 +75,19 @@ fn generate_colliders(
 
                 temp_mass += block_mass;
 
-                let is_empty = match colliders_registry.from_id(b.unlocalized_name()).map(|x| &x.collider) {
-                    Some(BlockColliderType::Full) => false,
-                    Some(BlockColliderType::Empty) => true,
+                let (is_empty, is_sensor) = match colliders_registry.from_id(b.unlocalized_name()).map(|x| &x.collider) {
+                    Some(BlockColliderType::Full(mode)) => match mode {
+                        BlockColliderMode::NormalCollider => (false, false),
+                        BlockColliderMode::SensorCollider => (true, true),
+                    },
+                    Some(BlockColliderType::Empty) => (true, false),
                     Some(BlockColliderType::Custom(_)) => todo!(),
                     _ => panic!("Got None for block collider for block {}!", b.unlocalized_name()),
                 };
+
+                if size == 1 && is_sensor {
+                    sensor_colliders.push((location, Rot::IDENTITY, Collider::cuboid(0.5, 0.5, 0.5)));
+                }
 
                 if last_seen_empty.is_none() {
                     last_seen_empty = Some(is_empty);
@@ -78,6 +101,7 @@ fn generate_colliders(
                         blocks,
                         colliders_registry,
                         colliders,
+                        sensor_colliders,
                         Vect::new(location.x - s4, location.y - s4, location.z - s4),
                         ChunkBlockCoordinate::new(offset.x, offset.y, offset.z),
                         s2,
@@ -90,6 +114,7 @@ fn generate_colliders(
                         blocks,
                         colliders_registry,
                         colliders,
+                        sensor_colliders,
                         Vect::new(location.x + s4, location.y - s4, location.z - s4),
                         ChunkBlockCoordinate::new(offset.x + s2, offset.y, offset.z),
                         s2,
@@ -102,6 +127,7 @@ fn generate_colliders(
                         blocks,
                         colliders_registry,
                         colliders,
+                        sensor_colliders,
                         Vect::new(location.x - s4, location.y + s4, location.z - s4),
                         ChunkBlockCoordinate::new(offset.x, offset.y + s2, offset.z),
                         s2,
@@ -114,6 +140,7 @@ fn generate_colliders(
                         blocks,
                         colliders_registry,
                         colliders,
+                        sensor_colliders,
                         Vect::new(location.x - s4, location.y - s4, location.z + s4),
                         ChunkBlockCoordinate::new(offset.x, offset.y, offset.z + s2),
                         s2,
@@ -126,6 +153,7 @@ fn generate_colliders(
                         blocks,
                         colliders_registry,
                         colliders,
+                        sensor_colliders,
                         Vect::new(location.x + s4, location.y - s4, location.z + s4),
                         ChunkBlockCoordinate::new(offset.x + s2, offset.y, offset.z + s2),
                         s2,
@@ -138,6 +166,7 @@ fn generate_colliders(
                         blocks,
                         colliders_registry,
                         colliders,
+                        sensor_colliders,
                         Vect::new(location.x - s4, location.y + s4, location.z + s4),
                         ChunkBlockCoordinate::new(offset.x, offset.y + s2, offset.z + s2),
                         s2,
@@ -150,6 +179,7 @@ fn generate_colliders(
                         blocks,
                         colliders_registry,
                         colliders,
+                        sensor_colliders,
                         Vect::new(location.x + s4, location.y + s4, location.z + s4),
                         ChunkBlockCoordinate::new(offset.x + s2, offset.y + s2, offset.z + s2),
                         s2,
@@ -162,6 +192,7 @@ fn generate_colliders(
                         blocks,
                         colliders_registry,
                         colliders,
+                        sensor_colliders,
                         Vect::new(location.x + s4, location.y + s4, location.z - s4),
                         ChunkBlockCoordinate::new(offset.x + s2, offset.y + s2, offset.z),
                         s2,
@@ -183,12 +214,9 @@ fn generate_colliders(
     }
 }
 
-fn generate_chunk_collider(
-    chunk: &Chunk,
-    blocks: &Registry<Block>,
-    colliders_registry: &Registry<BlockCollider>,
-) -> Option<GenerateCollider> {
+fn generate_chunk_collider(chunk: &Chunk, blocks: &Registry<Block>, colliders_registry: &Registry<BlockCollider>) -> Vec<GenerateCollider> {
     let mut colliders: Vec<(Vect, Rot, Collider)> = Vec::new();
+    let mut sensor_colliders: Vec<(Vect, Rot, Collider)> = Vec::new();
 
     let mut mass: f32 = 0.0;
 
@@ -197,17 +225,24 @@ fn generate_chunk_collider(
         blocks,
         colliders_registry,
         &mut colliders,
+        &mut sensor_colliders,
         Vect::new(0.0, 0.0, 0.0),
         ChunkBlockCoordinate::new(0, 0, 0),
         CHUNK_DIMENSIONS,
         &mut mass,
     );
 
-    if colliders.is_empty() {
-        None
-    } else {
-        Some((Collider::compound(colliders), mass))
+    let mut all_colliders = Vec::with_capacity(2);
+
+    if !colliders.is_empty() {
+        all_colliders.push((Collider::compound(colliders), mass, BlockColliderMode::NormalCollider));
     }
+    if !sensor_colliders.is_empty() {
+        // 0.0 for mass because it's all accounted for in non-sensor colliders.
+        all_colliders.push((Collider::compound(sensor_colliders), 0.0, BlockColliderMode::SensorCollider));
+    }
+
+    all_colliders
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Event)]
@@ -224,6 +259,7 @@ fn listen_for_new_physics_event(
     mut event_reader: EventReader<ChunkNeedsPhysicsEvent>,
     blocks: Res<Registry<Block>>,
     colliders: Res<Registry<BlockCollider>>,
+    old_entities_query: Query<&ChunkColliderEntities>,
 ) {
     let commands_mutex = Mutex::new(commands);
 
@@ -241,23 +277,63 @@ fn listen_for_new_physics_event(
             return;
         };
 
-        let Some(entity) = structure.chunk_entity(chunk_coord) else {
+        let Some(chunk_entity) = structure.chunk_entity(chunk_coord) else {
             return;
         };
 
-        let chunk_collider = generate_chunk_collider(chunk, &blocks, &colliders);
+        let chunk_colliders = generate_chunk_collider(chunk, &blocks, &colliders);
 
-        if let Some(mut structure_entity_commands) = commands_mutex.lock().unwrap().get_entity(ev.structure_entity) {
+        let mut first = true;
+
+        let mut child_entities = old_entities_query.get(chunk_entity).cloned().unwrap_or_default();
+
+        let mut locked_cmds = commands_mutex.lock().unwrap();
+
+        let mut new_children = ChunkColliderEntities::default();
+
+        if let Some(mut structure_entity_commands) = locked_cmds.get_entity(ev.structure_entity) {
             structure_entity_commands.remove::<RigidBody>().insert(*rb);
         }
 
-        if let Some(mut entity_commands) = commands_mutex.lock().unwrap().get_entity(entity) {
-            if let Some((collider, mass)) = chunk_collider {
-                entity_commands
-                    .insert(collider)
-                    .insert(ColliderMassProperties::Mass(mass))
-                    .insert(Ccd::enabled());
+        for (collider, mass, collider_mode) in chunk_colliders {
+            if first {
+                if let Some(mut entity_commands) = locked_cmds.get_entity(chunk_entity) {
+                    entity_commands
+                        .insert(collider)
+                        .insert(ColliderMassProperties::Mass(mass))
+                        .insert(Ccd::enabled());
+                } else {
+                    break; // No chunk found - may have been deleted
+                }
+
+                first = false;
+            } else {
+                if let Some(child_entity) = child_entities.pop() {
+                    if let Some(mut entity_commands) = locked_cmds.get_entity(child_entity) {
+                        entity_commands.insert((collider, ColliderMassProperties::Mass(mass), Ccd::enabled()));
+                        new_children.push(child_entity);
+                    }
+                } else {
+                    let child = locked_cmds
+                        .spawn((
+                            ChunkPhysicsPart { chunk_entity },
+                            Transform::IDENTITY,
+                            collider,
+                            ColliderMassProperties::Mass(mass),
+                            Ccd::enabled(),
+                        ))
+                        .id();
+
+                    if let Some(mut chunk_entity_cmds) = locked_cmds.get_entity(chunk_entity) {
+                        chunk_entity_cmds.add_child(child);
+                        new_children.push(child);
+                    }
+                }
             }
+        }
+
+        if let Some(mut chunk_entity_cmds) = locked_cmds.get_entity(chunk_entity) {
+            chunk_entity_cmds.insert(new_children);
         }
     });
 }

@@ -8,10 +8,19 @@ use crate::{
 };
 
 #[derive(Debug)]
+/// How the collider interacts with the world
+pub enum BlockColliderMode {
+    /// This type of collider will be physically interact with other colliders
+    NormalCollider,
+    /// This type of collider will not physically interact with the world, but can still be used in raycasts + other physics calculations
+    SensorCollider,
+}
+
+#[derive(Debug)]
 /// The type of collider a block has
 pub enum BlockColliderType {
     /// Takes an entire block
-    Full,
+    Full(BlockColliderMode),
     /// Not yet supported - will panic
     Custom(Box<()>),
     /// No collider at all
@@ -36,7 +45,7 @@ fn register_custom_colliders(blocks: Res<Registry<Block>>, mut registry: ResMut<
 
     if blocks.from_id("cosmos:short_grass").is_some() {
         registry.register(BlockCollider {
-            collider: BlockColliderType::Empty,
+            collider: BlockColliderType::Full(BlockColliderMode::SensorCollider),
             id: 0,
             unlocalized_name: "cosmos:short_grass".into(),
         });
@@ -47,7 +56,7 @@ fn register_all_colliders(blocks: Res<Registry<Block>>, mut registry: ResMut<Reg
     for block in blocks.iter() {
         if registry.from_id(block.unlocalized_name()).is_none() {
             registry.register(BlockCollider {
-                collider: BlockColliderType::Full,
+                collider: BlockColliderType::Full(BlockColliderMode::NormalCollider),
                 id: 0,
                 unlocalized_name: block.unlocalized_name().into(),
             });
