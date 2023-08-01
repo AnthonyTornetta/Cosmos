@@ -64,7 +64,11 @@ fn stop_near_unloaded_chunks(
                     ChunkIteratorResult::EmptyChunk { position } => structure.get_chunk_state(position) != ChunkState::Loaded,
                     ChunkIteratorResult::FilledChunk { position, chunk: _ } => {
                         if let Some(chunk_entity) = structure.chunk_entity(position) {
-                            !has_collider.contains(chunk_entity)
+                            let has_col = !has_collider.contains(chunk_entity);
+
+                            println!("HAS COL: {has_col}");
+
+                            has_col
                         } else {
                             true
                         }

@@ -11,13 +11,13 @@ use crate::structure::coordinates::{ChunkBlockCoordinate, ChunkCoordinate, Coord
 use crate::structure::events::ChunkSetEvent;
 use crate::structure::Structure;
 use bevy::prelude::{
-    App, BuildChildren, Commands, Component, Deref, DerefMut, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, Query, Res,
-    Transform, Update,
+    App, BuildChildren, Commands, Component, Deref, DerefMut, DespawnRecursiveExt, Entity, Event, EventReader, EventWriter,
+    IntoSystemConfigs, Query, Res, Transform, Update,
 };
 use bevy::reflect::Reflect;
 use bevy::utils::HashSet;
 use bevy_rapier3d::math::Vect;
-use bevy_rapier3d::prelude::{Ccd, Collider, ColliderMassProperties, ReadMassProperties, RigidBody, Rot};
+use bevy_rapier3d::prelude::{Ccd, Collider, ColliderMassProperties, PhysicsWorld, ReadMassProperties, RigidBody, Rot, Sensor};
 use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 
 use super::block_colliders::{BlockCollider, BlockColliderMode, BlockColliderType};
@@ -91,7 +91,7 @@ fn generate_colliders(
 
                 if last_seen_empty.is_none() {
                     last_seen_empty = Some(is_empty);
-                } else if last_seen_empty.unwrap() != is_empty {
+                } else if last_seen_empty.unwrap() != is_empty || is_sensor {
                     let s2 = size / 2;
                     let s4 = s2 as f32 / 2.0;
 
@@ -285,9 +285,13 @@ fn listen_for_new_physics_event(
 
         let mut first = true;
 
-        let mut child_entities = old_entities_query.get(chunk_entity).cloned().unwrap_or_default();
-
         let mut locked_cmds = commands_mutex.lock().unwrap();
+
+        if let Ok(old_child_entities) = old_entities_query.get(chunk_entity) {
+            for ent in old_child_entities.0.iter() {
+                locked_cmds.get_entity(*ent).map(|x| x.despawn_recursive());
+            }
+        }
 
         let mut new_children = ChunkColliderEntities::default();
 
@@ -295,39 +299,41 @@ fn listen_for_new_physics_event(
             structure_entity_commands.remove::<RigidBody>().insert(*rb);
         }
 
+        if let Some(mut ce_commands) = locked_cmds.get_entity(chunk_entity) {
+            ce_commands.remove::<(Collider, Sensor)>();
+        }
+
         for (collider, mass, collider_mode) in chunk_colliders {
             if first {
                 if let Some(mut entity_commands) = locked_cmds.get_entity(chunk_entity) {
-                    entity_commands
-                        .insert(collider)
-                        .insert(ColliderMassProperties::Mass(mass))
-                        .insert(Ccd::enabled());
+                    entity_commands.insert((Ccd::enabled(), collider, ColliderMassProperties::Mass(mass)));
+
+                    if matches!(collider_mode, BlockColliderMode::SensorCollider) {
+                        entity_commands.insert(Sensor);
+                    }
                 } else {
                     break; // No chunk found - may have been deleted
                 }
 
                 first = false;
             } else {
-                if let Some(child_entity) = child_entities.pop() {
-                    if let Some(mut entity_commands) = locked_cmds.get_entity(child_entity) {
-                        entity_commands.insert((collider, ColliderMassProperties::Mass(mass), Ccd::enabled()));
-                        new_children.push(child_entity);
-                    }
-                } else {
-                    let child = locked_cmds
-                        .spawn((
-                            ChunkPhysicsPart { chunk_entity },
-                            Transform::IDENTITY,
-                            collider,
-                            ColliderMassProperties::Mass(mass),
-                            Ccd::enabled(),
-                        ))
-                        .id();
+                let mut child = locked_cmds.spawn((
+                    ChunkPhysicsPart { chunk_entity },
+                    Transform::IDENTITY,
+                    collider,
+                    ColliderMassProperties::Mass(mass),
+                    Ccd::enabled(),
+                ));
 
-                    if let Some(mut chunk_entity_cmds) = locked_cmds.get_entity(chunk_entity) {
-                        chunk_entity_cmds.add_child(child);
-                        new_children.push(child);
-                    }
+                if matches!(collider_mode, BlockColliderMode::SensorCollider) {
+                    child.insert(Sensor);
+                }
+
+                let child_entity = child.id();
+
+                if let Some(mut chunk_entity_cmds) = locked_cmds.get_entity(chunk_entity) {
+                    chunk_entity_cmds.add_child(child_entity);
+                    new_children.push(child_entity);
                 }
             }
         }
