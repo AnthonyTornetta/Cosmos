@@ -339,10 +339,10 @@ fn listen_for_new_physics_event(
             chunk_entity_commands.remove::<(Collider, Sensor)>();
         }
 
-        for (collider, mass, collider_mode) in chunk_colliders.iter().rev() {
+        for (collider, mass, collider_mode) in chunk_colliders {
             if first {
                 if let Some(mut entity_commands) = locked_cmds.get_entity(chunk_entity) {
-                    entity_commands.insert((Ccd::enabled(), collider.clone(), ColliderMassProperties::Mass(*mass)));
+                    entity_commands.insert((Ccd::enabled(), collider, ColliderMassProperties::Mass(mass)));
 
                     if matches!(collider_mode, BlockColliderMode::SensorCollider) {
                         entity_commands.insert(Sensor);
@@ -360,8 +360,8 @@ fn listen_for_new_physics_event(
                 let mut child = locked_cmds.spawn((
                     ChunkPhysicsPart { chunk_entity },
                     TransformBundle::from_transform(*chunk_trans),
-                    collider.clone(),
-                    ColliderMassProperties::Mass(*mass),
+                    collider,
+                    ColliderMassProperties::Mass(mass),
                     Ccd::enabled(),
                 ));
 
@@ -390,8 +390,6 @@ fn listen_for_new_physics_event(
         let Ok(mut chunk_phys_parts) = physics_components_query.get_mut(structure_entity) else {
             continue;
         };
-
-        println!("Pooshed into enitty {structure_entity:?}!");
 
         chunk_phys_parts.pairs.push(pair);
     }
