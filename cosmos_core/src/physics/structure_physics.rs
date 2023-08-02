@@ -11,13 +11,14 @@ use crate::structure::coordinates::{ChunkBlockCoordinate, ChunkCoordinate, Coord
 use crate::structure::events::ChunkSetEvent;
 use crate::structure::Structure;
 use bevy::prelude::{
-    App, BuildChildren, Commands, Component, Deref, DerefMut, DespawnRecursiveExt, Entity, Event, EventReader, EventWriter,
-    IntoSystemConfigs, Query, Res, Transform, Update,
+    Added, App, BuildChildren, Commands, Component, DespawnRecursiveExt, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, Query,
+    Res, Transform, Update,
 };
 use bevy::reflect::Reflect;
+use bevy::transform::TransformBundle;
 use bevy::utils::HashSet;
 use bevy_rapier3d::math::Vect;
-use bevy_rapier3d::prelude::{Ccd, Collider, ColliderMassProperties, PhysicsWorld, ReadMassProperties, RigidBody, Rot, Sensor};
+use bevy_rapier3d::prelude::{Ccd, Collider, ColliderMassProperties, ReadMassProperties, Rot, Sensor};
 use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 
 use super::block_colliders::{BlockCollider, BlockColliderMode, BlockColliderType};
@@ -30,9 +31,6 @@ struct StructureMass {
     mass: f32,
 }
 
-#[derive(Component, Debug, Reflect, Default, Clone, Deref, DerefMut)]
-struct ChunkColliderEntities(Vec<Entity>);
-
 #[derive(Component, Debug, Reflect, Clone, Copy)]
 /// This means that this entity should be treated as if it were the chunk itself.
 ///
@@ -40,6 +38,17 @@ struct ChunkColliderEntities(Vec<Entity>);
 pub struct ChunkPhysicsPart {
     /// The chunk this belongs to
     pub chunk_entity: Entity,
+}
+
+#[derive(Debug, Reflect)]
+struct ColliderChunkPair {
+    collider_entity: Entity,
+    chunk_entity: Entity,
+}
+
+#[derive(Debug, Default, Component, Reflect)]
+struct ChunkPhysicsParts {
+    pairs: Vec<ColliderChunkPair>,
 }
 
 /// This works by first checking if the cube that is within its bounds contains either all solid or empty blocks
@@ -253,22 +262,61 @@ struct ChunkNeedsPhysicsEvent {
 }
 
 /// This system is responsible for adding colliders to chunks
+///
+/// Due to bevy_rapier issues, the colliders cannot be children of the chunks, but rather have to be
+/// children of the structure itself. This causes a bunch of issues, namely having to clean them up
+/// seperately whenever we delete a chunk.
 fn listen_for_new_physics_event(
-    commands: Commands,
-    query: Query<(&Structure, &RigidBody)>,
+    mut commands: Commands,
+    structure_query: Query<&Structure>,
     mut event_reader: EventReader<ChunkNeedsPhysicsEvent>,
     blocks: Res<Registry<Block>>,
     colliders: Res<Registry<BlockCollider>>,
-    old_entities_query: Query<&ChunkColliderEntities>,
+    transform_query: Query<&Transform>,
+    mut physics_components_query: Query<&mut ChunkPhysicsParts>,
 ) {
-    let commands_mutex = Mutex::new(commands);
-
     let mut to_process = event_reader.iter().collect::<Vec<&ChunkNeedsPhysicsEvent>>();
 
     to_process.dedup();
 
+    // clean up old collider entities
+    for ev in to_process.iter() {
+        let Ok(mut chunk_phys_parts) = physics_components_query.get_mut(ev.structure_entity) else {
+            continue;
+        };
+        let Ok(structure) = structure_query.get(ev.structure_entity) else {
+            continue;
+        };
+        let Some(chunk_entity) = structure.chunk_entity(ev.chunk) else {
+            continue;
+        };
+
+        let mut indices_to_remove = vec![];
+
+        for (idx, chunk_part_entity) in chunk_phys_parts
+            .pairs
+            .iter()
+            .enumerate()
+            .filter(|(_, x)| x.chunk_entity == chunk_entity)
+        {
+            commands
+                .get_entity(chunk_part_entity.collider_entity)
+                .map(|x| x.despawn_recursive());
+            indices_to_remove.push(idx);
+        }
+
+        for index in indices_to_remove {
+            chunk_phys_parts.pairs.remove(index);
+        }
+    }
+
+    // create new colliders
+    let commands_mutex = Mutex::new(commands);
+
+    let new_physics_entities = Mutex::new(vec![]);
+
     to_process.par_iter().for_each(|ev| {
-        let Ok((structure, rb)) = query.get(ev.structure_entity) else {
+        let Ok(structure) = structure_query.get(ev.structure_entity) else {
             return;
         };
         let chunk_coord = ev.chunk;
@@ -287,26 +335,14 @@ fn listen_for_new_physics_event(
 
         let mut locked_cmds = commands_mutex.lock().unwrap();
 
-        if let Ok(old_child_entities) = old_entities_query.get(chunk_entity) {
-            for ent in old_child_entities.0.iter() {
-                locked_cmds.get_entity(*ent).map(|x| x.despawn_recursive());
-            }
+        if let Some(mut chunk_entity_commands) = locked_cmds.get_entity(chunk_entity) {
+            chunk_entity_commands.remove::<(Collider, Sensor)>();
         }
 
-        let mut new_children = ChunkColliderEntities::default();
-
-        if let Some(mut structure_entity_commands) = locked_cmds.get_entity(ev.structure_entity) {
-            structure_entity_commands.remove::<RigidBody>().insert(*rb);
-        }
-
-        if let Some(mut ce_commands) = locked_cmds.get_entity(chunk_entity) {
-            ce_commands.remove::<(Collider, Sensor)>();
-        }
-
-        for (collider, mass, collider_mode) in chunk_colliders {
+        for (collider, mass, collider_mode) in chunk_colliders.iter().rev() {
             if first {
                 if let Some(mut entity_commands) = locked_cmds.get_entity(chunk_entity) {
-                    entity_commands.insert((Ccd::enabled(), collider, ColliderMassProperties::Mass(mass)));
+                    entity_commands.insert((Ccd::enabled(), collider.clone(), ColliderMassProperties::Mass(*mass)));
 
                     if matches!(collider_mode, BlockColliderMode::SensorCollider) {
                         entity_commands.insert(Sensor);
@@ -317,11 +353,15 @@ fn listen_for_new_physics_event(
 
                 first = false;
             } else {
+                let chunk_trans = transform_query
+                    .get(chunk_entity)
+                    .expect("No transform on a chunk??? (megamind face)");
+
                 let mut child = locked_cmds.spawn((
                     ChunkPhysicsPart { chunk_entity },
-                    Transform::IDENTITY,
-                    collider,
-                    ColliderMassProperties::Mass(mass),
+                    TransformBundle::from_transform(*chunk_trans),
+                    collider.clone(),
+                    ColliderMassProperties::Mass(*mass),
                     Ccd::enabled(),
                 ));
 
@@ -330,18 +370,42 @@ fn listen_for_new_physics_event(
                 }
 
                 let child_entity = child.id();
-
-                if let Some(mut chunk_entity_cmds) = locked_cmds.get_entity(chunk_entity) {
+                if let Some(mut chunk_entity_cmds) = locked_cmds.get_entity(ev.structure_entity) {
                     chunk_entity_cmds.add_child(child_entity);
-                    new_children.push(child_entity);
+
+                    // Store these children in a container so they can be properly deleted when new colliders are generated
+                    new_physics_entities.lock().unwrap().push((
+                        ColliderChunkPair {
+                            chunk_entity,
+                            collider_entity: child_entity,
+                        },
+                        ev.structure_entity,
+                    ));
                 }
             }
         }
-
-        if let Some(mut chunk_entity_cmds) = locked_cmds.get_entity(chunk_entity) {
-            chunk_entity_cmds.insert(new_children);
-        }
     });
+
+    for (pair, structure_entity) in new_physics_entities.into_inner().unwrap() {
+        let Ok(mut chunk_phys_parts) = physics_components_query.get_mut(structure_entity) else {
+            continue;
+        };
+
+        println!("Pooshed into enitty {structure_entity:?}!");
+
+        chunk_phys_parts.pairs.push(pair);
+    }
+}
+
+fn clean_unloaded_chunks() {
+    // todo: Remove unloaded chunks collider entities.
+    // will need some sort of chunk unloaded event system
+}
+
+fn add_physics_parts(mut commands: Commands, query: Query<Entity, Added<Structure>>) {
+    for ent in query.iter() {
+        commands.entity(ent).insert(ChunkPhysicsParts::default());
+    }
 }
 
 fn listen_for_structure_event(
@@ -375,5 +439,15 @@ pub(super) fn register(app: &mut App) {
         // This wasn't registered in bevy_rapier
         .register_type::<ReadMassProperties>()
         .register_type::<ColliderMassProperties>()
-        .add_systems(Update, (listen_for_structure_event, listen_for_new_physics_event).chain());
+        .register_type::<ChunkPhysicsParts>()
+        .add_systems(
+            Update,
+            (
+                add_physics_parts,
+                clean_unloaded_chunks,
+                listen_for_structure_event,
+                listen_for_new_physics_event,
+            )
+                .chain(),
+        );
 }
