@@ -16,13 +16,11 @@ Once you reach your destination, make a *hopefully safer than this* landing.
 ![](./showcase/ship_on_ground.png)
 
 ## Compilation
+To get started, install your OS dependencies [here](https://bevyengine.org/learn/book/getting-started/setup/#install-os-dependencies). The dependencies section is all you need to do.
+
 This project requires the latest nightly rust to compile. To swap to nightly, run the command 
 
 `rustup default nightly`.
-
-To compile, navigate to the root directory of the repo and run 
-
-`cargo build`.
 
 To run the client, navigate to the cosmos_client directory and run
 
@@ -33,6 +31,11 @@ For the server, navigate to the cosmos_server directory and run
 `cargo run`
 
 For release builds, append the `--release` flag to the build/run commands.
+
+To compile the workspace (not normally necessary), navigate to the root directory of the repo and run 
+
+`cargo build`
+
 
 ## Documentation
 
@@ -51,43 +54,9 @@ To view the documentation, navigate to the `docs/` directory. To have it update 
 
 See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the list of current features/bugs in development.
 
-## Release 0.0.4a (In Progress)
-- [ ] Galaxy Generation
-  - [x] Stars procedurally generated in spiral-like pattern based on seed 
-    - [x] Create star
-      - [x] Light emits from star
-      - [x] Load star within system
-  - [x] Planets generate around stars 
-    - [x] Biospheres depend on how close they are to the sun
-    - [x] Dynamic biospheres based off temperature
-    - [x] Only generate if planet is close enough to player
-    - [x] Cube planets
-      - [x] Planets will now be cubes instead of flat planes, and will be about the size of the sector
-      - [x] Redo saving/loading of planets
-      - [x] Dynamically generate chunks & unload them based on players' positions close to planet
-      - [x] Make generation work on all faces of planet
-      - [x] Block orientation for every block
-  - [ ] Biospheres
-    - [x] Speed up terrain generation
-    - [x] Make molten biosphere
-    - [x] Enhance grass biosphere
-    - [ ] Create icy biosphere
-  - [x] Asteroids
-    - [x] For now just floating rocks in space
-  - [x] Save generated universe
-    - [x] Save planet locations
-  - [x] Fix broken ship functionality
-    - [x] Make entities no longer pass through loading structures.
-- [x] Align body with structure
-  - [x] Switches to FPS Camera
-  - [x] Aligns the player to that structure
-    - [x] Fix child locations being not updated based on transform relative to parent
-  - [x] Add button to align to structure facing
-  - [x] De-align, switch back to free camera
-    - [x] Create free camera
-
-## Release 0.0.5a - The Aesthetic Release
+## Release 0.0.5a - The Aesthetic Release (In Progress)
 - [ ] Biosphere Improvements
+  - [ ] Ice biosphere glaciers
   - [ ] Water block
   - [ ] Lava block
   - [ ] Structures
@@ -124,6 +93,41 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
   - [ ] Abstract the 3d block GUI camera
   - [ ] Fix the 3d block GUI camera to not render anything except GUI blocks
 - [ ] Fix seeing through cracks in blocks
+
+## Release 0.0.4a
+- [x] Galaxy Generation
+  - [x] Stars procedurally generated in spiral-like pattern based on seed 
+    - [x] Create star
+      - [x] Light emits from star
+      - [x] Load star within system
+  - [x] Planets generate around stars 
+    - [x] Biospheres depend on how close they are to the sun
+    - [x] Dynamic biospheres based off temperature
+    - [x] Only generate if planet is close enough to player
+    - [x] Cube planets
+      - [x] Planets will now be cubes instead of flat planes, and will be about the size of the sector
+      - [x] Redo saving/loading of planets
+      - [x] Dynamically generate chunks & unload them based on players' positions close to planet
+      - [x] Make generation work on all faces of planet
+      - [x] Block orientation for every block
+  - [x] Biospheres
+    - [x] Speed up terrain generation
+    - [x] Make molten biosphere
+    - [x] Enhance grass biosphere
+    - [x] Create icy biosphere
+  - [x] Asteroids
+    - [x] For now just floating rocks in space
+  - [x] Save generated universe
+    - [x] Save planet locations
+  - [x] Fix broken ship functionality
+    - [x] Make entities no longer pass through loading structures.
+- [x] Align body with structure
+  - [x] Switches to FPS Camera
+  - [x] Aligns the player to that structure
+    - [x] Fix child locations being not updated based on transform relative to parent
+  - [x] Add button to align to structure facing
+  - [x] De-align, switch back to free camera
+    - [x] Create free camera
 
 ## Release 0.0.3a
 - [x] Infinite universe

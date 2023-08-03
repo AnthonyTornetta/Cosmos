@@ -14,7 +14,7 @@ use bevy::reflect::Reflect;
 use serde::{Deserialize, Serialize};
 
 use super::block_health::BlockHealth;
-use super::coordinates::{ChunkBlockCoordinate, ChunkCoordinate, Coordinate, CoordinateType};
+use super::coordinates::{ChunkBlockCoordinate, ChunkCoordinate, Coordinate, CoordinateType, UnboundCoordinateType};
 
 /// The number of blocks a chunk can have in the x/y/z directions.
 ///
@@ -23,6 +23,9 @@ pub const CHUNK_DIMENSIONS: CoordinateType = 32;
 
 /// Short for `CHUNK_DIMENSIONS as f32`
 pub const CHUNK_DIMENSIONSF: f32 = CHUNK_DIMENSIONS as f32;
+
+/// Short for `CHUNK_DIMENSIONS as UnboundCoordinateType`
+pub const CHUNK_DIMENSIONS_UB: UnboundCoordinateType = CHUNK_DIMENSIONS as UnboundCoordinateType;
 
 /// The number of blocks a chunk contains (`CHUNK_DIMENSIONS^3`)
 const N_BLOCKS: CoordinateType = CHUNK_DIMENSIONS * CHUNK_DIMENSIONS * CHUNK_DIMENSIONS;

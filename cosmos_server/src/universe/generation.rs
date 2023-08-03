@@ -82,7 +82,6 @@ pub fn get_star_in_system(system: &UniverseSystem, seed: &ServerSeed) -> Option<
     if num < prob {
         // More likely to be low than high random number
         let rand = 1.0 - (1.0 - rng.gen::<f32>()).sqrt();
-
         let temperature = (rand * (MAX_TEMPERATURE - MIN_TEMPERATURE)) + MIN_TEMPERATURE;
 
         Some(Star::new(temperature))
