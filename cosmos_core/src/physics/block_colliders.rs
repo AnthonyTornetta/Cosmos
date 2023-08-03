@@ -68,7 +68,7 @@ fn register_custom_colliders(blocks: Res<Registry<Block>>, mut registry: ResMut<
         registry.register(BlockCollider::new(
             BlockColliderType::Custom(vec![CustomCollider {
                 collider: Collider::cuboid(0.5, 0.2, 0.5),
-                mode: BlockColliderMode::NormalCollider,
+                mode: BlockColliderMode::SensorCollider,
                 offset: Vec3::new(0.0, -(0.5 - 0.2), 0.0),
             }]),
             "cosmos:short_grass",
@@ -80,7 +80,7 @@ fn register_all_colliders(blocks: Res<Registry<Block>>, mut registry: ResMut<Reg
     for block in blocks.iter() {
         if registry.from_id(block.unlocalized_name()).is_none() {
             registry.register(BlockCollider::new(
-                BlockColliderType::Full(BlockColliderMode::SensorCollider),
+                BlockColliderType::Full(BlockColliderMode::NormalCollider),
                 block.unlocalized_name(),
             ));
         }
