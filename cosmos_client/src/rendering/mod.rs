@@ -525,13 +525,9 @@ fn register_block_meshes(
     mut model_registry: ResMut<BlockMeshRegistry>,
 ) {
     for block in blocks.iter() {
-        println!("Doing {} ({})", block.unlocalized_name(), block.id());
-
         if !model_registry.contains(block) {
             if let Some(mesh_name) = block_info.from_id(block.unlocalized_name()).map(|x| x.model.as_ref()) {
-                println!("WOAH! Cool mesh name: {mesh_name} for {}", block.unlocalized_name());
                 if model_registry.add_link(block, mesh_name).is_err() {
-                    println!("WAS ERROR!");
                     // model doesn't exist yet - add it
                     let mut split = mesh_name.split(':');
                     if let (Some(mod_id), Some(model_name), None) = (split.next(), split.next(), split.next()) {

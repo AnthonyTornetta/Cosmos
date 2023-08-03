@@ -84,23 +84,48 @@ fn generate_colliders(
 
                 temp_mass += block_mass;
 
-                let (is_empty, is_sensor) = match colliders_registry.from_id(b.unlocalized_name()).map(|x| &x.collider) {
+                let (is_empty, is_different) = match colliders_registry.from_id(b.unlocalized_name()).map(|x| &x.collider) {
                     Some(BlockColliderType::Full(mode)) => match mode {
                         BlockColliderMode::NormalCollider => (false, false),
-                        BlockColliderMode::SensorCollider => (true, true),
+                        BlockColliderMode::SensorCollider => {
+                            if size == 1 {
+                                sensor_colliders.push((location, Rot::IDENTITY, Collider::cuboid(0.5, 0.5, 0.5)));
+                            }
+
+                            (true, true)
+                        }
                     },
                     Some(BlockColliderType::Empty) => (true, false),
-                    Some(BlockColliderType::Custom(_)) => todo!(),
+                    Some(BlockColliderType::Custom(custom_colliders)) => {
+                        if size == 1 {
+                            for custom_collider in custom_colliders.iter() {
+                                match custom_collider.mode {
+                                    BlockColliderMode::NormalCollider => {
+                                        colliders.push((
+                                            location + custom_collider.offset,
+                                            Rot::IDENTITY,
+                                            custom_collider.collider.clone(),
+                                        ));
+                                    }
+                                    BlockColliderMode::SensorCollider => {
+                                        sensor_colliders.push((
+                                            location + custom_collider.offset,
+                                            Rot::IDENTITY,
+                                            custom_collider.collider.clone(),
+                                        ));
+                                    }
+                                }
+                            }
+                        }
+
+                        (true, true)
+                    }
                     _ => panic!("Got None for block collider for block {}!", b.unlocalized_name()),
                 };
 
-                if size == 1 && is_sensor {
-                    sensor_colliders.push((location, Rot::IDENTITY, Collider::cuboid(0.5, 0.5, 0.5)));
-                }
-
                 if last_seen_empty.is_none() {
                     last_seen_empty = Some(is_empty);
-                } else if last_seen_empty.unwrap() != is_empty || is_sensor {
+                } else if last_seen_empty.unwrap() != is_empty || is_different {
                     let s2 = size / 2;
                     let s4 = s2 as f32 / 2.0;
 
@@ -403,8 +428,9 @@ fn remove_chunk_colliders(
         .enumerate()
         .filter(|(_, x)| x.chunk_entity == chunk_entity)
     {
-        if let Some(x) = commands
-            .get_entity(chunk_part_entity.collider_entity) { x.despawn_recursive() }
+        if let Some(x) = commands.get_entity(chunk_part_entity.collider_entity) {
+            x.despawn_recursive()
+        }
         indices_to_remove.push(idx);
     }
 

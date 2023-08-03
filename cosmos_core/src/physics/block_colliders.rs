@@ -1,6 +1,7 @@
 //! Assigns each block their respective collider
 
-use bevy::prelude::{App, IntoSystemConfigs, OnEnter, Res, ResMut, States};
+use bevy::prelude::{App, IntoSystemConfigs, OnEnter, Res, ResMut, States, Vec3};
+use bevy_rapier3d::prelude::Collider;
 
 use crate::{
     block::Block,
@@ -17,12 +18,25 @@ pub enum BlockColliderMode {
 }
 
 #[derive(Debug)]
+/// A custom collider a block may have
+///
+/// Note that this should not go outside the bounds of the block, or breaking/placing will not work when you are targetting this collider.
+pub struct CustomCollider {
+    /// How far away this collider's origin is from the center of this block
+    pub offset: Vec3,
+    /// The collider to use
+    pub collider: Collider,
+    /// What mode this collider should be treated with
+    pub mode: BlockColliderMode,
+}
+
+#[derive(Debug)]
 /// The type of collider a block has
 pub enum BlockColliderType {
     /// Takes an entire block
     Full(BlockColliderMode),
     /// Not yet supported - will panic
-    Custom(Box<()>),
+    Custom(Vec<CustomCollider>),
     /// No collider at all
     Empty,
 }
@@ -36,30 +50,39 @@ pub struct BlockCollider {
     unlocalized_name: String,
 }
 
+impl BlockCollider {
+    /// The unlocalized_name field should be the block this is a collider for.
+    pub fn new(collider: BlockColliderType, block_unlocalized_name: impl Into<String>) -> Self {
+        Self {
+            collider,
+            id: 0,
+            unlocalized_name: block_unlocalized_name.into(),
+        }
+    }
+}
+
 fn register_custom_colliders(blocks: Res<Registry<Block>>, mut registry: ResMut<Registry<BlockCollider>>) {
-    registry.register(BlockCollider {
-        collider: BlockColliderType::Empty,
-        id: 0,
-        unlocalized_name: "cosmos:air".into(),
-    });
+    registry.register(BlockCollider::new(BlockColliderType::Empty, "cosmos:air"));
 
     if blocks.from_id("cosmos:short_grass").is_some() {
-        registry.register(BlockCollider {
-            collider: BlockColliderType::Full(BlockColliderMode::SensorCollider),
-            id: 0,
-            unlocalized_name: "cosmos:short_grass".into(),
-        });
+        registry.register(BlockCollider::new(
+            BlockColliderType::Custom(vec![CustomCollider {
+                collider: Collider::cuboid(0.5, 0.2, 0.5),
+                mode: BlockColliderMode::NormalCollider,
+                offset: Vec3::new(0.0, -(0.5 - 0.2), 0.0),
+            }]),
+            "cosmos:short_grass",
+        ));
     }
 }
 
 fn register_all_colliders(blocks: Res<Registry<Block>>, mut registry: ResMut<Registry<BlockCollider>>) {
     for block in blocks.iter() {
         if registry.from_id(block.unlocalized_name()).is_none() {
-            registry.register(BlockCollider {
-                collider: BlockColliderType::Full(BlockColliderMode::NormalCollider),
-                id: 0,
-                unlocalized_name: block.unlocalized_name().into(),
-            });
+            registry.register(BlockCollider::new(
+                BlockColliderType::Full(BlockColliderMode::SensorCollider),
+                block.unlocalized_name(),
+            ));
         }
     }
 }
