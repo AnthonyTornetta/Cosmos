@@ -5,13 +5,12 @@ use bevy::prelude::{
 };
 use cosmos_core::{
     block::Block,
-    events::block_events::BlockChangedEvent,
     physics::location::Location,
     registry::Registry,
     structure::{coordinates::ChunkCoordinate, ChunkInitEvent, Structure},
 };
 
-use crate::{init::init_world::ServerSeed, GameState};
+use crate::GameState;
 
 use super::{
     biosphere_generation::{
@@ -76,15 +75,18 @@ fn make_block_ranges(block_registry: Res<Registry<Block>>, mut commands: Command
 
 /// Sends a ChunkInitEvent for every chunk that's done generating, monitors when chunks are finished generating, makes trees.
 pub fn generate_chunk_features(
+    // mut event_reader: EventReader<GenerateChunkFeaturesEvent<IceBiosphereMarker>>,
+    // mut init_event_writer: EventWriter<ChunkInitEvent>,
+    // _block_event_writer: EventWriter<BlockChangedEvent>,
+    // mut structure_query: Query<(&mut Structure, &Location)>,
+    // _blocks: Res<Registry<Block>>,
+    // _seed: Res<ServerSeed>,
     mut event_reader: EventReader<GenerateChunkFeaturesEvent<IceBiosphereMarker>>,
     mut init_event_writer: EventWriter<ChunkInitEvent>,
-    mut block_event_writer: EventWriter<BlockChangedEvent>,
     mut structure_query: Query<(&mut Structure, &Location)>,
-    blocks: Res<Registry<Block>>,
-    seed: Res<ServerSeed>,
 ) {
     for ev in event_reader.iter() {
-        if let Ok((mut structure, location)) = structure_query.get_mut(ev.structure_entity) {
+        if let Ok((_structure, _location)) = structure_query.get_mut(ev.structure_entity) {
             let chunk_coords = ev.chunk_coords;
 
             init_event_writer.send(ChunkInitEvent {
