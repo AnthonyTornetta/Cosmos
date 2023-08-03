@@ -16,13 +16,11 @@ Once you reach your destination, make a *hopefully safer than this* landing.
 ![](./showcase/ship_on_ground.png)
 
 ## Compilation
+To get started, install your OS dependencies [here](https://bevyengine.org/learn/book/getting-started/setup/#install-os-dependencies). The dependencies section is all you need to do.
+
 This project requires the latest nightly rust to compile. To swap to nightly, run the command 
 
 `rustup default nightly`.
-
-To compile, navigate to the root directory of the repo and run 
-
-`cargo build`.
 
 To run the client, navigate to the cosmos_client directory and run
 
@@ -33,6 +31,11 @@ For the server, navigate to the cosmos_server directory and run
 `cargo run`
 
 For release builds, append the `--release` flag to the build/run commands.
+
+To compile the workspace (not normally necessary), navigate to the root directory of the repo and run 
+
+`cargo build`
+
 
 ## Documentation
 

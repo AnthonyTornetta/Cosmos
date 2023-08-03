@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::utils::array_utils;
 
-use super::chunk::{CHUNK_DIMENSIONS, CHUNK_DIMENSIONSF};
+use super::chunk::{CHUNK_DIMENSIONS, CHUNK_DIMENSIONSF, CHUNK_DIMENSIONS_UB};
 
 /// Common functionality of structure-based coordinates
 pub trait Coordinate {
@@ -307,22 +307,22 @@ impl ChunkBlockCoordinate {
 impl UnboundChunkBlockCoordinate {
     /// This will get the chunk this BlockCoordinate would be in.
     ///
-    /// Shorthand for
-    /// ```rs
-    /// UnboundBlockCoordinate {
-    ///     x: blockCoord.x % CHUNK_DIMENSIONS,
-    ///     y: blockCoord.y % CHUNK_DIMENSIONS,
-    ///     z: blockCoord.z % CHUNK_DIMENSIONS,
-    /// }
-    /// ```
-    ///
     /// This is not made into a From to avoid accidental casting.
     #[inline(always)]
-    pub fn for_unbound_block_coordinate(value: UnboundBlockCoordinate) -> Self {
+    pub fn for_unbound_block_coordinate(mut value: UnboundBlockCoordinate) -> Self {
+        if value.x < 0 {
+            value.x += CHUNK_DIMENSIONS_UB;
+        }
+        if value.y < 0 {
+            value.y += CHUNK_DIMENSIONS_UB;
+        }
+        if value.z < 0 {
+            value.z += CHUNK_DIMENSIONS_UB;
+        }
         Self {
-            x: value.x % (CHUNK_DIMENSIONS as UnboundCoordinateType),
-            y: value.y % (CHUNK_DIMENSIONS as UnboundCoordinateType),
-            z: value.z % (CHUNK_DIMENSIONS as UnboundCoordinateType),
+            x: value.x & (CHUNK_DIMENSIONS_UB - 1),
+            y: value.y & (CHUNK_DIMENSIONS_UB - 1),
+            z: value.z & (CHUNK_DIMENSIONS_UB - 1),
         }
     }
 }

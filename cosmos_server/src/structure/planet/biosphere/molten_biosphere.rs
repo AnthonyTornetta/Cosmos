@@ -20,8 +20,7 @@ use crate::{init::init_world::ServerSeed, GameState};
 
 use super::{
     biosphere_generation::{
-        generate_planet, notify_when_done_generating_terrain, BlockRanges, DefaultBiosphereGenerationStrategy, GenerateChunkFeaturesEvent,
-        GenerationParemeters,
+        generate_planet, notify_when_done_generating_terrain, BlockLayers, DefaultBiosphereGenerationStrategy, GenerateChunkFeaturesEvent,
     },
     register_biosphere, TBiosphere, TGenerateChunkEvent, TemperatureRange,
 };
@@ -67,10 +66,10 @@ impl TBiosphere<MoltenBiosphereMarker, MoltenChunkNeedsGeneratedEvent> for Molte
 
 fn make_block_ranges(block_registry: Res<Registry<Block>>, mut commands: Commands) {
     commands.insert_resource(
-        BlockRanges::<MoltenBiosphereMarker>::default()
-            .with_sea_level_block("cosmos:cheese", &block_registry, -20)
+        BlockLayers::<MoltenBiosphereMarker>::default()
+            .with_sea_level_block("cosmos:cheese", &block_registry, 620)
             .expect("Cheese missing!")
-            .with_range("cosmos:molten_stone", &block_registry, 0)
+            .add_noise_layer("cosmos:molten_stone", &block_registry, 160, 0.10, 7.0, 9)
             .expect("Molten Stone missing"),
     );
 }
@@ -200,9 +199,14 @@ pub(super) fn register(app: &mut App) {
             notify_when_done_generating_terrain::<MoltenBiosphereMarker>,
             generate_chunk_features,
         )
+<<<<<<< HEAD
             .run_if(in_state(GameState::Playing)),
     )
     .insert_resource(GenerationParemeters::<MoltenBiosphereMarker>::new(0.10, 7.0, 9));
+=======
+            .in_set(OnUpdate(GameState::Playing)),
+    );
+>>>>>>> main
 
     app.add_systems(OnEnter(GameState::PostLoading), make_block_ranges);
 }
