@@ -56,6 +56,7 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 
 ## Release 0.0.5a - The Aesthetic Release (In Progress)
 - [ ] Biosphere Improvements
+  - [ ] Ice biosphere glaciers
   - [ ] Water block
   - [ ] Lava block
   - [ ] Structures
@@ -109,11 +110,11 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
       - [x] Dynamically generate chunks & unload them based on players' positions close to planet
       - [x] Make generation work on all faces of planet
       - [x] Block orientation for every block
-  - [ ] Biospheres
+  - [x] Biospheres
     - [x] Speed up terrain generation
     - [x] Make molten biosphere
     - [x] Enhance grass biosphere
-    - [ ] Create icy biosphere
+    - [x] Create icy biosphere
   - [x] Asteroids
     - [x] For now just floating rocks in space
   - [x] Save generated universe
