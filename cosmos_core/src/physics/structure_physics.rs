@@ -403,9 +403,8 @@ fn remove_chunk_colliders(
         .enumerate()
         .filter(|(_, x)| x.chunk_entity == chunk_entity)
     {
-        commands
-            .get_entity(chunk_part_entity.collider_entity)
-            .map(|x| x.despawn_recursive());
+        if let Some(x) = commands
+            .get_entity(chunk_part_entity.collider_entity) { x.despawn_recursive() }
         indices_to_remove.push(idx);
     }
 
