@@ -7,7 +7,7 @@ use bevy::{
     tasks::AsyncComputeTaskPool,
 };
 use cosmos_core::{
-    block::{self, Block, BlockFace},
+    block::{Block, BlockFace},
     physics::location::Location,
     registry::Registry,
     structure::{
@@ -44,9 +44,9 @@ pub struct GenerateChunkFeaturesEvent<T: Component> {
 /// * `iterations` Value passed in by the `GenerationParemeters`. Represents how many times the noise function will be run
 fn get_block_height(
     noise_generator: &noise::OpenSimplex,
-    (bx, by, bz): (usize, usize, usize),
+    block_coords: BlockCoordinate,
     (structure_x, structure_y, structure_z): (f64, f64, f64),
-    middle: usize,
+    middle: CoordinateType,
     amplitude: f64,
     delta: f64,
     iterations: usize,
@@ -55,9 +55,9 @@ fn get_block_height(
     for iteration in 1..=iterations {
         let iteration = iteration as f64;
         depth += noise_generator.get([
-            (bx as f64 + structure_x) * (delta / iteration),
-            (by as f64 + structure_y) * (delta / iteration),
-            (bz as f64 + structure_z) * (delta / iteration),
+            (block_coords.x as f64 + structure_x) * (delta / iteration),
+            (block_coords.y as f64 + structure_y) * (delta / iteration),
+            (block_coords.z as f64 + structure_z) * (delta / iteration),
         ]) * amplitude
             * iteration;
     }
@@ -99,10 +99,10 @@ pub fn notify_when_done_generating_terrain<T: Component>(
 #[inline]
 fn generate_face_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + Default>(
     block_coords: BlockCoordinate,
-    (structure_x, structure_y, structure_z): (f64, f64, f64),
+    structure_coords: (f64, f64, f64),
     s_dimensions: CoordinateType,
     noise_generator: &noise::OpenSimplex,
-    block_ranges: &BlockRanges<T>,
+    block_ranges: &BlockLayers<T>,
     chunk: &mut Chunk,
     up: BlockFace,
 ) {
@@ -140,14 +140,23 @@ fn generate_face_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
 
             for chunk_height in 0..CHUNK_DIMENSIONS {
                 let coords: ChunkBlockCoordinate = match up {
-                    BlockFace::Front => (i, j, chunk_height, sz + chunk_height),
-                    BlockFace::Back => (i, j, chunk_height, s_dimensions - (sz + chunk_height)),
-                    BlockFace::Top => (i, chunk_height, j, sy + chunk_height),
-                    BlockFace::Bottom => (i, chunk_height, j, s_dimensions - (sy + chunk_height)),
-                    BlockFace::Right => (chunk_height, i, j, sx + chunk_height),
-                    BlockFace::Left => (chunk_height, i, j, s_dimensions - (sx + chunk_height)),
+                    BlockFace::Front => (i, j, chunk_height),
+                    BlockFace::Back => (i, j, chunk_height),
+                    BlockFace::Top => (i, chunk_height, j),
+                    BlockFace::Bottom => (i, chunk_height, j),
+                    BlockFace::Right => (chunk_height, i, j),
+                    BlockFace::Left => (chunk_height, i, j),
                 }
                 .into();
+
+                let height = match up {
+                    BlockFace::Front => sz + chunk_height,
+                    BlockFace::Back => s_dimensions - (sz + chunk_height),
+                    BlockFace::Top => sy + chunk_height,
+                    BlockFace::Bottom => s_dimensions - (sy + chunk_height),
+                    BlockFace::Right => sx + chunk_height,
+                    BlockFace::Left => s_dimensions - (sx + chunk_height),
+                };
 
                 let block = block_ranges.face_block(height, &concrete_ranges, block_ranges.sea_level, block_ranges.sea_block());
                 if let Some(block) = block {
@@ -161,7 +170,7 @@ fn generate_face_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
 fn generate_edge_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + Default>(
     block_coords: BlockCoordinate,
     structure_coords: (f64, f64, f64),
-    s_dimensions: usize,
+    s_dimensions: CoordinateType,
     noise_generator: &noise::OpenSimplex,
     block_ranges: &BlockLayers<T>,
     chunk: &mut Chunk,
@@ -169,8 +178,8 @@ fn generate_edge_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
     k_up: BlockFace,
 ) {
     for i in 0..CHUNK_DIMENSIONS {
-        let mut j_layers: Vec<Vec<(&Block, usize)>> = vec![vec![]; CHUNK_DIMENSIONS];
-        for (j, vec) in j_layers.iter_mut().enumerate() {
+        let mut j_layers_cache: Vec<Vec<(&Block, CoordinateType)>> = vec![vec![]; CHUNK_DIMENSIONS as usize];
+        for (j, j_layers) in j_layers_cache.iter_mut().enumerate() {
             // Seed coordinates and j-direction noise functions.
             let (mut x, mut y, mut z) = (block_coords.x + i, block_coords.y + i, block_coords.z + i);
             match j_up {
@@ -190,7 +199,7 @@ fn generate_edge_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
             for (block, layer) in block_ranges.ranges.iter() {
                 let layer_top = S::get_top_height(
                     j_up,
-                    (x, y, z),
+                    BlockCoordinate::new(x, y, z),
                     structure_coords,
                     s_dimensions,
                     noise_generator,
@@ -199,7 +208,7 @@ fn generate_edge_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
                     layer.delta,
                     layer.iterations,
                 );
-                vec.push((block, layer_top));
+                j_layers.push((block, layer_top));
                 height = layer_top;
             }
         }
@@ -232,11 +241,11 @@ fn generate_edge_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
             };
 
             let mut height = s_dimensions;
-            let mut k_layers: Vec<(&Block, usize)> = vec![];
+            let mut k_layers: Vec<(&Block, CoordinateType)> = vec![];
             for (block, layer) in block_ranges.ranges.iter() {
                 let layer_top = S::get_top_height(
                     k_up,
-                    (x, y, z),
+                    BlockCoordinate::new(x, y, z),
                     structure_coords,
                     s_dimensions,
                     noise_generator,
@@ -249,40 +258,47 @@ fn generate_edge_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
                 height = layer_top;
             }
 
-            if j_layers[j][0].1 == j_height && k_layers[0].1 == j_height && first_both_45 == s_dimensions {
+            if j_layers_cache[j as usize][0].1 == j_height && k_layers[0].1 == j_height && first_both_45 == s_dimensions {
                 first_both_45 = j_height;
             }
 
-            for (k, vec) in j_layers.iter().enumerate() {
-                let chunk_block_coords = (i, i, i).into();
+            for (k, j_layers) in j_layers_cache.iter().enumerate() {
+                let mut chunk_block_coords: ChunkBlockCoordinate = (i, i, i).into();
                 match j_up {
                     BlockFace::Front | BlockFace::Back => chunk_block_coords.z = j,
                     BlockFace::Top | BlockFace::Bottom => chunk_block_coords.y = j,
                     BlockFace::Right | BlockFace::Left => chunk_block_coords.x = j,
                 };
                 match k_up {
-                    BlockFace::Front | BlockFace::Back => chunk_block_coords.z = k,
-                    BlockFace::Top | BlockFace::Bottom => chunk_block_coords.y = k,
-                    BlockFace::Right | BlockFace::Left => chunk_block_coords.x = k,
+                    BlockFace::Front | BlockFace::Back => chunk_block_coords.z = k as CoordinateType,
+                    BlockFace::Top | BlockFace::Bottom => chunk_block_coords.y = k as CoordinateType,
+                    BlockFace::Right | BlockFace::Left => chunk_block_coords.x = k as CoordinateType,
                 };
 
                 let k_height = match k_up {
-                    BlockFace::Front => block_coords.z + z,
-                    BlockFace::Back => s_dimensions - (block_coords.z + z),
-                    BlockFace::Top => block_coords.y + y,
-                    BlockFace::Bottom => s_dimensions - (block_coords.y + y),
-                    BlockFace::Right => block_coords.x + x,
-                    BlockFace::Left => s_dimensions - (block_coords.x + x),
+                    BlockFace::Front => block_coords.z + chunk_block_coords.z,
+                    BlockFace::Back => s_dimensions - (block_coords.z + chunk_block_coords.z),
+                    BlockFace::Top => block_coords.y + chunk_block_coords.y,
+                    BlockFace::Bottom => s_dimensions - (block_coords.y + chunk_block_coords.y),
+                    BlockFace::Right => block_coords.x + chunk_block_coords.x,
+                    BlockFace::Left => s_dimensions - (block_coords.x + chunk_block_coords.x),
                 };
 
                 if j_height < first_both_45 || k_height < first_both_45 {
                     // The top block needs different "top" to look good, the block can't tell which "up" looks good.
-                    let block_up = Planet::get_planet_face_without_structure(block_coords, s_dimensions);
+                    let block_up = Planet::get_planet_face_without_structure(
+                        BlockCoordinate::new(
+                            block_coords.x + chunk_block_coords.x,
+                            block_coords.y + chunk_block_coords.y,
+                            block_coords.z + chunk_block_coords.z,
+                        ),
+                        s_dimensions,
+                    );
                     let block = block_ranges.edge_block(
                         j_height,
                         k_height,
-                        Some(vec),
-                        Some(&k_layers),
+                        j_layers,
+                        &k_layers,
                         block_ranges.sea_level,
                         block_ranges.sea_block(),
                     );
@@ -299,7 +315,7 @@ fn generate_edge_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
 fn generate_corner_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + Default>(
     block_coords: BlockCoordinate,
     structure_coords: (f64, f64, f64),
-    s_dimensions: usize,
+    s_dimensions: CoordinateType,
     noise_generator: &noise::OpenSimplex,
     block_ranges: &BlockLayers<T>,
     chunk: &mut Chunk,
@@ -308,16 +324,17 @@ fn generate_corner_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + 
     z_up: BlockFace,
 ) {
     // x top height cache.
-    let mut x_layers: Vec<Vec<(&Block, usize)>> = vec![vec![]; CHUNK_DIMENSIONS * CHUNK_DIMENSIONS];
+    let mut x_layers: Vec<Vec<(&Block, CoordinateType)>> = vec![vec![]; CHUNK_DIMENSIONS as usize * CHUNK_DIMENSIONS as usize];
     for j in 0..CHUNK_DIMENSIONS {
         for k in 0..CHUNK_DIMENSIONS {
-            let index = flatten_2d(j, k, CHUNK_DIMENSIONS);
+            let index = flatten_2d(j as usize, k as usize, CHUNK_DIMENSIONS as usize);
 
             // Seed coordinates for the noise function.
             let seed_coords = match x_up {
-                BlockFace::Right => BlockCoordinate::new(s_dimensions, block_coords.y + j, block_coords.z + k),
-                _ => BlockCoordinate::new(0, block_coords.y + j, block_coords.z + k),
-            };
+                BlockFace::Right => (s_dimensions, block_coords.y + j, block_coords.z + k),
+                _ => (0, block_coords.y + j, block_coords.z + k),
+            }
+            .into();
 
             // Unmodified top height.
             let mut height = s_dimensions;
@@ -340,16 +357,17 @@ fn generate_corner_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + 
     }
 
     // y top height cache.
-    let mut y_layers: Vec<Vec<(&Block, usize)>> = vec![vec![]; CHUNK_DIMENSIONS * CHUNK_DIMENSIONS];
+    let mut y_layers: Vec<Vec<(&Block, CoordinateType)>> = vec![vec![]; CHUNK_DIMENSIONS as usize * CHUNK_DIMENSIONS as usize];
     for i in 0..CHUNK_DIMENSIONS {
         for k in 0..CHUNK_DIMENSIONS {
-            let index = flatten_2d(i, k, CHUNK_DIMENSIONS);
+            let index = flatten_2d(i as usize, k as usize, CHUNK_DIMENSIONS as usize);
 
             // Seed coordinates for the noise function. Which loop variable goes to which xyz must agree everywhere.
             let seed_coords = match y_up {
-                BlockFace::Top => BlockCoordinate::new(block_coords.x + i, s_dimensions, block_coords.z + k),
-                _ => BlockCoordinate::new(block_coords.x + i, 0, block_coords.z + k),
-            };
+                BlockFace::Top => (block_coords.x + i, s_dimensions, block_coords.z + k),
+                _ => (block_coords.x + i, 0, block_coords.z + k),
+            }
+            .into();
 
             // Unmodified top height.
             let mut height = s_dimensions;
@@ -375,9 +393,10 @@ fn generate_corner_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + 
         for j in 0..CHUNK_DIMENSIONS {
             // Seed coordinates for the noise function.
             let seed_coords = match z_up {
-                BlockFace::Front => BlockCoordinate::new(block_coords.x + i, block_coords.y + j, s_dimensions),
-                _ => BlockCoordinate::new(block_coords.x + i, block_coords.y + j, 0),
-            };
+                BlockFace::Front => (block_coords.x + i, block_coords.y + j, s_dimensions),
+                _ => (block_coords.x + i, block_coords.y + j, 0),
+            }
+            .into();
 
             // Unmodified top height.
             let mut height = s_dimensions;
@@ -420,21 +439,21 @@ fn generate_corner_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + 
                     x_height,
                     y_height,
                     z_height,
-                    &x_layers[flatten_2d(j, k, CHUNK_DIMENSIONS)],
-                    &y_layers[flatten_2d(i, k, CHUNK_DIMENSIONS)],
+                    &x_layers[flatten_2d(j as usize, k as usize, CHUNK_DIMENSIONS as usize)],
+                    &y_layers[flatten_2d(i as usize, k as usize, CHUNK_DIMENSIONS as usize)],
                     &z_layers,
                     block_ranges.sea_level,
                     block_ranges.sea_block(),
                 );
                 if let Some(block) = block {
-                    chunk.set_block_at(BlockCoordinate::new(i, j, k), block, block_up);
+                    chunk.set_block_at(ChunkBlockCoordinate::new(i, j, k), block, block_up);
                 }
             }
         }
     }
 }
 
-const GUIDE_MIN: usize = 100;
+const GUIDE_MIN: CoordinateType = 100;
 /// Used to change the algorithm used for base terrain generation.
 ///
 /// Try tweaking the values of GenerationParemeters first before making your own custom generation function.
@@ -452,9 +471,9 @@ pub trait BiosphereGenerationStrategy {
     /// * `iterations` Value passed in by the `GenerationParemeters`. Represents how many times the noise function will be run
     fn get_block_height(
         noise_generator: &noise::OpenSimplex,
-        block_coords: (usize, usize, usize),
+        block_coords: BlockCoordinate,
         structure_coords: (f64, f64, f64),
-        middle_air_start: usize,
+        middle_air_start: CoordinateType,
         amplitude: f64,
         delta: f64,
         iterations: usize,
@@ -477,7 +496,7 @@ pub trait BiosphereGenerationStrategy {
     /// - `a` x, y, or z but generalized.
     /// - `intersection` is where the two edges are projected to meet, which is used as the limit to your height.
     /// - `s_dimensions` structure width/height/length.
-    fn get_mirror_coefficient(a: usize, intersection: usize, s_dimensions: usize) -> f64 {
+    fn get_mirror_coefficient(a: CoordinateType, intersection: CoordinateType, s_dimensions: CoordinateType) -> f64 {
         let max = intersection;
         let min = intersection - GUIDE_MIN;
         if a > max || a < s_dimensions - max {
@@ -502,9 +521,9 @@ pub trait BiosphereGenerationStrategy {
     /// - `c1_height` The height on c1's edge.
     /// - `c2` The second edge coefficient (from `get_mirror_coefficient`).
     /// - `c2_height` The height on c2's edge.
-    fn merge(height: f64, c1: f64, c1_height: f64, c2: f64, c2_height: f64) -> usize {
+    fn merge(height: f64, c1: f64, c1_height: f64, c2: f64, c2_height: f64) -> CoordinateType {
         let c = if c1 + c2 == 0.0 { 0.0 } else { c1.max(c2) / (c1 + c2) };
-        (height * (1.0 - c * (c1 + c2)) + c * (c1 * c1_height + c2 * c2_height)) as usize
+        (height * (1.0 - c * (c1 + c2)) + c * (c1 * c1_height + c2 * c2_height)) as CoordinateType
     }
 
     /// Generates the "old" height, the one that's used if you're in the middle of a face.
@@ -515,15 +534,15 @@ pub trait BiosphereGenerationStrategy {
         block_up: BlockFace,
         block_coords: BlockCoordinate,
         structure_coords: (f64, f64, f64),
-        middle_air_start: usize,
+        middle_air_start: CoordinateType,
         amplitude: f64,
         delta: f64,
         iterations: usize,
-        s_dimensions: usize,
-    ) -> usize {
+        s_dimensions: CoordinateType,
+    ) -> CoordinateType {
         // The amplitude * iterations is an approximation to account for needing to guide the terrain farther from the edge
         // the bumpier the terrain is. Terrain may still get too bumpy.
-        let top = middle_air_start - (amplitude * iterations as f64) as usize;
+        let top = middle_air_start - (amplitude * iterations as f64) as CoordinateType;
         let bottom = s_dimensions - top;
         let min = top - GUIDE_MIN;
 
@@ -539,7 +558,8 @@ pub trait BiosphereGenerationStrategy {
                 BlockFace::Bottom => (x_coord, bottom, block_coords.z.clamp(bottom, top)),
                 BlockFace::Right => (x_coord, block_coords.y, block_coords.z),
                 BlockFace::Left => (x_coord, block_coords.y, block_coords.z),
-            };
+            }
+            .into();
             x_height = self::get_block_height(
                 noise_generator,
                 x_seed,
@@ -549,7 +569,7 @@ pub trait BiosphereGenerationStrategy {
                 delta,
                 iterations,
             );
-            x_coefficient = Self::get_mirror_coefficient(block_coords.x, x_height as usize, s_dimensions);
+            x_coefficient = Self::get_mirror_coefficient(block_coords.x, x_height as CoordinateType, s_dimensions);
         }
 
         // Y.
@@ -564,7 +584,8 @@ pub trait BiosphereGenerationStrategy {
                 BlockFace::Bottom => (block_coords.x, y_coord, block_coords.z),
                 BlockFace::Right => (top, y_coord, block_coords.z.clamp(bottom, top)),
                 BlockFace::Left => (bottom, y_coord, block_coords.z.clamp(bottom, top)),
-            };
+            }
+            .into();
             y_height = self::get_block_height(
                 noise_generator,
                 y_seed,
@@ -574,7 +595,7 @@ pub trait BiosphereGenerationStrategy {
                 delta,
                 iterations,
             );
-            y_coefficient = Self::get_mirror_coefficient(block_coords.y, y_height as usize, s_dimensions);
+            y_coefficient = Self::get_mirror_coefficient(block_coords.y, y_height as CoordinateType, s_dimensions);
         }
 
         // Z.
@@ -589,7 +610,8 @@ pub trait BiosphereGenerationStrategy {
                 BlockFace::Bottom => (block_coords.x.clamp(bottom, top), bottom, z_coord),
                 BlockFace::Right => (top, block_coords.y.clamp(bottom, top), z_coord),
                 BlockFace::Left => (bottom, block_coords.y.clamp(bottom, top), z_coord),
-            };
+            }
+            .into();
             z_height = self::get_block_height(
                 noise_generator,
                 z_seed,
@@ -599,14 +621,14 @@ pub trait BiosphereGenerationStrategy {
                 delta,
                 iterations,
             );
-            z_coefficient = Self::get_mirror_coefficient(block_coords.z, z_height as usize, s_dimensions);
+            z_coefficient = Self::get_mirror_coefficient(block_coords.z, z_height as CoordinateType, s_dimensions);
         }
 
         match block_up {
             BlockFace::Front | BlockFace::Back => Self::merge(z_height, x_coefficient, x_height, y_coefficient, y_height),
             BlockFace::Top | BlockFace::Bottom => Self::merge(y_height, x_coefficient, x_height, z_coefficient, z_height),
             BlockFace::Right | BlockFace::Left => Self::merge(x_height, y_coefficient, y_height, z_coefficient, z_height),
-        };
+        }
     }
 
     /// Gets the top block's height
@@ -629,7 +651,7 @@ pub trait BiosphereGenerationStrategy {
         amplitude: f64,
         delta: f64,
         iterations: usize,
-    ) -> usize {
+    ) -> CoordinateType {
         Self::guide(
             noise_generator,
             block_up,
@@ -656,14 +678,14 @@ pub struct BlockLayers<T: Component + Clone + Default> {
     _phantom: PhantomData<T>,
     ranges: Vec<(Block, BlockLayer)>,
     sea_block: Option<Block>,
-    sea_level: Option<usize>,
+    sea_level: Option<CoordinateType>,
 }
 
 /// Stores the blocks and all the noise information for creating the top of their layer.
 /// For example, the "stone" BlockLevel has the noise paramters that create the boundry between dirt and stone.
 #[derive(Clone, Debug)]
 pub struct BlockLayer {
-    middle_depth: usize,
+    middle_depth: CoordinateType,
     delta: f64,
     amplitude: f64,
     iterations: usize,
@@ -671,7 +693,7 @@ pub struct BlockLayer {
 
 impl BlockLayer {
     /// This layer doesn't use a noise function to generate its span, and is thus fixed at a certain depth.
-    pub fn fixed_layer(middle_depth: usize) -> Self {
+    pub fn fixed_layer(middle_depth: CoordinateType) -> Self {
         Self {
             middle_depth,
             delta: 0.0,
@@ -681,7 +703,7 @@ impl BlockLayer {
     }
 
     /// This layer is based off a noise function and will appear at a varying depth based on the parameters
-    pub fn noise_layer(middle_depth: usize, delta: f64, amplitude: f64, iterations: usize) -> Self {
+    pub fn noise_layer(middle_depth: CoordinateType, delta: f64, amplitude: f64, iterations: usize) -> Self {
         Self {
             middle_depth,
             delta,
@@ -709,7 +731,7 @@ impl<T: Component + Clone + Default> BlockLayers<T> {
         mut self,
         block_id: &str,
         block_registry: &Registry<Block>,
-        middle_depth: usize,
+        middle_depth: CoordinateType,
         delta: f64,
         amplitude: f64,
         iterations: usize,
@@ -742,7 +764,7 @@ impl<T: Component + Clone + Default> BlockLayers<T> {
         mut self,
         block_id: &str,
         block_registry: &Registry<Block>,
-        middle_depth: usize,
+        middle_depth: CoordinateType,
     ) -> Result<Self, BlockRangeError<T>> {
         let Some(block) = block_registry.from_id(block_id) else {
             return Err(BlockRangeError::MissingBlock(self));
@@ -757,7 +779,7 @@ impl<T: Component + Clone + Default> BlockLayers<T> {
         mut self,
         block_id: &str,
         block_registry: &Registry<Block>,
-        sea_level: usize,
+        sea_level: CoordinateType,
     ) -> Result<Self, BlockRangeError<T>> {
         let Some(block) = block_registry.from_id(block_id).cloned() else {
             return Err(BlockRangeError::MissingBlock(self));
@@ -774,9 +796,9 @@ impl<T: Component + Clone + Default> BlockLayers<T> {
 
     fn face_block<'a>(
         &self,
-        height: usize,
-        block_layers: &[(&'a Block, usize)],
-        sea_level: Option<usize>,
+        height: CoordinateType,
+        block_layers: &[(&'a Block, CoordinateType)],
+        sea_level: Option<CoordinateType>,
         sea_block: Option<&'a Block>,
     ) -> Option<&'a Block> {
         for (block, level_top) in block_layers.iter().rev() {
@@ -794,36 +816,17 @@ impl<T: Component + Clone + Default> BlockLayers<T> {
 
     fn edge_block<'a>(
         &self,
-        j_height: usize,
-        k_height: usize,
-        j_layers: Option<&[(&'a Block, usize)]>,
-        k_layers: Option<&[(&'a Block, usize)]>,
-        sea_level: Option<usize>,
+        j_height: CoordinateType,
+        k_height: CoordinateType,
+        j_layers: &[(&'a Block, CoordinateType)],
+        k_layers: &[(&'a Block, CoordinateType)],
+        sea_level: Option<CoordinateType>,
         sea_block: Option<&'a Block>,
     ) -> Option<&'a Block> {
-        match (j_layers, k_layers) {
-            (Some(j_layers), Some(k_layers)) => {
-                for (index, (block, j_layer_top)) in j_layers.iter().enumerate().rev() {
-                    if j_height <= *j_layer_top && k_height <= k_layers[index].1 {
-                        return Some(*block);
-                    }
-                }
+        for (index, (block, j_layer_top)) in j_layers.iter().enumerate().rev() {
+            if j_height <= *j_layer_top && k_height <= k_layers[index].1 {
+                return Some(*block);
             }
-            (Some(j_layers), None) => {
-                for (block, j_layer_top) in j_layers.iter().rev() {
-                    if j_height <= *j_layer_top {
-                        return Some(*block);
-                    }
-                }
-            }
-            (None, Some(k_layers)) => {
-                for (block, k_layer_top) in k_layers.iter().rev() {
-                    if k_height <= *k_layer_top {
-                        return Some(*block);
-                    }
-                }
-            }
-            (None, None) => {}
         }
 
         // No land blocks, must be sea or air.
@@ -836,13 +839,13 @@ impl<T: Component + Clone + Default> BlockLayers<T> {
 
     fn corner_block<'a>(
         &self,
-        x_height: usize,
-        y_height: usize,
-        z_height: usize,
-        x_layers: &[(&'a Block, usize)],
-        y_layers: &[(&'a Block, usize)],
-        z_layers: &[(&'a Block, usize)],
-        sea_level: Option<usize>,
+        x_height: CoordinateType,
+        y_height: CoordinateType,
+        z_height: CoordinateType,
+        x_layers: &[(&'a Block, CoordinateType)],
+        y_layers: &[(&'a Block, CoordinateType)],
+        z_layers: &[(&'a Block, CoordinateType)],
+        sea_level: Option<CoordinateType>,
         sea_block: Option<&'a Block>,
     ) -> Option<&'a Block> {
         for (index, (block, x_layer_top)) in x_layers.iter().enumerate().rev() {

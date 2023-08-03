@@ -575,14 +575,8 @@ pub(super) fn register(app: &mut App) {
             notify_when_done_generating_terrain::<GrassBiosphereMarker>,
             generate_chunk_features,
         )
-<<<<<<< HEAD
             .run_if(in_state(GameState::Playing)),
-    )
-    .insert_resource(GenerationParemeters::<GrassBiosphereMarker>::new(0.05, 7.0, 9));
-=======
-            .in_set(OnUpdate(GameState::Playing)),
     );
->>>>>>> main
 
     app.add_systems(OnEnter(GameState::PostLoading), make_block_ranges);
 }
