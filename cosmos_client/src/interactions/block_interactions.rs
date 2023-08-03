@@ -65,9 +65,6 @@ fn process_player_interaction(
         ) {
             let entity = chunk_physics_part.get(entity).map(|x| x.chunk_entity).unwrap_or(entity);
 
-            // println!("GOT CHUNK ENTITY: {}", entity.index());
-            // println!("Intersection: {intersection:?}");
-
             if let Ok(parent) = parent_query.get(entity) {
                 if let Ok((structure, transform, is_planet)) = structure_query.get(parent.get()) {
                     if input_handler.check_just_pressed(CosmosInputs::BreakBlock, &keys, &mouse) {

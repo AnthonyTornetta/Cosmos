@@ -65,8 +65,6 @@ impl<K: Identifiable + Sync + Send, V: Identifiable + Sync + Send> ManyToOneRegi
                 name: unlocalized_name.to_owned(),
             })?;
 
-        println!("Inserting {} : {unlocalized_name}", key.id());
-
         self.pointers.insert(key.id(), ptr);
 
         Ok(())
