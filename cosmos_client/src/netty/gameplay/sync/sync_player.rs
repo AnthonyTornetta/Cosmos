@@ -69,5 +69,5 @@ fn send_disconnect(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems((send_position, send_disconnect).in_set(OnUpdate(GameState::Playing)));
+    app.add_systems(Update, (send_position, send_disconnect).run_if(in_state(GameState::Playing)));
 }

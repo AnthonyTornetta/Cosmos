@@ -2,9 +2,10 @@
 
 use bevy::{
     prelude::{
-        App, BuildChildren, Children, Commands, Component, CoreSet, EventReader, IntoSystemConfig, OnUpdate, Or, Query, Res, States, With,
+        in_state, App, BuildChildren, Children, Commands, Component, EventReader, IntoSystemConfigs, Or, PostUpdate, Query, Res, States,
+        Update, With,
     },
-    reflect::{FromReflect, Reflect},
+    reflect::Reflect,
 };
 
 use crate::{
@@ -17,7 +18,7 @@ use crate::{
 
 use super::Ship;
 
-#[derive(Component, Default, FromReflect, Reflect, Debug, Copy, Clone)]
+#[derive(Component, Default, Reflect, Debug, Copy, Clone)]
 /// Represents the time since the last block was broken
 pub struct MeltingDown(pub f32);
 
@@ -46,6 +47,7 @@ fn save_the_kids(
 }
 
 pub(super) fn register<T: States + Clone + Copy>(app: &mut App, playing_state: T) {
-    app.add_system(monitor_block_events.in_set(OnUpdate(playing_state)))
-        .add_system(save_the_kids.in_base_set(CoreSet::PostUpdate));
+    app.add_systems(Update, monitor_block_events.run_if(in_state(playing_state)))
+        .add_systems(PostUpdate, save_the_kids)
+        .register_type::<MeltingDown>();
 }

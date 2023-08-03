@@ -1,5 +1,5 @@
 use bevy::{
-    prelude::{App, Commands, Component, DespawnRecursiveExt, Entity, EventWriter, IntoSystemConfigs, OnUpdate, Query, Res, With},
+    prelude::{in_state, App, Commands, Component, DespawnRecursiveExt, Entity, EventWriter, IntoSystemConfigs, Query, Res, Update, With},
     tasks::{AsyncComputeTaskPool, Task},
     utils::HashMap,
 };
@@ -10,6 +10,7 @@ use cosmos_core::{
     structure::{
         asteroid::loading::AsteroidNeedsCreated,
         chunk::{Chunk, CHUNK_DIMENSIONS},
+        coordinates::{BlockCoordinate, ChunkBlockCoordinate, ChunkCoordinate},
         loading::ChunksNeedLoaded,
         structure_iterator::ChunkIteratorResult,
         ChunkInitEvent, Structure,
@@ -52,16 +53,10 @@ fn notify_when_done_generating(
 
                 for res in itr {
                     // This will always be true because include_empty is false
-                    if let ChunkIteratorResult::FilledChunk {
-                        position: (x, y, z),
-                        chunk: _,
-                    } = res
-                    {
+                    if let ChunkIteratorResult::FilledChunk { position, chunk: _ } = res {
                         chunk_init_event_writer.send(ChunkInitEvent {
                             structure_entity: generating_chunk.structure_entity,
-                            x,
-                            y,
-                            z,
+                            coords: position,
                         });
                     }
                 }
@@ -119,19 +114,20 @@ fn start_generating_asteroid(
                         let dist = x_pos * x_pos + y_pos * y_pos + z_pos * z_pos + noise_here * noise_here;
 
                         if dist < distance_threshold * distance_threshold {
-                            let (cx, cy, cz) = (x / CHUNK_DIMENSIONS, y / CHUNK_DIMENSIONS, z / CHUNK_DIMENSIONS);
+                            let coords = BlockCoordinate::new(x / CHUNK_DIMENSIONS, y / CHUNK_DIMENSIONS, z / CHUNK_DIMENSIONS);
 
-                            if !chunks.contains_key(&(cx, cy, cz)) {
-                                chunks.insert((cx, cy, cz), Chunk::new(cx, cy, cz));
+                            let chunk_coords = ChunkCoordinate::for_block_coordinate(coords);
+
+                            if !chunks.contains_key(&chunk_coords) {
+                                chunks.insert(chunk_coords, Chunk::new(chunk_coords));
                             }
 
-                            chunks.get_mut(&(cx, cy, cz)).unwrap().set_block_at(
-                                x & (CHUNK_DIMENSIONS - 1),
-                                y & (CHUNK_DIMENSIONS - 1),
-                                z & (CHUNK_DIMENSIONS - 1),
-                                stone,
-                                BlockFace::Top,
-                            )
+                            let chunk_block_coords = ChunkBlockCoordinate::for_block_coordinate(coords);
+
+                            chunks
+                                .get_mut(&chunk_coords)
+                                .unwrap()
+                                .set_block_at(chunk_block_coords, stone, BlockFace::Top)
                         }
                     }
                 }
@@ -147,5 +143,8 @@ fn start_generating_asteroid(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems((start_generating_asteroid, notify_when_done_generating).in_set(OnUpdate(GameState::Playing)));
+    app.add_systems(
+        Update,
+        (start_generating_asteroid, notify_when_done_generating).run_if(in_state(GameState::Playing)),
+    );
 }

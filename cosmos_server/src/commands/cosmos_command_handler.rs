@@ -1,6 +1,6 @@
 //! Handles all the server console commands
 
-use bevy::prelude::{App, Commands, Entity, EventReader, EventWriter, Query, Res, ResMut, With};
+use bevy::prelude::{App, Commands, Entity, EventReader, EventWriter, Query, Res, ResMut, Startup, With};
 use cosmos_core::{
     ecs::NeedsDespawned,
     physics::location::Location,
@@ -183,5 +183,5 @@ fn cosmos_command_listener(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_startup_system(register_commands).add_system(cosmos_command_listener);
+    app.add_systems(Startup, (register_commands, cosmos_command_listener));
 }

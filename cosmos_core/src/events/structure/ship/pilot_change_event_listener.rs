@@ -1,6 +1,6 @@
 use bevy::prelude::{
-    Added, App, BuildChildren, Commands, Component, Entity, EventReader, EventWriter, IntoSystemConfig, OnUpdate, Quat, Query,
-    RemovedComponents, States, Transform, Vec3, With,
+    in_state, Added, App, BuildChildren, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, Quat, Query,
+    RemovedComponents, States, Transform, Update, Vec3, With,
 };
 use bevy_rapier3d::prelude::{RigidBody, Sensor};
 
@@ -66,8 +66,9 @@ fn add_pilot(mut query: Query<&mut Transform, (Added<Pilot>, With<Player>)>) {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Event)]
 struct RemoveSensorFrom(Entity, u8);
+
 /// This is stupid. But the only actual solution to this would require a ton of work.
 ///
 /// What happens is that the player leaves the ship & the client and server both move the player
@@ -78,7 +79,7 @@ struct RemoveSensorFrom(Entity, u8);
 /// To fix this we would need to some how set the player's position to a later game tick than
 /// the next couple player packets it would receive, but that would require a decent bit of work.
 /// So for now, we just delay the repositioning for quite a while on the server.
-#[derive(Debug)]
+#[derive(Debug, Event)]
 struct Bouncer(Entity, u8);
 
 const BOUNCES: u8 = if cfg!(feature = "server") { 100 } else { 0 };
@@ -128,17 +129,18 @@ fn verify_pilot_exists(mut commands: Commands, query: Query<(Entity, &Pilot)>) {
 }
 
 pub(super) fn register<T: States + Clone + Copy>(app: &mut App, playing_state: T) {
-    app.add_systems((
-        add_pilot,
-        pilot_removed.after(handle_child_syncing),
-        remove_sensor,
-        bouncer,
-        verify_pilot_exists.in_set(OnUpdate(playing_state)),
-        event_listener
-            .in_set(OnUpdate(playing_state))
-            .after(handle_child_syncing)
-            .after(verify_pilot_exists),
-    ))
+    app.add_systems(
+        Update,
+        (
+            add_pilot,
+            pilot_removed.after(handle_child_syncing),
+            remove_sensor,
+            bouncer,
+            verify_pilot_exists,
+            event_listener.after(handle_child_syncing).after(verify_pilot_exists),
+        )
+            .run_if(in_state(playing_state)),
+    )
     .add_event::<RemoveSensorFrom>()
     .add_event::<Bouncer>();
 }

@@ -79,5 +79,5 @@ fn register_materials(
 pub(super) fn register(app: &mut App) {
     registry::many_to_one::create_many_to_one_registry::<Block, CosmosMaterial>(app);
 
-    app.add_system(register_materials.in_schedule(OnExit(GameState::PostLoading)));
+    app.add_systems(OnExit(GameState::PostLoading), register_materials);
 }

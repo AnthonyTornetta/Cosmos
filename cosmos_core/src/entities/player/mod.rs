@@ -5,10 +5,10 @@ pub mod render_distance;
 
 use bevy::{
     prelude::{App, Component},
-    reflect::{FromReflect, Reflect},
+    reflect::Reflect,
 };
 
-#[derive(Component, Reflect, FromReflect, Debug)]
+#[derive(Component, Reflect, Debug)]
 /// Represents a player
 pub struct Player {
     name: String,

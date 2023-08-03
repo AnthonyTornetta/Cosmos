@@ -40,8 +40,7 @@ fn update_system(
                         if energy_storage_system.get_energy() >= line.property.energy_per_shot {
                             energy_storage_system.decrease_energy(line.property.energy_per_shot);
 
-                            let location =
-                                structure.block_world_location(line.start.x, line.start.y, line.start.z, global_transform, location);
+                            let location = structure.block_world_location(line.start.coords(), global_transform, location);
 
                             // AT SOME POINT, THE NEGATIVE SIGN HAS TO BE REMOVED HERE!!!!!
                             // I SHOULD NOT HAVE TO NEGATE THE DIRECTION
@@ -88,5 +87,5 @@ fn update_system(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(update_system.in_set(OnUpdate(GameState::Playing)));
+    app.add_systems(Update, update_system.run_if(in_state(GameState::Playing)));
 }

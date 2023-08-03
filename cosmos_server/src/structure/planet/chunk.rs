@@ -1,4 +1,4 @@
-use bevy::prelude::{App, Component, CoreSet, IntoSystemConfig, Query, With};
+use bevy::prelude::{App, Component, First, IntoSystemConfigs, Query, With};
 use cosmos_core::structure::chunk::Chunk;
 
 use crate::persistence::{
@@ -16,5 +16,5 @@ fn save_chunks(mut query: Query<(&mut SerializedData, &SaveChunk), With<NeedsSav
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(save_chunks.in_base_set(CoreSet::First).after(begin_saving).before(done_saving));
+    app.add_systems(First, save_chunks.after(begin_saving).before(done_saving));
 }

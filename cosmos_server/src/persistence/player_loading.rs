@@ -3,7 +3,7 @@
 use std::{ffi::OsStr, fs, time::Duration};
 
 use bevy::{
-    prelude::{warn, App, Commands, Component, DespawnRecursiveExt, Entity, IntoSystemConfig, Query, Res, ResMut, With, Without},
+    prelude::{warn, App, Commands, Component, DespawnRecursiveExt, Entity, IntoSystemConfigs, Query, Res, ResMut, Update, With, Without},
     tasks::{AsyncComputeTaskPool, Task},
     time::common_conditions::on_timer,
 };
@@ -170,9 +170,12 @@ fn load_near(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.insert_resource(SectorsCache::default()).add_systems((
-        unload_far.run_if(on_timer(Duration::from_millis(1000))),
-        load_near.run_if(on_timer(Duration::from_millis(1000))),
-        monitor_loading_task,
-    ));
+    app.insert_resource(SectorsCache::default()).add_systems(
+        Update,
+        (
+            unload_far.run_if(on_timer(Duration::from_millis(1000))),
+            load_near.run_if(on_timer(Duration::from_millis(1000))),
+            monitor_loading_task,
+        ),
+    );
 }

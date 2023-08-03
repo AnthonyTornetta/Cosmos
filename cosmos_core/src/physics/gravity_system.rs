@@ -89,7 +89,7 @@ fn gravity_system(
     }
 }
 
-#[derive(Component, Reflect, FromReflect, Debug)]
+#[derive(Component, Reflect, Debug)]
 /// If something emits gravity, it should have this component.
 pub struct GravityEmitter {
     /// How much force to apply per kg (Earth is 9.8)
@@ -101,5 +101,5 @@ pub struct GravityEmitter {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems((fix_read_mass_props, gravity_system));
+    app.add_systems(Update, (fix_read_mass_props, gravity_system));
 }

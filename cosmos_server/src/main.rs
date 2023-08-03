@@ -61,8 +61,6 @@ fn main() {
             GameState::Playing,
             GameState::Playing,
         ))
-        .add_plugin(RenetServerPlugin)
-        .add_plugin(NetcodeServerPlugin)
-        .add_plugin(ServerPlugin { ip })
+        .add_plugins((RenetServerPlugin, NetcodeServerPlugin, ServerPlugin { ip }))
         .run();
 }

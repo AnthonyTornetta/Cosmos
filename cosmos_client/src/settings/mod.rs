@@ -2,7 +2,7 @@
 
 use std::fs;
 
-use bevy::prelude::{AmbientLight, App, IntoSystemAppConfig, OnEnter, ResMut};
+use bevy::prelude::{AmbientLight, App, OnEnter, ResMut};
 use serde::{Deserialize, Serialize};
 
 use crate::state::game_state::GameState;
@@ -28,5 +28,5 @@ fn change_gamma(mut ambient_light: ResMut<AmbientLight>) {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(change_gamma.in_schedule(OnEnter(GameState::Loading)));
+    app.add_systems(OnEnter(GameState::Loading), change_gamma);
 }

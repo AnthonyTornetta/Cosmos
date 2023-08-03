@@ -3,7 +3,7 @@
 
 pub mod bundles;
 
-use bevy::prelude::{App, Commands, Component, CoreSet, DespawnRecursiveExt, Entity, IntoSystemConfig, Query, With};
+use bevy::prelude::{App, Commands, Component, DespawnRecursiveExt, Entity, First, Query, With};
 
 #[derive(Component, Debug)]
 /// Marks an entity that needs to be recurisvely despawned.
@@ -27,5 +27,5 @@ pub fn despawn_needed(mut commands: Commands, needs_despawned_query: Query<Entit
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(despawn_needed.in_base_set(CoreSet::First));
+    app.add_systems(First, despawn_needed);
 }

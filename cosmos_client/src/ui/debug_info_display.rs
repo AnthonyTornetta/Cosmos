@@ -29,13 +29,9 @@ fn add_text(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn((
         TextBundle {
             style: Style {
-                position: UiRect {
-                    bottom: Val::Px(5.0),
-                    left: Val::Px(5.0),
-                    ..default()
-                },
+                bottom: Val::Px(5.0),
+                left: Val::Px(5.0),
                 position_type: PositionType::Absolute,
-
                 ..default()
             },
             text: Text::from_section("(x, y, z) (x, y, z)", text_style.clone()),
@@ -47,11 +43,8 @@ fn add_text(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn((
         TextBundle {
             style: Style {
-                position: UiRect {
-                    bottom: Val::Px(5.0 + text_gap),
-                    left: Val::Px(5.0),
-                    ..default()
-                },
+                bottom: Val::Px(5.0 + text_gap),
+                left: Val::Px(5.0),
                 position_type: PositionType::Absolute,
 
                 ..default()
@@ -65,11 +58,8 @@ fn add_text(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn((
         TextBundle {
             style: Style {
-                position: UiRect {
-                    bottom: Val::Px(5.0 + text_gap * 2.0),
-                    left: Val::Px(5.0),
-                    ..default()
-                },
+                bottom: Val::Px(5.0 + text_gap * 2.0),
+                left: Val::Px(5.0),
                 position_type: PositionType::Absolute,
 
                 ..default()
@@ -112,6 +102,6 @@ fn update_fps(mut query: Query<(&mut Text, &mut FPSCounter)>, time: Res<Time>) {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(add_text.in_schedule(OnEnter(GameState::Playing)))
-        .add_systems((update_coords, update_fps).in_set(OnUpdate(GameState::Playing)));
+    app.add_systems(OnEnter(GameState::Playing), add_text)
+        .add_systems(Update, (update_coords, update_fps).run_if(in_state(GameState::Playing)));
 }

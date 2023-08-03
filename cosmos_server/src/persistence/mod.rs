@@ -4,7 +4,7 @@ use std::fs;
 
 use bevy::{
     prelude::{App, Component, Resource},
-    reflect::{FromReflect, Reflect},
+    reflect::Reflect,
     utils::{HashMap, HashSet},
 };
 use rand::{distributions::Alphanumeric, Rng};
@@ -19,7 +19,7 @@ pub mod loading;
 pub mod player_loading;
 pub mod saving;
 
-#[derive(Component, Debug, Reflect, FromReflect, Serialize, Deserialize, PartialEq, Eq, Clone, Hash)]
+#[derive(Component, Debug, Reflect, Serialize, Deserialize, PartialEq, Eq, Clone, Hash)]
 /// NOT ALL ENTITIES WILL HAVE THIS ON THEM!
 ///
 /// Only entities that have been loaded or saved will have this. This is a unique identifier for

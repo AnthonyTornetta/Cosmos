@@ -1,19 +1,18 @@
 //! Blocks have health, and this module is used to represent that.
 
-use bevy::{
-    prelude::App,
-    reflect::{FromReflect, Reflect},
-    utils::HashMap,
-};
+use bevy::{prelude::App, reflect::Reflect, utils::HashMap};
 use serde::{Deserialize, Serialize};
 
 pub mod block_destroyed_event;
 
-use crate::{block::hardness::BlockHardness, utils::array_utils::flatten};
+use crate::block::hardness::BlockHardness;
 
-use super::chunk::CHUNK_DIMENSIONS;
+use super::{
+    chunk::{Chunk, CHUNK_DIMENSIONS},
+    coordinates::{ChunkBlockCoordinate, Coordinate},
+};
 
-#[derive(Debug, Default, Serialize, Deserialize, Reflect, FromReflect)]
+#[derive(Debug, Default, Serialize, Deserialize, Reflect)]
 /// Each block's health is represented here
 pub struct BlockHealth {
     /// Block index -> block health
@@ -22,16 +21,16 @@ pub struct BlockHealth {
 
 impl BlockHealth {
     #[inline]
-    fn index(&self, x: usize, y: usize, z: usize) -> u32 {
-        flatten(x, y, z, CHUNK_DIMENSIONS, CHUNK_DIMENSIONS) as u32
+    fn index(&self, coords: ChunkBlockCoordinate) -> u32 {
+        coords.flatten(CHUNK_DIMENSIONS, CHUNK_DIMENSIONS) as u32
     }
 
     /// Gets the block's health at that given coordinate
     /// - x/y/z: block coordinate
     /// - block_hardness: The hardness for the block at those coordinates
     #[inline]
-    pub(crate) fn get_health(&self, x: usize, y: usize, z: usize, block_hardness: &BlockHardness) -> f32 {
-        if let Some(health) = self.block_healths.get(&self.index(x, y, z)) {
+    pub(crate) fn get_health(&self, coords: ChunkBlockCoordinate, block_hardness: &BlockHardness) -> f32 {
+        if let Some(health) = self.block_healths.get(&self.index(coords)) {
             *health
         } else {
             block_hardness.hardness()
@@ -40,22 +39,21 @@ impl BlockHealth {
 
     /// Clears the entry for this block's health - which sets it back to its starting health value
     /// - x/y/z: block coordinate
-    pub(crate) fn reset_health(&mut self, x: usize, y: usize, z: usize) {
-        self.block_healths.remove(&self.index(x, y, z));
+    pub(crate) fn reset_health(&mut self, coords: ChunkBlockCoordinate) {
+        self.block_healths.remove(&self.index(coords));
     }
 
     /// Sets the block's health at that specific coordinate
     /// - x/y/z: block coordinate
     /// - block_hardness: The hardness for the block at those coordinates
     /// - value: Any value, is clamped to always be 0.0 or above.
-    pub(crate) fn set_health(&mut self, x: usize, y: usize, z: usize, block_hardness: &BlockHardness, value: f32) {
-        debug_assert!(x < CHUNK_DIMENSIONS);
-        debug_assert!(y < CHUNK_DIMENSIONS);
+    pub(crate) fn set_health(&mut self, coords: ChunkBlockCoordinate, block_hardness: &BlockHardness, value: f32) {
+        Chunk::debug_assert_is_within_blocks(coords);
 
         if block_hardness.hardness() == value {
-            self.reset_health(x, y, z);
+            self.reset_health(coords);
         } else {
-            self.block_healths.insert(self.index(x, y, z), value.max(0.0));
+            self.block_healths.insert(self.index(coords), value.max(0.0));
         }
     }
 
@@ -66,11 +64,11 @@ impl BlockHealth {
     /// - amount: The amount of damage to take - cannot be negative
     ///
     /// Returns: true if that block was destroyed, false if not
-    pub fn take_damage(&mut self, x: usize, y: usize, z: usize, block_hardness: &BlockHardness, amount: f32) -> bool {
+    pub fn take_damage(&mut self, coords: ChunkBlockCoordinate, block_hardness: &BlockHardness, amount: f32) -> bool {
         debug_assert!(amount >= 0.0);
-        let value = self.get_health(x, y, z, block_hardness);
+        let value = self.get_health(coords, block_hardness);
         let amount = value - amount;
-        self.set_health(x, y, z, block_hardness, amount);
+        self.set_health(coords, block_hardness, amount);
 
         amount <= 0.0
     }

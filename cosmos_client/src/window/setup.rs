@@ -106,8 +106,6 @@ pub(super) fn register(app: &mut App) {
         visible: false,
     })
     .insert_resource(DeltaCursorPosition { x: 0.0, y: 0.0 })
-    .add_startup_system(setup_window)
-    .add_system(update_mouse_deltas)
-    .add_system(toggle_mouse_freeze)
-    .add_system(window_focus_changed);
+    .add_systems(Startup, setup_window)
+    .add_systems(Update, (update_mouse_deltas, toggle_mouse_freeze, window_focus_changed));
 }

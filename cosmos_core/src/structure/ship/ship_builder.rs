@@ -2,7 +2,7 @@
 
 use bevy::{
     ecs::system::EntityCommands,
-    prelude::{Added, App, Commands, Entity, Query},
+    prelude::{Added, App, Commands, Entity, Query, Update},
 };
 use bevy_rapier3d::prelude::{Ccd, ExternalImpulse, ReadMassProperties, RigidBody, Velocity};
 
@@ -54,5 +54,5 @@ fn on_add_ship(query: Query<Entity, Added<Ship>>, mut commands: Commands) {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(on_add_ship);
+    app.add_systems(Update, on_add_ship);
 }

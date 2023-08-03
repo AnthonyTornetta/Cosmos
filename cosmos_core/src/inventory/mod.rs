@@ -4,7 +4,7 @@
 
 use bevy::{
     prelude::{App, Component},
-    reflect::{FromReflect, Reflect},
+    reflect::Reflect,
 };
 use serde::{Deserialize, Serialize};
 
@@ -20,7 +20,7 @@ pub mod itemstack;
 //     NormalInventory, // These inventories are organizable by the player
 // }
 
-#[derive(Default, Component, Serialize, Deserialize, Debug, Reflect, FromReflect)]
+#[derive(Default, Component, Serialize, Deserialize, Debug, Reflect)]
 /// A collection of ItemStacks, organized into slots
 pub struct Inventory {
     items: Vec<Option<ItemStack>>,

@@ -1,6 +1,6 @@
 //! Represents client information for biospheres
 
-use bevy::prelude::{App, Color, ResMut};
+use bevy::prelude::{App, Color, ResMut, Startup};
 use cosmos_core::registry::{self, identifiable::Identifiable, Registry};
 
 #[derive(Debug)]
@@ -50,5 +50,5 @@ fn register_biospheres(mut reigstry: ResMut<Registry<BiosphereColor>>) {
 pub(super) fn register(app: &mut App) {
     registry::create_registry::<BiosphereColor>(app);
 
-    app.add_startup_system(register_biospheres);
+    app.add_systems(Startup, register_biospheres);
 }

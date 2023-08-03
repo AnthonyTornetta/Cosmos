@@ -5,22 +5,22 @@ use std::{
     ops::{Add, AddAssign, SubAssign},
 };
 
-use bevy::{
-    prelude::*,
-    reflect::{FromReflect, Reflect},
-    utils::HashMap,
-};
+use bevy::{prelude::*, reflect::Reflect, utils::HashMap};
 
 use crate::{
     block::{Block, BlockFace},
     events::block_events::BlockChangedEvent,
     registry::{identifiable::Identifiable, Registry},
-    structure::{events::StructureLoadedEvent, Structure, StructureBlock},
+    structure::{
+        coordinates::{BlockCoordinate, CoordinateType},
+        events::StructureLoadedEvent,
+        Structure, StructureBlock,
+    },
 };
 
 use super::Systems;
 
-#[derive(Default, FromReflect, Reflect, Clone, Copy)]
+#[derive(Default, Reflect, Clone, Copy)]
 /// Every block that is a laser cannon should have this property
 pub struct LaserCannonProperty {
     /// How much energy is consumed per shot
@@ -64,7 +64,7 @@ impl LaserCannonBlocks {
     }
 }
 
-#[derive(FromReflect, Reflect, Default)]
+#[derive(Reflect)]
 /// Represents a line of laser cannons.
 ///
 /// All laser cannons in this line are facing the same direction.
@@ -74,7 +74,7 @@ pub struct Line {
     /// The direction this line is facing
     pub direction: BlockFace,
     /// How many blocks this line has
-    pub len: usize,
+    pub len: CoordinateType,
     /// The property of all the blocks in this line
     pub property: LaserCannonProperty,
 
@@ -88,11 +88,12 @@ impl Line {
     pub fn end(&self) -> StructureBlock {
         let (dx, dy, dz) = self.direction.direction();
         let delta = self.len as i32 - 1;
-        StructureBlock {
-            x: (self.start.x as i32 + delta * dx) as usize,
-            y: (self.start.y as i32 + delta * dy) as usize,
-            z: (self.start.z as i32 + delta * dz) as usize,
-        }
+
+        StructureBlock::new(BlockCoordinate::new(
+            (self.start.x as i32 + delta * dx) as CoordinateType,
+            (self.start.y as i32 + delta * dy) as CoordinateType,
+            (self.start.z as i32 + delta * dz) as CoordinateType,
+        ))
     }
 
     /// Returns true if a structure block is within this line
@@ -108,7 +109,7 @@ impl Line {
     }
 }
 
-#[derive(Component, Default, FromReflect, Reflect)]
+#[derive(Component, Default, Reflect)]
 /// Represents all the laser cannons that are within this structure
 pub struct LaserCannonSystem {
     /// All the lins that there are
@@ -123,9 +124,9 @@ impl LaserCannonSystem {
             if line.start == *sb {
                 let (dx, dy, dz) = line.direction.direction();
 
-                line.start.x = (line.start.x as i32 + dx) as usize;
-                line.start.y = (line.start.y as i32 + dy) as usize;
-                line.start.z = (line.start.z as i32 + dz) as usize;
+                line.start.x = (line.start.x as i32 + dx) as CoordinateType;
+                line.start.y = (line.start.y as i32 + dy) as CoordinateType;
+                line.start.z = (line.start.z as i32 + dz) as CoordinateType;
                 line.len -= 1;
 
                 line.property -= line.properties.remove(0);
@@ -153,20 +154,20 @@ impl LaserCannonSystem {
                     BlockFace::Bottom => line.start.y - sb.y,
                 };
 
-                let l2_len = line.len - l1_len - 1;
+                let l2_len = line.len as CoordinateType - l1_len - 1;
 
                 let mut l1_total_prop = LaserCannonProperty::default();
                 let mut l2_total_prop = LaserCannonProperty::default();
 
-                let mut l1_props = Vec::with_capacity(l1_len);
-                let mut l2_props = Vec::with_capacity(l2_len);
+                let mut l1_props = Vec::with_capacity(l1_len as usize);
+                let mut l2_props = Vec::with_capacity(l2_len as usize);
 
-                for prop in line.properties.iter().take(l1_len) {
+                for prop in line.properties.iter().take(l1_len as usize) {
                     l1_total_prop.energy_per_shot += prop.energy_per_shot;
                     l1_props.push(*prop);
                 }
 
-                for prop in line.properties.iter().skip(l1_len + 1) {
+                for prop in line.properties.iter().skip(l1_len as usize + 1) {
                     l2_total_prop.energy_per_shot += prop.energy_per_shot;
                     l2_props.push(*prop);
                 }
@@ -185,11 +186,11 @@ impl LaserCannonSystem {
                 let dist = l1_len as i32 + 1;
 
                 let l2 = Line {
-                    start: StructureBlock {
-                        x: (line.start.x as i32 + dx * dist) as usize,
-                        y: (line.start.y as i32 + dy * dist) as usize,
-                        z: (line.start.z as i32 + dz * dist) as usize,
-                    },
+                    start: StructureBlock::new(BlockCoordinate::new(
+                        (line.start.x as i32 + dx * dist) as CoordinateType,
+                        (line.start.y as i32 + dy * dist) as CoordinateType,
+                        (line.start.z as i32 + dz * dist) as CoordinateType,
+                    )),
                     direction: line.direction,
                     len: line.len - l1_len - 1,
                     property: l2_total_prop,
@@ -224,9 +225,9 @@ impl LaserCannonSystem {
                     link_to = Some(i);
                     break;
                 } else {
-                    line.start.x -= dx as usize;
-                    line.start.y -= dy as usize;
-                    line.start.z -= dz as usize;
+                    line.start.x -= dx as CoordinateType;
+                    line.start.y -= dy as CoordinateType;
+                    line.start.z -= dz as CoordinateType;
                     line.len += 1;
                     line.property += *prop;
                     line.properties.insert(0, *prop);
@@ -339,10 +340,10 @@ fn structure_loaded_event(
 
 pub(super) fn register<T: States + Clone + Copy>(app: &mut App, post_loading_state: T, playing_state: T) {
     app.insert_resource(LaserCannonBlocks::default())
-        .add_systems((
-            register_laser_blocks.in_schedule(OnEnter(post_loading_state)),
-            structure_loaded_event.in_set(OnUpdate(playing_state)),
-            block_update_system.in_set(OnUpdate(playing_state)),
-        ))
+        .add_systems(OnEnter(post_loading_state), register_laser_blocks)
+        .add_systems(
+            Update,
+            (structure_loaded_event, block_update_system).run_if(in_state(playing_state)),
+        )
         .register_type::<LaserCannonSystem>();
 }

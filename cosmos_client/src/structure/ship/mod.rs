@@ -1,8 +1,8 @@
 //! Handles client-related ship things
 
 use bevy::prelude::{
-    App, BuildChildren, Commands, Entity, EventReader, Input, IntoSystemConfig, IntoSystemConfigs, KeyCode, MouseButton, OnUpdate, Parent,
-    Query, Res, ResMut, Transform, With, Without,
+    in_state, App, BuildChildren, Commands, Entity, EventReader, Input, IntoSystemConfigs, KeyCode, MouseButton, Parent, Query, Res,
+    ResMut, Transform, Update, With, Without,
 };
 use bevy_rapier3d::prelude::CollisionEvent;
 use bevy_renet::renet::RenetClient;
@@ -23,19 +23,6 @@ use crate::{
 };
 
 pub mod client_ship_builder;
-
-pub(super) fn register(app: &mut App) {
-    client_ship_builder::register(app);
-
-    app.add_systems(
-        (
-            remove_self_from_ship,
-            respond_to_collisions.after(handle_child_syncing),
-            remove_parent_when_too_far,
-        )
-            .in_set(OnUpdate(GameState::Playing)),
-    );
-}
 
 fn remove_self_from_ship(
     has_parent: Query<(Entity, &Parent), (With<LocalPlayer>, Without<Pilot>)>,
@@ -164,4 +151,18 @@ fn remove_parent_when_too_far(
             }
         }
     }
+}
+
+pub(super) fn register(app: &mut App) {
+    client_ship_builder::register(app);
+
+    app.add_systems(
+        Update,
+        (
+            remove_self_from_ship,
+            respond_to_collisions.after(handle_child_syncing),
+            remove_parent_when_too_far,
+        )
+            .run_if(in_state(GameState::Playing)),
+    );
 }

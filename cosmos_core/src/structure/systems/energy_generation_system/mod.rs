@@ -11,7 +11,7 @@ use crate::{
 
 use super::{StructureSystem, Systems};
 
-#[derive(Default, FromReflect, Reflect, Clone, Copy)]
+#[derive(Default, Reflect, Clone, Copy)]
 /// Any block that can generate energy will have this property.
 pub struct EnergyGenerationProperty {
     /// How much energy is generated
@@ -36,7 +36,7 @@ impl EnergyGenerationBlocks {
     }
 }
 
-#[derive(Component, Default, Reflect, FromReflect)]
+#[derive(Component, Default, Reflect)]
 struct EnergyGenerationSystem {
     generation_rate: f32,
 }
@@ -122,11 +122,10 @@ fn structure_loaded_event(
 
 pub(super) fn register<T: States + Clone + Copy>(app: &mut App, post_loading_state: T, playing_state: T) {
     app.insert_resource(EnergyGenerationBlocks::default())
-        .add_systems((
-            register_energy_blocks.in_schedule(OnEnter(post_loading_state)),
-            structure_loaded_event.in_set(OnUpdate(playing_state)),
-            block_update_system.in_set(OnUpdate(playing_state)),
-            update_energy.in_set(OnUpdate(playing_state)),
-        ))
+        .add_systems(OnEnter(post_loading_state), register_energy_blocks)
+        .add_systems(
+            Update,
+            (structure_loaded_event, block_update_system, update_energy).run_if(in_state(playing_state)),
+        )
         .register_type::<EnergyGenerationSystem>();
 }

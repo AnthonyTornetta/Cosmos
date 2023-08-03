@@ -4,8 +4,8 @@ use std::marker::PhantomData;
 
 use bevy::{
     prelude::{
-        Added, App, Commands, Component, CoreSet, Entity, EventReader, EventWriter, IntoSystemConfig, OnUpdate, Query, Res, ResMut,
-        Resource, With, Without,
+        in_state, Added, App, Commands, Component, Entity, Event, EventReader, EventWriter, First, IntoSystemConfigs, Query, Res, ResMut,
+        Resource, Startup, Update, With, Without,
     },
     tasks::Task,
 };
@@ -13,6 +13,7 @@ use cosmos_core::{
     physics::location::Location,
     structure::{
         chunk::Chunk,
+        coordinates::ChunkCoordinate,
         planet::{biosphere::BiosphereMarker, Planet},
         Structure,
     },
@@ -40,7 +41,7 @@ pub mod grass_biosphere;
 pub mod ice_biosphere;
 pub mod molten_biosphere;
 
-#[derive(Debug)]
+#[derive(Debug, Event)]
 /// This event is generated whenever a structure needs a biosphere
 struct NeedsBiosphereEvent {
     biosphere_id: String,
@@ -48,15 +49,15 @@ struct NeedsBiosphereEvent {
 }
 
 /// This has to be redone.
-pub trait TGenerateChunkEvent {
+pub trait TGenerateChunkEvent: Event {
     /// Creates the generate chunk event.
-    fn new(x: usize, y: usize, z: usize, structure_entity: Entity) -> Self;
+    fn new(coords: ChunkCoordinate, structure_entity: Entity) -> Self;
 
     /// Get structure entity.
     fn get_structure_entity(&self) -> Entity;
 
     /// Get coordinates.
-    fn get_chunk_coordinates(&self) -> (usize, usize, usize);
+    fn get_chunk_coordinates(&self) -> ChunkCoordinate;
 }
 
 /// This has to be redone.
@@ -64,7 +65,7 @@ pub trait TBiosphere<T: Component, E: TGenerateChunkEvent> {
     /// Gets the marker component used to flag this planet's type
     fn get_marker_component(&self) -> T;
     /// Gets a component for this specific generate chunk event
-    fn get_generate_chunk_event(&self, x: usize, y: usize, z: usize, structure_entity: Entity) -> E;
+    fn get_generate_chunk_event(&self, coords: ChunkCoordinate, structure_entity: Entity) -> E;
 }
 
 #[derive(Debug)]
@@ -104,40 +105,47 @@ pub fn register_biosphere<T: Component + Default, E: Send + Sync + 'static + TGe
     temperature_range: TemperatureRange,
 ) {
     app.add_event::<E>()
-        .add_startup_system(move |mut registry: ResMut<BiosphereTemperatureRegistry>| {
+        .add_systems(Startup, move |mut registry: ResMut<BiosphereTemperatureRegistry>| {
             registry.register(biosphere_id.to_owned(), temperature_range);
         })
-        .add_systems((
-            // Adds this biosphere's marker component to anything that needs generated
-            (move |mut event_reader: EventReader<NeedsBiosphereEvent>, mut commands: Commands| {
-                for ev in event_reader.iter() {
-                    if ev.biosphere_id == biosphere_id {
-                        commands.entity(ev.entity).insert(T::default());
+        .add_systems(
+            First,
+            (
+                // Adds this biosphere's marker component to anything that needs generated
+                (move |mut event_reader: EventReader<NeedsBiosphereEvent>, mut commands: Commands| {
+                    for ev in event_reader.iter() {
+                        if ev.biosphere_id == biosphere_id {
+                            commands.entity(ev.entity).insert(T::default());
+                        }
                     }
-                }
-            }),
-            // Saves this biosphere when the structure is saved
-            (|mut query: Query<&mut SerializedData, (With<NeedsSaved>, With<T>)>| {
-                for mut sd in query.iter_mut() {
-                    sd.serialize_data(biosphere_id.to_string(), &true);
-                }
-            })
-            .in_base_set(CoreSet::First)
-            .after(begin_saving)
-            .before(done_saving),
-            // Loads this biosphere when the structure is loaded
-            (move |query: Query<(Entity, &SerializedData), With<NeedsLoaded>>, mut commands: Commands| {
-                for (entity, sd) in query.iter() {
-                    if sd.deserialize_data::<bool>(biosphere_id).unwrap_or(false) {
-                        commands.entity(entity).insert((T::default(), BiosphereMarker::new(biosphere_id)));
+                }),
+                // Saves this biosphere when the structure is saved
+                (|mut query: Query<&mut SerializedData, (With<NeedsSaved>, With<T>)>| {
+                    for mut sd in query.iter_mut() {
+                        sd.serialize_data(biosphere_id.to_string(), &true);
                     }
-                }
-            })
-            .after(begin_loading)
-            .before(done_loading),
-            // Checks if any blocks need generated for this biosphere
-            check_needs_generated_system::<E, T>.in_set(OnUpdate(GameState::Playing)),
-        ))
+                })
+                .after(begin_saving)
+                .before(done_saving),
+            ),
+        )
+        .add_systems(
+            Update,
+            (
+                // Loads this biosphere when the structure is loaded
+                (move |query: Query<(Entity, &SerializedData), With<NeedsLoaded>>, mut commands: Commands| {
+                    for (entity, sd) in query.iter() {
+                        if sd.deserialize_data::<bool>(biosphere_id).unwrap_or(false) {
+                            commands.entity(entity).insert((T::default(), BiosphereMarker::new(biosphere_id)));
+                        }
+                    }
+                })
+                .after(begin_loading)
+                .before(done_loading),
+                // Checks if any blocks need generated for this biosphere
+                check_needs_generated_system::<E, T>.run_if(in_state(GameState::Playing)),
+            ),
+        )
         .insert_resource(GeneratingChunks::<T>::default())
         .add_event::<GenerateChunkFeaturesEvent<T>>();
 }
@@ -150,7 +158,6 @@ fn add_biosphere(
     mut commands: Commands,
 ) {
     for (entity, planet, location) in query.iter() {
-        println!("Planet temperature: {}", planet.temperature());
         let biospheres = registry.get_biospheres_for(planet.temperature());
 
         if !biospheres.is_empty() {
@@ -220,7 +227,7 @@ impl BiosphereTemperatureRegistry {
 pub(super) fn register(app: &mut App) {
     app.add_event::<NeedsBiosphereEvent>()
         .insert_resource(BiosphereTemperatureRegistry::default())
-        .add_system(add_biosphere);
+        .add_systems(Update, add_biosphere);
 
     grass_biosphere::register(app);
     molten_biosphere::register(app);

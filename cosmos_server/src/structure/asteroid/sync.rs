@@ -29,9 +29,9 @@ fn on_request_asteroid(
                 cosmos_encoder::serialize(&AsteroidServerMessages::Asteroid {
                     body: NettyRigidBody::new(velocity, transform.rotation, NettyRigidBodyLocation::Absolute(*location)),
                     entity: ev.entity,
-                    width: structure.chunks_width() as u32,
-                    height: structure.chunks_height() as u32,
-                    length: structure.chunks_length() as u32,
+                    width: structure.chunks_width(),
+                    height: structure.chunks_height(),
+                    length: structure.chunks_length(),
                 }),
             );
         }
@@ -39,5 +39,5 @@ fn on_request_asteroid(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(on_request_asteroid);
+    app.add_systems(Update, on_request_asteroid);
 }

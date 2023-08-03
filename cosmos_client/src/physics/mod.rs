@@ -1,6 +1,6 @@
 //! Handles client-only physics stuff
 
-use bevy::prelude::{App, Commands, Entity, Query, With, Without};
+use bevy::prelude::{App, Commands, Entity, Query, Update, With, Without};
 use cosmos_core::physics::{
     location::Location,
     player_world::{PlayerWorld, WorldWithin},
@@ -20,5 +20,5 @@ fn add_world_within(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(add_world_within);
+    app.add_systems(Update, add_world_within);
 }

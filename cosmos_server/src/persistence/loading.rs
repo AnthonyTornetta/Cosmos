@@ -10,7 +10,7 @@
 use std::fs;
 
 use bevy::{
-    prelude::{App, Commands, Component, CoreSet, DespawnRecursiveExt, Entity, IntoSystemConfig, Query, With, Without},
+    prelude::{App, Commands, Component, DespawnRecursiveExt, Entity, IntoSystemConfigs, PreUpdate, Query, Update, With, Without},
     reflect::Reflect,
 };
 use bevy_rapier3d::prelude::Velocity;
@@ -69,11 +69,11 @@ fn default_load(query: Query<(Entity, &SerializedData), With<NeedsLoaded>>, mut 
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(check_needs_loaded.in_base_set(CoreSet::PreUpdate))
+    app.add_systems(PreUpdate, check_needs_loaded)
         // Put all loading-related systems after this
-        .add_system(begin_loading.in_base_set(CoreSet::Update))
+        .add_systems(Update, begin_loading)
         // Put all loading-related systems before this
-        .add_system(done_loading.after(begin_loading))
+        .add_systems(Update, done_loading.after(begin_loading))
         // Like this:
-        .add_system(default_load.after(begin_loading).before(done_loading));
+        .add_systems(Update, default_load.after(begin_loading).before(done_loading));
 }

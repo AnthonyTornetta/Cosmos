@@ -4,7 +4,8 @@
 use bevy::{
     pbr::{NotShadowCaster, NotShadowReceiver},
     prelude::{
-        warn, App, Commands, Component, Entity, EventWriter, GlobalTransform, Parent, Quat, Query, Res, Transform, Vec3, With, Without,
+        warn, App, Commands, Component, Entity, Event, EventWriter, GlobalTransform, Parent, Quat, Query, Res, Transform, Update, Vec3,
+        With, Without,
     },
     time::Time,
 };
@@ -21,7 +22,7 @@ use crate::{
     },
 };
 
-#[derive(Debug)]
+#[derive(Debug, Event)]
 /// The entity hit represents the entity hit by the laser
 ///
 /// The world location the exact position the world this collision happened
@@ -282,5 +283,6 @@ fn despawn_lasers(mut commands: Commands, query: Query<(Entity, &FireTime), With
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems((handle_events, despawn_lasers)).add_event::<LaserCollideEvent>();
+    app.add_systems(Update, (handle_events, despawn_lasers))
+        .add_event::<LaserCollideEvent>();
 }

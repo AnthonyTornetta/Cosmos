@@ -1,6 +1,6 @@
 //! Used to represent how much damage a block can take before it breaks
 
-use bevy::prelude::{App, IntoSystemAppConfig, OnExit, Res, ResMut, States};
+use bevy::prelude::{App, OnExit, Res, ResMut, States};
 
 use crate::registry::{self, identifiable::Identifiable, Registry};
 
@@ -96,8 +96,6 @@ fn sanity_check(blocks: Res<Registry<Block>>, hardness: Res<Registry<BlockHardne
 pub(super) fn register<T: States + Clone + Copy>(app: &mut App, loading_state: T, post_loading_state: T) {
     registry::create_registry::<BlockHardness>(app);
 
-    app.add_systems((
-        register_block_hardness.in_schedule(OnExit(loading_state)),
-        sanity_check.in_schedule(OnExit(post_loading_state)),
-    ));
+    app.add_systems(OnExit(loading_state), register_block_hardness);
+    app.add_systems(OnExit(post_loading_state), sanity_check);
 }

@@ -21,6 +21,7 @@ use cosmos_core::{
 use crate::GameState;
 
 /// This is sent whenever a player breaks a block
+#[derive(Debug, Event)]
 pub struct BlockBreakEvent {
     /// The entity that was targeted
     pub structure_entity: Entity,
@@ -31,6 +32,7 @@ pub struct BlockBreakEvent {
 }
 
 /// This is sent whenever a player interacts with a block
+#[derive(Debug, Event)]
 pub struct BlockInteractEvent {
     /// The block interacted with
     pub structure_block: StructureBlock,
@@ -41,6 +43,7 @@ pub struct BlockInteractEvent {
 }
 
 /// This is sent whenever a player places a block
+#[derive(Debug, Event)]
 pub struct BlockPlaceEvent {
     /// The structure the block was placed on
     pub structure_entity: Entity,
@@ -93,13 +96,7 @@ fn handle_block_break_events(
                 }
             }
 
-            structure.remove_block_at(
-                ev.structure_block.x,
-                ev.structure_block.y,
-                ev.structure_block.z,
-                &blocks,
-                Some(&mut event_writer),
-            );
+            structure.remove_block_at(ev.structure_block.coords(), &blocks, Some(&mut event_writer));
         }
     }
 }
@@ -129,15 +126,7 @@ fn handle_block_place_events(
                     if let Ok(mut structure) = query.get_mut(ev.structure_entity) {
                         inv.decrease_quantity_at(ev.inventory_slot, 1);
 
-                        structure.set_block_at(
-                            ev.structure_block.x,
-                            ev.structure_block.y,
-                            ev.structure_block.z,
-                            block,
-                            ev.block_up,
-                            &blocks,
-                            Some(&mut event_writer),
-                        );
+                        structure.set_block_at(ev.structure_block.coords(), block, ev.block_up, &blocks, Some(&mut event_writer));
                     }
                 }
 
@@ -155,9 +144,7 @@ fn handle_block_changed_event(mut event_reader: EventReader<BlockChangedEvent>, 
             map.insert(ev.structure_entity, Vec::with_capacity(iter_len));
         }
         map.get_mut(&ev.structure_entity).expect("Set above").push(BlockChanged {
-            x: ev.block.x() as u32,
-            y: ev.block.y() as u32,
-            z: ev.block.z() as u32,
+            coordinates: ev.block,
             block_id: ev.new_block,
             block_up: ev.new_block_up,
         });
@@ -178,9 +165,8 @@ pub(super) fn register(app: &mut App) {
     app.add_event::<BlockBreakEvent>()
         .add_event::<BlockPlaceEvent>()
         .add_event::<BlockInteractEvent>()
-        .add_systems((
-            handle_block_break_events.in_set(OnUpdate(GameState::Playing)),
-            handle_block_place_events.in_set(OnUpdate(GameState::Playing)),
-            handle_block_changed_event.in_set(OnUpdate(GameState::Playing)),
-        ));
+        .add_systems(
+            Update,
+            (handle_block_break_events, handle_block_place_events, handle_block_changed_event).run_if(in_state(GameState::Playing)),
+        );
 }

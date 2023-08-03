@@ -5,13 +5,16 @@ use cosmos_core::{
     block::{Block, BlockFace},
     events::block_events::BlockChangedEvent,
     registry::Registry,
-    structure::{rotate, Structure},
+    structure::{
+        coordinates::{BlockCoordinate, UnboundBlockCoordinate},
+        rotate, Structure,
+    },
 };
 
 /// Sets the given block with the given relative rotation at the correct offsets, taking planet face into account.
 pub(crate) fn fill(
-    origin: (usize, usize, usize),
-    offsets: &[(i32, i32, i32)],
+    origin: BlockCoordinate,
+    offsets: &[UnboundBlockCoordinate],
     block: &Block,
     block_up: BlockFace,
     planet_face: BlockFace,
@@ -26,7 +29,7 @@ pub(crate) fn fill(
             (structure.blocks_width(), structure.blocks_height(), structure.blocks_length()),
             planet_face,
         ) {
-            structure.set_block_at_tuple(
+            structure.set_block_at(
                 rotated_block_pos,
                 block,
                 BlockFace::rotate_face(block_up, planet_face),

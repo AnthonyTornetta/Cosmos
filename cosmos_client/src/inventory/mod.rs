@@ -151,7 +151,8 @@ fn render_hotbar(
 struct HotbarLocation;
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(
+    app.add_systems(
+        Update,
         |query: Query<&Window, With<PrimaryWindow>>, mut cam: Query<&mut Transform, With<HotbarLocation>>| {
             let Ok(window) = query.get_single() else {
                 return;
@@ -163,6 +164,6 @@ pub(super) fn register(app: &mut App) {
             transform.translation.y = -0.012533 * window.height() + 0.804;
         },
     )
-    .add_system(render_hotbar.in_schedule(OnEnter(GameState::Playing)))
-    .add_startup_system(ui_camera);
+    .add_systems(OnEnter(GameState::Playing), render_hotbar)
+    .add_systems(Startup, ui_camera);
 }

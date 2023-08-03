@@ -1,11 +1,8 @@
 //! Represents all the energy stored on a structure
 
 use bevy::{
-    prelude::{
-        App, Commands, Component, EventReader, IntoSystemAppConfig, IntoSystemConfig, OnEnter, OnUpdate, Query, Res, ResMut, Resource,
-        States,
-    },
-    reflect::{FromReflect, Reflect},
+    prelude::{in_state, App, Commands, Component, EventReader, IntoSystemConfigs, OnEnter, Query, Res, ResMut, Resource, States, Update},
+    reflect::Reflect,
     utils::HashMap,
 };
 
@@ -18,7 +15,7 @@ use crate::{
 
 use super::Systems;
 
-#[derive(Default, FromReflect, Reflect, Clone, Copy)]
+#[derive(Default, Reflect, Clone, Copy)]
 /// Every block that can store energy should have this property
 pub struct EnergyStorageProperty {
     /// How much energy this block can store
@@ -40,7 +37,7 @@ impl EnergyStorageBlocks {
     }
 }
 
-#[derive(Component, Default, Reflect, FromReflect)]
+#[derive(Component, Default, Reflect)]
 /// Represents the energy storage of a structure
 pub struct EnergyStorageSystem {
     energy: f32,
@@ -135,10 +132,10 @@ fn structure_loaded_event(
 
 pub(super) fn register<T: States + Clone + Copy>(app: &mut App, post_loading_state: T, playing_state: T) {
     app.insert_resource(EnergyStorageBlocks::default())
-        .add_systems((
-            register_energy_blocks.in_schedule(OnEnter(post_loading_state)),
-            structure_loaded_event.in_set(OnUpdate(playing_state)),
-            block_update_system.in_set(OnUpdate(playing_state)),
-        ))
+        .add_systems(OnEnter(post_loading_state), register_energy_blocks)
+        .add_systems(
+            Update,
+            (structure_loaded_event, block_update_system).run_if(in_state(playing_state)),
+        )
         .register_type::<EnergyStorageSystem>();
 }

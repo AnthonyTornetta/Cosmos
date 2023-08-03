@@ -4,7 +4,7 @@
 
 use std::{fs, io::ErrorKind};
 
-use bevy::prelude::{App, Commands, Component, Entity, EventReader, EventWriter, Query};
+use bevy::prelude::{App, Commands, Component, Entity, Event, EventReader, EventWriter, Query, Update};
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
     netty::cosmos_encoder,
@@ -17,13 +17,13 @@ use super::ship::server_ship_builder::ServerShipBuilder;
 /// Loading loads the structure instantly + creates the events at the same time
 /// This can cause concurrency issues, so this allows the events to be generated 1 frame
 /// later to avoid those issues.
-#[derive(Debug)]
+#[derive(Debug, Event)]
 pub struct SendDelayedStructureLoadEvent(Entity);
 
-#[derive(Debug)]
 /// This is horrible please done use this.
 ///
 /// Used to send a structure load event in the next frame
+#[derive(Debug, Event)]
 pub struct EvenMoreDelayedSLE(Entity);
 
 fn send_actual_loaded_events_first(
@@ -45,15 +45,13 @@ fn send_actual_loaded_events(
             for res in structure.all_chunks_iter(false) {
                 // This will always be true because include_empty is false
                 if let ChunkIteratorResult::FilledChunk {
-                    position: (x, y, z),
+                    position: coords,
                     chunk: _,
                 } = res
                 {
                     chunk_set_event_writer.send(ChunkInitEvent {
                         structure_entity: ev.0,
-                        x,
-                        y,
-                        z,
+                        coords,
                     });
                 }
             }
@@ -175,9 +173,10 @@ fn monitor_needs_saved(mut commands: Commands, query: Query<(Entity, &Structure,
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(monitor_needs_saved)
-        .add_event::<SendDelayedStructureLoadEvent>()
-        .add_event::<EvenMoreDelayedSLE>()
-        .add_system(send_actual_loaded_events_first)
-        .add_system(send_actual_loaded_events);
+    app.add_systems(
+        Update,
+        (monitor_needs_saved, send_actual_loaded_events_first, send_actual_loaded_events),
+    )
+    .add_event::<SendDelayedStructureLoadEvent>()
+    .add_event::<EvenMoreDelayedSLE>();
 }

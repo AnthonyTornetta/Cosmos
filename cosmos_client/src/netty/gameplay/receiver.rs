@@ -2,7 +2,12 @@
 //!
 //! This should eventually be broken up
 
-use bevy::{core_pipeline::bloom::BloomSettings, prelude::*, render::camera::Projection, window::PrimaryWindow};
+use bevy::{
+    core_pipeline::{bloom::BloomSettings, Skybox},
+    prelude::*,
+    render::camera::Projection,
+    window::PrimaryWindow,
+};
 use bevy_rapier3d::prelude::*;
 use bevy_renet::renet::{transport::NetcodeClientTransport, RenetClient};
 use cosmos_core::{
@@ -79,7 +84,7 @@ fn update_crosshair(
                 pos_on_screen -= Vec2::new(primary.width() / 2.0, primary.height() / 2.0);
 
                 crosshair_offset.x += pos_on_screen.x;
-                crosshair_offset.y += pos_on_screen.y;
+                crosshair_offset.y -= pos_on_screen.y;
             }
 
             last_rotation.0 = transform.rotation;
@@ -341,13 +346,14 @@ fn client_sync_players(
                                     },
                                     transform: Transform::from_xyz(0.0, 0.75, 0.0),
                                     projection: Projection::from(PerspectiveProjection {
-                                        fov: (90.0 / 360.0) * (std::f32::consts::PI * 2.0),
+                                        fov: (90.0 / 180.0) * std::f32::consts::PI,
                                         ..default()
                                     }),
                                     ..default()
                                 },
                                 BloomSettings { ..Default::default() },
                                 CameraHelper::default(),
+                                Skybox(Handle::default()),
                                 MainCamera,
                                 // No double UI rendering
                                 UiCameraConfig { show_ui: false },
@@ -395,7 +401,7 @@ fn client_sync_players(
                 }
 
                 let mut entity_cmds = commands.spawn_empty();
-                let mut structure = Structure::new(width as usize, height as usize, length as usize);
+                let mut structure = Structure::new(width, height, length);
 
                 let builder = ClientPlanetBuilder::default();
                 builder.insert_planet(&mut entity_cmds, location, &mut structure, planet);
@@ -437,7 +443,7 @@ fn client_sync_players(
                 };
 
                 let mut entity_cmds = commands.spawn_empty();
-                let mut structure = Structure::new(width as usize, height as usize, length as usize);
+                let mut structure = Structure::new(width, height, length);
 
                 let builder = ClientShipBuilder::default();
                 builder.insert_ship(&mut entity_cmds, location, body.create_velocity(), &mut structure);
@@ -462,34 +468,24 @@ fn client_sync_players(
                 if let Some(s_entity) = network_mapping.client_from_server(&server_structure_entity) {
                     if let Ok(mut structure) = query_structure.get_mut(s_entity) {
                         let chunk: Chunk = cosmos_encoder::deserialize(&serialized_chunk).expect("Unable to deserialize chunk from server");
-
-                        let (x, y, z) = (chunk.structure_x(), chunk.structure_y(), chunk.structure_z());
+                        let chunk_coords = chunk.chunk_coordinates();
 
                         structure.set_chunk(chunk);
 
                         set_chunk_event_writer.send(ChunkInitEvent {
-                            x,
-                            y,
-                            z,
+                            coords: chunk_coords,
                             structure_entity: s_entity,
                         });
                     }
                 }
             }
-            ServerReliableMessages::EmptyChunk {
-                structure_entity,
-                cx,
-                cy,
-                cz,
-            } => {
+            ServerReliableMessages::EmptyChunk { structure_entity, coords } => {
                 if let Some(s_entity) = network_mapping.client_from_server(&structure_entity) {
                     if let Ok(mut structure) = query_structure.get_mut(s_entity) {
-                        structure.set_to_empty_chunk(cx as usize, cy as usize, cz as usize);
+                        structure.set_to_empty_chunk(coords);
 
                         set_chunk_event_writer.send(ChunkInitEvent {
-                            x: cx as usize,
-                            y: cy as usize,
-                            z: cz as usize,
+                            coords,
                             structure_entity: s_entity,
                         });
                     }
@@ -512,9 +508,7 @@ fn client_sync_players(
                     if let Ok(mut structure) = query_structure.get_mut(client_ent) {
                         for block_changed in blocks_changed_packet.0 {
                             structure.set_block_at(
-                                block_changed.x as usize,
-                                block_changed.y as usize,
-                                block_changed.z as usize,
+                                block_changed.coordinates.coords(),
                                 blocks.from_numeric_id(block_changed.block_id),
                                 block_changed.block_up,
                                 &blocks,
@@ -701,9 +695,13 @@ fn sync_transforms_and_locations(
 
 pub(super) fn register(app: &mut App) {
     app.insert_resource(RequestedEntities::default())
-        .add_systems((update_crosshair, insert_last_rotation))
-        .add_system(client_sync_players.run_if(in_state(GameState::Playing).or_else(in_state(GameState::LoadingWorld))))
+        .add_systems(Update, (update_crosshair, insert_last_rotation))
         .add_systems(
+            Update,
+            client_sync_players.run_if(in_state(GameState::Playing).or_else(in_state(GameState::LoadingWorld))),
+        )
+        .add_systems(
+            Update,
             (
                 fix_location.before(client_sync_players),
                 lerp_towards.after(client_sync_players),
@@ -712,6 +710,6 @@ pub(super) fn register(app: &mut App) {
                 add_previous_location,
             )
                 .chain()
-                .in_set(OnUpdate(GameState::Playing)),
+                .run_if(in_state(GameState::Playing)),
         );
 }

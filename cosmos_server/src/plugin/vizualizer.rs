@@ -12,5 +12,5 @@ fn update_visulizer_system(mut egui_context: EguiContexts, mut visualizer: ResMu
 
 pub(super) fn register(app: &mut App) {
     app.insert_resource(RenetServerVisualizer::<200>::default())
-        .add_system(update_visulizer_system);
+        .add_systems(Update, update_visulizer_system);
 }

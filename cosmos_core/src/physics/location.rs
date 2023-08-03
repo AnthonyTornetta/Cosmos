@@ -19,10 +19,10 @@ use std::{
 
 use bevy::{
     prelude::{
-        warn, Added, App, Children, Commands, Component, Deref, DerefMut, Entity, GlobalTransform, Parent, Quat, Query, Transform, Vec3,
-        With, Without,
+        warn, Added, App, Children, Commands, Component, Deref, DerefMut, Entity, GlobalTransform, Parent, Quat, Query, Transform, Update,
+        Vec3, With, Without,
     },
-    reflect::{FromReflect, Reflect},
+    reflect::Reflect,
     transform::TransformBundle,
 };
 use bevy_rapier3d::{na::Vector3, prelude::PhysicsWorld};
@@ -44,7 +44,7 @@ pub const SYSTEM_SECTORS: u32 = 100;
 /// This is the size in blocks of one system
 pub const SYSTEM_DIMENSIONS: f32 = SYSTEM_SECTORS as f32 * SECTOR_DIMENSIONS;
 
-#[derive(Default, Component, Debug, PartialEq, Serialize, Deserialize, Reflect, FromReflect, Clone, Copy)]
+#[derive(Default, Component, Debug, PartialEq, Serialize, Deserialize, Reflect, Clone, Copy)]
 /// Used to represent a point in a near-infinite space
 ///
 /// Rather than represent coordinates as imprecise f32, a location is used instead.
@@ -74,7 +74,7 @@ pub struct Location {
 /// Datatype used to store sector coordinates
 pub type SectorUnit = i64;
 
-#[derive(Default, Component, Debug, PartialEq, Serialize, Deserialize, Reflect, FromReflect, Clone, Copy, Hash, Eq)]
+#[derive(Default, Component, Debug, PartialEq, Serialize, Deserialize, Reflect, Clone, Copy, Hash, Eq)]
 /// Represents a large region of space
 pub struct Sector(SectorUnit, SectorUnit, SectorUnit);
 
@@ -143,7 +143,7 @@ impl Add<Sector> for Sector {
 /// Datatype used to store system coordinates
 pub type SystemUnit = i64;
 
-#[derive(Default, Component, Debug, PartialEq, Serialize, Deserialize, Reflect, FromReflect, Clone, Copy)]
+#[derive(Default, Component, Debug, PartialEq, Serialize, Deserialize, Reflect, Clone, Copy)]
 /// A universe system represents a large area of sectors
 pub struct UniverseSystem(SystemUnit, SystemUnit, SystemUnit);
 
@@ -419,7 +419,7 @@ impl Location {
     }
 }
 
-#[derive(Component, Debug, Reflect, FromReflect, Deref, DerefMut, Clone, Copy)]
+#[derive(Component, Debug, Reflect, Deref, DerefMut, Clone, Copy)]
 /// Stores the location from the previous frame
 pub struct PreviousLocation(pub Location);
 
@@ -527,7 +527,7 @@ fn on_add_location_without_transform(
 pub(super) fn register(app: &mut App) {
     app.register_type::<Location>()
         .register_type::<PreviousLocation>()
-        .add_system(on_add_location_without_transform);
+        .add_systems(Update, on_add_location_without_transform);
 }
 
 #[cfg(test)]
