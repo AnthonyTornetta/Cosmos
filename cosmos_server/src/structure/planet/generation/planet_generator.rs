@@ -17,7 +17,7 @@ use cosmos_core::{
     netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannelServer, NoSendEntity},
     physics::location::Location,
     structure::{
-        chunk::CHUNK_DIMENSIONSF,
+        chunk::{ChunkUnloadEvent, CHUNK_DIMENSIONSF},
         coordinates::{ChunkCoordinate, UnboundChunkCoordinate, UnboundCoordinateType},
         planet::Planet,
         structure_iterator::ChunkIteratorResult,
@@ -283,6 +283,7 @@ fn mark_chunk_for_generation(structure: &mut Structure, commands: &mut Commands,
 fn unload_chunks_far_from_players(
     players: Query<&Location, With<Player>>,
     mut planets: Query<(&Location, &mut Structure, Entity, Option<&EntityId>), With<Planet>>,
+    mut event_writer: EventWriter<ChunkUnloadEvent>,
     mut commands: Commands,
 ) {
     let mut potential_chunks = HashMap::<Entity, HashSet<ChunkCoordinate>>::new();
@@ -359,7 +360,7 @@ fn unload_chunks_far_from_players(
             };
 
             for coords in set {
-                if let Some(chunk) = structure.unload_chunk_at(coords, &mut commands) {
+                if let Some(chunk) = structure.unload_chunk_at(coords, &mut commands, Some(&mut event_writer)) {
                     let (cx, cy, cz) = (coords.x, coords.y, coords.z);
 
                     commands.spawn((

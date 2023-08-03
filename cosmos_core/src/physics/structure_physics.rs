@@ -6,7 +6,7 @@ use crate::block::Block;
 use crate::events::block_events::BlockChangedEvent;
 use crate::registry::identifiable::Identifiable;
 use crate::registry::Registry;
-use crate::structure::chunk::{Chunk, CHUNK_DIMENSIONS};
+use crate::structure::chunk::{Chunk, ChunkUnloadEvent, CHUNK_DIMENSIONS};
 use crate::structure::coordinates::{ChunkBlockCoordinate, ChunkCoordinate, CoordinateType};
 use crate::structure::events::ChunkSetEvent;
 use crate::structure::Structure;
@@ -281,33 +281,14 @@ fn listen_for_new_physics_event(
 
     // clean up old collider entities
     for ev in to_process.iter() {
-        let Ok(mut chunk_phys_parts) = physics_components_query.get_mut(ev.structure_entity) else {
-            continue;
-        };
-        let Ok(structure) = structure_query.get(ev.structure_entity) else {
-            continue;
-        };
-        let Some(chunk_entity) = structure.chunk_entity(ev.chunk) else {
+        let Ok(Some(chunk_entity)) = structure_query
+            .get(ev.structure_entity)
+            .map(|structure| structure.chunk_entity(ev.chunk))
+        else {
             continue;
         };
 
-        let mut indices_to_remove = vec![];
-
-        for (idx, chunk_part_entity) in chunk_phys_parts
-            .pairs
-            .iter()
-            .enumerate()
-            .filter(|(_, x)| x.chunk_entity == chunk_entity)
-        {
-            commands
-                .get_entity(chunk_part_entity.collider_entity)
-                .map(|x| x.despawn_recursive());
-            indices_to_remove.push(idx);
-        }
-
-        for index in indices_to_remove {
-            chunk_phys_parts.pairs.remove(index);
-        }
+        remove_chunk_colliders(&mut commands, &mut physics_components_query, ev.structure_entity, chunk_entity);
     }
 
     // create new colliders
@@ -395,9 +376,42 @@ fn listen_for_new_physics_event(
     }
 }
 
-fn clean_unloaded_chunks() {
-    // todo: Remove unloaded chunks collider entities.
-    // will need some sort of chunk unloaded event system
+fn clean_unloaded_chunks(
+    mut commands: Commands,
+    mut physics_components_query: Query<&mut ChunkPhysicsParts>,
+    mut event_reader: EventReader<ChunkUnloadEvent>,
+) {
+    for ev in event_reader.iter() {
+        remove_chunk_colliders(&mut commands, &mut physics_components_query, ev.structure_entity, ev.chunk_entity);
+    }
+}
+
+fn remove_chunk_colliders(
+    commands: &mut Commands,
+    physics_components_query: &mut Query<&mut ChunkPhysicsParts>,
+    structure_entity: Entity,
+    chunk_entity: Entity,
+) {
+    let Ok(mut chunk_phys_parts) = physics_components_query.get_mut(structure_entity) else {
+        return;
+    };
+    let mut indices_to_remove = vec![];
+
+    for (idx, chunk_part_entity) in chunk_phys_parts
+        .pairs
+        .iter()
+        .enumerate()
+        .filter(|(_, x)| x.chunk_entity == chunk_entity)
+    {
+        commands
+            .get_entity(chunk_part_entity.collider_entity)
+            .map(|x| x.despawn_recursive());
+        indices_to_remove.push(idx);
+    }
+
+    for index in indices_to_remove {
+        chunk_phys_parts.pairs.remove(index);
+    }
 }
 
 fn add_physics_parts(mut commands: Commands, query: Query<Entity, Added<Structure>>) {
@@ -442,9 +456,9 @@ pub(super) fn register(app: &mut App) {
             Update,
             (
                 add_physics_parts,
-                clean_unloaded_chunks,
                 listen_for_structure_event,
                 listen_for_new_physics_event,
+                clean_unloaded_chunks,
             )
                 .chain(),
         );

@@ -9,7 +9,7 @@ use crate::block::hardness::BlockHardness;
 use crate::block::{Block, BlockFace};
 use crate::registry::identifiable::Identifiable;
 use crate::registry::Registry;
-use bevy::prelude::{Component, Entity, Vec3};
+use bevy::prelude::{App, Component, Entity, Event, Vec3};
 use bevy::reflect::Reflect;
 use serde::{Deserialize, Serialize};
 
@@ -241,4 +241,23 @@ pub struct ChunkEntity {
     pub structure_entity: Entity,
     /// The chunk's position in the structure
     pub chunk_location: ChunkCoordinate,
+}
+
+#[derive(Debug, Event)]
+/// Sent whenever a chunk is unloaded from a structure
+///
+/// This event is NOT generated when a structure is despawned or when a chunk loses all its blocks or when a chunk with no blocks is unloaded.
+///
+/// This event's only current usecase is removing chunk's colliders when planet chunks are unloaded by a player moving away from them.
+pub struct ChunkUnloadEvent {
+    /// The chunk's entity. This will not have been despawned yet until after the Update system set.
+    pub chunk_entity: Entity,
+    /// The coordinates of the chunk in the structure
+    pub coords: ChunkCoordinate,
+    /// The structure's entity
+    pub structure_entity: Entity,
+}
+
+pub(super) fn register(app: &mut App) {
+    app.add_event::<ChunkUnloadEvent>();
 }
