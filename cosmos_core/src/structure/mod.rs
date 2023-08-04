@@ -38,7 +38,7 @@ use bevy::prelude::{
 use serde::{Deserialize, Serialize};
 
 use self::block_health::block_destroyed_event::BlockDestroyedEvent;
-use self::chunk::ChunkEntity;
+use self::chunk::{ChunkEntity, ChunkUnloadEvent};
 use self::coordinates::{
     BlockCoordinate, ChunkBlockCoordinate, ChunkCoordinate, Coordinate, CoordinateType, UnboundBlockCoordinate, UnboundChunkCoordinate,
     UnboundCoordinateType,
@@ -708,13 +708,25 @@ impl Structure {
     }
 
     /// Unloads the chunk at the given chunk position
-    pub fn unload_chunk_at(&mut self, coords: ChunkCoordinate, commands: &mut Commands) -> Option<Chunk> {
+    pub fn unload_chunk_at(
+        &mut self,
+        coords: ChunkCoordinate,
+        commands: &mut Commands,
+        event_writer: Option<&mut EventWriter<ChunkUnloadEvent>>,
+    ) -> Option<Chunk> {
         let index = self.flatten(coords);
 
         self.empty_chunks.remove(&index);
         let chunk = self.chunks.remove(&index);
 
         if let Some(entity) = self.chunk_entities.remove(&index) {
+            if let Some(event_writer) = event_writer {
+                event_writer.send(ChunkUnloadEvent {
+                    chunk_entity: entity,
+                    coords,
+                    structure_entity: self.get_entity().expect("A structure should have an entity at this point"),
+                });
+            }
             commands.entity(entity).insert(NeedsDespawned);
         }
 
@@ -917,16 +929,17 @@ pub fn rotate(
     }
 }
 
-pub(super) fn register<T: States + Clone + Copy>(app: &mut App, post_loading_state: T, playing_game_state: T) {
+pub(super) fn register<T: States + Clone + Copy>(app: &mut App, post_loading_state: T, playing_state: T) {
     app.register_type::<Structure>()
         .register_type::<Chunk>()
         .add_event::<ChunkInitEvent>();
 
-    systems::register(app, post_loading_state, playing_game_state);
-    ship::register(app, playing_game_state);
+    ship::register(app, playing_state);
+    chunk::register(app);
     planet::register(app);
     events::register(app);
     loading::register(app);
+    systems::register(app, post_loading_state, playing_state);
     block_health::register(app);
     structure_block::register(app);
 

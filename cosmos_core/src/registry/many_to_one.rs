@@ -13,7 +13,7 @@ use super::identifiable::Identifiable;
 use super::AddLinkError;
 
 /// Represents a many to one link
-#[derive(Resource, Default)]
+#[derive(Resource, Default, Debug)]
 pub struct ManyToOneRegistry<K: Identifiable + Sync + Send, V: Identifiable + Sync + Send> {
     values: HashMap<u16, V>,
 
@@ -84,6 +84,11 @@ impl<K: Identifiable + Sync + Send, V: Identifiable + Sync + Send> ManyToOneRegi
     /// Iterates over all the values stored in this -- not the keys.
     pub fn iter(&self) -> Values<'_, u16, V> {
         self.values.values()
+    }
+
+    /// Returns true if this registry contains an entry for that key
+    pub fn contains(&self, key: &K) -> bool {
+        self.pointers.contains_key(&key.id())
     }
 }
 

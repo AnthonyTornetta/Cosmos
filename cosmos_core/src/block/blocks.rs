@@ -154,6 +154,12 @@ fn add_cosmos_blocks(
             .create(),
     );
 
+    blocks.register(
+        BlockBuilder::new("cosmos:short_grass".into(), 10.0)
+            .add_property(BlockProperty::Opaque)
+            .create(),
+    );
+
     loading.finish_loading(id, &mut end_writer);
 }
 

@@ -7,6 +7,7 @@ use cosmos_core::{
     blockitems::BlockItems,
     inventory::Inventory,
     item::Item,
+    physics::structure_physics::ChunkPhysicsPart,
     registry::Registry,
     structure::{planet::Planet, ship::pilot::Pilot, structure_block::StructureBlock, Structure},
 };
@@ -42,6 +43,7 @@ fn process_player_interaction(
     player_body: Query<Entity, (With<LocalPlayer>, Without<Pilot>)>,
     rapier_context: Res<RapierContext>,
     parent_query: Query<&Parent>,
+    chunk_physics_part: Query<&ChunkPhysicsPart>,
     structure_query: Query<(&Structure, &GlobalTransform, Option<&Planet>)>,
     mut break_writer: EventWriter<BlockBreakEvent>,
     mut place_writer: EventWriter<BlockPlaceEvent>,
@@ -61,6 +63,8 @@ fn process_player_interaction(
             true,
             QueryFilter::new().exclude_rigid_body(player_body), // don't want to hit yourself
         ) {
+            let entity = chunk_physics_part.get(entity).map(|x| x.chunk_entity).unwrap_or(entity);
+
             if let Ok(parent) = parent_query.get(entity) {
                 if let Ok((structure, transform, is_planet)) = structure_query.get(parent.get()) {
                     if input_handler.check_just_pressed(CosmosInputs::BreakBlock, &keys, &mouse) {

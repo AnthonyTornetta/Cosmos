@@ -1,12 +1,12 @@
 //! Handles client-related planet things
 
-use bevy::prelude::{in_state, App, Commands, Entity, IntoSystemConfigs, Query, Res, ResMut, Update, Vec3, With};
+use bevy::prelude::{in_state, App, Commands, Entity, EventWriter, IntoSystemConfigs, Query, Res, ResMut, Update, Vec3, With};
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     netty::{client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannelClient},
     physics::location::Location,
     structure::{
-        chunk::Chunk,
+        chunk::{Chunk, ChunkUnloadEvent},
         coordinates::{UnboundChunkCoordinate, UnboundCoordinateType},
         planet::Planet,
         structure_iterator::ChunkIteratorResult,
@@ -91,6 +91,7 @@ fn load_planet_chunks(
 pub fn unload_chunks_far_from_players(
     player: Query<&Location, With<LocalPlayer>>,
     mut planets: Query<(&Location, &mut Structure), With<Planet>>,
+    mut event_writer: EventWriter<ChunkUnloadEvent>,
     mut commands: Commands,
 ) {
     if let Ok(player) = player.get_single() {
@@ -122,7 +123,7 @@ pub fn unload_chunks_far_from_players(
             }
 
             for coordinate in chunks {
-                planet.unload_chunk_at(coordinate, &mut commands);
+                planet.unload_chunk_at(coordinate, &mut commands, Some(&mut event_writer));
             }
         }
     }

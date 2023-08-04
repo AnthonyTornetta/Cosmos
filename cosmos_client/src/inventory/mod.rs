@@ -107,7 +107,10 @@ fn render_hotbar(
         let mut mesh_builder = CosmosMeshBuilder::default();
 
         for face in [BlockFace::Top, BlockFace::Left, BlockFace::Back] {
-            let mut mesh_info = block_mesh_info.info_for_face(face).clone();
+            let Some(mut mesh_info) = block_mesh_info.info_for_face(face).cloned() else {
+                break;
+            };
+
             mesh_info.scale(Vec3::new(size, size, size));
 
             let Some(image_index) = index.atlas_index_from_face(face) else {
