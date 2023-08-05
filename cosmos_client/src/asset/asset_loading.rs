@@ -366,6 +366,18 @@ fn create_illuminated_material(image_handle: Handle<Image>) -> StandardMaterial 
     }
 }
 
+fn create_transparent_material(image_handle: Handle<Image>, unlit: bool) -> StandardMaterial {
+    StandardMaterial {
+        base_color_texture: Some(image_handle),
+        alpha_mode: AlphaMode::Blend,
+        unlit,
+        metallic: 0.0,
+        reflectance: 0.0,
+        perceptual_roughness: 1.0,
+        ..Default::default()
+    }
+}
+
 fn create_materials(
     mut material_registry: ResMut<Registry<MaterialDefinition>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
@@ -397,6 +409,18 @@ fn create_materials(
                 padding: DEFAULT_PADDING,
                 id: 0,
                 unlocalized_name: "cosmos:illuminated".into(),
+            });
+
+            let transparent_material = create_transparent_material(atlas.texture_atlas.texture.clone(), false);
+            let unlit_transparent_material = create_transparent_material(atlas.texture_atlas.texture.clone(), true);
+
+            material_registry.register(MaterialDefinition {
+                material: materials.add(transparent_material),
+                unlit_material: materials.add(unlit_transparent_material),
+                atlas: atlas.clone(),
+                padding: DEFAULT_PADDING,
+                id: 0,
+                unlocalized_name: "cosmos:transparent".into(),
             });
         }
 
