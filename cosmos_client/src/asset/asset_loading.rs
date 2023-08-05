@@ -82,6 +82,7 @@ pub struct MaterialDefinition {
 const DEFAULT_PADDING: u32 = 2;
 
 impl MaterialDefinition {
+    /// Creates a new material definition
     pub fn new(
         unlocalized_name: String,
         material: Handle<StandardMaterial>,
@@ -99,11 +100,13 @@ impl MaterialDefinition {
     }
 
     #[inline]
+    /// Gets the material for this that responds to light (if applicable. Feel free to return an unlit material if this material doesn't care)
     pub fn lit_material(&self) -> &Handle<StandardMaterial> {
         &self.material
     }
 
     #[inline]
+    /// Gets the material for this that does not respond to light
     pub fn unlit_material(&self) -> &Handle<StandardMaterial> {
         &self.unlit_material
     }
@@ -244,13 +247,16 @@ fn expand_image(image: &Image, padding: u32) -> Image {
 }
 
 #[derive(Clone, Debug, Reflect)]
+/// A newtype wrapper around a bevy `TextureAtlas`
 pub struct CosmosTextureAtlas {
+    /// The texture atlas
     pub texture_atlas: TextureAtlas,
     unlocalized_name: String,
     id: u16,
 }
 
 impl CosmosTextureAtlas {
+    /// Creates a new Cosmos texture atlas - a newtype wrapper around a bevy `TextureAtlas`
     pub fn new(unlocalized_name: impl Into<String>, atlas: TextureAtlas) -> Self {
         Self {
             unlocalized_name: unlocalized_name.into(),
