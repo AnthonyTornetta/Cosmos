@@ -369,7 +369,7 @@ fn create_illuminated_material(image_handle: Handle<Image>) -> StandardMaterial 
 fn create_transparent_material(image_handle: Handle<Image>, unlit: bool) -> StandardMaterial {
     StandardMaterial {
         base_color_texture: Some(image_handle),
-        alpha_mode: AlphaMode::Blend,
+        alpha_mode: AlphaMode::Add,
         unlit,
         metallic: 0.0,
         reflectance: 0.0,
