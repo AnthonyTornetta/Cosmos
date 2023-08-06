@@ -1,5 +1,4 @@
 use crate::block::lighting::{BlockLightProperties, BlockLighting};
-// use crate::materials::CosmosMaterial;
 use crate::netty::flags::LocalPlayer;
 use crate::state::game_state::GameState;
 use crate::structure::planet::unload_chunks_far_from_players;
