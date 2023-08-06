@@ -37,6 +37,12 @@ fn register_materials(
             .expect("Transparent material should exist");
     }
 
+    if let Some(block) = blocks.from_id("cosmos:ice") {
+        registry
+            .add_link(block, "cosmos:transparent")
+            .expect("Transparent material should exist");
+    }
+
     for block in blocks.iter() {
         if !registry.contains(block) {
             registry.add_link(block, "cosmos:main").expect("Main material should exist");
