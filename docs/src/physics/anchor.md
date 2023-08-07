@@ -22,13 +22,13 @@ For the client, this isn't a problem at all. The client doesn't have to care how
 
 The server, in contrast to the client, has to love everyone equally. This leads to a more complex solution. 
 
-To make sure each player has a good experience, the server simply separates each player into their own "Physics World", thus making each player anchor. A Physics World is simply a sandbox where nothing in that world affects any others. This means, that if something in world "A" is at `0, 5, 0`, and something in world "B" is also at `0, 5, 0`, they will not interact with each other at all.
+To make sure each player has a good experience, the server simply separates each player into their own "Physics World", thus making each player an anchor. A Physics World is simply a sandbox where nothing in that world affects any others. This means, that if something in world "A" is at `0, 5, 0`, and something in world "B" is also at `0, 5, 0`, they will not interact with each other at all.
 
-Once each player is in their own world, it's as simple as assigning each non-anchor entity to the anchor closest to them and basing their positions off that and putting them in that anchor's physics world. 
+Once each player is in their own world, it's as simple as assigning each non-anchor entity to the anchor closest to them, basing their positions off that and putting them in that anchor's physics world. 
 
 Of course, this introduces a new issue - what about players that are close or next to each other? 
 
-The simplest fix to this issue is to simply have a check for anchors that are near each other. Once an anchor (A) is too close to another (B), A's status as an anchor is revoked and it thus becomes a part of B's world. All the entities that were part of A's world are also moved into B's world. 
+The simplest fix to this issue is to have a check for anchors that are near each other. Once an anchor (A) is too close to another (B), A's status as an anchor is revoked and it becomes a part of B's world. All the entities that were part of A's world are also moved into B's world. 
 
 When a player moves too far away from its anchor, it is once again put into its own world and treated as an anchor.
 
