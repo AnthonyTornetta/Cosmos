@@ -2,7 +2,7 @@
 
 ## Intent
 
-**Locations** represent an entity's absolute coordaintes in all three axis within a range of about -19,498,223 to 19,498,223 light years. 
+**Locations** represent an entity's absolute coordinates in all three x/y/z axes within a range of about -19,498,223 to 19,498,223 light years. 
 
 ## :( Problem
 
@@ -10,13 +10,13 @@ In a normal game, all x/y/z positions are stored as `f32` values. While floating
 
 ## :) Solution
 
-The Location structure stores your absolute position by breaking your position into two representations - sector coordinates and local coordinates. Sector coordinates represent how far away you are from `0, 0, 0` in multiples of 20,000*. A sector coordinate of (4, 0, -3) is the same as (80,000, 0, -60,000). The local coordinates are used to store an offset from sector coordinate grid. For example, sector coordinates (1, 0, 0) with local coordinates (5000, 1000, -4000) would represent an absolute position of `(45000, 1000, -4000)`. 
+The Location structure stores your absolute position by breaking your position into two representations - sector coordinates and local coordinates. Sector coordinates represent how far away you are from `0, 0, 0` in multiples of 20,000*. A sector coordinate of (4, 0, -3) is the same as (80,000, 0, -60,000). The local coordinates are used to store an offset from the sector coordinate grid. For example, sector coordinates (1, 0, 0) with local coordinates (5000, 1000, -4000) would represent an absolute position of `(45000, 1000, -4000)`. 
 
 By using locations to compare entities instead of their transforms, you will get correct measurements even over extremely long distances and short distances. Because of this, you should generally prefer to use the Location structure over the Transform or GlobalTransform.
 
 This means that when adding an entity to the world, it is generally a good idea to instead add a Location rather than a TransformBundle. For ease of use, a `CosmosPbrBundle` has been provided that works the same as a normal `PbrBundle`, except it takes a location instead of a transform.
 
-In order to make sure the transform &amp; location remains accurate, they are synced every frame. The below diagrams show this process.
+To make sure the transform &amp; location remains accurate, they are synced every frame. The below diagrams show this process.
 
 ## Diagrams
 
