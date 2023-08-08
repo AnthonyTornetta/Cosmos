@@ -1,8 +1,8 @@
 # Player movement packets
 
-**Packet**: ClientUnreliableMessages::PlayerBody
+**Packet**: `ClientUnreliableMessages::PlayerBody`
 
-**Channel**: NettyChannel::Unreliable
+**Channel**: `NettyChannelClient::Unreliable`
 
 ## Abstract
 

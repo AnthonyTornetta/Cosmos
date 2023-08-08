@@ -7,6 +7,8 @@ The mermaid markdown syntax highlighting + markdown preview mermaid plugins are 
 -->
 
 - [Cosmos](./index.md)
+- [Registries](./registries/index.md)
+  - [Block Registry](./registries/block.md)
 - [Physics](./physics/index.md)
   - [Location](./physics/location.md)
   - [Anchor](./physics/anchor.md)
