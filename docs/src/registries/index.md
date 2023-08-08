@@ -16,7 +16,7 @@ Most things that are dynamically added to the game (such as blocks, items, mater
 
 All items must have a unique [unlocalized name](./identifiable.md) to be in a registry. Note that two different registries may have the same unlocalized names. For example, the `Registry<Block>` and `Registry<Item>` could have the same key used in both to represent two different things. If you add two items with the same unlocalized name to the same registry, the second addition will overwrite the previous entry.
 
-There are two registries commonly used - the [one to one registry](./one_to_one_registry.md) known as the `Registry` type and the [many to one registry](./many_to_one_registry.md) known as the `ManyToOneRegistry` type.
+There are two registries commonly used - the basic registry known as the `Registry` type and the [many to one registry](./many_to_one_registry.md) known as the `ManyToOneRegistry` type. The basic registry simply maps a key to its value, as shown below. The Many to One registry maps many identifiable types to the same identifiable value.
 
 Registries are designed to be generic across any types of data, so to create a registry for a specific type it must implement the [`Identifiable`](./identifiable.md) trait.
 
