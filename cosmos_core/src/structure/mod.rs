@@ -11,10 +11,12 @@ use bevy_rapier3d::prelude::PhysicsWorld;
 
 pub mod asteroid;
 pub mod block_health;
+pub mod block_storage;
 pub mod chunk;
 pub mod coordinates;
 pub mod events;
 pub mod loading;
+pub mod lod_chunk;
 pub mod planet;
 pub mod ship;
 pub mod structure_block;
