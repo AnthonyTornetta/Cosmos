@@ -60,13 +60,15 @@ impl<'a> BlockIterator<'a> {
     ///
     /// * `include_empty` - If this is true, air blocks will be included. If false, air blocks will be excluded so some optimizations can be used.
     pub fn new(mut start: UnboundBlockCoordinate, mut end: UnboundBlockCoordinate, include_empty: bool, structure: &'a Structure) -> Self {
-        end.x = end.x.min(structure.blocks_width() as UnboundCoordinateType - 1);
-        end.y = end.y.min(structure.blocks_height() as UnboundCoordinateType - 1);
-        end.z = end.z.min(structure.blocks_length() as UnboundCoordinateType - 1);
+        let (w, h, l) = structure.block_dimensions();
+
+        end.x = end.x.min(w as UnboundCoordinateType - 1);
+        end.y = end.y.min(h as UnboundCoordinateType - 1);
+        end.z = end.z.min(l as UnboundCoordinateType - 1);
 
         let Ok(end) = BlockCoordinate::try_from(end) else {
             return Self {
-                state: BlockItrState::Invalid
+                state: BlockItrState::Invalid,
             };
         };
 
@@ -76,7 +78,7 @@ impl<'a> BlockIterator<'a> {
 
         let Ok(start) = BlockCoordinate::try_from(start) else {
             return Self {
-                state: BlockItrState::Invalid
+                state: BlockItrState::Invalid,
             };
         };
 
@@ -288,13 +290,15 @@ impl<'a> ChunkIterator<'a> {
     ///
     /// * `include_empty` - If enabled, the value iterated over may be `ChunkIteratorResult::EmptyChunk` OR `ChunkIteratorResult::FilledChunk`. Otherwise, the value iterated over may ONLY BE `ChunkIteratorResult::LoadedChunk`.
     pub fn new(mut start: UnboundChunkCoordinate, mut end: UnboundChunkCoordinate, structure: &'a Structure, include_empty: bool) -> Self {
-        end.x = end.x.min(structure.chunks_width() as UnboundCoordinateType - 1);
-        end.y = end.y.min(structure.chunks_length() as UnboundCoordinateType - 1);
-        end.z = end.z.min(structure.chunks_height() as UnboundCoordinateType - 1);
+        let (w, h, l) = structure.block_dimensions();
+
+        end.x = end.x.min(w as UnboundCoordinateType - 1);
+        end.y = end.y.min(h as UnboundCoordinateType - 1);
+        end.z = end.z.min(l as UnboundCoordinateType - 1);
 
         let Ok(end) = ChunkCoordinate::try_from(end) else {
             return Self {
-                state: ChunkItrState::Invalid
+                state: ChunkItrState::Invalid,
             };
         };
 
@@ -304,7 +308,7 @@ impl<'a> ChunkIterator<'a> {
 
         let Ok(start) = ChunkCoordinate::try_from(start) else {
             return Self {
-                state: ChunkItrState::Invalid
+                state: ChunkItrState::Invalid,
             };
         };
 
