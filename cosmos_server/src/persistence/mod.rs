@@ -1,6 +1,10 @@
 //! Handles both the saving & loading of entities on the server
 
-use std::{fmt::Display, fs};
+use std::{
+    fmt::Display,
+    fs,
+    sync::{Arc, Mutex},
+};
 
 use bevy::{
     prelude::{App, Component, Resource},
@@ -32,64 +36,51 @@ impl Display for EntityId {
     }
 }
 
+#[derive(Debug, Resource, Default)]
+/// This is a resource that caches the saved entities of different sectors that a player has been near.
+///
+/// This is just used to prevent excessive IO operations.
+///
+/// This can be cloned pretty quickly when needed
+pub struct SectorsCacheInner(HashMap<Sector, Arc<Mutex<HashSet<(EntityId, Option<u32>)>>>>);
+
 #[derive(Debug, Resource, Default, Clone)]
 /// This is a resource that caches the saved entities of different sectors that a player has been near.
 ///
 /// This is just used to prevent excessive IO operations.
 ///
 /// This can be cloned pretty quickly when needed
-pub struct SectorsCache(HashMap<Sector, Option<Box<HashSet<(EntityId, Option<u32>)>>>>);
-// Option<Box<HashSet<(EntityId, Option<u32>)>>>> is used instead of just HashSet<(EntityId, Option<u32>)>
-// so that clone operations are fast.
+pub struct SectorsCache(Arc<Mutex<SectorsCacheInner>>);
 
 impl SectorsCache {
     /// Gets all the entities that are saved for this sector in this cache.  This does NOT
     /// perform any IO operations.
-    pub fn get(&self, sector: &Sector) -> &Option<Box<HashSet<(EntityId, Option<u32>)>>> {
-        if let Some(set) = self.0.get(sector) {
-            set
-        } else {
-            &None
-        }
+    pub fn get(&self, sector: &Sector) -> Option<Arc<Mutex<HashSet<(EntityId, Option<u32>)>>>> {
+        self.0.lock().expect("Failed to lock").0.get(sector).cloned()
     }
 
     /// Removes a saved entity from this location - this does not do any IO operations,
     /// and only removes it from the cache.
     pub fn remove(&mut self, entity_id: &EntityId, sector: Sector, load_distance: Option<u32>) {
-        if let Some(set) = self.0.get_mut(&sector) {
-            let Some(set) = set else {
-                return;
-            };
-
-            set.remove(&(entity_id.clone(), load_distance));
-
-            if set.is_empty() {
-                self.0.insert(sector, None);
-            }
+        if let Some(set) = self.0.lock().expect("Failed to lock").0.get_mut(&sector) {
+            set.lock().expect("Failed to unlock").remove(&(entity_id.clone(), load_distance));
         }
     }
 
     /// Inserts an entity into this sector in this cache. This does not perform any IO operations.
     pub fn insert(&mut self, sector: Sector, entity_id: EntityId, load_distance: Option<u32>) {
-        if let Some(x) = self.0.get_mut(&sector) {
-            // helps out the lsp
-            let x: &mut Option<Box<HashSet<(EntityId, Option<u32>)>>> = x;
+        let self_locked = &mut self.0.lock().expect("Failed to lock").0;
 
-            if x.is_none() {
-                *x = Some(Box::new(HashSet::new()));
-            }
-        } else {
-            self.0.insert(sector, Some(Box::new(HashSet::new())));
+        if !self_locked.contains_key(&sector) {
+            self_locked.insert(sector, Arc::new(Mutex::new(HashSet::new())));
         }
 
-        let x: Option<&mut Option<Box<HashSet<(EntityId, Option<u32>)>>>> = self.0.get_mut(&sector);
-
-        x.expect("Sector doesn't exist despite me just making it")
-            .as_mut()
-            .expect("Sector is None despite me just making it")
+        self_locked
+            .get_mut(&sector)
+            .expect("Sector doesn't exist despite me just making it")
+            .lock()
+            .expect("Failed to unlock")
             .insert((entity_id, load_distance));
-
-        println!("Cache for {sector} is now {:?}", self.0.get_mut(&sector));
     }
 }
 

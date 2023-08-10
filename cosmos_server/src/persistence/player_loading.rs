@@ -3,7 +3,7 @@
 use std::{ffi::OsStr, fs, time::Duration};
 
 use bevy::{
-    prelude::{warn, App, Commands, Component, DespawnRecursiveExt, Entity, IntoSystemConfigs, Query, Res, ResMut, Update, With, Without},
+    prelude::{warn, App, Commands, Component, DespawnRecursiveExt, Entity, IntoSystemConfigs, Query, ResMut, Update, With, Without},
     tasks::{AsyncComputeTaskPool, Task},
     time::common_conditions::on_timer,
 };
@@ -40,7 +40,7 @@ const SEARCH_RANGE: SectorUnit = 25;
 const DEFAULT_LOAD_DISTANCE: u32 = (LOAD_DISTANCE / SECTOR_DIMENSIONS) as u32;
 
 #[derive(Component, Debug)]
-struct LoadingTask(Task<(SectorsCache, Vec<SaveFileIdentifier>)>);
+struct LoadingTask(Task<Vec<SaveFileIdentifier>>);
 
 fn monitor_loading_task(
     // Because entities can be added while the scan task is in progress,
@@ -48,13 +48,12 @@ fn monitor_loading_task(
     loaded_entities: Query<&EntityId>,
     mut query: Query<(Entity, &mut LoadingTask)>,
     mut commands: Commands,
-    mut sectors_cache: ResMut<SectorsCache>,
 ) {
     let Ok((entity, mut task)) = query.get_single_mut() else {
         return;
     };
 
-    if let Some((cache, save_file_ids)) = future::block_on(future::poll_once(&mut task.0)) {
+    if let Some(save_file_ids) = future::block_on(future::poll_once(&mut task.0)) {
         commands.entity(entity).despawn_recursive();
 
         for sfi in save_file_ids {
@@ -66,8 +65,6 @@ fn monitor_loading_task(
                 commands.spawn((sfi, NeedsLoaded));
             }
         }
-
-        *sectors_cache = cache;
     }
 }
 
@@ -75,7 +72,8 @@ fn monitor_loading_task(
 fn load_near(
     query: Query<&Location, With<Player>>,
     loaded_entities: Query<&EntityId>,
-    sectors_cache: Res<SectorsCache>,
+    // This is modified below, despite it being cloned. Use ResMut to make purpose clear
+    sectors_cache: ResMut<SectorsCache>,
     mut commands: Commands,
 
     already_exists: Query<(), With<LoadingTask>>,
@@ -89,8 +87,10 @@ fn load_near(
 
     let sectors = query.iter().map(|l| l.sector()).collect::<Vec<Sector>>();
 
-    // If this ever gets laggy, either of these two clones could be the cause
+    // Shallow clone - we are only cloning the Arc<Mutex<...>> not the ...
     let mut sectors_cache = sectors_cache.clone();
+
+    // If this ever gets laggy, either of this clone could be the cause
     let loaded_entities = loaded_entities.iter().cloned().collect::<Vec<EntityId>>();
 
     let task = thread_pool.spawn(async move {
@@ -108,7 +108,7 @@ fn load_near(
                         }
 
                         if let Some(entities) = sectors_cache.get(&sector) {
-                            for (entity_id, load_distance) in entities.iter() {
+                            for (entity_id, load_distance) in entities.lock().expect("Failed to lock").iter() {
                                 if max_delta <= load_distance.unwrap_or(DEFAULT_LOAD_DISTANCE)
                                     && !loaded_entities.iter().any(|x| x == entity_id)
                                 {
@@ -165,7 +165,7 @@ fn load_near(
             }
         }
 
-        (sectors_cache, to_load)
+        to_load
     });
 
     commands.spawn(LoadingTask(task));
