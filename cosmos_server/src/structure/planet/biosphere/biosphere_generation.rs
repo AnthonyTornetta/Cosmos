@@ -911,8 +911,6 @@ pub fn generate_planet<T: Component + Clone + Default, E: TGenerateChunkEvent + 
         .collect::<Vec<(Chunk, CoordinateType, Location, Entity)>>();
 
     if !chunks.is_empty() {
-        println!("Doing {} chunks!", chunks.len());
-
         for (mut chunk, s_dimensions, location, structure_entity) in chunks {
             let block_ranges = block_ranges.clone();
             let noise_generator = **noise_generator;

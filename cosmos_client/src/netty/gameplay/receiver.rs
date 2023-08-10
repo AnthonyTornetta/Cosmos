@@ -329,12 +329,6 @@ fn client_sync_players(
                 lobby.players.insert(id, player_info);
                 network_mapping.add_mapping(client_entity, server_entity);
 
-                println!(
-                    "Linking player (client {} to server {})",
-                    client_entity.index(),
-                    server_entity.index()
-                );
-
                 if client_id == id {
                     entity_cmds
                         .insert(LocalPlayer)

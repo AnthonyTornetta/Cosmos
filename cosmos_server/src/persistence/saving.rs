@@ -84,8 +84,6 @@ pub fn done_saving(
             entity_id
         };
 
-        println!("Saving {entity_id}");
-
         if let Some(save_file_identifier) = save_file_identifier {
             let path = save_file_identifier.get_save_file_path();
             if fs::try_exists(&path).unwrap_or(false) {
@@ -118,8 +116,6 @@ pub fn done_saving(
 
         if matches!(&save_identifier.identifier_type, SaveFileIdentifierType::Base(_)) {
             if let Some(loc) = sd.location {
-                println!("Caching {entity_id} @ {} {loading_distance:?}", loc.sector());
-
                 sectors_cache.insert(loc.sector(), entity_id, loading_distance.map(|ld| ld.load_distance()));
             }
         }

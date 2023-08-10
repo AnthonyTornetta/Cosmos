@@ -103,10 +103,6 @@ fn load_near(
                         let sector = Sector::new(dx + sector.x(), dy + sector.y(), dz + sector.z());
                         let max_delta = dz.abs().max(dy.abs()).max(dx.abs()) as u32;
 
-                        if sector == Sector::new(25, 25, 25) {
-                            println!("{:?}", sectors_cache.get(&sector));
-                        }
-
                         if let Some(entities) = sectors_cache.get(&sector) {
                             for (entity_id, load_distance) in entities.lock().expect("Failed to lock").iter() {
                                 if max_delta <= load_distance.unwrap_or(DEFAULT_LOAD_DISTANCE)

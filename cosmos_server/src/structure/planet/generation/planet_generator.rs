@@ -173,7 +173,7 @@ fn get_requested_chunk(
                             .push((ev.structure_entity, ev.chunk_coords, *ev))
                     }
                     ChunkState::Invalid => {
-                        eprintln!("Client requested invalid chunk @ {}", ev.chunk_coords);
+                        warn!("Client requested invalid chunk @ {}", ev.chunk_coords);
                     }
                 }
             }
