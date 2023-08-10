@@ -231,10 +231,12 @@ impl BaseStructure {
         self.mut_chunk_from_chunk_coordinates(ChunkCoordinate::for_block_coordinate(coords))
     }
 
+    /// Returns the number of blocks in the x, y, z direction of this structure.
     pub fn block_dimensions(&self) -> BlockCoordinate {
         self.dimensions.first_structure_block()
     }
 
+    /// Returns the number of chunks in the x, y, z direction of this structure.
     pub fn chunk_dimensions(&self) -> ChunkCoordinate {
         self.dimensions
     }
@@ -497,6 +499,7 @@ impl BaseStructure {
         }
     }
 
+    /// Removes the entity for this chunk - does not delete the chunk or care if the chunk even exists
     pub fn remove_chunk_entity(&mut self, coords: ChunkCoordinate) {
         self.chunk_entities.remove(&self.flatten(coords));
     }

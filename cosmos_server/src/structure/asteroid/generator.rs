@@ -15,7 +15,7 @@ use cosmos_core::{
         structure_iterator::ChunkIteratorResult,
         ChunkInitEvent, Structure,
     },
-    utils::{resource_wrapper::ResourceWrapper, timer::UtilsTimer},
+    utils::resource_wrapper::ResourceWrapper,
 };
 use futures_lite::future;
 use noise::NoiseFn;

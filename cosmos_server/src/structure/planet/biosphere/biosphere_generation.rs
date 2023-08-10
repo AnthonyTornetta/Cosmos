@@ -16,7 +16,7 @@ use cosmos_core::{
         planet::{ChunkFaces, Planet},
         Structure,
     },
-    utils::{array_utils::flatten_2d, resource_wrapper::ResourceWrapper, timer::UtilsTimer},
+    utils::{array_utils::flatten_2d, resource_wrapper::ResourceWrapper},
 };
 use futures_lite::future;
 use noise::NoiseFn;
