@@ -446,10 +446,11 @@ fn trees(
     };
 
     let first_block_coords = coords.first_structure_block();
-    let s_dimension = planet.dimensions();
+    let s_dimension = planet.block_dimensions();
     let s_dims = structure.block_dimensions();
 
     let air = blocks.from_id("cosmos:air").unwrap();
+    let short_grass = blocks.from_id("cosmos:short_grass").unwrap();
     let grass = blocks.from_id("cosmos:grass").unwrap();
 
     let structure_coords = location.absolute_coords_f64();
@@ -497,6 +498,8 @@ fn trees(
 
                 // Noise value not in forest range.
                 if noise * noise <= FOREST {
+                    println!("x");
+
                     continue 'next;
                 }
 
@@ -525,13 +528,24 @@ fn trees(
                     height -= 1;
                 }
 
-                // No grass block to grow tree from.
+                // // No grass block to grow tree from.
                 if let Ok(rotated) = rotate(coords, UnboundBlockCoordinate::new(0, height, 0), s_dims, block_up) {
-                    if height < 0 || structure.block_at(rotated, blocks) != grass || structure.block_rotation(rotated) != block_up {
+                    let block = structure.block_at(rotated, blocks);
+                    if height < 0 || (block != grass && block != short_grass) || structure.block_rotation(rotated) != block_up {
                         continue 'next;
                     }
 
-                    redwood_tree(rotated, block_up, structure, location, block_event_writer, blocks, noise_generator);
+                    if let Ok(lowered_rotated) = rotate(coords, UnboundBlockCoordinate::new(0, height - 4, 0), s_dims, block_up) {
+                        redwood_tree(
+                            lowered_rotated,
+                            block_up,
+                            structure,
+                            location,
+                            block_event_writer,
+                            blocks,
+                            noise_generator,
+                        );
+                    }
                 }
             }
         }
