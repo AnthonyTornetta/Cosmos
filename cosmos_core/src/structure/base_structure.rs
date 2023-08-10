@@ -110,7 +110,7 @@ impl BaseStructure {
         );
     }
 
-    fn debug_assert_is_within_blocks(&self, coords: BlockCoordinate) {
+    pub(super) fn debug_assert_block_coords_within(&self, coords: BlockCoordinate) {
         debug_assert!(
             self.block_coords_within(coords),
             "{} < {} && {} < {} && {} < {} failed",
@@ -303,7 +303,7 @@ impl BaseStructure {
     /// If the chunk is loaded, non-empty, returns the block at that coordinate.
     /// Otherwise, returns AIR_BLOCK_ID
     pub fn block_id_at(&self, coords: BlockCoordinate) -> u16 {
-        self.debug_assert_is_within_blocks(coords);
+        self.debug_assert_block_coords_within(coords);
 
         self.chunk_at_block_coordinates(coords)
             .map(|chunk| chunk.block_at(ChunkBlockCoordinate::for_block_coordinate(coords)))

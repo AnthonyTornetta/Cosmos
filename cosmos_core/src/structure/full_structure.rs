@@ -16,6 +16,7 @@ use crate::{
 
 use super::{
     base_structure::BaseStructure,
+    chunk::Chunk,
     coordinates::{BlockCoordinate, ChunkBlockCoordinate, ChunkCoordinate, CoordinateType},
     structure_block::StructureBlock,
     ChunkState,
@@ -78,6 +79,8 @@ impl FullStructure {
         blocks: &Registry<Block>,
         event_writer: Option<&mut EventWriter<BlockChangedEvent>>,
     ) {
+        self.debug_assert_block_coords_within(coords);
+
         let old_block = self.block_id_at(coords);
         if blocks.from_numeric_id(old_block) == block {
             return;
@@ -85,6 +88,7 @@ impl FullStructure {
 
         let chunk_coords = ChunkCoordinate::for_block_coordinate(coords);
         let chunk_block_coords = ChunkBlockCoordinate::for_block_coordinate(coords);
+        let mut send_event = false;
 
         if let Some(chunk) = self.mut_chunk_from_chunk_coordinates(chunk_coords) {
             chunk.set_block_at(chunk_block_coords, block, block_up);
@@ -93,19 +97,32 @@ impl FullStructure {
                 self.unload_chunk(chunk_coords);
             }
 
-            if let Some(self_entity) = self.self_entity {
-                if let Some(event_writer) = event_writer {
-                    event_writer.send(BlockChangedEvent {
-                        new_block: block.id(),
-                        old_block,
-                        structure_entity: self_entity,
-                        block: StructureBlock::new(coords),
-                        old_block_up: self.block_rotation(coords),
-                        new_block_up: block_up,
-                    });
-                }
-            }
+            send_event = true;
+        } else if block.id() != AIR_BLOCK_ID {
+            let mut chunk = Chunk::new(chunk_coords);
+            chunk.set_block_at(chunk_block_coords, block, block_up);
+            self.base_structure.chunks.insert(self.flatten(chunk_coords), chunk);
+            send_event = true;
         }
+
+        if !send_event {
+            return;
+        }
+        let Some(self_entity) = self.self_entity else {
+            return;
+        };
+        let Some(event_writer) = event_writer else {
+            return;
+        };
+
+        event_writer.send(BlockChangedEvent {
+            new_block: block.id(),
+            old_block,
+            structure_entity: self_entity,
+            block: StructureBlock::new(coords),
+            old_block_up: self.block_rotation(coords),
+            new_block_up: block_up,
+        });
     }
 
     /// Removes the block at the given coordinates
