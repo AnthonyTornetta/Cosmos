@@ -92,10 +92,8 @@ fn start_generating_asteroid(
 
         let (bx, by, bz) = (w, h, l);
 
-        println!("Starting async asteroid gen");
-
         let task = thread_pool.spawn(async move {
-            let timer = UtilsTimer::start();
+            // let timer = UtilsTimer::start();
 
             let stone = &stone;
 
@@ -139,7 +137,7 @@ fn start_generating_asteroid(
                 }
             }
 
-            timer.log_duration(&format!("for one {}:", bx));
+            // timer.log_duration(&format!("for one {}:", bx));
 
             chunks.into_iter().map(|(_, c)| c).collect::<Vec<Chunk>>()
         });

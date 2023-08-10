@@ -32,8 +32,6 @@ fn unload_far(
             }
         }
 
-        println!("Flagged for saving + unloading!");
-
         commands.entity(ent).insert((NeedsSaved, NeedsDespawned));
     }
 }
@@ -104,6 +102,10 @@ fn load_near(
                     for dx in -SEARCH_RANGE..SEARCH_RANGE {
                         let sector = Sector::new(dx + sector.x(), dy + sector.y(), dz + sector.z());
                         let max_delta = dz.abs().max(dy.abs()).max(dx.abs()) as u32;
+
+                        if sector == Sector::new(25, 25, 25) {
+                            println!("{:?}", sectors_cache.get(&sector));
+                        }
 
                         if let Some(entities) = sectors_cache.get(&sector) {
                             for (entity_id, load_distance) in entities.iter() {

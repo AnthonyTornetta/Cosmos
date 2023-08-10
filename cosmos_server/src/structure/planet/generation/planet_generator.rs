@@ -23,7 +23,6 @@ use cosmos_core::{
         structure_iterator::ChunkIteratorResult,
         ChunkState, Structure,
     },
-    utils::timer::UtilsTimer,
 };
 use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 
@@ -104,7 +103,7 @@ fn get_requested_chunk(
     let non_empty_serializes = AtomicI32::new(0);
     let empty_serializes = AtomicI32::new(0);
 
-    let timer = UtilsTimer::start();
+    // let timer = UtilsTimer::start();
 
     // No par_iter() for event readers, so first convert to vec then par_iter() it.
     event_reader
@@ -180,14 +179,14 @@ fn get_requested_chunk(
             }
         });
 
-    let non_empty_serializes = non_empty_serializes.into_inner();
-    let empty_serializes = empty_serializes.into_inner();
+    // let non_empty_serializes = non_empty_serializes.into_inner();
+    // let empty_serializes = empty_serializes.into_inner();
 
-    if non_empty_serializes != 0 || empty_serializes != 0 {
-        timer.log_duration(&format!(
-            "Time to serialize {non_empty_serializes} non-empty chunks & {empty_serializes} empty chunks:"
-        ));
-    }
+    // if non_empty_serializes != 0 || empty_serializes != 0 {
+    //     timer.log_duration(&format!(
+    //         "Time to serialize {non_empty_serializes} non-empty chunks & {empty_serializes} empty chunks:"
+    //     ));
+    // }
 
     for bounce in bounced.lock().expect("Failed to lock").take().unwrap() {
         event_writer.send(bounce);

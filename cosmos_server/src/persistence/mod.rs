@@ -1,6 +1,6 @@
 //! Handles both the saving & loading of entities on the server
 
-use std::fs;
+use std::{fmt::Display, fs};
 
 use bevy::{
     prelude::{App, Component, Resource},
@@ -25,6 +25,12 @@ pub mod saving;
 /// Only entities that have been loaded or saved will have this. This is a unique identifier for
 /// this entity.
 pub struct EntityId(String);
+
+impl Display for EntityId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0)
+    }
+}
 
 #[derive(Debug, Resource, Default, Clone)]
 /// This is a resource that caches the saved entities of different sectors that a player has been near.
@@ -82,6 +88,8 @@ impl SectorsCache {
             .as_mut()
             .expect("Sector is None despite me just making it")
             .insert((entity_id, load_distance));
+
+        println!("Cache for {sector} is now {:?}", self.0.get_mut(&sector));
     }
 }
 

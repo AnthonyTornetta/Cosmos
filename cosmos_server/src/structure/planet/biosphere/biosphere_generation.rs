@@ -918,7 +918,7 @@ pub fn generate_planet<T: Component + Clone + Default, E: TGenerateChunkEvent + 
             let noise_generator = **noise_generator;
 
             let task = thread_pool.spawn(async move {
-                let timer = UtilsTimer::start();
+                // let timer = UtilsTimer::start();
 
                 let actual_pos = location.absolute_coords_f64();
 
@@ -969,7 +969,7 @@ pub fn generate_planet<T: Component + Clone + Default, E: TGenerateChunkEvent + 
                         );
                     }
                 }
-                timer.log_duration("Chunk:");
+                // timer.log_duration("Chunk:");
                 (chunk, structure_entity)
             });
 

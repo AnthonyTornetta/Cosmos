@@ -29,6 +29,7 @@ fn on_load_structure(
 ) {
     for (entity, s_data) in query.iter() {
         if s_data.deserialize_data::<bool>("cosmos:is_ship").unwrap_or(false) {
+            println!("WAS SHIP!!!");
             if let Some(mut structure) = s_data.deserialize_data::<Structure>("cosmos:structure") {
                 let loc = s_data
                     .deserialize_data("cosmos:location")
