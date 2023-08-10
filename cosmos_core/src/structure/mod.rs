@@ -48,6 +48,19 @@ use self::full_structure::FullStructure;
 use self::structure_block::StructureBlock;
 use self::structure_iterator::{BlockIterator, ChunkIterator};
 
+/// Represents the state a chunk is in for loading
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ChunkState {
+    /// The chunk does not exist in the structure
+    Invalid,
+    /// The chunk does is not loaded & not being loaded
+    Unloaded,
+    /// The chunk is currently being loaded, but is not ready for use
+    Loading,
+    /// The chunk is fully loaded & ready for use
+    Loaded,
+}
+
 #[derive(Serialize, Deserialize, Component, Reflect, Debug)]
 /// A structure represents many blocks, grouped into chunks.
 pub enum Structure {
@@ -419,6 +432,13 @@ impl Structure {
         match self {
             Self::Full(fs) => fs.block_take_damage(coords, block_hardness, amount, event_writer),
             Self::Dynamic(ds) => ds.block_take_damage(coords, block_hardness, amount, event_writer),
+        }
+    }
+
+    pub fn get_chunk_state(&self, coords: ChunkCoordinate) -> ChunkState {
+        match self {
+            Self::Full(fs) => fs.get_chunk_state(coords),
+            Self::Dynamic(ds) => ds.get_chunk_state(coords),
         }
     }
 

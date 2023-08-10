@@ -26,21 +26,8 @@ use super::{
     },
     structure_block::StructureBlock,
     structure_iterator::{BlockIterator, ChunkIterator},
-    Structure,
+    ChunkState, Structure,
 };
-
-/// Represents the state a chunk is in for loading
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ChunkState {
-    /// The chunk does not exist in the structure
-    Invalid,
-    /// The chunk does is not loaded & not being loaded
-    Unloaded,
-    /// The chunk is currently being loaded, but is not ready for use
-    Loading,
-    /// The chunk is fully loaded & ready for use
-    Loaded,
-}
 
 #[derive(Serialize, Deserialize, Reflect, Debug)]
 /// Contains all the functionality & information related to structures that are dynamically loaded.
@@ -48,7 +35,6 @@ pub enum ChunkState {
 /// This means that not all chunks will be loaded at a time, and they will be loaded & unloaded at will
 pub struct DynamicStructure {
     base_structure: BaseStructure,
-
     /// Chunks that are just air should be removed from the chunks map above to conserve memory
     /// and added into this to be stored instead.
     empty_chunks: HashSet<usize>,
@@ -261,11 +247,11 @@ impl DynamicStructure {
         self.base_structure.chunk_entity(coords)
     }
 
-    pub(crate) fn set_chunk_entity(&self, coords: ChunkCoordinate, entity: bevy::prelude::Entity) {
+    pub fn set_chunk_entity(&mut self, coords: ChunkCoordinate, entity: bevy::prelude::Entity) {
         self.base_structure.set_chunk_entity(coords, entity)
     }
 
-    pub(crate) fn chunk_coords_within(&self, coords: ChunkCoordinate) -> bool {
+    pub fn chunk_coords_within(&self, coords: ChunkCoordinate) -> bool {
         self.base_structure.chunk_coords_within(coords)
     }
 
@@ -318,90 +304,85 @@ impl DynamicStructure {
         chunk
     }
 
-    pub(crate) fn chunk_from_entity(&self, entity: &Entity) -> Option<&Chunk> {
+    pub fn chunk_from_entity(&self, entity: &Entity) -> Option<&Chunk> {
         self.base_structure.chunk_from_entity(entity)
     }
 
-    pub(crate) fn set_entity(&self, entity: bevy::prelude::Entity) {
+    pub fn set_entity(&mut self, entity: bevy::prelude::Entity) {
         self.base_structure.set_entity(entity)
     }
 
-    pub(crate) fn get_entity(&self) -> Option<Entity> {
+    pub fn get_entity(&self) -> Option<Entity> {
         self.base_structure.get_entity()
     }
 
-    pub(crate) fn chunk_from_chunk_coordinates(&self, coords: ChunkCoordinate) -> Option<&Chunk> {
+    pub fn chunk_from_chunk_coordinates(&self, coords: ChunkCoordinate) -> Option<&Chunk> {
         self.base_structure.chunk_from_chunk_coordinates(coords)
     }
 
-    pub(crate) fn chunk_from_chunk_coordinates_unbound(&self, unbound_coords: UnboundChunkCoordinate) -> Option<&Chunk> {
+    pub fn chunk_from_chunk_coordinates_unbound(&self, unbound_coords: UnboundChunkCoordinate) -> Option<&Chunk> {
         self.base_structure.chunk_from_chunk_coordinates_unbound(unbound_coords)
     }
 
-    pub(crate) fn mut_chunk_from_chunk_coordinates(&self, coords: ChunkCoordinate) -> Option<&mut Chunk> {
+    pub fn mut_chunk_from_chunk_coordinates(&mut self, coords: ChunkCoordinate) -> Option<&mut Chunk> {
         self.base_structure.mut_chunk_from_chunk_coordinates(coords)
     }
 
-    pub(crate) fn chunk_at_block_coordinates(&self, coords: BlockCoordinate) -> Option<&Chunk> {
+    pub fn chunk_at_block_coordinates(&self, coords: BlockCoordinate) -> Option<&Chunk> {
         self.base_structure.chunk_at_block_coordinates(coords)
     }
 
-    pub(crate) fn is_within_blocks(&self, coords: BlockCoordinate) -> bool {
+    pub fn is_within_blocks(&self, coords: BlockCoordinate) -> bool {
         self.base_structure.is_within_blocks(coords)
     }
 
-    pub(crate) fn has_block_at(&self, coords: BlockCoordinate) -> bool {
+    pub fn has_block_at(&self, coords: BlockCoordinate) -> bool {
         self.base_structure.has_block_at(coords)
     }
 
-    pub(crate) fn relative_coords_to_local_coords_checked(&self, x: f32, y: f32, z: f32) -> Result<BlockCoordinate, bool> {
+    pub fn relative_coords_to_local_coords_checked(&self, x: f32, y: f32, z: f32) -> Result<BlockCoordinate, bool> {
         self.base_structure.relative_coords_to_local_coords_checked(x, y, z)
     }
 
-    pub(crate) fn relative_coords_to_local_coords(&self, x: f32, y: f32, z: f32) -> UnboundBlockCoordinate {
+    pub fn relative_coords_to_local_coords(&self, x: f32, y: f32, z: f32) -> UnboundBlockCoordinate {
         self.base_structure.relative_coords_to_local_coords(x, y, z)
     }
 
-    pub(crate) fn block_rotation(&self, coords: BlockCoordinate) -> BlockFace {
+    pub fn block_rotation(&self, coords: BlockCoordinate) -> BlockFace {
         self.base_structure.block_rotation(coords)
     }
 
-    pub(crate) fn block_id_at(&self, coords: BlockCoordinate) -> u16 {
+    pub fn block_id_at(&self, coords: BlockCoordinate) -> u16 {
         self.base_structure.block_id_at(coords)
     }
 
-    pub(crate) fn block_at(&self, coords: BlockCoordinate, blocks: &crate::registry::Registry<Block>) -> &Block {
+    pub fn block_at<'a>(&'a self, coords: BlockCoordinate, blocks: &'a Registry<Block>) -> &'a Block {
         self.base_structure.block_at(coords, blocks)
     }
 
-    pub(crate) fn chunks(&self) -> &bevy::utils::hashbrown::HashMap<usize, Chunk> {
+    pub fn chunks(&self) -> &bevy::utils::hashbrown::HashMap<usize, Chunk> {
         self.base_structure.chunks()
     }
 
-    pub(crate) fn chunk_relative_position(&self, coords: ChunkCoordinate) -> Vec3 {
+    pub fn chunk_relative_position(&self, coords: ChunkCoordinate) -> Vec3 {
         self.base_structure.chunk_relative_position(coords)
     }
 
-    pub(crate) fn block_world_location(
-        &self,
-        coords: BlockCoordinate,
-        body_position: &GlobalTransform,
-        this_location: &Location,
-    ) -> Location {
+    pub fn block_world_location(&self, coords: BlockCoordinate, body_position: &GlobalTransform, this_location: &Location) -> Location {
         self.base_structure.block_world_location(coords, body_position, this_location)
     }
 
-    pub(crate) fn take_chunk(&self, coords: ChunkCoordinate) -> Option<Chunk> {
+    pub fn take_chunk(&mut self, coords: ChunkCoordinate) -> Option<Chunk> {
         self.base_structure.take_chunk(coords)
     }
 
-    pub(crate) fn all_chunks_iter(&self, structure: &Structure, include_empty: bool) -> ChunkIterator {
+    pub fn all_chunks_iter<'a>(&'a self, structure: &'a Structure, include_empty: bool) -> ChunkIterator {
         self.base_structure.all_chunks_iter(structure, include_empty)
     }
 
-    pub(crate) fn chunk_iter(
-        &self,
-        structure: &Structure,
+    pub fn chunk_iter<'a>(
+        &'a self,
+        structure: &'a Structure,
         start: UnboundChunkCoordinate,
         end: UnboundChunkCoordinate,
         include_empty: bool,
@@ -409,17 +390,17 @@ impl DynamicStructure {
         self.base_structure.chunk_iter(structure, start, end, include_empty)
     }
 
-    pub(crate) fn block_iter_for_chunk(&self, structure: &Structure, coords: ChunkCoordinate, include_air: bool) -> BlockIterator {
+    pub fn block_iter_for_chunk<'a>(&'a self, structure: &'a Structure, coords: ChunkCoordinate, include_air: bool) -> BlockIterator {
         self.base_structure.block_iter_for_chunk(structure, coords, include_air)
     }
 
-    pub(crate) fn all_blocks_iter(&self, structure: &Structure, include_air: bool) -> BlockIterator {
+    pub fn all_blocks_iter<'a>(&'a self, structure: &'a Structure, include_air: bool) -> BlockIterator {
         self.base_structure.all_blocks_iter(structure, include_air)
     }
 
-    pub(crate) fn block_iter(
-        &self,
-        structure: &Structure,
+    pub fn block_iter<'a>(
+        &'a self,
+        structure: &'a Structure,
         start: UnboundBlockCoordinate,
         end: UnboundBlockCoordinate,
         include_air: bool,
@@ -427,12 +408,12 @@ impl DynamicStructure {
         self.base_structure.block_iter(structure, start, end, include_air)
     }
 
-    pub(crate) fn get_block_health(&self, coords: BlockCoordinate, block_hardness: &crate::block::hardness::BlockHardness) -> f32 {
+    pub fn get_block_health(&self, coords: BlockCoordinate, block_hardness: &crate::block::hardness::BlockHardness) -> f32 {
         self.base_structure.get_block_health(coords, block_hardness)
     }
 
-    pub(crate) fn block_take_damage(
-        &self,
+    pub fn block_take_damage(
+        &mut self,
         coords: BlockCoordinate,
         block_hardness: &BlockHardness,
         amount: f32,
@@ -441,7 +422,7 @@ impl DynamicStructure {
         self.base_structure.block_take_damage(coords, block_hardness, amount, event_writer)
     }
 
-    pub(crate) fn remove_chunk_entity(&self, coords: ChunkCoordinate) {
+    pub fn remove_chunk_entity(&mut self, coords: ChunkCoordinate) {
         self.base_structure.remove_chunk_entity(coords)
     }
 }

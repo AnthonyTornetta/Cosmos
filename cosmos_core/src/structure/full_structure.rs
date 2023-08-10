@@ -18,17 +18,25 @@ use super::{
     base_structure::BaseStructure,
     coordinates::{BlockCoordinate, ChunkBlockCoordinate, ChunkCoordinate, CoordinateType},
     structure_block::StructureBlock,
+    ChunkState,
 };
 
 #[derive(Serialize, Deserialize, Reflect, Debug, DerefMut, Deref)]
 /// Contains all the functionality & information related to structures that are fully loaded at all times.
 ///
 /// This means that all chunks this structure needs are loaded as long as the structure exists.
-pub struct FullStructure(BaseStructure);
+pub struct FullStructure {
+    #[deref]
+    base_structure: BaseStructure,
+    loaded: bool,
+}
 
 impl FullStructure {
     pub fn new(dimensions: ChunkCoordinate) -> Self {
-        Self(BaseStructure::new(dimensions))
+        Self {
+            base_structure: BaseStructure::new(dimensions),
+            loaded: false,
+        }
     }
 
     /// A static version of [`Self::block_relative_position`]. This is useful if you know
@@ -110,5 +118,27 @@ impl FullStructure {
         event_writer: Option<&mut EventWriter<BlockChangedEvent>>,
     ) {
         self.set_block_at(coords, blocks.from_numeric_id(AIR_BLOCK_ID), BlockFace::Top, blocks, event_writer);
+    }
+
+    /// Marks this structure as being completely loaded
+    pub fn set_loaded(&mut self) {
+        self.loaded = true;
+    }
+
+    /// Returns the chunk's state
+    pub fn get_chunk_state(&self, coords: ChunkCoordinate) -> ChunkState {
+        if !self.is_within_chunks(coords) {
+            ChunkState::Invalid
+        } else if self.loaded {
+            ChunkState::Loaded
+        } else {
+            ChunkState::Loading
+        }
+    }
+
+    fn is_within_chunks(&self, coords: ChunkCoordinate) -> bool {
+        let (w, h, l) = self.block_dimensions().into();
+
+        coords.x < w && coords.y < h && coords.z < l
     }
 }

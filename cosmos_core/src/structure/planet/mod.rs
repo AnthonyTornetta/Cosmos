@@ -14,6 +14,7 @@ use crate::{block::BlockFace, physics::location::SYSTEM_SECTORS};
 use super::{
     chunk::CHUNK_DIMENSIONS,
     coordinates::{BlockCoordinate, CoordinateType},
+    dynamic_structure::DynamicStructure,
     Structure,
 };
 
@@ -54,13 +55,8 @@ impl Planet {
     /// * `bx` Block's x
     /// * `by` Block's y
     /// * `bz` Block's z
-    pub fn get_planet_face_without_structure(coords: BlockCoordinate, structure_blocks_dimensions: CoordinateType) -> BlockFace {
-        Self::planet_face_relative(Structure::block_relative_position_static(
-            coords,
-            structure_blocks_dimensions,
-            structure_blocks_dimensions,
-            structure_blocks_dimensions,
-        ))
+    pub fn get_planet_face_without_structure(coords: BlockCoordinate, planet_dimensions: CoordinateType) -> BlockFace {
+        Self::planet_face_relative(DynamicStructure::block_relative_position_static(coords, planet_dimensions))
     }
 
     /// Gets the face of a planet this location is closest to. Prioritizes negative sides to make positive-to-negative edges look ok.

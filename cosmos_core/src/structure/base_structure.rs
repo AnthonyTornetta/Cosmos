@@ -361,7 +361,7 @@ impl BaseStructure {
     /// Used generally when loading stuff on client from server.
     ///
     /// This does not trigger any events, so make sure to handle that properly.
-    pub fn set_chunk(&mut self, mut chunk: Chunk) {
+    pub fn set_chunk(&mut self, chunk: Chunk) {
         let i = self.flatten(chunk.chunk_coordinates());
 
         if chunk.is_empty() {
@@ -394,7 +394,7 @@ impl BaseStructure {
     ///
     /// If include_empty is enabled, the value iterated over may be None OR Some(chunk).
     /// If include_empty is disabled, the value iterated over may ONLY BE Some(chunk).
-    pub fn all_chunks_iter(&self, structure: &Structure, include_empty: bool) -> ChunkIterator {
+    pub fn all_chunks_iter<'a>(&self, structure: &'a Structure, include_empty: bool) -> ChunkIterator<'a> {
         ChunkIterator::new(
             ChunkCoordinate::new(0, 0, 0).into(),
             ChunkCoordinate::new(self.chunks_width() - 1, self.chunks_height() - 1, self.chunks_length() - 1).into(),
@@ -405,18 +405,18 @@ impl BaseStructure {
 
     /// Iterate over blocks in a given range. Will skip over any out of bounds positions.
     /// Coordinates are inclusive
-    pub fn chunk_iter(
+    pub fn chunk_iter<'a>(
         &self,
-        structure: &Structure,
+        structure: &'a Structure,
         start: UnboundChunkCoordinate,
         end: UnboundChunkCoordinate,
         include_empty: bool,
-    ) -> ChunkIterator {
+    ) -> ChunkIterator<'a> {
         ChunkIterator::new(start, end, structure, include_empty)
     }
 
     /// Will fail assertion if chunk positions are out of bounds
-    pub fn block_iter_for_chunk(&self, structure: &Structure, coords: ChunkCoordinate, include_air: bool) -> BlockIterator {
+    pub fn block_iter_for_chunk<'a>(&self, structure: &'a Structure, coords: ChunkCoordinate, include_air: bool) -> BlockIterator<'a> {
         self.debug_assert_coords_within(coords);
 
         BlockIterator::new(
@@ -429,7 +429,7 @@ impl BaseStructure {
 
     /// Iterate over blocks in a given range. Will skip over any out of bounds positions.
     /// Coordinates are inclusive
-    pub fn all_blocks_iter(&self, structure: &Structure, include_air: bool) -> BlockIterator {
+    pub fn all_blocks_iter<'a>(&self, structure: &'a Structure, include_air: bool) -> BlockIterator<'a> {
         BlockIterator::new(
             BlockCoordinate::new(0, 0, 0).into(),
             BlockCoordinate::new(self.blocks_width() - 1, self.blocks_height() - 1, self.blocks_length() - 1).into(),
@@ -440,20 +440,20 @@ impl BaseStructure {
 
     /// Iterate over blocks in a given range. Will skip over any out of bounds positions.
     /// Coordinates are inclusive
-    pub fn block_iter(
+    pub fn block_iter<'a>(
         &self,
-        structure: &Structure,
+        structure: &'a Structure,
         start: UnboundBlockCoordinate,
         end: UnboundBlockCoordinate,
         include_air: bool,
-    ) -> BlockIterator {
+    ) -> BlockIterator<'a> {
         BlockIterator::new(start, end, include_air, structure)
     }
 
     /// Gets the block's health at that given coordinate
     /// - x/y/z: block coordinate
     /// - block_hardness: The hardness for the block at those coordinates
-    pub fn get_block_health(&mut self, coords: BlockCoordinate, block_hardness: &BlockHardness) -> f32 {
+    pub fn get_block_health(&self, coords: BlockCoordinate, block_hardness: &BlockHardness) -> f32 {
         self.chunk_at_block_coordinates(coords)
             .map(|c| c.get_block_health(ChunkBlockCoordinate::for_block_coordinate(coords), block_hardness))
             .unwrap_or(0.0)
