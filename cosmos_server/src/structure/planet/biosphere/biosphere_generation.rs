@@ -903,7 +903,7 @@ pub fn generate_planet<T: Component + Clone + Default, E: TGenerateChunkEvent + 
                 panic!("A planet must be dynamic!");
             };
 
-            let s_dimensions = planet.dimensions();
+            let s_dimensions = planet.block_dimensions();
             let location = *location;
 
             Some((chunk, s_dimensions, location, structure_entity))
