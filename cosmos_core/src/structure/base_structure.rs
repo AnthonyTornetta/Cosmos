@@ -26,6 +26,9 @@ use super::{
 };
 
 #[derive(Reflect, Debug, Serialize, Deserialize)]
+/// The most basic form of a structure. This contains shared functionality between full and dynamic structures.
+///
+/// Note that everything in here is subject to change
 pub struct BaseStructure {
     #[serde(skip)]
     pub(super) chunk_entities: HashMap<usize, Entity>,
@@ -38,6 +41,7 @@ pub struct BaseStructure {
 }
 
 impl BaseStructure {
+    /// The most basic form of a structure. This contains shared functionality between full and dynamic structures.
     pub fn new(dimensions: ChunkCoordinate) -> Self {
         Self {
             dimensions,
