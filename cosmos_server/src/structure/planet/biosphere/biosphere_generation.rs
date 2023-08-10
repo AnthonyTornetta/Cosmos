@@ -880,7 +880,10 @@ pub fn generate_planet<T: Component + Clone + Default, E: TGenerateChunkEvent + 
             let coords = ev.get_chunk_coordinates();
 
             if let Ok((mut structure, _)) = query.get_mut(structure_entity) {
-                Some((structure_entity, structure.take_or_create_chunk_for_loading(coords)))
+                let Structure::Dynamic(planet) = structure.as_mut() else {
+                    panic!("A planet must be dynamic!");
+                };
+                Some((structure_entity, planet.take_or_create_chunk_for_loading(coords)))
             } else {
                 None
             }
@@ -896,7 +899,11 @@ pub fn generate_planet<T: Component + Clone + Default, E: TGenerateChunkEvent + 
                 return None;
             };
 
-            let s_dimensions = structure.blocks_length();
+            let Structure::Dynamic(planet) = structure else {
+                panic!("A planet must be dynamic!");
+            };
+
+            let s_dimensions = planet.dimensions();
             let location = *location;
 
             Some((chunk, s_dimensions, location, structure_entity))

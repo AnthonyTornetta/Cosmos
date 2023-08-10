@@ -92,7 +92,7 @@ fn branch(
     blocks: &Registry<Block>,
     event_writer: &mut EventWriter<BlockChangedEvent>,
 ) {
-    let s_dims = (structure.blocks_width(), structure.blocks_height(), structure.blocks_length());
+    let s_dims = structure.block_dimensions();
 
     // Leaves. Must go first so they don't overwrite the logs.
     for (delta, block_up) in logs.iter().copied() {
@@ -410,7 +410,7 @@ fn redwood_tree(
         dy += 1;
     }
 
-    let s_dims = (structure.blocks_width(), structure.blocks_height(), structure.blocks_length());
+    let s_dims = structure.block_dimensions();
 
     // 1x1 trunk.
     while dy <= height {
@@ -441,9 +441,13 @@ fn trees(
     blocks: &Registry<Block>,
     noise_generator: &ResourceWrapper<noise::OpenSimplex>,
 ) {
+    let Structure::Dynamic(planet) = structure else {
+        panic!("A planet must be dynamic!");
+    };
+
     let first_block_coords = coords.first_structure_block();
-    let s_dimension = structure.blocks_height();
-    let s_dims = (s_dimension, s_dimension, s_dimension);
+    let s_dimension = planet.dimensions();
+    let s_dims = structure.block_dimensions();
 
     let air = blocks.from_id("cosmos:air").unwrap();
     let grass = blocks.from_id("cosmos:grass").unwrap();
@@ -454,7 +458,7 @@ fn trees(
     for block_up in faces.iter() {
         // Getting the noise value for every block in the chunk, to find where to put trees.
         let noise_height = match block_up {
-            BlockFace::Front | BlockFace::Top | BlockFace::Right => structure.blocks_height(),
+            BlockFace::Front | BlockFace::Top | BlockFace::Right => s_dimension,
             _ => 0,
         };
 

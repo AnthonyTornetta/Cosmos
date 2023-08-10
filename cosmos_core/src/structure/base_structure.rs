@@ -124,7 +124,7 @@ impl BaseStructure {
     }
 
     #[inline(always)]
-    fn flatten(&self, coords: ChunkCoordinate) -> usize {
+    pub(super) fn flatten(&self, coords: ChunkCoordinate) -> usize {
         coords.flatten(self.dimensions.x, self.dimensions.y)
     }
 
@@ -232,7 +232,11 @@ impl BaseStructure {
     }
 
     pub fn block_dimensions(&self) -> BlockCoordinate {
-        self.dimensions.first_structure_block().into()
+        self.dimensions.first_structure_block()
+    }
+
+    pub fn chunk_dimensions(&self) -> ChunkCoordinate {
+        self.dimensions
     }
 
     /// Returns true if these block coordinates are within the structure's bounds

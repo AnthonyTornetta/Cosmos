@@ -43,7 +43,11 @@ fn notify_when_done_generating(
                     structure.set_chunk(chunk);
                 }
 
-                structure.set_all_loaded(true);
+                if let Structure::Full(structure) = structure.as_mut() {
+                    structure.set_loaded();
+                } else {
+                    panic!("Asteroid must be a full structure!");
+                }
 
                 let itr = structure.all_chunks_iter(false);
 
@@ -76,7 +80,9 @@ fn start_generating_asteroid(
 
         let (cx, cy, cz) = (loc.local.x as f64, loc.local.y as f64, loc.local.z as f64);
 
-        let distance_threshold = (structure.blocks_length() as f64 / 4.0 * (noise.get([cx, cy, cz]).abs() + 1.0).min(25.0)) as f32;
+        let (w, h, l) = structure.block_dimensions().into();
+
+        let distance_threshold = (l as f64 / 4.0 * (noise.get([cx, cy, cz]).abs() + 1.0).min(25.0)) as f32;
 
         let stone = blocks.from_id("cosmos:stone").unwrap().clone();
 
@@ -84,7 +90,7 @@ fn start_generating_asteroid(
 
         let noise = **noise;
 
-        let (bx, by, bz) = (structure.blocks_width(), structure.blocks_height(), structure.blocks_length());
+        let (bx, by, bz) = (w, h, l);
 
         println!("Starting async asteroid gen");
 

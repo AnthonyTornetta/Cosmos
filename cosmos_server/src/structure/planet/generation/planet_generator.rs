@@ -265,7 +265,10 @@ fn generate_chunks_near_players(
 }
 
 fn mark_chunk_for_generation(structure: &mut Structure, commands: &mut Commands, coords: ChunkCoordinate, structure_entity: Entity) {
-    structure.mark_chunk_being_loaded(coords);
+    let Structure::Dynamic(planet) = structure else {
+        panic!("A planet must be dynamic!");
+    };
+    planet.mark_chunk_being_loaded(coords);
 
     let needs_generated_flag = commands
         .spawn((
@@ -360,7 +363,11 @@ fn unload_chunks_far_from_players(
             };
 
             for coords in set {
-                if let Some(chunk) = structure.unload_chunk_at(coords, &mut commands, Some(&mut event_writer)) {
+                let Structure::Dynamic(planet) = structure.as_mut() else {
+                    panic!("A planet must be dynamic!");
+                };
+
+                if let Some(chunk) = planet.unload_chunk_at(coords, &mut commands, Some(&mut event_writer)) {
                     let (cx, cy, cz) = (coords.x, coords.y, coords.z);
 
                     commands.spawn((

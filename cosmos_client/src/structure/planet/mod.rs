@@ -122,6 +122,10 @@ pub fn unload_chunks_far_from_players(
                 }
             }
 
+            let Structure::Dynamic(planet) = planet.as_mut() else {
+                panic!("Invalid planet structure! It must be dynamic!");
+            };
+
             for coordinate in chunks {
                 planet.unload_chunk_at(coordinate, &mut commands, Some(&mut event_writer));
             }

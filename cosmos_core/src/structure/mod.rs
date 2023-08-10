@@ -70,18 +70,18 @@ pub enum Structure {
 
 impl Structure {
     #[inline]
-    fn chunk_dimensions(&self) -> (CoordinateType, CoordinateType, CoordinateType) {
+    pub fn chunk_dimensions(&self) -> ChunkCoordinate {
         match &self {
-            Self::Dynamic(ds) => (ds.dimensions(), ds.dimensions(), ds.dimensions()),
-            Self::Full(full) => (full.chunks_width(), full.chunks_height(), full.chunks_length()),
+            Self::Dynamic(ds) => ChunkCoordinate::new(ds.dimensions(), ds.dimensions(), ds.dimensions()),
+            Self::Full(full) => full.chunk_dimensions(),
         }
     }
 
     #[inline]
-    fn block_dimensions(&self) -> (CoordinateType, CoordinateType, CoordinateType) {
+    pub fn block_dimensions(&self) -> BlockCoordinate {
         match &self {
-            Self::Dynamic(ds) => (ds.block_dimensions(), ds.block_dimensions(), ds.block_dimensions()),
-            Self::Full(full) => (full.blocks_width(), full.blocks_height(), full.blocks_length()),
+            Self::Dynamic(ds) => BlockCoordinate::new(ds.block_dimensions(), ds.block_dimensions(), ds.block_dimensions()),
+            Self::Full(full) => full.block_dimensions(),
         }
     }
 
@@ -457,6 +457,13 @@ impl Structure {
             Self::Dynamic(ds) => ds.remove_chunk_entity(coords),
         }
     }
+
+    pub fn has_empty_chunk_at(&self, coords: ChunkCoordinate) -> bool {
+        match self {
+            Self::Full(fs) => fs.has_empty_chunk_at(coords),
+            Self::Dynamic(ds) => ds.has_empty_chunk_at(coords),
+        }
+    }
 }
 
 /// This event is sent when a chunk is initially filled out
@@ -581,7 +588,7 @@ impl Display for RotationError {
 pub fn rotate(
     block_coord: BlockCoordinate,
     delta: UnboundBlockCoordinate,
-    (blocks_width, blocks_height, blocks_length): (CoordinateType, CoordinateType, CoordinateType),
+    dimensions: BlockCoordinate,
     block_up: BlockFace,
 ) -> Result<BlockCoordinate, RotationError> {
     let ub_block_coord = UnboundBlockCoordinate::from(block_coord);
@@ -620,7 +627,7 @@ pub fn rotate(
     });
 
     if let Ok(coords) = BlockCoordinate::try_from(ub_coords) {
-        if coords.x >= blocks_width || coords.y >= blocks_height || coords.z >= blocks_length {
+        if coords.x >= dimensions.x || coords.y >= dimensions.y || coords.z >= dimensions.z {
             Err(RotationError::PositiveResult(coords))
         } else {
             Ok(coords)

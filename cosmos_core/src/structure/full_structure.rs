@@ -141,4 +141,10 @@ impl FullStructure {
 
         coords.x < w && coords.y < h && coords.z < l
     }
+
+    /// Returns if the chunk at these chunk coordinates is fully loaded & empty.
+    pub fn has_empty_chunk_at(&self, coords: ChunkCoordinate) -> bool {
+        self.get_chunk_state(coords) == ChunkState::Loaded
+            && self.chunk_from_chunk_coordinates(coords).map(|c| c.is_empty()).unwrap_or(true)
+    }
 }

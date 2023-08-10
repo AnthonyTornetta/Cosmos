@@ -91,11 +91,7 @@ pub enum ServerReliableMessages {
         /// The planet's server entity.
         entity: Entity,
         /// The width to be passed into the structure's constructor.
-        width: CoordinateType,
-        /// The height to be passed into the structure's constructor.
-        height: CoordinateType,
-        /// The length to be passed into the structure's constructor.
-        length: CoordinateType,
+        dimensions: CoordinateType,
         /// The planet.
         planet: Planet,
         /// The planet's biosphere.
@@ -111,11 +107,7 @@ pub enum ServerReliableMessages {
         /// The planet's rigidbody.
         body: NettyRigidBody,
         /// The width to be passed into the structure's constructor.
-        width: CoordinateType,
-        /// The height to be passed into the structure's constructor.
-        height: CoordinateType,
-        /// The length to be passed into the structure's constructor.
-        length: CoordinateType,
+        dimensions: ChunkCoordinate,
         /// The number of chunks that need to be loaded from the server.
         chunks_needed: ChunksNeedLoaded,
     },

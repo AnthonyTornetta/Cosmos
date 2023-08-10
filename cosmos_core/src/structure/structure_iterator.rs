@@ -4,10 +4,7 @@ use bevy::utils::hashbrown::hash_map;
 
 use super::{
     chunk::{Chunk, CHUNK_DIMENSIONS},
-    coordinates::{
-        BlockCoordinate, ChunkBlockCoordinate, ChunkCoordinate, Coordinate, UnboundBlockCoordinate, UnboundChunkCoordinate,
-        UnboundCoordinateType,
-    },
+    coordinates::{BlockCoordinate, ChunkBlockCoordinate, ChunkCoordinate, Coordinate, UnboundBlockCoordinate, UnboundChunkCoordinate},
     structure_block::StructureBlock,
     Structure,
 };
@@ -60,11 +57,11 @@ impl<'a> BlockIterator<'a> {
     ///
     /// * `include_empty` - If this is true, air blocks will be included. If false, air blocks will be excluded so some optimizations can be used.
     pub fn new(mut start: UnboundBlockCoordinate, mut end: UnboundBlockCoordinate, include_empty: bool, structure: &'a Structure) -> Self {
-        let (w, h, l) = structure.block_dimensions();
+        let dims = UnboundBlockCoordinate::from(structure.block_dimensions());
 
-        end.x = end.x.min(w as UnboundCoordinateType - 1);
-        end.y = end.y.min(h as UnboundCoordinateType - 1);
-        end.z = end.z.min(l as UnboundCoordinateType - 1);
+        end.x = end.x.min(dims.x - 1);
+        end.y = end.y.min(dims.y - 1);
+        end.z = end.z.min(dims.z - 1);
 
         let Ok(end) = BlockCoordinate::try_from(end) else {
             return Self {
@@ -290,11 +287,11 @@ impl<'a> ChunkIterator<'a> {
     ///
     /// * `include_empty` - If enabled, the value iterated over may be `ChunkIteratorResult::EmptyChunk` OR `ChunkIteratorResult::FilledChunk`. Otherwise, the value iterated over may ONLY BE `ChunkIteratorResult::LoadedChunk`.
     pub fn new(mut start: UnboundChunkCoordinate, mut end: UnboundChunkCoordinate, structure: &'a Structure, include_empty: bool) -> Self {
-        let (w, h, l) = structure.block_dimensions();
+        let dims = UnboundChunkCoordinate::from(structure.chunk_dimensions());
 
-        end.x = end.x.min(w as UnboundCoordinateType - 1);
-        end.y = end.y.min(h as UnboundCoordinateType - 1);
-        end.z = end.z.min(l as UnboundCoordinateType - 1);
+        end.x = end.x.min(dims.x - 1);
+        end.y = end.y.min(dims.y - 1);
+        end.z = end.z.min(dims.z - 1);
 
         let Ok(end) = ChunkCoordinate::try_from(end) else {
             return Self {
