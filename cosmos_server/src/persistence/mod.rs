@@ -36,40 +36,30 @@ impl Display for EntityId {
     }
 }
 
-#[derive(Debug, Resource, Default)]
-/// This is a resource that caches the saved entities of different sectors that a player has been near.
-///
-/// This is just used to prevent excessive IO operations.
-///
-/// This can be cloned pretty quickly when needed
-pub struct SectorsCacheInner(HashMap<Sector, Arc<Mutex<HashSet<(EntityId, Option<u32>)>>>>);
-
 #[derive(Debug, Resource, Default, Clone)]
 /// This is a resource that caches the saved entities of different sectors that a player has been near.
 ///
 /// This is just used to prevent excessive IO operations.
-///
-/// This can be cloned pretty quickly when needed
-pub struct SectorsCache(Arc<Mutex<SectorsCacheInner>>);
+pub struct SectorsCache(Arc<Mutex<HashMap<Sector, Arc<Mutex<HashSet<(EntityId, Option<u32>)>>>>>>);
 
 impl SectorsCache {
     /// Gets all the entities that are saved for this sector in this cache.  This does NOT
     /// perform any IO operations.
     pub fn get(&self, sector: &Sector) -> Option<Arc<Mutex<HashSet<(EntityId, Option<u32>)>>>> {
-        self.0.lock().expect("Failed to lock").0.get(sector).cloned()
+        self.0.lock().expect("Failed to lock").get(sector).cloned()
     }
 
     /// Removes a saved entity from this location - this does not do any IO operations,
     /// and only removes it from the cache.
     pub fn remove(&mut self, entity_id: &EntityId, sector: Sector, load_distance: Option<u32>) {
-        if let Some(set) = self.0.lock().expect("Failed to lock").0.get_mut(&sector) {
+        if let Some(set) = self.0.lock().expect("Failed to lock").get_mut(&sector) {
             set.lock().expect("Failed to unlock").remove(&(entity_id.clone(), load_distance));
         }
     }
 
     /// Inserts an entity into this sector in this cache. This does not perform any IO operations.
     pub fn insert(&mut self, sector: Sector, entity_id: EntityId, load_distance: Option<u32>) {
-        let self_locked = &mut self.0.lock().expect("Failed to lock").0;
+        let self_locked = &mut self.0.lock().expect("Failed to lock");
 
         if !self_locked.contains_key(&sector) {
             self_locked.insert(sector, Arc::new(Mutex::new(HashSet::new())));
