@@ -1,3 +1,5 @@
+//! Internally used common logic between dynamic + full structures.
+
 use bevy::{
     prelude::{Entity, EventWriter, GlobalTransform, Vec3},
     reflect::Reflect,
@@ -14,7 +16,6 @@ use crate::{
 use super::{
     block_health::block_destroyed_event::BlockDestroyedEvent,
     chunk::{Chunk, CHUNK_DIMENSIONS},
-    chunk_container::ChunkContainer,
     coordinates::{
         BlockCoordinate, ChunkBlockCoordinate, ChunkCoordinate, Coordinate, CoordinateType, UnboundBlockCoordinate, UnboundChunkCoordinate,
         UnboundCoordinateType,
@@ -32,7 +33,6 @@ pub struct BaseStructure {
     pub(super) chunk_entity_map: HashMap<Entity, usize>,
     #[serde(skip)]
     pub(super) self_entity: Option<Entity>,
-    #[serde(skip)]
     pub(super) chunks: HashMap<usize, Chunk>,
     dimensions: ChunkCoordinate,
 }
@@ -501,5 +501,3 @@ impl BaseStructure {
         self.chunk_entities.remove(&self.flatten(coords));
     }
 }
-
-impl ChunkContainer for BaseStructure {}

@@ -498,8 +498,6 @@ fn trees(
 
                 // Noise value not in forest range.
                 if noise * noise <= FOREST {
-                    println!("x");
-
                     continue 'next;
                 }
 

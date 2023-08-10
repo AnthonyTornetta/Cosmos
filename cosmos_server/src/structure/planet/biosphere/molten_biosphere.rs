@@ -89,7 +89,7 @@ fn generate_spikes(
         panic!("A planet must be dynamic!");
     };
 
-    let s_dimension = planet.dimensions();
+    let s_dimension = planet.block_dimensions();
     let s_dimensions = structure.block_dimensions();
     let molten_stone = blocks.from_id("cosmos:molten_stone").expect("Missing molten_stone");
 

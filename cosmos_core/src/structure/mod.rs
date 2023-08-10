@@ -13,7 +13,6 @@ pub mod asteroid;
 pub mod base_structure;
 pub mod block_health;
 pub mod chunk;
-pub mod chunk_container;
 pub mod coordinates;
 pub mod dynamic_structure;
 pub mod events;
@@ -41,7 +40,7 @@ use serde::{Deserialize, Serialize};
 
 use self::block_health::block_destroyed_event::BlockDestroyedEvent;
 use self::chunk::ChunkEntity;
-use self::coordinates::{BlockCoordinate, ChunkCoordinate, CoordinateType, UnboundBlockCoordinate, UnboundChunkCoordinate};
+use self::coordinates::{BlockCoordinate, ChunkCoordinate, UnboundBlockCoordinate, UnboundChunkCoordinate};
 use self::dynamic_structure::DynamicStructure;
 use self::events::ChunkSetEvent;
 use self::full_structure::FullStructure;
@@ -64,12 +63,15 @@ pub enum ChunkState {
 #[derive(Serialize, Deserialize, Component, Reflect, Debug)]
 /// A structure represents many blocks, grouped into chunks.
 pub enum Structure {
+    /// This structure does not have all its chunks loaded at once, such as planets
     Dynamic(DynamicStructure),
+    /// This structure has all the chunks loaded at once, like ships and asteroids
     Full(FullStructure),
 }
 
 impl Structure {
     #[inline]
+    /// Returns the # of chunks in the x/y/z direction as a set of ChunkCoordinates.
     pub fn chunk_dimensions(&self) -> ChunkCoordinate {
         match &self {
             Self::Dynamic(ds) => ChunkCoordinate::new(ds.dimensions(), ds.dimensions(), ds.dimensions()),
@@ -78,6 +80,7 @@ impl Structure {
     }
 
     #[inline]
+    /// Returns the # of blocks in the x/y/z direction as a set of BlockCoordinates.
     pub fn block_dimensions(&self) -> BlockCoordinate {
         match &self {
             Self::Dynamic(ds) => BlockCoordinate::new(ds.block_dimensions(), ds.block_dimensions(), ds.block_dimensions()),
@@ -328,7 +331,7 @@ impl Structure {
     /// Used generally when loading stuff on client from server.
     ///
     /// This does not trigger any events, so make sure to handle that properly.
-    pub fn set_chunk(&mut self, mut chunk: Chunk) {
+    pub fn set_chunk(&mut self, chunk: Chunk) {
         match self {
             Self::Full(fs) => fs.set_chunk(chunk),
             Self::Dynamic(ds) => ds.set_chunk(chunk),
@@ -435,6 +438,7 @@ impl Structure {
         }
     }
 
+    /// Gets the chunk's state
     pub fn get_chunk_state(&self, coords: ChunkCoordinate) -> ChunkState {
         match self {
             Self::Full(fs) => fs.get_chunk_state(coords),
@@ -451,6 +455,7 @@ impl Structure {
         }
     }
 
+    /// Removes ths chunk entity from the structure
     pub fn remove_chunk_entity(&mut self, coords: ChunkCoordinate) {
         match self {
             Self::Full(fs) => fs.remove_chunk_entity(coords),
@@ -458,6 +463,9 @@ impl Structure {
         }
     }
 
+    /// Returns true if this structure has a loaded empty chunk at these coordinates.
+    ///
+    /// Will return false for unloaded chunks.
     pub fn has_empty_chunk_at(&self, coords: ChunkCoordinate) -> bool {
         match self {
             Self::Full(fs) => fs.has_empty_chunk_at(coords),
