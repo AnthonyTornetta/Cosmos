@@ -182,7 +182,7 @@ impl FullStructure {
 
     /// Sets this structure's entity - used in the base builder.
     #[inline(always)]
-    pub fn set_entity(&mut self, entity: bevy::prelude::Entity) {
+    pub fn set_entity(&mut self, entity: Entity) {
         self.base_structure.set_entity(entity)
     }
 

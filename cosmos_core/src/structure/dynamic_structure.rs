@@ -342,7 +342,7 @@ impl DynamicStructure {
 
     /// Associates an entity with this structure.
     #[inline(always)]
-    pub fn set_entity(&mut self, entity: bevy::prelude::Entity) {
+    pub fn set_entity(&mut self, entity: Entity) {
         self.base_structure.set_entity(entity)
     }
 
@@ -420,7 +420,7 @@ impl DynamicStructure {
 
     /// Retrieves the loaded chunks in the structure.
     #[inline(always)]
-    pub fn chunks(&self) -> &bevy::utils::hashbrown::HashMap<usize, Chunk> {
+    pub fn chunks(&self) -> &HashMap<usize, Chunk> {
         self.base_structure.chunks()
     }
 
@@ -486,7 +486,7 @@ impl DynamicStructure {
 
     /// Retrieves the health of the block at the provided coordinates.
     #[inline(always)]
-    pub fn get_block_health(&self, coords: BlockCoordinate, block_hardness: &crate::block::hardness::BlockHardness) -> f32 {
+    pub fn get_block_health(&self, coords: BlockCoordinate, block_hardness: &BlockHardness) -> f32 {
         self.base_structure.get_block_health(coords, block_hardness)
     }
 
