@@ -291,6 +291,8 @@ struct ChunkNeedsPhysicsEvent {
 /// Due to bevy_rapier issues, the colliders cannot be children of the chunks, but rather have to be
 /// children of the structure itself. This causes a bunch of issues, namely having to clean them up
 /// seperately whenever we delete a chunk.
+///
+/// This may need to be async-ified in the future
 fn listen_for_new_physics_event(
     mut commands: Commands,
     structure_query: Query<&Structure>,

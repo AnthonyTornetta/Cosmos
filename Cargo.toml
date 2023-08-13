@@ -1,17 +1,16 @@
 [workspace]
 
-members = [
-  "cosmos_client",
-  "cosmos_core",
-  "cosmos_server",
-]
+members = ["cosmos_client", "cosmos_core", "cosmos_server"]
 
 # Fixed wgpu issue
-resolver="2"
+resolver = "2"
 
 [workspace.dependencies]
 bevy = "0.11"
-bevy_rapier3d = { git = "https://github.com/AnthonyTornetta/bevy_rapier/", version = "0.22.0", features = [ "simd-stable", "serde-serialize" ] }
+bevy_rapier3d = { git = "https://github.com/AnthonyTornetta/bevy_rapier/", version = "0.22.0", features = [
+  "simd-stable",
+  "serde-serialize",
+] }
 
 bevy_renet = "0.0.9"
 serde = "1.0.155"
@@ -27,18 +26,20 @@ futures-lite = "1.13.0"
 
 local-ip-address = "0.5.1"
 
-image = { version = "0.24.5", default-features = false, features = ["png"]}
+image = { version = "0.24.5", default-features = false, features = ["png"] }
 
 bevy-inspector-egui = "0.19"
 
-crossterm = { version = "0.26.1", features = [ "event-stream" ] }
+crossterm = { version = "0.26.1", features = ["event-stream"] }
 
 renet_visualizer = { version = "0.0.6", features = ["bevy"] }
 
 walkdir = "2.3.3"
 
 toml = "0.7.6"
-lz4_flex = "0.7.2"
+
+# default-features makes it use safe but slower code.
+lz4_flex = { version = "0.11.1", default-features = false }
 
 # For any non workspace package
 [profile.dev.package."*"]
