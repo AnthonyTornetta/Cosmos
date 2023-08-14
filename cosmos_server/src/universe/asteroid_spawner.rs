@@ -9,6 +9,8 @@ use cosmos_core::{
     physics::location::{Location, Sector, SystemUnit, SECTOR_DIMENSIONS},
     structure::{
         asteroid::{asteroid_builder::TAsteroidBuilder, loading::AsteroidNeedsCreated, Asteroid, ASTEROID_LOAD_RADIUS},
+        coordinates::ChunkCoordinate,
+        full_structure::FullStructure,
         Structure,
     },
 };
@@ -100,7 +102,7 @@ fn spawn_asteroid(
                     sector,
                 );
 
-                let mut structure = Structure::new(size, size, size);
+                let mut structure = Structure::Full(FullStructure::new(ChunkCoordinate::new(size, size, size)));
                 let builder = ServerAsteroidBuilder::default();
                 let mut entity_cmd = commands.spawn_empty();
 

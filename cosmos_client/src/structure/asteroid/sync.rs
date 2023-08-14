@@ -7,6 +7,7 @@ use cosmos_core::{
     physics::location::Location,
     structure::{
         asteroid::{asteroid_builder::TAsteroidBuilder, asteroid_netty::AsteroidServerMessages},
+        full_structure::FullStructure,
         Structure,
     },
 };
@@ -25,13 +26,7 @@ fn receive_asteroids(
         let msg: AsteroidServerMessages = cosmos_encoder::deserialize(&message).unwrap();
 
         match msg {
-            AsteroidServerMessages::Asteroid {
-                entity,
-                body,
-                width,
-                height,
-                length,
-            } => {
+            AsteroidServerMessages::Asteroid { entity, body, dimensions } => {
                 let Ok(body) = body.map(&network_mapping) else {
                     continue;
                 };
@@ -47,7 +42,7 @@ fn receive_asteroids(
 
                 let mut entity_cmds = commands.spawn_empty();
 
-                let mut structure = Structure::new(width, height, length);
+                let mut structure = Structure::Full(FullStructure::new(dimensions));
 
                 let builder = ClientAsteroidBuilder::default();
 

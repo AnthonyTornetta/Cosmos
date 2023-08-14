@@ -92,7 +92,7 @@ fn branch(
     blocks: &Registry<Block>,
     event_writer: &mut EventWriter<BlockChangedEvent>,
 ) {
-    let s_dims = (structure.blocks_width(), structure.blocks_height(), structure.blocks_length());
+    let s_dims = structure.block_dimensions();
 
     // Leaves. Must go first so they don't overwrite the logs.
     for (delta, block_up) in logs.iter().copied() {
@@ -410,7 +410,7 @@ fn redwood_tree(
         dy += 1;
     }
 
-    let s_dims = (structure.blocks_width(), structure.blocks_height(), structure.blocks_length());
+    let s_dims = structure.block_dimensions();
 
     // 1x1 trunk.
     while dy <= height {
@@ -441,11 +441,16 @@ fn trees(
     blocks: &Registry<Block>,
     noise_generator: &ResourceWrapper<noise::OpenSimplex>,
 ) {
+    let Structure::Dynamic(planet) = structure else {
+        panic!("A planet must be dynamic!");
+    };
+
     let first_block_coords = coords.first_structure_block();
-    let s_dimension = structure.blocks_height();
-    let s_dims = (s_dimension, s_dimension, s_dimension);
+    let s_dimension = planet.block_dimensions();
+    let s_dims = structure.block_dimensions();
 
     let air = blocks.from_id("cosmos:air").unwrap();
+    let short_grass = blocks.from_id("cosmos:short_grass").unwrap();
     let grass = blocks.from_id("cosmos:grass").unwrap();
 
     let structure_coords = location.absolute_coords_f64();
@@ -454,7 +459,7 @@ fn trees(
     for block_up in faces.iter() {
         // Getting the noise value for every block in the chunk, to find where to put trees.
         let noise_height = match block_up {
-            BlockFace::Front | BlockFace::Top | BlockFace::Right => structure.blocks_height(),
+            BlockFace::Front | BlockFace::Top | BlockFace::Right => s_dimension,
             _ => 0,
         };
 
@@ -521,13 +526,24 @@ fn trees(
                     height -= 1;
                 }
 
-                // No grass block to grow tree from.
+                // // No grass block to grow tree from.
                 if let Ok(rotated) = rotate(coords, UnboundBlockCoordinate::new(0, height, 0), s_dims, block_up) {
-                    if height < 0 || structure.block_at(rotated, blocks) != grass || structure.block_rotation(rotated) != block_up {
+                    let block = structure.block_at(rotated, blocks);
+                    if height < 0 || (block != grass && block != short_grass) || structure.block_rotation(rotated) != block_up {
                         continue 'next;
                     }
 
-                    redwood_tree(rotated, block_up, structure, location, block_event_writer, blocks, noise_generator);
+                    if let Ok(lowered_rotated) = rotate(coords, UnboundBlockCoordinate::new(0, height - 4, 0), s_dims, block_up) {
+                        redwood_tree(
+                            lowered_rotated,
+                            block_up,
+                            structure,
+                            location,
+                            block_event_writer,
+                            blocks,
+                            noise_generator,
+                        );
+                    }
                 }
             }
         }

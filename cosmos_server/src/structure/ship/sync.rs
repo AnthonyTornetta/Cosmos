@@ -27,9 +27,7 @@ fn on_request_ship(
                 cosmos_encoder::serialize(&ServerReliableMessages::Ship {
                     entity: ev.entity,
                     body: NettyRigidBody::new(velocity, transform.rotation, NettyRigidBodyLocation::Absolute(*location)),
-                    width: structure.chunks_width(),
-                    height: structure.chunks_height(),
-                    length: structure.chunks_length(),
+                    dimensions: structure.chunk_dimensions(),
                     chunks_needed: ChunksNeedLoaded {
                         amount_needed: structure.all_chunks_iter(false).len(),
                     },

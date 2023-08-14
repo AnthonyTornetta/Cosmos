@@ -48,7 +48,11 @@ fn added_planet(
     color_registry: Res<Registry<BiosphereColor>>,
 ) {
     for (ent, structure, marker) in query.iter() {
-        let blocks_radius = structure.blocks_width() as f32 / 2.0;
+        let Structure::Dynamic(structure) = structure else {
+            panic!("Invalid planet structure! It must be dynamic!");
+        };
+
+        let blocks_radius = structure.block_dimensions() as f32 / 2.0;
 
         commands.entity(ent).insert((
             meshes.add(

@@ -9,9 +9,7 @@ use bevy::{
     },
     time::Time,
 };
-use bevy_rapier3d::prelude::{
-    ActiveEvents, ActiveHooks, LockedAxes, PhysicsWorld, QueryFilter, RapierContext, RigidBody, Sensor, Velocity, WorldId, DEFAULT_WORLD_ID,
-};
+use bevy_rapier3d::prelude::{LockedAxes, PhysicsWorld, QueryFilter, RapierContext, RigidBody, Velocity, WorldId, DEFAULT_WORLD_ID};
 
 use crate::{
     ecs::{bundles::CosmosPbrBundle, NeedsDespawned},
@@ -126,9 +124,6 @@ impl Laser {
                 time: time.elapsed_seconds(),
             },
             PhysicsWorld { world_id },
-            ActiveEvents::COLLISION_EVENTS,
-            ActiveHooks::MODIFY_SOLVER_CONTACTS,
-            Sensor,
             NotShadowCaster,
             NotShadowReceiver,
             NoSendEntity,

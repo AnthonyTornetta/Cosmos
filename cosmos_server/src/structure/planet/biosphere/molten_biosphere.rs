@@ -85,17 +85,21 @@ fn generate_spikes(
 ) {
     let sc = coords.first_structure_block();
 
-    let s_dimension = structure.blocks_height();
+    let Structure::Dynamic(planet) = structure else {
+        panic!("A planet must be dynamic!");
+    };
 
+    let s_dimension = planet.block_dimensions();
+    let s_dimensions = structure.block_dimensions();
     let molten_stone = blocks.from_id("cosmos:molten_stone").expect("Missing molten_stone");
 
     let structure_coords = location.absolute_coords_f64();
 
     let faces = Planet::chunk_planet_faces(sc, s_dimension);
     for block_up in faces.iter() {
-        // Getting the noise value for every block in the chunk, to find where to put trees.
+        // Getting the noise value for every block in the chunk, to find where to put spikes.
         let noise_height = match block_up {
-            BlockFace::Front | BlockFace::Top | BlockFace::Right => structure.blocks_height(),
+            BlockFace::Front | BlockFace::Top | BlockFace::Right => s_dimension,
             _ => 0,
         };
 
@@ -128,8 +132,6 @@ fn generate_spikes(
                         BlockFace::Right | BlockFace::Left => (sc.x, sc.y + x, sc.z + z),
                     }
                     .into();
-
-                    let s_dimensions = (s_dimension, s_dimension, s_dimension);
 
                     if let Ok(start_checking) = rotate(
                         coords,

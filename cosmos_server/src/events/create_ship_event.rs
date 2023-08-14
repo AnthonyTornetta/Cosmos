@@ -3,6 +3,8 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::physics::location::Location;
+use cosmos_core::structure::coordinates::ChunkCoordinate;
+use cosmos_core::structure::full_structure::FullStructure;
 use cosmos_core::structure::{ship::ship_builder::TShipBuilder, Structure};
 
 use crate::structure::ship::{loading::ShipNeedsCreated, server_ship_builder::ServerShipBuilder};
@@ -21,7 +23,7 @@ fn event_reader(mut event_reader: EventReader<CreateShipEvent>, mut commands: Co
     for ev in event_reader.iter() {
         let mut entity = commands.spawn_empty();
 
-        let mut structure = Structure::new(10, 10, 10);
+        let mut structure = Structure::Full(FullStructure::new(ChunkCoordinate::new(10, 10, 10)));
 
         let builder = ServerShipBuilder::default();
 

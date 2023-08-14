@@ -32,11 +32,11 @@ fn on_laser_hit_structure(
         if let Some(hardness) = hardness_registry.from_id(block.unlocalized_name()) {
             structure.block_take_damage(coords, hardness, strength, Some(block_destroy_event_writer));
         } else {
-            println!("WARNING: Missing block hardness for {}", block.unlocalized_name());
+            warn!("Missing block hardness for {}", block.unlocalized_name());
             structure.remove_block_at(coords, blocks, Some(block_change_event_writer));
         }
     } else {
-        println!("Bad laser hit spot that isn't actually on structure ;(");
+        warn!("Bad laser hit spot that isn't actually on structure ;(");
     }
 }
 

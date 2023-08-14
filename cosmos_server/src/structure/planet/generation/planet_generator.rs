@@ -23,7 +23,6 @@ use cosmos_core::{
         structure_iterator::ChunkIteratorResult,
         ChunkState, Structure,
     },
-    utils::timer::UtilsTimer,
 };
 use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 
@@ -104,7 +103,7 @@ fn get_requested_chunk(
     let non_empty_serializes = AtomicI32::new(0);
     let empty_serializes = AtomicI32::new(0);
 
-    let timer = UtilsTimer::start();
+    // let timer = UtilsTimer::start();
 
     // No par_iter() for event readers, so first convert to vec then par_iter() it.
     event_reader
@@ -174,20 +173,20 @@ fn get_requested_chunk(
                             .push((ev.structure_entity, ev.chunk_coords, *ev))
                     }
                     ChunkState::Invalid => {
-                        eprintln!("Client requested invalid chunk @ {}", ev.chunk_coords);
+                        warn!("Client requested invalid chunk @ {}", ev.chunk_coords);
                     }
                 }
             }
         });
 
-    let non_empty_serializes = non_empty_serializes.into_inner();
-    let empty_serializes = empty_serializes.into_inner();
+    // let non_empty_serializes = non_empty_serializes.into_inner();
+    // let empty_serializes = empty_serializes.into_inner();
 
-    if non_empty_serializes != 0 || empty_serializes != 0 {
-        timer.log_duration(&format!(
-            "Time to serialize {non_empty_serializes} non-empty chunks & {empty_serializes} empty chunks:"
-        ));
-    }
+    // if non_empty_serializes != 0 || empty_serializes != 0 {
+    //     timer.log_duration(&format!(
+    //         "Time to serialize {non_empty_serializes} non-empty chunks & {empty_serializes} empty chunks:"
+    //     ));
+    // }
 
     for bounce in bounced.lock().expect("Failed to lock").take().unwrap() {
         event_writer.send(bounce);
@@ -265,7 +264,10 @@ fn generate_chunks_near_players(
 }
 
 fn mark_chunk_for_generation(structure: &mut Structure, commands: &mut Commands, coords: ChunkCoordinate, structure_entity: Entity) {
-    structure.mark_chunk_being_loaded(coords);
+    let Structure::Dynamic(planet) = structure else {
+        panic!("A planet must be dynamic!");
+    };
+    planet.mark_chunk_being_loaded(coords);
 
     let needs_generated_flag = commands
         .spawn((
@@ -360,7 +362,11 @@ fn unload_chunks_far_from_players(
             };
 
             for coords in set {
-                if let Some(chunk) = structure.unload_chunk_at(coords, &mut commands, Some(&mut event_writer)) {
+                let Structure::Dynamic(planet) = structure.as_mut() else {
+                    panic!("A planet must be dynamic!");
+                };
+
+                if let Some(chunk) = planet.unload_chunk_at(coords, &mut commands, Some(&mut event_writer)) {
                     let (cx, cy, cz) = (coords.x, coords.y, coords.z);
 
                     commands.spawn((

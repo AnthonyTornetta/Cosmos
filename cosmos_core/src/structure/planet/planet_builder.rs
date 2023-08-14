@@ -47,20 +47,15 @@ impl<T: TStructureBuilder> TPlanetBuilder for PlanetBuilder<T> {
 
 fn on_add_planet(query: Query<(Entity, &Structure), Added<Planet>>, mut commands: Commands) {
     for (entity, structure) in query.iter() {
-        assert!(
-            structure.chunks_width() == structure.chunks_height() && structure.chunks_height() == structure.chunks_length(),
-            "Structure dimensions must all be the same for a planet."
-        );
+        let Structure::Dynamic(planet) = structure else {
+            panic!("Planet must be dynamic structure type!");
+        };
 
         commands.entity(entity).insert((
             RigidBody::Fixed,
             GravityEmitter {
                 force_per_kg: 9.8,
-                radius: structure
-                    .blocks_width()
-                    .max(structure.blocks_height())
-                    .max(structure.blocks_length()) as f32
-                    / 2.0,
+                radius: planet.block_dimensions() as f32 / 2.0,
             },
             LoadingDistance::new(PLANET_LOAD_RADIUS, PLANET_UNLOAD_RADIUS),
         ));

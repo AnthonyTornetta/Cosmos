@@ -18,14 +18,16 @@ fn on_request_planet(
 ) {
     for ev in event_reader.iter() {
         if let Ok((structure, planet, location, biosphere_marker)) = query.get(ev.entity) {
+            let Structure::Dynamic(dynamic_planet) = structure else {
+                panic!("Planet must be dynamic!");
+            };
+
             server.send_message(
                 ev.client_id,
                 NettyChannelServer::Reliable,
                 cosmos_encoder::serialize(&ServerReliableMessages::Planet {
                     entity: ev.entity,
-                    width: structure.chunks_width(),
-                    height: structure.chunks_height(),
-                    length: structure.chunks_length(),
+                    dimensions: dynamic_planet.dimensions(),
                     planet: *planet,
                     biosphere: biosphere_marker.biosphere_name().to_owned(),
                     location: *location,

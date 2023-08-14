@@ -8,6 +8,7 @@ use cosmos_core::{
     structure::{
         chunk::{Chunk, ChunkEntity},
         coordinates::{ChunkCoordinate, CoordinateType},
+        dynamic_structure::DynamicStructure,
         planet::{planet_builder::TPlanetBuilder, Planet},
         ChunkInitEvent, Structure,
     },
@@ -24,20 +25,20 @@ use super::{generation::planet_generator::ChunkNeedsGenerated, server_planet_bui
 
 #[derive(Debug, Serialize, Deserialize)]
 struct PlanetSaveData {
-    width: CoordinateType,
-    height: CoordinateType,
-    length: CoordinateType,
+    dimensions: CoordinateType,
     temperature: f32,
 }
 
 fn on_save_structure(mut query: Query<(&mut SerializedData, &Structure, &Planet), With<NeedsSaved>>) {
     for (mut s_data, structure, planet) in query.iter_mut() {
+        let Structure::Dynamic(dynamic_planet) = structure else {
+            panic!("Planet must be dynamic!");
+        };
+
         s_data.serialize_data(
             "cosmos:planet",
             &PlanetSaveData {
-                width: structure.chunks_width(),
-                height: structure.chunks_height(),
-                length: structure.chunks_length(),
+                dimensions: dynamic_planet.dimensions(),
                 temperature: planet.temperature(),
             },
         );
@@ -46,7 +47,7 @@ fn on_save_structure(mut query: Query<(&mut SerializedData, &Structure, &Planet)
 }
 
 fn generate_planet(entity: Entity, s_data: &SerializedData, planet_save_data: PlanetSaveData, commands: &mut Commands) {
-    let mut structure = Structure::new(planet_save_data.width, planet_save_data.height, planet_save_data.length);
+    let mut structure = Structure::Dynamic(DynamicStructure::new(planet_save_data.dimensions));
 
     let mut entity_cmd = commands.entity(entity);
 

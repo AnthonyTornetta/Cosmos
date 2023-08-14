@@ -114,8 +114,10 @@ pub fn done_saving(
             continue;
         }
 
-        if let Some(loc) = sd.location {
-            sectors_cache.insert(loc.sector(), entity_id, loading_distance.map(|ld| ld.load_distance()));
+        if matches!(&save_identifier.identifier_type, SaveFileIdentifierType::Base(_)) {
+            if let Some(loc) = sd.location {
+                sectors_cache.insert(loc.sector(), entity_id, loading_distance.map(|ld| ld.load_distance()));
+            }
         }
     }
 }
