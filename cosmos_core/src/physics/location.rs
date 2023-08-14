@@ -434,7 +434,10 @@ fn sync_self_with_parents(
     if let Ok(parent) = parent_query.get(this_entity).map(|p| p.get()) {
         sync_self_with_parents(parent, parent_query, data_query);
 
-        let Ok((parent_loc, parent_global_trans)) = data_query.get(parent).map(|(loc, _, _, parent_global_trans)| (*loc, *parent_global_trans)) else {
+        let Ok((parent_loc, parent_global_trans)) = data_query
+            .get(parent)
+            .map(|(loc, _, _, parent_global_trans)| (*loc, *parent_global_trans))
+        else {
             return;
         };
 
