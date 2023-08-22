@@ -20,6 +20,7 @@ use crate::{
     state::game_state::GameState,
 };
 
+mod lod_renderer;
 mod structure_renderer;
 
 #[derive(Component, Debug)]
@@ -563,6 +564,7 @@ pub type BlockMeshRegistry = ManyToOneRegistry<Block, BlockMeshInformation>;
 pub(super) fn register(app: &mut App) {
     many_to_one::create_many_to_one_registry::<Block, BlockMeshInformation>(app);
     structure_renderer::register(app);
+    lod_renderer::register(app);
 
     app.add_systems(OnEnter(GameState::Loading), register_meshes).add_systems(
         OnExit(GameState::PostLoading),

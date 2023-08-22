@@ -19,6 +19,7 @@ pub mod dynamic_structure;
 pub mod events;
 pub mod full_structure;
 pub mod loading;
+pub mod lod;
 pub mod lod_chunk;
 pub mod planet;
 pub mod ship;
@@ -652,6 +653,7 @@ pub(super) fn register<T: States + Clone + Copy>(app: &mut App, post_loading_sta
         .register_type::<Chunk>()
         .add_event::<ChunkInitEvent>();
 
+    lod::register(app, playing_state);
     ship::register(app, playing_state);
     chunk::register(app);
     planet::register(app);
