@@ -1,6 +1,6 @@
 use std::{f32::consts::PI, sync::Mutex};
 
-use bevy::{prelude::*, render::primitives::Aabb, utils::HashMap};
+use bevy::{pbr::NotShadowCaster, prelude::*, render::primitives::Aabb, utils::HashMap};
 use cosmos_core::{
     block::{Block, BlockFace},
     registry::{identifiable::Identifiable, many_to_one::ManyToOneRegistry, Registry},
@@ -308,7 +308,7 @@ struct ChunkMeshes(Vec<Entity>);
 fn recursively_process_lod(
     lod: &Lod,
     offset: Vec3,
-    to_process: &Mutex<Option<Vec<(Entity, ChunkMesh)>>>,
+    to_process: &Mutex<Option<Vec<(Entity, ChunkMesh, Vec3)>>>,
     entity: Entity,
     atlas: &MainAtlas,
     blocks: &Registry<Block>,
@@ -321,22 +321,19 @@ fn recursively_process_lod(
         Lod::None => {}
         Lod::Children(children) => {
             children.par_iter().enumerate().for_each(|(i, c)| {
-                let s2 = scale / 4.0;
-
-                let offset_add = s2;
+                let s4 = scale / 4.0;
 
                 let offset = match i {
-                    0 => offset + Vec3::new(-offset_add, -offset_add, -offset_add),
-                    1 => offset + Vec3::new(-offset_add, -offset_add, offset_add),
-                    2 => offset + Vec3::new(offset_add, -offset_add, offset_add),
-                    3 => offset + Vec3::new(offset_add, -offset_add, -offset_add),
-                    4 => offset + Vec3::new(-offset_add, offset_add, -offset_add),
-                    5 => offset + Vec3::new(-offset_add, offset_add, offset_add),
-                    6 => offset + Vec3::new(offset_add, offset_add, offset_add),
-                    _ => offset + Vec3::new(offset_add, offset_add, -offset_add),
+                    0 => offset + Vec3::new(-s4, -s4, -s4),
+                    1 => offset + Vec3::new(-s4, -s4, s4),
+                    2 => offset + Vec3::new(s4, -s4, s4),
+                    3 => offset + Vec3::new(s4, -s4, -s4),
+                    4 => offset + Vec3::new(-s4, s4, -s4),
+                    5 => offset + Vec3::new(-s4, s4, s4),
+                    6 => offset + Vec3::new(s4, s4, s4),
+                    7 => offset + Vec3::new(s4, s4, -s4),
+                    _ => unreachable!(),
                 };
-
-                println!("Offset: {offset}");
 
                 recursively_process_lod(
                     c,
@@ -357,7 +354,7 @@ fn recursively_process_lod(
 
             renderer.render(
                 scale,
-                offset,
+                Vec3::ZERO,
                 &atlas,
                 &materials,
                 &lod_chunk,
@@ -374,7 +371,15 @@ fn recursively_process_lod(
 
             let mut mutex = to_process.lock().expect("Error locking to_process vec!");
 
-            mutex.as_mut().unwrap().push((entity, renderer.create_mesh()));
+            mutex.as_mut().unwrap().push((
+                entity,
+                renderer.create_mesh(),
+                Vec3::new(
+                    offset.x * CHUNK_DIMENSIONSF,
+                    offset.y * CHUNK_DIMENSIONSF,
+                    offset.z * CHUNK_DIMENSIONSF,
+                ),
+            ));
         }
     };
 }
@@ -396,7 +401,7 @@ fn monitor_lods_needs_rendered_system(
     // by making the Vec an Option<Vec> I can take ownership of it later, which I cannot do with
     // just a plain Mutex<Vec>.
     // https://stackoverflow.com/questions/30573188/cannot-move-data-out-of-a-mutex
-    let to_process: Mutex<Option<Vec<(Entity, ChunkMesh)>>> = Mutex::new(Some(Vec::new()));
+    let to_process: Mutex<Option<Vec<(Entity, ChunkMesh, Vec3)>>> = Mutex::new(Some(Vec::new()));
 
     let todo = Vec::from_iter(lods_needed.iter());
 
@@ -419,11 +424,11 @@ fn monitor_lods_needs_rendered_system(
     let to_process_chunks = to_process.lock().unwrap().take().unwrap();
 
     let mut ent_meshes = HashMap::new();
-    for (entity, chunk_mesh) in to_process_chunks {
+    for (entity, chunk_mesh, offset) in to_process_chunks {
         if !ent_meshes.contains_key(&entity) {
             ent_meshes.insert(entity, vec![]);
         }
-        ent_meshes.get_mut(&entity).expect("Just added").push(chunk_mesh);
+        ent_meshes.get_mut(&entity).expect("Just added").push((chunk_mesh, offset));
     }
 
     for (entity, mut chunk_meshes) in ent_meshes {
@@ -452,10 +457,10 @@ fn monitor_lods_needs_rendered_system(
 
         let mut structure_meshes_component = ChunkMeshes::default();
 
-        let single = chunk_meshes.len() == 1 && chunk_meshes.first().map(|x| x.mesh_materials.len() == 1).unwrap_or(false);
+        let single = chunk_meshes.len() == 1 && chunk_meshes.first().map(|(x, _)| x.mesh_materials.len() == 1).unwrap_or(false);
 
         if !single {
-            for chunk_mesh in chunk_meshes {
+            for (chunk_mesh, offset) in chunk_meshes {
                 for mesh_material in chunk_mesh.mesh_materials {
                     let mesh = meshes.add(mesh_material.mesh);
 
@@ -466,13 +471,17 @@ fn monitor_lods_needs_rendered_system(
                     } else {
                         let s = (CHUNK_DIMENSIONS / 2) as f32 * chunk_mesh.scale;
 
+                        println!("{offset}");
+
                         let ent = commands
                             .spawn((
                                 PbrBundle {
                                     mesh,
                                     material: mesh_material.material,
+                                    transform: Transform::from_translation(offset),
                                     ..Default::default()
                                 },
+                                NotShadowCaster,
                                 // Remove this once https://github.com/bevyengine/bevy/issues/4294 is done (bevy 0.12 released)
                                 Aabb::from_min_max(Vec3::new(-s, -s, -s), Vec3::new(s, s, s)),
                             ))
@@ -490,7 +499,8 @@ fn monitor_lods_needs_rendered_system(
             // To avoid making too many entities (and tanking performance), if only one mesh
             // is present, just stick the mesh info onto the chunk itself.
 
-            let chunk_mesh = &mut chunk_meshes[0];
+            // offset (_) will always be Vec3::ZERO when there is just one
+            let (chunk_mesh, _) = &mut chunk_meshes[0];
             let mesh_material = chunk_mesh.mesh_materials.pop().expect("This has one element in it");
 
             let mesh = meshes.add(mesh_material.mesh);
@@ -499,6 +509,7 @@ fn monitor_lods_needs_rendered_system(
             commands.entity(entity).insert((
                 mesh,
                 mesh_material.material,
+                NotShadowCaster,
                 // Remove this once https://github.com/bevyengine/bevy/issues/4294 is done (bevy 0.12 released)
                 Aabb::from_min_max(Vec3::new(-s, -s, -s), Vec3::new(s, s, s)),
             ));

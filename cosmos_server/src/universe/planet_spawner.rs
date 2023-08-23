@@ -149,7 +149,11 @@ fn spawn_planet(
                 }
 
                 if let Some(star) = closest_star {
-                    let size = if is_origin { 50 } else { rng.gen_range(200..=500) };
+                    let size = if is_origin {
+                        64
+                    } else {
+                        (2 as f32).powi(rng.gen_range(7..=9)) as CoordinateType
+                    };
 
                     let distance_scaling = best_dist.expect("This would have been set at this point.") / 2.0;
 
