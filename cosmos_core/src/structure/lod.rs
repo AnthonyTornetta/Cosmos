@@ -50,6 +50,26 @@ fn add_lod_to_planet(blocks: Res<Registry<Block>>, mut commands: Commands, query
             Lod::Single(Box::new(chunk8)),
         ]));
 
+        // let all_stone_lod = Lod::Children(Box::new([
+        //     Lod::None,
+        //     Lod::None,
+        //     Lod::None,
+        //     Lod::None,
+        //     Lod::None,
+        //     Lod::None,
+        //     Lod::None,
+        //     Lod::Children(Box::new([
+        //         Lod::Single(Box::new(chunk1)),
+        //         Lod::Single(Box::new(chunk2)),
+        //         Lod::Single(Box::new(chunk3)),
+        //         Lod::Single(Box::new(chunk4)),
+        //         Lod::Single(Box::new(chunk5)),
+        //         Lod::Single(Box::new(chunk6)),
+        //         Lod::Single(Box::new(chunk7)),
+        //         Lod::Single(Box::new(chunk8)),
+        //     ])),
+        // ]));
+
         commands.entity(ent).insert(all_stone_lod);
     }
 }
