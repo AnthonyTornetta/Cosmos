@@ -149,11 +149,14 @@ impl BlockStorage {
         self.block_at(coords) != AIR_BLOCK_ID
     }
 
-    /// Sets every block within this to be this block -- this is just for debugging stuff and will clear any current block information
-    pub fn fill(&mut self, block: &Block) {
-        let n_blocks = self.width * self.height * self.length;
-        self.blocks = vec![block.id(); n_blocks as usize];
-        self.non_air_blocks = if block.id() != AIR_BLOCK_ID { n_blocks as u32 } else { 0 };
-        self.block_info.clear();
+    /// Sets every block within this to be this block + rotation
+    pub fn fill(&mut self, block: &Block, block_up: BlockFace) {
+        for z in 0..self.length {
+            for y in 0..self.height {
+                for x in 0..self.width {
+                    self.set_block_at((x, y, z).into(), block, block_up);
+                }
+            }
+        }
     }
 }

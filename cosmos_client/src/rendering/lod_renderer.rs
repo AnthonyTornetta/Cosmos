@@ -31,6 +31,7 @@ struct MeshMaterial {
 #[derive(Debug)]
 struct ChunkMesh {
     mesh_materials: Vec<MeshMaterial>,
+    scale: f32,
 }
 
 #[derive(Default, Debug, Reflect)]
@@ -61,6 +62,7 @@ impl MeshBuilder for MeshInfo {
 #[derive(Default, Debug, Reflect)]
 struct ChunkRenderer {
     meshes: HashMap<Handle<StandardMaterial>, MeshInfo>,
+    scale: f32,
 }
 
 impl ChunkRenderer {
@@ -85,6 +87,8 @@ impl ChunkRenderer {
         meshes: &BlockMeshRegistry,
         block_textures: &Registry<BlockTextureIndex>,
     ) {
+        self.scale = scale;
+
         let cd2 = CHUNK_DIMENSIONSF / 2.0;
 
         let mut faces = Vec::with_capacity(6);
@@ -264,7 +268,11 @@ impl ChunkRenderer {
                         *norm = rotation.mul_vec3((*norm).into()).into();
                     }
 
-                    mesh_builder.add_mesh_information(&mesh_info, Vec3::new(center_offset_x, center_offset_y, center_offset_z), uvs);
+                    mesh_builder.add_mesh_information(
+                        &mesh_info,
+                        Vec3::new(center_offset_x * scale, center_offset_y * scale, center_offset_z * scale),
+                        uvs,
+                    );
 
                     if one_mesh_only {
                         break;
@@ -285,7 +293,10 @@ impl ChunkRenderer {
             mesh_materials.push(MeshMaterial { material, mesh });
         }
 
-        ChunkMesh { mesh_materials }
+        ChunkMesh {
+            mesh_materials,
+            scale: self.scale,
+        }
     }
 }
 
@@ -322,7 +333,7 @@ fn monitor_lods_needs_rendered_system(
             Lod::Children(_) => panic!("Not done yet"),
             Lod::Single(lod_chunk) => {
                 renderer.render(
-                    1.0,
+                    lod_chunk.scale() as f32,
                     &atlas,
                     &materials,
                     &lod_chunk,
@@ -383,7 +394,7 @@ fn monitor_lods_needs_rendered_system(
 
                     ent
                 } else {
-                    let s = (CHUNK_DIMENSIONS / 2) as f32;
+                    let s = (CHUNK_DIMENSIONS / 2) as f32 * chunk_mesh.scale;
 
                     let ent = commands
                         .spawn((
@@ -411,7 +422,7 @@ fn monitor_lods_needs_rendered_system(
             let mesh_material = chunk_mesh.mesh_materials.pop().expect("This has one element in it");
 
             let mesh = meshes.add(mesh_material.mesh);
-            let s = (CHUNK_DIMENSIONS / 2) as f32;
+            let s = (CHUNK_DIMENSIONS / 2) as f32 * chunk_mesh.scale;
 
             commands.entity(entity).insert((
                 mesh,

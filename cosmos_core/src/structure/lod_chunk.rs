@@ -21,4 +21,9 @@ impl LodChunk {
             block_storage: BlockStorage::new(CHUNK_DIMENSIONS, CHUNK_DIMENSIONS, CHUNK_DIMENSIONS),
         }
     }
+
+    /// Gets the scale of this chunk
+    pub fn scale(&self) -> CoordinateType {
+        self.scale
+    }
 }
