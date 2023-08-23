@@ -133,7 +133,7 @@ fn spawn_planet(
 
             let is_origin = sector.x() == 25 && sector.y() == 25 && sector.z() == 25;
 
-            if is_origin || rng.gen_range(0..1000) == 9 {
+            if is_origin || rng.gen_range(0..1000) == 99989 {
                 let location = Location::new(Vec3::ZERO, sector);
 
                 let mut closest_star = None;

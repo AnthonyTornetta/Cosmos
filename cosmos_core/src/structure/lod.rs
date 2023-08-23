@@ -6,13 +6,13 @@ use crate::{
     registry::Registry,
 };
 
-use super::{dynamic_structure::DynamicStructure, lod_chunk::LodChunk, planet::Planet, Structure};
+use super::{lod_chunk::LodChunk, planet::Planet, Structure};
 
 #[derive(Serialize, Deserialize, Component, Debug)]
 pub enum Lod {
     None,
     Single(Box<LodChunk>),
-    Children(Box<[LodChunk; 4]>),
+    Children(Box<[Lod; 8]>),
 }
 
 fn add_lod_to_planet(blocks: Res<Registry<Block>>, mut commands: Commands, query: Query<(Entity, &Structure), Added<Planet>>) {
@@ -21,9 +21,35 @@ fn add_lod_to_planet(blocks: Res<Registry<Block>>, mut commands: Commands, query
             panic!("Planet was a non-dynamic!!!");
         };
 
-        let mut chunk = LodChunk::new(ds.dimensions());
-        chunk.fill(blocks.from_id("cosmos:stone").expect("Missing stone!"), BlockFace::Top);
-        let all_stone_lod = Lod::Single(Box::new(chunk));
+        let mut chunk1 = LodChunk::new(ds.dimensions() / 2);
+        chunk1.fill(blocks.from_id("cosmos:stone").expect("Missing stone!"), BlockFace::Top);
+        let mut chunk2 = LodChunk::new(ds.dimensions() / 2);
+        chunk2.fill(blocks.from_id("cosmos:stone").expect("Missing stone!"), BlockFace::Top);
+        let mut chunk3 = LodChunk::new(ds.dimensions() / 2);
+        chunk3.fill(blocks.from_id("cosmos:stone").expect("Missing stone!"), BlockFace::Top);
+        let mut chunk4 = LodChunk::new(ds.dimensions() / 2);
+        chunk4.fill(blocks.from_id("cosmos:stone").expect("Missing stone!"), BlockFace::Top);
+
+        let mut chunk5 = LodChunk::new(ds.dimensions() / 2);
+        chunk5.fill(blocks.from_id("cosmos:stone").expect("Missing stone!"), BlockFace::Top);
+        let mut chunk6 = LodChunk::new(ds.dimensions() / 2);
+        chunk6.fill(blocks.from_id("cosmos:stone").expect("Missing stone!"), BlockFace::Top);
+        let mut chunk7 = LodChunk::new(ds.dimensions() / 2);
+        chunk7.fill(blocks.from_id("cosmos:stone").expect("Missing stone!"), BlockFace::Top);
+        let mut chunk8 = LodChunk::new(ds.dimensions() / 2);
+        chunk8.fill(blocks.from_id("cosmos:stone").expect("Missing stone!"), BlockFace::Top);
+
+        let all_stone_lod = Lod::Children(Box::new([
+            Lod::Single(Box::new(chunk1)),
+            Lod::Single(Box::new(chunk2)),
+            Lod::Single(Box::new(chunk3)),
+            Lod::Single(Box::new(chunk4)),
+            Lod::Single(Box::new(chunk5)),
+            Lod::Single(Box::new(chunk6)),
+            Lod::Single(Box::new(chunk7)),
+            Lod::Single(Box::new(chunk8)),
+        ]));
+
         commands.entity(ent).insert(all_stone_lod);
     }
 }

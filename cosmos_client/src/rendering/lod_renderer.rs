@@ -9,10 +9,11 @@ use cosmos_core::{
         coordinates::ChunkBlockCoordinate,
         lod::Lod,
         lod_chunk::LodChunk,
+        Structure,
     },
     utils::array_utils::expand,
 };
-use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
+use rayon::prelude::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 
 use crate::{
     asset::asset_loading::{BlockTextureIndex, MainAtlas},
@@ -74,6 +75,7 @@ impl ChunkRenderer {
     fn render(
         &mut self,
         scale: f32,
+        offset: Vec3,
         atlas: &MainAtlas,
         materials: &ManyToOneRegistry<Block, CosmosMaterial>,
         lod: &LodChunk,
@@ -270,7 +272,7 @@ impl ChunkRenderer {
 
                     mesh_builder.add_mesh_information(
                         &mesh_info,
-                        Vec3::new(center_offset_x * scale, center_offset_y * scale, center_offset_z * scale),
+                        offset * CHUNK_DIMENSIONSF + Vec3::new(center_offset_x * scale, center_offset_y * scale, center_offset_z * scale),
                         uvs,
                     );
 
@@ -303,6 +305,80 @@ impl ChunkRenderer {
 #[derive(Component, Debug, Reflect, Default)]
 struct ChunkMeshes(Vec<Entity>);
 
+fn recursively_process_lod(
+    lod: &Lod,
+    offset: Vec3,
+    to_process: &Mutex<Option<Vec<(Entity, ChunkMesh)>>>,
+    entity: Entity,
+    atlas: &MainAtlas,
+    blocks: &Registry<Block>,
+    materials: &ManyToOneRegistry<Block, CosmosMaterial>,
+    meshes_registry: &BlockMeshRegistry,
+    block_textures: &Registry<BlockTextureIndex>,
+    scale: f32,
+) {
+    match lod {
+        Lod::None => {}
+        Lod::Children(children) => {
+            children.par_iter().enumerate().for_each(|(i, c)| {
+                let s2 = scale / 4.0;
+
+                let offset_add = s2;
+
+                let offset = match i {
+                    0 => offset + Vec3::new(-offset_add, -offset_add, -offset_add),
+                    1 => offset + Vec3::new(-offset_add, -offset_add, offset_add),
+                    2 => offset + Vec3::new(offset_add, -offset_add, offset_add),
+                    3 => offset + Vec3::new(offset_add, -offset_add, -offset_add),
+                    4 => offset + Vec3::new(-offset_add, offset_add, -offset_add),
+                    5 => offset + Vec3::new(-offset_add, offset_add, offset_add),
+                    6 => offset + Vec3::new(offset_add, offset_add, offset_add),
+                    _ => offset + Vec3::new(offset_add, offset_add, -offset_add),
+                };
+
+                println!("Offset: {offset}");
+
+                recursively_process_lod(
+                    c,
+                    offset,
+                    to_process,
+                    entity,
+                    atlas,
+                    blocks,
+                    materials,
+                    meshes_registry,
+                    block_textures,
+                    scale / 2.0,
+                );
+            });
+        }
+        Lod::Single(lod_chunk) => {
+            let mut renderer = ChunkRenderer::new();
+
+            renderer.render(
+                scale,
+                offset,
+                &atlas,
+                &materials,
+                &lod_chunk,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                &blocks,
+                &meshes_registry,
+                &block_textures,
+            );
+
+            let mut mutex = to_process.lock().expect("Error locking to_process vec!");
+
+            mutex.as_mut().unwrap().push((entity, renderer.create_mesh()));
+        }
+    };
+}
+
 /// Performance hot spot
 fn monitor_lods_needs_rendered_system(
     mut commands: Commands,
@@ -315,49 +391,42 @@ fn monitor_lods_needs_rendered_system(
     chunk_meshes_query: Query<&ChunkMeshes>,
     block_textures: Res<Registry<BlockTextureIndex>>,
 
-    chunks_need_rendered: Query<(Entity, &Lod), Changed<Lod>>,
+    lods_needed: Query<(Entity, &Lod, &Structure), Changed<Lod>>,
 ) {
     // by making the Vec an Option<Vec> I can take ownership of it later, which I cannot do with
     // just a plain Mutex<Vec>.
     // https://stackoverflow.com/questions/30573188/cannot-move-data-out-of-a-mutex
     let to_process: Mutex<Option<Vec<(Entity, ChunkMesh)>>> = Mutex::new(Some(Vec::new()));
 
-    let todo = Vec::from_iter(chunks_need_rendered.iter());
+    let todo = Vec::from_iter(lods_needed.iter());
 
     // Render lods in parallel
-    todo.par_iter().for_each(|(entity, lod)| {
-        let mut renderer = ChunkRenderer::new();
-
-        match lod {
-            Lod::None => {}
-            Lod::Children(_) => panic!("Not done yet"),
-            Lod::Single(lod_chunk) => {
-                renderer.render(
-                    lod_chunk.scale() as f32,
-                    &atlas,
-                    &materials,
-                    &lod_chunk,
-                    None,
-                    None,
-                    None,
-                    None,
-                    None,
-                    None,
-                    &blocks,
-                    &meshes_registry,
-                    &block_textures,
-                );
-
-                let mut mutex = to_process.lock().expect("Error locking to_process vec!");
-
-                mutex.as_mut().unwrap().push((*entity, renderer.create_mesh()));
-            }
-        };
+    todo.par_iter().for_each(|(entity, lod, structure)| {
+        recursively_process_lod(
+            lod,
+            Vec3::ZERO,
+            &to_process,
+            *entity,
+            &atlas,
+            &blocks,
+            &materials,
+            &meshes_registry,
+            &block_textures,
+            structure.chunk_dimensions().x as f32,
+        );
     });
 
     let to_process_chunks = to_process.lock().unwrap().take().unwrap();
 
-    for (entity, mut chunk_mesh) in to_process_chunks {
+    let mut ent_meshes = HashMap::new();
+    for (entity, chunk_mesh) in to_process_chunks {
+        if !ent_meshes.contains_key(&entity) {
+            ent_meshes.insert(entity, vec![]);
+        }
+        ent_meshes.get_mut(&entity).expect("Just added").push(chunk_mesh);
+    }
+
+    for (entity, mut chunk_meshes) in ent_meshes {
         let mut old_mesh_entities = Vec::new();
 
         if let Ok(chunk_meshes_component) = chunk_meshes_query.get(entity) {
@@ -374,8 +443,6 @@ fn monitor_lods_needs_rendered_system(
 
         let mut entities_to_add = Vec::new();
 
-        // meshes
-
         // If the structure previously only had one chunk mesh, then it would be on
         // the structure entity instead of child entities
         commands
@@ -385,40 +452,45 @@ fn monitor_lods_needs_rendered_system(
 
         let mut structure_meshes_component = ChunkMeshes::default();
 
-        if chunk_mesh.mesh_materials.len() > 1 {
-            for mesh_material in chunk_mesh.mesh_materials {
-                let mesh = meshes.add(mesh_material.mesh);
+        let single = chunk_meshes.len() == 1 && chunk_meshes.first().map(|x| x.mesh_materials.len() == 1).unwrap_or(false);
 
-                let ent = if let Some(ent) = old_mesh_entities.pop() {
-                    commands.entity(ent).insert(mesh).insert(mesh_material.material);
+        if !single {
+            for chunk_mesh in chunk_meshes {
+                for mesh_material in chunk_mesh.mesh_materials {
+                    let mesh = meshes.add(mesh_material.mesh);
 
-                    ent
-                } else {
-                    let s = (CHUNK_DIMENSIONS / 2) as f32 * chunk_mesh.scale;
+                    let ent = if let Some(ent) = old_mesh_entities.pop() {
+                        commands.entity(ent).insert(mesh).insert(mesh_material.material);
 
-                    let ent = commands
-                        .spawn((
-                            PbrBundle {
-                                mesh,
-                                material: mesh_material.material,
-                                ..Default::default()
-                            },
-                            // Remove this once https://github.com/bevyengine/bevy/issues/4294 is done (bevy 0.12 released)
-                            Aabb::from_min_max(Vec3::new(-s, -s, -s), Vec3::new(s, s, s)),
-                        ))
-                        .id();
+                        ent
+                    } else {
+                        let s = (CHUNK_DIMENSIONS / 2) as f32 * chunk_mesh.scale;
 
-                    entities_to_add.push(ent);
+                        let ent = commands
+                            .spawn((
+                                PbrBundle {
+                                    mesh,
+                                    material: mesh_material.material,
+                                    ..Default::default()
+                                },
+                                // Remove this once https://github.com/bevyengine/bevy/issues/4294 is done (bevy 0.12 released)
+                                Aabb::from_min_max(Vec3::new(-s, -s, -s), Vec3::new(s, s, s)),
+                            ))
+                            .id();
 
-                    ent
-                };
+                        entities_to_add.push(ent);
 
-                structure_meshes_component.0.push(ent);
+                        ent
+                    };
+
+                    structure_meshes_component.0.push(ent);
+                }
             }
-        } else if !chunk_mesh.mesh_materials.is_empty() {
+        } else {
             // To avoid making too many entities (and tanking performance), if only one mesh
             // is present, just stick the mesh info onto the chunk itself.
 
+            let chunk_mesh = &mut chunk_meshes[0];
             let mesh_material = chunk_mesh.mesh_materials.pop().expect("This has one element in it");
 
             let mesh = meshes.add(mesh_material.mesh);
