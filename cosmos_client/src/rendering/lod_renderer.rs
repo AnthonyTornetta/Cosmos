@@ -9,7 +9,6 @@ use cosmos_core::{
         coordinates::ChunkBlockCoordinate,
         lod::Lod,
         lod_chunk::LodChunk,
-        Structure,
     },
     utils::array_utils::expand,
 };
@@ -18,7 +17,6 @@ use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 use crate::{
     asset::asset_loading::{BlockTextureIndex, MainAtlas},
     materials::CosmosMaterial,
-    netty::flags::LocalPlayer,
     state::game_state::GameState,
 };
 

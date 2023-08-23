@@ -2,12 +2,9 @@
 //!
 //! These blocks can be updated.
 
-use std::slice::Iter;
-
 use crate::block::hardness::BlockHardness;
-use crate::block::{Block, BlockFace};
-use crate::registry::Registry;
-use bevy::prelude::{App, Component, Entity, Event, Vec3};
+use crate::block::BlockFace;
+use bevy::prelude::{App, Component, Deref, DerefMut, Entity, Event, Vec3};
 use bevy::reflect::Reflect;
 use serde::{Deserialize, Serialize};
 
@@ -26,14 +23,14 @@ pub const CHUNK_DIMENSIONSF: f32 = CHUNK_DIMENSIONS as f32;
 /// Short for `CHUNK_DIMENSIONS as UnboundCoordinateType`
 pub const CHUNK_DIMENSIONS_UB: UnboundCoordinateType = CHUNK_DIMENSIONS as UnboundCoordinateType;
 
-#[derive(Debug, Reflect, Serialize, Deserialize)]
+#[derive(Debug, Reflect, Serialize, Deserialize, Deref, DerefMut)]
 /// Stores a bunch of blocks, information about those blocks, and where they are in the structure.
 pub struct Chunk {
     structure_position: ChunkCoordinate,
-    block_storage: BlockStorage,
     block_health: BlockHealth,
 
-    non_air_blocks: u32,
+    #[deref]
+    block_storage: BlockStorage,
 }
 
 impl Chunk {
@@ -47,7 +44,6 @@ impl Chunk {
             structure_position,
             block_storage: BlockStorage::new(CHUNK_DIMENSIONS, CHUNK_DIMENSIONS, CHUNK_DIMENSIONS),
             block_health: BlockHealth::default(),
-            non_air_blocks: 0,
         }
     }
 
@@ -89,65 +85,6 @@ impl Chunk {
         );
     }
 
-    #[inline]
-    /// Returns true if this chunk only contains air.
-    pub fn is_empty(&self) -> bool {
-        self.non_air_blocks == 0
-    }
-
-    #[inline]
-    /// Sets the block at the given location.
-    ///
-    /// Generally, you should use the structure's version of this because this doesn't handle everything the structure does.
-    /// You should only call this if you know what you're doing.
-    ///
-    /// No events are generated from this.
-    pub fn set_block_at(&mut self, coords: ChunkBlockCoordinate, b: &Block, block_up: BlockFace) {
-        self.block_storage.set_block_at(coords, b, block_up);
-    }
-
-    /// Sets the block at the given location.
-    ///
-    /// Generally, you should use the structure's version of this because this doesn't handle everything the structure does.
-    /// You should only call this if you know what you're doing.
-    ///
-    /// No events are generated from this.
-    pub fn set_block_at_from_id(&mut self, coords: ChunkBlockCoordinate, id: u16, block_up: BlockFace) {
-        self.block_storage.set_block_at_from_id(coords, id, block_up);
-    }
-
-    #[inline]
-    /// Returns true if the block at this location is see-through. This is not determined from the block's texture, but
-    /// rather the flags the block was constructed with.
-    pub fn has_see_through_block_at(&self, coords: ChunkBlockCoordinate, blocks: &Registry<Block>) -> bool {
-        self.block_storage.has_see_through_block_at(coords, blocks)
-    }
-
-    #[inline]
-    /// Returns true if the block at this location is not air.
-    pub fn has_block_at(&self, coords: ChunkBlockCoordinate) -> bool {
-        self.block_storage.has_block_at(coords)
-    }
-
-    #[inline]
-    /// Gets the block at this location. Air is returned for empty blocks.
-    pub fn block_at(&self, coords: ChunkBlockCoordinate) -> u16 {
-        self.block_storage.block_at(coords)
-    }
-
-    #[inline]
-    /// Gets the block's rotation at this location
-    pub fn block_rotation(&self, coords: ChunkBlockCoordinate) -> BlockFace {
-        self.block_storage.block_rotation(coords)
-    }
-
-    #[inline]
-    /// Returns true if the block at these coordinates is a full block (1x1x1 cube). This is not determined
-    /// by the model, but rather the flags the block is constructed with.
-    pub fn has_full_block_at(&self, coords: ChunkBlockCoordinate, blocks: &Registry<Block>) -> bool {
-        self.block_storage.has_full_block_at(coords, blocks)
-    }
-
     /// Calculates the block coordinates used in something like `Self::block_at` from their f32 coordinates relative to the chunk's center.
     pub fn relative_coords_to_block_coords(&self, relative: &Vec3) -> (usize, usize, usize) {
         (
@@ -173,16 +110,6 @@ impl Chunk {
     /// **Returns:** true if that block was destroyed, false if not
     pub fn block_take_damage(&mut self, coords: ChunkBlockCoordinate, block_hardness: &BlockHardness, amount: f32) -> bool {
         self.block_health.take_damage(coords, block_hardness, amount)
-    }
-
-    /// Returns the iterator for every block in the chunk
-    pub fn blocks(&self) -> Iter<u16> {
-        self.block_storage.blocks()
-    }
-
-    /// Returns the iterator for all the block info of the chunk
-    pub fn block_info_iterator(&self) -> Iter<BlockInfo> {
-        self.block_storage.block_info_iterator()
     }
 }
 

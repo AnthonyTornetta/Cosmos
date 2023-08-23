@@ -465,6 +465,7 @@ fn trees(
 
         let mut noise_cache =
             [[0.0; (CHUNK_DIMENSIONS + DIST_BETWEEN_TREES * 2) as usize]; (CHUNK_DIMENSIONS + DIST_BETWEEN_TREES * 2) as usize];
+
         for (z, slice) in noise_cache.iter_mut().enumerate().map(|(z, noise)| (z as CoordinateType, noise)) {
             for (x, noise) in slice.iter_mut().enumerate().map(|(x, noise)| (x as CoordinateType, noise)) {
                 let (nx, ny, nz) = match block_up {
