@@ -4,9 +4,27 @@ use serde::{Deserialize, Serialize};
 use super::lod_chunk::LodChunk;
 
 #[derive(Serialize, Deserialize, Component, Debug)]
+/// Represents a reduced-detail version of a planet
 pub enum Lod {
+    /// No LOD here - this is probably unneeded - make sure to re-evaluate if this is used after implementation finished
     None,
+    /// Represents a single chunk of blocks at any scale.
     Single(Box<LodChunk>),
+    /// Breaks a single cube into 8 sub-cubes.
+    ///
+    /// The indicies of each cube follow a clockwise direction starting on the bottom-left-back
+    ///
+    /// ```
+    ///    +-----------+
+    ///   /  5    6   /|
+    ///  /  4    7   / |
+    /// +-----------+  |
+    /// |           |  |  
+    /// |           |  +
+    /// |   1    2  | /
+    /// |  0    3   |/
+    /// +-----------+
+    /// ```
     Children(Box<[Lod; 8]>),
 }
 
