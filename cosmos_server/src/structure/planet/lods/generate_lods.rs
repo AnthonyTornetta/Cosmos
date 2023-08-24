@@ -1,7 +1,10 @@
 use std::time::Duration;
 
 use bevy::{
-    prelude::{in_state, App, Commands, Component, DespawnRecursiveExt, Entity, IntoSystemConfigs, Query, Res, Update, With},
+    prelude::{
+        in_state, App, Commands, Component, DespawnRecursiveExt, Entity, Event, EventReader, Events, IntoSystemConfigs, Query, Res, ResMut,
+        Update, With,
+    },
     tasks::Task,
     time::common_conditions::on_timer,
 };
@@ -10,7 +13,13 @@ use cosmos_core::{
     entities::player::Player,
     physics::location::Location,
     registry::Registry,
-    structure::{coordinates::BlockCoordinate, lod::Lod, lod_chunk::LodChunk, planet::Planet, Structure},
+    structure::{
+        coordinates::{BlockCoordinate, UnboundChunkCoordinate},
+        lod::Lod,
+        lod_chunk::LodChunk,
+        planet::Planet,
+        Structure,
+    },
 };
 
 use crate::state::GameState;
@@ -19,6 +28,7 @@ use super::player_lod::PlayerLod;
 
 #[derive(Debug)]
 enum LodRequest {
+    None,
     Single,
     Multi(Box<[LodRequest; 8]>),
 }
@@ -28,7 +38,7 @@ struct LodGenerationRequest {
     request: LodRequest,
     structure_entity: Entity,
     player_entity: Entity,
-    // task: Task<()>,
+    // task: Task<Lod>,
 }
 
 fn create_lod(
@@ -38,9 +48,11 @@ fn create_lod(
     (min_block_range_inclusive, max_block_range_exclusive): (BlockCoordinate, BlockCoordinate),
 ) -> Lod {
     match request {
+        LodRequest::None => Lod::None,
         LodRequest::Single => {
             let mut chunk = LodChunk::new();
-            chunk.fill(blocks.from_id("cosmos:stone").expect("Missing stone!"), BlockFace::Top);
+
+            chunk.fill(blocks.from_id("cosmos:grass").expect("Missing grass!"), BlockFace::Top);
             Lod::Single(Box::new(chunk))
         }
         LodRequest::Multi(child_requests) => {
@@ -142,15 +154,23 @@ fn generate_player_lods(
                 panic!("Planet was a non-dynamic!!!");
             };
 
+            let rel_coords = structure_location.relative_coords_to(player_location);
+
+            let rel_chunk_coords = UnboundChunkCoordinate::for_unbound_block_coordinate(ds.relative_coords_to_local_coords(
+                rel_coords.x,
+                rel_coords.y,
+                rel_coords.z,
+            ));
+
             let request = LodRequest::Multi(Box::new([
                 LodRequest::Single,
+                LodRequest::None,
                 LodRequest::Single,
+                LodRequest::None,
                 LodRequest::Single,
+                LodRequest::None,
                 LodRequest::Single,
-                LodRequest::Single,
-                LodRequest::Single,
-                LodRequest::Single,
-                LodRequest::Single,
+                LodRequest::None,
             ]));
 
             let lod_request = LodGenerationRequest {

@@ -393,3 +393,55 @@ impl UnboundChunkCoordinate {
         }
     }
 }
+
+#[cfg(test)]
+mod test {
+    use crate::structure::{chunk::CHUNK_DIMENSIONS_UB, coordinates::UnboundChunkCoordinate};
+
+    use super::UnboundBlockCoordinate;
+
+    #[test]
+    fn test_unbound() {
+        assert_eq!(
+            UnboundChunkCoordinate::new(1, 1, 1),
+            UnboundChunkCoordinate::for_unbound_block_coordinate(UnboundBlockCoordinate::new(
+                CHUNK_DIMENSIONS_UB,
+                CHUNK_DIMENSIONS_UB,
+                CHUNK_DIMENSIONS_UB
+            ))
+        );
+
+        assert_eq!(
+            UnboundChunkCoordinate::new(0, 0, 0),
+            UnboundChunkCoordinate::for_unbound_block_coordinate(UnboundBlockCoordinate::new(10, 10, 10))
+        );
+
+        assert_eq!(
+            UnboundChunkCoordinate::new(0, 0, 0),
+            UnboundChunkCoordinate::for_unbound_block_coordinate(UnboundBlockCoordinate::new(0, 0, 0))
+        );
+
+        assert_eq!(
+            UnboundChunkCoordinate::new(-1, -1, -1),
+            UnboundChunkCoordinate::for_unbound_block_coordinate(UnboundBlockCoordinate::new(-10, -10, -10))
+        );
+
+        assert_eq!(
+            UnboundChunkCoordinate::new(-1, -1, -1),
+            UnboundChunkCoordinate::for_unbound_block_coordinate(UnboundBlockCoordinate::new(
+                -CHUNK_DIMENSIONS_UB,
+                -CHUNK_DIMENSIONS_UB,
+                -CHUNK_DIMENSIONS_UB
+            ))
+        );
+
+        assert_eq!(
+            UnboundChunkCoordinate::new(-2, -2, -2),
+            UnboundChunkCoordinate::for_unbound_block_coordinate(UnboundBlockCoordinate::new(
+                -CHUNK_DIMENSIONS_UB - 1,
+                -CHUNK_DIMENSIONS_UB - 1,
+                -CHUNK_DIMENSIONS_UB - 1
+            ))
+        );
+    }
+}

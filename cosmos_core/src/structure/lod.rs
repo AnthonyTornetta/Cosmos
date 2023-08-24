@@ -6,7 +6,7 @@ use super::lod_chunk::LodChunk;
 #[derive(Serialize, Deserialize, Component, Debug)]
 /// Represents a reduced-detail version of a planet
 pub enum Lod {
-    /// No LOD here - this is probably unneeded - make sure to re-evaluate if this is used after implementation finished
+    /// No Lod here - this means there should be an actual chunk here
     None,
     /// Represents a single chunk of blocks at any scale.
     Single(Box<LodChunk>),
