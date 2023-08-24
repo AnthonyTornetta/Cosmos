@@ -65,7 +65,7 @@ impl DynamicStructure {
 
     /// The number of chunks in each x/y/z axis
     #[inline(always)]
-    pub fn dimensions(&self) -> CoordinateType {
+    pub fn chunk_dimensions(&self) -> CoordinateType {
         self.dimensions
     }
 
@@ -77,7 +77,7 @@ impl DynamicStructure {
 
     #[inline(always)]
     pub(super) fn flatten(&self, c: ChunkCoordinate) -> usize {
-        c.flatten(self.dimensions(), self.dimensions())
+        c.flatten(self.chunk_dimensions(), self.chunk_dimensions())
     }
 
     /// Returns if the chunk at these chunk coordinates is fully loaded & empty.
@@ -183,7 +183,7 @@ impl DynamicStructure {
 
     /// Gets the block's relative position to this structure's transform.
     pub fn block_relative_position(&self, coords: BlockCoordinate) -> Vec3 {
-        Self::block_relative_position_static(coords, self.dimensions())
+        Self::block_relative_position_static(coords, self.chunk_dimensions())
     }
 
     /// Sets the chunk, overwriting what may have been there before.

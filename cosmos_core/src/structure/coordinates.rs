@@ -2,6 +2,8 @@
 
 extern crate proc_macro;
 
+use std::ops::{Add, Sub};
+
 use bevy::reflect::Reflect;
 use serde::{Deserialize, Serialize};
 
@@ -157,6 +159,14 @@ macro_rules! create_coordinate {
             }
         }
 
+        impl Add<$name> for $name {
+            type Output = Self;
+
+            fn add(self, rhs: Self) -> Self::Output {
+                Self::new(self.x + rhs.x, self.y + rhs.y, self.z + rhs.z)
+            }
+        }
+
         #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Reflect, Hash)]
         #[doc=$structComment]
         ///
@@ -261,6 +271,34 @@ macro_rules! create_coordinate {
                         value.z as CoordinateType,
                     ))
                 }
+            }
+        }
+
+        impl Add<$unbounded> for $unbounded {
+            type Output = Self;
+
+            fn add(self, rhs: Self) -> Self::Output {
+                Self::new(self.x + rhs.x, self.y + rhs.y, self.z + rhs.z)
+            }
+        }
+
+        impl Add<$name> for $unbounded {
+            type Output = Self;
+
+            fn add(self, rhs: $name) -> Self::Output {
+                Self::new(
+                    self.x + rhs.x as UnboundCoordinateType,
+                    self.y + rhs.y as UnboundCoordinateType,
+                    self.z + rhs.z as UnboundCoordinateType,
+                )
+            }
+        }
+
+        impl Sub<$unbounded> for $unbounded {
+            type Output = Self;
+
+            fn sub(self, rhs: Self) -> Self::Output {
+                Self::new(self.x - rhs.x, self.y - rhs.y, self.z - rhs.z)
             }
         }
     };

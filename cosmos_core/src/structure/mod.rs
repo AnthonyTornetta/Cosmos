@@ -77,7 +77,7 @@ impl Structure {
     /// Returns the # of chunks in the x/y/z direction as a set of ChunkCoordinates.
     pub fn chunk_dimensions(&self) -> ChunkCoordinate {
         match &self {
-            Self::Dynamic(ds) => ChunkCoordinate::new(ds.dimensions(), ds.dimensions(), ds.dimensions()),
+            Self::Dynamic(ds) => ChunkCoordinate::new(ds.chunk_dimensions(), ds.chunk_dimensions(), ds.chunk_dimensions()),
             Self::Full(full) => full.chunk_dimensions(),
         }
     }

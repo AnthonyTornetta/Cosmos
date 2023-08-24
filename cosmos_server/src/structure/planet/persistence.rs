@@ -38,7 +38,7 @@ fn on_save_structure(mut query: Query<(&mut SerializedData, &Structure, &Planet)
         s_data.serialize_data(
             "cosmos:planet",
             &PlanetSaveData {
-                dimensions: dynamic_planet.dimensions(),
+                dimensions: dynamic_planet.chunk_dimensions(),
                 temperature: planet.temperature(),
             },
         );

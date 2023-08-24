@@ -2,19 +2,20 @@ use std::time::Duration;
 
 use bevy::{
     prelude::{
-        in_state, App, Commands, Component, DespawnRecursiveExt, Entity, Event, EventReader, Events, IntoSystemConfigs, Query, Res, ResMut,
-        Update, With,
+        in_state, App, Commands, Component, DespawnRecursiveExt, Entity, Event, EventReader, Events, GlobalTransform, IntoSystemConfigs,
+        Quat, Query, Res, ResMut, Update, With,
     },
     tasks::Task,
     time::common_conditions::on_timer,
 };
 use cosmos_core::{
     block::{Block, BlockFace},
-    entities::player::Player,
+    entities::player::{render_distance::RenderDistance, Player},
     physics::location::Location,
     registry::Registry,
     structure::{
-        coordinates::{BlockCoordinate, UnboundChunkCoordinate},
+        chunk::{CHUNK_DIMENSIONS, CHUNK_DIMENSIONS_UB},
+        coordinates::{BlockCoordinate, CoordinateType, UnboundBlockCoordinate, UnboundChunkCoordinate, UnboundCoordinateType},
         lod::Lod,
         lod_chunk::LodChunk,
         planet::Planet,
@@ -138,40 +139,83 @@ fn poll_generating(
     }
 }
 
+fn create_lod_request(scale: CoordinateType, render_distance: CoordinateType, rel_coords: UnboundChunkCoordinate) -> LodRequest {
+    if scale == 1 || scale == 16 {
+        return LodRequest::Single;
+    }
+
+    let diameter = scale as UnboundCoordinateType;
+    let rd: i64 = render_distance as UnboundCoordinateType;
+
+    let max_dist = diameter;
+
+    println!("{} >= {} ======= ({diameter})", rel_coords.y, max_dist);
+
+    if rel_coords.x >= max_dist || rel_coords.y >= max_dist || rel_coords.z >= max_dist {
+        LodRequest::Single
+    } else {
+        let s4 = scale as UnboundCoordinateType / 4;
+
+        LodRequest::Multi(Box::new([
+            create_lod_request(scale / 2, render_distance, rel_coords - UnboundChunkCoordinate::new(-s4, -s4, -s4)),
+            create_lod_request(scale / 2, render_distance, rel_coords - UnboundChunkCoordinate::new(-s4, -s4, s4)),
+            create_lod_request(scale / 2, render_distance, rel_coords - UnboundChunkCoordinate::new(s4, -s4, s4)),
+            create_lod_request(scale / 2, render_distance, rel_coords - UnboundChunkCoordinate::new(s4, -s4, -s4)),
+            create_lod_request(scale / 2, render_distance, rel_coords - UnboundChunkCoordinate::new(-s4, s4, -s4)),
+            create_lod_request(scale / 2, render_distance, rel_coords - UnboundChunkCoordinate::new(-s4, s4, s4)),
+            create_lod_request(scale / 2, render_distance, rel_coords - UnboundChunkCoordinate::new(s4, s4, s4)),
+            create_lod_request(scale / 2, render_distance, rel_coords - UnboundChunkCoordinate::new(s4, s4, -s4)),
+        ]))
+    }
+
+    // LodRequest::Multi(Box::new([
+    //     LodRequest::Single,
+    //     LodRequest::None,
+    //     LodRequest::Single,
+    //     LodRequest::None,
+    //     LodRequest::Single,
+    //     LodRequest::None,
+    //     LodRequest::Single,
+    //     LodRequest::None,
+    // ]))
+}
+
 fn generate_player_lods(
     mut commands: Commands,
     any_generating_lods: Query<(), With<LodGenerationRequest>>,
     players: Query<(Entity, &Player, &Location)>,
-    structures: Query<(Entity, &Structure, &Location), With<Planet>>,
+    structures: Query<(Entity, &Structure, &Location, &GlobalTransform), With<Planet>>,
 ) {
     if !any_generating_lods.is_empty() {
         return;
     }
 
     for (player_entity, player, player_location) in players.iter() {
-        for (structure_ent, structure, structure_location) in structures.iter() {
+        let render_distance = 2;
+
+        for (structure_ent, structure, structure_location, g_trans) in structures.iter() {
             let Structure::Dynamic(ds) = structure else {
                 panic!("Planet was a non-dynamic!!!");
             };
 
-            let rel_coords = structure_location.relative_coords_to(player_location);
+            let inv_rotation = Quat::from_affine3(&g_trans.affine().inverse());
+            let rel_coords = inv_rotation.mul_vec3(structure_location.relative_coords_to(player_location));
 
-            let rel_chunk_coords = UnboundChunkCoordinate::for_unbound_block_coordinate(ds.relative_coords_to_local_coords(
+            let scale = ds.chunk_dimensions();
+
+            let rel_coords = UnboundChunkCoordinate::for_unbound_block_coordinate(ds.relative_coords_to_local_coords(
                 rel_coords.x,
                 rel_coords.y,
                 rel_coords.z,
             ));
 
-            let request = LodRequest::Multi(Box::new([
-                LodRequest::Single,
-                LodRequest::None,
-                LodRequest::Single,
-                LodRequest::None,
-                LodRequest::Single,
-                LodRequest::None,
-                LodRequest::Single,
-                LodRequest::None,
-            ]));
+            let middle_chunk = UnboundChunkCoordinate::new(
+                scale as UnboundCoordinateType / 2,
+                scale as UnboundCoordinateType / 2,
+                scale as UnboundCoordinateType / 2,
+            );
+
+            let request = create_lod_request(scale, render_distance, rel_coords - middle_chunk);
 
             let lod_request = LodGenerationRequest {
                 player_entity,
