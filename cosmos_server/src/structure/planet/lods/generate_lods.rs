@@ -140,8 +140,8 @@ fn poll_generating(
 }
 
 fn create_lod_request(scale: CoordinateType, render_distance: CoordinateType, rel_coords: UnboundChunkCoordinate) -> LodRequest {
-    if scale == 1 || scale == 16 {
-        return LodRequest::Single;
+    if scale == 1 {
+        return LodRequest::None;
     }
 
     let diameter = scale as UnboundCoordinateType;
@@ -149,7 +149,7 @@ fn create_lod_request(scale: CoordinateType, render_distance: CoordinateType, re
 
     let max_dist = diameter;
 
-    println!("{} >= {} ======= ({diameter})", rel_coords.y, max_dist);
+    // println!("{} >= {} ======= ({diameter})", rel_coords.y, max_dist);
 
     if rel_coords.x >= max_dist || rel_coords.y >= max_dist || rel_coords.z >= max_dist {
         LodRequest::Single
@@ -217,6 +217,32 @@ fn generate_player_lods(
 
             let request = create_lod_request(scale, render_distance, rel_coords - middle_chunk);
 
+            // let request = LodRequest::Multi(
+            //     [
+            //         LodRequest::Multi(
+            //             [
+            //                 LodRequest::Single,
+            //                 LodRequest::Single,
+            //                 LodRequest::Single,
+            //                 LodRequest::Single,
+            //                 LodRequest::Single,
+            //                 LodRequest::Single,
+            //                 LodRequest::Single,
+            //                 LodRequest::Single,
+            //             ]
+            //             .into(),
+            //         ),
+            //         LodRequest::Single,
+            //         LodRequest::None,
+            //         LodRequest::None,
+            //         LodRequest::None,
+            //         LodRequest::None,
+            //         LodRequest::None,
+            //         LodRequest::None,
+            //     ]
+            //     .into(),
+            // );
+
             let lod_request = LodGenerationRequest {
                 player_entity,
                 structure_entity: structure_ent,
@@ -263,7 +289,7 @@ pub(super) fn register(app: &mut App) {
         (
             generate_player_lods
                 .run_if(in_state(GameState::Playing))
-                .run_if(on_timer(Duration::from_millis(1000))),
+                .run_if(on_timer(Duration::from_millis(10000))),
             poll_generating.run_if(in_state(GameState::Playing)),
         ),
     );

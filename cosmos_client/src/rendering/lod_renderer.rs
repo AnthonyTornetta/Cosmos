@@ -30,7 +30,7 @@ struct MeshMaterial {
 }
 
 #[derive(Debug)]
-struct ChunkMesh {
+struct LodMesh {
     mesh_materials: Vec<MeshMaterial>,
     scale: f32,
 }
@@ -286,7 +286,7 @@ impl ChunkRenderer {
         }
     }
 
-    fn create_mesh(self) -> ChunkMesh {
+    fn create_mesh(self) -> LodMesh {
         let mut mesh_materials = Vec::new();
 
         for (material, chunk_mesh_info) in self.meshes {
@@ -295,7 +295,7 @@ impl ChunkRenderer {
             mesh_materials.push(MeshMaterial { material, mesh });
         }
 
-        ChunkMesh {
+        LodMesh {
             mesh_materials,
             scale: self.scale,
         }
@@ -303,12 +303,12 @@ impl ChunkRenderer {
 }
 
 #[derive(Component, Debug, Reflect, Default)]
-struct ChunkMeshes(Vec<Entity>);
+struct LodMeshes(Vec<Entity>);
 
 fn recursively_process_lod(
     lod: &Lod,
     offset: Vec3,
-    to_process: &Mutex<Option<Vec<(Entity, ChunkMesh, Vec3)>>>,
+    to_process: &Mutex<Option<Vec<(Entity, LodMesh, Vec3)>>>,
     entity: Entity,
     atlas: &MainAtlas,
     blocks: &Registry<Block>,
@@ -393,7 +393,7 @@ fn monitor_lods_needs_rendered_system(
     blocks: Res<Registry<Block>>,
     materials: Res<ManyToOneRegistry<Block, CosmosMaterial>>,
     meshes_registry: Res<BlockMeshRegistry>,
-    chunk_meshes_query: Query<&ChunkMeshes>,
+    chunk_meshes_query: Query<&LodMeshes>,
     block_textures: Res<Registry<BlockTextureIndex>>,
 
     lods_needed: Query<(Entity, &Lod, &Structure), Changed<Lod>>,
@@ -401,7 +401,7 @@ fn monitor_lods_needs_rendered_system(
     // by making the Vec an Option<Vec> I can take ownership of it later, which I cannot do with
     // just a plain Mutex<Vec>.
     // https://stackoverflow.com/questions/30573188/cannot-move-data-out-of-a-mutex
-    let to_process: Mutex<Option<Vec<(Entity, ChunkMesh, Vec3)>>> = Mutex::new(Some(Vec::new()));
+    let to_process: Mutex<Option<Vec<(Entity, LodMesh, Vec3)>>> = Mutex::new(Some(Vec::new()));
 
     let todo = Vec::from_iter(lods_needed.iter());
 
@@ -431,7 +431,7 @@ fn monitor_lods_needs_rendered_system(
         ent_meshes.get_mut(&entity).expect("Just added").push((chunk_mesh, offset));
     }
 
-    for (entity, mut chunk_meshes) in ent_meshes {
+    for (entity, mut lod_meshes) in ent_meshes {
         let mut old_mesh_entities = Vec::new();
 
         if let Ok(chunk_meshes_component) = chunk_meshes_query.get(entity) {
@@ -455,21 +455,25 @@ fn monitor_lods_needs_rendered_system(
             .remove::<Handle<Mesh>>()
             .remove::<Handle<StandardMaterial>>();
 
-        let mut structure_meshes_component = ChunkMeshes::default();
+        let mut structure_meshes_component = LodMeshes::default();
 
-        let single = chunk_meshes.len() == 1 && chunk_meshes.first().map(|(x, _)| x.mesh_materials.len() == 1).unwrap_or(false);
+        let single = lod_meshes.len() == 1 && lod_meshes.first().map(|(x, _)| x.mesh_materials.len() == 1).unwrap_or(false);
 
         if !single {
-            for (chunk_mesh, offset) in chunk_meshes {
-                for mesh_material in chunk_mesh.mesh_materials {
+            for (lod_mesh, offset) in lod_meshes {
+                for mesh_material in lod_mesh.mesh_materials {
                     let mesh = meshes.add(mesh_material.mesh);
 
                     let ent = if let Some(ent) = old_mesh_entities.pop() {
-                        commands.entity(ent).insert(mesh).insert(mesh_material.material);
+                        commands.entity(ent).insert((
+                            TransformBundle::from_transform(Transform::from_translation(offset)),
+                            mesh,
+                            mesh_material.material,
+                        ));
 
                         ent
                     } else {
-                        let s = (CHUNK_DIMENSIONS / 2) as f32 * chunk_mesh.scale;
+                        let s = (CHUNK_DIMENSIONS / 2) as f32 * lod_mesh.scale;
 
                         println!("{offset}");
 
@@ -500,7 +504,7 @@ fn monitor_lods_needs_rendered_system(
             // is present, just stick the mesh info onto the chunk itself.
 
             // offset (_) will always be Vec3::ZERO when there is just one
-            let (chunk_mesh, _) = &mut chunk_meshes[0];
+            let (chunk_mesh, _) = &mut lod_meshes[0];
             let mesh_material = chunk_mesh.mesh_materials.pop().expect("This has one element in it");
 
             let mesh = meshes.add(mesh_material.mesh);
@@ -516,8 +520,8 @@ fn monitor_lods_needs_rendered_system(
         }
 
         // Any leftover entities are useless now, so kill them
-        for mesh in old_mesh_entities {
-            commands.entity(mesh).despawn_recursive();
+        for mesh_entity in old_mesh_entities {
+            commands.entity(mesh_entity).despawn_recursive();
         }
 
         let mut entity_commands = commands.entity(entity);
