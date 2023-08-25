@@ -151,7 +151,7 @@ fn create_lod_request(scale: CoordinateType, render_distance: CoordinateType, re
 
     // println!("{} >= {} ======= ({diameter})", rel_coords.y, max_dist);
 
-    if rel_coords.x >= max_dist || rel_coords.y >= max_dist || rel_coords.z >= max_dist {
+    if rel_coords.x.abs() >= max_dist || rel_coords.y.abs() >= max_dist || rel_coords.z.abs() >= max_dist {
         LodRequest::Single
     } else {
         let s4 = scale as UnboundCoordinateType / 4;
