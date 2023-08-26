@@ -1,9 +1,9 @@
-use std::time::Duration;
+use std::{ops::Not, time::Duration};
 
 use bevy::{
     prelude::{
-        in_state, App, Commands, Component, DespawnRecursiveExt, Entity, Event, EventReader, Events, GlobalTransform, IntoSystemConfigs,
-        Quat, Query, Res, ResMut, Update, With,
+        in_state, warn, App, BuildChildren, Commands, Component, DespawnRecursiveExt, Entity, Event, EventReader, EventWriter, Events,
+        GlobalTransform, IntoSystemConfigs, Quat, Query, Res, ResMut, Update, With,
     },
     tasks::Task,
     time::common_conditions::on_timer,
@@ -15,7 +15,9 @@ use cosmos_core::{
     registry::Registry,
     structure::{
         chunk::{CHUNK_DIMENSIONS, CHUNK_DIMENSIONS_UB},
-        coordinates::{BlockCoordinate, CoordinateType, UnboundBlockCoordinate, UnboundChunkCoordinate, UnboundCoordinateType},
+        coordinates::{
+            BlockCoordinate, ChunkCoordinate, CoordinateType, UnboundBlockCoordinate, UnboundChunkCoordinate, UnboundCoordinateType,
+        },
         lod::Lod,
         lod_chunk::LodChunk,
         planet::Planet,
@@ -35,6 +37,42 @@ enum LodRequest {
 }
 
 #[derive(Debug, Component)]
+struct PlayerGeneratingLod {
+    structure_entity: Entity,
+    generating_lod: GeneratingLod,
+    player_entity: Entity,
+}
+
+#[derive(Debug, Clone)]
+/// Represents a reduced-detail version of a planet undergoing generation
+pub enum GeneratingLod {
+    /// No Lod here - this means there should be an actual chunk here
+    None,
+    /// Represents an LOD that needs generated
+    NeedsGenerated,
+    /// Represents an LOD that is currently being generated
+    BeingGenerated,
+    /// Represents a single chunk of blocks at any scale.
+    DoneGenerating(Box<LodChunk>),
+    /// Breaks a single cube into 8 sub-cubes.
+    ///
+    /// The indicies of each cube follow a clockwise direction starting on the bottom-left-back
+    ///
+    /// ```
+    ///    +-----------+
+    ///   /  5    6   /|
+    ///  /  4    7   / |
+    /// +-----------+  |
+    /// |           |  |  
+    /// |           |  +
+    /// |   1    2  | /
+    /// |  0    3   |/
+    /// +-----------+
+    /// ```
+    Children(Box<[GeneratingLod; 8]>),
+}
+
+#[derive(Debug, Component)]
 struct LodGenerationRequest {
     request: LodRequest,
     structure_entity: Entity,
@@ -42,19 +80,118 @@ struct LodGenerationRequest {
     // task: Task<Lod>,
 }
 
-fn create_lod(
-    blocks: &Registry<Block>,
+#[derive(Event)]
+pub struct GenerateLodRequest {
+    pub starting_chunk: ChunkCoordinate,
+    pub structure_entity: Entity,
 
+    pub block_interval: CoordinateType,
+
+    pub lod_chunk: LodChunk,
+}
+
+fn generate(generating_lod: &mut GeneratingLod, blocks: &Registry<Block>) {
+    let mut lod_chunk = Box::new(LodChunk::new());
+
+    lod_chunk.fill(blocks.from_id("cosmos:grass").expect("Missing grass!"), BlockFace::Top);
+
+    *generating_lod = GeneratingLod::DoneGenerating(lod_chunk);
+}
+
+fn recurse(generating_lod: &mut GeneratingLod, blocks: &Registry<Block>) {
+    match generating_lod {
+        GeneratingLod::NeedsGenerated => {
+            *generating_lod = GeneratingLod::BeingGenerated;
+            generate(generating_lod, blocks);
+        }
+        GeneratingLod::Children(children) => {
+            for child in children.iter_mut() {
+                recurse(child, blocks);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn generate_lod(mut query: Query<&mut PlayerGeneratingLod>, blocks: Res<Registry<Block>>) {
+    for mut generating_lod in query.iter_mut() {
+        recurse(&mut generating_lod.generating_lod, &blocks);
+    }
+}
+
+fn check_done(generating_lod: &GeneratingLod) -> bool {
+    match generating_lod {
+        GeneratingLod::Children(children) => children.iter().all(check_done),
+        GeneratingLod::None | GeneratingLod::DoneGenerating(_) => true,
+        _ => false,
+    }
+}
+
+fn recursively_create_lod(generated_lod: GeneratingLod) -> Lod {
+    match generated_lod {
+        GeneratingLod::Children(children) => {
+            let [c0, c1, c2, c3, c4, c5, c6, c7] = *children;
+
+            Lod::Children(Box::new([
+                recursively_create_lod(c0),
+                recursively_create_lod(c1),
+                recursively_create_lod(c2),
+                recursively_create_lod(c3),
+                recursively_create_lod(c4),
+                recursively_create_lod(c5),
+                recursively_create_lod(c6),
+                recursively_create_lod(c7),
+            ]))
+        }
+        GeneratingLod::DoneGenerating(lod_chunk) => Lod::Single(lod_chunk),
+        GeneratingLod::None => Lod::None,
+        _ => {
+            warn!("Invalid lod state: {generated_lod:?}");
+            Lod::None
+        }
+    }
+}
+
+fn check_done_generating(mut commands: Commands, query: Query<(Entity, &PlayerGeneratingLod)>) {
+    for (entity, player_generating_lod) in query.iter() {
+        if check_done(&player_generating_lod.generating_lod) {
+            commands.entity(entity).despawn_recursive();
+
+            let actual_lod = recursively_create_lod(player_generating_lod.generating_lod.clone());
+
+            commands.entity(player_generating_lod.structure_entity).insert(PlayerLod {
+                lod: actual_lod,
+                player: player_generating_lod.player_entity,
+            });
+        }
+    }
+}
+
+fn create_generating_lod(
+    structure_entity: Entity,
+    blocks: &Registry<Block>,
+    event_writer: &mut EventWriter<GenerateLodRequest>,
     request: &LodRequest,
     (min_block_range_inclusive, max_block_range_exclusive): (BlockCoordinate, BlockCoordinate),
-) -> Lod {
+) -> GeneratingLod {
     match request {
-        LodRequest::None => Lod::None,
+        LodRequest::None => GeneratingLod::None,
         LodRequest::Single => {
-            let mut chunk = LodChunk::new();
+            debug_assert!(
+                max_block_range_exclusive.x - min_block_range_inclusive.x == max_block_range_exclusive.y - min_block_range_inclusive.y
+                    && max_block_range_exclusive.x - min_block_range_inclusive.x
+                        == max_block_range_exclusive.z - min_block_range_inclusive.z
+            );
+            let interval = (max_block_range_exclusive.x - min_block_range_inclusive.x + 1) / CHUNK_DIMENSIONS;
 
-            chunk.fill(blocks.from_id("cosmos:grass").expect("Missing grass!"), BlockFace::Top);
-            Lod::Single(Box::new(chunk))
+            event_writer.send(GenerateLodRequest {
+                starting_chunk: ChunkCoordinate::for_block_coordinate(min_block_range_inclusive),
+                structure_entity: structure_entity,
+                block_interval: interval,
+                lod_chunk: LodChunk::new(),
+            });
+
+            GeneratingLod::NeedsGenerated
         }
         LodRequest::Multi(child_requests) => {
             let (dx, dy, dz) = (
@@ -66,44 +203,60 @@ fn create_lod(
             let min = min_block_range_inclusive;
             let max = max_block_range_exclusive;
 
-            Lod::Children(Box::new([
-                create_lod(
+            GeneratingLod::Children(Box::new([
+                create_generating_lod(
+                    structure_entity,
                     blocks,
+                    event_writer,
                     &child_requests[0],
                     ((min.x, min.y, min.z).into(), (max.x - dx, max.y - dy, max.z - dz).into()),
                 ),
-                create_lod(
+                create_generating_lod(
+                    structure_entity,
                     blocks,
+                    event_writer,
                     &child_requests[1],
                     ((min.x, min.y, min.z + dz).into(), (max.x - dx, max.y - dy, max.z).into()),
                 ),
-                create_lod(
+                create_generating_lod(
+                    structure_entity,
                     blocks,
+                    event_writer,
                     &child_requests[2],
                     ((min.x + dx, min.y, min.z + dz).into(), (max.x, max.y - dy, max.z).into()),
                 ),
-                create_lod(
+                create_generating_lod(
+                    structure_entity,
                     blocks,
+                    event_writer,
                     &child_requests[3],
                     ((min.x + dx, min.y, min.z).into(), (max.x, max.y - dy, max.z - dz).into()),
                 ),
-                create_lod(
+                create_generating_lod(
+                    structure_entity,
                     blocks,
+                    event_writer,
                     &child_requests[4],
                     ((min.x, min.y + dy, min.z).into(), (max.x - dx, max.y, max.z - dz).into()),
                 ),
-                create_lod(
+                create_generating_lod(
+                    structure_entity,
                     blocks,
+                    event_writer,
                     &child_requests[5],
                     ((min.x, min.y + dy, min.z + dz).into(), (max.x - dx, max.y, max.z).into()),
                 ),
-                create_lod(
+                create_generating_lod(
+                    structure_entity,
                     blocks,
+                    event_writer,
                     &child_requests[6],
                     ((min.x + dx, min.y + dy, min.z + dz).into(), (max.x, max.y, max.z).into()),
                 ),
-                create_lod(
+                create_generating_lod(
+                    structure_entity,
                     blocks,
+                    event_writer,
                     &child_requests[7],
                     ((min.x + dx, min.y + dy, min.z).into(), (max.x, max.y, max.z - dz).into()),
                 ),
@@ -115,7 +268,7 @@ fn create_lod(
 fn poll_generating(
     mut commands: Commands,
     blocks: Res<Registry<Block>>,
-
+    mut event_writer: EventWriter<GenerateLodRequest>,
     structure_query: Query<&Structure>,
     query: Query<(Entity, &LodGenerationRequest)>,
 ) {
@@ -124,15 +277,18 @@ fn poll_generating(
             continue;
         };
 
-        let lod = create_lod(
+        let generating_lod = create_generating_lod(
+            lod_request.structure_entity,
             &blocks,
+            &mut event_writer,
             &lod_request.request,
             (BlockCoordinate::new(0, 0, 0), structure.block_dimensions()),
         );
 
-        commands.entity(lod_request.structure_entity).insert(PlayerLod {
-            lod,
-            player: lod_request.player_entity,
+        commands.spawn(PlayerGeneratingLod {
+            structure_entity: lod_request.structure_entity,
+            generating_lod,
+            player_entity: lod_request.player_entity,
         });
 
         commands.entity(entity).despawn_recursive();
@@ -145,13 +301,10 @@ fn create_lod_request(scale: CoordinateType, render_distance: CoordinateType, re
     }
 
     let diameter = scale as UnboundCoordinateType;
-    let rd: i64 = render_distance as UnboundCoordinateType;
 
     let max_dist = diameter;
 
-    // println!("{} >= {} ======= ({diameter})", rel_coords.y, max_dist);
-
-    if rel_coords.x.abs() >= max_dist || rel_coords.y.abs() >= max_dist || rel_coords.z.abs() >= max_dist {
+    if rel_coords.x.abs() > max_dist || rel_coords.y.abs() > max_dist || rel_coords.z.abs() > max_dist {
         LodRequest::Single
     } else {
         let s4 = scale as UnboundCoordinateType / 4;
@@ -167,17 +320,6 @@ fn create_lod_request(scale: CoordinateType, render_distance: CoordinateType, re
             create_lod_request(scale / 2, render_distance, rel_coords - UnboundChunkCoordinate::new(s4, s4, -s4)),
         ]))
     }
-
-    // LodRequest::Multi(Box::new([
-    //     LodRequest::Single,
-    //     LodRequest::None,
-    //     LodRequest::Single,
-    //     LodRequest::None,
-    //     LodRequest::Single,
-    //     LodRequest::None,
-    //     LodRequest::Single,
-    //     LodRequest::None,
-    // ]))
 }
 
 fn generate_player_lods(
@@ -217,68 +359,14 @@ fn generate_player_lods(
 
             let request = create_lod_request(scale, render_distance, rel_coords - middle_chunk);
 
-            // let request = LodRequest::Multi(
-            //     [
-            //         LodRequest::Multi(
-            //             [
-            //                 LodRequest::Single,
-            //                 LodRequest::Single,
-            //                 LodRequest::Single,
-            //                 LodRequest::Single,
-            //                 LodRequest::Single,
-            //                 LodRequest::Single,
-            //                 LodRequest::Single,
-            //                 LodRequest::Single,
-            //             ]
-            //             .into(),
-            //         ),
-            //         LodRequest::Single,
-            //         LodRequest::None,
-            //         LodRequest::None,
-            //         LodRequest::None,
-            //         LodRequest::None,
-            //         LodRequest::None,
-            //         LodRequest::None,
-            //     ]
-            //     .into(),
-            // );
-
-            let lod_request = LodGenerationRequest {
-                player_entity,
-                structure_entity: structure_ent,
-                request,
-            };
-
-            // let mut chunk1 = LodChunk::new();
-            // chunk1.fill(blocks.from_id("cosmos:stone").expect("Missing stone!"), BlockFace::Top);
-            // let mut chunk2 = LodChunk::new();
-            // chunk2.fill(blocks.from_id("cosmos:stone").expect("Missing stone!"), BlockFace::Top);
-            // let mut chunk3 = LodChunk::new();
-            // chunk3.fill(blocks.from_id("cosmos:stone").expect("Missing stone!"), BlockFace::Top);
-            // let mut chunk4 = LodChunk::new();
-            // chunk4.fill(blocks.from_id("cosmos:stone").expect("Missing stone!"), BlockFace::Top);
-
-            // let mut chunk5 = LodChunk::new();
-            // chunk5.fill(blocks.from_id("cosmos:stone").expect("Missing stone!"), BlockFace::Top);
-            // let mut chunk6 = LodChunk::new();
-            // chunk6.fill(blocks.from_id("cosmos:stone").expect("Missing stone!"), BlockFace::Top);
-            // let mut chunk7 = LodChunk::new();
-            // chunk7.fill(blocks.from_id("cosmos:stone").expect("Missing stone!"), BlockFace::Top);
-            // let mut chunk8 = LodChunk::new();
-            // chunk8.fill(blocks.from_id("cosmos:stone").expect("Missing stone!"), BlockFace::Top);
-
-            // let all_stone_lod = Lod::Children(Box::new([
-            //     Lod::Single(Box::new(chunk1)),
-            //     Lod::Single(Box::new(chunk2)),
-            //     Lod::Single(Box::new(chunk3)),
-            //     Lod::Single(Box::new(chunk4)),
-            //     Lod::Single(Box::new(chunk5)),
-            //     Lod::Single(Box::new(chunk6)),
-            //     Lod::Single(Box::new(chunk7)),
-            //     Lod::Single(Box::new(chunk8)),
-            // ]));
-
-            commands.spawn(lod_request);
+            let request_entity = commands
+                .spawn(LodGenerationRequest {
+                    player_entity,
+                    structure_entity: structure_ent,
+                    request,
+                })
+                .id();
+            commands.entity(structure_ent).add_child(request_entity);
         }
     }
 }
@@ -290,7 +378,8 @@ pub(super) fn register(app: &mut App) {
             generate_player_lods
                 .run_if(in_state(GameState::Playing))
                 .run_if(on_timer(Duration::from_millis(10000))),
-            poll_generating.run_if(in_state(GameState::Playing)),
+            (poll_generating, generate_lod, check_done_generating).run_if(in_state(GameState::Playing)),
         ),
-    );
+    )
+    .add_event::<GenerateLodRequest>();
 }

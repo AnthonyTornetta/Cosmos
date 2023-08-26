@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{block_storage::BlockStorage, chunk::CHUNK_DIMENSIONS, coordinates::CoordinateType};
 
-#[derive(Debug, Reflect, Serialize, Deserialize, DerefMut, Deref)]
+#[derive(Debug, Reflect, Serialize, Deserialize, DerefMut, Deref, Clone)]
 pub struct LodChunk(BlockStorage);
 
 impl LodChunk {

@@ -25,7 +25,7 @@ pub enum Lod {
     /// |  0    3   |/
     /// +-----------+
     /// ```
-    Children(Box<[Lod; 8]>),
+    Children(Box<[Self; 8]>),
 }
 
 #[derive(Debug, Serialize, Deserialize)]

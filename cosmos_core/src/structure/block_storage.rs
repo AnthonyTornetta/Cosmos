@@ -14,7 +14,7 @@ use super::{
     coordinates::{ChunkBlockCoordinate, Coordinate, CoordinateType},
 };
 
-#[derive(Debug, Reflect, Serialize, Deserialize)]
+#[derive(Debug, Reflect, Serialize, Deserialize, Clone)]
 /// A generic way of storing blocks and their information
 pub struct BlockStorage {
     blocks: Vec<u16>,
