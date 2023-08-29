@@ -9,6 +9,7 @@ use cosmos_core::{
     registry::Registry,
     structure::{
         asteroid::loading::AsteroidNeedsCreated,
+        block_storage::BlockStorer,
         chunk::{Chunk, CHUNK_DIMENSIONS},
         coordinates::{BlockCoordinate, ChunkBlockCoordinate, ChunkCoordinate},
         loading::ChunksNeedLoaded,

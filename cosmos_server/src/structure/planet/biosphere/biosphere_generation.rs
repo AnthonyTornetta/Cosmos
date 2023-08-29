@@ -882,82 +882,157 @@ fn generate<T: Component + Default + Clone, S: BiosphereGenerationStrategy + 'st
 ) {
     let mut lod_chunk = Box::new(LodChunk::new());
 
+    let faces = Planet::chunk_planet_faces_with_scale(first_block_coord, s_dimensions, scale);
+
     for z in 0..CHUNK_DIMENSIONS {
         for y in 0..CHUNK_DIMENSIONS {
             for x in 0..CHUNK_DIMENSIONS {
-                // To save multiplication operations later.
+                let bc = first_block_coord + BlockCoordinate::new(scale * x, scale * y, scale * z);
 
                 // Get all possible planet faces from the chunk corners.
-                let chunk_faces = Planet::chunk_planet_faces(first_block_coord, s_dimensions);
-                match chunk_faces {
-                    ChunkFaces::Face(up) => {
-                        generate_face_chunk::<S, T>(
-                            first_block_coord,
-                            (structure_x, structure_y, structure_z),
-                            s_dimensions,
-                            &noise_generator,
-                            &block_ranges,
-                            &mut chunk,
-                            up,
-                        );
-                    }
-                    ChunkFaces::Edge(j_up, k_up) => {
-                        generate_edge_chunk::<S, T>(
-                            first_block_coord,
-                            (structure_x, structure_y, structure_z),
-                            s_dimensions,
-                            &noise_generator,
-                            &block_ranges,
-                            &mut chunk,
-                            j_up,
-                            k_up,
-                        );
-                    }
-                    ChunkFaces::Corner(x_up, y_up, z_up) => {
-                        generate_corner_chunk::<S, T>(
-                            first_block_coord,
-                            (structure_x, structure_y, structure_z),
-                            s_dimensions,
-                            &noise_generator,
-                            &block_ranges,
-                            &mut chunk,
-                            x_up,
-                            y_up,
-                            z_up,
-                        );
-                    }
+                let up = Planet::get_planet_face_without_structure(bc, s_dimensions);
+
+                let seed_coords: BlockCoordinate = match up {
+                    BlockFace::Top => (bc.x, s_dimensions, bc.z),
+                    BlockFace::Bottom => (bc.x, 0, bc.z),
+                    BlockFace::Front => (bc.x, bc.y, s_dimensions),
+                    BlockFace::Back => (bc.x, bc.y, 0),
+                    BlockFace::Right => (s_dimensions, bc.y, bc.z),
+                    BlockFace::Left => (0, bc.y, bc.z),
                 }
+                .into();
+
+                let mut height = s_dimensions;
+                let mut concrete_ranges = Vec::new();
+                for (block, level) in block_ranges.ranges.iter() {
+                    let level_top = S::get_top_height(
+                        up,
+                        seed_coords,
+                        (structure_x, structure_y, structure_z),
+                        s_dimensions,
+                        noise_generator,
+                        height - level.middle_depth,
+                        level.amplitude,
+                        level.delta,
+                        level.iterations,
+                    );
+                    concrete_ranges.push((block, level_top));
+                    height = level_top;
+                }
+
+                if let Some(block) = block_ranges.face_block(height, &concrete_ranges, block_ranges.sea_level, block_ranges.sea_block()) {
+                    lod_chunk.set_block_at(ChunkBlockCoordinate::new(x, y, z), block, up);
+                }
+
+                // for chunk_height in (0..CHUNK_DIMENSIONS).rev() {
+                //     let chunk_height = chunk_height;
+
+                //     let coords: ChunkBlockCoordinate = match up {
+                //         BlockFace::Front => (x, y, chunk_height),
+                //         BlockFace::Back => (x, y, chunk_height),
+                //         BlockFace::Top => (x, chunk_height, z),
+                //         BlockFace::Bottom => (x, chunk_height, z),
+                //         BlockFace::Right => (chunk_height, y, z),
+                //         BlockFace::Left => (chunk_height, y, z),
+                //     }
+                //     .into();
+
+                //     let scaled_chunk_height = chunk_height * scale;
+
+                //     let height = match up {
+                //         BlockFace::Front => bc.z + scaled_chunk_height,
+                //         BlockFace::Back => s_dimensions - (bc.z + scaled_chunk_height),
+                //         BlockFace::Top => bc.y + scaled_chunk_height,
+                //         BlockFace::Bottom => s_dimensions - (bc.y + scaled_chunk_height),
+                //         BlockFace::Right => bc.x + scaled_chunk_height,
+                //         BlockFace::Left => s_dimensions - (bc.x + scaled_chunk_height),
+                //     };
+
+                //     let block = block_ranges.face_block(height, &concrete_ranges, block_ranges.sea_level, block_ranges.sea_block());
+                //     if let Some(block) = block {
+                //         lod_chunk.set_block_at(coords, block, up);
+                //     }
+                // }
             }
         }
-
-        // lod_chunk.fill(blocks.from_id("cosmos:grass").expect("Missing grass!"), BlockFace::Top);
     }
 
+    // lod_chunk.fill(blocks.from_id("cosmos:grass").expect("Missing grass!"), BlockFace::Top);
     *generating_lod = GeneratingLod::DoneGenerating(lod_chunk);
 }
 
-fn recurse(generating_lod: &mut GeneratingLod, blocks: &Registry<Block>) {
+fn recurse<T: Component + Default + Clone, S: BiosphereGenerationStrategy + 'static>(
+    generating_lod: &mut GeneratingLod,
+    structure: &Structure,
+    (structure_x, structure_y, structure_z): (f64, f64, f64),
+    first_block_coord: BlockCoordinate,
+    s_dimensions: CoordinateType,
+    blocks: &Registry<Block>,
+    scale: CoordinateType,
+    noise_generator: &noise::OpenSimplex,
+    block_ranges: &BlockLayers<T>,
+) {
     match generating_lod {
         GeneratingLod::NeedsGenerated => {
             *generating_lod = GeneratingLod::BeingGenerated;
-            generate(generating_lod, blocks);
+            generate::<T, S>(
+                generating_lod,
+                structure,
+                (structure_x, structure_y, structure_z),
+                first_block_coord,
+                s_dimensions,
+                blocks,
+                scale,
+                noise_generator,
+                block_ranges,
+            );
         }
         GeneratingLod::Children(children) => {
             for child in children.iter_mut() {
-                recurse(child, blocks);
+                recurse::<T, S>(
+                    child,
+                    structure,
+                    (structure_x, structure_y, structure_z),
+                    first_block_coord,
+                    s_dimensions,
+                    blocks,
+                    scale / 2,
+                    noise_generator,
+                    block_ranges,
+                );
             }
         }
         _ => {}
     }
 }
 
-pub(crate) fn generate_lods<T: Component + Default>(
+pub(crate) fn generate_lods<T: Component + Default + Clone, S: BiosphereGenerationStrategy + 'static>(
     mut query: Query<&mut PlayerGeneratingLod>,
     is_grass: Query<(&Structure, &Location), With<T>>,
     blocks: Res<Registry<Block>>,
+    noise_generator: Res<ResourceWrapper<noise::OpenSimplex>>,
+    block_ranges: Res<BlockLayers<T>>,
 ) {
-    for mut generating_lod in query.iter_mut().filter(|x| is_grass.contains(x.structure_entity)) {
-        recurse(&mut generating_lod.generating_lod, &blocks);
+    for mut generating_lod in query.iter_mut() {
+        let Ok((structure, location)) = is_grass.get(generating_lod.structure_entity) else {
+            continue;
+        };
+
+        let structure_coords = location.absolute_coords_f64();
+
+        let dimensions = structure.block_dimensions().x;
+
+        recurse::<T, S>(
+            &mut generating_lod.generating_lod,
+            structure,
+            (structure_coords.x, structure_coords.y, structure_coords.z),
+            BlockCoordinate::new(0, 0, 0),
+            dimensions,
+            &blocks,
+            dimensions / CHUNK_DIMENSIONS,
+            &noise_generator,
+            &block_ranges,
+        );
     }
 }
 

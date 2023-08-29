@@ -40,9 +40,8 @@ impl Planet {
 
     /// Gets the face of a planet this block is on
     ///
-    /// * `bx` Block's x
-    /// * `by` Block's y
-    /// * `bz` Block's z
+    /// * `structure` The structure to check
+    /// * `coords` Block's coordinates
     pub fn planet_face(structure: &Structure, coords: BlockCoordinate) -> BlockFace {
         Self::planet_face_relative(structure.block_relative_position(coords))
     }
@@ -52,9 +51,8 @@ impl Planet {
     /// Use this if you know the structure's dimensions but don't have
     /// access to the structure instance.
     ///
-    /// * `bx` Block's x
-    /// * `by` Block's y
-    /// * `bz` Block's z
+    /// * `planet_dimensions` The dimensions of the structure
+    /// * `coords` Block's coordinates
     pub fn get_planet_face_without_structure(coords: BlockCoordinate, planet_dimensions: CoordinateType) -> BlockFace {
         Self::planet_face_relative(DynamicStructure::block_relative_position_static(coords, planet_dimensions))
     }
@@ -83,15 +81,20 @@ impl Planet {
 
     /// Given the coordinates of a chunk, returns a tuple of 3 perpendicular chunk's "up" directions, None elements for no up on that axis.
     pub fn chunk_planet_faces(coords: BlockCoordinate, s_dimension: CoordinateType) -> ChunkFaces {
+        Self::chunk_planet_faces_with_scale(coords, s_dimension, 1)
+    }
+
+    /// Given the coordinates of a chunk, returns a tuple of 3 perpendicular chunk's "up" directions, None elements for no up on that axis.
+    pub fn chunk_planet_faces_with_scale(coords: BlockCoordinate, s_dimension: CoordinateType, chunk_scale: CoordinateType) -> ChunkFaces {
         let mut chunk_faces = ChunkFaces::Face(Planet::get_planet_face_without_structure(coords, s_dimension));
         for z in 0..=1 {
             for y in 0..=1 {
                 for x in 0..=1 {
                     let up = Planet::get_planet_face_without_structure(
                         BlockCoordinate::new(
-                            coords.x + x * CHUNK_DIMENSIONS,
-                            coords.y + y * CHUNK_DIMENSIONS,
-                            coords.z + z * CHUNK_DIMENSIONS,
+                            coords.x + x * CHUNK_DIMENSIONS * chunk_scale,
+                            coords.y + y * CHUNK_DIMENSIONS * chunk_scale,
+                            coords.z + z * CHUNK_DIMENSIONS * chunk_scale,
                         ),
                         s_dimension,
                     );

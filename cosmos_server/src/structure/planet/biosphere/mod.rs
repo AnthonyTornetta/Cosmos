@@ -158,7 +158,7 @@ pub fn register_biosphere<
                 (
                     generate_planet::<T, E, S>,
                     notify_when_done_generating_terrain::<T>,
-                    generate_lods::<T>,
+                    generate_lods::<T, S>,
                     check_needs_generated_system::<E, T>,
                 )
                     .run_if(in_state(GameState::Playing)),
