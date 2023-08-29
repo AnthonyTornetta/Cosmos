@@ -275,36 +275,34 @@ fn generate_edge_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
             }
 
             for (k, j_layers) in j_layers_cache.iter().enumerate() {
-                let k_scaled = k as CoordinateType * scale;
-
-                let mut chunk_block_coords: ChunkBlockCoordinate = (i, i, i).into();
+                let mut chunk_block_coords = ChunkBlockCoordinate::new(i, i, i);
                 match j_up {
-                    BlockFace::Front | BlockFace::Back => chunk_block_coords.z = j_scaled,
-                    BlockFace::Top | BlockFace::Bottom => chunk_block_coords.y = j_scaled,
-                    BlockFace::Right | BlockFace::Left => chunk_block_coords.x = j_scaled,
+                    BlockFace::Front | BlockFace::Back => chunk_block_coords.z = j,
+                    BlockFace::Top | BlockFace::Bottom => chunk_block_coords.y = j,
+                    BlockFace::Right | BlockFace::Left => chunk_block_coords.x = j,
                 };
                 match k_up {
-                    BlockFace::Front | BlockFace::Back => chunk_block_coords.z = k_scaled,
-                    BlockFace::Top | BlockFace::Bottom => chunk_block_coords.y = k_scaled,
-                    BlockFace::Right | BlockFace::Left => chunk_block_coords.x = k_scaled,
+                    BlockFace::Front | BlockFace::Back => chunk_block_coords.z = k as CoordinateType,
+                    BlockFace::Top | BlockFace::Bottom => chunk_block_coords.y = k as CoordinateType,
+                    BlockFace::Right | BlockFace::Left => chunk_block_coords.x = k as CoordinateType,
                 };
 
                 let k_height = match k_up {
-                    BlockFace::Front => block_coords.z + chunk_block_coords.z,
-                    BlockFace::Back => s_dimensions - (block_coords.z + chunk_block_coords.z),
-                    BlockFace::Top => block_coords.y + chunk_block_coords.y,
-                    BlockFace::Bottom => s_dimensions - (block_coords.y + chunk_block_coords.y),
-                    BlockFace::Right => block_coords.x + chunk_block_coords.x,
-                    BlockFace::Left => s_dimensions - (block_coords.x + chunk_block_coords.x),
+                    BlockFace::Front => block_coords.z + chunk_block_coords.z * scale,
+                    BlockFace::Back => s_dimensions - (block_coords.z + chunk_block_coords.z * scale),
+                    BlockFace::Top => block_coords.y + chunk_block_coords.y * scale,
+                    BlockFace::Bottom => s_dimensions - (block_coords.y + chunk_block_coords.y * scale),
+                    BlockFace::Right => block_coords.x + chunk_block_coords.x * scale,
+                    BlockFace::Left => s_dimensions - (block_coords.x + chunk_block_coords.x * scale),
                 };
 
                 if j_height < first_both_45 || k_height < first_both_45 {
                     // The top block needs different "top" to look good, the block can't tell which "up" looks good.
                     let block_up = Planet::get_planet_face_without_structure(
                         BlockCoordinate::new(
-                            block_coords.x + chunk_block_coords.x,
-                            block_coords.y + chunk_block_coords.y,
-                            block_coords.z + chunk_block_coords.z,
+                            block_coords.x + chunk_block_coords.x * scale,
+                            block_coords.y + chunk_block_coords.y * scale,
+                            block_coords.z + chunk_block_coords.z * scale,
                         ),
                         s_dimensions,
                     );
@@ -903,13 +901,6 @@ fn generate<T: Component + Default + Clone, S: BiosphereGenerationStrategy + 'st
     match chunk_faces {
         ChunkFaces::Face(up) => {
             println!("GENERATING FACE LOD");
-            // for z in 0..CHUNK_DIMENSIONS {
-            //     for y in 0..CHUNK_DIMENSIONS {
-            //         for x in 0..CHUNK_DIMENSIONS {
-            //             lod_chunk.set_block_at(ChunkBlockCoordinate::new(x, y, z), blocks.from_id("cosmos:grass").unwrap(), up);
-            //         }
-            //     }
-            // }
             generate_face_chunk::<S, T, LodChunk>(
                 first_block_coord,
                 (structure_x, structure_y, structure_z),
@@ -923,17 +914,17 @@ fn generate<T: Component + Default + Clone, S: BiosphereGenerationStrategy + 'st
         }
         ChunkFaces::Edge(j_up, k_up) => {
             println!("GENERATING EDGE LOD");
-            // generate_edge_chunk::<S, T, LodChunk>(
-            //     first_block_coord,
-            //     (structure_x, structure_y, structure_z),
-            //     s_dimensions,
-            //     &noise_generator,
-            //     &block_ranges,
-            //     &mut lod_chunk,
-            //     j_up,
-            //     k_up,
-            //     scale,
-            // );
+            generate_edge_chunk::<S, T, LodChunk>(
+                first_block_coord,
+                (structure_x, structure_y, structure_z),
+                s_dimensions,
+                &noise_generator,
+                &block_ranges,
+                &mut lod_chunk,
+                j_up,
+                k_up,
+                scale,
+            );
         }
         ChunkFaces::Corner(x_up, y_up, z_up) => {
             println!("GENERATING CORNER LOD");
