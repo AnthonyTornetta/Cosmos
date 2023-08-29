@@ -15,6 +15,7 @@ use crate::{
 
 use super::{
     block_health::block_destroyed_event::BlockDestroyedEvent,
+    block_storage::BlockStorer,
     chunk::{Chunk, CHUNK_DIMENSIONS},
     coordinates::{
         BlockCoordinate, ChunkBlockCoordinate, ChunkCoordinate, Coordinate, CoordinateType, UnboundBlockCoordinate, UnboundChunkCoordinate,

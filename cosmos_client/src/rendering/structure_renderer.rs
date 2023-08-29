@@ -16,6 +16,7 @@ use cosmos_core::physics::location::SECTOR_DIMENSIONS;
 use cosmos_core::registry::identifiable::Identifiable;
 use cosmos_core::registry::many_to_one::ManyToOneRegistry;
 use cosmos_core::registry::Registry;
+use cosmos_core::structure::block_storage::BlockStorer;
 use cosmos_core::structure::chunk::{Chunk, ChunkEntity, CHUNK_DIMENSIONS, CHUNK_DIMENSIONSF};
 use cosmos_core::structure::coordinates::{ChunkBlockCoordinate, ChunkCoordinate, UnboundChunkCoordinate};
 use cosmos_core::structure::events::ChunkSetEvent;

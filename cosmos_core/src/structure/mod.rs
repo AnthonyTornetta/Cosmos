@@ -42,6 +42,7 @@ use bevy::prelude::{
 use serde::{Deserialize, Serialize};
 
 use self::block_health::block_destroyed_event::BlockDestroyedEvent;
+use self::block_storage::BlockStorer;
 use self::chunk::ChunkEntity;
 use self::coordinates::{BlockCoordinate, ChunkCoordinate, UnboundBlockCoordinate, UnboundChunkCoordinate};
 use self::dynamic_structure::DynamicStructure;

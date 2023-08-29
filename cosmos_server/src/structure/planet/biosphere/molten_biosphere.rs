@@ -188,21 +188,12 @@ pub fn generate_chunk_features(
 }
 
 pub(super) fn register(app: &mut App) {
-    register_biosphere::<MoltenBiosphereMarker, MoltenChunkNeedsGeneratedEvent>(
+    register_biosphere::<MoltenBiosphereMarker, MoltenChunkNeedsGeneratedEvent, DefaultBiosphereGenerationStrategy>(
         app,
         "cosmos:biosphere_molten",
         TemperatureRange::new(0.0, 0.0),
     );
 
-    app.add_systems(
-        Update,
-        (
-            generate_planet::<MoltenBiosphereMarker, MoltenChunkNeedsGeneratedEvent, DefaultBiosphereGenerationStrategy>,
-            notify_when_done_generating_terrain::<MoltenBiosphereMarker>,
-            generate_chunk_features,
-        )
-            .run_if(in_state(GameState::Playing)),
-    );
-
-    app.add_systems(OnEnter(GameState::PostLoading), make_block_ranges);
+    app.add_systems(Update, generate_chunk_features.run_if(in_state(GameState::Playing)))
+        .add_systems(OnEnter(GameState::PostLoading), make_block_ranges);
 }

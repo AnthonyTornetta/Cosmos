@@ -6,6 +6,7 @@ use crate::block::Block;
 use crate::events::block_events::BlockChangedEvent;
 use crate::registry::identifiable::Identifiable;
 use crate::registry::Registry;
+use crate::structure::block_storage::BlockStorer;
 use crate::structure::chunk::{Chunk, ChunkUnloadEvent, CHUNK_DIMENSIONS};
 use crate::structure::coordinates::{ChunkBlockCoordinate, ChunkCoordinate, CoordinateType};
 use crate::structure::events::ChunkSetEvent;

@@ -37,10 +37,10 @@ enum LodRequest {
 }
 
 #[derive(Debug, Component)]
-struct PlayerGeneratingLod {
-    structure_entity: Entity,
-    generating_lod: GeneratingLod,
-    player_entity: Entity,
+pub struct PlayerGeneratingLod {
+    pub structure_entity: Entity,
+    pub generating_lod: GeneratingLod,
+    pub player_entity: Entity,
 }
 
 #[derive(Debug, Clone)]
@@ -90,34 +90,11 @@ pub struct GenerateLodRequest {
     pub lod_chunk: LodChunk,
 }
 
-fn generate(generating_lod: &mut GeneratingLod, blocks: &Registry<Block>) {
-    let mut lod_chunk = Box::new(LodChunk::new());
-
-    lod_chunk.fill(blocks.from_id("cosmos:grass").expect("Missing grass!"), BlockFace::Top);
-
-    *generating_lod = GeneratingLod::DoneGenerating(lod_chunk);
-}
-
-fn recurse(generating_lod: &mut GeneratingLod, blocks: &Registry<Block>) {
-    match generating_lod {
-        GeneratingLod::NeedsGenerated => {
-            *generating_lod = GeneratingLod::BeingGenerated;
-            generate(generating_lod, blocks);
-        }
-        GeneratingLod::Children(children) => {
-            for child in children.iter_mut() {
-                recurse(child, blocks);
-            }
-        }
-        _ => {}
-    }
-}
-
-fn generate_lod(mut query: Query<&mut PlayerGeneratingLod>, blocks: Res<Registry<Block>>) {
-    for mut generating_lod in query.iter_mut() {
-        recurse(&mut generating_lod.generating_lod, &blocks);
-    }
-}
+// fn generate_lod(mut query: Query<&mut PlayerGeneratingLod>, blocks: Res<Registry<Block>>) {
+//     for mut generating_lod in query.iter_mut() {
+//         recurse(&mut generating_lod.generating_lod, &blocks);
+//     }
+// }
 
 fn check_done(generating_lod: &GeneratingLod) -> bool {
     match generating_lod {
@@ -378,7 +355,7 @@ pub(super) fn register(app: &mut App) {
             generate_player_lods
                 .run_if(in_state(GameState::Playing))
                 .run_if(on_timer(Duration::from_millis(10000))),
-            (poll_generating, generate_lod, check_done_generating).run_if(in_state(GameState::Playing)),
+            (poll_generating, check_done_generating).run_if(in_state(GameState::Playing)),
         ),
     )
     .add_event::<GenerateLodRequest>();

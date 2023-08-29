@@ -5,6 +5,7 @@ use cosmos_core::{
     block::{Block, BlockFace},
     registry::{identifiable::Identifiable, many_to_one::ManyToOneRegistry, Registry},
     structure::{
+        block_storage::BlockStorer,
         chunk::{CHUNK_DIMENSIONS, CHUNK_DIMENSIONSF},
         coordinates::ChunkBlockCoordinate,
         lod::Lod,
@@ -478,8 +479,6 @@ fn monitor_lods_needs_rendered_system(
                         ent
                     } else {
                         let s = (CHUNK_DIMENSIONS / 2) as f32 * lod_mesh.scale;
-
-                        println!("{offset}");
 
                         let ent = commands
                             .spawn((

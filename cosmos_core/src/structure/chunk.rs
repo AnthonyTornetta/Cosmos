@@ -2,14 +2,16 @@
 //!
 //! These blocks can be updated.
 
-use crate::block::hardness::BlockHardness;
-use crate::block::BlockFace;
-use bevy::prelude::{App, Component, Deref, DerefMut, Entity, Event, Vec3};
+use bevy::prelude::{App, Component, Entity, Event, Vec3};
 use bevy::reflect::Reflect;
 use serde::{Deserialize, Serialize};
 
+use crate::block::hardness::BlockHardness;
+use crate::block::{Block, BlockFace};
+use crate::registry::Registry;
+
 use super::block_health::BlockHealth;
-use super::block_storage::BlockStorage;
+use super::block_storage::{BlockStorage, BlockStorer};
 use super::coordinates::{ChunkBlockCoordinate, ChunkCoordinate, CoordinateType, UnboundCoordinateType};
 
 /// The number of blocks a chunk can have in the x/y/z directions.
@@ -23,14 +25,70 @@ pub const CHUNK_DIMENSIONSF: f32 = CHUNK_DIMENSIONS as f32;
 /// Short for `CHUNK_DIMENSIONS as UnboundCoordinateType`
 pub const CHUNK_DIMENSIONS_UB: UnboundCoordinateType = CHUNK_DIMENSIONS as UnboundCoordinateType;
 
-#[derive(Debug, Reflect, Serialize, Deserialize, Deref, DerefMut)]
+#[derive(Debug, Reflect, Serialize, Deserialize)]
 /// Stores a bunch of blocks, information about those blocks, and where they are in the structure.
 pub struct Chunk {
     structure_position: ChunkCoordinate,
     block_health: BlockHealth,
 
-    #[deref]
     block_storage: BlockStorage,
+}
+
+impl BlockStorer for Chunk {
+    #[inline(always)]
+    fn block_at(&self, coords: ChunkBlockCoordinate) -> u16 {
+        self.block_storage.block_at(coords)
+    }
+
+    #[inline(always)]
+    fn block_info_iterator(&self) -> std::slice::Iter<BlockInfo> {
+        self.block_storage.block_info_iterator()
+    }
+
+    #[inline(always)]
+    fn block_rotation(&self, coords: ChunkBlockCoordinate) -> BlockFace {
+        self.block_storage.block_rotation(coords)
+    }
+
+    #[inline(always)]
+    fn blocks(&self) -> std::slice::Iter<u16> {
+        self.block_storage.blocks()
+    }
+
+    #[inline(always)]
+    fn debug_assert_is_within_blocks(&self, coords: ChunkBlockCoordinate) {
+        self.block_storage.debug_assert_is_within_blocks(coords)
+    }
+
+    #[inline(always)]
+    fn has_block_at(&self, coords: ChunkBlockCoordinate) -> bool {
+        self.block_storage.has_block_at(coords)
+    }
+
+    #[inline(always)]
+    fn has_full_block_at(&self, coords: ChunkBlockCoordinate, blocks: &Registry<Block>) -> bool {
+        self.block_storage.has_full_block_at(coords, blocks)
+    }
+
+    #[inline(always)]
+    fn has_see_through_block_at(&self, coords: ChunkBlockCoordinate, blocks: &Registry<Block>) -> bool {
+        self.block_storage.has_see_through_block_at(coords, blocks)
+    }
+
+    #[inline(always)]
+    fn is_empty(&self) -> bool {
+        self.block_storage.is_empty()
+    }
+
+    #[inline(always)]
+    fn set_block_at(&mut self, coords: ChunkBlockCoordinate, b: &Block, block_up: BlockFace) {
+        self.block_storage.set_block_at(coords, b, block_up)
+    }
+
+    #[inline(always)]
+    fn set_block_at_from_id(&mut self, coords: ChunkBlockCoordinate, id: u16, block_up: BlockFace) {
+        self.block_storage.set_block_at_from_id(coords, id, block_up)
+    }
 }
 
 impl Chunk {

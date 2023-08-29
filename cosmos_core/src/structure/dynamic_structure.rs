@@ -20,6 +20,7 @@ use crate::{
 use super::{
     base_structure::BaseStructure,
     block_health::block_destroyed_event::BlockDestroyedEvent,
+    block_storage::BlockStorer,
     chunk::{Chunk, ChunkUnloadEvent, CHUNK_DIMENSIONS},
     coordinates::{
         BlockCoordinate, ChunkBlockCoordinate, ChunkCoordinate, Coordinate, CoordinateType, UnboundBlockCoordinate, UnboundChunkCoordinate,

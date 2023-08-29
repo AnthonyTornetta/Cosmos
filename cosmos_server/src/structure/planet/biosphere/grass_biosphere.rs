@@ -1,7 +1,7 @@
 //! Creates a grass planet
 
 use bevy::prelude::{
-    in_state, App, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, OnEnter, Query, Res, Update,
+    in_state, App, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, OnEnter, Query, Res, Update, With,
 };
 use cosmos_core::{
     block::{Block, BlockFace},
@@ -11,6 +11,7 @@ use cosmos_core::{
     structure::{
         chunk::CHUNK_DIMENSIONS,
         coordinates::{BlockCoordinate, ChunkCoordinate, CoordinateType, UnboundBlockCoordinate, UnboundCoordinateType},
+        lod_chunk::LodChunk,
         planet::Planet,
         rotate, ChunkInitEvent, Structure,
     },
@@ -18,7 +19,10 @@ use cosmos_core::{
 };
 use noise::NoiseFn;
 
-use crate::GameState;
+use crate::{
+    structure::planet::lods::generate_lods::{GeneratingLod, PlayerGeneratingLod},
+    GameState,
+};
 
 use super::{
     biosphere_generation::{
@@ -581,21 +585,12 @@ pub fn generate_chunk_features(
 }
 
 pub(super) fn register(app: &mut App) {
-    register_biosphere::<GrassBiosphereMarker, GrassChunkNeedsGeneratedEvent>(
+    register_biosphere::<GrassBiosphereMarker, GrassChunkNeedsGeneratedEvent, DefaultBiosphereGenerationStrategy>(
         app,
         "cosmos:biosphere_grass",
         TemperatureRange::new(50.0, 5000.0),
     );
 
-    app.add_systems(
-        Update,
-        (
-            generate_planet::<GrassBiosphereMarker, GrassChunkNeedsGeneratedEvent, DefaultBiosphereGenerationStrategy>,
-            notify_when_done_generating_terrain::<GrassBiosphereMarker>,
-            generate_chunk_features,
-        )
-            .run_if(in_state(GameState::Playing)),
-    );
-
-    app.add_systems(OnEnter(GameState::PostLoading), make_block_ranges);
+    app.add_systems(Update, generate_chunk_features.run_if(in_state(GameState::Playing)))
+        .add_systems(OnEnter(GameState::PostLoading), make_block_ranges);
 }
