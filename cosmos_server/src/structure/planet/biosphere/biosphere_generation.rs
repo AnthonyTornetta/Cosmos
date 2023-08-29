@@ -109,18 +109,19 @@ fn generate_face_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
     block_ranges: &BlockLayers<T>,
     chunk: &mut C,
     up: BlockFace,
+    scale: CoordinateType,
 ) {
     let (sx, sy, sz) = (block_coords.x, block_coords.y, block_coords.z);
 
     for i in 0..CHUNK_DIMENSIONS {
         for j in 0..CHUNK_DIMENSIONS {
             let seed_coords: BlockCoordinate = match up {
-                BlockFace::Top => (sx + i, s_dimensions, sz + j),
-                BlockFace::Bottom => (sx + i, 0, sz + j),
-                BlockFace::Front => (sx + i, sy + j, s_dimensions),
-                BlockFace::Back => (sx + i, sy + j, 0),
-                BlockFace::Right => (s_dimensions, sy + i, sz + j),
-                BlockFace::Left => (0, sy + i, sz + j),
+                BlockFace::Top => (sx + i * scale, s_dimensions, sz + j * scale),
+                BlockFace::Bottom => (sx + i * scale, 0, sz + j * scale),
+                BlockFace::Front => (sx + i * scale, sy + j * scale, s_dimensions),
+                BlockFace::Back => (sx + i * scale, sy + j * scale, 0),
+                BlockFace::Right => (s_dimensions, sy + i * scale, sz + j * scale),
+                BlockFace::Left => (0, sy + i * scale, sz + j * scale),
             }
             .into();
 
@@ -144,12 +145,12 @@ fn generate_face_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
 
             for chunk_height in 0..CHUNK_DIMENSIONS {
                 let coords: ChunkBlockCoordinate = match up {
-                    BlockFace::Front => (i, j, chunk_height),
-                    BlockFace::Back => (i, j, chunk_height),
-                    BlockFace::Top => (i, chunk_height, j),
-                    BlockFace::Bottom => (i, chunk_height, j),
-                    BlockFace::Right => (chunk_height, i, j),
-                    BlockFace::Left => (chunk_height, i, j),
+                    BlockFace::Front => (i * scale, j * scale, chunk_height),
+                    BlockFace::Back => (i * scale, j * scale, chunk_height),
+                    BlockFace::Top => (i * scale, chunk_height, j * scale),
+                    BlockFace::Bottom => (i * scale, chunk_height, j * scale),
+                    BlockFace::Right => (chunk_height, i * scale, j * scale),
+                    BlockFace::Left => (chunk_height, i * scale, j * scale),
                 }
                 .into();
 
@@ -180,12 +181,17 @@ fn generate_edge_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
     chunk: &mut C,
     j_up: BlockFace,
     k_up: BlockFace,
+    scale: CoordinateType,
 ) {
     for i in 0..CHUNK_DIMENSIONS {
+        let i_scaled = i * scale;
         let mut j_layers_cache: Vec<Vec<(&Block, CoordinateType)>> = vec![vec![]; CHUNK_DIMENSIONS as usize];
         for (j, j_layers) in j_layers_cache.iter_mut().enumerate() {
+            let j_scaled = j as CoordinateType * scale;
+
             // Seed coordinates and j-direction noise functions.
-            let (mut x, mut y, mut z) = (block_coords.x + i, block_coords.y + i, block_coords.z + i);
+            let (mut x, mut y, mut z) = (block_coords.x + i_scaled, block_coords.y + i_scaled, block_coords.z + i_scaled);
+
             match j_up {
                 BlockFace::Front => z = s_dimensions,
                 BlockFace::Back => z = 0,
@@ -195,9 +201,9 @@ fn generate_edge_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
                 BlockFace::Left => x = 0,
             };
             match k_up {
-                BlockFace::Front | BlockFace::Back => z = block_coords.z + j as CoordinateType,
-                BlockFace::Top | BlockFace::Bottom => y = block_coords.y + j as CoordinateType,
-                BlockFace::Right | BlockFace::Left => x = block_coords.x + j as CoordinateType,
+                BlockFace::Front | BlockFace::Back => z = block_coords.z + j_scaled,
+                BlockFace::Top | BlockFace::Bottom => y = block_coords.y + j_scaled,
+                BlockFace::Right | BlockFace::Left => x = block_coords.x + j_scaled,
             };
             let mut height = s_dimensions;
             for (block, layer) in block_ranges.ranges.iter() {
@@ -220,8 +226,10 @@ fn generate_edge_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
         // The minimum (j, j) on the 45 where the two top heights intersect.
         let mut first_both_45 = s_dimensions;
         for j in 0..CHUNK_DIMENSIONS {
+            let j_scaled = j as CoordinateType * scale;
+
             // Seed coordinates and k-direction noise functions.
-            let (mut x, mut y, mut z) = (block_coords.x + i, block_coords.y + i, block_coords.z + i);
+            let (mut x, mut y, mut z) = (block_coords.x + i_scaled, block_coords.y + i_scaled, block_coords.z + i_scaled);
             match k_up {
                 BlockFace::Front => z = s_dimensions,
                 BlockFace::Back => z = 0,
@@ -231,9 +239,9 @@ fn generate_edge_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
                 BlockFace::Left => x = 0,
             };
             match j_up {
-                BlockFace::Front | BlockFace::Back => z = block_coords.z + j,
-                BlockFace::Top | BlockFace::Bottom => y = block_coords.y + j,
-                BlockFace::Right | BlockFace::Left => x = block_coords.x + j,
+                BlockFace::Front | BlockFace::Back => z = block_coords.z + j_scaled,
+                BlockFace::Top | BlockFace::Bottom => y = block_coords.y + j_scaled,
+                BlockFace::Right | BlockFace::Left => x = block_coords.x + j_scaled,
             };
             let j_height = match j_up {
                 BlockFace::Front => z,
@@ -267,16 +275,18 @@ fn generate_edge_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
             }
 
             for (k, j_layers) in j_layers_cache.iter().enumerate() {
+                let k_scaled = k as CoordinateType * scale;
+
                 let mut chunk_block_coords: ChunkBlockCoordinate = (i, i, i).into();
                 match j_up {
-                    BlockFace::Front | BlockFace::Back => chunk_block_coords.z = j,
-                    BlockFace::Top | BlockFace::Bottom => chunk_block_coords.y = j,
-                    BlockFace::Right | BlockFace::Left => chunk_block_coords.x = j,
+                    BlockFace::Front | BlockFace::Back => chunk_block_coords.z = j_scaled,
+                    BlockFace::Top | BlockFace::Bottom => chunk_block_coords.y = j_scaled,
+                    BlockFace::Right | BlockFace::Left => chunk_block_coords.x = j_scaled,
                 };
                 match k_up {
-                    BlockFace::Front | BlockFace::Back => chunk_block_coords.z = k as CoordinateType,
-                    BlockFace::Top | BlockFace::Bottom => chunk_block_coords.y = k as CoordinateType,
-                    BlockFace::Right | BlockFace::Left => chunk_block_coords.x = k as CoordinateType,
+                    BlockFace::Front | BlockFace::Back => chunk_block_coords.z = k_scaled,
+                    BlockFace::Top | BlockFace::Bottom => chunk_block_coords.y = k_scaled,
+                    BlockFace::Right | BlockFace::Left => chunk_block_coords.x = k_scaled,
                 };
 
                 let k_height = match k_up {
@@ -326,17 +336,21 @@ fn generate_corner_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + 
     x_up: BlockFace,
     y_up: BlockFace,
     z_up: BlockFace,
+    scale: CoordinateType,
 ) {
     // x top height cache.
     let mut x_layers: Vec<Vec<(&Block, CoordinateType)>> = vec![vec![]; CHUNK_DIMENSIONS as usize * CHUNK_DIMENSIONS as usize];
     for j in 0..CHUNK_DIMENSIONS {
+        let j_scaled = j * scale;
         for k in 0..CHUNK_DIMENSIONS {
+            let k_scaled = k * scale;
+
             let index = flatten_2d(j as usize, k as usize, CHUNK_DIMENSIONS as usize);
 
             // Seed coordinates for the noise function.
             let seed_coords = match x_up {
-                BlockFace::Right => (s_dimensions, block_coords.y + j, block_coords.z + k),
-                _ => (0, block_coords.y + j, block_coords.z + k),
+                BlockFace::Right => (s_dimensions, block_coords.y + j_scaled, block_coords.z + k_scaled),
+                _ => (0, block_coords.y + j_scaled, block_coords.z + k_scaled),
             }
             .into();
 
@@ -363,13 +377,16 @@ fn generate_corner_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + 
     // y top height cache.
     let mut y_layers: Vec<Vec<(&Block, CoordinateType)>> = vec![vec![]; CHUNK_DIMENSIONS as usize * CHUNK_DIMENSIONS as usize];
     for i in 0..CHUNK_DIMENSIONS {
+        let i_scaled = i * scale;
         for k in 0..CHUNK_DIMENSIONS {
+            let k_scaled = k * scale;
+
             let index = flatten_2d(i as usize, k as usize, CHUNK_DIMENSIONS as usize);
 
             // Seed coordinates for the noise function. Which loop variable goes to which xyz must agree everywhere.
             let seed_coords = match y_up {
-                BlockFace::Top => (block_coords.x + i, s_dimensions, block_coords.z + k),
-                _ => (block_coords.x + i, 0, block_coords.z + k),
+                BlockFace::Top => (block_coords.x + i_scaled, s_dimensions, block_coords.z + k_scaled),
+                _ => (block_coords.x + i_scaled, 0, block_coords.z + k_scaled),
             }
             .into();
 
@@ -882,78 +899,49 @@ fn generate<T: Component + Default + Clone, S: BiosphereGenerationStrategy + 'st
 ) {
     let mut lod_chunk = Box::new(LodChunk::new());
 
-    let faces = Planet::chunk_planet_faces_with_scale(first_block_coord, s_dimensions, scale);
-
-    for z in 0..CHUNK_DIMENSIONS {
-        for y in 0..CHUNK_DIMENSIONS {
-            for x in 0..CHUNK_DIMENSIONS {
-                let bc = first_block_coord + BlockCoordinate::new(scale * x, scale * y, scale * z);
-
-                // Get all possible planet faces from the chunk corners.
-                let up = Planet::get_planet_face_without_structure(bc, s_dimensions);
-
-                let seed_coords: BlockCoordinate = match up {
-                    BlockFace::Top => (bc.x, s_dimensions, bc.z),
-                    BlockFace::Bottom => (bc.x, 0, bc.z),
-                    BlockFace::Front => (bc.x, bc.y, s_dimensions),
-                    BlockFace::Back => (bc.x, bc.y, 0),
-                    BlockFace::Right => (s_dimensions, bc.y, bc.z),
-                    BlockFace::Left => (0, bc.y, bc.z),
-                }
-                .into();
-
-                let mut height = s_dimensions;
-                let mut concrete_ranges = Vec::new();
-                for (block, level) in block_ranges.ranges.iter() {
-                    let level_top = S::get_top_height(
-                        up,
-                        seed_coords,
-                        (structure_x, structure_y, structure_z),
-                        s_dimensions,
-                        noise_generator,
-                        height - level.middle_depth,
-                        level.amplitude,
-                        level.delta,
-                        level.iterations,
-                    );
-                    concrete_ranges.push((block, level_top));
-                    height = level_top;
-                }
-
-                if let Some(block) = block_ranges.face_block(height, &concrete_ranges, block_ranges.sea_level, block_ranges.sea_block()) {
-                    lod_chunk.set_block_at(ChunkBlockCoordinate::new(x, y, z), block, up);
-                }
-
-                // for chunk_height in (0..CHUNK_DIMENSIONS).rev() {
-                //     let chunk_height = chunk_height;
-
-                //     let coords: ChunkBlockCoordinate = match up {
-                //         BlockFace::Front => (x, y, chunk_height),
-                //         BlockFace::Back => (x, y, chunk_height),
-                //         BlockFace::Top => (x, chunk_height, z),
-                //         BlockFace::Bottom => (x, chunk_height, z),
-                //         BlockFace::Right => (chunk_height, y, z),
-                //         BlockFace::Left => (chunk_height, y, z),
-                //     }
-                //     .into();
-
-                //     let scaled_chunk_height = chunk_height * scale;
-
-                //     let height = match up {
-                //         BlockFace::Front => bc.z + scaled_chunk_height,
-                //         BlockFace::Back => s_dimensions - (bc.z + scaled_chunk_height),
-                //         BlockFace::Top => bc.y + scaled_chunk_height,
-                //         BlockFace::Bottom => s_dimensions - (bc.y + scaled_chunk_height),
-                //         BlockFace::Right => bc.x + scaled_chunk_height,
-                //         BlockFace::Left => s_dimensions - (bc.x + scaled_chunk_height),
-                //     };
-
-                //     let block = block_ranges.face_block(height, &concrete_ranges, block_ranges.sea_level, block_ranges.sea_block());
-                //     if let Some(block) = block {
-                //         lod_chunk.set_block_at(coords, block, up);
-                //     }
-                // }
-            }
+    let chunk_faces = Planet::chunk_planet_faces_with_scale(first_block_coord, s_dimensions, scale);
+    match chunk_faces {
+        ChunkFaces::Face(up) => {
+            println!("GENERATING FACE LOD");
+            generate_face_chunk::<S, T, LodChunk>(
+                first_block_coord,
+                (structure_x, structure_y, structure_z),
+                s_dimensions,
+                &noise_generator,
+                &block_ranges,
+                &mut lod_chunk,
+                up,
+                1,
+            );
+        }
+        ChunkFaces::Edge(j_up, k_up) => {
+            println!("GENERATING EDGE LOD");
+            generate_edge_chunk::<S, T, LodChunk>(
+                first_block_coord,
+                (structure_x, structure_y, structure_z),
+                s_dimensions,
+                &noise_generator,
+                &block_ranges,
+                &mut lod_chunk,
+                j_up,
+                k_up,
+                1,
+            );
+        }
+        ChunkFaces::Corner(x_up, y_up, z_up) => {
+            println!("GENERATING CORNER LOD");
+            generate_corner_chunk::<S, T, LodChunk>(
+                first_block_coord,
+                (structure_x, structure_y, structure_z),
+                s_dimensions,
+                &noise_generator,
+                &block_ranges,
+                &mut lod_chunk,
+                x_up,
+                y_up,
+                z_up,
+                1,
+            );
         }
     }
 
@@ -988,15 +976,22 @@ fn recurse<T: Component + Default + Clone, S: BiosphereGenerationStrategy + 'sta
             );
         }
         GeneratingLod::Children(children) => {
-            for child in children.iter_mut() {
+            let s2 = scale / 2;
+            for (i, child) in children.iter_mut().enumerate() {
+                let i = i as CoordinateType;
+
                 recurse::<T, S>(
                     child,
                     structure,
                     (structure_x, structure_y, structure_z),
-                    first_block_coord,
+                    BlockCoordinate::new(
+                        (i % 4) / 2 * s2 * CHUNK_DIMENSIONS,
+                        i / 4 * s2 * CHUNK_DIMENSIONS,
+                        i % 2 * s2 * CHUNK_DIMENSIONS,
+                    ) + first_block_coord,
                     s_dimensions,
                     blocks,
-                    scale / 2,
+                    s2,
                     noise_generator,
                     block_ranges,
                 );
@@ -1110,6 +1105,7 @@ pub fn generate_planet<T: Component + Clone + Default, E: TGenerateChunkEvent + 
                             &block_ranges,
                             &mut chunk,
                             up,
+                            1,
                         );
                     }
                     ChunkFaces::Edge(j_up, k_up) => {
@@ -1122,6 +1118,7 @@ pub fn generate_planet<T: Component + Clone + Default, E: TGenerateChunkEvent + 
                             &mut chunk,
                             j_up,
                             k_up,
+                            1,
                         );
                     }
                     ChunkFaces::Corner(x_up, y_up, z_up) => {
@@ -1135,6 +1132,7 @@ pub fn generate_planet<T: Component + Clone + Default, E: TGenerateChunkEvent + 
                             x_up,
                             y_up,
                             z_up,
+                            1,
                         );
                     }
                 }

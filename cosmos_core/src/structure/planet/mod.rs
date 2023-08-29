@@ -87,6 +87,9 @@ impl Planet {
     /// Given the coordinates of a chunk, returns a tuple of 3 perpendicular chunk's "up" directions, None elements for no up on that axis.
     pub fn chunk_planet_faces_with_scale(coords: BlockCoordinate, s_dimension: CoordinateType, chunk_scale: CoordinateType) -> ChunkFaces {
         let mut chunk_faces = ChunkFaces::Face(Planet::get_planet_face_without_structure(coords, s_dimension));
+
+        println!("{chunk_scale} {coords}");
+
         for z in 0..=1 {
             for y in 0..=1 {
                 for x in 0..=1 {
@@ -132,7 +135,9 @@ impl Planet {
                         }
                         ChunkFaces::Corner(up1, up2, up3) => {
                             if up1 != up && up2 != up && up3 != up {
-                                panic!("Chunk with more than 3 \"up\" directions (center of the planet).");
+                                // chunk_faces = ChunkFaces::Corner(up1, up2, up3);
+                                println!("ASDKOLJANDKJANDMKADKDNOAJDHBUAIKSDBKADBADBASKJD :(");
+                                // panic!("Chunk with more than 3 \"up\" directions (center of the planet).");
                             }
                         }
                     }

@@ -272,7 +272,12 @@ fn poll_generating(
     }
 }
 
-fn create_lod_request(scale: CoordinateType, render_distance: CoordinateType, rel_coords: UnboundChunkCoordinate) -> LodRequest {
+fn create_lod_request(
+    scale: CoordinateType,
+    render_distance: CoordinateType,
+    rel_coords: UnboundChunkCoordinate,
+    first: bool,
+) -> LodRequest {
     if scale == 1 {
         return LodRequest::None;
     }
@@ -281,20 +286,60 @@ fn create_lod_request(scale: CoordinateType, render_distance: CoordinateType, re
 
     let max_dist = diameter;
 
-    if rel_coords.x.abs() > max_dist || rel_coords.y.abs() > max_dist || rel_coords.z.abs() > max_dist {
+    if !first && (rel_coords.x.abs() > max_dist || rel_coords.y.abs() > max_dist || rel_coords.z.abs() > max_dist) {
         LodRequest::Single
     } else {
         let s4 = scale as UnboundCoordinateType / 4;
 
         LodRequest::Multi(Box::new([
-            create_lod_request(scale / 2, render_distance, rel_coords - UnboundChunkCoordinate::new(-s4, -s4, -s4)),
-            create_lod_request(scale / 2, render_distance, rel_coords - UnboundChunkCoordinate::new(-s4, -s4, s4)),
-            create_lod_request(scale / 2, render_distance, rel_coords - UnboundChunkCoordinate::new(s4, -s4, s4)),
-            create_lod_request(scale / 2, render_distance, rel_coords - UnboundChunkCoordinate::new(s4, -s4, -s4)),
-            create_lod_request(scale / 2, render_distance, rel_coords - UnboundChunkCoordinate::new(-s4, s4, -s4)),
-            create_lod_request(scale / 2, render_distance, rel_coords - UnboundChunkCoordinate::new(-s4, s4, s4)),
-            create_lod_request(scale / 2, render_distance, rel_coords - UnboundChunkCoordinate::new(s4, s4, s4)),
-            create_lod_request(scale / 2, render_distance, rel_coords - UnboundChunkCoordinate::new(s4, s4, -s4)),
+            create_lod_request(
+                scale / 2,
+                render_distance,
+                rel_coords - UnboundChunkCoordinate::new(-s4, -s4, -s4),
+                false,
+            ),
+            create_lod_request(
+                scale / 2,
+                render_distance,
+                rel_coords - UnboundChunkCoordinate::new(-s4, -s4, s4),
+                false,
+            ),
+            create_lod_request(
+                scale / 2,
+                render_distance,
+                rel_coords - UnboundChunkCoordinate::new(s4, -s4, s4),
+                false,
+            ),
+            create_lod_request(
+                scale / 2,
+                render_distance,
+                rel_coords - UnboundChunkCoordinate::new(s4, -s4, -s4),
+                false,
+            ),
+            create_lod_request(
+                scale / 2,
+                render_distance,
+                rel_coords - UnboundChunkCoordinate::new(-s4, s4, -s4),
+                false,
+            ),
+            create_lod_request(
+                scale / 2,
+                render_distance,
+                rel_coords - UnboundChunkCoordinate::new(-s4, s4, s4),
+                false,
+            ),
+            create_lod_request(
+                scale / 2,
+                render_distance,
+                rel_coords - UnboundChunkCoordinate::new(s4, s4, s4),
+                false,
+            ),
+            create_lod_request(
+                scale / 2,
+                render_distance,
+                rel_coords - UnboundChunkCoordinate::new(s4, s4, -s4),
+                false,
+            ),
         ]))
     }
 }
@@ -334,7 +379,7 @@ fn generate_player_lods(
                 scale as UnboundCoordinateType / 2,
             );
 
-            let request = create_lod_request(scale, render_distance, rel_coords - middle_chunk);
+            let request = create_lod_request(scale, render_distance, rel_coords - middle_chunk, true);
 
             let request_entity = commands
                 .spawn(LodGenerationRequest {
