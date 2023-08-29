@@ -104,11 +104,13 @@ impl Planet {
                     match chunk_faces {
                         ChunkFaces::Face(up1) => {
                             if up1 != up {
+                                println!("become edge");
                                 chunk_faces = ChunkFaces::Edge(up1, up);
                             }
                         }
                         ChunkFaces::Edge(up1, up2) => {
                             if up1 != up && up2 != up {
+                                println!("become corner");
                                 let x_up = if matches!(up1, BlockFace::Right | BlockFace::Left) {
                                     up1
                                 } else if matches!(up2, BlockFace::Right | BlockFace::Left) {

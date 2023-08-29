@@ -145,22 +145,22 @@ fn generate_face_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
 
             for chunk_height in 0..CHUNK_DIMENSIONS {
                 let coords: ChunkBlockCoordinate = match up {
-                    BlockFace::Front => (i * scale, j * scale, chunk_height),
-                    BlockFace::Back => (i * scale, j * scale, chunk_height),
-                    BlockFace::Top => (i * scale, chunk_height, j * scale),
-                    BlockFace::Bottom => (i * scale, chunk_height, j * scale),
-                    BlockFace::Right => (chunk_height, i * scale, j * scale),
-                    BlockFace::Left => (chunk_height, i * scale, j * scale),
+                    BlockFace::Front => (i, j, chunk_height),
+                    BlockFace::Back => (i, j, chunk_height),
+                    BlockFace::Top => (i, chunk_height, j),
+                    BlockFace::Bottom => (i, chunk_height, j),
+                    BlockFace::Right => (chunk_height, i, j),
+                    BlockFace::Left => (chunk_height, i, j),
                 }
                 .into();
 
                 let height = match up {
-                    BlockFace::Front => sz + chunk_height,
-                    BlockFace::Back => s_dimensions - (sz + chunk_height),
-                    BlockFace::Top => sy + chunk_height,
-                    BlockFace::Bottom => s_dimensions - (sy + chunk_height),
-                    BlockFace::Right => sx + chunk_height,
-                    BlockFace::Left => s_dimensions - (sx + chunk_height),
+                    BlockFace::Front => sz + chunk_height * scale,
+                    BlockFace::Back => s_dimensions - (sz + chunk_height * scale),
+                    BlockFace::Top => sy + chunk_height * scale,
+                    BlockFace::Bottom => s_dimensions - (sy + chunk_height * scale),
+                    BlockFace::Right => sx + chunk_height * scale,
+                    BlockFace::Left => s_dimensions - (sx + chunk_height * scale),
                 };
 
                 let block = block_ranges.face_block(height, &concrete_ranges, block_ranges.sea_level, block_ranges.sea_block());
@@ -903,6 +903,13 @@ fn generate<T: Component + Default + Clone, S: BiosphereGenerationStrategy + 'st
     match chunk_faces {
         ChunkFaces::Face(up) => {
             println!("GENERATING FACE LOD");
+            // for z in 0..CHUNK_DIMENSIONS {
+            //     for y in 0..CHUNK_DIMENSIONS {
+            //         for x in 0..CHUNK_DIMENSIONS {
+            //             lod_chunk.set_block_at(ChunkBlockCoordinate::new(x, y, z), blocks.from_id("cosmos:grass").unwrap(), up);
+            //         }
+            //     }
+            // }
             generate_face_chunk::<S, T, LodChunk>(
                 first_block_coord,
                 (structure_x, structure_y, structure_z),
@@ -911,37 +918,37 @@ fn generate<T: Component + Default + Clone, S: BiosphereGenerationStrategy + 'st
                 &block_ranges,
                 &mut lod_chunk,
                 up,
-                1,
+                scale,
             );
         }
         ChunkFaces::Edge(j_up, k_up) => {
             println!("GENERATING EDGE LOD");
-            generate_edge_chunk::<S, T, LodChunk>(
-                first_block_coord,
-                (structure_x, structure_y, structure_z),
-                s_dimensions,
-                &noise_generator,
-                &block_ranges,
-                &mut lod_chunk,
-                j_up,
-                k_up,
-                1,
-            );
+            // generate_edge_chunk::<S, T, LodChunk>(
+            //     first_block_coord,
+            //     (structure_x, structure_y, structure_z),
+            //     s_dimensions,
+            //     &noise_generator,
+            //     &block_ranges,
+            //     &mut lod_chunk,
+            //     j_up,
+            //     k_up,
+            //     scale,
+            // );
         }
         ChunkFaces::Corner(x_up, y_up, z_up) => {
             println!("GENERATING CORNER LOD");
-            generate_corner_chunk::<S, T, LodChunk>(
-                first_block_coord,
-                (structure_x, structure_y, structure_z),
-                s_dimensions,
-                &noise_generator,
-                &block_ranges,
-                &mut lod_chunk,
-                x_up,
-                y_up,
-                z_up,
-                1,
-            );
+            // generate_corner_chunk::<S, T, LodChunk>(
+            //     first_block_coord,
+            //     (structure_x, structure_y, structure_z),
+            //     s_dimensions,
+            //     &noise_generator,
+            //     &block_ranges,
+            //     &mut lod_chunk,
+            //     x_up,
+            //     y_up,
+            //     z_up,
+            //     scale,
+            // );
         }
     }
 
@@ -977,18 +984,26 @@ fn recurse<T: Component + Default + Clone, S: BiosphereGenerationStrategy + 'sta
         }
         GeneratingLod::Children(children) => {
             let s2 = scale / 2;
-            for (i, child) in children.iter_mut().enumerate() {
-                let i = i as CoordinateType;
 
+            let sc = s2 * CHUNK_DIMENSIONS;
+
+            let coords = [
+                (0, 0, 0),
+                (0, 0, sc),
+                (sc, 0, sc),
+                (sc, 0, 0),
+                (0, sc, 0),
+                (0, sc, sc),
+                (sc, sc, sc),
+                (sc, sc, 0),
+            ];
+
+            for (child, (bx, by, bz)) in children.iter_mut().zip(coords) {
                 recurse::<T, S>(
                     child,
                     structure,
                     (structure_x, structure_y, structure_z),
-                    BlockCoordinate::new(
-                        (i % 4) / 2 * s2 * CHUNK_DIMENSIONS,
-                        i / 4 * s2 * CHUNK_DIMENSIONS,
-                        i % 2 * s2 * CHUNK_DIMENSIONS,
-                    ) + first_block_coord,
+                    BlockCoordinate::new(bx, by, bz) + first_block_coord,
                     s_dimensions,
                     blocks,
                     s2,
