@@ -409,11 +409,14 @@ fn generate_corner_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + 
     }
 
     for i in 0..CHUNK_DIMENSIONS {
+        let i_scaled = i * scale;
         for j in 0..CHUNK_DIMENSIONS {
+            let j_scaled = j * scale;
+
             // Seed coordinates for the noise function.
             let seed_coords = match z_up {
-                BlockFace::Front => (block_coords.x + i, block_coords.y + j, s_dimensions),
-                _ => (block_coords.x + i, block_coords.y + j, 0),
+                BlockFace::Front => (block_coords.x + i_scaled, block_coords.y + j_scaled, s_dimensions),
+                _ => (block_coords.x + i_scaled, block_coords.y + j_scaled, 0),
             }
             .into();
 
@@ -437,21 +440,23 @@ fn generate_corner_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + 
             }
 
             for k in 0..CHUNK_DIMENSIONS {
+                let k_scaled = k * scale;
+
                 let z_height = match z_up {
-                    BlockFace::Front => block_coords.z + k,
-                    _ => s_dimensions - (block_coords.z + k),
+                    BlockFace::Front => block_coords.z + k_scaled,
+                    _ => s_dimensions - (block_coords.z + k_scaled),
                 };
                 let y_height = match y_up {
-                    BlockFace::Top => block_coords.y + j,
-                    _ => s_dimensions - (block_coords.y + j),
+                    BlockFace::Top => block_coords.y + j_scaled,
+                    _ => s_dimensions - (block_coords.y + j_scaled),
                 };
                 let x_height = match x_up {
-                    BlockFace::Right => block_coords.x + i,
-                    _ => s_dimensions - (block_coords.x + i),
+                    BlockFace::Right => block_coords.x + i_scaled,
+                    _ => s_dimensions - (block_coords.x + i_scaled),
                 };
 
                 let block_up = Planet::get_planet_face_without_structure(
-                    BlockCoordinate::new(block_coords.x + i, block_coords.y + j, block_coords.z + k),
+                    BlockCoordinate::new(block_coords.x + i_scaled, block_coords.y + j_scaled, block_coords.z + k_scaled),
                     s_dimensions,
                 );
                 let block = block_ranges.corner_block(
@@ -900,7 +905,6 @@ fn generate<T: Component + Default + Clone, S: BiosphereGenerationStrategy + 'st
     let chunk_faces = Planet::chunk_planet_faces_with_scale(first_block_coord, s_dimensions, scale);
     match chunk_faces {
         ChunkFaces::Face(up) => {
-            println!("GENERATING FACE LOD");
             generate_face_chunk::<S, T, LodChunk>(
                 first_block_coord,
                 (structure_x, structure_y, structure_z),
@@ -913,7 +917,6 @@ fn generate<T: Component + Default + Clone, S: BiosphereGenerationStrategy + 'st
             );
         }
         ChunkFaces::Edge(j_up, k_up) => {
-            println!("GENERATING EDGE LOD");
             generate_edge_chunk::<S, T, LodChunk>(
                 first_block_coord,
                 (structure_x, structure_y, structure_z),
@@ -927,19 +930,18 @@ fn generate<T: Component + Default + Clone, S: BiosphereGenerationStrategy + 'st
             );
         }
         ChunkFaces::Corner(x_up, y_up, z_up) => {
-            println!("GENERATING CORNER LOD");
-            // generate_corner_chunk::<S, T, LodChunk>(
-            //     first_block_coord,
-            //     (structure_x, structure_y, structure_z),
-            //     s_dimensions,
-            //     &noise_generator,
-            //     &block_ranges,
-            //     &mut lod_chunk,
-            //     x_up,
-            //     y_up,
-            //     z_up,
-            //     scale,
-            // );
+            generate_corner_chunk::<S, T, LodChunk>(
+                first_block_coord,
+                (structure_x, structure_y, structure_z),
+                s_dimensions,
+                &noise_generator,
+                &block_ranges,
+                &mut lod_chunk,
+                x_up,
+                y_up,
+                z_up,
+                scale,
+            );
         }
     }
 

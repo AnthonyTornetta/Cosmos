@@ -88,8 +88,6 @@ impl Planet {
     pub fn chunk_planet_faces_with_scale(coords: BlockCoordinate, s_dimension: CoordinateType, chunk_scale: CoordinateType) -> ChunkFaces {
         let mut chunk_faces = ChunkFaces::Face(Planet::get_planet_face_without_structure(coords, s_dimension));
 
-        println!("{chunk_scale} {coords}");
-
         for z in 0..=1 {
             for y in 0..=1 {
                 for x in 0..=1 {
@@ -104,13 +102,11 @@ impl Planet {
                     match chunk_faces {
                         ChunkFaces::Face(up1) => {
                             if up1 != up {
-                                println!("become edge");
                                 chunk_faces = ChunkFaces::Edge(up1, up);
                             }
                         }
                         ChunkFaces::Edge(up1, up2) => {
                             if up1 != up && up2 != up {
-                                println!("become corner");
                                 let x_up = if matches!(up1, BlockFace::Right | BlockFace::Left) {
                                     up1
                                 } else if matches!(up2, BlockFace::Right | BlockFace::Left) {
@@ -132,15 +128,14 @@ impl Planet {
                                 } else {
                                     up
                                 };
-                                chunk_faces = ChunkFaces::Corner(x_up, y_up, z_up);
+
+                                // Nothing except the center-most chunks will have > 3 faces,
+                                // but those don't matter and can be treated as if they only have 3 faces.
+                                return ChunkFaces::Corner(x_up, y_up, z_up);
                             }
                         }
-                        ChunkFaces::Corner(up1, up2, up3) => {
-                            if up1 != up && up2 != up && up3 != up {
-                                // chunk_faces = ChunkFaces::Corner(up1, up2, up3);
-                                println!("ASDKOLJANDKJANDMKADKDNOAJDHBUAIKSDBKADBADBASKJD :(");
-                                // panic!("Chunk with more than 3 \"up\" directions (center of the planet).");
-                            }
+                        ChunkFaces::Corner(_, _, _) => {
+                            unreachable!("Return above prevents this")
                         }
                     }
                 }
