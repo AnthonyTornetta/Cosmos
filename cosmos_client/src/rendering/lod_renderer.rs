@@ -464,11 +464,15 @@ fn monitor_lods_needs_rendered_system(
                 for mesh_material in lod_mesh.mesh_materials {
                     let mesh = meshes.add(mesh_material.mesh);
 
+                    let s = (CHUNK_DIMENSIONS / 2) as f32 * lod_mesh.scale;
+
                     let ent = if let Some(ent) = old_mesh_entities.pop() {
                         commands.entity(ent).insert((
                             TransformBundle::from_transform(Transform::from_translation(offset)),
                             mesh,
                             mesh_material.material,
+                            // Remove this once https://github.com/bevyengine/bevy/issues/4294 is done (bevy 0.12 released)
+                            Aabb::from_min_max(Vec3::new(-s, -s, -s), Vec3::new(s, s, s)),
                         ));
 
                         ent
