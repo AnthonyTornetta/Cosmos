@@ -325,6 +325,7 @@ fn generate_edge_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
                         &k_layers,
                         block_ranges.sea_level,
                         block_ranges.sea_block(),
+                        scale,
                     );
                     if let Some(block) = block {
                         chunk.set_block_at(chunk_block_coords, block, block_up);
@@ -480,6 +481,7 @@ fn generate_corner_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + 
                     &z_layers,
                     block_ranges.sea_level,
                     block_ranges.sea_block(),
+                    scale,
                 );
                 if let Some(block) = block {
                     chunk.set_block_at(ChunkBlockCoordinate::new(i, j, k), block, block_up);
@@ -883,10 +885,34 @@ impl<T: Component + Clone + Default> BlockLayers<T> {
         k_layers: &[(&'a Block, CoordinateType)],
         sea_level: Option<CoordinateType>,
         sea_block: Option<&'a Block>,
+        scale: CoordinateType,
     ) -> Option<&'a Block> {
-        for (index, (block, j_layer_top)) in j_layers.iter().enumerate().rev() {
-            if j_height <= *j_layer_top && k_height <= k_layers[index].1 {
-                return Some(*block);
+        if scale == 1 {
+            for (index, &(block, j_layer_top)) in j_layers.iter().enumerate().rev() {
+                if j_height <= j_layer_top && k_height <= k_layers[index].1 {
+                    return Some(block);
+                }
+            }
+        } else {
+            let mut itr = j_layers.iter().enumerate().rev();
+            while let Some((index, &(block, j_layer_top))) = itr.next() {
+                if j_height <= j_layer_top && k_height <= k_layers[index].1 {
+                    if j_height + scale > j_layer_top || k_height + scale > k_layers[index].1 {
+                        let mut last_block = block;
+
+                        while let Some((index, &(block, j_layer_top))) = itr.next() {
+                            last_block = block;
+
+                            if j_height + scale > j_layer_top && k_height + scale > k_layers[index].1 {
+                                return Some(block);
+                            }
+                        }
+
+                        return Some(last_block);
+                    }
+
+                    return Some(block);
+                }
             }
         }
 
@@ -908,12 +934,40 @@ impl<T: Component + Clone + Default> BlockLayers<T> {
         z_layers: &[(&'a Block, CoordinateType)],
         sea_level: Option<CoordinateType>,
         sea_block: Option<&'a Block>,
+        scale: CoordinateType,
     ) -> Option<&'a Block> {
-        for (index, (block, x_layer_top)) in x_layers.iter().enumerate().rev() {
-            if x_height <= *x_layer_top && y_height <= y_layers[index].1 && z_height <= z_layers[index].1 {
-                return Some(*block);
+        if scale == 1 {
+            for (index, &(block, x_layer_top)) in x_layers.iter().enumerate().rev() {
+                if x_height <= x_layer_top && y_height <= y_layers[index].1 && z_height <= z_layers[index].1 {
+                    return Some(block);
+                }
+            }
+        } else {
+            let mut itr = x_layers.iter().enumerate().rev();
+            while let Some((index, &(block, x_layer_top))) = itr.next() {
+                if x_height <= x_layer_top && y_height <= y_layers[index].1 && z_height <= z_layers[index].1 {
+                    if x_height + scale > x_layer_top || y_height + scale > y_layers[index].1 || z_height + scale > z_layers[index].1 {
+                        let mut last_block = block;
+
+                        while let Some((index, &(block, x_layer_top))) = itr.next() {
+                            last_block = block;
+
+                            if x_height + scale > x_layer_top
+                                && y_height + scale > y_layers[index].1
+                                && z_height + scale > z_layers[index].1
+                            {
+                                return Some(block);
+                            }
+                        }
+
+                        return Some(last_block);
+                    }
+
+                    return Some(block);
+                }
             }
         }
+
         // No land blocks, must be sea or air.
         if sea_level
             .map(|sea_level| x_height.max(y_height).max(z_height) <= sea_level)
