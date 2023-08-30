@@ -235,7 +235,16 @@ impl ChunkRenderer {
                         .from_id(block.unlocalized_name())
                         .unwrap_or_else(|| block_textures.from_id("missing").expect("Missing texture should exist."));
 
-                    let Some(image_index) = index.atlas_index_from_face(face) else {
+                    let maybe_img_idx = if self.scale > 8.0 {
+                        index
+                            .atlas_index("lod")
+                            .map(|x| Some(x))
+                            .unwrap_or_else(|| index.atlas_index_from_face(face))
+                    } else {
+                        index.atlas_index_from_face(face)
+                    };
+
+                    let Some(image_index) = maybe_img_idx else {
                         warn!("Missing image index -- {index:?}");
                         continue;
                     };
