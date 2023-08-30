@@ -1,23 +1,20 @@
-use std::{ops::Not, time::Duration};
+use std::time::Duration;
 
 use bevy::{
     prelude::{
-        in_state, warn, App, BuildChildren, Commands, Component, DespawnRecursiveExt, Entity, Event, EventReader, EventWriter, Events,
-        GlobalTransform, IntoSystemConfigs, Quat, Query, Res, ResMut, Update, With,
+        in_state, warn, App, BuildChildren, Commands, Component, DespawnRecursiveExt, Entity, Event, EventWriter, GlobalTransform,
+        IntoSystemConfigs, Quat, Query, Res, Update, With,
     },
-    tasks::Task,
     time::common_conditions::on_timer,
 };
 use cosmos_core::{
-    block::{Block, BlockFace},
-    entities::player::{render_distance::RenderDistance, Player},
+    block::Block,
+    entities::player::Player,
     physics::location::Location,
     registry::Registry,
     structure::{
-        chunk::{CHUNK_DIMENSIONS, CHUNK_DIMENSIONS_UB},
-        coordinates::{
-            BlockCoordinate, ChunkCoordinate, CoordinateType, UnboundBlockCoordinate, UnboundChunkCoordinate, UnboundCoordinateType,
-        },
+        chunk::CHUNK_DIMENSIONS,
+        coordinates::{BlockCoordinate, ChunkCoordinate, CoordinateType, UnboundChunkCoordinate, UnboundCoordinateType},
         lod::Lod,
         lod_chunk::LodChunk,
         planet::Planet,

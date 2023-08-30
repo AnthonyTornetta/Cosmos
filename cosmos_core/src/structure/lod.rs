@@ -1,3 +1,5 @@
+//! Ways of displaying reduced-detail versions of dynamic structures
+
 use bevy::prelude::{Component, Entity};
 use serde::{Deserialize, Serialize};
 
@@ -29,12 +31,17 @@ pub enum Lod {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+/// Sends an Lod to the client
 pub struct SetLodMessage {
+    /// The structure this lod belongs to
     pub structure: Entity,
+    /// The lod serialized
     pub serialized_lod: Vec<u8>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+/// All the lod network messages
 pub enum LodNetworkMessage {
+    /// Set the lod to this lod
     SetLod(SetLodMessage),
 }

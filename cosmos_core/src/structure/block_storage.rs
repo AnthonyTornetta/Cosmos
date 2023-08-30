@@ -1,3 +1,5 @@
+//! Represents a generic way of storing blocks
+
 use std::slice::Iter;
 
 use bevy::reflect::Reflect;
@@ -25,6 +27,9 @@ pub struct BlockStorage {
     length: CoordinateType,
 }
 
+/// Something that stores a bunch of blocks that are next to each other.
+///
+/// For example, a `Chunk`.
 pub trait BlockStorer {
     /// Debug asserts that coordinates are within a chunk
     ///

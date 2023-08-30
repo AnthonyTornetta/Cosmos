@@ -1,3 +1,5 @@
+//! Used to store the various blocks an Lod would be made of
+
 use bevy::reflect::Reflect;
 use serde::{Deserialize, Serialize};
 
@@ -13,9 +15,13 @@ use super::{
 };
 
 #[derive(Debug, Reflect, Serialize, Deserialize, Clone)]
+/// A chunk that is scaled. The Lod's scale depends on the position in the octree and size of its structure.
+///
+/// Lods only function properly on structures whos sizes are powers of two.
 pub struct LodChunk(BlockStorage);
 
 impl LodChunk {
+    /// Creates a new Lod chunk
     pub fn new() -> Self {
         Self(BlockStorage::new(CHUNK_DIMENSIONS, CHUNK_DIMENSIONS, CHUNK_DIMENSIONS))
     }

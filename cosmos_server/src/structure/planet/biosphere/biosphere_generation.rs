@@ -3,7 +3,7 @@
 use std::{marker::PhantomData, mem::swap};
 
 use bevy::{
-    prelude::{Component, Entity, Event, EventReader, EventWriter, Query, Res, ResMut, Resource, Vec3, With},
+    prelude::{Component, Entity, Event, EventReader, EventWriter, Query, Res, ResMut, Resource, With},
     tasks::AsyncComputeTaskPool,
 };
 use cosmos_core::{
@@ -13,7 +13,7 @@ use cosmos_core::{
     structure::{
         block_storage::BlockStorer,
         chunk::{Chunk, CHUNK_DIMENSIONS},
-        coordinates::{BlockCoordinate, ChunkBlockCoordinate, ChunkCoordinate, CoordinateType, UnboundCoordinateType},
+        coordinates::{BlockCoordinate, ChunkBlockCoordinate, ChunkCoordinate, CoordinateType},
         lod_chunk::LodChunk,
         planet::{ChunkFaces, Planet},
         Structure,
@@ -982,11 +982,9 @@ impl<T: Component + Clone + Default> BlockLayers<T> {
 
 fn generate<T: Component + Default + Clone, S: BiosphereGenerationStrategy + 'static>(
     generating_lod: &mut GeneratingLod,
-    structure: &Structure,
     (structure_x, structure_y, structure_z): (f64, f64, f64),
     first_block_coord: BlockCoordinate,
     s_dimensions: CoordinateType,
-    blocks: &Registry<Block>,
     scale: CoordinateType,
     noise_generator: &noise::OpenSimplex,
     block_ranges: &BlockLayers<T>,
@@ -1042,11 +1040,9 @@ fn generate<T: Component + Default + Clone, S: BiosphereGenerationStrategy + 'st
 
 fn recurse<T: Component + Default + Clone, S: BiosphereGenerationStrategy + 'static>(
     generating_lod: &mut GeneratingLod,
-    structure: &Structure,
     (structure_x, structure_y, structure_z): (f64, f64, f64),
     first_block_coord: BlockCoordinate,
     s_dimensions: CoordinateType,
-    blocks: &Registry<Block>,
     scale: CoordinateType,
     noise_generator: &noise::OpenSimplex,
     block_ranges: &BlockLayers<T>,
@@ -1056,11 +1052,9 @@ fn recurse<T: Component + Default + Clone, S: BiosphereGenerationStrategy + 'sta
             *generating_lod = GeneratingLod::BeingGenerated;
             generate::<T, S>(
                 generating_lod,
-                structure,
                 (structure_x, structure_y, structure_z),
                 first_block_coord,
                 s_dimensions,
-                blocks,
                 scale,
                 noise_generator,
                 block_ranges,
@@ -1085,11 +1079,9 @@ fn recurse<T: Component + Default + Clone, S: BiosphereGenerationStrategy + 'sta
             for (child, (bx, by, bz)) in children.iter_mut().zip(coords) {
                 recurse::<T, S>(
                     child,
-                    structure,
                     (structure_x, structure_y, structure_z),
                     BlockCoordinate::new(bx, by, bz) + first_block_coord,
                     s_dimensions,
-                    blocks,
                     s2,
                     noise_generator,
                     block_ranges,
@@ -1102,13 +1094,12 @@ fn recurse<T: Component + Default + Clone, S: BiosphereGenerationStrategy + 'sta
 
 pub(crate) fn generate_lods<T: Component + Default + Clone, S: BiosphereGenerationStrategy + 'static>(
     mut query: Query<&mut PlayerGeneratingLod>,
-    is_grass: Query<(&Structure, &Location), With<T>>,
-    blocks: Res<Registry<Block>>,
+    is_biosphere: Query<(&Structure, &Location), With<T>>,
     noise_generator: Res<ResourceWrapper<noise::OpenSimplex>>,
     block_ranges: Res<BlockLayers<T>>,
 ) {
     for mut generating_lod in query.iter_mut() {
-        let Ok((structure, location)) = is_grass.get(generating_lod.structure_entity) else {
+        let Ok((structure, location)) = is_biosphere.get(generating_lod.structure_entity) else {
             continue;
         };
 
@@ -1118,11 +1109,9 @@ pub(crate) fn generate_lods<T: Component + Default + Clone, S: BiosphereGenerati
 
         recurse::<T, S>(
             &mut generating_lod.generating_lod,
-            structure,
             (structure_coords.x, structure_coords.y, structure_coords.z),
             BlockCoordinate::new(0, 0, 0),
             dimensions,
-            &blocks,
             dimensions / CHUNK_DIMENSIONS,
             &noise_generator,
             &block_ranges,

@@ -10,13 +10,10 @@ use bevy::{
     tasks::Task,
 };
 use cosmos_core::{
-    block::{Block, BlockFace},
     physics::location::Location,
-    registry::Registry,
     structure::{
         chunk::Chunk,
         coordinates::ChunkCoordinate,
-        lod_chunk::LodChunk,
         planet::{biosphere::BiosphereMarker, Planet},
         Structure,
     },
@@ -38,10 +35,7 @@ use self::biosphere_generation::{
     generate_lods, generate_planet, notify_when_done_generating_terrain, BiosphereGenerationStrategy, GenerateChunkFeaturesEvent,
 };
 
-use super::{
-    generation::planet_generator::check_needs_generated_system,
-    lods::generate_lods::{self, GeneratingLod, PlayerGeneratingLod},
-};
+use super::generation::planet_generator::check_needs_generated_system;
 
 pub mod biosphere_generation;
 pub mod generation_tools;

@@ -1,7 +1,7 @@
 //! Creates a grass planet
 
 use bevy::prelude::{
-    in_state, App, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, OnEnter, Query, Res, Update, With,
+    in_state, App, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, OnEnter, Query, Res, Update,
 };
 use cosmos_core::{
     block::{Block, BlockFace},
@@ -11,7 +11,6 @@ use cosmos_core::{
     structure::{
         chunk::CHUNK_DIMENSIONS,
         coordinates::{BlockCoordinate, ChunkCoordinate, CoordinateType, UnboundBlockCoordinate, UnboundCoordinateType},
-        lod_chunk::LodChunk,
         planet::Planet,
         rotate, ChunkInitEvent, Structure,
     },
@@ -19,15 +18,10 @@ use cosmos_core::{
 };
 use noise::NoiseFn;
 
-use crate::{
-    structure::planet::lods::generate_lods::{GeneratingLod, PlayerGeneratingLod},
-    GameState,
-};
+use crate::GameState;
 
 use super::{
-    biosphere_generation::{
-        generate_planet, notify_when_done_generating_terrain, BlockLayers, DefaultBiosphereGenerationStrategy, GenerateChunkFeaturesEvent,
-    },
+    biosphere_generation::{BlockLayers, DefaultBiosphereGenerationStrategy, GenerateChunkFeaturesEvent},
     generation_tools::fill,
     register_biosphere, TBiosphere, TGenerateChunkEvent, TemperatureRange,
 };
