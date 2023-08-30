@@ -72,6 +72,9 @@ pub trait BlockStorer {
 
     /// Returns true if the block at this location is not air.
     fn has_block_at(&self, coords: ChunkBlockCoordinate) -> bool;
+
+    /// Returns true if the coordinates are within this block storage
+    fn is_within_blocks(&self, coords: ChunkBlockCoordinate) -> bool;
 }
 
 impl BlockStorage {
@@ -180,6 +183,11 @@ impl BlockStorer for BlockStorage {
 
     #[inline]
     fn has_block_at(&self, coords: ChunkBlockCoordinate) -> bool {
-        self.block_at(coords) != AIR_BLOCK_ID
+        self.is_within_blocks(coords) && self.block_at(coords) != AIR_BLOCK_ID
+    }
+
+    #[inline]
+    fn is_within_blocks(&self, coords: ChunkBlockCoordinate) -> bool {
+        coords.x < self.width && coords.y < self.height && coords.z < self.length
     }
 }

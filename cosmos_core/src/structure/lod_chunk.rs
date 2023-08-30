@@ -76,4 +76,9 @@ impl BlockStorer for LodChunk {
     fn set_block_at_from_id(&mut self, coords: ChunkBlockCoordinate, id: u16, block_up: BlockFace) {
         self.0.set_block_at_from_id(coords, id, block_up)
     }
+
+    #[inline(always)]
+    fn is_within_blocks(&self, coords: ChunkBlockCoordinate) -> bool {
+        self.0.is_within_blocks(coords)
+    }
 }

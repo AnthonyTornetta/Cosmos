@@ -145,12 +145,9 @@ fn generate_face_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
 
             for chunk_height in 0..CHUNK_DIMENSIONS {
                 let coords: ChunkBlockCoordinate = match up {
-                    BlockFace::Front => (i, j, chunk_height),
-                    BlockFace::Back => (i, j, chunk_height),
-                    BlockFace::Top => (i, chunk_height, j),
-                    BlockFace::Bottom => (i, chunk_height, j),
-                    BlockFace::Right => (chunk_height, i, j),
-                    BlockFace::Left => (chunk_height, i, j),
+                    BlockFace::Front | BlockFace::Back => (i, j, chunk_height),
+                    BlockFace::Top | BlockFace::Bottom => (i, chunk_height, j),
+                    BlockFace::Right | BlockFace::Left => (chunk_height, i, j),
                 }
                 .into();
 
@@ -165,6 +162,23 @@ fn generate_face_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
 
                 let block = block_ranges.face_block(height, &concrete_ranges, block_ranges.sea_level, block_ranges.sea_block());
                 if let Some(block) = block {
+                    if scale != 1 {
+                        let above_coords = match up {
+                            BlockFace::Front => (coords.x, coords.y, coords.z + 1),
+                            BlockFace::Back => (coords.x, coords.y, coords.z - 1),
+                            BlockFace::Top => (coords.x, coords.y + 1, coords.z),
+                            BlockFace::Bottom => (coords.x, coords.y - 1, coords.z),
+                            BlockFace::Right => (coords.x + 1, coords.y, coords.z),
+                            BlockFace::Left => (coords.x - 1, coords.y, coords.z),
+                        }
+                        .into();
+
+                        if chunk.is_within_blocks(above_coords) && !chunk.has_block_at(above_coords) {
+                            if let Some((candidate, _)) = concrete_ranges.iter().find(|(_, h)| height + scale > *h) {
+                                chunk.set_block_at(above_coords, candidate, up);
+                            }
+                        }
+                    }
                     chunk.set_block_at(coords, block, up);
                 }
             }

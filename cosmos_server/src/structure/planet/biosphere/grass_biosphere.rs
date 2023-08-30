@@ -74,10 +74,12 @@ impl TBiosphere<GrassBiosphereMarker, GrassChunkNeedsGeneratedEvent> for GrassBi
 fn make_block_ranges(block_registry: Res<Registry<Block>>, mut commands: Commands) {
     commands.insert_resource(
         BlockLayers::<GrassBiosphereMarker>::default()
-            .add_noise_layer("cosmos:short_grass", &block_registry, 160, 0.05, 7.0, 9)
-            .expect("Short Grass missing")
-            .add_fixed_layer("cosmos:grass", &block_registry, 1)
+            .add_noise_layer("cosmos:grass", &block_registry, 160, 0.05, 7.0, 9)
             .expect("Grass missing")
+            // .add_noise_layer("cosmos:short_grass", &block_registry, 160, 0.05, 7.0, 9)
+            // .expect("Short Grass missing")
+            // .add_fixed_layer("cosmos:grass", &block_registry, 1)
+            // .expect("Grass missing")
             .add_fixed_layer("cosmos:dirt", &block_registry, 1)
             .expect("Dirt missing")
             .add_fixed_layer("cosmos:stone", &block_registry, 4)

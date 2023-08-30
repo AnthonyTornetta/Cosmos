@@ -89,6 +89,11 @@ impl BlockStorer for Chunk {
     fn set_block_at_from_id(&mut self, coords: ChunkBlockCoordinate, id: u16, block_up: BlockFace) {
         self.block_storage.set_block_at_from_id(coords, id, block_up)
     }
+
+    #[inline(always)]
+    fn is_within_blocks(&self, coords: ChunkBlockCoordinate) -> bool {
+        self.block_storage.is_within_blocks(coords)
+    }
 }
 
 impl Chunk {
