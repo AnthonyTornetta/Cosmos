@@ -160,27 +160,25 @@ fn generate_face_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
                     BlockFace::Left => s_dimensions - (sx + chunk_height * scale),
                 };
 
-                let block = block_ranges.face_block(height, &concrete_ranges, block_ranges.sea_level, block_ranges.sea_block());
+                let block = block_ranges.face_block(height, &concrete_ranges, block_ranges.sea_level, block_ranges.sea_block(), scale);
                 if let Some(block) = block {
-                    if scale != 1 {
-                        let above_coords = match up {
-                            BlockFace::Front => (coords.x, coords.y, coords.z + 1),
-                            BlockFace::Back => (coords.x, coords.y, coords.z - 1),
-                            BlockFace::Top => (coords.x, coords.y + 1, coords.z),
-                            BlockFace::Bottom => (coords.x, coords.y - 1, coords.z),
-                            BlockFace::Right => (coords.x + 1, coords.y, coords.z),
-                            BlockFace::Left => (coords.x - 1, coords.y, coords.z),
-                        }
-                        .into();
-
-                        if chunk.is_within_blocks(above_coords) && !chunk.has_block_at(above_coords) {
-                            if let Some((candidate, _)) = concrete_ranges.iter().find(|(_, h)| height + scale > *h) {
-                                chunk.set_block_at(above_coords, candidate, up);
-                            }
-                        }
-                    }
                     chunk.set_block_at(coords, block, up);
                 }
+                // else if scale != 1 {
+                //     let below_coords = match up {
+                //         BlockFace::Front => (coords.x, coords.y, coords.z - 1),
+                //         BlockFace::Back => (coords.x, coords.y, coords.z + 1),
+                //         BlockFace::Top => (coords.x, coords.y - 1, coords.z),
+                //         BlockFace::Bottom => (coords.x, coords.y + 1, coords.z),
+                //         BlockFace::Right => (coords.x - 1, coords.y, coords.z),
+                //         BlockFace::Left => (coords.x + 1, coords.y, coords.z),
+                //     }
+                //     .into();
+
+                //     if let Some((candidate, _)) = concrete_ranges.iter().find(|(_, h)| height + scale > *h) {
+                //         chunk.set_block_at(below_coords, candidate, up);
+                //     }
+                // }
             }
         }
     }
@@ -838,12 +836,37 @@ impl<T: Component + Clone + Default> BlockLayers<T> {
         block_layers: &[(&'a Block, CoordinateType)],
         sea_level: Option<CoordinateType>,
         sea_block: Option<&'a Block>,
+        scale: CoordinateType,
     ) -> Option<&'a Block> {
-        for (block, level_top) in block_layers.iter().rev() {
-            if height <= *level_top {
-                return Some(*block);
+        if scale == 1 {
+            for &(block, level_top) in block_layers.iter().rev() {
+                if height <= level_top {
+                    return Some(block);
+                }
+            }
+        } else {
+            let mut itr = block_layers.iter().rev();
+            while let Some(&(block, level_top)) = itr.next() {
+                if height <= level_top {
+                    if height + scale > level_top {
+                        let mut last_block = block;
+
+                        while let Some(&(block, level_top)) = itr.next() {
+                            last_block = block;
+
+                            if height + scale <= level_top {
+                                return Some(block);
+                            }
+                        }
+
+                        return Some(last_block);
+                    }
+
+                    return Some(block);
+                }
             }
         }
+
         // No land blocks, must be sea or air.
         if sea_level.map(|sea_level| height <= sea_level).unwrap_or(false) {
             Some(sea_block.expect("Set sea level without setting a sea block."))
