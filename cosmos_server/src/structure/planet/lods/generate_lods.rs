@@ -133,9 +133,11 @@ fn check_done_generating(mut commands: Commands, query: Query<(Entity, &PlayerGe
 
             let actual_lod = recursively_create_lod(player_generating_lod.generating_lod.clone());
 
-            commands.entity(player_generating_lod.structure_entity).insert(PlayerLod {
-                lod: actual_lod,
-                player: player_generating_lod.player_entity,
+            commands.entity(player_generating_lod.structure_entity).with_children(|cmds| {
+                cmds.spawn(PlayerLod {
+                    lod: actual_lod,
+                    player: player_generating_lod.player_entity,
+                });
             });
         }
     }
