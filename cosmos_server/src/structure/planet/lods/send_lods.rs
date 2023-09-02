@@ -1,4 +1,4 @@
-use bevy::prelude::{in_state, App, Changed, Entity, IntoSystemConfigs, Parent, Query, ResMut, Update};
+use bevy::prelude::{in_state, App, Changed, IntoSystemConfigs, Parent, Query, ResMut, Update};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     entities::player::Player,

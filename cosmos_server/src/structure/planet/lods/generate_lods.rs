@@ -2,8 +2,8 @@ use std::time::Duration;
 
 use bevy::{
     prelude::{
-        in_state, warn, App, BuildChildren, Commands, Component, DespawnRecursiveExt, Entity, Event, EventWriter, GlobalTransform,
-        IntoSystemConfigs, Quat, Query, Res, Update, With,
+        in_state, warn, App, BuildChildren, Children, Commands, Component, DespawnRecursiveExt, Entity, Event, EventWriter,
+        GlobalTransform, IntoSystemConfigs, Quat, Query, Res, Update, With,
     },
     time::common_conditions::on_timer,
 };
@@ -29,6 +29,7 @@ use super::player_lod::PlayerLod;
 #[derive(Debug)]
 enum LodRequest {
     None,
+    Same,
     Single,
     Multi(Box<[LodRequest; 8]>),
 }
@@ -143,14 +144,39 @@ fn check_done_generating(mut commands: Commands, query: Query<(Entity, &PlayerGe
     }
 }
 
+fn fill_done_lod(lod: &Lod) -> GeneratingLod {
+    match lod {
+        Lod::None => GeneratingLod::None,
+        Lod::Single(single) => GeneratingLod::DoneGenerating(single.clone()),
+        Lod::Children(children) => GeneratingLod::Children(Box::new([
+            fill_done_lod(&children[0]),
+            fill_done_lod(&children[1]),
+            fill_done_lod(&children[2]),
+            fill_done_lod(&children[3]),
+            fill_done_lod(&children[4]),
+            fill_done_lod(&children[5]),
+            fill_done_lod(&children[6]),
+            fill_done_lod(&children[7]),
+        ])),
+    }
+}
+
 fn create_generating_lod(
     structure_entity: Entity,
     blocks: &Registry<Block>,
     event_writer: &mut EventWriter<GenerateLodRequest>,
     request: &LodRequest,
     (min_block_range_inclusive, max_block_range_exclusive): (BlockCoordinate, BlockCoordinate),
+    current_lod: Option<&Lod>,
 ) -> GeneratingLod {
     match request {
+        LodRequest::Same => {
+            let Some(current_lod) = current_lod else {
+                panic!("Invalid current lod state - cannot be none!");
+            };
+
+            fill_done_lod(current_lod)
+        }
         LodRequest::None => GeneratingLod::None,
         LodRequest::Single => {
             debug_assert!(
@@ -179,6 +205,20 @@ fn create_generating_lod(
             let min = min_block_range_inclusive;
             let max = max_block_range_exclusive;
 
+            let cur_lod_children = match current_lod {
+                Some(Lod::Children(children)) => [
+                    Some(&children[0]),
+                    Some(&children[1]),
+                    Some(&children[2]),
+                    Some(&children[3]),
+                    Some(&children[4]),
+                    Some(&children[5]),
+                    Some(&children[6]),
+                    Some(&children[7]),
+                ],
+                _ => [None, None, None, None, None, None, None, None],
+            };
+
             GeneratingLod::Children(Box::new([
                 create_generating_lod(
                     structure_entity,
@@ -186,6 +226,7 @@ fn create_generating_lod(
                     event_writer,
                     &child_requests[0],
                     ((min.x, min.y, min.z).into(), (max.x - dx, max.y - dy, max.z - dz).into()),
+                    cur_lod_children[0],
                 ),
                 create_generating_lod(
                     structure_entity,
@@ -193,6 +234,7 @@ fn create_generating_lod(
                     event_writer,
                     &child_requests[1],
                     ((min.x, min.y, min.z + dz).into(), (max.x - dx, max.y - dy, max.z).into()),
+                    cur_lod_children[1],
                 ),
                 create_generating_lod(
                     structure_entity,
@@ -200,6 +242,7 @@ fn create_generating_lod(
                     event_writer,
                     &child_requests[2],
                     ((min.x + dx, min.y, min.z + dz).into(), (max.x, max.y - dy, max.z).into()),
+                    cur_lod_children[2],
                 ),
                 create_generating_lod(
                     structure_entity,
@@ -207,6 +250,7 @@ fn create_generating_lod(
                     event_writer,
                     &child_requests[3],
                     ((min.x + dx, min.y, min.z).into(), (max.x, max.y - dy, max.z - dz).into()),
+                    cur_lod_children[3],
                 ),
                 create_generating_lod(
                     structure_entity,
@@ -214,6 +258,7 @@ fn create_generating_lod(
                     event_writer,
                     &child_requests[4],
                     ((min.x, min.y + dy, min.z).into(), (max.x - dx, max.y, max.z - dz).into()),
+                    cur_lod_children[4],
                 ),
                 create_generating_lod(
                     structure_entity,
@@ -221,6 +266,7 @@ fn create_generating_lod(
                     event_writer,
                     &child_requests[5],
                     ((min.x, min.y + dy, min.z + dz).into(), (max.x - dx, max.y, max.z).into()),
+                    cur_lod_children[5],
                 ),
                 create_generating_lod(
                     structure_entity,
@@ -228,6 +274,7 @@ fn create_generating_lod(
                     event_writer,
                     &child_requests[6],
                     ((min.x + dx, min.y + dy, min.z + dz).into(), (max.x, max.y, max.z).into()),
+                    cur_lod_children[6],
                 ),
                 create_generating_lod(
                     structure_entity,
@@ -235,6 +282,7 @@ fn create_generating_lod(
                     event_writer,
                     &child_requests[7],
                     ((min.x + dx, min.y + dy, min.z).into(), (max.x, max.y, max.z - dz).into()),
+                    cur_lod_children[7],
                 ),
             ]))
         }
@@ -245,13 +293,20 @@ fn poll_generating(
     mut commands: Commands,
     blocks: Res<Registry<Block>>,
     mut event_writer: EventWriter<GenerateLodRequest>,
-    structure_query: Query<&Structure>,
+    structure_query: Query<(&Children, &Structure)>,
     query: Query<(Entity, &LodGenerationRequest)>,
+    player_lod: Query<&PlayerLod>,
 ) {
     for (entity, lod_request) in query.iter() {
-        let Ok(structure) = structure_query.get(lod_request.structure_entity) else {
+        let Ok((structure_children, structure)) = structure_query.get(lod_request.structure_entity) else {
             continue;
         };
+
+        let current_lod = structure_children
+            .iter()
+            .flat_map(|&child_entity| player_lod.get(child_entity))
+            .find(|p_lod| p_lod.player == lod_request.player_entity)
+            .map(|p_lod| &p_lod.lod);
 
         let generating_lod = create_generating_lod(
             lod_request.structure_entity,
@@ -259,6 +314,7 @@ fn poll_generating(
             &mut event_writer,
             &lod_request.request,
             (BlockCoordinate::new(0, 0, 0), structure.block_dimensions()),
+            current_lod,
         );
 
         commands.spawn(PlayerGeneratingLod {
@@ -276,28 +332,24 @@ fn create_lod_request(
     render_distance: CoordinateType,
     rel_coords: UnboundChunkCoordinate,
     first: bool,
+    current_lod: Option<&Lod>,
 ) -> LodRequest {
     if scale == 0 {
-        return LodRequest::None;
+        return match current_lod {
+            Some(Lod::None) => LodRequest::Same,
+            _ => LodRequest::None,
+        };
     }
-
-    let mut check_against = rel_coords;
-    // if rel_coords.x < 0 {
-    //     check_against.x -= 2;
-    // }
-    // if rel_coords.y < 0 {
-    //     check_against.y -= 2;
-    // }
-    // if rel_coords.z < 0 {
-    //     check_against.z -= 2;
-    // }
 
     let diameter = scale + render_distance - 1;
 
     let max_dist = diameter as UnboundCoordinateType;
 
-    if !first && (check_against.x.abs() >= max_dist || check_against.y.abs() >= max_dist || check_against.z.abs() >= max_dist) {
-        LodRequest::Single
+    if !first && (rel_coords.x.abs() >= max_dist || rel_coords.y.abs() >= max_dist || rel_coords.z.abs() >= max_dist) {
+        match current_lod {
+            Some(Lod::Single(_)) => LodRequest::Same,
+            _ => LodRequest::Single,
+        }
     } else {
         let s4 = scale as UnboundCoordinateType / 4;
 
@@ -307,48 +359,80 @@ fn create_lod_request(
                 render_distance,
                 rel_coords - UnboundChunkCoordinate::new(-s4, -s4, -s4),
                 false,
+                match current_lod {
+                    Some(Lod::Children(c)) => Some(&c[0]),
+                    _ => None,
+                },
             ),
             create_lod_request(
                 scale / 2,
                 render_distance,
                 rel_coords - UnboundChunkCoordinate::new(-s4, -s4, s4),
                 false,
+                match current_lod {
+                    Some(Lod::Children(c)) => Some(&c[1]),
+                    _ => None,
+                },
             ),
             create_lod_request(
                 scale / 2,
                 render_distance,
                 rel_coords - UnboundChunkCoordinate::new(s4, -s4, s4),
                 false,
+                match current_lod {
+                    Some(Lod::Children(c)) => Some(&c[2]),
+                    _ => None,
+                },
             ),
             create_lod_request(
                 scale / 2,
                 render_distance,
                 rel_coords - UnboundChunkCoordinate::new(s4, -s4, -s4),
                 false,
+                match current_lod {
+                    Some(Lod::Children(c)) => Some(&c[3]),
+                    _ => None,
+                },
             ),
             create_lod_request(
                 scale / 2,
                 render_distance,
                 rel_coords - UnboundChunkCoordinate::new(-s4, s4, -s4),
                 false,
+                match current_lod {
+                    Some(Lod::Children(c)) => Some(&c[4]),
+                    _ => None,
+                },
             ),
             create_lod_request(
                 scale / 2,
                 render_distance,
                 rel_coords - UnboundChunkCoordinate::new(-s4, s4, s4),
                 false,
+                match current_lod {
+                    Some(Lod::Children(c)) => Some(&c[5]),
+                    _ => None,
+                },
             ),
             create_lod_request(
                 scale / 2,
                 render_distance,
                 rel_coords - UnboundChunkCoordinate::new(s4, s4, s4),
                 false,
+                match current_lod {
+                    Some(Lod::Children(c)) => Some(&c[6]),
+                    _ => None,
+                },
             ),
             create_lod_request(
                 scale / 2,
                 render_distance,
                 rel_coords - UnboundChunkCoordinate::new(s4, s4, -s4),
                 false,
+                match current_lod {
+                    Some(Lod::Children(c)) => Some(&c[7]),
+                    _ => None,
+                },
             ),
         ]))
     }
@@ -358,7 +442,8 @@ fn generate_player_lods(
     mut commands: Commands,
     any_generating_lods: Query<(), With<LodGenerationRequest>>,
     players: Query<(Entity, &Player, &Location)>,
-    structures: Query<(Entity, &Structure, &Location, &GlobalTransform), With<Planet>>,
+    structures: Query<(Entity, &Structure, &Location, &GlobalTransform, Option<&Children>), With<Planet>>,
+    current_lods: Query<&PlayerLod>,
 ) {
     if !any_generating_lods.is_empty() {
         return;
@@ -367,7 +452,7 @@ fn generate_player_lods(
     for (player_entity, player, player_location) in players.iter() {
         let render_distance = 4;
 
-        for (structure_ent, structure, structure_location, g_trans) in structures.iter() {
+        for (structure_ent, structure, structure_location, g_trans, children) in structures.iter() {
             let Structure::Dynamic(ds) = structure else {
                 panic!("Planet was a non-dynamic!!!");
             };
@@ -389,7 +474,16 @@ fn generate_player_lods(
                 scale as UnboundCoordinateType / 2,
             );
 
-            let request = create_lod_request(scale, render_distance, rel_coords - middle_chunk, true);
+            let current_lod = children
+                .map(|c| {
+                    c.iter()
+                        .flat_map(|&child_entity| current_lods.get(child_entity))
+                        .find(|p_lod| p_lod.player == player_entity)
+                        .map(|p_lod| &p_lod.lod)
+                })
+                .unwrap_or(None);
+
+            let request = create_lod_request(scale, render_distance, rel_coords - middle_chunk, true, current_lod);
 
             let request_entity = commands
                 .spawn(LodGenerationRequest {
