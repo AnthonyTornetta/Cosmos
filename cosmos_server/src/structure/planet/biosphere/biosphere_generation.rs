@@ -22,6 +22,7 @@ use cosmos_core::{
 };
 use futures_lite::future;
 use noise::NoiseFn;
+use rayon::prelude::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
 
 use crate::structure::planet::lods::generate_lods::{GeneratingLod, PlayerGeneratingLod};
 
@@ -1076,7 +1077,7 @@ fn recurse<T: Component + Default + Clone, S: BiosphereGenerationStrategy + 'sta
                 (sc, sc, 0),
             ];
 
-            for (child, (bx, by, bz)) in children.iter_mut().zip(coords) {
+            children.par_iter_mut().zip(coords).for_each(|(child, (bx, by, bz))| {
                 recurse::<T, S>(
                     child,
                     (structure_x, structure_y, structure_z),
@@ -1086,7 +1087,7 @@ fn recurse<T: Component + Default + Clone, S: BiosphereGenerationStrategy + 'sta
                     noise_generator,
                     block_ranges,
                 );
-            }
+            });
         }
         _ => {}
     }
@@ -1098,9 +1099,9 @@ pub(crate) fn generate_lods<T: Component + Default + Clone, S: BiosphereGenerati
     noise_generator: Res<ResourceWrapper<noise::OpenSimplex>>,
     block_ranges: Res<BlockLayers<T>>,
 ) {
-    for mut generating_lod in query.iter_mut() {
+    query.par_iter_mut().for_each_mut(|mut generating_lod| {
         let Ok((structure, location)) = is_biosphere.get(generating_lod.structure_entity) else {
-            continue;
+            return;
         };
 
         let structure_coords = location.absolute_coords_f64();
@@ -1116,7 +1117,7 @@ pub(crate) fn generate_lods<T: Component + Default + Clone, S: BiosphereGenerati
             &noise_generator,
             &block_ranges,
         );
-    }
+    });
 }
 
 /// Calls generate_face_chunk, generate_edge_chunk, and generate_corner_chunk to generate the chunks of a planet.
