@@ -277,15 +277,26 @@ fn create_lod_request(
     rel_coords: UnboundChunkCoordinate,
     first: bool,
 ) -> LodRequest {
-    if scale == 1 {
+    if scale == 0 {
         return LodRequest::None;
     }
 
-    let diameter = scale as UnboundCoordinateType;
+    let mut check_against = rel_coords;
+    // if rel_coords.x < 0 {
+    //     check_against.x -= 2;
+    // }
+    // if rel_coords.y < 0 {
+    //     check_against.y -= 2;
+    // }
+    // if rel_coords.z < 0 {
+    //     check_against.z -= 2;
+    // }
 
-    let max_dist = diameter;
+    let diameter = scale + render_distance - 1;
 
-    if !first && (rel_coords.x.abs() > max_dist || rel_coords.y.abs() > max_dist || rel_coords.z.abs() > max_dist) {
+    let max_dist = diameter as UnboundCoordinateType;
+
+    if !first && (check_against.x.abs() >= max_dist || check_against.y.abs() >= max_dist || check_against.z.abs() >= max_dist) {
         LodRequest::Single
     } else {
         let s4 = scale as UnboundCoordinateType / 4;
@@ -354,7 +365,7 @@ fn generate_player_lods(
     }
 
     for (player_entity, player, player_location) in players.iter() {
-        let render_distance = 2;
+        let render_distance = 4;
 
         for (structure_ent, structure, structure_location, g_trans) in structures.iter() {
             let Structure::Dynamic(ds) = structure else {
