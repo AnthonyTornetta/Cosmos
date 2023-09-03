@@ -1,5 +1,7 @@
 //! Used to store the various blocks an Lod would be made of
 
+use std::fmt::Debug;
+
 use bevy::reflect::Reflect;
 use serde::{Deserialize, Serialize};
 
@@ -14,11 +16,17 @@ use super::{
     coordinates::ChunkBlockCoordinate,
 };
 
-#[derive(Debug, Reflect, Serialize, Deserialize, Clone)]
+#[derive(Reflect, Serialize, Deserialize, Clone)]
 /// A chunk that is scaled. The Lod's scale depends on the position in the octree and size of its structure.
 ///
 /// Lods only function properly on structures whos sizes are powers of two.
 pub struct LodChunk(BlockStorage);
+
+impl Debug for LodChunk {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&format!("LodChunk (empty: {})", self.0.is_empty()))
+    }
+}
 
 impl LodChunk {
     /// Creates a new Lod chunk

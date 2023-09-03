@@ -7,14 +7,14 @@ use cosmos_core::{
     structure::{
         block_storage::BlockStorer,
         chunk::{CHUNK_DIMENSIONS, CHUNK_DIMENSIONSF},
-        coordinates::ChunkBlockCoordinate,
+        coordinates::{ChunkBlockCoordinate, ChunkCoordinate},
         lod::Lod,
         lod_chunk::LodChunk,
         Structure,
     },
     utils::array_utils::expand,
 };
-use rayon::prelude::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
+use rayon::prelude::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
 
 use crate::{
     asset::asset_loading::{BlockTextureIndex, MainAtlas},
@@ -316,7 +316,7 @@ impl ChunkRenderer {
 struct LodMeshes(Vec<Entity>);
 
 fn recursively_process_lod(
-    lod: &Lod,
+    lod: &mut Lod,
     offset: Vec3,
     to_process: &Mutex<Option<Vec<(Entity, LodMesh, Vec3)>>>,
     entity: Entity,
@@ -330,7 +330,7 @@ fn recursively_process_lod(
     match lod {
         Lod::None => {}
         Lod::Children(children) => {
-            children.par_iter().enumerate().for_each(|(i, c)| {
+            children.par_iter_mut().enumerate().for_each(|(i, c)| {
                 let s4 = scale / 4.0;
 
                 let offset = match i {
@@ -359,7 +359,13 @@ fn recursively_process_lod(
                 );
             });
         }
-        Lod::Single(lod_chunk) => {
+        Lod::Single(lod_chunk, dirty) => {
+            if !*dirty {
+                return;
+            }
+
+            *dirty = false;
+
             let mut renderer = ChunkRenderer::new();
 
             renderer.render(
@@ -394,6 +400,38 @@ fn recursively_process_lod(
     };
 }
 
+fn find_non_dirty(lod: &Lod, offset: Vec3, to_process: &mut Vec<Vec3>, scale: f32) {
+    match lod {
+        Lod::None => {}
+        Lod::Children(children) => {
+            children.iter().enumerate().for_each(|(i, c)| {
+                let s4 = scale / 4.0;
+
+                let offset = match i {
+                    0 => offset + Vec3::new(-s4, -s4, -s4),
+                    1 => offset + Vec3::new(-s4, -s4, s4),
+                    2 => offset + Vec3::new(s4, -s4, s4),
+                    3 => offset + Vec3::new(s4, -s4, -s4),
+                    4 => offset + Vec3::new(-s4, s4, -s4),
+                    5 => offset + Vec3::new(-s4, s4, s4),
+                    6 => offset + Vec3::new(s4, s4, s4),
+                    7 => offset + Vec3::new(s4, s4, -s4),
+                    _ => unreachable!(),
+                };
+
+                find_non_dirty(c, offset, to_process, scale / 2.0);
+            });
+        }
+        Lod::Single(_, dirty) => {
+            if *dirty {
+                return;
+            }
+
+            to_process.push(offset);
+        }
+    };
+}
+
 /// Performance hot spot
 fn monitor_lods_needs_rendered_system(
     mut commands: Commands,
@@ -405,20 +443,34 @@ fn monitor_lods_needs_rendered_system(
     meshes_registry: Res<BlockMeshRegistry>,
     chunk_meshes_query: Query<&LodMeshes>,
     block_textures: Res<Registry<BlockTextureIndex>>,
+    transform_query: Query<&Transform>,
 
-    lods_needed: Query<(Entity, &Lod, &Structure), Changed<Lod>>,
+    mut lods_needed: Query<(Entity, &mut Lod, &Structure), Changed<Lod>>,
 ) {
     // by making the Vec an Option<Vec> I can take ownership of it later, which I cannot do with
     // just a plain Mutex<Vec>.
     // https://stackoverflow.com/questions/30573188/cannot-move-data-out-of-a-mutex
     let to_process: Mutex<Option<Vec<(Entity, LodMesh, Vec3)>>> = Mutex::new(Some(Vec::new()));
+    let to_keep: Mutex<Option<HashMap<Entity, Vec<Vec3>>>> = Mutex::new(Some(HashMap::new()));
 
-    let todo = Vec::from_iter(lods_needed.iter());
+    let mut todo = Vec::from_iter(lods_needed.iter_mut());
 
     // Render lods in parallel
-    todo.par_iter().for_each(|(entity, lod, structure)| {
+    todo.par_iter_mut().for_each(|(entity, lod, structure)| {
+        let scale = structure.chunk_dimensions().x as f32;
+
+        let mut non_dirty = vec![];
+        find_non_dirty(lod, Vec3::ZERO, &mut non_dirty, scale);
+
+        to_keep
+            .lock()
+            .expect("failed to lock mutex")
+            .as_mut()
+            .unwrap()
+            .insert(*entity, non_dirty);
+
         recursively_process_lod(
-            lod,
+            lod.as_mut(),
             Vec3::ZERO,
             &to_process,
             *entity,
@@ -427,7 +479,7 @@ fn monitor_lods_needs_rendered_system(
             &materials,
             &meshes_registry,
             &block_textures,
-            structure.chunk_dimensions().x as f32,
+            scale,
         );
     });
 
@@ -443,6 +495,10 @@ fn monitor_lods_needs_rendered_system(
 
     for (entity, mut lod_meshes) in ent_meshes {
         let mut old_mesh_entities = Vec::new();
+
+        let to_keep_locations = to_keep.lock().unwrap().take().unwrap_or_default();
+
+        let to_keep_locations = to_keep_locations.get(&entity);
 
         if let Ok(chunk_meshes_component) = chunk_meshes_query.get(entity) {
             for ent in chunk_meshes_component.0.iter() {
@@ -533,6 +589,13 @@ fn monitor_lods_needs_rendered_system(
 
         // Any leftover entities are useless now, so kill them
         for mesh_entity in old_mesh_entities {
+            if let Ok(transform) = transform_query.get(mesh_entity) {
+                if to_keep_locations.map(|x| x.contains(&transform.translation)).unwrap_or(false) {
+                    structure_meshes_component.0.push(mesh_entity);
+                    continue;
+                }
+            }
+
             commands.entity(mesh_entity).despawn_recursive();
         }
 

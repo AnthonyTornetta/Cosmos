@@ -33,7 +33,7 @@ pub enum NettyChannelServer {
     /// Used for asteroids
     Asteroid,
     /// Sending LOD information to the client
-    Lod,
+    DeltaLod,
 }
 
 /// Network channels that clients send to the server
@@ -82,7 +82,7 @@ impl From<NettyChannelServer> for u8 {
             NettyChannelServer::Unreliable => 1,
             NettyChannelServer::LaserCannonSystem => 2,
             NettyChannelServer::Asteroid => 3,
-            NettyChannelServer::Lod => 4,
+            NettyChannelServer::DeltaLod => 4,
         }
     }
 }
@@ -116,7 +116,7 @@ impl NettyChannelServer {
                 },
             },
             ChannelConfig {
-                channel_id: Self::Lod.into(),
+                channel_id: Self::DeltaLod.into(),
                 max_memory_usage_bytes: 5 * 1024 * 1024,
                 send_type: SendType::ReliableOrdered {
                     resend_time: Duration::from_millis(200),
