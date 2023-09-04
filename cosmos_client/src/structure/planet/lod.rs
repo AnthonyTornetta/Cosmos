@@ -32,9 +32,7 @@ fn listen_for_new_lods(
                         if let Ok(mut cur_lod) = cur_lod {
                             delta_lod.apply_changes(&mut cur_lod);
                         } else {
-                            println!("Creating delta: {delta_lod:?}");
                             ecmds.insert(delta_lod.create_lod());
-                            ecmds.log_components();
                         }
                     }
                 }

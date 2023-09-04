@@ -1,13 +1,13 @@
 use std::{f32::consts::PI, sync::Mutex};
 
-use bevy::{pbr::NotShadowCaster, prelude::*, render::primitives::Aabb, utils::HashMap};
+use bevy::{prelude::*, render::primitives::Aabb, utils::HashMap};
 use cosmos_core::{
     block::{Block, BlockFace},
     registry::{identifiable::Identifiable, many_to_one::ManyToOneRegistry, Registry},
     structure::{
         block_storage::BlockStorer,
         chunk::{CHUNK_DIMENSIONS, CHUNK_DIMENSIONSF},
-        coordinates::{ChunkBlockCoordinate, ChunkCoordinate},
+        coordinates::ChunkBlockCoordinate,
         lod::Lod,
         lod_chunk::LodChunk,
         Structure,
@@ -423,11 +423,9 @@ fn find_non_dirty(lod: &Lod, offset: Vec3, to_process: &mut Vec<Vec3>, scale: f3
             });
         }
         Lod::Single(_, dirty) => {
-            if *dirty {
-                return;
+            if !*dirty {
+                to_process.push(offset);
             }
-
-            to_process.push(offset);
         }
     };
 }
@@ -436,7 +434,6 @@ fn find_non_dirty(lod: &Lod, offset: Vec3, to_process: &mut Vec<Vec3>, scale: f3
 fn monitor_lods_needs_rendered_system(
     mut commands: Commands,
     atlas: Res<MainAtlas>,
-    mesh_query: Query<Option<&Handle<Mesh>>>,
     mut meshes: ResMut<Assets<Mesh>>,
     blocks: Res<Registry<Block>>,
     materials: Res<ManyToOneRegistry<Block, CosmosMaterial>>,
@@ -457,10 +454,8 @@ fn monitor_lods_needs_rendered_system(
 
     // Render lods in parallel
     todo.par_iter_mut().for_each(|(entity, lod, structure)| {
-        let scale = structure.chunk_dimensions().x as f32;
-
         let mut non_dirty = vec![];
-        find_non_dirty(lod, Vec3::ZERO, &mut non_dirty, scale);
+        find_non_dirty(lod, Vec3::ZERO, &mut non_dirty, structure.block_dimensions().x as f32);
 
         to_keep
             .lock()
@@ -479,7 +474,7 @@ fn monitor_lods_needs_rendered_system(
             &materials,
             &meshes_registry,
             &block_textures,
-            scale,
+            structure.chunk_dimensions().x as f32,
         );
     });
 
@@ -493,110 +488,53 @@ fn monitor_lods_needs_rendered_system(
         ent_meshes.get_mut(&entity).expect("Just added").push((chunk_mesh, offset));
     }
 
-    for (entity, mut lod_meshes) in ent_meshes {
-        let mut old_mesh_entities = Vec::new();
+    for (entity, lod_meshes) in ent_meshes {
+        let old_mesh_entities = chunk_meshes_query.get(entity).map(|x| x.0.clone()).unwrap_or_default();
 
         let to_keep_locations = to_keep.lock().unwrap().take().unwrap_or_default();
 
         let to_keep_locations = to_keep_locations.get(&entity);
 
-        if let Ok(chunk_meshes_component) = chunk_meshes_query.get(entity) {
-            for ent in chunk_meshes_component.0.iter() {
-                let old_mesh_handle = mesh_query.get(*ent).expect("This should have a mesh component.");
-
-                if let Some(old_mesh_handle) = old_mesh_handle {
-                    meshes.remove(old_mesh_handle);
-                }
-
-                old_mesh_entities.push(*ent);
-            }
-        }
-
         let mut entities_to_add = Vec::new();
-
-        // If the structure previously only had one chunk mesh, then it would be on
-        // the structure entity instead of child entities
-        commands
-            .entity(entity)
-            .remove::<Handle<Mesh>>()
-            .remove::<Handle<StandardMaterial>>();
 
         let mut structure_meshes_component = LodMeshes::default();
 
-        let single = lod_meshes.len() == 1 && lod_meshes.first().map(|(x, _)| x.mesh_materials.len() == 1).unwrap_or(false);
+        for (lod_mesh, offset) in lod_meshes {
+            for mesh_material in lod_mesh.mesh_materials {
+                let mesh = meshes.add(mesh_material.mesh);
 
-        if !single {
-            for (lod_mesh, offset) in lod_meshes {
-                for mesh_material in lod_mesh.mesh_materials {
-                    let mesh = meshes.add(mesh_material.mesh);
+                let s = (CHUNK_DIMENSIONS / 2) as f32 * lod_mesh.scale;
 
-                    let s = (CHUNK_DIMENSIONS / 2) as f32 * lod_mesh.scale;
-
-                    let ent = if let Some(ent) = old_mesh_entities.pop() {
-                        commands.entity(ent).insert((
-                            TransformBundle::from_transform(Transform::from_translation(offset)),
+                let ent = commands
+                    .spawn((
+                        PbrBundle {
                             mesh,
-                            mesh_material.material,
-                            // Remove this once https://github.com/bevyengine/bevy/issues/4294 is done (bevy 0.12 released)
-                            Aabb::from_min_max(Vec3::new(-s, -s, -s), Vec3::new(s, s, s)),
-                        ));
+                            material: mesh_material.material,
+                            transform: Transform::from_translation(offset),
+                            ..Default::default()
+                        },
+                        // Remove this once https://github.com/bevyengine/bevy/issues/4294 is done (bevy 0.12 released)
+                        Aabb::from_min_max(Vec3::new(-s, -s, -s), Vec3::new(s, s, s)),
+                    ))
+                    .id();
 
-                        ent
-                    } else {
-                        let s = (CHUNK_DIMENSIONS / 2) as f32 * lod_mesh.scale;
+                entities_to_add.push(ent);
 
-                        let ent = commands
-                            .spawn((
-                                PbrBundle {
-                                    mesh,
-                                    material: mesh_material.material,
-                                    transform: Transform::from_translation(offset),
-                                    ..Default::default()
-                                },
-                                NotShadowCaster,
-                                // Remove this once https://github.com/bevyengine/bevy/issues/4294 is done (bevy 0.12 released)
-                                Aabb::from_min_max(Vec3::new(-s, -s, -s), Vec3::new(s, s, s)),
-                            ))
-                            .id();
-
-                        entities_to_add.push(ent);
-
-                        ent
-                    };
-
-                    structure_meshes_component.0.push(ent);
-                }
+                structure_meshes_component.0.push(ent);
             }
-        } else {
-            // To avoid making too many entities (and tanking performance), if only one mesh
-            // is present, just stick the mesh info onto the chunk itself.
-
-            // offset (_) will always be Vec3::ZERO when there is just one
-            let (chunk_mesh, _) = &mut lod_meshes[0];
-            let mesh_material = chunk_mesh.mesh_materials.pop().expect("This has one element in it");
-
-            let mesh = meshes.add(mesh_material.mesh);
-            let s = (CHUNK_DIMENSIONS / 2) as f32 * chunk_mesh.scale;
-
-            commands.entity(entity).insert((
-                mesh,
-                mesh_material.material,
-                NotShadowCaster,
-                // Remove this once https://github.com/bevyengine/bevy/issues/4294 is done (bevy 0.12 released)
-                Aabb::from_min_max(Vec3::new(-s, -s, -s), Vec3::new(s, s, s)),
-            ));
         }
 
-        // Any leftover entities are useless now, so kill them
+        // Any dirty entities are useless now, so kill them
         for mesh_entity in old_mesh_entities {
-            if let Ok(transform) = transform_query.get(mesh_entity) {
-                if to_keep_locations.map(|x| x.contains(&transform.translation)).unwrap_or(false) {
-                    structure_meshes_component.0.push(mesh_entity);
-                    continue;
-                }
+            let is_clean = transform_query
+                .get(mesh_entity)
+                .map(|transform| to_keep_locations.map(|x| x.contains(&transform.translation)).unwrap_or(false))
+                .unwrap_or(false);
+            if is_clean {
+                structure_meshes_component.0.push(mesh_entity);
+            } else {
+                commands.entity(mesh_entity).despawn_recursive();
             }
-
-            commands.entity(mesh_entity).despawn_recursive();
         }
 
         let mut entity_commands = commands.entity(entity);

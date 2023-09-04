@@ -157,9 +157,6 @@ fn check_done_generating(
             let cloned_delta = lod_delta.clone();
 
             if let Some(Ok(mut current_lod)) = current_lod {
-                println!("{lod_delta:?}");
-                println!("==========================");
-                println!("{current_lod:?}");
                 cloned_delta.apply_changes(&mut current_lod.lod);
                 current_lod.deltas.push(lod_delta);
             } else {

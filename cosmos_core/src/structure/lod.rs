@@ -60,6 +60,10 @@ pub enum LodDelta {
 }
 
 impl LodDelta {
+    /// Creates an lod based off this delta.
+    ///
+    /// # Panics
+    /// if self contains any LodDelta::NoChange because these must have a corresponding lod.
     pub fn create_lod(self) -> Lod {
         match self {
             LodDelta::Children(children) => {
@@ -88,6 +92,10 @@ impl LodDelta {
         }
     }
 
+    /// Applies the delta changes to a present lod
+    ///
+    /// # Panics
+    /// if self contains any LodDelta::NoChange and there is no matching lod for that.
     pub fn apply_changes(self, lod: &mut Lod) {
         match self {
             LodDelta::Children(children) => {
