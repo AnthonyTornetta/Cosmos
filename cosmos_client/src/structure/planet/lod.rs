@@ -32,7 +32,13 @@ fn listen_for_new_lods(
                         if let Ok(mut cur_lod) = cur_lod {
                             delta_lod.apply_changes(&mut cur_lod);
                         } else {
-                            ecmds.insert(delta_lod.create_lod());
+                            let created = delta_lod.clone().create_lod();
+                            if matches!(created, Lod::None) {
+                                println!("From:");
+                                // remove above clone when you remove this
+                                println!("{delta_lod:?}");
+                            }
+                            ecmds.insert(created);
                         }
                     }
                 }

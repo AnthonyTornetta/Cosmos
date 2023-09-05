@@ -83,8 +83,8 @@ impl LodDelta {
             LodDelta::None => Lod::None,
             LodDelta::Single(chunk) => Lod::Single(chunk, true),
             LodDelta::NoChange => {
-                // or forcibly capture the backtrace regardless of environment variable configuration
-                println!("Error backtrace: {}", Backtrace::force_capture());
+                // Forcibly capture the backtrace regardless of environment variable configuration
+                println!("Error backtrace: \n{}", Backtrace::force_capture());
 
                 // panic!("Cannot have no change with no lod given!");
                 Lod::None
