@@ -25,6 +25,7 @@ fn listen_for_new_lods(
         match msg {
             LodNetworkMessage::SetLod(lod) => {
                 if let Some(structure_entity) = netty_mapping.client_from_server(&lod.structure) {
+                    println!("Got LOD for {structure_entity:?}");
                     if let Some(mut ecmds) = commands.get_entity(structure_entity) {
                         let cur_lod = lod_query.get_mut(structure_entity);
 

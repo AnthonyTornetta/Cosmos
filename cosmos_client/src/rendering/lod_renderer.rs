@@ -442,7 +442,7 @@ fn find_non_dirty(lod: &Lod, offset: Vec3, to_process: &mut Vec<Vec3>, scale: f3
 }
 
 #[derive(Debug)]
-struct RenderingLod(Task<(Vec<Vec3>, HashMap<Entity, Vec<(LodMesh, Vec3)>>)>);
+struct RenderingLod(Task<(Vec<Vec3>, HashMap<Entity, Vec<(LodMesh, Vec3)>>, Lod)>);
 
 fn poll_generating_lods(
     mut commands: Commands,
@@ -450,13 +450,15 @@ fn poll_generating_lods(
     mut meshes: ResMut<Assets<Mesh>>,
     transform_query: Query<&Transform>,
     mut rendering_lods: ResMut<RenderingLods>,
+    // bypass change detection to not trigger re-render
+    mut lod_query: Query<&mut Lod>,
 ) {
     let mut todo = Vec::with_capacity(rendering_lods.0.capacity());
 
     swap(&mut rendering_lods.0, &mut todo);
 
     for (entity, mut rendering_lod) in todo {
-        if let Some((to_keep_locations, ent_meshes)) = future::block_on(future::poll_once(&mut rendering_lod.0)) {
+        if let Some((to_keep_locations, ent_meshes, lod)) = future::block_on(future::poll_once(&mut rendering_lod.0)) {
             let mut structure_meshes_component = LodMeshes::default();
             let mut entities_to_add = Vec::new();
 
@@ -488,8 +490,6 @@ fn poll_generating_lods(
                     }
                 }
 
-                println!("{to_keep_locations:?}");
-
                 // Any dirty entities are useless now, so kill them
                 for mesh_entity in old_mesh_entities {
                     let is_clean = transform_query
@@ -499,7 +499,7 @@ fn poll_generating_lods(
                     if is_clean {
                         structure_meshes_component.0.push(mesh_entity);
                     } else {
-                        // commands.entity(mesh_entity).log_components();
+                        println!("Despawning {mesh_entity:?}");
                         commands.entity(mesh_entity).despawn_recursive();
                     }
                 }
@@ -511,23 +511,23 @@ fn poll_generating_lods(
                 entity_commands.add_child(ent);
             }
 
+            println!("New entities: {structure_meshes_component:?}");
+
+            if let Ok(mut l) = lod_query.get_mut(entity) {
+                // Avoid recursively re-rendering the lod. The only thing changing about the lod are the dirty flags.
+                // This could be refactored to store dirty flags elsewhere, but I'm not sure about the performance cost of that.
+                println!("Bypassing!");
+                *(l.bypass_change_detection()) = lod;
+            } else {
+                println!("Not bypassing!");
+                entity_commands.insert(lod);
+            }
+
             entity_commands
                 // .insert(meshes.add(chunk_mesh.mesh))
                 .insert(structure_meshes_component);
         } else {
             rendering_lods.0.push((entity, rendering_lod))
-        }
-    }
-}
-
-fn make_clean(lod: &mut Lod) {
-    match lod {
-        Lod::None => {}
-        Lod::Children(children) => {
-            children.iter_mut().for_each(make_clean);
-        }
-        Lod::Single(_, dirty) => {
-            *dirty = false;
         }
     }
 }
@@ -539,17 +539,17 @@ fn monitor_lods_needs_rendered_system(
     materials: Res<ReadOnlyManyToOneRegistry<Block, CosmosMaterial>>,
     meshes_registry: Res<ReadOnlyBlockMeshRegistry>,
     block_textures: Res<ReadOnlyRegistry<BlockTextureIndex>>,
-    mut lods_needed: Query<(Entity, &mut Lod, &Structure), Changed<Lod>>,
+    mut lods_needed: Query<(Entity, &Lod, &Structure), Changed<Lod>>,
     mut rendering_lods: ResMut<RenderingLods>,
 ) {
     let thread_pool = AsyncComputeTaskPool::get();
-    for (entity, mut lod, structure) in lods_needed.iter_mut() {
-        // for (entity, _, _, _) in todo.iter() {
-        //     if let Some((idx, _)) = rendering_lods.iter().enumerate().find(|(_, r_lod)| r_lod.0 == *entity) {
-        //         // Tasks are auto-cancelled when they are dropped
-        //          rendering_lods.swap_remove(idx);
-        //     }
-        // }
+    for (entity, lod, structure) in lods_needed.iter_mut() {
+        println!("NEW LOD NEED FOR {entity:?}");
+        if let Some((idx, _)) = rendering_lods.iter().enumerate().find(|(_, r_lod)| r_lod.0 == entity) {
+            // Tasks are auto-cancelled when they are dropped
+            rendering_lods.swap_remove(idx);
+            println!("Swap removed!!!");
+        }
 
         let mut non_dirty = vec![];
         find_non_dirty(&lod, Vec3::ZERO, &mut non_dirty, structure.block_dimensions().x as f32);
@@ -563,8 +563,6 @@ fn monitor_lods_needs_rendered_system(
         let chunk_dimensions = structure.chunk_dimensions().x;
 
         let mut cloned_lod = lod.clone();
-
-        make_clean(&mut lod);
 
         let task = thread_pool.spawn(async move {
             // by making the Vec an Option<Vec> I can take ownership of it later, which I cannot do with
@@ -601,7 +599,7 @@ fn monitor_lods_needs_rendered_system(
                 ent_meshes.get_mut(&entity).expect("Just added").push((chunk_mesh, offset));
             }
 
-            (non_dirty, ent_meshes)
+            (non_dirty, ent_meshes, cloned_lod)
         });
 
         rendering_lods.push((entity, RenderingLod(task)));
@@ -612,7 +610,7 @@ fn monitor_lods_needs_rendered_system(
 struct RenderingLods(Vec<(Entity, RenderingLod)>);
 
 fn count_entities(query: Query<Entity>) {
-    println!("# ents: {}", query.iter().len());
+    // println!("# ents: {}", query.iter().len());
 }
 
 pub(super) fn register(app: &mut App) {

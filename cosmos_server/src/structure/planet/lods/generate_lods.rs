@@ -382,12 +382,13 @@ fn create_lod_request(
 
 fn generate_player_lods(
     mut commands: Commands,
-    any_generating_lods: Query<(), With<LodGenerationRequest>>,
+    any_generation_requests: Query<(), With<LodGenerationRequest>>,
+    generating_lods: Query<&PlayerGeneratingLod>,
     players: Query<(Entity, &Player, &Location)>,
     structures: Query<(Entity, &Structure, &Location, &GlobalTransform, Option<&Children>), With<Planet>>,
     current_lods: Query<&PlayerLod>,
 ) {
-    if !any_generating_lods.is_empty() {
+    if !any_generation_requests.is_empty() {
         return;
     }
 
@@ -395,6 +396,13 @@ fn generate_player_lods(
         let render_distance = 4;
 
         for (structure_ent, structure, structure_location, g_trans, children) in structures.iter() {
+            if generating_lods
+                .iter()
+                .any(|generating_lod| generating_lod.player_entity == player_entity && generating_lod.structure_entity == structure_ent)
+            {
+                continue;
+            }
+
             let Structure::Dynamic(ds) = structure else {
                 panic!("Planet was a non-dynamic!!!");
             };

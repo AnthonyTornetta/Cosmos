@@ -1051,7 +1051,6 @@ fn recurse<T: Component + Default + Clone, S: BiosphereGenerationStrategy + 'sta
     match generating_lod {
         GeneratingLod::NeedsGenerated => {
             *generating_lod = GeneratingLod::BeingGenerated;
-            println!("Generating LOD ({scale})!");
             generate::<T, S>(
                 generating_lod,
                 (structure_x, structure_y, structure_z),

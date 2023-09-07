@@ -1,4 +1,4 @@
-use bevy::prelude::{in_state, App, Changed, IntoSystemConfigs, Parent, Query, ResMut, Update};
+use bevy::prelude::{in_state, App, IntoSystemConfigs, Parent, Query, ResMut, Update};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     entities::player::Player,
@@ -19,6 +19,8 @@ fn send_lods(mut server: ResMut<RenetServer>, mut changed_lods: Query<(&Parent, 
         let Ok(player) = players.get(player_lod.player) else {
             continue;
         };
+
+        println!("N DELTAS: {}", player_lod.deltas.len());
 
         let delta = player_lod.deltas.remove(0);
         server.send_message(
