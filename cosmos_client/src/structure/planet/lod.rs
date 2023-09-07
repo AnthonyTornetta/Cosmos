@@ -3,6 +3,7 @@ use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     netty::{cosmos_encoder, NettyChannelServer},
     structure::lod::{Lod, LodDelta, LodNetworkMessage},
+    utils::timer::UtilsTimer,
 };
 
 use crate::{netty::mapping::NetworkMapping, state::game_state::GameState};
@@ -27,6 +28,8 @@ fn listen_for_new_lods(
                     if let Some(mut ecmds) = commands.get_entity(structure_entity) {
                         let cur_lod = lod_query.get_mut(structure_entity);
 
+                        let timer = UtilsTimer::start();
+
                         let delta_lod = cosmos_encoder::deserialize::<LodDelta>(&lod.serialized_lod).expect("Unable to deserialize lod");
 
                         if let Ok(mut cur_lod) = cur_lod {
@@ -40,6 +43,8 @@ fn listen_for_new_lods(
                             }
                             ecmds.insert(created);
                         }
+
+                        timer.log_duration("Apply LOD changes:");
                     }
                 }
             }

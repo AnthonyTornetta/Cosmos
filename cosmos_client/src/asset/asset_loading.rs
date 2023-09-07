@@ -2,7 +2,10 @@
 //!
 //! This also combines the textures into one big atlas.
 
-use std::fs;
+use std::{
+    fs,
+    sync::{Arc, Mutex, MutexGuard, RwLock, RwLockReadGuard},
+};
 
 use bevy::{
     prelude::*,
@@ -38,7 +41,7 @@ struct AssetsLoadingID(usize);
 #[derive(Resource, Debug, Default)]
 struct AssetsLoading(Vec<LoadingAsset>);
 
-#[derive(Resource, Reflect, Debug)]
+#[derive(Resource, Reflect, Debug, Clone)]
 /// This stores the texture atlas for all blocks in the game.
 ///
 /// Eventually this will be redone to allow for multiple atlases, but for now this works fine.
@@ -54,6 +57,19 @@ pub struct MainAtlas {
     pub atlas: TextureAtlas,
 
     padding: u32,
+}
+
+#[derive(Resource, Debug, Clone)]
+/// This stores the texture atlas for all blocks in the game.
+///
+/// Eventually this will be redone to allow for multiple atlases, but for now this works fine.
+pub struct ReadOnlyMainAtlas(Arc<RwLock<MainAtlas>>);
+
+impl ReadOnlyMainAtlas {
+    /// Locks the atlas for use on this thread
+    pub fn atlas<'a>(&'a self) -> RwLockReadGuard<'a, MainAtlas> {
+        self.0.as_ref().read().expect("Failed to lock atlas")
+    }
 }
 
 impl MainAtlas {
@@ -256,12 +272,15 @@ fn check_assets_ready(
 
                         let texture = atlas.texture.clone();
 
-                        commands.insert_resource(MainAtlas {
+                        let main_atlas = MainAtlas {
                             material: material_handle,
                             unlit_material: unlit_material_handle,
                             atlas,
                             padding: PADDING,
-                        });
+                        };
+
+                        commands.insert_resource(main_atlas.clone());
+                        commands.insert_resource(ReadOnlyMainAtlas(Arc::new(RwLock::new(main_atlas))));
 
                         let illuminated_material_handle = materials.add(StandardMaterial {
                             base_color_texture: Some(texture),
@@ -294,7 +313,7 @@ fn check_assets_ready(
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// Contains information that links the block faces to their texture indices.
 ///
 /// This could also link non-face imformation to their texture indices.
@@ -312,7 +331,7 @@ impl BlockTextureIndicies {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// Links blocks to their correspoding atlas index.
 pub struct BlockTextureIndex {
     indices: BlockTextureIndicies,
@@ -363,7 +382,7 @@ struct ReadBlockInfo {
     model: Option<String>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// Every block will have information about how to render it -- even air
 pub struct BlockRenderingInfo {
     /// This maps textures ids to the various parts of its model.

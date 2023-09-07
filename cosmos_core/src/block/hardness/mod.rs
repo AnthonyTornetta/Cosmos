@@ -6,7 +6,7 @@ use crate::registry::{self, identifiable::Identifiable, Registry};
 
 use super::Block;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// Used to represent how much damage a block can take before it breaks
 pub struct BlockHardness {
     id: u16,

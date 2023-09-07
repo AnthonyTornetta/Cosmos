@@ -8,7 +8,7 @@ use crate::{
     registry::{create_registry, identifiable::Identifiable, Registry},
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 /// How the collider interacts with the world
 pub enum BlockColliderMode {
     /// This type of collider will be physically interact with other colliders
@@ -17,7 +17,7 @@ pub enum BlockColliderMode {
     SensorCollider,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// A custom collider a block may have
 ///
 /// Note that this should not go outside the bounds of the block, or breaking/placing will not work when you are targetting this collider.
@@ -30,7 +30,7 @@ pub struct CustomCollider {
     pub mode: BlockColliderMode,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// The type of collider a block has
 pub enum BlockColliderType {
     /// Takes an entire block
@@ -41,7 +41,7 @@ pub enum BlockColliderType {
     Empty,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// Determines how a block interacts with its physics environment
 pub struct BlockCollider {
     /// What type of collider this is

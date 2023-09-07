@@ -1500,6 +1500,7 @@ dependencies = [
  "bigdecimal",
  "bincode",
  "cosmos_core",
+ "futures-lite",
  "image",
  "local-ip-address",
  "rayon",

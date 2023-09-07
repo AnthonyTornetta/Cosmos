@@ -4,10 +4,11 @@ pub mod identifiable;
 pub mod many_to_one;
 pub mod one_to_one;
 
-use bevy::prelude::{App, Resource};
+use bevy::prelude::{resource_exists_and_changed, App, IntoSystemConfigs, Res, ResMut, Resource, Update};
 use bevy::utils::HashMap;
 use std::fmt;
 use std::slice::Iter;
+use std::sync::{Arc, RwLock, RwLockReadGuard};
 
 use self::identifiable::Identifiable;
 
@@ -36,7 +37,7 @@ impl fmt::Display for AddLinkError {
 impl std::error::Error for AddLinkError {}
 
 /// Represents a bunch of values that are identifiable by their unlocalized name + numeric ids.
-#[derive(Resource, Debug)]
+#[derive(Resource, Debug, Clone)]
 pub struct Registry<T: Identifiable> {
     contents: Vec<T>,
     unlocalized_name_to_id: HashMap<String, u16>,
@@ -104,7 +105,45 @@ impl<T: Identifiable + Sync + Send> Registry<T> {
     }
 }
 
+/// Represents a bunch of values that are identifiable by their unlocalized name + numeric ids.
+///
+/// This is synced with its corresponding Registry<T> every frame when it's changed.
+///
+/// This is slower than a normal registry, but is usable between threads.
+///
+/// Any updates made to this will be overwritten whenever the Registry<T> changes, so don't change this
+/// and expect anything to happen to the normal registry.
+#[derive(Resource, Debug, Clone)]
+pub struct ReadOnlyRegistry<T: Identifiable>(Arc<RwLock<Registry<T>>>);
+
+impl<T: Identifiable> Default for ReadOnlyRegistry<T> {
+    fn default() -> Self {
+        Self(Arc::new(RwLock::new(Registry::default())))
+    }
+}
+
+impl<T: Identifiable + Sync + Send> ReadOnlyRegistry<T> {
+    /// Initializes a Registry.
+    ///
+    /// You should use [`create_registry`] instead, unless you don't want this
+    /// added as a bevy resource.
+    pub fn new() -> Self {
+        Self(Arc::new(RwLock::new(Registry::new())))
+    }
+
+    /// Takes a lock of the registry this encapsulates
+    pub fn registry<'a>(&'a self) -> RwLockReadGuard<'a, Registry<T>> {
+        self.0.as_ref().read().expect("Failed to lock registry")
+    }
+}
+
+fn apply_changes<T: Identifiable + 'static>(registry: Res<Registry<T>>, mut mutex_registry: ResMut<ReadOnlyRegistry<T>>) {
+    mutex_registry.0 = Arc::new(RwLock::new(registry.clone()));
+}
+
 /// Initializes & adds the registry to bevy that can then be used in systems via `Res<Registry<T>>`
-pub fn create_registry<T: Identifiable + Sync + Send + 'static>(app: &mut App) {
-    app.insert_resource(Registry::<T>::new());
+pub fn create_registry<T: Identifiable + 'static>(app: &mut App) {
+    app.insert_resource(Registry::<T>::new())
+        .insert_resource(ReadOnlyRegistry::<T>::new())
+        .add_systems(Update, apply_changes::<T>.run_if(resource_exists_and_changed::<Registry<T>>()));
 }

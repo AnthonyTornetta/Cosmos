@@ -27,7 +27,7 @@ pub struct BlockLightProperties {
     pub shadows_disabled: bool,
 }
 
-#[derive(Debug, Reflect, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Reflect, Default, Serialize, Deserialize)]
 /// This links up a block to its block light properties
 pub struct BlockLighting {
     /// The properties this block has

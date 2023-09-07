@@ -10,7 +10,7 @@ use cosmos_core::{
     block::{Block, BlockFace},
     registry::{
         identifiable::Identifiable,
-        many_to_one::{self, ManyToOneRegistry},
+        many_to_one::{self, ManyToOneRegistry, ReadOnlyManyToOneRegistry},
         Registry,
     },
 };
@@ -114,7 +114,7 @@ impl MeshBuilder for CosmosMeshBuilder {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum MeshType {
     /// The mesh is broken up into its 6 faces, which can all be stitched together to create the full mesh
     ///
@@ -124,7 +124,7 @@ enum MeshType {
     AllFacesMesh(Box<MeshInformation>),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// Stores all the mesh information for a block
 pub struct BlockMeshInformation {
     mesh_info: MeshType,
@@ -561,6 +561,9 @@ fn register_block_meshes(
 
 /// This is a `ManyToOneRegistry` mapping Blocks to `BlockMeshInformation`.
 pub type BlockMeshRegistry = ManyToOneRegistry<Block, BlockMeshInformation>;
+
+/// This is a `ReadOnlyManyToOneRegistry` mapping Blocks to `BlockMeshInformation`.
+pub type ReadOnlyBlockMeshRegistry = ReadOnlyManyToOneRegistry<Block, BlockMeshInformation>;
 
 pub(super) fn register(app: &mut App) {
     many_to_one::create_many_to_one_registry::<Block, BlockMeshInformation>(app);

@@ -11,6 +11,7 @@ use crate::{
     state::game_state::GameState,
 };
 
+#[derive(Debug, Clone)]
 /// An identifiable `StandardMaterial`
 pub struct CosmosMaterial {
     /// The handle to the bevy `StandardMaterial`

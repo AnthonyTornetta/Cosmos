@@ -1,9 +1,20 @@
-use std::{f32::consts::PI, sync::Mutex};
+use std::{f32::consts::PI, mem::swap, sync::Mutex};
 
-use bevy::{prelude::*, render::primitives::Aabb, utils::HashMap};
+use bevy::{
+    prelude::*,
+    render::primitives::Aabb,
+    tasks::{AsyncComputeTaskPool, Task},
+    utils::HashMap,
+};
+use futures_lite::future;
+
 use cosmos_core::{
     block::{Block, BlockFace},
-    registry::{identifiable::Identifiable, many_to_one::ManyToOneRegistry, Registry},
+    registry::{
+        identifiable::Identifiable,
+        many_to_one::{ManyToOneRegistry, ReadOnlyManyToOneRegistry},
+        ReadOnlyRegistry, Registry,
+    },
     structure::{
         block_storage::BlockStorer,
         chunk::{CHUNK_DIMENSIONS, CHUNK_DIMENSIONSF},
@@ -17,12 +28,12 @@ use cosmos_core::{
 use rayon::prelude::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
 
 use crate::{
-    asset::asset_loading::{BlockTextureIndex, MainAtlas},
+    asset::asset_loading::{BlockTextureIndex, MainAtlas, ReadOnlyMainAtlas},
     materials::CosmosMaterial,
     state::game_state::GameState,
 };
 
-use super::{BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder, MeshInformation};
+use super::{BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder, MeshInformation, ReadOnlyBlockMeshRegistry};
 
 #[derive(Debug)]
 struct MeshMaterial {
@@ -405,7 +416,7 @@ fn find_non_dirty(lod: &Lod, offset: Vec3, to_process: &mut Vec<Vec3>, scale: f3
         Lod::None => {}
         Lod::Children(children) => {
             children.iter().enumerate().for_each(|(i, c)| {
-                let s4 = scale / 4.0;
+                let s4: f32 = scale / 4.0;
 
                 let offset = match i {
                     0 => offset + Vec3::new(-s4, -s4, -s4),
@@ -430,125 +441,184 @@ fn find_non_dirty(lod: &Lod, offset: Vec3, to_process: &mut Vec<Vec3>, scale: f3
     };
 }
 
-/// Performance hot spot
-fn monitor_lods_needs_rendered_system(
+#[derive(Debug)]
+struct RenderingLod(Task<(Vec<Vec3>, HashMap<Entity, Vec<(LodMesh, Vec3)>>)>);
+
+fn poll_generating_lods(
     mut commands: Commands,
-    atlas: Res<MainAtlas>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    blocks: Res<Registry<Block>>,
-    materials: Res<ManyToOneRegistry<Block, CosmosMaterial>>,
-    meshes_registry: Res<BlockMeshRegistry>,
     chunk_meshes_query: Query<&LodMeshes>,
-    block_textures: Res<Registry<BlockTextureIndex>>,
+    mut meshes: ResMut<Assets<Mesh>>,
     transform_query: Query<&Transform>,
-
-    mut lods_needed: Query<(Entity, &mut Lod, &Structure), Changed<Lod>>,
+    mut rendering_lods: ResMut<RenderingLods>,
 ) {
-    // by making the Vec an Option<Vec> I can take ownership of it later, which I cannot do with
-    // just a plain Mutex<Vec>.
-    // https://stackoverflow.com/questions/30573188/cannot-move-data-out-of-a-mutex
-    let to_process: Mutex<Option<Vec<(Entity, LodMesh, Vec3)>>> = Mutex::new(Some(Vec::new()));
-    let to_keep: Mutex<Option<HashMap<Entity, Vec<Vec3>>>> = Mutex::new(Some(HashMap::new()));
+    let mut todo = Vec::with_capacity(rendering_lods.0.capacity());
 
-    let mut todo = Vec::from_iter(lods_needed.iter_mut());
+    swap(&mut rendering_lods.0, &mut todo);
 
-    // Render lods in parallel
-    todo.par_iter_mut().for_each(|(entity, lod, structure)| {
-        let mut non_dirty = vec![];
-        find_non_dirty(lod, Vec3::ZERO, &mut non_dirty, structure.block_dimensions().x as f32);
+    for (entity, mut rendering_lod) in todo {
+        if let Some((to_keep_locations, ent_meshes)) = future::block_on(future::poll_once(&mut rendering_lod.0)) {
+            let mut structure_meshes_component = LodMeshes::default();
+            let mut entities_to_add = Vec::new();
 
-        to_keep
-            .lock()
-            .expect("failed to lock mutex")
-            .as_mut()
-            .unwrap()
-            .insert(*entity, non_dirty);
+            for (entity, lod_meshes) in ent_meshes {
+                let old_mesh_entities = chunk_meshes_query.get(entity).map(|x| x.0.clone()).unwrap_or_default();
 
-        recursively_process_lod(
-            lod.as_mut(),
-            Vec3::ZERO,
-            &to_process,
-            *entity,
-            &atlas,
-            &blocks,
-            &materials,
-            &meshes_registry,
-            &block_textures,
-            structure.chunk_dimensions().x as f32,
-        );
-    });
+                for (lod_mesh, offset) in lod_meshes {
+                    for mesh_material in lod_mesh.mesh_materials {
+                        let mesh = meshes.add(mesh_material.mesh);
 
-    let to_process_chunks = to_process.lock().unwrap().take().unwrap();
+                        let s = (CHUNK_DIMENSIONS / 2) as f32 * lod_mesh.scale;
 
-    let mut ent_meshes = HashMap::new();
-    for (entity, chunk_mesh, offset) in to_process_chunks {
-        if !ent_meshes.contains_key(&entity) {
-            ent_meshes.insert(entity, vec![]);
-        }
-        ent_meshes.get_mut(&entity).expect("Just added").push((chunk_mesh, offset));
-    }
+                        let ent = commands
+                            .spawn((
+                                PbrBundle {
+                                    mesh,
+                                    material: mesh_material.material,
+                                    transform: Transform::from_translation(offset),
+                                    ..Default::default()
+                                },
+                                // Remove this once https://github.com/bevyengine/bevy/issues/4294 is done (bevy 0.12 released)
+                                Aabb::from_min_max(Vec3::new(-s, -s, -s), Vec3::new(s, s, s)),
+                            ))
+                            .id();
 
-    for (entity, lod_meshes) in ent_meshes {
-        let old_mesh_entities = chunk_meshes_query.get(entity).map(|x| x.0.clone()).unwrap_or_default();
+                        entities_to_add.push(ent);
 
-        let to_keep_locations = to_keep.lock().unwrap().take().unwrap_or_default();
+                        structure_meshes_component.0.push(ent);
+                    }
+                }
 
-        let to_keep_locations = to_keep_locations.get(&entity);
+                println!("{to_keep_locations:?}");
 
-        let mut entities_to_add = Vec::new();
-
-        let mut structure_meshes_component = LodMeshes::default();
-
-        for (lod_mesh, offset) in lod_meshes {
-            for mesh_material in lod_mesh.mesh_materials {
-                let mesh = meshes.add(mesh_material.mesh);
-
-                let s = (CHUNK_DIMENSIONS / 2) as f32 * lod_mesh.scale;
-
-                let ent = commands
-                    .spawn((
-                        PbrBundle {
-                            mesh,
-                            material: mesh_material.material,
-                            transform: Transform::from_translation(offset),
-                            ..Default::default()
-                        },
-                        // Remove this once https://github.com/bevyengine/bevy/issues/4294 is done (bevy 0.12 released)
-                        Aabb::from_min_max(Vec3::new(-s, -s, -s), Vec3::new(s, s, s)),
-                    ))
-                    .id();
-
-                entities_to_add.push(ent);
-
-                structure_meshes_component.0.push(ent);
+                // Any dirty entities are useless now, so kill them
+                for mesh_entity in old_mesh_entities {
+                    let is_clean = transform_query
+                        .get(mesh_entity)
+                        .map(|transform| to_keep_locations.contains(&transform.translation))
+                        .unwrap_or(false);
+                    if is_clean {
+                        structure_meshes_component.0.push(mesh_entity);
+                    } else {
+                        // commands.entity(mesh_entity).log_components();
+                        commands.entity(mesh_entity).despawn_recursive();
+                    }
+                }
             }
-        }
 
-        // Any dirty entities are useless now, so kill them
-        for mesh_entity in old_mesh_entities {
-            let is_clean = transform_query
-                .get(mesh_entity)
-                .map(|transform| to_keep_locations.map(|x| x.contains(&transform.translation)).unwrap_or(false))
-                .unwrap_or(false);
-            if is_clean {
-                structure_meshes_component.0.push(mesh_entity);
-            } else {
-                commands.entity(mesh_entity).despawn_recursive();
+            let mut entity_commands = commands.entity(entity);
+
+            for ent in entities_to_add {
+                entity_commands.add_child(ent);
             }
+
+            entity_commands
+                // .insert(meshes.add(chunk_mesh.mesh))
+                .insert(structure_meshes_component);
+        } else {
+            rendering_lods.0.push((entity, rendering_lod))
         }
-
-        let mut entity_commands = commands.entity(entity);
-
-        for ent in entities_to_add {
-            entity_commands.add_child(ent);
-        }
-
-        entity_commands
-            // .insert(meshes.add(chunk_mesh.mesh))
-            .insert(structure_meshes_component);
     }
 }
 
+fn make_clean(lod: &mut Lod) {
+    match lod {
+        Lod::None => {}
+        Lod::Children(children) => {
+            children.iter_mut().for_each(make_clean);
+        }
+        Lod::Single(_, dirty) => {
+            *dirty = false;
+        }
+    }
+}
+
+/// Performance hot spot
+fn monitor_lods_needs_rendered_system(
+    atlas: Res<ReadOnlyMainAtlas>,
+    blocks: Res<ReadOnlyRegistry<Block>>,
+    materials: Res<ReadOnlyManyToOneRegistry<Block, CosmosMaterial>>,
+    meshes_registry: Res<ReadOnlyBlockMeshRegistry>,
+    block_textures: Res<ReadOnlyRegistry<BlockTextureIndex>>,
+    mut lods_needed: Query<(Entity, &mut Lod, &Structure), Changed<Lod>>,
+    mut rendering_lods: ResMut<RenderingLods>,
+) {
+    let thread_pool = AsyncComputeTaskPool::get();
+    for (entity, mut lod, structure) in lods_needed.iter_mut() {
+        // for (entity, _, _, _) in todo.iter() {
+        //     if let Some((idx, _)) = rendering_lods.iter().enumerate().find(|(_, r_lod)| r_lod.0 == *entity) {
+        //         // Tasks are auto-cancelled when they are dropped
+        //          rendering_lods.swap_remove(idx);
+        //     }
+        // }
+
+        let mut non_dirty = vec![];
+        find_non_dirty(&lod, Vec3::ZERO, &mut non_dirty, structure.block_dimensions().x as f32);
+
+        let blocks = blocks.clone();
+        let block_textures = block_textures.clone();
+        let materials = materials.clone();
+        let meshes_registry = meshes_registry.clone();
+        let atlas = atlas.clone();
+
+        let chunk_dimensions = structure.chunk_dimensions().x;
+
+        let mut cloned_lod = lod.clone();
+
+        make_clean(&mut lod);
+
+        let task = thread_pool.spawn(async move {
+            // by making the Vec an Option<Vec> I can take ownership of it later, which I cannot do with
+            // just a plain Mutex<Vec>.
+            // https://stackoverflow.com/questions/30573188/cannot-move-data-out-of-a-mutex
+            let to_process: Mutex<Option<Vec<(Entity, LodMesh, Vec3)>>> = Mutex::new(Some(Vec::new()));
+
+            let blocks = blocks.registry();
+            let block_textures = block_textures.registry();
+            let materials = materials.registry();
+            let meshes_registry = meshes_registry.registry();
+            let atlas = atlas.atlas();
+
+            recursively_process_lod(
+                &mut cloned_lod,
+                Vec3::ZERO,
+                &to_process,
+                entity,
+                &atlas,
+                &blocks,
+                &materials,
+                &meshes_registry,
+                &block_textures,
+                chunk_dimensions as f32,
+            );
+
+            let to_process_chunks = to_process.lock().unwrap().take().unwrap();
+
+            let mut ent_meshes = HashMap::new();
+            for (entity, chunk_mesh, offset) in to_process_chunks {
+                if !ent_meshes.contains_key(&entity) {
+                    ent_meshes.insert(entity, vec![]);
+                }
+                ent_meshes.get_mut(&entity).expect("Just added").push((chunk_mesh, offset));
+            }
+
+            (non_dirty, ent_meshes)
+        });
+
+        rendering_lods.push((entity, RenderingLod(task)));
+    }
+}
+
+#[derive(Resource, Debug, Default, Deref, DerefMut)]
+struct RenderingLods(Vec<(Entity, RenderingLod)>);
+
+fn count_entities(query: Query<Entity>) {
+    println!("# ents: {}", query.iter().len());
+}
+
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, (monitor_lods_needs_rendered_system).run_if(in_state(GameState::Playing)));
+    app.add_systems(
+        Update,
+        (monitor_lods_needs_rendered_system, poll_generating_lods, count_entities).run_if(in_state(GameState::Playing)),
+    )
+    .insert_resource(RenderingLods::default());
 }
