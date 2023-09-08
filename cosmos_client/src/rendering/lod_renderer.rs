@@ -413,7 +413,9 @@ fn recursively_process_lod(
 
 fn find_non_dirty(lod: &Lod, offset: Vec3, to_process: &mut Vec<Vec3>, scale: f32) {
     match lod {
-        Lod::None => {}
+        Lod::None => {
+            to_process.push(offset);
+        }
         Lod::Children(children) => {
             children.iter().enumerate().for_each(|(i, c)| {
                 let s4: f32 = scale / 4.0;
@@ -499,7 +501,6 @@ fn poll_generating_lods(
                     if is_clean {
                         structure_meshes_component.0.push(mesh_entity);
                     } else {
-                        println!("Despawning {mesh_entity:?}");
                         commands.entity(mesh_entity).despawn_recursive();
                     }
                 }
@@ -510,8 +511,6 @@ fn poll_generating_lods(
             for ent in entities_to_add {
                 entity_commands.add_child(ent);
             }
-
-            println!("New entities: {structure_meshes_component:?}");
 
             if let Ok(mut l) = lod_query.get_mut(entity) {
                 // Avoid recursively re-rendering the lod. The only thing changing about the lod are the dirty flags.

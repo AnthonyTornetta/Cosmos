@@ -8,7 +8,6 @@ use cosmos_core::{
     physics::location::Location,
     registry::Registry,
     structure::{
-        chunk::CHUNK_DIMENSIONS,
         coordinates::{BlockCoordinate, CoordinateType, UnboundChunkCoordinate, UnboundCoordinateType},
         lod::{Lod, LodDelta},
         lod_chunk::LodChunk,
@@ -270,10 +269,10 @@ fn create_lod_request(
     first: bool,
     current_lod: Option<&Lod>,
 ) -> LodRequest {
-    if scale == 0 {
+    if scale == 1 {
         return match current_lod {
-            Some(Lod::None) => LodRequest::Same,
-            _ => LodRequest::None,
+            Some(Lod::Single(_, _)) => LodRequest::Same,
+            _ => LodRequest::Single,
         };
     }
 
