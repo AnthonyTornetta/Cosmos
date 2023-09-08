@@ -18,10 +18,10 @@ use cosmos_core::{
     structure::{
         block_storage::BlockStorer,
         chunk::{CHUNK_DIMENSIONS, CHUNK_DIMENSIONSF},
-        coordinates::ChunkBlockCoordinate,
+        coordinates::{ChunkBlockCoordinate, ChunkCoordinate},
         lod::Lod,
         lod_chunk::LodChunk,
-        Structure,
+        ChunkState, Structure,
     },
     utils::array_utils::expand,
 };
@@ -446,6 +446,9 @@ fn find_non_dirty(lod: &Lod, offset: Vec3, to_process: &mut Vec<Vec3>, scale: f3
 #[derive(Debug)]
 struct RenderingLod(Task<(Vec<Vec3>, HashMap<Entity, Vec<(LodMesh, Vec3)>>, Lod)>);
 
+#[derive(Component, Debug)]
+struct RenderedLod;
+
 fn poll_generating_lods(
     mut commands: Commands,
     chunk_meshes_query: Query<&LodMeshes>,
@@ -483,6 +486,7 @@ fn poll_generating_lods(
                                 },
                                 // Remove this once https://github.com/bevyengine/bevy/issues/4294 is done (bevy 0.12 released)
                                 Aabb::from_min_max(Vec3::new(-s, -s, -s), Vec3::new(s, s, s)),
+                                RenderedLod,
                             ))
                             .id();
 
@@ -527,6 +531,27 @@ fn poll_generating_lods(
                 .insert(structure_meshes_component);
         } else {
             rendering_lods.0.push((entity, rendering_lod))
+        }
+    }
+}
+
+fn hide_lod(mut query: Query<(&Transform, &Parent, &mut Visibility), With<RenderedLod>>, structure_query: Query<&Structure>) {
+    for (transform, parent, mut vis) in query.iter_mut() {
+        let structure = structure_query.get(parent.get()).expect("This should always be a structure");
+
+        let translation = transform.translation;
+        if let Ok(bc) = structure.relative_coords_to_local_coords_checked(translation.x, translation.y, translation.z) {
+            let chunk_coord = ChunkCoordinate::for_block_coordinate(bc);
+
+            let Structure::Dynamic(ds) = structure else {
+                continue;
+            };
+
+            if ds.get_chunk_state(chunk_coord) == ChunkState::Loaded {
+                *vis = Visibility::Hidden;
+            } else {
+                *vis = Visibility::Inherited;
+            }
         }
     }
 }
@@ -615,7 +640,7 @@ fn count_entities(query: Query<Entity>) {
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        (monitor_lods_needs_rendered_system, poll_generating_lods, count_entities).run_if(in_state(GameState::Playing)),
+        (monitor_lods_needs_rendered_system, poll_generating_lods, count_entities, hide_lod).run_if(in_state(GameState::Playing)),
     )
     .insert_resource(RenderingLods::default());
 }
