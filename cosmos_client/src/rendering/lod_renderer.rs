@@ -633,14 +633,10 @@ fn monitor_lods_needs_rendered_system(
 #[derive(Resource, Debug, Default, Deref, DerefMut)]
 struct RenderingLods(Vec<(Entity, RenderingLod)>);
 
-fn count_entities(query: Query<Entity>) {
-    // println!("# ents: {}", query.iter().len());
-}
-
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        (monitor_lods_needs_rendered_system, poll_generating_lods, count_entities, hide_lod).run_if(in_state(GameState::Playing)),
+        (monitor_lods_needs_rendered_system, poll_generating_lods, hide_lod).run_if(in_state(GameState::Playing)),
     )
     .insert_resource(RenderingLods::default());
 }
