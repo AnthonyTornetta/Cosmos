@@ -20,8 +20,6 @@ fn send_lods(mut server: ResMut<RenetServer>, mut changed_lods: Query<(&Parent, 
             continue;
         };
 
-        println!("N DELTAS: {}", player_lod.deltas.len());
-
         let delta = player_lod.deltas.remove(0);
         server.send_message(
             player.id(),

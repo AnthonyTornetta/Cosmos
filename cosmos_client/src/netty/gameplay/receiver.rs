@@ -237,8 +237,6 @@ fn client_sync_players(
                     } else if !requested_entities.entities.iter().any(|x| x.0 == *server_entity) {
                         requested_entities.entities.push((*server_entity, 0.0));
 
-                        println!("Requesting entity {}!", server_entity.index());
-
                         client.send_message(
                             NettyChannelClient::Reliable,
                             cosmos_encoder::serialize(&ClientReliableMessages::RequestEntityData { entity: *server_entity }),

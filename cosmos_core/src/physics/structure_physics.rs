@@ -11,7 +11,6 @@ use crate::structure::chunk::{Chunk, ChunkUnloadEvent, CHUNK_DIMENSIONS};
 use crate::structure::coordinates::{ChunkBlockCoordinate, ChunkCoordinate, CoordinateType};
 use crate::structure::events::ChunkSetEvent;
 use crate::structure::Structure;
-use crate::utils::timer::UtilsTimer;
 use bevy::prelude::{
     Added, App, BuildChildren, Commands, Component, DespawnRecursiveExt, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, Query,
     Res, Transform, Update,
@@ -308,11 +307,9 @@ fn listen_for_new_physics_event(
         return;
     }
 
-    let timer = UtilsTimer::start();
     let mut to_process = event_reader.iter().collect::<Vec<&ChunkNeedsPhysicsEvent>>();
 
     to_process.dedup();
-    timer.log_duration("Dedup");
 
     // clean up old collider entities
     for ev in to_process.iter() {

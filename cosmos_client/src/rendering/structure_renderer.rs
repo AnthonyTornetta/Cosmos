@@ -22,7 +22,6 @@ use cosmos_core::structure::coordinates::{ChunkBlockCoordinate, ChunkCoordinate,
 use cosmos_core::structure::events::ChunkSetEvent;
 use cosmos_core::structure::Structure;
 use cosmos_core::utils::array_utils::expand;
-use cosmos_core::utils::timer::UtilsTimer;
 use rayon::prelude::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use std::collections::HashSet;
 use std::f32::consts::PI;
@@ -184,8 +183,6 @@ fn monitor_needs_rendered_system(
         return;
     };
 
-    let timer: UtilsTimer = UtilsTimer::start();
-
     // by making the Vec an Option<Vec> I can take ownership of it later, which I cannot do with
     // just a plain Mutex<Vec>.
     // https://stackoverflow.com/questions/30573188/cannot-move-data-out-of-a-mutex
@@ -262,10 +259,6 @@ fn monitor_needs_rendered_system(
     });
 
     let to_process_chunks = to_process.lock().unwrap().take().unwrap();
-
-    if !to_process_chunks.is_empty() {
-        timer.log_duration(&format!("Rendering {} chunks took", to_process_chunks.len()));
-    }
 
     for (entity, mut chunk_mesh) in to_process_chunks {
         commands.entity(entity).remove::<ChunkNeedsRendered>();
