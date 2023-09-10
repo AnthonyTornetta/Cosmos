@@ -4,7 +4,7 @@
 
 use std::{
     fs,
-    sync::{Arc, Mutex, MutexGuard, RwLock, RwLockReadGuard},
+    sync::{Arc, RwLock, RwLockReadGuard},
 };
 
 use bevy::{

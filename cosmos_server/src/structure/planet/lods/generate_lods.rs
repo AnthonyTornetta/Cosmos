@@ -22,7 +22,6 @@ use super::player_lod::PlayerLod;
 
 #[derive(Debug)]
 enum LodRequest {
-    None,
     Same,
     Single,
     Multi(Box<[LodRequest; 8]>),
@@ -38,8 +37,6 @@ pub struct PlayerGeneratingLod {
 #[derive(Debug, Clone)]
 /// Represents a reduced-detail version of a planet undergoing generation
 pub enum GeneratingLod {
-    /// No Lod here - this means there should be an actual chunk here
-    None,
     /// Represents an LOD that needs generated
     NeedsGenerated,
     /// Represents an LOD that is currently being generated
@@ -77,7 +74,7 @@ struct LodGenerationRequest {
 fn check_done(generating_lod: &GeneratingLod) -> bool {
     match generating_lod {
         GeneratingLod::Children(children) => children.iter().all(check_done),
-        GeneratingLod::None | GeneratingLod::DoneGenerating(_) | GeneratingLod::Same => true,
+        GeneratingLod::DoneGenerating(_) | GeneratingLod::Same => true,
         _ => false,
     }
 }
@@ -100,7 +97,6 @@ fn recursively_create_lod_delta(generated_lod: GeneratingLod) -> LodDelta {
             ]))
         }
         GeneratingLod::DoneGenerating(lod_chunk) => LodDelta::Single(lod_chunk),
-        GeneratingLod::None => LodDelta::None,
         _ => {
             warn!("Invalid lod state: {generated_lod:?}");
             LodDelta::None
@@ -160,7 +156,6 @@ fn create_generating_lod(
 ) -> GeneratingLod {
     match request {
         LodRequest::Same => GeneratingLod::Same,
-        LodRequest::None => GeneratingLod::None,
         LodRequest::Single => {
             debug_assert!(
                 max_block_range_exclusive.x - min_block_range_inclusive.x == max_block_range_exclusive.y - min_block_range_inclusive.y
@@ -383,7 +378,7 @@ fn generate_player_lods(
     mut commands: Commands,
     any_generation_requests: Query<(), With<LodGenerationRequest>>,
     generating_lods: Query<&PlayerGeneratingLod>,
-    players: Query<(Entity, &Player, &Location)>,
+    players: Query<(Entity, &Location), With<Player>>,
     structures: Query<(Entity, &Structure, &Location, &GlobalTransform, Option<&Children>), With<Planet>>,
     current_lods: Query<&PlayerLod>,
 ) {
@@ -391,7 +386,7 @@ fn generate_player_lods(
         return;
     }
 
-    for (player_entity, player, player_location) in players.iter() {
+    for (player_entity, player_location) in players.iter() {
         let render_distance = 4;
 
         for (structure_ent, structure, structure_location, g_trans, children) in structures.iter() {
