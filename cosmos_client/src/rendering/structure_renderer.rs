@@ -374,10 +374,6 @@ fn monitor_needs_rendered_system(
         return;
     };
 
-    // by making the Vec an Option<Vec> I can take ownership of it later, which I cannot do with
-    // just a plain Mutex<Vec>.
-    // https://stackoverflow.com/questions/30573188/cannot-move-data-out-of-a-mutex
-
     for (entity, ce, _) in chunks_need_rendered
         .iter()
         .map(|(x, y, transform)| (x, y, transform.translation().distance_squared(local_transform.translation())))
@@ -392,6 +388,10 @@ fn monitor_needs_rendered_system(
 
         let coords = ce.chunk_location;
 
+        // I assure you officer, cloning 7 chunks to render 1 is very necessary
+        //
+        // please someone fix this when they feel inspired
+
         let Some(chunk) = structure.chunk_from_chunk_coordinates(coords).cloned() else {
             continue;
         };
@@ -404,6 +404,8 @@ fn monitor_needs_rendered_system(
         let top = structure.chunk_from_chunk_coordinates_unbound(unbound.top()).cloned();
         let back = structure.chunk_from_chunk_coordinates_unbound(unbound.back()).cloned();
         let front = structure.chunk_from_chunk_coordinates_unbound(unbound.front()).cloned();
+
+        // "gee, you sure have a way with the borrow checker"
 
         let atlas = atlas.clone();
         let materials = materials.clone();

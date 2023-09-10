@@ -16,12 +16,11 @@ use cosmos_core::{
         structure_iterator::ChunkIteratorResult,
         ChunkInitEvent, Structure,
     },
-    utils::resource_wrapper::ResourceWrapper,
 };
 use futures_lite::future;
 use noise::NoiseFn;
 
-use crate::state::GameState;
+use crate::{init::init_world::Noise, state::GameState};
 
 #[derive(Component)]
 struct AsyncStructureGeneration {
@@ -72,7 +71,7 @@ fn notify_when_done_generating(
 
 fn start_generating_asteroid(
     query: Query<(Entity, &Structure, &Location), With<AsteroidNeedsCreated>>,
-    noise: Res<ResourceWrapper<noise::OpenSimplex>>,
+    noise: Res<Noise>,
     blocks: Res<Registry<Block>>,
     mut commands: Commands,
 ) {

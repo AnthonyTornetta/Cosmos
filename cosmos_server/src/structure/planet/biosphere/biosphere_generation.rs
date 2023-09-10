@@ -3,7 +3,7 @@
 use std::{marker::PhantomData, mem::swap};
 
 use bevy::{
-    prelude::{Component, Entity, Event, EventReader, EventWriter, Query, Res, ResMut, Resource, With},
+    prelude::{App, Commands, Component, DespawnRecursiveExt, Entity, Event, EventReader, EventWriter, Query, Res, ResMut, Resource, With},
     tasks::AsyncComputeTaskPool,
 };
 use cosmos_core::{
@@ -18,13 +18,16 @@ use cosmos_core::{
         planet::{ChunkFaces, Planet},
         Structure,
     },
-    utils::{array_utils::flatten_2d, resource_wrapper::ResourceWrapper},
+    utils::array_utils::flatten_2d,
 };
 use futures_lite::future;
 use noise::NoiseFn;
 use rayon::prelude::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
 
-use crate::structure::planet::lods::generate_lods::{GeneratingLod, PlayerGeneratingLod};
+use crate::{
+    init::init_world::{Noise, ReadOnlyNoise},
+    structure::planet::lods::generate_lods::{GeneratingLod, GeneratingLods, LodNeedsGeneratedForPlayer},
+};
 
 use super::{GeneratingChunk, GeneratingChunks, TGenerateChunkEvent};
 
@@ -1045,7 +1048,7 @@ fn recurse<T: Component + Default + Clone, S: BiosphereGenerationStrategy + 'sta
     first_block_coord: BlockCoordinate,
     s_dimensions: CoordinateType,
     scale: CoordinateType,
-    noise_generator: &noise::OpenSimplex,
+    noise_generator: &Noise,
     block_ranges: &BlockLayers<T>,
 ) {
     match generating_lod {
@@ -1093,31 +1096,49 @@ fn recurse<T: Component + Default + Clone, S: BiosphereGenerationStrategy + 'sta
     }
 }
 
-pub(crate) fn generate_lods<T: Component + Default + Clone, S: BiosphereGenerationStrategy + 'static>(
-    mut query: Query<&mut PlayerGeneratingLod>,
+pub(crate) fn start_generating_lods<T: Component + Default + Clone, S: BiosphereGenerationStrategy + 'static>(
+    query: Query<(Entity, &LodNeedsGeneratedForPlayer)>,
     is_biosphere: Query<(&Structure, &Location), With<T>>,
-    noise_generator: Res<ResourceWrapper<noise::OpenSimplex>>,
+    noise_generator: Res<ReadOnlyNoise>,
     block_ranges: Res<BlockLayers<T>>,
+    mut currently_generating: ResMut<GeneratingLods>,
+    mut commands: Commands,
 ) {
-    query.par_iter_mut().for_each_mut(|mut generating_lod| {
+    for (entity, generating_lod) in query.iter() {
+        commands.entity(entity).despawn_recursive();
+
         let Ok((structure, location)) = is_biosphere.get(generating_lod.structure_entity) else {
             return;
         };
+
+        let task_pool = AsyncComputeTaskPool::get();
 
         let structure_coords = location.absolute_coords_f64();
 
         let dimensions = structure.block_dimensions().x;
 
-        recurse::<T, S>(
-            &mut generating_lod.generating_lod,
-            (structure_coords.x, structure_coords.y, structure_coords.z),
-            BlockCoordinate::new(0, 0, 0),
-            dimensions,
-            dimensions / CHUNK_DIMENSIONS,
-            &noise_generator,
-            &block_ranges,
-        );
-    });
+        let mut generating_lod = generating_lod.clone();
+        let noise_generator = noise_generator.clone();
+        let block_ranges = block_ranges.clone();
+
+        let task = task_pool.spawn(async move {
+            let noise = noise_generator.inner();
+
+            recurse::<T, S>(
+                &mut generating_lod.generating_lod,
+                (structure_coords.x, structure_coords.y, structure_coords.z),
+                BlockCoordinate::new(0, 0, 0),
+                dimensions,
+                dimensions / CHUNK_DIMENSIONS,
+                &noise,
+                &block_ranges,
+            );
+
+            generating_lod
+        });
+
+        currently_generating.push(task);
+    }
 }
 
 /// Calls generate_face_chunk, generate_edge_chunk, and generate_corner_chunk to generate the chunks of a planet.
@@ -1125,7 +1146,7 @@ pub fn generate_planet<T: Component + Clone + Default, E: TGenerateChunkEvent + 
     mut query: Query<(&mut Structure, &Location)>,
     mut generating: ResMut<GeneratingChunks<T>>,
     mut events: EventReader<E>,
-    noise_generator: Res<ResourceWrapper<noise::OpenSimplex>>,
+    noise_generator: Res<ReadOnlyNoise>,
     block_ranges: Res<BlockLayers<T>>,
 ) {
     let chunks = events
@@ -1168,9 +1189,11 @@ pub fn generate_planet<T: Component + Clone + Default, E: TGenerateChunkEvent + 
     if !chunks.is_empty() {
         for (mut chunk, s_dimensions, location, structure_entity) in chunks {
             let block_ranges = block_ranges.clone();
-            let noise_generator = **noise_generator;
+
+            let noise = noise_generator.clone();
 
             let task = thread_pool.spawn(async move {
+                let noise_generator = noise.inner();
                 // let timer = UtilsTimer::start();
 
                 let actual_pos = location.absolute_coords_f64();
@@ -1232,4 +1255,8 @@ pub fn generate_planet<T: Component + Clone + Default, E: TGenerateChunkEvent + 
             generating.generating.push(GeneratingChunk::new(task));
         }
     }
+}
+
+pub(super) fn register(app: &mut App) {
+    app.init_resource::<GeneratingLods>();
 }

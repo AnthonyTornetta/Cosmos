@@ -455,7 +455,7 @@ fn vec_eq(v1: Vec3, v2: Vec3) -> bool {
     (v1.x - v2.x).abs() < EPSILON && (v1.y - v2.y).abs() < EPSILON && (v1.z - v2.z).abs() < EPSILON
 }
 
-fn poll_generating_lods(
+fn poll_rendering_lods(
     mut commands: Commands,
     structure_lod_meshes_query: Query<&LodMeshes>,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -654,7 +654,7 @@ pub(super) fn register(app: &mut App) {
         (
             monitor_lods_needs_rendered_system,
             trigger_lod_render,
-            poll_generating_lods,
+            poll_rendering_lods,
             hide_lod,
         )
             .chain()

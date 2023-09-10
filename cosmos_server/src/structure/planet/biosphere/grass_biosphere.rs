@@ -14,11 +14,10 @@ use cosmos_core::{
         planet::Planet,
         rotate, ChunkInitEvent, Structure,
     },
-    utils::resource_wrapper::ResourceWrapper,
 };
 use noise::NoiseFn;
 
-use crate::GameState;
+use crate::{init::init_world::Noise, GameState};
 
 use super::{
     biosphere_generation::{BlockLayers, DefaultBiosphereGenerationStrategy, GenerateChunkFeaturesEvent},
@@ -139,7 +138,7 @@ fn redwood_tree(
     location: &Location,
     block_event_writer: &mut EventWriter<BlockChangedEvent>,
     blocks: &Registry<Block>,
-    noise_generator: &ResourceWrapper<noise::OpenSimplex>,
+    noise_generator: &Noise,
 ) {
     let log = blocks.from_id("cosmos:redwood_log").unwrap();
     let leaf = blocks.from_id("cosmos:redwood_leaf").unwrap();
@@ -439,7 +438,7 @@ fn trees(
     location: &Location,
     block_event_writer: &mut EventWriter<BlockChangedEvent>,
     blocks: &Registry<Block>,
-    noise_generator: &ResourceWrapper<noise::OpenSimplex>,
+    noise_generator: &Noise,
 ) {
     let Structure::Dynamic(planet) = structure else {
         panic!("A planet must be dynamic!");
@@ -565,7 +564,7 @@ pub fn generate_chunk_features(
     mut block_event_writer: EventWriter<BlockChangedEvent>,
     mut structure_query: Query<(&mut Structure, &Location)>,
     blocks: Res<Registry<Block>>,
-    noise_generator: Res<ResourceWrapper<noise::OpenSimplex>>,
+    noise_generator: Res<Noise>,
 ) {
     for ev in event_reader.iter() {
         if let Ok((mut structure, location)) = structure_query.get_mut(ev.structure_entity) {
