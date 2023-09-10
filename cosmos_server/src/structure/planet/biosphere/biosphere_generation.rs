@@ -3,7 +3,9 @@
 use std::{marker::PhantomData, mem::swap};
 
 use bevy::{
-    prelude::{App, Commands, Component, DespawnRecursiveExt, Entity, Event, EventReader, EventWriter, Query, Res, ResMut, Resource, With},
+    prelude::{
+        warn, App, Commands, Component, DespawnRecursiveExt, Entity, Event, EventReader, EventWriter, Query, Res, ResMut, Resource, With,
+    },
     tasks::AsyncComputeTaskPool,
 };
 use cosmos_core::{
@@ -14,6 +16,7 @@ use cosmos_core::{
         block_storage::BlockStorer,
         chunk::{Chunk, CHUNK_DIMENSIONS},
         coordinates::{BlockCoordinate, ChunkBlockCoordinate, ChunkCoordinate, CoordinateType},
+        lod::LodDelta,
         lod_chunk::LodChunk,
         planet::{ChunkFaces, Planet},
         Structure,
@@ -26,7 +29,9 @@ use rayon::prelude::{IndexedParallelIterator, IntoParallelRefMutIterator, Parall
 
 use crate::{
     init::init_world::{Noise, ReadOnlyNoise},
-    structure::planet::lods::generate_lods::{AsyncGeneratingLod, GeneratingLod, GeneratingLods, LodNeedsGeneratedForPlayer},
+    structure::planet::lods::generate_lods::{
+        AsyncGeneratingLod, DoneGeneratingLod, GeneratingLod, GeneratingLods, LodNeedsGeneratedForPlayer,
+    },
 };
 
 use super::{GeneratingChunk, GeneratingChunks, TGenerateChunkEvent};
@@ -1136,7 +1141,17 @@ pub(crate) fn start_generating_lods<T: Component + Default + Clone, S: Biosphere
                 &block_ranges,
             );
 
-            generating_lod
+            let lod_delta = recursively_create_lod_delta(generating_lod.generating_lod);
+            let cloned_delta = lod_delta.clone();
+
+            let new_lod = if let Some(mut current_lod) = generating_lod.current_lod {
+                cloned_delta.apply_changes(&mut current_lod);
+                current_lod
+            } else {
+                cloned_delta.create_lod()
+            };
+
+            DoneGeneratingLod { lod_delta, new_lod }
         });
 
         currently_generating.push(AsyncGeneratingLod {
@@ -1144,6 +1159,31 @@ pub(crate) fn start_generating_lods<T: Component + Default + Clone, S: Biosphere
             player_entity,
             structure_entity,
         });
+    }
+}
+
+fn recursively_create_lod_delta(generated_lod: GeneratingLod) -> LodDelta {
+    match generated_lod {
+        GeneratingLod::Same => LodDelta::NoChange,
+        GeneratingLod::Children(children) => {
+            let [c0, c1, c2, c3, c4, c5, c6, c7] = *children;
+
+            LodDelta::Children(Box::new([
+                recursively_create_lod_delta(c0),
+                recursively_create_lod_delta(c1),
+                recursively_create_lod_delta(c2),
+                recursively_create_lod_delta(c3),
+                recursively_create_lod_delta(c4),
+                recursively_create_lod_delta(c5),
+                recursively_create_lod_delta(c6),
+                recursively_create_lod_delta(c7),
+            ]))
+        }
+        GeneratingLod::DoneGenerating(lod_chunk) => LodDelta::Single(lod_chunk),
+        _ => {
+            warn!("Invalid lod state: {generated_lod:?}");
+            LodDelta::None
+        }
     }
 }
 

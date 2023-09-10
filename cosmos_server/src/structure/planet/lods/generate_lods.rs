@@ -2,7 +2,7 @@ use std::mem::swap;
 
 use bevy::{
     prelude::{
-        in_state, warn, App, BuildChildren, Children, Commands, Component, Deref, DerefMut, Entity, GlobalTransform, IntoSystemConfigs,
+        in_state, App, BuildChildren, Children, Commands, Component, Deref, DerefMut, Entity, GlobalTransform, IntoSystemConfigs, Parent,
         Quat, Query, Res, ResMut, Resource, Update, With,
     },
     tasks::Task,
@@ -41,11 +41,17 @@ pub struct LodNeedsGeneratedForPlayer {
     pub current_lod: Option<Lod>,
 }
 
+#[derive(Debug, Component, Clone)]
+pub struct DoneGeneratingLod {
+    pub lod_delta: LodDelta,
+    pub new_lod: Lod,
+}
+
 #[derive(Debug)]
 pub struct AsyncGeneratingLod {
     pub player_entity: Entity,
     pub structure_entity: Entity,
-    pub task: Task<LodNeedsGeneratedForPlayer>,
+    pub task: Task<DoneGeneratingLod>,
 }
 
 #[derive(Debug, Resource, Deref, DerefMut, Default)]
@@ -88,43 +94,9 @@ pub(crate) struct LodGenerationRequest {
     current_lod: Option<Lod>,
 }
 
-fn check_done(generating_lod: &GeneratingLod) -> bool {
-    match generating_lod {
-        GeneratingLod::Children(children) => children.iter().all(check_done),
-        GeneratingLod::DoneGenerating(_) | GeneratingLod::Same => true,
-        _ => false,
-    }
-}
-
-fn recursively_create_lod_delta(generated_lod: GeneratingLod) -> LodDelta {
-    match generated_lod {
-        GeneratingLod::Same => LodDelta::NoChange,
-        GeneratingLod::Children(children) => {
-            let [c0, c1, c2, c3, c4, c5, c6, c7] = *children;
-
-            LodDelta::Children(Box::new([
-                recursively_create_lod_delta(c0),
-                recursively_create_lod_delta(c1),
-                recursively_create_lod_delta(c2),
-                recursively_create_lod_delta(c3),
-                recursively_create_lod_delta(c4),
-                recursively_create_lod_delta(c5),
-                recursively_create_lod_delta(c6),
-                recursively_create_lod_delta(c7),
-            ]))
-        }
-        GeneratingLod::DoneGenerating(lod_chunk) => LodDelta::Single(lod_chunk),
-        _ => {
-            warn!("Invalid lod state: {generated_lod:?}");
-            LodDelta::None
-        }
-    }
-}
-
 fn check_done_generating(
     mut commands: Commands,
-    children_query: Query<&Children>,
-    mut lod_query: Query<(Entity, &mut PlayerLod)>,
+    mut lod_query: Query<(Entity, &mut PlayerLod, &Parent)>,
     mut generating_lods: ResMut<GeneratingLods>,
 ) {
     let mut todo = Vec::with_capacity(generating_lods.capacity());
@@ -132,38 +104,23 @@ fn check_done_generating(
     swap(&mut todo, &mut generating_lods.0);
 
     for mut task in todo {
-        if let Some(generated_lod) = future::block_on(future::poll_once(&mut task.task)) {
-            if check_done(&generated_lod.generating_lod) {
-                let current_lod = children_query
-                    .get(generated_lod.structure_entity)
-                    .map(|children| {
-                        children
-                            .iter()
-                            .flat_map(|&child_entity| lod_query.get(child_entity))
-                            .find(|&(_, player_lod)| player_lod.player == generated_lod.player_entity)
-                            .map(|(entity, _)| entity)
-                    })
-                    .unwrap_or(None)
-                    .map(|e| lod_query.get_mut(e).map(|(_, player_lod)| player_lod));
-
-                let lod_delta = recursively_create_lod_delta(generated_lod.generating_lod);
-
-                let cloned_delta = lod_delta.clone();
-
-                if let Some(Ok(mut current_lod)) = current_lod {
-                    cloned_delta.apply_changes(&mut current_lod.lod);
-                    current_lod.deltas.push(lod_delta);
-                } else {
-                    commands.get_entity(generated_lod.structure_entity).map(|mut ecmds| {
-                        ecmds.with_children(|cmds| {
-                            cmds.spawn(PlayerLod {
-                                lod: cloned_delta.create_lod(),
-                                deltas: vec![lod_delta],
-                                player: generated_lod.player_entity,
-                            });
+        if let Some(done_generating_lod) = future::block_on(future::poll_once(&mut task.task)) {
+            if let Some((_, mut player_lod, _)) = lod_query
+                .iter_mut()
+                .find(|(_, player_lod, parent)| player_lod.player == task.player_entity && parent.get() == task.structure_entity)
+            {
+                player_lod.lod = done_generating_lod.new_lod;
+                player_lod.deltas.push(done_generating_lod.lod_delta);
+            } else {
+                commands.get_entity(task.structure_entity).map(|mut ecmds| {
+                    ecmds.with_children(|cmds| {
+                        cmds.spawn(PlayerLod {
+                            lod: done_generating_lod.new_lod,
+                            deltas: vec![done_generating_lod.lod_delta],
+                            player: task.player_entity,
                         });
                     });
-                }
+                });
             }
         } else {
             generating_lods.push(task);
