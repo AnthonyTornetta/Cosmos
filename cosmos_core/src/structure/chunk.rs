@@ -25,7 +25,7 @@ pub const CHUNK_DIMENSIONSF: f32 = CHUNK_DIMENSIONS as f32;
 /// Short for `CHUNK_DIMENSIONS as UnboundCoordinateType`
 pub const CHUNK_DIMENSIONS_UB: UnboundCoordinateType = CHUNK_DIMENSIONS as UnboundCoordinateType;
 
-#[derive(Debug, Reflect, Serialize, Deserialize)]
+#[derive(Debug, Reflect, Serialize, Deserialize, Clone)]
 /// Stores a bunch of blocks, information about those blocks, and where they are in the structure.
 pub struct Chunk {
     structure_position: ChunkCoordinate,
