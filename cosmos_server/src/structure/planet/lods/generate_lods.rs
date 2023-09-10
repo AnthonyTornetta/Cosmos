@@ -41,8 +41,15 @@ pub struct LodNeedsGeneratedForPlayer {
     pub current_lod: Option<Lod>,
 }
 
+#[derive(Debug)]
+pub struct AsyncGeneratingLod {
+    pub player_entity: Entity,
+    pub structure_entity: Entity,
+    pub task: Task<LodNeedsGeneratedForPlayer>,
+}
+
 #[derive(Debug, Resource, Deref, DerefMut, Default)]
-pub(crate) struct GeneratingLods(pub Vec<Task<LodNeedsGeneratedForPlayer>>);
+pub(crate) struct GeneratingLods(pub Vec<AsyncGeneratingLod>);
 
 #[derive(Debug, Clone)]
 /// Represents a reduced-detail version of a planet undergoing generation
@@ -74,7 +81,7 @@ pub enum GeneratingLod {
 }
 
 #[derive(Debug, Component)]
-struct LodGenerationRequest {
+pub(crate) struct LodGenerationRequest {
     request: LodRequest,
     structure_entity: Entity,
     player_entity: Entity,
@@ -125,7 +132,7 @@ fn check_done_generating(
     swap(&mut todo, &mut generating_lods.0);
 
     for mut task in todo {
-        if let Some(generated_lod) = future::block_on(future::poll_once(&mut task)) {
+        if let Some(generated_lod) = future::block_on(future::poll_once(&mut task.task)) {
             if check_done(&generated_lod.generating_lod) {
                 let current_lod = children_query
                     .get(generated_lod.structure_entity)
@@ -392,7 +399,7 @@ fn create_lod_request(
     }
 }
 
-fn generate_player_lods(
+pub(crate) fn generate_player_lods<T: Component + Default>(
     mut commands: Commands,
     any_generation_requests: Query<(), With<LodGenerationRequest>>,
     generating_lods: Query<&LodNeedsGeneratedForPlayer>,
@@ -411,6 +418,13 @@ fn generate_player_lods(
             if generating_lods
                 .iter()
                 .any(|generating_lod| generating_lod.player_entity == player_entity && generating_lod.structure_entity == structure_ent)
+            {
+                continue;
+            }
+
+            if generating_lods
+                .iter()
+                .any(|x| x.player_entity == player_entity || x.structure_entity == structure_ent)
             {
                 continue;
             }
@@ -453,12 +467,15 @@ fn generate_player_lods(
             }
 
             let request_entity = commands
-                .spawn(LodGenerationRequest {
-                    player_entity,
-                    structure_entity: structure_ent,
-                    request,
-                    current_lod: current_lod.cloned(),
-                })
+                .spawn((
+                    LodGenerationRequest {
+                        player_entity,
+                        structure_entity: structure_ent,
+                        request,
+                        current_lod: current_lod.cloned(),
+                    },
+                    T::default(),
+                ))
                 .id();
             commands.entity(structure_ent).add_child(request_entity);
         }
@@ -468,9 +485,6 @@ fn generate_player_lods(
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        (
-            generate_player_lods.run_if(in_state(GameState::Playing)),
-            (start_generating_lods, check_done_generating).run_if(in_state(GameState::Playing)),
-        ),
+        ((start_generating_lods, check_done_generating).run_if(in_state(GameState::Playing)),),
     );
 }

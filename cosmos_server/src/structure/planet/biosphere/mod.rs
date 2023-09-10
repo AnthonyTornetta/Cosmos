@@ -35,7 +35,7 @@ use self::biosphere_generation::{
     generate_planet, notify_when_done_generating_terrain, start_generating_lods, BiosphereGenerationStrategy, GenerateChunkFeaturesEvent,
 };
 
-use super::generation::planet_generator::check_needs_generated_system;
+use super::{generation::planet_generator::check_needs_generated_system, lods::generate_lods::generate_player_lods};
 
 pub mod biosphere_generation;
 pub mod generation_tools;
@@ -152,6 +152,7 @@ pub fn register_biosphere<
                 (
                     generate_planet::<T, E, S>,
                     notify_when_done_generating_terrain::<T>,
+                    generate_player_lods::<T>,
                     start_generating_lods::<T, S>,
                     check_needs_generated_system::<E, T>,
                 )

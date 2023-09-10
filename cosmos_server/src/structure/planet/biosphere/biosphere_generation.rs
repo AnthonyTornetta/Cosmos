@@ -26,7 +26,7 @@ use rayon::prelude::{IndexedParallelIterator, IntoParallelRefMutIterator, Parall
 
 use crate::{
     init::init_world::{Noise, ReadOnlyNoise},
-    structure::planet::lods::generate_lods::{GeneratingLod, GeneratingLods, LodNeedsGeneratedForPlayer},
+    structure::planet::lods::generate_lods::{AsyncGeneratingLod, GeneratingLod, GeneratingLods, LodNeedsGeneratedForPlayer},
 };
 
 use super::{GeneratingChunk, GeneratingChunks, TGenerateChunkEvent};
@@ -1097,7 +1097,7 @@ fn recurse<T: Component + Default + Clone, S: BiosphereGenerationStrategy + 'sta
 }
 
 pub(crate) fn start_generating_lods<T: Component + Default + Clone, S: BiosphereGenerationStrategy + 'static>(
-    query: Query<(Entity, &LodNeedsGeneratedForPlayer)>,
+    query: Query<(Entity, &LodNeedsGeneratedForPlayer), With<T>>,
     is_biosphere: Query<(&Structure, &Location), With<T>>,
     noise_generator: Res<ReadOnlyNoise>,
     block_ranges: Res<BlockLayers<T>>,
@@ -1110,6 +1110,8 @@ pub(crate) fn start_generating_lods<T: Component + Default + Clone, S: Biosphere
         let Ok((structure, location)) = is_biosphere.get(generating_lod.structure_entity) else {
             return;
         };
+
+        let (player_entity, structure_entity) = (generating_lod.player_entity, generating_lod.structure_entity);
 
         let task_pool = AsyncComputeTaskPool::get();
 
@@ -1137,7 +1139,11 @@ pub(crate) fn start_generating_lods<T: Component + Default + Clone, S: Biosphere
             generating_lod
         });
 
-        currently_generating.push(task);
+        currently_generating.push(AsyncGeneratingLod {
+            task,
+            player_entity,
+            structure_entity,
+        });
     }
 }
 
