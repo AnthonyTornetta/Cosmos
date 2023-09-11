@@ -10,13 +10,14 @@ use bevy::{
 };
 use cosmos_core::{
     block::{Block, BlockFace},
+    netty::cosmos_encoder,
     physics::location::Location,
     registry::Registry,
     structure::{
         block_storage::BlockStorer,
         chunk::{Chunk, CHUNK_DIMENSIONS},
         coordinates::{BlockCoordinate, ChunkBlockCoordinate, ChunkCoordinate, CoordinateType},
-        lod::LodDelta,
+        lod::{LodDelta, LodNetworkMessage, SetLodMessage},
         lod_chunk::LodChunk,
         planet::{ChunkFaces, Planet},
         Structure,
@@ -1144,14 +1145,27 @@ pub(crate) fn start_generating_lods<T: Component + Default + Clone, S: Biosphere
             let lod_delta = recursively_create_lod_delta(generating_lod.generating_lod);
             let cloned_delta = lod_delta.clone();
 
-            let new_lod = if let Some(mut current_lod) = generating_lod.current_lod {
+            let new_lod = if let Some(read_only_current_lod) = generating_lod.current_lod {
+                let mut current_lod = read_only_current_lod.inner().clone();
                 cloned_delta.apply_changes(&mut current_lod);
                 current_lod
             } else {
                 cloned_delta.create_lod()
             };
 
-            DoneGeneratingLod { lod_delta, new_lod }
+            // lod delta is only used for network requests, so serializing it here saves a ton of processing power on the main thread
+            let lod_delta = cosmos_encoder::serialize(&LodNetworkMessage::SetLod(SetLodMessage {
+                serialized_lod: cosmos_encoder::serialize(&lod_delta),
+                structure: structure_entity,
+            }));
+
+            let cloned_new_lod = new_lod.clone();
+
+            DoneGeneratingLod {
+                lod_delta,
+                new_lod,
+                cloned_new_lod,
+            }
         });
 
         currently_generating.push(AsyncGeneratingLod {

@@ -1,6 +1,9 @@
 //! Ways of displaying reduced-detail versions of dynamic structures
 
-use std::backtrace::Backtrace;
+use std::{
+    backtrace::Backtrace,
+    sync::{Arc, RwLock, RwLockReadGuard},
+};
 
 use bevy::prelude::{warn, Component, Entity};
 use serde::{Deserialize, Serialize};
@@ -30,6 +33,23 @@ pub enum Lod {
     /// +-----------+
     /// ```
     Children(Box<[Self; 8]>),
+}
+
+#[derive(Serialize, Deserialize, Component, Debug, Clone)]
+/// Represents thread-safe a reduced-detail version of a planet
+pub struct ReadOnlyLod(Arc<RwLock<Lod>>);
+
+impl ReadOnlyLod {
+    /// Grabs the inner lod
+    pub fn inner(&self) -> RwLockReadGuard<Lod> {
+        self.0.read().expect("Failed to read")
+    }
+}
+
+impl From<Lod> for ReadOnlyLod {
+    fn from(value: Lod) -> Self {
+        Self(Arc::new(RwLock::new(value)))
+    }
 }
 
 #[derive(Serialize, Deserialize, Component, Debug, Clone)]

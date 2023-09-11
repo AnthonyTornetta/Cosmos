@@ -14,7 +14,7 @@ use cosmos_core::{
     registry::Registry,
     structure::{
         coordinates::{BlockCoordinate, CoordinateType, UnboundChunkCoordinate, UnboundCoordinateType},
-        lod::{Lod, LodDelta},
+        lod::{Lod, ReadOnlyLod},
         lod_chunk::LodChunk,
         planet::Planet,
         Structure,
@@ -38,13 +38,15 @@ pub struct LodNeedsGeneratedForPlayer {
     pub structure_entity: Entity,
     pub generating_lod: GeneratingLod,
     pub player_entity: Entity,
-    pub current_lod: Option<Lod>,
+    pub current_lod: Option<ReadOnlyLod>,
 }
 
 #[derive(Debug, Component, Clone)]
 pub struct DoneGeneratingLod {
-    pub lod_delta: LodDelta,
+    /// Represents `LodNetworkMessage::SetLod` but is pre-serialized to save time when sending this to players
+    pub lod_delta: Vec<u8>,
     pub new_lod: Lod,
+    pub cloned_new_lod: Lod,
 }
 
 #[derive(Debug)]
@@ -91,7 +93,7 @@ pub(crate) struct LodGenerationRequest {
     request: LodRequest,
     structure_entity: Entity,
     player_entity: Entity,
-    current_lod: Option<Lod>,
+    current_lod: Option<ReadOnlyLod>,
 }
 
 fn check_done_generating(
@@ -105,19 +107,25 @@ fn check_done_generating(
 
     for mut task in todo {
         if let Some(done_generating_lod) = future::block_on(future::poll_once(&mut task.task)) {
+            let lod = done_generating_lod.new_lod;
+            let read_only_lod = ReadOnlyLod::from(done_generating_lod.cloned_new_lod);
+            let lod_delta = done_generating_lod.lod_delta;
+
             if let Some((_, mut player_lod, _)) = lod_query
                 .iter_mut()
                 .find(|(_, player_lod, parent)| player_lod.player == task.player_entity && parent.get() == task.structure_entity)
             {
-                player_lod.lod = done_generating_lod.new_lod;
-                player_lod.deltas.push(done_generating_lod.lod_delta);
+                player_lod.lod = lod;
+                player_lod.deltas.push(lod_delta);
+                player_lod.read_only_lod = read_only_lod;
             } else {
                 commands.get_entity(task.structure_entity).map(|mut ecmds| {
                     ecmds.with_children(|cmds| {
                         cmds.spawn(PlayerLod {
-                            lod: done_generating_lod.new_lod,
-                            deltas: vec![done_generating_lod.lod_delta],
+                            lod,
+                            deltas: vec![lod_delta],
                             player: task.player_entity,
+                            read_only_lod,
                         });
                     });
                 });
@@ -215,6 +223,8 @@ fn start_generating_lods(
     structure_query: Query<&Structure>,
     query: Query<(Entity, &LodGenerationRequest)>,
 ) {
+    // This is turbo laggy
+
     for (entity, lod_request) in query.iter() {
         let Ok(structure) = structure_query.get(lod_request.structure_entity) else {
             continue;
@@ -412,11 +422,17 @@ pub(crate) fn generate_player_lods<T: Component + Default>(
                     c.iter()
                         .flat_map(|&child_entity| current_lods.get(child_entity))
                         .find(|p_lod| p_lod.player == player_entity)
-                        .map(|p_lod| &p_lod.lod)
+                        .map(|p_lod| (&p_lod.lod, p_lod.read_only_lod.clone()))
                 })
                 .unwrap_or(None);
 
-            let request = create_lod_request(scale, render_distance, rel_coords - middle_chunk, true, current_lod);
+            let request = create_lod_request(
+                scale,
+                render_distance,
+                rel_coords - middle_chunk,
+                true,
+                current_lod.as_ref().map(|x| x.0),
+            );
 
             // Same lod, don't generate
             if matches!(request, LodRequest::Same) {
@@ -429,7 +445,7 @@ pub(crate) fn generate_player_lods<T: Component + Default>(
                         player_entity,
                         structure_entity: structure_ent,
                         request,
-                        current_lod: current_lod.cloned(),
+                        current_lod: current_lod.map(|x| x.1),
                     },
                     T::default(),
                 ))

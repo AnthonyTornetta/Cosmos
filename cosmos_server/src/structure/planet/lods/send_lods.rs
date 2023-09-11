@@ -1,17 +1,13 @@
-use bevy::prelude::{in_state, App, IntoSystemConfigs, Parent, Query, ResMut, Update};
+use bevy::prelude::{in_state, App, IntoSystemConfigs, Query, ResMut, Update};
 use bevy_renet::renet::RenetServer;
-use cosmos_core::{
-    entities::player::Player,
-    netty::{cosmos_encoder, NettyChannelServer},
-    structure::lod::{LodNetworkMessage, SetLodMessage},
-};
+use cosmos_core::{entities::player::Player, netty::NettyChannelServer};
 
 use crate::state::GameState;
 
 use super::player_lod::PlayerLod;
 
-fn send_lods(mut server: ResMut<RenetServer>, mut changed_lods: Query<(&Parent, &mut PlayerLod)>, players: Query<&Player>) {
-    for (parent, mut player_lod) in changed_lods.iter_mut() {
+fn send_lods(mut server: ResMut<RenetServer>, mut changed_lods: Query<&mut PlayerLod>, players: Query<&Player>) {
+    for mut player_lod in changed_lods.iter_mut() {
         if player_lod.deltas.is_empty() {
             continue;
         }
@@ -21,14 +17,7 @@ fn send_lods(mut server: ResMut<RenetServer>, mut changed_lods: Query<(&Parent, 
         };
 
         let delta = player_lod.deltas.remove(0);
-        server.send_message(
-            player.id(),
-            NettyChannelServer::DeltaLod,
-            cosmos_encoder::serialize(&LodNetworkMessage::SetLod(SetLodMessage {
-                serialized_lod: cosmos_encoder::serialize(&delta),
-                structure: parent.get(),
-            })),
-        );
+        server.send_message(player.id(), NettyChannelServer::DeltaLod, delta);
     }
 }
 
