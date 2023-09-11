@@ -7,13 +7,14 @@ use bevy::{
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     netty::{cosmos_encoder, NettyChannelServer},
-    structure::lod::{Lod, LodDelta, LodNetworkMessage, SetLodMessage},
+    structure::lod::{Lod, LodDelta, LodNetworkMessage, ReadOnlyLod, SetLodMessage},
 };
 use futures_lite::future;
 
 use crate::{netty::mapping::NetworkMapping, state::game_state::GameState};
 
-type LodTask = Task<Lod>;
+/// Contains two of the same LOD to save on cloning costs
+type LodTask = Task<(Lod, Lod)>;
 
 #[derive(Debug, Resource, DerefMut, Deref, Default)]
 struct ApplyingLods(Vec<(Entity, LodTask)>);
@@ -27,9 +28,9 @@ fn apply_lod_changes(mut applying_lods: ResMut<ApplyingLods>, mut commands: Comm
     swap(&mut applying_lods.0, &mut todo);
 
     for (structure_entity, mut applying_lod) in todo {
-        if let Some(lod) = future::block_on(future::poll_once(&mut applying_lod)) {
+        if let Some((lod, same_lod)) = future::block_on(future::poll_once(&mut applying_lod)) {
             if let Some(mut ecmds) = commands.get_entity(structure_entity) {
-                ecmds.insert(lod);
+                ecmds.insert((lod, ReadOnlyLod::from(same_lod)));
             }
         } else {
             applying_lods.push((structure_entity, applying_lod));
@@ -37,7 +38,7 @@ fn apply_lod_changes(mut applying_lods: ResMut<ApplyingLods>, mut commands: Comm
     }
 }
 
-fn process_new_lods(mut todo_lods: ResMut<TodoLods>, mut applying_lods: ResMut<ApplyingLods>, lod_query: Query<&Lod>) {
+fn process_new_lods(mut todo_lods: ResMut<TodoLods>, mut applying_lods: ResMut<ApplyingLods>, lod_query: Query<&ReadOnlyLod>) {
     let mut todo = Vec::with_capacity(todo_lods.capacity());
 
     swap(&mut todo_lods.0, &mut todo);
@@ -54,20 +55,21 @@ fn process_new_lods(mut todo_lods: ResMut<TodoLods>, mut applying_lods: ResMut<A
 
         let async_task_pool = AsyncComputeTaskPool::get();
 
-        // LAG!
         let cur_lod = cur_lod.cloned();
 
         // This is a heavy operation, and needs to be run async
         let task = async_task_pool.spawn(async move {
             let delta_lod = cosmos_encoder::deserialize::<LodDelta>(&lod_message.serialized_lod).expect("Unable to deserialize lod delta");
 
-            if let Ok(mut cur_lod) = cur_lod {
+            let lod = if let Ok(cur_lod) = cur_lod {
+                let mut cur_lod = cur_lod.inner().clone();
                 delta_lod.apply_changes(&mut cur_lod);
-
                 cur_lod
             } else {
                 delta_lod.create_lod()
-            }
+            };
+
+            (lod.clone(), lod)
         });
 
         applying_lods.0.push((structure_entity, task));

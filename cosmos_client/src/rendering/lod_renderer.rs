@@ -19,7 +19,7 @@ use cosmos_core::{
         block_storage::BlockStorer,
         chunk::{CHUNK_DIMENSIONS, CHUNK_DIMENSIONSF},
         coordinates::{ChunkBlockCoordinate, ChunkCoordinate, CoordinateType},
-        lod::Lod,
+        lod::{Lod, ReadOnlyLod},
         lod_chunk::LodChunk,
         ChunkState, Structure,
     },
@@ -576,7 +576,7 @@ fn trigger_lod_render(
     materials: Res<ReadOnlyManyToOneRegistry<Block, CosmosMaterial>>,
     meshes_registry: Res<ReadOnlyBlockMeshRegistry>,
     block_textures: Res<ReadOnlyRegistry<BlockTextureIndex>>,
-    lods_query: Query<(&Lod, &Structure)>,
+    lods_query: Query<(&ReadOnlyLod, &Structure)>,
     mut rendering_lods: ResMut<RenderingLods>,
     mut lods_needed: ResMut<NeedLods>,
 ) {
@@ -599,9 +599,6 @@ fn trigger_lod_render(
 
         println!("NEW LOD RENDER TRIGGERED FOR {entity:?}");
 
-        let mut non_dirty = vec![];
-        find_non_dirty(&lod, Vec3::ZERO, &mut non_dirty, structure.block_dimensions().x as f32);
-
         let blocks = blocks.clone();
         let block_textures = block_textures.clone();
         let materials = materials.clone();
@@ -609,10 +606,15 @@ fn trigger_lod_render(
         let atlas = atlas.clone();
 
         let chunk_dimensions = structure.chunk_dimensions().x;
+        let block_dimensions = structure.block_dimensions().x;
 
-        let mut cloned_lod = lod.clone();
+        let lod = lod.clone();
 
         let task = thread_pool.spawn(async move {
+            let lod = lod.inner();
+            let mut non_dirty = vec![];
+            find_non_dirty(&lod, Vec3::ZERO, &mut non_dirty, block_dimensions as f32);
+
             // by making the Vec an Option<Vec> I can take ownership of it later, which I cannot do with
             // just a plain Mutex<Vec>.
             // https://stackoverflow.com/questions/30573188/cannot-move-data-out-of-a-mutex
@@ -623,6 +625,8 @@ fn trigger_lod_render(
             let materials = materials.registry();
             let meshes_registry = meshes_registry.registry();
             let atlas = atlas.atlas();
+
+            let mut cloned_lod = lod.clone();
 
             recursively_process_lod(
                 &mut cloned_lod,
