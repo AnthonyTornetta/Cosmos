@@ -54,6 +54,7 @@ fn process_new_lods(mut todo_lods: ResMut<TodoLods>, mut applying_lods: ResMut<A
 
         let async_task_pool = AsyncComputeTaskPool::get();
 
+        // LAG!
         let cur_lod = cur_lod.cloned();
 
         // This is a heavy operation, and needs to be run async
