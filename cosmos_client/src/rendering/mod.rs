@@ -21,6 +21,7 @@ use crate::{
 };
 
 mod lod_renderer;
+pub mod mesh_delayer;
 mod structure_renderer;
 
 #[derive(Component, Debug)]
@@ -569,6 +570,7 @@ pub(super) fn register(app: &mut App) {
     many_to_one::create_many_to_one_registry::<Block, BlockMeshInformation>(app);
     structure_renderer::register(app);
     lod_renderer::register(app);
+    mesh_delayer::register(app);
 
     app.add_systems(OnEnter(GameState::Loading), register_meshes).add_systems(
         OnExit(GameState::PostLoading),

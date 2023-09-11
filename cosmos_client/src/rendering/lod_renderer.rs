@@ -33,7 +33,7 @@ use crate::{
     state::game_state::GameState,
 };
 
-use super::{BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder, MeshInformation, ReadOnlyBlockMeshRegistry};
+use super::{mesh_delayer::DelayedMeshes, BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder, MeshInformation, ReadOnlyBlockMeshRegistry};
 
 #[derive(Debug)]
 struct MeshMaterial {
@@ -458,11 +458,12 @@ fn vec_eq(v1: Vec3, v2: Vec3) -> bool {
 fn poll_rendering_lods(
     mut commands: Commands,
     structure_lod_meshes_query: Query<&LodMeshes>,
-    mut meshes: ResMut<Assets<Mesh>>,
     transform_query: Query<&Transform>,
     mut rendering_lods: ResMut<RenderingLods>,
     // bypass change detection to not trigger re-render
     mut lod_query: Query<&mut Lod>,
+
+    mut delayed_meshes: ResMut<DelayedMeshes>,
 ) {
     let mut todo = Vec::with_capacity(rendering_lods.0.capacity());
 
@@ -480,14 +481,11 @@ fn poll_rendering_lods(
 
             for (lod_mesh, offset, scale) in ent_meshes {
                 for mesh_material in lod_mesh.mesh_materials {
-                    let mesh = meshes.add(mesh_material.mesh);
-
                     let s = (CHUNK_DIMENSIONS / 2) as f32 * lod_mesh.scale;
 
                     let ent = commands
                         .spawn((
                             PbrBundle {
-                                mesh,
                                 material: mesh_material.material,
                                 transform: Transform::from_translation(offset),
                                 ..Default::default()
@@ -497,6 +495,8 @@ fn poll_rendering_lods(
                             RenderedLod { scale },
                         ))
                         .id();
+
+                    delayed_meshes.add_mesh(mesh_material.mesh, ent);
 
                     entities_to_add.push(ent);
 
