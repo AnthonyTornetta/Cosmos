@@ -1,4 +1,4 @@
-use std::mem::swap;
+use std::{marker::PhantomData, mem::swap};
 
 use bevy::{
     prelude::{
@@ -50,14 +50,26 @@ pub struct DoneGeneratingLod {
 }
 
 #[derive(Debug)]
-pub struct AsyncGeneratingLod {
-    pub player_entity: Entity,
-    pub structure_entity: Entity,
-    pub task: Task<DoneGeneratingLod>,
+pub struct AsyncGeneratingLod<T> {
+    player_entity: Entity,
+    structure_entity: Entity,
+    task: Task<DoneGeneratingLod>,
+    _phantom: PhantomData<T>,
+}
+
+impl<T> AsyncGeneratingLod<T> {
+    pub fn new(player_entity: Entity, structure_entity: Entity, task: Task<DoneGeneratingLod>) -> Self {
+        Self {
+            _phantom: PhantomData::default(),
+            player_entity,
+            structure_entity,
+            task,
+        }
+    }
 }
 
 #[derive(Debug, Resource, Deref, DerefMut, Default)]
-pub(crate) struct GeneratingLods(pub Vec<AsyncGeneratingLod>);
+pub(crate) struct GeneratingLods<T>(pub Vec<AsyncGeneratingLod<T>>);
 
 #[derive(Debug, Clone)]
 /// Represents a reduced-detail version of a planet undergoing generation
@@ -96,10 +108,10 @@ pub(crate) struct LodGenerationRequest {
     current_lod: Option<ReadOnlyLod>,
 }
 
-fn check_done_generating(
+pub(crate) fn check_done_generating_lods<T: Component + Default>(
     mut commands: Commands,
     mut lod_query: Query<(Entity, &mut PlayerLod, &Parent)>,
-    mut generating_lods: ResMut<GeneratingLods>,
+    mut generating_lods: ResMut<GeneratingLods<T>>,
 ) {
     let mut todo = Vec::with_capacity(generating_lods.capacity());
 
@@ -217,14 +229,12 @@ fn create_generating_lod(
     }
 }
 
-fn start_generating_lods(
+pub(crate) fn start_generating_lods(
     mut commands: Commands,
     blocks: Res<Registry<Block>>,
     structure_query: Query<&Structure>,
     query: Query<(Entity, &LodGenerationRequest)>,
 ) {
-    // This is turbo laggy
-
     for (entity, lod_request) in query.iter() {
         let Ok(structure) = structure_query.get(lod_request.structure_entity) else {
             continue;
@@ -236,6 +246,8 @@ fn start_generating_lods(
             &lod_request.request,
             (BlockCoordinate::new(0, 0, 0), structure.block_dimensions()),
         );
+
+        println!("Starting to generate lod for {:?}", lod_request.structure_entity);
 
         commands
             .entity(entity)
@@ -368,11 +380,12 @@ fn create_lod_request(
 
 pub(crate) fn generate_player_lods<T: Component + Default>(
     mut commands: Commands,
-    any_generation_requests: Query<(), With<LodGenerationRequest>>,
-    generating_lods: Query<&LodNeedsGeneratedForPlayer>,
+    any_generation_requests: Query<Entity, (With<LodGenerationRequest>, With<T>)>,
+    needs_generated_lods: Query<&LodNeedsGeneratedForPlayer>,
     players: Query<(Entity, &Location), With<Player>>,
-    structures: Query<(Entity, &Structure, &Location, &GlobalTransform, Option<&Children>), With<Planet>>,
+    structures: Query<(Entity, &Structure, &Location, &GlobalTransform, Option<&Children>), (With<Planet>, With<T>)>,
     current_lods: Query<&PlayerLod>,
+    currently_generating_lods: Res<GeneratingLods<T>>,
 ) {
     if !any_generation_requests.is_empty() {
         return;
@@ -382,16 +395,15 @@ pub(crate) fn generate_player_lods<T: Component + Default>(
         let render_distance = 4;
 
         for (structure_ent, structure, structure_location, g_trans, children) in structures.iter() {
-            if generating_lods
-                .iter()
-                .any(|generating_lod| generating_lod.player_entity == player_entity && generating_lod.structure_entity == structure_ent)
-            {
+            if needs_generated_lods.iter().any(|needs_generated_lod| {
+                needs_generated_lod.player_entity == player_entity && needs_generated_lod.structure_entity == structure_ent
+            }) {
                 continue;
             }
 
-            if generating_lods
+            if currently_generating_lods
                 .iter()
-                .any(|x| x.player_entity == player_entity || x.structure_entity == structure_ent)
+                .any(|generating_lod| generating_lod.player_entity == player_entity || generating_lod.structure_entity == structure_ent)
             {
                 continue;
             }
@@ -439,6 +451,8 @@ pub(crate) fn generate_player_lods<T: Component + Default>(
                 continue;
             }
 
+            println!("Create new lod render for {structure_ent:?}");
+
             let request_entity = commands
                 .spawn((
                     LodGenerationRequest {
@@ -456,8 +470,5 @@ pub(crate) fn generate_player_lods<T: Component + Default>(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(
-        Update,
-        ((start_generating_lods, check_done_generating).run_if(in_state(GameState::Playing)),),
-    );
+    app.add_systems(Update, (start_generating_lods.run_if(in_state(GameState::Playing)),));
 }

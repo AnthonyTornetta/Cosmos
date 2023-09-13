@@ -4,7 +4,7 @@ use std::{marker::PhantomData, mem::swap};
 
 use bevy::{
     prelude::{
-        warn, App, Commands, Component, DespawnRecursiveExt, Entity, Event, EventReader, EventWriter, Query, Res, ResMut, Resource, With,
+        warn, Commands, Component, DespawnRecursiveExt, Entity, Event, EventReader, EventWriter, Query, Res, ResMut, Resource, With,
     },
     tasks::AsyncComputeTaskPool,
 };
@@ -1102,12 +1102,12 @@ fn recurse<T: Component + Default + Clone, S: BiosphereGenerationStrategy + 'sta
     }
 }
 
-pub(crate) fn start_generating_lods<T: Component + Default + Clone, S: BiosphereGenerationStrategy + 'static>(
+pub(crate) fn begin_generating_lods<T: Component + Default + Clone, S: BiosphereGenerationStrategy + 'static>(
     query: Query<(Entity, &LodNeedsGeneratedForPlayer), With<T>>,
     is_biosphere: Query<(&Structure, &Location), With<T>>,
     noise_generator: Res<ReadOnlyNoise>,
     block_ranges: Res<BlockLayers<T>>,
-    mut currently_generating: ResMut<GeneratingLods>,
+    mut currently_generating: ResMut<GeneratingLods<T>>,
     mut commands: Commands,
 ) {
     for (entity, generating_lod) in query.iter() {
@@ -1168,11 +1168,8 @@ pub(crate) fn start_generating_lods<T: Component + Default + Clone, S: Biosphere
             }
         });
 
-        currently_generating.push(AsyncGeneratingLod {
-            task,
-            player_entity,
-            structure_entity,
-        });
+        println!("Beginning generation of actual lods of: {structure_entity:?}");
+        currently_generating.push(AsyncGeneratingLod::<T>::new(player_entity, structure_entity, task));
     }
 }
 
@@ -1315,8 +1312,4 @@ pub fn generate_planet<T: Component + Clone + Default, E: TGenerateChunkEvent + 
             generating.generating.push(GeneratingChunk::new(task));
         }
     }
-}
-
-pub(super) fn register(app: &mut App) {
-    app.init_resource::<GeneratingLods>();
 }

@@ -32,10 +32,13 @@ use crate::{
 };
 
 use self::biosphere_generation::{
-    generate_planet, notify_when_done_generating_terrain, start_generating_lods, BiosphereGenerationStrategy, GenerateChunkFeaturesEvent,
+    begin_generating_lods, generate_planet, notify_when_done_generating_terrain, BiosphereGenerationStrategy, GenerateChunkFeaturesEvent,
 };
 
-use super::{generation::planet_generator::check_needs_generated_system, lods::generate_lods::generate_player_lods};
+use super::{
+    generation::planet_generator::check_needs_generated_system,
+    lods::generate_lods::{check_done_generating_lods, generate_player_lods, start_generating_lods, GeneratingLods},
+};
 
 pub mod biosphere_generation;
 pub mod generation_tools;
@@ -152,14 +155,16 @@ pub fn register_biosphere<
                 (
                     generate_planet::<T, E, S>,
                     notify_when_done_generating_terrain::<T>,
-                    generate_player_lods::<T>,
-                    start_generating_lods::<T, S>,
+                    generate_player_lods::<T>.before(start_generating_lods),
+                    begin_generating_lods::<T, S>,
                     check_needs_generated_system::<E, T>,
+                    check_done_generating_lods::<T>,
                 )
                     .run_if(in_state(GameState::Playing)),
             ),
         )
-        .insert_resource(GeneratingChunks::<T>::default())
+        .init_resource::<GeneratingChunks<T>>()
+        .init_resource::<GeneratingLods<T>>()
         .add_event::<GenerateChunkFeaturesEvent<T>>();
 }
 
@@ -245,5 +250,4 @@ pub(super) fn register(app: &mut App) {
     grass_biosphere::register(app);
     molten_biosphere::register(app);
     ice_biosphere::register(app);
-    biosphere_generation::register(app);
 }

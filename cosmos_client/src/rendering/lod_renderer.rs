@@ -1,4 +1,9 @@
-use std::{f32::consts::PI, mem::swap, sync::Mutex};
+use std::{
+    collections::VecDeque,
+    f32::consts::PI,
+    mem::swap,
+    sync::{Arc, Mutex},
+};
 
 use bevy::{
     prelude::*,
@@ -323,7 +328,7 @@ impl ChunkRenderer {
     }
 }
 
-#[derive(Component, Debug, Reflect, Default)]
+#[derive(Component, Debug, Reflect, Default, Deref, DerefMut)]
 struct LodMeshes(Vec<Entity>);
 
 fn recursively_process_lod(
@@ -449,21 +454,69 @@ struct RenderedLod {
     scale: CoordinateType,
 }
 
-fn vec_eq(v1: Vec3, v2: Vec3) -> bool {
-    const EPSILON: f32 = 1e-2;
+#[derive(Debug, Clone, DerefMut, Deref)]
+struct ToKill(Arc<Mutex<(Entity, usize)>>);
 
-    (v1.x - v2.x).abs() < EPSILON && (v1.y - v2.y).abs() < EPSILON && (v1.z - v2.z).abs() < EPSILON
+#[derive(Debug, Resource, Default, Deref, DerefMut)]
+struct MeshesToCompute(VecDeque<(Mesh, Entity, Vec<ToKill>)>);
+
+const MESHES_PER_FRAME: usize = 5;
+
+fn kill_all(to_kill: Vec<ToKill>, commands: &mut Commands) {
+    for x in to_kill {
+        let mut unlocked = x.lock().expect("Failed lock");
+        unlocked.1 -= 1;
+
+        if unlocked.1 == 0 {
+            commands.get_entity(unlocked.0).map(|ecmds| ecmds.despawn_recursive());
+        }
+    }
+}
+
+fn compute_meshes_and_kill_dead_entities(
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut commands: Commands,
+    mut meshes_to_compute: ResMut<MeshesToCompute>,
+) {
+    if meshes_to_compute.is_empty() {
+        return;
+    }
+
+    println!("TODO: {}", meshes_to_compute.len());
+
+    let mut to_clean_meshes = VecDeque::with_capacity(meshes_to_compute.0.capacity());
+
+    swap(&mut to_clean_meshes, &mut meshes_to_compute.0);
+
+    for (delayed_mesh, entity, to_kill) in to_clean_meshes {
+        if commands.get_entity(entity).is_some() {
+            meshes_to_compute.push_back((delayed_mesh, entity, to_kill));
+        } else {
+            kill_all(to_kill, &mut commands);
+        }
+    }
+
+    for _ in 0..MESHES_PER_FRAME {
+        let Some((delayed_mesh, entity, to_kill)) = meshes_to_compute.0.pop_front() else {
+            break;
+        };
+
+        // The entity was verified to exist above
+        commands.entity(entity).insert(meshes.add(delayed_mesh));
+        kill_all(to_kill, &mut commands);
+    }
 }
 
 fn poll_rendering_lods(
     mut commands: Commands,
     structure_lod_meshes_query: Query<&LodMeshes>,
     transform_query: Query<&Transform>,
+    rendered_lod_query: Query<&RenderedLod>,
     mut rendering_lods: ResMut<RenderingLods>,
     // bypass change detection to not trigger re-render
     mut lod_query: Query<&mut Lod>,
 
-    mut delayed_meshes: ResMut<DelayedMeshes>,
+    mut meshes_to_compute: ResMut<MeshesToCompute>,
 ) {
     let mut todo = Vec::with_capacity(rendering_lods.0.capacity());
 
@@ -478,6 +531,13 @@ fn poll_rendering_lods(
                 .get(structure_entity)
                 .map(|x| x.0.clone())
                 .unwrap_or_default();
+
+            // grab entities to kill
+            //   insert them into list of Arc<Mutex<(Entity, usize)>> where usize represents a counter
+            //   loop through every created lod and assign them the dirty entity where they go (or none)
+
+            // once the new entity's mesh is ready, decrease the counter
+            // if the counter is 0, despawn the dirty entity.
 
             for (lod_mesh, offset, scale) in ent_meshes {
                 for mesh_material in lod_mesh.mesh_materials {
@@ -496,31 +556,58 @@ fn poll_rendering_lods(
                         ))
                         .id();
 
-                    delayed_meshes.add_mesh(mesh_material.mesh, ent);
-
-                    entities_to_add.push(ent);
+                    entities_to_add.push((ent, offset, scale, mesh_material.mesh));
 
                     structure_meshes_component.0.push(ent);
                 }
             }
 
+            let mut to_despawn = Vec::with_capacity(old_mesh_entities.len());
+
             // Any dirty entities are useless now, so kill them
             for mesh_entity in old_mesh_entities {
-                let is_clean = transform_query
-                    .get(mesh_entity)
-                    .map(|transform| to_keep_locations.iter().any(|&x| vec_eq(x, transform.translation)))
-                    .unwrap_or(false);
+                let Ok(transform) = transform_query.get(mesh_entity) else {
+                    unreachable!();
+                };
+
+                let is_clean = to_keep_locations.iter().any(|&x| x == transform.translation);
                 if is_clean {
-                    structure_meshes_component.0.push(mesh_entity);
+                    structure_meshes_component.push(mesh_entity);
                 } else {
-                    commands.entity(mesh_entity).despawn_recursive();
+                    let Ok(rendered_lod) = rendered_lod_query.get(mesh_entity) else {
+                        warn!("Invalid mesh entity {mesh_entity:?}!");
+                        commands.entity(mesh_entity).despawn_recursive();
+                        continue;
+                    };
+
+                    to_despawn.push((
+                        transform.translation,
+                        rendered_lod.scale,
+                        ToKill(Arc::new(Mutex::new((mesh_entity, 0)))),
+                    ));
                 }
             }
 
             let mut entity_commands = commands.entity(structure_entity);
 
-            for ent in entities_to_add {
-                entity_commands.add_child(ent);
+            for (entity, offset, scale, mesh) in entities_to_add {
+                let mut to_kill = vec![];
+
+                for (other_offset, other_scale, counter) in to_despawn.iter() {
+                    let diff = (offset - *other_offset).abs();
+                    let max = diff.x.max(diff.y).max(diff.z);
+
+                    if CHUNK_DIMENSIONS * scale + CHUNK_DIMENSIONS * *other_scale < max.floor() as CoordinateType {
+                        let counter = counter.clone();
+
+                        counter.0.lock().expect("lock failed").1 += 1;
+
+                        to_kill.push(counter);
+                    }
+                }
+
+                meshes_to_compute.0.push_back((mesh, entity, to_kill));
+                entity_commands.add_child(entity);
             }
 
             if let Ok(mut l) = lod_query.get_mut(structure_entity) {
@@ -660,10 +747,12 @@ pub(super) fn register(app: &mut App) {
             trigger_lod_render,
             poll_rendering_lods,
             hide_lod,
+            compute_meshes_and_kill_dead_entities,
         )
             .chain()
             .run_if(in_state(GameState::Playing)),
     )
     .insert_resource(RenderingLods::default())
-    .insert_resource(NeedLods::default());
+    .insert_resource(NeedLods::default())
+    .init_resource::<MeshesToCompute>();
 }

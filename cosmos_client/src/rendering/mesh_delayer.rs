@@ -1,6 +1,6 @@
 //! Used to fix performance issues of adding a ton of meshes all at once
 
-use std::collections::VecDeque;
+use std::{collections::VecDeque, mem::swap};
 
 use bevy::prelude::{App, Assets, Commands, Entity, Mesh, ResMut, Resource, Update};
 
@@ -32,14 +32,27 @@ impl DelayedMeshes {
 const MESHES_PER_FRAME: usize = 5;
 
 fn add_meshes(mut meshes: ResMut<Assets<Mesh>>, mut commands: Commands, mut meshes_to_add: ResMut<DelayedMeshes>) {
+    if meshes_to_add.0.is_empty() {
+        return;
+    }
+
+    let mut to_clean_meshes = VecDeque::with_capacity(meshes_to_add.0.capacity());
+
+    swap(&mut to_clean_meshes, &mut meshes_to_add.0);
+
+    for delayed_mesh in to_clean_meshes {
+        if commands.get_entity(delayed_mesh.entity).is_some() {
+            meshes_to_add.0.push_back(delayed_mesh);
+        }
+    }
+
     for _ in 0..MESHES_PER_FRAME {
         let Some(delayed_mesh) = meshes_to_add.0.pop_front() else {
             break;
         };
 
-        if let Some(mut ecmds) = commands.get_entity(delayed_mesh.entity) {
-            ecmds.insert(meshes.add(delayed_mesh.mesh));
-        }
+        // The entity was verified to exist above
+        commands.entity(delayed_mesh.entity).insert(meshes.add(delayed_mesh.mesh));
     }
 }
 
