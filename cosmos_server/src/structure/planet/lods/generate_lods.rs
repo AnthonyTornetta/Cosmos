@@ -451,7 +451,7 @@ pub(crate) fn generate_player_lods<T: Component + Default>(
                 continue;
             }
 
-            println!("Create new lod render for {structure_ent:?}");
+            println!("Requesting new lod generation for {structure_ent:?}");
 
             let request_entity = commands
                 .spawn((

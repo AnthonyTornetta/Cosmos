@@ -38,7 +38,7 @@ use crate::{
     state::game_state::GameState,
 };
 
-use super::{mesh_delayer::DelayedMeshes, BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder, MeshInformation, ReadOnlyBlockMeshRegistry};
+use super::{BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder, MeshInformation, ReadOnlyBlockMeshRegistry};
 
 #[derive(Debug)]
 struct MeshMaterial {
@@ -460,7 +460,7 @@ struct ToKill(Arc<Mutex<(Entity, usize)>>);
 #[derive(Debug, Resource, Default, Deref, DerefMut)]
 struct MeshesToCompute(VecDeque<(Mesh, Entity, Vec<ToKill>)>);
 
-const MESHES_PER_FRAME: usize = 5;
+const MESHES_PER_FRAME: usize = 25;
 
 fn kill_all(to_kill: Vec<ToKill>, commands: &mut Commands) {
     for x in to_kill {
@@ -619,6 +619,15 @@ fn poll_rendering_lods(
             }
 
             entity_commands.insert(structure_meshes_component);
+
+            for (_, _, counter) in to_despawn {
+                let locked = counter.lock().expect("failed to lock");
+                if locked.1 == 0 {
+                    if let Some(ecmds) = commands.get_entity(locked.0) {
+                        ecmds.despawn_recursive();
+                    }
+                }
+            }
         } else {
             rendering_lods.0.push((structure_entity, rendering_lod))
         }

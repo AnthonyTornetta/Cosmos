@@ -340,9 +340,9 @@ fn listen_for_new_physics_event(
             return;
         };
 
-        let chunk_colliders = vec![(Collider::cuboid(16.0, 16.0, 16.0), 10.0, BlockColliderMode::NormalCollider)];
+        // let chunk_colliders = vec![(Collider::cuboid(16.0, 16.0, 16.0), 10.0, BlockColliderMode::NormalCollider)];
 
-        // let chunk_colliders = generate_chunk_collider(chunk, &blocks, &colliders);
+        let chunk_colliders = generate_chunk_collider(chunk, &blocks, &colliders);
 
         let mut first = true;
 
