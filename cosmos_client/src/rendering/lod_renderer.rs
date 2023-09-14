@@ -468,7 +468,9 @@ fn kill_all(to_kill: Vec<ToKill>, commands: &mut Commands) {
         unlocked.1 -= 1;
 
         if unlocked.1 == 0 {
-            if let Some(ecmds) = commands.get_entity(unlocked.0) { ecmds.despawn_recursive() }
+            if let Some(ecmds) = commands.get_entity(unlocked.0) {
+                ecmds.despawn_recursive()
+            }
         }
     }
 }
