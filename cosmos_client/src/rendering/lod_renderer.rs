@@ -460,7 +460,7 @@ struct ToKill(Arc<Mutex<(Entity, usize)>>);
 #[derive(Debug, Resource, Default, Deref, DerefMut)]
 struct MeshesToCompute(VecDeque<(Mesh, Entity, Vec<ToKill>)>);
 
-const MESHES_PER_FRAME: usize = 25;
+const MESHES_PER_FRAME: usize = 15;
 
 fn kill_all(to_kill: Vec<ToKill>, commands: &mut Commands) {
     for x in to_kill {

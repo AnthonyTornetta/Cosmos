@@ -30,6 +30,7 @@ pub mod window;
 use std::env;
 use std::f32::consts::PI;
 
+use bevy::core::TaskPoolThreadAssignmentPolicy;
 use bevy::window::PrimaryWindow;
 use bevy_renet::renet::RenetClient;
 use bevy_renet::transport::NetcodeClientPlugin;
@@ -45,6 +46,7 @@ use netty::mapping::NetworkMapping;
 use rendering::MainCamera;
 use state::game_state::GameState;
 use structure::planet::align_player::PlayerAlignment;
+use thread_priority::{set_current_thread_priority, ThreadPriority};
 use ui::crosshair::CrosshairOffset;
 use window::setup::DeltaCursorPosition;
 
@@ -287,6 +289,12 @@ fn create_sun(mut commands: Commands) {
 }
 
 fn main() {
+    if set_current_thread_priority(ThreadPriority::Max).is_err() {
+        warn!("Failed to set main thread priority to max - this can lead to lag.");
+    } else {
+        println!("Successfully set main thread priority to max!");
+    }
+
     // #[cfg(debug_assertions)]
     // env::set_var("RUST_BACKTRACE", "1");
 
@@ -315,7 +323,20 @@ fn main() {
         .insert_resource(ClearColor(Color::BLACK))
         // This must be registered here, before it is used anywhere
         .add_state::<GameState>()
-        .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))
+        .add_plugins(
+            DefaultPlugins
+                .set(TaskPoolPlugin {
+                    task_pool_options: TaskPoolOptions {
+                        compute: TaskPoolThreadAssignmentPolicy {
+                            min_threads: 1,
+                            max_threads: std::usize::MAX,
+                            percent: 0.25,
+                        },
+                        ..Default::default()
+                    },
+                })
+                .set(ImagePlugin::default_nearest()),
+        )
         .add_plugins(CosmosCorePluginGroup::new(
             GameState::PreLoading,
             GameState::Loading,

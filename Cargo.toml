@@ -38,6 +38,8 @@ walkdir = "2.3.3"
 
 toml = "0.7.6"
 
+thread-priority = "0.13.1"
+
 # default-features makes it use safe but slower code.
 lz4_flex = { version = "0.11.1", default-features = false }
 

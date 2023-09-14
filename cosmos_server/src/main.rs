@@ -5,13 +5,14 @@
 
 use std::env;
 
-use bevy::prelude::*;
+use bevy::{core::TaskPoolThreadAssignmentPolicy, prelude::*};
 use bevy_rapier3d::prelude::{RapierConfiguration, TimestepMode};
 use bevy_renet::{transport::NetcodeServerPlugin, RenetServerPlugin};
 use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
 
 use plugin::server_plugin::ServerPlugin;
 use state::GameState;
+use thread_priority::{set_current_thread_priority, ThreadPriority};
 
 pub mod blocks;
 pub mod commands;
@@ -30,6 +31,12 @@ pub mod structure;
 pub mod universe;
 
 fn main() {
+    if set_current_thread_priority(ThreadPriority::Max).is_err() {
+        println!("Failed to set main thread priority to max - this can lead to lag.");
+    } else {
+        println!("Successfully set main thread priority to max!");
+    }
+
     // #[cfg(debug_assertions)]
     // env::set_var("RUST_BACKTRACE", "1");
 
@@ -53,7 +60,20 @@ fn main() {
             },
             ..default()
         })
-        .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))
+        .add_plugins(
+            DefaultPlugins
+                .set(TaskPoolPlugin {
+                    task_pool_options: TaskPoolOptions {
+                        compute: TaskPoolThreadAssignmentPolicy {
+                            min_threads: 1,
+                            max_threads: std::usize::MAX,
+                            percent: 0.25,
+                        },
+                        ..Default::default()
+                    },
+                })
+                .set(ImagePlugin::default_nearest()),
+        )
         .add_plugins(CosmosCorePluginGroup::new(
             GameState::PreLoading,
             GameState::Loading,
