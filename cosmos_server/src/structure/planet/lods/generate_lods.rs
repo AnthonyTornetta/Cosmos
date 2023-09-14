@@ -8,10 +8,8 @@ use bevy::{
     tasks::Task,
 };
 use cosmos_core::{
-    block::Block,
     entities::player::Player,
     physics::location::Location,
-    registry::Registry,
     structure::{
         coordinates::{BlockCoordinate, CoordinateType, UnboundChunkCoordinate, UnboundCoordinateType},
         lod::{Lod, ReadOnlyLod},
@@ -130,14 +128,16 @@ pub(crate) fn check_done_generating_lods<T: Component + Default>(
                 player_lod.lod = lod;
                 player_lod.deltas.push(lod_delta);
                 player_lod.read_only_lod = read_only_lod;
-            } else if let Some(mut ecmds) = commands.get_entity(task.structure_entity) { ecmds.with_children(|cmds| {
-                cmds.spawn(PlayerLod {
-                    lod,
-                    deltas: vec![lod_delta],
-                    player: task.player_entity,
-                    read_only_lod,
+            } else if let Some(mut ecmds) = commands.get_entity(task.structure_entity) {
+                ecmds.with_children(|cmds| {
+                    cmds.spawn(PlayerLod {
+                        lod,
+                        deltas: vec![lod_delta],
+                        player: task.player_entity,
+                        read_only_lod,
+                    });
                 });
-            }); }
+            }
         } else {
             generating_lods.push(task);
         }
@@ -145,8 +145,6 @@ pub(crate) fn check_done_generating_lods<T: Component + Default>(
 }
 
 fn create_generating_lod(
-    structure_entity: Entity,
-    blocks: &Registry<Block>,
     request: &LodRequest,
     (min_block_range_inclusive, max_block_range_exclusive): (BlockCoordinate, BlockCoordinate),
 ) -> GeneratingLod {
@@ -173,50 +171,34 @@ fn create_generating_lod(
 
             GeneratingLod::Children(Box::new([
                 create_generating_lod(
-                    structure_entity,
-                    blocks,
                     &child_requests[0],
                     ((min.x, min.y, min.z).into(), (max.x - dx, max.y - dy, max.z - dz).into()),
                 ),
                 create_generating_lod(
-                    structure_entity,
-                    blocks,
                     &child_requests[1],
                     ((min.x, min.y, min.z + dz).into(), (max.x - dx, max.y - dy, max.z).into()),
                 ),
                 create_generating_lod(
-                    structure_entity,
-                    blocks,
                     &child_requests[2],
                     ((min.x + dx, min.y, min.z + dz).into(), (max.x, max.y - dy, max.z).into()),
                 ),
                 create_generating_lod(
-                    structure_entity,
-                    blocks,
                     &child_requests[3],
                     ((min.x + dx, min.y, min.z).into(), (max.x, max.y - dy, max.z - dz).into()),
                 ),
                 create_generating_lod(
-                    structure_entity,
-                    blocks,
                     &child_requests[4],
                     ((min.x, min.y + dy, min.z).into(), (max.x - dx, max.y, max.z - dz).into()),
                 ),
                 create_generating_lod(
-                    structure_entity,
-                    blocks,
                     &child_requests[5],
                     ((min.x, min.y + dy, min.z + dz).into(), (max.x - dx, max.y, max.z).into()),
                 ),
                 create_generating_lod(
-                    structure_entity,
-                    blocks,
                     &child_requests[6],
                     ((min.x + dx, min.y + dy, min.z + dz).into(), (max.x, max.y, max.z).into()),
                 ),
                 create_generating_lod(
-                    structure_entity,
-                    blocks,
                     &child_requests[7],
                     ((min.x + dx, min.y + dy, min.z).into(), (max.x, max.y, max.z - dz).into()),
                 ),
@@ -227,7 +209,6 @@ fn create_generating_lod(
 
 pub(crate) fn start_generating_lods(
     mut commands: Commands,
-    blocks: Res<Registry<Block>>,
     structure_query: Query<&Structure>,
     query: Query<(Entity, &LodGenerationRequest)>,
 ) {
@@ -236,12 +217,7 @@ pub(crate) fn start_generating_lods(
             continue;
         };
 
-        let generating_lod = create_generating_lod(
-            lod_request.structure_entity,
-            &blocks,
-            &lod_request.request,
-            (BlockCoordinate::new(0, 0, 0), structure.block_dimensions()),
-        );
+        let generating_lod = create_generating_lod(&lod_request.request, (BlockCoordinate::new(0, 0, 0), structure.block_dimensions()));
 
         println!("Starting to generate lod for {:?}", lod_request.structure_entity);
 

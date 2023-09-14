@@ -102,6 +102,12 @@ impl<K: Identifiable, V: Identifiable> ManyToOneRegistry<K, V> {
 #[derive(Resource, Debug, Clone)]
 pub struct ReadOnlyManyToOneRegistry<K: Identifiable, V: Identifiable>(Arc<RwLock<ManyToOneRegistry<K, V>>>);
 
+impl<K: Identifiable, V: Identifiable> Default for ReadOnlyManyToOneRegistry<K, V> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<K: Identifiable, V: Identifiable> ReadOnlyManyToOneRegistry<K, V> {
     /// Initializes a Registry.
     ///

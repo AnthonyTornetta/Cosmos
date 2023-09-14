@@ -28,6 +28,12 @@ impl Debug for LodChunk {
     }
 }
 
+impl Default for LodChunk {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LodChunk {
     /// Creates a new Lod chunk
     pub fn new() -> Self {
