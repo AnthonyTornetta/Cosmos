@@ -132,7 +132,7 @@ impl<T: Identifiable + Sync + Send> ReadOnlyRegistry<T> {
     }
 
     /// Takes a lock of the registry this encapsulates
-    pub fn registry<'a>(&'a self) -> RwLockReadGuard<'a, Registry<T>> {
+    pub fn registry(&self) -> RwLockReadGuard<'_, Registry<T>> {
         self.0.as_ref().read().expect("Failed to lock registry")
     }
 }

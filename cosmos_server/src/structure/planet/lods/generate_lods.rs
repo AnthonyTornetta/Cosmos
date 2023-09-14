@@ -60,7 +60,7 @@ pub struct AsyncGeneratingLod<T> {
 impl<T> AsyncGeneratingLod<T> {
     pub fn new(player_entity: Entity, structure_entity: Entity, task: Task<DoneGeneratingLod>) -> Self {
         Self {
-            _phantom: PhantomData::default(),
+            _phantom: PhantomData,
             player_entity,
             structure_entity,
             task,
@@ -130,18 +130,14 @@ pub(crate) fn check_done_generating_lods<T: Component + Default>(
                 player_lod.lod = lod;
                 player_lod.deltas.push(lod_delta);
                 player_lod.read_only_lod = read_only_lod;
-            } else {
-                commands.get_entity(task.structure_entity).map(|mut ecmds| {
-                    ecmds.with_children(|cmds| {
-                        cmds.spawn(PlayerLod {
-                            lod,
-                            deltas: vec![lod_delta],
-                            player: task.player_entity,
-                            read_only_lod,
-                        });
-                    });
+            } else if let Some(mut ecmds) = commands.get_entity(task.structure_entity) { ecmds.with_children(|cmds| {
+                cmds.spawn(PlayerLod {
+                    lod,
+                    deltas: vec![lod_delta],
+                    player: task.player_entity,
+                    read_only_lod,
                 });
-            }
+            }); }
         } else {
             generating_lods.push(task);
         }

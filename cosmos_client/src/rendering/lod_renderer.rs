@@ -254,7 +254,7 @@ impl ChunkRenderer {
                     let maybe_img_idx = if self.scale > 8.0 {
                         index
                             .atlas_index("lod")
-                            .map(|x| Some(x))
+                            .map(Some)
                             .unwrap_or_else(|| index.atlas_index_from_face(face))
                     } else {
                         index.atlas_index_from_face(face)
@@ -385,18 +385,18 @@ fn recursively_process_lod(
             renderer.render(
                 scale,
                 Vec3::ZERO,
-                &atlas,
-                &materials,
-                &lod_chunk,
+                atlas,
+                materials,
+                lod_chunk,
                 None,
                 None,
                 None,
                 None,
                 None,
                 None,
-                &blocks,
-                &meshes_registry,
-                &block_textures,
+                blocks,
+                meshes_registry,
+                block_textures,
             );
 
             let mut mutex = to_process.lock().expect("Error locking to_process vec!");
@@ -468,7 +468,7 @@ fn kill_all(to_kill: Vec<ToKill>, commands: &mut Commands) {
         unlocked.1 -= 1;
 
         if unlocked.1 == 0 {
-            commands.get_entity(unlocked.0).map(|ecmds| ecmds.despawn_recursive());
+            if let Some(ecmds) = commands.get_entity(unlocked.0) { ecmds.despawn_recursive() }
         }
     }
 }

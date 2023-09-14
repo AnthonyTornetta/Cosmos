@@ -112,7 +112,7 @@ impl<K: Identifiable, V: Identifiable> ReadOnlyManyToOneRegistry<K, V> {
     }
 
     /// Takes a lock of the registry this encapsulates
-    pub fn registry<'a>(&'a self) -> RwLockReadGuard<'a, ManyToOneRegistry<K, V>> {
+    pub fn registry(&self) -> RwLockReadGuard<'_, ManyToOneRegistry<K, V>> {
         self.0.as_ref().read().expect("Failed to lock registry")
     }
 }

@@ -863,7 +863,7 @@ impl<T: Component + Clone + Default> BlockLayers<T> {
                     if height + scale > level_top {
                         let mut last_block = block;
 
-                        while let Some(&(block, level_top)) = itr.next() {
+                        for &(block, level_top) in itr.by_ref() {
                             last_block = block;
 
                             if height + scale <= level_top {
@@ -910,7 +910,7 @@ impl<T: Component + Clone + Default> BlockLayers<T> {
                     if j_height + scale > j_layer_top || k_height + scale > k_layers[index].1 {
                         let mut last_block = block;
 
-                        while let Some((index, &(block, j_layer_top))) = itr.next() {
+                        for (index, &(block, j_layer_top)) in itr.by_ref() {
                             last_block = block;
 
                             if j_height + scale > j_layer_top && k_height + scale > k_layers[index].1 {
@@ -959,7 +959,7 @@ impl<T: Component + Clone + Default> BlockLayers<T> {
                     if x_height + scale > x_layer_top || y_height + scale > y_layers[index].1 || z_height + scale > z_layers[index].1 {
                         let mut last_block = block;
 
-                        while let Some((index, &(block, x_layer_top))) = itr.next() {
+                        for (index, &(block, x_layer_top)) in itr.by_ref() {
                             last_block = block;
 
                             if x_height + scale > x_layer_top
@@ -1008,8 +1008,8 @@ fn generate<T: Component + Default + Clone, S: BiosphereGenerationStrategy + 'st
                 first_block_coord,
                 (structure_x, structure_y, structure_z),
                 s_dimensions,
-                &noise_generator,
-                &block_ranges,
+                noise_generator,
+                block_ranges,
                 &mut lod_chunk,
                 up,
                 scale,
@@ -1020,8 +1020,8 @@ fn generate<T: Component + Default + Clone, S: BiosphereGenerationStrategy + 'st
                 first_block_coord,
                 (structure_x, structure_y, structure_z),
                 s_dimensions,
-                &noise_generator,
-                &block_ranges,
+                noise_generator,
+                block_ranges,
                 &mut lod_chunk,
                 j_up,
                 k_up,
@@ -1033,8 +1033,8 @@ fn generate<T: Component + Default + Clone, S: BiosphereGenerationStrategy + 'st
                 first_block_coord,
                 (structure_x, structure_y, structure_z),
                 s_dimensions,
-                &noise_generator,
-                &block_ranges,
+                noise_generator,
+                block_ranges,
                 &mut lod_chunk,
                 x_up,
                 y_up,

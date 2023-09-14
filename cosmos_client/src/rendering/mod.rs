@@ -272,7 +272,7 @@ fn stupid_parse(file: &str) -> Option<MeshInformation> {
     let obj = fs::read_to_string(file);
     if let Ok(obj) = obj {
         let split = obj
-            .replace("\r", "")
+            .replace('\r', "")
             .split('\n')
             .filter(|x| !x.trim().starts_with('#') && !x.trim().is_empty())
             .map(|x| x.to_owned())

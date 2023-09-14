@@ -67,7 +67,7 @@ pub struct ReadOnlyMainAtlas(Arc<RwLock<MainAtlas>>);
 
 impl ReadOnlyMainAtlas {
     /// Locks the atlas for use on this thread
-    pub fn atlas<'a>(&'a self) -> RwLockReadGuard<'a, MainAtlas> {
+    pub fn atlas(&self) -> RwLockReadGuard<'_, MainAtlas> {
         self.0.as_ref().read().expect("Failed to lock atlas")
     }
 }
