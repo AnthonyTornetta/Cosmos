@@ -4,7 +4,7 @@
 
 use std::{fs, io::ErrorKind};
 
-use bevy::prelude::{App, Commands, Component, Entity, Event, EventReader, EventWriter, Query, Update};
+use bevy::prelude::{warn, App, Commands, Component, Entity, Event, EventReader, EventWriter, Query, Update};
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
     netty::cosmos_encoder,
@@ -56,7 +56,7 @@ fn send_actual_loaded_events(
                 }
             }
         } else {
-            println!("Error: structure still no exist");
+            warn!("Error: structure still no exist");
         }
     }
 }

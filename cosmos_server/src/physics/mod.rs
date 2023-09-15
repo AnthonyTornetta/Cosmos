@@ -282,12 +282,12 @@ fn sync_transforms_and_locations(
                 }
             }
 
-            let Ok(location) = trans_query_no_parent
-                .get(player_entity)
-                .map(|(_, _, loc, _)| loc)
-                .or_else(|_| match trans_query_with_parent.get(player_entity) {
-                    Ok((_, _, loc)) => Ok(loc),
-                    Err(x) => Err(x),
+            let Ok(location) =
+                trans_query_no_parent.get(player_entity).map(|(_, _, loc, _)| loc).or_else(|_| {
+                    match trans_query_with_parent.get(player_entity) {
+                        Ok((_, _, loc)) => Ok(loc),
+                        Err(x) => Err(x),
+                    }
                 })
             else {
                 // The player was just added & doesn't have a transform yet - only a location.

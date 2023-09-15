@@ -24,13 +24,16 @@ fn create_ships(
     for (mut structure, entity) in query.iter_mut() {
         let ship_core = blocks.from_id("cosmos:ship_core").expect("Ship core block missing!");
 
-        let coords = BlockCoordinate::new(
-            structure.blocks_width() / 2,
-            structure.blocks_height() / 2,
-            structure.blocks_length() / 2,
-        );
+        let (w, h, l) = structure.block_dimensions().into();
 
-        structure.set_all_loaded(true);
+        let coords = BlockCoordinate::new(w / 2, h / 2, l / 2);
+
+        if let Structure::Full(full) = structure.as_mut() {
+            full.set_loaded();
+        } else {
+            panic!("Ship must be full!");
+        }
+
         structure.set_block_at(coords, ship_core, BlockFace::Top, &blocks, None);
 
         let itr = structure.all_chunks_iter(false);

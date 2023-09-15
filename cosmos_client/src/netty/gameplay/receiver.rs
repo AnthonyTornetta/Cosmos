@@ -32,6 +32,8 @@ use cosmos_core::{
     registry::Registry,
     structure::{
         chunk::Chunk,
+        dynamic_structure::DynamicStructure,
+        full_structure::FullStructure,
         planet::{biosphere::BiosphereMarker, planet_builder::TPlanetBuilder},
         ship::{pilot::Pilot, ship_builder::TShipBuilder, Ship},
         ChunkInitEvent, Structure,
@@ -327,12 +329,6 @@ fn client_sync_players(
                 lobby.players.insert(id, player_info);
                 network_mapping.add_mapping(client_entity, server_entity);
 
-                println!(
-                    "Linking player (client {} to server {})",
-                    client_entity.index(),
-                    server_entity.index()
-                );
-
                 if client_id == id {
                     entity_cmds
                         .insert(LocalPlayer)
@@ -388,9 +384,7 @@ fn client_sync_players(
             // Please restructure this + the ship to use the new requesting system.
             ServerReliableMessages::Planet {
                 entity: server_entity,
-                length,
-                height,
-                width,
+                dimensions,
                 planet,
                 biosphere,
                 location,
@@ -401,7 +395,7 @@ fn client_sync_players(
                 }
 
                 let mut entity_cmds = commands.spawn_empty();
-                let mut structure = Structure::new(width, height, length);
+                let mut structure = Structure::Dynamic(DynamicStructure::new(dimensions));
 
                 let builder = ClientPlanetBuilder::default();
                 builder.insert_planet(&mut entity_cmds, location, &mut structure, planet);
@@ -415,9 +409,7 @@ fn client_sync_players(
             ServerReliableMessages::Ship {
                 entity: server_entity,
                 body,
-                width,
-                height,
-                length,
+                dimensions,
                 chunks_needed,
             } => {
                 if network_mapping.contains_server_entity(server_entity) {
@@ -443,7 +435,7 @@ fn client_sync_players(
                 };
 
                 let mut entity_cmds = commands.spawn_empty();
-                let mut structure = Structure::new(width, height, length);
+                let mut structure = Structure::Full(FullStructure::new(dimensions));
 
                 let builder = ClientShipBuilder::default();
                 builder.insert_ship(&mut entity_cmds, location, body.create_velocity(), &mut structure);
@@ -577,9 +569,7 @@ fn client_sync_players(
 
                         ecmds.remove_parent();
 
-                        let Ok(Some(ship_trans)) = query_body
-                            .get(parent.get())
-                            .map(|x| x.1.cloned()) else {
+                        let Ok(Some(ship_trans)) = query_body.get(parent.get()).map(|x| x.1.cloned()) else {
                             continue;
                         };
 
@@ -604,9 +594,7 @@ fn client_sync_players(
                         if let Some(ship_entity) = network_mapping.client_from_server(&ship_entity) {
                             ecmds.set_parent(ship_entity);
 
-                            let Ok(Some(ship_loc)) = query_body
-                                .get(ship_entity)
-                                .map(|x| x.0.cloned()) else {
+                            let Ok(Some(ship_loc)) = query_body.get(ship_entity).map(|x| x.0.cloned()) else {
                                 continue;
                             };
 

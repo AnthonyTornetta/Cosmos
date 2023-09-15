@@ -32,14 +32,12 @@ fn populate_structures(
     let max_dist = SECTOR_DIMENSIONS * 2.0;
     let max_dist_sqrd = max_dist * max_dist;
 
-    for (entity, loc) in query
+    for (entity, _) in query
         .iter()
         .filter(|(_, location)| player_location.distance_sqrd(location) < max_dist_sqrd)
     {
         if let Some(server_entity) = network_mapping.server_from_client(&entity) {
             commands.entity(entity).remove::<NeedsPopulated>();
-
-            println!("Populating @ {loc}");
 
             client.send_message(
                 NettyChannelClient::Reliable,

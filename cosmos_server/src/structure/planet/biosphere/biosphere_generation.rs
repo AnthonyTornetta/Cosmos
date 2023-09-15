@@ -16,7 +16,7 @@ use cosmos_core::{
         planet::{ChunkFaces, Planet},
         Structure,
     },
-    utils::{array_utils::flatten_2d, resource_wrapper::ResourceWrapper, timer::UtilsTimer},
+    utils::{array_utils::flatten_2d, resource_wrapper::ResourceWrapper},
 };
 use futures_lite::future;
 use noise::NoiseFn;
@@ -880,7 +880,10 @@ pub fn generate_planet<T: Component + Clone + Default, E: TGenerateChunkEvent + 
             let coords = ev.get_chunk_coordinates();
 
             if let Ok((mut structure, _)) = query.get_mut(structure_entity) {
-                Some((structure_entity, structure.take_or_create_chunk_for_loading(coords)))
+                let Structure::Dynamic(planet) = structure.as_mut() else {
+                    panic!("A planet must be dynamic!");
+                };
+                Some((structure_entity, planet.take_or_create_chunk_for_loading(coords)))
             } else {
                 None
             }
@@ -896,7 +899,11 @@ pub fn generate_planet<T: Component + Clone + Default, E: TGenerateChunkEvent + 
                 return None;
             };
 
-            let s_dimensions = structure.blocks_length();
+            let Structure::Dynamic(planet) = structure else {
+                panic!("A planet must be dynamic!");
+            };
+
+            let s_dimensions = planet.block_dimensions();
             let location = *location;
 
             Some((chunk, s_dimensions, location, structure_entity))
@@ -904,14 +911,12 @@ pub fn generate_planet<T: Component + Clone + Default, E: TGenerateChunkEvent + 
         .collect::<Vec<(Chunk, CoordinateType, Location, Entity)>>();
 
     if !chunks.is_empty() {
-        println!("Doing {} chunks!", chunks.len());
-
         for (mut chunk, s_dimensions, location, structure_entity) in chunks {
             let block_ranges = block_ranges.clone();
             let noise_generator = **noise_generator;
 
             let task = thread_pool.spawn(async move {
-                let timer = UtilsTimer::start();
+                // let timer = UtilsTimer::start();
 
                 let actual_pos = location.absolute_coords_f64();
 
@@ -962,7 +967,7 @@ pub fn generate_planet<T: Component + Clone + Default, E: TGenerateChunkEvent + 
                         );
                     }
                 }
-                timer.log_duration("Chunk:");
+                // timer.log_duration("Chunk:");
                 (chunk, structure_entity)
             });
 

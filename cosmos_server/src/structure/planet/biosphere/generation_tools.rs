@@ -23,12 +23,7 @@ pub(crate) fn fill(
     event_writer: &mut EventWriter<BlockChangedEvent>,
 ) {
     for offset in offsets {
-        if let Ok(rotated_block_pos) = rotate(
-            origin,
-            *offset,
-            (structure.blocks_width(), structure.blocks_height(), structure.blocks_length()),
-            planet_face,
-        ) {
+        if let Ok(rotated_block_pos) = rotate(origin, *offset, structure.block_dimensions(), planet_face) {
             structure.set_block_at(
                 rotated_block_pos,
                 block,

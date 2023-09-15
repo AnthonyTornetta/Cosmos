@@ -65,7 +65,9 @@ fn monitor_block_updates_system(
             chunks.insert(ChunkCoordinate::new(cc.x - 1, cc.y, cc.z));
         }
 
-        if ev.block.x() != structure.blocks_width() - 1 && (ev.block.x() + 1) % CHUNK_DIMENSIONS == 0 {
+        let dims = structure.block_dimensions();
+
+        if ev.block.x() != dims.x - 1 && (ev.block.x() + 1) % CHUNK_DIMENSIONS == 0 {
             chunks.insert(ChunkCoordinate::new(cc.x + 1, cc.y, cc.z));
         }
 
@@ -73,7 +75,7 @@ fn monitor_block_updates_system(
             chunks.insert(ChunkCoordinate::new(cc.x, cc.y - 1, cc.z));
         }
 
-        if ev.block.y() != structure.blocks_height() - 1 && (ev.block.y() + 1) % CHUNK_DIMENSIONS == 0 {
+        if ev.block.y() != dims.y - 1 && (ev.block.y() + 1) % CHUNK_DIMENSIONS == 0 {
             chunks.insert(ChunkCoordinate::new(cc.x, cc.y + 1, cc.z));
         }
 
@@ -81,7 +83,7 @@ fn monitor_block_updates_system(
             chunks.insert(ChunkCoordinate::new(cc.x, cc.y, cc.z - 1));
         }
 
-        if ev.block.z() != structure.blocks_length() - 1 && (ev.block.z() + 1) % CHUNK_DIMENSIONS == 0 {
+        if ev.block.z() != dims.z - 1 && (ev.block.z() + 1) % CHUNK_DIMENSIONS == 0 {
             chunks.insert(ChunkCoordinate::new(cc.x, cc.y, cc.z + 1));
         }
 
@@ -103,22 +105,24 @@ fn monitor_block_updates_system(
 
         chunks.insert(cc);
 
+        let dims = structure.chunk_dimensions();
+
         if cc.z != 0 {
             chunks.insert(ChunkCoordinate::new(cc.x, cc.y, cc.z - 1));
         }
-        if cc.z < structure.chunks_length() - 1 {
+        if cc.z < dims.z - 1 {
             chunks.insert(ChunkCoordinate::new(cc.x, cc.y, cc.z + 1));
         }
         if cc.y != 0 {
             chunks.insert(ChunkCoordinate::new(cc.x, cc.y - 1, cc.z));
         }
-        if cc.y < structure.chunks_height() - 1 {
+        if cc.y < dims.y - 1 {
             chunks.insert(ChunkCoordinate::new(cc.x, cc.y + 1, cc.z));
         }
         if cc.x != 0 {
             chunks.insert(ChunkCoordinate::new(cc.x - 1, cc.y, cc.z));
         }
-        if cc.x < structure.chunks_width() - 1 {
+        if cc.x < dims.x - 1 {
             chunks.insert(ChunkCoordinate::new(cc.x + 1, cc.y, cc.z));
         }
     }

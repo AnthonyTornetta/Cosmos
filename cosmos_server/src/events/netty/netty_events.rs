@@ -88,7 +88,7 @@ fn handle_events_system(
                 }
 
                 let Some(user_data) = transport.user_data(client_id) else {
-                    println!("Unable to user data!");
+                    println!("Unable to get user data!");
                     continue;
                 };
                 let Ok(name) = bincode::deserialize::<String>(user_data.as_slice()) else {
