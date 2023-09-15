@@ -13,11 +13,11 @@ use cosmos_core::{
     blockitems::BlockItems,
     inventory::Inventory,
     item::Item,
-    registry::{identifiable::Identifiable, Registry},
+    registry::{identifiable::Identifiable, many_to_one::ManyToOneRegistry, Registry},
 };
 
 use crate::{
-    asset::asset_loading::{BlockTextureIndex, MainAtlas},
+    asset::asset_loading::{BlockTextureIndex, MaterialDefinition},
     netty::flags::LocalPlayer,
     rendering::{BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder},
     state::game_state::GameState,
@@ -61,7 +61,7 @@ fn render_hotbar(
     items: Res<Registry<Item>>,
     blocks: Res<Registry<Block>>,
 
-    atlas: Res<MainAtlas>,
+    materials_registry: Res<ManyToOneRegistry<Block, MaterialDefinition>>,
     block_textures: Res<Registry<BlockTextureIndex>>,
     block_meshes: Res<BlockMeshRegistry>,
 ) {
@@ -106,18 +106,39 @@ fn render_hotbar(
 
         let mut mesh_builder = CosmosMeshBuilder::default();
 
-        for face in [BlockFace::Top, BlockFace::Left, BlockFace::Back] {
-            let Some(mut mesh_info) = block_mesh_info.info_for_face(face).cloned() else {
+        let Some(material) = materials_registry.get_value(block) else {
+            warn!("Missing material for block {}", block.unlocalized_name());
+            continue;
+        };
+
+        if block_mesh_info.has_multiple_face_meshes() {
+            for face in [BlockFace::Top, BlockFace::Left, BlockFace::Back] {
+                let Some(mut mesh_info) = block_mesh_info.info_for_face(face).cloned() else {
+                    break;
+                };
+
+                mesh_info.scale(Vec3::new(size, size, size));
+
+                let Some(image_index) = index.atlas_index_from_face(face) else {
+                    continue;
+                };
+
+                let uvs = material.uvs_for_index(image_index);
+
+                mesh_builder.add_mesh_information(&mesh_info, Vec3::ZERO, uvs);
+            }
+        } else {
+            let Some(mut mesh_info) = block_mesh_info.info_for_whole_block().cloned() else {
                 break;
             };
 
             mesh_info.scale(Vec3::new(size, size, size));
 
-            let Some(image_index) = index.atlas_index_from_face(face) else {
+            let Some(image_index) = index.atlas_index("all") else {
                 continue;
             };
 
-            let uvs = atlas.uvs_for_index(image_index);
+            let uvs = material.uvs_for_index(image_index);
 
             mesh_builder.add_mesh_information(&mesh_info, Vec3::ZERO, uvs);
         }
@@ -127,7 +148,7 @@ fn render_hotbar(
                 .spawn((
                     PbrBundle {
                         mesh: meshes.add(mesh_builder.build_mesh()),
-                        material: atlas.unlit_material.clone(),
+                        material: material.unlit_material().clone(),
                         transform,
                         ..default()
                     },
