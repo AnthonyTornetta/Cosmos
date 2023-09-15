@@ -128,7 +128,7 @@ fn add_cosmos_blocks(
 
     blocks.register(
         BlockBuilder::new("cosmos:ice".to_owned(), 2.0)
-            .add_property(BlockProperty::Opaque)
+            .add_property(BlockProperty::Transparent)
             .add_property(BlockProperty::Full)
             .create(),
     );
@@ -142,7 +142,7 @@ fn add_cosmos_blocks(
 
     blocks.register(
         BlockBuilder::new("cosmos:water".to_owned(), 6.0)
-            .add_property(BlockProperty::Opaque)
+            .add_property(BlockProperty::Transparent)
             .add_property(BlockProperty::Full)
             .create(),
     );
