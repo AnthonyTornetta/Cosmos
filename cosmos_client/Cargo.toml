@@ -1,12 +1,12 @@
 [package]
 name = "cosmos_client"
-version = "0.0.4"
+version = "0.0.5"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-cosmos_core = { version = "0.0.4", path = "../cosmos_core", features = [
+cosmos_core = { version = "0.0.5", path = "../cosmos_core", features = [
     "client",
 ] }
 

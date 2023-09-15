@@ -1,5 +1,4 @@
 use crate::block::lighting::{BlockLightProperties, BlockLighting};
-use crate::materials::CosmosMaterial;
 use crate::netty::flags::LocalPlayer;
 use crate::state::game_state::GameState;
 use crate::structure::planet::unload_chunks_far_from_players;
@@ -360,13 +359,21 @@ fn poll_rendering_chunks(
 fn monitor_needs_rendered_system(
     mut commands: Commands,
     structure_query: Query<&Structure>,
-    atlas: Res<ReadOnlyMainAtlas>,
     blocks: Res<ReadOnlyRegistry<Block>>,
     materials: Res<ReadOnlyManyToOneRegistry<Block, CosmosMaterial>>,
     meshes_registry: Res<ReadOnlyBlockMeshRegistry>,
     lighting: Res<ReadOnlyRegistry<BlockLighting>>,
     block_textures: Res<ReadOnlyRegistry<BlockTextureIndex>>,
     mut rendering_chunks: ResMut<RenderingChunks>,
+    // mesh_query: Query<Option<&Handle<Mesh>>>,
+    // mut meshes: ResMut<Assets<Mesh>>,
+    // blocks: Res<Registry<Block>>,
+    // materials: Res<ManyToOneRegistry<Block, MaterialDefinition>>,
+    // meshes_registry: Res<BlockMeshRegistry>,
+    // lighting: Res<Registry<BlockLighting>>,
+    // lights_query: Query<&LightsHolder>,
+    // chunk_meshes_query: Query<&ChunkMeshes>,
+    // block_textures: Res<Registry<BlockTextureIndex>>,
     local_player: Query<&GlobalTransform, With<LocalPlayer>>,
     chunks_need_rendered: Query<(Entity, &ChunkEntity, &GlobalTransform), With<ChunkNeedsRendered>>,
 ) {
@@ -418,7 +425,6 @@ fn monitor_needs_rendered_system(
             let mut renderer = ChunkRenderer::new();
 
             renderer.render(
-                &atlas.atlas(),
                 &materials.registry(),
                 &lighting.registry(),
                 &chunk,
@@ -485,8 +491,7 @@ impl ChunkRenderer {
     /// Renders a chunk into mesh information that can then be turned into a bevy mesh
     fn render(
         &mut self,
-        atlas: &MainAtlas,
-        materials: &ManyToOneRegistry<Block, CosmosMaterial>,
+        materials: &ManyToOneRegistry<Block, MaterialDefinition>,
         lighting: &Registry<BlockLighting>,
         chunk: &Chunk,
         left: Option<&Chunk>,
@@ -646,11 +651,11 @@ impl ChunkRenderer {
                     continue;
                 };
 
-                if !self.meshes.contains_key(&material.handle) {
-                    self.meshes.insert(material.handle.clone(), Default::default());
+                if !self.meshes.contains_key(material.lit_material()) {
+                    self.meshes.insert(material.lit_material().clone(), Default::default());
                 }
 
-                let mesh_builder = self.meshes.get_mut(&material.handle).unwrap();
+                let mesh_builder = self.meshes.get_mut(material.lit_material()).unwrap();
 
                 let rotation = block_info.get_rotation();
 
@@ -664,7 +669,7 @@ impl ChunkRenderer {
                         continue;
                     };
 
-                    let uvs = atlas.uvs_for_index(image_index);
+                    let uvs = material.uvs_for_index(image_index);
 
                     let rotation = match rotation {
                         BlockFace::Top => Quat::IDENTITY,

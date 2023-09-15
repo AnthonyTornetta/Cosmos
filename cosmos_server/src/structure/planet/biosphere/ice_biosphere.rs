@@ -99,7 +99,7 @@ pub(super) fn register(app: &mut App) {
     register_biosphere::<IceBiosphereMarker, IceChunkNeedsGeneratedEvent, DefaultBiosphereGenerationStrategy>(
         app,
         "cosmos:biosphere_ice",
-        TemperatureRange::new(0.0, 1.0),
+        TemperatureRange::new(0.0, 300.0),
     );
 
     app.add_systems(Update, generate_chunk_features.run_if(in_state(GameState::Playing)))
