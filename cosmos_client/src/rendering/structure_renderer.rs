@@ -27,7 +27,7 @@ use std::collections::HashSet;
 use std::f32::consts::PI;
 use std::mem::swap;
 
-use crate::asset::asset_loading::{BlockTextureIndex, MainAtlas, ReadOnlyMainAtlas};
+use crate::asset::asset_loading::{BlockTextureIndex, MaterialDefinition};
 use crate::{Assets, Commands, Entity, Handle, Query, Res, ResMut};
 
 use super::{BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder, MeshInformation, ReadOnlyBlockMeshRegistry};
@@ -360,7 +360,7 @@ fn monitor_needs_rendered_system(
     mut commands: Commands,
     structure_query: Query<&Structure>,
     blocks: Res<ReadOnlyRegistry<Block>>,
-    materials: Res<ReadOnlyManyToOneRegistry<Block, CosmosMaterial>>,
+    materials: Res<ReadOnlyManyToOneRegistry<Block, MaterialDefinition>>,
     meshes_registry: Res<ReadOnlyBlockMeshRegistry>,
     lighting: Res<ReadOnlyRegistry<BlockLighting>>,
     block_textures: Res<ReadOnlyRegistry<BlockTextureIndex>>,
@@ -414,7 +414,6 @@ fn monitor_needs_rendered_system(
 
         // "gee, you sure have a way with the borrow checker"
 
-        let atlas = atlas.clone();
         let materials = materials.clone();
         let blocks = blocks.clone();
         let meshes_registry = meshes_registry.clone();

@@ -33,8 +33,7 @@ use cosmos_core::{
 use rayon::prelude::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
 
 use crate::{
-    asset::asset_loading::{BlockTextureIndex, MainAtlas, ReadOnlyMainAtlas},
-    materials::CosmosMaterial,
+    asset::asset_loading::{BlockTextureIndex, MaterialDefinition},
     state::game_state::GameState,
 };
 
@@ -93,8 +92,7 @@ impl ChunkRenderer {
         &mut self,
         scale: f32,
         offset: Vec3,
-        atlas: &MainAtlas,
-        materials: &ManyToOneRegistry<Block, CosmosMaterial>,
+        materials: &ManyToOneRegistry<Block, MaterialDefinition>,
         lod: &LodChunk,
         left: Option<&LodChunk>,
         right: Option<&LodChunk>,
@@ -238,11 +236,11 @@ impl ChunkRenderer {
                     continue;
                 };
 
-                if !self.meshes.contains_key(&material.handle) {
-                    self.meshes.insert(material.handle.clone(), Default::default());
+                if !self.meshes.contains_key(material.lit_material()) {
+                    self.meshes.insert(material.lit_material().clone(), Default::default());
                 }
 
-                let mesh_builder = self.meshes.get_mut(&material.handle).unwrap();
+                let mesh_builder = self.meshes.get_mut(material.lit_material()).unwrap();
 
                 let rotation = block_info.get_rotation();
 
@@ -265,7 +263,7 @@ impl ChunkRenderer {
                         continue;
                     };
 
-                    let uvs = atlas.uvs_for_index(image_index);
+                    let uvs = material.uvs_for_index(image_index);
 
                     let rotation = match rotation {
                         BlockFace::Top => Quat::IDENTITY,
@@ -335,9 +333,8 @@ fn recursively_process_lod(
     lod: &mut Lod,
     offset: Vec3,
     to_process: &Mutex<Option<Vec<(LodMesh, Vec3, CoordinateType)>>>,
-    atlas: &MainAtlas,
     blocks: &Registry<Block>,
-    materials: &ManyToOneRegistry<Block, CosmosMaterial>,
+    materials: &ManyToOneRegistry<Block, MaterialDefinition>,
     meshes_registry: &BlockMeshRegistry,
     block_textures: &Registry<BlockTextureIndex>,
     scale: f32,
@@ -364,7 +361,6 @@ fn recursively_process_lod(
                     c,
                     offset,
                     to_process,
-                    atlas,
                     blocks,
                     materials,
                     meshes_registry,
@@ -385,7 +381,6 @@ fn recursively_process_lod(
             renderer.render(
                 scale,
                 Vec3::ZERO,
-                atlas,
                 materials,
                 lod_chunk,
                 None,
@@ -504,7 +499,10 @@ fn compute_meshes_and_kill_dead_entities(
         };
 
         // The entity was verified to exist above
-        commands.entity(entity).insert(meshes.add(delayed_mesh));
+        if let Some(mut ecmds) = commands.get_entity(entity) {
+            ecmds.insert(meshes.add(delayed_mesh));
+        }
+
         kill_all(to_kill, &mut commands);
     }
 }
@@ -669,9 +667,8 @@ fn monitor_lods_needs_rendered_system(lods_needed: Query<Entity, Changed<Lod>>, 
 
 /// Performance hot spot
 fn trigger_lod_render(
-    atlas: Res<ReadOnlyMainAtlas>,
     blocks: Res<ReadOnlyRegistry<Block>>,
-    materials: Res<ReadOnlyManyToOneRegistry<Block, CosmosMaterial>>,
+    materials: Res<ReadOnlyManyToOneRegistry<Block, MaterialDefinition>>,
     meshes_registry: Res<ReadOnlyBlockMeshRegistry>,
     block_textures: Res<ReadOnlyRegistry<BlockTextureIndex>>,
     lods_query: Query<(&ReadOnlyLod, &Structure)>,
@@ -701,7 +698,6 @@ fn trigger_lod_render(
         let block_textures = block_textures.clone();
         let materials = materials.clone();
         let meshes_registry = meshes_registry.clone();
-        let atlas = atlas.clone();
 
         let chunk_dimensions = structure.chunk_dimensions().x;
         let block_dimensions = structure.block_dimensions().x;
@@ -722,7 +718,6 @@ fn trigger_lod_render(
             let block_textures = block_textures.registry();
             let materials = materials.registry();
             let meshes_registry = meshes_registry.registry();
-            let atlas = atlas.atlas();
 
             let mut cloned_lod = lod.clone();
 
@@ -730,7 +725,6 @@ fn trigger_lod_render(
                 &mut cloned_lod,
                 Vec3::ZERO,
                 &to_process,
-                &atlas,
                 &blocks,
                 &materials,
                 &meshes_registry,

@@ -2,10 +2,7 @@
 //!
 //! This also combines the textures into one big atlas.
 
-use std::{
-    fs,
-    sync::{Arc, RwLock, RwLockReadGuard},
-};
+use std::fs;
 
 use bevy::{
     prelude::*,
@@ -21,7 +18,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::state::game_state::GameState;
 
-#[derive(Resource, Debug)]
+#[derive(Resource, Debug, Clone)]
 struct LoadingTextureAtlas {
     unlocalized_name: String,
     id: u16,
@@ -431,7 +428,7 @@ fn create_materials(
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// Contains information that links the block faces to their texture indices.
 ///
 /// This could also link non-face imformation to their texture indices.
