@@ -8,6 +8,12 @@
     <title>Inventory Mockup</title>
 
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         html {
             min-height: 100%;
             display: flex;
@@ -20,11 +26,148 @@
             background-size: 100% 100%;
             display: flex;
         }
+
+        #inventory {
+            background-color: #444;
+            display: flex;
+            flex-direction: column;
+            margin: 100px;
+
+            height: 800px;
+            width: 596px;
+            color: white;
+        }
+
+        #slots {
+            flex: 1;
+            display: flex;
+
+            margin-right: 20px;
+            outline: thin solid blue;
+            flex-direction: column;
+        }
+
+        #title-bar {
+            display: flex;
+            outline: red thin solid;
+            padding: 20px;
+            flex-direction: row;
+        }
+
+        .slot {
+            width: 64px;
+            height: 64px;
+
+            outline: white thin solid;
+        }
+
+        #bottom-slots {
+            outline: red thin solid;
+        }
+
+        .slot-row {
+            display: flex;
+            flex-direction: row;
+        }
     </style>
 </head>
 
 <body>
+    <div id="inventory">
+        <div id="title-bar">
+            <p>Inventory</p>
+            <div style="flex:1"></div>
+            <p>X</p>
+        </div>
 
+        <div id="slots">
+            <div class="slot-row">
+                <div class="slot"></div>
+                <div class="slot"></div>
+                <div class="slot"></div>
+                <div class="slot"></div>
+                <div class="slot"></div>
+                <div class="slot"></div>
+                <div class="slot"></div>
+                <div class="slot"></div>
+                <div class="slot"></div>
+            </div>
+
+            <div class="slot-row">
+                <div class="slot"></div>
+                <div class="slot"></div>
+                <div class="slot"></div>
+                <div class="slot"></div>
+                <div class="slot"></div>
+                <div class="slot"></div>
+                <div class="slot"></div>
+                <div class="slot"></div>
+                <div class="slot"></div>
+            </div>
+
+            <div class="slot-row">
+                <div class="slot"></div>
+                <div class="slot"></div>
+                <div class="slot"></div>
+                <div class="slot"></div>
+                <div class="slot"></div>
+                <div class="slot"></div>
+                <div class="slot"></div>
+                <div class="slot"></div>
+                <div class="slot"></div>
+            </div>
+
+            <div class="slot-row">
+                <div class="slot"></div>
+                <div class="slot"></div>
+                <div class="slot"></div>
+                <div class="slot"></div>
+                <div class="slot"></div>
+                <div class="slot"></div>
+                <div class="slot"></div>
+                <div class="slot"></div>
+                <div class="slot"></div>
+            </div>
+
+            <div class="slot-row">
+                <div class="slot"></div>
+                <div class="slot"></div>
+                <div class="slot"></div>
+                <div class="slot"></div>
+                <div class="slot"></div>
+                <div class="slot"></div>
+                <div class="slot"></div>
+                <div class="slot"></div>
+                <div class="slot"></div>
+            </div>
+
+            <div class="slot-row">
+                <div class="slot"></div>
+                <div class="slot"></div>
+                <div class="slot"></div>
+                <div class="slot"></div>
+                <div class="slot"></div>
+                <div class="slot"></div>
+                <div class="slot"></div>
+                <div class="slot"></div>
+                <div class="slot"></div>
+            </div>
+        </div>
+
+        <div id="bottom-slots">
+            <div class="slot-row">
+                <div class="slot"></div>
+                <div class="slot"></div>
+                <div class="slot"></div>
+                <div class="slot"></div>
+                <div class="slot"></div>
+                <div class="slot"></div>
+                <div class="slot"></div>
+                <div class="slot"></div>
+                <div class="slot"></div>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>

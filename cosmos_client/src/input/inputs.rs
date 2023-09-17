@@ -150,7 +150,7 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
 
     input_handler.set_keycode(CosmosInputs::LeaveShip, KeyCode::L);
 
-    input_handler.set_keycode(CosmosInputs::ToggleInventory, KeyCode::Tab);
+    input_handler.set_keycode(CosmosInputs::ToggleInventory, KeyCode::T);
 }
 
 #[derive(Resource, Default, Debug)]

@@ -9,15 +9,25 @@ use bevy::{
 use crate::input::inputs::{CosmosInputHandler, CosmosInputs};
 
 #[derive(Resource, Copy, Clone)]
-struct CursorFlags {
+pub struct CursorFlags {
     locked: bool,
     visible: bool,
 }
 
 impl CursorFlags {
-    fn toggle(&mut self) {
+    pub fn toggle(&mut self) {
         self.locked = !self.locked;
         self.visible = !self.visible;
+    }
+
+    pub fn show(&mut self) {
+        self.locked = false;
+        self.visible = true;
+    }
+
+    pub fn hide(&mut self) {
+        self.locked = true;
+        self.visible = false;
     }
 }
 
@@ -70,7 +80,6 @@ fn toggle_mouse_freeze(
         let mut window = primary_query.get_single_mut().expect("Missing primary window.");
 
         cursor_flags.toggle();
-        apply_cursor_flags(&mut window, *cursor_flags);
     }
 }
 
@@ -100,6 +109,12 @@ fn apply_cursor_flags(window: &mut Window, cursor_flags: CursorFlags) {
     window.cursor.visible = cursor_flags.visible;
 }
 
+fn apply_cursor_flags_on_change(cursor_flags: Res<CursorFlags>, mut primary_query: Query<&mut Window, With<PrimaryWindow>>) {
+    let mut window = primary_query.get_single_mut().expect("Missing primary window.");
+
+    apply_cursor_flags(&mut window, *cursor_flags);
+}
+
 pub(super) fn register(app: &mut App) {
     app.insert_resource(CursorFlags {
         locked: true,
@@ -107,5 +122,14 @@ pub(super) fn register(app: &mut App) {
     })
     .insert_resource(DeltaCursorPosition { x: 0.0, y: 0.0 })
     .add_systems(Startup, setup_window)
-    .add_systems(Update, (update_mouse_deltas, toggle_mouse_freeze, window_focus_changed));
+    .add_systems(
+        Update,
+        (
+            update_mouse_deltas,
+            toggle_mouse_freeze,
+            window_focus_changed,
+            apply_cursor_flags_on_change,
+        )
+            .chain(),
+    );
 }
