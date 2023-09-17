@@ -1,6 +1,6 @@
 //! Renders the inventory slots and handles all the logic for moving items around
 
-use bevy::{prelude::*, window::PrimaryWindow};
+use bevy::prelude::*;
 use cosmos_core::{ecs::NeedsDespawned, inventory::Inventory};
 
 use crate::{

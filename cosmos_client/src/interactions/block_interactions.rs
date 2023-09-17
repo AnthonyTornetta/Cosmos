@@ -18,6 +18,7 @@ use crate::{
     rendering::MainCamera,
     state::game_state::GameState,
     ui::hotbar::Hotbar,
+    window::setup::CursorFlags,
     LocalPlayer,
 };
 
@@ -28,9 +29,7 @@ pub enum InteractionType {
 }
 
 fn process_player_interaction(
-    keys: Res<Input<KeyCode>>,
-    mouse: Res<Input<MouseButton>>,
-    input_handler: Res<CosmosInputHandler>,
+    (keys, mouse, input_handler): (Res<Input<KeyCode>>, Res<Input<MouseButton>>, Res<CosmosInputHandler>),
     camera: Query<&GlobalTransform, With<MainCamera>>,
     player_body: Query<Entity, (With<LocalPlayer>, Without<Pilot>)>,
     rapier_context: Res<RapierContext>,
@@ -44,7 +43,13 @@ fn process_player_interaction(
     mut inventory: Query<&mut Inventory, With<LocalPlayer>>,
     items: Res<Registry<Item>>,
     block_items: Res<BlockItems>,
+    cursor_flags: Res<CursorFlags>,
 ) {
+    // They're in a menu if the cursor isn't locked
+    if !cursor_flags.is_cursor_locked() {
+        return;
+    }
+
     // this fails if the player is a pilot
     let Ok(player_body) = player_body.get_single() else {
         return;

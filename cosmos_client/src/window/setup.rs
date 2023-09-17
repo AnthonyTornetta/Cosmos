@@ -9,25 +9,39 @@ use bevy::{
 use crate::input::inputs::{CosmosInputHandler, CosmosInputs};
 
 #[derive(Resource, Copy, Clone)]
+/// Resource containing the various flags about the cursor, like if it's hidden or not
 pub struct CursorFlags {
     locked: bool,
     visible: bool,
 }
 
 impl CursorFlags {
+    /// Toggles the cursor between being hidden + locked and shown + unlocked
     pub fn toggle(&mut self) {
         self.locked = !self.locked;
         self.visible = !self.visible;
     }
 
+    /// Shows + unlocks the cursor
     pub fn show(&mut self) {
         self.locked = false;
         self.visible = true;
     }
 
+    /// Hides + locks the cursor
     pub fn hide(&mut self) {
         self.locked = true;
         self.visible = false;
+    }
+
+    /// Returns true if the cursor is locked
+    pub fn is_cursor_locked(&self) -> bool {
+        self.locked
+    }
+
+    /// Returns true if the cursor is shown
+    pub fn is_cursor_shown(&self) -> bool {
+        self.visible
     }
 }
 
@@ -74,11 +88,8 @@ fn toggle_mouse_freeze(
     inputs: Res<Input<KeyCode>>,
     mouse: Res<Input<MouseButton>>,
     mut cursor_flags: ResMut<CursorFlags>,
-    mut primary_query: Query<&mut Window, With<PrimaryWindow>>,
 ) {
     if input_handler.check_just_pressed(CosmosInputs::UnlockMouse, &inputs, &mouse) {
-        let mut window = primary_query.get_single_mut().expect("Missing primary window.");
-
         cursor_flags.toggle();
     }
 }
