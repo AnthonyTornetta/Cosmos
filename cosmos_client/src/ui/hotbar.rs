@@ -5,11 +5,12 @@ use cosmos_core::{inventory::Inventory, item::Item};
 
 use crate::{
     input::inputs::{CosmosInputHandler, CosmosInputs},
-    inventory::RenderItem,
     lang::Lang,
     netty::flags::LocalPlayer,
     state::game_state::GameState,
 };
+
+use super::item_renderer::RenderItem;
 
 const ITEM_NAME_FADE_DURATION_SEC: f32 = 5.0;
 

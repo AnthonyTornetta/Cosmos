@@ -95,6 +95,9 @@ pub enum CosmosInputs {
 
     /// For testing - disconnects you from the server
     Disconnect,
+
+    /// Opens + closes your inventory
+    ToggleInventory,
 }
 
 fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
@@ -146,6 +149,8 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     input_handler.set_mouse_button(CosmosInputs::UseSelectedSystem, MouseButton::Left);
 
     input_handler.set_keycode(CosmosInputs::LeaveShip, KeyCode::L);
+
+    input_handler.set_keycode(CosmosInputs::ToggleInventory, KeyCode::Tab);
 }
 
 #[derive(Resource, Default, Debug)]
