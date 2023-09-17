@@ -25,9 +25,9 @@ use crate::netty::network_helpers::{ClientTicks, ServerLobby};
 fn generate_player_inventory(items: &Registry<Item>) -> Inventory {
     let mut inventory = Inventory::new(9);
 
-    inventory.insert_at(0, items.from_id("cosmos:ice").expect("Ice item to exist"), 999);
+    inventory.insert_at(0, items.from_id("cosmos:ice").expect("Ice item to exist"), 1);
 
-    inventory.insert_at(1, items.from_id("cosmos:water").expect("Water item to exist"), 999);
+    inventory.insert_at(1, items.from_id("cosmos:water").expect("Water item to exist"), 1);
 
     inventory.insert_at(2, items.from_id("cosmos:glass").expect("Glass item to exist"), 64);
 

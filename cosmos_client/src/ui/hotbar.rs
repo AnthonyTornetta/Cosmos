@@ -5,6 +5,7 @@ use cosmos_core::{inventory::Inventory, item::Item};
 
 use crate::{
     input::inputs::{CosmosInputHandler, CosmosInputs},
+    inventory::RenderItem,
     lang::Lang,
     netty::flags::LocalPlayer,
     state::game_state::GameState,
@@ -162,7 +163,7 @@ fn listen_for_change_events(
 
                             name_text.sections[0].style.color = Color::WHITE;
                         } else {
-                            name_text.sections[0].value = "[ no name ]".to_owned();
+                            name_text.sections[0].value = "".to_owned();
                         }
                     }
                 }
@@ -223,32 +224,76 @@ fn add_item_text(mut commands: Commands, asset_server: Res<AssetServer>) {
         });
 }
 
+fn populate_hotbar(
+    inventory: Query<&Inventory, (Changed<Inventory>, With<LocalPlayer>)>,
+    hotbar: Query<&Hotbar>,
+
+    render_item_query: Query<&RenderItem>,
+    mut commands: Commands,
+) {
+    let Ok(hotbar) = hotbar.get_single() else {
+        warn!("Missing hotbar");
+        return;
+    };
+
+    let Ok(inventory) = inventory.get_single() else {
+        return;
+    };
+
+    for (item, &(slot_entity, _)) in inventory.iter().take(hotbar.slots.len()).zip(hotbar.slots.iter()) {
+        let Some(item_stack) = item else {
+            commands.entity(slot_entity).remove::<RenderItem>();
+
+            continue;
+        };
+
+        if render_item_query
+            .get(slot_entity)
+            .map(|x| x.item_id != item_stack.item_id())
+            .unwrap_or(true)
+        {
+            commands.entity(slot_entity).insert((
+                RenderItem {
+                    item_id: item_stack.item_id(),
+                },
+                Name::new("Inventory Item Slot"),
+            ));
+        }
+    }
+}
+
 fn add_hotbar(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
-        .spawn(NodeBundle {
-            style: Style {
-                position_type: PositionType::Absolute,
-                display: Display::Flex,
-                justify_content: JustifyContent::Center,
-                align_items: AlignItems::FlexEnd,
-                width: Val::Percent(100.0),
-                height: Val::Percent(100.0),
-                ..default()
-            },
-            ..default()
-        })
-        .with_children(|parent| {
-            let mut hotbar = Hotbar::default();
-
-            let mut slots = parent.spawn(NodeBundle {
+        .spawn((
+            NodeBundle {
                 style: Style {
-                    flex_direction: FlexDirection::Row,
-                    flex_grow: 1.0,
+                    position_type: PositionType::Absolute,
+                    display: Display::Flex,
                     justify_content: JustifyContent::Center,
+                    align_items: AlignItems::FlexEnd,
+                    width: Val::Percent(100.0),
+                    height: Val::Percent(100.0),
                     ..default()
                 },
                 ..default()
-            });
+            },
+            Name::new("Hotbar Container"),
+        ))
+        .with_children(|parent| {
+            let mut hotbar = Hotbar::default();
+
+            let mut slots = parent.spawn((
+                NodeBundle {
+                    style: Style {
+                        flex_direction: FlexDirection::Row,
+                        flex_grow: 1.0,
+                        justify_content: JustifyContent::Center,
+                        ..default()
+                    },
+                    ..default()
+                },
+                Name::new("Hotbar"),
+            ));
 
             slots.with_children(|parent| {
                 for slot_num in 0..hotbar.max_slots {
@@ -267,10 +312,6 @@ fn add_hotbar(mut commands: Commands, asset_server: Res<AssetServer>) {
                     let mut text_entity = None;
 
                     slot.with_children(|slot| {
-                        // https://github.com/bevyengine/bevy/pull/5070
-                        // In bevy 0.10 there will be a TextureAtlasLayout that can be used in GUIs to render the item's texture
-                        // Until bevy 0.10, the hotbar will show no textures
-
                         text_entity = Some(
                             slot.spawn(TextBundle {
                                 style: Style {
@@ -309,6 +350,12 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(OnEnter(GameState::Playing), (add_hotbar, add_item_text))
         .add_systems(
             Update,
-            (listen_for_change_events, listen_button_presses, tick_text_alpha_down).run_if(in_state(GameState::Playing)),
+            (
+                populate_hotbar,
+                listen_for_change_events,
+                listen_button_presses,
+                tick_text_alpha_down,
+            )
+                .run_if(in_state(GameState::Playing)),
         );
 }

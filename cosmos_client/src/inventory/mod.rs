@@ -11,16 +11,14 @@ use bevy::{
 use cosmos_core::{
     block::{Block, BlockFace},
     blockitems::BlockItems,
-    inventory::Inventory,
+    ecs::NeedsDespawned,
     item::Item,
     registry::{identifiable::Identifiable, many_to_one::ManyToOneRegistry, Registry},
 };
 
 use crate::{
     asset::asset_loading::{BlockTextureIndex, MaterialDefinition},
-    netty::flags::LocalPlayer,
     rendering::{BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder},
-    state::game_state::GameState,
 };
 
 const INVENTORY_SLOT_LAYER: u8 = 0b1;
@@ -52,8 +50,22 @@ fn create_ui_camera(mut commands: Commands) {
     ));
 }
 
+#[derive(Debug, Component)]
+/// Put this onto a UI element to render a 3D item there
+pub struct RenderItem {
+    /// The item's id
+    pub item_id: u16,
+}
+
+#[derive(Debug, Component)]
+struct RenderedItem {
+    /// Points to the UI entity that had the `RenderItem` that created this
+    ui_element_entity: Entity,
+    item_id: u16,
+    based_off: Vec3,
+}
+
 fn render_hotbar(
-    inventory: Query<&Inventory, With<LocalPlayer>>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
 
@@ -64,23 +76,51 @@ fn render_hotbar(
     materials_registry: Res<ManyToOneRegistry<Block, MaterialDefinition>>,
     block_textures: Res<Registry<BlockTextureIndex>>,
     block_meshes: Res<BlockMeshRegistry>,
+
+    mut removed_render_items: RemovedComponents<RenderItem>,
+    changed_render_items: Query<(Entity, &RenderItem, &GlobalTransform), Or<(Changed<RenderItem>, Changed<GlobalTransform>)>>,
+    rendered_items: Query<(Entity, &RenderedItem)>,
 ) {
-    let Ok(inventory) = inventory.get_single() else {
-        return;
-    };
+    for entity in removed_render_items.iter() {
+        if let Some((rendered_item_entity, _)) = rendered_items
+            .iter()
+            .find(|(_, rendered_item)| rendered_item.ui_element_entity == entity)
+        {
+            if let Some(mut ecmds) = commands.get_entity(rendered_item_entity) {
+                ecmds.insert(NeedsDespawned);
+            }
+        }
+    }
 
-    let amt = 9;
+    for (entity, changed_render_item, transform) in changed_render_items.iter() {
+        let size = 0.8;
+        let translation = transform.translation();
 
-    let size = 0.8;
+        let to_create = if let Some((rendered_item_entity, rendered_item)) = rendered_items
+            .iter()
+            .find(|(_, rendered_item)| rendered_item.ui_element_entity == entity)
+        {
+            if rendered_item.item_id == changed_render_item.item_id {
+                // We're already displaying that item, no need to recalculate everything
+                continue;
+            }
 
-    let mut children = vec![];
+            rendered_item_entity
+        } else {
+            let mut transform = Transform::from_rotation(Quat::from_xyzw(0.18354653, 0.37505528, 0.07602747, 0.90546346)); // This makes it look cool
 
-    for (i, item) in inventory.iter().take(amt).enumerate() {
-        let Some(item_stack) = item else {
-            continue;
+            // hide it till we position it properly
+            transform.translation.x = -1000000.0;
+
+            commands
+                .spawn(PbrBundle {
+                    transform,
+                    ..Default::default()
+                })
+                .id()
         };
 
-        let item = items.from_numeric_id(item_stack.item_id());
+        let item = items.from_numeric_id(changed_render_item.item_id);
 
         let Some(block_id) = block_items.block_from_item(item) else {
             continue;
@@ -91,14 +131,6 @@ fn render_hotbar(
         let index = block_textures
             .from_id(block.unlocalized_name())
             .unwrap_or_else(|| block_textures.from_id("missing").expect("Missing texture should exist."));
-
-        let multiplier = size * 2.0;
-        let slot_x = -(amt as f32) / 2.0 * multiplier + multiplier * (i as f32 + 0.5);
-
-        let mut transform = Transform::from_xyz(slot_x, 0.0, 0.0);
-
-        // This makes it look cool
-        transform.rotation = Quat::from_xyzw(0.18354653, 0.37505528, 0.07602747, 0.90546346);
 
         let Some(block_mesh_info) = block_meshes.get_value(block) else {
             continue;
@@ -143,51 +175,62 @@ fn render_hotbar(
             mesh_builder.add_mesh_information(&mesh_info, Vec3::ZERO, uvs);
         }
 
-        children.push(
-            commands
-                .spawn((
-                    PbrBundle {
-                        mesh: meshes.add(mesh_builder.build_mesh()),
-                        material: material.unlit_material().clone(),
-                        transform,
-                        ..default()
-                    },
-                    RenderLayers::from_layers(&[INVENTORY_SLOT_LAYER]),
-                ))
-                .id(),
-        );
-    }
-
-    let mut hotbar = commands.spawn((
-        PbrBundle {
-            transform: Transform::from_xyz(0.0, -8.22, 0.0),
-            ..Default::default()
-        },
-        HotbarLocation,
-    ));
-
-    for child in children {
-        hotbar.add_child(child);
+        commands.entity(to_create).insert((
+            RenderedItem {
+                based_off: translation,
+                ui_element_entity: entity,
+                item_id: changed_render_item.item_id,
+            },
+            meshes.add(mesh_builder.build_mesh()),
+            material.unlit_material().clone(),
+            RenderLayers::from_layers(&[INVENTORY_SLOT_LAYER]),
+            Name::new("Rendered Inventory Item"),
+        ));
     }
 }
 
-#[derive(Component)]
-struct HotbarLocation;
+fn update_rendered_items_transforms(
+    query: Query<(Entity, &GlobalTransform), (With<RenderItem>, Changed<GlobalTransform>)>,
+    mut rendered_items: Query<&mut RenderedItem>,
+) {
+    for (entity, changed_transform) in query.iter() {
+        if let Some(mut rendered_item) = rendered_items.iter_mut().find(|x| x.ui_element_entity == entity) {
+            rendered_item.based_off = changed_transform.translation();
+        }
+    }
+}
+
+fn reposition_ui_items(query: Query<&Window, With<PrimaryWindow>>, mut rendered_items: Query<(&mut Transform, &RenderedItem)>) {
+    let Ok(window) = query.get_single() else {
+        return;
+    };
+
+    for (mut transform, rendered_item) in rendered_items.iter_mut() {
+        let translation = rendered_item.based_off;
+
+        let (mut x, mut y) = (translation.x, translation.y);
+
+        let (w, h) = (window.width(), window.height());
+
+        // normalizes x/y to be [-1, 1]
+        (x, y) = ((x / w - 0.5) * 2.0, (y / h - 0.5) * 2.0);
+
+        // magic equations derived from trial + error to reposition stuff
+        let x_num = 0.0124979 * w - 0.016775;
+        let y_num = 0.0124566 * h + 0.10521;
+
+        x *= x_num;
+        y *= -y_num;
+
+        transform.translation.x = x;
+        transform.translation.y = y;
+    }
+}
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        |query: Query<&Window, With<PrimaryWindow>>, mut cam: Query<&mut Transform, With<HotbarLocation>>| {
-            let Ok(window) = query.get_single() else {
-                return;
-            };
-            let Ok(mut transform) = cam.get_single_mut() else {
-                return;
-            };
-
-            transform.translation.y = -0.012533 * window.height() + 0.804;
-        },
+        (update_rendered_items_transforms, reposition_ui_items, render_hotbar).chain(),
     )
-    .add_systems(OnEnter(GameState::Playing), render_hotbar)
     .add_systems(Startup, create_ui_camera);
 }
