@@ -15,6 +15,7 @@ use futures_lite::future;
 
 use cosmos_core::{
     block::{Block, BlockFace},
+    ecs::NeedsDespawned,
     registry::{
         identifiable::Identifiable,
         many_to_one::{ManyToOneRegistry, ReadOnlyManyToOneRegistry},
@@ -463,8 +464,8 @@ fn kill_all(to_kill: Vec<ToKill>, commands: &mut Commands) {
         unlocked.1 -= 1;
 
         if unlocked.1 == 0 {
-            if let Some(ecmds) = commands.get_entity(unlocked.0) {
-                ecmds.despawn_recursive()
+            if let Some(mut ecmds) = commands.get_entity(unlocked.0) {
+                ecmds.insert(NeedsDespawned);
             }
         }
     }
@@ -576,7 +577,7 @@ fn poll_rendering_lods(
                 } else {
                     let Ok(rendered_lod) = rendered_lod_query.get(mesh_entity) else {
                         warn!("Invalid mesh entity {mesh_entity:?}!");
-                        commands.entity(mesh_entity).despawn_recursive();
+                        commands.entity(mesh_entity).insert(NeedsDespawned);
                         continue;
                     };
 
@@ -623,8 +624,8 @@ fn poll_rendering_lods(
             for (_, _, counter) in to_despawn {
                 let locked = counter.lock().expect("failed to lock");
                 if locked.1 == 0 {
-                    if let Some(ecmds) = commands.get_entity(locked.0) {
-                        ecmds.despawn_recursive();
+                    if let Some(mut ecmds) = commands.get_entity(locked.0) {
+                        ecmds.insert(NeedsDespawned);
                     }
                 }
             }
