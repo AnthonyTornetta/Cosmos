@@ -57,9 +57,9 @@ struct ItemNameDisplay;
 
 fn image_path(selected: bool) -> &'static str {
     if selected {
-        "images/ui/hotbar-slot-selected.png"
+        "cosmos/images/ui/hotbar-slot-selected.png"
     } else {
-        "images/ui/hotbar-slot.png"
+        "cosmos/images/ui/hotbar-slot.png"
     }
 }
 

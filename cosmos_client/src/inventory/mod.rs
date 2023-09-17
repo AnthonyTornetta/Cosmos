@@ -23,12 +23,12 @@ use crate::{
     state::game_state::GameState,
 };
 
-const INVENTORY_SLOT_LAYER: u8 = 10;
+const INVENTORY_SLOT_LAYER: u8 = 0b1;
 
 #[derive(Component)]
 struct UICamera;
 
-fn ui_camera(mut commands: Commands) {
+fn create_ui_camera(mut commands: Commands) {
     commands.spawn((
         Camera3dBundle {
             projection: Projection::Orthographic(OrthographicProjection {
@@ -189,5 +189,5 @@ pub(super) fn register(app: &mut App) {
         },
     )
     .add_systems(OnEnter(GameState::Playing), render_hotbar)
-    .add_systems(Startup, ui_camera);
+    .add_systems(Startup, create_ui_camera);
 }
