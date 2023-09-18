@@ -98,7 +98,7 @@ fn process_player_interaction(
     if input_handler.check_just_pressed(CosmosInputs::PlaceBlock, &keys, &mouse) {
         if let Ok(mut inventory) = inventory.get_single_mut() {
             if let Ok(hotbar) = hotbar.get_single() {
-                let inventory_slot = hotbar.item_at_selected_inventory_slot(&inventory);
+                let inventory_slot = hotbar.selected_slot();
 
                 if let Some(is) = inventory.itemstack_at(inventory_slot) {
                     let item = items.from_numeric_id(is.item_id());

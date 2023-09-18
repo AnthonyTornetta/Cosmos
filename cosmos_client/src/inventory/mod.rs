@@ -6,6 +6,7 @@ use cosmos_core::{ecs::NeedsDespawned, inventory::Inventory};
 use crate::{
     input::inputs::{CosmosInputHandler, CosmosInputs},
     netty::flags::LocalPlayer,
+    ui::item_renderer::RenderItem,
     window::setup::CursorFlags,
 };
 
@@ -91,8 +92,7 @@ fn toggle_inventory_rendering(
                             flex_direction: FlexDirection::Column,
                             left: Val::Px(100.0),
                             top: Val::Px(100.0),
-                            width: Val::Px(800.0),
-                            height: Val::Px(596.0),
+                            width: Val::Px(596.0),
                             border: UiRect::all(Val::Px(2.0)),
                             ..default()
                         },
@@ -178,40 +178,93 @@ fn toggle_inventory_rendering(
                                 });
                         });
 
-                    parent.spawn((
-                        Name::new("Slots"),
-                        NodeBundle {
-                            style: Style {
-                                display: Display::Flex,
-                                flex_direction: FlexDirection::Column,
-                                flex_grow: 1.0,
-                                // margin: UiRect::new(Val::Px(0.0), Val::Px(20.0), Val::Px(0.0), Val::Px(0.0)),
+                    parent
+                        .spawn((
+                            Name::new("Slots"),
+                            NodeBundle {
+                                style: Style {
+                                    display: Display::Grid,
+                                    flex_grow: 1.0,
+                                    grid_column: GridPlacement::end(9),
+                                    grid_template_columns: vec![RepeatedGridTrack::px(GridTrackRepetition::Count(9), 64.0)],
+                                    ..default()
+                                },
+
+                                background_color: BackgroundColor(Color::hex("2D2D2D").unwrap()),
                                 ..default()
                             },
+                        ))
+                        .with_children(|slots| {
+                            for slot in local_inventory.iter().skip(9) {
+                                let mut ecmds = slots.spawn((
+                                    Name::new("Inventory Item"),
+                                    NodeBundle {
+                                        style: Style {
+                                            // margin: UiRect::new(Val::Px(0.0), Val::Px(20.0), Val::Px(0.0), Val::Px(0.0)),
+                                            border: UiRect::all(Val::Px(2.0)),
+                                            width: Val::Px(64.0),
+                                            height: Val::Px(64.0),
+                                            ..default()
+                                        },
 
-                            background_color: BackgroundColor(Color::hex("2D2D2D").unwrap()),
-                            ..default()
-                        },
-                    ));
+                                        border_color: BorderColor(Color::hex("222222").unwrap()),
+                                        ..default()
+                                    },
+                                ));
 
-                    parent.spawn((
-                        Name::new("Hotbar Slots"),
-                        NodeBundle {
-                            style: Style {
-                                display: Display::Flex,
-                                height: Val::Px(64.0),
+                                if let Some(item_stack) = slot {
+                                    ecmds.insert(RenderItem {
+                                        item_id: item_stack.item_id(),
+                                    });
+                                }
+                            }
+                        });
 
+                    parent
+                        .spawn((
+                            Name::new("Hotbar Slots"),
+                            NodeBundle {
+                                style: Style {
+                                    display: Display::Flex,
+                                    height: Val::Px(5.0 + 64.0),
+                                    border: UiRect::new(Val::Px(0.0), Val::Px(0.0), Val::Px(5.0), Val::Px(0.0)),
+
+                                    ..default()
+                                },
+                                border_color: BorderColor(Color::hex("222222").unwrap()),
+                                background_color: BackgroundColor(Color::WHITE),
                                 ..default()
                             },
+                            UiImage {
+                                texture: asset_server.load("cosmos/images/ui/inventory-footer.png"),
+                                ..Default::default()
+                            },
+                        ))
+                        .with_children(|slots| {
+                            for slot in local_inventory.iter().take(9) {
+                                let mut ecmds = slots.spawn((
+                                    Name::new("Inventory Hotar Item"),
+                                    NodeBundle {
+                                        style: Style {
+                                            // margin: UiRect::new(Val::Px(0.0), Val::Px(20.0), Val::Px(0.0), Val::Px(0.0)),
+                                            border: UiRect::all(Val::Px(2.0)),
+                                            width: Val::Px(64.0),
+                                            height: Val::Px(64.0),
+                                            ..default()
+                                        },
 
-                            background_color: BackgroundColor(Color::WHITE),
-                            ..default()
-                        },
-                        UiImage {
-                            texture: asset_server.load("cosmos/images/ui/inventory-footer.png"),
-                            ..Default::default()
-                        },
-                    ));
+                                        border_color: BorderColor(Color::hex("222222").unwrap()),
+                                        ..default()
+                                    },
+                                ));
+
+                                if let Some(item_stack) = slot {
+                                    ecmds.insert(RenderItem {
+                                        item_id: item_stack.item_id(),
+                                    });
+                                }
+                            }
+                        });
                 });
         }
     }

@@ -1,7 +1,10 @@
 //! Displays the player's hotbar
 
 use bevy::prelude::*;
-use cosmos_core::{inventory::Inventory, item::Item};
+use cosmos_core::{
+    inventory::{itemstack::ItemStack, Inventory},
+    item::Item,
+};
 
 use crate::{
     input::inputs::{CosmosInputHandler, CosmosInputs},
@@ -19,8 +22,7 @@ const ITEM_NAME_FADE_DURATION_SEC: f32 = 5.0;
 pub struct Hotbar {
     /// Vec<(slot, slot text)>
     slots: Vec<(Entity, Entity)>,
-    /// This is the slot the player has currently selected
-    pub selected_slot: usize,
+    selected_slot: usize,
     prev_slot: usize,
     max_slots: usize,
 }
@@ -41,16 +43,9 @@ impl Hotbar {
         }
     }
 
-    #[inline]
-    /// Gets the item's inventory slot based on the hotbar slot
-    pub fn item_at_inventory_slot(&self, slot: usize, inv: &Inventory) -> usize {
-        inv.len() - self.max_slots + slot
-    }
-
-    #[inline]
-    /// Gets the item's inventory slot based off the item the player has selected
-    pub fn item_at_selected_inventory_slot(&self, inv: &Inventory) -> usize {
-        self.item_at_inventory_slot(self.selected_slot, inv)
+    /// This is the slot the player has currently selected - corresponds to the proper inventory slots
+    pub fn selected_slot(&self) -> usize {
+        self.selected_slot
     }
 }
 
@@ -156,7 +151,7 @@ fn listen_for_change_events(
             if let Ok(inv) = inventory_unchanged.get_single() {
                 if let Ok(ent) = item_name_query.get_single() {
                     if let Ok(mut name_text) = text_query.get_mut(ent) {
-                        if let Some(is) = inv.itemstack_at(hb.item_at_selected_inventory_slot(inv)) {
+                        if let Some(is) = inv.itemstack_at(hb.selected_slot()) {
                             name_text.sections[0].value = names
                                 .get_name_from_numeric_id(is.item_id())
                                 .unwrap_or(&format!("[missing name] ID #{}", is.item_id()))
@@ -173,7 +168,7 @@ fn listen_for_change_events(
 
         if let Ok(inv) = query_inventory.get_single() {
             for hb_slot in 0..hb.max_slots {
-                let is = inv.itemstack_at(hb.item_at_inventory_slot(hb_slot, inv));
+                let is = inv.itemstack_at(hb_slot);
 
                 if let Ok(mut text) = text_query.get_mut(hb.slots[hb_slot].1) {
                     if let Some(is) = is {

@@ -23,7 +23,7 @@ use crate::entities::player::PlayerLooking;
 use crate::netty::network_helpers::{ClientTicks, ServerLobby};
 
 fn generate_player_inventory(items: &Registry<Item>) -> Inventory {
-    let mut inventory = Inventory::new(9);
+    let mut inventory = Inventory::new(9 * 2);
 
     inventory.insert_at(0, items.from_id("cosmos:ice").expect("Ice item to exist"), 1);
 
