@@ -39,7 +39,7 @@ fn generate_player_inventory(items: &Registry<Item>) -> Inventory {
 
     inventory.insert_at(6, items.from_id("cosmos:energy_cell").expect("Energy cell item to exist"), 64);
 
-    inventory.insert_at(7, items.from_id("cosmos:ship_hull").expect("Ship hull item to exist"), 999);
+    inventory.insert_at(7, items.from_id("cosmos:ship_hull").expect("Ship hull item to exist"), 64);
 
     inventory.insert_at(8, items.from_id("cosmos:light").expect("Light item to exist"), 64);
 

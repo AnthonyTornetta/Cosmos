@@ -274,8 +274,6 @@ fn on_update_inventory(
 
             displayed_slot.item_stack = inventory.itemstack_at(displayed_slot.slot_number).cloned();
 
-            println!("GOT CHANGE! {:?}", displayed_slot.item_stack);
-
             if let Some(item_stack) = displayed_slot.item_stack.as_ref() {
                 commands
                     .entity(display_entity)

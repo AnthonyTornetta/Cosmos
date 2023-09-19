@@ -1,10 +1,7 @@
 //! Displays the player's hotbar
 
 use bevy::prelude::*;
-use cosmos_core::{
-    inventory::{itemstack::ItemStack, Inventory},
-    item::Item,
-};
+use cosmos_core::{inventory::Inventory, item::Item};
 
 use crate::{
     input::inputs::{CosmosInputHandler, CosmosInputs},
