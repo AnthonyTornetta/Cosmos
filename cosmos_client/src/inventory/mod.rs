@@ -1,6 +1,6 @@
 //! Renders the inventory slots and handles all the logic for moving items around
 
-use bevy::prelude::*;
+use bevy::{ecs::system::EntityCommands, prelude::*};
 use cosmos_core::{
     ecs::NeedsDespawned,
     inventory::{itemstack::ItemStack, Inventory},
@@ -275,25 +275,14 @@ fn on_update_inventory(
             displayed_slot.item_stack = inventory.itemstack_at(displayed_slot.slot_number).cloned();
 
             if let Some(item_stack) = displayed_slot.item_stack.as_ref() {
-                commands
-                    .entity(display_entity)
-                    .insert(RenderItem {
-                        item_id: item_stack.item_id(),
-                    })
-                    .despawn_descendants()
-                    .with_children(|p| {
-                        p.spawn((TextBundle {
-                            style: Style {
-                                margin: UiRect::new(Val::Px(0.0), Val::Px(5.0), Val::Px(0.0), Val::Px(5.0)),
+                let mut ecmds = commands.entity(display_entity);
 
-                                ..default()
-                            },
-                            text: Text::from_section(format!("{} {}", item_stack.item_id(), item_stack.quantity()), text_style),
-                            ..default()
-                        },));
-                    });
+                // removes previous rendered item here
+                ecmds.despawn_descendants();
+
+                create_item_stack_slot_data(item_stack, &mut ecmds, text_style);
             } else {
-                commands.entity(display_entity).despawn_descendants().remove::<RenderItem>();
+                commands.entity(display_entity).despawn_descendants();
             }
         }
     }
@@ -314,10 +303,6 @@ fn create_inventory_slot(
                 border: UiRect::all(Val::Px(2.0)),
                 width: Val::Px(64.0),
                 height: Val::Px(64.0),
-                display: Display::Flex,
-                justify_content: JustifyContent::FlexEnd,
-                align_items: AlignItems::FlexEnd,
-
                 ..default()
             },
 
@@ -332,22 +317,39 @@ fn create_inventory_slot(
     ));
 
     if let Some(item_stack) = item_stack {
-        ecmds
-            .insert(RenderItem {
-                item_id: item_stack.item_id(),
-            })
-            .with_children(|p| {
-                p.spawn((TextBundle {
-                    style: Style {
-                        margin: UiRect::new(Val::Px(0.0), Val::Px(5.0), Val::Px(0.0), Val::Px(5.0)),
-
-                        ..default()
-                    },
-                    text: Text::from_section(format!("{} {}", item_stack.item_id(), item_stack.quantity()), text_style),
-                    ..default()
-                },));
-            });
+        create_item_stack_slot_data(item_stack, &mut ecmds, text_style);
     }
+}
+
+fn create_item_stack_slot_data(item_stack: &ItemStack, ecmds: &mut EntityCommands, text_style: TextStyle) {
+    ecmds.with_children(|p| {
+        p.spawn((
+            NodeBundle {
+                style: Style {
+                    width: Val::Px(64.0),
+                    height: Val::Px(64.0),
+                    display: Display::Flex,
+                    justify_content: JustifyContent::FlexEnd,
+                    align_items: AlignItems::FlexEnd,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            RenderItem {
+                item_id: item_stack.item_id(),
+            },
+        ))
+        .with_children(|p| {
+            p.spawn(TextBundle {
+                style: Style {
+                    margin: UiRect::new(Val::Px(0.0), Val::Px(5.0), Val::Px(0.0), Val::Px(5.0)),
+                    ..default()
+                },
+                text: Text::from_section(format!("{} {}", item_stack.item_id(), item_stack.quantity()), text_style),
+                ..default()
+            });
+        });
+    });
 }
 
 pub(super) fn register(app: &mut App) {
