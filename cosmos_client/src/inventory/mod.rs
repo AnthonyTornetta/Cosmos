@@ -1,6 +1,6 @@
 //! Renders the inventory slots and handles all the logic for moving items around
 
-use bevy::{ecs::system::EntityCommands, input::mouse::MouseButtonInput, prelude::*};
+use bevy::{ecs::system::EntityCommands, prelude::*};
 use cosmos_core::{
     ecs::NeedsDespawned,
     inventory::{itemstack::ItemStack, Inventory},
@@ -12,6 +12,8 @@ use crate::{
     ui::item_renderer::RenderItem,
     window::setup::CursorFlags,
 };
+
+pub mod netty;
 
 #[derive(Debug, Resource, Clone, Copy, Default)]
 enum InventoryState {
@@ -403,4 +405,6 @@ pub(super) fn register(app: &mut App) {
     )
     .init_resource::<InventoryState>()
     .register_type::<DisplayedItemFromInventory>();
+
+    netty::register(app);
 }

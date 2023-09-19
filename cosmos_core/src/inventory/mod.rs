@@ -13,6 +13,7 @@ use crate::{item::Item, registry::identifiable::Identifiable};
 use self::itemstack::ItemStack;
 
 pub mod itemstack;
+pub mod netty;
 
 // TODO
 // pub enum InventoryType {
@@ -20,7 +21,7 @@ pub mod itemstack;
 //     NormalInventory, // These inventories are organizable by the player
 // }
 
-#[derive(Default, Component, Serialize, Deserialize, Debug, Reflect)]
+#[derive(Default, Component, Serialize, Deserialize, Debug, Reflect, Clone)]
 /// A collection of ItemStacks, organized into slots
 pub struct Inventory {
     items: Vec<Option<ItemStack>>,
