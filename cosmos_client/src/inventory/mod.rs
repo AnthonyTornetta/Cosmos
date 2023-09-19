@@ -1,6 +1,6 @@
 //! Renders the inventory slots and handles all the logic for moving items around
 
-use bevy::{ecs::system::EntityCommands, prelude::*};
+use bevy::{ecs::system::EntityCommands, input::mouse::MouseButtonInput, prelude::*};
 use cosmos_core::{
     ecs::NeedsDespawned,
     inventory::{itemstack::ItemStack, Inventory},
@@ -296,7 +296,7 @@ fn create_inventory_slot(
     text_style: TextStyle,
 ) {
     let mut ecmds = slots.spawn((
-        Name::new("Inventory Hotar Item"),
+        Name::new("Inventory Item"),
         NodeBundle {
             style: Style {
                 // margin: UiRect::new(Val::Px(0.0), Val::Px(20.0), Val::Px(0.0), Val::Px(0.0)),
@@ -309,6 +309,7 @@ fn create_inventory_slot(
             border_color: BorderColor(Color::hex("222222").unwrap()),
             ..default()
         },
+        Interaction::None,
         DisplayedItemFromInventory {
             inventory_holder,
             slot_number,
@@ -318,6 +319,42 @@ fn create_inventory_slot(
 
     if let Some(item_stack) = item_stack {
         create_item_stack_slot_data(item_stack, &mut ecmds, text_style);
+    }
+}
+
+#[derive(Debug, Component)]
+struct FollowCursor;
+
+fn handle_interactions(
+    mut commands: Commands,
+    follownig_cursor: Query<Entity, With<FollowCursor>>,
+    interactions: Query<(Entity, Option<&Children>, &DisplayedItemFromInventory, &Interaction), Without<FollowCursor>>,
+    mouse: Res<Input<MouseButton>>,
+) {
+    // Only runs as soon as the mouse is pressed, not every frame
+    if !mouse.just_pressed(MouseButton::Left) {
+        return;
+    }
+
+    let Some((entity, children, di, _)) = interactions
+        .iter()
+        .find(|(_, _, _, interaction)| matches!(interaction, Interaction::Pressed))
+    else {
+        return;
+    };
+
+    println!("Found {entity:?}");
+
+    if let Some(children) = children {
+        if let Some(&child) = children.first() {
+            if di.item_stack.is_some() {
+                commands.entity(child).remove_parent().insert(FollowCursor);
+            }
+        }
+    }
+
+    if let Ok(following_entity) = follownig_cursor.get_single() {
+        commands.entity(following_entity).remove::<FollowCursor>().set_parent(entity);
     }
 }
 
@@ -358,6 +395,7 @@ pub(super) fn register(app: &mut App) {
         (
             toggle_inventory,
             on_update_inventory,
+            handle_interactions,
             close_button_system,
             toggle_inventory_rendering,
         )
