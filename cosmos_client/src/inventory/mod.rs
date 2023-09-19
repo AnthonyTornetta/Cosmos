@@ -1,7 +1,10 @@
 //! Renders the inventory slots and handles all the logic for moving items around
 
 use bevy::prelude::*;
-use cosmos_core::{ecs::NeedsDespawned, inventory::Inventory};
+use cosmos_core::{
+    ecs::NeedsDespawned,
+    inventory::{itemstack::ItemStack, Inventory},
+};
 
 use crate::{
     input::inputs::{CosmosInputHandler, CosmosInputs},
@@ -56,14 +59,14 @@ fn toggle_inventory_rendering(
     inventory_state: Res<InventoryState>,
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    local_inventory: Query<&Inventory, With<LocalPlayer>>,
+    local_inventory: Query<(Entity, &Inventory), With<LocalPlayer>>,
     mut cursor_flags: ResMut<CursorFlags>,
 ) {
     if !inventory_state.is_changed() {
         return;
     }
 
-    let Ok(local_inventory) = local_inventory.get_single() else {
+    let Ok((inventory_holder, local_inventory)) = local_inventory.get_single() else {
         warn!("Missing inventory and tried to open it!");
         return;
     };
@@ -81,6 +84,16 @@ fn toggle_inventory_rendering(
 
             let font = asset_server.load("fonts/PixeloidSans.ttf");
 
+            let text_style = TextStyle {
+                color: Color::WHITE,
+                font_size: 22.0,
+                font: font.clone(),
+            };
+
+            let inventory_border_size = 2.0;
+            let n_slots_per_row: usize = 9;
+            let slot_size = 64.0;
+
             commands
                 .spawn((
                     Name::new("Rendered Inventory"),
@@ -92,8 +105,8 @@ fn toggle_inventory_rendering(
                             flex_direction: FlexDirection::Column,
                             left: Val::Px(100.0),
                             top: Val::Px(100.0),
-                            width: Val::Px(596.0),
-                            border: UiRect::all(Val::Px(2.0)),
+                            width: Val::Px(n_slots_per_row as f32 * slot_size + inventory_border_size * 2.0),
+                            border: UiRect::all(Val::Px(inventory_border_size)),
                             ..default()
                         },
                         border_color: BorderColor(Color::BLACK),
@@ -180,13 +193,16 @@ fn toggle_inventory_rendering(
 
                     parent
                         .spawn((
-                            Name::new("Slots"),
+                            Name::new("Non-Hotbar Slots"),
                             NodeBundle {
                                 style: Style {
                                     display: Display::Grid,
                                     flex_grow: 1.0,
-                                    grid_column: GridPlacement::end(9),
-                                    grid_template_columns: vec![RepeatedGridTrack::px(GridTrackRepetition::Count(9), 64.0)],
+                                    grid_column: GridPlacement::end(n_slots_per_row as i16),
+                                    grid_template_columns: vec![RepeatedGridTrack::px(
+                                        GridTrackRepetition::Count(n_slots_per_row as u16),
+                                        slot_size,
+                                    )],
                                     ..default()
                                 },
 
@@ -195,28 +211,8 @@ fn toggle_inventory_rendering(
                             },
                         ))
                         .with_children(|slots| {
-                            for slot in local_inventory.iter().skip(9) {
-                                let mut ecmds = slots.spawn((
-                                    Name::new("Inventory Item"),
-                                    NodeBundle {
-                                        style: Style {
-                                            // margin: UiRect::new(Val::Px(0.0), Val::Px(20.0), Val::Px(0.0), Val::Px(0.0)),
-                                            border: UiRect::all(Val::Px(2.0)),
-                                            width: Val::Px(64.0),
-                                            height: Val::Px(64.0),
-                                            ..default()
-                                        },
-
-                                        border_color: BorderColor(Color::hex("222222").unwrap()),
-                                        ..default()
-                                    },
-                                ));
-
-                                if let Some(item_stack) = slot {
-                                    ecmds.insert(RenderItem {
-                                        item_id: item_stack.item_id(),
-                                    });
-                                }
+                            for (slot_number, slot) in local_inventory.iter().enumerate().skip(n_slots_per_row) {
+                                create_inventory_slot(inventory_holder, slot_number, slots, slot.as_ref(), text_style.clone());
                             }
                         });
 
@@ -226,7 +222,7 @@ fn toggle_inventory_rendering(
                             NodeBundle {
                                 style: Style {
                                     display: Display::Flex,
-                                    height: Val::Px(5.0 + 64.0),
+                                    height: Val::Px(5.0 + slot_size),
                                     border: UiRect::new(Val::Px(0.0), Val::Px(0.0), Val::Px(5.0), Val::Px(0.0)),
 
                                     ..default()
@@ -241,28 +237,8 @@ fn toggle_inventory_rendering(
                             },
                         ))
                         .with_children(|slots| {
-                            for slot in local_inventory.iter().take(9) {
-                                let mut ecmds = slots.spawn((
-                                    Name::new("Inventory Hotar Item"),
-                                    NodeBundle {
-                                        style: Style {
-                                            // margin: UiRect::new(Val::Px(0.0), Val::Px(20.0), Val::Px(0.0), Val::Px(0.0)),
-                                            border: UiRect::all(Val::Px(2.0)),
-                                            width: Val::Px(64.0),
-                                            height: Val::Px(64.0),
-                                            ..default()
-                                        },
-
-                                        border_color: BorderColor(Color::hex("222222").unwrap()),
-                                        ..default()
-                                    },
-                                ));
-
-                                if let Some(item_stack) = slot {
-                                    ecmds.insert(RenderItem {
-                                        item_id: item_stack.item_id(),
-                                    });
-                                }
+                            for (slot_number, slot) in local_inventory.iter().enumerate().take(n_slots_per_row) {
+                                create_inventory_slot(inventory_holder, slot_number, slots, slot.as_ref(), text_style.clone());
                             }
                         });
                 });
@@ -270,7 +246,123 @@ fn toggle_inventory_rendering(
     }
 }
 
+#[derive(Debug, Component, Reflect)]
+struct DisplayedItemFromInventory {
+    inventory_holder: Entity,
+    slot_number: usize,
+    item_stack: Option<ItemStack>,
+}
+
+fn on_update_inventory(
+    mut commands: Commands,
+    query: Query<(Entity, &Inventory), Changed<Inventory>>,
+    asset_server: Res<AssetServer>,
+    mut current_slots: Query<(Entity, &mut DisplayedItemFromInventory)>,
+) {
+    for (entity, inventory) in query.iter() {
+        for (display_entity, mut displayed_slot) in current_slots
+            .iter_mut()
+            .filter(|(_, x)| x.inventory_holder == entity && x.item_stack.as_ref() != inventory.itemstack_at(x.slot_number))
+        {
+            let font = asset_server.load("fonts/PixeloidSans.ttf");
+
+            let text_style = TextStyle {
+                color: Color::WHITE,
+                font_size: 22.0,
+                font: font.clone(),
+            };
+
+            displayed_slot.item_stack = inventory.itemstack_at(displayed_slot.slot_number).cloned();
+
+            println!("GOT CHANGE! {:?}", displayed_slot.item_stack);
+
+            if let Some(item_stack) = displayed_slot.item_stack.as_ref() {
+                commands
+                    .entity(display_entity)
+                    .insert(RenderItem {
+                        item_id: item_stack.item_id(),
+                    })
+                    .despawn_descendants()
+                    .with_children(|p| {
+                        p.spawn((TextBundle {
+                            style: Style {
+                                margin: UiRect::new(Val::Px(0.0), Val::Px(5.0), Val::Px(0.0), Val::Px(5.0)),
+
+                                ..default()
+                            },
+                            text: Text::from_section(format!("{} {}", item_stack.item_id(), item_stack.quantity()), text_style),
+                            ..default()
+                        },));
+                    });
+            } else {
+                commands.entity(display_entity).despawn_descendants().remove::<RenderItem>();
+            }
+        }
+    }
+}
+
+fn create_inventory_slot(
+    inventory_holder: Entity,
+    slot_number: usize,
+    slots: &mut ChildBuilder,
+    item_stack: Option<&ItemStack>,
+    text_style: TextStyle,
+) {
+    let mut ecmds = slots.spawn((
+        Name::new("Inventory Hotar Item"),
+        NodeBundle {
+            style: Style {
+                // margin: UiRect::new(Val::Px(0.0), Val::Px(20.0), Val::Px(0.0), Val::Px(0.0)),
+                border: UiRect::all(Val::Px(2.0)),
+                width: Val::Px(64.0),
+                height: Val::Px(64.0),
+                display: Display::Flex,
+                justify_content: JustifyContent::FlexEnd,
+                align_items: AlignItems::FlexEnd,
+
+                ..default()
+            },
+
+            border_color: BorderColor(Color::hex("222222").unwrap()),
+            ..default()
+        },
+        DisplayedItemFromInventory {
+            inventory_holder,
+            slot_number,
+            item_stack: item_stack.cloned(),
+        },
+    ));
+
+    if let Some(item_stack) = item_stack {
+        ecmds
+            .insert(RenderItem {
+                item_id: item_stack.item_id(),
+            })
+            .with_children(|p| {
+                p.spawn((TextBundle {
+                    style: Style {
+                        margin: UiRect::new(Val::Px(0.0), Val::Px(5.0), Val::Px(0.0), Val::Px(5.0)),
+
+                        ..default()
+                    },
+                    text: Text::from_section(format!("{} {}", item_stack.item_id(), item_stack.quantity()), text_style),
+                    ..default()
+                },));
+            });
+    }
+}
+
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, (toggle_inventory, close_button_system, toggle_inventory_rendering).chain())
-        .init_resource::<InventoryState>();
+    app.add_systems(
+        Update,
+        (
+            toggle_inventory,
+            on_update_inventory,
+            close_button_system,
+            toggle_inventory_rendering,
+        )
+            .chain(),
+    )
+    .init_resource::<InventoryState>()
+    .register_type::<DisplayedItemFromInventory>();
 }
