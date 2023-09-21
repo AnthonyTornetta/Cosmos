@@ -67,12 +67,12 @@ impl Inventory {
     /// Swaps the contents of two inventory slots in two different inventories
     ///
     /// Returns Ok if both slots were within the bounds of their inventories, Err if either was not
-    pub fn swap_slots(&mut self, this_slot: usize, other: &mut Inventory, their_slot: usize) -> Result<(), ()> {
-        if !(this_slot < self.items.len() && their_slot < other.len()) {
+    pub fn swap_slots(&mut self, this_slot: usize, other: &mut Inventory, other_slot: usize) -> Result<(), ()> {
+        if !(this_slot < self.items.len() && other_slot < other.len()) {
             return Err(());
         }
 
-        std::mem::swap(&mut self.items[this_slot], &mut other.items[their_slot]);
+        std::mem::swap(&mut self.items[this_slot], &mut other.items[other_slot]);
 
         Ok(())
     }

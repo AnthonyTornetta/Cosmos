@@ -387,22 +387,23 @@ fn handle_interactions(
     println!("Found {clicked_entity:?}");
 
     if let Ok((following_entity, display_item_held)) = following_cursor.get_single() {
+        let (slot_a, slot_b) = (display_item_held.slot_number, displayed_item_clicked.slot_number);
+
         if display_item_held.inventory_holder == displayed_item_clicked.inventory_holder {
             if let Ok(mut inventory) = inventory_query.get_mut(display_item_held.inventory_holder) {
                 println!(
                     "{inventory:?} Swapping {} {}",
                     display_item_held.slot_number, displayed_item_clicked.slot_number
                 );
-                inventory
-                    .self_swap_slots(display_item_held.slot_number, displayed_item_clicked.slot_number)
-                    .expect("Bad inventory slot values");
+
+                inventory.self_swap_slots(slot_a, slot_b).expect("Bad inventory slot values");
             }
         } else {
             if let Ok([mut inventory_a, mut inventory_b]) =
                 inventory_query.get_many_mut([display_item_held.inventory_holder, displayed_item_clicked.inventory_holder])
             {
                 inventory_a
-                    .swap_slots(display_item_held.slot_number, &mut inventory_b, displayed_item_clicked.slot_number)
+                    .swap_slots(slot_a, &mut inventory_b, slot_b)
                     .expect("Bad inventory slot values");
             }
         }
