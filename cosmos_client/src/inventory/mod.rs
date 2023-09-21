@@ -1,14 +1,17 @@
 //! Renders the inventory slots and handles all the logic for moving items around
 
 use bevy::{ecs::system::EntityCommands, prelude::*};
+use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     ecs::NeedsDespawned,
-    inventory::{itemstack::ItemStack, Inventory},
+    inventory::{itemstack::ItemStack, netty::ClientInventoryMessages, Inventory},
+    netty::{cosmos_encoder, NettyChannelClient},
 };
 
 use crate::{
     input::inputs::{CosmosInputHandler, CosmosInputs},
-    netty::flags::LocalPlayer,
+    netty::{flags::LocalPlayer, mapping::NetworkMapping},
+    state::game_state::GameState,
     ui::item_renderer::RenderItem,
     window::setup::CursorFlags,
 };
@@ -248,7 +251,7 @@ fn toggle_inventory_rendering(
     }
 }
 
-#[derive(Debug, Component, Reflect)]
+#[derive(Debug, Component, Reflect, Clone)]
 struct DisplayedItemFromInventory {
     inventory_holder: Entity,
     slot_number: usize,
@@ -259,13 +262,15 @@ fn on_update_inventory(
     mut commands: Commands,
     query: Query<(Entity, &Inventory), Changed<Inventory>>,
     asset_server: Res<AssetServer>,
-    mut current_slots: Query<(Entity, &mut DisplayedItemFromInventory)>,
+    following_cursor: Query<&DisplayedItemFromInventory, (With<FollowCursor>, Without<InventoryItemMarker>)>,
+    mut current_slots: Query<(Entity, &mut DisplayedItemFromInventory), With<InventoryItemMarker>>,
 ) {
     for (entity, inventory) in query.iter() {
         for (display_entity, mut displayed_slot) in current_slots
             .iter_mut()
             .filter(|(_, x)| x.inventory_holder == entity && x.item_stack.as_ref() != inventory.itemstack_at(x.slot_number))
         {
+            // This is rarely hit, so putting this load in here is best
             let font = asset_server.load("fonts/PixeloidSans.ttf");
 
             let text_style = TextStyle {
@@ -276,19 +281,27 @@ fn on_update_inventory(
 
             displayed_slot.item_stack = inventory.itemstack_at(displayed_slot.slot_number).cloned();
 
-            if let Some(item_stack) = displayed_slot.item_stack.as_ref() {
-                let mut ecmds = commands.entity(display_entity);
+            let Some(mut ecmds) = commands.get_entity(display_entity) else {
+                continue;
+            };
 
+            if let Some(item_stack) = displayed_slot.item_stack.as_ref() {
                 // removes previous rendered item here
                 ecmds.despawn_descendants();
 
-                create_item_stack_slot_data(item_stack, &mut ecmds, text_style);
+                // Only create an item render here if we're not holding the item with our cursor (moving it around)
+                if !following_cursor.iter().any(|x| x.slot_number == displayed_slot.slot_number) {
+                    create_item_stack_slot_data(item_stack, &mut ecmds, text_style);
+                }
             } else {
-                commands.entity(display_entity).despawn_descendants();
+                ecmds.despawn_descendants();
             }
         }
     }
 }
+
+#[derive(Component, Debug)]
+struct InventoryItemMarker;
 
 fn create_inventory_slot(
     inventory_holder: Entity,
@@ -299,9 +312,9 @@ fn create_inventory_slot(
 ) {
     let mut ecmds = slots.spawn((
         Name::new("Inventory Item"),
+        InventoryItemMarker,
         NodeBundle {
             style: Style {
-                // margin: UiRect::new(Val::Px(0.0), Val::Px(20.0), Val::Px(0.0), Val::Px(0.0)),
                 border: UiRect::all(Val::Px(2.0)),
                 width: Val::Px(64.0),
                 height: Val::Px(64.0),
@@ -324,41 +337,105 @@ fn create_inventory_slot(
     }
 }
 
+/**
+ * Moving items around
+ */
+
 #[derive(Debug, Component)]
 struct FollowCursor;
 
+fn pickup_item_into_cursor(children: Option<&Children>, displayed_item_clicked: &DisplayedItemFromInventory, commands: &mut Commands) {
+    if !displayed_item_clicked.item_stack.is_some() {
+        return;
+    }
+
+    let Some(children) = children else {
+        return;
+    };
+
+    let Some(&child) = children.first() else {
+        return;
+    };
+
+    commands
+        .entity(child)
+        .remove_parent()
+        .insert((FollowCursor, displayed_item_clicked.clone()));
+}
+
 fn handle_interactions(
     mut commands: Commands,
-    follownig_cursor: Query<Entity, With<FollowCursor>>,
+    following_cursor: Query<(Entity, &DisplayedItemFromInventory), With<FollowCursor>>,
     interactions: Query<(Entity, Option<&Children>, &DisplayedItemFromInventory, &Interaction), Without<FollowCursor>>,
     mouse: Res<Input<MouseButton>>,
+    mut inventory_query: Query<&mut Inventory>,
+    mut client: ResMut<RenetClient>,
+    mapping: Res<NetworkMapping>,
 ) {
     // Only runs as soon as the mouse is pressed, not every frame
     if !mouse.just_pressed(MouseButton::Left) {
         return;
     }
 
-    let Some((entity, children, di, _)) = interactions
+    let Some((clicked_entity, children, displayed_item_clicked, _)) = interactions
         .iter()
         .find(|(_, _, _, interaction)| matches!(interaction, Interaction::Pressed))
     else {
         return;
     };
 
-    println!("Found {entity:?}");
+    println!("Found {clicked_entity:?}");
 
-    if let Some(children) = children {
-        if let Some(&child) = children.first() {
-            if di.item_stack.is_some() {
-                commands.entity(child).remove_parent().insert(FollowCursor);
+    if let Ok((following_entity, display_item_held)) = following_cursor.get_single() {
+        if display_item_held.inventory_holder == displayed_item_clicked.inventory_holder {
+            if let Ok(mut inventory) = inventory_query.get_mut(display_item_held.inventory_holder) {
+                println!(
+                    "{inventory:?} Swapping {} {}",
+                    display_item_held.slot_number, displayed_item_clicked.slot_number
+                );
+                inventory
+                    .self_swap_slots(display_item_held.slot_number, displayed_item_clicked.slot_number)
+                    .expect("Bad inventory slot values");
+            }
+        } else {
+            if let Ok([mut inventory_a, mut inventory_b]) =
+                inventory_query.get_many_mut([display_item_held.inventory_holder, displayed_item_clicked.inventory_holder])
+            {
+                inventory_a
+                    .swap_slots(display_item_held.slot_number, &mut inventory_b, displayed_item_clicked.slot_number)
+                    .expect("Bad inventory slot values");
             }
         }
-    }
 
-    if let Ok(following_entity) = follownig_cursor.get_single() {
-        commands.entity(following_entity).remove::<FollowCursor>().set_parent(entity);
+        client.send_message(
+            NettyChannelClient::Inventory,
+            cosmos_encoder::serialize(&ClientInventoryMessages::SwapSlots {
+                slot_a: display_item_held.slot_number as u32,
+                inventory_a: mapping
+                    .server_from_client(&display_item_held.inventory_holder)
+                    .expect("Missing server entity for inventory"),
+                slot_b: displayed_item_clicked.slot_number as u32,
+                inventory_b: mapping
+                    .server_from_client(&displayed_item_clicked.inventory_holder)
+                    .expect("Missing server entity for inventory"),
+            }),
+        );
+
+        // Pick up the item in the same space we just held, because the item we just placed has been moved there.
+        pickup_item_into_cursor(children, display_item_held, &mut commands);
+
+        commands
+            .entity(following_entity)
+            .remove::<FollowCursor>()
+            .set_parent(clicked_entity);
+    } else {
+        pickup_item_into_cursor(children, displayed_item_clicked, &mut commands);
     }
 }
+
+/**
+ * End moving items around
+ */
 
 fn create_item_stack_slot_data(item_stack: &ItemStack, ecmds: &mut EntityCommands, text_style: TextStyle) {
     ecmds.with_children(|p| {
@@ -401,7 +478,8 @@ pub(super) fn register(app: &mut App) {
             close_button_system,
             toggle_inventory_rendering,
         )
-            .chain(),
+            .chain()
+            .run_if(in_state(GameState::Playing)),
     )
     .init_resource::<InventoryState>()
     .register_type::<DisplayedItemFromInventory>();

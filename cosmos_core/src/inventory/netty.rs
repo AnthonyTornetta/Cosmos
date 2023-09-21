@@ -24,9 +24,11 @@ pub enum ClientInventoryMessages {
     SwapSlots {
         /// The first slot
         slot_a: u32,
+        /// The entity that has this inventory.
+        inventory_a: Entity,
         /// The second slot
         slot_b: u32,
         /// The entity that has this inventory.
-        inventory_owner: Entity,
+        inventory_b: Entity,
     },
 }

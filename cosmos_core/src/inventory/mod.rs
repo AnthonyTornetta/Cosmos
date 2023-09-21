@@ -51,6 +51,32 @@ impl Inventory {
         self.items.iter().any(|x| x.is_some())
     }
 
+    /// Swaps the contents of two inventory slots in the same inventory.
+    ///
+    /// Returns Ok if both slots were within the bounds of the inventory, Err if either was not
+    pub fn self_swap_slots(&mut self, slot_a: usize, slot_b: usize) -> Result<(), ()> {
+        if !(slot_a < self.items.len() && slot_b < self.items.len()) {
+            return Err(());
+        }
+
+        self.items.swap(slot_a, slot_b);
+
+        Ok(())
+    }
+
+    /// Swaps the contents of two inventory slots in two different inventories
+    ///
+    /// Returns Ok if both slots were within the bounds of their inventories, Err if either was not
+    pub fn swap_slots(&mut self, this_slot: usize, other: &mut Inventory, their_slot: usize) -> Result<(), ()> {
+        if !(this_slot < self.items.len() && their_slot < other.len()) {
+            return Err(());
+        }
+
+        std::mem::swap(&mut self.items[this_slot], &mut other.items[their_slot]);
+
+        Ok(())
+    }
+
     /// Returns the overflow that could not fit
     pub fn insert(&mut self, item: &Item, mut quantity: u16) -> u16 {
         // Search for existing stacks, if none found that make new one(s)
@@ -110,11 +136,6 @@ impl Inventory {
         } else {
             amount
         }
-    }
-
-    /// Swaps the ItemStack's places in the inventory
-    pub fn swap(&mut self, slot_a: usize, slot_b: usize) {
-        self.items.swap(slot_a, slot_b);
     }
 
     /// Sets the ItemStack stored at that slot number. Will overwrite any previous stack
