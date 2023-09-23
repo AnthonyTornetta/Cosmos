@@ -14,7 +14,7 @@ use cosmos_core::{
 
 use crate::{
     events::block::block_events::*,
-    input::inputs::{CosmosInputHandler, CosmosInputs},
+    input::inputs::{CosmosInputs, InputChecker, InputHandler},
     rendering::MainCamera,
     state::game_state::GameState,
     ui::hotbar::Hotbar,
@@ -29,7 +29,7 @@ pub enum InteractionType {
 }
 
 fn process_player_interaction(
-    (keys, mouse, input_handler): (Res<Input<KeyCode>>, Res<Input<MouseButton>>, Res<CosmosInputHandler>),
+    input_handler: InputChecker,
     camera: Query<&GlobalTransform, With<MainCamera>>,
     player_body: Query<Entity, (With<LocalPlayer>, Without<Pilot>)>,
     rapier_context: Res<RapierContext>,
@@ -82,7 +82,7 @@ fn process_player_interaction(
 
     let structure_physics_transform = transform;
 
-    if input_handler.check_just_pressed(CosmosInputs::BreakBlock, &keys, &mouse) {
+    if input_handler.check_just_pressed(CosmosInputs::BreakBlock) {
         let moved_point = intersection.point - intersection.normal * 0.3;
 
         let point = structure_physics_transform.compute_matrix().inverse().transform_point3(moved_point);
@@ -95,7 +95,7 @@ fn process_player_interaction(
         }
     }
 
-    if input_handler.check_just_pressed(CosmosInputs::PlaceBlock, &keys, &mouse) {
+    if input_handler.check_just_pressed(CosmosInputs::PlaceBlock) {
         if let Ok(mut inventory) = inventory.get_single_mut() {
             if let Ok(hotbar) = hotbar.get_single() {
                 let inventory_slot = hotbar.selected_slot();
@@ -133,7 +133,7 @@ fn process_player_interaction(
         }
     }
 
-    if input_handler.check_just_pressed(CosmosInputs::Interact, &keys, &mouse) {
+    if input_handler.check_just_pressed(CosmosInputs::Interact) {
         let moved_point = intersection.point - intersection.normal * 0.3;
 
         let point = structure_physics_transform.compute_matrix().inverse().transform_point3(moved_point);

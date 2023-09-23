@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use cosmos_core::{inventory::Inventory, item::Item};
 
 use crate::{
-    input::inputs::{CosmosInputHandler, CosmosInputs},
+    input::inputs::{CosmosInputs, InputChecker, InputHandler},
     lang::Lang,
     netty::flags::LocalPlayer,
     state::game_state::GameState,
@@ -57,53 +57,48 @@ fn image_path(selected: bool) -> &'static str {
     }
 }
 
-fn listen_button_presses(
-    keys: Res<Input<KeyCode>>,
-    mouse: Res<Input<MouseButton>>,
-    input_handler: Res<CosmosInputHandler>,
-    mut hotbar: Query<&mut Hotbar>,
-) {
-    if input_handler.check_just_pressed(CosmosInputs::HotbarSlot1, &keys, &mouse) {
+fn listen_button_presses(input_handler: InputChecker, mut hotbar: Query<&mut Hotbar>) {
+    if input_handler.check_just_pressed(CosmosInputs::HotbarSlot1) {
         if let Ok(mut hotbar) = hotbar.get_single_mut() {
             hotbar.selected_slot = 0;
         }
     }
-    if input_handler.check_just_pressed(CosmosInputs::HotbarSlot2, &keys, &mouse) {
+    if input_handler.check_just_pressed(CosmosInputs::HotbarSlot2) {
         if let Ok(mut hotbar) = hotbar.get_single_mut() {
             hotbar.selected_slot = 1;
         }
     }
-    if input_handler.check_just_pressed(CosmosInputs::HotbarSlot3, &keys, &mouse) {
+    if input_handler.check_just_pressed(CosmosInputs::HotbarSlot3) {
         if let Ok(mut hotbar) = hotbar.get_single_mut() {
             hotbar.selected_slot = 2;
         }
     }
-    if input_handler.check_just_pressed(CosmosInputs::HotbarSlot4, &keys, &mouse) {
+    if input_handler.check_just_pressed(CosmosInputs::HotbarSlot4) {
         if let Ok(mut hotbar) = hotbar.get_single_mut() {
             hotbar.selected_slot = 3;
         }
     }
-    if input_handler.check_just_pressed(CosmosInputs::HotbarSlot5, &keys, &mouse) {
+    if input_handler.check_just_pressed(CosmosInputs::HotbarSlot5) {
         if let Ok(mut hotbar) = hotbar.get_single_mut() {
             hotbar.selected_slot = 4;
         }
     }
-    if input_handler.check_just_pressed(CosmosInputs::HotbarSlot6, &keys, &mouse) {
+    if input_handler.check_just_pressed(CosmosInputs::HotbarSlot6) {
         if let Ok(mut hotbar) = hotbar.get_single_mut() {
             hotbar.selected_slot = 5;
         }
     }
-    if input_handler.check_just_pressed(CosmosInputs::HotbarSlot7, &keys, &mouse) {
+    if input_handler.check_just_pressed(CosmosInputs::HotbarSlot7) {
         if let Ok(mut hotbar) = hotbar.get_single_mut() {
             hotbar.selected_slot = 6;
         }
     }
-    if input_handler.check_just_pressed(CosmosInputs::HotbarSlot8, &keys, &mouse) {
+    if input_handler.check_just_pressed(CosmosInputs::HotbarSlot8) {
         if let Ok(mut hotbar) = hotbar.get_single_mut() {
             hotbar.selected_slot = 7;
         }
     }
-    if input_handler.check_just_pressed(CosmosInputs::HotbarSlot9, &keys, &mouse) {
+    if input_handler.check_just_pressed(CosmosInputs::HotbarSlot9) {
         if let Ok(mut hotbar) = hotbar.get_single_mut() {
             hotbar.selected_slot = 8;
         }

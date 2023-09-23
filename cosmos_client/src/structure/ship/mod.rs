@@ -1,8 +1,8 @@
 //! Handles client-related ship things
 
 use bevy::prelude::{
-    in_state, App, BuildChildren, Commands, Entity, EventReader, Input, IntoSystemConfigs, KeyCode, MouseButton, Parent, Query, Res,
-    ResMut, Transform, Update, With, Without,
+    in_state, App, BuildChildren, Commands, Entity, EventReader, IntoSystemConfigs, Parent, Query, Res, ResMut, Transform, Update, With,
+    Without,
 };
 use bevy_rapier3d::prelude::CollisionEvent;
 use bevy_renet::renet::RenetClient;
@@ -17,7 +17,7 @@ use cosmos_core::{
 };
 
 use crate::{
-    input::inputs::{CosmosInputHandler, CosmosInputs},
+    input::inputs::{CosmosInputs, InputChecker, InputHandler},
     netty::{flags::LocalPlayer, mapping::NetworkMapping},
     state::game_state::GameState,
 };
@@ -27,17 +27,13 @@ pub mod client_ship_builder;
 fn remove_self_from_ship(
     has_parent: Query<(Entity, &Parent), (With<LocalPlayer>, Without<Pilot>)>,
     ship_is_parent: Query<(), With<Ship>>,
-
-    input_handler: Res<CosmosInputHandler>,
-    inputs: Res<Input<KeyCode>>,
-    mouse: Res<Input<MouseButton>>,
-
+    input_handler: InputChecker,
     mut commands: Commands,
 
     mut renet_client: ResMut<RenetClient>,
 ) {
     if let Ok((entity, parent)) = has_parent.get_single() {
-        if ship_is_parent.contains(parent.get()) && input_handler.check_just_pressed(CosmosInputs::LeaveShip, &inputs, &mouse) {
+        if ship_is_parent.contains(parent.get()) && input_handler.check_just_pressed(CosmosInputs::LeaveShip) {
             commands.entity(entity).remove_parent();
 
             renet_client.send_message(

@@ -159,6 +159,64 @@ pub struct CosmosInputHandler {
     input_mapping: HashMap<CosmosInputs, (Option<KeyCode>, Option<MouseButton>)>,
 }
 
+/// A wrapper around [`CosmosInputHandler`] and all the resources it needs.
+///
+/// It just makes calling the functions a little bit easier
+pub trait InputHandler {
+    /// Check if the given input was just released.
+    ///
+    /// Use this to see if something was held in the last frame but is no longer being held.
+    fn check_just_released(&self, input_code: CosmosInputs) -> bool;
+
+    /// Check if the given input is not being used.
+    fn check_released(&self, input_code: CosmosInputs) -> bool;
+
+    /// Checks if the given input was just pressed.
+    ///
+    /// Use this to see if something was pressed just this frame.
+    fn check_just_pressed(&self, input_code: CosmosInputs) -> bool;
+
+    /// Check if this input is currently being used.
+    fn check_pressed(&self, input_code: CosmosInputs) -> bool;
+
+    /// Gets the raw mouse key structure (Res<Input<KeyCode>>)
+    fn key_inputs(&self) -> &Input<KeyCode>;
+
+    /// Gets the raw mouse inputs structure (Res<Input<KeyCode>>)
+    fn mouse_inputs(&self) -> &Input<MouseButton>;
+}
+
+/// A wrapper around [`CosmosInputHandler`] and all the resources it needs.
+///
+/// It just makes calling the functions a little bit easier
+pub type InputChecker<'a> = (Res<'a, CosmosInputHandler>, Res<'a, Input<KeyCode>>, Res<'a, Input<MouseButton>>);
+
+impl<'a> InputHandler for InputChecker<'a> {
+    fn check_just_pressed(&self, input_code: CosmosInputs) -> bool {
+        self.0.check_just_pressed(input_code, &self.1, &self.2)
+    }
+
+    fn check_just_released(&self, input_code: CosmosInputs) -> bool {
+        self.0.check_just_released(input_code, &self.1, &self.2)
+    }
+
+    fn check_pressed(&self, input_code: CosmosInputs) -> bool {
+        self.0.check_pressed(input_code, &self.1, &self.2)
+    }
+
+    fn check_released(&self, input_code: CosmosInputs) -> bool {
+        self.0.check_released(input_code, &self.1, &self.2)
+    }
+
+    fn key_inputs(&self) -> &Input<KeyCode> {
+        &self.1
+    }
+
+    fn mouse_inputs(&self) -> &Input<MouseButton> {
+        &self.2
+    }
+}
+
 impl CosmosInputHandler {
     /// Default
     pub fn new() -> Self {

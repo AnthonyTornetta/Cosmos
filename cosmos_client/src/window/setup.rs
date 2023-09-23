@@ -6,7 +6,7 @@ use bevy::{
     window::{CursorGrabMode, PrimaryWindow, Window, WindowFocused},
 };
 
-use crate::input::inputs::{CosmosInputHandler, CosmosInputs};
+use crate::input::inputs::{CosmosInputs, InputChecker, InputHandler};
 
 #[derive(Resource, Copy, Clone)]
 /// Resource containing the various flags about the cursor, like if it's hidden or not
@@ -83,13 +83,8 @@ fn update_mouse_deltas(
     }
 }
 
-fn toggle_mouse_freeze(
-    input_handler: Res<CosmosInputHandler>,
-    inputs: Res<Input<KeyCode>>,
-    mouse: Res<Input<MouseButton>>,
-    mut cursor_flags: ResMut<CursorFlags>,
-) {
-    if input_handler.check_just_pressed(CosmosInputs::UnlockMouse, &inputs, &mouse) {
+fn toggle_mouse_freeze(input_handler: InputChecker, mut cursor_flags: ResMut<CursorFlags>) {
+    if input_handler.check_just_pressed(CosmosInputs::UnlockMouse) {
         cursor_flags.toggle();
     }
 }

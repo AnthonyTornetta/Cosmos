@@ -1,11 +1,11 @@
 //! Event & its processing for when a player wants to create a ship
 
-use bevy::prelude::{in_state, App, Event, EventReader, EventWriter, Input, IntoSystemConfigs, KeyCode, MouseButton, Res, ResMut, Update};
+use bevy::prelude::{in_state, App, Event, EventReader, EventWriter, IntoSystemConfigs, ResMut, Update};
 use bevy_renet::renet::RenetClient;
 use cosmos_core::netty::{client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannelClient};
 
 use crate::{
-    input::inputs::{CosmosInputHandler, CosmosInputs},
+    input::inputs::{CosmosInputs, InputChecker, InputHandler},
     state::game_state::GameState,
 };
 
@@ -15,13 +15,8 @@ pub struct CreateShipEvent {
     name: String,
 }
 
-fn listener(
-    inputs: Res<Input<KeyCode>>,
-    mouse: Res<Input<MouseButton>>,
-    cosmos_inputs: Res<CosmosInputHandler>,
-    mut event_writer: EventWriter<CreateShipEvent>,
-) {
-    if cosmos_inputs.check_just_pressed(CosmosInputs::CreateShip, &inputs, &mouse) {
+fn listener(input_handler: InputChecker, mut event_writer: EventWriter<CreateShipEvent>) {
+    if input_handler.check_just_pressed(CosmosInputs::CreateShip) {
         event_writer.send(CreateShipEvent { name: "Cool name".into() });
     }
 }

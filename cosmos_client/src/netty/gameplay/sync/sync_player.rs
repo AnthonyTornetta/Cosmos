@@ -11,8 +11,11 @@ use cosmos_core::{
     physics::location::Location,
 };
 
-use crate::{input::inputs::CosmosInputHandler, netty::mapping::NetworkMapping, rendering::MainCamera, state::game_state::GameState};
-use crate::{input::inputs::CosmosInputs, netty::flags::LocalPlayer};
+use crate::{input::inputs::InputChecker, netty::mapping::NetworkMapping, rendering::MainCamera, state::game_state::GameState};
+use crate::{
+    input::inputs::{CosmosInputs, InputHandler},
+    netty::flags::LocalPlayer,
+};
 
 fn send_position(
     mut client: ResMut<RenetClient>,
@@ -52,13 +55,8 @@ fn send_position(
 }
 
 // Just for testing
-fn send_disconnect(
-    inputs: Res<Input<KeyCode>>,
-    mouse: Res<Input<MouseButton>>,
-    input_handler: ResMut<CosmosInputHandler>,
-    transport: Option<ResMut<NetcodeClientTransport>>,
-) {
-    if input_handler.check_just_pressed(CosmosInputs::Disconnect, &inputs, &mouse) {
+fn send_disconnect(input_handler: InputChecker, transport: Option<ResMut<NetcodeClientTransport>>) {
+    if input_handler.check_just_pressed(CosmosInputs::Disconnect) {
         if let Some(mut transport) = transport {
             if transport.is_connected() {
                 println!("SENDING DC MESSAGE!");

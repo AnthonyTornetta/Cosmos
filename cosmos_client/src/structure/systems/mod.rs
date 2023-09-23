@@ -8,7 +8,7 @@ use cosmos_core::{
 };
 
 use crate::{
-    input::inputs::{CosmosInputHandler, CosmosInputs},
+    input::inputs::{CosmosInputs, InputChecker, InputHandler},
     netty::flags::LocalPlayer,
     state::game_state::GameState,
 };
@@ -16,14 +16,12 @@ use crate::{
 fn check_if_using_structure_system(
     query: Query<&Pilot, With<LocalPlayer>>,
     structure_query: Query<Entity>,
-    keys: Res<Input<KeyCode>>,
-    mouse: Res<Input<MouseButton>>,
-    input_handler: Res<CosmosInputHandler>,
+    input_handler: InputChecker,
     mut commands: Commands,
 ) {
     if let Ok(pilot) = query.get_single() {
         if let Ok(structure_ent) = structure_query.get(pilot.entity) {
-            if input_handler.check_pressed(CosmosInputs::PlaceBlock, &keys, &mouse) {
+            if input_handler.check_pressed(CosmosInputs::PlaceBlock) {
                 commands.entity(structure_ent).insert(SystemActive);
             } else {
                 commands.entity(structure_ent).remove::<SystemActive>();

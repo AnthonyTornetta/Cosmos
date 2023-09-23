@@ -9,7 +9,7 @@ use cosmos_core::{
 };
 
 use crate::{
-    input::inputs::{CosmosInputHandler, CosmosInputs},
+    input::inputs::{CosmosInputs, InputChecker, InputHandler},
     netty::{flags::LocalPlayer, mapping::NetworkMapping},
     state::game_state::GameState,
     ui::item_renderer::RenderItem,
@@ -28,13 +28,8 @@ enum InventoryState {
 #[derive(Component)]
 struct RenderedInventory;
 
-fn toggle_inventory(
-    mut inventory_state: ResMut<InventoryState>,
-    inputs: Res<CosmosInputHandler>,
-    keys: Res<Input<KeyCode>>,
-    mouse: Res<Input<MouseButton>>,
-) {
-    if inputs.check_just_pressed(CosmosInputs::ToggleInventory, &keys, &mouse) {
+fn toggle_inventory(mut inventory_state: ResMut<InventoryState>, inputs: InputChecker) {
+    if inputs.check_just_pressed(CosmosInputs::ToggleInventory) {
         match *inventory_state {
             InventoryState::Closed => *inventory_state = InventoryState::Open,
             InventoryState::Open => *inventory_state = InventoryState::Closed,
@@ -65,6 +60,7 @@ fn toggle_inventory_rendering(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     local_inventory: Query<(Entity, &Inventory), With<LocalPlayer>>,
+    holding_item: Query<Entity, With<FollowCursor>>,
     mut cursor_flags: ResMut<CursorFlags>,
 ) {
     if !inventory_state.is_changed() {
@@ -80,6 +76,9 @@ fn toggle_inventory_rendering(
         InventoryState::Closed => {
             if let Ok(entity) = open_inventory.get_single() {
                 commands.entity(entity).insert(NeedsDespawned);
+                for entity in holding_item.iter() {
+                    commands.entity(entity).insert(NeedsDespawned);
+                }
 
                 cursor_flags.hide();
             }
@@ -342,6 +341,9 @@ fn create_inventory_slot(
  */
 
 #[derive(Debug, Component)]
+/// If something is tagged with this, it is being held and moved around by the player.
+///
+/// Note that even if something is being moved, it is still always within the player's inventory
 struct FollowCursor;
 
 fn pickup_item_into_cursor(children: Option<&Children>, displayed_item_clicked: &DisplayedItemFromInventory, commands: &mut Commands) {
@@ -367,13 +369,13 @@ fn handle_interactions(
     mut commands: Commands,
     following_cursor: Query<(Entity, &DisplayedItemFromInventory), With<FollowCursor>>,
     interactions: Query<(Entity, Option<&Children>, &DisplayedItemFromInventory, &Interaction), Without<FollowCursor>>,
-    mouse: Res<Input<MouseButton>>,
+    input_handler: InputChecker,
     mut inventory_query: Query<&mut Inventory>,
     mut client: ResMut<RenetClient>,
     mapping: Res<NetworkMapping>,
 ) {
     // Only runs as soon as the mouse is pressed, not every frame
-    if !mouse.just_pressed(MouseButton::Left) {
+    if !input_handler.mouse_inputs().just_pressed(MouseButton::Left) {
         return;
     }
 
@@ -391,11 +393,6 @@ fn handle_interactions(
 
         if display_item_held.inventory_holder == displayed_item_clicked.inventory_holder {
             if let Ok(mut inventory) = inventory_query.get_mut(display_item_held.inventory_holder) {
-                println!(
-                    "{inventory:?} Swapping {} {}",
-                    display_item_held.slot_number, displayed_item_clicked.slot_number
-                );
-
                 inventory.self_swap_slots(slot_a, slot_b).expect("Bad inventory slot values");
             }
         } else {
