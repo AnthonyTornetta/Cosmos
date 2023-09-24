@@ -31,4 +31,13 @@ pub enum ClientInventoryMessages {
         /// The entity that has this inventory.
         inventory_b: Entity,
     },
+    /// Auto moves an item in one inventory to another (or the same)
+    AutoMove {
+        /// The slot to automove
+        from_slot: usize,
+        /// The inventory the item is in
+        from_inventory: Entity,
+        /// The inventory you want to auto-move the item to. Can be the same as `from_inventory` to auto sort it.
+        to_inventory: Entity,
+    },
 }

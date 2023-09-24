@@ -98,6 +98,8 @@ pub enum CosmosInputs {
 
     /// Opens + closes your inventory
     ToggleInventory,
+    /// "Shift-Clicking" an item in minecraft
+    AutoMoveItem,
 }
 
 fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
@@ -151,6 +153,7 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     input_handler.set_keycode(CosmosInputs::LeaveShip, KeyCode::L);
 
     input_handler.set_keycode(CosmosInputs::ToggleInventory, KeyCode::T);
+    input_handler.set_keycode(CosmosInputs::AutoMoveItem, KeyCode::ShiftLeft);
 }
 
 #[derive(Resource, Default, Debug)]

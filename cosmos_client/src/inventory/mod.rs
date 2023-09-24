@@ -386,9 +386,31 @@ fn handle_interactions(
         return;
     };
 
+    let bulk_moving = input_handler.check_pressed(CosmosInputs::AutoMoveItem);
+
     println!("Found {clicked_entity:?}");
 
-    if let Ok((following_entity, display_item_held)) = following_cursor.get_single() {
+    if bulk_moving {
+        let slot_num = displayed_item_clicked.slot_number;
+        let inventory_entity = displayed_item_clicked.inventory_holder;
+
+        if let Ok(mut inventory) = inventory_query.get_mut(inventory_entity) {
+            inventory.auto_move(slot_num).expect("Bad inventory slot values");
+        }
+
+        let server_entity = mapping
+            .server_from_client(&displayed_item_clicked.inventory_holder)
+            .expect("Missing server entity for inventory");
+
+        client.send_message(
+            NettyChannelClient::Inventory,
+            cosmos_encoder::serialize(&ClientInventoryMessages::AutoMove {
+                from_slot: slot_num,
+                from_inventory: server_entity,
+                to_inventory: server_entity,
+            }),
+        );
+    } else if let Ok((following_entity, display_item_held)) = following_cursor.get_single() {
         let (slot_a, slot_b) = (display_item_held.slot_number, displayed_item_clicked.slot_number);
 
         if display_item_held.inventory_holder == displayed_item_clicked.inventory_holder {

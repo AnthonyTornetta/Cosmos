@@ -2,6 +2,8 @@
 //!
 //! These ItemStacks can be modified freely. An inventory is owned by an entity.
 
+use std::ops::Range;
+
 use bevy::{
     prelude::{App, Component},
     reflect::Reflect,
@@ -21,22 +23,38 @@ pub mod netty;
 //     NormalInventory, // These inventories are organizable by the player
 // }
 
+/// Represents some sort of error that occurred
+#[derive(Debug)]
+pub enum InventoryError {
+    /// A slot outside the range of this inventory was given
+    InvalidSlot(usize),
+}
+
+impl std::fmt::Display for InventoryError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match *self {
+            Self::InvalidSlot(slot) => f.write_str(&format!("Invalid slot {}", slot)),
+        }
+    }
+}
+
 #[derive(Default, Component, Serialize, Deserialize, Debug, Reflect, Clone)]
 /// A collection of ItemStacks, organized into slots
 pub struct Inventory {
     items: Vec<Option<ItemStack>>,
+    priority_slots: Option<Range<usize>>,
 }
 
 impl Inventory {
     /// Creates an empty inventory with that number of slots
-    pub fn new(n_slots: usize) -> Self {
+    pub fn new(n_slots: usize, priority_slots: Option<Range<usize>>) -> Self {
         let mut items = Vec::with_capacity(n_slots);
 
         for _ in 0..n_slots {
             items.push(None);
         }
 
-        Self { items }
+        Self { items, priority_slots }
     }
 
     /// The number of slots this inventory contains
@@ -54,9 +72,12 @@ impl Inventory {
     /// Swaps the contents of two inventory slots in the same inventory.
     ///
     /// Returns Ok if both slots were within the bounds of the inventory, Err if either was not
-    pub fn self_swap_slots(&mut self, slot_a: usize, slot_b: usize) -> Result<(), ()> {
-        if !(slot_a < self.items.len() && slot_b < self.items.len()) {
-            return Err(());
+    pub fn self_swap_slots(&mut self, slot_a: usize, slot_b: usize) -> Result<(), InventoryError> {
+        if slot_a >= self.items.len() {
+            return Err(InventoryError::InvalidSlot(slot_a));
+        }
+        if slot_b >= self.items.len() {
+            return Err(InventoryError::InvalidSlot(slot_b));
         }
 
         self.items.swap(slot_a, slot_b);
@@ -67,9 +88,12 @@ impl Inventory {
     /// Swaps the contents of two inventory slots in two different inventories
     ///
     /// Returns Ok if both slots were within the bounds of their inventories, Err if either was not
-    pub fn swap_slots(&mut self, this_slot: usize, other: &mut Inventory, other_slot: usize) -> Result<(), ()> {
-        if !(this_slot < self.items.len() && other_slot < other.len()) {
-            return Err(());
+    pub fn swap_slots(&mut self, this_slot: usize, other: &mut Inventory, other_slot: usize) -> Result<(), InventoryError> {
+        if this_slot >= self.items.len() {
+            return Err(InventoryError::InvalidSlot(this_slot));
+        }
+        if other_slot >= other.len() {
+            return Err(InventoryError::InvalidSlot(other_slot));
         }
 
         std::mem::swap(&mut self.items[this_slot], &mut other.items[other_slot]);
@@ -114,6 +138,11 @@ impl Inventory {
         self.items[slot].as_ref()
     }
 
+    /// Returns the ItemStack at that slot
+    pub fn mut_itemstack_at(&mut self, slot: usize) -> Option<&mut ItemStack> {
+        self.items[slot].as_mut()
+    }
+
     /// Returns the overflow quantity
     pub fn decrease_quantity_at(&mut self, slot: usize, amount: u16) -> u16 {
         if let Some(is) = &mut self.items[slot] {
@@ -146,17 +175,72 @@ impl Inventory {
     /// Inserts the items & quantity at that slot. Returns the number of items left over, or the full
     /// quantity of items if that slot doesn't represent that item.
     pub fn insert_at(&mut self, slot: usize, item: &Item, quantity: u16) -> u16 {
+        self.insert_raw_at(slot, item.id(), item.max_stack_size(), quantity)
+    }
+
+    /// Inserts the items & quantity at that slot. Returns the number of items left over, or the full
+    /// quantity of items if that slot doesn't represent that item.
+    fn insert_raw_at(&mut self, slot: usize, item_id: u16, max_stack_size: u16, quantity: u16) -> u16 {
         if let Some(slot) = &mut self.items[slot] {
-            if slot.item_id() != item.id() {
+            if slot.item_id() != item_id {
                 quantity
             } else {
                 slot.increase_quantity(quantity)
             }
         } else {
-            self.items[slot] = Some(ItemStack::with_quantity(item, quantity));
+            self.items[slot] = Some(ItemStack::raw_with_quantity(item_id, max_stack_size, quantity));
 
             0
         }
+    }
+
+    /// Moves an item around an inventory to auto sort it
+    pub fn auto_move(&mut self, slot: usize) -> Result<(), InventoryError> {
+        if slot >= self.items.len() {
+            return Err(InventoryError::InvalidSlot(slot));
+        }
+
+        let Some(mut item_stack) = self.itemstack_at(slot).cloned() else {
+            return Ok(());
+        };
+
+        if let Some(priority_slots) = self.priority_slots.clone() {
+            if !priority_slots.contains(&slot) {
+                // attempt to move to priority slots first
+                for slot in priority_slots {
+                    let left_over = self.insert_raw_at(slot, item_stack.item_id(), item_stack.max_stack_size(), item_stack.quantity());
+
+                    item_stack.set_quantity(left_over);
+
+                    if item_stack.quantity() == 0 {
+                        break;
+                    }
+                }
+            }
+        }
+
+        let n = self.items.len();
+        let priority_slots = self.priority_slots.clone();
+
+        let slot_not_priority_slot = |x: &usize| priority_slots.clone().map(|range| !range.contains(x)).unwrap_or(true);
+
+        for slot in (0..n).filter(|&x| x != slot).filter(slot_not_priority_slot) {
+            if item_stack.quantity() == 0 {
+                break;
+            }
+
+            let left_over = self.insert_raw_at(slot, item_stack.item_id(), item_stack.max_stack_size(), item_stack.quantity());
+
+            item_stack.set_quantity(left_over);
+        }
+
+        if item_stack.quantity() != 0 {
+            self.set_itemstack_at(slot, Some(item_stack));
+        } else {
+            self.set_itemstack_at(slot, None);
+        }
+
+        Ok(())
     }
 
     /// Calculates the number of that specific item in this inventory.
