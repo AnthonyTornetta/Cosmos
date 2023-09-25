@@ -374,42 +374,54 @@ fn handle_interactions(
     mut client: ResMut<RenetClient>,
     mapping: Res<NetworkMapping>,
 ) {
+    let lmb = input_handler.mouse_inputs().just_pressed(MouseButton::Left);
+    let rmb = input_handler.mouse_inputs().just_pressed(MouseButton::Right);
+
     // Only runs as soon as the mouse is pressed, not every frame
-    if !input_handler.mouse_inputs().just_pressed(MouseButton::Left) {
+    if !lmb && !rmb {
         return;
     }
 
     let Some((clicked_entity, children, displayed_item_clicked, _)) = interactions
         .iter()
-        .find(|(_, _, _, interaction)| matches!(interaction, Interaction::Pressed))
+        // hovered or pressed should trigger this because pressed doesn't detected right click
+        .find(|(_, _, _, interaction)| !matches!(interaction, Interaction::None))
     else {
         return;
     };
 
     let bulk_moving = input_handler.check_pressed(CosmosInputs::AutoMoveItem);
 
-    println!("Found {clicked_entity:?}");
-
     if bulk_moving {
         let slot_num = displayed_item_clicked.slot_number;
         let inventory_entity = displayed_item_clicked.inventory_holder;
 
         if let Ok(mut inventory) = inventory_query.get_mut(inventory_entity) {
-            inventory.auto_move(slot_num).expect("Bad inventory slot values");
+            let quantity = if lmb {
+                u16::MAX
+            } else {
+                inventory
+                    .itemstack_at(slot_num)
+                    .map(|x| (x.quantity() as f32 / 2.0).ceil() as u16)
+                    .unwrap_or(0)
+            };
+
+            inventory.auto_move(slot_num, quantity).expect("Bad inventory slot values");
+
+            let server_entity = mapping
+                .server_from_client(&displayed_item_clicked.inventory_holder)
+                .expect("Missing server entity for inventory");
+
+            client.send_message(
+                NettyChannelClient::Inventory,
+                cosmos_encoder::serialize(&ClientInventoryMessages::AutoMove {
+                    from_slot: slot_num as u32,
+                    quantity: quantity,
+                    from_inventory: server_entity,
+                    to_inventory: server_entity,
+                }),
+            );
         }
-
-        let server_entity = mapping
-            .server_from_client(&displayed_item_clicked.inventory_holder)
-            .expect("Missing server entity for inventory");
-
-        client.send_message(
-            NettyChannelClient::Inventory,
-            cosmos_encoder::serialize(&ClientInventoryMessages::AutoMove {
-                from_slot: slot_num,
-                from_inventory: server_entity,
-                to_inventory: server_entity,
-            }),
-        );
     } else if let Ok((following_entity, display_item_held)) = following_cursor.get_single() {
         let (slot_a, slot_b) = (display_item_held.slot_number, displayed_item_clicked.slot_number);
 

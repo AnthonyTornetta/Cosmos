@@ -53,13 +53,14 @@ fn listen(mut query: Query<&mut Inventory>, mut server: ResMut<RenetServer>) {
                 }
                 ClientInventoryMessages::AutoMove {
                     from_slot,
+                    quantity,
                     from_inventory,
                     to_inventory,
                 } => {
                     if from_inventory == to_inventory {
                         if let Ok(mut inventory) = query.get_mut(from_inventory) {
                             inventory
-                                .auto_move(from_slot)
+                                .auto_move(from_slot as usize, quantity)
                                 .expect(format!("Got bad inventory slot from player! {}", from_slot).as_str());
                         }
                     } else {

@@ -195,13 +195,23 @@ impl Inventory {
     }
 
     /// Moves an item around an inventory to auto sort it
-    pub fn auto_move(&mut self, slot: usize) -> Result<(), InventoryError> {
+    pub fn auto_move(&mut self, slot: usize, amount: u16) -> Result<(), InventoryError> {
         if slot >= self.items.len() {
             return Err(InventoryError::InvalidSlot(slot));
         }
 
         let Some(mut item_stack) = self.itemstack_at(slot).cloned() else {
             return Ok(());
+        };
+
+        let final_left_over = if amount < item_stack.quantity() {
+            let res = item_stack.quantity() - amount;
+
+            item_stack.set_quantity(amount);
+
+            res
+        } else {
+            0
         };
 
         if let Some(priority_slots) = self.priority_slots.clone() {
@@ -233,6 +243,8 @@ impl Inventory {
 
             item_stack.set_quantity(left_over);
         }
+
+        item_stack.set_quantity(item_stack.quantity() + final_left_over);
 
         if item_stack.quantity() != 0 {
             self.set_itemstack_at(slot, Some(item_stack));
