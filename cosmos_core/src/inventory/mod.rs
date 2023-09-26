@@ -25,12 +25,19 @@ pub mod netty;
 
 /// Represents some sort of error that occurred
 #[derive(Debug)]
-pub enum InventoryError {
+pub enum InventorySlotError {
     /// A slot outside the range of this inventory was given
     InvalidSlot(usize),
 }
 
-impl std::fmt::Display for InventoryError {
+/// Represents some sort of error that occurred
+#[derive(Debug)]
+pub enum InventoryItemStackError {
+    /// Trying to merge two itemstacks with non-equal items
+    ItemStackItemsDontMatch(u16, u16),
+}
+
+impl std::fmt::Display for InventorySlotError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match *self {
             Self::InvalidSlot(slot) => f.write_str(&format!("Invalid slot {}", slot)),
@@ -72,12 +79,12 @@ impl Inventory {
     /// Swaps the contents of two inventory slots in the same inventory.
     ///
     /// Returns Ok if both slots were within the bounds of the inventory, Err if either was not
-    pub fn self_swap_slots(&mut self, slot_a: usize, slot_b: usize) -> Result<(), InventoryError> {
+    pub fn self_swap_slots(&mut self, slot_a: usize, slot_b: usize) -> Result<(), InventorySlotError> {
         if slot_a >= self.items.len() {
-            return Err(InventoryError::InvalidSlot(slot_a));
+            return Err(InventorySlotError::InvalidSlot(slot_a));
         }
         if slot_b >= self.items.len() {
-            return Err(InventoryError::InvalidSlot(slot_b));
+            return Err(InventorySlotError::InvalidSlot(slot_b));
         }
 
         self.items.swap(slot_a, slot_b);
@@ -88,12 +95,12 @@ impl Inventory {
     /// Swaps the contents of two inventory slots in two different inventories
     ///
     /// Returns Ok if both slots were within the bounds of their inventories, Err if either was not
-    pub fn swap_slots(&mut self, this_slot: usize, other: &mut Inventory, other_slot: usize) -> Result<(), InventoryError> {
+    pub fn swap_slots(&mut self, this_slot: usize, other: &mut Inventory, other_slot: usize) -> Result<(), InventorySlotError> {
         if this_slot >= self.items.len() {
-            return Err(InventoryError::InvalidSlot(this_slot));
+            return Err(InventorySlotError::InvalidSlot(this_slot));
         }
         if other_slot >= other.len() {
-            return Err(InventoryError::InvalidSlot(other_slot));
+            return Err(InventorySlotError::InvalidSlot(other_slot));
         }
 
         std::mem::swap(&mut self.items[this_slot], &mut other.items[other_slot]);
@@ -195,9 +202,9 @@ impl Inventory {
     }
 
     /// Moves an item around an inventory to auto sort it
-    pub fn auto_move(&mut self, slot: usize, amount: u16) -> Result<(), InventoryError> {
+    pub fn auto_move(&mut self, slot: usize, amount: u16) -> Result<(), InventorySlotError> {
         if slot >= self.items.len() {
-            return Err(InventoryError::InvalidSlot(slot));
+            return Err(InventorySlotError::InvalidSlot(slot));
         }
 
         let Some(mut item_stack) = self.itemstack_at(slot).cloned() else {
@@ -253,6 +260,123 @@ impl Inventory {
         }
 
         Ok(())
+    }
+
+    /// A quick way of comparing two different slots to see if they contain the same item
+    pub fn can_move_itemstack_to(&self, self_slot: usize, other_inventory: &Self, other_slot: usize) -> bool {
+        let Some(is_moving_to) = other_inventory.itemstack_at(other_slot) else {
+            return true;
+        };
+
+        if let Some(is_coming_from) = self.itemstack_at(self_slot) {
+            is_coming_from.is_same_as(is_moving_to)
+        } else {
+            return true;
+        }
+    }
+
+    /// A quick way of comparing two different slots to see if they contain the same item
+    pub fn is_same_itemstack_as(&self, self_slot: usize, other_inventory: &Self, other_slot: usize) -> bool {
+        let is_1 = self.itemstack_at(self_slot);
+        let is_2 = other_inventory.itemstack_at(other_slot);
+
+        if is_1.is_none() && is_2.is_none() {
+            return true;
+        } else if let Some(is_1) = is_1 {
+            if let Some(is_2) = is_2 {
+                is_1.is_same_as(is_2)
+            } else {
+                false
+            }
+        } else {
+            false
+        }
+    }
+
+    /// Moves an item from slot `from` to slot `to`.
+    ///
+    /// This will respect stack sizes, and returns the "left over" amount in the slot it was moved from.
+    pub fn self_move_itemstack(&mut self, from: usize, to: usize, max_quantity: u16) -> Result<u16, InventorySlotError> {
+        if from >= self.items.len() {
+            return Err(InventorySlotError::InvalidSlot(from));
+        }
+        if to >= self.items.len() {
+            return Err(InventorySlotError::InvalidSlot(to));
+        }
+
+        if from == to {
+            return Ok(0);
+        }
+
+        let is = self.itemstack_at(from);
+        let Some(is) = is else {
+            return Ok(0);
+        };
+
+        let reserve = if max_quantity > is.quantity() {
+            0
+        } else {
+            is.quantity() - max_quantity
+        };
+
+        let move_quantity = is.quantity().min(max_quantity);
+
+        println!("{max_quantity} -> {move_quantity}");
+
+        let left_over = self.insert_raw_at(to, is.item_id(), is.max_stack_size(), move_quantity) + reserve;
+
+        self.mut_itemstack_at(from)
+            .expect("Already exists because of above if")
+            .set_quantity(left_over);
+
+        if left_over == 0 {
+            self.set_itemstack_at(from, None);
+        }
+
+        return Ok(left_over);
+    }
+
+    /// Moves an item from slot `from` to slot `to`.
+    ///
+    /// This will respect stack sizes, and returns the "left over" amount in the slot it was moved from.
+    pub fn move_itemstack(
+        &mut self,
+        from: usize,
+        to_inventory: &mut Inventory,
+        to: usize,
+        max_quantity: u16,
+    ) -> Result<u16, InventorySlotError> {
+        if from >= self.items.len() {
+            return Err(InventorySlotError::InvalidSlot(from));
+        }
+        if to >= to_inventory.items.len() {
+            return Err(InventorySlotError::InvalidSlot(to));
+        }
+
+        let is = self.itemstack_at(from);
+        let Some(is) = is else {
+            return Ok(0);
+        };
+
+        let reserve = if max_quantity > is.quantity() {
+            0
+        } else {
+            is.quantity() - max_quantity
+        };
+
+        let move_quantity = is.quantity().min(max_quantity);
+
+        let left_over = to_inventory.insert_raw_at(to, is.item_id(), is.max_stack_size(), move_quantity) + reserve;
+
+        self.mut_itemstack_at(from)
+            .expect("Already exists because of above if")
+            .set_quantity(left_over);
+
+        if left_over == 0 {
+            self.set_itemstack_at(from, None);
+        }
+
+        return Ok(left_over);
     }
 
     /// Calculates the number of that specific item in this inventory.

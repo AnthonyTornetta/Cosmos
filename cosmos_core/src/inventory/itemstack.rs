@@ -105,6 +105,11 @@ impl ItemStack {
     pub fn set_quantity(&mut self, new_quantity: u16) {
         self.quantity = new_quantity;
     }
+
+    /// Similar to equals, but only checks if the items are the same.
+    pub fn is_same_as(&self, other: &ItemStack) -> bool {
+        self.item_id == other.item_id
+    }
 }
 
 pub(super) fn register(app: &mut App) {

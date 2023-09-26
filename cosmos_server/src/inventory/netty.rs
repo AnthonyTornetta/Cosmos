@@ -67,6 +67,27 @@ fn listen(mut query: Query<&mut Inventory>, mut server: ResMut<RenetServer>) {
                         panic!("Not implemented yet!");
                     }
                 }
+                ClientInventoryMessages::MoveItemstack {
+                    from_slot,
+                    quantity,
+                    from_inventory,
+                    to_inventory,
+                    to_slot,
+                } => {
+                    if from_inventory == to_inventory {
+                        if let Ok(mut inventory) = query.get_mut(from_inventory) {
+                            inventory
+                                .self_move_itemstack(from_slot as usize, to_slot as usize, quantity)
+                                .expect(format!("Got bad inventory slots from player! {}, {}", from_slot, to_slot).as_str());
+                        }
+                    } else {
+                        if let Ok([mut inventory_a, mut inventory_b]) = query.get_many_mut([from_inventory, to_inventory]) {
+                            inventory_a
+                                .move_itemstack(from_slot as usize, &mut inventory_b, to_slot as usize, quantity)
+                                .expect(format!("Got bad inventory slots from player! {}, {}", from_slot, to_slot).as_str());
+                        }
+                    }
+                }
             }
         }
     }

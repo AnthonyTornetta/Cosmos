@@ -261,14 +261,19 @@ fn on_update_inventory(
     mut commands: Commands,
     query: Query<(Entity, &Inventory), Changed<Inventory>>,
     asset_server: Res<AssetServer>,
-    following_cursor: Query<&DisplayedItemFromInventory, (With<FollowCursor>, Without<InventoryItemMarker>)>,
-    mut current_slots: Query<(Entity, &mut DisplayedItemFromInventory), With<InventoryItemMarker>>,
+    following_cursor: Query<&FollowCursor>,
+    mut current_slots: Query<
+        (Entity, &mut DisplayedItemFromInventory, Option<&FollowCursor>),
+        Or<(With<InventoryItemMarker>, With<FollowCursor>)>,
+    >,
 ) {
     for (entity, inventory) in query.iter() {
-        for (display_entity, mut displayed_slot) in current_slots
+        for (display_entity, mut displayed_slot, follow_cursor) in current_slots
             .iter_mut()
-            .filter(|(_, x)| x.inventory_holder == entity && x.item_stack.as_ref() != inventory.itemstack_at(x.slot_number))
+            .filter(|(_, di, _)| di.inventory_holder == entity && di.item_stack.as_ref() != inventory.itemstack_at(di.slot_number))
         {
+            println!("{:?} | {:?}", display_entity, displayed_slot.as_ref());
+
             // This is rarely hit, so putting this load in here is best
             let font = asset_server.load("fonts/PixeloidSans.ttf");
 
@@ -289,7 +294,7 @@ fn on_update_inventory(
                 ecmds.despawn_descendants();
 
                 // Only create an item render here if we're not holding the item with our cursor (moving it around)
-                if !following_cursor.iter().any(|x| x.slot_number == displayed_slot.slot_number) {
+                if follow_cursor.is_some() || !following_cursor.iter().any(|x| x.slot == displayed_slot.slot_number) {
                     create_item_stack_slot_data(item_stack, &mut ecmds, text_style);
                 }
             } else {
@@ -344,7 +349,9 @@ fn create_inventory_slot(
 /// If something is tagged with this, it is being held and moved around by the player.
 ///
 /// Note that even if something is being moved, it is still always within the player's inventory
-struct FollowCursor;
+struct FollowCursor {
+    slot: usize,
+}
 
 fn pickup_item_into_cursor(children: Option<&Children>, displayed_item_clicked: &DisplayedItemFromInventory, commands: &mut Commands) {
     if !displayed_item_clicked.item_stack.is_some() {
@@ -362,7 +369,57 @@ fn pickup_item_into_cursor(children: Option<&Children>, displayed_item_clicked: 
     commands
         .entity(child)
         .remove_parent()
-        .insert((FollowCursor, displayed_item_clicked.clone()));
+        .insert((
+            FollowCursor {
+                slot: displayed_item_clicked.slot_number,
+            },
+            displayed_item_clicked.clone(),
+        ))
+        .log_components();
+}
+
+fn send_swap(
+    client: &mut RenetClient,
+    display_item_held: &DisplayedItemFromInventory,
+    displayed_item_clicked: &DisplayedItemFromInventory,
+    mapping: &NetworkMapping,
+) {
+    client.send_message(
+        NettyChannelClient::Inventory,
+        cosmos_encoder::serialize(&ClientInventoryMessages::SwapSlots {
+            slot_a: display_item_held.slot_number as u32,
+            inventory_a: mapping
+                .server_from_client(&display_item_held.inventory_holder)
+                .expect("Missing server entity for inventory"),
+            slot_b: displayed_item_clicked.slot_number as u32,
+            inventory_b: mapping
+                .server_from_client(&displayed_item_clicked.inventory_holder)
+                .expect("Missing server entity for inventory"),
+        }),
+    );
+}
+
+fn send_move(
+    client: &mut RenetClient,
+    display_item_held: &DisplayedItemFromInventory,
+    displayed_item_clicked: &DisplayedItemFromInventory,
+    mapping: &NetworkMapping,
+    quantity: u16,
+) {
+    client.send_message(
+        NettyChannelClient::Inventory,
+        cosmos_encoder::serialize(&ClientInventoryMessages::MoveItemstack {
+            from_slot: display_item_held.slot_number as u32,
+            quantity,
+            from_inventory: mapping
+                .server_from_client(&display_item_held.inventory_holder)
+                .expect("Missing server entity for inventory"),
+            to_inventory: mapping
+                .server_from_client(&displayed_item_clicked.inventory_holder)
+                .expect("Missing server entity for inventory"),
+            to_slot: displayed_item_clicked.slot_number as u32,
+        }),
+    )
 }
 
 fn handle_interactions(
@@ -393,6 +450,7 @@ fn handle_interactions(
     let bulk_moving = input_handler.check_pressed(CosmosInputs::AutoMoveItem);
 
     if bulk_moving {
+        println!("BULK");
         let slot_num = displayed_item_clicked.slot_number;
         let inventory_entity = displayed_item_clicked.inventory_holder;
 
@@ -416,7 +474,7 @@ fn handle_interactions(
                 NettyChannelClient::Inventory,
                 cosmos_encoder::serialize(&ClientInventoryMessages::AutoMove {
                     from_slot: slot_num as u32,
-                    quantity: quantity,
+                    quantity,
                     from_inventory: server_entity,
                     to_inventory: server_entity,
                 }),
@@ -427,39 +485,76 @@ fn handle_interactions(
 
         if display_item_held.inventory_holder == displayed_item_clicked.inventory_holder {
             if let Ok(mut inventory) = inventory_query.get_mut(display_item_held.inventory_holder) {
-                inventory.self_swap_slots(slot_a, slot_b).expect("Bad inventory slot values");
+                println!("A");
+
+                let right_click_move = rmb && inventory.can_move_itemstack_to(slot_a, &inventory, slot_b);
+
+                if right_click_move {
+                    println!("RMB");
+                    let quantity = if lmb { u16::MAX } else { 1 };
+
+                    let leftover = inventory
+                        .self_move_itemstack(slot_a, slot_b, quantity)
+                        .expect("Bad inventory slot values");
+
+                    send_move(&mut client, display_item_held, displayed_item_clicked, &mapping, quantity);
+
+                    if leftover == 0 {
+                        commands.entity(following_entity).insert(NeedsDespawned);
+                    }
+                } else if lmb {
+                    println!("LMB");
+
+                    inventory.self_swap_slots(slot_a, slot_b).expect("Bad inventory slot values");
+
+                    send_swap(&mut client, display_item_held, displayed_item_clicked, &mapping);
+                    // Pick up the item in the same space we just held, because the item we just placed has been moved there.
+                    pickup_item_into_cursor(children, display_item_held, &mut commands);
+
+                    commands
+                        .entity(following_entity)
+                        .remove::<FollowCursor>()
+                        .set_parent(clicked_entity);
+                } else {
+                    println!("None... somehow");
+                }
             }
         } else {
             if let Ok([mut inventory_a, mut inventory_b]) =
                 inventory_query.get_many_mut([display_item_held.inventory_holder, displayed_item_clicked.inventory_holder])
             {
-                inventory_a
-                    .swap_slots(slot_a, &mut inventory_b, slot_b)
-                    .expect("Bad inventory slot values");
+                println!("B");
+
+                let can_move = rmb && inventory_a.can_move_itemstack_to(slot_a, &inventory_b, slot_b);
+
+                if can_move {
+                    let quantity = if lmb { u16::MAX } else { 1 };
+
+                    let leftover = inventory_a
+                        .move_itemstack(slot_a, &mut inventory_b, slot_b, quantity)
+                        .expect("Bad inventory slot values");
+
+                    send_move(&mut client, display_item_held, displayed_item_clicked, &mapping, quantity);
+
+                    if leftover == 0 {
+                        commands.entity(following_entity).insert(NeedsDespawned);
+                    }
+                } else if lmb {
+                    inventory_a
+                        .swap_slots(slot_a, &mut inventory_b, slot_b)
+                        .expect("Bad inventory slot values");
+
+                    send_swap(&mut client, display_item_held, displayed_item_clicked, &mapping);
+                    // Pick up the item in the same space we just held, because the item we just placed has been moved there.
+                    pickup_item_into_cursor(children, display_item_held, &mut commands);
+
+                    commands
+                        .entity(following_entity)
+                        .remove::<FollowCursor>()
+                        .set_parent(clicked_entity);
+                }
             }
         }
-
-        client.send_message(
-            NettyChannelClient::Inventory,
-            cosmos_encoder::serialize(&ClientInventoryMessages::SwapSlots {
-                slot_a: display_item_held.slot_number as u32,
-                inventory_a: mapping
-                    .server_from_client(&display_item_held.inventory_holder)
-                    .expect("Missing server entity for inventory"),
-                slot_b: displayed_item_clicked.slot_number as u32,
-                inventory_b: mapping
-                    .server_from_client(&displayed_item_clicked.inventory_holder)
-                    .expect("Missing server entity for inventory"),
-            }),
-        );
-
-        // Pick up the item in the same space we just held, because the item we just placed has been moved there.
-        pickup_item_into_cursor(children, display_item_held, &mut commands);
-
-        commands
-            .entity(following_entity)
-            .remove::<FollowCursor>()
-            .set_parent(clicked_entity);
     } else {
         pickup_item_into_cursor(children, displayed_item_clicked, &mut commands);
     }

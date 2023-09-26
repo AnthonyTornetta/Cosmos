@@ -42,4 +42,17 @@ pub enum ClientInventoryMessages {
         /// The inventory you want to auto-move the item to. Can be the same as `from_inventory` to auto sort it.
         to_inventory: Entity,
     },
+    /// Manually moves an itemstack in one inventory to another (or the same) inventory.
+    MoveItemstack {
+        /// The slot to automove
+        from_slot: u32,
+        /// The maximum amount to move
+        quantity: u16,
+        /// The inventory the item is in
+        from_inventory: Entity,
+        /// The inventory you want to auto-move the item to. Can be the same as `from_inventory` to auto sort it.
+        to_inventory: Entity,
+        /// The slot to go to
+        to_slot: u32,
+    },
 }
