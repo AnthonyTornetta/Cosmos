@@ -30,13 +30,6 @@ pub enum InventorySlotError {
     InvalidSlot(usize),
 }
 
-/// Represents some sort of error that occurred
-#[derive(Debug)]
-pub enum InventoryItemStackError {
-    /// Trying to merge two itemstacks with non-equal items
-    ItemStackItemsDontMatch(u16, u16),
-}
-
 impl std::fmt::Display for InventorySlotError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match *self {
@@ -390,7 +383,7 @@ impl Inventory {
     }
 
     /// Iterates over every slot in the inventory.
-    pub fn iter(&self) -> std::slice::Iter<'_, std::option::Option<ItemStack>> {
+    pub fn iter(&self) -> std::slice::Iter<'_, Option<ItemStack>> {
         self.items.iter()
     }
 }

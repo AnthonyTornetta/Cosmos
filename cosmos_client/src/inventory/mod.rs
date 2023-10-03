@@ -264,7 +264,11 @@ fn on_update_inventory(
     following_cursor: Query<&FollowCursor>,
     mut current_slots: Query<
         (Entity, &mut DisplayedItemFromInventory, Option<&FollowCursor>),
-        Or<(With<InventoryItemMarker>, With<FollowCursor>)>,
+        (Without<NeedsReRendered>, Or<(With<InventoryItemMarker>, With<FollowCursor>)>),
+    >,
+    mut needs_rerendered: Query<
+        (Entity, &mut DisplayedItemFromInventory, Option<&FollowCursor>),
+        (With<NeedsReRendered>, Or<(With<InventoryItemMarker>, With<FollowCursor>)>),
     >,
 ) {
     for (entity, inventory) in query.iter() {
@@ -275,13 +279,13 @@ fn on_update_inventory(
             println!("{:?} | {:?}", display_entity, displayed_slot.as_ref());
 
             // This is rarely hit, so putting this load in here is best
-            let font = asset_server.load("fonts/PixeloidSans.ttf");
+            // let font = asset_server.load("fonts/PixeloidSans.ttf");
 
-            let text_style = TextStyle {
-                color: Color::WHITE,
-                font_size: 22.0,
-                font: font.clone(),
-            };
+            // let text_style = TextStyle {
+            //     color: Color::WHITE,
+            //     font_size: 22.0,
+            //     font: font.clone(),
+            // };
 
             displayed_slot.item_stack = inventory.itemstack_at(displayed_slot.slot_number).cloned();
 
@@ -289,19 +293,85 @@ fn on_update_inventory(
                 continue;
             };
 
-            if let Some(item_stack) = displayed_slot.item_stack.as_ref() {
-                // removes previous rendered item here
-                ecmds.despawn_descendants();
+            rerender_inventory_slot(&mut ecmds, &displayed_slot, follow_cursor, &following_cursor, &asset_server);
 
-                // Only create an item render here if we're not holding the item with our cursor (moving it around)
-                if follow_cursor.is_some() || !following_cursor.iter().any(|x| x.slot == displayed_slot.slot_number) {
-                    create_item_stack_slot_data(item_stack, &mut ecmds, text_style);
-                }
-            } else {
-                ecmds.despawn_descendants();
-            }
+            // // removes previous rendered item here
+            // ecmds.despawn_descendants();
+
+            // if let Some(item_stack) = displayed_slot.item_stack.as_ref() {
+            //     // Only create an item render here if we're not holding the item with our cursor (moving it around)
+            //     if follow_cursor.is_some() || !following_cursor.iter().any(|x| x.slot == displayed_slot.slot_number) {
+            //         let quantity = follow_cursor.map(|x| x.quantity).unwrap_or(item_stack.quantity());
+
+            //         if quantity != 0 {
+            //             create_item_stack_slot_data(item_stack, &mut ecmds, text_style, quantity);
+            //         }
+            //     }
+            // }
         }
     }
+
+    for (entity, displayed_item, follow_cursor) in needs_rerendered.iter_mut() {
+        let Some(mut ecmds) = commands.get_entity(entity) else {
+            continue;
+        };
+
+        ecmds.remove::<NeedsReRendered>();
+
+        println!("Rerendering {entity:?}");
+        rerender_inventory_slot(&mut ecmds, &displayed_item, follow_cursor, &following_cursor, &asset_server);
+    }
+}
+
+fn rerender_inventory_slot(
+    ecmds: &mut EntityCommands,
+    displayed_item: &DisplayedItemFromInventory,
+    follow_cursor: Option<&FollowCursor>,
+    following_cursor: &Query<&FollowCursor>,
+    asset_server: &AssetServer,
+) {
+    println!("ASDF!");
+    ecmds.despawn_descendants();
+
+    let Some(is) = displayed_item.item_stack.as_ref() else {
+        return;
+    };
+
+    let quantity = if let Some(follow_cursor) = follow_cursor {
+        follow_cursor.quantity
+    } else {
+        if let Some(following) = following_cursor
+            .iter()
+            .find(|x| x.inventory_entity == displayed_item.inventory_holder && x.slot == displayed_item.slot_number)
+        {
+            if following.quantity < is.quantity() {
+                is.quantity() - following.quantity
+            } else {
+                0
+            }
+        } else {
+            is.quantity()
+        }
+    };
+
+    if quantity != 0 {
+        // This is rarely hit, so putting this load in here is best
+        let font = asset_server.load("fonts/PixeloidSans.ttf");
+
+        let text_style = TextStyle {
+            color: Color::WHITE,
+            font_size: 22.0,
+            font: font.clone(),
+        };
+
+        ecmds.with_children(|p| {
+            let mut ecmds = p.spawn_empty();
+
+            create_item_stack_slot_data(&is, &mut ecmds, text_style, quantity);
+        });
+    }
+
+    ecmds.log_components();
 }
 
 #[derive(Component, Debug)]
@@ -337,7 +407,11 @@ fn create_inventory_slot(
     ));
 
     if let Some(item_stack) = item_stack {
-        create_item_stack_slot_data(item_stack, &mut ecmds, text_style);
+        ecmds.with_children(|p| {
+            let mut ecmds = p.spawn_empty();
+
+            create_item_stack_slot_data(item_stack, &mut ecmds, text_style, item_stack.quantity());
+        });
     }
 }
 
@@ -350,32 +424,64 @@ fn create_inventory_slot(
 ///
 /// Note that even if something is being moved, it is still always within the player's inventory
 struct FollowCursor {
+    inventory_entity: Entity,
     slot: usize,
+    quantity: u16,
+    slot_entity: Entity,
 }
 
-fn pickup_item_into_cursor(children: Option<&Children>, displayed_item_clicked: &DisplayedItemFromInventory, commands: &mut Commands) {
-    if !displayed_item_clicked.item_stack.is_some() {
-        return;
-    }
+#[derive(Component)]
+struct NeedsReRendered;
 
-    let Some(children) = children else {
+fn pickup_item_into_cursor(
+    clicked_entity: Entity,
+    displayed_item_clicked: &mut DisplayedItemFromInventory,
+    commands: &mut Commands,
+    quantity_multiplier: f32,
+    asset_server: &AssetServer,
+) {
+    let Some(is) = displayed_item_clicked.item_stack.as_ref() else {
         return;
     };
 
-    let Some(&child) = children.first() else {
-        return;
+    let amount = (quantity_multiplier * is.quantity() as f32).ceil() as u16;
+
+    println!("Amount: {amount}");
+
+    let mut new_is = is.clone();
+    new_is.set_quantity(amount);
+
+    let displayed_item = DisplayedItemFromInventory {
+        inventory_holder: displayed_item_clicked.inventory_holder,
+        item_stack: Some(new_is),
+        slot_number: displayed_item_clicked.slot_number,
     };
 
-    commands
-        .entity(child)
-        .remove_parent()
-        .insert((
-            FollowCursor {
-                slot: displayed_item_clicked.slot_number,
-            },
-            displayed_item_clicked.clone(),
-        ))
-        .log_components();
+    commands.entity(clicked_entity).insert(NeedsReRendered);
+
+    let font = asset_server.load("fonts/PixeloidSans.ttf");
+
+    let text_style = TextStyle {
+        color: Color::WHITE,
+        font_size: 22.0,
+        font: font.clone(),
+    };
+
+    let mut ecmds = commands.spawn(FollowCursor {
+        slot: displayed_item_clicked.slot_number,
+        quantity: amount,
+        inventory_entity: displayed_item_clicked.inventory_holder,
+        slot_entity: clicked_entity,
+    });
+
+    create_item_stack_slot_data(
+        displayed_item.item_stack.as_ref().expect("This was added above"),
+        &mut ecmds,
+        text_style,
+        amount,
+    );
+
+    ecmds.insert(displayed_item);
 }
 
 fn send_swap(
@@ -424,12 +530,13 @@ fn send_move(
 
 fn handle_interactions(
     mut commands: Commands,
-    following_cursor: Query<(Entity, &DisplayedItemFromInventory), With<FollowCursor>>,
-    interactions: Query<(Entity, Option<&Children>, &DisplayedItemFromInventory, &Interaction), Without<FollowCursor>>,
+    mut following_cursor: Query<(Entity, &mut FollowCursor, &mut DisplayedItemFromInventory)>,
+    mut interactions: Query<(Entity, Option<&Children>, &mut DisplayedItemFromInventory, &Interaction), Without<FollowCursor>>,
     input_handler: InputChecker,
     mut inventory_query: Query<&mut Inventory>,
     mut client: ResMut<RenetClient>,
     mapping: Res<NetworkMapping>,
+    asset_server: Res<AssetServer>,
 ) {
     let lmb = input_handler.mouse_inputs().just_pressed(MouseButton::Left);
     let rmb = input_handler.mouse_inputs().just_pressed(MouseButton::Right);
@@ -439,8 +546,8 @@ fn handle_interactions(
         return;
     }
 
-    let Some((clicked_entity, children, displayed_item_clicked, _)) = interactions
-        .iter()
+    let Some((clicked_entity, children, mut displayed_item_clicked, _)) = interactions
+        .iter_mut()
         // hovered or pressed should trigger this because pressed doesn't detected right click
         .find(|(_, _, _, interaction)| !matches!(interaction, Interaction::None))
     else {
@@ -480,7 +587,7 @@ fn handle_interactions(
                 }),
             );
         }
-    } else if let Ok((following_entity, display_item_held)) = following_cursor.get_single() {
+    } else if let Ok((following_entity, mut follow_cursor, mut display_item_held)) = following_cursor.get_single_mut() {
         let (slot_a, slot_b) = (display_item_held.slot_number, displayed_item_clicked.slot_number);
 
         if display_item_held.inventory_holder == displayed_item_clicked.inventory_holder {
@@ -490,16 +597,27 @@ fn handle_interactions(
                 let right_click_move = rmb && inventory.can_move_itemstack_to(slot_a, &inventory, slot_b);
 
                 if right_click_move {
-                    println!("RMB");
-                    let quantity = if lmb { u16::MAX } else { 1 };
+                    let quantity = 1;
 
-                    let leftover = inventory
-                        .self_move_itemstack(slot_a, slot_b, quantity)
-                        .expect("Bad inventory slot values");
+                    if slot_a == slot_b {
+                        follow_cursor.quantity -= quantity;
+                        commands.entity(follow_cursor.slot_entity).insert(NeedsReRendered);
+                        commands.entity(following_entity).insert(NeedsReRendered);
+                    } else {
+                        let prev_quantity = inventory.itemstack_at(slot_a).map(|x| x.quantity()).unwrap_or(0);
 
-                    send_move(&mut client, display_item_held, displayed_item_clicked, &mapping, quantity);
+                        let leftover = inventory
+                            .self_move_itemstack(slot_a, slot_b, quantity)
+                            .expect("Bad inventory slot values");
 
-                    if leftover == 0 {
+                        let delta = prev_quantity - leftover;
+
+                        follow_cursor.quantity -= delta;
+
+                        send_move(&mut client, &display_item_held, &displayed_item_clicked, &mapping, quantity);
+                    }
+
+                    if follow_cursor.quantity == 0 {
                         commands.entity(following_entity).insert(NeedsDespawned);
                     }
                 } else if lmb {
@@ -507,14 +625,12 @@ fn handle_interactions(
 
                     inventory.self_swap_slots(slot_a, slot_b).expect("Bad inventory slot values");
 
-                    send_swap(&mut client, display_item_held, displayed_item_clicked, &mapping);
+                    send_swap(&mut client, &display_item_held, &displayed_item_clicked, &mapping);
                     // Pick up the item in the same space we just held, because the item we just placed has been moved there.
-                    pickup_item_into_cursor(children, display_item_held, &mut commands);
+                    pickup_item_into_cursor(clicked_entity, &mut display_item_held, &mut commands, 1.0, &asset_server);
 
-                    commands
-                        .entity(following_entity)
-                        .remove::<FollowCursor>()
-                        .set_parent(clicked_entity);
+                    commands.entity(follow_cursor.slot_entity).set_parent(clicked_entity);
+                    commands.entity(following_entity).despawn_recursive();
                 } else {
                     println!("None... somehow");
                 }
@@ -534,7 +650,7 @@ fn handle_interactions(
                         .move_itemstack(slot_a, &mut inventory_b, slot_b, quantity)
                         .expect("Bad inventory slot values");
 
-                    send_move(&mut client, display_item_held, displayed_item_clicked, &mapping, quantity);
+                    send_move(&mut client, &display_item_held, &displayed_item_clicked, &mapping, quantity);
 
                     if leftover == 0 {
                         commands.entity(following_entity).insert(NeedsDespawned);
@@ -544,9 +660,9 @@ fn handle_interactions(
                         .swap_slots(slot_a, &mut inventory_b, slot_b)
                         .expect("Bad inventory slot values");
 
-                    send_swap(&mut client, display_item_held, displayed_item_clicked, &mapping);
+                    send_swap(&mut client, &display_item_held, &displayed_item_clicked, &mapping);
                     // Pick up the item in the same space we just held, because the item we just placed has been moved there.
-                    pickup_item_into_cursor(children, display_item_held, &mut commands);
+                    pickup_item_into_cursor(clicked_entity, &mut display_item_held, &mut commands, 1.0, &asset_server);
 
                     commands
                         .entity(following_entity)
@@ -556,7 +672,15 @@ fn handle_interactions(
             }
         }
     } else {
-        pickup_item_into_cursor(children, displayed_item_clicked, &mut commands);
+        let quanitty_multiplier = if lmb { 1.0 } else { 0.5 };
+
+        pickup_item_into_cursor(
+            clicked_entity,
+            &mut displayed_item_clicked,
+            &mut commands,
+            quanitty_multiplier,
+            &asset_server,
+        );
     }
 }
 
@@ -564,9 +688,9 @@ fn handle_interactions(
  * End moving items around
  */
 
-fn create_item_stack_slot_data(item_stack: &ItemStack, ecmds: &mut EntityCommands, text_style: TextStyle) {
-    ecmds.with_children(|p| {
-        p.spawn((
+fn create_item_stack_slot_data(item_stack: &ItemStack, ecmds: &mut EntityCommands, text_style: TextStyle, quantity: u16) {
+    ecmds
+        .insert((
             NodeBundle {
                 style: Style {
                     width: Val::Px(64.0),
@@ -588,11 +712,39 @@ fn create_item_stack_slot_data(item_stack: &ItemStack, ecmds: &mut EntityCommand
                     margin: UiRect::new(Val::Px(0.0), Val::Px(5.0), Val::Px(0.0), Val::Px(5.0)),
                     ..default()
                 },
-                text: Text::from_section(format!("{} {}", item_stack.item_id(), item_stack.quantity()), text_style),
+                text: Text::from_section(format!("{} {}", item_stack.item_id(), quantity), text_style),
                 ..default()
             });
         });
-    });
+
+    // ecmds.with_children(|p| {
+    //     p.spawn((
+    //         NodeBundle {
+    //             style: Style {
+    //                 width: Val::Px(64.0),
+    //                 height: Val::Px(64.0),
+    //                 display: Display::Flex,
+    //                 justify_content: JustifyContent::FlexEnd,
+    //                 align_items: AlignItems::FlexEnd,
+    //                 ..Default::default()
+    //             },
+    //             ..Default::default()
+    //         },
+    //         RenderItem {
+    //             item_id: item_stack.item_id(),
+    //         },
+    //     ))
+    //     .with_children(|p| {
+    //         p.spawn(TextBundle {
+    //             style: Style {
+    //                 margin: UiRect::new(Val::Px(0.0), Val::Px(5.0), Val::Px(0.0), Val::Px(5.0)),
+    //                 ..default()
+    //             },
+    //             text: Text::from_section(format!("{} {}", item_stack.item_id(), quantity), text_style),
+    //             ..default()
+    //         });
+    //     });
+    // });
 }
 
 pub(super) fn register(app: &mut App) {
