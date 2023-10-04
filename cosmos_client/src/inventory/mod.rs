@@ -5,7 +5,9 @@ use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     ecs::NeedsDespawned,
     inventory::{itemstack::ItemStack, netty::ClientInventoryMessages, Inventory},
+    item::Item,
     netty::{cosmos_encoder, NettyChannelClient},
+    registry::Registry,
 };
 
 use crate::{
@@ -259,100 +261,42 @@ struct DisplayedItemFromInventory {
 
 fn on_update_inventory(
     mut commands: Commands,
-    query: Query<(Entity, &Inventory), Changed<Inventory>>,
+    inventory_query: Query<&Inventory, Changed<Inventory>>,
+    mut held_item_query: Query<(Entity, &HoldingItemStack, &mut DisplayedItemFromInventory), Changed<HoldingItemStack>>,
+    mut current_slots: Query<(Entity, &mut DisplayedItemFromInventory), Without<HoldingItemStack>>,
     asset_server: Res<AssetServer>,
-    following_cursor: Query<&FollowCursor>,
-    mut current_slots: Query<
-        (Entity, &mut DisplayedItemFromInventory, Option<&FollowCursor>),
-        (Without<NeedsReRendered>, Or<(With<InventoryItemMarker>, With<FollowCursor>)>),
-    >,
-    mut needs_rerendered: Query<
-        (Entity, &mut DisplayedItemFromInventory, Option<&FollowCursor>),
-        (With<NeedsReRendered>, Or<(With<InventoryItemMarker>, With<FollowCursor>)>),
-    >,
 ) {
-    for (entity, inventory) in query.iter() {
-        for (display_entity, mut displayed_slot, follow_cursor) in current_slots
-            .iter_mut()
-            .filter(|(_, di, _)| di.inventory_holder == entity && di.item_stack.as_ref() != inventory.itemstack_at(di.slot_number))
-        {
-            println!("{:?} | {:?}", display_entity, displayed_slot.as_ref());
-
-            // This is rarely hit, so putting this load in here is best
-            // let font = asset_server.load("fonts/PixeloidSans.ttf");
-
-            // let text_style = TextStyle {
-            //     color: Color::WHITE,
-            //     font_size: 22.0,
-            //     font: font.clone(),
-            // };
-
+    for inventory in inventory_query.iter() {
+        for (display_entity, mut displayed_slot) in current_slots.iter_mut() {
             displayed_slot.item_stack = inventory.itemstack_at(displayed_slot.slot_number).cloned();
 
             let Some(mut ecmds) = commands.get_entity(display_entity) else {
                 continue;
             };
 
-            rerender_inventory_slot(&mut ecmds, &displayed_slot, follow_cursor, &following_cursor, &asset_server);
-
-            // // removes previous rendered item here
-            // ecmds.despawn_descendants();
-
-            // if let Some(item_stack) = displayed_slot.item_stack.as_ref() {
-            //     // Only create an item render here if we're not holding the item with our cursor (moving it around)
-            //     if follow_cursor.is_some() || !following_cursor.iter().any(|x| x.slot == displayed_slot.slot_number) {
-            //         let quantity = follow_cursor.map(|x| x.quantity).unwrap_or(item_stack.quantity());
-
-            //         if quantity != 0 {
-            //             create_item_stack_slot_data(item_stack, &mut ecmds, text_style, quantity);
-            //         }
-            //     }
-            // }
+            rerender_inventory_slot(&mut ecmds, &displayed_slot, &asset_server);
         }
     }
 
-    for (entity, displayed_item, follow_cursor) in needs_rerendered.iter_mut() {
+    for (entity, held_item_stack, mut displayed_item) in held_item_query.iter_mut() {
+        displayed_item.item_stack = Some(held_item_stack.0.clone());
+
         let Some(mut ecmds) = commands.get_entity(entity) else {
             continue;
         };
 
-        ecmds.remove::<NeedsReRendered>();
-
-        println!("Rerendering {entity:?}");
-        rerender_inventory_slot(&mut ecmds, &displayed_item, follow_cursor, &following_cursor, &asset_server);
+        rerender_inventory_slot(&mut ecmds, &displayed_item, &asset_server);
     }
 }
 
-fn rerender_inventory_slot(
-    ecmds: &mut EntityCommands,
-    displayed_item: &DisplayedItemFromInventory,
-    follow_cursor: Option<&FollowCursor>,
-    following_cursor: &Query<&FollowCursor>,
-    asset_server: &AssetServer,
-) {
-    println!("ASDF!");
+fn rerender_inventory_slot(ecmds: &mut EntityCommands, displayed_item: &DisplayedItemFromInventory, asset_server: &AssetServer) {
     ecmds.despawn_descendants();
 
     let Some(is) = displayed_item.item_stack.as_ref() else {
         return;
     };
 
-    let quantity = if let Some(follow_cursor) = follow_cursor {
-        follow_cursor.quantity
-    } else {
-        if let Some(following) = following_cursor
-            .iter()
-            .find(|x| x.inventory_entity == displayed_item.inventory_holder && x.slot == displayed_item.slot_number)
-        {
-            if following.quantity < is.quantity() {
-                is.quantity() - following.quantity
-            } else {
-                0
-            }
-        } else {
-            is.quantity()
-        }
-    };
+    let quantity = is.quantity();
 
     if quantity != 0 {
         // This is rarely hit, so putting this load in here is best
@@ -370,8 +314,6 @@ fn rerender_inventory_slot(
             create_item_stack_slot_data(&is, &mut ecmds, text_style, quantity);
         });
     }
-
-    ecmds.log_components();
 }
 
 #[derive(Component, Debug)]
@@ -425,13 +367,11 @@ fn create_inventory_slot(
 /// Note that even if something is being moved, it is still always within the player's inventory
 struct FollowCursor {
     inventory_entity: Entity,
-    slot: usize,
-    quantity: u16,
     slot_entity: Entity,
 }
 
-#[derive(Component)]
-struct NeedsReRendered;
+#[derive(Component, DerefMut, Deref)]
+struct HoldingItemStack(ItemStack);
 
 fn pickup_item_into_cursor(
     clicked_entity: Entity,
@@ -446,18 +386,14 @@ fn pickup_item_into_cursor(
 
     let amount = (quantity_multiplier * is.quantity() as f32).ceil() as u16;
 
-    println!("Amount: {amount}");
-
     let mut new_is = is.clone();
     new_is.set_quantity(amount);
 
     let displayed_item = DisplayedItemFromInventory {
         inventory_holder: displayed_item_clicked.inventory_holder,
-        item_stack: Some(new_is),
+        item_stack: Some(new_is.clone()),
         slot_number: displayed_item_clicked.slot_number,
     };
-
-    commands.entity(clicked_entity).insert(NeedsReRendered);
 
     let font = asset_server.load("fonts/PixeloidSans.ttf");
 
@@ -468,8 +404,6 @@ fn pickup_item_into_cursor(
     };
 
     let mut ecmds = commands.spawn(FollowCursor {
-        slot: displayed_item_clicked.slot_number,
-        quantity: amount,
         inventory_entity: displayed_item_clicked.inventory_holder,
         slot_entity: clicked_entity,
     });
@@ -481,7 +415,7 @@ fn pickup_item_into_cursor(
         amount,
     );
 
-    ecmds.insert(displayed_item);
+    ecmds.insert((displayed_item, HoldingItemStack(new_is)));
 }
 
 fn send_swap(
@@ -530,13 +464,14 @@ fn send_move(
 
 fn handle_interactions(
     mut commands: Commands,
-    mut following_cursor: Query<(Entity, &mut FollowCursor, &mut DisplayedItemFromInventory)>,
+    mut following_cursor: Query<(Entity, &mut HoldingItemStack, &mut FollowCursor, &mut DisplayedItemFromInventory)>,
     mut interactions: Query<(Entity, Option<&Children>, &mut DisplayedItemFromInventory, &Interaction), Without<FollowCursor>>,
     input_handler: InputChecker,
     mut inventory_query: Query<&mut Inventory>,
     mut client: ResMut<RenetClient>,
     mapping: Res<NetworkMapping>,
     asset_server: Res<AssetServer>,
+    items: Res<Registry<Item>>,
 ) {
     let lmb = input_handler.mouse_inputs().just_pressed(MouseButton::Left);
     let rmb = input_handler.mouse_inputs().just_pressed(MouseButton::Right);
@@ -587,100 +522,154 @@ fn handle_interactions(
                 }),
             );
         }
-    } else if let Ok((following_entity, mut follow_cursor, mut display_item_held)) = following_cursor.get_single_mut() {
-        let (slot_a, slot_b) = (display_item_held.slot_number, displayed_item_clicked.slot_number);
+    } else if let Ok((following_entity, mut held_item_stack, mut follow_cursor, mut display_item_held)) = following_cursor.get_single_mut()
+    {
+        let clicked_slot = displayed_item_clicked.slot_number;
 
-        if display_item_held.inventory_holder == displayed_item_clicked.inventory_holder {
-            if let Ok(mut inventory) = inventory_query.get_mut(display_item_held.inventory_holder) {
-                println!("A");
+        if let Ok(mut inventory) = inventory_query.get_mut(displayed_item_clicked.inventory_holder) {
+            let item = items.from_numeric_id(held_item_stack.item_id());
 
-                let right_click_move = rmb && inventory.can_move_itemstack_to(slot_a, &inventory, slot_b);
+            if inventory.can_move_itemstack_to(&held_item_stack, clicked_slot) {
+                let move_quantity = if lmb { held_item_stack.quantity() } else { 1 };
+                let over_quantity = held_item_stack.quantity() - move_quantity;
 
-                if right_click_move {
-                    let quantity = 1;
+                let leftover = inventory.insert_item_at(clicked_slot, item, move_quantity);
 
-                    if slot_a == slot_b {
-                        follow_cursor.quantity -= quantity;
-                        commands.entity(follow_cursor.slot_entity).insert(NeedsReRendered);
-                        commands.entity(following_entity).insert(NeedsReRendered);
-                    } else {
-                        let prev_quantity = inventory.itemstack_at(slot_a).map(|x| x.quantity()).unwrap_or(0);
+                held_item_stack.set_quantity(over_quantity + leftover);
 
-                        let leftover = inventory
-                            .self_move_itemstack(slot_a, slot_b, quantity)
-                            .expect("Bad inventory slot values");
-
-                        let delta = prev_quantity - leftover;
-
-                        follow_cursor.quantity -= delta;
-
-                        send_move(&mut client, &display_item_held, &displayed_item_clicked, &mapping, quantity);
-                    }
-
-                    if follow_cursor.quantity == 0 {
-                        commands.entity(following_entity).insert(NeedsDespawned);
-                    }
-                } else if lmb {
-                    println!("LMB");
-
-                    inventory.self_swap_slots(slot_a, slot_b).expect("Bad inventory slot values");
-
-                    send_swap(&mut client, &display_item_held, &displayed_item_clicked, &mapping);
-                    // Pick up the item in the same space we just held, because the item we just placed has been moved there.
-                    pickup_item_into_cursor(clicked_entity, &mut display_item_held, &mut commands, 1.0, &asset_server);
-
-                    commands.entity(follow_cursor.slot_entity).set_parent(clicked_entity);
-                    commands.entity(following_entity).despawn_recursive();
-                } else {
-                    println!("None... somehow");
+                if held_item_stack.is_empty() {
+                    commands.entity(following_entity).insert(NeedsDespawned);
                 }
-            }
-        } else {
-            if let Ok([mut inventory_a, mut inventory_b]) =
-                inventory_query.get_many_mut([display_item_held.inventory_holder, displayed_item_clicked.inventory_holder])
-            {
-                println!("B");
+            } else {
+                let is_here = inventory.remove_itemstack_at(clicked_slot);
 
-                let can_move = rmb && inventory_a.can_move_itemstack_to(slot_a, &inventory_b, slot_b);
+                if is_here.is_none() || lmb {
+                    let quantity = if lmb { held_item_stack.quantity() } else { 1 };
+                    let over_quantity = held_item_stack.quantity() - quantity;
 
-                if can_move {
-                    let quantity = if lmb { u16::MAX } else { 1 };
+                    let leftover = inventory.insert_item_at(clicked_slot, item, quantity);
+                    assert_eq!(
+                        leftover, 0,
+                        "Leftover wasn't 0 somehow? This could only mean something has an invalid stack size"
+                    );
 
-                    let leftover = inventory_a
-                        .move_itemstack(slot_a, &mut inventory_b, slot_b, quantity)
-                        .expect("Bad inventory slot values");
+                    println!("LEFTOVER: {leftover}");
+                    held_item_stack.set_quantity(over_quantity + leftover);
 
-                    send_move(&mut client, &display_item_held, &displayed_item_clicked, &mapping, quantity);
-
-                    if leftover == 0 {
+                    if held_item_stack.quantity() == 0 {
                         commands.entity(following_entity).insert(NeedsDespawned);
+                    } else if let Some(is_here) = is_here {
+                        held_item_stack.0 = is_here;
                     }
-                } else if lmb {
-                    inventory_a
-                        .swap_slots(slot_a, &mut inventory_b, slot_b)
-                        .expect("Bad inventory slot values");
-
-                    send_swap(&mut client, &display_item_held, &displayed_item_clicked, &mapping);
-                    // Pick up the item in the same space we just held, because the item we just placed has been moved there.
-                    pickup_item_into_cursor(clicked_entity, &mut display_item_held, &mut commands, 1.0, &asset_server);
-
-                    commands
-                        .entity(following_entity)
-                        .remove::<FollowCursor>()
-                        .set_parent(clicked_entity);
                 }
             }
         }
-    } else {
-        let quanitty_multiplier = if lmb { 1.0 } else { 0.5 };
 
-        pickup_item_into_cursor(
-            clicked_entity,
-            &mut displayed_item_clicked,
-            &mut commands,
-            quanitty_multiplier,
-            &asset_server,
-        );
+        if display_item_held.inventory_holder == displayed_item_clicked.inventory_holder {
+
+            //     println!("A");
+
+            //     let right_click_move = rmb && inventory.can_move_itemstack_to(slot_a, &inventory, slot_b);
+
+            //     if right_click_move {
+            //         let quantity = 1;
+
+            //         if slot_a == slot_b {
+            //             follow_cursor.quantity -= quantity;
+            //             commands.entity(follow_cursor.slot_entity).insert(NeedsReRendered);
+            //             commands.entity(following_entity).insert(NeedsReRendered);
+            //         } else {
+            //             let prev_quantity = inventory.itemstack_at(slot_a).map(|x| x.quantity()).unwrap_or(0);
+
+            //             let leftover = inventory
+            //                 .self_move_itemstack(slot_a, slot_b, quantity)
+            //                 .expect("Bad inventory slot values");
+
+            //             let delta = prev_quantity - leftover;
+
+            //             follow_cursor.quantity -= delta;
+
+            //             send_move(&mut client, &display_item_held, &displayed_item_clicked, &mapping, quantity);
+            //         }
+
+            //         if follow_cursor.quantity == 0 {
+            //             commands.entity(following_entity).insert(NeedsDespawned);
+            //         }
+            //     } else if lmb {
+            //         println!("LMB");
+
+            //         inventory.self_swap_slots(slot_a, slot_b).expect("Bad inventory slot values");
+
+            //         send_swap(&mut client, &display_item_held, &displayed_item_clicked, &mapping);
+            //         // Pick up the item in the same space we just held, because the item we just placed has been moved there.
+            //         pickup_item_into_cursor(clicked_entity, &mut display_item_held, &mut commands, 1.0, &asset_server);
+
+            //         commands.entity(follow_cursor.slot_entity).set_parent(clicked_entity);
+            //         commands.entity(following_entity).despawn_recursive();
+            //     } else {
+            //         println!("None... somehow");
+            //     }
+            // }
+        } else {
+            // if let Ok([mut inventory_a, mut inventory_b]) =
+            //     inventory_query.get_many_mut([display_item_held.inventory_holder, displayed_item_clicked.inventory_holder])
+            // {
+            //     println!("B");
+
+            //     let can_move = rmb && inventory_a.can_move_itemstack_to(slot_a, &inventory_b, slot_b);
+
+            //     if can_move {
+            //         let quantity = if lmb { u16::MAX } else { 1 };
+
+            //         let leftover = inventory_a
+            //             .move_itemstack(slot_a, &mut inventory_b, slot_b, quantity)
+            //             .expect("Bad inventory slot values");
+
+            //         send_move(&mut client, &display_item_held, &displayed_item_clicked, &mapping, quantity);
+
+            //         if leftover == 0 {
+            //             commands.entity(following_entity).insert(NeedsDespawned);
+            //         }
+            //     } else if lmb {
+            //         inventory_a
+            //             .swap_slots(slot_a, &mut inventory_b, slot_b)
+            //             .expect("Bad inventory slot values");
+
+            //         send_swap(&mut client, &display_item_held, &displayed_item_clicked, &mapping);
+            //         // Pick up the item in the same space we just held, because the item we just placed has been moved there.
+            //         pickup_item_into_cursor(clicked_entity, &mut display_item_held, &mut commands, 1.0, &asset_server);
+
+            //         commands
+            //             .entity(following_entity)
+            //             .remove::<FollowCursor>()
+            //             .set_parent(clicked_entity);
+            //     }
+            // }
+        }
+    } else {
+        if let Ok(mut inventory) = inventory_query.get_mut(displayed_item_clicked.inventory_holder) {
+            let quanity_multiplier = if lmb { 1.0 } else { 0.5 };
+
+            pickup_item_into_cursor(
+                clicked_entity,
+                &mut displayed_item_clicked,
+                &mut commands,
+                quanity_multiplier,
+                &asset_server,
+            );
+
+            let slot_clicked = displayed_item_clicked.slot_number;
+            if let Some(is) = inventory.mut_itemstack_at(slot_clicked) {
+                let leftover_quantity = is.quantity() - (is.quantity() as f32 * quanity_multiplier).ceil() as u16;
+                is.set_quantity(leftover_quantity);
+
+                println!("{is:?}");
+
+                if is.is_empty() {
+                    inventory.remove_itemstack_at(slot_clicked);
+                }
+            }
+        }
     }
 }
 

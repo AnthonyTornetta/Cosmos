@@ -174,8 +174,19 @@ impl Inventory {
 
     /// Inserts the items & quantity at that slot. Returns the number of items left over, or the full
     /// quantity of items if that slot doesn't represent that item.
-    pub fn insert_at(&mut self, slot: usize, item: &Item, quantity: u16) -> u16 {
+    pub fn insert_item_at(&mut self, slot: usize, item: &Item, quantity: u16) -> u16 {
         self.insert_raw_at(slot, item.id(), item.max_stack_size(), quantity)
+    }
+
+    /// Inserts the items & quantity at that slot. Returns the number of items left over, or the full
+    /// quantity of items if that slot doesn't represent that item.
+    pub fn insert_item_stack_at(&mut self, slot: usize, itemstack: &ItemStack) -> u16 {
+        self.insert_raw_at(slot, itemstack.item_id(), itemstack.max_stack_size(), itemstack.quantity())
+    }
+
+    /// Removes an itemstack at that slot and replaces it with `None`. Returns the itemstack previously in that slot
+    pub fn remove_itemstack_at(&mut self, slot: usize) -> Option<ItemStack> {
+        std::mem::replace(&mut self.items[slot], None)
     }
 
     /// Inserts the items & quantity at that slot. Returns the number of items left over, or the full
@@ -256,16 +267,8 @@ impl Inventory {
     }
 
     /// A quick way of comparing two different slots to see if they contain the same item
-    pub fn can_move_itemstack_to(&self, self_slot: usize, other_inventory: &Self, other_slot: usize) -> bool {
-        let Some(is_moving_to) = other_inventory.itemstack_at(other_slot) else {
-            return true;
-        };
-
-        if let Some(is_coming_from) = self.itemstack_at(self_slot) {
-            is_coming_from.is_same_as(is_moving_to)
-        } else {
-            return true;
-        }
+    pub fn can_move_itemstack_to(&self, is: &ItemStack, slot: usize) -> bool {
+        self.itemstack_at(slot).map(|x| x.is_same_as(is)).unwrap_or(false)
     }
 
     /// A quick way of comparing two different slots to see if they contain the same item
