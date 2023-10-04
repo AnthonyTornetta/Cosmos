@@ -378,6 +378,7 @@ fn pickup_item_into_cursor(
     displayed_item_clicked: &mut DisplayedItemFromInventory,
     commands: &mut Commands,
     quantity_multiplier: f32,
+    inventory: &mut Inventory,
     asset_server: &AssetServer,
 ) {
     let Some(is) = displayed_item_clicked.item_stack.as_ref() else {
@@ -416,6 +417,16 @@ fn pickup_item_into_cursor(
     );
 
     ecmds.insert((displayed_item, HoldingItemStack(new_is)));
+
+    let slot_clicked = displayed_item_clicked.slot_number;
+    if let Some(is) = inventory.mut_itemstack_at(slot_clicked) {
+        let leftover_quantity = is.quantity() - (is.quantity() as f32 * quantity_multiplier).ceil() as u16;
+        is.set_quantity(leftover_quantity);
+
+        if is.is_empty() {
+            inventory.remove_itemstack_at(slot_clicked);
+        }
+    }
 }
 
 fn send_swap(
@@ -655,20 +666,9 @@ fn handle_interactions(
                 &mut displayed_item_clicked,
                 &mut commands,
                 quanity_multiplier,
+                &mut inventory,
                 &asset_server,
             );
-
-            let slot_clicked = displayed_item_clicked.slot_number;
-            if let Some(is) = inventory.mut_itemstack_at(slot_clicked) {
-                let leftover_quantity = is.quantity() - (is.quantity() as f32 * quanity_multiplier).ceil() as u16;
-                is.set_quantity(leftover_quantity);
-
-                println!("{is:?}");
-
-                if is.is_empty() {
-                    inventory.remove_itemstack_at(slot_clicked);
-                }
-            }
         }
     }
 }
