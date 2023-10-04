@@ -475,8 +475,8 @@ fn send_move(
 
 fn handle_interactions(
     mut commands: Commands,
-    mut following_cursor: Query<(Entity, &mut HoldingItemStack, &mut FollowCursor, &mut DisplayedItemFromInventory)>,
-    mut interactions: Query<(Entity, Option<&Children>, &mut DisplayedItemFromInventory, &Interaction), Without<FollowCursor>>,
+    mut following_cursor: Query<(Entity, &mut HoldingItemStack)>,
+    mut interactions: Query<(Entity, &mut DisplayedItemFromInventory, &Interaction), Without<FollowCursor>>,
     input_handler: InputChecker,
     mut inventory_query: Query<&mut Inventory>,
     mut client: ResMut<RenetClient>,
@@ -492,10 +492,10 @@ fn handle_interactions(
         return;
     }
 
-    let Some((clicked_entity, children, mut displayed_item_clicked, _)) = interactions
+    let Some((clicked_entity, mut displayed_item_clicked, _)) = interactions
         .iter_mut()
         // hovered or pressed should trigger this because pressed doesn't detected right click
-        .find(|(_, _, _, interaction)| !matches!(interaction, Interaction::None))
+        .find(|(_, _, interaction)| !matches!(interaction, Interaction::None))
     else {
         return;
     };
@@ -503,7 +503,6 @@ fn handle_interactions(
     let bulk_moving = input_handler.check_pressed(CosmosInputs::AutoMoveItem);
 
     if bulk_moving {
-        println!("BULK");
         let slot_num = displayed_item_clicked.slot_number;
         let inventory_entity = displayed_item_clicked.inventory_holder;
 
@@ -533,8 +532,7 @@ fn handle_interactions(
                 }),
             );
         }
-    } else if let Ok((following_entity, mut held_item_stack, mut follow_cursor, mut display_item_held)) = following_cursor.get_single_mut()
-    {
+    } else if let Ok((following_entity, mut held_item_stack)) = following_cursor.get_single_mut() {
         let clicked_slot = displayed_item_clicked.slot_number;
 
         if let Ok(mut inventory) = inventory_query.get_mut(displayed_item_clicked.inventory_holder) {
@@ -574,88 +572,6 @@ fn handle_interactions(
                     }
                 }
             }
-        }
-
-        if display_item_held.inventory_holder == displayed_item_clicked.inventory_holder {
-
-            //     println!("A");
-
-            //     let right_click_move = rmb && inventory.can_move_itemstack_to(slot_a, &inventory, slot_b);
-
-            //     if right_click_move {
-            //         let quantity = 1;
-
-            //         if slot_a == slot_b {
-            //             follow_cursor.quantity -= quantity;
-            //             commands.entity(follow_cursor.slot_entity).insert(NeedsReRendered);
-            //             commands.entity(following_entity).insert(NeedsReRendered);
-            //         } else {
-            //             let prev_quantity = inventory.itemstack_at(slot_a).map(|x| x.quantity()).unwrap_or(0);
-
-            //             let leftover = inventory
-            //                 .self_move_itemstack(slot_a, slot_b, quantity)
-            //                 .expect("Bad inventory slot values");
-
-            //             let delta = prev_quantity - leftover;
-
-            //             follow_cursor.quantity -= delta;
-
-            //             send_move(&mut client, &display_item_held, &displayed_item_clicked, &mapping, quantity);
-            //         }
-
-            //         if follow_cursor.quantity == 0 {
-            //             commands.entity(following_entity).insert(NeedsDespawned);
-            //         }
-            //     } else if lmb {
-            //         println!("LMB");
-
-            //         inventory.self_swap_slots(slot_a, slot_b).expect("Bad inventory slot values");
-
-            //         send_swap(&mut client, &display_item_held, &displayed_item_clicked, &mapping);
-            //         // Pick up the item in the same space we just held, because the item we just placed has been moved there.
-            //         pickup_item_into_cursor(clicked_entity, &mut display_item_held, &mut commands, 1.0, &asset_server);
-
-            //         commands.entity(follow_cursor.slot_entity).set_parent(clicked_entity);
-            //         commands.entity(following_entity).despawn_recursive();
-            //     } else {
-            //         println!("None... somehow");
-            //     }
-            // }
-        } else {
-            // if let Ok([mut inventory_a, mut inventory_b]) =
-            //     inventory_query.get_many_mut([display_item_held.inventory_holder, displayed_item_clicked.inventory_holder])
-            // {
-            //     println!("B");
-
-            //     let can_move = rmb && inventory_a.can_move_itemstack_to(slot_a, &inventory_b, slot_b);
-
-            //     if can_move {
-            //         let quantity = if lmb { u16::MAX } else { 1 };
-
-            //         let leftover = inventory_a
-            //             .move_itemstack(slot_a, &mut inventory_b, slot_b, quantity)
-            //             .expect("Bad inventory slot values");
-
-            //         send_move(&mut client, &display_item_held, &displayed_item_clicked, &mapping, quantity);
-
-            //         if leftover == 0 {
-            //             commands.entity(following_entity).insert(NeedsDespawned);
-            //         }
-            //     } else if lmb {
-            //         inventory_a
-            //             .swap_slots(slot_a, &mut inventory_b, slot_b)
-            //             .expect("Bad inventory slot values");
-
-            //         send_swap(&mut client, &display_item_held, &displayed_item_clicked, &mapping);
-            //         // Pick up the item in the same space we just held, because the item we just placed has been moved there.
-            //         pickup_item_into_cursor(clicked_entity, &mut display_item_held, &mut commands, 1.0, &asset_server);
-
-            //         commands
-            //             .entity(following_entity)
-            //             .remove::<FollowCursor>()
-            //             .set_parent(clicked_entity);
-            //     }
-            // }
         }
     } else {
         if let Ok(mut inventory) = inventory_query.get_mut(displayed_item_clicked.inventory_holder) {
