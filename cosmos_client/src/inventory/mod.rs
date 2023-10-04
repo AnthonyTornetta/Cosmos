@@ -365,16 +365,12 @@ fn create_inventory_slot(
 /// If something is tagged with this, it is being held and moved around by the player.
 ///
 /// Note that even if something is being moved, it is still always within the player's inventory
-struct FollowCursor {
-    inventory_entity: Entity,
-    slot_entity: Entity,
-}
+struct FollowCursor;
 
 #[derive(Component, DerefMut, Deref)]
 struct HoldingItemStack(ItemStack);
 
 fn pickup_item_into_cursor(
-    clicked_entity: Entity,
     displayed_item_clicked: &mut DisplayedItemFromInventory,
     commands: &mut Commands,
     quantity_multiplier: f32,
@@ -404,10 +400,7 @@ fn pickup_item_into_cursor(
         font: font.clone(),
     };
 
-    let mut ecmds = commands.spawn(FollowCursor {
-        inventory_entity: displayed_item_clicked.inventory_holder,
-        slot_entity: clicked_entity,
-    });
+    let mut ecmds = commands.spawn(FollowCursor);
 
     create_item_stack_slot_data(
         displayed_item.item_stack.as_ref().expect("This was added above"),
@@ -578,7 +571,6 @@ fn handle_interactions(
             let quanity_multiplier = if lmb { 1.0 } else { 0.5 };
 
             pickup_item_into_cursor(
-                clicked_entity,
                 &mut displayed_item_clicked,
                 &mut commands,
                 quanity_multiplier,
