@@ -3,7 +3,7 @@
 use bevy::prelude::Entity;
 use serde::{Deserialize, Serialize};
 
-use super::Inventory;
+use super::{itemstack::ItemStack, HeldItemStack, Inventory};
 
 #[derive(Debug, Serialize, Deserialize)]
 /// All the laser cannon system messages
@@ -14,6 +14,9 @@ pub enum ServerInventoryMessages {
         inventory: Inventory,
         /// The entity that has this inventory.
         owner: Entity,
+    },
+    HeldItemstack {
+        itemstack: Option<HeldItemStack>,
     },
 }
 
@@ -41,6 +44,20 @@ pub enum ClientInventoryMessages {
         from_inventory: Entity,
         /// The inventory you want to auto-move the item to. Can be the same as `from_inventory` to auto sort it.
         to_inventory: Entity,
+    },
+    PickupItemstack {
+        inventory_holder: Entity,
+        slot: u32,
+        quantity: u16,
+    },
+    DepositHeldItemstack {
+        inventory_holder: Entity,
+        slot: u32,
+        quantity: u16,
+    },
+    DepositAndSwapHeldItemstack {
+        inventory_holder: Entity,
+        slot: u32,
     },
     /// Manually moves an itemstack in one inventory to another (or the same) inventory.
     MoveItemstack {

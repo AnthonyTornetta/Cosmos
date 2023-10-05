@@ -1,10 +1,11 @@
 //! Renders the inventory slots and handles all the logic for moving items around
 
 use bevy::{ecs::system::EntityCommands, prelude::*};
+use bevy_rapier3d::na::U2;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     ecs::NeedsDespawned,
-    inventory::{itemstack::ItemStack, netty::ClientInventoryMessages, Inventory},
+    inventory::{itemstack::ItemStack, netty::ClientInventoryMessages, HeldItemStack, Inventory},
     item::Item,
     netty::{cosmos_encoder, NettyChannelClient},
     registry::Registry,
@@ -262,8 +263,8 @@ struct DisplayedItemFromInventory {
 fn on_update_inventory(
     mut commands: Commands,
     inventory_query: Query<&Inventory, Changed<Inventory>>,
-    mut held_item_query: Query<(Entity, &HoldingItemStack, &mut DisplayedItemFromInventory), Changed<HoldingItemStack>>,
-    mut current_slots: Query<(Entity, &mut DisplayedItemFromInventory), Without<HoldingItemStack>>,
+    mut held_item_query: Query<(Entity, &HeldItemStack, &mut DisplayedItemFromInventory), Changed<HeldItemStack>>,
+    mut current_slots: Query<(Entity, &mut DisplayedItemFromInventory), Without<HeldItemStack>>,
     asset_server: Res<AssetServer>,
 ) {
     for inventory in inventory_query.iter() {
@@ -367,24 +368,23 @@ fn create_inventory_slot(
 /// Note that even if something is being moved, it is still always within the player's inventory
 struct FollowCursor;
 
-#[derive(Component, DerefMut, Deref)]
-struct HoldingItemStack(ItemStack);
-
 fn pickup_item_into_cursor(
     displayed_item_clicked: &mut DisplayedItemFromInventory,
     commands: &mut Commands,
     quantity_multiplier: f32,
     inventory: &mut Inventory,
     asset_server: &AssetServer,
+    client: &mut RenetClient,
+    server_inventory_holder: Entity,
 ) {
     let Some(is) = displayed_item_clicked.item_stack.as_ref() else {
         return;
     };
 
-    let amount = (quantity_multiplier * is.quantity() as f32).ceil() as u16;
+    let pickup_quantity = (quantity_multiplier * is.quantity() as f32).ceil() as u16;
 
     let mut new_is = is.clone();
-    new_is.set_quantity(amount);
+    new_is.set_quantity(pickup_quantity);
 
     let displayed_item = DisplayedItemFromInventory {
         inventory_holder: displayed_item_clicked.inventory_holder,
@@ -406,10 +406,10 @@ fn pickup_item_into_cursor(
         displayed_item.item_stack.as_ref().expect("This was added above"),
         &mut ecmds,
         text_style,
-        amount,
+        pickup_quantity,
     );
 
-    ecmds.insert((displayed_item, HoldingItemStack(new_is)));
+    ecmds.insert((displayed_item, HeldItemStack(new_is)));
 
     let slot_clicked = displayed_item_clicked.slot_number;
     if let Some(is) = inventory.mut_itemstack_at(slot_clicked) {
@@ -420,6 +420,15 @@ fn pickup_item_into_cursor(
             inventory.remove_itemstack_at(slot_clicked);
         }
     }
+
+    client.send_message(
+        NettyChannelClient::Inventory,
+        cosmos_encoder::serialize(&ClientInventoryMessages::PickupItemstack {
+            inventory_holder: server_inventory_holder,
+            slot: slot_clicked as u32,
+            quantity: pickup_quantity,
+        }),
+    );
 }
 
 fn send_swap(
@@ -468,7 +477,7 @@ fn send_move(
 
 fn handle_interactions(
     mut commands: Commands,
-    mut following_cursor: Query<(Entity, &mut HoldingItemStack)>,
+    mut following_cursor: Query<(Entity, &mut HeldItemStack)>,
     mut interactions: Query<(Entity, &mut DisplayedItemFromInventory, &Interaction), Without<FollowCursor>>,
     input_handler: InputChecker,
     mut inventory_query: Query<&mut Inventory>,
@@ -495,6 +504,10 @@ fn handle_interactions(
 
     let bulk_moving = input_handler.check_pressed(CosmosInputs::AutoMoveItem);
 
+    let server_inventory_holder = mapping
+        .server_from_client(&displayed_item_clicked.inventory_holder)
+        .expect("Unable to map inventory to server inventory");
+
     if bulk_moving {
         let slot_num = displayed_item_clicked.slot_number;
         let inventory_entity = displayed_item_clicked.inventory_holder;
@@ -511,17 +524,13 @@ fn handle_interactions(
 
             inventory.auto_move(slot_num, quantity).expect("Bad inventory slot values");
 
-            let server_entity = mapping
-                .server_from_client(&displayed_item_clicked.inventory_holder)
-                .expect("Missing server entity for inventory");
-
             client.send_message(
                 NettyChannelClient::Inventory,
                 cosmos_encoder::serialize(&ClientInventoryMessages::AutoMove {
                     from_slot: slot_num as u32,
                     quantity,
-                    from_inventory: server_entity,
-                    to_inventory: server_entity,
+                    from_inventory: server_inventory_holder,
+                    to_inventory: server_inventory_holder,
                 }),
             );
         }
@@ -542,40 +551,58 @@ fn handle_interactions(
                 if held_item_stack.is_empty() {
                     commands.entity(following_entity).insert(NeedsDespawned);
                 }
+
+                client.send_message(
+                    NettyChannelClient::Inventory,
+                    cosmos_encoder::serialize(&ClientInventoryMessages::DepositHeldItemstack {
+                        inventory_holder: server_inventory_holder,
+                        slot: clicked_slot as u32,
+                        quantity: move_quantity,
+                    }),
+                )
             } else {
                 let is_here = inventory.remove_itemstack_at(clicked_slot);
 
-                if is_here.is_none() || lmb {
-                    let quantity = if lmb { held_item_stack.quantity() } else { 1 };
-                    let over_quantity = held_item_stack.quantity() - quantity;
+                if is_here.as_ref().map(|is| is.quantity() == 1).unwrap_or(true) || lmb {
+                    let leftover = inventory.insert_item_at(clicked_slot, item, held_item_stack.quantity());
 
-                    let leftover = inventory.insert_item_at(clicked_slot, item, quantity);
                     assert_eq!(
                         leftover, 0,
                         "Leftover wasn't 0 somehow? This could only mean something has an invalid stack size"
                     );
 
-                    println!("LEFTOVER: {leftover}");
-                    held_item_stack.set_quantity(over_quantity + leftover);
+                    held_item_stack.set_quantity(0);
 
-                    if held_item_stack.quantity() == 0 {
-                        commands.entity(following_entity).insert(NeedsDespawned);
-                    } else if let Some(is_here) = is_here {
+                    if let Some(is_here) = is_here {
                         held_item_stack.0 = is_here;
+                    } else {
+                        commands.entity(following_entity).insert(NeedsDespawned);
                     }
+
+                    client.send_message(
+                        NettyChannelClient::Inventory,
+                        cosmos_encoder::serialize(&ClientInventoryMessages::DepositAndSwapHeldItemstack {
+                            inventory_holder: server_inventory_holder,
+                            slot: clicked_slot as u32,
+                        }),
+                    );
+                } else {
+                    inventory.set_itemstack_at(clicked_slot, is_here);
                 }
             }
         }
     } else {
         if let Ok(mut inventory) = inventory_query.get_mut(displayed_item_clicked.inventory_holder) {
-            let quanity_multiplier = if lmb { 1.0 } else { 0.5 };
+            let quantity_multiplier = if lmb { 1.0 } else { 0.5 };
 
             pickup_item_into_cursor(
                 &mut displayed_item_clicked,
                 &mut commands,
-                quanity_multiplier,
+                quantity_multiplier,
                 &mut inventory,
                 &asset_server,
+                &mut client,
+                server_inventory_holder,
             );
         }
     }

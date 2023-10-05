@@ -1,15 +1,23 @@
 //! Syncs the inventories with the server-provided inventories
 
-use bevy::prelude::{in_state, App, Commands, IntoSystemConfigs, Res, ResMut, Update};
+use bevy::prelude::{in_state, App, Commands, Entity, IntoSystemConfigs, Query, Res, ResMut, Update};
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
+    ecs::NeedsDespawned,
     inventory::netty::ServerInventoryMessages,
     netty::{cosmos_encoder, NettyChannelServer},
 };
 
 use crate::{netty::mapping::NetworkMapping, state::game_state::GameState};
 
-fn sync(mut client: ResMut<RenetClient>, network_mapping: Res<NetworkMapping>, mut commands: Commands) {
+use super::HeldItemStack;
+
+fn sync(
+    mut client: ResMut<RenetClient>,
+    network_mapping: Res<NetworkMapping>,
+    mut commands: Commands,
+    mut held_item_query: Query<(Entity, &mut HeldItemStack)>,
+) {
     while let Some(message) = client.receive_message(NettyChannelServer::Inventory) {
         let msg: ServerInventoryMessages = cosmos_encoder::deserialize(&message).expect("Failed to deserialize server inventory message!");
 
@@ -21,6 +29,15 @@ fn sync(mut client: ResMut<RenetClient>, network_mapping: Res<NetworkMapping>, m
                     }
                 } else {
                     eprintln!("Error: unrecognized entity {} received from server!", owner.index());
+                }
+            }
+            ServerInventoryMessages::HeldItemstack { itemstack } => {
+                if let Ok((entity, mut holding_itemstack)) = held_item_query.get_single_mut() {
+                    if let Some(is) = itemstack {
+                        *holding_itemstack = is;
+                    } else {
+                        commands.entity(entity).insert(NeedsDespawned);
+                    }
                 }
             }
         }

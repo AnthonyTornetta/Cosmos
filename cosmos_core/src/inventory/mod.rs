@@ -5,7 +5,7 @@
 use std::ops::Range;
 
 use bevy::{
-    prelude::{App, Component},
+    prelude::{App, Component, Deref, DerefMut},
     reflect::Reflect,
 };
 use serde::{Deserialize, Serialize};
@@ -22,6 +22,9 @@ pub mod netty;
 //     BulkInventory,   // These inventories are not organizable by the player
 //     NormalInventory, // These inventories are organizable by the player
 // }
+
+#[derive(Component, DerefMut, Deref, Debug, Serialize, Deserialize, Clone)]
+pub struct HeldItemStack(pub ItemStack);
 
 /// Represents some sort of error that occurred
 #[derive(Debug)]
