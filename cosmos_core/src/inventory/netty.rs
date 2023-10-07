@@ -3,7 +3,7 @@
 use bevy::prelude::Entity;
 use serde::{Deserialize, Serialize};
 
-use super::{itemstack::ItemStack, HeldItemStack, Inventory};
+use super::{HeldItemStack, Inventory};
 
 #[derive(Debug, Serialize, Deserialize)]
 /// All the laser cannon system messages
@@ -15,7 +15,9 @@ pub enum ServerInventoryMessages {
         /// The entity that has this inventory.
         owner: Entity,
     },
+    /// Updates what is currently held by the player
     HeldItemstack {
+        /// The currently held itemstack, if they are holding one
         itemstack: Option<HeldItemStack>,
     },
 }
@@ -45,18 +47,35 @@ pub enum ClientInventoryMessages {
         /// The inventory you want to auto-move the item to. Can be the same as `from_inventory` to auto sort it.
         to_inventory: Entity,
     },
+    /// Picks up the itemstack at this slot and makes that the held itemstack
+    ///
+    /// Note that this can only be used when you are not already holding an itemstack, and will do nothing if you are
     PickupItemstack {
+        /// The inventory's entity
         inventory_holder: Entity,
+        /// The slot to pickup from
         slot: u32,
+        /// The amount of the held item to pick up from the inventory (is checked on the server to not exceed the held quantity)
+        ///
+        /// Feel free to use `u16::MAX` to pick up as many items as possible
         quantity: u16,
     },
+    /// Inserts a specified quantity of the itemstack into this slot
     DepositHeldItemstack {
+        /// The inventory's entity
         inventory_holder: Entity,
+        /// The slot you are inserting into
         slot: u32,
+        /// The amount of the held item to insert into the inventory (is checked on the server to not exceed the held quantity)
+        ///
+        /// Feel free to use `u16::MAX` to insert as many items as possible
         quantity: u16,
     },
+    /// Deposits all the items in the itemstack into that slot, and makes the item that is currently in this slot the held item
     DepositAndSwapHeldItemstack {
+        /// The entity that has this inventory you're interacting with
         inventory_holder: Entity,
+        /// The slot you want to swap the held item with
         slot: u32,
     },
     /// Manually moves an itemstack in one inventory to another (or the same) inventory.
@@ -71,5 +90,21 @@ pub enum ClientInventoryMessages {
         to_inventory: Entity,
         /// The slot to go to
         to_slot: u32,
+    },
+    /// "Throws" the currently held item in the cursor
+    ///
+    /// Note throwing isn't implemented yet, so for now it will simply delete the item.
+    ThrowHeldItemstack {
+        /// The amount of the held item to throw (is checked on the server to not exceed the held quantity)
+        quantity: u16,
+    },
+    /// "Throws" the currently held item in the cursor
+    ///
+    /// Note throwing isn't implemented yet, so for now it will simply delete the item.
+    InsertHeldItem {
+        /// The amount of the held item to insert into the inventory (is checked on the server to not exceed the held quantity)
+        quantity: u16,
+        /// The entity that has this inventory attached to it you want to insert into
+        inventory_holder: Entity,
     },
 }

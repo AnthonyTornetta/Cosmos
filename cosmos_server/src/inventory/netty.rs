@@ -1,6 +1,6 @@
 //! Syncs player inventories
 
-use bevy::prelude::{in_state, App, Changed, Commands, Entity, IntoSystemConfigs, Query, RemovedComponents, Res, ResMut, Update};
+use bevy::prelude::{in_state, warn, App, Changed, Commands, Entity, IntoSystemConfigs, Query, RemovedComponents, Res, ResMut, Update};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     entities::player::Player,
@@ -203,7 +203,7 @@ fn listen(
                 ClientInventoryMessages::DepositAndSwapHeldItemstack { inventory_holder, slot } => {
                     let slot = slot as usize;
 
-                    let Ok(mut held_is) = held_item_query.get_mut(client_entity) else {
+                    let Ok(mut held_item_stack) = held_item_query.get_mut(client_entity) else {
                         // Perhaps the client needs updated
                         server.send_message(
                             client_id,
@@ -218,7 +218,8 @@ fn listen(
                     if let Ok(mut inventory) = inventory_query.get_mut(inventory_holder) {
                         let itemstack_here = inventory.remove_itemstack_at(slot);
 
-                        let leftover = inventory.insert_item_at(slot, items.from_numeric_id(held_is.item_id()), held_item_stack.quantity());
+                        let leftover =
+                            inventory.insert_item_at(slot, items.from_numeric_id(held_item_stack.item_id()), held_item_stack.quantity());
 
                         assert_eq!(
                             leftover, 0,
@@ -230,7 +231,55 @@ fn listen(
                         if let Some(is_here) = itemstack_here {
                             held_item_stack.0 = is_here;
                         } else {
-                            commands.entity(following_entity).insert(NeedsDespawned);
+                            commands.entity(client_entity).remove::<HeldItemStack>();
+                        }
+                    }
+                }
+                ClientInventoryMessages::ThrowHeldItemstack { quantity } => {
+                    let Ok(mut held_item_stack) = held_item_query.get_mut(client_entity) else {
+                        // Perhaps the client needs updated
+                        server.send_message(
+                            client_id,
+                            NettyChannelServer::Inventory,
+                            cosmos_encoder::serialize(&ServerInventoryMessages::HeldItemstack { itemstack: None }),
+                        );
+                        continue;
+                    };
+
+                    let amount = held_item_stack.quantity().min(quantity);
+
+                    // "Throws" item
+                    held_item_stack.decrease_quantity(amount);
+                    warn!("Throwing not implemented yet - deleting {amount}.");
+
+                    if held_item_stack.is_empty() {
+                        commands.entity(client_entity).remove::<HeldItemStack>();
+                    }
+                }
+                ClientInventoryMessages::InsertHeldItem {
+                    quantity,
+                    inventory_holder: inventory_entity,
+                } => {
+                    let Ok(mut held_item_stack) = held_item_query.get_mut(client_entity) else {
+                        // Perhaps the client needs updated
+                        server.send_message(
+                            client_id,
+                            NettyChannelServer::Inventory,
+                            cosmos_encoder::serialize(&ServerInventoryMessages::HeldItemstack { itemstack: None }),
+                        );
+                        continue;
+                    };
+
+                    let quantity = held_item_stack.quantity().min(quantity);
+
+                    if let Ok(mut inventory) = inventory_query.get_mut(inventory_entity) {
+                        let unused_leftover = held_item_stack.quantity() - quantity;
+                        let leftover = inventory.insert(items.from_numeric_id(held_item_stack.item_id()), quantity);
+
+                        held_item_stack.set_quantity(leftover + unused_leftover);
+
+                        if held_item_stack.is_empty() {
+                            commands.entity(client_entity).remove::<HeldItemStack>();
                         }
                     }
                 }

@@ -48,14 +48,14 @@ fn create_ui_camera(mut commands: Commands) {
     ));
 }
 
-#[derive(Debug, Component)]
+#[derive(Debug, Component, Reflect)]
 /// Put this onto a UI element to render a 3D item there
 pub struct RenderItem {
     /// The item's id
     pub item_id: u16,
 }
 
-#[derive(Debug, Component)]
+#[derive(Debug, Component, Reflect)]
 struct RenderedItem {
     /// Points to the UI entity that had the `RenderItem` that created this
     ui_element_entity: Entity,
@@ -182,7 +182,7 @@ fn render_items(
             meshes.add(mesh_builder.build_mesh()),
             material.unlit_material().clone(),
             RenderLayers::from_layers(&[INVENTORY_SLOT_LAYER]),
-            Name::new("Rendered Inventory Item"),
+            Name::new(format!("Rendered Inventory Item ({})", changed_render_item.item_id)),
         ));
     }
 }
@@ -230,5 +230,7 @@ pub(super) fn register(app: &mut App) {
         Update,
         (update_rendered_items_transforms, reposition_ui_items, render_items).chain(),
     )
-    .add_systems(Startup, create_ui_camera);
+    .add_systems(Startup, create_ui_camera)
+    .register_type::<RenderItem>()
+    .register_type::<RenderedItem>();
 }

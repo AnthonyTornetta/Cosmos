@@ -34,7 +34,10 @@ fn sync(
             ServerInventoryMessages::HeldItemstack { itemstack } => {
                 if let Ok((entity, mut holding_itemstack)) = held_item_query.get_single_mut() {
                     if let Some(is) = itemstack {
-                        *holding_itemstack = is;
+                        // Don't trigger change detection unless it actually changed
+                        if is.quantity() != holding_itemstack.quantity() || is.item_id() != holding_itemstack.item_id() {
+                            *holding_itemstack = is;
+                        }
                     } else {
                         commands.entity(entity).insert(NeedsDespawned);
                     }

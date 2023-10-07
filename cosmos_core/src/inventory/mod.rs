@@ -23,7 +23,17 @@ pub mod netty;
 //     NormalInventory, // These inventories are organizable by the player
 // }
 
-#[derive(Component, DerefMut, Deref, Debug, Serialize, Deserialize, Clone)]
+#[derive(Component, DerefMut, Deref, Debug, Serialize, Deserialize, Clone, Reflect)]
+/// This represents the itemstack the player is currently holding while moving items around in their inventory.
+///
+/// There should only ever be one HeldItemStack per player, and on the client only one or zero HeldItemStacks will ever exist at a time.
+///
+/// # THIS BEHAVES DIFFERENTLY ON THE CLIENT & SERVER
+/// ### Client
+/// On the client, this is attached to a GUI element holding the drawn item
+///
+/// ### Server
+/// On the server, this is attached directly to the player
 pub struct HeldItemStack(pub ItemStack);
 
 /// Represents some sort of error that occurred
@@ -105,10 +115,20 @@ impl Inventory {
     }
 
     /// Returns the overflow that could not fit
-    pub fn insert(&mut self, item: &Item, mut quantity: u16) -> u16 {
+    pub fn insert_itemstack(&mut self, itemstack: &ItemStack) -> u16 {
+        self.insert_raw(itemstack.item_id(), itemstack.max_stack_size(), itemstack.quantity())
+    }
+
+    /// Returns (the overflow that could not fit and the slot
+    pub fn insert(&mut self, item: &Item, quantity: u16) -> u16 {
+        self.insert_raw(item.id(), item.max_stack_size(), quantity)
+    }
+
+    /// Returns the overflow that could not fit
+    fn insert_raw(&mut self, item_id: u16, max_stack_size: u16, mut quantity: u16) -> u16 {
         // Search for existing stacks, if none found that make new one(s)
 
-        for is in &mut self.items.iter_mut().flatten().filter(|x| x.item_id() == item.id()) {
+        for is in &mut self.items.iter_mut().flatten().filter(|x| x.item_id() == item_id) {
             quantity = is.increase_quantity(quantity);
 
             if quantity == 0 {
@@ -120,7 +140,7 @@ impl Inventory {
 
         for i in 0..self.items.len() {
             if self.items[i].is_none() {
-                let mut is = ItemStack::new(item);
+                let mut is = ItemStack::raw_with_quantity(item_id, max_stack_size, 0);
                 quantity = is.increase_quantity(quantity);
 
                 self.items[i] = Some(is);
@@ -396,5 +416,5 @@ impl Inventory {
 
 pub(super) fn register(app: &mut App) {
     itemstack::register(app);
-    app.register_type::<Inventory>();
+    app.register_type::<Inventory>().register_type::<HeldItemStack>();
 }
