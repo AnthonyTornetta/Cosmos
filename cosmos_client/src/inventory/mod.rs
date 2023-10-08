@@ -96,9 +96,6 @@ fn toggle_inventory_rendering(
                                 quantity: u16::MAX,
                             }),
                         );
-                        println!("Put item in og spot!");
-                    } else {
-                        println!("Unable to put item in og spot");
                     }
 
                     if !held_item_stack.is_empty() {
@@ -114,9 +111,6 @@ fn toggle_inventory_rendering(
                                     quantity: u16::MAX,
                                 }),
                             );
-                            println!("Inserted itemstack! {leftover}");
-                        } else {
-                            println!("Unable to insert itemstack");
                         }
 
                         if leftover != 0 {
