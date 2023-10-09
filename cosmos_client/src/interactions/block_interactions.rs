@@ -14,10 +14,11 @@ use cosmos_core::{
 
 use crate::{
     events::block::block_events::*,
-    input::inputs::{CosmosInputHandler, CosmosInputs},
+    input::inputs::{CosmosInputs, InputChecker, InputHandler},
     rendering::MainCamera,
     state::game_state::GameState,
     ui::hotbar::Hotbar,
+    window::setup::CursorFlags,
     LocalPlayer,
 };
 
@@ -28,9 +29,7 @@ pub enum InteractionType {
 }
 
 fn process_player_interaction(
-    keys: Res<Input<KeyCode>>,
-    mouse: Res<Input<MouseButton>>,
-    input_handler: Res<CosmosInputHandler>,
+    input_handler: InputChecker,
     camera: Query<&GlobalTransform, With<MainCamera>>,
     player_body: Query<Entity, (With<LocalPlayer>, Without<Pilot>)>,
     rapier_context: Res<RapierContext>,
@@ -44,7 +43,13 @@ fn process_player_interaction(
     mut inventory: Query<&mut Inventory, With<LocalPlayer>>,
     items: Res<Registry<Item>>,
     block_items: Res<BlockItems>,
+    cursor_flags: Res<CursorFlags>,
 ) {
+    // They're in a menu if the cursor isn't locked
+    if !cursor_flags.is_cursor_locked() {
+        return;
+    }
+
     // this fails if the player is a pilot
     let Ok(player_body) = player_body.get_single() else {
         return;
@@ -77,7 +82,7 @@ fn process_player_interaction(
 
     let structure_physics_transform = transform;
 
-    if input_handler.check_just_pressed(CosmosInputs::BreakBlock, &keys, &mouse) {
+    if input_handler.check_just_pressed(CosmosInputs::BreakBlock) {
         let moved_point = intersection.point - intersection.normal * 0.3;
 
         let point = structure_physics_transform.compute_matrix().inverse().transform_point3(moved_point);
@@ -90,10 +95,10 @@ fn process_player_interaction(
         }
     }
 
-    if input_handler.check_just_pressed(CosmosInputs::PlaceBlock, &keys, &mouse) {
+    if input_handler.check_just_pressed(CosmosInputs::PlaceBlock) {
         if let Ok(mut inventory) = inventory.get_single_mut() {
             if let Ok(hotbar) = hotbar.get_single() {
-                let inventory_slot = hotbar.item_at_selected_inventory_slot(&inventory);
+                let inventory_slot = hotbar.selected_slot();
 
                 if let Some(is) = inventory.itemstack_at(inventory_slot) {
                     let item = items.from_numeric_id(is.item_id());
@@ -128,7 +133,7 @@ fn process_player_interaction(
         }
     }
 
-    if input_handler.check_just_pressed(CosmosInputs::Interact, &keys, &mouse) {
+    if input_handler.check_just_pressed(CosmosInputs::Interact) {
         let moved_point = intersection.point - intersection.normal * 0.3;
 
         let point = structure_physics_transform.compute_matrix().inverse().transform_point3(moved_point);

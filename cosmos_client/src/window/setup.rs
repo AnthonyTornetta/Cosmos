@@ -6,18 +6,42 @@ use bevy::{
     window::{CursorGrabMode, PrimaryWindow, Window, WindowFocused},
 };
 
-use crate::input::inputs::{CosmosInputHandler, CosmosInputs};
+use crate::input::inputs::{CosmosInputs, InputChecker, InputHandler};
 
 #[derive(Resource, Copy, Clone)]
-struct CursorFlags {
+/// Resource containing the various flags about the cursor, like if it's hidden or not
+pub struct CursorFlags {
     locked: bool,
     visible: bool,
 }
 
 impl CursorFlags {
-    fn toggle(&mut self) {
+    /// Toggles the cursor between being hidden + locked and shown + unlocked
+    pub fn toggle(&mut self) {
         self.locked = !self.locked;
         self.visible = !self.visible;
+    }
+
+    /// Shows + unlocks the cursor
+    pub fn show(&mut self) {
+        self.locked = false;
+        self.visible = true;
+    }
+
+    /// Hides + locks the cursor
+    pub fn hide(&mut self) {
+        self.locked = true;
+        self.visible = false;
+    }
+
+    /// Returns true if the cursor is locked
+    pub fn is_cursor_locked(&self) -> bool {
+        self.locked
+    }
+
+    /// Returns true if the cursor is shown
+    pub fn is_cursor_shown(&self) -> bool {
+        self.visible
     }
 }
 
@@ -59,18 +83,9 @@ fn update_mouse_deltas(
     }
 }
 
-fn toggle_mouse_freeze(
-    input_handler: Res<CosmosInputHandler>,
-    inputs: Res<Input<KeyCode>>,
-    mouse: Res<Input<MouseButton>>,
-    mut cursor_flags: ResMut<CursorFlags>,
-    mut primary_query: Query<&mut Window, With<PrimaryWindow>>,
-) {
-    if input_handler.check_just_pressed(CosmosInputs::UnlockMouse, &inputs, &mouse) {
-        let mut window = primary_query.get_single_mut().expect("Missing primary window.");
-
+fn toggle_mouse_freeze(input_handler: InputChecker, mut cursor_flags: ResMut<CursorFlags>) {
+    if input_handler.check_just_pressed(CosmosInputs::UnlockMouse) {
         cursor_flags.toggle();
-        apply_cursor_flags(&mut window, *cursor_flags);
     }
 }
 
@@ -100,6 +115,12 @@ fn apply_cursor_flags(window: &mut Window, cursor_flags: CursorFlags) {
     window.cursor.visible = cursor_flags.visible;
 }
 
+fn apply_cursor_flags_on_change(cursor_flags: Res<CursorFlags>, mut primary_query: Query<&mut Window, With<PrimaryWindow>>) {
+    let mut window = primary_query.get_single_mut().expect("Missing primary window.");
+
+    apply_cursor_flags(&mut window, *cursor_flags);
+}
+
 pub(super) fn register(app: &mut App) {
     app.insert_resource(CursorFlags {
         locked: true,
@@ -107,5 +128,14 @@ pub(super) fn register(app: &mut App) {
     })
     .insert_resource(DeltaCursorPosition { x: 0.0, y: 0.0 })
     .add_systems(Startup, setup_window)
-    .add_systems(Update, (update_mouse_deltas, toggle_mouse_freeze, window_focus_changed));
+    .add_systems(
+        Update,
+        (
+            update_mouse_deltas,
+            toggle_mouse_freeze,
+            window_focus_changed,
+            apply_cursor_flags_on_change,
+        )
+            .chain(),
+    );
 }
