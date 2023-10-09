@@ -613,7 +613,7 @@ fn handle_interactions(
         let quantity_multiplier = if lmb { 1.0 } else { 0.5 };
 
         pickup_item_into_cursor(
-            &displayed_item_clicked,
+            displayed_item_clicked,
             &mut commands,
             quantity_multiplier,
             &mut inventory,
