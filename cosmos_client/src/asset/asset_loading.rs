@@ -65,6 +65,8 @@ struct AssetsLoadingID(usize);
 pub struct MaterialDefinition {
     /// The main material used to draw blocks
     pub material: Handle<StandardMaterial>,
+    /// The material used to render things far away
+    pub far_away_material: Handle<StandardMaterial>,
     /// The unlit version of the main material
     pub unlit_material: Handle<StandardMaterial>,
     /// All the textures packed into an atlas.
@@ -86,6 +88,7 @@ impl MaterialDefinition {
     pub fn new(
         unlocalized_name: String,
         material: Handle<StandardMaterial>,
+        lod_material: Handle<StandardMaterial>,
         unlit_material: Handle<StandardMaterial>,
         atlas: CosmosTextureAtlas,
     ) -> Self {
@@ -93,6 +96,7 @@ impl MaterialDefinition {
             atlas,
             id: 0,
             material,
+            far_away_material: lod_material,
             unlit_material,
             padding: DEFAULT_PADDING,
             unlocalized_name,
@@ -109,6 +113,12 @@ impl MaterialDefinition {
     /// Gets the material for this that does not respond to light
     pub fn unlit_material(&self) -> &Handle<StandardMaterial> {
         &self.unlit_material
+    }
+
+    #[inline]
+    /// Gets the material for this that should be used for far away (lod) blocks
+    pub fn far_away_material(&self) -> &Handle<StandardMaterial> {
+        &self.far_away_material
     }
 
     #[inline]
@@ -387,12 +397,13 @@ fn create_materials(
 ) {
     if !event_reader.is_empty() {
         if let Some(atlas) = texture_atlases.from_id("cosmos:main") {
-            let default_material = create_main_material(atlas.texture_atlas.texture.clone(), false);
-            let unlit_default_material = create_main_material(atlas.texture_atlas.texture.clone(), true);
+            let default_material = materials.add(create_main_material(atlas.texture_atlas.texture.clone(), false));
+            let unlit_default_material = materials.add(create_main_material(atlas.texture_atlas.texture.clone(), true));
 
             material_registry.register(MaterialDefinition {
-                material: materials.add(default_material),
-                unlit_material: materials.add(unlit_default_material),
+                material: default_material.clone(),
+                far_away_material: default_material.clone(),
+                unlit_material: unlit_default_material.clone(),
                 atlas: atlas.clone(),
                 padding: DEFAULT_PADDING,
                 id: 0,
@@ -404,6 +415,7 @@ fn create_materials(
 
             material_registry.register(MaterialDefinition {
                 material: material.clone(),
+                far_away_material: default_material.clone(),
                 unlit_material: material.clone(),
                 atlas: atlas.clone(),
                 padding: DEFAULT_PADDING,
@@ -411,12 +423,13 @@ fn create_materials(
                 unlocalized_name: "cosmos:illuminated".into(),
             });
 
-            let transparent_material = create_transparent_material(atlas.texture_atlas.texture.clone(), false);
-            let unlit_transparent_material = create_transparent_material(atlas.texture_atlas.texture.clone(), true);
+            let transparent_material = materials.add(create_transparent_material(atlas.texture_atlas.texture.clone(), false));
+            let unlit_transparent_material = materials.add(create_transparent_material(atlas.texture_atlas.texture.clone(), true));
 
             material_registry.register(MaterialDefinition {
-                material: materials.add(transparent_material),
-                unlit_material: materials.add(unlit_transparent_material),
+                material: transparent_material,
+                far_away_material: default_material.clone(),
+                unlit_material: unlit_transparent_material,
                 atlas: atlas.clone(),
                 padding: DEFAULT_PADDING,
                 id: 0,

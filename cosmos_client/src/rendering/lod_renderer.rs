@@ -229,7 +229,7 @@ impl ChunkRenderer {
             if !faces.is_empty() {
                 let block = blocks.from_numeric_id(block);
 
-                let Some(material) = materials.get_value(block) else {
+                let Some(material_def) = materials.get_value(block) else {
                     continue;
                 };
 
@@ -237,11 +237,17 @@ impl ChunkRenderer {
                     continue;
                 };
 
-                if !self.meshes.contains_key(material.lit_material()) {
-                    self.meshes.insert(material.lit_material().clone(), Default::default());
+                let material_here = if scale > 2.0 {
+                    material_def.far_away_material()
+                } else {
+                    material_def.lit_material()
+                };
+
+                if !self.meshes.contains_key(material_here) {
+                    self.meshes.insert(material_here.clone(), Default::default());
                 }
 
-                let mesh_builder = self.meshes.get_mut(material.lit_material()).unwrap();
+                let mesh_builder = self.meshes.get_mut(material_here).unwrap();
 
                 let rotation = block_info.get_rotation();
 
@@ -264,7 +270,7 @@ impl ChunkRenderer {
                         continue;
                     };
 
-                    let uvs = material.uvs_for_index(image_index);
+                    let uvs = material_def.uvs_for_index(image_index);
 
                     let rotation = match rotation {
                         BlockFace::Top => Quat::IDENTITY,
