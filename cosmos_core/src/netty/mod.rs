@@ -34,6 +34,8 @@ pub enum NettyChannelServer {
     Asteroid,
     /// Sending LOD information to the client
     DeltaLod,
+    /// Used for inventories
+    Inventory,
 }
 
 /// Network channels that clients send to the server
@@ -44,6 +46,8 @@ pub enum NettyChannelClient {
     /// These are unreliably sent, and may never reach their destination or become corrupted.
     /// Used for sending `ClientUnreliableMessages`
     Unreliable,
+    /// used for inventories
+    Inventory,
 }
 
 impl From<NettyChannelClient> for u8 {
@@ -51,9 +55,13 @@ impl From<NettyChannelClient> for u8 {
         match channel_id {
             NettyChannelClient::Reliable => 0,
             NettyChannelClient::Unreliable => 1,
+            NettyChannelClient::Inventory => 2,
         }
     }
 }
+
+const KB: usize = 1024;
+const MB: usize = KB * KB;
 
 impl NettyChannelClient {
     /// Assembles & returns the configuration for all the client channels
@@ -61,15 +69,22 @@ impl NettyChannelClient {
         vec![
             ChannelConfig {
                 channel_id: Self::Reliable.into(),
-                max_memory_usage_bytes: 5 * 1024 * 1024,
+                max_memory_usage_bytes: 5 * MB,
                 send_type: SendType::ReliableOrdered {
                     resend_time: Duration::from_millis(200),
                 },
             },
             ChannelConfig {
                 channel_id: Self::Unreliable.into(),
-                max_memory_usage_bytes: 5 * 1024 * 1024,
+                max_memory_usage_bytes: 5 * MB,
                 send_type: SendType::Unreliable,
+            },
+            ChannelConfig {
+                channel_id: Self::Inventory.into(),
+                max_memory_usage_bytes: 5 * MB,
+                send_type: SendType::ReliableOrdered {
+                    resend_time: Duration::from_millis(200),
+                },
             },
         ]
     }
@@ -83,6 +98,7 @@ impl From<NettyChannelServer> for u8 {
             NettyChannelServer::LaserCannonSystem => 2,
             NettyChannelServer::Asteroid => 3,
             NettyChannelServer::DeltaLod => 4,
+            NettyChannelServer::Inventory => 5,
         }
     }
 }
@@ -93,24 +109,31 @@ impl NettyChannelServer {
         vec![
             ChannelConfig {
                 channel_id: Self::Reliable.into(),
-                max_memory_usage_bytes: 5 * 1024 * 1024,
+                max_memory_usage_bytes: 5 * MB,
                 send_type: SendType::ReliableOrdered {
                     resend_time: Duration::from_millis(200),
                 },
             },
             ChannelConfig {
                 channel_id: Self::Unreliable.into(),
-                max_memory_usage_bytes: 5 * 1024 * 1024,
+                max_memory_usage_bytes: 5 * MB,
                 send_type: SendType::Unreliable,
             },
             ChannelConfig {
                 channel_id: Self::LaserCannonSystem.into(),
-                max_memory_usage_bytes: 5 * 1024 * 1024,
+                max_memory_usage_bytes: 5 * MB,
                 send_type: SendType::Unreliable,
             },
             ChannelConfig {
                 channel_id: Self::Asteroid.into(),
-                max_memory_usage_bytes: 5 * 1024 * 1024,
+                max_memory_usage_bytes: 5 * MB,
+                send_type: SendType::ReliableOrdered {
+                    resend_time: Duration::from_millis(200),
+                },
+            },
+            ChannelConfig {
+                channel_id: Self::Inventory.into(),
+                max_memory_usage_bytes: 5 * MB,
                 send_type: SendType::ReliableOrdered {
                     resend_time: Duration::from_millis(200),
                 },

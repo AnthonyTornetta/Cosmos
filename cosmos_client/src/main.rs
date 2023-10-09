@@ -39,7 +39,7 @@ use cosmos_core::netty::client_unreliable_messages::ClientUnreliableMessages;
 use cosmos_core::netty::{cosmos_encoder, get_local_ipaddress, NettyChannelClient};
 use cosmos_core::structure::ship::pilot::Pilot;
 use cosmos_core::structure::ship::ship_movement::ShipMovement;
-use input::inputs::{CosmosInputHandler, CosmosInputs};
+use input::inputs::{CosmosInputs, InputChecker, InputHandler};
 use netty::connect::{self, HostConfig};
 use netty::flags::LocalPlayer;
 use netty::mapping::NetworkMapping;
@@ -56,9 +56,7 @@ use bevy_renet::RenetClientPlugin;
 use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
 
 fn process_ship_movement(
-    keys: Res<Input<KeyCode>>,
-    mouse: Res<Input<MouseButton>>,
-    input_handler: ResMut<CosmosInputHandler>,
+    input_handler: InputChecker,
     query: Query<Entity, (With<LocalPlayer>, With<Pilot>)>,
     mut client: ResMut<RenetClient>,
     mut crosshair_offset: ResMut<CrosshairOffset>,
@@ -68,28 +66,28 @@ fn process_ship_movement(
     if query.get_single().is_ok() {
         let mut movement = ShipMovement::default();
 
-        if input_handler.check_pressed(CosmosInputs::MoveForward, &keys, &mouse) {
+        if input_handler.check_pressed(CosmosInputs::MoveForward) {
             movement.movement.z += 1.0;
         }
-        if input_handler.check_pressed(CosmosInputs::MoveBackward, &keys, &mouse) {
+        if input_handler.check_pressed(CosmosInputs::MoveBackward) {
             movement.movement.z -= 1.0;
         }
-        if input_handler.check_pressed(CosmosInputs::MoveUp, &keys, &mouse) {
+        if input_handler.check_pressed(CosmosInputs::MoveUp) {
             movement.movement.y += 1.0;
         }
-        if input_handler.check_pressed(CosmosInputs::MoveDown, &keys, &mouse) {
+        if input_handler.check_pressed(CosmosInputs::MoveDown) {
             movement.movement.y -= 1.0;
         }
-        if input_handler.check_pressed(CosmosInputs::MoveLeft, &keys, &mouse) {
+        if input_handler.check_pressed(CosmosInputs::MoveLeft) {
             movement.movement.x -= 1.0;
         }
-        if input_handler.check_pressed(CosmosInputs::MoveRight, &keys, &mouse) {
+        if input_handler.check_pressed(CosmosInputs::MoveRight) {
             movement.movement.x += 1.0;
         }
 
-        movement.braking = input_handler.check_pressed(CosmosInputs::SlowDown, &keys, &mouse);
+        movement.braking = input_handler.check_pressed(CosmosInputs::SlowDown);
 
-        if input_handler.check_just_pressed(CosmosInputs::StopPiloting, &keys, &mouse) {
+        if input_handler.check_just_pressed(CosmosInputs::StopPiloting) {
             client.send_message(
                 NettyChannelClient::Reliable,
                 cosmos_encoder::serialize(&ClientReliableMessages::StopPiloting),
@@ -114,10 +112,10 @@ fn process_ship_movement(
 
         let mut roll = 0.0;
 
-        if input_handler.check_pressed(CosmosInputs::RollLeft, &keys, &mouse) {
+        if input_handler.check_pressed(CosmosInputs::RollLeft) {
             roll += 0.25;
         }
-        if input_handler.check_pressed(CosmosInputs::RollRight, &keys, &mouse) {
+        if input_handler.check_pressed(CosmosInputs::RollRight) {
             roll -= 0.25;
         }
 
@@ -141,10 +139,8 @@ fn reset_cursor(
 }
 
 fn process_player_movement(
-    keys: Res<Input<KeyCode>>,
-    mouse: Res<Input<MouseButton>>,
     time: Res<Time>,
-    input_handler: ResMut<CosmosInputHandler>,
+    input_handler: InputChecker,
     mut query: Query<(Entity, &mut Velocity, &Transform, Option<&PlayerAlignment>), (With<LocalPlayer>, Without<Pilot>)>,
     cam_query: Query<&Transform, With<MainCamera>>,
     parent_query: Query<&Parent>,
@@ -154,7 +150,7 @@ fn process_player_movement(
     if let Ok((ent, mut velocity, player_transform, player_alignment)) = query.get_single_mut() {
         let cam_trans = player_transform.mul_transform(*cam_query.single());
 
-        let max_speed: f32 = match input_handler.check_pressed(CosmosInputs::Sprint, &keys, &mouse) {
+        let max_speed: f32 = match input_handler.check_pressed(CosmosInputs::Sprint) {
             false => 3.0,
             true => 20.0,
         };
@@ -199,28 +195,28 @@ fn process_player_movement(
 
         let mut new_linvel = parent_rot.inverse().mul_vec3(velocity.linvel);
 
-        if input_handler.check_pressed(CosmosInputs::MoveForward, &keys, &mouse) {
+        if input_handler.check_pressed(CosmosInputs::MoveForward) {
             new_linvel += forward * time;
         }
-        if input_handler.check_pressed(CosmosInputs::MoveBackward, &keys, &mouse) {
+        if input_handler.check_pressed(CosmosInputs::MoveBackward) {
             new_linvel -= forward * time;
         }
-        if input_handler.check_pressed(CosmosInputs::MoveUp, &keys, &mouse) {
+        if input_handler.check_pressed(CosmosInputs::MoveUp) {
             new_linvel += movement_up * time;
         }
-        if input_handler.check_pressed(CosmosInputs::MoveDown, &keys, &mouse) {
+        if input_handler.check_pressed(CosmosInputs::MoveDown) {
             new_linvel -= movement_up * time;
         }
-        if input_handler.check_just_pressed(CosmosInputs::Jump, &keys, &mouse) {
+        if input_handler.check_just_pressed(CosmosInputs::Jump) {
             new_linvel += up * 5.0;
         }
-        if input_handler.check_pressed(CosmosInputs::MoveLeft, &keys, &mouse) {
+        if input_handler.check_pressed(CosmosInputs::MoveLeft) {
             new_linvel -= right * time;
         }
-        if input_handler.check_pressed(CosmosInputs::MoveRight, &keys, &mouse) {
+        if input_handler.check_pressed(CosmosInputs::MoveRight) {
             new_linvel += right * time;
         }
-        if input_handler.check_pressed(CosmosInputs::SlowDown, &keys, &mouse) {
+        if input_handler.check_pressed(CosmosInputs::SlowDown) {
             let mut amt = new_linvel * 0.5;
             if amt.dot(amt) > max_speed * max_speed {
                 amt = amt.normalize() * max_speed;

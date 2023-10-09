@@ -3,7 +3,7 @@
 use bevy::{prelude::*, utils::HashMap};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
-    block::{Block, BlockFace},
+    block::{blocks::AIR_BLOCK_ID, Block, BlockFace},
     blockitems::BlockItems,
     entities::player::Player,
     events::block_events::BlockChangedEvent,
@@ -86,17 +86,19 @@ fn handle_block_break_events(
 
             let block_id = ev.structure_block.block_id(&structure);
 
-            if let Ok(mut inventory) = inventory_query.get_mut(ev.breaker) {
-                let block = blocks.from_numeric_id(block_id);
+            if block_id != AIR_BLOCK_ID {
+                if let Ok(mut inventory) = inventory_query.get_mut(ev.breaker) {
+                    let block = blocks.from_numeric_id(block_id);
 
-                if let Some(item_id) = block_items.item_from_block(block) {
-                    let item = items.from_numeric_id(item_id);
+                    if let Some(item_id) = block_items.item_from_block(block) {
+                        let item = items.from_numeric_id(item_id);
 
-                    inventory.insert(item, 1);
+                        inventory.insert(item, 1);
+                    }
                 }
-            }
 
-            structure.remove_block_at(ev.structure_block.coords(), &blocks, Some(&mut event_writer));
+                structure.remove_block_at(ev.structure_block.coords(), &blocks, Some(&mut event_writer));
+            }
         }
     }
 }

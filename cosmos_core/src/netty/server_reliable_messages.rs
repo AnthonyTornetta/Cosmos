@@ -111,13 +111,6 @@ pub enum ServerReliableMessages {
         /// The number of chunks that need to be loaded from the server.
         chunks_needed: ChunksNeedLoaded,
     },
-    /// Represents the inventory that an entity has.
-    EntityInventory {
-        /// The serialized version of an inventory.
-        serialized_inventory: Vec<u8>,
-        /// The entity that has this inventory.
-        owner: Entity,
-    },
     /// Represents the server's message of the day.
     MOTD {
         /// The message of the day.

@@ -2,8 +2,8 @@
 
 use bevy::prelude::App;
 
-mod sync;
+mod netty;
 
 pub(super) fn register(app: &mut App) {
-    sync::register(app);
+    netty::register(app);
 }

@@ -532,18 +532,6 @@ fn client_sync_players(
                     pilot_entity,
                 });
             }
-            ServerReliableMessages::EntityInventory {
-                serialized_inventory,
-                owner,
-            } => {
-                if let Some(client_entity) = network_mapping.client_from_server(&owner) {
-                    let inventory: Inventory = cosmos_encoder::deserialize(&serialized_inventory).unwrap();
-
-                    commands.entity(client_entity).insert(inventory);
-                } else {
-                    eprintln!("Error: unrecognized entity {} received from server!", owner.index());
-                }
-            }
             ServerReliableMessages::Star { entity, star } => {
                 if let Some(client_entity) = network_mapping.client_from_server(&entity) {
                     commands

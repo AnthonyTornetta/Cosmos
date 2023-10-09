@@ -23,7 +23,7 @@ fn add_crosshair(mut commands: Commands, asset_server: Res<AssetServer>) {
         .with_children(|parent| {
             parent
                 .spawn(ImageBundle {
-                    image: asset_server.load("images/ui/crosshair.png").into(),
+                    image: asset_server.load("cosmos/images/ui/crosshair.png").into(),
                     style: Style {
                         width: Val::Px(8.0),
                         height: Val::Px(8.0),
