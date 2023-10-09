@@ -140,7 +140,7 @@ impl NettyChannelServer {
             },
             ChannelConfig {
                 channel_id: Self::DeltaLod.into(),
-                max_memory_usage_bytes: 5 * 1024 * 1024,
+                max_memory_usage_bytes: 5 * MB,
                 send_type: SendType::ReliableOrdered {
                     resend_time: Duration::from_millis(200),
                 },
