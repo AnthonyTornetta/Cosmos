@@ -82,14 +82,12 @@ fn listen(
                         if let Ok(mut inventory) = inventory_query.get_mut(inventory_a) {
                             inventory
                                 .self_swap_slots(slot_a as usize, slot_b as usize)
-                                .expect(format!("Got bad inventory slots from player! {}, {}", slot_a, slot_b).as_str());
+                                .unwrap_or_else(|_| panic!("Got bad inventory slots from player! {}, {}", slot_a, slot_b));
                         }
-                    } else {
-                        if let Ok([mut inventory_a, mut inventory_b]) = inventory_query.get_many_mut([inventory_a, inventory_b]) {
-                            inventory_a
-                                .swap_slots(slot_a as usize, &mut inventory_b, slot_b as usize)
-                                .expect(format!("Got bad inventory slots from player! {}, {}", slot_a, slot_b).as_str());
-                        }
+                    } else if let Ok([mut inventory_a, mut inventory_b]) = inventory_query.get_many_mut([inventory_a, inventory_b]) {
+                        inventory_a
+                            .swap_slots(slot_a as usize, &mut inventory_b, slot_b as usize)
+                            .unwrap_or_else(|_| panic!("Got bad inventory slots from player! {}, {}", slot_a, slot_b));
                     }
                 }
                 ClientInventoryMessages::AutoMove {
@@ -102,7 +100,7 @@ fn listen(
                         if let Ok(mut inventory) = inventory_query.get_mut(from_inventory) {
                             inventory
                                 .auto_move(from_slot as usize, quantity)
-                                .expect(format!("Got bad inventory slot from player! {}", from_slot).as_str());
+                                .unwrap_or_else(|_| panic!("Got bad inventory slot from player! {}", from_slot));
                         }
                     } else {
                         panic!("Not implemented yet!");
@@ -119,14 +117,12 @@ fn listen(
                         if let Ok(mut inventory) = inventory_query.get_mut(from_inventory) {
                             inventory
                                 .self_move_itemstack(from_slot as usize, to_slot as usize, quantity)
-                                .expect(format!("Got bad inventory slots from player! {}, {}", from_slot, to_slot).as_str());
+                                .unwrap_or_else(|_| panic!("Got bad inventory slots from player! {}, {}", from_slot, to_slot));
                         }
-                    } else {
-                        if let Ok([mut inventory_a, mut inventory_b]) = inventory_query.get_many_mut([from_inventory, to_inventory]) {
-                            inventory_a
-                                .move_itemstack(from_slot as usize, &mut inventory_b, to_slot as usize, quantity)
-                                .expect(format!("Got bad inventory slots from player! {}, {}", from_slot, to_slot).as_str());
-                        }
+                    } else if let Ok([mut inventory_a, mut inventory_b]) = inventory_query.get_many_mut([from_inventory, to_inventory]) {
+                        inventory_a
+                            .move_itemstack(from_slot as usize, &mut inventory_b, to_slot as usize, quantity)
+                            .unwrap_or_else(|_| panic!("Got bad inventory slots from player! {}, {}", from_slot, to_slot));
                     }
                 }
                 ClientInventoryMessages::PickupItemstack {

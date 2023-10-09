@@ -209,7 +209,7 @@ impl Inventory {
 
     /// Removes an itemstack at that slot and replaces it with `None`. Returns the itemstack previously in that slot
     pub fn remove_itemstack_at(&mut self, slot: usize) -> Option<ItemStack> {
-        std::mem::replace(&mut self.items[slot], None)
+        self.items[slot].take()
     }
 
     /// Inserts the items & quantity at that slot. Returns the number of items left over, or the full
@@ -300,7 +300,7 @@ impl Inventory {
         let is_2 = other_inventory.itemstack_at(other_slot);
 
         if is_1.is_none() && is_2.is_none() {
-            return true;
+            true
         } else if let Some(is_1) = is_1 {
             if let Some(is_2) = is_2 {
                 is_1.is_same_as(is_2)
@@ -352,7 +352,7 @@ impl Inventory {
             self.set_itemstack_at(from, None);
         }
 
-        return Ok(left_over);
+        Ok(left_over)
     }
 
     /// Moves an item from slot `from` to slot `to`.
@@ -395,7 +395,7 @@ impl Inventory {
             self.set_itemstack_at(from, None);
         }
 
-        return Ok(left_over);
+        Ok(left_over)
     }
 
     /// Calculates the number of that specific item in this inventory.

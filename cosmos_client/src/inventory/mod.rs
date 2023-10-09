@@ -47,11 +47,8 @@ fn close_button_system(
     mut interaction_query: Query<&Interaction, (Changed<Interaction>, With<Button>, With<CloseInventoryButton>)>,
 ) {
     for interaction in interaction_query.iter_mut() {
-        match *interaction {
-            Interaction::Pressed => {
-                *inventory_state = InventoryState::Closed;
-            }
-            _ => {}
+        if *interaction == Interaction::Pressed {
+            *inventory_state = InventoryState::Closed;
         }
     }
 }
@@ -361,10 +358,10 @@ fn rerender_inventory_slot(
 
         if as_child {
             ecmds.with_children(|p| {
-                create_item_stack_slot_data(&is, &mut p.spawn_empty(), text_style, quantity);
+                create_item_stack_slot_data(is, &mut p.spawn_empty(), text_style, quantity);
             });
         } else {
-            create_item_stack_slot_data(&is, ecmds, text_style, quantity);
+            create_item_stack_slot_data(is, ecmds, text_style, quantity);
         }
     }
 }
@@ -421,7 +418,7 @@ fn create_inventory_slot(
 struct FollowCursor;
 
 fn pickup_item_into_cursor(
-    displayed_item_clicked: &mut DisplayedItemFromInventory,
+    displayed_item_clicked: &DisplayedItemFromInventory,
     commands: &mut Commands,
     quantity_multiplier: f32,
     inventory: &mut Inventory,
@@ -486,7 +483,7 @@ fn pickup_item_into_cursor(
 fn handle_interactions(
     mut commands: Commands,
     mut following_cursor: Query<(Entity, &mut HeldItemStack)>,
-    mut interactions: Query<(&mut DisplayedItemFromInventory, &Interaction), Without<FollowCursor>>,
+    interactions: Query<(&DisplayedItemFromInventory, &Interaction), Without<FollowCursor>>,
     input_handler: InputChecker,
     mut inventory_query: Query<&mut Inventory>,
     mut client: ResMut<RenetClient>,
@@ -502,8 +499,8 @@ fn handle_interactions(
         return;
     }
 
-    let Some((mut displayed_item_clicked, _)) = interactions
-        .iter_mut()
+    let Some((displayed_item_clicked, _)) = interactions
+        .iter()
         // hovered or pressed should trigger this because pressed doesn't detected right click
         .find(|(_, interaction)| !matches!(interaction, Interaction::None))
     else {
@@ -612,20 +609,18 @@ fn handle_interactions(
                 }
             }
         }
-    } else {
-        if let Ok(mut inventory) = inventory_query.get_mut(displayed_item_clicked.inventory_holder) {
-            let quantity_multiplier = if lmb { 1.0 } else { 0.5 };
+    } else if let Ok(mut inventory) = inventory_query.get_mut(displayed_item_clicked.inventory_holder) {
+        let quantity_multiplier = if lmb { 1.0 } else { 0.5 };
 
-            pickup_item_into_cursor(
-                &mut displayed_item_clicked,
-                &mut commands,
-                quantity_multiplier,
-                &mut inventory,
-                &asset_server,
-                &mut client,
-                server_inventory_holder,
-            );
-        }
+        pickup_item_into_cursor(
+            &displayed_item_clicked,
+            &mut commands,
+            quantity_multiplier,
+            &mut inventory,
+            &asset_server,
+            &mut client,
+            server_inventory_holder,
+        );
     }
 }
 
