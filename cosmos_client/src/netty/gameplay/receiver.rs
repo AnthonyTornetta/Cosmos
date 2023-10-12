@@ -2,13 +2,10 @@
 //!
 //! This should eventually be broken up
 
-use std::time::Duration;
-
 use bevy::{
     core_pipeline::{bloom::BloomSettings, Skybox},
     prelude::*,
     render::camera::Projection,
-    time::common_conditions::on_timer,
     window::PrimaryWindow,
 };
 use bevy_rapier3d::prelude::*;
