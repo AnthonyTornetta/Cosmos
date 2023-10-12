@@ -2,10 +2,13 @@
 //!
 //! This should eventually be broken up
 
+use std::time::Duration;
+
 use bevy::{
     core_pipeline::{bloom::BloomSettings, Skybox},
     prelude::*,
     render::camera::Projection,
+    time::common_conditions::on_timer,
     window::PrimaryWindow,
 };
 use bevy_rapier3d::prelude::*;
@@ -679,9 +682,7 @@ pub(super) fn register(app: &mut App) {
             (
                 fix_location.before(client_sync_players),
                 lerp_towards.after(client_sync_players),
-                sync_transforms_and_locations,
-                handle_child_syncing,
-                add_previous_location,
+                (sync_transforms_and_locations, handle_child_syncing, add_previous_location).chain(), //.run_if(on_timer(Duration::from_millis(1000))),
             )
                 .chain()
                 .run_if(in_state(GameState::Playing)),

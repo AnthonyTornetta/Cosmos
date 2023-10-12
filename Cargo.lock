@@ -796,7 +796,7 @@ checksum = "15702dff420fac72c2ab92428a8600e079ae89c5845401c4e39b843665a3d2d0"
 [[package]]
 name = "bevy_rapier3d"
 version = "0.22.0"
-source = "git+https://github.com/AnthonyTornetta/bevy_rapier/#c9ea6f90e13889deb17ae59fb06f996b89e682e5"
+source = "git+https://github.com/AnthonyTornetta/bevy_rapier/#c8d4ccdc1db051ca976c5f59c242e2bbc24c392a"
 dependencies = [
  "bevy",
  "bitflags 1.3.2",
@@ -2950,6 +2950,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "num-derive"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cfb77679af88f8b125209d354a202862602672222e7f2313fdd6dc349bad4712"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.34",
+]
+
+[[package]]
 name = "num-integer"
 version = "0.1.45"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3094,7 +3105,7 @@ dependencies = [
  "jni 0.20.0",
  "ndk",
  "ndk-context",
- "num-derive",
+ "num-derive 0.3.3",
  "num-traits",
  "oboe-sys",
 ]
@@ -3209,7 +3220,7 @@ dependencies = [
  "downcast-rs",
  "either",
  "nalgebra",
- "num-derive",
+ "num-derive 0.3.3",
  "num-traits",
  "rustc-hash",
  "serde",
@@ -3432,7 +3443,7 @@ checksum = "9c8a99fddc9f0ba0a85884b8d14e3592853e787d581ca1816c91349b10e4eeab"
 [[package]]
 name = "rapier3d"
 version = "0.17.2"
-source = "git+https://github.com/AnthonyTornetta/rapier#5f07d6eef524467988a61345988a07c97eaa61b3"
+source = "git+https://github.com/AnthonyTornetta/rapier#e9ed17febee278bc3e1dea12e8f026f381fd86a1"
 dependencies = [
  "approx",
  "arrayvec",
@@ -3441,7 +3452,7 @@ dependencies = [
  "crossbeam",
  "downcast-rs",
  "nalgebra",
- "num-derive",
+ "num-derive 0.4.1",
  "num-traits",
  "parry3d",
  "rustc-hash",

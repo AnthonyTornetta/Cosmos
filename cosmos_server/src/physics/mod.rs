@@ -2,7 +2,9 @@
 //!
 //! Mostly used to move entities between worlds & sync up locations to their transforms.
 
-use bevy::{prelude::*, utils::HashSet};
+use std::time::Duration;
+
+use bevy::{prelude::*, time::common_conditions::on_timer, utils::HashSet};
 use bevy_rapier3d::prelude::{PhysicsWorld, RapierContext, RapierWorld, DEFAULT_WORLD_ID};
 use cosmos_core::{
     entities::player::Player,
@@ -342,6 +344,7 @@ pub(super) fn register(app: &mut App) {
                 add_previous_location,
             )
                 .chain()
+                // .run_if(on_timer(Duration::from_millis(1000)))
                 .run_if(in_state(GameState::Playing))
                 .before(server_listen_messages),
         )
