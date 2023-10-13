@@ -486,8 +486,6 @@ fn compute_meshes_and_kill_dead_entities(
         return;
     }
 
-    println!("TODO: {}", meshes_to_compute.len());
-
     let mut to_clean_meshes = VecDeque::with_capacity(meshes_to_compute.0.capacity());
 
     swap(&mut to_clean_meshes, &mut meshes_to_compute.0);
