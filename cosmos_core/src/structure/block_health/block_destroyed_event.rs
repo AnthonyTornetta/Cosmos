@@ -1,10 +1,11 @@
 //! Block destroyed event
 
-use bevy::prelude::{App, Entity};
+use bevy::prelude::{App, Entity, Event};
 
 use crate::structure::structure_block::StructureBlock;
 
 /// This event is sent when a block is destroyed
+#[derive(Debug, Event)]
 pub struct BlockDestroyedEvent {
     /// The structure that had its block destroyed
     pub structure_entity: Entity,

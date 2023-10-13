@@ -3,9 +3,9 @@
 use bevy::prelude::*;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::netty::client_reliable_messages::ClientReliableMessages;
-use cosmos_core::netty::cosmos_encoder;
+use cosmos_core::netty::{cosmos_encoder, NettyChannelClient};
 use cosmos_core::physics::location::{Location, SECTOR_DIMENSIONS};
-use cosmos_core::{netty::NettyChannel, structure::Structure};
+use cosmos_core::structure::Structure;
 
 use crate::netty::flags::LocalPlayer;
 use crate::state::game_state::GameState;
@@ -32,17 +32,15 @@ fn populate_structures(
     let max_dist = SECTOR_DIMENSIONS * 2.0;
     let max_dist_sqrd = max_dist * max_dist;
 
-    for (entity, loc) in query
+    for (entity, _) in query
         .iter()
         .filter(|(_, location)| player_location.distance_sqrd(location) < max_dist_sqrd)
     {
         if let Some(server_entity) = network_mapping.server_from_client(&entity) {
             commands.entity(entity).remove::<NeedsPopulated>();
 
-            println!("Populating @ {loc}");
-
             client.send_message(
-                NettyChannel::Reliable.id(),
+                NettyChannelClient::Reliable,
                 cosmos_encoder::serialize(&ClientReliableMessages::SendAllChunks { server_entity }),
             );
         }
@@ -50,8 +48,11 @@ fn populate_structures(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems((
-        populate_structures.in_set(OnUpdate(GameState::Playing)),
-        populate_structures.in_set(OnUpdate(GameState::LoadingWorld)),
-    ));
+    app.add_systems(
+        Update,
+        (
+            populate_structures.run_if(in_state(GameState::Playing)),
+            populate_structures.run_if(in_state(GameState::LoadingWorld)),
+        ),
+    );
 }

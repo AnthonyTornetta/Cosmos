@@ -1,6 +1,6 @@
 //! Used to represent how much damage a block can take before it breaks
 
-use bevy::prelude::{App, IntoSystemAppConfig, OnExit, Res, ResMut, States};
+use bevy::prelude::{App, OnExit, Res, ResMut, States};
 
 use crate::registry::{self, identifiable::Identifiable, Registry};
 
@@ -48,12 +48,7 @@ impl Identifiable for BlockHardness {
     }
 }
 
-fn register_hardness(
-    registry: &mut Registry<BlockHardness>,
-    value: f32,
-    blocks: &Registry<Block>,
-    name: &str,
-) {
+fn register_hardness(registry: &mut Registry<BlockHardness>, value: f32, blocks: &Registry<Block>, name: &str) {
     if let Some(block) = blocks.from_id(name) {
         registry.register(BlockHardness::new(block, value));
     } else {
@@ -61,17 +56,20 @@ fn register_hardness(
     }
 }
 
-fn register_block_hardness(
-    blocks: Res<Registry<Block>>,
-    mut registry: ResMut<Registry<BlockHardness>>,
-) {
+fn register_block_hardness(blocks: Res<Registry<Block>>, mut registry: ResMut<Registry<BlockHardness>>) {
     register_hardness(&mut registry, 0.0, &blocks, "cosmos:air");
     register_hardness(&mut registry, 10.0, &blocks, "cosmos:grass");
     register_hardness(&mut registry, 10.0, &blocks, "cosmos:dirt");
     register_hardness(&mut registry, 50.0, &blocks, "cosmos:stone");
+    register_hardness(&mut registry, 50.0, &blocks, "cosmos:molten_stone");
 
-    register_hardness(&mut registry, 30.0, &blocks, "cosmos:cherry_log");
+    register_hardness(&mut registry, 30.0, &blocks, "cosmos:log");
+
     register_hardness(&mut registry, 1.0, &blocks, "cosmos:cherry_leaf");
+
+    register_hardness(&mut registry, 30.0, &blocks, "cosmos:redwood_log");
+    register_hardness(&mut registry, 1.0, &blocks, "cosmos:redwood_leaf");
+    register_hardness(&mut registry, 10.0, &blocks, "cosmos:cheese");
 
     register_hardness(&mut registry, 100.0, &blocks, "cosmos:ship_core");
     register_hardness(&mut registry, 20.0, &blocks, "cosmos:energy_cell");
@@ -79,31 +77,26 @@ fn register_block_hardness(
     register_hardness(&mut registry, 20.0, &blocks, "cosmos:laser_cannon");
     register_hardness(&mut registry, 20.0, &blocks, "cosmos:thruster");
     register_hardness(&mut registry, 20.0, &blocks, "cosmos:light");
+    register_hardness(&mut registry, 0.1, &blocks, "cosmos:short_grass");
 
     register_hardness(&mut registry, 100.0, &blocks, "cosmos:ship_hull");
     register_hardness(&mut registry, 100.0, &blocks, "cosmos:glass");
+
+    register_hardness(&mut registry, 100.0, &blocks, "cosmos:ice");
+    register_hardness(&mut registry, 100.0, &blocks, "cosmos:water");
 }
 
 fn sanity_check(blocks: Res<Registry<Block>>, hardness: Res<Registry<BlockHardness>>) {
     for block in blocks.iter() {
         if hardness.from_id(block.unlocalized_name()).is_none() {
-            eprintln!(
-                "!!! WARNING !!! Missing block hardness value for {}",
-                block.unlocalized_name()
-            );
+            eprintln!("!!! WARNING !!! Missing block hardness value for {}", block.unlocalized_name());
         }
     }
 }
 
-pub(super) fn register<T: States + Clone + Copy>(
-    app: &mut App,
-    loading_state: T,
-    post_loading_state: T,
-) {
+pub(super) fn register<T: States + Clone + Copy>(app: &mut App, loading_state: T, post_loading_state: T) {
     registry::create_registry::<BlockHardness>(app);
 
-    app.add_systems((
-        register_block_hardness.in_schedule(OnExit(loading_state)),
-        sanity_check.in_schedule(OnExit(post_loading_state)),
-    ));
+    app.add_systems(OnExit(loading_state), register_block_hardness);
+    app.add_systems(OnExit(post_loading_state), sanity_check);
 }

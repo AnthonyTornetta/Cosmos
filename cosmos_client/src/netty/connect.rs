@@ -8,10 +8,13 @@ use std::{
 };
 
 use bevy::prelude::*;
-use bevy_renet::renet::{ClientAuthentication, RenetClient};
+use bevy_renet::renet::{
+    transport::{ClientAuthentication, NetcodeClientTransport},
+    RenetClient,
+};
 use cosmos_core::{
     entities::player::Player,
-    netty::{client_connection_config, PROTOCOL_ID},
+    netty::{connection_config, PROTOCOL_ID},
 };
 
 use crate::{
@@ -24,19 +27,16 @@ use crate::{
 
 use super::flags::LocalPlayer;
 
-fn new_renet_client(host: &str) -> RenetClient {
+fn new_netcode_transport(host: &str) -> NetcodeClientTransport {
     let port: u16 = 1337;
 
     let server_addr = format!("{host}:{port}").parse().unwrap();
     let socket = UdpSocket::bind("0.0.0.0:0").unwrap();
 
-    socket
-        .set_nonblocking(true)
-        .expect("Unable to make UDP non-blocking!");
+    socket.set_nonblocking(true).expect("Unable to make UDP non-blocking!");
 
-    let connection_config = client_connection_config();
-    let cur_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-    let client_id = cur_time.as_millis() as u64;
+    let current_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+    let client_id = current_time.as_millis() as u64;
 
     let name = "CoolPlayer";
 
@@ -57,12 +57,12 @@ fn new_renet_client(host: &str) -> RenetClient {
 
     println!("Connecting to {server_addr}");
 
-    RenetClient::new(cur_time, socket, connection_config, auth).unwrap()
+    NetcodeClientTransport::new(current_time, auth, socket).unwrap()
 }
 
 #[derive(Resource)]
 /// Used to setup the connection with the server
-pub struct ConnectionConfig {
+pub struct HostConfig {
     /// The server's host
     pub host_name: String,
 }
@@ -70,30 +70,25 @@ pub struct ConnectionConfig {
 /// Establishes a connection with the server.
 ///
 /// Make sure the `ConnectionConfig` resource was added first.
-pub fn establish_connection(mut commands: Commands, connection_config: Res<ConnectionConfig>) {
+pub fn establish_connection(mut commands: Commands, host_config: Res<HostConfig>) {
     println!("Establishing connection w/ server...");
     commands.insert_resource(ClientLobby::default());
     commands.insert_resource(MostRecentTick(None));
-    commands.insert_resource(new_renet_client(connection_config.host_name.as_str()));
+    commands.insert_resource(RenetClient::new(connection_config()));
+    commands.insert_resource(new_netcode_transport(host_config.host_name.as_str()));
     commands.insert_resource(NetworkMapping::default());
 }
 
 /// Waits for a connection to be made, then changes the game state to `GameState::LoadingWorld`.
-pub fn wait_for_connection(
-    mut state_changer: ResMut<NextState<GameState>>,
-    client: Res<RenetClient>,
-) {
-    if client.is_connected() {
+pub fn wait_for_connection(mut state_changer: ResMut<NextState<GameState>>, transport: Res<NetcodeClientTransport>) {
+    if transport.is_connected() {
         println!("Loading server data...");
         state_changer.set(GameState::LoadingWorld);
     }
 }
 
 /// Waits for the `LoadingWorld` state to be done loading, then transitions to the `GameState::Playing`
-pub fn wait_for_done_loading(
-    mut state_changer: ResMut<NextState<GameState>>,
-    query: Query<&Player, With<LocalPlayer>>,
-) {
+pub fn wait_for_done_loading(mut state_changer: ResMut<NextState<GameState>>, query: Query<&Player, With<LocalPlayer>>) {
     if query.get_single().is_ok() {
         println!("Got local player, starting game!");
         state_changer.set(GameState::Playing);

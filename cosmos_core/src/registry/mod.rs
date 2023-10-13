@@ -2,6 +2,7 @@
 
 pub mod identifiable;
 pub mod many_to_one;
+pub mod one_to_one;
 
 use bevy::prelude::{App, Resource};
 use bevy::utils::HashMap;
@@ -35,10 +36,19 @@ impl fmt::Display for AddLinkError {
 impl std::error::Error for AddLinkError {}
 
 /// Represents a bunch of values that are identifiable by their unlocalized name + numeric ids.
-#[derive(Default, Resource)]
-pub struct Registry<T: Identifiable + Sync + Send> {
+#[derive(Resource, Debug)]
+pub struct Registry<T: Identifiable> {
     contents: Vec<T>,
     unlocalized_name_to_id: HashMap<String, u16>,
+}
+
+impl<T: Identifiable> Default for Registry<T> {
+    fn default() -> Self {
+        Self {
+            contents: Vec::new(),
+            unlocalized_name_to_id: Default::default(),
+        }
+    }
 }
 
 impl<T: Identifiable + Sync + Send> Registry<T> {
@@ -61,6 +71,14 @@ impl<T: Identifiable + Sync + Send> Registry<T> {
         &self.contents[id as usize]
     }
 
+    /// Prefer to use `Self::from_id` in general, numeric IDs may change, unlocalized names should not
+    ///
+    /// Returns None if no item exists for this id
+    #[inline]
+    pub fn try_from_numeric_id(&self, id: u16) -> Option<&T> {
+        self.contents.get(id as usize)
+    }
+
     /// Gets the value that has been registered with that unlocalized name.
     ///
     /// Returns None if no value was found.
@@ -76,8 +94,7 @@ impl<T: Identifiable + Sync + Send> Registry<T> {
     pub fn register(&mut self, mut item: T) {
         let id = self.contents.len() as u16;
         item.set_numeric_id(id);
-        self.unlocalized_name_to_id
-            .insert(item.unlocalized_name().to_owned(), id);
+        self.unlocalized_name_to_id.insert(item.unlocalized_name().to_owned(), id);
         self.contents.push(item);
     }
 

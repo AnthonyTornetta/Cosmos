@@ -13,7 +13,7 @@ use super::identifiable::Identifiable;
 use super::AddLinkError;
 
 /// Represents a many to one link
-#[derive(Resource, Default)]
+#[derive(Resource, Default, Debug)]
 pub struct ManyToOneRegistry<K: Identifiable + Sync + Send, V: Identifiable + Sync + Send> {
     values: HashMap<u16, V>,
 
@@ -49,8 +49,7 @@ impl<K: Identifiable + Sync + Send, V: Identifiable + Sync + Send> ManyToOneRegi
         value.set_numeric_id(id);
         self.next_id += 1;
 
-        self.name_to_value_pointer
-            .insert(value.unlocalized_name().into(), id);
+        self.name_to_value_pointer.insert(value.unlocalized_name().into(), id);
         self.values.insert(id, value);
     }
 
@@ -86,14 +85,14 @@ impl<K: Identifiable + Sync + Send, V: Identifiable + Sync + Send> ManyToOneRegi
     pub fn iter(&self) -> Values<'_, u16, V> {
         self.values.values()
     }
+
+    /// Returns true if this registry contains an entry for that key
+    pub fn contains(&self, key: &K) -> bool {
+        self.pointers.contains_key(&key.id())
+    }
 }
 
 /// Initializes & adds the resource to bevy that can then be used in systems via `Res<ManyToOneRegistry<K, V>>`
-pub fn create_many_to_one_registry<
-    K: Identifiable + Sync + Send + 'static,
-    V: Identifiable + Sync + Send + 'static,
->(
-    app: &mut App,
-) {
+pub fn create_many_to_one_registry<K: Identifiable + Sync + Send + 'static, V: Identifiable + Sync + Send + 'static>(app: &mut App) {
     app.insert_resource(ManyToOneRegistry::<K, V>::new());
 }

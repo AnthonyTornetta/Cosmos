@@ -2,7 +2,7 @@
 
 use bevy::{
     ecs::system::EntityCommands,
-    prelude::{Added, App, Commands, Entity, Query},
+    prelude::{Added, App, Commands, Entity, Query, Update},
 };
 use bevy_rapier3d::prelude::{Ccd, ExternalImpulse, ReadMassProperties, RigidBody, Velocity};
 
@@ -17,13 +17,7 @@ use super::{ship_movement::ShipMovement, Ship};
 /// Implement this to add a custom way to build ships
 pub trait TShipBuilder {
     /// Adds everything to the entity needed to have a ship
-    fn insert_ship(
-        &self,
-        entity: &mut EntityCommands,
-        location: Location,
-        velocity: Velocity,
-        structure: &mut Structure,
-    );
+    fn insert_ship(&self, entity: &mut EntityCommands, location: Location, velocity: Velocity, structure: &mut Structure);
 }
 
 /// Default way to build a ship
@@ -39,15 +33,8 @@ impl<T: TStructureBuilder> ShipBuilder<T> {
 }
 
 impl<T: TStructureBuilder> TShipBuilder for ShipBuilder<T> {
-    fn insert_ship(
-        &self,
-        entity: &mut EntityCommands,
-        location: Location,
-        velocity: Velocity,
-        structure: &mut Structure,
-    ) {
-        self.structure_builder
-            .insert_structure(entity, location, velocity, structure);
+    fn insert_ship(&self, entity: &mut EntityCommands, location: Location, velocity: Velocity, structure: &mut Structure) {
+        self.structure_builder.insert_structure(entity, location, velocity, structure);
 
         entity.insert(Ship);
     }
@@ -67,5 +54,5 @@ fn on_add_ship(query: Query<Entity, Added<Ship>>, mut commands: Commands) {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(on_add_ship);
+    app.add_systems(Update, on_add_ship);
 }

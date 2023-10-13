@@ -29,13 +29,9 @@ fn add_text(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn((
         TextBundle {
             style: Style {
-                position: UiRect {
-                    bottom: Val::Px(5.0),
-                    left: Val::Px(5.0),
-                    ..default()
-                },
+                bottom: Val::Px(5.0),
+                left: Val::Px(5.0),
                 position_type: PositionType::Absolute,
-
                 ..default()
             },
             text: Text::from_section("(x, y, z) (x, y, z)", text_style.clone()),
@@ -47,11 +43,8 @@ fn add_text(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn((
         TextBundle {
             style: Style {
-                position: UiRect {
-                    bottom: Val::Px(5.0 + text_gap),
-                    left: Val::Px(5.0),
-                    ..default()
-                },
+                bottom: Val::Px(5.0 + text_gap),
+                left: Val::Px(5.0),
                 position_type: PositionType::Absolute,
 
                 ..default()
@@ -65,11 +58,8 @@ fn add_text(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn((
         TextBundle {
             style: Style {
-                position: UiRect {
-                    bottom: Val::Px(5.0 + text_gap * 2.0),
-                    left: Val::Px(5.0),
-                    ..default()
-                },
+                bottom: Val::Px(5.0 + text_gap * 2.0),
+                left: Val::Px(5.0),
                 position_type: PositionType::Absolute,
 
                 ..default()
@@ -88,21 +78,12 @@ fn update_coords(
 ) {
     if let Ok(loc) = query.get_single() {
         for mut txt_coords in txt_coords.iter_mut() {
-            txt_coords.sections[0].value = format!(
-                "({}), ({:.1}, {:.1}, {:.1})",
-                loc.sector(),
-                loc.local.x,
-                loc.local.y,
-                loc.local.z
-            );
+            txt_coords.sections[0].value = format!("({}), ({:.1}, {:.1}, {:.1})", loc.sector(), loc.local.x, loc.local.y, loc.local.z);
         }
 
         for mut txt_coords_actual in txt_coords_actual.iter_mut() {
             let absolute_coords = loc.absolute_coords();
-            txt_coords_actual.sections[0].value = format!(
-                "({:.1}, {:.1}, {:.1})",
-                absolute_coords.x, absolute_coords.y, absolute_coords.z
-            );
+            txt_coords_actual.sections[0].value = format!("({:.1}, {:.1}, {:.1})", absolute_coords.x, absolute_coords.y, absolute_coords.z);
         }
     }
 }
@@ -121,6 +102,6 @@ fn update_fps(mut query: Query<(&mut Text, &mut FPSCounter)>, time: Res<Time>) {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(add_text.in_schedule(OnEnter(GameState::Playing)))
-        .add_systems((update_coords, update_fps).in_set(OnUpdate(GameState::Playing)));
+    app.add_systems(OnEnter(GameState::Playing), add_text)
+        .add_systems(Update, (update_coords, update_fps).run_if(in_state(GameState::Playing)));
 }

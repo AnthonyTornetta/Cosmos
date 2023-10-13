@@ -3,14 +3,14 @@
 use std::time::Duration;
 
 use bevy::{
-    prelude::{App, EventWriter, ResMut, Resource},
-    reflect::{FromReflect, Reflect},
+    prelude::{App, Event, EventWriter, ResMut, Resource, Update},
+    reflect::Reflect,
     utils::HashMap,
 };
-use crossterm::event::{poll, read, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
+use crossterm::event::{poll, read, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 pub mod cosmos_command_handler;
 
-#[derive(Debug)]
+#[derive(Debug, Event)]
 /// This event is sent when the server admin types a console command
 pub struct CosmosCommandSent {
     /// The raw string the user typed
@@ -78,8 +78,7 @@ impl CosmosCommands {
 
     /// Adds information for a command, based on the `command_info` argument's name
     pub fn add_command_info(&mut self, command_info: CosmosCommandInfo) {
-        self.commands
-            .insert(command_info.name.clone(), command_info);
+        self.commands.insert(command_info.name.clone(), command_info);
     }
 
     /// Removes the command info for the given command
@@ -95,22 +94,13 @@ impl CosmosCommands {
     }
 }
 
-#[derive(Resource, Reflect, FromReflect, Debug, Default)]
+#[derive(Resource, Reflect, Debug, Default)]
 struct CurrentlyWriting(String);
 
-fn monitor_inputs(
-    mut event_writer: EventWriter<CosmosCommandSent>,
-    mut text: ResMut<CurrentlyWriting>,
-) {
+fn monitor_inputs(mut event_writer: EventWriter<CosmosCommandSent>, mut text: ResMut<CurrentlyWriting>) {
     while let Ok(event_available) = poll(Duration::ZERO) {
         if event_available {
-            if let Ok(Event::Key(KeyEvent {
-                code,
-                modifiers,
-                kind,
-                ..
-            })) = read()
-            {
+            if let Ok(crossterm::event::Event::Key(KeyEvent { code, modifiers, kind, .. })) = read() {
                 if kind != KeyEventKind::Release {
                     if let KeyCode::Char(mut c) = code {
                         if modifiers.intersects(KeyModifiers::SHIFT) {
@@ -129,9 +119,7 @@ fn monitor_inputs(
     }
 
     if !text.0.trim().is_empty() && text.0.ends_with('\n') {
-        event_writer.send(CosmosCommandSent::new(
-            text.0[0..text.0.len() - 1].to_owned(),
-        ));
+        event_writer.send(CosmosCommandSent::new(text.0[0..text.0.len() - 1].to_owned()));
 
         text.0.clear();
     }
@@ -140,7 +128,7 @@ fn monitor_inputs(
 pub(super) fn register(app: &mut App) {
     app.insert_resource(CosmosCommands::default())
         .insert_resource(CurrentlyWriting::default())
-        .add_system(monitor_inputs)
+        .add_systems(Update, monitor_inputs)
         .add_event::<CosmosCommandSent>();
 
     cosmos_command_handler::register(app);

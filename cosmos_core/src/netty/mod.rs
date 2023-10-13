@@ -7,11 +7,10 @@ pub mod netty_rigidbody;
 pub mod server_laser_cannon_system_messages;
 pub mod server_reliable_messages;
 pub mod server_unreliable_messages;
+pub mod world_tick;
 
-use bevy::{prelude::Component, utils::default};
-use bevy_renet::renet::{
-    ChannelConfig, ReliableChannelConfig, RenetConnectionConfig, UnreliableChannelConfig,
-};
+use bevy::prelude::{App, Component};
+use bevy_renet::renet::{ChannelConfig, ConnectionConfig, SendType};
 use local_ip_address::local_ip;
 use std::time::Duration;
 
@@ -21,19 +20,123 @@ use std::time::Duration;
 #[derive(Component)]
 pub struct NoSendEntity;
 
-/// Different network channels have an enum here. Make sure to add any new ones here.
-pub enum NettyChannel {
+/// Network channels that the server sends to clients
+pub enum NettyChannelServer {
     /// These are reliably sent, so they are guarenteed to reach their destination.
-    /// Used for `ClientReliableMessages` and `ServerReliableMessages`
+    /// Used for sending `ServerReliableMessages`
     Reliable,
     /// These are unreliably sent, and may never reach their destination or become corrupted.
-    /// Used for `ClientUnreliableMessages` and `ServerUnreliableMessages`
+    /// Used for sending `ServerUnreliableMessages`
     Unreliable,
     /// Used for `ServerLaserCannonSystemMessages`
     LaserCannonSystem,
-
     /// Used for asteroids
-    Asteroids,
+    Asteroid,
+    /// Used for inventories
+    Inventory,
+}
+
+/// Network channels that clients send to the server
+pub enum NettyChannelClient {
+    /// These are reliably sent, so they are guarenteed to reach their destination.
+    /// Used for sending `ClientReliableMessages`
+    Reliable,
+    /// These are unreliably sent, and may never reach their destination or become corrupted.
+    /// Used for sending `ClientUnreliableMessages`
+    Unreliable,
+    /// used for inventories
+    Inventory,
+}
+
+impl From<NettyChannelClient> for u8 {
+    fn from(channel_id: NettyChannelClient) -> Self {
+        match channel_id {
+            NettyChannelClient::Reliable => 0,
+            NettyChannelClient::Unreliable => 1,
+            NettyChannelClient::Inventory => 2,
+        }
+    }
+}
+
+const KB: usize = 1024;
+const MB: usize = KB * KB;
+
+impl NettyChannelClient {
+    /// Assembles & returns the configuration for all the client channels
+    pub fn channels_config() -> Vec<ChannelConfig> {
+        vec![
+            ChannelConfig {
+                channel_id: Self::Reliable.into(),
+                max_memory_usage_bytes: 5 * MB,
+                send_type: SendType::ReliableOrdered {
+                    resend_time: Duration::from_millis(200),
+                },
+            },
+            ChannelConfig {
+                channel_id: Self::Unreliable.into(),
+                max_memory_usage_bytes: 5 * MB,
+                send_type: SendType::Unreliable,
+            },
+            ChannelConfig {
+                channel_id: Self::Inventory.into(),
+                max_memory_usage_bytes: 5 * MB,
+                send_type: SendType::ReliableOrdered {
+                    resend_time: Duration::from_millis(200),
+                },
+            },
+        ]
+    }
+}
+
+impl From<NettyChannelServer> for u8 {
+    fn from(channel_id: NettyChannelServer) -> Self {
+        match channel_id {
+            NettyChannelServer::Reliable => 0,
+            NettyChannelServer::Unreliable => 1,
+            NettyChannelServer::LaserCannonSystem => 2,
+            NettyChannelServer::Asteroid => 3,
+            NettyChannelServer::Inventory => 4,
+        }
+    }
+}
+
+impl NettyChannelServer {
+    /// Assembles & returns the config for all the server channels
+    pub fn channels_config() -> Vec<ChannelConfig> {
+        vec![
+            ChannelConfig {
+                channel_id: Self::Reliable.into(),
+                max_memory_usage_bytes: 5 * MB,
+                send_type: SendType::ReliableOrdered {
+                    resend_time: Duration::from_millis(200),
+                },
+            },
+            ChannelConfig {
+                channel_id: Self::Unreliable.into(),
+                max_memory_usage_bytes: 5 * MB,
+                send_type: SendType::Unreliable,
+            },
+            ChannelConfig {
+                channel_id: Self::LaserCannonSystem.into(),
+                max_memory_usage_bytes: 5 * MB,
+                send_type: SendType::Unreliable,
+            },
+            ChannelConfig {
+                channel_id: Self::Asteroid.into(),
+                max_memory_usage_bytes: 5 * MB,
+                send_type: SendType::ReliableOrdered {
+                    resend_time: Duration::from_millis(200),
+                },
+            },
+            ChannelConfig {
+                channel_id: Self::Inventory.into(),
+                max_memory_usage_bytes: 5 * MB,
+                send_type: SendType::ReliableOrdered {
+                    resend_time: Duration::from_millis(200),
+                },
+            },
+        ]
+    }
 }
 
 /// In the future, this should be based off the game version.
@@ -41,123 +144,20 @@ pub enum NettyChannel {
 /// Must have the same protocol to connect to something
 pub const PROTOCOL_ID: u64 = 7;
 
-impl NettyChannel {
-    /// Gets the ID used in a netty channel
-    pub fn id(&self) -> u8 {
-        match self {
-            Self::Reliable => 0,
-            Self::Unreliable => 1,
-            Self::LaserCannonSystem => 2,
-            Self::Asteroids => 3,
-        }
-    }
-
-    /// Assembles & returns the configuration for all the client channels
-    pub fn client_channels_config() -> Vec<ChannelConfig> {
-        vec![
-            ReliableChannelConfig {
-                channel_id: Self::Reliable.id(),
-                message_resend_time: Duration::from_millis(200),
-                message_send_queue_size: 4096 * 4,
-                message_receive_queue_size: 4096 * 4,
-                max_message_size: 12000,
-                packet_budget: 13000,
-                ..default()
-            }
-            .into(),
-            UnreliableChannelConfig {
-                channel_id: Self::Unreliable.id(),
-                message_send_queue_size: 4096 * 16,
-                message_receive_queue_size: 4096 * 16,
-                ..default()
-            }
-            .into(),
-            UnreliableChannelConfig {
-                channel_id: Self::LaserCannonSystem.id(),
-                packet_budget: 7000,
-                max_message_size: 6000,
-                message_send_queue_size: 0,
-                message_receive_queue_size: 4096 * 16,
-                ..default()
-            }
-            .into(),
-            ReliableChannelConfig {
-                channel_id: Self::Asteroids.id(),
-                message_send_queue_size: 1000,
-                message_receive_queue_size: 1024,
-                max_message_size: 6000,
-                packet_budget: 7000,
-                ..Default::default()
-            }
-            .into(),
-        ]
-    }
-
-    /// Assembles & returns the config for all the server channels
-    pub fn server_channels_config() -> Vec<ChannelConfig> {
-        vec![
-            ReliableChannelConfig {
-                channel_id: Self::Reliable.id(),
-                message_resend_time: Duration::from_millis(200),
-                message_send_queue_size: 4096 * 4,
-                message_receive_queue_size: 4096 * 4,
-                max_message_size: 12000,
-                packet_budget: 13000,
-                ..default()
-            }
-            .into(),
-            UnreliableChannelConfig {
-                channel_id: Self::Unreliable.id(),
-                message_send_queue_size: 4096 * 16,
-                message_receive_queue_size: 4096 * 16,
-                ..default()
-            }
-            .into(),
-            UnreliableChannelConfig {
-                channel_id: Self::LaserCannonSystem.id(),
-                packet_budget: 7000,
-                max_message_size: 6000,
-                message_send_queue_size: 4096 * 16,
-                message_receive_queue_size: 0,
-                ..default()
-            }
-            .into(),
-            ReliableChannelConfig {
-                channel_id: Self::Asteroids.id(),
-                message_send_queue_size: 1024 * 16,
-                message_receive_queue_size: 1000,
-                max_message_size: 6000,
-                packet_budget: 7000,
-                ..Default::default()
-            }
-            .into(),
-        ]
-    }
-}
-
-/// Assembles the configuration for a client configuration
-pub fn client_connection_config() -> RenetConnectionConfig {
-    RenetConnectionConfig {
-        send_channels_config: NettyChannel::client_channels_config(),
-        receive_channels_config: NettyChannel::client_channels_config(),
-        heartbeat_time: Duration::from_millis(10_000),
-        ..default()
-    }
-}
-
-/// Assembles the configuration for a server configuration
-pub fn server_connection_config() -> RenetConnectionConfig {
-    RenetConnectionConfig {
-        send_channels_config: NettyChannel::server_channels_config(),
-        receive_channels_config: NettyChannel::server_channels_config(),
-        heartbeat_time: Duration::from_millis(10_000),
-        ..default()
+/// Assembles the configuration for a renet connection
+pub fn connection_config() -> ConnectionConfig {
+    ConnectionConfig {
+        available_bytes_per_tick: 1024 * 1024,
+        client_channels_config: NettyChannelClient::channels_config(),
+        server_channels_config: NettyChannelServer::channels_config(),
     }
 }
 
 /// Gets the local ip address, or returns `127.0.0.1` if it fails to find it.
 pub fn get_local_ipaddress() -> String {
-    local_ip()
-        .map(|x| x.to_string())
-        .unwrap_or("127.0.0.1".to_owned())
+    local_ip().map(|x| x.to_string()).unwrap_or("127.0.0.1".to_owned())
+}
+
+pub(super) fn register(app: &mut App) {
+    world_tick::register(app);
 }

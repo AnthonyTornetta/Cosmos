@@ -7,7 +7,7 @@
 use crate::block::block_builder::BlockBuilder;
 use crate::loader::{AddLoadingEvent, DoneLoadingEvent, LoadingManager};
 use crate::registry::{self, Registry};
-use bevy::prelude::{App, EventWriter, IntoSystemAppConfig, OnEnter, ResMut, States};
+use bevy::prelude::{App, EventWriter, OnEnter, ResMut, States};
 
 use super::{Block, BlockProperty};
 
@@ -44,15 +44,28 @@ fn add_cosmos_blocks(
     );
 
     blocks.register(
+        BlockBuilder::new("cosmos:log".into(), 3.0)
+            .add_property(BlockProperty::Opaque)
+            .add_property(BlockProperty::Full)
+            .create(),
+    );
+
+    blocks.register(
         BlockBuilder::new("cosmos:cherry_leaf".into(), 0.1)
             .add_property(BlockProperty::Transparent)
             .create(),
     );
 
     blocks.register(
-        BlockBuilder::new("cosmos:cherry_log".into(), 3.0)
+        BlockBuilder::new("cosmos:redwood_log".into(), 3.0)
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
+            .create(),
+    );
+
+    blocks.register(
+        BlockBuilder::new("cosmos:redwood_leaf".into(), 0.1)
+            .add_property(BlockProperty::Transparent)
             .create(),
     );
 
@@ -86,7 +99,7 @@ fn add_cosmos_blocks(
     );
 
     blocks.register(
-        BlockBuilder::new("cosmos:ship_hull".to_owned(), 6.0)
+        BlockBuilder::new("cosmos:ship_hull".to_owned(), 4.0)
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .create(),
@@ -107,9 +120,43 @@ fn add_cosmos_blocks(
     );
 
     blocks.register(
-        BlockBuilder::new("cosmos:glass".to_owned(), 6.0)
+        BlockBuilder::new("cosmos:glass".to_owned(), 4.0)
             .add_property(BlockProperty::Transparent)
             .add_property(BlockProperty::Full)
+            .create(),
+    );
+
+    blocks.register(
+        BlockBuilder::new("cosmos:ice".to_owned(), 2.0)
+            .add_property(BlockProperty::Transparent)
+            .add_property(BlockProperty::Full)
+            .create(),
+    );
+
+    blocks.register(
+        BlockBuilder::new("cosmos:molten_stone".to_owned(), 10.0)
+            .add_property(BlockProperty::Opaque)
+            .add_property(BlockProperty::Full)
+            .create(),
+    );
+
+    blocks.register(
+        BlockBuilder::new("cosmos:water".to_owned(), 6.0)
+            .add_property(BlockProperty::Transparent)
+            .add_property(BlockProperty::Full)
+            .create(),
+    );
+
+    blocks.register(
+        BlockBuilder::new("cosmos:cheese".into(), 10.0)
+            .add_property(BlockProperty::Opaque)
+            .add_property(BlockProperty::Full)
+            .create(),
+    );
+
+    blocks.register(
+        BlockBuilder::new("cosmos:short_grass".into(), 10.0)
+            .add_property(BlockProperty::Opaque)
             .create(),
     );
 
@@ -135,16 +182,9 @@ fn add_air_block(
     loader.finish_loading(id, &mut done_loading_event);
 }
 
-pub(super) fn register<T: States + Clone + Copy>(
-    app: &mut App,
-    pre_loading_state: T,
-    loading_state: T,
-) {
+pub(super) fn register<T: States + Clone + Copy>(app: &mut App, pre_loading_state: T, loading_state: T) {
     registry::create_registry::<Block>(app);
 
-    app.add_systems((
-        // Game will break without air & needs this at ID 0, so load that first
-        add_air_block.in_schedule(OnEnter(pre_loading_state)),
-        add_cosmos_blocks.in_schedule(OnEnter(loading_state)),
-    ));
+    app.add_systems(OnEnter(pre_loading_state), add_air_block);
+    app.add_systems(OnEnter(loading_state), add_cosmos_blocks);
 }

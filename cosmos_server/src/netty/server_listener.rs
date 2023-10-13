@@ -5,21 +5,18 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::RenetServer;
-use cosmos_core::netty::cosmos_encoder;
+use cosmos_core::netty::netty_rigidbody::NettyRigidBodyLocation;
+use cosmos_core::netty::{cosmos_encoder, NettyChannelClient, NettyChannelServer};
 use cosmos_core::physics::location::Location;
 use cosmos_core::structure::systems::{SystemActive, Systems};
 use cosmos_core::{
     entities::player::Player,
     events::structure::change_pilot_event::ChangePilotEvent,
     netty::{
-        client_reliable_messages::ClientReliableMessages,
-        client_unreliable_messages::ClientUnreliableMessages,
-        server_reliable_messages::ServerReliableMessages, NettyChannel,
+        client_reliable_messages::ClientReliableMessages, client_unreliable_messages::ClientUnreliableMessages,
+        server_reliable_messages::ServerReliableMessages,
     },
-    structure::{
-        ship::pilot::Pilot,
-        {structure_block::StructureBlock, Structure},
-    },
+    structure::{ship::pilot::Pilot, Structure},
 };
 
 use crate::entities::player::PlayerLooking;
@@ -47,37 +44,37 @@ pub fn server_listen_messages(
     mut place_block_event: EventWriter<BlockPlaceEvent>,
     mut create_ship_event_writer: EventWriter<CreateShipEvent>,
 
-    mut ship_movement_event_writer: EventWriter<ShipSetMovementEvent>,
-    mut pilot_change_event_writer: EventWriter<ChangePilotEvent>,
+    (mut ship_movement_event_writer, mut pilot_change_event_writer): (EventWriter<ShipSetMovementEvent>, EventWriter<ChangePilotEvent>),
     pilot_query: Query<&Pilot>,
-    mut change_player_query: Query<
-        (
-            &mut Transform,
-            &mut Location,
-            &mut PlayerLooking,
-            &mut Velocity,
-        ),
-        With<Player>,
-    >,
+    player_parent_location: Query<&Location, Without<Player>>,
+    mut change_player_query: Query<(&mut Transform, &mut Location, &mut PlayerLooking, &mut Velocity), With<Player>>,
+    non_player_transform_query: Query<&Transform, Without<Player>>,
     mut requested_entities_writer: EventWriter<RequestedEntityEvent>,
     mut request_chunk_event_writer: EventWriter<RequestChunkEvent>,
 ) {
     for client_id in server.clients_id().into_iter() {
-        while let Some(message) = server.receive_message(client_id, NettyChannel::Unreliable.id()) {
+        while let Some(message) = server.receive_message(client_id, NettyChannelClient::Unreliable) {
             if let Some(player_entity) = lobby.player_from_id(client_id) {
-                let command: ClientUnreliableMessages =
-                    cosmos_encoder::deserialize(&message).unwrap();
+                let Ok(command) = cosmos_encoder::deserialize::<ClientUnreliableMessages>(&message) else {
+                    eprintln!("ERROR DECODING CLIENT MESSAGE!");
+                    break;
+                };
 
                 match command {
                     ClientUnreliableMessages::PlayerBody { body, looking } => {
-                        if let Ok((
-                            mut transform,
-                            mut location,
-                            mut currently_looking,
-                            mut velocity,
-                        )) = change_player_query.get_mut(player_entity)
+                        if let Ok((mut transform, mut location, mut currently_looking, mut velocity)) =
+                            change_player_query.get_mut(player_entity)
                         {
-                            location.set_from(&body.location);
+                            let new_loc = match body.location {
+                                NettyRigidBodyLocation::Absolute(location) => location,
+                                NettyRigidBodyLocation::Relative(rel_trans, entity) => {
+                                    let parent_loc = player_parent_location.get(entity).copied().unwrap_or(Location::default());
+
+                                    parent_loc + rel_trans
+                                }
+                            };
+
+                            location.set_from(&new_loc);
                             location.last_transform_loc = Some(transform.translation);
                             currently_looking.rotation = looking;
                             velocity.linvel = body.body_vel.linvel.into();
@@ -88,8 +85,7 @@ pub fn server_listen_messages(
                         if let Ok(pilot) = pilot_query.get(player_entity) {
                             let ship = pilot.entity;
 
-                            ship_movement_event_writer
-                                .send(ShipSetMovementEvent { movement, ship });
+                            ship_movement_event_writer.send(ShipSetMovementEvent { movement, ship });
                         }
                     }
                     ClientUnreliableMessages::ShipStatus { use_system } => {
@@ -112,17 +108,19 @@ pub fn server_listen_messages(
             }
         }
 
-        while let Some(message) = server.receive_message(client_id, NettyChannel::Reliable.id()) {
-            let command: ClientReliableMessages = cosmos_encoder::deserialize(&message).unwrap();
+        while let Some(message) = server.receive_message(client_id, NettyChannelClient::Reliable) {
+            let Ok(command) = cosmos_encoder::deserialize::<ClientReliableMessages>(&message) else {
+                eprintln!("ERROR DECODING CLIENT MESSAGE!");
+                break;
+            };
 
             match command {
-                ClientReliableMessages::PlayerDisconnect => {}
                 ClientReliableMessages::SendAllChunks { server_entity } => {
                     if let Ok(structure) = structure_query.get(server_entity) {
                         for (_, chunk) in structure.chunks() {
                             server.send_message(
                                 client_id,
-                                NettyChannel::Reliable.id(),
+                                NettyChannelServer::Reliable,
                                 cosmos_encoder::serialize(&ServerReliableMessages::ChunkData {
                                     structure_entity: server_entity,
                                     serialized_chunk: cosmos_encoder::serialize(chunk),
@@ -133,35 +131,23 @@ pub fn server_listen_messages(
                         println!("!!! Server received invalid entity from client {client_id}");
                     }
                 }
-                ClientReliableMessages::SendSingleChunk {
-                    structure_entity,
-                    chunk: (cx, cy, cz),
-                } => request_chunk_event_writer.send(RequestChunkEvent {
+                ClientReliableMessages::SendSingleChunk { structure_entity, chunk } => request_chunk_event_writer.send(RequestChunkEvent {
                     requester_id: client_id,
                     structure_entity,
-                    chunk_coords: (cx as usize, cy as usize, cz as usize),
+                    chunk_coords: chunk,
                 }),
-                ClientReliableMessages::BreakBlock {
-                    structure_entity,
-                    x,
-                    y,
-                    z,
-                } => {
+                ClientReliableMessages::BreakBlock { structure_entity, block } => {
                     if let Some(player_entity) = lobby.player_from_id(client_id) {
                         break_block_event.send(BlockBreakEvent {
                             structure_entity,
                             breaker: player_entity,
-                            structure_block: StructureBlock::new(
-                                x as usize, y as usize, z as usize,
-                            ),
+                            structure_block: block,
                         });
                     }
                 }
                 ClientReliableMessages::PlaceBlock {
                     structure_entity,
-                    x,
-                    y,
-                    z,
+                    block,
                     block_id,
                     block_up,
                     inventory_slot,
@@ -169,9 +155,7 @@ pub fn server_listen_messages(
                     if let Some(player_entity) = lobby.player_from_id(client_id) {
                         place_block_event.send(BlockPlaceEvent {
                             structure_entity,
-                            structure_block: StructureBlock::new(
-                                x as usize, y as usize, z as usize,
-                            ),
+                            structure_block: block,
                             block_id,
                             block_up,
                             inventory_slot: inventory_slot as usize,
@@ -179,23 +163,18 @@ pub fn server_listen_messages(
                         });
                     }
                 }
-                ClientReliableMessages::InteractWithBlock {
-                    structure_entity,
-                    x,
-                    y,
-                    z,
-                } => {
+                ClientReliableMessages::InteractWithBlock { structure_entity, block } => {
                     block_interact_event.send(BlockInteractEvent {
                         structure_entity,
-                        structure_block: StructureBlock::new(x as usize, y as usize, z as usize),
+                        structure_block: block,
                         interactor: lobby.player_from_id(client_id).unwrap(),
                     });
                 }
                 ClientReliableMessages::CreateShip { name: _name } => {
                     if let Some(client) = lobby.player_from_id(client_id) {
-                        if let Ok((_, location, looking, _)) = change_player_query.get(client) {
+                        if let Ok((transform, location, looking, _)) = change_player_query.get(client) {
                             let ship_location =
-                                *location + looking.rotation.mul_vec3(Vec3::new(0.0, 0.0, -4.0));
+                                *location + transform.rotation.mul_vec3(looking.rotation.mul_vec3(Vec3::new(0.0, 0.0, -4.0)));
 
                             create_ship_event_writer.send(CreateShipEvent {
                                 ship_location,
@@ -212,7 +191,7 @@ pub fn server_listen_messages(
 
                     server.send_message(
                         client_id,
-                        NettyChannel::Reliable.id(),
+                        NettyChannelServer::Reliable,
                         cosmos_encoder::serialize(&ServerReliableMessages::PilotChange {
                             structure_entity: ship_entity,
                             pilot_entity: pilot,
@@ -229,9 +208,7 @@ pub fn server_listen_messages(
                         }
                     }
                 }
-                ClientReliableMessages::ChangeRenderDistance {
-                    mut render_distance,
-                } => {
+                ClientReliableMessages::ChangeRenderDistance { mut render_distance } => {
                     if let Some(player_entity) = lobby.player_from_id(client_id) {
                         if let Some(mut e) = commands.get_entity(player_entity) {
                             if render_distance.sector_range > 8 {
@@ -246,11 +223,56 @@ pub fn server_listen_messages(
                         requested_entities_writer.send(RequestedEntityEvent { client_id, entity });
                     }
                 }
+                ClientReliableMessages::LeaveShip => {
+                    if let Some(player_entity) = lobby.player_from_id(client_id) {
+                        if let Some(mut e) = commands.get_entity(player_entity) {
+                            // This should be verified in the future to make sure the parent of the player is actually a ship
+                            e.remove_parent();
+                            if let Ok((player_trans, mut player_loc)) =
+                                change_player_query.get_mut(player_entity).map(|(x, y, _, _)| (x, y))
+                            {
+                                player_loc.last_transform_loc = Some(player_trans.translation);
+                            }
+
+                            server.broadcast_message_except(
+                                client_id,
+                                NettyChannelServer::Reliable,
+                                cosmos_encoder::serialize(&ServerReliableMessages::PlayerLeaveShip { player_entity }),
+                            );
+                        }
+                    }
+                }
+                ClientReliableMessages::JoinShip { ship_entity } => {
+                    if let Some(player_entity) = lobby.player_from_id(client_id) {
+                        if let Some(mut e) = commands.get_entity(player_entity) {
+                            // This should be verified in the future to make sure the entity is actually a ship
+                            e.set_parent(ship_entity);
+
+                            // This is stupid, but when a parent changes the transform isn't properly updated for the player, which is super cool.
+                            // At some point this should be fixed in a way that doesn't require this stuck everywhere
+                            if let Ok((mut trans, _, _, _)) = change_player_query.get_mut(player_entity) {
+                                trans.translation -= non_player_transform_query
+                                    .get(ship_entity)
+                                    .expect("A ship should always have a transform.")
+                                    .translation;
+                            }
+
+                            server.broadcast_message_except(
+                                client_id,
+                                NettyChannelServer::Reliable,
+                                cosmos_encoder::serialize(&ServerReliableMessages::PlayerJoinShip {
+                                    player_entity,
+                                    ship_entity,
+                                }),
+                            );
+                        }
+                    }
+                }
             }
         }
     }
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(server_listen_messages);
+    app.add_systems(Update, server_listen_messages);
 }

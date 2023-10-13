@@ -32,9 +32,7 @@ impl ServerLobby {
     }
 }
 
-#[derive(
-    Debug, Default, Resource, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Clone, Copy,
-)]
+#[derive(Debug, Default, Resource, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 /// Store the server's tick
 pub struct NetworkTick(pub u64);
 

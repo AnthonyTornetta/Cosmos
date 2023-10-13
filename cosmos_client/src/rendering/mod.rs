@@ -1,5 +1,7 @@
 //! Handles most of the rendering logic
 
+use std::fs;
+
 use bevy::{
     prelude::*,
     render::{mesh::Indices, render_resource::PrimitiveTopology},
@@ -13,7 +15,10 @@ use cosmos_core::{
     },
 };
 
-use crate::state::game_state::GameState;
+use crate::{
+    asset::asset_loading::{load_block_rendering_information, BlockRenderingInfo},
+    state::game_state::GameState,
+};
 
 mod structure_renderer;
 
@@ -21,7 +26,7 @@ mod structure_renderer;
 /// The player's active camera will have this component
 pub struct MainCamera;
 
-#[derive(Default, Debug, Reflect, FromReflect, Clone)]
+#[derive(Default, Debug, Reflect, Clone)]
 /// Stores all the needed information for a mesh
 pub struct MeshInformation {
     /// The indicies of the model
@@ -45,7 +50,7 @@ impl MeshInformation {
     }
 }
 
-#[derive(Default, Debug, Reflect, FromReflect)]
+#[derive(Default, Debug, Reflect)]
 /// Default way to create a mesh from many different combined `MeshInformation` objects.
 pub struct CosmosMeshBuilder {
     last_index: u32,
@@ -108,12 +113,20 @@ impl MeshBuilder for CosmosMeshBuilder {
     }
 }
 
-#[derive(Default, Debug, Reflect, FromReflect)]
+#[derive(Debug)]
+enum MeshType {
+    /// The mesh is broken up into its 6 faces, which can all be stitched together to create the full mesh
+    ///
+    /// Make sure this is in the same order as the [`BlockFace::index`] method.
+    MultipleFaceMesh(Box<[MeshInformation; 6]>),
+    /// This mesh contains the model data for every face
+    AllFacesMesh(Box<MeshInformation>),
+}
+
+#[derive(Debug)]
 /// Stores all the mesh information for a block
 pub struct BlockMeshInformation {
-    /// Make sure this is in the same order as the [`BlockFace::index`] method.
-    mesh_info: [MeshInformation; 6],
-
+    mesh_info: MeshType,
     id: u16,
     unlocalized_name: String,
 }
@@ -136,7 +149,7 @@ impl BlockMeshInformation {
     /// Creates the mesh information for a block.
     ///
     /// Make sure the mesh information is given in the proper order
-    pub fn new(
+    pub fn new_multi_face(
         unlocalized_name: impl Into<String>,
 
         right: MeshInformation,
@@ -163,99 +176,385 @@ impl BlockMeshInformation {
                BlockFace::Front => 4,
                BlockFace::Back => 5,
             */
-            mesh_info: [right, left, top, bottom, front, back],
+            mesh_info: MeshType::MultipleFaceMesh(Box::new([right, left, top, bottom, front, back])),
             id: 0,
             unlocalized_name: unlocalized_name.into(),
         }
     }
 
-    /// Gets the mesh information for that block face
-    pub fn info_for_face(&self, face: BlockFace) -> &MeshInformation {
-        &self.mesh_info[face.index()]
+    /// Creates the mesh information for a block.
+    pub fn new_single_mesh_info(unlocalized_name: impl Into<String>, mesh_info: MeshInformation) -> Self {
+        Self {
+            mesh_info: MeshType::AllFacesMesh(Box::new(mesh_info)),
+            id: 0,
+            unlocalized_name: unlocalized_name.into(),
+        }
+    }
+
+    /// Returns true if the block has an individual mesh for each face of the block
+    pub fn has_multiple_face_meshes(&self) -> bool {
+        matches!(self.mesh_info, MeshType::MultipleFaceMesh(_))
+    }
+
+    /// Returns true if the block only one mesh and does not have meshes for each side of the block
+    pub fn has_single_mesh(&self) -> bool {
+        matches!(self.mesh_info, MeshType::AllFacesMesh(_))
+    }
+
+    /// Gets the mesh information for that block face if the model is divided into multiple faces.
+    ///
+    /// If the block only contains one mesh, None is returned.
+    pub fn info_for_face(&self, face: BlockFace) -> Option<&MeshInformation> {
+        match &self.mesh_info {
+            MeshType::MultipleFaceMesh(faces) => Some(&faces[face.index()]),
+            MeshType::AllFacesMesh(_) => None,
+        }
+    }
+
+    /// Gets the mesh information for that whole block if the block is made out of only one mesh,
+    /// and not divided into multiple (per-face) meshes.
+    ///
+    /// Note that if the block contains per-face meshes, None is returned.
+    pub fn info_for_whole_block(&self) -> Option<&MeshInformation> {
+        match &self.mesh_info {
+            MeshType::MultipleFaceMesh(_) => None,
+            MeshType::AllFacesMesh(mesh) => Some(mesh),
+        }
     }
 }
 
 fn register_meshes(mut registry: ResMut<BlockMeshRegistry>) {
     // Model for a basic cube.
-    registry.insert_value(BlockMeshInformation::new(
+    registry.insert_value(BlockMeshInformation::new_multi_face(
         "cosmos:base_block",
         MeshInformation {
             indices: vec![0, 1, 2, 2, 3, 0],
             uvs: vec![[0.0, 1.0], [0.0, 0.0], [1.0, 0.0], [1.0, 1.0]],
-            positions: vec![
-                [0.5, -0.5, -0.5],
-                [0.5, 0.5, -0.5],
-                [0.5, 0.5, 0.5],
-                [0.5, -0.5, 0.5],
-            ],
+            positions: vec![[0.5, -0.5, -0.5], [0.5, 0.5, -0.5], [0.5, 0.5, 0.5], [0.5, -0.5, 0.5]],
             normals: [[1.0, 0.0, 0.0]; 4].to_vec(),
         },
         MeshInformation {
             indices: vec![0, 1, 2, 2, 3, 0],
             uvs: vec![[0.0, 1.0], [0.0, 0.0], [1.0, 0.0], [1.0, 1.0]],
-            positions: vec![
-                [-0.5, -0.5, 0.5],
-                [-0.5, 0.5, 0.5],
-                [-0.5, 0.5, -0.5],
-                [-0.5, -0.5, -0.5],
-            ],
+            positions: vec![[-0.5, -0.5, 0.5], [-0.5, 0.5, 0.5], [-0.5, 0.5, -0.5], [-0.5, -0.5, -0.5]],
             normals: [[-1.0, 0.0, 0.0]; 4].to_vec(),
         },
         MeshInformation {
             indices: vec![0, 1, 2, 2, 3, 0],
             uvs: vec![[1.0, 1.0], [0.0, 1.0], [0.0, 0.0], [1.0, 0.0]],
-            positions: vec![
-                [0.5, 0.5, -0.5],
-                [-0.5, 0.5, -0.5],
-                [-0.5, 0.5, 0.5],
-                [0.5, 0.5, 0.5],
-            ],
+            positions: vec![[0.5, 0.5, -0.5], [-0.5, 0.5, -0.5], [-0.5, 0.5, 0.5], [0.5, 0.5, 0.5]],
             normals: [[0.0, 1.0, 0.0]; 4].to_vec(),
         },
         MeshInformation {
             indices: vec![0, 1, 2, 2, 3, 0],
             uvs: vec![[1.0, 0.0], [0.0, 0.0], [0.0, 1.0], [1.0, 1.0]],
-            positions: vec![
-                [0.5, -0.5, 0.5],
-                [-0.5, -0.5, 0.5],
-                [-0.5, -0.5, -0.5],
-                [0.5, -0.5, -0.5],
-            ],
+            positions: vec![[0.5, -0.5, 0.5], [-0.5, -0.5, 0.5], [-0.5, -0.5, -0.5], [0.5, -0.5, -0.5]],
             normals: [[0.0, -1.0, 0.0]; 4].to_vec(),
         },
         MeshInformation {
             indices: vec![0, 1, 2, 2, 3, 0],
             uvs: vec![[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]],
-            positions: vec![
-                [-0.5, 0.5, -0.5],
-                [0.5, 0.5, -0.5],
-                [0.5, -0.5, -0.5],
-                [-0.5, -0.5, -0.5],
-            ],
+            positions: vec![[-0.5, 0.5, -0.5], [0.5, 0.5, -0.5], [0.5, -0.5, -0.5], [-0.5, -0.5, -0.5]],
             normals: [[0.0, 0.0, -1.0]; 4].to_vec(),
         },
         MeshInformation {
             indices: vec![0, 1, 2, 2, 3, 0],
             uvs: vec![[0.0, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0]],
-            positions: vec![
-                [-0.5, -0.5, 0.5],
-                [0.5, -0.5, 0.5],
-                [0.5, 0.5, 0.5],
-                [-0.5, 0.5, 0.5],
-            ],
+            positions: vec![[-0.5, -0.5, 0.5], [0.5, -0.5, 0.5], [0.5, 0.5, 0.5], [-0.5, 0.5, 0.5]],
             normals: [[0.0, 0.0, 1.0]; 4].to_vec(),
         },
     ));
 }
 
+fn stupid_parse(file: &str) -> Option<MeshInformation> {
+    let obj = fs::read_to_string(file);
+    if let Ok(obj) = obj {
+        let split = obj
+            .replace('\r', "")
+            .split('\n')
+            .filter(|x| !x.trim().starts_with('#') && !x.trim().is_empty())
+            .map(|x| x.to_owned())
+            .collect::<Vec<String>>();
+
+        // parses a .stupid file the way it was intended - stupidly
+        let x = split
+            .chunks(4)
+            .map(|arr| {
+                (
+                    arr[0]
+                        .split(' ')
+                        .map(|x| x.parse::<u32>().expect("bad parse"))
+                        .collect::<Vec<u32>>(),
+                    arr[1]
+                        .split(' ')
+                        .map(|x| x.parse::<f32>().expect("bad parse"))
+                        .collect::<Vec<f32>>()
+                        .chunks(2)
+                        .map(|x| [x[0], x[1]])
+                        .collect::<Vec<[f32; 2]>>(),
+                    arr[2]
+                        .split(' ')
+                        .map(|x| x.parse::<f32>().expect("bad parse"))
+                        .collect::<Vec<f32>>()
+                        .chunks(3)
+                        .map(|x| [x[0], x[1], x[2]])
+                        .collect::<Vec<[f32; 3]>>(),
+                    arr[3]
+                        .split(' ')
+                        .map(|x| x.parse::<f32>().expect("bad parse"))
+                        .collect::<Vec<f32>>()
+                        .chunks(3)
+                        .map(|x| [x[0], x[1], x[2]])
+                        .collect::<Vec<[f32; 3]>>(),
+                )
+            })
+            .collect::<Vec<(Vec<u32>, Vec<[f32; 2]>, Vec<[f32; 3]>, Vec<[f32; 3]>)>>();
+
+        let (mut indices, mut uvs, mut positions, mut normals) = (Vec::new(), Vec::new(), Vec::new(), Vec::new());
+
+        for (mut a, mut b, mut c, mut d) in x {
+            indices.append(&mut a);
+            uvs.append(&mut b);
+            positions.append(&mut c);
+            normals.append(&mut d);
+        }
+
+        Some(MeshInformation {
+            indices,
+            uvs,
+            positions,
+            normals,
+        })
+    } else {
+        None
+    }
+}
+
+#[allow(dead_code)]
+/// converts a goxel export txt file to mesh code
+fn txt_to_mesh_info(txt: String) -> MeshInformation {
+    let mut index_off = 0;
+
+    let mut done_colors = Vec::new();
+    let mut u_off = 0.0;
+    let mut v_off = 0.0;
+
+    const UV_OFF: f32 = 1.0 / 16.0;
+
+    let mut indices = vec![];
+    let mut uvs: Vec<[f32; 2]> = vec![];
+    let mut positions: Vec<[f32; 3]> = vec![];
+    let mut normals: Vec<[f32; 3]> = vec![];
+
+    let data = txt
+        .split('\n')
+        .filter(|x| !x.starts_with('#') && !x.trim().is_empty())
+        .map(|line| {
+            let mut data = line.split(' ');
+            let (x, z, y) = (
+                data.next().expect("invalid txt").parse::<f32>().expect("invalid txt"),
+                data.next().expect("invalid txt").parse::<f32>().expect("invalid txt"),
+                data.next().expect("invalid txt").parse::<f32>().expect("invalid txt"),
+            );
+
+            let color = data.next().expect("invalid txt");
+
+            (x, y, z, color)
+        })
+        .collect::<Vec<(f32, f32, f32, &str)>>();
+
+    for (x, y, z, color) in data.iter() {
+        let (x, y, z) = (*x, *y, *z);
+
+        if done_colors.is_empty() {
+            done_colors.push(color.to_owned());
+        } else if !done_colors.contains(color) {
+            done_colors.push(color.to_owned());
+            u_off += UV_OFF;
+            if u_off >= 0.998 {
+                u_off = 0.0;
+                v_off += UV_OFF;
+            }
+        }
+
+        let mut poses = Vec::with_capacity(24);
+        let mut local_uvs = Vec::new();
+
+        // right
+        if !data.iter().any(|(xx, yy, zz, _)| *xx + 1.0 == x && *yy == y && *zz == z) {
+            indices.append(&mut vec![
+                index_off,
+                1 + index_off,
+                2 + index_off,
+                2 + index_off,
+                3 + index_off,
+                index_off,
+            ]);
+            local_uvs.append(&mut vec![[0.0, 1.0], [0.0, 0.0], [1.0, 0.0], [1.0, 1.0]]);
+            poses.append(&mut vec![[0.5, -0.5, -0.5], [0.5, 0.5, -0.5], [0.5, 0.5, 0.5], [0.5, -0.5, 0.5]]);
+            normals.append(&mut [[1.0, 0.0, 0.0]; 4].to_vec());
+
+            index_off += 4;
+        }
+
+        // left
+        if !data.iter().any(|(xx, yy, zz, _)| *xx - 1.0 == x && *yy == y && *zz == z) {
+            indices.append(&mut vec![
+                index_off,
+                1 + index_off,
+                2 + index_off,
+                2 + index_off,
+                3 + index_off,
+                index_off,
+            ]);
+            local_uvs.append(&mut vec![[0.0, 1.0], [0.0, 0.0], [1.0, 0.0], [1.0, 1.0]]);
+            poses.append(&mut vec![
+                [-0.5, -0.5, 0.5],
+                [-0.5, 0.5, 0.5],
+                [-0.5, 0.5, -0.5],
+                [-0.5, -0.5, -0.5],
+            ]);
+            normals.append(&mut [[-1.0, 0.0, 0.0]; 4].to_vec());
+
+            index_off += 4;
+        }
+
+        // top
+        if !data.iter().any(|(xx, yy, zz, _)| *xx == x && *yy + 1.0 == y && *zz == z) {
+            indices.append(&mut vec![
+                index_off,
+                1 + index_off,
+                2 + index_off,
+                2 + index_off,
+                3 + index_off,
+                index_off,
+            ]);
+            local_uvs.append(&mut vec![[1.0, 1.0], [0.0, 1.0], [0.0, 0.0], [1.0, 0.0]]);
+            poses.append(&mut vec![[0.5, 0.5, -0.5], [-0.5, 0.5, -0.5], [-0.5, 0.5, 0.5], [0.5, 0.5, 0.5]]);
+            normals.append(&mut [[0.0, 1.0, 0.0]; 4].to_vec());
+
+            index_off += 4;
+        }
+
+        // bottom
+        if !data.iter().any(|(xx, yy, zz, _)| *xx == x && *yy - 1.0 == y && *zz == z) {
+            indices.append(&mut vec![
+                index_off,
+                1 + index_off,
+                2 + index_off,
+                2 + index_off,
+                3 + index_off,
+                index_off,
+            ]);
+            local_uvs.append(&mut vec![[1.0, 0.0], [0.0, 0.0], [0.0, 1.0], [1.0, 1.0]]);
+            poses.append(&mut vec![
+                [0.5, -0.5, 0.5],
+                [-0.5, -0.5, 0.5],
+                [-0.5, -0.5, -0.5],
+                [0.5, -0.5, -0.5],
+            ]);
+            normals.append(&mut [[0.0, -1.0, 0.0]; 4].to_vec());
+
+            index_off += 4;
+        }
+
+        // front
+        if !data.iter().any(|(xx, yy, zz, _)| *xx == x && *yy == y && *zz + 1.0 == z) {
+            indices.append(&mut vec![
+                index_off,
+                1 + index_off,
+                2 + index_off,
+                2 + index_off,
+                3 + index_off,
+                index_off,
+            ]);
+            local_uvs.append(&mut vec![[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]);
+            poses.append(&mut vec![
+                [-0.5, 0.5, -0.5],
+                [0.5, 0.5, -0.5],
+                [0.5, -0.5, -0.5],
+                [-0.5, -0.5, -0.5],
+            ]);
+            normals.append(&mut [[0.0, 0.0, -1.0]; 4].to_vec());
+
+            index_off += 4;
+        }
+
+        // back
+        if !data.iter().any(|(xx, yy, zz, _)| *xx == x && *yy == y && *zz - 1.0 == z) {
+            indices.append(&mut vec![
+                index_off,
+                1 + index_off,
+                2 + index_off,
+                2 + index_off,
+                3 + index_off,
+                index_off,
+            ]);
+            local_uvs.append(&mut vec![[0.0, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0]]);
+            poses.append(&mut vec![[-0.5, -0.5, 0.5], [0.5, -0.5, 0.5], [0.5, 0.5, 0.5], [-0.5, 0.5, 0.5]]);
+            normals.append(&mut [[0.0, 0.0, 1.0]; 4].to_vec());
+
+            index_off += 4;
+        }
+
+        for uv in local_uvs.iter_mut() {
+            uv[0] = uv[0] * UV_OFF + u_off;
+            uv[1] = uv[1] * UV_OFF + v_off;
+        }
+
+        for pos in poses.iter_mut() {
+            pos[0] = x / 16.0 + (pos[0] + 0.5) / 16.0;
+            pos[1] = y / 16.0 + (pos[1] + 0.5) / 16.0;
+            pos[2] = z / 16.0 + (pos[2] + 0.5) / 16.0;
+        }
+
+        uvs.append(&mut local_uvs);
+        positions.append(&mut poses);
+    }
+
+    MeshInformation {
+        indices,
+        normals,
+        positions,
+        uvs,
+    }
+}
+
 fn register_block_meshes(
     blocks: Res<Registry<Block>>,
+    block_info: Res<Registry<BlockRenderingInfo>>,
     mut model_registry: ResMut<BlockMeshRegistry>,
 ) {
     for block in blocks.iter() {
-        model_registry
-            .add_link(block, "cosmos:base_block")
-            .expect("cosmos:base_block model link wasn't inserted successfully!");
+        if !model_registry.contains(block) {
+            if let Some(mesh_name) = block_info.from_id(block.unlocalized_name()).map(|x| x.model.as_ref()) {
+                if model_registry.add_link(block, mesh_name).is_err() {
+                    // model doesn't exist yet - add it
+                    let mut split = mesh_name.split(':');
+                    if let (Some(mod_id), Some(model_name), None) = (split.next(), split.next(), split.next()) {
+                        let path = format!("assets/{mod_id}/models/blocks/{model_name}.stupid");
+                        let mesh_info = stupid_parse(&path).unwrap_or_else(|| panic!("Unable to parse/read/find file at {path}"));
+
+                        model_registry.insert_value(BlockMeshInformation {
+                            mesh_info: MeshType::AllFacesMesh(Box::new(mesh_info)),
+                            id: 0,
+                            unlocalized_name: mesh_name.into(),
+                        });
+
+                        model_registry
+                            .add_link(block, mesh_name)
+                            .expect("This was just added, so should always work.");
+                    } else {
+                        panic!("Invalid model name: {mesh_name}. Must be mod_id:model_name");
+                    }
+                }
+            } else {
+                warn!("Missing block info for {}", block.unlocalized_name());
+                model_registry
+                    .add_link(block, "cosmos:base_block")
+                    .expect("cosmos:base_block model link wasn't inserted successfully!");
+            }
+        }
     }
 }
 
@@ -266,8 +565,8 @@ pub(super) fn register(app: &mut App) {
     many_to_one::create_many_to_one_registry::<Block, BlockMeshInformation>(app);
     structure_renderer::register(app);
 
-    app.add_systems((
-        register_meshes.in_schedule(OnEnter(GameState::Loading)),
-        register_block_meshes.in_schedule(OnExit(GameState::PostLoading)),
-    ));
+    app.add_systems(OnEnter(GameState::Loading), register_meshes).add_systems(
+        OnExit(GameState::PostLoading),
+        register_block_meshes.after(load_block_rendering_information),
+    );
 }

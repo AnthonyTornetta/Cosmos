@@ -2,11 +2,11 @@
 
 use bevy::{
     prelude::{App, Component, Entity},
-    reflect::{FromReflect, Reflect},
+    reflect::Reflect,
 };
 
 /// A pilot component is bi-directional, if a player has the component then the entity it points to also has this component which points to the player.
-#[derive(Component, FromReflect, Reflect)]
+#[derive(Component, Reflect)]
 pub struct Pilot {
     /// This will either be the ship the player is piloting, or the pilot of the ship
     ///
@@ -14,6 +14,6 @@ pub struct Pilot {
     pub entity: Entity,
 }
 
-pub(super) fn regiter(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.register_type::<Pilot>();
 }

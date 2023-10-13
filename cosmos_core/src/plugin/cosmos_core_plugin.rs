@@ -5,7 +5,7 @@ use bevy::prelude::{App, Plugin, PluginGroup, States};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_rapier3d::prelude::{NoUserData, RapierPhysicsPlugin};
 
-use crate::{block, entities, inventory, persistence, projectiles, universe};
+use crate::{block, ecs, entities, inventory, netty, persistence, projectiles, universe};
 use crate::{blockitems, structure};
 use crate::{events, loader};
 use crate::{item, physics};
@@ -31,37 +31,25 @@ where
     loading_state: T,
     post_loading_state: T,
     done_loading_state: T,
-    playing_game_state: T,
+    playing_state: T,
 }
 
 impl<T: States + Clone + Copy> CosmosCorePlugin<T> {
     /// Creates the plugin with the given states
-    pub fn new(
-        pre_loading_state: T,
-        loading_state: T,
-        post_loading_state: T,
-        done_loading_state: T,
-        playing_game_state: T,
-    ) -> Self {
+    pub fn new(pre_loading_state: T, loading_state: T, post_loading_state: T, done_loading_state: T, playing_game_state: T) -> Self {
         Self {
             pre_loading_state,
             loading_state,
             post_loading_state,
             done_loading_state,
-            playing_game_state,
+            playing_state: playing_game_state,
         }
     }
 }
 
 impl<T: States + Clone + Copy> CosmosCorePluginGroup<T> {
     /// Creates the plugin group with the given states
-    pub fn new(
-        pre_loading_state: T,
-        loading_state: T,
-        post_loading_state: T,
-        done_loading_state: T,
-        playing_game_state: T,
-    ) -> Self {
+    pub fn new(pre_loading_state: T, loading_state: T, post_loading_state: T, done_loading_state: T, playing_game_state: T) -> Self {
         Self {
             pre_loading_state,
             loading_state,
@@ -82,23 +70,19 @@ impl<T: States + Clone + Copy> Plugin for CosmosCorePlugin<T> {
             self.done_loading_state,
         );
 
-        block::register(
-            app,
-            self.pre_loading_state,
-            self.loading_state,
-            self.post_loading_state,
-        );
+        block::register(app, self.pre_loading_state, self.loading_state, self.post_loading_state);
         item::register(app);
         blockitems::register(app, self.post_loading_state);
-        physics::register(app);
-        events::register(app, self.playing_game_state);
-        structure::register(app, self.post_loading_state, self.playing_game_state);
+        physics::register(app, self.post_loading_state);
+        events::register(app, self.playing_state);
+        structure::register(app, self.post_loading_state, self.playing_state);
         inventory::register(app);
         projectiles::register(app);
         entities::register(app);
-        // sector::register(app);
+        ecs::register(app);
         persistence::register(app);
         universe::register(app);
+        netty::register(app);
     }
 }
 

@@ -5,6 +5,7 @@
 
 pub mod block;
 pub mod blockitems;
+pub mod ecs;
 pub mod entities;
 pub mod events;
 pub mod inventory;
@@ -16,7 +17,6 @@ pub mod physics;
 pub mod plugin;
 pub mod projectiles;
 pub mod registry;
-pub mod sector;
 pub mod structure;
 pub mod universe;
 pub mod utils;

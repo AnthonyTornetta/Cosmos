@@ -7,7 +7,7 @@ use bevy_rapier3d::prelude::{PhysicsWorld, RapierContext, RapierWorld, DEFAULT_W
 use cosmos_core::{
     entities::player::Player,
     physics::{
-        location::{bubble_down_locations, Location, SECTOR_DIMENSIONS},
+        location::{add_previous_location, handle_child_syncing, Location, SECTOR_DIMENSIONS},
         player_world::{PlayerWorld, WorldWithin},
     },
 };
@@ -19,10 +19,7 @@ const WORLD_SWITCH_DISTANCE_SQRD: f32 = WORLD_SWITCH_DISTANCE * WORLD_SWITCH_DIS
 
 /// This is used to assign a player to a specific rapier world.
 pub fn assign_player_world(
-    player_worlds: &Query<
-        (&Location, &WorldWithin, &PhysicsWorld),
-        (With<Player>, Without<Parent>),
-    >,
+    player_worlds: &Query<(&Location, &WorldWithin, &PhysicsWorld), (With<Player>, Without<Parent>)>,
     player_entity: Entity,
     location: &Location,
     commands: &mut Commands,
@@ -35,9 +32,7 @@ pub fn assign_player_world(
     for (loc, ww, body_world) in player_worlds.iter() {
         let distance = location.distance_sqrd(loc);
 
-        if distance <= WORLD_SWITCH_DISTANCE
-            && (best_distance.is_none() || distance < best_distance.unwrap())
-        {
+        if distance <= WORLD_SWITCH_DISTANCE && (best_distance.is_none() || distance < best_distance.unwrap()) {
             best_distance = Some(distance);
             best_world = Some(*ww);
             best_world_id = Some(body_world.world_id);
@@ -45,23 +40,14 @@ pub fn assign_player_world(
     }
 
     if let Some(world) = best_world {
-        commands
-            .entity(player_entity)
-            .insert(world)
-            .insert(PhysicsWorld {
-                world_id: best_world_id.expect("This should never be None if world is some."),
-            });
+        commands.entity(player_entity).insert(world).insert(PhysicsWorld {
+            world_id: best_world_id.expect("This should never be None if world is some."),
+        });
     } else {
         let world_id = rapier_context.add_world(RapierWorld::default());
 
         let world_entity = commands
-            .spawn((
-                PlayerWorld {
-                    player: player_entity,
-                },
-                *location,
-                PhysicsWorld { world_id },
-            ))
+            .spawn((PlayerWorld { player: player_entity }, *location, PhysicsWorld { world_id }))
             .id();
 
         commands
@@ -98,8 +84,7 @@ fn move_players_between_worlds(
                     .map(|(ent, world)| (ent.0, world.world_id))
                     .unwrap();
 
-                let (mut world_currently_in, mut body_world) =
-                    world_within_query.get_mut(entity).unwrap();
+                let (mut world_currently_in, mut body_world) = world_within_query.get_mut(entity).unwrap();
 
                 let distance = location.distance_sqrd(other_location);
 
@@ -123,15 +108,10 @@ fn move_players_between_worlds(
                 let world_id = rapier_context.add_world(RapierWorld::default());
 
                 let world_entity = commands
-                    .spawn((
-                        PlayerWorld { player: entity },
-                        *location,
-                        PhysicsWorld { world_id },
-                    ))
+                    .spawn((PlayerWorld { player: entity }, *location, PhysicsWorld { world_id }))
                     .id();
 
-                let (mut world_within, mut body_world) =
-                    world_within_query.get_mut(entity).unwrap();
+                let (mut world_within, mut body_world) = world_within_query.get_mut(entity).unwrap();
 
                 world_within.0 = world_entity;
                 body_world.world_id = world_id;
@@ -141,15 +121,7 @@ fn move_players_between_worlds(
 }
 
 fn move_non_players_between_worlds(
-    mut needs_world: Query<
-        (
-            Entity,
-            &Location,
-            Option<&mut WorldWithin>,
-            Option<&mut PhysicsWorld>,
-        ),
-        (Without<Player>, Without<Parent>),
-    >,
+    mut needs_world: Query<(Entity, &Location, Option<&mut WorldWithin>, Option<&mut PhysicsWorld>), (Without<Player>, Without<Parent>)>,
     players_with_worlds: Query<(&WorldWithin, &Location, &PhysicsWorld), With<Player>>,
     mut commands: Commands,
 ) {
@@ -172,8 +144,7 @@ fn move_non_players_between_worlds(
             let world_id = best_world_id.expect("This should have a value if ww is some");
 
             if let Some(mut world_within) = maybe_within {
-                let mut body_world = maybe_body_world
-                    .expect("Something should have a PhysicsWorld if it has a WorldWithin.");
+                let mut body_world = maybe_body_world.expect("Something should have a PhysicsWorld if it has a WorldWithin.");
 
                 if body_world.world_id != world_id {
                     body_world.world_id = world_id;
@@ -182,10 +153,7 @@ fn move_non_players_between_worlds(
                     world_within.0 = ww.0;
                 }
             } else {
-                commands
-                    .entity(entity)
-                    .insert(ww)
-                    .insert(PhysicsWorld { world_id });
+                commands.entity(entity).insert(ww).insert(PhysicsWorld { world_id });
             }
         }
     }
@@ -236,12 +204,12 @@ fn remove_empty_worlds(
 
 /// Handles any just-added locations that need to sync up to their transforms
 fn fix_location(
-    mut query: Query<(Entity, &mut Location), (Added<Location>, Without<PlayerWorld>)>,
+    mut query: Query<(Entity, &mut Location, Option<&mut Transform>), (Added<Location>, Without<PlayerWorld>, Without<Parent>)>,
     player_worlds: Query<(&Location, &WorldWithin, &PhysicsWorld), With<PlayerWorld>>,
     mut commands: Commands,
     player_world_loc_query: Query<&Location, With<PlayerWorld>>,
 ) {
-    for (entity, mut location) in query.iter_mut() {
+    for (entity, mut location, my_trans) in query.iter_mut() {
         let mut best_distance = None;
         let mut best_world = None;
         let mut best_world_id = None;
@@ -259,21 +227,25 @@ fn fix_location(
         match (best_world, best_world_id) {
             (Some(world), Some(world_id)) => {
                 if let Ok(loc) = player_world_loc_query.get(world.0) {
-                    let transform = Transform::from_translation(location.relative_coords_to(loc));
+                    let translation = -location.relative_coords_to(loc);
 
-                    location.last_transform_loc = Some(transform.translation);
+                    location.last_transform_loc = Some(translation);
 
-                    commands.entity(entity).insert((
-                        TransformBundle::from_transform(transform),
-                        world,
-                        PhysicsWorld { world_id },
-                    ));
+                    commands.entity(entity).insert((world, PhysicsWorld { world_id }));
+
+                    if let Some(mut my_trans) = my_trans {
+                        my_trans.translation = translation;
+                    } else {
+                        commands
+                            .entity(entity)
+                            .insert((TransformBundle::from_transform(Transform::from_translation(translation)),));
+                    }
                 } else {
                     warn!("A player world was missing a location");
                 }
             }
             _ => {
-                warn!("Something was added with a location before a player world was registered.")
+                warn!("Something was added with a location before a player world was created.")
             }
         }
     }
@@ -281,14 +253,8 @@ fn fix_location(
 
 /// This system syncs the locations up with their changes in transforms.
 fn sync_transforms_and_locations(
-    mut trans_query_no_parent: Query<
-        (Entity, &mut Transform, &mut Location, &WorldWithin),
-        (Without<PlayerWorld>, Without<Parent>),
-    >,
-    mut trans_query_with_parent: Query<
-        (Entity, &mut Transform, &mut Location),
-        (Without<PlayerWorld>, With<Parent>),
-    >,
+    mut trans_query_no_parent: Query<(Entity, &mut Transform, &mut Location, &WorldWithin), (Without<PlayerWorld>, Without<Parent>)>,
+    trans_query_with_parent: Query<(Entity, &mut Transform, &mut Location), (Without<PlayerWorld>, With<Parent>)>,
     players_query: Query<(&WorldWithin, Entity), With<Player>>,
     everything_query: Query<(&WorldWithin, Entity)>,
     parent_query: Query<&Parent>,
@@ -300,22 +266,7 @@ fn sync_transforms_and_locations(
     for (entity, transform, mut location, _) in trans_query_no_parent.iter_mut() {
         // Server transforms for players should NOT be applied to the location.
         // The location the client sent should override it.
-        if !players_query.contains(entity) {
-            if location.last_transform_loc.is_none() {
-                location.last_transform_loc = Some(location.local);
-            }
-
-            location.apply_updates(transform.translation);
-        }
-    }
-    for (entity, transform, mut location) in trans_query_with_parent.iter_mut() {
-        // Server transforms for players should NOT be applied to the location.
-        // The location the client sent should override it.
-        if !players_query.contains(entity) {
-            if location.last_transform_loc.is_none() {
-                location.last_transform_loc = Some(location.local);
-            }
-
+        if !players_query.contains(entity) && location.last_transform_loc.is_some() {
             location.apply_updates(transform.translation);
         }
     }
@@ -331,14 +282,17 @@ fn sync_transforms_and_locations(
                 }
             }
 
-            let location = trans_query_no_parent
-                .get(player_entity)
-                .map(|(_, _, loc, _)| loc)
-                .or_else(|_| match trans_query_with_parent.get(player_entity) {
-                    Ok((_, _, loc)) => Ok(loc),
-                    Err(x) => Err(x),
+            let Ok(location) =
+                trans_query_no_parent.get(player_entity).map(|(_, _, loc, _)| loc).or_else(|_| {
+                    match trans_query_with_parent.get(player_entity) {
+                        Ok((_, _, loc)) => Ok(loc),
+                        Err(x) => Err(x),
+                    }
                 })
-                .expect("The above loop guarantees this is valid");
+            else {
+                // The player was just added & doesn't have a transform yet - only a location.
+                continue;
+            };
 
             world_location.set_from(location);
 
@@ -378,18 +332,21 @@ fn sync_transforms_and_locations(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(
-        (
-            // If it's not after server_listen_messages, some noticable jitter can happen
-            fix_location.after(server_listen_messages),
-            sync_transforms_and_locations,
-            bubble_down_locations,
-            move_players_between_worlds,
-            move_non_players_between_worlds,
+    app.add_systems(Last, (move_players_between_worlds, move_non_players_between_worlds).chain())
+        .add_systems(
+            Update,
+            (
+                fix_location,
+                sync_transforms_and_locations,
+                handle_child_syncing,
+                add_previous_location,
+            )
+                .chain()
+                .run_if(in_state(GameState::Playing))
+                .before(server_listen_messages),
         )
-            .chain()
-            .in_set(OnUpdate(GameState::Playing)),
-    )
-    // This must be last due to commands being delayed when adding PhysicsWorlds.
-    .add_system(remove_empty_worlds.in_base_set(CoreSet::Last));
+        // Used to be UpdateFlush
+        .add_systems(PostUpdate, fix_location)
+        // This must be last due to commands being delayed when adding PhysicsWorlds.
+        .add_systems(Last, remove_empty_worlds);
 }

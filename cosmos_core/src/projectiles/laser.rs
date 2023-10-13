@@ -4,19 +4,23 @@
 use bevy::{
     pbr::{NotShadowCaster, NotShadowReceiver},
     prelude::{
-        App, Commands, Component, DespawnRecursiveExt, Entity, EventWriter, GlobalTransform,
-        Parent, PbrBundle, Quat, Query, Res, Transform, Vec3, With, Without,
+        warn, App, Commands, Component, Entity, Event, EventWriter, GlobalTransform, Parent, Quat, Query, Res, Transform, Update, Vec3,
+        With, Without,
     },
     time::Time,
 };
-use bevy_rapier3d::prelude::{
-    ActiveEvents, ActiveHooks, Collider, LockedAxes, PhysicsWorld, QueryFilter, RapierContext,
-    RigidBody, Sensor, Velocity, WorldId, DEFAULT_WORLD_ID,
+use bevy_rapier3d::prelude::{LockedAxes, PhysicsWorld, QueryFilter, RapierContext, RigidBody, Velocity, WorldId, DEFAULT_WORLD_ID};
+
+use crate::{
+    ecs::{bundles::CosmosPbrBundle, NeedsDespawned},
+    netty::NoSendEntity,
+    physics::{
+        location::Location,
+        player_world::{PlayerWorld, WorldWithin},
+    },
 };
 
-use crate::{netty::NoSendEntity, physics::location::Location};
-
-#[derive(Debug)]
+#[derive(Debug, Event)]
 /// The entity hit represents the entity hit by the laser
 ///
 /// The world location the exact position the world this collision happened
@@ -81,22 +85,23 @@ impl Laser {
     ///
     /// * `laser_velocity` - The laser's velocity. Do not add the parent's velocity for this, use `firer_velocity` instead.
     /// * `firer_velocity` - The laser's parent's velocity.
-    /// * `pbr` - This takes a PBR that contains mesh data. The transform field will be overwritten
+    /// * `pbr` - This takes a PBR that contains mesh data. The location & rotation fields will be overwritten
     pub fn spawn_custom_pbr(
         location: Location,
         laser_velocity: Vec3,
         firer_velocity: Vec3,
         strength: f32,
         no_collide_entity: Option<Entity>,
-        mut pbr: PbrBundle,
+        mut pbr: CosmosPbrBundle,
         time: &Time,
         world_id: WorldId,
-        world_location: &Location,
         commands: &mut Commands,
     ) -> Entity {
-        pbr.transform = Transform::from_translation(world_location.relative_coords_to(&location));
-
-        pbr.transform.look_at(laser_velocity, Vec3::Y);
+        pbr.rotation = Transform::from_xyz(0.0, 0.0, 0.0)
+            .looking_at(laser_velocity, Vec3::Y)
+            .rotation
+            .into();
+        pbr.location = location;
 
         let mut ent_cmds = commands.spawn_empty();
 
@@ -108,11 +113,9 @@ impl Laser {
                 active: true,
                 last_position: location,
             },
-            location,
             pbr,
             RigidBody::Dynamic,
             LockedAxes::ROTATION_LOCKED,
-            Collider::cuboid(0.05, 0.05, 1.0),
             Velocity {
                 linvel: laser_velocity + firer_velocity,
                 ..Default::default()
@@ -121,9 +124,6 @@ impl Laser {
                 time: time.elapsed_seconds(),
             },
             PhysicsWorld { world_id },
-            ActiveEvents::COLLISION_EVENTS,
-            ActiveHooks::MODIFY_SOLVER_CONTACTS,
-            Sensor,
             NotShadowCaster,
             NotShadowReceiver,
             NoSendEntity,
@@ -148,7 +148,6 @@ impl Laser {
         no_collide_entity: Option<Entity>,
         time: &Time,
         world_id: WorldId,
-        world_location: &Location,
         commands: &mut Commands,
     ) -> Entity {
         Self::spawn_custom_pbr(
@@ -157,12 +156,9 @@ impl Laser {
             firer_velocity,
             strength,
             no_collide_entity,
-            PbrBundle {
-                ..Default::default()
-            },
+            CosmosPbrBundle { ..Default::default() },
             time,
             world_id,
-            world_location,
             commands,
         )
     }
@@ -173,12 +169,11 @@ fn handle_events(
         (
             Option<&PhysicsWorld>,
             &Location,
-            &GlobalTransform,
             Entity,
             Option<&NoCollide>,
             &mut Laser,
             &Velocity,
-            &Collider,
+            Option<&WorldWithin>,
         ),
         With<Laser>,
     >,
@@ -187,34 +182,46 @@ fn handle_events(
     rapier_context: Res<RapierContext>,
     parent_query: Query<&Parent>,
     transform_query: Query<&GlobalTransform, Without<Laser>>,
+    worlds: Query<(&Location, &PhysicsWorld, Entity), With<PlayerWorld>>,
 ) {
-    for (
-        world,
-        location,
-        transform,
-        laser_entity,
-        no_collide_entity,
-        mut laser,
-        velocity,
-        collider,
-    ) in query.iter_mut()
-    {
+    for (world, location, laser_entity, no_collide_entity, mut laser, velocity, world_within) in query.iter_mut() {
         if laser.active {
             let last_pos = laser.last_position;
             let delta_position = last_pos.relative_coords_to(location);
             laser.last_position = *location;
 
-            // Pass 1 second as the time & delta_position as the velocity because
-            // it simulates the laser moving over the period it moved in 1 second
-            // and the time it takes is irrelevant.
+            let world_id = world.map(|bw| bw.world_id).unwrap_or(DEFAULT_WORLD_ID);
 
-            if let Ok(Some((entity, toi))) = rapier_context.cast_shape(
-                world.map(|bw| bw.world_id).unwrap_or(DEFAULT_WORLD_ID),
-                (last_pos - delta_position).absolute_coords_f32(), // sometimes lasers pass through things that are next to where they are spawned, thus we check starting a bit behind them
-                Quat::from_affine3(&transform.affine()),
-                delta_position * 2.0, // * 2.0 to account for checking behind the laser
-                collider,
-                1.0,
+            let coords: Option<Vec3> = world_within
+                .map(|world_within| {
+                    if let Ok((loc, _, _)) = worlds.get(world_within.0) {
+                        Some(loc.relative_coords_to(location))
+                    } else {
+                        warn!("Laser playerworld not found!");
+                        None
+                    }
+                })
+                .unwrap_or(None);
+
+            let Some(coords) = coords else {
+                continue;
+            };
+
+            let ray_start = coords - delta_position;
+
+            // * 2.0 to account for checking behind the laser
+            let ray_distance = ((delta_position * 2.0).dot(delta_position * 2.0)).sqrt();
+
+            // The transform's rotation may not accurately represent the direction the laser is travelling,
+            // so rather use its actual delta position for direction of travel calculations
+            let ray_direction = delta_position.normalize_or_zero();
+
+            if let Ok(Some((entity, toi))) = rapier_context.cast_ray(
+                world_id,
+                ray_start, // sometimes lasers pass through things that are next to where they are spawned, thus we check starting a bit behind them
+                ray_direction,
+                ray_distance,
+                false,
                 QueryFilter::predicate(QueryFilter::default(), &|entity| {
                     if let Some(no_collide_entity) = no_collide_entity {
                         if no_collide_entity.0 == entity {
@@ -229,10 +236,10 @@ fn handle_events(
                     }
                 }),
             ) {
+                let pos = ray_start + (toi * ray_direction) + (velocity.linvel.normalize() * 0.01);
+
                 if let Ok(parent) = parent_query.get(entity) {
                     if let Ok(transform) = transform_query.get(parent.get()) {
-                        let pos = toi.witness1 + velocity.linvel.normalize() * 0.01;
-
                         let lph = Quat::from_affine3(&transform.affine())
                             .inverse()
                             .mul_vec3(pos - transform.translation());
@@ -244,7 +251,6 @@ fn handle_events(
                         });
                     }
                 } else if let Ok(transform) = transform_query.get(entity) {
-                    let pos = toi.witness1 + velocity.linvel.normalize() * 0.01;
                     let lph = Quat::from_affine3(&transform.affine())
                         .inverse()
                         .mul_vec3(pos - transform.translation());
@@ -255,26 +261,23 @@ fn handle_events(
                         laser_strength: laser.strength,
                     });
                 }
+
                 laser.active = false;
-                commands.entity(laser_entity).despawn_recursive();
+                commands.entity(laser_entity).insert(NeedsDespawned);
             }
         }
     }
 }
 
-fn despawn_lasers(
-    mut commands: Commands,
-    query: Query<(Entity, &FireTime), With<Laser>>,
-    time: Res<Time>,
-) {
+fn despawn_lasers(mut commands: Commands, query: Query<(Entity, &FireTime), With<Laser>>, time: Res<Time>) {
     for (ent, fire_time) in query.iter() {
         if time.elapsed_seconds() - fire_time.time > 5.0 {
-            commands.entity(ent).despawn_recursive();
+            commands.entity(ent).insert(NeedsDespawned);
         }
     }
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems((handle_events, despawn_lasers))
+    app.add_systems(Update, (handle_events, despawn_lasers))
         .add_event::<LaserCollideEvent>();
 }

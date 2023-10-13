@@ -15,9 +15,7 @@ use crate::persistence::{
 
 use super::server_ship_builder::ServerShipBuilder;
 
-fn on_save_structure(
-    mut query: Query<(&mut SerializedData, &Structure), (With<NeedsSaved>, With<Ship>)>,
-) {
+fn on_save_structure(mut query: Query<(&mut SerializedData, &Structure), (With<NeedsSaved>, With<Ship>)>) {
     for (mut s_data, structure) in query.iter_mut() {
         s_data.serialize_data("cosmos:structure", structure);
         s_data.serialize_data("cosmos:is_ship", &true);
@@ -30,10 +28,7 @@ fn on_load_structure(
     mut commands: Commands,
 ) {
     for (entity, s_data) in query.iter() {
-        if s_data
-            .deserialize_data::<bool>("cosmos:is_ship")
-            .unwrap_or(false)
-        {
+        if s_data.deserialize_data::<bool>("cosmos:is_ship").unwrap_or(false) {
             if let Some(mut structure) = s_data.deserialize_data::<Structure>("cosmos:structure") {
                 let loc = s_data
                     .deserialize_data("cosmos:location")
@@ -41,9 +36,7 @@ fn on_load_structure(
 
                 let mut entity_cmd = commands.entity(entity);
 
-                let vel = s_data
-                    .deserialize_data("cosmos:velocity")
-                    .unwrap_or(Velocity::zero());
+                let vel = s_data.deserialize_data("cosmos:velocity").unwrap_or(Velocity::zero());
 
                 let builder = ServerShipBuilder::default();
 
@@ -62,7 +55,9 @@ fn on_load_structure(
 /// I hate this, but the only way to prevent issues with events is to delay the sending of the chunk init events
 /// by 2 frames, so two events are needed to do this. This is really horrible, but the only way I can think of
 /// to get this to work ;(
+#[derive(Debug, Event)]
 struct DelayedStructureLoadEvent(pub Entity);
+#[derive(Debug, Event)]
 struct EvenMoreDelayedStructureLoadEvent(Entity);
 
 fn delayed_structure_event(
@@ -85,32 +80,29 @@ fn even_more_delayed_structure_event(
             for res in structure.all_chunks_iter(false) {
                 // This will always be true because include_empty is false
                 if let ChunkIteratorResult::FilledChunk {
-                    position: (x, y, z),
+                    position: coords,
                     chunk: _,
                 } = res
                 {
                     chunk_set_event_writer.send(ChunkInitEvent {
                         structure_entity: ev.0,
-                        x,
-                        y,
-                        z,
+                        coords,
                     });
                 }
             }
         }
 
-        structure_loaded_event_writer.send(StructureLoadedEvent {
-            structure_entity: ev.0,
-        });
+        structure_loaded_event_writer.send(StructureLoadedEvent { structure_entity: ev.0 });
     }
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(even_more_delayed_structure_event.in_base_set(CoreSet::PreUpdate))
+    app.add_systems(PreUpdate, even_more_delayed_structure_event)
         // After to ensure 1 frame delay
-        .add_system(delayed_structure_event.after(even_more_delayed_structure_event))
+        // Used to have `.after(even_more_delayed_structure_event)`
+        .add_systems(Update, delayed_structure_event)
         .add_event::<DelayedStructureLoadEvent>()
         .add_event::<EvenMoreDelayedStructureLoadEvent>()
-        .add_system(on_save_structure.after(begin_saving).before(done_saving))
-        .add_system(on_load_structure.after(begin_loading).before(done_loading));
+        .add_systems(First, on_save_structure.after(begin_saving).before(done_saving))
+        .add_systems(Update, on_load_structure.after(begin_loading).before(done_loading));
 }

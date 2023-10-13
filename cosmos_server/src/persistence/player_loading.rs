@@ -1,20 +1,14 @@
 //! Loads/unloads entities that are close to/far away from players
 
-use std::{
-    ffi::OsStr,
-    fs::{self},
-    time::Duration,
-};
+use std::{ffi::OsStr, fs, time::Duration};
 
 use bevy::{
-    prelude::{
-        warn, App, Commands, Component, DespawnRecursiveExt, Entity, IntoSystemConfig, Query, Res,
-        ResMut, With, Without,
-    },
+    prelude::{warn, App, Commands, Component, DespawnRecursiveExt, Entity, IntoSystemConfigs, Query, ResMut, Update, With, Without},
     tasks::{AsyncComputeTaskPool, Task},
     time::common_conditions::on_timer,
 };
 use cosmos_core::{
+    ecs::NeedsDespawned,
     entities::player::Player,
     persistence::{LoadingDistance, LOAD_DISTANCE},
     physics::location::{Location, Sector, SectorUnit, SECTOR_DIMENSIONS},
@@ -22,33 +16,23 @@ use cosmos_core::{
 use futures_lite::future;
 use walkdir::WalkDir;
 
-use super::{
-    loading::NeedsLoaded,
-    saving::{NeedsSaved, NeedsUnloaded},
-    EntityId, SaveFileIdentifier, SectorsCache,
-};
+use super::{loading::NeedsLoaded, saving::NeedsSaved, EntityId, SaveFileIdentifier, SectorsCache};
 
 fn unload_far(
     query: Query<&Location, With<Player>>,
-    others: Query<(&Location, Entity, &LoadingDistance), (Without<Player>, Without<NeedsUnloaded>)>,
+    others: Query<(&Location, Entity, &LoadingDistance), (Without<Player>, Without<NeedsDespawned>)>,
     mut commands: Commands,
 ) {
     for (loc, ent, ul_distance) in others.iter() {
         let ul_distance = ul_distance.unload_block_distance();
 
-        if let Some(min_dist) = query
-            .iter()
-            .map(|l| l.relative_coords_to(loc).abs().max_element())
-            .reduce(f32::min)
-        {
+        if let Some(min_dist) = query.iter().map(|l| l.relative_coords_to(loc).abs().max_element()).reduce(f32::min) {
             if min_dist <= ul_distance {
                 continue;
             }
         }
 
-        println!("Flagged for saving + unloading!");
-
-        commands.entity(ent).insert((NeedsSaved, NeedsUnloaded));
+        commands.entity(ent).insert((NeedsSaved, NeedsDespawned));
     }
 }
 
@@ -56,7 +40,7 @@ const SEARCH_RANGE: SectorUnit = 25;
 const DEFAULT_LOAD_DISTANCE: u32 = (LOAD_DISTANCE / SECTOR_DIMENSIONS) as u32;
 
 #[derive(Component, Debug)]
-struct LoadingTask(Task<(SectorsCache, Vec<SaveFileIdentifier>)>);
+struct LoadingTask(Task<Vec<SaveFileIdentifier>>);
 
 fn monitor_loading_task(
     // Because entities can be added while the scan task is in progress,
@@ -64,13 +48,12 @@ fn monitor_loading_task(
     loaded_entities: Query<&EntityId>,
     mut query: Query<(Entity, &mut LoadingTask)>,
     mut commands: Commands,
-    mut sectors_cache: ResMut<SectorsCache>,
 ) {
     let Ok((entity, mut task)) = query.get_single_mut() else {
         return;
     };
 
-    if let Some((cache, save_file_ids)) = future::block_on(future::poll_once(&mut task.0)) {
+    if let Some(save_file_ids) = future::block_on(future::poll_once(&mut task.0)) {
         commands.entity(entity).despawn_recursive();
 
         for sfi in save_file_ids {
@@ -82,8 +65,6 @@ fn monitor_loading_task(
                 commands.spawn((sfi, NeedsLoaded));
             }
         }
-
-        *sectors_cache = cache;
     }
 }
 
@@ -91,7 +72,8 @@ fn monitor_loading_task(
 fn load_near(
     query: Query<&Location, With<Player>>,
     loaded_entities: Query<&EntityId>,
-    sectors_cache: Res<SectorsCache>,
+    // This is modified below, despite it being cloned. Use ResMut to make purpose clear
+    sectors_cache: ResMut<SectorsCache>,
     mut commands: Commands,
 
     already_exists: Query<(), With<LoadingTask>>,
@@ -105,8 +87,10 @@ fn load_near(
 
     let sectors = query.iter().map(|l| l.sector()).collect::<Vec<Sector>>();
 
-    // If this ever gets laggy, either of these two clones could be the cause
+    // Shallow clone - we are only cloning the Arc<Mutex<...>> not the ...
     let mut sectors_cache = sectors_cache.clone();
+
+    // If this ever gets laggy, either of this clone could be the cause
     let loaded_entities = loaded_entities.iter().cloned().collect::<Vec<EntityId>>();
 
     let task = thread_pool.spawn(async move {
@@ -120,15 +104,11 @@ fn load_near(
                         let max_delta = dz.abs().max(dy.abs()).max(dx.abs()) as u32;
 
                         if let Some(entities) = sectors_cache.get(&sector) {
-                            for (entity_id, load_distance) in entities.iter() {
+                            for (entity_id, load_distance) in entities.lock().expect("Failed to lock").iter() {
                                 if max_delta <= load_distance.unwrap_or(DEFAULT_LOAD_DISTANCE)
                                     && !loaded_entities.iter().any(|x| x == entity_id)
                                 {
-                                    to_load.push(SaveFileIdentifier::new(
-                                        Some(sector),
-                                        entity_id.clone(),
-                                        *load_distance,
-                                    ));
+                                    to_load.push(SaveFileIdentifier::new(Some(sector), entity_id.clone(), *load_distance));
                                 }
                             }
                         } else {
@@ -165,21 +145,12 @@ fn load_near(
 
                                         let entity_id = EntityId::new(entity_id);
 
-                                        sectors_cache.insert(
-                                            sector,
-                                            entity_id.clone(),
-                                            load_distance,
-                                        );
+                                        sectors_cache.insert(sector, entity_id.clone(), load_distance);
 
-                                        if max_delta
-                                            <= load_distance.unwrap_or(DEFAULT_LOAD_DISTANCE)
+                                        if max_delta <= load_distance.unwrap_or(DEFAULT_LOAD_DISTANCE)
                                             && !loaded_entities.iter().any(|x| x == &entity_id)
                                         {
-                                            to_load.push(SaveFileIdentifier::new(
-                                                Some(sector),
-                                                entity_id,
-                                                load_distance,
-                                            ));
+                                            to_load.push(SaveFileIdentifier::new(Some(sector), entity_id, load_distance));
                                         }
                                     }
                                 }
@@ -190,16 +161,19 @@ fn load_near(
             }
         }
 
-        (sectors_cache, to_load)
+        to_load
     });
 
     commands.spawn(LoadingTask(task));
 }
 
 pub(super) fn register(app: &mut App) {
-    app.insert_resource(SectorsCache::default()).add_systems((
-        unload_far.run_if(on_timer(Duration::from_millis(1000))),
-        load_near.run_if(on_timer(Duration::from_millis(1000))),
-        monitor_loading_task,
-    ));
+    app.insert_resource(SectorsCache::default()).add_systems(
+        Update,
+        (
+            unload_far.run_if(on_timer(Duration::from_millis(1000))),
+            load_near.run_if(on_timer(Duration::from_millis(1000))),
+            monitor_loading_task,
+        ),
+    );
 }

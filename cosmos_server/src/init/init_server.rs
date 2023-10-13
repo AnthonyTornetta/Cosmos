@@ -8,8 +8,11 @@ use std::{
 };
 
 use bevy::prelude::*;
-use bevy_renet::renet::{RenetServer, ServerAuthentication, ServerConfig};
-use cosmos_core::netty::{get_local_ipaddress, server_connection_config, PROTOCOL_ID};
+use bevy_renet::renet::{
+    transport::{NetcodeServerTransport, ServerAuthentication, ServerConfig},
+    RenetServer,
+};
+use cosmos_core::netty::{connection_config, get_local_ipaddress, PROTOCOL_ID};
 
 use crate::netty::network_helpers::{ClientTicks, NetworkTick, ServerLobby};
 
@@ -19,24 +22,26 @@ pub fn init(app: &mut App, address: Option<String>) {
 
     let local_addr = address.unwrap_or(get_local_ipaddress());
 
-    let address: SocketAddr = format!("{local_addr}:{port}").parse().unwrap();
+    let public_addr: SocketAddr = format!("{local_addr}:{port}").parse().unwrap();
     let socket = UdpSocket::bind(format!("0.0.0.0:{port}")).unwrap();
-    socket
-        .set_nonblocking(true)
-        .expect("Cannot set non-blocking mode!");
+    socket.set_nonblocking(true).expect("Cannot set non-blocking mode!");
 
-    let server_config = ServerConfig::new(20, PROTOCOL_ID, address, ServerAuthentication::Unsecure);
-    let connection_config = server_connection_config(); //RenetConnectionConfig::default();
-    let cur_time = SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .unwrap();
+    let server_config = ServerConfig {
+        max_clients: 20,
+        protocol_id: PROTOCOL_ID,
+        public_addr,
+        authentication: ServerAuthentication::Unsecure,
+    };
+    let current_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap();
 
-    let server = RenetServer::new(cur_time, server_config, connection_config, socket).unwrap();
+    let transport = NetcodeServerTransport::new(current_time, server_config, socket).unwrap();
+    let server = RenetServer::new(connection_config());
 
     app.insert_resource(ServerLobby::default())
         .insert_resource(NetworkTick(0))
         .insert_resource(ClientTicks::default())
-        .insert_resource(server);
+        .insert_resource(server)
+        .insert_resource(transport);
 
     println!("Setup server on {local_addr}:{port}");
 }

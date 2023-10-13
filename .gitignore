@@ -8,6 +8,9 @@
 
 .idea/
 
+# Don't include user-specific settings
+cosmos_client/settings
+
 # Don't include any saved world files
 /cosmos_server/saves
 cosmos_server/world/*

@@ -1,8 +1,8 @@
 //! Represents a block that is a part of a structure
 
 use bevy::{
-    prelude::App,
-    reflect::{FromReflect, Reflect},
+    prelude::{App, Deref, DerefMut},
+    reflect::Reflect,
 };
 use serde::{Deserialize, Serialize};
 
@@ -11,30 +11,24 @@ use crate::{
     registry::Registry,
 };
 
-use super::{chunk::CHUNK_DIMENSIONS, Structure};
+use super::{
+    coordinates::{BlockCoordinate, ChunkCoordinate, CoordinateType},
+    Structure,
+};
 
-#[derive(
-    Clone, Debug, FromReflect, Reflect, Copy, PartialEq, Eq, Default, Serialize, Deserialize,
-)]
+#[derive(Clone, Deref, DerefMut, Debug, Reflect, Copy, PartialEq, Eq, Serialize, Deserialize)]
 /// A block that is a part of a structure
 ///
 /// This may not be valid when it is used.
-pub struct StructureBlock {
-    /// Block x position
-    pub x: usize,
-    /// Block y position
-    pub y: usize,
-    /// Block z position
-    pub z: usize,
-}
+pub struct StructureBlock(pub BlockCoordinate);
 
-impl From<StructureBlock> for (usize, usize, usize) {
+impl From<StructureBlock> for (CoordinateType, CoordinateType, CoordinateType) {
     fn from(val: StructureBlock) -> Self {
         (val.x, val.y, val.z)
     }
 }
 
-impl From<&StructureBlock> for (usize, usize, usize) {
+impl From<&StructureBlock> for (CoordinateType, CoordinateType, CoordinateType) {
     fn from(val: &StructureBlock) -> Self {
         (val.x, val.y, val.z)
     }
@@ -43,35 +37,35 @@ impl From<&StructureBlock> for (usize, usize, usize) {
 impl StructureBlock {
     #[inline]
     /// Gets the x position
-    pub fn x(&self) -> usize {
+    pub fn x(&self) -> CoordinateType {
         self.x
     }
     #[inline]
     /// Gets the y position
-    pub fn y(&self) -> usize {
+    pub fn y(&self) -> CoordinateType {
         self.y
     }
     #[inline]
     /// Gets the z position
-    pub fn z(&self) -> usize {
+    pub fn z(&self) -> CoordinateType {
         self.z
     }
 
     /// Creates a structure block
-    pub fn new(x: usize, y: usize, z: usize) -> Self {
-        Self { x, y, z }
+    pub fn new(coords: BlockCoordinate) -> Self {
+        Self(coords)
     }
 
     #[inline]
     /// Returns this block's top facing face
     pub fn block_up(&self, structure: &Structure) -> BlockFace {
-        structure.block_rotation(self.x, self.y, self.z)
+        structure.block_rotation(self.0)
     }
 
     #[inline]
     /// Returns the numeric block id - this returns air if the block is not loaded
     pub fn block_id(&self, structure: &Structure) -> u16 {
-        structure.block_id_at(self.x, self.y, self.z)
+        structure.block_id_at(self.0)
     }
 
     #[inline]
@@ -81,31 +75,15 @@ impl StructureBlock {
     }
 
     #[inline]
-    /// The chunk that contains this block's x coordinate
-    pub fn chunk_coord_x(&self) -> usize {
-        self.x / CHUNK_DIMENSIONS
-    }
-
-    #[inline]
-    /// The chunk that contains this block's y coordinate
-    pub fn chunk_coord_y(&self) -> usize {
-        self.y / CHUNK_DIMENSIONS
-    }
-
-    #[inline]
-    /// The chunk that contains this block's z coordinate
-    pub fn chunk_coord_z(&self) -> usize {
-        self.z / CHUNK_DIMENSIONS
+    /// The chunk that contains this block's coordinates as (x, y, z).
+    pub fn coords(&self) -> BlockCoordinate {
+        self.0
     }
 
     #[inline]
     /// The chunk that contains this block's coordinates as (x, y, z).
-    pub fn chunk_coords(&self) -> (usize, usize, usize) {
-        (
-            self.chunk_coord_x(),
-            self.chunk_coord_y(),
-            self.chunk_coord_z(),
-        )
+    pub fn chunk_coords(&self) -> ChunkCoordinate {
+        ChunkCoordinate::for_block_coordinate(self.0)
     }
 }
 

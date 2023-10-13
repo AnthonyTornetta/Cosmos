@@ -4,18 +4,15 @@ use bevy::{
     ecs::system::EntityCommands,
     pbr::NotShadowCaster,
     prelude::{
-        shape::UVSphere, Added, App, Assets, Color, Commands, ComputedVisibility, Entity, Mesh,
-        Query, Res, ResMut, StandardMaterial, Visibility,
+        shape::UVSphere, Added, App, Assets, Color, Commands, ComputedVisibility, Entity, Mesh, Query, Res, ResMut, StandardMaterial,
+        Update, Visibility,
     },
 };
 use cosmos_core::{
     physics::location::Location,
     registry::Registry,
     structure::{
-        planet::{
-            biosphere::BiosphereMarker, planet_builder::PlanetBuilder,
-            planet_builder::TPlanetBuilder, Planet,
-        },
+        planet::{biosphere::BiosphereMarker, planet_builder::PlanetBuilder, planet_builder::TPlanetBuilder, Planet},
         Structure,
     },
 };
@@ -38,15 +35,8 @@ impl Default for ClientPlanetBuilder {
 }
 
 impl TPlanetBuilder for ClientPlanetBuilder {
-    fn insert_planet(
-        &self,
-        entity: &mut EntityCommands,
-        location: Location,
-        structure: &mut Structure,
-        planet: Planet,
-    ) {
-        self.planet_builder
-            .insert_planet(entity, location, structure, planet);
+    fn insert_planet(&self, entity: &mut EntityCommands, location: Location, structure: &mut Structure, planet: Planet) {
+        self.planet_builder.insert_planet(entity, location, structure, planet);
     }
 }
 
@@ -58,7 +48,11 @@ fn added_planet(
     color_registry: Res<Registry<BiosphereColor>>,
 ) {
     for (ent, structure, marker) in query.iter() {
-        let blocks_radius = structure.blocks_width() as f32 / 2.0;
+        let Structure::Dynamic(structure) = structure else {
+            panic!("Invalid planet structure! It must be dynamic!");
+        };
+
+        let blocks_radius = structure.block_dimensions() as f32 / 2.0;
 
         commands.entity(ent).insert((
             meshes.add(
@@ -74,6 +68,8 @@ fn added_planet(
                     .from_id(marker.biosphere_name())
                     .map(|x| x.color())
                     .unwrap_or(Color::WHITE),
+
+                perceptual_roughness: 1.0,
                 ..Default::default()
             }),
             Visibility::default(),
@@ -84,5 +80,5 @@ fn added_planet(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(added_planet);
+    app.add_systems(Update, added_planet);
 }

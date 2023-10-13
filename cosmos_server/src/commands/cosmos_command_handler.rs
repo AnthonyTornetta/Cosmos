@@ -1,16 +1,13 @@
 //! Handles all the server console commands
 
-use bevy::prelude::{
-    App, Commands, DespawnRecursiveExt, Entity, EventReader, EventWriter, Query, Res, ResMut, With,
-};
+use bevy::prelude::{App, Commands, Entity, EventReader, EventWriter, Query, Res, ResMut, Startup, With};
 use cosmos_core::{
+    ecs::NeedsDespawned,
     physics::location::Location,
     structure::{planet::Planet, ship::Ship, Structure},
 };
 
-use crate::structure::saving::{
-    load_structure, SaveStructure, SendDelayedStructureLoadEvent, StructureType,
-};
+use crate::structure::saving::{load_structure, SaveStructure, SendDelayedStructureLoadEvent, StructureType};
 
 use super::{CosmosCommandInfo, CosmosCommandSent, CosmosCommands};
 
@@ -30,8 +27,7 @@ fn register_commands(mut commands: ResMut<CosmosCommands>) {
     commands.add_command_info(CosmosCommandInfo {
         name: "save".into(),
         usage: "save [entity_id] [file_name]".into(),
-        description: "Saves the given structure to that file. Do not specify the file extension."
-            .into(),
+        description: "Saves the given structure to that file. Do not specify the file extension.".into(),
     });
 
     commands.add_command_info(CosmosCommandInfo {
@@ -106,8 +102,8 @@ fn cosmos_command_listener(
                 } else if let Ok(index) = ev.args[0].parse::<u64>() {
                     let entity = Entity::from_bits(index);
 
-                    if let Some(entity_commands) = commands.get_entity(entity) {
-                        entity_commands.despawn_recursive();
+                    if let Some(mut entity_commands) = commands.get_entity(entity) {
+                        entity_commands.insert(NeedsDespawned);
                         println!("Despawned entity {index}");
                     } else {
                         println!("Entity not found");
@@ -153,10 +149,7 @@ fn cosmos_command_listener(
                 if ev.args.len() != 2 {
                     display_help(Some("save"), &cosmos_commands);
                 } else if let Ok(index) = ev.args[0].parse::<u32>() {
-                    if let Some(entity) = all_saveable_entities
-                        .iter()
-                        .find(|ent| ent.index() == index)
-                    {
+                    if let Some(entity) = all_saveable_entities.iter().find(|ent| ent.index() == index) {
                         let mut entity_cmds = commands.get_entity(entity).unwrap();
                         if let Ok((planet, ship)) = structure_query.get(entity) {
                             if planet.is_some() {
@@ -190,6 +183,5 @@ fn cosmos_command_listener(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_startup_system(register_commands)
-        .add_system(cosmos_command_listener);
+    app.add_systems(Startup, (register_commands, cosmos_command_listener));
 }

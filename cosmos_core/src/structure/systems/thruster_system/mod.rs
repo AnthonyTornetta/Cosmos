@@ -4,14 +4,14 @@ use std::ops::Mul;
 
 use bevy::{
     prelude::{
-        App, Commands, Component, EventReader, IntoSystemAppConfig, IntoSystemConfig, OnEnter,
-        OnUpdate, Quat, Query, Res, ResMut, Resource, States, Transform, Vec3, With,
+        in_state, App, Commands, Component, EventReader, IntoSystemConfigs, OnEnter, Quat, Query, Res, ResMut, Resource, States, Transform,
+        Update, Vec3, With,
     },
-    reflect::{FromReflect, Reflect},
+    reflect::Reflect,
     time::Time,
     utils::HashMap,
 };
-use bevy_rapier3d::prelude::{ExternalImpulse, Velocity};
+use bevy_rapier3d::prelude::{ExternalImpulse, ReadMassProperties, Velocity};
 
 use crate::{
     block::Block,
@@ -27,7 +27,7 @@ use crate::{
 
 use super::{StructureSystem, Systems};
 
-const MAX_SHIP_SPEED: f32 = 1000.0;
+const MAX_SHIP_SPEED: f32 = 200.0;
 const MAX_BRAKE_DELTA_PER_THRUST: f32 = 300.0;
 
 /// A block that is a thruster will have a thruster property
@@ -53,7 +53,7 @@ impl ThrusterBlocks {
     }
 }
 
-#[derive(Component, Default, Reflect, FromReflect)]
+#[derive(Component, Default, Reflect)]
 /// Represents all the thruster blocks on this structure
 pub struct ThrusterSystem {
     thrust_total: f32,
@@ -77,7 +77,7 @@ fn register_thruster_blocks(blocks: Res<Registry<Block>>, mut storage: ResMut<Th
         storage.insert(
             block,
             ThrusterProperty {
-                strength: 5.0,
+                strength: 10.0,
                 energy_consupmtion: 100.0,
             },
         );
@@ -104,13 +104,11 @@ fn block_update_system(
     for ev in event.iter() {
         if let Ok(systems) = systems_query.get(ev.structure_entity) {
             if let Ok(mut system) = systems.query_mut(&mut system_query) {
-                if let Some(prop) = energy_storage_blocks.get(blocks.from_numeric_id(ev.old_block))
-                {
+                if let Some(prop) = energy_storage_blocks.get(blocks.from_numeric_id(ev.old_block)) {
                     system.block_removed(prop);
                 }
 
-                if let Some(prop) = energy_storage_blocks.get(blocks.from_numeric_id(ev.new_block))
-                {
+                if let Some(prop) = energy_storage_blocks.get(blocks.from_numeric_id(ev.new_block)) {
                     system.block_added(prop);
                 }
             }
@@ -127,6 +125,7 @@ fn update_movement(
             &Transform,
             &mut Velocity,
             &mut ExternalImpulse,
+            &ReadMassProperties,
         ),
         With<Pilot>,
     >,
@@ -134,9 +133,7 @@ fn update_movement(
     time: Res<Time>,
 ) {
     for (thruster_system, system) in thrusters_query.iter() {
-        if let Ok((movement, systems, transform, mut velocity, mut external_impulse)) =
-            query.get_mut(system.structure_entity)
-        {
+        if let Ok((movement, systems, transform, mut velocity, mut external_impulse, readmass)) = query.get_mut(system.structure_entity) {
             // Rotation
             let torque = Quat::from_affine3(&transform.compute_affine()).mul(movement.torque * 5.0);
 
@@ -183,10 +180,8 @@ fn update_movement(
             };
 
             if movement.braking {
-                let mut brake_vec = -velocity.linvel;
-                let delta = time.delta_seconds()
-                    * MAX_BRAKE_DELTA_PER_THRUST
-                    * thruster_system.thrust_total;
+                let mut brake_vec = -velocity.linvel * readmass.0.mass;
+                let delta = time.delta_seconds() * MAX_BRAKE_DELTA_PER_THRUST * thruster_system.thrust_total;
 
                 if brake_vec.length_squared() >= delta * delta {
                     brake_vec = brake_vec.normalize() * delta;
@@ -222,18 +217,12 @@ fn structure_loaded_event(
     }
 }
 
-pub(super) fn register<T: States + Clone + Copy>(
-    app: &mut App,
-    post_loading_state: T,
-    playing_state: T,
-) {
+pub(super) fn register<T: States + Clone + Copy>(app: &mut App, post_loading_state: T, playing_state: T) {
     app.insert_resource(ThrusterBlocks::default())
-        .add_systems((
-            register_thruster_blocks.in_schedule(OnEnter(post_loading_state)),
-            // block update system used to be in CoreState::PostUpdate
-            structure_loaded_event.in_set(OnUpdate(playing_state)),
-            block_update_system.in_set(OnUpdate(playing_state)),
-            update_movement.in_set(OnUpdate(playing_state)),
-        ))
+        .add_systems(OnEnter(post_loading_state), register_thruster_blocks)
+        .add_systems(
+            Update,
+            (structure_loaded_event, block_update_system, update_movement).run_if(in_state(playing_state)),
+        )
         .register_type::<ThrusterSystem>();
 }

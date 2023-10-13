@@ -8,15 +8,15 @@
 //! See [`saving::default_save`] for an example.
 
 use bevy::{
-    prelude::{
-        App, Commands, Component, CoreSet, DespawnRecursiveExt, Entity, IntoSystemConfig, Query,
-        ResMut, With, Without,
-    },
+    prelude::{App, Commands, Component, Entity, First, IntoSystemConfigs, PostUpdate, Query, ResMut, With, Without},
     reflect::Reflect,
 };
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
-    netty::cosmos_encoder, persistence::LoadingDistance, physics::location::Location,
+    ecs::{despawn_needed, NeedsDespawned},
+    netty::cosmos_encoder,
+    persistence::LoadingDistance,
+    physics::location::Location,
 };
 use std::{fs, io};
 
@@ -27,15 +27,7 @@ use super::{EntityId, SaveFileIdentifier, SaveFileIdentifierType, SectorsCache, 
 #[derive(Component, Debug, Default, Reflect)]
 pub struct NeedsSaved;
 
-/// This flag will denote that once this entity is saved, it will be unloaded.
-/// To save this entity, make sure to also add `NeedsSaved`
-#[derive(Component, Debug, Default, Reflect)]
-pub struct NeedsUnloaded;
-
-fn check_needs_saved(
-    query: Query<Entity, (With<NeedsSaved>, Without<SerializedData>)>,
-    mut commands: Commands,
-) {
+fn check_needs_saved(query: Query<Entity, (With<NeedsSaved>, Without<SerializedData>)>, mut commands: Commands) {
     for ent in query.iter() {
         commands.entity(ent).insert(SerializedData::default());
     }
@@ -55,22 +47,32 @@ pub fn done_saving(
             Entity,
             &SerializedData,
             Option<&EntityId>,
-            Option<&NeedsUnloaded>,
             Option<&LoadingDistance>,
             Option<&SaveFileIdentifier>,
         ),
         With<NeedsSaved>,
     >,
+    dead_saves_query: Query<&SaveFileIdentifier, (With<NeedsDespawned>, Without<NeedsSaved>)>,
     mut sectors_cache: ResMut<SectorsCache>,
     mut commands: Commands,
 ) {
-    for (entity, sd, entity_id, needs_unloaded, loading_distance, save_file_identifier) in
-        query.iter()
-    {
-        commands
-            .entity(entity)
-            .remove::<NeedsSaved>()
-            .remove::<SerializedData>();
+    for dead_save in dead_saves_query.iter() {
+        let path = dead_save.get_save_file_path();
+        if fs::try_exists(&path).unwrap_or(false) {
+            fs::remove_file(path).expect("Error deleting old save file!");
+
+            if let SaveFileIdentifierType::Base((entity_id, Some(sector), load_distance)) = &dead_save.identifier_type {
+                sectors_cache.remove(entity_id, *sector, *load_distance);
+            }
+        }
+    }
+
+    for (entity, sd, entity_id, loading_distance, save_file_identifier) in query.iter() {
+        commands.entity(entity).remove::<NeedsSaved>().remove::<SerializedData>();
+
+        if !sd.should_save() {
+            continue;
+        }
 
         let entity_id = if let Some(id) = entity_id {
             id.clone()
@@ -87,19 +89,10 @@ pub fn done_saving(
             if fs::try_exists(&path).unwrap_or(false) {
                 fs::remove_file(path).expect("Error deleting old save file!");
 
-                if let SaveFileIdentifierType::Base((entity_id, Some(sector), load_distance)) =
-                    &save_file_identifier.identifier_type
-                {
+                if let SaveFileIdentifierType::Base((entity_id, Some(sector), load_distance)) = &save_file_identifier.identifier_type {
                     sectors_cache.remove(entity_id, *sector, *load_distance);
                 }
             }
-        }
-
-        if !sd.should_save() {
-            if needs_unloaded.is_some() {
-                commands.entity(entity).despawn_recursive();
-            }
-            continue;
         }
 
         let serialized: Vec<u8> = cosmos_encoder::serialize(&sd);
@@ -121,16 +114,10 @@ pub fn done_saving(
             continue;
         }
 
-        if let Some(loc) = sd.location {
-            sectors_cache.insert(
-                loc.sector(),
-                entity_id,
-                loading_distance.map(|ld| ld.load_distance()),
-            );
-        }
-
-        if needs_unloaded.is_some() {
-            commands.entity(entity).despawn_recursive();
+        if matches!(&save_identifier.identifier_type, SaveFileIdentifierType::Base(_)) {
+            if let Some(loc) = sd.location {
+                sectors_cache.insert(loc.sector(), entity_id, loading_distance.map(|ld| ld.load_distance()));
+            }
         }
     }
 }
@@ -147,17 +134,7 @@ fn write_file(save_identifier: &SaveFileIdentifier, serialized: &[u8]) -> io::Re
     Ok(())
 }
 
-fn default_save(
-    mut query: Query<
-        (
-            &mut SerializedData,
-            Option<&Location>,
-            Option<&Velocity>,
-            Option<&LoadingDistance>,
-        ),
-        With<NeedsSaved>,
-    >,
-) {
+fn default_save(mut query: Query<(&mut SerializedData, Option<&Location>, Option<&Velocity>, Option<&LoadingDistance>), With<NeedsSaved>>) {
     for (mut data, loc, vel, loading_distance) in query.iter_mut() {
         if let Some(loc) = loc {
             data.set_location(loc);
@@ -174,11 +151,11 @@ fn default_save(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(check_needs_saved)
+    app.add_systems(PostUpdate, check_needs_saved)
         // Put all saving-related systems after this
-        .add_system(begin_saving.in_base_set(CoreSet::First))
+        .add_systems(First, begin_saving.before(despawn_needed))
         // Put all saving-related systems before this
-        .add_system(done_saving.after(begin_saving))
+        .add_systems(First, done_saving.after(begin_saving).before(despawn_needed))
         // Like this:
-        .add_system(default_save.after(begin_saving).before(done_saving));
+        .add_systems(First, default_save.after(begin_saving).before(done_saving));
 }

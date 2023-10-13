@@ -4,108 +4,113 @@ use bevy::utils::hashbrown::hash_map;
 
 use super::{
     chunk::{Chunk, CHUNK_DIMENSIONS},
+    coordinates::{BlockCoordinate, ChunkBlockCoordinate, ChunkCoordinate, Coordinate, UnboundBlockCoordinate, UnboundChunkCoordinate},
     structure_block::StructureBlock,
     Structure,
 };
 
-#[derive(Debug)]
-struct Body<'a> {
-    start_x: usize,
-    start_y: usize,
-    start_z: usize,
-
-    end_x: usize,
-    end_y: usize,
-    end_z: usize,
-
-    at_x: usize,
-    at_y: usize,
-    at_z: usize,
+#[derive(Debug, Clone)]
+struct Body<'a, T: Coordinate> {
+    start: T,
+    end: T,
+    at: T,
 
     structure: &'a Structure,
 }
 
-#[derive(Debug)]
-enum BlockItrState<'a> {
-    ExcludeEmpty(Body<'a>),
-    IncludeEmpty(Body<'a>),
+#[derive(Debug, Clone)]
+struct EmptyBody<'a, T: Coordinate> {
+    chunk_itr: ChunkIterator<'a>,
+    cur_chunk: &'a Chunk,
+
+    body: Body<'a, T>,
+}
+
+#[derive(Debug, Clone)]
+enum BlockItrState<'a, T: Coordinate> {
+    ExcludeEmpty(EmptyBody<'a, T>),
+    IncludeEmpty(Body<'a, T>),
     Invalid,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct ExcludeEmptyBody {
-    start_x: usize,
-    start_y: usize,
-    start_z: usize,
-
-    end_x: usize,
-    end_y: usize,
-    end_z: usize,
+    start: ChunkCoordinate,
+    end: ChunkCoordinate,
 }
 
-#[derive(Debug)]
-enum ChunkItrState<'a> {
+#[derive(Debug, Clone)]
+enum ChunkItrState<'a, T: Coordinate> {
     ExcludeEmpty((ExcludeEmptyBody, hash_map::Iter<'a, usize, Chunk>)),
-    IncludeEmpty(Body<'a>),
+    IncludeEmpty(Body<'a, T>),
     Invalid,
 }
 
 /// Iterates over the blocks of a structure
+#[derive(Clone, Debug)]
 pub struct BlockIterator<'a> {
-    state: BlockItrState<'a>,
+    state: BlockItrState<'a, BlockCoordinate>,
 }
 
 impl<'a> BlockIterator<'a> {
     /// ALL Coordinates are inclusive!
     ///
     /// * `include_empty` - If this is true, air blocks will be included. If false, air blocks will be excluded so some optimizations can be used.
-    pub fn new(
-        start_x: i32,
-        start_y: i32,
-        start_z: i32,
-        mut end_x: i32,
-        mut end_y: i32,
-        mut end_z: i32,
-        include_empty: bool,
-        structure: &'a Structure,
-    ) -> Self {
-        end_x = end_x.min(structure.blocks_width() as i32 - 1);
-        end_y = end_y.min(structure.blocks_height() as i32 - 1);
-        end_z = end_z.min(structure.blocks_length() as i32 - 1);
+    pub fn new(mut start: UnboundBlockCoordinate, mut end: UnboundBlockCoordinate, include_empty: bool, structure: &'a Structure) -> Self {
+        let dims = UnboundBlockCoordinate::from(structure.block_dimensions());
 
-        if end_x < 0
-            || end_y < 0
-            || end_z < 0
-            || start_x >= structure.blocks_width() as i32
-            || start_y >= structure.blocks_height() as i32
-            || start_z >= structure.blocks_length() as i32
-            || start_x > end_x
-            || start_y > end_y
-            || start_z > end_z
-        {
+        end.x = end.x.min(dims.x - 1);
+        end.y = end.y.min(dims.y - 1);
+        end.z = end.z.min(dims.z - 1);
+
+        let Ok(end) = BlockCoordinate::try_from(end) else {
+            return Self {
+                state: BlockItrState::Invalid,
+            };
+        };
+
+        start.x = start.x.max(0);
+        start.y = start.y.max(0);
+        start.z = start.z.max(0);
+
+        let Ok(start) = BlockCoordinate::try_from(start) else {
+            return Self {
+                state: BlockItrState::Invalid,
+            };
+        };
+
+        if !structure.is_within_blocks(start) {
             Self {
                 state: BlockItrState::Invalid,
             }
         } else {
             let body = Body {
-                start_x: start_x.max(0) as usize,
-                start_y: start_y.max(0) as usize,
-                start_z: start_z.max(0) as usize,
-
-                end_x: end_x as usize,
-                end_y: end_y as usize,
-                end_z: end_z as usize,
-
-                at_x: (start_x.max(0) as usize).min(structure.blocks_width() - 1),
-                at_y: (start_y.max(0) as usize).min(structure.blocks_height() - 1),
-                at_z: (start_z.max(0) as usize).min(structure.blocks_length() - 1),
+                start,
+                end,
+                at: start,
                 structure,
             };
+
             Self {
                 state: if include_empty {
                     BlockItrState::IncludeEmpty(body)
                 } else {
-                    BlockItrState::ExcludeEmpty(body)
+                    let mut chunk_itr = structure.chunk_iter(
+                        UnboundChunkCoordinate::for_unbound_block_coordinate(start.into()),
+                        UnboundChunkCoordinate::for_unbound_block_coordinate(end.into()),
+                        false,
+                    );
+                    let cur_chunk = chunk_itr.next();
+
+                    if let Some(ChunkIteratorResult::FilledChunk { position: _, chunk }) = cur_chunk {
+                        BlockItrState::ExcludeEmpty(EmptyBody {
+                            chunk_itr,
+                            cur_chunk: chunk,
+                            body,
+                        })
+                    } else {
+                        BlockItrState::Invalid
+                    }
                 },
             }
         }
@@ -120,21 +125,9 @@ impl<'a> BlockIterator<'a> {
     pub fn len(&self) -> usize {
         match &self.state {
             BlockItrState::IncludeEmpty(body) => {
-                (body.end_x - body.start_x)
-                    * (body.end_y - body.start_y)
-                    * (body.end_z - body.start_z)
+                ((body.end.x - body.start.x) * (body.end.y - body.start.y) * (body.end.z - body.start.z)) as usize
             }
-            BlockItrState::ExcludeEmpty(body) => Self::new(
-                body.start_x as i32,
-                body.start_y as i32,
-                body.start_z as i32,
-                body.end_x as i32,
-                body.end_y as i32,
-                body.end_z as i32,
-                false,
-                body.structure,
-            )
-            .count(),
+            BlockItrState::ExcludeEmpty(_) => self.clone().count(),
             BlockItrState::Invalid => 0,
         }
     }
@@ -147,82 +140,135 @@ impl<'a> Iterator for BlockIterator<'a> {
         match &mut self.state {
             BlockItrState::Invalid => None,
             BlockItrState::IncludeEmpty(body) => {
-                if body.at_z > body.end_z {
+                if body.at.z > body.end.z {
                     return None;
                 }
 
-                let (x, y, z) = (body.at_x, body.at_y, body.at_z);
+                let position = body.at;
 
-                body.at_x += 1;
+                body.at.x += 1;
 
-                if body.at_x > body.end_x {
-                    body.at_x = body.start_x;
+                if body.at.x > body.end.x {
+                    body.at.x = body.start.x;
 
-                    body.at_y += 1;
+                    body.at.y += 1;
 
-                    if body.at_y > body.end_y {
-                        body.at_y = body.start_y;
+                    if body.at.y > body.end.y {
+                        body.at.y = body.start.y;
 
-                        body.at_z += 1;
+                        body.at.z += 1;
                     }
                 }
 
-                Some(StructureBlock { x, y, z })
+                Some(StructureBlock::new(position))
             }
-            BlockItrState::ExcludeEmpty(body) => loop {
-                if body.at_z > body.end_z {
-                    return None;
+            BlockItrState::ExcludeEmpty(body) => {
+                let first_block_coordinate = body.cur_chunk.chunk_coordinates().first_structure_block();
+
+                let structure_x = body.body.at.x + first_block_coordinate.x;
+                let structure_y = body.body.at.y + first_block_coordinate.y;
+                let structure_z = body.body.at.z + first_block_coordinate.z;
+
+                if structure_x < body.body.start.x {
+                    body.body.at.x = structure_x - first_block_coordinate.x;
+                }
+                if structure_y < body.body.start.y {
+                    body.body.at.y = structure_y - first_block_coordinate.y;
+                }
+                if structure_z < body.body.start.z {
+                    body.body.at.z = structure_z - first_block_coordinate.z;
                 }
 
-                let (mut x, mut y, mut z) = (body.at_x, body.at_y, body.at_z);
-
-                // Skip over empty chunks to increase performance
-                while !(body
-                    .structure
-                    .chunk_at_block_coordinates(x, y, z)
-                    .is_some_and(|c| !c.is_empty()))
-                {
-                    body.at_x = (body.at_x / CHUNK_DIMENSIONS + 1) * CHUNK_DIMENSIONS;
-
-                    if body.at_x > body.end_x {
-                        body.at_x = body.start_x;
-
-                        body.at_y = (body.at_y / CHUNK_DIMENSIONS + 1) * CHUNK_DIMENSIONS;
-
-                        if body.at_y > body.end_y {
-                            body.at_y = body.start_y;
-
-                            body.at_z = (body.at_z / CHUNK_DIMENSIONS + 1) * CHUNK_DIMENSIONS;
+                if body.body.at.x >= CHUNK_DIMENSIONS || body.body.at.y >= CHUNK_DIMENSIONS || body.body.at.z >= CHUNK_DIMENSIONS {
+                    if let Some(chunk) = body.chunk_itr.next() {
+                        if let ChunkIteratorResult::FilledChunk { position: _, chunk } = chunk {
+                            body.cur_chunk = chunk;
+                            body.body.at.x = 0;
+                            body.body.at.y = 0;
+                            body.body.at.z = 0;
+                        } else {
+                            panic!("This should never happen.");
                         }
-                    }
-
-                    (x, y, z) = (body.at_x, body.at_y, body.at_z);
-
-                    if body.at_z > body.end_z {
+                    } else {
+                        self.state = BlockItrState::Invalid;
                         return None;
                     }
                 }
 
-                body.at_x += 1;
-
-                if body.at_x > body.end_x {
-                    body.at_x = body.start_x;
-
-                    body.at_y += 1;
-
-                    if body.at_y > body.end_y {
-                        body.at_y = body.start_y;
-
-                        body.at_z += 1;
+                while !body
+                    .cur_chunk
+                    .has_block_at(ChunkBlockCoordinate::new(body.body.at.x, body.body.at.y, body.body.at.z))
+                {
+                    if advance_body(body) {
+                        self.state = BlockItrState::Invalid;
+                        return None;
                     }
                 }
 
-                if body.structure.has_block_at(x, y, z) {
-                    return Some(StructureBlock { x, y, z });
+                let to_return = Some(StructureBlock::new(BlockCoordinate::new(
+                    body.body.at.x + body.cur_chunk.structure_x() * CHUNK_DIMENSIONS,
+                    body.body.at.y + body.cur_chunk.structure_y() * CHUNK_DIMENSIONS,
+                    body.body.at.z + body.cur_chunk.structure_z() * CHUNK_DIMENSIONS,
+                )));
+
+                if advance_body(body) {
+                    self.state = BlockItrState::Invalid;
                 }
-            },
+
+                to_return
+            }
         }
     }
+}
+
+/// Returns true if there are no available chunks left
+fn advance_body(body: &mut EmptyBody<BlockCoordinate>) -> bool {
+    body.body.at.x += 1;
+    if body.body.at.x >= CHUNK_DIMENSIONS {
+        body.body.at.x = 0;
+
+        body.body.at.y += 1;
+        if body.body.at.y >= CHUNK_DIMENSIONS {
+            body.body.at.y = 0;
+
+            body.body.at.z += 1;
+            if body.body.at.z >= CHUNK_DIMENSIONS {
+                body.body.at.z = 0;
+
+                if let Some(chunk) = body.chunk_itr.next() {
+                    if let ChunkIteratorResult::FilledChunk { position: _, chunk } = chunk {
+                        body.cur_chunk = chunk;
+
+                        let (cx, cy, cz) = (
+                            body.cur_chunk.structure_x() * CHUNK_DIMENSIONS,
+                            body.cur_chunk.structure_y() * CHUNK_DIMENSIONS,
+                            body.cur_chunk.structure_z() * CHUNK_DIMENSIONS,
+                        );
+
+                        let structure_x = body.body.at.x + cx;
+                        let structure_y = body.body.at.y + cy;
+                        let structure_z = body.body.at.z + cz;
+
+                        if structure_x < body.body.start.x {
+                            body.body.at.x = structure_x - cx;
+                        }
+                        if structure_y < body.body.start.y {
+                            body.body.at.y = structure_y - cy;
+                        }
+                        if structure_z < body.body.start.z {
+                            body.body.at.z = structure_z - cz;
+                        }
+                    } else {
+                        panic!("This should never happen.");
+                    }
+                } else {
+                    return true;
+                }
+            }
+        }
+    }
+
+    false
 }
 
 /// Chunk Iterator
@@ -230,8 +276,9 @@ impl<'a> Iterator for BlockIterator<'a> {
 /// Iterates over the chunks of a structure
 ///
 /// * `include_empty` - If enabled, the value iterated over may be None OR Some(chunk). Otherwise, the value iterated over may ONLY BE Some(chunk).
+#[derive(Debug, Clone)]
 pub struct ChunkIterator<'a> {
-    state: ChunkItrState<'a>,
+    state: ChunkItrState<'a, ChunkCoordinate>,
 }
 
 impl<'a> ChunkIterator<'a> {
@@ -239,71 +286,44 @@ impl<'a> ChunkIterator<'a> {
     /// Coordinates are invlusive!
     ///
     /// * `include_empty` - If enabled, the value iterated over may be `ChunkIteratorResult::EmptyChunk` OR `ChunkIteratorResult::FilledChunk`. Otherwise, the value iterated over may ONLY BE `ChunkIteratorResult::LoadedChunk`.
-    pub fn new(
-        start_x: i32,
-        start_y: i32,
-        start_z: i32,
-        mut end_x: i32,
-        mut end_y: i32,
-        mut end_z: i32,
-        structure: &'a Structure,
-        include_empty: bool,
-    ) -> Self {
-        end_x = end_x.min(structure.chunks_width() as i32 - 1);
-        end_y = end_y.min(structure.chunks_height() as i32 - 1);
-        end_z = end_z.min(structure.chunks_length() as i32 - 1);
+    pub fn new(mut start: UnboundChunkCoordinate, mut end: UnboundChunkCoordinate, structure: &'a Structure, include_empty: bool) -> Self {
+        let dims = UnboundChunkCoordinate::from(structure.chunk_dimensions());
 
-        if end_x < 0
-            || end_y < 0
-            || end_z < 0
-            || start_x >= structure.chunks_width() as i32
-            || start_y >= structure.chunks_height() as i32
-            || start_z >= structure.chunks_length() as i32
-            || start_x > end_x
-            || start_y > end_y
-            || start_z > end_z
-        {
+        end.x = end.x.min(dims.x - 1);
+        end.y = end.y.min(dims.y - 1);
+        end.z = end.z.min(dims.z - 1);
+
+        let Ok(end) = ChunkCoordinate::try_from(end) else {
+            return Self {
+                state: ChunkItrState::Invalid,
+            };
+        };
+
+        start.x = start.x.max(0);
+        start.y = start.y.max(0);
+        start.z = start.z.max(0);
+
+        let Ok(start) = ChunkCoordinate::try_from(start) else {
+            return Self {
+                state: ChunkItrState::Invalid,
+            };
+        };
+
+        if !structure.chunk_coords_within(start) {
             Self {
                 state: ChunkItrState::Invalid,
             }
         } else {
-            let start_x = start_x.max(0) as usize;
-            let start_y = start_y.max(0) as usize;
-            let start_z = start_z.max(0) as usize;
-
-            let end_x = end_x as usize;
-            let end_y = end_y as usize;
-            let end_z = end_z as usize;
-
             Self {
                 state: if include_empty {
                     ChunkItrState::IncludeEmpty(Body {
-                        start_x,
-                        start_y,
-                        start_z,
-
-                        end_x,
-                        end_y,
-                        end_z,
-
-                        at_x: start_x.max(0).min(structure.chunks_width() - 1),
-                        at_y: start_y.max(0).min(structure.chunks_height() - 1),
-                        at_z: start_z.max(0).min(structure.chunks_length() - 1),
+                        start,
+                        end,
+                        at: start,
                         structure,
                     })
                 } else {
-                    ChunkItrState::ExcludeEmpty((
-                        ExcludeEmptyBody {
-                            start_x,
-                            start_y,
-                            start_z,
-
-                            end_x,
-                            end_y,
-                            end_z,
-                        },
-                        structure.chunks().iter(),
-                    ))
+                    ChunkItrState::ExcludeEmpty((ExcludeEmptyBody { start, end }, structure.chunks().iter()))
                 },
             }
         }
@@ -318,9 +338,7 @@ impl<'a> ChunkIterator<'a> {
     pub fn len(&self) -> usize {
         match &self.state {
             ChunkItrState::IncludeEmpty(body) => {
-                (body.end_x - body.start_x + 1)
-                    * (body.end_y - body.start_y + 1)
-                    * (body.end_z - body.start_z + 1)
+                ((body.end.x - body.start.x + 1) * (body.end.y - body.start.y + 1) * (body.end.z - body.start.z + 1)) as usize
             }
             ChunkItrState::ExcludeEmpty((_, itr)) => itr.len(),
             ChunkItrState::Invalid => 0,
@@ -336,12 +354,12 @@ pub enum ChunkIteratorResult<'a> {
     /// This represents a chunk that has no blocks in it, and is thus unloaded.
     EmptyChunk {
         /// That chunk's position in the structure, can be used in `Structure::chunk_from_chunk_coordinates` once it is loaded.
-        position: (usize, usize, usize),
+        position: ChunkCoordinate,
     },
     /// This represents a chunk that does have blocks in it, and is loaded.
     FilledChunk {
         /// That chunk's position in the structure, can be used in `Structure::chunk_from_chunk_coordinates`.
-        position: (usize, usize, usize),
+        position: ChunkCoordinate,
         /// The loaded chunk.
         chunk: &'a Chunk,
     },
@@ -354,30 +372,28 @@ impl<'a> Iterator for ChunkIterator<'a> {
         match &mut self.state {
             ChunkItrState::Invalid => None,
             ChunkItrState::IncludeEmpty(body) => {
-                if body.at_z > body.end_z {
+                if body.at.z > body.end.z {
                     self.state = ChunkItrState::Invalid;
                     return None;
                 }
 
-                let (cx, cy, cz) = (body.at_x, body.at_y, body.at_z);
+                let position = body.at;
 
-                body.at_x += 1;
+                body.at.x += 1;
 
-                if body.at_x > body.end_x {
-                    body.at_x = body.start_x;
+                if body.at.x > body.end.x {
+                    body.at.x = body.start.x;
 
-                    body.at_y += 1;
+                    body.at.y += 1;
 
-                    if body.at_y > body.end_y {
-                        body.at_y = body.start_y;
+                    if body.at.y > body.end.y {
+                        body.at.y = body.start.y;
 
-                        body.at_z += 1;
+                        body.at.z += 1;
                     }
                 }
 
-                let position = (cx, cy, cz);
-
-                if let Some(chunk) = body.structure.chunk_from_chunk_coordinates(cx, cy, cz) {
+                if let Some(chunk) = body.structure.chunk_from_chunk_coordinates(position) {
                     Some(ChunkIteratorResult::FilledChunk { position, chunk })
                 } else {
                     Some(ChunkIteratorResult::EmptyChunk { position })
@@ -385,23 +401,16 @@ impl<'a> Iterator for ChunkIterator<'a> {
             }
             ChunkItrState::ExcludeEmpty((body, itr)) => {
                 for (_, chunk) in itr.by_ref() {
-                    let (cx, cy, cz) = (
-                        chunk.structure_x(),
-                        chunk.structure_y(),
-                        chunk.structure_z(),
-                    );
+                    let position = chunk.chunk_coordinates();
 
-                    if cx >= body.start_x
-                        && cx <= body.end_x
-                        && cy >= body.start_y
-                        && cy <= body.end_y
-                        && cz >= body.start_z
-                        && cz <= body.end_z
+                    if position.x >= body.start.x
+                        && position.x <= body.end.x
+                        && position.y >= body.start.y
+                        && position.y <= body.end.y
+                        && position.z >= body.start.z
+                        && position.z <= body.end.z
                     {
-                        return Some(ChunkIteratorResult::FilledChunk {
-                            position: (cx, cy, cz),
-                            chunk,
-                        });
+                        return Some(ChunkIteratorResult::FilledChunk { position, chunk });
                     }
                 }
 

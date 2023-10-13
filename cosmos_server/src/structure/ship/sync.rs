@@ -3,8 +3,10 @@ use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     netty::{
-        cosmos_encoder, netty_rigidbody::NettyRigidBody,
-        server_reliable_messages::ServerReliableMessages, NettyChannel,
+        cosmos_encoder,
+        netty_rigidbody::{NettyRigidBody, NettyRigidBodyLocation},
+        server_reliable_messages::ServerReliableMessages,
+        NettyChannelServer,
     },
     physics::location::Location,
     structure::{loading::ChunksNeedLoaded, ship::Ship, Structure},
@@ -21,13 +23,11 @@ fn on_request_ship(
         if let Ok((structure, transform, location, velocity)) = query.get(ev.entity) {
             server.send_message(
                 ev.client_id,
-                NettyChannel::Reliable.id(),
+                NettyChannelServer::Reliable,
                 cosmos_encoder::serialize(&ServerReliableMessages::Ship {
                     entity: ev.entity,
-                    body: NettyRigidBody::new(velocity, transform.rotation, *location),
-                    width: structure.chunks_width() as u32,
-                    height: structure.chunks_height() as u32,
-                    length: structure.chunks_length() as u32,
+                    body: NettyRigidBody::new(velocity, transform.rotation, NettyRigidBodyLocation::Absolute(*location)),
+                    dimensions: structure.chunk_dimensions(),
                     chunks_needed: ChunksNeedLoaded {
                         amount_needed: structure.all_chunks_iter(false).len(),
                     },
@@ -38,5 +38,5 @@ fn on_request_ship(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(on_request_ship);
+    app.add_systems(Update, on_request_ship);
 }

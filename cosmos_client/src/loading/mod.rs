@@ -1,10 +1,8 @@
 //! Responsible for unloading far entities
 
-use bevy::prelude::{
-    App, Commands, CoreSet, DespawnRecursiveExt, Entity, IntoSystemConfig, Parent, Query, With,
-    Without,
-};
+use bevy::prelude::{App, Commands, Entity, Parent, Query, Update, With, Without};
 use cosmos_core::{
+    ecs::NeedsDespawned,
     entities::player::Player,
     persistence::LoadingDistance,
     physics::location::{Location, SectorUnit},
@@ -22,13 +20,12 @@ fn unload_far_entities(
             let ul_distance = unload_distance.unload_distance() as SectorUnit;
 
             if (loc.sector() - my_loc.sector()).abs().max_element() > ul_distance {
-                println!("Unloading entity at {loc}!");
-                commands.entity(ent).despawn_recursive();
+                commands.entity(ent).insert(NeedsDespawned);
             }
         }
     }
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(unload_far_entities.in_base_set(CoreSet::First));
+    app.add_systems(Update, unload_far_entities);
 }

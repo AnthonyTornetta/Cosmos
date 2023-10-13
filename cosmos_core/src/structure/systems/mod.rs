@@ -67,17 +67,13 @@ impl Systems {
 
         if let Some(active_system) = self.active_system {
             if (active_system as usize) < self.systems.len() {
-                commands
-                    .entity(self.systems[active_system as usize])
-                    .remove::<SystemActive>();
+                commands.entity(self.systems[active_system as usize]).remove::<SystemActive>();
             }
         }
 
         if let Some(active_system) = active {
             if (active_system as usize) < self.systems.len() {
-                commands
-                    .entity(self.systems[active_system as usize])
-                    .insert(SystemActive);
+                commands.entity(self.systems[active_system as usize]).insert(SystemActive);
             }
         }
 
@@ -119,10 +115,7 @@ impl Systems {
     /// Queries all the systems of a structure with this specific query, or returns `Err(NoSystemFound)` if none matched this query.
     ///
     /// TODO: in future allow for this to take any number of components
-    pub fn query_mut<'a, T: Component>(
-        &'a self,
-        query: &'a mut Query<&mut T>,
-    ) -> Result<Mut<T>, NoSystemFound> {
+    pub fn query_mut<'a, T: Component>(&'a self, query: &'a mut Query<&mut T>) -> Result<Mut<T>, NoSystemFound> {
         for ent in self.systems.iter() {
             // for some reason, the borrow checker gets mad when I do a get_mut in this if statement
             if query.get(*ent).is_ok() {
@@ -144,12 +137,8 @@ fn add_structure(mut commands: Commands, query: Query<Entity, (Added<Structure>,
     }
 }
 
-pub(super) fn register<T: States + Clone + Copy>(
-    app: &mut App,
-    post_loading_state: T,
-    playing_state: T,
-) {
-    app.add_system(add_structure);
+pub(super) fn register<T: States + Clone + Copy>(app: &mut App, post_loading_state: T, playing_state: T) {
+    app.add_systems(Update, add_structure);
 
     energy_storage_system::register(app, post_loading_state, playing_state);
     energy_generation_system::register(app, post_loading_state, playing_state);

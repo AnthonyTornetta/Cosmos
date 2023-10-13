@@ -2,11 +2,11 @@
 
 use bevy::{
     prelude::{App, Component},
-    reflect::{FromReflect, Reflect},
+    reflect::Reflect,
 };
 
 /// Represents the information about a biosphere
-#[derive(Debug, Component, Reflect, FromReflect)]
+#[derive(Debug, Component, Reflect)]
 pub struct BiosphereMarker {
     /// The biosphere's name
     biosphere_name: String,

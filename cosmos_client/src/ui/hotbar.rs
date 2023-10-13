@@ -4,11 +4,13 @@ use bevy::prelude::*;
 use cosmos_core::{inventory::Inventory, item::Item};
 
 use crate::{
-    input::inputs::{CosmosInputHandler, CosmosInputs},
+    input::inputs::{CosmosInputs, InputChecker, InputHandler},
     lang::Lang,
     netty::flags::LocalPlayer,
     state::game_state::GameState,
 };
+
+use super::item_renderer::RenderItem;
 
 const ITEM_NAME_FADE_DURATION_SEC: f32 = 5.0;
 
@@ -17,8 +19,7 @@ const ITEM_NAME_FADE_DURATION_SEC: f32 = 5.0;
 pub struct Hotbar {
     /// Vec<(slot, slot text)>
     slots: Vec<(Entity, Entity)>,
-    /// This is the slot the player has currently selected
-    pub selected_slot: usize,
+    selected_slot: usize,
     prev_slot: usize,
     max_slots: usize,
 }
@@ -39,16 +40,9 @@ impl Hotbar {
         }
     }
 
-    #[inline]
-    /// Gets the item's inventory slot based on the hotbar slot
-    pub fn item_at_inventory_slot(&self, slot: usize, inv: &Inventory) -> usize {
-        inv.len() - self.max_slots + slot
-    }
-
-    #[inline]
-    /// Gets the item's inventory slot based off the item the player has selected
-    pub fn item_at_selected_inventory_slot(&self, inv: &Inventory) -> usize {
-        self.item_at_inventory_slot(self.selected_slot, inv)
+    /// This is the slot the player has currently selected - corresponds to the proper inventory slots
+    pub fn selected_slot(&self) -> usize {
+        self.selected_slot
     }
 }
 
@@ -57,59 +51,54 @@ struct ItemNameDisplay;
 
 fn image_path(selected: bool) -> &'static str {
     if selected {
-        "images/ui/hotbar-slot-selected.png"
+        "cosmos/images/ui/hotbar-slot-selected.png"
     } else {
-        "images/ui/hotbar-slot.png"
+        "cosmos/images/ui/hotbar-slot.png"
     }
 }
 
-fn listen_button_presses(
-    keys: Res<Input<KeyCode>>,
-    mouse: Res<Input<MouseButton>>,
-    input_handler: Res<CosmosInputHandler>,
-    mut hotbar: Query<&mut Hotbar>,
-) {
-    if input_handler.check_just_pressed(CosmosInputs::HotbarSlot1, &keys, &mouse) {
+fn listen_button_presses(input_handler: InputChecker, mut hotbar: Query<&mut Hotbar>) {
+    if input_handler.check_just_pressed(CosmosInputs::HotbarSlot1) {
         if let Ok(mut hotbar) = hotbar.get_single_mut() {
             hotbar.selected_slot = 0;
         }
     }
-    if input_handler.check_just_pressed(CosmosInputs::HotbarSlot2, &keys, &mouse) {
+    if input_handler.check_just_pressed(CosmosInputs::HotbarSlot2) {
         if let Ok(mut hotbar) = hotbar.get_single_mut() {
             hotbar.selected_slot = 1;
         }
     }
-    if input_handler.check_just_pressed(CosmosInputs::HotbarSlot3, &keys, &mouse) {
+    if input_handler.check_just_pressed(CosmosInputs::HotbarSlot3) {
         if let Ok(mut hotbar) = hotbar.get_single_mut() {
             hotbar.selected_slot = 2;
         }
     }
-    if input_handler.check_just_pressed(CosmosInputs::HotbarSlot4, &keys, &mouse) {
+    if input_handler.check_just_pressed(CosmosInputs::HotbarSlot4) {
         if let Ok(mut hotbar) = hotbar.get_single_mut() {
             hotbar.selected_slot = 3;
         }
     }
-    if input_handler.check_just_pressed(CosmosInputs::HotbarSlot5, &keys, &mouse) {
+    if input_handler.check_just_pressed(CosmosInputs::HotbarSlot5) {
         if let Ok(mut hotbar) = hotbar.get_single_mut() {
             hotbar.selected_slot = 4;
         }
     }
-    if input_handler.check_just_pressed(CosmosInputs::HotbarSlot6, &keys, &mouse) {
+    if input_handler.check_just_pressed(CosmosInputs::HotbarSlot6) {
         if let Ok(mut hotbar) = hotbar.get_single_mut() {
             hotbar.selected_slot = 5;
         }
     }
-    if input_handler.check_just_pressed(CosmosInputs::HotbarSlot7, &keys, &mouse) {
+    if input_handler.check_just_pressed(CosmosInputs::HotbarSlot7) {
         if let Ok(mut hotbar) = hotbar.get_single_mut() {
             hotbar.selected_slot = 6;
         }
     }
-    if input_handler.check_just_pressed(CosmosInputs::HotbarSlot8, &keys, &mouse) {
+    if input_handler.check_just_pressed(CosmosInputs::HotbarSlot8) {
         if let Ok(mut hotbar) = hotbar.get_single_mut() {
             hotbar.selected_slot = 7;
         }
     }
-    if input_handler.check_just_pressed(CosmosInputs::HotbarSlot9, &keys, &mouse) {
+    if input_handler.check_just_pressed(CosmosInputs::HotbarSlot9) {
         if let Ok(mut hotbar) = hotbar.get_single_mut() {
             hotbar.selected_slot = 8;
         }
@@ -154,8 +143,7 @@ fn listen_for_change_events(
             if let Ok(inv) = inventory_unchanged.get_single() {
                 if let Ok(ent) = item_name_query.get_single() {
                     if let Ok(mut name_text) = text_query.get_mut(ent) {
-                        if let Some(is) = inv.itemstack_at(hb.item_at_selected_inventory_slot(inv))
-                        {
+                        if let Some(is) = inv.itemstack_at(hb.selected_slot()) {
                             name_text.sections[0].value = names
                                 .get_name_from_numeric_id(is.item_id())
                                 .unwrap_or(&format!("[missing name] ID #{}", is.item_id()))
@@ -163,7 +151,7 @@ fn listen_for_change_events(
 
                             name_text.sections[0].style.color = Color::WHITE;
                         } else {
-                            name_text.sections[0].value = "[ no name ]".to_owned();
+                            name_text.sections[0].value = "".to_owned();
                         }
                     }
                 }
@@ -172,7 +160,7 @@ fn listen_for_change_events(
 
         if let Ok(inv) = query_inventory.get_single() {
             for hb_slot in 0..hb.max_slots {
-                let is = inv.itemstack_at(hb.item_at_inventory_slot(hb_slot, inv));
+                let is = inv.itemstack_at(hb_slot);
 
                 if let Ok(mut text) = text_query.get_mut(hb.slots[hb_slot].1) {
                     if let Some(is) = is {
@@ -194,7 +182,8 @@ fn add_item_text(mut commands: Commands, asset_server: Res<AssetServer>) {
                 display: Display::Flex,
                 justify_content: JustifyContent::Center,
                 align_items: AlignItems::FlexEnd,
-                size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
                 ..default()
             },
             ..default()
@@ -203,11 +192,7 @@ fn add_item_text(mut commands: Commands, asset_server: Res<AssetServer>) {
             parent
                 .spawn(TextBundle {
                     style: Style {
-                        position: UiRect {
-                            bottom: Val::Px(75.0),
-                            ..default()
-                        },
-
+                        bottom: Val::Px(75.0),
                         position_type: PositionType::Absolute,
 
                         ..default()
@@ -227,31 +212,76 @@ fn add_item_text(mut commands: Commands, asset_server: Res<AssetServer>) {
         });
 }
 
+fn populate_hotbar(
+    inventory: Query<&Inventory, (Changed<Inventory>, With<LocalPlayer>)>,
+    hotbar: Query<&Hotbar>,
+
+    render_item_query: Query<&RenderItem>,
+    mut commands: Commands,
+) {
+    let Ok(hotbar) = hotbar.get_single() else {
+        warn!("Missing hotbar");
+        return;
+    };
+
+    let Ok(inventory) = inventory.get_single() else {
+        return;
+    };
+
+    for (item, &(slot_entity, _)) in inventory.iter().take(hotbar.slots.len()).zip(hotbar.slots.iter()) {
+        let Some(item_stack) = item else {
+            commands.entity(slot_entity).remove::<RenderItem>();
+
+            continue;
+        };
+
+        if render_item_query
+            .get(slot_entity)
+            .map(|x| x.item_id != item_stack.item_id())
+            .unwrap_or(true)
+        {
+            commands.entity(slot_entity).insert((
+                RenderItem {
+                    item_id: item_stack.item_id(),
+                },
+                Name::new("Inventory Item Slot"),
+            ));
+        }
+    }
+}
+
 fn add_hotbar(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
-        .spawn(NodeBundle {
-            style: Style {
-                position_type: PositionType::Absolute,
-                display: Display::Flex,
-                justify_content: JustifyContent::Center,
-                align_items: AlignItems::FlexEnd,
-                size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
-                ..default()
-            },
-            ..default()
-        })
-        .with_children(|parent| {
-            let mut hotbar = Hotbar::default();
-
-            let mut slots = parent.spawn(NodeBundle {
+        .spawn((
+            NodeBundle {
                 style: Style {
-                    flex_direction: FlexDirection::Row,
-                    flex_grow: 1.0,
+                    position_type: PositionType::Absolute,
+                    display: Display::Flex,
                     justify_content: JustifyContent::Center,
+                    align_items: AlignItems::FlexEnd,
+                    width: Val::Percent(100.0),
+                    height: Val::Percent(100.0),
                     ..default()
                 },
                 ..default()
-            });
+            },
+            Name::new("Hotbar Container"),
+        ))
+        .with_children(|parent| {
+            let mut hotbar = Hotbar::default();
+
+            let mut slots = parent.spawn((
+                NodeBundle {
+                    style: Style {
+                        flex_direction: FlexDirection::Row,
+                        flex_grow: 1.0,
+                        justify_content: JustifyContent::Center,
+                        ..default()
+                    },
+                    ..default()
+                },
+                Name::new("Hotbar"),
+            ));
 
             slots.with_children(|parent| {
                 for slot_num in 0..hotbar.max_slots {
@@ -260,7 +290,8 @@ fn add_hotbar(mut commands: Commands, asset_server: Res<AssetServer>) {
                     let mut slot = parent.spawn(ImageBundle {
                         image: asset_server.load(path).into(),
                         style: Style {
-                            size: Size::new(Val::Px(64.0), Val::Px(64.0)),
+                            width: Val::Px(64.0),
+                            height: Val::Px(64.0),
                             ..default()
                         },
                         ..default()
@@ -269,18 +300,11 @@ fn add_hotbar(mut commands: Commands, asset_server: Res<AssetServer>) {
                     let mut text_entity = None;
 
                     slot.with_children(|slot| {
-                        // https://github.com/bevyengine/bevy/pull/5070
-                        // In bevy 0.10 there will be a TextureAtlasLayout that can be used in GUIs to render the item's texture
-                        // Until bevy 0.10, the hotbar will show no textures
-
                         text_entity = Some(
                             slot.spawn(TextBundle {
                                 style: Style {
-                                    position: UiRect {
-                                        bottom: Val::Px(5.0),
-                                        right: Val::Px(5.0),
-                                        ..default()
-                                    },
+                                    bottom: Val::Px(5.0),
+                                    right: Val::Px(5.0),
                                     position_type: PositionType::Absolute,
 
                                     ..default()
@@ -300,10 +324,9 @@ fn add_hotbar(mut commands: Commands, asset_server: Res<AssetServer>) {
                         );
                     });
 
-                    hotbar.slots.push((
-                        slot.id(),
-                        text_entity.expect("This should have been set in the closure above"),
-                    ));
+                    hotbar
+                        .slots
+                        .push((slot.id(), text_entity.expect("This should have been set in the closure above")));
                 }
             });
 
@@ -312,13 +335,15 @@ fn add_hotbar(mut commands: Commands, asset_server: Res<AssetServer>) {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems((add_hotbar, add_item_text).in_schedule(OnEnter(GameState::Playing)))
+    app.add_systems(OnEnter(GameState::Playing), (add_hotbar, add_item_text))
         .add_systems(
+            Update,
             (
+                populate_hotbar,
                 listen_for_change_events,
                 listen_button_presses,
                 tick_text_alpha_down,
             )
-                .in_set(OnUpdate(GameState::Playing)),
+                .run_if(in_state(GameState::Playing)),
         );
 }

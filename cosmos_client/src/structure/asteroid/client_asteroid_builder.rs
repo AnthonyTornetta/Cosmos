@@ -2,7 +2,7 @@
 
 use bevy::{
     ecs::system::EntityCommands,
-    prelude::{Added, App, Commands, Entity, Query},
+    prelude::{Added, App, Commands, Entity, Query, Update},
 };
 use cosmos_core::{
     physics::location::Location,
@@ -15,9 +15,7 @@ use cosmos_core::{
     },
 };
 
-use crate::structure::{
-    chunk_retreiver::NeedsPopulated, client_structure_builder::ClientStructureBuilder,
-};
+use crate::structure::{chunk_retreiver::NeedsPopulated, client_structure_builder::ClientStructureBuilder};
 
 /// Builds a client asteroid
 pub struct ClientAsteroidBuilder {
@@ -40,12 +38,7 @@ impl Default for ClientAsteroidBuilder {
 }
 
 impl TAsteroidBuilder for ClientAsteroidBuilder {
-    fn insert_asteroid(
-        &self,
-        entity: &mut EntityCommands,
-        location: Location,
-        structure: &mut Structure,
-    ) {
+    fn insert_asteroid(&self, entity: &mut EntityCommands, location: Location, structure: &mut Structure) {
         self.builder.insert_asteroid(entity, location, structure);
     }
 }
@@ -57,5 +50,5 @@ fn on_add_asteroid(query: Query<Entity, Added<Asteroid>>, mut commands: Commands
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(on_add_asteroid);
+    app.add_systems(Update, on_add_asteroid);
 }

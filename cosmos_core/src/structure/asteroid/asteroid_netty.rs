@@ -3,7 +3,7 @@
 use bevy::prelude::Entity;
 use serde::{Deserialize, Serialize};
 
-use crate::netty::netty_rigidbody::NettyRigidBody;
+use crate::{netty::netty_rigidbody::NettyRigidBody, structure::coordinates::ChunkCoordinate};
 
 #[derive(Debug, Serialize, Deserialize)]
 /// All the asteroid server messages
@@ -17,10 +17,6 @@ pub enum AsteroidServerMessages {
         /// The asteroid's rigidbody
         body: NettyRigidBody,
         /// The width to be passed into the structure's constructor
-        width: u32,
-        /// The height to be passed into the structure's constructor
-        height: u32,
-        /// The length to be passed into the structure's constructor
-        length: u32,
+        dimensions: ChunkCoordinate,
     },
 }

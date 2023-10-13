@@ -1,4 +1,4 @@
-use bevy::prelude::{App, EventReader, EventWriter, IntoSystemConfig, OnUpdate, Query, Res, With};
+use bevy::prelude::{in_state, App, EventReader, EventWriter, IntoSystemConfigs, Query, Res, Update, With};
 use cosmos_core::{
     block::Block,
     events::structure::change_pilot_event::ChangePilotEvent,
@@ -18,9 +18,7 @@ fn handle_block_event(
     pilot_query: Query<&Pilot>,
     blocks: Res<Registry<Block>>,
 ) {
-    let block = blocks
-        .from_id("cosmos:ship_core")
-        .expect("ship core block missing!");
+    let block = blocks.from_id("cosmos:ship_core").expect("ship core block missing!");
 
     for ev in interact_events.iter() {
         if let Ok(structure) = s_query.get(ev.structure_entity) {
@@ -41,5 +39,5 @@ fn handle_block_event(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_system(handle_block_event.in_set(OnUpdate(GameState::Playing)));
+    app.add_systems(Update, handle_block_event.run_if(in_state(GameState::Playing)));
 }

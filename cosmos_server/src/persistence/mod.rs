@@ -1,10 +1,14 @@
 //! Handles both the saving & loading of entities on the server
 
-use std::fs;
+use std::{
+    fmt::Display,
+    fs,
+    sync::{Arc, Mutex},
+};
 
 use bevy::{
     prelude::{App, Component, Resource},
-    reflect::{FromReflect, Reflect},
+    reflect::Reflect,
     utils::{HashMap, HashSet},
 };
 use rand::{distributions::Alphanumeric, Rng};
@@ -19,70 +23,53 @@ pub mod loading;
 pub mod player_loading;
 pub mod saving;
 
-#[derive(
-    Component, Debug, Reflect, FromReflect, Serialize, Deserialize, PartialEq, Eq, Clone, Hash,
-)]
+#[derive(Component, Debug, Reflect, Serialize, Deserialize, PartialEq, Eq, Clone, Hash)]
 /// NOT ALL ENTITIES WILL HAVE THIS ON THEM!
 ///
 /// Only entities that have been loaded or saved will have this. This is a unique identifier for
 /// this entity.
 pub struct EntityId(String);
 
+impl Display for EntityId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
 #[derive(Debug, Resource, Default, Clone)]
 /// This is a resource that caches the saved entities of different sectors that a player has been near.
 ///
 /// This is just used to prevent excessive IO operations.
-///
-/// This can be cloned pretty quickly when needed
-pub struct SectorsCache(HashMap<Sector, Option<Box<HashSet<(EntityId, Option<u32>)>>>>);
-// Option<Box<HashSet<(EntityId, Option<u32>)>>>> is used instead of just HashSet<(EntityId, Option<u32>)>
-// so that clone operations are fast.
+pub struct SectorsCache(Arc<Mutex<HashMap<Sector, Arc<Mutex<HashSet<(EntityId, Option<u32>)>>>>>>);
 
 impl SectorsCache {
     /// Gets all the entities that are saved for this sector in this cache.  This does NOT
     /// perform any IO operations.
-    pub fn get(&self, sector: &Sector) -> &Option<Box<HashSet<(EntityId, Option<u32>)>>> {
-        if let Some(set) = self.0.get(sector) {
-            set
-        } else {
-            &None
-        }
+    pub fn get(&self, sector: &Sector) -> Option<Arc<Mutex<HashSet<(EntityId, Option<u32>)>>>> {
+        self.0.lock().expect("Failed to lock").get(sector).cloned()
     }
 
     /// Removes a saved entity from this location - this does not do any IO operations,
     /// and only removes it from the cache.
     pub fn remove(&mut self, entity_id: &EntityId, sector: Sector, load_distance: Option<u32>) {
-        if let Some(set) = self.0.get_mut(&sector) {
-            let Some(set) = set else {
-                return;
-            };
-
-            set.remove(&(entity_id.clone(), load_distance));
-
-            if set.is_empty() {
-                self.0.insert(sector, None);
-            }
+        if let Some(set) = self.0.lock().expect("Failed to lock").get_mut(&sector) {
+            set.lock().expect("Failed to unlock").remove(&(entity_id.clone(), load_distance));
         }
     }
 
     /// Inserts an entity into this sector in this cache. This does not perform any IO operations.
     pub fn insert(&mut self, sector: Sector, entity_id: EntityId, load_distance: Option<u32>) {
-        if let Some(x) = self.0.get_mut(&sector) {
-            // helps out the lsp
-            let x: &mut Option<Box<HashSet<(EntityId, Option<u32>)>>> = x;
+        let self_locked = &mut self.0.lock().expect("Failed to lock");
 
-            if x.is_none() {
-                *x = Some(Box::new(HashSet::new()));
-            }
-        } else {
-            self.0.insert(sector, Some(Box::new(HashSet::new())));
+        if !self_locked.contains_key(&sector) {
+            self_locked.insert(sector, Arc::new(Mutex::new(HashSet::new())));
         }
 
-        let x: Option<&mut Option<Box<HashSet<(EntityId, Option<u32>)>>>> = self.0.get_mut(&sector);
-
-        x.expect("Sector doesn't exist despite me just making it")
-            .as_mut()
-            .expect("Sector is None despite me just making it")
+        self_locked
+            .get_mut(&sector)
+            .expect("Sector doesn't exist despite me just making it")
+            .lock()
+            .expect("Failed to unlock")
             .insert((entity_id, load_distance));
     }
 }
@@ -152,19 +139,13 @@ impl SaveFileIdentifier {
     /// Creates a new SaveFileIdentifier from this location & entity id
     pub fn as_child(this_identifier: impl Into<String>, belongs_to: SaveFileIdentifier) -> Self {
         Self {
-            identifier_type: SaveFileIdentifierType::BelongsTo((
-                Box::new(belongs_to),
-                this_identifier.into(),
-            )),
+            identifier_type: SaveFileIdentifierType::BelongsTo((Box::new(belongs_to), this_identifier.into())),
         }
     }
 
     /// Gets the file path a given entity will be saved to.
     pub fn get_save_file_path(&self) -> String {
-        format!(
-            "{}.cent",
-            self.get_save_file_directory(Self::get_save_file_name)
-        )
+        format!("{}.cent", self.get_save_file_directory(Self::get_save_file_name))
     }
 
     /// Gets the save file name without the .cent extension, but not the whole path
@@ -189,9 +170,7 @@ impl SaveFileIdentifier {
     fn get_save_file_directory(&self, base_get_save_file_name: impl Fn(&Self) -> String) -> String {
         match &self.identifier_type {
             SaveFileIdentifierType::Base((_, sector, _)) => {
-                let directory = sector
-                    .map(Self::get_sector_path)
-                    .unwrap_or("world/nowhere".into());
+                let directory = sector.map(Self::get_sector_path).unwrap_or("world/nowhere".into());
 
                 format!("{directory}/{}", base_get_save_file_name(self))
             }

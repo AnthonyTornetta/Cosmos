@@ -6,15 +6,12 @@ use crate::{
     block::Block,
     events::block_events::BlockChangedEvent,
     registry::{identifiable::Identifiable, Registry},
-    structure::{
-        events::StructureLoadedEvent, systems::energy_storage_system::EnergyStorageSystem,
-        Structure,
-    },
+    structure::{events::StructureLoadedEvent, systems::energy_storage_system::EnergyStorageSystem, Structure},
 };
 
 use super::{StructureSystem, Systems};
 
-#[derive(Default, FromReflect, Reflect, Clone, Copy)]
+#[derive(Default, Reflect, Clone, Copy)]
 /// Any block that can generate energy will have this property.
 pub struct EnergyGenerationProperty {
     /// How much energy is generated
@@ -39,7 +36,7 @@ impl EnergyGenerationBlocks {
     }
 }
 
-#[derive(Component, Default, Reflect, FromReflect)]
+#[derive(Component, Default, Reflect)]
 struct EnergyGenerationSystem {
     generation_rate: f32,
 }
@@ -54,26 +51,13 @@ impl EnergyGenerationSystem {
     }
 }
 
-fn register_energy_blocks(
-    blocks: Res<Registry<Block>>,
-    mut generation: ResMut<EnergyGenerationBlocks>,
-) {
+fn register_energy_blocks(blocks: Res<Registry<Block>>, mut generation: ResMut<EnergyGenerationBlocks>) {
     if let Some(block) = blocks.from_id("cosmos:reactor") {
-        generation.insert(
-            block,
-            EnergyGenerationProperty {
-                generation_rate: 1000.0,
-            },
-        );
+        generation.insert(block, EnergyGenerationProperty { generation_rate: 1000.0 });
     }
 
     if let Some(block) = blocks.from_id("cosmos:ship_core") {
-        generation.insert(
-            block,
-            EnergyGenerationProperty {
-                generation_rate: 100.0,
-            },
-        )
+        generation.insert(block, EnergyGenerationProperty { generation_rate: 100.0 })
     }
 }
 
@@ -87,15 +71,11 @@ fn block_update_system(
     for ev in event.iter() {
         if let Ok(systems) = systems_query.get(ev.structure_entity) {
             if let Ok(mut system) = systems.query_mut(&mut system_query) {
-                if let Some(prop) =
-                    energy_generation_blocks.get(blocks.from_numeric_id(ev.old_block))
-                {
+                if let Some(prop) = energy_generation_blocks.get(blocks.from_numeric_id(ev.old_block)) {
                     system.block_removed(prop);
                 }
 
-                if let Some(prop) =
-                    energy_generation_blocks.get(blocks.from_numeric_id(ev.new_block))
-                {
+                if let Some(prop) = energy_generation_blocks.get(blocks.from_numeric_id(ev.new_block)) {
                     system.block_added(prop);
                 }
             }
@@ -140,18 +120,12 @@ fn structure_loaded_event(
     }
 }
 
-pub(super) fn register<T: States + Clone + Copy>(
-    app: &mut App,
-    post_loading_state: T,
-    playing_state: T,
-) {
+pub(super) fn register<T: States + Clone + Copy>(app: &mut App, post_loading_state: T, playing_state: T) {
     app.insert_resource(EnergyGenerationBlocks::default())
-        .add_systems((
-            register_energy_blocks.in_schedule(OnEnter(post_loading_state)),
-            // block update system used to be in CoreState::PostUpdate
-            structure_loaded_event.in_set(OnUpdate(playing_state)),
-            block_update_system.in_set(OnUpdate(playing_state)),
-            update_energy.in_set(OnUpdate(playing_state)),
-        ))
+        .add_systems(OnEnter(post_loading_state), register_energy_blocks)
+        .add_systems(
+            Update,
+            (structure_loaded_event, block_update_system, update_energy).run_if(in_state(playing_state)),
+        )
         .register_type::<EnergyGenerationSystem>();
 }

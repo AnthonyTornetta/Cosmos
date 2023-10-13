@@ -3,7 +3,13 @@
 #[inline]
 /// Calcuates the analogous index for a 1d array given the x/y/z for a 3d array.
 pub fn flatten(x: usize, y: usize, z: usize, width: usize, height: usize) -> usize {
-    z * width * height + y * width + x
+    (z * height + y) * width + x
+}
+
+#[inline]
+/// Calcuates the analogous index for a 1d array given the x/y/z for a 3d array.
+pub fn flatten_2d(x: usize, y: usize, width: usize) -> usize {
+    y * width + x
 }
 
 /// Reverses the operation of flatten, and gives the 3d x/y/z coordinates for a 3d array given a 1d array coordinate
