@@ -24,7 +24,7 @@ impl PluginGroup for ClientPluginGroup {
             .add(CorePipelinePlugin)
             // NOTE: Load this after renderer initialization so that it knows about the supported
             // compressed texture formats
-            .add(GltfPlugin)
+            .add(GltfPlugin::default())
             .add(AnimationPlugin::default())
     }
 }

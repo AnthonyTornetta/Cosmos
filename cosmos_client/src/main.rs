@@ -351,13 +351,10 @@ fn main() {
     rendering::register(&mut app);
     universe::register(&mut app);
     skybox::register(&mut app);
-<<<<<<< HEAD
     music::register(&mut app);
-=======
     settings::register(&mut app);
     physics::register(&mut app);
     ecs::register(&mut app);
->>>>>>> main
 
     app.run();
 }
