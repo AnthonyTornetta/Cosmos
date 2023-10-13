@@ -29,7 +29,7 @@ fn monitor_background_song(bg_song: Res<BackgroundSong>, mut audio_instances: Re
 
 fn start_playing(mut commands: Commands, asset_server: Res<AssetServer>, audio: Res<Audio>) {
     let handle = audio
-        .play(asset_server.load("sounds/music/AntirockSong.ogg"))
+        .play(asset_server.load("cosmos/sounds/music/AntirockSong.ogg"))
         .with_volume(0.15)
         .fade_in(AudioTween::new(Duration::from_secs(2), AudioEasing::InOutPowi(2)))
         .handle();
