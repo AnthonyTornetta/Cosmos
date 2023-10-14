@@ -14,7 +14,7 @@ pub mod inventory;
 pub mod lang;
 pub mod loading;
 pub mod materials;
-mod music;
+pub mod music;
 pub mod netty;
 pub mod physics;
 pub mod plugin;
