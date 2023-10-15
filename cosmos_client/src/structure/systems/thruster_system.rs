@@ -5,10 +5,13 @@ use cosmos_core::{
     structure::ship::ship_movement::ShipMovement,
 };
 
-use crate::state::game_state::GameState;
+use crate::{
+    audio::{AudioEmission, CosmosAudioEmitter},
+    state::game_state::GameState,
+};
 
 fn apply_thruster_sound(
-    query: Query<(Entity, &ShipMovement, Option<&AudioEmitter>)>,
+    query: Query<(Entity, &ShipMovement, Option<&CosmosAudioEmitter>)>,
     mut commands: Commands,
     audio: Res<Audio>,
     audio_handle: Res<ThrusterAudioHandle>,
@@ -20,13 +23,18 @@ fn apply_thruster_sound(
         // println!("{ship_movement}");
 
         if thrusters_off && audio_emitter.is_some() {
-            commands.entity(entity).remove::<AudioEmitter>();
+            commands.entity(entity).remove::<CosmosAudioEmitter>();
             println!("Removing emitter!");
         } else if !thrusters_off && audio_emitter.is_none() {
-            let playing_sound = audio.play(audio_handle.0.clone()).looped().with_volume(0.1).handle();
+            let playing_sound: Handle<AudioInstance> = audio.play(audio_handle.0.clone()).looped().with_volume(0.1).handle();
 
-            commands.entity(entity).insert(AudioEmitter {
-                instances: vec![playing_sound],
+            commands.entity(entity).insert(CosmosAudioEmitter {
+                emissions: vec![AudioEmission {
+                    instance: playing_sound,
+                    max_distance: 100.0,
+                    peak_volume: 0.3,
+                    ..Default::default()
+                }],
             });
 
             println!("Adding emitter!");
@@ -75,6 +83,5 @@ fn check(
 pub(super) fn register(app: &mut App) {
     app.add_systems(OnEnter(GameState::PreLoading), prepare)
         .add_systems(Update, check.run_if(in_state(GameState::PreLoading)))
-        .add_systems(Update, apply_thruster_sound.run_if(in_state(GameState::Playing)))
-        .insert_resource(SpacialAudio { max_distance: 100.0 }); // TODO: Move this to a seperate place
+        .add_systems(Update, apply_thruster_sound.run_if(in_state(GameState::Playing)));
 }

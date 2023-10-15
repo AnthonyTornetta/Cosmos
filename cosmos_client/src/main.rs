@@ -3,6 +3,7 @@
 #![warn(missing_docs)]
 
 pub mod asset;
+pub mod audio;
 pub mod block;
 pub mod camera;
 pub mod ecs;
@@ -89,6 +90,7 @@ fn main() {
     input::register(&mut app);
     window::register(&mut app);
     asset::register(&mut app);
+    audio::register(&mut app);
     events::register(&mut app);
     interactions::register(&mut app);
     camera::register(&mut app);
