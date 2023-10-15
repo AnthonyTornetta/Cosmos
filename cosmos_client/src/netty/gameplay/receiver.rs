@@ -8,6 +8,7 @@ use bevy::{
     render::camera::Projection,
     window::PrimaryWindow,
 };
+use bevy_kira_audio::prelude::AudioReceiver;
 use bevy_rapier3d::prelude::*;
 use bevy_renet::renet::{transport::NetcodeClientTransport, RenetClient};
 use cosmos_core::{
@@ -353,6 +354,7 @@ fn client_sync_players(
                                 MainCamera,
                                 // No double UI rendering
                                 UiCameraConfig { show_ui: false },
+                                AudioReceiver,
                             ));
                         });
 
