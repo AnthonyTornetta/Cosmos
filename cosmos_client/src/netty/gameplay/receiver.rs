@@ -246,7 +246,6 @@ pub(crate) fn client_sync_players(
                 }
             }
             ServerUnreliableMessages::SetMovement { movement, ship_entity } => {
-                println!("Received movement packet {movement}");
                 if let Some(entity) = network_mapping.client_from_server(&ship_entity) {
                     commands.entity(entity).insert(movement);
                 }
