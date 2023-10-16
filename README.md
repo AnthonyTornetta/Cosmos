@@ -77,22 +77,25 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
     - [ ] Lit up underground blocks
 - [ ] Animated textures
 - [ ] Sounds
-  - [ ] Laser cannon fire
+  - [x] Laser cannon fire
   - [ ] Block take damage
-  - [ ] Thrusters moving
+  - [x] Thrusters moving
   - [ ] Space ship idle
-  - [ ] Background space music
+  - [x] Background space music
   - [ ] Block break
 - [ ] Place rotated blocks
 - [ ] Multiblock machines (if enough time)
   - [ ] Revamp power generation to use reactor multiblock structure
   - [ ] Colored laser
     - [ ] Colored glass placed in front of laser
-- [ ] Inventory GUI
-  - [ ] Able to open inventory
-  - [ ] Abstract the 3d block GUI camera
-  - [ ] Fix the 3d block GUI camera to not render anything except GUI blocks
+- [x] Inventory GUI
+  - [x] Able to open inventory
+  - [x] Abstract the 3d block GUI camera
+  - [x] Fix the 3d block GUI camera to not render anything except GUI blocks
 - [ ] Fix seeing through cracks in blocks
+- [ ] Update to bevy 0.11
+  - [ ] Update physics
+  - [x] Update bevy
 
 ## Release 0.0.4a
 - [x] Galaxy Generation
