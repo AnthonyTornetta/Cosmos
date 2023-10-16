@@ -17,10 +17,8 @@ fn apply_thruster_sound(
     audio_handle: Res<ThrusterAudioHandle>,
 ) {
     for (entity, ship_movement, audio_emitter) in query.iter() {
-        // `ship_movement.movement == Vec3::ZERO` is a hacky way to determine if the thrusters are off, come up with a better solution later.
-        let thrusters_off = false; // ship_movement.movement == Vec3::ZERO && ship_movement.torque == Vec3::ZERO;
-
-        // println!("{ship_movement}");
+        // A hacky way of determining if the thrusters are running
+        let thrusters_off = ship_movement.movement.length_squared() + ship_movement.torque.length_squared() < 0.1;
 
         if thrusters_off && audio_emitter.is_some() {
             commands.entity(entity).remove::<CosmosAudioEmitter>();
