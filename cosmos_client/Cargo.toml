@@ -48,6 +48,7 @@ image = { workspace = true }
 
 bevy-inspector-egui = { workspace = true }
 
+rand = { workspace = true }
 rand_chacha = { workspace = true }
 rayon = { workspace = true }
 bevy_kira_audio = { workspace = true }

@@ -1,3 +1,5 @@
+//! Client-side thruster system logic
+
 use std::time::Duration;
 
 use bevy::prelude::*;
@@ -43,7 +45,7 @@ fn apply_thruster_sound(
                 }
             }
         } else if !thrusters_off && thruster_sound_instance.is_none() {
-            let playing_sound: Handle<AudioInstance> = audio.play(audio_handle.0.clone()).looped().with_volume(0.1).handle();
+            let playing_sound: Handle<AudioInstance> = audio.play(audio_handle.0.clone()).looped().handle();
 
             let stop_tween = AudioTween::new(Duration::from_millis(400), AudioEasing::Linear);
 

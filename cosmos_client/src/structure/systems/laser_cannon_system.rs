@@ -1,31 +1,75 @@
-use bevy::prelude::*;
+//! Client-side laser cannon system logic
 
-// fn prepare_sound(
-//     asset_server: Res<AssetServer>,
-//     mut commands: Commands,
-//     mut loader: ResMut<LoadingManager>,
-//     mut event_writer: EventWriter<AddLoadingEvent>,
-// ) {
-//     let id = loader.register_loader(&mut event_writer);
+use bevy::{asset::LoadState, prelude::*};
+use bevy_kira_audio::prelude::*;
+use cosmos_core::physics::location::Location;
 
-//     commands.insert_resource(LoadingAudioHandle(asset_server.load("cosmos/sounds/sfx/thruster-running.ogg"), id));
-// }
+use crate::{
+    asset::asset_loader::load_assets,
+    audio::{AudioEmission, CosmosAudioEmitter, DespawnOnNoEmissions},
+    state::game_state::GameState,
+};
 
-// fn check_sound_done_loading(
-//     handle: Option<Res<LoadingAudioHandle>>,
-//     asset_server: Res<AssetServer>,
-//     mut commands: Commands,
-//     mut loader: ResMut<LoadingManager>,
-//     mut end_writer: EventWriter<DoneLoadingEvent>,
-// ) {
-//     if let Some(handle) = handle {
-//         if asset_server.get_load_state(handle.0.id()) == LoadState::Loaded {
-//             commands.insert_resource(ThrusterAudioHandle(handle.0.clone()));
-//             commands.remove_resource::<LoadingAudioHandle>();
+#[derive(Event)]
+/// This event is fired whenever a laser cannon system is fired
+pub struct LaserCannonSystemFiredEvent(pub Entity);
 
-//             loader.finish_loading(handle.1, &mut end_writer);
-//         }
-//     }
-// }
+#[derive(Resource)]
+struct LaserCannonFireHandles(Vec<Handle<AudioSource>>);
 
-pub(super) fn register(_app: &mut App) {}
+fn apply_thruster_sound(
+    query: Query<(&Location, &GlobalTransform)>,
+    mut commands: Commands,
+    audio: Res<Audio>,
+    audio_handles: Res<LaserCannonFireHandles>,
+    mut event_reader: EventReader<LaserCannonSystemFiredEvent>,
+) {
+    for entity in event_reader.iter() {
+        let Ok((ship_location, ship_global_transform)) = query.get(entity.0) else {
+            continue;
+        };
+
+        let mut location = *ship_location;
+        let translation = ship_global_transform.translation();
+        location.last_transform_loc = Some(ship_global_transform.translation());
+
+        let idx = rand::random::<usize>() % audio_handles.0.len();
+
+        let playing_sound: Handle<AudioInstance> = audio.play(audio_handles.0[idx].clone()).handle();
+
+        commands.spawn((
+            CosmosAudioEmitter {
+                emissions: vec![AudioEmission {
+                    instance: playing_sound,
+                    ..Default::default()
+                }],
+                ..Default::default()
+            },
+            DespawnOnNoEmissions,
+            location,
+            TransformBundle::from_transform(Transform::from_translation(translation)),
+        ));
+    }
+}
+
+struct LaserCannonLoadingFlag;
+
+pub(super) fn register(app: &mut App) {
+    load_assets::<AudioSource, LaserCannonLoadingFlag>(
+        app,
+        GameState::PreLoading,
+        vec![
+            "cosmos/sounds/sfx/laser-fire-1.ogg",
+            "cosmos/sounds/sfx/laser-fire-2.ogg",
+            "cosmos/sounds/sfx/laser-fire-3.ogg",
+        ],
+        |mut commands, handles| {
+            commands.insert_resource(LaserCannonFireHandles(
+                handles.into_iter().filter(|x| x.1 == LoadState::Loaded).map(|x| x.0).collect(),
+            ));
+        },
+    );
+
+    app.add_event::<LaserCannonSystemFiredEvent>()
+        .add_systems(Update, apply_thruster_sound.run_if(in_state(GameState::Playing)));
+}

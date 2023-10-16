@@ -1,3 +1,5 @@
+//! Client-side ship systems logic
+
 pub mod laser_cannon_system;
 mod player_interactions;
 pub mod thruster_system;

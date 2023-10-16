@@ -4,7 +4,7 @@
 //!
 //! Note that this logic does rely on the `AudioReceiver` defined in kira's implementation.
 
-use bevy::{prelude::*, utils::HashMap};
+use bevy::{prelude::*, transform::commands, utils::HashMap};
 use bevy_kira_audio::{prelude::*, AudioSystemSet};
 
 /// Contains information for a specific audio emission.
@@ -42,6 +42,10 @@ pub struct CosmosAudioEmitter {
     /// The audio sources to output
     pub emissions: Vec<AudioEmission>,
 }
+
+#[derive(Component, Default, Debug)]
+/// This flag will despawn the entity when there are no more audio emissions occuring
+pub struct DespawnOnNoEmissions;
 
 #[derive(Default, Resource, Deref, DerefMut)]
 /// Fixes the issue of sounds failing to stop because of a full command queue.
@@ -159,8 +163,12 @@ fn monitor_attached_audio_sources(
     }
 }
 
-fn cleanup_stopped_spacial_instances(mut emitters: Query<&mut CosmosAudioEmitter>, instances: Res<Assets<AudioInstance>>) {
-    for mut emitter in emitters.iter_mut() {
+fn cleanup_stopped_spacial_instances(
+    mut emitters: Query<(Entity, &mut CosmosAudioEmitter, Option<&DespawnOnNoEmissions>)>,
+    instances: Res<Assets<AudioInstance>>,
+    mut commands: Commands,
+) {
+    for (entity, mut emitter, despawn_when_empty) in emitters.iter_mut() {
         let handles = &mut emitter.emissions;
 
         handles.retain(|emission| {
@@ -170,6 +178,10 @@ fn cleanup_stopped_spacial_instances(mut emitters: Query<&mut CosmosAudioEmitter
                 true
             }
         });
+
+        if handles.is_empty() && despawn_when_empty.is_some() {
+            commands.entity(entity).despawn_recursive();
+        }
     }
 }
 
