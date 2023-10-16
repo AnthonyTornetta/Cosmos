@@ -1,13 +1,11 @@
 use std::time::Duration;
 
-use bevy::{asset::LoadState, prelude::*};
+use bevy::prelude::*;
 use bevy_kira_audio::prelude::*;
-use cosmos_core::{
-    loader::{AddLoadingEvent, DoneLoadingEvent, LoadingManager},
-    structure::ship::ship_movement::ShipMovement,
-};
+use cosmos_core::structure::ship::ship_movement::ShipMovement;
 
 use crate::{
+    asset::asset_loader::load_assets,
     audio::{AudioEmission, BufferedStopAudio, CosmosAudioEmitter},
     state::game_state::GameState,
 };
@@ -66,41 +64,19 @@ fn apply_thruster_sound(
 }
 
 #[derive(Resource)]
-struct LoadingAudioHandle(Handle<AudioSource>, usize);
-
-#[derive(Resource)]
 struct ThrusterAudioHandle(Handle<AudioSource>);
 
-fn prepare(
-    asset_server: Res<AssetServer>,
-    mut commands: Commands,
-    mut loader: ResMut<LoadingManager>,
-    mut event_writer: EventWriter<AddLoadingEvent>,
-) {
-    let id = loader.register_loader(&mut event_writer);
-
-    commands.insert_resource(LoadingAudioHandle(asset_server.load("cosmos/sounds/sfx/thruster-running.ogg"), id));
-}
-
-fn check(
-    handle: Option<Res<LoadingAudioHandle>>,
-    asset_server: Res<AssetServer>,
-    mut commands: Commands,
-    mut loader: ResMut<LoadingManager>,
-    mut end_writer: EventWriter<DoneLoadingEvent>,
-) {
-    if let Some(handle) = handle {
-        if asset_server.get_load_state(handle.0.id()) == LoadState::Loaded {
-            commands.insert_resource(ThrusterAudioHandle(handle.0.clone()));
-            commands.remove_resource::<LoadingAudioHandle>();
-
-            loader.finish_loading(handle.1, &mut end_writer);
-        }
-    }
-}
+struct ThrusterSoundLoading;
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(OnEnter(GameState::PreLoading), prepare)
-        .add_systems(Update, check.run_if(in_state(GameState::PreLoading)))
-        .add_systems(Update, apply_thruster_sound.run_if(in_state(GameState::Playing)));
+    load_assets::<AudioSource, ThrusterSoundLoading>(
+        app,
+        GameState::PreLoading,
+        vec!["cosmos/sounds/sfx/thruster-running.ogg"],
+        |mut commands, mut handles| {
+            commands.insert_resource(ThrusterAudioHandle(handles.remove(0).0));
+        },
+    );
+
+    app.add_systems(Update, apply_thruster_sound.run_if(in_state(GameState::Playing)));
 }

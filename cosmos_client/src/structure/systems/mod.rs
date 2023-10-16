@@ -1,3 +1,4 @@
+pub mod laser_cannon_system;
 mod player_interactions;
 pub mod thruster_system;
 
@@ -45,6 +46,7 @@ fn send_structure_state(query: Query<&Pilot, With<LocalPlayer>>, structure_query
 pub(super) fn register(app: &mut App) {
     player_interactions::register(app);
     thruster_system::register(app);
+    laser_cannon_system::register(app);
 
     app.add_systems(
         Update,
