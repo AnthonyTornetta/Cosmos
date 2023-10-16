@@ -7,7 +7,6 @@
 use bevy::{prelude::*, utils::HashMap};
 use bevy_kira_audio::{prelude::*, AudioSystemSet};
 
-#[derive(Debug)]
 /// Contains information for a specific audio emission.
 ///
 /// Do make sure the [`instance`] is unique to this [`AudioEmission`], as this directly modifies that instance to get the 3d effect.
@@ -20,6 +19,8 @@ pub struct AudioEmission {
     pub max_distance: f32,
     /// The max volume this sound will play at - defaults to 1.0
     pub peak_volume: f64,
+    /// Tween used when the sound is removed from the audio emitter - Default will immediately cut it off
+    pub stop_tween: AudioTween,
 }
 
 impl Default for AudioEmission {
@@ -28,11 +29,12 @@ impl Default for AudioEmission {
             max_distance: 100.0,
             peak_volume: 1.0,
             instance: Default::default(),
+            stop_tween: Default::default(),
         }
     }
 }
 
-#[derive(Default, Debug, Component)]
+#[derive(Default, Component)]
 /// Contains a bunch of audio instances to output
 ///
 /// This must be put onto an entity with a transform to do anything
@@ -90,17 +92,22 @@ fn cleanup_stopped_spacial_instances(mut emitters: Query<&mut CosmosAudioEmitter
     }
 }
 
-#[derive(Debug, Default, Resource)]
-struct AttachedAudioSources(HashMap<Entity, Vec<Handle<AudioInstance>>>);
+#[derive(Default, Resource)]
+struct AttachedAudioSources(HashMap<Entity, Vec<(Handle<AudioInstance>, AudioTween)>>);
 
 fn monitor_attached_audio_sources(
     mut attached_audio_sources: ResMut<AttachedAudioSources>,
     query: Query<(Entity, &CosmosAudioEmitter), Changed<CosmosAudioEmitter>>,
 ) {
     for (entity, audio_emitter) in query.iter() {
-        attached_audio_sources
-            .0
-            .insert(entity, audio_emitter.emissions.iter().map(|x| x.instance.clone_weak()).collect());
+        attached_audio_sources.0.insert(
+            entity,
+            audio_emitter
+                .emissions
+                .iter()
+                .map(|x| (x.instance.clone_weak(), x.stop_tween.clone()))
+                .collect(),
+        );
     }
 }
 
@@ -111,9 +118,9 @@ fn cleanup_despawning_audio_sources(
 ) {
     for entity in removed_emitters.iter() {
         if let Some(instances) = attached_audio_sources.0.remove(&entity) {
-            for audio_instance in instances {
+            for (audio_instance, tween) in instances {
                 if let Some(mut ai) = audio_instances.remove(&audio_instance) {
-                    ai.stop(AudioTween::default());
+                    ai.stop(tween);
                 }
             }
         }

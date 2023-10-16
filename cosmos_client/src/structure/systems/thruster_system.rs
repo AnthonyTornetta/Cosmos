@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use bevy::{asset::LoadState, prelude::*};
 use bevy_kira_audio::prelude::*;
 use cosmos_core::{
@@ -25,11 +27,14 @@ fn apply_thruster_sound(
         } else if !thrusters_off && audio_emitter.is_none() {
             let playing_sound: Handle<AudioInstance> = audio.play(audio_handle.0.clone()).looped().with_volume(0.1).handle();
 
+            let stop_tween = AudioTween::new(Duration::from_millis(200), AudioEasing::Linear);
+
             commands.entity(entity).insert(CosmosAudioEmitter {
                 emissions: vec![AudioEmission {
                     instance: playing_sound,
                     max_distance: 100.0,
                     peak_volume: 0.3,
+                    stop_tween,
                     ..Default::default()
                 }],
             });
