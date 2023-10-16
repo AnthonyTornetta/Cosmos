@@ -8,36 +8,59 @@ use cosmos_core::{
 };
 
 use crate::{
-    audio::{AudioEmission, CosmosAudioEmitter},
+    audio::{AudioEmission, BufferedStopAudio, CosmosAudioEmitter},
     state::game_state::GameState,
 };
 
+#[derive(Component)]
+struct ThrusterSoundInstace(Handle<AudioInstance>);
+
 fn apply_thruster_sound(
-    query: Query<(Entity, &ShipMovement, Option<&CosmosAudioEmitter>)>,
+    mut query: Query<
+        (
+            Entity,
+            &ShipMovement,
+            Option<&ThrusterSoundInstace>,
+            Option<&mut CosmosAudioEmitter>,
+        ),
+        Changed<ShipMovement>,
+    >,
     mut commands: Commands,
     audio: Res<Audio>,
     audio_handle: Res<ThrusterAudioHandle>,
+    mut audio_instances: ResMut<Assets<AudioInstance>>,
+    mut stop_later: ResMut<BufferedStopAudio>,
 ) {
-    for (entity, ship_movement, audio_emitter) in query.iter() {
+    for (entity, ship_movement, thruster_sound_instance, audio_emitter) in query.iter_mut() {
         // A hacky way of determining if the thrusters are running
-        let thrusters_off = ship_movement.movement.length_squared() + ship_movement.torque.length_squared() < 0.1 && !ship_movement.braking;
+        let thrusters_off =
+            ship_movement.movement.length_squared() + ship_movement.torque.length_squared() < 0.01 && !ship_movement.braking;
 
-        if thrusters_off && audio_emitter.is_some() {
-            commands.entity(entity).remove::<CosmosAudioEmitter>();
-        } else if !thrusters_off && audio_emitter.is_none() {
+        if thrusters_off {
+            if let Some(mut audio_emitter) = audio_emitter {
+                if let Some(thruster_sound_instance) = thruster_sound_instance {
+                    audio_emitter.remove_and_stop(&thruster_sound_instance.0, &mut audio_instances, &mut stop_later);
+
+                    commands.entity(entity).remove::<ThrusterSoundInstace>();
+                }
+            }
+        } else if !thrusters_off && thruster_sound_instance.is_none() {
             let playing_sound: Handle<AudioInstance> = audio.play(audio_handle.0.clone()).looped().with_volume(0.1).handle();
 
-            let stop_tween = AudioTween::new(Duration::from_millis(200), AudioEasing::Linear);
+            let stop_tween = AudioTween::new(Duration::from_millis(400), AudioEasing::Linear);
 
-            commands.entity(entity).insert(CosmosAudioEmitter {
-                emissions: vec![AudioEmission {
-                    instance: playing_sound,
-                    max_distance: 100.0,
-                    peak_volume: 0.3,
-                    stop_tween,
-                    ..Default::default()
-                }],
-            });
+            commands.entity(entity).insert((
+                ThrusterSoundInstace(playing_sound.clone_weak()),
+                CosmosAudioEmitter {
+                    emissions: vec![AudioEmission {
+                        instance: playing_sound,
+                        max_distance: 100.0,
+                        peak_volume: 0.3,
+                        stop_tween,
+                        ..Default::default()
+                    }],
+                },
+            ));
         }
     }
 }
@@ -57,8 +80,6 @@ fn prepare(
     let id = loader.register_loader(&mut event_writer);
 
     commands.insert_resource(LoadingAudioHandle(asset_server.load("cosmos/sounds/sfx/thruster-running.ogg"), id));
-
-    println!("Started loading sound!");
 }
 
 fn check(
@@ -72,8 +93,6 @@ fn check(
         if asset_server.get_load_state(handle.0.id()) == LoadState::Loaded {
             commands.insert_resource(ThrusterAudioHandle(handle.0.clone()));
             commands.remove_resource::<LoadingAudioHandle>();
-
-            println!("Done loading sound!");
 
             loader.finish_loading(handle.1, &mut end_writer);
         }
