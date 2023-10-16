@@ -4,7 +4,7 @@
 //!
 //! Note that this logic does rely on the `AudioReceiver` defined in kira's implementation.
 
-use bevy::{prelude::*, transform::commands, utils::HashMap};
+use bevy::{prelude::*, utils::HashMap};
 use bevy_kira_audio::{prelude::*, AudioSystemSet};
 
 /// Contains information for a specific audio emission.
