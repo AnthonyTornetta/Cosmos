@@ -1,5 +1,6 @@
 use bevy::{asset::LoadState, prelude::*};
 use bevy_kira_audio::prelude::*;
+use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
     loader::{AddLoadingEvent, DoneLoadingEvent, LoadingManager},
     structure::ship::ship_movement::ShipMovement,
@@ -11,14 +12,15 @@ use crate::{
 };
 
 fn apply_thruster_sound(
-    query: Query<(Entity, &ShipMovement, Option<&CosmosAudioEmitter>)>,
+    query: Query<(Entity, &Velocity, &ShipMovement, Option<&CosmosAudioEmitter>)>,
     mut commands: Commands,
     audio: Res<Audio>,
     audio_handle: Res<ThrusterAudioHandle>,
 ) {
-    for (entity, ship_movement, audio_emitter) in query.iter() {
+    for (entity, ship_velocity, ship_movement, audio_emitter) in query.iter() {
         // A hacky way of determining if the thrusters are running
-        let thrusters_off = ship_movement.movement.length_squared() + ship_movement.torque.length_squared() < 0.1;
+        let thrusters_off = ship_movement.movement.length_squared() + ship_movement.torque.length_squared() < 0.1
+            || (ship_movement.braking && ship_velocity.linvel.length_squared() > 0.1);
 
         if thrusters_off && audio_emitter.is_some() {
             commands.entity(entity).remove::<CosmosAudioEmitter>();
