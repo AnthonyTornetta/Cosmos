@@ -31,7 +31,7 @@ fn monitor_set_movement_events(
 ) {
     for ev in event_reader.iter() {
         if let Ok(mut current_movement) = query.get_mut(ev.ship) {
-            current_movement.set(&ev.movement);
+            *current_movement = ev.movement;
 
             server.broadcast_message(
                 NettyChannelServer::Unreliable,
