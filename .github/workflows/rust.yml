@@ -14,9 +14,9 @@ jobs:
     name: build
     runs-on: ubuntu-latest
     env:
-      RUSTFLAGS: -D warnings
+      RUSTFLAGS: -Dwarnings
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - uses: actions-rs/toolchain@v1
       with:
         toolchain: nightly
@@ -29,45 +29,8 @@ jobs:
       run: sudo apt update -y && sudo apt upgrade -y
     - name: Install Bevy Dependencies
       run: sudo apt-get install -y g++ pkg-config libx11-dev libasound2-dev libudev-dev
-    - name: Build
-      run: cargo build --verbose
-  # Doesn't work
-  # clippy:
-  #   name: Clippy
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v1
-  #     - uses: actions-rs/toolchain@v1
-  #       with:
-  #           toolchain: nightly
-  #           components: clippy
-  #           override: true
-  #     - name: Cache
-  #       uses: Swatinem/rust-cache@v2
-  #     # Note that there is no release tag available yet
-  #     # and the following code will use master branch HEAD
-  #     # all the time.
-  #     - name: Install Bevy Dependencies
-  #       run: sudo apt-get install -y g++ pkg-config libx11-dev libasound2-dev
-  #     - uses: actions-rs/clippy@master
-  #       with:
-  #         token: ${{ secrets.GITHUB_TOKEN }}
-  #         args: --all-features --all-targets --no-deps -- --deny "warnings"
-#   rustfmt:
-#     name: rustfmt
-#     runs-on: ubuntu-latest
-#     steps:
-#       - name: Checkout repository
-#         uses: actions/checkout@v2
-#       - name: Install Rust
-#         uses: actions-rs/toolchain@v1
-#         with:
-#           toolchain: stable
-#           override: true
-#           profile: minimal
-#           components: rustfmt
-#       - name: Check formatting
-#         uses: actions-rs/cargo@v1
-#         with:
-#           command: fmt
-#           args: -- --check
+    - name: rust-clippy-check
+      uses: actions-rs/clippy-check@v1.0.7
+    - name: rustfmt check
+      uses: mbrobbel/rustfmt-check@0.8.0
+ 
