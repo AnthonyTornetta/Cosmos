@@ -1,4 +1,8 @@
+//! Client-side ship systems logic
+
+pub mod laser_cannon_system;
 mod player_interactions;
+pub mod thruster_system;
 
 use bevy::prelude::*;
 use bevy_renet::renet::RenetClient;
@@ -42,10 +46,12 @@ fn send_structure_state(query: Query<&Pilot, With<LocalPlayer>>, structure_query
 }
 
 pub(super) fn register(app: &mut App) {
+    player_interactions::register(app);
+    thruster_system::register(app);
+    laser_cannon_system::register(app);
+
     app.add_systems(
         Update,
         (check_if_using_structure_system, send_structure_state).run_if(in_state(GameState::Playing)),
     );
-
-    player_interactions::register(app);
 }

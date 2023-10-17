@@ -8,6 +8,7 @@ use bevy::{
     render::camera::Projection,
     window::PrimaryWindow,
 };
+use bevy_kira_audio::prelude::AudioReceiver;
 use bevy_rapier3d::prelude::*;
 use bevy_renet::renet::{transport::NetcodeClientTransport, RenetClient};
 use cosmos_core::{
@@ -42,7 +43,6 @@ use cosmos_core::{
 
 use crate::{
     camera::camera_controller::CameraHelper,
-    events::ship::set_ship_event::SetShipMovementEvent,
     netty::{
         flags::LocalPlayer,
         lobby::{ClientLobby, PlayerInfo},
@@ -95,7 +95,7 @@ fn update_crosshair(
 }
 
 #[derive(Resource, Debug, Default)]
-struct RequestedEntities {
+pub(crate) struct RequestedEntities {
     entities: Vec<(Entity, f32)>,
 }
 
@@ -103,7 +103,7 @@ struct RequestedEntities {
 pub struct NetworkTick(pub u64);
 
 #[derive(Debug, Component, Deref)]
-struct LerpTowards(NettyRigidBody);
+pub(crate) struct LerpTowards(NettyRigidBody);
 
 fn lerp_towards(
     mut location_query: Query<&mut Location>,
@@ -148,7 +148,7 @@ fn lerp_towards(
     }
 }
 
-fn client_sync_players(
+pub(crate) fn client_sync_players(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut client: ResMut<RenetClient>,
@@ -171,7 +171,6 @@ fn client_sync_players(
     mut query_structure: Query<&mut Structure>,
     blocks: Res<Registry<Block>>,
     mut pilot_change_event_writer: EventWriter<ChangePilotEvent>,
-    mut set_ship_movement_event: EventWriter<SetShipMovementEvent>,
     mut requested_entities: ResMut<RequestedEntities>,
     time: Res<Time>,
 ) {
@@ -244,10 +243,9 @@ fn client_sync_players(
                 }
             }
             ServerUnreliableMessages::SetMovement { movement, ship_entity } => {
-                set_ship_movement_event.send(SetShipMovementEvent {
-                    ship_entity,
-                    ship_movement: movement,
-                });
+                if let Some(entity) = network_mapping.client_from_server(&ship_entity) {
+                    commands.entity(entity).insert(movement);
+                }
             }
         }
     }
@@ -346,6 +344,7 @@ fn client_sync_players(
                                 MainCamera,
                                 // No double UI rendering
                                 UiCameraConfig { show_ui: false },
+                                AudioReceiver,
                             ));
                         });
 

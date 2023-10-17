@@ -6,7 +6,7 @@ members = ["cosmos_client", "cosmos_core", "cosmos_server"]
 resolver = "2"
 
 [workspace.dependencies]
-bevy = "0.11.2"
+bevy = { version = "0.11.2", default-features = false }
 bevy_rapier3d = { git = "https://github.com/AnthonyTornetta/bevy_rapier/", version = "0.22.0", features = [
   "simd-stable",
   "serde-serialize",
@@ -18,13 +18,13 @@ serde_json = "1.0.107"
 bincode = "1.3.3"
 noise = "0.8.2"
 
-rand = "0.8.5"
+rand = "0.8.5"          # Check out https://crates.io/crates/tinyrand in future
 rand_chacha = "0.3.1"
 bigdecimal = "0.4.1"
-rayon = "1.7.0"
+rayon = "1.8.0"
 futures-lite = "1.13.0"
 
-local-ip-address = "0.5.5"
+local-ip-address = "0.5.6"
 
 image = { version = "0.24.7", default-features = false, features = ["png"] }
 
@@ -36,8 +36,10 @@ renet_visualizer = { version = "0.0.6", features = ["bevy"] }
 
 walkdir = "2.4.0"
 
-toml = "0.8.0"
+toml = "0.8.2"
 lz4_flex = "0.11.1"
+
+bevy_kira_audio = "0.17.0"
 
 # For any non workspace package
 [profile.dev.package."*"]

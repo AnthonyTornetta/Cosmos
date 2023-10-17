@@ -9,6 +9,30 @@ client = []
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+# Bevy defaults minus audio and some other not needed things
+# see https://github.com/bevyengine/bevy/blob/main/Cargo.toml#L31-L54
+# from https://github.com/NiklasEi/bevy_game_template/blob/main/Cargo.toml
+default = [
+    "bevy/animation",
+    "bevy/bevy_asset",
+    "bevy/bevy_scene",
+    "bevy/bevy_winit",
+    "bevy/bevy_core_pipeline",
+    "bevy/bevy_pbr",
+    "bevy/bevy_gltf",
+    "bevy/bevy_render",
+    "bevy/bevy_sprite",
+    "bevy/bevy_text",
+    "bevy/bevy_ui",
+    "bevy/png",
+    "bevy/hdr",
+    "bevy/zstd",
+    "bevy/x11",
+    "bevy/ktx2",
+    "bevy/filesystem_watcher",
+    "bevy/tonemapping_luts",
+]
+
 [dependencies]
 bevy = { workspace = true }
 bevy_renet = { workspace = true }
