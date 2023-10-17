@@ -25,6 +25,6 @@ impl PluginGroup for ClientPluginGroup {
             // NOTE: Load this after renderer initialization so that it knows about the supported
             // compressed texture formats
             .add(GltfPlugin::default())
-            .add(AnimationPlugin::default())
+            .add(AnimationPlugin)
     }
 }

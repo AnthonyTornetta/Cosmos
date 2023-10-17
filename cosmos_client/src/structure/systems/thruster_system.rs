@@ -57,7 +57,6 @@ fn apply_thruster_sound(
                         max_distance: 100.0,
                         peak_volume: 0.3,
                         stop_tween,
-                        ..Default::default()
                     }],
                 },
             ));

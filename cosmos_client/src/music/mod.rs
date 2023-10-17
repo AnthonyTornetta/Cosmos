@@ -32,11 +32,8 @@ impl Default for VolumeSetting {
 
 fn monitor_background_song(bg_song: Res<BackgroundSong>, mut audio_instances: ResMut<Assets<AudioInstance>>, mut commands: Commands) {
     if let Some(instance) = audio_instances.get_mut(&bg_song.0) {
-        match instance.state() {
-            PlaybackState::Stopped => {
-                commands.remove_resource::<BackgroundSong>();
-            }
-            _ => {}
+        if instance.state() == PlaybackState::Stopped {
+            commands.remove_resource::<BackgroundSong>();
         }
     }
 }
@@ -77,10 +74,8 @@ fn play_music_when_enter_new_sector(
     };
 
     if let Some(last_play_sector) = last_play_sector {
-        if background_song.is_none() {
-            if last_play_sector.0 != location.sector {
-                event_writer.send_default();
-            }
+        if background_song.is_none() && last_play_sector.0 != location.sector {
+            event_writer.send_default();
         }
     }
 

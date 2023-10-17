@@ -43,7 +43,6 @@ fn apply_thruster_sound(
                     instance: playing_sound,
                     ..Default::default()
                 }],
-                ..Default::default()
             },
             DespawnOnNoEmissions,
             location,

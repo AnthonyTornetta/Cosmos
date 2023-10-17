@@ -36,7 +36,7 @@ fn monitor_set_movement_events(
             server.broadcast_message(
                 NettyChannelServer::Unreliable,
                 cosmos_encoder::serialize(&ServerUnreliableMessages::SetMovement {
-                    movement: ev.movement.clone(),
+                    movement: ev.movement,
                     ship_entity: ev.ship,
                 }),
             );
