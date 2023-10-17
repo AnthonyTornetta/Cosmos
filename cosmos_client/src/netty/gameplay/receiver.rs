@@ -221,11 +221,8 @@ fn client_sync_players(
                                 let loc = match body.location {
                                     NettyRigidBodyLocation::Absolute(location) => location,
                                     NettyRigidBodyLocation::Relative(rel_trans, parent_ent) => {
-                                        let parent_loc = query_body
-                                            .get(parent_ent)
-                                            .map(|x| x.0.copied())
-                                            .unwrap_or(None)
-                                            .unwrap_or(Location::default());
+                                        let parent_loc =
+                                            query_body.get(parent_ent).map(|x| x.0.copied()).unwrap_or(None).unwrap_or_default();
 
                                         parent_loc + rel_trans
                                     }
@@ -286,11 +283,7 @@ fn client_sync_players(
                 let mut loc = match body.location {
                     NettyRigidBodyLocation::Absolute(location) => location,
                     NettyRigidBodyLocation::Relative(rel_trans, entity) => {
-                        let parent_loc = query_body
-                            .get(entity)
-                            .map(|x| x.0.copied())
-                            .unwrap_or(None)
-                            .unwrap_or(Location::default());
+                        let parent_loc = query_body.get(entity).map(|x| x.0.copied()).unwrap_or(None).unwrap_or_default();
 
                         parent_loc + rel_trans
                     }
@@ -424,11 +417,7 @@ fn client_sync_players(
                 let location = match body.location {
                     NettyRigidBodyLocation::Absolute(location) => location,
                     NettyRigidBodyLocation::Relative(rel_trans, entity) => {
-                        let parent_loc = query_body
-                            .get(entity)
-                            .map(|x| x.0.copied())
-                            .unwrap_or(None)
-                            .unwrap_or(Location::default());
+                        let parent_loc = query_body.get(entity).map(|x| x.0.copied()).unwrap_or(None).unwrap_or_default();
 
                         parent_loc + rel_trans
                     }

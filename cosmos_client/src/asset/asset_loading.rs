@@ -178,10 +178,12 @@ fn assets_done_loading(
     mut loader: ResMut<LoadingManager>,
     mut end_writer: EventWriter<DoneLoadingEvent>,
 ) {
-    if loading_id.is_some() && !event_listener.is_empty() {
-        loader.finish_loading(loading_id.as_ref().unwrap().0, &mut end_writer);
+    if !event_listener.is_empty() {
+        if let Some(loading_id) = loading_id.as_ref() {
+            loader.finish_loading(loading_id.0, &mut end_writer);
 
-        commands.remove_resource::<AssetsLoadingID>();
+            commands.remove_resource::<AssetsLoadingID>();
+        }
     }
 }
 
