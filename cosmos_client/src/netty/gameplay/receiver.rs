@@ -225,7 +225,7 @@ fn client_sync_players(
                                             .get(parent_ent)
                                             .map(|x| x.0.copied())
                                             .unwrap_or(None)
-                                            .unwrap_or(Location::default());
+                                            .unwrap_or_default();
 
                                         parent_loc + rel_trans
                                     }
@@ -290,7 +290,7 @@ fn client_sync_players(
                             .get(entity)
                             .map(|x| x.0.copied())
                             .unwrap_or(None)
-                            .unwrap_or(Location::default());
+                            .unwrap_or_default();
 
                         parent_loc + rel_trans
                     }
@@ -428,7 +428,7 @@ fn client_sync_players(
                             .get(entity)
                             .map(|x| x.0.copied())
                             .unwrap_or(None)
-                            .unwrap_or(Location::default());
+                            .unwrap_or_default();
 
                         parent_loc + rel_trans
                     }
