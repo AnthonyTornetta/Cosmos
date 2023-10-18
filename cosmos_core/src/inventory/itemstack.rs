@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{item::Item, registry::identifiable::Identifiable};
 
-#[derive(Serialize, Deserialize, Debug, Reflect)]
+#[derive(Serialize, Deserialize, Debug, Reflect, Clone, PartialEq, Eq)]
 /// An item & the quantity of that item
 pub struct ItemStack {
     item_id: u16,
@@ -32,6 +32,15 @@ impl ItemStack {
         }
     }
 
+    /// Creates an ItemStack of that item id, its max stack size, and with the given initial quantity
+    pub fn raw_with_quantity(item_id: u16, max_stack_size: u16, quantity: u16) -> Self {
+        Self {
+            item_id,
+            max_stack_size,
+            quantity,
+        }
+    }
+
     #[inline]
     /// Gets the item's id
     pub fn item_id(&self) -> u16 {
@@ -42,6 +51,12 @@ impl ItemStack {
     /// Gets the quantity
     pub fn quantity(&self) -> u16 {
         self.quantity
+    }
+
+    #[inline]
+    /// Gets the max stack size
+    pub fn max_stack_size(&self) -> u16 {
+        self.max_stack_size
     }
 
     #[inline]
@@ -84,6 +99,16 @@ impl ItemStack {
     /// Returns true if the ItemStack is at or above the max stack size.
     pub fn is_full(&self) -> bool {
         self.quantity >= self.max_stack_size
+    }
+
+    /// Sets the quantity. Does not care about the max stack size
+    pub fn set_quantity(&mut self, new_quantity: u16) {
+        self.quantity = new_quantity;
+    }
+
+    /// Similar to equals, but only checks if the items are the same.
+    pub fn is_same_as(&self, other: &ItemStack) -> bool {
+        self.item_id == other.item_id
     }
 }
 

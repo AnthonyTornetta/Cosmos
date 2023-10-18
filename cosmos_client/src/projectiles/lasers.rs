@@ -9,7 +9,9 @@ use cosmos_core::{
     projectiles::laser::Laser,
 };
 
-use crate::{netty::mapping::NetworkMapping, state::game_state::GameState};
+use crate::{
+    netty::mapping::NetworkMapping, state::game_state::GameState, structure::systems::laser_cannon_system::LaserCannonSystemFiredEvent,
+};
 
 #[derive(Resource)]
 struct LaserMesh(Handle<Mesh>);
@@ -25,6 +27,7 @@ fn lasers_netty(
     time: Res<Time>,
     network_mapping: Res<NetworkMapping>,
     laser_mesh: Res<LaserMesh>,
+    mut event_writer: EventWriter<LaserCannonSystemFiredEvent>,
 ) {
     while let Some(message) = client.receive_message(NettyChannelServer::LaserCannonSystem) {
         let msg: ServerLaserCannonSystemMessages = cosmos_encoder::deserialize(&message).unwrap();
@@ -64,6 +67,13 @@ fn lasers_netty(
                     DEFAULT_WORLD_ID,
                     &mut commands,
                 );
+            }
+            ServerLaserCannonSystemMessages::LaserCannonSystemFired { ship_entity } => {
+                let Some(ship_entity) = network_mapping.client_from_server(&ship_entity) else {
+                    continue;
+                };
+
+                event_writer.send(LaserCannonSystemFiredEvent(ship_entity));
             }
         }
     }

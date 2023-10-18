@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 
 use super::pilot::Pilot;
 
-#[derive(Component, Default, Serialize, Deserialize, Debug, Clone, Reflect)]
+#[derive(Component, Default, Serialize, Deserialize, Debug, Clone, Copy, Reflect)]
 /// represents how the ship should be moving
 pub struct ShipMovement {
     /// If true, the ship should be braking.
@@ -25,13 +25,6 @@ impl ShipMovement {
     /// Normalizes the movement vector
     pub fn into_normal_vector(&self) -> Vec3 {
         self.movement.normalize_or_zero()
-    }
-
-    /// Sets this from another movement
-    pub fn set(&mut self, other: &Self) {
-        self.movement = other.movement;
-        self.torque = other.torque;
-        self.braking = other.braking;
     }
 }
 

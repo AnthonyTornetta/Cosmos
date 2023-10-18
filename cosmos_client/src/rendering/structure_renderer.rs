@@ -1,5 +1,4 @@
 use crate::block::lighting::{BlockLightProperties, BlockLighting};
-use crate::materials::CosmosMaterial;
 use crate::netty::flags::LocalPlayer;
 use crate::state::game_state::GameState;
 use crate::structure::planet::unload_chunks_far_from_players;
@@ -27,7 +26,7 @@ use std::collections::HashSet;
 use std::f32::consts::PI;
 use std::sync::Mutex;
 
-use crate::asset::asset_loading::{BlockTextureIndex, MainAtlas};
+use crate::asset::asset_loading::{BlockTextureIndex, MaterialDefinition};
 use crate::{Assets, Commands, Entity, Handle, Query, Res, ResMut};
 
 use super::{BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder, MeshInformation};
@@ -66,7 +65,9 @@ fn monitor_block_updates_system(
             chunks.insert(ChunkCoordinate::new(cc.x - 1, cc.y, cc.z));
         }
 
-        if ev.block.x() != structure.blocks_width() - 1 && (ev.block.x() + 1) % CHUNK_DIMENSIONS == 0 {
+        let dims = structure.block_dimensions();
+
+        if ev.block.x() != dims.x - 1 && (ev.block.x() + 1) % CHUNK_DIMENSIONS == 0 {
             chunks.insert(ChunkCoordinate::new(cc.x + 1, cc.y, cc.z));
         }
 
@@ -74,7 +75,7 @@ fn monitor_block_updates_system(
             chunks.insert(ChunkCoordinate::new(cc.x, cc.y - 1, cc.z));
         }
 
-        if ev.block.y() != structure.blocks_height() - 1 && (ev.block.y() + 1) % CHUNK_DIMENSIONS == 0 {
+        if ev.block.y() != dims.y - 1 && (ev.block.y() + 1) % CHUNK_DIMENSIONS == 0 {
             chunks.insert(ChunkCoordinate::new(cc.x, cc.y + 1, cc.z));
         }
 
@@ -82,7 +83,7 @@ fn monitor_block_updates_system(
             chunks.insert(ChunkCoordinate::new(cc.x, cc.y, cc.z - 1));
         }
 
-        if ev.block.z() != structure.blocks_length() - 1 && (ev.block.z() + 1) % CHUNK_DIMENSIONS == 0 {
+        if ev.block.z() != dims.z - 1 && (ev.block.z() + 1) % CHUNK_DIMENSIONS == 0 {
             chunks.insert(ChunkCoordinate::new(cc.x, cc.y, cc.z + 1));
         }
 
@@ -104,22 +105,24 @@ fn monitor_block_updates_system(
 
         chunks.insert(cc);
 
+        let dims = structure.chunk_dimensions();
+
         if cc.z != 0 {
             chunks.insert(ChunkCoordinate::new(cc.x, cc.y, cc.z - 1));
         }
-        if cc.z < structure.chunks_length() - 1 {
+        if cc.z < dims.z - 1 {
             chunks.insert(ChunkCoordinate::new(cc.x, cc.y, cc.z + 1));
         }
         if cc.y != 0 {
             chunks.insert(ChunkCoordinate::new(cc.x, cc.y - 1, cc.z));
         }
-        if cc.y < structure.chunks_height() - 1 {
+        if cc.y < dims.y - 1 {
             chunks.insert(ChunkCoordinate::new(cc.x, cc.y + 1, cc.z));
         }
         if cc.x != 0 {
             chunks.insert(ChunkCoordinate::new(cc.x - 1, cc.y, cc.z));
         }
-        if cc.x < structure.chunks_width() - 1 {
+        if cc.x < dims.x - 1 {
             chunks.insert(ChunkCoordinate::new(cc.x + 1, cc.y, cc.z));
         }
     }
@@ -160,11 +163,10 @@ struct ChunkMeshes(Vec<Entity>);
 fn monitor_needs_rendered_system(
     mut commands: Commands,
     structure_query: Query<&Structure>,
-    atlas: Res<MainAtlas>,
     mesh_query: Query<Option<&Handle<Mesh>>>,
     mut meshes: ResMut<Assets<Mesh>>,
     blocks: Res<Registry<Block>>,
-    materials: Res<ManyToOneRegistry<Block, CosmosMaterial>>,
+    materials: Res<ManyToOneRegistry<Block, MaterialDefinition>>,
     meshes_registry: Res<BlockMeshRegistry>,
     lighting: Res<Registry<BlockLighting>>,
     lights_query: Query<&LightsHolder>,
@@ -215,8 +217,8 @@ fn monitor_needs_rendered_system(
     // Render chunks in parallel
     todo.par_iter().take(chunks_per_frame).copied().for_each(|(entity, ce, _)| {
         let Ok(structure) = structure_query.get(ce.structure_entity) else {
-                return;
-            };
+            return;
+        };
 
         let mut renderer = ChunkRenderer::new();
 
@@ -236,7 +238,6 @@ fn monitor_needs_rendered_system(
         let front = structure.chunk_from_chunk_coordinates_unbound(unbound.front());
 
         renderer.render(
-            &atlas,
             &materials,
             &lighting,
             chunk,
@@ -464,8 +465,7 @@ impl ChunkRenderer {
     /// Renders a chunk into mesh information that can then be turned into a bevy mesh
     fn render(
         &mut self,
-        atlas: &MainAtlas,
-        materials: &ManyToOneRegistry<Block, CosmosMaterial>,
+        materials: &ManyToOneRegistry<Block, MaterialDefinition>,
         lighting: &Registry<BlockLighting>,
         chunk: &Chunk,
         left: Option<&Chunk>,
@@ -625,11 +625,11 @@ impl ChunkRenderer {
                     continue;
                 };
 
-                if !self.meshes.contains_key(&material.handle) {
-                    self.meshes.insert(material.handle.clone(), Default::default());
+                if !self.meshes.contains_key(material.lit_material()) {
+                    self.meshes.insert(material.lit_material().clone(), Default::default());
                 }
 
-                let mesh_builder = self.meshes.get_mut(&material.handle).unwrap();
+                let mesh_builder = self.meshes.get_mut(material.lit_material()).unwrap();
 
                 let rotation = block_info.get_rotation();
 
@@ -643,7 +643,7 @@ impl ChunkRenderer {
                         continue;
                     };
 
-                    let uvs = atlas.uvs_for_index(image_index);
+                    let uvs = material.uvs_for_index(image_index);
 
                     let rotation = match rotation {
                         BlockFace::Top => Quat::IDENTITY,

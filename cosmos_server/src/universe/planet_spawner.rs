@@ -16,6 +16,7 @@ use cosmos_core::{
     physics::location::{Location, Sector, SystemUnit},
     structure::{
         coordinates::CoordinateType,
+        dynamic_structure::DynamicStructure,
         planet::{planet_builder::TPlanetBuilder, Planet, PLANET_LOAD_RADIUS},
         Structure,
     },
@@ -62,7 +63,7 @@ fn monitor_planets_to_spawn(
 
             let mut entity_cmd = commands.spawn_empty();
 
-            let mut structure = Structure::new(size, size, size);
+            let mut structure = Structure::Dynamic(DynamicStructure::new(size));
 
             let builder = ServerPlanetBuilder::default();
 
@@ -132,7 +133,7 @@ fn spawn_planet(
 
             let is_origin = sector.x() == 25 && sector.y() == 25 && sector.z() == 25;
 
-            if is_origin || rng.gen_range(0..1000) == 9 {
+            if !is_origin && rng.gen_range(0..1000) == 9 {
                 let location = Location::new(Vec3::ZERO, sector);
 
                 let mut closest_star = None;

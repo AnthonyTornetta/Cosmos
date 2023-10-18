@@ -1,172 +1,707 @@
-//! This whole module is pretty bad because it relies on a whole lot of magic numbers.
-//!
-//! This will need to be redone once more slots are added.
+//! Renders the inventory slots and handles all the logic for moving items around
 
-use bevy::{
-    core_pipeline::clear_color::ClearColorConfig,
-    prelude::*,
-    render::{camera::ScalingMode, view::RenderLayers},
-    window::PrimaryWindow,
-};
+use bevy::{ecs::system::EntityCommands, prelude::*};
+use bevy_renet::renet::RenetClient;
 use cosmos_core::{
-    block::{Block, BlockFace},
-    blockitems::BlockItems,
-    inventory::Inventory,
+    ecs::NeedsDespawned,
+    inventory::{itemstack::ItemStack, netty::ClientInventoryMessages, HeldItemStack, Inventory},
     item::Item,
-    registry::{identifiable::Identifiable, Registry},
+    netty::{cosmos_encoder, NettyChannelClient},
+    registry::Registry,
 };
 
 use crate::{
-    asset::asset_loading::{BlockTextureIndex, MainAtlas},
-    netty::flags::LocalPlayer,
-    rendering::{BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder},
+    input::inputs::{CosmosInputs, InputChecker, InputHandler},
+    netty::{flags::LocalPlayer, mapping::NetworkMapping},
     state::game_state::GameState,
+    ui::item_renderer::RenderItem,
+    window::setup::CursorFlags,
 };
 
-const INVENTORY_SLOT_LAYER: u8 = 10;
+pub mod netty;
 
-#[derive(Component)]
-struct UICamera;
-
-fn ui_camera(mut commands: Commands) {
-    commands.spawn((
-        Camera3dBundle {
-            projection: Projection::Orthographic(OrthographicProjection {
-                scaling_mode: ScalingMode::WindowSize(40.0),
-                ..Default::default()
-            }),
-            camera_3d: Camera3d {
-                clear_color: ClearColorConfig::None,
-                ..Default::default()
-            },
-            camera: Camera {
-                order: 1,
-                hdr: true, // this has to be true or the camera doesn't render over the main one correctly.
-                ..Default::default()
-            },
-            transform: Transform::from_xyz(0.0, 0.0, 1.0).looking_at(Vec3::ZERO, Vec3::Y),
-            ..Default::default()
-        },
-        UICamera,
-        RenderLayers::from_layers(&[INVENTORY_SLOT_LAYER]),
-    ));
+#[derive(Debug, Resource, Clone, Copy, Default)]
+enum InventoryState {
+    #[default]
+    Closed,
+    Open,
 }
 
-fn render_hotbar(
-    inventory: Query<&Inventory, With<LocalPlayer>>,
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
+#[derive(Component)]
+struct RenderedInventory;
 
-    block_items: Res<BlockItems>,
-    items: Res<Registry<Item>>,
-    blocks: Res<Registry<Block>>,
+fn toggle_inventory(mut inventory_state: ResMut<InventoryState>, inputs: InputChecker) {
+    if inputs.check_just_pressed(CosmosInputs::ToggleInventory) {
+        match *inventory_state {
+            InventoryState::Closed => *inventory_state = InventoryState::Open,
+            InventoryState::Open => *inventory_state = InventoryState::Closed,
+        }
+    }
+}
 
-    atlas: Res<MainAtlas>,
-    block_textures: Res<Registry<BlockTextureIndex>>,
-    block_meshes: Res<BlockMeshRegistry>,
+#[derive(Component, Debug)]
+struct CloseInventoryButton;
+
+fn close_button_system(
+    mut inventory_state: ResMut<InventoryState>,
+    mut interaction_query: Query<&Interaction, (Changed<Interaction>, With<Button>, With<CloseInventoryButton>)>,
 ) {
-    let Ok(inventory) = inventory.get_single() else {
+    for interaction in interaction_query.iter_mut() {
+        if *interaction == Interaction::Pressed {
+            *inventory_state = InventoryState::Closed;
+        }
+    }
+}
+
+fn toggle_inventory_rendering(
+    open_inventory: Query<Entity, With<RenderedInventory>>,
+    inventory_state: Res<InventoryState>,
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut local_inventory: Query<(Entity, &mut Inventory), With<LocalPlayer>>,
+    mut holding_item: Query<(Entity, &DisplayedItemFromInventory, &mut HeldItemStack), With<FollowCursor>>,
+    mut cursor_flags: ResMut<CursorFlags>,
+    mut client: ResMut<RenetClient>,
+    mapping: Res<NetworkMapping>,
+) {
+    let Ok((inventory_holder, mut local_inventory)) = local_inventory.get_single_mut() else {
+        warn!("Missing inventory and tried to open it!");
         return;
     };
 
-    let amt = 9;
+    match *inventory_state {
+        InventoryState::Closed => {
+            if let Ok(entity) = open_inventory.get_single() {
+                commands.entity(entity).insert(NeedsDespawned);
+                if let Ok((entity, displayed_item, mut held_item_stack)) = holding_item.get_single_mut() {
+                    let server_inventory_holder = mapping
+                        .server_from_client(&inventory_holder)
+                        .expect("Unable to map inventory to server inventory");
 
-    let size = 0.8;
+                    // Try to put it in its original spot first
+                    let leftover = local_inventory.insert_item_stack_at(displayed_item.slot_number, &held_item_stack);
 
-    let mut children = vec![];
+                    if leftover != held_item_stack.quantity() {
+                        // Only send information to server if there is a point to the move
+                        held_item_stack.set_quantity(leftover);
 
-    for (i, item) in inventory.iter().take(amt).enumerate() {
-        let Some(item_stack) = item else {
-            continue;
-        };
+                        client.send_message(
+                            NettyChannelClient::Inventory,
+                            cosmos_encoder::serialize(&ClientInventoryMessages::DepositHeldItemstack {
+                                inventory_holder: server_inventory_holder,
+                                slot: displayed_item.slot_number as u32,
+                                quantity: u16::MAX,
+                            }),
+                        );
+                    }
 
-        let item = items.from_numeric_id(item_stack.item_id());
+                    if !held_item_stack.is_empty() {
+                        // Put it wherever it can fit if it couldn't go back to its original spot
+                        let leftover = local_inventory.insert_itemstack(&held_item_stack);
 
-        let Some(block_id) = block_items.block_from_item(item) else {
-            continue;
-        };
+                        if leftover != held_item_stack.quantity() {
+                            // Only send information to server if there is a point to the insertion
+                            client.send_message(
+                                NettyChannelClient::Inventory,
+                                cosmos_encoder::serialize(&ClientInventoryMessages::InsertHeldItem {
+                                    inventory_holder: server_inventory_holder,
+                                    quantity: u16::MAX,
+                                }),
+                            );
+                        }
 
-        let block = blocks.from_numeric_id(block_id);
+                        if leftover != 0 {
+                            warn!("Unable to put itemstack into inventory it was taken out of - and dropping hasn't been implemented yet. Deleting for now.");
+                            // Only send information to server if there is a point to the insertion
+                            client.send_message(
+                                NettyChannelClient::Inventory,
+                                cosmos_encoder::serialize(&ClientInventoryMessages::ThrowHeldItemstack { quantity: u16::MAX }),
+                            );
+                        }
+                    }
 
-        let index = block_textures
-            .from_id(block.unlocalized_name())
-            .unwrap_or_else(|| block_textures.from_id("missing").expect("Missing texture should exist."));
+                    commands.entity(entity).insert(NeedsDespawned);
+                }
 
-        let multiplier = size * 2.0;
-        let slot_x = -(amt as f32) / 2.0 * multiplier + multiplier * (i as f32 + 0.5);
-
-        let mut transform = Transform::from_xyz(slot_x, 0.0, 0.0);
-
-        // This makes it look cool
-        transform.rotation = Quat::from_xyzw(0.18354653, 0.37505528, 0.07602747, 0.90546346);
-
-        let Some(block_mesh_info) = block_meshes.get_value(block) else {
-            continue;
-        };
-
-        let mut mesh_builder = CosmosMeshBuilder::default();
-
-        for face in [BlockFace::Top, BlockFace::Left, BlockFace::Back] {
-            let Some(mut mesh_info) = block_mesh_info.info_for_face(face).cloned() else {
-                break;
-            };
-
-            mesh_info.scale(Vec3::new(size, size, size));
-
-            let Some(image_index) = index.atlas_index_from_face(face) else {
-                continue;
-            };
-
-            let uvs = atlas.uvs_for_index(image_index);
-
-            mesh_builder.add_mesh_information(&mesh_info, Vec3::ZERO, uvs);
+                cursor_flags.hide();
+            }
         }
+        InventoryState::Open => {
+            cursor_flags.show();
 
-        children.push(
+            let font = asset_server.load("fonts/PixeloidSans.ttf");
+
+            let text_style = TextStyle {
+                color: Color::WHITE,
+                font_size: 22.0,
+                font: font.clone(),
+            };
+
+            let inventory_border_size = 2.0;
+            let n_slots_per_row: usize = 9;
+            let slot_size = 64.0;
+
             commands
                 .spawn((
-                    PbrBundle {
-                        mesh: meshes.add(mesh_builder.build_mesh()),
-                        material: atlas.unlit_material.clone(),
-                        transform,
+                    Name::new("Rendered Inventory"),
+                    RenderedInventory,
+                    NodeBundle {
+                        style: Style {
+                            position_type: PositionType::Absolute,
+                            display: Display::Flex,
+                            flex_direction: FlexDirection::Column,
+                            left: Val::Px(100.0),
+                            top: Val::Px(100.0),
+                            width: Val::Px(n_slots_per_row as f32 * slot_size + inventory_border_size * 2.0),
+                            border: UiRect::all(Val::Px(inventory_border_size)),
+                            ..default()
+                        },
+                        border_color: BorderColor(Color::BLACK),
                         ..default()
                     },
-                    RenderLayers::from_layers(&[INVENTORY_SLOT_LAYER]),
                 ))
-                .id(),
-        );
-    }
+                .with_children(|parent| {
+                    // Title bar
+                    parent
+                        .spawn((
+                            Name::new("Title Bar"),
+                            NodeBundle {
+                                style: Style {
+                                    display: Display::Flex,
+                                    flex_direction: FlexDirection::Row,
+                                    justify_content: JustifyContent::SpaceBetween,
+                                    align_items: AlignItems::Center,
+                                    width: Val::Percent(100.0),
+                                    height: Val::Px(60.0),
+                                    padding: UiRect::new(Val::Px(20.0), Val::Px(20.0), Val::Px(0.0), Val::Px(0.0)),
 
-    let mut hotbar = commands.spawn((
-        PbrBundle {
-            transform: Transform::from_xyz(0.0, -8.22, 0.0),
-            ..Default::default()
-        },
-        HotbarLocation,
-    ));
+                                    ..default()
+                                },
+                                background_color: BackgroundColor(Color::WHITE),
+                                ..default()
+                            },
+                            UiImage {
+                                texture: asset_server.load("cosmos/images/ui/inventory-header.png"),
+                                ..Default::default()
+                            },
+                        ))
+                        .with_children(|parent| {
+                            parent.spawn(TextBundle {
+                                style: Style { ..default() },
+                                text: Text::from_section(
+                                    "Inventory",
+                                    TextStyle {
+                                        color: Color::WHITE,
+                                        font_size: 24.0,
+                                        font: font.clone(),
+                                    },
+                                )
+                                .with_alignment(TextAlignment::Center),
+                                ..default()
+                            });
 
-    for child in children {
-        hotbar.add_child(child);
+                            parent
+                                .spawn((
+                                    ButtonBundle {
+                                        style: Style {
+                                            width: Val::Px(50.0),
+                                            height: Val::Px(50.0),
+                                            // horizontally center child text
+                                            justify_content: JustifyContent::Center,
+                                            // vertically center child text
+                                            align_items: AlignItems::Center,
+                                            ..default()
+                                        },
+                                        background_color: BackgroundColor(Color::WHITE),
+                                        image: UiImage {
+                                            texture: asset_server.load("cosmos/images/ui/inventory-close-button.png"),
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
+                                    },
+                                    CloseInventoryButton,
+                                ))
+                                .with_children(|button| {
+                                    button.spawn(TextBundle {
+                                        style: Style { ..default() },
+                                        text: Text::from_section(
+                                            "X",
+                                            TextStyle {
+                                                color: Color::WHITE,
+                                                font_size: 24.0,
+                                                font: font.clone(),
+                                            },
+                                        )
+                                        .with_alignment(TextAlignment::Center),
+                                        ..default()
+                                    });
+                                });
+                        });
+
+                    parent
+                        .spawn((
+                            Name::new("Non-Hotbar Slots"),
+                            NodeBundle {
+                                style: Style {
+                                    display: Display::Grid,
+                                    flex_grow: 1.0,
+                                    grid_column: GridPlacement::end(n_slots_per_row as i16),
+                                    grid_template_columns: vec![RepeatedGridTrack::px(
+                                        GridTrackRepetition::Count(n_slots_per_row as u16),
+                                        slot_size,
+                                    )],
+                                    ..default()
+                                },
+
+                                background_color: BackgroundColor(Color::hex("2D2D2D").unwrap()),
+                                ..default()
+                            },
+                        ))
+                        .with_children(|slots| {
+                            for (slot_number, slot) in local_inventory.iter().enumerate().skip(n_slots_per_row) {
+                                create_inventory_slot(inventory_holder, slot_number, slots, slot.as_ref(), text_style.clone());
+                            }
+                        });
+
+                    parent
+                        .spawn((
+                            Name::new("Hotbar Slots"),
+                            NodeBundle {
+                                style: Style {
+                                    display: Display::Flex,
+                                    height: Val::Px(5.0 + slot_size),
+                                    border: UiRect::new(Val::Px(0.0), Val::Px(0.0), Val::Px(5.0), Val::Px(0.0)),
+
+                                    ..default()
+                                },
+                                border_color: BorderColor(Color::hex("222222").unwrap()),
+                                background_color: BackgroundColor(Color::WHITE),
+                                ..default()
+                            },
+                            UiImage {
+                                texture: asset_server.load("cosmos/images/ui/inventory-footer.png"),
+                                ..Default::default()
+                            },
+                        ))
+                        .with_children(|slots| {
+                            for (slot_number, slot) in local_inventory.iter().enumerate().take(n_slots_per_row) {
+                                create_inventory_slot(inventory_holder, slot_number, slots, slot.as_ref(), text_style.clone());
+                            }
+                        });
+                });
+        }
     }
 }
 
-#[derive(Component)]
-struct HotbarLocation;
+#[derive(Debug, Component, Reflect, Clone)]
+struct DisplayedItemFromInventory {
+    inventory_holder: Entity,
+    slot_number: usize,
+    item_stack: Option<ItemStack>,
+}
+
+fn on_update_inventory(
+    mut commands: Commands,
+    inventory_query: Query<&Inventory, Changed<Inventory>>,
+    mut held_item_query: Query<(Entity, &HeldItemStack, &mut DisplayedItemFromInventory), Changed<HeldItemStack>>,
+    mut current_slots: Query<(Entity, &mut DisplayedItemFromInventory), Without<HeldItemStack>>,
+    asset_server: Res<AssetServer>,
+) {
+    for inventory in inventory_query.iter() {
+        for (display_entity, mut displayed_slot) in current_slots.iter_mut() {
+            if displayed_slot.item_stack.as_ref() != inventory.itemstack_at(displayed_slot.slot_number) {
+                displayed_slot.item_stack = inventory.itemstack_at(displayed_slot.slot_number).cloned();
+
+                let Some(mut ecmds) = commands.get_entity(display_entity) else {
+                    continue;
+                };
+
+                rerender_inventory_slot(&mut ecmds, &displayed_slot, &asset_server, true);
+            }
+        }
+    }
+
+    assert!(held_item_query.iter().count() <= 1, "BAD HELD ITEMS!");
+
+    if let Ok((entity, held_item_stack, mut displayed_item)) = held_item_query.get_single_mut() {
+        displayed_item.item_stack = Some(held_item_stack.0.clone());
+
+        if let Some(mut ecmds) = commands.get_entity(entity) {
+            rerender_inventory_slot(&mut ecmds, &displayed_item, &asset_server, false);
+        }
+    }
+}
+
+fn rerender_inventory_slot(
+    ecmds: &mut EntityCommands,
+    displayed_item: &DisplayedItemFromInventory,
+    asset_server: &AssetServer,
+    as_child: bool,
+) {
+    ecmds.despawn_descendants();
+
+    let Some(is) = displayed_item.item_stack.as_ref() else {
+        return;
+    };
+
+    let quantity = is.quantity();
+
+    if quantity != 0 {
+        // This is rarely hit, so putting this load in here is best
+        let font = asset_server.load("fonts/PixeloidSans.ttf");
+
+        let text_style = TextStyle {
+            color: Color::WHITE,
+            font_size: 22.0,
+            font: font.clone(),
+        };
+
+        if as_child {
+            ecmds.with_children(|p| {
+                create_item_stack_slot_data(is, &mut p.spawn_empty(), text_style, quantity);
+            });
+        } else {
+            create_item_stack_slot_data(is, ecmds, text_style, quantity);
+        }
+    }
+}
+
+#[derive(Component, Debug)]
+struct InventoryItemMarker;
+
+fn create_inventory_slot(
+    inventory_holder: Entity,
+    slot_number: usize,
+    slots: &mut ChildBuilder,
+    item_stack: Option<&ItemStack>,
+    text_style: TextStyle,
+) {
+    let mut ecmds = slots.spawn((
+        Name::new("Inventory Item"),
+        InventoryItemMarker,
+        NodeBundle {
+            style: Style {
+                border: UiRect::all(Val::Px(2.0)),
+                width: Val::Px(64.0),
+                height: Val::Px(64.0),
+                ..default()
+            },
+
+            border_color: BorderColor(Color::hex("222222").unwrap()),
+            ..default()
+        },
+        Interaction::None,
+        DisplayedItemFromInventory {
+            inventory_holder,
+            slot_number,
+            item_stack: item_stack.cloned(),
+        },
+    ));
+
+    if let Some(item_stack) = item_stack {
+        ecmds.with_children(|p| {
+            let mut ecmds = p.spawn_empty();
+
+            create_item_stack_slot_data(item_stack, &mut ecmds, text_style, item_stack.quantity());
+        });
+    }
+}
+
+/**
+ * Moving items around
+ */
+
+#[derive(Debug, Component)]
+/// If something is tagged with this, it is being held and moved around by the player.
+///
+/// Note that even if something is being moved, it is still always within the player's inventory
+struct FollowCursor;
+
+fn pickup_item_into_cursor(
+    displayed_item_clicked: &DisplayedItemFromInventory,
+    commands: &mut Commands,
+    quantity_multiplier: f32,
+    inventory: &mut Inventory,
+    asset_server: &AssetServer,
+    client: &mut RenetClient,
+    server_inventory_holder: Entity,
+) {
+    let Some(is) = displayed_item_clicked.item_stack.as_ref() else {
+        return;
+    };
+
+    let pickup_quantity = (quantity_multiplier * is.quantity() as f32).ceil() as u16;
+
+    let mut new_is = is.clone();
+    new_is.set_quantity(pickup_quantity);
+
+    let displayed_item = DisplayedItemFromInventory {
+        inventory_holder: displayed_item_clicked.inventory_holder,
+        item_stack: Some(new_is.clone()),
+        slot_number: displayed_item_clicked.slot_number,
+    };
+
+    let font = asset_server.load("fonts/PixeloidSans.ttf");
+
+    let text_style = TextStyle {
+        color: Color::WHITE,
+        font_size: 22.0,
+        font: font.clone(),
+    };
+
+    let mut ecmds = commands.spawn(FollowCursor);
+
+    create_item_stack_slot_data(
+        displayed_item.item_stack.as_ref().expect("This was added above"),
+        &mut ecmds,
+        text_style,
+        pickup_quantity,
+    );
+
+    ecmds.insert((displayed_item, HeldItemStack(new_is)));
+
+    let slot_clicked = displayed_item_clicked.slot_number;
+    if let Some(is) = inventory.mut_itemstack_at(slot_clicked) {
+        let leftover_quantity = is.quantity() - (is.quantity() as f32 * quantity_multiplier).ceil() as u16;
+        is.set_quantity(leftover_quantity);
+
+        if is.is_empty() {
+            inventory.remove_itemstack_at(slot_clicked);
+        }
+    }
+
+    client.send_message(
+        NettyChannelClient::Inventory,
+        cosmos_encoder::serialize(&ClientInventoryMessages::PickupItemstack {
+            inventory_holder: server_inventory_holder,
+            slot: slot_clicked as u32,
+            quantity: pickup_quantity,
+        }),
+    );
+}
+
+fn handle_interactions(
+    mut commands: Commands,
+    mut following_cursor: Query<(Entity, &mut HeldItemStack)>,
+    interactions: Query<(&DisplayedItemFromInventory, &Interaction), Without<FollowCursor>>,
+    input_handler: InputChecker,
+    mut inventory_query: Query<&mut Inventory>,
+    mut client: ResMut<RenetClient>,
+    mapping: Res<NetworkMapping>,
+    asset_server: Res<AssetServer>,
+    items: Res<Registry<Item>>,
+) {
+    let lmb = input_handler.mouse_inputs().just_pressed(MouseButton::Left);
+    let rmb = input_handler.mouse_inputs().just_pressed(MouseButton::Right);
+
+    // Only runs as soon as the mouse is pressed, not every frame
+    if !lmb && !rmb {
+        return;
+    }
+
+    let Some((displayed_item_clicked, _)) = interactions
+        .iter()
+        // hovered or pressed should trigger this because pressed doesn't detected right click
+        .find(|(_, interaction)| !matches!(interaction, Interaction::None))
+    else {
+        return;
+    };
+
+    let bulk_moving = input_handler.check_pressed(CosmosInputs::AutoMoveItem);
+
+    let server_inventory_holder = mapping
+        .server_from_client(&displayed_item_clicked.inventory_holder)
+        .expect("Unable to map inventory to server inventory");
+
+    if bulk_moving {
+        let slot_num = displayed_item_clicked.slot_number;
+        let inventory_entity = displayed_item_clicked.inventory_holder;
+
+        if let Ok(mut inventory) = inventory_query.get_mut(inventory_entity) {
+            let quantity = if lmb {
+                u16::MAX
+            } else {
+                inventory
+                    .itemstack_at(slot_num)
+                    .map(|x| (x.quantity() as f32 / 2.0).ceil() as u16)
+                    .unwrap_or(0)
+            };
+
+            inventory.auto_move(slot_num, quantity).expect("Bad inventory slot values");
+
+            client.send_message(
+                NettyChannelClient::Inventory,
+                cosmos_encoder::serialize(&ClientInventoryMessages::AutoMove {
+                    from_slot: slot_num as u32,
+                    quantity,
+                    from_inventory: server_inventory_holder,
+                    to_inventory: server_inventory_holder,
+                }),
+            );
+        }
+    } else if let Ok((following_entity, mut held_item_stack)) = following_cursor.get_single_mut() {
+        let clicked_slot = displayed_item_clicked.slot_number;
+
+        if let Ok(mut inventory) = inventory_query.get_mut(displayed_item_clicked.inventory_holder) {
+            let item = items.from_numeric_id(held_item_stack.item_id());
+
+            if inventory.can_move_itemstack_to(&held_item_stack, clicked_slot) {
+                let move_quantity = if lmb { held_item_stack.quantity() } else { 1 };
+                let over_quantity = held_item_stack.quantity() - move_quantity;
+
+                let leftover = inventory.insert_item_at(clicked_slot, item, move_quantity);
+
+                held_item_stack.set_quantity(over_quantity + leftover);
+
+                if held_item_stack.is_empty() {
+                    commands.entity(following_entity).insert(NeedsDespawned);
+                }
+
+                client.send_message(
+                    NettyChannelClient::Inventory,
+                    cosmos_encoder::serialize(&ClientInventoryMessages::DepositHeldItemstack {
+                        inventory_holder: server_inventory_holder,
+                        slot: clicked_slot as u32,
+                        quantity: move_quantity,
+                    }),
+                )
+            } else {
+                let is_here = inventory.remove_itemstack_at(clicked_slot);
+
+                if is_here.as_ref().map(|is| is.quantity() == 1).unwrap_or(true) || lmb {
+                    let quantity = if lmb { held_item_stack.quantity() } else { 1 };
+                    let unused_itemstack = held_item_stack.quantity() - quantity;
+
+                    let leftover = inventory.insert_item_at(clicked_slot, item, quantity);
+
+                    assert_eq!(
+                        leftover, 0,
+                        "Leftover wasn't 0 somehow? This could only mean something has an invalid stack size"
+                    );
+
+                    held_item_stack.set_quantity(unused_itemstack);
+
+                    if unused_itemstack == 0 {
+                        if let Some(is_here) = is_here {
+                            held_item_stack.0 = is_here;
+                        } else {
+                            commands.entity(following_entity).insert(NeedsDespawned);
+                        }
+                    }
+
+                    let message = if lmb {
+                        // A swap assumes we're depositing everything, which will remove all items on the server-side.
+                        cosmos_encoder::serialize(&ClientInventoryMessages::DepositAndSwapHeldItemstack {
+                            inventory_holder: server_inventory_holder,
+                            slot: clicked_slot as u32,
+                        })
+                    } else {
+                        cosmos_encoder::serialize(&ClientInventoryMessages::DepositHeldItemstack {
+                            inventory_holder: server_inventory_holder,
+                            slot: clicked_slot as u32,
+                            quantity: 1,
+                        })
+                    };
+
+                    client.send_message(NettyChannelClient::Inventory, message);
+                } else {
+                    inventory.set_itemstack_at(clicked_slot, is_here);
+                }
+            }
+        }
+    } else if let Ok(mut inventory) = inventory_query.get_mut(displayed_item_clicked.inventory_holder) {
+        let quantity_multiplier = if lmb { 1.0 } else { 0.5 };
+
+        pickup_item_into_cursor(
+            displayed_item_clicked,
+            &mut commands,
+            quantity_multiplier,
+            &mut inventory,
+            &asset_server,
+            &mut client,
+            server_inventory_holder,
+        );
+    }
+}
+
+/**
+ * End moving items around
+ */
+
+fn create_item_stack_slot_data(item_stack: &ItemStack, ecmds: &mut EntityCommands, text_style: TextStyle, quantity: u16) {
+    ecmds
+        .insert((
+            NodeBundle {
+                style: Style {
+                    width: Val::Px(64.0),
+                    height: Val::Px(64.0),
+                    display: Display::Flex,
+                    justify_content: JustifyContent::FlexEnd,
+                    align_items: AlignItems::FlexEnd,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            RenderItem {
+                item_id: item_stack.item_id(),
+            },
+        ))
+        .with_children(|p| {
+            p.spawn(TextBundle {
+                style: Style {
+                    margin: UiRect::new(Val::Px(0.0), Val::Px(5.0), Val::Px(0.0), Val::Px(5.0)),
+                    ..default()
+                },
+                text: Text::from_section(format!("{} {}", item_stack.item_id(), quantity), text_style),
+                ..default()
+            });
+        });
+
+    // ecmds.with_children(|p| {
+    //     p.spawn((
+    //         NodeBundle {
+    //             style: Style {
+    //                 width: Val::Px(64.0),
+    //                 height: Val::Px(64.0),
+    //                 display: Display::Flex,
+    //                 justify_content: JustifyContent::FlexEnd,
+    //                 align_items: AlignItems::FlexEnd,
+    //                 ..Default::default()
+    //             },
+    //             ..Default::default()
+    //         },
+    //         RenderItem {
+    //             item_id: item_stack.item_id(),
+    //         },
+    //     ))
+    //     .with_children(|p| {
+    //         p.spawn(TextBundle {
+    //             style: Style {
+    //                 margin: UiRect::new(Val::Px(0.0), Val::Px(5.0), Val::Px(0.0), Val::Px(5.0)),
+    //                 ..default()
+    //             },
+    //             text: Text::from_section(format!("{} {}", item_stack.item_id(), quantity), text_style),
+    //             ..default()
+    //         });
+    //     });
+    // });
+}
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        |query: Query<&Window, With<PrimaryWindow>>, mut cam: Query<&mut Transform, With<HotbarLocation>>| {
-            let Ok(window) = query.get_single() else {
-                return;
-            };
-            let Ok(mut transform) = cam.get_single_mut() else {
-                return;
-            };
-
-            transform.translation.y = -0.012533 * window.height() + 0.804;
-        },
+        (
+            toggle_inventory,
+            on_update_inventory,
+            handle_interactions,
+            close_button_system,
+            toggle_inventory_rendering.run_if(resource_exists_and_changed::<InventoryState>()),
+        )
+            .chain()
+            .run_if(in_state(GameState::Playing)),
     )
-    .add_systems(OnEnter(GameState::Playing), render_hotbar)
-    .add_systems(Startup, ui_camera);
+    .init_resource::<InventoryState>()
+    .register_type::<DisplayedItemFromInventory>();
+
+    netty::register(app);
 }

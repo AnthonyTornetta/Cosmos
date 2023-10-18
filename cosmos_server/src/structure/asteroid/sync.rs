@@ -29,9 +29,7 @@ fn on_request_asteroid(
                 cosmos_encoder::serialize(&AsteroidServerMessages::Asteroid {
                     body: NettyRigidBody::new(velocity, transform.rotation, NettyRigidBodyLocation::Absolute(*location)),
                     entity: ev.entity,
-                    width: structure.chunks_width(),
-                    height: structure.chunks_height(),
-                    length: structure.chunks_length(),
+                    dimensions: structure.chunk_dimensions(),
                 }),
             );
         }

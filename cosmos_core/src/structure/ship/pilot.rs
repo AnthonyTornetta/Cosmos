@@ -14,6 +14,6 @@ pub struct Pilot {
     pub entity: Entity,
 }
 
-pub(super) fn regiter(app: &mut App) {
+pub(super) fn register(app: &mut App) {
     app.register_type::<Pilot>();
 }

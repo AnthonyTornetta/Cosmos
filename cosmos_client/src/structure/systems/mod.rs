@@ -1,4 +1,8 @@
+//! Client-side ship systems logic
+
+pub mod laser_cannon_system;
 mod player_interactions;
+pub mod thruster_system;
 
 use bevy::prelude::*;
 use bevy_renet::renet::RenetClient;
@@ -8,7 +12,7 @@ use cosmos_core::{
 };
 
 use crate::{
-    input::inputs::{CosmosInputHandler, CosmosInputs},
+    input::inputs::{CosmosInputs, InputChecker, InputHandler},
     netty::flags::LocalPlayer,
     state::game_state::GameState,
 };
@@ -16,14 +20,12 @@ use crate::{
 fn check_if_using_structure_system(
     query: Query<&Pilot, With<LocalPlayer>>,
     structure_query: Query<Entity>,
-    keys: Res<Input<KeyCode>>,
-    mouse: Res<Input<MouseButton>>,
-    input_handler: Res<CosmosInputHandler>,
+    input_handler: InputChecker,
     mut commands: Commands,
 ) {
     if let Ok(pilot) = query.get_single() {
         if let Ok(structure_ent) = structure_query.get(pilot.entity) {
-            if input_handler.check_pressed(CosmosInputs::PlaceBlock, &keys, &mouse) {
+            if input_handler.check_pressed(CosmosInputs::PlaceBlock) {
                 commands.entity(structure_ent).insert(SystemActive);
             } else {
                 commands.entity(structure_ent).remove::<SystemActive>();
@@ -44,10 +46,12 @@ fn send_structure_state(query: Query<&Pilot, With<LocalPlayer>>, structure_query
 }
 
 pub(super) fn register(app: &mut App) {
+    player_interactions::register(app);
+    thruster_system::register(app);
+    laser_cannon_system::register(app);
+
     app.add_systems(
         Update,
         (check_if_using_structure_system, send_structure_state).run_if(in_state(GameState::Playing)),
     );
-
-    player_interactions::register(app);
 }

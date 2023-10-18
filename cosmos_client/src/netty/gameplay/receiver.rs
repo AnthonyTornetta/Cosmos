@@ -8,6 +8,7 @@ use bevy::{
     render::camera::Projection,
     window::PrimaryWindow,
 };
+use bevy_kira_audio::prelude::AudioReceiver;
 use bevy_rapier3d::prelude::*;
 use bevy_renet::renet::{transport::NetcodeClientTransport, RenetClient};
 use cosmos_core::{
@@ -32,6 +33,8 @@ use cosmos_core::{
     registry::Registry,
     structure::{
         chunk::Chunk,
+        dynamic_structure::DynamicStructure,
+        full_structure::FullStructure,
         planet::{biosphere::BiosphereMarker, planet_builder::TPlanetBuilder},
         ship::{pilot::Pilot, ship_builder::TShipBuilder, Ship},
         ChunkInitEvent, Structure,
@@ -40,7 +43,6 @@ use cosmos_core::{
 
 use crate::{
     camera::camera_controller::CameraHelper,
-    events::ship::set_ship_event::SetShipMovementEvent,
     netty::{
         flags::LocalPlayer,
         lobby::{ClientLobby, PlayerInfo},
@@ -93,7 +95,7 @@ fn update_crosshair(
 }
 
 #[derive(Resource, Debug, Default)]
-struct RequestedEntities {
+pub(crate) struct RequestedEntities {
     entities: Vec<(Entity, f32)>,
 }
 
@@ -101,7 +103,7 @@ struct RequestedEntities {
 pub struct NetworkTick(pub u64);
 
 #[derive(Debug, Component, Deref)]
-struct LerpTowards(NettyRigidBody);
+pub(crate) struct LerpTowards(NettyRigidBody);
 
 fn lerp_towards(
     mut location_query: Query<&mut Location>,
@@ -146,7 +148,7 @@ fn lerp_towards(
     }
 }
 
-fn client_sync_players(
+pub(crate) fn client_sync_players(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut client: ResMut<RenetClient>,
@@ -169,7 +171,6 @@ fn client_sync_players(
     mut query_structure: Query<&mut Structure>,
     blocks: Res<Registry<Block>>,
     mut pilot_change_event_writer: EventWriter<ChangePilotEvent>,
-    mut set_ship_movement_event: EventWriter<SetShipMovementEvent>,
     mut requested_entities: ResMut<RequestedEntities>,
     time: Res<Time>,
 ) {
@@ -219,11 +220,8 @@ fn client_sync_players(
                                 let loc = match body.location {
                                     NettyRigidBodyLocation::Absolute(location) => location,
                                     NettyRigidBodyLocation::Relative(rel_trans, parent_ent) => {
-                                        let parent_loc = query_body
-                                            .get(parent_ent)
-                                            .map(|x| x.0.copied())
-                                            .unwrap_or(None)
-                                            .unwrap_or(Location::default());
+                                        let parent_loc =
+                                            query_body.get(parent_ent).map(|x| x.0.copied()).unwrap_or(None).unwrap_or_default();
 
                                         parent_loc + rel_trans
                                     }
@@ -245,10 +243,9 @@ fn client_sync_players(
                 }
             }
             ServerUnreliableMessages::SetMovement { movement, ship_entity } => {
-                set_ship_movement_event.send(SetShipMovementEvent {
-                    ship_entity,
-                    ship_movement: movement,
-                });
+                if let Some(entity) = network_mapping.client_from_server(&ship_entity) {
+                    commands.entity(entity).insert(movement);
+                }
             }
         }
     }
@@ -284,11 +281,7 @@ fn client_sync_players(
                 let mut loc = match body.location {
                     NettyRigidBodyLocation::Absolute(location) => location,
                     NettyRigidBodyLocation::Relative(rel_trans, entity) => {
-                        let parent_loc = query_body
-                            .get(entity)
-                            .map(|x| x.0.copied())
-                            .unwrap_or(None)
-                            .unwrap_or(Location::default());
+                        let parent_loc = query_body.get(entity).map(|x| x.0.copied()).unwrap_or(None).unwrap_or_default();
 
                         parent_loc + rel_trans
                     }
@@ -327,12 +320,6 @@ fn client_sync_players(
                 lobby.players.insert(id, player_info);
                 network_mapping.add_mapping(client_entity, server_entity);
 
-                println!(
-                    "Linking player (client {} to server {})",
-                    client_entity.index(),
-                    server_entity.index()
-                );
-
                 if client_id == id {
                     entity_cmds
                         .insert(LocalPlayer)
@@ -357,6 +344,7 @@ fn client_sync_players(
                                 MainCamera,
                                 // No double UI rendering
                                 UiCameraConfig { show_ui: false },
+                                AudioReceiver,
                             ));
                         });
 
@@ -388,9 +376,7 @@ fn client_sync_players(
             // Please restructure this + the ship to use the new requesting system.
             ServerReliableMessages::Planet {
                 entity: server_entity,
-                length,
-                height,
-                width,
+                dimensions,
                 planet,
                 biosphere,
                 location,
@@ -401,7 +387,7 @@ fn client_sync_players(
                 }
 
                 let mut entity_cmds = commands.spawn_empty();
-                let mut structure = Structure::new(width, height, length);
+                let mut structure = Structure::Dynamic(DynamicStructure::new(dimensions));
 
                 let builder = ClientPlanetBuilder::default();
                 builder.insert_planet(&mut entity_cmds, location, &mut structure, planet);
@@ -415,9 +401,7 @@ fn client_sync_players(
             ServerReliableMessages::Ship {
                 entity: server_entity,
                 body,
-                width,
-                height,
-                length,
+                dimensions,
                 chunks_needed,
             } => {
                 if network_mapping.contains_server_entity(server_entity) {
@@ -432,18 +416,14 @@ fn client_sync_players(
                 let location = match body.location {
                     NettyRigidBodyLocation::Absolute(location) => location,
                     NettyRigidBodyLocation::Relative(rel_trans, entity) => {
-                        let parent_loc = query_body
-                            .get(entity)
-                            .map(|x| x.0.copied())
-                            .unwrap_or(None)
-                            .unwrap_or(Location::default());
+                        let parent_loc = query_body.get(entity).map(|x| x.0.copied()).unwrap_or(None).unwrap_or_default();
 
                         parent_loc + rel_trans
                     }
                 };
 
                 let mut entity_cmds = commands.spawn_empty();
-                let mut structure = Structure::new(width, height, length);
+                let mut structure = Structure::Full(FullStructure::new(dimensions));
 
                 let builder = ClientShipBuilder::default();
                 builder.insert_ship(&mut entity_cmds, location, body.create_velocity(), &mut structure);
@@ -542,18 +522,6 @@ fn client_sync_players(
                     pilot_entity,
                 });
             }
-            ServerReliableMessages::EntityInventory {
-                serialized_inventory,
-                owner,
-            } => {
-                if let Some(client_entity) = network_mapping.client_from_server(&owner) {
-                    let inventory: Inventory = cosmos_encoder::deserialize(&serialized_inventory).unwrap();
-
-                    commands.entity(client_entity).insert(inventory);
-                } else {
-                    eprintln!("Error: unrecognized entity {} received from server!", owner.index());
-                }
-            }
             ServerReliableMessages::Star { entity, star } => {
                 if let Some(client_entity) = network_mapping.client_from_server(&entity) {
                     commands
@@ -577,9 +545,7 @@ fn client_sync_players(
 
                         ecmds.remove_parent();
 
-                        let Ok(Some(ship_trans)) = query_body
-                            .get(parent.get())
-                            .map(|x| x.1.cloned()) else {
+                        let Ok(Some(ship_trans)) = query_body.get(parent.get()).map(|x| x.1.cloned()) else {
                             continue;
                         };
 
@@ -604,9 +570,7 @@ fn client_sync_players(
                         if let Some(ship_entity) = network_mapping.client_from_server(&ship_entity) {
                             ecmds.set_parent(ship_entity);
 
-                            let Ok(Some(ship_loc)) = query_body
-                                .get(ship_entity)
-                                .map(|x| x.0.cloned()) else {
+                            let Ok(Some(ship_loc)) = query_body.get(ship_entity).map(|x| x.0.cloned()) else {
                                 continue;
                             };
 
