@@ -697,7 +697,7 @@ fn trigger_lod_render(
             continue;
         }
 
-        println!("NEW LOD RENDER TRIGGERED FOR {entity:?}");
+        info!("NEW LOD RENDER TRIGGERED FOR {entity:?}");
 
         let blocks = blocks.clone();
         let block_textures = block_textures.clone();

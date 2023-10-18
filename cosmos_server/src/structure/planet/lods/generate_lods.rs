@@ -2,8 +2,8 @@ use std::{marker::PhantomData, mem::swap};
 
 use bevy::{
     prelude::{
-        in_state, App, BuildChildren, Children, Commands, Component, Deref, DerefMut, Entity, GlobalTransform, IntoSystemConfigs, Parent,
-        Quat, Query, Res, ResMut, Resource, Update, With,
+        debug, in_state, App, BuildChildren, Children, Commands, Component, Deref, DerefMut, Entity, GlobalTransform, IntoSystemConfigs,
+        Parent, Quat, Query, Res, ResMut, Resource, Update, With,
     },
     tasks::Task,
 };
@@ -219,7 +219,7 @@ pub(crate) fn start_generating_lods(
 
         let generating_lod = create_generating_lod(&lod_request.request, (BlockCoordinate::new(0, 0, 0), structure.block_dimensions()));
 
-        println!("Starting to generate lod for {:?}", lod_request.structure_entity);
+        debug!("Starting to generate lod for {:?}", lod_request.structure_entity);
 
         commands
             .entity(entity)
@@ -423,7 +423,7 @@ pub(crate) fn generate_player_lods<T: Component + Default>(
                 continue;
             }
 
-            println!("Requesting new lod generation for {structure_ent:?}");
+            debug!("Requesting new lod generation for {structure_ent:?}");
 
             let request_entity = commands
                 .spawn((

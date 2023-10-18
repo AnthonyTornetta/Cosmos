@@ -49,7 +49,7 @@ fn main() {
     if set_current_thread_priority(ThreadPriority::Max).is_err() {
         warn!("Failed to set main thread priority to max - this can lead to lag.");
     } else {
-        println!("Successfully set main thread priority to max!");
+        info!("Successfully set main thread priority to max!");
     }
 
     // #[cfg(debug_assertions)]
@@ -63,7 +63,7 @@ fn main() {
         get_local_ipaddress()
     };
 
-    println!("Host: {host_name}");
+    info!("Host: {host_name}");
 
     let mut app = App::new();
 

@@ -1168,7 +1168,6 @@ pub(crate) fn begin_generating_lods<T: Component + Default + Clone, S: Biosphere
             }
         });
 
-        println!("Beginning generation of actual lods for {structure_entity:?}");
         currently_generating.push(AsyncGeneratingLod::<T>::new(player_entity, structure_entity, task));
     }
 }

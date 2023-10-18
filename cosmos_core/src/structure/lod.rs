@@ -105,7 +105,7 @@ impl LodDelta {
             LodDelta::NoChange => {
                 // Forcibly capture the backtrace regardless of environment variable configuration
                 warn!("Got no change but there wasn't an lod entry for that no change!");
-                println!("Warning backtrace: \n{}", Backtrace::force_capture());
+                warn!("Backtrace: \n{}", Backtrace::force_capture());
 
                 // panic!("Cannot have no change with no lod given!");
                 Lod::None

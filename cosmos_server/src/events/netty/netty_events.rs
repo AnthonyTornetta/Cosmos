@@ -68,7 +68,7 @@ fn handle_events_system(
         match event {
             ServerEvent::ClientConnected { client_id } => {
                 let client_id = *client_id;
-                println!("Client {client_id} connected");
+                info!("Client {client_id} connected");
                 visualizer.add_client(client_id);
 
                 for (entity, player, transform, location, velocity, inventory, render_distance) in players.iter() {
@@ -88,11 +88,11 @@ fn handle_events_system(
                 }
 
                 let Some(user_data) = transport.user_data(client_id) else {
-                    println!("Unable to get user data!");
+                    warn!("Unable to get user data!");
                     continue;
                 };
                 let Ok(name) = bincode::deserialize::<String>(user_data.as_slice()) else {
-                    println!("Unable to deserialize name!");
+                    warn!("Unable to deserialize name!");
                     continue;
                 };
 
@@ -147,7 +147,7 @@ fn handle_events_system(
                 server.broadcast_message(NettyChannelServer::Reliable, msg);
             }
             ServerEvent::ClientDisconnected { client_id, reason } => {
-                println!("Client {client_id} disconnected: {reason}");
+                info!("Client {client_id} disconnected: {reason}");
                 visualizer.remove_client(*client_id);
                 client_ticks.ticks.remove(client_id);
 

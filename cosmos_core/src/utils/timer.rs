@@ -4,6 +4,8 @@
 
 use std::time::SystemTime;
 
+use bevy::prelude::info;
+
 /// Used for debugging - logs the difference in time
 pub struct UtilsTimer {
     start: SystemTime,
@@ -20,9 +22,9 @@ impl UtilsTimer {
         self.start = SystemTime::now();
     }
 
-    /// println! the difference in time - does not reset timer.
+    /// info! the difference in time - does not reset timer.
     pub fn log_duration(&self, message: &str) {
-        println!(
+        info!(
             "{} {}ms",
             message,
             SystemTime::now().duration_since(self.start).unwrap().as_millis()
