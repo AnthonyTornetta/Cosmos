@@ -21,13 +21,23 @@ const LASER_SHOOT_SECONDS: f32 = 0.2;
 fn update_system(
     mut query: Query<(&mut LaserCannonSystem, &StructureSystem), With<SystemActive>>,
     mut es_query: Query<&mut EnergyStorageSystem>,
-    systems: Query<(&Systems, &Structure, &Location, &GlobalTransform, &Velocity, Option<&PhysicsWorld>)>,
+    systems: Query<(
+        Entity,
+        &Systems,
+        &Structure,
+        &Location,
+        &GlobalTransform,
+        &Velocity,
+        Option<&PhysicsWorld>,
+    )>,
     time: Res<Time>,
     mut commands: Commands,
     mut server: ResMut<RenetServer>,
 ) {
     for (mut cannon_system, system) in query.iter_mut() {
-        if let Ok((systems, structure, location, global_transform, ship_velocity, physics_world)) = systems.get(system.structure_entity) {
+        if let Ok((ship_entity, systems, structure, location, global_transform, ship_velocity, physics_world)) =
+            systems.get(system.structure_entity)
+        {
             if let Ok(mut energy_storage_system) = systems.query_mut(&mut es_query) {
                 let sec = time.elapsed_seconds();
 
@@ -36,8 +46,11 @@ fn update_system(
 
                     let world_id = physics_world.map(|bw| bw.world_id).unwrap_or(DEFAULT_WORLD_ID);
 
+                    let mut any_fired = false;
+
                     for line in cannon_system.lines.iter() {
                         if energy_storage_system.get_energy() >= line.property.energy_per_shot {
+                            any_fired = true;
                             energy_storage_system.decrease_energy(line.property.energy_per_shot);
 
                             let location = structure.block_world_location(line.start.coords(), global_transform, location);
@@ -79,6 +92,13 @@ fn update_system(
                         } else {
                             break;
                         }
+                    }
+
+                    if any_fired {
+                        server.broadcast_message(
+                            NettyChannelServer::LaserCannonSystem,
+                            cosmos_encoder::serialize(&ServerLaserCannonSystemMessages::LaserCannonSystemFired { ship_entity }),
+                        );
                     }
                 }
             }

@@ -23,6 +23,7 @@ use crate::{
 };
 
 pub mod client_ship_builder;
+pub mod ship_movement;
 
 fn remove_self_from_ship(
     has_parent: Query<(Entity, &Parent), (With<LocalPlayer>, Without<Pilot>)>,
@@ -151,6 +152,7 @@ fn remove_parent_when_too_far(
 
 pub(super) fn register(app: &mut App) {
     client_ship_builder::register(app);
+    ship_movement::register(app);
 
     app.add_systems(
         Update,
