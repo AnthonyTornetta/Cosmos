@@ -1,8 +1,8 @@
 # Bulk Bodies packet
 
-**Packet**: ServerUnreliableMessages::BulkBodies
+**Packet**: `ServerUnreliableMessages::BulkBodies`
 
-**Channel**: NettyChannelServer::Unreliable
+**Channel**: `NettyChannelServer::Unreliable`
 
 ## Abstract
 
@@ -26,4 +26,3 @@ sequenceDiagram
     Server->>All Clients: Send BulkBody packet(s)
     All Clients->>All Clients: Update entities' transforms except for self
 ```
-

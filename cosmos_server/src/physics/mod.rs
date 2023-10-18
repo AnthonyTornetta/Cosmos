@@ -332,21 +332,22 @@ fn sync_transforms_and_locations(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Last, (move_players_between_worlds, move_non_players_between_worlds).chain())
-        .add_systems(
-            Update,
-            (
-                fix_location,
-                sync_transforms_and_locations,
-                handle_child_syncing,
-                add_previous_location,
-            )
-                .chain()
-                .run_if(in_state(GameState::Playing))
-                .before(server_listen_messages),
+    app.add_systems(
+        Update,
+        (
+            fix_location,
+            sync_transforms_and_locations,
+            handle_child_syncing,
+            add_previous_location,
         )
-        // Used to be UpdateFlush
-        .add_systems(PostUpdate, fix_location)
-        // This must be last due to commands being delayed when adding PhysicsWorlds.
-        .add_systems(Last, remove_empty_worlds);
+            .chain()
+            .run_if(in_state(GameState::Playing))
+            .before(server_listen_messages),
+    )
+    .add_systems(PostUpdate, fix_location)
+    // This must be last due to commands being delayed when adding PhysicsWorlds.
+    .add_systems(
+        Last,
+        (move_players_between_worlds, move_non_players_between_worlds, remove_empty_worlds).chain(),
+    );
 }
