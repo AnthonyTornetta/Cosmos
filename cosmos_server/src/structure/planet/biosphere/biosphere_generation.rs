@@ -12,7 +12,7 @@ use cosmos_core::{
     registry::Registry,
     structure::{
         chunk::{Chunk, CHUNK_DIMENSIONS},
-        coordinates::{BlockCoordinate, ChunkBlockCoordinate, ChunkCoordinate, CoordinateType},
+        coordinates::{BlockCoordinate, ChunkBlockCoordinate, ChunkCoordinate, Coordinate, CoordinateType},
         planet::{ChunkFaces, Planet},
         Structure,
     },
@@ -97,12 +97,12 @@ pub fn notify_when_done_generating_terrain<T: Component>(
 }
 
 #[inline]
-fn generate_face_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + Default>(
+fn generate_face_chunk<S: BiosphereGenerationStrategy>(
+    strategy: &S,
     block_coords: BlockCoordinate,
     structure_coords: (f64, f64, f64),
     s_dimensions: CoordinateType,
     noise_generator: &noise::OpenSimplex,
-    block_ranges: &BlockLayers<T>,
     chunk: &mut Chunk,
     up: BlockFace,
 ) {
@@ -120,23 +120,7 @@ fn generate_face_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
             }
             .into();
 
-            let mut height = s_dimensions;
-            let mut concrete_ranges = Vec::new();
-            for (block, level) in block_ranges.ranges.iter() {
-                let level_top = S::get_top_height(
-                    up,
-                    seed_coords,
-                    structure_coords,
-                    s_dimensions,
-                    noise_generator,
-                    height - level.middle_depth,
-                    level.amplitude,
-                    level.delta,
-                    level.iterations,
-                );
-                concrete_ranges.push((block, level_top));
-                height = level_top;
-            }
+            // let layers = strategy.get_layers();
 
             for chunk_height in 0..CHUNK_DIMENSIONS {
                 let coords: ChunkBlockCoordinate = match up {
@@ -158,7 +142,7 @@ fn generate_face_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
                     BlockFace::Left => s_dimensions - (sx + chunk_height),
                 };
 
-                let block = block_ranges.face_block(height, &concrete_ranges, block_ranges.sea_level, block_ranges.sea_block());
+                let block = block_ranges.face_block(height, &layers, block_ranges.sea_level, block_ranges.sea_block());
                 if let Some(block) = block {
                     chunk.set_block_at(coords, block, up);
                 }
@@ -167,12 +151,12 @@ fn generate_face_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
     }
 }
 
-fn generate_edge_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + Default>(
+fn generate_edge_chunk<S: BiosphereGenerationStrategy>(
+    strategy: &S,
     block_coords: BlockCoordinate,
     structure_coords: (f64, f64, f64),
     s_dimensions: CoordinateType,
     noise_generator: &noise::OpenSimplex,
-    block_ranges: &BlockLayers<T>,
     chunk: &mut Chunk,
     j_up: BlockFace,
     k_up: BlockFace,
@@ -197,7 +181,7 @@ fn generate_edge_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
             };
             let mut height = s_dimensions;
             for (block, layer) in block_ranges.ranges.iter() {
-                let layer_top = S::get_top_height(
+                let layer_top = strategy.get_top_height(
                     j_up,
                     BlockCoordinate::new(x, y, z),
                     structure_coords,
@@ -243,7 +227,7 @@ fn generate_edge_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
             let mut height = s_dimensions;
             let mut k_layers: Vec<(&Block, CoordinateType)> = vec![];
             for (block, layer) in block_ranges.ranges.iter() {
-                let layer_top = S::get_top_height(
+                let layer_top = strategy.get_top_height(
                     k_up,
                     BlockCoordinate::new(x, y, z),
                     structure_coords,
@@ -312,12 +296,12 @@ fn generate_edge_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + De
 }
 
 // Might trim 45s, see generate_edge_chunk.
-fn generate_corner_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + Default>(
+fn generate_corner_chunk<S: BiosphereGenerationStrategy>(
+    strategy: &S,
     block_coords: BlockCoordinate,
     structure_coords: (f64, f64, f64),
     s_dimensions: CoordinateType,
     noise_generator: &noise::OpenSimplex,
-    block_ranges: &BlockLayers<T>,
     chunk: &mut Chunk,
     x_up: BlockFace,
     y_up: BlockFace,
@@ -339,7 +323,7 @@ fn generate_corner_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + 
             // Unmodified top height.
             let mut height = s_dimensions;
             for (block, level) in block_ranges.ranges.iter() {
-                let level_top = S::get_top_height(
+                let level_top = strategy.get_top_height(
                     x_up,
                     seed_coords,
                     structure_coords,
@@ -372,7 +356,7 @@ fn generate_corner_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + 
             // Unmodified top height.
             let mut height = s_dimensions;
             for (block, level) in block_ranges.ranges.iter() {
-                let level_top = S::get_top_height(
+                let level_top = strategy.get_top_height(
                     y_up,
                     seed_coords,
                     structure_coords,
@@ -402,7 +386,7 @@ fn generate_corner_chunk<S: BiosphereGenerationStrategy, T: Component + Clone + 
             let mut height = s_dimensions;
             let mut z_layers = vec![];
             for (block, level) in block_ranges.ranges.iter() {
-                let level_top = S::get_top_height(
+                let level_top = strategy.get_top_height(
                     z_up,
                     seed_coords,
                     structure_coords,
@@ -459,7 +443,7 @@ const GUIDE_MIN: CoordinateType = 100;
 /// Try tweaking the values of GenerationParemeters first before making your own custom generation function.
 ///
 /// For most cases, the `DefaultBiosphereGenerationStrategy` strategy will work.
-pub trait BiosphereGenerationStrategy {
+pub trait BiosphereGenerationStrategy: Resource {
     /// Gets the "y" value of a block on the planet. This "y" value is relative to the face the block is on.
     ///
     /// * `noise_generator` Used to generate noise values. Seeded for this world seed.
@@ -470,6 +454,7 @@ pub trait BiosphereGenerationStrategy {
     /// * `delta` Value passed in by the `GenerationParemeters`. Represents how much each change in x/y/z will effect the terrain. Small values = lesser effect
     /// * `iterations` Value passed in by the `GenerationParemeters`. Represents how many times the noise function will be run
     fn get_block_height(
+        &self,
         noise_generator: &noise::OpenSimplex,
         block_coords: BlockCoordinate,
         structure_coords: (f64, f64, f64),
@@ -496,7 +481,7 @@ pub trait BiosphereGenerationStrategy {
     /// - `a` x, y, or z but generalized.
     /// - `intersection` is where the two edges are projected to meet, which is used as the limit to your height.
     /// - `s_dimensions` structure width/height/length.
-    fn get_mirror_coefficient(a: CoordinateType, intersection: CoordinateType, s_dimensions: CoordinateType) -> f64 {
+    fn get_mirror_coefficient(&self, a: CoordinateType, intersection: CoordinateType, s_dimensions: CoordinateType) -> f64 {
         let max = intersection;
         let min = intersection - GUIDE_MIN;
         if a > max || a < s_dimensions - max {
@@ -521,7 +506,7 @@ pub trait BiosphereGenerationStrategy {
     /// - `c1_height` The height on c1's edge.
     /// - `c2` The second edge coefficient (from `get_mirror_coefficient`).
     /// - `c2_height` The height on c2's edge.
-    fn merge(height: f64, c1: f64, c1_height: f64, c2: f64, c2_height: f64) -> CoordinateType {
+    fn merge(&self, height: f64, c1: f64, c1_height: f64, c2: f64, c2_height: f64) -> CoordinateType {
         let c = if c1 + c2 == 0.0 { 0.0 } else { c1.max(c2) / (c1 + c2) };
         (height * (1.0 - c * (c1 + c2)) + c * (c1 * c1_height + c2 * c2_height)) as CoordinateType
     }
@@ -530,6 +515,7 @@ pub trait BiosphereGenerationStrategy {
     /// Also generates the height at any edge within GUIDE_MIN distance.
     /// Averages the "old" height with the edge heights with coefficients based on how close you are to the edge intersection.
     fn guide(
+        &self,
         noise_generator: &noise::OpenSimplex,
         block_up: BlockFace,
         block_coords: BlockCoordinate,
@@ -560,7 +546,7 @@ pub trait BiosphereGenerationStrategy {
                 BlockFace::Left => (x_coord, block_coords.y, block_coords.z),
             }
             .into();
-            x_height = self::get_block_height(
+            x_height = self.get_block_height(
                 noise_generator,
                 x_seed,
                 structure_coords,
@@ -569,7 +555,7 @@ pub trait BiosphereGenerationStrategy {
                 delta,
                 iterations,
             );
-            x_coefficient = Self::get_mirror_coefficient(block_coords.x, x_height as CoordinateType, s_dimensions);
+            x_coefficient = self.get_mirror_coefficient(block_coords.x, x_height as CoordinateType, s_dimensions);
         }
 
         // Y.
@@ -595,7 +581,7 @@ pub trait BiosphereGenerationStrategy {
                 delta,
                 iterations,
             );
-            y_coefficient = Self::get_mirror_coefficient(block_coords.y, y_height as CoordinateType, s_dimensions);
+            y_coefficient = self.get_mirror_coefficient(block_coords.y, y_height as CoordinateType, s_dimensions);
         }
 
         // Z.
@@ -612,7 +598,7 @@ pub trait BiosphereGenerationStrategy {
                 BlockFace::Left => (bottom, block_coords.y.clamp(bottom, top), z_coord),
             }
             .into();
-            z_height = self::get_block_height(
+            z_height = self.get_block_height(
                 noise_generator,
                 z_seed,
                 structure_coords,
@@ -621,13 +607,13 @@ pub trait BiosphereGenerationStrategy {
                 delta,
                 iterations,
             );
-            z_coefficient = Self::get_mirror_coefficient(block_coords.z, z_height as CoordinateType, s_dimensions);
+            z_coefficient = self.get_mirror_coefficient(block_coords.z, z_height as CoordinateType, s_dimensions);
         }
 
         match block_up {
-            BlockFace::Front | BlockFace::Back => Self::merge(z_height, x_coefficient, x_height, y_coefficient, y_height),
-            BlockFace::Top | BlockFace::Bottom => Self::merge(y_height, x_coefficient, x_height, z_coefficient, z_height),
-            BlockFace::Right | BlockFace::Left => Self::merge(x_height, y_coefficient, y_height, z_coefficient, z_height),
+            BlockFace::Front | BlockFace::Back => self.merge(z_height, x_coefficient, x_height, y_coefficient, y_height),
+            BlockFace::Top | BlockFace::Bottom => self.merge(y_height, x_coefficient, x_height, z_coefficient, z_height),
+            BlockFace::Right | BlockFace::Left => self.merge(x_height, y_coefficient, y_height, z_coefficient, z_height),
         }
     }
 
@@ -642,6 +628,7 @@ pub trait BiosphereGenerationStrategy {
     /// * `delta` Value passed in by the `GenerationParemeters`. Represents how much each change in x/y/z will effect the terrain. Small values = lesser effect
     /// * `iterations` Value passed in by the `GenerationParemeters`. Represents how many times the noise function will be run
     fn get_top_height(
+        &self,
         block_up: BlockFace,
         block_coords: BlockCoordinate,
         structure_coords: (f64, f64, f64),
@@ -652,7 +639,7 @@ pub trait BiosphereGenerationStrategy {
         delta: f64,
         iterations: usize,
     ) -> CoordinateType {
-        Self::guide(
+        self.guide(
             noise_generator,
             block_up,
             block_coords,
@@ -664,31 +651,36 @@ pub trait BiosphereGenerationStrategy {
             s_dimensions,
         )
     }
+
+    /// Calculuates which coordinates in a column should be which blocks.
+    fn get_layers(
+        &self,
+        s_dimensions: CoordinateType,
+        seed_coords: BlockCoordinate,
+        structure_coords: (f64, f64, f64),
+        noise_generator: &noise::OpenSimplex,
+        up: BlockFace,
+        blocks: &Registry<Block>,
+    ) -> Vec<(Block, CoordinateType)>;
 }
-
-/// The default implementation for the `BiosphereGenerationStrategy` that will work for most biospheres.
-pub struct DefaultBiosphereGenerationStrategy;
-
-impl BiosphereGenerationStrategy for DefaultBiosphereGenerationStrategy {}
 
 /// Stores which blocks make up each biosphere, and how far below the top solid block each block generates.
 /// Blocks in ascending order ("stone" = 5 first, "grass" = 0 last).
 #[derive(Resource, Clone, Default, Debug)]
-pub struct BlockLayers<T: Component + Clone + Default> {
-    _phantom: PhantomData<T>,
-    ranges: Vec<(Block, BlockLayer)>,
-    sea_block: Option<Block>,
-    sea_level: Option<CoordinateType>,
+pub struct BlockLayers {
+    pub ranges: Vec<(Block, BlockLayer)>,
+    pub sea_block: Option<Block>,
+    pub sea_level: Option<CoordinateType>,
 }
 
 /// Stores the blocks and all the noise information for creating the top of their layer.
 /// For example, the "stone" BlockLevel has the noise paramters that create the boundry between dirt and stone.
 #[derive(Clone, Debug)]
 pub struct BlockLayer {
-    middle_depth: CoordinateType,
-    delta: f64,
-    amplitude: f64,
-    iterations: usize,
+    pub middle_depth: CoordinateType,
+    pub delta: f64,
+    pub amplitude: f64,
+    pub iterations: usize,
 }
 
 impl BlockLayer {
@@ -715,12 +707,12 @@ impl BlockLayer {
 
 #[derive(Debug)]
 /// Errors generated when initally setting up the block ranges
-pub enum BlockRangeError<T: Component + Clone + Default> {
+pub enum BlockRangeError {
     /// This means the block id provided was not found in the block registry
-    MissingBlock(BlockLayers<T>),
+    MissingBlock(BlockLayers),
 }
 
-impl<T: Component + Clone + Default> BlockLayers<T> {
+impl BlockLayers {
     /// Creates a new block range, for each planet type to specify its blocks.
     pub fn new() -> Self {
         Self::default()
@@ -735,7 +727,7 @@ impl<T: Component + Clone + Default> BlockLayers<T> {
         delta: f64,
         amplitude: f64,
         iterations: usize,
-    ) -> Result<Self, BlockRangeError<T>> {
+    ) -> Result<Self, BlockRangeError> {
         let Some(block) = block_registry.from_id(block_id) else {
             return Err(BlockRangeError::MissingBlock(self));
         };
@@ -765,7 +757,7 @@ impl<T: Component + Clone + Default> BlockLayers<T> {
         block_id: &str,
         block_registry: &Registry<Block>,
         middle_depth: CoordinateType,
-    ) -> Result<Self, BlockRangeError<T>> {
+    ) -> Result<Self, BlockRangeError> {
         let Some(block) = block_registry.from_id(block_id) else {
             return Err(BlockRangeError::MissingBlock(self));
         };
@@ -780,7 +772,7 @@ impl<T: Component + Clone + Default> BlockLayers<T> {
         block_id: &str,
         block_registry: &Registry<Block>,
         sea_level: CoordinateType,
-    ) -> Result<Self, BlockRangeError<T>> {
+    ) -> Result<Self, BlockRangeError> {
         let Some(block) = block_registry.from_id(block_id).cloned() else {
             return Err(BlockRangeError::MissingBlock(self));
         };
@@ -867,11 +859,12 @@ impl<T: Component + Clone + Default> BlockLayers<T> {
 
 /// Calls generate_face_chunk, generate_edge_chunk, and generate_corner_chunk to generate the chunks of a planet.
 pub fn generate_planet<T: Component + Clone + Default, E: TGenerateChunkEvent + Send + Sync + 'static, S: BiosphereGenerationStrategy>(
+    strategy: Res<S>,
     mut query: Query<(&mut Structure, &Location)>,
     mut generating: ResMut<GeneratingChunks<T>>,
     mut events: EventReader<E>,
     noise_generator: Res<ResourceWrapper<noise::OpenSimplex>>,
-    block_ranges: Res<BlockLayers<T>>,
+    block_ranges: Res<BlockLayers>,
 ) {
     let chunks = events
         .iter()
@@ -931,35 +924,35 @@ pub fn generate_planet<T: Component + Clone + Default, E: TGenerateChunkEvent + 
                 let chunk_faces = Planet::chunk_planet_faces(first_block_coord, s_dimensions);
                 match chunk_faces {
                     ChunkFaces::Face(up) => {
-                        generate_face_chunk::<S, T>(
+                        generate_face_chunk::<S>(
+                            &strategy,
                             first_block_coord,
                             (structure_x, structure_y, structure_z),
                             s_dimensions,
                             &noise_generator,
-                            &block_ranges,
                             &mut chunk,
                             up,
                         );
                     }
                     ChunkFaces::Edge(j_up, k_up) => {
-                        generate_edge_chunk::<S, T>(
+                        generate_edge_chunk::<S>(
+                            &strategy,
                             first_block_coord,
                             (structure_x, structure_y, structure_z),
                             s_dimensions,
                             &noise_generator,
-                            &block_ranges,
                             &mut chunk,
                             j_up,
                             k_up,
                         );
                     }
                     ChunkFaces::Corner(x_up, y_up, z_up) => {
-                        generate_corner_chunk::<S, T>(
+                        generate_corner_chunk::<S>(
+                            &strategy,
                             first_block_coord,
                             (structure_x, structure_y, structure_z),
                             s_dimensions,
                             &noise_generator,
-                            &block_ranges,
                             &mut chunk,
                             x_up,
                             y_up,
