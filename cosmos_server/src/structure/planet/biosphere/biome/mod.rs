@@ -3,47 +3,21 @@ use std::{hash::Hash, marker::PhantomData};
 use bevy::utils::HashMap;
 use cosmos_core::{registry::identifiable::Identifiable, utils::array_utils::flatten};
 
-type GenerationFunction = dyn Fn() -> () + Send + Sync;
-
-pub struct Biome {
-    unlocalized_name: String,
-    id: u16,
-    generate_column: Box<GenerationFunction>,
+pub trait Biome: Identifiable {
+    fn generate_column(&self);
 }
 
-fn asdf() {
-    let biome = Biome {
-        generate_column: Box::new(|| {}),
-        id: 0,
-        unlocalized_name: "Aasdf".into(),
-    };
-}
-
-impl PartialEq for Biome {
+impl PartialEq for dyn Biome {
     fn eq(&self, other: &Self) -> bool {
-        self.id != other.id
+        self.id() == other.id()
     }
 }
 
-impl Eq for Biome {}
+impl Eq for dyn Biome {}
 
-impl Hash for Biome {
+impl Hash for dyn Biome {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        state.write_u16(self.id);
-    }
-}
-
-impl Identifiable for Biome {
-    fn id(&self) -> u16 {
-        self.id
-    }
-
-    fn set_numeric_id(&mut self, id: u16) {
-        self.id = id;
-    }
-
-    fn unlocalized_name(&self) -> &str {
-        &self.unlocalized_name
+        state.write_u16(self.id())
     }
 }
 
@@ -57,10 +31,9 @@ pub struct BiomeRegistry<T> {
     lookup_table: Box<[u8; LOOKUP_TABLE_SIZE]>,
 
     /// All the registered biomes
-    biomes: Vec<Biome>,
-
+    biomes: Vec<Box<dyn Biome>>,
     /// Only used before `construct_lookup_table` method is called, used to store the biomes + their [`BiomeParameters`] before all the possibilities are computed.
-    todo_biomes: HashMap<Biome, BiomeParameters>,
+    todo_biomes: HashMap<Box<dyn Biome>, BiomeParameters>,
 }
 
 pub struct BiomeParameters {
@@ -90,11 +63,11 @@ impl<T> BiomeRegistry<T> {
 
     fn construct_lookup_table() {}
 
-    pub fn register(&mut self, biome: Biome, params: BiomeParameters) {
+    pub fn register(&mut self, biome: Box<dyn Biome>, params: BiomeParameters) {
         self.todo_biomes.insert(biome, params);
     }
 
-    pub fn ideal_biosphere_for(&self, params: BiomeParameters) -> &Biome {
+    pub fn ideal_biome_for(&self, params: BiomeParameters) -> &dyn Biome {
         let lookup_idx = flatten(
             params.ideal_elevation as usize,
             params.ideal_humidity as usize,
@@ -103,6 +76,6 @@ impl<T> BiomeRegistry<T> {
             LOOKUP_TABLE_PRECISION,
         );
 
-        &self.biomes[self.lookup_table[lookup_idx] as usize]
+        self.biomes[self.lookup_table[lookup_idx] as usize].as_ref()
     }
 }
