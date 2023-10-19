@@ -19,6 +19,7 @@ use crate::{
 use super::{
     base_structure::BaseStructure,
     block_health::block_destroyed_event::BlockDestroyedEvent,
+    block_storage::BlockStorer,
     chunk::Chunk,
     coordinates::{BlockCoordinate, ChunkBlockCoordinate, ChunkCoordinate, CoordinateType, UnboundBlockCoordinate, UnboundChunkCoordinate},
     structure_block::StructureBlock,

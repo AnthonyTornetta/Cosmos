@@ -76,13 +76,13 @@ fn monitor_loading<T: States + Clone + Copy>(
         let cur_state = *state.get();
 
         if cur_state == loading_status.pre_loading_state {
-            println!("Transitioning to loading state!");
+            info!("Transitioning to loading state!");
             state_changer.set(loading_status.loading_state);
         } else if cur_state == loading_status.loading_state {
-            println!("Transitioning to post loading state!");
+            info!("Transitioning to post loading state!");
             state_changer.set(loading_status.post_loading_state);
         } else if cur_state == loading_status.post_loading_state {
-            println!("Transitioning to done state!");
+            info!("Transitioning to done state!");
             state_changer.set(loading_status.done_state);
         } else {
             panic!("Missing state!");

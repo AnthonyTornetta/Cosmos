@@ -340,8 +340,6 @@ impl Inventory {
 
         let move_quantity = is.quantity().min(max_quantity);
 
-        println!("{max_quantity} -> {move_quantity}");
-
         let left_over = self.insert_raw_at(to, is.item_id(), is.max_stack_size(), move_quantity) + reserve;
 
         self.mut_itemstack_at(from)

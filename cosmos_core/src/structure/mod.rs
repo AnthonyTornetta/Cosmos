@@ -12,12 +12,15 @@ use bevy_rapier3d::prelude::PhysicsWorld;
 pub mod asteroid;
 pub mod base_structure;
 pub mod block_health;
+pub mod block_storage;
 pub mod chunk;
 pub mod coordinates;
 pub mod dynamic_structure;
 pub mod events;
 pub mod full_structure;
 pub mod loading;
+pub mod lod;
+pub mod lod_chunk;
 pub mod planet;
 pub mod ship;
 pub mod structure_block;
@@ -39,6 +42,7 @@ use bevy::prelude::{
 use serde::{Deserialize, Serialize};
 
 use self::block_health::block_destroyed_event::BlockDestroyedEvent;
+use self::block_storage::BlockStorer;
 use self::chunk::ChunkEntity;
 use self::coordinates::{BlockCoordinate, ChunkCoordinate, UnboundBlockCoordinate, UnboundChunkCoordinate};
 use self::dynamic_structure::DynamicStructure;
@@ -74,7 +78,7 @@ impl Structure {
     /// Returns the # of chunks in the x/y/z direction as a set of ChunkCoordinates.
     pub fn chunk_dimensions(&self) -> ChunkCoordinate {
         match &self {
-            Self::Dynamic(ds) => ChunkCoordinate::new(ds.dimensions(), ds.dimensions(), ds.dimensions()),
+            Self::Dynamic(ds) => ChunkCoordinate::new(ds.chunk_dimensions(), ds.chunk_dimensions(), ds.chunk_dimensions()),
             Self::Full(full) => full.chunk_dimensions(),
         }
     }

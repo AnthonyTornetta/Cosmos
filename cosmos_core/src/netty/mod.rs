@@ -32,6 +32,8 @@ pub enum NettyChannelServer {
     LaserCannonSystem,
     /// Used for asteroids
     Asteroid,
+    /// Sending LOD information to the client
+    DeltaLod,
     /// Used for inventories
     Inventory,
 }
@@ -95,7 +97,8 @@ impl From<NettyChannelServer> for u8 {
             NettyChannelServer::Unreliable => 1,
             NettyChannelServer::LaserCannonSystem => 2,
             NettyChannelServer::Asteroid => 3,
-            NettyChannelServer::Inventory => 4,
+            NettyChannelServer::DeltaLod => 4,
+            NettyChannelServer::Inventory => 5,
         }
     }
 }
@@ -130,6 +133,13 @@ impl NettyChannelServer {
             },
             ChannelConfig {
                 channel_id: Self::Inventory.into(),
+                max_memory_usage_bytes: 5 * MB,
+                send_type: SendType::ReliableOrdered {
+                    resend_time: Duration::from_millis(200),
+                },
+            },
+            ChannelConfig {
+                channel_id: Self::DeltaLod.into(),
                 max_memory_usage_bytes: 5 * MB,
                 send_type: SendType::ReliableOrdered {
                     resend_time: Duration::from_millis(200),

@@ -14,11 +14,10 @@ use cosmos_core::{
         planet::Planet,
         rotate, ChunkInitEvent, Structure,
     },
-    utils::resource_wrapper::ResourceWrapper,
 };
 use noise::NoiseFn;
 
-use crate::GameState;
+use crate::{init::init_world::Noise, GameState};
 
 use super::{
     biosphere_generation::{generate_planet, notify_when_done_generating_terrain, BlockLayers, GenerateChunkFeaturesEvent},
@@ -68,10 +67,12 @@ impl TBiosphere<GrassBiosphereMarker, GrassChunkNeedsGeneratedEvent> for GrassBi
 fn make_block_ranges(block_registry: Res<Registry<Block>>, mut commands: Commands) {
     commands.insert_resource(
         BlockLayers::default()
-            .add_noise_layer("cosmos:short_grass", &block_registry, 160, 0.05, 7.0, 9)
-            .expect("Short Grass missing")
-            .add_fixed_layer("cosmos:grass", &block_registry, 1)
+            .add_noise_layer("cosmos:grass", &block_registry, 160, 0.05, 7.0, 9)
             .expect("Grass missing")
+            // .add_noise_layer("cosmos:short_grass", &block_registry, 160, 0.05, 7.0, 9)
+            // .expect("Short Grass missing")
+            // .add_fixed_layer("cosmos:grass", &block_registry, 1)
+            // .expect("Grass missing")
             .add_fixed_layer("cosmos:dirt", &block_registry, 1)
             .expect("Dirt missing")
             .add_fixed_layer("cosmos:stone", &block_registry, 4)
@@ -137,7 +138,7 @@ fn redwood_tree(
     location: &Location,
     block_event_writer: &mut EventWriter<BlockChangedEvent>,
     blocks: &Registry<Block>,
-    noise_generator: &ResourceWrapper<noise::OpenSimplex>,
+    noise_generator: &Noise,
 ) {
     let log = blocks.from_id("cosmos:redwood_log").unwrap();
     let leaf = blocks.from_id("cosmos:redwood_leaf").unwrap();
@@ -437,7 +438,7 @@ fn trees(
     location: &Location,
     block_event_writer: &mut EventWriter<BlockChangedEvent>,
     blocks: &Registry<Block>,
-    noise_generator: &ResourceWrapper<noise::OpenSimplex>,
+    noise_generator: &Noise,
 ) {
     let Structure::Dynamic(planet) = structure else {
         panic!("A planet must be dynamic!");
@@ -463,6 +464,7 @@ fn trees(
 
         let mut noise_cache =
             [[0.0; (CHUNK_DIMENSIONS + DIST_BETWEEN_TREES * 2) as usize]; (CHUNK_DIMENSIONS + DIST_BETWEEN_TREES * 2) as usize];
+
         for (z, slice) in noise_cache.iter_mut().enumerate().map(|(z, noise)| (z as CoordinateType, noise)) {
             for (x, noise) in slice.iter_mut().enumerate().map(|(x, noise)| (x as CoordinateType, noise)) {
                 let (nx, ny, nz) = match block_up {
@@ -562,7 +564,7 @@ pub fn generate_chunk_features(
     mut block_event_writer: EventWriter<BlockChangedEvent>,
     mut structure_query: Query<(&mut Structure, &Location)>,
     blocks: Res<Registry<Block>>,
-    noise_generator: Res<ResourceWrapper<noise::OpenSimplex>>,
+    noise_generator: Res<Noise>,
 ) {
     for ev in event_reader.iter() {
         if let Ok((mut structure, location)) = structure_query.get_mut(ev.structure_entity) {
@@ -578,21 +580,12 @@ pub fn generate_chunk_features(
 }
 
 pub(super) fn register(app: &mut App) {
-    register_biosphere::<GrassBiosphereMarker, GrassChunkNeedsGeneratedEvent>(
+    register_biosphere::<GrassBiosphereMarker, GrassChunkNeedsGeneratedEvent, DefaultBiosphereGenerationStrategy>(
         app,
         "cosmos:biosphere_grass",
         TemperatureRange::new(250.0, 400.0),
     );
 
-    app.add_systems(
-        Update,
-        (
-            generate_planet::<GrassBiosphereMarker, GrassChunkNeedsGeneratedEvent>,
-            notify_when_done_generating_terrain::<GrassBiosphereMarker>,
-            generate_chunk_features,
-        )
-            .run_if(in_state(GameState::Playing)),
-    );
-
-    app.add_systems(OnEnter(GameState::PostLoading), make_block_ranges);
+    app.add_systems(Update, generate_chunk_features.run_if(in_state(GameState::Playing)))
+        .add_systems(OnEnter(GameState::PostLoading), make_block_ranges);
 }

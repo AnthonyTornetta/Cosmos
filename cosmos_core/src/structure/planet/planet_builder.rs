@@ -2,7 +2,7 @@
 
 use bevy::{
     ecs::system::EntityCommands,
-    prelude::{Added, App, Commands, Entity, Query, Update},
+    prelude::{Added, App, Commands, Entity, Name, Query, Update},
 };
 use bevy_rapier3d::prelude::{RigidBody, Velocity};
 
@@ -41,7 +41,7 @@ impl<T: TStructureBuilder> TPlanetBuilder for PlanetBuilder<T> {
         self.structure_builder
             .insert_structure(entity, location, Velocity::default(), structure);
 
-        entity.insert(planet);
+        entity.insert((planet, Name::new(format!("Planet @ {}", location.sector))));
     }
 }
 

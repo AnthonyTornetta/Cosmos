@@ -332,6 +332,7 @@ fn sync_transforms_and_locations(
 }
 
 pub(super) fn register(app: &mut App) {
+<<<<<<< HEAD
     app.add_systems(
         Update,
         (
@@ -339,6 +340,21 @@ pub(super) fn register(app: &mut App) {
             sync_transforms_and_locations,
             handle_child_syncing,
             add_previous_location,
+=======
+    app.add_systems(Last, (move_players_between_worlds, move_non_players_between_worlds).chain())
+        .add_systems(
+            Update,
+            (
+                fix_location,
+                sync_transforms_and_locations,
+                handle_child_syncing,
+                add_previous_location,
+            )
+                .chain()
+                // .run_if(on_timer(Duration::from_millis(1000)))
+                .run_if(in_state(GameState::Playing))
+                .before(server_listen_messages),
+>>>>>>> 175-planet-lods
         )
             .chain()
             .run_if(in_state(GameState::Playing))

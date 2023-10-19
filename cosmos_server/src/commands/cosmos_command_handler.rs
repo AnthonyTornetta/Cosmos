@@ -148,31 +148,36 @@ fn cosmos_command_listener(
             "save" => {
                 if ev.args.len() != 2 {
                     display_help(Some("save"), &cosmos_commands);
-                } else if let Ok(index) = ev.args[0].parse::<u32>() {
-                    if let Some(entity) = all_saveable_entities.iter().find(|ent| ent.index() == index) {
-                        let mut entity_cmds = commands.get_entity(entity).unwrap();
-                        if let Ok((planet, ship)) = structure_query.get(entity) {
-                            if planet.is_some() {
-                                entity_cmds.insert(SaveStructure {
-                                    structure_type: StructureType::Planet,
-                                    name: ev.args[1].clone(),
-                                });
-                            } else if ship.is_some() {
-                                entity_cmds.insert(SaveStructure {
-                                    structure_type: StructureType::Ship,
-                                    name: ev.args[1].clone(),
-                                });
-                            } else {
-                                println!("Error: No valid structure type (planet/ship) for this structure");
-                            }
-                        } else {
-                            println!("You can only save structures!");
-                        }
-                    } else {
-                        println!("Invalid entity index {index}");
-                    }
-                } else {
+                    continue;
+                }
+                let Ok(index) = ev.args[0].parse::<u32>() else {
                     println!("The first argument must be the entity's index (positive number)");
+                    continue;
+                };
+
+                let Some(entity) = all_saveable_entities.iter().find(|ent| ent.index() == index) else {
+                    println!("Invalid entity index {index}");
+                    continue;
+                };
+
+                let mut entity_cmds = commands.entity(entity);
+                let Ok((planet, ship)) = structure_query.get(entity) else {
+                    println!("You can only save structures!");
+                    continue;
+                };
+
+                if planet.is_some() {
+                    entity_cmds.insert(SaveStructure {
+                        structure_type: StructureType::Planet,
+                        name: ev.args[1].clone(),
+                    });
+                } else if ship.is_some() {
+                    entity_cmds.insert(SaveStructure {
+                        structure_type: StructureType::Ship,
+                        name: ev.args[1].clone(),
+                    });
+                } else {
+                    println!("Error: No valid structure type (planet/ship) for this structure");
                 }
             }
             _ => {

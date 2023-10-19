@@ -93,6 +93,8 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
   - [x] Abstract the 3d block GUI camera
   - [x] Fix the 3d block GUI camera to not render anything except GUI blocks
 - [ ] Fix seeing through cracks in blocks
+- [x] Lods
+  - [x] Reduced detail rendering of far away chunks to see the entire planet
 - [x] Update to bevy 0.11
   - [x] Update physics
   - [x] Update bevy

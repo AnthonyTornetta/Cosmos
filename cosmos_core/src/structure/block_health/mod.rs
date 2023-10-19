@@ -12,7 +12,7 @@ use super::{
     coordinates::{ChunkBlockCoordinate, Coordinate},
 };
 
-#[derive(Debug, Default, Serialize, Deserialize, Reflect)]
+#[derive(Debug, Default, Serialize, Deserialize, Reflect, Clone)]
 /// Each block's health is represented here
 pub struct BlockHealth {
     /// Block index -> block health

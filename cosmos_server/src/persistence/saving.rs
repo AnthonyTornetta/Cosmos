@@ -8,7 +8,7 @@
 //! See [`saving::default_save`] for an example.
 
 use bevy::{
-    prelude::{App, Commands, Component, Entity, First, IntoSystemConfigs, PostUpdate, Query, ResMut, With, Without},
+    prelude::{warn, App, Commands, Component, Entity, First, IntoSystemConfigs, PostUpdate, Query, ResMut, With, Without},
     reflect::Reflect,
 };
 use bevy_rapier3d::prelude::Velocity;
@@ -110,7 +110,7 @@ pub fn done_saving(
         });
 
         if let Err(e) = write_file(&save_identifier, &serialized) {
-            eprintln!("{e}");
+            warn!("{e}");
             continue;
         }
 

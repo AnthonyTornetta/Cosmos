@@ -337,6 +337,8 @@ impl Location {
     }
 
     /// Only usable over f32 distances - will return infinity for distances that are outside the bounds of f32 calculations
+    ///
+    /// Performs (parameter - self)
     pub fn relative_coords_to(&self, other: &Location) -> Vec3 {
         let (dsx, dsy, dsz) = (
             (other.sector.x() - self.sector.x()) as f32,

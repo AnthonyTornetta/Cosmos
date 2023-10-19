@@ -31,12 +31,14 @@ pub mod window;
 
 use std::env;
 
+use bevy::core::TaskPoolThreadAssignmentPolicy;
 use bevy_renet::transport::NetcodeClientPlugin;
 use cosmos_core::netty::get_local_ipaddress;
 use netty::connect::{self, HostConfig};
 use netty::flags::LocalPlayer;
 use netty::mapping::NetworkMapping;
 use state::game_state::GameState;
+use thread_priority::{set_current_thread_priority, ThreadPriority};
 
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::{RapierConfiguration, TimestepMode};
@@ -44,6 +46,12 @@ use bevy_renet::RenetClientPlugin;
 use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
 
 fn main() {
+    if set_current_thread_priority(ThreadPriority::Max).is_err() {
+        warn!("Failed to set main thread priority to max - this can lead to lag.");
+    } else {
+        info!("Successfully set main thread priority to max!");
+    }
+
     // #[cfg(debug_assertions)]
     // env::set_var("RUST_BACKTRACE", "1");
 
@@ -55,7 +63,7 @@ fn main() {
         get_local_ipaddress()
     };
 
-    println!("Host: {host_name}");
+    info!("Host: {host_name}");
 
     let mut app = App::new();
 
@@ -72,7 +80,20 @@ fn main() {
         .insert_resource(ClearColor(Color::BLACK))
         // This must be registered here, before it is used anywhere
         .add_state::<GameState>()
-        .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))
+        .add_plugins(
+            DefaultPlugins
+                .set(TaskPoolPlugin {
+                    task_pool_options: TaskPoolOptions {
+                        compute: TaskPoolThreadAssignmentPolicy {
+                            min_threads: 1,
+                            max_threads: std::usize::MAX,
+                            percent: 0.25,
+                        },
+                        ..Default::default()
+                    },
+                })
+                .set(ImagePlugin::default_nearest()),
+        )
         .add_plugins(CosmosCorePluginGroup::new(
             GameState::PreLoading,
             GameState::Loading,

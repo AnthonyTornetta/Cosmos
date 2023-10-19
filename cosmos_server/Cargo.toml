@@ -54,3 +54,5 @@ cosmos_core = { version = "0.0.5", path = "../cosmos_core", features = [
 bevy-inspector-egui = { workspace = true }
 
 walkdir = { workspace = true }
+
+thread-priority = { workspace = true }

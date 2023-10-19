@@ -42,6 +42,7 @@ bincode = { workspace = true }
 local-ip-address = { workspace = true }
 bevy_rapier3d = { workspace = true }
 bigdecimal = { workspace = true }
+futures-lite = { workspace = true }
 
 serde_json = { workspace = true }
 image = { workspace = true }
@@ -54,3 +55,5 @@ rayon = { workspace = true }
 bevy_kira_audio = { workspace = true }
 
 toml = { workspace = true }
+
+thread-priority = { workspace = true }

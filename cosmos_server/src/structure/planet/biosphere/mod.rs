@@ -31,9 +31,14 @@ use crate::{
     state::GameState,
 };
 
-use self::biosphere_generation::GenerateChunkFeaturesEvent;
+use self::biosphere_generation::{
+    begin_generating_lods, generate_planet, notify_when_done_generating_terrain, BiosphereGenerationStrategy, GenerateChunkFeaturesEvent,
+};
 
-use super::generation::planet_generator::check_needs_generated_system;
+use super::{
+    generation::planet_generator::check_needs_generated_system,
+    lods::generate_lods::{check_done_generating_lods, generate_player_lods, start_generating_lods, GeneratingLods},
+};
 
 pub mod biome;
 pub mod biosphere_generation;
@@ -100,7 +105,11 @@ impl<T: Component> GeneratingChunk<T> {
 ///
 /// T: The biosphere's marker component type
 /// E: The biosphere's generate chunk event type
-pub fn register_biosphere<T: Component + Default, E: Send + Sync + 'static + TGenerateChunkEvent>(
+pub fn register_biosphere<
+    T: Component + Default + Clone,
+    E: Send + Sync + 'static + TGenerateChunkEvent,
+    S: BiosphereGenerationStrategy + 'static,
+>(
     app: &mut App,
     biosphere_id: &'static str,
     temperature_range: TemperatureRange,
@@ -144,10 +153,19 @@ pub fn register_biosphere<T: Component + Default, E: Send + Sync + 'static + TGe
                 .after(begin_loading)
                 .before(done_loading),
                 // Checks if any blocks need generated for this biosphere
-                check_needs_generated_system::<E, T>.run_if(in_state(GameState::Playing)),
+                (
+                    generate_planet::<T, E, S>,
+                    notify_when_done_generating_terrain::<T>,
+                    generate_player_lods::<T>.before(start_generating_lods),
+                    begin_generating_lods::<T, S>,
+                    check_needs_generated_system::<E, T>,
+                    check_done_generating_lods::<T>,
+                )
+                    .run_if(in_state(GameState::Playing)),
             ),
         )
-        .insert_resource(GeneratingChunks::<T>::default())
+        .init_resource::<GeneratingChunks<T>>()
+        .init_resource::<GeneratingLods<T>>()
         .add_event::<GenerateChunkFeaturesEvent<T>>();
 }
 

@@ -1,9 +1,13 @@
 //! Handles the initialization of the server world
 
-use std::{fs, num::Wrapping};
+use std::{
+    fs,
+    num::Wrapping,
+    sync::{Arc, RwLock, RwLockReadGuard},
+};
 
 use bevy::prelude::*;
-use cosmos_core::{netty::cosmos_encoder, utils::resource_wrapper::ResourceWrapper};
+use cosmos_core::netty::cosmos_encoder;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Resource, Deref, Serialize, Deserialize, Clone, Copy)]
@@ -35,6 +39,25 @@ impl ServerSeed {
     }
 }
 
+#[derive(Resource, Debug, Clone, Deref, DerefMut)]
+/// A pre-seeded structure to create noise values. Uses simplex noise as the backend
+///
+/// This cannot be sent across threads - use ReadOnlyNoise to send use across threads.
+pub struct Noise(noise::OpenSimplex);
+
+#[derive(Resource, Debug, Clone)]
+/// A thread-safe pre-seeded structure to create noise values. Uses simplex noise as the backend
+///
+/// To use across threads, just clone this and call the `inner` method to get the Noise struct this encapsulates
+pub struct ReadOnlyNoise(Arc<RwLock<Noise>>);
+
+impl ReadOnlyNoise {
+    /// Returns the `Noise` instance this encapsulates
+    pub fn inner(&self) -> RwLockReadGuard<Noise> {
+        self.0.read().expect("Failed to read")
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     let server_seed = if let Ok(seed) = fs::read("./world/seed.dat") {
         cosmos_encoder::deserialize::<ServerSeed>(&seed).expect("Unable to understand './world/seed.dat' seed file. Is it corrupted?")
@@ -47,6 +70,8 @@ pub(super) fn register(app: &mut App) {
         seed
     };
 
-    app.insert_resource(ResourceWrapper(noise::OpenSimplex::new(server_seed.as_u32())))
-        .insert_resource(server_seed);
+    let noise = Noise(noise::OpenSimplex::new(server_seed.as_u32()));
+    let read_noise = ReadOnlyNoise(Arc::new(RwLock::new(noise.clone())));
+
+    app.insert_resource(noise).insert_resource(read_noise).insert_resource(server_seed);
 }

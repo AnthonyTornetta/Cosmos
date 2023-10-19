@@ -1,12 +1,12 @@
 //! Used to represent how much damage a block can take before it breaks
 
-use bevy::prelude::{App, OnExit, Res, ResMut, States};
+use bevy::prelude::{warn, App, OnExit, Res, ResMut, States};
 
 use crate::registry::{self, identifiable::Identifiable, Registry};
 
 use super::Block;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// Used to represent how much damage a block can take before it breaks
 pub struct BlockHardness {
     id: u16,
@@ -52,7 +52,7 @@ fn register_hardness(registry: &mut Registry<BlockHardness>, value: f32, blocks:
     if let Some(block) = blocks.from_id(name) {
         registry.register(BlockHardness::new(block, value));
     } else {
-        println!("[Block Hardness] Missing block {name}");
+        warn!("[Block Hardness] Missing block {name}");
     }
 }
 
@@ -89,7 +89,7 @@ fn register_block_hardness(blocks: Res<Registry<Block>>, mut registry: ResMut<Re
 fn sanity_check(blocks: Res<Registry<Block>>, hardness: Res<Registry<BlockHardness>>) {
     for block in blocks.iter() {
         if hardness.from_id(block.unlocalized_name()).is_none() {
-            eprintln!("!!! WARNING !!! Missing block hardness value for {}", block.unlocalized_name());
+            warn!("Missing block hardness value for {}", block.unlocalized_name());
         }
     }
 }

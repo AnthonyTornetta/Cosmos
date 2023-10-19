@@ -59,7 +59,7 @@ fn send_disconnect(input_handler: InputChecker, transport: Option<ResMut<Netcode
     if input_handler.check_just_pressed(CosmosInputs::Disconnect) {
         if let Some(mut transport) = transport {
             if transport.is_connected() {
-                println!("SENDING DC MESSAGE!");
+                info!("SENDING DC MESSAGE!");
                 transport.disconnect();
             }
         }

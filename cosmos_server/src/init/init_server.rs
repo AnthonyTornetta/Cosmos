@@ -43,5 +43,5 @@ pub fn init(app: &mut App, address: Option<String>) {
         .insert_resource(server)
         .insert_resource(transport);
 
-    println!("Setup server on {local_addr}:{port}");
+    info!("Setup server on {local_addr}:{port}");
 }
