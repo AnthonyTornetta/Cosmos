@@ -1,7 +1,7 @@
 //! Creates a ice planet
 
 use bevy::prelude::{
-    in_state, App, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, OnEnter, Query, Res, Update,
+    in_state, App, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, OnEnter, Query, Res, ResMut, Update,
 };
 use cosmos_core::{
     block::Block,
@@ -13,13 +13,16 @@ use cosmos_core::{
 use crate::GameState;
 
 use super::{
+    biome::{biome_registry::RegisteredBiome, BiomeParameters, BiosphereBiomesRegistry},
     biosphere_generation::{BlockLayers, GenerateChunkFeaturesEvent},
-    register_biosphere, TBiosphere, TGenerateChunkEvent, TemperatureRange,
+    register_biosphere, BiosphereMarkerComponent, TBiosphere, TGenerateChunkEvent, TemperatureRange,
 };
 
-#[derive(Component, Debug, Default, Clone)]
+#[derive(Component, Debug, Default, Clone, Copy)]
 /// Marks that this is for a grass biosphere
 pub struct IceBiosphereMarker;
+
+impl BiosphereMarkerComponent for IceBiosphereMarker {}
 
 /// Marks that an ice chunk needs generated
 #[derive(Event, Debug)]
@@ -59,45 +62,36 @@ impl TBiosphere<IceBiosphereMarker, IceChunkNeedsGeneratedEvent> for IceBiospher
     }
 }
 
-fn make_block_ranges(block_registry: Res<Registry<Block>>, mut commands: Commands) {
-    commands.insert_resource(
-        BlockLayers::default()
-            .add_noise_layer("cosmos:ice", &block_registry, 160, 0.01, 4.0, 1)
-            .expect("Ice missing")
-            .add_fixed_layer("cosmos:water", &block_registry, 4)
-            .expect("Water missing")
-            .add_fixed_layer("cosmos:stone", &block_registry, 296)
-            .expect("Stone missing"),
-    );
-}
+// fn make_block_ranges(block_registry: Res<Registry<Block>>, mut commands: Commands) {
+//     commands.insert_resource(
+//         BlockLayers::default()
+//             .add_noise_layer("cosmos:ice", &block_registry, 160, 0.01, 4.0, 1)
+//             .expect("Ice missing")
+//             .add_fixed_layer("cosmos:water", &block_registry, 4)
+//             .expect("Water missing")
+//             .add_fixed_layer("cosmos:stone", &block_registry, 296)
+//             .expect("Stone missing"),
+//     );
+// }
 
-/// Sends a ChunkInitEvent for every chunk that's done generating, monitors when chunks are finished generating, makes trees.
-pub fn generate_chunk_features(
-    // mut event_reader: EventReader<GenerateChunkFeaturesEvent<IceBiosphereMarker>>,
-    // mut init_event_writer: EventWriter<ChunkInitEvent>,
-    // _block_event_writer: EventWriter<BlockChangedEvent>,
-    // mut structure_query: Query<(&mut Structure, &Location)>,
-    // _blocks: Res<Registry<Block>>,
-    // _seed: Res<ServerSeed>,
-    mut event_reader: EventReader<GenerateChunkFeaturesEvent<IceBiosphereMarker>>,
-    mut init_event_writer: EventWriter<ChunkInitEvent>,
-    mut structure_query: Query<(&mut Structure, &Location)>,
+fn register_biosphere_biomes(
+    biome_registry: Res<Registry<RegisteredBiome>>,
+    mut biosphere_biomes_registry: ResMut<BiosphereBiomesRegistry<IceBiosphereMarker>>,
 ) {
-    for ev in event_reader.iter() {
-        if let Ok((_structure, _location)) = structure_query.get_mut(ev.structure_entity) {
-            let chunk_coords = ev.chunk_coords;
-
-            init_event_writer.send(ChunkInitEvent {
-                structure_entity: ev.structure_entity,
-                coords: chunk_coords,
-            });
-        }
+    if let Some(plains) = biome_registry.from_id("cosmos:plains") {
+        biosphere_biomes_registry.register(
+            plains.biome(),
+            BiomeParameters {
+                ideal_elevation: 30.0,
+                ideal_humidity: 30.0,
+                ideal_temperature: 60.0,
+            },
+        );
     }
 }
 
 pub(super) fn register(app: &mut App) {
     register_biosphere::<IceBiosphereMarker, IceChunkNeedsGeneratedEvent>(app, "cosmos:biosphere_ice", TemperatureRange::new(0.0, 300.0));
 
-    app.add_systems(Update, generate_chunk_features.run_if(in_state(GameState::Playing)))
-        .add_systems(OnEnter(GameState::PostLoading), make_block_ranges);
+    app.add_systems(OnEnter(GameState::PostLoading), register_biosphere_biomes);
 }

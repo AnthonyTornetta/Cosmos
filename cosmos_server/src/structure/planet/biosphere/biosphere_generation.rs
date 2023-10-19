@@ -3,9 +3,7 @@
 use std::{marker::PhantomData, mem::swap};
 
 use bevy::{
-    prelude::{
-        warn, Commands, Component, DespawnRecursiveExt, Entity, Event, EventReader, EventWriter, Query, Res, ResMut, Resource, With,
-    },
+    prelude::{warn, Commands, DespawnRecursiveExt, Entity, Event, EventReader, EventWriter, Query, Res, ResMut, Resource, With},
     tasks::AsyncComputeTaskPool,
 };
 use cosmos_core::{
@@ -14,7 +12,6 @@ use cosmos_core::{
     physics::location::Location,
     registry::Registry,
     structure::{
-        block_storage::BlockStorer,
         chunk::{Chunk, CHUNK_DIMENSIONS},
         coordinates::{BlockCoordinate, ChunkBlockCoordinate, ChunkCoordinate, CoordinateType},
         lod::{LodDelta, LodNetworkMessage, SetLodMessage},
@@ -22,7 +19,6 @@ use cosmos_core::{
         planet::{ChunkFaces, Planet},
         Structure,
     },
-    utils::array_utils::flatten_2d,
 };
 use futures_lite::future;
 use rayon::prelude::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
@@ -35,13 +31,13 @@ use crate::{
 };
 
 use super::{
-    biome::{Biome, SimpleBiome},
-    GeneratingChunk, GeneratingChunks, TGenerateChunkEvent,
+    biome::{Biome, BiosphereBiomesRegistry, SimpleBiome},
+    BiomeDecider, BiosphereMarkerComponent, GeneratingChunk, GeneratingChunks, TGenerateChunkEvent,
 };
 
 /// Tells the chunk to generate its features.
 #[derive(Debug, Event)]
-pub struct GenerateChunkFeaturesEvent<T: Component> {
+pub struct GenerateChunkFeaturesEvent<T: BiosphereMarkerComponent> {
     _phantom: PhantomData<T>,
     /// cx, cy, cz.
     pub chunk_coords: ChunkCoordinate,
@@ -50,7 +46,7 @@ pub struct GenerateChunkFeaturesEvent<T: Component> {
 }
 
 /// Sends a ChunkInitEvent for every chunk that's done generating, monitors when chunks are finished generating.
-pub fn notify_when_done_generating_terrain<T: Component>(
+pub fn notify_when_done_generating_terrain<T: BiosphereMarkerComponent>(
     mut generating: ResMut<GeneratingChunks<T>>,
     mut event_writer: EventWriter<GenerateChunkFeaturesEvent<T>>,
     mut structure_query: Query<&mut Structure>,
@@ -80,420 +76,32 @@ pub fn notify_when_done_generating_terrain<T: Component>(
     }
 }
 
-#[inline]
-fn generate_face_chunk<C: BlockStorer>(
-    block_coords: BlockCoordinate,
-    structure_coords: (f64, f64, f64),
-    s_dimensions: CoordinateType,
-    noise_generator: &noise::OpenSimplex,
-    biome: &dyn Biome,
-    chunk: &mut C,
-    up: BlockFace,
-    scale: CoordinateType,
-) {
-    let (sx, sy, sz) = (block_coords.x, block_coords.y, block_coords.z);
-
-    let block_layers = biome.block_layers();
-
-    for i in 0..CHUNK_DIMENSIONS {
-        for j in 0..CHUNK_DIMENSIONS {
-            let seed_coords: BlockCoordinate = match up {
-                BlockFace::Top => (sx + i * scale, s_dimensions, sz + j * scale),
-                BlockFace::Bottom => (sx + i * scale, 0, sz + j * scale),
-                BlockFace::Front => (sx + i * scale, sy + j * scale, s_dimensions),
-                BlockFace::Back => (sx + i * scale, sy + j * scale, 0),
-                BlockFace::Right => (s_dimensions, sy + i * scale, sz + j * scale),
-                BlockFace::Left => (0, sy + i * scale, sz + j * scale),
-            }
-            .into();
-
-            let mut height = s_dimensions;
-            let mut concrete_ranges = Vec::new();
-            for (block, level) in block_layers.ranges.iter() {
-                let level_top = biome.get_top_height(
-                    up,
-                    seed_coords,
-                    structure_coords,
-                    s_dimensions,
-                    noise_generator,
-                    height - level.middle_depth,
-                    level.amplitude,
-                    level.delta,
-                    level.iterations,
-                );
-                concrete_ranges.push((block, level_top));
-                height = level_top;
-            }
-
-            for chunk_height in 0..CHUNK_DIMENSIONS {
-                let coords: ChunkBlockCoordinate = match up {
-                    BlockFace::Front | BlockFace::Back => (i, j, chunk_height),
-                    BlockFace::Top | BlockFace::Bottom => (i, chunk_height, j),
-                    BlockFace::Right | BlockFace::Left => (chunk_height, i, j),
-                }
-                .into();
-
-                let height = match up {
-                    BlockFace::Front => sz + chunk_height * scale,
-                    BlockFace::Back => s_dimensions - (sz + chunk_height * scale),
-                    BlockFace::Top => sy + chunk_height * scale,
-                    BlockFace::Bottom => s_dimensions - (sy + chunk_height * scale),
-                    BlockFace::Right => sx + chunk_height * scale,
-                    BlockFace::Left => s_dimensions - (sx + chunk_height * scale),
-                };
-
-                let block = block_layers.face_block(height, &concrete_ranges, block_layers.sea_level, block_layers.sea_block(), scale);
-                if let Some(block) = block {
-                    chunk.set_block_at(coords, block, up);
-                }
-                // else if scale != 1 {
-                //     let below_coords = match up {
-                //         BlockFace::Front => (coords.x, coords.y, coords.z - 1),
-                //         BlockFace::Back => (coords.x, coords.y, coords.z + 1),
-                //         BlockFace::Top => (coords.x, coords.y - 1, coords.z),
-                //         BlockFace::Bottom => (coords.x, coords.y + 1, coords.z),
-                //         BlockFace::Right => (coords.x - 1, coords.y, coords.z),
-                //         BlockFace::Left => (coords.x + 1, coords.y, coords.z),
-                //     }
-                //     .into();
-
-                //     if let Some((candidate, _)) = concrete_ranges.iter().find(|(_, h)| height + scale > *h) {
-                //         chunk.set_block_at(below_coords, candidate, up);
-                //     }
-                // }
-            }
-        }
-    }
-}
-
-fn generate_edge_chunk<C: BlockStorer>(
-    block_coords: BlockCoordinate,
-    structure_coords: (f64, f64, f64),
-    s_dimensions: CoordinateType,
-    noise_generator: &noise::OpenSimplex,
-    biome: &dyn Biome,
-    chunk: &mut C,
-    j_up: BlockFace,
-    k_up: BlockFace,
-    scale: CoordinateType,
-) {
-    let block_layers = biome.block_layers();
-
-    for i in 0..CHUNK_DIMENSIONS {
-        let i_scaled = i * scale;
-        let mut j_layers_cache: Vec<Vec<(&Block, CoordinateType)>> = vec![vec![]; CHUNK_DIMENSIONS as usize];
-        for (j, j_layers) in j_layers_cache.iter_mut().enumerate() {
-            let j_scaled = j as CoordinateType * scale;
-
-            // Seed coordinates and j-direction noise functions.
-            let (mut x, mut y, mut z) = (block_coords.x + i_scaled, block_coords.y + i_scaled, block_coords.z + i_scaled);
-
-            match j_up {
-                BlockFace::Front => z = s_dimensions,
-                BlockFace::Back => z = 0,
-                BlockFace::Top => y = s_dimensions,
-                BlockFace::Bottom => y = 0,
-                BlockFace::Right => x = s_dimensions,
-                BlockFace::Left => x = 0,
-            };
-            match k_up {
-                BlockFace::Front | BlockFace::Back => z = block_coords.z + j_scaled,
-                BlockFace::Top | BlockFace::Bottom => y = block_coords.y + j_scaled,
-                BlockFace::Right | BlockFace::Left => x = block_coords.x + j_scaled,
-            };
-            let mut height = s_dimensions;
-            for (block, layer) in block_layers.ranges.iter() {
-                let layer_top = biome.get_top_height(
-                    j_up,
-                    BlockCoordinate::new(x, y, z),
-                    structure_coords,
-                    s_dimensions,
-                    noise_generator,
-                    height - layer.middle_depth,
-                    layer.amplitude,
-                    layer.delta,
-                    layer.iterations,
-                );
-                j_layers.push((block, layer_top));
-                height = layer_top;
-            }
-        }
-
-        // The minimum (j, j) on the 45 where the two top heights intersect.
-        let mut first_both_45 = s_dimensions;
-        for j in 0..CHUNK_DIMENSIONS {
-            let j_scaled = j as CoordinateType * scale;
-
-            // Seed coordinates and k-direction noise functions.
-            let (mut x, mut y, mut z) = (block_coords.x + i_scaled, block_coords.y + i_scaled, block_coords.z + i_scaled);
-            match k_up {
-                BlockFace::Front => z = s_dimensions,
-                BlockFace::Back => z = 0,
-                BlockFace::Top => y = s_dimensions,
-                BlockFace::Bottom => y = 0,
-                BlockFace::Right => x = s_dimensions,
-                BlockFace::Left => x = 0,
-            };
-            match j_up {
-                BlockFace::Front | BlockFace::Back => z = block_coords.z + j_scaled,
-                BlockFace::Top | BlockFace::Bottom => y = block_coords.y + j_scaled,
-                BlockFace::Right | BlockFace::Left => x = block_coords.x + j_scaled,
-            };
-            let j_height = match j_up {
-                BlockFace::Front => z,
-                BlockFace::Back => s_dimensions - z,
-                BlockFace::Top => y,
-                BlockFace::Bottom => s_dimensions - y,
-                BlockFace::Right => x,
-                BlockFace::Left => s_dimensions - x,
-            };
-
-            let mut height = s_dimensions;
-            let mut k_layers: Vec<(&Block, CoordinateType)> = vec![];
-            for (block, layer) in block_layers.ranges.iter() {
-                let layer_top = biome.get_top_height(
-                    k_up,
-                    BlockCoordinate::new(x, y, z),
-                    structure_coords,
-                    s_dimensions,
-                    noise_generator,
-                    height - layer.middle_depth,
-                    layer.amplitude,
-                    layer.delta,
-                    layer.iterations,
-                );
-                k_layers.push((block, layer_top));
-                height = layer_top;
-            }
-
-            if j_layers_cache[j as usize][0].1 == j_height && k_layers[0].1 == j_height && first_both_45 == s_dimensions {
-                first_both_45 = j_height;
-            }
-
-            for (k, j_layers) in j_layers_cache.iter().enumerate() {
-                let mut chunk_block_coords = ChunkBlockCoordinate::new(i, i, i);
-                match j_up {
-                    BlockFace::Front | BlockFace::Back => chunk_block_coords.z = j,
-                    BlockFace::Top | BlockFace::Bottom => chunk_block_coords.y = j,
-                    BlockFace::Right | BlockFace::Left => chunk_block_coords.x = j,
-                };
-                match k_up {
-                    BlockFace::Front | BlockFace::Back => chunk_block_coords.z = k as CoordinateType,
-                    BlockFace::Top | BlockFace::Bottom => chunk_block_coords.y = k as CoordinateType,
-                    BlockFace::Right | BlockFace::Left => chunk_block_coords.x = k as CoordinateType,
-                };
-
-                let k_height = match k_up {
-                    BlockFace::Front => block_coords.z + chunk_block_coords.z * scale,
-                    BlockFace::Back => s_dimensions - (block_coords.z + chunk_block_coords.z * scale),
-                    BlockFace::Top => block_coords.y + chunk_block_coords.y * scale,
-                    BlockFace::Bottom => s_dimensions - (block_coords.y + chunk_block_coords.y * scale),
-                    BlockFace::Right => block_coords.x + chunk_block_coords.x * scale,
-                    BlockFace::Left => s_dimensions - (block_coords.x + chunk_block_coords.x * scale),
-                };
-
-                if j_height < first_both_45 || k_height < first_both_45 {
-                    // The top block needs different "top" to look good, the block can't tell which "up" looks good.
-                    let block_up = Planet::get_planet_face_without_structure(
-                        BlockCoordinate::new(
-                            block_coords.x + chunk_block_coords.x * scale,
-                            block_coords.y + chunk_block_coords.y * scale,
-                            block_coords.z + chunk_block_coords.z * scale,
-                        ),
-                        s_dimensions,
-                    );
-                    let block = block_layers.edge_block(
-                        j_height,
-                        k_height,
-                        j_layers,
-                        &k_layers,
-                        block_layers.sea_level,
-                        block_layers.sea_block(),
-                        scale,
-                    );
-                    if let Some(block) = block {
-                        chunk.set_block_at(chunk_block_coords, block, block_up);
-                    }
-                }
-            }
-        }
-    }
-}
-
-// Might trim 45s, see generate_edge_chunk.
-fn generate_corner_chunk<C: BlockStorer>(
-    block_coords: BlockCoordinate,
-    structure_coords: (f64, f64, f64),
-    s_dimensions: CoordinateType,
-    noise_generator: &noise::OpenSimplex,
-    biome: &dyn Biome,
-    chunk: &mut C,
-    x_up: BlockFace,
-    y_up: BlockFace,
-    z_up: BlockFace,
-    scale: CoordinateType,
-) {
-    let block_layers = biome.block_layers();
-
-    // x top height cache.
-    let mut x_layers: Vec<Vec<(&Block, CoordinateType)>> = vec![vec![]; CHUNK_DIMENSIONS as usize * CHUNK_DIMENSIONS as usize];
-    for j in 0..CHUNK_DIMENSIONS {
-        let j_scaled = j * scale;
-        for k in 0..CHUNK_DIMENSIONS {
-            let k_scaled = k * scale;
-
-            let index = flatten_2d(j as usize, k as usize, CHUNK_DIMENSIONS as usize);
-
-            // Seed coordinates for the noise function.
-            let seed_coords = match x_up {
-                BlockFace::Right => (s_dimensions, block_coords.y + j_scaled, block_coords.z + k_scaled),
-                _ => (0, block_coords.y + j_scaled, block_coords.z + k_scaled),
-            }
-            .into();
-
-            // Unmodified top height.
-            let mut height = s_dimensions;
-            for (block, level) in block_layers.ranges.iter() {
-                let level_top = biome.get_top_height(
-                    x_up,
-                    seed_coords,
-                    structure_coords,
-                    s_dimensions,
-                    noise_generator,
-                    height - level.middle_depth,
-                    level.amplitude,
-                    level.delta,
-                    level.iterations,
-                );
-                x_layers[index].push((block, level_top));
-                height = level_top;
-            }
-        }
-    }
-
-    // y top height cache.
-    let mut y_layers: Vec<Vec<(&Block, CoordinateType)>> = vec![vec![]; CHUNK_DIMENSIONS as usize * CHUNK_DIMENSIONS as usize];
-    for i in 0..CHUNK_DIMENSIONS {
-        let i_scaled = i * scale;
-        for k in 0..CHUNK_DIMENSIONS {
-            let k_scaled = k * scale;
-
-            let index = flatten_2d(i as usize, k as usize, CHUNK_DIMENSIONS as usize);
-
-            // Seed coordinates for the noise function. Which loop variable goes to which xyz must agree everywhere.
-            let seed_coords = match y_up {
-                BlockFace::Top => (block_coords.x + i_scaled, s_dimensions, block_coords.z + k_scaled),
-                _ => (block_coords.x + i_scaled, 0, block_coords.z + k_scaled),
-            }
-            .into();
-
-            // Unmodified top height.
-            let mut height = s_dimensions;
-            for (block, level) in block_layers.ranges.iter() {
-                let level_top = biome.get_top_height(
-                    y_up,
-                    seed_coords,
-                    structure_coords,
-                    s_dimensions,
-                    noise_generator,
-                    height - level.middle_depth,
-                    level.amplitude,
-                    level.delta,
-                    level.iterations,
-                );
-                y_layers[index].push((block, level_top));
-                height = level_top;
-            }
-        }
-    }
-
-    for i in 0..CHUNK_DIMENSIONS {
-        let i_scaled = i * scale;
-        for j in 0..CHUNK_DIMENSIONS {
-            let j_scaled = j * scale;
-
-            // Seed coordinates for the noise function.
-            let seed_coords = match z_up {
-                BlockFace::Front => (block_coords.x + i_scaled, block_coords.y + j_scaled, s_dimensions),
-                _ => (block_coords.x + i_scaled, block_coords.y + j_scaled, 0),
-            }
-            .into();
-
-            // Unmodified top height.
-            let mut height = s_dimensions;
-            let mut z_layers = vec![];
-            for (block, level) in block_layers.ranges.iter() {
-                let level_top = biome.get_top_height(
-                    z_up,
-                    seed_coords,
-                    structure_coords,
-                    s_dimensions,
-                    noise_generator,
-                    height - level.middle_depth,
-                    level.amplitude,
-                    level.delta,
-                    level.iterations,
-                );
-                z_layers.push((block, level_top));
-                height = level_top;
-            }
-
-            for k in 0..CHUNK_DIMENSIONS {
-                let k_scaled = k * scale;
-
-                let z_height = match z_up {
-                    BlockFace::Front => block_coords.z + k_scaled,
-                    _ => s_dimensions - (block_coords.z + k_scaled),
-                };
-                let y_height = match y_up {
-                    BlockFace::Top => block_coords.y + j_scaled,
-                    _ => s_dimensions - (block_coords.y + j_scaled),
-                };
-                let x_height = match x_up {
-                    BlockFace::Right => block_coords.x + i_scaled,
-                    _ => s_dimensions - (block_coords.x + i_scaled),
-                };
-
-                let block_up = Planet::get_planet_face_without_structure(
-                    BlockCoordinate::new(block_coords.x + i_scaled, block_coords.y + j_scaled, block_coords.z + k_scaled),
-                    s_dimensions,
-                );
-                let block = block_layers.corner_block(
-                    x_height,
-                    y_height,
-                    z_height,
-                    &x_layers[flatten_2d(j as usize, k as usize, CHUNK_DIMENSIONS as usize)],
-                    &y_layers[flatten_2d(i as usize, k as usize, CHUNK_DIMENSIONS as usize)],
-                    &z_layers,
-                    block_layers.sea_level,
-                    block_layers.sea_block(),
-                    scale,
-                );
-                if let Some(block) = block {
-                    chunk.set_block_at(ChunkBlockCoordinate::new(i, j, k), block, block_up);
-                }
-            }
-        }
-    }
-}
-
 /// Stores which blocks make up each biosphere, and how far below the top solid block each block generates.
 /// Blocks in ascending order ("stone" = 5 first, "grass" = 0 last).
 #[derive(Resource, Clone, Default, Debug)]
 pub struct BlockLayers {
     ranges: Vec<(Block, BlockLayer)>,
-    sea_block: Option<Block>,
-    sea_level: Option<CoordinateType>,
+    sea_block: Option<(CoordinateType, Block)>,
+}
+
+impl BlockLayers {
+    pub fn ranges(&self) -> std::slice::Iter<(cosmos_core::block::Block, BlockLayer)> {
+        self.ranges.iter()
+    }
+
+    pub fn sea_level(&self) -> Option<&(CoordinateType, Block)> {
+        self.sea_block.as_ref()
+    }
 }
 
 /// Stores the blocks and all the noise information for creating the top of their layer.
 /// For example, the "stone" BlockLevel has the noise paramters that create the boundry between dirt and stone.
 #[derive(Clone, Debug)]
 pub struct BlockLayer {
-    middle_depth: CoordinateType,
-    delta: f64,
-    amplitude: f64,
-    iterations: usize,
+    pub middle_depth: CoordinateType,
+    pub delta: f64,
+    pub amplitude: f64,
+    pub iterations: usize,
 }
 
 impl BlockLayer {
@@ -589,22 +197,15 @@ impl BlockLayers {
         let Some(block) = block_registry.from_id(block_id).cloned() else {
             return Err(BlockRangeError::MissingBlock(self));
         };
-        self.sea_block = Some(block);
-        self.sea_level = Some(sea_level);
+        self.sea_block = Some((sea_level, block));
         Ok(self)
     }
 
-    #[inline]
-    fn sea_block(&self) -> Option<&Block> {
-        self.sea_block.as_ref()
-    }
-
-    fn face_block<'a>(
+    pub fn face_block<'a>(
         &self,
         height: CoordinateType,
         block_layers: &[(&'a Block, CoordinateType)],
-        sea_level: Option<CoordinateType>,
-        sea_block: Option<&'a Block>,
+        sea_level: Option<&'a (CoordinateType, Block)>,
         scale: CoordinateType,
     ) -> Option<&'a Block> {
         if scale == 1 {
@@ -637,21 +238,24 @@ impl BlockLayers {
         }
 
         // No land blocks, must be sea or air.
-        if sea_level.map(|sea_level| height <= sea_level).unwrap_or(false) {
-            Some(sea_block.expect("Set sea level without setting a sea block."))
+        if let Some((sea_level, sea_block)) = sea_level {
+            if height <= *sea_level {
+                Some(sea_block)
+            } else {
+                None
+            }
         } else {
             None
         }
     }
 
-    fn edge_block<'a>(
+    pub fn edge_block<'a>(
         &self,
         j_height: CoordinateType,
         k_height: CoordinateType,
         j_layers: &[(&'a Block, CoordinateType)],
         k_layers: &[(&'a Block, CoordinateType)],
-        sea_level: Option<CoordinateType>,
-        sea_block: Option<&'a Block>,
+        sea_level: Option<&'a (CoordinateType, Block)>,
         scale: CoordinateType,
     ) -> Option<&'a Block> {
         if scale == 1 {
@@ -684,14 +288,18 @@ impl BlockLayers {
         }
 
         // No land blocks, must be sea or air.
-        if sea_level.map(|sea_level| j_height.max(k_height) <= sea_level).unwrap_or(false) {
-            Some(sea_block.expect("Set sea level without setting a sea block."))
+        if let Some((sea_level, sea_block)) = sea_level {
+            if j_height.max(k_height) <= *sea_level {
+                Some(sea_block)
+            } else {
+                None
+            }
         } else {
             None
         }
     }
 
-    fn corner_block<'a>(
+    pub fn corner_block<'a>(
         &self,
         x_height: CoordinateType,
         y_height: CoordinateType,
@@ -699,8 +307,7 @@ impl BlockLayers {
         x_layers: &[(&'a Block, CoordinateType)],
         y_layers: &[(&'a Block, CoordinateType)],
         z_layers: &[(&'a Block, CoordinateType)],
-        sea_level: Option<CoordinateType>,
-        sea_block: Option<&'a Block>,
+        sea_level: Option<&'a (CoordinateType, Block)>,
         scale: CoordinateType,
     ) -> Option<&'a Block> {
         if scale == 1 {
@@ -735,12 +342,12 @@ impl BlockLayers {
             }
         }
 
-        // No land blocks, must be sea or air.
-        if sea_level
-            .map(|sea_level| x_height.max(y_height).max(z_height) <= sea_level)
-            .unwrap_or(false)
-        {
-            Some(sea_block.expect("Set sea level without setting a sea block."))
+        if let Some((sea_level, sea_block)) = sea_level {
+            if x_height.max(y_height).max(z_height) <= *sea_level {
+                Some(sea_block)
+            } else {
+                None
+            }
         } else {
             None
         }
@@ -761,42 +368,48 @@ fn generate(
     let chunk_faces = Planet::chunk_planet_faces_with_scale(first_block_coord, s_dimensions, scale);
     match chunk_faces {
         ChunkFaces::Face(up) => {
-            generate_face_chunk::<LodChunk>(
+            biome.generate_face_chunk_lod(
+                biome,
                 first_block_coord,
                 (structure_x, structure_y, structure_z),
                 s_dimensions,
                 noise_generator,
-                biome,
                 &mut lod_chunk,
                 up,
                 scale,
+                ChunkBlockCoordinate::min(),
+                ChunkBlockCoordinate::max(),
             );
         }
         ChunkFaces::Edge(j_up, k_up) => {
-            generate_edge_chunk::<LodChunk>(
+            biome.generate_edge_chunk_lod(
+                biome,
                 first_block_coord,
                 (structure_x, structure_y, structure_z),
                 s_dimensions,
                 noise_generator,
-                biome,
                 &mut lod_chunk,
                 j_up,
                 k_up,
                 scale,
+                ChunkBlockCoordinate::min(),
+                ChunkBlockCoordinate::max(),
             );
         }
         ChunkFaces::Corner(x_up, y_up, z_up) => {
-            generate_corner_chunk::<LodChunk>(
+            biome.generate_corner_chunk_lod(
+                biome,
                 first_block_coord,
                 (structure_x, structure_y, structure_z),
                 s_dimensions,
                 noise_generator,
-                biome,
                 &mut lod_chunk,
                 x_up,
                 y_up,
                 z_up,
                 scale,
+                ChunkBlockCoordinate::min(),
+                ChunkBlockCoordinate::max(),
             );
         }
     }
@@ -805,7 +418,7 @@ fn generate(
     *generating_lod = GeneratingLod::DoneGenerating(lod_chunk);
 }
 
-fn recurse<T: Component + Default + Clone>(
+fn recurse<T: BiosphereMarkerComponent>(
     generating_lod: &mut GeneratingLod,
     (structure_x, structure_y, structure_z): (f64, f64, f64),
     first_block_coord: BlockCoordinate,
@@ -859,7 +472,7 @@ fn recurse<T: Component + Default + Clone>(
     }
 }
 
-pub(crate) fn begin_generating_lods<T: Component + Default + Clone>(
+pub(crate) fn begin_generating_lods<T: BiosphereMarkerComponent>(
     query: Query<(Entity, &LodNeedsGeneratedForPlayer), With<T>>,
     is_biosphere: Query<(&Structure, &Location), With<T>>,
     noise_generator: Res<ReadOnlyNoise>,
@@ -889,11 +502,7 @@ pub(crate) fn begin_generating_lods<T: Component + Default + Clone>(
         let task = task_pool.spawn(async move {
             let noise = noise_generator.inner();
 
-            let biome = SimpleBiome {
-                block_layers: block_ranges,
-                id: 0,
-                unlocalized_name: "asdf".into(),
-            };
+            let biome = SimpleBiome::new("asdf", block_ranges);
 
             recurse::<T>(
                 &mut generating_lod.generating_lod,
@@ -961,12 +570,13 @@ fn recursively_create_lod_delta(generated_lod: GeneratingLod) -> LodDelta {
 }
 
 /// Calls generate_face_chunk, generate_edge_chunk, and generate_corner_chunk to generate the chunks of a planet.
-pub fn generate_planet<T: Component + Clone + Default, E: TGenerateChunkEvent + Send + Sync + 'static>(
+pub fn generate_planet<T: BiosphereMarkerComponent, E: TGenerateChunkEvent>(
     mut query: Query<(&mut Structure, &Location)>,
     mut generating: ResMut<GeneratingChunks<T>>,
     mut events: EventReader<E>,
     noise_generator: Res<ReadOnlyNoise>,
-    block_ranges: Res<BlockLayers>,
+    biosphere_biomes: Res<BiosphereBiomesRegistry<T>>,
+    biome_decider: Res<BiomeDecider<T>>,
 ) {
     let chunks = events
         .iter()
@@ -1007,9 +617,10 @@ pub fn generate_planet<T: Component + Clone + Default, E: TGenerateChunkEvent + 
 
     if !chunks.is_empty() {
         for (mut chunk, s_dimensions, location, structure_entity) in chunks {
-            let block_ranges = block_ranges.clone();
-
             let noise = noise_generator.clone();
+
+            let biome_decider = *biome_decider;
+            let biosphere_biomes = biosphere_biomes.clone();
 
             let task = thread_pool.spawn(async move {
                 let noise_generator = noise.inner();
@@ -1024,52 +635,56 @@ pub fn generate_planet<T: Component + Clone + Default, E: TGenerateChunkEvent + 
                 // To save multiplication operations later.
                 let first_block_coord = chunk.chunk_coordinates().first_structure_block();
 
-                let biome = SimpleBiome {
-                    block_layers: block_ranges.clone(),
-                    id: 0,
-                    unlocalized_name: "Asdf".into(),
-                };
+                let biome_params = biome_decider.biome_parameters_at(&location, first_block_coord, &noise_generator);
+
+                let biome = biosphere_biomes.ideal_biome_for(biome_params);
 
                 // Get all possible planet faces from the chunk corners.
                 let chunk_faces = Planet::chunk_planet_faces(first_block_coord, s_dimensions);
                 match chunk_faces {
                     ChunkFaces::Face(up) => {
-                        generate_face_chunk::<Chunk>(
+                        biome.generate_face_chunk(
+                            biome.as_ref(),
                             first_block_coord,
                             (structure_x, structure_y, structure_z),
                             s_dimensions,
                             &noise_generator,
-                            &biome,
                             &mut chunk,
                             up,
                             1,
+                            ChunkBlockCoordinate::min(),
+                            ChunkBlockCoordinate::max(),
                         );
                     }
                     ChunkFaces::Edge(j_up, k_up) => {
-                        generate_edge_chunk::<Chunk>(
+                        biome.generate_edge_chunk(
+                            biome.as_ref(),
                             first_block_coord,
                             (structure_x, structure_y, structure_z),
                             s_dimensions,
                             &noise_generator,
-                            &biome,
                             &mut chunk,
                             j_up,
                             k_up,
                             1,
+                            ChunkBlockCoordinate::min(),
+                            ChunkBlockCoordinate::max(),
                         );
                     }
                     ChunkFaces::Corner(x_up, y_up, z_up) => {
-                        generate_corner_chunk::<Chunk>(
+                        biome.generate_corner_chunk(
+                            biome.as_ref(),
                             first_block_coord,
                             (structure_x, structure_y, structure_z),
                             s_dimensions,
                             &noise_generator,
-                            &biome,
                             &mut chunk,
                             x_up,
                             y_up,
                             z_up,
                             1,
+                            ChunkBlockCoordinate::min(),
+                            ChunkBlockCoordinate::max(),
                         );
                     }
                 }

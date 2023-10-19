@@ -340,6 +340,18 @@ impl ChunkBlockCoordinate {
             z: value.z & (CHUNK_DIMENSIONS - 1),
         }
     }
+
+    #[inline]
+    /// `Self::new(0, 0, 0)`
+    pub fn min() -> Self {
+        Self::new(0, 0, 0)
+    }
+
+    #[inline]
+    /// `Self::new(CHUNK_DIMENSIONS, CHUNK_DIMENSIONS, CHUNK_DIMENSIONS)`
+    pub fn max() -> Self {
+        Self::new(CHUNK_DIMENSIONS, CHUNK_DIMENSIONS, CHUNK_DIMENSIONS)
+    }
 }
 
 impl UnboundChunkBlockCoordinate {
@@ -397,6 +409,16 @@ impl ChunkCoordinate {
     /// Returns the left, bottom, back block of this chunk
     pub fn first_structure_block(&self) -> BlockCoordinate {
         BlockCoordinate::new(self.x * CHUNK_DIMENSIONS, self.y * CHUNK_DIMENSIONS, self.z * CHUNK_DIMENSIONS)
+    }
+
+    /// Returns the "middle" block of this chunk. Note that the middle isn't actually the middle, since a chunk has an even number of blocks.
+    /// The "middle" block is 1 closer to the positive side than the negative.
+    pub fn middle_structure_block(&self) -> BlockCoordinate {
+        BlockCoordinate::new(
+            self.x * CHUNK_DIMENSIONS + CHUNK_DIMENSIONS / 2,
+            self.y * CHUNK_DIMENSIONS + CHUNK_DIMENSIONS / 2,
+            self.z * CHUNK_DIMENSIONS + CHUNK_DIMENSIONS / 2,
+        )
     }
 
     /// Returns the right, top, front block of this chunk
