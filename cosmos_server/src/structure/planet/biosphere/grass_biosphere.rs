@@ -21,9 +21,7 @@ use noise::NoiseFn;
 use crate::GameState;
 
 use super::{
-    biosphere_generation::{
-        generate_planet, notify_when_done_generating_terrain, BlockLayers, DefaultBiosphereGenerationStrategy, GenerateChunkFeaturesEvent,
-    },
+    biosphere_generation::{generate_planet, notify_when_done_generating_terrain, BlockLayers, GenerateChunkFeaturesEvent},
     generation_tools::fill,
     register_biosphere, TBiosphere, TGenerateChunkEvent, TemperatureRange,
 };
@@ -69,7 +67,7 @@ impl TBiosphere<GrassBiosphereMarker, GrassChunkNeedsGeneratedEvent> for GrassBi
 
 fn make_block_ranges(block_registry: Res<Registry<Block>>, mut commands: Commands) {
     commands.insert_resource(
-        BlockLayers::<GrassBiosphereMarker>::default()
+        BlockLayers::default()
             .add_noise_layer("cosmos:short_grass", &block_registry, 160, 0.05, 7.0, 9)
             .expect("Short Grass missing")
             .add_fixed_layer("cosmos:grass", &block_registry, 1)
@@ -589,7 +587,7 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         (
-            generate_planet::<GrassBiosphereMarker, GrassChunkNeedsGeneratedEvent, DefaultBiosphereGenerationStrategy>,
+            generate_planet::<GrassBiosphereMarker, GrassChunkNeedsGeneratedEvent>,
             notify_when_done_generating_terrain::<GrassBiosphereMarker>,
             generate_chunk_features,
         )

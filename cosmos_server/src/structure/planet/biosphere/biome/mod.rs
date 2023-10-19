@@ -7,9 +7,40 @@ use cosmos_core::{
     structure::coordinates::{BlockCoordinate, CoordinateType},
     utils::array_utils::flatten,
 };
+use noise::NoiseFn;
+
+use super::biosphere_generation::BlockLayers;
+
+const GUIDE_MIN: CoordinateType = 100;
+
+pub struct SimpleBiome {
+    pub id: u16,
+    pub unlocalized_name: String,
+    pub block_layers: BlockLayers,
+}
+
+impl Identifiable for SimpleBiome {
+    fn id(&self) -> u16 {
+        self.id
+    }
+
+    fn set_numeric_id(&mut self, id: u16) {
+        self.id = id;
+    }
+
+    fn unlocalized_name(&self) -> &str {
+        &self.unlocalized_name
+    }
+}
+
+impl Biome for SimpleBiome {
+    fn block_layers(&self) -> &BlockLayers {
+        &self.block_layers
+    }
+}
 
 pub trait Biome: Identifiable {
-    fn generate_column(&self);
+    fn block_layers(&self) -> &BlockLayers;
 
     /// Gets the "y" value of a block on the planet. This "y" value is relative to the face the block is on.
     ///
@@ -24,21 +55,24 @@ pub trait Biome: Identifiable {
         &self,
         noise_generator: &noise::OpenSimplex,
         block_coords: BlockCoordinate,
-        structure_coords: (f64, f64, f64),
-        middle_air_start: CoordinateType,
+        (structure_x, structure_y, structure_z): (f64, f64, f64),
+        middle: CoordinateType,
         amplitude: f64,
         delta: f64,
         iterations: usize,
     ) -> f64 {
-        get_block_height(
-            noise_generator,
-            block_coords,
-            structure_coords,
-            middle_air_start,
-            amplitude,
-            delta,
-            iterations,
-        )
+        let mut depth: f64 = 0.0;
+        for iteration in 1..=iterations {
+            let iteration = iteration as f64;
+            depth += noise_generator.get([
+                (block_coords.x as f64 + structure_x) * (delta / iteration),
+                (block_coords.y as f64 + structure_y) * (delta / iteration),
+                (block_coords.z as f64 + structure_z) * (delta / iteration),
+            ]) * amplitude
+                * iteration;
+        }
+
+        middle as f64 + depth
     }
 
     /// Returns how much the edge height should be averaged in from the other side it's approaching.
@@ -113,7 +147,7 @@ pub trait Biome: Identifiable {
                 BlockFace::Left => (x_coord, block_coords.y, block_coords.z),
             }
             .into();
-            x_height = self::get_block_height(
+            x_height = self.get_block_height(
                 noise_generator,
                 x_seed,
                 structure_coords,
@@ -122,7 +156,7 @@ pub trait Biome: Identifiable {
                 delta,
                 iterations,
             );
-            x_coefficient = Self::get_mirror_coefficient(block_coords.x, x_height as CoordinateType, s_dimensions);
+            x_coefficient = self.get_mirror_coefficient(block_coords.x, x_height as CoordinateType, s_dimensions);
         }
 
         // Y.
@@ -139,7 +173,7 @@ pub trait Biome: Identifiable {
                 BlockFace::Left => (bottom, y_coord, block_coords.z.clamp(bottom, top)),
             }
             .into();
-            y_height = self::get_block_height(
+            y_height = self.get_block_height(
                 noise_generator,
                 y_seed,
                 structure_coords,
@@ -148,7 +182,7 @@ pub trait Biome: Identifiable {
                 delta,
                 iterations,
             );
-            y_coefficient = Self::get_mirror_coefficient(block_coords.y, y_height as CoordinateType, s_dimensions);
+            y_coefficient = self.get_mirror_coefficient(block_coords.y, y_height as CoordinateType, s_dimensions);
         }
 
         // Z.
@@ -165,7 +199,7 @@ pub trait Biome: Identifiable {
                 BlockFace::Left => (bottom, block_coords.y.clamp(bottom, top), z_coord),
             }
             .into();
-            z_height = self::get_block_height(
+            z_height = self.get_block_height(
                 noise_generator,
                 z_seed,
                 structure_coords,
@@ -174,13 +208,13 @@ pub trait Biome: Identifiable {
                 delta,
                 iterations,
             );
-            z_coefficient = Self::get_mirror_coefficient(block_coords.z, z_height as CoordinateType, s_dimensions);
+            z_coefficient = self.get_mirror_coefficient(block_coords.z, z_height as CoordinateType, s_dimensions);
         }
 
         match block_up {
-            BlockFace::Front | BlockFace::Back => Self::merge(z_height, x_coefficient, x_height, y_coefficient, y_height),
-            BlockFace::Top | BlockFace::Bottom => Self::merge(y_height, x_coefficient, x_height, z_coefficient, z_height),
-            BlockFace::Right | BlockFace::Left => Self::merge(x_height, y_coefficient, y_height, z_coefficient, z_height),
+            BlockFace::Front | BlockFace::Back => self.merge(z_height, x_coefficient, x_height, y_coefficient, y_height),
+            BlockFace::Top | BlockFace::Bottom => self.merge(y_height, x_coefficient, x_height, z_coefficient, z_height),
+            BlockFace::Right | BlockFace::Left => self.merge(x_height, y_coefficient, y_height, z_coefficient, z_height),
         }
     }
 
@@ -206,7 +240,7 @@ pub trait Biome: Identifiable {
         delta: f64,
         iterations: usize,
     ) -> CoordinateType {
-        Self::guide(
+        self.guide(
             noise_generator,
             block_up,
             block_coords,

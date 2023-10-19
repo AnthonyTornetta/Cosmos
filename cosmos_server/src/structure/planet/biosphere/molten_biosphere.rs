@@ -19,9 +19,7 @@ use cosmos_core::{
 use crate::{init::init_world::ServerSeed, GameState};
 
 use super::{
-    biosphere_generation::{
-        generate_planet, notify_when_done_generating_terrain, BlockLayers, DefaultBiosphereGenerationStrategy, GenerateChunkFeaturesEvent,
-    },
+    biosphere_generation::{generate_planet, notify_when_done_generating_terrain, BlockLayers, GenerateChunkFeaturesEvent},
     register_biosphere, TBiosphere, TGenerateChunkEvent, TemperatureRange,
 };
 
@@ -66,7 +64,7 @@ impl TBiosphere<MoltenBiosphereMarker, MoltenChunkNeedsGeneratedEvent> for Molte
 
 fn make_block_ranges(block_registry: Res<Registry<Block>>, mut commands: Commands) {
     commands.insert_resource(
-        BlockLayers::<MoltenBiosphereMarker>::default()
+        BlockLayers::default()
             .with_sea_level_block("cosmos:cheese", &block_registry, 620)
             .expect("Cheese missing!")
             .add_noise_layer("cosmos:molten_stone", &block_registry, 160, 0.10, 7.0, 9)
@@ -197,7 +195,7 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         (
-            generate_planet::<MoltenBiosphereMarker, MoltenChunkNeedsGeneratedEvent, DefaultBiosphereGenerationStrategy>,
+            generate_planet::<MoltenBiosphereMarker, MoltenChunkNeedsGeneratedEvent>,
             notify_when_done_generating_terrain::<MoltenBiosphereMarker>,
             generate_chunk_features,
         )

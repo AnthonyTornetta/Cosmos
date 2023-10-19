@@ -13,9 +13,7 @@ use cosmos_core::{
 use crate::GameState;
 
 use super::{
-    biosphere_generation::{
-        generate_planet, notify_when_done_generating_terrain, BlockLayers, DefaultBiosphereGenerationStrategy, GenerateChunkFeaturesEvent,
-    },
+    biosphere_generation::{generate_planet, notify_when_done_generating_terrain, BlockLayers, GenerateChunkFeaturesEvent},
     register_biosphere, TBiosphere, TGenerateChunkEvent, TemperatureRange,
 };
 
@@ -63,7 +61,7 @@ impl TBiosphere<IceBiosphereMarker, IceChunkNeedsGeneratedEvent> for IceBiospher
 
 fn make_block_ranges(block_registry: Res<Registry<Block>>, mut commands: Commands) {
     commands.insert_resource(
-        BlockLayers::<IceBiosphereMarker>::default()
+        BlockLayers::default()
             .add_noise_layer("cosmos:ice", &block_registry, 160, 0.01, 4.0, 1)
             .expect("Ice missing")
             .add_fixed_layer("cosmos:water", &block_registry, 4)
@@ -103,7 +101,7 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         (
-            generate_planet::<IceBiosphereMarker, IceChunkNeedsGeneratedEvent, DefaultBiosphereGenerationStrategy>,
+            generate_planet::<IceBiosphereMarker, IceChunkNeedsGeneratedEvent>,
             notify_when_done_generating_terrain::<IceBiosphereMarker>,
             generate_chunk_features,
         )
