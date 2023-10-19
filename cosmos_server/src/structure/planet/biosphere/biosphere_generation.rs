@@ -747,38 +747,38 @@ impl BlockLayers {
     }
 }
 
-fn generate<T: Component + Default + Clone, S: BiosphereGenerationStrategy + 'static>(
+fn generate(
     generating_lod: &mut GeneratingLod,
     (structure_x, structure_y, structure_z): (f64, f64, f64),
     first_block_coord: BlockCoordinate,
     s_dimensions: CoordinateType,
     scale: CoordinateType,
     noise_generator: &noise::OpenSimplex,
-    block_ranges: &BlockLayers<T>,
+    biome: &dyn Biome,
 ) {
     let mut lod_chunk = Box::new(LodChunk::new());
 
     let chunk_faces = Planet::chunk_planet_faces_with_scale(first_block_coord, s_dimensions, scale);
     match chunk_faces {
         ChunkFaces::Face(up) => {
-            generate_face_chunk::<S, T, LodChunk>(
+            generate_face_chunk::<LodChunk>(
                 first_block_coord,
                 (structure_x, structure_y, structure_z),
                 s_dimensions,
                 noise_generator,
-                block_ranges,
+                biome,
                 &mut lod_chunk,
                 up,
                 scale,
             );
         }
         ChunkFaces::Edge(j_up, k_up) => {
-            generate_edge_chunk::<S, T, LodChunk>(
+            generate_edge_chunk::<LodChunk>(
                 first_block_coord,
                 (structure_x, structure_y, structure_z),
                 s_dimensions,
                 noise_generator,
-                block_ranges,
+                biome,
                 &mut lod_chunk,
                 j_up,
                 k_up,
@@ -786,12 +786,12 @@ fn generate<T: Component + Default + Clone, S: BiosphereGenerationStrategy + 'st
             );
         }
         ChunkFaces::Corner(x_up, y_up, z_up) => {
-            generate_corner_chunk::<S, T, LodChunk>(
+            generate_corner_chunk::<LodChunk>(
                 first_block_coord,
                 (structure_x, structure_y, structure_z),
                 s_dimensions,
                 noise_generator,
-                block_ranges,
+                biome,
                 &mut lod_chunk,
                 x_up,
                 y_up,
@@ -805,26 +805,26 @@ fn generate<T: Component + Default + Clone, S: BiosphereGenerationStrategy + 'st
     *generating_lod = GeneratingLod::DoneGenerating(lod_chunk);
 }
 
-fn recurse<T: Component + Default + Clone, S: BiosphereGenerationStrategy + 'static>(
+fn recurse<T: Component + Default + Clone>(
     generating_lod: &mut GeneratingLod,
     (structure_x, structure_y, structure_z): (f64, f64, f64),
     first_block_coord: BlockCoordinate,
     s_dimensions: CoordinateType,
     scale: CoordinateType,
     noise_generator: &Noise,
-    block_ranges: &BlockLayers<T>,
+    biome: &dyn Biome,
 ) {
     match generating_lod {
         GeneratingLod::NeedsGenerated => {
             *generating_lod = GeneratingLod::BeingGenerated;
-            generate::<T, S>(
+            generate(
                 generating_lod,
                 (structure_x, structure_y, structure_z),
                 first_block_coord,
                 s_dimensions,
                 scale,
                 noise_generator,
-                block_ranges,
+                biome,
             );
         }
         GeneratingLod::Children(children) => {
@@ -844,14 +844,14 @@ fn recurse<T: Component + Default + Clone, S: BiosphereGenerationStrategy + 'sta
             ];
 
             children.par_iter_mut().zip(coords).for_each(|(child, (bx, by, bz))| {
-                recurse::<T, S>(
+                recurse::<T>(
                     child,
                     (structure_x, structure_y, structure_z),
                     BlockCoordinate::new(bx, by, bz) + first_block_coord,
                     s_dimensions,
                     s2,
                     noise_generator,
-                    block_ranges,
+                    biome,
                 );
             });
         }
@@ -859,11 +859,11 @@ fn recurse<T: Component + Default + Clone, S: BiosphereGenerationStrategy + 'sta
     }
 }
 
-pub(crate) fn begin_generating_lods<T: Component + Default + Clone, S: BiosphereGenerationStrategy + 'static>(
+pub(crate) fn begin_generating_lods<T: Component + Default + Clone>(
     query: Query<(Entity, &LodNeedsGeneratedForPlayer), With<T>>,
     is_biosphere: Query<(&Structure, &Location), With<T>>,
     noise_generator: Res<ReadOnlyNoise>,
-    block_ranges: Res<BlockLayers<T>>,
+    block_ranges: Res<BlockLayers>,
     mut currently_generating: ResMut<GeneratingLods<T>>,
     mut commands: Commands,
 ) {
@@ -889,14 +889,20 @@ pub(crate) fn begin_generating_lods<T: Component + Default + Clone, S: Biosphere
         let task = task_pool.spawn(async move {
             let noise = noise_generator.inner();
 
-            recurse::<T, S>(
+            let biome = SimpleBiome {
+                block_layers: block_ranges,
+                id: 0,
+                unlocalized_name: "asdf".into(),
+            };
+
+            recurse::<T>(
                 &mut generating_lod.generating_lod,
                 (structure_coords.x, structure_coords.y, structure_coords.z),
                 BlockCoordinate::new(0, 0, 0),
                 dimensions,
                 dimensions / CHUNK_DIMENSIONS,
                 &noise,
-                &block_ranges,
+                &biome,
             );
 
             let lod_delta = recursively_create_lod_delta(generating_lod.generating_lod);

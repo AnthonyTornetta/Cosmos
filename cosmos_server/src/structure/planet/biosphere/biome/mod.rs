@@ -3,7 +3,6 @@ use std::{hash::Hash, marker::PhantomData};
 use bevy::utils::HashMap;
 use cosmos_core::{
     block::BlockFace,
-    registry::identifiable::Identifiable,
     structure::coordinates::{BlockCoordinate, CoordinateType},
     utils::array_utils::flatten,
 };
@@ -19,12 +18,16 @@ pub struct SimpleBiome {
     pub block_layers: BlockLayers,
 }
 
-impl Identifiable for SimpleBiome {
+impl Biome for SimpleBiome {
+    fn block_layers(&self) -> &BlockLayers {
+        &self.block_layers
+    }
+
     fn id(&self) -> u16 {
         self.id
     }
 
-    fn set_numeric_id(&mut self, id: u16) {
+    fn set_id(&mut self, id: u16) {
         self.id = id;
     }
 
@@ -33,13 +36,11 @@ impl Identifiable for SimpleBiome {
     }
 }
 
-impl Biome for SimpleBiome {
-    fn block_layers(&self) -> &BlockLayers {
-        &self.block_layers
-    }
-}
+pub trait Biome: Send + Sync + 'static {
+    fn id(&self) -> u16;
+    fn unlocalized_name(&self) -> &str;
+    fn set_id(&mut self, id: u16);
 
-pub trait Biome: Identifiable {
     fn block_layers(&self) -> &BlockLayers;
 
     /// Gets the "y" value of a block on the planet. This "y" value is relative to the face the block is on.

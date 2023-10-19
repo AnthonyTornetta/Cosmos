@@ -31,9 +31,7 @@ use crate::{
     state::GameState,
 };
 
-use self::biosphere_generation::{
-    begin_generating_lods, generate_planet, notify_when_done_generating_terrain, BiosphereGenerationStrategy, GenerateChunkFeaturesEvent,
-};
+use self::biosphere_generation::{begin_generating_lods, generate_planet, notify_when_done_generating_terrain, GenerateChunkFeaturesEvent};
 
 use super::{
     generation::planet_generator::check_needs_generated_system,
@@ -105,11 +103,7 @@ impl<T: Component> GeneratingChunk<T> {
 ///
 /// T: The biosphere's marker component type
 /// E: The biosphere's generate chunk event type
-pub fn register_biosphere<
-    T: Component + Default + Clone,
-    E: Send + Sync + 'static + TGenerateChunkEvent,
-    S: BiosphereGenerationStrategy + 'static,
->(
+pub fn register_biosphere<T: Component + Default + Clone, E: Send + Sync + 'static + TGenerateChunkEvent>(
     app: &mut App,
     biosphere_id: &'static str,
     temperature_range: TemperatureRange,
@@ -154,10 +148,10 @@ pub fn register_biosphere<
                 .before(done_loading),
                 // Checks if any blocks need generated for this biosphere
                 (
-                    generate_planet::<T, E, S>,
+                    generate_planet::<T, E>,
                     notify_when_done_generating_terrain::<T>,
                     generate_player_lods::<T>.before(start_generating_lods),
-                    begin_generating_lods::<T, S>,
+                    begin_generating_lods::<T>,
                     check_needs_generated_system::<E, T>,
                     check_done_generating_lods::<T>,
                 )

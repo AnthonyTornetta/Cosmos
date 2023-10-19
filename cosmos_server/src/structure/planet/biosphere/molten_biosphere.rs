@@ -19,7 +19,7 @@ use cosmos_core::{
 use crate::{init::init_world::ServerSeed, GameState};
 
 use super::{
-    biosphere_generation::{generate_planet, notify_when_done_generating_terrain, BlockLayers, GenerateChunkFeaturesEvent},
+    biosphere_generation::{BlockLayers, GenerateChunkFeaturesEvent},
     register_biosphere, TBiosphere, TGenerateChunkEvent, TemperatureRange,
 };
 
@@ -186,7 +186,7 @@ pub fn generate_chunk_features(
 }
 
 pub(super) fn register(app: &mut App) {
-    register_biosphere::<MoltenBiosphereMarker, MoltenChunkNeedsGeneratedEvent, DefaultBiosphereGenerationStrategy>(
+    register_biosphere::<MoltenBiosphereMarker, MoltenChunkNeedsGeneratedEvent>(
         app,
         "cosmos:biosphere_molten",
         TemperatureRange::new(0.0, 0.0),

@@ -13,7 +13,7 @@ use cosmos_core::{
 use crate::GameState;
 
 use super::{
-    biosphere_generation::{generate_planet, notify_when_done_generating_terrain, BlockLayers, GenerateChunkFeaturesEvent},
+    biosphere_generation::{BlockLayers, GenerateChunkFeaturesEvent},
     register_biosphere, TBiosphere, TGenerateChunkEvent, TemperatureRange,
 };
 
@@ -96,11 +96,7 @@ pub fn generate_chunk_features(
 }
 
 pub(super) fn register(app: &mut App) {
-    register_biosphere::<IceBiosphereMarker, IceChunkNeedsGeneratedEvent, DefaultBiosphereGenerationStrategy>(
-        app,
-        "cosmos:biosphere_ice",
-        TemperatureRange::new(0.0, 300.0),
-    );
+    register_biosphere::<IceBiosphereMarker, IceChunkNeedsGeneratedEvent>(app, "cosmos:biosphere_ice", TemperatureRange::new(0.0, 300.0));
 
     app.add_systems(Update, generate_chunk_features.run_if(in_state(GameState::Playing)))
         .add_systems(OnEnter(GameState::PostLoading), make_block_ranges);

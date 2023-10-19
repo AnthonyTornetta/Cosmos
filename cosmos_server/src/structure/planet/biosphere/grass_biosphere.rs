@@ -20,7 +20,7 @@ use noise::NoiseFn;
 use crate::{init::init_world::Noise, GameState};
 
 use super::{
-    biosphere_generation::{generate_planet, notify_when_done_generating_terrain, BlockLayers, GenerateChunkFeaturesEvent},
+    biosphere_generation::{BlockLayers, GenerateChunkFeaturesEvent},
     generation_tools::fill,
     register_biosphere, TBiosphere, TGenerateChunkEvent, TemperatureRange,
 };
@@ -580,7 +580,7 @@ pub fn generate_chunk_features(
 }
 
 pub(super) fn register(app: &mut App) {
-    register_biosphere::<GrassBiosphereMarker, GrassChunkNeedsGeneratedEvent, DefaultBiosphereGenerationStrategy>(
+    register_biosphere::<GrassBiosphereMarker, GrassChunkNeedsGeneratedEvent>(
         app,
         "cosmos:biosphere_grass",
         TemperatureRange::new(250.0, 400.0),
