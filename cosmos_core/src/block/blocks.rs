@@ -23,54 +23,54 @@ fn add_cosmos_blocks(
     let id = loading.register_loader(&mut start_writer);
 
     blocks.register(
-        BlockBuilder::new("cosmos:stone".into(), 10.0)
+        BlockBuilder::new("cosmos:stone", 10.0)
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .create(),
     );
 
     blocks.register(
-        BlockBuilder::new("cosmos:grass".into(), 3.0)
+        BlockBuilder::new("cosmos:grass", 3.0)
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .create(),
     );
 
     blocks.register(
-        BlockBuilder::new("cosmos:dirt".into(), 3.0)
+        BlockBuilder::new("cosmos:dirt", 3.0)
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .create(),
     );
 
     blocks.register(
-        BlockBuilder::new("cosmos:log".into(), 3.0)
+        BlockBuilder::new("cosmos:log", 3.0)
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .create(),
     );
 
     blocks.register(
-        BlockBuilder::new("cosmos:cherry_leaf".into(), 0.1)
+        BlockBuilder::new("cosmos:cherry_leaf", 0.1)
             .add_property(BlockProperty::Transparent)
             .create(),
     );
 
     blocks.register(
-        BlockBuilder::new("cosmos:redwood_log".into(), 3.0)
+        BlockBuilder::new("cosmos:redwood_log", 3.0)
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .create(),
     );
 
     blocks.register(
-        BlockBuilder::new("cosmos:redwood_leaf".into(), 0.1)
+        BlockBuilder::new("cosmos:redwood_leaf", 0.1)
             .add_property(BlockProperty::Transparent)
             .create(),
     );
 
     blocks.register(
-        BlockBuilder::new("cosmos:ship_core".into(), 2.0)
+        BlockBuilder::new("cosmos:ship_core", 2.0)
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .add_property(BlockProperty::ShipOnly)
@@ -78,49 +78,49 @@ fn add_cosmos_blocks(
     );
 
     blocks.register(
-        BlockBuilder::new("cosmos:energy_cell".to_owned(), 2.0)
+        BlockBuilder::new("cosmos:energy_cell", 2.0)
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .create(),
     );
 
     blocks.register(
-        BlockBuilder::new("cosmos:reactor".to_owned(), 2.0)
+        BlockBuilder::new("cosmos:reactor", 2.0)
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .create(),
     );
 
     blocks.register(
-        BlockBuilder::new("cosmos:laser_cannon".to_owned(), 2.0)
+        BlockBuilder::new("cosmos:laser_cannon", 2.0)
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .create(),
     );
 
     blocks.register(
-        BlockBuilder::new("cosmos:ship_hull".to_owned(), 4.0)
+        BlockBuilder::new("cosmos:ship_hull", 4.0)
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .create(),
     );
 
     blocks.register(
-        BlockBuilder::new("cosmos:thruster".to_owned(), 2.0)
+        BlockBuilder::new("cosmos:thruster", 2.0)
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .create(),
     );
 
     blocks.register(
-        BlockBuilder::new("cosmos:light".to_owned(), 0.1)
+        BlockBuilder::new("cosmos:light", 0.1)
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .create(),
     );
 
     blocks.register(
-        BlockBuilder::new("cosmos:glass".to_owned(), 4.0)
+        BlockBuilder::new("cosmos:glass", 4.0)
             .add_property(BlockProperty::Transparent)
             .add_property(BlockProperty::Full)
             .create(),
@@ -134,7 +134,7 @@ fn add_cosmos_blocks(
     );
 
     blocks.register(
-        BlockBuilder::new("cosmos:molten_stone".to_owned(), 10.0)
+        BlockBuilder::new("cosmos:molten_stone", 10.0)
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .create(),
@@ -148,14 +148,14 @@ fn add_cosmos_blocks(
     );
 
     blocks.register(
-        BlockBuilder::new("cosmos:cheese".into(), 10.0)
+        BlockBuilder::new("cosmos:cheese", 10.0)
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .create(),
     );
 
     blocks.register(
-        BlockBuilder::new("cosmos:short_grass".into(), 10.0)
+        BlockBuilder::new("cosmos:short_grass", 10.0)
             .add_property(BlockProperty::Opaque)
             .create(),
     );
@@ -173,7 +173,7 @@ fn add_air_block(
     let id = loader.register_loader(&mut add_loader_event);
 
     blocks.register(
-        BlockBuilder::new("cosmos:air".into(), 0.0)
+        BlockBuilder::new("cosmos:air", 0.0)
             .add_property(BlockProperty::Transparent)
             .add_property(BlockProperty::Empty)
             .create(),
