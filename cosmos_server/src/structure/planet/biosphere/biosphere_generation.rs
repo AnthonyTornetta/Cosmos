@@ -7,7 +7,7 @@ use bevy::{
     tasks::AsyncComputeTaskPool,
 };
 use cosmos_core::{
-    block::{Block, BlockFace},
+    block::Block,
     netty::cosmos_encoder,
     physics::location::Location,
     registry::Registry,
@@ -31,7 +31,7 @@ use crate::{
 };
 
 use super::{
-    biome::{Biome, BiosphereBiomesRegistry, SimpleBiome},
+    biome::{Biome, BiosphereBiomesRegistry},
     BiomeDecider, BiosphereMarkerComponent, GeneratingChunk, GeneratingChunks, TGenerateChunkEvent,
 };
 
@@ -476,9 +476,10 @@ pub(crate) fn begin_generating_lods<T: BiosphereMarkerComponent>(
     query: Query<(Entity, &LodNeedsGeneratedForPlayer), With<T>>,
     is_biosphere: Query<(&Structure, &Location), With<T>>,
     noise_generator: Res<ReadOnlyNoise>,
-    block_ranges: Res<BlockLayers>,
     mut currently_generating: ResMut<GeneratingLods<T>>,
     mut commands: Commands,
+    biosphere_biomes: Res<BiosphereBiomesRegistry<T>>,
+    biome_decider: Res<BiomeDecider<T>>,
 ) {
     for (entity, generating_lod) in query.iter() {
         commands.entity(entity).despawn_recursive();
@@ -497,21 +498,28 @@ pub(crate) fn begin_generating_lods<T: BiosphereMarkerComponent>(
 
         let mut generating_lod = generating_lod.clone();
         let noise_generator = noise_generator.clone();
-        let block_ranges = block_ranges.clone();
+
+        let biome_decider = *biome_decider;
+        let biosphere_biomes = biosphere_biomes.clone();
+        let location = *location;
 
         let task = task_pool.spawn(async move {
             let noise = noise_generator.inner();
 
-            let biome = SimpleBiome::new("asdf", block_ranges);
+            let first_block_coord = BlockCoordinate::new(0, 0, 0);
+
+            let biome_params = biome_decider.biome_parameters_at(&location, first_block_coord, &noise);
+
+            let biome = biosphere_biomes.ideal_biome_for(biome_params);
 
             recurse::<T>(
                 &mut generating_lod.generating_lod,
                 (structure_coords.x, structure_coords.y, structure_coords.z),
-                BlockCoordinate::new(0, 0, 0),
+                first_block_coord,
                 dimensions,
                 dimensions / CHUNK_DIMENSIONS,
                 &noise,
-                &biome,
+                biome.as_ref(),
             );
 
             let lod_delta = recursively_create_lod_delta(generating_lod.generating_lod);

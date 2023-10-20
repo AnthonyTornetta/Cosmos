@@ -1,4 +1,4 @@
-use bevy::prelude::EventWriter;
+use bevy::prelude::{App, EventWriter, OnExit, Res, ResMut};
 use cosmos_core::{
     block::{Block, BlockFace},
     events::block_events::BlockChangedEvent,
@@ -15,10 +15,11 @@ use noise::NoiseFn;
 
 use crate::{
     init::init_world::Noise,
+    state::GameState,
     structure::planet::biosphere::{biosphere_generation::BlockLayers, generation_tools::fill},
 };
 
-use super::Biome;
+use super::{biome_registry::RegisteredBiome, Biome};
 
 pub struct PlainsBiome {
     id: u16,
@@ -529,4 +530,21 @@ fn branch(
             );
         }
     }
+}
+
+fn register_biome(mut registry: ResMut<Registry<RegisteredBiome>>, block_registry: Res<Registry<Block>>) {
+    registry.register(RegisteredBiome::new(Box::new(PlainsBiome::new(
+        "cosmos:plains",
+        BlockLayers::default()
+            .add_noise_layer("cosmos:grass", &block_registry, 160, 0.05, 7.0, 9)
+            .expect("Grass missing")
+            .add_fixed_layer("cosmos:dirt", &block_registry, 1)
+            .expect("Dirt missing")
+            .add_fixed_layer("cosmos:stone", &block_registry, 4)
+            .expect("Stone missing"),
+    ))));
+}
+
+pub(super) fn register(app: &mut App) {
+    app.add_systems(OnExit(GameState::Loading), register_biome);
 }

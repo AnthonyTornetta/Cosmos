@@ -1,6 +1,6 @@
 //! Creates a grass planet
 
-use bevy::prelude::{App, Component, Entity, Event, OnEnter, Res, ResMut};
+use bevy::prelude::{warn, App, Component, Entity, Event, OnEnter, Res, ResMut};
 use cosmos_core::{registry::Registry, structure::coordinates::ChunkCoordinate};
 
 use crate::GameState;
@@ -59,11 +59,26 @@ fn register_biosphere_biomes(
         biosphere_biomes_registry.register(
             plains.biome(),
             BiomeParameters {
-                ideal_elevation: 30.0,
-                ideal_humidity: 30.0,
-                ideal_temperature: 60.0,
+                ideal_elevation: 0.0,
+                ideal_humidity: 0.0,
+                ideal_temperature: 0.0,
             },
         );
+    } else {
+        warn!("Missing plains biome!");
+    }
+
+    if let Some(plains) = biome_registry.from_id("cosmos:desert") {
+        biosphere_biomes_registry.register(
+            plains.biome(),
+            BiomeParameters {
+                ideal_elevation: 100.0,
+                ideal_humidity: 100.0,
+                ideal_temperature: 100.0,
+            },
+        );
+    } else {
+        warn!("Missing plains biome!");
     }
 }
 

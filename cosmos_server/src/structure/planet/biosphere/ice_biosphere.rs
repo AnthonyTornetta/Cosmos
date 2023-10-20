@@ -1,7 +1,8 @@
 //! Creates a ice planet
 
 use bevy::prelude::{
-    in_state, App, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, OnEnter, Query, Res, ResMut, Update,
+    in_state, warn, App, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, OnEnter, Query, Res, ResMut,
+    Update,
 };
 use cosmos_core::{
     block::Block,
@@ -14,7 +15,6 @@ use crate::GameState;
 
 use super::{
     biome::{biome_registry::RegisteredBiome, BiomeParameters, BiosphereBiomesRegistry},
-    biosphere_generation::{BlockLayers, GenerateChunkFeaturesEvent},
     register_biosphere, BiosphereMarkerComponent, TBiosphere, TGenerateChunkEvent, TemperatureRange,
 };
 
@@ -87,11 +87,13 @@ fn register_biosphere_biomes(
                 ideal_temperature: 60.0,
             },
         );
+    } else {
+        warn!("Missing plains biome!");
     }
 }
 
 pub(super) fn register(app: &mut App) {
-    register_biosphere::<IceBiosphereMarker, IceChunkNeedsGeneratedEvent>(app, "cosmos:biosphere_ice", TemperatureRange::new(0.0, 300.0));
+    register_biosphere::<IceBiosphereMarker, IceChunkNeedsGeneratedEvent>(app, "cosmos:biosphere_ice", TemperatureRange::new(0.0, 0.0));
 
     app.add_systems(OnEnter(GameState::PostLoading), register_biosphere_biomes);
 }

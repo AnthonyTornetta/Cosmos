@@ -1,11 +1,10 @@
 use std::{
-    any::Any,
     hash::Hash,
     marker::PhantomData,
     sync::{Arc, RwLock, RwLockReadGuard},
 };
 
-use bevy::prelude::{info, App, EventWriter, OnEnter, OnExit, Res, ResMut, Resource, Vec3};
+use bevy::prelude::{info, App, EventWriter, OnExit, ResMut, Resource, Vec3};
 use cosmos_core::{
     block::{Block, BlockFace},
     events::block_events::BlockChangedEvent,
@@ -25,59 +24,13 @@ use noise::NoiseFn;
 
 use crate::{init::init_world::Noise, state::GameState};
 
-use self::biome_registry::RegisteredBiome;
-
 use super::{biosphere_generation::BlockLayers, BiosphereMarkerComponent};
 
 pub mod biome_registry;
+pub mod desert;
 pub mod plains;
 
 const GUIDE_MIN: CoordinateType = 100;
-
-pub struct SimpleBiome {
-    id: u16,
-    unlocalized_name: String,
-    block_layers: BlockLayers,
-}
-
-impl SimpleBiome {
-    pub fn new(name: impl Into<String>, block_layers: BlockLayers) -> Self {
-        Self {
-            id: 0,
-            block_layers,
-            unlocalized_name: name.into(),
-        }
-    }
-}
-
-impl Biome for SimpleBiome {
-    fn block_layers(&self) -> &BlockLayers {
-        &self.block_layers
-    }
-
-    fn id(&self) -> u16 {
-        self.id
-    }
-
-    fn set_numeric_id(&mut self, id: u16) {
-        self.id = id;
-    }
-
-    fn unlocalized_name(&self) -> &str {
-        &self.unlocalized_name
-    }
-
-    fn generate_chunk_features(
-        &self,
-        block_event_writer: &mut EventWriter<BlockChangedEvent>,
-        chunk_coords: ChunkCoordinate,
-        structure: &mut Structure,
-        structure_location: &Location,
-        blocks: &Registry<Block>,
-        noise_generator: &Noise,
-    ) {
-    }
-}
 
 #[inline]
 fn generate_face_chunk<C: BlockStorer>(
@@ -945,11 +898,10 @@ impl<T> BiosphereBiomesRegistry<T> {
                     let pos = Vec3::new(x as f32, y as f32, z as f32);
 
                     for &(params, idx) in self.todo_biomes.iter() {
-                        if let Some(best_b) = best_biome {
-                            let dist = pos.distance_squared(params);
-                            if dist < best_b.0 {
-                                best_biome = Some((dist, idx));
-                            }
+                        let dist = pos.distance_squared(params);
+
+                        if best_biome.map(|best_b| dist < best_b.0).unwrap_or(true) {
+                            best_biome = Some((dist, idx));
                         }
                     }
 
@@ -979,9 +931,21 @@ impl<T> BiosphereBiomesRegistry<T> {
     /// # Panics
     /// If the params values are outside the range of `[0.0, 100)`, if there was an error getting the RwLock, or if [`construct_lookup_table`] wasn't called yet (run before [`GameState::PostLoading`]` ends)
     pub fn ideal_biome_for(&self, params: BiomeParameters) -> RwLockReadGuard<Box<dyn Biome>> {
-        debug_assert!(params.ideal_elevation >= 0.0 && params.ideal_elevation < 100.0);
-        debug_assert!(params.ideal_humidity >= 0.0 && params.ideal_humidity < 100.0);
-        debug_assert!(params.ideal_temperature >= 0.0 && params.ideal_temperature < 100.0);
+        debug_assert!(
+            params.ideal_elevation >= 0.0 && params.ideal_elevation < 100.0,
+            "Bad elevation: {}",
+            params.ideal_elevation
+        );
+        debug_assert!(
+            params.ideal_humidity >= 0.0 && params.ideal_humidity < 100.0,
+            "Bad humidity: {}",
+            params.ideal_humidity
+        );
+        debug_assert!(
+            params.ideal_temperature >= 0.0 && params.ideal_temperature < 100.0,
+            "Bad temperature: {}",
+            params.ideal_temperature
+        );
 
         let lookup_idx = flatten(
             params.ideal_elevation as usize,
@@ -995,19 +959,6 @@ impl<T> BiosphereBiomesRegistry<T> {
     }
 }
 
-fn register_biome(mut registry: ResMut<Registry<RegisteredBiome>>, block_registry: Res<Registry<Block>>) {
-    registry.register(RegisteredBiome::new(Box::new(SimpleBiome::new(
-        "cosmos:plains",
-        BlockLayers::default()
-            .add_noise_layer("cosmos:grass", &block_registry, 160, 0.05, 7.0, 9)
-            .expect("Grass missing")
-            .add_fixed_layer("cosmos:dirt", &block_registry, 1)
-            .expect("Dirt missing")
-            .add_fixed_layer("cosmos:stone", &block_registry, 4)
-            .expect("Stone missing"),
-    ))));
-}
-
 fn construct_lookup_tables<T: BiosphereMarkerComponent>(mut registry: ResMut<BiosphereBiomesRegistry<T>>) {
     registry.construct_lookup_table();
 }
@@ -1019,6 +970,6 @@ pub fn create_biosphere_biomes_registry<T: BiosphereMarkerComponent>(app: &mut A
 
 pub(super) fn register(app: &mut App) {
     biome_registry::register(app);
-
-    app.add_systems(OnEnter(GameState::Loading), register_biome);
+    desert::register(app);
+    plains::register(app);
 }

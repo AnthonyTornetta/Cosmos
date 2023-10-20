@@ -1,7 +1,8 @@
 //! Creates a molten planet
 
 use bevy::prelude::{
-    in_state, App, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, OnEnter, Query, Res, ResMut, Update,
+    in_state, warn, App, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, OnEnter, Query, Res, ResMut,
+    Update,
 };
 use cosmos_core::{
     block::{Block, BlockFace},
@@ -178,6 +179,8 @@ fn register_biosphere_biomes(
                 ideal_temperature: 60.0,
             },
         );
+    } else {
+        warn!("Missing plains biome!");
     }
 }
 
