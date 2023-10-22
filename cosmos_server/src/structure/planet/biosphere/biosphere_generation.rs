@@ -395,7 +395,6 @@ fn calculate_biomes<'a, T: BiosphereMarkerComponent>(
                 biome_list.set_biome_id(coords, idx as u8);
 
                 if !biomes.iter().any(|(_, biome_idx)| idx == *biome_idx) {
-                    println!("Pooshing!");
                     biomes.push((biosphere_biomes.biome_from_index(idx), idx));
                 }
             }
@@ -426,8 +425,6 @@ fn generate<T: BiosphereMarkerComponent>(
         biome_decider,
         biosphere_biomes,
     );
-
-    println!("# lod biomes: {}", biomes.len());
 
     for (biome, biome_id) in biomes {
         let biome_id = biome_id as u8;
@@ -723,8 +720,6 @@ pub fn generate_planet<T: BiosphereMarkerComponent, E: TGenerateChunkEvent>(
                     &biome_decider,
                     &biosphere_biomes,
                 );
-
-                println!("# biomes: {}", biomes.len());
 
                 for (biome, biome_id) in biomes {
                     let biome_id = biome_id as u8;

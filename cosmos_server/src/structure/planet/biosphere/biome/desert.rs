@@ -64,7 +64,7 @@ fn register_biome(mut registry: ResMut<Registry<RegisteredBiome>>, block_registr
     registry.register(RegisteredBiome::new(Box::new(DesertBiome::new(
         "cosmos:desert",
         BlockLayers::default()
-            .add_noise_layer("cosmos:stone", &block_registry, 160, 0.05, 3.0, 2)
+            .add_noise_layer("cosmos:stone", &block_registry, 160, 0.05, 7.0, 9)
             .expect("Grass missing")
             .add_fixed_layer("cosmos:dirt", &block_registry, 1)
             .expect("Dirt missing")
