@@ -311,6 +311,38 @@ create_coordinate!(
     "coordinate in range [0, structure.blocks_(width/height/length)())"
 );
 
+impl Add<ChunkBlockCoordinate> for BlockCoordinate {
+    type Output = Self;
+
+    fn add(self, rhs: ChunkBlockCoordinate) -> Self::Output {
+        Self::new(self.x + rhs.x, self.y + rhs.y, self.z + rhs.z)
+    }
+}
+
+impl Add<UnboundChunkBlockCoordinate> for UnboundBlockCoordinate {
+    type Output = Self;
+
+    fn add(self, rhs: UnboundChunkBlockCoordinate) -> Self::Output {
+        Self::new(self.x + rhs.x, self.y + rhs.y, self.z + rhs.z)
+    }
+}
+
+impl Add<BlockCoordinate> for ChunkBlockCoordinate {
+    type Output = Self;
+
+    fn add(self, rhs: BlockCoordinate) -> Self::Output {
+        Self::new(self.x + rhs.x, self.y + rhs.y, self.z + rhs.z)
+    }
+}
+
+impl Add<UnboundBlockCoordinate> for UnboundChunkBlockCoordinate {
+    type Output = Self;
+
+    fn add(self, rhs: UnboundBlockCoordinate) -> Self::Output {
+        Self::new(self.x + rhs.x, self.y + rhs.y, self.z + rhs.z)
+    }
+}
+
 create_coordinate!(
     ChunkBlockCoordinate,
     UnboundChunkBlockCoordinate,

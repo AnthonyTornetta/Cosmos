@@ -42,8 +42,8 @@ fn generate_face_chunk<C: BlockStorer>(
     chunk: &mut C,
     up: BlockFace,
     scale: CoordinateType,
-    start: ChunkBlockCoordinate,
-    stop: ChunkBlockCoordinate,
+    biome_id_list: &BiomeIdList,
+    self_biome_id: u8,
 ) {
     let (sx, sy, sz) = (block_coords.x, block_coords.y, block_coords.z);
 
@@ -86,6 +86,10 @@ fn generate_face_chunk<C: BlockStorer>(
                     BlockFace::Right | BlockFace::Left => (chunk_height, i, j),
                 }
                 .into();
+
+                if biome_id_list.biome_id(coords) != self_biome_id {
+                    continue;
+                }
 
                 let height = match up {
                     BlockFace::Front => sz + chunk_height * scale,
@@ -130,8 +134,8 @@ fn generate_edge_chunk<C: BlockStorer>(
     j_up: BlockFace,
     k_up: BlockFace,
     scale: CoordinateType,
-    start: ChunkBlockCoordinate,
-    stop: ChunkBlockCoordinate,
+    biome_id_list: &BiomeIdList,
+    self_biome_id: u8,
 ) {
     let block_layers = biome.block_layers();
 
@@ -228,6 +232,11 @@ fn generate_edge_chunk<C: BlockStorer>(
 
             for (k, j_layers) in j_layers_cache.iter().enumerate() {
                 let mut chunk_block_coords = ChunkBlockCoordinate::new(i, i, i);
+
+                if biome_id_list.biome_id(chunk_block_coords) != self_biome_id {
+                    continue;
+                }
+
                 match j_up {
                     BlockFace::Front | BlockFace::Back => chunk_block_coords.z = j,
                     BlockFace::Top | BlockFace::Bottom => chunk_block_coords.y = j,
@@ -280,8 +289,8 @@ fn generate_corner_chunk<C: BlockStorer>(
     y_up: BlockFace,
     z_up: BlockFace,
     scale: CoordinateType,
-    start: ChunkBlockCoordinate,
-    stop: ChunkBlockCoordinate,
+    biome_id_list: &BiomeIdList,
+    self_biome_id: u8,
 ) {
     let block_layers = biome.block_layers();
 
@@ -389,6 +398,12 @@ fn generate_corner_chunk<C: BlockStorer>(
             }
 
             for k in 0..CHUNK_DIMENSIONS {
+                let coords = ChunkBlockCoordinate::new(i, j, k);
+
+                if biome_id_list.biome_id(coords) != self_biome_id {
+                    continue;
+                }
+
                 let k_scaled = k * scale;
 
                 let z_height = match z_up {
@@ -419,10 +434,42 @@ fn generate_corner_chunk<C: BlockStorer>(
                     scale,
                 );
                 if let Some(block) = block {
-                    chunk.set_block_at(ChunkBlockCoordinate::new(i, j, k), block, block_up);
+                    chunk.set_block_at(coords, block, block_up);
                 }
             }
         }
+    }
+}
+
+pub struct BiomeIdList(Box<[u8; (CHUNK_DIMENSIONS * CHUNK_DIMENSIONS * CHUNK_DIMENSIONS) as usize]>);
+
+impl BiomeIdList {
+    /// Initializes a Biome Id List to be all 0s.
+    ///
+    /// Note that 0 IS a valid id - so make sure to change these to make them accurate before using
+    pub fn new() -> Self {
+        Self(Box::new([0; (CHUNK_DIMENSIONS * CHUNK_DIMENSIONS * CHUNK_DIMENSIONS) as usize]))
+    }
+
+    #[inline]
+    pub fn set_biome_id(&mut self, coords: ChunkBlockCoordinate, value: u8) {
+        self.0[flatten(
+            coords.x as usize,
+            coords.y as usize,
+            coords.z as usize,
+            CHUNK_DIMENSIONS as usize,
+            CHUNK_DIMENSIONS as usize,
+        )] = value;
+    }
+
+    pub fn biome_id(&self, coords: ChunkBlockCoordinate) -> u8 {
+        self.0[flatten(
+            coords.x as usize,
+            coords.y as usize,
+            coords.z as usize,
+            CHUNK_DIMENSIONS as usize,
+            CHUNK_DIMENSIONS as usize,
+        )]
     }
 }
 
@@ -443,8 +490,8 @@ pub trait Biome: Send + Sync + 'static {
         chunk: &mut LodChunk,
         up: BlockFace,
         scale: CoordinateType,
-        start: ChunkBlockCoordinate,
-        stop: ChunkBlockCoordinate,
+        biome_id_list: &BiomeIdList,
+        self_biome_id: u8,
     ) {
         generate_face_chunk::<LodChunk>(
             self_as_dyn,
@@ -455,8 +502,8 @@ pub trait Biome: Send + Sync + 'static {
             chunk,
             up,
             scale,
-            start,
-            stop,
+            biome_id_list,
+            self_biome_id,
         );
     }
 
@@ -471,8 +518,8 @@ pub trait Biome: Send + Sync + 'static {
         j_up: BlockFace,
         k_up: BlockFace,
         scale: CoordinateType,
-        start: ChunkBlockCoordinate,
-        stop: ChunkBlockCoordinate,
+        biome_id_list: &BiomeIdList,
+        self_biome_id: u8,
     ) {
         generate_edge_chunk(
             self_as_dyn,
@@ -484,8 +531,8 @@ pub trait Biome: Send + Sync + 'static {
             j_up,
             k_up,
             scale,
-            start,
-            stop,
+            biome_id_list,
+            self_biome_id,
         );
     }
 
@@ -501,8 +548,8 @@ pub trait Biome: Send + Sync + 'static {
         y_up: BlockFace,
         z_up: BlockFace,
         scale: CoordinateType,
-        start: ChunkBlockCoordinate,
-        stop: ChunkBlockCoordinate,
+        biome_id_list: &BiomeIdList,
+        self_biome_id: u8,
     ) {
         generate_corner_chunk::<LodChunk>(
             self_as_dyn,
@@ -515,8 +562,8 @@ pub trait Biome: Send + Sync + 'static {
             y_up,
             z_up,
             scale,
-            start,
-            stop,
+            biome_id_list,
+            self_biome_id,
         );
     }
 
@@ -530,8 +577,8 @@ pub trait Biome: Send + Sync + 'static {
         chunk: &mut Chunk,
         up: BlockFace,
         scale: CoordinateType,
-        start: ChunkBlockCoordinate,
-        stop: ChunkBlockCoordinate,
+        biome_id_list: &BiomeIdList,
+        self_biome_id: u8,
     ) {
         generate_face_chunk::<Chunk>(
             self_as_dyn,
@@ -542,8 +589,8 @@ pub trait Biome: Send + Sync + 'static {
             chunk,
             up,
             scale,
-            start,
-            stop,
+            biome_id_list,
+            self_biome_id,
         );
     }
 
@@ -558,8 +605,8 @@ pub trait Biome: Send + Sync + 'static {
         j_up: BlockFace,
         k_up: BlockFace,
         scale: CoordinateType,
-        start: ChunkBlockCoordinate,
-        stop: ChunkBlockCoordinate,
+        biome_id_list: &BiomeIdList,
+        self_biome_id: u8,
     ) {
         generate_edge_chunk::<Chunk>(
             self_as_dyn,
@@ -571,8 +618,8 @@ pub trait Biome: Send + Sync + 'static {
             j_up,
             k_up,
             scale,
-            start,
-            stop,
+            biome_id_list,
+            self_biome_id,
         );
     }
 
@@ -588,8 +635,8 @@ pub trait Biome: Send + Sync + 'static {
         y_up: BlockFace,
         z_up: BlockFace,
         scale: CoordinateType,
-        start: ChunkBlockCoordinate,
-        stop: ChunkBlockCoordinate,
+        biome_id_list: &BiomeIdList,
+        self_biome_id: u8,
     ) {
         generate_corner_chunk::<Chunk>(
             self_as_dyn,
@@ -602,8 +649,8 @@ pub trait Biome: Send + Sync + 'static {
             y_up,
             z_up,
             scale,
-            start,
-            stop,
+            biome_id_list,
+            self_biome_id,
         );
     }
 
@@ -930,7 +977,7 @@ impl<T> BiosphereBiomesRegistry<T> {
     ///
     /// # Panics
     /// If the params values are outside the range of `[0.0, 100)`, if there was an error getting the RwLock, or if [`construct_lookup_table`] wasn't called yet (run before [`GameState::PostLoading`]` ends)
-    pub fn ideal_biome_for(&self, params: BiomeParameters) -> RwLockReadGuard<Box<dyn Biome>> {
+    pub fn ideal_biome_index_for(&self, params: BiomeParameters) -> usize {
         debug_assert!(
             params.ideal_elevation >= 0.0 && params.ideal_elevation < 100.0,
             "Bad elevation: {}",
@@ -955,7 +1002,22 @@ impl<T> BiosphereBiomesRegistry<T> {
             LOOKUP_TABLE_PRECISION,
         );
 
-        self.biomes[self.lookup_table.read().unwrap()[lookup_idx] as usize].read().unwrap()
+        self.lookup_table.read().unwrap()[lookup_idx] as usize
+    }
+
+    #[inline]
+    pub fn biome_from_index(&self, biome_idx: usize) -> RwLockReadGuard<Box<dyn Biome>> {
+        self.biomes[biome_idx].read().unwrap()
+    }
+
+    /// Gets the ideal biome for the parmaters provided
+    ///
+    /// # Panics
+    /// If the params values are outside the range of `[0.0, 100)`, if there was an error getting the RwLock, or if [`construct_lookup_table`] wasn't called yet (run before [`GameState::PostLoading`]` ends)
+    pub fn ideal_biome_for(&self, params: BiomeParameters) -> RwLockReadGuard<Box<dyn Biome>> {
+        let lookup_idx = self.ideal_biome_index_for(params);
+
+        self.biome_from_index(lookup_idx)
     }
 }
 

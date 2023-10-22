@@ -78,7 +78,7 @@ fn register_biosphere_biomes(
             },
         );
     } else {
-        warn!("Missing plains biome!");
+        warn!("Missing desert biome!");
     }
 }
 

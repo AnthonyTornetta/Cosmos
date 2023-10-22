@@ -1,6 +1,6 @@
 //! Responsible for the default generation of biospheres.
 
-use std::{marker::PhantomData, mem::swap};
+use std::{marker::PhantomData, mem::swap, sync::RwLockReadGuard};
 
 use bevy::{
     prelude::{warn, Commands, DespawnRecursiveExt, Entity, Event, EventReader, EventWriter, Query, Res, ResMut, Resource, With},
@@ -12,6 +12,7 @@ use cosmos_core::{
     physics::location::Location,
     registry::Registry,
     structure::{
+        block_storage::BlockStorer,
         chunk::{Chunk, CHUNK_DIMENSIONS},
         coordinates::{BlockCoordinate, ChunkBlockCoordinate, ChunkCoordinate, CoordinateType},
         lod::{LodDelta, LodNetworkMessage, SetLodMessage},
@@ -31,7 +32,7 @@ use crate::{
 };
 
 use super::{
-    biome::{Biome, BiosphereBiomesRegistry},
+    biome::{Biome, BiomeIdList, BiosphereBiomesRegistry},
     BiomeDecider, BiosphereMarkerComponent, GeneratingChunk, GeneratingChunks, TGenerateChunkEvent,
 };
 
@@ -354,63 +355,116 @@ impl BlockLayers {
     }
 }
 
-fn generate(
+fn calculate_biomes<'a, T: BiosphereMarkerComponent>(
+    first_block_coord: BlockCoordinate,
+    structure_location: &Location,
+    noise_generator: &Noise,
+    scale: CoordinateType,
+    biome_decider: &BiomeDecider<T>,
+    biosphere_biomes: &'a BiosphereBiomesRegistry<T>,
+) -> (Vec<(RwLockReadGuard<'a, Box<dyn Biome + 'static>>, usize)>, BiomeIdList) {
+    let mut biome_list = BiomeIdList::new();
+
+    let mut biomes = vec![];
+
+    for z in 0..CHUNK_DIMENSIONS {
+        for y in 0..CHUNK_DIMENSIONS {
+            for x in 0..CHUNK_DIMENSIONS {
+                let coords = ChunkBlockCoordinate::new(x, y, z);
+
+                let block_coords = first_block_coord + BlockCoordinate::new(x * scale, y * scale, z * scale);
+
+                let biome_params = biome_decider.biome_parameters_at(structure_location, block_coords, &noise_generator);
+
+                let idx = biosphere_biomes.ideal_biome_index_for(biome_params);
+
+                biome_list.set_biome_id(coords, idx as u8);
+
+                if !biomes.iter().any(|(_, biome_idx)| idx == *biome_idx) {
+                    println!("Pooshing!");
+                    biomes.push((biosphere_biomes.biome_from_index(idx), idx));
+                }
+            }
+        }
+    }
+
+    (biomes, biome_list)
+}
+
+fn generate<T: BiosphereMarkerComponent>(
     generating_lod: &mut GeneratingLod,
+    structure_location: &Location,
     (structure_x, structure_y, structure_z): (f64, f64, f64),
     first_block_coord: BlockCoordinate,
     s_dimensions: CoordinateType,
     scale: CoordinateType,
-    noise_generator: &noise::OpenSimplex,
-    biome: &dyn Biome,
+    noise_generator: &Noise,
+    biome_decider: &BiomeDecider<T>,
+    biosphere_biomes: &BiosphereBiomesRegistry<T>,
 ) {
     let mut lod_chunk = Box::new(LodChunk::new());
 
-    let chunk_faces = Planet::chunk_planet_faces_with_scale(first_block_coord, s_dimensions, scale);
-    match chunk_faces {
-        ChunkFaces::Face(up) => {
-            biome.generate_face_chunk_lod(
-                biome,
-                first_block_coord,
-                (structure_x, structure_y, structure_z),
-                s_dimensions,
-                noise_generator,
-                &mut lod_chunk,
-                up,
-                scale,
-                ChunkBlockCoordinate::min(),
-                ChunkBlockCoordinate::max(),
-            );
-        }
-        ChunkFaces::Edge(j_up, k_up) => {
-            biome.generate_edge_chunk_lod(
-                biome,
-                first_block_coord,
-                (structure_x, structure_y, structure_z),
-                s_dimensions,
-                noise_generator,
-                &mut lod_chunk,
-                j_up,
-                k_up,
-                scale,
-                ChunkBlockCoordinate::min(),
-                ChunkBlockCoordinate::max(),
-            );
-        }
-        ChunkFaces::Corner(x_up, y_up, z_up) => {
-            biome.generate_corner_chunk_lod(
-                biome,
-                first_block_coord,
-                (structure_x, structure_y, structure_z),
-                s_dimensions,
-                noise_generator,
-                &mut lod_chunk,
-                x_up,
-                y_up,
-                z_up,
-                scale,
-                ChunkBlockCoordinate::min(),
-                ChunkBlockCoordinate::max(),
-            );
+    let (biomes, biome_list) = calculate_biomes(
+        first_block_coord,
+        structure_location,
+        noise_generator,
+        scale,
+        biome_decider,
+        biosphere_biomes,
+    );
+
+    println!("# lod biomes: {}", biomes.len());
+
+    for (biome, biome_id) in biomes {
+        let biome_id = biome_id as u8;
+
+        let chunk_faces = Planet::chunk_planet_faces_with_scale(first_block_coord, s_dimensions, scale);
+        match chunk_faces {
+            ChunkFaces::Face(up) => {
+                biome.generate_face_chunk_lod(
+                    biome.as_ref(),
+                    first_block_coord,
+                    (structure_x, structure_y, structure_z),
+                    s_dimensions,
+                    noise_generator,
+                    &mut lod_chunk,
+                    up,
+                    scale,
+                    &biome_list,
+                    biome_id,
+                );
+            }
+            ChunkFaces::Edge(j_up, k_up) => {
+                biome.generate_edge_chunk_lod(
+                    biome.as_ref(),
+                    first_block_coord,
+                    (structure_x, structure_y, structure_z),
+                    s_dimensions,
+                    noise_generator,
+                    &mut lod_chunk,
+                    j_up,
+                    k_up,
+                    scale,
+                    &biome_list,
+                    biome_id,
+                );
+            }
+            ChunkFaces::Corner(x_up, y_up, z_up) => {
+                biome.generate_corner_chunk_lod(
+                    biome.as_ref(),
+                    first_block_coord,
+                    (structure_x, structure_y, structure_z),
+                    s_dimensions,
+                    noise_generator,
+                    &mut lod_chunk,
+                    x_up,
+                    y_up,
+                    z_up,
+                    scale,
+                    &biome_list,
+                    biome_id,
+                );
+            }
         }
     }
 
@@ -420,24 +474,28 @@ fn generate(
 
 fn recurse<T: BiosphereMarkerComponent>(
     generating_lod: &mut GeneratingLod,
+    structure_location: &Location,
     (structure_x, structure_y, structure_z): (f64, f64, f64),
     first_block_coord: BlockCoordinate,
     s_dimensions: CoordinateType,
     scale: CoordinateType,
     noise_generator: &Noise,
-    biome: &dyn Biome,
+    biome_decider: &BiomeDecider<T>,
+    biosphere_biomes: &BiosphereBiomesRegistry<T>,
 ) {
     match generating_lod {
         GeneratingLod::NeedsGenerated => {
             *generating_lod = GeneratingLod::BeingGenerated;
-            generate(
+            generate::<T>(
                 generating_lod,
+                structure_location,
                 (structure_x, structure_y, structure_z),
                 first_block_coord,
                 s_dimensions,
                 scale,
                 noise_generator,
-                biome,
+                biome_decider,
+                biosphere_biomes,
             );
         }
         GeneratingLod::Children(children) => {
@@ -459,12 +517,14 @@ fn recurse<T: BiosphereMarkerComponent>(
             children.par_iter_mut().zip(coords).for_each(|(child, (bx, by, bz))| {
                 recurse::<T>(
                     child,
+                    structure_location,
                     (structure_x, structure_y, structure_z),
                     BlockCoordinate::new(bx, by, bz) + first_block_coord,
                     s_dimensions,
                     s2,
                     noise_generator,
-                    biome,
+                    biome_decider,
+                    biosphere_biomes,
                 );
             });
         }
@@ -508,18 +568,16 @@ pub(crate) fn begin_generating_lods<T: BiosphereMarkerComponent>(
 
             let first_block_coord = BlockCoordinate::new(0, 0, 0);
 
-            let biome_params = biome_decider.biome_parameters_at(&location, first_block_coord, &noise);
-
-            let biome = biosphere_biomes.ideal_biome_for(biome_params);
-
             recurse::<T>(
                 &mut generating_lod.generating_lod,
+                &location,
                 (structure_coords.x, structure_coords.y, structure_coords.z),
                 first_block_coord,
                 dimensions,
                 dimensions / CHUNK_DIMENSIONS,
                 &noise,
-                biome.as_ref(),
+                &biome_decider,
+                &biosphere_biomes,
             );
 
             let lod_delta = recursively_create_lod_delta(generating_lod.generating_lod);
@@ -624,7 +682,7 @@ pub fn generate_planet<T: BiosphereMarkerComponent, E: TGenerateChunkEvent>(
         .collect::<Vec<(Chunk, CoordinateType, Location, Entity)>>();
 
     if !chunks.is_empty() {
-        for (mut chunk, s_dimensions, location, structure_entity) in chunks {
+        for (mut chunk, s_dimensions, structure_location, structure_entity) in chunks {
             let noise = noise_generator.clone();
 
             let biome_decider = *biome_decider;
@@ -634,7 +692,7 @@ pub fn generate_planet<T: BiosphereMarkerComponent, E: TGenerateChunkEvent>(
                 let noise_generator = noise.inner();
                 // let timer = UtilsTimer::start();
 
-                let actual_pos = location.absolute_coords_f64();
+                let actual_pos = structure_location.absolute_coords_f64();
 
                 let structure_z = actual_pos.z;
                 let structure_y = actual_pos.y;
@@ -643,57 +701,68 @@ pub fn generate_planet<T: BiosphereMarkerComponent, E: TGenerateChunkEvent>(
                 // To save multiplication operations later.
                 let first_block_coord = chunk.chunk_coordinates().first_structure_block();
 
-                let biome_params = biome_decider.biome_parameters_at(&location, first_block_coord, &noise_generator);
+                let (biomes, biome_list) = calculate_biomes::<T>(
+                    first_block_coord,
+                    &structure_location,
+                    &noise_generator,
+                    1,
+                    &biome_decider,
+                    &biosphere_biomes,
+                );
 
-                let biome = biosphere_biomes.ideal_biome_for(biome_params);
+                println!("# biomes: {}", biomes.len());
 
-                // Get all possible planet faces from the chunk corners.
-                let chunk_faces = Planet::chunk_planet_faces(first_block_coord, s_dimensions);
-                match chunk_faces {
-                    ChunkFaces::Face(up) => {
-                        biome.generate_face_chunk(
-                            biome.as_ref(),
-                            first_block_coord,
-                            (structure_x, structure_y, structure_z),
-                            s_dimensions,
-                            &noise_generator,
-                            &mut chunk,
-                            up,
-                            1,
-                            ChunkBlockCoordinate::min(),
-                            ChunkBlockCoordinate::max(),
-                        );
-                    }
-                    ChunkFaces::Edge(j_up, k_up) => {
-                        biome.generate_edge_chunk(
-                            biome.as_ref(),
-                            first_block_coord,
-                            (structure_x, structure_y, structure_z),
-                            s_dimensions,
-                            &noise_generator,
-                            &mut chunk,
-                            j_up,
-                            k_up,
-                            1,
-                            ChunkBlockCoordinate::min(),
-                            ChunkBlockCoordinate::max(),
-                        );
-                    }
-                    ChunkFaces::Corner(x_up, y_up, z_up) => {
-                        biome.generate_corner_chunk(
-                            biome.as_ref(),
-                            first_block_coord,
-                            (structure_x, structure_y, structure_z),
-                            s_dimensions,
-                            &noise_generator,
-                            &mut chunk,
-                            x_up,
-                            y_up,
-                            z_up,
-                            1,
-                            ChunkBlockCoordinate::min(),
-                            ChunkBlockCoordinate::max(),
-                        );
+                for (biome, biome_id) in biomes {
+                    let biome_id = biome_id as u8;
+
+                    // Get all possible planet faces from the chunk corners.
+                    let chunk_faces = Planet::chunk_planet_faces(first_block_coord, s_dimensions);
+                    match chunk_faces {
+                        ChunkFaces::Face(up) => {
+                            biome.generate_face_chunk(
+                                biome.as_ref(),
+                                first_block_coord,
+                                (structure_x, structure_y, structure_z),
+                                s_dimensions,
+                                &noise_generator,
+                                &mut chunk,
+                                up,
+                                1,
+                                &biome_list,
+                                biome_id,
+                            );
+                        }
+                        ChunkFaces::Edge(j_up, k_up) => {
+                            biome.generate_edge_chunk(
+                                biome.as_ref(),
+                                first_block_coord,
+                                (structure_x, structure_y, structure_z),
+                                s_dimensions,
+                                &noise_generator,
+                                &mut chunk,
+                                j_up,
+                                k_up,
+                                1,
+                                &biome_list,
+                                biome_id,
+                            );
+                        }
+                        ChunkFaces::Corner(x_up, y_up, z_up) => {
+                            biome.generate_corner_chunk(
+                                biome.as_ref(),
+                                first_block_coord,
+                                (structure_x, structure_y, structure_z),
+                                s_dimensions,
+                                &noise_generator,
+                                &mut chunk,
+                                x_up,
+                                y_up,
+                                z_up,
+                                1,
+                                &biome_list,
+                                biome_id,
+                            );
+                        }
                     }
                 }
                 // timer.log_duration("Chunk:");
