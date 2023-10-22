@@ -99,8 +99,7 @@ impl Biome for DesertBiome {
                         sx + 456.0 * rng_changer as f64,
                         sy + 4645.0 * rng_changer as f64,
                         sz + 354.0 * rng_changer as f64,
-                    )
-                    .abs() as CoordinateType
+                    ).unsigned_abs()
                     % CHUNK_DIMENSIONS;
 
                 let z = seed
@@ -108,8 +107,7 @@ impl Biome for DesertBiome {
                         sx + 678.0 * rng_changer as f64,
                         sy + 87.0 * rng_changer as f64,
                         sz + 456.0 * rng_changer as f64,
-                    )
-                    .abs() as CoordinateType
+                    ).unsigned_abs()
                     % CHUNK_DIMENSIONS;
 
                 let coords: BlockCoordinate = match block_up {
@@ -140,8 +138,7 @@ impl Biome for DesertBiome {
                             sx + 561.0 * rng_changer as f64,
                             sy + 456.0 * rng_changer as f64,
                             sz + 786.0 * rng_changer as f64,
-                        )
-                        .abs() as CoordinateType
+                        ).unsigned_abs()
                         % MAX_CACTUS_HEIGHT
                         + 1;
 

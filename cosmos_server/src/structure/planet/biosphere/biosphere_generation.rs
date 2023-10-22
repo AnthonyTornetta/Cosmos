@@ -388,7 +388,7 @@ fn calculate_biomes<'a, T: BiosphereMarkerComponent>(
 
                 let block_coords = first_block_coord + BlockCoordinate::new(x * scale, y * scale, z * scale);
 
-                let biome_params = biome_decider.biome_parameters_at(structure_location, block_coords, &noise_generator);
+                let biome_params = biome_decider.biome_parameters_at(structure_location, block_coords, noise_generator);
 
                 let idx = biosphere_biomes.ideal_biome_index_for(biome_params);
 

@@ -155,9 +155,9 @@ impl<T: BiosphereMarkerComponent> BiomeDecider<T> {
         humidity = (humidity.min(0.999).max(-1.0) * 0.5 + 0.5) * 100.0;
         elevation = (elevation.min(0.999).max(-1.0) * 0.5 + 0.5) * 100.0;
 
-        debug_assert!(elevation >= 0.0 && elevation < 100.0, "Bad elevation: {elevation}",);
-        debug_assert!(humidity >= 0.0 && humidity < 100.0, "Bad humidity: {humidity}",);
-        debug_assert!(temperature >= 0.0 && temperature < 100.0, "Bad temperature: {temperature}",);
+        debug_assert!((0.0..100.0).contains(&elevation), "Bad elevation: {elevation}",);
+        debug_assert!((0.0..100.0).contains(&humidity), "Bad humidity: {humidity}",);
+        debug_assert!((0.0..100.0).contains(&temperature), "Bad temperature: {temperature}",);
 
         BiomeParameters {
             ideal_elevation: elevation as f32,

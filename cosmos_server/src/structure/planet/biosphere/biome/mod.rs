@@ -454,6 +454,12 @@ fn generate_corner_chunk<C: BlockStorer>(
 /// This is mostly used to keep performance to a maximum.
 pub struct BiomeIdList(Box<[u8; (CHUNK_DIMENSIONS * CHUNK_DIMENSIONS * CHUNK_DIMENSIONS) as usize]>);
 
+impl Default for BiomeIdList {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl BiomeIdList {
     /// Initializes a Biome Id List to be all 0s.
     ///
