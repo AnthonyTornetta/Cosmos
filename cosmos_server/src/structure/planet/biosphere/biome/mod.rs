@@ -24,7 +24,10 @@ use cosmos_core::{
 };
 use noise::NoiseFn;
 
-use crate::{init::init_world::Noise, state::GameState};
+use crate::{
+    init::init_world::{Noise, ServerSeed},
+    state::GameState,
+};
 
 use super::{biosphere_generation::BlockLayers, BiosphereMarkerComponent};
 
@@ -751,6 +754,7 @@ pub trait Biome: Send + Sync + 'static {
         structure_location: &Location,
         blocks: &Registry<Block>,
         noise_generator: &Noise,
+        seed: &ServerSeed,
     );
 
     /// Gets the "y" value of a block on the planet. This "y" value is relative to the face the block is on.

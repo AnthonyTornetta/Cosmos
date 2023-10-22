@@ -84,6 +84,9 @@ fn register_block_hardness(blocks: Res<Registry<Block>>, mut registry: ResMut<Re
 
     register_hardness(&mut registry, 100.0, &blocks, "cosmos:ice");
     register_hardness(&mut registry, 100.0, &blocks, "cosmos:water");
+
+    register_hardness(&mut registry, 5.0, &blocks, "cosmos:sand");
+    register_hardness(&mut registry, 1.0, &blocks, "cosmos:cactus");
 }
 
 fn sanity_check(blocks: Res<Registry<Block>>, hardness: Res<Registry<BlockHardness>>) {

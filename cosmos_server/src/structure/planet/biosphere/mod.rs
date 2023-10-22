@@ -113,7 +113,7 @@ impl<T: BiosphereMarkerComponent> GeneratingChunk<T> {
     }
 }
 
-const BIOME_DECIDER_DELTA: f64 = 0.01;
+const BIOME_DECIDER_DELTA: f64 = 0.001;
 
 #[derive(Resource, Clone, Copy)]
 /// This is used to calculate which biosphere parameters are present at specific blocks,
@@ -176,6 +176,7 @@ fn generate_chunk_featuress<T: BiosphereMarkerComponent>(
     noise_generator: Res<Noise>,
     biosphere_biomes: Res<BiosphereBiomesRegistry<T>>,
     biome_decider: Res<BiomeDecider<T>>,
+    seed: Res<ServerSeed>,
 ) {
     for ev in event_reader.iter() {
         if let Ok((mut structure, location)) = structure_query.get_mut(ev.structure_entity) {
@@ -191,6 +192,7 @@ fn generate_chunk_featuress<T: BiosphereMarkerComponent>(
                 location,
                 &blocks,
                 &noise_generator,
+                &seed,
             );
 
             init_event_writer.send(ChunkInitEvent {

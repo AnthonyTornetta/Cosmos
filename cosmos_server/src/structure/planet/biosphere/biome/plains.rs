@@ -16,7 +16,7 @@ use cosmos_core::{
 use noise::NoiseFn;
 
 use crate::{
-    init::init_world::Noise,
+    init::init_world::{Noise, ServerSeed},
     state::GameState,
     structure::planet::biosphere::{biosphere_generation::BlockLayers, generation_tools::fill},
 };
@@ -73,6 +73,7 @@ impl Biome for PlainsBiome {
         location: &Location,
         blocks: &Registry<Block>,
         noise_generator: &Noise,
+        _seed: &ServerSeed,
     ) {
         let Structure::Dynamic(planet) = structure else {
             panic!("A planet must be dynamic!");
