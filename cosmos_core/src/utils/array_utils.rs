@@ -1,12 +1,12 @@
 //! Some array utility functions
 
-#[inline]
+#[inline(always)]
 /// Calcuates the analogous index for a 1d array given the x/y/z for a 3d array.
 pub fn flatten(x: usize, y: usize, z: usize, width: usize, height: usize) -> usize {
     (z * height + y) * width + x
 }
 
-#[inline]
+#[inline(always)]
 /// Calcuates the analogous index for a 1d array given the x/y/z for a 3d array.
 pub fn flatten_2d(x: usize, y: usize, width: usize) -> usize {
     y * width + x

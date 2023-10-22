@@ -311,6 +311,38 @@ create_coordinate!(
     "coordinate in range [0, structure.blocks_(width/height/length)())"
 );
 
+impl Add<ChunkBlockCoordinate> for BlockCoordinate {
+    type Output = Self;
+
+    fn add(self, rhs: ChunkBlockCoordinate) -> Self::Output {
+        Self::new(self.x + rhs.x, self.y + rhs.y, self.z + rhs.z)
+    }
+}
+
+impl Add<UnboundChunkBlockCoordinate> for UnboundBlockCoordinate {
+    type Output = Self;
+
+    fn add(self, rhs: UnboundChunkBlockCoordinate) -> Self::Output {
+        Self::new(self.x + rhs.x, self.y + rhs.y, self.z + rhs.z)
+    }
+}
+
+impl Add<BlockCoordinate> for ChunkBlockCoordinate {
+    type Output = Self;
+
+    fn add(self, rhs: BlockCoordinate) -> Self::Output {
+        Self::new(self.x + rhs.x, self.y + rhs.y, self.z + rhs.z)
+    }
+}
+
+impl Add<UnboundBlockCoordinate> for UnboundChunkBlockCoordinate {
+    type Output = Self;
+
+    fn add(self, rhs: UnboundBlockCoordinate) -> Self::Output {
+        Self::new(self.x + rhs.x, self.y + rhs.y, self.z + rhs.z)
+    }
+}
+
 create_coordinate!(
     ChunkBlockCoordinate,
     UnboundChunkBlockCoordinate,
@@ -339,6 +371,18 @@ impl ChunkBlockCoordinate {
             y: value.y & (CHUNK_DIMENSIONS - 1),
             z: value.z & (CHUNK_DIMENSIONS - 1),
         }
+    }
+
+    #[inline]
+    /// `Self::new(0, 0, 0)`
+    pub fn min() -> Self {
+        Self::new(0, 0, 0)
+    }
+
+    #[inline]
+    /// `Self::new(CHUNK_DIMENSIONS, CHUNK_DIMENSIONS, CHUNK_DIMENSIONS)`
+    pub fn max() -> Self {
+        Self::new(CHUNK_DIMENSIONS, CHUNK_DIMENSIONS, CHUNK_DIMENSIONS)
     }
 }
 
@@ -397,6 +441,16 @@ impl ChunkCoordinate {
     /// Returns the left, bottom, back block of this chunk
     pub fn first_structure_block(&self) -> BlockCoordinate {
         BlockCoordinate::new(self.x * CHUNK_DIMENSIONS, self.y * CHUNK_DIMENSIONS, self.z * CHUNK_DIMENSIONS)
+    }
+
+    /// Returns the "middle" block of this chunk. Note that the middle isn't actually the middle, since a chunk has an even number of blocks.
+    /// The "middle" block is 1 closer to the positive side than the negative.
+    pub fn middle_structure_block(&self) -> BlockCoordinate {
+        BlockCoordinate::new(
+            self.x * CHUNK_DIMENSIONS + CHUNK_DIMENSIONS / 2,
+            self.y * CHUNK_DIMENSIONS + CHUNK_DIMENSIONS / 2,
+            self.z * CHUNK_DIMENSIONS + CHUNK_DIMENSIONS / 2,
+        )
     }
 
     /// Returns the right, top, front block of this chunk

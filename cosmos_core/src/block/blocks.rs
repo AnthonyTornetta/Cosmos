@@ -127,7 +127,7 @@ fn add_cosmos_blocks(
     );
 
     blocks.register(
-        BlockBuilder::new("cosmos:ice".to_owned(), 2.0)
+        BlockBuilder::new("cosmos:ice".to_owned(), 1.9)
             .add_property(BlockProperty::Transparent)
             .add_property(BlockProperty::Full)
             .create(),
@@ -141,7 +141,7 @@ fn add_cosmos_blocks(
     );
 
     blocks.register(
-        BlockBuilder::new("cosmos:water".to_owned(), 6.0)
+        BlockBuilder::new("cosmos:water".to_owned(), 2.0)
             .add_property(BlockProperty::Transparent)
             .add_property(BlockProperty::Full)
             .create(),
@@ -155,8 +155,22 @@ fn add_cosmos_blocks(
     );
 
     blocks.register(
-        BlockBuilder::new("cosmos:short_grass", 10.0)
+        BlockBuilder::new("cosmos:short_grass", 0.1)
             .add_property(BlockProperty::Opaque)
+            .create(),
+    );
+
+    blocks.register(
+        BlockBuilder::new("cosmos:sand", 4.0)
+            .add_property(BlockProperty::Opaque)
+            .add_property(BlockProperty::Full)
+            .create(),
+    );
+
+    blocks.register(
+        BlockBuilder::new("cosmos:cactus", 0.8)
+            .add_property(BlockProperty::Opaque)
+            .add_property(BlockProperty::Full)
             .create(),
     );
 
