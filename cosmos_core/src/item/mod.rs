@@ -6,6 +6,7 @@ use bevy::prelude::App;
 
 use crate::registry::identifiable::Identifiable;
 
+#[derive(Debug, Clone)]
 /// An item represents something that can be stored in inventories.
 pub struct Item {
     unlocalized_name: String,

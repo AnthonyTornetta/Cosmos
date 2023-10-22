@@ -656,35 +656,6 @@ fn create_item_stack_slot_data(item_stack: &ItemStack, ecmds: &mut EntityCommand
                 ..default()
             });
         });
-
-    // ecmds.with_children(|p| {
-    //     p.spawn((
-    //         NodeBundle {
-    //             style: Style {
-    //                 width: Val::Px(64.0),
-    //                 height: Val::Px(64.0),
-    //                 display: Display::Flex,
-    //                 justify_content: JustifyContent::FlexEnd,
-    //                 align_items: AlignItems::FlexEnd,
-    //                 ..Default::default()
-    //             },
-    //             ..Default::default()
-    //         },
-    //         RenderItem {
-    //             item_id: item_stack.item_id(),
-    //         },
-    //     ))
-    //     .with_children(|p| {
-    //         p.spawn(TextBundle {
-    //             style: Style {
-    //                 margin: UiRect::new(Val::Px(0.0), Val::Px(5.0), Val::Px(0.0), Val::Px(5.0)),
-    //                 ..default()
-    //             },
-    //             text: Text::from_section(format!("{} {}", item_stack.item_id(), quantity), text_style),
-    //             ..default()
-    //         });
-    //     });
-    // });
 }
 
 pub(super) fn register(app: &mut App) {

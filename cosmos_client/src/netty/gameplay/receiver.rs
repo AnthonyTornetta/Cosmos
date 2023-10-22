@@ -233,8 +233,6 @@ pub(crate) fn client_sync_players(
                     } else if !requested_entities.entities.iter().any(|x| x.0 == *server_entity) {
                         requested_entities.entities.push((*server_entity, 0.0));
 
-                        println!("Requesting entity {}!", server_entity.index());
-
                         client.send_message(
                             NettyChannelClient::Reliable,
                             cosmos_encoder::serialize(&ClientReliableMessages::RequestEntityData { entity: *server_entity }),
@@ -264,7 +262,7 @@ pub(crate) fn client_sync_players(
             } => {
                 // Prevents creation of duplicate players
                 if lobby.players.contains_key(&id) {
-                    println!("WARNING - DUPLICATE PLAYER RECEIVED {id}");
+                    warn!("DUPLICATE PLAYER RECEIVED {id}");
                     break;
                 }
 
@@ -272,7 +270,7 @@ pub(crate) fn client_sync_players(
                     continue;
                 };
 
-                println!("Player {} ({}) connected!", name.as_str(), id);
+                info!("Player {} ({}) connected!", name.as_str(), id);
 
                 let mut entity_cmds = commands.spawn_empty();
 
@@ -365,7 +363,7 @@ pub(crate) fn client_sync_players(
                 {
                     if let Some(mut entity) = commands.get_entity(client_entity) {
                         if let Ok(player) = query_player.get(client_entity) {
-                            println!("Player {} ({id}) disconnected", player.name());
+                            info!("Player {} ({id}) disconnected", player.name());
                         }
 
                         entity.insert(NeedsDespawned);
@@ -382,7 +380,7 @@ pub(crate) fn client_sync_players(
                 location,
             } => {
                 if network_mapping.contains_server_entity(server_entity) {
-                    println!("Got duplicate planet! Is the server lagging?");
+                    warn!("Got duplicate planet! Is the server lagging?");
                     break;
                 }
 
@@ -405,7 +403,7 @@ pub(crate) fn client_sync_players(
                 chunks_needed,
             } => {
                 if network_mapping.contains_server_entity(server_entity) {
-                    println!("Got duplicate ship! Is the server lagging?");
+                    warn!("Got duplicate ship! Is the server lagging?");
                     break;
                 }
 
@@ -477,7 +475,7 @@ pub(crate) fn client_sync_players(
                 }
             }
             ServerReliableMessages::MOTD { motd } => {
-                println!("Server MOTD: {motd}");
+                info!("Server MOTD: {motd}");
             }
             ServerReliableMessages::BlockChange {
                 blocks_changed_packet,
@@ -669,9 +667,7 @@ pub(super) fn register(app: &mut App) {
             (
                 fix_location.before(client_sync_players),
                 lerp_towards.after(client_sync_players),
-                sync_transforms_and_locations,
-                handle_child_syncing,
-                add_previous_location,
+                (sync_transforms_and_locations, handle_child_syncing, add_previous_location).chain(), //.run_if(on_timer(Duration::from_millis(1000))),
             )
                 .chain()
                 .run_if(in_state(GameState::Playing)),

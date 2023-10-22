@@ -119,7 +119,7 @@ fn handle_block_place_events(
 
                 if let Some(block_id) = block_items.block_from_item(item) {
                     if block_id != ev.block_id {
-                        eprintln!("WARNING: Inventory out of sync between client {}!", player.name());
+                        warn!("Inventory out of sync between client {}!", player.name());
                         break;
                     }
 

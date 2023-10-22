@@ -41,22 +41,41 @@ fn fix_read_mass_props(
 
 /// See https://github.com/dimforge/bevy_rapier/issues/271
 fn gravity_system(
-    emitters: Query<(&GravityEmitter, &GlobalTransform, &Location)>,
+    emitters: Query<(Entity, &GravityEmitter, &GlobalTransform, &Location)>,
     mut receiver: Query<(Entity, &Location, &ReadMassProperties, &RigidBody, Option<&mut ExternalImpulse>), Without<RigidBodyDisabled>>,
     time: Res<Time>,
     mut commands: Commands,
 ) {
-    let mut gravs: Vec<(f32, f32, Location, Quat)> = Vec::with_capacity(emitters.iter().len());
+    // let mut gravs: Vec<(Entity, &GravityEmitter, &Location)> = Vec::with_capacity(emitters.iter().len());
 
-    for (emitter, trans, location) in emitters.iter() {
-        gravs.push((emitter.force_per_kg, emitter.radius, *location, Quat::from_affine3(&trans.affine())));
-    }
+    // for (entity, emitter, trans, location) in emitters.iter() {
+    //     gravs.push((
+    //         entity,
+    //         emitter.force_per_kg,
+    //         emitter.radius,
+    //         *location,
+    //         Quat::from_affine3(&trans.affine()),
+    //     ));
+    // }
+
+    let gravs = emitters
+        .iter()
+        .map(|(ent, emitter, global_transform, location)| {
+            (
+                ent,
+                emitter.force_per_kg,
+                emitter.radius,
+                *location,
+                Quat::from_affine3(&global_transform.affine()),
+            )
+        })
+        .collect::<Vec<(Entity, f32, f32, Location, Quat)>>();
 
     for (ent, location, prop, rb, external_force) in receiver.iter_mut() {
         if *rb == RigidBody::Dynamic {
             let mut force = Vec3::ZERO;
 
-            for (force_per_kilogram, radius, pos, rotation) in gravs.iter() {
+            for (_, force_per_kilogram, radius, pos, rotation) in gravs.iter().filter(|emitter| emitter.0 != ent) {
                 let relative_position = pos.relative_coords_to(location);
                 let dist = relative_position.abs().max_element();
 

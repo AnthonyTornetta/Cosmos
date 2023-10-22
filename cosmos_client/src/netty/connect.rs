@@ -55,7 +55,7 @@ fn new_netcode_transport(host: &str) -> NetcodeClientTransport {
         user_data: Some(token),
     };
 
-    println!("Connecting to {server_addr}");
+    info!("Connecting to {server_addr}");
 
     NetcodeClientTransport::new(current_time, auth, socket).unwrap()
 }
@@ -71,7 +71,7 @@ pub struct HostConfig {
 ///
 /// Make sure the `ConnectionConfig` resource was added first.
 pub fn establish_connection(mut commands: Commands, host_config: Res<HostConfig>) {
-    println!("Establishing connection w/ server...");
+    info!("Establishing connection w/ server...");
     commands.insert_resource(ClientLobby::default());
     commands.insert_resource(MostRecentTick(None));
     commands.insert_resource(RenetClient::new(connection_config()));
@@ -82,7 +82,7 @@ pub fn establish_connection(mut commands: Commands, host_config: Res<HostConfig>
 /// Waits for a connection to be made, then changes the game state to `GameState::LoadingWorld`.
 pub fn wait_for_connection(mut state_changer: ResMut<NextState<GameState>>, transport: Res<NetcodeClientTransport>) {
     if transport.is_connected() {
-        println!("Loading server data...");
+        info!("Loading server data...");
         state_changer.set(GameState::LoadingWorld);
     }
 }
@@ -90,7 +90,7 @@ pub fn wait_for_connection(mut state_changer: ResMut<NextState<GameState>>, tran
 /// Waits for the `LoadingWorld` state to be done loading, then transitions to the `GameState::Playing`
 pub fn wait_for_done_loading(mut state_changer: ResMut<NextState<GameState>>, query: Query<&Player, With<LocalPlayer>>) {
     if query.get_single().is_ok() {
-        println!("Got local player, starting game!");
+        info!("Got local player, starting game!");
         state_changer.set(GameState::Playing);
     }
 }

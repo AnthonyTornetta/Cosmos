@@ -4,8 +4,9 @@
 //! [`create_many_to_one_registry`]
 
 use std::marker::PhantomData;
+use std::sync::{Arc, RwLock, RwLockReadGuard};
 
-use bevy::prelude::{App, Resource};
+use bevy::prelude::{resource_exists_and_changed, App, IntoSystemConfigs, Res, ResMut, Resource, Update};
 use bevy::utils::hashbrown::hash_map::Values;
 use bevy::utils::HashMap;
 
@@ -13,8 +14,8 @@ use super::identifiable::Identifiable;
 use super::AddLinkError;
 
 /// Represents a many to one link
-#[derive(Resource, Default, Debug)]
-pub struct ManyToOneRegistry<K: Identifiable + Sync + Send, V: Identifiable + Sync + Send> {
+#[derive(Resource, Default, Debug, Clone)]
+pub struct ManyToOneRegistry<K: Identifiable, V: Identifiable> {
     values: HashMap<u16, V>,
 
     name_to_value_pointer: HashMap<String, u16>,
@@ -26,7 +27,7 @@ pub struct ManyToOneRegistry<K: Identifiable + Sync + Send, V: Identifiable + Sy
     _phantom: PhantomData<K>,
 }
 
-impl<K: Identifiable + Sync + Send, V: Identifiable + Sync + Send> ManyToOneRegistry<K, V> {
+impl<K: Identifiable, V: Identifiable> ManyToOneRegistry<K, V> {
     /// Initializes a ManyToOne relationship.
     ///
     /// You should use [`create_many_to_one_registry`] instead, unless you don't want this
@@ -92,7 +93,49 @@ impl<K: Identifiable + Sync + Send, V: Identifiable + Sync + Send> ManyToOneRegi
     }
 }
 
+/// This is synced with its corresponding ManyToOneRegistry<T> every frame when it's changed.
+///
+/// This is slower than a normal registry, but is usable between threads.
+///
+/// Any updates made to this will be overwritten whenever the ManyToOneRegistry<T> changes, so don't change this
+/// and expect anything to happen to the normal registry.
+#[derive(Resource, Debug, Clone)]
+pub struct ReadOnlyManyToOneRegistry<K: Identifiable, V: Identifiable>(Arc<RwLock<ManyToOneRegistry<K, V>>>);
+
+impl<K: Identifiable, V: Identifiable> Default for ReadOnlyManyToOneRegistry<K, V> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<K: Identifiable, V: Identifiable> ReadOnlyManyToOneRegistry<K, V> {
+    /// Initializes a Registry.
+    ///
+    /// You should use [`create_registry`] instead, unless you don't want this
+    /// added as a bevy resource.
+    pub fn new() -> Self {
+        Self(Arc::new(RwLock::new(ManyToOneRegistry::new())))
+    }
+
+    /// Takes a lock of the registry this encapsulates
+    pub fn registry(&self) -> RwLockReadGuard<'_, ManyToOneRegistry<K, V>> {
+        self.0.as_ref().read().expect("Failed to lock registry")
+    }
+}
+
+fn apply_changes<K: Identifiable, V: Identifiable>(
+    registry: Res<ManyToOneRegistry<K, V>>,
+    mut mutex_registry: ResMut<ReadOnlyManyToOneRegistry<K, V>>,
+) {
+    mutex_registry.0 = Arc::new(RwLock::new(registry.clone()));
+}
+
 /// Initializes & adds the resource to bevy that can then be used in systems via `Res<ManyToOneRegistry<K, V>>`
-pub fn create_many_to_one_registry<K: Identifiable + Sync + Send + 'static, V: Identifiable + Sync + Send + 'static>(app: &mut App) {
-    app.insert_resource(ManyToOneRegistry::<K, V>::new());
+pub fn create_many_to_one_registry<K: Identifiable + 'static, V: Identifiable + 'static>(app: &mut App) {
+    app.insert_resource(ManyToOneRegistry::<K, V>::new())
+        .insert_resource(ReadOnlyManyToOneRegistry::<K, V>::new())
+        .add_systems(
+            Update,
+            apply_changes::<K, V>.run_if(resource_exists_and_changed::<ManyToOneRegistry<K, V>>()),
+        );
 }

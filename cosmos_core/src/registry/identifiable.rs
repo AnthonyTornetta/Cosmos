@@ -5,7 +5,7 @@
 //! some dummy value like 0. The unlocalized name has to be set by you.
 
 /// Represents something that has an internally used numeric id & a globally used unlocalized name.
-pub trait Identifiable: Send + Sync {
+pub trait Identifiable: Send + Sync + 'static + Clone {
     /// Returns the internally used id
     ///
     /// Make sure the value this returns is the same as the value set by set_numeric_id.

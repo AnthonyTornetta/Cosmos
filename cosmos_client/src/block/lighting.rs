@@ -1,7 +1,7 @@
 //! Handles all the blocks with lighting in the game
 
 use bevy::{
-    prelude::{App, Color, OnExit, Res, ResMut},
+    prelude::{warn, App, Color, OnExit, Res, ResMut},
     reflect::Reflect,
 };
 use cosmos_core::{
@@ -27,7 +27,7 @@ pub struct BlockLightProperties {
     pub shadows_disabled: bool,
 }
 
-#[derive(Debug, Reflect, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Reflect, Default, Serialize, Deserialize)]
 /// This links up a block to its block light properties
 pub struct BlockLighting {
     /// The properties this block has
@@ -59,7 +59,7 @@ fn register_light(lighting: BlockLightProperties, registry: &mut Registry<BlockL
             unlocalized_name: block.unlocalized_name().to_owned(),
         });
     } else {
-        println!("[Block Lighting] Missing block {name}");
+        warn!("[Block Lighting] Missing block {name}");
     }
 }
 

@@ -6,6 +6,7 @@ use crate::block::Block;
 use crate::events::block_events::BlockChangedEvent;
 use crate::registry::identifiable::Identifiable;
 use crate::registry::Registry;
+use crate::structure::block_storage::BlockStorer;
 use crate::structure::chunk::{Chunk, ChunkUnloadEvent, CHUNK_DIMENSIONS};
 use crate::structure::coordinates::{ChunkBlockCoordinate, ChunkCoordinate, CoordinateType};
 use crate::structure::events::ChunkSetEvent;
@@ -19,7 +20,6 @@ use bevy::transform::TransformBundle;
 use bevy::utils::HashSet;
 use bevy_rapier3d::math::Vect;
 use bevy_rapier3d::prelude::{Ccd, Collider, ColliderMassProperties, ReadMassProperties, Rot, Sensor};
-use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 
 use super::block_colliders::{BlockCollider, BlockColliderMode, BlockColliderType};
 
@@ -302,6 +302,10 @@ fn listen_for_new_physics_event(
     transform_query: Query<&Transform>,
     mut physics_components_query: Query<&mut ChunkPhysicsParts>,
 ) {
+    if event_reader.is_empty() {
+        return;
+    }
+
     let mut to_process = event_reader.iter().collect::<Vec<&ChunkNeedsPhysicsEvent>>();
 
     to_process.dedup();
@@ -319,11 +323,10 @@ fn listen_for_new_physics_event(
     }
 
     // create new colliders
-    let commands_mutex = Mutex::new(commands);
 
     let new_physics_entities = Mutex::new(vec![]);
 
-    to_process.par_iter().for_each(|ev| {
+    to_process.iter().for_each(|ev| {
         let Ok(structure) = structure_query.get(ev.structure_entity) else {
             return;
         };
@@ -337,19 +340,19 @@ fn listen_for_new_physics_event(
             return;
         };
 
+        // let chunk_colliders = vec![(Collider::cuboid(16.0, 16.0, 16.0), 10.0, BlockColliderMode::NormalCollider)];
+
         let chunk_colliders = generate_chunk_collider(chunk, &blocks, &colliders);
 
         let mut first = true;
 
-        let mut locked_cmds = commands_mutex.lock().unwrap();
-
-        if let Some(mut chunk_entity_commands) = locked_cmds.get_entity(chunk_entity) {
+        if let Some(mut chunk_entity_commands) = commands.get_entity(chunk_entity) {
             chunk_entity_commands.remove::<(Collider, Sensor)>();
         }
 
         for (collider, mass, collider_mode) in chunk_colliders {
             if first {
-                if let Some(mut entity_commands) = locked_cmds.get_entity(chunk_entity) {
+                if let Some(mut entity_commands) = commands.get_entity(chunk_entity) {
                     entity_commands.insert((Ccd::enabled(), collider, ColliderMassProperties::Mass(mass)));
 
                     if matches!(collider_mode, BlockColliderMode::SensorCollider) {
@@ -365,7 +368,7 @@ fn listen_for_new_physics_event(
                     .get(chunk_entity)
                     .expect("No transform on a chunk??? (megamind face)");
 
-                let mut child = locked_cmds.spawn((
+                let mut child = commands.spawn((
                     ChunkPhysicsPart { chunk_entity },
                     TransformBundle::from_transform(*chunk_trans),
                     collider,
@@ -378,7 +381,7 @@ fn listen_for_new_physics_event(
                 }
 
                 let child_entity = child.id();
-                if let Some(mut chunk_entity_cmds) = locked_cmds.get_entity(ev.structure_entity) {
+                if let Some(mut chunk_entity_cmds) = commands.get_entity(ev.structure_entity) {
                     chunk_entity_cmds.add_child(child_entity);
 
                     // Store these children in a container so they can be properly deleted when new colliders are generated

@@ -3,6 +3,7 @@
 use bevy::utils::hashbrown::hash_map;
 
 use super::{
+    block_storage::BlockStorer,
     chunk::{Chunk, CHUNK_DIMENSIONS},
     coordinates::{BlockCoordinate, ChunkBlockCoordinate, ChunkCoordinate, Coordinate, UnboundBlockCoordinate, UnboundChunkCoordinate},
     structure_block::StructureBlock,

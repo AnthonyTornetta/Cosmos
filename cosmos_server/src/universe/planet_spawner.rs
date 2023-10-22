@@ -133,7 +133,7 @@ fn spawn_planet(
 
             let is_origin = sector.x() == 25 && sector.y() == 25 && sector.z() == 25;
 
-            if !is_origin && rng.gen_range(0..1000) == 9 {
+            if is_origin || rng.gen_range(0..1000) == 9 {
                 let location = Location::new(Vec3::ZERO, sector);
 
                 let mut closest_star = None;
@@ -149,7 +149,11 @@ fn spawn_planet(
                 }
 
                 if let Some(star) = closest_star {
-                    let size = if is_origin { 50 } else { rng.gen_range(200..=500) };
+                    let size = if is_origin {
+                        64
+                    } else {
+                        2_f32.powi(rng.gen_range(7..=9)) as CoordinateType
+                    };
 
                     let distance_scaling = best_dist.expect("This would have been set at this point.") / 2.0;
 

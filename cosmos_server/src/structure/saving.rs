@@ -4,7 +4,7 @@
 
 use std::{fs, io::ErrorKind};
 
-use bevy::prelude::{warn, App, Commands, Component, Entity, Event, EventReader, EventWriter, Query, Update};
+use bevy::prelude::{error, info, warn, App, Commands, Component, Entity, Event, EventReader, EventWriter, Query, Update};
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
     netty::cosmos_encoder,
@@ -70,7 +70,7 @@ pub fn load_structure(
     structure_loaded: &mut EventWriter<SendDelayedStructureLoadEvent>,
 ) {
     if let Ok(structure_bin) = fs::read(format!("saves/{}/{}.cstr", structure_type.name(), structure_name)) {
-        println!("Loading structure {structure_name}...");
+        info!("Loading structure {structure_name}...");
 
         if let Ok(mut structure) = cosmos_encoder::deserialize::<Structure>(&structure_bin) {
             let mut entity_cmd = commands.spawn_empty();
@@ -91,12 +91,12 @@ pub fn load_structure(
 
             structure_loaded.send(SendDelayedStructureLoadEvent(entity));
 
-            println!("Done with {structure_name}!");
+            info!("Done with {structure_name}!");
         } else {
-            println!("Error parsing structure data for {structure_name} -- is it a valid file?");
+            error!("Unable to parse structure data for {structure_name} -- is it a valid file?");
         }
     } else {
-        println!("No {} structure found with the name of {}!", structure_type.name(), structure_name);
+        warn!("No {} structure found with the name of {}!", structure_type.name(), structure_name);
     }
 }
 
@@ -164,8 +164,8 @@ pub struct SaveStructure {
 fn monitor_needs_saved(mut commands: Commands, query: Query<(Entity, &Structure, &SaveStructure)>) {
     for (entity, structure, save_structure_component) in query.iter() {
         match save_structure(structure, &save_structure_component.name, save_structure_component.structure_type) {
-            Ok(_) => println!("Saved structure {}", save_structure_component.name),
-            Err(e) => eprintln!("Error saving structure {} {}", save_structure_component.name, e),
+            Ok(_) => info!("Saved structure {}", save_structure_component.name),
+            Err(e) => error!("Unable to save structure {} {}", save_structure_component.name, e),
         }
 
         commands.entity(entity).remove::<SaveStructure>();

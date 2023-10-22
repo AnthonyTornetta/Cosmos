@@ -10,7 +10,7 @@
 use std::fs;
 
 use bevy::{
-    prelude::{App, Commands, Component, DespawnRecursiveExt, Entity, IntoSystemConfigs, PreUpdate, Query, Update, With, Without},
+    prelude::{warn, App, Commands, Component, DespawnRecursiveExt, Entity, IntoSystemConfigs, PreUpdate, Query, Update, With, Without},
     reflect::Reflect,
 };
 use bevy_rapier3d::prelude::Velocity;
@@ -27,7 +27,7 @@ fn check_needs_loaded(query: Query<(Entity, &SaveFileIdentifier), (Without<Seria
     for (ent, nl) in query.iter() {
         let path = nl.get_save_file_path();
         let Ok(data) = fs::read(&path) else {
-            eprintln!("Error reading record at '{path}'. Is it corrupted?");
+            warn!("Error reading record at '{path}'. Is it corrupted?");
             commands.entity(ent).despawn_recursive();
             continue;
         };

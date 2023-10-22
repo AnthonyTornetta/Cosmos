@@ -3,7 +3,7 @@
 use bevy::prelude::{App, Color, ResMut, Startup};
 use cosmos_core::registry::{self, identifiable::Identifiable, Registry};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// Represents the overall color of a biosphere
 pub struct BiosphereColor {
     color: Color,

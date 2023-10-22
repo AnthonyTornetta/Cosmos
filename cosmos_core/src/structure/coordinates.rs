@@ -2,6 +2,8 @@
 
 extern crate proc_macro;
 
+use std::ops::{Add, Sub};
+
 use bevy::reflect::Reflect;
 use serde::{Deserialize, Serialize};
 
@@ -157,6 +159,14 @@ macro_rules! create_coordinate {
             }
         }
 
+        impl Add<$name> for $name {
+            type Output = Self;
+
+            fn add(self, rhs: Self) -> Self::Output {
+                Self::new(self.x + rhs.x, self.y + rhs.y, self.z + rhs.z)
+            }
+        }
+
         #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Reflect, Hash)]
         #[doc=$structComment]
         ///
@@ -263,6 +273,34 @@ macro_rules! create_coordinate {
                 }
             }
         }
+
+        impl Add<$unbounded> for $unbounded {
+            type Output = Self;
+
+            fn add(self, rhs: Self) -> Self::Output {
+                Self::new(self.x + rhs.x, self.y + rhs.y, self.z + rhs.z)
+            }
+        }
+
+        impl Add<$name> for $unbounded {
+            type Output = Self;
+
+            fn add(self, rhs: $name) -> Self::Output {
+                Self::new(
+                    self.x + rhs.x as UnboundCoordinateType,
+                    self.y + rhs.y as UnboundCoordinateType,
+                    self.z + rhs.z as UnboundCoordinateType,
+                )
+            }
+        }
+
+        impl Sub<$unbounded> for $unbounded {
+            type Output = Self;
+
+            fn sub(self, rhs: Self) -> Self::Output {
+                Self::new(self.x - rhs.x, self.y - rhs.y, self.z - rhs.z)
+            }
+        }
     };
 }
 
@@ -272,6 +310,38 @@ create_coordinate!(
     "This is for each block in a structure.\n\n0, 0, 0 represents the bottom, left, back block.",
     "coordinate in range [0, structure.blocks_(width/height/length)())"
 );
+
+impl Add<ChunkBlockCoordinate> for BlockCoordinate {
+    type Output = Self;
+
+    fn add(self, rhs: ChunkBlockCoordinate) -> Self::Output {
+        Self::new(self.x + rhs.x, self.y + rhs.y, self.z + rhs.z)
+    }
+}
+
+impl Add<UnboundChunkBlockCoordinate> for UnboundBlockCoordinate {
+    type Output = Self;
+
+    fn add(self, rhs: UnboundChunkBlockCoordinate) -> Self::Output {
+        Self::new(self.x + rhs.x, self.y + rhs.y, self.z + rhs.z)
+    }
+}
+
+impl Add<BlockCoordinate> for ChunkBlockCoordinate {
+    type Output = Self;
+
+    fn add(self, rhs: BlockCoordinate) -> Self::Output {
+        Self::new(self.x + rhs.x, self.y + rhs.y, self.z + rhs.z)
+    }
+}
+
+impl Add<UnboundBlockCoordinate> for UnboundChunkBlockCoordinate {
+    type Output = Self;
+
+    fn add(self, rhs: UnboundBlockCoordinate) -> Self::Output {
+        Self::new(self.x + rhs.x, self.y + rhs.y, self.z + rhs.z)
+    }
+}
 
 create_coordinate!(
     ChunkBlockCoordinate,
@@ -301,6 +371,18 @@ impl ChunkBlockCoordinate {
             y: value.y & (CHUNK_DIMENSIONS - 1),
             z: value.z & (CHUNK_DIMENSIONS - 1),
         }
+    }
+
+    #[inline]
+    /// `Self::new(0, 0, 0)`
+    pub fn min() -> Self {
+        Self::new(0, 0, 0)
+    }
+
+    #[inline]
+    /// `Self::new(CHUNK_DIMENSIONS, CHUNK_DIMENSIONS, CHUNK_DIMENSIONS)`
+    pub fn max() -> Self {
+        Self::new(CHUNK_DIMENSIONS, CHUNK_DIMENSIONS, CHUNK_DIMENSIONS)
     }
 }
 
@@ -361,6 +443,16 @@ impl ChunkCoordinate {
         BlockCoordinate::new(self.x * CHUNK_DIMENSIONS, self.y * CHUNK_DIMENSIONS, self.z * CHUNK_DIMENSIONS)
     }
 
+    /// Returns the "middle" block of this chunk. Note that the middle isn't actually the middle, since a chunk has an even number of blocks.
+    /// The "middle" block is 1 closer to the positive side than the negative.
+    pub fn middle_structure_block(&self) -> BlockCoordinate {
+        BlockCoordinate::new(
+            self.x * CHUNK_DIMENSIONS + CHUNK_DIMENSIONS / 2,
+            self.y * CHUNK_DIMENSIONS + CHUNK_DIMENSIONS / 2,
+            self.z * CHUNK_DIMENSIONS + CHUNK_DIMENSIONS / 2,
+        )
+    }
+
     /// Returns the right, top, front block of this chunk
     pub fn last_structure_block(&self) -> BlockCoordinate {
         BlockCoordinate::new(
@@ -391,5 +483,57 @@ impl UnboundChunkCoordinate {
             y: (value.y as f32 / CHUNK_DIMENSIONSF).floor() as UnboundCoordinateType,
             z: (value.z as f32 / CHUNK_DIMENSIONSF).floor() as UnboundCoordinateType,
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::structure::{chunk::CHUNK_DIMENSIONS_UB, coordinates::UnboundChunkCoordinate};
+
+    use super::UnboundBlockCoordinate;
+
+    #[test]
+    fn test_unbound() {
+        assert_eq!(
+            UnboundChunkCoordinate::new(1, 1, 1),
+            UnboundChunkCoordinate::for_unbound_block_coordinate(UnboundBlockCoordinate::new(
+                CHUNK_DIMENSIONS_UB,
+                CHUNK_DIMENSIONS_UB,
+                CHUNK_DIMENSIONS_UB
+            ))
+        );
+
+        assert_eq!(
+            UnboundChunkCoordinate::new(0, 0, 0),
+            UnboundChunkCoordinate::for_unbound_block_coordinate(UnboundBlockCoordinate::new(10, 10, 10))
+        );
+
+        assert_eq!(
+            UnboundChunkCoordinate::new(0, 0, 0),
+            UnboundChunkCoordinate::for_unbound_block_coordinate(UnboundBlockCoordinate::new(0, 0, 0))
+        );
+
+        assert_eq!(
+            UnboundChunkCoordinate::new(-1, -1, -1),
+            UnboundChunkCoordinate::for_unbound_block_coordinate(UnboundBlockCoordinate::new(-10, -10, -10))
+        );
+
+        assert_eq!(
+            UnboundChunkCoordinate::new(-1, -1, -1),
+            UnboundChunkCoordinate::for_unbound_block_coordinate(UnboundBlockCoordinate::new(
+                -CHUNK_DIMENSIONS_UB,
+                -CHUNK_DIMENSIONS_UB,
+                -CHUNK_DIMENSIONS_UB
+            ))
+        );
+
+        assert_eq!(
+            UnboundChunkCoordinate::new(-2, -2, -2),
+            UnboundChunkCoordinate::for_unbound_block_coordinate(UnboundBlockCoordinate::new(
+                -CHUNK_DIMENSIONS_UB - 1,
+                -CHUNK_DIMENSIONS_UB - 1,
+                -CHUNK_DIMENSIONS_UB - 1
+            ))
+        );
     }
 }

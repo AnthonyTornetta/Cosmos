@@ -1,4 +1,5 @@
 # Cosmos
+
 A multiplayer block-based space exploration game, written in rust using the [Bevy](https://www.bevyengine.org/) engine.
 
 If you're interested, join our new discord server here:
@@ -12,13 +13,14 @@ Cosmos has ships that you can pilot through space. (And yes those are working la
 Build your own ship block by block and walk inside while flying through space.
 ![](./showcase/inside_ship.png)
 
-Once you reach your destination, make a *hopefully safer than this* landing.
+Once you reach your destination, make a _hopefully safer than this_ landing.
 ![](./showcase/ship_on_ground.png)
 
 ## Compilation
+
 To get started, install your OS dependencies [here](https://bevyengine.org/learn/book/getting-started/setup/#install-os-dependencies). The dependencies section is all you need to do.
 
-This project requires the latest nightly rust to compile. To swap to nightly, run the command 
+This project requires the latest nightly rust to compile. To swap to nightly, run the command
 
 `rustup default nightly`.
 
@@ -32,29 +34,27 @@ For the server, navigate to the cosmos_server directory and run
 
 For release builds, append the `--release` flag to the build/run commands.
 
-To compile the workspace (not normally necessary), navigate to the root directory of the repo and run 
+To compile the workspace (not normally necessary), navigate to the root directory of the repo and run
 
 `cargo build`
 
-
 ## Documentation
 
-To view the cosmos documentation, run the following commands
+The first time you view the cosmos documentation, run the following commands
 
 ```console
 cargo install mdbook
 cargo install mdbook-mermaid
 ```
 
-Then navigate to the docs folder and run `mdbook-mermaid install`
-
-To view the documentation, navigate to the `docs/` directory. To have it update as you modify it, run `mdbook serve` and navigate to the URL it provides, or to just build it run `mdbook build`.
+Every time you want to view the documentation, navigate to the `docs/` directory. To have it update as you modify it, run `mdbook serve` and navigate to the URL it provides, or to just build it run `mdbook build`.
 
 # Cosmos Roadmap
 
 See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the list of current features/bugs in development.
 
 ## Release 0.0.5a - The Aesthetic Release (In Progress)
+
 - [ ] Biosphere Improvements
   - [ ] Ice biosphere glaciers
   - [ ] Water block
@@ -64,8 +64,8 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
     - [ ] Undergrowth
     - [ ] 1 More tree type
   - [ ] Groundwork for biomes
-    - [ ] Plane, 
-    - [ ] Redwood forest, 
+    - [ ] Plane,
+    - [ ] Redwood forest,
     - [ ] 1 Additional forest
     - [ ] Ocean
   - [ ] On-planet skybox
@@ -93,17 +93,20 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
   - [x] Abstract the 3d block GUI camera
   - [x] Fix the 3d block GUI camera to not render anything except GUI blocks
 - [ ] Fix seeing through cracks in blocks
+- [x] Lods
+  - [x] Reduced detail rendering of far away chunks to see the entire planet
 - [x] Update to bevy 0.11
   - [x] Update physics
   - [x] Update bevy
 
 ## Release 0.0.4a
+
 - [x] Galaxy Generation
-  - [x] Stars procedurally generated in spiral-like pattern based on seed 
+  - [x] Stars procedurally generated in spiral-like pattern based on seed
     - [x] Create star
       - [x] Light emits from star
       - [x] Load star within system
-  - [x] Planets generate around stars 
+  - [x] Planets generate around stars
     - [x] Biospheres depend on how close they are to the sun
     - [x] Dynamic biospheres based off temperature
     - [x] Only generate if planet is close enough to player
@@ -133,9 +136,10 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
     - [x] Create free camera
 
 ## Release 0.0.3a
+
 - [x] Infinite universe
   - [x] (**Client**) Player can travel any distance from 0,0,0 with no noticable issues, and everything moves relaitve to player
-  - [x] (**Server**) 
+  - [x] (**Server**)
     - [x] Objects move relative to player world they are a part of
     - [x] Player world moves relative to its player
     - [x] Players can be a part of the same world if they are close enough
@@ -148,7 +152,7 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
   - [x] (**Client**)
     - [x] Unload objects that are too far away
     - [x] Request entities that server sends if they don't have the entity for them
-  - [x] (**Server**) 
+  - [x] (**Server**)
     - [x] Unload objects that are too far from any player
     - [x] Load objects that are close to a player & send that info to client
     - [x] Only send information about objects to clients that are close enough to have them loaded
@@ -158,6 +162,7 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
   - [x] 3d models for blocks
 
 ## Release 0.0.2a
+
 - [x] Improved state management
   - [x] Client state management
   - [x] Server state management
@@ -208,6 +213,7 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
   - [x] Implement console commands
 
 ## Release 0.0.1a
+
 - [x] Player Movement
   - [x] FPS Camera
 - [x] Dynamic Input system
@@ -242,7 +248,6 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
     - [x] Chunk-based rendering
 - [x] Add Crosshair
 - [x] Support re-sizable window
-
 
 ## Everything that will still have to be done after 0.0.5a
 

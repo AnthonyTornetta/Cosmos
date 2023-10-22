@@ -56,7 +56,7 @@ pub fn server_listen_messages(
         while let Some(message) = server.receive_message(client_id, NettyChannelClient::Unreliable) {
             if let Some(player_entity) = lobby.player_from_id(client_id) {
                 let Ok(command) = cosmos_encoder::deserialize::<ClientUnreliableMessages>(&message) else {
-                    eprintln!("ERROR DECODING CLIENT MESSAGE!");
+                    warn!("UNABLE TO DESERIALIZE CLIENT MESSAGE!");
                     break;
                 };
 
@@ -110,7 +110,7 @@ pub fn server_listen_messages(
 
         while let Some(message) = server.receive_message(client_id, NettyChannelClient::Reliable) {
             let Ok(command) = cosmos_encoder::deserialize::<ClientReliableMessages>(&message) else {
-                eprintln!("ERROR DECODING CLIENT MESSAGE!");
+                warn!("UNABLE TO DESERIALIZE CLIENT MESSAGE!");
                 break;
             };
 
@@ -128,7 +128,7 @@ pub fn server_listen_messages(
                             );
                         }
                     } else {
-                        println!("!!! Server received invalid entity from client {client_id}");
+                        warn!("!!! Server received invalid entity from client {client_id}");
                     }
                 }
                 ClientReliableMessages::SendSingleChunk { structure_entity, chunk } => request_chunk_event_writer.send(RequestChunkEvent {
