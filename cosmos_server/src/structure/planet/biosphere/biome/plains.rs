@@ -1,3 +1,5 @@
+//! Plains biome
+
 use bevy::prelude::{App, EventWriter, OnExit, Res, ResMut};
 use cosmos_core::{
     block::{Block, BlockFace},
@@ -21,6 +23,7 @@ use crate::{
 
 use super::{biome_registry::RegisteredBiome, Biome};
 
+/// Grassy and has trees
 pub struct PlainsBiome {
     id: u16,
     unlocalized_name: String,
@@ -28,6 +31,7 @@ pub struct PlainsBiome {
 }
 
 impl PlainsBiome {
+    /// Creates a new plains biome
     pub fn new(name: impl Into<String>, block_layers: BlockLayers) -> Self {
         Self {
             id: 0,

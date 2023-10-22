@@ -12,7 +12,6 @@ use cosmos_core::{
     physics::location::Location,
     registry::Registry,
     structure::{
-        block_storage::BlockStorer,
         chunk::{Chunk, CHUNK_DIMENSIONS},
         coordinates::{BlockCoordinate, ChunkBlockCoordinate, ChunkCoordinate, CoordinateType},
         lod::{LodDelta, LodNetworkMessage, SetLodMessage},
@@ -86,10 +85,14 @@ pub struct BlockLayers {
 }
 
 impl BlockLayers {
+    /// Returns an iterator over all the block ranges in the order they were added
     pub fn ranges(&self) -> std::slice::Iter<(cosmos_core::block::Block, BlockLayer)> {
         self.ranges.iter()
     }
 
+    /// Returns the "Y" coordinate the sea level is at, and its block if there is one
+    ///
+    /// This should be replaced in the future with an actual ocean biome
     pub fn sea_level(&self) -> Option<&(CoordinateType, Block)> {
         self.sea_block.as_ref()
     }
@@ -99,9 +102,17 @@ impl BlockLayers {
 /// For example, the "stone" BlockLevel has the noise paramters that create the boundry between dirt and stone.
 #[derive(Clone, Debug)]
 pub struct BlockLayer {
+    /// The "Y" coordinate when amplitude is 0
     pub middle_depth: CoordinateType,
+    /// How much each change in coordinate will effect the change of the block
+    ///
+    /// Lower number = less change per block.
     pub delta: f64,
+    /// Maximum/minimum height of this layer.
     pub amplitude: f64,
+    /// # of iterations for this layer. More = more computationally expensive but better looking terrain.
+    ///
+    /// I would recommend putting iterations to something like 9 for top-level terrain, and keeping it 1 for everything else.
     pub iterations: usize,
 }
 
@@ -202,6 +213,7 @@ impl BlockLayers {
         Ok(self)
     }
 
+    /// Calculates the block here for a face chunk
     pub fn face_block<'a>(
         &self,
         height: CoordinateType,
@@ -250,6 +262,7 @@ impl BlockLayers {
         }
     }
 
+    /// Calculates the block here for an edge chunk
     pub fn edge_block<'a>(
         &self,
         j_height: CoordinateType,
@@ -300,6 +313,7 @@ impl BlockLayers {
         }
     }
 
+    /// Calculates the block here for a corner chunk
     pub fn corner_block<'a>(
         &self,
         x_height: CoordinateType,
@@ -727,7 +741,6 @@ pub fn generate_planet<T: BiosphereMarkerComponent, E: TGenerateChunkEvent>(
                                 &noise_generator,
                                 &mut chunk,
                                 up,
-                                1,
                                 &biome_list,
                                 biome_id,
                             );
@@ -742,7 +755,6 @@ pub fn generate_planet<T: BiosphereMarkerComponent, E: TGenerateChunkEvent>(
                                 &mut chunk,
                                 j_up,
                                 k_up,
-                                1,
                                 &biome_list,
                                 biome_id,
                             );
@@ -758,7 +770,6 @@ pub fn generate_planet<T: BiosphereMarkerComponent, E: TGenerateChunkEvent>(
                                 x_up,
                                 y_up,
                                 z_up,
-                                1,
                                 &biome_list,
                                 biome_id,
                             );

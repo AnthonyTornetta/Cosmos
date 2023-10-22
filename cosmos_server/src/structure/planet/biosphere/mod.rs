@@ -52,6 +52,11 @@ pub mod grass_biosphere;
 pub mod ice_biosphere;
 pub mod molten_biosphere;
 
+/// This component is only used to mark a planet as a specific biosphere.
+///
+/// Ideally, this should be a 0-size type to allow for quick creation of it.
+///
+/// Generally, you should just create a new marker component for every new biosphere you create, as each biosphere needs a unique component to work properly.
 pub trait BiosphereMarkerComponent: Component + Default + Clone + Copy {}
 
 #[derive(Debug, Event)]
@@ -111,6 +116,8 @@ impl<T: BiosphereMarkerComponent> GeneratingChunk<T> {
 const BIOME_DECIDER_DELTA: f64 = 0.01;
 
 #[derive(Resource, Clone, Copy)]
+/// This is used to calculate which biosphere parameters are present at specific blocks,
+/// and is used to decide which biosphere goes here in conjunction with the `BiosphereBiomeRegistry`
 pub struct BiomeDecider<T: BiosphereMarkerComponent> {
     _phantom: PhantomData<T>,
 
@@ -120,6 +127,11 @@ pub struct BiomeDecider<T: BiosphereMarkerComponent> {
 }
 
 impl<T: BiosphereMarkerComponent> BiomeDecider<T> {
+    /// Gets the biome parameters at this block coordinate
+    ///
+    /// - `location` The structure's location (used for seeding the noise function)
+    /// - `block_coords` The coordinates of the block to look at
+    /// - `noise` The noise function to use
     pub fn biome_parameters_at(&self, location: &Location, block_coords: BlockCoordinate, noise: &Noise) -> BiomeParameters {
         let (lx, ly, lz) = (
             (location.absolute_coords_f64().x + block_coords.x as f64) * BIOME_DECIDER_DELTA,

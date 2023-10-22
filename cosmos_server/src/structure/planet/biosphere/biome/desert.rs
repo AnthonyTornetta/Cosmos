@@ -1,3 +1,5 @@
+//! Desert biome
+
 use bevy::prelude::{App, EventWriter, OnExit, Res, ResMut};
 use cosmos_core::{
     block::Block,
@@ -11,6 +13,7 @@ use crate::{init::init_world::Noise, state::GameState, structure::planet::biosph
 
 use super::{biome_registry::RegisteredBiome, Biome};
 
+/// Sandy without any features
 pub struct DesertBiome {
     id: u16,
     unlocalized_name: String,
@@ -18,6 +21,7 @@ pub struct DesertBiome {
 }
 
 impl DesertBiome {
+    /// Creates a new desert biome
     pub fn new(name: impl Into<String>, block_layers: BlockLayers) -> Self {
         Self {
             id: 0,
@@ -46,12 +50,12 @@ impl Biome for DesertBiome {
 
     fn generate_chunk_features(
         &self,
-        block_event_writer: &mut EventWriter<BlockChangedEvent>,
-        coords: ChunkCoordinate,
-        structure: &mut Structure,
-        location: &Location,
-        blocks: &Registry<Block>,
-        noise_generator: &Noise,
+        _block_event_writer: &mut EventWriter<BlockChangedEvent>,
+        _coords: ChunkCoordinate,
+        _structure: &mut Structure,
+        _location: &Location,
+        _blocks: &Registry<Block>,
+        _noise_generator: &Noise,
     ) {
     }
 }
@@ -60,7 +64,7 @@ fn register_biome(mut registry: ResMut<Registry<RegisteredBiome>>, block_registr
     registry.register(RegisteredBiome::new(Box::new(DesertBiome::new(
         "cosmos:desert",
         BlockLayers::default()
-            .add_noise_layer("cosmos:stone", &block_registry, 160, 0.05, 7.0, 9)
+            .add_noise_layer("cosmos:stone", &block_registry, 160, 0.05, 3.0, 2)
             .expect("Grass missing")
             .add_fixed_layer("cosmos:dirt", &block_registry, 1)
             .expect("Dirt missing")

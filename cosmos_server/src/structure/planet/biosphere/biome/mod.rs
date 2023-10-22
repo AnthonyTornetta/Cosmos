@@ -1,3 +1,5 @@
+//! Contains logic related to the localized formation of terrain
+
 use std::{
     hash::Hash,
     marker::PhantomData,
@@ -441,6 +443,12 @@ fn generate_corner_chunk<C: BlockStorer>(
     }
 }
 
+/// This is used when generating chunks for both LODs and normally.
+///
+/// This maps every block in a chunk to its biome, based on the biome's "id". The id is just its index
+/// in the [`BiosphereBiomesRegistry<T>`] where `T` is the biosphere.
+///
+/// This is mostly used to keep performance to a maximum.
 pub struct BiomeIdList(Box<[u8; (CHUNK_DIMENSIONS * CHUNK_DIMENSIONS * CHUNK_DIMENSIONS) as usize]>);
 
 impl BiomeIdList {
@@ -452,16 +460,25 @@ impl BiomeIdList {
     }
 
     #[inline]
-    pub fn set_biome_id(&mut self, coords: ChunkBlockCoordinate, value: u8) {
+    /// Sets the biome id at these chunk coordinates
+    ///
+    /// # PANICS
+    /// if the coords are out of a chunk's normal bounds
+    pub fn set_biome_id(&mut self, coords: ChunkBlockCoordinate, id: u8) {
         self.0[flatten(
             coords.x as usize,
             coords.y as usize,
             coords.z as usize,
             CHUNK_DIMENSIONS as usize,
             CHUNK_DIMENSIONS as usize,
-        )] = value;
+        )] = id;
     }
 
+    /// Gets the biome's id at these coordinates. Will return 0 if nothing has been set.
+    /// Note that 0 is also a valid id.
+    ///
+    /// # PANICS
+    /// if the coords are out of a chunk's normal bounds
     pub fn biome_id(&self, coords: ChunkBlockCoordinate) -> u8 {
         self.0[flatten(
             coords.x as usize,
@@ -473,13 +490,35 @@ impl BiomeIdList {
     }
 }
 
+/// A biome is a structure that dictates how terrain will be generated.
+///
+/// Biomes can be linked to biospheres, which will then call their methods to generate their terrain.
+///
+/// Biomes don't do anything, until registered in the [`BiosphereBiomesRegistry<T>`] where `T` is the biosphere they belong to.
+///
+/// Most methods in here don't need to be modified, and will work for most biome implementations.
+/// The main ones to mess with are:
+/// `id, unlocailized_name, set_numeric_id, block_layers`.
 pub trait Biome: Send + Sync + 'static {
+    /// Same as [`Identifiable::id`]
     fn id(&self) -> u16;
+    /// Same as [`Identifiable::unlocalized_name`]
     fn unlocalized_name(&self) -> &str;
+    /// Same as [`Identifiable::set_numeric_id`]
     fn set_numeric_id(&mut self, id: u16);
 
+    /// Gets the block layers that this biome uses. Note that this is only used internally. If you don't need them, feel free to return an empty BlockLayers.
     fn block_layers(&self) -> &BlockLayers;
 
+    /// Generates an lod chunk that is completely on one side of the planet
+    /// - `self_as_dyn` Self as a dyn Biome pointer
+    /// - `block_coords` The bottom-left-back-most coordinates to start the generation
+    /// - `structure_coords` Just used to seed the noise function
+    /// - `chunk` The chunk to fill in
+    /// - `up` The up direction of this face
+    /// - `scale` The scale of this LOD
+    /// - `biome_id_list` A list of biomes each block in the lod chunk is
+    /// - `self_biome_id` This biome's id for this specific biosphere. Used to check against itself in the `biome_id_list`
     fn generate_face_chunk_lod(
         &self,
         self_as_dyn: &dyn Biome,
@@ -507,6 +546,16 @@ pub trait Biome: Send + Sync + 'static {
         );
     }
 
+    /// Generates an lod chunk that is on an edge of the planet
+    /// - `self_as_dyn` Self as a dyn Biome pointer
+    /// - `block_coords` The bottom-left-back-most coordinates to start the generation
+    /// - `structure_coords` Just used to seed the noise function
+    /// - `chunk` The chunk to fill in
+    /// - `j_up` The up direction of one of the faces
+    /// - `k_up` The up direction of the other of the faces
+    /// - `scale` The scale of this LOD
+    /// - `biome_id_list` A list of biomes each block in the lod chunk is
+    /// - `self_biome_id` This biome's id for this specific biosphere. Used to check against itself in the `biome_id_list`
     fn generate_edge_chunk_lod(
         &self,
         self_as_dyn: &dyn Biome,
@@ -536,6 +585,17 @@ pub trait Biome: Send + Sync + 'static {
         );
     }
 
+    /// Generates an lod chunk that is on a corner of the planet
+    /// - `self_as_dyn` Self as a dyn Biome pointer
+    /// - `block_coords` The bottom-left-back-most coordinates to start the generation
+    /// - `structure_coords` Just used to seed the noise function
+    /// - `chunk` The chunk to fill in
+    /// - `x_up` The up direction of the x face
+    /// - `y_up` The up direction of the y face
+    /// - `z_up` The up direction of the z face
+    /// - `scale` The scale of this LOD
+    /// - `biome_id_list` A list of biomes each block in the lod chunk is
+    /// - `self_biome_id` This biome's id for this specific biosphere. Used to check against itself in the `biome_id_list`
     fn generate_corner_chunk_lod(
         &self,
         self_as_dyn: &dyn Biome,
@@ -567,6 +627,14 @@ pub trait Biome: Send + Sync + 'static {
         );
     }
 
+    /// Generates a chunk that is completely on one side of the planet
+    /// - `self_as_dyn` Self as a dyn Biome pointer
+    /// - `block_coords` The bottom-left-back-most coordinates to start the generation
+    /// - `structure_coords` Just used to seed the noise function
+    /// - `chunk` The chunk to fill in
+    /// - `up` The up direction of this face
+    /// - `biome_id_list` A list of biomes each block in the chunk is
+    /// - `self_biome_id` This biome's id for this specific biosphere. Used to check against itself in the `biome_id_list`
     fn generate_face_chunk(
         &self,
         self_as_dyn: &dyn Biome,
@@ -576,7 +644,6 @@ pub trait Biome: Send + Sync + 'static {
         noise_generator: &noise::OpenSimplex,
         chunk: &mut Chunk,
         up: BlockFace,
-        scale: CoordinateType,
         biome_id_list: &BiomeIdList,
         self_biome_id: u8,
     ) {
@@ -588,12 +655,21 @@ pub trait Biome: Send + Sync + 'static {
             noise_generator,
             chunk,
             up,
-            scale,
+            1,
             biome_id_list,
             self_biome_id,
         );
     }
 
+    /// Generates a chunk that is on an edge of the planet
+    /// - `self_as_dyn` Self as a dyn Biome pointer
+    /// - `block_coords` The bottom-left-back-most coordinates to start the generation
+    /// - `structure_coords` Just used to seed the noise function
+    /// - `chunk` The chunk to fill in
+    /// - `j_up` The up direction of one of the faces
+    /// - `k_up` The up direction of the other of the faces
+    /// - `biome_id_list` A list of biomes each block in the chunk is
+    /// - `self_biome_id` This biome's id for this specific biosphere. Used to check against itself in the `biome_id_list`
     fn generate_edge_chunk(
         &self,
         self_as_dyn: &dyn Biome,
@@ -604,7 +680,6 @@ pub trait Biome: Send + Sync + 'static {
         chunk: &mut Chunk,
         j_up: BlockFace,
         k_up: BlockFace,
-        scale: CoordinateType,
         biome_id_list: &BiomeIdList,
         self_biome_id: u8,
     ) {
@@ -617,12 +692,22 @@ pub trait Biome: Send + Sync + 'static {
             chunk,
             j_up,
             k_up,
-            scale,
+            1,
             biome_id_list,
             self_biome_id,
         );
     }
 
+    /// Generates a chunk that is on a corner of the planet
+    /// - `self_as_dyn` Self as a dyn Biome pointer
+    /// - `block_coords` The bottom-left-back-most coordinates to start the generation
+    /// - `structure_coords` Just used to seed the noise function
+    /// - `chunk` The chunk to fill in
+    /// - `x_up` The up direction of the x face
+    /// - `y_up` The up direction of the y face
+    /// - `z_up` The up direction of the z face
+    /// - `biome_id_list` A list of biomes each block in the chunk is
+    /// - `self_biome_id` This biome's id for this specific biosphere. Used to check against itself in the `biome_id_list`
     fn generate_corner_chunk(
         &self,
         self_as_dyn: &dyn Biome,
@@ -634,7 +719,6 @@ pub trait Biome: Send + Sync + 'static {
         x_up: BlockFace,
         y_up: BlockFace,
         z_up: BlockFace,
-        scale: CoordinateType,
         biome_id_list: &BiomeIdList,
         self_biome_id: u8,
     ) {
@@ -648,12 +732,17 @@ pub trait Biome: Send + Sync + 'static {
             x_up,
             y_up,
             z_up,
-            scale,
+            1,
             biome_id_list,
             self_biome_id,
         );
     }
 
+    /// Generates any features this chunk may have after generating the bulk of the terrain
+    ///
+    /// This includes things like trees + flora.
+    ///
+    /// Note that currently LOD chunks will not have this method called.
     fn generate_chunk_features(
         &self,
         block_event_writer: &mut EventWriter<BlockChangedEvent>,
@@ -894,7 +983,10 @@ const LOOKUP_TABLE_PRECISION: usize = 100;
 const LOOKUP_TABLE_SIZE: usize = LOOKUP_TABLE_PRECISION * LOOKUP_TABLE_PRECISION * LOOKUP_TABLE_PRECISION;
 
 #[derive(Resource, Clone)]
-pub struct BiosphereBiomesRegistry<T> {
+/// Links a biosphere and all the biomes it has together
+///
+/// `T` is the marker component for the biosphere this goes with
+pub struct BiosphereBiomesRegistry<T: BiosphereMarkerComponent> {
     _phantom: PhantomData<T>,
 
     /// Contains a list of indicies to the biomes vec
@@ -907,6 +999,9 @@ pub struct BiosphereBiomesRegistry<T> {
 }
 
 #[derive(Clone, Copy, Debug)]
+/// Dictates the optimal parameters for this biome to generate.
+///
+/// The most fit biome will be selected for each block on a planet
 pub struct BiomeParameters {
     /// This must be within 0.0 to 100.0
     pub ideal_temperature: f32,
@@ -916,13 +1011,14 @@ pub struct BiomeParameters {
     pub ideal_humidity: f32,
 }
 
-impl<T> Default for BiosphereBiomesRegistry<T> {
+impl<T: BiosphereMarkerComponent> Default for BiosphereBiomesRegistry<T> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<T> BiosphereBiomesRegistry<T> {
+impl<T: BiosphereMarkerComponent> BiosphereBiomesRegistry<T> {
+    /// Creates an empty biosphere-biome registry.
     pub fn new() -> Self {
         Self {
             _phantom: Default::default(),
@@ -964,6 +1060,7 @@ impl<T> BiosphereBiomesRegistry<T> {
         info!("Done constructing lookup table!");
     }
 
+    /// Links a biome with this biosphere. Make sure this is only done before `GameState::PostLoading` ends, otherwise this will have no effect.
     pub fn register(&mut self, biome: Arc<RwLock<Box<dyn Biome>>>, params: BiomeParameters) {
         let idx = self.biomes.len();
         self.biomes.push(biome);
@@ -1006,6 +1103,7 @@ impl<T> BiosphereBiomesRegistry<T> {
     }
 
     #[inline]
+    /// Gets the biome from this index (relative to this registry). Call [`Self::ideal_biome_index_for`] to get the best index for a biome.
     pub fn biome_from_index(&self, biome_idx: usize) -> RwLockReadGuard<Box<dyn Biome>> {
         self.biomes[biome_idx].read().unwrap()
     }
@@ -1025,6 +1123,9 @@ fn construct_lookup_tables<T: BiosphereMarkerComponent>(mut registry: ResMut<Bio
     registry.construct_lookup_table();
 }
 
+/// This will setup the biosphere registry and construct the lookup tables at the end of [`GameState::PostLoading`]
+///
+/// You don't normally have to call this manually, because is automatically called in `register_biosphere`
 pub fn create_biosphere_biomes_registry<T: BiosphereMarkerComponent>(app: &mut App) {
     app.init_resource::<BiosphereBiomesRegistry<T>>()
         .add_systems(OnExit(GameState::PostLoading), construct_lookup_tables::<T>);

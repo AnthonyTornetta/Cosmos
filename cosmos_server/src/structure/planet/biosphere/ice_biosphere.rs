@@ -1,15 +1,7 @@
 //! Creates a ice planet
 
-use bevy::prelude::{
-    in_state, warn, App, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, OnEnter, Query, Res, ResMut,
-    Update,
-};
-use cosmos_core::{
-    block::Block,
-    physics::location::Location,
-    registry::Registry,
-    structure::{coordinates::ChunkCoordinate, ChunkInitEvent, Structure},
-};
+use bevy::prelude::{warn, App, Component, Entity, Event, OnEnter, Res, ResMut};
+use cosmos_core::{registry::Registry, structure::coordinates::ChunkCoordinate};
 
 use crate::GameState;
 

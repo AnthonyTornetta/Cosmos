@@ -1,3 +1,5 @@
+//! A wrapper around dyn Biome to make biomes registerable
+
 use std::sync::{Arc, RwLock};
 
 use bevy::prelude::App;
@@ -6,6 +8,9 @@ use cosmos_core::registry::{self, identifiable::Identifiable};
 use super::Biome;
 
 #[derive(Clone)]
+/// A wrapper around a dyn Biome that makes it registerable.
+///
+/// Use [`Self::biome`] to get the dyn Biome in a thread-safe way
 pub struct RegisteredBiome {
     biome: Arc<RwLock<Box<dyn Biome>>>,
     // Duplication of data voids rwlock waiting
@@ -14,6 +19,7 @@ pub struct RegisteredBiome {
 }
 
 impl RegisteredBiome {
+    /// Turns a dynamic biome trait into something that can be registered
     pub fn new(biome: Box<dyn Biome>) -> Self {
         let id = biome.id();
         let unlocalized_name = biome.unlocalized_name().to_owned();
@@ -25,6 +31,7 @@ impl RegisteredBiome {
         }
     }
 
+    /// Gets this as a thread-safe biome
     pub fn biome(&self) -> Arc<RwLock<Box<dyn Biome>>> {
         self.biome.clone()
     }

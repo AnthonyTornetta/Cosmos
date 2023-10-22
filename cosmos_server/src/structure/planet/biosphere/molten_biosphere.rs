@@ -1,27 +1,12 @@
 //! Creates a molten planet
 
-use bevy::prelude::{
-    in_state, warn, App, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, OnEnter, Query, Res, ResMut,
-    Update,
-};
-use cosmos_core::{
-    block::{Block, BlockFace},
-    events::block_events::BlockChangedEvent,
-    physics::location::Location,
-    registry::Registry,
-    structure::{
-        chunk::CHUNK_DIMENSIONS,
-        coordinates::{BlockCoordinate, ChunkCoordinate, UnboundBlockCoordinate, UnboundCoordinateType},
-        planet::Planet,
-        rotate, ChunkInitEvent, Structure,
-    },
-};
+use bevy::prelude::{warn, App, Component, Entity, Event, OnEnter, Res, ResMut};
+use cosmos_core::{registry::Registry, structure::coordinates::ChunkCoordinate};
 
-use crate::{init::init_world::ServerSeed, GameState};
+use crate::GameState;
 
 use super::{
     biome::{biome_registry::RegisteredBiome, BiomeParameters, BiosphereBiomesRegistry},
-    biosphere_generation::{BlockLayers, GenerateChunkFeaturesEvent},
     register_biosphere, BiosphereMarkerComponent, TBiosphere, TGenerateChunkEvent, TemperatureRange,
 };
 
