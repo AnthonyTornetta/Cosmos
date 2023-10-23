@@ -637,19 +637,36 @@ fn generate<T: BiosphereMarkerComponent>(
             }
         }
         ChunkFaces::Edge(j_up, k_up) => {
-            // biome.generate_edge_chunk_lod(
-            //     biome.as_ref(),
-            //     first_block_coord,
-            //     (structure_x, structure_y, structure_z),
-            //     s_dimensions,
-            //     noise_generator,
-            //     &mut lod_chunk,
-            //     j_up,
-            //     k_up,
-            //     scale,
-            //     &biome_list,
-            //     biome_id,
-            // );
+            let (biomes, elevations, biome_list) = calculate_biomes_and_elevations_edge(
+                first_block_coord,
+                structure_location,
+                noise_generator,
+                scale,
+                biome_decider,
+                biosphere_biomes,
+                s_dimensions * 3 / 4,
+                j_up,
+                k_up,
+                s_dimensions,
+            );
+
+            for (biome, biome_id) in biomes {
+                biome.generate_edge_chunk_lod(
+                    biome.as_ref(),
+                    first_block_coord,
+                    (structure_x, structure_y, structure_z),
+                    s_dimensions,
+                    noise_generator,
+                    &mut lod_chunk,
+                    j_up,
+                    k_up,
+                    scale,
+                    &biome_list,
+                    biome_id as u8,
+                    elevations.as_ref(),
+                    None,
+                );
+            }
         }
         ChunkFaces::Corner(x_up, y_up, z_up) => {
             // biome.generate_corner_chunk_lod(

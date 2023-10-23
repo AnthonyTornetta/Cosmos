@@ -260,6 +260,8 @@ fn generate_corner_chunk<C: BlockStorer>(
     scale: CoordinateType,
     biome_id_list: &BiomeIdList,
     self_biome_id: u8,
+    elevation: &[CoordinateType; CHUNK_DIMENSIONS_USIZE * CHUNK_DIMENSIONS_USIZE * 3],
+    sea_level: Option<&(CoordinateType, Block)>,
 ) {
     return;
     // let block_layers = biome.block_layers();
@@ -551,6 +553,8 @@ pub trait Biome: Send + Sync + 'static {
         scale: CoordinateType,
         biome_id_list: &BiomeIdList,
         self_biome_id: u8,
+        elevation: &[CoordinateType; CHUNK_DIMENSIONS_USIZE * CHUNK_DIMENSIONS_USIZE * 3],
+        sea_level: Option<&(CoordinateType, Block)>,
     ) {
         generate_corner_chunk::<LodChunk>(
             self_as_dyn,
@@ -565,6 +569,8 @@ pub trait Biome: Send + Sync + 'static {
             scale,
             biome_id_list,
             self_biome_id,
+            elevation,
+            sea_level,
         );
     }
 
@@ -670,6 +676,8 @@ pub trait Biome: Send + Sync + 'static {
         z_up: BlockFace,
         biome_id_list: &BiomeIdList,
         self_biome_id: u8,
+        elevation: &[CoordinateType; CHUNK_DIMENSIONS_USIZE * CHUNK_DIMENSIONS_USIZE * 3],
+        sea_level: Option<&(CoordinateType, Block)>,
     ) {
         generate_corner_chunk::<Chunk>(
             self_as_dyn,
@@ -684,6 +692,8 @@ pub trait Biome: Send + Sync + 'static {
             1,
             biome_id_list,
             self_biome_id,
+            elevation,
+            sea_level,
         );
     }
 
