@@ -8,13 +8,12 @@ use bevy::{
 };
 use cosmos_core::{
     block::{Block, BlockFace},
-    events::structure,
     netty::cosmos_encoder,
     physics::location::Location,
     registry::Registry,
     structure::{
         chunk::{Chunk, CHUNK_DIMENSIONS, CHUNK_DIMENSIONS_USIZE},
-        coordinates::{BlockCoordinate, ChunkBlockCoordinate, ChunkCoordinate, Coordinate, CoordinateType},
+        coordinates::{BlockCoordinate, ChunkCoordinate, CoordinateType},
         lod::{LodDelta, LodNetworkMessage, SetLodMessage},
         lod_chunk::LodChunk,
         planet::{ChunkFaces, Planet},
@@ -35,7 +34,7 @@ use crate::{
 
 use super::{
     biome::{Biome, BiomeIdList, BiomeParameters, BiosphereBiomesRegistry},
-    BiomeDecider, BiosphereMarkerComponent, GeneratingChunk, GeneratingChunks, TGenerateChunkEvent,
+    BiomeDecider, BiosphereMarkerComponent, BiosphereSeaLevel, GeneratingChunk, GeneratingChunks, TGenerateChunkEvent,
 };
 
 /// Tells the chunk to generate its features.
@@ -97,6 +96,16 @@ impl BlockLayers {
 /// For example, the "stone" BlockLevel has the noise paramters that create the boundry between dirt and stone.
 #[derive(Clone, Debug)]
 pub struct BlockLayer {
+    /// How far away from this elevation should this generate
+    ///
+    /// For the first block, this should almost always be 0.
+    ///
+    /// For example:
+    /// - `Grass` 0
+    /// - `Dirt` 1
+    /// - `Stone` 4
+    ///
+    /// Would create 1 top layer of grass starting at the proper elevation, 4 layers of dirt below that, and however many layers of stone till the bottom
     pub middle_depth: CoordinateType,
     /// How much each change in coordinate will effect the change of the block
     ///
@@ -198,7 +207,7 @@ impl BlockLayers {
         &self,
         height: CoordinateType,
         block_layers: &[(&'a Block, CoordinateType)],
-        sea_level: Option<&'a (CoordinateType, Block)>,
+        sea_level: Option<(CoordinateType, Option<&'a Block>)>,
         scale: CoordinateType,
     ) -> Option<&'a Block> {
         if scale == 1 {
@@ -231,8 +240,8 @@ impl BlockLayers {
         }
 
         // No land blocks, must be sea or air.
-        if let Some((sea_level, sea_block)) = sea_level {
-            if height <= *sea_level {
+        if let Some((sea_level, Some(sea_block))) = sea_level {
+            if height <= sea_level {
                 Some(sea_block)
             } else {
                 None
@@ -249,7 +258,7 @@ impl BlockLayers {
         k_height: CoordinateType,
         j_layers: &[(&'a Block, CoordinateType)],
         k_layers: &[(&'a Block, CoordinateType)],
-        sea_level: Option<&'a (CoordinateType, Block)>,
+        sea_level: Option<(CoordinateType, Option<&'a Block>)>,
         scale: CoordinateType,
     ) -> Option<&'a Block> {
         if scale == 1 {
@@ -282,8 +291,8 @@ impl BlockLayers {
         }
 
         // No land blocks, must be sea or air.
-        if let Some((sea_level, sea_block)) = sea_level {
-            if j_height.max(k_height) <= *sea_level {
+        if let Some((sea_level, Some(sea_block))) = sea_level {
+            if j_height.max(k_height) <= sea_level {
                 Some(sea_block)
             } else {
                 None
@@ -302,7 +311,7 @@ impl BlockLayers {
         x_layers: &[(&'a Block, CoordinateType)],
         y_layers: &[(&'a Block, CoordinateType)],
         z_layers: &[(&'a Block, CoordinateType)],
-        sea_level: Option<&'a (CoordinateType, Block)>,
+        sea_level: Option<(CoordinateType, Option<&'a Block>)>,
         scale: CoordinateType,
     ) -> Option<&'a Block> {
         if scale == 1 {
@@ -337,8 +346,8 @@ impl BlockLayers {
             }
         }
 
-        if let Some((sea_level, sea_block)) = sea_level {
-            if x_height.max(y_height).max(z_height) <= *sea_level {
+        if let Some((sea_level, Some(sea_block))) = sea_level {
+            if x_height.max(y_height).max(z_height) <= sea_level {
                 Some(sea_block)
             } else {
                 None
@@ -651,7 +660,7 @@ fn calculate_biomes_and_elevations_corner<'a, T: BiosphereMarkerComponent>(
                 structure_location,
                 seed_coords,
                 noise_generator,
-                x_up,
+                y_up,
                 s_dimensions,
                 sea_level,
             );
@@ -688,7 +697,7 @@ fn calculate_biomes_and_elevations_corner<'a, T: BiosphereMarkerComponent>(
                 structure_location,
                 seed_coords,
                 noise_generator,
-                x_up,
+                z_up,
                 s_dimensions,
                 sea_level,
             );
@@ -713,16 +722,20 @@ fn calculate_biomes_and_elevations_corner<'a, T: BiosphereMarkerComponent>(
 fn generate<T: BiosphereMarkerComponent>(
     generating_lod: &mut GeneratingLod,
     structure_location: &Location,
-    (structure_x, structure_y, structure_z): (f64, f64, f64),
     first_block_coord: BlockCoordinate,
     s_dimensions: CoordinateType,
     scale: CoordinateType,
     noise_generator: &Noise,
     biome_decider: &BiomeDecider<T>,
     biosphere_biomes: &BiosphereBiomesRegistry<T>,
+    sea_level: Option<&BiosphereSeaLevel<T>>,
 ) {
     let mut lod_chunk = Box::new(LodChunk::new());
     let chunk_faces = Planet::chunk_planet_faces_with_scale(first_block_coord, s_dimensions, scale);
+
+    let sea_level = sea_level.map(|x| ((x.level * s_dimensions as f32) as CoordinateType, x.block.as_ref()));
+    let numeric_sea_level = sea_level.as_ref().map(|(level, _)| *level).unwrap_or(s_dimensions * 3 / 4);
+
     match chunk_faces {
         ChunkFaces::Face(up) => {
             let (biomes, elevations, biome_list) = calculate_biomes_and_elevations_face(
@@ -732,7 +745,7 @@ fn generate<T: BiosphereMarkerComponent>(
                 scale,
                 biome_decider,
                 biosphere_biomes,
-                s_dimensions * 3 / 4,
+                numeric_sea_level,
                 up,
                 s_dimensions,
             );
@@ -743,16 +756,14 @@ fn generate<T: BiosphereMarkerComponent>(
                 biome.generate_face_chunk_lod(
                     biome.as_ref(),
                     first_block_coord,
-                    (structure_x, structure_y, structure_z),
                     s_dimensions,
-                    noise_generator,
                     &mut lod_chunk,
                     up,
                     scale,
                     &biome_list,
                     biome_id,
                     elevations.as_ref(),
-                    None,
+                    sea_level,
                 );
             }
         }
@@ -764,7 +775,7 @@ fn generate<T: BiosphereMarkerComponent>(
                 scale,
                 biome_decider,
                 biosphere_biomes,
-                s_dimensions * 3 / 4,
+                numeric_sea_level,
                 j_up,
                 k_up,
                 s_dimensions,
@@ -774,9 +785,7 @@ fn generate<T: BiosphereMarkerComponent>(
                 biome.generate_edge_chunk_lod(
                     biome.as_ref(),
                     first_block_coord,
-                    (structure_x, structure_y, structure_z),
                     s_dimensions,
-                    noise_generator,
                     &mut lod_chunk,
                     j_up,
                     k_up,
@@ -784,7 +793,7 @@ fn generate<T: BiosphereMarkerComponent>(
                     &biome_list,
                     biome_id as u8,
                     elevations.as_ref(),
-                    None,
+                    sea_level,
                 );
             }
         }
@@ -796,7 +805,7 @@ fn generate<T: BiosphereMarkerComponent>(
                 scale,
                 biome_decider,
                 biosphere_biomes,
-                s_dimensions * 3 / 4,
+                numeric_sea_level,
                 x_up,
                 y_up,
                 z_up,
@@ -807,9 +816,7 @@ fn generate<T: BiosphereMarkerComponent>(
                 biome.generate_corner_chunk_lod(
                     biome.as_ref(),
                     first_block_coord,
-                    (structure_x, structure_y, structure_z),
                     s_dimensions,
-                    noise_generator,
                     &mut lod_chunk,
                     x_up,
                     y_up,
@@ -818,7 +825,7 @@ fn generate<T: BiosphereMarkerComponent>(
                     &biome_list,
                     biome_id as u8,
                     elevations.as_ref(),
-                    None,
+                    sea_level,
                 );
             }
         }
@@ -831,13 +838,13 @@ fn generate<T: BiosphereMarkerComponent>(
 fn recurse<T: BiosphereMarkerComponent>(
     generating_lod: &mut GeneratingLod,
     structure_location: &Location,
-    (structure_x, structure_y, structure_z): (f64, f64, f64),
     first_block_coord: BlockCoordinate,
     s_dimensions: CoordinateType,
     scale: CoordinateType,
     noise_generator: &Noise,
     biome_decider: &BiomeDecider<T>,
     biosphere_biomes: &BiosphereBiomesRegistry<T>,
+    sea_level: Option<&BiosphereSeaLevel<T>>,
 ) {
     match generating_lod {
         GeneratingLod::NeedsGenerated => {
@@ -845,13 +852,13 @@ fn recurse<T: BiosphereMarkerComponent>(
             generate::<T>(
                 generating_lod,
                 structure_location,
-                (structure_x, structure_y, structure_z),
                 first_block_coord,
                 s_dimensions,
                 scale,
                 noise_generator,
                 biome_decider,
                 biosphere_biomes,
+                sea_level,
             );
         }
         GeneratingLod::Children(children) => {
@@ -874,13 +881,13 @@ fn recurse<T: BiosphereMarkerComponent>(
                 recurse::<T>(
                     child,
                     structure_location,
-                    (structure_x, structure_y, structure_z),
                     BlockCoordinate::new(bx, by, bz) + first_block_coord,
                     s_dimensions,
                     s2,
                     noise_generator,
                     biome_decider,
                     biosphere_biomes,
+                    sea_level,
                 );
             });
         }
@@ -896,7 +903,10 @@ pub(crate) fn begin_generating_lods<T: BiosphereMarkerComponent>(
     mut commands: Commands,
     biosphere_biomes: Res<BiosphereBiomesRegistry<T>>,
     biome_decider: Res<BiomeDecider<T>>,
+    sea_level: Option<Res<BiosphereSeaLevel<T>>>,
 ) {
+    let sea_level = sea_level.map(|x| x.clone());
+
     for (entity, generating_lod) in query.iter() {
         commands.entity(entity).despawn_recursive();
 
@@ -908,8 +918,6 @@ pub(crate) fn begin_generating_lods<T: BiosphereMarkerComponent>(
 
         let task_pool = AsyncComputeTaskPool::get();
 
-        let structure_coords = location.absolute_coords_f64();
-
         let dimensions = structure.block_dimensions().x;
 
         let mut generating_lod = generating_lod.clone();
@@ -918,6 +926,7 @@ pub(crate) fn begin_generating_lods<T: BiosphereMarkerComponent>(
         let biome_decider = *biome_decider;
         let biosphere_biomes = biosphere_biomes.clone();
         let location = *location;
+        let sea_level = sea_level.clone();
 
         let task = task_pool.spawn(async move {
             let noise = noise_generator.inner();
@@ -927,13 +936,13 @@ pub(crate) fn begin_generating_lods<T: BiosphereMarkerComponent>(
             recurse::<T>(
                 &mut generating_lod.generating_lod,
                 &location,
-                (structure_coords.x, structure_coords.y, structure_coords.z),
                 first_block_coord,
                 dimensions,
                 dimensions / CHUNK_DIMENSIONS,
                 &noise,
                 &biome_decider,
                 &biosphere_biomes,
+                sea_level.as_ref(),
             );
 
             let lod_delta = recursively_create_lod_delta(generating_lod.generating_lod);
@@ -999,6 +1008,7 @@ pub fn generate_planet<T: BiosphereMarkerComponent, E: TGenerateChunkEvent>(
     noise_generator: Res<ReadOnlyNoise>,
     biosphere_biomes: Res<BiosphereBiomesRegistry<T>>,
     biome_decider: Res<BiomeDecider<T>>,
+    sea_level: Option<Res<BiosphereSeaLevel<T>>>,
 ) {
     let chunks = events
         .iter()
@@ -1039,6 +1049,11 @@ pub fn generate_planet<T: BiosphereMarkerComponent, E: TGenerateChunkEvent>(
 
     if !chunks.is_empty() {
         for (mut chunk, s_dimensions, structure_location, structure_entity) in chunks {
+            let sea_level = sea_level
+                .as_ref()
+                .map(|x| ((x.level * s_dimensions as f32) as CoordinateType, x.block.clone()));
+            let numeric_sea_level = sea_level.as_ref().map(|(level, _)| *level).unwrap_or(s_dimensions * 3 / 4);
+
             let noise = noise_generator.clone();
 
             let biome_decider = *biome_decider;
@@ -1048,17 +1063,13 @@ pub fn generate_planet<T: BiosphereMarkerComponent, E: TGenerateChunkEvent>(
                 let noise_generator = noise.inner();
                 // let timer = UtilsTimer::start();
 
-                let actual_pos = structure_location.absolute_coords_f64();
-
-                let structure_z = actual_pos.z;
-                let structure_y = actual_pos.y;
-                let structure_x = actual_pos.x;
-
                 // To save multiplication operations later.
                 let first_block_coord = chunk.chunk_coordinates().first_structure_block();
 
                 // Get all possible planet faces from the chunk corners.
                 let chunk_faces = Planet::chunk_planet_faces(first_block_coord, s_dimensions);
+
+                let sea_level_ref = sea_level.as_ref().map(|x| (x.0, x.1.as_ref()));
                 match chunk_faces {
                     ChunkFaces::Face(up) => {
                         let (biomes, elevations, biome_list) = calculate_biomes_and_elevations_face::<T>(
@@ -1068,7 +1079,7 @@ pub fn generate_planet<T: BiosphereMarkerComponent, E: TGenerateChunkEvent>(
                             1,
                             &biome_decider,
                             &biosphere_biomes,
-                            s_dimensions * 3 / 4,
+                            numeric_sea_level,
                             up,
                             s_dimensions,
                         );
@@ -1079,27 +1090,25 @@ pub fn generate_planet<T: BiosphereMarkerComponent, E: TGenerateChunkEvent>(
                             biome.generate_face_chunk(
                                 biome.as_ref(),
                                 first_block_coord,
-                                (structure_x, structure_y, structure_z),
                                 s_dimensions,
-                                &noise_generator,
                                 &mut chunk,
                                 up,
                                 &biome_list,
                                 biome_id,
                                 elevations.as_ref(),
-                                None,
+                                sea_level_ref,
                             );
                         }
                     }
                     ChunkFaces::Edge(j_up, k_up) => {
-                        let (biomes, elevations, biome_list) = calculate_biomes_and_elevations_edge::<T>(
+                        let (biomes, elevations, biome_id_list) = calculate_biomes_and_elevations_edge::<T>(
                             first_block_coord,
                             &structure_location,
                             &noise_generator,
                             1,
                             &biome_decider,
                             &biosphere_biomes,
-                            s_dimensions * 3 / 4,
+                            numeric_sea_level,
                             j_up,
                             k_up,
                             s_dimensions,
@@ -1109,33 +1118,47 @@ pub fn generate_planet<T: BiosphereMarkerComponent, E: TGenerateChunkEvent>(
                             biome.generate_edge_chunk(
                                 biome.as_ref(),
                                 first_block_coord,
-                                (structure_x, structure_y, structure_z),
                                 s_dimensions,
-                                &noise_generator,
                                 &mut chunk,
                                 j_up,
                                 k_up,
-                                &biome_list,
+                                &biome_id_list,
                                 biome_id as u8,
                                 elevations.as_ref(),
-                                None,
+                                sea_level_ref,
                             );
                         }
                     }
                     ChunkFaces::Corner(x_up, y_up, z_up) => {
-                        // biome.generate_corner_chunk(
-                        //     biome.as_ref(),
-                        //     first_block_coord,
-                        //     (structure_x, structure_y, structure_z),
-                        //     s_dimensions,
-                        //     &noise_generator,
-                        //     &mut chunk,
-                        //     x_up,
-                        //     y_up,
-                        //     z_up,
-                        //     &biome_list,
-                        //     biome_id,
-                        // );
+                        let (biomes, elevations, biome_list) = calculate_biomes_and_elevations_corner::<T>(
+                            first_block_coord,
+                            &structure_location,
+                            &noise_generator,
+                            1,
+                            &biome_decider,
+                            &biosphere_biomes,
+                            numeric_sea_level,
+                            x_up,
+                            y_up,
+                            z_up,
+                            s_dimensions,
+                        );
+
+                        for (biome, biome_id) in biomes {
+                            biome.generate_corner_chunk(
+                                biome.as_ref(),
+                                first_block_coord,
+                                s_dimensions,
+                                &mut chunk,
+                                x_up,
+                                y_up,
+                                z_up,
+                                &biome_list,
+                                biome_id as u8,
+                                elevations.as_ref(),
+                                sea_level_ref,
+                            );
+                        }
                     }
                 }
                 // timer.log_duration("Chunk:");

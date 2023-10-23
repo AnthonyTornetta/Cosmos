@@ -69,11 +69,9 @@ fn register_biome(mut registry: ResMut<Registry<RegisteredBiome>>, block_registr
     registry.register(RegisteredBiome::new(Box::new(OceanBiome::new(
         "cosmos:ocean",
         BlockLayers::default()
-            .add_fixed_layer("cosmos:water", &block_registry, 0)
-            .expect("Water missing")
-            .add_fixed_layer("cosmos:sand", &block_registry, 4)
+            .add_fixed_layer("cosmos:sand", &block_registry, 0)
             .expect("Sand missing")
-            .add_fixed_layer("cosmos:stone", &block_registry, 1)
+            .add_fixed_layer("cosmos:stone", &block_registry, 4)
             .expect("Stone missing"),
     ))));
 }

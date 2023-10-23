@@ -203,6 +203,26 @@ fn generate_chunk_featuress<T: BiosphereMarkerComponent>(
     }
 }
 
+#[derive(Resource, Clone)]
+/// Dictates where the sea level will be and what block it should be for a biosphere
+pub struct BiosphereSeaLevel<T: BiosphereMarkerComponent> {
+    _phantom: PhantomData<T>,
+    /// The sea level as a fraction of the world's size (default 0.75)
+    pub level: f32,
+    /// The block to put there - leave `None` for air
+    pub block: Option<Block>,
+}
+
+impl<T: BiosphereMarkerComponent> Default for BiosphereSeaLevel<T> {
+    fn default() -> Self {
+        Self {
+            level: 0.75,
+            block: None,
+            _phantom: PhantomData::default(),
+        }
+    }
+}
+
 /// Use this to register a biosphere
 ///
 /// T: The biosphere's marker component type

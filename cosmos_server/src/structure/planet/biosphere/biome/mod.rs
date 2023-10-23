@@ -22,7 +22,6 @@ use cosmos_core::{
     },
     utils::array_utils::{flatten, flatten_2d},
 };
-use noise::NoiseFn;
 
 use crate::{
     init::init_world::{Noise, ServerSeed},
@@ -40,16 +39,14 @@ pub mod plains;
 fn generate_face_chunk<C: BlockStorer>(
     biome: &dyn Biome,
     block_coords: BlockCoordinate,
-    structure_coords: (f64, f64, f64),
     s_dimensions: CoordinateType,
-    noise_generator: &Noise,
     chunk: &mut C,
     up: BlockFace,
     scale: CoordinateType,
     biome_id_list: &BiomeIdList,
     self_biome_id: u8,
-    elevation: &[CoordinateType; (CHUNK_DIMENSIONS * CHUNK_DIMENSIONS) as usize],
-    sea_level: Option<&(CoordinateType, Block)>,
+    elevation: &[CoordinateType; CHUNK_DIMENSIONS_USIZE * CHUNK_DIMENSIONS_USIZE],
+    sea_level: Option<(CoordinateType, Option<&Block>)>,
 ) {
     let BiomeIdList::Face(biome_id_list) = biome_id_list else {
         panic!("Invalid biome id list type passed!");
@@ -109,9 +106,7 @@ fn generate_face_chunk<C: BlockStorer>(
 fn generate_edge_chunk<C: BlockStorer>(
     biome: &dyn Biome,
     block_coords: BlockCoordinate,
-    structure_coords: (f64, f64, f64),
     s_dimensions: CoordinateType,
-    noise_generator: &Noise,
     chunk: &mut C,
     j_up: BlockFace,
     k_up: BlockFace,
@@ -119,7 +114,7 @@ fn generate_edge_chunk<C: BlockStorer>(
     biome_id_list: &BiomeIdList,
     self_biome_id: u8,
     elevation: &[CoordinateType; CHUNK_DIMENSIONS_USIZE * CHUNK_DIMENSIONS_USIZE * 2],
-    sea_level: Option<&(CoordinateType, Block)>,
+    sea_level: Option<(CoordinateType, Option<&Block>)>,
 ) {
     let BiomeIdList::Edge(biome_id_list) = biome_id_list else {
         panic!("Invalid biome id list type passed!");
@@ -250,9 +245,7 @@ fn generate_edge_chunk<C: BlockStorer>(
 fn generate_corner_chunk<C: BlockStorer>(
     biome: &dyn Biome,
     block_coords: BlockCoordinate,
-    structure_coords: (f64, f64, f64),
     s_dimensions: CoordinateType,
-    noise_generator: &Noise,
     chunk: &mut C,
     x_up: BlockFace,
     y_up: BlockFace,
@@ -261,7 +254,7 @@ fn generate_corner_chunk<C: BlockStorer>(
     biome_id_list: &BiomeIdList,
     self_biome_id: u8,
     elevation: &[CoordinateType; CHUNK_DIMENSIONS_USIZE * CHUNK_DIMENSIONS_USIZE * 3],
-    sea_level: Option<&(CoordinateType, Block)>,
+    sea_level: Option<(CoordinateType, Option<&Block>)>,
 ) {
     let BiomeIdList::Corner(biome_id_list) = biome_id_list else {
         panic!("Invalid biome id list type passed!");
@@ -339,20 +332,20 @@ fn generate_corner_chunk<C: BlockStorer>(
                     s_dimensions,
                 );
 
-                // if match block_up {
-                //     BlockFace::Left | BlockFace::Right => {
-                //         biome_id_list[flatten(y as usize, z as usize, 0, CHUNK_DIMENSIONS_USIZE, CHUNK_DIMENSIONS_USIZE)]
-                //     }
-                //     BlockFace::Top | BlockFace::Bottom => {
-                //         biome_id_list[flatten(x as usize, z as usize, 1, CHUNK_DIMENSIONS_USIZE, CHUNK_DIMENSIONS_USIZE)]
-                //     }
-                //     BlockFace::Back | BlockFace::Front => {
-                //         biome_id_list[flatten(x as usize, y as usize, 2, CHUNK_DIMENSIONS_USIZE, CHUNK_DIMENSIONS_USIZE)]
-                //     }
-                // } != self_biome_id
-                // {
-                //     continue;
-                // }
+                if match block_up {
+                    BlockFace::Left | BlockFace::Right => {
+                        biome_id_list[flatten(y as usize, z as usize, 0, CHUNK_DIMENSIONS_USIZE, CHUNK_DIMENSIONS_USIZE)]
+                    }
+                    BlockFace::Top | BlockFace::Bottom => {
+                        biome_id_list[flatten(x as usize, z as usize, 1, CHUNK_DIMENSIONS_USIZE, CHUNK_DIMENSIONS_USIZE)]
+                    }
+                    BlockFace::Back | BlockFace::Front => {
+                        biome_id_list[flatten(x as usize, y as usize, 2, CHUNK_DIMENSIONS_USIZE, CHUNK_DIMENSIONS_USIZE)]
+                    }
+                } != self_biome_id
+                {
+                    continue;
+                }
 
                 let z_height = match z_up {
                     BlockFace::Front => block_coords.z + z_scaled,
@@ -392,8 +385,11 @@ fn generate_corner_chunk<C: BlockStorer>(
 ///
 /// This is mostly used to keep performance to a maximum.
 pub enum BiomeIdList {
-    Face(Box<[u8; (CHUNK_DIMENSIONS * CHUNK_DIMENSIONS) as usize]>),
+    /// Will be given for face chunks only
+    Face(Box<[u8; CHUNK_DIMENSIONS_USIZE * CHUNK_DIMENSIONS_USIZE]>),
+    /// Will be given for edge chunks only
     Edge(Box<[u8; (CHUNK_DIMENSIONS * CHUNK_DIMENSIONS * 2) as usize]>),
+    /// Will be given for corner chunks only
     Corner(Box<[u8; (CHUNK_DIMENSIONS * CHUNK_DIMENSIONS * 3) as usize]>),
 }
 
@@ -430,23 +426,19 @@ pub trait Biome: Send + Sync + 'static {
         &self,
         self_as_dyn: &dyn Biome,
         block_coords: BlockCoordinate,
-        structure_coords: (f64, f64, f64),
         s_dimensions: CoordinateType,
-        noise_generator: &Noise,
         chunk: &mut LodChunk,
         up: BlockFace,
         scale: CoordinateType,
         biome_id_list: &BiomeIdList,
         self_biome_id: u8,
-        elevation: &[CoordinateType; (CHUNK_DIMENSIONS * CHUNK_DIMENSIONS) as usize],
-        sea_level: Option<&(CoordinateType, Block)>,
+        elevation: &[CoordinateType; CHUNK_DIMENSIONS_USIZE * CHUNK_DIMENSIONS_USIZE],
+        sea_level: Option<(CoordinateType, Option<&Block>)>,
     ) {
         generate_face_chunk::<LodChunk>(
             self_as_dyn,
             block_coords,
-            structure_coords,
             s_dimensions,
-            noise_generator,
             chunk,
             up,
             scale,
@@ -471,9 +463,7 @@ pub trait Biome: Send + Sync + 'static {
         &self,
         self_as_dyn: &dyn Biome,
         block_coords: BlockCoordinate,
-        structure_coords: (f64, f64, f64),
         s_dimensions: CoordinateType,
-        noise_generator: &Noise,
         chunk: &mut LodChunk,
         j_up: BlockFace,
         k_up: BlockFace,
@@ -481,14 +471,12 @@ pub trait Biome: Send + Sync + 'static {
         biome_id_list: &BiomeIdList,
         self_biome_id: u8,
         elevation: &[CoordinateType; CHUNK_DIMENSIONS_USIZE * CHUNK_DIMENSIONS_USIZE * 2],
-        sea_level: Option<&(CoordinateType, Block)>,
+        sea_level: Option<(CoordinateType, Option<&Block>)>,
     ) {
         generate_edge_chunk(
             self_as_dyn,
             block_coords,
-            structure_coords,
             s_dimensions,
-            noise_generator,
             chunk,
             j_up,
             k_up,
@@ -515,9 +503,7 @@ pub trait Biome: Send + Sync + 'static {
         &self,
         self_as_dyn: &dyn Biome,
         block_coords: BlockCoordinate,
-        structure_coords: (f64, f64, f64),
         s_dimensions: CoordinateType,
-        noise_generator: &Noise,
         chunk: &mut LodChunk,
         x_up: BlockFace,
         y_up: BlockFace,
@@ -526,14 +512,12 @@ pub trait Biome: Send + Sync + 'static {
         biome_id_list: &BiomeIdList,
         self_biome_id: u8,
         elevation: &[CoordinateType; CHUNK_DIMENSIONS_USIZE * CHUNK_DIMENSIONS_USIZE * 3],
-        sea_level: Option<&(CoordinateType, Block)>,
+        sea_level: Option<(CoordinateType, Option<&Block>)>,
     ) {
         generate_corner_chunk::<LodChunk>(
             self_as_dyn,
             block_coords,
-            structure_coords,
             s_dimensions,
-            noise_generator,
             chunk,
             x_up,
             y_up,
@@ -549,7 +533,7 @@ pub trait Biome: Send + Sync + 'static {
     /// Generates a chunk that is completely on one side of the planet
     /// - `self_as_dyn` Self as a dyn Biome pointer
     /// - `block_coords` The bottom-left-back-most coordinates to start the generation
-    /// - `structure_coords` Just used to seed the noise function
+    /// - `s_dimensions` The size of the structure
     /// - `chunk` The chunk to fill in
     /// - `up` The up direction of this face
     /// - `biome_id_list` A list of biomes each block in the chunk is
@@ -558,22 +542,18 @@ pub trait Biome: Send + Sync + 'static {
         &self,
         self_as_dyn: &dyn Biome,
         block_coords: BlockCoordinate,
-        structure_coords: (f64, f64, f64),
         s_dimensions: CoordinateType,
-        noise_generator: &Noise,
         chunk: &mut Chunk,
         up: BlockFace,
         biome_id_list: &BiomeIdList,
         self_biome_id: u8,
-        elevation: &[CoordinateType; (CHUNK_DIMENSIONS * CHUNK_DIMENSIONS) as usize],
-        sea_level: Option<&(CoordinateType, Block)>,
+        elevation: &[CoordinateType; CHUNK_DIMENSIONS_USIZE * CHUNK_DIMENSIONS_USIZE],
+        sea_level: Option<(CoordinateType, Option<&Block>)>,
     ) {
         generate_face_chunk::<Chunk>(
             self_as_dyn,
             block_coords,
-            structure_coords,
             s_dimensions,
-            noise_generator,
             chunk,
             up,
             1,
@@ -597,23 +577,19 @@ pub trait Biome: Send + Sync + 'static {
         &self,
         self_as_dyn: &dyn Biome,
         block_coords: BlockCoordinate,
-        structure_coords: (f64, f64, f64),
         s_dimensions: CoordinateType,
-        noise_generator: &Noise,
         chunk: &mut Chunk,
         j_up: BlockFace,
         k_up: BlockFace,
         biome_id_list: &BiomeIdList,
         self_biome_id: u8,
         elevation: &[CoordinateType; CHUNK_DIMENSIONS_USIZE * CHUNK_DIMENSIONS_USIZE * 2],
-        sea_level: Option<&(CoordinateType, Block)>,
+        sea_level: Option<(CoordinateType, Option<&Block>)>,
     ) {
         generate_edge_chunk::<Chunk>(
             self_as_dyn,
             block_coords,
-            structure_coords,
             s_dimensions,
-            noise_generator,
             chunk,
             j_up,
             k_up,
@@ -628,7 +604,7 @@ pub trait Biome: Send + Sync + 'static {
     /// Generates a chunk that is on a corner of the planet
     /// - `self_as_dyn` Self as a dyn Biome pointer
     /// - `block_coords` The bottom-left-back-most coordinates to start the generation
-    /// - `structure_coords` Just used to seed the noise function
+    /// - `s_dimensions` The size of the structure
     /// - `chunk` The chunk to fill in
     /// - `x_up` The up direction of the x face
     /// - `y_up` The up direction of the y face
@@ -639,9 +615,7 @@ pub trait Biome: Send + Sync + 'static {
         &self,
         self_as_dyn: &dyn Biome,
         block_coords: BlockCoordinate,
-        structure_coords: (f64, f64, f64),
         s_dimensions: CoordinateType,
-        noise_generator: &Noise,
         chunk: &mut Chunk,
         x_up: BlockFace,
         y_up: BlockFace,
@@ -649,14 +623,12 @@ pub trait Biome: Send + Sync + 'static {
         biome_id_list: &BiomeIdList,
         self_biome_id: u8,
         elevation: &[CoordinateType; CHUNK_DIMENSIONS_USIZE * CHUNK_DIMENSIONS_USIZE * 3],
-        sea_level: Option<&(CoordinateType, Block)>,
+        sea_level: Option<(CoordinateType, Option<&Block>)>,
     ) {
         generate_corner_chunk::<Chunk>(
             self_as_dyn,
             block_coords,
-            structure_coords,
             s_dimensions,
-            noise_generator,
             chunk,
             x_up,
             y_up,
