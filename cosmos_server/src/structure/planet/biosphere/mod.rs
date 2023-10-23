@@ -113,7 +113,7 @@ impl<T: BiosphereMarkerComponent> GeneratingChunk<T> {
     }
 }
 
-const BIOME_DECIDER_DELTA: f64 = 0.001;
+const BIOME_DECIDER_DELTA: f64 = 0.01;
 
 #[derive(Resource, Clone, Copy)]
 /// This is used to calculate which biosphere parameters are present at specific blocks,

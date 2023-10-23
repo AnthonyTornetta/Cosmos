@@ -55,25 +55,38 @@ fn register_biosphere_biomes(
     biome_registry: Res<Registry<RegisteredBiome>>,
     mut biosphere_biomes_registry: ResMut<BiosphereBiomesRegistry<GrassBiosphereMarker>>,
 ) {
+    if let Some(ocean) = biome_registry.from_id("cosmos:ocean") {
+        biosphere_biomes_registry.register(
+            ocean.biome(),
+            BiomeParameters {
+                ideal_elevation: 49.0,
+                ideal_humidity: 0.0,
+                ideal_temperature: 30.0,
+            },
+        );
+    } else {
+        warn!("Missing ocean biome!");
+    }
+
     if let Some(plains) = biome_registry.from_id("cosmos:plains") {
         biosphere_biomes_registry.register(
             plains.biome(),
             BiomeParameters {
-                ideal_elevation: 0.0,
+                ideal_elevation: 50.0,
                 ideal_humidity: 0.0,
-                ideal_temperature: 0.0,
+                ideal_temperature: 30.0,
             },
         );
     } else {
         warn!("Missing plains biome!");
     }
 
-    if let Some(plains) = biome_registry.from_id("cosmos:desert") {
+    if let Some(desert) = biome_registry.from_id("cosmos:desert") {
         biosphere_biomes_registry.register(
-            plains.biome(),
+            desert.biome(),
             BiomeParameters {
-                ideal_elevation: 100.0,
-                ideal_humidity: 100.0,
+                ideal_elevation: 50.0,
+                ideal_humidity: 0.0,
                 ideal_temperature: 100.0,
             },
         );

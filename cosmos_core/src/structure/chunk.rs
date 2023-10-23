@@ -19,6 +19,9 @@ use super::coordinates::{ChunkBlockCoordinate, ChunkCoordinate, CoordinateType, 
 /// A chunk contains `CHUNK_DIMENSIONS`^3 blocks total.
 pub const CHUNK_DIMENSIONS: CoordinateType = 32;
 
+/// Short for `CHUNK_DIMENSIONS as usize`
+pub const CHUNK_DIMENSIONS_USIZE: usize = CHUNK_DIMENSIONS as usize;
+
 /// Short for `CHUNK_DIMENSIONS as f32`
 pub const CHUNK_DIMENSIONSF: f32 = CHUNK_DIMENSIONS as f32;
 
