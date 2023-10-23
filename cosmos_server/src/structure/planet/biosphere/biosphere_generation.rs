@@ -84,20 +84,12 @@ pub fn notify_when_done_generating_terrain<T: BiosphereMarkerComponent>(
 #[derive(Resource, Clone, Default, Debug)]
 pub struct BlockLayers {
     ranges: Vec<(Block, BlockLayer)>,
-    sea_block: Option<(CoordinateType, Block)>,
 }
 
 impl BlockLayers {
     /// Returns an iterator over all the block ranges in the order they were added
     pub fn ranges(&self) -> std::slice::Iter<(cosmos_core::block::Block, BlockLayer)> {
         self.ranges.iter()
-    }
-
-    /// Returns the "Y" coordinate the sea level is at, and its block if there is one
-    ///
-    /// This should be replaced in the future with an actual ocean biome
-    pub fn sea_level(&self) -> Option<&(CoordinateType, Block)> {
-        self.sea_block.as_ref()
     }
 }
 
@@ -198,20 +190,6 @@ impl BlockLayers {
         };
         let layer = BlockLayer::fixed_layer(middle_depth);
         self.ranges.push((block.clone(), layer));
-        Ok(self)
-    }
-
-    /// Sets the sea level and the block that goes along with it
-    pub fn with_sea_level_block(
-        mut self,
-        block_id: &str,
-        block_registry: &Registry<Block>,
-        sea_level: CoordinateType,
-    ) -> Result<Self, BlockRangeError> {
-        let Some(block) = block_registry.from_id(block_id).cloned() else {
-            return Err(BlockRangeError::MissingBlock(self));
-        };
-        self.sea_block = Some((sea_level, block));
         Ok(self)
     }
 
@@ -590,6 +568,148 @@ fn calculate_biomes_and_elevations_edge<'a, T: BiosphereMarkerComponent>(
     (biomes, elevations, BiomeIdList::Edge(biome_list))
 }
 
+const CORNER_SIZE: usize = CHUNK_DIMENSIONS_USIZE * CHUNK_DIMENSIONS_USIZE * 3;
+
+// Might trim 45s, see generate_edge_chunk.
+fn calculate_biomes_and_elevations_corner<'a, T: BiosphereMarkerComponent>(
+    first_block_coord: BlockCoordinate,
+    structure_location: &Location,
+    noise_generator: &Noise,
+    scale: CoordinateType,
+    biome_decider: &BiomeDecider<T>,
+    biosphere_biomes: &'a BiosphereBiomesRegistry<T>,
+    sea_level: CoordinateType,
+    x_up: BlockFace,
+    y_up: BlockFace,
+    z_up: BlockFace,
+    s_dimensions: CoordinateType,
+) -> (
+    Vec<(RwLockReadGuard<'a, Box<dyn Biome + 'static>>, usize)>,
+    Box<[CoordinateType; CORNER_SIZE]>,
+    BiomeIdList,
+) {
+    let mut biome_list = Box::new([0; CORNER_SIZE]);
+
+    let mut biomes = vec![];
+
+    let mut elevations = Box::new([0; CORNER_SIZE]);
+
+    // x top height cache.
+    for y in 0..CHUNK_DIMENSIONS {
+        let y_scaled = y * scale;
+        for z in 0..CHUNK_DIMENSIONS {
+            let z_scaled = z * scale;
+
+            // Seed coordinates for the noise function.
+            let seed_coords = match x_up {
+                BlockFace::Right => (s_dimensions, first_block_coord.y + y_scaled, first_block_coord.z + z_scaled),
+                _ => (0, first_block_coord.y + y_scaled, first_block_coord.z + z_scaled),
+            }
+            .into();
+
+            // Unmodified top height.
+            let (biome_params, top_height) = generate_height(
+                biome_decider,
+                structure_location,
+                seed_coords,
+                noise_generator,
+                x_up,
+                s_dimensions,
+                sea_level,
+            );
+
+            let list_index = flatten(y as usize, z as usize, 0, CHUNK_DIMENSIONS_USIZE, CHUNK_DIMENSIONS_USIZE);
+
+            elevations[list_index] = top_height;
+
+            let idx = biosphere_biomes.ideal_biome_index_for(biome_params);
+
+            biome_list[list_index] = idx as u8;
+
+            if !biomes.iter().any(|(_, biome_idx)| idx == *biome_idx) {
+                biomes.push((biosphere_biomes.biome_from_index(idx), idx));
+            }
+        }
+    }
+
+    // y top height cache.
+    for x in 0..CHUNK_DIMENSIONS {
+        let x_scaled = x * scale;
+        for z in 0..CHUNK_DIMENSIONS {
+            let z_scaled = z * scale;
+
+            // Seed coordinates for the noise function. Which loop variable goes to which xyz must agree everywhere.
+            let seed_coords = match y_up {
+                BlockFace::Top => (first_block_coord.x + x_scaled, s_dimensions, first_block_coord.z + z_scaled),
+                _ => (first_block_coord.x + x_scaled, 0, first_block_coord.z + z_scaled),
+            }
+            .into();
+
+            // Unmodified top height.
+            let (biome_params, top_height) = generate_height(
+                biome_decider,
+                structure_location,
+                seed_coords,
+                noise_generator,
+                x_up,
+                s_dimensions,
+                sea_level,
+            );
+
+            let list_index = flatten(x as usize, z as usize, 1, CHUNK_DIMENSIONS_USIZE, CHUNK_DIMENSIONS_USIZE);
+
+            elevations[list_index] = top_height;
+
+            let idx = biosphere_biomes.ideal_biome_index_for(biome_params);
+
+            biome_list[list_index] = idx as u8;
+
+            if !biomes.iter().any(|(_, biome_idx)| idx == *biome_idx) {
+                biomes.push((biosphere_biomes.biome_from_index(idx), idx));
+            }
+        }
+    }
+
+    for x in 0..CHUNK_DIMENSIONS {
+        let x_scaled = x * scale;
+        for y in 0..CHUNK_DIMENSIONS {
+            let y_scaled = y * scale;
+
+            // Seed coordinates for the noise function.
+            let seed_coords = match z_up {
+                BlockFace::Front => (first_block_coord.x + x_scaled, first_block_coord.y + y_scaled, s_dimensions),
+                _ => (first_block_coord.x + x_scaled, first_block_coord.y + y_scaled, 0),
+            }
+            .into();
+
+            // Unmodified top height.
+            let (biome_params, top_height) = generate_height(
+                biome_decider,
+                structure_location,
+                seed_coords,
+                noise_generator,
+                x_up,
+                s_dimensions,
+                sea_level,
+            );
+
+            let list_index = flatten(x as usize, y as usize, 2, CHUNK_DIMENSIONS_USIZE, CHUNK_DIMENSIONS_USIZE);
+
+            elevations[list_index] = top_height;
+
+            let idx = biosphere_biomes.ideal_biome_index_for(biome_params);
+
+            biome_list[list_index] = idx as u8;
+
+            if !biomes.iter().any(|(_, biome_idx)| idx == *biome_idx) {
+                biomes.push((biosphere_biomes.biome_from_index(idx), idx));
+            }
+        }
+    }
+
+    (biomes, elevations, BiomeIdList::Corner(biome_list))
+}
+
 fn generate<T: BiosphereMarkerComponent>(
     generating_lod: &mut GeneratingLod,
     structure_location: &Location,
@@ -669,20 +789,38 @@ fn generate<T: BiosphereMarkerComponent>(
             }
         }
         ChunkFaces::Corner(x_up, y_up, z_up) => {
-            // biome.generate_corner_chunk_lod(
-            //     biome.as_ref(),
-            //     first_block_coord,
-            //     (structure_x, structure_y, structure_z),
-            //     s_dimensions,
-            //     noise_generator,
-            //     &mut lod_chunk,
-            //     x_up,
-            //     y_up,
-            //     z_up,
-            //     scale,
-            //     &biome_list,
-            //     biome_id,
-            // );
+            let (biomes, elevations, biome_list) = calculate_biomes_and_elevations_corner(
+                first_block_coord,
+                structure_location,
+                noise_generator,
+                scale,
+                biome_decider,
+                biosphere_biomes,
+                s_dimensions * 3 / 4,
+                x_up,
+                y_up,
+                z_up,
+                s_dimensions,
+            );
+
+            for (biome, biome_id) in biomes {
+                biome.generate_corner_chunk_lod(
+                    biome.as_ref(),
+                    first_block_coord,
+                    (structure_x, structure_y, structure_z),
+                    s_dimensions,
+                    noise_generator,
+                    &mut lod_chunk,
+                    x_up,
+                    y_up,
+                    z_up,
+                    scale,
+                    &biome_list,
+                    biome_id as u8,
+                    elevations.as_ref(),
+                    None,
+                );
+            }
         }
     }
 

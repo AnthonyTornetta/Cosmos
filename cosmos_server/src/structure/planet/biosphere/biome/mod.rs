@@ -263,154 +263,126 @@ fn generate_corner_chunk<C: BlockStorer>(
     elevation: &[CoordinateType; CHUNK_DIMENSIONS_USIZE * CHUNK_DIMENSIONS_USIZE * 3],
     sea_level: Option<&(CoordinateType, Block)>,
 ) {
-    return;
-    // let block_layers = biome.block_layers();
+    let BiomeIdList::Corner(biome_id_list) = biome_id_list else {
+        panic!("Invalid biome id list type passed!");
+    };
 
-    // // x top height cache.
-    // let mut x_layers: Vec<Vec<(&Block, CoordinateType)>> = vec![vec![]; CHUNK_DIMENSIONS as usize * CHUNK_DIMENSIONS as usize];
-    // for j in 0..CHUNK_DIMENSIONS {
-    //     let j_scaled = j * scale;
-    //     for k in 0..CHUNK_DIMENSIONS {
-    //         let k_scaled = k * scale;
+    let block_layers = biome.block_layers();
 
-    //         let index = flatten_2d(j as usize, k as usize, CHUNK_DIMENSIONS as usize);
+    // x top height cache.
+    let mut x_layers: Vec<Vec<(&Block, CoordinateType)>> = vec![vec![]; CHUNK_DIMENSIONS as usize * CHUNK_DIMENSIONS as usize];
+    for y in 0..CHUNK_DIMENSIONS {
+        for z in 0..CHUNK_DIMENSIONS {
+            let index = flatten_2d(y as usize, z as usize, CHUNK_DIMENSIONS as usize);
 
-    //         // Seed coordinates for the noise function.
-    //         let seed_coords = match x_up {
-    //             BlockFace::Right => (s_dimensions, block_coords.y + j_scaled, block_coords.z + k_scaled),
-    //             _ => (0, block_coords.y + j_scaled, block_coords.z + k_scaled),
-    //         }
-    //         .into();
+            // Unmodified top height.
+            let elevation = elevation[flatten(y as usize, z as usize, 0, CHUNK_DIMENSIONS_USIZE, CHUNK_DIMENSIONS_USIZE)];
+            let mut depth_increase = 0;
 
-    //         // Unmodified top height.
-    //         let mut height = s_dimensions;
-    //         for (block, level) in block_layers.ranges() {
-    //             let level_top = biome.get_top_height(
-    //                 x_up,
-    //                 seed_coords,
-    //                 structure_coords,
-    //                 s_dimensions,
-    //                 noise_generator,
-    //                 height - level.middle_depth,
-    //                 level.amplitude,
-    //                 level.delta,
-    //                 level.iterations,
-    //             );
-    //             x_layers[index].push((block, level_top));
-    //             height = level_top;
-    //         }
-    //     }
-    // }
+            for (block, level) in block_layers.ranges() {
+                let layer_height = elevation - level.middle_depth - depth_increase;
 
-    // // y top height cache.
-    // let mut y_layers: Vec<Vec<(&Block, CoordinateType)>> = vec![vec![]; CHUNK_DIMENSIONS as usize * CHUNK_DIMENSIONS as usize];
-    // for i in 0..CHUNK_DIMENSIONS {
-    //     let i_scaled = i * scale;
-    //     for k in 0..CHUNK_DIMENSIONS {
-    //         let k_scaled = k * scale;
+                depth_increase += level.middle_depth;
 
-    //         let index = flatten_2d(i as usize, k as usize, CHUNK_DIMENSIONS as usize);
+                x_layers[index].push((block, layer_height));
+            }
+        }
+    }
 
-    //         // Seed coordinates for the noise function. Which loop variable goes to which xyz must agree everywhere.
-    //         let seed_coords = match y_up {
-    //             BlockFace::Top => (block_coords.x + i_scaled, s_dimensions, block_coords.z + k_scaled),
-    //             _ => (block_coords.x + i_scaled, 0, block_coords.z + k_scaled),
-    //         }
-    //         .into();
+    // y top height cache.
+    let mut y_layers: Vec<Vec<(&Block, CoordinateType)>> = vec![vec![]; CHUNK_DIMENSIONS as usize * CHUNK_DIMENSIONS as usize];
+    for x in 0..CHUNK_DIMENSIONS {
+        for z in 0..CHUNK_DIMENSIONS {
+            let index = flatten_2d(x as usize, z as usize, CHUNK_DIMENSIONS as usize);
 
-    //         // Unmodified top height.
-    //         let mut height = s_dimensions;
-    //         for (block, level) in block_layers.ranges() {
-    //             let level_top = biome.get_top_height(
-    //                 y_up,
-    //                 seed_coords,
-    //                 structure_coords,
-    //                 s_dimensions,
-    //                 noise_generator,
-    //                 height - level.middle_depth,
-    //                 level.amplitude,
-    //                 level.delta,
-    //                 level.iterations,
-    //             );
-    //             y_layers[index].push((block, level_top));
-    //             height = level_top;
-    //         }
-    //     }
-    // }
+            // Unmodified top height.
+            let elevation = elevation[flatten(x as usize, z as usize, 1, CHUNK_DIMENSIONS_USIZE, CHUNK_DIMENSIONS_USIZE)];
+            let mut depth_increase = 0;
 
-    // for i in 0..CHUNK_DIMENSIONS {
-    //     let i_scaled = i * scale;
-    //     for j in 0..CHUNK_DIMENSIONS {
-    //         let j_scaled = j * scale;
+            for (block, level) in block_layers.ranges() {
+                let layer_height = elevation - level.middle_depth - depth_increase;
 
-    //         // Seed coordinates for the noise function.
-    //         let seed_coords = match z_up {
-    //             BlockFace::Front => (block_coords.x + i_scaled, block_coords.y + j_scaled, s_dimensions),
-    //             _ => (block_coords.x + i_scaled, block_coords.y + j_scaled, 0),
-    //         }
-    //         .into();
+                depth_increase += level.middle_depth;
 
-    //         // Unmodified top height.
-    //         let mut height = s_dimensions;
-    //         let mut z_layers = vec![];
-    //         for (block, level) in block_layers.ranges() {
-    //             let level_top = biome.get_top_height(
-    //                 z_up,
-    //                 seed_coords,
-    //                 structure_coords,
-    //                 s_dimensions,
-    //                 noise_generator,
-    //                 height - level.middle_depth,
-    //                 level.amplitude,
-    //                 level.delta,
-    //                 level.iterations,
-    //             );
-    //             z_layers.push((block, level_top));
-    //             height = level_top;
-    //         }
+                y_layers[index].push((block, layer_height));
+            }
+        }
+    }
 
-    //         for k in 0..CHUNK_DIMENSIONS {
-    //             let coords = ChunkBlockCoordinate::new(i, j, k);
+    for x in 0..CHUNK_DIMENSIONS {
+        let x_scaled = x * scale;
+        for y in 0..CHUNK_DIMENSIONS {
+            let y_scaled = y * scale;
 
-    //             if biome_id_list.biome_id(coords) != self_biome_id {
-    //                 continue;
-    //             }
+            // Unmodified top height.
+            let elevation = elevation[flatten(x as usize, y as usize, 2, CHUNK_DIMENSIONS_USIZE, CHUNK_DIMENSIONS_USIZE)];
+            let mut depth_increase = 0;
 
-    //             let k_scaled = k * scale;
+            let z_layers = block_layers
+                .ranges()
+                .map(|(block, level)| {
+                    let layer_height = elevation - level.middle_depth - depth_increase;
 
-    //             let z_height = match z_up {
-    //                 BlockFace::Front => block_coords.z + k_scaled,
-    //                 _ => s_dimensions - (block_coords.z + k_scaled),
-    //             };
-    //             let y_height = match y_up {
-    //                 BlockFace::Top => block_coords.y + j_scaled,
-    //                 _ => s_dimensions - (block_coords.y + j_scaled),
-    //             };
-    //             let x_height = match x_up {
-    //                 BlockFace::Right => block_coords.x + i_scaled,
-    //                 _ => s_dimensions - (block_coords.x + i_scaled),
-    //             };
+                    depth_increase += level.middle_depth;
 
-    //             let block_up = Planet::get_planet_face_without_structure(
-    //                 BlockCoordinate::new(block_coords.x + i_scaled, block_coords.y + j_scaled, block_coords.z + k_scaled),
-    //                 s_dimensions,
-    //             );
-    //             let block = block_layers.corner_block(
-    //                 x_height,
-    //                 y_height,
-    //                 z_height,
-    //                 &x_layers[flatten_2d(j as usize, k as usize, CHUNK_DIMENSIONS as usize)],
-    //                 &y_layers[flatten_2d(i as usize, k as usize, CHUNK_DIMENSIONS as usize)],
-    //                 &z_layers,
-    //                 block_layers.sea_level(),
-    //                 scale,
-    //             );
-    //             if let Some(block) = block {
-    //                 chunk.set_block_at(coords, block, block_up);
-    //             }
-    //         }
-    //     }
-    // }
+                    (block, layer_height)
+                })
+                .collect::<Vec<(&Block, u64)>>();
+
+            for z in 0..CHUNK_DIMENSIONS {
+                let z_scaled = z * scale;
+
+                let coords = ChunkBlockCoordinate::new(x, y, z);
+
+                let block_up = Planet::get_planet_face_without_structure(
+                    BlockCoordinate::new(block_coords.x + x_scaled, block_coords.y + y_scaled, block_coords.z + z_scaled),
+                    s_dimensions,
+                );
+
+                // if match block_up {
+                //     BlockFace::Left | BlockFace::Right => {
+                //         biome_id_list[flatten(y as usize, z as usize, 0, CHUNK_DIMENSIONS_USIZE, CHUNK_DIMENSIONS_USIZE)]
+                //     }
+                //     BlockFace::Top | BlockFace::Bottom => {
+                //         biome_id_list[flatten(x as usize, z as usize, 1, CHUNK_DIMENSIONS_USIZE, CHUNK_DIMENSIONS_USIZE)]
+                //     }
+                //     BlockFace::Back | BlockFace::Front => {
+                //         biome_id_list[flatten(x as usize, y as usize, 2, CHUNK_DIMENSIONS_USIZE, CHUNK_DIMENSIONS_USIZE)]
+                //     }
+                // } != self_biome_id
+                // {
+                //     continue;
+                // }
+
+                let z_height = match z_up {
+                    BlockFace::Front => block_coords.z + z_scaled,
+                    _ => s_dimensions - (block_coords.z + z_scaled),
+                };
+                let y_height = match y_up {
+                    BlockFace::Top => block_coords.y + y_scaled,
+                    _ => s_dimensions - (block_coords.y + y_scaled),
+                };
+                let x_height = match x_up {
+                    BlockFace::Right => block_coords.x + x_scaled,
+                    _ => s_dimensions - (block_coords.x + x_scaled),
+                };
+
+                let block = block_layers.corner_block(
+                    x_height,
+                    y_height,
+                    z_height,
+                    &x_layers[flatten_2d(y as usize, z as usize, CHUNK_DIMENSIONS as usize)],
+                    &y_layers[flatten_2d(x as usize, z as usize, CHUNK_DIMENSIONS as usize)],
+                    &z_layers,
+                    sea_level,
+                    scale,
+                );
+                if let Some(block) = block {
+                    chunk.set_block_at(coords, block, block_up);
+                }
+            }
+        }
+    }
 }
 
 /// This is used when generating chunks for both LODs and normally.

@@ -55,18 +55,18 @@ fn register_biosphere_biomes(
     biome_registry: Res<Registry<RegisteredBiome>>,
     mut biosphere_biomes_registry: ResMut<BiosphereBiomesRegistry<GrassBiosphereMarker>>,
 ) {
-    if let Some(ocean) = biome_registry.from_id("cosmos:ocean") {
-        biosphere_biomes_registry.register(
-            ocean.biome(),
-            BiomeParameters {
-                ideal_elevation: 49.0,
-                ideal_humidity: 0.0,
-                ideal_temperature: 30.0,
-            },
-        );
-    } else {
-        warn!("Missing ocean biome!");
-    }
+    // if let Some(ocean) = biome_registry.from_id("cosmos:ocean") {
+    //     biosphere_biomes_registry.register(
+    //         ocean.biome(),
+    //         BiomeParameters {
+    //             ideal_elevation: 49.0,
+    //             ideal_humidity: 0.0,
+    //             ideal_temperature: 30.0,
+    //         },
+    //     );
+    // } else {
+    //     warn!("Missing ocean biome!");
+    // }
 
     if let Some(plains) = biome_registry.from_id("cosmos:plains") {
         biosphere_biomes_registry.register(
@@ -81,18 +81,18 @@ fn register_biosphere_biomes(
         warn!("Missing plains biome!");
     }
 
-    if let Some(desert) = biome_registry.from_id("cosmos:desert") {
-        biosphere_biomes_registry.register(
-            desert.biome(),
-            BiomeParameters {
-                ideal_elevation: 50.0,
-                ideal_humidity: 0.0,
-                ideal_temperature: 100.0,
-            },
-        );
-    } else {
-        warn!("Missing desert biome!");
-    }
+    // if let Some(desert) = biome_registry.from_id("cosmos:desert") {
+    //     biosphere_biomes_registry.register(
+    //         desert.biome(),
+    //         BiomeParameters {
+    //             ideal_elevation: 50.0,
+    //             ideal_humidity: 0.0,
+    //             ideal_temperature: 100.0,
+    //         },
+    //     );
+    // } else {
+    //     warn!("Missing desert biome!");
+    // }
 }
 
 pub(super) fn register(app: &mut App) {
