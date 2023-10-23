@@ -17,6 +17,7 @@ use cosmos_core::{
         chunk::{Chunk, CHUNK_DIMENSIONS, CHUNK_DIMENSIONS_USIZE},
         coordinates::{BlockCoordinate, ChunkBlockCoordinate, ChunkCoordinate, CoordinateType},
         lod_chunk::LodChunk,
+        planet::Planet,
         Structure,
     },
     utils::array_utils::{flatten, flatten_2d},
@@ -144,147 +145,188 @@ fn generate_edge_chunk<C: BlockStorer>(
     scale: CoordinateType,
     biome_id_list: &BiomeIdList,
     self_biome_id: u8,
-    elevation: &[CoordinateType; (CHUNK_DIMENSIONS * CHUNK_DIMENSIONS) as usize],
+    elevation: &[CoordinateType; CHUNK_DIMENSIONS_USIZE * CHUNK_DIMENSIONS_USIZE * 2],
     sea_level: Option<&(CoordinateType, Block)>,
 ) {
-    // let block_layers = biome.block_layers();
+    let BiomeIdList::Edge(biome_id_list) = biome_id_list else {
+        panic!("Invalid biome id list type passed!");
+    };
 
-    // for i in 0..CHUNK_DIMENSIONS {
-    //     let i_scaled = i * scale;
-    //     let mut j_layers_cache: Vec<Vec<(&Block, CoordinateType)>> = vec![vec![]; CHUNK_DIMENSIONS as usize];
-    //     for (j, j_layers) in j_layers_cache.iter_mut().enumerate() {
-    //         let j_scaled = j as CoordinateType * scale;
+    let block_layers = biome.block_layers();
 
-    //         // Seed coordinates and j-direction noise functions.
-    //         let (mut x, mut y, mut z) = (block_coords.x + i_scaled, block_coords.y + i_scaled, block_coords.z + i_scaled);
+    for i in 0..CHUNK_DIMENSIONS {
+        let i_scaled = i * scale;
+        let mut j_layers_cache: Vec<Vec<(&Block, CoordinateType)>> = vec![vec![]; CHUNK_DIMENSIONS as usize];
+        for (j, j_layers) in j_layers_cache.iter_mut().enumerate() {
+            let j_scaled = j as CoordinateType * scale;
 
-    //         match j_up {
-    //             BlockFace::Front => z = s_dimensions,
-    //             BlockFace::Back => z = 0,
-    //             BlockFace::Top => y = s_dimensions,
-    //             BlockFace::Bottom => y = 0,
-    //             BlockFace::Right => x = s_dimensions,
-    //             BlockFace::Left => x = 0,
-    //         };
-    //         match k_up {
-    //             BlockFace::Front | BlockFace::Back => z = block_coords.z + j_scaled,
-    //             BlockFace::Top | BlockFace::Bottom => y = block_coords.y + j_scaled,
-    //             BlockFace::Right | BlockFace::Left => x = block_coords.x + j_scaled,
-    //         };
-    //         let mut height = s_dimensions;
-    //         for (block, layer) in block_layers.ranges() {
-    //             let layer_top = biome.get_top_height(
-    //                 j_up,
-    //                 BlockCoordinate::new(x, y, z),
-    //                 structure_coords,
-    //                 s_dimensions,
-    //                 noise_generator,
-    //                 height - layer.middle_depth,
-    //                 layer.amplitude,
-    //                 layer.delta,
-    //                 layer.iterations,
-    //             );
-    //             j_layers.push((block, layer_top));
-    //             height = layer_top;
-    //         }
-    //     }
+            // Seed coordinates and j-direction noise functions.
+            let (mut x, mut y, mut z) = (block_coords.x + i_scaled, block_coords.y + i_scaled, block_coords.z + i_scaled);
 
-    //     // The minimum (j, j) on the 45 where the two top heights intersect.
-    //     let mut first_both_45 = s_dimensions;
-    //     for j in 0..CHUNK_DIMENSIONS {
-    //         let j_scaled = j as CoordinateType * scale;
+            match j_up {
+                BlockFace::Front => z = s_dimensions,
+                BlockFace::Back => z = 0,
+                BlockFace::Top => y = s_dimensions,
+                BlockFace::Bottom => y = 0,
+                BlockFace::Right => x = s_dimensions,
+                BlockFace::Left => x = 0,
+            };
+            match k_up {
+                BlockFace::Front | BlockFace::Back => z = block_coords.z + j_scaled,
+                BlockFace::Top | BlockFace::Bottom => y = block_coords.y + j_scaled,
+                BlockFace::Right | BlockFace::Left => x = block_coords.x + j_scaled,
+            };
 
-    //         // Seed coordinates and k-direction noise functions.
-    //         let (mut x, mut y, mut z) = (block_coords.x + i_scaled, block_coords.y + i_scaled, block_coords.z + i_scaled);
-    //         match k_up {
-    //             BlockFace::Front => z = s_dimensions,
-    //             BlockFace::Back => z = 0,
-    //             BlockFace::Top => y = s_dimensions,
-    //             BlockFace::Bottom => y = 0,
-    //             BlockFace::Right => x = s_dimensions,
-    //             BlockFace::Left => x = 0,
-    //         };
-    //         match j_up {
-    //             BlockFace::Front | BlockFace::Back => z = block_coords.z + j_scaled,
-    //             BlockFace::Top | BlockFace::Bottom => y = block_coords.y + j_scaled,
-    //             BlockFace::Right | BlockFace::Left => x = block_coords.x + j_scaled,
-    //         };
-    //         let j_height = match j_up {
-    //             BlockFace::Front => z,
-    //             BlockFace::Back => s_dimensions - z,
-    //             BlockFace::Top => y,
-    //             BlockFace::Bottom => s_dimensions - y,
-    //             BlockFace::Right => x,
-    //             BlockFace::Left => s_dimensions - x,
-    //         };
+            let elevation = elevation[flatten(i as usize, j as usize, 0, CHUNK_DIMENSIONS_USIZE, CHUNK_DIMENSIONS_USIZE)];
 
-    //         let mut height = s_dimensions;
-    //         let mut k_layers: Vec<(&Block, CoordinateType)> = vec![];
-    //         for (block, layer) in block_layers.ranges() {
-    //             let layer_top = biome.get_top_height(
-    //                 k_up,
-    //                 BlockCoordinate::new(x, y, z),
-    //                 structure_coords,
-    //                 s_dimensions,
-    //                 noise_generator,
-    //                 height - layer.middle_depth,
-    //                 layer.amplitude,
-    //                 layer.delta,
-    //                 layer.iterations,
-    //             );
-    //             k_layers.push((block, layer_top));
-    //             height = layer_top;
-    //         }
+            let mut depth_increase = 0;
+            for (block, level) in block_layers.ranges() {
+                let layer_height = elevation - level.middle_depth - depth_increase;
 
-    //         if j_layers_cache[j as usize][0].1 == j_height && k_layers[0].1 == j_height && first_both_45 == s_dimensions {
-    //             first_both_45 = j_height;
-    //         }
+                // for _ in 0..level.iterations {
+                //     layer_height += (level.amplitude
+                //         * noise_generator
+                //             .get([
+                //                 (structure_coords.0 + seed_coords.x as f64) * level.delta,
+                //                 (structure_coords.1 + seed_coords.y as f64) * level.delta,
+                //                 (structure_coords.2 + seed_coords.z as f64) * level.delta,
+                //             ])
+                //             .round()) as CoordinateType;
+                // }
 
-    //         for (k, j_layers) in j_layers_cache.iter().enumerate() {
-    //             let mut chunk_block_coords = ChunkBlockCoordinate::new(i, i, i);
+                depth_increase += level.middle_depth;
 
-    //             if biome_id_list.biome_id(chunk_block_coords) != self_biome_id {
-    //                 continue;
-    //             }
+                j_layers.push((block, layer_height));
+            }
+        }
 
-    //             match j_up {
-    //                 BlockFace::Front | BlockFace::Back => chunk_block_coords.z = j,
-    //                 BlockFace::Top | BlockFace::Bottom => chunk_block_coords.y = j,
-    //                 BlockFace::Right | BlockFace::Left => chunk_block_coords.x = j,
-    //             };
-    //             match k_up {
-    //                 BlockFace::Front | BlockFace::Back => chunk_block_coords.z = k as CoordinateType,
-    //                 BlockFace::Top | BlockFace::Bottom => chunk_block_coords.y = k as CoordinateType,
-    //                 BlockFace::Right | BlockFace::Left => chunk_block_coords.x = k as CoordinateType,
-    //             };
+        // The minimum (j, j) on the 45 where the two top heights intersect.
+        let mut first_both_45 = s_dimensions;
+        for j in 0..CHUNK_DIMENSIONS {
+            let j_scaled = j as CoordinateType * scale;
 
-    //             let k_height = match k_up {
-    //                 BlockFace::Front => block_coords.z + chunk_block_coords.z * scale,
-    //                 BlockFace::Back => s_dimensions - (block_coords.z + chunk_block_coords.z * scale),
-    //                 BlockFace::Top => block_coords.y + chunk_block_coords.y * scale,
-    //                 BlockFace::Bottom => s_dimensions - (block_coords.y + chunk_block_coords.y * scale),
-    //                 BlockFace::Right => block_coords.x + chunk_block_coords.x * scale,
-    //                 BlockFace::Left => s_dimensions - (block_coords.x + chunk_block_coords.x * scale),
-    //             };
+            // Seed coordinates and k-direction noise functions.
+            let (mut x, mut y, mut z) = (block_coords.x + i_scaled, block_coords.y + i_scaled, block_coords.z + i_scaled);
+            match k_up {
+                BlockFace::Front => z = s_dimensions,
+                BlockFace::Back => z = 0,
+                BlockFace::Top => y = s_dimensions,
+                BlockFace::Bottom => y = 0,
+                BlockFace::Right => x = s_dimensions,
+                BlockFace::Left => x = 0,
+            };
+            match j_up {
+                BlockFace::Front | BlockFace::Back => z = block_coords.z + j_scaled,
+                BlockFace::Top | BlockFace::Bottom => y = block_coords.y + j_scaled,
+                BlockFace::Right | BlockFace::Left => x = block_coords.x + j_scaled,
+            };
+            let j_height = match j_up {
+                BlockFace::Front => z,
+                BlockFace::Back => s_dimensions - z,
+                BlockFace::Top => y,
+                BlockFace::Bottom => s_dimensions - y,
+                BlockFace::Right => x,
+                BlockFace::Left => s_dimensions - x,
+            };
 
-    //             if j_height < first_both_45 || k_height < first_both_45 {
-    //                 // The top block needs different "top" to look good, the block can't tell which "up" looks good.
-    //                 let block_up = Planet::get_planet_face_without_structure(
-    //                     BlockCoordinate::new(
-    //                         block_coords.x + chunk_block_coords.x * scale,
-    //                         block_coords.y + chunk_block_coords.y * scale,
-    //                         block_coords.z + chunk_block_coords.z * scale,
-    //                     ),
-    //                     s_dimensions,
-    //                 );
-    //                 let block = block_layers.edge_block(j_height, k_height, j_layers, &k_layers, block_layers.sea_level(), scale);
-    //                 if let Some(block) = block {
-    //                     chunk.set_block_at(chunk_block_coords, block, block_up);
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }
+            let mut height = s_dimensions;
+            let mut k_layers: Vec<(&Block, CoordinateType)> = vec![];
+            // for (block, layer) in block_layers.ranges() {
+            //     let layer_top = biome.get_top_height(
+            //         k_up,
+            //         BlockCoordinate::new(x, y, z),
+            //         structure_coords,
+            //         s_dimensions,
+            //         noise_generator,
+            //         height - layer.middle_depth,
+            //         layer.amplitude,
+            //         layer.delta,
+            //         layer.iterations,
+            //     );
+            //     k_layers.push((block, layer_top));
+            //     height = layer_top;
+            // }
+
+            let elevation = elevation[flatten(i as usize, j as usize, 1, CHUNK_DIMENSIONS_USIZE, CHUNK_DIMENSIONS_USIZE)];
+
+            let mut depth_increase = 0;
+            for (block, level) in block_layers.ranges() {
+                let layer_height = elevation - level.middle_depth - depth_increase;
+
+                // for _ in 0..level.iterations {
+                //     layer_height += (level.amplitude
+                //         * noise_generator
+                //             .get([
+                //                 (structure_coords.0 + seed_coords.x as f64) * level.delta,
+                //                 (structure_coords.1 + seed_coords.y as f64) * level.delta,
+                //                 (structure_coords.2 + seed_coords.z as f64) * level.delta,
+                //             ])
+                //             .round()) as CoordinateType;
+                // }
+
+                depth_increase += level.middle_depth;
+
+                k_layers.push((block, layer_height));
+            }
+
+            if j_layers_cache[j as usize][0].1 == j_height && k_layers[0].1 == j_height && first_both_45 == s_dimensions {
+                first_both_45 = j_height;
+            }
+
+            for (k, j_layers) in j_layers_cache.iter().enumerate() {
+                let mut chunk_block_coords = ChunkBlockCoordinate::new(i, i, i);
+
+                let block_up = Planet::get_planet_face_without_structure(
+                    BlockCoordinate::new(
+                        block_coords.x + chunk_block_coords.x * scale,
+                        block_coords.y + chunk_block_coords.y * scale,
+                        block_coords.z + chunk_block_coords.z * scale,
+                    ),
+                    s_dimensions,
+                );
+
+                if biome_id_list[flatten(
+                    i as usize,
+                    j as usize,
+                    if block_up == j_up { 1 } else { 0 },
+                    CHUNK_DIMENSIONS_USIZE,
+                    CHUNK_DIMENSIONS_USIZE,
+                )] != self_biome_id
+                {
+                    continue;
+                }
+
+                match j_up {
+                    BlockFace::Front | BlockFace::Back => chunk_block_coords.z = j,
+                    BlockFace::Top | BlockFace::Bottom => chunk_block_coords.y = j,
+                    BlockFace::Right | BlockFace::Left => chunk_block_coords.x = j,
+                };
+                match k_up {
+                    BlockFace::Front | BlockFace::Back => chunk_block_coords.z = k as CoordinateType,
+                    BlockFace::Top | BlockFace::Bottom => chunk_block_coords.y = k as CoordinateType,
+                    BlockFace::Right | BlockFace::Left => chunk_block_coords.x = k as CoordinateType,
+                };
+
+                let k_height = match k_up {
+                    BlockFace::Front => block_coords.z + chunk_block_coords.z * scale,
+                    BlockFace::Back => s_dimensions - (block_coords.z + chunk_block_coords.z * scale),
+                    BlockFace::Top => block_coords.y + chunk_block_coords.y * scale,
+                    BlockFace::Bottom => s_dimensions - (block_coords.y + chunk_block_coords.y * scale),
+                    BlockFace::Right => block_coords.x + chunk_block_coords.x * scale,
+                    BlockFace::Left => s_dimensions - (block_coords.x + chunk_block_coords.x * scale),
+                };
+
+                if j_height < first_both_45 || k_height < first_both_45 {
+                    // The top block needs different "top" to look good, the block can't tell which "up" looks good.
+
+                    let block = block_layers.edge_block(j_height, k_height, j_layers, &k_layers, block_layers.sea_level(), scale);
+                    if let Some(block) = block {
+                        chunk.set_block_at(chunk_block_coords, block, block_up);
+                    }
+                }
+            }
+        }
+    }
 }
 
 // Might trim 45s, see generate_edge_chunk.
@@ -460,8 +502,8 @@ fn generate_corner_chunk<C: BlockStorer>(
 /// This is mostly used to keep performance to a maximum.
 pub enum BiomeIdList {
     Face(Box<[u8; (CHUNK_DIMENSIONS * CHUNK_DIMENSIONS) as usize]>),
-    Corner(Box<[u8; (CHUNK_DIMENSIONS * CHUNK_DIMENSIONS * 2) as usize]>),
-    Edge(Box<[u8; (CHUNK_DIMENSIONS * CHUNK_DIMENSIONS * 3) as usize]>),
+    Edge(Box<[u8; (CHUNK_DIMENSIONS * CHUNK_DIMENSIONS * 2) as usize]>),
+    Corner(Box<[u8; (CHUNK_DIMENSIONS * CHUNK_DIMENSIONS * 3) as usize]>),
 }
 
 /// A biome is a structure that dictates how terrain will be generated.
@@ -547,20 +589,24 @@ pub trait Biome: Send + Sync + 'static {
         scale: CoordinateType,
         biome_id_list: &BiomeIdList,
         self_biome_id: u8,
+        elevation: &[CoordinateType; CHUNK_DIMENSIONS_USIZE * CHUNK_DIMENSIONS_USIZE * 2],
+        sea_level: Option<&(CoordinateType, Block)>,
     ) {
-        // generate_edge_chunk(
-        //     self_as_dyn,
-        //     block_coords,
-        //     structure_coords,
-        //     s_dimensions,
-        //     noise_generator,
-        //     chunk,
-        //     j_up,
-        //     k_up,
-        //     scale,
-        //     biome_id_list,
-        //     self_biome_id,
-        // );
+        generate_edge_chunk(
+            self_as_dyn,
+            block_coords,
+            structure_coords,
+            s_dimensions,
+            noise_generator,
+            chunk,
+            j_up,
+            k_up,
+            scale,
+            biome_id_list,
+            self_biome_id,
+            elevation,
+            sea_level,
+        );
     }
 
     /// Generates an lod chunk that is on a corner of the planet
@@ -664,20 +710,24 @@ pub trait Biome: Send + Sync + 'static {
         k_up: BlockFace,
         biome_id_list: &BiomeIdList,
         self_biome_id: u8,
+        elevation: &[CoordinateType; CHUNK_DIMENSIONS_USIZE * CHUNK_DIMENSIONS_USIZE * 2],
+        sea_level: Option<&(CoordinateType, Block)>,
     ) {
-        // generate_edge_chunk::<Chunk>(
-        //     self_as_dyn,
-        //     block_coords,
-        //     structure_coords,
-        //     s_dimensions,
-        //     noise_generator,
-        //     chunk,
-        //     j_up,
-        //     k_up,
-        //     1,
-        //     biome_id_list,
-        //     self_biome_id,
-        // );
+        generate_edge_chunk::<Chunk>(
+            self_as_dyn,
+            block_coords,
+            structure_coords,
+            s_dimensions,
+            noise_generator,
+            chunk,
+            j_up,
+            k_up,
+            1,
+            biome_id_list,
+            self_biome_id,
+            elevation,
+            sea_level,
+        );
     }
 
     /// Generates a chunk that is on a corner of the planet
@@ -751,7 +801,7 @@ impl Hash for dyn Biome {
     }
 }
 
-const LOOKUP_TABLE_PRECISION: usize = 100;
+const LOOKUP_TABLE_PRECISION: usize = 101;
 const LOOKUP_TABLE_SIZE: usize = LOOKUP_TABLE_PRECISION * LOOKUP_TABLE_PRECISION * LOOKUP_TABLE_PRECISION;
 
 #[derive(Resource, Clone)]
@@ -854,17 +904,17 @@ impl<T: BiosphereMarkerComponent> BiosphereBiomesRegistry<T> {
     /// If the params values are outside the range of `[0.0, 100)`, if there was an error getting the RwLock, or if [`construct_lookup_table`] wasn't called yet (run before [`GameState::PostLoading`]` ends)
     pub fn ideal_biome_index_for(&self, params: BiomeParameters) -> usize {
         debug_assert!(
-            params.ideal_elevation >= 0.0 && params.ideal_elevation < 100.0,
+            params.ideal_elevation >= 0.0 && params.ideal_elevation <= 100.0,
             "Bad elevation: {}",
             params.ideal_elevation
         );
         debug_assert!(
-            params.ideal_humidity >= 0.0 && params.ideal_humidity < 100.0,
+            params.ideal_humidity >= 0.0 && params.ideal_humidity <= 100.0,
             "Bad humidity: {}",
             params.ideal_humidity
         );
         debug_assert!(
-            params.ideal_temperature >= 0.0 && params.ideal_temperature < 100.0,
+            params.ideal_temperature >= 0.0 && params.ideal_temperature <= 100.0,
             "Bad temperature: {}",
             params.ideal_temperature
         );
