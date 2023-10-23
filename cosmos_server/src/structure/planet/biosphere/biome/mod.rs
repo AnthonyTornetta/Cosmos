@@ -61,16 +61,6 @@ fn generate_face_chunk<C: BlockStorer>(
 
     for i in 0..CHUNK_DIMENSIONS {
         for j in 0..CHUNK_DIMENSIONS {
-            let seed_coords: BlockCoordinate = match up {
-                BlockFace::Top => (sx + i * scale, s_dimensions, sz + j * scale),
-                BlockFace::Bottom => (sx + i * scale, 0, sz + j * scale),
-                BlockFace::Front => (sx + i * scale, sy + j * scale, s_dimensions),
-                BlockFace::Back => (sx + i * scale, sy + j * scale, 0),
-                BlockFace::Right => (s_dimensions, sy + i * scale, sz + j * scale),
-                BlockFace::Left => (0, sy + i * scale, sz + j * scale),
-            }
-            .into();
-
             let elevation = elevation[flatten_2d(i as usize, j as usize, CHUNK_DIMENSIONS as usize)];
 
             let mut depth_increase = 0;
@@ -79,17 +69,6 @@ fn generate_face_chunk<C: BlockStorer>(
                 .ranges()
                 .map(|(block, level)| {
                     let layer_height = elevation - level.middle_depth - depth_increase;
-
-                    // for _ in 0..level.iterations {
-                    //     layer_height += (level.amplitude
-                    //         * noise_generator
-                    //             .get([
-                    //                 (structure_coords.0 + seed_coords.x as f64) * level.delta,
-                    //                 (structure_coords.1 + seed_coords.y as f64) * level.delta,
-                    //                 (structure_coords.2 + seed_coords.z as f64) * level.delta,
-                    //             ])
-                    //             .round()) as CoordinateType;
-                    // }
 
                     depth_increase += level.middle_depth;
 
@@ -117,12 +96,6 @@ fn generate_face_chunk<C: BlockStorer>(
                     BlockFace::Right => sx + chunk_height * scale,
                     BlockFace::Left => s_dimensions - (sx + chunk_height * scale),
                 };
-
-                // if scale == 1 && height >= 1530 && height <= 1560 {
-                //     println!("HEIGHT: {height}");
-                //     println!("RANGES: {concrete_ranges:?}");
-                //     println!("Elevatinon: {elevation}");
-                // }
 
                 let block = block_layers.face_block(height, &concrete_ranges, sea_level, scale);
                 if let Some(block) = block {
@@ -158,41 +131,11 @@ fn generate_edge_chunk<C: BlockStorer>(
         let i_scaled = i * scale;
         let mut j_layers_cache: Vec<Vec<(&Block, CoordinateType)>> = vec![vec![]; CHUNK_DIMENSIONS as usize];
         for (j, j_layers) in j_layers_cache.iter_mut().enumerate() {
-            let j_scaled = j as CoordinateType * scale;
-
-            // Seed coordinates and j-direction noise functions.
-            let (mut x, mut y, mut z) = (block_coords.x + i_scaled, block_coords.y + i_scaled, block_coords.z + i_scaled);
-
-            match j_up {
-                BlockFace::Front => z = s_dimensions,
-                BlockFace::Back => z = 0,
-                BlockFace::Top => y = s_dimensions,
-                BlockFace::Bottom => y = 0,
-                BlockFace::Right => x = s_dimensions,
-                BlockFace::Left => x = 0,
-            };
-            match k_up {
-                BlockFace::Front | BlockFace::Back => z = block_coords.z + j_scaled,
-                BlockFace::Top | BlockFace::Bottom => y = block_coords.y + j_scaled,
-                BlockFace::Right | BlockFace::Left => x = block_coords.x + j_scaled,
-            };
-
             let elevation = elevation[flatten(i as usize, j as usize, 0, CHUNK_DIMENSIONS_USIZE, CHUNK_DIMENSIONS_USIZE)];
 
             let mut depth_increase = 0;
             for (block, level) in block_layers.ranges() {
                 let layer_height = elevation - level.middle_depth - depth_increase;
-
-                // for _ in 0..level.iterations {
-                //     layer_height += (level.amplitude
-                //         * noise_generator
-                //             .get([
-                //                 (structure_coords.0 + seed_coords.x as f64) * level.delta,
-                //                 (structure_coords.1 + seed_coords.y as f64) * level.delta,
-                //                 (structure_coords.2 + seed_coords.z as f64) * level.delta,
-                //             ])
-                //             .round()) as CoordinateType;
-                // }
 
                 depth_increase += level.middle_depth;
 
@@ -229,45 +172,19 @@ fn generate_edge_chunk<C: BlockStorer>(
                 BlockFace::Left => s_dimensions - x,
             };
 
-            let mut height = s_dimensions;
-            let mut k_layers: Vec<(&Block, CoordinateType)> = vec![];
-            // for (block, layer) in block_layers.ranges() {
-            //     let layer_top = biome.get_top_height(
-            //         k_up,
-            //         BlockCoordinate::new(x, y, z),
-            //         structure_coords,
-            //         s_dimensions,
-            //         noise_generator,
-            //         height - layer.middle_depth,
-            //         layer.amplitude,
-            //         layer.delta,
-            //         layer.iterations,
-            //     );
-            //     k_layers.push((block, layer_top));
-            //     height = layer_top;
-            // }
-
             let elevation = elevation[flatten(i as usize, j as usize, 1, CHUNK_DIMENSIONS_USIZE, CHUNK_DIMENSIONS_USIZE)];
 
             let mut depth_increase = 0;
-            for (block, level) in block_layers.ranges() {
-                let layer_height = elevation - level.middle_depth - depth_increase;
+            let k_layers = block_layers
+                .ranges()
+                .map(|(block, level)| {
+                    let layer_height = elevation - level.middle_depth - depth_increase;
 
-                // for _ in 0..level.iterations {
-                //     layer_height += (level.amplitude
-                //         * noise_generator
-                //             .get([
-                //                 (structure_coords.0 + seed_coords.x as f64) * level.delta,
-                //                 (structure_coords.1 + seed_coords.y as f64) * level.delta,
-                //                 (structure_coords.2 + seed_coords.z as f64) * level.delta,
-                //             ])
-                //             .round()) as CoordinateType;
-                // }
+                    depth_increase += level.middle_depth;
 
-                depth_increase += level.middle_depth;
-
-                k_layers.push((block, layer_height));
-            }
+                    (block, layer_height)
+                })
+                .collect::<Vec<(&Block, CoordinateType)>>();
 
             if j_layers_cache[j as usize][0].1 == j_height && k_layers[0].1 == j_height && first_both_45 == s_dimensions {
                 first_both_45 = j_height;
@@ -319,7 +236,7 @@ fn generate_edge_chunk<C: BlockStorer>(
                 if j_height < first_both_45 || k_height < first_both_45 {
                     // The top block needs different "top" to look good, the block can't tell which "up" looks good.
 
-                    let block = block_layers.edge_block(j_height, k_height, j_layers, &k_layers, block_layers.sea_level(), scale);
+                    let block = block_layers.edge_block(j_height, k_height, j_layers, &k_layers, sea_level, scale);
                     if let Some(block) = block {
                         chunk.set_block_at(chunk_block_coords, block, block_up);
                     }
