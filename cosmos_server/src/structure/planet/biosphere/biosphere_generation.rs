@@ -831,7 +831,6 @@ fn generate<T: BiosphereMarkerComponent>(
         }
     }
 
-    // lod_chunk.fill(blocks.from_id("cosmos:grass").expect("Missing grass!"), BlockFace::Top);
     *generating_lod = GeneratingLod::DoneGenerating(lod_chunk);
 }
 
