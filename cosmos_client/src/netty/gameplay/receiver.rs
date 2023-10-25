@@ -36,7 +36,12 @@ use cosmos_core::{
         dynamic_structure::DynamicStructure,
         full_structure::FullStructure,
         planet::{biosphere::BiosphereMarker, planet_builder::TPlanetBuilder},
-        ship::{pilot::Pilot, ship_builder::TShipBuilder, Ship},
+        ship::{
+            build_mode::{EnterBuildModeEvent, ExitBuildModeEvent},
+            pilot::Pilot,
+            ship_builder::TShipBuilder,
+            Ship,
+        },
         ChunkInitEvent, Structure,
     },
 };
@@ -173,6 +178,8 @@ pub(crate) fn client_sync_players(
     mut pilot_change_event_writer: EventWriter<ChangePilotEvent>,
     mut requested_entities: ResMut<RequestedEntities>,
     time: Res<Time>,
+
+    (mut build_mode_enter, mut build_mode_exit): (EventWriter<EnterBuildModeEvent>, EventWriter<ExitBuildModeEvent>),
 ) {
     let client_id = transport.client_id();
 
@@ -578,6 +585,24 @@ pub(crate) fn client_sync_players(
                             }
                         }
                     }
+                }
+            }
+            ServerReliableMessages::PlayerEnterBuildMode {
+                player_entity,
+                structure_entity,
+            } => {
+                if let Some(player_entity) = network_mapping.client_from_server(&player_entity) {
+                    if let Some(structure_entity) = network_mapping.client_from_server(&structure_entity) {
+                        build_mode_enter.send(EnterBuildModeEvent {
+                            player_entity,
+                            structure_entity,
+                        });
+                    }
+                }
+            }
+            ServerReliableMessages::PlayerExitBuildMode { player_entity } => {
+                if let Some(player_entity) = network_mapping.client_from_server(&player_entity) {
+                    build_mode_exit.send(ExitBuildModeEvent { player_entity });
                 }
             }
         }

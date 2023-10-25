@@ -2,7 +2,7 @@
 
 use bevy::{
     ecs::system::EntityCommands,
-    prelude::{Added, App, Commands, Entity, Query, Update},
+    prelude::{Added, App, Commands, Entity, Name, Query, Update},
 };
 use bevy_rapier3d::prelude::{Ccd, ExternalImpulse, ReadMassProperties, RigidBody, Velocity};
 
@@ -49,6 +49,7 @@ fn on_add_ship(query: Query<Entity, Added<Ship>>, mut commands: Commands) {
             Ccd::enabled(),
             ExternalImpulse::default(),
             LoadingDistance::new(6, 7),
+            Name::new("Ship"),
         ));
     }
 }

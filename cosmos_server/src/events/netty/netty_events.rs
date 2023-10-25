@@ -27,7 +27,7 @@ fn generate_player_inventory(items: &Registry<Item>) -> Inventory {
 
     inventory.insert_item_at(0, items.from_id("cosmos:ice").expect("Ice item to exist"), 1);
 
-    inventory.insert_item_at(1, items.from_id("cosmos:water").expect("Water item to exist"), 1);
+    inventory.insert_item_at(1, items.from_id("cosmos:build_block").expect("Water item to exist"), 64);
 
     inventory.insert_item_at(2, items.from_id("cosmos:glass").expect("Glass item to exist"), 64);
 

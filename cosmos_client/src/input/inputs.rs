@@ -100,6 +100,9 @@ pub enum CosmosInputs {
     ToggleInventory,
     /// "Shift-Clicking" an item in minecraft
     AutoMoveItem,
+
+    /// Toggles the player between being in build mode and not on a ship
+    ToggleBuildMode,
 }
 
 fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
@@ -154,6 +157,8 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
 
     input_handler.set_keycode(CosmosInputs::ToggleInventory, KeyCode::T);
     input_handler.set_keycode(CosmosInputs::AutoMoveItem, KeyCode::ShiftLeft);
+
+    input_handler.set_keycode(CosmosInputs::ToggleBuildMode, KeyCode::B);
 }
 
 #[derive(Resource, Default, Debug)]

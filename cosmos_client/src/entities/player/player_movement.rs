@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
-use cosmos_core::structure::ship::pilot::Pilot;
+use cosmos_core::structure::ship::{build_mode::BuildMode, pilot::Pilot};
 
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
@@ -15,7 +15,10 @@ use crate::{
 fn process_player_movement(
     time: Res<Time>,
     input_handler: InputChecker,
-    mut query: Query<(Entity, &mut Velocity, &Transform, Option<&PlayerAlignment>), (With<LocalPlayer>, Without<Pilot>)>,
+    mut query: Query<
+        (Entity, &mut Velocity, &Transform, Option<&PlayerAlignment>),
+        (With<LocalPlayer>, Without<Pilot>, Without<BuildMode>),
+    >,
     cam_query: Query<&Transform, With<MainCamera>>,
     parent_query: Query<&Parent>,
     global_transform_query: Query<&GlobalTransform>,

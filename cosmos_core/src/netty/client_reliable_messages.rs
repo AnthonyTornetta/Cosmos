@@ -89,4 +89,8 @@ pub enum ClientReliableMessages {
         /// The ship the player wants to walk on
         ship_entity: Entity,
     },
+    /// Sent whenever a client wants to exit build mode
+    ///
+    /// Requires server confirmation via [`ServerReliableMessages::PlayerExitBuildMode`] or client will do nothing
+    ExitBuildMode,
 }
