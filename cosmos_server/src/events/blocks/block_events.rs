@@ -5,7 +5,6 @@ use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::{blocks::AIR_BLOCK_ID, Block, BlockFace},
     blockitems::BlockItems,
-    entities::player::Player,
     events::block_events::BlockChangedEvent,
     inventory::Inventory,
     item::Item,
@@ -15,7 +14,12 @@ use cosmos_core::{
         NettyChannelServer,
     },
     registry::{identifiable::Identifiable, Registry},
-    structure::{structure_block::StructureBlock, Structure},
+    structure::{
+        coordinates::{BlockCoordinate, CoordinateType, UnboundCoordinateType},
+        ship::build_mode::{BuildAxis, BuildMode},
+        structure_block::StructureBlock,
+        Structure,
+    },
 };
 
 use crate::GameState;
@@ -103,35 +107,126 @@ fn handle_block_break_events(
     }
 }
 
+/// Ensure we're not double-placing any blocks, which could happen if you place on the symmetry line
+fn unique_push(vec: &mut Vec<(BlockCoordinate, BlockFace)>, item: (BlockCoordinate, BlockFace)) {
+    for item in vec.iter() {
+        if item.0 == item.0 {
+            return;
+        }
+    }
+    vec.push(item);
+}
+
 fn handle_block_place_events(
     mut query: Query<&mut Structure>,
     mut event_reader: EventReader<BlockPlaceEvent>,
     mut event_writer: EventWriter<BlockChangedEvent>,
-    mut inventory_query: Query<(&mut Inventory, &Player)>,
+    mut player_query: Query<(&mut Inventory, Option<&BuildMode>, Option<&Parent>)>,
     items: Res<Registry<Item>>,
     blocks: Res<Registry<Block>>,
     block_items: Res<BlockItems>,
 ) {
     for ev in event_reader.iter() {
-        if let Ok((mut inv, player)) = inventory_query.get_mut(ev.placer) {
-            if let Some(is) = inv.itemstack_at(ev.inventory_slot) {
-                let item = items.from_numeric_id(is.item_id());
+        let Ok((mut inv, build_mode, parent)) = player_query.get_mut(ev.placer) else {
+            continue;
+        };
 
-                if let Some(block_id) = block_items.block_from_item(item) {
-                    if block_id != ev.block_id {
-                        warn!("Inventory out of sync between client {}!", player.name());
-                        break;
+        let Ok(mut structure) = query.get_mut(ev.structure_entity) else {
+            continue;
+        };
+        let mut structure_blocks = vec![(ev.structure_block.coords(), ev.block_up)];
+
+        if let (Some(build_mode), Some(parent)) = (build_mode, parent) {
+            if parent.get() != ev.structure_entity {
+                // Tried to place a block on a structure they're not in build mode on
+
+                // Update player that they didn't place the block
+                inv.set_changed();
+                continue;
+            }
+
+            if let Some(axis_coord) = build_mode.get_symmetry(BuildAxis::X) {
+                let axis_coord = axis_coord as UnboundCoordinateType;
+
+                let mut new_coords = vec![];
+
+                for (old_coords, block_up) in structure_blocks {
+                    let new_x_coord = 2 * (axis_coord - old_coords.x as UnboundCoordinateType) + old_coords.x as UnboundCoordinateType;
+                    if new_x_coord >= 0 {
+                        let new_block_coords = BlockCoordinate::new(new_x_coord as CoordinateType, old_coords.y, old_coords.z);
+                        if structure.is_within_blocks(new_block_coords) {
+                            unique_push(&mut new_coords, (new_block_coords, block_up));
+                        }
                     }
 
-                    let block = blocks.from_numeric_id(block_id);
-
-                    if let Ok(mut structure) = query.get_mut(ev.structure_entity) {
-                        inv.decrease_quantity_at(ev.inventory_slot, 1);
-
-                        structure.set_block_at(ev.structure_block.coords(), block, ev.block_up, &blocks, Some(&mut event_writer));
-                    }
+                    unique_push(&mut new_coords, (old_coords, block_up));
                 }
 
+                structure_blocks = new_coords;
+            }
+
+            if let Some(axis_coord) = build_mode.get_symmetry(BuildAxis::Y) {
+                let axis_coord = axis_coord as UnboundCoordinateType;
+
+                let mut new_coords = vec![];
+
+                for (old_coords, block_up) in structure_blocks {
+                    let new_y_coord = 2 * (axis_coord - old_coords.y as UnboundCoordinateType) + old_coords.y as UnboundCoordinateType;
+                    if new_y_coord >= 0 {
+                        let new_block_coords = BlockCoordinate::new(old_coords.x, new_y_coord as CoordinateType, old_coords.z);
+                        if structure.is_within_blocks(new_block_coords) {
+                            unique_push(&mut new_coords, (new_block_coords, block_up));
+                        }
+                    }
+
+                    unique_push(&mut new_coords, (old_coords, block_up));
+                }
+
+                structure_blocks = new_coords;
+            }
+
+            if let Some(axis_coord) = build_mode.get_symmetry(BuildAxis::Z) {
+                let axis_coord = axis_coord as UnboundCoordinateType;
+
+                let mut new_coords = vec![];
+
+                for (old_coords, block_up) in structure_blocks {
+                    let new_z_coord = 2 * (axis_coord - old_coords.z as UnboundCoordinateType) + old_coords.z as UnboundCoordinateType;
+                    if new_z_coord >= 0 {
+                        let new_block_coords = BlockCoordinate::new(old_coords.x, old_coords.y, new_z_coord as CoordinateType);
+                        if structure.is_within_blocks(new_block_coords) {
+                            unique_push(&mut new_coords, (new_block_coords, block_up));
+                        }
+                    }
+
+                    unique_push(&mut new_coords, (old_coords, block_up));
+                }
+
+                structure_blocks = new_coords;
+            }
+        }
+
+        for (structure_block, block_up) in structure_blocks {
+            let Some(is) = inv.itemstack_at(ev.inventory_slot) else {
+                break;
+            };
+
+            let item = items.from_numeric_id(is.item_id());
+
+            let Some(block_id) = block_items.block_from_item(item) else {
+                break;
+            };
+
+            if block_id != ev.block_id {
+                // May have run out of the item or it was swapped with something else (not really possible currently, but more checks never hurt anyone)
+                break;
+            }
+
+            let block = blocks.from_numeric_id(block_id);
+
+            if inv.decrease_quantity_at(ev.inventory_slot, 1) == 0 {
+                structure.set_block_at(structure_block, block, block_up, &blocks, Some(&mut event_writer));
+            } else {
                 break;
             }
         }

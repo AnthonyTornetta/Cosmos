@@ -1,13 +1,14 @@
 //! Handles server-side build mode logic
 
-use bevy::prelude::{in_state, App, EventReader, EventWriter, IntoSystemConfigs, Query, Res, ResMut, Update};
+use bevy::prelude::{in_state, App, Changed, EventReader, EventWriter, IntoSystemConfigs, Query, Res, ResMut, Update};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::Block,
+    entities::player::Player,
     netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannelServer},
     registry::{identifiable::Identifiable, Registry},
     structure::{
-        ship::build_mode::{EnterBuildModeEvent, ExitBuildModeEvent},
+        ship::build_mode::{BuildMode, EnterBuildModeEvent, ExitBuildModeEvent},
         Structure,
     },
 };
@@ -55,10 +56,20 @@ fn exit_build_mode(mut server: ResMut<RenetServer>, mut event_reader: EventReade
     }
 }
 
+fn sync_build_mode(changed_build_modes: Query<(&Player, &BuildMode), Changed<BuildMode>>, mut server: ResMut<RenetServer>) {
+    for (player, build_mode) in changed_build_modes.iter() {
+        server.send_message(
+            player.id(),
+            NettyChannelServer::Reliable,
+            cosmos_encoder::serialize(&ServerReliableMessages::UpdateBuildMode { build_mode: *build_mode }),
+        );
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        (interact_with_block, enter_build_mode, exit_build_mode)
+        (interact_with_block, enter_build_mode, exit_build_mode, sync_build_mode)
             .chain()
             .run_if(in_state(GameState::Playing)),
     );

@@ -8,11 +8,15 @@ use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     netty::{client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannelClient},
-    structure::{chunk::CHUNK_DIMENSIONSF, ship::build_mode::BuildMode},
+    structure::{
+        chunk::CHUNK_DIMENSIONSF,
+        ship::build_mode::{BuildAxis, BuildMode},
+    },
 };
 
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
+    interactions::block_interactions::LookingAt,
     netty::flags::LocalPlayer,
     rendering::MainCamera,
     state::game_state::GameState,
@@ -101,9 +105,58 @@ fn control_build_mode(
     }
 }
 
+fn place_symmetries(mut client: ResMut<RenetClient>, input_handler: InputChecker, query: Query<&LookingAt, With<LocalPlayer>>) {
+    let Ok(looking_at) = query.get_single() else {
+        return;
+    };
+
+    let clearing = input_handler.check_pressed(CosmosInputs::ClearSymmetry);
+
+    let looking_at_block = &looking_at.looking_at_block.map(|x| x.1);
+
+    if !clearing && looking_at_block.is_none() {
+        return;
+    }
+
+    if input_handler.check_just_pressed(CosmosInputs::SymmetryX) {
+        println!("Sending X {looking_at_block:?}");
+        client.send_message(
+            NettyChannelClient::Reliable,
+            cosmos_encoder::serialize(&ClientReliableMessages::SetSymmetry {
+                axis: BuildAxis::X,
+                coordinate: looking_at_block.map(|block| block.x),
+            }),
+        )
+    }
+
+    if input_handler.check_just_pressed(CosmosInputs::SymmetryY) {
+        println!("Sending Y {looking_at_block:?}");
+        client.send_message(
+            NettyChannelClient::Reliable,
+            cosmos_encoder::serialize(&ClientReliableMessages::SetSymmetry {
+                axis: BuildAxis::Y,
+                coordinate: looking_at_block.map(|block| block.y),
+            }),
+        )
+    }
+
+    if input_handler.check_just_pressed(CosmosInputs::SymmetryZ) {
+        println!("Sending Z {looking_at_block:?}");
+        client.send_message(
+            NettyChannelClient::Reliable,
+            cosmos_encoder::serialize(&ClientReliableMessages::SetSymmetry {
+                axis: BuildAxis::Z,
+                coordinate: looking_at_block.map(|block| block.z),
+            }),
+        )
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        (exit_build_mode, control_build_mode).chain().run_if(in_state(GameState::Playing)),
+        (place_symmetries, exit_build_mode, control_build_mode)
+            .chain()
+            .run_if(in_state(GameState::Playing)),
     );
 }

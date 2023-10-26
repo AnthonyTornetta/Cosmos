@@ -14,6 +14,7 @@ use crate::{
         coordinates::{ChunkCoordinate, CoordinateType},
         loading::ChunksNeedLoaded,
         planet::Planet,
+        ship::build_mode::BuildMode,
         structure_block::StructureBlock,
     },
     universe::star::Star,
@@ -153,5 +154,8 @@ pub enum ServerReliableMessages {
     PlayerExitBuildMode {
         /// The server's player entity that's exiting
         player_entity: Entity,
+    },
+    UpdateBuildMode {
+        build_mode: BuildMode,
     },
 }

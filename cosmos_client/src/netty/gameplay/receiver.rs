@@ -155,11 +155,13 @@ fn lerp_towards(
 
 pub(crate) fn client_sync_players(
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut client: ResMut<RenetClient>,
-    transport: Res<NetcodeClientTransport>,
-    mut lobby: ResMut<ClientLobby>,
-    mut network_mapping: ResMut<NetworkMapping>,
+    (mut meshes, mut client, transport, mut lobby, mut network_mapping): (
+        ResMut<Assets<Mesh>>,
+        ResMut<RenetClient>,
+        Res<NetcodeClientTransport>,
+        ResMut<ClientLobby>,
+        ResMut<NetworkMapping>,
+    ),
     mut set_chunk_event_writer: EventWriter<ChunkInitEvent>,
     mut block_change_event_writer: EventWriter<BlockChangedEvent>,
     (query_player, parent_query): (Query<&Player>, Query<&Parent>),
@@ -178,6 +180,7 @@ pub(crate) fn client_sync_players(
     mut pilot_change_event_writer: EventWriter<ChangePilotEvent>,
     mut requested_entities: ResMut<RequestedEntities>,
     time: Res<Time>,
+    local_player: Query<Entity, With<LocalPlayer>>,
 
     (mut build_mode_enter, mut build_mode_exit): (EventWriter<EnterBuildModeEvent>, EventWriter<ExitBuildModeEvent>),
 ) {
@@ -603,6 +606,11 @@ pub(crate) fn client_sync_players(
             ServerReliableMessages::PlayerExitBuildMode { player_entity } => {
                 if let Some(player_entity) = network_mapping.client_from_server(&player_entity) {
                     build_mode_exit.send(ExitBuildModeEvent { player_entity });
+                }
+            }
+            ServerReliableMessages::UpdateBuildMode { build_mode } => {
+                if let Ok(player_entity) = local_player.get_single() {
+                    commands.entity(player_entity).insert(build_mode);
                 }
             }
         }

@@ -7,7 +7,11 @@ use serde::{Deserialize, Serialize};
 use crate::{
     block::BlockFace,
     entities::player::render_distance::RenderDistance,
-    structure::{coordinates::ChunkCoordinate, structure_block::StructureBlock},
+    structure::{
+        coordinates::{ChunkCoordinate, CoordinateType},
+        ship::build_mode::BuildAxis,
+        structure_block::StructureBlock,
+    },
 };
 
 #[derive(Debug, Serialize, Deserialize, Component)]
@@ -93,4 +97,8 @@ pub enum ClientReliableMessages {
     ///
     /// Requires server confirmation via [`ServerReliableMessages::PlayerExitBuildMode`] or client will do nothing
     ExitBuildMode,
+    SetSymmetry {
+        axis: BuildAxis,
+        coordinate: Option<CoordinateType>,
+    },
 }

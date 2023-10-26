@@ -8,7 +8,7 @@ use bevy_renet::renet::RenetServer;
 use cosmos_core::netty::netty_rigidbody::NettyRigidBodyLocation;
 use cosmos_core::netty::{cosmos_encoder, NettyChannelClient, NettyChannelServer};
 use cosmos_core::physics::location::Location;
-use cosmos_core::structure::ship::build_mode::ExitBuildModeEvent;
+use cosmos_core::structure::ship::build_mode::{BuildMode, ExitBuildModeEvent};
 use cosmos_core::structure::systems::{SystemActive, Systems};
 use cosmos_core::{
     entities::player::Player,
@@ -63,6 +63,7 @@ pub fn server_listen_messages(
     player_parent_location: Query<&Location, Without<Player>>,
     mut change_player_query: Query<(&mut Transform, &mut Location, &mut PlayerLooking, &mut Velocity), With<Player>>,
     non_player_transform_query: Query<&Transform, Without<Player>>,
+    mut build_mode: Query<&mut BuildMode>,
 ) {
     for client_id in server.clients_id().into_iter() {
         while let Some(message) = server.receive_message(client_id, NettyChannelClient::Unreliable) {
@@ -283,6 +284,17 @@ pub fn server_listen_messages(
                 ClientReliableMessages::ExitBuildMode => {
                     if let Some(player_entity) = lobby.player_from_id(client_id) {
                         exit_build_mode_writer.send(ExitBuildModeEvent { player_entity });
+                    }
+                }
+                ClientReliableMessages::SetSymmetry { axis, coordinate } => {
+                    if let Some(player_entity) = lobby.player_from_id(client_id) {
+                        if let Ok(mut build_mode) = build_mode.get_mut(player_entity) {
+                            if let Some(coordinate) = coordinate {
+                                build_mode.set_symmetry(axis, coordinate);
+                            } else {
+                                build_mode.remove_symmetry(axis);
+                            }
+                        }
                     }
                 }
             }

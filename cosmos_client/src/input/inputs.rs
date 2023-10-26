@@ -103,6 +103,10 @@ pub enum CosmosInputs {
 
     /// Toggles the player between being in build mode and not on a ship
     ToggleBuildMode,
+    ClearSymmetry,
+    SymmetryX,
+    SymmetryY,
+    SymmetryZ,
 }
 
 fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
@@ -159,6 +163,10 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     input_handler.set_keycode(CosmosInputs::AutoMoveItem, KeyCode::ShiftLeft);
 
     input_handler.set_keycode(CosmosInputs::ToggleBuildMode, KeyCode::B);
+    input_handler.set_keycode(CosmosInputs::ClearSymmetry, KeyCode::ShiftLeft);
+    input_handler.set_keycode(CosmosInputs::SymmetryX, KeyCode::X);
+    input_handler.set_keycode(CosmosInputs::SymmetryY, KeyCode::Y);
+    input_handler.set_keycode(CosmosInputs::SymmetryZ, KeyCode::Z);
 }
 
 #[derive(Resource, Default, Debug)]
