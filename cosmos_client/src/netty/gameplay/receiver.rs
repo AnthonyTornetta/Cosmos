@@ -36,7 +36,12 @@ use cosmos_core::{
         dynamic_structure::DynamicStructure,
         full_structure::FullStructure,
         planet::{biosphere::BiosphereMarker, planet_builder::TPlanetBuilder},
-        ship::{pilot::Pilot, ship_builder::TShipBuilder, Ship},
+        ship::{
+            build_mode::{EnterBuildModeEvent, ExitBuildModeEvent},
+            pilot::Pilot,
+            ship_builder::TShipBuilder,
+            Ship,
+        },
         ChunkInitEvent, Structure,
     },
 };
@@ -150,11 +155,13 @@ fn lerp_towards(
 
 pub(crate) fn client_sync_players(
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut client: ResMut<RenetClient>,
-    transport: Res<NetcodeClientTransport>,
-    mut lobby: ResMut<ClientLobby>,
-    mut network_mapping: ResMut<NetworkMapping>,
+    (mut meshes, mut client, transport, mut lobby, mut network_mapping): (
+        ResMut<Assets<Mesh>>,
+        ResMut<RenetClient>,
+        Res<NetcodeClientTransport>,
+        ResMut<ClientLobby>,
+        ResMut<NetworkMapping>,
+    ),
     mut set_chunk_event_writer: EventWriter<ChunkInitEvent>,
     mut block_change_event_writer: EventWriter<BlockChangedEvent>,
     (query_player, parent_query): (Query<&Player>, Query<&Parent>),
@@ -173,6 +180,9 @@ pub(crate) fn client_sync_players(
     mut pilot_change_event_writer: EventWriter<ChangePilotEvent>,
     mut requested_entities: ResMut<RequestedEntities>,
     time: Res<Time>,
+    local_player: Query<Entity, With<LocalPlayer>>,
+
+    (mut build_mode_enter, mut build_mode_exit): (EventWriter<EnterBuildModeEvent>, EventWriter<ExitBuildModeEvent>),
 ) {
     let client_id = transport.client_id();
 
@@ -339,6 +349,7 @@ pub(crate) fn client_sync_players(
                                 BloomSettings { ..Default::default() },
                                 CameraHelper::default(),
                                 Skybox(Handle::default()),
+                                Name::new("Main Camera"),
                                 MainCamera,
                                 // No double UI rendering
                                 UiCameraConfig { show_ui: false },
@@ -348,6 +359,7 @@ pub(crate) fn client_sync_players(
 
                     commands.spawn((
                         PlayerWorld { player: client_entity },
+                        Name::new("Player World"),
                         loc,
                         PhysicsWorld {
                             world_id: DEFAULT_WORLD_ID,
@@ -578,6 +590,29 @@ pub(crate) fn client_sync_players(
                             }
                         }
                     }
+                }
+            }
+            ServerReliableMessages::PlayerEnterBuildMode {
+                player_entity,
+                structure_entity,
+            } => {
+                if let Some(player_entity) = network_mapping.client_from_server(&player_entity) {
+                    if let Some(structure_entity) = network_mapping.client_from_server(&structure_entity) {
+                        build_mode_enter.send(EnterBuildModeEvent {
+                            player_entity,
+                            structure_entity,
+                        });
+                    }
+                }
+            }
+            ServerReliableMessages::PlayerExitBuildMode { player_entity } => {
+                if let Some(player_entity) = network_mapping.client_from_server(&player_entity) {
+                    build_mode_exit.send(ExitBuildModeEvent { player_entity });
+                }
+            }
+            ServerReliableMessages::UpdateBuildMode { build_mode } => {
+                if let Ok(player_entity) = local_player.get_single() {
+                    commands.entity(player_entity).insert(build_mode);
                 }
             }
         }

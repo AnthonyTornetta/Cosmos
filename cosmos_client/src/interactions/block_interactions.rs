@@ -28,10 +28,17 @@ pub enum InteractionType {
     Primary,
 }
 
+#[derive(Component, Debug)]
+/// Stores the block the player is last noted as looked at
+pub struct LookingAt {
+    /// The block the player is looking at
+    pub looking_at_block: Option<(Entity, StructureBlock)>,
+}
+
 fn process_player_interaction(
     input_handler: InputChecker,
     camera: Query<&GlobalTransform, With<MainCamera>>,
-    player_body: Query<Entity, (With<LocalPlayer>, Without<Pilot>)>,
+    mut player_body: Query<(Entity, &mut Inventory, Option<&mut LookingAt>), (With<LocalPlayer>, Without<Pilot>)>,
     rapier_context: Res<RapierContext>,
     parent_query: Query<&Parent>,
     chunk_physics_part: Query<&ChunkPhysicsPart>,
@@ -40,10 +47,10 @@ fn process_player_interaction(
     mut place_writer: EventWriter<BlockPlaceEvent>,
     mut interact_writer: EventWriter<BlockInteractEvent>,
     hotbar: Query<&Hotbar>,
-    mut inventory: Query<&mut Inventory, With<LocalPlayer>>,
     items: Res<Registry<Item>>,
     block_items: Res<BlockItems>,
     cursor_flags: Res<CursorFlags>,
+    mut commands: Commands,
 ) {
     // They're in a menu if the cursor isn't locked
     if !cursor_flags.is_cursor_locked() {
@@ -51,11 +58,14 @@ fn process_player_interaction(
     }
 
     // this fails if the player is a pilot
-    let Ok(player_body) = player_body.get_single() else {
+    let Ok((player_body, mut inventory, looking_at)) = player_body.get_single_mut() else {
         return;
     };
 
     let Ok(cam_trans) = camera.get_single() else {
+        if let Some(mut looking_at) = looking_at {
+            looking_at.looking_at_block = None;
+        }
         return;
     };
 
@@ -67,26 +77,44 @@ fn process_player_interaction(
         true,
         QueryFilter::new().exclude_rigid_body(player_body), // don't want to hit yourself
     ) else {
+        if let Some(mut looking_at) = looking_at {
+            looking_at.looking_at_block = None;
+        }
         return;
     };
 
     let entity = chunk_physics_part.get(entity).map(|x| x.chunk_entity).unwrap_or(entity);
 
     let Ok(parent) = parent_query.get(entity) else {
+        if let Some(mut looking_at) = looking_at {
+            looking_at.looking_at_block = None;
+        }
         return;
     };
 
     let Ok((structure, transform, is_planet)) = structure_query.get(parent.get()) else {
+        if let Some(mut looking_at) = looking_at {
+            looking_at.looking_at_block = None;
+        }
         return;
     };
 
     let structure_physics_transform = transform;
 
+    let moved_point = intersection.point - intersection.normal * 0.3;
+
+    let point = structure_physics_transform.compute_matrix().inverse().transform_point3(moved_point);
+
+    if let Ok(coords) = structure.relative_coords_to_local_coords_checked(point.x, point.y, point.z) {
+        let looking_at_block = Some((parent.get(), StructureBlock::new(coords)));
+        if let Some(mut looking_at) = looking_at {
+            looking_at.looking_at_block = looking_at_block;
+        } else {
+            commands.entity(player_body).insert(LookingAt { looking_at_block });
+        }
+    }
+
     if input_handler.check_just_pressed(CosmosInputs::BreakBlock) {
-        let moved_point = intersection.point - intersection.normal * 0.3;
-
-        let point = structure_physics_transform.compute_matrix().inverse().transform_point3(moved_point);
-
         if let Ok(coords) = structure.relative_coords_to_local_coords_checked(point.x, point.y, point.z) {
             break_writer.send(BlockBreakEvent {
                 structure_entity: structure.get_entity().unwrap(),
@@ -96,36 +124,34 @@ fn process_player_interaction(
     }
 
     if input_handler.check_just_pressed(CosmosInputs::PlaceBlock) {
-        if let Ok(mut inventory) = inventory.get_single_mut() {
-            if let Ok(hotbar) = hotbar.get_single() {
-                let inventory_slot = hotbar.selected_slot();
+        if let Ok(hotbar) = hotbar.get_single() {
+            let inventory_slot = hotbar.selected_slot();
 
-                if let Some(is) = inventory.itemstack_at(inventory_slot) {
-                    let item = items.from_numeric_id(is.item_id());
+            if let Some(is) = inventory.itemstack_at(inventory_slot) {
+                let item = items.from_numeric_id(is.item_id());
 
-                    if let Some(block_id) = block_items.block_from_item(item) {
-                        let moved_point = intersection.point + intersection.normal * 0.75;
+                if let Some(block_id) = block_items.block_from_item(item) {
+                    let moved_point = intersection.point + intersection.normal * 0.75;
 
-                        let point = structure_physics_transform.compute_matrix().inverse().transform_point3(moved_point);
+                    let point = structure_physics_transform.compute_matrix().inverse().transform_point3(moved_point);
 
-                        if let Ok(coords) = structure.relative_coords_to_local_coords_checked(point.x, point.y, point.z) {
-                            if structure.is_within_blocks(coords) {
-                                inventory.decrease_quantity_at(inventory_slot, 1);
+                    if let Ok(coords) = structure.relative_coords_to_local_coords_checked(point.x, point.y, point.z) {
+                        if structure.is_within_blocks(coords) {
+                            inventory.decrease_quantity_at(inventory_slot, 1);
 
-                                let block_up = if is_planet.is_some() {
-                                    Planet::planet_face(structure, coords)
-                                } else {
-                                    BlockFace::Top
-                                };
+                            let block_up = if is_planet.is_some() {
+                                Planet::planet_face(structure, coords)
+                            } else {
+                                BlockFace::Top
+                            };
 
-                                place_writer.send(BlockPlaceEvent {
-                                    structure_entity: structure.get_entity().unwrap(),
-                                    coords: StructureBlock::new(coords),
-                                    inventory_slot,
-                                    block_id,
-                                    block_up,
-                                });
-                            }
+                            place_writer.send(BlockPlaceEvent {
+                                structure_entity: structure.get_entity().unwrap(),
+                                coords: StructureBlock::new(coords),
+                                inventory_slot,
+                                block_id,
+                                block_up,
+                            });
                         }
                     }
                 }
@@ -134,10 +160,6 @@ fn process_player_interaction(
     }
 
     if input_handler.check_just_pressed(CosmosInputs::Interact) {
-        let moved_point = intersection.point - intersection.normal * 0.3;
-
-        let point = structure_physics_transform.compute_matrix().inverse().transform_point3(moved_point);
-
         if let Ok(coords) = structure.relative_coords_to_local_coords_checked(point.x, point.y, point.z) {
             interact_writer.send(BlockInteractEvent {
                 structure_entity: structure.get_entity().unwrap(),

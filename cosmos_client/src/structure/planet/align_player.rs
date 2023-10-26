@@ -122,7 +122,7 @@ pub enum Axis {
     Z,
 }
 
-#[derive(Debug, Component, Default)]
+#[derive(Debug, Component, Default, Clone, Copy, PartialEq, Eq)]
 /// Used to represent the player's orientation on a planet
 pub struct PlayerAlignment(pub Axis);
 

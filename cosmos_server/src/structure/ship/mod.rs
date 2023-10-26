@@ -2,6 +2,7 @@
 
 use bevy::prelude::App;
 
+pub mod build_mode;
 mod change_pilot_event_listener;
 pub mod loading;
 mod persistence;
@@ -13,4 +14,5 @@ pub(super) fn register(app: &mut App) {
     loading::register(app);
     persistence::register(app);
     sync::register(app);
+    build_mode::register(app);
 }

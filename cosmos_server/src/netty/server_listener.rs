@@ -8,6 +8,7 @@ use bevy_renet::renet::RenetServer;
 use cosmos_core::netty::netty_rigidbody::NettyRigidBodyLocation;
 use cosmos_core::netty::{cosmos_encoder, NettyChannelClient, NettyChannelServer};
 use cosmos_core::physics::location::Location;
+use cosmos_core::structure::ship::build_mode::{BuildMode, ExitBuildModeEvent};
 use cosmos_core::structure::systems::{SystemActive, Systems};
 use cosmos_core::{
     entities::player::Player,
@@ -38,19 +39,31 @@ pub fn server_listen_messages(
     mut server: ResMut<RenetServer>,
     lobby: ResMut<ServerLobby>,
     structure_query: Query<&Structure>,
-    mut systems_query: Query<&mut Systems>,
-    mut break_block_event: EventWriter<BlockBreakEvent>,
-    mut block_interact_event: EventWriter<BlockInteractEvent>,
-    mut place_block_event: EventWriter<BlockPlaceEvent>,
-    mut create_ship_event_writer: EventWriter<CreateShipEvent>,
-
+    (
+        mut systems_query,
+        mut break_block_event,
+        mut place_block_event,
+        mut block_interact_event,
+        mut exit_build_mode_writer,
+        mut create_ship_event_writer,
+        mut requested_entities_writer,
+        mut request_chunk_event_writer,
+    ): (
+        Query<&mut Systems>,
+        EventWriter<BlockBreakEvent>,
+        EventWriter<BlockPlaceEvent>,
+        EventWriter<BlockInteractEvent>,
+        EventWriter<ExitBuildModeEvent>,
+        EventWriter<CreateShipEvent>,
+        EventWriter<RequestedEntityEvent>,
+        EventWriter<RequestChunkEvent>,
+    ),
     (mut ship_movement_event_writer, mut pilot_change_event_writer): (EventWriter<ShipSetMovementEvent>, EventWriter<ChangePilotEvent>),
     pilot_query: Query<&Pilot>,
     player_parent_location: Query<&Location, Without<Player>>,
     mut change_player_query: Query<(&mut Transform, &mut Location, &mut PlayerLooking, &mut Velocity), With<Player>>,
     non_player_transform_query: Query<&Transform, Without<Player>>,
-    mut requested_entities_writer: EventWriter<RequestedEntityEvent>,
-    mut request_chunk_event_writer: EventWriter<RequestChunkEvent>,
+    mut build_mode: Query<&mut BuildMode>,
 ) {
     for client_id in server.clients_id().into_iter() {
         while let Some(message) = server.receive_message(client_id, NettyChannelClient::Unreliable) {
@@ -265,6 +278,22 @@ pub fn server_listen_messages(
                                     ship_entity,
                                 }),
                             );
+                        }
+                    }
+                }
+                ClientReliableMessages::ExitBuildMode => {
+                    if let Some(player_entity) = lobby.player_from_id(client_id) {
+                        exit_build_mode_writer.send(ExitBuildModeEvent { player_entity });
+                    }
+                }
+                ClientReliableMessages::SetSymmetry { axis, coordinate } => {
+                    if let Some(player_entity) = lobby.player_from_id(client_id) {
+                        if let Ok(mut build_mode) = build_mode.get_mut(player_entity) {
+                            if let Some(coordinate) = coordinate {
+                                build_mode.set_symmetry(axis, coordinate);
+                            } else {
+                                build_mode.remove_symmetry(axis);
+                            }
                         }
                     }
                 }

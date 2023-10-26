@@ -7,6 +7,7 @@ use bevy::prelude::Component;
 use bevy::prelude::States;
 use bevy::reflect::Reflect;
 
+pub mod build_mode;
 pub mod core;
 pub mod pilot;
 pub mod ship_builder;
@@ -21,4 +22,5 @@ pub(super) fn register<T: States + Clone + Copy>(app: &mut App, playing_state: T
     ship_movement::register(app);
     core::register(app, playing_state);
     ship_builder::register(app);
+    build_mode::register(app);
 }

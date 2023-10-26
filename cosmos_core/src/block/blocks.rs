@@ -44,13 +44,6 @@ fn add_cosmos_blocks(
     );
 
     blocks.register(
-        BlockBuilder::new("cosmos:log", 3.0)
-            .add_property(BlockProperty::Opaque)
-            .add_property(BlockProperty::Full)
-            .create(),
-    );
-
-    blocks.register(
         BlockBuilder::new("cosmos:cherry_leaf", 0.1)
             .add_property(BlockProperty::Transparent)
             .create(),
@@ -169,6 +162,13 @@ fn add_cosmos_blocks(
 
     blocks.register(
         BlockBuilder::new("cosmos:cactus", 0.8)
+            .add_property(BlockProperty::Opaque)
+            .add_property(BlockProperty::Full)
+            .create(),
+    );
+
+    blocks.register(
+        BlockBuilder::new("cosmos:build_block", 2.0)
             .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .create(),

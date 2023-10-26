@@ -47,7 +47,12 @@ pub fn assign_player_world(
         let world_id = rapier_context.add_world(RapierWorld::default());
 
         let world_entity = commands
-            .spawn((PlayerWorld { player: player_entity }, *location, PhysicsWorld { world_id }))
+            .spawn((
+                Name::new("Player World"),
+                PlayerWorld { player: player_entity },
+                *location,
+                PhysicsWorld { world_id },
+            ))
             .id();
 
         commands
@@ -108,7 +113,12 @@ fn move_players_between_worlds(
                 let world_id = rapier_context.add_world(RapierWorld::default());
 
                 let world_entity = commands
-                    .spawn((PlayerWorld { player: entity }, *location, PhysicsWorld { world_id }))
+                    .spawn((
+                        Name::new("Player World"),
+                        PlayerWorld { player: entity },
+                        *location,
+                        PhysicsWorld { world_id },
+                    ))
                     .id();
 
                 let (mut world_within, mut body_world) = world_within_query.get_mut(entity).unwrap();

@@ -14,6 +14,7 @@ use crate::{
         coordinates::{ChunkCoordinate, CoordinateType},
         loading::ChunksNeedLoaded,
         planet::Planet,
+        ship::build_mode::BuildMode,
         structure_block::StructureBlock,
     },
     universe::star::Star,
@@ -141,5 +142,24 @@ pub enum ServerReliableMessages {
         player_entity: Entity,
         /// The ship the player is walking on
         ship_entity: Entity,
+    },
+    /// Sent when a player enters build mode
+    PlayerEnterBuildMode {
+        /// The player entity on the server
+        player_entity: Entity,
+        /// The structure entity they're building on the server
+        structure_entity: Entity,
+    },
+    /// Sent whenever a player exits build mode
+    PlayerExitBuildMode {
+        /// The server's player entity that's exiting
+        player_entity: Entity,
+    },
+    /// Updates the player's build mode.
+    ///
+    /// Only used to update symmetry axis.
+    UpdateBuildMode {
+        /// The new build mode
+        build_mode: BuildMode,
     },
 }
