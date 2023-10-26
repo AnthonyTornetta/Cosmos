@@ -1,7 +1,10 @@
 //! Handles the build mode logic on the client-side
 
 use bevy::{
-    prelude::{in_state, App, IntoSystemConfigs, Query, Res, ResMut, Transform, Update, Vec3, With, Without},
+    prelude::{
+        in_state, shape, App, AssetServer, Assets, BuildChildren, Changed, Color, Commands, Component, DespawnRecursiveExt, Entity,
+        EventReader, IntoSystemConfigs, MaterialMeshBundle, Mesh, Parent, Query, Res, ResMut, Transform, Update, Vec3, With, Without,
+    },
     time::Time,
 };
 use bevy_rapier3d::prelude::Velocity;
@@ -10,11 +13,14 @@ use cosmos_core::{
     netty::{client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannelClient},
     structure::{
         chunk::CHUNK_DIMENSIONSF,
-        ship::build_mode::{BuildAxis, BuildMode},
+        coordinates::BlockCoordinate,
+        ship::build_mode::{BuildAxis, BuildMode, ExitBuildModeEvent},
+        Structure,
     },
 };
 
 use crate::{
+    asset::repeating_material::{Repeats, UnlitRepeatedMaterial},
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     interactions::block_interactions::LookingAt,
     netty::flags::LocalPlayer,
@@ -37,6 +43,9 @@ fn exit_build_mode(
         }
     }
 }
+
+#[derive(Component, Clone, Copy, Default)]
+struct SymmetryVisuals(Option<Entity>, Option<Entity>, Option<Entity>);
 
 fn control_build_mode(
     input_handler: InputChecker,
@@ -127,7 +136,6 @@ fn place_symmetries(
     }
 
     if input_handler.check_just_pressed(CosmosInputs::SymmetryX) {
-        println!("Sending X {looking_at_block:?}");
         client.send_message(
             NettyChannelClient::Reliable,
             cosmos_encoder::serialize(&ClientReliableMessages::SetSymmetry {
@@ -138,7 +146,6 @@ fn place_symmetries(
     }
 
     if input_handler.check_just_pressed(CosmosInputs::SymmetryY) {
-        println!("Sending Y {looking_at_block:?}");
         client.send_message(
             NettyChannelClient::Reliable,
             cosmos_encoder::serialize(&ClientReliableMessages::SetSymmetry {
@@ -149,7 +156,6 @@ fn place_symmetries(
     }
 
     if input_handler.check_just_pressed(CosmosInputs::SymmetryZ) {
-        println!("Sending Z {looking_at_block:?}");
         client.send_message(
             NettyChannelClient::Reliable,
             cosmos_encoder::serialize(&ClientReliableMessages::SetSymmetry {
@@ -160,10 +166,150 @@ fn place_symmetries(
     }
 }
 
+fn clear_visuals(
+    parent_query: Query<&Parent>,
+    visuals_query: Query<&SymmetryVisuals>,
+    mut event_reader: EventReader<ExitBuildModeEvent>,
+    mut commands: Commands,
+) {
+    for ev in event_reader.iter() {
+        if let Ok(parent) = parent_query.get(ev.player_entity).map(|p| p.get()) {
+            if let Ok(sym_visuals) = visuals_query.get(parent) {
+                if let Some(ent) = sym_visuals.0 {
+                    commands.entity(ent).despawn_recursive();
+                }
+                if let Some(ent) = sym_visuals.1 {
+                    commands.entity(ent).despawn_recursive();
+                }
+                if let Some(ent) = sym_visuals.2 {
+                    commands.entity(ent).despawn_recursive();
+                }
+            }
+
+            if let Some(mut ecmds) = commands.get_entity(parent) {
+                ecmds.remove::<SymmetryVisuals>();
+            }
+        }
+    }
+}
+
+fn change_visuals(
+    mut commands: Commands,
+    query: Query<(&BuildMode, &Parent), (With<LocalPlayer>, Changed<BuildMode>)>,
+    structure_query: Query<&Structure>,
+    visuals: Query<&SymmetryVisuals>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<UnlitRepeatedMaterial>>,
+    asset_server: Res<AssetServer>,
+) {
+    if let Ok((build_mode, parent)) = query.get_single() {
+        let structure_entity = parent.get();
+        let Ok(structure) = structure_query.get(structure_entity) else {
+            return;
+        };
+
+        let mut visuals = visuals.get(structure_entity).copied().unwrap_or_default();
+
+        if let Some(ent) = visuals.0 {
+            commands.entity(ent).despawn_recursive();
+            visuals.0 = None;
+        }
+        if let Some(ent) = visuals.1 {
+            commands.entity(ent).despawn_recursive();
+            visuals.1 = None;
+        }
+        if let Some(ent) = visuals.2 {
+            commands.entity(ent).despawn_recursive();
+            visuals.2 = None;
+        }
+
+        let texture_handle = asset_server.load("images/misc/symmetry.png");
+
+        let size = structure.block_dimensions().x;
+
+        if let Some(coords) = build_mode.get_symmetry(BuildAxis::X) {
+            let coords = structure.block_relative_position(BlockCoordinate::new(coords, 0, 0));
+
+            commands.entity(structure_entity).with_children(|ecmds| {
+                visuals.0 = Some(
+                    ecmds
+                        .spawn(MaterialMeshBundle {
+                            mesh: meshes.add(shape::Box::new(0.001, size as f32, size as f32).into()),
+                            material: materials.add(UnlitRepeatedMaterial {
+                                repeats: Repeats {
+                                    horizontal: size as u32,
+                                    vertical: size as u32,
+                                    ..Default::default()
+                                },
+                                texture: texture_handle.clone(),
+                                color: Color::rgb(1.0, 0.0, 0.0).into(),
+                            }),
+                            transform: Transform::from_xyz(coords.x, 0.5, 0.5),
+                            ..Default::default()
+                        })
+                        .id(),
+                );
+            });
+        }
+
+        if let Some(coords) = build_mode.get_symmetry(BuildAxis::Y) {
+            let coords = structure.block_relative_position(BlockCoordinate::new(0, coords, 0));
+
+            commands.entity(structure_entity).with_children(|ecmds| {
+                visuals.1 = Some(
+                    ecmds
+                        .spawn(MaterialMeshBundle {
+                            mesh: meshes.add(shape::Box::new(size as f32, 0.001, size as f32).into()),
+                            material: materials.add(UnlitRepeatedMaterial {
+                                repeats: Repeats {
+                                    horizontal: size as u32,
+                                    vertical: size as u32,
+                                    ..Default::default()
+                                },
+                                texture: texture_handle.clone(),
+                                color: Color::rgb(0.0, 1.0, 0.0).into(),
+                            }),
+                            transform: Transform::from_xyz(0.5, coords.y, 0.5),
+                            ..Default::default()
+                        })
+                        .id(),
+                );
+            });
+        }
+
+        if let Some(coords) = build_mode.get_symmetry(BuildAxis::Z) {
+            let coords = structure.block_relative_position(BlockCoordinate::new(0, 0, coords));
+
+            commands.entity(structure_entity).with_children(|ecmds| {
+                visuals.2 = Some(
+                    ecmds
+                        .spawn(MaterialMeshBundle {
+                            mesh: meshes.add(shape::Box::new(size as f32, size as f32, 0.001).into()),
+                            material: materials.add(UnlitRepeatedMaterial {
+                                repeats: Repeats {
+                                    horizontal: size as u32 / 4,
+                                    vertical: size as u32 / 4,
+                                    ..Default::default()
+                                },
+                                texture: texture_handle.clone(),
+                                color: Color::rgb(0.0, 0.0, 1.0).into(),
+                            }),
+                            transform: Transform::from_xyz(0.5, 0.5, coords.z),
+                            ..Default::default()
+                        })
+                        .id(),
+                );
+            });
+        }
+
+        commands.entity(structure_entity).insert(visuals);
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        (place_symmetries, exit_build_mode, control_build_mode)
+        (place_symmetries, exit_build_mode, control_build_mode, change_visuals, clear_visuals)
             .chain()
             .run_if(in_state(GameState::Playing)),
     );

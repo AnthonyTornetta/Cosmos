@@ -3,7 +3,9 @@
 //! Note that build mode is currently only intended for ships, but is not yet manually limited to only ships.
 
 use bevy::{
-    prelude::{App, BuildChildren, Commands, Component, Entity, Event, EventReader, Update},
+    prelude::{
+        App, BuildChildren, Changed, Commands, Component, Entity, Event, EventReader, EventWriter, Parent, Query, Update, With, Without,
+    },
     reflect::Reflect,
 };
 use bevy_rapier3d::prelude::{RigidBodyDisabled, Sensor};
@@ -100,13 +102,46 @@ fn exit_build_mode_listener(mut commands: Commands, mut event_reader: EventReade
         };
 
         // Keep them as a child of the ship
-        ecmds.remove::<BuildMode>().remove::<RigidBodyDisabled>().remove::<Sensor>();
+        ecmds
+            .remove::<BuildMode>()
+            .remove::<RigidBodyDisabled>()
+            .remove::<Sensor>()
+            .remove::<InBuildModeFlag>();
+    }
+}
+
+#[derive(Component)]
+struct InBuildModeFlag;
+
+fn exit_build_mode_when_parent_dies(
+    query: Query<Entity, (With<BuildMode>, Without<Parent>)>,
+    changed_query: Query<(Entity, Option<&InBuildModeFlag>), (With<BuildMode>, Changed<Parent>)>,
+    mut event_writer: EventWriter<ExitBuildModeEvent>,
+    mut commands: Commands,
+) {
+    for entity in query.iter() {
+        event_writer.send(ExitBuildModeEvent { player_entity: entity });
+    }
+
+    for (entity, in_build_mode) in changed_query.iter() {
+        if in_build_mode.is_some() {
+            event_writer.send(ExitBuildModeEvent { player_entity: entity });
+        } else {
+            commands.entity(entity).insert(InBuildModeFlag);
+        }
     }
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, (enter_build_mode_listener, exit_build_mode_listener))
-        .add_event::<EnterBuildModeEvent>()
-        .add_event::<ExitBuildModeEvent>()
-        .register_type::<BuildMode>();
+    app.add_systems(
+        Update,
+        (
+            enter_build_mode_listener,
+            exit_build_mode_when_parent_dies,
+            exit_build_mode_listener,
+        ),
+    )
+    .add_event::<EnterBuildModeEvent>()
+    .add_event::<ExitBuildModeEvent>()
+    .register_type::<BuildMode>();
 }

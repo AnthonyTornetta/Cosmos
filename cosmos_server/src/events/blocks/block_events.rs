@@ -231,8 +231,6 @@ fn handle_block_place_events(
             structure_blocks = calculate_build_mode_blocks(structure_blocks, build_mode, parent, ev.structure_entity, &mut inv, &structure);
         }
 
-        println!("{structure_blocks:?}");
-
         for (coords, block_up) in structure_blocks {
             if structure.has_block_at(coords) {
                 continue;
