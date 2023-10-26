@@ -31,7 +31,7 @@ impl Identifiable for Item {
 }
 
 /// The max stack size for items, should load this from config file in future
-pub const DEFAULT_MAX_STACK_SIZE: u16 = 64;
+pub const DEFAULT_MAX_STACK_SIZE: u16 = 999;
 
 impl Item {
     /// Creates an item
