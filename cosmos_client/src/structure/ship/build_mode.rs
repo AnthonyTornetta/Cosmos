@@ -250,8 +250,8 @@ fn change_visuals(
                             mesh: meshes.add(shape::Box::new(0.001, size as f32, size as f32).into()),
                             material: materials.add(UnlitRepeatedMaterial {
                                 repeats: Repeats {
-                                    horizontal: size as u32,
-                                    vertical: size as u32,
+                                    horizontal: size as u32 / 4,
+                                    vertical: size as u32 / 4,
                                     ..Default::default()
                                 },
                                 texture: texture_handle.clone(),
@@ -281,8 +281,8 @@ fn change_visuals(
                             mesh: meshes.add(shape::Box::new(size as f32, 0.001, size as f32).into()),
                             material: materials.add(UnlitRepeatedMaterial {
                                 repeats: Repeats {
-                                    horizontal: size as u32,
-                                    vertical: size as u32,
+                                    horizontal: size as u32 / 4,
+                                    vertical: size as u32 / 4,
                                     ..Default::default()
                                 },
                                 texture: texture_handle.clone(),
