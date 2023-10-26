@@ -103,9 +103,13 @@ pub enum CosmosInputs {
 
     /// Toggles the player between being in build mode and not on a ship
     ToggleBuildMode,
+    /// A toggle to clear the symmetry - when combined with a symmetry key the symmetry will be cleared
     ClearSymmetry,
+    /// Creates an X symmetry
     SymmetryX,
+    /// Creates a Y symmetry
     SymmetryY,
+    /// Creates a Z symmetry
     SymmetryZ,
 }
 

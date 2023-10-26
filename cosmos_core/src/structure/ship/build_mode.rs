@@ -22,9 +22,13 @@ pub struct BuildMode {
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+/// Represents the X/Y/Z symmetry axis
 pub enum BuildAxis {
+    /// X axis
     X,
+    /// Y axis
     Y,
+    /// Z axis
     Z,
 }
 
@@ -37,14 +41,17 @@ impl BuildMode {
         }
     }
 
+    /// Sets the symmetry for this axis
     pub fn set_symmetry(&mut self, axis: BuildAxis, coordinate: CoordinateType) {
         self.internal_set_symmetry(axis, Some(coordinate));
     }
 
+    /// Removes the symmetry from this axis
     pub fn remove_symmetry(&mut self, axis: BuildAxis) {
         self.internal_set_symmetry(axis, None);
     }
 
+    /// Gets the symmetry for this axis - `None` if there is no symmetry present.
     pub fn get_symmetry(&self, axis: BuildAxis) -> Option<CoordinateType> {
         match axis {
             BuildAxis::X => self.symmetries.0,

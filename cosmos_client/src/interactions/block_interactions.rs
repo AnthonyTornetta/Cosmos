@@ -28,8 +28,10 @@ pub enum InteractionType {
     Primary,
 }
 
-#[derive(Component)]
+#[derive(Component, Debug)]
+/// Stores the block the player is last noted as looked at
 pub struct LookingAt {
+    /// The block the player is looking at
     pub looking_at_block: Option<(Entity, StructureBlock)>,
 }
 

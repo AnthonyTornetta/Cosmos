@@ -97,8 +97,11 @@ pub enum ClientReliableMessages {
     ///
     /// Requires server confirmation via [`ServerReliableMessages::PlayerExitBuildMode`] or client will do nothing
     ExitBuildMode,
+    /// Sent by the player to update their symmetry
     SetSymmetry {
+        /// The axis they are changing
         axis: BuildAxis,
+        /// None if they want to remove it, otherwise the respective axis's coordinate
         coordinate: Option<CoordinateType>,
     },
 }

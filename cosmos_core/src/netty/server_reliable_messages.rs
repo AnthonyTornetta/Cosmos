@@ -155,7 +155,11 @@ pub enum ServerReliableMessages {
         /// The server's player entity that's exiting
         player_entity: Entity,
     },
+    /// Updates the player's build mode.
+    ///
+    /// Only used to update symmetry axis.
     UpdateBuildMode {
+        /// The new build mode
         build_mode: BuildMode,
     },
 }

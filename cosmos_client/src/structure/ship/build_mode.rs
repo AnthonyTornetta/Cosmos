@@ -105,14 +105,22 @@ fn control_build_mode(
     }
 }
 
-fn place_symmetries(mut client: ResMut<RenetClient>, input_handler: InputChecker, query: Query<&LookingAt, With<LocalPlayer>>) {
+fn place_symmetries(
+    mut client: ResMut<RenetClient>,
+    input_handler: InputChecker,
+    query: Query<&LookingAt, (With<LocalPlayer>, With<BuildMode>)>,
+) {
     let Ok(looking_at) = query.get_single() else {
         return;
     };
 
     let clearing = input_handler.check_pressed(CosmosInputs::ClearSymmetry);
 
-    let looking_at_block = &looking_at.looking_at_block.map(|x| x.1);
+    let looking_at_block = if !clearing {
+        looking_at.looking_at_block.map(|x| x.1)
+    } else {
+        None
+    };
 
     if !clearing && looking_at_block.is_none() {
         return;
