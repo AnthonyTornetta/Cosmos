@@ -1,9 +1,10 @@
 //! Handles the build mode logic on the client-side
 
 use bevy::{
+    pbr::{NotShadowCaster, NotShadowReceiver},
     prelude::{
         in_state, shape, App, AssetServer, Assets, BuildChildren, Changed, Color, Commands, Component, DespawnRecursiveExt, Entity,
-        EventReader, IntoSystemConfigs, MaterialMeshBundle, Mesh, Parent, Query, Res, ResMut, Transform, Update, Vec3, With, Without,
+        EventReader, IntoSystemConfigs, MaterialMeshBundle, Mesh, Name, Parent, Query, Res, ResMut, Transform, Update, Vec3, With, Without,
     },
     time::Time,
 };
@@ -14,7 +15,10 @@ use cosmos_core::{
     structure::{
         chunk::CHUNK_DIMENSIONSF,
         coordinates::BlockCoordinate,
-        ship::build_mode::{BuildAxis, BuildMode, ExitBuildModeEvent},
+        ship::{
+            build_mode::{BuildAxis, BuildMode, ExitBuildModeEvent},
+            core::DieWithStructure,
+        },
         Structure,
     },
 };
@@ -233,20 +237,26 @@ fn change_visuals(
             commands.entity(structure_entity).with_children(|ecmds| {
                 visuals.0 = Some(
                     ecmds
-                        .spawn(MaterialMeshBundle {
-                            mesh: meshes.add(shape::Box::new(0.001, size as f32, size as f32).into()),
-                            material: materials.add(UnlitRepeatedMaterial {
-                                repeats: Repeats {
-                                    horizontal: size as u32,
-                                    vertical: size as u32,
-                                    ..Default::default()
-                                },
-                                texture: texture_handle.clone(),
-                                color: Color::rgb(1.0, 0.0, 0.0).into(),
-                            }),
-                            transform: Transform::from_xyz(coords.x, 0.5, 0.5),
-                            ..Default::default()
-                        })
+                        .spawn((
+                            DieWithStructure,
+                            NotShadowCaster,
+                            NotShadowReceiver,
+                            Name::new("X Axis - build mode"),
+                            MaterialMeshBundle {
+                                mesh: meshes.add(shape::Box::new(0.001, size as f32, size as f32).into()),
+                                material: materials.add(UnlitRepeatedMaterial {
+                                    repeats: Repeats {
+                                        horizontal: size as u32,
+                                        vertical: size as u32,
+                                        ..Default::default()
+                                    },
+                                    texture: texture_handle.clone(),
+                                    color: Color::rgb(1.0, 0.0, 0.0).into(),
+                                }),
+                                transform: Transform::from_xyz(coords.x, 0.5, 0.5),
+                                ..Default::default()
+                            },
+                        ))
                         .id(),
                 );
             });
@@ -258,20 +268,26 @@ fn change_visuals(
             commands.entity(structure_entity).with_children(|ecmds| {
                 visuals.1 = Some(
                     ecmds
-                        .spawn(MaterialMeshBundle {
-                            mesh: meshes.add(shape::Box::new(size as f32, 0.001, size as f32).into()),
-                            material: materials.add(UnlitRepeatedMaterial {
-                                repeats: Repeats {
-                                    horizontal: size as u32,
-                                    vertical: size as u32,
-                                    ..Default::default()
-                                },
-                                texture: texture_handle.clone(),
-                                color: Color::rgb(0.0, 1.0, 0.0).into(),
-                            }),
-                            transform: Transform::from_xyz(0.5, coords.y, 0.5),
-                            ..Default::default()
-                        })
+                        .spawn((
+                            DieWithStructure,
+                            NotShadowCaster,
+                            NotShadowReceiver,
+                            Name::new("Y Axis - build mode"),
+                            MaterialMeshBundle {
+                                mesh: meshes.add(shape::Box::new(size as f32, 0.001, size as f32).into()),
+                                material: materials.add(UnlitRepeatedMaterial {
+                                    repeats: Repeats {
+                                        horizontal: size as u32,
+                                        vertical: size as u32,
+                                        ..Default::default()
+                                    },
+                                    texture: texture_handle.clone(),
+                                    color: Color::rgb(0.0, 1.0, 0.0).into(),
+                                }),
+                                transform: Transform::from_xyz(0.5, coords.y, 0.5),
+                                ..Default::default()
+                            },
+                        ))
                         .id(),
                 );
             });
@@ -283,20 +299,26 @@ fn change_visuals(
             commands.entity(structure_entity).with_children(|ecmds| {
                 visuals.2 = Some(
                     ecmds
-                        .spawn(MaterialMeshBundle {
-                            mesh: meshes.add(shape::Box::new(size as f32, size as f32, 0.001).into()),
-                            material: materials.add(UnlitRepeatedMaterial {
-                                repeats: Repeats {
-                                    horizontal: size as u32 / 4,
-                                    vertical: size as u32 / 4,
-                                    ..Default::default()
-                                },
-                                texture: texture_handle.clone(),
-                                color: Color::rgb(0.0, 0.0, 1.0).into(),
-                            }),
-                            transform: Transform::from_xyz(0.5, 0.5, coords.z),
-                            ..Default::default()
-                        })
+                        .spawn((
+                            DieWithStructure,
+                            NotShadowCaster,
+                            NotShadowReceiver,
+                            Name::new("Z Axis - build mode"),
+                            MaterialMeshBundle {
+                                mesh: meshes.add(shape::Box::new(size as f32, size as f32, 0.001).into()),
+                                material: materials.add(UnlitRepeatedMaterial {
+                                    repeats: Repeats {
+                                        horizontal: size as u32 / 4,
+                                        vertical: size as u32 / 4,
+                                        ..Default::default()
+                                    },
+                                    texture: texture_handle.clone(),
+                                    color: Color::rgb(0.0, 0.0, 1.0).into(),
+                                }),
+                                transform: Transform::from_xyz(0.5, 0.5, coords.z),
+                                ..Default::default()
+                            },
+                        ))
                         .id(),
                 );
             });

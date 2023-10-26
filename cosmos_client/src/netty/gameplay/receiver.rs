@@ -349,6 +349,7 @@ pub(crate) fn client_sync_players(
                                 BloomSettings { ..Default::default() },
                                 CameraHelper::default(),
                                 Skybox(Handle::default()),
+                                Name::new("Main Camera"),
                                 MainCamera,
                                 // No double UI rendering
                                 UiCameraConfig { show_ui: false },
@@ -358,6 +359,7 @@ pub(crate) fn client_sync_players(
 
                     commands.spawn((
                         PlayerWorld { player: client_entity },
+                        Name::new("Player World"),
                         loc,
                         PhysicsWorld {
                             world_id: DEFAULT_WORLD_ID,
