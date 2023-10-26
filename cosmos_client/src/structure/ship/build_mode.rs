@@ -55,65 +55,66 @@ fn control_build_mode(
     time: Res<Time>,
     mut query: Query<(&mut Transform, &mut Velocity, Option<&PlayerAlignment>), (With<LocalPlayer>, With<BuildMode>, Without<MainCamera>)>,
 ) {
-    if let Ok((mut transform, mut velocity, player_alignment)) = query.get_single_mut() {
-        velocity.linvel = Vec3::ZERO;
-        velocity.angvel = Vec3::ZERO;
+    let Ok((mut transform, mut velocity, player_alignment)) = query.get_single_mut() else {
+        return;
+    };
+    velocity.linvel = Vec3::ZERO;
+    velocity.angvel = Vec3::ZERO;
 
-        let cam_trans = transform.mul_transform(*cam_query.single());
+    let cam_trans = transform.mul_transform(*cam_query.single());
 
-        let max_speed: f32 = match input_handler.check_pressed(CosmosInputs::Sprint) {
-            false => 5.0,
-            true => 20.0,
-        };
+    let max_speed: f32 = match input_handler.check_pressed(CosmosInputs::Sprint) {
+        false => 5.0,
+        true => 20.0,
+    };
 
-        let mut forward = cam_trans.forward();
-        let mut right = cam_trans.right();
-        let up = transform.up();
+    let mut forward = cam_trans.forward();
+    let mut right = cam_trans.right();
+    let up = transform.up();
 
-        match player_alignment.copied().unwrap_or_default().0 {
-            align_player::Axis::X => {
-                forward.x = 0.0;
-                right.x = 0.0;
-            }
-            align_player::Axis::Y => {
-                forward.y = 0.0;
-                right.y = 0.0;
-            }
-            align_player::Axis::Z => {
-                forward.z = 0.0;
-                right.z = 0.0;
-            }
+    match player_alignment.copied().unwrap_or_default().0 {
+        align_player::Axis::X => {
+            forward.x = 0.0;
+            right.x = 0.0;
         }
-
-        forward = forward.normalize_or_zero() * max_speed;
-        right = right.normalize_or_zero() * max_speed;
-        let movement_up = up * max_speed;
-
-        let time = time.delta_seconds();
-
-        if input_handler.check_pressed(CosmosInputs::MoveForward) {
-            transform.translation += forward * time;
+        align_player::Axis::Y => {
+            forward.y = 0.0;
+            right.y = 0.0;
         }
-        if input_handler.check_pressed(CosmosInputs::MoveBackward) {
-            transform.translation -= forward * time;
+        align_player::Axis::Z => {
+            forward.z = 0.0;
+            right.z = 0.0;
         }
-        if input_handler.check_pressed(CosmosInputs::MoveUp) {
-            transform.translation += movement_up * time;
-        }
-        if input_handler.check_pressed(CosmosInputs::MoveDown) {
-            transform.translation -= movement_up * time;
-        }
-        if input_handler.check_pressed(CosmosInputs::MoveLeft) {
-            transform.translation -= right * time;
-        }
-        if input_handler.check_pressed(CosmosInputs::MoveRight) {
-            transform.translation += right * time;
-        }
-
-        let max = CHUNK_DIMENSIONSF * 10.0;
-
-        transform.translation = transform.translation.clamp(Vec3::new(-max, -max, -max), Vec3::new(max, max, max));
     }
+
+    forward = forward.normalize_or_zero() * max_speed;
+    right = right.normalize_or_zero() * max_speed;
+    let movement_up = up * max_speed;
+
+    let time = time.delta_seconds();
+
+    if input_handler.check_pressed(CosmosInputs::MoveForward) {
+        transform.translation += forward * time;
+    }
+    if input_handler.check_pressed(CosmosInputs::MoveBackward) {
+        transform.translation -= forward * time;
+    }
+    if input_handler.check_pressed(CosmosInputs::MoveUp) {
+        transform.translation += movement_up * time;
+    }
+    if input_handler.check_pressed(CosmosInputs::MoveDown) {
+        transform.translation -= movement_up * time;
+    }
+    if input_handler.check_pressed(CosmosInputs::MoveLeft) {
+        transform.translation -= right * time;
+    }
+    if input_handler.check_pressed(CosmosInputs::MoveRight) {
+        transform.translation += right * time;
+    }
+
+    let max = CHUNK_DIMENSIONSF * 10.0;
+
+    transform.translation = transform.translation.clamp(Vec3::new(-max, -max, -max), Vec3::new(max, max, max));
 }
 
 fn place_symmetries(
@@ -207,126 +208,127 @@ fn change_visuals(
     mut materials: ResMut<Assets<UnlitRepeatedMaterial>>,
     asset_server: Res<AssetServer>,
 ) {
-    if let Ok((build_mode, parent)) = query.get_single() {
-        let structure_entity = parent.get();
-        let Ok(structure) = structure_query.get(structure_entity) else {
-            return;
-        };
+    let Ok((build_mode, parent)) = query.get_single() else {
+        return;
+    };
+    let structure_entity = parent.get();
+    let Ok(structure) = structure_query.get(structure_entity) else {
+        return;
+    };
 
-        let mut visuals = visuals.get(structure_entity).copied().unwrap_or_default();
+    let mut visuals = visuals.get(structure_entity).copied().unwrap_or_default();
 
-        if let Some(ent) = visuals.0 {
-            commands.entity(ent).despawn_recursive();
-            visuals.0 = None;
-        }
-        if let Some(ent) = visuals.1 {
-            commands.entity(ent).despawn_recursive();
-            visuals.1 = None;
-        }
-        if let Some(ent) = visuals.2 {
-            commands.entity(ent).despawn_recursive();
-            visuals.2 = None;
-        }
-
-        let texture_handle = asset_server.load("images/misc/symmetry.png");
-
-        let size = structure.block_dimensions().x;
-
-        if let Some(coords) = build_mode.get_symmetry(BuildAxis::X) {
-            let coords = structure.block_relative_position(BlockCoordinate::new(coords, 0, 0));
-
-            commands.entity(structure_entity).with_children(|ecmds| {
-                visuals.0 = Some(
-                    ecmds
-                        .spawn((
-                            DieWithStructure,
-                            NotShadowCaster,
-                            NotShadowReceiver,
-                            Name::new("X Axis - build mode"),
-                            MaterialMeshBundle {
-                                mesh: meshes.add(shape::Box::new(0.001, size as f32, size as f32).into()),
-                                material: materials.add(UnlitRepeatedMaterial {
-                                    repeats: Repeats {
-                                        horizontal: size as u32,
-                                        vertical: size as u32,
-                                        ..Default::default()
-                                    },
-                                    texture: texture_handle.clone(),
-                                    color: Color::rgb(1.0, 0.0, 0.0),
-                                }),
-                                transform: Transform::from_xyz(coords.x, 0.5, 0.5),
-                                ..Default::default()
-                            },
-                        ))
-                        .id(),
-                );
-            });
-        }
-
-        if let Some(coords) = build_mode.get_symmetry(BuildAxis::Y) {
-            let coords = structure.block_relative_position(BlockCoordinate::new(0, coords, 0));
-
-            commands.entity(structure_entity).with_children(|ecmds| {
-                visuals.1 = Some(
-                    ecmds
-                        .spawn((
-                            DieWithStructure,
-                            NotShadowCaster,
-                            NotShadowReceiver,
-                            Name::new("Y Axis - build mode"),
-                            MaterialMeshBundle {
-                                mesh: meshes.add(shape::Box::new(size as f32, 0.001, size as f32).into()),
-                                material: materials.add(UnlitRepeatedMaterial {
-                                    repeats: Repeats {
-                                        horizontal: size as u32,
-                                        vertical: size as u32,
-                                        ..Default::default()
-                                    },
-                                    texture: texture_handle.clone(),
-                                    color: Color::rgb(0.0, 1.0, 0.0),
-                                }),
-                                transform: Transform::from_xyz(0.5, coords.y, 0.5),
-                                ..Default::default()
-                            },
-                        ))
-                        .id(),
-                );
-            });
-        }
-
-        if let Some(coords) = build_mode.get_symmetry(BuildAxis::Z) {
-            let coords = structure.block_relative_position(BlockCoordinate::new(0, 0, coords));
-
-            commands.entity(structure_entity).with_children(|ecmds| {
-                visuals.2 = Some(
-                    ecmds
-                        .spawn((
-                            DieWithStructure,
-                            NotShadowCaster,
-                            NotShadowReceiver,
-                            Name::new("Z Axis - build mode"),
-                            MaterialMeshBundle {
-                                mesh: meshes.add(shape::Box::new(size as f32, size as f32, 0.001).into()),
-                                material: materials.add(UnlitRepeatedMaterial {
-                                    repeats: Repeats {
-                                        horizontal: size as u32 / 4,
-                                        vertical: size as u32 / 4,
-                                        ..Default::default()
-                                    },
-                                    texture: texture_handle.clone(),
-                                    color: Color::rgb(0.0, 0.0, 1.0),
-                                }),
-                                transform: Transform::from_xyz(0.5, 0.5, coords.z),
-                                ..Default::default()
-                            },
-                        ))
-                        .id(),
-                );
-            });
-        }
-
-        commands.entity(structure_entity).insert(visuals);
+    if let Some(ent) = visuals.0 {
+        commands.entity(ent).despawn_recursive();
+        visuals.0 = None;
     }
+    if let Some(ent) = visuals.1 {
+        commands.entity(ent).despawn_recursive();
+        visuals.1 = None;
+    }
+    if let Some(ent) = visuals.2 {
+        commands.entity(ent).despawn_recursive();
+        visuals.2 = None;
+    }
+
+    let texture_handle = asset_server.load("images/misc/symmetry.png");
+
+    let size = structure.block_dimensions().x;
+
+    if let Some(coords) = build_mode.get_symmetry(BuildAxis::X) {
+        let coords = structure.block_relative_position(BlockCoordinate::new(coords, 0, 0));
+
+        commands.entity(structure_entity).with_children(|ecmds| {
+            visuals.0 = Some(
+                ecmds
+                    .spawn((
+                        DieWithStructure,
+                        NotShadowCaster,
+                        NotShadowReceiver,
+                        Name::new("X Axis - build mode"),
+                        MaterialMeshBundle {
+                            mesh: meshes.add(shape::Box::new(0.001, size as f32, size as f32).into()),
+                            material: materials.add(UnlitRepeatedMaterial {
+                                repeats: Repeats {
+                                    horizontal: size as u32,
+                                    vertical: size as u32,
+                                    ..Default::default()
+                                },
+                                texture: texture_handle.clone(),
+                                color: Color::rgb(1.0, 0.0, 0.0),
+                            }),
+                            transform: Transform::from_xyz(coords.x, 0.5, 0.5),
+                            ..Default::default()
+                        },
+                    ))
+                    .id(),
+            );
+        });
+    }
+
+    if let Some(coords) = build_mode.get_symmetry(BuildAxis::Y) {
+        let coords = structure.block_relative_position(BlockCoordinate::new(0, coords, 0));
+
+        commands.entity(structure_entity).with_children(|ecmds| {
+            visuals.1 = Some(
+                ecmds
+                    .spawn((
+                        DieWithStructure,
+                        NotShadowCaster,
+                        NotShadowReceiver,
+                        Name::new("Y Axis - build mode"),
+                        MaterialMeshBundle {
+                            mesh: meshes.add(shape::Box::new(size as f32, 0.001, size as f32).into()),
+                            material: materials.add(UnlitRepeatedMaterial {
+                                repeats: Repeats {
+                                    horizontal: size as u32,
+                                    vertical: size as u32,
+                                    ..Default::default()
+                                },
+                                texture: texture_handle.clone(),
+                                color: Color::rgb(0.0, 1.0, 0.0),
+                            }),
+                            transform: Transform::from_xyz(0.5, coords.y, 0.5),
+                            ..Default::default()
+                        },
+                    ))
+                    .id(),
+            );
+        });
+    }
+
+    if let Some(coords) = build_mode.get_symmetry(BuildAxis::Z) {
+        let coords = structure.block_relative_position(BlockCoordinate::new(0, 0, coords));
+
+        commands.entity(structure_entity).with_children(|ecmds| {
+            visuals.2 = Some(
+                ecmds
+                    .spawn((
+                        DieWithStructure,
+                        NotShadowCaster,
+                        NotShadowReceiver,
+                        Name::new("Z Axis - build mode"),
+                        MaterialMeshBundle {
+                            mesh: meshes.add(shape::Box::new(size as f32, size as f32, 0.001).into()),
+                            material: materials.add(UnlitRepeatedMaterial {
+                                repeats: Repeats {
+                                    horizontal: size as u32 / 4,
+                                    vertical: size as u32 / 4,
+                                    ..Default::default()
+                                },
+                                texture: texture_handle.clone(),
+                                color: Color::rgb(0.0, 0.0, 1.0),
+                            }),
+                            transform: Transform::from_xyz(0.5, 0.5, coords.z),
+                            ..Default::default()
+                        },
+                    ))
+                    .id(),
+            );
+        });
+    }
+
+    commands.entity(structure_entity).insert(visuals);
 }
 
 pub(super) fn register(app: &mut App) {
