@@ -38,13 +38,11 @@ fn exit_build_mode(
     local_player_in_build_mode: Query<(), (With<LocalPlayer>, With<BuildMode>)>,
     mut client: ResMut<RenetClient>,
 ) {
-    if local_player_in_build_mode.get_single().is_ok() {
-        if input_handler.check_just_pressed(CosmosInputs::ToggleBuildMode) {
-            client.send_message(
-                NettyChannelClient::Reliable,
-                cosmos_encoder::serialize(&ClientReliableMessages::ExitBuildMode),
-            );
-        }
+    if local_player_in_build_mode.get_single().is_ok() && input_handler.check_just_pressed(CosmosInputs::ToggleBuildMode) {
+        client.send_message(
+            NettyChannelClient::Reliable,
+            cosmos_encoder::serialize(&ClientReliableMessages::ExitBuildMode),
+        );
     }
 }
 
@@ -177,21 +175,24 @@ fn clear_visuals(
     mut commands: Commands,
 ) {
     for ev in event_reader.iter() {
-        if let Ok(parent) = parent_query.get(ev.player_entity).map(|p| p.get()) {
-            if let Ok(sym_visuals) = visuals_query.get(parent) {
-                if let Some(ent) = sym_visuals.0 {
-                    commands.entity(ent).despawn_recursive();
-                }
-                if let Some(ent) = sym_visuals.1 {
-                    commands.entity(ent).despawn_recursive();
-                }
-                if let Some(ent) = sym_visuals.2 {
-                    commands.entity(ent).despawn_recursive();
-                }
-            }
+        let Ok(parent) = parent_query.get(ev.player_entity).map(|p| p.get()) else {
+            continue;
+        };
+        let Some(mut ecmds) = commands.get_entity(parent) else {
+            continue;
+        };
 
-            if let Some(mut ecmds) = commands.get_entity(parent) {
-                ecmds.remove::<SymmetryVisuals>();
+        ecmds.remove::<SymmetryVisuals>();
+
+        if let Ok(sym_visuals) = visuals_query.get(parent) {
+            if let Some(ent) = sym_visuals.0 {
+                commands.entity(ent).despawn_recursive();
+            }
+            if let Some(ent) = sym_visuals.1 {
+                commands.entity(ent).despawn_recursive();
+            }
+            if let Some(ent) = sym_visuals.2 {
+                commands.entity(ent).despawn_recursive();
             }
         }
     }
@@ -251,7 +252,7 @@ fn change_visuals(
                                         ..Default::default()
                                     },
                                     texture: texture_handle.clone(),
-                                    color: Color::rgb(1.0, 0.0, 0.0).into(),
+                                    color: Color::rgb(1.0, 0.0, 0.0),
                                 }),
                                 transform: Transform::from_xyz(coords.x, 0.5, 0.5),
                                 ..Default::default()
@@ -282,7 +283,7 @@ fn change_visuals(
                                         ..Default::default()
                                     },
                                     texture: texture_handle.clone(),
-                                    color: Color::rgb(0.0, 1.0, 0.0).into(),
+                                    color: Color::rgb(0.0, 1.0, 0.0),
                                 }),
                                 transform: Transform::from_xyz(0.5, coords.y, 0.5),
                                 ..Default::default()
@@ -313,7 +314,7 @@ fn change_visuals(
                                         ..Default::default()
                                     },
                                     texture: texture_handle.clone(),
-                                    color: Color::rgb(0.0, 0.0, 1.0).into(),
+                                    color: Color::rgb(0.0, 0.0, 1.0),
                                 }),
                                 transform: Transform::from_xyz(0.5, 0.5, coords.z),
                                 ..Default::default()

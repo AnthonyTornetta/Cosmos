@@ -129,12 +129,12 @@ fn unique_push(vec: &mut Vec<(BlockCoordinate, BlockFace)>, item: (BlockCoordina
     vec.push(item);
 }
 
-fn calculate_build_mode_blocks<'a>(
+fn calculate_build_mode_blocks(
     mut structure_blocks: Vec<(BlockCoordinate, BlockFace)>,
     build_mode: &BuildMode,
     parent: &Parent,
     structure_entity: Entity,
-    inventory: &mut Mut<'a, Inventory>,
+    inventory: &mut Mut<'_, Inventory>,
     structure: &Structure,
 ) -> Vec<(BlockCoordinate, BlockFace)> {
     if parent.get() != structure_entity {
