@@ -8,7 +8,7 @@ use bevy::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    block::{blocks::AIR_BLOCK_ID, hardness::BlockHardness, Block, BlockFace},
+    block::{blocks::AIR_BLOCK_ID, Block, BlockFace},
     physics::location::Location,
     registry::Registry,
 };
@@ -464,9 +464,9 @@ impl BaseStructure {
     /// Gets the block's health at that given coordinate
     /// - x/y/z: block coordinate
     /// - block_hardness: The hardness for the block at those coordinates
-    pub fn get_block_health(&self, coords: BlockCoordinate, block_hardness: &BlockHardness) -> f32 {
+    pub fn get_block_health(&self, coords: BlockCoordinate, blocks: &Registry<Block>) -> f32 {
         self.chunk_at_block_coordinates(coords)
-            .map(|c| c.get_block_health(ChunkBlockCoordinate::for_block_coordinate(coords), block_hardness))
+            .map(|c| c.get_block_health(ChunkBlockCoordinate::for_block_coordinate(coords), blocks))
             .unwrap_or(0.0)
     }
 
@@ -480,12 +480,12 @@ impl BaseStructure {
     pub fn block_take_damage(
         &mut self,
         coords: BlockCoordinate,
-        block_hardness: &BlockHardness,
+        blocks: &Registry<Block>,
         amount: f32,
         event_writer: Option<&mut EventWriter<BlockDestroyedEvent>>,
     ) -> bool {
         if let Some(chunk) = self.mut_chunk_at_block_coordinates(coords) {
-            let destroyed = chunk.block_take_damage(ChunkBlockCoordinate::for_block_coordinate(coords), block_hardness, amount);
+            let destroyed = chunk.block_take_damage(ChunkBlockCoordinate::for_block_coordinate(coords), amount, blocks);
 
             if destroyed {
                 if let Some(structure_entity) = self.get_entity() {

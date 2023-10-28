@@ -1,9 +1,8 @@
 use bevy::prelude::*;
 use cosmos_core::{
-    block::{hardness::BlockHardness, Block},
-    events::block_events::BlockChangedEvent,
+    block::Block,
     projectiles::laser::{Laser, LaserCollideEvent},
-    registry::{identifiable::Identifiable, Registry},
+    registry::Registry,
     structure::{block_health::block_destroyed_event::BlockDestroyedEvent, Structure},
 };
 
@@ -20,21 +19,12 @@ fn on_laser_hit_structure(
     structure: &mut Structure,
     local_position_hit: Vec3,
     blocks: &Registry<Block>,
-    block_change_event_writer: &mut EventWriter<BlockChangedEvent>,
     block_destroy_event_writer: &mut EventWriter<BlockDestroyedEvent>,
-    hardness_registry: &Registry<BlockHardness>,
     strength: f32,
 ) {
     if let Ok(coords) = structure.relative_coords_to_local_coords_checked(local_position_hit.x, local_position_hit.y, local_position_hit.z)
     {
-        let block = structure.block_at(coords, blocks);
-
-        if let Some(hardness) = hardness_registry.from_id(block.unlocalized_name()) {
-            structure.block_take_damage(coords, hardness, strength, Some(block_destroy_event_writer));
-        } else {
-            warn!("Missing block hardness for {}", block.unlocalized_name());
-            structure.remove_block_at(coords, blocks, Some(block_change_event_writer));
-        }
+        structure.block_take_damage(coords, blocks, strength, Some(block_destroy_event_writer));
     } else {
         warn!("Bad laser hit spot that isn't actually on structure ;(");
     }
@@ -45,9 +35,7 @@ fn respond_laser_hit_event(
     parent_query: Query<&Parent>,
     mut structure_query: Query<&mut Structure>,
     blocks: Res<Registry<Block>>,
-    mut block_change_event_writer: EventWriter<BlockChangedEvent>,
     mut block_destroy_event_writer: EventWriter<BlockDestroyedEvent>,
-    hardness_registry: Res<Registry<BlockHardness>>,
 ) {
     for ev in reader.iter() {
         let entity_hit = ev.entity_hit();
@@ -59,9 +47,7 @@ fn respond_laser_hit_event(
                     &mut structure,
                     local_position_hit,
                     &blocks,
-                    &mut block_change_event_writer,
                     &mut block_destroy_event_writer,
-                    &hardness_registry,
                     ev.laser_strength(),
                 );
             }

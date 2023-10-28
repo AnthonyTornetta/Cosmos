@@ -12,7 +12,6 @@ use crate::registry::identifiable::Identifiable;
 
 pub mod block_builder;
 pub mod blocks;
-pub mod hardness;
 
 #[derive(Reflect, Debug, Eq, PartialEq, Clone, Copy, Hash)]
 /// Represents different properties a block can has
@@ -199,6 +198,7 @@ pub struct Block {
     id: u16,
     unlocalized_name: String,
     density: f32,
+    hardness: f32,
 }
 
 impl Identifiable for Block {
@@ -221,12 +221,13 @@ impl Block {
     /// Creates a block
     ///
     /// * `unlocalized_name` This should be unique for that block with the following formatting: `mod_id:block_identifier`. Such as: `cosmos:laser_cannon`
-    pub fn new(properties: &Vec<BlockProperty>, id: u16, unlocalized_name: String, density: f32) -> Self {
+    pub fn new(properties: &Vec<BlockProperty>, id: u16, unlocalized_name: String, density: f32, hardness: f32) -> Self {
         Self {
             visibility: BlockProperty::create_id(properties),
             id,
             unlocalized_name,
             density,
+            hardness,
         }
     }
 
@@ -259,6 +260,13 @@ impl Block {
     pub fn density(&self) -> f32 {
         self.density
     }
+
+    /// Returns the hardness of this block (how resistant it is to breaking)
+    ///
+    /// Air: 0, Leaves: 1, Grass/Dirt: 10, Stone: 50, Hull: 100,
+    pub fn hardness(&self) -> f32 {
+        self.hardness
+    }
 }
 
 impl PartialEq for Block {
@@ -267,9 +275,8 @@ impl PartialEq for Block {
     }
 }
 
-pub(super) fn register<T: States + Clone + Copy>(app: &mut App, pre_loading_state: T, loading_state: T, post_loading_state: T) {
+pub(super) fn register<T: States + Clone + Copy>(app: &mut App, pre_loading_state: T, loading_state: T) {
     blocks::register(app, pre_loading_state, loading_state);
-    hardness::register(app, loading_state, post_loading_state);
 
     app.register_type::<BlockFace>();
 }

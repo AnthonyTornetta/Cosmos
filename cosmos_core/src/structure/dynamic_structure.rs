@@ -10,7 +10,7 @@ use bevy::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    block::{blocks::AIR_BLOCK_ID, hardness::BlockHardness, Block, BlockFace},
+    block::{blocks::AIR_BLOCK_ID, Block, BlockFace},
     ecs::NeedsDespawned,
     events::block_events::BlockChangedEvent,
     physics::location::Location,
@@ -487,8 +487,8 @@ impl DynamicStructure {
 
     /// Retrieves the health of the block at the provided coordinates.
     #[inline(always)]
-    pub fn get_block_health(&self, coords: BlockCoordinate, block_hardness: &BlockHardness) -> f32 {
-        self.base_structure.get_block_health(coords, block_hardness)
+    pub fn get_block_health(&self, coords: BlockCoordinate, blocks: &Registry<Block>) -> f32 {
+        self.base_structure.get_block_health(coords, blocks)
     }
 
     /// Causes a block at the given coordinates to take damage.
@@ -498,11 +498,11 @@ impl DynamicStructure {
     pub fn block_take_damage(
         &mut self,
         coords: BlockCoordinate,
-        block_hardness: &BlockHardness,
+        blocks: &Registry<Block>,
         amount: f32,
         event_writer: Option<&mut EventWriter<BlockDestroyedEvent>>,
     ) -> bool {
-        self.base_structure.block_take_damage(coords, block_hardness, amount, event_writer)
+        self.base_structure.block_take_damage(coords, blocks, amount, event_writer)
     }
 
     /// Removes the chunk entity at the specified chunk coordinates.
