@@ -151,7 +151,7 @@ fn listen_for_change_events(
                         if let Some(is) = inv.itemstack_at(hb.selected_slot()) {
                             name_text.sections[0].value = names
                                 .get_name_from_numeric_id(is.item_id())
-                                .unwrap_or(&items.from_numeric_id(is.item_id()).unlocalized_name().to_string())
+                                .unwrap_or(items.from_numeric_id(is.item_id()).unlocalized_name())
                                 .to_owned();
 
                             name_text.sections[0].style.color = Color::WHITE;
