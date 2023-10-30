@@ -1,7 +1,11 @@
 //! Displays the player's hotbar
 
 use bevy::prelude::*;
-use cosmos_core::{inventory::Inventory, item::Item};
+use cosmos_core::{
+    inventory::Inventory,
+    item::Item,
+    registry::{identifiable::Identifiable, Registry},
+};
 
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
@@ -127,6 +131,7 @@ fn listen_for_change_events(
     item_name_query: Query<Entity, With<ItemNameDisplay>>,
     mut commands: Commands,
     names: Res<Lang<Item>>,
+    items: Res<Registry<Item>>,
 ) {
     if let Ok(mut hb) = query_hb.get_single_mut() {
         if hb.selected_slot != hb.prev_slot {
@@ -146,7 +151,7 @@ fn listen_for_change_events(
                         if let Some(is) = inv.itemstack_at(hb.selected_slot()) {
                             name_text.sections[0].value = names
                                 .get_name_from_numeric_id(is.item_id())
-                                .unwrap_or(&format!("[missing name] ID #{}", is.item_id()))
+                                .unwrap_or(&format!("{}", items.from_numeric_id(is.item_id()).unlocalized_name()))
                                 .to_owned();
 
                             name_text.sections[0].style.color = Color::WHITE;
