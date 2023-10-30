@@ -6,7 +6,6 @@ use bevy::prelude::{App, Component, Entity, Event, Vec3};
 use bevy::reflect::Reflect;
 use serde::{Deserialize, Serialize};
 
-use crate::block::hardness::BlockHardness;
 use crate::block::{Block, BlockFace};
 use crate::registry::Registry;
 
@@ -160,8 +159,9 @@ impl Chunk {
     /// Gets the block's health at that given coordinate
     /// * `x/y/z`: block coordinate
     /// * `block_hardness`: The hardness for the block at those coordinates
-    pub fn get_block_health(&self, coords: ChunkBlockCoordinate, block_hardness: &BlockHardness) -> f32 {
-        self.block_health.get_health(coords, block_hardness)
+    pub fn get_block_health(&self, coords: ChunkBlockCoordinate, blocks: &Registry<Block>) -> f32 {
+        self.block_health
+            .get_health(coords, blocks.from_numeric_id(self.block_at(coords)).hardness())
     }
 
     /// Causes a block at the given coordinates to take damage
@@ -171,8 +171,9 @@ impl Chunk {
     /// * `amount` The amount of damage to take - cannot be negative
     ///
     /// **Returns:** true if that block was destroyed, false if not
-    pub fn block_take_damage(&mut self, coords: ChunkBlockCoordinate, block_hardness: &BlockHardness, amount: f32) -> bool {
-        self.block_health.take_damage(coords, block_hardness, amount)
+    pub fn block_take_damage(&mut self, coords: ChunkBlockCoordinate, amount: f32, blocks: &Registry<Block>) -> bool {
+        self.block_health
+            .take_damage(coords, blocks.from_numeric_id(self.block_at(coords)).hardness(), amount)
     }
 }
 

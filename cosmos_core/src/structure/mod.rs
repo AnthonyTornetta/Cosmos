@@ -28,7 +28,6 @@ pub mod structure_builder;
 pub mod structure_iterator;
 pub mod systems;
 
-use crate::block::hardness::BlockHardness;
 use crate::block::{Block, BlockFace};
 use crate::ecs::NeedsDespawned;
 use crate::events::block_events::BlockChangedEvent;
@@ -415,10 +414,10 @@ impl Structure {
     /// Gets the block's health at that given coordinate
     /// - x/y/z: block coordinate
     /// - block_hardness: The hardness for the block at those coordinates
-    pub fn get_block_health(&mut self, coords: BlockCoordinate, block_hardness: &BlockHardness) -> f32 {
+    pub fn get_block_health(&mut self, coords: BlockCoordinate, blocks: &Registry<Block>) -> f32 {
         match self {
-            Self::Full(fs) => fs.get_block_health(coords, block_hardness),
-            Self::Dynamic(ds) => ds.get_block_health(coords, block_hardness),
+            Self::Full(fs) => fs.get_block_health(coords, blocks),
+            Self::Dynamic(ds) => ds.get_block_health(coords, blocks),
         }
     }
 
@@ -432,13 +431,13 @@ impl Structure {
     pub fn block_take_damage(
         &mut self,
         coords: BlockCoordinate,
-        block_hardness: &BlockHardness,
+        blocks: &Registry<Block>,
         amount: f32,
         event_writer: Option<&mut EventWriter<BlockDestroyedEvent>>,
     ) -> bool {
         match self {
-            Self::Full(fs) => fs.block_take_damage(coords, block_hardness, amount, event_writer),
-            Self::Dynamic(ds) => ds.block_take_damage(coords, block_hardness, amount, event_writer),
+            Self::Full(fs) => fs.block_take_damage(coords, blocks, amount, event_writer),
+            Self::Dynamic(ds) => ds.block_take_damage(coords, blocks, amount, event_writer),
         }
     }
 

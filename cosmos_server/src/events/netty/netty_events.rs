@@ -27,25 +27,25 @@ use crate::netty::network_helpers::{ClientTicks, ServerLobby};
 fn generate_player_inventory(items: &Registry<Item>) -> Inventory {
     let mut inventory = Inventory::new(9 * 6, Some(0..9));
 
-    inventory.insert_item_at(0, items.from_id("cosmos:ship_hull").expect("Ship hull item to exist"), 999);
+    // inventory.insert_item_at(0, items.from_id("cosmos:ship_hull").expect("Ship hull item to exist"), 999);
 
-    inventory.insert_item_at(1, items.from_id("cosmos:glass").expect("Glass item to exist"), 999);
+    // inventory.insert_item_at(1, items.from_id("cosmos:glass").expect("Glass item to exist"), 999);
 
-    inventory.insert_item_at(2, items.from_id("cosmos:build_block").expect("Build block item to exist"), 999);
+    // inventory.insert_item_at(2, items.from_id("cosmos:build_block").expect("Build block item to exist"), 999);
 
-    inventory.insert_item_at(3, items.from_id("cosmos:thruster").expect("Thruster item to exist"), 999);
+    // inventory.insert_item_at(3, items.from_id("cosmos:thruster").expect("Thruster item to exist"), 999);
 
-    inventory.insert_item_at(4, items.from_id("cosmos:laser_cannon").expect("Laser cannon item to exist"), 999);
+    // inventory.insert_item_at(4, items.from_id("cosmos:laser_cannon").expect("Laser cannon item to exist"), 999);
 
-    inventory.insert_item_at(5, items.from_id("cosmos:reactor").expect("Reactor item to exist"), 999);
+    // inventory.insert_item_at(5, items.from_id("cosmos:reactor").expect("Reactor item to exist"), 999);
 
-    inventory.insert_item_at(6, items.from_id("cosmos:energy_cell").expect("Energy cell item to exist"), 999);
+    // inventory.insert_item_at(6, items.from_id("cosmos:energy_cell").expect("Energy cell item to exist"), 999);
 
-    inventory.insert_item_at(7, items.from_id("cosmos:light").expect("Light item to exist"), 999);
+    // inventory.insert_item_at(7, items.from_id("cosmos:light").expect("Light item to exist"), 999);
 
-    inventory.insert_item_at(8, items.from_id("cosmos:redwood_log").expect("Redwood log item to exist"), 999);
+    // inventory.insert_item_at(8, items.from_id("cosmos:redwood_log").expect("Redwood log item to exist"), 999);
 
-    for item in items.iter().filter(|item| item.unlocalized_name() != "cosmos:air") {
+    for item in items.iter().rev().filter(|item| item.unlocalized_name() != "cosmos:air") {
         inventory.insert_itemstack(&ItemStack::with_quantity(item, 999));
     }
 

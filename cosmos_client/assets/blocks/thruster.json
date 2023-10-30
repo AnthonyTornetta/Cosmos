@@ -1,7 +1,7 @@
 {
     "texture": {
         "back": "thruster_back",
-        "front": "ship_hull",
+        "front": "ship_hull_grey",
         "left": "thruster_left_right",
         "right": "thruster_left_right",
         "top": "thruster_top_bottom",

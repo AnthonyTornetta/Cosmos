@@ -74,7 +74,7 @@ impl<T: Identifiable + Send + Sync> Lang<T> {
     /// Gets the text for this specific entry
     ///
     /// Make sure `register(item)` was called first!
-    pub fn get_name(&self, item: &T) -> Option<&String> {
+    pub fn get_name(&self, item: &T) -> Option<&str> {
         self.get_name_from_numeric_id(item.id())
     }
 
@@ -93,8 +93,8 @@ impl<T: Identifiable + Send + Sync> Lang<T> {
     /// Gets the text for this specific numerical id.
     ///
     /// Make sure `register(item)` was called first!
-    pub fn get_name_from_numeric_id(&self, id: u16) -> Option<&String> {
-        self.map.get(&id)
+    pub fn get_name_from_numeric_id(&self, id: u16) -> Option<&str> {
+        self.map.get(&id).map(|x| x.as_str())
     }
 }
 
