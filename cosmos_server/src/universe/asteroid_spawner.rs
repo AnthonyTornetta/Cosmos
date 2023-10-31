@@ -121,10 +121,6 @@ fn spawn_asteroid(
     }
 }
 
-fn print_n(query: Query<&Asteroid>) {
-    println!("N: {}", query.iter().len());
-}
-
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
@@ -132,6 +128,5 @@ pub(super) fn register(app: &mut App) {
             .run_if(on_timer(Duration::from_secs(1)))
             .run_if(in_state(GameState::Playing)),
     )
-    .insert_resource(CachedSectors::default())
-    .add_systems(Update, print_n);
+    .insert_resource(CachedSectors::default());
 }
