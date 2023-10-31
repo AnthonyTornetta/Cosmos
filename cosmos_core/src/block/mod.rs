@@ -12,6 +12,7 @@ use crate::registry::identifiable::Identifiable;
 
 pub mod block_builder;
 pub mod blocks;
+pub mod multiblock;
 
 #[derive(Reflect, Debug, Eq, PartialEq, Clone, Copy, Hash)]
 /// Represents different properties a block can has

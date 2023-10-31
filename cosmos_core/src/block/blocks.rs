@@ -206,6 +206,34 @@ fn add_cosmos_blocks(
         );
     }
 
+    blocks.register(
+        BlockBuilder::new("cosmos:reactor_controller", 2.0, 20.0)
+            .add_property(BlockProperty::Opaque)
+            .add_property(BlockProperty::Full)
+            .create(),
+    );
+
+    blocks.register(
+        BlockBuilder::new("cosmos:reactor_casing", 2.0, 20.0)
+            .add_property(BlockProperty::Opaque)
+            .add_property(BlockProperty::Full)
+            .create(),
+    );
+
+    blocks.register(
+        BlockBuilder::new("cosmos:reactor_window", 2.0, 20.0)
+            .add_property(BlockProperty::Transparent)
+            .add_property(BlockProperty::Full)
+            .create(),
+    );
+
+    blocks.register(
+        BlockBuilder::new("cosmos:reactor_cell", 2.0, 20.0)
+            .add_property(BlockProperty::Opaque)
+            .add_property(BlockProperty::Full)
+            .create(),
+    );
+
     loading.finish_loading(id, &mut end_writer);
 }
 
