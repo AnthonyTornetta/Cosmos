@@ -223,6 +223,15 @@ macro_rules! create_coordinate {
             pub fn front(&self) -> Self {
                 Self::new(self.x, self.y, self.z + 1)
             }
+
+            /// Computes the abs() of each value and converts to a bounded coordinate type
+            pub fn abs(&self) -> $name {
+                $name::new(
+                    self.x.abs() as CoordinateType,
+                    self.y.abs() as CoordinateType,
+                    self.z.abs() as CoordinateType,
+                )
+            }
         }
 
         impl std::fmt::Display for $unbounded {

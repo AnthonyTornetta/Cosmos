@@ -1,6 +1,4 @@
-use bevy::{prelude::App, utils::HashMap};
-
-use crate::structure::coordinates::BlockCoordinate;
+use bevy::prelude::App;
 
 mod reactor;
 
