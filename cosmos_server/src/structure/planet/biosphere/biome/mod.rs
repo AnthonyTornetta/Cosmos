@@ -3,6 +3,7 @@
 use std::{
     hash::Hash,
     marker::PhantomData,
+    mem::size_of,
     sync::{Arc, RwLock, RwLockReadGuard},
 };
 
@@ -1000,7 +1001,7 @@ pub struct BiosphereBiomesRegistry<T: BiosphereMarkerComponent> {
     _phantom: PhantomData<T>,
 
     /// Contains a list of indicies to the biomes vec
-    lookup_table: Arc<RwLock<[u8; LOOKUP_TABLE_SIZE]>>,
+    lookup_table: Arc<RwLock<Box<[u8; LOOKUP_TABLE_SIZE]>>>,
 
     /// All the registered biomes
     biomes: Vec<Arc<RwLock<Box<dyn Biome>>>>,
@@ -1032,7 +1033,7 @@ impl<T: BiosphereMarkerComponent> BiosphereBiomesRegistry<T> {
     pub fn new() -> Self {
         Self {
             _phantom: Default::default(),
-            lookup_table: Arc::new(RwLock::new([0; LOOKUP_TABLE_SIZE])),
+            lookup_table: Arc::new(RwLock::new(Box::new([0; LOOKUP_TABLE_SIZE]))),
             biomes: vec![],
             todo_biomes: Default::default(),
         }
@@ -1041,7 +1042,7 @@ impl<T: BiosphereMarkerComponent> BiosphereBiomesRegistry<T> {
     fn construct_lookup_table(&mut self) {
         info!("Creating biome lookup table! This could take a bit...");
 
-        let mut lookup_table: std::sync::RwLockWriteGuard<'_, [u8; 1000000]> = self.lookup_table.write().unwrap();
+        let mut lookup_table: std::sync::RwLockWriteGuard<'_, Box<[u8; 1000000]>> = self.lookup_table.write().unwrap();
 
         for z in 0..LOOKUP_TABLE_PRECISION {
             for y in 0..LOOKUP_TABLE_PRECISION {
@@ -1137,8 +1138,28 @@ fn construct_lookup_tables<T: BiosphereMarkerComponent>(mut registry: ResMut<Bio
 ///
 /// You don't normally have to call this manually, because is automatically called in `register_biosphere`
 pub fn create_biosphere_biomes_registry<T: BiosphereMarkerComponent>(app: &mut App) {
+    println!("A");
+    println!("A");
+    println!("A");
+    println!("A");
+    println!("A");
+    println!("Size: {}", size_of::<BiosphereBiomesRegistry<T>>());
+
+    // let le = Box::new([0; LOOKUP_TABLE_SIZE]);
+
+    // let x = BiosphereBiomesRegistry::<T> {
+    //     biomes: vec![],
+    //     lookup_table: Arc::new(RwLock::new(le)),
+    //     todo_biomes: vec![],
+    //     _phantom: Default::default(),
+    // };
+
+    println!("made x!");
+
     app.init_resource::<BiosphereBiomesRegistry<T>>()
         .add_systems(OnExit(GameState::PostLoading), construct_lookup_tables::<T>);
+
+    println!("Inited resource!");
 }
 
 pub(super) fn register(app: &mut App) {
