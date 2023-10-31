@@ -256,7 +256,7 @@ fn add_air_block(
     loader.finish_loading(id, &mut done_loading_event);
 }
 
-pub(super) fn register<T: States + Clone + Copy>(app: &mut App, pre_loading_state: T, loading_state: T) {
+pub(super) fn register<T: States>(app: &mut App, pre_loading_state: T, loading_state: T) {
     registry::create_registry::<Block>(app);
 
     app.add_systems(OnEnter(pre_loading_state), add_air_block);

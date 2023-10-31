@@ -1,19 +1,27 @@
 //! Handles the logic behind the creation of a reactor multiblock
 
-use bevy::prelude::{in_state, App, EventReader, EventWriter, IntoSystemConfigs, Query, Res, Update};
+use bevy::prelude::{
+    in_state, App, BuildChildren, Commands, Entity, EventReader, EventWriter, IntoSystemConfigs, Name, Query, Res, Update,
+};
 use cosmos_core::{
-    block::{block_events::BlockInteractEvent, Block, BlockFace},
+    block::{
+        block_events::BlockInteractEvent,
+        multiblock::reactor::{Reactor, ReactorBounds, ReactorPowerGenerationBlock, Reactors},
+        Block, BlockFace,
+    },
     events::block_events::BlockChangedEvent,
     registry::{identifiable::Identifiable, Registry},
     structure::{
         coordinates::{BlockCoordinate, CoordinateType, UnboundBlockCoordinate},
+        structure_block::StructureBlock,
         Structure,
     },
 };
 
 use crate::state::GameState;
 
-const MAX_SIZE: CoordinateType = 11;
+/// Represents the maximum dimensions of the reactor, including the reactor casing
+const MAX_REACTOR_SIZE: CoordinateType = 11;
 
 fn find_wall_coords(
     ub_controller_coords: UnboundBlockCoordinate,
@@ -30,7 +38,7 @@ fn find_wall_coords(
         let search_direction = direction_a;
 
         let mut check_coords = search_direction;
-        for _ in 0..MAX_SIZE {
+        for _ in 0..MAX_REACTOR_SIZE {
             let Ok(check_here) = BlockCoordinate::try_from(check_coords + ub_controller_coords) else {
                 return None;
             };
@@ -60,7 +68,7 @@ fn find_wall_coords(
         let search_direction = direction_b;
 
         let mut check_coords = search_direction;
-        for _ in width..=MAX_SIZE {
+        for _ in width..=MAX_REACTOR_SIZE {
             let Ok(check_here) = BlockCoordinate::try_from(check_coords + ub_controller_coords) else {
                 return None;
             };
@@ -108,7 +116,7 @@ fn check_is_valid_multiblock(structure: &Structure, controller_coords: BlockCoor
 
         // Start 2 back to now allow a 2x2x2 reactor - minimum size is 3x3x3
         let mut check_coords = search_direction + search_direction;
-        for _ in 0..MAX_SIZE - 2 {
+        for _ in 0..MAX_REACTOR_SIZE - 2 {
             let Ok(check_here) = BlockCoordinate::try_from(check_coords + ub_controller_coords) else {
                 return None;
             };
@@ -207,12 +215,6 @@ fn check_is_valid_multiblock(structure: &Structure, controller_coords: BlockCoor
                 .max(down_wall_coords.z),
         ),
     })
-}
-
-#[derive(Debug, Clone, Copy)]
-struct ReactorBounds {
-    negative_coords: BlockCoordinate,
-    positive_coords: BlockCoordinate,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -345,14 +347,36 @@ fn check_valid(bounds: ReactorBounds, structure: &Structure, blocks: &Registry<B
     ReactorValidity::Valid
 }
 
+fn create_reactor(
+    structure: &Structure,
+    blocks: &Registry<Block>,
+    reactor_blocks: &Registry<ReactorPowerGenerationBlock>,
+    bounds: ReactorBounds,
+    controller: StructureBlock,
+) -> Reactor {
+    let mut power_per_second = 0.0;
+
+    for block in structure.block_iter(bounds.negative_coords.into(), bounds.positive_coords.into(), true) {
+        let block = block.block(structure, blocks);
+
+        if let Some(reactor_block) = reactor_blocks.for_block(block) {
+            power_per_second += reactor_block.power_per_second();
+        }
+    }
+
+    Reactor::new(controller, power_per_second, bounds)
+}
+
 fn on_interact_reactor(
-    mut structure_query: Query<&mut Structure>,
+    mut structure_query: Query<(Entity, &mut Structure, &mut Reactors)>,
     blocks: Res<Registry<Block>>,
+    reactor_blocks: Res<Registry<ReactorPowerGenerationBlock>>,
     mut interaction: EventReader<BlockInteractEvent>,
     mut event_writer: EventWriter<BlockChangedEvent>,
+    mut commands: Commands,
 ) {
     for ev in interaction.iter() {
-        let Ok(mut structure) = structure_query.get_mut(ev.structure_entity) else {
+        let Ok((entity, mut structure, mut reactors)) = structure_query.get_mut(ev.structure_entity) else {
             continue;
         };
 
@@ -360,6 +384,10 @@ fn on_interact_reactor(
 
         if block.unlocalized_name() == "cosmos:reactor_controller" {
             println!("You clicked the reactor!!!");
+
+            if reactors.iter().any(|&(controller_block, _)| controller_block == ev.structure_block) {
+                continue;
+            }
 
             if let Some(bounds) = check_is_valid_multiblock(&structure, ev.structure_block.coords(), &blocks) {
                 println!("Bounds: {bounds:?}");
@@ -379,7 +407,15 @@ fn on_interact_reactor(
                         &blocks,
                         Some(&mut event_writer),
                     ),
-                    ReactorValidity::Valid => println!("Valid!"),
+                    ReactorValidity::Valid => {
+                        let reactor = create_reactor(&structure, &blocks, &reactor_blocks, bounds, ev.structure_block);
+
+                        commands.entity(entity).with_children(|structure| {
+                            let reactor_entity = structure.spawn((reactor, Name::new("Reactor"))).id();
+
+                            reactors.add_reactor(reactor_entity, ev.structure_block);
+                        });
+                    }
                 };
             }
         }

@@ -70,7 +70,7 @@ impl<T: States + Clone + Copy> Plugin for CosmosCorePlugin<T> {
             self.done_loading_state,
         );
 
-        block::register(app, self.pre_loading_state, self.loading_state);
+        block::register(app, self.pre_loading_state, self.loading_state, self.post_loading_state);
         item::register(app);
         blockitems::register(app, self.post_loading_state);
         physics::register(app, self.post_loading_state);
