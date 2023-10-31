@@ -41,3 +41,7 @@ cosmos:ship_hull_dark_red=Dark Red Ship Hull
 cosmos:ship_hull_yellow=Yellow Ship Hull
 cosmos:ship_hull_dark_yellow=Dark Yellow Ship Hull
 cosmos:ship_hull_mint=Mint Ship Hull
+reactor_controller=Reactor Controller
+cosmos:reactor_casing=Reactor Casing
+cosmos:reactor_window=Reactor Window
+cosmos:reactor_cell=Reactor Power Cell
