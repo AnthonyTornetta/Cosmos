@@ -309,6 +309,7 @@ pub(crate) fn client_sync_players(
                     },
                     Collider::capsule_y(0.5, 0.25),
                     LockedAxes::ROTATION_LOCKED,
+                    Name::new(format!("Player ({name})")),
                     RigidBody::Dynamic,
                     body.create_velocity(),
                     Player::new(name, id),

@@ -4,7 +4,7 @@
 
 use std::fmt::Display;
 
-use bevy::prelude::{App, Event, IntoSystemConfigs, PreUpdate};
+use bevy::prelude::{App, Event, IntoSystemConfigs, Name, PreUpdate};
 use bevy::reflect::Reflect;
 use bevy::utils::{HashMap, HashSet};
 use bevy_rapier3d::prelude::PhysicsWorld;
@@ -509,6 +509,43 @@ fn remove_empty_chunks(
     }
 }
 
+fn spawn_chunk_entity(
+    commands: &mut Commands,
+    structure: &mut Structure,
+    chunk_coordinate: ChunkCoordinate,
+    structure_entity: Entity,
+    body_world: Option<&PhysicsWorld>,
+    chunk_set_events: &mut HashSet<ChunkSetEvent>,
+) {
+    let mut entity_cmds = commands.spawn((
+        PbrBundle {
+            transform: Transform::from_translation(structure.chunk_relative_position(chunk_coordinate)),
+            ..Default::default()
+        },
+        Name::new("Chunk Entity"),
+        NoSendEntity,
+        ChunkEntity {
+            structure_entity,
+            chunk_location: chunk_coordinate,
+        },
+    ));
+
+    if let Some(bw) = body_world {
+        entity_cmds.insert(*bw);
+    }
+
+    let entity = entity_cmds.id();
+
+    commands.entity(structure_entity).add_child(entity);
+
+    structure.set_chunk_entity(chunk_coordinate, entity);
+
+    chunk_set_events.insert(ChunkSetEvent {
+        structure_entity,
+        coords: chunk_coordinate,
+    });
+}
+
 fn add_chunks_system(
     mut chunk_init_reader: EventReader<ChunkInitEvent>,
     mut block_reader: EventReader<BlockChangedEvent>,
@@ -532,37 +569,23 @@ fn add_chunks_system(
     }
 
     for (structure_entity, chunk_coordinate) in s_chunks {
-        if let Ok((mut structure, body_world)) = structure_query.get_mut(structure_entity) {
-            if let Some(chunk) = structure.chunk_from_chunk_coordinates(chunk_coordinate) {
-                if !chunk.is_empty() && structure.chunk_entity(chunk_coordinate).is_none() {
-                    let mut entity_cmds = commands.spawn((
-                        PbrBundle {
-                            transform: Transform::from_translation(structure.chunk_relative_position(chunk_coordinate)),
-                            ..Default::default()
-                        },
-                        NoSendEntity,
-                        ChunkEntity {
-                            structure_entity,
-                            chunk_location: chunk_coordinate,
-                        },
-                    ));
+        let Ok((mut structure, body_world)) = structure_query.get_mut(structure_entity) else {
+            continue;
+        };
 
-                    if let Some(bw) = body_world {
-                        entity_cmds.insert(*bw);
-                    }
+        let Some(chunk) = structure.chunk_from_chunk_coordinates(chunk_coordinate) else {
+            continue;
+        };
 
-                    let entity = entity_cmds.id();
-
-                    commands.entity(structure_entity).add_child(entity);
-
-                    structure.set_chunk_entity(chunk_coordinate, entity);
-
-                    chunk_set_events.insert(ChunkSetEvent {
-                        structure_entity,
-                        coords: chunk_coordinate,
-                    });
-                }
-            }
+        if !chunk.is_empty() && structure.chunk_entity(chunk_coordinate).is_none() {
+            spawn_chunk_entity(
+                &mut commands,
+                &mut structure,
+                chunk_coordinate,
+                structure_entity,
+                body_world,
+                &mut chunk_set_events,
+            );
         }
     }
 
