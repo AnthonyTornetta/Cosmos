@@ -1,8 +1,7 @@
 use bevy::prelude::*;
-use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::structure::{
+    asteroid::{asteroid_builder::TAsteroidBuilder, Asteroid},
     events::StructureLoadedEvent,
-    ship::{ship_builder::TShipBuilder, Ship},
     structure_iterator::ChunkIteratorResult,
     ChunkInitEvent, Structure,
 };
@@ -13,12 +12,12 @@ use crate::persistence::{
     SerializedData,
 };
 
-use super::server_ship_builder::ServerShipBuilder;
+use super::server_asteroid_builder::ServerAsteroidBuilder;
 
-fn on_save_structure(mut query: Query<(&mut SerializedData, &Structure), (With<NeedsSaved>, With<Ship>)>) {
+fn on_save_structure(mut query: Query<(&mut SerializedData, &Structure), (With<NeedsSaved>, With<Asteroid>)>) {
     for (mut s_data, structure) in query.iter_mut() {
         s_data.serialize_data("cosmos:structure", structure);
-        s_data.serialize_data("cosmos:is_ship", &true);
+        s_data.serialize_data("cosmos:is_asteroid", &true);
     }
 }
 
@@ -28,19 +27,17 @@ fn on_load_structure(
     mut commands: Commands,
 ) {
     for (entity, s_data) in query.iter() {
-        if s_data.deserialize_data::<bool>("cosmos:is_ship").unwrap_or(false) {
+        if s_data.deserialize_data::<bool>("cosmos:is_asteroid").unwrap_or(false) {
             if let Some(mut structure) = s_data.deserialize_data::<Structure>("cosmos:structure") {
                 let loc = s_data
                     .deserialize_data("cosmos:location")
-                    .expect("Every ship should have a location when saved!");
+                    .expect("Every asteroid should have a location when saved!");
 
                 let mut entity_cmd = commands.entity(entity);
 
-                let vel = s_data.deserialize_data("cosmos:velocity").unwrap_or(Velocity::zero());
+                let builder = ServerAsteroidBuilder::default();
 
-                let builder = ServerShipBuilder::default();
-
-                builder.insert_ship(&mut entity_cmd, loc, vel, &mut structure);
+                builder.insert_asteroid(&mut entity_cmd, loc, &mut structure);
 
                 let entity = entity_cmd.id();
 

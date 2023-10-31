@@ -2,10 +2,9 @@
 
 use std::f32::consts::{E, TAU};
 
-use bevy::prelude::{in_state, App, Commands, IntoSystemConfigs, Query, Res, Update, Vec3, With};
+use bevy::prelude::{in_state, App, Commands, IntoSystemConfigs, Name, Query, Res, Update, Vec3, With};
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
-    ecs::bundles::CosmosPbrBundle,
     entities::player::Player,
     persistence::LoadingDistance,
     physics::location::{Location, Sector, SystemUnit, UniverseSystem, SYSTEM_SECTORS},
@@ -111,17 +110,15 @@ fn load_stars_near_players(
 
             commands.spawn((
                 star,
-                CosmosPbrBundle {
-                    location: Location::new(
-                        Vec3::ZERO,
-                        Sector::new(
-                            ((system.x() as f32 + STAR_POS_OFFSET) * SYSTEM_SECTORS as f32) as SystemUnit,
-                            ((system.y() as f32 + STAR_POS_OFFSET) * SYSTEM_SECTORS as f32) as SystemUnit,
-                            ((system.z() as f32 + STAR_POS_OFFSET) * SYSTEM_SECTORS as f32) as SystemUnit,
-                        ),
+                Location::new(
+                    Vec3::ZERO,
+                    Sector::new(
+                        ((system.x() as f32 + STAR_POS_OFFSET) * SYSTEM_SECTORS as f32) as SystemUnit,
+                        ((system.y() as f32 + STAR_POS_OFFSET) * SYSTEM_SECTORS as f32) as SystemUnit,
+                        ((system.z() as f32 + STAR_POS_OFFSET) * SYSTEM_SECTORS as f32) as SystemUnit,
                     ),
-                    ..Default::default()
-                },
+                ),
+                Name::new("Star"),
                 Velocity::zero(),
                 LoadingDistance::new(SYSTEM_SECTORS / 2 + 1, SYSTEM_SECTORS / 2 + 1),
             ));

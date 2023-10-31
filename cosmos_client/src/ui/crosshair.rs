@@ -7,19 +7,22 @@ use crate::state::game_state::GameState;
 
 fn add_crosshair(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
-        .spawn(NodeBundle {
-            style: Style {
-                position_type: PositionType::Absolute,
-                display: Display::Flex,
-                justify_content: JustifyContent::Center,
-                align_items: AlignItems::Center,
-                width: Val::Percent(100.0),
-                height: Val::Percent(100.0),
+        .spawn((
+            NodeBundle {
+                style: Style {
+                    position_type: PositionType::Absolute,
+                    display: Display::Flex,
+                    justify_content: JustifyContent::Center,
+                    align_items: AlignItems::Center,
+                    width: Val::Percent(100.0),
+                    height: Val::Percent(100.0),
+                    ..default()
+                },
+                // color: Color::NONE.into(),
                 ..default()
             },
-            // color: Color::NONE.into(),
-            ..default()
-        })
+            Name::new("Crosshair"),
+        ))
         .with_children(|parent| {
             parent
                 .spawn(ImageBundle {

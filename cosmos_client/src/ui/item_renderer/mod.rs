@@ -26,6 +26,7 @@ struct UICamera;
 
 fn create_ui_camera(mut commands: Commands) {
     commands.spawn((
+        Name::new("UI Camera"),
         Camera3dBundle {
             projection: Projection::Orthographic(OrthographicProjection {
                 scaling_mode: ScalingMode::WindowSize(40.0),

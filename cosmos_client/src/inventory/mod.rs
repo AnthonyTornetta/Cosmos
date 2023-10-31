@@ -631,6 +631,7 @@ fn handle_interactions(
 fn create_item_stack_slot_data(item_stack: &ItemStack, ecmds: &mut EntityCommands, text_style: TextStyle, quantity: u16) {
     ecmds
         .insert((
+            Name::new("Render Item"),
             NodeBundle {
                 style: Style {
                     width: Val::Px(64.0),

@@ -1,7 +1,10 @@
 //! Responsible for spawning planets near stars, but for now just spawns a planet at 0, 0, 0.
 
+use std::time::Duration;
+
 use bevy::{
     prelude::{in_state, App, Commands, Deref, DerefMut, IntoSystemConfigs, Query, Res, ResMut, Resource, Update, Vec3, With},
+    time::common_conditions::on_timer,
     utils::HashSet,
 };
 use cosmos_core::{
@@ -17,7 +20,7 @@ use cosmos_core::{
 use rand::Rng;
 
 use crate::{
-    init::init_world::ServerSeed, persistence::is_sector_loaded, rng::get_rng_for_sector, state::GameState,
+    init::init_world::ServerSeed, persistence::is_sector_generated, rng::get_rng_for_sector, state::GameState,
     structure::asteroid::server_asteroid_builder::ServerAsteroidBuilder,
 };
 
@@ -76,19 +79,23 @@ fn spawn_asteroid(
     for sector in sectors {
         cache.insert(sector);
 
-        if is_sector_loaded(sector) || is_planet_in_sector(&sector, &server_seed) {
+        if sector != Sector::new(25, 25, 25) {
+            continue;
+        }
+
+        if is_sector_generated(sector) || is_planet_in_sector(&sector, &server_seed) {
             // This sector has already been loaded, don't regenerate stuff
             continue;
         }
 
         let mut rng = get_rng_for_sector(&server_seed, &sector);
 
-        if rng.gen_range(0..100) == 0 {
+        if rng.gen_range(0..100) < 100 {
             // Biased towards lower amounts
             let n_asteroids = (6.0 * (1.0 - (1.0 - rng.gen::<f32>()).sqrt())) as usize;
 
-            let multiplier = SECTOR_DIMENSIONS - 600.0;
-            let adder = 300.0 + SECTOR_DIMENSIONS / 2.0;
+            let multiplier = SECTOR_DIMENSIONS;
+            let adder = -SECTOR_DIMENSIONS / 2.0;
 
             for _ in 0..n_asteroids {
                 let size = rng.gen_range(2..=5);
@@ -114,7 +121,17 @@ fn spawn_asteroid(
     }
 }
 
+fn print_n(query: Query<&Asteroid>) {
+    println!("N: {}", query.iter().len());
+}
+
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, spawn_asteroid.run_if(in_state(GameState::Playing)))
-        .insert_resource(CachedSectors::default());
+    app.add_systems(
+        Update,
+        spawn_asteroid
+            .run_if(on_timer(Duration::from_secs(1)))
+            .run_if(in_state(GameState::Playing)),
+    )
+    .insert_resource(CachedSectors::default())
+    .add_systems(Update, print_n);
 }
