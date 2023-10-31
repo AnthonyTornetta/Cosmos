@@ -1,3 +1,5 @@
+//! Handles the logic behind the creation of a reactor multiblock
+
 use bevy::prelude::{in_state, App, EventReader, EventWriter, IntoSystemConfigs, Query, Res, Update};
 use cosmos_core::{
     block::{block_events::BlockInteractEvent, Block, BlockFace},

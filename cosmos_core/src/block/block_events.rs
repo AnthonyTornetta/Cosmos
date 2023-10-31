@@ -1,18 +1,12 @@
 //! Contains the various types of block events
 
-use bevy::{prelude::*, utils::HashMap};
-use bevy_renet::renet::RenetServer;
+use bevy::prelude::*;
 
 use crate::{
     blockitems::BlockItems,
     events::block_events::BlockChangedEvent,
     inventory::Inventory,
     item::Item,
-    netty::{
-        cosmos_encoder,
-        server_reliable_messages::{BlockChanged, ServerReliableMessages},
-        NettyChannelServer,
-    },
     registry::{identifiable::Identifiable, Registry},
     structure::{
         coordinates::{BlockCoordinate, CoordinateType, UnboundCoordinateType},

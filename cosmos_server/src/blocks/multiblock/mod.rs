@@ -1,3 +1,5 @@
+//! Contains all the server logic related to multiblocks
+
 use bevy::prelude::App;
 
 pub mod reactor;
