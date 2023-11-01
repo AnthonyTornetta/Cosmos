@@ -390,8 +390,6 @@ fn on_interact_reactor(
             }
 
             if let Some(bounds) = check_is_valid_multiblock(&structure, ev.structure_block.coords(), &blocks) {
-                println!("Bounds: {bounds:?}");
-
                 match check_valid(bounds, &structure, &blocks) {
                     ReactorValidity::MissingCasing(coords) => structure.set_block_at(
                         coords,

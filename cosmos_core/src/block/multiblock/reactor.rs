@@ -1,14 +1,25 @@
 //! Represents the logic behind the reactor multiblock system
 
 use bevy::{
-    prelude::{Added, App, Commands, Component, Entity, OnEnter, Query, Res, ResMut, States, Update, Without},
+    prelude::{
+        in_state, warn, Added, App, Commands, Component, Deref, DerefMut, Entity, EventReader, IntoSystemConfigs, OnEnter, Parent, Query,
+        Res, ResMut, States, Update, Without,
+    },
     reflect::Reflect,
+    time::Time,
 };
 
 use crate::{
     block::Block,
+    ecs::NeedsDespawned,
+    events::block_events::BlockChangedEvent,
     registry::{create_registry, identifiable::Identifiable, Registry},
-    structure::{coordinates::BlockCoordinate, structure_block::StructureBlock, Structure},
+    structure::{
+        coordinates::BlockCoordinate,
+        structure_block::StructureBlock,
+        systems::{energy_storage_system::EnergyStorageSystem, Systems},
+        Structure,
+    },
 };
 
 #[derive(Debug, Clone, Copy, Reflect)]
@@ -37,9 +48,20 @@ impl Reactor {
             power_per_second,
         }
     }
+
+    /// Decreases the power-per-second generated in this reactor.
+    pub fn decrease_power_per_second(&mut self, amount: f32) {
+        self.power_per_second -= amount;
+        self.power_per_second = self.power_per_second.max(0.0);
+    }
+
+    /// Increases the power-per-second generated in this reactor
+    pub fn increase_power_per_second(&mut self, amount: f32) {
+        self.power_per_second += amount;
+    }
 }
 
-#[derive(Component, Default, Reflect)]
+#[derive(Component, Default, Reflect, DerefMut, Deref)]
 /// Stores the entities of all the reactors in a structure and their controller blocks for quick access
 pub struct Reactors(Vec<(StructureBlock, Entity)>);
 
@@ -47,11 +69,6 @@ impl Reactors {
     /// Adds a reactor to the structure
     pub fn add_reactor(&mut self, reactor_entity: Entity, controller_block: StructureBlock) {
         self.0.push((controller_block, reactor_entity));
-    }
-
-    /// Iterates over all the reactors in the structure
-    pub fn iter(&self) -> std::slice::Iter<(StructureBlock, Entity)> {
-        self.0.iter()
     }
 }
 
@@ -113,11 +130,89 @@ fn on_structure_add(mut commands: Commands, query: Query<Entity, (Added<Structur
     }
 }
 
-pub(super) fn register<T: States>(app: &mut App, post_loading_state: T) {
+fn on_modify_reactor(
+    mut commands: Commands,
+    mut reactor_query: Query<&mut Reactor>,
+    mut reactors_query: Query<&mut Reactors>,
+    mut block_change_event: EventReader<BlockChangedEvent>,
+    blocks: Res<Registry<Block>>,
+    reactor_cells: Res<Registry<ReactorPowerGenerationBlock>>,
+) {
+    for ev in block_change_event.iter() {
+        let Ok(mut reactors) = reactors_query.get_mut(ev.structure_entity) else {
+            continue;
+        };
+
+        reactors.retain(|&(_, reactor_entity)| {
+            let Ok(mut reactor) = reactor_query.get_mut(reactor_entity) else {
+                warn!("Missing reactor component but is in the reactors component list.");
+                return false;
+            };
+
+            let (neg, pos) = (reactor.bounds.negative_coords, reactor.bounds.positive_coords);
+
+            if neg.x == ev.block.x
+                || pos.x == ev.block.x
+                || neg.y == ev.block.y
+                || pos.y == ev.block.y
+                || neg.z == ev.block.z
+                || pos.z == ev.block.z
+            {
+                // They changed the casing of the reactor - kill it
+                commands.entity(reactor_entity).insert(NeedsDespawned);
+
+                false
+            } else {
+                if neg.x <= ev.block.x
+                    && neg.y <= ev.block.y
+                    && neg.z <= ev.block.z
+                    && pos.x >= ev.block.x
+                    && pos.y >= ev.block.y
+                    && pos.z >= ev.block.z
+                {
+                    // The innards of the reactor were changed, add/remove any needed power per second
+                    if let Some(reactor_cell) = reactor_cells.for_block(blocks.from_numeric_id(ev.old_block)) {
+                        reactor.decrease_power_per_second(reactor_cell.power_per_second());
+                    }
+
+                    if let Some(reactor_cell) = reactor_cells.for_block(blocks.from_numeric_id(ev.new_block)) {
+                        reactor.increase_power_per_second(reactor_cell.power_per_second());
+                    }
+                }
+
+                true
+            }
+        });
+    }
+}
+
+fn generate_power(
+    reactors: Query<(&Reactor, &Parent)>,
+    structure: Query<&Systems>,
+    mut energy_storage_system_query: Query<&mut EnergyStorageSystem>,
+    time: Res<Time>,
+) {
+    for (reactor, parent) in reactors.iter() {
+        let Ok(systems) = structure.get(parent.get()) else {
+            continue;
+        };
+
+        let Ok(mut system) = systems.query_mut(&mut energy_storage_system_query) else {
+            continue;
+        };
+
+        system.increase_energy(reactor.power_per_second * time.delta_seconds());
+    }
+}
+
+pub(super) fn register<T: States>(app: &mut App, post_loading_state: T, playing_state: T) {
     create_registry::<ReactorPowerGenerationBlock>(app);
 
     app.add_systems(OnEnter(post_loading_state), register_power_blocks)
-        .add_systems(Update, on_structure_add)
+        .add_systems(
+            Update,
+            (on_structure_add, generate_power, on_modify_reactor).run_if(in_state(playing_state)),
+        )
         .register_type::<Reactor>()
         .register_type::<Reactors>();
 }
