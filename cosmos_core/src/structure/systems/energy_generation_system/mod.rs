@@ -53,7 +53,7 @@ impl EnergyGenerationSystem {
 
 fn register_energy_blocks(blocks: Res<Registry<Block>>, mut generation: ResMut<EnergyGenerationBlocks>) {
     if let Some(block) = blocks.from_id("cosmos:reactor") {
-        generation.insert(block, EnergyGenerationProperty { generation_rate: 1000.0 });
+        generation.insert(block, EnergyGenerationProperty { generation_rate: 100.0 });
     }
 
     if let Some(block) = blocks.from_id("cosmos:ship_core") {
