@@ -151,25 +151,20 @@ fn on_modify_reactor(
 
             let (neg, pos) = (reactor.bounds.negative_coords, reactor.bounds.positive_coords);
 
-            if neg.x == ev.block.x
-                || pos.x == ev.block.x
-                || neg.y == ev.block.y
-                || pos.y == ev.block.y
-                || neg.z == ev.block.z
-                || pos.z == ev.block.z
+            let within_x = neg.x <= ev.block.x && pos.x >= ev.block.x;
+            let within_y = neg.y <= ev.block.y && pos.y >= ev.block.y;
+            let within_z = neg.z <= ev.block.z && pos.z >= ev.block.z;
+
+            if (neg.x == ev.block.x || pos.x == ev.block.x) && (within_y && within_z)
+                || (neg.y == ev.block.y || pos.y == ev.block.y) && (within_x && within_z)
+                || (neg.z == ev.block.z || pos.z == ev.block.z) && (within_x && within_y)
             {
                 // They changed the casing of the reactor - kill it
                 commands.entity(reactor_entity).insert(NeedsDespawned);
 
                 false
             } else {
-                if neg.x <= ev.block.x
-                    && neg.y <= ev.block.y
-                    && neg.z <= ev.block.z
-                    && pos.x >= ev.block.x
-                    && pos.y >= ev.block.y
-                    && pos.z >= ev.block.z
-                {
+                if within_x && within_y && within_z {
                     // The innards of the reactor were changed, add/remove any needed power per second
                     if let Some(reactor_cell) = reactor_cells.for_block(blocks.from_numeric_id(ev.old_block)) {
                         reactor.decrease_power_per_second(reactor_cell.power_per_second());
