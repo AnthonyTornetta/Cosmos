@@ -74,8 +74,6 @@ fn find_wall_coords(
                 return None;
             };
 
-            width += 1;
-
             let block_here = structure.block_at(check_here, blocks);
 
             if !valid_blocks.contains(&block_here) {
