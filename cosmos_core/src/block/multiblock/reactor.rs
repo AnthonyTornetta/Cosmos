@@ -8,6 +8,7 @@ use bevy::{
     reflect::Reflect,
     time::Time,
 };
+use serde::{Deserialize, Serialize};
 
 use crate::{
     block::Block,
@@ -22,7 +23,7 @@ use crate::{
     },
 };
 
-#[derive(Debug, Clone, Copy, Reflect)]
+#[derive(Debug, Clone, Copy, Reflect, Serialize, Deserialize)]
 /// The inclusive bounds of a reactor, including its casing
 pub struct ReactorBounds {
     /// Inclusive negative-most coordinates of a reactor (include casing)
@@ -31,7 +32,7 @@ pub struct ReactorBounds {
     pub positive_coords: BlockCoordinate,
 }
 
-#[derive(Component, Clone, Copy, Debug, Reflect)]
+#[derive(Component, Clone, Copy, Debug, Reflect, Serialize, Deserialize)]
 /// Represents a constructed reactor
 pub struct Reactor {
     controller: StructureBlock,
@@ -58,6 +59,11 @@ impl Reactor {
     /// Increases the power-per-second generated in this reactor
     pub fn increase_power_per_second(&mut self, amount: f32) {
         self.power_per_second += amount;
+    }
+
+    /// Returns the block where the controller for this reactor is
+    pub fn controller_block(&self) -> StructureBlock {
+        self.controller
     }
 }
 

@@ -1,7 +1,7 @@
 //! Handles the logic behind the creation of a reactor multiblock
 
 use bevy::prelude::{
-    in_state, App, BuildChildren, Commands, Entity, EventReader, EventWriter, IntoSystemConfigs, Name, Query, Res, Update,
+    in_state, App, BuildChildren, Bundle, Commands, Entity, EventReader, EventWriter, IntoSystemConfigs, Name, Query, Res, Update,
 };
 use cosmos_core::{
     block::{
@@ -13,6 +13,7 @@ use cosmos_core::{
     registry::{identifiable::Identifiable, Registry},
     structure::{
         coordinates::{BlockCoordinate, CoordinateType, UnboundBlockCoordinate},
+        ship::core::DespawnWithStructure,
         structure_block::StructureBlock,
         Structure,
     },
@@ -409,13 +410,32 @@ fn on_interact_reactor(
                         let reactor = create_reactor(&structure, &blocks, &reactor_blocks, bounds, ev.structure_block);
 
                         commands.entity(entity).with_children(|structure| {
-                            let reactor_entity = structure.spawn((reactor, Name::new("Reactor"))).id();
+                            let reactor_entity = structure.spawn(ReactorBundle::new(reactor)).id();
 
                             reactors.add_reactor(reactor_entity, ev.structure_block);
                         });
                     }
                 };
             }
+        }
+    }
+}
+
+#[derive(Bundle)]
+/// Use this when creating a reactor entity
+pub struct ReactorBundle {
+    reactor: Reactor,
+    name: Name,
+    despawn_with_structure: DespawnWithStructure,
+}
+
+impl ReactorBundle {
+    /// Creates a new reactor bundle for this reactor
+    pub fn new(reactor: Reactor) -> Self {
+        Self {
+            reactor,
+            name: Name::new("Reactor"),
+            despawn_with_structure: DespawnWithStructure,
         }
     }
 }
