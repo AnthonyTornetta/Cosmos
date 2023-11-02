@@ -34,7 +34,10 @@ use cosmos_core::{
 use rayon::prelude::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
 
 use crate::{
-    asset::asset_loading::{BlockTextureIndex, MaterialDefinition},
+    asset::{
+        asset_loading::{BlockTextureIndex, MaterialDefinition},
+        block_materials::ArrayTextureMaterial,
+    },
     state::game_state::GameState,
 };
 
@@ -43,7 +46,7 @@ use super::{BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder, MeshInformation, 
 #[derive(Debug)]
 struct MeshMaterial {
     mesh: Mesh,
-    material: Handle<StandardMaterial>,
+    material: Handle<ArrayTextureMaterial>,
 }
 
 #[derive(Debug)]
@@ -79,7 +82,7 @@ impl MeshBuilder for MeshInfo {
 
 #[derive(Default, Debug, Reflect)]
 struct ChunkRenderer {
-    meshes: HashMap<Handle<StandardMaterial>, MeshInfo>,
+    meshes: HashMap<Handle<ArrayTextureMaterial>, MeshInfo>,
     scale: f32,
 }
 
@@ -550,7 +553,7 @@ fn poll_rendering_lods(
 
                     let ent = commands
                         .spawn((
-                            PbrBundle {
+                            MaterialMeshBundle {
                                 material: mesh_material.material,
                                 transform: Transform::from_translation(offset),
                                 ..Default::default()

@@ -264,7 +264,6 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 - [ ] Storage system
   - [ ] An interface into all the storage devices on the ship
 - [ ] A way of selecting which systems to use preventing use of systems that are not meant to be actively used
-  - [ ] You can fire a laser cannon, but not actively use the power storage blocks
 - [ ] Dropped item entity
 - [ ] Storage block
   - [ ] A block that stores an amount of items

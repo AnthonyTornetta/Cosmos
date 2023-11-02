@@ -2,7 +2,7 @@
 //!
 //! This also combines the textures into one big atlas.
 
-use std::fs;
+use std::{fs, path::Path};
 
 use bevy::{
     prelude::*,
@@ -17,6 +17,8 @@ use cosmos_core::{
 use serde::{Deserialize, Serialize};
 
 use crate::state::game_state::GameState;
+
+use super::block_materials::ArrayTextureMaterial;
 
 #[derive(Resource, Debug, Clone)]
 struct LoadingTextureAtlas {
@@ -64,11 +66,11 @@ struct AssetsLoadingID(usize);
 /// Eventually this will be redone to allow for multiple atlases, but for now this works fine.
 pub struct MaterialDefinition {
     /// The main material used to draw blocks
-    pub material: Handle<StandardMaterial>,
+    pub material: Handle<ArrayTextureMaterial>,
     /// The material used to render things far away
-    pub far_away_material: Handle<StandardMaterial>,
+    pub far_away_material: Handle<ArrayTextureMaterial>,
     /// The unlit version of the main material
-    pub unlit_material: Handle<StandardMaterial>,
+    pub unlit_material: Handle<ArrayTextureMaterial>,
     /// All the textures packed into an atlas.
     ///
     /// Use the `MainAtlas::uvs_for_index` function to get the atlas index for a given block.
@@ -81,15 +83,15 @@ pub struct MaterialDefinition {
     unlocalized_name: String,
 }
 
-const DEFAULT_PADDING: u32 = 2;
+const DEFAULT_PADDING: u32 = 0;
 
 impl MaterialDefinition {
     /// Creates a new material definition
     pub fn new(
         unlocalized_name: String,
-        material: Handle<StandardMaterial>,
-        lod_material: Handle<StandardMaterial>,
-        unlit_material: Handle<StandardMaterial>,
+        material: Handle<ArrayTextureMaterial>,
+        lod_material: Handle<ArrayTextureMaterial>,
+        unlit_material: Handle<ArrayTextureMaterial>,
         atlas: CosmosTextureAtlas,
     ) -> Self {
         Self {
@@ -105,19 +107,19 @@ impl MaterialDefinition {
 
     #[inline]
     /// Gets the material for this that responds to light (if applicable. Feel free to return an unlit material if this material doesn't care)
-    pub fn lit_material(&self) -> &Handle<StandardMaterial> {
+    pub fn lit_material(&self) -> &Handle<ArrayTextureMaterial> {
         &self.material
     }
 
     #[inline]
     /// Gets the material for this that does not respond to light
-    pub fn unlit_material(&self) -> &Handle<StandardMaterial> {
+    pub fn unlit_material(&self) -> &Handle<ArrayTextureMaterial> {
         &self.unlit_material
     }
 
     #[inline]
     /// Gets the material for this that should be used for far away (lod) blocks
-    pub fn far_away_material(&self) -> &Handle<StandardMaterial> {
+    pub fn far_away_material(&self) -> &Handle<ArrayTextureMaterial> {
         &self.far_away_material
     }
 
@@ -159,7 +161,7 @@ impl Identifiable for MaterialDefinition {
 /// This contains the material for illuminated blocks.
 pub struct IlluminatedMaterial {
     /// The material for unlit blocks
-    pub material: Handle<StandardMaterial>,
+    pub material: Handle<ArrayTextureMaterial>,
 }
 
 fn setup_textures(
@@ -318,7 +320,9 @@ fn check_assets_ready(
             // for better performance
 
             for asset in loading.iter() {
-                let mut texture_atlas_builder = TextureAtlasBuilder::default();
+                let mut texture_atlas_builder = TextureAtlasBuilder::default()
+                    .initial_size(Vec2::new(16.0, 2048.0))
+                    .max_size(Vec2::new(16.0, 2048.0 * 20.0));
 
                 for handle in &asset.handles {
                     let Some(image) = images.get(handle) else {
@@ -326,7 +330,7 @@ fn check_assets_ready(
                         continue;
                     };
 
-                    let img = expand_image(image, DEFAULT_PADDING);
+                    let img = image.clone(); //expand_image(image, DEFAULT_PADDING);
 
                     let handle = images.set(handle.clone(), img);
 
@@ -337,6 +341,19 @@ fn check_assets_ready(
                 }
 
                 let atlas = texture_atlas_builder.finish(&mut images).expect("Failed to build atlas");
+
+                let img = images.get_mut(&atlas.texture).expect("No");
+
+                image::save_buffer(
+                    &Path::new("image.png"),
+                    img.data.as_slice(),
+                    atlas.size.x as u32,
+                    atlas.size.y as u32,
+                    image::ColorType::Rgba8,
+                )
+                .unwrap();
+
+                img.reinterpret_stacked_2d_as_array((atlas.size.y / 16.0) as u32);
 
                 texture_atlases.register(CosmosTextureAtlas::new("cosmos:main", atlas));
             }
@@ -355,44 +372,54 @@ fn check_assets_ready(
     }
 }
 
-fn create_main_material(image_handle: Handle<Image>, unlit: bool) -> StandardMaterial {
-    StandardMaterial {
-        base_color_texture: Some(image_handle),
-        alpha_mode: AlphaMode::Mask(0.5),
-        unlit,
-        metallic: 0.0,
-        reflectance: 0.0,
-        perceptual_roughness: 1.0,
-        ..Default::default()
+fn create_main_material(image_handle: Handle<Image>, unlit: bool) -> ArrayTextureMaterial {
+    // StandardMaterial {
+    //     base_color_texture: Some(image_handle),
+    //     alpha_mode: AlphaMode::Mask(0.5),
+    //     unlit,
+    //     metallic: 0.0,
+    //     reflectance: 0.0,
+    //     perceptual_roughness: 1.0,
+    //     ..Default::default()
+    // }
+    ArrayTextureMaterial {
+        array_texture: image_handle,
     }
 }
 
-fn create_illuminated_material(image_handle: Handle<Image>) -> StandardMaterial {
-    StandardMaterial {
-        base_color_texture: Some(image_handle),
-        alpha_mode: AlphaMode::Mask(0.5),
-        unlit: true,
-        double_sided: true,
-        perceptual_roughness: 1.0,
-        ..Default::default()
+fn create_illuminated_material(image_handle: Handle<Image>) -> ArrayTextureMaterial {
+    // StandardMaterial {
+    //     base_color_texture: Some(image_handle),
+    //     alpha_mode: AlphaMode::Mask(0.5),
+    //     unlit: true,
+    //     double_sided: true,
+    //     perceptual_roughness: 1.0,
+    //     ..Default::default()
+    // }
+
+    ArrayTextureMaterial {
+        array_texture: image_handle,
     }
 }
 
-fn create_transparent_material(image_handle: Handle<Image>, unlit: bool) -> StandardMaterial {
-    StandardMaterial {
-        base_color_texture: Some(image_handle),
-        alpha_mode: AlphaMode::Add,
-        unlit,
-        metallic: 0.0,
-        reflectance: 0.0,
-        perceptual_roughness: 1.0,
-        ..Default::default()
+fn create_transparent_material(image_handle: Handle<Image>, unlit: bool) -> ArrayTextureMaterial {
+    // StandardMaterial {
+    //     base_color_texture: Some(image_handle),
+    //     alpha_mode: AlphaMode::Add,
+    //     unlit,
+    //     metallic: 0.0,
+    //     reflectance: 0.0,
+    //     perceptual_roughness: 1.0,
+    //     ..Default::default()
+    // }
+    ArrayTextureMaterial {
+        array_texture: image_handle,
     }
 }
 
 fn create_materials(
     mut material_registry: ResMut<Registry<MaterialDefinition>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut materials: ResMut<Assets<ArrayTextureMaterial>>,
     event_reader: EventReader<AllTexturesDoneLoadingEvent>,
     mut event_writer: EventWriter<AssetsDoneLoadingEvent>,
     texture_atlases: Res<Registry<CosmosTextureAtlas>>,

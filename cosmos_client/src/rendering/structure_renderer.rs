@@ -1,10 +1,12 @@
+use crate::asset::block_materials::ArrayTextureMaterial;
 use crate::block::lighting::{BlockLightProperties, BlockLighting};
 use crate::netty::flags::LocalPlayer;
 use crate::state::game_state::GameState;
 use crate::structure::planet::unload_chunks_far_from_players;
 use bevy::prelude::{
     in_state, warn, App, BuildChildren, Component, Deref, DerefMut, DespawnRecursiveExt, EventReader, GlobalTransform, IntoSystemConfigs,
-    Mesh, PbrBundle, PointLight, PointLightBundle, Quat, Rect, Resource, StandardMaterial, Transform, Update, Vec3, With,
+    MaterialMeshBundle, Mesh, PbrBundle, PointLight, PointLightBundle, Quat, Rect, Resource, StandardMaterial, Transform, Update, Vec3,
+    With,
 };
 use bevy::reflect::Reflect;
 use bevy::render::primitives::Aabb;
@@ -35,7 +37,7 @@ use super::{BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder, MeshInformation, 
 #[derive(Debug)]
 struct MeshMaterial {
     mesh: Mesh,
-    material: Handle<StandardMaterial>,
+    material: Handle<ArrayTextureMaterial>,
 }
 
 #[derive(Debug)]
@@ -283,7 +285,7 @@ fn poll_rendering_chunks(
             commands
                 .entity(entity)
                 .remove::<Handle<Mesh>>()
-                .remove::<Handle<StandardMaterial>>();
+                .remove::<Handle<ArrayTextureMaterial>>();
 
             let mut chunk_meshes_component = ChunkMeshes::default();
 
@@ -300,7 +302,7 @@ fn poll_rendering_chunks(
 
                         let ent = commands
                             .spawn((
-                                PbrBundle {
+                                MaterialMeshBundle {
                                     mesh,
                                     material: mesh_material.material,
                                     ..Default::default()
@@ -469,7 +471,7 @@ impl MeshBuilder for MeshInfo {
 
 #[derive(Default, Debug, Reflect)]
 struct ChunkRenderer {
-    meshes: HashMap<Handle<StandardMaterial>, MeshInfo>,
+    meshes: HashMap<Handle<ArrayTextureMaterial>, MeshInfo>,
     lights: HashMap<ChunkBlockCoordinate, BlockLightProperties>,
 }
 
