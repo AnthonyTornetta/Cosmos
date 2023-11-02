@@ -99,9 +99,16 @@ fn update_crosshair(
     }
 }
 
+#[derive(Resource, Debug, Clone, Copy)]
+struct RequestedEntity {
+    server_entity: Entity,
+    client_entity: Entity,
+    seconds_since_request: f32,
+}
+
 #[derive(Resource, Debug, Default)]
 pub(crate) struct RequestedEntities {
-    entities: Vec<(Entity, f32)>,
+    entities: Vec<RequestedEntity>,
 }
 
 #[derive(Component, Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
@@ -186,16 +193,15 @@ pub(crate) fn client_sync_players(
 ) {
     let client_id = transport.client_id();
 
-    let mut new_entities = Vec::with_capacity(requested_entities.entities.len());
-
-    for ent in requested_entities.entities.iter_mut() {
-        ent.1 += time.delta_seconds();
-        if ent.1 < 10.0 {
-            new_entities.push(*ent);
+    requested_entities.entities.retain_mut(|x| {
+        x.seconds_since_request += time.delta_seconds();
+        if x.seconds_since_request < 10.0 {
+            true
+        } else {
+            commands.entity(x.client_entity).despawn_recursive();
+            false
         }
-    }
-
-    requested_entities.entities = new_entities;
+    });
 
     while let Some(message) = client.receive_message(NettyChannelServer::Unreliable) {
         let msg: ServerUnreliableMessages = cosmos_encoder::deserialize(&message).unwrap();
@@ -240,8 +246,15 @@ pub(crate) fn client_sync_players(
                                 commands.entity(entity).insert((loc, body.create_velocity(), LerpTowards(body)));
                             }
                         }
-                    } else if !requested_entities.entities.iter().any(|x| x.0 == *server_entity) {
-                        requested_entities.entities.push((*server_entity, 0.0));
+                    } else if !requested_entities.entities.iter().any(|x| x.server_entity == *server_entity) {
+                        let client_entity = commands.spawn_empty().id();
+
+                        requested_entities.entities.push(RequestedEntity {
+                            server_entity: *server_entity,
+                            client_entity,
+                            seconds_since_request: 0.0,
+                        });
+                        network_mapping.add_mapping(client_entity, *server_entity);
 
                         client.send_message(
                             NettyChannelClient::Reliable,
@@ -273,7 +286,7 @@ pub(crate) fn client_sync_players(
                 // Prevents creation of duplicate players
                 if lobby.players.contains_key(&id) {
                     warn!("DUPLICATE PLAYER RECEIVED {id}");
-                    break;
+                    continue;
                 }
 
                 let Ok(body) = body.map(&network_mapping) else {
@@ -392,22 +405,17 @@ pub(crate) fn client_sync_players(
                 biosphere,
                 location,
             } => {
-                if network_mapping.contains_server_entity(server_entity) {
-                    warn!("Got duplicate planet! Is the server lagging?");
-                    break;
-                }
+                let Some(entity) = network_mapping.client_from_server(&server_entity) else {
+                    continue;
+                };
 
-                let mut entity_cmds = commands.spawn_empty();
+                let mut entity_cmds = commands.entity(entity);
                 let mut structure = Structure::Dynamic(DynamicStructure::new(dimensions));
 
                 let builder = ClientPlanetBuilder::default();
                 builder.insert_planet(&mut entity_cmds, location, &mut structure, planet);
 
                 entity_cmds.insert((structure, BiosphereMarker::new(biosphere)));
-
-                let entity = entity_cmds.id();
-
-                network_mapping.add_mapping(entity, server_entity);
             }
             ServerReliableMessages::Ship {
                 entity: server_entity,
@@ -415,10 +423,9 @@ pub(crate) fn client_sync_players(
                 dimensions,
                 chunks_needed,
             } => {
-                if network_mapping.contains_server_entity(server_entity) {
-                    warn!("Got duplicate ship! Is the server lagging?");
-                    break;
-                }
+                let Some(entity) = network_mapping.client_from_server(&server_entity) else {
+                    continue;
+                };
 
                 let Ok(body) = body.map(&network_mapping) else {
                     continue;
@@ -433,17 +440,13 @@ pub(crate) fn client_sync_players(
                     }
                 };
 
-                let mut entity_cmds = commands.spawn_empty();
+                let mut entity_cmds = commands.entity(entity);
                 let mut structure = Structure::Full(FullStructure::new(dimensions));
 
                 let builder = ClientShipBuilder::default();
                 builder.insert_ship(&mut entity_cmds, location, body.create_velocity(), &mut structure);
 
                 entity_cmds.insert((structure, chunks_needed));
-
-                let entity = entity_cmds.id();
-
-                network_mapping.add_mapping(entity, server_entity);
 
                 client.send_message(
                     NettyChannelClient::Reliable,
@@ -615,6 +618,17 @@ pub(crate) fn client_sync_players(
                 if let Ok(player_entity) = local_player.get_single() {
                     commands.entity(player_entity).insert(build_mode);
                 }
+            }
+            ServerReliableMessages::InvalidReactor { reason } => {
+                println!("Invalid reactor setup: {reason}");
+            }
+            ServerReliableMessages::Reactors { reactors, structure } => {
+                if let Some(structure_entity) = network_mapping.client_from_server(&structure) {
+                    commands.entity(structure_entity).insert(reactors);
+                }
+            }
+            ServerReliableMessages::RequestedEntityReceived(entity) => {
+                requested_entities.entities.retain(|x| x.server_entity != entity);
             }
         }
     }

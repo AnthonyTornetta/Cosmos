@@ -1,6 +1,7 @@
 //! Handles the logic behind the creation of a reactor multiblock
 
-use bevy::prelude::{in_state, App, EventReader, EventWriter, IntoSystemConfigs, Query, Res, Update};
+use bevy::prelude::{in_state, App, Changed, Entity, EventReader, EventWriter, IntoSystemConfigs, Query, Res, ResMut, Update};
+use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::{
         block_events::BlockInteractEvent,
@@ -8,6 +9,7 @@ use cosmos_core::{
         Block, BlockFace,
     },
     events::block_events::BlockChangedEvent,
+    netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannelServer},
     registry::{identifiable::Identifiable, Registry},
     structure::{
         coordinates::{BlockCoordinate, CoordinateType, UnboundBlockCoordinate},
@@ -16,7 +18,7 @@ use cosmos_core::{
     },
 };
 
-use crate::state::GameState;
+use crate::{netty::sync::entities::RequestedEntityEvent, state::GameState};
 
 /// Represents the maximum dimensions of the reactor, including the reactor casing
 const MAX_REACTOR_SIZE: CoordinateType = 11;
@@ -378,8 +380,6 @@ fn on_interact_reactor(
         let block = structure.block_at(ev.structure_block.coords(), &blocks);
 
         if block.unlocalized_name() == "cosmos:reactor_controller" {
-            println!("You clicked the reactor!!!");
-
             if reactors.iter().any(|reactor| reactor.controller_block() == ev.structure_block) {
                 continue;
             }
@@ -402,6 +402,7 @@ fn on_interact_reactor(
                     ),
                     ReactorValidity::Valid => {
                         let reactor = create_reactor(&structure, &blocks, &reactor_blocks, bounds, ev.structure_block);
+
                         reactors.add_reactor(reactor);
                     }
                 };
@@ -410,6 +411,36 @@ fn on_interact_reactor(
     }
 }
 
+fn request_reactor_event(query: Query<&Reactors>, mut event_reader: EventReader<RequestedEntityEvent>, mut server: ResMut<RenetServer>) {
+    for ev in event_reader.iter() {
+        if let Ok(reactors) = query.get(ev.entity) {
+            server.send_message(
+                ev.client_id,
+                NettyChannelServer::Reliable,
+                cosmos_encoder::serialize(&ServerReliableMessages::Reactors {
+                    reactors: reactors.clone(),
+                    structure: ev.entity,
+                }),
+            );
+        }
+    }
+}
+
+fn on_change_reactors(query: Query<(Entity, &Reactors), Changed<Reactors>>, mut server: ResMut<RenetServer>) {
+    for (entity, changed_reactor) in query.iter() {
+        server.broadcast_message(
+            NettyChannelServer::Reliable,
+            cosmos_encoder::serialize(&ServerReliableMessages::Reactors {
+                reactors: changed_reactor.clone(),
+                structure: entity,
+            }),
+        );
+    }
+}
+
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, on_interact_reactor.run_if(in_state(GameState::Playing)));
+    app.add_systems(
+        Update,
+        (on_interact_reactor, request_reactor_event, on_change_reactors).run_if(in_state(GameState::Playing)),
+    );
 }

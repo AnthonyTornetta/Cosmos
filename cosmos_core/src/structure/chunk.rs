@@ -178,7 +178,7 @@ impl Chunk {
 }
 
 #[derive(Debug, Default, Reflect, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
-/// This represents the information for a block. The first 3 bits are reserved for rotation data.
+/// This represents the information for a block. The first 3 rightmost bits are reserved for rotation data.
 ///
 /// All other bits can be used for anything else
 pub struct BlockInfo(u8);

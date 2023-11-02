@@ -66,7 +66,7 @@ impl Reactor {
     }
 }
 
-#[derive(Component, Default, Reflect, DerefMut, Deref, Serialize, Deserialize)]
+#[derive(Debug, Component, Default, Reflect, DerefMut, Deref, Serialize, Deserialize, Clone)]
 /// Stores the entities of all the reactors in a structure and their controller blocks for quick access
 pub struct Reactors(Vec<Reactor>);
 

@@ -27,7 +27,7 @@ fn check_needs_loaded(query: Query<(Entity, &SaveFileIdentifier), (Without<Seria
     for (ent, nl) in query.iter() {
         let path = nl.get_save_file_path();
         let Ok(data) = fs::read(&path) else {
-            warn!("Error reading record at '{path}'. Is it corrupted?");
+            warn!("Error reading file at '{path}'. Is it there?");
             commands.entity(ent).despawn_recursive();
             continue;
         };

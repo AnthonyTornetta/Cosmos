@@ -138,7 +138,7 @@ pub fn server_listen_messages(
                             );
                         }
                     } else {
-                        warn!("!!! Server received invalid entity from client {client_id}");
+                        warn!("!!! Server received invalid entity from client {client_id}; entity = {server_entity:?}");
                     }
                 }
                 ClientReliableMessages::SendSingleChunk { structure_entity, chunk } => request_chunk_event_writer.send(RequestChunkEvent {
