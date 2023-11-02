@@ -1,14 +1,14 @@
 //! Handles the logic behind the creation of a reactor multiblock
 
-use bevy::prelude::{in_state, App, Changed, Entity, EventReader, EventWriter, IntoSystemConfigs, Query, Res, ResMut, Update};
+use bevy::prelude::{in_state, App, Changed, Entity, EventReader, IntoSystemConfigs, Query, Res, ResMut, Update};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::{
         block_events::BlockInteractEvent,
         multiblock::reactor::{Reactor, ReactorBounds, ReactorPowerGenerationBlock, Reactors},
-        Block, BlockFace,
+        Block,
     },
-    events::block_events::BlockChangedEvent,
+    entities::player::Player,
     netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannelServer},
     registry::{identifiable::Identifiable, Registry},
     structure::{
@@ -155,15 +155,6 @@ fn check_is_valid_multiblock(structure: &Structure, controller_coords: BlockCoor
     ) else {
         return None;
     };
-
-    println!("Found reactor!");
-
-    println!("Controller: {controller_coords}");
-    println!("Back wall: {back_wall_coords}");
-    println!("Right wall: {right_wall_coords}");
-    println!("Left wall: {left_wall_coords}");
-    println!("Up wall: {up_wall_coords}");
-    println!("Down wall: {down_wall_coords}");
 
     Some(ReactorBounds {
         negative_coords: BlockCoordinate::new(
@@ -366,14 +357,15 @@ fn create_reactor(
 }
 
 fn on_interact_reactor(
-    mut structure_query: Query<(&mut Structure, &mut Reactors)>,
+    mut structure_query: Query<(&Structure, &mut Reactors)>,
     blocks: Res<Registry<Block>>,
     reactor_blocks: Res<Registry<ReactorPowerGenerationBlock>>,
     mut interaction: EventReader<BlockInteractEvent>,
-    mut event_writer: EventWriter<BlockChangedEvent>,
+    mut server: ResMut<RenetServer>,
+    player_query: Query<&Player>,
 ) {
     for ev in interaction.iter() {
-        let Ok((mut structure, mut reactors)) = structure_query.get_mut(ev.structure_entity) else {
+        let Ok((structure, mut reactors)) = structure_query.get_mut(ev.structure_entity) else {
             continue;
         };
 
@@ -386,20 +378,30 @@ fn on_interact_reactor(
 
             if let Some(bounds) = check_is_valid_multiblock(&structure, ev.structure_block.coords(), &blocks) {
                 match check_valid(bounds, &structure, &blocks) {
-                    ReactorValidity::MissingCasing(coords) => structure.set_block_at(
-                        coords,
-                        blocks.from_id("cosmos:ship_hull_yellow").unwrap(),
-                        BlockFace::Top,
-                        &blocks,
-                        Some(&mut event_writer),
-                    ),
-                    ReactorValidity::TooManyControllers(coords) => structure.set_block_at(
-                        coords,
-                        blocks.from_id("cosmos:ship_hull_red").unwrap(),
-                        BlockFace::Top,
-                        &blocks,
-                        Some(&mut event_writer),
-                    ),
+                    ReactorValidity::MissingCasing(_) => {
+                        let Ok(player) = player_query.get(ev.interactor) else {
+                            continue;
+                        };
+                        server.send_message(
+                            player.id(),
+                            NettyChannelServer::Reliable,
+                            cosmos_encoder::serialize(&ServerReliableMessages::InvalidReactor {
+                                reason: "The reactor is missing required casing.".into(),
+                            }),
+                        );
+                    }
+                    ReactorValidity::TooManyControllers(_) => {
+                        let Ok(player) = player_query.get(ev.interactor) else {
+                            continue;
+                        };
+                        server.send_message(
+                            player.id(),
+                            NettyChannelServer::Reliable,
+                            cosmos_encoder::serialize(&ServerReliableMessages::InvalidReactor {
+                                reason: "The reactor can only have 1 controller.".into(),
+                            }),
+                        );
+                    }
                     ReactorValidity::Valid => {
                         let reactor = create_reactor(&structure, &blocks, &reactor_blocks, bounds, ev.structure_block);
 

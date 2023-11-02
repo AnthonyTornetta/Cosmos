@@ -56,7 +56,10 @@ use crate::{
     rendering::MainCamera,
     state::game_state::GameState,
     structure::{planet::client_planet_builder::ClientPlanetBuilder, ship::client_ship_builder::ClientShipBuilder},
-    ui::crosshair::CrosshairOffset,
+    ui::{
+        crosshair::CrosshairOffset,
+        message::{HudMessage, HudMessages},
+    },
 };
 
 #[derive(Component)]
@@ -188,6 +191,8 @@ pub(crate) fn client_sync_players(
     mut requested_entities: ResMut<RequestedEntities>,
     time: Res<Time>,
     local_player: Query<Entity, With<LocalPlayer>>,
+
+    mut hud_messages: ResMut<HudMessages>,
 
     (mut build_mode_enter, mut build_mode_exit): (EventWriter<EnterBuildModeEvent>, EventWriter<ExitBuildModeEvent>),
 ) {
@@ -491,7 +496,7 @@ pub(crate) fn client_sync_players(
                 }
             }
             ServerReliableMessages::MOTD { motd } => {
-                info!("Server MOTD: {motd}");
+                hud_messages.display_message(motd.into());
             }
             ServerReliableMessages::BlockChange {
                 blocks_changed_packet,
@@ -620,7 +625,10 @@ pub(crate) fn client_sync_players(
                 }
             }
             ServerReliableMessages::InvalidReactor { reason } => {
-                println!("Invalid reactor setup: {reason}");
+                hud_messages.display_message(HudMessage::with_colored_string(
+                    format!("Invalid reactor setup: {reason}"),
+                    Color::ORANGE_RED,
+                ));
             }
             ServerReliableMessages::Reactors { reactors, structure } => {
                 if let Some(structure_entity) = network_mapping.client_from_server(&structure) {
