@@ -1,0 +1,6 @@
+{
+    "texture": {
+        "all": "reactor_casing",
+        "back": "reactor_controller"
+    }
+}

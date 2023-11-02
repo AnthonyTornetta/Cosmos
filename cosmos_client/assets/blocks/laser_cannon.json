@@ -1,7 +1,7 @@
 {
     "texture": {
-        "back": "laser_cannon_back",
-        "front": "laser_cannon_front",
+        "front": "laser_cannon_back",
+        "back": "laser_cannon_front",
         "left": "laser_cannon_left_right",
         "right": "laser_cannon_left_right",
         "top": "laser_cannon_top_bottom",

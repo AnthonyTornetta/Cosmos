@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::{QueryFilter, RapierContext, DEFAULT_WORLD_ID};
 use cosmos_core::{
-    block::BlockFace,
+    block::{block_events::BlockInteractEvent, BlockFace},
     blockitems::BlockItems,
     inventory::Inventory,
     item::Item,
@@ -58,7 +58,7 @@ fn process_player_interaction(
     }
 
     // this fails if the player is a pilot
-    let Ok((player_body, mut inventory, looking_at)) = player_body.get_single_mut() else {
+    let Ok((player_entity, mut inventory, looking_at)) = player_body.get_single_mut() else {
         return;
     };
 
@@ -75,7 +75,7 @@ fn process_player_interaction(
         cam_trans.forward(),
         10.0,
         true,
-        QueryFilter::new().exclude_rigid_body(player_body), // don't want to hit yourself
+        QueryFilter::new().exclude_rigid_body(player_entity), // don't want to hit yourself
     ) else {
         if let Some(mut looking_at) = looking_at {
             looking_at.looking_at_block = None;
@@ -110,7 +110,7 @@ fn process_player_interaction(
         if let Some(mut looking_at) = looking_at {
             looking_at.looking_at_block = looking_at_block;
         } else {
-            commands.entity(player_body).insert(LookingAt { looking_at_block });
+            commands.entity(player_entity).insert(LookingAt { looking_at_block });
         }
     }
 
@@ -163,7 +163,8 @@ fn process_player_interaction(
         if let Ok(coords) = structure.relative_coords_to_local_coords_checked(point.x, point.y, point.z) {
             interact_writer.send(BlockInteractEvent {
                 structure_entity: structure.get_entity().unwrap(),
-                coords: StructureBlock::new(coords),
+                structure_block: StructureBlock::new(coords),
+                interactor: player_entity,
             });
         }
     }

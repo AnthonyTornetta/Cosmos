@@ -8,10 +8,12 @@ use bevy::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::registry::identifiable::Identifiable;
+use crate::{registry::identifiable::Identifiable, structure::coordinates::UnboundBlockCoordinate};
 
 pub mod block_builder;
+pub mod block_events;
 pub mod blocks;
+pub mod multiblock;
 
 #[derive(Reflect, Debug, Eq, PartialEq, Clone, Copy, Hash)]
 /// Represents different properties a block can has
@@ -87,6 +89,18 @@ impl BlockFace {
         }
     }
 
+    /// Returns the direction each face represents as an UnboundBlockCoordinate
+    pub fn direction_coordinates(&self) -> UnboundBlockCoordinate {
+        match *self {
+            Self::Front => UnboundBlockCoordinate::new(0, 0, 1),
+            Self::Back => UnboundBlockCoordinate::new(0, 0, -1),
+            Self::Left => UnboundBlockCoordinate::new(-1, 0, 0),
+            Self::Right => UnboundBlockCoordinate::new(1, 0, 0),
+            Self::Top => UnboundBlockCoordinate::new(0, 1, 0),
+            Self::Bottom => UnboundBlockCoordinate::new(0, -1, 0),
+        }
+    }
+
     /// Returns the string representation of this face.
     pub fn as_str(&self) -> &'static str {
         match *self {
@@ -113,6 +127,54 @@ impl BlockFace {
             5 => BlockFace::Back,
             _ => panic!("Index must be 0 <= index <= 5"),
         }
+    }
+
+    /// Gets the opposite face for this block face (example: `BlockFace::Left` -> `BlockFace::Right`)
+    pub fn inverse(&self) -> BlockFace {
+        match self {
+            Self::Top => Self::Bottom,
+            Self::Bottom => Self::Top,
+            Self::Left => Self::Right,
+            Self::Right => Self::Left,
+            Self::Back => Self::Front,
+            Self::Front => Self::Back,
+        }
+    }
+
+    #[inline(always)]
+    /// Returns the `BlockFace` that is this blockface's top
+    pub fn local_top(self) -> BlockFace {
+        Self::rotate_face(self, BlockFace::Top)
+    }
+
+    #[inline(always)]
+    /// Returns the `BlockFace` that is this blockface's bottom
+    pub fn local_bottom(self) -> BlockFace {
+        Self::rotate_face(self, BlockFace::Bottom)
+    }
+
+    #[inline(always)]
+    /// Returns the `BlockFace` that is this blockface's left
+    pub fn local_left(self) -> BlockFace {
+        Self::rotate_face(self, BlockFace::Left)
+    }
+
+    #[inline(always)]
+    /// Returns the `BlockFace` that is this blockface's right
+    pub fn local_right(self) -> BlockFace {
+        Self::rotate_face(self, BlockFace::Right)
+    }
+
+    #[inline(always)]
+    /// Returns the `BlockFace` that is this blockface's back
+    pub fn local_back(self) -> BlockFace {
+        Self::rotate_face(self, BlockFace::Back)
+    }
+
+    #[inline(always)]
+    /// Returns the `BlockFace` that is this blockface's front
+    pub fn local_front(self) -> BlockFace {
+        Self::rotate_face(self, BlockFace::Front)
     }
 
     /// BlockFace::Top will result in no rotation being made
@@ -275,8 +337,16 @@ impl PartialEq for Block {
     }
 }
 
-pub(super) fn register<T: States + Clone + Copy>(app: &mut App, pre_loading_state: T, loading_state: T) {
+pub(super) fn register<T: States + Clone + Copy>(
+    app: &mut App,
+    pre_loading_state: T,
+    loading_state: T,
+    post_loading_state: T,
+    playing_state: T,
+) {
     blocks::register(app, pre_loading_state, loading_state);
+    block_events::register(app);
+    multiblock::register(app, post_loading_state, playing_state);
 
     app.register_type::<BlockFace>();
 }

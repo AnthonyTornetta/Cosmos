@@ -17,8 +17,9 @@ use super::{
 };
 
 #[derive(Clone, Deref, DerefMut, Debug, Reflect, Copy, PartialEq, Eq, Serialize, Deserialize)]
-/// A block that is a part of a structure
+/// A block that is a part of a structure.
 ///
+/// This is really just a wrapper around a BlockCoordinate, but this implies there is (or at least was) a block here.
 /// This may not be valid when it is used.
 pub struct StructureBlock(pub BlockCoordinate);
 

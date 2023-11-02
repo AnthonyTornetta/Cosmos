@@ -7,7 +7,7 @@ use bevy::prelude::{Component, Entity};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    block::BlockFace,
+    block::{multiblock::reactor::Reactors, BlockFace},
     entities::player::render_distance::RenderDistance,
     physics::location::Location,
     structure::{
@@ -162,4 +162,18 @@ pub enum ServerReliableMessages {
         /// The new build mode
         build_mode: BuildMode,
     },
+    /// Reactor creation failure
+    InvalidReactor {
+        /// The reason the reactor failed to be created
+        reason: String,
+    },
+    /// Updates the reactors for a specific structure
+    Reactors {
+        /// The reactors the structure now has
+        reactors: Reactors,
+        /// The structure this the reactors are a part of
+        structure: Entity,
+    },
+    /// This signifies that the server is sending information for a requested entity
+    RequestedEntityReceived(Entity),
 }

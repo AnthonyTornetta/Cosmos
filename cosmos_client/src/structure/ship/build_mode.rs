@@ -17,7 +17,7 @@ use cosmos_core::{
         coordinates::BlockCoordinate,
         ship::{
             build_mode::{BuildAxis, BuildMode, ExitBuildModeEvent},
-            core::DieWithStructure,
+            core::DespawnWithStructure,
         },
         Structure,
     },
@@ -242,7 +242,7 @@ fn change_visuals(
             visuals.0 = Some(
                 ecmds
                     .spawn((
-                        DieWithStructure,
+                        DespawnWithStructure,
                         NotShadowCaster,
                         NotShadowReceiver,
                         Name::new("X Axis - build mode"),
@@ -273,7 +273,7 @@ fn change_visuals(
             visuals.1 = Some(
                 ecmds
                     .spawn((
-                        DieWithStructure,
+                        DespawnWithStructure,
                         NotShadowCaster,
                         NotShadowReceiver,
                         Name::new("Y Axis - build mode"),
@@ -304,7 +304,7 @@ fn change_visuals(
             visuals.2 = Some(
                 ecmds
                     .spawn((
-                        DieWithStructure,
+                        DespawnWithStructure,
                         NotShadowCaster,
                         NotShadowReceiver,
                         Name::new("Z Axis - build mode"),

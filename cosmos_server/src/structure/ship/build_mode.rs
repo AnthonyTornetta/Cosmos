@@ -3,7 +3,7 @@
 use bevy::prelude::{in_state, App, Changed, EventReader, EventWriter, IntoSystemConfigs, Query, Res, ResMut, Update};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
-    block::Block,
+    block::{block_events::BlockInteractEvent, Block},
     entities::player::Player,
     netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannelServer},
     registry::{identifiable::Identifiable, Registry},
@@ -13,7 +13,7 @@ use cosmos_core::{
     },
 };
 
-use crate::{events::blocks::block_events::BlockInteractEvent, state::GameState};
+use crate::state::GameState;
 
 fn interact_with_block(
     mut event_reader: EventReader<BlockInteractEvent>,

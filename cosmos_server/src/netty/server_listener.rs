@@ -5,6 +5,7 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::RenetServer;
+use cosmos_core::block::block_events::{BlockBreakEvent, BlockInteractEvent, BlockPlaceEvent};
 use cosmos_core::netty::netty_rigidbody::NettyRigidBodyLocation;
 use cosmos_core::netty::{cosmos_encoder, NettyChannelClient, NettyChannelServer};
 use cosmos_core::physics::location::Location;
@@ -21,11 +22,7 @@ use cosmos_core::{
 };
 
 use crate::entities::player::PlayerLooking;
-use crate::events::{
-    blocks::block_events::{BlockBreakEvent, BlockInteractEvent, BlockPlaceEvent},
-    create_ship_event::CreateShipEvent,
-    structure::ship::ShipSetMovementEvent,
-};
+use crate::events::{create_ship_event::CreateShipEvent, structure::ship::ShipSetMovementEvent};
 use crate::structure::planet::generation::planet_generator::RequestChunkEvent;
 
 use super::network_helpers::ServerLobby;
@@ -141,7 +138,7 @@ pub fn server_listen_messages(
                             );
                         }
                     } else {
-                        warn!("!!! Server received invalid entity from client {client_id}");
+                        warn!("!!! Server received invalid entity from client {client_id}; entity = {server_entity:?}");
                     }
                 }
                 ClientReliableMessages::SendSingleChunk { structure_entity, chunk } => request_chunk_event_writer.send(RequestChunkEvent {

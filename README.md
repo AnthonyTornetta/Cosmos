@@ -69,8 +69,6 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
       - [ ] Perhaps done via a sphere surrounding the planet that always faces the nearest star
     - [ ] Sun-set skybox
     - [ ] Night-side skybox
-  - [ ] Caves
-    - [ ] Lit up underground blocks
 - [ ] Animated textures
 - [ ] Sounds
   - [x] Laser cannon fire
@@ -80,10 +78,10 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
   - [x] Background space music
   - [ ] Block break
 - [ ] Place rotated blocks
-- [ ] Multiblock machines (if enough time)
-  - [ ] Revamp power generation to use reactor multiblock structure
-  - [ ] Colored laser
-    - [ ] Colored glass placed in front of laser
+- [x] Multiblock machines
+  - [x] Revamp power generation to use reactor multiblock structure
+- [ ] Colored laser
+  - [ ] Colored glass placed in front of laser
 - [x] Inventory GUI
   - [x] Able to open inventory
   - [x] Abstract the 3d block GUI camera

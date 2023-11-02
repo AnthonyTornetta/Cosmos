@@ -206,6 +206,34 @@ fn add_cosmos_blocks(
         );
     }
 
+    blocks.register(
+        BlockBuilder::new("cosmos:reactor_controller", 2.0, 20.0)
+            .add_property(BlockProperty::Opaque)
+            .add_property(BlockProperty::Full)
+            .create(),
+    );
+
+    blocks.register(
+        BlockBuilder::new("cosmos:reactor_casing", 2.0, 20.0)
+            .add_property(BlockProperty::Opaque)
+            .add_property(BlockProperty::Full)
+            .create(),
+    );
+
+    blocks.register(
+        BlockBuilder::new("cosmos:reactor_window", 2.0, 20.0)
+            .add_property(BlockProperty::Transparent)
+            .add_property(BlockProperty::Full)
+            .create(),
+    );
+
+    blocks.register(
+        BlockBuilder::new("cosmos:reactor_cell", 2.0, 20.0)
+            .add_property(BlockProperty::Opaque)
+            .add_property(BlockProperty::Full)
+            .create(),
+    );
+
     loading.finish_loading(id, &mut end_writer);
 }
 
@@ -228,7 +256,7 @@ fn add_air_block(
     loader.finish_loading(id, &mut done_loading_event);
 }
 
-pub(super) fn register<T: States + Clone + Copy>(app: &mut App, pre_loading_state: T, loading_state: T) {
+pub(super) fn register<T: States>(app: &mut App, pre_loading_state: T, loading_state: T) {
     registry::create_registry::<Block>(app);
 
     app.add_systems(OnEnter(pre_loading_state), add_air_block);
