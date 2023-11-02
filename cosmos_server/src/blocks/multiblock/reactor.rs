@@ -376,8 +376,8 @@ fn on_interact_reactor(
                 continue;
             }
 
-            if let Some(bounds) = check_is_valid_multiblock(&structure, ev.structure_block.coords(), &blocks) {
-                match check_valid(bounds, &structure, &blocks) {
+            if let Some(bounds) = check_is_valid_multiblock(structure, ev.structure_block.coords(), &blocks) {
+                match check_valid(bounds, structure, &blocks) {
                     ReactorValidity::MissingCasing(_) => {
                         let Ok(player) = player_query.get(ev.interactor) else {
                             continue;
@@ -403,7 +403,7 @@ fn on_interact_reactor(
                         );
                     }
                     ReactorValidity::Valid => {
-                        let reactor = create_reactor(&structure, &blocks, &reactor_blocks, bounds, ev.structure_block);
+                        let reactor = create_reactor(structure, &blocks, &reactor_blocks, bounds, ev.structure_block);
 
                         reactors.add_reactor(reactor);
                     }
