@@ -2,8 +2,8 @@
 
 use bevy::{
     prelude::{
-        in_state, warn, Added, App, Commands, Component, Deref, DerefMut, Entity, EventReader, IntoSystemConfigs, OnEnter, Parent, Query,
-        Res, ResMut, States, Update, Without,
+        in_state, Added, App, Commands, Component, Deref, DerefMut, Entity, EventReader, IntoSystemConfigs, OnEnter, Query, Res, ResMut,
+        States, Update, Without,
     },
     reflect::Reflect,
     time::Time,
@@ -12,7 +12,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     block::Block,
-    ecs::NeedsDespawned,
     events::block_events::BlockChangedEvent,
     registry::{create_registry, identifiable::Identifiable, Registry},
     structure::{
@@ -32,7 +31,7 @@ pub struct ReactorBounds {
     pub positive_coords: BlockCoordinate,
 }
 
-#[derive(Component, Clone, Copy, Debug, Reflect, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Reflect, Serialize, Deserialize)]
 /// Represents a constructed reactor
 pub struct Reactor {
     controller: StructureBlock,
@@ -67,14 +66,14 @@ impl Reactor {
     }
 }
 
-#[derive(Component, Default, Reflect, DerefMut, Deref)]
+#[derive(Component, Default, Reflect, DerefMut, Deref, Serialize, Deserialize)]
 /// Stores the entities of all the reactors in a structure and their controller blocks for quick access
-pub struct Reactors(Vec<(StructureBlock, Entity)>);
+pub struct Reactors(Vec<Reactor>);
 
 impl Reactors {
     /// Adds a reactor to the structure
-    pub fn add_reactor(&mut self, reactor_entity: Entity, controller_block: StructureBlock) {
-        self.0.push((controller_block, reactor_entity));
+    pub fn add_reactor(&mut self, reactor: Reactor) {
+        self.0.push(reactor);
     }
 }
 
@@ -137,8 +136,6 @@ fn on_structure_add(mut commands: Commands, query: Query<Entity, (Added<Structur
 }
 
 fn on_modify_reactor(
-    mut commands: Commands,
-    mut reactor_query: Query<&mut Reactor>,
     mut reactors_query: Query<&mut Reactors>,
     mut block_change_event: EventReader<BlockChangedEvent>,
     blocks: Res<Registry<Block>>,
@@ -149,12 +146,7 @@ fn on_modify_reactor(
             continue;
         };
 
-        reactors.retain(|&(_, reactor_entity)| {
-            let Ok(mut reactor) = reactor_query.get_mut(reactor_entity) else {
-                warn!("Missing reactor component but is in the reactors component list.");
-                return false;
-            };
-
+        reactors.retain_mut(|reactor| {
             let (neg, pos) = (reactor.bounds.negative_coords, reactor.bounds.positive_coords);
 
             let within_x = neg.x <= ev.block.x && pos.x >= ev.block.x;
@@ -166,8 +158,6 @@ fn on_modify_reactor(
                 || (neg.z == ev.block.z || pos.z == ev.block.z) && (within_x && within_y)
             {
                 // They changed the casing of the reactor - kill it
-                commands.entity(reactor_entity).insert(NeedsDespawned);
-
                 false
             } else {
                 if within_x && within_y && within_z {
@@ -188,13 +178,13 @@ fn on_modify_reactor(
 }
 
 fn generate_power(
-    reactors: Query<(&Reactor, &Parent)>,
+    reactors: Query<(&Reactors, Entity)>,
     structure: Query<&Systems>,
     mut energy_storage_system_query: Query<&mut EnergyStorageSystem>,
     time: Res<Time>,
 ) {
-    for (reactor, parent) in reactors.iter() {
-        let Ok(systems) = structure.get(parent.get()) else {
+    for (reactors, structure_entity) in reactors.iter() {
+        let Ok(systems) = structure.get(structure_entity) else {
             continue;
         };
 
@@ -202,7 +192,9 @@ fn generate_power(
             continue;
         };
 
-        system.increase_energy(reactor.power_per_second * time.delta_seconds());
+        for reactor in reactors.iter() {
+            system.increase_energy(reactor.power_per_second * time.delta_seconds());
+        }
     }
 }
 

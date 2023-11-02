@@ -1,8 +1,6 @@
 //! Handles the logic behind the creation of a reactor multiblock
 
-use bevy::prelude::{
-    in_state, App, BuildChildren, Bundle, Commands, Entity, EventReader, EventWriter, IntoSystemConfigs, Name, Query, Res, Update,
-};
+use bevy::prelude::{in_state, App, EventReader, EventWriter, IntoSystemConfigs, Query, Res, Update};
 use cosmos_core::{
     block::{
         block_events::BlockInteractEvent,
@@ -13,7 +11,6 @@ use cosmos_core::{
     registry::{identifiable::Identifiable, Registry},
     structure::{
         coordinates::{BlockCoordinate, CoordinateType, UnboundBlockCoordinate},
-        ship::core::DespawnWithStructure,
         structure_block::StructureBlock,
         Structure,
     },
@@ -367,15 +364,14 @@ fn create_reactor(
 }
 
 fn on_interact_reactor(
-    mut structure_query: Query<(Entity, &mut Structure, &mut Reactors)>,
+    mut structure_query: Query<(&mut Structure, &mut Reactors)>,
     blocks: Res<Registry<Block>>,
     reactor_blocks: Res<Registry<ReactorPowerGenerationBlock>>,
     mut interaction: EventReader<BlockInteractEvent>,
     mut event_writer: EventWriter<BlockChangedEvent>,
-    mut commands: Commands,
 ) {
     for ev in interaction.iter() {
-        let Ok((entity, mut structure, mut reactors)) = structure_query.get_mut(ev.structure_entity) else {
+        let Ok((mut structure, mut reactors)) = structure_query.get_mut(ev.structure_entity) else {
             continue;
         };
 
@@ -384,7 +380,7 @@ fn on_interact_reactor(
         if block.unlocalized_name() == "cosmos:reactor_controller" {
             println!("You clicked the reactor!!!");
 
-            if reactors.iter().any(|&(controller_block, _)| controller_block == ev.structure_block) {
+            if reactors.iter().any(|reactor| reactor.controller_block() == ev.structure_block) {
                 continue;
             }
 
@@ -406,34 +402,10 @@ fn on_interact_reactor(
                     ),
                     ReactorValidity::Valid => {
                         let reactor = create_reactor(&structure, &blocks, &reactor_blocks, bounds, ev.structure_block);
-
-                        commands.entity(entity).with_children(|structure| {
-                            let reactor_entity = structure.spawn(ReactorBundle::new(reactor)).id();
-
-                            reactors.add_reactor(reactor_entity, ev.structure_block);
-                        });
+                        reactors.add_reactor(reactor);
                     }
                 };
             }
-        }
-    }
-}
-
-#[derive(Bundle)]
-/// Use this when creating a reactor entity
-pub struct ReactorBundle {
-    reactor: Reactor,
-    name: Name,
-    despawn_with_structure: DespawnWithStructure,
-}
-
-impl ReactorBundle {
-    /// Creates a new reactor bundle for this reactor
-    pub fn new(reactor: Reactor) -> Self {
-        Self {
-            reactor,
-            name: Name::new("Reactor"),
-            despawn_with_structure: DespawnWithStructure,
         }
     }
 }
