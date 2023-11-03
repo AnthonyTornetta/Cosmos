@@ -695,7 +695,7 @@ impl ChunkRenderer {
                         &mesh_info,
                         Vec3::new(center_offset_x, center_offset_y, center_offset_z),
                         uvs,
-                        image_index as u32,
+                        image_index,
                     );
 
                     if one_mesh_only {

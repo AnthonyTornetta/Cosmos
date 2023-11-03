@@ -306,7 +306,7 @@ impl ChunkRenderer {
                         &mesh_info,
                         offset * CHUNK_DIMENSIONSF + Vec3::new(center_offset_x * scale, center_offset_y * scale, center_offset_z * scale),
                         Rect::new(0.0, 0.0, 1.0, 1.0),
-                        image_index as u32,
+                        image_index,
                     );
 
                     if one_mesh_only {

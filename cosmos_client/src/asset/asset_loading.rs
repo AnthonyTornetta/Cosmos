@@ -256,7 +256,7 @@ fn check_assets_ready(
                 let img = images.get_mut(&atlas.texture).expect("No");
 
                 image::save_buffer(
-                    &Path::new("image.png"),
+                    Path::new("image.png"),
                     img.data.as_slice(),
                     atlas.size.x as u32,
                     atlas.size.y as u32,
@@ -479,7 +479,7 @@ pub fn load_block_rendering_information(
         registry.register(BlockTextureIndex {
             id: 0,
             unlocalized_name: "missing".to_owned(),
-            indices: BlockTextureIndicies::all(index as u32),
+            indices: BlockTextureIndicies::all(index),
         });
     }
 
@@ -523,7 +523,7 @@ pub fn load_block_rendering_information(
                 .texture_atlas
                 .get_texture_index(&server.get_handle(&format!("images/blocks/{texture_name}.png",)))
             {
-                map.insert(entry.to_owned(), index as u32);
+                map.insert(entry.to_owned(), index);
             }
         }
 

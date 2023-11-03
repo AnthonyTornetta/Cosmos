@@ -157,7 +157,7 @@ fn render_items(
                     continue;
                 };
 
-                mesh_builder.add_mesh_information(&mesh_info, Vec3::ZERO, Rect::new(0.0, 0.0, 1.0, 1.0), image_index as u32);
+                mesh_builder.add_mesh_information(&mesh_info, Vec3::ZERO, Rect::new(0.0, 0.0, 1.0, 1.0), image_index);
             }
         } else {
             let Some(mut mesh_info) = block_mesh_info.info_for_whole_block().cloned() else {
@@ -170,7 +170,7 @@ fn render_items(
                 continue;
             };
 
-            mesh_builder.add_mesh_information(&mesh_info, Vec3::ZERO, Rect::new(0.0, 0.0, 1.0, 1.0), image_index as u32);
+            mesh_builder.add_mesh_information(&mesh_info, Vec3::ZERO, Rect::new(0.0, 0.0, 1.0, 1.0), image_index);
         }
 
         commands.entity(to_create).insert((
