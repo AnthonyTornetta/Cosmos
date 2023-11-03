@@ -34,8 +34,10 @@ use cosmos_core::{
 use rayon::prelude::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
 
 use crate::{
-    asset::asset_loading::{add_materials, remove_materials, AddMaterialEvent, BlockTextureIndex, MaterialType},
-    materials::BlockMaterialMapping,
+    asset::{
+        asset_loading::BlockTextureIndex,
+        materials::{add_materials, remove_materials, AddMaterialEvent, BlockMaterialMapping, MaterialType},
+    },
     state::game_state::GameState,
 };
 

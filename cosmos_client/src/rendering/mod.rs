@@ -18,7 +18,7 @@ use cosmos_core::{
 use crate::{
     asset::{
         asset_loading::{load_block_rendering_information, BlockRenderingInfo},
-        block_materials::ATTRIBUTE_TEXTURE_INDEX,
+        materials::block_materials::ATTRIBUTE_TEXTURE_INDEX,
     },
     state::game_state::GameState,
 };

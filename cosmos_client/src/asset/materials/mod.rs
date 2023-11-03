@@ -1,0 +1,186 @@
+//! Used to handle material registration
+
+use bevy::prelude::*;
+use cosmos_core::{
+    block::Block,
+    registry::{self, identifiable::Identifiable, many_to_one::ManyToOneRegistry, Registry},
+};
+
+use crate::state::game_state::GameState;
+
+pub mod block_materials;
+pub(super) mod material_types;
+
+#[derive(Hash, Clone, Copy, Debug, PartialEq, Eq)]
+/// Materials are used for different things, and sometimes need to be in different states.
+///
+/// This represents which state the material is used for
+pub enum MaterialType {
+    /// The normal behavior of your material, like when it's placed on a structure.
+    Normal,
+    /// Used in the UI and should not respond to any lighting.
+    Unlit,
+    /// Used in LODs when the blocks are at a certani scale, so if your material should be dumbed down a bit use this.
+    ///
+    /// For example, all transparent blocks are made opqaue by default.
+    FarAway,
+}
+
+#[derive(Event)]
+/// This event is sent when you have to remove all materials from a given entity.
+///
+/// If you add your own material, make sure to remove it when you receive this event for your material.
+///
+/// ### Important:
+/// Add your event listeners for this after `remove_materials` and before `add_materials`
+pub struct RemoveAllMaterialsEvent {
+    /// The entity to remove the materials from
+    pub entity: Entity,
+}
+
+#[derive(Event)]
+/// This event is sent whenever a specific material must be added to an entity.
+///
+/// ### Important:
+/// Add your event listeners for this after `add_materials`.
+pub struct AddMaterialEvent {
+    /// The entity to add your material to
+    pub entity: Entity,
+    /// The materal's id referring to the `Registry<MaterialDefinition]`
+    pub add_material_id: u16,
+    /// The state the material should be in
+    pub material_type: MaterialType,
+}
+
+/// Add all event listeners for `AddMaterialEvent` after this to prevent any 1-frame delays
+pub fn add_materials() {}
+/// Add all event listeners for `RemoveAllMaterialsEvent` after this and before `add_materials` to ensure your material is removed at the right time.
+pub fn remove_materials() {}
+
+#[derive(Resource, Reflect, Debug, Clone)]
+/// This stores the texture atlas for all blocks in the game.
+///
+/// Eventually this will be redone to allow for multiple atlases, but for now this works fine.
+pub struct MaterialDefinition {
+    // /// The main material used to draw blocks
+    // pub material: Handle<M>,
+    // /// The material used to render things far away
+    // pub far_away_material: Handle<M>,
+    // /// The unlit version of the main material
+    // pub unlit_material: Handle<M>,
+    id: u16,
+    unlocalized_name: String,
+}
+impl MaterialDefinition {
+    /// Creates a new material definition
+    pub fn new(unlocalized_name: impl Into<String>) -> Self {
+        Self {
+            id: 0,
+            unlocalized_name: unlocalized_name.into(),
+        }
+    }
+}
+
+impl Identifiable for MaterialDefinition {
+    fn id(&self) -> u16 {
+        self.id
+    }
+
+    fn set_numeric_id(&mut self, id: u16) {
+        self.id = id;
+    }
+
+    fn unlocalized_name(&self) -> &str {
+        self.unlocalized_name.as_str()
+    }
+}
+
+#[derive(Clone)]
+/// Represents a mapping between blocks and the materials they are attached to.
+///
+/// Do not use the `id` function to get the material's id - that only refers to this mapping's id.
+/// Instead use `material_id` to get the material this points to's id.
+pub struct BlockMaterialMapping {
+    id: u16,
+    unlocalized_name: String,
+    material_id: u16,
+}
+
+impl BlockMaterialMapping {
+    /// The id of the material this points to
+    pub fn material_id(&self) -> u16 {
+        self.material_id
+    }
+}
+
+impl Identifiable for BlockMaterialMapping {
+    fn id(&self) -> u16 {
+        self.id
+    }
+
+    fn set_numeric_id(&mut self, id: u16) {
+        self.id = id;
+    }
+
+    fn unlocalized_name(&self) -> &str {
+        &self.unlocalized_name
+    }
+}
+
+fn register_materials(
+    blocks: Res<Registry<Block>>,
+    materials: Res<Registry<MaterialDefinition>>,
+    mut registry: ResMut<ManyToOneRegistry<Block, BlockMaterialMapping>>,
+) {
+    for material in materials.iter() {
+        registry.insert_value(BlockMaterialMapping {
+            id: 0,
+            material_id: material.id(),
+            unlocalized_name: material.unlocalized_name().to_owned(),
+        });
+    }
+
+    // TODO: Specify this in file or something
+
+    if let Some(block) = blocks.from_id("cosmos:light") {
+        registry
+            .add_link(block, "cosmos:illuminated")
+            .expect("Illuminated material should exist");
+    }
+
+    if let Some(block) = blocks.from_id("cosmos:ship_core") {
+        registry
+            .add_link(block, "cosmos:illuminated")
+            .expect("Illuminated material should exist");
+    }
+
+    if let Some(block) = blocks.from_id("cosmos:water") {
+        registry
+            .add_link(block, "cosmos:transparent")
+            .expect("Transparent material should exist");
+    }
+
+    if let Some(block) = blocks.from_id("cosmos:ice") {
+        registry
+            .add_link(block, "cosmos:transparent")
+            .expect("Transparent material should exist");
+    }
+
+    for block in blocks.iter() {
+        if !registry.contains(block) {
+            registry.add_link(block, "cosmos:main").expect("Main material should exist");
+        }
+    }
+}
+
+pub(super) fn register(app: &mut App) {
+    registry::create_registry::<MaterialDefinition>(app);
+    registry::many_to_one::create_many_to_one_registry::<Block, BlockMaterialMapping>(app);
+    material_types::register(app);
+    block_materials::register(app);
+
+    app.add_systems(OnExit(GameState::PostLoading), register_materials)
+        .add_systems(Update, (remove_materials, add_materials).chain())
+        .add_event::<RemoveAllMaterialsEvent>()
+        .add_event::<AddMaterialEvent>();
+}

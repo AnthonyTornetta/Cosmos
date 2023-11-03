@@ -16,10 +16,11 @@ use cosmos_core::{
 
 use crate::{
     asset::{
-        asset_loading::{add_materials, remove_materials, AddMaterialEvent, BlockTextureIndex, MaterialType},
-        block_materials::ArrayTextureMaterial,
+        asset_loading::BlockTextureIndex,
+        materials::{
+            add_materials, block_materials::ArrayTextureMaterial, remove_materials, AddMaterialEvent, BlockMaterialMapping, MaterialType,
+        },
     },
-    materials::BlockMaterialMapping,
     rendering::{BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder},
 };
 

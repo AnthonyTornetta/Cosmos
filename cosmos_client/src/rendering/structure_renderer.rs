@@ -1,5 +1,8 @@
+use crate::asset::asset_loading::BlockTextureIndex;
+use crate::asset::materials::{
+    add_materials, remove_materials, AddMaterialEvent, BlockMaterialMapping, MaterialType, RemoveAllMaterialsEvent,
+};
 use crate::block::lighting::{BlockLightProperties, BlockLighting};
-use crate::materials::BlockMaterialMapping;
 use crate::netty::flags::LocalPlayer;
 use crate::state::game_state::GameState;
 use crate::structure::planet::unload_chunks_far_from_players;
@@ -30,9 +33,6 @@ use std::collections::HashSet;
 use std::f32::consts::PI;
 use std::mem::swap;
 
-use crate::asset::asset_loading::{
-    add_materials, remove_materials, AddMaterialEvent, BlockTextureIndex, MaterialType, RemoveAllMaterialsEvent,
-};
 use crate::{Assets, Commands, Entity, Handle, Query, Res, ResMut};
 
 use super::{BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder, MeshInformation, ReadOnlyBlockMeshRegistry};
@@ -297,20 +297,10 @@ fn poll_rendering_chunks(
                 for mesh_material in chunk_mesh.mesh_materials {
                     let mesh = meshes.add(mesh_material.mesh);
 
-                    // let ent = if let Some(ent) = old_mesh_entities.pop() {
-                    //     // commands.entity(ent).insert(mesh).insert(mesh_material.material_id);
-
-                    //     ent
-                    // } else {
                     let s = (CHUNK_DIMENSIONS / 2) as f32;
 
                     let ent = commands
                         .spawn((
-                            // MaterialMeshBundle {
-                            //     mesh,
-                            //     // material: mesh_material.material_id,
-                            //     ..Default::default()
-                            // },
                             mesh,
                             TransformBundle::default(),
                             Visibility::default(),
@@ -321,8 +311,6 @@ fn poll_rendering_chunks(
                         .id();
 
                     entities_to_add.push(ent);
-
-                    // };
 
                     event_writer.send(AddMaterialEvent {
                         entity: ent,
@@ -762,7 +750,6 @@ pub(super) fn register(app: &mut App) {
             .before(remove_materials)
             .before(add_materials),
     )
-    // .add_system(add_renderer)
     .init_resource::<RenderingChunks>()
     .register_type::<LightsHolder>();
 }

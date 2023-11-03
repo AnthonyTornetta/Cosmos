@@ -14,7 +14,6 @@ pub mod interactions;
 pub mod inventory;
 pub mod lang;
 pub mod loading;
-pub mod materials;
 pub mod music;
 pub mod netty;
 pub mod physics;
@@ -131,7 +130,6 @@ fn main() {
     structure::register(&mut app);
     block::register(&mut app);
     projectiles::register(&mut app);
-    materials::register(&mut app);
     loading::register(&mut app);
     entities::register(&mut app);
     inventory::register(&mut app);

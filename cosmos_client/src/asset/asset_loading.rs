@@ -14,8 +14,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::state::game_state::GameState;
 
-use super::block_materials::ArrayTextureMaterial;
-
 #[derive(Resource, Debug, Clone)]
 struct LoadingTextureAtlas {
     unlocalized_name: String,
@@ -48,118 +46,15 @@ impl LoadingTextureAtlas {
 }
 
 #[derive(Debug, Event)]
-struct AssetsDoneLoadingEvent;
+/// Send this whenever you register a loader and want to signify that your assets are done loading
+pub struct AssetsDoneLoadingEvent;
 
 #[derive(Debug, Event)]
-struct AllTexturesDoneLoadingEvent;
+/// Sent whenever all the textures are done being loaded into the `CosmosTextureAtlas`
+pub struct AllTexturesDoneLoadingEvent;
 
 #[derive(Resource, Debug)]
 struct AssetsLoadingID(usize);
-
-#[derive(Hash, Clone, Copy, Debug, PartialEq, Eq)]
-pub enum MaterialType {
-    Normal,
-    Unlit,
-    FarAway,
-}
-
-#[derive(Event)]
-pub struct RemoveAllMaterialsEvent {
-    pub entity: Entity,
-}
-
-#[derive(Event)]
-/// This event is sent whenever a specific material must be added
-pub struct AddMaterialEvent {
-    pub entity: Entity,
-    pub add_material_id: u16,
-    pub material_type: MaterialType,
-}
-
-pub fn add_materials() {}
-pub fn remove_materials() {}
-
-#[derive(Resource, Reflect, Debug, Clone)]
-/// This stores the texture atlas for all blocks in the game.
-///
-/// Eventually this will be redone to allow for multiple atlases, but for now this works fine.
-pub struct MaterialDefinition {
-    // /// The main material used to draw blocks
-    // pub material: Handle<M>,
-    // /// The material used to render things far away
-    // pub far_away_material: Handle<M>,
-    // /// The unlit version of the main material
-    // pub unlit_material: Handle<M>,
-    id: u16,
-    unlocalized_name: String,
-}
-impl MaterialDefinition {
-    /// Creates a new material definition
-    pub fn new(unlocalized_name: impl Into<String>) -> Self {
-        Self {
-            id: 0,
-            unlocalized_name: unlocalized_name.into(),
-        }
-    }
-}
-
-// impl<M: Material> MaterialDefinition<M> {
-//     /// Creates a new material definition
-//     pub fn new(
-//         unlocalized_name: String,
-//         material: Handle<ArrayTextureMaterial>,
-//         lod_material: Handle<ArrayTextureMaterial>,
-//         unlit_material: Handle<ArrayTextureMaterial>,
-//         atlas: CosmosTextureAtlas,
-//     ) -> Self {
-//         Self {
-//             id: 0,
-//             material,
-//             far_away_material: lod_material,
-//             unlit_material,
-//             unlocalized_name,
-//         }
-//     }
-
-//     #[inline]
-//     /// Gets the material for this that responds to light (if applicable. Feel free to return an unlit material if this material doesn't care)
-//     pub fn lit_material(&self) -> &Handle<ArrayTextureMaterial> {
-//         &self.material
-//     }
-
-//     #[inline]
-//     /// Gets the material for this that does not respond to light
-//     pub fn unlit_material(&self) -> &Handle<ArrayTextureMaterial> {
-//         &self.unlit_material
-//     }
-
-//     #[inline]
-//     /// Gets the material for this that should be used for far away (lod) blocks
-//     pub fn far_away_material(&self) -> &Handle<ArrayTextureMaterial> {
-//         &self.far_away_material
-//     }
-// }
-
-impl Identifiable for MaterialDefinition {
-    fn id(&self) -> u16 {
-        self.id
-    }
-
-    fn set_numeric_id(&mut self, id: u16) {
-        self.id = id;
-    }
-
-    fn unlocalized_name(&self) -> &str {
-        self.unlocalized_name.as_str()
-    }
-}
-
-#[derive(Resource, Reflect, Debug)]
-/// This contains the material for illuminated blocks.
-pub struct IlluminatedMaterial {
-    /// The material for unlit blocks
-    pub material: Handle<ArrayTextureMaterial>,
-}
 
 fn setup_textures(
     mut commands: Commands,
@@ -305,114 +200,6 @@ fn check_assets_ready(
         _ => {
             // NotLoaded/Loading: not fully ready yet
         }
-    }
-}
-
-fn create_main_material(image_handle: Handle<Image>, unlit: bool) -> ArrayTextureMaterial {
-    ArrayTextureMaterial {
-        base_color_texture: Some(image_handle),
-        alpha_mode: AlphaMode::Mask(0.5),
-        unlit,
-        metallic: 0.0,
-        reflectance: 0.0,
-        perceptual_roughness: 1.0,
-        ..Default::default()
-    }
-}
-
-fn create_transparent_material(image_handle: Handle<Image>, unlit: bool) -> ArrayTextureMaterial {
-    ArrayTextureMaterial {
-        base_color_texture: Some(image_handle),
-        alpha_mode: AlphaMode::Add,
-        unlit,
-        metallic: 0.0,
-        reflectance: 0.0,
-        perceptual_roughness: 1.0,
-        ..Default::default()
-    }
-}
-
-fn respond_to_add_materials_event(
-    material_registry: Res<Registry<MaterialDefinition>>,
-    mut commands: Commands,
-    mut event_reader: EventReader<AddMaterialEvent>,
-
-    default_material: Res<DefaultMaterial>,
-    unlit_material: Res<UnlitMaterial>,
-    transparent_material: Res<TransparentMaterial>,
-    unlit_transparent_material: Res<UnlitTransparentMaterial>,
-) {
-    for ev in event_reader.iter() {
-        let mat = material_registry.from_numeric_id(ev.add_material_id);
-
-        match mat.unlocalized_name() {
-            "cosmos:main" => {
-                commands.entity(ev.entity).insert(match ev.material_type {
-                    MaterialType::Normal => default_material.0.clone(),
-                    MaterialType::Unlit => unlit_material.0.clone(),
-                    MaterialType::FarAway => default_material.0.clone(),
-                });
-            }
-            "cosmos:illuminated" => {
-                commands.entity(ev.entity).insert(match ev.material_type {
-                    MaterialType::Normal => unlit_material.0.clone(),
-                    MaterialType::Unlit => unlit_material.0.clone(),
-                    MaterialType::FarAway => unlit_material.0.clone(),
-                });
-            }
-            "cosmos:transparent" => {
-                commands.entity(ev.entity).insert(match ev.material_type {
-                    MaterialType::Normal => transparent_material.0.clone(),
-                    MaterialType::Unlit => unlit_transparent_material.0.clone(),
-                    MaterialType::FarAway => default_material.0.clone(),
-                });
-            }
-            _ => {}
-        }
-    }
-}
-
-fn respond_to_remove_materails_event(mut event_reader: EventReader<RemoveAllMaterialsEvent>, mut commands: Commands) {
-    for ev in event_reader.iter() {
-        commands.entity(ev.entity).remove::<Handle<ArrayTextureMaterial>>();
-    }
-}
-
-#[derive(Resource)]
-struct DefaultMaterial(Handle<ArrayTextureMaterial>);
-#[derive(Resource)]
-struct UnlitMaterial(Handle<ArrayTextureMaterial>);
-#[derive(Resource)]
-struct TransparentMaterial(Handle<ArrayTextureMaterial>);
-#[derive(Resource)]
-struct UnlitTransparentMaterial(Handle<ArrayTextureMaterial>);
-
-fn create_materials(
-    mut commands: Commands,
-    mut material_registry: ResMut<Registry<MaterialDefinition>>,
-    mut materials: ResMut<Assets<ArrayTextureMaterial>>,
-    event_reader: EventReader<AllTexturesDoneLoadingEvent>,
-    mut event_writer: EventWriter<AssetsDoneLoadingEvent>,
-    texture_atlases: Res<Registry<CosmosTextureAtlas>>,
-) {
-    if !event_reader.is_empty() {
-        if let Some(atlas) = texture_atlases.from_id("cosmos:main") {
-            let default_material = materials.add(create_main_material(atlas.texture_atlas.texture.clone(), false));
-            let unlit_default_material = materials.add(create_main_material(atlas.texture_atlas.texture.clone(), true));
-            let transparent_material = materials.add(create_transparent_material(atlas.texture_atlas.texture.clone(), false));
-            let unlit_transparent_material = materials.add(create_transparent_material(atlas.texture_atlas.texture.clone(), true));
-
-            commands.insert_resource(DefaultMaterial(default_material));
-            commands.insert_resource(UnlitMaterial(unlit_default_material));
-            commands.insert_resource(TransparentMaterial(transparent_material));
-            commands.insert_resource(UnlitTransparentMaterial(unlit_transparent_material));
-
-            material_registry.register(MaterialDefinition::new("cosmos:main"));
-            material_registry.register(MaterialDefinition::new("cosmos:illuminated"));
-            material_registry.register(MaterialDefinition::new("cosmos:transparent"));
-        }
-
-        event_writer.send(AssetsDoneLoadingEvent);
     }
 }
 
@@ -588,7 +375,6 @@ pub fn load_block_rendering_information(
 pub(super) fn register(app: &mut App) {
     registry::create_registry::<BlockTextureIndex>(app);
     registry::create_registry::<LoadingTextureAtlas>(app);
-    registry::create_registry::<MaterialDefinition>(app);
     registry::create_registry::<BlockRenderingInfo>(app);
     registry::create_registry::<CosmosTextureAtlas>(app);
 
@@ -599,21 +385,9 @@ pub(super) fn register(app: &mut App) {
             (
                 check_assets_ready.run_if(resource_exists::<Registry<LoadingTextureAtlas>>()),
                 assets_done_loading,
-                create_materials,
             )
                 .run_if(in_state(GameState::PostLoading)),
         )
         .add_systems(OnEnter(GameState::PostLoading), setup_textures)
-        .add_systems(OnExit(GameState::PostLoading), load_block_rendering_information)
-        .add_event::<RemoveAllMaterialsEvent>()
-        .add_event::<AddMaterialEvent>()
-        .add_systems(Update, (remove_materials, add_materials).chain())
-        .add_systems(
-            Update,
-            (
-                respond_to_remove_materails_event.after(remove_materials).before(add_materials),
-                respond_to_add_materials_event.after(add_materials),
-            )
-                .run_if(in_state(GameState::Playing)),
-        );
+        .add_systems(OnExit(GameState::PostLoading), load_block_rendering_information);
 }
