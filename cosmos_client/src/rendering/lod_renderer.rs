@@ -71,8 +71,8 @@ struct MeshInfo {
 
 impl MeshBuilder for MeshInfo {
     #[inline]
-    fn add_mesh_information(&mut self, mesh_info: &MeshInformation, position: Vec3, uvs: Rect) {
-        self.mesh_builder.add_mesh_information(mesh_info, position, uvs);
+    fn add_mesh_information(&mut self, mesh_info: &MeshInformation, position: Vec3, uvs: Rect, texture_index: u32) {
+        self.mesh_builder.add_mesh_information(mesh_info, position, uvs, texture_index);
     }
 
     fn build_mesh(self) -> Mesh {
@@ -308,6 +308,7 @@ impl ChunkRenderer {
                         &mesh_info,
                         offset * CHUNK_DIMENSIONSF + Vec3::new(center_offset_x * scale, center_offset_y * scale, center_offset_z * scale),
                         uvs,
+                        13,
                     );
 
                     if one_mesh_only {

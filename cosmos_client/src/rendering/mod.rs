@@ -4,7 +4,10 @@ use std::fs;
 
 use bevy::{
     prelude::*,
-    render::{mesh::Indices, render_resource::PrimitiveTopology},
+    render::{
+        mesh::{Indices, MeshVertexAttribute},
+        render_resource::{PrimitiveTopology, VertexFormat},
+    },
 };
 use cosmos_core::{
     block::{Block, BlockFace},
@@ -16,7 +19,10 @@ use cosmos_core::{
 };
 
 use crate::{
-    asset::asset_loading::{load_block_rendering_information, BlockRenderingInfo},
+    asset::{
+        asset_loading::{load_block_rendering_information, BlockRenderingInfo},
+        block_materials::ATTRIBUTE_TEXTURE_INDEX,
+    },
     state::game_state::GameState,
 };
 
@@ -60,6 +66,7 @@ pub struct CosmosMeshBuilder {
     uvs: Vec<[f32; 2]>,
     positions: Vec<[f32; 3]>,
     normals: Vec<[f32; 3]>,
+    array_texture_ids: Vec<u32>,
 }
 
 /// Used to create a mesh from many different combined `MeshInformation` objects.
@@ -67,7 +74,7 @@ pub struct CosmosMeshBuilder {
 /// Implemented by default in `CosmosMeshBuilder`
 pub trait MeshBuilder {
     /// Adds the information to this mesh builder
-    fn add_mesh_information(&mut self, mesh_info: &MeshInformation, position: Vec3, uvs: Rect);
+    fn add_mesh_information(&mut self, mesh_info: &MeshInformation, position: Vec3, uvs: Rect, texture_index: u32);
 
     /// Creates the bevy mesh from the information given so far
     fn build_mesh(self) -> Mesh;
@@ -75,17 +82,17 @@ pub trait MeshBuilder {
 
 impl MeshBuilder for CosmosMeshBuilder {
     #[inline]
-    fn add_mesh_information(&mut self, mesh_info: &MeshInformation, position: Vec3, uvs: Rect) {
+    fn add_mesh_information(&mut self, mesh_info: &MeshInformation, position: Vec3, uvs: Rect, texture_index: u32) {
         let diff = [uvs.max.x - uvs.min.x, uvs.max.y - uvs.min.y];
 
         let mut max_index = -1;
 
-        self.positions.extend(
-            mesh_info
-                .positions
-                .iter()
-                .map(|x| [x[0] + position.x, x[1] + position.y, x[2] + position.z]),
-        );
+        self.positions.extend(mesh_info.positions.iter().map(|x| {
+            // We need another texture index vertex for every position we push
+            self.array_texture_ids.push(texture_index);
+
+            [x[0] + position.x, x[1] + position.y, x[2] + position.z]
+        }));
         self.normals.extend(mesh_info.normals.iter());
 
         self.uvs.extend(
@@ -110,6 +117,7 @@ impl MeshBuilder for CosmosMeshBuilder {
         mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, self.positions);
         mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, self.normals);
         mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, self.uvs);
+        mesh.insert_attribute(ATTRIBUTE_TEXTURE_INDEX, self.array_texture_ids);
 
         mesh
     }

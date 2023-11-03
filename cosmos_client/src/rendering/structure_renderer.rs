@@ -460,8 +460,8 @@ struct MeshInfo {
 
 impl MeshBuilder for MeshInfo {
     #[inline]
-    fn add_mesh_information(&mut self, mesh_info: &MeshInformation, position: Vec3, uvs: Rect) {
-        self.mesh_builder.add_mesh_information(mesh_info, position, uvs);
+    fn add_mesh_information(&mut self, mesh_info: &MeshInformation, position: Vec3, uvs: Rect, texture_index: u32) {
+        self.mesh_builder.add_mesh_information(mesh_info, position, uvs, texture_index);
     }
 
     fn build_mesh(self) -> Mesh {
@@ -692,7 +692,12 @@ impl ChunkRenderer {
                         *norm = rotation.mul_vec3((*norm).into()).into();
                     }
 
-                    mesh_builder.add_mesh_information(&mesh_info, Vec3::new(center_offset_x, center_offset_y, center_offset_z), uvs);
+                    mesh_builder.add_mesh_information(
+                        &mesh_info,
+                        Vec3::new(center_offset_x, center_offset_y, center_offset_z),
+                        uvs,
+                        image_index as u32,
+                    );
 
                     if one_mesh_only {
                         break;

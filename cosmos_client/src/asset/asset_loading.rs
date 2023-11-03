@@ -134,12 +134,14 @@ impl MaterialDefinition {
         let padding_x = self.padding as f32 / atlas.size.x;
         let padding_y = self.padding as f32 / atlas.size.y;
 
-        Rect::new(
-            rect.min.x / atlas.size.x + padding_x,
-            rect.min.y / atlas.size.y + padding_y,
-            rect.max.x / atlas.size.x - padding_x,
-            rect.max.y / atlas.size.y - padding_y,
-        )
+        // Rect::new(
+        //     rect.min.x / atlas.size.x + padding_x,
+        //     rect.min.y / atlas.size.y + padding_y,
+        //     rect.max.x / atlas.size.x - padding_x,
+        //     rect.max.y / atlas.size.y - padding_y,
+        // )
+
+        Rect::new(0.0, 0.0, 1.0, 1.0)
     }
 }
 

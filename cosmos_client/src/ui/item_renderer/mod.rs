@@ -156,7 +156,7 @@ fn render_items(
 
                 let uvs = material.uvs_for_index(image_index);
 
-                mesh_builder.add_mesh_information(&mesh_info, Vec3::ZERO, uvs);
+                mesh_builder.add_mesh_information(&mesh_info, Vec3::ZERO, uvs, image_index as u32);
             }
         } else {
             let Some(mut mesh_info) = block_mesh_info.info_for_whole_block().cloned() else {
@@ -171,7 +171,7 @@ fn render_items(
 
             let uvs = material.uvs_for_index(image_index);
 
-            mesh_builder.add_mesh_information(&mesh_info, Vec3::ZERO, uvs);
+            mesh_builder.add_mesh_information(&mesh_info, Vec3::ZERO, uvs, image_index as u32);
         }
 
         commands.entity(to_create).insert((
