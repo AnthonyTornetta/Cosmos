@@ -1,7 +1,4 @@
-#import bevy_pbr::mesh_view_bindings    view
 #import bevy_pbr::pbr_types             STANDARD_MATERIAL_FLAGS_DOUBLE_SIDED_BIT
-#import bevy_core_pipeline::tonemapping tone_mapping
-#import bevy_pbr::mesh_bindings         mesh
 #import bevy_pbr::mesh_functions as mesh_functions
 
 #import bevy_pbr::pbr_functions as pbr_functions
