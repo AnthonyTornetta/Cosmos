@@ -16,9 +16,10 @@ use cosmos_core::{
 
 use crate::{
     asset::{
-        asset_loading::{BlockTextureIndex, MaterialDefinition},
+        asset_loading::{add_materials, remove_materials, AddMaterialEvent, BlockTextureIndex, MaterialType},
         block_materials::ArrayTextureMaterial,
     },
+    materials::BlockMaterialMapping,
     rendering::{BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder},
 };
 
@@ -75,13 +76,15 @@ fn render_items(
     items: Res<Registry<Item>>,
     blocks: Res<Registry<Block>>,
 
-    materials_registry: Res<ManyToOneRegistry<Block, MaterialDefinition>>,
+    materials_registry: Res<ManyToOneRegistry<Block, BlockMaterialMapping>>,
     block_textures: Res<Registry<BlockTextureIndex>>,
     block_meshes: Res<BlockMeshRegistry>,
 
     mut removed_render_items: RemovedComponents<RenderItem>,
     changed_render_items: Query<(Entity, &RenderItem, &GlobalTransform), Or<(Changed<RenderItem>, Changed<GlobalTransform>)>>,
     rendered_items: Query<(Entity, &RenderedItem)>,
+
+    mut event_writer: EventWriter<AddMaterialEvent>,
 ) {
     for entity in removed_render_items.iter() {
         if let Some((rendered_item_entity, _)) = rendered_items
@@ -180,10 +183,16 @@ fn render_items(
                 item_id: changed_render_item.item_id,
             },
             meshes.add(mesh_builder.build_mesh()),
-            material.unlit_material().clone(),
+            // material.unlit_material().clone(),
             RenderLayers::from_layers(&[INVENTORY_SLOT_LAYER]),
             Name::new(format!("Rendered Inventory Item ({})", changed_render_item.item_id)),
         ));
+
+        event_writer.send(AddMaterialEvent {
+            entity: to_create,
+            add_material_id: material.material_id(),
+            material_type: MaterialType::Unlit,
+        });
     }
 }
 
@@ -228,7 +237,10 @@ fn reposition_ui_items(query: Query<&Window, With<PrimaryWindow>>, mut rendered_
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        (update_rendered_items_transforms, reposition_ui_items, render_items).chain(),
+        (update_rendered_items_transforms, reposition_ui_items, render_items)
+            .before(remove_materials)
+            .before(add_materials)
+            .chain(),
     )
     .add_systems(Startup, create_ui_camera)
     .register_type::<RenderItem>()

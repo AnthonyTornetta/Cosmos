@@ -3,7 +3,6 @@
 use std::{
     hash::Hash,
     marker::PhantomData,
-    mem::size_of,
     sync::{Arc, RwLock, RwLockReadGuard},
 };
 

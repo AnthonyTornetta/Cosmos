@@ -572,5 +572,6 @@ impl Material for ArrayTextureMaterial {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_plugins(MaterialPlugin::<ArrayTextureMaterial>::default());
+    app.add_plugins(MaterialPlugin::<ArrayTextureMaterial>::default())
+        .register_type::<ArrayTextureMaterial>();
 }

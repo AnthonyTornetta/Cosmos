@@ -1,15 +1,17 @@
-use crate::asset::block_materials::ArrayTextureMaterial;
 use crate::block::lighting::{BlockLightProperties, BlockLighting};
+use crate::materials::BlockMaterialMapping;
 use crate::netty::flags::LocalPlayer;
 use crate::state::game_state::GameState;
 use crate::structure::planet::unload_chunks_far_from_players;
 use bevy::prelude::{
-    in_state, warn, App, BuildChildren, Component, Deref, DerefMut, DespawnRecursiveExt, EventReader, GlobalTransform, IntoSystemConfigs,
-    MaterialMeshBundle, Mesh, PointLight, PointLightBundle, Quat, Rect, Resource, Transform, Update, Vec3, With,
+    in_state, warn, App, BuildChildren, Component, ComputedVisibility, Deref, DerefMut, DespawnRecursiveExt, EventReader, EventWriter,
+    GlobalTransform, IntoSystemConfigs, Mesh, PointLight, PointLightBundle, Quat, Rect, Resource, Transform, Update, Vec3, Visibility,
+    With,
 };
 use bevy::reflect::Reflect;
 use bevy::render::primitives::Aabb;
 use bevy::tasks::{AsyncComputeTaskPool, Task};
+use bevy::transform::TransformBundle;
 use bevy::utils::hashbrown::HashMap;
 use cosmos_core::block::{Block, BlockFace};
 use cosmos_core::events::block_events::BlockChangedEvent;
@@ -28,7 +30,9 @@ use std::collections::HashSet;
 use std::f32::consts::PI;
 use std::mem::swap;
 
-use crate::asset::asset_loading::{BlockTextureIndex, MaterialDefinition};
+use crate::asset::asset_loading::{
+    add_materials, remove_materials, AddMaterialEvent, BlockTextureIndex, MaterialType, RemoveAllMaterialsEvent,
+};
 use crate::{Assets, Commands, Entity, Handle, Query, Res, ResMut};
 
 use super::{BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder, MeshInformation, ReadOnlyBlockMeshRegistry};
@@ -36,7 +40,7 @@ use super::{BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder, MeshInformation, 
 #[derive(Debug)]
 struct MeshMaterial {
     mesh: Mesh,
-    material: Handle<ArrayTextureMaterial>,
+    material_id: u16,
 }
 
 #[derive(Debug)]
@@ -180,6 +184,8 @@ fn poll_rendering_chunks(
     mut meshes: ResMut<Assets<Mesh>>,
     lights_query: Query<&LightsHolder>,
     chunk_meshes_query: Query<&ChunkMeshes>,
+    mut event_writer: EventWriter<AddMaterialEvent>,
+    mut remove_all_materials: EventWriter<RemoveAllMaterialsEvent>,
 ) {
     let mut todo = Vec::with_capacity(rendering_chunks.capacity());
 
@@ -281,10 +287,9 @@ fn poll_rendering_chunks(
 
             // If the chunk previously only had one chunk mesh, then it would be on
             // the chunk entity instead of child entities
-            commands
-                .entity(entity)
-                .remove::<Handle<Mesh>>()
-                .remove::<Handle<ArrayTextureMaterial>>();
+            commands.entity(entity).remove::<Handle<Mesh>>();
+
+            remove_all_materials.send(RemoveAllMaterialsEvent { entity });
 
             let mut chunk_meshes_component = ChunkMeshes::default();
 
@@ -292,29 +297,38 @@ fn poll_rendering_chunks(
                 for mesh_material in chunk_mesh.mesh_materials {
                     let mesh = meshes.add(mesh_material.mesh);
 
-                    let ent = if let Some(ent) = old_mesh_entities.pop() {
-                        commands.entity(ent).insert(mesh).insert(mesh_material.material);
+                    // let ent = if let Some(ent) = old_mesh_entities.pop() {
+                    //     // commands.entity(ent).insert(mesh).insert(mesh_material.material_id);
 
-                        ent
-                    } else {
-                        let s = (CHUNK_DIMENSIONS / 2) as f32;
+                    //     ent
+                    // } else {
+                    let s = (CHUNK_DIMENSIONS / 2) as f32;
 
-                        let ent = commands
-                            .spawn((
-                                MaterialMeshBundle {
-                                    mesh,
-                                    material: mesh_material.material,
-                                    ..Default::default()
-                                },
-                                // Remove this once https://github.com/bevyengine/bevy/issues/4294 is done (bevy 0.12 released)
-                                Aabb::from_min_max(Vec3::new(-s, -s, -s), Vec3::new(s, s, s)),
-                            ))
-                            .id();
+                    let ent = commands
+                        .spawn((
+                            // MaterialMeshBundle {
+                            //     mesh,
+                            //     // material: mesh_material.material_id,
+                            //     ..Default::default()
+                            // },
+                            mesh,
+                            TransformBundle::default(),
+                            Visibility::default(),
+                            ComputedVisibility::default(),
+                            // Remove this once https://github.com/bevyengine/bevy/issues/4294 is done (bevy 0.12 released)
+                            Aabb::from_min_max(Vec3::new(-s, -s, -s), Vec3::new(s, s, s)),
+                        ))
+                        .id();
 
-                        entities_to_add.push(ent);
+                    entities_to_add.push(ent);
 
-                        ent
-                    };
+                    // };
+
+                    event_writer.send(AddMaterialEvent {
+                        entity: ent,
+                        add_material_id: mesh_material.material_id,
+                        material_type: MaterialType::Normal,
+                    });
 
                     chunk_meshes_component.0.push(ent);
                 }
@@ -329,10 +343,16 @@ fn poll_rendering_chunks(
 
                 commands.entity(entity).insert((
                     mesh,
-                    mesh_material.material,
+                    // mesh_material.material_id,
                     // Remove this once https://github.com/bevyengine/bevy/issues/4294 is done (bevy 0.12 released)
                     Aabb::from_min_max(Vec3::new(-s, -s, -s), Vec3::new(s, s, s)),
                 ));
+
+                event_writer.send(AddMaterialEvent {
+                    entity,
+                    add_material_id: mesh_material.material_id,
+                    material_type: MaterialType::Normal,
+                });
             }
 
             // Any leftover entities are useless now, so kill them
@@ -361,7 +381,7 @@ fn monitor_needs_rendered_system(
     mut commands: Commands,
     structure_query: Query<&Structure>,
     blocks: Res<ReadOnlyRegistry<Block>>,
-    materials: Res<ReadOnlyManyToOneRegistry<Block, MaterialDefinition>>,
+    materials: Res<ReadOnlyManyToOneRegistry<Block, BlockMaterialMapping>>,
     meshes_registry: Res<ReadOnlyBlockMeshRegistry>,
     lighting: Res<ReadOnlyRegistry<BlockLighting>>,
     block_textures: Res<ReadOnlyRegistry<BlockTextureIndex>>,
@@ -470,7 +490,7 @@ impl MeshBuilder for MeshInfo {
 
 #[derive(Default, Debug, Reflect)]
 struct ChunkRenderer {
-    meshes: HashMap<Handle<ArrayTextureMaterial>, MeshInfo>,
+    meshes: HashMap<u16, MeshInfo>,
     lights: HashMap<ChunkBlockCoordinate, BlockLightProperties>,
 }
 
@@ -482,7 +502,7 @@ impl ChunkRenderer {
     /// Renders a chunk into mesh information that can then be turned into a bevy mesh
     fn render(
         &mut self,
-        materials: &ManyToOneRegistry<Block, MaterialDefinition>,
+        materials: &ManyToOneRegistry<Block, BlockMaterialMapping>,
         lighting: &Registry<BlockLighting>,
         chunk: &Chunk,
         left: Option<&Chunk>,
@@ -638,15 +658,17 @@ impl ChunkRenderer {
                     continue;
                 };
 
+                let mat_id = material.material_id();
+
                 let Some(mesh) = meshes.get_value(block) else {
                     continue;
                 };
 
-                if !self.meshes.contains_key(material.lit_material()) {
-                    self.meshes.insert(material.lit_material().clone(), Default::default());
+                if !self.meshes.contains_key(&mat_id) {
+                    self.meshes.insert(mat_id, Default::default());
                 }
 
-                let mesh_builder = self.meshes.get_mut(material.lit_material()).unwrap();
+                let mesh_builder = self.meshes.get_mut(&mat_id).unwrap();
 
                 let rotation = block_info.get_rotation();
 
@@ -718,7 +740,10 @@ impl ChunkRenderer {
         for (material, chunk_mesh_info) in self.meshes {
             let mesh = chunk_mesh_info.build_mesh();
 
-            mesh_materials.push(MeshMaterial { material, mesh });
+            mesh_materials.push(MeshMaterial {
+                material_id: material,
+                mesh,
+            });
         }
 
         let lights = self.lights;
@@ -733,7 +758,9 @@ pub(super) fn register(app: &mut App) {
         (monitor_block_updates_system, monitor_needs_rendered_system, poll_rendering_chunks)
             .chain()
             .run_if(in_state(GameState::Playing))
-            .before(unload_chunks_far_from_players),
+            .before(unload_chunks_far_from_players)
+            .before(remove_materials)
+            .before(add_materials),
     )
     // .add_system(add_renderer)
     .init_resource::<RenderingChunks>()

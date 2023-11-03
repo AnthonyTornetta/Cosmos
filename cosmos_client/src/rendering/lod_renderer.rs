@@ -34,10 +34,8 @@ use cosmos_core::{
 use rayon::prelude::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
 
 use crate::{
-    asset::{
-        asset_loading::{BlockTextureIndex, MaterialDefinition},
-        block_materials::ArrayTextureMaterial,
-    },
+    asset::asset_loading::{add_materials, remove_materials, AddMaterialEvent, BlockTextureIndex, MaterialType},
+    materials::BlockMaterialMapping,
     state::game_state::GameState,
 };
 
@@ -46,7 +44,7 @@ use super::{BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder, MeshInformation, 
 #[derive(Debug)]
 struct MeshMaterial {
     mesh: Mesh,
-    material: Handle<ArrayTextureMaterial>,
+    material_id: u16,
 }
 
 #[derive(Debug)]
@@ -82,7 +80,7 @@ impl MeshBuilder for MeshInfo {
 
 #[derive(Default, Debug, Reflect)]
 struct ChunkRenderer {
-    meshes: HashMap<Handle<ArrayTextureMaterial>, MeshInfo>,
+    meshes: HashMap<u16, MeshInfo>,
     scale: f32,
 }
 
@@ -96,7 +94,7 @@ impl ChunkRenderer {
         &mut self,
         scale: f32,
         offset: Vec3,
-        materials: &ManyToOneRegistry<Block, MaterialDefinition>,
+        materials: &ManyToOneRegistry<Block, BlockMaterialMapping>,
         lod: &LodChunk,
         left: Option<&LodChunk>,
         right: Option<&LodChunk>,
@@ -236,21 +234,17 @@ impl ChunkRenderer {
                     continue;
                 };
 
+                let mat_id = material_def.material_id();
+
                 let Some(mesh) = meshes.get_value(block) else {
                     continue;
                 };
 
-                let material_here = if scale > 2.0 {
-                    material_def.far_away_material()
-                } else {
-                    material_def.lit_material()
-                };
-
-                if !self.meshes.contains_key(material_here) {
-                    self.meshes.insert(material_here.clone(), Default::default());
+                if !self.meshes.contains_key(&mat_id) {
+                    self.meshes.insert(mat_id, Default::default());
                 }
 
-                let mesh_builder = self.meshes.get_mut(material_here).unwrap();
+                let mesh_builder = self.meshes.get_mut(&mat_id).unwrap();
 
                 let rotation = block_info.get_rotation();
 
@@ -325,7 +319,10 @@ impl ChunkRenderer {
         for (material, chunk_mesh_info) in self.meshes {
             let mesh = chunk_mesh_info.build_mesh();
 
-            mesh_materials.push(MeshMaterial { material, mesh });
+            mesh_materials.push(MeshMaterial {
+                material_id: material,
+                mesh,
+            });
         }
 
         LodMesh {
@@ -343,7 +340,7 @@ fn recursively_process_lod(
     offset: Vec3,
     to_process: &Mutex<Option<Vec<(LodMesh, Vec3, CoordinateType)>>>,
     blocks: &Registry<Block>,
-    materials: &ManyToOneRegistry<Block, MaterialDefinition>,
+    materials: &ManyToOneRegistry<Block, BlockMaterialMapping>,
     meshes_registry: &BlockMeshRegistry,
     block_textures: &Registry<BlockTextureIndex>,
     scale: f32,
@@ -524,6 +521,7 @@ fn poll_rendering_lods(
     mut lod_query: Query<&mut Lod>,
 
     mut meshes_to_compute: ResMut<MeshesToCompute>,
+    mut event_writer: EventWriter<AddMaterialEvent>,
 ) {
     let mut todo = Vec::with_capacity(rendering_lods.0.capacity());
 
@@ -552,16 +550,20 @@ fn poll_rendering_lods(
 
                     let ent = commands
                         .spawn((
-                            MaterialMeshBundle {
-                                material: mesh_material.material,
-                                transform: Transform::from_translation(offset),
-                                ..Default::default()
-                            },
+                            TransformBundle::from_transform(Transform::from_translation(offset)),
+                            Visibility::default(),
+                            ComputedVisibility::default(),
                             // Remove this once https://github.com/bevyengine/bevy/issues/4294 is done (bevy 0.12 released)
                             Aabb::from_min_max(Vec3::new(-s, -s, -s), Vec3::new(s, s, s)),
                             RenderedLod { scale },
                         ))
                         .id();
+
+                    event_writer.send(AddMaterialEvent {
+                        entity: ent,
+                        add_material_id: mesh_material.material_id,
+                        material_type: if scale >= 2 { MaterialType::FarAway } else { MaterialType::Normal },
+                    });
 
                     entities_to_add.push((ent, offset, scale, mesh_material.mesh));
 
@@ -675,7 +677,7 @@ fn monitor_lods_needs_rendered_system(lods_needed: Query<Entity, Changed<Lod>>, 
 /// Performance hot spot
 fn trigger_lod_render(
     blocks: Res<ReadOnlyRegistry<Block>>,
-    materials: Res<ReadOnlyManyToOneRegistry<Block, MaterialDefinition>>,
+    materials: Res<ReadOnlyManyToOneRegistry<Block, BlockMaterialMapping>>,
     meshes_registry: Res<ReadOnlyBlockMeshRegistry>,
     block_textures: Res<ReadOnlyRegistry<BlockTextureIndex>>,
     lods_query: Query<(&ReadOnlyLod, &Structure)>,
@@ -762,6 +764,8 @@ pub(super) fn register(app: &mut App) {
             compute_meshes_and_kill_dead_entities,
         )
             .chain()
+            .before(remove_materials)
+            .before(add_materials)
             .run_if(in_state(GameState::Playing)),
     )
     .insert_resource(RenderingLods::default())
