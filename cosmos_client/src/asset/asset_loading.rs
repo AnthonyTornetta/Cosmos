@@ -4,11 +4,7 @@
 
 use std::{fs, path::Path};
 
-use bevy::{
-    prelude::*,
-    render::render_resource::{Extent3d, TextureDimension, TextureFormat},
-    utils::HashMap,
-};
+use bevy::{prelude::*, utils::HashMap};
 use cosmos_core::{
     block::{Block, BlockFace},
     loader::{AddLoadingEvent, DoneLoadingEvent, LoadingManager},
@@ -173,67 +169,6 @@ fn assets_done_loading(
             commands.remove_resource::<AssetsLoadingID>();
         }
     }
-}
-
-fn expand_image(image: &Image, padding: u32) -> Image {
-    let mut data: Vec<u8> = Vec::new();
-
-    let mut i = 0;
-
-    let image_size_x = image.size().x as u32;
-    let image_size_y = image.size().y as u32;
-
-    for y in 0..image_size_y as usize {
-        let mut n = match y % image_size_y as usize == 0 || (y + 1) % image_size_y as usize == 0 {
-            true => 1 + padding,
-            false => 1,
-        };
-
-        while n > 0 {
-            let og_i = i;
-
-            for x in 0..image_size_x as usize {
-                if x % image_size_x as usize == 0 || (x + 1) % image_size_x as usize == 0 {
-                    for _ in 0..(padding + 1) {
-                        data.push(image.data[i]);
-                        data.push(image.data[i + 1]);
-                        data.push(image.data[i + 2]);
-                        data.push(image.data[i + 3]);
-                    }
-                } else {
-                    data.push(image.data[i]);
-                    data.push(image.data[i + 1]);
-                    data.push(image.data[i + 2]);
-                    data.push(image.data[i + 3]);
-                }
-
-                i += 4;
-            }
-
-            n -= 1;
-
-            if n != 0 {
-                i = og_i;
-            }
-        }
-    }
-
-    let height = image_size_y + padding * 2;
-    let width = image_size_y + padding * 2;
-
-    // debug save
-    // image::save_buffer(&Path::new("image.png"), data.as_slice(), width, height, image::ColorType::Rgba8);
-
-    Image::new(
-        Extent3d {
-            height,
-            width,
-            depth_or_array_layers: 1,
-        },
-        TextureDimension::D2,
-        data,
-        TextureFormat::Rgba8UnormSrgb,
-    )
 }
 
 #[derive(Clone, Debug, Reflect)]

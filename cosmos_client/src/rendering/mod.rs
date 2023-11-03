@@ -4,10 +4,7 @@ use std::fs;
 
 use bevy::{
     prelude::*,
-    render::{
-        mesh::{Indices, MeshVertexAttribute},
-        render_resource::{PrimitiveTopology, VertexFormat},
-    },
+    render::{mesh::Indices, render_resource::PrimitiveTopology},
 };
 use cosmos_core::{
     block::{Block, BlockFace},

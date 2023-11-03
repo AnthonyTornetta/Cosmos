@@ -5,8 +5,7 @@ use crate::state::game_state::GameState;
 use crate::structure::planet::unload_chunks_far_from_players;
 use bevy::prelude::{
     in_state, warn, App, BuildChildren, Component, Deref, DerefMut, DespawnRecursiveExt, EventReader, GlobalTransform, IntoSystemConfigs,
-    MaterialMeshBundle, Mesh, PbrBundle, PointLight, PointLightBundle, Quat, Rect, Resource, StandardMaterial, Transform, Update, Vec3,
-    With,
+    MaterialMeshBundle, Mesh, PointLight, PointLightBundle, Quat, Rect, Resource, StandardMaterial, Transform, Update, Vec3, With,
 };
 use bevy::reflect::Reflect;
 use bevy::render::primitives::Aabb;
@@ -728,10 +727,21 @@ impl ChunkRenderer {
     }
 }
 
+fn remove_mat(query: Query<Entity, (With<ChunkEntity>, With<Handle<StandardMaterial>>)>, mut commands: Commands) {
+    for ent in query.iter() {
+        commands.entity(ent).remove::<Handle<StandardMaterial>>();
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        (monitor_block_updates_system, monitor_needs_rendered_system, poll_rendering_chunks)
+        (
+            monitor_block_updates_system,
+            remove_mat,
+            monitor_needs_rendered_system,
+            poll_rendering_chunks,
+        )
             .chain()
             .run_if(in_state(GameState::Playing))
             .before(unload_chunks_far_from_players),

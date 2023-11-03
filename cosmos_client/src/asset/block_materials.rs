@@ -1,7 +1,9 @@
+//! The material used by most blocks
+
 use bevy::{
     pbr::{MaterialPipeline, MaterialPipelineKey},
     prelude::*,
-    reflect::{TypePath, TypeUuid},
+    reflect::TypeUuid,
     render::{
         mesh::{MeshVertexAttribute, MeshVertexBufferLayout},
         render_resource::{AsBindGroup, RenderPipelineDescriptor, ShaderRef, SpecializedMeshPipelineError, VertexFormat},
@@ -9,7 +11,7 @@ use bevy::{
 };
 
 use bevy::{
-    pbr::{StandardMaterialFlags, PBR_PREPASS_SHADER_HANDLE},
+    pbr::StandardMaterialFlags,
     reflect::Reflect,
     render::{
         render_asset::RenderAssets,
@@ -17,50 +19,11 @@ use bevy::{
     },
 };
 
-// A "high" random id should be used for custom attributes to ensure consistent sorting and avoid collisions with other attributes.
-// See the MeshVertexAttribute docs for more info.
-pub const ATTRIBUTE_TEXTURE_INDEX: MeshVertexAttribute = //
+/// Specifies the texture index to use
+pub const ATTRIBUTE_TEXTURE_INDEX: MeshVertexAttribute =
+    // A "high" random id should be used for custom attributes to ensure consistent sorting and avoid collisions with other attributes.
+    // See the MeshVertexAttribute docs for more info.
     MeshVertexAttribute::new("ArrayTextureIndex", 923840841, VertexFormat::Uint32);
-
-// #[derive(AsBindGroup, Debug, Clone, TypeUuid, TypePath)]
-// #[uuid = "9c5a0ddf-1eaf-41b4-9832-ed736fd26af3"]
-// pub struct ArrayTextureMaterial {
-//     #[texture(0, dimension = "2d_array")]
-//     #[sampler(1)]
-//     pub array_texture: Handle<Image>,
-// }
-
-// impl Material for ArrayTextureMaterial {
-//     fn fragment_shader() -> ShaderRef {
-//         "cosmos/shaders/block.wgsl".into()
-//     }
-
-//     fn vertex_shader() -> ShaderRef {
-//         "cosmos/shaders/block.wgsl".into()
-//     }
-
-//     fn specialize(
-//         _pipeline: &MaterialPipeline<Self>,
-//         descriptor: &mut RenderPipelineDescriptor,
-//         layout: &MeshVertexBufferLayout,
-//         _key: MaterialPipelineKey<Self>,
-//     ) -> Result<(), SpecializedMeshPipelineError> {
-//         let vertex_layout = layout.get_layout(&[
-//             Mesh::ATTRIBUTE_POSITION.at_shader_location(0),
-//             Mesh::ATTRIBUTE_NORMAL.at_shader_location(1),
-//             Mesh::ATTRIBUTE_UV_0.at_shader_location(2),
-//             // Mesh::ATTRIBUTE_TANGENT.at_shader_location(3),
-//             // Mesh::ATTRIBUTE_COLOR.at_shader_location(4),
-//             ATTRIBUTE_TEXTURE_INDEX.at_shader_location(5),
-//         ])?;
-//         descriptor.vertex.buffers = vec![vertex_layout];
-//         Ok(())
-//     }
-// }
-
-pub(super) fn register(app: &mut App) {
-    app.add_plugins(MaterialPlugin::<ArrayTextureMaterial>::default());
-}
 
 /// A material with "standard" properties used in PBR lighting
 /// Standard property values with pictures here
@@ -69,7 +32,7 @@ pub(super) fn register(app: &mut App) {
 /// May be created directly from a [`Color`] or an [`Image`].
 #[derive(AsBindGroup, Reflect, Debug, Clone, TypeUuid)]
 #[uuid = "9c5a0ddf-1eaf-41b4-9832-ed736fd26af3"]
-#[bind_group_data(StandardMaterialKey)]
+#[bind_group_data(ArrayTextureMaterialKey)]
 #[uniform(0, ArrayTextureMaterialUniform)]
 #[reflect(Default, Debug)]
 pub struct ArrayTextureMaterial {
@@ -94,7 +57,7 @@ pub struct ArrayTextureMaterial {
     /// the texture. For example, setting `base_color` to pure red will
     /// tint the texture red.
     ///
-    /// [`base_color`]: StandardMaterial::base_color
+    /// [`base_color`]: ArrayTextureMaterial::base_color
     #[texture(1, dimension = "2d_array")]
     #[sampler(2)]
     pub base_color_texture: Option<Handle<Image>>,
@@ -123,7 +86,7 @@ pub struct ArrayTextureMaterial {
     /// Meaning that you should set [`emissive`] to [`Color::WHITE`]
     /// if you want to use the full range of color of the emissive texture.
     ///
-    /// [`emissive`]: StandardMaterial::emissive
+    /// [`emissive`]: ArrayTextureMaterial::emissive
     #[texture(3)]
     #[sampler(4)]
     pub emissive_texture: Option<Handle<Image>>,
@@ -170,8 +133,8 @@ pub struct ArrayTextureMaterial {
     /// `metallic_roughness_texture` values for your material, make sure to set [`metallic`]
     /// and [`perceptual_roughness`] to `1.0`.
     ///
-    /// [`metallic`]: StandardMaterial::metallic
-    /// [`perceptual_roughness`]: StandardMaterial::perceptual_roughness
+    /// [`metallic`]: ArrayTextureMaterial::metallic
+    /// [`perceptual_roughness`]: ArrayTextureMaterial::perceptual_roughness
     #[texture(5)]
     #[sampler(6)]
     pub metallic_roughness_texture: Option<Handle<Image>>,
@@ -195,7 +158,7 @@ pub struct ArrayTextureMaterial {
     ///
     /// # Notes
     ///
-    /// Normal mapping with `StandardMaterial` and the core bevy PBR shaders requires:
+    /// Normal mapping with `ArrayTextureMaterial` and the core bevy PBR shaders requires:
     /// - A normal map texture
     /// - Vertex UVs
     /// - Vertex tangents
@@ -325,9 +288,9 @@ pub struct ArrayTextureMaterial {
     ///
     /// [this paper]: https://www.diva-portal.org/smash/get/diva2:831762/FULLTEXT01.pdf
     /// [parallax mapping]: https://en.wikipedia.org/wiki/Parallax_mapping
-    /// [`parallax_depth_scale`]: StandardMaterial::parallax_depth_scale
-    /// [`parallax_mapping_method`]: StandardMaterial::parallax_mapping_method
-    /// [`max_parallax_layer_count`]: StandardMaterial::max_parallax_layer_count
+    /// [`parallax_depth_scale`]: ArrayTextureMaterial::parallax_depth_scale
+    /// [`parallax_mapping_method`]: ArrayTextureMaterial::parallax_mapping_method
+    /// [`max_parallax_layer_count`]: ArrayTextureMaterial::max_parallax_layer_count
     #[texture(11)]
     #[sampler(12)]
     pub depth_map: Option<Handle<Image>>,
@@ -417,14 +380,14 @@ impl From<Handle<Image>> for ArrayTextureMaterial {
     }
 }
 
-/// The GPU representation of the uniform data of a [`StandardMaterial`].
+/// The GPU representation of the uniform data of a [`ArrayTextureMaterial`].
 #[derive(Clone, Default, ShaderType)]
 pub struct ArrayTextureMaterialUniform {
     /// Doubles as diffuse albedo for non-metallic, specular for metallic and a mix for everything
     /// in between.
     pub base_color: Vec4,
-    // Use a color for user friendliness even though we technically don't use the alpha channel
-    // Might be used in the future for exposure correction in HDR
+    /// Use a color for user friendliness even though we technically don't use the alpha channel
+    /// Might be used in the future for exposure correction in HDR
     pub emissive: Vec4,
     /// Linear perceptual roughness, clamped to [0.089, 1.0] in the shader
     /// Defaults to minimum of 0.089
@@ -439,7 +402,7 @@ pub struct ArrayTextureMaterialUniform {
     /// When the alpha mode mask flag is set, any base color alpha above this cutoff means fully opaque,
     /// and any below means fully transparent.
     pub alpha_cutoff: f32,
-    /// The depth of the [`StandardMaterial::depth_map`] to apply.
+    /// The depth of the [`ArrayTextureMaterial::depth_map`] to apply.
     pub parallax_depth_scale: f32,
     /// In how many layers to split the depth maps for Steep parallax mapping.
     ///
@@ -522,6 +485,7 @@ impl AsBindGroupShaderType<ArrayTextureMaterialUniform> for ArrayTextureMaterial
     }
 }
 
+/// Idk i copied this from standard material and it had no docs there
 pub fn parallax_mapping_method_max_steps(p: ParallaxMappingMethod) -> u32 {
     match p {
         ParallaxMappingMethod::Occlusion => 0,
@@ -529,18 +493,18 @@ pub fn parallax_mapping_method_max_steps(p: ParallaxMappingMethod) -> u32 {
     }
 }
 
-/// The pipeline key for [`StandardMaterial`].
+/// The pipeline key for [`ArrayTextureMaterial`].
 #[derive(Clone, PartialEq, Eq, Hash)]
-pub struct StandardMaterialKey {
+pub struct ArrayTextureMaterialKey {
     normal_map: bool,
     cull_mode: Option<Face>,
     depth_bias: i32,
     relief_mapping: bool,
 }
 
-impl From<&ArrayTextureMaterial> for StandardMaterialKey {
+impl From<&ArrayTextureMaterial> for ArrayTextureMaterialKey {
     fn from(material: &ArrayTextureMaterial) -> Self {
-        StandardMaterialKey {
+        ArrayTextureMaterialKey {
             normal_map: material.normal_map_texture.is_some(),
             cull_mode: material.cull_mode,
             depth_bias: material.depth_bias as i32,
@@ -554,13 +518,13 @@ impl Material for ArrayTextureMaterial {
         _pipeline: &MaterialPipeline<Self>,
         descriptor: &mut RenderPipelineDescriptor,
         layout: &MeshVertexBufferLayout,
-        key: MaterialPipelineKey<Self>,
+        _key: MaterialPipelineKey<Self>,
     ) -> Result<(), SpecializedMeshPipelineError> {
         // if let Some(fragment) = descriptor.fragment.as_mut() {
         //     let shader_defs = &mut fragment.shader_defs;
 
         //     if key.bind_group_data.normal_map {
-        //         shader_defs.push("STANDARDMATERIAL_NORMAL_MAP".into());
+        //         shader_defs.push("ArrayTextureMaterial_NORMAL_MAP".into());
         //     }
         //     if key.bind_group_data.relief_mapping {
         //         shader_defs.push("RELIEF_MAPPING".into());
@@ -592,10 +556,6 @@ impl Material for ArrayTextureMaterial {
         "cosmos/shaders/block.wgsl".into()
     }
 
-    fn prepass_fragment_shader() -> ShaderRef {
-        "cosmos/shaders/block.wgsl".into()
-    }
-
     fn fragment_shader() -> ShaderRef {
         "cosmos/shaders/block.wgsl".into()
     }
@@ -609,4 +569,8 @@ impl Material for ArrayTextureMaterial {
     fn depth_bias(&self) -> f32 {
         self.depth_bias
     }
+}
+
+pub(super) fn register(app: &mut App) {
+    app.add_plugins(MaterialPlugin::<ArrayTextureMaterial>::default());
 }

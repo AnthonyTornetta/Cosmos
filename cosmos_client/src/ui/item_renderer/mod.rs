@@ -15,7 +15,10 @@ use cosmos_core::{
 };
 
 use crate::{
-    asset::asset_loading::{BlockTextureIndex, MaterialDefinition},
+    asset::{
+        asset_loading::{BlockTextureIndex, MaterialDefinition},
+        block_materials::ArrayTextureMaterial,
+    },
     rendering::{BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder},
 };
 
@@ -112,7 +115,7 @@ fn render_items(
             transform.translation.x = -1000000.0;
 
             commands
-                .spawn(PbrBundle {
+                .spawn(MaterialMeshBundle::<ArrayTextureMaterial> {
                     transform,
                     ..Default::default()
                 })
