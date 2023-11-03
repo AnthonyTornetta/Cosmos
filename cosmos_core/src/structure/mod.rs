@@ -4,8 +4,9 @@
 
 use std::fmt::Display;
 
-use bevy::prelude::{App, Event, IntoSystemConfigs, Name, PreUpdate};
+use bevy::prelude::{App, ComputedVisibility, Event, IntoSystemConfigs, Name, PreUpdate, Visibility};
 use bevy::reflect::Reflect;
+use bevy::transform::TransformBundle;
 use bevy::utils::{HashMap, HashSet};
 use bevy_rapier3d::prelude::PhysicsWorld;
 
@@ -36,7 +37,7 @@ use crate::physics::location::Location;
 use crate::registry::Registry;
 use crate::structure::chunk::Chunk;
 use bevy::prelude::{
-    BuildChildren, Commands, Component, Entity, EventReader, EventWriter, GlobalTransform, PbrBundle, Query, States, Transform, Vec3,
+    BuildChildren, Commands, Component, Entity, EventReader, EventWriter, GlobalTransform, Query, States, Transform, Vec3,
 };
 use serde::{Deserialize, Serialize};
 
@@ -518,10 +519,9 @@ fn spawn_chunk_entity(
     chunk_set_events: &mut HashSet<ChunkSetEvent>,
 ) {
     let mut entity_cmds = commands.spawn((
-        PbrBundle {
-            transform: Transform::from_translation(structure.chunk_relative_position(chunk_coordinate)),
-            ..Default::default()
-        },
+        Visibility::default(),
+        ComputedVisibility::default(),
+        TransformBundle::from_transform(Transform::from_translation(structure.chunk_relative_position(chunk_coordinate))),
         Name::new("Chunk Entity"),
         NoSendEntity,
         ChunkEntity {
