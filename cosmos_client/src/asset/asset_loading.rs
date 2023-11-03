@@ -77,13 +77,9 @@ pub struct MaterialDefinition {
     /// Calculate that index with the `Registry<BlockTextureIndex>`.
     pub atlas: CosmosTextureAtlas,
 
-    padding: u32,
-
     id: u16,
     unlocalized_name: String,
 }
-
-const DEFAULT_PADDING: u32 = 0;
 
 impl MaterialDefinition {
     /// Creates a new material definition
@@ -100,7 +96,6 @@ impl MaterialDefinition {
             material,
             far_away_material: lod_material,
             unlit_material,
-            padding: DEFAULT_PADDING,
             unlocalized_name,
         }
     }
@@ -121,27 +116,6 @@ impl MaterialDefinition {
     /// Gets the material for this that should be used for far away (lod) blocks
     pub fn far_away_material(&self) -> &Handle<ArrayTextureMaterial> {
         &self.far_away_material
-    }
-
-    #[inline]
-    /// Returns the UV coordinates for the texture atlas given the block's index
-    ///
-    /// Get the block's index from `Registry<BlockTextureIndex>`.
-    pub fn uvs_for_index(&self, index: usize) -> Rect {
-        let atlas = &self.atlas.texture_atlas;
-        let rect = atlas.textures[index];
-
-        let padding_x = self.padding as f32 / atlas.size.x;
-        let padding_y = self.padding as f32 / atlas.size.y;
-
-        // Rect::new(
-        //     rect.min.x / atlas.size.x + padding_x,
-        //     rect.min.y / atlas.size.y + padding_y,
-        //     rect.max.x / atlas.size.x - padding_x,
-        //     rect.max.y / atlas.size.y - padding_y,
-        // )
-
-        Rect::new(0.0, 0.0, 1.0, 1.0)
     }
 }
 
@@ -375,47 +349,37 @@ fn check_assets_ready(
 }
 
 fn create_main_material(image_handle: Handle<Image>, unlit: bool) -> ArrayTextureMaterial {
-    // StandardMaterial {
-    //     base_color_texture: Some(image_handle),
-    //     alpha_mode: AlphaMode::Mask(0.5),
-    //     unlit,
-    //     metallic: 0.0,
-    //     reflectance: 0.0,
-    //     perceptual_roughness: 1.0,
-    //     ..Default::default()
-    // }
     ArrayTextureMaterial {
-        array_texture: image_handle,
+        base_color_texture: Some(image_handle),
+        alpha_mode: AlphaMode::Mask(0.5),
+        unlit,
+        metallic: 0.0,
+        reflectance: 0.0,
+        perceptual_roughness: 1.0,
+        ..Default::default()
     }
 }
 
 fn create_illuminated_material(image_handle: Handle<Image>) -> ArrayTextureMaterial {
-    // StandardMaterial {
-    //     base_color_texture: Some(image_handle),
-    //     alpha_mode: AlphaMode::Mask(0.5),
-    //     unlit: true,
-    //     double_sided: true,
-    //     perceptual_roughness: 1.0,
-    //     ..Default::default()
-    // }
-
     ArrayTextureMaterial {
-        array_texture: image_handle,
+        base_color_texture: Some(image_handle),
+        alpha_mode: AlphaMode::Mask(0.5),
+        unlit: true,
+        double_sided: true,
+        perceptual_roughness: 1.0,
+        ..Default::default()
     }
 }
 
 fn create_transparent_material(image_handle: Handle<Image>, unlit: bool) -> ArrayTextureMaterial {
-    // StandardMaterial {
-    //     base_color_texture: Some(image_handle),
-    //     alpha_mode: AlphaMode::Add,
-    //     unlit,
-    //     metallic: 0.0,
-    //     reflectance: 0.0,
-    //     perceptual_roughness: 1.0,
-    //     ..Default::default()
-    // }
     ArrayTextureMaterial {
-        array_texture: image_handle,
+        base_color_texture: Some(image_handle),
+        alpha_mode: AlphaMode::Add,
+        unlit,
+        metallic: 0.0,
+        reflectance: 0.0,
+        perceptual_roughness: 1.0,
+        ..Default::default()
     }
 }
 
@@ -436,7 +400,6 @@ fn create_materials(
                 far_away_material: default_material.clone(),
                 unlit_material: unlit_default_material.clone(),
                 atlas: atlas.clone(),
-                padding: DEFAULT_PADDING,
                 id: 0,
                 unlocalized_name: "cosmos:main".into(),
             });
@@ -449,7 +412,6 @@ fn create_materials(
                 far_away_material: default_material.clone(),
                 unlit_material: material.clone(),
                 atlas: atlas.clone(),
-                padding: DEFAULT_PADDING,
                 id: 0,
                 unlocalized_name: "cosmos:illuminated".into(),
             });
@@ -462,7 +424,6 @@ fn create_materials(
                 far_away_material: default_material.clone(),
                 unlit_material: unlit_transparent_material,
                 atlas: atlas.clone(),
-                padding: DEFAULT_PADDING,
                 id: 0,
                 unlocalized_name: "cosmos:transparent".into(),
             });
@@ -476,16 +437,16 @@ fn create_materials(
 /// Contains information that links the block faces to their texture indices.
 ///
 /// This could also link non-face imformation to their texture indices.
-struct BlockTextureIndicies(HashMap<String, usize>);
+struct BlockTextureIndicies(HashMap<String, u32>);
 
 impl BlockTextureIndicies {
-    fn all(index: usize) -> Self {
+    fn all(index: u32) -> Self {
         let mut map = HashMap::new();
         map.insert("all".into(), index);
         Self(map)
     }
 
-    fn new(map: HashMap<String, usize>) -> Self {
+    fn new(map: HashMap<String, u32>) -> Self {
         Self(map)
     }
 }
@@ -501,7 +462,7 @@ pub struct BlockTextureIndex {
 impl BlockTextureIndex {
     #[inline]
     /// Returns the index for that block face, if one exists
-    pub fn atlas_index_from_face(&self, face: BlockFace) -> Option<usize> {
+    pub fn atlas_index_from_face(&self, face: BlockFace) -> Option<u32> {
         self.atlas_index(face.as_str())
     }
 
@@ -509,7 +470,7 @@ impl BlockTextureIndex {
     /// Returns the index for that specific identifier, if one exists.
     ///
     /// If none exists and an "all" identifier is present, "all" is returned.
-    pub fn atlas_index(&self, identifier: &str) -> Option<usize> {
+    pub fn atlas_index(&self, identifier: &str) -> Option<u32> {
         if let Some(index) = self.indices.0.get(identifier) {
             Some(*index)
         } else {
@@ -583,7 +544,7 @@ pub fn load_block_rendering_information(
         registry.register(BlockTextureIndex {
             id: 0,
             unlocalized_name: "missing".to_owned(),
-            indices: BlockTextureIndicies::all(index),
+            indices: BlockTextureIndicies::all(index as u32),
         });
     }
 
@@ -627,7 +588,7 @@ pub fn load_block_rendering_information(
                 .texture_atlas
                 .get_texture_index(&server.get_handle(&format!("images/blocks/{texture_name}.png",)))
             {
-                map.insert(entry.to_owned(), index);
+                map.insert(entry.to_owned(), index as u32);
             }
         }
 

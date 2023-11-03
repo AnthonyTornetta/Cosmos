@@ -273,8 +273,6 @@ impl ChunkRenderer {
                         continue;
                     };
 
-                    let uvs = material_def.uvs_for_index(image_index);
-
                     let rotation = match rotation {
                         BlockFace::Top => Quat::IDENTITY,
                         BlockFace::Front => Quat::from_axis_angle(Vec3::X, PI / 2.0),
@@ -307,8 +305,8 @@ impl ChunkRenderer {
                     mesh_builder.add_mesh_information(
                         &mesh_info,
                         offset * CHUNK_DIMENSIONSF + Vec3::new(center_offset_x * scale, center_offset_y * scale, center_offset_z * scale),
-                        uvs,
-                        13,
+                        Rect::new(0.0, 0.0, 1.0, 1.0),
+                        image_index as u32,
                     );
 
                     if one_mesh_only {

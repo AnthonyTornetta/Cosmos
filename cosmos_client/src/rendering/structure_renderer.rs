@@ -661,7 +661,7 @@ impl ChunkRenderer {
                         continue;
                     };
 
-                    let uvs = material.uvs_for_index(image_index);
+                    let uvs = Rect::new(0.0, 0.0, 1.0, 1.0);
 
                     let rotation = match rotation {
                         BlockFace::Top => Quat::IDENTITY,
