@@ -1,7 +1,6 @@
 #import bevy_pbr::mesh_view_bindings    view
 #import bevy_pbr::pbr_types             STANDARD_MATERIAL_FLAGS_DOUBLE_SIDED_BIT
 #import bevy_core_pipeline::tonemapping tone_mapping
-#import bevy_pbr::pbr_functions as fns
 #import bevy_pbr::mesh_bindings         mesh
 #import bevy_pbr::mesh_functions as mesh_functions
 
@@ -15,8 +14,6 @@
 #import bevy_pbr::mesh_view_types          FOG_MODE_OFF
 #import bevy_core_pipeline::tonemapping    screen_space_dither, powsafe, tone_mapping
 #import bevy_pbr::parallax_mapping         parallaxed_uv
-
-#import bevy_pbr::prepass_utils
 
 #ifdef SCREEN_SPACE_AMBIENT_OCCLUSION
 #import bevy_pbr::gtao_utils gtao_multibounce
@@ -117,59 +114,8 @@ fn vertex(vertex_no_morph: CustomVertex) -> CustomMeshVertexOutput {
     return out;
 }
 
-
-// @fragment
-// fn fragment(
-//     @builtin(front_facing) is_front: bool,
-//     mesh: CustomMeshVertexOutput,
-// ) -> @location(0) vec4<f32> {
-//     let layer = i32(mesh.world_position.x) & 0x3;
-
-//     // Prepare a 'processed' StandardMaterial by sampling all textures to resolve
-//     // the material members
-//     var pbr_input: fns::PbrInput = fns::pbr_input_new();
-
-//     var abc = vec2(mesh.uv[0], mesh.uv[1]);
-
-//     pbr_input.material.base_color = textureSample(my_array_texture, my_array_texture_sampler, mesh.uv, mesh.texture_index);
-// #ifdef VERTEX_COLORS
-//     pbr_input.material.base_color = pbr_input.material.base_color * mesh.color;
-// #endif
-
-//     pbr_input.frag_coord = mesh.position;
-//     pbr_input.world_position = mesh.world_position;
-//     pbr_input.world_normal = fns::prepare_world_normal(
-//         mesh.world_normal,
-//         (pbr_input.material.flags & STANDARD_MATERIAL_FLAGS_DOUBLE_SIDED_BIT) != 0u,
-//         is_front,
-//     );
-
-//     pbr_input.is_orthographic = view.projection[3].w == 1.0;
-
-//     pbr_input.N = fns::apply_normal_mapping(
-//         pbr_input.material.flags,
-//         mesh.world_normal,
-// #ifdef VERTEX_TANGENTS
-// #ifdef STANDARDMATERIAL_NORMAL_MAP
-//         mesh.world_tangent,
-// #endif
-// #endif
-//         mesh.uv,
-//         view.mip_bias,
-//     );
-//     pbr_input.V = fns::calculate_view(mesh.world_position, pbr_input.is_orthographic);
-
-//     return tone_mapping(fns::pbr(pbr_input), view.color_grading);
-// }
-
-
-
-
-
-
-
-
 @fragment
+// Stolen and slightly modified from https://github.com/bevyengine/bevy/blob/v0.11.3/crates/bevy_pbr/src/render/pbr.wgsl#L143
 fn fragment(
     @builtin(front_facing) is_front: bool,
     in: CustomMeshVertexOutput,
@@ -206,8 +152,8 @@ fn fragment(
 #endif
 #ifdef VERTEX_UVS
     if ((pbr_bindings::material.flags & pbr_types::STANDARD_MATERIAL_FLAGS_BASE_COLOR_TEXTURE_BIT) != 0u) {
+        // Changed bit
         output_color = output_color * textureSample(my_array_texture, my_array_texture_sampler, uv, in.texture_index);
-        
         //textureSampleBias(pbr_bindings::base_color_texture, pbr_bindings::base_color_sampler, uv, view.mip_bias);
     }
 #endif
