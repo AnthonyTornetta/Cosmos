@@ -1,5 +1,6 @@
 #import bevy_pbr::pbr_types             STANDARD_MATERIAL_FLAGS_DOUBLE_SIDED_BIT
 #import bevy_pbr::mesh_functions as mesh_functions
+#import bevy_pbr::mesh_view_bindings globals
 
 #import bevy_pbr::pbr_functions as pbr_functions
 #import bevy_pbr::pbr_bindings as pbr_bindings
@@ -110,10 +111,12 @@ fn vertex(vertex_no_morph: CustomVertex) -> CustomMeshVertexOutput {
     out.color = vertex.color;
 #endif
 
-    var frame_duration_ms = vertex_no_morph.animation_data >> u32(16);
+    var frame_duration_ms = f32(vertex_no_morph.animation_data >> u32(16)) / 1000.0;
     var n_frames = vertex_no_morph.animation_data & u32(0xFFFF);
 
-    out.texture_index = vertex.texture_index + n_frames;
+    var secs = u32(globals.time / frame_duration_ms) % n_frames;
+
+    out.texture_index = vertex.texture_index + secs;
     return out;
 }
 
