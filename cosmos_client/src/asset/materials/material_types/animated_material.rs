@@ -1,16 +1,25 @@
-use crate::asset::asset_loading::{AllTexturesDoneLoadingEvent, AssetsDoneLoadingEvent, CosmosTextureAtlas};
+use crate::asset::{
+    asset_loading::{AllTexturesDoneLoadingEvent, AssetsDoneLoadingEvent, CosmosTextureAtlas},
+    materials::animated_material::AnimatedArrayTextureMaterial,
+};
 
-use super::super::{block_materials::ArrayTextureMaterial, *};
-use bevy::prelude::Commands;
+use super::super::*;
+use bevy::{prelude::Commands, render::render_resource::VertexFormat};
 
 #[derive(Resource)]
-pub(crate) struct DefaultMaterial(pub Handle<ArrayTextureMaterial>);
+pub(crate) struct DefaultMaterial(pub Handle<AnimatedArrayTextureMaterial>);
 #[derive(Resource)]
-pub(crate) struct UnlitMaterial(pub Handle<ArrayTextureMaterial>);
+pub(crate) struct UnlitMaterial(pub Handle<AnimatedArrayTextureMaterial>);
 #[derive(Resource)]
-pub(crate) struct TransparentMaterial(pub Handle<ArrayTextureMaterial>);
+pub(crate) struct TransparentMaterial(pub Handle<AnimatedArrayTextureMaterial>);
 #[derive(Resource)]
-pub(crate) struct UnlitTransparentMaterial(pub Handle<ArrayTextureMaterial>);
+pub(crate) struct UnlitTransparentMaterial(pub Handle<AnimatedArrayTextureMaterial>);
+
+/// Specifies the texture index to use
+pub const ATTRIBUTE_PACKED_ANIMATION_DATA: MeshVertexAttribute =
+    // A "high" random id should be used for custom attributes to ensure consistent sorting and avoid collisions with other attributes.
+    // See the MeshVertexAttribute docs for more info.
+    MeshVertexAttribute::new("ArrayTextureIndex", 2212350841, VertexFormat::Uint32);
 
 fn respond_to_add_materials_event(
     material_registry: Res<Registry<MaterialDefinition>>,
@@ -26,21 +35,21 @@ fn respond_to_add_materials_event(
         let mat = material_registry.from_numeric_id(ev.add_material_id);
 
         match mat.unlocalized_name() {
-            "cosmos:main" => {
+            "cosmos:animated" => {
                 commands.entity(ev.entity).insert(match ev.material_type {
                     MaterialType::Normal => default_material.0.clone(),
                     MaterialType::Unlit => unlit_material.0.clone(),
                     MaterialType::FarAway => default_material.0.clone(),
                 });
             }
-            "cosmos:illuminated" => {
+            "cosmos:illuminated_animated" => {
                 commands.entity(ev.entity).insert(match ev.material_type {
                     MaterialType::Normal => unlit_material.0.clone(),
                     MaterialType::Unlit => unlit_material.0.clone(),
                     MaterialType::FarAway => unlit_material.0.clone(),
                 });
             }
-            "cosmos:transparent" => {
+            "cosmos:transparent_animated" => {
                 commands.entity(ev.entity).insert(match ev.material_type {
                     MaterialType::Normal => transparent_material.0.clone(),
                     MaterialType::Unlit => unlit_transparent_material.0.clone(),
@@ -54,12 +63,12 @@ fn respond_to_add_materials_event(
 
 fn respond_to_remove_materails_event(mut event_reader: EventReader<RemoveAllMaterialsEvent>, mut commands: Commands) {
     for ev in event_reader.iter() {
-        commands.entity(ev.entity).remove::<Handle<ArrayTextureMaterial>>();
+        commands.entity(ev.entity).remove::<Handle<AnimatedArrayTextureMaterial>>();
     }
 }
 
-fn create_main_material(image_handle: Handle<Image>, unlit: bool) -> ArrayTextureMaterial {
-    ArrayTextureMaterial {
+fn create_main_material(image_handle: Handle<Image>, unlit: bool) -> AnimatedArrayTextureMaterial {
+    AnimatedArrayTextureMaterial {
         base_color_texture: Some(image_handle),
         alpha_mode: AlphaMode::Mask(0.5),
         unlit,
@@ -70,8 +79,8 @@ fn create_main_material(image_handle: Handle<Image>, unlit: bool) -> ArrayTextur
     }
 }
 
-fn create_transparent_material(image_handle: Handle<Image>, unlit: bool) -> ArrayTextureMaterial {
-    ArrayTextureMaterial {
+fn create_transparent_material(image_handle: Handle<Image>, unlit: bool) -> AnimatedArrayTextureMaterial {
+    AnimatedArrayTextureMaterial {
         base_color_texture: Some(image_handle),
         alpha_mode: AlphaMode::Add,
         unlit,
@@ -82,10 +91,25 @@ fn create_transparent_material(image_handle: Handle<Image>, unlit: bool) -> Arra
     }
 }
 
+struct AnimatedMaterialInformationGenerator {}
+
+impl MaterialMeshInformationGenerator for AnimatedMaterialInformationGenerator {
+    fn generate_information(&self, block_id: u16, mesh_info: &MeshInformation) -> Vec<(MeshVertexAttribute, VertexAttributeValues)> {
+        let frame_duration_ms: u16 = 100;
+        let n_frames: u16 = 4;
+
+        let packed: u32 = ((frame_duration_ms as u32) << 16) | (n_frames as u32);
+
+        let animation_data = (0..mesh_info.positions.len()).map(|_| packed).collect::<Vec<u32>>();
+
+        vec![(ATTRIBUTE_PACKED_ANIMATION_DATA, animation_data.into())]
+    }
+}
+
 fn create_materials(
     mut commands: Commands,
     mut material_registry: ResMut<Registry<MaterialDefinition>>,
-    mut materials: ResMut<Assets<ArrayTextureMaterial>>,
+    mut materials: ResMut<Assets<AnimatedArrayTextureMaterial>>,
     event_reader: EventReader<AllTexturesDoneLoadingEvent>,
     mut event_writer: EventWriter<AssetsDoneLoadingEvent>,
     texture_atlases: Res<Registry<CosmosTextureAtlas>>,
@@ -102,9 +126,18 @@ fn create_materials(
             commands.insert_resource(TransparentMaterial(transparent_material));
             commands.insert_resource(UnlitTransparentMaterial(unlit_transparent_material));
 
-            material_registry.register(MaterialDefinition::new("cosmos:main", None));
-            material_registry.register(MaterialDefinition::new("cosmos:illuminated", None));
-            material_registry.register(MaterialDefinition::new("cosmos:transparent", None));
+            material_registry.register(MaterialDefinition::new(
+                "cosmos:animated",
+                Some(Box::new(AnimatedMaterialInformationGenerator {})),
+            ));
+            material_registry.register(MaterialDefinition::new(
+                "cosmos:illuminated_animated",
+                Some(Box::new(AnimatedMaterialInformationGenerator {})),
+            ));
+            material_registry.register(MaterialDefinition::new(
+                "cosmos:transparent_animated",
+                Some(Box::new(AnimatedMaterialInformationGenerator {})),
+            ));
         }
 
         event_writer.send(AssetsDoneLoadingEvent);

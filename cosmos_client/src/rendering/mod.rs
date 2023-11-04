@@ -4,7 +4,10 @@ use std::fs;
 
 use bevy::{
     prelude::*,
-    render::{mesh::Indices, render_resource::PrimitiveTopology},
+    render::{
+        mesh::{Indices, MeshVertexAttribute, VertexAttributeValues},
+        render_resource::PrimitiveTopology,
+    },
 };
 use cosmos_core::{
     block::{Block, BlockFace},
@@ -55,7 +58,7 @@ impl MeshInformation {
     }
 }
 
-#[derive(Default, Debug, Reflect)]
+#[derive(Default, Debug)]
 /// Default way to create a mesh from many different combined `MeshInformation` objects.
 pub struct CosmosMeshBuilder {
     last_index: u32,
@@ -64,6 +67,7 @@ pub struct CosmosMeshBuilder {
     positions: Vec<[f32; 3]>,
     normals: Vec<[f32; 3]>,
     array_texture_ids: Vec<u32>,
+    additional_info: Vec<(MeshVertexAttribute, VertexAttributeValues)>,
 }
 
 /// Used to create a mesh from many different combined `MeshInformation` objects.
@@ -71,7 +75,14 @@ pub struct CosmosMeshBuilder {
 /// Implemented by default in `CosmosMeshBuilder`
 pub trait MeshBuilder {
     /// Adds the information to this mesh builder
-    fn add_mesh_information(&mut self, mesh_info: &MeshInformation, position: Vec3, uvs: Rect, texture_index: u32);
+    fn add_mesh_information(
+        &mut self,
+        mesh_info: &MeshInformation,
+        position: Vec3,
+        uvs: Rect,
+        texture_index: u32,
+        additional_info: Vec<(MeshVertexAttribute, VertexAttributeValues)>,
+    );
 
     /// Creates the bevy mesh from the information given so far
     fn build_mesh(self) -> Mesh;
@@ -79,7 +90,14 @@ pub trait MeshBuilder {
 
 impl MeshBuilder for CosmosMeshBuilder {
     #[inline]
-    fn add_mesh_information(&mut self, mesh_info: &MeshInformation, position: Vec3, uvs: Rect, texture_index: u32) {
+    fn add_mesh_information(
+        &mut self,
+        mesh_info: &MeshInformation,
+        position: Vec3,
+        uvs: Rect,
+        texture_index: u32,
+        additional_info: Vec<(MeshVertexAttribute, VertexAttributeValues)>,
+    ) {
         let diff = [uvs.max.x - uvs.min.x, uvs.max.y - uvs.min.y];
 
         let mut max_index = -1;
@@ -104,6 +122,218 @@ impl MeshBuilder for CosmosMeshBuilder {
             max_index = max_index.max(*index as i32);
         }
 
+        if self.additional_info.is_empty() {
+            self.additional_info = additional_info;
+        } else {
+            // It is assumed these are always equal because it's coming from the same shader
+            debug_assert!(self.additional_info.len() == additional_info.len());
+
+            for ((adding_mesh_attr, adding_values), (current_mesh_attr, current_values)) in
+                additional_info.into_iter().zip(self.additional_info.iter_mut())
+            {
+                debug_assert!(adding_mesh_attr.id == current_mesh_attr.id); // This guarentees they are the same type, thus the unreachable! macros below.
+
+                match adding_values {
+                    VertexAttributeValues::Float32(vals) => {
+                        let VertexAttributeValues::Float32(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Sint32(vals) => {
+                        let VertexAttributeValues::Sint32(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Uint32(vals) => {
+                        let VertexAttributeValues::Uint32(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Float32x2(vals) => {
+                        let VertexAttributeValues::Float32x2(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Sint32x2(vals) => {
+                        let VertexAttributeValues::Sint32x2(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Uint32x2(vals) => {
+                        let VertexAttributeValues::Uint32x2(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Float32x3(vals) => {
+                        let VertexAttributeValues::Float32x3(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Sint32x3(vals) => {
+                        let VertexAttributeValues::Sint32x3(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Uint32x3(vals) => {
+                        let VertexAttributeValues::Uint32x3(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Float32x4(vals) => {
+                        let VertexAttributeValues::Float32x4(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Sint32x4(vals) => {
+                        let VertexAttributeValues::Sint32x4(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Uint32x4(vals) => {
+                        let VertexAttributeValues::Uint32x4(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Sint16x2(vals) => {
+                        let VertexAttributeValues::Sint16x2(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Snorm16x2(vals) => {
+                        let VertexAttributeValues::Snorm16x2(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Uint16x2(vals) => {
+                        let VertexAttributeValues::Uint16x2(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Unorm16x2(vals) => {
+                        let VertexAttributeValues::Unorm16x2(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Sint16x4(vals) => {
+                        let VertexAttributeValues::Sint16x4(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Snorm16x4(vals) => {
+                        let VertexAttributeValues::Snorm16x4(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Uint16x4(vals) => {
+                        let VertexAttributeValues::Uint16x4(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Unorm16x4(vals) => {
+                        let VertexAttributeValues::Unorm16x4(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Sint8x2(vals) => {
+                        let VertexAttributeValues::Sint8x2(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Snorm8x2(vals) => {
+                        let VertexAttributeValues::Snorm8x2(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Uint8x2(vals) => {
+                        let VertexAttributeValues::Uint8x2(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Unorm8x2(vals) => {
+                        let VertexAttributeValues::Unorm8x2(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Sint8x4(vals) => {
+                        let VertexAttributeValues::Sint8x4(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Snorm8x4(vals) => {
+                        let VertexAttributeValues::Snorm8x4(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Uint8x4(vals) => {
+                        let VertexAttributeValues::Uint8x4(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Unorm8x4(vals) => {
+                        let VertexAttributeValues::Unorm8x4(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                }
+            }
+        }
+
         self.last_index += (max_index + 1) as u32;
     }
 
@@ -115,6 +345,10 @@ impl MeshBuilder for CosmosMeshBuilder {
         mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, self.normals);
         mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, self.uvs);
         mesh.insert_attribute(ATTRIBUTE_TEXTURE_INDEX, self.array_texture_ids);
+
+        for (attribute, values) in self.additional_info {
+            mesh.insert_attribute(attribute, values);
+        }
 
         mesh
     }

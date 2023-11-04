@@ -1,13 +1,19 @@
 //! Used to handle material registration
 
-use bevy::prelude::*;
+use std::sync::{Arc, RwLock};
+
+use bevy::{
+    prelude::*,
+    render::mesh::{MeshVertexAttribute, VertexAttributeValues},
+};
 use cosmos_core::{
     block::Block,
     registry::{self, identifiable::Identifiable, many_to_one::ManyToOneRegistry, Registry},
 };
 
-use crate::state::game_state::GameState;
+use crate::{rendering::MeshInformation, state::game_state::GameState};
 
+pub mod animated_material;
 pub mod block_materials;
 pub(super) mod material_types;
 
@@ -57,7 +63,11 @@ pub fn add_materials() {}
 /// Add all event listeners for `RemoveAllMaterialsEvent` after this and before `add_materials` to ensure your material is removed at the right time.
 pub fn remove_materials() {}
 
-#[derive(Resource, Reflect, Debug, Clone)]
+pub trait MaterialMeshInformationGenerator: Send + Sync {
+    fn generate_information(&self, block_id: u16, mesh_info: &MeshInformation) -> Vec<(MeshVertexAttribute, VertexAttributeValues)>;
+}
+
+#[derive(Resource, Clone)]
 /// This stores the texture atlas for all blocks in the game.
 ///
 /// Eventually this will be redone to allow for multiple atlases, but for now this works fine.
@@ -70,14 +80,24 @@ pub struct MaterialDefinition {
     // pub unlit_material: Handle<M>,
     id: u16,
     unlocalized_name: String,
+
+    generator: Option<Arc<RwLock<Box<dyn MaterialMeshInformationGenerator>>>>,
 }
 impl MaterialDefinition {
     /// Creates a new material definition
-    pub fn new(unlocalized_name: impl Into<String>) -> Self {
+    pub fn new(unlocalized_name: impl Into<String>, mesh_information_generator: Option<Box<dyn MaterialMeshInformationGenerator>>) -> Self {
         Self {
             id: 0,
             unlocalized_name: unlocalized_name.into(),
+            generator: mesh_information_generator.map(|mesh_information_generator| Arc::new(RwLock::new(mesh_information_generator))),
         }
+    }
+
+    pub fn add_material_data(&self, block_id: u16, mesh_info: &MeshInformation) -> Vec<(MeshVertexAttribute, VertexAttributeValues)> {
+        self.generator
+            .as_ref()
+            .map(|gen| gen.read().unwrap().generate_information(block_id, mesh_info))
+            .unwrap_or_default()
     }
 }
 
@@ -168,7 +188,7 @@ fn register_materials(
 
     for block in blocks.iter() {
         if !registry.contains(block) {
-            registry.add_link(block, "cosmos:main").expect("Main material should exist");
+            registry.add_link(block, "cosmos:animated").expect("Animated material should exist");
         }
     }
 }
@@ -178,6 +198,7 @@ pub(super) fn register(app: &mut App) {
     registry::many_to_one::create_many_to_one_registry::<Block, BlockMaterialMapping>(app);
     material_types::register(app);
     block_materials::register(app);
+    animated_material::register(app);
 
     app.add_systems(OnExit(GameState::PostLoading), register_materials)
         .add_systems(Update, (remove_materials, add_materials).chain())
