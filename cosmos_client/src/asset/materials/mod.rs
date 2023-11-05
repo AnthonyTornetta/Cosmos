@@ -13,6 +13,8 @@ use cosmos_core::{
 
 use crate::{rendering::MeshInformation, state::game_state::GameState};
 
+use self::material_types::animated_material::AnimationData;
+
 pub mod animated_material;
 pub mod block_materials;
 pub(super) mod material_types;
@@ -65,6 +67,8 @@ pub fn remove_materials() {}
 
 pub trait MaterialMeshInformationGenerator: Send + Sync {
     fn generate_information(&self, block_id: u16, mesh_info: &MeshInformation) -> Vec<(MeshVertexAttribute, VertexAttributeValues)>;
+
+    fn add_information(&mut self, block_id: u16, serialized_information: Vec<u8>);
 }
 
 #[derive(Resource, Clone)]
@@ -98,6 +102,12 @@ impl MaterialDefinition {
             .as_ref()
             .map(|gen| gen.read().unwrap().generate_information(block_id, mesh_info))
             .unwrap_or_default()
+    }
+
+    pub fn add_block_information(&self, block_id: u16, serialized_information: Vec<u8>) {
+        if let Some(generator) = self.generator.as_ref() {
+            generator.write().unwrap().add_information(block_id, serialized_information);
+        }
     }
 }
 
@@ -186,9 +196,27 @@ fn register_materials(
             .expect("Transparent material should exist");
     }
 
+    if let Some(block) = blocks.from_id("cosmos:reactor_cell") {
+        registry
+            .add_link(block, "cosmos:animated")
+            .expect("Transparent material should exist");
+
+        materials
+            .from_id("cosmos:animated")
+            .expect("Missing animated shader!")
+            .add_block_information(
+                block.id(),
+                bincode::serialize(&AnimationData {
+                    frame_duration_ms: 200,
+                    n_frames: 4,
+                })
+                .unwrap(),
+            );
+    }
+
     for block in blocks.iter() {
         if !registry.contains(block) {
-            registry.add_link(block, "cosmos:animated").expect("Animated material should exist");
+            registry.add_link(block, "cosmos:main").expect("Animated material should exist");
         }
     }
 }

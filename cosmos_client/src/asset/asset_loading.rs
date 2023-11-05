@@ -12,7 +12,9 @@ use cosmos_core::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::state::game_state::GameState;
+use crate::{asset::texture_atlas::SquareTextureAtlasBuilder, state::game_state::GameState};
+
+use super::texture_atlas::SquareTextureAtlas;
 
 #[derive(Resource, Debug, Clone)]
 struct LoadingTextureAtlas {
@@ -95,14 +97,14 @@ fn assets_done_loading(
 /// A newtype wrapper around a bevy `TextureAtlas`
 pub struct CosmosTextureAtlas {
     /// The texture atlas
-    pub texture_atlas: TextureAtlas,
+    pub texture_atlas: SquareTextureAtlas,
     unlocalized_name: String,
     id: u16,
 }
 
 impl CosmosTextureAtlas {
     /// Creates a new Cosmos texture atlas - a newtype wrapper around a bevy `TextureAtlas`
-    pub fn new(unlocalized_name: impl Into<String>, atlas: TextureAtlas) -> Self {
+    pub fn new(unlocalized_name: impl Into<String>, atlas: SquareTextureAtlas) -> Self {
         Self {
             unlocalized_name: unlocalized_name.into(),
             id: 0,
@@ -151,40 +153,39 @@ fn check_assets_ready(
             // for better performance
 
             for asset in loading.iter() {
-                let mut texture_atlas_builder = TextureAtlasBuilder::default()
-                    .initial_size(Vec2::new(16.0, 2048.0))
-                    .max_size(Vec2::new(16.0, 2048.0 * 20.0));
+                let mut texture_atlas_builder = SquareTextureAtlasBuilder::new(16);
 
-                for handle in &asset.handles {
-                    let Some(image) = images.get(handle) else {
-                        warn!("{:?} did not resolve to an `Image` asset.", server.get_handle_path(handle));
-                        continue;
-                    };
+                for handle in asset.handles.iter() {
+                    // let Some(image) = images.get(handle) else {
+                    //     warn!("{:?} did not resolve to an `Image` asset.", server.get_handle_path(handle));
+                    //     continue;
+                    // };
 
-                    let img = image.clone(); //expand_image(image, DEFAULT_PADDING);
+                    // let img = image.clone(); //expand_image(image, DEFAULT_PADDING);
 
-                    let handle = images.set(handle.clone(), img);
+                    // let handle = images.set(handle.clone(), img);
 
-                    texture_atlas_builder.add_texture(
-                        handle.clone(),
-                        images.get(&handle).expect("This image was just added, but doesn't exist."),
-                    );
+                    println!("{:?}", handle.id());
+
+                    texture_atlas_builder.add_texture(handle.clone());
                 }
 
-                let atlas = texture_atlas_builder.finish(&mut images).expect("Failed to build atlas");
+                let atlas = texture_atlas_builder.create_atlas(&mut images);
 
-                let img = images.get_mut(&atlas.texture).expect("No");
+                let img = images.get(&atlas.get_atlas_handle()).expect("No");
+                let image_area = img.size().x * img.size().y;
+
+                println!("X: {}; y: {}", img.size().x, img.size().y);
+                println!("Image area: {image_area}");
 
                 image::save_buffer(
                     Path::new("image.png"),
                     img.data.as_slice(),
-                    atlas.size.x as u32,
-                    atlas.size.y as u32,
+                    atlas.width(),
+                    atlas.height(),
                     image::ColorType::Rgba8,
                 )
                 .unwrap();
-
-                img.reinterpret_stacked_2d_as_array((atlas.size.y / 16.0) as u32);
 
                 texture_atlases.register(CosmosTextureAtlas::new("cosmos:main", atlas));
             }

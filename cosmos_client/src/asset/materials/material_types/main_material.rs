@@ -92,10 +92,11 @@ fn create_materials(
 ) {
     if !event_reader.is_empty() {
         if let Some(atlas) = texture_atlases.from_id("cosmos:main") {
-            let default_material = materials.add(create_main_material(atlas.texture_atlas.texture.clone(), false));
-            let unlit_default_material = materials.add(create_main_material(atlas.texture_atlas.texture.clone(), true));
-            let transparent_material = materials.add(create_transparent_material(atlas.texture_atlas.texture.clone(), false));
-            let unlit_transparent_material = materials.add(create_transparent_material(atlas.texture_atlas.texture.clone(), true));
+            let default_material = materials.add(create_main_material(atlas.texture_atlas.get_atlas_handle().clone(), false));
+            let unlit_default_material = materials.add(create_main_material(atlas.texture_atlas.get_atlas_handle().clone(), true));
+            let transparent_material = materials.add(create_transparent_material(atlas.texture_atlas.get_atlas_handle().clone(), false));
+            let unlit_transparent_material =
+                materials.add(create_transparent_material(atlas.texture_atlas.get_atlas_handle().clone(), true));
 
             commands.insert_resource(DefaultMaterial(default_material));
             commands.insert_resource(UnlitMaterial(unlit_default_material));

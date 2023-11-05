@@ -4,7 +4,8 @@ use crate::asset::{
 };
 
 use super::super::*;
-use bevy::{prelude::Commands, render::render_resource::VertexFormat};
+use bevy::{prelude::Commands, render::render_resource::VertexFormat, utils::HashMap};
+use serde::{Deserialize, Serialize};
 
 #[derive(Resource)]
 pub(crate) struct DefaultMaterial(pub Handle<AnimatedArrayTextureMaterial>);
@@ -91,18 +92,42 @@ fn create_transparent_material(image_handle: Handle<Image>, unlit: bool) -> Anim
     }
 }
 
-struct AnimatedMaterialInformationGenerator {}
+#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
+pub struct AnimationData {
+    pub frame_duration_ms: u16,
+    pub n_frames: u16,
+}
+
+#[derive(Resource, Default, Clone)]
+struct AnimatedMaterialInformationGenerator {
+    mapping: HashMap<u16, u32>,
+}
+
+impl AnimatedMaterialInformationGenerator {
+    pub fn add_block_animation_data(&mut self, block_id: u16, data: AnimationData) {
+        let packed: u32 = ((data.frame_duration_ms as u32) << 16) | (data.n_frames as u32);
+
+        self.mapping.insert(block_id, packed);
+    }
+}
 
 impl MaterialMeshInformationGenerator for AnimatedMaterialInformationGenerator {
     fn generate_information(&self, block_id: u16, mesh_info: &MeshInformation) -> Vec<(MeshVertexAttribute, VertexAttributeValues)> {
-        let frame_duration_ms: u16 = 100;
-        let n_frames: u16 = 4;
-
-        let packed: u32 = ((frame_duration_ms as u32) << 16) | (n_frames as u32);
+        let packed = *self
+            .mapping
+            .get(&block_id)
+            .unwrap_or_else(|| panic!("Missing animation data for block {block_id}"));
 
         let animation_data = (0..mesh_info.positions.len()).map(|_| packed).collect::<Vec<u32>>();
 
         vec![(ATTRIBUTE_PACKED_ANIMATION_DATA, animation_data.into())]
+    }
+
+    fn add_information(&mut self, block_id: u16, serialized_information: Vec<u8>) {
+        self.add_block_animation_data(
+            block_id,
+            bincode::deserialize(&serialized_information).expect("Bad animation information given - unable to deserialize!"),
+        );
     }
 }
 
@@ -116,10 +141,11 @@ fn create_materials(
 ) {
     if !event_reader.is_empty() {
         if let Some(atlas) = texture_atlases.from_id("cosmos:main") {
-            let default_material = materials.add(create_main_material(atlas.texture_atlas.texture.clone(), false));
-            let unlit_default_material = materials.add(create_main_material(atlas.texture_atlas.texture.clone(), true));
-            let transparent_material = materials.add(create_transparent_material(atlas.texture_atlas.texture.clone(), false));
-            let unlit_transparent_material = materials.add(create_transparent_material(atlas.texture_atlas.texture.clone(), true));
+            let default_material = materials.add(create_main_material(atlas.texture_atlas.get_atlas_handle().clone(), false));
+            let unlit_default_material = materials.add(create_main_material(atlas.texture_atlas.get_atlas_handle().clone(), true));
+            let transparent_material = materials.add(create_transparent_material(atlas.texture_atlas.get_atlas_handle().clone(), false));
+            let unlit_transparent_material =
+                materials.add(create_transparent_material(atlas.texture_atlas.get_atlas_handle().clone(), true));
 
             commands.insert_resource(DefaultMaterial(default_material));
             commands.insert_resource(UnlitMaterial(unlit_default_material));
@@ -128,16 +154,18 @@ fn create_materials(
 
             material_registry.register(MaterialDefinition::new(
                 "cosmos:animated",
-                Some(Box::new(AnimatedMaterialInformationGenerator {})),
+                Some(Box::new(AnimatedMaterialInformationGenerator::default())),
             ));
             material_registry.register(MaterialDefinition::new(
                 "cosmos:illuminated_animated",
-                Some(Box::new(AnimatedMaterialInformationGenerator {})),
+                Some(Box::new(AnimatedMaterialInformationGenerator::default())),
             ));
             material_registry.register(MaterialDefinition::new(
                 "cosmos:transparent_animated",
-                Some(Box::new(AnimatedMaterialInformationGenerator {})),
+                Some(Box::new(AnimatedMaterialInformationGenerator::default())),
             ));
+
+            commands.remove_resource::<AnimatedMaterialInformationGenerator>();
         }
 
         event_writer.send(AssetsDoneLoadingEvent);
