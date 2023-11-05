@@ -185,7 +185,6 @@ fn register_materials(
         .iter()
         .filter_map(|x| x.material_data.as_ref().map(|y| (x.unlocalized_name(), y)))
     {
-        println!(":D");
         if let Some(block) = blocks.from_id(block_name) {
             let material_name = &material_data.name;
 
@@ -199,31 +198,7 @@ fn register_materials(
                     .expect("This was verified to exist above!")
                     .add_block_information(block.id(), data);
             }
-
-            println!("{registry:?}");
-        } else {
-            println!("D:");
         }
-    }
-
-    // TODO: Specify this in file or something
-
-    if let Some(block) = blocks.from_id("cosmos:light") {
-        registry
-            .add_link(block, "cosmos:illuminated")
-            .expect("Illuminated material should exist");
-    }
-
-    if let Some(block) = blocks.from_id("cosmos:water") {
-        registry
-            .add_link(block, "cosmos:transparent")
-            .expect("Transparent material should exist");
-    }
-
-    if let Some(block) = blocks.from_id("cosmos:ice") {
-        registry
-            .add_link(block, "cosmos:transparent")
-            .expect("Transparent material should exist");
     }
 
     for block in blocks.iter() {
