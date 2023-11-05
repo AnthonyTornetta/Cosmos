@@ -69,7 +69,7 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
       - [ ] Perhaps done via a sphere surrounding the planet that always faces the nearest star
     - [ ] Sun-set skybox
     - [ ] Night-side skybox
-- [ ] Animated textures
+- [x] Animated textures
 - [ ] Sounds
   - [x] Laser cannon fire
   - [ ] Block take damage
@@ -86,7 +86,7 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
   - [x] Able to open inventory
   - [x] Abstract the 3d block GUI camera
   - [x] Fix the 3d block GUI camera to not render anything except GUI blocks
-- [ ] Fix seeing through cracks in blocks
+- [x] Fix seeing through cracks in blocks
 - [x] Lods
   - [x] Reduced detail rendering of far away chunks to see the entire planet
 - [x] Update to bevy 0.11

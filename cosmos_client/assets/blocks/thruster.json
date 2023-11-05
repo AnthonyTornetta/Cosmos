@@ -1,7 +1,14 @@
 {
+    "material": {
+        "name": "cosmos:animated",
+        "data": {
+            "frame_duration_ms": "500",
+            "n_frames": "2"
+        }
+    },
     "texture": {
         "back": "thruster_back",
-        "front": "ship_hull_grey",
+        "front": "thruster_front",
         "left": "thruster_left_right",
         "right": "thruster_left_right",
         "top": "thruster_top_bottom",
