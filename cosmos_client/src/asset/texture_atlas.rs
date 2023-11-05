@@ -1,3 +1,5 @@
+//! Similar to bevy's default texture atlas, but the order they are inserted matters and assumes every texture is the same size and a square.
+
 use bevy::{
     prelude::{Assets, Handle, Image},
     reflect::Reflect,
@@ -20,10 +22,14 @@ pub struct SquareTextureAtlas {
 }
 
 impl SquareTextureAtlas {
+    /// Gets the texture index for a specific image if it exists in this atlas
     pub fn get_texture_index(&self, handle: &Handle<Image>) -> Option<u32> {
         self.indices.get(handle).copied()
     }
 
+    /// Gets the handle to this atlas's image
+    ///
+    /// The image has already been interpreted as a stacked 2d array texture
     pub fn get_atlas_handle(&self) -> &Handle<Image> {
         &self.atlas_texture
     }
@@ -52,6 +58,11 @@ pub struct SquareTextureAtlasBuilder {
 }
 
 impl SquareTextureAtlasBuilder {
+    /// Creates a new atlas builder
+    ///
+    /// All textures fed into this should have these dimensions or it will panic.
+    /// Note that if a texture with a height that is a multiple of these dimensions is given, it will treat that single
+    /// texture as multiple textures and add them in order next to each other in the atlas.
     pub fn new(texture_dimensions: u32) -> Self {
         Self {
             images: vec![],
@@ -59,10 +70,14 @@ impl SquareTextureAtlasBuilder {
         }
     }
 
+    /// All textures fed into this should have these dimensions or it will panic*.
+    /// *Note that if a texture with a height that is a multiple of these dimensions is given, it will treat that single
+    /// texture as multiple textures and add them in order next to each other in the atlas.
     pub fn add_texture(&mut self, handle: Handle<Image>) {
         self.images.push(handle);
     }
 
+    /// Turns all the images given to this into one big atlas image that is usable as an array texture.
     pub fn create_atlas(self, textures: &mut Assets<Image>) -> SquareTextureAtlas {
         let mut total_height = 0;
 

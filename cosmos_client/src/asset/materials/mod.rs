@@ -65,9 +65,14 @@ pub fn add_materials() {}
 /// Add all event listeners for `RemoveAllMaterialsEvent` after this and before `add_materials` to ensure your material is removed at the right time.
 pub fn remove_materials() {}
 
+/// Generates any extra information need for meshes that use this material
 pub trait MaterialMeshInformationGenerator: Send + Sync {
+    /// Generates the information needed for this mesh information.
+    ///
+    /// It is guarenteeed that this `mesh_info` uses this material.
     fn generate_information(&self, block_id: u16, mesh_info: &MeshInformation) -> Vec<(MeshVertexAttribute, VertexAttributeValues)>;
 
+    /// Adds information about a block from its JSON file if that block uses this material
     fn add_information(&mut self, block_id: u16, serialized_information: Vec<u8>);
 }
 
@@ -97,6 +102,9 @@ impl MaterialDefinition {
         }
     }
 
+    /// Generates the information needed for this mesh information.
+    ///
+    /// It is guarenteeed that this `mesh_info` uses this material.
     pub fn add_material_data(&self, block_id: u16, mesh_info: &MeshInformation) -> Vec<(MeshVertexAttribute, VertexAttributeValues)> {
         self.generator
             .as_ref()
@@ -104,6 +112,7 @@ impl MaterialDefinition {
             .unwrap_or_default()
     }
 
+    /// Adds information about a block from its JSON file if that block uses this material
     pub fn add_block_information(&self, block_id: u16, serialized_information: Vec<u8>) {
         if let Some(generator) = self.generator.as_ref() {
             generator.write().unwrap().add_information(block_id, serialized_information);
