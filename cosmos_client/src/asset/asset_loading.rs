@@ -156,27 +156,12 @@ fn check_assets_ready(
                 let mut texture_atlas_builder = SquareTextureAtlasBuilder::new(16);
 
                 for handle in asset.handles.iter() {
-                    // let Some(image) = images.get(handle) else {
-                    //     warn!("{:?} did not resolve to an `Image` asset.", server.get_handle_path(handle));
-                    //     continue;
-                    // };
-
-                    // let img = image.clone(); //expand_image(image, DEFAULT_PADDING);
-
-                    // let handle = images.set(handle.clone(), img);
-
-                    println!("{:?}", handle.id());
-
                     texture_atlas_builder.add_texture(handle.clone());
                 }
 
                 let atlas = texture_atlas_builder.create_atlas(&mut images);
 
                 let img = images.get(&atlas.get_atlas_handle()).expect("No");
-                let image_area = img.size().x * img.size().y;
-
-                println!("X: {}; y: {}", img.size().x, img.size().y);
-                println!("Image area: {image_area}");
 
                 image::save_buffer(
                     Path::new("image.png"),
@@ -267,8 +252,18 @@ impl Identifiable for BlockTextureIndex {
     }
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+/// The material for this block - if none the default material is assumed.
+pub struct MaterialData {
+    /// The name of the material
+    pub name: String,
+    /// This data is sent to the material for its own processing, if it is provided
+    pub data: Option<HashMap<String, String>>,
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 struct ReadBlockInfo {
+    material: Option<MaterialData>,
     texture: Option<HashMap<String, String>>,
     model: Option<String>,
 }
@@ -280,6 +275,9 @@ pub struct BlockRenderingInfo {
     pub texture: HashMap<String, String>,
     /// This is the model id this block has
     pub model: String,
+    /// This data is sent to the material for its own processing, if it is provided
+    pub material_data: Option<MaterialData>,
+
     unlocalized_name: String,
     id: u16,
 }
@@ -326,8 +324,8 @@ pub fn load_block_rendering_information(
         let json_path = format!("assets/blocks/{block_name}.json");
 
         let block_info = if let Ok(block_info) = fs::read(&json_path) {
-            let read_info =
-                serde_json::from_slice::<ReadBlockInfo>(&block_info).unwrap_or_else(|_| panic!("Error reading json data in {json_path}"));
+            let read_info = serde_json::from_slice::<ReadBlockInfo>(&block_info)
+                .unwrap_or_else(|e| panic!("Error reading json data in {json_path}. \nError: \n{e}\n"));
 
             BlockRenderingInfo {
                 id: 0,
@@ -338,6 +336,7 @@ pub fn load_block_rendering_information(
                     default_hashmap.insert("all".into(), block_name.to_owned());
                     default_hashmap
                 }),
+                material_data: read_info.material,
             }
         } else {
             let mut default_hashmap = HashMap::new();
@@ -348,6 +347,7 @@ pub fn load_block_rendering_information(
                 model: "cosmos:base_block".into(),
                 id: 0,
                 unlocalized_name: block.unlocalized_name().to_owned(),
+                material_data: None,
             }
         };
 

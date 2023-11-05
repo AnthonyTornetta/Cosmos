@@ -132,13 +132,9 @@ impl SquareTextureAtlasBuilder {
             format,
         );
 
-        println!("Total height: {total_height}");
-
         let mut y = 0;
 
         for texture in images {
-            println!("Y: {y}");
-            println!("Y normalized: {y}");
             let next_y = y + self.texture_dimensions as usize * texture.size().y as usize * format_size;
             atlas_texture.data[y..next_y].copy_from_slice(&texture.data);
             y = next_y;

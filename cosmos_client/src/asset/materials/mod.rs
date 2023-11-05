@@ -5,6 +5,7 @@ use std::sync::{Arc, RwLock};
 use bevy::{
     prelude::*,
     render::mesh::{MeshVertexAttribute, VertexAttributeValues},
+    utils::HashMap,
 };
 use cosmos_core::{
     block::Block,
@@ -13,7 +14,7 @@ use cosmos_core::{
 
 use crate::{rendering::MeshInformation, state::game_state::GameState};
 
-use self::material_types::animated_material::AnimationData;
+use super::asset_loading::{load_block_rendering_information, BlockRenderingInfo};
 
 pub mod animated_material;
 pub mod block_materials;
@@ -73,7 +74,7 @@ pub trait MaterialMeshInformationGenerator: Send + Sync {
     fn generate_information(&self, block_id: u16, mesh_info: &MeshInformation) -> Vec<(MeshVertexAttribute, VertexAttributeValues)>;
 
     /// Adds information about a block from its JSON file if that block uses this material
-    fn add_information(&mut self, block_id: u16, serialized_information: Vec<u8>);
+    fn add_information(&mut self, block_id: u16, additional_information: &HashMap<String, String>);
 }
 
 #[derive(Resource, Clone)]
@@ -113,9 +114,9 @@ impl MaterialDefinition {
     }
 
     /// Adds information about a block from its JSON file if that block uses this material
-    pub fn add_block_information(&self, block_id: u16, serialized_information: Vec<u8>) {
+    pub fn add_block_information(&self, block_id: u16, additional_information: &HashMap<String, String>) {
         if let Some(generator) = self.generator.as_ref() {
-            generator.write().unwrap().add_information(block_id, serialized_information);
+            generator.write().unwrap().add_information(block_id, additional_information);
         }
     }
 }
@@ -134,7 +135,7 @@ impl Identifiable for MaterialDefinition {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 /// Represents a mapping between blocks and the materials they are attached to.
 ///
 /// Do not use the `id` function to get the material's id - that only refers to this mapping's id.
@@ -170,6 +171,7 @@ fn register_materials(
     blocks: Res<Registry<Block>>,
     materials: Res<Registry<MaterialDefinition>>,
     mut registry: ResMut<ManyToOneRegistry<Block, BlockMaterialMapping>>,
+    info_registry: Res<Registry<BlockRenderingInfo>>,
 ) {
     for material in materials.iter() {
         registry.insert_value(BlockMaterialMapping {
@@ -179,15 +181,34 @@ fn register_materials(
         });
     }
 
+    for (block_name, material_data) in info_registry
+        .iter()
+        .filter_map(|x| x.material_data.as_ref().map(|y| (x.unlocalized_name(), y)))
+    {
+        println!(":D");
+        if let Some(block) = blocks.from_id(block_name) {
+            let material_name = &material_data.name;
+
+            registry
+                .add_link(block, material_name)
+                .unwrap_or_else(|_| panic!("Missing material {material_name} for block {block_name}"));
+
+            if let Some(data) = material_data.data.as_ref() {
+                materials
+                    .from_id(material_name)
+                    .expect("This was verified to exist above!")
+                    .add_block_information(block.id(), data);
+            }
+
+            println!("{registry:?}");
+        } else {
+            println!("D:");
+        }
+    }
+
     // TODO: Specify this in file or something
 
     if let Some(block) = blocks.from_id("cosmos:light") {
-        registry
-            .add_link(block, "cosmos:illuminated")
-            .expect("Illuminated material should exist");
-    }
-
-    if let Some(block) = blocks.from_id("cosmos:ship_core") {
         registry
             .add_link(block, "cosmos:illuminated")
             .expect("Illuminated material should exist");
@@ -205,24 +226,6 @@ fn register_materials(
             .expect("Transparent material should exist");
     }
 
-    if let Some(block) = blocks.from_id("cosmos:reactor_cell") {
-        registry
-            .add_link(block, "cosmos:animated")
-            .expect("Transparent material should exist");
-
-        materials
-            .from_id("cosmos:animated")
-            .expect("Missing animated shader!")
-            .add_block_information(
-                block.id(),
-                bincode::serialize(&AnimationData {
-                    frame_duration_ms: 200,
-                    n_frames: 4,
-                })
-                .unwrap(),
-            );
-    }
-
     for block in blocks.iter() {
         if !registry.contains(block) {
             registry.add_link(block, "cosmos:main").expect("Animated material should exist");
@@ -237,8 +240,11 @@ pub(super) fn register(app: &mut App) {
     block_materials::register(app);
     animated_material::register(app);
 
-    app.add_systems(OnExit(GameState::PostLoading), register_materials)
-        .add_systems(Update, (remove_materials, add_materials).chain())
-        .add_event::<RemoveAllMaterialsEvent>()
-        .add_event::<AddMaterialEvent>();
+    app.add_systems(
+        OnExit(GameState::PostLoading),
+        register_materials.after(load_block_rendering_information),
+    )
+    .add_systems(Update, (remove_materials, add_materials).chain())
+    .add_event::<RemoveAllMaterialsEvent>()
+    .add_event::<AddMaterialEvent>();
 }

@@ -2,8 +2,8 @@
     "material": {
         "name": "cosmos:animated",
         "data": {
-            "frame_duration_ms": 200,
-            "n_frames": 4
+            "frame_duration_ms": "200",
+            "n_frames": "4"
         }
     }
 }

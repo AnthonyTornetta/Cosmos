@@ -43,14 +43,14 @@ fn respond_to_add_materials_event(
                     MaterialType::FarAway => default_material.0.clone(),
                 });
             }
-            "cosmos:illuminated_animated" => {
+            "cosmos:animated_illuminated" => {
                 commands.entity(ev.entity).insert(match ev.material_type {
                     MaterialType::Normal => unlit_material.0.clone(),
                     MaterialType::Unlit => unlit_material.0.clone(),
                     MaterialType::FarAway => unlit_material.0.clone(),
                 });
             }
-            "cosmos:transparent_animated" => {
+            "cosmos:animated_transparent" => {
                 commands.entity(ev.entity).insert(match ev.material_type {
                     MaterialType::Normal => transparent_material.0.clone(),
                     MaterialType::Unlit => unlit_transparent_material.0.clone(),
@@ -98,7 +98,7 @@ pub struct AnimationData {
     pub n_frames: u16,
 }
 
-#[derive(Resource, Default, Clone)]
+#[derive(Default, Clone)]
 struct AnimatedMaterialInformationGenerator {
     mapping: HashMap<u16, u32>,
 }
@@ -123,10 +123,21 @@ impl MaterialMeshInformationGenerator for AnimatedMaterialInformationGenerator {
         vec![(ATTRIBUTE_PACKED_ANIMATION_DATA, animation_data.into())]
     }
 
-    fn add_information(&mut self, block_id: u16, serialized_information: Vec<u8>) {
+    fn add_information(&mut self, block_id: u16, additional_information: &HashMap<String, String>) {
         self.add_block_animation_data(
             block_id,
-            bincode::deserialize(&serialized_information).expect("Bad animation information given - unable to deserialize!"),
+            AnimationData {
+                frame_duration_ms: additional_information
+                    .get("frame_duration_ms")
+                    .expect("Missing 'frame_duration_ms' for animated material! Please add that to your json file.")
+                    .parse()
+                    .expect("Invalid 'frame_duration_ms' value. It must be a number between 0 and 65535"),
+                n_frames: additional_information
+                    .get("n_frames")
+                    .expect("Missing 'n_frames' for animated material! Please add that to your json file.")
+                    .parse()
+                    .expect("Invalid 'n_frames' value. It must be a number between 0 and 65535"),
+            },
         );
     }
 }
@@ -141,8 +152,8 @@ fn create_materials(
 ) {
     if !event_reader.is_empty() {
         if let Some(atlas) = texture_atlases.from_id("cosmos:main") {
-            let default_material = materials.add(create_main_material(atlas.texture_atlas.get_atlas_handle().clone(), false));
             let unlit_default_material = materials.add(create_main_material(atlas.texture_atlas.get_atlas_handle().clone(), true));
+            let default_material = materials.add(create_main_material(atlas.texture_atlas.get_atlas_handle().clone(), false));
             let transparent_material = materials.add(create_transparent_material(atlas.texture_atlas.get_atlas_handle().clone(), false));
             let unlit_transparent_material =
                 materials.add(create_transparent_material(atlas.texture_atlas.get_atlas_handle().clone(), true));
@@ -157,15 +168,13 @@ fn create_materials(
                 Some(Box::new(AnimatedMaterialInformationGenerator::default())),
             ));
             material_registry.register(MaterialDefinition::new(
-                "cosmos:illuminated_animated",
+                "cosmos:animated_illuminated",
                 Some(Box::new(AnimatedMaterialInformationGenerator::default())),
             ));
             material_registry.register(MaterialDefinition::new(
-                "cosmos:transparent_animated",
+                "cosmos:animated_transparent",
                 Some(Box::new(AnimatedMaterialInformationGenerator::default())),
             ));
-
-            commands.remove_resource::<AnimatedMaterialInformationGenerator>();
         }
 
         event_writer.send(AssetsDoneLoadingEvent);
