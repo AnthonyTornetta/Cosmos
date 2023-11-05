@@ -1,7 +1,7 @@
 {
     "texture": {
-        "all": "redwood_log_side",
-        "top": "redwood_log_top_bottom",
-        "bottom": "redwood_log_top_bottom"
+        "all": "cosmos:redwood_log_side",
+        "top": "cosmos:redwood_log_top_bottom",
+        "bottom": "cosmos:redwood_log_top_bottom"
     }
 }

@@ -7,11 +7,11 @@
         }
     },
     "texture": {
-        "back": "thruster_back",
-        "front": "thruster_front",
-        "left": "thruster_left_right",
-        "right": "thruster_left_right",
-        "top": "thruster_top_bottom",
-        "bottom": "thruster_top_bottom"
+        "back": "cosmos:thruster_back",
+        "front": "cosmos:thruster_front",
+        "left": "cosmos:thruster_left_right",
+        "right": "cosmos:thruster_left_right",
+        "top": "cosmos:thruster_top_bottom",
+        "bottom": "cosmos:thruster_top_bottom"
     }
 }

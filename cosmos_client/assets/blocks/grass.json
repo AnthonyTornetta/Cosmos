@@ -1,8 +1,8 @@
 {
     "texture": {
-        "all": "grass_side",
-        "top": "grass_top",
-        "bottom": "dirt",
-        "lod": "grass_top"
+        "all": "cosmos:grass_side",
+        "top": "cosmos:grass_top",
+        "bottom": "cosmos:dirt",
+        "lod": "cosmos:grass_top"
     }
 }

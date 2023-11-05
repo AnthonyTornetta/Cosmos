@@ -66,7 +66,7 @@ fn setup_textures(
     mut start_writer: EventWriter<AddLoadingEvent>,
 ) {
     let image_handles = server
-        .load_folder("images/blocks/")
+        .load_folder("cosmos/images/blocks/")
         .expect("error loading blocks textures")
         .into_iter()
         .map(|x| x.typed::<Image>())
@@ -308,7 +308,7 @@ pub fn load_block_rendering_information(
         .from_id("cosmos:main")
         .expect("Missing main atlas!")
         .texture_atlas
-        .get_texture_index(&server.get_handle("images/blocks/missing.png"))
+        .get_texture_index(&server.get_handle("cosmos/images/blocks/missing.png"))
     {
         registry.register(BlockTextureIndex {
             id: 0,
@@ -333,14 +333,14 @@ pub fn load_block_rendering_information(
                 model: read_info.model.unwrap_or("cosmos:base_block".into()),
                 texture: read_info.texture.unwrap_or_else(|| {
                     let mut default_hashmap = HashMap::new();
-                    default_hashmap.insert("all".into(), block_name.to_owned());
+                    default_hashmap.insert("all".into(), unlocalized_name.to_owned());
                     default_hashmap
                 }),
                 material_data: read_info.material,
             }
         } else {
             let mut default_hashmap = HashMap::new();
-            default_hashmap.insert("all".into(), block_name.to_owned());
+            default_hashmap.insert("all".into(), unlocalized_name.to_owned());
 
             BlockRenderingInfo {
                 texture: default_hashmap.clone(),
@@ -353,11 +353,18 @@ pub fn load_block_rendering_information(
 
         let mut map = HashMap::new();
         for (entry, texture_name) in block_info.texture.iter() {
+            let mut name_split = texture_name.split(":");
+
+            let mod_id = name_split.next().unwrap();
+            let name = name_split
+                .next()
+                .unwrap_or_else(|| panic!("Invalid texture - {texture_name}. Did you forget the 'cosmos:'?"));
+
             if let Some(index) = atlas_registry
                 .from_id("cosmos:main") // Eventually load this via the block_info file
                 .expect("No main atlas")
                 .texture_atlas
-                .get_texture_index(&server.get_handle(&format!("images/blocks/{texture_name}.png",)))
+                .get_texture_index(&server.get_handle(&format!("{mod_id}/images/blocks/{name}.png",)))
             {
                 map.insert(entry.to_owned(), index);
             }

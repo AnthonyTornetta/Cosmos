@@ -1,10 +1,10 @@
 {
     "texture": {
-        "front": "laser_cannon_back",
-        "back": "laser_cannon_front",
-        "left": "laser_cannon_left_right",
-        "right": "laser_cannon_left_right",
-        "top": "laser_cannon_top_bottom",
-        "bottom": "laser_cannon_top_bottom"
+        "front": "cosmos:laser_cannon_back",
+        "back": "cosmos:laser_cannon_front",
+        "left": "cosmos:laser_cannon_left_right",
+        "right": "cosmos:laser_cannon_left_right",
+        "top": "cosmos:laser_cannon_top_bottom",
+        "bottom": "cosmos:laser_cannon_top_bottom"
     }
 }
