@@ -144,9 +144,9 @@ fn vertex(vertex_no_morph: Vertex) -> VertexOutput {
 
     var secs = u32(globals.time / frame_duration_ms) % n_frames;
 
-    // out.texture_index = vertex.texture_index + secs;
+    out.texture_index = vertex.texture_index + secs;
 
-    // out.animation_data = vertex.animation_data;
+    out.animation_data = vertex.animation_data;
 
     return out;
 }
