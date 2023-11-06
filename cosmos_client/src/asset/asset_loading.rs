@@ -308,9 +308,11 @@ pub fn load_block_rendering_information(
 
     for block in blocks.iter() {
         let unlocalized_name = block.unlocalized_name();
-        let block_name = unlocalized_name.split(':').nth(1).unwrap_or(unlocalized_name);
+        let mut split = unlocalized_name.split(':');
+        let mod_id = split.next().unwrap();
+        let block_name = split.next().unwrap_or(unlocalized_name);
 
-        let json_path = format!("assets/blocks/{block_name}.json");
+        let json_path = format!("assets/{mod_id}/blocks/{block_name}.json");
 
         let block_info = if let Ok(block_info) = fs::read(&json_path) {
             let read_info = serde_json::from_slice::<ReadBlockInfo>(&block_info)

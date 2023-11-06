@@ -231,7 +231,7 @@ fn change_visuals(
         visuals.2 = None;
     }
 
-    let texture_handle = asset_server.load("images/misc/symmetry.png");
+    let texture_handle = asset_server.load("cosmos/images/misc/symmetry.png");
 
     let size = structure.block_dimensions().x;
 
