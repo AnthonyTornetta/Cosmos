@@ -2,7 +2,7 @@
 //!
 //! This also combines the textures into one big atlas.
 
-use std::{fs, path::Path};
+use std::fs;
 
 use bevy::{prelude::*, utils::HashMap};
 use cosmos_core::{
@@ -160,17 +160,6 @@ fn check_assets_ready(
                 }
 
                 let atlas = texture_atlas_builder.create_atlas(&mut images);
-
-                let img = images.get(&atlas.get_atlas_handle()).expect("No");
-
-                image::save_buffer(
-                    Path::new("image.png"),
-                    img.data.as_slice(),
-                    atlas.width(),
-                    atlas.height(),
-                    image::ColorType::Rgba8,
-                )
-                .unwrap();
 
                 texture_atlases.register(CosmosTextureAtlas::new("cosmos:main", atlas));
             }
