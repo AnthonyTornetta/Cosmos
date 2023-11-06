@@ -10,7 +10,7 @@ use bevy::{prelude::*, reflect::Reflect, utils::HashMap};
 use crate::{
     block::{Block, BlockFace},
     events::block_events::BlockChangedEvent,
-    registry::{identifiable::Identifiable, Registry},
+    registry::{create_registry, identifiable::Identifiable, Registry},
     structure::{
         coordinates::{BlockCoordinate, CoordinateType},
         events::StructureLoadedEvent,
@@ -25,6 +25,13 @@ use super::Systems;
 pub struct LaserCannonProperty {
     /// How much energy is consumed per shot
     pub energy_per_shot: f32,
+}
+
+#[derive(Default, Reflect, Clone, Copy)]
+/// Every block that will change the color of laser cannons should have this property
+pub struct LaserCannonColorProperty {
+    /// The color this will change the laser to
+    pub color: Color,
 }
 
 impl SubAssign for LaserCannonProperty {
@@ -54,6 +61,44 @@ struct LaserCannonBlocks {
     blocks: HashMap<u16, LaserCannonProperty>,
 }
 
+#[derive(Clone)]
+pub struct LaserCannonColorBlock {
+    id: u16,
+    unlocalized_name: String,
+
+    pub color: LaserCannonColorProperty,
+}
+
+impl Identifiable for LaserCannonColorBlock {
+    fn id(&self) -> u16 {
+        self.id
+    }
+
+    fn set_numeric_id(&mut self, id: u16) {
+        self.id = id;
+    }
+
+    fn unlocalized_name(&self) -> &str {
+        &self.unlocalized_name
+    }
+}
+
+impl LaserCannonColorBlock {
+    pub fn new(block: &Block, color: LaserCannonColorProperty) -> Self {
+        Self {
+            color,
+            id: 0,
+            unlocalized_name: block.unlocalized_name().to_owned(),
+        }
+    }
+}
+
+impl Registry<LaserCannonColorBlock> {
+    pub fn from_block(&self, block: &Block) -> Option<&LaserCannonColorBlock> {
+        self.from_id(block.unlocalized_name())
+    }
+}
+
 impl LaserCannonBlocks {
     pub fn insert(&mut self, block: &Block, cannon_property: LaserCannonProperty) {
         self.blocks.insert(block.id(), cannon_property);
@@ -77,6 +122,8 @@ pub struct Line {
     pub len: CoordinateType,
     /// The property of all the blocks in this line
     pub property: LaserCannonProperty,
+    /// The color of the laser
+    pub color: Color,
 
     /// All the properties of the laser cannons in this line
     properties: Vec<LaserCannonProperty>,
@@ -114,11 +161,17 @@ impl Line {
 pub struct LaserCannonSystem {
     /// All the lins that there are
     pub lines: Vec<Line>,
+    /// Any color changers that are placed on this structure
+    pub colors: Vec<(BlockCoordinate, LaserCannonColorProperty)>,
     /// The time since this system was last fired.
     pub last_shot_time: f32,
 }
 
 impl LaserCannonSystem {
+    fn find_best_color(&self, block: StructureBlock) -> Color {
+        todo!();
+    }
+
     fn block_removed(&mut self, sb: &StructureBlock) {
         for (i, line) in self.lines.iter_mut().enumerate() {
             if line.start == *sb {
@@ -179,6 +232,7 @@ impl LaserCannonSystem {
                     len: l1_len,
                     property: l1_total_prop,
                     properties: l1_props,
+                    color: line.color,
                 };
 
                 let (dx, dy, dz) = line.direction.direction();
@@ -195,6 +249,7 @@ impl LaserCannonSystem {
                     len: line.len - l1_len - 1,
                     property: l2_total_prop,
                     properties: l2_props,
+                    color: line.color,
                 };
 
                 self.lines[i] = l1;
@@ -278,12 +333,15 @@ impl LaserCannonSystem {
 
         // If gotten here, no suitable line was found
 
+        let color = self.find_best_color(block);
+
         self.lines.push(Line {
             start: *block,
             direction: block_direction,
             len: 1,
             property: *prop,
             properties: vec![*prop],
+            color,
         });
     }
 }
@@ -339,6 +397,8 @@ fn structure_loaded_event(
 }
 
 pub(super) fn register<T: States + Clone + Copy>(app: &mut App, post_loading_state: T, playing_state: T) {
+    create_registry::<LaserCannonColorBlock>(app);
+
     app.insert_resource(LaserCannonBlocks::default())
         .add_systems(OnEnter(post_loading_state), register_laser_blocks)
         .add_systems(
