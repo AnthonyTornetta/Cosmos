@@ -545,8 +545,8 @@ impl Material for AnimatedArrayTextureMaterial {
             Mesh::ATTRIBUTE_UV_0.at_shader_location(2),
             // Mesh::ATTRIBUTE_TANGENT.at_shader_location(3),
             // Mesh::ATTRIBUTE_COLOR.at_shader_location(4),
-            ATTRIBUTE_TEXTURE_INDEX.at_shader_location(5),
-            ATTRIBUTE_PACKED_ANIMATION_DATA.at_shader_location(6),
+            ATTRIBUTE_TEXTURE_INDEX.at_shader_location(20),
+            ATTRIBUTE_PACKED_ANIMATION_DATA.at_shader_location(21),
         ])?;
 
         descriptor.vertex.buffers = vec![vertex_layout];

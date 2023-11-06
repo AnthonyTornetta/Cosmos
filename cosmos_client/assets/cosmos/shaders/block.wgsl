@@ -37,7 +37,7 @@ struct CustomMeshVertexOutput {
     #ifdef VERTEX_COLORS
     @location(4) color: vec4<f32>,
     #endif
-    @location(5) texture_index: u32,
+    @location(20) texture_index: u32,
 }
 
 
@@ -59,7 +59,7 @@ struct CustomVertex {
     @location(4) color: vec4<f32>,
 
     #endif
-        @location(5) texture_index: u32,
+        @location(20) texture_index: u32,
     #ifdef MORPH_TARGETS
         @builtin(vertex_index) index: u32,
     #endif

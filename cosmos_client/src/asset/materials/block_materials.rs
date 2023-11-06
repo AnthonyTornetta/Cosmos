@@ -537,7 +537,7 @@ impl Material for ArrayTextureMaterial {
             Mesh::ATTRIBUTE_UV_0.at_shader_location(2),
             // Mesh::ATTRIBUTE_TANGENT.at_shader_location(3),
             // Mesh::ATTRIBUTE_COLOR.at_shader_location(4),
-            ATTRIBUTE_TEXTURE_INDEX.at_shader_location(5),
+            ATTRIBUTE_TEXTURE_INDEX.at_shader_location(20),
         ])?;
 
         descriptor.vertex.buffers = vec![vertex_layout];
@@ -550,6 +550,14 @@ impl Material for ArrayTextureMaterial {
         //     depth_stencil.bias.constant = key.bind_group_data.depth_bias;
         // }
         Ok(())
+    }
+
+    fn prepass_vertex_shader() -> ShaderRef {
+        "cosmos/shaders/block_prepass.wgsl".into()
+    }
+
+    fn prepass_fragment_shader() -> ShaderRef {
+        "cosmos/shaders/block_prepass.wgsl".into()
     }
 
     fn vertex_shader() -> ShaderRef {
