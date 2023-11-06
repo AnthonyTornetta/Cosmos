@@ -561,6 +561,14 @@ impl Material for AnimatedArrayTextureMaterial {
         Ok(())
     }
 
+    fn prepass_vertex_shader() -> ShaderRef {
+        "cosmos/shaders/animated_prepass.wgsl".into()
+    }
+
+    fn prepass_fragment_shader() -> ShaderRef {
+        "cosmos/shaders/animated_prepass.wgsl".into()
+    }
+
     fn vertex_shader() -> ShaderRef {
         "cosmos/shaders/animated.wgsl".into()
     }
