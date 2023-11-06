@@ -241,6 +241,35 @@ fn add_cosmos_blocks(
             .create(),
     );
 
+    let glass_colors = [
+        "white",
+        "blue",
+        "dark_blue",
+        "brown",
+        "green",
+        "dark_green",
+        "orange",
+        "dark_orange",
+        "pink",
+        "dark_pink",
+        "purple",
+        "dark_purple",
+        "red",
+        "dark_red",
+        "yellow",
+        "dark_yellow",
+        "mint",
+    ];
+
+    for color in glass_colors {
+        blocks.register(
+            BlockBuilder::new(format!("cosmos:glass_{color}"), 4.0, 100.0)
+                .add_property(BlockProperty::Transparent)
+                .add_property(BlockProperty::Full)
+                .create(),
+        );
+    }
+
     loading.finish_loading(id, &mut end_writer);
 }
 
