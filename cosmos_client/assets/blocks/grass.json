@@ -1,8 +1,0 @@
-{
-    "texture": {
-        "all": "grass_side",
-        "top": "grass_top",
-        "bottom": "dirt",
-        "lod": "grass_top"
-    }
-}

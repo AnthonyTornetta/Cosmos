@@ -3,7 +3,6 @@
 use std::{
     hash::Hash,
     marker::PhantomData,
-    mem::size_of,
     sync::{Arc, RwLock, RwLockReadGuard},
 };
 
@@ -1138,28 +1137,8 @@ fn construct_lookup_tables<T: BiosphereMarkerComponent>(mut registry: ResMut<Bio
 ///
 /// You don't normally have to call this manually, because is automatically called in `register_biosphere`
 pub fn create_biosphere_biomes_registry<T: BiosphereMarkerComponent>(app: &mut App) {
-    println!("A");
-    println!("A");
-    println!("A");
-    println!("A");
-    println!("A");
-    println!("Size: {}", size_of::<BiosphereBiomesRegistry<T>>());
-
-    // let le = Box::new([0; LOOKUP_TABLE_SIZE]);
-
-    // let x = BiosphereBiomesRegistry::<T> {
-    //     biomes: vec![],
-    //     lookup_table: Arc::new(RwLock::new(le)),
-    //     todo_biomes: vec![],
-    //     _phantom: Default::default(),
-    // };
-
-    println!("made x!");
-
     app.init_resource::<BiosphereBiomesRegistry<T>>()
         .add_systems(OnExit(GameState::PostLoading), construct_lookup_tables::<T>);
-
-    println!("Inited resource!");
 }
 
 pub(super) fn register(app: &mut App) {

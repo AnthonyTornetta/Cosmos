@@ -15,7 +15,13 @@ use cosmos_core::{
 };
 
 use crate::{
-    asset::asset_loading::{BlockTextureIndex, MaterialDefinition},
+    asset::{
+        asset_loading::BlockTextureIndex,
+        materials::{
+            add_materials, block_materials::ArrayTextureMaterial, remove_materials, AddMaterialEvent, BlockMaterialMapping,
+            MaterialDefinition, MaterialType,
+        },
+    },
     rendering::{BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder},
 };
 
@@ -72,13 +78,15 @@ fn render_items(
     items: Res<Registry<Item>>,
     blocks: Res<Registry<Block>>,
 
-    materials_registry: Res<ManyToOneRegistry<Block, MaterialDefinition>>,
+    block_materials_registry: Res<ManyToOneRegistry<Block, BlockMaterialMapping>>,
     block_textures: Res<Registry<BlockTextureIndex>>,
     block_meshes: Res<BlockMeshRegistry>,
 
     mut removed_render_items: RemovedComponents<RenderItem>,
     changed_render_items: Query<(Entity, &RenderItem, &GlobalTransform), Or<(Changed<RenderItem>, Changed<GlobalTransform>)>>,
     rendered_items: Query<(Entity, &RenderedItem)>,
+    material_definitions_registry: Res<Registry<MaterialDefinition>>,
+    mut event_writer: EventWriter<AddMaterialEvent>,
 ) {
     for entity in removed_render_items.iter() {
         if let Some((rendered_item_entity, _)) = rendered_items
@@ -112,7 +120,7 @@ fn render_items(
             transform.translation.x = -1000000.0;
 
             commands
-                .spawn(PbrBundle {
+                .spawn(MaterialMeshBundle::<ArrayTextureMaterial> {
                     transform,
                     ..Default::default()
                 })
@@ -137,10 +145,14 @@ fn render_items(
 
         let mut mesh_builder = CosmosMeshBuilder::default();
 
-        let Some(material) = materials_registry.get_value(block) else {
+        let Some(block_material_mapping) = block_materials_registry.get_value(block) else {
             warn!("Missing material for block {}", block.unlocalized_name());
             continue;
         };
+
+        let mat_id = block_material_mapping.material_id();
+
+        let material = material_definitions_registry.from_numeric_id(mat_id);
 
         if block_mesh_info.has_multiple_face_meshes() {
             for face in [BlockFace::Top, BlockFace::Left, BlockFace::Back] {
@@ -154,9 +166,13 @@ fn render_items(
                     continue;
                 };
 
-                let uvs = material.uvs_for_index(image_index);
-
-                mesh_builder.add_mesh_information(&mesh_info, Vec3::ZERO, uvs);
+                mesh_builder.add_mesh_information(
+                    &mesh_info,
+                    Vec3::ZERO,
+                    Rect::new(0.0, 0.0, 1.0, 1.0),
+                    image_index,
+                    material.add_material_data(block_id, &mesh_info),
+                );
             }
         } else {
             let Some(mut mesh_info) = block_mesh_info.info_for_whole_block().cloned() else {
@@ -169,9 +185,13 @@ fn render_items(
                 continue;
             };
 
-            let uvs = material.uvs_for_index(image_index);
-
-            mesh_builder.add_mesh_information(&mesh_info, Vec3::ZERO, uvs);
+            mesh_builder.add_mesh_information(
+                &mesh_info,
+                Vec3::ZERO,
+                Rect::new(0.0, 0.0, 1.0, 1.0),
+                image_index,
+                material.add_material_data(block_id, &mesh_info),
+            );
         }
 
         commands.entity(to_create).insert((
@@ -181,10 +201,16 @@ fn render_items(
                 item_id: changed_render_item.item_id,
             },
             meshes.add(mesh_builder.build_mesh()),
-            material.unlit_material().clone(),
+            // material.unlit_material().clone(),
             RenderLayers::from_layers(&[INVENTORY_SLOT_LAYER]),
             Name::new(format!("Rendered Inventory Item ({})", changed_render_item.item_id)),
         ));
+
+        event_writer.send(AddMaterialEvent {
+            entity: to_create,
+            add_material_id: mat_id,
+            material_type: MaterialType::Unlit,
+        });
     }
 }
 
@@ -229,7 +255,10 @@ fn reposition_ui_items(query: Query<&Window, With<PrimaryWindow>>, mut rendered_
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        (update_rendered_items_transforms, reposition_ui_items, render_items).chain(),
+        (update_rendered_items_transforms, reposition_ui_items, render_items)
+            .before(remove_materials)
+            .before(add_materials)
+            .chain(),
     )
     .add_systems(Startup, create_ui_camera)
     .register_type::<RenderItem>()
