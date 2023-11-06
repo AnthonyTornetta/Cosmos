@@ -344,7 +344,7 @@ pub fn load_block_rendering_information(
 
         let mut map = HashMap::new();
         for (entry, texture_name) in block_info.texture.iter() {
-            let mut name_split = texture_name.split(":");
+            let mut name_split = texture_name.split(':');
 
             let mod_id = name_split.next().unwrap();
             let name = name_split

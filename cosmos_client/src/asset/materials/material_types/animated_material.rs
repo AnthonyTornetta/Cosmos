@@ -165,15 +165,15 @@ fn create_materials(
 
             material_registry.register(MaterialDefinition::new(
                 "cosmos:animated",
-                Some(Box::new(AnimatedMaterialInformationGenerator::default())),
+                Some(Box::<AnimatedMaterialInformationGenerator>::default()),
             ));
             material_registry.register(MaterialDefinition::new(
                 "cosmos:animated_illuminated",
-                Some(Box::new(AnimatedMaterialInformationGenerator::default())),
+                Some(Box::<AnimatedMaterialInformationGenerator>::default()),
             ));
             material_registry.register(MaterialDefinition::new(
                 "cosmos:animated_transparent",
-                Some(Box::new(AnimatedMaterialInformationGenerator::default())),
+                Some(Box::<AnimatedMaterialInformationGenerator>::default()),
             ));
         }
 
