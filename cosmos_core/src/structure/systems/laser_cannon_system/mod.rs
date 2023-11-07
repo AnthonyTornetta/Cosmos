@@ -208,8 +208,6 @@ impl LaserCannonSystem {
             .reduce(|x, y| Color::rgb(x.r() + y.r(), x.g() + y.g(), x.b() + y.b()))
             .unwrap_or(Color::WHITE);
 
-        
-
         if len != 0 {
             Color::rgb(
                 averaged_color.r() / len as f32,
