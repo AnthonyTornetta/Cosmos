@@ -208,7 +208,9 @@ impl LaserCannonSystem {
             .reduce(|x, y| Color::rgb(x.r() + y.r(), x.g() + y.g(), x.b() + y.b()))
             .unwrap_or(Color::WHITE);
 
-        let averaged_color = if len != 0 {
+        
+
+        if len != 0 {
             Color::rgb(
                 averaged_color.r() / len as f32,
                 averaged_color.g() / len as f32,
@@ -216,9 +218,7 @@ impl LaserCannonSystem {
             )
         } else {
             averaged_color
-        };
-
-        averaged_color
+        }
     }
 
     fn recalculate_colors(&mut self, changed_coordinate: Option<BlockCoordinate>) {
