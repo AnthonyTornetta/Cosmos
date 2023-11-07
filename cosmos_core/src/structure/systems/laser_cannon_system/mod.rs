@@ -62,11 +62,19 @@ struct LaserCannonBlocks {
 }
 
 #[derive(Clone)]
+/// The wrapper that ties a block to its alser cannon color properties
 pub struct LaserCannonColorBlock {
     id: u16,
     unlocalized_name: String,
 
-    pub color: LaserCannonColorProperty,
+    /// The color properties of this block
+    pub properties: LaserCannonColorProperty,
+}
+
+impl From<Color> for LaserCannonColorProperty {
+    fn from(color: Color) -> Self {
+        Self { color }
+    }
 }
 
 impl Identifiable for LaserCannonColorBlock {
@@ -84,9 +92,12 @@ impl Identifiable for LaserCannonColorBlock {
 }
 
 impl LaserCannonColorBlock {
-    pub fn new(block: &Block, color: LaserCannonColorProperty) -> Self {
+    /// Creates a new laser cannon color block entry
+    ///
+    /// You can also use the `insert` method in the `Registry<LaserCannonColorBlock>` if that is easier.
+    pub fn new(block: &Block, properties: LaserCannonColorProperty) -> Self {
         Self {
-            color,
+            properties,
             id: 0,
             unlocalized_name: block.unlocalized_name().to_owned(),
         }
@@ -94,8 +105,14 @@ impl LaserCannonColorBlock {
 }
 
 impl Registry<LaserCannonColorBlock> {
+    /// Gets the corrusponding properties if there is an entry for this block
     pub fn from_block(&self, block: &Block) -> Option<&LaserCannonColorBlock> {
         self.from_id(block.unlocalized_name())
+    }
+
+    /// Inserts a block with the specified properties
+    pub fn insert(&mut self, block: &Block, properties: LaserCannonColorProperty) {
+        self.register(LaserCannonColorBlock::new(block, properties));
     }
 }
 
@@ -167,9 +184,56 @@ pub struct LaserCannonSystem {
     pub last_shot_time: f32,
 }
 
+fn is_in_line_with(block: &StructureBlock, direction: BlockFace, coord: &BlockCoordinate) -> bool {
+    match direction {
+        BlockFace::Front => coord.x == block.x && coord.y == block.y && coord.z <= block.z,
+        BlockFace::Back => coord.x == block.x && coord.y == block.y && coord.z >= block.z,
+        _ => todo!(),
+    }
+}
+
 impl LaserCannonSystem {
-    fn find_best_color(&self, block: StructureBlock) -> Color {
-        todo!();
+    fn calculate_color_for_line(&self, block: &StructureBlock, direction: BlockFace) -> Color {
+        let colors = self
+            .colors
+            .iter()
+            .filter(|x| is_in_line_with(block, direction, &x.0))
+            .map(|x| x.1)
+            .collect::<Vec<LaserCannonColorProperty>>();
+
+        let len = colors.len();
+        let averaged_color = colors
+            .into_iter()
+            .map(|x| x.color)
+            .reduce(|x, y| Color::rgb(x.r() + y.r(), x.g() + y.g(), x.b() + y.b()))
+            .unwrap_or(Color::WHITE);
+
+        let averaged_color = if len != 0 {
+            Color::rgb(
+                averaged_color.r() / len as f32,
+                averaged_color.g() / len as f32,
+                averaged_color.b() / len as f32,
+            )
+        } else {
+            averaged_color
+        };
+
+        averaged_color
+    }
+
+    fn recalculate_colors(&mut self, changed_coordinate: Option<BlockCoordinate>) {
+        // Gets around borrow checker being a total buzzkill
+        let mut lines = std::mem::take(&mut self.lines);
+
+        for line in lines.iter_mut().filter(|line| {
+            changed_coordinate
+                .map(|changed_coordinate| is_in_line_with(&line.start, line.direction, &changed_coordinate))
+                .unwrap_or(false)
+        }) {
+            line.color = self.calculate_color_for_line(&line.start, line.direction);
+        }
+
+        self.lines = lines;
     }
 
     fn block_removed(&mut self, sb: &StructureBlock) {
@@ -333,7 +397,7 @@ impl LaserCannonSystem {
 
         // If gotten here, no suitable line was found
 
-        let color = self.find_best_color(block);
+        let color = self.calculate_color_for_line(block, block_direction);
 
         self.lines.push(Line {
             start: *block,
@@ -346,15 +410,72 @@ impl LaserCannonSystem {
     }
 }
 
-fn register_laser_blocks(blocks: Res<Registry<Block>>, mut cannon: ResMut<LaserCannonBlocks>) {
+fn register_laser_blocks(
+    blocks: Res<Registry<Block>>,
+    mut cannon: ResMut<LaserCannonBlocks>,
+    mut colors: ResMut<Registry<LaserCannonColorBlock>>,
+) {
     if let Some(block) = blocks.from_id("cosmos:laser_cannon") {
         cannon.insert(block, LaserCannonProperty { energy_per_shot: 100.0 })
+    }
+
+    if let Some(block) = blocks.from_id("cosmos:glass_white") {
+        colors.insert(block, Color::WHITE.into());
+    }
+    if let Some(block) = blocks.from_id("cosmos:glass_blue") {
+        colors.insert(block, Color::BLUE.into());
+    }
+    if let Some(block) = blocks.from_id("cosmos:glass_dark_blue") {
+        colors.insert(block, Color::hex("2658FE").unwrap().into());
+    }
+    if let Some(block) = blocks.from_id("cosmos:glass_brown") {
+        colors.insert(block, Color::hex("943D00").unwrap().into());
+    }
+    if let Some(block) = blocks.from_id("cosmos:glass_green") {
+        colors.insert(block, Color::GREEN.into());
+    }
+    if let Some(block) = blocks.from_id("cosmos:glass_dark_green") {
+        colors.insert(block, Color::DARK_GREEN.into());
+    }
+    if let Some(block) = blocks.from_id("cosmos:glass_orange") {
+        colors.insert(block, Color::ORANGE.into());
+    }
+    if let Some(block) = blocks.from_id("cosmos:glass_dark_orange") {
+        colors.insert(block, Color::hex("CCA120").unwrap().into());
+    }
+    if let Some(block) = blocks.from_id("cosmos:glass_pink") {
+        colors.insert(block, Color::PINK.into());
+    }
+    if let Some(block) = blocks.from_id("cosmos:glass_dark_pink") {
+        colors.insert(block, Color::hex("CC0170").unwrap().into());
+    }
+    if let Some(block) = blocks.from_id("cosmos:glass_purple") {
+        colors.insert(block, Color::PURPLE.into());
+    }
+    if let Some(block) = blocks.from_id("cosmos:glass_dark_purple") {
+        colors.insert(block, Color::hex("AB1EB6").unwrap().into());
+    }
+    if let Some(block) = blocks.from_id("cosmos:glass_red") {
+        colors.insert(block, Color::RED.into());
+    }
+    if let Some(block) = blocks.from_id("cosmos:glass_dark_red") {
+        colors.insert(block, Color::hex("AB1EB6").unwrap().into());
+    }
+    if let Some(block) = blocks.from_id("cosmos:glass_yellow") {
+        colors.insert(block, Color::YELLOW.into());
+    }
+    if let Some(block) = blocks.from_id("cosmos:glass_dark_yellow") {
+        colors.insert(block, Color::hex("CCA120").unwrap().into());
+    }
+    if let Some(block) = blocks.from_id("cosmos:glass_mint") {
+        colors.insert(block, Color::hex("28FF9E").unwrap().into());
     }
 }
 
 fn block_update_system(
     mut event: EventReader<BlockChangedEvent>,
     laser_cannon_blocks: Res<LaserCannonBlocks>,
+    color_blocks: Res<Registry<LaserCannonColorBlock>>,
     blocks: Res<Registry<Block>>,
     mut system_query: Query<&mut LaserCannonSystem>,
     systems_query: Query<&Systems>,
@@ -362,12 +483,29 @@ fn block_update_system(
     for ev in event.iter() {
         if let Ok(systems) = systems_query.get(ev.structure_entity) {
             if let Ok(mut system) = systems.query_mut(&mut system_query) {
-                if laser_cannon_blocks.get(blocks.from_numeric_id(ev.old_block)).is_some() {
+                let old_block = blocks.from_numeric_id(ev.old_block);
+                let new_block = blocks.from_numeric_id(ev.new_block);
+
+                if laser_cannon_blocks.get(old_block).is_some() {
                     system.block_removed(&ev.block);
                 }
 
-                if let Some(property) = laser_cannon_blocks.get(blocks.from_numeric_id(ev.new_block)) {
+                if let Some(property) = laser_cannon_blocks.get(new_block) {
                     system.block_added(property, &ev.block);
+                }
+
+                let mut recalc = false;
+                if color_blocks.from_block(old_block).is_some() {
+                    system.colors.retain(|x| x.0 != ev.block.coords());
+                    recalc = true;
+                }
+
+                if let Some(color_property) = color_blocks.from_block(new_block) {
+                    system.colors.push((ev.block.coords(), color_property.properties));
+                    recalc = true;
+                }
+                if recalc {
+                    system.recalculate_colors(Some(ev.block.coords()));
                 }
             }
         }
@@ -378,6 +516,7 @@ fn structure_loaded_event(
     mut event_reader: EventReader<StructureLoadedEvent>,
     mut structure_query: Query<(&Structure, &mut Systems)>,
     blocks: Res<Registry<Block>>,
+    color_blocks: Res<Registry<LaserCannonColorBlock>>,
     mut commands: Commands,
     laser_cannon_blocks: Res<LaserCannonBlocks>,
 ) {
@@ -385,10 +524,21 @@ fn structure_loaded_event(
         if let Ok((structure, mut systems)) = structure_query.get_mut(ev.structure_entity) {
             let mut system = LaserCannonSystem::default();
 
-            for block in structure.all_blocks_iter(false) {
-                if let Some(prop) = laser_cannon_blocks.get(block.block(structure, &blocks)) {
-                    system.block_added(prop, &block);
+            let mut color_found = false;
+
+            for structure_block in structure.all_blocks_iter(false) {
+                let block = structure_block.block(structure, &blocks);
+                if let Some(prop) = laser_cannon_blocks.get(block) {
+                    system.block_added(prop, &structure_block);
                 }
+                if let Some(color_property) = color_blocks.from_block(block) {
+                    color_found = true;
+                    system.colors.push((structure_block.coords(), color_property.properties));
+                }
+            }
+
+            if color_found {
+                system.recalculate_colors(None);
             }
 
             systems.add_system(&mut commands, system);
