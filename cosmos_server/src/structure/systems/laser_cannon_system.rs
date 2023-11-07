@@ -76,7 +76,7 @@ fn update_system(
                                 &mut commands,
                             );
 
-                            let color = Color::rgb(rand::random(), rand::random(), rand::random());
+                            let color = line.color;
 
                             server.broadcast_message(
                                 NettyChannelServer::LaserCannonSystem,

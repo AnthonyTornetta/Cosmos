@@ -1,6 +1,6 @@
 //! Renders the inventory slots and handles all the logic for moving items around
 
-use bevy::{ecs::system::EntityCommands, prelude::*};
+use bevy::{ecs::system::EntityCommands, prelude::*, window::PrimaryWindow};
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     ecs::NeedsDespawned,
@@ -253,7 +253,7 @@ fn toggle_inventory_rendering(
                                     ..default()
                                 },
 
-                                background_color: BackgroundColor(Color::hex("2D2D2D").unwrap()),
+                                background_color: BackgroundColor(Color::hex("2D2D2D0A").unwrap()),
                                 ..default()
                             },
                         ))
@@ -653,10 +653,21 @@ fn create_item_stack_slot_data(item_stack: &ItemStack, ecmds: &mut EntityCommand
                     margin: UiRect::new(Val::Px(0.0), Val::Px(5.0), Val::Px(0.0), Val::Px(5.0)),
                     ..default()
                 },
-                text: Text::from_section(format!("{} {}", item_stack.item_id(), quantity), text_style),
+                text: Text::from_section(format!("{quantity}"), text_style),
                 ..default()
             });
         });
+}
+
+fn follow_cursor(mut query: Query<&mut Style, With<FollowCursor>>, primary_window_query: Query<&Window, With<PrimaryWindow>>) {
+    let Some(cursor_pos) = primary_window_query.single().cursor_position() else {
+        return; // cursor is outside of window
+    };
+    for mut style in query.iter_mut() {
+        style.position_type = PositionType::Absolute;
+        style.left = Val::Px(cursor_pos.x - 32.0);
+        style.top = Val::Px(cursor_pos.y - 32.0);
+    }
 }
 
 pub(super) fn register(app: &mut App) {
@@ -666,6 +677,7 @@ pub(super) fn register(app: &mut App) {
             toggle_inventory,
             on_update_inventory,
             handle_interactions,
+            follow_cursor,
             close_button_system,
             toggle_inventory_rendering.run_if(resource_exists_and_changed::<InventoryState>()),
         )
