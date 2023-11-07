@@ -42,6 +42,24 @@ cosmos:ship_hull_yellow=Yellow Ship Hull
 cosmos:ship_hull_dark_yellow=Dark Yellow Ship Hull
 cosmos:ship_hull_mint=Mint Ship Hull
 
+cosmos:glass_white=White Glass
+cosmos:glass_blue=Blue Glass
+cosmos:glass_dark_blue=Dark Blue Glass
+cosmos:glass_brown=Brown Glass
+cosmos:glass_green=Green Glass
+cosmos:glass_dark_green=Dark Green Glass
+cosmos:glass_orange=Orange Glass
+cosmos:glass_dark_orange=Dark Orange Glass
+cosmos:glass_pink=Pink Glass
+cosmos:glass_dark_pink=Dark Pink Glass
+cosmos:glass_purple=Purple Glass
+cosmos:glass_dark_purple=Dark Purple Glass
+cosmos:glass_red=Red Glass
+cosmos:glass_dark_red=Dark Red Glass
+cosmos:glass_yellow=Yellow Glass
+cosmos:glass_dark_yellow=Dark Yellow Glass
+cosmos:glass_mint=Mint Glass
+
 cosmos:reactor_controller=Reactor Controller
 cosmos:reactor_casing=Reactor Casing
 cosmos:reactor_window=Reactor Window
