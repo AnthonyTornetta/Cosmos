@@ -80,8 +80,8 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 - [ ] Place rotated blocks
 - [x] Multiblock machines
   - [x] Revamp power generation to use reactor multiblock structure
-- [ ] Colored laser
-  - [ ] Colored glass placed in front of laser
+- [x] Colored laser
+  - [x] Colored glass placed in front of laser
 - [x] Inventory GUI
   - [x] Able to open inventory
   - [x] Abstract the 3d block GUI camera
