@@ -1469,6 +1469,7 @@ dependencies = [
 name = "cosmos_client"
 version = "0.0.5"
 dependencies = [
+ "anyhow",
  "bevy",
  "bevy-inspector-egui",
  "bevy_kira_audio",
@@ -1485,6 +1486,7 @@ dependencies = [
  "rayon",
  "serde",
  "serde_json",
+ "thiserror",
  "thread-priority",
  "toml",
 ]
@@ -1493,6 +1495,7 @@ dependencies = [
 name = "cosmos_core"
 version = "0.0.5"
 dependencies = [
+ "anyhow",
  "bevy",
  "bevy-inspector-egui",
  "bevy_rapier3d",
@@ -1504,12 +1507,14 @@ dependencies = [
  "lz4_flex",
  "rayon",
  "serde",
+ "thiserror",
 ]
 
 [[package]]
 name = "cosmos_server"
 version = "0.0.5"
 dependencies = [
+ "anyhow",
  "bevy",
  "bevy-inspector-egui",
  "bevy_rapier3d",
@@ -1525,6 +1530,7 @@ dependencies = [
  "rayon",
  "renet_visualizer",
  "serde",
+ "thiserror",
  "thread-priority",
  "walkdir",
 ]
