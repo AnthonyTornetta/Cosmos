@@ -91,6 +91,8 @@ pub fn done_blueprinting(mut query: Query<(Entity, &mut SerializedData, &NeedsBl
         save_blueprint(&serialized_data, needs_blueprinted)
             .unwrap_or_else(|e| warn!("Failed to save blueprint for {entity:?} \n\n{e}\n\n"));
 
+        commands.entity(entity).remove::<NeedsBlueprinted>();
+
         if needs_saved.is_none() {
             commands.entity(entity).remove::<SerializedData>();
         } else {
