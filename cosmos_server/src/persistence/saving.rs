@@ -34,7 +34,7 @@ pub struct NeedsSaved;
 /// this component will be removed.
 #[derive(Component, Debug, Default, Reflect)]
 pub struct NeedsBlueprinted {
-    /// The blueprint file's name (without .blueprint or the path to it)
+    /// The blueprint file's name (without .bp or the path to it)
     pub blueprint_name: String,
     /// The subdirectory the blueprint resides in (same as the blueprint type)
     pub subdir_name: String,
@@ -67,7 +67,7 @@ pub fn save_blueprint(data: &SerializedData, needs_blueprinted: &NeedsBlueprinte
         }
     }
 
-    if let Err(e) = fs::create_dir(format!("saves/{}", needs_blueprinted.subdir_name)) {
+    if let Err(e) = fs::create_dir(format!("blueprints/{}", needs_blueprinted.subdir_name)) {
         match e.kind() {
             ErrorKind::AlreadyExists => {}
             _ => return Err(e),
@@ -76,7 +76,7 @@ pub fn save_blueprint(data: &SerializedData, needs_blueprinted: &NeedsBlueprinte
 
     fs::write(
         format!(
-            "saves/{}/{}.blueprint",
+            "blueprints/{}/{}.bp",
             needs_blueprinted.subdir_name, needs_blueprinted.blueprint_name
         ),
         cosmos_encoder::serialize(&data),

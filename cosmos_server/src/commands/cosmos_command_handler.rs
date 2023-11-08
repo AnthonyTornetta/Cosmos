@@ -122,7 +122,7 @@ fn cosmos_command_listener(
                 if ev.args.len() < 2 || ev.args.len() > 8 {
                     display_help(Some("load"), &cosmos_commands);
                 } else {
-                    let path = format!("saves/{}/{}.blueprint", ev.args[0], ev.args[1]);
+                    let path = format!("blueprints/{}/{}.bp", ev.args[0], ev.args[1]);
 
                     fn parse_args(ev: &CosmosCommandSent) -> anyhow::Result<Location> {
                         let mut spawn_at = Location::default();
