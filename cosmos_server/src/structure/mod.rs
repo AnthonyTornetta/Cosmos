@@ -5,7 +5,6 @@ use bevy::prelude::App;
 pub mod asteroid;
 pub mod block_health;
 pub mod planet;
-pub mod saving;
 pub mod server_structure_builder;
 pub mod ship;
 pub mod systems;
@@ -15,6 +14,5 @@ pub(super) fn register(app: &mut App) {
     systems::register(app);
     planet::register(app);
     block_health::register(app);
-    saving::register(app);
     asteroid::register(app);
 }

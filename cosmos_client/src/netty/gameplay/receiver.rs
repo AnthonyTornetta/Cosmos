@@ -325,7 +325,7 @@ pub(crate) fn client_sync_players(
                         mesh: meshes.add(shape::Capsule::default().into()),
                         ..default()
                     },
-                    Collider::capsule_y(0.5, 0.25),
+                    Collider::capsule_y(0.65, 0.25),
                     LockedAxes::ROTATION_LOCKED,
                     Name::new(format!("Player ({name})")),
                     RigidBody::Dynamic,

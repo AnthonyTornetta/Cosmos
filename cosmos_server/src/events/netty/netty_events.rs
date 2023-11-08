@@ -117,7 +117,7 @@ fn handle_events_system(
                     LockedAxes::ROTATION_LOCKED,
                     RigidBody::Dynamic,
                     velocity,
-                    Collider::capsule_y(0.5, 0.25),
+                    Collider::capsule_y(0.65, 0.25),
                     player,
                     ReadMassProperties::default(),
                     inventory,

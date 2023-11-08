@@ -100,7 +100,9 @@ struct CurrentlyWriting(String);
 fn monitor_inputs(mut event_writer: EventWriter<CosmosCommandSent>, mut text: ResMut<CurrentlyWriting>) {
     while let Ok(event_available) = poll(Duration::ZERO) {
         if event_available {
-            if let Ok(crossterm::event::Event::Key(KeyEvent { code, modifiers, kind, .. })) = read() {
+            let x = read();
+
+            if let Ok(crossterm::event::Event::Key(KeyEvent { code, modifiers, kind, .. })) = x {
                 if kind != KeyEventKind::Release {
                     if let KeyCode::Char(mut c) = code {
                         if modifiers.intersects(KeyModifiers::SHIFT) {
@@ -119,7 +121,8 @@ fn monitor_inputs(mut event_writer: EventWriter<CosmosCommandSent>, mut text: Re
     }
 
     if !text.0.trim().is_empty() && text.0.ends_with('\n') {
-        event_writer.send(CosmosCommandSent::new(text.0[0..text.0.len() - 1].to_owned()));
+        let cmd = CosmosCommandSent::new(text.0[0..text.0.len() - 1].to_owned());
+        event_writer.send(cmd);
 
         text.0.clear();
     }

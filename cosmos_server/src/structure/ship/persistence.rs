@@ -1,24 +1,79 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
-use cosmos_core::structure::{
-    events::StructureLoadedEvent,
-    ship::{ship_builder::TShipBuilder, Ship},
-    structure_iterator::ChunkIteratorResult,
-    ChunkInitEvent, Structure,
+use cosmos_core::{
+    physics::location::Location,
+    structure::{
+        events::StructureLoadedEvent,
+        ship::{ship_builder::TShipBuilder, Ship},
+        structure_iterator::ChunkIteratorResult,
+        ChunkInitEvent, Structure,
+    },
 };
 
 use crate::persistence::{
-    loading::{begin_loading, done_loading, NeedsLoaded},
-    saving::{begin_saving, done_saving, NeedsSaved},
+    loading::{begin_loading, begin_loading_blueprint, done_loading, done_loading_blueprint, NeedsBlueprintLoaded, NeedsLoaded},
+    saving::{begin_blueprinting, begin_saving, done_blueprinting, done_saving, NeedsBlueprinted, NeedsSaved},
     SerializedData,
 };
 
 use super::server_ship_builder::ServerShipBuilder;
 
+fn on_blueprint_structure(mut query: Query<(&mut SerializedData, &Structure, &mut NeedsBlueprinted), With<Ship>>) {
+    for (mut s_data, structure, mut blueprint) in query.iter_mut() {
+        blueprint.subdir_name = "ship".into();
+        s_data.serialize_data("cosmos:structure", structure);
+        s_data.serialize_data("cosmos:is_ship", &true);
+    }
+}
+
 fn on_save_structure(mut query: Query<(&mut SerializedData, &Structure), (With<NeedsSaved>, With<Ship>)>) {
     for (mut s_data, structure) in query.iter_mut() {
         s_data.serialize_data("cosmos:structure", structure);
         s_data.serialize_data("cosmos:is_ship", &true);
+    }
+}
+
+fn load_structure(
+    entity: Entity,
+    commands: &mut Commands,
+    loc: Location,
+    mut structure: Structure,
+    s_data: &SerializedData,
+    event_writer: &mut EventWriter<DelayedStructureLoadEvent>,
+) {
+    let mut entity_cmd = commands.entity(entity);
+
+    let vel = s_data.deserialize_data("cosmos:velocity").unwrap_or(Velocity::zero());
+
+    let builder = ServerShipBuilder::default();
+
+    builder.insert_ship(&mut entity_cmd, loc, vel, &mut structure);
+
+    let entity = entity_cmd.id();
+
+    event_writer.send(DelayedStructureLoadEvent(entity));
+
+    commands.entity(entity).insert(structure);
+}
+
+fn on_load_blueprint(
+    query: Query<(Entity, &SerializedData, &NeedsBlueprintLoaded), With<NeedsBlueprintLoaded>>,
+    mut event_writer: EventWriter<DelayedStructureLoadEvent>,
+    mut commands: Commands,
+) {
+    for (entity, s_data, needs_blueprinted) in query.iter() {
+        if s_data.deserialize_data::<bool>("cosmos:is_ship").unwrap_or(false) {
+            if let Some(structure) = s_data.deserialize_data::<Structure>("cosmos:structure") {
+                load_structure(
+                    entity,
+                    &mut commands,
+                    needs_blueprinted.spawn_at,
+                    structure,
+                    s_data,
+                    &mut event_writer,
+                );
+            }
+        }
     }
 }
 
@@ -29,24 +84,12 @@ fn on_load_structure(
 ) {
     for (entity, s_data) in query.iter() {
         if s_data.deserialize_data::<bool>("cosmos:is_ship").unwrap_or(false) {
-            if let Some(mut structure) = s_data.deserialize_data::<Structure>("cosmos:structure") {
+            if let Some(structure) = s_data.deserialize_data::<Structure>("cosmos:structure") {
                 let loc = s_data
                     .deserialize_data("cosmos:location")
                     .expect("Every ship should have a location when saved!");
 
-                let mut entity_cmd = commands.entity(entity);
-
-                let vel = s_data.deserialize_data("cosmos:velocity").unwrap_or(Velocity::zero());
-
-                let builder = ServerShipBuilder::default();
-
-                builder.insert_ship(&mut entity_cmd, loc, vel, &mut structure);
-
-                let entity = entity_cmd.id();
-
-                event_writer.send(DelayedStructureLoadEvent(entity));
-
-                commands.entity(entity).insert(structure);
+                load_structure(entity, &mut commands, loc, structure, s_data, &mut event_writer);
             }
         }
     }
@@ -101,6 +144,18 @@ pub(super) fn register(app: &mut App) {
         .add_systems(Update, delayed_structure_event)
         .add_event::<DelayedStructureLoadEvent>()
         .add_event::<EvenMoreDelayedStructureLoadEvent>()
-        .add_systems(First, on_save_structure.after(begin_saving).before(done_saving))
-        .add_systems(Update, on_load_structure.after(begin_loading).before(done_loading));
+        .add_systems(
+            First,
+            (
+                on_blueprint_structure.after(begin_blueprinting).before(done_blueprinting),
+                on_save_structure.after(begin_saving).before(done_saving),
+            ),
+        )
+        .add_systems(
+            Update,
+            (
+                on_load_blueprint.after(begin_loading_blueprint).before(done_loading_blueprint),
+                on_load_structure.after(begin_loading).before(done_loading),
+            ),
+        );
 }
