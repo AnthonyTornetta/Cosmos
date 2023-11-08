@@ -58,7 +58,7 @@ fn check_needs_loaded(query: Query<(Entity, &SaveFileIdentifier), (Without<Seria
 fn check_blueprint_needs_loaded(query: Query<(Entity, &NeedsBlueprintLoaded), Without<SerializedData>>, mut commands: Commands) {
     for (ent, blueprint_needs_loaded) in query.iter() {
         let path = &blueprint_needs_loaded.path;
-        let Ok(data) = fs::read(&path) else {
+        let Ok(data) = fs::read(path) else {
             warn!("Error reading file at '{path}'. Is it there?");
             commands.entity(ent).despawn_recursive();
             continue;
