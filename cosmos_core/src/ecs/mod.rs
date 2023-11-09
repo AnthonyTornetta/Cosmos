@@ -2,6 +2,7 @@
 //! prone to problems.
 
 pub mod bundles;
+pub mod mut_events;
 
 use bevy::prelude::{App, Commands, Component, DespawnRecursiveExt, Entity, First, Query, With};
 
