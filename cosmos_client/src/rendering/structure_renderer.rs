@@ -1,14 +1,21 @@
+use crate::asset::asset_loading::BlockTextureIndex;
+use crate::asset::materials::{
+    add_materials, remove_materials, AddMaterialEvent, BlockMaterialMapping, MaterialDefinition, MaterialType, RemoveAllMaterialsEvent,
+};
 use crate::block::lighting::{BlockLightProperties, BlockLighting};
 use crate::netty::flags::LocalPlayer;
 use crate::state::game_state::GameState;
 use crate::structure::planet::unload_chunks_far_from_players;
 use bevy::prelude::{
-    in_state, warn, App, BuildChildren, Component, Deref, DerefMut, DespawnRecursiveExt, EventReader, GlobalTransform, IntoSystemConfigs,
-    Mesh, PbrBundle, PointLight, PointLightBundle, Quat, Rect, Resource, StandardMaterial, Transform, Update, Vec3, With,
+    in_state, warn, App, BuildChildren, Component, ComputedVisibility, Deref, DerefMut, DespawnRecursiveExt, EventReader, EventWriter,
+    GlobalTransform, IntoSystemConfigs, Mesh, PointLight, PointLightBundle, Quat, Rect, Resource, Transform, Update, Vec3, Visibility,
+    With,
 };
 use bevy::reflect::Reflect;
+use bevy::render::mesh::{MeshVertexAttribute, VertexAttributeValues};
 use bevy::render::primitives::Aabb;
 use bevy::tasks::{AsyncComputeTaskPool, Task};
+use bevy::transform::TransformBundle;
 use bevy::utils::hashbrown::HashMap;
 use cosmos_core::block::{Block, BlockFace};
 use cosmos_core::events::block_events::BlockChangedEvent;
@@ -27,7 +34,6 @@ use std::collections::HashSet;
 use std::f32::consts::PI;
 use std::mem::swap;
 
-use crate::asset::asset_loading::{BlockTextureIndex, MaterialDefinition};
 use crate::{Assets, Commands, Entity, Handle, Query, Res, ResMut};
 
 use super::{BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder, MeshInformation, ReadOnlyBlockMeshRegistry};
@@ -35,7 +41,7 @@ use super::{BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder, MeshInformation, 
 #[derive(Debug)]
 struct MeshMaterial {
     mesh: Mesh,
-    material: Handle<StandardMaterial>,
+    material_id: u16,
 }
 
 #[derive(Debug)]
@@ -179,6 +185,8 @@ fn poll_rendering_chunks(
     mut meshes: ResMut<Assets<Mesh>>,
     lights_query: Query<&LightsHolder>,
     chunk_meshes_query: Query<&ChunkMeshes>,
+    mut event_writer: EventWriter<AddMaterialEvent>,
+    mut remove_all_materials: EventWriter<RemoveAllMaterialsEvent>,
 ) {
     let mut todo = Vec::with_capacity(rendering_chunks.capacity());
 
@@ -280,10 +288,9 @@ fn poll_rendering_chunks(
 
             // If the chunk previously only had one chunk mesh, then it would be on
             // the chunk entity instead of child entities
-            commands
-                .entity(entity)
-                .remove::<Handle<Mesh>>()
-                .remove::<Handle<StandardMaterial>>();
+            commands.entity(entity).remove::<Handle<Mesh>>();
+
+            remove_all_materials.send(RemoveAllMaterialsEvent { entity });
 
             let mut chunk_meshes_component = ChunkMeshes::default();
 
@@ -291,29 +298,26 @@ fn poll_rendering_chunks(
                 for mesh_material in chunk_mesh.mesh_materials {
                     let mesh = meshes.add(mesh_material.mesh);
 
-                    let ent = if let Some(ent) = old_mesh_entities.pop() {
-                        commands.entity(ent).insert(mesh).insert(mesh_material.material);
+                    let s = (CHUNK_DIMENSIONS / 2) as f32;
 
-                        ent
-                    } else {
-                        let s = (CHUNK_DIMENSIONS / 2) as f32;
+                    let ent = commands
+                        .spawn((
+                            mesh,
+                            TransformBundle::default(),
+                            Visibility::default(),
+                            ComputedVisibility::default(),
+                            // Remove this once https://github.com/bevyengine/bevy/issues/4294 is done (bevy 0.12 released)
+                            Aabb::from_min_max(Vec3::new(-s, -s, -s), Vec3::new(s, s, s)),
+                        ))
+                        .id();
 
-                        let ent = commands
-                            .spawn((
-                                PbrBundle {
-                                    mesh,
-                                    material: mesh_material.material,
-                                    ..Default::default()
-                                },
-                                // Remove this once https://github.com/bevyengine/bevy/issues/4294 is done (bevy 0.12 released)
-                                Aabb::from_min_max(Vec3::new(-s, -s, -s), Vec3::new(s, s, s)),
-                            ))
-                            .id();
+                    entities_to_add.push(ent);
 
-                        entities_to_add.push(ent);
-
-                        ent
-                    };
+                    event_writer.send(AddMaterialEvent {
+                        entity: ent,
+                        add_material_id: mesh_material.material_id,
+                        material_type: MaterialType::Normal,
+                    });
 
                     chunk_meshes_component.0.push(ent);
                 }
@@ -328,10 +332,16 @@ fn poll_rendering_chunks(
 
                 commands.entity(entity).insert((
                     mesh,
-                    mesh_material.material,
+                    // mesh_material.material_id,
                     // Remove this once https://github.com/bevyengine/bevy/issues/4294 is done (bevy 0.12 released)
                     Aabb::from_min_max(Vec3::new(-s, -s, -s), Vec3::new(s, s, s)),
                 ));
+
+                event_writer.send(AddMaterialEvent {
+                    entity,
+                    add_material_id: mesh_material.material_id,
+                    material_type: MaterialType::Normal,
+                });
             }
 
             // Any leftover entities are useless now, so kill them
@@ -360,13 +370,14 @@ fn monitor_needs_rendered_system(
     mut commands: Commands,
     structure_query: Query<&Structure>,
     blocks: Res<ReadOnlyRegistry<Block>>,
-    materials: Res<ReadOnlyManyToOneRegistry<Block, MaterialDefinition>>,
+    materials: Res<ReadOnlyManyToOneRegistry<Block, BlockMaterialMapping>>,
     meshes_registry: Res<ReadOnlyBlockMeshRegistry>,
     lighting: Res<ReadOnlyRegistry<BlockLighting>>,
     block_textures: Res<ReadOnlyRegistry<BlockTextureIndex>>,
     mut rendering_chunks: ResMut<RenderingChunks>,
     local_player: Query<&GlobalTransform, With<LocalPlayer>>,
     chunks_need_rendered: Query<(Entity, &ChunkEntity, &GlobalTransform), With<ChunkNeedsRendered>>,
+    materials_registry: Res<ReadOnlyRegistry<MaterialDefinition>>,
 ) {
     let Ok(local_transform) = local_player.get_single() else {
         return;
@@ -410,12 +421,14 @@ fn monitor_needs_rendered_system(
         let meshes_registry = meshes_registry.clone();
         let block_textures = block_textures.clone();
         let lighting = lighting.clone();
+        let materials_registry = materials_registry.clone();
 
         let task = async_task_pool.spawn(async move {
             let mut renderer = ChunkRenderer::new();
 
             renderer.render(
                 &materials.registry(),
+                &materials_registry.registry(),
                 &lighting.registry(),
                 &chunk,
                 left.as_ref(),
@@ -441,25 +454,23 @@ fn monitor_needs_rendered_system(
     }
 }
 
-#[derive(Default, Debug, Reflect)]
-struct ChunkRendererInstance {
-    indices: Vec<u32>,
-    uvs: Vec<[f32; 2]>,
-    positions: Vec<[f32; 3]>,
-    normals: Vec<[f32; 3]>,
-    lights: HashMap<(usize, usize, usize), BlockLightProperties>,
-}
-
-#[derive(Default, Debug, Reflect)]
+#[derive(Default, Debug)]
 struct MeshInfo {
-    renderer: ChunkRendererInstance,
     mesh_builder: CosmosMeshBuilder,
 }
 
 impl MeshBuilder for MeshInfo {
     #[inline]
-    fn add_mesh_information(&mut self, mesh_info: &MeshInformation, position: Vec3, uvs: Rect) {
-        self.mesh_builder.add_mesh_information(mesh_info, position, uvs);
+    fn add_mesh_information(
+        &mut self,
+        mesh_info: &MeshInformation,
+        position: Vec3,
+        uvs: Rect,
+        texture_index: u32,
+        additional_info: Vec<(MeshVertexAttribute, VertexAttributeValues)>,
+    ) {
+        self.mesh_builder
+            .add_mesh_information(mesh_info, position, uvs, texture_index, additional_info);
     }
 
     fn build_mesh(self) -> Mesh {
@@ -467,9 +478,9 @@ impl MeshBuilder for MeshInfo {
     }
 }
 
-#[derive(Default, Debug, Reflect)]
+#[derive(Default, Debug)]
 struct ChunkRenderer {
-    meshes: HashMap<Handle<StandardMaterial>, MeshInfo>,
+    meshes: HashMap<u16, MeshInfo>,
     lights: HashMap<ChunkBlockCoordinate, BlockLightProperties>,
 }
 
@@ -481,7 +492,8 @@ impl ChunkRenderer {
     /// Renders a chunk into mesh information that can then be turned into a bevy mesh
     fn render(
         &mut self,
-        materials: &ManyToOneRegistry<Block, MaterialDefinition>,
+        materials: &ManyToOneRegistry<Block, BlockMaterialMapping>,
+        materials_registry: &Registry<MaterialDefinition>,
         lighting: &Registry<BlockLighting>,
         chunk: &Chunk,
         left: Option<&Chunk>,
@@ -498,7 +510,7 @@ impl ChunkRenderer {
 
         let mut faces = Vec::with_capacity(6);
 
-        for (coords, (block, block_info)) in chunk
+        for (coords, (block_id, block_info)) in chunk
             .blocks()
             .copied()
             .zip(chunk.block_info_iterator().copied())
@@ -519,7 +531,7 @@ impl ChunkRenderer {
                 coords.y as f32 - cd2 + 0.5,
                 coords.z as f32 - cd2 + 0.5,
             );
-            let actual_block = blocks.from_numeric_id(block);
+            let actual_block = blocks.from_numeric_id(block_id);
 
             #[inline(always)]
             fn check(c: &Chunk, block: u16, actual_block: &Block, blocks: &Registry<Block>, coords: ChunkBlockCoordinate) -> bool {
@@ -529,10 +541,10 @@ impl ChunkRenderer {
             let (x, y, z) = (coords.x, coords.y, coords.z);
 
             // right
-            if (x != CHUNK_DIMENSIONS - 1 && check(chunk, block, actual_block, blocks, coords.right()))
+            if (x != CHUNK_DIMENSIONS - 1 && check(chunk, block_id, actual_block, blocks, coords.right()))
                 || (x == CHUNK_DIMENSIONS - 1
                     && (right
-                        .map(|c| check(c, block, actual_block, blocks, ChunkBlockCoordinate::new(0, y, z)))
+                        .map(|c| check(c, block_id, actual_block, blocks, ChunkBlockCoordinate::new(0, y, z)))
                         .unwrap_or(true)))
             {
                 faces.push(BlockFace::Right);
@@ -541,7 +553,7 @@ impl ChunkRenderer {
             if (x != 0
                 && check(
                     chunk,
-                    block,
+                    block_id,
                     actual_block,
                     blocks,
                     coords.left().expect("Checked in first condition"),
@@ -551,7 +563,7 @@ impl ChunkRenderer {
                         .map(|c| {
                             check(
                                 c,
-                                block,
+                                block_id,
                                 actual_block,
                                 blocks,
                                 ChunkBlockCoordinate::new(CHUNK_DIMENSIONS - 1, y, z),
@@ -563,10 +575,10 @@ impl ChunkRenderer {
             }
 
             // top
-            if (y != CHUNK_DIMENSIONS - 1 && check(chunk, block, actual_block, blocks, coords.top()))
+            if (y != CHUNK_DIMENSIONS - 1 && check(chunk, block_id, actual_block, blocks, coords.top()))
                 || (y == CHUNK_DIMENSIONS - 1
                     && top
-                        .map(|c| check(c, block, actual_block, blocks, ChunkBlockCoordinate::new(x, 0, z)))
+                        .map(|c| check(c, block_id, actual_block, blocks, ChunkBlockCoordinate::new(x, 0, z)))
                         .unwrap_or(true))
             {
                 faces.push(BlockFace::Top);
@@ -575,7 +587,7 @@ impl ChunkRenderer {
             if (y != 0
                 && check(
                     chunk,
-                    block,
+                    block_id,
                     actual_block,
                     blocks,
                     coords.bottom().expect("Checked in first condition"),
@@ -585,7 +597,7 @@ impl ChunkRenderer {
                         .map(|c| {
                             check(
                                 c,
-                                block,
+                                block_id,
                                 actual_block,
                                 blocks,
                                 ChunkBlockCoordinate::new(x, CHUNK_DIMENSIONS - 1, z),
@@ -597,10 +609,10 @@ impl ChunkRenderer {
             }
 
             // front
-            if (z != CHUNK_DIMENSIONS - 1 && check(chunk, block, actual_block, blocks, coords.front()))
+            if (z != CHUNK_DIMENSIONS - 1 && check(chunk, block_id, actual_block, blocks, coords.front()))
                 || (z == CHUNK_DIMENSIONS - 1
                     && (front
-                        .map(|c| check(c, block, actual_block, blocks, ChunkBlockCoordinate::new(x, y, 0)))
+                        .map(|c| check(c, block_id, actual_block, blocks, ChunkBlockCoordinate::new(x, y, 0)))
                         .unwrap_or(true)))
             {
                 faces.push(BlockFace::Back);
@@ -609,7 +621,7 @@ impl ChunkRenderer {
             if (z != 0
                 && check(
                     chunk,
-                    block,
+                    block_id,
                     actual_block,
                     blocks,
                     coords.back().expect("Checked in first condition"),
@@ -619,7 +631,7 @@ impl ChunkRenderer {
                         .map(|c| {
                             check(
                                 c,
-                                block,
+                                block_id,
                                 actual_block,
                                 blocks,
                                 ChunkBlockCoordinate::new(x, y, CHUNK_DIMENSIONS - 1),
@@ -631,21 +643,25 @@ impl ChunkRenderer {
             }
 
             if !faces.is_empty() {
-                let block = blocks.from_numeric_id(block);
+                let block = blocks.from_numeric_id(block_id);
 
                 let Some(material) = materials.get_value(block) else {
                     continue;
                 };
 
+                let mat_id = material.material_id();
+
                 let Some(mesh) = meshes.get_value(block) else {
                     continue;
                 };
 
-                if !self.meshes.contains_key(material.lit_material()) {
-                    self.meshes.insert(material.lit_material().clone(), Default::default());
+                if !self.meshes.contains_key(&mat_id) {
+                    self.meshes.insert(mat_id, Default::default());
                 }
 
-                let mesh_builder = self.meshes.get_mut(material.lit_material()).unwrap();
+                let material_definition = materials_registry.from_numeric_id(mat_id);
+
+                let mesh_builder = self.meshes.get_mut(&mat_id).unwrap();
 
                 let rotation = block_info.get_rotation();
 
@@ -659,7 +675,7 @@ impl ChunkRenderer {
                         continue;
                     };
 
-                    let uvs = material.uvs_for_index(image_index);
+                    let uvs = Rect::new(0.0, 0.0, 1.0, 1.0);
 
                     let rotation = match rotation {
                         BlockFace::Top => Quat::IDENTITY,
@@ -690,7 +706,15 @@ impl ChunkRenderer {
                         *norm = rotation.mul_vec3((*norm).into()).into();
                     }
 
-                    mesh_builder.add_mesh_information(&mesh_info, Vec3::new(center_offset_x, center_offset_y, center_offset_z), uvs);
+                    let additional_info = material_definition.add_material_data(block_id, &mesh_info);
+
+                    mesh_builder.add_mesh_information(
+                        &mesh_info,
+                        Vec3::new(center_offset_x, center_offset_y, center_offset_z),
+                        uvs,
+                        image_index,
+                        additional_info,
+                    );
 
                     if one_mesh_only {
                         break;
@@ -712,7 +736,10 @@ impl ChunkRenderer {
         for (material, chunk_mesh_info) in self.meshes {
             let mesh = chunk_mesh_info.build_mesh();
 
-            mesh_materials.push(MeshMaterial { material, mesh });
+            mesh_materials.push(MeshMaterial {
+                material_id: material,
+                mesh,
+            });
         }
 
         let lights = self.lights;
@@ -727,9 +754,10 @@ pub(super) fn register(app: &mut App) {
         (monitor_block_updates_system, monitor_needs_rendered_system, poll_rendering_chunks)
             .chain()
             .run_if(in_state(GameState::Playing))
-            .before(unload_chunks_far_from_players),
+            .before(unload_chunks_far_from_players)
+            .before(remove_materials)
+            .before(add_materials),
     )
-    // .add_system(add_renderer)
     .init_resource::<RenderingChunks>()
     .register_type::<LightsHolder>();
 }

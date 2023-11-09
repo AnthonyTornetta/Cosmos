@@ -4,8 +4,9 @@
 
 use std::fmt::Display;
 
-use bevy::prelude::{App, Event, IntoSystemConfigs, PreUpdate};
+use bevy::prelude::{App, ComputedVisibility, Event, IntoSystemConfigs, Name, PreUpdate, Visibility};
 use bevy::reflect::Reflect;
+use bevy::transform::TransformBundle;
 use bevy::utils::{HashMap, HashSet};
 use bevy_rapier3d::prelude::PhysicsWorld;
 
@@ -28,7 +29,6 @@ pub mod structure_builder;
 pub mod structure_iterator;
 pub mod systems;
 
-use crate::block::hardness::BlockHardness;
 use crate::block::{Block, BlockFace};
 use crate::ecs::NeedsDespawned;
 use crate::events::block_events::BlockChangedEvent;
@@ -37,7 +37,7 @@ use crate::physics::location::Location;
 use crate::registry::Registry;
 use crate::structure::chunk::Chunk;
 use bevy::prelude::{
-    BuildChildren, Commands, Component, Entity, EventReader, EventWriter, GlobalTransform, PbrBundle, Query, States, Transform, Vec3,
+    BuildChildren, Commands, Component, Entity, EventReader, EventWriter, GlobalTransform, Query, States, Transform, Vec3,
 };
 use serde::{Deserialize, Serialize};
 
@@ -415,10 +415,10 @@ impl Structure {
     /// Gets the block's health at that given coordinate
     /// - x/y/z: block coordinate
     /// - block_hardness: The hardness for the block at those coordinates
-    pub fn get_block_health(&mut self, coords: BlockCoordinate, block_hardness: &BlockHardness) -> f32 {
+    pub fn get_block_health(&mut self, coords: BlockCoordinate, blocks: &Registry<Block>) -> f32 {
         match self {
-            Self::Full(fs) => fs.get_block_health(coords, block_hardness),
-            Self::Dynamic(ds) => ds.get_block_health(coords, block_hardness),
+            Self::Full(fs) => fs.get_block_health(coords, blocks),
+            Self::Dynamic(ds) => ds.get_block_health(coords, blocks),
         }
     }
 
@@ -432,13 +432,13 @@ impl Structure {
     pub fn block_take_damage(
         &mut self,
         coords: BlockCoordinate,
-        block_hardness: &BlockHardness,
+        blocks: &Registry<Block>,
         amount: f32,
         event_writer: Option<&mut EventWriter<BlockDestroyedEvent>>,
     ) -> bool {
         match self {
-            Self::Full(fs) => fs.block_take_damage(coords, block_hardness, amount, event_writer),
-            Self::Dynamic(ds) => ds.block_take_damage(coords, block_hardness, amount, event_writer),
+            Self::Full(fs) => fs.block_take_damage(coords, blocks, amount, event_writer),
+            Self::Dynamic(ds) => ds.block_take_damage(coords, blocks, amount, event_writer),
         }
     }
 
@@ -510,6 +510,42 @@ fn remove_empty_chunks(
     }
 }
 
+fn spawn_chunk_entity(
+    commands: &mut Commands,
+    structure: &mut Structure,
+    chunk_coordinate: ChunkCoordinate,
+    structure_entity: Entity,
+    body_world: Option<&PhysicsWorld>,
+    chunk_set_events: &mut HashSet<ChunkSetEvent>,
+) {
+    let mut entity_cmds = commands.spawn((
+        Visibility::default(),
+        ComputedVisibility::default(),
+        TransformBundle::from_transform(Transform::from_translation(structure.chunk_relative_position(chunk_coordinate))),
+        Name::new("Chunk Entity"),
+        NoSendEntity,
+        ChunkEntity {
+            structure_entity,
+            chunk_location: chunk_coordinate,
+        },
+    ));
+
+    if let Some(bw) = body_world {
+        entity_cmds.insert(*bw);
+    }
+
+    let entity = entity_cmds.id();
+
+    commands.entity(structure_entity).add_child(entity);
+
+    structure.set_chunk_entity(chunk_coordinate, entity);
+
+    chunk_set_events.insert(ChunkSetEvent {
+        structure_entity,
+        coords: chunk_coordinate,
+    });
+}
+
 fn add_chunks_system(
     mut chunk_init_reader: EventReader<ChunkInitEvent>,
     mut block_reader: EventReader<BlockChangedEvent>,
@@ -533,37 +569,23 @@ fn add_chunks_system(
     }
 
     for (structure_entity, chunk_coordinate) in s_chunks {
-        if let Ok((mut structure, body_world)) = structure_query.get_mut(structure_entity) {
-            if let Some(chunk) = structure.chunk_from_chunk_coordinates(chunk_coordinate) {
-                if !chunk.is_empty() && structure.chunk_entity(chunk_coordinate).is_none() {
-                    let mut entity_cmds = commands.spawn((
-                        PbrBundle {
-                            transform: Transform::from_translation(structure.chunk_relative_position(chunk_coordinate)),
-                            ..Default::default()
-                        },
-                        NoSendEntity,
-                        ChunkEntity {
-                            structure_entity,
-                            chunk_location: chunk_coordinate,
-                        },
-                    ));
+        let Ok((mut structure, body_world)) = structure_query.get_mut(structure_entity) else {
+            continue;
+        };
 
-                    if let Some(bw) = body_world {
-                        entity_cmds.insert(*bw);
-                    }
+        let Some(chunk) = structure.chunk_from_chunk_coordinates(chunk_coordinate) else {
+            continue;
+        };
 
-                    let entity = entity_cmds.id();
-
-                    commands.entity(structure_entity).add_child(entity);
-
-                    structure.set_chunk_entity(chunk_coordinate, entity);
-
-                    chunk_set_events.insert(ChunkSetEvent {
-                        structure_entity,
-                        coords: chunk_coordinate,
-                    });
-                }
-            }
+        if !chunk.is_empty() && structure.chunk_entity(chunk_coordinate).is_none() {
+            spawn_chunk_entity(
+                &mut commands,
+                &mut structure,
+                chunk_coordinate,
+                structure_entity,
+                body_world,
+                &mut chunk_set_events,
+            );
         }
     }
 

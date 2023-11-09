@@ -32,11 +32,17 @@ fn monitor_block_events(mut commands: Commands, blocks: Res<Registry<Block>>, mu
     }
 }
 
+#[derive(Component)]
+/// Marks a child of a structure as needing to be despawned when the structure itself is despawned.
+///
+/// If something does not have this component and its parent ship is despawned, it will have its parent removed instead of being despawned.
+pub struct DespawnWithStructure;
+
 /// Makes sure that when the ship is despawned, only that ship is despawned and not
 /// any of the things docked to it (like the player walking on it)
 fn save_the_kids(
     query: Query<&Children, (With<NeedsDespawned>, With<Ship>)>,
-    is_this_structure: Query<(), Or<(With<ChunkEntity>, With<StructureSystem>)>>,
+    is_this_structure: Query<(), Or<(With<ChunkEntity>, With<StructureSystem>, With<DespawnWithStructure>)>>,
     mut commands: Commands,
 ) {
     for children in query.iter() {

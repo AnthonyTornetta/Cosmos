@@ -27,7 +27,7 @@ default = [
     "bevy/x11",
     "bevy/ktx2",
     "bevy/filesystem_watcher",
-    "bevy/tonemapping_luts"
+    "bevy/tonemapping_luts",
 ]
 
 [dependencies]
@@ -56,3 +56,5 @@ bevy-inspector-egui = { workspace = true }
 walkdir = { workspace = true }
 
 thread-priority = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }

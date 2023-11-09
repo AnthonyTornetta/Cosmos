@@ -11,7 +11,7 @@ use cosmos_core::{
     physics::location::{handle_child_syncing, Location},
     structure::{
         chunk::CHUNK_DIMENSIONSF,
-        ship::{pilot::Pilot, Ship},
+        ship::{build_mode::BuildMode, pilot::Pilot, Ship},
         Structure,
     },
 };
@@ -22,6 +22,7 @@ use crate::{
     state::game_state::GameState,
 };
 
+pub mod build_mode;
 pub mod client_ship_builder;
 pub mod ship_movement;
 
@@ -129,14 +130,14 @@ fn respond_to_collisions(
 }
 
 fn remove_parent_when_too_far(
-    mut query: Query<(Entity, &Parent, &mut Location, &Transform), (With<LocalPlayer>, Without<Ship>)>,
+    mut query: Query<(Entity, &Parent, &mut Location, &Transform), (With<LocalPlayer>, Without<Ship>, Without<BuildMode>)>,
     is_ship: Query<&Location, With<Ship>>,
     mut commands: Commands,
     mut renet_client: ResMut<RenetClient>,
 ) {
     if let Ok((player_entity, parent, mut player_loc, player_trans)) = query.get_single_mut() {
         if let Ok(ship_loc) = is_ship.get(parent.get()) {
-            if player_loc.distance_sqrd(ship_loc).sqrt() >= CHUNK_DIMENSIONSF * 2.0 {
+            if player_loc.distance_sqrd(ship_loc).sqrt() >= CHUNK_DIMENSIONSF * 10.0 {
                 commands.entity(player_entity).remove_parent();
 
                 player_loc.last_transform_loc = Some(player_trans.translation);
@@ -151,6 +152,7 @@ fn remove_parent_when_too_far(
 }
 
 pub(super) fn register(app: &mut App) {
+    build_mode::register(app);
     client_ship_builder::register(app);
     ship_movement::register(app);
 

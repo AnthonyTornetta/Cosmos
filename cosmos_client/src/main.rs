@@ -14,7 +14,6 @@ pub mod interactions;
 pub mod inventory;
 pub mod lang;
 pub mod loading;
-pub mod materials;
 pub mod music;
 pub mod netty;
 pub mod physics;
@@ -30,7 +29,9 @@ pub mod universe;
 pub mod window;
 
 use std::env;
+use std::time::Duration;
 
+use bevy::asset::ChangeWatcher;
 use bevy::core::TaskPoolThreadAssignmentPolicy;
 use bevy_renet::transport::NetcodeClientPlugin;
 use cosmos_core::netty::get_local_ipaddress;
@@ -92,6 +93,14 @@ fn main() {
                         ..Default::default()
                     },
                 })
+                .set(AssetPlugin {
+                    watch_for_changes: if cfg!(debug_assertions) {
+                        ChangeWatcher::with_delay(Duration::from_secs(1))
+                    } else {
+                        None
+                    },
+                    ..Default::default()
+                })
                 .set(ImagePlugin::default_nearest()),
         )
         .add_plugins(CosmosCorePluginGroup::new(
@@ -121,7 +130,6 @@ fn main() {
     structure::register(&mut app);
     block::register(&mut app);
     projectiles::register(&mut app);
-    materials::register(&mut app);
     loading::register(&mut app);
     entities::register(&mut app);
     inventory::register(&mut app);

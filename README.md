@@ -7,14 +7,14 @@ If you're interested, join our new discord server here:
 
 ## Screenshots
 
-Cosmos has ships that you can pilot through space. (And yes those are working laser cannons.)
-![](./showcase/ship_in_space.png)
+Cosmos is a game where you can create your dream spaceship that you can pilot through space. (And add those are working laser cannons.)
+![](./showcase/gunship_top.png)
 
-Build your own ship block by block and walk inside while flying through space.
-![](./showcase/inside_ship.png)
+Build your own ship block by block and walk inside with friends while cruising through space.
+![](./showcase/gunner_flying_towards_planet.png)
 
 Once you reach your destination, make a _hopefully safer than this_ landing.
-![](./showcase/ship_on_ground.png)
+![](./showcase/safely_landed_gunner.png)
 
 ## Compilation
 
@@ -33,10 +33,6 @@ For the server, navigate to the cosmos_server directory and run
 `cargo run`
 
 For release builds, append the `--release` flag to the build/run commands.
-
-To compile the workspace (not normally necessary), navigate to the root directory of the repo and run
-
-`cargo build`
 
 ## Documentation
 
@@ -73,9 +69,7 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
       - [ ] Perhaps done via a sphere surrounding the planet that always faces the nearest star
     - [ ] Sun-set skybox
     - [ ] Night-side skybox
-  - [ ] Caves
-    - [ ] Lit up underground blocks
-- [ ] Animated textures
+- [x] Animated textures
 - [ ] Sounds
   - [x] Laser cannon fire
   - [ ] Block take damage
@@ -84,20 +78,29 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
   - [x] Background space music
   - [ ] Block break
 - [ ] Place rotated blocks
-- [ ] Multiblock machines (if enough time)
-  - [ ] Revamp power generation to use reactor multiblock structure
-  - [ ] Colored laser
-    - [ ] Colored glass placed in front of laser
+- [x] Multiblock machines
+  - [x] Revamp power generation to use reactor multiblock structure
+- [x] Colored laser
+  - [x] Colored glass placed in front of laser
 - [x] Inventory GUI
   - [x] Able to open inventory
   - [x] Abstract the 3d block GUI camera
   - [x] Fix the 3d block GUI camera to not render anything except GUI blocks
-- [ ] Fix seeing through cracks in blocks
+- [x] Fix seeing through cracks in blocks
 - [x] Lods
   - [x] Reduced detail rendering of far away chunks to see the entire planet
 - [x] Update to bevy 0.11
   - [x] Update physics
   - [x] Update bevy
+- [x] GUI to interact with inventory
+  - [x] Easier way of adding 3d blocks to GUI
+  - [x] Move items around in inventory via mouse
+- [x] Structure build mode
+  - [x] Interact with build block to enter build mode
+  - [x] Build mode
+    - [x] Camera becomes a noclip free cam and goes outside of player's body.
+    - [x] Player no longer piloting ship, & is able to create + destroy blocks on the ship but ONLY the ship
+    - [x] Symmetry modes are added that will mirror blocks on user-defined axis
 
 ## Release 0.0.4a
 
@@ -251,14 +254,6 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 
 ## Everything that will still have to be done after 0.0.5a
 
-- [ ] GUI to interact with inventory
-  - [ ] Easier way of adding 3d blocks to GUI
-  - [ ] Move items around in inventory via mouse
-- [ ] Structure build mode
-  - [ ] Press B while piloting ship to enter build mode
-  - [ ] Build mode
-    - [ ] Camera becomes a noclip free cam and goes outside of player's body.
-    - [ ] Player no longer piloting ship, & is able to create + destroy blocks on the ship but ONLY the ship
 - [ ] Mining beam system
   - [ ] Mining beam block
     - [ ] Can be placed in line to create more powerful miners
@@ -269,7 +264,6 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 - [ ] Storage system
   - [ ] An interface into all the storage devices on the ship
 - [ ] A way of selecting which systems to use preventing use of systems that are not meant to be actively used
-  - [ ] You can fire a laser cannon, but not actively use the power storage blocks
 - [ ] Dropped item entity
 - [ ] Storage block
   - [ ] A block that stores an amount of items
@@ -279,9 +273,6 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
   - [ ] Camera block
   - [ ] Use left/right to switch between ship cameras
     - [ ] Changes where your view is
-- [ ] Planet Generation
-  - [ ] New planet types
-  - [ ] A bunch of new blocks
 - [ ] Shops
   - [ ] Sell blocks/items
   - [ ] Buy blocks/items

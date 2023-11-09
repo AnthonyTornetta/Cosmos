@@ -3,7 +3,7 @@
 use std::{ffi::OsStr, fs, time::Duration};
 
 use bevy::{
-    prelude::{warn, App, Commands, Component, DespawnRecursiveExt, Entity, IntoSystemConfigs, Query, ResMut, Update, With, Without},
+    prelude::{warn, App, Commands, Component, DespawnRecursiveExt, Entity, IntoSystemConfigs, Name, Query, ResMut, Update, With, Without},
     tasks::{AsyncComputeTaskPool, Task},
     time::common_conditions::on_timer,
 };
@@ -62,7 +62,7 @@ fn monitor_loading_task(
                     .entity_id()
                     .expect("A non-base SaveFileIdentifier was attempted to be loaded in load_near")
             }) {
-                commands.spawn((sfi, NeedsLoaded));
+                commands.spawn((sfi, NeedsLoaded, Name::new("Needs Loaded Entity")));
             }
         }
     }

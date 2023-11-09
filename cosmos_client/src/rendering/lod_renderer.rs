@@ -7,7 +7,10 @@ use std::{
 
 use bevy::{
     prelude::*,
-    render::primitives::Aabb,
+    render::{
+        mesh::{MeshVertexAttribute, VertexAttributeValues},
+        primitives::Aabb,
+    },
     tasks::{AsyncComputeTaskPool, Task},
     utils::{hashbrown::HashMap, HashSet},
 };
@@ -34,7 +37,10 @@ use cosmos_core::{
 use rayon::prelude::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
 
 use crate::{
-    asset::asset_loading::{BlockTextureIndex, MaterialDefinition},
+    asset::{
+        asset_loading::BlockTextureIndex,
+        materials::{add_materials, remove_materials, AddMaterialEvent, BlockMaterialMapping, MaterialDefinition, MaterialType},
+    },
     state::game_state::GameState,
 };
 
@@ -43,7 +49,7 @@ use super::{BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder, MeshInformation, 
 #[derive(Debug)]
 struct MeshMaterial {
     mesh: Mesh,
-    material: Handle<StandardMaterial>,
+    material_id: u16,
 }
 
 #[derive(Debug)]
@@ -52,24 +58,23 @@ struct LodMesh {
     scale: f32,
 }
 
-#[derive(Default, Debug, Reflect)]
-struct ChunkRendererInstance {
-    indices: Vec<u32>,
-    uvs: Vec<[f32; 2]>,
-    positions: Vec<[f32; 3]>,
-    normals: Vec<[f32; 3]>,
-}
-
-#[derive(Default, Debug, Reflect)]
+#[derive(Default, Debug)]
 struct MeshInfo {
-    renderer: ChunkRendererInstance,
     mesh_builder: CosmosMeshBuilder,
 }
 
 impl MeshBuilder for MeshInfo {
     #[inline]
-    fn add_mesh_information(&mut self, mesh_info: &MeshInformation, position: Vec3, uvs: Rect) {
-        self.mesh_builder.add_mesh_information(mesh_info, position, uvs);
+    fn add_mesh_information(
+        &mut self,
+        mesh_info: &MeshInformation,
+        position: Vec3,
+        uvs: Rect,
+        texture_index: u32,
+        additional_info: Vec<(MeshVertexAttribute, VertexAttributeValues)>,
+    ) {
+        self.mesh_builder
+            .add_mesh_information(mesh_info, position, uvs, texture_index, additional_info);
     }
 
     fn build_mesh(self) -> Mesh {
@@ -77,9 +82,9 @@ impl MeshBuilder for MeshInfo {
     }
 }
 
-#[derive(Default, Debug, Reflect)]
+#[derive(Default, Debug)]
 struct ChunkRenderer {
-    meshes: HashMap<Handle<StandardMaterial>, MeshInfo>,
+    meshes: HashMap<u16, MeshInfo>,
     scale: f32,
 }
 
@@ -93,7 +98,8 @@ impl ChunkRenderer {
         &mut self,
         scale: f32,
         offset: Vec3,
-        materials: &ManyToOneRegistry<Block, MaterialDefinition>,
+        materials: &ManyToOneRegistry<Block, BlockMaterialMapping>,
+        materials_registry: &Registry<MaterialDefinition>,
         lod: &LodChunk,
         left: Option<&LodChunk>,
         right: Option<&LodChunk>,
@@ -111,7 +117,7 @@ impl ChunkRenderer {
 
         let mut faces = Vec::with_capacity(6);
 
-        for (coords, (block, block_info)) in lod
+        for (coords, (block_id, block_info)) in lod
             .blocks()
             .copied()
             .zip(lod.block_info_iterator().copied())
@@ -129,7 +135,7 @@ impl ChunkRenderer {
                 coords.y as f32 - cd2 + 0.5,
                 coords.z as f32 - cd2 + 0.5,
             );
-            let actual_block = blocks.from_numeric_id(block);
+            let actual_block = blocks.from_numeric_id(block_id);
 
             #[inline(always)]
             fn check(c: &LodChunk, block: u16, actual_block: &Block, blocks: &Registry<Block>, coords: ChunkBlockCoordinate) -> bool {
@@ -139,22 +145,29 @@ impl ChunkRenderer {
             let (x, y, z) = (coords.x, coords.y, coords.z);
 
             // right
-            if (x != CHUNK_DIMENSIONS - 1 && check(lod, block, actual_block, blocks, coords.right()))
+            if (x != CHUNK_DIMENSIONS - 1 && check(lod, block_id, actual_block, blocks, coords.right()))
                 || (x == CHUNK_DIMENSIONS - 1
                     && (right
-                        .map(|c| check(c, block, actual_block, blocks, ChunkBlockCoordinate::new(0, y, z)))
+                        .map(|c| check(c, block_id, actual_block, blocks, ChunkBlockCoordinate::new(0, y, z)))
                         .unwrap_or(true)))
             {
                 faces.push(BlockFace::Right);
             }
             // left
-            if (x != 0 && check(lod, block, actual_block, blocks, coords.left().expect("Checked in first condition")))
+            if (x != 0
+                && check(
+                    lod,
+                    block_id,
+                    actual_block,
+                    blocks,
+                    coords.left().expect("Checked in first condition"),
+                ))
                 || (x == 0
                     && (left
                         .map(|c| {
                             check(
                                 c,
-                                block,
+                                block_id,
                                 actual_block,
                                 blocks,
                                 ChunkBlockCoordinate::new(CHUNK_DIMENSIONS - 1, y, z),
@@ -166,10 +179,10 @@ impl ChunkRenderer {
             }
 
             // top
-            if (y != CHUNK_DIMENSIONS - 1 && check(lod, block, actual_block, blocks, coords.top()))
+            if (y != CHUNK_DIMENSIONS - 1 && check(lod, block_id, actual_block, blocks, coords.top()))
                 || (y == CHUNK_DIMENSIONS - 1
                     && top
-                        .map(|c| check(c, block, actual_block, blocks, ChunkBlockCoordinate::new(x, 0, z)))
+                        .map(|c| check(c, block_id, actual_block, blocks, ChunkBlockCoordinate::new(x, 0, z)))
                         .unwrap_or(true))
             {
                 faces.push(BlockFace::Top);
@@ -178,7 +191,7 @@ impl ChunkRenderer {
             if (y != 0
                 && check(
                     lod,
-                    block,
+                    block_id,
                     actual_block,
                     blocks,
                     coords.bottom().expect("Checked in first condition"),
@@ -188,7 +201,7 @@ impl ChunkRenderer {
                         .map(|c| {
                             check(
                                 c,
-                                block,
+                                block_id,
                                 actual_block,
                                 blocks,
                                 ChunkBlockCoordinate::new(x, CHUNK_DIMENSIONS - 1, z),
@@ -200,22 +213,29 @@ impl ChunkRenderer {
             }
 
             // front
-            if (z != CHUNK_DIMENSIONS - 1 && check(lod, block, actual_block, blocks, coords.front()))
+            if (z != CHUNK_DIMENSIONS - 1 && check(lod, block_id, actual_block, blocks, coords.front()))
                 || (z == CHUNK_DIMENSIONS - 1
                     && (front
-                        .map(|c| check(c, block, actual_block, blocks, ChunkBlockCoordinate::new(x, y, 0)))
+                        .map(|c| check(c, block_id, actual_block, blocks, ChunkBlockCoordinate::new(x, y, 0)))
                         .unwrap_or(true)))
             {
                 faces.push(BlockFace::Back);
             }
             // back
-            if (z != 0 && check(lod, block, actual_block, blocks, coords.back().expect("Checked in first condition")))
+            if (z != 0
+                && check(
+                    lod,
+                    block_id,
+                    actual_block,
+                    blocks,
+                    coords.back().expect("Checked in first condition"),
+                ))
                 || (z == 0
                     && (back
                         .map(|c| {
                             check(
                                 c,
-                                block,
+                                block_id,
                                 actual_block,
                                 blocks,
                                 ChunkBlockCoordinate::new(x, y, CHUNK_DIMENSIONS - 1),
@@ -227,27 +247,25 @@ impl ChunkRenderer {
             }
 
             if !faces.is_empty() {
-                let block = blocks.from_numeric_id(block);
+                let block = blocks.from_numeric_id(block_id);
 
-                let Some(material_def) = materials.get_value(block) else {
+                let Some(block_material_mapping) = materials.get_value(block) else {
                     continue;
                 };
+
+                let mat_id = block_material_mapping.material_id();
+
+                let material_definition = materials_registry.from_numeric_id(mat_id);
 
                 let Some(mesh) = meshes.get_value(block) else {
                     continue;
                 };
 
-                let material_here = if scale > 2.0 {
-                    material_def.far_away_material()
-                } else {
-                    material_def.lit_material()
-                };
-
-                if !self.meshes.contains_key(material_here) {
-                    self.meshes.insert(material_here.clone(), Default::default());
+                if !self.meshes.contains_key(&mat_id) {
+                    self.meshes.insert(mat_id, Default::default());
                 }
 
-                let mesh_builder = self.meshes.get_mut(material_here).unwrap();
+                let mesh_builder = self.meshes.get_mut(&mat_id).unwrap();
 
                 let rotation = block_info.get_rotation();
 
@@ -269,8 +287,6 @@ impl ChunkRenderer {
                         warn!("Missing image index -- {index:?}");
                         continue;
                     };
-
-                    let uvs = material_def.uvs_for_index(image_index);
 
                     let rotation = match rotation {
                         BlockFace::Top => Quat::IDENTITY,
@@ -304,7 +320,9 @@ impl ChunkRenderer {
                     mesh_builder.add_mesh_information(
                         &mesh_info,
                         offset * CHUNK_DIMENSIONSF + Vec3::new(center_offset_x * scale, center_offset_y * scale, center_offset_z * scale),
-                        uvs,
+                        Rect::new(0.0, 0.0, 1.0, 1.0),
+                        image_index,
+                        material_definition.add_material_data(block_id, &mesh_info),
                     );
 
                     if one_mesh_only {
@@ -323,7 +341,10 @@ impl ChunkRenderer {
         for (material, chunk_mesh_info) in self.meshes {
             let mesh = chunk_mesh_info.build_mesh();
 
-            mesh_materials.push(MeshMaterial { material, mesh });
+            mesh_materials.push(MeshMaterial {
+                material_id: material,
+                mesh,
+            });
         }
 
         LodMesh {
@@ -341,9 +362,10 @@ fn recursively_process_lod(
     offset: Vec3,
     to_process: &Mutex<Option<Vec<(LodMesh, Vec3, CoordinateType)>>>,
     blocks: &Registry<Block>,
-    materials: &ManyToOneRegistry<Block, MaterialDefinition>,
+    materials: &ManyToOneRegistry<Block, BlockMaterialMapping>,
     meshes_registry: &BlockMeshRegistry,
     block_textures: &Registry<BlockTextureIndex>,
+    materials_registry: &Registry<MaterialDefinition>,
     scale: f32,
 ) {
     match lod {
@@ -372,6 +394,7 @@ fn recursively_process_lod(
                     materials,
                     meshes_registry,
                     block_textures,
+                    materials_registry,
                     scale / 2.0,
                 );
             });
@@ -389,6 +412,7 @@ fn recursively_process_lod(
                 scale,
                 Vec3::ZERO,
                 materials,
+                materials_registry,
                 lod_chunk,
                 None,
                 None,
@@ -522,6 +546,7 @@ fn poll_rendering_lods(
     mut lod_query: Query<&mut Lod>,
 
     mut meshes_to_compute: ResMut<MeshesToCompute>,
+    mut event_writer: EventWriter<AddMaterialEvent>,
 ) {
     let mut todo = Vec::with_capacity(rendering_lods.0.capacity());
 
@@ -550,16 +575,20 @@ fn poll_rendering_lods(
 
                     let ent = commands
                         .spawn((
-                            PbrBundle {
-                                material: mesh_material.material,
-                                transform: Transform::from_translation(offset),
-                                ..Default::default()
-                            },
+                            TransformBundle::from_transform(Transform::from_translation(offset)),
+                            Visibility::default(),
+                            ComputedVisibility::default(),
                             // Remove this once https://github.com/bevyengine/bevy/issues/4294 is done (bevy 0.12 released)
                             Aabb::from_min_max(Vec3::new(-s, -s, -s), Vec3::new(s, s, s)),
                             RenderedLod { scale },
                         ))
                         .id();
+
+                    event_writer.send(AddMaterialEvent {
+                        entity: ent,
+                        add_material_id: mesh_material.material_id,
+                        material_type: if scale >= 2 { MaterialType::FarAway } else { MaterialType::Normal },
+                    });
 
                     entities_to_add.push((ent, offset, scale, mesh_material.mesh));
 
@@ -673,7 +702,8 @@ fn monitor_lods_needs_rendered_system(lods_needed: Query<Entity, Changed<Lod>>, 
 /// Performance hot spot
 fn trigger_lod_render(
     blocks: Res<ReadOnlyRegistry<Block>>,
-    materials: Res<ReadOnlyManyToOneRegistry<Block, MaterialDefinition>>,
+    materials: Res<ReadOnlyManyToOneRegistry<Block, BlockMaterialMapping>>,
+    materials_registry: Res<ReadOnlyRegistry<MaterialDefinition>>,
     meshes_registry: Res<ReadOnlyBlockMeshRegistry>,
     block_textures: Res<ReadOnlyRegistry<BlockTextureIndex>>,
     lods_query: Query<(&ReadOnlyLod, &Structure)>,
@@ -703,6 +733,7 @@ fn trigger_lod_render(
         let block_textures = block_textures.clone();
         let materials = materials.clone();
         let meshes_registry = meshes_registry.clone();
+        let materials_registry = materials_registry.clone();
 
         let chunk_dimensions = structure.chunk_dimensions().x;
         let block_dimensions = structure.block_dimensions().x;
@@ -723,6 +754,7 @@ fn trigger_lod_render(
             let block_textures = block_textures.registry();
             let materials = materials.registry();
             let meshes_registry = meshes_registry.registry();
+            let materials_registry = materials_registry.registry();
 
             let mut cloned_lod = lod.clone();
 
@@ -734,6 +766,7 @@ fn trigger_lod_render(
                 &materials,
                 &meshes_registry,
                 &block_textures,
+                &materials_registry,
                 chunk_dimensions as f32,
             );
 
@@ -760,6 +793,8 @@ pub(super) fn register(app: &mut App) {
             compute_meshes_and_kill_dead_entities,
         )
             .chain()
+            .before(remove_materials)
+            .before(add_materials)
             .run_if(in_state(GameState::Playing)),
     )
     .insert_resource(RenderingLods::default())

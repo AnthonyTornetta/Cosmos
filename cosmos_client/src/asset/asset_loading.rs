@@ -4,11 +4,7 @@
 
 use std::fs;
 
-use bevy::{
-    prelude::*,
-    render::render_resource::{Extent3d, TextureDimension, TextureFormat},
-    utils::HashMap,
-};
+use bevy::{prelude::*, utils::HashMap};
 use cosmos_core::{
     block::{Block, BlockFace},
     loader::{AddLoadingEvent, DoneLoadingEvent, LoadingManager},
@@ -16,7 +12,9 @@ use cosmos_core::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::state::game_state::GameState;
+use crate::{asset::texture_atlas::SquareTextureAtlasBuilder, state::game_state::GameState};
+
+use super::texture_atlas::SquareTextureAtlas;
 
 #[derive(Resource, Debug, Clone)]
 struct LoadingTextureAtlas {
@@ -50,117 +48,15 @@ impl LoadingTextureAtlas {
 }
 
 #[derive(Debug, Event)]
-struct AssetsDoneLoadingEvent;
+/// Send this whenever you register a loader and want to signify that your assets are done loading
+pub struct AssetsDoneLoadingEvent;
 
 #[derive(Debug, Event)]
-struct AllTexturesDoneLoadingEvent;
+/// Sent whenever all the textures are done being loaded into the `CosmosTextureAtlas`
+pub struct AllTexturesDoneLoadingEvent;
 
 #[derive(Resource, Debug)]
 struct AssetsLoadingID(usize);
-
-#[derive(Resource, Reflect, Debug, Clone)]
-/// This stores the texture atlas for all blocks in the game.
-///
-/// Eventually this will be redone to allow for multiple atlases, but for now this works fine.
-pub struct MaterialDefinition {
-    /// The main material used to draw blocks
-    pub material: Handle<StandardMaterial>,
-    /// The material used to render things far away
-    pub far_away_material: Handle<StandardMaterial>,
-    /// The unlit version of the main material
-    pub unlit_material: Handle<StandardMaterial>,
-    /// All the textures packed into an atlas.
-    ///
-    /// Use the `MainAtlas::uvs_for_index` function to get the atlas index for a given block.
-    /// Calculate that index with the `Registry<BlockTextureIndex>`.
-    pub atlas: CosmosTextureAtlas,
-
-    padding: u32,
-
-    id: u16,
-    unlocalized_name: String,
-}
-
-const DEFAULT_PADDING: u32 = 2;
-
-impl MaterialDefinition {
-    /// Creates a new material definition
-    pub fn new(
-        unlocalized_name: String,
-        material: Handle<StandardMaterial>,
-        lod_material: Handle<StandardMaterial>,
-        unlit_material: Handle<StandardMaterial>,
-        atlas: CosmosTextureAtlas,
-    ) -> Self {
-        Self {
-            atlas,
-            id: 0,
-            material,
-            far_away_material: lod_material,
-            unlit_material,
-            padding: DEFAULT_PADDING,
-            unlocalized_name,
-        }
-    }
-
-    #[inline]
-    /// Gets the material for this that responds to light (if applicable. Feel free to return an unlit material if this material doesn't care)
-    pub fn lit_material(&self) -> &Handle<StandardMaterial> {
-        &self.material
-    }
-
-    #[inline]
-    /// Gets the material for this that does not respond to light
-    pub fn unlit_material(&self) -> &Handle<StandardMaterial> {
-        &self.unlit_material
-    }
-
-    #[inline]
-    /// Gets the material for this that should be used for far away (lod) blocks
-    pub fn far_away_material(&self) -> &Handle<StandardMaterial> {
-        &self.far_away_material
-    }
-
-    #[inline]
-    /// Returns the UV coordinates for the texture atlas given the block's index
-    ///
-    /// Get the block's index from `Registry<BlockTextureIndex>`.
-    pub fn uvs_for_index(&self, index: usize) -> Rect {
-        let atlas = &self.atlas.texture_atlas;
-        let rect = atlas.textures[index];
-
-        let padding_x = self.padding as f32 / atlas.size.x;
-        let padding_y = self.padding as f32 / atlas.size.y;
-
-        Rect::new(
-            rect.min.x / atlas.size.x + padding_x,
-            rect.min.y / atlas.size.y + padding_y,
-            rect.max.x / atlas.size.x - padding_x,
-            rect.max.y / atlas.size.y - padding_y,
-        )
-    }
-}
-
-impl Identifiable for MaterialDefinition {
-    fn id(&self) -> u16 {
-        self.id
-    }
-
-    fn set_numeric_id(&mut self, id: u16) {
-        self.id = id;
-    }
-
-    fn unlocalized_name(&self) -> &str {
-        self.unlocalized_name.as_str()
-    }
-}
-
-#[derive(Resource, Reflect, Debug)]
-/// This contains the material for illuminated blocks.
-pub struct IlluminatedMaterial {
-    /// The material for unlit blocks
-    pub material: Handle<StandardMaterial>,
-}
 
 fn setup_textures(
     mut commands: Commands,
@@ -170,7 +66,7 @@ fn setup_textures(
     mut start_writer: EventWriter<AddLoadingEvent>,
 ) {
     let image_handles = server
-        .load_folder("images/blocks/")
+        .load_folder("cosmos/images/blocks/")
         .expect("error loading blocks textures")
         .into_iter()
         .map(|x| x.typed::<Image>())
@@ -197,79 +93,18 @@ fn assets_done_loading(
     }
 }
 
-fn expand_image(image: &Image, padding: u32) -> Image {
-    let mut data: Vec<u8> = Vec::new();
-
-    let mut i = 0;
-
-    let image_size_x = image.size().x as u32;
-    let image_size_y = image.size().y as u32;
-
-    for y in 0..image_size_y as usize {
-        let mut n = match y % image_size_y as usize == 0 || (y + 1) % image_size_y as usize == 0 {
-            true => 1 + padding,
-            false => 1,
-        };
-
-        while n > 0 {
-            let og_i = i;
-
-            for x in 0..image_size_x as usize {
-                if x % image_size_x as usize == 0 || (x + 1) % image_size_x as usize == 0 {
-                    for _ in 0..(padding + 1) {
-                        data.push(image.data[i]);
-                        data.push(image.data[i + 1]);
-                        data.push(image.data[i + 2]);
-                        data.push(image.data[i + 3]);
-                    }
-                } else {
-                    data.push(image.data[i]);
-                    data.push(image.data[i + 1]);
-                    data.push(image.data[i + 2]);
-                    data.push(image.data[i + 3]);
-                }
-
-                i += 4;
-            }
-
-            n -= 1;
-
-            if n != 0 {
-                i = og_i;
-            }
-        }
-    }
-
-    let height = image_size_y + padding * 2;
-    let width = image_size_y + padding * 2;
-
-    // debug save
-    // image::save_buffer(&Path::new("image.png"), data.as_slice(), width, height, image::ColorType::Rgba8);
-
-    Image::new(
-        Extent3d {
-            height,
-            width,
-            depth_or_array_layers: 1,
-        },
-        TextureDimension::D2,
-        data,
-        TextureFormat::Rgba8UnormSrgb,
-    )
-}
-
 #[derive(Clone, Debug, Reflect)]
 /// A newtype wrapper around a bevy `TextureAtlas`
 pub struct CosmosTextureAtlas {
     /// The texture atlas
-    pub texture_atlas: TextureAtlas,
+    pub texture_atlas: SquareTextureAtlas,
     unlocalized_name: String,
     id: u16,
 }
 
 impl CosmosTextureAtlas {
     /// Creates a new Cosmos texture atlas - a newtype wrapper around a bevy `TextureAtlas`
-    pub fn new(unlocalized_name: impl Into<String>, atlas: TextureAtlas) -> Self {
+    pub fn new(unlocalized_name: impl Into<String>, atlas: SquareTextureAtlas) -> Self {
         Self {
             unlocalized_name: unlocalized_name.into(),
             id: 0,
@@ -318,25 +153,13 @@ fn check_assets_ready(
             // for better performance
 
             for asset in loading.iter() {
-                let mut texture_atlas_builder = TextureAtlasBuilder::default();
+                let mut texture_atlas_builder = SquareTextureAtlasBuilder::new(16);
 
-                for handle in &asset.handles {
-                    let Some(image) = images.get(handle) else {
-                        warn!("{:?} did not resolve to an `Image` asset.", server.get_handle_path(handle));
-                        continue;
-                    };
-
-                    let img = expand_image(image, DEFAULT_PADDING);
-
-                    let handle = images.set(handle.clone(), img);
-
-                    texture_atlas_builder.add_texture(
-                        handle.clone(),
-                        images.get(&handle).expect("This image was just added, but doesn't exist."),
-                    );
+                for handle in asset.handles.iter() {
+                    texture_atlas_builder.add_texture(handle.clone());
                 }
 
-                let atlas = texture_atlas_builder.finish(&mut images).expect("Failed to build atlas");
+                let atlas = texture_atlas_builder.create_atlas(&mut images);
 
                 texture_atlases.register(CosmosTextureAtlas::new("cosmos:main", atlas));
             }
@@ -355,108 +178,20 @@ fn check_assets_ready(
     }
 }
 
-fn create_main_material(image_handle: Handle<Image>, unlit: bool) -> StandardMaterial {
-    StandardMaterial {
-        base_color_texture: Some(image_handle),
-        alpha_mode: AlphaMode::Mask(0.5),
-        unlit,
-        metallic: 0.0,
-        reflectance: 0.0,
-        perceptual_roughness: 1.0,
-        ..Default::default()
-    }
-}
-
-fn create_illuminated_material(image_handle: Handle<Image>) -> StandardMaterial {
-    StandardMaterial {
-        base_color_texture: Some(image_handle),
-        alpha_mode: AlphaMode::Mask(0.5),
-        unlit: true,
-        double_sided: true,
-        perceptual_roughness: 1.0,
-        ..Default::default()
-    }
-}
-
-fn create_transparent_material(image_handle: Handle<Image>, unlit: bool) -> StandardMaterial {
-    StandardMaterial {
-        base_color_texture: Some(image_handle),
-        alpha_mode: AlphaMode::Add,
-        unlit,
-        metallic: 0.0,
-        reflectance: 0.0,
-        perceptual_roughness: 1.0,
-        ..Default::default()
-    }
-}
-
-fn create_materials(
-    mut material_registry: ResMut<Registry<MaterialDefinition>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    event_reader: EventReader<AllTexturesDoneLoadingEvent>,
-    mut event_writer: EventWriter<AssetsDoneLoadingEvent>,
-    texture_atlases: Res<Registry<CosmosTextureAtlas>>,
-) {
-    if !event_reader.is_empty() {
-        if let Some(atlas) = texture_atlases.from_id("cosmos:main") {
-            let default_material = materials.add(create_main_material(atlas.texture_atlas.texture.clone(), false));
-            let unlit_default_material = materials.add(create_main_material(atlas.texture_atlas.texture.clone(), true));
-
-            material_registry.register(MaterialDefinition {
-                material: default_material.clone(),
-                far_away_material: default_material.clone(),
-                unlit_material: unlit_default_material.clone(),
-                atlas: atlas.clone(),
-                padding: DEFAULT_PADDING,
-                id: 0,
-                unlocalized_name: "cosmos:main".into(),
-            });
-
-            let illuminated_material = create_illuminated_material(atlas.texture_atlas.texture.clone());
-            let material = materials.add(illuminated_material);
-
-            material_registry.register(MaterialDefinition {
-                material: material.clone(),
-                far_away_material: default_material.clone(),
-                unlit_material: material.clone(),
-                atlas: atlas.clone(),
-                padding: DEFAULT_PADDING,
-                id: 0,
-                unlocalized_name: "cosmos:illuminated".into(),
-            });
-
-            let transparent_material = materials.add(create_transparent_material(atlas.texture_atlas.texture.clone(), false));
-            let unlit_transparent_material = materials.add(create_transparent_material(atlas.texture_atlas.texture.clone(), true));
-
-            material_registry.register(MaterialDefinition {
-                material: transparent_material,
-                far_away_material: default_material.clone(),
-                unlit_material: unlit_transparent_material,
-                atlas: atlas.clone(),
-                padding: DEFAULT_PADDING,
-                id: 0,
-                unlocalized_name: "cosmos:transparent".into(),
-            });
-        }
-
-        event_writer.send(AssetsDoneLoadingEvent);
-    }
-}
-
 #[derive(Debug, Clone)]
 /// Contains information that links the block faces to their texture indices.
 ///
 /// This could also link non-face imformation to their texture indices.
-struct BlockTextureIndicies(HashMap<String, usize>);
+struct BlockTextureIndicies(HashMap<String, u32>);
 
 impl BlockTextureIndicies {
-    fn all(index: usize) -> Self {
+    fn all(index: u32) -> Self {
         let mut map = HashMap::new();
         map.insert("all".into(), index);
         Self(map)
     }
 
-    fn new(map: HashMap<String, usize>) -> Self {
+    fn new(map: HashMap<String, u32>) -> Self {
         Self(map)
     }
 }
@@ -472,7 +207,7 @@ pub struct BlockTextureIndex {
 impl BlockTextureIndex {
     #[inline]
     /// Returns the index for that block face, if one exists
-    pub fn atlas_index_from_face(&self, face: BlockFace) -> Option<usize> {
+    pub fn atlas_index_from_face(&self, face: BlockFace) -> Option<u32> {
         self.atlas_index(face.as_str())
     }
 
@@ -480,7 +215,7 @@ impl BlockTextureIndex {
     /// Returns the index for that specific identifier, if one exists.
     ///
     /// If none exists and an "all" identifier is present, "all" is returned.
-    pub fn atlas_index(&self, identifier: &str) -> Option<usize> {
+    pub fn atlas_index(&self, identifier: &str) -> Option<u32> {
         if let Some(index) = self.indices.0.get(identifier) {
             Some(*index)
         } else {
@@ -506,8 +241,18 @@ impl Identifiable for BlockTextureIndex {
     }
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+/// The material for this block - if none the default material is assumed.
+pub struct MaterialData {
+    /// The name of the material
+    pub name: String,
+    /// This data is sent to the material for its own processing, if it is provided
+    pub data: Option<HashMap<String, String>>,
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 struct ReadBlockInfo {
+    material: Option<MaterialData>,
     texture: Option<HashMap<String, String>>,
     model: Option<String>,
 }
@@ -519,6 +264,9 @@ pub struct BlockRenderingInfo {
     pub texture: HashMap<String, String>,
     /// This is the model id this block has
     pub model: String,
+    /// This data is sent to the material for its own processing, if it is provided
+    pub material_data: Option<MaterialData>,
+
     unlocalized_name: String,
     id: u16,
 }
@@ -549,7 +297,7 @@ pub fn load_block_rendering_information(
         .from_id("cosmos:main")
         .expect("Missing main atlas!")
         .texture_atlas
-        .get_texture_index(&server.get_handle("images/blocks/missing.png"))
+        .get_texture_index(&server.get_handle("cosmos/images/blocks/missing.png"))
     {
         registry.register(BlockTextureIndex {
             id: 0,
@@ -560,13 +308,15 @@ pub fn load_block_rendering_information(
 
     for block in blocks.iter() {
         let unlocalized_name = block.unlocalized_name();
-        let block_name = unlocalized_name.split(':').nth(1).unwrap_or(unlocalized_name);
+        let mut split = unlocalized_name.split(':');
+        let mod_id = split.next().unwrap();
+        let block_name = split.next().unwrap_or(unlocalized_name);
 
-        let json_path = format!("assets/blocks/{block_name}.json");
+        let json_path = format!("assets/{mod_id}/blocks/{block_name}.json");
 
         let block_info = if let Ok(block_info) = fs::read(&json_path) {
-            let read_info =
-                serde_json::from_slice::<ReadBlockInfo>(&block_info).unwrap_or_else(|_| panic!("Error reading json data in {json_path}"));
+            let read_info = serde_json::from_slice::<ReadBlockInfo>(&block_info)
+                .unwrap_or_else(|e| panic!("Error reading json data in {json_path}. \nError: \n{e}\n"));
 
             BlockRenderingInfo {
                 id: 0,
@@ -574,29 +324,38 @@ pub fn load_block_rendering_information(
                 model: read_info.model.unwrap_or("cosmos:base_block".into()),
                 texture: read_info.texture.unwrap_or_else(|| {
                     let mut default_hashmap = HashMap::new();
-                    default_hashmap.insert("all".into(), block_name.to_owned());
+                    default_hashmap.insert("all".into(), unlocalized_name.to_owned());
                     default_hashmap
                 }),
+                material_data: read_info.material,
             }
         } else {
             let mut default_hashmap = HashMap::new();
-            default_hashmap.insert("all".into(), block_name.to_owned());
+            default_hashmap.insert("all".into(), unlocalized_name.to_owned());
 
             BlockRenderingInfo {
                 texture: default_hashmap.clone(),
                 model: "cosmos:base_block".into(),
                 id: 0,
                 unlocalized_name: block.unlocalized_name().to_owned(),
+                material_data: None,
             }
         };
 
         let mut map = HashMap::new();
         for (entry, texture_name) in block_info.texture.iter() {
+            let mut name_split = texture_name.split(':');
+
+            let mod_id = name_split.next().unwrap();
+            let name = name_split
+                .next()
+                .unwrap_or_else(|| panic!("Invalid texture - {texture_name}. Did you forget the 'cosmos:'?"));
+
             if let Some(index) = atlas_registry
                 .from_id("cosmos:main") // Eventually load this via the block_info file
                 .expect("No main atlas")
                 .texture_atlas
-                .get_texture_index(&server.get_handle(&format!("images/blocks/{texture_name}.png",)))
+                .get_texture_index(&server.get_handle(&format!("{mod_id}/images/blocks/{name}.png",)))
             {
                 map.insert(entry.to_owned(), index);
             }
@@ -615,7 +374,6 @@ pub fn load_block_rendering_information(
 pub(super) fn register(app: &mut App) {
     registry::create_registry::<BlockTextureIndex>(app);
     registry::create_registry::<LoadingTextureAtlas>(app);
-    registry::create_registry::<MaterialDefinition>(app);
     registry::create_registry::<BlockRenderingInfo>(app);
     registry::create_registry::<CosmosTextureAtlas>(app);
 
@@ -626,7 +384,6 @@ pub(super) fn register(app: &mut App) {
             (
                 check_assets_ready.run_if(resource_exists::<Registry<LoadingTextureAtlas>>()),
                 assets_done_loading,
-                create_materials,
             )
                 .run_if(in_state(GameState::PostLoading)),
         )

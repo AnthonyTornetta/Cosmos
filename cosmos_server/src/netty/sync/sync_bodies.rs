@@ -8,6 +8,7 @@ use cosmos_core::{
     netty::{
         cosmos_encoder,
         netty_rigidbody::{NettyRigidBody, NettyRigidBodyLocation},
+        server_reliable_messages::ServerReliableMessages,
         server_unreliable_messages::ServerUnreliableMessages,
         NettyChannelServer, NoSendEntity,
     },
@@ -16,6 +17,8 @@ use cosmos_core::{
 };
 
 use crate::netty::{network_helpers::NetworkTick, server_listener::server_listen_messages};
+
+use super::entities::RequestedEntityEvent;
 
 /// Sends bodies to players only if it's within their render distance.
 fn send_bodies(
@@ -87,11 +90,26 @@ fn server_sync_bodies(
     }
 }
 
+fn pinger(mut server: ResMut<RenetServer>, mut event_reader: EventReader<RequestedEntityEvent>, mut commands: Commands) {
+    for ev in event_reader.iter() {
+        if commands.get_entity(ev.entity).is_some() {
+            server.send_message(
+                ev.client_id,
+                NettyChannelServer::Reliable,
+                cosmos_encoder::serialize(&ServerReliableMessages::RequestedEntityReceived(ev.entity)),
+            );
+        }
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         // This really needs to run immediately after `add_previous_location` to make sure nothing causes any desync
         // in location + transform, but for now it's fine.
-        server_sync_bodies.after(add_previous_location).before(server_listen_messages),
+        (
+            server_sync_bodies.after(add_previous_location).before(server_listen_messages),
+            pinger,
+        ),
     );
 }

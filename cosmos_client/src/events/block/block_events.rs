@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
-    block::BlockFace,
+    block::{block_events::BlockInteractEvent, BlockFace},
     netty::{client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannelClient},
     structure::structure_block::StructureBlock,
 };
@@ -32,15 +32,6 @@ pub struct BlockPlaceEvent {
     pub block_id: u16,
     /// The block's top face
     pub block_up: BlockFace,
-}
-
-#[derive(Debug, Event)]
-/// Sent whenever the player interacts with a block
-pub struct BlockInteractEvent {
-    /// The structure this block is on
-    pub structure_entity: Entity,
-    /// block coords
-    pub coords: StructureBlock,
 }
 
 fn handle_block_break(
@@ -88,7 +79,7 @@ fn handle_block_interact(
             NettyChannelClient::Reliable,
             cosmos_encoder::serialize(&ClientReliableMessages::InteractWithBlock {
                 structure_entity: network_mapping.server_from_client(&ev.structure_entity).unwrap(),
-                block: ev.coords,
+                block: ev.structure_block,
             }),
         );
     }

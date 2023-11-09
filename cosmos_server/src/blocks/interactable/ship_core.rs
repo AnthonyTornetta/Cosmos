@@ -1,6 +1,6 @@
 use bevy::prelude::{in_state, App, EventReader, EventWriter, IntoSystemConfigs, Query, Res, Update, With};
 use cosmos_core::{
-    block::Block,
+    block::{block_events::BlockInteractEvent, Block},
     events::structure::change_pilot_event::ChangePilotEvent,
     registry::{identifiable::Identifiable, Registry},
     structure::{
@@ -9,7 +9,7 @@ use cosmos_core::{
     },
 };
 
-use crate::{events::blocks::block_events::BlockInteractEvent, state::GameState};
+use crate::state::GameState;
 
 fn handle_block_event(
     mut interact_events: EventReader<BlockInteractEvent>,

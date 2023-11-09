@@ -47,3 +47,5 @@ bevy-inspector-egui = { workspace = true }
 
 rayon = { workspace = true }
 lz4_flex = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }

@@ -1,11 +1,15 @@
 //! Event & its processing for when a player wants to create a ship
 
-use bevy::prelude::{in_state, App, Event, EventReader, EventWriter, IntoSystemConfigs, ResMut, Update};
+use bevy::prelude::{in_state, App, Event, EventReader, EventWriter, IntoSystemConfigs, Query, ResMut, Update, With};
 use bevy_renet::renet::RenetClient;
-use cosmos_core::netty::{client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannelClient};
+use cosmos_core::{
+    netty::{client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannelClient},
+    structure::ship::build_mode::BuildMode,
+};
 
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
+    netty::flags::LocalPlayer,
     state::game_state::GameState,
 };
 
@@ -15,7 +19,16 @@ pub struct CreateShipEvent {
     name: String,
 }
 
-fn listener(input_handler: InputChecker, mut event_writer: EventWriter<CreateShipEvent>) {
+fn listener(
+    in_build_mode: Query<(), (With<LocalPlayer>, With<BuildMode>)>,
+    input_handler: InputChecker,
+    mut event_writer: EventWriter<CreateShipEvent>,
+) {
+    if in_build_mode.get_single().is_ok() {
+        // Don't create ships while in build mode
+        return;
+    }
+
     if input_handler.check_just_pressed(CosmosInputs::CreateShip) {
         event_writer.send(CreateShipEvent { name: "Cool name".into() });
     }

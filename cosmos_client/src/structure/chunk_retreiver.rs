@@ -19,11 +19,11 @@ use crate::NetworkMapping;
 pub struct NeedsPopulated;
 
 fn populate_structures(
-    mut commands: Commands,
     player_location: Query<&Location, With<LocalPlayer>>,
     query: Query<(Entity, &Location), (With<NeedsPopulated>, With<Structure>)>,
     mut client: ResMut<RenetClient>,
     network_mapping: Res<NetworkMapping>,
+    mut commands: Commands,
 ) {
     let Ok(player_location) = player_location.get_single() else {
         return;

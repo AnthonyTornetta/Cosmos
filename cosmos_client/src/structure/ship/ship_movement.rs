@@ -8,6 +8,7 @@ use bevy_renet::renet::RenetClient;
 use cosmos_core::netty::client_reliable_messages::ClientReliableMessages;
 use cosmos_core::netty::client_unreliable_messages::ClientUnreliableMessages;
 use cosmos_core::netty::{cosmos_encoder, NettyChannelClient};
+use cosmos_core::structure::ship::build_mode::BuildMode;
 use cosmos_core::structure::ship::pilot::Pilot;
 use cosmos_core::structure::ship::ship_movement::ShipMovement;
 
@@ -19,7 +20,7 @@ use crate::window::setup::DeltaCursorPosition;
 
 fn process_ship_movement(
     input_handler: InputChecker,
-    query: Query<Entity, (With<LocalPlayer>, With<Pilot>)>,
+    query: Query<Entity, (With<LocalPlayer>, With<Pilot>, Without<BuildMode>)>,
     mut client: ResMut<RenetClient>,
     mut crosshair_offset: ResMut<CrosshairOffset>,
     cursor_delta_position: Res<DeltaCursorPosition>,

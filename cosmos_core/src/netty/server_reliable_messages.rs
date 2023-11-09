@@ -7,13 +7,14 @@ use bevy::prelude::{Component, Entity};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    block::BlockFace,
+    block::{multiblock::reactor::Reactors, BlockFace},
     entities::player::render_distance::RenderDistance,
     physics::location::Location,
     structure::{
         coordinates::{ChunkCoordinate, CoordinateType},
         loading::ChunksNeedLoaded,
         planet::Planet,
+        ship::build_mode::BuildMode,
         structure_block::StructureBlock,
     },
     universe::star::Star,
@@ -142,4 +143,37 @@ pub enum ServerReliableMessages {
         /// The ship the player is walking on
         ship_entity: Entity,
     },
+    /// Sent when a player enters build mode
+    PlayerEnterBuildMode {
+        /// The player entity on the server
+        player_entity: Entity,
+        /// The structure entity they're building on the server
+        structure_entity: Entity,
+    },
+    /// Sent whenever a player exits build mode
+    PlayerExitBuildMode {
+        /// The server's player entity that's exiting
+        player_entity: Entity,
+    },
+    /// Updates the player's build mode.
+    ///
+    /// Only used to update symmetry axis.
+    UpdateBuildMode {
+        /// The new build mode
+        build_mode: BuildMode,
+    },
+    /// Reactor creation failure
+    InvalidReactor {
+        /// The reason the reactor failed to be created
+        reason: String,
+    },
+    /// Updates the reactors for a specific structure
+    Reactors {
+        /// The reactors the structure now has
+        reactors: Reactors,
+        /// The structure this the reactors are a part of
+        structure: Entity,
+    },
+    /// This signifies that the server is sending information for a requested entity
+    RequestedEntityReceived(Entity),
 }

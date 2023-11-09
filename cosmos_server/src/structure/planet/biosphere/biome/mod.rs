@@ -683,7 +683,7 @@ pub struct BiosphereBiomesRegistry<T: BiosphereMarkerComponent> {
     _phantom: PhantomData<T>,
 
     /// Contains a list of indicies to the biomes vec
-    lookup_table: Arc<RwLock<[u8; LOOKUP_TABLE_SIZE]>>,
+    lookup_table: Arc<RwLock<Box<[u8; LOOKUP_TABLE_SIZE]>>>,
 
     /// All the registered biomes
     biomes: Vec<Arc<RwLock<Box<dyn Biome>>>>,
@@ -715,7 +715,7 @@ impl<T: BiosphereMarkerComponent> BiosphereBiomesRegistry<T> {
     pub fn new() -> Self {
         Self {
             _phantom: Default::default(),
-            lookup_table: Arc::new(RwLock::new([0; LOOKUP_TABLE_SIZE])),
+            lookup_table: Arc::new(RwLock::new(Box::new([0; LOOKUP_TABLE_SIZE]))),
             biomes: vec![],
             todo_biomes: Default::default(),
         }

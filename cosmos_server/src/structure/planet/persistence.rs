@@ -126,6 +126,7 @@ fn populate_chunks(
                 .insert((
                     serialized_data,
                     NeedsLoaded,
+                    Name::new("Needs Loaded Chunk"),
                     NoSendEntity,
                     ChunkEntity {
                         structure_entity: needs.structure_entity,
@@ -137,10 +138,13 @@ fn populate_chunks(
         } else {
             commands
                 .entity(entity)
-                .insert(ChunkNeedsGenerated {
-                    coords: needs.chunk_coords,
-                    structure_entity: needs.structure_entity,
-                })
+                .insert((
+                    ChunkNeedsGenerated {
+                        coords: needs.chunk_coords,
+                        structure_entity: needs.structure_entity,
+                    },
+                    Name::new("Needs Generated Chunk"),
+                ))
                 .remove::<ChunkNeedsPopulated>();
         }
     }
@@ -157,10 +161,11 @@ fn load_chunk(
             if let Ok(mut structure) = structure_query.get_mut(ce.structure_entity) {
                 let coords = chunk.chunk_coordinates();
 
-                commands.entity(entity).insert(PbrBundle {
-                    transform: Transform::from_translation(structure.chunk_relative_position(coords)),
-                    ..Default::default()
-                });
+                commands
+                    .entity(entity)
+                    .insert(TransformBundle::from_transform(Transform::from_translation(
+                        structure.chunk_relative_position(coords),
+                    )));
 
                 structure.set_chunk_entity(coords, entity);
 

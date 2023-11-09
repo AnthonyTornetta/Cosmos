@@ -18,7 +18,10 @@ use cosmos_core::{
     persistence::LoadingDistance,
     physics::location::Location,
 };
-use std::{fs, io};
+use std::{
+    fs,
+    io::{self, ErrorKind},
+};
 
 use super::{EntityId, SaveFileIdentifier, SaveFileIdentifierType, SectorsCache, SerializedData};
 
@@ -27,9 +30,75 @@ use super::{EntityId, SaveFileIdentifier, SaveFileIdentifierType, SectorsCache, 
 #[derive(Component, Debug, Default, Reflect)]
 pub struct NeedsSaved;
 
+/// Denotes that this entity should be saved as a blueprint. Once this entity is saved,
+/// this component will be removed.
+#[derive(Component, Debug, Default, Reflect)]
+pub struct NeedsBlueprinted {
+    /// The blueprint file's name (without .bp or the path to it)
+    pub blueprint_name: String,
+    /// The subdirectory the blueprint resides in (same as the blueprint type)
+    pub subdir_name: String,
+}
+
 fn check_needs_saved(query: Query<Entity, (With<NeedsSaved>, Without<SerializedData>)>, mut commands: Commands) {
     for ent in query.iter() {
         commands.entity(ent).insert(SerializedData::default());
+    }
+}
+
+fn check_needs_blueprinted(query: Query<Entity, (With<NeedsBlueprinted>, Without<SerializedData>)>, mut commands: Commands) {
+    for ent in query.iter() {
+        commands.entity(ent).insert(SerializedData::default());
+    }
+}
+
+/// Put all systems that add data to blueprinted entities after this and before `done_blueprinting`
+pub fn begin_blueprinting() {}
+
+/// Saves the given structure.
+///
+/// This is NOT how the structures are saved in the world, but rather used to get structure
+/// files that can be loaded through commands.
+pub fn save_blueprint(data: &SerializedData, needs_blueprinted: &NeedsBlueprinted) -> std::io::Result<()> {
+    if let Err(e) = fs::create_dir("saves") {
+        match e.kind() {
+            ErrorKind::AlreadyExists => {}
+            _ => return Err(e),
+        }
+    }
+
+    if let Err(e) = fs::create_dir(format!("blueprints/{}", needs_blueprinted.subdir_name)) {
+        match e.kind() {
+            ErrorKind::AlreadyExists => {}
+            _ => return Err(e),
+        }
+    }
+
+    fs::write(
+        format!(
+            "blueprints/{}/{}.bp",
+            needs_blueprinted.subdir_name, needs_blueprinted.blueprint_name
+        ),
+        cosmos_encoder::serialize(&data),
+    )?;
+
+    Ok(())
+}
+
+/// Put all systems that add data to blueprinted entities before this and after `begin_blueprinting`
+pub fn done_blueprinting(mut query: Query<(Entity, &mut SerializedData, &NeedsBlueprinted, Option<&NeedsSaved>)>, mut commands: Commands) {
+    for (entity, mut serialized_data, needs_blueprinted, needs_saved) in query.iter_mut() {
+        save_blueprint(&serialized_data, needs_blueprinted)
+            .unwrap_or_else(|e| warn!("Failed to save blueprint for {entity:?} \n\n{e}\n\n"));
+
+        commands.entity(entity).remove::<NeedsBlueprinted>();
+
+        if needs_saved.is_none() {
+            commands.entity(entity).remove::<SerializedData>();
+        } else {
+            // Clear out any blueprint data for the actual saving coming up
+            *serialized_data = SerializedData::default();
+        }
     }
 }
 
@@ -151,7 +220,9 @@ fn default_save(mut query: Query<(&mut SerializedData, Option<&Location>, Option
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(PostUpdate, check_needs_saved)
+    app.add_systems(PostUpdate, (check_needs_saved, check_needs_blueprinted))
+        // Add all blueprint-related systems between these systems
+        .add_systems(First, (begin_blueprinting, done_blueprinting).chain().before(begin_saving))
         // Put all saving-related systems after this
         .add_systems(First, begin_saving.before(despawn_needed))
         // Put all saving-related systems before this

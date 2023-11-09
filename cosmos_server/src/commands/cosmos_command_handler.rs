@@ -1,13 +1,14 @@
 //! Handles all the server console commands
 
-use bevy::prelude::{App, Commands, Entity, EventReader, EventWriter, Query, Res, ResMut, Startup, With};
+use bevy::prelude::{warn, App, Commands, Entity, EventReader, Name, Quat, Query, Res, ResMut, Startup, Update, Vec3, With};
 use cosmos_core::{
     ecs::NeedsDespawned,
-    physics::location::Location,
-    structure::{planet::Planet, ship::Ship, Structure},
+    physics::location::{Location, Sector, SectorUnit},
+    structure::ship::Ship,
 };
+use thiserror::Error;
 
-use crate::structure::saving::{load_structure, SaveStructure, SendDelayedStructureLoadEvent, StructureType};
+use crate::persistence::{loading::NeedsBlueprintLoaded, saving::NeedsBlueprinted};
 
 use super::{CosmosCommandInfo, CosmosCommandSent, CosmosCommands};
 
@@ -25,22 +26,22 @@ fn register_commands(mut commands: ResMut<CosmosCommands>) {
     });
 
     commands.add_command_info(CosmosCommandInfo {
-        name: "save".into(),
-        usage: "save [entity_id] [file_name]".into(),
-        description: "Saves the given structure to that file. Do not specify the file extension.".into(),
+        name: "blueprint".into(),
+        usage: "blueprint [entity_id] [file_name]".into(),
+        description: "blueprints the given structure to that file. Do not specify the file extension.".into(),
     });
 
     commands.add_command_info(CosmosCommandInfo {
         name: "load".into(),
-        usage: "load [structure_name] [planet_type] ([x], [y], [z])".into(),
-        description: "Loads the given structure from the file for that name. The planet type should be either 'planet' or 'ship'. You can specify x/y/z to specify the coordinates to spawn it at."
+        usage: "load [blueprint_type] [blueprint_name] ([x], [y], [z]) ([x], [y], [z])".into(),
+        description: "Loads the given structure from the file for that name. You can specify sector coords and the local coords to specify the coordinates to spawn it."
             .into(),
     });
 
     commands.add_command_info(CosmosCommandInfo {
         name: "list".into(),
         usage: "list".into(),
-        description: "Lists all entity bits with no parents (top-level)".into(),
+        description: "Lists all the savable entity ids".into(),
     });
 
     commands.add_command_info(CosmosCommandInfo {
@@ -66,16 +67,20 @@ fn display_help(command_name: Option<&str>, commands: &CosmosCommands) {
     }
 }
 
+#[derive(Debug, Error)]
+enum ArgumentError {
+    #[error("Too few arguments: {0}")]
+    TooFewArguments(String),
+    // #[error("Too many arguments: {0}")]
+    // TooManyArguments(String),
+}
+
 fn cosmos_command_listener(
     mut commands: Commands,
     mut command_events: EventReader<CosmosCommandSent>,
     cosmos_commands: Res<CosmosCommands>,
 
-    mut structure_loaded_delayed: EventWriter<SendDelayedStructureLoadEvent>,
-
-    structure_query: Query<(Option<&Planet>, Option<&Ship>), With<Structure>>,
-
-    all_saveable_entities: Query<Entity, With<Structure>>,
+    all_blueprintable_entities: Query<(Entity, &Name, &Location), With<Ship>>,
 ) {
     for ev in command_events.iter() {
         match ev.name.as_str() {
@@ -90,11 +95,12 @@ fn cosmos_command_listener(
                 println!("Pong");
             }
             "list" => {
-                println!("All saveable entities: ");
-                for entity in all_saveable_entities.iter() {
-                    print!("{} ", entity.index());
+                println!("All blueprintable entities: ");
+                println!("Name\tSector\t\tId");
+                for (entity, name, location) in all_blueprintable_entities.iter() {
+                    println!("{name}\t{}\t{} ", location.sector(), entity.index());
                 }
-                println!();
+                println!("======================================")
             }
             "despawn" => {
                 if ev.args.len() != 1 {
@@ -113,41 +119,54 @@ fn cosmos_command_listener(
                 }
             }
             "load" => {
-                if ev.args.len() < 2 {
+                if ev.args.len() < 2 || ev.args.len() > 8 {
                     display_help(Some("load"), &cosmos_commands);
-                } else if let Some(structure_type) = match ev.args[1].to_lowercase().as_str() {
-                    "ship" => Some(StructureType::Ship),
-                    "planet" => Some(StructureType::Planet),
-                    _ => {
-                        println!("Invalid structure type! Should be ship or planet");
-                        None
-                    }
-                } {
-                    let mut spawn_at = Location::default();
-                    if ev.args.len() == 5 {
-                        if let Ok(x) = ev.args[2].parse::<f32>() {
-                            if let Ok(y) = ev.args[3].parse::<f32>() {
-                                if let Ok(z) = ev.args[4].parse::<f32>() {
-                                    spawn_at.local.x = x;
-                                    spawn_at.local.y = y;
-                                    spawn_at.local.z = z;
-                                }
+                } else {
+                    let path = format!("blueprints/{}/{}.bp", ev.args[0], ev.args[1]);
+
+                    fn parse_args(ev: &CosmosCommandSent) -> anyhow::Result<Location> {
+                        let mut spawn_at = Location::default();
+
+                        if ev.args.len() >= 5 {
+                            let x = ev.args[2].parse::<SectorUnit>()?;
+                            let y = ev.args[3].parse::<SectorUnit>()?;
+
+                            let z = ev.args[4].parse::<SectorUnit>()?;
+
+                            spawn_at.sector = Sector::new(x, y, z);
+
+                            if ev.args.len() == 8 {
+                                let x = ev.args[5].parse::<f32>()?;
+                                let y = ev.args[6].parse::<f32>()?;
+                                let z = ev.args[7].parse::<f32>()?;
+                                spawn_at.local = Vec3::new(x, y, z);
+                            } else if ev.args.len() != 5 {
+                                return Err(ArgumentError::TooFewArguments("Missing some local coordinate arguments".into()).into());
                             }
+                        } else if ev.args.len() != 2 {
+                            return Err(ArgumentError::TooFewArguments("Missing some sector coordinate arguments".into()).into());
                         }
+
+                        Ok(spawn_at)
                     }
 
-                    load_structure(
-                        ev.args[0].as_str(),
-                        structure_type,
+                    let Ok(spawn_at) = parse_args(ev).map_err(|e| warn!("{e}")) else {
+                        continue;
+                    };
+
+                    commands.spawn((
                         spawn_at,
-                        &mut commands,
-                        &mut structure_loaded_delayed,
-                    );
+                        NeedsBlueprintLoaded {
+                            spawn_at,
+                            rotation: Quat::IDENTITY,
+                            path,
+                        },
+                    ));
                 }
             }
-            "save" => {
+            "blueprint" => {
                 if ev.args.len() != 2 {
-                    display_help(Some("save"), &cosmos_commands);
+                    display_help(Some("blueprint"), &cosmos_commands);
                     continue;
                 }
                 let Ok(index) = ev.args[0].parse::<u32>() else {
@@ -155,30 +174,17 @@ fn cosmos_command_listener(
                     continue;
                 };
 
-                let Some(entity) = all_saveable_entities.iter().find(|ent| ent.index() == index) else {
+                let Some(entity) = all_blueprintable_entities.iter().find(|entity| entity.0.index() == index) else {
                     println!("Invalid entity index {index}");
                     continue;
                 };
 
-                let mut entity_cmds = commands.entity(entity);
-                let Ok((planet, ship)) = structure_query.get(entity) else {
-                    println!("You can only save structures!");
-                    continue;
-                };
+                let mut entity_cmds = commands.entity(entity.0);
 
-                if planet.is_some() {
-                    entity_cmds.insert(SaveStructure {
-                        structure_type: StructureType::Planet,
-                        name: ev.args[1].clone(),
-                    });
-                } else if ship.is_some() {
-                    entity_cmds.insert(SaveStructure {
-                        structure_type: StructureType::Ship,
-                        name: ev.args[1].clone(),
-                    });
-                } else {
-                    println!("Error: No valid structure type (planet/ship) for this structure");
-                }
+                entity_cmds.insert(NeedsBlueprinted {
+                    blueprint_name: ev.args[1].to_owned(),
+                    ..Default::default()
+                });
             }
             _ => {
                 display_help(Some(&ev.text), &cosmos_commands);
@@ -188,5 +194,6 @@ fn cosmos_command_listener(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Startup, (register_commands, cosmos_command_listener));
+    app.add_systems(Startup, register_commands)
+        .add_systems(Update, cosmos_command_listener);
 }

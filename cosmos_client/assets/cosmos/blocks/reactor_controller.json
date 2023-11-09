@@ -1,0 +1,6 @@
+{
+    "texture": {
+        "all": "cosmos:reactor_casing",
+        "back": "cosmos:reactor_controller"
+    }
+}

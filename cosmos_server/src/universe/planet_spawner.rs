@@ -26,7 +26,7 @@ use futures_lite::future;
 use rand::Rng;
 
 use crate::{
-    init::init_world::ServerSeed, persistence::is_sector_loaded, rng::get_rng_for_sector, state::GameState,
+    init::init_world::ServerSeed, persistence::is_sector_generated, rng::get_rng_for_sector, state::GameState,
     structure::planet::server_planet_builder::ServerPlanetBuilder,
 };
 
@@ -124,7 +124,7 @@ fn spawn_planet(
         for sector in to_check_sectors {
             cache.insert(sector);
 
-            if is_sector_loaded(sector) {
+            if is_sector_generated(sector) {
                 // This sector has already been loaded, don't regenerate stuff
                 continue;
             }
@@ -133,7 +133,7 @@ fn spawn_planet(
 
             let is_origin = sector.x() == 25 && sector.y() == 25 && sector.z() == 25;
 
-            if is_origin || rng.gen_range(0..1000) == 9 {
+            if !is_origin && rng.gen_range(0..1000) == 9 {
                 let location = Location::new(Vec3::ZERO, sector);
 
                 let mut closest_star = None;

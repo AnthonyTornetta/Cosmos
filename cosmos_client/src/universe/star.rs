@@ -5,8 +5,8 @@ use std::f32::consts::PI;
 use bevy::{
     pbr::NotShadowCaster,
     prelude::{
-        shape, Added, App, Assets, Commands, DirectionalLight, DirectionalLightBundle, Entity, EulerRot, Mesh, OnEnter, PbrBundle, Quat,
-        Query, ResMut, StandardMaterial, Transform, Update, Vec3, With, Without,
+        shape, Added, App, Assets, Commands, DirectionalLight, DirectionalLightBundle, Entity, EulerRot, Mesh, Name, OnEnter, PbrBundle,
+        Quat, Query, ResMut, StandardMaterial, Transform, Update, Vec3, With, Without,
     },
 };
 use cosmos_core::{physics::location::SECTOR_DIMENSIONS, universe::star::Star};
@@ -62,19 +62,22 @@ fn create_added_star(
 
 /// There is only ever one light source for stars, it is just moved around as needed
 fn create_star_light_source(mut commands: Commands) {
-    commands.spawn(DirectionalLightBundle {
-        directional_light: DirectionalLight {
-            illuminance: 30000.0,
-            shadows_enabled: true,
+    commands.spawn((
+        Name::new("Star Light Emitter"),
+        DirectionalLightBundle {
+            directional_light: DirectionalLight {
+                illuminance: 30000.0,
+                shadows_enabled: true,
+                ..Default::default()
+            },
+            transform: Transform {
+                translation: Vec3::ZERO,
+                rotation: Quat::from_euler(EulerRot::XYZ, -PI / 4.0, 0.1, 0.1),
+                ..Default::default()
+            },
             ..Default::default()
         },
-        transform: Transform {
-            translation: Vec3::ZERO,
-            rotation: Quat::from_euler(EulerRot::XYZ, -PI / 4.0, 0.1, 0.1),
-            ..Default::default()
-        },
-        ..Default::default()
-    });
+    ));
 }
 
 pub(super) fn register(app: &mut App) {

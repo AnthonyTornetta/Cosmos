@@ -7,7 +7,11 @@ use serde::{Deserialize, Serialize};
 use crate::{
     block::BlockFace,
     entities::player::render_distance::RenderDistance,
-    structure::{coordinates::ChunkCoordinate, structure_block::StructureBlock},
+    structure::{
+        coordinates::{ChunkCoordinate, CoordinateType},
+        ship::build_mode::BuildAxis,
+        structure_block::StructureBlock,
+    },
 };
 
 #[derive(Debug, Serialize, Deserialize, Component)]
@@ -88,5 +92,16 @@ pub enum ClientReliableMessages {
     JoinShip {
         /// The ship the player wants to walk on
         ship_entity: Entity,
+    },
+    /// Sent whenever a client wants to exit build mode
+    ///
+    /// Requires server confirmation via [`ServerReliableMessages::PlayerExitBuildMode`] or client will do nothing
+    ExitBuildMode,
+    /// Sent by the player to update their symmetry
+    SetSymmetry {
+        /// The axis they are changing
+        axis: BuildAxis,
+        /// None if they want to remove it, otherwise the respective axis's coordinate
+        coordinate: Option<CoordinateType>,
     },
 }
