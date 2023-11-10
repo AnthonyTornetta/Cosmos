@@ -1,8 +1,15 @@
+//! Responsible for rendering planet LODs.
+//!
+//! The code in this file is very smelly.
+//!
+//! I'm sorry. I'll fix it when I feel inspired.
+
 use std::{
     collections::VecDeque,
     f32::consts::PI,
     mem::swap,
     sync::{Arc, Mutex},
+    usize,
 };
 
 use bevy::{
@@ -34,7 +41,7 @@ use cosmos_core::{
     },
     utils::array_utils::expand,
 };
-use rayon::prelude::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
+use rayon::prelude::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 
 use crate::{
     asset::{
@@ -97,7 +104,6 @@ impl ChunkRenderer {
     fn render(
         &mut self,
         scale: f32,
-        offset: Vec3,
         materials: &ManyToOneRegistry<Block, BlockMaterialMapping>,
         materials_registry: &Registry<MaterialDefinition>,
         lod: &LodChunk,
@@ -319,7 +325,7 @@ impl ChunkRenderer {
 
                     mesh_builder.add_mesh_information(
                         &mesh_info,
-                        offset * CHUNK_DIMENSIONSF + Vec3::new(center_offset_x * scale, center_offset_y * scale, center_offset_z * scale),
+                        Vec3::new(center_offset_x * scale, center_offset_y * scale, center_offset_z * scale),
                         Rect::new(0.0, 0.0, 1.0, 1.0),
                         image_index,
                         material_definition.add_material_data(block_id, &mesh_info),
@@ -358,44 +364,54 @@ impl ChunkRenderer {
 struct LodMeshes(Vec<Entity>);
 
 fn recursively_process_lod(
-    lod: &mut Lod,
-    offset: Vec3,
+    lod_path: LodPath,
     to_process: &Mutex<Option<Vec<(LodMesh, Vec3, CoordinateType)>>>,
     blocks: &Registry<Block>,
     materials: &ManyToOneRegistry<Block, BlockMaterialMapping>,
     meshes_registry: &BlockMeshRegistry,
     block_textures: &Registry<BlockTextureIndex>,
     materials_registry: &Registry<MaterialDefinition>,
-    scale: f32,
 ) {
-    match lod {
+    let (lod_path_info, _) = match &lod_path {
+        LodPath::Top(lod_path_info) => (lod_path_info, None),
+        LodPath::HasParent(lod_path_info, parent) => (lod_path_info, Some(parent)),
+    };
+
+    match lod_path_info.lod {
         Lod::None => {}
         Lod::Children(children) => {
-            children.par_iter_mut().enumerate().for_each(|(i, c)| {
-                let s4 = scale / 4.0;
+            children.par_iter().enumerate().for_each(|(i, c)| {
+                let s4 = lod_path_info.scale / 4.0;
 
-                let offset = match i {
-                    0 => offset + Vec3::new(-s4, -s4, -s4),
-                    1 => offset + Vec3::new(-s4, -s4, s4),
-                    2 => offset + Vec3::new(s4, -s4, s4),
-                    3 => offset + Vec3::new(s4, -s4, -s4),
-                    4 => offset + Vec3::new(-s4, s4, -s4),
-                    5 => offset + Vec3::new(-s4, s4, s4),
-                    6 => offset + Vec3::new(s4, s4, s4),
-                    7 => offset + Vec3::new(s4, s4, -s4),
-                    _ => unreachable!(),
-                };
+                let offset = lod_path_info.offset
+                    + match i {
+                        0 => Vec3::new(-s4, -s4, -s4),
+                        1 => Vec3::new(-s4, -s4, s4),
+                        2 => Vec3::new(s4, -s4, s4),
+                        3 => Vec3::new(s4, -s4, -s4),
+                        4 => Vec3::new(-s4, s4, -s4),
+                        5 => Vec3::new(-s4, s4, s4),
+                        6 => Vec3::new(s4, s4, s4),
+                        7 => Vec3::new(s4, s4, -s4),
+                        _ => unreachable!(),
+                    };
 
                 recursively_process_lod(
-                    c,
-                    offset,
+                    LodPath::HasParent(
+                        PathInfo {
+                            lod: c,
+                            depth: lod_path_info.depth + 1,
+                            scale: lod_path_info.scale / 2.0,
+                            offset,
+                        },
+                        &lod_path,
+                    ),
                     to_process,
                     blocks,
                     materials,
                     meshes_registry,
                     block_textures,
                     materials_registry,
-                    scale / 2.0,
                 );
             });
         }
@@ -404,22 +420,23 @@ fn recursively_process_lod(
                 return;
             }
 
-            *dirty = false;
-
             let mut renderer = ChunkRenderer::new();
 
+            let mut neighbors = [None; 6];
+
+            lod_path.find_neighbors(lod_path_info, &mut neighbors);
+
             renderer.render(
-                scale,
-                Vec3::ZERO,
+                lod_path_info.scale,
                 materials,
                 materials_registry,
                 lod_chunk,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
+                neighbors[0],
+                neighbors[1],
+                neighbors[2],
+                neighbors[3],
+                neighbors[4],
+                neighbors[5],
                 blocks,
                 meshes_registry,
                 block_textures,
@@ -430,11 +447,11 @@ fn recursively_process_lod(
             mutex.as_mut().unwrap().push((
                 renderer.create_mesh(),
                 Vec3::new(
-                    offset.x * CHUNK_DIMENSIONSF,
-                    offset.y * CHUNK_DIMENSIONSF,
-                    offset.z * CHUNK_DIMENSIONSF,
+                    lod_path_info.offset.x * CHUNK_DIMENSIONSF,
+                    lod_path_info.offset.y * CHUNK_DIMENSIONSF,
+                    lod_path_info.offset.z * CHUNK_DIMENSIONSF,
                 ),
-                scale as CoordinateType,
+                lod_path_info.scale as CoordinateType,
             ));
         }
     };
@@ -699,6 +716,134 @@ fn monitor_lods_needs_rendered_system(lods_needed: Query<Entity, Changed<Lod>>, 
     }
 }
 
+struct PathInfo<'a> {
+    lod: &'a Lod,
+    depth: usize,
+    scale: f32,
+    offset: Vec3,
+}
+
+enum LodPath<'a> {
+    Top(PathInfo<'a>),
+    HasParent(PathInfo<'a>, &'a LodPath<'a>),
+}
+
+/// Checks if b is within or directly next to a
+#[must_use]
+fn check_within_or_next_to(a: (Vec3, f32), b: (Vec3, f32)) -> bool {
+    let (a_off, a_scale) = a;
+    let (b_off, b_scale) = b;
+    let s2 = a_scale / 2.0;
+
+    let a_min = a_off - Vec3::splat(s2);
+    let a_max = a_off + Vec3::splat(s2);
+
+    let s2 = b_scale / 2.0;
+
+    let b_min = b_off - Vec3::splat(s2);
+    let b_max = b_off + Vec3::splat(s2);
+
+    b_max.x >= a_min.x && b_max.y >= a_min.y && b_max.z >= a_min.z && b_min.x <= a_max.x && b_min.y <= a_max.y && b_min.z <= a_max.z
+}
+
+fn we_need_to_go_deeper<'a>(
+    offset: Vec3,
+    scale: f32,
+    lod: &'a Lod,
+    depth: usize,
+    searching_for_path_info: &PathInfo,
+    neighbors: &mut [Option<&'a LodChunk>; 6],
+) {
+    if !neighbors.iter().any(|x| x.is_none()) {
+        // Neighbors have already been found, stop looking for more
+        return;
+    }
+
+    let bounds = (searching_for_path_info.offset, searching_for_path_info.scale);
+
+    if !check_within_or_next_to((offset, scale), bounds) {
+        return;
+    }
+
+    match lod {
+        Lod::Children(children) => {
+            for (i, child_lod) in children.iter().enumerate() {
+                // if i == index {
+                //     // This will check against every single index, not just the ones that are a part of the same lod group as the index passed in.
+                //     // However, because a neighbor will never share the same index as the one we're checking, this check is perfectly fine.
+                //     continue;
+                // }
+
+                let s4 = scale / 4.0;
+
+                let new_offset = offset
+                    + match i {
+                        0 => Vec3::new(-s4, -s4, -s4),
+                        1 => Vec3::new(-s4, -s4, s4),
+                        2 => Vec3::new(s4, -s4, s4),
+                        3 => Vec3::new(s4, -s4, -s4),
+                        4 => Vec3::new(-s4, s4, -s4),
+                        5 => Vec3::new(-s4, s4, s4),
+                        6 => Vec3::new(s4, s4, s4),
+                        7 => Vec3::new(s4, s4, -s4),
+                        _ => unreachable!(),
+                    };
+
+                match child_lod {
+                    Lod::Single(chunk, _) => {
+                        if searching_for_path_info.depth == depth + 1 {
+                            if check_within_or_next_to((new_offset, scale / 2.0), bounds) {
+                                let diff = new_offset - searching_for_path_info.offset;
+                                if diff.y == 0.0 && diff.z == 0.0 {
+                                    if diff.x < 0.0 {
+                                        neighbors[0] = Some(&chunk);
+                                    } else if diff.x > 0.0 {
+                                        neighbors[1] = Some(&chunk);
+                                    }
+                                } else if diff.x == 0.0 && diff.z == 0.0 {
+                                    if diff.y < 0.0 {
+                                        neighbors[2] = Some(&chunk);
+                                    } else if diff.y > 0.0 {
+                                        neighbors[3] = Some(&chunk);
+                                    }
+                                } else if diff.x == 0.0 && diff.y == 0.0 {
+                                    if diff.z < 0.0 {
+                                        neighbors[4] = Some(&chunk);
+                                    } else if diff.z > 0.0 {
+                                        neighbors[5] = Some(&chunk);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Lod::Children(_) => {
+                        we_need_to_go_deeper(new_offset, scale / 2.0, child_lod, depth + 1, searching_for_path_info, neighbors)
+                    }
+                    Lod::None => {}
+                }
+            }
+        }
+        _ => {}
+    }
+}
+
+impl<'a> LodPath<'a> {
+    /// Order: left, right, bottom, top, back, front
+    fn find_neighbors(&self, searching_for_path_info: &PathInfo, neighbors: &mut [Option<&'a LodChunk>; 6]) {
+        match self {
+            LodPath::Top(path_info) => we_need_to_go_deeper(
+                path_info.offset,
+                path_info.scale,
+                path_info.lod,
+                path_info.depth,
+                searching_for_path_info,
+                neighbors,
+            ),
+            LodPath::HasParent(_, parent) => parent.find_neighbors(searching_for_path_info, neighbors),
+        }
+    }
+}
+
 /// Performance hot spot
 fn trigger_lod_render(
     blocks: Res<ReadOnlyRegistry<Block>>,
@@ -758,17 +903,23 @@ fn trigger_lod_render(
 
             let mut cloned_lod = lod.clone();
 
+            let lod_path = LodPath::Top(PathInfo {
+                lod: &cloned_lod,
+                depth: 1,
+                scale: chunk_dimensions as f32,
+                offset: Vec3::ZERO,
+            });
             recursively_process_lod(
-                &mut cloned_lod,
-                Vec3::ZERO,
+                lod_path,
                 &to_process,
                 &blocks,
                 &materials,
                 &meshes_registry,
                 &block_textures,
                 &materials_registry,
-                chunk_dimensions as f32,
             );
+
+            mark_non_dirty(&mut cloned_lod);
 
             let to_process_chunks = to_process.lock().unwrap().take().unwrap();
 
@@ -776,6 +927,14 @@ fn trigger_lod_render(
         });
 
         rendering_lods.push((entity, RenderingLod(task)));
+    }
+}
+
+fn mark_non_dirty(lod: &mut Lod) {
+    match lod {
+        Lod::None => {}
+        Lod::Single(_, dirty) => *dirty = false,
+        Lod::Children(children) => children.iter_mut().for_each(mark_non_dirty),
     }
 }
 
