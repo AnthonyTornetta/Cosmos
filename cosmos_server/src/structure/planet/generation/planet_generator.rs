@@ -24,7 +24,6 @@ use cosmos_core::{
         ChunkState, Structure,
     },
 };
-use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 
 use crate::{
     persistence::{saving::NeedsSaved, EntityId, SaveFileIdentifier},
@@ -108,9 +107,9 @@ fn get_requested_chunk(
     // No par_iter() for event readers, so first convert to vec then par_iter() it.
     event_reader
         .iter()
-        .copied()
-        .collect::<Vec<RequestChunkEvent>>()
-        .par_iter()
+        // .copied()
+        // .collect::<Vec<RequestChunkEvent>>()
+        // .par_iter()
         .for_each(|ev| {
             if let Ok((structure, loc)) = structure.get(ev.structure_entity) {
                 let cpos = structure.chunk_relative_position(ev.chunk_coords);
