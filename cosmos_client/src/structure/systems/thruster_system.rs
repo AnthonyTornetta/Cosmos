@@ -45,7 +45,7 @@ fn apply_thruster_sound(
                 }
             }
         } else if !thrusters_off && thruster_sound_instance.is_none() {
-            let playing_sound: Handle<AudioInstance> = audio.play(audio_handle.0.clone()).looped().handle();
+            let playing_sound: Handle<AudioInstance> = audio.play(audio_handle.0.clone()).with_volume(0.0).looped().handle();
 
             let stop_tween = AudioTween::new(Duration::from_millis(400), AudioEasing::Linear);
 
