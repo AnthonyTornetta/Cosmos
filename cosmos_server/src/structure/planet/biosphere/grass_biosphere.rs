@@ -1,13 +1,13 @@
 //! Creates a grass planet
 
-use bevy::prelude::{warn, App, Component, Entity, Event, OnEnter, Res, ResMut};
-use cosmos_core::{registry::Registry, structure::coordinates::ChunkCoordinate};
+use bevy::prelude::{warn, App, Commands, Component, Entity, Event, OnEnter, Res, ResMut};
+use cosmos_core::{block::Block, registry::Registry, structure::coordinates::ChunkCoordinate};
 
 use crate::GameState;
 
 use super::{
     biome::{biome_registry::RegisteredBiome, BiomeParameters, BiosphereBiomesRegistry},
-    register_biosphere, BiosphereMarkerComponent, TBiosphere, TGenerateChunkEvent, TemperatureRange,
+    register_biosphere, BiosphereMarkerComponent, BiosphereSeaLevel, TBiosphere, TGenerateChunkEvent, TemperatureRange,
 };
 
 #[derive(Component, Debug, Default, Clone, Copy)]
@@ -55,30 +55,52 @@ fn register_biosphere_biomes(
     biome_registry: Res<Registry<RegisteredBiome>>,
     mut biosphere_biomes_registry: ResMut<BiosphereBiomesRegistry<GrassBiosphereMarker>>,
 ) {
+    if let Some(ocean) = biome_registry.from_id("cosmos:ocean") {
+        biosphere_biomes_registry.register(
+            ocean.biome(),
+            BiomeParameters {
+                ideal_elevation: 49.0,
+                ideal_humidity: 0.0,
+                ideal_temperature: 30.0,
+            },
+        );
+    } else {
+        warn!("Missing ocean biome!");
+    }
+
     if let Some(plains) = biome_registry.from_id("cosmos:plains") {
         biosphere_biomes_registry.register(
             plains.biome(),
             BiomeParameters {
-                ideal_elevation: 0.0,
+                ideal_elevation: 50.0,
                 ideal_humidity: 0.0,
-                ideal_temperature: 0.0,
+                ideal_temperature: 30.0,
             },
         );
     } else {
         warn!("Missing plains biome!");
     }
 
-    if let Some(plains) = biome_registry.from_id("cosmos:desert") {
+    if let Some(desert) = biome_registry.from_id("cosmos:desert") {
         biosphere_biomes_registry.register(
-            plains.biome(),
+            desert.biome(),
             BiomeParameters {
-                ideal_elevation: 100.0,
-                ideal_humidity: 100.0,
+                ideal_elevation: 50.0,
+                ideal_humidity: 0.0,
                 ideal_temperature: 100.0,
             },
         );
     } else {
         warn!("Missing desert biome!");
+    }
+}
+
+fn add_ocean_level(mut commands: Commands, blocks: Res<Registry<Block>>) {
+    if let Some(water) = blocks.from_id("cosmos:water") {
+        commands.insert_resource(BiosphereSeaLevel::<GrassBiosphereMarker> {
+            block: Some(water.clone()),
+            ..Default::default()
+        });
     }
 }
 
@@ -89,5 +111,5 @@ pub(super) fn register(app: &mut App) {
         TemperatureRange::new(0.0, 400.0),
     );
 
-    app.add_systems(OnEnter(GameState::PostLoading), register_biosphere_biomes);
+    app.add_systems(OnEnter(GameState::PostLoading), (register_biosphere_biomes, add_ocean_level));
 }
