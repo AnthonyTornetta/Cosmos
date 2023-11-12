@@ -126,7 +126,7 @@ fn generate_edge_chunk<C: BlockStorer>(
         let i_scaled = i * scale;
         let mut j_layers_cache: Vec<Vec<(&Block, CoordinateType)>> = vec![vec![]; CHUNK_DIMENSIONS as usize];
         for (j, j_layers) in j_layers_cache.iter_mut().enumerate() {
-            let elevation = elevation[flatten(i as usize, j as usize, 0, CHUNK_DIMENSIONS_USIZE, CHUNK_DIMENSIONS_USIZE)];
+            let elevation = elevation[flatten(i as usize, j, 0, CHUNK_DIMENSIONS_USIZE, CHUNK_DIMENSIONS_USIZE)];
 
             let mut depth_increase = 0;
             for (block, level) in block_layers.ranges() {

@@ -218,7 +218,7 @@ impl<T: BiosphereMarkerComponent> Default for BiosphereSeaLevel<T> {
         Self {
             level: 0.75,
             block: None,
-            _phantom: PhantomData::default(),
+            _phantom: PhantomData,
         }
     }
 }

@@ -765,65 +765,58 @@ fn we_need_to_go_deeper<'a>(
         return;
     }
 
-    match lod {
-        Lod::Children(children) => {
-            for (i, child_lod) in children.iter().enumerate() {
-                // if i == index {
-                //     // This will check against every single index, not just the ones that are a part of the same lod group as the index passed in.
-                //     // However, because a neighbor will never share the same index as the one we're checking, this check is perfectly fine.
-                //     continue;
-                // }
+    if let Lod::Children(children) = lod {
+        for (i, child_lod) in children.iter().enumerate() {
+            // if i == index {
+            //     // This will check against every single index, not just the ones that are a part of the same lod group as the index passed in.
+            //     // However, because a neighbor will never share the same index as the one we're checking, this check is perfectly fine.
+            //     continue;
+            // }
 
-                let s4 = scale / 4.0;
+            let s4 = scale / 4.0;
 
-                let new_offset = offset
-                    + match i {
-                        0 => Vec3::new(-s4, -s4, -s4),
-                        1 => Vec3::new(-s4, -s4, s4),
-                        2 => Vec3::new(s4, -s4, s4),
-                        3 => Vec3::new(s4, -s4, -s4),
-                        4 => Vec3::new(-s4, s4, -s4),
-                        5 => Vec3::new(-s4, s4, s4),
-                        6 => Vec3::new(s4, s4, s4),
-                        7 => Vec3::new(s4, s4, -s4),
-                        _ => unreachable!(),
-                    };
+            let new_offset = offset
+                + match i {
+                    0 => Vec3::new(-s4, -s4, -s4),
+                    1 => Vec3::new(-s4, -s4, s4),
+                    2 => Vec3::new(s4, -s4, s4),
+                    3 => Vec3::new(s4, -s4, -s4),
+                    4 => Vec3::new(-s4, s4, -s4),
+                    5 => Vec3::new(-s4, s4, s4),
+                    6 => Vec3::new(s4, s4, s4),
+                    7 => Vec3::new(s4, s4, -s4),
+                    _ => unreachable!(),
+                };
 
-                match child_lod {
-                    Lod::Single(chunk, _) => {
-                        if searching_for_path_info.depth == depth + 1 {
-                            if check_within_or_next_to((new_offset, scale / 2.0), bounds) {
-                                let diff = new_offset - searching_for_path_info.offset;
-                                if diff.y == 0.0 && diff.z == 0.0 {
-                                    if diff.x < 0.0 {
-                                        neighbors[0] = Some(&chunk);
-                                    } else if diff.x > 0.0 {
-                                        neighbors[1] = Some(&chunk);
-                                    }
-                                } else if diff.x == 0.0 && diff.z == 0.0 {
-                                    if diff.y < 0.0 {
-                                        neighbors[2] = Some(&chunk);
-                                    } else if diff.y > 0.0 {
-                                        neighbors[3] = Some(&chunk);
-                                    }
-                                } else if diff.x == 0.0 && diff.y == 0.0 {
-                                    if diff.z < 0.0 {
-                                        neighbors[4] = Some(&chunk);
-                                    } else if diff.z > 0.0 {
-                                        neighbors[5] = Some(&chunk);
-                                    }
-                                }
+            match child_lod {
+                Lod::Single(chunk, _) => {
+                    if searching_for_path_info.depth == depth + 1 && check_within_or_next_to((new_offset, scale / 2.0), bounds) {
+                        let diff = new_offset - searching_for_path_info.offset;
+                        if diff.y == 0.0 && diff.z == 0.0 {
+                            if diff.x < 0.0 {
+                                neighbors[0] = Some(chunk);
+                            } else if diff.x > 0.0 {
+                                neighbors[1] = Some(chunk);
+                            }
+                        } else if diff.x == 0.0 && diff.z == 0.0 {
+                            if diff.y < 0.0 {
+                                neighbors[2] = Some(chunk);
+                            } else if diff.y > 0.0 {
+                                neighbors[3] = Some(chunk);
+                            }
+                        } else if diff.x == 0.0 && diff.y == 0.0 {
+                            if diff.z < 0.0 {
+                                neighbors[4] = Some(chunk);
+                            } else if diff.z > 0.0 {
+                                neighbors[5] = Some(chunk);
                             }
                         }
                     }
-                    Lod::Children(_) => {
-                        we_need_to_go_deeper(new_offset, scale / 2.0, child_lod, depth + 1, searching_for_path_info, neighbors)
-                    }
-                    Lod::None => {}
                 }
+                Lod::Children(_) => we_need_to_go_deeper(new_offset, scale / 2.0, child_lod, depth + 1, searching_for_path_info, neighbors),
+                Lod::None => {}
             }
         }
-        _ => {}
     }
 }
 
