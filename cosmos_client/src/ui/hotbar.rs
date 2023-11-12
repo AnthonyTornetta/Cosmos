@@ -1,6 +1,6 @@
 //! Displays the player's hotbar
 
-use bevy::prelude::*;
+use bevy::{input::mouse::MouseWheel, prelude::*};
 use cosmos_core::{
     inventory::Inventory,
     item::Item,
@@ -61,7 +61,25 @@ fn image_path(selected: bool) -> &'static str {
     }
 }
 
-fn listen_button_presses(input_handler: InputChecker, mut hotbar: Query<&mut Hotbar>) {
+fn listen_button_presses(input_handler: InputChecker, mut scroll_evr: EventReader<MouseWheel>, mut hotbar: Query<&mut Hotbar>) {
+    for ev in scroll_evr.iter() {
+        if let Ok(mut hotbar) = hotbar.get_single_mut() {
+            if ev.y > 0.0 {
+                if hotbar.selected_slot == 0 {
+                    hotbar.selected_slot = hotbar.max_slots - 1;
+                } else {
+                    hotbar.selected_slot -= 1;
+                }
+            } else if ev.y < 0.0 {
+                if hotbar.selected_slot == hotbar.max_slots - 1 {
+                    hotbar.selected_slot = 0;
+                } else {
+                    hotbar.selected_slot += 1;
+                }
+            }
+        }
+    }
+
     if input_handler.check_just_pressed(CosmosInputs::HotbarSlot1) {
         if let Ok(mut hotbar) = hotbar.get_single_mut() {
             hotbar.selected_slot = 0;
