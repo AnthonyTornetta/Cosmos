@@ -2,7 +2,9 @@
 
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
-use bevy::prelude::{App, Event};
+use bevy::prelude::{App, Event, EventReader, EventWriter};
+
+use crate::block::block_update::BlockUpdate;
 
 #[derive(Event)]
 /// Same as a bevy Event, but you can read & write to it
@@ -20,12 +22,43 @@ impl<E: Event> MutEvent<E> {
     }
 }
 
-trait MutEventsCommand {
-    fn add_mut_event<E: Event>(&mut self);
+impl<E: Event> From<E> for MutEvent<E> {
+    fn from(value: E) -> Self {
+        Self(Arc::new(RwLock::new(value)))
+    }
+}
+
+pub trait MutEventsCommand {
+    /// Adds a mutable event that can be used via an EventReader & Writer
+    ///
+    /// Example usage:
+    /// ```rs
+    /// fn read_system(mut event_reader: EventReader<MutEvent<EventType>>) {
+    ///     for ev in event_reader.iter() {
+    ///         // Read:
+    ///         {
+    ///             let event = ev.read();
+    ///             println!("{event:?}");
+    ///         }
+    ///         // Or write:
+    ///         {
+    ///             let event = ev.write();
+    ///             event.mutable_thing();
+    ///         }
+    ///     }
+    /// }
+    ///
+    /// fn send_system(mut event_writer: EventWriter<MutEvent<EventType>>) {
+    ///     event_writer.send(EventType::default().into());
+    /// }
+    /// ```
+    fn add_mut_event<E: Event>(&mut self) -> &mut Self;
 }
 
 impl MutEventsCommand for App {
-    fn add_mut_event<E: Event>(&mut self) {
+    fn add_mut_event<E: Event>(&mut self) -> &mut Self {
         self.add_event::<MutEvent<E>>();
+
+        self
     }
 }
