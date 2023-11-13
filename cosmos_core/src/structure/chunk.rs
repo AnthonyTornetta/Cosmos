@@ -173,10 +173,18 @@ impl Chunk {
     /// * `block_hardness` The hardness for that block
     /// * `amount` The amount of damage to take - cannot be negative
     ///
-    /// **Returns:** true if that block was destroyed, false if not
-    pub fn block_take_damage(&mut self, coords: ChunkBlockCoordinate, amount: f32, blocks: &Registry<Block>) -> bool {
+    /// **Returns:** The leftover health - 0.0 means the block was destroyed
+    pub fn block_take_damage(&mut self, coords: ChunkBlockCoordinate, amount: f32, blocks: &Registry<Block>) -> f32 {
         self.block_health
             .take_damage(coords, blocks.from_numeric_id(self.block_at(coords)).hardness(), amount)
+    }
+
+    /// This should be used in response to a `BlockTakeDamageEvent`
+    ///
+    /// This will NOT delete the block if the health is 0.0
+    pub(crate) fn set_block_health(&mut self, coords: ChunkBlockCoordinate, amount: f32, blocks: &Registry<Block>) {
+        self.block_health
+            .set_health(coords, blocks.from_numeric_id(self.block_at(coords)).hardness(), amount);
     }
 }
 

@@ -41,7 +41,7 @@ use bevy::prelude::{
 };
 use serde::{Deserialize, Serialize};
 
-use self::block_health::block_destroyed_event::BlockDestroyedEvent;
+use self::block_health::events::{BlockDestroyedEvent, BlockTakeDamageEvent};
 use self::block_storage::BlockStorer;
 use self::chunk::ChunkEntity;
 use self::coordinates::{BlockCoordinate, ChunkCoordinate, UnboundBlockCoordinate, UnboundChunkCoordinate};
@@ -434,11 +434,23 @@ impl Structure {
         coords: BlockCoordinate,
         blocks: &Registry<Block>,
         amount: f32,
-        event_writer: Option<&mut EventWriter<BlockDestroyedEvent>>,
-    ) -> bool {
+        event_writers: Option<(&mut EventWriter<BlockTakeDamageEvent>, &mut EventWriter<BlockDestroyedEvent>)>,
+    ) -> Option<f32> {
         match self {
-            Self::Full(fs) => fs.block_take_damage(coords, blocks, amount, event_writer),
-            Self::Dynamic(ds) => ds.block_take_damage(coords, blocks, amount, event_writer),
+            Self::Full(fs) => fs.block_take_damage(coords, blocks, amount, event_writers),
+            Self::Dynamic(ds) => ds.block_take_damage(coords, blocks, amount, event_writers),
+        }
+    }
+
+    /// This should be used in response to a `BlockTakeDamageEvent`
+    ///
+    /// This will NOT delete the block if the health is 0.0
+    pub fn set_block_health(&mut self, coords: BlockCoordinate, amount: f32, blocks: &Registry<Block>) {
+        debug_assert!(amount != 0.0, "Block health cannot be 0.0!");
+
+        match self {
+            Self::Full(fs) => fs.set_block_health(coords, amount, blocks),
+            Self::Dynamic(ds) => ds.set_block_health(coords, amount, blocks),
         }
     }
 

@@ -3,7 +3,7 @@
 use bevy::{prelude::App, reflect::Reflect, utils::HashMap};
 use serde::{Deserialize, Serialize};
 
-pub mod block_destroyed_event;
+pub mod events;
 
 use super::{
     chunk::{Chunk, CHUNK_DIMENSIONS},
@@ -61,17 +61,17 @@ impl BlockHealth {
     /// - block_hardness: The hardness for that block
     /// - amount: The amount of damage to take - cannot be negative
     ///
-    /// Returns: true if that block was destroyed, false if not
-    pub fn take_damage(&mut self, coords: ChunkBlockCoordinate, hardness: f32, amount: f32) -> bool {
+    /// Returns: The leftover health - 0.0 means the block was destroyed
+    pub fn take_damage(&mut self, coords: ChunkBlockCoordinate, hardness: f32, amount: f32) -> f32 {
         debug_assert!(amount >= 0.0);
         let value = self.get_health(coords, hardness);
-        let amount = value - amount;
+        let amount = (value - amount).max(0.0);
         self.set_health(coords, hardness, amount);
 
-        amount <= 0.0
+        amount
     }
 }
 
 pub(super) fn register(app: &mut App) {
-    block_destroyed_event::register(app);
+    events::register(app);
 }

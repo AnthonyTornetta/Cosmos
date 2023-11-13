@@ -14,7 +14,7 @@ use crate::{
 };
 
 use super::{
-    block_health::block_destroyed_event::BlockDestroyedEvent,
+    block_health::events::{BlockDestroyedEvent, BlockTakeDamageEvent},
     block_storage::BlockStorer,
     chunk::{Chunk, CHUNK_DIMENSIONS},
     coordinates::{
@@ -476,36 +476,49 @@ impl BaseStructure {
     /// - block_hardness: The hardness for that block
     /// - amount: The amount of damage to take - cannot be negative
     ///
-    /// Returns: true if that block was destroyed, false if not
+    /// Returns: the amount of health left over - 0.0 means the block was destroyed. None means the chunk wasn't loaded yet
     pub fn block_take_damage(
         &mut self,
         coords: BlockCoordinate,
         blocks: &Registry<Block>,
         amount: f32,
-        event_writer: Option<&mut EventWriter<BlockDestroyedEvent>>,
-    ) -> bool {
+        event_writers: Option<(&mut EventWriter<BlockTakeDamageEvent>, &mut EventWriter<BlockDestroyedEvent>)>,
+    ) -> Option<f32> {
         if let Some(chunk) = self.mut_chunk_at_block_coordinates(coords) {
-            let destroyed = chunk.block_take_damage(ChunkBlockCoordinate::for_block_coordinate(coords), amount, blocks);
+            let health_left = chunk.block_take_damage(ChunkBlockCoordinate::for_block_coordinate(coords), amount, blocks);
 
-            if destroyed {
-                if let Some(structure_entity) = self.get_entity() {
-                    if let Some(event_writer) = event_writer {
-                        event_writer.send(BlockDestroyedEvent {
-                            block: StructureBlock::new(coords),
-                            structure_entity,
-                        });
+            if let Some(structure_entity) = self.get_entity() {
+                if let Some((take_damage_event_writer, destroyed_event_writer)) = event_writers {
+                    let block = StructureBlock::new(coords);
+
+                    take_damage_event_writer.send(BlockTakeDamageEvent {
+                        structure_entity,
+                        block,
+                        new_health: health_left,
+                    });
+                    if health_left <= 0.0 {
+                        destroyed_event_writer.send(BlockDestroyedEvent { structure_entity, block });
                     }
                 }
             }
 
-            destroyed
+            Some(health_left)
         } else {
-            false
+            None
         }
     }
 
     /// Removes the entity for this chunk - does not delete the chunk or care if the chunk even exists
     pub fn remove_chunk_entity(&mut self, coords: ChunkCoordinate) {
         self.chunk_entities.remove(&self.flatten(coords));
+    }
+
+    /// This should be used in response to a `BlockTakeDamageEvent`
+    ///
+    /// This will NOT delete the block if the health is 0.0
+    pub(crate) fn set_block_health(&mut self, coords: BlockCoordinate, amount: f32, blocks: &Registry<Block>) {
+        if let Some(chunk) = self.mut_chunk_at_block_coordinates(coords) {
+            chunk.set_block_health(ChunkBlockCoordinate::for_block_coordinate(coords), amount, blocks);
+        }
     }
 }
