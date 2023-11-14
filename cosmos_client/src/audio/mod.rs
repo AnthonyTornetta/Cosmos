@@ -56,6 +56,11 @@ pub struct DespawnOnNoEmissions;
 pub struct BufferedStopAudio(Vec<(AudioInstance, AudioTween)>);
 
 impl CosmosAudioEmitter {
+    /// Constructs an audio emitter with the given emissions
+    pub fn with_emissions(emissions: Vec<AudioEmission>) -> Self {
+        Self { emissions }
+    }
+
     /// Removes the audio handle from this emitter and returns the emission if one is present.
     ///
     /// This does not stop playing the audio, it is up to you to handle it.

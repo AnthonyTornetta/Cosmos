@@ -32,6 +32,7 @@ use cosmos_core::{
     },
     registry::Registry,
     structure::{
+        block_health::events::BlockTakeDamageEvent,
         chunk::Chunk,
         dynamic_structure::DynamicStructure,
         full_structure::FullStructure,
@@ -163,6 +164,7 @@ fn lerp_towards(
     }
 }
 
+/// TODO: super split this up
 pub(crate) fn client_sync_players(
     mut commands: Commands,
     (mut meshes, mut client, transport, mut lobby, mut network_mapping): (
@@ -172,8 +174,11 @@ pub(crate) fn client_sync_players(
         ResMut<ClientLobby>,
         ResMut<NetworkMapping>,
     ),
-    mut set_chunk_event_writer: EventWriter<ChunkInitEvent>,
-    mut block_change_event_writer: EventWriter<BlockChangedEvent>,
+    (mut set_chunk_event_writer, mut block_change_event_writer, mut take_damage_event_writer): (
+        EventWriter<ChunkInitEvent>,
+        EventWriter<BlockChangedEvent>,
+        EventWriter<BlockTakeDamageEvent>,
+    ),
     (query_player, parent_query): (Query<&Player>, Query<&Parent>),
     mut query_body: Query<
         (
@@ -637,6 +642,17 @@ pub(crate) fn client_sync_players(
             }
             ServerReliableMessages::RequestedEntityReceived(entity) => {
                 requested_entities.entities.retain(|x| x.server_entity != entity);
+            }
+            ServerReliableMessages::BlockHealthChange { changes } => {
+                take_damage_event_writer.send_batch(changes.into_iter().filter_map(|ev| {
+                    network_mapping
+                        .client_from_server(&ev.structure_entity)
+                        .map(|structure_entity| BlockTakeDamageEvent {
+                            structure_entity,
+                            block: ev.block,
+                            new_health: ev.new_health,
+                        })
+                }));
             }
         }
     }

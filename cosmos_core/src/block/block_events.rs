@@ -26,7 +26,7 @@ pub struct BlockBreakEvent {
     /// The player breaking the block
     pub breaker: Entity,
     /// The block broken with
-    pub structure_block: StructureBlock,
+    pub block: StructureBlock,
 }
 
 /// This is sent whenever a player interacts with a block
@@ -69,7 +69,7 @@ fn handle_block_break_events(
     for ev in event_reader.iter() {
         if let Ok((mut inventory, build_mode, parent)) = player_query.get_mut(ev.breaker) {
             if let Ok(mut structure) = query.get_mut(ev.structure_entity) {
-                let mut structure_blocks = vec![(ev.structure_block.coords(), BlockFace::Top)];
+                let mut structure_blocks = vec![(ev.block.coords(), BlockFace::Top)];
 
                 if let (Some(build_mode), Some(parent)) = (build_mode, parent) {
                     structure_blocks = calculate_build_mode_blocks(
