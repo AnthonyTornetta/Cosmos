@@ -151,7 +151,7 @@ pub fn server_listen_messages(
                         break_block_event.send(BlockBreakEvent {
                             structure_entity,
                             breaker: player_entity,
-                            structure_block: block,
+                            block,
                         });
                     }
                 }

@@ -3,7 +3,10 @@ use cosmos_core::{
     block::Block,
     projectiles::laser::{Laser, LaserCollideEvent},
     registry::Registry,
-    structure::{block_health::block_destroyed_event::BlockDestroyedEvent, Structure},
+    structure::{
+        block_health::events::{BlockDestroyedEvent, BlockTakeDamageEvent},
+        Structure,
+    },
 };
 
 use crate::{
@@ -19,12 +22,18 @@ fn on_laser_hit_structure(
     structure: &mut Structure,
     local_position_hit: Vec3,
     blocks: &Registry<Block>,
+    block_take_damage_event_writer: &mut EventWriter<BlockTakeDamageEvent>,
     block_destroy_event_writer: &mut EventWriter<BlockDestroyedEvent>,
     strength: f32,
 ) {
     if let Ok(coords) = structure.relative_coords_to_local_coords_checked(local_position_hit.x, local_position_hit.y, local_position_hit.z)
     {
-        structure.block_take_damage(coords, blocks, strength, Some(block_destroy_event_writer));
+        structure.block_take_damage(
+            coords,
+            blocks,
+            strength,
+            Some((block_take_damage_event_writer, block_destroy_event_writer)),
+        );
     } else {
         warn!("Bad laser hit spot that isn't actually on structure ;(");
     }
@@ -35,6 +44,7 @@ fn respond_laser_hit_event(
     parent_query: Query<&Parent>,
     mut structure_query: Query<&mut Structure>,
     blocks: Res<Registry<Block>>,
+    mut block_take_damage_event_writer: EventWriter<BlockTakeDamageEvent>,
     mut block_destroy_event_writer: EventWriter<BlockDestroyedEvent>,
 ) {
     for ev in reader.iter() {
@@ -47,6 +57,7 @@ fn respond_laser_hit_event(
                     &mut structure,
                     local_position_hit,
                     &blocks,
+                    &mut block_take_damage_event_writer,
                     &mut block_destroy_event_writer,
                     ev.laser_strength(),
                 );

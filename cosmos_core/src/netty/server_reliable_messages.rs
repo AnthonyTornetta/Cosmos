@@ -37,6 +37,17 @@ pub struct BlockChanged {
 /// Should probably just be a vector.
 pub struct BlocksChangedPacket(pub Vec<BlockChanged>);
 
+#[derive(Debug, Serialize, Deserialize)]
+/// Sent whenever a block's health is changed
+pub struct BlockHealthUpdate {
+    /// The structure's server entity
+    pub structure_entity: Entity,
+    /// The block who's health was changed
+    pub block: StructureBlock,
+    /// The block's new health
+    pub new_health: f32,
+}
+
 #[derive(Debug, Serialize, Deserialize, Component)]
 /// A mash of a bunch of different packets the server reliably sends.
 pub enum ServerReliableMessages {
@@ -176,4 +187,9 @@ pub enum ServerReliableMessages {
     },
     /// This signifies that the server is sending information for a requested entity
     RequestedEntityReceived(Entity),
+    /// Sent whenever a block's health is changed
+    BlockHealthChange {
+        /// All the health changes packed into a vec
+        changes: Vec<BlockHealthUpdate>,
+    },
 }

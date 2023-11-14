@@ -70,13 +70,13 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
     - [ ] Sun-set skybox
     - [ ] Night-side skybox
 - [x] Animated textures
-- [ ] Sounds
+- [x] Sounds
   - [x] Laser cannon fire
-  - [ ] Block take damage
+  - [x] Block take damage
   - [x] Thrusters moving
-  - [ ] Space ship idle
+  - [x] Space ship idle
   - [x] Background space music
-  - [ ] Block break
+  - [x] Block place/break
 - [ ] Place rotated blocks
 - [x] Multiblock machines
   - [x] Revamp power generation to use reactor multiblock structure
