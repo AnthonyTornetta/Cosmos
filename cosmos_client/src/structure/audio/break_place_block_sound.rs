@@ -7,7 +7,7 @@ use bevy::{
 };
 use bevy_kira_audio::{Audio, AudioControl, AudioInstance, AudioSource};
 use cosmos_core::{
-    block::block_events::BlockBreakEvent,
+    block::block_events::{BlockBreakEvent, BlockPlaceEvent},
     structure::{ship::core::DespawnWithStructure, Structure},
 };
 
@@ -32,6 +32,40 @@ fn play_block_break_sound(
         let sound_location = structure.block_relative_position(ev.block.coords());
 
         let playing_sound: Handle<AudioInstance> = audio.play(break_sound.0.clone()).with_volume(0.0).handle();
+
+        let sound_emission = CosmosAudioEmitter::with_emissions(vec![AudioEmission {
+            instance: playing_sound,
+            max_distance: 16.0,
+            ..Default::default()
+        }]);
+
+        commands.entity(ev.structure_entity).with_children(|p| {
+            p.spawn((
+                Name::new("Block break sound"),
+                DespawnWithStructure,
+                DespawnOnNoEmissions,
+                TransformBundle::from_transform(Transform::from_translation(sound_location)),
+                sound_emission,
+            ));
+        });
+    }
+}
+
+fn play_block_place_sound(
+    mut event_reader: EventReader<BlockPlaceEvent>,
+    place_sound: Res<BlockPlaceSound>,
+    structure_query: Query<&Structure>,
+    audio: Res<Audio>,
+    mut commands: Commands,
+) {
+    for ev in event_reader.iter() {
+        let Ok(structure) = structure_query.get(ev.structure_entity) else {
+            continue;
+        };
+
+        let sound_location = structure.block_relative_position(ev.structure_block.coords());
+
+        let playing_sound: Handle<AudioInstance> = audio.play(place_sound.0.clone()).with_volume(0.0).handle();
 
         let sound_emission = CosmosAudioEmitter::with_emissions(vec![AudioEmission {
             instance: playing_sound,
@@ -82,5 +116,11 @@ pub(super) fn register(app: &mut App) {
         },
     );
 
-    app.add_systems(Update, play_block_break_sound.run_if(resource_exists::<BlockBreakSound>()));
+    app.add_systems(
+        Update,
+        (
+            play_block_place_sound.run_if(resource_exists::<BlockPlaceSound>()),
+            play_block_break_sound.run_if(resource_exists::<BlockBreakSound>()),
+        ),
+    );
 }

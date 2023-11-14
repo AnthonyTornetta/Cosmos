@@ -35,7 +35,7 @@ pub struct LookingAt {
     pub looking_at_block: Option<(Entity, StructureBlock)>,
 }
 
-fn process_player_interaction(
+pub(crate) fn process_player_interaction(
     input_handler: InputChecker,
     camera: Query<&GlobalTransform, With<MainCamera>>,
     mut player_body: Query<(Entity, &mut Inventory, Option<&mut LookingAt>), (With<LocalPlayer>, Without<Pilot>)>,
@@ -43,8 +43,8 @@ fn process_player_interaction(
     parent_query: Query<&Parent>,
     chunk_physics_part: Query<&ChunkPhysicsPart>,
     structure_query: Query<(&Structure, &GlobalTransform, Option<&Planet>)>,
-    mut break_writer: EventWriter<BlockBreakEvent>,
-    mut place_writer: EventWriter<BlockPlaceEvent>,
+    mut break_writer: EventWriter<RequestBlockBreakEvent>,
+    mut place_writer: EventWriter<RequestBlockPlaceEvent>,
     mut interact_writer: EventWriter<BlockInteractEvent>,
     hotbar: Query<&Hotbar>,
     items: Res<Registry<Item>>,
@@ -116,7 +116,7 @@ fn process_player_interaction(
 
     if input_handler.check_just_pressed(CosmosInputs::BreakBlock) {
         if let Ok(coords) = structure.relative_coords_to_local_coords_checked(point.x, point.y, point.z) {
-            break_writer.send(BlockBreakEvent {
+            break_writer.send(RequestBlockBreakEvent {
                 structure_entity: structure.get_entity().unwrap(),
                 coords: StructureBlock::new(coords),
             });
@@ -145,7 +145,7 @@ fn process_player_interaction(
                                 BlockFace::Top
                             };
 
-                            place_writer.send(BlockPlaceEvent {
+                            place_writer.send(RequestBlockPlaceEvent {
                                 structure_entity: structure.get_entity().unwrap(),
                                 coords: StructureBlock::new(coords),
                                 inventory_slot,

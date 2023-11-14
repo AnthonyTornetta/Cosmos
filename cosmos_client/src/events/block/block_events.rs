@@ -8,11 +8,11 @@ use cosmos_core::{
     structure::structure_block::StructureBlock,
 };
 
-use crate::{netty::mapping::NetworkMapping, state::game_state::GameState};
+use crate::{interactions::block_interactions::process_player_interaction, netty::mapping::NetworkMapping, state::game_state::GameState};
 
 #[derive(Debug, Event)]
-/// Sent when this client breaks a block
-pub struct BlockBreakEvent {
+/// Sent when this client tries to breaks a block
+pub struct RequestBlockBreakEvent {
     /// The structure this block was on
     pub structure_entity: Entity,
     /// block coords
@@ -20,8 +20,8 @@ pub struct BlockBreakEvent {
 }
 
 #[derive(Debug, Event)]
-/// Sent when this client places a block
-pub struct BlockPlaceEvent {
+/// Sent when this client tries to places a block
+pub struct RequestBlockPlaceEvent {
     /// The structure this block is on
     pub structure_entity: Entity,
     /// block coords
@@ -35,7 +35,7 @@ pub struct BlockPlaceEvent {
 }
 
 fn handle_block_break(
-    mut event_reader: EventReader<BlockBreakEvent>,
+    mut event_reader: EventReader<RequestBlockBreakEvent>,
     mut client: ResMut<RenetClient>,
     network_mapping: Res<NetworkMapping>,
 ) {
@@ -51,7 +51,7 @@ fn handle_block_break(
 }
 
 fn handle_block_place(
-    mut event_reader: EventReader<BlockPlaceEvent>,
+    mut event_reader: EventReader<RequestBlockPlaceEvent>,
     mut client: ResMut<RenetClient>,
     network_mapping: Res<NetworkMapping>,
 ) {
@@ -86,11 +86,13 @@ fn handle_block_interact(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_event::<BlockBreakEvent>()
-        .add_event::<BlockPlaceEvent>()
+    app.add_event::<RequestBlockBreakEvent>()
+        .add_event::<RequestBlockPlaceEvent>()
         .add_event::<BlockInteractEvent>()
         .add_systems(
             Update,
-            (handle_block_break, handle_block_place, handle_block_interact).run_if(in_state(GameState::Playing)),
+            (handle_block_break, handle_block_place, handle_block_interact)
+                .after(process_player_interaction)
+                .run_if(in_state(GameState::Playing)),
         );
 }
