@@ -118,7 +118,7 @@ pub(crate) fn process_player_interaction(
         if let Ok(coords) = structure.relative_coords_to_local_coords_checked(point.x, point.y, point.z) {
             break_writer.send(RequestBlockBreakEvent {
                 structure_entity: structure.get_entity().unwrap(),
-                coords: StructureBlock::new(coords),
+                block: StructureBlock::new(coords),
             });
         }
     }
@@ -147,7 +147,7 @@ pub(crate) fn process_player_interaction(
 
                             place_writer.send(RequestBlockPlaceEvent {
                                 structure_entity: structure.get_entity().unwrap(),
-                                coords: StructureBlock::new(coords),
+                                block: StructureBlock::new(coords),
                                 inventory_slot,
                                 block_id,
                                 block_up,

@@ -6,19 +6,17 @@ use bevy::{
     transform::TransformBundle,
 };
 use bevy_kira_audio::{Audio, AudioControl, AudioInstance, AudioSource};
-use cosmos_core::{
-    block::block_events::{BlockBreakEvent, BlockPlaceEvent},
-    structure::{ship::core::DespawnWithStructure, Structure},
-};
+use cosmos_core::structure::{ship::core::DespawnWithStructure, Structure};
 
 use crate::{
     asset::asset_loader::load_assets,
     audio::{AudioEmission, CosmosAudioEmitter, DespawnOnNoEmissions},
+    events::block::block_events::{RequestBlockBreakEvent, RequestBlockPlaceEvent},
     state::game_state::GameState,
 };
 
 fn play_block_break_sound(
-    mut event_reader: EventReader<BlockBreakEvent>,
+    mut event_reader: EventReader<RequestBlockBreakEvent>,
     break_sound: Res<BlockBreakSound>,
     structure_query: Query<&Structure>,
     audio: Res<Audio>,
@@ -52,7 +50,7 @@ fn play_block_break_sound(
 }
 
 fn play_block_place_sound(
-    mut event_reader: EventReader<BlockPlaceEvent>,
+    mut event_reader: EventReader<RequestBlockPlaceEvent>,
     place_sound: Res<BlockPlaceSound>,
     structure_query: Query<&Structure>,
     audio: Res<Audio>,
@@ -63,7 +61,7 @@ fn play_block_place_sound(
             continue;
         };
 
-        let sound_location = structure.block_relative_position(ev.structure_block.coords());
+        let sound_location = structure.block_relative_position(ev.block.coords());
 
         let playing_sound: Handle<AudioInstance> = audio.play(place_sound.0.clone()).with_volume(0.0).handle();
 

@@ -16,7 +16,7 @@ pub struct RequestBlockBreakEvent {
     /// The structure this block was on
     pub structure_entity: Entity,
     /// block coords
-    pub coords: StructureBlock,
+    pub block: StructureBlock,
 }
 
 #[derive(Debug, Event)]
@@ -25,7 +25,7 @@ pub struct RequestBlockPlaceEvent {
     /// The structure this block is on
     pub structure_entity: Entity,
     /// block coords
-    pub coords: StructureBlock,
+    pub block: StructureBlock,
     /// Which inventory slot it came from to make sure the inventory isn't out of sync
     pub inventory_slot: usize,
     /// The block's id
@@ -44,7 +44,7 @@ fn handle_block_break(
             NettyChannelClient::Reliable,
             cosmos_encoder::serialize(&ClientReliableMessages::BreakBlock {
                 structure_entity: network_mapping.server_from_client(&ev.structure_entity).unwrap(),
-                block: ev.coords,
+                block: ev.block,
             }),
         );
     }
@@ -60,7 +60,7 @@ fn handle_block_place(
             NettyChannelClient::Reliable,
             cosmos_encoder::serialize(&ClientReliableMessages::PlaceBlock {
                 structure_entity: network_mapping.server_from_client(&ev.structure_entity).unwrap(),
-                block: ev.coords,
+                block: ev.block,
                 block_id: ev.block_id,
                 block_up: ev.block_up,
                 inventory_slot: ev.inventory_slot as u32,
