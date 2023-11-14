@@ -195,7 +195,7 @@ impl DynamicStructure {
 
     /// Gets the block's relative position to this structure's transform.
     pub fn block_relative_position(&self, coords: BlockCoordinate) -> Vec3 {
-        Self::block_relative_position_static(coords, self.chunk_dimensions())
+        Self::block_relative_position_static(coords, self.block_dimensions())
     }
 
     /// Sets the chunk, overwriting what may have been there before.
