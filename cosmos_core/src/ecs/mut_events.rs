@@ -2,9 +2,7 @@
 
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
-use bevy::prelude::{App, Event, EventReader, EventWriter};
-
-use crate::block::block_update::BlockUpdate;
+use bevy::prelude::{App, Event};
 
 #[derive(Event)]
 /// Same as a bevy Event, but you can read & write to it
@@ -28,6 +26,9 @@ impl<E: Event> From<E> for MutEvent<E> {
     }
 }
 
+/// Adds a mutable event that can be used via an EventReader & Writer
+///
+/// Add your own mutable event via `App::add_mut_event(&mut self, event: Event)`
 pub trait MutEventsCommand {
     /// Adds a mutable event that can be used via an EventReader & Writer
     ///

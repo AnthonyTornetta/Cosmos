@@ -1,3 +1,5 @@
+//! Events sent to adjacent blocks on block changes
+
 use bevy::prelude::{App, Entity, Event, EventReader, EventWriter, Query, Update};
 
 use crate::{
@@ -9,6 +11,7 @@ use crate::{
 use super::ALL_BLOCK_FACES;
 
 #[derive(Debug, Clone, Event, PartialEq, Eq)]
+/// This event is sent whenever an adjacent block is changed
 pub struct BlockUpdate {
     structure_entity: Entity,
     block: StructureBlock,
@@ -16,6 +19,7 @@ pub struct BlockUpdate {
 }
 
 impl BlockUpdate {
+    /// Creates a new block update
     pub fn new(structure_entity: Entity, block: StructureBlock) -> Self {
         Self {
             block,
@@ -24,27 +28,33 @@ impl BlockUpdate {
         }
     }
 
+    /// The structure that was updated
     pub fn structure_entity(&self) -> Entity {
         self.structure_entity
     }
 
+    /// The block that was changed
     pub fn block(&self) -> StructureBlock {
         self.block
     }
 
+    /// If the event has been cancelled
     pub fn cancelled(&self) -> bool {
         self.cancelled
     }
 
+    /// Cancels the event (will do nothing)
     pub fn cancel(&mut self) {
         self.cancelled = true;
     }
 
+    /// Sets if the event has been cancelled or not
     pub fn set_cancelled(&mut self, cancelled: bool) {
         self.cancelled = cancelled;
     }
 }
 
+/// Sends block updates when blocks are changed
 pub fn send_block_updates(
     structure_query: Query<&Structure>,
     mut block_chage_event: EventReader<BlockChangedEvent>,
@@ -68,7 +78,7 @@ pub fn send_block_updates(
 
                 Some(MutEvent::from(BlockUpdate {
                     structure_entity: ev.structure_entity,
-                    block: ev.block,
+                    block: StructureBlock(coord),
                     cancelled: false,
                 }))
             }))
