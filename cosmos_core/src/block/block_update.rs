@@ -83,7 +83,7 @@ pub fn send_block_updates(
                 }))
             }))
         })
-        .flat_map(|x| x);
+        .flatten();
 
     event_writer.send_batch(block_updates);
 }
