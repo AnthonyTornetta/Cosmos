@@ -303,6 +303,18 @@ macro_rules! create_coordinate {
             }
         }
 
+        impl Add<$unbounded> for $name {
+            type Output = $unbounded;
+
+            fn add(self, rhs: $unbounded) -> Self::Output {
+                $unbounded::new(
+                    self.x as UnboundCoordinateType + rhs.x,
+                    self.y as UnboundCoordinateType + rhs.y,
+                    self.z as UnboundCoordinateType + rhs.z,
+                )
+            }
+        }
+
         impl Sub<$unbounded> for $unbounded {
             type Output = Self;
 

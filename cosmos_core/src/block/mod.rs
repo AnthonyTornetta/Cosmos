@@ -12,6 +12,7 @@ use crate::{registry::identifiable::Identifiable, structure::coordinates::Unboun
 
 pub mod block_builder;
 pub mod block_events;
+pub mod block_update;
 pub mod blocks;
 pub mod multiblock;
 
@@ -49,6 +50,16 @@ pub enum BlockFace {
     /// -X
     Left,
 }
+
+/// Contains each block face a block can have in the order their `index` method returns.
+pub const ALL_BLOCK_FACES: [BlockFace; 6] = [
+    BlockFace::Right,
+    BlockFace::Left,
+    BlockFace::Top,
+    BlockFace::Bottom,
+    BlockFace::Front,
+    BlockFace::Back,
+];
 
 impl BlockFace {
     /// Returns the index for each block face [0, 5].
@@ -347,6 +358,7 @@ pub(super) fn register<T: States + Clone + Copy>(
     blocks::register(app, pre_loading_state, loading_state);
     block_events::register(app);
     multiblock::register(app, post_loading_state, playing_state);
+    block_update::register(app);
 
     app.register_type::<BlockFace>();
 }
