@@ -3,7 +3,8 @@
 use std::{ffi::OsStr, fs, time::Duration};
 
 use bevy::{
-    prelude::{warn, App, Commands, Component, DespawnRecursiveExt, Entity, IntoSystemConfigs, Name, Query, ResMut, Update, With, Without},
+    log::warn,
+    prelude::{App, Commands, Component, DespawnRecursiveExt, Entity, IntoSystemConfigs, Name, Query, ResMut, Update, With, Without},
     tasks::{AsyncComputeTaskPool, Task},
     time::common_conditions::on_timer,
 };

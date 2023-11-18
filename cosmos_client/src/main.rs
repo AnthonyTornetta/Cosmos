@@ -29,7 +29,6 @@ pub mod universe;
 pub mod window;
 
 use std::env;
-use std::time::Duration;
 
 use bevy::core::TaskPoolThreadAssignmentPolicy;
 use bevy_renet::transport::NetcodeClientPlugin;

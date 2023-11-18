@@ -18,9 +18,10 @@ use std::{
 };
 
 use bevy::{
+    log::warn,
     prelude::{
-        warn, Added, App, Children, Commands, Component, Deref, DerefMut, Entity, GlobalTransform, Parent, Quat, Query, Transform, Update,
-        Vec3, With, Without,
+        Added, App, Children, Commands, Component, Deref, DerefMut, Entity, GlobalTransform, Parent, Quat, Query, Transform, Update, Vec3,
+        With, Without,
     },
     reflect::Reflect,
     transform::TransformBundle,

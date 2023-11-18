@@ -90,7 +90,7 @@ fn pilot_removed(
     mut removed_pilots: RemovedComponents<Pilot>,
     mut event_writer: EventWriter<RemoveSensorFrom>,
 ) {
-    for entity in removed_pilots.iter() {
+    for entity in removed_pilots.read() {
         if let Ok((mut trans, starting_delta)) = query.get_mut(entity) {
             commands.entity(entity).remove::<PilotStartingDelta>().insert(RigidBody::Dynamic);
 

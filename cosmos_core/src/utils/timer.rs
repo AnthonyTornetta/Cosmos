@@ -4,7 +4,7 @@
 
 use std::time::SystemTime;
 
-use bevy::prelude::info;
+use bevy::log::info;
 
 /// Used for debugging - logs the difference in time
 pub struct UtilsTimer {

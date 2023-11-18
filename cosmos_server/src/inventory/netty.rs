@@ -1,6 +1,9 @@
 //! Syncs player inventories
 
-use bevy::prelude::{in_state, warn, App, Changed, Commands, Entity, IntoSystemConfigs, Query, RemovedComponents, Res, ResMut, Update};
+use bevy::{
+    log::warn,
+    prelude::{in_state, App, Changed, Commands, Entity, IntoSystemConfigs, Query, RemovedComponents, Res, ResMut, Update},
+};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     entities::player::Player,
@@ -43,7 +46,7 @@ fn sync_held_items(
         );
     }
 
-    for removed_held_item in removed_held_itemstacks.iter() {
+    for removed_held_item in removed_held_itemstacks.read() {
         if let Ok(player) = player_query.get(removed_held_item) {
             server.send_message(
                 player.id(),

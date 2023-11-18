@@ -4,7 +4,7 @@
 
 use std::fmt::Display;
 
-use bevy::prelude::{App, Event, IntoSystemConfigs, Name, PreUpdate, Visibility, VisibilityBundle};
+use bevy::prelude::{App, Event, IntoSystemConfigs, Name, PreUpdate, VisibilityBundle};
 use bevy::reflect::Reflect;
 use bevy::transform::TransformBundle;
 use bevy::utils::{HashMap, HashSet};

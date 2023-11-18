@@ -62,7 +62,7 @@ fn image_path(selected: bool) -> &'static str {
 }
 
 fn listen_button_presses(input_handler: InputChecker, mut scroll_evr: EventReader<MouseWheel>, mut hotbar: Query<&mut Hotbar>) {
-    for ev in scroll_evr.iter() {
+    for ev in scroll_evr.read() {
         if let Ok(mut hotbar) = hotbar.get_single_mut() {
             if ev.y > 0.0 {
                 if hotbar.selected_slot == 0 {

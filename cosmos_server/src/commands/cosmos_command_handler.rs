@@ -1,6 +1,9 @@
 //! Handles all the server console commands
 
-use bevy::prelude::{warn, App, Commands, Entity, EventReader, Name, Quat, Query, Res, ResMut, Startup, Update, Vec3, With};
+use bevy::{
+    log::warn,
+    prelude::{App, Commands, Entity, EventReader, Name, Quat, Query, Res, ResMut, Startup, Update, Vec3, With},
+};
 use cosmos_core::{
     ecs::NeedsDespawned,
     physics::location::{Location, Sector, SectorUnit},
@@ -82,7 +85,7 @@ fn cosmos_command_listener(
 
     all_blueprintable_entities: Query<(Entity, &Name, &Location), With<Ship>>,
 ) {
-    for ev in command_events.iter() {
+    for ev in command_events.read() {
         match ev.name.as_str() {
             "help" => {
                 if ev.args.len() != 1 {

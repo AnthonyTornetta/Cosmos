@@ -6,6 +6,7 @@ use crate::block::lighting::{BlockLightProperties, BlockLighting};
 use crate::netty::flags::LocalPlayer;
 use crate::state::game_state::GameState;
 use crate::structure::planet::unload_chunks_far_from_players;
+use bevy::log::warn;
 use bevy::prelude::{
     in_state, App, BuildChildren, Component, Deref, DerefMut, DespawnRecursiveExt, EventReader, EventWriter, GlobalTransform,
     IntoSystemConfigs, Mesh, PointLight, PointLightBundle, Quat, Rect, Resource, Transform, Update, Vec3, VisibilityBundle, With,
@@ -16,7 +17,6 @@ use bevy::render::primitives::Aabb;
 use bevy::tasks::{AsyncComputeTaskPool, Task};
 use bevy::transform::TransformBundle;
 use bevy::utils::hashbrown::HashMap;
-use bevy::utils::warn;
 use cosmos_core::block::{Block, BlockFace};
 use cosmos_core::events::block_events::BlockChangedEvent;
 use cosmos_core::physics::location::SECTOR_DIMENSIONS;
@@ -670,7 +670,7 @@ impl ChunkRenderer {
                         .unwrap_or_else(|| block_textures.from_id("missing").expect("Missing texture should exist."));
 
                     let Some(image_index) = index.atlas_index_from_face(face) else {
-                        warn(Err(format!("Missing image index -- {index:?}")));
+                        warn!("Missing image index -- {index:?}");
                         continue;
                     };
 

@@ -34,7 +34,7 @@ fn monitor_block_destroyed(
 
 fn monitor_block_health_changed(mut server: ResMut<RenetServer>, mut event_reader: EventReader<BlockTakeDamageEvent>) {
     let changes = event_reader
-        .iter()
+        .read()
         .map(|ev| BlockHealthUpdate {
             block: ev.block,
             new_health: ev.new_health,

@@ -88,7 +88,7 @@ fn render_items(
     material_definitions_registry: Res<Registry<MaterialDefinition>>,
     mut event_writer: EventWriter<AddMaterialEvent>,
 ) {
-    for entity in removed_render_items.iter() {
+    for entity in removed_render_items.read() {
         if let Some((rendered_item_entity, _)) = rendered_items
             .iter()
             .find(|(_, rendered_item)| rendered_item.ui_element_entity == entity)

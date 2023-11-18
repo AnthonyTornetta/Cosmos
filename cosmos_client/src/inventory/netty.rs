@@ -1,8 +1,8 @@
 //! Syncs the inventories with the server-provided inventories
 
 use bevy::{
+    log::warn,
     prelude::{in_state, App, Commands, Entity, IntoSystemConfigs, Query, Res, ResMut, Update},
-    utils::warn,
 };
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
@@ -31,7 +31,7 @@ fn sync(
                         ecmds.insert(inventory);
                     }
                 } else {
-                    warn(Err(format!("Error: unrecognized entity {} received from server!", owner.index())));
+                    warn!("Error: unrecognized entity {} received from server!", owner.index());
                 }
             }
             ServerInventoryMessages::HeldItemstack { itemstack } => {

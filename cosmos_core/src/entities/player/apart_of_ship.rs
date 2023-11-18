@@ -20,7 +20,7 @@ fn add_or_remove_component(
     is_ship: Query<(), With<Ship>>,
     mut commands: Commands,
 ) {
-    for entity in remove_components.iter() {
+    for entity in remove_components.read() {
         if has_apart_of_ship.contains(entity) {
             if let Some(mut ecmds) = commands.get_entity(entity) {
                 ecmds.remove::<ApartOfShip>();

@@ -1,6 +1,9 @@
 //! Creates a grass planet
 
-use bevy::prelude::{warn, App, Commands, Component, Entity, Event, OnEnter, Res, ResMut};
+use bevy::{
+    log::warn,
+    prelude::{App, Commands, Component, Entity, Event, OnEnter, Res, ResMut},
+};
 use cosmos_core::{block::Block, registry::Registry, structure::coordinates::ChunkCoordinate};
 
 use crate::GameState;

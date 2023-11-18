@@ -10,9 +10,8 @@
 use std::fs;
 
 use bevy::{
-    prelude::{
-        warn, App, Commands, Component, DespawnRecursiveExt, Entity, IntoSystemConfigs, PreUpdate, Quat, Query, Update, With, Without,
-    },
+    log::warn,
+    prelude::{App, Commands, Component, DespawnRecursiveExt, Entity, IntoSystemConfigs, PreUpdate, Quat, Query, Update, With, Without},
     reflect::Reflect,
 };
 use bevy_rapier3d::prelude::Velocity;

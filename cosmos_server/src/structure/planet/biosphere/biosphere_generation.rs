@@ -3,7 +3,8 @@
 use std::{marker::PhantomData, mem::swap, sync::RwLockReadGuard};
 
 use bevy::{
-    prelude::{warn, Commands, DespawnRecursiveExt, Entity, Event, EventReader, EventWriter, Query, Res, ResMut, Resource, With},
+    log::warn,
+    prelude::{Commands, DespawnRecursiveExt, Entity, Event, EventReader, EventWriter, Query, Res, ResMut, Resource, With},
     tasks::AsyncComputeTaskPool,
 };
 use cosmos_core::{
@@ -1010,7 +1011,7 @@ pub fn generate_planet<T: BiosphereMarkerComponent, E: TGenerateChunkEvent>(
     sea_level: Option<Res<BiosphereSeaLevel<T>>>,
 ) {
     let chunks = events
-        .iter()
+        .read()
         .filter_map(|ev| {
             let structure_entity = ev.get_structure_entity();
             let coords = ev.get_chunk_coordinates();
