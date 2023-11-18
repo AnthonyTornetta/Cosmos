@@ -141,34 +141,31 @@ fn check_assets_ready(
     loaded_folders: Res<Assets<LoadedFolder>>,
 ) {
     for ev in ev_asset_folder_event.read() {
-        match ev {
-            AssetEvent::LoadedWithDependencies { id } => {
-                let asset = server.get_id_handle::<LoadedFolder>(id.clone()).unwrap();
+        if let AssetEvent::LoadedWithDependencies { id } = ev {
+            let asset = server.get_id_handle::<LoadedFolder>(*id).unwrap();
 
-                if let Some(loaded_folder) = loaded_folders.get(asset) {
-                    // all assets are now ready, construct texture atlas
-                    // for better performance
+            if let Some(loaded_folder) = loaded_folders.get(asset) {
+                // all assets are now ready, construct texture atlas
+                // for better performance
 
-                    let mut texture_atlas_builder = SquareTextureAtlasBuilder::new(16);
+                let mut texture_atlas_builder = SquareTextureAtlasBuilder::new(16);
 
-                    for handle in loaded_folder.handles.iter() {
-                        texture_atlas_builder.add_texture(handle.clone().typed::<Image>());
-                    }
-
-                    let atlas = texture_atlas_builder.create_atlas(&mut images);
-
-                    texture_atlases.register(CosmosTextureAtlas::new("cosmos:main", atlas));
-
-                    // Clear out handles to avoid continually checking
-                    commands.remove_resource::<Registry<LoadingTextureAtlas>>();
-
-                    // (note: if you don't have any other handles to the assets
-                    // elsewhere, they will get unloaded after this)
-
-                    event_writer.send(AllTexturesDoneLoadingEvent);
+                for handle in loaded_folder.handles.iter() {
+                    texture_atlas_builder.add_texture(handle.clone().typed::<Image>());
                 }
+
+                let atlas = texture_atlas_builder.create_atlas(&mut images);
+
+                texture_atlases.register(CosmosTextureAtlas::new("cosmos:main", atlas));
+
+                // Clear out handles to avoid continually checking
+                commands.remove_resource::<Registry<LoadingTextureAtlas>>();
+
+                // (note: if you don't have any other handles to the assets
+                // elsewhere, they will get unloaded after this)
+
+                event_writer.send(AllTexturesDoneLoadingEvent);
             }
-            _ => {}
         }
     }
 
