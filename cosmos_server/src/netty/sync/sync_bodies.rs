@@ -91,7 +91,7 @@ fn server_sync_bodies(
 }
 
 fn pinger(mut server: ResMut<RenetServer>, mut event_reader: EventReader<RequestedEntityEvent>, mut commands: Commands) {
-    for ev in event_reader.iter() {
+    for ev in event_reader.read() {
         if commands.get_entity(ev.entity).is_some() {
             server.send_message(
                 ev.client_id,

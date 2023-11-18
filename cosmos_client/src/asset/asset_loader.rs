@@ -62,7 +62,8 @@ pub fn load_assets<T: Asset, K: Send + Sync + 'static>(
             let mut done_loading = done_loading.expect("This must exist if loading exists.");
 
             loading_assets.loading_handles.retain_mut(|handle| {
-                let load_state = asset_server.get_load_state(handle.id());
+                let load_state = asset_server.get_load_state(handle.id()).expect("Id has to exist here");
+
                 if load_state == LoadState::Loaded || load_state == LoadState::Failed {
                     done_loading.loaded_handles.push((std::mem::take(handle), load_state));
                     false

@@ -178,7 +178,7 @@ fn generate_chunk_featuress<T: BiosphereMarkerComponent>(
     biome_decider: Res<BiomeDecider<T>>,
     seed: Res<ServerSeed>,
 ) {
-    for ev in event_reader.iter() {
+    for ev in event_reader.read() {
         if let Ok((mut structure, location)) = structure_query.get_mut(ev.structure_entity) {
             let block_coords = ev.chunk_coords.middle_structure_block();
             let biome_params = biome_decider.biome_parameters_at(location, block_coords, &noise_generator);
@@ -243,7 +243,7 @@ pub fn register_biosphere<T: BiosphereMarkerComponent + Default + Clone, E: Send
             (
                 // Adds this biosphere's marker component to anything that needs generated
                 (move |mut event_reader: EventReader<NeedsBiosphereEvent>, mut commands: Commands| {
-                    for ev in event_reader.iter() {
+                    for ev in event_reader.read() {
                         if ev.biosphere_id == biosphere_id {
                             commands.entity(ev.entity).insert(T::default());
                         }

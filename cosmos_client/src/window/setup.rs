@@ -74,7 +74,7 @@ fn update_mouse_deltas(
     delta.y = 0.0;
 
     if cursor_flags.locked {
-        for ev in ev_mouse_motion.iter() {
+        for ev in ev_mouse_motion.read() {
             if window.cursor.grab_mode == CursorGrabMode::Locked {
                 delta.x += ev.delta.x;
                 delta.y += -ev.delta.y;
@@ -96,7 +96,7 @@ fn window_focus_changed(
 ) {
     let (window_entity, mut window) = primary_query.get_single_mut().expect("Missing primary window.");
 
-    if let Some(ev) = ev_focus.iter().find(|e| e.window == window_entity) {
+    if let Some(ev) = ev_focus.read().find(|e| e.window == window_entity) {
         if ev.focused {
             apply_cursor_flags(&mut window, *cursor_flags);
         } else {

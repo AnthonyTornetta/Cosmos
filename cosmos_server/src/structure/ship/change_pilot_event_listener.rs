@@ -14,7 +14,7 @@ pub struct ClientChangePilotEvent {
 }
 
 fn event_listener(mut event_reader: EventReader<ClientChangePilotEvent>, mut server: ResMut<RenetServer>) {
-    for ev in event_reader.iter() {
+    for ev in event_reader.read() {
         server.broadcast_message(
             NettyChannelServer::Reliable,
             cosmos_encoder::serialize(&ServerReliableMessages::PilotChange {

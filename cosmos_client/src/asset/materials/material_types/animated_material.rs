@@ -32,7 +32,7 @@ fn respond_to_add_materials_event(
     transparent_material: Res<TransparentMaterial>,
     unlit_transparent_material: Res<UnlitTransparentMaterial>,
 ) {
-    for ev in event_reader.iter() {
+    for ev in event_reader.read() {
         let mat = material_registry.from_numeric_id(ev.add_material_id);
 
         match mat.unlocalized_name() {
@@ -63,7 +63,7 @@ fn respond_to_add_materials_event(
 }
 
 fn respond_to_remove_materails_event(mut event_reader: EventReader<RemoveAllMaterialsEvent>, mut commands: Commands) {
-    for ev in event_reader.iter() {
+    for ev in event_reader.read() {
         commands.entity(ev.entity).remove::<Handle<AnimatedArrayTextureMaterial>>();
     }
 }

@@ -23,7 +23,7 @@ fn listen_chunk_done_loading(
     mut event_writer: EventWriter<StructureLoadedEvent>,
     mut commands: Commands,
 ) {
-    for ev in event.iter() {
+    for ev in event.read() {
         let Ok(mut chunks_needed) = query.get_mut(ev.structure_entity) else {
             continue;
         };
@@ -43,7 +43,7 @@ fn listen_chunk_done_loading(
 }
 
 fn set_structure_done_loading(mut structure_query: Query<&mut Structure>, mut event_reader: EventReader<StructureLoadedEvent>) {
-    for ent in event_reader.iter() {
+    for ent in event_reader.read() {
         if let Ok(mut structure) = structure_query.get_mut(ent.structure_entity) {
             if let Structure::Full(structure) = structure.as_mut() {
                 structure.set_loaded();

@@ -4,6 +4,7 @@ use bevy::{
     prelude::{Entity, Resource},
     utils::HashMap,
 };
+use bevy_renet::renet::ClientId;
 
 #[derive(Debug, Resource)]
 /// Links up a player to their server-side equivalent entity.
@@ -17,7 +18,7 @@ pub struct PlayerInfo {
 /// Stores all the players based on their id & maps them to their entities
 pub struct ClientLobby {
     /// All the players
-    pub players: HashMap<u64, PlayerInfo>,
+    pub players: HashMap<ClientId, PlayerInfo>,
 }
 
 #[derive(Debug, Resource)]

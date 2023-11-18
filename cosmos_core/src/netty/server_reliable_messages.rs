@@ -4,6 +4,7 @@
 //! In the future, this itself will be broken up.
 
 use bevy::prelude::{Component, Entity};
+use bevy_renet::renet::ClientId;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -58,7 +59,7 @@ pub enum ServerReliableMessages {
         /// The player's name.
         name: String,
         /// The id for this player.
-        id: u64,
+        id: ClientId,
         /// The player's rigidbody.
         body: NettyRigidBody,
         /// The player's inventory.
@@ -76,7 +77,7 @@ pub enum ServerReliableMessages {
     /// A player has been removed, and the client should remove them.
     PlayerRemove {
         /// The id of the player removed.
-        id: u64,
+        id: ClientId,
     },
     /// A structure has been removed, and the client should remove it.
     StructureRemove {

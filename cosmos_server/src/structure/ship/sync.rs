@@ -19,7 +19,7 @@ fn on_request_ship(
     query: Query<(&Structure, &Transform, &Location, &Velocity), With<Ship>>,
     mut server: ResMut<RenetServer>,
 ) {
-    for ev in event_reader.iter() {
+    for ev in event_reader.read() {
         if let Ok((structure, transform, location, velocity)) = query.get(ev.entity) {
             server.send_message(
                 ev.client_id,

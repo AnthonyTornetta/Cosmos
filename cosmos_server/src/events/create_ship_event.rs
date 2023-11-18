@@ -20,7 +20,7 @@ pub struct CreateShipEvent {
 }
 
 fn event_reader(mut event_reader: EventReader<CreateShipEvent>, mut commands: Commands) {
-    for ev in event_reader.iter() {
+    for ev in event_reader.read() {
         let mut entity = commands.spawn_empty();
 
         let mut structure = Structure::Full(FullStructure::new(ChunkCoordinate::new(10, 10, 10)));

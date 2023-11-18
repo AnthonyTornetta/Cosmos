@@ -1,8 +1,9 @@
 //! Handles all the blocks with lighting in the game
 
 use bevy::{
-    prelude::{warn, App, Color, OnExit, Res, ResMut},
+    prelude::{App, Color, OnExit, Res, ResMut},
     reflect::Reflect,
+    utils::warn,
 };
 use cosmos_core::{
     block::Block,
@@ -59,7 +60,7 @@ fn register_light(lighting: BlockLightProperties, registry: &mut Registry<BlockL
             unlocalized_name: block.unlocalized_name().to_owned(),
         });
     } else {
-        warn!("[Block Lighting] Missing block {name}");
+        warn(Err(format!("[Block Lighting] Missing block {name}")));
     }
 }
 

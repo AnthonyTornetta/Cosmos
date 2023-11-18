@@ -593,8 +593,7 @@ fn poll_rendering_lods(
                     let ent = commands
                         .spawn((
                             TransformBundle::from_transform(Transform::from_translation(offset)),
-                            Visibility::default(),
-                            ComputedVisibility::default(),
+                            VisibilityBundle::default(),
                             // Remove this once https://github.com/bevyengine/bevy/issues/4294 is done (bevy 0.12 released)
                             Aabb::from_min_max(Vec3::new(-s, -s, -s), Vec3::new(s, s, s)),
                             RenderedLod { scale },

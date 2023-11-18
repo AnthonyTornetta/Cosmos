@@ -26,12 +26,13 @@ default = [
     "bevy/zstd",
     "bevy/x11",
     "bevy/ktx2",
+    "bevy/multi-threaded",
     "bevy/tonemapping_luts",
 ]
 
 [dependencies]
 bevy = { workspace = true }
-bevy_renet = { workspace = true }
+bevy_renet = { workspace = true, features = ["serde"] }
 serde = { workspace = true }
 bincode = { workspace = true }
 noise = { workspace = true }

@@ -82,7 +82,7 @@ pub struct ExitBuildModeEvent {
 }
 
 fn enter_build_mode_listener(mut commands: Commands, mut event_reader: EventReader<EnterBuildModeEvent>) {
-    for ev in event_reader.iter() {
+    for ev in event_reader.read() {
         let Some(mut ecmds) = commands.get_entity(ev.player_entity) else {
             continue;
         };
@@ -96,7 +96,7 @@ fn enter_build_mode_listener(mut commands: Commands, mut event_reader: EventRead
 }
 
 fn exit_build_mode_listener(mut commands: Commands, mut event_reader: EventReader<ExitBuildModeEvent>) {
-    for ev in event_reader.iter() {
+    for ev in event_reader.read() {
         let Some(mut ecmds) = commands.get_entity(ev.player_entity) else {
             continue;
         };

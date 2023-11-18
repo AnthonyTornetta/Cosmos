@@ -107,7 +107,7 @@ fn delayed_structure_event(
     mut event_reader: EventReader<DelayedStructureLoadEvent>,
     mut event_writer: EventWriter<EvenMoreDelayedStructureLoadEvent>,
 ) {
-    for ev in event_reader.iter() {
+    for ev in event_reader.read() {
         event_writer.send(EvenMoreDelayedStructureLoadEvent(ev.0));
     }
 }
@@ -118,7 +118,7 @@ fn even_more_delayed_structure_event(
     mut structure_loaded_event_writer: EventWriter<StructureLoadedEvent>,
     query: Query<&Structure>,
 ) {
-    for ev in event_reader.iter() {
+    for ev in event_reader.read() {
         if let Ok(structure) = query.get(ev.0) {
             for res in structure.all_chunks_iter(false) {
                 // This will always be true because include_empty is false

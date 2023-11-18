@@ -7,9 +7,8 @@ use crate::netty::flags::LocalPlayer;
 use crate::state::game_state::GameState;
 use crate::structure::planet::unload_chunks_far_from_players;
 use bevy::prelude::{
-    in_state, warn, App, BuildChildren, Component, ComputedVisibility, Deref, DerefMut, DespawnRecursiveExt, EventReader, EventWriter,
-    GlobalTransform, IntoSystemConfigs, Mesh, PointLight, PointLightBundle, Quat, Rect, Resource, Transform, Update, Vec3, Visibility,
-    With,
+    in_state, App, BuildChildren, Component, Deref, DerefMut, DespawnRecursiveExt, EventReader, EventWriter, GlobalTransform,
+    IntoSystemConfigs, Mesh, PointLight, PointLightBundle, Quat, Rect, Resource, Transform, Update, Vec3, VisibilityBundle, With,
 };
 use bevy::reflect::Reflect;
 use bevy::render::mesh::{MeshVertexAttribute, VertexAttributeValues};
@@ -17,6 +16,7 @@ use bevy::render::primitives::Aabb;
 use bevy::tasks::{AsyncComputeTaskPool, Task};
 use bevy::transform::TransformBundle;
 use bevy::utils::hashbrown::HashMap;
+use bevy::utils::warn;
 use cosmos_core::block::{Block, BlockFace};
 use cosmos_core::events::block_events::BlockChangedEvent;
 use cosmos_core::physics::location::SECTOR_DIMENSIONS;
@@ -58,7 +58,7 @@ fn monitor_block_updates_system(
 ) {
     let mut chunks_todo = HashMap::<Entity, HashSet<ChunkCoordinate>>::default();
 
-    for ev in event.iter() {
+    for ev in event.read() {
         let structure: &Structure = structure_query.get(ev.structure_entity).unwrap();
         if !chunks_todo.contains_key(&ev.structure_entity) {
             chunks_todo.insert(ev.structure_entity, HashSet::default());
@@ -97,7 +97,7 @@ fn monitor_block_updates_system(
         chunks.insert(cc);
     }
 
-    for ev in chunk_set_event.iter() {
+    for ev in chunk_set_event.read() {
         let Ok(structure) = structure_query.get(ev.structure_entity) else {
             continue;
         };
@@ -304,8 +304,7 @@ fn poll_rendering_chunks(
                         .spawn((
                             mesh,
                             TransformBundle::default(),
-                            Visibility::default(),
-                            ComputedVisibility::default(),
+                            VisibilityBundle::default(),
                             // Remove this once https://github.com/bevyengine/bevy/issues/4294 is done (bevy 0.12 released)
                             Aabb::from_min_max(Vec3::new(-s, -s, -s), Vec3::new(s, s, s)),
                         ))
@@ -671,7 +670,7 @@ impl ChunkRenderer {
                         .unwrap_or_else(|| block_textures.from_id("missing").expect("Missing texture should exist."));
 
                     let Some(image_index) = index.atlas_index_from_face(face) else {
-                        warn!("Missing image index -- {index:?}");
+                        warn(Err(format!("Missing image index -- {index:?}")));
                         continue;
                     };
 

@@ -364,7 +364,7 @@ fn on_interact_reactor(
     mut server: ResMut<RenetServer>,
     player_query: Query<&Player>,
 ) {
-    for ev in interaction.iter() {
+    for ev in interaction.read() {
         let Ok((structure, mut reactors)) = structure_query.get_mut(ev.structure_entity) else {
             continue;
         };
@@ -414,7 +414,7 @@ fn on_interact_reactor(
 }
 
 fn request_reactor_event(query: Query<&Reactors>, mut event_reader: EventReader<RequestedEntityEvent>, mut server: ResMut<RenetServer>) {
-    for ev in event_reader.iter() {
+    for ev in event_reader.read() {
         if let Ok(reactors) = query.get(ev.entity) {
             server.send_message(
                 ev.client_id,

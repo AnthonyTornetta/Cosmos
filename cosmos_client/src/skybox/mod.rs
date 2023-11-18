@@ -40,7 +40,7 @@ fn asset_loaded(
     mut cubemap: ResMut<Cubemap>,
     mut skyboxes: Query<&mut Skybox>,
 ) {
-    if !cubemap.is_loaded && asset_server.get_load_state(cubemap.image_handle.clone_weak()) == LoadState::Loaded {
+    if !cubemap.is_loaded && asset_server.get_load_state(cubemap.image_handle.clone_weak()) == Some(LoadState::Loaded) {
         let image = images.get_mut(&cubemap.image_handle).unwrap();
         // NOTE: PNGs do not have any metadata that could indicate they contain a cubemap texture,
         // so they appear as one texture. The following code reconfigures the texture as necessary.

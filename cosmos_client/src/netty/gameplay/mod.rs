@@ -12,7 +12,7 @@ mod sync;
 ///
 /// Please come up with a better solution
 fn remove_despawned_entities(mut removed_entities: RemovedComponents<Location>, mut mapping: ResMut<NetworkMapping>) {
-    for removed in removed_entities.iter() {
+    for removed in removed_entities.read() {
         mapping.remove_mapping_from_client_entity(&removed);
     }
 }

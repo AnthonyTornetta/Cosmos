@@ -80,7 +80,7 @@ fn swap_selected(mut query: Query<&mut HoveredSystem, (With<Pilot>, With<LocalPl
 }
 
 fn check_removed_pilot(mut commands: Commands, mut removed: RemovedComponents<Pilot>) {
-    for ent in removed.iter() {
+    for ent in removed.read() {
         if let Some(mut ecmds) = commands.get_entity(ent) {
             ecmds.remove::<HoveredSystem>();
         }

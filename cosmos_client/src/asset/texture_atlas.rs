@@ -93,7 +93,7 @@ impl SquareTextureAtlasBuilder {
 
                 indices.insert(image_handle.clone_weak(), current_index);
 
-                let img_ratio = image.size().y / self.texture_dimensions as f32;
+                let img_ratio = image.size().y as f32 / self.texture_dimensions as f32;
 
                 assert_eq!(
                     image.size().x as u32,

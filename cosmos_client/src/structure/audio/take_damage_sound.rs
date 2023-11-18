@@ -21,7 +21,7 @@ fn play_block_damage_sound(
     audio: Res<Audio>,
     mut commands: Commands,
 ) {
-    for ev in event_reader.iter() {
+    for ev in event_reader.read() {
         let Ok(structure) = structure_query.get(ev.structure_entity) else {
             continue;
         };

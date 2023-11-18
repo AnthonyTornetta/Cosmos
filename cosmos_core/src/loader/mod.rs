@@ -64,11 +64,11 @@ fn monitor_loading<T: States + Clone + Copy>(
     state: Res<State<T>>,
     mut state_changer: ResMut<NextState<T>>,
 ) {
-    for ev in event_start_reader.iter() {
+    for ev in event_start_reader.read() {
         loading_status.loaders.insert(ev.loading_id);
     }
 
-    for ev in event_done_reader.iter() {
+    for ev in event_done_reader.read() {
         loading_status.done_loading(ev.loading_id);
     }
 

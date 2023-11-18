@@ -47,7 +47,7 @@ fn respond_laser_hit_event(
     mut block_take_damage_event_writer: EventWriter<BlockTakeDamageEvent>,
     mut block_destroy_event_writer: EventWriter<BlockDestroyedEvent>,
 ) {
-    for ev in reader.iter() {
+    for ev in reader.read() {
         let entity_hit = ev.entity_hit();
         if let Ok(parent) = parent_query.get(entity_hit) {
             if let Ok(mut structure) = structure_query.get_mut(parent.get()) {

@@ -26,6 +26,7 @@ default = [
     "bevy/zstd",
     "bevy/x11",
     "bevy/ktx2",
+    "bevy/multi-threaded",
     "bevy/tonemapping_luts",
 ]
 

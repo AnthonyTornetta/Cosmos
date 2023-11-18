@@ -10,7 +10,7 @@ use bevy::{
     prelude::*,
     utils::{HashMap, HashSet},
 };
-use bevy_renet::renet::RenetServer;
+use bevy_renet::renet::{ClientId, RenetServer};
 use cosmos_core::{
     ecs::NeedsDespawned,
     entities::player::Player,
@@ -70,7 +70,7 @@ pub fn check_needs_generated_system<T: TGenerateChunkEvent + Event, K: Component
 /// This will either generate a chunk & send it or send it if it's already loaded.
 pub struct RequestChunkEvent {
     /// The client's id
-    pub requester_id: u64,
+    pub requester_id: ClientId,
     /// The structure's entity
     pub structure_entity: Entity,
     /// The chunk's coordinates on that structure
@@ -81,7 +81,7 @@ pub struct RequestChunkEvent {
 struct RequestChunkBouncer(RequestChunkEvent);
 
 fn bounce_events(mut event_reader: EventReader<RequestChunkBouncer>, mut event_writer: EventWriter<RequestChunkEvent>) {
-    for ev in event_reader.iter() {
+    for ev in event_reader.read() {
         event_writer.send(ev.0);
     }
 }
@@ -106,7 +106,7 @@ fn get_requested_chunk(
 
     // No par_iter() for event readers, so first convert to vec then par_iter() it.
     event_reader
-        .iter()
+        .read()
         // .copied()
         // .collect::<Vec<RequestChunkEvent>>()
         // .par_iter()

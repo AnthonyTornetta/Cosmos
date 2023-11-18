@@ -39,7 +39,7 @@ fn handle_block_break(
     mut client: ResMut<RenetClient>,
     network_mapping: Res<NetworkMapping>,
 ) {
-    for ev in event_reader.iter() {
+    for ev in event_reader.read() {
         client.send_message(
             NettyChannelClient::Reliable,
             cosmos_encoder::serialize(&ClientReliableMessages::BreakBlock {
@@ -55,7 +55,7 @@ fn handle_block_place(
     mut client: ResMut<RenetClient>,
     network_mapping: Res<NetworkMapping>,
 ) {
-    for ev in event_reader.iter() {
+    for ev in event_reader.read() {
         client.send_message(
             NettyChannelClient::Reliable,
             cosmos_encoder::serialize(&ClientReliableMessages::PlaceBlock {
@@ -74,7 +74,7 @@ fn handle_block_interact(
     mut client: ResMut<RenetClient>,
     network_mapping: Res<NetworkMapping>,
 ) {
-    for ev in event_reader.iter() {
+    for ev in event_reader.read() {
         client.send_message(
             NettyChannelClient::Reliable,
             cosmos_encoder::serialize(&ClientReliableMessages::InteractWithBlock {

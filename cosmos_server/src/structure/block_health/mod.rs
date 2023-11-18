@@ -25,7 +25,7 @@ fn monitor_block_destroyed(
     mut event_writer: EventWriter<BlockChangedEvent>,
     blocks: Res<Registry<Block>>,
 ) {
-    for ev in event_reader.iter() {
+    for ev in event_reader.read() {
         if let Ok(mut structure) = structure_query.get_mut(ev.structure_entity) {
             structure.remove_block_at(ev.block.coords(), &blocks, Some(&mut event_writer));
         }

@@ -18,7 +18,7 @@ fn event_listener(
     location_query: Query<(&Location, &Transform)>,
     pilot_query: Query<&Pilot>,
 ) {
-    for ev in event_reader.iter() {
+    for ev in event_reader.read() {
         // Make sure there is no other player thinking they are the pilot of this ship
         if let Ok(prev_pilot) = pilot_query.get(ev.structure_entity) {
             if let Some(mut ec) = commands.get_entity(ev.structure_entity) {
@@ -103,13 +103,13 @@ fn pilot_removed(
 }
 
 fn bouncer(mut reader: EventReader<Bouncer>, mut event_writer: EventWriter<RemoveSensorFrom>) {
-    for ev in reader.iter() {
+    for ev in reader.read() {
         event_writer.send(RemoveSensorFrom(ev.0, ev.1 + 1));
     }
 }
 
 fn remove_sensor(mut reader: EventReader<RemoveSensorFrom>, mut event_writer: EventWriter<Bouncer>, mut commands: Commands) {
-    for ev in reader.iter() {
+    for ev in reader.read() {
         if ev.1 >= BOUNCES {
             if let Some(mut e) = commands.get_entity(ev.0) {
                 e.remove::<Sensor>();

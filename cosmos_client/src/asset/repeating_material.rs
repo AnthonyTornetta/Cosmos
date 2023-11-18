@@ -1,6 +1,7 @@
 //! A garbage repeated material. Don't use this.
 
 use bevy::{
+    asset::Asset,
     prelude::{AlphaMode, App, Color, Handle, Image, Material, MaterialPlugin},
     reflect::{Reflect, TypeUuid},
     render::render_resource::{AsBindGroup, ShaderRef, ShaderType},
@@ -15,7 +16,7 @@ pub(crate) struct Repeats {
     pub(crate) _wasm_padding2: u32,
 }
 
-#[derive(AsBindGroup, Debug, Clone, TypeUuid, Reflect)]
+#[derive(AsBindGroup, Debug, Clone, TypeUuid, Reflect, Asset)]
 #[uuid = "82d336c5-fd6c-41a3-bdd4-267cd4c9be22"]
 pub(crate) struct UnlitRepeatedMaterial {
     #[texture(0)]

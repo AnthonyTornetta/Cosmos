@@ -175,7 +175,7 @@ fn clear_visuals(
     mut event_reader: EventReader<ExitBuildModeEvent>,
     mut commands: Commands,
 ) {
-    for ev in event_reader.iter() {
+    for ev in event_reader.read() {
         let Ok(parent) = parent_query.get(ev.player_entity).map(|p| p.get()) else {
             continue;
         };

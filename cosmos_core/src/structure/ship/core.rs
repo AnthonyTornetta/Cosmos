@@ -23,7 +23,7 @@ use super::Ship;
 pub struct MeltingDown(pub f32);
 
 fn monitor_block_events(mut commands: Commands, blocks: Res<Registry<Block>>, mut event_reader: EventReader<BlockChangedEvent>) {
-    for ev in event_reader.iter() {
+    for ev in event_reader.read() {
         let block = blocks.from_numeric_id(ev.old_block);
 
         if block.unlocalized_name() == "cosmos:ship_core" {

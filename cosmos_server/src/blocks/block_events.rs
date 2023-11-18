@@ -12,9 +12,9 @@ use cosmos_core::{
 use crate::state::GameState;
 
 fn handle_block_changed_event(mut event_reader: EventReader<BlockChangedEvent>, mut server: ResMut<RenetServer>) {
-    let iter_len = event_reader.iter().len();
+    let iter_len = event_reader.read().len();
     let mut map = HashMap::new();
-    for ev in event_reader.iter() {
+    for ev in event_reader.read() {
         if !map.contains_key(&ev.structure_entity) {
             map.insert(ev.structure_entity, Vec::with_capacity(iter_len));
         }

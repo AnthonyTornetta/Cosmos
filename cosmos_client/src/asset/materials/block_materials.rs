@@ -30,7 +30,7 @@ pub const ATTRIBUTE_TEXTURE_INDEX: MeshVertexAttribute =
 /// <https://google.github.io/filament/Material%20Properties.pdf>.
 ///
 /// May be created directly from a [`Color`] or an [`Image`].
-#[derive(AsBindGroup, Reflect, Debug, Clone, TypeUuid)]
+#[derive(AsBindGroup, Reflect, Debug, Clone, TypeUuid, Asset)]
 #[uuid = "9c5a0ddf-1eaf-41b4-9832-ed736fd26af3"]
 #[bind_group_data(ArrayTextureMaterialKey)]
 #[uniform(0, ArrayTextureMaterialUniform)]

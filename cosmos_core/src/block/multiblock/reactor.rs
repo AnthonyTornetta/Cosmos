@@ -141,7 +141,7 @@ fn on_modify_reactor(
     blocks: Res<Registry<Block>>,
     reactor_cells: Res<Registry<ReactorPowerGenerationBlock>>,
 ) {
-    for ev in block_change_event.iter() {
+    for ev in block_change_event.read() {
         let Ok(mut reactors) = reactors_query.get_mut(ev.structure_entity) else {
             continue;
         };

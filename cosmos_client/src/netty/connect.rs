@@ -80,8 +80,8 @@ pub fn establish_connection(mut commands: Commands, host_config: Res<HostConfig>
 }
 
 /// Waits for a connection to be made, then changes the game state to `GameState::LoadingWorld`.
-pub fn wait_for_connection(mut state_changer: ResMut<NextState<GameState>>, transport: Res<NetcodeClientTransport>) {
-    if transport.is_connected() {
+pub fn wait_for_connection(mut state_changer: ResMut<NextState<GameState>>, client: Res<RenetClient>) {
+    if client.is_connected() {
         info!("Loading server data...");
         state_changer.set(GameState::LoadingWorld);
     }

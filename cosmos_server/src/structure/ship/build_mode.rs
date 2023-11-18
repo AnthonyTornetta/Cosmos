@@ -21,7 +21,7 @@ fn interact_with_block(
     mut enter_writer: EventWriter<EnterBuildModeEvent>,
     blocks: Res<Registry<Block>>,
 ) {
-    for ev in event_reader.iter() {
+    for ev in event_reader.read() {
         if let Ok(structure) = structure_query.get(ev.structure_entity) {
             if ev.structure_block.block(structure, &blocks).unlocalized_name() == "cosmos:build_block" {
                 enter_writer.send(EnterBuildModeEvent {
@@ -34,7 +34,7 @@ fn interact_with_block(
 }
 
 fn enter_build_mode(mut server: ResMut<RenetServer>, mut event_reader: EventReader<EnterBuildModeEvent>) {
-    for ev in event_reader.iter() {
+    for ev in event_reader.read() {
         server.broadcast_message(
             NettyChannelServer::Reliable,
             cosmos_encoder::serialize(&ServerReliableMessages::PlayerEnterBuildMode {
@@ -46,7 +46,7 @@ fn enter_build_mode(mut server: ResMut<RenetServer>, mut event_reader: EventRead
 }
 
 fn exit_build_mode(mut server: ResMut<RenetServer>, mut event_reader: EventReader<ExitBuildModeEvent>) {
-    for ev in event_reader.iter() {
+    for ev in event_reader.read() {
         server.broadcast_message(
             NettyChannelServer::Reliable,
             cosmos_encoder::serialize(&ServerReliableMessages::PlayerExitBuildMode {
