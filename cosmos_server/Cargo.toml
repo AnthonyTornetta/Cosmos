@@ -26,7 +26,6 @@ default = [
     "bevy/zstd",
     "bevy/x11",
     "bevy/ktx2",
-    "bevy/filesystem_watcher",
     "bevy/tonemapping_luts",
 ]
 
