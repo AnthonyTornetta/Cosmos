@@ -35,7 +35,7 @@ default = [
 
 [dependencies]
 bevy = { workspace = true }
-bevy_renet = { workspace = true }
+bevy_renet = { workspace = true, features = ["serde"] }
 serde = { workspace = true }
 bincode = { workspace = true }
 local-ip-address = { workspace = true }

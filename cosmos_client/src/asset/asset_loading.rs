@@ -367,11 +367,7 @@ pub fn load_block_rendering_information(
                 .from_id("cosmos:main") // Eventually load this via the block_info file
                 .expect("No main atlas")
                 .texture_atlas
-                .get_texture_index(
-                    &server
-                        .get_handle(&format!("{mod_id}/images/blocks/{name}.png"))
-                        .expect("Unable to find block texture"),
-                )
+                .get_texture_index(&server.get_handle(&format!("{mod_id}/images/blocks/{name}.png")).unwrap_or_default())
             {
                 map.insert(entry.to_owned(), index);
             }

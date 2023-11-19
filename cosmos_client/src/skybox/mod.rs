@@ -7,6 +7,8 @@ use bevy::{
     render::render_resource::{TextureViewDescriptor, TextureViewDimension},
 };
 
+use crate::rendering::MainCamera;
+
 /// Order from top to bottom:
 /// Right, Left, Top, Bottom, Front, Back
 const CUBEMAP: &str = "skybox/skybox.png";
@@ -34,12 +36,7 @@ fn added_skybox(mut query: Query<&mut Skybox, Added<Skybox>>, cubemap: Res<Cubem
     }
 }
 
-fn asset_loaded(
-    asset_server: Res<AssetServer>,
-    mut images: ResMut<Assets<Image>>,
-    mut cubemap: ResMut<Cubemap>,
-    mut skyboxes: Query<&mut Skybox>,
-) {
+fn asset_loaded(asset_server: Res<AssetServer>, mut images: ResMut<Assets<Image>>, mut cubemap: ResMut<Cubemap>) {
     if !cubemap.is_loaded && asset_server.get_load_state(cubemap.image_handle.clone_weak()) == Some(LoadState::Loaded) {
         let image = images.get_mut(&cubemap.image_handle).unwrap();
         // NOTE: PNGs do not have any metadata that could indicate they contain a cubemap texture,
@@ -52,16 +49,18 @@ fn asset_loaded(
             });
         }
 
-        for mut skybox in skyboxes.iter_mut() {
-            skybox.0 = cubemap.image_handle.clone();
-        }
-
         cubemap.is_loaded = true;
+    }
+}
+
+fn on_add_main_camera(cubemap: Res<Cubemap>, mut commands: Commands, query: Query<Entity, Added<MainCamera>>) {
+    for ent in query.iter() {
+        commands.entity(ent).insert(Skybox(cubemap.image_handle.clone()));
     }
 }
 
 pub(super) fn register(app: &mut App) {
     app //.add_plugin(MaterialPlugin::<CubemapMaterial>::default())
         .add_systems(Startup, setup)
-        .add_systems(Update, (added_skybox, asset_loaded));
+        .add_systems(Update, (added_skybox, on_add_main_camera, asset_loaded));
 }
