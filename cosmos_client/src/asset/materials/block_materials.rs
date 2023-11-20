@@ -1,23 +1,19 @@
 //! The material used by most blocks
 
 use bevy::{
-    pbr::{MaterialPipeline, MaterialPipelineKey},
-    prelude::*,
-    reflect::TypeUuid,
+    pbr::{deferred::DEFAULT_PBR_DEFERRED_LIGHTING_PASS_ID, MaterialPipeline, MaterialPipelineKey, OpaqueRendererMethod},
+    prelude::{Asset, Color, Handle, Reflect, Vec4},
     render::{
         mesh::{MeshVertexAttribute, MeshVertexBufferLayout},
-        render_resource::{AsBindGroup, RenderPipelineDescriptor, ShaderRef, SpecializedMeshPipelineError, VertexFormat},
+        render_asset::RenderAssets,
+        render_resource::{
+            AsBindGroup, AsBindGroupShaderType, Face, RenderPipelineDescriptor, ShaderRef, ShaderType, SpecializedMeshPipelineError,
+            TextureFormat, VertexFormat,
+        },
     },
 };
 
-use bevy::{
-    pbr::StandardMaterialFlags,
-    reflect::Reflect,
-    render::{
-        render_asset::RenderAssets,
-        render_resource::{AsBindGroupShaderType, Face, ShaderType, TextureFormat},
-    },
-};
+use crate::*;
 
 /// Specifies the texture index to use
 pub const ATTRIBUTE_TEXTURE_INDEX: MeshVertexAttribute =
@@ -30,8 +26,7 @@ pub const ATTRIBUTE_TEXTURE_INDEX: MeshVertexAttribute =
 /// <https://google.github.io/filament/Material%20Properties.pdf>.
 ///
 /// May be created directly from a [`Color`] or an [`Image`].
-#[derive(AsBindGroup, Reflect, Debug, Clone, TypeUuid, Asset)]
-#[uuid = "9c5a0ddf-1eaf-41b4-9832-ed736fd26af3"]
+#[derive(Asset, AsBindGroup, Reflect, Debug, Clone)]
 #[bind_group_data(ArrayTextureMaterialKey)]
 #[uniform(0, ArrayTextureMaterialUniform)]
 #[reflect(Default, Debug)]
@@ -60,6 +55,7 @@ pub struct ArrayTextureMaterial {
     /// [`base_color`]: ArrayTextureMaterial::base_color
     #[texture(1, dimension = "2d_array")]
     #[sampler(2)]
+    #[dependency]
     pub base_color_texture: Option<Handle<Image>>,
 
     // Use a color for user friendliness even though we technically don't use the alpha channel
@@ -89,6 +85,7 @@ pub struct ArrayTextureMaterial {
     /// [`emissive`]: ArrayTextureMaterial::emissive
     #[texture(3)]
     #[sampler(4)]
+    #[dependency]
     pub emissive_texture: Option<Handle<Image>>,
 
     /// Linear perceptual roughness, clamped to `[0.089, 1.0]` in the shader.
@@ -137,6 +134,7 @@ pub struct ArrayTextureMaterial {
     /// [`perceptual_roughness`]: ArrayTextureMaterial::perceptual_roughness
     #[texture(5)]
     #[sampler(6)]
+    #[dependency]
     pub metallic_roughness_texture: Option<Handle<Image>>,
 
     /// Specular intensity for non-metals on a linear scale of `[0.0, 1.0]`.
@@ -152,6 +150,152 @@ pub struct ArrayTextureMaterial {
     #[doc(alias = "specular_intensity")]
     pub reflectance: f32,
 
+    /// The amount of light transmitted _diffusely_ through the material (i.e. “translucency”)
+    ///
+    /// Implemented as a second, flipped [Lambertian diffuse](https://en.wikipedia.org/wiki/Lambertian_reflectance) lobe,
+    /// which provides an inexpensive but plausible approximation of translucency for thin dieletric objects (e.g. paper,
+    /// leaves, some fabrics) or thicker volumetric materials with short scattering distances (e.g. porcelain, wax).
+    ///
+    /// For specular transmission usecases with refraction (e.g. glass) use the [`ArrayTextureMaterial::specular_transmission`] and
+    /// [`ArrayTextureMaterial::ior`] properties instead.
+    ///
+    /// - When set to `0.0` (the default) no diffuse light is transmitted;
+    /// - When set to `1.0` all diffuse light is transmitted through the material;
+    /// - Values higher than `0.5` will cause more diffuse light to be transmitted than reflected, resulting in a “darker”
+    ///   appearance on the side facing the light than the opposite side. (e.g. plant leaves)
+    ///
+    /// ## Notes
+    ///
+    /// - The material's [`ArrayTextureMaterial::base_color`] also modulates the transmitted light;
+    /// - To receive transmitted shadows on the diffuse transmission lobe (i.e. the “backside”) of the material,
+    ///   use the [`TransmittedShadowReceiver`] component.
+    #[doc(alias = "translucency")]
+    pub diffuse_transmission: f32,
+
+    /// A map that modulates diffuse transmission via its alpha channel. Multiplied by [`ArrayTextureMaterial::diffuse_transmission`]
+    /// to obtain the final result.
+    ///
+    /// **Important:** The [`ArrayTextureMaterial::diffuse_transmission`] property must be set to a value higher than 0.0,
+    /// or this texture won't have any effect.
+    #[texture(17)]
+    #[sampler(18)]
+    #[cfg(feature = "pbr_transmission_textures")]
+    pub diffuse_transmission_texture: Option<Handle<Image>>,
+
+    /// The amount of light transmitted _specularly_ through the material (i.e. via refraction)
+    ///
+    /// - When set to `0.0` (the default) no light is transmitted.
+    /// - When set to `1.0` all light is transmitted through the material.
+    ///
+    /// The material's [`ArrayTextureMaterial::base_color`] also modulates the transmitted light.
+    ///
+    /// **Note:** Typically used in conjunction with [`ArrayTextureMaterial::thickness`], [`ArrayTextureMaterial::ior`] and [`ArrayTextureMaterial::perceptual_roughness`].
+    ///
+    /// ## Performance
+    ///
+    /// Specular transmission is implemented as a relatively expensive screen-space effect that allows ocluded objects to be seen through the material,
+    /// with distortion and blur effects.
+    ///
+    /// - [`Camera3d::screen_space_specular_transmission_steps`](bevy_core_pipeline::core_3d::Camera3d::screen_space_specular_transmission_steps) can be used to enable transmissive objects
+    /// to be seen through other transmissive objects, at the cost of additional draw calls and texture copies; (Use with caution!)
+    ///     - If a simplified approximation of specular transmission using only environment map lighting is sufficient, consider setting
+    /// [`Camera3d::screen_space_specular_transmission_steps`](bevy_core_pipeline::core_3d::Camera3d::screen_space_specular_transmission_steps) to `0`.
+    /// - If purely diffuse light transmission is needed, (i.e. “translucency”) consider using [`ArrayTextureMaterial::diffuse_transmission`] instead,
+    /// for a much less expensive effect.
+    /// - Specular transmission is rendered before alpha blending, so any material with [`AlphaMode::Blend`], [`AlphaMode::Premultiplied`], [`AlphaMode::Add`] or [`AlphaMode::Multiply`]
+    ///   won't be visible through specular transmissive materials.
+    #[doc(alias = "refraction")]
+    pub specular_transmission: f32,
+
+    /// A map that modulates specular transmission via its red channel. Multiplied by [`ArrayTextureMaterial::specular_transmission`]
+    /// to obtain the final result.
+    ///
+    /// **Important:** The [`ArrayTextureMaterial::specular_transmission`] property must be set to a value higher than 0.0,
+    /// or this texture won't have any effect.
+    #[texture(13)]
+    #[sampler(14)]
+    #[cfg(feature = "pbr_transmission_textures")]
+    pub specular_transmission_texture: Option<Handle<Image>>,
+
+    /// Thickness of the volume beneath the material surface.
+    ///
+    /// When set to `0.0` (the default) the material appears as an infinitely-thin film,
+    /// transmitting light without distorting it.
+    ///
+    /// When set to any other value, the material distorts light like a thick lens.
+    ///
+    /// **Note:** Typically used in conjunction with [`ArrayTextureMaterial::specular_transmission`] and [`ArrayTextureMaterial::ior`], or with
+    /// [`ArrayTextureMaterial::diffuse_transmission`].
+    #[doc(alias = "volume")]
+    #[doc(alias = "thin_walled")]
+    pub thickness: f32,
+
+    /// A map that modulates thickness via its green channel. Multiplied by [`ArrayTextureMaterial::thickness`]
+    /// to obtain the final result.
+    ///
+    /// **Important:** The [`ArrayTextureMaterial::thickness`] property must be set to a value higher than 0.0,
+    /// or this texture won't have any effect.
+    #[texture(15)]
+    #[sampler(16)]
+    #[cfg(feature = "pbr_transmission_textures")]
+    pub thickness_texture: Option<Handle<Image>>,
+
+    /// The [index of refraction](https://en.wikipedia.org/wiki/Refractive_index) of the material.
+    ///
+    /// Defaults to 1.5.
+    ///
+    /// | Material        | Index of Refraction  |
+    /// |:----------------|:---------------------|
+    /// | Vacuum          | 1                    |
+    /// | Air             | 1.00                 |
+    /// | Ice             | 1.31                 |
+    /// | Water           | 1.33                 |
+    /// | Eyes            | 1.38                 |
+    /// | Quartz          | 1.46                 |
+    /// | Olive Oil       | 1.47                 |
+    /// | Honey           | 1.49                 |
+    /// | Acrylic         | 1.49                 |
+    /// | Window Glass    | 1.52                 |
+    /// | Polycarbonate   | 1.58                 |
+    /// | Flint Glass     | 1.69                 |
+    /// | Ruby            | 1.71                 |
+    /// | Glycerine       | 1.74                 |
+    /// | Saphire         | 1.77                 |
+    /// | Cubic Zirconia  | 2.15                 |
+    /// | Diamond         | 2.42                 |
+    /// | Moissanite      | 2.65                 |
+    ///
+    /// **Note:** Typically used in conjunction with [`ArrayTextureMaterial::specular_transmission`] and [`ArrayTextureMaterial::thickness`].
+    #[doc(alias = "index_of_refraction")]
+    #[doc(alias = "refraction_index")]
+    #[doc(alias = "refractive_index")]
+    pub ior: f32,
+
+    /// How far, on average, light travels through the volume beneath the material's
+    /// surface before being absorbed.
+    ///
+    /// Defaults to [`f32::INFINITY`], i.e. light is never absorbed.
+    ///
+    /// **Note:** To have any effect, must be used in conjunction with:
+    /// - [`ArrayTextureMaterial::attenuation_color`];
+    /// - [`ArrayTextureMaterial::thickness`];
+    /// - [`ArrayTextureMaterial::diffuse_transmission`] or [`ArrayTextureMaterial::specular_transmission`].
+    #[doc(alias = "absorption_distance")]
+    #[doc(alias = "extinction_distance")]
+    pub attenuation_distance: f32,
+
+    /// The resulting (non-absorbed) color after white light travels through the attenuation distance.
+    ///
+    /// Defaults to [`Color::WHITE`], i.e. no change.
+    ///
+    /// **Note:** To have any effect, must be used in conjunction with:
+    /// - [`ArrayTextureMaterial::attenuation_distance`];
+    /// - [`ArrayTextureMaterial::thickness`];
+    /// - [`ArrayTextureMaterial::diffuse_transmission`] or [`ArrayTextureMaterial::specular_transmission`].
+    #[doc(alias = "absorption_color")]
+    #[doc(alias = "extinction_color")]
+    pub attenuation_color: Color,
+
     /// Used to fake the lighting of bumps and dents on a material.
     ///
     /// A typical usage would be faking cobblestones on a flat plane mesh in 3D.
@@ -165,13 +309,16 @@ pub struct ArrayTextureMaterial {
     /// - Vertex normals
     ///
     /// Tangents do not have to be stored in your model,
-    /// they can be generated using the [`Mesh::generate_tangents`] method.
+    /// they can be generated using the [`Mesh::generate_tangents`] or
+    /// [`Mesh::with_generated_tangents`] methods.
     /// If your material has a normal map, but still renders as a flat surface,
     /// make sure your meshes have their tangents set.
     ///
     /// [`Mesh::generate_tangents`]: bevy_render::mesh::Mesh::generate_tangents
+    /// [`Mesh::with_generated_tangents`]: bevy_render::mesh::Mesh::with_generated_tangents
     #[texture(9)]
     #[sampler(10)]
+    #[dependency]
     pub normal_map_texture: Option<Handle<Image>>,
 
     /// Normal map textures authored for DirectX have their y-component flipped. Set this to flip
@@ -190,6 +337,7 @@ pub struct ArrayTextureMaterial {
     /// This is similar to ambient occlusion, but built into the model.
     #[texture(7)]
     #[sampler(8)]
+    #[dependency]
     pub occlusion_texture: Option<Handle<Image>>,
 
     /// Support two-sided lighting by automatically flipping the normals for "back" faces
@@ -265,7 +413,7 @@ pub struct ArrayTextureMaterial {
     /// - It will look weird on bent/non-planar surfaces.
     /// - The depth of the pixel does not reflect its visual position, resulting
     ///   in artifacts for depth-dependent features such as fog or SSAO.
-    /// - For the same reason, the the geometry silhouette will always be
+    /// - For the same reason, the geometry silhouette will always be
     ///   the one of the actual geometry, not the parallaxed version, resulting
     ///   in awkward looks on intersecting parallaxed surfaces.
     ///
@@ -277,7 +425,7 @@ pub struct ArrayTextureMaterial {
     /// Use the [`parallax_mapping_method`] and [`max_parallax_layer_count`] fields
     /// to tweak the shader, trading graphical quality for performance.
     ///
-    /// To improve performance, set your `depth_map`'s [`Image::sampler_descriptor`]
+    /// To improve performance, set your `depth_map`'s [`Image::sampler`]
     /// filter mode to `FilterMode::Nearest`, as [this paper] indicates, it improves
     /// performance a bit.
     ///
@@ -293,6 +441,7 @@ pub struct ArrayTextureMaterial {
     /// [`max_parallax_layer_count`]: ArrayTextureMaterial::max_parallax_layer_count
     #[texture(11)]
     #[sampler(12)]
+    #[dependency]
     pub depth_map: Option<Handle<Image>>,
 
     /// How deep the offset introduced by the depth map should be.
@@ -324,6 +473,14 @@ pub struct ArrayTextureMaterial {
     ///
     /// Default is `16.0`.
     pub max_parallax_layer_count: f32,
+
+    /// Render method used for opaque materials. (Where `alpha_mode` is [`AlphaMode::Opaque`] or [`AlphaMode::Mask`])
+    pub opaque_render_method: OpaqueRendererMethod,
+
+    /// Used for selecting the deferred lighting pass for deferred materials.
+    /// Default is [`DEFAULT_PBR_DEFERRED_LIGHTING_PASS_ID`] for default
+    /// PBR deferred lighting pass. Ignored in the case of forward materials.
+    pub deferred_lighting_pass_id: u8,
 }
 
 impl Default for ArrayTextureMaterial {
@@ -344,6 +501,18 @@ impl Default for ArrayTextureMaterial {
             // Expressed in a linear scale and equivalent to 4% reflectance see
             // <https://google.github.io/filament/Material%20Properties.pdf>
             reflectance: 0.5,
+            diffuse_transmission: 0.0,
+            #[cfg(feature = "pbr_transmission_textures")]
+            diffuse_transmission_texture: None,
+            specular_transmission: 0.0,
+            #[cfg(feature = "pbr_transmission_textures")]
+            specular_transmission_texture: None,
+            thickness: 0.0,
+            #[cfg(feature = "pbr_transmission_textures")]
+            thickness_texture: None,
+            ior: 1.5,
+            attenuation_color: Color::WHITE,
+            attenuation_distance: f32::INFINITY,
             occlusion_texture: None,
             normal_map_texture: None,
             flip_normal_map_y: false,
@@ -357,6 +526,8 @@ impl Default for ArrayTextureMaterial {
             parallax_depth_scale: 0.1,
             max_parallax_layer_count: 16.0,
             parallax_mapping_method: ParallaxMappingMethod::Occlusion,
+            opaque_render_method: OpaqueRendererMethod::Auto,
+            deferred_lighting_pass_id: DEFAULT_PBR_DEFERRED_LIGHTING_PASS_ID,
         }
     }
 }
@@ -380,6 +551,65 @@ impl From<Handle<Image>> for ArrayTextureMaterial {
     }
 }
 
+bitflags::bitflags! {
+    /// Bitflags info about the material a shader is currently rendering.
+    /// This is accessible in the shader in the [`ArrayTextureMaterialUniform`]
+    #[repr(transparent)]
+    pub struct ArrayTextureMaterialFlags: u32 {
+        /// NOTE: These must match the bit flags in bevy_pbr/src/render/pbr_types.wgsl!
+        const BASE_COLOR_TEXTURE         = (1 << 0);
+        /// NOTE: These must match the bit flags in bevy_pbr/src/render/pbr_types.wgsl!
+        const EMISSIVE_TEXTURE           = (1 << 1);
+        /// NOTE: These must match the bit flags in bevy_pbr/src/render/pbr_types.wgsl!
+        const METALLIC_ROUGHNESS_TEXTURE = (1 << 2);
+        /// NOTE: These must match the bit flags in bevy_pbr/src/render/pbr_types.wgsl!
+        const OCCLUSION_TEXTURE          = (1 << 3);
+        /// NOTE: These must match the bit flags in bevy_pbr/src/render/pbr_types.wgsl!
+        const DOUBLE_SIDED               = (1 << 4);
+        /// NOTE: These must match the bit flags in bevy_pbr/src/render/pbr_types.wgsl!
+        const UNLIT                      = (1 << 5);
+        /// NOTE: These must match the bit flags in bevy_pbr/src/render/pbr_types.wgsl!
+        const TWO_COMPONENT_NORMAL_MAP   = (1 << 6);
+        /// NOTE: These must match the bit flags in bevy_pbr/src/render/pbr_types.wgsl!
+        const FLIP_NORMAL_MAP_Y          = (1 << 7);
+        /// NOTE: These must match the bit flags in bevy_pbr/src/render/pbr_types.wgsl!
+        const FOG_ENABLED                = (1 << 8);
+        /// NOTE: These must match the bit flags in bevy_pbr/src/render/pbr_types.wgsl!
+        const DEPTH_MAP                  = (1 << 9); // Used for parallax mapping
+        /// NOTE: These must match the bit flags in bevy_pbr/src/render/pbr_types.wgsl!
+        const SPECULAR_TRANSMISSION_TEXTURE = (1 << 10);
+        /// NOTE: These must match the bit flags in bevy_pbr/src/render/pbr_types.wgsl!
+        const THICKNESS_TEXTURE          = (1 << 11);
+        /// NOTE: These must match the bit flags in bevy_pbr/src/render/pbr_types.wgsl!
+        const DIFFUSE_TRANSMISSION_TEXTURE = (1 << 12);
+        /// NOTE: These must match the bit flags in bevy_pbr/src/render/pbr_types.wgsl!
+        const ATTENUATION_ENABLED        = (1 << 13);
+        /// NOTE: These must match the bit flags in bevy_pbr/src/render/pbr_types.wgsl!
+        const ALPHA_MODE_RESERVED_BITS   = (Self::ALPHA_MODE_MASK_BITS << Self::ALPHA_MODE_SHIFT_BITS); // ← Bitmask reserving bits for the `AlphaMode`
+        /// NOTE: These must match the bit flags in bevy_pbr/src/render/pbr_types.wgsl!
+        const ALPHA_MODE_OPAQUE          = (0 << Self::ALPHA_MODE_SHIFT_BITS);                          // ← Values are just sequential values bitshifted into
+        /// NOTE: These must match the bit flags in bevy_pbr/src/render/pbr_types.wgsl!
+        const ALPHA_MODE_MASK            = (1 << Self::ALPHA_MODE_SHIFT_BITS);                          //   the bitmask, and can range from 0 to 7.
+        /// NOTE: These must match the bit flags in bevy_pbr/src/render/pbr_types.wgsl!
+        const ALPHA_MODE_BLEND           = (2 << Self::ALPHA_MODE_SHIFT_BITS);                          //
+        /// NOTE: These must match the bit flags in bevy_pbr/src/render/pbr_types.wgsl!
+        const ALPHA_MODE_PREMULTIPLIED   = (3 << Self::ALPHA_MODE_SHIFT_BITS);                          //
+        /// NOTE: These must match the bit flags in bevy_pbr/src/render/pbr_types.wgsl!
+        const ALPHA_MODE_ADD             = (4 << Self::ALPHA_MODE_SHIFT_BITS);                          //   Right now only values 0–5 are used, which still gives
+        /// NOTE: These must match the bit flags in bevy_pbr/src/render/pbr_types.wgsl!
+        const ALPHA_MODE_MULTIPLY        = (5 << Self::ALPHA_MODE_SHIFT_BITS);                          // ← us "room" for two more modes without adding more bits
+        /// NOTE: These must match the bit flags in bevy_pbr/src/render/pbr_types.wgsl!
+        const NONE                       = 0;
+        /// NOTE: These must match the bit flags in bevy_pbr/src/render/pbr_types.wgsl!
+        const UNINITIALIZED              = 0xFFFF;
+    }
+}
+
+impl ArrayTextureMaterialFlags {
+    const ALPHA_MODE_MASK_BITS: u32 = 0b111;
+    const ALPHA_MODE_SHIFT_BITS: u32 = 32 - Self::ALPHA_MODE_MASK_BITS.count_ones();
+}
+
 /// The GPU representation of the uniform data of a [`ArrayTextureMaterial`].
 #[derive(Clone, Default, ShaderType)]
 pub struct ArrayTextureMaterialUniform {
@@ -397,7 +627,19 @@ pub struct ArrayTextureMaterialUniform {
     /// Specular intensity for non-metals on a linear scale of [0.0, 1.0]
     /// defaults to 0.5 which is mapped to 4% reflectance in the shader
     pub reflectance: f32,
-    /// The [`StandardMaterialFlags`] accessible in the `wgsl` shader.
+    /// Amount of diffuse light transmitted through the material
+    pub diffuse_transmission: f32,
+    /// Amount of specular light transmitted through the material
+    pub specular_transmission: f32,
+    /// Thickness of the volume underneath the material surface
+    pub thickness: f32,
+    /// Index of Refraction
+    pub ior: f32,
+    /// How far light travels through the volume underneath the material surface before being absorbed
+    pub attenuation_distance: f32,
+    /// Color white light takes after travelling through the attenuation distance underneath the material surface
+    pub attenuation_color: Vec4,
+    /// The [`ArrayTextureMaterialFlags`] accessible in the `wgsl` shader.
     pub flags: u32,
     /// When the alpha mode mask flag is set, any base color alpha above this cutoff means fully opaque,
     /// and any below means fully transparent.
@@ -412,63 +654,82 @@ pub struct ArrayTextureMaterialUniform {
     /// Using [`ParallaxMappingMethod::Relief`], how many additional
     /// steps to use at most to find the depth value.
     pub max_relief_mapping_search_steps: u32,
+    /// ID for specifying which deferred lighting pass should be used for rendering this material, if any.
+    pub deferred_lighting_pass_id: u32,
 }
 
 impl AsBindGroupShaderType<ArrayTextureMaterialUniform> for ArrayTextureMaterial {
     fn as_bind_group_shader_type(&self, images: &RenderAssets<Image>) -> ArrayTextureMaterialUniform {
-        let mut flags = StandardMaterialFlags::NONE;
+        let mut flags = ArrayTextureMaterialFlags::NONE;
         if self.base_color_texture.is_some() {
-            flags |= StandardMaterialFlags::BASE_COLOR_TEXTURE;
+            flags |= ArrayTextureMaterialFlags::BASE_COLOR_TEXTURE;
         }
         if self.emissive_texture.is_some() {
-            flags |= StandardMaterialFlags::EMISSIVE_TEXTURE;
+            flags |= ArrayTextureMaterialFlags::EMISSIVE_TEXTURE;
         }
         if self.metallic_roughness_texture.is_some() {
-            flags |= StandardMaterialFlags::METALLIC_ROUGHNESS_TEXTURE;
+            flags |= ArrayTextureMaterialFlags::METALLIC_ROUGHNESS_TEXTURE;
         }
         if self.occlusion_texture.is_some() {
-            flags |= StandardMaterialFlags::OCCLUSION_TEXTURE;
+            flags |= ArrayTextureMaterialFlags::OCCLUSION_TEXTURE;
         }
         if self.double_sided {
-            flags |= StandardMaterialFlags::DOUBLE_SIDED;
+            flags |= ArrayTextureMaterialFlags::DOUBLE_SIDED;
         }
         if self.unlit {
-            flags |= StandardMaterialFlags::UNLIT;
+            flags |= ArrayTextureMaterialFlags::UNLIT;
         }
         if self.fog_enabled {
-            flags |= StandardMaterialFlags::FOG_ENABLED;
+            flags |= ArrayTextureMaterialFlags::FOG_ENABLED;
         }
         if self.depth_map.is_some() {
-            flags |= StandardMaterialFlags::DEPTH_MAP;
+            flags |= ArrayTextureMaterialFlags::DEPTH_MAP;
+        }
+        #[cfg(feature = "pbr_transmission_textures")]
+        {
+            if self.specular_transmission_texture.is_some() {
+                flags |= ArrayTextureMaterialFlags::SPECULAR_TRANSMISSION_TEXTURE;
+            }
+            if self.thickness_texture.is_some() {
+                flags |= ArrayTextureMaterialFlags::THICKNESS_TEXTURE;
+            }
+            if self.diffuse_transmission_texture.is_some() {
+                flags |= ArrayTextureMaterialFlags::DIFFUSE_TRANSMISSION_TEXTURE;
+            }
         }
         let has_normal_map = self.normal_map_texture.is_some();
         if has_normal_map {
-            if let Some(texture) = images.get(self.normal_map_texture.as_ref().unwrap()) {
+            let normal_map_id = self.normal_map_texture.as_ref().map(|h| h.id()).unwrap();
+            if let Some(texture) = images.get(normal_map_id) {
                 match texture.texture_format {
                     // All 2-component unorm formats
                     TextureFormat::Rg8Unorm | TextureFormat::Rg16Unorm | TextureFormat::Bc5RgUnorm | TextureFormat::EacRg11Unorm => {
-                        flags |= StandardMaterialFlags::TWO_COMPONENT_NORMAL_MAP;
+                        flags |= ArrayTextureMaterialFlags::TWO_COMPONENT_NORMAL_MAP;
                     }
                     _ => {}
                 }
             }
             if self.flip_normal_map_y {
-                flags |= StandardMaterialFlags::FLIP_NORMAL_MAP_Y;
+                flags |= ArrayTextureMaterialFlags::FLIP_NORMAL_MAP_Y;
             }
         }
         // NOTE: 0.5 is from the glTF default - do we want this?
         let mut alpha_cutoff = 0.5;
         match self.alpha_mode {
-            AlphaMode::Opaque => flags |= StandardMaterialFlags::ALPHA_MODE_OPAQUE,
+            AlphaMode::Opaque => flags |= ArrayTextureMaterialFlags::ALPHA_MODE_OPAQUE,
             AlphaMode::Mask(c) => {
                 alpha_cutoff = c;
-                flags |= StandardMaterialFlags::ALPHA_MODE_MASK;
+                flags |= ArrayTextureMaterialFlags::ALPHA_MODE_MASK;
             }
-            AlphaMode::Blend => flags |= StandardMaterialFlags::ALPHA_MODE_BLEND,
-            AlphaMode::Premultiplied => flags |= StandardMaterialFlags::ALPHA_MODE_PREMULTIPLIED,
-            AlphaMode::Add => flags |= StandardMaterialFlags::ALPHA_MODE_ADD,
-            AlphaMode::Multiply => flags |= StandardMaterialFlags::ALPHA_MODE_MULTIPLY,
+            AlphaMode::Blend => flags |= ArrayTextureMaterialFlags::ALPHA_MODE_BLEND,
+            AlphaMode::Premultiplied => flags |= ArrayTextureMaterialFlags::ALPHA_MODE_PREMULTIPLIED,
+            AlphaMode::Add => flags |= ArrayTextureMaterialFlags::ALPHA_MODE_ADD,
+            AlphaMode::Multiply => flags |= ArrayTextureMaterialFlags::ALPHA_MODE_MULTIPLY,
         };
+
+        if self.attenuation_distance.is_finite() {
+            flags |= ArrayTextureMaterialFlags::ATTENUATION_ENABLED;
+        }
 
         ArrayTextureMaterialUniform {
             base_color: self.base_color.as_linear_rgba_f32().into(),
@@ -476,20 +737,22 @@ impl AsBindGroupShaderType<ArrayTextureMaterialUniform> for ArrayTextureMaterial
             roughness: self.perceptual_roughness,
             metallic: self.metallic,
             reflectance: self.reflectance,
+            diffuse_transmission: self.diffuse_transmission,
+            specular_transmission: self.specular_transmission,
+            thickness: self.thickness,
+            ior: self.ior,
+            attenuation_distance: self.attenuation_distance,
+            attenuation_color: self.attenuation_color.as_linear_rgba_f32().into(),
             flags: flags.bits(),
             alpha_cutoff,
             parallax_depth_scale: self.parallax_depth_scale,
             max_parallax_layer_count: self.max_parallax_layer_count,
-            max_relief_mapping_search_steps: parallax_mapping_method_max_steps(self.parallax_mapping_method),
+            max_relief_mapping_search_steps: match self.parallax_mapping_method {
+                ParallaxMappingMethod::Occlusion => 0,
+                ParallaxMappingMethod::Relief { max_steps } => max_steps,
+            },
+            deferred_lighting_pass_id: self.deferred_lighting_pass_id as u32,
         }
-    }
-}
-
-/// Idk i copied this from standard material and it had no docs there
-pub fn parallax_mapping_method_max_steps(p: ParallaxMappingMethod) -> u32 {
-    match p {
-        ParallaxMappingMethod::Occlusion => 0,
-        ParallaxMappingMethod::Relief { max_steps } => max_steps,
     }
 }
 
@@ -530,6 +793,14 @@ impl Material for ArrayTextureMaterial {
         //         shader_defs.push("RELIEF_MAPPING".into());
         //     }
         // }
+        // descriptor.primitive.cull_mode = key.bind_group_data.cull_mode;
+        // if let Some(label) = &mut descriptor.label {
+        //     *label = format!("pbr_{}", *label).into();
+        // }
+        // if let Some(depth_stencil) = descriptor.depth_stencil.as_mut() {
+        //     depth_stencil.bias.constant = key.bind_group_data.depth_bias;
+        // }
+        // Ok(())
 
         let vertex_layout = layout.get_layout(&[
             Mesh::ATTRIBUTE_POSITION.at_shader_location(0),
@@ -542,13 +813,6 @@ impl Material for ArrayTextureMaterial {
 
         descriptor.vertex.buffers = vec![vertex_layout];
 
-        // descriptor.primitive.cull_mode = key.bind_group_data.cull_mode;
-        // if let Some(label) = &mut descriptor.label {
-        //     *label = format!("pbr_{}", *label).into();
-        // }
-        // if let Some(depth_stencil) = descriptor.depth_stencil.as_mut() {
-        //     depth_stencil.bias.constant = key.bind_group_data.depth_bias;
-        // }
         Ok(())
     }
 
@@ -576,6 +840,26 @@ impl Material for ArrayTextureMaterial {
     #[inline]
     fn depth_bias(&self) -> f32 {
         self.depth_bias
+    }
+
+    #[inline]
+    fn reads_view_transmission_texture(&self) -> bool {
+        self.specular_transmission > 0.0
+    }
+
+    #[inline]
+    fn opaque_render_method(&self) -> OpaqueRendererMethod {
+        match self.opaque_render_method {
+            // For now, diffuse transmission doesn't work under deferred rendering as we don't pack
+            // the required data into the GBuffer. If this material is set to `Auto`, we report it as
+            // `Forward` so that it's rendered correctly, even when the `DefaultOpaqueRendererMethod`
+            // is set to `Deferred`.
+            //
+            // If the developer explicitly sets the `OpaqueRendererMethod` to `Deferred`, we assume
+            // they know what they're doing and don't override it.
+            OpaqueRendererMethod::Auto if self.diffuse_transmission > 0.0 => OpaqueRendererMethod::Forward,
+            other => other,
+        }
     }
 }
 

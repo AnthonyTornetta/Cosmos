@@ -1,7 +1,6 @@
 // Stolen and heavily modified from: https://github.com/janhohenheim/foxtrot/blob/main/assets/shaders/repeated.wgsl - TY!
 
 #import bevy_pbr::mesh_vertex_output MeshVertexOutput
-#import bevy_pbr::mesh_vertex_output as OutputTypes
 #import bevy_pbr::pbr_functions as PbrCore
 #import bevy_pbr::pbr_bindings as MaterialBindings
 #import bevy_pbr::pbr_types as PbrTypes

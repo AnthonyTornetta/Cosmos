@@ -1,21 +1,10 @@
-#import bevy_pbr::pbr_types             STANDARD_MATERIAL_FLAGS_DOUBLE_SIDED_BIT
-#import bevy_pbr::mesh_functions as mesh_functions
-#import bevy_pbr::mesh_view_bindings globals
-
-#import bevy_pbr::pbr_functions as pbr_functions
-#import bevy_pbr::pbr_bindings as pbr_bindings
-#import bevy_pbr::pbr_types as pbr_types
-#import bevy_pbr::prepass_utils
-
-#import bevy_pbr::mesh_bindings            mesh
-#import bevy_pbr::mesh_view_bindings       view, fog, screen_space_ambient_occlusion_texture
-#import bevy_pbr::mesh_view_types          FOG_MODE_OFF
-#import bevy_core_pipeline::tonemapping    screen_space_dither, powsafe, tone_mapping
-#import bevy_pbr::parallax_mapping         parallaxed_uv
-
-#ifdef SCREEN_SPACE_AMBIENT_OCCLUSION
-#import bevy_pbr::gtao_utils gtao_multibounce
-#endif
+#import bevy_pbr::{
+    mesh_functions,
+    skinning,
+    morph::morph,
+    view_transformations::position_world_to_clip,
+}
+#import bevy_render::instance_index::get_instance_index
 
 @group(1) @binding(1)
 var my_array_texture: texture_2d_array<f32>;

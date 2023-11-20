@@ -58,3 +58,4 @@ walkdir = { workspace = true }
 thread-priority = { workspace = true }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
+bitflags = { workspace = true }
