@@ -6,7 +6,10 @@ use std::{
     sync::{Arc, RwLock, RwLockReadGuard},
 };
 
-use bevy::prelude::{info, App, EventWriter, OnExit, ResMut, Resource, Vec3};
+use bevy::{
+    log::info,
+    prelude::{App, EventWriter, OnExit, ResMut, Resource, Vec3},
+};
 use cosmos_core::{
     block::{Block, BlockFace},
     events::block_events::BlockChangedEvent,

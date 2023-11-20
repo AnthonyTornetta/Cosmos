@@ -1,6 +1,9 @@
 //! Syncs the inventories with the server-provided inventories
 
-use bevy::prelude::{in_state, warn, App, Commands, Entity, IntoSystemConfigs, Query, Res, ResMut, Update};
+use bevy::{
+    log::warn,
+    prelude::{in_state, App, Commands, Entity, IntoSystemConfigs, Query, Res, ResMut, Update},
+};
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     ecs::NeedsDespawned,

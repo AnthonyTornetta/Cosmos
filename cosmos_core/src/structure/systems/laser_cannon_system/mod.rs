@@ -478,7 +478,7 @@ fn block_update_system(
     mut system_query: Query<&mut LaserCannonSystem>,
     systems_query: Query<&Systems>,
 ) {
-    for ev in event.iter() {
+    for ev in event.read() {
         if let Ok(systems) = systems_query.get(ev.structure_entity) {
             if let Ok(mut system) = systems.query_mut(&mut system_query) {
                 let old_block = blocks.from_numeric_id(ev.old_block);
@@ -518,7 +518,7 @@ fn structure_loaded_event(
     mut commands: Commands,
     laser_cannon_blocks: Res<LaserCannonBlocks>,
 ) {
-    for ev in event_reader.iter() {
+    for ev in event_reader.read() {
         if let Ok((structure, mut systems)) = structure_query.get_mut(ev.structure_entity) {
             let mut system = LaserCannonSystem::default();
 

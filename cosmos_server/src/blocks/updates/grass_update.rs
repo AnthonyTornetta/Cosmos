@@ -16,7 +16,7 @@ fn monitor_grass_updated(
     mut event_reader: EventReader<MutEvent<BlockUpdate>>,
     mut event_writer: EventWriter<BlockChangedEvent>,
 ) {
-    for ev in event_reader.iter() {
+    for ev in event_reader.read() {
         let ev = ev.read();
 
         if ev.cancelled() {

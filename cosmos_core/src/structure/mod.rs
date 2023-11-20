@@ -4,7 +4,7 @@
 
 use std::fmt::Display;
 
-use bevy::prelude::{App, ComputedVisibility, Event, IntoSystemConfigs, Name, PreUpdate, Visibility};
+use bevy::prelude::{App, Event, IntoSystemConfigs, Name, PreUpdate, VisibilityBundle};
 use bevy::reflect::Reflect;
 use bevy::transform::TransformBundle;
 use bevy::utils::{HashMap, HashSet};
@@ -505,7 +505,7 @@ fn remove_empty_chunks(
     mut structure_query: Query<&mut Structure>,
     mut commands: Commands,
 ) {
-    for bce in block_change_event.iter() {
+    for bce in block_change_event.read() {
         let Ok(mut structure) = structure_query.get_mut(bce.structure_entity) else {
             continue;
         };
@@ -531,8 +531,7 @@ fn spawn_chunk_entity(
     chunk_set_events: &mut HashSet<ChunkSetEvent>,
 ) {
     let mut entity_cmds = commands.spawn((
-        Visibility::default(),
-        ComputedVisibility::default(),
+        VisibilityBundle::default(),
         TransformBundle::from_transform(Transform::from_translation(structure.chunk_relative_position(chunk_coordinate))),
         Name::new("Chunk Entity"),
         NoSendEntity,
@@ -568,11 +567,11 @@ fn add_chunks_system(
     let mut s_chunks = HashSet::new();
     let mut chunk_set_events = HashSet::new();
 
-    for ev in block_reader.iter() {
+    for ev in block_reader.read() {
         s_chunks.insert((ev.structure_entity, ev.block.chunk_coords()));
     }
 
-    for ev in chunk_init_reader.iter() {
+    for ev in chunk_init_reader.read() {
         s_chunks.insert((ev.structure_entity, ev.coords));
         chunk_set_events.insert(ChunkSetEvent {
             structure_entity: ev.structure_entity,

@@ -55,10 +55,10 @@ fn send_position(
 }
 
 // Just for testing
-fn send_disconnect(input_handler: InputChecker, transport: Option<ResMut<NetcodeClientTransport>>) {
+fn send_disconnect(input_handler: InputChecker, transport: Option<ResMut<NetcodeClientTransport>>, client: Res<RenetClient>) {
     if input_handler.check_just_pressed(CosmosInputs::Disconnect) {
         if let Some(mut transport) = transport {
-            if transport.is_connected() {
+            if client.is_connected() {
                 info!("SENDING DC MESSAGE!");
                 transport.disconnect();
             }

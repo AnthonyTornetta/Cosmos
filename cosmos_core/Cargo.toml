@@ -29,13 +29,13 @@ default = [
     "bevy/zstd",
     "bevy/x11",
     "bevy/ktx2",
-    "bevy/filesystem_watcher",
     "bevy/tonemapping_luts",
+    "bevy/multi-threaded",
 ]
 
 [dependencies]
 bevy = { workspace = true }
-bevy_renet = { workspace = true }
+bevy_renet = { workspace = true, features = ["serde"] }
 serde = { workspace = true }
 bincode = { workspace = true }
 local-ip-address = { workspace = true }
@@ -49,3 +49,4 @@ rayon = { workspace = true }
 lz4_flex = { workspace = true }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
+bitflags = { workspace = true }

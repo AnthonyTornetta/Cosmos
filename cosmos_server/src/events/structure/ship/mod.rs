@@ -29,7 +29,7 @@ fn monitor_set_movement_events(
     mut event_reader: EventReader<ShipSetMovementEvent>,
     mut server: ResMut<RenetServer>,
 ) {
-    for ev in event_reader.iter() {
+    for ev in event_reader.read() {
         if let Ok(mut current_movement) = query.get_mut(ev.ship) {
             *current_movement = ev.movement;
 
@@ -45,7 +45,7 @@ fn monitor_set_movement_events(
 }
 
 fn monitor_pilot_changes(mut event_reader: EventReader<ChangePilotEvent>, mut server: ResMut<RenetServer>) {
-    for ev in event_reader.iter() {
+    for ev in event_reader.read() {
         server.broadcast_message(
             NettyChannelServer::Reliable,
             cosmos_encoder::serialize(&ServerReliableMessages::PilotChange {

@@ -93,7 +93,7 @@ fn block_update_system(
     mut system_query: Query<&mut EnergyStorageSystem>,
     systems_query: Query<&Systems>,
 ) {
-    for ev in event.iter() {
+    for ev in event.read() {
         if let Ok(systems) = systems_query.get(ev.structure_entity) {
             if let Ok(mut system) = systems.query_mut(&mut system_query) {
                 if let Some(prop) = energy_storage_blocks.get(blocks.from_numeric_id(ev.old_block)) {
@@ -115,7 +115,7 @@ fn structure_loaded_event(
     mut commands: Commands,
     thruster_blocks: Res<EnergyStorageBlocks>,
 ) {
-    for ev in event_reader.iter() {
+    for ev in event_reader.read() {
         if let Ok((structure, mut systems)) = structure_query.get_mut(ev.structure_entity) {
             let mut system = EnergyStorageSystem::default();
 

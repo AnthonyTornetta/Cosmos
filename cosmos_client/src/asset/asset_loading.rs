@@ -4,7 +4,11 @@
 
 use std::fs;
 
-use bevy::{prelude::*, utils::HashMap};
+use bevy::{
+    asset::{LoadState, LoadedFolder, RecursiveDependencyLoadState},
+    prelude::*,
+    utils::HashMap,
+};
 use cosmos_core::{
     block::{Block, BlockFace},
     loader::{AddLoadingEvent, DoneLoadingEvent, LoadingManager},
@@ -20,7 +24,7 @@ use super::texture_atlas::SquareTextureAtlas;
 struct LoadingTextureAtlas {
     unlocalized_name: String,
     id: u16,
-    handles: Vec<Handle<Image>>,
+    handles: Handle<LoadedFolder>,
 }
 
 impl Identifiable for LoadingTextureAtlas {
@@ -38,7 +42,7 @@ impl Identifiable for LoadingTextureAtlas {
 }
 
 impl LoadingTextureAtlas {
-    pub fn new(unlocalized_name: impl Into<String>, handles: Vec<Handle<Image>>) -> Self {
+    pub fn new(unlocalized_name: impl Into<String>, handles: Handle<LoadedFolder>) -> Self {
         Self {
             handles,
             id: 0,
@@ -65,12 +69,11 @@ fn setup_textures(
     mut loader: ResMut<LoadingManager>,
     mut start_writer: EventWriter<AddLoadingEvent>,
 ) {
-    let image_handles = server
-        .load_folder("cosmos/images/blocks/")
-        .expect("error loading blocks textures")
-        .into_iter()
-        .map(|x| x.typed::<Image>())
-        .collect();
+    let image_handles = server.load_folder("cosmos/images/blocks/");
+    // .expect("error loading blocks textures")
+    // .into_iter()
+    // .map(|x| x.typed::<Image>())
+    // .collect();
 
     loading.register(LoadingTextureAtlas::new("cosmos:main", image_handles));
 
@@ -134,46 +137,51 @@ fn check_assets_ready(
     mut texture_atlases: ResMut<Registry<CosmosTextureAtlas>>,
     mut images: ResMut<Assets<Image>>,
     mut event_writer: EventWriter<AllTexturesDoneLoadingEvent>,
+    mut ev_asset_folder_event: EventReader<AssetEvent<LoadedFolder>>,
+    loaded_folders: Res<Assets<LoadedFolder>>,
 ) {
-    use bevy::asset::LoadState;
+    for ev in ev_asset_folder_event.read() {
+        if let AssetEvent::LoadedWithDependencies { id } = ev {
+            let asset = server.get_id_handle::<LoadedFolder>(*id).unwrap();
 
-    let mut handles = Vec::new();
-    for la in loading.iter().map(|h| &h.handles) {
-        for handle in la.iter() {
-            handles.push(handle.id());
-        }
-    }
+            if let Some(loaded_folder) = loaded_folders.get(asset) {
+                // all assets are now ready, construct texture atlas
+                // for better performance
 
-    match server.get_group_load_state(handles) {
-        LoadState::Failed => {
-            panic!("Failed to load asset!!");
-        }
-        LoadState::Loaded => {
-            // all assets are now ready, construct texture atlas
-            // for better performance
-
-            for asset in loading.iter() {
                 let mut texture_atlas_builder = SquareTextureAtlasBuilder::new(16);
 
-                for handle in asset.handles.iter() {
-                    texture_atlas_builder.add_texture(handle.clone());
+                for handle in loaded_folder.handles.iter() {
+                    texture_atlas_builder.add_texture(handle.clone().typed::<Image>());
                 }
 
                 let atlas = texture_atlas_builder.create_atlas(&mut images);
 
                 texture_atlases.register(CosmosTextureAtlas::new("cosmos:main", atlas));
+
+                // Clear out handles to avoid continually checking
+                commands.remove_resource::<Registry<LoadingTextureAtlas>>();
+
+                // (note: if you don't have any other handles to the assets
+                // elsewhere, they will get unloaded after this)
+
+                event_writer.send(AllTexturesDoneLoadingEvent);
             }
-
-            // Clear out handles to avoid continually checking
-            commands.remove_resource::<Registry<LoadingTextureAtlas>>();
-
-            // (note: if you don't have any other handles to the assets
-            // elsewhere, they will get unloaded after this)
-
-            event_writer.send(AllTexturesDoneLoadingEvent);
         }
-        _ => {
-            // NotLoaded/Loading: not fully ready yet
+    }
+
+    // let mut handles = Vec::new();
+    for folder_handle in loading.iter().map(|h| &h.handles) {
+        let load_state = server.get_load_state(folder_handle);
+        if load_state == Some(LoadState::Loaded) || load_state == Some(LoadState::Failed) {
+            match server.get_recursive_dependency_load_state(folder_handle) {
+                Some(RecursiveDependencyLoadState::Loaded) => {}
+                Some(RecursiveDependencyLoadState::Failed) => {
+                    panic!("Failed to load asset!!");
+                }
+                _ => {
+                    // NotLoaded/Loading: not fully ready yet
+                }
+            }
         }
     }
 }
@@ -297,7 +305,11 @@ pub fn load_block_rendering_information(
         .from_id("cosmos:main")
         .expect("Missing main atlas!")
         .texture_atlas
-        .get_texture_index(&server.get_handle("cosmos/images/blocks/missing.png"))
+        .get_texture_index(
+            &server
+                .get_handle("cosmos/images/blocks/missing.png")
+                .expect("Missing missing texture!!!! *world ends*"),
+        )
     {
         registry.register(BlockTextureIndex {
             id: 0,
@@ -355,7 +367,7 @@ pub fn load_block_rendering_information(
                 .from_id("cosmos:main") // Eventually load this via the block_info file
                 .expect("No main atlas")
                 .texture_atlas
-                .get_texture_index(&server.get_handle(&format!("{mod_id}/images/blocks/{name}.png",)))
+                .get_texture_index(&server.get_handle(&format!("{mod_id}/images/blocks/{name}.png")).unwrap_or_default())
             {
                 map.insert(entry.to_owned(), index);
             }

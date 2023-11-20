@@ -26,7 +26,7 @@ default = [
     "bevy/zstd",
     "bevy/x11",
     "bevy/ktx2",
-    "bevy/filesystem_watcher",
+    "bevy/multi-threaded",
     "bevy/tonemapping_luts",
 ]
 
@@ -36,7 +36,7 @@ cosmos_core = { version = "0.0.5", path = "../cosmos_core", features = [
 ] }
 
 bevy = { workspace = true }
-bevy_renet = { workspace = true }
+bevy_renet = { workspace = true, features = ["serde"] }
 serde = { workspace = true }
 bincode = { workspace = true }
 local-ip-address = { workspace = true }
@@ -59,3 +59,4 @@ toml = { workspace = true }
 thread-priority = { workspace = true }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
+bitflags = { workspace = true }

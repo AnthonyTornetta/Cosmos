@@ -66,7 +66,7 @@ fn handle_block_break_events(
     mut player_query: Query<(&mut Inventory, Option<&BuildMode>, Option<&Parent>)>,
     mut event_writer: EventWriter<BlockChangedEvent>,
 ) {
-    for ev in event_reader.iter() {
+    for ev in event_reader.read() {
         if let Ok((mut inventory, build_mode, parent)) = player_query.get_mut(ev.breaker) {
             if let Ok(mut structure) = query.get_mut(ev.structure_entity) {
                 let mut structure_blocks = vec![(ev.block.coords(), BlockFace::Top)];
@@ -211,7 +211,7 @@ fn handle_block_place_events(
     blocks: Res<Registry<Block>>,
     block_items: Res<BlockItems>,
 ) {
-    for ev in event_reader.iter() {
+    for ev in event_reader.read() {
         let Ok((mut inv, build_mode, parent)) = player_query.get_mut(ev.placer) else {
             continue;
         };

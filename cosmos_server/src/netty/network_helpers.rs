@@ -4,30 +4,31 @@ use bevy::{
     prelude::{Entity, Resource},
     utils::HashMap,
 };
+use bevy_renet::renet::ClientId;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Default, Resource)]
 /// Maps each player's id to their player entity
 pub struct ServerLobby {
-    players: HashMap<u64, Entity>,
+    players: HashMap<ClientId, Entity>,
 }
 
 impl ServerLobby {
     #[inline]
     /// Gets a player's entity from their id, or returns None if no player was found
-    pub fn player_from_id(&self, id: u64) -> Option<Entity> {
+    pub fn player_from_id(&self, id: ClientId) -> Option<Entity> {
         self.players.get(&id).copied()
     }
 
     /// Inserts a player with that id into the lobby
-    pub fn add_player(&mut self, id: u64, player_entity: Entity) {
+    pub fn add_player(&mut self, id: ClientId, player_entity: Entity) {
         self.players.insert(id, player_entity);
     }
 
     /// Removes the player with that id from the lobby
     ///
     /// Returns the entity if one was successfully removed
-    pub fn remove_player(&mut self, id: u64) -> Option<Entity> {
+    pub fn remove_player(&mut self, id: ClientId) -> Option<Entity> {
         self.players.remove(&id)
     }
 }
@@ -40,5 +41,5 @@ pub struct NetworkTick(pub u64);
 /// Unused currently, but will eventually store each client's individual ticks
 pub struct ClientTicks {
     /// Unused currently, but will eventually store each client's individual ticks
-    pub ticks: HashMap<u64, Option<u32>>,
+    pub ticks: HashMap<ClientId, Option<u32>>,
 }

@@ -10,7 +10,7 @@ fn take_damage_reader(
     mut event_reader: EventReader<BlockTakeDamageEvent>,
     blocks: Res<Registry<Block>>,
 ) {
-    for ev in event_reader.iter() {
+    for ev in event_reader.read() {
         let Ok(mut structure) = structure_query.get_mut(ev.structure_entity) else {
             continue;
         };

@@ -17,7 +17,7 @@ use crate::{
 };
 
 fn on_request_star(mut event_reader: EventReader<RequestedEntityEvent>, query: Query<&Star>, mut server: ResMut<RenetServer>) {
-    for ev in event_reader.iter() {
+    for ev in event_reader.read() {
         if let Ok(star) = query.get(ev.entity) {
             server.send_message(
                 ev.client_id,

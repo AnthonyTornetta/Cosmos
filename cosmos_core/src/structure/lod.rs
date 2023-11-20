@@ -5,7 +5,10 @@ use std::{
     sync::{Arc, RwLock, RwLockReadGuard},
 };
 
-use bevy::prelude::{warn, Component, Entity};
+use bevy::{
+    log::warn,
+    prelude::{Component, Entity},
+};
 use serde::{Deserialize, Serialize};
 
 use super::lod_chunk::LodChunk;

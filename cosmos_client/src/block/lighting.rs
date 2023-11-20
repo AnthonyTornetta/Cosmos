@@ -1,7 +1,8 @@
 //! Handles all the blocks with lighting in the game
 
 use bevy::{
-    prelude::{warn, App, Color, OnExit, Res, ResMut},
+    log::warn,
+    prelude::{App, Color, OnExit, Res, ResMut},
     reflect::Reflect,
 };
 use cosmos_core::{

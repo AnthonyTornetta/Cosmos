@@ -89,14 +89,14 @@ impl SquareTextureAtlasBuilder {
             .iter()
             .map(|image_handle| {
                 let image = textures.get(image_handle).expect("Given invalid image");
-                total_height += image.size().y as u32;
+                total_height += image.size().y;
 
                 indices.insert(image_handle.clone_weak(), current_index);
 
-                let img_ratio = image.size().y / self.texture_dimensions as f32;
+                let img_ratio = image.size().y as f32 / self.texture_dimensions as f32;
 
                 assert_eq!(
-                    image.size().x as u32,
+                    { image.size().x },
                     self.texture_dimensions,
                     "Invalid image width -- {}. Must be exactly {}",
                     image.size().x,
@@ -111,7 +111,7 @@ impl SquareTextureAtlasBuilder {
                     self.texture_dimensions
                 );
 
-                current_index += image.size().y as u32 / self.texture_dimensions;
+                current_index += image.size().y / self.texture_dimensions;
 
                 image
             })
@@ -140,7 +140,7 @@ impl SquareTextureAtlasBuilder {
             y = next_y;
         }
 
-        let (width, height) = (atlas_texture.size().x as u32, atlas_texture.size().y as u32);
+        let (width, height) = (atlas_texture.size().x, atlas_texture.size().y);
 
         atlas_texture.reinterpret_stacked_2d_as_array(total_height / self.texture_dimensions);
 

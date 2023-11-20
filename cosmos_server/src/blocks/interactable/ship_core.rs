@@ -20,7 +20,7 @@ fn handle_block_event(
 ) {
     let block = blocks.from_id("cosmos:ship_core").expect("ship core block missing!");
 
-    for ev in interact_events.iter() {
+    for ev in interact_events.read() {
         if let Ok(structure) = s_query.get(ev.structure_entity) {
             let block_id = ev.structure_block.block_id(structure);
 

@@ -2,15 +2,10 @@
 //!
 //! This should eventually be broken up
 
-use bevy::{
-    core_pipeline::{bloom::BloomSettings, Skybox},
-    prelude::*,
-    render::camera::Projection,
-    window::PrimaryWindow,
-};
+use bevy::{core_pipeline::bloom::BloomSettings, prelude::*, render::camera::Projection, window::PrimaryWindow};
 use bevy_kira_audio::prelude::AudioReceiver;
 use bevy_rapier3d::prelude::*;
-use bevy_renet::renet::{transport::NetcodeClientTransport, RenetClient};
+use bevy_renet::renet::{transport::NetcodeClientTransport, ClientId, RenetClient};
 use cosmos_core::{
     block::Block,
     ecs::{bundles::CosmosPbrBundle, NeedsDespawned},
@@ -201,7 +196,7 @@ pub(crate) fn client_sync_players(
 
     (mut build_mode_enter, mut build_mode_exit): (EventWriter<EnterBuildModeEvent>, EventWriter<ExitBuildModeEvent>),
 ) {
-    let client_id = transport.client_id();
+    let client_id = ClientId::from_raw(transport.client_id());
 
     requested_entities.entities.retain_mut(|x| {
         x.seconds_since_request += time.delta_seconds();
@@ -372,7 +367,6 @@ pub(crate) fn client_sync_players(
                                 },
                                 BloomSettings { ..Default::default() },
                                 CameraHelper::default(),
-                                Skybox(Handle::default()),
                                 Name::new("Main Camera"),
                                 MainCamera,
                                 // No double UI rendering

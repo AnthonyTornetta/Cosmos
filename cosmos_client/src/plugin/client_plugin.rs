@@ -17,7 +17,7 @@ pub struct ClientPluginGroup;
 impl PluginGroup for ClientPluginGroup {
     fn build(self) -> PluginGroupBuilder {
         PluginGroupBuilder::start::<Self>()
-            .add(WinitPlugin)
+            .add(WinitPlugin { run_on_any_thread: false })
             .add(TextPlugin)
             .add(UiPlugin)
             .add(PbrPlugin::default())

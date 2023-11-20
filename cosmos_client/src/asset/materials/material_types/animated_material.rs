@@ -1,10 +1,10 @@
 use crate::asset::{
     asset_loading::{AllTexturesDoneLoadingEvent, AssetsDoneLoadingEvent, CosmosTextureAtlas},
-    materials::animated_material::AnimatedArrayTextureMaterial,
+    materials::animated_material::{AnimatedArrayTextureMaterial, ATTRIBUTE_PACKED_ANIMATION_DATA},
 };
 
 use super::super::*;
-use bevy::{prelude::Commands, render::render_resource::VertexFormat, utils::HashMap};
+use bevy::{prelude::Commands, utils::HashMap};
 use serde::{Deserialize, Serialize};
 
 #[derive(Resource)]
@@ -16,12 +16,6 @@ pub(crate) struct TransparentMaterial(pub Handle<AnimatedArrayTextureMaterial>);
 #[derive(Resource)]
 pub(crate) struct UnlitTransparentMaterial(pub Handle<AnimatedArrayTextureMaterial>);
 
-/// Specifies the texture index to use
-pub const ATTRIBUTE_PACKED_ANIMATION_DATA: MeshVertexAttribute =
-    // A "high" random id should be used for custom attributes to ensure consistent sorting and avoid collisions with other attributes.
-    // See the MeshVertexAttribute docs for more info.
-    MeshVertexAttribute::new("ArrayTextureIndex", 2212350841, VertexFormat::Uint32);
-
 fn respond_to_add_materials_event(
     material_registry: Res<Registry<MaterialDefinition>>,
     mut commands: Commands,
@@ -32,7 +26,7 @@ fn respond_to_add_materials_event(
     transparent_material: Res<TransparentMaterial>,
     unlit_transparent_material: Res<UnlitTransparentMaterial>,
 ) {
-    for ev in event_reader.iter() {
+    for ev in event_reader.read() {
         let mat = material_registry.from_numeric_id(ev.add_material_id);
 
         match mat.unlocalized_name() {
@@ -63,7 +57,7 @@ fn respond_to_add_materials_event(
 }
 
 fn respond_to_remove_materails_event(mut event_reader: EventReader<RemoveAllMaterialsEvent>, mut commands: Commands) {
-    for ev in event_reader.iter() {
+    for ev in event_reader.read() {
         commands.entity(ev.entity).remove::<Handle<AnimatedArrayTextureMaterial>>();
     }
 }

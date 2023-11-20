@@ -307,7 +307,7 @@ fn listen_for_new_physics_event(
         return;
     }
 
-    let to_process = event_reader.iter().collect::<Vec<&ChunkNeedsPhysicsEvent>>();
+    let to_process = event_reader.read().collect::<Vec<&ChunkNeedsPhysicsEvent>>();
 
     let mut todo = Vec::with_capacity(to_process.capacity());
     // clean up old collider entities
@@ -418,7 +418,7 @@ fn clean_unloaded_chunks(
     mut physics_components_query: Query<&mut ChunkPhysicsParts>,
     mut event_reader: EventReader<ChunkUnloadEvent>,
 ) {
-    for ev in event_reader.iter() {
+    for ev in event_reader.read() {
         remove_chunk_colliders(&mut commands, &mut physics_components_query, ev.structure_entity, ev.chunk_entity);
     }
 }
@@ -464,14 +464,14 @@ fn listen_for_structure_event(
 ) {
     let mut to_do: HashSet<ChunkNeedsPhysicsEvent> = HashSet::new();
 
-    for ev in event.iter() {
+    for ev in event.read() {
         to_do.insert(ChunkNeedsPhysicsEvent {
             chunk: (ev.block.chunk_coords()),
             structure_entity: ev.structure_entity,
         });
     }
 
-    for ev in chunk_set_event.iter() {
+    for ev in chunk_set_event.read() {
         to_do.insert(ChunkNeedsPhysicsEvent {
             chunk: ev.coords,
             structure_entity: ev.structure_entity,

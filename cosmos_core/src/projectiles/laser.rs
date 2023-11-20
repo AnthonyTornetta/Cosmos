@@ -2,10 +2,11 @@
 //! it to take damage. Use `Laser::spawn` to create a laser.
 
 use bevy::{
+    log::warn,
     pbr::{NotShadowCaster, NotShadowReceiver},
     prelude::{
-        warn, App, Commands, Component, Entity, Event, EventWriter, GlobalTransform, Parent, Quat, Query, Res, Transform, Update, Vec3,
-        With, Without,
+        App, Commands, Component, Entity, Event, EventWriter, GlobalTransform, Parent, Quat, Query, Res, Transform, Update, Vec3, With,
+        Without,
     },
     time::Time,
 };

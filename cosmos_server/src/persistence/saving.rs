@@ -8,7 +8,8 @@
 //! See [`saving::default_save`] for an example.
 
 use bevy::{
-    prelude::{warn, App, Commands, Component, Entity, First, IntoSystemConfigs, PostUpdate, Query, ResMut, With, Without},
+    log::warn,
+    prelude::{App, Commands, Component, Entity, First, IntoSystemConfigs, PostUpdate, Query, ResMut, With, Without},
     reflect::Reflect,
 };
 use bevy_rapier3d::prelude::Velocity;

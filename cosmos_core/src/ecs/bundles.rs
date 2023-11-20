@@ -28,10 +28,12 @@ pub struct CosmosMaterialMeshBundle<M: Material> {
     pub material: Handle<M>,
     /// User indication of whether an entity is visible
     pub visibility: Visibility,
-    /// Algorithmically-computed indication of whether an entity is visible and should be extracted for rendering
-    pub computed_visibility: ComputedVisibility,
     /// The location of this entity
     pub location: Location,
     /// The rotation of this entity
     pub rotation: BundleStartingRotation,
+    /// Inherited visibility of an entity.
+    pub inherited_visibility: InheritedVisibility,
+    /// Algorithmically-computed indication of whether an entity is visible and should be extracted for rendering
+    pub view_visibility: ViewVisibility,
 }

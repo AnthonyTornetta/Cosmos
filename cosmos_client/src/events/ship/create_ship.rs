@@ -35,7 +35,7 @@ fn listener(
 }
 
 fn event_handler(mut event_reader: EventReader<CreateShipEvent>, mut client: ResMut<RenetClient>) {
-    for ev in event_reader.iter() {
+    for ev in event_reader.read() {
         client.send_message(
             NettyChannelClient::Reliable,
             cosmos_encoder::serialize(&ClientReliableMessages::CreateShip { name: ev.name.clone() }),

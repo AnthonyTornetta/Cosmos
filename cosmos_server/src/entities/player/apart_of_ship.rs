@@ -12,7 +12,7 @@ fn send_netty_info(
     mut server: ResMut<RenetServer>,
     is_apart_of_ship: Query<&ApartOfShip>,
 ) {
-    for ev in event_reader.iter() {
+    for ev in event_reader.read() {
         if let Ok(apart_of) = is_apart_of_ship.get(ev.entity) {
             server.send_message(
                 ev.client_id,

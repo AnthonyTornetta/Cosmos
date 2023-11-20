@@ -70,7 +70,7 @@ fn handle_events_system(
     mut rapier_context: ResMut<RapierContext>,
     mut requested_entity: EventWriter<RequestedEntityEvent>,
 ) {
-    for event in server_events.iter() {
+    for event in server_events.read() {
         match event {
             ServerEvent::ClientConnected { client_id } => {
                 let client_id = *client_id;

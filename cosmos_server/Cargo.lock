@@ -626,19 +626,6 @@ version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9960c19e582b43cebe1894b6679520a4f50802d1cc5b6fa432f8d685ed232f09"
 
-[[package]]
-name = "bevy_rapier3d"
-version = "0.16.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e9fd7a0ffc55bf7c127f9e1877481c57d42ff0f04530550cdf209dd136485ecb"
-dependencies = [
- "bevy",
- "bitflags",
- "log",
- "nalgebra",
- "rapier3d",
- "serde",
-]
 
 [[package]]
 name = "bevy_reflect"

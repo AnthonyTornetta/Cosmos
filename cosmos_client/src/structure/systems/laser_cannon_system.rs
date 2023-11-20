@@ -24,7 +24,7 @@ fn apply_thruster_sound(
     audio_handles: Res<LaserCannonFireHandles>,
     mut event_reader: EventReader<LaserCannonSystemFiredEvent>,
 ) {
-    for entity in event_reader.iter() {
+    for entity in event_reader.read() {
         let Ok((ship_location, ship_global_transform)) = query.get(entity.0) else {
             continue;
         };

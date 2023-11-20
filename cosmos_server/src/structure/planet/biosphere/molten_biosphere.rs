@@ -1,6 +1,9 @@
 //! Creates a molten planet
 
-use bevy::prelude::{warn, App, Component, Entity, Event, OnEnter, Res, ResMut};
+use bevy::{
+    log::warn,
+    prelude::{App, Component, Entity, Event, OnEnter, Res, ResMut},
+};
 use cosmos_core::{registry::Registry, structure::coordinates::ChunkCoordinate};
 
 use crate::GameState;

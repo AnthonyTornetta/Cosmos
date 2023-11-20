@@ -57,7 +57,7 @@ fn respond_to_collisions(
     mut renet_client: ResMut<RenetClient>,
     mapping: Res<NetworkMapping>,
 ) {
-    for ev in ev_reader.iter() {
+    for ev in ev_reader.read() {
         if let CollisionEvent::Started(e1, e2, _) = ev {
             if let Some((player_entity, hit)) = if is_local_player.contains(*e1) {
                 Some((*e1, *e2))

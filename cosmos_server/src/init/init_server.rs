@@ -26,15 +26,17 @@ pub fn init(app: &mut App, address: Option<String>) {
     let socket = UdpSocket::bind(format!("0.0.0.0:{port}")).unwrap();
     socket.set_nonblocking(true).expect("Cannot set non-blocking mode!");
 
+    let current_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap();
+
     let server_config = ServerConfig {
         max_clients: 20,
         protocol_id: PROTOCOL_ID,
-        public_addr,
+        public_addresses: vec![public_addr],
+        current_time,
         authentication: ServerAuthentication::Unsecure,
     };
-    let current_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap();
 
-    let transport = NetcodeServerTransport::new(current_time, server_config, socket).unwrap();
+    let transport = NetcodeServerTransport::new(server_config, socket).unwrap();
     let server = RenetServer::new(connection_config());
 
     app.insert_resource(ServerLobby::default())

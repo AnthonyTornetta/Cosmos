@@ -1,6 +1,7 @@
 //! Handles syncing entities
 
 use bevy::prelude::*;
+use bevy_renet::renet::ClientId;
 
 /// Entities requested are **NOT** guarenteed to exist!
 ///
@@ -8,7 +9,7 @@ use bevy::prelude::*;
 #[derive(Debug, Copy, Clone, Event)]
 pub struct RequestedEntityEvent {
     /// The client who requested this's id
-    pub client_id: u64,
+    pub client_id: ClientId,
     /// The entitiy they requested
     pub entity: Entity,
 }

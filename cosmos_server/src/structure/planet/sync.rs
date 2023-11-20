@@ -16,7 +16,7 @@ fn on_request_planet(
     query: Query<(&Structure, &Planet, &Location, &BiosphereMarker)>,
     mut server: ResMut<RenetServer>,
 ) {
-    for ev in event_reader.iter() {
+    for ev in event_reader.read() {
         if let Ok((structure, planet, location, biosphere_marker)) = query.get(ev.entity) {
             let Structure::Dynamic(dynamic_planet) = structure else {
                 panic!("Planet must be dynamic!");

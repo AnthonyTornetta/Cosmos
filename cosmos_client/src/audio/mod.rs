@@ -195,7 +195,7 @@ fn cleanup_despawning_audio_sources(
     mut attached_audio_sources: ResMut<AttachedAudioSources>,
     mut audio_instances: ResMut<Assets<AudioInstance>>,
 ) {
-    for entity in removed_emitters.iter() {
+    for entity in removed_emitters.read() {
         if let Some(instances) = attached_audio_sources.0.remove(&entity) {
             for (audio_instance, tween) in instances {
                 if let Some(mut ai) = audio_instances.remove(&audio_instance) {
