@@ -140,7 +140,7 @@ impl SquareTextureAtlasBuilder {
             y = next_y;
         }
 
-        let (width, height) = (atlas_texture.size().x as u32, atlas_texture.size().y as u32);
+        let (width, height) = (atlas_texture.size().x, atlas_texture.size().y);
 
         atlas_texture.reinterpret_stacked_2d_as_array(total_height / self.texture_dimensions);
 
