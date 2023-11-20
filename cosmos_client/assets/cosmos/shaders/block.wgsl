@@ -21,10 +21,6 @@
 #import bevy_pbr::gtao_utils::gtao_multibounce
 #endif
 
-#ifdef SCREEN_SPACE_AMBIENT_OCCLUSION
-#import bevy_pbr::gtao_utils gtao_multibounce
-#endif
-
 struct Vertex {
     @builtin(instance_index) instance_index: u32,
 #ifdef VERTEX_POSITIONS
@@ -169,17 +165,11 @@ fn vertex(vertex_no_morph: Vertex) -> VertexOutput {
     return out;
 }
 
-
-
-
-
-
-
-
-
-
+// 
+// 
 // FRAGMENT
-
+// 
+// 
 
 
 // prepare a basic PbrInput from the vertex stage output, mesh binding and view binding
