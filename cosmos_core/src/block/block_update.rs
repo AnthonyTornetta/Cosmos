@@ -61,7 +61,7 @@ pub fn send_block_updates(
     mut event_writer: EventWriter<MutEvent<BlockUpdate>>,
 ) {
     let block_updates = block_chage_event
-        .iter()
+        .read()
         .filter_map(|ev| {
             let Ok(structure) = structure_query.get(ev.structure_entity) else {
                 return None;
