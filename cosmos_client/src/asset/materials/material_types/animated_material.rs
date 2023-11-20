@@ -1,10 +1,10 @@
 use crate::asset::{
     asset_loading::{AllTexturesDoneLoadingEvent, AssetsDoneLoadingEvent, CosmosTextureAtlas},
-    materials::animated_material::AnimatedArrayTextureMaterial,
+    materials::animated_material::{AnimatedArrayTextureMaterial, ATTRIBUTE_PACKED_ANIMATION_DATA},
 };
 
 use super::super::*;
-use bevy::{prelude::Commands, render::render_resource::VertexFormat, utils::HashMap};
+use bevy::{prelude::Commands, utils::HashMap};
 use serde::{Deserialize, Serialize};
 
 #[derive(Resource)]
@@ -15,12 +15,6 @@ pub(crate) struct UnlitMaterial(pub Handle<AnimatedArrayTextureMaterial>);
 pub(crate) struct TransparentMaterial(pub Handle<AnimatedArrayTextureMaterial>);
 #[derive(Resource)]
 pub(crate) struct UnlitTransparentMaterial(pub Handle<AnimatedArrayTextureMaterial>);
-
-/// Specifies the texture index to use
-pub const ATTRIBUTE_PACKED_ANIMATION_DATA: MeshVertexAttribute =
-    // A "high" random id should be used for custom attributes to ensure consistent sorting and avoid collisions with other attributes.
-    // See the MeshVertexAttribute docs for more info.
-    MeshVertexAttribute::new("ArrayTextureIndex", 2212350841, VertexFormat::Uint32);
 
 fn respond_to_add_materials_event(
     material_registry: Res<Registry<MaterialDefinition>>,

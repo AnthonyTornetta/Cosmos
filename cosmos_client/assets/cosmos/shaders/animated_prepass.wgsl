@@ -1,44 +1,54 @@
-#import bevy_pbr::prepass_bindings
-#import bevy_pbr::pbr_bindings
-#import bevy_pbr::pbr_types
-#ifdef NORMAL_PREPASS
-#import bevy_pbr::pbr_functions
-#endif // NORMAL_PREPASS
-#import bevy_pbr::prepass_bindings globals
+#import bevy_pbr::{
+    pbr_prepass_functions,
+    pbr_bindings::material,
+    pbr_types,
+    pbr_functions,
+    prepass_io::FragmentOutput,
+    mesh_view_bindings::view,
+    pbr_bindings,
+    skinning,
+    mesh_functions,
+    morph,
+}
+#import bevy_render::instance_index::get_instance_index
 
-#import bevy_pbr::mesh_functions
-#import bevy_pbr::skinning
-#import bevy_pbr::morph
-#import bevy_pbr::mesh_bindings mesh
+#import bevy_pbr::prepass_bindings::globals
 
+#ifdef DEFERRED_PREPASS
+#import bevy_pbr::rgb9e5
+#endif
 
 @group(1) @binding(1)
 var my_array_texture: texture_2d_array<f32>;
 @group(1) @binding(2)
 var my_array_texture_sampler: sampler;
 
-// Ty: https://github.com/bevyengine/bevy/blob/v0.11.3/crates/bevy_pbr/src/prepass/prepass.wgsl
 
 // Most of these attributes are not used in the default prepass fragment shader, but they are still needed so we can
 // pass them to custom prepass shaders like pbr_prepass.wgsl.
 struct Vertex {
+    @builtin(instance_index) instance_index: u32,
     @location(0) position: vec3<f32>,
 
 #ifdef VERTEX_UVS
     @location(2) uv: vec2<f32>,
-#endif // VERTEX_UVS
+#endif
 
-#ifdef NORMAL_PREPASS
+#ifdef NORMAL_PREPASS_OR_DEFERRED_PREPASS
     @location(1) normal: vec3<f32>,
 #ifdef VERTEX_TANGENTS
     @location(3) tangent: vec4<f32>,
-#endif // VERTEX_TANGENTS
-#endif // NORMAL_PREPASS
+#endif
+#endif // NORMAL_PREPASS_OR_DEFERRED_PREPASS
 
 #ifdef SKINNED
     @location(4) joint_indices: vec4<u32>,
     @location(5) joint_weights: vec4<f32>,
-#endif // SKINNED
+#endif
+
+#ifdef VERTEX_COLORS
+    @location(6) color: vec4<f32>,
+#endif
 
 #ifdef MORPH_TARGETS
     @builtin(vertex_index) index: u32,
@@ -49,47 +59,55 @@ struct Vertex {
 }
 
 struct VertexOutput {
-    @builtin(position) clip_position: vec4<f32>,
+    // This is `clip position` when the struct is used as a vertex stage output
+    // and `frag coord` when used as a fragment stage input
+    @builtin(position) position: vec4<f32>,
 
 #ifdef VERTEX_UVS
     @location(0) uv: vec2<f32>,
-#endif // VERTEX_UVS
+#endif
 
-#ifdef NORMAL_PREPASS
+#ifdef NORMAL_PREPASS_OR_DEFERRED_PREPASS
     @location(1) world_normal: vec3<f32>,
 #ifdef VERTEX_TANGENTS
     @location(2) world_tangent: vec4<f32>,
-#endif // VERTEX_TANGENTS
-#endif // NORMAL_PREPASS
+#endif
+#endif // NORMAL_PREPASS_OR_DEFERRED_PREPASS
 
-#ifdef MOTION_VECTOR_PREPASS
     @location(3) world_position: vec4<f32>,
+#ifdef MOTION_VECTOR_PREPASS
     @location(4) previous_world_position: vec4<f32>,
-#endif // MOTION_VECTOR_PREPASS
+#endif
 
 #ifdef DEPTH_CLAMP_ORTHO
     @location(5) clip_position_unclamped: vec4<f32>,
 #endif // DEPTH_CLAMP_ORTHO
+#ifdef VERTEX_OUTPUT_INSTANCE_INDEX
+    @location(6) instance_index: u32,
+#endif
+
+#ifdef VERTEX_COLORS
+    @location(7) color: vec4<f32>,
+#endif
 
     @location(20) texture_index: u32,
-    @location(21) animation_data: u32,
 }
 
 #ifdef MORPH_TARGETS
 fn morph_vertex(vertex_in: Vertex) -> Vertex {
     var vertex = vertex_in;
-    let weight_count = bevy_pbr::morph::layer_count();
+    let weight_count = morph::layer_count();
     for (var i: u32 = 0u; i < weight_count; i ++) {
-        let weight = bevy_pbr::morph::weight_at(i);
+        let weight = morph::weight_at(i);
         if weight == 0.0 {
             continue;
         }
-        vertex.position += weight * bevy_pbr::morph::morph(vertex.index, bevy_pbr::morph::position_offset, i);
+        vertex.position += weight * morph::morph(vertex.index, morph::position_offset, i);
 #ifdef VERTEX_NORMALS
-        vertex.normal += weight * bevy_pbr::morph::morph(vertex.index, bevy_pbr::morph::normal_offset, i);
+        vertex.normal += weight * morph::morph(vertex.index, morph::normal_offset, i);
 #endif
 #ifdef VERTEX_TANGENTS
-        vertex.tangent += vec4(weight * bevy_pbr::morph::morph(vertex.index, bevy_pbr::morph::tangent_offset, i), 0.0);
+        vertex.tangent += vec4(weight * morph::morph(vertex.index, morph::tangent_offset, i), 0.0);
 #endif
     }
     return vertex;
@@ -101,119 +119,92 @@ fn vertex(vertex_no_morph: Vertex) -> VertexOutput {
     var out: VertexOutput;
 
 #ifdef MORPH_TARGETS
-    var vertex = morph_vertex(vertex_no_morph);
+    var vertex = morph::morph_vertex(vertex_no_morph);
 #else
     var vertex = vertex_no_morph;
 #endif
 
 #ifdef SKINNED
-    var model = bevy_pbr::skinning::skin_model(vertex.joint_indices, vertex.joint_weights);
+    var model = skinning::skin_model(vertex.joint_indices, vertex.joint_weights);
 #else // SKINNED
-    var model = mesh.model;
+    // Use vertex_no_morph.instance_index instead of vertex.instance_index to work around a wgpu dx12 bug.
+    // See https://github.com/gfx-rs/naga/issues/2416
+    var model = mesh_functions::get_model_matrix(vertex_no_morph.instance_index);
 #endif // SKINNED
 
-    out.clip_position = bevy_pbr::mesh_functions::mesh_position_local_to_clip(model, vec4(vertex.position, 1.0));
+    out.position = mesh_functions::mesh_position_local_to_clip(model, vec4(vertex.position, 1.0));
 #ifdef DEPTH_CLAMP_ORTHO
-    out.clip_position_unclamped = out.clip_position;
-    out.clip_position.z = min(out.clip_position.z, 1.0);
+    out.clip_position_unclamped = out.position;
+    out.position.z = min(out.position.z, 1.0);
 #endif // DEPTH_CLAMP_ORTHO
 
 #ifdef VERTEX_UVS
     out.uv = vertex.uv;
-#endif
+#endif // VERTEX_UVS
 
-#ifdef NORMAL_PREPASS
+#ifdef NORMAL_PREPASS_OR_DEFERRED_PREPASS
 #ifdef SKINNED
-    out.world_normal = bevy_pbr::skinning::skin_normals(model, vertex.normal);
+    out.world_normal = skinning::skin_normals(model, vertex.normal);
 #else // SKINNED
-    out.world_normal = bevy_pbr::mesh_functions::mesh_normal_local_to_world(vertex.normal);
+    out.world_normal = mesh_functions::mesh_normal_local_to_world(
+        vertex.normal,
+        // Use vertex_no_morph.instance_index instead of vertex.instance_index to work around a wgpu dx12 bug.
+        // See https://github.com/gfx-rs/naga/issues/2416
+        get_instance_index(vertex_no_morph.instance_index)
+    );
 #endif // SKINNED
 
 #ifdef VERTEX_TANGENTS
-    out.world_tangent = bevy_pbr::mesh_functions::mesh_tangent_local_to_world(model, vertex.tangent);
+    out.world_tangent = mesh_functions::mesh_tangent_local_to_world(
+        model,
+        vertex.tangent,
+        // Use vertex_no_morph.instance_index instead of vertex.instance_index to work around a wgpu dx12 bug.
+        // See https://github.com/gfx-rs/naga/issues/2416
+        get_instance_index(vertex_no_morph.instance_index)
+    );
 #endif // VERTEX_TANGENTS
-#endif // NORMAL_PREPASS
+#endif // NORMAL_PREPASS_OR_DEFERRED_PREPASS
+
+#ifdef VERTEX_COLORS
+    out.color = vertex.color;
+#endif
+
+#ifdef MOTION_VECTOR_PREPASS_OR_DEFERRED_PREPASS
+    out.world_position = mesh_functions::mesh_position_local_to_world(model, vec4<f32>(vertex.position, 1.0));
+#endif // MOTION_VECTOR_PREPASS_OR_DEFERRED_PREPASS
 
 #ifdef MOTION_VECTOR_PREPASS
-    out.world_position = bevy_pbr::mesh_functions::mesh_position_local_to_world(model, vec4<f32>(vertex.position, 1.0));
-    out.previous_world_position = bevy_pbr::mesh_functions::mesh_position_local_to_world(mesh.previous_model, vec4<f32>(vertex.position, 1.0));
+    // Use vertex_no_morph.instance_index instead of vertex.instance_index to work around a wgpu dx12 bug.
+    // See https://github.com/gfx-rs/naga/issues/2416
+    out.previous_world_position = mesh_functions::mesh_position_local_to_world(
+        mesh_functions::get_previous_model_matrix(vertex_no_morph.instance_index),
+        vec4<f32>(vertex.position, 1.0)
+    );
 #endif // MOTION_VECTOR_PREPASS
+
+#ifdef VERTEX_OUTPUT_INSTANCE_INDEX
+    // Use vertex_no_morph.instance_index instead of vertex.instance_index to work around a wgpu dx12 bug.
+    // See https://github.com/gfx-rs/naga/issues/2416
+    out.instance_index = get_instance_index(vertex_no_morph.instance_index);
+#endif
 
     var frame_duration_ms = f32(vertex.animation_data >> u32(16)) / 1000.0;
     var n_frames = vertex.animation_data & u32(0xFFFF);
 
-    var secs = u32(globals.time / frame_duration_ms) % n_frames;
+    var texture_index_offset = u32(globals.time / frame_duration_ms) % n_frames;
 
-    out.texture_index = vertex.texture_index + secs;
-
-    out.animation_data = vertex.animation_data;
+    out.texture_index = vertex.texture_index + texture_index_offset;
 
     return out;
 }
 
-
-
-
-
-
-
-
-
-
-
-// Cutoff used for the premultiplied alpha modes BLEND and ADD.
-const PREMULTIPLIED_ALPHA_CUTOFF = 0.05;
-
-// We can use a simplified version of alpha_discard() here since we only need to handle the alpha_cutoff
-fn prepass_alpha_discard(in: VertexOutput) {
-
-#ifdef MAY_DISCARD
-    var output_color: vec4<f32> = bevy_pbr::pbr_bindings::material.base_color;
-
-
-#ifdef VERTEX_UVS
-    if (bevy_pbr::pbr_bindings::material.flags & bevy_pbr::pbr_types::STANDARD_MATERIAL_FLAGS_BASE_COLOR_TEXTURE_BIT) != 0u {
-        output_color = output_color * textureSample(my_array_texture, my_array_texture_sampler, in.uv, in.texture_index);
-
-        // textureSampleBias(bevy_pbr::pbr_bindings::base_color_texture, bevy_pbr::pbr_bindings::base_color_sampler, in.uv, bevy_pbr::prepass_bindings::view.mip_bias);
-    }
-#endif // VERTEX_UVS
-
-    let alpha_mode = bevy_pbr::pbr_bindings::material.flags & bevy_pbr::pbr_types::STANDARD_MATERIAL_FLAGS_ALPHA_MODE_RESERVED_BITS;
-    if alpha_mode == bevy_pbr::pbr_types::STANDARD_MATERIAL_FLAGS_ALPHA_MODE_MASK {
-        if output_color.a < bevy_pbr::pbr_bindings::material.alpha_cutoff {
-            discard;
-        }
-    } else if (alpha_mode == bevy_pbr::pbr_types::STANDARD_MATERIAL_FLAGS_ALPHA_MODE_BLEND || alpha_mode == bevy_pbr::pbr_types::STANDARD_MATERIAL_FLAGS_ALPHA_MODE_ADD) {
-        if output_color.a < PREMULTIPLIED_ALPHA_CUTOFF {
-            discard;
-        }
-    } else if alpha_mode == bevy_pbr::pbr_types::STANDARD_MATERIAL_FLAGS_ALPHA_MODE_PREMULTIPLIED {
-        if all(output_color < vec4(PREMULTIPLIED_ALPHA_CUTOFF)) {
-            discard;
-        }
-    }
-
-#endif // MAY_DISCARD
-}
-
+// From https://github.com/bevyengine/bevy/blob/v0.12.0/crates/bevy_pbr/src/render/pbr_prepass.wgsl
 #ifdef PREPASS_FRAGMENT
-struct FragmentOutput {
-#ifdef NORMAL_PREPASS
-    @location(0) normal: vec4<f32>,
-#endif // NORMAL_PREPASS
-
-#ifdef MOTION_VECTOR_PREPASS
-    @location(1) motion_vector: vec2<f32>,
-#endif // MOTION_VECTOR_PREPASS
-
-#ifdef DEPTH_CLAMP_ORTHO
-    @builtin(frag_depth) frag_depth: f32,
-#endif // DEPTH_CLAMP_ORTHO
-}
-
 @fragment
-fn fragment(in: VertexOutput) -> FragmentOutput {
+fn fragment(
+    in: VertexOutput,
+    @builtin(front_facing) is_front: bool,
+) -> FragmentOutput {
     prepass_alpha_discard(in);
 
     var out: FragmentOutput;
@@ -224,16 +215,20 @@ fn fragment(in: VertexOutput) -> FragmentOutput {
 
 #ifdef NORMAL_PREPASS
     // NOTE: Unlit bit not set means == 0 is true, so the true case is if lit
-    if (bevy_pbr::pbr_bindings::material.flags & bevy_pbr::pbr_types::STANDARD_MATERIAL_FLAGS_UNLIT_BIT) == 0u {
-        let world_normal = bevy_pbr::pbr_functions::prepare_world_normal(
+    if (material.flags & pbr_types::STANDARD_MATERIAL_FLAGS_UNLIT_BIT) == 0u {
+        let double_sided = (material.flags & pbr_types::STANDARD_MATERIAL_FLAGS_DOUBLE_SIDED_BIT) != 0u;
+
+        let world_normal = pbr_functions::prepare_world_normal(
             in.world_normal,
-            (bevy_pbr::pbr_bindings::material.flags & bevy_pbr::pbr_types::STANDARD_MATERIAL_FLAGS_DOUBLE_SIDED_BIT) != 0u,
-            in.is_front,
+            double_sided,
+            is_front,
         );
 
-        let normal = bevy_pbr::pbr_functions::apply_normal_mapping(
-            bevy_pbr::pbr_bindings::material.flags,
+        let normal = pbr_functions::apply_normal_mapping(
+            material.flags,
             world_normal,
+            double_sided,
+            is_front,
 #ifdef VERTEX_TANGENTS
 #ifdef STANDARDMATERIAL_NORMAL_MAP
             in.world_tangent,
@@ -242,7 +237,7 @@ fn fragment(in: VertexOutput) -> FragmentOutput {
 #ifdef VERTEX_UVS
             in.uv,
 #endif // VERTEX_UVS
-            bevy_pbr::prepass_bindings::view.mip_bias,
+            view.mip_bias,
         );
 
         out.normal = vec4(normal * 0.5 + vec3(0.5), 1.0);
@@ -252,18 +247,8 @@ fn fragment(in: VertexOutput) -> FragmentOutput {
 #endif // NORMAL_PREPASS
 
 #ifdef MOTION_VECTOR_PREPASS
-    let clip_position_t = bevy_pbr::prepass_bindings::view.unjittered_view_proj * in.world_position;
-    let clip_position = clip_position_t.xy / clip_position_t.w;
-    let previous_clip_position_t = bevy_pbr::prepass_bindings::previous_view_proj * in.previous_world_position;
-    let previous_clip_position = previous_clip_position_t.xy / previous_clip_position_t.w;
-    // These motion vectors are used as offsets to UV positions and are stored
-    // in the range -1,1 to allow offsetting from the one corner to the
-    // diagonally-opposite corner in UV coordinates, in either direction.
-    // A difference between diagonally-opposite corners of clip space is in the
-    // range -2,2, so this needs to be scaled by 0.5. And the V direction goes
-    // down where clip space y goes up, so y needs to be flipped.
-    out.motion_vector = (clip_position - previous_clip_position) * vec2(0.5, -0.5);
-#endif // MOTION_VECTOR_PREPASS
+    out.motion_vector = pbr_prepass_functions::calculate_motion_vector(in.world_position, in.previous_world_position);
+#endif
 
     return out;
 }
@@ -273,3 +258,43 @@ fn fragment(in: VertexOutput) {
     prepass_alpha_discard(in);
 }
 #endif // PREPASS_FRAGMENT
+
+
+
+
+
+// From https://github.com/bevyengine/bevy/blob/v0.12.0/crates/bevy_pbr/src/render/pbr_prepass_functions.wgsl
+
+// Cutoff used for the premultiplied alpha modes BLEND and ADD.
+const PREMULTIPLIED_ALPHA_CUTOFF = 0.05;
+
+// We can use a simplified version of alpha_discard() here since we only need to handle the alpha_cutoff
+fn prepass_alpha_discard(in: VertexOutput) {
+
+#ifdef MAY_DISCARD
+    var output_color: vec4<f32> = pbr_bindings::material.base_color;
+
+#ifdef VERTEX_UVS
+    if (pbr_bindings::material.flags & pbr_types::STANDARD_MATERIAL_FLAGS_BASE_COLOR_TEXTURE_BIT) != 0u {
+        output_color = output_color * textureSample(my_array_texture, my_array_texture_sampler, in.uv, in.texture_index);
+    }
+#endif // VERTEX_UVS
+
+    let alpha_mode = pbr_bindings::material.flags & pbr_types::STANDARD_MATERIAL_FLAGS_ALPHA_MODE_RESERVED_BITS;
+    if alpha_mode == pbr_types::STANDARD_MATERIAL_FLAGS_ALPHA_MODE_MASK {
+        if output_color.a < pbr_bindings::material.alpha_cutoff {
+            discard;
+        }
+    } else if (alpha_mode == pbr_types::STANDARD_MATERIAL_FLAGS_ALPHA_MODE_BLEND || alpha_mode == pbr_types::STANDARD_MATERIAL_FLAGS_ALPHA_MODE_ADD) {
+        if output_color.a < PREMULTIPLIED_ALPHA_CUTOFF {
+            discard;
+        }
+    } else if alpha_mode == pbr_types::STANDARD_MATERIAL_FLAGS_ALPHA_MODE_PREMULTIPLIED {
+        if all(output_color < vec4(PREMULTIPLIED_ALPHA_CUTOFF)) {
+            discard;
+        }
+    }
+
+#endif // MAY_DISCARD
+}
+
