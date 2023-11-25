@@ -191,6 +191,17 @@ fn generate_edge_chunk<C: BlockStorer>(
             for (k, j_layers) in j_layers_cache.iter().enumerate() {
                 let mut chunk_block_coords = ChunkBlockCoordinate::new(i, i, i);
 
+                match j_up {
+                    BlockFace::Front | BlockFace::Back => chunk_block_coords.z = j,
+                    BlockFace::Top | BlockFace::Bottom => chunk_block_coords.y = j,
+                    BlockFace::Right | BlockFace::Left => chunk_block_coords.x = j,
+                };
+                match k_up {
+                    BlockFace::Front | BlockFace::Back => chunk_block_coords.z = k as CoordinateType,
+                    BlockFace::Top | BlockFace::Bottom => chunk_block_coords.y = k as CoordinateType,
+                    BlockFace::Right | BlockFace::Left => chunk_block_coords.x = k as CoordinateType,
+                };
+
                 let block_up = Planet::get_planet_face_without_structure(
                     BlockCoordinate::new(
                         block_coords.x + chunk_block_coords.x * scale,
@@ -210,17 +221,6 @@ fn generate_edge_chunk<C: BlockStorer>(
                 {
                     continue;
                 }
-
-                match j_up {
-                    BlockFace::Front | BlockFace::Back => chunk_block_coords.z = j,
-                    BlockFace::Top | BlockFace::Bottom => chunk_block_coords.y = j,
-                    BlockFace::Right | BlockFace::Left => chunk_block_coords.x = j,
-                };
-                match k_up {
-                    BlockFace::Front | BlockFace::Back => chunk_block_coords.z = k as CoordinateType,
-                    BlockFace::Top | BlockFace::Bottom => chunk_block_coords.y = k as CoordinateType,
-                    BlockFace::Right | BlockFace::Left => chunk_block_coords.x = k as CoordinateType,
-                };
 
                 let k_height = match k_up {
                     BlockFace::Front => block_coords.z + chunk_block_coords.z * scale,
@@ -686,7 +686,10 @@ pub struct BiosphereBiomesRegistry<T: BiosphereMarkerComponent> {
     _phantom: PhantomData<T>,
 
     /// Contains a list of indicies to the biomes vec
-    lookup_table: Arc<RwLock<Box<[u8; LOOKUP_TABLE_SIZE]>>>,
+    ///
+    /// The vec will always be a size of `LOOKUP_TABLE_SIZE`, but using a `Box<[u8; LOOKUP_TABLE_SIZE]>` blows the stack in debug mode.
+    /// See https://github.com/rust-lang/rust/issues/53827
+    lookup_table: Arc<RwLock<Vec<u8>>>,
 
     /// All the registered biomes
     biomes: Vec<Arc<RwLock<Box<dyn Biome>>>>,
@@ -718,7 +721,7 @@ impl<T: BiosphereMarkerComponent> BiosphereBiomesRegistry<T> {
     pub fn new() -> Self {
         Self {
             _phantom: Default::default(),
-            lookup_table: Arc::new(RwLock::new(Box::new([0; LOOKUP_TABLE_SIZE]))),
+            lookup_table: Arc::new(RwLock::new(vec![0; LOOKUP_TABLE_SIZE])),
             biomes: vec![],
             todo_biomes: Default::default(),
         }
@@ -805,7 +808,7 @@ impl<T: BiosphereMarkerComponent> BiosphereBiomesRegistry<T> {
     }
 
     #[inline]
-    /// Gets the biome from this index (relative to this registry). Call [`Self::ideal_biome_index_for`] to get the best index for a biome.
+    /// Gets the biome from this index (relative to this registry). Call [`ideal_biome_index_for`] to get the best index for a biome.
     pub fn biome_from_index(&self, biome_idx: usize) -> RwLockReadGuard<Box<dyn Biome>> {
         self.biomes[biome_idx].read().unwrap()
     }

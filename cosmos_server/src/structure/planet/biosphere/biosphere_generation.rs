@@ -918,28 +918,28 @@ pub(crate) fn begin_generating_lods<T: BiosphereMarkerComponent>(
 
         let task_pool = AsyncComputeTaskPool::get();
 
-        let dimensions = structure.block_dimensions().x;
+        let s_dimensions = structure.block_dimensions().x;
 
         let mut generating_lod = generating_lod.clone();
         let noise_generator = noise_generator.clone();
 
         let biome_decider = *biome_decider;
         let biosphere_biomes = biosphere_biomes.clone();
-        let location = *location;
+        let structure_location = *location;
         let sea_level = sea_level.clone();
 
         let task = task_pool.spawn(async move {
-            let noise = noise_generator.inner();
+            let noise_generator = noise_generator.inner();
 
             let first_block_coord = BlockCoordinate::new(0, 0, 0);
 
             recurse::<T>(
                 &mut generating_lod.generating_lod,
-                &location,
+                &structure_location,
                 first_block_coord,
-                dimensions,
-                dimensions / CHUNK_DIMENSIONS,
-                &noise,
+                s_dimensions,
+                s_dimensions / CHUNK_DIMENSIONS,
+                &noise_generator,
                 &biome_decider,
                 &biosphere_biomes,
                 sea_level.as_ref(),

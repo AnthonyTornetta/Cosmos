@@ -3,6 +3,7 @@
 use std::marker::PhantomData;
 
 use bevy::{
+    log::info,
     prelude::{
         in_state, Added, App, Commands, Component, Entity, Event, EventReader, EventWriter, First, IntoSystemConfigs, Query, Res, ResMut,
         Resource, Startup, Update, With, Without,
@@ -232,7 +233,9 @@ pub fn register_biosphere<T: BiosphereMarkerComponent + Default + Clone, E: Send
     biosphere_id: &'static str,
     temperature_range: TemperatureRange,
 ) {
+    info!("Creating a biome registry.");
     create_biosphere_biomes_registry::<T>(app);
+    info!("Done creating biome registry.");
 
     app.add_event::<E>()
         .add_systems(Startup, move |mut registry: ResMut<BiosphereTemperatureRegistry>| {
@@ -382,8 +385,12 @@ pub(super) fn register(app: &mut App) {
         .insert_resource(BiosphereTemperatureRegistry::default())
         .add_systems(Update, add_biosphere);
 
+    info!("...biome");
     biome::register(app);
+    info!("...grass_biospehere");
     grass_biosphere::register(app);
+    info!("...molten_biospehere");
     molten_biosphere::register(app);
+    info!("...ice_biospehere");
     ice_biosphere::register(app);
 }

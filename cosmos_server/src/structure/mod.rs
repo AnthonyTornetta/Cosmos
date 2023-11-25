@@ -1,6 +1,6 @@
 //! Contains all structure-related information for the server
 
-use bevy::prelude::App;
+use bevy::{log::info, prelude::App};
 
 pub mod asteroid;
 pub mod block_health;
@@ -10,9 +10,14 @@ pub mod ship;
 pub mod systems;
 
 pub(super) fn register(app: &mut App) {
+    info!(".ship");
     ship::register(app);
+    info!(".systems");
     systems::register(app);
+    info!(".planet");
     planet::register(app);
+    info!(".block_health");
     block_health::register(app);
+    info!(".asteroid");
     asteroid::register(app);
 }

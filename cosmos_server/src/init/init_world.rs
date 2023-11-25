@@ -39,11 +39,18 @@ impl ServerSeed {
     }
 }
 
-#[derive(Resource, Debug, Clone, Deref, DerefMut)]
+#[derive(Resource, Debug, Clone, Deref, DerefMut, Default)]
 /// A pre-seeded structure to create noise values. Uses simplex noise as the backend
 ///
 /// This cannot be sent across threads - use ReadOnlyNoise to send use across threads.
 pub struct Noise(noise::OpenSimplex);
+
+impl Noise {
+    /// Creates a new noise based on the seed you provide
+    pub fn new(seed: u32) -> Self {
+        Self(noise::OpenSimplex::new(seed))
+    }
+}
 
 #[derive(Resource, Debug, Clone)]
 /// A thread-safe pre-seeded structure to create noise values. Uses simplex noise as the backend
