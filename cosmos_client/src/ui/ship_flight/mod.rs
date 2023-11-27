@@ -1,6 +1,6 @@
 //! Displays the information a player sees while piloting a ship
 
-use bevy::{asset::LoadState, prelude::*};
+use bevy::{asset::LoadState, prelude::*, utils::HashMap};
 use cosmos_core::{
     entities::player::Player,
     physics::location::Location,
@@ -13,10 +13,10 @@ use cosmos_core::{
 use crate::{asset::asset_loader::load_assets, netty::flags::LocalPlayer, rendering::MainCamera, state::game_state::GameState};
 
 #[derive(Clone, Copy, Component, Debug)]
-enum IndicatorType {
-    Ship,
-    Planet,
-    Player,
+pub struct IndicatorSettings {
+    pub color: Color,
+    pub offset: Vec3,
+    pub max_distance: f32,
 }
 
 #[derive(Component, Debug)]
@@ -25,9 +25,20 @@ struct Indicator(Entity);
 #[derive(Component, Debug)]
 struct Indicating(Entity);
 
-fn create_indicator(entity: Entity, commands: &mut Commands, texture: Handle<Image>, images: &Assets<Image>) {
+#[derive(Resource, Default)]
+struct IndicatorImages(HashMap<u32, Handle<Image>>);
+
+fn create_indicator(
+    entity: Entity,
+    commands: &mut Commands,
+    base_texture: Handle<Image>,
+    images: &mut Assets<Image>,
+    color: Color,
+    indicator_images: &mut IndicatorImages,
+) {
     let indicator_entity = commands
         .spawn((
+            Name::new("Indicator waypoint"),
             Indicating(entity),
             NodeBundle {
                 style: Style {
@@ -38,10 +49,32 @@ fn create_indicator(entity: Entity, commands: &mut Commands, texture: Handle<Ima
             },
         ))
         .with_children(|p| {
-            let img = images.get(&texture).expect("Waypoint diamond image removed?");
+            let (r, g, b) = ((color.r() * 255.0) as u8, (color.g() * 255.0) as u8, (color.b() * 255.0) as u8);
+
+            let color_hash = u32::from_be_bytes([r, g, b, 0]);
+
+            let handle = indicator_images.0.get(&color_hash).map(|x| x.clone_weak()).unwrap_or_else(|| {
+                let mut img = images.get(&base_texture).expect("Waypoint diamond image removed?").clone();
+
+                for [img_r, img_g, img_b, _] in img.data.iter_mut().array_chunks::<4>() {
+                    *img_r = r;
+                    *img_g = g;
+                    *img_b = b;
+                }
+
+                let handle = images.add(img);
+
+                let weak_clone = handle.clone_weak();
+
+                indicator_images.0.insert(color_hash, handle);
+
+                weak_clone
+            });
+
+            let img = images.get(&handle).expect("Missing indicator image.");
 
             p.spawn(ImageBundle {
-                image: UiImage::new(texture),
+                image: UiImage::new(handle),
                 style: Style {
                     margin: UiRect {
                         left: Val::Px(img.width() as f32 / -2.0),
@@ -65,12 +98,13 @@ fn add_indicators(
     mut commands: Commands,
 
     all_indicators: Query<(Entity, &Indicator)>,
-    nearby_entities: Query<(Entity, &Location, &IndicatorType, Option<&Indicator>)>,
+    nearby_entities: Query<(Entity, &Location, &IndicatorSettings, Option<&Indicator>)>,
     player_piloting: Query<&Pilot, With<LocalPlayer>>,
     location_query: Query<&Location>,
 
     indicator_image: Res<IndicatorImage>,
-    images: Res<Assets<Image>>,
+    mut images: ResMut<Assets<Image>>,
+    mut indicator_images: ResMut<IndicatorImages>,
 ) {
     let despawn_indicator = |(entity, indicator): (Entity, &Indicator)| {
         commands.entity(indicator.0).despawn_recursive();
@@ -87,18 +121,13 @@ fn add_indicators(
         return;
     };
 
-    nearby_entities.for_each(|(entity, location, indicator_type, indicator)| {
+    nearby_entities.for_each(|(entity, location, indicator_settings, indicator)| {
         if pilot.entity == entity {
             // Don't put an indicator on the ship you're currently flying
             return;
         }
 
-        let max_distance = match indicator_type {
-            IndicatorType::Planet => 50_000.0,
-            IndicatorType::Ship => 10_000.0,
-            IndicatorType::Player => 5_000.0,
-        };
-
+        let max_distance = indicator_settings.max_distance;
         let max_dist_sqrd = max_distance * max_distance;
 
         let distance = location.distance_sqrd(player_location);
@@ -106,11 +135,19 @@ fn add_indicators(
         if distance <= max_dist_sqrd {
             if indicator.is_none() {
                 println!("Creating indicator");
-                create_indicator(entity, &mut commands, indicator_image.0.clone_weak(), &images);
+                create_indicator(
+                    entity,
+                    &mut commands,
+                    indicator_image.0.clone_weak(),
+                    &mut images,
+                    indicator_settings.color,
+                    &mut indicator_images,
+                );
             }
         } else {
             if let Some(indicator) = indicator {
                 println!("Killing indicator!");
+                commands.entity(entity).remove::<Indicator>();
                 if let Some(ecmds) = commands.get_entity(indicator.0) {
                     ecmds.despawn_recursive();
                 }
@@ -126,28 +163,43 @@ fn added(
     mut commands: Commands,
 ) {
     ship_query.for_each(|ent| {
-        commands.entity(ent).insert(IndicatorType::Ship);
+        commands.entity(ent).insert(IndicatorSettings {
+            color: Color::hex("FF5733").unwrap(),
+            max_distance: 10_000.0,
+            offset: Vec3::new(0.5, 0.5, 0.5), // Accounts for the ship core being at 0.5, 0.5, 0.5 instead of the origin
+        });
     });
     planet_query.for_each(|ent| {
-        commands.entity(ent).insert(IndicatorType::Planet);
+        commands.entity(ent).insert(IndicatorSettings {
+            color: Color::hex("BC8F8F").unwrap(),
+            max_distance: 200_000.0,
+            offset: Vec3::ZERO,
+        });
     });
     player_query.for_each(|ent| {
-        commands.entity(ent).insert(IndicatorType::Player);
+        commands.entity(ent).insert(IndicatorSettings {
+            color: Color::WHITE,
+            max_distance: 5_000.0,
+            offset: Vec3::ZERO,
+        });
     });
 }
 
 fn position_diamonds(
     cam_query: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
-    mut indicators: Query<(&mut Style, &Indicating)>,
+    mut indicators: Query<(Entity, &mut Style, &Indicating)>,
     global_trans_query: Query<&GlobalTransform>,
+    mut commands: Commands,
 ) {
     let Ok((cam, cam_trans)) = cam_query.get_single() else {
         warn!("Missing main camera.");
         return;
     };
 
-    for (mut style, indicating) in indicators.iter_mut() {
+    for (entity, mut style, indicating) in indicators.iter_mut() {
         let Ok(indicating_global_trans) = global_trans_query.get(indicating.0) else {
+            // The thing we are indicating has despawned, so despawn the indicator
+            commands.entity(entity).despawn_recursive();
             continue;
         };
 
@@ -199,9 +251,8 @@ fn position_diamonds(
             }
         }
 
-        println!("Post: {normalized_screen_pos}");
-        normalized_screen_pos.x = normalized_screen_pos.x.clamp(-1.0, 1.0) / 2.0 + 0.5;
-        normalized_screen_pos.y = normalized_screen_pos.y.clamp(-1.0, 1.0) / 2.0 + 0.5;
+        normalized_screen_pos.x = normalized_screen_pos.x.clamp(-0.9, 0.0) / 2.0 + 0.45;
+        normalized_screen_pos.y = normalized_screen_pos.y.clamp(-0.9, 0.9) / 2.0 + 0.45;
 
         style.left = Val::Percent(normalized_screen_pos.x * 100.0);
         style.bottom = Val::Percent(normalized_screen_pos.y * 100.0);
@@ -213,7 +264,7 @@ fn position_diamonds(
     }
 }
 
-const OFFSET_BORDER: f32 = 0.0;
+const OFFSET_BORDER: f32 = 0.1;
 
 fn is_target_visible(normalized_screen_position: Vec3) -> bool {
     normalized_screen_position.z > 0.0
@@ -238,7 +289,7 @@ pub(super) fn register(app: &mut App) {
         },
     );
 
-    app.add_systems(
+    app.init_resource::<IndicatorImages>().add_systems(
         Update,
         (add_indicators.run_if(resource_exists::<IndicatorImage>()), added, position_diamonds).run_if(in_state(GameState::Playing)),
     );
