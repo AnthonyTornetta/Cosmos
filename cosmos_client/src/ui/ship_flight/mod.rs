@@ -25,7 +25,7 @@ struct Indicator(Entity);
 #[derive(Component, Debug)]
 struct Indicating(Entity);
 
-fn create_indicator(entity: Entity, commands: &mut Commands, texture: Handle<Image>) {
+fn create_indicator(entity: Entity, commands: &mut Commands, texture: Handle<Image>, images: &Assets<Image>) {
     let indicator_entity = commands
         .spawn((
             Indicating(entity),
@@ -38,14 +38,22 @@ fn create_indicator(entity: Entity, commands: &mut Commands, texture: Handle<Ima
             },
         ))
         .with_children(|p| {
+            let img = images.get(&texture).expect("Waypoint diamond image removed?");
+
             p.spawn(ImageBundle {
                 image: UiImage::new(texture),
+                style: Style {
+                    margin: UiRect {
+                        left: Val::Px(img.width() as f32 / -2.0),
+                        bottom: Val::Px(img.height() as f32 / -2.0),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
                 ..Default::default()
             });
         })
         .id();
-
-    // https://forum.unity.com/threads/hud-waypoint-indicator-with-problem.1102957/
 
     commands.entity(entity).insert(Indicator(indicator_entity));
 }
@@ -62,6 +70,7 @@ fn add_indicators(
     location_query: Query<&Location>,
 
     indicator_image: Res<IndicatorImage>,
+    images: Res<Assets<Image>>,
 ) {
     let despawn_indicator = |(entity, indicator): (Entity, &Indicator)| {
         commands.entity(indicator.0).despawn_recursive();
@@ -97,7 +106,7 @@ fn add_indicators(
         if distance <= max_dist_sqrd {
             if indicator.is_none() {
                 println!("Creating indicator");
-                create_indicator(entity, &mut commands, indicator_image.0.clone_weak());
+                create_indicator(entity, &mut commands, indicator_image.0.clone_weak(), &images);
             }
         } else {
             if let Some(indicator) = indicator {
@@ -142,15 +151,19 @@ fn position_diamonds(
             continue;
         };
 
-        let offset = Vec3::splat(0.0);
+        let offset = Vec3::splat(0.5);
+        let cam_rot = Quat::from_affine3(&indicating_global_trans.affine());
 
-        let entity_location =
-            indicating_global_trans.translation() + Quat::from_affine3(&indicating_global_trans.affine()).mul_vec3(offset);
+        let entity_location = indicating_global_trans.translation() + cam_rot.mul_vec3(offset);
 
         // X/Y normalized to [-1, 1] when it's on the screen
         let Some(mut normalized_screen_pos) = cam.world_to_ndc(cam_trans, entity_location) else {
             continue;
         };
+
+        let rot_diff = cam_rot.mul_quat(Quat::from_affine3(&indicating_global_trans.affine()).inverse());
+
+        normalized_screen_pos = rot_diff.inverse().mul_vec3(normalized_screen_pos);
 
         if !is_target_visible(normalized_screen_pos) {
             if normalized_screen_pos.z < 0.0 {
