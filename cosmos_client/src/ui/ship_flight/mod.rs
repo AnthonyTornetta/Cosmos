@@ -251,8 +251,8 @@ fn position_diamonds(
             }
         }
 
-        normalized_screen_pos.x = normalized_screen_pos.x.clamp(-0.9, 0.0) / 2.0 + 0.45;
-        normalized_screen_pos.y = normalized_screen_pos.y.clamp(-0.9, 0.9) / 2.0 + 0.45;
+        normalized_screen_pos.x = normalized_screen_pos.x.clamp(-1.0, 1.0) / 2.0 + 0.45;
+        normalized_screen_pos.y = normalized_screen_pos.y.clamp(-1.0, 1.0) / 2.0 + 0.45;
 
         style.left = Val::Percent(normalized_screen_pos.x * 100.0);
         style.bottom = Val::Percent(normalized_screen_pos.y * 100.0);
@@ -264,7 +264,7 @@ fn position_diamonds(
     }
 }
 
-const OFFSET_BORDER: f32 = 0.1;
+const OFFSET_BORDER: f32 = 0.0;
 
 fn is_target_visible(normalized_screen_position: Vec3) -> bool {
     normalized_screen_position.z > 0.0
