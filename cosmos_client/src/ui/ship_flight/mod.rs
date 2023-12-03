@@ -220,12 +220,10 @@ fn add_indicators(
                     &asset_server,
                 );
             }
-        } else {
-            if let Some(has_indicator) = has_indicator {
-                commands.entity(entity).remove::<HasIndicator>();
-                if let Some(ecmds) = commands.get_entity(has_indicator.0) {
-                    ecmds.despawn_recursive();
-                }
+        } else if let Some(has_indicator) = has_indicator {
+            commands.entity(entity).remove::<HasIndicator>();
+            if let Some(ecmds) = commands.get_entity(has_indicator.0) {
+                ecmds.despawn_recursive();
             }
         }
     });
