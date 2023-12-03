@@ -210,7 +210,6 @@ fn add_indicators(
                     }
                 }
             } else {
-                println!("Creating indicator");
                 create_indicator(
                     entity,
                     &mut commands,
@@ -223,7 +222,6 @@ fn add_indicators(
             }
         } else {
             if let Some(has_indicator) = has_indicator {
-                println!("Killing indicator!");
                 commands.entity(entity).remove::<HasIndicator>();
                 if let Some(ecmds) = commands.get_entity(has_indicator.0) {
                     ecmds.despawn_recursive();
@@ -242,7 +240,7 @@ fn added(
     ship_query.for_each(|ent| {
         commands.entity(ent).insert(IndicatorSettings {
             color: Color::hex("FF57337F").unwrap(),
-            max_distance: 10_000.0,
+            max_distance: 20_000.0,
             offset: Vec3::new(0.5, 0.5, 0.5), // Accounts for the ship core being at 0.5, 0.5, 0.5 instead of the origin
         });
     });
