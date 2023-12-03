@@ -1,7 +1,6 @@
 //! Contains all the logic for the client-side of Cosmos.
 
 #![warn(missing_docs)]
-#![feature(iter_array_chunks)]
 
 pub mod asset;
 pub mod audio;
