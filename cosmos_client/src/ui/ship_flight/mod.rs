@@ -1,6 +1,6 @@
 //! Displays the information a player sees while piloting a ship
 
-use bevy::{asset::LoadState, prelude::*, text::TextLayoutInfo, utils::HashMap};
+use bevy::{asset::LoadState, prelude::*, utils::HashMap};
 use cosmos_core::{
     entities::player::Player,
     physics::location::Location,
@@ -10,7 +10,13 @@ use cosmos_core::{
     },
 };
 
-use crate::{asset::asset_loader::load_assets, netty::flags::LocalPlayer, rendering::MainCamera, state::game_state::GameState};
+use crate::{
+    asset::asset_loader::load_assets,
+    input::inputs::{CosmosInputs, InputChecker, InputHandler},
+    netty::flags::LocalPlayer,
+    rendering::MainCamera,
+    state::game_state::GameState,
+};
 
 #[derive(Clone, Copy, Component, Debug)]
 struct IndicatorSettings {
@@ -30,7 +36,14 @@ struct Indicating(Entity);
 struct IndicatorImages(HashMap<u32, Handle<Image>>);
 
 #[derive(Component)]
+struct Focused;
+
+#[derive(Component)]
 struct IndicatorTextEntity(Entity);
+
+#[derive(Resource, Default)]
+/// Waypoint closest to the center of your screen NOT your character/ship
+struct ClosestWaypoint(Option<Entity>);
 
 fn get_distance_text(distance: f32) -> String {
     const METERS_TO_KM: f32 = 1.0 / 1000.0;
@@ -53,7 +66,6 @@ fn create_indicator(
     color: Color,
     indicator_images: &mut IndicatorImages,
     asset_server: &AssetServer,
-    distance: f32,
 ) {
     let text_style = TextStyle {
         color,
@@ -73,8 +85,8 @@ fn create_indicator(
                 },
                 ..default()
             },
-
-            text: Text::from_section(get_distance_text(distance), text_style),
+            visibility: Visibility::Hidden,
+            text: Text::from_section("", text_style),
             ..default()
         })
         .id();
@@ -155,7 +167,7 @@ fn add_indicators(
     mut images: ResMut<Assets<Image>>,
     mut indicator_images: ResMut<IndicatorImages>,
     asset_server: Res<AssetServer>,
-    text_entity_query: Query<&IndicatorTextEntity>,
+    q_text_entity_with_focus: Query<&IndicatorTextEntity, With<Focused>>,
 ) {
     let despawn_indicator = |(entity, indicator): (Entity, &HasIndicator)| {
         commands.entity(indicator.0).despawn_recursive();
@@ -186,7 +198,7 @@ fn add_indicators(
 
         if distance_sqrd <= max_dist_sqrd {
             if let Some(has_indicator) = has_indicator {
-                if let Ok(text_entity) = text_entity_query.get(has_indicator.0) {
+                if let Ok(text_entity) = q_text_entity_with_focus.get(has_indicator.0) {
                     if let Ok(mut text) = text_query.get_mut(text_entity.0) {
                         text.sections[0].value = get_distance_text(distance_sqrd.sqrt());
                     }
@@ -201,7 +213,6 @@ fn add_indicators(
                     indicator_settings.color,
                     &mut indicator_images,
                     &asset_server,
-                    distance_sqrd.sqrt(),
                 );
             }
         } else {
@@ -251,11 +262,15 @@ fn position_diamonds(
     global_trans_query: Query<&GlobalTransform>,
     indicator_settings_query: Query<&IndicatorSettings>,
     mut commands: Commands,
+    mut closest_waypoint: ResMut<ClosestWaypoint>,
 ) {
     let Ok((cam, cam_trans)) = cam_query.get_single() else {
         warn!("Missing main camera.");
         return;
     };
+
+    const MAX_DIST_FROM_CENTER: f32 = 0.4;
+    let mut closest = None;
 
     for (entity, mut style, indicating) in indicators.iter_mut() {
         let Ok(indicating_global_trans) = global_trans_query.get(indicating.0) else {
@@ -281,6 +296,8 @@ fn position_diamonds(
         let rot_diff = cam_rot.mul_quat(Quat::from_affine3(&indicating_global_trans.affine()).inverse());
 
         normalized_screen_pos = rot_diff.inverse().mul_vec3(normalized_screen_pos);
+
+        // This code is largely based on https://forum.unity.com/threads/hud-waypoint-indicator-with-problem.1102957/
 
         if !is_target_visible(normalized_screen_pos) {
             if normalized_screen_pos.z < 0.0 {
@@ -316,22 +333,66 @@ fn position_diamonds(
             }
         }
 
+        let x = normalized_screen_pos.x.abs();
+        let y = normalized_screen_pos.y.abs();
+        if x < MAX_DIST_FROM_CENTER && y < MAX_DIST_FROM_CENTER {
+            let dist_sqrd = x * x + y * y;
+
+            if closest.as_ref().map(|(_, dist)| dist_sqrd < *dist).unwrap_or(true) {
+                closest = Some((entity, dist_sqrd));
+            }
+        }
+
         normalized_screen_pos.x = normalized_screen_pos.x.clamp(-0.9, 0.9) / 2.0 + 0.5;
         normalized_screen_pos.y = normalized_screen_pos.y.clamp(-0.9, 0.9) / 2.0 + 0.5;
 
         style.left = Val::Percent(normalized_screen_pos.x * 100.0);
         style.bottom = Val::Percent(normalized_screen_pos.y * 100.0);
     }
+
+    closest_waypoint.0 = closest.map(|x| x.0);
 }
 
-const OFFSET_BORDER: f32 = 0.0;
+fn focus_waypoint(
+    inputs: InputChecker,
+    focused: Query<(Entity, &IndicatorTextEntity), With<Focused>>,
+    q_indicator_text: Query<&IndicatorTextEntity>,
+    mut visibility: Query<&mut Visibility>,
+    closest_waypoint: Res<ClosestWaypoint>,
+    mut commands: Commands,
+) {
+    if inputs.check_just_pressed(CosmosInputs::FocusWaypoint) {
+        if let Ok((current_ent, indicator_text_ent)) = focused.get_single() {
+            *visibility.get_mut(indicator_text_ent.0).expect("This always has visibility") = Visibility::Hidden;
+            commands.entity(current_ent).remove::<Focused>();
+
+            if let Some(closest_waypoint) = closest_waypoint.0 {
+                if current_ent != closest_waypoint {
+                    let Ok(closest) = q_indicator_text.get(closest_waypoint) else {
+                        return;
+                    };
+
+                    *visibility.get_mut(closest.0).expect("This always has visibility") = Visibility::Visible;
+                    commands.entity(closest_waypoint).insert(Focused);
+                }
+            }
+        } else if let Some(closest_waypoint) = closest_waypoint.0 {
+            let Ok(closest) = q_indicator_text.get(closest_waypoint) else {
+                return;
+            };
+
+            *visibility.get_mut(closest.0).expect("This always has visibility") = Visibility::Visible;
+            commands.entity(closest_waypoint).insert(Focused);
+        }
+    }
+}
 
 fn is_target_visible(normalized_screen_position: Vec3) -> bool {
     normalized_screen_position.z > 0.0
-        && normalized_screen_position.x >= OFFSET_BORDER - 1.0
-        && normalized_screen_position.x <= 1.0 - OFFSET_BORDER
-        && normalized_screen_position.y >= OFFSET_BORDER - 1.0
-        && normalized_screen_position.y <= 1.0 - OFFSET_BORDER
+        && normalized_screen_position.x >= -1.0
+        && normalized_screen_position.x <= 1.0
+        && normalized_screen_position.y >= -1.0
+        && normalized_screen_position.y <= 1.0
 }
 
 pub(super) fn register(app: &mut App) {
@@ -349,8 +410,17 @@ pub(super) fn register(app: &mut App) {
         },
     );
 
-    app.init_resource::<IndicatorImages>().add_systems(
-        Update,
-        (add_indicators.run_if(resource_exists::<IndicatorImage>()), added, position_diamonds).run_if(in_state(GameState::Playing)),
-    );
+    app.init_resource::<IndicatorImages>()
+        .init_resource::<ClosestWaypoint>()
+        .add_systems(
+            Update,
+            (
+                add_indicators.run_if(resource_exists::<IndicatorImage>()),
+                added,
+                position_diamonds,
+                focus_waypoint,
+            )
+                .chain()
+                .run_if(in_state(GameState::Playing)),
+        );
 }

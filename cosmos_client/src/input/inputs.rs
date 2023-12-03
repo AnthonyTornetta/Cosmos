@@ -111,6 +111,9 @@ pub enum CosmosInputs {
     SymmetryY,
     /// Creates a Z symmetry
     SymmetryZ,
+
+    /// Focuses/unfofcuses the waypoint the player is looking at
+    FocusWaypoint,
 }
 
 fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
@@ -171,10 +174,14 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     input_handler.set_keycode(CosmosInputs::SymmetryX, KeyCode::X);
     input_handler.set_keycode(CosmosInputs::SymmetryY, KeyCode::Y);
     input_handler.set_keycode(CosmosInputs::SymmetryZ, KeyCode::Z);
+
+    input_handler.set_keycode(CosmosInputs::FocusWaypoint, KeyCode::F);
 }
 
 #[derive(Resource, Default, Debug)]
 /// Use this to check if inputs are selected
+///
+/// You should generally prefer to use the `InputChecker` unless you're doing something super specific.
 pub struct CosmosInputHandler {
     input_mapping: HashMap<CosmosInputs, (Option<KeyCode>, Option<MouseButton>)>,
 }
