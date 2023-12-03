@@ -31,9 +31,11 @@ fn event_listener(
         }
 
         if let Some(entity) = ev.pilot_entity {
-            let (structure_loc, structure_transform) = location_query
-                .get(ev.structure_entity)
-                .expect("Every structure should have a location & transform.");
+            let Ok((structure_loc, structure_transform)) = location_query.get(ev.structure_entity) else {
+                // This structure probably wasn't loaded yet
+                continue;
+            };
+
             let (pilot_loc, pilot_transform) = location_query.get(entity).expect("Every pilot should have a location & transform");
 
             let delta = structure_transform

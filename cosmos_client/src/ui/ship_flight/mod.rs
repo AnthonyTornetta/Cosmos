@@ -316,8 +316,8 @@ fn position_diamonds(
             }
         }
 
-        normalized_screen_pos.x = normalized_screen_pos.x.clamp(-1.0, 1.0) / 2.0 + 0.5;
-        normalized_screen_pos.y = normalized_screen_pos.y.clamp(-1.0, 1.0) / 2.0 + 0.5;
+        normalized_screen_pos.x = normalized_screen_pos.x.clamp(-0.9, 0.9) / 2.0 + 0.5;
+        normalized_screen_pos.y = normalized_screen_pos.y.clamp(-0.9, 0.9) / 2.0 + 0.5;
 
         style.left = Val::Percent(normalized_screen_pos.x * 100.0);
         style.bottom = Val::Percent(normalized_screen_pos.y * 100.0);
