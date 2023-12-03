@@ -52,9 +52,9 @@ fn get_distance_text(distance: f32) -> String {
     if distance < 1_000.0 {
         format!("{}m", distance as i32)
     } else if distance < 1_000_000.0 {
-        format!("{:.1}km", distance * METERS_TO_KM)
+        format!("{:.1}k", distance * METERS_TO_KM)
     } else {
-        format!("{:.1}Mm", distance * METERS_TO_MEGA_METERS)
+        format!("{:.1}M", distance * METERS_TO_MEGA_METERS)
     }
 }
 
@@ -105,17 +105,23 @@ fn create_indicator(
             },
         ))
         .with_children(|p| {
-            let (r, g, b) = ((color.r() * 255.0) as u8, (color.g() * 255.0) as u8, (color.b() * 255.0) as u8);
+            let (r, g, b, a) = (
+                (color.r() * 255.0) as u8,
+                (color.g() * 255.0) as u8,
+                (color.b() * 255.0) as u8,
+                (color.a() * 255.0) as u8,
+            );
 
             let color_hash = u32::from_be_bytes([r, g, b, 0]);
 
             let handle = indicator_images.0.get(&color_hash).map(|x| x.clone_weak()).unwrap_or_else(|| {
                 let mut img = images.get(&base_texture).expect("Waypoint diamond image removed?").clone();
 
-                for [img_r, img_g, img_b, _] in img.data.iter_mut().array_chunks::<4>() {
+                for [img_r, img_g, img_b, img_a] in img.data.iter_mut().array_chunks::<4>() {
                     *img_r = r;
                     *img_g = g;
                     *img_b = b;
+                    *img_a = ((*img_a as f32) / 255.0 * a as f32) as u8;
                 }
 
                 let handle = images.add(img);
@@ -235,21 +241,21 @@ fn added(
 ) {
     ship_query.for_each(|ent| {
         commands.entity(ent).insert(IndicatorSettings {
-            color: Color::hex("FF5733").unwrap(),
+            color: Color::hex("FF57337F").unwrap(),
             max_distance: 10_000.0,
             offset: Vec3::new(0.5, 0.5, 0.5), // Accounts for the ship core being at 0.5, 0.5, 0.5 instead of the origin
         });
     });
     planet_query.for_each(|ent| {
         commands.entity(ent).insert(IndicatorSettings {
-            color: Color::hex("BC8F8F").unwrap(),
+            color: Color::hex("BC8F8F7F").unwrap(),
             max_distance: 200_000.0,
             offset: Vec3::ZERO,
         });
     });
     player_query.for_each(|ent| {
         commands.entity(ent).insert(IndicatorSettings {
-            color: Color::WHITE,
+            color: Color::hex("FFFFFF7F").unwrap(),
             max_distance: 5_000.0,
             offset: Vec3::ZERO,
         });
