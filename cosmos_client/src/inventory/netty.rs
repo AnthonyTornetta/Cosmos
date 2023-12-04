@@ -31,7 +31,7 @@ fn sync(
                         ecmds.insert(inventory);
                     }
                 } else {
-                    warn!("Error: unrecognized entity {} received from server!", owner.index());
+                    warn!("Error: unrecognized entity {owner:?} received from server when trying to sync up inventories!",);
                 }
             }
             ServerInventoryMessages::HeldItemstack { itemstack } => {
