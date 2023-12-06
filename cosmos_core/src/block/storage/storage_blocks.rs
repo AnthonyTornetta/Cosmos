@@ -1,43 +1,46 @@
+//! Handles blocks that have inventories
+
 use bevy::{
     app::{App, Update},
-    core::Name,
     ecs::{
-        component::Component,
         entity::Entity,
-        event::EventReader,
-        query::{Added, Without},
+        event::{Event, EventReader, EventWriter},
         system::{Commands, Query, Res},
     },
-    hierarchy::BuildChildren,
     log::warn,
-    utils::HashMap,
 };
 
 use crate::{
-    block::Block,
-    ecs::NeedsDespawned,
+    block::{data::BlockData, Block},
     events::block_events::BlockChangedEvent,
     inventory::Inventory,
-    netty::NoSendEntity,
     registry::Registry,
-    structure::{
-        chunk::ChunkEntity,
-        coordinates::{ChunkBlockCoordinate, ChunkCoordinate},
-        Structure,
-    },
+    structure::{structure_block::StructureBlock, Structure},
 };
 
-#[derive(Component, Default)]
-struct ChunkStorageBlockData {
-    data: HashMap<ChunkBlockCoordinate, Entity>,
+#[derive(Event)]
+/// Sent whenever an entity needs an inventory populated.
+///
+/// On client, this should be populated by asking the server.
+///
+/// On server, this should be populated by reading the block data on disk or creating a new inventory.
+pub struct PopulateBlockInventoryEvent {
+    /// The structure's entity
+    pub structure_entity: Entity,
+    /// The block
+    pub block: StructureBlock,
 }
 
-fn on_add_storage(
-    mut q_chunk_storage_block_data: Query<&mut ChunkStorageBlockData>,
+/// Used to process the addition/removal of storage blocks to a structure.
+///
+/// Sends out the `PopulateBlockInventoryEvent` event when needed.
+pub fn on_add_storage(
     q_structure: Query<&Structure>,
     blocks: Res<Registry<Block>>,
     mut evr_block_changed: EventReader<BlockChangedEvent>,
     mut commands: Commands,
+    mut ev_writer: EventWriter<PopulateBlockInventoryEvent>,
+    mut q_block_data: Query<&mut BlockData>,
 ) {
     if evr_block_changed.is_empty() {
         return;
@@ -59,56 +62,28 @@ fn on_add_storage(
         if blocks.from_numeric_id(ev.old_block) == block {
             let coords = ev.block.coords();
 
-            let Some(chunk_ent) = structure.chunk_entity(ChunkCoordinate::for_block_coordinate(coords)) else {
-                warn!("Missing chunk entity but got block change event? How???");
-                continue;
-            };
+            if let Some(data_ent) = structure.block_data(coords) {
+                if let Ok(mut block_data) = q_block_data.get_mut(data_ent) {
+                    block_data.decrement();
+                } else {
+                    warn!("Missing BlockData on block data component?");
+                }
 
-            let Ok(mut storage) = q_chunk_storage_block_data.get_mut(chunk_ent) else {
-                warn!("Chunk missing storage data mapping!");
-                continue;
-            };
-
-            if let Some(ent) = storage.data.remove(&ChunkBlockCoordinate::for_block_coordinate(coords)) {
-                commands.entity(ent).insert(NeedsDespawned);
+                if let Some(mut ecmds) = commands.get_entity(data_ent) {
+                    ecmds.remove::<Inventory>();
+                }
             }
         }
 
         if blocks.from_numeric_id(ev.new_block) == block {
-            let coords = ev.block.coords();
-
-            let Some(chunk_ent) = structure.chunk_entity(ChunkCoordinate::for_block_coordinate(coords)) else {
-                warn!("Missing chunk entity but got block change event? How???");
-                continue;
-            };
-
-            let Ok(mut storage) = q_chunk_storage_block_data.get_mut(chunk_ent) else {
-                warn!("Chunk missing storage data mapping!");
-                continue;
-            };
-
-            let chunk_block_coord = ChunkBlockCoordinate::for_block_coordinate(coords);
-
-            let inventory_ent = commands
-                .spawn((
-                    Name::new(format!("Inventory for Block @ {chunk_block_coord}")),
-                    NoSendEntity,
-                    Inventory::new(9 * 5, None),
-                ))
-                .id();
-
-            commands.entity(chunk_ent).add_child(inventory_ent);
-            storage.data.insert(chunk_block_coord, inventory_ent);
+            ev_writer.send(PopulateBlockInventoryEvent {
+                block: ev.block,
+                structure_entity: ev.structure_entity,
+            });
         }
     }
 }
 
-fn on_add_chunk_ent(query: Query<Entity, (Without<ChunkStorageBlockData>, Added<ChunkEntity>)>, mut commands: Commands) {
-    for ent in query.iter() {
-        commands.entity(ent).insert(ChunkStorageBlockData::default());
-    }
-}
-
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, (on_add_chunk_ent, on_add_storage));
+    app.add_systems(Update, on_add_storage).add_event::<PopulateBlockInventoryEvent>();
 }

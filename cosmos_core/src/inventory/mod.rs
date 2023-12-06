@@ -30,10 +30,10 @@ pub mod netty;
 ///
 /// # THIS BEHAVES DIFFERENTLY ON THE CLIENT & SERVER
 /// ### Client
-/// On the client, this is attached to a GUI element holding the drawn item
+/// On the client, this is attached to a GUI element holding the drawn item the player is moving w/ their cursor.
 ///
 /// ### Server
-/// On the server, this is attached directly to the player
+/// On the server, this is attached directly to the player.
 pub struct HeldItemStack(pub ItemStack);
 
 /// Represents some sort of error that occurred

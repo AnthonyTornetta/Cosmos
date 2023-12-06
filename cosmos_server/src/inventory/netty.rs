@@ -1,32 +1,47 @@
 //! Syncs player inventories
 
 use bevy::{
+    ecs::query::Without,
     log::warn,
     prelude::{in_state, App, Changed, Commands, Entity, IntoSystemConfigs, Query, RemovedComponents, Res, ResMut, Update},
 };
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
+    block::data::BlockData,
     entities::player::Player,
     inventory::{
         netty::{ClientInventoryMessages, ServerInventoryMessages},
         HeldItemStack, Inventory,
     },
     item::Item,
-    netty::{cosmos_encoder, NettyChannelClient, NettyChannelServer},
+    netty::{cosmos_encoder, NettyChannelClient, NettyChannelServer, NoSendEntity},
     registry::Registry,
 };
 
 use crate::{netty::network_helpers::ServerLobby, state::GameState};
 
-fn sync_inventories(query: Query<(Entity, &Inventory), Changed<Inventory>>, mut server: ResMut<RenetServer>) {
-    for (entity, inventory) in query.iter() {
-        server.broadcast_message(
-            NettyChannelServer::Inventory,
-            cosmos_encoder::serialize(&ServerInventoryMessages::EntityInventory {
-                inventory: inventory.clone(),
-                owner: entity,
-            }),
-        );
+fn sync_inventories(
+    query: Query<(Entity, &Inventory, Option<&BlockData>), (Changed<Inventory>, Without<NoSendEntity>)>,
+    mut server: ResMut<RenetServer>,
+) {
+    for (entity, inventory, block_data) in query.iter() {
+        if let Some(block_data) = block_data {
+            server.broadcast_message(
+                NettyChannelServer::Inventory,
+                cosmos_encoder::serialize(&ServerInventoryMessages::BlockInventory {
+                    inventory: inventory.clone(),
+                    block_data: *block_data,
+                }),
+            );
+        } else {
+            server.broadcast_message(
+                NettyChannelServer::Inventory,
+                cosmos_encoder::serialize(&ServerInventoryMessages::EntityInventory {
+                    inventory: inventory.clone(),
+                    owner: entity,
+                }),
+            );
+        }
     }
 }
 

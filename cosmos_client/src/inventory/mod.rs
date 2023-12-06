@@ -31,7 +31,6 @@ fn toggle_inventory(
     if inputs.check_just_pressed(CosmosInputs::ToggleInventory) {
         if let Ok((ent, x)) = player_inventory.get_single() {
             if x.is_some() {
-                println!("RMD!");
                 commands.entity(ent).remove::<NeedsDisplayed>();
             } else {
                 commands.entity(ent).insert(NeedsDisplayed);
@@ -81,7 +80,6 @@ fn toggle_inventory_rendering(
     let mut decreased = false;
 
     for removed in removed_components.read() {
-        println!("Removed {removed:?}");
         commands.entity(removed).log_components();
         let Ok((inventory_holder, mut local_inventory, open_inventory_entity)) = without_needs_displayed_inventories.get_mut(removed)
         else {

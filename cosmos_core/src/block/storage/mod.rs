@@ -1,3 +1,5 @@
+//! Handles blocks that have inventories
+
 use bevy::app::App;
 
 pub mod storage_blocks;

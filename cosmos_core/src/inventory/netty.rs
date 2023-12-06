@@ -3,6 +3,8 @@
 use bevy::prelude::Entity;
 use serde::{Deserialize, Serialize};
 
+use crate::block::data::BlockData;
+
 use super::{HeldItemStack, Inventory};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -14,6 +16,13 @@ pub enum ServerInventoryMessages {
         inventory: Inventory,
         /// The entity that has this inventory.
         owner: Entity,
+    },
+    /// Represents the inventory that an entity has.
+    BlockInventory {
+        /// The serialized version of an inventory.
+        inventory: Inventory,
+        /// The block's identifier in question.
+        block_data: BlockData,
     },
     /// Updates what is currently held by the player
     HeldItemstack {

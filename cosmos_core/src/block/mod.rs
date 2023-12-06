@@ -14,6 +14,7 @@ pub mod block_builder;
 pub mod block_events;
 pub mod block_update;
 pub mod blocks;
+pub mod data;
 pub mod multiblock;
 pub mod storage;
 
@@ -361,6 +362,7 @@ pub(super) fn register<T: States + Clone + Copy>(
     multiblock::register(app, post_loading_state, playing_state);
     block_update::register(app);
     storage::register(app);
+    data::register(app);
 
     app.register_type::<BlockFace>();
 }

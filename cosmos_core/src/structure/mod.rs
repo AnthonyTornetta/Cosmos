@@ -488,6 +488,40 @@ impl Structure {
             Self::Dynamic(ds) => ds.has_empty_chunk_at(coords),
         }
     }
+
+    /// Returns `None` if the chunk is unloaded.
+    ///
+    /// Gets the entity that contains this block's information if there is one
+    pub fn block_data(&self, coords: BlockCoordinate) -> Option<Entity> {
+        match self {
+            Self::Full(fs) => fs.block_data(coords),
+            Self::Dynamic(ds) => ds.block_data(coords),
+        }
+    }
+
+    /// Returns `None` if the chunk is unloaded.
+    ///
+    /// Sets the block at these coordinate's data.
+    ///
+    /// This does NOT despawn previous data that was here.
+    ///
+    /// Will return the entity that was previously here, if any.
+    pub fn set_block_data(&mut self, coords: BlockCoordinate, data_entity: Entity) -> Option<Entity> {
+        match self {
+            Self::Full(fs) => fs.set_block_data(coords, data_entity),
+            Self::Dynamic(ds) => ds.set_block_data(coords, data_entity),
+        }
+    }
+
+    /// Removes any block data associated with this block
+    ///
+    /// Will return the data entity that was previously here, if any
+    pub fn remove_block_data(&mut self, coords: BlockCoordinate) -> Option<Entity> {
+        match self {
+            Self::Full(fs) => fs.remove_block_data(coords),
+            Self::Dynamic(ds) => ds.remove_block_data(coords),
+        }
+    }
 }
 
 /// This event is sent when a chunk is initially filled out
