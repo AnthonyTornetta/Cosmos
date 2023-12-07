@@ -112,6 +112,16 @@ pub fn done_blueprinting(mut query: Query<(Entity, &mut SerializedData, &NeedsBl
 /// Make sure those systems are run before `done_saving` aswell.
 pub fn begin_saving() {}
 
+/// `apply_deferred` but for the saving phase
+pub fn apply_deferred_saving(world: &mut World) {
+    info!("DEFERRING! {}", world.query::<&BlockDataNeedsSaved>().iter(&world).len());
+}
+
+/// `apply_deferred` but for the saving phase
+pub fn apply_deferred_saving_2(world: &mut World) {
+    info!("DEFERRING 2! {}", world.query::<&BlockDataNeedsSaved>().iter(&world).len());
+}
+
 /// Make sure any systems that serialize data for saving are run before this
 ///
 /// Make sure those systems are run after `begin_saving` aswell.
@@ -234,7 +244,12 @@ pub(super) fn register(app: &mut App) {
                 .before(begin_saving),
         )
         // Put all saving-related systems between these systems
-        .add_systems(First, (begin_saving, done_saving).chain().before(despawn_needed))
+        .add_systems(
+            First,
+            (begin_saving, apply_deferred_saving, apply_deferred_saving_2, done_saving)
+                .chain()
+                .before(despawn_needed),
+        )
         // Like this:
         .add_systems(First, default_save.after(begin_saving).before(done_saving));
 }
