@@ -192,12 +192,16 @@ impl SaveFileIdentifier {
     }
 }
 
+#[derive(Debug, Reflect, Serialize, Deserialize, Default, Clone)]
+/// A version of `SerializedData` without the location field and the inability to disable saving
+pub struct SaveData(HashMap<String, Vec<u8>>);
+
 #[derive(Component, Debug, Reflect, Serialize, Deserialize)]
 /// Stores the serialized data for an entity.
 ///
 /// This is either read from or written to a save file depending on if an entity is being loaded or saved.
 pub struct SerializedData {
-    save_data: HashMap<String, Vec<u8>>,
+    save_data: SaveData,
 
     /// Used to identify the location this should be saved under
     location: Option<Location>,
@@ -216,10 +220,40 @@ impl SerializedData {
 impl Default for SerializedData {
     fn default() -> Self {
         Self {
-            save_data: HashMap::default(),
+            save_data: SaveData::default(),
             location: None,
             should_save: true,
         }
+    }
+}
+
+impl SaveData {
+    /// Saves the data to that data id. Will overwrite any existing data at that id.
+    ///
+    /// Will only save if `should_save()` returns true.
+    pub fn save(&mut self, data_id: impl Into<String>, data: Vec<u8>) {
+        self.0.insert(data_id.into(), data);
+    }
+
+    /// Calls `cosmos_encoder::serialize` on the passed in data.
+    /// Then sends that data into the `save` method, with the given data id.
+    ///
+    /// Will only serialize & save if `should_save()` returns true.
+
+    pub fn serialize_data(&mut self, data_id: impl Into<String>, data: &impl Serialize) {
+        self.save(data_id, cosmos_encoder::serialize(data));
+    }
+
+    /// Reads the data as raw bytes at the given data id. Use `deserialize_data` for a streamlined way to read the data.
+    pub fn read_data(&self, data_id: &str) -> Option<&Vec<u8>> {
+        self.0.get(data_id)
+    }
+
+    /// Deserializes the data as the given type (via `cosmos_encoder::deserialize`) at the given id. Will panic if the
+    /// data is not properly serialized.
+    pub fn deserialize_data<T: DeserializeOwned>(&self, data_id: &str) -> Option<T> {
+        self.read_data(data_id)
+            .map(|d| cosmos_encoder::deserialize(d).expect("Error deserializing data!"))
     }
 }
 
@@ -229,7 +263,7 @@ impl SerializedData {
     /// Will only save if `should_save()` returns true.
     pub fn save(&mut self, data_id: impl Into<String>, data: Vec<u8>) {
         if self.should_save() {
-            self.save_data.insert(data_id.into(), data);
+            self.save_data.save(data_id, data);
         }
     }
 
@@ -240,20 +274,19 @@ impl SerializedData {
 
     pub fn serialize_data(&mut self, data_id: impl Into<String>, data: &impl Serialize) {
         if self.should_save() {
-            self.save(data_id, cosmos_encoder::serialize(data));
+            self.save_data.serialize_data(data_id, data);
         }
     }
 
     /// Reads the data as raw bytes at the given data id. Use `deserialize_data` for a streamlined way to read the data.
     pub fn read_data(&self, data_id: &str) -> Option<&Vec<u8>> {
-        self.save_data.get(data_id)
+        self.save_data.read_data(data_id)
     }
 
     /// Deserializes the data as the given type (via `cosmos_encoder::deserialize`) at the given id. Will panic if the
     /// data is not properly serialized.
     pub fn deserialize_data<T: DeserializeOwned>(&self, data_id: &str) -> Option<T> {
-        self.read_data(data_id)
-            .map(|d| cosmos_encoder::deserialize(d).expect("Error deserializing data!"))
+        self.save_data.deserialize_data(data_id)
     }
 
     /// Sets whether this should actually be saved - if false, when save and serialize_data is called,

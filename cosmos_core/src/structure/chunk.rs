@@ -213,6 +213,13 @@ impl Chunk {
     pub fn remove_block_data(&mut self, coords: ChunkBlockCoordinate) -> Option<Entity> {
         self.block_data.remove(&coords)
     }
+
+    /// Returns all the block data entities this chunk has.
+    ///
+    /// Mostly just used for saving
+    pub fn all_block_data_entities(&self) -> &HashMap<ChunkBlockCoordinate, Entity> {
+        &self.block_data
+    }
 }
 
 #[derive(Debug, Default, Reflect, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]

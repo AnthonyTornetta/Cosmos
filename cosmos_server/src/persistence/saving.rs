@@ -8,7 +8,8 @@
 //! See [`saving::default_save`] for an example.
 
 use bevy::{
-    log::warn,
+    ecs::world::World,
+    log::{info, warn},
     prelude::{App, Commands, Component, Entity, First, IntoSystemConfigs, PostUpdate, Query, ResMut, With, Without},
     reflect::Reflect,
 };
@@ -55,6 +56,9 @@ fn check_needs_blueprinted(query: Query<Entity, (With<NeedsBlueprinted>, Without
 
 /// Put all systems that add data to blueprinted entities after this and before `done_blueprinting`
 pub fn begin_blueprinting() {}
+
+/// `apply_deferred` but for the blueprinting phase
+pub fn apply_deferred_blueprinting(_: &mut World) {}
 
 /// Saves the given structure.
 ///
@@ -223,11 +227,14 @@ fn default_save(mut query: Query<(&mut SerializedData, Option<&Location>, Option
 pub(super) fn register(app: &mut App) {
     app.add_systems(PostUpdate, (check_needs_saved, check_needs_blueprinted))
         // Add all blueprint-related systems between these systems
-        .add_systems(First, (begin_blueprinting, done_blueprinting).chain().before(begin_saving))
-        // Put all saving-related systems after this
-        .add_systems(First, begin_saving.before(despawn_needed))
-        // Put all saving-related systems before this
-        .add_systems(First, done_saving.after(begin_saving).before(despawn_needed))
+        .add_systems(
+            First,
+            (begin_blueprinting, apply_deferred_blueprinting, done_blueprinting)
+                .chain()
+                .before(begin_saving),
+        )
+        // Put all saving-related systems between these systems
+        .add_systems(First, (begin_saving, done_saving).chain().before(despawn_needed))
         // Like this:
         .add_systems(First, default_save.after(begin_saving).before(done_saving));
 }

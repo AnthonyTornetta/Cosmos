@@ -1,4 +1,6 @@
-use bevy::prelude::*;
+use std::time::Duration;
+
+use bevy::{prelude::*, time::common_conditions::on_timer};
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
     physics::location::Location,
@@ -10,25 +12,32 @@ use cosmos_core::{
     },
 };
 
-use crate::persistence::{
-    loading::{begin_loading, begin_loading_blueprint, done_loading, done_loading_blueprint, NeedsBlueprintLoaded, NeedsLoaded},
-    saving::{begin_blueprinting, begin_saving, done_blueprinting, done_saving, NeedsBlueprinted, NeedsSaved},
-    SerializedData,
+use crate::{
+    persistence::{
+        loading::{begin_loading, begin_loading_blueprint, done_loading, done_loading_blueprint, NeedsBlueprintLoaded, NeedsLoaded},
+        saving::{
+            apply_deferred_blueprinting, apply_deferred_saving, begin_blueprinting, begin_saving, done_blueprinting, done_saving,
+            NeedsBlueprinted, NeedsSaved,
+        },
+        SerializedData,
+    },
+    structure::persistence::save_structure,
 };
 
 use super::server_ship_builder::ServerShipBuilder;
 
-fn on_blueprint_structure(mut query: Query<(&mut SerializedData, &Structure, &mut NeedsBlueprinted), With<Ship>>) {
+fn on_blueprint_structure(mut query: Query<(&mut SerializedData, &Structure, &mut NeedsBlueprinted), With<Ship>>, mut commands: Commands) {
     for (mut s_data, structure, mut blueprint) in query.iter_mut() {
         blueprint.subdir_name = "ship".into();
-        s_data.serialize_data("cosmos:structure", structure);
+
+        save_structure(structure, &mut s_data, &mut commands);
         s_data.serialize_data("cosmos:is_ship", &true);
     }
 }
 
-fn on_save_structure(mut query: Query<(&mut SerializedData, &Structure), (With<NeedsSaved>, With<Ship>)>) {
+fn on_save_structure(mut query: Query<(&mut SerializedData, &Structure), (With<NeedsSaved>, With<Ship>)>, mut commands: Commands) {
     for (mut s_data, structure) in query.iter_mut() {
-        s_data.serialize_data("cosmos:structure", structure);
+        save_structure(structure, &mut s_data, &mut commands);
         s_data.serialize_data("cosmos:is_ship", &true);
     }
 }
@@ -139,6 +148,12 @@ fn even_more_delayed_structure_event(
     }
 }
 
+fn save_ships(query: Query<Entity, With<Ship>>, mut commands: Commands) {
+    for ent in query.iter() {
+        commands.entity(ent).insert(NeedsSaved);
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_systems(PreUpdate, even_more_delayed_structure_event)
         .add_systems(Update, delayed_structure_event)
@@ -147,8 +162,14 @@ pub(super) fn register(app: &mut App) {
         .add_systems(
             First,
             (
-                on_blueprint_structure.after(begin_blueprinting).before(done_blueprinting),
-                on_save_structure.after(begin_saving).before(done_saving),
+                on_blueprint_structure
+                    .after(begin_blueprinting)
+                    .before(apply_deferred_blueprinting)
+                    .before(done_blueprinting),
+                on_save_structure
+                    .after(begin_saving)
+                    .before(apply_deferred_saving)
+                    .before(done_saving),
             ),
         )
         .add_systems(
@@ -156,6 +177,7 @@ pub(super) fn register(app: &mut App) {
             (
                 on_load_blueprint.after(begin_loading_blueprint).before(done_loading_blueprint),
                 on_load_structure.after(begin_loading).before(done_loading),
+                save_ships.run_if(on_timer(Duration::from_secs(1))),
             ),
         );
 }

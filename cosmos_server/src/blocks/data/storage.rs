@@ -1,12 +1,13 @@
 use bevy::{
-    app::{App, Update},
+    app::{App, First, Update},
     ecs::{
         event::EventReader,
+        query::With,
         schedule::IntoSystemConfigs,
         system::{Commands, Query, Res},
     },
-    hierarchy::BuildChildren,
-    log::warn,
+    hierarchy::{BuildChildren, Parent},
+    log::{info, warn},
 };
 use cosmos_core::{
     block::{
@@ -16,8 +17,55 @@ use cosmos_core::{
     inventory::Inventory,
     item::Item,
     registry::Registry,
-    structure::{coordinates::ChunkCoordinate, Structure},
+    structure::{
+        coordinates::{ChunkBlockCoordinate, ChunkCoordinate},
+        Structure,
+    },
 };
+
+use crate::{
+    persistence::saving::apply_deferred_saving,
+    structure::persistence::{chunk::done_saving_block_data, BlockDataNeedsSavedThisIsStupidPleaseMakeThisAComponent, SerializedBlockData},
+};
+
+// I can't get this to work no matter how many deffers I use.
+// Wait till https://github.com/bevyengine/bevy/pull/9822 is released
+// fn save_storage(
+//     q_storage_blocks: Query<(&Parent, &Inventory, &BlockData), With<BlockDataNeedsSaved>>,
+//     mut q_chunk: Query<&mut SerializedBlockData>,
+// ) {
+//     q_storage_blocks.for_each(|(parent, inventory, block_data)| {
+//         let mut serialized_block_data = q_chunk
+//             .get_mut(parent.get())
+//             .expect("Block data's parent wasn't a chunk w/ SerializedBlockData???");
+
+//         serialized_block_data.serialize_data(
+//             ChunkBlockCoordinate::for_block_coordinate(block_data.block.coords()),
+//             "cosmos:inventory",
+//             inventory,
+//         );
+//     });
+// }
+
+fn save_storage(
+    mut ev_reader: EventReader<BlockDataNeedsSavedThisIsStupidPleaseMakeThisAComponent>,
+    q_storage_blocks: Query<(&Parent, &Inventory, &BlockData) /*With<BlockDataNeedsSaved>*/>,
+    mut q_chunk: Query<&mut SerializedBlockData>,
+) {
+    for ev in ev_reader.read() {
+        if let Ok((parent, inventory, block_data)) = q_storage_blocks.get(ev.0) {
+            let mut serialized_block_data = q_chunk
+                .get_mut(parent.get())
+                .expect("Block data's parent wasn't a chunk w/ SerializedBlockData???");
+
+            serialized_block_data.serialize_data(
+                ChunkBlockCoordinate::for_block_coordinate(block_data.block.coords()),
+                "cosmos:inventory",
+                inventory,
+            );
+        }
+    }
+}
 
 fn populate_inventory(
     mut q_structure: Query<&mut Structure>,
@@ -82,5 +130,6 @@ fn populate_inventory(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, populate_inventory.after(on_add_storage));
+    app.add_systems(Update, populate_inventory.after(on_add_storage))
+        .add_systems(First, save_storage.after(apply_deferred_saving).before(done_saving_block_data));
 }
