@@ -1,6 +1,9 @@
 //! Handles the loading of ships
 
-use bevy::prelude::{in_state, App, Commands, Component, Entity, EventWriter, IntoSystemConfigs, Query, Res, Update, With};
+use bevy::{
+    ecs::schedule::apply_deferred,
+    prelude::{in_state, App, Commands, Component, Entity, EventWriter, IntoSystemConfigs, Query, Res, Update, With},
+};
 use cosmos_core::{
     block::{Block, BlockFace},
     registry::Registry,
@@ -9,7 +12,7 @@ use cosmos_core::{
     },
 };
 
-use crate::state::GameState;
+use crate::{events::create_ship_event::create_ship_event_reader, state::GameState};
 
 /// A flag that denotes that a ship needs created
 #[derive(Component)]
@@ -60,5 +63,11 @@ fn create_ships(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, create_ships.run_if(in_state(GameState::Playing)));
+    app.add_systems(
+        Update,
+        create_ships
+            .after(apply_deferred)
+            .after(create_ship_event_reader)
+            .run_if(in_state(GameState::Playing)),
+    );
 }

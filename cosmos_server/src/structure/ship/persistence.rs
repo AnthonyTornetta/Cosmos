@@ -6,6 +6,7 @@ use cosmos_core::{
     physics::location::Location,
     structure::{
         events::StructureLoadedEvent,
+        loading::StructureLoadingSet,
         ship::{ship_builder::TShipBuilder, Ship},
         structure_iterator::ChunkIteratorResult,
         ChunkInitEvent, Structure,
@@ -21,7 +22,10 @@ use crate::{
         },
         SerializedData,
     },
-    structure::persistence::{save_structure, BlockDataNeedsSavedThisIsStupidPleaseMakeThisAComponent, SuperDuperStupidGarbage},
+    structure::persistence::{
+        chunk::{AllBlockData, ChunkLoadBlockDataEvent},
+        save_structure, BlockDataNeedsSavedThisIsStupidPleaseMakeThisAComponent, SuperDuperStupidGarbage,
+    },
 };
 
 use super::server_ship_builder::ServerShipBuilder;
@@ -58,7 +62,10 @@ fn load_structure(
     loc: Location,
     mut structure: Structure,
     s_data: &SerializedData,
-    event_writer: &mut EventWriter<DelayedStructureLoadEvent>,
+    // event_writer: &mut EventWriter<DelayedStructureLoadEvent>,
+    chunk_load_block_data_event_writer: &mut EventWriter<ChunkLoadBlockDataEvent>,
+    chunk_set_event_writer: &mut EventWriter<ChunkInitEvent>,
+    structure_loaded_event_writer: &mut EventWriter<StructureLoadedEvent>,
 ) {
     let mut entity_cmd = commands.entity(entity);
 
@@ -70,15 +77,46 @@ fn load_structure(
 
     let entity = entity_cmd.id();
 
-    event_writer.send(DelayedStructureLoadEvent(entity));
+    // event_writer.send(DelayedStructureLoadEvent(entity));
 
-    commands.entity(entity).insert(structure);
+    for res in structure.all_chunks_iter(false) {
+        // This will always be true because include_empty is false
+        if let ChunkIteratorResult::FilledChunk {
+            position: coords,
+            chunk: _,
+        } = res
+        {
+            // Maybe wait till block data is set for this?
+            chunk_set_event_writer.send(ChunkInitEvent {
+                structure_entity: entity,
+                coords,
+            });
+        }
+    }
+
+    structure_loaded_event_writer.send(StructureLoadedEvent { structure_entity: entity });
+
+    info!("LOGGING COMPONENTS");
+    commands.entity(entity).insert(structure).log_components();
+
+    if let Some(block_data) = s_data.deserialize_data::<AllBlockData>("cosmos:block_data") {
+        for (chunk_coord, data) in block_data.0 {
+            chunk_load_block_data_event_writer.send(ChunkLoadBlockDataEvent {
+                data,
+                chunk: chunk_coord,
+                structure_entity: entity,
+            });
+        }
+    }
 }
 
 fn on_load_blueprint(
     query: Query<(Entity, &SerializedData, &NeedsBlueprintLoaded), With<NeedsBlueprintLoaded>>,
-    mut event_writer: EventWriter<DelayedStructureLoadEvent>,
+    // mut event_writer: EventWriter<DelayedStructureLoadEvent>,
     mut commands: Commands,
+    mut chunk_load_block_data_event_writer: EventWriter<ChunkLoadBlockDataEvent>,
+    mut chunk_set_event_writer: EventWriter<ChunkInitEvent>,
+    mut structure_loaded_event_writer: EventWriter<StructureLoadedEvent>,
 ) {
     for (entity, s_data, needs_blueprinted) in query.iter() {
         if s_data.deserialize_data::<bool>("cosmos:is_ship").unwrap_or(false) {
@@ -89,8 +127,21 @@ fn on_load_blueprint(
                     needs_blueprinted.spawn_at,
                     structure,
                     s_data,
-                    &mut event_writer,
+                    &mut chunk_load_block_data_event_writer,
+                    // &mut event_writer,
+                    &mut chunk_set_event_writer,
+                    &mut structure_loaded_event_writer,
                 );
+            }
+        }
+
+        if let Some(block_data) = s_data.deserialize_data::<AllBlockData>("cosmos:block_data") {
+            for (chunk_coord, data) in block_data.0 {
+                chunk_load_block_data_event_writer.send(ChunkLoadBlockDataEvent {
+                    data,
+                    chunk: chunk_coord,
+                    structure_entity: entity,
+                });
             }
         }
     }
@@ -98,8 +149,11 @@ fn on_load_blueprint(
 
 fn on_load_structure(
     query: Query<(Entity, &SerializedData), With<NeedsLoaded>>,
-    mut event_writer: EventWriter<DelayedStructureLoadEvent>,
+    // mut event_writer: EventWriter<DelayedStructureLoadEvent>,
     mut commands: Commands,
+    mut chunk_load_block_data_event_writer: EventWriter<ChunkLoadBlockDataEvent>,
+    mut chunk_set_event_writer: EventWriter<ChunkInitEvent>,
+    mut structure_loaded_event_writer: EventWriter<StructureLoadedEvent>,
 ) {
     for (entity, s_data) in query.iter() {
         if s_data.deserialize_data::<bool>("cosmos:is_ship").unwrap_or(false) {
@@ -108,7 +162,17 @@ fn on_load_structure(
                     .deserialize_data("cosmos:location")
                     .expect("Every ship should have a location when saved!");
 
-                load_structure(entity, &mut commands, loc, structure, s_data, &mut event_writer);
+                load_structure(
+                    entity,
+                    &mut commands,
+                    loc,
+                    structure,
+                    s_data,
+                    &mut chunk_load_block_data_event_writer,
+                    // &mut event_writer,
+                    &mut chunk_set_event_writer,
+                    &mut structure_loaded_event_writer,
+                );
             }
         }
     }
@@ -117,46 +181,46 @@ fn on_load_structure(
 /// I hate this, but the only way to prevent issues with events is to delay the sending of the chunk init events
 /// by 2 frames, so two events are needed to do this. This is really horrible, but the only way I can think of
 /// to get this to work ;(
-#[derive(Debug, Event)]
-struct DelayedStructureLoadEvent(pub Entity);
-#[derive(Debug, Event)]
-struct EvenMoreDelayedStructureLoadEvent(Entity);
+// #[derive(Debug, Event)]
+// struct DelayedStructureLoadEvent(pub Entity);
+// #[derive(Debug, Event)]
+// struct EvenMoreDelayedStructureLoadEvent(Entity);
 
-fn delayed_structure_event(
-    mut event_reader: EventReader<DelayedStructureLoadEvent>,
-    mut event_writer: EventWriter<EvenMoreDelayedStructureLoadEvent>,
-) {
-    for ev in event_reader.read() {
-        event_writer.send(EvenMoreDelayedStructureLoadEvent(ev.0));
-    }
-}
+// fn delayed_structure_event(
+//     mut event_reader: EventReader<DelayedStructureLoadEvent>,
+//     mut event_writer: EventWriter<EvenMoreDelayedStructureLoadEvent>,
+// ) {
+//     for ev in event_reader.read() {
+//         event_writer.send(EvenMoreDelayedStructureLoadEvent(ev.0));
+//     }
+// }
 
-fn even_more_delayed_structure_event(
-    mut event_reader: EventReader<EvenMoreDelayedStructureLoadEvent>,
-    mut chunk_set_event_writer: EventWriter<ChunkInitEvent>,
-    mut structure_loaded_event_writer: EventWriter<StructureLoadedEvent>,
-    query: Query<&Structure>,
-) {
-    for ev in event_reader.read() {
-        if let Ok(structure) = query.get(ev.0) {
-            for res in structure.all_chunks_iter(false) {
-                // This will always be true because include_empty is false
-                if let ChunkIteratorResult::FilledChunk {
-                    position: coords,
-                    chunk: _,
-                } = res
-                {
-                    chunk_set_event_writer.send(ChunkInitEvent {
-                        structure_entity: ev.0,
-                        coords,
-                    });
-                }
-            }
-        }
+// fn even_more_delayed_structure_event(
+//     mut event_reader: EventReader<EvenMoreDelayedStructureLoadEvent>,
+//     mut chunk_set_event_writer: EventWriter<ChunkInitEvent>,
+//     mut structure_loaded_event_writer: EventWriter<StructureLoadedEvent>,
+//     query: Query<&Structure>,
+// ) {
+//     for ev in event_reader.read() {
+//         if let Ok(structure) = query.get(ev.0) {
+//             for res in structure.all_chunks_iter(false) {
+//                 // This will always be true because include_empty is false
+//                 if let ChunkIteratorResult::FilledChunk {
+//                     position: coords,
+//                     chunk: _,
+//                 } = res
+//                 {
+//                     chunk_set_event_writer.send(ChunkInitEvent {
+//                         structure_entity: ev.0,
+//                         coords,
+//                     });
+//                 }
+//             }
+//         }
 
-        structure_loaded_event_writer.send(StructureLoadedEvent { structure_entity: ev.0 });
-    }
-}
+//         structure_loaded_event_writer.send(StructureLoadedEvent { structure_entity: ev.0 });
+//     }
+// }
 
 fn save_ships(query: Query<Entity, With<Ship>>, mut commands: Commands) {
     for ent in query.iter() {
@@ -165,10 +229,10 @@ fn save_ships(query: Query<Entity, With<Ship>>, mut commands: Commands) {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(PreUpdate, even_more_delayed_structure_event)
-        .add_systems(Update, delayed_structure_event)
-        .add_event::<DelayedStructureLoadEvent>()
-        .add_event::<EvenMoreDelayedStructureLoadEvent>()
+    app //.add_systems(PreUpdate, even_more_delayed_structure_event)
+        //.add_systems(Update, delayed_structure_event)
+        // .add_event::<DelayedStructureLoadEvent>()
+        // .add_event::<EvenMoreDelayedStructureLoadEvent>()
         .add_systems(
             First,
             (
@@ -186,7 +250,10 @@ pub(super) fn register(app: &mut App) {
             Update,
             (
                 on_load_blueprint.after(begin_loading_blueprint).before(done_loading_blueprint),
-                on_load_structure.after(begin_loading).before(done_loading),
+                on_load_structure
+                    .after(begin_loading)
+                    .in_set(StructureLoadingSet::LoadStructure)
+                    .before(done_loading),
                 save_ships.run_if(on_timer(Duration::from_secs(1))),
             ),
         );

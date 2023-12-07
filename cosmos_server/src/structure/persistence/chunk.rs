@@ -8,6 +8,7 @@ use bevy::{
     ecs::{
         component::Component,
         entity::Entity,
+        event::Event,
         query::Without,
         schedule::IntoSystemConfigs,
         system::{Commands, Query, ResMut},
@@ -18,23 +19,26 @@ use bevy::{
 };
 use cosmos_core::{
     ecs::NeedsDespawned,
-    structure::{
-        chunk::ChunkEntity,
-        coordinates::{ChunkBlockCoordinate, ChunkCoordinate},
-        Structure,
-    },
+    structure::{chunk::ChunkEntity, coordinates::ChunkCoordinate, Structure},
 };
 use serde::{Deserialize, Serialize};
 
 use crate::persistence::{
     saving::{apply_deferred_blueprinting, done_blueprinting, done_saving},
-    SaveData, SerializedData,
+    SerializedData,
 };
 
-use super::SuperDuperStupidGarbage;
+use super::{SerializedChunkBlockData, SuperDuperStupidGarbage};
+
+#[derive(Event)]
+pub struct ChunkLoadBlockDataEvent {
+    pub data: SerializedChunkBlockData,
+    pub chunk: ChunkCoordinate,
+    pub structure_entity: Entity,
+}
 
 #[derive(Serialize, Deserialize, Default, Component, DerefMut, Deref)]
-struct AllBlockData(HashMap<ChunkCoordinate, HashMap<ChunkBlockCoordinate, SaveData>>);
+pub struct AllBlockData(pub HashMap<ChunkCoordinate, SerializedChunkBlockData>);
 
 /// Put systems that save block data before this
 pub(crate) fn save_block_data(
@@ -108,7 +112,6 @@ pub(crate) fn done_saving_block_data(
     commands: Commands,
     chunks_that_need_saved_turn_this_into_a_query_please: ResMut<SuperDuperStupidGarbage>,
 ) {
-    info!("Should be last");
     save_block_data(
         q_structure,
         q_serialized_data,
@@ -119,10 +122,12 @@ pub(crate) fn done_saving_block_data(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(First, done_saving_block_data.before(done_saving)).add_systems(
-        First,
-        done_blueprinting_block_data
-            .after(apply_deferred_blueprinting)
-            .before(done_blueprinting),
-    );
+    app.add_event::<ChunkLoadBlockDataEvent>()
+        .add_systems(First, done_saving_block_data.before(done_saving))
+        .add_systems(
+            First,
+            done_blueprinting_block_data
+                .after(apply_deferred_blueprinting)
+                .before(done_blueprinting),
+        );
 }

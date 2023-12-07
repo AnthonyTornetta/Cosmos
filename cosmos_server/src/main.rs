@@ -14,6 +14,9 @@ use plugin::server_plugin::ServerPlugin;
 use state::GameState;
 use thread_priority::{set_current_thread_priority, ThreadPriority};
 
+#[cfg(feature = "print-schedule")]
+use bevy::log::LogPlugin;
+
 pub mod blocks;
 pub mod commands;
 pub mod entities;
@@ -48,7 +51,25 @@ fn main() {
         None
     };
 
-    App::new()
+    let mut app = App::new();
+
+    let default_plugins = DefaultPlugins
+        .set(TaskPoolPlugin {
+            task_pool_options: TaskPoolOptions {
+                compute: TaskPoolThreadAssignmentPolicy {
+                    min_threads: 1,
+                    max_threads: std::usize::MAX,
+                    percent: 0.25,
+                },
+                ..Default::default()
+            },
+        })
+        .set(ImagePlugin::default_nearest());
+
+    #[cfg(feature = "print-schedule")]
+    let default_plugins = default_plugins.disable::<LogPlugin>();
+
+    app
         // This must be the first thing added or systems don't get added correctly
         .add_state::<GameState>()
         .insert_resource(RapierConfiguration {
@@ -60,20 +81,7 @@ fn main() {
             },
             ..default()
         })
-        .add_plugins(
-            DefaultPlugins
-                .set(TaskPoolPlugin {
-                    task_pool_options: TaskPoolOptions {
-                        compute: TaskPoolThreadAssignmentPolicy {
-                            min_threads: 1,
-                            max_threads: std::usize::MAX,
-                            percent: 0.25,
-                        },
-                        ..Default::default()
-                    },
-                })
-                .set(ImagePlugin::default_nearest()),
-        )
+        .add_plugins(default_plugins)
         .add_plugins(CosmosCorePluginGroup::new(
             GameState::PreLoading,
             GameState::Loading,
@@ -81,6 +89,13 @@ fn main() {
             GameState::Playing,
             GameState::Playing,
         ))
-        .add_plugins((RenetServerPlugin, NetcodeServerPlugin, ServerPlugin { ip }))
-        .run();
+        .add_plugins((RenetServerPlugin, NetcodeServerPlugin, ServerPlugin { ip }));
+
+    #[cfg(feature = "print-schedule")]
+    {
+        bevy_mod_debugdump::print_schedule_graph(&mut app, Update);
+        return;
+    }
+
+    app.run();
 }

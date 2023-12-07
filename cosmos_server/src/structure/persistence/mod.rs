@@ -3,11 +3,13 @@
 use bevy::{
     app::App,
     ecs::{
+        component::Component,
         entity::Entity,
         event::{Event, EventWriter},
         system::{Commands, Resource},
     },
     log::{info, warn},
+    prelude::{Deref, DerefMut},
     utils::HashMap,
 };
 use cosmos_core::structure::{
@@ -21,13 +23,16 @@ use crate::persistence::{SaveData, SerializedData};
 
 pub mod chunk;
 
-#[derive(/*Component,*/ Debug, Serialize, Deserialize)]
+#[derive(DerefMut, Deref, Debug, Serialize, Deserialize, Default)]
+pub struct SerializedChunkBlockData(HashMap<ChunkBlockCoordinate, SaveData>);
+
+#[derive(Component, Debug, Serialize, Deserialize)]
 /// This will *eventually* be a component on the chunk that stores all the block data that has been serialized.
 pub struct SerializedBlockData {
     /// The chunk's coordinates stored for your convenience
     pub chunk: ChunkCoordinate,
     /// If this is being saved for a blueprint instead of an actual world file
-    save_data: HashMap<ChunkBlockCoordinate, SaveData>,
+    save_data: SerializedChunkBlockData,
 }
 
 impl SerializedBlockData {
@@ -74,7 +79,7 @@ impl SerializedBlockData {
         }
     }
 
-    pub(crate) fn take_save_data(&mut self) -> HashMap<ChunkBlockCoordinate, SaveData> {
+    pub(crate) fn take_save_data(&mut self) -> SerializedChunkBlockData {
         std::mem::take(&mut self.save_data)
     }
 }

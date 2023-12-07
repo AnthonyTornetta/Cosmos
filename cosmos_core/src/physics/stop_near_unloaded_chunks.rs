@@ -1,6 +1,9 @@
 //! Freezes entities that are near unloaded chunks so they don't fly into unloaded areas.
 
-use bevy::prelude::{App, Commands, Entity, GlobalTransform, PostUpdate, Query, With, Without};
+use bevy::{
+    log::warn,
+    prelude::{App, Commands, Entity, GlobalTransform, PostUpdate, Query, With, Without},
+};
 use bevy_rapier3d::prelude::{Collider, RigidBodyDisabled};
 
 use crate::{
@@ -66,6 +69,7 @@ fn stop_near_unloaded_chunks(
                         if let Some(chunk_entity) = structure.chunk_entity(position) {
                             !has_collider.contains(chunk_entity)
                         } else {
+                            warn!("Missing chunk entity in loaded structure - {structure_ent:?}");
                             true
                         }
                     }

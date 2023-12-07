@@ -5,8 +5,10 @@ use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::physics::location::Location;
 use cosmos_core::structure::coordinates::ChunkCoordinate;
 use cosmos_core::structure::full_structure::FullStructure;
+use cosmos_core::structure::loading::StructureLoadingSet;
 use cosmos_core::structure::{ship::ship_builder::TShipBuilder, Structure};
 
+use crate::netty::server_listener::server_listen_messages;
 use crate::structure::ship::{loading::ShipNeedsCreated, server_ship_builder::ServerShipBuilder};
 use crate::GameState;
 
@@ -19,7 +21,7 @@ pub struct CreateShipEvent {
     pub rotation: Quat,
 }
 
-fn event_reader(mut event_reader: EventReader<CreateShipEvent>, mut commands: Commands) {
+pub(crate) fn create_ship_event_reader(mut event_reader: EventReader<CreateShipEvent>, mut commands: Commands) {
     for ev in event_reader.read() {
         let mut entity = commands.spawn_empty();
 
@@ -34,6 +36,11 @@ fn event_reader(mut event_reader: EventReader<CreateShipEvent>, mut commands: Co
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_event::<CreateShipEvent>()
-        .add_systems(Update, event_reader.run_if(in_state(GameState::Playing)));
+    app.add_event::<CreateShipEvent>().add_systems(
+        Update,
+        create_ship_event_reader
+            .after(server_listen_messages)
+            .in_set(StructureLoadingSet::LoadStructure)
+            .run_if(in_state(GameState::Playing)),
+    );
 }

@@ -14,6 +14,7 @@ use crate::{
     structure::{
         coordinates::{BlockCoordinate, CoordinateType},
         events::StructureLoadedEvent,
+        loading::StructureLoadingSet,
         Structure, StructureBlock,
     },
 };
@@ -551,7 +552,11 @@ pub(super) fn register<T: States + Clone + Copy>(app: &mut App, post_loading_sta
         .add_systems(OnEnter(post_loading_state), register_laser_blocks)
         .add_systems(
             Update,
-            (structure_loaded_event, block_update_system).run_if(in_state(playing_state)),
+            (
+                structure_loaded_event.in_set(StructureLoadingSet::StructureLoaded),
+                block_update_system,
+            )
+                .run_if(in_state(playing_state)),
         )
         .register_type::<LaserCannonSystem>();
 }

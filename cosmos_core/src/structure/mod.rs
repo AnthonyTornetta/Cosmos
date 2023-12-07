@@ -4,6 +4,7 @@
 
 use std::fmt::Display;
 
+use bevy::ecs::schedule::apply_deferred;
 use bevy::prelude::{App, Event, IntoSystemConfigs, Name, PreUpdate, VisibilityBundle};
 use bevy::reflect::Reflect;
 use bevy::transform::TransformBundle;
@@ -730,5 +731,5 @@ pub(super) fn register<T: States + Clone + Copy>(app: &mut App, post_loading_sta
     block_health::register(app);
     structure_block::register(app);
 
-    app.add_systems(PreUpdate, (add_chunks_system, remove_empty_chunks).chain());
+    app.add_systems(PreUpdate, (add_chunks_system.after(apply_deferred), remove_empty_chunks).chain());
 }

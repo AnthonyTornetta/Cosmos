@@ -6,6 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
+print-schedule = []
+
 # Bevy defaults minus audio and some other not needed things
 # see https://github.com/bevyengine/bevy/blob/main/Cargo.toml#L31-L54
 # from https://github.com/NiklasEi/bevy_game_template/blob/main/Cargo.toml
@@ -59,3 +61,4 @@ thread-priority = { workspace = true }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
 bitflags = { workspace = true }
+bevy_mod_debugdump = { workspace = true }

@@ -36,6 +36,7 @@ bevy_kira_audio = "0.18.0"
 anyhow = "1.0.75"
 thiserror = "1.0.50"
 bitflags = "2.4.1"
+bevy_mod_debugdump = "0.9.0"
 
 # For any non workspace package
 [profile.dev.package."*"]

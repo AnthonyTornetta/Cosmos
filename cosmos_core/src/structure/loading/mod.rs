@@ -2,6 +2,11 @@
 
 use crate::structure::events::{ChunkSetEvent, StructureLoadedEvent};
 use bevy::{
+    ecs::{
+        schedule::{apply_deferred, IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
+        world::World,
+    },
+    log::{info, warn},
     prelude::{App, Commands, Component, EventReader, EventWriter, Query, Update},
     reflect::Reflect,
 };
@@ -44,15 +49,46 @@ fn listen_chunk_done_loading(
 
 fn set_structure_done_loading(mut structure_query: Query<&mut Structure>, mut event_reader: EventReader<StructureLoadedEvent>) {
     for ent in event_reader.read() {
+        println!("Got entity in reader!");
         if let Ok(mut structure) = structure_query.get_mut(ent.structure_entity) {
             if let Structure::Full(structure) = structure.as_mut() {
                 structure.set_loaded();
+            } else {
+                warn!("Not full.");
             }
+        } else {
+            warn!("Missing structure after got StructureLoadedEvent?");
         }
     }
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, (listen_chunk_done_loading, set_structure_done_loading))
-        .register_type::<ChunksNeedLoaded>();
+    app.configure_sets(
+        Update,
+        (
+            StructureLoadingSet::LoadStructure,
+            StructureLoadingSet::Defer,
+            StructureLoadingSet::LoadChunkData,
+            StructureLoadingSet::StructureLoaded,
+        )
+            .chain(),
+    )
+    .add_systems(Update, apply_deferred.in_set(StructureLoadingSet::Defer));
+
+    app.add_systems(
+        Update,
+        (
+            listen_chunk_done_loading.in_set(StructureLoadingSet::LoadChunkData),
+            set_structure_done_loading.in_set(StructureLoadingSet::StructureLoaded),
+        ),
+    )
+    .register_type::<ChunksNeedLoaded>();
+}
+
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+pub enum StructureLoadingSet {
+    LoadStructure,
+    Defer,
+    LoadChunkData,
+    StructureLoaded,
 }
