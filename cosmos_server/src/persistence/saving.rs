@@ -9,7 +9,7 @@
 
 use bevy::{
     ecs::world::World,
-    log::{info, warn},
+    log::warn,
     prelude::{App, Commands, Component, Entity, First, IntoSystemConfigs, PostUpdate, Query, ResMut, With, Without},
     reflect::Reflect,
 };
@@ -113,14 +113,7 @@ pub fn done_blueprinting(mut query: Query<(Entity, &mut SerializedData, &NeedsBl
 pub fn begin_saving() {}
 
 /// `apply_deferred` but for the saving phase
-pub fn apply_deferred_saving(world: &mut World) {
-    info!("DEFERRING! {}", world.query::<&BlockDataNeedsSaved>().iter(&world).len());
-}
-
-/// `apply_deferred` but for the saving phase
-pub fn apply_deferred_saving_2(world: &mut World) {
-    info!("DEFERRING 2! {}", world.query::<&BlockDataNeedsSaved>().iter(&world).len());
-}
+pub fn apply_deferred_saving(_: &mut World) {}
 
 /// Make sure any systems that serialize data for saving are run before this
 ///
@@ -246,9 +239,7 @@ pub(super) fn register(app: &mut App) {
         // Put all saving-related systems between these systems
         .add_systems(
             First,
-            (begin_saving, apply_deferred_saving, apply_deferred_saving_2, done_saving)
-                .chain()
-                .before(despawn_needed),
+            (begin_saving, apply_deferred_saving, done_saving).chain().before(despawn_needed),
         )
         // Like this:
         .add_systems(First, default_save.after(begin_saving).before(done_saving));

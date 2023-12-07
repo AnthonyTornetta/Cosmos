@@ -21,23 +21,33 @@ use crate::{
         },
         SerializedData,
     },
-    structure::persistence::save_structure,
+    structure::persistence::{save_structure, BlockDataNeedsSavedThisIsStupidPleaseMakeThisAComponent, SuperDuperStupidGarbage},
 };
 
 use super::server_ship_builder::ServerShipBuilder;
 
-fn on_blueprint_structure(mut query: Query<(&mut SerializedData, &Structure, &mut NeedsBlueprinted), With<Ship>>, mut commands: Commands) {
+fn on_blueprint_structure(
+    mut ev_writer: EventWriter<BlockDataNeedsSavedThisIsStupidPleaseMakeThisAComponent>,
+    mut query: Query<(&mut SerializedData, &Structure, &mut NeedsBlueprinted), With<Ship>>,
+    mut commands: Commands,
+    mut garbage: ResMut<SuperDuperStupidGarbage>,
+) {
     for (mut s_data, structure, mut blueprint) in query.iter_mut() {
         blueprint.subdir_name = "ship".into();
 
-        save_structure(structure, &mut s_data, &mut commands);
+        save_structure(structure, &mut s_data, &mut commands, &mut ev_writer, &mut garbage);
         s_data.serialize_data("cosmos:is_ship", &true);
     }
 }
 
-fn on_save_structure(mut query: Query<(&mut SerializedData, &Structure), (With<NeedsSaved>, With<Ship>)>, mut commands: Commands) {
+fn on_save_structure(
+    mut ev_writer: EventWriter<BlockDataNeedsSavedThisIsStupidPleaseMakeThisAComponent>,
+    mut query: Query<(&mut SerializedData, &Structure), (With<NeedsSaved>, With<Ship>)>,
+    mut commands: Commands,
+    mut garbage: ResMut<SuperDuperStupidGarbage>,
+) {
     for (mut s_data, structure) in query.iter_mut() {
-        save_structure(structure, &mut s_data, &mut commands);
+        save_structure(structure, &mut s_data, &mut commands, &mut ev_writer, &mut garbage);
         s_data.serialize_data("cosmos:is_ship", &true);
     }
 }

@@ -9,17 +9,24 @@ use cosmos_core::structure::{
 use crate::{
     persistence::{
         loading::{begin_loading, done_loading, NeedsLoaded},
-        saving::{apply_deferred_saving, begin_saving, done_saving, NeedsSaved},
+        saving::{begin_saving, done_saving, NeedsSaved},
         SerializedData,
     },
-    structure::persistence::save_structure,
+    structure::persistence::{
+        chunk::save_block_data, save_structure, BlockDataNeedsSavedThisIsStupidPleaseMakeThisAComponent, SuperDuperStupidGarbage,
+    },
 };
 
 use super::server_asteroid_builder::ServerAsteroidBuilder;
 
-fn on_save_structure(mut query: Query<(&mut SerializedData, &Structure), (With<NeedsSaved>, With<Asteroid>)>, mut commands: Commands) {
+fn on_save_structure(
+    mut query: Query<(&mut SerializedData, &Structure), (With<NeedsSaved>, With<Asteroid>)>,
+    mut commands: Commands,
+    mut ev_writer: EventWriter<BlockDataNeedsSavedThisIsStupidPleaseMakeThisAComponent>,
+    mut garbage: ResMut<SuperDuperStupidGarbage>,
+) {
     for (mut s_data, structure) in query.iter_mut() {
-        save_structure(structure, &mut s_data, &mut commands);
+        save_structure(structure, &mut s_data, &mut commands, &mut ev_writer, &mut garbage);
         s_data.serialize_data("cosmos:is_asteroid", &true);
     }
 }
@@ -103,10 +110,7 @@ pub(super) fn register(app: &mut App) {
         .add_event::<EvenMoreDelayedStructureLoadEvent>()
         .add_systems(
             First,
-            on_save_structure
-                .after(begin_saving)
-                .before(apply_deferred_saving)
-                .before(done_saving),
+            on_save_structure.after(begin_saving).before(save_block_data).before(done_saving),
         )
         .add_systems(Update, on_load_structure.after(begin_loading).before(done_loading));
 }

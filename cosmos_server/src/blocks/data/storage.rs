@@ -4,7 +4,7 @@ use bevy::{
         event::EventReader,
         query::With,
         schedule::IntoSystemConfigs,
-        system::{Commands, Query, Res},
+        system::{Commands, Query, Res, ResMut},
     },
     hierarchy::{BuildChildren, Parent},
     log::{info, warn},
@@ -25,7 +25,10 @@ use cosmos_core::{
 
 use crate::{
     persistence::saving::apply_deferred_saving,
-    structure::persistence::{chunk::done_saving_block_data, BlockDataNeedsSavedThisIsStupidPleaseMakeThisAComponent, SerializedBlockData},
+    structure::persistence::{
+        chunk::done_saving_block_data, BlockDataNeedsSavedThisIsStupidPleaseMakeThisAComponent, SerializedBlockData,
+        SuperDuperStupidGarbage,
+    },
 };
 
 // I can't get this to work no matter how many deffers I use.
@@ -50,12 +53,14 @@ use crate::{
 fn save_storage(
     mut ev_reader: EventReader<BlockDataNeedsSavedThisIsStupidPleaseMakeThisAComponent>,
     q_storage_blocks: Query<(&Parent, &Inventory, &BlockData) /*With<BlockDataNeedsSaved>*/>,
-    mut q_chunk: Query<&mut SerializedBlockData>,
+    // mut q_chunk: Query<&mut SerializedBlockData>,
+    mut garbage: ResMut<SuperDuperStupidGarbage>,
 ) {
     for ev in ev_reader.read() {
         if let Ok((parent, inventory, block_data)) = q_storage_blocks.get(ev.0) {
-            let mut serialized_block_data = q_chunk
-                .get_mut(parent.get())
+            let mut serialized_block_data = garbage
+                .0
+                .get_mut(&parent.get())
                 .expect("Block data's parent wasn't a chunk w/ SerializedBlockData???");
 
             serialized_block_data.serialize_data(
