@@ -1,3 +1,8 @@
+//! Handles the serialization of data stored in a chunk.
+//!
+//! Note that the saving of blocks are generally handled in the saving of the structure.
+//! This file mostly deals with saving block data.
+
 use bevy::{
     app::{App, First},
     ecs::{
@@ -31,7 +36,8 @@ use super::SuperDuperStupidGarbage;
 #[derive(Serialize, Deserialize, Default, Component, DerefMut, Deref)]
 struct AllBlockData(HashMap<ChunkCoordinate, HashMap<ChunkBlockCoordinate, SaveData>>);
 
-pub fn save_block_data(
+/// Put systems that save block data before this
+pub(crate) fn save_block_data(
     _q_structure: Query<&Structure, Without<NeedsDespawned>>,
     mut q_serialized_data: Query<&mut SerializedData>,
     // mut q_chunks: Query<(Entity, &ChunkEntity, &mut SerializedBlockData), With<NeedsSaved>>,

@@ -6,7 +6,7 @@ use bevy::{
         system::{Commands, Query, Res, ResMut},
     },
     hierarchy::{BuildChildren, Parent},
-    log::{warn},
+    log::warn,
 };
 use cosmos_core::{
     block::{
@@ -25,8 +25,7 @@ use cosmos_core::{
 use crate::{
     persistence::saving::apply_deferred_saving,
     structure::persistence::{
-        chunk::done_saving_block_data, BlockDataNeedsSavedThisIsStupidPleaseMakeThisAComponent,
-        SuperDuperStupidGarbage,
+        chunk::done_saving_block_data, BlockDataNeedsSavedThisIsStupidPleaseMakeThisAComponent, SuperDuperStupidGarbage,
     },
 };
 

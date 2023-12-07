@@ -1,5 +1,7 @@
+//! Saving/reading from disk block data
+
 use bevy::{
-    app::{App},
+    app::App,
     ecs::{
         entity::Entity,
         event::{Event, EventWriter},
@@ -20,13 +22,16 @@ use crate::persistence::{SaveData, SerializedData};
 pub mod chunk;
 
 #[derive(/*Component,*/ Debug, Serialize, Deserialize)]
+/// This will *eventually* be a component on the chunk that stores all the block data that has been serialized.
 pub struct SerializedBlockData {
+    /// The chunk's coordinates stored for your convenience
     pub chunk: ChunkCoordinate,
     /// If this is being saved for a blueprint instead of an actual world file
     save_data: HashMap<ChunkBlockCoordinate, SaveData>,
 }
 
 impl SerializedBlockData {
+    /// Creates an empty serialized data field
     pub fn new(chunk: ChunkCoordinate) -> Self {
         Self {
             chunk,
