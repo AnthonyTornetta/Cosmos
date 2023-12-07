@@ -22,21 +22,21 @@ use cosmos_core::{
 use serde::{Deserialize, Serialize};
 
 use crate::persistence::{
-    saving::{apply_deferred_blueprinting, done_blueprinting, done_saving, NeedsSaved},
+    saving::{apply_deferred_blueprinting, done_blueprinting, done_saving},
     SaveData, SerializedData,
 };
 
-use super::{SerializedBlockData, SuperDuperStupidGarbage};
+use super::SuperDuperStupidGarbage;
 
 #[derive(Serialize, Deserialize, Default, Component, DerefMut, Deref)]
 struct AllBlockData(HashMap<ChunkCoordinate, HashMap<ChunkBlockCoordinate, SaveData>>);
 
 pub fn save_block_data(
-    q_structure: Query<&Structure, Without<NeedsDespawned>>,
+    _q_structure: Query<&Structure, Without<NeedsDespawned>>,
     mut q_serialized_data: Query<&mut SerializedData>,
     // mut q_chunks: Query<(Entity, &ChunkEntity, &mut SerializedBlockData), With<NeedsSaved>>,
     q_chunks: Query<&ChunkEntity>,
-    mut commands: Commands,
+    _commands: Commands,
     mut chunks_that_need_saved_turn_this_into_a_query_please: ResMut<SuperDuperStupidGarbage>,
 ) {
     let mut all_block_data = HashMap::<Entity, AllBlockData>::default();
@@ -75,7 +75,8 @@ pub fn save_block_data(
     }
 }
 
-pub fn done_blueprinting_block_data(
+/// Put systems that blueprint block data before this
+pub(crate) fn done_blueprinting_block_data(
     q_structure: Query<&Structure, Without<NeedsDespawned>>,
     q_serialized_data: Query<&mut SerializedData>,
     // q_chunks: Query<(Entity, &ChunkEntity, &mut SerializedBlockData), With<NeedsSaved>>,
@@ -92,7 +93,8 @@ pub fn done_blueprinting_block_data(
     );
 }
 
-pub fn done_saving_block_data(
+/// Put systems that save block data before this
+pub(crate) fn done_saving_block_data(
     q_structure: Query<&Structure, Without<NeedsDespawned>>,
     q_serialized_data: Query<&mut SerializedData>,
     // q_chunks: Query<(Entity, &ChunkEntity, &mut SerializedBlockData), With<NeedsSaved>>,

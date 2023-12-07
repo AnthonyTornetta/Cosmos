@@ -1,9 +1,9 @@
 use bevy::{
-    app::{App, PreUpdate},
+    app::{App},
     ecs::{
         entity::Entity,
         event::{Event, EventWriter},
-        system::{Commands, ResMut, Resource},
+        system::{Commands, Resource},
     },
     log::{info, warn},
     utils::HashMap,
@@ -95,7 +95,7 @@ pub(crate) struct SuperDuperStupidGarbage(pub HashMap<Entity, SerializedBlockDat
 pub(crate) fn save_structure(
     structure: &Structure,
     s_data: &mut SerializedData,
-    commands: &mut Commands,
+    _commands: &mut Commands,
     ev_writer: &mut EventWriter<BlockDataNeedsSavedThisIsStupidPleaseMakeThisAComponent>,
     garbage: &mut SuperDuperStupidGarbage,
 ) {

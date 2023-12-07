@@ -2,12 +2,11 @@ use bevy::{
     app::{App, First, Update},
     ecs::{
         event::EventReader,
-        query::With,
         schedule::IntoSystemConfigs,
         system::{Commands, Query, Res, ResMut},
     },
     hierarchy::{BuildChildren, Parent},
-    log::{info, warn},
+    log::{warn},
 };
 use cosmos_core::{
     block::{
@@ -26,7 +25,7 @@ use cosmos_core::{
 use crate::{
     persistence::saving::apply_deferred_saving,
     structure::persistence::{
-        chunk::done_saving_block_data, BlockDataNeedsSavedThisIsStupidPleaseMakeThisAComponent, SerializedBlockData,
+        chunk::done_saving_block_data, BlockDataNeedsSavedThisIsStupidPleaseMakeThisAComponent,
         SuperDuperStupidGarbage,
     },
 };
@@ -58,7 +57,7 @@ fn save_storage(
 ) {
     for ev in ev_reader.read() {
         if let Ok((parent, inventory, block_data)) = q_storage_blocks.get(ev.0) {
-            let mut serialized_block_data = garbage
+            let serialized_block_data = garbage
                 .0
                 .get_mut(&parent.get())
                 .expect("Block data's parent wasn't a chunk w/ SerializedBlockData???");

@@ -62,23 +62,21 @@ fn sync(
                             ecmds.insert(inventory);
                         }
                     }
-                } else {
-                    if let Some(chunk_ent) = structure.chunk_entity(ChunkCoordinate::for_block_coordinate(coords)) {
-                        if let Some(mut ecmds) = commands.get_entity(chunk_ent) {
-                            ecmds.with_children(|p| {
-                                let data_entity = p
-                                    .spawn((
-                                        BlockData {
-                                            block: StructureBlock::new(coords),
-                                            structure_entity: client_entity,
-                                            data_count: 1,
-                                        },
-                                        inventory,
-                                    ))
-                                    .id();
-                                structure.set_block_data(coords, data_entity);
-                            });
-                        }
+                } else if let Some(chunk_ent) = structure.chunk_entity(ChunkCoordinate::for_block_coordinate(coords)) {
+                    if let Some(mut ecmds) = commands.get_entity(chunk_ent) {
+                        ecmds.with_children(|p| {
+                            let data_entity = p
+                                .spawn((
+                                    BlockData {
+                                        block: StructureBlock::new(coords),
+                                        structure_entity: client_entity,
+                                        data_count: 1,
+                                    },
+                                    inventory,
+                                ))
+                                .id();
+                            structure.set_block_data(coords, data_entity);
+                        });
                     }
                 }
             }
