@@ -18,15 +18,14 @@ use cosmos_core::{
     registry::Registry,
     structure::{
         coordinates::{ChunkBlockCoordinate, ChunkCoordinate},
+        loading::StructureLoadingSet,
         Structure,
     },
 };
 
-use crate::{
-    persistence::saving::apply_deferred_saving,
-    structure::persistence::{
-        chunk::done_saving_block_data, BlockDataNeedsSavedThisIsStupidPleaseMakeThisAComponent, SuperDuperStupidGarbage,
-    },
+use crate::structure::persistence::{
+    chunk::{done_saving_block_data, ChunkLoadBlockDataEvent},
+    BlockDataNeedsSavedThisIsStupidPleaseMakeThisAComponent, SuperDuperStupidGarbage,
 };
 
 // I can't get this to work no matter how many deffers I use.
@@ -66,6 +65,27 @@ fn save_storage(
                 "cosmos:inventory",
                 inventory,
             );
+        }
+    }
+}
+
+fn deserialize_storage(q_structure: Query<&Structure>, mut commands: Commands, mut ev_reader: EventReader<ChunkLoadBlockDataEvent>) {
+    for ev in ev_reader.read() {
+        let Ok(structure) = q_structure.get(ev.structure_entity) else {
+            continue;
+        };
+
+        let first = ev.chunk.first_structure_block();
+        for (data_coord, serialized) in ev.data.iter() {
+            let Some(inventory) = serialized.deserialize_data::<Inventory>("cosmos:inventory") else {
+                continue;
+            };
+
+            let data_ent = structure
+                .block_data(first + *data_coord)
+                .expect("Missing data entity despite having data here");
+
+            commands.entity(data_ent).insert(inventory);
         }
     }
 }
@@ -134,5 +154,10 @@ fn populate_inventory(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(Update, populate_inventory.after(on_add_storage))
-        .add_systems(First, save_storage.after(apply_deferred_saving).before(done_saving_block_data));
+        .add_systems(
+            First,
+            save_storage /* .after(apply_deferred_saving)*/
+                .before(done_saving_block_data),
+        )
+        .add_systems(Update, deserialize_storage.in_set(StructureLoadingSet::LoadChunkData));
 }

@@ -16,10 +16,7 @@ use cosmos_core::{
 use crate::{
     persistence::{
         loading::{begin_loading, begin_loading_blueprint, done_loading, done_loading_blueprint, NeedsBlueprintLoaded, NeedsLoaded},
-        saving::{
-            apply_deferred_blueprinting, apply_deferred_saving, begin_blueprinting, begin_saving, done_blueprinting, done_saving,
-            NeedsBlueprinted, NeedsSaved,
-        },
+        saving::{begin_blueprinting, begin_saving, done_blueprinting, done_saving, NeedsBlueprinted, NeedsSaved},
         SerializedData,
     },
     structure::persistence::{
@@ -134,16 +131,6 @@ fn on_load_blueprint(
                 );
             }
         }
-
-        if let Some(block_data) = s_data.deserialize_data::<AllBlockData>("cosmos:block_data") {
-            for (chunk_coord, data) in block_data.0 {
-                chunk_load_block_data_event_writer.send(ChunkLoadBlockDataEvent {
-                    data,
-                    chunk: chunk_coord,
-                    structure_entity: entity,
-                });
-            }
-        }
     }
 }
 
@@ -238,11 +225,11 @@ pub(super) fn register(app: &mut App) {
             (
                 on_blueprint_structure
                     .after(begin_blueprinting)
-                    .before(apply_deferred_blueprinting)
+                    // .before(apply_deferred_blueprinting)
                     .before(done_blueprinting),
                 on_save_structure
                     .after(begin_saving)
-                    .before(apply_deferred_saving)
+                    // .before(apply_deferred_saving)
                     .before(done_saving),
             ),
         )

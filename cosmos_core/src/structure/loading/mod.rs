@@ -2,11 +2,8 @@
 
 use crate::structure::events::{ChunkSetEvent, StructureLoadedEvent};
 use bevy::{
-    ecs::{
-        schedule::{apply_deferred, IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
-        world::World,
-    },
-    log::{info, warn},
+    ecs::schedule::{apply_deferred, IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
+    log::warn,
     prelude::{App, Commands, Component, EventReader, EventWriter, Query, Update},
     reflect::Reflect,
 };
@@ -67,13 +64,19 @@ pub(super) fn register(app: &mut App) {
         Update,
         (
             StructureLoadingSet::LoadStructure,
-            StructureLoadingSet::Defer,
+            StructureLoadingSet::FlushStructureComponents,
+            StructureLoadingSet::CreateChunkEntities,
+            StructureLoadingSet::FlushChunkComponents,
+            StructureLoadingSet::LoadChunkDataBase,
+            StructureLoadingSet::FlushBlockDataBase,
             StructureLoadingSet::LoadChunkData,
             StructureLoadingSet::StructureLoaded,
         )
             .chain(),
     )
-    .add_systems(Update, apply_deferred.in_set(StructureLoadingSet::Defer));
+    .add_systems(Update, apply_deferred.in_set(StructureLoadingSet::FlushStructureComponents))
+    .add_systems(Update, apply_deferred.in_set(StructureLoadingSet::FlushChunkComponents))
+    .add_systems(Update, apply_deferred.in_set(StructureLoadingSet::FlushBlockDataBase));
 
     app.add_systems(
         Update,
@@ -88,7 +91,14 @@ pub(super) fn register(app: &mut App) {
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 pub enum StructureLoadingSet {
     LoadStructure,
-    Defer,
+    /// apply_deferred
+    FlushStructureComponents,
+    CreateChunkEntities,
+    /// apply_deferred
+    FlushChunkComponents,
+    LoadChunkDataBase,
+    /// apply_deferred
+    FlushBlockDataBase,
     LoadChunkData,
     StructureLoaded,
 }

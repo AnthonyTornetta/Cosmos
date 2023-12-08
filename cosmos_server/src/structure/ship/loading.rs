@@ -65,9 +65,6 @@ fn create_ships(
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        create_ships
-            .after(apply_deferred)
-            .after(create_ship_event_reader)
-            .run_if(in_state(GameState::Playing)),
+        create_ships.after(create_ship_event_reader).run_if(in_state(GameState::Playing)),
     );
 }

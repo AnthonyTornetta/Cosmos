@@ -4,6 +4,7 @@
 
 use std::fmt::Display;
 
+use bevy::app::Update;
 use bevy::ecs::schedule::apply_deferred;
 use bevy::prelude::{App, Event, IntoSystemConfigs, Name, PreUpdate, VisibilityBundle};
 use bevy::reflect::Reflect;
@@ -49,6 +50,7 @@ use self::coordinates::{BlockCoordinate, ChunkCoordinate, UnboundBlockCoordinate
 use self::dynamic_structure::DynamicStructure;
 use self::events::ChunkSetEvent;
 use self::full_structure::FullStructure;
+use self::loading::StructureLoadingSet;
 use self::structure_block::StructureBlock;
 use self::structure_iterator::{BlockIterator, ChunkIterator};
 
@@ -731,5 +733,6 @@ pub(super) fn register<T: States + Clone + Copy>(app: &mut App, post_loading_sta
     block_health::register(app);
     structure_block::register(app);
 
-    app.add_systems(PreUpdate, (add_chunks_system.after(apply_deferred), remove_empty_chunks).chain());
+    app.add_systems(Update, add_chunks_system.in_set(StructureLoadingSet::CreateChunkEntities))
+        .add_systems(PreUpdate, remove_empty_chunks);
 }
