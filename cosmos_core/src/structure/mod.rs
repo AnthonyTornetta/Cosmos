@@ -5,7 +5,6 @@
 use std::fmt::Display;
 
 use bevy::app::Update;
-use bevy::ecs::schedule::apply_deferred;
 use bevy::prelude::{App, Event, IntoSystemConfigs, Name, PreUpdate, VisibilityBundle};
 use bevy::reflect::Reflect;
 use bevy::transform::TransformBundle;

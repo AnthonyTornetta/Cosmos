@@ -1,9 +1,6 @@
 //! Handles the loading of ships
 
-use bevy::{
-    ecs::schedule::apply_deferred,
-    prelude::{in_state, App, Commands, Component, Entity, EventWriter, IntoSystemConfigs, Query, Res, Update, With},
-};
+use bevy::prelude::{in_state, App, Commands, Component, Entity, EventWriter, IntoSystemConfigs, Query, Res, Update, With};
 use cosmos_core::{
     block::{Block, BlockFace},
     registry::Registry,

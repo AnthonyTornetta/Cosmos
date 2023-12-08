@@ -16,8 +16,8 @@ use cosmos_core::{
 use serde::{Deserialize, Serialize};
 
 use crate::persistence::{
-    loading::{begin_loading, done_loading, NeedsLoaded},
-    saving::{begin_saving, done_saving, NeedsSaved},
+    loading::{LoadingSystemSet, NeedsLoaded, LOADING_SCHEDULE},
+    saving::{NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
     EntityId, SaveFileIdentifier, SerializedData,
 };
 
@@ -182,7 +182,7 @@ fn load_chunk(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(Update, (structure_created, populate_chunks).chain())
-        .add_systems(First, on_save_structure.after(begin_saving).before(done_saving))
-        .add_systems(Update, on_load_structure.after(begin_loading).before(done_loading))
-        .add_systems(Update, load_chunk.after(begin_loading).before(done_loading));
+        .add_systems(SAVING_SCHEDULE, on_save_structure.in_set(SavingSystemSet::DoSaving))
+        .add_systems(LOADING_SCHEDULE, on_load_structure.in_set(LoadingSystemSet::DoLoading))
+        .add_systems(LOADING_SCHEDULE, load_chunk.in_set(LoadingSystemSet::DoLoading));
 }

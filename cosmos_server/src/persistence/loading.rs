@@ -10,8 +10,9 @@
 use std::fs;
 
 use bevy::{
+    ecs::schedule::{apply_deferred, IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
     log::warn,
-    prelude::{App, Commands, Component, DespawnRecursiveExt, Entity, IntoSystemConfigs, PreUpdate, Quat, Query, Update, With, Without},
+    prelude::{App, Commands, Component, DespawnRecursiveExt, Entity, PreUpdate, Quat, Query, Update, With, Without},
     reflect::Reflect,
 };
 use bevy_rapier3d::prelude::Velocity;
@@ -19,6 +20,27 @@ use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{netty::cosmos_encoder, persistence::LoadingDistance, physics::location::Location};
 
 use super::{SaveFileIdentifier, SaveFileIdentifierType, SerializedData};
+
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+pub enum LoadingSystemSet {
+    BeginLoading,
+    FlushBeginning,
+    /// Put all your loading logic in here
+    DoLoading,
+    FlushDoing,
+    DoneLoading,
+    FlushDoneLoading,
+}
+
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+pub enum LoadingBlueprintSystemSet {
+    BeginLoading,
+    FlushBeginning,
+    DoLoading,
+    FlushDoing,
+    DoneLoading,
+    FlushDoneLoading,
+}
 
 #[derive(Component, Debug, Reflect)]
 /// An entity that currently has this is currently in the process of being loaded
@@ -73,20 +95,14 @@ fn check_blueprint_needs_loaded(query: Query<(Entity, &NeedsBlueprintLoaded), Wi
 }
 
 /// To add your own loading event, add a system after `begin_loading` and before `done_loading`.
-pub fn begin_loading_blueprint() {}
-
-/// To add your own loading event, add a system after `begin_loading` and before `done_loading`.
-pub fn done_loading_blueprint(query: Query<Entity, With<NeedsBlueprintLoaded>>, mut commands: Commands) {
+fn done_loading_blueprint(query: Query<Entity, With<NeedsBlueprintLoaded>>, mut commands: Commands) {
     for ent in query.iter() {
         commands.entity(ent).remove::<NeedsBlueprintLoaded>().remove::<SerializedData>();
     }
 }
 
 /// To add your own loading event, add a system after `begin_loading` and before `done_loading`.
-pub fn begin_loading() {}
-
-/// To add your own loading event, add a system after `begin_loading` and before `done_loading`.
-pub fn done_loading(query: Query<Entity, With<NeedsLoaded>>, mut commands: Commands) {
+fn done_loading(query: Query<Entity, With<NeedsLoaded>>, mut commands: Commands) {
     for ent in query.iter() {
         commands.entity(ent).remove::<NeedsLoaded>().remove::<SerializedData>();
     }
@@ -108,16 +124,73 @@ fn default_load(query: Query<(Entity, &SerializedData), With<NeedsLoaded>>, mut 
     }
 }
 
+// pub(super) fn register(app: &mut App) {
+//     app.add_systems(PreUpdate, (check_needs_loaded, check_blueprint_needs_loaded))
+//         .add_systems(
+//             Update,
+//             (begin_loading_blueprint, done_loading_blueprint).chain().before(begin_loading),
+//         )
+//         // Put all loading-related systems after this
+//         .add_systems(Update, begin_loading)
+//         // Put all loading-related systems before this
+//         .add_systems(Update, done_loading.after(begin_loading))
+//         // Like this:
+//         .add_systems(Update, default_load.after(begin_loading).before(done_loading));
+// }
+
+/// The schedule loading takes place in - this may change in the future
+pub const LOADING_SCHEDULE: Update = Update;
+
 pub(super) fn register(app: &mut App) {
-    app.add_systems(PreUpdate, (check_needs_loaded, check_blueprint_needs_loaded))
-        .add_systems(
-            Update,
-            (begin_loading_blueprint, done_loading_blueprint).chain().before(begin_loading),
+    app.add_systems(PreUpdate, (check_needs_loaded, check_blueprint_needs_loaded));
+
+    app.configure_sets(
+        LOADING_SCHEDULE,
+        (
+            LoadingSystemSet::BeginLoading,
+            LoadingSystemSet::FlushBeginning,
+            LoadingSystemSet::DoLoading,
+            LoadingSystemSet::FlushDoing,
+            LoadingSystemSet::DoneLoading,
+            LoadingSystemSet::FlushDoneLoading,
         )
-        // Put all loading-related systems after this
-        .add_systems(Update, begin_loading)
-        // Put all loading-related systems before this
-        .add_systems(Update, done_loading.after(begin_loading))
-        // Like this:
-        .add_systems(Update, default_load.after(begin_loading).before(done_loading));
+            .chain(),
+    )
+    .add_systems(
+        LOADING_SCHEDULE,
+        (
+            // Defers
+            apply_deferred.in_set(LoadingSystemSet::FlushBeginning),
+            apply_deferred.in_set(LoadingSystemSet::FlushDoing),
+            apply_deferred.in_set(LoadingSystemSet::FlushDoneLoading),
+            // Logic
+            default_load.in_set(LoadingSystemSet::DoLoading),
+            done_loading.in_set(LoadingSystemSet::DoneLoading),
+        ),
+    );
+
+    app.configure_sets(
+        LOADING_SCHEDULE,
+        (
+            LoadingBlueprintSystemSet::BeginLoading,
+            LoadingBlueprintSystemSet::FlushBeginning,
+            LoadingBlueprintSystemSet::DoLoading,
+            LoadingBlueprintSystemSet::FlushDoing,
+            LoadingBlueprintSystemSet::DoneLoading,
+            LoadingBlueprintSystemSet::FlushDoneLoading,
+        )
+            .chain()
+            .before(LoadingSystemSet::BeginLoading),
+    )
+    .add_systems(
+        LOADING_SCHEDULE,
+        (
+            // Defers
+            apply_deferred.in_set(LoadingBlueprintSystemSet::FlushBeginning),
+            apply_deferred.in_set(LoadingBlueprintSystemSet::FlushDoing),
+            apply_deferred.in_set(LoadingBlueprintSystemSet::FlushDoneLoading),
+            // Logic
+            done_loading_blueprint.in_set(LoadingBlueprintSystemSet::DoneLoading),
+        ),
+    );
 }

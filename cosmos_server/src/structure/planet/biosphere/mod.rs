@@ -5,7 +5,7 @@ use std::marker::PhantomData;
 use bevy::{
     log::info,
     prelude::{
-        in_state, Added, App, Commands, Component, Entity, Event, EventReader, EventWriter, First, IntoSystemConfigs, Query, Res, ResMut,
+        in_state, Added, App, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, Query, Res, ResMut,
         Resource, Startup, Update, With, Without,
     },
     tasks::Task,
@@ -28,8 +28,8 @@ use rand::Rng;
 use crate::{
     init::init_world::{Noise, ServerSeed},
     persistence::{
-        loading::{begin_loading, done_loading, NeedsLoaded},
-        saving::{begin_saving, done_saving, NeedsSaved},
+        loading::{LoadingSystemSet, NeedsLoaded},
+        saving::{NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
         SerializedData,
     },
     rng::get_rng_for_sector,
@@ -242,7 +242,7 @@ pub fn register_biosphere<T: BiosphereMarkerComponent + Default + Clone, E: Send
             registry.register(biosphere_id.to_owned(), temperature_range);
         })
         .add_systems(
-            First,
+            SAVING_SCHEDULE,
             (
                 // Adds this biosphere's marker component to anything that needs generated
                 (move |mut event_reader: EventReader<NeedsBiosphereEvent>, mut commands: Commands| {
@@ -258,8 +258,7 @@ pub fn register_biosphere<T: BiosphereMarkerComponent + Default + Clone, E: Send
                         sd.serialize_data(biosphere_id.to_string(), &true);
                     }
                 })
-                .after(begin_saving)
-                .before(done_saving),
+                .in_set(SavingSystemSet::DoSaving),
             ),
         )
         .add_systems(
@@ -273,8 +272,7 @@ pub fn register_biosphere<T: BiosphereMarkerComponent + Default + Clone, E: Send
                         }
                     }
                 })
-                .after(begin_loading)
-                .before(done_loading),
+                .in_set(LoadingSystemSet::DoLoading),
                 // Checks if any blocks need generated for this biosphere
                 (
                     (

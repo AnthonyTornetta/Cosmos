@@ -11,7 +11,7 @@ use cosmos_core::{
 
 use crate::{
     persistence::{
-        saving::{begin_saving, done_saving, NeedsSaved},
+        saving::{NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
         SerializedData,
     },
     state::GameState,
@@ -75,5 +75,5 @@ fn on_save_laser(mut query: Query<&mut SerializedData, (With<NeedsSaved>, With<L
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(Update, respond_laser_hit_event.run_if(in_state(GameState::Playing)))
-        .add_systems(First, on_save_laser.after(begin_saving).before(done_saving));
+        .add_systems(SAVING_SCHEDULE, on_save_laser.in_set(SavingSystemSet::DoSaving));
 }

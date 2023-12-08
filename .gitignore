@@ -26,5 +26,5 @@ docs/mermaid.min.js
 # 
 docs/book/
 
-# Generated via `cargo run --features print-schedule | dot -Tsvg > ./debug.html`
-debug.html
+# Generated via `cargo run --features print-schedule | dot -Tsvg > ./debug.svg`
+debug.svg

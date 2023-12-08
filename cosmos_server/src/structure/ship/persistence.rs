@@ -15,8 +15,8 @@ use cosmos_core::{
 
 use crate::{
     persistence::{
-        loading::{begin_loading, begin_loading_blueprint, done_loading, done_loading_blueprint, NeedsBlueprintLoaded, NeedsLoaded},
-        saving::{begin_blueprinting, begin_saving, done_blueprinting, done_saving, NeedsBlueprinted, NeedsSaved},
+        loading::{LoadingBlueprintSystemSet, LoadingSystemSet, NeedsBlueprintLoaded, NeedsLoaded},
+        saving::{BlueprintingSystemSet, NeedsBlueprinted, NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
         SerializedData,
     },
     structure::persistence::{
@@ -221,26 +221,19 @@ pub(super) fn register(app: &mut App) {
         // .add_event::<DelayedStructureLoadEvent>()
         // .add_event::<EvenMoreDelayedStructureLoadEvent>()
         .add_systems(
-            First,
+            SAVING_SCHEDULE,
             (
-                on_blueprint_structure
-                    .after(begin_blueprinting)
-                    // .before(apply_deferred_blueprinting)
-                    .before(done_blueprinting),
-                on_save_structure
-                    .after(begin_saving)
-                    // .before(apply_deferred_saving)
-                    .before(done_saving),
+                on_blueprint_structure.in_set(BlueprintingSystemSet::DoBlueprinting),
+                on_save_structure.in_set(SavingSystemSet::DoSaving),
             ),
         )
         .add_systems(
             Update,
             (
-                on_load_blueprint.after(begin_loading_blueprint).before(done_loading_blueprint),
+                on_load_blueprint.in_set(LoadingBlueprintSystemSet::DoLoading),
                 on_load_structure
-                    .after(begin_loading)
                     .in_set(StructureLoadingSet::LoadStructure)
-                    .before(done_loading),
+                    .in_set(LoadingSystemSet::DoLoading),
                 save_ships.run_if(on_timer(Duration::from_secs(1))),
             ),
         );

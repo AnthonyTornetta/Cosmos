@@ -1,5 +1,5 @@
 use bevy::{
-    app::{App, First, Update},
+    app::{App, Update},
     ecs::{
         event::EventReader,
         schedule::IntoSystemConfigs,
@@ -23,9 +23,12 @@ use cosmos_core::{
     },
 };
 
-use crate::structure::persistence::{
-    chunk::{done_saving_block_data, ChunkLoadBlockDataEvent},
-    BlockDataNeedsSavedThisIsStupidPleaseMakeThisAComponent, SuperDuperStupidGarbage,
+use crate::{
+    persistence::saving::SAVING_SCHEDULE,
+    structure::persistence::{
+        chunk::{BlockDataSavingSet, ChunkLoadBlockDataEvent},
+        BlockDataNeedsSavedThisIsStupidPleaseMakeThisAComponent, SuperDuperStupidGarbage,
+    },
 };
 
 // I can't get this to work no matter how many deffers I use.
@@ -154,10 +157,6 @@ fn populate_inventory(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(Update, populate_inventory.after(on_add_storage))
-        .add_systems(
-            First,
-            save_storage /* .after(apply_deferred_saving)*/
-                .before(done_saving_block_data),
-        )
+        .add_systems(SAVING_SCHEDULE, save_storage.in_set(BlockDataSavingSet::SaveBlockData))
         .add_systems(Update, deserialize_storage.in_set(StructureLoadingSet::LoadChunkData));
 }

@@ -8,13 +8,11 @@ use cosmos_core::structure::{
 
 use crate::{
     persistence::{
-        loading::{begin_loading, done_loading, NeedsLoaded},
-        saving::{begin_saving, done_saving, NeedsSaved},
+        loading::{LoadingSystemSet, NeedsLoaded},
+        saving::{NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
         SerializedData,
     },
-    structure::persistence::{
-        chunk::save_block_data, save_structure, BlockDataNeedsSavedThisIsStupidPleaseMakeThisAComponent, SuperDuperStupidGarbage,
-    },
+    structure::persistence::{save_structure, BlockDataNeedsSavedThisIsStupidPleaseMakeThisAComponent, SuperDuperStupidGarbage},
 };
 
 use super::server_asteroid_builder::ServerAsteroidBuilder;
@@ -108,9 +106,6 @@ pub(super) fn register(app: &mut App) {
         .add_systems(Update, delayed_structure_event)
         .add_event::<DelayedStructureLoadEvent>()
         .add_event::<EvenMoreDelayedStructureLoadEvent>()
-        .add_systems(
-            First,
-            on_save_structure.after(begin_saving).before(save_block_data).before(done_saving),
-        )
-        .add_systems(Update, on_load_structure.after(begin_loading).before(done_loading));
+        .add_systems(SAVING_SCHEDULE, on_save_structure.in_set(SavingSystemSet::DoSaving))
+        .add_systems(Update, on_load_structure.in_set(LoadingSystemSet::DoLoading));
 }

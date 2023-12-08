@@ -4,16 +4,15 @@
 //! This file mostly deals with saving block data.
 
 use bevy::{
-    app::{App, First},
+    app::App,
     ecs::{
         component::Component,
         entity::Entity,
         event::Event,
         query::Without,
-        schedule::IntoSystemConfigs,
+        schedule::{apply_deferred, IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
         system::{Commands, Query, ResMut},
     },
-    log::info,
     prelude::{Deref, DerefMut},
     utils::HashMap,
 };
@@ -24,7 +23,7 @@ use cosmos_core::{
 use serde::{Deserialize, Serialize};
 
 use crate::persistence::{
-    saving::{apply_deferred_blueprinting, done_blueprinting, done_saving},
+    saving::{BlueprintingSystemSet, SavingSystemSet, SAVING_SCHEDULE},
     SerializedData,
 };
 
@@ -41,7 +40,7 @@ pub struct ChunkLoadBlockDataEvent {
 pub struct AllBlockData(pub HashMap<ChunkCoordinate, SerializedChunkBlockData>);
 
 /// Put systems that save block data before this
-pub(crate) fn save_block_data(
+fn save_block_data(
     _q_structure: Query<&Structure, Without<NeedsDespawned>>,
     mut q_serialized_data: Query<&mut SerializedData>,
     // mut q_chunks: Query<(Entity, &ChunkEntity, &mut SerializedBlockData), With<NeedsSaved>>,
@@ -86,7 +85,7 @@ pub(crate) fn save_block_data(
 }
 
 /// Put systems that blueprint block data before this
-pub(crate) fn done_blueprinting_block_data(
+fn done_blueprinting_block_data(
     q_structure: Query<&Structure, Without<NeedsDespawned>>,
     q_serialized_data: Query<&mut SerializedData>,
     // q_chunks: Query<(Entity, &ChunkEntity, &mut SerializedBlockData), With<NeedsSaved>>,
@@ -104,7 +103,7 @@ pub(crate) fn done_blueprinting_block_data(
 }
 
 /// Put systems that save block data before this
-pub(crate) fn done_saving_block_data(
+fn done_saving_block_data(
     q_structure: Query<&Structure, Without<NeedsDespawned>>,
     q_serialized_data: Query<&mut SerializedData>,
     // q_chunks: Query<(Entity, &ChunkEntity, &mut SerializedBlockData), With<NeedsSaved>>,
@@ -121,13 +120,74 @@ pub(crate) fn done_saving_block_data(
     );
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+pub enum BlockDataSavingSet {
+    BeginSavingBlockData,
+    FlushBeginSavingBlockData,
+    SaveBlockData,
+    FlushSaveBlockData,
+    DoneSavingBlockData,
+}
+
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+pub enum BlockDataBlueprintingSet {
+    BeginBlueprintingBlockData,
+    FlushBeginBlueprintingBlockData,
+    BlueprintBlockData,
+    FlushBlueprintBlockData,
+    DoneBlueprintingBlockData,
+}
+
 pub(super) fn register(app: &mut App) {
-    app.add_event::<ChunkLoadBlockDataEvent>()
-        .add_systems(First, done_saving_block_data.before(done_saving))
-        .add_systems(
-            First,
-            done_blueprinting_block_data
-                .after(apply_deferred_blueprinting)
-                .before(done_blueprinting),
-        );
+    app.add_event::<ChunkLoadBlockDataEvent>();
+    //     .add_systems(First, .before(done_saving))
+    //     .add_systems(First, done_blueprinting_block_data.in_set(BlueprintingSystemSet::DoSaving));
+
+    app.configure_sets(
+        SAVING_SCHEDULE,
+        (
+            BlockDataSavingSet::BeginSavingBlockData,
+            BlockDataSavingSet::FlushBeginSavingBlockData,
+            BlockDataSavingSet::SaveBlockData,
+            BlockDataSavingSet::FlushSaveBlockData,
+            BlockDataSavingSet::DoneSavingBlockData,
+        )
+            .chain()
+            .after(SavingSystemSet::DoSaving)
+            .before(SavingSystemSet::FlushDoneSaving),
+    )
+    .add_systems(
+        SAVING_SCHEDULE,
+        (
+            // Deferred
+            apply_deferred.in_set(BlockDataSavingSet::FlushBeginSavingBlockData),
+            apply_deferred.in_set(BlockDataSavingSet::FlushSaveBlockData),
+            // Logic
+            done_saving_block_data.in_set(BlockDataSavingSet::DoneSavingBlockData),
+        ),
+    );
+
+    app.configure_sets(
+        SAVING_SCHEDULE,
+        (
+            BlockDataBlueprintingSet::BeginBlueprintingBlockData,
+            BlockDataBlueprintingSet::FlushBeginBlueprintingBlockData,
+            BlockDataBlueprintingSet::BlueprintBlockData,
+            BlockDataBlueprintingSet::FlushBlueprintBlockData,
+            BlockDataBlueprintingSet::DoneBlueprintingBlockData,
+        )
+            .chain()
+            .after(BlueprintingSystemSet::DoBlueprinting)
+            .before(BlueprintingSystemSet::FlushDoneBlueprinting),
+    )
+    .add_systems(
+        SAVING_SCHEDULE,
+        (
+            // Deferred
+            apply_deferred.in_set(BlockDataBlueprintingSet::FlushBeginBlueprintingBlockData),
+            apply_deferred.in_set(BlockDataBlueprintingSet::FlushBlueprintBlockData),
+            // Logic
+            done_blueprinting_block_data.in_set(BlockDataBlueprintingSet::DoneBlueprintingBlockData),
+        ),
+    );
 }
