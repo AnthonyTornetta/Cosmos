@@ -45,7 +45,7 @@ fn save_block_data(
     mut q_serialized_data: Query<&mut SerializedData>,
     // mut q_chunks: Query<(Entity, &ChunkEntity, &mut SerializedBlockData), With<NeedsSaved>>,
     q_chunks: Query<&ChunkEntity>,
-    _commands: Commands,
+    mut commands: Commands,
     mut chunks_that_need_saved_turn_this_into_a_query_please: ResMut<SuperDuperStupidGarbage>,
 ) {
     let mut all_block_data = HashMap::<Entity, AllBlockData>::default();
@@ -79,8 +79,6 @@ fn save_block_data(
             .expect("No serialized data on structure after saving chunks - how???");
 
         serialized_data.serialize_data("cosmos:block_data", &all_block_data);
-
-        println!("{serialized_data:?}");
     }
 }
 
@@ -154,7 +152,7 @@ pub(super) fn register(app: &mut App) {
         )
             .chain()
             .after(SavingSystemSet::DoSaving)
-            .before(SavingSystemSet::FlushDoneSaving),
+            .before(SavingSystemSet::FlushDoSaving),
     )
     .add_systems(
         SAVING_SCHEDULE,
