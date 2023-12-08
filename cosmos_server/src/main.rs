@@ -93,7 +93,7 @@ fn main() {
 
     #[cfg(feature = "print-schedule")]
     {
-        bevy_mod_debugdump::print_schedule_graph(&mut app, First);
+        bevy_mod_debugdump::print_schedule_graph(&mut app, Update);
         return;
     }
 

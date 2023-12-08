@@ -230,7 +230,7 @@ pub(super) fn register(app: &mut App) {
         .add_systems(
             Update,
             (
-                on_load_blueprint.in_set(LoadingBlueprintSystemSet::DoLoading),
+                on_load_blueprint.in_set(LoadingBlueprintSystemSet::DoLoadingBlueprints),
                 on_load_structure
                     .in_set(StructureLoadingSet::LoadStructure)
                     .in_set(LoadingSystemSet::DoLoading),
