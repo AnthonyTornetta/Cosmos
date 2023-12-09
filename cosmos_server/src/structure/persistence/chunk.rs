@@ -9,9 +9,9 @@ use bevy::{
         component::Component,
         entity::Entity,
         event::Event,
-        query::Without,
+        query::{With, Without},
         schedule::{apply_deferred, IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
-        system::{Commands, Query, ResMut},
+        system::{Commands, Query},
     },
     prelude::{Deref, DerefMut},
     utils::HashMap,
@@ -22,12 +22,15 @@ use cosmos_core::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::persistence::{
-    saving::{BlueprintingSystemSet, SavingSystemSet, SAVING_SCHEDULE},
-    SerializedData,
+use crate::{
+    persistence::{
+        saving::{BlueprintingSystemSet, NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
+        SerializedData,
+    },
+    structure::persistence::BlockDataNeedsSaved,
 };
 
-use super::{SerializedChunkBlockData, SuperDuperStupidGarbage};
+use super::{SerializedBlockData, SerializedChunkBlockData};
 
 #[derive(Event)]
 pub struct ChunkLoadBlockDataEvent {
@@ -41,36 +44,32 @@ pub struct AllBlockData(pub HashMap<ChunkCoordinate, SerializedChunkBlockData>);
 
 /// Put systems that save block data before this
 fn save_block_data(
-    _q_structure: Query<&Structure, Without<NeedsDespawned>>,
+    q_structure: Query<&Structure, Without<NeedsDespawned>>,
     mut q_serialized_data: Query<&mut SerializedData>,
-    // mut q_chunks: Query<(Entity, &ChunkEntity, &mut SerializedBlockData), With<NeedsSaved>>,
-    q_chunks: Query<&ChunkEntity>,
+    mut q_chunks: Query<(Entity, &ChunkEntity, &mut SerializedBlockData), With<NeedsSaved>>,
     mut commands: Commands,
-    mut chunks_that_need_saved_turn_this_into_a_query_please: ResMut<SuperDuperStupidGarbage>,
 ) {
     let mut all_block_data = HashMap::<Entity, AllBlockData>::default();
 
-    for (entity, mut serialized_block_data) in std::mem::take(&mut chunks_that_need_saved_turn_this_into_a_query_please.0) {
-        let chunk_ent = q_chunks.get(entity).expect("A chunk should always have this.");
-        // for (entity, chunk_ent, mut serialized_block_data) in q_chunks.iter_mut() {
+    for (entity, chunk_ent, mut serialized_block_data) in q_chunks.iter_mut() {
         println!("SAVING BLOCK DATA FOR CHUNK!");
         let block_data = all_block_data.entry(chunk_ent.structure_entity).or_insert(Default::default());
 
         block_data.insert(chunk_ent.chunk_location, serialized_block_data.take_save_data());
 
-        // commands.entity(entity).remove::<SerializedBlockData>().remove::<NeedsSaved>();
+        commands.entity(entity).remove::<SerializedBlockData>().remove::<NeedsSaved>();
 
         // Don't waste time removing all the block data needs saved from a structure that's going to be despawned anyway
-        // if let Ok(structure) = q_structure.get(chunk_ent.structure_entity) {
-        //     structure
-        //         .chunk_from_chunk_coordinates(chunk_ent.chunk_location)
-        //         .expect("Chunk must still be loaded")
-        //         .all_block_data_entities()
-        //         .iter()
-        //         .for_each(|(_, &block_data_ent)| {
-        //             commands.entity(block_data_ent).remove::<BlockDataNeedsSaved>();
-        //         });
-        // }
+        if let Ok(structure) = q_structure.get(chunk_ent.structure_entity) {
+            structure
+                .chunk_from_chunk_coordinates(chunk_ent.chunk_location)
+                .expect("Chunk must still be loaded")
+                .all_block_data_entities()
+                .iter()
+                .for_each(|(_, &block_data_ent)| {
+                    commands.entity(block_data_ent).remove::<BlockDataNeedsSaved>();
+                });
+        }
     }
 
     for (structure_ent, all_block_data) in all_block_data {
@@ -86,48 +85,43 @@ fn save_block_data(
 fn done_blueprinting_block_data(
     q_structure: Query<&Structure, Without<NeedsDespawned>>,
     q_serialized_data: Query<&mut SerializedData>,
-    // q_chunks: Query<(Entity, &ChunkEntity, &mut SerializedBlockData), With<NeedsSaved>>,
-    q_chunks: Query<&ChunkEntity>,
+    q_chunks: Query<(Entity, &ChunkEntity, &mut SerializedBlockData), With<NeedsSaved>>,
     commands: Commands,
-    chunks_that_need_saved_turn_this_into_a_query_please: ResMut<SuperDuperStupidGarbage>,
 ) {
-    save_block_data(
-        q_structure,
-        q_serialized_data,
-        q_chunks,
-        commands,
-        chunks_that_need_saved_turn_this_into_a_query_please,
-    );
+    save_block_data(q_structure, q_serialized_data, q_chunks, commands);
 }
 
 /// Put systems that save block data before this
 fn done_saving_block_data(
     q_structure: Query<&Structure, Without<NeedsDespawned>>,
     q_serialized_data: Query<&mut SerializedData>,
-    // q_chunks: Query<(Entity, &ChunkEntity, &mut SerializedBlockData), With<NeedsSaved>>,
-    q_chunks: Query<&ChunkEntity>,
+    q_chunks: Query<(Entity, &ChunkEntity, &mut SerializedBlockData), With<NeedsSaved>>,
     commands: Commands,
-    chunks_that_need_saved_turn_this_into_a_query_please: ResMut<SuperDuperStupidGarbage>,
 ) {
-    save_block_data(
-        q_structure,
-        q_serialized_data,
-        q_chunks,
-        commands,
-        chunks_that_need_saved_turn_this_into_a_query_please,
-    );
+    save_block_data(q_structure, q_serialized_data, q_chunks, commands);
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// This system set is for when block data is being saved normally - NOT FOR A BLUEPRINT (use [`BlockDataBlueprintingSet`] for that.)
+///
+/// This set will be after `SavingSystemSet::DoSaving` and before `SavingSystemSet::FlushDoSaving`.
 pub enum BlockDataSavingSet {
+    /// Nothing yet =).
     BeginSavingBlockData,
+    /// apply_deferred
     FlushBeginSavingBlockData,
+    /// This is where you should add any saving logic and write to the `SerializedData` component.
     SaveBlockData,
+    /// apply_deferred
     FlushSaveBlockData,
+    /// This writes the block data to the structures' `SerializedData` fields `SerializedData` and `NeedsSaved` components.
     DoneSavingBlockData,
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// This system set is for when block data is being blueprinted - not saved normally (use [`BlockDataSavingSet`] for that.)
+///
+/// This set will be after `BlueprintingSystemSet::DoBlueprinting` and before `SavingSystemSet::FlushDoBlueprinting`.
 pub enum BlockDataBlueprintingSet {
     BeginBlueprintingBlockData,
     FlushBeginBlueprintingBlockData,

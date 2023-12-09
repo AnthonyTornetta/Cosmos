@@ -2,8 +2,9 @@ use bevy::{
     app::{App, Update},
     ecs::{
         event::EventReader,
+        query::With,
         schedule::IntoSystemConfigs,
-        system::{Commands, Query, Res, ResMut},
+        system::{Commands, Query, Res},
     },
     hierarchy::{BuildChildren, Parent},
     log::warn,
@@ -27,12 +28,10 @@ use crate::{
     persistence::saving::SAVING_SCHEDULE,
     structure::persistence::{
         chunk::{BlockDataSavingSet, ChunkLoadBlockDataEvent},
-        BlockDataNeedsSavedThisIsStupidPleaseMakeThisAComponent, SuperDuperStupidGarbage,
+        BlockDataNeedsSaved, SerializedBlockData,
     },
 };
 
-// I can't get this to work no matter how many deffers I use.
-// Wait till https://github.com/bevyengine/bevy/pull/9822 is released
 // fn save_storage(
 //     q_storage_blocks: Query<(&Parent, &Inventory, &BlockData), With<BlockDataNeedsSaved>>,
 //     mut q_chunk: Query<&mut SerializedBlockData>,
@@ -51,25 +50,20 @@ use crate::{
 // }
 
 fn save_storage(
-    mut ev_reader: EventReader<BlockDataNeedsSavedThisIsStupidPleaseMakeThisAComponent>,
-    q_storage_blocks: Query<(&Parent, &Inventory, &BlockData) /*With<BlockDataNeedsSaved>*/>,
-    // mut q_chunk: Query<&mut SerializedBlockData>,
-    mut garbage: ResMut<SuperDuperStupidGarbage>,
+    q_storage_blocks: Query<(&Parent, &Inventory, &BlockData), With<BlockDataNeedsSaved>>,
+    mut q_chunk: Query<&mut SerializedBlockData>,
 ) {
-    for ev in ev_reader.read() {
-        if let Ok((parent, inventory, block_data)) = q_storage_blocks.get(ev.0) {
-            let serialized_block_data = garbage
-                .0
-                .get_mut(&parent.get())
-                .expect("Block data's parent wasn't a chunk w/ SerializedBlockData???");
+    q_storage_blocks.for_each(|(parent, inventory, block_data)| {
+        let mut serialized_block_data = q_chunk
+            .get_mut(parent.get())
+            .expect("Block data's parent wasn't a chunk w/ SerializedBlockData???");
 
-            serialized_block_data.serialize_data(
-                ChunkBlockCoordinate::for_block_coordinate(block_data.block.coords()),
-                "cosmos:inventory",
-                inventory,
-            );
-        }
-    }
+        serialized_block_data.serialize_data(
+            ChunkBlockCoordinate::for_block_coordinate(block_data.block.coords()),
+            "cosmos:inventory",
+            inventory,
+        );
+    });
 }
 
 fn deserialize_storage(q_structure: Query<&Structure>, mut commands: Commands, mut ev_reader: EventReader<ChunkLoadBlockDataEvent>) {

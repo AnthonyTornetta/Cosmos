@@ -2,12 +2,7 @@
 
 use bevy::{
     app::App,
-    ecs::{
-        component::Component,
-        entity::Entity,
-        event::{Event, EventWriter},
-        system::{Commands, Resource},
-    },
+    ecs::{component::Component, system::Commands},
     log::{info, warn},
     prelude::{Deref, DerefMut},
     utils::HashMap,
@@ -19,7 +14,7 @@ use cosmos_core::structure::{
 };
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use crate::persistence::{SaveData, SerializedData};
+use crate::persistence::{saving::NeedsSaved, SaveData, SerializedData};
 
 pub mod chunk;
 
@@ -84,31 +79,11 @@ impl SerializedBlockData {
     }
 }
 
-#[derive(Event, Debug, Clone, Copy)]
-/// This is a stupid way of "adding" a component to an entity and it getting added in time to be processed this frame.
-///
-/// For some reason I can't get apply_deferred working in the `First` schedule, and I give up.
-///
-/// I would care more, but in bevy 0.13, apply_deferred will be unneeded because
-/// of https://github.com/bevyengine/bevy/pull/9822 and this hot garbage can be purged
-pub(crate) struct BlockDataNeedsSavedThisIsStupidPleaseMakeThisAComponent(pub Entity);
+#[derive(Component, Debug, Clone, Copy)]
+/// Signifies that this block's data needs saved
+pub(crate) struct BlockDataNeedsSaved;
 
-#[derive(Resource, Default)]
-/// This is a stupid way of "adding" a component to an entity and it getting added in time to be processed this frame.
-///
-/// For some reason I can't get apply_deferred working in the `First` schedule, and I give up.
-///
-/// I would care more, but in bevy 0.13, apply_deferred will be unneeded because
-/// of https://github.com/bevyengine/bevy/pull/9822 and this hot garbage can be purged
-pub(crate) struct SuperDuperStupidGarbage(pub HashMap<Entity, SerializedBlockData>);
-
-pub(crate) fn save_structure(
-    structure: &Structure,
-    s_data: &mut SerializedData,
-    _commands: &mut Commands,
-    ev_writer: &mut EventWriter<BlockDataNeedsSavedThisIsStupidPleaseMakeThisAComponent>,
-    garbage: &mut SuperDuperStupidGarbage,
-) {
+pub(crate) fn save_structure(structure: &Structure, s_data: &mut SerializedData, commands: &mut Commands) {
     s_data.serialize_data("cosmos:structure", structure);
 
     for chunk in structure.all_chunks_iter(false) {
@@ -124,8 +99,8 @@ pub(crate) fn save_structure(
         let mut has_block_data_to_save = false;
         for (_, &entity) in chunk.all_block_data_entities() {
             info!("Logging block's components!");
-            ev_writer.send(BlockDataNeedsSavedThisIsStupidPleaseMakeThisAComponent(entity));
-            // commands.entity(entity).insert(BlockDataNeedsSaved).log_components();
+
+            commands.entity(entity).insert(BlockDataNeedsSaved);
             has_block_data_to_save = true;
         }
 
@@ -133,8 +108,7 @@ pub(crate) fn save_structure(
             if let Some(chunk_ent) = structure.chunk_entity(position) {
                 info!("SAID SAVE THIS CHUNK'S BLOCK DATA!");
 
-                garbage.0.insert(chunk_ent, SerializedBlockData::new(position));
-                // commands.entity(chunk_ent).insert((SerializedBlockData::new(position), NeedsSaved));
+                commands.entity(chunk_ent).insert((SerializedBlockData::new(position), NeedsSaved));
             }
         }
     }
@@ -142,7 +116,4 @@ pub(crate) fn save_structure(
 
 pub(super) fn register(app: &mut App) {
     chunk::register(app);
-
-    app.init_resource::<SuperDuperStupidGarbage>()
-        .add_event::<BlockDataNeedsSavedThisIsStupidPleaseMakeThisAComponent>();
 }

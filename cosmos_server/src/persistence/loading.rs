@@ -17,7 +17,9 @@ use bevy::{
 };
 use bevy_rapier3d::prelude::Velocity;
 
-use cosmos_core::{netty::cosmos_encoder, persistence::LoadingDistance, physics::location::Location};
+use cosmos_core::{
+    netty::cosmos_encoder, persistence::LoadingDistance, physics::location::Location, structure::loading::StructureLoadingSet,
+};
 
 use super::{SaveFileIdentifier, SaveFileIdentifierType, SerializedData};
 
@@ -148,8 +150,8 @@ pub(super) fn register(app: &mut App) {
             LoadingSystemSet::BeginLoading,
             LoadingSystemSet::FlushBeginLoading,
             LoadingSystemSet::DoLoading,
-            LoadingSystemSet::FlushDoLoading,
-            LoadingSystemSet::DoneLoading,
+            LoadingSystemSet::FlushDoLoading.before(StructureLoadingSet::LoadStructure),
+            LoadingSystemSet::DoneLoading.after(StructureLoadingSet::StructureLoaded),
             LoadingSystemSet::FlushDoneLoading,
         )
             .chain(),

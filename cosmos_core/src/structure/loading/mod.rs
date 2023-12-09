@@ -54,7 +54,7 @@ fn set_structure_done_loading(mut structure_query: Query<&mut Structure>, mut ev
                 warn!("Not full.");
             }
         } else {
-            warn!("Missing structure after got StructureLoadedEvent?");
+            panic!("Missing `Structure` component after got StructureLoadedEvent! Did you forget to add it? Make sure your system runs in `LoadingBlueprintSystemSet::DoLoadingBlueprints` or `LoadingBlueprintSystemSet::DoLoading`");
         }
     }
 }

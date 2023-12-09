@@ -28,13 +28,19 @@ use std::{
 use super::{EntityId, SaveFileIdentifier, SaveFileIdentifierType, SectorsCache, SerializedData};
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// This system set is for when entities are being saved normally - NOT FOR A BLUEPRINT (use [`BlueprintingSystemSet`] for that.)
 pub enum SavingSystemSet {
+    /// Adds the `SerializedData` component to any entities that have the `NeedsSaved` component.
     BeginSaving,
+    /// apply_deferred
     FlushBeginSaving,
     /// Put all your saving logic in here
     DoSaving,
+    /// apply_deferred
     FlushDoSaving,
+    /// This writes the save data to the disk and removes the `SerializedData` and `NeedsSaved` components.
     DoneSaving,
+    /// apply_deferred
     FlushDoneSaving,
 }
 
