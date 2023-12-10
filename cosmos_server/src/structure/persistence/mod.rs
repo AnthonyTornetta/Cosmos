@@ -19,6 +19,7 @@ use crate::persistence::{saving::NeedsSaved, SaveData, SerializedData};
 pub mod chunk;
 
 #[derive(DerefMut, Deref, Debug, Serialize, Deserialize, Default)]
+/// Contains all the serialized block data for each block that has it in a chunk
 pub struct SerializedChunkBlockData(HashMap<ChunkBlockCoordinate, SaveData>);
 
 #[derive(Component, Debug, Serialize, Deserialize)]

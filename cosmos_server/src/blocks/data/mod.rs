@@ -51,5 +51,5 @@ fn add_chunk_data(mut ev_reader: EventReader<ChunkLoadBlockDataEvent>, mut comma
 pub(super) fn register(app: &mut App) {
     storage::register(app);
 
-    app.add_systems(Update, add_chunk_data.in_set(StructureLoadingSet::LoadChunkDataBase));
+    app.add_systems(Update, add_chunk_data.in_set(StructureLoadingSet::InitializeChunkBlockData));
 }

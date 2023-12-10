@@ -4,7 +4,6 @@ use cosmos_core::{
     structure::{
         asteroid::{asteroid_builder::TAsteroidBuilder, Asteroid},
         events::StructureLoadedEvent,
-        loading::StructureLoadingSet,
         structure_iterator::ChunkIteratorResult,
         ChunkInitEvent, Structure,
     },

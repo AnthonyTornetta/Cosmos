@@ -3,7 +3,6 @@
 use crate::structure::events::{ChunkSetEvent, StructureLoadedEvent};
 use bevy::{
     ecs::schedule::{apply_deferred, IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
-    log::{info, warn},
     prelude::{App, Commands, Component, EventReader, EventWriter, Query, Update},
     reflect::Reflect,
 };
@@ -62,16 +61,18 @@ pub(super) fn register(app: &mut App) {
             StructureLoadingSet::FlushStructureComponents,
             StructureLoadingSet::CreateChunkEntities,
             StructureLoadingSet::FlushChunkComponents,
-            StructureLoadingSet::LoadChunkDataBase,
+            StructureLoadingSet::InitializeChunkBlockData,
             StructureLoadingSet::FlushBlockDataBase,
             StructureLoadingSet::LoadChunkData,
+            StructureLoadingSet::FlushLoadChunkData,
             StructureLoadingSet::StructureLoaded,
         )
             .chain(),
     )
     .add_systems(Update, apply_deferred.in_set(StructureLoadingSet::FlushStructureComponents))
     .add_systems(Update, apply_deferred.in_set(StructureLoadingSet::FlushChunkComponents))
-    .add_systems(Update, apply_deferred.in_set(StructureLoadingSet::FlushBlockDataBase));
+    .add_systems(Update, apply_deferred.in_set(StructureLoadingSet::FlushBlockDataBase))
+    .add_systems(Update, apply_deferred.in_set(StructureLoadingSet::FlushLoadChunkData));
 
     app.add_systems(
         Update,
@@ -84,16 +85,24 @@ pub(super) fn register(app: &mut App) {
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// Systems responsible for the creation & population of a structure
 pub enum StructureLoadingSet {
+    /// Initially sets up the structure being loaded, such as creating the `Structure` component
     LoadStructure,
     /// apply_deferred
     FlushStructureComponents,
+    /// Creates all entnties the chunks would have
     CreateChunkEntities,
     /// apply_deferred
     FlushChunkComponents,
-    LoadChunkDataBase,
+    /// Sets up the `BlockData` components used by block data
+    InitializeChunkBlockData,
     /// apply_deferred
     FlushBlockDataBase,
+    /// Loads any chunk's block data
     LoadChunkData,
+    /// apply_deferred
+    FlushLoadChunkData,
+    /// Run once the structure is finished loaded. Used to notify other systems a chunk is ready to be processed
     StructureLoaded,
 }

@@ -24,23 +24,36 @@ use cosmos_core::{
 use super::{SaveFileIdentifier, SaveFileIdentifierType, SerializedData};
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// Put anything related to loading entities in from serialized data into this set
 pub enum LoadingSystemSet {
+    /// Sets up the loading entities
     BeginLoading,
+    /// apply_deferred
     FlushBeginLoading,
     /// Put all your loading logic in here
     DoLoading,
+    /// apply_deferred
     FlushDoLoading,
+    /// Removes all unneeded components
     DoneLoading,
+    /// apply_deferred
     FlushDoneLoading,
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// Put anything related to loading blueprinted entities in from serialized data into this set
 pub enum LoadingBlueprintSystemSet {
+    /// Sets up the loading entities
     BeginLoadingBlueprints,
+    /// apply_deferred
     FlushBeginLoadingBlueprints,
+    /// Put all your blueprint loading logic in here
     DoLoadingBlueprints,
+    /// apply_deferred
     FlushDoLoadingBlueprints,
+    /// Removes all unneeded components
     DoneLoadingBlueprints,
+    /// apply_deferred
     FlushDoneLoadingBlueprints,
 }
 

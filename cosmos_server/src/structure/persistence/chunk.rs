@@ -33,13 +33,18 @@ use crate::{
 use super::{SerializedBlockData, SerializedChunkBlockData};
 
 #[derive(Event)]
+/// This event is created whenever a chunk needs to load block data
 pub struct ChunkLoadBlockDataEvent {
+    /// The serialized block data
     pub data: SerializedChunkBlockData,
+    /// The chunk's coordinates
     pub chunk: ChunkCoordinate,
+    /// The structure's entity
     pub structure_entity: Entity,
 }
 
 #[derive(Serialize, Deserialize, Default, Component, DerefMut, Deref)]
+/// Refers to all the block data in a serialized structure
 pub struct AllBlockData(pub HashMap<ChunkCoordinate, SerializedChunkBlockData>);
 
 /// Put systems that save block data before this
@@ -123,10 +128,15 @@ pub enum BlockDataSavingSet {
 ///
 /// This set will be after `BlueprintingSystemSet::DoBlueprinting` and before `SavingSystemSet::FlushDoBlueprinting`.
 pub enum BlockDataBlueprintingSet {
+    /// Nothing yet =).
     BeginBlueprintingBlockData,
+    /// apply_deferred.
     FlushBeginBlueprintingBlockData,
+    /// This is where you should add any saving logic and write to the `SerializedData` component.
     BlueprintBlockData,
+    /// apply_deferred.
     FlushBlueprintBlockData,
+    /// Nothing yet =).
     DoneBlueprintingBlockData,
 }
 

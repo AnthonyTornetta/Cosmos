@@ -10,7 +10,7 @@
 use bevy::{
     ecs::schedule::{apply_deferred, IntoSystemSetConfigs, SystemSet},
     log::warn,
-    prelude::{App, Commands, Component, Entity, First, IntoSystemConfigs, PostUpdate, Query, ResMut, With, Without},
+    prelude::{App, Commands, Component, Entity, First, IntoSystemConfigs, Query, ResMut, With, Without},
     reflect::Reflect,
 };
 use bevy_rapier3d::prelude::Velocity;
@@ -45,12 +45,19 @@ pub enum SavingSystemSet {
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// This system set is for when entities are being blueprinted - NOT FOR A NORMAL SAVE (use [`SavingSystemSet`] for that.)
 pub enum BlueprintingSystemSet {
+    /// Adds the `SerializedData` component to any entities that have the `NeedsBlueprinted` component.
     BeginBlueprinting,
+    /// apply_deferred
     FlushBeginBlueprinting,
+    /// Put all your blueprinting logic in here
     DoBlueprinting,
+    /// apply_deferred
     FlushDoBlueprinting,
+    /// This writes the save data to the disk and removes the `SerializedData` and `NeedsBlueprinted` components.
     DoneBlueprinting,
+    /// apply_deferred
     FlushDoneBlueprinting,
 }
 
