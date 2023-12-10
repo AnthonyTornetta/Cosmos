@@ -20,6 +20,7 @@ mod storage;
 fn add_chunk_data(mut ev_reader: EventReader<ChunkLoadBlockDataEvent>, mut commands: Commands, mut q_structure: Query<&mut Structure>) {
     for ev in ev_reader.read() {
         let Ok(mut structure) = q_structure.get_mut(ev.structure_entity) else {
+            warn!("Missing structure for block data");
             continue;
         };
         let Some(chunk_ent) = structure.chunk_entity(ev.chunk) else {

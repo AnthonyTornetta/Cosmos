@@ -66,9 +66,15 @@ fn save_storage(
     });
 }
 
-fn deserialize_storage(q_structure: Query<&Structure>, mut commands: Commands, mut ev_reader: EventReader<ChunkLoadBlockDataEvent>) {
+fn deserialize_storage(
+    q_structure: Query<&Structure>,
+    mut q_block_data: Query<&mut BlockData>,
+    mut commands: Commands,
+    mut ev_reader: EventReader<ChunkLoadBlockDataEvent>,
+) {
     for ev in ev_reader.read() {
         let Ok(structure) = q_structure.get(ev.structure_entity) else {
+            warn!("No structure but tried to deserialize storage.");
             continue;
         };
 
@@ -83,6 +89,10 @@ fn deserialize_storage(q_structure: Query<&Structure>, mut commands: Commands, m
                 .expect("Missing data entity despite having data here");
 
             commands.entity(data_ent).insert(inventory);
+            q_block_data
+                .get_mut(data_ent)
+                .expect("Block data missing `BlockData` component!")
+                .increment();
         }
     }
 }
@@ -103,11 +113,11 @@ fn populate_inventory(
 
         let mut inv = Inventory::new(9 * 5, None);
 
-        // if let Some(item) = items.from_id("cosmos:stone") {
-        //     inv.insert(item, 100);
-        // } else {
-        //     warn!("Missing cosmos:stone?");
-        // }
+        if let Some(item) = items.from_id("cosmos:stone") {
+            inv.insert(item, 100);
+        } else {
+            warn!("Missing cosmos:stone?");
+        }
 
         if let Some(data_ent) = structure.block_data(coords) {
             // TODO:
