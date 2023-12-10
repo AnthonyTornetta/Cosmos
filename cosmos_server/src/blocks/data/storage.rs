@@ -103,11 +103,11 @@ fn populate_inventory(
 
         let mut inv = Inventory::new(9 * 5, None);
 
-        if let Some(item) = items.from_id("cosmos:stone") {
-            inv.insert(item, 100);
-        } else {
-            warn!("Missing cosmos:stone?");
-        }
+        // if let Some(item) = items.from_id("cosmos:stone") {
+        //     inv.insert(item, 100);
+        // } else {
+        //     warn!("Missing cosmos:stone?");
+        // }
 
         if let Some(data_ent) = structure.block_data(coords) {
             // TODO:

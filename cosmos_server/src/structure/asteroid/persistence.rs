@@ -77,6 +77,8 @@ fn load_structure(
         }
     }
 
+    entity_cmd.insert(structure);
+
     structure_loaded_event_writer.send(StructureLoadedEvent { structure_entity: entity });
 
     if let Some(block_data) = s_data.deserialize_data::<AllBlockData>("cosmos:block_data") {

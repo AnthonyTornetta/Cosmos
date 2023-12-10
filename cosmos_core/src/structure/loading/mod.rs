@@ -3,7 +3,7 @@
 use crate::structure::events::{ChunkSetEvent, StructureLoadedEvent};
 use bevy::{
     ecs::schedule::{apply_deferred, IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
-    log::warn,
+    log::{info, warn},
     prelude::{App, Commands, Component, EventReader, EventWriter, Query, Update},
     reflect::Reflect,
 };
@@ -45,16 +45,11 @@ fn listen_chunk_done_loading(
 }
 
 fn set_structure_done_loading(mut structure_query: Query<&mut Structure>, mut event_reader: EventReader<StructureLoadedEvent>) {
-    for ent in event_reader.read() {
-        println!("Got entity in reader!");
-        if let Ok(mut structure) = structure_query.get_mut(ent.structure_entity) {
-            if let Structure::Full(structure) = structure.as_mut() {
-                structure.set_loaded();
-            } else {
-                warn!("Not full.");
-            }
-        } else {
-            panic!("Missing `Structure` component after got StructureLoadedEvent! Did you forget to add it? Make sure your system runs in `LoadingBlueprintSystemSet::DoLoadingBlueprints` or `LoadingBlueprintSystemSet::DoLoading`");
+    for ev in event_reader.read() {
+        let mut structure = structure_query.get_mut(ev.structure_entity).expect("Missing `Structure` component after got StructureLoadedEvent! Did you forget to add it? Make sure your system runs in `LoadingBlueprintSystemSet::DoLoadingBlueprints` or `LoadingBlueprintSystemSet::DoLoading`");
+
+        if let Structure::Full(structure) = structure.as_mut() {
+            structure.set_loaded();
         }
     }
 }
