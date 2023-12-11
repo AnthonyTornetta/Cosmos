@@ -61,6 +61,7 @@ fn notify_when_done_generating(
                         chunk_init_event_writer.send(ChunkInitEvent {
                             structure_entity: generating_chunk.structure_entity,
                             coords: position,
+                            serialized_block_data: None,
                         });
                     }
                 }

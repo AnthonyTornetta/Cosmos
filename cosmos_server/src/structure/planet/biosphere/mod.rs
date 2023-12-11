@@ -199,6 +199,7 @@ fn generate_chunk_featuress<T: BiosphereMarkerComponent>(
             init_event_writer.send(ChunkInitEvent {
                 structure_entity: ev.structure_entity,
                 coords: ev.chunk_coords,
+                serialized_block_data: None,
             });
         }
     }

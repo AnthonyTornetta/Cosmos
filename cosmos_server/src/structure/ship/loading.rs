@@ -53,6 +53,7 @@ fn create_ships(
                 chunk_set_event_writer.send(ChunkInitEvent {
                     structure_entity: entity,
                     coords,
+                    serialized_block_data: None,
                 });
             }
         }

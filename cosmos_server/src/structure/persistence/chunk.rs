@@ -36,7 +36,7 @@ use crate::{
 
 use super::SerializedChunkBlockData;
 
-#[derive(Event)]
+#[derive(Event, Debug)]
 /// This event is created whenever a chunk needs to load block data
 pub struct ChunkLoadBlockDataEvent {
     /// The serialized block data

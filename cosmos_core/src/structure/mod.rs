@@ -44,6 +44,7 @@ use serde::{Deserialize, Serialize};
 
 use self::block_health::events::{BlockDestroyedEvent, BlockTakeDamageEvent};
 use self::block_storage::BlockStorer;
+use self::chunk::netty::SerializedChunkBlockData;
 use self::chunk::ChunkEntity;
 use self::coordinates::{BlockCoordinate, ChunkCoordinate, UnboundBlockCoordinate, UnboundChunkCoordinate};
 use self::dynamic_structure::DynamicStructure;
@@ -533,6 +534,8 @@ pub struct ChunkInitEvent {
     pub structure_entity: Entity,
     /// Chunk's coordinates in the structure
     pub coords: ChunkCoordinate,
+    /// If the chunk has block data that needs deserialized, this will be populated
+    pub serialized_block_data: Option<SerializedChunkBlockData>,
 }
 
 // Removes chunk entities if they have no blocks

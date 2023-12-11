@@ -462,6 +462,7 @@ pub(crate) fn client_sync_players(
             ServerReliableMessages::ChunkData {
                 structure_entity: server_structure_entity,
                 serialized_chunk,
+                serialized_block_data,
             } => {
                 if let Some(s_entity) = network_mapping.client_from_server(&server_structure_entity) {
                     if let Ok(mut structure) = query_structure.get_mut(s_entity) {
@@ -473,6 +474,7 @@ pub(crate) fn client_sync_players(
                         set_chunk_event_writer.send(ChunkInitEvent {
                             coords: chunk_coords,
                             structure_entity: s_entity,
+                            serialized_block_data: Some(serialized_block_data),
                         });
                     }
                 }
@@ -485,6 +487,7 @@ pub(crate) fn client_sync_players(
                         set_chunk_event_writer.send(ChunkInitEvent {
                             coords,
                             structure_entity: s_entity,
+                            serialized_block_data: None,
                         });
                     }
                 }

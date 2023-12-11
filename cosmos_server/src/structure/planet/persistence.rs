@@ -176,6 +176,7 @@ fn load_chunk(
                 chunk_init_event.send(ChunkInitEvent {
                     structure_entity: ce.structure_entity,
                     coords,
+                    serialized_block_data: None,
                 });
             }
         }
