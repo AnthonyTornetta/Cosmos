@@ -21,14 +21,21 @@ use crate::{
 #[derive(Component, Clone, Copy, Debug, Serialize, Deserialize, Reflect)]
 /// This component indicates an entity that is storing data for a specific block
 pub struct BlockData {
-    /// The block this data is for
-    pub block: StructureBlock,
-    /// The structure this block is a part of
-    pub structure_entity: Entity,
+    /// Where this block data is on the structure
+    pub identifier: BlockDataIdentifier,
     /// The number of important pieces of data. Used to determine when to remove this data
     ///
     /// Use `self::increment` and `self::decrement` to manage this. Make sure to call these when you add/remove data appropriately!
     pub data_count: usize,
+}
+
+#[derive(Component, Clone, Copy, Debug, Serialize, Deserialize, Reflect, PartialEq, Eq)]
+/// Where this block data is on the structure
+pub struct BlockDataIdentifier {
+    /// The block this data is for
+    pub block: StructureBlock,
+    /// The structure this block is a part of
+    pub structure_entity: Entity,
 }
 
 impl BlockData {
@@ -51,8 +58,8 @@ fn despawn_dead_data(
 ) {
     query.for_each(|(ent, block_data)| {
         if block_data.data_count == 0 {
-            if let Ok(mut structure) = q_structure.get_mut(block_data.structure_entity) {
-                structure.remove_block_data(block_data.block.coords());
+            if let Ok(mut structure) = q_structure.get_mut(block_data.identifier.structure_entity) {
+                structure.remove_block_data(block_data.identifier.block.coords());
             }
 
             commands.entity(ent).insert(NeedsDespawned);
@@ -64,7 +71,7 @@ fn name_block_data(query: Query<(Entity, &BlockData), Without<Name>>, mut comman
     for (ent, data) in query.iter() {
         commands.entity(ent).insert(Name::new(format!(
             "BlockData for Block @ {}",
-            ChunkBlockCoordinate::for_block_coordinate(data.block.coords())
+            ChunkBlockCoordinate::for_block_coordinate(data.identifier.block.coords())
         )));
     }
 }

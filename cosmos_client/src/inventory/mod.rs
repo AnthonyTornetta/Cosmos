@@ -3,8 +3,13 @@
 use bevy::{ecs::system::EntityCommands, prelude::*, window::PrimaryWindow};
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
+    block::data::BlockData,
     ecs::NeedsDespawned,
-    inventory::{itemstack::ItemStack, netty::ClientInventoryMessages, HeldItemStack, Inventory},
+    inventory::{
+        itemstack::ItemStack,
+        netty::{ClientInventoryMessages, InventoryIdentifier},
+        HeldItemStack, Inventory,
+    },
     item::Item,
     netty::{cosmos_encoder, NettyChannelClient},
     registry::Registry,
@@ -20,6 +25,18 @@ use crate::{
 
 pub mod netty;
 
+fn get_server_inventory_identifier(entity: Entity, mapping: &NetworkMapping, q_block_data: &Query<&BlockData>) -> InventoryIdentifier {
+    if let Ok(block_data) = q_block_data.get(entity) {
+        InventoryIdentifier::BlockData(block_data.identifier)
+    } else {
+        InventoryIdentifier::Entity(
+            mapping
+                .server_from_client(&entity)
+                .expect("Unable to map inventory to server inventory"),
+        )
+    }
+}
+
 #[derive(Component)]
 struct RenderedInventory;
 
@@ -33,7 +50,7 @@ fn toggle_inventory(
             if x.is_some() {
                 commands.entity(ent).remove::<NeedsDisplayed>();
             } else {
-                commands.entity(ent).insert(NeedsDisplayed);
+                commands.entity(ent).insert(NeedsDisplayed(InventorySide::Left));
             }
         }
     }
@@ -58,7 +75,17 @@ fn close_button_system(
 
 #[derive(Default, Component)]
 /// Add this to an inventory you want displayed, and remove this component when you want to hide the inventory
-pub struct NeedsDisplayed;
+pub struct NeedsDisplayed(InventorySide);
+
+#[derive(Default, Clone, Copy, Debug, PartialEq, Eq)]
+/// The side of the screen the inventory will be rendered
+pub enum InventorySide {
+    #[default]
+    /// Right side
+    Right,
+    /// Left side - used for the player's inventory, so prefer right generally.
+    Left,
+}
 
 #[derive(Component)]
 /// Holds a reference to the opened inventory GUI
@@ -67,7 +94,7 @@ struct OpenInventoryEntity(Entity);
 fn toggle_inventory_rendering(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    added_inventories: Query<(Entity, &Inventory, Option<&OpenInventoryEntity>), Added<NeedsDisplayed>>,
+    added_inventories: Query<(Entity, &Inventory, &NeedsDisplayed, Option<&OpenInventoryEntity>), Added<NeedsDisplayed>>,
     mut without_needs_displayed_inventories: Query<(Entity, &mut Inventory, Option<&OpenInventoryEntity>), Without<NeedsDisplayed>>,
     mut holding_item: Query<(Entity, &DisplayedItemFromInventory, &mut HeldItemStack), With<FollowCursor>>,
     mut cursor_flags: ResMut<CursorFlags>,
@@ -75,6 +102,7 @@ fn toggle_inventory_rendering(
     mapping: Res<NetworkMapping>,
     mut removed_components: RemovedComponents<NeedsDisplayed>,
     rendered_inventories: Query<(), With<RenderedInventory>>,
+    q_block_data: Query<&BlockData>,
 ) {
     let mut n_open_inventories = rendered_inventories.iter().len();
     let mut decreased = false;
@@ -98,9 +126,7 @@ fn toggle_inventory_rendering(
         decreased = true;
 
         if let Ok((entity, displayed_item, mut held_item_stack)) = holding_item.get_single_mut() {
-            let server_inventory_holder = mapping
-                .server_from_client(&inventory_holder)
-                .expect("Unable to map inventory to server inventory");
+            let server_inventory_holder = get_server_inventory_identifier(inventory_holder, &mapping, &q_block_data);
 
             // Try to put it in its original spot first
             let leftover = local_inventory.insert_item_stack_at(displayed_item.slot_number, &held_item_stack);
@@ -148,7 +174,7 @@ fn toggle_inventory_rendering(
         }
     }
 
-    for (inventory_holder, local_inventory, open_inventory_entity) in added_inventories.iter() {
+    for (inventory_holder, local_inventory, needs_displayed, open_inventory_entity) in added_inventories.iter() {
         if open_inventory_entity.is_some() {
             continue;
         }
@@ -169,6 +195,13 @@ fn toggle_inventory_rendering(
         let n_slots_per_row: usize = 9;
         let slot_size = 64.0;
 
+        let width = n_slots_per_row as f32 * slot_size + inventory_border_size * 2.0;
+        let (right, left) = if needs_displayed.0 == InventorySide::Right {
+            (Val::Px(100.0 + width), Val::Auto)
+        } else {
+            (Val::Px(100.0), Val::Auto)
+        };
+
         let open_inventory = commands
             .spawn((
                 Name::new("Rendered Inventory"),
@@ -178,7 +211,8 @@ fn toggle_inventory_rendering(
                         position_type: PositionType::Absolute,
                         display: Display::Flex,
                         flex_direction: FlexDirection::Column,
-                        left: Val::Px(100.0),
+                        right,
+                        left,
                         top: Val::Px(100.0),
                         width: Val::Px(n_slots_per_row as f32 * slot_size + inventory_border_size * 2.0),
                         border: UiRect::all(Val::Px(inventory_border_size)),
@@ -458,7 +492,7 @@ fn pickup_item_into_cursor(
     inventory: &mut Inventory,
     asset_server: &AssetServer,
     client: &mut RenetClient,
-    server_inventory_holder: Entity,
+    server_inventory_holder: InventoryIdentifier,
 ) {
     let Some(is) = displayed_item_clicked.item_stack.as_ref() else {
         return;
@@ -522,6 +556,7 @@ fn handle_interactions(
     mut inventory_query: Query<&mut Inventory>,
     mut client: ResMut<RenetClient>,
     mapping: Res<NetworkMapping>,
+    q_block_data: Query<&BlockData>,
     asset_server: Res<AssetServer>,
     items: Res<Registry<Item>>,
 ) {
@@ -543,9 +578,7 @@ fn handle_interactions(
 
     let bulk_moving = input_handler.check_pressed(CosmosInputs::AutoMoveItem);
 
-    let server_inventory_holder = mapping
-        .server_from_client(&displayed_item_clicked.inventory_holder)
-        .expect("Unable to map inventory to server inventory");
+    let server_inventory_holder = get_server_inventory_identifier(displayed_item_clicked.inventory_holder, &mapping, &q_block_data);
 
     if bulk_moving {
         let slot_num = displayed_item_clicked.slot_number;

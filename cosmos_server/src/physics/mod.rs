@@ -255,7 +255,8 @@ fn fix_location(
                 }
             }
             _ => {
-                warn!("Something was added with a location before a player world was created.")
+                warn!("Something was added with a location before a player world was created.");
+                commands.entity(entity).log_components();
             }
         }
     }

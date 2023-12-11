@@ -3,31 +3,38 @@
 use bevy::prelude::Entity;
 use serde::{Deserialize, Serialize};
 
-use crate::block::data::BlockData;
+use crate::block::data::BlockDataIdentifier;
 
 use super::{HeldItemStack, Inventory};
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
+/// A way of identifying where the inventory is
+pub enum InventoryIdentifier {
+    /// The inventory is attached to this entity
+    Entity(Entity),
+    /// The inventory is for thie specific block data
+    BlockData(BlockDataIdentifier),
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 /// All the laser cannon system messages
 pub enum ServerInventoryMessages {
     /// Represents the inventory that an entity has.
-    EntityInventory {
+    UpdateInventory {
         /// The serialized version of an inventory.
         inventory: Inventory,
-        /// The entity that has this inventory.
-        owner: Entity,
-    },
-    /// Represents the inventory that an entity has.
-    BlockInventory {
-        /// The serialized version of an inventory.
-        inventory: Inventory,
-        /// The block's identifier in question.
-        block_data: BlockData,
+        /// The owner of this inventory.
+        owner: InventoryIdentifier,
     },
     /// Updates what is currently held by the player
     HeldItemstack {
         /// The currently held itemstack, if they are holding one
         itemstack: Option<HeldItemStack>,
+    },
+    /// Called whenever a player tries to open an inventory that isn't their own
+    OpenInventory {
+        /// The owner of the inventory
+        owner: InventoryIdentifier,
     },
 }
 
@@ -39,11 +46,11 @@ pub enum ClientInventoryMessages {
         /// The first slot
         slot_a: u32,
         /// The entity that has this inventory.
-        inventory_a: Entity,
+        inventory_a: InventoryIdentifier,
         /// The second slot
         slot_b: u32,
         /// The entity that has this inventory.
-        inventory_b: Entity,
+        inventory_b: InventoryIdentifier,
     },
     /// Auto moves an item in one inventory to another (or the same)
     AutoMove {
@@ -52,16 +59,16 @@ pub enum ClientInventoryMessages {
         /// The amount to move
         quantity: u16,
         /// The inventory the item is in
-        from_inventory: Entity,
+        from_inventory: InventoryIdentifier,
         /// The inventory you want to auto-move the item to. Can be the same as `from_inventory` to auto sort it.
-        to_inventory: Entity,
+        to_inventory: InventoryIdentifier,
     },
     /// Picks up the itemstack at this slot and makes that the held itemstack
     ///
     /// Note that this can only be used when you are not already holding an itemstack, and will do nothing if you are
     PickupItemstack {
         /// The inventory's entity
-        inventory_holder: Entity,
+        inventory_holder: InventoryIdentifier,
         /// The slot to pickup from
         slot: u32,
         /// The amount of the held item to pick up from the inventory (is checked on the server to not exceed the held quantity)
@@ -72,7 +79,7 @@ pub enum ClientInventoryMessages {
     /// Inserts a specified quantity of the itemstack into this slot
     DepositHeldItemstack {
         /// The inventory's entity
-        inventory_holder: Entity,
+        inventory_holder: InventoryIdentifier,
         /// The slot you are inserting into
         slot: u32,
         /// The amount of the held item to insert into the inventory (is checked on the server to not exceed the held quantity)
@@ -83,7 +90,7 @@ pub enum ClientInventoryMessages {
     /// Deposits all the items in the itemstack into that slot, and makes the item that is currently in this slot the held item
     DepositAndSwapHeldItemstack {
         /// The entity that has this inventory you're interacting with
-        inventory_holder: Entity,
+        inventory_holder: InventoryIdentifier,
         /// The slot you want to swap the held item with
         slot: u32,
     },
@@ -94,9 +101,9 @@ pub enum ClientInventoryMessages {
         /// The maximum amount to move
         quantity: u16,
         /// The inventory the item is in
-        from_inventory: Entity,
+        from_inventory: InventoryIdentifier,
         /// The inventory you want to auto-move the item to. Can be the same as `from_inventory` to auto sort it.
-        to_inventory: Entity,
+        to_inventory: InventoryIdentifier,
         /// The slot to go to
         to_slot: u32,
     },
@@ -114,6 +121,6 @@ pub enum ClientInventoryMessages {
         /// The amount of the held item to insert into the inventory (is checked on the server to not exceed the held quantity)
         quantity: u16,
         /// The entity that has this inventory attached to it you want to insert into
-        inventory_holder: Entity,
+        inventory_holder: InventoryIdentifier,
     },
 }

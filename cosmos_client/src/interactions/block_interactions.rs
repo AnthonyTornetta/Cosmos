@@ -22,12 +22,6 @@ use crate::{
     LocalPlayer,
 };
 
-/// How the player interacted with this block
-pub enum InteractionType {
-    /// Used the priamry interact key
-    Primary,
-}
-
 #[derive(Component, Debug)]
 /// Stores the block the player is last noted as looked at
 pub struct LookingAt {

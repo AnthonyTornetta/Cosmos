@@ -9,7 +9,7 @@ use bevy::{
     log::warn,
 };
 use cosmos_core::{
-    block::data::BlockData,
+    block::data::{BlockData, BlockDataIdentifier},
     structure::{loading::StructureLoadingSet, structure_block::StructureBlock, Structure},
 };
 
@@ -36,8 +36,10 @@ fn add_chunk_data(mut ev_reader: EventReader<ChunkLoadBlockDataEvent>, mut comma
 
                 let data_ent = chunk_ecmds
                     .spawn((BlockData {
-                        block: StructureBlock::new(coords),
-                        structure_entity: ev.structure_entity,
+                        identifier: BlockDataIdentifier {
+                            block: StructureBlock::new(coords),
+                            structure_entity: ev.structure_entity,
+                        },
                         data_count: 0,
                     },))
                     .id();

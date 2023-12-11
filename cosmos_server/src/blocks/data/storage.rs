@@ -11,7 +11,7 @@ use bevy::{
 };
 use cosmos_core::{
     block::{
-        data::BlockData,
+        data::{BlockData, BlockDataIdentifier},
         storage::storage_blocks::{on_add_storage, PopulateBlockInventoryEvent},
     },
     inventory::Inventory,
@@ -59,7 +59,7 @@ fn save_storage(
             .expect("Block data's parent wasn't a chunk w/ SerializedBlockData???");
 
         serialized_block_data.serialize_data(
-            ChunkBlockCoordinate::for_block_coordinate(block_data.block.coords()),
+            ChunkBlockCoordinate::for_block_coordinate(block_data.identifier.block.coords()),
             "cosmos:inventory",
             inventory,
         );
@@ -145,8 +145,10 @@ fn populate_inventory(
             let data_ent = commands
                 .spawn((
                     BlockData {
-                        block: ev.block,
-                        structure_entity: ev.structure_entity,
+                        identifier: BlockDataIdentifier {
+                            block: ev.block,
+                            structure_entity: ev.structure_entity,
+                        },
                         data_count: 1,
                     },
                     inv,
