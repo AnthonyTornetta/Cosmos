@@ -18,6 +18,7 @@ use cosmos_core::{
     item::Item,
     registry::Registry,
     structure::{
+        chunk::netty::SerializedBlockData,
         coordinates::{ChunkBlockCoordinate, ChunkCoordinate},
         loading::StructureLoadingSet,
         Structure,
@@ -26,28 +27,14 @@ use cosmos_core::{
 
 use crate::{
     persistence::saving::SAVING_SCHEDULE,
-    structure::persistence::{
-        chunk::{BlockDataSavingSet, ChunkLoadBlockDataEvent},
-        BlockDataNeedsSaved, SerializedBlockData,
+    structure::{
+        persistence::{
+            chunk::{BlockDataSavingSet, ChunkLoadBlockDataEvent},
+            BlockDataNeedsSaved,
+        },
+        planet::chunk::SerializeChunkBlockDataSet,
     },
 };
-
-// fn save_storage(
-//     q_storage_blocks: Query<(&Parent, &Inventory, &BlockData), With<BlockDataNeedsSaved>>,
-//     mut q_chunk: Query<&mut SerializedBlockData>,
-// ) {
-//     q_storage_blocks.for_each(|(parent, inventory, block_data)| {
-//         let mut serialized_block_data = q_chunk
-//             .get_mut(parent.get())
-//             .expect("Block data's parent wasn't a chunk w/ SerializedBlockData???");
-
-//         serialized_block_data.serialize_data(
-//             ChunkBlockCoordinate::for_block_coordinate(block_data.block.coords()),
-//             "cosmos:inventory",
-//             inventory,
-//         );
-//     });
-// }
 
 fn save_storage(
     q_storage_blocks: Query<(&Parent, &Inventory, &BlockData), With<BlockDataNeedsSaved>>,
@@ -164,5 +151,6 @@ fn populate_inventory(
 pub(super) fn register(app: &mut App) {
     app.add_systems(Update, populate_inventory.after(on_add_storage))
         .add_systems(SAVING_SCHEDULE, save_storage.in_set(BlockDataSavingSet::SaveBlockData))
+        .add_systems(Update, save_storage.in_set(SerializeChunkBlockDataSet::Serialize))
         .add_systems(Update, deserialize_storage.in_set(StructureLoadingSet::LoadChunkData));
 }

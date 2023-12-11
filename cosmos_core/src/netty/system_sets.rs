@@ -1,9 +1,12 @@
+//! Netty system sets
+
 use bevy::{
     app::{App, Update},
     ecs::schedule::{apply_deferred, IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
 };
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// Contains the system set shared by the client + server for their networking needs
 pub enum NetworkingSystemsSet {
     /// apply_deferred
     PreReceiveMessages,

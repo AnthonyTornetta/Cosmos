@@ -15,8 +15,8 @@ use rand::{distributions::Alphanumeric, Rng};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use cosmos_core::{
-    netty::cosmos_encoder,
     physics::location::{Location, Sector},
+    structure::chunk::netty::SaveData,
 };
 
 pub mod loading;
@@ -192,10 +192,6 @@ impl SaveFileIdentifier {
     }
 }
 
-#[derive(Debug, Reflect, Serialize, Deserialize, Default, Clone)]
-/// A version of `SerializedData` without the location field and the inability to disable saving
-pub struct SaveData(HashMap<String, Vec<u8>>);
-
 #[derive(Component, Debug, Reflect, Serialize, Deserialize)]
 /// Stores the serialized data for an entity.
 ///
@@ -224,36 +220,6 @@ impl Default for SerializedData {
             location: None,
             should_save: true,
         }
-    }
-}
-
-impl SaveData {
-    /// Saves the data to that data id. Will overwrite any existing data at that id.
-    ///
-    /// Will only save if `should_save()` returns true.
-    pub fn save(&mut self, data_id: impl Into<String>, data: Vec<u8>) {
-        self.0.insert(data_id.into(), data);
-    }
-
-    /// Calls `cosmos_encoder::serialize` on the passed in data.
-    /// Then sends that data into the `save` method, with the given data id.
-    ///
-    /// Will only serialize & save if `should_save()` returns true.
-
-    pub fn serialize_data(&mut self, data_id: impl Into<String>, data: &impl Serialize) {
-        self.save(data_id, cosmos_encoder::serialize(data));
-    }
-
-    /// Reads the data as raw bytes at the given data id. Use `deserialize_data` for a streamlined way to read the data.
-    pub fn read_data(&self, data_id: &str) -> Option<&Vec<u8>> {
-        self.0.get(data_id)
-    }
-
-    /// Deserializes the data as the given type (via `cosmos_encoder::deserialize`) at the given id. Will panic if the
-    /// data is not properly serialized.
-    pub fn deserialize_data<T: DeserializeOwned>(&self, data_id: &str) -> Option<T> {
-        self.read_data(data_id)
-            .map(|d| cosmos_encoder::deserialize(d).expect("Error deserializing data!"))
     }
 }
 

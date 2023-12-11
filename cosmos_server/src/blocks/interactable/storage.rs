@@ -1,28 +1,22 @@
 use bevy::{
     ecs::system::ResMut,
-    prelude::{in_state, App, EventReader, EventWriter, IntoSystemConfigs, Query, Res, Update, With},
+    prelude::{in_state, App, EventReader, IntoSystemConfigs, Query, Res, Update},
 };
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::{block_events::BlockInteractEvent, data::BlockDataIdentifier, Block},
     entities::player::Player,
-    events::structure::change_pilot_event::ChangePilotEvent,
     inventory::netty::{InventoryIdentifier, ServerInventoryMessages},
     netty::{cosmos_encoder, NettyChannelServer},
     registry::{identifiable::Identifiable, Registry},
-    structure::{
-        ship::{pilot::Pilot, Ship},
-        Structure,
-    },
+    structure::Structure,
 };
 
 use crate::state::GameState;
 
 fn handle_block_event(
     mut interact_events: EventReader<BlockInteractEvent>,
-    mut change_pilot_event: EventWriter<ChangePilotEvent>,
-    s_query: Query<&Structure, With<Ship>>,
-    pilot_query: Query<&Pilot>,
+    s_query: Query<&Structure>,
     blocks: Res<Registry<Block>>,
     q_player: Query<&Player>,
     mut server: ResMut<RenetServer>,

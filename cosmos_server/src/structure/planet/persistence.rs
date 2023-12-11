@@ -1,3 +1,5 @@
+//! Structure serialization/deserialization
+
 use std::fs;
 
 use bevy::prelude::*;

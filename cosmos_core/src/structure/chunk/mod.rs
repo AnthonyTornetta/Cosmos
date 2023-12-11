@@ -14,6 +14,8 @@ use super::block_health::BlockHealth;
 use super::block_storage::{BlockStorage, BlockStorer};
 use super::coordinates::{ChunkBlockCoordinate, ChunkCoordinate, CoordinateType, UnboundCoordinateType};
 
+pub mod netty;
+
 /// The number of blocks a chunk can have in the x/y/z directions.
 ///
 /// A chunk contains `CHUNK_DIMENSIONS`^3 blocks total.

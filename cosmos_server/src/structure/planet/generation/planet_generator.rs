@@ -28,7 +28,11 @@ use cosmos_core::{
 use crate::{
     persistence::{saving::NeedsSaved, EntityId, SaveFileIdentifier},
     state::GameState,
-    structure::planet::{biosphere::TGenerateChunkEvent, chunk::SaveChunk, persistence::ChunkNeedsPopulated},
+    structure::planet::{
+        biosphere::TGenerateChunkEvent,
+        chunk::{ChunkNeedsSent, SaveChunk},
+        persistence::ChunkNeedsPopulated,
+    },
 };
 
 #[derive(Component)]
@@ -90,7 +94,7 @@ fn bounce_events(mut event_reader: EventReader<RequestChunkBouncer>, mut event_w
 fn get_requested_chunk(
     mut event_reader: EventReader<RequestChunkEvent>,
     players: Query<&Location, With<Player>>,
-    mut structure: Query<(&mut Structure, &Location), With<Planet>>,
+    mut q_structure: Query<(&mut Structure, &Location), With<Planet>>,
     mut event_writer: EventWriter<RequestChunkBouncer>,
     mut server: ResMut<RenetServer>,
     mut commands: Commands,
@@ -104,15 +108,24 @@ fn get_requested_chunk(
 
     // let timer = UtilsTimer::start();
 
+    let mut requests = HashMap::new();
+
+    event_reader.read().for_each(|ev| {
+        requests
+            .entry((ev.structure_entity, ev.chunk_coords))
+            .or_insert(vec![])
+            .push(ev.requester_id);
+    });
+
     // No par_iter() for event readers, so first convert to vec then par_iter() it.
-    event_reader
-        .read()
+    requests
+        .into_iter()
         // .copied()
         // .collect::<Vec<RequestChunkEvent>>()
         // .par_iter()
-        .for_each(|ev| {
-            if let Ok((structure, loc)) = structure.get(ev.structure_entity) {
-                let cpos = structure.chunk_relative_position(ev.chunk_coords);
+        .for_each(|((structure_entity, chunk_coords), client_ids)| {
+            if let Ok((structure, loc)) = q_structure.get(structure_entity) {
+                let cpos = structure.chunk_relative_position(chunk_coords);
 
                 let chunk_loc = *loc + cpos;
 
@@ -123,10 +136,10 @@ fn get_requested_chunk(
                     return;
                 }
 
-                match structure.get_chunk_state(ev.chunk_coords) {
+                match structure.get_chunk_state(chunk_coords) {
                     ChunkState::Loaded => {
-                        if let Some(chunk) = structure.chunk_from_chunk_coordinates(ev.chunk_coords) {
-                            let mut mutex = serialized.lock().expect("Failed to lock");
+                        if let Some(chunk) = structure.chunk_entity(chunk_coords) {
+                            // let mut mutex = serialized.lock().expect("Failed to lock");
 
                             // let mut timer = UtilsTimer::start();
                             // let _ = cosmos_encoder::serialize(chunk);
@@ -135,45 +148,56 @@ fn get_requested_chunk(
                             // let _ = bincode::serialize(chunk).unwrap();
                             // timer.log_duration("For just bincode:");
 
-                            mutex.as_mut().unwrap().push((
-                                ev.requester_id,
-                                cosmos_encoder::serialize(&ServerReliableMessages::ChunkData {
-                                    structure_entity: ev.structure_entity,
-                                    serialized_chunk: cosmos_encoder::serialize(chunk),
-                                    serialized_block_data: 0,
-                                }),
-                            ));
+                            // mutex.as_mut().unwrap().push((
+                            //     ev.requester_id,
+                            //     cosmos_encoder::serialize(&ServerReliableMessages::ChunkData {
+                            //         structure_entity: ev.structure_entity,
+                            //         serialized_chunk: cosmos_encoder::serialize(chunk),
+                            //         serialized_block_data: 0,
+                            //     }),
+                            // ));
+
+                            commands.entity(chunk).insert(ChunkNeedsSent { client_ids });
 
                             non_empty_serializes.fetch_add(1, Ordering::SeqCst);
-                        } else if structure.has_empty_chunk_at(ev.chunk_coords) {
+                        } else if structure.has_empty_chunk_at(chunk_coords) {
                             let mut mutex = serialized.lock().expect("Failed to lock");
 
-                            mutex.as_mut().unwrap().push((
-                                ev.requester_id,
-                                cosmos_encoder::serialize(&ServerReliableMessages::EmptyChunk {
-                                    structure_entity: ev.structure_entity,
-                                    coords: ev.chunk_coords,
-                                }),
-                            ));
+                            let locked = mutex.as_mut().unwrap();
+
+                            for client_id in client_ids {
+                                locked.push((
+                                    client_id,
+                                    cosmos_encoder::serialize(&ServerReliableMessages::EmptyChunk {
+                                        structure_entity: structure_entity,
+                                        coords: chunk_coords,
+                                    }),
+                                ));
+                            }
 
                             empty_serializes.fetch_add(1, Ordering::SeqCst);
                         }
                     }
-                    ChunkState::Loading => bounced
-                        .lock()
-                        .expect("Failed to lock")
-                        .as_mut()
-                        .unwrap()
-                        .push(RequestChunkBouncer(*ev)),
+                    ChunkState::Loading => {
+                        let mut locked = bounced.lock().expect("Failed to lock");
+                        let locked = locked.as_mut().unwrap();
+                        for client_id in client_ids {
+                            locked.push(RequestChunkBouncer(RequestChunkEvent {
+                                chunk_coords,
+                                structure_entity,
+                                requester_id: client_id,
+                            }));
+                        }
+                    }
                     ChunkState::Unloaded => {
                         todo.lock()
                             .expect("Failed to lock")
                             .as_mut()
                             .unwrap()
-                            .push((ev.structure_entity, ev.chunk_coords, *ev))
+                            .push((structure_entity, chunk_coords, client_ids))
                     }
                     ChunkState::Invalid => {
-                        warn!("Client requested invalid chunk @ {}", ev.chunk_coords);
+                        warn!("Client requested invalid chunk @ {}", chunk_coords);
                     }
                 }
             }
@@ -196,14 +220,20 @@ fn get_requested_chunk(
         server.send_message(client_id, NettyChannelServer::Reliable, serialized);
     }
 
-    for (entity, coords, ev) in todo.lock().expect("Failed to lock").take().unwrap() {
-        let Ok((mut structure, _)) = structure.get_mut(entity) else {
+    for (structure_entity, chunk_coords, client_ids) in todo.lock().expect("Failed to lock").take().unwrap() {
+        let Ok((mut structure, _)) = q_structure.get_mut(structure_entity) else {
             continue;
         };
 
-        mark_chunk_for_generation(&mut structure, &mut commands, coords, entity);
+        mark_chunk_for_generation(&mut structure, &mut commands, chunk_coords, structure_entity);
 
-        event_writer.send(RequestChunkBouncer(ev));
+        for client_id in client_ids {
+            event_writer.send(RequestChunkBouncer(RequestChunkEvent {
+                chunk_coords,
+                structure_entity,
+                requester_id: client_id,
+            }));
+        }
     }
 }
 

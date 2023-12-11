@@ -18,7 +18,11 @@ use bevy::{
 };
 use cosmos_core::{
     ecs::NeedsDespawned,
-    structure::{chunk::ChunkEntity, coordinates::ChunkCoordinate, Structure},
+    structure::{
+        chunk::{netty::SerializedBlockData, ChunkEntity},
+        coordinates::ChunkCoordinate,
+        Structure,
+    },
 };
 use serde::{Deserialize, Serialize};
 
@@ -30,7 +34,7 @@ use crate::{
     structure::persistence::BlockDataNeedsSaved,
 };
 
-use super::{SerializedBlockData, SerializedChunkBlockData};
+use super::SerializedChunkBlockData;
 
 #[derive(Event)]
 /// This event is created whenever a chunk needs to load block data
