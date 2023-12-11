@@ -3,7 +3,7 @@
 use bevy::{ecs::system::EntityCommands, prelude::*, window::PrimaryWindow};
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
-    block::data::BlockData,
+    block::data::{BlockData, BlockDataIdentifier},
     ecs::NeedsDespawned,
     inventory::{
         itemstack::ItemStack,
@@ -27,7 +27,12 @@ pub mod netty;
 
 fn get_server_inventory_identifier(entity: Entity, mapping: &NetworkMapping, q_block_data: &Query<&BlockData>) -> InventoryIdentifier {
     if let Ok(block_data) = q_block_data.get(entity) {
-        InventoryIdentifier::BlockData(block_data.identifier)
+        InventoryIdentifier::BlockData(BlockDataIdentifier {
+            block: block_data.identifier.block,
+            structure_entity: mapping
+                .server_from_client(&block_data.identifier.structure_entity)
+                .expect("Unable to map inventory to server inventory"),
+        })
     } else {
         InventoryIdentifier::Entity(
             mapping

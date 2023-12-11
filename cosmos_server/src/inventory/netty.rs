@@ -81,8 +81,19 @@ fn get_inventory_mut<'a>(
     match identifier {
         InventoryIdentifier::Entity(entity) => q_inventory.get_mut(entity).ok(),
         InventoryIdentifier::BlockData(block_data) => {
-            let structure = q_structure.get(block_data.structure_entity).ok()?;
-            let block_data_ent = structure.block_data(block_data.block.coords())?;
+            let Ok(structure) = q_structure.get(block_data.structure_entity) else {
+                warn!("Missing structure entity for {:?}", block_data.structure_entity);
+                return None;
+            };
+
+            let Some(block_data_ent) = structure.block_data(block_data.block.coords()) else {
+                warn!(
+                    "Missing block data for {} in entity {:?}",
+                    block_data.block.coords(),
+                    block_data.structure_entity
+                );
+                return None;
+            };
 
             q_inventory.get_mut(block_data_ent).ok()
         }
@@ -208,8 +219,11 @@ fn listen(
 
                     // TODO: Check if has access to inventory
 
+                    println!("Getting inv for {inventory_holder:?}");
                     if let Some(mut inventory) = get_inventory_mut(inventory_holder, &mut q_inventory, &q_structure) {
+                        println!("YIPPPEEE");
                         if let Some(is) = inventory.mut_itemstack_at(slot) {
+                            println!("Doing it");
                             let quantity = quantity.min(is.quantity());
 
                             let mut held_itemstack = is.clone();
