@@ -1,6 +1,9 @@
 //! Handles the loading of structures
 
-use crate::structure::events::{ChunkSetEvent, StructureLoadedEvent};
+use crate::{
+    netty::system_sets::NetworkingSystemsSet,
+    structure::events::{ChunkSetEvent, StructureLoadedEvent},
+};
 use bevy::{
     ecs::schedule::{apply_deferred, IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
     prelude::{App, Commands, Component, EventReader, EventWriter, Query, Update},
@@ -67,6 +70,7 @@ pub(super) fn register(app: &mut App) {
             StructureLoadingSet::FlushLoadChunkData,
             StructureLoadingSet::StructureLoaded,
         )
+            .after(NetworkingSystemsSet::FlushReceiveMessages)
             .chain(),
     )
     .add_systems(Update, apply_deferred.in_set(StructureLoadingSet::FlushStructureComponents))

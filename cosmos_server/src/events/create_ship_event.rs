@@ -8,7 +8,6 @@ use cosmos_core::structure::full_structure::FullStructure;
 use cosmos_core::structure::loading::StructureLoadingSet;
 use cosmos_core::structure::{ship::ship_builder::TShipBuilder, Structure};
 
-use crate::netty::server_listener::server_listen_messages;
 use crate::structure::ship::{loading::ShipNeedsCreated, server_ship_builder::ServerShipBuilder};
 use crate::GameState;
 
@@ -39,7 +38,6 @@ pub(super) fn register(app: &mut App) {
     app.add_event::<CreateShipEvent>().add_systems(
         Update,
         create_ship_event_reader
-            .after(server_listen_messages)
             .in_set(StructureLoadingSet::LoadStructure)
             .run_if(in_state(GameState::Playing)),
     );

@@ -7,6 +7,7 @@ use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::block::block_events::{BlockBreakEvent, BlockInteractEvent, BlockPlaceEvent};
 use cosmos_core::netty::netty_rigidbody::NettyRigidBodyLocation;
+use cosmos_core::netty::system_sets::NetworkingSystemsSet;
 use cosmos_core::netty::{cosmos_encoder, NettyChannelClient, NettyChannelServer};
 use cosmos_core::physics::location::Location;
 use cosmos_core::structure::ship::build_mode::{BuildMode, ExitBuildModeEvent};
@@ -31,7 +32,7 @@ use super::sync::entities::RequestedEntityEvent;
 /// Bevy system that listens to almost all the messages received from the client
 ///
 /// Eventually this should be broken down into more specific functions
-pub fn server_listen_messages(
+fn server_listen_messages(
     mut commands: Commands,
     mut server: ResMut<RenetServer>,
     lobby: ResMut<ServerLobby>,
@@ -126,19 +127,20 @@ pub fn server_listen_messages(
 
             match command {
                 ClientReliableMessages::SendAllChunks { server_entity } => {
-                    if let Ok(structure) = structure_query.get(server_entity) {
-                        for (_, chunk) in structure.chunks() {
-                            server.send_message(
-                                client_id,
-                                NettyChannelServer::Reliable,
-                                cosmos_encoder::serialize(&ServerReliableMessages::ChunkData {
-                                    structure_entity: server_entity,
-                                    serialized_chunk: cosmos_encoder::serialize(chunk),
-                                }),
-                            );
-                        }
-                    } else {
+                    let Ok(structure) = structure_query.get(server_entity) else {
                         warn!("!!! Server received invalid entity from client {client_id}; entity = {server_entity:?}");
+                        continue;
+                    };
+
+                    for (_, chunk) in structure.chunks() {
+                        server.send_message(
+                            client_id,
+                            NettyChannelServer::Reliable,
+                            cosmos_encoder::serialize(&ServerReliableMessages::ChunkData {
+                                structure_entity: server_entity,
+                                serialized_chunk: cosmos_encoder::serialize(chunk),
+                            }),
+                        );
                     }
                 }
                 ClientReliableMessages::SendSingleChunk { structure_entity, chunk } => request_chunk_event_writer.send(RequestChunkEvent {
@@ -300,5 +302,5 @@ pub fn server_listen_messages(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, server_listen_messages);
+    app.add_systems(Update, server_listen_messages.in_set(NetworkingSystemsSet::ReceiveMessages));
 }

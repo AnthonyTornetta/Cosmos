@@ -10,13 +10,14 @@ use cosmos_core::{
         netty_rigidbody::{NettyRigidBody, NettyRigidBodyLocation},
         server_reliable_messages::ServerReliableMessages,
         server_unreliable_messages::ServerUnreliableMessages,
+        system_sets::NetworkingSystemsSet,
         NettyChannelServer, NoSendEntity,
     },
     persistence::LoadingDistance,
     physics::location::{add_previous_location, Location},
 };
 
-use crate::netty::{network_helpers::NetworkTick, server_listener::server_listen_messages};
+use crate::netty::network_helpers::NetworkTick;
 
 use super::entities::RequestedEntityEvent;
 
@@ -108,7 +109,9 @@ pub(super) fn register(app: &mut App) {
         // This really needs to run immediately after `add_previous_location` to make sure nothing causes any desync
         // in location + transform, but for now it's fine.
         (
-            server_sync_bodies.after(add_previous_location).before(server_listen_messages),
+            server_sync_bodies
+                .after(add_previous_location)
+                .before(NetworkingSystemsSet::PreReceiveMessages),
             pinger,
         ),
     );

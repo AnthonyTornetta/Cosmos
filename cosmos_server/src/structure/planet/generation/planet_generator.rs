@@ -140,6 +140,7 @@ fn get_requested_chunk(
                                 cosmos_encoder::serialize(&ServerReliableMessages::ChunkData {
                                     structure_entity: ev.structure_entity,
                                     serialized_chunk: cosmos_encoder::serialize(chunk),
+                                    serialized_block_data: 0,
                                 }),
                             ));
 

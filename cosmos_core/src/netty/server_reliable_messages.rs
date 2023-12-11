@@ -90,6 +90,7 @@ pub enum ServerReliableMessages {
         structure_entity: Entity,
         /// The serialized version of the chunk.
         serialized_chunk: Vec<u8>,
+        serialized_block_data: u8,
     },
     /// This represents the data for an empty chunk.
     EmptyChunk {

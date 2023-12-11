@@ -6,13 +6,14 @@ use bevy::{prelude::*, utils::HashSet};
 use bevy_rapier3d::prelude::{PhysicsWorld, RapierContext, RapierWorld, DEFAULT_WORLD_ID};
 use cosmos_core::{
     entities::player::Player,
+    netty::system_sets::NetworkingSystemsSet,
     physics::{
         location::{add_previous_location, handle_child_syncing, Location, SECTOR_DIMENSIONS},
         player_world::{PlayerWorld, WorldWithin},
     },
 };
 
-use crate::{netty::server_listener::server_listen_messages, state::GameState};
+use crate::state::GameState;
 
 const WORLD_SWITCH_DISTANCE: f32 = SECTOR_DIMENSIONS / 2.0;
 const WORLD_SWITCH_DISTANCE_SQRD: f32 = WORLD_SWITCH_DISTANCE * WORLD_SWITCH_DISTANCE;
@@ -353,7 +354,7 @@ pub(super) fn register(app: &mut App) {
         )
             .chain()
             .run_if(in_state(GameState::Playing))
-            .before(server_listen_messages),
+            .before(NetworkingSystemsSet::PreReceiveMessages),
     )
     .add_systems(PostUpdate, fix_location)
     // This must be last due to commands being delayed when adding PhysicsWorlds.
