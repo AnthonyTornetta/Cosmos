@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
+    block::data::persistence::ChunkLoadBlockDataEvent,
     physics::location::Location,
     structure::{
         events::StructureLoadedEvent,
@@ -16,10 +17,7 @@ use crate::{
         saving::{BlueprintingSystemSet, NeedsBlueprinted, NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
         SerializedData,
     },
-    structure::persistence::{
-        chunk::{AllBlockData, ChunkLoadBlockDataEvent},
-        save_structure,
-    },
+    structure::persistence::{chunk::AllBlockData, save_structure},
 };
 
 use super::server_ship_builder::ServerShipBuilder;

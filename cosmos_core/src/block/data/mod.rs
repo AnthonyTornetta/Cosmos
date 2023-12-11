@@ -18,6 +18,9 @@ use crate::{
     structure::{coordinates::ChunkBlockCoordinate, structure_block::StructureBlock, Structure},
 };
 
+pub mod instances;
+pub mod persistence;
+
 #[derive(Component, Clone, Copy, Debug, Serialize, Deserialize, Reflect)]
 /// This component indicates an entity that is storing data for a specific block
 pub struct BlockData {
@@ -77,6 +80,9 @@ fn name_block_data(query: Query<(Entity, &BlockData), Without<Name>>, mut comman
 }
 
 pub(super) fn register(app: &mut App) {
+    persistence::register(app);
+    instances::register(app);
+
     app.add_systems(PostUpdate, despawn_dead_data)
         .add_systems(Update, name_block_data)
         .register_type::<BlockData>();

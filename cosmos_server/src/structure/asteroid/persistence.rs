@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use cosmos_core::{
+    block::data::persistence::ChunkLoadBlockDataEvent,
     physics::location::Location,
     structure::{
         asteroid::{asteroid_builder::TAsteroidBuilder, Asteroid},
@@ -17,10 +18,7 @@ use crate::{
     },
     structure::{
         asteroid::server_asteroid_builder::ServerAsteroidBuilder,
-        persistence::{
-            chunk::{AllBlockData, ChunkLoadBlockDataEvent},
-            save_structure,
-        },
+        persistence::{chunk::AllBlockData, save_structure},
     },
 };
 

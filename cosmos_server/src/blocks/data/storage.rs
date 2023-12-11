@@ -20,7 +20,6 @@ use cosmos_core::{
     structure::{
         chunk::netty::SerializedBlockData,
         coordinates::{ChunkBlockCoordinate, ChunkCoordinate},
-        loading::StructureLoadingSet,
         Structure,
     },
 };
@@ -28,10 +27,7 @@ use cosmos_core::{
 use crate::{
     persistence::saving::SAVING_SCHEDULE,
     structure::{
-        persistence::{
-            chunk::{BlockDataSavingSet, ChunkLoadBlockDataEvent},
-            BlockDataNeedsSaved,
-        },
+        persistence::{chunk::BlockDataSavingSet, BlockDataNeedsSaved},
         planet::chunk::SerializeChunkBlockDataSet,
     },
 };
@@ -51,37 +47,6 @@ fn save_storage(
             inventory,
         );
     });
-}
-
-fn deserialize_storage(
-    q_structure: Query<&Structure>,
-    mut q_block_data: Query<&mut BlockData>,
-    mut commands: Commands,
-    mut ev_reader: EventReader<ChunkLoadBlockDataEvent>,
-) {
-    for ev in ev_reader.read() {
-        let Ok(structure) = q_structure.get(ev.structure_entity) else {
-            warn!("No structure but tried to deserialize storage.");
-            continue;
-        };
-
-        let first = ev.chunk.first_structure_block();
-        for (data_coord, serialized) in ev.data.iter() {
-            let Some(inventory) = serialized.deserialize_data::<Inventory>("cosmos:inventory") else {
-                continue;
-            };
-
-            let data_ent = structure
-                .block_data(first + *data_coord)
-                .expect("Missing data entity despite having data here");
-
-            commands.entity(data_ent).insert(inventory);
-            q_block_data
-                .get_mut(data_ent)
-                .expect("Block data missing `BlockData` component!")
-                .increment();
-        }
-    }
 }
 
 fn populate_inventory(
@@ -151,6 +116,5 @@ fn populate_inventory(
 pub(super) fn register(app: &mut App) {
     app.add_systems(Update, populate_inventory.after(on_add_storage))
         .add_systems(SAVING_SCHEDULE, save_storage.in_set(BlockDataSavingSet::SaveBlockData))
-        .add_systems(Update, save_storage.in_set(SerializeChunkBlockDataSet::Serialize))
-        .add_systems(Update, deserialize_storage.in_set(StructureLoadingSet::LoadChunkData));
+        .add_systems(Update, save_storage.in_set(SerializeChunkBlockDataSet::Serialize));
 }

@@ -8,7 +8,6 @@ use bevy::{
     ecs::{
         component::Component,
         entity::Entity,
-        event::Event,
         query::{With, Without},
         schedule::{apply_deferred, IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
         system::{Commands, Query},
@@ -35,17 +34,6 @@ use crate::{
 };
 
 use super::SerializedChunkBlockData;
-
-#[derive(Event, Debug)]
-/// This event is created whenever a chunk needs to load block data
-pub struct ChunkLoadBlockDataEvent {
-    /// The serialized block data
-    pub data: SerializedChunkBlockData,
-    /// The chunk's coordinates
-    pub chunk: ChunkCoordinate,
-    /// The structure's entity
-    pub structure_entity: Entity,
-}
 
 #[derive(Serialize, Deserialize, Default, Component, DerefMut, Deref)]
 /// Refers to all the block data in a serialized structure
@@ -145,10 +133,6 @@ pub enum BlockDataBlueprintingSet {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_event::<ChunkLoadBlockDataEvent>();
-    //     .add_systems(First, .before(done_saving))
-    //     .add_systems(First, done_blueprinting_block_data.in_set(BlueprintingSystemSet::DoSaving));
-
     app.configure_sets(
         SAVING_SCHEDULE,
         (
