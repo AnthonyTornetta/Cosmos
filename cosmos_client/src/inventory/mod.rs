@@ -565,6 +565,7 @@ fn handle_interactions(
     q_block_data: Query<&BlockData>,
     asset_server: Res<AssetServer>,
     items: Res<Registry<Item>>,
+    open_inventories: Query<Entity, With<NeedsDisplayed>>,
 ) {
     let lmb = input_handler.mouse_inputs().just_pressed(MouseButton::Left);
     let rmb = input_handler.mouse_inputs().just_pressed(MouseButton::Right);
@@ -590,6 +591,11 @@ fn handle_interactions(
         let slot_num = displayed_item_clicked.slot_number;
         let inventory_entity = displayed_item_clicked.inventory_holder;
 
+        // try to find non-self inventory first, then default to self
+        let other_inventory = open_inventories.iter().find(|&x| x != inventory_entity).unwrap_or(inventory_entity);
+
+        let other_inventory = get_server_inventory_identifier(other_inventory, &mapping, &q_block_data);
+
         if let Ok(mut inventory) = inventory_query.get_mut(inventory_entity) {
             let quantity = if lmb {
                 u16::MAX
@@ -600,7 +606,10 @@ fn handle_interactions(
                     .unwrap_or(0)
             };
 
-            inventory.auto_move(slot_num, quantity).expect("Bad inventory slot values");
+            if other_inventory == server_inventory_holder {
+                inventory.auto_move(slot_num, quantity).expect("Bad inventory slot values");
+            }
+            // logic is handled on server otherwise, don't feel like copying it here
 
             client.send_message(
                 NettyChannelClient::Inventory,
@@ -608,7 +617,7 @@ fn handle_interactions(
                     from_slot: slot_num as u32,
                     quantity,
                     from_inventory: server_inventory_holder,
-                    to_inventory: server_inventory_holder,
+                    to_inventory: other_inventory,
                 }),
             );
         }
