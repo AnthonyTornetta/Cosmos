@@ -76,8 +76,6 @@ fn begin_serialization(
             continue;
         };
 
-        println!("Added Serialized Block Data");
-
         let mut has_block_data_to_save = false;
 
         for (_, &entity) in chunk.all_block_data_entities() {

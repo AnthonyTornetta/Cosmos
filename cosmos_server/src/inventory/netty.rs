@@ -219,11 +219,8 @@ fn listen(
 
                     // TODO: Check if has access to inventory
 
-                    println!("Getting inv for {inventory_holder:?}");
                     if let Some(mut inventory) = get_inventory_mut(inventory_holder, &mut q_inventory, &q_structure) {
-                        println!("YIPPPEEE");
                         if let Some(is) = inventory.mut_itemstack_at(slot) {
-                            println!("Doing it");
                             let quantity = quantity.min(is.quantity());
 
                             let mut held_itemstack = is.clone();

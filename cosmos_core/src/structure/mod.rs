@@ -629,7 +629,6 @@ fn add_chunks_system(
 
             let data = std::mem::take(data);
 
-            println!("SENT EVENT {data:?}!");
             ev_writer.send(ChunkLoadBlockDataEvent {
                 data,
                 chunk: ev.coords,

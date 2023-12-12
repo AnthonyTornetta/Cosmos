@@ -300,7 +300,6 @@ fn server_listen_messages(
     }
 
     for (entity, client_ids) in to_send_chunks {
-        println!("OOGA!: {client_ids:?}");
         commands.entity(entity).insert(ChunkNeedsSent { client_ids });
     }
 }

@@ -32,8 +32,6 @@ pub struct ChunkLoadBlockDataEvent {
 
 fn add_chunk_data(mut ev_reader: EventReader<ChunkLoadBlockDataEvent>, mut commands: Commands, mut q_structure: Query<&mut Structure>) {
     for ev in ev_reader.read() {
-        println!("GOT EVENT - ADDING BLOCK DATA!!!!");
-
         let Ok(mut structure) = q_structure.get_mut(ev.structure_entity) else {
             warn!("Missing structure for block data");
             continue;

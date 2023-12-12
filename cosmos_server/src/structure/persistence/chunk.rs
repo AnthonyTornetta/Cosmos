@@ -49,7 +49,6 @@ fn save_block_data(
     let mut all_block_data = HashMap::<Entity, AllBlockData>::default();
 
     for (entity, chunk_ent, mut serialized_block_data) in q_chunks.iter_mut() {
-        println!("SAVING BLOCK DATA FOR CHUNK!");
         let block_data = all_block_data.entry(chunk_ent.structure_entity).or_insert(Default::default());
 
         block_data.insert(chunk_ent.chunk_location, serialized_block_data.take_save_data());
