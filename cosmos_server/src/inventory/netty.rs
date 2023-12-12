@@ -173,27 +173,23 @@ fn listen(
                                 .auto_move(from_slot as usize, quantity)
                                 .unwrap_or_else(|_| panic!("Got bad inventory slot from player! {}", from_slot));
                         }
-                    } else {
-                        if let Some([mut from_inventory, mut to_inventory]) =
-                            get_many_inventories_mut([from_inventory, to_inventory], &mut q_inventory, &q_structure)
-                        {
-                            let from_slot = from_slot as usize;
-                            if let Some(mut is) = from_inventory.remove_itemstack_at(from_slot) {
-                                let leftover = to_inventory.insert_itemstack(&is);
-                                if leftover == 0 {
-                                    from_inventory.remove_itemstack_at(from_slot);
-                                } else {
-                                    if leftover == is.quantity() {
-                                        from_inventory.set_itemstack_at(from_slot, Some(is));
+                    } else if let Some([mut from_inventory, mut to_inventory]) =
+                        get_many_inventories_mut([from_inventory, to_inventory], &mut q_inventory, &q_structure)
+                    {
+                        let from_slot = from_slot as usize;
+                        if let Some(mut is) = from_inventory.remove_itemstack_at(from_slot) {
+                            let leftover = to_inventory.insert_itemstack(&is);
+                            if leftover == 0 {
+                                from_inventory.remove_itemstack_at(from_slot);
+                            } else if leftover == is.quantity() {
+                                from_inventory.set_itemstack_at(from_slot, Some(is));
 
-                                        from_inventory
-                                            .auto_move(from_slot as usize, quantity)
-                                            .unwrap_or_else(|_| panic!("Got bad inventory slot from player! {}", from_slot));
-                                    } else {
-                                        is.set_quantity(leftover);
-                                        from_inventory.set_itemstack_at(from_slot, Some(is));
-                                    }
-                                }
+                                from_inventory
+                                    .auto_move(from_slot, quantity)
+                                    .unwrap_or_else(|_| panic!("Got bad inventory slot from player! {}", from_slot));
+                            } else {
+                                is.set_quantity(leftover);
+                                from_inventory.set_itemstack_at(from_slot, Some(is));
                             }
                         }
                     }

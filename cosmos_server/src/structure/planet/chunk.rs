@@ -124,7 +124,7 @@ fn send_chunks(
         for client_id in needs_sent.client_ids.iter().skip(1).copied() {
             server.send_message(client_id, NettyChannelServer::Reliable, message.clone());
         }
-        if let Some(client_id) = needs_sent.client_ids.iter().next().copied() {
+        if let Some(client_id) = needs_sent.client_ids.first().copied() {
             server.send_message(client_id, NettyChannelServer::Reliable, message);
         }
     }

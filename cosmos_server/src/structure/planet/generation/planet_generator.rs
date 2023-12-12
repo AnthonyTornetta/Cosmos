@@ -169,7 +169,7 @@ fn get_requested_chunk(
                                 locked.push((
                                     client_id,
                                     cosmos_encoder::serialize(&ServerReliableMessages::EmptyChunk {
-                                        structure_entity: structure_entity,
+                                        structure_entity,
                                         coords: chunk_coords,
                                     }),
                                 ));
