@@ -60,7 +60,7 @@ fn populate_inventory(
             continue;
         };
 
-        let inv = Inventory::new(9 * 5, None);
+        let inv = Inventory::new("Storage", 9 * 5, None);
 
         if let Some(data_ent) = structure.block_data(coords) {
             // TODO:

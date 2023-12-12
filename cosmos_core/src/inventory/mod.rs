@@ -56,18 +56,38 @@ impl std::fmt::Display for InventorySlotError {
 pub struct Inventory {
     items: Vec<Option<ItemStack>>,
     priority_slots: Option<Range<usize>>,
+    name: String,
 }
 
 impl Inventory {
     /// Creates an empty inventory with that number of slots
-    pub fn new(n_slots: usize, priority_slots: Option<Range<usize>>) -> Self {
+    pub fn new(name: impl Into<String>, n_slots: usize, priority_slots: Option<Range<usize>>) -> Self {
         let mut items = Vec::with_capacity(n_slots);
 
         for _ in 0..n_slots {
             items.push(None);
         }
 
-        Self { items, priority_slots }
+        Self {
+            items,
+            priority_slots,
+            name: name.into(),
+        }
+    }
+
+    /// Returns the name of this inventory
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    /// Sets the name of this inventory
+    pub fn set_name(&mut self, name: impl Into<String>) {
+        self.name = name.into();
+    }
+
+    /// Returns the range of priority slots if this inventory has any
+    pub fn priority_slots(&self) -> Option<Range<usize>> {
+        self.priority_slots.clone()
     }
 
     /// The number of slots this inventory contains

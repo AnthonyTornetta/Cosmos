@@ -52,15 +52,17 @@ fn toggle_inventory(
     inputs: InputChecker,
 ) {
     if inputs.check_just_pressed(CosmosInputs::ToggleInventory) {
-        if let Ok(player_inventory_ent) = player_inventory.get_single() {
-            if !open_inventories.is_empty() {
-                open_inventories.iter().for_each(|ent| {
-                    commands.entity(ent).remove::<NeedsDisplayed>();
-                });
-            } else {
-                commands.entity(player_inventory_ent).insert(NeedsDisplayed(InventorySide::Left));
-            }
+        if !open_inventories.is_empty() {
+            open_inventories.iter().for_each(|ent| {
+                commands.entity(ent).remove::<NeedsDisplayed>();
+            });
+        } else if let Ok(player_inventory_ent) = player_inventory.get_single() {
+            commands.entity(player_inventory_ent).insert(NeedsDisplayed(InventorySide::Left));
         }
+    } else if inputs.check_just_pressed(CosmosInputs::Interact) && !open_inventories.is_empty() {
+        open_inventories.iter().for_each(|ent| {
+            commands.entity(ent).remove::<NeedsDisplayed>();
+        });
     }
 }
 
@@ -181,7 +183,7 @@ fn toggle_inventory_rendering(
         }
     }
 
-    for (inventory_holder, local_inventory, needs_displayed, open_inventory_entity) in added_inventories.iter() {
+    for (inventory_holder, inventory, needs_displayed, open_inventory_entity) in added_inventories.iter() {
         if open_inventory_entity.is_some() {
             continue;
         }
@@ -257,7 +259,7 @@ fn toggle_inventory_rendering(
                         parent.spawn(TextBundle {
                             style: Style { ..default() },
                             text: Text::from_section(
-                                "Inventory",
+                                inventory.name(),
                                 TextStyle {
                                     color: Color::WHITE,
                                     font_size: 24.0,
@@ -306,6 +308,8 @@ fn toggle_inventory_rendering(
                             });
                     });
 
+                let priority_slots = inventory.priority_slots();
+
                 parent
                     .spawn((
                         Name::new("Non-Hotbar Slots"),
@@ -326,36 +330,48 @@ fn toggle_inventory_rendering(
                         },
                     ))
                     .with_children(|slots| {
-                        for (slot_number, slot) in local_inventory.iter().enumerate().skip(n_slots_per_row) {
+                        for (slot_number, slot) in inventory
+                            .iter()
+                            .enumerate()
+                            .filter(|(slot, _)| priority_slots.as_ref().map(|x| !x.contains(slot)).unwrap_or(true))
+                        {
                             create_inventory_slot(inventory_holder, slot_number, slots, slot.as_ref(), text_style.clone());
                         }
                     });
 
-                parent
-                    .spawn((
-                        Name::new("Hotbar Slots"),
-                        NodeBundle {
-                            style: Style {
-                                display: Display::Flex,
-                                height: Val::Px(5.0 + slot_size),
-                                border: UiRect::new(Val::Px(0.0), Val::Px(0.0), Val::Px(5.0), Val::Px(0.0)),
+                if let Some(priority_slots) = priority_slots {
+                    parent
+                        .spawn((
+                            Name::new("Hotbar Slots"),
+                            NodeBundle {
+                                style: Style {
+                                    display: Display::Flex,
+                                    height: Val::Px(5.0 + slot_size),
+                                    border: UiRect::new(Val::Px(0.0), Val::Px(0.0), Val::Px(5.0), Val::Px(0.0)),
 
+                                    ..default()
+                                },
+                                border_color: BorderColor(Color::hex("222222").unwrap()),
+                                background_color: BackgroundColor(Color::WHITE),
                                 ..default()
                             },
-                            border_color: BorderColor(Color::hex("222222").unwrap()),
-                            background_color: BackgroundColor(Color::WHITE),
-                            ..default()
-                        },
-                        UiImage {
-                            texture: asset_server.load("cosmos/images/ui/inventory-footer.png"),
-                            ..Default::default()
-                        },
-                    ))
-                    .with_children(|slots| {
-                        for (slot_number, slot) in local_inventory.iter().enumerate().take(n_slots_per_row) {
-                            create_inventory_slot(inventory_holder, slot_number, slots, slot.as_ref(), text_style.clone());
-                        }
-                    });
+                            UiImage {
+                                texture: asset_server.load("cosmos/images/ui/inventory-footer.png"),
+                                ..Default::default()
+                            },
+                        ))
+                        .with_children(|slots| {
+                            for slot_number in priority_slots {
+                                create_inventory_slot(
+                                    inventory_holder,
+                                    slot_number,
+                                    slots,
+                                    inventory.itemstack_at(slot_number),
+                                    text_style.clone(),
+                                );
+                            }
+                        });
+                }
             })
             .id();
 

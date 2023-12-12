@@ -1,0 +1,4 @@
+1. Fix blueprints
+2. Check planet chunks
+3. Remove "hotbar" from chest guis X
+4. Rename chest inventory title bar X
