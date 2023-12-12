@@ -3,6 +3,8 @@
 //! Structures are the backbone of everything that contains blocks.
 
 use std::fmt::Display;
+use std::ops::DerefMut;
+use std::sync::{Arc, Mutex};
 
 use bevy::app::Update;
 use bevy::prelude::{App, Event, IntoSystemConfigs, Name, PreUpdate, VisibilityBundle};
@@ -30,6 +32,7 @@ pub mod structure_builder;
 pub mod structure_iterator;
 pub mod systems;
 
+use crate::block::data::persistence::ChunkLoadBlockDataEvent;
 use crate::block::{Block, BlockFace};
 use crate::ecs::NeedsDespawned;
 use crate::events::block_events::BlockChangedEvent;
@@ -535,7 +538,9 @@ pub struct ChunkInitEvent {
     /// Chunk's coordinates in the structure
     pub coords: ChunkCoordinate,
     /// If the chunk has block data that needs deserialized, this will be populated
-    pub serialized_block_data: Option<SerializedChunkBlockData>,
+    ///
+    /// Arc<Mutex<>> so we can efficiently take the data without cloning it
+    pub serialized_block_data: Option<Arc<Mutex<SerializedChunkBlockData>>>,
 }
 
 // Removes chunk entities if they have no blocks
@@ -602,6 +607,7 @@ fn add_chunks_system(
     mut structure_query: Query<(&mut Structure, Option<&PhysicsWorld>)>,
     mut chunk_set_event_writer: EventWriter<ChunkSetEvent>,
     mut commands: Commands,
+    mut ev_writer: EventWriter<ChunkLoadBlockDataEvent>,
 ) {
     let mut s_chunks = HashSet::new();
     let mut chunk_set_events = HashSet::new();
@@ -616,6 +622,20 @@ fn add_chunks_system(
             structure_entity: ev.structure_entity,
             coords: ev.coords,
         });
+
+        if let Some(serialized_data) = &ev.serialized_block_data {
+            let mut data: std::sync::MutexGuard<'_, SerializedChunkBlockData> = serialized_data.lock().unwrap();
+            let data = data.deref_mut();
+
+            let data = std::mem::take(data);
+
+            println!("SENT EVENT {data:?}!");
+            ev_writer.send(ChunkLoadBlockDataEvent {
+                data,
+                chunk: ev.coords,
+                structure_entity: ev.structure_entity,
+            });
+        }
     }
 
     for (structure_entity, chunk_coordinate) in s_chunks {

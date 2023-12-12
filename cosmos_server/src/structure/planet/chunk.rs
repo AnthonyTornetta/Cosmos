@@ -19,10 +19,13 @@ use cosmos_core::{
     },
 };
 
-use crate::persistence::{
-    loading::LoadingSystemSet,
-    saving::{NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
-    SerializedData,
+use crate::{
+    persistence::{
+        loading::LoadingSystemSet,
+        saving::{NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
+        SerializedData,
+    },
+    structure::persistence::BlockDataNeedsSaved,
 };
 
 #[derive(Component, Debug)]
@@ -59,19 +62,42 @@ pub enum SerializeChunkBlockDataSet {
     FlushSendChunks,
 }
 
-fn begin_serialization(mut commands: Commands, q_chunks_need_serialized: Query<(Entity, &ChunkEntity), With<ChunkNeedsSent>>) {
+fn begin_serialization(
+    mut commands: Commands,
+    q_chunks_need_serialized: Query<(Entity, &ChunkEntity), With<ChunkNeedsSent>>,
+    q_structure: Query<&Structure>,
+) {
     for (ent, chunk_ent) in q_chunks_need_serialized.iter() {
-        commands.entity(ent).insert(SerializedBlockData::new(chunk_ent.chunk_location));
+        let Ok(structure) = q_structure.get(chunk_ent.structure_entity) else {
+            continue;
+        };
+
+        let Some(chunk) = structure.chunk_from_chunk_coordinates(chunk_ent.chunk_location) else {
+            continue;
+        };
+
+        println!("Added Serialized Block Data");
+
+        let mut has_block_data_to_save = false;
+
+        for (_, &entity) in chunk.all_block_data_entities() {
+            commands.entity(entity).insert(BlockDataNeedsSaved);
+            has_block_data_to_save = true;
+        }
+
+        if has_block_data_to_save {
+            commands.entity(ent).insert(SerializedBlockData::new(chunk_ent.chunk_location));
+        }
     }
 }
 
 fn send_chunks(
     mut commands: Commands,
-    mut q_chunks_need_serialized: Query<(Entity, &ChunkNeedsSent, &mut SerializedBlockData, &ChunkEntity)>,
+    mut q_chunks_need_serialized: Query<(Entity, &ChunkNeedsSent, Option<&mut SerializedBlockData>, &ChunkEntity)>,
     q_structure: Query<&Structure>,
     mut server: ResMut<RenetServer>,
 ) {
-    for (ent, needs_sent, mut serialized_chunk_block_data, chunk_ent) in q_chunks_need_serialized.iter_mut() {
+    for (ent, needs_sent, serialized_chunk_block_data, chunk_ent) in q_chunks_need_serialized.iter_mut() {
         commands.entity(ent).remove::<ChunkNeedsSent>();
 
         let Ok(structure) = q_structure.get(chunk_ent.structure_entity) else {
@@ -84,8 +110,17 @@ fn send_chunks(
         let message = cosmos_encoder::serialize(&ServerReliableMessages::ChunkData {
             structure_entity: chunk_ent.structure_entity,
             serialized_chunk: cosmos_encoder::serialize(chunk),
-            serialized_block_data: serialized_chunk_block_data.take_save_data(),
+            serialized_block_data: serialized_chunk_block_data.map(|mut x| x.take_save_data()),
         });
+
+        structure
+            .chunk_from_chunk_coordinates(chunk_ent.chunk_location)
+            .expect("Chunk must still be loaded")
+            .all_block_data_entities()
+            .iter()
+            .for_each(|(_, &block_data_ent)| {
+                commands.entity(block_data_ent).remove::<BlockDataNeedsSaved>();
+            });
 
         // Avoids 1 unnecessary clone
         for client_id in needs_sent.client_ids.iter().skip(1).copied() {

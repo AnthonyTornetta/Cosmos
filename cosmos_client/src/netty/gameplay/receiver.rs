@@ -2,6 +2,8 @@
 //!
 //! This should eventually be broken up
 
+use std::sync::{Arc, Mutex};
+
 use bevy::{core_pipeline::bloom::BloomSettings, prelude::*, render::camera::Projection, window::PrimaryWindow};
 use bevy_kira_audio::prelude::AudioReceiver;
 use bevy_rapier3d::prelude::*;
@@ -474,7 +476,7 @@ pub(crate) fn client_sync_players(
                         set_chunk_event_writer.send(ChunkInitEvent {
                             coords: chunk_coords,
                             structure_entity: s_entity,
-                            serialized_block_data: Some(serialized_block_data),
+                            serialized_block_data: serialized_block_data.map(|x| Arc::new(Mutex::new(x))),
                         });
                     }
                 }
