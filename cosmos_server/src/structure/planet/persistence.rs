@@ -5,10 +5,11 @@ use std::fs;
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::PhysicsWorld;
 use cosmos_core::{
+    block::data::persistence::ChunkLoadBlockDataEvent,
     netty::{cosmos_encoder, NoSendEntity},
     physics::location::Location,
     structure::{
-        chunk::{Chunk, ChunkEntity},
+        chunk::{netty::SerializedChunkBlockData, Chunk, ChunkEntity},
         coordinates::{ChunkCoordinate, CoordinateType},
         dynamic_structure::DynamicStructure,
         planet::{planet_builder::TPlanetBuilder, Planet},
@@ -157,6 +158,7 @@ fn load_chunk(
     mut structure_query: Query<&mut Structure>,
     mut chunk_init_event: EventWriter<ChunkInitEvent>,
     mut commands: Commands,
+    mut chunk_load_block_data_event_writer: EventWriter<ChunkLoadBlockDataEvent>,
 ) {
     for (entity, sd, ce) in query.iter() {
         if let Some(chunk) = sd.deserialize_data::<Chunk>("cosmos:chunk") {
@@ -178,6 +180,16 @@ fn load_chunk(
                     coords,
                     serialized_block_data: None,
                 });
+
+                // Block data is stored per-chunk as `SerializedChunkBlockData` on dynamic structures,
+                // instead of fixed structures storing it as `AllBlockData` on the structure itself.
+                if let Some(data) = sd.deserialize_data::<SerializedChunkBlockData>("cosmos:block_data") {
+                    chunk_load_block_data_event_writer.send(ChunkLoadBlockDataEvent {
+                        data,
+                        chunk: coords,
+                        structure_entity: ce.structure_entity,
+                    });
+                }
             }
         }
     }

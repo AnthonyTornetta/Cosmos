@@ -17,7 +17,7 @@ use cosmos_core::{
     netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannelServer, NoSendEntity},
     physics::location::Location,
     structure::{
-        chunk::{ChunkUnloadEvent, CHUNK_DIMENSIONSF},
+        chunk::{netty::SerializedBlockData, ChunkUnloadEvent, CHUNK_DIMENSIONSF},
         coordinates::{ChunkCoordinate, UnboundChunkCoordinate, UnboundCoordinateType},
         planet::Planet,
         structure_iterator::ChunkIteratorResult,
@@ -26,12 +26,18 @@ use cosmos_core::{
 };
 
 use crate::{
-    persistence::{saving::NeedsSaved, EntityId, SaveFileIdentifier},
+    persistence::{
+        saving::{NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
+        EntityId, SaveFileIdentifier,
+    },
     state::GameState,
-    structure::planet::{
-        biosphere::TGenerateChunkEvent,
-        chunk::{ChunkNeedsSent, SaveChunk},
-        persistence::ChunkNeedsPopulated,
+    structure::{
+        persistence::BlockDataNeedsSaved,
+        planet::{
+            biosphere::TGenerateChunkEvent,
+            chunk::{ChunkNeedsSent, SaveChunk},
+            persistence::ChunkNeedsPopulated,
+        },
     },
 };
 
@@ -380,7 +386,7 @@ fn unload_chunks_far_from_players(
         }
     }
 
-    for (planet, set) in potential_chunks {
+    for (planet, chunk_coords) in potential_chunks {
         if let Ok((location, mut structure, _, entity_id)) = planets.get_mut(planet) {
             let mut needs_id = false;
 
@@ -391,7 +397,7 @@ fn unload_chunks_far_from_players(
                 EntityId::generate()
             };
 
-            for coords in set {
+            for coords in chunk_coords {
                 let Structure::Dynamic(planet) = structure.as_mut() else {
                     panic!("A planet must be dynamic!");
                 };
@@ -399,8 +405,7 @@ fn unload_chunks_far_from_players(
                 if let Some(chunk) = planet.unload_chunk_at(coords, &mut commands, Some(&mut event_writer)) {
                     let (cx, cy, cz) = (coords.x, coords.y, coords.z);
 
-                    commands.spawn((
-                        SaveChunk(chunk),
+                    let mut ecmds = commands.spawn((
                         SaveFileIdentifier::as_child(
                             format!("{cx}_{cy}_{cz}"),
                             SaveFileIdentifier::new(Some(location.sector()), entity_id.clone(), None),
@@ -409,6 +414,20 @@ fn unload_chunks_far_from_players(
                         NeedsDespawned,
                         NoSendEntity,
                     ));
+
+                    if !chunk.all_block_data_entities().is_empty() {
+                        ecmds.insert(SerializedBlockData::new(coords));
+                    }
+
+                    let save_ent = ecmds.id();
+
+                    for (_, &entity) in chunk.all_block_data_entities() {
+                        // Block data saving relies on the block data being a child of the thing being saved,
+                        // so make that hold true here
+                        commands.entity(entity).insert(BlockDataNeedsSaved).set_parent(save_ent);
+                    }
+
+                    commands.entity(save_ent).insert(SaveChunk(chunk));
                 }
             }
 
@@ -426,7 +445,12 @@ pub(super) fn register(app: &mut App) {
             .chain()
             .run_if(in_state(GameState::Playing)),
     )
-    .add_systems(Update, unload_chunks_far_from_players.run_if(in_state(GameState::Playing)))
+    .add_systems(
+        SAVING_SCHEDULE,
+        unload_chunks_far_from_players
+            .before(SavingSystemSet::BeginSaving)
+            .run_if(in_state(GameState::Playing)),
+    )
     .add_event::<RequestChunkEvent>()
     .add_event::<RequestChunkBouncer>();
 }

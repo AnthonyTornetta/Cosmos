@@ -37,7 +37,7 @@ fn save_storage(
     q_storage_blocks.for_each(|(parent, inventory, block_data)| {
         let mut serialized_block_data = q_chunk
             .get_mut(parent.get())
-            .expect("Block data's parent wasn't a chunk w/ SerializedBlockData???");
+            .expect("Block data's parent didn't have SerializedBlockData???");
 
         serialized_block_data.serialize_data(
             ChunkBlockCoordinate::for_block_coordinate(block_data.identifier.block.coords()),

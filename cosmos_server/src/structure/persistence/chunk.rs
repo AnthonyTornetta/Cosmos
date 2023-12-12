@@ -30,17 +30,31 @@ use crate::{
         saving::{BlueprintingSystemSet, NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
         SerializedData,
     },
-    structure::persistence::BlockDataNeedsSaved,
+    structure::{persistence::BlockDataNeedsSaved, planet::chunk::SaveChunk},
 };
 
 use super::SerializedChunkBlockData;
 
-#[derive(Serialize, Deserialize, Default, Component, DerefMut, Deref)]
+#[derive(Serialize, Deserialize, Default, Component, DerefMut, Deref, Debug)]
 /// Refers to all the block data in a serialized structure
 pub struct AllBlockData(pub HashMap<ChunkCoordinate, SerializedChunkBlockData>);
 
-/// Put systems that save block data before this
-fn save_block_data(
+/// Dynamic structure block data is saved per-chunk instead of on the structure
+///
+/// Dynamic structures also can't be blueprinted
+fn save_dynamic_structure_block_data(
+    mut q_chunks: Query<(&mut SerializedBlockData, &mut SerializedData), (With<NeedsSaved>, With<SaveChunk>)>,
+) {
+    for (mut serialized_block_data, mut serialized_data) in q_chunks.iter_mut() {
+        let data = serialized_block_data.take_save_data();
+        serialized_data.serialize_data("cosmos:block_data", &data);
+    }
+}
+
+/// Fixed structures have their block data stored on the structure itself.
+///
+/// Perhaps reevaluate this in the future?
+fn save_fixed_structure_block_data(
     q_structure: Query<&Structure, Without<NeedsDespawned>>,
     mut q_serialized_data: Query<&mut SerializedData>,
     mut q_chunks: Query<(Entity, &ChunkEntity, &mut SerializedBlockData), With<NeedsSaved>>,
@@ -77,24 +91,22 @@ fn save_block_data(
     }
 }
 
-/// Put systems that blueprint block data before this
-fn done_blueprinting_block_data(
+fn done_blueprinting_block_data_fixed_structure(
     q_structure: Query<&Structure, Without<NeedsDespawned>>,
     q_serialized_data: Query<&mut SerializedData>,
     q_chunks: Query<(Entity, &ChunkEntity, &mut SerializedBlockData), With<NeedsSaved>>,
     commands: Commands,
 ) {
-    save_block_data(q_structure, q_serialized_data, q_chunks, commands);
+    save_fixed_structure_block_data(q_structure, q_serialized_data, q_chunks, commands);
 }
 
-/// Put systems that save block data before this
-fn done_saving_block_data(
+fn done_saving_block_data_fixed_structure(
     q_structure: Query<&Structure, Without<NeedsDespawned>>,
     q_serialized_data: Query<&mut SerializedData>,
     q_chunks: Query<(Entity, &ChunkEntity, &mut SerializedBlockData), With<NeedsSaved>>,
     commands: Commands,
 ) {
-    save_block_data(q_structure, q_serialized_data, q_chunks, commands);
+    save_fixed_structure_block_data(q_structure, q_serialized_data, q_chunks, commands);
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
@@ -152,7 +164,7 @@ pub(super) fn register(app: &mut App) {
             apply_deferred.in_set(BlockDataSavingSet::FlushBeginSavingBlockData),
             apply_deferred.in_set(BlockDataSavingSet::FlushSaveBlockData),
             // Logic
-            done_saving_block_data.in_set(BlockDataSavingSet::DoneSavingBlockData),
+            (done_saving_block_data_fixed_structure, save_dynamic_structure_block_data).in_set(BlockDataSavingSet::DoneSavingBlockData),
         ),
     );
 
@@ -176,7 +188,7 @@ pub(super) fn register(app: &mut App) {
             apply_deferred.in_set(BlockDataBlueprintingSet::FlushBeginBlueprintingBlockData),
             apply_deferred.in_set(BlockDataBlueprintingSet::FlushBlueprintBlockData),
             // Logic
-            done_blueprinting_block_data.in_set(BlockDataBlueprintingSet::DoneBlueprintingBlockData),
+            done_blueprinting_block_data_fixed_structure.in_set(BlockDataBlueprintingSet::DoneBlueprintingBlockData),
         ),
     );
 }
