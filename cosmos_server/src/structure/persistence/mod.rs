@@ -3,7 +3,7 @@
 use bevy::{
     app::App,
     ecs::{component::Component, system::Commands},
-    log::{info, warn},
+    log::warn,
 };
 use cosmos_core::structure::{
     chunk::netty::{SerializedBlockData, SerializedChunkBlockData},
@@ -34,16 +34,12 @@ pub(crate) fn save_structure(structure: &Structure, s_data: &mut SerializedData,
 
         let mut has_block_data_to_save = false;
         for (_, &entity) in chunk.all_block_data_entities() {
-            info!("Logging block's components!");
-
             commands.entity(entity).insert(BlockDataNeedsSaved);
             has_block_data_to_save = true;
         }
 
         if has_block_data_to_save {
             if let Some(chunk_ent) = structure.chunk_entity(position) {
-                info!("SAID SAVE THIS CHUNK'S BLOCK DATA!");
-
                 commands.entity(chunk_ent).insert((SerializedBlockData::new(position), NeedsSaved));
             }
         }

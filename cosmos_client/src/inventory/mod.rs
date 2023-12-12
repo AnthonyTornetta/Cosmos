@@ -62,18 +62,17 @@ fn toggle_inventory(
 }
 
 #[derive(Component, Debug)]
-struct CloseInventoryButton;
+struct CloseInventoryButton {
+    inventory_entity: Entity,
+}
 
 fn close_button_system(
     mut commands: Commands,
-    local_player_ent: Query<Entity, With<LocalPlayer>>,
-    mut interaction_query: Query<&Interaction, (Changed<Interaction>, With<Button>, With<CloseInventoryButton>)>,
+    mut interaction_query: Query<(&Interaction, &CloseInventoryButton), (Changed<Interaction>, With<Button>)>,
 ) {
-    for interaction in interaction_query.iter_mut() {
+    for (interaction, close_inv_button) in interaction_query.iter_mut() {
         if *interaction == Interaction::Pressed {
-            if let Ok(ent) = local_player_ent.get_single() {
-                commands.entity(ent).remove::<NeedsDisplayed>();
-            }
+            commands.entity(close_inv_button.inventory_entity).remove::<NeedsDisplayed>();
         }
     }
 }
@@ -113,7 +112,6 @@ fn toggle_inventory_rendering(
     let mut decreased = false;
 
     for removed in removed_components.read() {
-        commands.entity(removed).log_components();
         let Ok((inventory_holder, mut local_inventory, open_inventory_entity)) = without_needs_displayed_inventories.get_mut(removed)
         else {
             continue;
@@ -200,9 +198,8 @@ fn toggle_inventory_rendering(
         let n_slots_per_row: usize = 9;
         let slot_size = 64.0;
 
-        let width = n_slots_per_row as f32 * slot_size + inventory_border_size * 2.0;
-        let (right, left) = if needs_displayed.0 == InventorySide::Right {
-            (Val::Px(100.0 + width), Val::Auto)
+        let (left, right) = if needs_displayed.0 == InventorySide::Right {
+            (Val::Auto, Val::Px(100.0))
         } else {
             (Val::Px(100.0), Val::Auto)
         };
@@ -286,7 +283,9 @@ fn toggle_inventory_rendering(
                                     },
                                     ..Default::default()
                                 },
-                                CloseInventoryButton,
+                                CloseInventoryButton {
+                                    inventory_entity: inventory_holder,
+                                },
                             ))
                             .with_children(|button| {
                                 button.spawn(TextBundle {
@@ -375,14 +374,16 @@ struct DisplayedItemFromInventory {
 
 fn on_update_inventory(
     mut commands: Commands,
-    inventory_query: Query<&Inventory, Changed<Inventory>>,
+    q_inventory: Query<(Entity, &Inventory), Changed<Inventory>>,
     mut held_item_query: Query<(Entity, &HeldItemStack, &mut DisplayedItemFromInventory), Changed<HeldItemStack>>,
     mut current_slots: Query<(Entity, &mut DisplayedItemFromInventory), Without<HeldItemStack>>,
     asset_server: Res<AssetServer>,
 ) {
-    for inventory in inventory_query.iter() {
+    for (inventory_entity, inventory) in q_inventory.iter() {
         for (display_entity, mut displayed_slot) in current_slots.iter_mut() {
-            if displayed_slot.item_stack.as_ref() != inventory.itemstack_at(displayed_slot.slot_number) {
+            if displayed_slot.inventory_holder == inventory_entity
+                && displayed_slot.item_stack.as_ref() != inventory.itemstack_at(displayed_slot.slot_number)
+            {
                 displayed_slot.item_stack = inventory.itemstack_at(displayed_slot.slot_number).cloned();
 
                 let Some(mut ecmds) = commands.get_entity(display_entity) else {
