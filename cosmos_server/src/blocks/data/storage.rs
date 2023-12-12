@@ -4,7 +4,7 @@ use bevy::{
         event::EventReader,
         query::With,
         schedule::IntoSystemConfigs,
-        system::{Commands, Query, Res},
+        system::{Commands, Query},
     },
     hierarchy::{BuildChildren, Parent},
     log::warn,
@@ -15,8 +15,6 @@ use cosmos_core::{
         storage::storage_blocks::{on_add_storage, PopulateBlockInventoryEvent},
     },
     inventory::Inventory,
-    item::Item,
-    registry::Registry,
     structure::{
         chunk::netty::SerializedBlockData,
         coordinates::{ChunkBlockCoordinate, ChunkCoordinate},
@@ -54,7 +52,6 @@ fn populate_inventory(
     mut q_block_data: Query<&mut BlockData>,
     mut commands: Commands,
     mut ev_reader: EventReader<PopulateBlockInventoryEvent>,
-    items: Res<Registry<Item>>,
 ) {
     for ev in ev_reader.read() {
         let coords = ev.block.coords();
@@ -63,13 +60,7 @@ fn populate_inventory(
             continue;
         };
 
-        let mut inv = Inventory::new(9 * 5, None);
-
-        if let Some(item) = items.from_id("cosmos:stone") {
-            inv.insert(item, 100);
-        } else {
-            warn!("Missing cosmos:stone?");
-        }
+        let inv = Inventory::new(9 * 5, None);
 
         if let Some(data_ent) = structure.block_data(coords) {
             // TODO:

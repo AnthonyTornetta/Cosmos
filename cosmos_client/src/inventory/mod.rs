@@ -47,32 +47,36 @@ struct RenderedInventory;
 
 fn toggle_inventory(
     mut commands: Commands,
-    player_inventory: Query<(Entity, Option<&NeedsDisplayed>), With<LocalPlayer>>,
+    player_inventory: Query<Entity, With<LocalPlayer>>,
+    open_inventories: Query<Entity, With<NeedsDisplayed>>,
     inputs: InputChecker,
 ) {
     if inputs.check_just_pressed(CosmosInputs::ToggleInventory) {
-        if let Ok((ent, x)) = player_inventory.get_single() {
-            if x.is_some() {
-                commands.entity(ent).remove::<NeedsDisplayed>();
+        if let Ok(player_inventory_ent) = player_inventory.get_single() {
+            if !open_inventories.is_empty() {
+                open_inventories.iter().for_each(|ent| {
+                    commands.entity(ent).remove::<NeedsDisplayed>();
+                });
             } else {
-                commands.entity(ent).insert(NeedsDisplayed(InventorySide::Left));
+                commands.entity(player_inventory_ent).insert(NeedsDisplayed(InventorySide::Left));
             }
         }
     }
 }
 
 #[derive(Component, Debug)]
-struct CloseInventoryButton {
-    inventory_entity: Entity,
-}
+struct CloseInventoryButton;
 
 fn close_button_system(
     mut commands: Commands,
-    mut interaction_query: Query<(&Interaction, &CloseInventoryButton), (Changed<Interaction>, With<Button>)>,
+    mut interaction_query: Query<&Interaction, (Changed<Interaction>, With<Button>, With<CloseInventoryButton>)>,
+    open_inventories: Query<Entity, With<NeedsDisplayed>>,
 ) {
-    for (interaction, close_inv_button) in interaction_query.iter_mut() {
+    for interaction in interaction_query.iter_mut() {
         if *interaction == Interaction::Pressed {
-            commands.entity(close_inv_button.inventory_entity).remove::<NeedsDisplayed>();
+            open_inventories.iter().for_each(|entity| {
+                commands.entity(entity).remove::<NeedsDisplayed>();
+            });
         }
     }
 }
@@ -283,9 +287,7 @@ fn toggle_inventory_rendering(
                                     },
                                     ..Default::default()
                                 },
-                                CloseInventoryButton {
-                                    inventory_entity: inventory_holder,
-                                },
+                                CloseInventoryButton,
                             ))
                             .with_children(|button| {
                                 button.spawn(TextBundle {
