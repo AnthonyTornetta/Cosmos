@@ -1,8 +1,14 @@
 //! Handles all the server console commands
 
+use std::{
+    fs::{self},
+    path::Path,
+};
+
 use bevy::{
+    app::PreUpdate,
     log::warn,
-    prelude::{App, Commands, Entity, EventReader, Name, Quat, Query, Res, ResMut, Startup, Update, Vec3, With},
+    prelude::{App, Commands, Entity, EventReader, Name, Quat, Query, Res, ResMut, Startup, Vec3, With},
 };
 use cosmos_core::{
     ecs::NeedsDespawned,
@@ -32,6 +38,13 @@ fn register_commands(mut commands: ResMut<CosmosCommands>) {
         name: "blueprint".into(),
         usage: "blueprint [entity_id] [file_name]".into(),
         description: "blueprints the given structure to that file. Do not specify the file extension.".into(),
+    });
+
+    commands.add_command_info(CosmosCommandInfo {
+        name: "blueprints".into(),
+        usage: "blueprints {blueprint_type}".into(),
+        description: "Lists all the blueprints available. The type is optional, and if provided will only list blueprints for that type."
+            .into(),
     });
 
     commands.add_command_info(CosmosCommandInfo {
@@ -189,6 +202,57 @@ fn cosmos_command_listener(
                     ..Default::default()
                 });
             }
+            "blueprints" => {
+                let check_for = if ev.args.len() == 1 {
+                    Some(ev.args[0].as_str())
+                } else if ev.args.is_empty() {
+                    None
+                } else {
+                    display_help(Some("blueprints"), &cosmos_commands);
+                    continue;
+                };
+
+                let Ok(files) = fs::read_dir("./blueprints") else {
+                    println!("No blueprints yet!");
+                    continue;
+                };
+
+                for blueprint_type in files {
+                    let Ok(blueprint_type_dir) = blueprint_type else {
+                        continue;
+                    };
+
+                    let file_name = blueprint_type_dir.file_name();
+                    let blueprint_type = file_name.to_str().expect("Unable to read string");
+
+                    if check_for.map(|x| x == blueprint_type).unwrap_or(true) {
+                        println!("{blueprint_type}:");
+                        let Ok(blueprints) = fs::read_dir(format!("./blueprints/{blueprint_type}")) else {
+                            println!("Unable to list blueprints in this directory!");
+                            continue;
+                        };
+
+                        let mut printed = false;
+                        for blueprint in blueprints {
+                            let Ok(blueprint) = blueprint else {
+                                continue;
+                            };
+
+                            printed = true;
+
+                            let blueprint = blueprint.file_name();
+                            let file_name = Path::new(&blueprint).file_stem().expect("Unable to get file stem");
+                            let file_name = file_name.to_str().expect("Unable to read string");
+
+                            println!("\t{file_name}");
+                        }
+
+                        if !printed {
+                            println!("\tNo blueprints of this type");
+                        }
+                    }
+                }
+            }
             _ => {
                 display_help(Some(&ev.text), &cosmos_commands);
             }
@@ -198,5 +262,5 @@ fn cosmos_command_listener(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(Startup, register_commands)
-        .add_systems(Update, cosmos_command_listener);
+        .add_systems(PreUpdate, cosmos_command_listener);
 }

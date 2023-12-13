@@ -24,6 +24,8 @@ use super::server_ship_builder::ServerShipBuilder;
 
 fn on_blueprint_structure(mut query: Query<(&mut SerializedData, &Structure, &mut NeedsBlueprinted), With<Ship>>, mut commands: Commands) {
     for (mut s_data, structure, mut blueprint) in query.iter_mut() {
+        println!("Blueprinting structure!");
+
         blueprint.subdir_name = "ship".into();
 
         save_structure(structure, &mut s_data, &mut commands);
@@ -98,6 +100,7 @@ fn on_load_blueprint(
 ) {
     for (entity, s_data, needs_blueprinted) in query.iter() {
         if s_data.deserialize_data::<bool>("cosmos:is_ship").unwrap_or(false) {
+            println!("Loading blueprint for ship!");
             if let Some(structure) = s_data.deserialize_data::<Structure>("cosmos:structure") {
                 load_structure(
                     entity,
