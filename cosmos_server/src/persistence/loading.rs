@@ -12,13 +12,14 @@ use std::fs;
 use bevy::{
     ecs::schedule::{apply_deferred, IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
     log::warn,
-    prelude::{App, Commands, Component, DespawnRecursiveExt, Entity, Quat, Query, Update, With, Without},
+    prelude::{App, Commands, Component, Entity, Quat, Query, Update, With, Without},
     reflect::Reflect,
 };
 use bevy_rapier3d::prelude::Velocity;
 
 use cosmos_core::{
-    netty::cosmos_encoder, persistence::LoadingDistance, physics::location::Location, structure::loading::StructureLoadingSet,
+    ecs::NeedsDespawned, netty::cosmos_encoder, persistence::LoadingDistance, physics::location::Location,
+    structure::loading::StructureLoadingSet,
 };
 
 use super::{SaveFileIdentifier, SaveFileIdentifierType, SerializedData};
@@ -77,7 +78,7 @@ fn check_needs_loaded(query: Query<(Entity, &SaveFileIdentifier), (Without<Seria
         let path = nl.get_save_file_path();
         let Ok(data) = fs::read(&path) else {
             warn!("Error reading file at '{path}'. Is it there?");
-            commands.entity(ent).despawn_recursive();
+            commands.entity(ent).insert(NeedsDespawned);
             continue;
         };
 
@@ -96,7 +97,7 @@ fn check_blueprint_needs_loaded(query: Query<(Entity, &NeedsBlueprintLoaded), Wi
         let path = &blueprint_needs_loaded.path;
         let Ok(data) = fs::read(path) else {
             warn!("Error reading file at '{path}'. Is it there?");
-            commands.entity(ent).despawn_recursive();
+            commands.entity(ent).insert(NeedsDespawned);
             continue;
         };
 
