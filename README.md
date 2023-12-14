@@ -70,6 +70,8 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
     - [ ] Sun-set skybox
     - [ ] Night-side skybox
 - [x] Animated textures
+- [x] Storage system
+  - [x] Support for blocks that store their own data
 - [x] Sounds
   - [x] Laser cannon fire
   - [x] Block take damage
@@ -261,8 +263,7 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
     - [ ] Inserts the item into the ship's inventory
     - [ ] Hold lmb to continually fire the laser
   - [ ] Structure gets deleted when no more blocks are left
-- [ ] Storage system
-  - [ ] An interface into all the storage devices on the ship
+- [ ] An interface into all the storage devices on the ship
 - [ ] A way of selecting which systems to use preventing use of systems that are not meant to be actively used
 - [ ] Dropped item entity
 - [ ] Storage block
