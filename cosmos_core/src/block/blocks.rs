@@ -24,21 +24,18 @@ fn add_cosmos_blocks(
 
     blocks.register(
         BlockBuilder::new("cosmos:stone", 10.0, 50.0)
-            .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .create(),
     );
 
     blocks.register(
         BlockBuilder::new("cosmos:grass", 3.0, 20.0)
-            .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .create(),
     );
 
     blocks.register(
         BlockBuilder::new("cosmos:dirt", 3.0, 20.0)
-            .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .create(),
     );
@@ -51,7 +48,6 @@ fn add_cosmos_blocks(
 
     blocks.register(
         BlockBuilder::new("cosmos:redwood_log", 3.0, 30.0)
-            .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .create(),
     );
@@ -64,50 +60,42 @@ fn add_cosmos_blocks(
 
     blocks.register(
         BlockBuilder::new("cosmos:ship_core", 2.0, 20.0)
-            .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
-            .add_property(BlockProperty::ShipOnly)
             .create(),
     );
 
     blocks.register(
         BlockBuilder::new("cosmos:energy_cell", 2.0, 20.0)
-            .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .create(),
     );
 
     blocks.register(
         BlockBuilder::new("cosmos:reactor", 2.0, 20.0)
-            .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .create(),
     );
 
     blocks.register(
         BlockBuilder::new("cosmos:laser_cannon", 2.0, 20.0)
-            .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .create(),
     );
 
     blocks.register(
         BlockBuilder::new("cosmos:ship_hull_grey", 4.0, 100.0)
-            .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .create(),
     );
 
     blocks.register(
         BlockBuilder::new("cosmos:thruster", 2.0, 20.0)
-            .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .create(),
     );
 
     blocks.register(
         BlockBuilder::new("cosmos:light", 0.1, 20.0)
-            .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .create(),
     );
@@ -128,7 +116,6 @@ fn add_cosmos_blocks(
 
     blocks.register(
         BlockBuilder::new("cosmos:molten_stone", 10.0, 50.0)
-            .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .create(),
     );
@@ -142,34 +129,26 @@ fn add_cosmos_blocks(
 
     blocks.register(
         BlockBuilder::new("cosmos:cheese", 10.0, 50.0)
-            .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .create(),
     );
 
-    blocks.register(
-        BlockBuilder::new("cosmos:short_grass", 0.1, 1.0)
-            .add_property(BlockProperty::Opaque)
-            .create(),
-    );
+    blocks.register(BlockBuilder::new("cosmos:short_grass", 0.1, 1.0).create());
 
     blocks.register(
         BlockBuilder::new("cosmos:sand", 4.0, 10.0)
-            .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .create(),
     );
 
     blocks.register(
         BlockBuilder::new("cosmos:cactus", 0.8, 10.0)
-            .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .create(),
     );
 
     blocks.register(
         BlockBuilder::new("cosmos:build_block", 2.0, 20.0)
-            .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .create(),
     );
@@ -200,7 +179,6 @@ fn add_cosmos_blocks(
     for ship_hull in ship_hulls {
         blocks.register(
             BlockBuilder::new(format!("cosmos:ship_hull_{ship_hull}"), 4.0, 100.0)
-                .add_property(BlockProperty::Opaque)
                 .add_property(BlockProperty::Full)
                 .create(),
         );
@@ -208,14 +186,12 @@ fn add_cosmos_blocks(
 
     blocks.register(
         BlockBuilder::new("cosmos:reactor_controller", 2.0, 20.0)
-            .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .create(),
     );
 
     blocks.register(
         BlockBuilder::new("cosmos:reactor_casing", 2.0, 20.0)
-            .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .create(),
     );
@@ -229,7 +205,6 @@ fn add_cosmos_blocks(
 
     blocks.register(
         BlockBuilder::new("cosmos:reactor_cell", 2.0, 20.0)
-            .add_property(BlockProperty::Opaque)
             .add_property(BlockProperty::Full)
             .create(),
     );
@@ -273,7 +248,12 @@ fn add_cosmos_blocks(
     blocks.register(
         BlockBuilder::new("cosmos:storage", 2.0, 20.0)
             .add_property(BlockProperty::Full)
-            .add_property(BlockProperty::Opaque)
+            .create(),
+    );
+
+    blocks.register(
+        BlockBuilder::new("cosmos:station_core", 2.0, 20.0)
+            .add_property(BlockProperty::Full)
             .create(),
     );
 

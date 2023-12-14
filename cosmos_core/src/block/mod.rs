@@ -21,16 +21,12 @@ pub mod storage;
 #[derive(Reflect, Debug, Eq, PartialEq, Clone, Copy, Hash)]
 /// Represents different properties a block can has
 pub enum BlockProperty {
-    /// Is this block non-see-through
-    Opaque,
     /// Is this block see-through
     Transparent,
     /// Does this block always take up the full 1x1x1 space.
     Full,
     /// Does this block not take up any space (such as air)
     Empty,
-    /// Does this block only belong on a ship
-    ShipOnly,
 }
 
 #[derive(Debug, PartialEq, Eq, Reflect, Default, Copy, Clone, Serialize, Deserialize, Hash)]
@@ -244,11 +240,9 @@ impl Display for BlockFace {
 impl BlockProperty {
     fn id(&self) -> u8 {
         match *self {
-            Self::Opaque => 0b1,
-            Self::Transparent => 0b10,
-            Self::Full => 0b100,
-            Self::Empty => 0b1000,
-            Self::ShipOnly => 0b10000,
+            Self::Transparent => 0b1,
+            Self::Full => 0b10,
+            Self::Empty => 0b100,
         }
     }
 
