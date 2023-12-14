@@ -5,9 +5,16 @@ use bevy_inspector_egui::bevy_egui::EguiContexts;
 use bevy_renet::renet::RenetServer;
 use renet_visualizer::RenetServerVisualizer;
 
-fn update_visulizer_system(mut egui_context: EguiContexts, mut visualizer: ResMut<RenetServerVisualizer<200>>, server: Res<RenetServer>) {
-    visualizer.update(&server);
-    visualizer.show_window(egui_context.ctx_mut());
+fn update_visulizer_system(
+    q_windows: Query<(), With<Window>>,
+    mut egui_context: EguiContexts,
+    mut visualizer: ResMut<RenetServerVisualizer<200>>,
+    server: Res<RenetServer>,
+) {
+    if !q_windows.is_empty() {
+        visualizer.update(&server);
+        visualizer.show_window(egui_context.ctx_mut());
+    }
 }
 
 pub(super) fn register(app: &mut App) {
