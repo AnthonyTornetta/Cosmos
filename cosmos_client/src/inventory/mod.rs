@@ -19,7 +19,7 @@ use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     netty::{flags::LocalPlayer, mapping::NetworkMapping},
     state::game_state::GameState,
-    ui::item_renderer::RenderItem,
+    ui::item_renderer::{RenderItem, RenderItemSystemSet},
     window::setup::CursorFlags,
 };
 
@@ -770,19 +770,54 @@ fn follow_cursor(mut query: Query<&mut Style, With<FollowCursor>>, primary_windo
     }
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+enum InventorySet {
+    ToggleInventory,
+    FlushToggleInventory,
+    UpdateInventory,
+    FlushUpdateInventory,
+    HandleInteractions,
+    FlushHandleInteractions,
+    FollowCursor,
+    FlushFollowCursor,
+    ToggleInventoryRendering,
+    FlushToggleInventoryRendering,
+}
+
 pub(super) fn register(app: &mut App) {
-    app.add_systems(
+    app.configure_sets(
         Update,
         (
-            toggle_inventory,
-            on_update_inventory,
-            handle_interactions,
-            close_button_system,
-            apply_deferred,
-            follow_cursor,
-            toggle_inventory_rendering,
+            InventorySet::ToggleInventory,
+            InventorySet::FlushToggleInventory,
+            InventorySet::UpdateInventory,
+            InventorySet::FlushUpdateInventory,
+            InventorySet::HandleInteractions,
+            InventorySet::FlushHandleInteractions,
+            InventorySet::FollowCursor,
+            InventorySet::FlushFollowCursor,
+            InventorySet::ToggleInventoryRendering,
+            InventorySet::FlushToggleInventoryRendering,
         )
-            .chain()
+            .before(RenderItemSystemSet::BeginRenderingItems)
+            .chain(),
+    )
+    .add_systems(
+        Update,
+        (
+            // apply_deferred
+            apply_deferred.in_set(InventorySet::FlushToggleInventory),
+            apply_deferred.in_set(InventorySet::FlushUpdateInventory),
+            apply_deferred.in_set(InventorySet::FlushHandleInteractions),
+            apply_deferred.in_set(InventorySet::FlushFollowCursor),
+            apply_deferred.in_set(InventorySet::FlushToggleInventoryRendering),
+            // Logic
+            (toggle_inventory, close_button_system).in_set(InventorySet::ToggleInventory),
+            on_update_inventory.in_set(InventorySet::UpdateInventory),
+            handle_interactions.in_set(InventorySet::HandleInteractions),
+            follow_cursor.in_set(InventorySet::FollowCursor),
+            toggle_inventory_rendering.in_set(InventorySet::ToggleInventoryRendering),
+        )
             .run_if(in_state(GameState::Playing)),
     )
     .register_type::<DisplayedItemFromInventory>();
