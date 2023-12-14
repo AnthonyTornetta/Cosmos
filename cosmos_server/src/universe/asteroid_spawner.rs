@@ -79,10 +79,6 @@ fn spawn_asteroid(
     for sector in sectors {
         cache.insert(sector);
 
-        if sector != Sector::new(25, 25, 25) {
-            continue;
-        }
-
         if is_sector_generated(sector) || is_planet_in_sector(&sector, &server_seed) {
             // This sector has already been loaded, don't regenerate stuff
             continue;
