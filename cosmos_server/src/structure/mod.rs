@@ -9,6 +9,7 @@ pub mod planet;
 pub mod server_structure_builder;
 pub mod shared;
 pub mod ship;
+pub mod station;
 pub mod systems;
 
 pub(super) fn register(app: &mut App) {

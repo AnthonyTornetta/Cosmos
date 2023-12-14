@@ -137,6 +137,11 @@ fn server_listen_messages(
                         continue;
                     };
 
+                    let Structure::Full(structure) = structure else {
+                        warn!("Cannot request all chunks for a dynamic structure! Requester: {client_id}; entity = {server_entity:?}");
+                        continue;
+                    };
+
                     for (_, chunk) in structure.chunks() {
                         let entity = structure.chunk_entity(chunk.chunk_coordinates()).expect("Missing chunk entity!");
 
