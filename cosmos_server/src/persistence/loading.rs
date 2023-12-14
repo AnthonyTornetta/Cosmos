@@ -106,8 +106,6 @@ fn check_blueprint_needs_loaded(query: Query<(Entity, &NeedsBlueprintLoaded), Wi
             continue;
         };
 
-        println!("Blueprint needs loaded - added serialized data!");
-
         commands.entity(ent).insert(serialized_data);
     }
 }
@@ -115,7 +113,6 @@ fn check_blueprint_needs_loaded(query: Query<(Entity, &NeedsBlueprintLoaded), Wi
 /// To add your own loading event, add a system after `begin_loading` and before `done_loading`.
 fn done_loading_blueprint(query: Query<Entity, With<NeedsBlueprintLoaded>>, mut commands: Commands) {
     for ent in query.iter() {
-        println!("Blueprint done loading!");
         commands.entity(ent).remove::<NeedsBlueprintLoaded>().remove::<SerializedData>();
     }
 }

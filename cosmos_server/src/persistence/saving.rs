@@ -84,7 +84,6 @@ fn check_needs_saved(query: Query<Entity, (With<NeedsSaved>, Without<SerializedD
 
 fn check_needs_blueprinted(query: Query<Entity, (With<NeedsBlueprinted>, Without<SerializedData>)>, mut commands: Commands) {
     for ent in query.iter() {
-        println!("Inserting blueprint serialized data!");
         commands.entity(ent).insert(SerializedData::default());
     }
 }
