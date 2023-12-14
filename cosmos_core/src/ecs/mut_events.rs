@@ -39,7 +39,7 @@ pub trait MutEventsCommand {
     ///         // Read:
     ///         {
     ///             let event = ev.read();
-    ///             println!("{event:?}");
+    ///             info!("{event:?}");
     ///         }
     ///         // Or write:
     ///         {

@@ -270,6 +270,13 @@ fn add_cosmos_blocks(
         );
     }
 
+    blocks.register(
+        BlockBuilder::new("cosmos:storage", 2.0, 20.0)
+            .add_property(BlockProperty::Full)
+            .add_property(BlockProperty::Opaque)
+            .create(),
+    );
+
     loading.finish_loading(id, &mut end_writer);
 }
 

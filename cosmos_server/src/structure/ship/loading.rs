@@ -9,7 +9,7 @@ use cosmos_core::{
     },
 };
 
-use crate::state::GameState;
+use crate::{events::create_ship_event::create_ship_event_reader, state::GameState};
 
 /// A flag that denotes that a ship needs created
 #[derive(Component)]
@@ -53,6 +53,7 @@ fn create_ships(
                 chunk_set_event_writer.send(ChunkInitEvent {
                     structure_entity: entity,
                     coords,
+                    serialized_block_data: None,
                 });
             }
         }
@@ -60,5 +61,8 @@ fn create_ships(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, create_ships.run_if(in_state(GameState::Playing)));
+    app.add_systems(
+        Update,
+        create_ships.after(create_ship_event_reader).run_if(in_state(GameState::Playing)),
+    );
 }

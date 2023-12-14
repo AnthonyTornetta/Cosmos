@@ -113,7 +113,11 @@ fn run_spacial_audio(
         for (emitter_transform, emitter) in emitters.iter() {
             let sound_path = emitter_transform.translation() - receiver_transform.translation();
 
-            let right_ear_angle = receiver_transform.right().angle_between(sound_path);
+            let mut right_ear_angle = receiver_transform.right().angle_between(sound_path);
+            if right_ear_angle.is_nan() {
+                right_ear_angle = 0.0;
+            }
+
             let panning = ((right_ear_angle.cos() + 1.0) / 2.0) as f64;
 
             for emission in emitter.emissions.iter() {

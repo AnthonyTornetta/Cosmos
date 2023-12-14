@@ -4,8 +4,8 @@ use bevy::prelude::{App, Commands, Entity, First, IntoSystemConfigs, Query, Upda
 use cosmos_core::block::multiblock::reactor::Reactors;
 
 use crate::persistence::{
-    loading::{begin_loading, done_loading, NeedsLoaded},
-    saving::{begin_saving, done_saving, NeedsSaved},
+    loading::{LoadingSystemSet, NeedsLoaded},
+    saving::{NeedsSaved, SavingSystemSet},
     SerializedData,
 };
 
@@ -26,6 +26,6 @@ fn on_load_reactors(mut commands: Commands, query: Query<(Entity, &SerializedDat
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(First, on_save_reactors.after(begin_saving).before(done_saving))
-        .add_systems(Update, on_load_reactors.after(begin_loading).before(done_loading));
+    app.add_systems(First, on_save_reactors.in_set(SavingSystemSet::DoSaving))
+        .add_systems(Update, on_load_reactors.in_set(LoadingSystemSet::DoLoading));
 }

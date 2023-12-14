@@ -9,7 +9,7 @@ use std::{error::Error, fmt::Formatter};
 
 use bevy::prelude::*;
 
-use super::{ship::Ship, Structure};
+use super::{loading::StructureLoadingSet, ship::Ship, Structure};
 
 pub mod energy_generation_system;
 pub mod energy_storage_system;
@@ -138,7 +138,7 @@ fn add_structure(mut commands: Commands, query: Query<Entity, (Added<Structure>,
 }
 
 pub(super) fn register<T: States + Clone + Copy>(app: &mut App, post_loading_state: T, playing_state: T) {
-    app.add_systems(Update, add_structure);
+    app.add_systems(Update, add_structure.in_set(StructureLoadingSet::LoadChunkData));
 
     energy_storage_system::register(app, post_loading_state, playing_state);
     energy_generation_system::register(app, post_loading_state, playing_state);

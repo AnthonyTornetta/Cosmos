@@ -4,6 +4,7 @@
 
 use bevy::prelude::{App, Component, Entity, Event, Vec3};
 use bevy::reflect::Reflect;
+use bevy::utils::HashMap;
 use serde::{Deserialize, Serialize};
 
 use crate::block::{Block, BlockFace};
@@ -12,6 +13,8 @@ use crate::registry::Registry;
 use super::block_health::BlockHealth;
 use super::block_storage::{BlockStorage, BlockStorer};
 use super::coordinates::{ChunkBlockCoordinate, ChunkCoordinate, CoordinateType, UnboundCoordinateType};
+
+pub mod netty;
 
 /// The number of blocks a chunk can have in the x/y/z directions.
 ///
@@ -34,6 +37,10 @@ pub struct Chunk {
     block_health: BlockHealth,
 
     block_storage: BlockStorage,
+
+    /// Each entity this points to should ideally be a child of this chunk used to store data about a specific block
+    #[serde(skip)]
+    block_data: HashMap<ChunkBlockCoordinate, Entity>,
 }
 
 impl BlockStorer for Chunk {
@@ -109,6 +116,7 @@ impl Chunk {
             structure_position,
             block_storage: BlockStorage::new(CHUNK_DIMENSIONS, CHUNK_DIMENSIONS, CHUNK_DIMENSIONS),
             block_health: BlockHealth::default(),
+            block_data: Default::default(),
         }
     }
 
@@ -185,6 +193,34 @@ impl Chunk {
     pub(crate) fn set_block_health(&mut self, coords: ChunkBlockCoordinate, amount: f32, blocks: &Registry<Block>) {
         self.block_health
             .set_health(coords, blocks.from_numeric_id(self.block_at(coords)).hardness(), amount);
+    }
+
+    /// Gets the entity that contains this block's information if there is one
+    pub fn block_data(&self, coords: ChunkBlockCoordinate) -> Option<Entity> {
+        self.block_data.get(&coords).copied()
+    }
+
+    /// Sets the block at these coordinate's data.
+    ///
+    /// This does NOT despawn previous data that was here.
+    ///
+    /// Will return the entity that was previously here, if any
+    pub fn set_block_data(&mut self, coords: ChunkBlockCoordinate, data_entity: Entity) -> Option<Entity> {
+        self.block_data.insert(coords, data_entity)
+    }
+
+    /// Removes any block data associated with this block
+    ///
+    /// Will return the data entity that was previously here, if any
+    pub fn remove_block_data(&mut self, coords: ChunkBlockCoordinate) -> Option<Entity> {
+        self.block_data.remove(&coords)
+    }
+
+    /// Returns all the block data entities this chunk has.
+    ///
+    /// Mostly just used for saving
+    pub fn all_block_data_entities(&self) -> &HashMap<ChunkBlockCoordinate, Entity> {
+        &self.block_data
     }
 }
 

@@ -19,6 +19,7 @@ use crate::{
     registry::{identifiable::Identifiable, Registry},
     structure::{
         events::StructureLoadedEvent,
+        loading::StructureLoadingSet,
         ship::{pilot::Pilot, ship_movement::ShipMovement},
         systems::energy_storage_system::EnergyStorageSystem,
         Structure,
@@ -222,7 +223,12 @@ pub(super) fn register<T: States + Clone + Copy>(app: &mut App, post_loading_sta
         .add_systems(OnEnter(post_loading_state), register_thruster_blocks)
         .add_systems(
             Update,
-            (structure_loaded_event, block_update_system, update_movement).run_if(in_state(playing_state)),
+            (
+                structure_loaded_event.in_set(StructureLoadingSet::StructureLoaded),
+                block_update_system,
+                update_movement,
+            )
+                .run_if(in_state(playing_state)),
         )
         .register_type::<ThrusterSystem>();
 }

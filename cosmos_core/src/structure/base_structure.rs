@@ -521,4 +521,41 @@ impl BaseStructure {
             chunk.set_block_health(ChunkBlockCoordinate::for_block_coordinate(coords), amount, blocks);
         }
     }
+
+    /// Returns `None` if the chunk is unloaded.
+    ///
+    /// Gets the entity that contains this block's information if there is one
+    pub fn block_data(&self, coords: BlockCoordinate) -> Option<Entity> {
+        if let Some(chunk) = self.chunk_at_block_coordinates(coords) {
+            chunk.block_data(ChunkBlockCoordinate::for_block_coordinate(coords))
+        } else {
+            None
+        }
+    }
+
+    /// Returns `None` if the chunk is unloaded.
+    ///
+    /// Sets the block at these coordinate's data.
+    ///
+    /// This does NOT despawn previous data that was here.
+    ///
+    /// Will return the entity that was previously here, if any.
+    pub fn set_block_data(&mut self, coords: BlockCoordinate, data_entity: Entity) -> Option<Entity> {
+        if let Some(chunk) = self.mut_chunk_at_block_coordinates(coords) {
+            chunk.set_block_data(ChunkBlockCoordinate::for_block_coordinate(coords), data_entity)
+        } else {
+            None
+        }
+    }
+
+    /// Removes any block data associated with this block
+    ///
+    /// Will return the data entity that was previously here, if any
+    pub fn remove_block_data(&mut self, coords: BlockCoordinate) -> Option<Entity> {
+        if let Some(chunk) = self.mut_chunk_at_block_coordinates(coords) {
+            chunk.remove_block_data(ChunkBlockCoordinate::for_block_coordinate(coords))
+        } else {
+            None
+        }
+    }
 }

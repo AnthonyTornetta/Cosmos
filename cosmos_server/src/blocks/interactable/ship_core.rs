@@ -18,20 +18,20 @@ fn handle_block_event(
     pilot_query: Query<&Pilot>,
     blocks: Res<Registry<Block>>,
 ) {
-    let block = blocks.from_id("cosmos:ship_core").expect("ship core block missing!");
-
     for ev in interact_events.read() {
         if let Ok(structure) = s_query.get(ev.structure_entity) {
-            let block_id = ev.structure_block.block_id(structure);
+            if let Some(block) = blocks.from_id("cosmos:ship_core") {
+                let block_id = ev.structure_block.block_id(structure);
 
-            if block_id == block.id() {
-                // Only works on ships (maybe replace this with pilotable component instead of only checking ships)
-                // Cannot pilot a ship that already has a pilot
-                if pilot_query.get(ev.structure_entity).is_err() {
-                    change_pilot_event.send(ChangePilotEvent {
-                        structure_entity: ev.structure_entity,
-                        pilot_entity: Some(ev.interactor),
-                    });
+                if block_id == block.id() {
+                    // Only works on ships (maybe replace this with pilotable component instead of only checking ships)
+                    // Cannot pilot a ship that already has a pilot
+                    if pilot_query.get(ev.structure_entity).is_err() {
+                        change_pilot_event.send(ChangePilotEvent {
+                            structure_entity: ev.structure_entity,
+                            pilot_entity: Some(ev.interactor),
+                        });
+                    }
                 }
             }
         }

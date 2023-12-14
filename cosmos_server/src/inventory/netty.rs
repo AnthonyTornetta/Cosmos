@@ -1,32 +1,48 @@
 //! Syncs player inventories
 
 use bevy::{
+    ecs::{query::Without, world::Mut},
     log::warn,
     prelude::{in_state, App, Changed, Commands, Entity, IntoSystemConfigs, Query, RemovedComponents, Res, ResMut, Update},
 };
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
+    block::data::BlockData,
     entities::player::Player,
     inventory::{
-        netty::{ClientInventoryMessages, ServerInventoryMessages},
+        netty::{ClientInventoryMessages, InventoryIdentifier, ServerInventoryMessages},
         HeldItemStack, Inventory,
     },
     item::Item,
-    netty::{cosmos_encoder, NettyChannelClient, NettyChannelServer},
+    netty::{cosmos_encoder, NettyChannelClient, NettyChannelServer, NoSendEntity},
     registry::Registry,
+    structure::Structure,
 };
 
 use crate::{netty::network_helpers::ServerLobby, state::GameState};
 
-fn sync_inventories(query: Query<(Entity, &Inventory), Changed<Inventory>>, mut server: ResMut<RenetServer>) {
-    for (entity, inventory) in query.iter() {
-        server.broadcast_message(
-            NettyChannelServer::Inventory,
-            cosmos_encoder::serialize(&ServerInventoryMessages::EntityInventory {
-                inventory: inventory.clone(),
-                owner: entity,
-            }),
-        );
+fn sync_inventories(
+    query: Query<(Entity, &Inventory, Option<&BlockData>), (Changed<Inventory>, Without<NoSendEntity>)>,
+    mut server: ResMut<RenetServer>,
+) {
+    for (entity, inventory, block_data) in query.iter() {
+        if let Some(block_data) = block_data {
+            server.broadcast_message(
+                NettyChannelServer::Inventory,
+                cosmos_encoder::serialize(&ServerInventoryMessages::UpdateInventory {
+                    inventory: inventory.clone(),
+                    owner: InventoryIdentifier::BlockData(block_data.identifier),
+                }),
+            );
+        } else {
+            server.broadcast_message(
+                NettyChannelServer::Inventory,
+                cosmos_encoder::serialize(&ServerInventoryMessages::UpdateInventory {
+                    inventory: inventory.clone(),
+                    owner: InventoryIdentifier::Entity(entity),
+                }),
+            );
+        }
     }
 }
 
@@ -57,9 +73,59 @@ fn sync_held_items(
     }
 }
 
+fn get_inventory_mut<'a>(
+    identifier: InventoryIdentifier,
+    q_inventory: &'a mut Query<&mut Inventory>,
+    q_structure: &'a Query<&Structure>,
+) -> Option<Mut<'a, Inventory>> {
+    match identifier {
+        InventoryIdentifier::Entity(entity) => q_inventory.get_mut(entity).ok(),
+        InventoryIdentifier::BlockData(block_data) => {
+            let Ok(structure) = q_structure.get(block_data.structure_entity) else {
+                warn!("Missing structure entity for {:?}", block_data.structure_entity);
+                return None;
+            };
+
+            let Some(block_data_ent) = structure.block_data(block_data.block.coords()) else {
+                warn!(
+                    "Missing block data for {} in entity {:?}",
+                    block_data.block.coords(),
+                    block_data.structure_entity
+                );
+                return None;
+            };
+
+            q_inventory.get_mut(block_data_ent).ok()
+        }
+    }
+}
+
+fn get_many_inventories_mut<'a, const N: usize>(
+    identifiers: [InventoryIdentifier; N],
+    q_inventory: &'a mut Query<&mut Inventory>,
+    q_structure: &'a Query<&Structure>,
+) -> Option<[Mut<'a, Inventory>; N]> {
+    let ents = identifiers
+        .into_iter()
+        .map(|x| match x {
+            InventoryIdentifier::Entity(entity) => Some(entity),
+            InventoryIdentifier::BlockData(block_data) => {
+                let structure = q_structure.get(block_data.structure_entity).ok()?;
+
+                structure.block_data(block_data.block.coords())
+            }
+        })
+        .collect::<Option<Vec<Entity>>>()?;
+
+    let ents = ents.try_into().expect("This is guarenteed to be the same size as input");
+
+    q_inventory.get_many_mut(ents).ok()
+}
+
 fn listen(
     mut commands: Commands,
-    mut inventory_query: Query<&mut Inventory>,
+    mut q_inventory: Query<&mut Inventory>,
+    q_structure: Query<&Structure>,
     mut held_item_query: Query<&mut HeldItemStack>,
     mut server: ResMut<RenetServer>,
     lobby: Res<ServerLobby>,
@@ -82,12 +148,14 @@ fn listen(
                     inventory_b,
                 } => {
                     if inventory_a == inventory_b {
-                        if let Ok(mut inventory) = inventory_query.get_mut(inventory_a) {
+                        if let Some(mut inventory) = get_inventory_mut(inventory_a, &mut q_inventory, &q_structure) {
                             inventory
                                 .self_swap_slots(slot_a as usize, slot_b as usize)
                                 .unwrap_or_else(|_| panic!("Got bad inventory slots from player! {}, {}", slot_a, slot_b));
                         }
-                    } else if let Ok([mut inventory_a, mut inventory_b]) = inventory_query.get_many_mut([inventory_a, inventory_b]) {
+                    } else if let Some([mut inventory_a, mut inventory_b]) =
+                        get_many_inventories_mut([inventory_a, inventory_b], &mut q_inventory, &q_structure)
+                    {
                         inventory_a
                             .swap_slots(slot_a as usize, &mut inventory_b, slot_b as usize)
                             .unwrap_or_else(|_| panic!("Got bad inventory slots from player! {}, {}", slot_a, slot_b));
@@ -100,13 +168,30 @@ fn listen(
                     to_inventory,
                 } => {
                     if from_inventory == to_inventory {
-                        if let Ok(mut inventory) = inventory_query.get_mut(from_inventory) {
+                        if let Some(mut inventory) = get_inventory_mut(from_inventory, &mut q_inventory, &q_structure) {
                             inventory
                                 .auto_move(from_slot as usize, quantity)
                                 .unwrap_or_else(|_| panic!("Got bad inventory slot from player! {}", from_slot));
                         }
-                    } else {
-                        panic!("Not implemented yet!");
+                    } else if let Some([mut from_inventory, mut to_inventory]) =
+                        get_many_inventories_mut([from_inventory, to_inventory], &mut q_inventory, &q_structure)
+                    {
+                        let from_slot = from_slot as usize;
+                        if let Some(mut is) = from_inventory.remove_itemstack_at(from_slot) {
+                            let leftover = to_inventory.insert_itemstack(&is);
+                            if leftover == 0 {
+                                from_inventory.remove_itemstack_at(from_slot);
+                            } else if leftover == is.quantity() {
+                                from_inventory.set_itemstack_at(from_slot, Some(is));
+
+                                from_inventory
+                                    .auto_move(from_slot, quantity)
+                                    .unwrap_or_else(|_| panic!("Got bad inventory slot from player! {}", from_slot));
+                            } else {
+                                is.set_quantity(leftover);
+                                from_inventory.set_itemstack_at(from_slot, Some(is));
+                            }
+                        }
                     }
                 }
                 ClientInventoryMessages::MoveItemstack {
@@ -117,12 +202,14 @@ fn listen(
                     to_slot,
                 } => {
                     if from_inventory == to_inventory {
-                        if let Ok(mut inventory) = inventory_query.get_mut(from_inventory) {
+                        if let Some(mut inventory) = get_inventory_mut(from_inventory, &mut q_inventory, &q_structure) {
                             inventory
                                 .self_move_itemstack(from_slot as usize, to_slot as usize, quantity)
                                 .unwrap_or_else(|_| panic!("Got bad inventory slots from player! {}, {}", from_slot, to_slot));
                         }
-                    } else if let Ok([mut inventory_a, mut inventory_b]) = inventory_query.get_many_mut([from_inventory, to_inventory]) {
+                    } else if let Some([mut inventory_a, mut inventory_b]) =
+                        get_many_inventories_mut([from_inventory, to_inventory], &mut q_inventory, &q_structure)
+                    {
                         inventory_a
                             .move_itemstack(from_slot as usize, &mut inventory_b, to_slot as usize, quantity)
                             .unwrap_or_else(|_| panic!("Got bad inventory slots from player! {}, {}", from_slot, to_slot));
@@ -149,7 +236,7 @@ fn listen(
 
                     // TODO: Check if has access to inventory
 
-                    if let Ok(mut inventory) = inventory_query.get_mut(inventory_holder) {
+                    if let Some(mut inventory) = get_inventory_mut(inventory_holder, &mut q_inventory, &q_structure) {
                         if let Some(is) = inventory.mut_itemstack_at(slot) {
                             let quantity = quantity.min(is.quantity());
 
@@ -186,7 +273,7 @@ fn listen(
 
                     // TODO: Check if has access to inventory
 
-                    if let Ok(mut inventory) = inventory_query.get_mut(inventory_holder) {
+                    if let Some(mut inventory) = get_inventory_mut(inventory_holder, &mut q_inventory, &q_structure) {
                         let quantity = quantity.min(held_is.quantity()); // make sure we don't deposit more than we have
                         let unused_quantity = held_is.quantity() - quantity;
 
@@ -214,7 +301,7 @@ fn listen(
 
                     // TODO: Check if has access to inventory
 
-                    if let Ok(mut inventory) = inventory_query.get_mut(inventory_holder) {
+                    if let Some(mut inventory) = get_inventory_mut(inventory_holder, &mut q_inventory, &q_structure) {
                         let itemstack_here = inventory.remove_itemstack_at(slot);
 
                         let leftover =
@@ -257,7 +344,7 @@ fn listen(
                 }
                 ClientInventoryMessages::InsertHeldItem {
                     quantity,
-                    inventory_holder: inventory_entity,
+                    inventory_holder,
                 } => {
                     let Ok(mut held_item_stack) = held_item_query.get_mut(client_entity) else {
                         // Perhaps the client needs updated
@@ -271,7 +358,7 @@ fn listen(
 
                     let quantity = held_item_stack.quantity().min(quantity);
 
-                    if let Ok(mut inventory) = inventory_query.get_mut(inventory_entity) {
+                    if let Some(mut inventory) = get_inventory_mut(inventory_holder, &mut q_inventory, &q_structure) {
                         let unused_leftover = held_item_stack.quantity() - quantity;
                         let leftover = inventory.insert(items.from_numeric_id(held_item_stack.item_id()), quantity);
 

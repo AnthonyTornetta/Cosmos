@@ -10,7 +10,7 @@ use crate::{
     block::Block,
     events::block_events::BlockChangedEvent,
     registry::{identifiable::Identifiable, Registry},
-    structure::{events::StructureLoadedEvent, Structure},
+    structure::{events::StructureLoadedEvent, loading::StructureLoadingSet, Structure},
 };
 
 use super::Systems;
@@ -135,7 +135,11 @@ pub(super) fn register<T: States + Clone + Copy>(app: &mut App, post_loading_sta
         .add_systems(OnEnter(post_loading_state), register_energy_blocks)
         .add_systems(
             Update,
-            (structure_loaded_event, block_update_system).run_if(in_state(playing_state)),
+            (
+                structure_loaded_event.in_set(StructureLoadingSet::StructureLoaded),
+                block_update_system,
+            )
+                .run_if(in_state(playing_state)),
         )
         .register_type::<EnergyStorageSystem>();
 }

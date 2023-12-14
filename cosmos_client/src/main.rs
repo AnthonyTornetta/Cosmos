@@ -45,6 +45,9 @@ use bevy_rapier3d::prelude::{RapierConfiguration, TimestepMode};
 use bevy_renet::RenetClientPlugin;
 use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
 
+#[cfg(feature = "print-schedule")]
+use bevy::log::LogPlugin;
+
 fn main() {
     if set_current_thread_priority(ThreadPriority::Max).is_err() {
         warn!("Failed to set main thread priority to max - this can lead to lag.");
@@ -67,6 +70,22 @@ fn main() {
 
     let mut app = App::new();
 
+    let default_plugins = DefaultPlugins
+        .set(TaskPoolPlugin {
+            task_pool_options: TaskPoolOptions {
+                compute: TaskPoolThreadAssignmentPolicy {
+                    min_threads: 1,
+                    max_threads: std::usize::MAX,
+                    percent: 0.25,
+                },
+                ..Default::default()
+            },
+        })
+        .set(ImagePlugin::default_nearest());
+
+    #[cfg(feature = "print-schedule")]
+    let default_plugins = default_plugins.disable::<LogPlugin>();
+
     app.insert_resource(HostConfig { host_name })
         .insert_resource(RapierConfiguration {
             gravity: Vec3::ZERO,
@@ -80,20 +99,7 @@ fn main() {
         .insert_resource(ClearColor(Color::BLACK))
         // This must be registered here, before it is used anywhere
         .add_state::<GameState>()
-        .add_plugins(
-            DefaultPlugins
-                .set(TaskPoolPlugin {
-                    task_pool_options: TaskPoolOptions {
-                        compute: TaskPoolThreadAssignmentPolicy {
-                            min_threads: 1,
-                            max_threads: std::usize::MAX,
-                            percent: 0.25,
-                        },
-                        ..Default::default()
-                    },
-                })
-                .set(ImagePlugin::default_nearest()),
-        )
+        .add_plugins(default_plugins)
         .add_plugins(CosmosCorePluginGroup::new(
             GameState::PreLoading,
             GameState::Loading,
@@ -131,6 +137,11 @@ fn main() {
     settings::register(&mut app);
     physics::register(&mut app);
     ecs::register(&mut app);
+
+    if cfg!(feature = "print-schedule") {
+        bevy_mod_debugdump::print_schedule_graph(&mut app, Update);
+        return;
+    }
 
     app.run();
 }

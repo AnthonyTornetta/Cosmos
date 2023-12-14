@@ -1,12 +1,15 @@
+//! Structure serialization/deserialization
+
 use std::fs;
 
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::PhysicsWorld;
 use cosmos_core::{
+    block::data::persistence::ChunkLoadBlockDataEvent,
     netty::{cosmos_encoder, NoSendEntity},
     physics::location::Location,
     structure::{
-        chunk::{Chunk, ChunkEntity},
+        chunk::{netty::SerializedChunkBlockData, Chunk, ChunkEntity},
         coordinates::{ChunkCoordinate, CoordinateType},
         dynamic_structure::DynamicStructure,
         planet::{planet_builder::TPlanetBuilder, Planet},
@@ -16,8 +19,8 @@ use cosmos_core::{
 use serde::{Deserialize, Serialize};
 
 use crate::persistence::{
-    loading::{begin_loading, done_loading, NeedsLoaded},
-    saving::{begin_saving, done_saving, NeedsSaved},
+    loading::{LoadingSystemSet, NeedsLoaded, LOADING_SCHEDULE},
+    saving::{NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
     EntityId, SaveFileIdentifier, SerializedData,
 };
 
@@ -155,6 +158,7 @@ fn load_chunk(
     mut structure_query: Query<&mut Structure>,
     mut chunk_init_event: EventWriter<ChunkInitEvent>,
     mut commands: Commands,
+    mut chunk_load_block_data_event_writer: EventWriter<ChunkLoadBlockDataEvent>,
 ) {
     for (entity, sd, ce) in query.iter() {
         if let Some(chunk) = sd.deserialize_data::<Chunk>("cosmos:chunk") {
@@ -174,7 +178,18 @@ fn load_chunk(
                 chunk_init_event.send(ChunkInitEvent {
                     structure_entity: ce.structure_entity,
                     coords,
+                    serialized_block_data: None,
                 });
+
+                // Block data is stored per-chunk as `SerializedChunkBlockData` on dynamic structures,
+                // instead of fixed structures storing it as `AllBlockData` on the structure itself.
+                if let Some(data) = sd.deserialize_data::<SerializedChunkBlockData>("cosmos:block_data") {
+                    chunk_load_block_data_event_writer.send(ChunkLoadBlockDataEvent {
+                        data,
+                        chunk: coords,
+                        structure_entity: ce.structure_entity,
+                    });
+                }
             }
         }
     }
@@ -182,7 +197,7 @@ fn load_chunk(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(Update, (structure_created, populate_chunks).chain())
-        .add_systems(First, on_save_structure.after(begin_saving).before(done_saving))
-        .add_systems(Update, on_load_structure.after(begin_loading).before(done_loading))
-        .add_systems(Update, load_chunk.after(begin_loading).before(done_loading));
+        .add_systems(SAVING_SCHEDULE, on_save_structure.in_set(SavingSystemSet::DoSaving))
+        .add_systems(LOADING_SCHEDULE, on_load_structure.in_set(LoadingSystemSet::DoLoading))
+        .add_systems(LOADING_SCHEDULE, load_chunk.in_set(LoadingSystemSet::DoLoading));
 }

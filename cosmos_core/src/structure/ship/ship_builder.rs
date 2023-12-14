@@ -1,7 +1,7 @@
 //! Used to build ships
 
 use bevy::{
-    ecs::system::EntityCommands,
+    ecs::{schedule::IntoSystemConfigs, system::EntityCommands},
     prelude::{Added, App, Commands, Entity, Name, Query, Update},
 };
 use bevy_rapier3d::prelude::{Ccd, ExternalImpulse, ReadMassProperties, RigidBody, Velocity};
@@ -9,7 +9,7 @@ use bevy_rapier3d::prelude::{Ccd, ExternalImpulse, ReadMassProperties, RigidBody
 use crate::{
     persistence::LoadingDistance,
     physics::location::Location,
-    structure::{structure_builder::TStructureBuilder, Structure},
+    structure::{loading::StructureLoadingSet, structure_builder::TStructureBuilder, Structure},
 };
 
 use super::{ship_movement::ShipMovement, Ship};
@@ -55,5 +55,5 @@ fn on_add_ship(query: Query<Entity, Added<Ship>>, mut commands: Commands) {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, on_add_ship);
+    app.add_systems(Update, on_add_ship.in_set(StructureLoadingSet::LoadStructure));
 }

@@ -7,6 +7,7 @@ pub mod netty_rigidbody;
 pub mod server_laser_cannon_system_messages;
 pub mod server_reliable_messages;
 pub mod server_unreliable_messages;
+pub mod system_sets;
 pub mod world_tick;
 
 use bevy::prelude::{App, Component};
@@ -170,4 +171,5 @@ pub fn get_local_ipaddress() -> String {
 
 pub(super) fn register(app: &mut App) {
     world_tick::register(app);
+    system_sets::register(app);
 }

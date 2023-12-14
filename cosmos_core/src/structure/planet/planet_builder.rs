@@ -1,7 +1,7 @@
 //! Used to build a planet
 
 use bevy::{
-    ecs::system::EntityCommands,
+    ecs::{schedule::IntoSystemConfigs, system::EntityCommands},
     prelude::{Added, App, Commands, Entity, Name, Query, Update},
 };
 use bevy_rapier3d::prelude::{RigidBody, Velocity};
@@ -10,6 +10,7 @@ use crate::{
     persistence::LoadingDistance,
     physics::{gravity_system::GravityEmitter, location::Location},
     structure::{
+        loading::StructureLoadingSet,
         planet::{PLANET_LOAD_RADIUS, PLANET_UNLOAD_RADIUS},
         structure_builder::TStructureBuilder,
         Structure,
@@ -63,5 +64,5 @@ fn on_add_planet(query: Query<(Entity, &Structure), Added<Planet>>, mut commands
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, on_add_planet);
+    app.add_systems(Update, on_add_planet.in_set(StructureLoadingSet::LoadStructure));
 }

@@ -3,7 +3,10 @@
 //! Structures are the backbone of everything that contains blocks.
 
 use std::fmt::Display;
+use std::ops::DerefMut;
+use std::sync::{Arc, Mutex};
 
+use bevy::app::Update;
 use bevy::prelude::{App, Event, IntoSystemConfigs, Name, PreUpdate, VisibilityBundle};
 use bevy::reflect::Reflect;
 use bevy::transform::TransformBundle;
@@ -29,6 +32,7 @@ pub mod structure_builder;
 pub mod structure_iterator;
 pub mod systems;
 
+use crate::block::data::persistence::ChunkLoadBlockDataEvent;
 use crate::block::{Block, BlockFace};
 use crate::ecs::NeedsDespawned;
 use crate::events::block_events::BlockChangedEvent;
@@ -43,11 +47,13 @@ use serde::{Deserialize, Serialize};
 
 use self::block_health::events::{BlockDestroyedEvent, BlockTakeDamageEvent};
 use self::block_storage::BlockStorer;
+use self::chunk::netty::SerializedChunkBlockData;
 use self::chunk::ChunkEntity;
 use self::coordinates::{BlockCoordinate, ChunkCoordinate, UnboundBlockCoordinate, UnboundChunkCoordinate};
 use self::dynamic_structure::DynamicStructure;
 use self::events::ChunkSetEvent;
 use self::full_structure::FullStructure;
+use self::loading::StructureLoadingSet;
 use self::structure_block::StructureBlock;
 use self::structure_iterator::{BlockIterator, ChunkIterator};
 
@@ -488,6 +494,40 @@ impl Structure {
             Self::Dynamic(ds) => ds.has_empty_chunk_at(coords),
         }
     }
+
+    /// Returns `None` if the chunk is unloaded.
+    ///
+    /// Gets the entity that contains this block's information if there is one
+    pub fn block_data(&self, coords: BlockCoordinate) -> Option<Entity> {
+        match self {
+            Self::Full(fs) => fs.block_data(coords),
+            Self::Dynamic(ds) => ds.block_data(coords),
+        }
+    }
+
+    /// Returns `None` if the chunk is unloaded.
+    ///
+    /// Sets the block at these coordinate's data.
+    ///
+    /// This does NOT despawn previous data that was here.
+    ///
+    /// Will return the entity that was previously here, if any.
+    pub fn set_block_data(&mut self, coords: BlockCoordinate, data_entity: Entity) -> Option<Entity> {
+        match self {
+            Self::Full(fs) => fs.set_block_data(coords, data_entity),
+            Self::Dynamic(ds) => ds.set_block_data(coords, data_entity),
+        }
+    }
+
+    /// Removes any block data associated with this block
+    ///
+    /// Will return the data entity that was previously here, if any
+    pub fn remove_block_data(&mut self, coords: BlockCoordinate) -> Option<Entity> {
+        match self {
+            Self::Full(fs) => fs.remove_block_data(coords),
+            Self::Dynamic(ds) => ds.remove_block_data(coords),
+        }
+    }
 }
 
 /// This event is sent when a chunk is initially filled out
@@ -497,6 +537,10 @@ pub struct ChunkInitEvent {
     pub structure_entity: Entity,
     /// Chunk's coordinates in the structure
     pub coords: ChunkCoordinate,
+    /// If the chunk has block data that needs deserialized, this will be populated
+    ///
+    /// Arc<Mutex<>> so we can efficiently take the data without cloning it
+    pub serialized_block_data: Option<Arc<Mutex<SerializedChunkBlockData>>>,
 }
 
 // Removes chunk entities if they have no blocks
@@ -563,6 +607,7 @@ fn add_chunks_system(
     mut structure_query: Query<(&mut Structure, Option<&PhysicsWorld>)>,
     mut chunk_set_event_writer: EventWriter<ChunkSetEvent>,
     mut commands: Commands,
+    mut ev_writer: EventWriter<ChunkLoadBlockDataEvent>,
 ) {
     let mut s_chunks = HashSet::new();
     let mut chunk_set_events = HashSet::new();
@@ -577,6 +622,19 @@ fn add_chunks_system(
             structure_entity: ev.structure_entity,
             coords: ev.coords,
         });
+
+        if let Some(serialized_data) = &ev.serialized_block_data {
+            let mut data: std::sync::MutexGuard<'_, SerializedChunkBlockData> = serialized_data.lock().unwrap();
+            let data = data.deref_mut();
+
+            let data = std::mem::take(data);
+
+            ev_writer.send(ChunkLoadBlockDataEvent {
+                data,
+                chunk: ev.coords,
+                structure_entity: ev.structure_entity,
+            });
+        }
     }
 
     for (structure_entity, chunk_coordinate) in s_chunks {
@@ -696,5 +754,6 @@ pub(super) fn register<T: States + Clone + Copy>(app: &mut App, post_loading_sta
     block_health::register(app);
     structure_block::register(app);
 
-    app.add_systems(PreUpdate, (add_chunks_system, remove_empty_chunks).chain());
+    app.add_systems(Update, add_chunks_system.in_set(StructureLoadingSet::CreateChunkEntities))
+        .add_systems(PreUpdate, remove_empty_chunks);
 }

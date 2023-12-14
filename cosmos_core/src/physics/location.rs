@@ -516,6 +516,7 @@ fn on_add_location_without_transform(
 
             commands
                 .entity(needs_transform_entity)
+                .remove::<BundleStartingRotation>()
                 .insert((TransformBundle::from_transform(transform), best_physics_world));
         } else {
             warn!("Location bundle added before there was a player world!");
@@ -525,6 +526,7 @@ fn on_add_location_without_transform(
 
             commands
                 .entity(needs_transform_entity)
+                .remove::<BundleStartingRotation>()
                 .insert(TransformBundle::from_transform(transform));
         }
     }

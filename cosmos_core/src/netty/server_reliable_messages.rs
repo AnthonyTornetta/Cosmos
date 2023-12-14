@@ -12,6 +12,7 @@ use crate::{
     entities::player::render_distance::RenderDistance,
     physics::location::Location,
     structure::{
+        chunk::netty::SerializedChunkBlockData,
         coordinates::{ChunkCoordinate, CoordinateType},
         loading::ChunksNeedLoaded,
         planet::Planet,
@@ -90,6 +91,8 @@ pub enum ServerReliableMessages {
         structure_entity: Entity,
         /// The serialized version of the chunk.
         serialized_chunk: Vec<u8>,
+        /// The chunk's block data in serialized form
+        serialized_block_data: Option<SerializedChunkBlockData>,
     },
     /// This represents the data for an empty chunk.
     EmptyChunk {
