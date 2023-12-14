@@ -3,6 +3,7 @@
 use std::ops::Mul;
 
 use bevy::{
+    log::warn,
     prelude::{
         in_state, App, Commands, Component, EventReader, IntoSystemConfigs, OnEnter, Quat, Query, Res, ResMut, Resource, States, Transform,
         Update, Vec3, With,
@@ -204,16 +205,21 @@ fn structure_loaded_event(
     thruster_blocks: Res<ThrusterBlocks>,
 ) {
     for ev in event_reader.read() {
+        println!("Got strucutre loaded event!");
         if let Ok((structure, mut systems)) = structure_query.get_mut(ev.structure_entity) {
+            println!("Adding thruster system!");
             let mut system = ThrusterSystem::default();
 
             for block in structure.all_blocks_iter(false) {
+                println!("Found block!");
                 if let Some(prop) = thruster_blocks.get(block.block(structure, &blocks)) {
                     system.block_added(prop);
                 }
             }
 
             systems.add_system(&mut commands, system);
+        } else {
+            warn!("Structure missing `Systems` component!");
         }
     }
 }

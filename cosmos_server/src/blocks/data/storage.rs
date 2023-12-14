@@ -59,7 +59,6 @@ fn on_load_blueprint_storage(
     mut ev_writer: EventWriter<PopulateBlockInventoryEvent>,
 ) {
     for (structure_entity, structure) in needs_blueprint_loaded_structure.iter() {
-        println!("FOUND ONE!!!!");
         let Some(storage_block) = blocks.from_id("cosmos:storage") else {
             return;
         };
