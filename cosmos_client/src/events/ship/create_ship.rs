@@ -4,7 +4,7 @@ use bevy::prelude::{in_state, App, Event, EventReader, EventWriter, IntoSystemCo
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     netty::{client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannelClient},
-    structure::ship::build_mode::BuildMode,
+    structure::shared::build_mode::BuildMode,
 };
 
 use crate::{

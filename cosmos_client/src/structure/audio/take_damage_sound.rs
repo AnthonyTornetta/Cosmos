@@ -6,7 +6,7 @@ use bevy::{
     transform::TransformBundle,
 };
 use bevy_kira_audio::{Audio, AudioControl, AudioInstance, AudioSource};
-use cosmos_core::structure::{block_health::events::BlockTakeDamageEvent, ship::core::DespawnWithStructure, Structure};
+use cosmos_core::structure::{block_health::events::BlockTakeDamageEvent, shared::DespawnWithStructure, Structure};
 
 use crate::{
     asset::asset_loader::load_assets,

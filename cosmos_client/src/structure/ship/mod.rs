@@ -11,7 +11,8 @@ use cosmos_core::{
     physics::location::{handle_child_syncing, Location},
     structure::{
         chunk::CHUNK_DIMENSIONSF,
-        ship::{build_mode::BuildMode, pilot::Pilot, Ship},
+        shared::build_mode::BuildMode,
+        ship::{pilot::Pilot, Ship},
         Structure,
     },
 };

@@ -16,7 +16,7 @@ use crate::{
         coordinates::{ChunkCoordinate, CoordinateType},
         loading::ChunksNeedLoaded,
         planet::Planet,
-        ship::build_mode::BuildMode,
+        shared::build_mode::BuildMode,
         structure_block::StructureBlock,
     },
     universe::star::Star,

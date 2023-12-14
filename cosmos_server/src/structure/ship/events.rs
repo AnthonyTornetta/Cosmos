@@ -13,8 +13,6 @@ use cosmos_core::{
 
 use crate::state::GameState;
 
-mod core;
-
 #[derive(Debug, Event)]
 /// This event is sent when the ship's movement is set
 pub struct ShipSetMovementEvent {
@@ -57,8 +55,6 @@ fn monitor_pilot_changes(mut event_reader: EventReader<ChangePilotEvent>, mut se
 }
 
 pub(super) fn register(app: &mut App) {
-    core::register(app);
-
     app.add_event::<ShipSetMovementEvent>().add_systems(
         Update,
         (monitor_pilot_changes, monitor_set_movement_events).run_if(in_state(GameState::Playing)),

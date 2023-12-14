@@ -11,7 +11,7 @@ use cosmos_core::netty::netty_rigidbody::NettyRigidBodyLocation;
 use cosmos_core::netty::system_sets::NetworkingSystemsSet;
 use cosmos_core::netty::{cosmos_encoder, NettyChannelClient, NettyChannelServer};
 use cosmos_core::physics::location::Location;
-use cosmos_core::structure::ship::build_mode::{BuildMode, ExitBuildModeEvent};
+use cosmos_core::structure::shared::build_mode::{BuildMode, ExitBuildModeEvent};
 use cosmos_core::structure::systems::{SystemActive, Systems};
 use cosmos_core::{
     entities::player::Player,
@@ -24,9 +24,10 @@ use cosmos_core::{
 };
 
 use crate::entities::player::PlayerLooking;
-use crate::events::{create_ship_event::CreateShipEvent, structure::ship::ShipSetMovementEvent};
+use crate::events::create_ship_event::CreateShipEvent;
 use crate::structure::planet::chunk::ChunkNeedsSent;
 use crate::structure::planet::generation::planet_generator::RequestChunkEvent;
+use crate::structure::ship::events::ShipSetMovementEvent;
 
 use super::network_helpers::ServerLobby;
 use super::sync::entities::RequestedEntityEvent;

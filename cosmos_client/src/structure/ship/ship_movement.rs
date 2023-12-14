@@ -8,7 +8,7 @@ use bevy_renet::renet::RenetClient;
 use cosmos_core::netty::client_reliable_messages::ClientReliableMessages;
 use cosmos_core::netty::client_unreliable_messages::ClientUnreliableMessages;
 use cosmos_core::netty::{cosmos_encoder, NettyChannelClient};
-use cosmos_core::structure::ship::build_mode::BuildMode;
+use cosmos_core::structure::shared::build_mode::BuildMode;
 use cosmos_core::structure::ship::pilot::Pilot;
 use cosmos_core::structure::ship::ship_movement::ShipMovement;
 

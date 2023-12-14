@@ -10,7 +10,7 @@ use crate::{
     registry::{identifiable::Identifiable, Registry},
     structure::{
         coordinates::{BlockCoordinate, CoordinateType, UnboundCoordinateType},
-        ship::build_mode::{BuildAxis, BuildMode},
+        shared::build_mode::{BuildAxis, BuildMode},
         structure_block::StructureBlock,
         Structure,
     },

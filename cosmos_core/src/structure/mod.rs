@@ -26,7 +26,9 @@ pub mod loading;
 pub mod lod;
 pub mod lod_chunk;
 pub mod planet;
+pub mod shared;
 pub mod ship;
+pub mod station;
 pub mod structure_block;
 pub mod structure_builder;
 pub mod structure_iterator;
@@ -746,9 +748,11 @@ pub(super) fn register<T: States + Clone + Copy>(app: &mut App, post_loading_sta
         .add_event::<ChunkInitEvent>();
 
     ship::register(app, playing_state);
+    station::register(app, playing_state);
     chunk::register(app);
     planet::register(app);
     events::register(app);
+    shared::register(app);
     loading::register(app);
     systems::register(app, post_loading_state, playing_state);
     block_health::register(app);

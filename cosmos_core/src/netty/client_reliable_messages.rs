@@ -9,7 +9,7 @@ use crate::{
     entities::player::render_distance::RenderDistance,
     structure::{
         coordinates::{ChunkCoordinate, CoordinateType},
-        ship::build_mode::BuildAxis,
+        shared::build_mode::BuildAxis,
         structure_block::StructureBlock,
     },
 };

@@ -34,12 +34,8 @@ use cosmos_core::{
         dynamic_structure::DynamicStructure,
         full_structure::FullStructure,
         planet::{biosphere::BiosphereMarker, planet_builder::TPlanetBuilder},
-        ship::{
-            build_mode::{EnterBuildModeEvent, ExitBuildModeEvent},
-            pilot::Pilot,
-            ship_builder::TShipBuilder,
-            Ship,
-        },
+        shared::build_mode::{EnterBuildModeEvent, ExitBuildModeEvent},
+        ship::{pilot::Pilot, ship_builder::TShipBuilder, Ship},
         ChunkInitEvent, Structure,
     },
 };
@@ -334,7 +330,6 @@ pub(crate) fn client_sync_players(
                     body.create_velocity(),
                     Player::new(name, id),
                     ReadMassProperties::default(),
-                    Ccd::enabled(),
                     ActiveEvents::COLLISION_EVENTS,
                     inventory,
                 ));
