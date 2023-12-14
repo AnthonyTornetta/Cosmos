@@ -8,6 +8,7 @@
 //! See [`saving::default_save`] for an example.
 
 use bevy::{
+    core::Name,
     ecs::schedule::{apply_deferred, IntoSystemSetConfigs, SystemSet},
     log::warn,
     prelude::{App, Commands, Component, Entity, First, IntoSystemConfigs, Query, ResMut, With, Without},
@@ -140,6 +141,7 @@ fn done_saving(
     query: Query<
         (
             Entity,
+            Option<&Name>,
             &SerializedData,
             Option<&EntityId>,
             Option<&LoadingDistance>,
@@ -162,11 +164,19 @@ fn done_saving(
         }
     }
 
-    for (entity, sd, entity_id, loading_distance, save_file_identifier) in query.iter() {
+    for (entity, name, sd, entity_id, loading_distance, save_file_identifier) in query.iter() {
         commands.entity(entity).remove::<NeedsSaved>().remove::<SerializedData>();
 
         if !sd.should_save() {
             continue;
+        }
+
+        if loading_distance.is_none() {
+            if let Some(name) = name {
+                warn!("Missing load distance for {name}");
+            } else {
+                warn!("Missing load distance for {entity:?}");
+            }
         }
 
         let entity_id = if let Some(id) = entity_id {
