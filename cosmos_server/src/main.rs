@@ -91,8 +91,7 @@ fn main() {
         ))
         .add_plugins((RenetServerPlugin, NetcodeServerPlugin, ServerPlugin { ip }));
 
-    #[cfg(feature = "print-schedule")]
-    {
+    if cfg!(feature = "print-schedule") {
         bevy_mod_debugdump::print_schedule_graph(&mut app, Update);
         return;
     }

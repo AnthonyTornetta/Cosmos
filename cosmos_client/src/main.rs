@@ -138,8 +138,7 @@ fn main() {
     physics::register(&mut app);
     ecs::register(&mut app);
 
-    #[cfg(feature = "print-schedule")]
-    {
+    if cfg!(feature = "print-schedule") {
         bevy_mod_debugdump::print_schedule_graph(&mut app, Update);
         return;
     }
