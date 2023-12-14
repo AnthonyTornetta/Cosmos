@@ -86,7 +86,8 @@ fn spawn_asteroid(
 
         let mut rng = get_rng_for_sector(&server_seed, &sector);
 
-        if rng.gen_range(0..100) < 100 {
+        // !!!!! Disabled asteroids for now !!!!!
+        if rng.gen_range(0..100) > 100 {
             // Biased towards lower amounts
             let n_asteroids = (6.0 * (1.0 - (1.0 - rng.gen::<f32>()).sqrt())) as usize;
 

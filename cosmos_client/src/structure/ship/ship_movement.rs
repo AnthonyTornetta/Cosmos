@@ -57,7 +57,10 @@ fn process_ship_movement(
             );
         }
 
-        let w = primary_query.get_single().expect("Missing primary window!");
+        let Ok(w) = primary_query.get_single() else {
+            return;
+        };
+
         let hw = w.width() / 2.0;
         let hh = w.height() / 2.0;
         let p2 = PI / 2.0; // 45 deg (half of FOV)

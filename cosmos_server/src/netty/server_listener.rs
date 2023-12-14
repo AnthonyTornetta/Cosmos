@@ -142,6 +142,8 @@ fn server_listen_messages(
                         continue;
                     };
 
+                    info!("Send all chunks for {server_entity:?}!");
+
                     for (_, chunk) in structure.chunks() {
                         let entity = structure.chunk_entity(chunk.chunk_coordinates()).expect("Missing chunk entity!");
 
