@@ -3,6 +3,7 @@
 use std::time::Duration;
 
 use bevy::{
+    core::Name,
     prelude::{
         in_state, App, Commands, Component, Deref, DerefMut, DespawnRecursiveExt, Entity, IntoSystemConfigs, Query, Res, ResMut, Resource,
         Update, Vec3, With,
@@ -77,7 +78,7 @@ fn monitor_planets_to_spawn(
 }
 
 fn spawn_planet(
-    query: Query<&Location, With<Planet>>,
+    q_player_locations: Query<&Location, With<Planet>>,
     players: Query<&Location, With<Player>>,
     server_seed: Res<ServerSeed>,
     mut commands: Commands,
@@ -90,13 +91,18 @@ fn spawn_planet(
         return;
     }
 
+    if q_player_locations.is_empty() {
+        // Don't bother if there are no players
+        return;
+    }
+
     let thread_pool = AsyncComputeTaskPool::get();
 
     let locs = players.iter().copied().collect::<Vec<Location>>();
 
     let mut cache = cache.clone();
 
-    query.iter().for_each(|l| {
+    q_player_locations.iter().for_each(|l| {
         cache.insert(l.sector());
     });
 
@@ -171,7 +177,7 @@ fn spawn_planet(
         (cache, made_stars)
     });
 
-    commands.spawn(PlanetSpawnerAsyncTask(task));
+    commands.spawn((Name::new("Planet spawner async task"), PlanetSpawnerAsyncTask(task)));
 }
 
 /// Checks if there should be a planet in this sector.

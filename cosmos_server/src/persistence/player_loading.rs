@@ -71,7 +71,7 @@ fn monitor_loading_task(
 
 /// Performance hot spot
 fn load_near(
-    query: Query<&Location, With<Player>>,
+    q_player_locations: Query<&Location, With<Player>>,
     loaded_entities: Query<&EntityId>,
     // This is modified below, despite it being cloned. Use ResMut to make purpose clear
     sectors_cache: ResMut<SectorsCache>,
@@ -84,9 +84,14 @@ fn load_near(
         return;
     }
 
+    if q_player_locations.is_empty() {
+        // Don't bother if there are no players
+        return;
+    }
+
     let thread_pool = AsyncComputeTaskPool::get();
 
-    let sectors = query.iter().map(|l| l.sector()).collect::<Vec<Sector>>();
+    let sectors = q_player_locations.iter().map(|l| l.sector()).collect::<Vec<Sector>>();
 
     // Shallow clone - we are only cloning the Arc<Mutex<...>> not the ...
     let mut sectors_cache = sectors_cache.clone();
@@ -165,7 +170,7 @@ fn load_near(
         to_load
     });
 
-    commands.spawn(LoadingTask(task));
+    commands.spawn((Name::new("Loading near players async task"), LoadingTask(task)));
 }
 
 pub(super) fn register(app: &mut App) {
