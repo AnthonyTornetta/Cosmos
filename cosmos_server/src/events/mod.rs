@@ -2,10 +2,8 @@
 
 use bevy::prelude::App;
 
-pub mod create_ship_event;
 pub mod netty;
 
 pub(super) fn register(app: &mut App) {
-    create_ship_event::register(app);
     netty::register(app);
 }

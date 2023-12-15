@@ -1,3 +1,5 @@
+//! Shared logic between different structure types
+
 use bevy::prelude::*;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{

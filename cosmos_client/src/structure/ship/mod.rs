@@ -23,6 +23,7 @@ use crate::{
 };
 
 pub mod client_ship_builder;
+pub mod create_ship;
 pub mod ship_movement;
 
 fn respond_to_collisions(
@@ -133,6 +134,7 @@ fn remove_parent_when_too_far(
 pub(super) fn register(app: &mut App) {
     client_ship_builder::register(app);
     ship_movement::register(app);
+    create_ship::register(app);
 
     app.add_systems(
         Update,

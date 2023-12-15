@@ -22,4 +22,5 @@ pub(super) fn register(app: &mut App) {
     audio::register(app);
     events::register(app);
     shared::register(app);
+    station::register(app);
 }

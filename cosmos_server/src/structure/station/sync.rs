@@ -20,7 +20,9 @@ fn on_request_station(
     mut server: ResMut<RenetServer>,
 ) {
     for ev in event_reader.read() {
+        println!("{ev:?}");
         if let Ok((structure, transform, location, velocity)) = query.get(ev.entity) {
+            println!("Was station - sending!");
             server.send_message(
                 ev.client_id,
                 NettyChannelServer::Reliable,

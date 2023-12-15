@@ -87,7 +87,7 @@ fn handle_block_break_events(
 
                     // Eventually seperate this into another event lsitener that some how interacts with this one
                     // Idk if bevy supports this yet without some hacky stuff?
-                    if block.unlocalized_name() == "cosmos:ship_core" {
+                    if block.unlocalized_name() == "cosmos:ship_core" || block.unlocalized_name() == "cosmos:station_core" {
                         let mut itr = structure.all_blocks_iter(false);
 
                         // ship core               some other block
@@ -246,6 +246,10 @@ fn handle_block_place_events(
             }
 
             let block = blocks.from_numeric_id(block_id);
+
+            if block.unlocalized_name() == "cosmos:ship_core" || block.unlocalized_name() == "cosmos:station_core" {
+                break;
+            }
 
             if inv.decrease_quantity_at(ev.inventory_slot, 1) == 0 {
                 structure.set_block_at(coords, block, block_up, &blocks, Some(&mut event_writer));

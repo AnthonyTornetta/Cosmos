@@ -65,6 +65,11 @@ pub enum ClientReliableMessages {
         /// The name of the ship
         name: String,
     },
+    /// Asks the server to create a space station
+    CreateStation {
+        /// The name of the station
+        name: String,
+    },
     /// Asks who the pilot is of a given ship
     PilotQuery {
         /// The ship's entity they are querying

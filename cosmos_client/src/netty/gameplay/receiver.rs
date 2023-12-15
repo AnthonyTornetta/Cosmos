@@ -36,6 +36,7 @@ use cosmos_core::{
         planet::{biosphere::BiosphereMarker, planet_builder::TPlanetBuilder},
         shared::build_mode::{EnterBuildModeEvent, ExitBuildModeEvent},
         ship::{pilot::Pilot, ship_builder::TShipBuilder, Ship},
+        station::station_builder::TStationBuilder,
         ChunkInitEvent, Structure,
     },
 };
@@ -49,7 +50,10 @@ use crate::{
     },
     rendering::MainCamera,
     state::game_state::GameState,
-    structure::{planet::client_planet_builder::ClientPlanetBuilder, ship::client_ship_builder::ClientShipBuilder},
+    structure::{
+        planet::client_planet_builder::ClientPlanetBuilder, ship::client_ship_builder::ClientShipBuilder,
+        station::client_station_builder::ClientStationBuilder,
+    },
     ui::{
         crosshair::CrosshairOffset,
         message::{HudMessage, HudMessages},
@@ -482,17 +486,10 @@ pub(crate) fn client_sync_players(
                 let mut entity_cmds = commands.entity(entity);
                 let mut structure = Structure::Full(FullStructure::new(dimensions));
 
-                let builder = ClientShipBuilder::default();
-                builder.insert_ship(&mut entity_cmds, location, body.create_velocity(), &mut structure);
+                let builder = ClientStationBuilder::default();
+                builder.insert_station(&mut entity_cmds, location, &mut structure);
 
                 entity_cmds.insert((structure, chunks_needed));
-
-                client.send_message(
-                    NettyChannelClient::Reliable,
-                    cosmos_encoder::serialize(&ClientReliableMessages::PilotQuery {
-                        ship_entity: server_entity,
-                    }),
-                );
             }
             ServerReliableMessages::ChunkData {
                 structure_entity: server_structure_entity,

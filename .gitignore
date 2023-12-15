@@ -7,6 +7,7 @@
 
 
 .idea/
+.vscode/
 
 # Don't include user-specific settings
 cosmos_client/settings
