@@ -18,34 +18,12 @@ use cosmos_core::{
 };
 
 use crate::{
-    input::inputs::{CosmosInputs, InputChecker, InputHandler},
     netty::{flags::LocalPlayer, mapping::NetworkMapping},
     state::game_state::GameState,
 };
 
-pub mod build_mode;
 pub mod client_ship_builder;
 pub mod ship_movement;
-
-fn remove_self_from_ship(
-    has_parent: Query<(Entity, &Parent), (With<LocalPlayer>, Without<Pilot>)>,
-    ship_is_parent: Query<(), With<Ship>>,
-    input_handler: InputChecker,
-    mut commands: Commands,
-
-    mut renet_client: ResMut<RenetClient>,
-) {
-    if let Ok((entity, parent)) = has_parent.get_single() {
-        if ship_is_parent.contains(parent.get()) && input_handler.check_just_pressed(CosmosInputs::LeaveShip) {
-            commands.entity(entity).remove_parent();
-
-            renet_client.send_message(
-                NettyChannelClient::Reliable,
-                cosmos_encoder::serialize(&ClientReliableMessages::LeaveShip),
-            );
-        }
-    }
-}
 
 fn respond_to_collisions(
     mut ev_reader: EventReader<CollisionEvent>,
@@ -153,17 +131,11 @@ fn remove_parent_when_too_far(
 }
 
 pub(super) fn register(app: &mut App) {
-    build_mode::register(app);
     client_ship_builder::register(app);
     ship_movement::register(app);
 
     app.add_systems(
         Update,
-        (
-            remove_self_from_ship,
-            respond_to_collisions.after(handle_child_syncing),
-            remove_parent_when_too_far,
-        )
-            .run_if(in_state(GameState::Playing)),
+        (respond_to_collisions.after(handle_child_syncing), remove_parent_when_too_far).run_if(in_state(GameState::Playing)),
     );
 }

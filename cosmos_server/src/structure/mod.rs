@@ -21,4 +21,5 @@ pub(super) fn register(app: &mut App) {
 
     persistence::register(app);
     shared::register(app);
+    station::register(app);
 }

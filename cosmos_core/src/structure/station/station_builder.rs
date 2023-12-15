@@ -17,7 +17,7 @@ use super::Station;
 /// Implement this to add a custom way to build stations
 pub trait TStationBuilder {
     /// Adds everything to the entity needed to have a station
-    fn insert_station(&self, entity: &mut EntityCommands, location: Location, velocity: Velocity, structure: &mut Structure);
+    fn insert_station(&self, entity: &mut EntityCommands, location: Location, structure: &mut Structure);
 }
 
 /// Default way to build a station
@@ -33,8 +33,9 @@ impl<T: TStructureBuilder> StationBuilder<T> {
 }
 
 impl<T: TStructureBuilder> TStationBuilder for StationBuilder<T> {
-    fn insert_station(&self, entity: &mut EntityCommands, location: Location, velocity: Velocity, structure: &mut Structure) {
-        self.structure_builder.insert_structure(entity, location, velocity, structure);
+    fn insert_station(&self, entity: &mut EntityCommands, location: Location, structure: &mut Structure) {
+        self.structure_builder
+            .insert_structure(entity, location, Velocity::zero(), structure);
 
         entity.insert(Station);
     }

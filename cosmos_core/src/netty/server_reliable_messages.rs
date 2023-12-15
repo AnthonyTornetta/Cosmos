@@ -120,7 +120,19 @@ pub enum ServerReliableMessages {
     Ship {
         /// The ship's server entity.
         entity: Entity,
-        /// The planet's rigidbody.
+        /// The ship's rigidbody.
+        body: NettyRigidBody,
+        /// The width to be passed into the structure's constructor.
+        dimensions: ChunkCoordinate,
+        /// The number of chunks that need to be loaded from the server.
+        chunks_needed: ChunksNeedLoaded,
+    },
+    /// A station should be created on the client-side.
+    /// This does NOT mean the station was just created by the sever, just that one should be created on the client.
+    Station {
+        /// The station's server entity.
+        entity: Entity,
+        /// The station's rigidbody.
         body: NettyRigidBody,
         /// The width to be passed into the structure's constructor.
         dimensions: ChunkCoordinate,

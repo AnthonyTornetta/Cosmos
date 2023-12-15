@@ -456,6 +456,44 @@ pub(crate) fn client_sync_players(
                     }),
                 );
             }
+            ServerReliableMessages::Station {
+                entity: server_entity,
+                body,
+                dimensions,
+                chunks_needed,
+            } => {
+                let Some(entity) = network_mapping.client_from_server(&server_entity) else {
+                    continue;
+                };
+
+                let Ok(body) = body.map(&network_mapping) else {
+                    continue;
+                };
+
+                let location = match body.location {
+                    NettyRigidBodyLocation::Absolute(location) => location,
+                    NettyRigidBodyLocation::Relative(rel_trans, entity) => {
+                        let parent_loc = query_body.get(entity).map(|x| x.0.copied()).unwrap_or(None).unwrap_or_default();
+
+                        parent_loc + rel_trans
+                    }
+                };
+
+                let mut entity_cmds = commands.entity(entity);
+                let mut structure = Structure::Full(FullStructure::new(dimensions));
+
+                let builder = ClientShipBuilder::default();
+                builder.insert_ship(&mut entity_cmds, location, body.create_velocity(), &mut structure);
+
+                entity_cmds.insert((structure, chunks_needed));
+
+                client.send_message(
+                    NettyChannelClient::Reliable,
+                    cosmos_encoder::serialize(&ClientReliableMessages::PilotQuery {
+                        ship_entity: server_entity,
+                    }),
+                );
+            }
             ServerReliableMessages::ChunkData {
                 structure_entity: server_structure_entity,
                 serialized_chunk,
