@@ -55,7 +55,6 @@ fn create_stations(
                 chunk: _,
             } = res
             {
-                println!("Sent chunk init event!");
                 chunk_set_event_writer.send(ChunkInitEvent {
                     structure_entity: entity,
                     coords,
