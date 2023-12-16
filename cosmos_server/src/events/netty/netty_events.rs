@@ -4,6 +4,7 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use bevy_renet::renet::transport::NetcodeServerTransport;
 use bevy_renet::renet::{RenetServer, ServerEvent};
+use cosmos_core::economy::Credits;
 use cosmos_core::ecs::NeedsDespawned;
 use cosmos_core::entities::player::render_distance::RenderDistance;
 use cosmos_core::inventory::itemstack::ItemStack;
@@ -125,6 +126,7 @@ fn handle_events_system(
                     LoadingDistance::new(2, 9999),
                     ActiveEvents::COLLISION_EVENTS,
                     Name::new(format!("Player ({name})")),
+                    Credits::new(50_000),
                 ));
 
                 let entity = player_commands.id();

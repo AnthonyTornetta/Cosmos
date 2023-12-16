@@ -683,6 +683,11 @@ pub(crate) fn client_sync_players(
                         })
                 }));
             }
+            ServerReliableMessages::Credits { credits, entity } => {
+                if let Some(entity) = network_mapping.client_from_server(&entity) {
+                    commands.entity(entity).insert(credits);
+                }
+            }
         }
     }
 }
