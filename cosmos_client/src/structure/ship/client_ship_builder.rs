@@ -13,8 +13,8 @@ use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
     physics::location::Location,
     structure::{
+        shared::DespawnWithStructure,
         ship::{
-            core::DespawnWithStructure,
             ship_builder::{ShipBuilder, TShipBuilder},
             Ship,
         },

@@ -79,10 +79,6 @@ fn spawn_asteroid(
     for sector in sectors {
         cache.insert(sector);
 
-        if sector != Sector::new(25, 25, 25) {
-            continue;
-        }
-
         if is_sector_generated(sector) || is_planet_in_sector(&sector, &server_seed) {
             // This sector has already been loaded, don't regenerate stuff
             continue;
@@ -90,7 +86,8 @@ fn spawn_asteroid(
 
         let mut rng = get_rng_for_sector(&server_seed, &sector);
 
-        if rng.gen_range(0..100) < 100 {
+        // !!!!! Disabled asteroids for now !!!!!
+        if rng.gen_range(0..100) > 100 {
             // Biased towards lower amounts
             let n_asteroids = (6.0 * (1.0 - (1.0 - rng.gen::<f32>()).sqrt())) as usize;
 

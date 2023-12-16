@@ -121,7 +121,6 @@ fn handle_events_system(
                     player,
                     ReadMassProperties::default(),
                     inventory,
-                    Ccd::enabled(),
                     PlayerLooking { rotation: Quat::IDENTITY },
                     LoadingDistance::new(2, 9999),
                     ActiveEvents::COLLISION_EVENTS,

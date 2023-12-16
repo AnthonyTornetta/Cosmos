@@ -7,6 +7,7 @@ use cosmos_core::{
     structure::{
         planet::Planet,
         ship::{pilot::Pilot, Ship},
+        station::Station,
     },
 };
 
@@ -231,6 +232,7 @@ fn add_indicators(
 
 fn added(
     ship_query: Query<Entity, Added<Ship>>,
+    station_query: Query<Entity, Added<Station>>,
     planet_query: Query<Entity, Added<Planet>>,
     player_query: Query<Entity, (Added<Player>, Without<LocalPlayer>)>,
     mut commands: Commands,
@@ -240,6 +242,13 @@ fn added(
             color: Color::hex("FF57337F").unwrap(),
             max_distance: 20_000.0,
             offset: Vec3::new(0.5, 0.5, 0.5), // Accounts for the ship core being at 0.5, 0.5, 0.5 instead of the origin
+        });
+    });
+    station_query.for_each(|ent| {
+        commands.entity(ent).insert(IndicatorSettings {
+            color: Color::hex("5b4fff7F").unwrap(),
+            max_distance: 20_000.0,
+            offset: Vec3::new(0.5, 0.5, 0.5), // Accounts for the station core being at 0.5, 0.5, 0.5 instead of the origin
         });
     });
     planet_query.for_each(|ent| {

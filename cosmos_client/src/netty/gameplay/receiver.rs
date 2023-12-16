@@ -34,12 +34,9 @@ use cosmos_core::{
         dynamic_structure::DynamicStructure,
         full_structure::FullStructure,
         planet::{biosphere::BiosphereMarker, planet_builder::TPlanetBuilder},
-        ship::{
-            build_mode::{EnterBuildModeEvent, ExitBuildModeEvent},
-            pilot::Pilot,
-            ship_builder::TShipBuilder,
-            Ship,
-        },
+        shared::build_mode::{EnterBuildModeEvent, ExitBuildModeEvent},
+        ship::{pilot::Pilot, ship_builder::TShipBuilder, Ship},
+        station::station_builder::TStationBuilder,
         ChunkInitEvent, Structure,
     },
 };
@@ -53,7 +50,10 @@ use crate::{
     },
     rendering::MainCamera,
     state::game_state::GameState,
-    structure::{planet::client_planet_builder::ClientPlanetBuilder, ship::client_ship_builder::ClientShipBuilder},
+    structure::{
+        planet::client_planet_builder::ClientPlanetBuilder, ship::client_ship_builder::ClientShipBuilder,
+        station::client_station_builder::ClientStationBuilder,
+    },
     ui::{
         crosshair::CrosshairOffset,
         message::{HudMessage, HudMessages},
@@ -334,7 +334,6 @@ pub(crate) fn client_sync_players(
                     body.create_velocity(),
                     Player::new(name, id),
                     ReadMassProperties::default(),
-                    Ccd::enabled(),
                     ActiveEvents::COLLISION_EVENTS,
                     inventory,
                 ));
@@ -460,6 +459,37 @@ pub(crate) fn client_sync_players(
                         ship_entity: server_entity,
                     }),
                 );
+            }
+            ServerReliableMessages::Station {
+                entity: server_entity,
+                body,
+                dimensions,
+                chunks_needed,
+            } => {
+                let Some(entity) = network_mapping.client_from_server(&server_entity) else {
+                    continue;
+                };
+
+                let Ok(body) = body.map(&network_mapping) else {
+                    continue;
+                };
+
+                let location = match body.location {
+                    NettyRigidBodyLocation::Absolute(location) => location,
+                    NettyRigidBodyLocation::Relative(rel_trans, entity) => {
+                        let parent_loc = query_body.get(entity).map(|x| x.0.copied()).unwrap_or(None).unwrap_or_default();
+
+                        parent_loc + rel_trans
+                    }
+                };
+
+                let mut entity_cmds = commands.entity(entity);
+                let mut structure = Structure::Full(FullStructure::new(dimensions));
+
+                let builder = ClientStationBuilder::default();
+                builder.insert_station(&mut entity_cmds, location, &mut structure);
+
+                entity_cmds.insert((structure, chunks_needed));
             }
             ServerReliableMessages::ChunkData {
                 structure_entity: server_structure_entity,

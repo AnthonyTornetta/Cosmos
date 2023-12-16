@@ -1,11 +1,10 @@
 use bevy::prelude::*;
-use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
     block::data::persistence::ChunkLoadBlockDataEvent,
     physics::location::Location,
     structure::{
         events::StructureLoadedEvent,
-        ship::{ship_builder::TShipBuilder, Ship},
+        station::{station_builder::TStationBuilder, Station},
         structure_iterator::ChunkIteratorResult,
         ChunkInitEvent, Structure,
     },
@@ -20,21 +19,24 @@ use crate::{
     structure::persistence::{chunk::AllBlockData, save_structure},
 };
 
-use super::server_ship_builder::ServerShipBuilder;
+use super::server_station_builder::ServerStationBuilder;
 
-fn on_blueprint_structure(mut query: Query<(&mut SerializedData, &Structure, &mut NeedsBlueprinted), With<Ship>>, mut commands: Commands) {
+fn on_blueprint_structure(
+    mut query: Query<(&mut SerializedData, &Structure, &mut NeedsBlueprinted), With<Station>>,
+    mut commands: Commands,
+) {
     for (mut s_data, structure, mut blueprint) in query.iter_mut() {
-        blueprint.subdir_name = "ship".into();
+        blueprint.subdir_name = "station".into();
 
         save_structure(structure, &mut s_data, &mut commands);
-        s_data.serialize_data("cosmos:is_ship", &true);
+        s_data.serialize_data("cosmos:is_station", &true);
     }
 }
 
-fn on_save_structure(mut query: Query<(&mut SerializedData, &Structure), (With<NeedsSaved>, With<Ship>)>, mut commands: Commands) {
+fn on_save_structure(mut query: Query<(&mut SerializedData, &Structure), (With<NeedsSaved>, With<Station>)>, mut commands: Commands) {
     for (mut s_data, structure) in query.iter_mut() {
         save_structure(structure, &mut s_data, &mut commands);
-        s_data.serialize_data("cosmos:is_ship", &true);
+        s_data.serialize_data("cosmos:is_station", &true);
     }
 }
 
@@ -50,11 +52,9 @@ fn load_structure(
 ) {
     let mut entity_cmd = commands.entity(entity);
 
-    let vel = s_data.deserialize_data("cosmos:velocity").unwrap_or(Velocity::zero());
+    let builder = ServerStationBuilder::default();
 
-    let builder = ServerShipBuilder::default();
-
-    builder.insert_ship(&mut entity_cmd, loc, vel, &mut structure);
+    builder.insert_station(&mut entity_cmd, loc, &mut structure);
 
     let entity = entity_cmd.id();
 
@@ -97,7 +97,7 @@ fn on_load_blueprint(
     mut structure_loaded_event_writer: EventWriter<StructureLoadedEvent>,
 ) {
     for (entity, s_data, needs_blueprinted) in query.iter() {
-        if s_data.deserialize_data::<bool>("cosmos:is_ship").unwrap_or(false) {
+        if s_data.deserialize_data::<bool>("cosmos:is_station").unwrap_or(false) {
             if let Some(structure) = s_data.deserialize_data::<Structure>("cosmos:structure") {
                 load_structure(
                     entity,
@@ -122,11 +122,11 @@ fn on_load_structure(
     mut structure_loaded_event_writer: EventWriter<StructureLoadedEvent>,
 ) {
     for (entity, s_data) in query.iter() {
-        if s_data.deserialize_data::<bool>("cosmos:is_ship").unwrap_or(false) {
+        if s_data.deserialize_data::<bool>("cosmos:is_station").unwrap_or(false) {
             if let Some(structure) = s_data.deserialize_data::<Structure>("cosmos:structure") {
                 let loc = s_data
                     .deserialize_data("cosmos:location")
-                    .expect("Every ship should have a location when saved!");
+                    .expect("Every station should have a location when saved!");
 
                 load_structure(
                     entity,

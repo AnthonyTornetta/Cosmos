@@ -19,7 +19,7 @@ use bevy::reflect::Reflect;
 use bevy::transform::TransformBundle;
 use bevy::utils::HashSet;
 use bevy_rapier3d::math::Vect;
-use bevy_rapier3d::prelude::{Ccd, Collider, ColliderMassProperties, ReadMassProperties, Rot, Sensor};
+use bevy_rapier3d::prelude::{Collider, ColliderMassProperties, ReadMassProperties, Rot, Sensor};
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 
 use super::block_colliders::{BlockCollider, BlockColliderMode, BlockColliderType};
@@ -360,7 +360,7 @@ fn listen_for_new_physics_event(
         for (collider, mass, collider_mode) in chunk_colliders {
             if first {
                 if let Some(mut entity_commands) = commands.get_entity(chunk_entity) {
-                    entity_commands.insert((Ccd::enabled(), collider, ColliderMassProperties::Mass(mass)));
+                    entity_commands.insert((collider, ColliderMassProperties::Mass(mass)));
 
                     if matches!(collider_mode, BlockColliderMode::SensorCollider) {
                         entity_commands.insert(Sensor);
@@ -380,7 +380,6 @@ fn listen_for_new_physics_event(
                     TransformBundle::from_transform(*chunk_trans),
                     collider,
                     ColliderMassProperties::Mass(mass),
-                    Ccd::enabled(),
                 ));
 
                 if matches!(collider_mode, BlockColliderMode::SensorCollider) {

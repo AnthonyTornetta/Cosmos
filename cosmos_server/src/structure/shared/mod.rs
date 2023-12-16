@@ -1,3 +1,5 @@
+//! Shared systems between different structure types
+
 use bevy::{
     prelude::{in_state, App, Commands, Entity, EventWriter, IntoSystemConfigs, Query, Res, ResMut, Update},
     time::Time,
@@ -9,13 +11,12 @@ use cosmos_core::{
     events::{block_events::BlockChangedEvent, structure::change_pilot_event::ChangePilotEvent},
     netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannelServer},
     registry::Registry,
-    structure::{
-        ship::{core::MeltingDown, pilot::Pilot},
-        Structure,
-    },
+    structure::{shared::MeltingDown, ship::pilot::Pilot, Structure},
 };
 
 use crate::state::GameState;
+
+pub mod build_mode;
 
 fn on_melting_down(
     mut commands: Commands,
@@ -56,4 +57,6 @@ fn on_melting_down(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(Update, on_melting_down.run_if(in_state(GameState::Playing)));
+
+    build_mode::register(app);
 }

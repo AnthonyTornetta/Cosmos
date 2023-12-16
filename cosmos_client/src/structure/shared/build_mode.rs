@@ -15,9 +15,9 @@ use cosmos_core::{
     structure::{
         chunk::CHUNK_DIMENSIONSF,
         coordinates::BlockCoordinate,
-        ship::{
+        shared::{
             build_mode::{BuildAxis, BuildMode, ExitBuildModeEvent},
-            core::DespawnWithStructure,
+            DespawnWithStructure,
         },
         Structure,
     },

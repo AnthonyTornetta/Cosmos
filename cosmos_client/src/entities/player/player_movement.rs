@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
-use cosmos_core::structure::ship::{build_mode::BuildMode, pilot::Pilot};
+use cosmos_core::structure::{shared::build_mode::BuildMode, ship::pilot::Pilot};
 
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},

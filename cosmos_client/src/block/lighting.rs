@@ -88,6 +88,18 @@ fn register_all_lights(blocks: Res<Registry<Block>>, mut registry: ResMut<Regist
         &blocks,
         "cosmos:ship_core",
     );
+
+    register_light(
+        BlockLightProperties {
+            color: Color::rgb(81.0 / 255.0, 225.0 / 255.0, 143.0 / 255.0),
+            intensity: 100.0,
+            range: 6.0,
+            ..Default::default()
+        },
+        &mut registry,
+        &blocks,
+        "cosmos:station_core",
+    );
 }
 
 pub(super) fn register(app: &mut App) {

@@ -11,7 +11,7 @@ use cosmos_core::netty::netty_rigidbody::NettyRigidBodyLocation;
 use cosmos_core::netty::system_sets::NetworkingSystemsSet;
 use cosmos_core::netty::{cosmos_encoder, NettyChannelClient, NettyChannelServer};
 use cosmos_core::physics::location::Location;
-use cosmos_core::structure::ship::build_mode::{BuildMode, ExitBuildModeEvent};
+use cosmos_core::structure::shared::build_mode::{BuildMode, ExitBuildModeEvent};
 use cosmos_core::structure::systems::{SystemActive, Systems};
 use cosmos_core::{
     entities::player::Player,
@@ -24,9 +24,10 @@ use cosmos_core::{
 };
 
 use crate::entities::player::PlayerLooking;
-use crate::events::{create_ship_event::CreateShipEvent, structure::ship::ShipSetMovementEvent};
 use crate::structure::planet::chunk::ChunkNeedsSent;
 use crate::structure::planet::generation::planet_generator::RequestChunkEvent;
+use crate::structure::ship::events::{CreateShipEvent, ShipSetMovementEvent};
+use crate::structure::station::events::CreateStationEvent;
 
 use super::network_helpers::ServerLobby;
 use super::sync::entities::RequestedEntityEvent;
@@ -46,6 +47,7 @@ fn server_listen_messages(
         mut block_interact_event,
         mut exit_build_mode_writer,
         mut create_ship_event_writer,
+        mut create_station_event_writer,
         mut requested_entities_writer,
         mut request_chunk_event_writer,
     ): (
@@ -55,6 +57,7 @@ fn server_listen_messages(
         EventWriter<BlockInteractEvent>,
         EventWriter<ExitBuildModeEvent>,
         EventWriter<CreateShipEvent>,
+        EventWriter<CreateStationEvent>,
         EventWriter<RequestedEntityEvent>,
         EventWriter<RequestChunkEvent>,
     ),
@@ -136,6 +139,13 @@ fn server_listen_messages(
                         continue;
                     };
 
+                    let Structure::Full(structure) = structure else {
+                        warn!("Cannot request all chunks for a dynamic structure! Requester: {client_id}; entity = {server_entity:?}");
+                        continue;
+                    };
+
+                    info!("Send all chunks for {server_entity:?}!");
+
                     for (_, chunk) in structure.chunks() {
                         let entity = structure.chunk_entity(chunk.chunk_coordinates()).expect("Missing chunk entity!");
 
@@ -189,6 +199,19 @@ fn server_listen_messages(
 
                             create_ship_event_writer.send(CreateShipEvent {
                                 ship_location,
+                                rotation: looking.rotation,
+                            });
+                        }
+                    }
+                }
+                ClientReliableMessages::CreateStation { name: _name } => {
+                    if let Some(client) = lobby.player_from_id(client_id) {
+                        if let Ok((transform, location, looking, _)) = change_player_query.get(client) {
+                            let station_location =
+                                *location + transform.rotation.mul_vec3(looking.rotation.mul_vec3(Vec3::new(0.0, 0.0, -4.0)));
+
+                            create_station_event_writer.send(CreateStationEvent {
+                                station_location,
                                 rotation: looking.rotation,
                             });
                         }

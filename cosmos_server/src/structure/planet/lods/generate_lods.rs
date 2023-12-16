@@ -15,6 +15,7 @@ use cosmos_core::{
         lod::{Lod, ReadOnlyLod},
         lod_chunk::LodChunk,
         planet::Planet,
+        shared::DespawnWithStructure,
         Structure,
     },
 };
@@ -130,12 +131,15 @@ pub(crate) fn check_done_generating_lods<T: Component + Default>(
                 player_lod.read_only_lod = read_only_lod;
             } else if let Some(mut ecmds) = commands.get_entity(task.structure_entity) {
                 ecmds.with_children(|cmds| {
-                    cmds.spawn(PlayerLod {
-                        lod,
-                        deltas: vec![lod_delta],
-                        player: task.player_entity,
-                        read_only_lod,
-                    });
+                    cmds.spawn((
+                        PlayerLod {
+                            lod,
+                            deltas: vec![lod_delta],
+                            player: task.player_entity,
+                            read_only_lod,
+                        },
+                        DespawnWithStructure,
+                    ));
                 });
             }
         } else {

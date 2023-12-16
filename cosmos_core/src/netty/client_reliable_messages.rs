@@ -9,7 +9,7 @@ use crate::{
     entities::player::render_distance::RenderDistance,
     structure::{
         coordinates::{ChunkCoordinate, CoordinateType},
-        ship::build_mode::BuildAxis,
+        shared::build_mode::BuildAxis,
         structure_block::StructureBlock,
     },
 };
@@ -63,6 +63,11 @@ pub enum ClientReliableMessages {
     /// Asks the server to create a ship
     CreateShip {
         /// The name of the ship
+        name: String,
+    },
+    /// Asks the server to create a space station
+    CreateStation {
+        /// The name of the station
         name: String,
     },
     /// Asks who the pilot is of a given ship

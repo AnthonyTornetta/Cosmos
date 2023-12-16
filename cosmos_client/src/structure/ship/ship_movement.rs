@@ -8,7 +8,7 @@ use bevy_renet::renet::RenetClient;
 use cosmos_core::netty::client_reliable_messages::ClientReliableMessages;
 use cosmos_core::netty::client_unreliable_messages::ClientUnreliableMessages;
 use cosmos_core::netty::{cosmos_encoder, NettyChannelClient};
-use cosmos_core::structure::ship::build_mode::BuildMode;
+use cosmos_core::structure::shared::build_mode::BuildMode;
 use cosmos_core::structure::ship::pilot::Pilot;
 use cosmos_core::structure::ship::ship_movement::ShipMovement;
 
@@ -57,7 +57,10 @@ fn process_ship_movement(
             );
         }
 
-        let w = primary_query.get_single().expect("Missing primary window!");
+        let Ok(w) = primary_query.get_single() else {
+            return;
+        };
+
         let hw = w.width() / 2.0;
         let hh = w.height() / 2.0;
         let p2 = PI / 2.0; // 45 deg (half of FOV)

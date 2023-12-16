@@ -7,6 +7,7 @@ use std::ops::DerefMut;
 use std::sync::{Arc, Mutex};
 
 use bevy::app::Update;
+use bevy::log::info;
 use bevy::prelude::{App, Event, IntoSystemConfigs, Name, PreUpdate, VisibilityBundle};
 use bevy::reflect::Reflect;
 use bevy::transform::TransformBundle;
@@ -26,7 +27,9 @@ pub mod loading;
 pub mod lod;
 pub mod lod_chunk;
 pub mod planet;
+pub mod shared;
 pub mod ship;
+pub mod station;
 pub mod structure_block;
 pub mod structure_builder;
 pub mod structure_iterator;
@@ -647,6 +650,7 @@ fn add_chunks_system(
         };
 
         if !chunk.is_empty() && structure.chunk_entity(chunk_coordinate).is_none() {
+            info!("Spawning chunk entity!");
             spawn_chunk_entity(
                 &mut commands,
                 &mut structure,
@@ -746,9 +750,11 @@ pub(super) fn register<T: States + Clone + Copy>(app: &mut App, post_loading_sta
         .add_event::<ChunkInitEvent>();
 
     ship::register(app, playing_state);
+    station::register(app, playing_state);
     chunk::register(app);
     planet::register(app);
     events::register(app);
+    shared::register(app);
     loading::register(app);
     systems::register(app, post_loading_state, playing_state);
     block_health::register(app);

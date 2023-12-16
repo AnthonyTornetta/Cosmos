@@ -8,7 +8,7 @@ use cosmos_core::{
     netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannelServer},
     registry::{identifiable::Identifiable, Registry},
     structure::{
-        ship::build_mode::{BuildMode, EnterBuildModeEvent, ExitBuildModeEvent},
+        shared::build_mode::{BuildMode, EnterBuildModeEvent, ExitBuildModeEvent},
         Structure,
     },
 };

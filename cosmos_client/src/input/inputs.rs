@@ -49,8 +49,11 @@ pub enum CosmosInputs {
     /// Interact with the block the player is looking at
     Interact,
 
+    // These two controls will eventually be removed
     /// Create a ship with a ship core in the player's inventory
     CreateShip,
+    /// Creates a space station with the station core in the player's inventory
+    CreateStation,
 
     /// Unlocks the mouse from the window
     UnlockMouse,
@@ -137,6 +140,7 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     input_handler.set_keycode(CosmosInputs::StopPiloting, KeyCode::R);
 
     input_handler.set_keycode(CosmosInputs::CreateShip, KeyCode::X);
+    input_handler.set_keycode(CosmosInputs::CreateStation, KeyCode::Y);
 
     input_handler.set_keycode(CosmosInputs::UnlockMouse, KeyCode::Escape);
 
