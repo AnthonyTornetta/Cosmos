@@ -102,14 +102,14 @@ fn spawn_asteroid(
         let adder = -SECTOR_DIMENSIONS / 2.0;
 
         for _ in 0..n_asteroids {
-            let size = rng.gen_range(2..=5);
+            let size = rng.gen_range(4..=8);
 
             let loc = Location::new(
                 Vec3::new(
                     // rng.gen::<f32>() * multiplier + adder,
                     // rng.gen::<f32>() * multiplier + adder,
                     // rng.gen::<f32>() * multiplier + adder,
-                    0.0, 1000.0, 0.0,
+                    0.0, 800.0, 0.0,
                 ),
                 sector,
             );
