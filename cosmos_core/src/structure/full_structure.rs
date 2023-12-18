@@ -162,6 +162,11 @@ impl FullStructure {
         self.loaded = true;
     }
 
+    /// Returns true if the `set_loaded` member function has been called.
+    pub fn is_loaded(&self) -> bool {
+        self.loaded
+    }
+
     /// Returns the chunk's state
     pub fn get_chunk_state(&self, coords: ChunkCoordinate) -> ChunkState {
         if !self.is_within_chunks(coords) {

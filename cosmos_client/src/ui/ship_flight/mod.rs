@@ -5,6 +5,7 @@ use cosmos_core::{
     entities::player::Player,
     physics::location::Location,
     structure::{
+        asteroid::Asteroid,
         planet::Planet,
         ship::{pilot::Pilot, Ship},
         station::Station,
@@ -233,6 +234,7 @@ fn add_indicators(
 fn added(
     ship_query: Query<Entity, Added<Ship>>,
     station_query: Query<Entity, Added<Station>>,
+    asteroid_query: Query<Entity, Added<Asteroid>>,
     planet_query: Query<Entity, Added<Planet>>,
     player_query: Query<Entity, (Added<Player>, Without<LocalPlayer>)>,
     mut commands: Commands,
@@ -255,6 +257,13 @@ fn added(
         commands.entity(ent).insert(IndicatorSettings {
             color: Color::hex("BC8F8F7F").unwrap(),
             max_distance: 200_000.0,
+            offset: Vec3::ZERO,
+        });
+    });
+    asteroid_query.for_each(|ent| {
+        commands.entity(ent).insert(IndicatorSettings {
+            color: Color::hex("FF00007F").unwrap(),
+            max_distance: 20_000.0,
             offset: Vec3::ZERO,
         });
     });

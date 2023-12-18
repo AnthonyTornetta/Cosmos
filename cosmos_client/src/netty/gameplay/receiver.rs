@@ -422,11 +422,22 @@ pub(crate) fn client_sync_players(
 
                 entity_cmds.insert((structure, BiosphereMarker::new(biosphere)));
             }
+            ServerReliableMessages::NumberOfChunks {
+                entity: server_entity,
+                chunks_needed,
+            } => {
+                let Some(entity) = network_mapping.client_from_server(&server_entity) else {
+                    continue;
+                };
+
+                if let Some(mut ecmds) = commands.get_entity(entity) {
+                    ecmds.insert(chunks_needed);
+                }
+            }
             ServerReliableMessages::Ship {
                 entity: server_entity,
                 body,
                 dimensions,
-                chunks_needed,
             } => {
                 let Some(entity) = network_mapping.client_from_server(&server_entity) else {
                     continue;
@@ -451,7 +462,7 @@ pub(crate) fn client_sync_players(
                 let builder = ClientShipBuilder::default();
                 builder.insert_ship(&mut entity_cmds, location, body.create_velocity(), &mut structure);
 
-                entity_cmds.insert((structure, chunks_needed));
+                entity_cmds.insert((structure /*chunks_needed*/,));
 
                 client.send_message(
                     NettyChannelClient::Reliable,
@@ -464,7 +475,6 @@ pub(crate) fn client_sync_players(
                 entity: server_entity,
                 body,
                 dimensions,
-                chunks_needed,
             } => {
                 let Some(entity) = network_mapping.client_from_server(&server_entity) else {
                     continue;
@@ -489,7 +499,7 @@ pub(crate) fn client_sync_players(
                 let builder = ClientStationBuilder::default();
                 builder.insert_station(&mut entity_cmds, location, &mut structure);
 
-                entity_cmds.insert((structure, chunks_needed));
+                entity_cmds.insert((structure /*chunks_needed*/,));
             }
             ServerReliableMessages::ChunkData {
                 structure_entity: server_structure_entity,

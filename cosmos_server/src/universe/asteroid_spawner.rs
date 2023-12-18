@@ -84,36 +84,43 @@ fn spawn_asteroid(
             continue;
         }
 
+        if sector != Sector::new(25, 25, 25) {
+            continue;
+        }
+
         let mut rng = get_rng_for_sector(&server_seed, &sector);
 
         // !!!!! Disabled asteroids for now !!!!!
-        if rng.gen_range(0..100) > 100 {
-            // Biased towards lower amounts
-            let n_asteroids = (6.0 * (1.0 - (1.0 - rng.gen::<f32>()).sqrt())) as usize;
+        // if rng.gen_range(0..100) < 100 {
+        // Biased towards lower amounts
+        // let n_asteroids = (6.0 * (1.0 - (1.0 - rng.gen::<f32>()).sqrt())) as usize;
+        let n_asteroids = 1;
 
-            let multiplier = SECTOR_DIMENSIONS;
-            let adder = -SECTOR_DIMENSIONS / 2.0;
+        println!("N ASTEROIDS: {n_asteroids}");
 
-            for _ in 0..n_asteroids {
-                let size = rng.gen_range(2..=5);
+        let multiplier = SECTOR_DIMENSIONS;
+        let adder = -SECTOR_DIMENSIONS / 2.0;
 
-                let loc = Location::new(
-                    Vec3::new(
-                        rng.gen::<f32>() * multiplier + adder,
-                        rng.gen::<f32>() * multiplier + adder,
-                        rng.gen::<f32>() * multiplier + adder,
-                    ),
-                    sector,
-                );
+        for _ in 0..n_asteroids {
+            let size = rng.gen_range(2..=5);
 
-                let mut structure = Structure::Full(FullStructure::new(ChunkCoordinate::new(size, size, size)));
-                let builder = ServerAsteroidBuilder::default();
-                let mut entity_cmd = commands.spawn_empty();
+            let loc = Location::new(
+                Vec3::new(
+                    // rng.gen::<f32>() * multiplier + adder,
+                    // rng.gen::<f32>() * multiplier + adder,
+                    // rng.gen::<f32>() * multiplier + adder,
+                    0.0, 0.0, 0.0,
+                ),
+                sector,
+            );
 
-                builder.insert_asteroid(&mut entity_cmd, loc, &mut structure);
+            let mut structure = Structure::Full(FullStructure::new(ChunkCoordinate::new(size, size, size)));
+            let builder = ServerAsteroidBuilder::default();
+            let mut entity_cmd = commands.spawn_empty();
 
-                entity_cmd.insert((structure, AsteroidNeedsCreated));
-            }
+            builder.insert_asteroid(&mut entity_cmd, loc, &mut structure);
+
+            entity_cmd.insert((structure, AsteroidNeedsCreated));
         }
     }
 }

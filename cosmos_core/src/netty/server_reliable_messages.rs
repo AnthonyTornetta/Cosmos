@@ -116,6 +116,13 @@ pub enum ServerReliableMessages {
         /// Planet's location
         location: Location,
     },
+    /// This is sent whenever `SendAllChunks` is requested - it is used to specify how much chunks you should expect before marking the structure as loaded
+    NumberOfChunks {
+        /// The fixed structure's server entity.
+        entity: Entity,
+        /// The number of chunks that need to be loaded from the server.
+        chunks_needed: ChunksNeedLoaded,
+    },
     /// A ship should be created on the client-side.
     /// This does NOT mean the ship was just created by the sever, just that one should be created on the client.
     Ship {
@@ -125,8 +132,6 @@ pub enum ServerReliableMessages {
         body: NettyRigidBody,
         /// The width to be passed into the structure's constructor.
         dimensions: ChunkCoordinate,
-        /// The number of chunks that need to be loaded from the server.
-        chunks_needed: ChunksNeedLoaded,
     },
     /// A station should be created on the client-side.
     /// This does NOT mean the station was just created by the sever, just that one should be created on the client.
@@ -137,8 +142,6 @@ pub enum ServerReliableMessages {
         body: NettyRigidBody,
         /// The width to be passed into the structure's constructor.
         dimensions: ChunkCoordinate,
-        /// The number of chunks that need to be loaded from the server.
-        chunks_needed: ChunksNeedLoaded,
     },
     /// Represents the server's message of the day.
     MOTD {

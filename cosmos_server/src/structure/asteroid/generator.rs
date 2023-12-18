@@ -1,4 +1,5 @@
 use bevy::{
+    log::info,
     prelude::{in_state, App, Commands, Component, DespawnRecursiveExt, Entity, EventWriter, IntoSystemConfigs, Query, Res, Update, With},
     tasks::{AsyncComputeTaskPool, Task},
     utils::HashMap,
@@ -12,21 +13,25 @@ use cosmos_core::{
         block_storage::BlockStorer,
         chunk::{Chunk, CHUNK_DIMENSIONS},
         coordinates::{BlockCoordinate, ChunkBlockCoordinate, ChunkCoordinate},
-        loading::ChunksNeedLoaded,
+        loading::{ChunksNeedLoaded, StructureLoadingSet},
         structure_iterator::ChunkIteratorResult,
         ChunkInitEvent, Structure,
     },
+    utils::timer::UtilsTimer,
 };
 use futures_lite::future;
 use noise::NoiseFn;
 
-use crate::{init::init_world::Noise, state::GameState};
+use crate::{init::init_world::ReadOnlyNoise, state::GameState};
 
 #[derive(Component)]
 struct AsyncStructureGeneration {
     structure_entity: Entity,
     task: Task<Vec<Chunk>>,
 }
+
+/// Max number of asteroids to generate at once
+const MAX_GENERATING_ASTEROIDS: usize = 2;
 
 fn notify_when_done_generating(
     mut query: Query<(Entity, &mut AsyncStructureGeneration)>,
@@ -71,30 +76,46 @@ fn notify_when_done_generating(
 }
 
 fn start_generating_asteroid(
-    query: Query<(Entity, &Structure, &Location), With<AsteroidNeedsCreated>>,
-    noise: Res<Noise>,
+    q_asteroids_need_generated: Query<(Entity, &Structure, &Location), With<AsteroidNeedsCreated>>,
+    q_generating_asteroids: Query<&AsyncStructureGeneration>,
+    noise: Res<ReadOnlyNoise>,
     blocks: Res<Registry<Block>>,
     mut commands: Commands,
 ) {
-    for (structure_entity, structure, loc) in query.iter() {
+    let currently_generating = q_generating_asteroids.iter().len();
+    if currently_generating >= MAX_GENERATING_ASTEROIDS {
+        return;
+    }
+
+    let n = q_asteroids_need_generated.iter().len();
+    if n != 0 {
+        info!("Need generated: {}", n);
+    }
+
+    for (structure_entity, structure, loc) in q_asteroids_need_generated
+        .iter()
+        .take(MAX_GENERATING_ASTEROIDS - currently_generating)
+    {
         commands.entity(structure_entity).remove::<AsteroidNeedsCreated>();
 
         let (cx, cy, cz) = (loc.local.x as f64, loc.local.y as f64, loc.local.z as f64);
 
         let (w, h, l) = structure.block_dimensions().into();
 
-        let distance_threshold = (l as f64 / 4.0 * (noise.get([cx, cy, cz]).abs() + 1.0).min(25.0)) as f32;
+        let noise = noise.clone();
 
-        let stone = blocks.from_id("cosmos:stone").unwrap().clone();
+        let stone = blocks.from_id("cosmos:stone").expect("Missing cosmos:stone").clone();
 
         let thread_pool = AsyncComputeTaskPool::get();
-
-        let noise = **noise;
 
         let (bx, by, bz) = (w, h, l);
 
         let task = thread_pool.spawn(async move {
-            // let timer = UtilsTimer::start();
+            let noise = noise.inner();
+
+            let distance_threshold = (l as f64 / 4.0 * (noise.get([cx, cy, cz]).abs() + 1.0).min(25.0)) as f32;
+
+            let timer = UtilsTimer::start();
 
             let stone = &stone;
 
@@ -123,22 +144,19 @@ fn start_generating_asteroid(
 
                             let chunk_coords = ChunkCoordinate::for_block_coordinate(coords);
 
-                            if !chunks.contains_key(&chunk_coords) {
-                                chunks.insert(chunk_coords, Chunk::new(chunk_coords));
-                            }
-
                             let chunk_block_coords = ChunkBlockCoordinate::for_block_coordinate(coords);
 
-                            chunks
-                                .get_mut(&chunk_coords)
-                                .unwrap()
-                                .set_block_at(chunk_block_coords, stone, BlockFace::Top)
+                            chunks.entry(chunk_coords).or_insert_with(|| Chunk::new(chunk_coords)).set_block_at(
+                                chunk_block_coords,
+                                stone,
+                                BlockFace::Top,
+                            );
                         }
                     }
                 }
             }
 
-            // timer.log_duration(&format!("for one {}:", bx));
+            timer.log_duration(&format!("Asteroid {w}x{h}x{l} generation time: {bx}:"));
 
             chunks.into_iter().map(|(_, c)| c).collect::<Vec<Chunk>>()
         });
@@ -150,6 +168,8 @@ fn start_generating_asteroid(
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        (start_generating_asteroid, notify_when_done_generating).run_if(in_state(GameState::Playing)),
+        (start_generating_asteroid, notify_when_done_generating)
+            .in_set(StructureLoadingSet::LoadStructure)
+            .run_if(in_state(GameState::Playing)),
     );
 }

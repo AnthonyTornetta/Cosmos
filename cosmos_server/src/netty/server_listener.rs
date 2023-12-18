@@ -11,6 +11,7 @@ use cosmos_core::netty::netty_rigidbody::NettyRigidBodyLocation;
 use cosmos_core::netty::system_sets::NetworkingSystemsSet;
 use cosmos_core::netty::{cosmos_encoder, NettyChannelClient, NettyChannelServer};
 use cosmos_core::physics::location::Location;
+use cosmos_core::structure::loading::ChunksNeedLoaded;
 use cosmos_core::structure::shared::build_mode::{BuildMode, ExitBuildModeEvent};
 use cosmos_core::structure::systems::{SystemActive, Systems};
 use cosmos_core::{
@@ -31,6 +32,9 @@ use crate::structure::station::events::CreateStationEvent;
 
 use super::network_helpers::ServerLobby;
 use super::sync::entities::RequestedEntityEvent;
+
+#[derive(Resource, Default)]
+struct SendAllChunks(HashMap<Entity, Vec<ClientId>>);
 
 /// Bevy system that listens to almost all the messages received from the client
 ///
@@ -67,9 +71,9 @@ fn server_listen_messages(
     mut change_player_query: Query<(&mut Transform, &mut Location, &mut PlayerLooking, &mut Velocity), With<Player>>,
     non_player_transform_query: Query<&Transform, Without<Player>>,
     mut build_mode: Query<&mut BuildMode>,
-) {
-    let mut to_send_chunks = HashMap::<Entity, Vec<ClientId>>::new();
 
+    mut send_all_chunks: ResMut<SendAllChunks>,
+) {
     for client_id in server.clients_id().into_iter() {
         while let Some(message) = server.receive_message(client_id, NettyChannelClient::Unreliable) {
             if let Some(player_entity) = lobby.player_from_id(client_id) {
@@ -139,18 +143,14 @@ fn server_listen_messages(
                         continue;
                     };
 
-                    let Structure::Full(structure) = structure else {
+                    let Structure::Full(_) = structure else {
                         warn!("Cannot request all chunks for a dynamic structure! Requester: {client_id}; entity = {server_entity:?}");
                         continue;
                     };
 
-                    info!("Send all chunks for {server_entity:?}!");
+                    info!("Send all chunks for received {server_entity:?}!");
 
-                    for (_, chunk) in structure.chunks() {
-                        let entity = structure.chunk_entity(chunk.chunk_coordinates()).expect("Missing chunk entity!");
-
-                        to_send_chunks.entry(entity).or_insert(vec![]).push(client_id);
-                    }
+                    send_all_chunks.0.entry(server_entity).or_insert(vec![]).push(client_id);
                 }
                 ClientReliableMessages::SendSingleChunk { structure_entity, chunk } => request_chunk_event_writer.send(RequestChunkEvent {
                     requester_id: client_id,
@@ -321,12 +321,58 @@ fn server_listen_messages(
             }
         }
     }
+}
 
-    for (entity, client_ids) in to_send_chunks {
-        commands.entity(entity).insert(ChunkNeedsSent { client_ids });
-    }
+fn send_all_chunks(
+    mut send_all_chunks: ResMut<SendAllChunks>,
+    q_structure: Query<&Structure>,
+    mut commands: Commands,
+    mut server: ResMut<RenetServer>,
+) {
+    send_all_chunks.0.retain(|&structure_entity, client_ids| {
+        let Ok(structure) = q_structure.get(structure_entity) else {
+            return false;
+        };
+
+        let Structure::Full(structure) = structure else {
+            panic!("Verified in `server_listen_messages`");
+        };
+
+        if !structure.is_loaded() {
+            return true;
+        }
+
+        let message = cosmos_encoder::serialize(&ServerReliableMessages::NumberOfChunks {
+            entity: structure_entity,
+            chunks_needed: ChunksNeedLoaded {
+                amount_needed: structure.chunks().len(),
+            },
+        });
+
+        for &client_id in client_ids.iter() {
+            server.send_message(client_id, NettyChannelServer::Reliable, message.clone());
+        }
+
+        for (_, chunk) in structure.chunks() {
+            let entity = structure.chunk_entity(chunk.chunk_coordinates()).expect("Missing chunk entity!");
+
+            info!("Sending chunks for {structure_entity:?}!");
+
+            commands.entity(entity).insert(ChunkNeedsSent {
+                client_ids: std::mem::take(client_ids),
+            });
+        }
+
+        false
+    });
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, server_listen_messages.in_set(NetworkingSystemsSet::ReceiveMessages));
+    app.add_systems(
+        Update,
+        (server_listen_messages, send_all_chunks)
+            .chain()
+            .in_set(NetworkingSystemsSet::ReceiveMessages),
+    )
+    .init_resource::<SendAllChunks>();
 }
