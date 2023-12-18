@@ -109,7 +109,7 @@ fn spawn_asteroid(
                     // rng.gen::<f32>() * multiplier + adder,
                     // rng.gen::<f32>() * multiplier + adder,
                     // rng.gen::<f32>() * multiplier + adder,
-                    0.0, 0.0, 0.0,
+                    0.0, 1000.0, 0.0,
                 ),
                 sector,
             );

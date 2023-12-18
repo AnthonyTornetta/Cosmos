@@ -135,15 +135,13 @@ fn start_generating_asteroid(
                         let z_pos = z as f32 - bz as f32 / 2.0;
 
                         let noise_here =
-                            (noise.get([x_pos as f64 * 0.1 + cx, y_pos as f64 * 0.1 + cy, z_pos as f64 * 0.1 + cz]) * 150.0) as f32;
+                            (noise.get([x_pos as f64 * 0.1 + cx, y_pos as f64 * 0.1 + cy, z_pos as f64 * 0.1 + cz]) * 0.0) as f32;
 
                         let dist = x_pos * x_pos + y_pos * y_pos + z_pos * z_pos + noise_here * noise_here;
 
                         if dist < distance_threshold * distance_threshold {
-                            let coords = BlockCoordinate::new(x / CHUNK_DIMENSIONS, y / CHUNK_DIMENSIONS, z / CHUNK_DIMENSIONS);
-
+                            let coords = BlockCoordinate::new(x, y, z);
                             let chunk_coords = ChunkCoordinate::for_block_coordinate(coords);
-
                             let chunk_block_coords = ChunkBlockCoordinate::for_block_coordinate(coords);
 
                             chunks.entry(chunk_coords).or_insert_with(|| Chunk::new(chunk_coords)).set_block_at(

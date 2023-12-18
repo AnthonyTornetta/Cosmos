@@ -353,13 +353,13 @@ fn send_all_chunks(
             server.send_message(client_id, NettyChannelServer::Reliable, message.clone());
         }
 
+        info!("Sending chunks for {structure_entity:?}!");
+
         for (_, chunk) in structure.chunks() {
             let entity = structure.chunk_entity(chunk.chunk_coordinates()).expect("Missing chunk entity!");
 
-            info!("Sending chunks for {structure_entity:?}!");
-
             commands.entity(entity).insert(ChunkNeedsSent {
-                client_ids: std::mem::take(client_ids),
+                client_ids: client_ids.clone(),
             });
         }
 
