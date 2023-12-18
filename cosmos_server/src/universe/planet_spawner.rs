@@ -78,8 +78,8 @@ fn monitor_planets_to_spawn(
 }
 
 fn spawn_planet(
-    q_player_locations: Query<&Location, With<Planet>>,
-    players: Query<&Location, With<Player>>,
+    q_planet_locations: Query<&Location, With<Planet>>,
+    q_player_locations: Query<&Location, With<Player>>,
     server_seed: Res<ServerSeed>,
     mut commands: Commands,
     stars: Query<(&Location, &Star), With<Star>>,
@@ -98,11 +98,11 @@ fn spawn_planet(
 
     let thread_pool = AsyncComputeTaskPool::get();
 
-    let locs = players.iter().copied().collect::<Vec<Location>>();
+    let locs = q_player_locations.iter().copied().collect::<Vec<Location>>();
 
     let mut cache = cache.clone();
 
-    q_player_locations.iter().for_each(|l| {
+    q_planet_locations.iter().for_each(|l| {
         cache.insert(l.sector());
     });
 

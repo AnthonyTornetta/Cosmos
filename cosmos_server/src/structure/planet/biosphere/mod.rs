@@ -384,12 +384,8 @@ pub(super) fn register(app: &mut App) {
         .insert_resource(BiosphereTemperatureRegistry::default())
         .add_systems(Update, add_biosphere);
 
-    info!("...biome");
     biome::register(app);
-    info!("...grass_biospehere");
     grass_biosphere::register(app);
-    info!("...molten_biospehere");
     molten_biosphere::register(app);
-    info!("...ice_biospehere");
     ice_biosphere::register(app);
 }

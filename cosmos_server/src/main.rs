@@ -19,6 +19,7 @@ use bevy::log::LogPlugin;
 
 pub mod blocks;
 pub mod commands;
+pub mod economy;
 pub mod entities;
 pub mod events;
 pub mod init;

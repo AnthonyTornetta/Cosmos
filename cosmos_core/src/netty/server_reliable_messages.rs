@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     block::{multiblock::reactor::Reactors, BlockFace},
+    economy::Credits,
     entities::player::render_distance::RenderDistance,
     physics::location::Location,
     structure::{
@@ -207,5 +208,12 @@ pub enum ServerReliableMessages {
     BlockHealthChange {
         /// All the health changes packed into a vec
         changes: Vec<BlockHealthUpdate>,
+    },
+    /// Sent whenever the credits for an entity need set
+    Credits {
+        /// The number of credits
+        credits: Credits,
+        /// The entity that has these credits
+        entity: Entity,
     },
 }
