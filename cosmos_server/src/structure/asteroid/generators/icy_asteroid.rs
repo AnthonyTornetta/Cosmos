@@ -38,7 +38,6 @@ fn start_generating_asteroid(
     mut commands: Commands,
 ) {
     for ent in ev_reader.read() {
-        commands.entity(ent.0).log_components();
         let Ok((structure_entity, structure, loc)) = q_icy_asteroids.get(ent.0) else {
             continue;
         };

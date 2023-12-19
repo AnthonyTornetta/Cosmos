@@ -10,6 +10,7 @@ use bevy::{
     },
     prelude::{in_state, App, Commands, Entity, EventWriter, IntoSystemConfigs, Query, Update},
     tasks::Task,
+    transform::components::Transform,
 };
 use cosmos_core::structure::{
     asteroid::loading::AsteroidNeedsCreated,
@@ -53,7 +54,7 @@ struct BeingGenerated;
 pub struct GenerateAsteroidEvent(pub Entity);
 
 /// Max number of asteroids to generate at once
-const MAX_GENERATING_ASTEROIDS: usize = 2;
+const MAX_GENERATING_ASTEROIDS: usize = 1;
 
 fn notify_when_done_generating(
     mut generating_asteroids: ResMut<GeneratingAsteroids>,
@@ -102,7 +103,7 @@ fn notify_when_done_generating(
 
 fn send_events(
     being_generated: Query<(), With<BeingGenerated>>,
-    q_need_generated: Query<Entity, (With<AsteroidNeedsCreated>, With<AsteroidGeneratorMarker>)>,
+    q_need_generated: Query<(Entity, &Transform), (With<AsteroidNeedsCreated>, With<AsteroidGeneratorMarker>)>,
     mut ev_writer: EventWriter<GenerateAsteroidEvent>,
     mut commands: Commands,
 ) {
@@ -110,7 +111,15 @@ fn send_events(
         return;
     }
 
-    for needs_generated in q_need_generated.iter().take(MAX_GENERATING_ASTEROIDS) {
+    // Sort by the transform's translation because that is already lower the closer it is to a player, and I want to prioritize nearby asteroids.
+    // Sorting here isn't the most efficient for large number of asteroids, and a kind of selection method would be better, but I don't care.
+    let mut asteroids = q_need_generated
+        .iter()
+        .map(|(e, trans)| (e, trans.translation.dot(trans.translation)))
+        .collect::<Vec<(Entity, f32)>>();
+    asteroids.sort_unstable_by(|(_, t1), (_, t2)| t1.partial_cmp(t2).unwrap());
+
+    for (needs_generated, _) in asteroids.into_iter().take(MAX_GENERATING_ASTEROIDS) {
         ev_writer.send(GenerateAsteroidEvent(needs_generated));
 
         commands
