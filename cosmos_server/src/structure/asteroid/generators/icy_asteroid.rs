@@ -35,7 +35,6 @@ fn start_generating_asteroid(
     noise: Res<ReadOnlyNoise>,
     blocks: Res<ReadOnlyRegistry<Block>>,
     mut generating_asteroids: ResMut<GeneratingAsteroids>,
-    mut commands: Commands,
 ) {
     for ent in ev_reader.read() {
         let Ok((structure_entity, structure, loc)) = q_icy_asteroids.get(ent.0) else {
