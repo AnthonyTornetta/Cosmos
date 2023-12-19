@@ -58,9 +58,9 @@ pub fn calculate_temperature_at(stars: Iter<'_, (Location, Star)>, location: &Lo
     closest_star.map(|(star, best_dist)| {
         let distance_scaling = best_dist / 2.0;
 
-        let temperature = (TEMPERATURE_CONSTANT * (star.temperature() / distance_scaling)).max(BACKGROUND_TEMPERATURE);
+        
 
-        temperature
+        (TEMPERATURE_CONSTANT * (star.temperature() / distance_scaling)).max(BACKGROUND_TEMPERATURE)
     })
 }
 
