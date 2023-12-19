@@ -18,11 +18,11 @@ use crate::netty::sync::entities::RequestedEntityEvent;
 
 fn on_request_asteroid(
     mut event_reader: EventReader<RequestedEntityEvent>,
-    query: Query<(&Structure, &Transform, &Location, &Velocity), With<Asteroid>>,
+    query: Query<(&Structure, &Transform, &Location, &Velocity, &Asteroid)>,
     mut server: ResMut<RenetServer>,
 ) {
     for ev in event_reader.read() {
-        if let Ok((structure, transform, location, velocity)) = query.get(ev.entity) {
+        if let Ok((structure, transform, location, velocity, asteroid)) = query.get(ev.entity) {
             server.send_message(
                 ev.client_id,
                 NettyChannelServer::Asteroid,
@@ -30,6 +30,7 @@ fn on_request_asteroid(
                     body: NettyRigidBody::new(velocity, transform.rotation, NettyRigidBodyLocation::Absolute(*location)),
                     entity: ev.entity,
                     dimensions: structure.chunk_dimensions(),
+                    temperature: asteroid.temperature(),
                 }),
             );
         }

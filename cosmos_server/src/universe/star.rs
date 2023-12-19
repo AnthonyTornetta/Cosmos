@@ -1,9 +1,12 @@
 //! Contains server-side logic for stars
 
+use std::slice::Iter;
+
 use bevy::prelude::{in_state, App, EventReader, IntoSystemConfigs, Query, ResMut, Update, With};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannelServer},
+    physics::location::Location,
     universe::star::Star,
 };
 
@@ -35,6 +38,30 @@ fn on_save_star(mut query: Query<&mut SerializedData, (With<NeedsSaved>, With<St
     for mut data in query.iter_mut() {
         data.set_should_save(false);
     }
+}
+
+const BACKGROUND_TEMPERATURE: f32 = 50.0;
+const TEMPERATURE_CONSTANT: f32 = 5.3e9;
+
+/// Calculates the temperature at a given location from the nearest star
+pub fn calculate_temperature_at(stars: Iter<'_, (Location, Star)>, location: &Location) -> Option<f32> {
+    let mut closest_star = None;
+
+    for (star_loc, star) in stars {
+        let dist = location.distance_sqrd(star_loc);
+
+        if closest_star.map(|(_, d)| d < dist).unwrap_or(true) {
+            closest_star = Some((star, dist));
+        }
+    }
+
+    closest_star.map(|(star, best_dist)| {
+        let distance_scaling = best_dist / 2.0;
+
+        let temperature = (TEMPERATURE_CONSTANT * (star.temperature() / distance_scaling)).max(BACKGROUND_TEMPERATURE);
+
+        temperature
+    })
 }
 
 pub(super) fn register(app: &mut App) {

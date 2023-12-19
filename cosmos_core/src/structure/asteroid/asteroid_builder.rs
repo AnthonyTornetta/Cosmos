@@ -14,7 +14,7 @@ use super::*;
 /// Implement this to add a custom way to build asteroids
 pub trait TAsteroidBuilder {
     /// Adds everything to the entity needed to have an asteroid
-    fn insert_asteroid(&self, entity: &mut EntityCommands, location: Location, structure: &mut Structure);
+    fn insert_asteroid(&self, entity: &mut EntityCommands, location: Location, structure: &mut Structure, temperature: f32);
 }
 
 /// Default way to build an asteroid
@@ -30,12 +30,12 @@ impl<T: TStructureBuilder> AsteroidBuilder<T> {
 }
 
 impl<T: TStructureBuilder> TAsteroidBuilder for AsteroidBuilder<T> {
-    fn insert_asteroid(&self, entity: &mut EntityCommands, location: Location, structure: &mut Structure) {
+    fn insert_asteroid(&self, entity: &mut EntityCommands, location: Location, structure: &mut Structure, temperature: f32) {
         self.structure_builder
             .insert_structure(entity, location, Velocity::default(), structure);
 
         entity.insert((
-            Asteroid,
+            Asteroid::new(temperature),
             Name::new("Asteroid"),
             RigidBody::Fixed,
             LoadingDistance::new(ASTEROID_LOAD_RADIUS, ASTEROID_UNLOAD_RADIUS),
