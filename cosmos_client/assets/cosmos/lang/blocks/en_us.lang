@@ -65,3 +65,6 @@ cosmos:reactor_casing=Reactor Casing
 cosmos:reactor_window=Reactor Window
 cosmos:reactor_cell=Reactor Power Cell
 cosmos:fan=Fan
+cosmos:storage=Storage
+cosmos:station_core=Station Core
+cosmos:test_ore=Test Ore

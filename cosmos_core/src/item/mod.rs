@@ -2,7 +2,7 @@
 
 pub mod items;
 
-use bevy::prelude::App;
+use bevy::{ecs::schedule::States, prelude::App};
 
 use crate::registry::identifiable::Identifiable;
 
@@ -35,9 +35,9 @@ pub const DEFAULT_MAX_STACK_SIZE: u16 = 999;
 
 impl Item {
     /// Creates an item
-    pub fn new(unlocalized_name: String, max_stack_size: u16) -> Self {
+    pub fn new(unlocalized_name: impl Into<String>, max_stack_size: u16) -> Self {
         Self {
-            unlocalized_name,
+            unlocalized_name: unlocalized_name.into(),
             numeric_id: 0, // this will get set when this item is registered
             max_stack_size,
         }
@@ -49,6 +49,6 @@ impl Item {
     }
 }
 
-pub(super) fn register(app: &mut App) {
-    items::register(app);
+pub(super) fn register<T: States>(app: &mut App, loading_state: T) {
+    items::register(app, loading_state);
 }

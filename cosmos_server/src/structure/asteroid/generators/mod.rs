@@ -19,6 +19,7 @@ use crate::{
 };
 
 mod all_stone;
+mod icy_asteroid;
 
 /// Just an empty component for marking your biosphere
 pub trait AsteroidGeneratorComponent: Default + Clone + Copy + Component {}
@@ -127,6 +128,8 @@ fn add_asteroid_generator(
     for (entity, asteroid, location) in query.iter() {
         let biospheres = registry.get_asteroid_generators_for(asteroid.temperature());
 
+        println!("{registry:?}");
+
         if !biospheres.is_empty() {
             let sector = location.sector();
 
@@ -146,6 +149,7 @@ fn add_asteroid_generator(
 
 pub(super) fn register(app: &mut App) {
     all_stone::register(app);
+    icy_asteroid::register(app);
 
     app.add_systems(Update, add_asteroid_generator)
         .init_resource::<AsteroidTemperatureRegistry>()
