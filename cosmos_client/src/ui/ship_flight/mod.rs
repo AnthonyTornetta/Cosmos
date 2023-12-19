@@ -262,7 +262,7 @@ fn added(
     });
     asteroid_query.for_each(|ent| {
         commands.entity(ent).insert(IndicatorSettings {
-            color: Color::hex("FF00007F").unwrap(),
+            color: Color::hex("6159427F").unwrap(),
             max_distance: 20_000.0,
             offset: Vec3::ZERO,
         });

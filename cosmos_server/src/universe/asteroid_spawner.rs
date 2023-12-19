@@ -86,46 +86,38 @@ fn spawn_asteroid(
             continue;
         }
 
-        if sector != Sector::new(25, 25, 25) {
-            continue;
-        }
-
         let mut rng = get_rng_for_sector(&server_seed, &sector);
 
-        // !!!!! Disabled asteroids for now !!!!!
-        // if rng.gen_range(0..100) < 100 {
-        // Biased towards lower amounts
-        // let n_asteroids = (6.0 * (1.0 - (1.0 - rng.gen::<f32>()).sqrt())) as usize;
-        let n_asteroids = 1;
+        if rng.gen_range(0..1000) < 100 {
+            // Biased towards lower amounts
+            let n_asteroids = (6.0 * (1.0 - (1.0 - rng.gen::<f32>()).sqrt())) as usize;
 
-        println!("N ASTEROIDS: {n_asteroids}");
+            let multiplier = SECTOR_DIMENSIONS;
+            let adder = -SECTOR_DIMENSIONS / 2.0;
 
-        let multiplier = SECTOR_DIMENSIONS;
-        let adder = -SECTOR_DIMENSIONS / 2.0;
+            let stars = q_stars.iter().map(|(x, y)| (*x, *y)).collect::<Vec<(Location, Star)>>();
 
-        let stars = q_stars.iter().map(|(x, y)| (*x, *y)).collect::<Vec<(Location, Star)>>();
+            for _ in 0..n_asteroids {
+                let size = rng.gen_range(4..=8);
 
-        for _ in 0..n_asteroids {
-            let size = rng.gen_range(4..=8);
+                let loc = Location::new(
+                    Vec3::new(
+                        rng.gen::<f32>() * multiplier + adder,
+                        rng.gen::<f32>() * multiplier + adder,
+                        rng.gen::<f32>() * multiplier + adder,
+                    ),
+                    sector,
+                );
 
-            let loc = Location::new(
-                Vec3::new(
-                    // rng.gen::<f32>() * multiplier + adder,
-                    // rng.gen::<f32>() * multiplier + adder,
-                    // rng.gen::<f32>() * multiplier + adder,
-                    0.0, 800.0, 0.0,
-                ),
-                sector,
-            );
+                if let Some(temperature) = calculate_temperature_at(stars.iter(), &loc) {
+                    let mut structure = Structure::Full(FullStructure::new(ChunkCoordinate::new(size, size, size)));
+                    let builder = ServerAsteroidBuilder::default();
+                    let mut entity_cmd = commands.spawn_empty();
 
-            if let Some(temperature) = calculate_temperature_at(stars.iter(), &loc) {
-                let mut structure = Structure::Full(FullStructure::new(ChunkCoordinate::new(size, size, size)));
-                let builder = ServerAsteroidBuilder::default();
-                let mut entity_cmd = commands.spawn_empty();
+                    builder.insert_asteroid(&mut entity_cmd, loc, &mut structure, temperature);
 
-                builder.insert_asteroid(&mut entity_cmd, loc, &mut structure, temperature);
-
-                entity_cmd.insert((structure, AsteroidNeedsCreated));
+                    entity_cmd.insert((structure, AsteroidNeedsCreated));
+                }
             }
         }
     }

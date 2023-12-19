@@ -18,7 +18,6 @@ use crate::{
     structure::planet::biosphere::TemperatureRange,
 };
 
-mod all_stone;
 mod icy_asteroid;
 
 /// Just an empty component for marking your biosphere
@@ -32,7 +31,7 @@ struct AsteroidNeedsGeneratorEvent {
 
 /// Represents the information about a biosphere
 #[derive(Debug, Component, Reflect)]
-struct AsteroidGeneratorMarker {
+pub struct AsteroidGeneratorMarker {
     /// The biosphere's name
     asteroid_generator_name: String,
 }
@@ -87,7 +86,9 @@ pub fn register_asteroid_generator<T: AsteroidGeneratorComponent>(
             (move |mut event_reader: EventReader<AsteroidNeedsGeneratorEvent>, mut commands: Commands| {
                 for ev in event_reader.read() {
                     if ev.biosphere_id == asteroid_generator_id {
-                        commands.entity(ev.entity).insert(T::default());
+                        commands
+                            .entity(ev.entity)
+                            .insert((T::default(), AsteroidGeneratorMarker::new(asteroid_generator_id)));
                     }
                 }
             }),
@@ -123,24 +124,19 @@ fn add_asteroid_generator(
     mut event_writer: EventWriter<AsteroidNeedsGeneratorEvent>,
     registry: Res<AsteroidTemperatureRegistry>,
     server_seed: Res<ServerSeed>,
-    mut commands: Commands,
 ) {
     for (entity, asteroid, location) in query.iter() {
-        let biospheres = registry.get_asteroid_generators_for(asteroid.temperature());
+        let generators = registry.get_asteroid_generators_for(asteroid.temperature());
 
-        println!("{registry:?}");
-
-        if !biospheres.is_empty() {
+        if !generators.is_empty() {
             let sector = location.sector();
 
             let mut rng = get_rng_for_sector(&server_seed, &sector);
 
-            let biosphere = biospheres[rng.gen_range(0..biospheres.len())];
-
-            commands.entity(entity).insert(AsteroidGeneratorMarker::new(biosphere));
+            let asteroid_generator = generators[rng.gen_range(0..generators.len())];
 
             event_writer.send(AsteroidNeedsGeneratorEvent {
-                biosphere_id: biosphere.to_owned(),
+                biosphere_id: asteroid_generator.to_owned(),
                 entity,
             });
         }
@@ -148,7 +144,6 @@ fn add_asteroid_generator(
 }
 
 pub(super) fn register(app: &mut App) {
-    all_stone::register(app);
     icy_asteroid::register(app);
 
     app.add_systems(Update, add_asteroid_generator)

@@ -4,11 +4,9 @@ use cosmos_core::{
     physics::location::Location,
     registry::ReadOnlyRegistry,
     structure::{
-        asteroid::loading::AsteroidNeedsCreated,
         block_storage::BlockStorer,
         chunk::Chunk,
         coordinates::{BlockCoordinate, ChunkBlockCoordinate, ChunkCoordinate},
-        loading::StructureLoadingSet,
         Structure,
     },
     utils::timer::UtilsTimer,
@@ -18,7 +16,10 @@ use noise::NoiseFn;
 use crate::{
     init::init_world::ReadOnlyNoise,
     state::GameState,
-    structure::{asteroid::generator::GeneratingAsteroids, planet::biosphere::TemperatureRange},
+    structure::{
+        asteroid::generator::{AsteroidGenerationSet, GenerateAsteroidEvent, GeneratingAsteroids},
+        planet::biosphere::TemperatureRange,
+    },
 };
 
 use super::{register_asteroid_generator, AsteroidGeneratorComponent};
@@ -29,13 +30,19 @@ struct IcyAsteroidMarker;
 impl AsteroidGeneratorComponent for IcyAsteroidMarker {}
 
 fn start_generating_asteroid(
-    q_asteroids_need_generated: Query<(Entity, &Structure, &Location), (With<AsteroidNeedsCreated>, With<IcyAsteroidMarker>)>,
+    q_icy_asteroids: Query<(Entity, &Structure, &Location), With<IcyAsteroidMarker>>,
+    mut ev_reader: EventReader<GenerateAsteroidEvent>,
     noise: Res<ReadOnlyNoise>,
     blocks: Res<ReadOnlyRegistry<Block>>,
-    mut commands: Commands,
     mut generating_asteroids: ResMut<GeneratingAsteroids>,
+    mut commands: Commands,
 ) {
-    for (structure_entity, structure, loc) in q_asteroids_need_generated.iter() {
+    for ent in ev_reader.read() {
+        commands.entity(ent.0).log_components();
+        let Ok((structure_entity, structure, loc)) = q_icy_asteroids.get(ent.0) else {
+            continue;
+        };
+
         let (local_x, local_y, local_z) = (loc.local.x as f64, loc.local.y as f64, loc.local.z as f64);
 
         let (bx, by, bz) = structure.block_dimensions().into();
@@ -84,12 +91,12 @@ fn start_generating_asteroid(
                             const RANDOM_OFFSET: f64 = 2378.0;
 
                             let ore_noise = noise.get([
-                                x_pos as f64 * 0.03 + local_x + RANDOM_OFFSET,
-                                y_pos as f64 * 0.03 + local_y + RANDOM_OFFSET,
-                                z_pos as f64 * 0.03 + local_z + RANDOM_OFFSET,
+                                x_pos as f64 * 0.1 + local_x + RANDOM_OFFSET,
+                                y_pos as f64 * 0.1 + local_y + RANDOM_OFFSET,
+                                z_pos as f64 * 0.1 + local_z + RANDOM_OFFSET,
                             ]);
 
-                            let block = if ore_noise > 0.1 { ore } else { stone };
+                            let block = if ore_noise > 0.2 { ore } else { stone };
 
                             chunks.entry(chunk_coords).or_insert_with(|| Chunk::new(chunk_coords)).set_block_at(
                                 chunk_block_coords,
@@ -106,7 +113,7 @@ fn start_generating_asteroid(
             chunks.into_iter().map(|(_, c)| c).collect::<Vec<Chunk>>()
         });
 
-        generating_asteroids.add_generating_asteroid(structure_entity, task, &mut commands);
+        generating_asteroids.add_generating_asteroid(structure_entity, task);
     }
 }
 
@@ -116,7 +123,7 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         start_generating_asteroid
-            .in_set(StructureLoadingSet::LoadStructure)
+            .in_set(AsteroidGenerationSet::GenerateAsteroid)
             .run_if(in_state(GameState::Playing)),
     );
 }
