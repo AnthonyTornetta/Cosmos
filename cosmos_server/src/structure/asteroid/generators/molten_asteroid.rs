@@ -25,19 +25,19 @@ use crate::{
 use super::{register_asteroid_generator, AsteroidGeneratorComponent};
 
 #[derive(Clone, Copy, Component, Default)]
-struct IcyAsteroidMarker;
+struct MoltenAsteroidMarker;
 
-impl AsteroidGeneratorComponent for IcyAsteroidMarker {}
+impl AsteroidGeneratorComponent for MoltenAsteroidMarker {}
 
 fn start_generating_asteroid(
-    q_icy_asteroids: Query<(Entity, &Structure, &Location), With<IcyAsteroidMarker>>,
+    q_molten_asteroids: Query<(Entity, &Structure, &Location), With<MoltenAsteroidMarker>>,
     mut ev_reader: EventReader<GenerateAsteroidEvent>,
     noise: Res<ReadOnlyNoise>,
     blocks: Res<ReadOnlyRegistry<Block>>,
     mut generating_asteroids: ResMut<GeneratingAsteroids>,
 ) {
     for ent in ev_reader.read() {
-        let Ok((structure_entity, structure, loc)) = q_icy_asteroids.get(ent.0) else {
+        let Ok((structure_entity, structure, loc)) = q_molten_asteroids.get(ent.0) else {
             continue;
         };
 
@@ -59,7 +59,8 @@ fn start_generating_asteroid(
             let timer = UtilsTimer::start();
 
             let blocks = blocks.registry();
-            let stone = blocks.from_id("cosmos:stone").expect("Missing cosmos:stone");
+            let stone = blocks.from_id("cosmos:molten_stone").expect("Missing cosmos:molten_stone");
+            let lava = blocks.from_id("cosmos:cheese").expect("Missing cosmos:cheese");
             let ore = blocks.from_id("cosmos:test_ore").expect("Missing text ore");
 
             let mut chunks = HashMap::new();
@@ -86,15 +87,28 @@ fn start_generating_asteroid(
                             let chunk_coords = ChunkCoordinate::for_block_coordinate(coords);
                             let chunk_block_coords = ChunkBlockCoordinate::for_block_coordinate(coords);
 
-                            const RANDOM_OFFSET: f64 = 2378.0;
+                            const ORE_OFFSET: f64 = 2378.0;
+                            const LAVA_OFFSET: f64 = 1026.0;
 
                             let ore_noise = noise.get([
-                                x_pos as f64 * 0.1 + local_x + RANDOM_OFFSET,
-                                y_pos as f64 * 0.1 + local_y + RANDOM_OFFSET,
-                                z_pos as f64 * 0.1 + local_z + RANDOM_OFFSET,
+                                x_pos as f64 * 0.1 + local_x + ORE_OFFSET,
+                                y_pos as f64 * 0.1 + local_y + ORE_OFFSET,
+                                z_pos as f64 * 0.1 + local_z + ORE_OFFSET,
                             ]);
 
-                            let block = if ore_noise > 0.2 { ore } else { stone };
+                            let lava_noise = noise.get([
+                                x_pos as f64 * 0.1 + local_x + LAVA_OFFSET,
+                                y_pos as f64 * 0.1 + local_y + LAVA_OFFSET,
+                                z_pos as f64 * 0.1 + local_z + LAVA_OFFSET,
+                            ]);
+
+                            let block = if ore_noise > 0.2 {
+                                ore
+                            } else if lava_noise > 0.1 {
+                                lava
+                            } else {
+                                stone
+                            };
 
                             chunks.entry(chunk_coords).or_insert_with(|| Chunk::new(chunk_coords)).set_block_at(
                                 chunk_block_coords,
@@ -106,7 +120,7 @@ fn start_generating_asteroid(
                 }
             }
 
-            timer.log_duration(&format!("Ice Asteroid {bx}x{by}x{bz} generation time: {bx}:"));
+            timer.log_duration(&format!("Molten Asteroid {bx}x{by}x{bz} generation time: {bx}:"));
 
             chunks.into_iter().map(|(_, c)| c).collect::<Vec<Chunk>>()
         });
@@ -116,7 +130,7 @@ fn start_generating_asteroid(
 }
 
 pub(super) fn register(app: &mut App) {
-    register_asteroid_generator::<IcyAsteroidMarker>(app, "cosmos:icy", TemperatureRange::new(0.0, 700.0));
+    register_asteroid_generator::<MoltenAsteroidMarker>(app, "cosmos:molten", TemperatureRange::new(700.0, 1000000.0));
 
     app.add_systems(
         Update,

@@ -19,6 +19,7 @@ use crate::{
 };
 
 mod icy_asteroid;
+mod molten_asteroid;
 
 /// Just an empty component for marking your biosphere
 pub trait AsteroidGeneratorComponent: Default + Clone + Copy + Component {}
@@ -139,12 +140,15 @@ fn add_asteroid_generator(
                 biosphere_id: asteroid_generator.to_owned(),
                 entity,
             });
+        } else {
+            warn!("Unable to find proper generator asteroid {entity:?} - this will cause the asteroid to never generate! Temperature: {}, Registry: {registry:?}", asteroid.temperature());
         }
     }
 }
 
 pub(super) fn register(app: &mut App) {
     icy_asteroid::register(app);
+    molten_asteroid::register(app);
 
     app.add_systems(Update, add_asteroid_generator)
         .init_resource::<AsteroidTemperatureRegistry>()
