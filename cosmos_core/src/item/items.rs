@@ -1,23 +1,26 @@
 //! Loads all the items for cosmos & adds the item registry.
 
-// use crate::loader::{AddLoadingEvent, DoneLoadingEvent, LoadingManager};
-use crate::registry;
-use bevy::prelude::App;
+use crate::loader::{AddLoadingEvent, DoneLoadingEvent, LoadingManager};
+use crate::registry::{self, Registry};
+use bevy::prelude::*;
 
-use super::Item;
+use super::{Item, DEFAULT_MAX_STACK_SIZE};
 
-// pub fn add_cosmos_items(
-//     mut items: ResMut<Registry<Item>>,
-//     mut loading: ResMut<LoadingManager>,
-//     mut end_writer: EventWriter<DoneLoadingEvent>,
-//     mut start_writer: EventWriter<AddLoadingEvent>,
-// ) {
-//     let id = loading.register_loader(&mut start_writer);
-//     loading.finish_loading(id, &mut end_writer);
-// }
+fn add_cosmos_items(
+    mut items: ResMut<Registry<Item>>,
+    mut loading: ResMut<LoadingManager>,
+    mut end_writer: EventWriter<DoneLoadingEvent>,
+    mut start_writer: EventWriter<AddLoadingEvent>,
+) {
+    let id = loading.register_loader(&mut start_writer);
 
-pub(super) fn register(app: &mut App) {
+    items.register(Item::new("cosmos:test_crystal", DEFAULT_MAX_STACK_SIZE));
+
+    loading.finish_loading(id, &mut end_writer);
+}
+
+pub(super) fn register<T: States>(app: &mut App, loading_state: T) {
     registry::create_registry::<Item>(app);
 
-    // app.add_system_set(SystemSet::on_enter(loading_state).with_system(add_cosmos_items));
+    app.add_systems(OnEnter(loading_state), add_cosmos_items);
 }

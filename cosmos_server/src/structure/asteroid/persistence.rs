@@ -22,22 +22,19 @@ use crate::{
     },
 };
 
-fn on_blueprint_structure(
-    mut query: Query<(&mut SerializedData, &Structure, &mut NeedsBlueprinted), With<Asteroid>>,
-    mut commands: Commands,
-) {
-    for (mut s_data, structure, mut blueprint) in query.iter_mut() {
+fn on_blueprint_structure(mut query: Query<(&mut SerializedData, &Structure, &mut NeedsBlueprinted, &Asteroid)>, mut commands: Commands) {
+    for (mut s_data, structure, mut blueprint, asteroid) in query.iter_mut() {
         blueprint.subdir_name = "asteroid".into();
 
         save_structure(structure, &mut s_data, &mut commands);
-        s_data.serialize_data("cosmos:is_asteroid", &true);
+        s_data.serialize_data("cosmos:asteroid", &asteroid.temperature());
     }
 }
 
-fn on_save_structure(mut query: Query<(&mut SerializedData, &Structure), (With<NeedsSaved>, With<Asteroid>)>, mut commands: Commands) {
-    for (mut s_data, structure) in query.iter_mut() {
+fn on_save_structure(mut query: Query<(&mut SerializedData, &Structure, &Asteroid), With<NeedsSaved>>, mut commands: Commands) {
+    for (mut s_data, structure, asteroid) in query.iter_mut() {
         save_structure(structure, &mut s_data, &mut commands);
-        s_data.serialize_data("cosmos:is_asteroid", &true);
+        s_data.serialize_data("cosmos:asteroid", &asteroid.temperature());
     }
 }
 
@@ -47,6 +44,7 @@ fn load_structure(
     loc: Location,
     mut structure: Structure,
     s_data: &SerializedData,
+    temperature: f32,
     chunk_load_block_data_event_writer: &mut EventWriter<ChunkLoadBlockDataEvent>,
     chunk_set_event_writer: &mut EventWriter<ChunkInitEvent>,
     structure_loaded_event_writer: &mut EventWriter<StructureLoadedEvent>,
@@ -55,7 +53,7 @@ fn load_structure(
 
     let builder = ServerAsteroidBuilder::default();
 
-    builder.insert_asteroid(&mut entity_cmd, loc, &mut structure);
+    builder.insert_asteroid(&mut entity_cmd, loc, &mut structure, temperature);
 
     let entity = entity_cmd.id();
 
@@ -98,7 +96,7 @@ fn on_load_blueprint(
     mut structure_loaded_event_writer: EventWriter<StructureLoadedEvent>,
 ) {
     for (entity, s_data, needs_blueprinted) in query.iter() {
-        if s_data.deserialize_data::<bool>("cosmos:is_asteroid").unwrap_or(false) {
+        if let Some(temperature) = s_data.deserialize_data::<f32>("cosmos:asteroid") {
             if let Some(structure) = s_data.deserialize_data::<Structure>("cosmos:structure") {
                 load_structure(
                     entity,
@@ -106,6 +104,7 @@ fn on_load_blueprint(
                     needs_blueprinted.spawn_at,
                     structure,
                     s_data,
+                    temperature,
                     &mut chunk_load_block_data_event_writer,
                     // &mut event_writer,
                     &mut chunk_set_event_writer,
@@ -124,7 +123,7 @@ fn on_load_structure(
     mut structure_loaded_event_writer: EventWriter<StructureLoadedEvent>,
 ) {
     for (entity, s_data) in query.iter() {
-        if s_data.deserialize_data::<bool>("cosmos:is_asteroid").unwrap_or(false) {
+        if let Some(temperature) = s_data.deserialize_data::<f32>("cosmos:asteroid") {
             if let Some(structure) = s_data.deserialize_data::<Structure>("cosmos:structure") {
                 let loc = s_data
                     .deserialize_data("cosmos:location")
@@ -136,6 +135,7 @@ fn on_load_structure(
                     loc,
                     structure,
                     s_data,
+                    temperature,
                     &mut chunk_load_block_data_event_writer,
                     &mut chunk_set_event_writer,
                     &mut structure_loaded_event_writer,

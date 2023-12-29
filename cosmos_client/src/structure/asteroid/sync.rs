@@ -30,6 +30,7 @@ fn receive_asteroids(
                 entity: server_entity,
                 body,
                 dimensions,
+                temperature,
             } => {
                 let Some(entity) = network_mapping.client_from_server(&server_entity) else {
                     continue;
@@ -54,7 +55,7 @@ fn receive_asteroids(
 
                 let builder = ClientAsteroidBuilder::default();
 
-                builder.insert_asteroid(&mut entity_cmds, location, &mut structure);
+                builder.insert_asteroid(&mut entity_cmds, location, &mut structure, temperature);
 
                 entity_cmds.insert(structure);
             }

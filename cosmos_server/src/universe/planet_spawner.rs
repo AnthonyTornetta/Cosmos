@@ -31,11 +31,10 @@ use crate::{
     structure::planet::server_planet_builder::ServerPlanetBuilder,
 };
 
+use super::star::calculate_temperature_at;
+
 #[derive(Debug, Default, Resource, Deref, DerefMut, Clone)]
 struct CachedSectors(HashSet<Sector>);
-
-const BACKGROUND_TEMPERATURE: f32 = 50.0;
-const TEMPERATURE_CONSTANT: f32 = 5.3e9;
 
 #[derive(Component, Debug)]
 struct PlanetSpawnerAsyncTask(Task<(CachedSectors, Vec<PlanetToSpawn>)>);
@@ -142,28 +141,12 @@ fn spawn_planet(
             if !is_origin && rng.gen_range(0..1000) == 9 {
                 let location = Location::new(Vec3::ZERO, sector);
 
-                let mut closest_star = None;
-                let mut best_dist = None;
-
-                for (star_loc, star) in stars.iter() {
-                    let dist = location.distance_sqrd(star_loc);
-
-                    if closest_star.is_none() || best_dist.unwrap() < dist {
-                        closest_star = Some(star);
-                        best_dist = Some(dist);
-                    }
-                }
-
-                if let Some(star) = closest_star {
+                if let Some(temperature) = calculate_temperature_at(stars.iter(), &location) {
                     let size = if is_origin {
                         64
                     } else {
                         2_f32.powi(rng.gen_range(7..=9)) as CoordinateType
                     };
-
-                    let distance_scaling = best_dist.expect("This would have been set at this point.") / 2.0;
-
-                    let temperature = (TEMPERATURE_CONSTANT * (star.temperature() / distance_scaling)).max(BACKGROUND_TEMPERATURE);
 
                     made_stars.push(PlanetToSpawn {
                         size,

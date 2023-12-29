@@ -18,5 +18,7 @@ pub enum AsteroidServerMessages {
         body: NettyRigidBody,
         /// The width to be passed into the structure's constructor
         dimensions: ChunkCoordinate,
+        /// The asteroid's temperature
+        temperature: f32,
     },
 }

@@ -38,8 +38,8 @@ impl Default for ClientAsteroidBuilder {
 }
 
 impl TAsteroidBuilder for ClientAsteroidBuilder {
-    fn insert_asteroid(&self, entity: &mut EntityCommands, location: Location, structure: &mut Structure) {
-        self.builder.insert_asteroid(entity, location, structure);
+    fn insert_asteroid(&self, entity: &mut EntityCommands, location: Location, structure: &mut Structure, temperature: f32) {
+        self.builder.insert_asteroid(entity, location, structure, temperature);
     }
 }
 

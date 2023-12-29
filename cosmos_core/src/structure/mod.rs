@@ -7,7 +7,6 @@ use std::ops::DerefMut;
 use std::sync::{Arc, Mutex};
 
 use bevy::app::Update;
-use bevy::log::info;
 use bevy::prelude::{App, Event, IntoSystemConfigs, Name, PreUpdate, VisibilityBundle};
 use bevy::reflect::Reflect;
 use bevy::transform::TransformBundle;
@@ -650,7 +649,6 @@ fn add_chunks_system(
         };
 
         if !chunk.is_empty() && structure.chunk_entity(chunk_coordinate).is_none() {
-            info!("Spawning chunk entity!");
             spawn_chunk_entity(
                 &mut commands,
                 &mut structure,
