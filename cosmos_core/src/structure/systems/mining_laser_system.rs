@@ -28,35 +28,11 @@ pub struct MiningLaserProperty {
 }
 
 #[derive(Default, Reflect, Debug)]
-pub struct MiningLaserLine {
-    properties: Vec<MiningLaserProperty>,
-
-    cached: Option<MiningLaserProperty>,
-}
+struct MiningLaserLine;
 
 impl MiningLaserLine {
-    fn add(&mut self, property: MiningLaserProperty) {
-        self.properties.push(property);
-    }
-
-    fn remove(&mut self, property: MiningLaserProperty) {
-        let idx = self
-            .properties
-            .iter()
-            .enumerate()
-            .find(|(_, &x)| x == property)
-            .expect("Unable to remove - not in current properties list")
-            .0;
-
-        self.properties.swap_remove(idx);
-    }
-
-    fn combine(&mut self, other: &mut Self) {
-        self.properties.append(&mut other.properties);
-    }
-
-    fn calculate_property(&self) -> MiningLaserProperty {
-        self.properties
+    fn calculate_property(properties: &[MiningLaserProperty]) -> MiningLaserProperty {
+        properties
             .iter()
             .copied()
             .reduce(|a, b: MiningLaserProperty| MiningLaserProperty {
@@ -162,8 +138,6 @@ pub struct Line {
 
     /// All the properties of the laser cannons in this line
     properties: Vec<MiningLaserProperty>,
-    /// The property of all the blocks in this line
-    inner_line: MiningLaserLine,
 }
 
 impl Line {
@@ -262,18 +236,12 @@ impl MiningLaserSystem {
                 line.start.z = (line.start.z as i32 + dz) as CoordinateType;
                 line.len -= 1;
 
-                let property = line.properties.remove(0);
-                line.inner_line.add(property);
-
                 if line.len == 0 {
                     self.lines.swap_remove(i);
                     return;
                 }
             } else if line.end() == *sb {
                 line.len -= 1;
-
-                let property = line.properties.pop().expect("At least one");
-                line.inner_line.remove(property);
 
                 if line.len == 0 {
                     self.lines.swap_remove(i);
@@ -291,30 +259,26 @@ impl MiningLaserSystem {
 
                 let l2_len = line.len as CoordinateType - l1_len - 1;
 
-                let mut l1_inner_line = MiningLaserLine::default();
-                let mut l2_inner_line = MiningLaserLine::default();
-
                 let mut l1_props = Vec::with_capacity(l1_len as usize);
                 let mut l2_props = Vec::with_capacity(l2_len as usize);
 
                 for prop in line.properties.iter().take(l1_len as usize) {
-                    l1_inner_line.add(*prop);
                     l1_props.push(*prop);
                 }
 
                 for prop in line.properties.iter().skip(l1_len as usize + 1) {
-                    l2_inner_line.add(*prop);
                     l2_props.push(*prop);
                 }
+
+                let l1_property = MiningLaserLine::calculate_property(&l1_props);
 
                 // we are within a line, so split it into two seperate ones
                 let l1 = Line {
                     start: line.start,
                     direction: line.direction,
                     len: l1_len,
-                    inner_line: l1_inner_line,
                     properties: l1_props,
-                    property: l1_inner_line.calculate_property(),
+                    property: l1_property,
                     color: line.color,
                 };
 
@@ -322,6 +286,7 @@ impl MiningLaserSystem {
 
                 let dist = l1_len as i32 + 1;
 
+                let l2_property = MiningLaserLine::calculate_property(&l2_props);
                 let l2 = Line {
                     start: StructureBlock::new(BlockCoordinate::new(
                         (line.start.x as i32 + dx * dist) as CoordinateType,
@@ -330,9 +295,8 @@ impl MiningLaserSystem {
                     )),
                     direction: line.direction,
                     len: line.len - l1_len - 1,
-                    inner_line: l2_inner_line,
                     properties: l2_props,
-                    property: l2_inner_line.calculate_property(),
+                    property: l2_property,
                     color: line.color,
                 };
 
@@ -368,7 +332,6 @@ impl MiningLaserSystem {
                     line.start.y -= dy as CoordinateType;
                     line.start.z -= dz as CoordinateType;
                     line.len += 1;
-                    line.inner_line.add(*prop);
                     line.properties.insert(0, *prop);
 
                     found_line = Some(i);
@@ -381,7 +344,6 @@ impl MiningLaserSystem {
                     break;
                 } else {
                     line.len += 1;
-                    line.inner_line.add(*prop);
                     line.properties.push(*prop);
 
                     found_line = Some(i);
@@ -406,7 +368,6 @@ impl MiningLaserSystem {
                 }
 
                 l1.len += l2.len;
-                l1.inner_line.combine(&mut l2.inner_line);
 
                 l1.properties.append(&mut l2.properties);
 
@@ -419,17 +380,15 @@ impl MiningLaserSystem {
 
         let color = self.calculate_color_for_line(block, block_direction);
 
-        let mut inner_line = MiningLaserLine::default();
-        inner_line.add(*prop);
-        let total = inner_line.calculate_property();
+        let properties = vec![*prop];
+        let property = MiningLaserLine::calculate_property(&properties);
 
         self.lines.push(Line {
             start: *block,
             direction: block_direction,
             len: 1,
-            inner_line,
-            properties: vec![*prop],
-            property: total,
+            properties,
+            property,
             color,
         });
     }
