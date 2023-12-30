@@ -356,7 +356,11 @@ fn send_all_chunks(
         info!("Sending chunks for {structure_entity:?}!");
 
         for (_, chunk) in structure.chunks() {
-            let entity = structure.chunk_entity(chunk.chunk_coordinates()).expect("Missing chunk entity!");
+            let Some(entity) = structure.chunk_entity(chunk.chunk_coordinates()) else {
+                error!("Missing chunk entity in entity {structure_entity:?} - logging components!");
+                commands.entity(structure_entity).log_components();
+                return true;
+            };
 
             commands.entity(entity).insert(ChunkNeedsSent {
                 client_ids: client_ids.clone(),
