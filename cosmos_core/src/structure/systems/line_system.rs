@@ -27,13 +27,21 @@ pub trait LinePropertyCalculator<T: LineProperty>: 'static + Send + Sync {
 /// Property each block adds to the line
 pub trait LineProperty: 'static + Send + Sync + Clone + Copy {}
 
-#[derive(Resource, Default)]
+#[derive(Resource)]
 /// The blocks that will effect this line
-pub struct LineBlocks<T> {
+pub struct LineBlocks<T: LineProperty> {
     blocks: HashMap<u16, T>,
 }
 
-impl<T> LineBlocks<T> {
+impl<T: LineProperty> Default for LineBlocks<T> {
+    fn default() -> Self {
+        Self {
+            blocks: Default::default(),
+        }
+    }
+}
+
+impl<T: LineProperty> LineBlocks<T> {
     /// Registers a block with this property
     pub fn insert(&mut self, block: &Block, cannon_property: T) {
         self.blocks.insert(block.id(), cannon_property);
@@ -529,12 +537,12 @@ pub fn add_line_system<K: States, T: LineProperty, S: LinePropertyCalculator<T>>
             block_update_system::<T, S>,
         )
             .run_if(in_state(playing_state)),
-    );
+    )
+    .init_resource::<LineBlocks<T>>();
 }
 
 pub(super) fn register<T: States>(app: &mut App, post_loading_state: T) {
     create_registry::<LineColorBlock>(app);
 
-    app.add_systems(OnEnter(post_loading_state), add_colors)
-        .init_resource::<LineBlocks<T>>();
+    app.add_systems(OnEnter(post_loading_state), add_colors);
 }

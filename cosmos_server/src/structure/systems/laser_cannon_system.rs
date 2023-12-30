@@ -7,7 +7,9 @@ use cosmos_core::{
     projectiles::laser::Laser,
     structure::{
         systems::{
-            energy_storage_system::EnergyStorageSystem, laser_cannon_system::LaserCannonSystem, StructureSystem, SystemActive, Systems,
+            energy_storage_system::EnergyStorageSystem,
+            laser_cannon_system::{LaserCannonSystem, SystemCooldown},
+            StructureSystem, SystemActive, Systems,
         },
         Structure,
     },
@@ -16,10 +18,9 @@ use cosmos_core::{
 use crate::state::GameState;
 
 const LASER_BASE_VELOCITY: f32 = 200.0;
-const LASER_SHOOT_SECONDS: f32 = 0.2;
 
 fn update_system(
-    mut query: Query<(&mut LaserCannonSystem, &StructureSystem), With<SystemActive>>,
+    mut query: Query<(&LaserCannonSystem, &StructureSystem, &mut SystemCooldown), With<SystemActive>>,
     mut es_query: Query<&mut EnergyStorageSystem>,
     systems: Query<(
         Entity,
@@ -34,15 +35,15 @@ fn update_system(
     mut commands: Commands,
     mut server: ResMut<RenetServer>,
 ) {
-    for (mut cannon_system, system) in query.iter_mut() {
+    for (cannon_system, system, mut cooldown) in query.iter_mut() {
         if let Ok((ship_entity, systems, structure, location, global_transform, ship_velocity, physics_world)) =
             systems.get(system.structure_entity)
         {
             if let Ok(mut energy_storage_system) = systems.query_mut(&mut es_query) {
                 let sec = time.elapsed_seconds();
 
-                if sec - cannon_system.last_shot_time > LASER_SHOOT_SECONDS {
-                    cannon_system.last_shot_time = sec;
+                if sec - cooldown.last_use_time > cooldown.cooldown_time.as_secs_f32() {
+                    cooldown.last_use_time = sec;
 
                     let world_id = physics_world.map(|bw| bw.world_id).unwrap_or(DEFAULT_WORLD_ID);
 
