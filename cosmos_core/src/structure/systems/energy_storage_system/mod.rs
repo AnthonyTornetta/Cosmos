@@ -61,8 +61,9 @@ impl EnergyStorageSystem {
     /// Decreases the energy stored in this system - does not go below 0.
     ///
     /// Make sure to check using `get_energy` if there is enough to use.
-    pub fn decrease_energy(&mut self, delta: f32) {
+    pub fn decrease_energy(&mut self, delta: f32) -> bool {
         self.energy = (self.energy - delta).max(0.0);
+        self.energy > 0.0
     }
 
     /// Gets the current stored energy of the system

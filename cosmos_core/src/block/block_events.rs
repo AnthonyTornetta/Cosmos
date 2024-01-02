@@ -260,9 +260,19 @@ fn handle_block_place_events(
     }
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+pub enum BlockEventsSet {
+    ProcessEvents,
+}
+
 pub(super) fn register(app: &mut App) {
+    app.configure_sets(Update, (BlockEventsSet::ProcessEvents));
+
     app.add_event::<BlockBreakEvent>()
         .add_event::<BlockPlaceEvent>()
         .add_event::<BlockInteractEvent>()
-        .add_systems(Update, (handle_block_break_events, handle_block_place_events));
+        .add_systems(
+            Update,
+            (handle_block_break_events, handle_block_place_events).in_set(BlockEventsSet::ProcessEvents),
+        );
 }
