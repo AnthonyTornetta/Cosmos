@@ -47,7 +47,7 @@ fn add_being_mined(mut commands: Commands, query: Query<Entity, (With<Structure>
 fn check_should_break(
     mut commands: Commands,
     mut q_structure: Query<(Entity, &Structure, &mut BeingMined)>,
-    mut q_mining_blocks: Query<&mut MiningBlock>,
+    mut q_mining_blocks: Query<(Entity, &mut MiningBlock)>,
     mut ev_writer: EventWriter<BlockBreakEvent>,
     blocks: Res<Registry<Block>>,
     time: Res<Time>,
@@ -56,7 +56,7 @@ fn check_should_break(
 
     for (structure_entity, structure, mut being_mined) in q_structure.iter_mut() {
         being_mined.0.retain(|coordinate, &mut entity| {
-            let Ok(mut mining_block) = q_mining_blocks.get_mut(entity) else {
+            let Ok((_, mut mining_block)) = q_mining_blocks.get_mut(entity) else {
                 return false;
             };
 
@@ -86,6 +86,12 @@ fn check_should_break(
             true
         });
     }
+
+    q_mining_blocks.iter().for_each(|(entity, mining_block)| {
+        if mining_block.time_mined <= 0.0 {
+            commands.entity(entity).insert(NeedsDespawned);
+        }
+    });
 }
 
 fn update_mining_beams(
