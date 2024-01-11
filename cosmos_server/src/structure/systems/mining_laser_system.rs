@@ -1,9 +1,5 @@
 use bevy::{prelude::*, time::Time, utils::HashMap};
-use bevy_rapier3d::{
-    pipeline::QueryFilter,
-    plugin::RapierContext,
-    prelude::{PhysicsWorld, Velocity},
-};
+use bevy_rapier3d::{pipeline::QueryFilter, plugin::RapierContext, prelude::PhysicsWorld};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::{
@@ -11,7 +7,6 @@ use cosmos_core::{
         Block,
     },
     ecs::NeedsDespawned,
-    physics::location::Location,
     registry::Registry,
     structure::{
         coordinates::BlockCoordinate,
@@ -67,9 +62,7 @@ fn check_should_break(
 
             let block = structure.block_at(mining_block.block_coord, &blocks);
 
-            println!("Mining: {block:?} {mining_block:?}");
-
-            if mining_block.time_mined >= 3.0 {
+            if mining_block.time_mined >= block.mining_resistance() {
                 ev_writer.send(BlockBreakEvent {
                     block: StructureBlock::new(*coordinate),
                     breaker: mining_block.last_toucher,
@@ -213,10 +206,6 @@ fn update_mining_beams(
         }
     }
 
-    if !mining_blocks.is_empty() {
-        println!("Doing {mining_blocks:?}");
-    }
-
     for CachedBlockBeingMined {
         hit_structure_entity,
         beam_shooter_entity,
@@ -265,23 +254,13 @@ struct MiningBeam {
 fn on_activate_system(
     mut query: Query<(Entity, &MiningLaserSystem, &StructureSystem), Added<SystemActive>>,
     mut es_query: Query<&mut EnergyStorageSystem>,
-    systems: Query<(
-        Entity,
-        &Systems,
-        &Structure,
-        &Location,
-        &GlobalTransform,
-        &Velocity,
-        Option<&PhysicsWorld>,
-    )>,
+    systems: Query<(Entity, &Systems, &Structure, Option<&PhysicsWorld>)>,
     time: Res<Time>,
     mut commands: Commands,
     mut server: ResMut<RenetServer>,
 ) {
     for (system_entity, mining_system, system) in query.iter_mut() {
-        if let Ok((ship_entity, systems, structure, location, global_transform, ship_velocity, physics_world)) =
-            systems.get(system.structure_entity)
-        {
+        if let Ok((ship_entity, systems, structure, physics_world)) = systems.get(system.structure_entity) {
             if let Ok(mut energy_storage_system) = systems.query_mut(&mut es_query) {
                 let sec = time.delta_seconds();
 

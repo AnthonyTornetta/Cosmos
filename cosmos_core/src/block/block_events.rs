@@ -73,11 +73,7 @@ fn handle_block_break_events(
         // but for now just throw them where ever thire is space. This will get horribly laggy as there are more
         // structures in the game
 
-        println!("Got event! {ev:?}");
-
         if q_structure.contains(ev.breaker) {
-            println!("The breaker is a structure!");
-
             let Ok(mut structure) = q_structure.get_mut(ev.structure_entity) else {
                 continue;
             };
@@ -103,21 +99,14 @@ fn handle_block_break_events(
 
             let item_id = block_items.item_from_block(block);
 
-            println!("Item ID: {item_id:?}");
-
             if let Some(item_id) = item_id {
                 let item = items.from_numeric_id(item_id);
-
-                println!("Inventories count: {}", q_inventory_block_data.iter().len());
 
                 for (_, mut inventory) in q_inventory_block_data
                     .iter_mut()
                     .filter(|(block_data, _)| block_data.identifier.structure_entity == ev.breaker)
                 {
-                    println!("Found a block data!");
-
                     if inventory.insert(item, 1) == 0 {
-                        println!("Inserted all!");
                         break;
                     }
                 }

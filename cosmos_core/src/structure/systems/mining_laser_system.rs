@@ -1,7 +1,5 @@
 //! Represents all the mining lasers on a structure
 
-use std::time::Duration;
-
 use bevy::{prelude::*, reflect::Reflect};
 
 use crate::{block::Block, registry::Registry};

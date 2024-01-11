@@ -350,14 +350,18 @@ impl Block {
         self.hardness
     }
 
+    /// How resistant this block is to being mined.
+    ///
+    /// This is (for now) how long it takes 1 mining beam to mine this block in seconds
     #[inline]
     pub fn mining_resistance(&self) -> f32 {
         self.mining_resistance
     }
 
+    /// If the block's [`Self::mining_resistance`] is `f32::INFINITY` this will be false
     #[inline]
     pub fn can_be_mined(&self) -> bool {
-        self.mining_resistance == f32::INFINITY
+        self.mining_resistance != f32::INFINITY
     }
 }
 
