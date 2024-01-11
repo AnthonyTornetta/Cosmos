@@ -247,7 +247,7 @@ impl BlockProperty {
     }
 
     /// Creates a property id from a list of block properties
-    pub fn create_id(properties: &Vec<Self>) -> u8 {
+    pub fn create_id(properties: &[Self]) -> u8 {
         let mut res = 0;
 
         for p in properties {
@@ -268,6 +268,10 @@ pub struct Block {
     unlocalized_name: String,
     density: f32,
     hardness: f32,
+    /// How resistant this block is to being mined.
+    ///
+    /// This is (for now) how long it takes 1 mining beam to mine this block in seconds
+    mining_resistance: f32,
 }
 
 impl Identifiable for Block {
@@ -290,13 +294,21 @@ impl Block {
     /// Creates a block
     ///
     /// * `unlocalized_name` This should be unique for that block with the following formatting: `mod_id:block_identifier`. Such as: `cosmos:laser_cannon`
-    pub fn new(properties: &Vec<BlockProperty>, id: u16, unlocalized_name: String, density: f32, hardness: f32) -> Self {
+    pub fn new(
+        properties: &[BlockProperty],
+        id: u16,
+        unlocalized_name: String,
+        density: f32,
+        hardness: f32,
+        mining_resistance: f32,
+    ) -> Self {
         Self {
             visibility: BlockProperty::create_id(properties),
             id,
             unlocalized_name,
             density,
             hardness,
+            mining_resistance,
         }
     }
 
@@ -333,8 +345,19 @@ impl Block {
     /// Returns the hardness of this block (how resistant it is to breaking)
     ///
     /// Air: 0, Leaves: 1, Grass/Dirt: 10, Stone: 50, Hull: 100,
+    #[inline]
     pub fn hardness(&self) -> f32 {
         self.hardness
+    }
+
+    #[inline]
+    pub fn mining_resistance(&self) -> f32 {
+        self.mining_resistance
+    }
+
+    #[inline]
+    pub fn can_be_mined(&self) -> bool {
+        self.mining_resistance == f32::INFINITY
     }
 }
 

@@ -16,8 +16,10 @@ pub type MiningLaserSystem = LineSystem<MiningLaserProperty, MiningLaserProperty
 pub struct MiningLaserProperty {
     /// How much energy is consumed per shot
     pub energy_per_second: f32,
-    /// The duration it takes to break a block
-    pub break_speed: Duration,
+    /// The breaking force this block has
+    ///
+    /// Base is 1.0
+    pub break_force: f32,
 }
 
 impl LineProperty for MiningLaserProperty {}
@@ -34,7 +36,7 @@ impl LinePropertyCalculator<MiningLaserProperty> for MiningLaserPropertyCalculat
             .iter()
             .copied()
             .reduce(|a, b: MiningLaserProperty| MiningLaserProperty {
-                break_speed: a.break_speed + b.break_speed,
+                break_force: a.break_force + b.break_force,
                 energy_per_second: a.energy_per_second + b.energy_per_second,
             })
             .unwrap_or_default()
@@ -47,7 +49,7 @@ fn register_laser_blocks(blocks: Res<Registry<Block>>, mut cannon: ResMut<LineBl
             block,
             MiningLaserProperty {
                 energy_per_second: 100.0,
-                break_speed: Duration::from_secs(10),
+                break_force: 1.0,
             },
         )
     }

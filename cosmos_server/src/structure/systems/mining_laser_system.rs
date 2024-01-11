@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use bevy::{prelude::*, time::Time, utils::HashMap};
 use bevy_rapier3d::{
     pipeline::QueryFilter,
@@ -123,22 +121,22 @@ fn update_mining_beams(
     let delta_time = time.delta_seconds();
 
     for (entity, beam, p_world, g_trans) in q_mining_beams.iter_mut() {
-        println!("Found beam??!?!?");
-
         if !q_is_system_active.contains(beam.system_entity) {
-            println!("System inactive??!?!?");
             commands.entity(entity).insert(NeedsDespawned);
             continue;
         }
 
         let Ok(systems) = q_systems.get(beam.structure_entity) else {
-            println!("No systems??!?!?");
+            warn!("Structure missing `Systems` component {:?}", beam.structure_entity);
+            commands.entity(beam.structure_entity).log_components();
             commands.entity(entity).insert(NeedsDespawned);
             continue;
         };
 
         let Ok(mut energy_storage_system) = systems.query_mut(&mut q_energy_storage_system) else {
-            println!("No energy system??!?!?");
+            warn!("Structure missing `EnergyStorageSystem` system {:?}", beam.structure_entity);
+            commands.entity(beam.structure_entity).log_components();
+
             continue;
         };
 
@@ -184,18 +182,20 @@ fn update_mining_beams(
             {
                 let hit_structure_entity = structure.get_entity().expect("Missing structure entity");
 
+                let break_delta = delta_time * beam.property.break_force;
+
                 if let Some(block) = mining_blocks.iter_mut().find(|b| {
                     b.hit_structure_entity == hit_structure_entity
                         && b.beam_shooter_entity == beam_shooter_entity
                         && b.hit_coordinate == block_coord
                 }) {
-                    block.break_increase += delta_time;
+                    block.break_increase += break_delta;
                 } else {
                     mining_blocks.push(CachedBlockBeingMined {
                         hit_structure_entity,
                         beam_shooter_entity,
                         hit_coordinate: block_coord,
-                        break_increase: delta_time,
+                        break_increase: break_delta,
                     });
                 }
             } else {
@@ -257,8 +257,6 @@ fn update_mining_beams(
 
 #[derive(Component)]
 struct MiningBeam {
-    mining: Option<(StructureBlock, f32)>,
-    mine_duration: Duration,
     property: MiningLaserProperty,
     system_entity: Entity,
     structure_entity: Entity,
@@ -300,8 +298,6 @@ fn on_activate_system(
                         // let beam_direction = global_transform.affine().matrix3.mul_vec3(-line.direction.direction_vec3());
                         let beam_direction = -line.direction.direction_vec3();
 
-                        let strength = line.property.break_speed;
-
                         let beam_begin = line.end();
                         let rel_pos = structure.block_relative_position(beam_begin.coords());
 
@@ -309,8 +305,6 @@ fn on_activate_system(
                             .spawn((
                                 Name::new("Mining beam"),
                                 MiningBeam {
-                                    mine_duration: strength,
-                                    mining: None,
                                     property: line.property,
                                     structure_entity: ship_entity,
                                     system_entity,

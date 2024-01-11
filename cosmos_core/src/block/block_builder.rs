@@ -8,18 +8,20 @@ pub struct BlockBuilder {
     unlocalized_name: String,
     density: f32,
     hardness: f32,
+    mining_resistance: f32,
 }
 
 impl BlockBuilder {
     /// Starts the building process for a block
     ///
     /// * `unlocalized_name` This should be unique for that block with the following formatting: `mod_id:block_identifier`. Such as: `cosmos:laser_cannon`
-    pub fn new(unlocalized_name: impl Into<String>, density: f32, hardness: f32) -> Self {
+    pub fn new(unlocalized_name: impl Into<String>, density: f32, hardness: f32, mining_resistance: f32) -> Self {
         Self {
             properties: Vec::new(),
             unlocalized_name: unlocalized_name.into(),
             density,
             hardness,
+            mining_resistance,
         }
     }
 
@@ -45,6 +47,7 @@ impl BlockBuilder {
             self.unlocalized_name.clone(),
             self.density,
             self.hardness,
+            self.mining_resistance,
         )
     }
 }
