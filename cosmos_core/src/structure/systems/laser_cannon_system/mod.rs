@@ -8,7 +8,7 @@ use crate::{block::Block, registry::Registry};
 
 use super::line_system::{add_line_system, LineBlocks, LineProperty, LinePropertyCalculator, LineSystem};
 
-#[derive(Default, Reflect, Clone, Copy)]
+#[derive(Default, Reflect, Clone, Copy, Debug)]
 /// Every block that is a laser cannon should have this property
 pub struct LaserCannonProperty {
     /// How much energy is consumed per shot

@@ -25,7 +25,7 @@ pub trait LinePropertyCalculator<T: LineProperty>: 'static + Send + Sync {
 }
 
 /// Property each block adds to the line
-pub trait LineProperty: 'static + Send + Sync + Clone + Copy {}
+pub trait LineProperty: 'static + Send + Sync + Clone + Copy + std::fmt::Debug {}
 
 #[derive(Resource)]
 /// The blocks that will effect this line
@@ -115,7 +115,7 @@ impl Registry<LineColorBlock> {
     }
 }
 
-#[derive(Reflect)]
+#[derive(Reflect, Debug)]
 /// Represents a line of laser cannons.
 ///
 /// All laser cannons in this line are facing the same direction.
@@ -339,6 +339,7 @@ impl<T: LineProperty, S: LinePropertyCalculator<T>> LineSystem<T, S> {
                     line.start.z -= dz as CoordinateType;
                     line.len += 1;
                     line.properties.insert(0, *prop);
+                    line.property = S::calculate_property(&line.properties);
 
                     found_line = Some(i);
                 }
@@ -351,6 +352,7 @@ impl<T: LineProperty, S: LinePropertyCalculator<T>> LineSystem<T, S> {
                 } else {
                     line.len += 1;
                     line.properties.push(*prop);
+                    line.property = S::calculate_property(&line.properties);
 
                     found_line = Some(i);
                 }
@@ -376,6 +378,7 @@ impl<T: LineProperty, S: LinePropertyCalculator<T>> LineSystem<T, S> {
                 l1.len += l2.len;
 
                 l1.properties.append(&mut l2.properties);
+                l1.property = S::calculate_property(&l1.properties);
 
                 self.lines.swap_remove(l2_i);
             }
@@ -500,7 +503,7 @@ fn structure_loaded_event<T: LineProperty, S: LinePropertyCalculator<T>>(
     blocks: Res<Registry<Block>>,
     color_blocks: Res<Registry<LineColorBlock>>,
     mut commands: Commands,
-    laser_cannon_blocks: Res<LineBlocks<T>>,
+    line_blocks: Res<LineBlocks<T>>,
 ) {
     for ev in event_reader.read() {
         if let Ok((structure, mut systems)) = structure_query.get_mut(ev.structure_entity) {
@@ -510,7 +513,7 @@ fn structure_loaded_event<T: LineProperty, S: LinePropertyCalculator<T>>(
 
             for structure_block in structure.all_blocks_iter(false) {
                 let block = structure_block.block(structure, &blocks);
-                if let Some(prop) = laser_cannon_blocks.get(block) {
+                if let Some(prop) = line_blocks.get(block) {
                     system.block_added(prop, &structure_block);
                 }
                 if let Some(color_property) = color_blocks.from_block(block) {
