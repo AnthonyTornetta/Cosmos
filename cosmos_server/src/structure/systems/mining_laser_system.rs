@@ -4,7 +4,7 @@ use bevy::{prelude::*, time::Time, utils::HashMap};
 use bevy_rapier3d::{
     pipeline::QueryFilter,
     plugin::RapierContext,
-    prelude::{PhysicsWorld, Velocity, DEFAULT_WORLD_ID},
+    prelude::{PhysicsWorld, Velocity},
 };
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
@@ -13,16 +13,13 @@ use cosmos_core::{
         Block,
     },
     ecs::NeedsDespawned,
-    netty::{cosmos_encoder, server_laser_cannon_system_messages::ServerLaserCannonSystemMessages, NettyChannelServer},
     physics::location::Location,
-    projectiles::laser::Laser,
     registry::Registry,
     structure::{
         coordinates::BlockCoordinate,
         structure_block::StructureBlock,
         systems::{
             energy_storage_system::EnergyStorageSystem,
-            laser_cannon_system::{LaserCannonSystem, SystemCooldown},
             mining_laser_system::{MiningLaserProperty, MiningLaserSystem},
             StructureSystem, SystemActive, Systems,
         },
@@ -32,28 +29,10 @@ use cosmos_core::{
 
 use crate::state::GameState;
 
-const LASER_BASE_VELOCITY: f32 = 200.0;
-
-// struct MiningBeam {
-//     direction: Vec3,
-//     last_mined: Option<(StructureBlock, f32)>,
-//     mine_duration: Duration,
-//     property: MiningLaserProperty,
-// }
-
-// #[derive(Deref, DerefMut, Default, Component)]
-// struct MiningBeams(HashMap<BlockCoordinate, MiningBeam>);
-
-// fn on_add_system(mut commands: Commands, query: Query<Entity, Added<MiningLaserSystem>>) {
-//     for ent in query.iter() {
-//         commands.entity(ent).insert(MiningBeams::default());
-//     }
-// }
-
 const BEAM_MAX_RANGE: f32 = 250.0;
-const BREAK_DECAY_RATIO: f32 = 0.5;
+const BREAK_DECAY_RATIO: f32 = 1.5;
 
-#[derive(Component)]
+#[derive(Component, Debug)]
 struct MiningBlock {
     block_coord: BlockCoordinate,
     time_mined: f32,
@@ -74,7 +53,7 @@ fn add_being_mined(mut commands: Commands, query: Query<Entity, (With<Structure>
 
 fn check_should_break(
     mut commands: Commands,
-    mut q_structure: Query<(Entity, &mut Structure, &mut BeingMined)>,
+    mut q_structure: Query<(Entity, &Structure, &mut BeingMined)>,
     mut q_mining_blocks: Query<&mut MiningBlock>,
     mut ev_writer: EventWriter<BlockBreakEvent>,
     blocks: Res<Registry<Block>>,
@@ -82,7 +61,7 @@ fn check_should_break(
 ) {
     let delta = time.delta_seconds();
 
-    for (structure_entity, mut structure, mut being_mined) in q_structure.iter_mut() {
+    for (structure_entity, structure, mut being_mined) in q_structure.iter_mut() {
         being_mined.0.retain(|coordinate, &mut entity| {
             let Ok(mut mining_block) = q_mining_blocks.get_mut(entity) else {
                 return false;
@@ -90,7 +69,7 @@ fn check_should_break(
 
             let block = structure.block_at(mining_block.block_coord, &blocks);
 
-            println!("Mining: {block:?}");
+            println!("Mining: {block:?} {mining_block:?}");
 
             if mining_block.time_mined >= 3.0 {
                 ev_writer.send(BlockBreakEvent {
@@ -111,6 +90,8 @@ fn check_should_break(
                 return false;
             }
 
+            mining_block.dirty = false;
+
             true
         });
     }
@@ -119,15 +100,49 @@ fn check_should_break(
 fn update_mining_beams(
     mut commands: Commands,
     mut q_mining_beams: Query<(Entity, &mut MiningBeam, &PhysicsWorld, &GlobalTransform)>,
-    mut q_structure: Query<(Entity, &mut Structure, &mut BeingMined, &GlobalTransform)>,
+    q_systems: Query<&Systems>,
+    mut q_energy_storage_system: Query<&mut EnergyStorageSystem>,
+    q_structure: Query<(&Structure, &GlobalTransform)>,
     mut q_mining_block: Query<&mut MiningBlock>,
+    mut q_being_mined: Query<&mut BeingMined>,
     q_is_system_active: Query<(), With<SystemActive>>,
     rapier_context: Res<RapierContext>,
     q_parent: Query<&Parent>,
     time: Res<Time>,
 ) {
+    #[derive(Debug)]
+    struct CachedBlockBeingMined {
+        hit_structure_entity: Entity,
+        beam_shooter_entity: Entity,
+        hit_coordinate: BlockCoordinate,
+        break_increase: f32,
+    }
+
+    let mut mining_blocks: Vec<CachedBlockBeingMined> = vec![];
+
+    let delta_time = time.delta_seconds();
+
     for (entity, beam, p_world, g_trans) in q_mining_beams.iter_mut() {
+        println!("Found beam??!?!?");
+
         if !q_is_system_active.contains(beam.system_entity) {
+            println!("System inactive??!?!?");
+            commands.entity(entity).insert(NeedsDespawned);
+            continue;
+        }
+
+        let Ok(systems) = q_systems.get(beam.structure_entity) else {
+            println!("No systems??!?!?");
+            commands.entity(entity).insert(NeedsDespawned);
+            continue;
+        };
+
+        let Ok(mut energy_storage_system) = systems.query_mut(&mut q_energy_storage_system) else {
+            println!("No energy system??!?!?");
+            continue;
+        };
+
+        if !energy_storage_system.decrease_energy(beam.property.energy_per_second * delta_time) {
             commands.entity(entity).insert(NeedsDespawned);
             continue;
         }
@@ -135,7 +150,7 @@ fn update_mining_beams(
         let ray_start = g_trans.translation();
         let ray_dir = g_trans.forward();
 
-        if let Ok(Some((hit_entity, toi))) = rapier_context.cast_ray(
+        let Ok(Some((hit_entity, toi))) = rapier_context.cast_ray(
             p_world.world_id,
             ray_start.into(),
             ray_dir.into(),
@@ -150,64 +165,92 @@ fn update_mining_beams(
                     false
                 }
             }),
-        ) {
-            println!("Hit!!!");
-            commands.entity(hit_entity).log_components();
+        ) else {
+            continue;
+        };
 
-            let mut handle_structure = |structure_entity: Entity,
-                                        structure: &mut Structure,
-                                        being_mined: &mut BeingMined,
-                                        structure_global_trans: &GlobalTransform| {
-                let global_point_hit = ray_start + (ray_dir * (toi + 0.01));
+        let mut handle_structure = |beam_shooter_entity: Entity,
+                                    structure: &Structure,
+                                    // being_mined: &mut BeingMined,
+                                    structure_global_trans: &GlobalTransform| {
+            let global_point_hit = ray_start + (ray_dir * (toi + 0.01));
 
-                let local_point_hit = Quat::from_affine3(&structure_global_trans.affine())
-                    .inverse()
-                    .mul_vec3(global_point_hit - structure_global_trans.translation());
+            let local_point_hit = Quat::from_affine3(&structure_global_trans.affine())
+                .inverse()
+                .mul_vec3(global_point_hit - structure_global_trans.translation());
 
-                println!("Hit {global_point_hit} => {local_point_hit}");
+            if let Ok(block_coord) =
+                structure.relative_coords_to_local_coords_checked(local_point_hit.x, local_point_hit.y, local_point_hit.z)
+            {
+                let hit_structure_entity = structure.get_entity().expect("Missing structure entity");
 
-                if let Ok(block_coord) =
-                    structure.relative_coords_to_local_coords_checked(local_point_hit.x, local_point_hit.y, local_point_hit.z)
-                {
-                    let delta_time = time.delta_seconds();
-
-                    if let Some(&mining_block) = being_mined.0.get(&block_coord) {
-                        if let Ok(mut mining_block) = q_mining_block.get_mut(mining_block) {
-                            mining_block.time_mined += delta_time;
-                            mining_block.dirty = true;
-                        }
-                    } else {
-                        let mining_block = commands
-                            .spawn((
-                                Name::new("Block being mined"),
-                                MiningBlock {
-                                    block_coord,
-                                    time_mined: delta_time,
-                                    dirty: true,
-                                    last_toucher: structure_entity,
-                                },
-                            ))
-                            .id();
-
-                        being_mined.0.insert(block_coord, mining_block);
-                    }
+                if let Some(block) = mining_blocks.iter_mut().find(|b| {
+                    b.hit_structure_entity == hit_structure_entity
+                        && b.beam_shooter_entity == beam_shooter_entity
+                        && b.hit_coordinate == block_coord
+                }) {
+                    block.break_increase += delta_time;
                 } else {
-                    println!("Oob hit??");
+                    mining_blocks.push(CachedBlockBeingMined {
+                        hit_structure_entity,
+                        beam_shooter_entity,
+                        hit_coordinate: block_coord,
+                        break_increase: delta_time,
+                    });
                 }
-                // if let Some((block, seconds_mined)) = &mut beam.mining {
-                //     if *block != local_point_hit {}
-                // }
-            };
+            } else {
+                warn!("Mining laser hit out of bounds coordinates?");
+            }
+        };
 
-            if let Ok((entity, mut structure, mut being_mined, g_trans)) = q_structure.get_mut(hit_entity) {
-                handle_structure(entity, &mut structure, &mut being_mined, g_trans);
-            } else if let Ok(parent) = q_parent.get(hit_entity) {
-                if let Ok((entity, mut structure, mut being_mined, g_trans)) = q_structure.get_mut(parent.get()) {
-                    handle_structure(entity, &mut structure, &mut being_mined, g_trans);
-                }
+        if let Ok((structure, g_trans)) = q_structure.get(hit_entity) {
+            handle_structure(beam.structure_entity, &structure, g_trans);
+        } else if let Ok(parent) = q_parent.get(hit_entity) {
+            let entity = parent.get();
+            if let Ok((structure, g_trans)) = q_structure.get(entity) {
+                handle_structure(beam.structure_entity, &structure, g_trans);
+            }
+        }
+    }
+
+    if !mining_blocks.is_empty() {
+        println!("Doing {mining_blocks:?}");
+    }
+
+    for CachedBlockBeingMined {
+        hit_structure_entity,
+        beam_shooter_entity,
+        hit_coordinate,
+        break_increase,
+    } in mining_blocks
+    {
+        let Ok(mut being_mined) = q_being_mined.get_mut(hit_structure_entity) else {
+            error!("No being mined! Logging components of something that should be a structure but isn't.");
+            commands.entity(hit_structure_entity).log_components();
+            continue;
+        };
+
+        if let Some(&mining_block) = being_mined.0.get(&hit_coordinate) {
+            if let Ok(mut mining_block) = q_mining_block.get_mut(mining_block) {
+                mining_block.time_mined += break_increase;
+                mining_block.dirty = true;
             }
         } else {
-            println!("Ray missed!");
+            let mining_block = commands
+                .spawn((
+                    Name::new("Block being mined"),
+                    MiningBlock {
+                        block_coord: hit_coordinate,
+                        time_mined: break_increase,
+                        dirty: true,
+                        last_toucher: beam_shooter_entity,
+                    },
+                ))
+                .id();
+
+            commands.entity(beam_shooter_entity).add_child(mining_block);
+
+            being_mined.0.insert(hit_coordinate, mining_block);
         }
     }
 }
@@ -242,7 +285,7 @@ fn on_activate_system(
             systems.get(system.structure_entity)
         {
             if let Ok(mut energy_storage_system) = systems.query_mut(&mut es_query) {
-                let sec = time.elapsed_seconds();
+                let sec = time.delta_seconds();
 
                 let world_id = physics_world.map(|bw| bw.world_id).unwrap_or_default();
 
@@ -254,7 +297,8 @@ fn on_activate_system(
                         // I SHOULD NOT HAVE TO NEGATE THE DIRECTION
                         // SINCE THERE IS NO WAY TO ROTATE THE CANNONS, FOR NOW THIS HAS
                         // TO BE HERE, BUT ONCE CANNONS CAN BE ROTATED, REMOVE THIS!
-                        let beam_direction = global_transform.affine().matrix3.mul_vec3(-line.direction.direction_vec3());
+                        // let beam_direction = global_transform.affine().matrix3.mul_vec3(-line.direction.direction_vec3());
+                        let beam_direction = -line.direction.direction_vec3();
 
                         let strength = line.property.break_speed;
 
