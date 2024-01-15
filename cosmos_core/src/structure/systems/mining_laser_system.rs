@@ -42,7 +42,7 @@ impl LinePropertyCalculator<MiningLaserProperty> for MiningLaserPropertyCalculat
 }
 
 fn register_laser_blocks(blocks: Res<Registry<Block>>, mut cannon: ResMut<LineBlocks<MiningLaserProperty>>) {
-    if let Some(block) = blocks.from_id("cosmos:laser_cannon") {
+    if let Some(block) = blocks.from_id("cosmos:plasma_drill") {
         cannon.insert(
             block,
             MiningLaserProperty {
