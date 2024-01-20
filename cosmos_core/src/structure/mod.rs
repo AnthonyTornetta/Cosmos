@@ -742,7 +742,7 @@ pub fn rotate(
     }
 }
 
-pub(super) fn register<T: States + Clone + Copy>(app: &mut App, post_loading_state: T, playing_state: T) {
+pub(super) fn register<T: States + Clone + Copy>(app: &mut App, playing_state: T) {
     app.register_type::<Structure>()
         .register_type::<Chunk>()
         .add_event::<ChunkInitEvent>();
@@ -754,7 +754,7 @@ pub(super) fn register<T: States + Clone + Copy>(app: &mut App, post_loading_sta
     events::register(app);
     shared::register(app);
     loading::register(app);
-    systems::register(app, post_loading_state, playing_state);
+    systems::register(app);
     block_health::register(app);
     structure_block::register(app);
 

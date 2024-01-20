@@ -1,14 +1,19 @@
+use std::time::Duration;
+
 use bevy::{prelude::*, time::Time};
 use bevy_rapier3d::prelude::{PhysicsWorld, Velocity, DEFAULT_WORLD_ID};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
+    block::Block,
     netty::{cosmos_encoder, server_laser_cannon_system_messages::ServerLaserCannonSystemMessages, NettyChannelServer},
     physics::location::Location,
     projectiles::laser::Laser,
+    registry::Registry,
     structure::{
         systems::{
             energy_storage_system::EnergyStorageSystem,
-            laser_cannon_system::{LaserCannonSystem, SystemCooldown},
+            laser_cannon_system::{LaserCannonCalculator, LaserCannonProperty, LaserCannonSystem, SystemCooldown},
+            line_system::LineBlocks,
             StructureSystem, SystemActive, Systems,
         },
         Structure,
@@ -16,6 +21,23 @@ use cosmos_core::{
 };
 
 use crate::state::GameState;
+
+use super::line_system::add_line_system;
+
+fn on_add_laser(mut commands: Commands, query: Query<Entity, Added<LaserCannonSystem>>) {
+    for ent in query.iter() {
+        commands.entity(ent).insert(SystemCooldown {
+            cooldown_time: Duration::from_millis(200),
+            ..Default::default()
+        });
+    }
+}
+
+fn register_laser_blocks(blocks: Res<Registry<Block>>, mut cannon: ResMut<LineBlocks<LaserCannonProperty>>) {
+    if let Some(block) = blocks.from_id("cosmos:laser_cannon") {
+        cannon.insert(block, LaserCannonProperty { energy_per_shot: 100.0 })
+    }
+}
 
 const LASER_BASE_VELOCITY: f32 = 200.0;
 
@@ -108,5 +130,9 @@ fn update_system(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, update_system.run_if(in_state(GameState::Playing)));
+    add_line_system::<LaserCannonProperty, LaserCannonCalculator>(app);
+
+    app.add_systems(Update, update_system.run_if(in_state(GameState::Playing)))
+        .add_systems(OnEnter(GameState::PostLoading), register_laser_blocks)
+        .add_systems(Update, on_add_laser);
 }

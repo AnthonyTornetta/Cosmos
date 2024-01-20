@@ -13,7 +13,8 @@ use cosmos_core::{
         structure_block::StructureBlock,
         systems::{
             energy_storage_system::EnergyStorageSystem,
-            mining_laser_system::{MiningLaserProperty, MiningLaserSystem},
+            line_system::LineBlocks,
+            mining_laser_system::{MiningLaserProperty, MiningLaserPropertyCalculator, MiningLaserSystem},
             StructureSystem, SystemActive, Systems,
         },
         Structure,
@@ -21,6 +22,8 @@ use cosmos_core::{
 };
 
 use crate::state::GameState;
+
+use super::line_system::add_line_system;
 
 const BEAM_MAX_RANGE: f32 = 250.0;
 const BREAK_DECAY_RATIO: f32 = 1.5;
@@ -310,11 +313,26 @@ fn on_activate_system(
     }
 }
 
+fn register_laser_blocks(blocks: Res<Registry<Block>>, mut cannon: ResMut<LineBlocks<MiningLaserProperty>>) {
+    if let Some(block) = blocks.from_id("cosmos:plasma_drill") {
+        cannon.insert(
+            block,
+            MiningLaserProperty {
+                energy_per_second: 100.0,
+                break_force: 1.0,
+            },
+        )
+    }
+}
+
 pub(super) fn register(app: &mut App) {
+    add_line_system::<MiningLaserProperty, MiningLaserPropertyCalculator>(app);
+
     app.add_systems(
         Update,
         (add_being_mined, on_activate_system, update_mining_beams, check_should_break)
             .before(BlockEventsSet::ProcessEvents)
             .run_if(in_state(GameState::Playing)),
-    );
+    )
+    .add_systems(OnEnter(GameState::PostLoading), register_laser_blocks);
 }

@@ -13,12 +13,16 @@ use bevy::{
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannelServer},
-    structure::systems::{StructureSystem, SystemActive},
+    structure::{
+        structure_block::StructureBlock,
+        systems::{StructureSystem, SystemActive},
+    },
 };
 
 mod energy_generation_system;
 mod energy_storage_system;
 mod laser_cannon_system;
+mod line_system;
 mod mining_laser_system;
 mod thruster_system;
 
@@ -64,7 +68,16 @@ fn sync_active_systems(
     }
 }
 
+/// A system that is created by the addition and removal of blocks
+pub trait BlockStructureSystem<T> {
+    /// Called whenever a block is added that is relevant to this system
+    fn add_block(&mut self, sb: &StructureBlock, property: &T);
+    /// Called whenever a block is removed that is relevant to this system
+    fn remove_block(&mut self, sb: &StructureBlock);
+}
+
 pub(super) fn register(app: &mut App) {
+    line_system::register(app);
     laser_cannon_system::register(app);
     thruster_system::register(app);
     energy_generation_system::register(app);

@@ -1,10 +1,8 @@
 //! Represents all the mining lasers on a structure
 
-use bevy::{prelude::*, reflect::Reflect};
+use bevy::reflect::Reflect;
 
-use crate::{block::Block, registry::Registry};
-
-use super::line_system::{add_line_system, LineBlocks, LineProperty, LinePropertyCalculator, LineSystem};
+use super::line_system::{LineProperty, LinePropertyCalculator, LineSystem};
 
 /// A ship system that stores information about the mining lasers
 pub type MiningLaserSystem = LineSystem<MiningLaserProperty, MiningLaserPropertyCalculator>;
@@ -39,22 +37,4 @@ impl LinePropertyCalculator<MiningLaserProperty> for MiningLaserPropertyCalculat
             })
             .unwrap_or_default()
     }
-}
-
-fn register_laser_blocks(blocks: Res<Registry<Block>>, mut cannon: ResMut<LineBlocks<MiningLaserProperty>>) {
-    if let Some(block) = blocks.from_id("cosmos:plasma_drill") {
-        cannon.insert(
-            block,
-            MiningLaserProperty {
-                energy_per_second: 100.0,
-                break_force: 1.0,
-            },
-        )
-    }
-}
-
-pub(super) fn register<T: States + Clone + Copy>(app: &mut App, post_loading_state: T, playing_state: T) {
-    add_line_system::<T, MiningLaserProperty, MiningLaserPropertyCalculator>(app, playing_state);
-
-    app.add_systems(OnEnter(post_loading_state), register_laser_blocks);
 }
