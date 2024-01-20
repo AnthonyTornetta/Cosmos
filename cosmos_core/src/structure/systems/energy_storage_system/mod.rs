@@ -1,19 +1,12 @@
 //! Represents all the energy stored on a structure
 
 use bevy::{
-    prelude::{in_state, App, Commands, Component, EventReader, IntoSystemConfigs, OnEnter, Query, Res, ResMut, Resource, States, Update},
+    prelude::{App, Component, Resource},
     reflect::Reflect,
     utils::HashMap,
 };
 
-use crate::{
-    block::Block,
-    events::block_events::BlockChangedEvent,
-    registry::{identifiable::Identifiable, Registry},
-    structure::{events::StructureLoadedEvent, loading::StructureLoadingSet, Structure},
-};
-
-use super::Systems;
+use crate::{block::Block, registry::identifiable::Identifiable};
 
 #[derive(Default, Reflect, Clone, Copy)]
 /// Every block that can store energy should have this property
@@ -23,15 +16,18 @@ pub struct EnergyStorageProperty {
 }
 
 #[derive(Default, Resource)]
-struct EnergyStorageBlocks {
+/// All the energy storage blocks - register them here.
+pub struct EnergyStorageBlocks {
     blocks: HashMap<u16, EnergyStorageProperty>,
 }
 
 impl EnergyStorageBlocks {
+    /// Inserts a block with a property
     pub fn insert(&mut self, block: &Block, storage_property: EnergyStorageProperty) {
         self.blocks.insert(block.id(), storage_property);
     }
 
+    /// Gets a property from that block if it has one
     pub fn get(&self, block: &Block) -> Option<&EnergyStorageProperty> {
         self.blocks.get(&block.id())
     }
@@ -45,11 +41,13 @@ pub struct EnergyStorageSystem {
 }
 
 impl EnergyStorageSystem {
-    fn block_added(&mut self, prop: &EnergyStorageProperty) {
+    /// Call this whenever a block is added to the system
+    pub fn block_added(&mut self, prop: &EnergyStorageProperty) {
         self.capacity += prop.capacity;
     }
 
-    fn block_removed(&mut self, prop: &EnergyStorageProperty) {
+    /// Call this whenever a block is removed from the system
+    pub fn block_removed(&mut self, prop: &EnergyStorageProperty) {
         self.capacity -= prop.capacity;
     }
 
@@ -79,70 +77,7 @@ impl EnergyStorageSystem {
     }
 }
 
-fn register_energy_blocks(blocks: Res<Registry<Block>>, mut storage: ResMut<EnergyStorageBlocks>) {
-    if let Some(block) = blocks.from_id("cosmos:energy_cell") {
-        storage.insert(block, EnergyStorageProperty { capacity: 10000.0 });
-    }
-
-    if let Some(block) = blocks.from_id("cosmos:ship_core") {
-        storage.insert(block, EnergyStorageProperty { capacity: 1000.0 })
-    }
-}
-
-fn block_update_system(
-    mut event: EventReader<BlockChangedEvent>,
-    energy_storage_blocks: Res<EnergyStorageBlocks>,
-    blocks: Res<Registry<Block>>,
-    mut system_query: Query<&mut EnergyStorageSystem>,
-    systems_query: Query<&Systems>,
-) {
-    for ev in event.read() {
-        if let Ok(systems) = systems_query.get(ev.structure_entity) {
-            if let Ok(mut system) = systems.query_mut(&mut system_query) {
-                if let Some(prop) = energy_storage_blocks.get(blocks.from_numeric_id(ev.old_block)) {
-                    system.block_removed(prop);
-                }
-
-                if let Some(prop) = energy_storage_blocks.get(blocks.from_numeric_id(ev.new_block)) {
-                    system.block_added(prop);
-                }
-            }
-        }
-    }
-}
-
-fn structure_loaded_event(
-    mut event_reader: EventReader<StructureLoadedEvent>,
-    mut structure_query: Query<(&Structure, &mut Systems)>,
-    blocks: Res<Registry<Block>>,
-    mut commands: Commands,
-    thruster_blocks: Res<EnergyStorageBlocks>,
-) {
-    for ev in event_reader.read() {
-        if let Ok((structure, mut systems)) = structure_query.get_mut(ev.structure_entity) {
-            let mut system = EnergyStorageSystem::default();
-
-            for block in structure.all_blocks_iter(false) {
-                if let Some(prop) = thruster_blocks.get(block.block(structure, &blocks)) {
-                    system.block_added(prop);
-                }
-            }
-
-            systems.add_system(&mut commands, system);
-        }
-    }
-}
-
-pub(super) fn register<T: States + Clone + Copy>(app: &mut App, post_loading_state: T, playing_state: T) {
+pub(super) fn register(app: &mut App) {
     app.insert_resource(EnergyStorageBlocks::default())
-        .add_systems(OnEnter(post_loading_state), register_energy_blocks)
-        .add_systems(
-            Update,
-            (
-                structure_loaded_event.in_set(StructureLoadingSet::StructureLoaded),
-                block_update_system,
-            )
-                .run_if(in_state(playing_state)),
-        )
         .register_type::<EnergyStorageSystem>();
 }

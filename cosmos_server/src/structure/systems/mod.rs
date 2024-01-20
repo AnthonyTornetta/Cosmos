@@ -16,6 +16,8 @@ use cosmos_core::{
     structure::systems::{StructureSystem, SystemActive},
 };
 
+mod energy_generation_system;
+mod energy_storage_system;
 mod laser_cannon_system;
 mod mining_laser_system;
 mod thruster_system;
@@ -65,7 +67,9 @@ fn sync_active_systems(
 pub(super) fn register(app: &mut App) {
     laser_cannon_system::register(app);
     thruster_system::register(app);
+    energy_generation_system::register(app);
     mining_laser_system::register(app);
+    energy_storage_system::register(app);
 
     app.add_systems(Update, sync_active_systems);
 }
