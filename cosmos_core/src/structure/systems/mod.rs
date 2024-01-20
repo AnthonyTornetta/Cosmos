@@ -233,6 +233,6 @@ pub(super) fn register<T: States + Clone + Copy>(app: &mut App, post_loading_sta
     mining_laser_system::register(app, post_loading_state, playing_state);
     energy_storage_system::register(app, post_loading_state, playing_state);
     energy_generation_system::register(app, post_loading_state, playing_state);
-    thruster_system::register(app, post_loading_state, playing_state);
+    thruster_system::register(app);
     laser_cannon_system::register(app, post_loading_state, playing_state);
 }

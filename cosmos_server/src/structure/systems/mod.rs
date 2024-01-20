@@ -18,6 +18,7 @@ use cosmos_core::{
 
 mod laser_cannon_system;
 mod mining_laser_system;
+mod thruster_system;
 
 fn sync_active_systems(
     q_systems: Query<&StructureSystem>,
@@ -63,6 +64,7 @@ fn sync_active_systems(
 
 pub(super) fn register(app: &mut App) {
     laser_cannon_system::register(app);
+    thruster_system::register(app);
     mining_laser_system::register(app);
 
     app.add_systems(Update, sync_active_systems);
