@@ -40,7 +40,7 @@ pub struct SystemActive;
 /// This does not need to be provided if no controller is used
 pub struct SystemBlock(String);
 
-#[derive(Component, Debug)]
+#[derive(Component, Debug, Reflect)]
 /// Every system has this as a component.
 pub struct StructureSystem {
     structure_entity: Entity,
@@ -121,7 +121,7 @@ impl Systems {
             .copied()
     }
 
-    /// Sets the currently selected system
+    /// Activates the passed in selected system, and deactivates the system that was previously selected
     pub fn set_active_system(&mut self, active: Option<u32>, commands: &mut Commands) {
         if active == self.active_system {
             return;
@@ -226,7 +226,8 @@ fn add_structure(mut commands: Commands, query: Query<Entity, (Added<Structure>,
 }
 
 pub(super) fn register<T: States + Clone + Copy>(app: &mut App, post_loading_state: T, playing_state: T) {
-    app.add_systems(Update, add_structure.in_set(StructureLoadingSet::LoadChunkData));
+    app.add_systems(Update, add_structure.in_set(StructureLoadingSet::LoadChunkData))
+        .register_type::<StructureSystem>();
 
     line_system::register(app, post_loading_state);
     mining_laser_system::register(app, post_loading_state, playing_state);

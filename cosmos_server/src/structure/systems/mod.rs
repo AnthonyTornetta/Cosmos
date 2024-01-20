@@ -31,6 +31,8 @@ fn sync_active_systems(
             continue;
         };
 
+        println!("Sending activated system {:?}!", structure_system.id());
+
         server.broadcast_message(
             NettyChannelServer::Reliable,
             cosmos_encoder::serialize(&ServerReliableMessages::StructureSystemActiveChange {
@@ -45,6 +47,8 @@ fn sync_active_systems(
         let Ok(structure_system) = q_systems.get(deactivated_system) else {
             continue;
         };
+
+        println!("Sending deactivated system {:?}!", structure_system.id());
 
         server.broadcast_message(
             NettyChannelServer::Reliable,
