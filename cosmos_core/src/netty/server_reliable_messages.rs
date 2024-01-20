@@ -19,6 +19,7 @@ use crate::{
         planet::Planet,
         shared::build_mode::BuildMode,
         structure_block::StructureBlock,
+        systems::StructureSystemId,
     },
     universe::star::Star,
 };
@@ -218,5 +219,14 @@ pub enum ServerReliableMessages {
         credits: Credits,
         /// The entity that has these credits
         entity: Entity,
+    },
+    /// Sent whenever the activness of a structure system changes
+    StructureSystemActiveChange {
+        /// The structure system id
+        system_id: StructureSystemId,
+        /// The structure that contains this system
+        structure_entity: Entity,
+        /// If the system is active or not
+        active: bool,
     },
 }

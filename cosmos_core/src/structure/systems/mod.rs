@@ -7,7 +7,8 @@
 
 use std::{error::Error, fmt::Formatter};
 
-use bevy::prelude::*;
+use bevy::{prelude::*, utils::HashMap};
+use serde::{Deserialize, Serialize};
 
 use super::{loading::StructureLoadingSet, ship::Ship, Structure};
 
@@ -22,6 +23,16 @@ pub mod thruster_system;
 #[component(storage = "SparseSet")]
 /// Used to tell if the selected system should be active
 /// (ie laser cannons firing)
+///
+/// This component will be on the system's entity
+///
+/// For example:
+///
+/// ```rs
+/// Query<&LaserCannonSystem, With<SystemActive>>
+/// ```
+///
+/// would give you every laser cannon system that is currently being activated.
 pub struct SystemActive;
 
 #[derive(Component)]
@@ -32,8 +43,35 @@ pub struct SystemBlock(String);
 #[derive(Component, Debug)]
 /// Every system has this as a component.
 pub struct StructureSystem {
+    structure_entity: Entity,
+    system_id: StructureSystemId,
+}
+
+impl StructureSystem {
+    /// This system's unique id
+    pub fn id(&self) -> StructureSystemId {
+        self.system_id
+    }
+
     /// The entity this system belongs to
-    pub structure_entity: Entity,
+    pub fn structure_entity(&self) -> Entity {
+        self.structure_entity
+    }
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Reflect, Hash)]
+/// Uniquely identifies a system on a per-structure basis.
+///
+/// This can have collisions across multiple structures, but is guarenteed to be unique per-structure.
+pub struct StructureSystemId(u64);
+
+impl StructureSystemId {
+    /// Creates a new system id.
+    ///
+    /// This does not check for collisions
+    pub fn new(id: u64) -> Self {
+        Self(id)
+    }
 }
 
 #[derive(Debug)]
@@ -53,6 +91,8 @@ impl Error for NoSystemFound {}
 pub struct Systems {
     /// These entities should have the `StructureSystem` component
     pub systems: Vec<Entity>,
+    /// The system ids
+    ids: HashMap<StructureSystemId, usize>,
     /// More than just one system can be active at a time, but the pilot can only personally activate one system at a time
     /// Perhaps make this a component on the pilot entity in the future?
     /// Currently this limits a ship to one pilot, the above would fix this issue, but this is a future concern.
@@ -61,6 +101,26 @@ pub struct Systems {
 }
 
 impl Systems {
+    fn has_id(&self, id: StructureSystemId) -> bool {
+        self.ids.contains_key(&id)
+    }
+
+    fn insert_system(&mut self, system_id: StructureSystemId, entity: Entity) {
+        let idx = self.systems.len();
+        self.ids.insert(system_id, idx);
+        self.systems.push(entity);
+    }
+
+    /// Gets the entity that corresponds to the system id, or none if not found.
+    pub fn get_system_entity(&self, system_id: StructureSystemId) -> Option<Entity> {
+        self.ids
+            .get(&system_id)
+            .copied()
+            .map(|idx| self.systems.get(idx))
+            .flatten()
+            .copied()
+    }
+
     /// Sets the currently selected system
     pub fn set_active_system(&mut self, active: Option<u32>, commands: &mut Commands) {
         if active == self.active_system {
@@ -82,20 +142,45 @@ impl Systems {
         self.active_system = active;
     }
 
+    /// Returns the active system entity, if there is one.
+    pub fn active_system(&self) -> Option<Entity> {
+        self.active_system.map(|x| self.systems[x as usize])
+    }
+
+    /// Generates a new id for a system while avoiding collisions
+    fn generate_new_system_id(&self) -> StructureSystemId {
+        let mut system_id;
+
+        loop {
+            system_id = StructureSystemId::new(rand::random::<u64>());
+            if !self.has_id(system_id) {
+                break;
+            }
+        }
+
+        system_id
+    }
+
     /// Adds a system to the structure. Use this instead of directly adding it with commands.
     pub fn add_system<T: Component>(&mut self, commands: &mut Commands, system: T) -> Entity {
         let mut ent = None;
 
-        commands.entity(self.entity).with_children(|p| {
-            ent = Some(
-                p.spawn(system)
-                    .insert(StructureSystem {
-                        structure_entity: self.entity,
-                    })
-                    .id(),
-            );
+        let system_id = self.generate_new_system_id();
 
-            self.systems.push(ent.unwrap());
+        commands.entity(self.entity).with_children(|p| {
+            let entity = p
+                .spawn(system)
+                .insert(StructureSystem {
+                    structure_entity: self.entity,
+                    system_id,
+                })
+                .id();
+
+            self.insert_system(system_id, entity);
+
+            self.systems.push(entity);
+
+            ent = Some(entity);
         });
 
         ent.expect("This should have been set in above closure.")
@@ -135,6 +220,7 @@ fn add_structure(mut commands: Commands, query: Query<Entity, (Added<Structure>,
             systems: Vec::new(),
             entity,
             active_system: None,
+            ids: Default::default(),
         });
     }
 }

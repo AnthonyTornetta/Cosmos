@@ -37,7 +37,7 @@ fn update_system(
 ) {
     for (cannon_system, system, mut cooldown) in query.iter_mut() {
         if let Ok((ship_entity, systems, structure, location, global_transform, ship_velocity, physics_world)) =
-            systems.get(system.structure_entity)
+            systems.get(system.structure_entity())
         {
             if let Ok(mut energy_storage_system) = systems.query_mut(&mut es_query) {
                 let sec = time.elapsed_seconds();
@@ -64,7 +64,7 @@ fn update_system(
                                 global_transform.affine().matrix3.mul_vec3(-line.direction.direction_vec3()) * LASER_BASE_VELOCITY;
 
                             let strength = (5.0 * line.len as f32).powf(1.2);
-                            let no_hit = Some(system.structure_entity);
+                            let no_hit = Some(system.structure_entity());
 
                             Laser::spawn(
                                 location,

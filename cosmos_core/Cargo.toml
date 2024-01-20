@@ -41,6 +41,7 @@ bincode = { workspace = true }
 local-ip-address = { workspace = true }
 image = { workspace = true }
 bigdecimal = { workspace = true }
+rand = { workspace = true }
 
 bevy_rapier3d = { workspace = true }
 bevy-inspector-egui = { workspace = true }

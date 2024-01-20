@@ -37,6 +37,7 @@ use cosmos_core::{
         shared::build_mode::{EnterBuildModeEvent, ExitBuildModeEvent},
         ship::{pilot::Pilot, ship_builder::TShipBuilder, Ship},
         station::station_builder::TStationBuilder,
+        systems::{SystemActive, Systems},
         ChunkInitEvent, Structure,
     },
 };
@@ -177,6 +178,7 @@ pub(crate) fn client_sync_players(
         EventWriter<BlockTakeDamageEvent>,
     ),
     (query_player, parent_query): (Query<&Player>, Query<&Parent>),
+    q_systems: Query<&Systems>,
     mut query_body: Query<
         (
             Option<&mut Location>,
@@ -696,6 +698,27 @@ pub(crate) fn client_sync_players(
             ServerReliableMessages::Credits { credits, entity } => {
                 if let Some(entity) = network_mapping.client_from_server(&entity) {
                     commands.entity(entity).insert(credits);
+                }
+            }
+            ServerReliableMessages::StructureSystemActiveChange {
+                system_id,
+                structure_entity,
+                active,
+            } => {
+                let Ok(systems) = q_systems.get(structure_entity) else {
+                    continue;
+                };
+
+                let Some(entity) = systems.get_system_entity(system_id) else {
+                    continue;
+                };
+
+                let Some(mut ecmds) = commands.get_entity(entity) else { continue };
+
+                if active {
+                    ecmds.insert(SystemActive);
+                } else {
+                    ecmds.remove::<SystemActive>();
                 }
             }
         }

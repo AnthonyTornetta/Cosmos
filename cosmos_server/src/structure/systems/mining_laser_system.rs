@@ -1,6 +1,5 @@
 use bevy::{prelude::*, time::Time, utils::HashMap};
 use bevy_rapier3d::{pipeline::QueryFilter, plugin::RapierContext, prelude::PhysicsWorld};
-use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::{
         block_events::{BlockBreakEvent, BlockEventsSet},
@@ -10,6 +9,7 @@ use cosmos_core::{
     registry::Registry,
     structure::{
         coordinates::BlockCoordinate,
+        shared::DespawnWithStructure,
         structure_block::StructureBlock,
         systems::{
             energy_storage_system::EnergyStorageSystem,
@@ -263,10 +263,9 @@ fn on_activate_system(
     systems: Query<(Entity, &Systems, &Structure, Option<&PhysicsWorld>)>,
     time: Res<Time>,
     mut commands: Commands,
-    mut server: ResMut<RenetServer>,
 ) {
     for (system_entity, mining_system, system) in query.iter_mut() {
-        if let Ok((ship_entity, systems, structure, physics_world)) = systems.get(system.structure_entity) {
+        if let Ok((ship_entity, systems, structure, physics_world)) = systems.get(system.structure_entity()) {
             if let Ok(mut energy_storage_system) = systems.query_mut(&mut es_query) {
                 let sec = time.delta_seconds();
 
@@ -294,6 +293,7 @@ fn on_activate_system(
                                     structure_entity: ship_entity,
                                     system_entity,
                                 },
+                                DespawnWithStructure,
                                 TransformBundle::from_transform(Transform::from_translation(rel_pos).looking_to(beam_direction, Vec3::Y)),
                                 PhysicsWorld { world_id },
                             ))
