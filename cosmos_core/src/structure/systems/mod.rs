@@ -136,10 +136,14 @@ impl Systems {
         if let Some(active_system) = active {
             if (active_system as usize) < self.systems.len() {
                 commands.entity(self.systems[active_system as usize]).insert(SystemActive);
-            }
-        }
 
-        self.active_system = active;
+                self.active_system = active;
+            } else {
+                self.active_system = None;
+            }
+        } else {
+            self.active_system = None;
+        }
     }
 
     /// Returns the active system entity, if there is one.
@@ -177,8 +181,6 @@ impl Systems {
                 .id();
 
             self.insert_system(system_id, entity);
-
-            self.systems.push(entity);
 
             ent = Some(entity);
         });
