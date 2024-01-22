@@ -292,7 +292,7 @@ fn add_air_block(
 }
 
 pub(super) fn register<T: States>(app: &mut App, pre_loading_state: T, loading_state: T) {
-    registry::create_registry::<Block>(app);
+    registry::create_registry::<Block>(app, "cosmos:blocks");
 
     app.add_systems(OnEnter(pre_loading_state), add_air_block);
     app.add_systems(OnEnter(loading_state), add_cosmos_blocks);

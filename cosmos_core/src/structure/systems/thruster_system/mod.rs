@@ -5,8 +5,11 @@ use bevy::{
     reflect::Reflect,
     utils::HashMap,
 };
+use serde::{Deserialize, Serialize};
 
 use crate::{block::Block, registry::identifiable::Identifiable};
+
+use super::{sync::SyncableSystem, StructureSystemImpl};
 
 /// A block that is a thruster will have a thruster property
 pub struct ThrusterProperty {
@@ -34,12 +37,20 @@ impl ThrusterBlocks {
     }
 }
 
-#[derive(Component, Default, Reflect)]
+#[derive(Component, Default, Reflect, Serialize, Deserialize)]
 /// Represents all the thruster blocks on this structure
 pub struct ThrusterSystem {
     thrust_total: f32,
     energy_consumption: f32,
 }
+
+impl StructureSystemImpl for ThrusterSystem {
+    fn unlocalized_name() -> &'static str {
+        "cosmos:thruster_system"
+    }
+}
+
+impl SyncableSystem for ThrusterSystem {}
 
 impl ThrusterSystem {
     /// Called whenever a block is added

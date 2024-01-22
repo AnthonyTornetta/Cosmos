@@ -102,7 +102,7 @@ impl Identifiable for BlockCollider {
 }
 
 pub(super) fn register<T: States + Copy>(app: &mut App, post_loading_state: T) {
-    create_registry::<BlockCollider>(app);
+    create_registry::<BlockCollider>(app, "cosmos:block_colliders");
 
     app.add_systems(
         OnEnter(post_loading_state),

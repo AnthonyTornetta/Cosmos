@@ -2,7 +2,7 @@
 
 #![feature(fs_try_exists)]
 #![feature(get_many_mut)]
-#![warn(missing_docs)]
+// #![warn(missing_docs)]
 
 use std::env;
 
@@ -30,6 +30,7 @@ pub mod persistence;
 pub mod physics;
 pub mod plugin;
 pub mod projectiles;
+pub mod registry;
 pub mod rng;
 pub mod state;
 pub mod structure;

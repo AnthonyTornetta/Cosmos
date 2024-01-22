@@ -10,6 +10,8 @@ use std::{error::Error, fmt::Formatter};
 use bevy::{prelude::*, utils::HashMap};
 use serde::{Deserialize, Serialize};
 
+use crate::registry::{create_registry, identifiable::Identifiable, Registry};
+
 use super::{loading::StructureLoadingSet, ship::Ship, Structure};
 
 pub mod energy_generation_system;
@@ -17,6 +19,7 @@ pub mod energy_storage_system;
 pub mod laser_cannon_system;
 pub mod line_system;
 pub mod mining_laser_system;
+pub mod sync;
 pub mod thruster_system;
 
 #[derive(Component)]
@@ -45,6 +48,7 @@ pub struct SystemBlock(String);
 pub struct StructureSystem {
     structure_entity: Entity,
     system_id: StructureSystemId,
+    system_type_id: StructureSystemTypeId,
 }
 
 impl StructureSystem {
@@ -57,6 +61,10 @@ impl StructureSystem {
     pub fn structure_entity(&self) -> Entity {
         self.structure_entity
     }
+
+    pub fn system_type_id(&self) -> StructureSystemTypeId {
+        self.system_type_id
+    }
 }
 
 #[derive(Clone, Copy, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Reflect, Hash)]
@@ -64,6 +72,10 @@ impl StructureSystem {
 ///
 /// This can have collisions across multiple structures, but is guarenteed to be unique per-structure.
 pub struct StructureSystemId(u64);
+
+#[derive(Clone, Copy, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Reflect, Hash, Default)]
+/// The type of a system
+pub struct StructureSystemTypeId(u16);
 
 impl StructureSystemId {
     /// Creates a new system id.
@@ -166,17 +178,27 @@ impl Systems {
     }
 
     /// Adds a system to the structure. Use this instead of directly adding it with commands.
-    pub fn add_system<T: Component>(&mut self, commands: &mut Commands, system: T) -> Entity {
+    pub fn add_system<T: StructureSystemImpl>(
+        &mut self,
+        commands: &mut Commands,
+        system: T,
+        registry: &Registry<StructureSystemType>,
+    ) -> Entity {
         let mut ent = None;
 
         let system_id = self.generate_new_system_id();
 
         commands.entity(self.entity).with_children(|p| {
+            let Some(system_type) = registry.from_id(T::unlocalized_name()) else {
+                return;
+            };
+
             let entity = p
                 .spawn(system)
                 .insert(StructureSystem {
                     structure_entity: self.entity,
                     system_id,
+                    system_type_id: system_type.system_type_id,
                 })
                 .id();
 
@@ -227,7 +249,51 @@ fn add_structure(mut commands: Commands, query: Query<Entity, (Added<Structure>,
     }
 }
 
+// Update doc comment in line_system too
+pub trait StructureSystemImpl: Component {
+    fn unlocalized_name() -> &'static str;
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StructureSystemType {
+    unlocalized_name: String,
+    id: u16,
+
+    system_type_id: StructureSystemTypeId,
+}
+
+impl StructureSystemType {
+    pub fn new(unlocalized_name: impl Into<String>) -> Self {
+        Self {
+            id: 0,
+            system_type_id: StructureSystemTypeId::default(),
+            unlocalized_name: unlocalized_name.into(),
+        }
+    }
+
+    pub fn system_type_id(&self) -> StructureSystemTypeId {
+        self.system_type_id
+    }
+}
+
+impl Identifiable for StructureSystemType {
+    fn id(&self) -> u16 {
+        self.id
+    }
+
+    fn set_numeric_id(&mut self, id: u16) {
+        self.id = id;
+        self.system_type_id = StructureSystemTypeId(id);
+    }
+
+    fn unlocalized_name(&self) -> &str {
+        &self.unlocalized_name
+    }
+}
+
 pub(super) fn register(app: &mut App) {
+    create_registry::<StructureSystemType>(app, "cosmos:structure_system_types");
+
     app.add_systems(Update, add_structure.in_set(StructureLoadingSet::LoadChunkData))
         .register_type::<StructureSystem>();
 

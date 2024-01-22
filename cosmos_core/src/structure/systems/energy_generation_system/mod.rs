@@ -1,8 +1,27 @@
 //! Represents all the energy generation in a structure
 
 use bevy::{prelude::*, utils::HashMap};
+use serde::{Deserialize, Serialize};
 
 use crate::{block::Block, registry::identifiable::Identifiable};
+
+use super::{sync::SyncableSystem, StructureSystemImpl};
+
+#[derive(Component, Default, Reflect, Serialize, Deserialize)]
+/// A quick and dirty system that will generate X amount of energy per second.
+///
+/// This will eventually be removed
+pub struct EnergyGenerationSystem {
+    generation_rate: f32,
+}
+
+impl StructureSystemImpl for EnergyGenerationSystem {
+    fn unlocalized_name() -> &'static str {
+        "cosmos:energy_generation_system"
+    }
+}
+
+impl SyncableSystem for EnergyGenerationSystem {}
 
 #[derive(Default, Reflect, Clone, Copy)]
 /// Any block that can generate energy will have this property.
@@ -27,14 +46,6 @@ impl EnergyGenerationBlocks {
     pub fn get(&self, block: &Block) -> Option<&EnergyGenerationProperty> {
         self.blocks.get(&block.id())
     }
-}
-
-#[derive(Component, Default, Reflect)]
-/// A quick and dirty system that will generate X amount of energy per second.
-///
-/// This will eventually be removed
-pub struct EnergyGenerationSystem {
-    generation_rate: f32,
 }
 
 impl EnergyGenerationSystem {

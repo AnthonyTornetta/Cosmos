@@ -17,8 +17,8 @@ use cosmos_core::{
         loading::StructureLoadingSet,
         structure_block::StructureBlock,
         systems::{
-            line_system::{LaserCannonColorProperty, Line, LineBlocks, LineColorBlock, LineProperty, LinePropertyCalculator, LineSystem},
-            Systems,
+            line_system::{Line, LineBlocks, LineColorBlock, LineColorProperty, LineProperty, LinePropertyCalculator, LineSystem},
+            StructureSystemType, Systems,
         },
         Structure,
     },
@@ -75,6 +75,7 @@ fn structure_loaded_event<T: LineProperty, S: LinePropertyCalculator<T>>(
     color_blocks: Res<Registry<LineColorBlock>>,
     mut commands: Commands,
     line_blocks: Res<LineBlocks<T>>,
+    registry: Res<Registry<StructureSystemType>>,
 ) {
     for ev in event_reader.read() {
         if let Ok((structure, mut systems)) = structure_query.get_mut(ev.structure_entity) {
@@ -97,7 +98,7 @@ fn structure_loaded_event<T: LineProperty, S: LinePropertyCalculator<T>>(
                 recalculate_colors(&mut system, None);
             }
 
-            systems.add_system(&mut commands, system);
+            systems.add_system(&mut commands, system, &registry);
         }
     }
 }
@@ -346,7 +347,7 @@ fn calculate_color_for_line<T: LineProperty, S: LinePropertyCalculator<T>>(
         .iter()
         .filter(|x| is_in_line_with(block, direction, &x.0))
         .map(|x| x.1)
-        .collect::<Vec<LaserCannonColorProperty>>();
+        .collect::<Vec<LineColorProperty>>();
 
     let len = colors.len();
     let averaged_color = colors

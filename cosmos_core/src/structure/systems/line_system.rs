@@ -3,6 +3,7 @@
 use std::marker::PhantomData;
 
 use bevy::{prelude::*, reflect::Reflect, utils::HashMap};
+use serde::{Deserialize, Serialize};
 
 use crate::{
     block::{Block, BlockFace},
@@ -13,10 +14,15 @@ use crate::{
     },
 };
 
+use super::StructureSystemImpl;
+
 /// Calculates the total property from a line of properties
 pub trait LinePropertyCalculator<T: LineProperty>: 'static + Send + Sync {
     /// Calculates the total property from a line of properties
     fn calculate_property(properties: &[T]) -> T;
+
+    /// Gets the unlocalized name
+    fn unlocalized_name() -> &'static str;
 }
 
 /// Property each block adds to the line
@@ -48,9 +54,9 @@ impl<T: LineProperty> LineBlocks<T> {
     }
 }
 
-#[derive(Default, Reflect, Clone, Copy)]
+#[derive(Default, Reflect, Clone, Copy, Debug, Serialize, Deserialize)]
 /// Every block that will change the color of laser cannons should have this property
-pub struct LaserCannonColorProperty {
+pub struct LineColorProperty {
     /// The color this mining beam will be
     pub color: Color,
 }
@@ -62,10 +68,10 @@ pub struct LineColorBlock {
     unlocalized_name: String,
 
     /// The color properties of this block
-    pub properties: LaserCannonColorProperty,
+    pub properties: LineColorProperty,
 }
 
-impl From<Color> for LaserCannonColorProperty {
+impl From<Color> for LineColorProperty {
     fn from(color: Color) -> Self {
         Self { color }
     }
@@ -89,7 +95,7 @@ impl LineColorBlock {
     /// Creates a new laser cannon color block entry
     ///
     /// You can also use the `insert` method in the `Registry<LaserCannonColorBlock>` if that is easier.
-    pub fn new(block: &Block, properties: LaserCannonColorProperty) -> Self {
+    pub fn new(block: &Block, properties: LineColorProperty) -> Self {
         Self {
             properties,
             id: 0,
@@ -105,12 +111,12 @@ impl Registry<LineColorBlock> {
     }
 
     /// Inserts a block with the specified properties
-    pub fn insert(&mut self, block: &Block, properties: LaserCannonColorProperty) {
+    pub fn insert(&mut self, block: &Block, properties: LineColorProperty) {
         self.register(LineColorBlock::new(block, properties));
     }
 }
 
-#[derive(Reflect, Debug)]
+#[derive(Reflect, Debug, Serialize, Deserialize)]
 /// Represents a line of laser cannons.
 ///
 /// All laser cannons in this line are facing the same direction.
@@ -156,14 +162,20 @@ impl<T: LineProperty> Line<T> {
     }
 }
 
-#[derive(Component)]
+#[derive(Component, Debug, Serialize, Deserialize)]
 /// Represents all the laser cannons that are within this structure
 pub struct LineSystem<T: LineProperty, S: LinePropertyCalculator<T>> {
     /// All the lins that there are
     pub lines: Vec<Line<T>>,
     /// Any color changers that are placed on this structure
-    pub colors: Vec<(BlockCoordinate, LaserCannonColorProperty)>,
+    pub colors: Vec<(BlockCoordinate, LineColorProperty)>,
     _phantom: PhantomData<S>,
+}
+
+impl<T: LineProperty, S: LinePropertyCalculator<T>> StructureSystemImpl for LineSystem<T, S> {
+    fn unlocalized_name() -> &'static str {
+        S::unlocalized_name()
+    }
 }
 
 impl<T: LineProperty, S: LinePropertyCalculator<T>> Default for LineSystem<T, S> {
@@ -177,5 +189,5 @@ impl<T: LineProperty, S: LinePropertyCalculator<T>> Default for LineSystem<T, S>
 }
 
 pub(super) fn register(app: &mut App) {
-    create_registry::<LineColorBlock>(app);
+    create_registry::<LineColorBlock>(app, "cosmos:line_colors");
 }

@@ -1,6 +1,6 @@
 //! Contains all the logic for the client-side of Cosmos.
 
-#![warn(missing_docs)]
+// #![warn(missing_docs)]
 #![feature(iter_array_chunks)]
 
 pub mod asset;
@@ -20,6 +20,7 @@ pub mod netty;
 pub mod physics;
 pub mod plugin;
 pub mod projectiles;
+pub mod registry;
 pub mod rendering;
 pub mod settings;
 pub mod skybox;
@@ -122,6 +123,7 @@ fn main() {
     interactions::register(&mut app);
     camera::register(&mut app);
     ui::register(&mut app);
+    registry::register(&mut app);
     netty::register(&mut app);
     lang::register(&mut app);
     structure::register(&mut app);

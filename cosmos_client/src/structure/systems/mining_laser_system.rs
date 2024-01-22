@@ -31,6 +31,8 @@ fn apply_mining_sound(
     audio_handles: Res<LaserCannonFireHandles>,
 ) {
     for (structure_system, mining_laser_system) in q_mining_lasers.iter() {
+        println!("{mining_laser_system:?}");
+
         let structure_entity = structure_system.structure_entity();
 
         let Ok((ship_location, ship_global_transform, systems)) = q_position.get(structure_entity) else {

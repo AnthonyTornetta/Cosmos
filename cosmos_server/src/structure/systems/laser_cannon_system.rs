@@ -22,7 +22,7 @@ use cosmos_core::{
 
 use crate::state::GameState;
 
-use super::line_system::add_line_system;
+use super::{line_system::add_line_system, sync::register_structure_system};
 
 fn on_add_laser(mut commands: Commands, query: Query<Entity, Added<LaserCannonSystem>>) {
     for ent in query.iter() {
@@ -135,4 +135,6 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(Update, update_system.run_if(in_state(GameState::Playing)))
         .add_systems(OnEnter(GameState::PostLoading), register_laser_blocks)
         .add_systems(Update, on_add_laser);
+
+    register_structure_system::<LaserCannonSystem>(app);
 }

@@ -3,6 +3,7 @@
 pub mod laser_cannon_system;
 pub mod mining_laser_system;
 mod player_interactions;
+mod sync;
 pub mod thruster_system;
 
 use bevy::prelude::*;
@@ -16,4 +17,5 @@ pub(super) fn register(app: &mut App) {
     thruster_system::register(app);
     laser_cannon_system::register(app);
     mining_laser_system::register(app);
+    sync::register(app);
 }

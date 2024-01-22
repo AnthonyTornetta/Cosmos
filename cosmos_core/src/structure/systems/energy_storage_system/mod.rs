@@ -5,8 +5,11 @@ use bevy::{
     reflect::Reflect,
     utils::HashMap,
 };
+use serde::{Deserialize, Serialize};
 
 use crate::{block::Block, registry::identifiable::Identifiable};
+
+use super::{sync::SyncableSystem, StructureSystemImpl};
 
 #[derive(Default, Reflect, Clone, Copy)]
 /// Every block that can store energy should have this property
@@ -33,11 +36,19 @@ impl EnergyStorageBlocks {
     }
 }
 
-#[derive(Component, Default, Reflect)]
+#[derive(Component, Default, Reflect, Serialize, Deserialize)]
 /// Represents the energy storage of a structure
 pub struct EnergyStorageSystem {
     energy: f32,
     capacity: f32,
+}
+
+impl SyncableSystem for EnergyStorageSystem {}
+
+impl StructureSystemImpl for EnergyStorageSystem {
+    fn unlocalized_name() -> &'static str {
+        "cosmos:energy_storage_system"
+    }
 }
 
 impl EnergyStorageSystem {

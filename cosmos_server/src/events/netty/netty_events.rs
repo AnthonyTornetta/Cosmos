@@ -12,6 +12,7 @@ use cosmos_core::inventory::Inventory;
 use cosmos_core::item::Item;
 use cosmos_core::netty::netty_rigidbody::NettyRigidBodyLocation;
 use cosmos_core::netty::server_reliable_messages::ServerReliableMessages;
+use cosmos_core::netty::system_sets::NetworkingSystemsSet;
 use cosmos_core::netty::{cosmos_encoder, NettyChannelServer};
 use cosmos_core::persistence::LoadingDistance;
 use cosmos_core::physics::location::{Location, Sector};
@@ -24,6 +25,9 @@ use renet_visualizer::RenetServerVisualizer;
 
 use crate::entities::player::PlayerLooking;
 use crate::netty::network_helpers::{ClientTicks, ServerLobby};
+use crate::netty::sync::entities::RequestedEntityEvent;
+use crate::physics::assign_player_world;
+use crate::state::GameState;
 
 fn generate_player_inventory(items: &Registry<Item>) -> Inventory {
     let mut inventory = Inventory::new("Inventory", 9 * 10, Some(0..9));
@@ -53,11 +57,12 @@ fn generate_player_inventory(items: &Registry<Item>) -> Inventory {
     inventory
 }
 
-use crate::netty::sync::entities::RequestedEntityEvent;
-use crate::physics::assign_player_world;
-use crate::state::GameState;
+#[derive(Event, Debug)]
+pub struct PlayerConnectedEvent {
+    pub player_entity: Entity,
+}
 
-fn handle_events_system(
+fn handle_server_events(
     mut commands: Commands,
     mut server: ResMut<RenetServer>,
     transport: Res<NetcodeServerTransport>,
@@ -70,6 +75,7 @@ fn handle_events_system(
     mut visualizer: ResMut<RenetServerVisualizer<200>>,
     mut rapier_context: ResMut<RapierContext>,
     mut requested_entity: EventWriter<RequestedEntityEvent>,
+    mut player_join_ev_writer: EventWriter<PlayerConnectedEvent>,
 ) {
     for event in server_events.read() {
         match event {
@@ -129,14 +135,14 @@ fn handle_events_system(
                     Credits::new(50_000),
                 ));
 
-                let entity = player_commands.id();
+                let player_entity = player_commands.id();
 
-                lobby.add_player(client_id, entity);
+                lobby.add_player(client_id, player_entity);
 
-                assign_player_world(&player_worlds, entity, &location, &mut commands, &mut rapier_context);
+                assign_player_world(&player_worlds, player_entity, &location, &mut commands, &mut rapier_context);
 
                 let msg = cosmos_encoder::serialize(&ServerReliableMessages::PlayerCreate {
-                    entity,
+                    entity: player_entity,
                     id: client_id,
                     name,
                     body: netty_body,
@@ -153,6 +159,8 @@ fn handle_events_system(
                 );
 
                 server.broadcast_message(NettyChannelServer::Reliable, msg);
+
+                player_join_ev_writer.send(PlayerConnectedEvent { player_entity });
             }
             ServerEvent::ClientDisconnected { client_id, reason } => {
                 info!("Client {client_id} disconnected: {reason}");
@@ -172,5 +180,11 @@ fn handle_events_system(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, handle_events_system.run_if(in_state(GameState::Playing)));
+    app.add_systems(
+        Update,
+        handle_server_events
+            .run_if(in_state(GameState::Playing))
+            .in_set(NetworkingSystemsSet::ReceiveMessages),
+    )
+    .add_event::<PlayerConnectedEvent>();
 }

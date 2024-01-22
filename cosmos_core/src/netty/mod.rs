@@ -5,7 +5,9 @@ pub mod client_unreliable_messages;
 pub mod cosmos_encoder;
 pub mod netty_rigidbody;
 pub mod server_laser_cannon_system_messages;
+pub mod server_registry;
 pub mod server_reliable_messages;
+pub mod server_replication;
 pub mod server_unreliable_messages;
 pub mod system_sets;
 pub mod world_tick;
@@ -37,6 +39,9 @@ pub enum NettyChannelServer {
     DeltaLod,
     /// Used for inventories
     Inventory,
+    /// In future will be used for general component syncing
+    SystemReplication,
+    Registry,
 }
 
 /// Network channels that clients send to the server
@@ -100,6 +105,8 @@ impl From<NettyChannelServer> for u8 {
             NettyChannelServer::Asteroid => 3,
             NettyChannelServer::DeltaLod => 4,
             NettyChannelServer::Inventory => 5,
+            NettyChannelServer::SystemReplication => 6,
+            NettyChannelServer::Registry => 7,
         }
     }
 }
@@ -146,6 +153,20 @@ impl NettyChannelServer {
                     resend_time: Duration::from_millis(200),
                 },
             },
+            ChannelConfig {
+                channel_id: Self::SystemReplication.into(),
+                max_memory_usage_bytes: 5 * MB,
+                send_type: SendType::ReliableOrdered {
+                    resend_time: Duration::from_millis(200),
+                },
+            },
+            ChannelConfig {
+                channel_id: Self::Registry.into(),
+                max_memory_usage_bytes: 5 * MB,
+                send_type: SendType::ReliableOrdered {
+                    resend_time: Duration::from_millis(200),
+                },
+            },
         ]
     }
 }
@@ -158,7 +179,7 @@ pub const PROTOCOL_ID: u64 = 7;
 /// Assembles the configuration for a renet connection
 pub fn connection_config() -> ConnectionConfig {
     ConnectionConfig {
-        available_bytes_per_tick: 1024 * 1024,
+        available_bytes_per_tick: MB as u64,
         client_channels_config: NettyChannelClient::channels_config(),
         server_channels_config: NettyChannelServer::channels_config(),
     }

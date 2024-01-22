@@ -384,10 +384,10 @@ pub fn load_block_rendering_information(
 }
 
 pub(super) fn register(app: &mut App) {
-    registry::create_registry::<BlockTextureIndex>(app);
-    registry::create_registry::<LoadingTextureAtlas>(app);
-    registry::create_registry::<BlockRenderingInfo>(app);
-    registry::create_registry::<CosmosTextureAtlas>(app);
+    registry::create_registry::<BlockTextureIndex>(app, "cosmos:block_texture_index");
+    registry::create_registry::<LoadingTextureAtlas>(app, "cosmos:loading_texture_atlas");
+    registry::create_registry::<BlockRenderingInfo>(app, "cosmos:block_rendering_info");
+    registry::create_registry::<CosmosTextureAtlas>(app, "cosmos:texture_atlas");
 
     app.add_event::<AssetsDoneLoadingEvent>()
         .add_event::<AllTexturesDoneLoadingEvent>()

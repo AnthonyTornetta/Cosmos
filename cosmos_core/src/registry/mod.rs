@@ -6,6 +6,7 @@ pub mod one_to_one;
 
 use bevy::prelude::{resource_exists_and_changed, App, IntoSystemConfigs, Res, ResMut, Resource, Update};
 use bevy::utils::HashMap;
+use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::slice::Iter;
 use std::sync::{Arc, RwLock, RwLockReadGuard};
@@ -37,30 +38,28 @@ impl fmt::Display for AddLinkError {
 impl std::error::Error for AddLinkError {}
 
 /// Represents a bunch of values that are identifiable by their unlocalized name + numeric ids.
-#[derive(Resource, Debug, Clone)]
+#[derive(Resource, Debug, Clone, Serialize, Deserialize)]
 pub struct Registry<T: Identifiable> {
     contents: Vec<T>,
     unlocalized_name_to_id: HashMap<String, u16>,
-}
-
-impl<T: Identifiable> Default for Registry<T> {
-    fn default() -> Self {
-        Self {
-            contents: Vec::new(),
-            unlocalized_name_to_id: Default::default(),
-        }
-    }
+    /// Used for network syncing
+    registry_name: String,
 }
 
 impl<T: Identifiable + Sync + Send> Registry<T> {
+    pub fn name(&self) -> &str {
+        &self.registry_name
+    }
+
     /// Initializes a Registry.
     ///
     /// You should use [`create_registry`] instead, unless you don't want this
     /// added as a bevy resource.
-    pub fn new() -> Self {
+    pub fn new(registry_name: impl Into<String>) -> Self {
         Self {
             contents: Vec::new(),
             unlocalized_name_to_id: HashMap::new(),
+            registry_name: registry_name.into(),
         }
     }
 
@@ -116,19 +115,13 @@ impl<T: Identifiable + Sync + Send> Registry<T> {
 #[derive(Resource, Debug, Clone)]
 pub struct ReadOnlyRegistry<T: Identifiable>(Arc<RwLock<Registry<T>>>);
 
-impl<T: Identifiable> Default for ReadOnlyRegistry<T> {
-    fn default() -> Self {
-        Self(Arc::new(RwLock::new(Registry::default())))
-    }
-}
-
 impl<T: Identifiable + Sync + Send> ReadOnlyRegistry<T> {
     /// Initializes a Registry.
     ///
     /// You should use [`create_registry`] instead, unless you don't want this
     /// added as a bevy resource.
-    pub fn new() -> Self {
-        Self(Arc::new(RwLock::new(Registry::new())))
+    pub fn new(registry_name: impl Into<String>) -> Self {
+        Self(Arc::new(RwLock::new(Registry::new(registry_name))))
     }
 
     /// Takes a lock of the registry this encapsulates
@@ -142,8 +135,8 @@ fn apply_changes<T: Identifiable + 'static>(registry: Res<Registry<T>>, mut mute
 }
 
 /// Initializes & adds the registry to bevy that can then be used in systems via `Res<Registry<T>>`
-pub fn create_registry<T: Identifiable + 'static>(app: &mut App) {
-    app.insert_resource(Registry::<T>::new())
-        .insert_resource(ReadOnlyRegistry::<T>::new())
+pub fn create_registry<T: Identifiable + 'static>(app: &mut App, registry_name: impl Into<String> + Clone) {
+    app.insert_resource(Registry::<T>::new(registry_name.clone()))
+        .insert_resource(ReadOnlyRegistry::<T>::new(registry_name))
         .add_systems(Update, apply_changes::<T>.run_if(resource_exists_and_changed::<Registry<T>>()));
 }

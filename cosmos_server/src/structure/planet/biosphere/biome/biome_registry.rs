@@ -53,5 +53,5 @@ impl Identifiable for RegisteredBiome {
 }
 
 pub(super) fn register(app: &mut App) {
-    registry::create_registry::<RegisteredBiome>(app);
+    registry::create_registry::<RegisteredBiome>(app, "cosmos:biomes");
 }

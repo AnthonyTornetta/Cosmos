@@ -14,6 +14,8 @@ pub enum GameState {
     PostLoading,
     /// Connecting to the server
     Connecting,
+    /// Loading server data
+    LoadingData,
     /// Loading the server's world
     LoadingWorld,
     /// Playing the game

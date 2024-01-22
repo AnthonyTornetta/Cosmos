@@ -23,7 +23,7 @@ use cosmos_core::{
 
 use crate::state::GameState;
 
-use super::line_system::add_line_system;
+use super::{line_system::add_line_system, sync::register_structure_system};
 
 const BEAM_MAX_RANGE: f32 = 250.0;
 const BREAK_DECAY_RATIO: f32 = 1.5;
@@ -335,4 +335,6 @@ pub(super) fn register(app: &mut App) {
             .run_if(in_state(GameState::Playing)),
     )
     .add_systems(OnEnter(GameState::PostLoading), register_laser_blocks);
+
+    register_structure_system::<MiningLaserSystem>(app);
 }

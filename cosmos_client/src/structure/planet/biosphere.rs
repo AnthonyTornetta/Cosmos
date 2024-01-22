@@ -48,7 +48,7 @@ fn register_biospheres(mut reigstry: ResMut<Registry<BiosphereColor>>) {
 }
 
 pub(super) fn register(app: &mut App) {
-    registry::create_registry::<BiosphereColor>(app);
+    registry::create_registry::<BiosphereColor>(app, "cosmos:biosphere_colors");
 
     app.add_systems(Startup, register_biospheres);
 }

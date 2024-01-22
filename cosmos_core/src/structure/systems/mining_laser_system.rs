@@ -1,13 +1,19 @@
 //! Represents all the mining lasers on a structure
 
 use bevy::reflect::Reflect;
+use serde::{Deserialize, Serialize};
 
-use super::line_system::{LineProperty, LinePropertyCalculator, LineSystem};
+use super::{
+    line_system::{LineProperty, LinePropertyCalculator, LineSystem},
+    sync::SyncableSystem,
+};
 
 /// A ship system that stores information about the mining lasers
 pub type MiningLaserSystem = LineSystem<MiningLaserProperty, MiningLaserPropertyCalculator>;
 
-#[derive(Debug, Default, Reflect, Clone, Copy, PartialEq)]
+impl SyncableSystem for MiningLaserSystem {}
+
+#[derive(Debug, Default, Reflect, Clone, Copy, PartialEq, Serialize, Deserialize)]
 /// Every block that is a mining laser should have this property
 pub struct MiningLaserProperty {
     /// How much energy is consumed per shot
@@ -36,5 +42,9 @@ impl LinePropertyCalculator<MiningLaserProperty> for MiningLaserPropertyCalculat
                 energy_per_second: a.energy_per_second + b.energy_per_second,
             })
             .unwrap_or_default()
+    }
+
+    fn unlocalized_name() -> &'static str {
+        "cosmos:mining_laser_system"
     }
 }

@@ -24,6 +24,7 @@ mod energy_storage_system;
 mod laser_cannon_system;
 mod line_system;
 mod mining_laser_system;
+pub(crate) mod sync;
 mod thruster_system;
 
 fn sync_active_systems(
@@ -77,6 +78,7 @@ pub trait BlockStructureSystem<T> {
 }
 
 pub(super) fn register(app: &mut App) {
+    sync::register(app);
     line_system::register(app);
     laser_cannon_system::register(app);
     thruster_system::register(app);

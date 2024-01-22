@@ -16,13 +16,15 @@ use cosmos_core::{
         systems::{
             energy_storage_system::EnergyStorageSystem,
             thruster_system::{ThrusterBlocks, ThrusterProperty, ThrusterSystem},
-            StructureSystem, Systems,
+            StructureSystem, StructureSystemType, Systems,
         },
         Structure,
     },
 };
 
 use crate::state::GameState;
+
+use super::sync::register_structure_system;
 
 const MAX_SHIP_SPEED: f32 = 200.0;
 const MAX_BRAKE_DELTA_PER_THRUST: f32 = 300.0;
@@ -156,6 +158,7 @@ fn structure_loaded_event(
     blocks: Res<Registry<Block>>,
     mut commands: Commands,
     thruster_blocks: Res<ThrusterBlocks>,
+    registry: Res<Registry<StructureSystemType>>,
 ) {
     for ev in event_reader.read() {
         if let Ok((structure, mut systems)) = structure_query.get_mut(ev.structure_entity) {
@@ -167,7 +170,7 @@ fn structure_loaded_event(
                 }
             }
 
-            systems.add_system(&mut commands, system);
+            systems.add_system(&mut commands, system, &registry);
         }
     }
 }
@@ -185,4 +188,6 @@ pub(super) fn register(app: &mut App) {
                 .run_if(in_state(GameState::Playing)),
         )
         .register_type::<ThrusterSystem>();
+
+    register_structure_system::<ThrusterSystem>(app);
 }

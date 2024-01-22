@@ -103,7 +103,7 @@ fn register_all_lights(blocks: Res<Registry<Block>>, mut registry: ResMut<Regist
 }
 
 pub(super) fn register(app: &mut App) {
-    registry::create_registry::<BlockLighting>(app);
+    registry::create_registry::<BlockLighting>(app, "cosmos:block_lighting");
 
     app.add_systems(OnExit(GameState::Loading), register_all_lights);
 }
