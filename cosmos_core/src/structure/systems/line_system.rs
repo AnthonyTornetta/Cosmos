@@ -17,7 +17,7 @@ use crate::{
 use super::StructureSystemImpl;
 
 /// Calculates the total property from a line of properties
-pub trait LinePropertyCalculator<T: LineProperty>: 'static + Send + Sync {
+pub trait LinePropertyCalculator<T: LineProperty>: 'static + Send + Sync + std::fmt::Debug {
     /// Calculates the total property from a line of properties
     fn calculate_property(properties: &[T]) -> T;
 
@@ -162,7 +162,7 @@ impl<T: LineProperty> Line<T> {
     }
 }
 
-#[derive(Component, Debug, Serialize, Deserialize)]
+#[derive(Component, Serialize, Deserialize, Debug)]
 /// Represents all the laser cannons that are within this structure
 pub struct LineSystem<T: LineProperty, S: LinePropertyCalculator<T>> {
     /// All the lins that there are

@@ -15,6 +15,8 @@ use crate::{
     state::game_state::GameState,
 };
 
+use super::sync::sync_system;
+
 #[derive(Event)]
 /// This event is fired whenever a laser cannon system is fired
 pub struct LaserCannonSystemFiredEvent(pub Entity);
@@ -75,6 +77,8 @@ fn apply_mining_sound(
 struct LaserCannonLoadingFlag;
 
 pub(super) fn register(app: &mut App) {
+    sync_system::<MiningLaserSystem>(app);
+
     load_assets::<AudioSource, LaserCannonLoadingFlag>(
         app,
         GameState::PreLoading,

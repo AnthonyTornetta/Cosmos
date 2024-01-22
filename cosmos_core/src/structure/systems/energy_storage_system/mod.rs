@@ -36,7 +36,7 @@ impl EnergyStorageBlocks {
     }
 }
 
-#[derive(Component, Default, Reflect, Serialize, Deserialize)]
+#[derive(Component, Default, Reflect, Serialize, Deserialize, Debug)]
 /// Represents the energy storage of a structure
 pub struct EnergyStorageSystem {
     energy: f32,

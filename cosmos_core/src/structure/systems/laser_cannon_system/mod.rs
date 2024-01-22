@@ -26,6 +26,7 @@ pub struct LaserCannonProperty {
 
 impl LineProperty for LaserCannonProperty {}
 
+#[derive(Debug)]
 /// Used internally by laser cannon system, but must be public for compiler to be happy.
 ///
 /// A simple strategy pattern that is never initialized

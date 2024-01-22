@@ -2,13 +2,15 @@
 
 use bevy::{asset::LoadState, prelude::*};
 use bevy_kira_audio::prelude::*;
-use cosmos_core::physics::location::Location;
+use cosmos_core::{physics::location::Location, structure::systems::laser_cannon_system::LaserCannonSystem};
 
 use crate::{
     asset::asset_loader::load_assets,
     audio::{AudioEmission, CosmosAudioEmitter, DespawnOnNoEmissions},
     state::game_state::GameState,
 };
+
+use super::sync::sync_system;
 
 #[derive(Event)]
 /// This event is fired whenever a laser cannon system is fired
@@ -54,6 +56,8 @@ fn apply_shooting_sound(
 struct LaserCannonLoadingFlag;
 
 pub(super) fn register(app: &mut App) {
+    sync_system::<LaserCannonSystem>(app);
+
     load_assets::<AudioSource, LaserCannonLoadingFlag>(
         app,
         GameState::PreLoading,

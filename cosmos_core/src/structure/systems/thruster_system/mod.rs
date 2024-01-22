@@ -37,7 +37,7 @@ impl ThrusterBlocks {
     }
 }
 
-#[derive(Component, Default, Reflect, Serialize, Deserialize)]
+#[derive(Component, Default, Reflect, Serialize, Deserialize, Debug)]
 /// Represents all the thruster blocks on this structure
 pub struct ThrusterSystem {
     thrust_total: f32,

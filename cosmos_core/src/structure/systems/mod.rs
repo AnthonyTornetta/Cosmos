@@ -7,7 +7,11 @@
 
 use std::{error::Error, fmt::Formatter};
 
-use bevy::{prelude::*, utils::HashMap};
+use bevy::{
+    ecs::query::{ReadOnlyWorldQuery, WorldQuery},
+    prelude::*,
+    utils::HashMap,
+};
 use serde::{Deserialize, Serialize};
 
 use crate::registry::{create_registry, identifiable::Identifiable, Registry};
@@ -76,6 +80,12 @@ pub struct StructureSystemId(u64);
 #[derive(Clone, Copy, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Reflect, Hash, Default)]
 /// The type of a system
 pub struct StructureSystemTypeId(u16);
+
+impl From<StructureSystemTypeId> for u16 {
+    fn from(value: StructureSystemTypeId) -> Self {
+        value.0
+    }
+}
 
 impl StructureSystemId {
     /// Creates a new system id.
@@ -178,15 +188,16 @@ impl Systems {
     }
 
     /// Adds a system to the structure. Use this instead of directly adding it with commands.
-    pub fn add_system<T: StructureSystemImpl>(
+    ///
+    /// If you don't know what the id should be, use [`Self::add_system`]
+    pub fn add_system_with_id<T: StructureSystemImpl>(
         &mut self,
         commands: &mut Commands,
         system: T,
+        system_id: StructureSystemId,
         registry: &Registry<StructureSystemType>,
     ) -> Entity {
         let mut ent = None;
-
-        let system_id = self.generate_new_system_id();
 
         commands.entity(self.entity).with_children(|p| {
             let Some(system_type) = registry.from_id(T::unlocalized_name()) else {
@@ -210,10 +221,24 @@ impl Systems {
         ent.expect("This should have been set in above closure.")
     }
 
+    /// Adds a system to the structure. Use this instead of directly adding it with commands.
+    pub fn add_system<T: StructureSystemImpl>(
+        &mut self,
+        commands: &mut Commands,
+        system: T,
+        registry: &Registry<StructureSystemType>,
+    ) -> Entity {
+        let system_id = self.generate_new_system_id();
+
+        self.add_system_with_id(commands, system, system_id, registry)
+    }
+
     /// Queries all the systems of a structure with this specific query, or returns `Err(NoSystemFound)` if none matched this query.
-    ///
-    /// TODO: in future allow for this to take any number of components
-    pub fn query<'a, T: Component>(&'a self, query: &'a Query<&T>) -> Result<&T, NoSystemFound> {
+    pub fn query<'a, Q, F>(&'a self, query: &'a Query<Q, F>) -> Result<<<Q as WorldQuery>::ReadOnly as WorldQuery>::Item<'a>, NoSystemFound>
+    where
+        F: ReadOnlyWorldQuery,
+        Q: WorldQuery,
+    {
         for ent in self.systems.iter() {
             if let Ok(res) = query.get(*ent) {
                 return Ok(res);
@@ -224,9 +249,11 @@ impl Systems {
     }
 
     /// Queries all the systems of a structure with this specific query, or returns `Err(NoSystemFound)` if none matched this query.
-    ///
-    /// TODO: in future allow for this to take any number of components
-    pub fn query_mut<'a, T: Component>(&'a self, query: &'a mut Query<&mut T>) -> Result<Mut<T>, NoSystemFound> {
+    pub fn query_mut<'a, Q, F>(&'a self, query: &'a mut Query<Q, F>) -> Result<<Q as WorldQuery>::Item<'a>, NoSystemFound>
+    where
+        F: ReadOnlyWorldQuery,
+        Q: WorldQuery,
+    {
         for ent in self.systems.iter() {
             // for some reason, the borrow checker gets mad when I do a get_mut in this if statement
             if query.get(*ent).is_ok() {
@@ -250,7 +277,7 @@ fn add_structure(mut commands: Commands, query: Query<Entity, (Added<Structure>,
 }
 
 // Update doc comment in line_system too
-pub trait StructureSystemImpl: Component {
+pub trait StructureSystemImpl: Component + std::fmt::Debug {
     fn unlocalized_name() -> &'static str;
 }
 
