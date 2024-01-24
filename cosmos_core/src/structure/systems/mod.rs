@@ -45,7 +45,7 @@ pub struct SystemActive;
 #[derive(Component)]
 /// Used to tell if a system has a specified controller
 /// This does not need to be provided if no controller is used
-pub struct SystemBlock(String);
+pub struct SystemBlock;
 
 #[derive(Component, Debug, Reflect)]
 /// Every system has this as a component.
