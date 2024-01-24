@@ -142,9 +142,8 @@ fn sync<T: StructureSystemImpl + Serialize + DeserializeOwned>(
     for (_, needs_updated) in sys_queue.iter_mut() {
         needs_updated.retain(|ev| {
             let Ok(mut systems) = systems_query.get_mut(ev.structure_entity) else {
-                warn!("Structure missing systems");
-
-                commands.entity(ev.structure_entity).log_components();
+                // Structure doesn't have the systems component yet, save these systems to be added later once it has that component.
+                // This is normally done within a frame or two.
                 return true;
             };
 

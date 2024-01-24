@@ -46,8 +46,6 @@ fn sync<T: Identifiable + Serialize + DeserializeOwned + std::fmt::Debug>(
         };
 
         *registry = new_registry;
-
-        println!("{:?}", registry);
     }
 }
 
