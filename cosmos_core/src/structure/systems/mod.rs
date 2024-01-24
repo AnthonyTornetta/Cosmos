@@ -71,7 +71,7 @@ impl StructureSystem {
     }
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Reflect, Hash)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Reflect, Hash)]
 /// Uniquely identifies a system on a per-structure basis.
 ///
 /// This can have collisions across multiple structures, but is guarenteed to be unique per-structure.
@@ -108,7 +108,7 @@ impl std::fmt::Display for NoSystemFound {
 
 impl Error for NoSystemFound {}
 
-#[derive(Component)]
+#[derive(Component, Debug)]
 /// Stores all the systems a structure has
 pub struct Systems {
     /// These entities should have the `StructureSystem` component

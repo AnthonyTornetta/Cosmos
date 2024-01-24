@@ -2,11 +2,8 @@
 
 use bevy::{asset::LoadState, prelude::*};
 use bevy_kira_audio::prelude::*;
-use cosmos_core::{
-    physics::location::Location,
-    structure::systems::{
-        energy_storage_system::EnergyStorageSystem, mining_laser_system::MiningLaserSystem, StructureSystem, SystemActive, Systems,
-    },
+use cosmos_core::structure::systems::{
+    energy_storage_system::EnergyStorageSystem, mining_laser_system::MiningLaserSystem, StructureSystem, SystemActive, Systems,
 };
 
 use crate::{
@@ -25,7 +22,7 @@ pub struct LaserCannonSystemFiredEvent(pub Entity);
 struct LaserCannonFireHandles(Vec<Handle<AudioSource>>);
 
 fn apply_mining_sound(
-    q_position: Query<(&Location, &GlobalTransform, &Systems)>,
+    q_systems: Query<&Systems>,
     q_mining_lasers: Query<(&StructureSystem, &MiningLaserSystem), With<SystemActive>>,
     q_energy_storage_system: Query<&EnergyStorageSystem>,
     mut commands: Commands,
@@ -33,12 +30,14 @@ fn apply_mining_sound(
     audio_handles: Res<LaserCannonFireHandles>,
 ) {
     for (structure_system, mining_laser_system) in q_mining_lasers.iter() {
-        println!("{mining_laser_system:?}");
+        if mining_laser_system.lines.is_empty() {
+            continue;
+        }
 
         let structure_entity = structure_system.structure_entity();
 
-        let Ok((ship_location, ship_global_transform, systems)) = q_position.get(structure_entity) else {
-            error!("Missing location/global transform/systems for ship {:?}", structure_entity);
+        let Ok(systems) = q_systems.get(structure_entity) else {
+            error!("Missing systems for ship {:?}", structure_entity);
             continue;
         };
 
@@ -52,25 +51,23 @@ fn apply_mining_sound(
             continue;
         }
 
-        let mut location = *ship_location;
-        let translation = ship_global_transform.translation();
-        location.last_transform_loc = Some(ship_global_transform.translation());
-
         let idx = rand::random::<usize>() % audio_handles.0.len();
 
         let playing_sound: Handle<AudioInstance> = audio.play(audio_handles.0[idx].clone()).handle();
 
-        commands.spawn((
-            CosmosAudioEmitter {
-                emissions: vec![AudioEmission {
-                    instance: playing_sound,
-                    ..Default::default()
-                }],
-            },
-            DespawnOnNoEmissions,
-            location,
-            TransformBundle::from_transform(Transform::from_translation(translation)),
-        ));
+        commands.entity(structure_entity).with_children(|p| {
+            p.spawn((
+                CosmosAudioEmitter {
+                    emissions: vec![AudioEmission {
+                        instance: playing_sound,
+                        peak_volume: 0.3,
+                        ..Default::default()
+                    }],
+                },
+                DespawnOnNoEmissions,
+                TransformBundle::from_transform(Transform::from_xyz(0.5, 0.5, 1.0)),
+            ));
+        });
     }
 }
 

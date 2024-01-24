@@ -11,4 +11,13 @@ pub enum ReplicationMessage {
         system_type_id: StructureSystemTypeId,
         raw: Vec<u8>,
     },
+    /// Sent whenever the activness of a structure system changes
+    SystemStatus {
+        /// The structure system id
+        system_id: StructureSystemId,
+        /// The structure that contains this system
+        structure_entity: Entity,
+        /// If the system is active or not
+        active: bool,
+    },
 }

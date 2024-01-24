@@ -18,7 +18,9 @@ use cosmos_core::{
     registry::{identifiable::Identifiable, Registry},
     structure::{
         loading::StructureLoadingSet,
-        systems::{StructureSystem, StructureSystemId, StructureSystemImpl, StructureSystemType, StructureSystemTypeId, Systems},
+        systems::{
+            StructureSystem, StructureSystemId, StructureSystemImpl, StructureSystemType, StructureSystemTypeId, SystemActive, Systems,
+        },
     },
 };
 use serde::{de::DeserializeOwned, Serialize};
@@ -56,8 +58,9 @@ impl<T> Default for SystemsQueue<T> {
 fn listen_netty(
     mut client: ResMut<RenetClient>,
     mapping: Res<NetworkMapping>,
-    // mut sys_queue: ResMut<SystemsQueue>,
     mut event_writer: EventWriter<StructureSystemNeedsUpdated>,
+    q_systems: Query<&Systems>,
+    mut commands: Commands,
 ) {
     while let Some(message) = client.receive_message(NettyChannelServer::SystemReplication) {
         let msg: ReplicationMessage = cosmos_encoder::deserialize(&message).expect("Unable to parse registry sync from server");
@@ -79,6 +82,32 @@ fn listen_netty(
                     system_id,
                     system_type_id,
                 });
+            }
+            ReplicationMessage::SystemStatus {
+                structure_entity,
+                system_id,
+                active,
+            } => {
+                let Some(structure_entity) = mapping.client_from_server(&structure_entity) else {
+                    continue;
+                };
+
+                let Ok(systems) = q_systems.get(structure_entity) else {
+                    continue;
+                };
+
+                let Some(system) = systems.get_system_entity(system_id) else {
+                    warn!("Invalid system id for system {system_id:?} on structure {structure_entity:?}");
+                    warn!("{systems:?}");
+
+                    continue;
+                };
+
+                if active {
+                    commands.entity(system).insert(SystemActive);
+                } else {
+                    commands.entity(system).remove::<SystemActive>();
+                }
             }
         }
     }
