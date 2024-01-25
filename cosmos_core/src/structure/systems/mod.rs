@@ -138,8 +138,7 @@ impl Systems {
         self.ids
             .get(&system_id)
             .copied()
-            .map(|idx| self.systems.get(idx))
-            .flatten()
+            .and_then(|idx| self.systems.get(idx))
             .copied()
     }
 
