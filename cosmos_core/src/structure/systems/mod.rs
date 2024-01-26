@@ -135,11 +135,7 @@ impl Systems {
 
     /// Gets the entity that corresponds to the system id, or none if not found.
     pub fn get_system_entity(&self, system_id: StructureSystemId) -> Option<Entity> {
-        self.ids
-            .get(&system_id)
-            .copied()
-            .and_then(|idx| self.systems.get(idx))
-            .copied()
+        self.ids.get(&system_id).copied().and_then(|idx| self.systems.get(idx)).copied()
     }
 
     /// Activates the passed in selected system, and deactivates the system that was previously selected

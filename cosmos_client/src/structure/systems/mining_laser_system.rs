@@ -1,9 +1,22 @@
 //! Client-side laser cannon system logic
 
-use bevy::{asset::LoadState, prelude::*};
+use bevy::{
+    asset::LoadState,
+    pbr::{NotShadowCaster, NotShadowReceiver},
+    prelude::*,
+    utils::HashMap,
+};
 use bevy_kira_audio::prelude::*;
-use cosmos_core::structure::systems::{
-    energy_storage_system::EnergyStorageSystem, mining_laser_system::MiningLaserSystem, StructureSystem, SystemActive, Systems,
+use bevy_rapier3d::{dynamics::PhysicsWorld, pipeline::QueryFilter, plugin::RapierContext};
+use cosmos_core::{
+    ecs::NeedsDespawned,
+    structure::{
+        shared::DespawnWithStructure,
+        systems::{
+            energy_storage_system::EnergyStorageSystem, mining_laser_system::MiningLaserSystem, StructureSystem, SystemActive, Systems,
+        },
+        Structure,
+    },
 };
 
 use crate::{
@@ -14,6 +27,11 @@ use crate::{
 
 use super::sync::sync_system;
 
+const BEAM_SIZE: f32 = 0.2;
+
+/// TODO: sync from server
+const BEAM_MAX_RANGE: f32 = 250.0;
+
 #[derive(Event)]
 /// This event is fired whenever a laser cannon system is fired
 pub struct LaserCannonSystemFiredEvent(pub Entity);
@@ -21,18 +39,72 @@ pub struct LaserCannonSystemFiredEvent(pub Entity);
 #[derive(Resource)]
 struct LaserCannonFireHandles(Vec<Handle<AudioSource>>);
 
-fn apply_mining_sound(
+#[derive(Resource)]
+struct MiningLaserMesh(Handle<Mesh>);
+
+#[derive(Resource, Default)]
+struct MiningLaserMaterialCache(HashMap<u32, Handle<StandardMaterial>>);
+
+fn color_hash(color: Color) -> u32 {
+    let (r, g, b, a) = (
+        (color.r() * 255.0) as u8,
+        (color.g() * 255.0) as u8,
+        (color.b() * 255.0) as u8,
+        (color.a() * 255.0) as u8,
+    );
+
+    u32::from_be_bytes([r, g, b, a])
+}
+
+#[derive(Component)]
+struct MiningLaser {
+    /// Relative to structure
+    start_loc: Vec3,
+    max_length: f32,
+}
+
+#[derive(Component, Debug)]
+struct ActiveBeams(Vec<Entity>);
+
+fn remove_dead_beams(mut commands: Commands, q_has_beams: Query<&ActiveBeams>, mut q_deactivated_systems: RemovedComponents<SystemActive>) {
+    for deactivated_system in q_deactivated_systems.read() {
+        let Ok(active_beams) = q_has_beams.get(deactivated_system) else {
+            continue;
+        };
+
+        for beam in active_beams.0.iter() {
+            if let Some(mut beam) = commands.get_entity(*beam) {
+                beam.insert(NeedsDespawned);
+            }
+        }
+
+        commands.entity(deactivated_system).remove::<ActiveBeams>();
+    }
+}
+
+fn apply_mining_effects(
     q_systems: Query<&Systems>,
-    q_mining_lasers: Query<(&StructureSystem, &MiningLaserSystem), With<SystemActive>>,
+    q_mining_lasers: Query<(Entity, &StructureSystem, &MiningLaserSystem), Added<SystemActive>>,
     q_energy_storage_system: Query<&EnergyStorageSystem>,
     mut commands: Commands,
     audio: Res<Audio>,
     audio_handles: Res<LaserCannonFireHandles>,
+
+    q_structure: Query<(&Structure, &PhysicsWorld)>,
+    mut materials_cache: ResMut<MiningLaserMaterialCache>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mesh: Res<MiningLaserMesh>,
 ) {
-    for (structure_system, mining_laser_system) in q_mining_lasers.iter() {
+    for (system_entity, structure_system, mining_laser_system) in q_mining_lasers.iter() {
         if mining_laser_system.lines.is_empty() {
             continue;
         }
+
+        let Ok((structure, physics_world)) = q_structure.get(structure_system.structure_entity()) else {
+            warn!("Mining laser system firing on entity w/out structure?");
+            commands.entity(structure_system.structure_entity()).log_components();
+            continue;
+        };
 
         let structure_entity = structure_system.structure_entity();
 
@@ -65,13 +137,119 @@ fn apply_mining_sound(
                     }],
                 },
                 DespawnOnNoEmissions,
-                TransformBundle::from_transform(Transform::from_xyz(0.5, 0.5, 1.0)),
+                TransformBundle::from_transform(Transform::from_xyz(BEAM_SIZE, BEAM_SIZE, 1.0)),
             ));
         });
+
+        let mut active_beams = Vec::with_capacity(mining_laser_system.lines.len());
+
+        commands.entity(structure_system.structure_entity()).with_children(|p| {
+            for line in &mining_laser_system.lines {
+                let color = line.color;
+
+                let hashed = color_hash(color);
+
+                if !materials_cache.0.contains_key(&hashed) {
+                    materials_cache.0.insert(
+                        hashed,
+                        materials.add(StandardMaterial {
+                            unlit: true,
+                            base_color: color,
+                            emissive: color,
+                            ..Default::default()
+                        }),
+                    );
+                }
+
+                let material = materials_cache.0.get(&hashed).expect("Added above");
+
+                let laser_start = structure.block_relative_position(line.start.coords());
+                let beam_ent = p
+                    .spawn((
+                        PbrBundle {
+                            transform: Transform::from_translation(laser_start).looking_to(-line.direction.direction_vec3(), Vec3::Y),
+                            material: material.clone_weak(),
+                            mesh: mesh.0.clone_weak(),
+                            ..Default::default()
+                        },
+                        NotShadowCaster,
+                        NotShadowReceiver,
+                        MiningLaser {
+                            start_loc: laser_start,
+                            max_length: BEAM_MAX_RANGE,
+                        },
+                        DespawnWithStructure,
+                        *physics_world,
+                    ))
+                    .id();
+
+                active_beams.push(beam_ent);
+            }
+        });
+
+        commands.entity(system_entity).insert(ActiveBeams(active_beams));
     }
 }
 
+fn resize_lasers(
+    q_parent: Query<&Parent>,
+    mut q_lasers: Query<(&GlobalTransform, &mut Transform, &PhysicsWorld, &MiningLaser, &Parent)>,
+    q_global_trans: Query<&GlobalTransform>,
+    rapier_context: Res<RapierContext>,
+) {
+    for (g_trans, mut trans, phys_world, mining_laser, parent) in q_lasers.iter_mut() {
+        let parent_structure_ent = parent.get();
+
+        let Ok(parent_g_trans) = q_global_trans.get(parent_structure_ent) else {
+            warn!("Mining laser missing parent!");
+            continue;
+        };
+
+        let mut laser_start = mining_laser.start_loc;
+
+        let parent_rot = Quat::from_affine3(&parent_g_trans.affine());
+
+        laser_start = parent_g_trans.translation() + parent_rot.mul_vec3(laser_start);
+
+        let toi = match rapier_context.cast_ray(
+            phys_world.world_id,
+            laser_start,
+            g_trans.forward(),
+            mining_laser.max_length,
+            true,
+            QueryFilter::predicate(QueryFilter::default(), &|entity| {
+                if parent_structure_ent == entity {
+                    false
+                } else if let Ok(parent) = q_parent.get(entity) {
+                    parent.get() != parent_structure_ent
+                } else {
+                    false
+                }
+            }),
+        ) {
+            Ok(Some((_, toi))) => toi,
+            _ => mining_laser.max_length,
+        };
+
+        trans.scale.z = toi * 2.0;
+        trans.translation.z = mining_laser.start_loc.z - toi / 2.0;
+    }
+}
+
+fn create_mining_laser_mesh(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
+    let shape = meshes.add(bevy::prelude::shape::Box::new(0.5, 0.5, 0.5).into());
+
+    commands.insert_resource(MiningLaserMesh(shape));
+}
+
 struct LaserCannonLoadingFlag;
+
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+enum LasersSystemSet {
+    CreateLasers,
+    ApplyDeferred,
+    UpdateLasers,
+}
 
 pub(super) fn register(app: &mut App) {
     sync_system::<MiningLaserSystem>(app);
@@ -91,6 +269,28 @@ pub(super) fn register(app: &mut App) {
         },
     );
 
+    app.configure_sets(
+        Update,
+        (
+            LasersSystemSet::CreateLasers,
+            LasersSystemSet::ApplyDeferred,
+            LasersSystemSet::UpdateLasers,
+        )
+            .chain(),
+    )
+    .add_systems(Update, apply_deferred.in_set(LasersSystemSet::ApplyDeferred));
+
     app.add_event::<LaserCannonSystemFiredEvent>()
-        .add_systems(Update, apply_mining_sound.run_if(in_state(GameState::Playing)));
+        .init_resource::<MiningLaserMaterialCache>()
+        .add_systems(Startup, create_mining_laser_mesh)
+        .add_systems(
+            Update,
+            (
+                apply_mining_effects.in_set(LasersSystemSet::CreateLasers),
+                resize_lasers.in_set(LasersSystemSet::UpdateLasers),
+                remove_dead_beams.in_set(LasersSystemSet::UpdateLasers),
+            )
+                .chain()
+                .run_if(in_state(GameState::Playing)),
+        );
 }

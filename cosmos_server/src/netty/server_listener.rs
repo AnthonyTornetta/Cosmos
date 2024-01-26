@@ -110,21 +110,6 @@ fn server_listen_messages(
                             ship_movement_event_writer.send(ShipSetMovementEvent { movement, ship });
                         }
                     }
-                    // ClientUnreliableMessages::ShipStatus { use_system } => {
-                    //     if let Ok(pilot) = pilot_query.get(player_entity) {
-                    //         let structure_entity = pilot.entity;
-
-                    //         if let Ok(systems) = systems_query.get(structure_entity) {
-                    //             if let Some(active_system) = systems.active_system() {
-                    //                 if use_system {
-                    //                     commands.entity(active_system).insert(SystemActive);
-                    //                 } else {
-                    //                     commands.entity(active_system).remove::<SystemActive>();
-                    //                 }
-                    //             }
-                    //         }
-                    //     }
-                    // }
                     ClientUnreliableMessages::ShipActiveSystem { active_system } => {
                         if let Ok(pilot) = pilot_query.get(player_entity) {
                             if let Ok(mut systems) = systems_query.get_mut(pilot.entity) {

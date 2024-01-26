@@ -5,6 +5,7 @@ use bevy::{
     ecs::{
         entity::Entity,
         event::{Event, EventReader, EventWriter},
+        query::With,
         schedule::{common_conditions::in_state, IntoSystemConfigs},
         system::{Commands, Query, Res, ResMut, Resource},
     },
@@ -61,6 +62,7 @@ fn listen_netty(
     mut event_writer: EventWriter<StructureSystemNeedsUpdated>,
     q_systems: Query<&Systems>,
     mut commands: Commands,
+    q_is_active: Query<(), With<SystemActive>>,
 ) {
     while let Some(message) = client.receive_message(NettyChannelServer::SystemReplication) {
         let msg: ReplicationMessage = cosmos_encoder::deserialize(&message).expect("Unable to parse registry sync from server");
@@ -104,9 +106,13 @@ fn listen_netty(
                 };
 
                 if active {
-                    commands.entity(system).insert(SystemActive);
+                    if !q_is_active.contains(system) {
+                        commands.entity(system).insert(SystemActive);
+                    }
                 } else {
-                    commands.entity(system).remove::<SystemActive>();
+                    if q_is_active.contains(system) {
+                        commands.entity(system).remove::<SystemActive>();
+                    }
                 }
             }
         }
