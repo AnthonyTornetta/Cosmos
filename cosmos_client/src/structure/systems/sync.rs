@@ -109,10 +109,8 @@ fn listen_netty(
                     if !q_is_active.contains(system) {
                         commands.entity(system).insert(SystemActive);
                     }
-                } else {
-                    if q_is_active.contains(system) {
-                        commands.entity(system).remove::<SystemActive>();
-                    }
+                } else if q_is_active.contains(system) {
+                    commands.entity(system).remove::<SystemActive>();
                 }
             }
         }

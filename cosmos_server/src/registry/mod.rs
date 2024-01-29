@@ -45,7 +45,7 @@ fn sync<'a, T: Identifiable + Serialize + Deserialize<'a>>(
     }
 }
 
-fn incr_registries_to_sync<T>(mut n_registries: ResMut<NumRegistriesToSync>) {
+fn incr_registries_to_sync(mut n_registries: ResMut<NumRegistriesToSync>) {
     n_registries.0 += 1;
 }
 
@@ -72,7 +72,7 @@ fn send_number_of_registries(
 }
 
 pub fn sync_registry<'a, T: Identifiable + Serialize + Deserialize<'a>>(app: &mut App) {
-    app.add_systems(Startup, incr_registries_to_sync::<T>).add_systems(
+    app.add_systems(Startup, incr_registries_to_sync).add_systems(
         Update,
         sync::<T>.run_if(in_state(GameState::Playing)).after(send_number_of_registries),
     );

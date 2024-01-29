@@ -152,8 +152,8 @@ fn update_mining_beams(
 
         let Ok(Some((hit_entity, toi))) = rapier_context.cast_ray(
             p_world.world_id,
-            ray_start.into(),
-            ray_dir.into(),
+            ray_start,
+            ray_dir,
             BEAM_MAX_RANGE,
             true,
             QueryFilter::predicate(QueryFilter::default(), &|entity| {
@@ -206,11 +206,11 @@ fn update_mining_beams(
         };
 
         if let Ok((structure, g_trans)) = q_structure.get(hit_entity) {
-            handle_structure(beam.structure_entity, &structure, g_trans);
+            handle_structure(beam.structure_entity, structure, g_trans);
         } else if let Ok(parent) = q_parent.get(hit_entity) {
             let entity = parent.get();
             if let Ok((structure, g_trans)) = q_structure.get(entity) {
-                handle_structure(beam.structure_entity, &structure, g_trans);
+                handle_structure(beam.structure_entity, structure, g_trans);
             }
         }
     }

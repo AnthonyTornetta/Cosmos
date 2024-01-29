@@ -47,7 +47,7 @@ fn block_update_system<T: LineProperty, S: LinePropertyCalculator<T>>(
                 }
 
                 if let Some(property) = laser_cannon_blocks.get(new_block) {
-                    system.add_block(&ev.block, &property);
+                    system.add_block(&ev.block, property);
                 }
 
                 let mut recalc = false;
@@ -86,7 +86,7 @@ fn structure_loaded_event<T: LineProperty, S: LinePropertyCalculator<T>>(
             for structure_block in structure.all_blocks_iter(false) {
                 let block = structure_block.block(structure, &blocks);
                 if let Some(prop) = line_blocks.get(block) {
-                    system.add_block(&structure_block, &prop);
+                    system.add_block(&structure_block, prop);
                 }
                 if let Some(color_property) = color_blocks.from_block(block) {
                     color_found = true;
