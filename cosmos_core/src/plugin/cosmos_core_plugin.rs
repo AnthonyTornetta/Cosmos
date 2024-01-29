@@ -81,7 +81,7 @@ impl<T: States + Clone + Copy> Plugin for CosmosCorePlugin<T> {
         blockitems::register(app, self.post_loading_state);
         physics::register(app, self.post_loading_state);
         events::register(app, self.playing_state);
-        structure::register(app, self.post_loading_state, self.playing_state);
+        structure::register(app, self.playing_state);
         inventory::register(app);
         projectiles::register(app);
         entities::register(app);

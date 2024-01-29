@@ -59,9 +59,7 @@ fn find_wall_coords(
         }
     }
 
-    let Some(left_wall_coords) = found_coords else {
-        return None;
-    };
+    let left_wall_coords = found_coords?;
 
     let mut found_coords = None;
     {
@@ -87,9 +85,7 @@ fn find_wall_coords(
         }
     }
 
-    let Some(right_wall_coords) = found_coords else {
-        return None;
-    };
+    let right_wall_coords = found_coords?;
 
     Some((left_wall_coords, right_wall_coords))
 }
@@ -130,31 +126,25 @@ fn check_is_valid_multiblock(structure: &Structure, controller_coords: BlockCoor
         }
     }
 
-    let Some(back_wall_coords) = found_coords else {
-        return None;
-    };
+    let back_wall_coords = found_coords?;
 
-    let Some((left_wall_coords, right_wall_coords)) = find_wall_coords(
+    let (left_wall_coords, right_wall_coords) = find_wall_coords(
         ub_controller_coords,
         structure,
         direction.local_left().direction_coordinates(),
         direction.local_right().direction_coordinates(),
         blocks,
         &valid_blocks,
-    ) else {
-        return None;
-    };
+    )?;
 
-    let Some((down_wall_coords, up_wall_coords)) = find_wall_coords(
+    let (down_wall_coords, up_wall_coords) = find_wall_coords(
         ub_controller_coords,
         structure,
         direction.local_bottom().direction_coordinates(),
         direction.local_top().direction_coordinates(),
         blocks,
         &valid_blocks,
-    ) else {
-        return None;
-    };
+    )?;
 
     Some(ReactorBounds {
         negative_coords: BlockCoordinate::new(

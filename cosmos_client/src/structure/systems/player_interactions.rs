@@ -25,20 +25,22 @@ fn check_system_in_use(
     input_handler: InputChecker,
     mut client: ResMut<RenetClient>,
 ) {
-    if let Ok(mut hovered_system) = query.get_single_mut() {
-        hovered_system.active = input_handler.check_pressed(CosmosInputs::UseSelectedSystem);
+    let Ok(mut hovered_system) = query.get_single_mut() else {
+        return;
+    };
 
-        let active_system = if hovered_system.active {
-            Some(hovered_system.system_index as u32)
-        } else {
-            None
-        };
+    hovered_system.active = input_handler.check_pressed(CosmosInputs::UseSelectedSystem);
 
-        client.send_message(
-            NettyChannelClient::Unreliable,
-            cosmos_encoder::serialize(&ClientUnreliableMessages::ShipActiveSystem { active_system }),
-        );
-    }
+    let active_system = if hovered_system.active {
+        Some(hovered_system.system_index as u32)
+    } else {
+        None
+    };
+
+    client.send_message(
+        NettyChannelClient::Unreliable,
+        cosmos_encoder::serialize(&ClientUnreliableMessages::ShipActiveSystem { active_system }),
+    );
 }
 
 fn check_became_pilot(mut commands: Commands, query: Query<Entity, (Added<Pilot>, With<LocalPlayer>)>) {

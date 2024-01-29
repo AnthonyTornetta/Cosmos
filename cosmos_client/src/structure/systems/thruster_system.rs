@@ -4,13 +4,15 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 use bevy_kira_audio::prelude::*;
-use cosmos_core::structure::ship::ship_movement::ShipMovement;
+use cosmos_core::structure::{ship::ship_movement::ShipMovement, systems::thruster_system::ThrusterSystem};
 
 use crate::{
     asset::asset_loader::load_assets,
     audio::{AudioEmission, BufferedStopAudio, CosmosAudioEmitter},
     state::game_state::GameState,
 };
+
+use super::sync::sync_system;
 
 #[derive(Component)]
 struct ThrusterSoundInstace(Handle<AudioInstance>);
@@ -70,6 +72,8 @@ struct ThrusterAudioHandle(Handle<AudioSource>);
 struct ThrusterSoundLoading;
 
 pub(super) fn register(app: &mut App) {
+    sync_system::<ThrusterSystem>(app);
+
     load_assets::<AudioSource, ThrusterSoundLoading>(
         app,
         GameState::PreLoading,

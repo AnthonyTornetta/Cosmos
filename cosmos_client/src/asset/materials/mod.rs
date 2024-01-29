@@ -209,7 +209,7 @@ fn register_materials(
 }
 
 pub(super) fn register(app: &mut App) {
-    registry::create_registry::<MaterialDefinition>(app);
+    registry::create_registry::<MaterialDefinition>(app, "cosmos:material_definitions");
     registry::many_to_one::create_many_to_one_registry::<Block, BlockMaterialMapping>(app);
     material_types::register(app);
     block_materials::register(app);

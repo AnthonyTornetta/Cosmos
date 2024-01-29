@@ -13,7 +13,7 @@ use cosmos_core::netty::{cosmos_encoder, NettyChannelClient, NettyChannelServer}
 use cosmos_core::physics::location::Location;
 use cosmos_core::structure::loading::ChunksNeedLoaded;
 use cosmos_core::structure::shared::build_mode::{BuildMode, ExitBuildModeEvent};
-use cosmos_core::structure::systems::{SystemActive, Systems};
+use cosmos_core::structure::systems::Systems;
 use cosmos_core::{
     entities::player::Player,
     events::structure::change_pilot_event::ChangePilotEvent,
@@ -108,15 +108,6 @@ fn server_listen_messages(
                             let ship = pilot.entity;
 
                             ship_movement_event_writer.send(ShipSetMovementEvent { movement, ship });
-                        }
-                    }
-                    ClientUnreliableMessages::ShipStatus { use_system } => {
-                        if let Ok(pilot) = pilot_query.get(player_entity) {
-                            if use_system {
-                                commands.entity(pilot.entity).insert(SystemActive);
-                            } else {
-                                commands.entity(pilot.entity).remove::<SystemActive>();
-                            }
                         }
                     }
                     ClientUnreliableMessages::ShipActiveSystem { active_system } => {
@@ -356,7 +347,11 @@ fn send_all_chunks(
         info!("Sending chunks for {structure_entity:?}!");
 
         for (_, chunk) in structure.chunks() {
-            let entity = structure.chunk_entity(chunk.chunk_coordinates()).expect("Missing chunk entity!");
+            let Some(entity) = structure.chunk_entity(chunk.chunk_coordinates()) else {
+                error!("Missing chunk entity in entity {structure_entity:?} - logging components!");
+                commands.entity(structure_entity).log_components();
+                return true;
+            };
 
             commands.entity(entity).insert(ChunkNeedsSent {
                 client_ids: client_ids.clone(),

@@ -23,11 +23,6 @@ pub enum ClientUnreliableMessages {
         /// The movement to set it to
         movement: ShipMovement,
     },
-    /// Tells the ship to either activate the selected system or not.
-    ShipStatus {
-        /// Activate the selected system or not
-        use_system: bool,
-    },
     /// Which system is the pilot currently settnig to active
     ShipActiveSystem {
         /// Sets the system the player has selected

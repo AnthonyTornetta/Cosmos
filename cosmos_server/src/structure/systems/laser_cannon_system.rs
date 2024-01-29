@@ -1,13 +1,20 @@
+use std::time::Duration;
+
 use bevy::{prelude::*, time::Time};
 use bevy_rapier3d::prelude::{PhysicsWorld, Velocity, DEFAULT_WORLD_ID};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
+    block::Block,
     netty::{cosmos_encoder, server_laser_cannon_system_messages::ServerLaserCannonSystemMessages, NettyChannelServer},
     physics::location::Location,
     projectiles::laser::Laser,
+    registry::Registry,
     structure::{
         systems::{
-            energy_storage_system::EnergyStorageSystem, laser_cannon_system::LaserCannonSystem, StructureSystem, SystemActive, Systems,
+            energy_storage_system::EnergyStorageSystem,
+            laser_cannon_system::{LaserCannonCalculator, LaserCannonProperty, LaserCannonSystem, SystemCooldown},
+            line_system::LineBlocks,
+            StructureSystem, SystemActive, Systems,
         },
         Structure,
     },
@@ -15,11 +22,27 @@ use cosmos_core::{
 
 use crate::state::GameState;
 
+use super::{line_system::add_line_system, sync::register_structure_system};
+
+fn on_add_laser(mut commands: Commands, query: Query<Entity, Added<LaserCannonSystem>>) {
+    for ent in query.iter() {
+        commands.entity(ent).insert(SystemCooldown {
+            cooldown_time: Duration::from_millis(200),
+            ..Default::default()
+        });
+    }
+}
+
+fn register_laser_blocks(blocks: Res<Registry<Block>>, mut cannon: ResMut<LineBlocks<LaserCannonProperty>>) {
+    if let Some(block) = blocks.from_id("cosmos:laser_cannon") {
+        cannon.insert(block, LaserCannonProperty { energy_per_shot: 100.0 })
+    }
+}
+
 const LASER_BASE_VELOCITY: f32 = 200.0;
-const LASER_SHOOT_SECONDS: f32 = 0.2;
 
 fn update_system(
-    mut query: Query<(&mut LaserCannonSystem, &StructureSystem), With<SystemActive>>,
+    mut query: Query<(&LaserCannonSystem, &StructureSystem, &mut SystemCooldown), With<SystemActive>>,
     mut es_query: Query<&mut EnergyStorageSystem>,
     systems: Query<(
         Entity,
@@ -34,15 +57,15 @@ fn update_system(
     mut commands: Commands,
     mut server: ResMut<RenetServer>,
 ) {
-    for (mut cannon_system, system) in query.iter_mut() {
+    for (cannon_system, system, mut cooldown) in query.iter_mut() {
         if let Ok((ship_entity, systems, structure, location, global_transform, ship_velocity, physics_world)) =
-            systems.get(system.structure_entity)
+            systems.get(system.structure_entity())
         {
             if let Ok(mut energy_storage_system) = systems.query_mut(&mut es_query) {
                 let sec = time.elapsed_seconds();
 
-                if sec - cannon_system.last_shot_time > LASER_SHOOT_SECONDS {
-                    cannon_system.last_shot_time = sec;
+                if sec - cooldown.last_use_time > cooldown.cooldown_time.as_secs_f32() {
+                    cooldown.last_use_time = sec;
 
                     let world_id = physics_world.map(|bw| bw.world_id).unwrap_or(DEFAULT_WORLD_ID);
 
@@ -63,7 +86,7 @@ fn update_system(
                                 global_transform.affine().matrix3.mul_vec3(-line.direction.direction_vec3()) * LASER_BASE_VELOCITY;
 
                             let strength = (5.0 * line.len as f32).powf(1.2);
-                            let no_hit = Some(system.structure_entity);
+                            let no_hit = Some(system.structure_entity());
 
                             Laser::spawn(
                                 location,
@@ -107,5 +130,11 @@ fn update_system(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, update_system.run_if(in_state(GameState::Playing)));
+    add_line_system::<LaserCannonProperty, LaserCannonCalculator>(app);
+
+    app.add_systems(Update, update_system.run_if(in_state(GameState::Playing)))
+        .add_systems(OnEnter(GameState::PostLoading), register_laser_blocks)
+        .add_systems(Update, on_add_laser);
+
+    register_structure_system::<LaserCannonSystem>(app);
 }

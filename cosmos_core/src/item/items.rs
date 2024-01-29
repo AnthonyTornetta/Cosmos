@@ -20,7 +20,7 @@ fn add_cosmos_items(
 }
 
 pub(super) fn register<T: States>(app: &mut App, loading_state: T) {
-    registry::create_registry::<Item>(app);
+    registry::create_registry::<Item>(app, "cosmos:items");
 
     app.add_systems(OnEnter(loading_state), add_cosmos_items);
 }

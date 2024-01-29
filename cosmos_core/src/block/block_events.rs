@@ -16,7 +16,7 @@ use crate::{
     },
 };
 
-use super::{blocks::AIR_BLOCK_ID, Block, BlockFace};
+use super::{blocks::AIR_BLOCK_ID, data::BlockData, Block, BlockFace};
 
 /// This is sent whenever a player breaks a block
 #[derive(Debug, Event)]
@@ -58,17 +58,65 @@ pub struct BlockPlaceEvent {
 }
 
 fn handle_block_break_events(
-    mut query: Query<&mut Structure>,
+    mut q_structure: Query<&mut Structure>,
     mut event_reader: EventReader<BlockBreakEvent>,
     blocks: Res<Registry<Block>>,
     items: Res<Registry<Item>>,
     block_items: Res<BlockItems>, // TODO: Replace this with drop table
-    mut player_query: Query<(&mut Inventory, Option<&BuildMode>, Option<&Parent>)>,
+    mut inventory_query: Query<(&mut Inventory, Option<&BuildMode>, Option<&Parent>), Without<BlockData>>,
     mut event_writer: EventWriter<BlockChangedEvent>,
+    mut q_inventory_block_data: Query<(&BlockData, &mut Inventory)>,
+    mut commands: Commands,
 ) {
     for ev in event_reader.read() {
-        if let Ok((mut inventory, build_mode, parent)) = player_query.get_mut(ev.breaker) {
-            if let Ok(mut structure) = query.get_mut(ev.structure_entity) {
+        // This is a temporary fix for mining lasers - eventually these items will have specified destinations,
+        // but for now just throw them where ever thire is space. This will get horribly laggy as there are more
+        // structures in the game
+
+        if q_structure.contains(ev.breaker) {
+            let Ok(mut structure) = q_structure.get_mut(ev.structure_entity) else {
+                continue;
+            };
+
+            let coord = ev.block.coords();
+            let block = structure.block_at(coord, &blocks);
+
+            if block.id() == AIR_BLOCK_ID {
+                continue;
+            }
+
+            // Eventually seperate this into another event lsitener that some how interacts with this one
+            // Idk if bevy supports this yet without some hacky stuff?
+            if block.unlocalized_name() == "cosmos:ship_core" || block.unlocalized_name() == "cosmos:station_core" {
+                let mut itr = structure.all_blocks_iter(false);
+
+                // ship core               some other block
+                if itr.next().is_some() && itr.next().is_some() {
+                    // Do not allow player to mine ship core if another block exists on the ship
+                    return;
+                }
+            }
+
+            let item_id = block_items.item_from_block(block);
+
+            if let Some(item_id) = item_id {
+                let item = items.from_numeric_id(item_id);
+
+                for (_, mut inventory) in q_inventory_block_data
+                    .iter_mut()
+                    .filter(|(block_data, _)| block_data.identifier.structure_entity == ev.breaker)
+                {
+                    if inventory.insert(item, 1) == 0 {
+                        break;
+                    }
+                }
+            } else {
+                warn!("Missing item id for block {:?}", block);
+            }
+
+            structure.remove_block_at(coord, &blocks, Some(&mut event_writer));
+        } else if let Ok((mut inventory, build_mode, parent)) = inventory_query.get_mut(ev.breaker) {
+            if let Ok(mut structure) = q_structure.get_mut(ev.structure_entity) {
                 let mut structure_blocks = vec![(ev.block.coords(), BlockFace::Top)];
 
                 if let (Some(build_mode), Some(parent)) = (build_mode, parent) {
@@ -108,6 +156,9 @@ fn handle_block_break_events(
                     }
                 }
             }
+        } else {
+            error!("Unknown breaker entity {:?} - logging components", ev.breaker);
+            commands.entity(ev.breaker).log_components();
         }
     }
 }
@@ -260,9 +311,21 @@ fn handle_block_place_events(
     }
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// The event set used for processing block events
+pub enum BlockEventsSet {
+    /// All block event processing happens here
+    ProcessEvents,
+}
+
 pub(super) fn register(app: &mut App) {
+    app.configure_sets(Update, BlockEventsSet::ProcessEvents);
+
     app.add_event::<BlockBreakEvent>()
         .add_event::<BlockPlaceEvent>()
         .add_event::<BlockInteractEvent>()
-        .add_systems(Update, (handle_block_break_events, handle_block_place_events));
+        .add_systems(
+            Update,
+            (handle_block_break_events, handle_block_place_events).in_set(BlockEventsSet::ProcessEvents),
+        );
 }

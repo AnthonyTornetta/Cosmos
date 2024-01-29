@@ -83,9 +83,11 @@ pub fn establish_connection(mut commands: Commands, host_config: Res<HostConfig>
 pub fn wait_for_connection(mut state_changer: ResMut<NextState<GameState>>, client: Res<RenetClient>) {
     if client.is_connected() {
         info!("Loading server data...");
-        state_changer.set(GameState::LoadingWorld);
+        state_changer.set(GameState::LoadingData);
     }
 }
+
+// GameState::LoadingData -> GameState::LoadingWorld in registry/mod.rs
 
 /// Waits for the `LoadingWorld` state to be done loading, then transitions to the `GameState::Playing`
 pub fn wait_for_done_loading(mut state_changer: ResMut<NextState<GameState>>, query: Query<&Player, With<LocalPlayer>>) {

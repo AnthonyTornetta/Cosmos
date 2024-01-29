@@ -199,7 +199,7 @@ fn generate_power(
 }
 
 pub(super) fn register<T: States>(app: &mut App, post_loading_state: T, playing_state: T) {
-    create_registry::<ReactorPowerGenerationBlock>(app);
+    create_registry::<ReactorPowerGenerationBlock>(app, "cosmos:power_generation_blocks");
 
     app.add_systems(OnEnter(post_loading_state), register_power_blocks)
         .add_systems(
