@@ -2,7 +2,7 @@
 
 #![feature(fs_try_exists)]
 #![feature(get_many_mut)]
-// #![warn(missing_docs)]
+#![warn(missing_docs)]
 
 use std::env;
 

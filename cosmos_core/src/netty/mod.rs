@@ -41,6 +41,7 @@ pub enum NettyChannelServer {
     Inventory,
     /// In future will be used for general component syncing
     SystemReplication,
+    /// Syncing of registry data
     Registry,
 }
 

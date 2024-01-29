@@ -47,6 +47,7 @@ pub struct Registry<T: Identifiable> {
 }
 
 impl<T: Identifiable + Sync + Send> Registry<T> {
+    /// Gets the unlocalized name for this registry - used for syncing registries from server -> client
     pub fn name(&self) -> &str {
         &self.registry_name
     }

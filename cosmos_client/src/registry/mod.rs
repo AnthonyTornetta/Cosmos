@@ -1,3 +1,5 @@
+//! Handles client-side registry syncing logic
+
 use bevy::{
     app::{App, Update},
     ecs::{
@@ -50,6 +52,7 @@ fn sync<T: Identifiable + Serialize + DeserializeOwned + std::fmt::Debug>(
     }
 }
 
+/// Call this function on the client-side to signal that this registry should be synced with the server
 pub fn sync_registry<T: Identifiable + Serialize + DeserializeOwned + std::fmt::Debug>(app: &mut App) {
     app.add_systems(Update, sync::<T>.run_if(in_state(GameState::LoadingData)));
 }

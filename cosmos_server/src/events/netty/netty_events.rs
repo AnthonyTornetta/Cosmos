@@ -58,7 +58,9 @@ fn generate_player_inventory(items: &Registry<Item>) -> Inventory {
 }
 
 #[derive(Event, Debug)]
+/// Sent whenever a player just connected
 pub struct PlayerConnectedEvent {
+    /// The player's entity
     pub player_entity: Entity,
 }
 

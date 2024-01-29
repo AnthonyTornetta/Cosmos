@@ -66,6 +66,7 @@ impl StructureSystem {
         self.structure_entity
     }
 
+    /// Gets the type id of the system. This links it to the datatype of this system used for serialization/deserialization
     pub fn system_type_id(&self) -> StructureSystemTypeId {
         self.system_type_id
     }
@@ -78,7 +79,9 @@ impl StructureSystem {
 pub struct StructureSystemId(u64);
 
 #[derive(Clone, Copy, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Reflect, Hash, Default)]
-/// The type of a system
+/// The id of this structure system type
+///
+/// This will be unique across all systems, and is primarily used for serializing/deserializing structure systems
 pub struct StructureSystemTypeId(u16);
 
 impl From<StructureSystemTypeId> for u16 {
@@ -271,12 +274,14 @@ fn add_structure(mut commands: Commands, query: Query<Entity, (Added<Structure>,
     }
 }
 
-// Update doc comment in line_system too
+/// A structure system should implement this
 pub trait StructureSystemImpl: Component + std::fmt::Debug {
+    /// The unlocalized name of this system. Used for unique serialization
     fn unlocalized_name() -> &'static str;
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+/// Links a structure system's type id with their unlocalized name
 pub struct StructureSystemType {
     unlocalized_name: String,
     id: u16,
@@ -285,6 +290,7 @@ pub struct StructureSystemType {
 }
 
 impl StructureSystemType {
+    /// Creates a new structure system type
     pub fn new(unlocalized_name: impl Into<String>) -> Self {
         Self {
             id: 0,
@@ -293,6 +299,7 @@ impl StructureSystemType {
         }
     }
 
+    /// The numeric id of this structure system type
     pub fn system_type_id(&self) -> StructureSystemTypeId {
         self.system_type_id
     }

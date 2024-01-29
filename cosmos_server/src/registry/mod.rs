@@ -1,3 +1,5 @@
+//! Used for syncing of registries from server -> client
+
 use bevy::{
     app::{App, Startup, Update},
     ecs::{
@@ -71,6 +73,7 @@ fn send_number_of_registries(
     }
 }
 
+/// Call this function on the server-side to signal that this registry should be synced with the client
 pub fn sync_registry<'a, T: Identifiable + Serialize + Deserialize<'a>>(app: &mut App) {
     app.add_systems(Startup, incr_registries_to_sync).add_systems(
         Update,
