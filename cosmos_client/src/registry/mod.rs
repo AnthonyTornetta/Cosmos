@@ -36,9 +36,10 @@ fn sync<T: Identifiable + Serialize + DeserializeOwned + std::fmt::Debug>(
             continue;
         }
 
-        left_to_sync.0 = Some(left_to_sync.0.unwrap_or(0) - 1);
+        let new_amt = left_to_sync.0.unwrap_or(0) - 1;
+        left_to_sync.0 = Some(new_amt);
 
-        info!("Got registry from server: {}!", ev.registry_name);
+        info!("Got registry from server: {}! Need {} more.", ev.registry_name, new_amt);
 
         let Ok(new_registry) = cosmos_encoder::deserialize::<Registry<T>>(&ev.serialized_data) else {
             error!("Got bad registry data from server - {}!", ev.registry_name);
@@ -63,6 +64,7 @@ fn listen_netty(
 
         match msg {
             RegistrySyncing::RegistryCount(count) => {
+                info!("Need to load {count} registries from server.");
                 registry_count.0 = Some(count as i64 + registry_count.0.unwrap_or(0));
             }
             RegistrySyncing::Registry { serialized, registry_name } => {
@@ -89,7 +91,10 @@ fn transition_state(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, (transition_state, listen_netty).run_if(in_state(GameState::LoadingData)))
-        .init_resource::<RegistriesLeftToSync>()
-        .add_event::<ReceivedRegistryEvent>();
+    app.add_systems(
+        Update,
+        (listen_netty, transition_state).chain().run_if(in_state(GameState::LoadingData)),
+    )
+    .init_resource::<RegistriesLeftToSync>()
+    .add_event::<ReceivedRegistryEvent>();
 }

@@ -9,7 +9,8 @@ use cosmos_core::{
     registry::Registry,
     structure::{
         coordinates::BlockCoordinate,
-        shared::DespawnWithStructure,
+        shared::{DespawnWithStructure, MeltingDown},
+        ship::Ship,
         structure_block::StructureBlock,
         systems::{
             energy_storage_system::EnergyStorageSystem,
@@ -27,6 +28,10 @@ use super::{line_system::add_line_system, sync::register_structure_system};
 
 const BEAM_MAX_RANGE: f32 = 250.0;
 const BREAK_DECAY_RATIO: f32 = 1.5;
+
+#[derive(Component, Debug)]
+/// If this is on a structure, the mining laser will not mine this
+pub struct CannotBeMinedByMiningLaser;
 
 #[derive(Component, Debug)]
 struct MiningBlock {
@@ -102,7 +107,7 @@ fn update_mining_beams(
     mut q_mining_beams: Query<(Entity, &mut MiningBeam, &PhysicsWorld, &GlobalTransform)>,
     q_systems: Query<&Systems>,
     mut q_energy_storage_system: Query<&mut EnergyStorageSystem>,
-    q_structure: Query<(&Structure, &GlobalTransform)>,
+    q_structure: Query<(&Structure, &GlobalTransform), Without<CannotBeMinedByMiningLaser>>,
     mut q_mining_block: Query<&mut MiningBlock>,
     mut q_being_mined: Query<&mut BeingMined>,
     q_is_system_active: Query<(), With<SystemActive>>,
@@ -325,12 +330,32 @@ fn register_laser_blocks(blocks: Res<Registry<Block>>, mut cannon: ResMut<LineBl
     }
 }
 
+fn dont_mine_alive_ships(
+    mut commands: Commands,
+    q_ships: Query<Entity, (With<Ship>, Without<MeltingDown>, Without<CannotBeMinedByMiningLaser>)>,
+    q_melting_ships: Query<Entity, (With<Ship>, With<MeltingDown>, With<CannotBeMinedByMiningLaser>)>,
+) {
+    for ent in q_ships.iter() {
+        commands.entity(ent).insert(CannotBeMinedByMiningLaser);
+    }
+
+    for ent in q_melting_ships.iter() {
+        commands.entity(ent).remove::<CannotBeMinedByMiningLaser>();
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     add_line_system::<MiningLaserProperty, MiningLaserPropertyCalculator>(app);
 
     app.add_systems(
         Update,
-        (add_being_mined, on_activate_system, update_mining_beams, check_should_break)
+        (
+            dont_mine_alive_ships,
+            add_being_mined,
+            on_activate_system,
+            update_mining_beams,
+            check_should_break,
+        )
             .before(BlockEventsSet::ProcessEvents)
             .run_if(in_state(GameState::Playing)),
     )

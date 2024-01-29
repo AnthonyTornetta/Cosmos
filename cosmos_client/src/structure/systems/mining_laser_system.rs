@@ -137,7 +137,7 @@ fn apply_mining_effects(
                     }],
                 },
                 DespawnOnNoEmissions,
-                TransformBundle::from_transform(Transform::from_xyz(BEAM_SIZE, BEAM_SIZE, 1.0)),
+                TransformBundle::from_transform(Transform::from_xyz(0.5, 0.5, 1.0)),
             ));
         });
 
@@ -237,7 +237,7 @@ fn resize_lasers(
 }
 
 fn create_mining_laser_mesh(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
-    let shape = meshes.add(bevy::prelude::shape::Box::new(0.5, 0.5, 0.5).into());
+    let shape = meshes.add(bevy::prelude::shape::Box::new(BEAM_SIZE, BEAM_SIZE, 0.5).into());
 
     commands.insert_resource(MiningLaserMesh(shape));
 }
