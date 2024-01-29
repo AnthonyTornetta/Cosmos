@@ -126,9 +126,7 @@ fn check_is_valid_multiblock(structure: &Structure, controller_coords: BlockCoor
         }
     }
 
-    let Some(back_wall_coords) = found_coords else {
-        return None;
-    };
+    let back_wall_coords = found_coords?;
 
     let (left_wall_coords, right_wall_coords) = find_wall_coords(
         ub_controller_coords,
