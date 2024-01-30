@@ -5,7 +5,7 @@
 //! Use the query: `Query<(Entity, &SerializedData), With<NeedsLoaded>>` to get all the data that will need
 //! loaded. From there, you can add any components necessary to the entity to fully load it in.
 //!
-//! See [`loading::default_load`] for an example.
+//! See [`default_load`] for an example.
 
 use std::fs;
 

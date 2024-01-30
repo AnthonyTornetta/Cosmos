@@ -69,3 +69,4 @@ cosmos:storage=Storage
 cosmos:station_core=Station Core
 cosmos:test_ore=Test Ore
 cosmos:plasma_drill=Plasma Drill
+cosmos:shop=Shop
