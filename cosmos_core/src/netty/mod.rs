@@ -43,6 +43,7 @@ pub enum NettyChannelServer {
     SystemReplication,
     /// Syncing of registry data
     Registry,
+    Shop,
 }
 
 /// Network channels that clients send to the server
@@ -108,6 +109,7 @@ impl From<NettyChannelServer> for u8 {
             NettyChannelServer::Inventory => 5,
             NettyChannelServer::SystemReplication => 6,
             NettyChannelServer::Registry => 7,
+            NettyChannelServer::Shop => 8,
         }
     }
 }
@@ -163,6 +165,13 @@ impl NettyChannelServer {
             },
             ChannelConfig {
                 channel_id: Self::Registry.into(),
+                max_memory_usage_bytes: 5 * MB,
+                send_type: SendType::ReliableOrdered {
+                    resend_time: Duration::from_millis(200),
+                },
+            },
+            ChannelConfig {
+                channel_id: Self::Shop.into(),
                 max_memory_usage_bytes: 5 * MB,
                 send_type: SendType::ReliableOrdered {
                     resend_time: Duration::from_millis(200),
