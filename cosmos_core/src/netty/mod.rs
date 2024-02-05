@@ -43,6 +43,7 @@ pub enum NettyChannelServer {
     SystemReplication,
     /// Syncing of registry data
     Registry,
+    /// Syncs information about shops
     Shop,
 }
 

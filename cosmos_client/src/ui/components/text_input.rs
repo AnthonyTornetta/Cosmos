@@ -2,6 +2,7 @@
 
 use std::ops::Range;
 
+use arboard::Clipboard;
 use bevy::{
     a11y::Focus,
     app::{App, Update},
@@ -11,20 +12,25 @@ use bevy::{
         component::Component,
         entity::Entity,
         event::EventReader,
-        query::{Added, Changed, Or, With},
+        query::{Added, Changed, Or},
         schedule::{apply_deferred, common_conditions::resource_changed, IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
         system::{Commands, Query, Res, ResMut, Resource},
     },
+    hierarchy::BuildChildren,
     input::{
         keyboard::{KeyCode, KeyboardInput},
         mouse::MouseButton,
         ButtonState, Input,
     },
+    log::{info, warn},
     prelude::Deref,
     render::color::Color,
     text::{Text, TextSection, TextStyle},
     time::Time,
-    ui::{node_bundles::TextBundle, FocusPolicy, Interaction},
+    ui::{
+        node_bundles::{NodeBundle, TextBundle},
+        AlignSelf, FocusPolicy, Interaction, Style,
+    },
     window::ReceivedCharacter,
 };
 
@@ -100,11 +106,23 @@ impl Default for TextInput {
     }
 }
 
+impl TextInput {
+    /// Creates a new TextInput with this TextStyle.
+    ///
+    /// The TextStyle will effect the text typed & the cursor color, font, and font size.
+    pub fn new(style: TextStyle) -> Self {
+        Self {
+            style,
+            ..Default::default()
+        }
+    }
+}
+
 #[derive(Bundle, Debug, Default)]
 /// An easy way of creating the [`TextInput`] UI element.
 pub struct TextInputBundle {
-    /// The text bundle that will be used with the TextInput
-    pub text_bundle: TextBundle,
+    /// The node bundle that will be used with the TextInput
+    pub node_bundle: NodeBundle,
     /// The [`TextInput`] used to capture user input
     pub text_input: TextInput,
     /// The component you can read to get what the user types
@@ -133,41 +151,42 @@ fn monitor_clicked(
     }
 }
 
+#[derive(Component)]
+struct TextEnt(Entity);
+
 fn added_text_input_bundle(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut q_added: Query<(Entity, &mut Text, &InputValue, &mut TextInput), Added<TextInput>>,
+    mut q_added: Query<(Entity, &InputValue, &mut TextInput), Added<TextInput>>,
 ) {
-    for (entity, mut text, input_value, mut text_input) in q_added.iter_mut() {
+    for (entity, input_value, mut text_input) in q_added.iter_mut() {
         commands.entity(entity).insert(Interaction::None).insert(FocusPolicy::Block);
 
-        if text.sections.len() != 2 {
-            if text_input.style.font == Default::default() {
-                // Font hasn't been assigned yet if it's the default handle, so assign the default now.
-                text_input.style.font = asset_server.load("fonts/PixeloidSans.ttf");
-            }
-
-            let text_style = TextStyle {
-                color: Color::WHITE,
-                font_size: 22.0,
-                font: text_input.style.font.clone(),
-            };
-
-            text.sections.clear();
-
-            text.sections.push(TextSection {
-                style: text_style.clone(),
-                value: input_value.0.clone(),
-            });
-            text.sections.push(TextSection {
-                style: text_style.clone(),
-                value: "|".into(),
-            });
-            text.sections.push(TextSection {
-                style: text_style,
-                value: "".into(),
-            });
+        if text_input.style.font == Default::default() {
+            // Font hasn't been assigned yet if it's the default handle, so assign the default now.
+            text_input.style.font = asset_server.load("fonts/PixeloidSans.ttf");
         }
+
+        let mut text_ent = None;
+        commands.entity(entity).with_children(|p| {
+            text_ent = Some(
+                p.spawn(TextBundle {
+                    text: Text::from_sections([
+                        TextSection::new(input_value.0.clone(), text_input.style.clone()),
+                        TextSection::new("|", text_input.style.clone()),
+                        TextSection::new("", text_input.style.clone()),
+                    ]),
+                    style: Style {
+                        align_self: AlignSelf::Center,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .id(),
+            );
+        });
+
+        commands.entity(entity).insert(TextEnt(text_ent.expect("Set above")));
     }
 }
 
@@ -198,9 +217,6 @@ fn send_key_inputs(
 
         match pressed.key_code {
             Some(KeyCode::Back) => {
-                if focused_input_field.cursor_pos == 0 {
-                    continue;
-                }
                 if text.is_empty() {
                     continue;
                 }
@@ -210,15 +226,12 @@ fn send_key_inputs(
                     focused_input_field.highlight_begin = None;
 
                     text.0.replace_range(range, "");
-                } else {
+                } else if focused_input_field.cursor_pos != 0 {
                     text.0.remove(focused_input_field.cursor_pos - 1);
                     focused_input_field.cursor_pos -= 1;
                 }
             }
             Some(KeyCode::Delete) => {
-                if focused_input_field.cursor_pos == text.len() {
-                    continue;
-                }
                 if text.is_empty() {
                     continue;
                 }
@@ -228,7 +241,7 @@ fn send_key_inputs(
                     focused_input_field.highlight_begin = None;
 
                     text.0.replace_range(range, "");
-                } else {
+                } else if focused_input_field.cursor_pos != text.len() {
                     text.0.remove(focused_input_field.cursor_pos);
                 }
             }
@@ -239,17 +252,21 @@ fn send_key_inputs(
     for ev in evr_char.read() {
         if !ev.char.is_control() {
             let mut new_value = text.0.clone();
+            let new_cursor_pos;
 
             if let Some(range) = focused_input_field.get_highlighted_range() {
                 let replace_string = ev.char.to_string();
-                focused_input_field.cursor_pos = range.start + replace_string.len();
-                focused_input_field.highlight_begin = None;
+                new_cursor_pos = range.start + replace_string.len();
 
                 text.0.replace_range(range, &replace_string);
             } else if focused_input_field.cursor_pos == text.len() {
                 new_value.push(ev.char);
+
+                new_cursor_pos = focused_input_field.cursor_pos + 1;
             } else {
                 new_value.insert(focused_input_field.cursor_pos, ev.char);
+
+                new_cursor_pos = focused_input_field.cursor_pos + 1;
             }
 
             if match focused_input_field.input_type {
@@ -259,14 +276,19 @@ fn send_key_inputs(
                 InputType::Custom(check) => check(&new_value),
             } {
                 text.0 = new_value;
-                focused_input_field.cursor_pos += 1;
+                focused_input_field.cursor_pos = new_cursor_pos;
+                focused_input_field.highlight_begin = None;
             }
         }
     }
 }
 
-fn show_text_cursor(focused: Res<Focus>, mut q_text_inputs: Query<(Entity, &mut Text, &TextInput)>) {
-    for (ent, mut text, text_input) in q_text_inputs.iter_mut() {
+fn show_text_cursor(focused: Res<Focus>, mut q_text_inputs: Query<(Entity, &TextEnt, &TextInput)>, mut q_text: Query<&mut Text>) {
+    for (ent, text, text_input) in q_text_inputs.iter_mut() {
+        let Ok(mut text) = q_text.get_mut(text.0) else {
+            continue;
+        };
+
         if focused.0.map(|x| x == ent).unwrap_or(false) {
             text.sections[1].style.color = text_input.style.color;
         } else {
@@ -278,7 +300,8 @@ fn show_text_cursor(focused: Res<Focus>, mut q_text_inputs: Query<(Entity, &mut 
 fn flash_cursor(
     mut cursor_flash_time: ResMut<CursorFlashTime>,
     focused: Res<Focus>,
-    mut q_text_inputs: Query<&mut Text, With<TextInput>>,
+    mut q_text: Query<&mut Text>,
+    q_text_inputs: Query<(&TextEnt, &TextInput)>,
     time: Res<Time>,
 ) {
     const CURSOR_FLASH_SPEED: f32 = 1.0; // # flashes per second
@@ -287,16 +310,22 @@ fn flash_cursor(
         return;
     };
 
-    let Ok(mut text) = q_text_inputs.get_mut(focused_ent) else {
+    let Ok((text, text_input)) = q_text_inputs.get(focused_ent) else {
+        return;
+    };
+
+    let Ok(mut text) = q_text.get_mut(text.0) else {
         return;
     };
 
     if (cursor_flash_time.0 * CURSOR_FLASH_SPEED * 2.0) as i64 % 2 == 0 {
-        if text.sections[1].value.is_empty() {
-            text.sections[1].value = "|".into();
+        if text.sections[1].style.color != text_input.style.color {
+            text.sections[1].style.color = text_input.style.color;
         }
     } else if !text.sections[1].value.is_empty() {
-        text.sections[1].value.clear();
+        if text.sections[1].style.color != Color::NONE {
+            text.sections[1].style.color = Color::NONE;
+        }
     }
 
     cursor_flash_time.0 += time.delta_seconds();
@@ -304,10 +333,15 @@ fn flash_cursor(
 
 fn value_changed(
     focused: Res<Focus>,
-    mut q_values_changed: Query<(Entity, &InputValue, &TextInput, &mut Text), Or<(Changed<InputValue>, Changed<TextInput>)>>,
+    q_values_changed: Query<(Entity, &InputValue, &TextInput, &TextEnt), Or<(Changed<InputValue>, Changed<TextInput>)>>,
+    mut q_text: Query<&mut Text>,
     mut cursor_flash_time: ResMut<CursorFlashTime>,
 ) {
-    for (entity, input_val, text_input, mut text) in q_values_changed.iter_mut() {
+    for (entity, input_val, text_input, text) in q_values_changed.iter() {
+        let Ok(mut text) = q_text.get_mut(text.0) else {
+            continue;
+        };
+
         if focused.0.map(|x| x == entity).unwrap_or(false) {
             cursor_flash_time.0 = 0.0;
         }
@@ -323,7 +357,7 @@ fn value_changed(
 
 fn handle_keyboard_shortcuts(
     focused: Res<Focus>,
-    mut q_text_inputs: Query<(&InputValue, &mut TextInput)>,
+    mut q_text_inputs: Query<(&mut InputValue, &mut TextInput)>,
     mut cursor_flash_time: ResMut<CursorFlashTime>,
     inputs: Res<Input<KeyCode>>,
     mut evr_keyboard: EventReader<KeyboardInput>,
@@ -333,7 +367,7 @@ fn handle_keyboard_shortcuts(
         return;
     };
 
-    let Ok((value, mut text_input)) = q_text_inputs.get_mut(focused_entity) else {
+    let Ok((mut value, mut text_input)) = q_text_inputs.get_mut(focused_entity) else {
         evr_keyboard.clear();
         return;
     };
@@ -357,9 +391,86 @@ fn handle_keyboard_shortcuts(
 
                     cursor_flash_time.0 = 0.0;
                 }
-                KeyCode::Left => {
-                    println!("Left!");
+                KeyCode::C => {
+                    let Ok(mut clipboard) = Clipboard::new() else {
+                        continue;
+                    };
 
+                    let Some(range) = text_input.get_highlighted_range() else {
+                        continue;
+                    };
+
+                    if let Err(err) = clipboard.set_text(&value[range]) {
+                        warn!("{err}");
+                    }
+                }
+                KeyCode::X => {
+                    let Ok(mut clipboard) = Clipboard::new() else {
+                        continue;
+                    };
+
+                    let Some(range) = text_input.get_highlighted_range() else {
+                        continue;
+                    };
+
+                    if let Err(err) = clipboard.set_text(&value[range.clone()]) {
+                        warn!("{err}");
+                    }
+
+                    let mut new_value = value.0.clone();
+                    let new_cursor_pos = range.start;
+                    new_value.replace_range(range, "");
+
+                    if match text_input.input_type {
+                        InputType::Text { max_length } => max_length.map(|max_len| new_value.len() <= max_len).unwrap_or(true),
+                        InputType::Integer { min, max } => new_value.parse::<i64>().map(|x| x >= min && x <= max).unwrap_or(false),
+                        InputType::Decimal { min, max } => new_value.parse::<f64>().map(|x| x >= min && x <= max).unwrap_or(false),
+                        InputType::Custom(check) => check(&new_value),
+                    } {
+                        value.0 = new_value;
+                        text_input.cursor_pos = new_cursor_pos;
+                        text_input.highlight_begin = None;
+                    }
+                }
+                KeyCode::V => {
+                    let Ok(mut clipboard) = Clipboard::new() else {
+                        continue;
+                    };
+
+                    let Ok(clipboard_contents) = clipboard.get_text() else {
+                        continue;
+                    };
+
+                    let mut new_value = value.0.clone();
+                    let new_cursor_pos;
+
+                    if let Some(range) = text_input.get_highlighted_range() {
+                        let replace_string = clipboard_contents;
+                        new_cursor_pos = range.start + replace_string.len();
+
+                        new_value.replace_range(range, &replace_string);
+                    } else if text_input.cursor_pos == value.len() {
+                        new_value.push_str(&clipboard_contents);
+
+                        new_cursor_pos = clipboard_contents.len() + text_input.cursor_pos;
+                    } else {
+                        new_value.insert_str(text_input.cursor_pos, &clipboard_contents);
+
+                        new_cursor_pos = clipboard_contents.len() + text_input.cursor_pos;
+                    }
+
+                    if match text_input.input_type {
+                        InputType::Text { max_length } => max_length.map(|max_len| new_value.len() <= max_len).unwrap_or(true),
+                        InputType::Integer { min, max } => new_value.parse::<i64>().map(|x| x >= min && x <= max).unwrap_or(false),
+                        InputType::Decimal { min, max } => new_value.parse::<f64>().map(|x| x >= min && x <= max).unwrap_or(false),
+                        InputType::Custom(check) => check(&new_value),
+                    } {
+                        value.0 = new_value;
+                        text_input.cursor_pos = new_cursor_pos;
+                        text_input.highlight_begin = None;
+                    }
+                }
+                KeyCode::Left => {
                     if inputs.pressed(KeyCode::ShiftLeft) || inputs.pressed(KeyCode::ShiftRight) {
                         text_input.highlight_begin = Some(text_input.cursor_pos);
                     } else {
@@ -369,7 +480,6 @@ fn handle_keyboard_shortcuts(
                     cursor_flash_time.0 = 0.0;
                 }
                 KeyCode::Right => {
-                    println!("Right!");
                     if inputs.pressed(KeyCode::ShiftLeft) || inputs.pressed(KeyCode::ShiftRight) {
                         text_input.highlight_begin = Some(text_input.cursor_pos);
                     } else {
@@ -421,7 +531,7 @@ fn handle_keyboard_shortcuts(
             let end = highlighted.max(text_input.cursor_pos);
 
             let slice = &value[start..end];
-            println!("Highlighted: {slice}");
+            info!("Highlighted: {slice}");
         }
     }
 }

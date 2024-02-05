@@ -14,7 +14,7 @@ use bevy::{
     text::{Text, TextStyle},
     ui::{
         node_bundles::{NodeBundle, TextBundle},
-        BackgroundColor, Style, UiRect, Val,
+        Style, UiRect, Val,
     },
 };
 use cosmos_core::{
@@ -26,7 +26,7 @@ use cosmos_core::{
     shop::Shop,
 };
 
-use crate::ui::components::text_input::{TextInputBundle, TextInputUiSystemSet};
+use crate::ui::components::text_input::{TextInput, TextInputBundle, TextInputUiSystemSet};
 
 #[derive(Event)]
 pub(super) struct OpenShopUiEvent(pub Shop);
@@ -87,20 +87,22 @@ fn render_shop_ui(mut commands: Commands, q_shop_ui: Query<(&ShopUI, Entity), Ad
                 ..Default::default()
             });
 
-            p.spawn(
-                (TextInputBundle {
-                    text_bundle: TextBundle {
-                        background_color: Color::GRAY.into(),
-                        style: Style {
-                            width: Val::Px(200.0),
-                            height: Val::Px(40.0),
-                            ..Default::default()
-                        },
+            p.spawn(TextInputBundle {
+                node_bundle: NodeBundle {
+                    background_color: Color::GRAY.into(),
+                    style: Style {
+                        width: Val::Px(200.0),
+                        height: Val::Px(40.0),
                         ..Default::default()
                     },
                     ..Default::default()
+                },
+                text_input: TextInput::new(TextStyle {
+                    font_size: 32.0,
+                    ..Default::default()
                 }),
-            );
+                ..Default::default()
+            });
         });
 }
 
