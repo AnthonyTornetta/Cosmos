@@ -14,7 +14,7 @@ use bevy::{
     text::{Text, TextStyle},
     ui::{
         node_bundles::{NodeBundle, TextBundle},
-        Style, UiRect, Val,
+        BackgroundColor, Style, UiRect, Val,
     },
 };
 use cosmos_core::{
@@ -25,6 +25,8 @@ use cosmos_core::{
     netty::system_sets::NetworkingSystemsSet,
     shop::Shop,
 };
+
+use crate::ui::components::text_input::{TextInputBundle, TextInputUiSystemSet};
 
 #[derive(Event)]
 pub(super) struct OpenShopUiEvent(pub Shop);
@@ -84,12 +86,29 @@ fn render_shop_ui(mut commands: Commands, q_shop_ui: Query<(&ShopUI, Entity), Ad
                 text: Text::from_section(name, text_style.clone()),
                 ..Default::default()
             });
+
+            p.spawn(
+                (TextInputBundle {
+                    text_bundle: TextBundle {
+                        background_color: Color::GRAY.into(),
+                        style: Style {
+                            width: Val::Px(200.0),
+                            height: Val::Px(40.0),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                }),
+            );
         });
 }
 
 pub(super) fn register(app: &mut App) {
     app.add_mut_event::<OpenShopUiEvent>().add_systems(
         Update,
-        (open_shop_ui, render_shop_ui).after(NetworkingSystemsSet::FlushReceiveMessages),
+        (open_shop_ui, render_shop_ui)
+            .after(NetworkingSystemsSet::FlushReceiveMessages)
+            .before(TextInputUiSystemSet::ApplyDeferredA),
     );
 }

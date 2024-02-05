@@ -2,6 +2,7 @@
 
 use bevy::prelude::App;
 
+pub mod components;
 pub mod crosshair;
 pub mod debug_info_display;
 pub mod hotbar;
@@ -16,4 +17,5 @@ pub(super) fn register(app: &mut App) {
     item_renderer::register(app);
     message::register(app);
     ship_flight::register(app);
+    components::register(app);
 }
