@@ -26,7 +26,10 @@ use cosmos_core::{
     shop::Shop,
 };
 
-use crate::ui::components::text_input::{TextInput, TextInputBundle, TextInputUiSystemSet};
+use crate::ui::components::{
+    button::{register_button, Button, ButtonBundle, ButtonEvent, ButtonEventType, ButtonStyles, ButtonUiSystemSet},
+    text_input::{InputType, TextInput, TextInputBundle, TextInputUiSystemSet},
+};
 
 #[derive(Event)]
 pub(super) struct OpenShopUiEvent(pub Shop);
@@ -89,7 +92,7 @@ fn render_shop_ui(mut commands: Commands, q_shop_ui: Query<(&ShopUI, Entity), Ad
 
             p.spawn(TextInputBundle {
                 node_bundle: NodeBundle {
-                    background_color: Color::GRAY.into(),
+                    background_color: Color::DARK_GRAY.into(),
                     style: Style {
                         width: Val::Px(200.0),
                         height: Val::Px(40.0),
@@ -97,20 +100,68 @@ fn render_shop_ui(mut commands: Commands, q_shop_ui: Query<(&ShopUI, Entity), Ad
                     },
                     ..Default::default()
                 },
-                text_input: TextInput::new(TextStyle {
-                    font_size: 32.0,
+                text_input: TextInput {
+                    style: TextStyle {
+                        font_size: 32.0,
+                        ..Default::default()
+                    },
+                    input_type: InputType::Integer { min: -10000, max: 10000 },
                     ..Default::default()
-                }),
+                },
+                ..Default::default()
+            });
+
+            p.spawn(ButtonBundle::<ClickBtnEvent> {
+                node_bundle: NodeBundle {
+                    style: Style {
+                        width: Val::Px(400.0),
+                        height: Val::Px(200.0),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                button: Button::<ClickBtnEvent> {
+                    starting_text: Some(("Hello!".into(), text_style.clone())),
+                    button_styles: Some(ButtonStyles {
+                        background_color: Color::RED,
+                        foreground_color: Color::BLACK,
+                        hover_background_color: Color::GREEN,
+                        hover_foreground_color: Color::WHITE,
+                        press_background_color: Color::PURPLE,
+                        press_foreground_color: Color::YELLOW,
+                    }),
+                    ..Default::default()
+                },
+
                 ..Default::default()
             });
         });
 }
 
+#[derive(Event)]
+struct ClickBtnEvent {}
+
+impl ButtonEvent for ClickBtnEvent {
+    fn create_event(_: ButtonEventType) -> Option<Self> {
+        Some(Self {})
+    }
+}
+
+fn reader(mut ev_reader: EventReader<ClickBtnEvent>) {
+    for _ in ev_reader.read() {
+        println!("Click event!");
+    }
+}
+
 pub(super) fn register(app: &mut App) {
-    app.add_mut_event::<OpenShopUiEvent>().add_systems(
-        Update,
-        (open_shop_ui, render_shop_ui)
-            .after(NetworkingSystemsSet::FlushReceiveMessages)
-            .before(TextInputUiSystemSet::ApplyDeferredA),
-    );
+    register_button::<ClickBtnEvent>(app);
+
+    app.add_mut_event::<OpenShopUiEvent>()
+        .add_systems(
+            Update,
+            (open_shop_ui, render_shop_ui)
+                .after(NetworkingSystemsSet::FlushReceiveMessages)
+                .before(TextInputUiSystemSet::ApplyDeferredA),
+        )
+        .add_systems(Update, reader.after(ButtonUiSystemSet::SendButtonEvents));
 }

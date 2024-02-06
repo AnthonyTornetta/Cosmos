@@ -41,7 +41,9 @@ struct CursorFlashTime(f32);
 /// Holds the value input by the user in this text field.
 ///
 /// This is guarenteed at all times to only contain values that meet the criteria
-/// specified in [`InputType`].
+/// specified in [`InputType`].  **NOTE** For Integer and Decimal, a single negative sign (-)
+/// could be stored as the value, in which case parsing will fail but it is considered a valid
+/// input.
 pub struct InputValue(String);
 
 #[derive(Debug)]
@@ -73,9 +75,9 @@ pub enum InputType {
 #[derive(Component, Debug)]
 /// A text box the user can type in
 pub struct TextInput {
-    input_type: InputType,
-    cursor_pos: usize,
-    highlight_begin: Option<usize>,
+    pub input_type: InputType,
+    pub cursor_pos: usize,
+    pub highlight_begin: Option<usize>,
     /// The style of the text
     pub style: TextStyle,
 }
@@ -102,18 +104,6 @@ impl Default for TextInput {
                 font_size: 12.0,
                 font: Default::default(), // font assigned later
             },
-        }
-    }
-}
-
-impl TextInput {
-    /// Creates a new TextInput with this TextStyle.
-    ///
-    /// The TextStyle will effect the text typed & the cursor color, font, and font size.
-    pub fn new(style: TextStyle) -> Self {
-        Self {
-            style,
-            ..Default::default()
         }
     }
 }
@@ -175,7 +165,8 @@ fn added_text_input_bundle(
                         TextSection::new(input_value.0.clone(), text_input.style.clone()),
                         TextSection::new("|", text_input.style.clone()),
                         TextSection::new("", text_input.style.clone()),
-                    ]),
+                    ])
+                    .with_no_wrap(),
                     style: Style {
                         align_self: AlignSelf::Center,
                         ..Default::default()
@@ -269,12 +260,7 @@ fn send_key_inputs(
                 new_cursor_pos = focused_input_field.cursor_pos + 1;
             }
 
-            if match focused_input_field.input_type {
-                InputType::Text { max_length } => max_length.map(|max_len| new_value.len() <= max_len).unwrap_or(true),
-                InputType::Integer { min, max } => new_value.parse::<i64>().map(|x| x >= min && x <= max).unwrap_or(false),
-                InputType::Decimal { min, max } => new_value.parse::<f64>().map(|x| x >= min && x <= max).unwrap_or(false),
-                InputType::Custom(check) => check(&new_value),
-            } {
+            if verify_input(&focused_input_field, &new_value) {
                 text.0 = new_value;
                 focused_input_field.cursor_pos = new_cursor_pos;
                 focused_input_field.highlight_begin = None;
@@ -421,12 +407,7 @@ fn handle_keyboard_shortcuts(
                     let new_cursor_pos = range.start;
                     new_value.replace_range(range, "");
 
-                    if match text_input.input_type {
-                        InputType::Text { max_length } => max_length.map(|max_len| new_value.len() <= max_len).unwrap_or(true),
-                        InputType::Integer { min, max } => new_value.parse::<i64>().map(|x| x >= min && x <= max).unwrap_or(false),
-                        InputType::Decimal { min, max } => new_value.parse::<f64>().map(|x| x >= min && x <= max).unwrap_or(false),
-                        InputType::Custom(check) => check(&new_value),
-                    } {
+                    if verify_input(&text_input, &new_value) {
                         value.0 = new_value;
                         text_input.cursor_pos = new_cursor_pos;
                         text_input.highlight_begin = None;
@@ -459,12 +440,7 @@ fn handle_keyboard_shortcuts(
                         new_cursor_pos = clipboard_contents.len() + text_input.cursor_pos;
                     }
 
-                    if match text_input.input_type {
-                        InputType::Text { max_length } => max_length.map(|max_len| new_value.len() <= max_len).unwrap_or(true),
-                        InputType::Integer { min, max } => new_value.parse::<i64>().map(|x| x >= min && x <= max).unwrap_or(false),
-                        InputType::Decimal { min, max } => new_value.parse::<f64>().map(|x| x >= min && x <= max).unwrap_or(false),
-                        InputType::Custom(check) => check(&new_value),
-                    } {
+                    if verify_input(&text_input, &new_value) {
                         value.0 = new_value;
                         text_input.cursor_pos = new_cursor_pos;
                         text_input.highlight_begin = None;
@@ -533,6 +509,15 @@ fn handle_keyboard_shortcuts(
             let slice = &value[start..end];
             info!("Highlighted: {slice}");
         }
+    }
+}
+
+fn verify_input(text_input: &TextInput, test_value: &str) -> bool {
+    match text_input.input_type {
+        InputType::Text { max_length } => max_length.map(|max_len| test_value.len() <= max_len).unwrap_or(true),
+        InputType::Integer { min, max } => test_value == "-" || test_value.parse::<i64>().map(|x| x >= min && x <= max).unwrap_or(false),
+        InputType::Decimal { min, max } => test_value == "-" || test_value.parse::<f64>().map(|x| x >= min && x <= max).unwrap_or(false),
+        InputType::Custom(check) => check(test_value),
     }
 }
 
