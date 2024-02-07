@@ -28,6 +28,7 @@ use cosmos_core::{
 
 use crate::ui::components::{
     button::{register_button, Button, ButtonBundle, ButtonEvent, ButtonEventType, ButtonStyles, ButtonUiSystemSet},
+    slider::{Slider, SliderBundle, SliderStyles},
     text_input::{InputType, TextInput, TextInputBundle, TextInputUiSystemSet},
 };
 
@@ -133,6 +134,28 @@ fn render_shop_ui(mut commands: Commands, q_shop_ui: Query<(&ShopUI, Entity), Ad
                     ..Default::default()
                 },
 
+                ..Default::default()
+            });
+
+            p.spawn(SliderBundle {
+                node_bundle: NodeBundle {
+                    style: Style {
+                        width: Val::Px(400.0),
+                        height: Val::Px(200.0),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                slider: Slider {
+                    range: 0..1001,
+                    slider_styles: Some(SliderStyles {
+                        hover_background_color: Color::GREEN,
+                        hover_foreground_color: Color::WHITE,
+                        press_background_color: Color::PURPLE,
+                        press_foreground_color: Color::YELLOW,
+                    }),
+                    ..Default::default()
+                },
                 ..Default::default()
             });
         });

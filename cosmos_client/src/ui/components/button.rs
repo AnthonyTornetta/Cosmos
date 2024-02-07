@@ -1,3 +1,5 @@
+//! An batteries included way to add an interactive button that will easily send out events when a button is clicked.
+
 use std::marker::PhantomData;
 
 use bevy::{
@@ -20,31 +22,52 @@ use bevy::{
     },
 };
 
+/// The reason a button event is being created
 pub enum ButtonEventType {
+    /// The button has been clicked
     Click,
 }
 
+/// An event that will be created and sent when a button is interacted with
 pub trait ButtonEvent: Sized + Event {
+    /// Create an instance of this event. If you don't want to respond
+    /// to this event type, just return `None`.
     fn create_event(event_type: ButtonEventType) -> Option<Self>;
 }
 
 #[derive(Component, Debug)]
+/// A UI element that will send out events (of type `T`) when it is pressed.
+///
+/// This does NOT use the default bevy `Button` component.
 pub struct Button<T: ButtonEvent> {
+    /// boo
     pub _phantom: PhantomData<T>,
+    /// Interaction state of the button.
     pub last_interaction: Interaction,
+    /// Out-of-the-box color changing for the different
+    /// states a button can be in. Leave `None` if you don't want this.
     pub button_styles: Option<ButtonStyles>,
+    /// Text to display in the button. The text will be center aligned.
     pub starting_text: Option<(String, TextStyle)>,
 }
 
 #[derive(Default, Debug)]
+/// Out-of-the-box color changing for the different
+/// states a button can be in.
 pub struct ButtonStyles {
+    /// Color used when not hovering/clicking the button
     pub background_color: Color,
+    /// Color used when not hovering/clicking the button
     pub foreground_color: Color,
 
+    /// Color used when hovering but not clicking the button
     pub hover_background_color: Color,
+    /// Color used when hovering but not clicking the button
     pub hover_foreground_color: Color,
 
+    /// Color used when clicking the button
     pub press_background_color: Color,
+    /// Color used when clicking the button
     pub press_foreground_color: Color,
 }
 
@@ -60,9 +83,13 @@ impl<T: ButtonEvent> Default for Button<T> {
 }
 
 #[derive(Debug, Bundle)]
+/// A UI element that will send out events (of type `T`) when it is pressed.
+///
+/// This does NOT use the default bevy `Button` component.
 pub struct ButtonBundle<T: ButtonEvent> {
     /// The node bundle that will be used with the TextInput
     pub node_bundle: NodeBundle,
+    /// The button UI element
     pub button: Button<T>,
 }
 
@@ -149,6 +176,7 @@ pub enum ButtonUiSystemSet {
     SendButtonEvents,
 }
 
+/// When you make a new [`ButtonEvent`] type and add a button, you must call this method or they will not work.
 pub fn register_button<T: ButtonEvent>(app: &mut App) {
     app.add_systems(
         Update,

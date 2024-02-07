@@ -66,9 +66,11 @@ fn update_mouse_deltas(
     mut delta: ResMut<DeltaCursorPosition>,
     cursor_flags: Res<CursorFlags>,
     mut ev_mouse_motion: EventReader<MouseMotion>,
-    mut primary_query: Query<&mut Window, With<PrimaryWindow>>,
+    primary_query: Query<&Window, With<PrimaryWindow>>,
 ) {
-    let window = primary_query.get_single_mut().expect("Missing primary window.");
+    let Ok(window) = primary_query.get_single() else {
+        return;
+    };
 
     delta.x = 0.0;
     delta.y = 0.0;
@@ -94,7 +96,9 @@ fn window_focus_changed(
     mut ev_focus: EventReader<WindowFocused>,
     cursor_flags: Res<CursorFlags>,
 ) {
-    let (window_entity, mut window) = primary_query.get_single_mut().expect("Missing primary window.");
+    let Ok((window_entity, mut window)) = primary_query.get_single_mut() else {
+        return;
+    };
 
     if let Some(ev) = ev_focus.read().find(|e| e.window == window_entity) {
         if ev.focused {
@@ -116,7 +120,9 @@ fn apply_cursor_flags(window: &mut Window, cursor_flags: CursorFlags) {
 }
 
 fn apply_cursor_flags_on_change(cursor_flags: Res<CursorFlags>, mut primary_query: Query<&mut Window, With<PrimaryWindow>>) {
-    let mut window = primary_query.get_single_mut().expect("Missing primary window.");
+    let Ok(mut window) = primary_query.get_single_mut() else {
+        return;
+    };
 
     apply_cursor_flags(&mut window, *cursor_flags);
 }

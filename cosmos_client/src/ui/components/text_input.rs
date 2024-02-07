@@ -75,8 +75,11 @@ pub enum InputType {
 #[derive(Component, Debug)]
 /// A text box the user can type in
 pub struct TextInput {
+    /// Handles input validation to ensure the data stored in [`InputValue`] is correct.
     pub input_type: InputType,
+    /// Where the cursor is in the input field.
     pub cursor_pos: usize,
+    /// Where the highlighting should begin (an index). This can be before or after the cursor.
     pub highlight_begin: Option<usize>,
     /// The style of the text
     pub style: TextStyle,
@@ -148,6 +151,7 @@ fn added_text_input_bundle(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut q_added: Query<(Entity, &InputValue, &mut TextInput), Added<TextInput>>,
+    focused: Res<Focus>,
 ) {
     for (entity, input_value, mut text_input) in q_added.iter_mut() {
         commands.entity(entity).insert(Interaction::None).insert(FocusPolicy::Block);
@@ -158,12 +162,19 @@ fn added_text_input_bundle(
         }
 
         let mut text_ent = None;
+
+        let mut cursor_style = text_input.style.clone();
+
+        if focused.0 != Some(entity) {
+            cursor_style.color = Color::NONE;
+        }
+
         commands.entity(entity).with_children(|p| {
             text_ent = Some(
                 p.spawn(TextBundle {
                     text: Text::from_sections([
                         TextSection::new(input_value.0.clone(), text_input.style.clone()),
-                        TextSection::new("|", text_input.style.clone()),
+                        TextSection::new("|", cursor_style),
                         TextSection::new("", text_input.style.clone()),
                     ])
                     .with_no_wrap(),

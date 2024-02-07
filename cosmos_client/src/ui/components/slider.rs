@@ -4,96 +4,278 @@ use bevy::{
     app::{App, Update},
     ecs::{
         bundle::Bundle,
+        change_detection::DetectChanges,
         component::Component,
         entity::Entity,
-        query::{Added, Changed},
+        query::{Added, Changed, With},
         schedule::{apply_deferred, IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
-        system::{Commands, Query},
+        system::{Commands, Query, Res},
+        world::Ref,
     },
-    hierarchy::Children,
+    hierarchy::BuildChildren,
+    reflect::Reflect,
     render::color::Color,
-    text::Text,
-    ui::{node_bundles::NodeBundle, BackgroundColor, Interaction},
+    transform::components::GlobalTransform,
+    ui::{node_bundles::NodeBundle, BackgroundColor, Interaction, Node, PositionType, Style, UiRect, UiScale, Val},
+    window::{PrimaryWindow, Window},
 };
 
-#[derive(Component, Debug)]
+#[derive(Component, Debug, Reflect)]
+/// A UI component that is used to select a number between a range of values using a slider.
+///
+/// Similar to the HTML `input type="range"`.
 pub struct Slider {
+    /// Optional styles to further customize the slider
     pub slider_styles: Option<SliderStyles>,
+    /// The range of values you want the slider to use
     pub range: Range<i64>,
+    /// The color of the background bar
+    pub background_color: Color,
+    /// The color of the bar that represents % filled
+    pub foreground_color: Color,
+    /// The color of the square the user clicks to drag the bar around
+    pub square_color: Color,
+    /// The height the slider should be up its creation in px
+    pub height: f32,
 }
 
-#[derive(Component, Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Reflect, Component, Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+/// The value the slider curently has selected
 pub struct SliderValue(i64);
 
 impl SliderValue {
+    /// Gets the value currently selected
     pub fn value(&self) -> i64 {
         self.0
     }
 
+    /// Sets the value currently selected
+    ///
+    /// Updating this will change the UI
     pub fn set_value(&mut self, new_val: i64) {
         self.0 = new_val;
     }
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Reflect)]
+/// Styles to further customize the slider
 pub struct SliderStyles {
-    pub background_color: Color,
-    pub foreground_color: Color,
-
+    /// The color of the background bar
     pub hover_background_color: Color,
+    /// The color of the bar that represents % filled when the slider is pressed
     pub hover_foreground_color: Color,
 
+    /// The color of the background bar
     pub press_background_color: Color,
+    /// The color of the bar that represents % filled when the slider is pressed
     pub press_foreground_color: Color,
 }
 
 impl Default for Slider {
     fn default() -> Self {
         Self {
+            background_color: Color::RED,
+            foreground_color: Color::GRAY,
+            square_color: Color::AQUAMARINE,
             range: 0..101,
             slider_styles: Default::default(),
+            height: 10.0,
         }
     }
 }
 
 #[derive(Debug, Bundle, Default)]
+/// A UI component that is used to select a number between a range of values using a slider.
+///
+/// Similar to the HTML `input type="range"`.
 pub struct SliderBundle {
     /// The node bundle that will be used with the TextInput
     pub node_bundle: NodeBundle,
+    /// The slider component
     pub slider: Slider,
+    /// The value the slider is set to
     pub slider_value: SliderValue,
 }
 
-fn on_add_slider(mut commands: Commands, mut q_added_button: Query<(Entity, &mut Slider, &SliderValue), Added<Slider>>) {
-    for (ent, mut slider, slider_value) in q_added_button.iter_mut() {
-        commands.entity(ent).insert(Interaction::default());
+#[derive(Component)]
+struct SliderProgressEntites {
+    empty_bar_entity: Entity,
+    bar_entity: Entity,
+    square_entity: Entity,
+}
+
+fn slider_percent(slider: &Slider, value: &SliderValue) -> f32 {
+    // .end - 1 because the range is exclusive of the ending value (which end is for some reason)
+    (value.0 as f32 - slider.range.start as f32) / ((slider.range.end - 1) - slider.range.start) as f32
+}
+
+const BASE_SQUARE_SIZE: f32 = 10.0;
+
+const X_MARGIN: f32 = BASE_SQUARE_SIZE;
+const Y_MARGIN: f32 = BASE_SQUARE_SIZE / 2.0;
+
+fn on_add_slider(mut commands: Commands, mut q_added_button: Query<(Entity, &mut Style, &Slider, &SliderValue), Added<Slider>>) {
+    for (ent, mut style, slider, slider_value) in q_added_button.iter_mut() {
+        style.height = Val::Px(slider.height + BASE_SQUARE_SIZE);
+
+        let mut bar_entity = None;
+        let mut square_entity = None;
+        let mut empty_bar_entity = None;
+
+        commands.entity(ent).insert(Interaction::default()).with_children(|p| {
+            empty_bar_entity = Some(
+                p.spawn(NodeBundle {
+                    style: Style {
+                        width: Val::Percent(100.0),
+                        height: Val::Px(slider.height),
+                        margin: UiRect {
+                            left: Val::Px(X_MARGIN),
+                            right: Val::Px(X_MARGIN),
+                            top: Val::Px(Y_MARGIN),
+                            bottom: Val::Px(Y_MARGIN),
+                        },
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .with_children(|p| {
+                    let percent_selected = slider_percent(slider, slider_value);
+
+                    let square_size = slider.height + BASE_SQUARE_SIZE;
+
+                    bar_entity = Some(
+                        p.spawn(NodeBundle {
+                            background_color: slider.foreground_color.into(),
+                            style: Style {
+                                width: Val::Percent(percent_selected),
+                                height: Val::Percent(100.0),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        })
+                        .id(),
+                    );
+
+                    square_entity = Some(
+                        p.spawn(NodeBundle {
+                            background_color: slider.square_color.into(),
+                            style: Style {
+                                position_type: PositionType::Absolute,
+                                width: Val::Px(square_size),
+                                height: Val::Px(square_size),
+                                left: Val::Px(-BASE_SQUARE_SIZE),
+                                top: Val::Px(-BASE_SQUARE_SIZE / 2.0),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        })
+                        .id(),
+                    );
+                })
+                .id(),
+            );
+        });
+
+        commands.entity(ent).insert(SliderProgressEntites {
+            bar_entity: bar_entity.expect("Set above"),
+            square_entity: square_entity.expect("Set above"),
+            empty_bar_entity: empty_bar_entity.expect("Set above"),
+        });
     }
 }
 
 fn on_interact_slider(
-    mut q_added_button: Query<(&Interaction, &Slider, &mut SliderValue, &mut BackgroundColor, &Children), Changed<Interaction>>,
-    mut q_text: Query<&mut Text>,
+    ui_scale: Res<UiScale>,
+    mut q_added_button: Query<(
+        Ref<Interaction>,
+        &Slider,
+        &mut SliderValue,
+        &Node,
+        &GlobalTransform,
+        &SliderProgressEntites,
+    )>,
+    mut q_bg_color: Query<&mut BackgroundColor>,
+    q_windows: Query<&Window, With<PrimaryWindow>>,
 ) {
-    for (interaction, slider, slider_value, mut bg_color, children) in q_added_button.iter_mut() {
-        if let Some(slider_styles) = &slider.slider_styles {
-            bg_color.0 = match *interaction {
-                Interaction::None => slider_styles.background_color,
-                Interaction::Hovered => slider_styles.hover_background_color,
-                Interaction::Pressed => slider_styles.press_background_color,
+    for (interaction, slider, mut slider_value, node, g_trans, progress_entities) in q_added_button.iter_mut() {
+        if *interaction == Interaction::Pressed {
+            let Ok(window) = q_windows.get_single() else {
+                continue;
             };
 
-            if let Some(&text_child) = children.iter().find(|&x| q_text.contains(*x)) {
-                let mut text = q_text.get_mut(text_child).expect("Checked above");
+            let Some(cursor_pos) = window.cursor_position() else {
+                continue;
+            };
 
-                let color = match *interaction {
-                    Interaction::None => slider_styles.foreground_color,
-                    Interaction::Hovered => slider_styles.hover_foreground_color,
-                    Interaction::Pressed => slider_styles.press_foreground_color,
-                };
+            let mut slider_bounds = node.physical_rect(g_trans, 1.0, ui_scale.0);
+            slider_bounds.min.x += X_MARGIN;
+            slider_bounds.max.x -= X_MARGIN;
 
-                text.sections.iter_mut().for_each(|x| x.style.color = color);
+            slider_value.0 = if cursor_pos.x <= slider_bounds.min.x {
+                slider.range.start
+            } else if cursor_pos.x >= slider_bounds.max.x {
+                slider.range.end - 1
+            } else {
+                (((cursor_pos.x - slider_bounds.min.x) as f32 / (slider_bounds.max.x - slider_bounds.min.x) as f32)
+                    * ((slider.range.end - 1) as f32 - slider.range.start as f32)
+                    + slider.range.start as f32)
+                    .round() as i64
+            };
+        }
+
+        if interaction.is_changed() {
+            if let Some(slider_styles) = &slider.slider_styles {
+                if let Ok(mut bg_color) = q_bg_color.get_mut(progress_entities.empty_bar_entity) {
+                    bg_color.0 = match *interaction {
+                        Interaction::None => slider.background_color,
+                        Interaction::Hovered => slider_styles.hover_background_color,
+                        Interaction::Pressed => slider_styles.press_background_color,
+                    };
+                }
+                if let Ok(mut bg_color) = q_bg_color.get_mut(progress_entities.bar_entity) {
+                    bg_color.0 = match *interaction {
+                        Interaction::None => slider.foreground_color,
+                        Interaction::Hovered => slider_styles.hover_foreground_color,
+                        Interaction::Pressed => slider_styles.press_foreground_color,
+                    };
+                }
+
+                // if let Some(&text_child) = children.iter().find(|&x| q_text.contains(*x)) {
+                // let mut text = q_text.get_mut(text_child).expect("Checked above");
+
+                // let color = match *interaction {
+                //     Interaction::None => slider.foreground_color,
+                //     Interaction::Hovered => slider_styles.hover_foreground_color,
+                //     Interaction::Pressed => slider_styles.press_foreground_color,
+                // };
+
+                // text.sections.iter_mut().for_each(|x| x.style.color = color);
+                // }
             }
         }
+    }
+}
+
+fn on_change_value(
+    mut q_style: Query<&mut Style>,
+    ui_scale: Res<UiScale>,
+    q_changed_value: Query<(&SliderProgressEntites, &SliderValue, &Slider, &Node, &GlobalTransform), Changed<SliderValue>>,
+) {
+    for (slider_progress_entity, slider_value, slider, node, g_trans) in q_changed_value.iter() {
+        let Ok(mut style) = q_style.get_mut(slider_progress_entity.bar_entity) else {
+            continue;
+        };
+
+        style.width = Val::Percent(slider_percent(slider, slider_value) * 100.0);
+
+        let Ok(mut style) = q_style.get_mut(slider_progress_entity.square_entity) else {
+            continue;
+        };
+
+        let slider_bounds = node.physical_rect(g_trans, 1.0, ui_scale.0);
+        let slider_actual_width = slider_bounds.size().x - X_MARGIN * 2.0;
+
+        style.left = Val::Px(slider_actual_width * slider_percent(slider, slider_value) - BASE_SQUARE_SIZE);
     }
 }
 
@@ -110,7 +292,11 @@ pub enum SliderUiSystemSet {
     /// apply_deferred
     ApplyDeferredB,
     /// Sends user events from the various [`Button`] components.
-    UpdateSliderValues,
+    SliderInteraction,
+    /// apply_deferred
+    ApplyDeferredC,
+    /// Sends user events from the various [`Button`] components.
+    UpdateSliderDisplay,
 }
 
 pub(super) fn register(app: &mut App) {
@@ -120,7 +306,9 @@ pub(super) fn register(app: &mut App) {
             SliderUiSystemSet::ApplyDeferredA,
             SliderUiSystemSet::AddSliderBundle,
             SliderUiSystemSet::ApplyDeferredB,
-            SliderUiSystemSet::UpdateSliderValues,
+            SliderUiSystemSet::SliderInteraction,
+            SliderUiSystemSet::ApplyDeferredC,
+            SliderUiSystemSet::UpdateSliderDisplay,
         )
             .chain(),
     )
@@ -129,13 +317,17 @@ pub(super) fn register(app: &mut App) {
         (
             apply_deferred.in_set(SliderUiSystemSet::ApplyDeferredA),
             apply_deferred.in_set(SliderUiSystemSet::ApplyDeferredB),
+            apply_deferred.in_set(SliderUiSystemSet::ApplyDeferredC),
         ),
     )
     .add_systems(
         Update,
         (
             on_add_slider.in_set(SliderUiSystemSet::AddSliderBundle),
-            on_interact_slider.in_set(SliderUiSystemSet::UpdateSliderValues),
+            on_interact_slider.in_set(SliderUiSystemSet::SliderInteraction),
+            on_change_value.in_set(SliderUiSystemSet::UpdateSliderDisplay),
         ),
-    );
+    )
+    .register_type::<SliderValue>()
+    .register_type::<Slider>();
 }
