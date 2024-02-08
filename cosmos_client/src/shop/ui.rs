@@ -14,6 +14,7 @@ use bevy::{
     text::{Text, TextStyle},
     ui::{
         node_bundles::{NodeBundle, TextBundle},
+        widget::Label,
         Style, UiRect, Val,
     },
 };
@@ -28,6 +29,7 @@ use cosmos_core::{
 
 use crate::ui::components::{
     button::{register_button, Button, ButtonBundle, ButtonEvent, ButtonEventType, ButtonStyles, ButtonUiSystemSet},
+    scollable_container::ScrollBundle,
     slider::{Slider, SliderBundle, SliderStyles},
     text_input::{InputType, TextInput, TextInputBundle, TextInputUiSystemSet},
 };
@@ -157,6 +159,32 @@ fn render_shop_ui(mut commands: Commands, q_shop_ui: Query<(&ShopUI, Entity), Ad
                     ..Default::default()
                 },
                 ..Default::default()
+            });
+
+            p.spawn(ScrollBundle {
+                node_bundle: NodeBundle {
+                    style: Style {
+                        width: Val::Px(400.0),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                ..Default::default()
+            })
+            .with_children(|p| {
+                for i in 0..100 {
+                    p.spawn((
+                        TextBundle::from_section(
+                            format!("Item {i}"),
+                            TextStyle {
+                                font: asset_server.load("fonts/PixeloidSans.ttf"),
+                                font_size: 20.,
+                                ..Default::default()
+                            },
+                        ),
+                        Label,
+                    ));
+                }
             });
         });
 }

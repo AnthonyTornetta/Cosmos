@@ -1,3 +1,7 @@
+//! A UI component that is used to select a number between a range of values using a slider.
+//!
+//! Similar to the HTML `input type="range"`.use std::ops::Range;
+
 use std::ops::Range;
 
 use bevy::{
