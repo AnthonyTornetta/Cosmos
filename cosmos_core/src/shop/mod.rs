@@ -1,4 +1,4 @@
-use bevy::{app::App, reflect::Reflect};
+use bevy::{app::App, ecs::component::Component, reflect::Reflect};
 use serde::{Deserialize, Serialize};
 
 pub mod netty;

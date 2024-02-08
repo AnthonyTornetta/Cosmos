@@ -14,6 +14,9 @@ use crate::{
 
 use super::Station;
 
+pub const STATION_LOAD_DISTANCE: u32 = 6;
+pub const STATION_UNLOAD_DISTANCE: u32 = STATION_LOAD_DISTANCE + 1;
+
 /// Implement this to add a custom way to build stations
 pub trait TStationBuilder {
     /// Adds everything to the entity needed to have a station
@@ -46,7 +49,7 @@ fn on_add_station(query: Query<Entity, Added<Station>>, mut commands: Commands) 
         commands.entity(entity).insert((
             RigidBody::Fixed,
             ReadMassProperties::default(),
-            LoadingDistance::new(6, 7),
+            LoadingDistance::new(STATION_LOAD_DISTANCE, STATION_UNLOAD_DISTANCE),
             Name::new("Station"),
         ));
     }
