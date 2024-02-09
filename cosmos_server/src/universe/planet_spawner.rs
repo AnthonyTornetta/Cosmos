@@ -167,7 +167,8 @@ fn spawn_planet(
 pub fn is_planet_in_sector(sector: &Sector, seed: &ServerSeed) -> bool {
     let mut rng: rand_chacha::ChaCha8Rng = get_rng_for_sector(seed, sector);
 
-    (sector.x() == 0 && sector.y() == 0 && sector.z() == 0) || rng.gen_range(0..1000) == 9
+    /*(sector.x() == 0 && sector.y() == 0 && sector.z() == 0) || */
+    rng.gen_range(0..1000) == 9
 }
 
 pub(super) fn register(app: &mut App) {
