@@ -7,7 +7,7 @@ use bevy::{
 use bevy_rapier3d::prelude::{ReadMassProperties, RigidBody, Velocity};
 
 use crate::{
-    persistence::LoadingDistance,
+    persistence::{Blueprintable, LoadingDistance},
     physics::location::Location,
     structure::{loading::StructureLoadingSet, structure_builder::TStructureBuilder, Structure},
 };
@@ -49,6 +49,7 @@ fn on_add_station(query: Query<Entity, Added<Station>>, mut commands: Commands) 
         commands.entity(entity).insert((
             RigidBody::Fixed,
             ReadMassProperties::default(),
+            Blueprintable,
             LoadingDistance::new(STATION_LOAD_DISTANCE, STATION_UNLOAD_DISTANCE),
             Name::new("Station"),
         ));

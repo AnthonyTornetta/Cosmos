@@ -4,10 +4,13 @@ use bevy::{
     ecs::{schedule::IntoSystemConfigs, system::EntityCommands},
     prelude::{Added, App, Commands, Entity, Name, Query, Update},
 };
-use bevy_rapier3d::prelude::{ExternalImpulse, ReadMassProperties, RigidBody, Velocity};
+use bevy_rapier3d::{
+    dynamics::Ccd,
+    prelude::{ExternalImpulse, ReadMassProperties, RigidBody, Velocity},
+};
 
 use crate::{
-    persistence::LoadingDistance,
+    persistence::{Blueprintable, LoadingDistance},
     physics::location::Location,
     structure::{loading::StructureLoadingSet, structure_builder::TStructureBuilder, Structure},
 };
@@ -47,6 +50,8 @@ fn on_add_ship(query: Query<Entity, Added<Ship>>, mut commands: Commands) {
             RigidBody::Dynamic,
             ReadMassProperties::default(),
             ExternalImpulse::default(),
+            Ccd::enabled(),
+            Blueprintable,
             LoadingDistance::new(6, 7),
             Name::new("Ship"),
         ));

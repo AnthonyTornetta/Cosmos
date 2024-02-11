@@ -65,6 +65,10 @@ impl LoadingDistance {
     }
 }
 
+#[derive(Component, Debug, Reflect, Default, Clone, Copy)]
+/// Signifies that this entity can be blueprinted.
+pub struct Blueprintable;
+
 pub(super) fn register(app: &mut App) {
-    app.register_type::<LoadingDistance>();
+    app.register_type::<LoadingDistance>().register_type::<Blueprintable>();
 }
