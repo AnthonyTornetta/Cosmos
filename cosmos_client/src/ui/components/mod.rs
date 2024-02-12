@@ -6,6 +6,7 @@ pub mod button;
 pub mod scollable_container;
 pub mod slider;
 pub mod text_input;
+pub mod window;
 
 pub(super) fn register(app: &mut App) {
     text_input::register(app);

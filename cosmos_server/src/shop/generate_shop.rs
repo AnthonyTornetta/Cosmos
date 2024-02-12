@@ -29,7 +29,7 @@ use crate::{
     universe::planet_spawner::is_planet_in_sector,
 };
 
-// const SHOP_FREQUENCY: u32 = 3;
+const SHOP_FREQUENCY: u32 = 2;
 
 #[derive(Default, Resource, Deref, DerefMut)]
 struct CachedSectors(HashSet<Sector>);
@@ -88,25 +88,28 @@ fn spawn_shop(
         cache.insert(sector);
 
         if is_sector_generated(sector) || is_planet_in_sector(&sector, &server_seed) {
-            println!("Continuuing {sector}");
             // This sector has already been loaded, don't regenerate stuff
             continue;
         }
 
         let mut rng = get_rng_for_sector(&server_seed, &sector);
 
-        if sector == Sector::new(25, 25, 25) {
-            // if rng.gen_range(0..100) < SHOP_FREQUENCY {
+        const ORIGIN_SECTOR: Sector = Sector::new(25, 25, 25);
+
+        if sector == ORIGIN_SECTOR || rng.gen_range(0..100) < SHOP_FREQUENCY {
             let multiplier = SECTOR_DIMENSIONS;
             let adder = -SECTOR_DIMENSIONS / 2.0;
 
             let loc = Location::new(
-                // Vec3::new(
-                //     rng.gen::<f32>() * multiplier + adder,
-                //     rng.gen::<f32>() * multiplier + adder,
-                //     rng.gen::<f32>() * multiplier + adder,
-                // ),
-                Vec3::new(0.0, 0.0, 0.0),
+                if sector == ORIGIN_SECTOR {
+                    Vec3::new(0.0, 0.0, 0.0)
+                } else {
+                    Vec3::new(
+                        rng.gen::<f32>() * multiplier + adder,
+                        rng.gen::<f32>() * multiplier + adder,
+                        rng.gen::<f32>() * multiplier + adder,
+                    )
+                },
                 sector,
             );
 

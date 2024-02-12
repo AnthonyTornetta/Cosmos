@@ -82,7 +82,7 @@ pub struct Sector(SectorUnit, SectorUnit, SectorUnit);
 impl Sector {
     #[inline]
     /// Creates a new Sector at the given coordinates
-    pub fn new(x: SectorUnit, y: SectorUnit, z: SectorUnit) -> Self {
+    pub const fn new(x: SectorUnit, y: SectorUnit, z: SectorUnit) -> Self {
         Self(x, y, z)
     }
 
