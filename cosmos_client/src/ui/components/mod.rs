@@ -13,4 +13,5 @@ pub(super) fn register(app: &mut App) {
     button::register(app);
     slider::register(app);
     scollable_container::register(app);
+    window::register(app);
 }

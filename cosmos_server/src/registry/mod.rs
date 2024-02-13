@@ -7,7 +7,7 @@ use bevy::{
         schedule::{common_conditions::in_state, IntoSystemConfigs},
         system::{Query, Res, ResMut, Resource},
     },
-    log::warn,
+    log::{info, warn},
     prelude::Deref,
 };
 use bevy_renet::renet::RenetServer;
@@ -63,7 +63,7 @@ fn send_number_of_registries(
             continue;
         };
 
-        println!("Sending {n_registries:?}");
+        info!("Sending {n_registries:?}");
 
         server.send_message(
             player.id(),

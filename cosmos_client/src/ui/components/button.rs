@@ -4,6 +4,7 @@ use std::marker::PhantomData;
 
 use bevy::{
     app::{App, Update},
+    core::Name,
     ecs::{
         bundle::Bundle,
         component::Component,
@@ -15,24 +16,19 @@ use bevy::{
     },
     hierarchy::{BuildChildren, Children},
     render::color::Color,
-    text::{Text, TextAlignment, TextStyle},
+    text::{Text, TextStyle},
     ui::{
         node_bundles::{NodeBundle, TextBundle},
-        AlignSelf, BackgroundColor, Interaction, Style, Val,
+        AlignItems, BackgroundColor, Interaction, JustifyContent, Style, UiImage,
     },
 };
 
-/// The reason a button event is being created
-pub enum ButtonEventType {
-    /// The button has been clicked
-    Click,
-}
+use crate::ui::UiSystemSet;
 
 /// An event that will be created and sent when a button is interacted with
-pub trait ButtonEvent: Sized + Event {
-    /// Create an instance of this event. If you don't want to respond
-    /// to this event type, just return `None`.
-    fn create_event(event_type: ButtonEventType) -> Option<Self>;
+pub trait ButtonEvent: Sized + Event + std::fmt::Debug {
+    /// Create an instance of this event
+    fn create_event(btn_entity: Entity) -> Self;
 }
 
 #[derive(Component, Debug)]
@@ -48,7 +44,9 @@ pub struct Button<T: ButtonEvent> {
     /// states a button can be in. Leave `None` if you don't want this.
     pub button_styles: Option<ButtonStyles>,
     /// Text to display in the button. The text will be center aligned.
-    pub starting_text: Option<(String, TextStyle)>,
+    pub text: Option<(String, TextStyle)>,
+    /// Image to display in the button. The image will take up the entire button.
+    pub image: Option<UiImage>,
 }
 
 #[derive(Default, Debug)]
@@ -77,7 +75,8 @@ impl<T: ButtonEvent> Default for Button<T> {
             _phantom: Default::default(),
             button_styles: Default::default(),
             last_interaction: Default::default(),
-            starting_text: Default::default(),
+            text: Default::default(),
+            image: Default::default(),
         }
     }
 }
@@ -102,21 +101,30 @@ impl<T: ButtonEvent> Default for ButtonBundle<T> {
     }
 }
 
-fn on_add_button<T: ButtonEvent>(mut commands: Commands, mut q_added_button: Query<(Entity, &mut Button<T>), Added<Button<T>>>) {
-    for (ent, mut button) in q_added_button.iter_mut() {
+fn on_add_button<T: ButtonEvent>(
+    mut commands: Commands,
+    mut q_added_button: Query<(Entity, &mut Button<T>, &mut Style), Added<Button<T>>>,
+) {
+    for (ent, mut button, mut style) in q_added_button.iter_mut() {
         commands.entity(ent).insert(Interaction::default());
 
-        if let Some((text, text_style)) = std::mem::take(&mut button.starting_text) {
+        // horizontally + vertically center child text
+        style.justify_content = JustifyContent::Center;
+        style.align_items = AlignItems::Center;
+
+        if let Some(ui_node) = std::mem::take(&mut button.image) {
+            commands.entity(ent).insert(ui_node);
+        }
+
+        if let Some((text, text_style)) = std::mem::take(&mut button.text) {
             commands.entity(ent).with_children(|p| {
-                p.spawn(TextBundle {
-                    text: Text::from_section(text, text_style).with_alignment(TextAlignment::Center),
-                    style: Style {
-                        align_self: AlignSelf::Center,
-                        width: Val::Percent(100.0),
+                p.spawn((
+                    Name::new("Button Text"),
+                    TextBundle {
+                        text: Text::from_section(text, text_style),
                         ..Default::default()
                     },
-                    ..Default::default()
-                });
+                ));
             });
         }
     }
@@ -124,10 +132,10 @@ fn on_add_button<T: ButtonEvent>(mut commands: Commands, mut q_added_button: Que
 
 fn on_interact_button<T: ButtonEvent>(
     mut ev_writer: EventWriter<T>,
-    mut q_added_button: Query<(&Interaction, &mut Button<T>, &mut BackgroundColor, &Children), Changed<Interaction>>,
+    mut q_added_button: Query<(Entity, &Interaction, &mut Button<T>, &mut BackgroundColor, &Children), Changed<Interaction>>,
     mut q_text: Query<&mut Text>,
 ) {
-    for (interaction, mut button, mut bg_color, children) in q_added_button.iter_mut() {
+    for (btn_entity, interaction, mut button, mut bg_color, children) in q_added_button.iter_mut() {
         if let Some(btn_styles) = &button.button_styles {
             bg_color.0 = match *interaction {
                 Interaction::None => btn_styles.background_color,
@@ -151,9 +159,7 @@ fn on_interact_button<T: ButtonEvent>(
         if *interaction == Interaction::Hovered && button.last_interaction == Interaction::Pressed {
             // Click and still hovering the button, so they didn't move out while holding the mouse down,
             // which should cancel the mouse click
-            if let Some(ev) = T::create_event(ButtonEventType::Click) {
-                ev_writer.send(ev);
-            }
+            ev_writer.send(T::create_event(btn_entity));
         }
 
         button.last_interaction = *interaction;
@@ -197,7 +203,8 @@ pub(super) fn register(app: &mut App) {
             ButtonUiSystemSet::ApplyDeferredB,
             ButtonUiSystemSet::SendButtonEvents,
         )
-            .chain(),
+            .chain()
+            .in_set(UiSystemSet::DoUi),
     )
     .add_systems(
         Update,

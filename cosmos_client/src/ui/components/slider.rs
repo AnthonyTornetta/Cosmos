@@ -24,6 +24,8 @@ use bevy::{
     window::{PrimaryWindow, Window},
 };
 
+use crate::ui::UiSystemSet;
+
 #[derive(Component, Debug, Reflect)]
 /// A UI component that is used to select a number between a range of values using a slider.
 ///
@@ -314,7 +316,8 @@ pub(super) fn register(app: &mut App) {
             SliderUiSystemSet::ApplyDeferredC,
             SliderUiSystemSet::UpdateSliderDisplay,
         )
-            .chain(),
+            .chain()
+            .in_set(UiSystemSet::DoUi),
     )
     .add_systems(
         Update,

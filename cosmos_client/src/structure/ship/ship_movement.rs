@@ -16,7 +16,7 @@ use crate::input::inputs::{CosmosInputs, InputChecker, InputHandler};
 use crate::netty::flags::LocalPlayer;
 use crate::state::game_state::GameState;
 use crate::ui::crosshair::CrosshairOffset;
-use crate::window::setup::DeltaCursorPosition;
+use crate::window::setup::{CursorFlags, DeltaCursorPosition};
 
 fn process_ship_movement(
     input_handler: InputChecker,
@@ -25,7 +25,14 @@ fn process_ship_movement(
     mut crosshair_offset: ResMut<CrosshairOffset>,
     cursor_delta_position: Res<DeltaCursorPosition>,
     primary_query: Query<&Window, With<PrimaryWindow>>,
+    cursor_flags: Res<CursorFlags>,
 ) {
+    let cursor_delta_position = if cursor_flags.is_cursor_locked() {
+        *cursor_delta_position
+    } else {
+        DeltaCursorPosition::default()
+    };
+
     if query.get_single().is_ok() {
         let mut movement = ShipMovement::default();
 

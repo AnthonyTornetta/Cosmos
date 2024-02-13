@@ -1,3 +1,5 @@
+//! Client logic for the shop
+
 use bevy::app::App;
 
 mod netty;

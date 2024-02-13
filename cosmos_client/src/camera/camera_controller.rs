@@ -6,7 +6,12 @@ use bevy::prelude::*;
 use bevy_rapier3d::na::clamp;
 use cosmos_core::structure::ship::pilot::Pilot;
 
-use crate::{netty::flags::LocalPlayer, rendering::MainCamera, state::game_state::GameState, window::setup::DeltaCursorPosition};
+use crate::{
+    netty::flags::LocalPlayer,
+    rendering::MainCamera,
+    state::game_state::GameState,
+    window::setup::{CursorFlags, DeltaCursorPosition},
+};
 
 /// Attach this to the player to give it a first person camera
 #[derive(Component, Default, Debug)]
@@ -19,7 +24,12 @@ fn process_player_camera(
     mut query: Query<(&mut Transform, &mut CameraHelper), With<MainCamera>>,
     is_pilot_query: Query<&LocalPlayer, With<Pilot>>,
     cursor_delta: Res<DeltaCursorPosition>,
+    cursor_flags: Res<CursorFlags>,
 ) {
+    if !cursor_flags.is_cursor_locked() {
+        return;
+    }
+
     // get the camera info and transform
     // assuming there is exactly one main camera entity, so query::single() is OK
     let (mut camera_transform, mut camera_helper) = query.single_mut();

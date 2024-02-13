@@ -34,6 +34,8 @@ use bevy::{
     window::ReceivedCharacter,
 };
 
+use crate::ui::UiSystemSet;
+
 #[derive(Resource, Default)]
 struct CursorFlashTime(f32);
 
@@ -565,7 +567,8 @@ pub(super) fn register(app: &mut App) {
             TextInputUiSystemSet::ApplyDeferredC,
             TextInputUiSystemSet::ValueChanged,
         )
-            .chain(),
+            .chain()
+            .in_set(UiSystemSet::DoUi),
     )
     .add_systems(
         Update,

@@ -45,7 +45,7 @@ impl CursorFlags {
     }
 }
 
-#[derive(Resource)]
+#[derive(Resource, Debug, Clone, Copy, Default)]
 /// How much the cursor has moved since the last frame
 pub struct DeltaCursorPosition {
     /// Delta cursor x
@@ -62,26 +62,13 @@ fn setup_window(mut primary_query: Query<&mut Window, With<PrimaryWindow>>) {
     window.cursor.grab_mode = CursorGrabMode::Locked;
 }
 
-fn update_mouse_deltas(
-    mut delta: ResMut<DeltaCursorPosition>,
-    cursor_flags: Res<CursorFlags>,
-    mut ev_mouse_motion: EventReader<MouseMotion>,
-    primary_query: Query<&Window, With<PrimaryWindow>>,
-) {
-    let Ok(window) = primary_query.get_single() else {
-        return;
-    };
-
+fn update_mouse_deltas(mut delta: ResMut<DeltaCursorPosition>, mut ev_mouse_motion: EventReader<MouseMotion>) {
     delta.x = 0.0;
     delta.y = 0.0;
 
-    if cursor_flags.locked {
-        for ev in ev_mouse_motion.read() {
-            if window.cursor.grab_mode == CursorGrabMode::Locked {
-                delta.x += ev.delta.x;
-                delta.y += -ev.delta.y;
-            }
-        }
+    for ev in ev_mouse_motion.read() {
+        delta.x += ev.delta.x;
+        delta.y += -ev.delta.y;
     }
 }
 

@@ -27,6 +27,8 @@ use bevy::{
     window::{PrimaryWindow, Window},
 };
 
+use crate::ui::UiSystemSet;
+
 #[derive(Component, Default, Debug)]
 /// Put content you want to scroll through as a child of this
 pub struct ScrollBox {
@@ -306,7 +308,8 @@ pub(super) fn register(app: &mut App) {
             SliderUiSystemSet::ApplyDeferredC,
             SliderUiSystemSet::UpdateSliderDisplay,
         )
-            .chain(),
+            .chain()
+            .in_set(UiSystemSet::DoUi),
     )
     .add_systems(
         Update,

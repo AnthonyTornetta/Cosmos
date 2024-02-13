@@ -27,11 +27,15 @@ use cosmos_core::{
     shop::Shop,
 };
 
-use crate::ui::components::{
-    button::{register_button, Button, ButtonBundle, ButtonEvent, ButtonEventType, ButtonStyles, ButtonUiSystemSet},
-    scollable_container::ScrollBundle,
-    slider::{Slider, SliderBundle, SliderStyles},
-    text_input::{InputType, TextInput, TextInputBundle, TextInputUiSystemSet},
+use crate::ui::{
+    components::{
+        button::{register_button, Button, ButtonBundle, ButtonEvent, ButtonStyles, ButtonUiSystemSet},
+        scollable_container::ScrollBundle,
+        slider::{Slider, SliderBundle, SliderStyles},
+        text_input::{InputType, TextInput, TextInputBundle},
+        window::{GuiWindow, WindowBundle},
+    },
+    UiSystemSet,
 };
 
 #[derive(Event)]
@@ -71,21 +75,27 @@ fn render_shop_ui(mut commands: Commands, q_shop_ui: Query<(&ShopUI, Entity), Ad
 
     commands
         .entity(ui_ent)
-        .insert(NodeBundle {
-            background_color: Color::BLACK.into(),
-            style: Style {
-                width: Val::Px(800.0),
-                height: Val::Px(800.0),
-                left: Val::Percent(51.0),
-                margin: UiRect {
-                    // Centers it vertically
-                    top: Val::Auto,
-                    bottom: Val::Auto,
+        .insert(WindowBundle {
+            node_bundle: NodeBundle {
+                background_color: Color::BLACK.into(),
+                style: Style {
+                    width: Val::Px(800.0),
+                    height: Val::Px(800.0),
+                    left: Val::Percent(51.0),
+                    margin: UiRect {
+                        // Centers it vertically
+                        top: Val::Auto,
+                        bottom: Val::Auto,
+                        ..Default::default()
+                    },
                     ..Default::default()
                 },
                 ..Default::default()
             },
-            ..Default::default()
+            window: GuiWindow {
+                title: "Hello, World!".into(),
+                ..Default::default()
+            },
         })
         .with_children(|p| {
             p.spawn(TextBundle {
@@ -124,7 +134,7 @@ fn render_shop_ui(mut commands: Commands, q_shop_ui: Query<(&ShopUI, Entity), Ad
                     ..Default::default()
                 },
                 button: Button::<ClickBtnEvent> {
-                    starting_text: Some(("Hello!".into(), text_style.clone())),
+                    text: Some(("Hello!".into(), text_style.clone())),
                     button_styles: Some(ButtonStyles {
                         background_color: Color::RED,
                         foreground_color: Color::BLACK,
@@ -189,12 +199,12 @@ fn render_shop_ui(mut commands: Commands, q_shop_ui: Query<(&ShopUI, Entity), Ad
         });
 }
 
-#[derive(Event)]
+#[derive(Event, Debug)]
 struct ClickBtnEvent {}
 
 impl ButtonEvent for ClickBtnEvent {
-    fn create_event(_: ButtonEventType) -> Option<Self> {
-        Some(Self {})
+    fn create_event(_: Entity) -> Self {
+        Self {}
     }
 }
 
@@ -212,7 +222,7 @@ pub(super) fn register(app: &mut App) {
             Update,
             (open_shop_ui, render_shop_ui)
                 .after(NetworkingSystemsSet::FlushReceiveMessages)
-                .before(TextInputUiSystemSet::ApplyDeferredA),
+                .before(UiSystemSet::DoUi),
         )
         .add_systems(Update, reader.after(ButtonUiSystemSet::SendButtonEvents));
 }
