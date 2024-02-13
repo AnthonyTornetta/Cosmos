@@ -1,6 +1,7 @@
 use bevy::{
     app::{App, Update},
     asset::AssetServer,
+    core::Name,
     ecs::{
         component::Component,
         entity::Entity,
@@ -15,7 +16,7 @@ use bevy::{
     ui::{
         node_bundles::{NodeBundle, TextBundle},
         widget::Label,
-        Style, UiRect, Val,
+        BorderColor, FlexDirection, Style, UiRect, Val,
     },
 };
 use cosmos_core::{
@@ -73,13 +74,19 @@ fn render_shop_ui(mut commands: Commands, q_shop_ui: Query<(&ShopUI, Entity), Ad
         font: asset_server.load("fonts/PixeloidSans.ttf"),
     };
 
+    let text_style_small = TextStyle {
+        color: Color::WHITE,
+        font_size: 24.0,
+        font: asset_server.load("fonts/PixeloidSans.ttf"),
+    };
+
     commands
         .entity(ui_ent)
         .insert(WindowBundle {
             node_bundle: NodeBundle {
-                background_color: Color::BLACK.into(),
+                background_color: Color::hex("2D2D2D").unwrap().into(),
                 style: Style {
-                    width: Val::Px(800.0),
+                    width: Val::Px(1000.0),
                     height: Val::Px(800.0),
                     left: Val::Percent(51.0),
                     margin: UiRect {
@@ -93,111 +100,303 @@ fn render_shop_ui(mut commands: Commands, q_shop_ui: Query<(&ShopUI, Entity), Ad
                 ..Default::default()
             },
             window: GuiWindow {
-                title: "Hello, World!".into(),
+                title: name.into(),
+                body_styles: Style {
+                    flex_direction: FlexDirection::Column,
+                    ..Default::default()
+                },
                 ..Default::default()
             },
             ..Default::default()
         })
         .with_children(|p| {
-            p.spawn(TextBundle {
-                text: Text::from_section(name, text_style.clone()),
-                ..Default::default()
-            });
-
-            p.spawn(TextInputBundle {
-                node_bundle: NodeBundle {
-                    background_color: Color::DARK_GRAY.into(),
-                    style: Style {
-                        width: Val::Px(200.0),
-                        height: Val::Px(40.0),
+            p.spawn(NodeBundle {
+                style: Style {
+                    height: Val::Px(50.0),
+                    border: UiRect {
+                        bottom: Val::Px(4.0),
                         ..Default::default()
                     },
                     ..Default::default()
                 },
-                text_input: TextInput {
-                    style: TextStyle {
-                        font_size: 32.0,
-                        ..Default::default()
-                    },
-                    input_type: InputType::Integer { min: -10000, max: 10000 },
-                    ..Default::default()
-                },
-                ..Default::default()
-            });
-
-            p.spawn(ButtonBundle::<ClickBtnEvent> {
-                node_bundle: NodeBundle {
-                    style: Style {
-                        width: Val::Px(400.0),
-                        height: Val::Px(200.0),
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                },
-                button: Button::<ClickBtnEvent> {
-                    text: Some(("Hello!".into(), text_style.clone())),
-                    button_styles: Some(ButtonStyles {
-                        background_color: Color::RED,
-                        foreground_color: Color::BLACK,
-                        hover_background_color: Color::GREEN,
-                        hover_foreground_color: Color::WHITE,
-                        press_background_color: Color::PURPLE,
-                        press_foreground_color: Color::YELLOW,
-                    }),
-                    ..Default::default()
-                },
-
-                ..Default::default()
-            });
-
-            p.spawn(SliderBundle {
-                node_bundle: NodeBundle {
-                    style: Style {
-                        width: Val::Px(400.0),
-                        height: Val::Px(200.0),
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                },
-                slider: Slider {
-                    range: 0..1001,
-                    slider_styles: Some(SliderStyles {
-                        hover_background_color: Color::GREEN,
-                        hover_foreground_color: Color::WHITE,
-                        press_background_color: Color::PURPLE,
-                        press_foreground_color: Color::YELLOW,
-                    }),
-                    ..Default::default()
-                },
-                ..Default::default()
-            });
-
-            p.spawn(ScrollBundle {
-                node_bundle: NodeBundle {
-                    style: Style {
-                        width: Val::Px(400.0),
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                },
+                border_color: Color::hex("1C1C1C").unwrap().into(),
                 ..Default::default()
             })
             .with_children(|p| {
-                for i in 0..100 {
-                    p.spawn((
-                        TextBundle::from_section(
-                            format!("Item {i}"),
-                            TextStyle {
-                                font: asset_server.load("fonts/PixeloidSans.ttf"),
-                                font_size: 20.,
+                p.spawn(ButtonBundle::<ClickSellTabEvent> {
+                    node_bundle: NodeBundle {
+                        style: Style {
+                            flex_grow: 1.0,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    button: Button {
+                        text: Some(("Sell".into(), text_style.clone())),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                });
+
+                p.spawn(ButtonBundle::<ClickBuyTabEvent> {
+                    node_bundle: NodeBundle {
+                        style: Style {
+                            flex_grow: 1.0,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    button: Button {
+                        button_styles: Some(ButtonStyles {
+                            background_color: Color::GREEN,
+                            hover_background_color: Color::DARK_GREEN,
+                            press_background_color: Color::DARK_GREEN,
+                            ..Default::default()
+                        }),
+                        text: Some(("Buy".into(), text_style.clone())),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                });
+            });
+
+            p.spawn((
+                Name::new("Body"),
+                NodeBundle {
+                    style: Style {
+                        flex_grow: 1.0,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            ))
+            .with_children(|body| {
+                body.spawn((
+                    Name::new("Main Stuff"),
+                    NodeBundle {
+                        style: Style {
+                            flex_grow: 1.0,
+                            padding: UiRect {
+                                left: Val::Px(40.0),
+                                right: Val::Px(40.0),
+                                top: Val::Px(20.0),
+                                bottom: Val::Px(20.0),
+                            },
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                ))
+                .with_children(|body| {
+                    body.spawn((
+                        Name::new("Description section"),
+                        NodeBundle {
+                            style: Style {
+                                flex_direction: FlexDirection::Column,
+                                flex_grow: 1.0,
                                 ..Default::default()
                             },
-                        ),
-                        Label,
-                    ));
-                }
+                            ..Default::default()
+                        },
+                    ))
+                    .with_children(|p| {
+                        p.spawn(TextBundle {
+                            text: Text::from_section("Laser Cannon", text_style.clone()),
+                            style: Style {
+                                margin: UiRect {
+                                    bottom: Val::Px(10.0),
+                                    top: Val::Px(10.0),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        });
+
+                        p.spawn(TextBundle {
+                            text: Text::from_section("Description of Cannon", text_style_small.clone()),
+                            style: Style {
+                                margin: UiRect {
+                                    bottom: Val::Px(30.0),
+                                    top: Val::Px(10.0),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        });
+
+                        p.spawn(TextBundle {
+                            text: Text::from_section("Stats", text_style.clone()),
+                            style: Style {
+                                margin: UiRect {
+                                    bottom: Val::Px(10.0),
+                                    top: Val::Px(10.0),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        });
+                    });
+
+                    body.spawn((Name::new("Item picture"), NodeBundle { ..Default::default() }));
+                });
+
+                body.spawn((
+                    Name::new("Shop Categories"),
+                    NodeBundle {
+                        border_color: Color::hex("1C1C1C").unwrap().into(),
+                        style: Style {
+                            flex_direction: FlexDirection::Column,
+                            width: Val::Px(400.0),
+                            border: UiRect {
+                                left: Val::Px(4.0),
+                                ..Default::default()
+                            },
+                            padding: UiRect::all(Val::Px(10.0)),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                ))
+                .with_children(|body| {
+                    body.spawn(TextBundle {
+                        text: Text::from_section("Stock", text_style.clone()),
+                        style: Style {
+                            margin: UiRect {
+                                bottom: Val::Px(10.0),
+                                top: Val::Px(10.0),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    });
+
+                    body.spawn(TextInputBundle {
+                        text_input: TextInput {
+                            style: text_style.clone(),
+                            ..Default::default()
+                        },
+                        node_bundle: NodeBundle {
+                            style: Style {
+                                padding: UiRect {
+                                    top: Val::Px(4.0),
+                                    bottom: Val::Px(4.0),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    });
+
+                    body.spawn(ScrollBundle {
+                        node_bundle: NodeBundle {
+                            style: Style {
+                                width: Val::Percent(100.0),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    })
+                    .with_children(|p| {
+                        for i in 0..100 {
+                            p.spawn((TextBundle::from_section(format!("Item {i}"), text_style_small.clone()), Label));
+                        }
+                    });
+                });
             });
+
+            // p.spawn(TextInputBundle {
+            //     node_bundle: NodeBundle {
+            //         background_color: Color::DARK_GRAY.into(),
+            //         style: Style {
+            //             width: Val::Px(200.0),
+            //             height: Val::Px(40.0),
+            //             ..Default::default()
+            //         },
+            //         ..Default::default()
+            //     },
+            //     text_input: TextInput {
+            //         style: TextStyle {
+            //             font_size: 32.0,
+            //             ..Default::default()
+            //         },
+            //         input_type: InputType::Integer { min: -10000, max: 10000 },
+            //         ..Default::default()
+            //     },
+            //     ..Default::default()
+            // });
+
+            // p.spawn(ButtonBundle::<ClickBtnEvent> {
+            //     node_bundle: NodeBundle {
+            //         style: Style {
+            //             width: Val::Px(400.0),
+            //             height: Val::Px(200.0),
+            //             ..Default::default()
+            //         },
+            //         ..Default::default()
+            //     },
+            //     button: Button::<ClickBtnEvent> {
+            //         text: Some(("Hello!".into(), text_style.clone())),
+            //         button_styles: Some(ButtonStyles {
+            //             background_color: Color::RED,
+            //             foreground_color: Color::BLACK,
+            //             hover_background_color: Color::GREEN,
+            //             hover_foreground_color: Color::WHITE,
+            //             press_background_color: Color::PURPLE,
+            //             press_foreground_color: Color::YELLOW,
+            //         }),
+            //         ..Default::default()
+            //     },
+
+            //     ..Default::default()
+            // });
+
+            // p.spawn(SliderBundle {
+            //     node_bundle: NodeBundle {
+            //         style: Style {
+            //             width: Val::Px(400.0),
+            //             height: Val::Px(200.0),
+            //             ..Default::default()
+            //         },
+            //         ..Default::default()
+            //     },
+            //     slider: Slider {
+            //         range: 0..1001,
+            //         slider_styles: Some(SliderStyles {
+            //             hover_background_color: Color::GREEN,
+            //             hover_foreground_color: Color::WHITE,
+            //             press_background_color: Color::PURPLE,
+            //             press_foreground_color: Color::YELLOW,
+            //         }),
+            //         ..Default::default()
+            //     },
+            //     ..Default::default()
+            // });
         });
+}
+
+#[derive(Event, Debug)]
+struct ClickSellTabEvent;
+
+impl ButtonEvent for ClickSellTabEvent {
+    fn create_event(_: Entity) -> Self {
+        Self
+    }
+}
+
+#[derive(Event, Debug)]
+struct ClickBuyTabEvent;
+
+impl ButtonEvent for ClickBuyTabEvent {
+    fn create_event(_: Entity) -> Self {
+        Self
+    }
 }
 
 #[derive(Event, Debug)]
@@ -217,6 +416,8 @@ fn reader(mut ev_reader: EventReader<ClickBtnEvent>) {
 
 pub(super) fn register(app: &mut App) {
     register_button::<ClickBtnEvent>(app);
+    register_button::<ClickSellTabEvent>(app);
+    register_button::<ClickBuyTabEvent>(app);
 
     app.add_mut_event::<OpenShopUiEvent>()
         .add_systems(

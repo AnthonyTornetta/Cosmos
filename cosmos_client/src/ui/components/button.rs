@@ -49,7 +49,7 @@ pub struct Button<T: ButtonEvent> {
     pub image: Option<UiImage>,
 }
 
-#[derive(Default, Debug)]
+#[derive(Debug)]
 /// Out-of-the-box color changing for the different
 /// states a button can be in.
 pub struct ButtonStyles {
@@ -67,6 +67,19 @@ pub struct ButtonStyles {
     pub press_background_color: Color,
     /// Color used when clicking the button
     pub press_foreground_color: Color,
+}
+
+impl Default for ButtonStyles {
+    fn default() -> Self {
+        Self {
+            background_color: Color::GRAY,
+            foreground_color: Color::WHITE,
+            hover_background_color: Color::GRAY,
+            hover_foreground_color: Color::WHITE,
+            press_background_color: Color::hex("333333").unwrap(),
+            press_foreground_color: Color::WHITE,
+        }
+    }
 }
 
 impl<T: ButtonEvent> Default for Button<T> {
