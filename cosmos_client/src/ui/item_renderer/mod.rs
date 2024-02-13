@@ -25,6 +25,8 @@ use crate::{
     rendering::{BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder},
 };
 
+use super::UiSystemSet;
+
 const INVENTORY_SLOT_LAYER: u8 = 0b1;
 
 #[derive(Component)]
@@ -273,7 +275,8 @@ pub(super) fn register(app: &mut App) {
             RenderItemSystemSet::RenderItems.before(remove_materials).before(add_materials),
             RenderItemSystemSet::FlushRenderItems,
         )
-            .chain(),
+            .chain()
+            .in_set(UiSystemSet::DoUi),
     )
     .add_systems(
         Update,

@@ -5,8 +5,12 @@ use bevy::{
     prelude::*,
     window::{CursorGrabMode, PrimaryWindow, Window, WindowFocused},
 };
+use cosmos_core::ecs::NeedsDespawned;
 
-use crate::input::inputs::{CosmosInputs, InputChecker, InputHandler};
+use crate::{
+    input::inputs::{CosmosInputs, InputChecker, InputHandler},
+    ui::components::show_cursor::ShowCursor,
+};
 
 #[derive(Resource, Copy, Clone)]
 /// Resource containing the various flags about the cursor, like if it's hidden or not
@@ -72,9 +76,16 @@ fn update_mouse_deltas(mut delta: ResMut<DeltaCursorPosition>, mut ev_mouse_moti
     }
 }
 
-fn toggle_mouse_freeze(input_handler: InputChecker, mut cursor_flags: ResMut<CursorFlags>) {
+#[derive(Component)]
+struct CursorUnlocker;
+
+fn toggle_mouse_freeze(mut commands: Commands, q_cursor_unlocked: Query<Entity, With<CursorUnlocker>>, input_handler: InputChecker) {
     if input_handler.check_just_pressed(CosmosInputs::UnlockMouse) {
-        cursor_flags.toggle();
+        if let Ok(ent) = q_cursor_unlocked.get_single() {
+            commands.entity(ent).insert(NeedsDespawned);
+        } else {
+            commands.spawn((CursorUnlocker, ShowCursor));
+        }
     }
 }
 

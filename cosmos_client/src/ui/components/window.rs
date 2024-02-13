@@ -28,7 +28,10 @@ use cosmos_core::ecs::NeedsDespawned;
 
 use crate::{ui::UiSystemSet, window::setup::DeltaCursorPosition};
 
-use super::button::{register_button, Button, ButtonBundle, ButtonEvent};
+use super::{
+    button::{register_button, Button, ButtonBundle, ButtonEvent},
+    show_cursor::ShowCursor,
+};
 
 #[derive(Debug, Component, Default)]
 /// A wrapper around ui components that will make them movable and have a title bar with a close button.
@@ -48,6 +51,8 @@ pub struct WindowBundle {
     ///
     /// To only style the body of the window, change the body_styles in the GuiWindow object.
     pub node_bundle: NodeBundle,
+    /// Makes the cursor show itself
+    pub show_cursor: ShowCursor,
 }
 
 #[derive(Event, Debug)]

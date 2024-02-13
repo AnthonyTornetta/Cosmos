@@ -4,6 +4,7 @@ use bevy::app::App;
 
 pub mod button;
 pub mod scollable_container;
+pub mod show_cursor;
 pub mod slider;
 pub mod text_input;
 pub mod window;
@@ -14,4 +15,5 @@ pub(super) fn register(app: &mut App) {
     slider::register(app);
     scollable_container::register(app);
     window::register(app);
+    show_cursor::register(app);
 }

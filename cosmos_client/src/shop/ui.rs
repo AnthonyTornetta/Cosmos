@@ -96,6 +96,7 @@ fn render_shop_ui(mut commands: Commands, q_shop_ui: Query<(&ShopUI, Entity), Ad
                 title: "Hello, World!".into(),
                 ..Default::default()
             },
+            ..Default::default()
         })
         .with_children(|p| {
             p.spawn(TextBundle {
@@ -222,7 +223,7 @@ pub(super) fn register(app: &mut App) {
             Update,
             (open_shop_ui, render_shop_ui)
                 .after(NetworkingSystemsSet::FlushReceiveMessages)
-                .before(UiSystemSet::DoUi),
+                .before(UiSystemSet::ApplyDeferredA),
         )
         .add_systems(Update, reader.after(ButtonUiSystemSet::SendButtonEvents));
 }
