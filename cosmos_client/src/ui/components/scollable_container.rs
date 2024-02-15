@@ -4,6 +4,7 @@
 
 use bevy::{
     app::{App, Update},
+    core::Name,
     ecs::{
         bundle::Bundle,
         component::Component,
@@ -43,18 +44,27 @@ pub struct ScrollBox {
 pub struct ScrollerStyles {
     /// The color of the scrollbar
     pub scrollbar_color: Color,
-    /// The color of the scrollbar when hovered
-    pub hover_scrollbar_color: Color,
-    /// The color of the scrollbar when scrolled
-    pub press_scrollbar_color: Color,
+    // /// The color of the scrollbar when hovered
+    // pub hover_scrollbar_color: Color,
+    // /// The color of the scrollbar when scrolled
+    // pub press_scrollbar_color: Color,
+    /// The color of the scrollbar
+    pub scrollbar_background_color: Color,
+    // /// The color of the scrollbar when hovered
+    // pub hover_scrollbar_background_color: Color,
+    // /// The color of the scrollbar when scrolled
+    // pub press_scrollbar_background_color: Color,
 }
 
 impl Default for ScrollerStyles {
     fn default() -> Self {
         Self {
-            scrollbar_color: Color::RED,
-            hover_scrollbar_color: Color::GRAY,
-            press_scrollbar_color: Color::AQUAMARINE,
+            scrollbar_background_color: Color::hex("555555").unwrap(),
+            // hover_scrollbar_background_color: Color::GRAY,
+            // press_scrollbar_background_color: Color::AQUAMARINE,
+            scrollbar_color: Color::hex("999999").unwrap(),
+            // hover_scrollbar_color: Color::GRAY,
+            // press_scrollbar_color: Color::AQUAMARINE,
         }
     }
 }
@@ -77,31 +87,34 @@ struct ScrollbarContainerEntity(Entity);
 #[derive(Component)]
 struct ScrollbarEntity(Entity);
 
-fn on_add_scrollbar(mut commands: Commands, mut q_added_button: Query<(Entity, &mut Style, &Children), Added<ScrollBox>>) {
-    for (ent, mut style, children) in q_added_button.iter_mut() {
+fn on_add_scrollbar(mut commands: Commands, mut q_added_button: Query<(Entity, &ScrollBox, &mut Style, &Children), Added<ScrollBox>>) {
+    for (ent, scrollbox, mut style, children) in q_added_button.iter_mut() {
         style.overflow = Overflow::clip_y();
 
         let container_entity = commands
-            .spawn((NodeBundle {
-                style: Style {
-                    // Take the size of the parent node.
-                    flex_grow: 1.0,
-                    position_type: PositionType::Absolute,
-                    flex_direction: FlexDirection::Column,
-                    width: Val::Percent(100.0),
-                    margin: UiRect {
-                        right: Val::Px(20.0),
+            .spawn((
+                Name::new("Scrollbar Content Container"),
+                NodeBundle {
+                    style: Style {
+                        // Take the size of the parent node.
+                        flex_grow: 1.0,
+                        position_type: PositionType::Absolute,
+                        flex_direction: FlexDirection::Column,
+                        width: Val::Percent(100.0),
+                        padding: UiRect {
+                            right: Val::Px(15.0),
+                            ..Default::default()
+                        },
                         ..Default::default()
                     },
                     ..Default::default()
                 },
-                background_color: Color::rgb(1.0, 0.3, 0.3).into(),
-                ..Default::default()
-            },))
+            ))
             .id();
 
         let scroll_bar = commands
             .spawn((
+                Name::new("Scrollbar Container"),
                 Interaction::None,
                 NodeBundle {
                     style: Style {
@@ -111,17 +124,18 @@ fn on_add_scrollbar(mut commands: Commands, mut q_added_button: Query<(Entity, &
                             left: Val::Auto, // aligns it to right
                             ..Default::default()
                         },
-                        width: Val::Px(20.0),
+                        width: Val::Px(15.0),
                         height: Val::Percent(100.0),
                         flex_direction: FlexDirection::Column,
                         ..Default::default()
                     },
-                    background_color: Color::rgb(0.3, 0.3, 0.8).into(),
+                    background_color: scrollbox.styles.scrollbar_background_color.into(),
                     ..Default::default()
                 },
             ))
             .with_children(|p| {
                 p.spawn((
+                    Name::new("Scrollbar"),
                     ScrollbarContainerEntity(ent),
                     Interaction::None,
                     NodeBundle {
@@ -129,12 +143,12 @@ fn on_add_scrollbar(mut commands: Commands, mut q_added_button: Query<(Entity, &
                             // Take the size of the parent node.
                             position_type: PositionType::Relative,
                             top: Val::Percent(0.0),
-                            width: Val::Px(20.0),
+                            width: Val::Px(15.0),
                             height: Val::Px(0.0),
                             flex_direction: FlexDirection::Column,
                             ..Default::default()
                         },
-                        background_color: Color::rgb(0.4, 0.8, 0.4).into(),
+                        background_color: scrollbox.styles.scrollbar_color.into(),
                         ..Default::default()
                     },
                 ));

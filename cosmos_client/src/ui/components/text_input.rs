@@ -7,6 +7,7 @@ use bevy::{
     a11y::Focus,
     app::{App, Update},
     asset::AssetServer,
+    core::Name,
     ecs::{
         bundle::Bundle,
         component::Component,
@@ -173,19 +174,22 @@ fn added_text_input_bundle(
 
         commands.entity(entity).with_children(|p| {
             text_ent = Some(
-                p.spawn(TextBundle {
-                    text: Text::from_sections([
-                        TextSection::new(input_value.0.clone(), text_input.style.clone()),
-                        TextSection::new("|", cursor_style),
-                        TextSection::new("", text_input.style.clone()),
-                    ])
-                    .with_no_wrap(),
-                    style: Style {
-                        align_self: AlignSelf::Center,
+                p.spawn((
+                    Name::new("Text input text display"),
+                    TextBundle {
+                        text: Text::from_sections([
+                            TextSection::new(input_value.0.clone(), text_input.style.clone()),
+                            TextSection::new("|", cursor_style),
+                            TextSection::new("", text_input.style.clone()),
+                        ])
+                        .with_no_wrap(),
+                        style: Style {
+                            align_self: AlignSelf::Center,
+                            ..Default::default()
+                        },
                         ..Default::default()
                     },
-                    ..Default::default()
-                })
+                ))
                 .id(),
             );
         });

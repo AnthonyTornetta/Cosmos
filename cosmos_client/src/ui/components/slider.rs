@@ -131,6 +131,7 @@ fn on_add_slider(mut commands: Commands, mut q_added_button: Query<(Entity, &mut
         commands.entity(ent).insert(Interaction::default()).with_children(|p| {
             empty_bar_entity = Some(
                 p.spawn(NodeBundle {
+                    background_color: slider.background_color.into(),
                     style: Style {
                         width: Val::Percent(100.0),
                         height: Val::Px(slider.height),
@@ -245,18 +246,6 @@ fn on_interact_slider(
                         Interaction::Pressed => slider_styles.press_foreground_color,
                     };
                 }
-
-                // if let Some(&text_child) = children.iter().find(|&x| q_text.contains(*x)) {
-                // let mut text = q_text.get_mut(text_child).expect("Checked above");
-
-                // let color = match *interaction {
-                //     Interaction::None => slider.foreground_color,
-                //     Interaction::Hovered => slider_styles.hover_foreground_color,
-                //     Interaction::Pressed => slider_styles.press_foreground_color,
-                // };
-
-                // text.sections.iter_mut().for_each(|x| x.style.color = color);
-                // }
             }
         }
     }

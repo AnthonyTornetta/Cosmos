@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 pub mod netty;
 
-#[derive(Debug, Serialize, Deserialize, Reflect)]
+#[derive(Debug, Serialize, Deserialize, Reflect, Component, Clone, Copy, PartialEq, Eq)]
 pub enum ShopEntry {
     Selling {
         item_id: u16,
