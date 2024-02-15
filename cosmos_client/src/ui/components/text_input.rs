@@ -49,6 +49,16 @@ struct CursorFlashTime(f32);
 /// input.
 pub struct InputValue(String);
 
+impl InputValue {
+    pub fn set_value(&mut self, value: impl Into<String>) {
+        self.0 = value.into();
+    }
+
+    pub fn value(&self) -> &str {
+        &self.0
+    }
+}
+
 #[derive(Debug)]
 /// Used to validate user input for a given TextInput field.
 pub enum InputType {

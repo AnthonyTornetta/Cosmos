@@ -6,7 +6,7 @@ use bevy::{
         component::Component,
         entity::Entity,
         event::{Event, EventReader},
-        query::{Added, With},
+        query::{Added, Changed, With},
         schedule::IntoSystemConfigs,
         system::{Commands, Query, Res},
     },
@@ -17,10 +17,11 @@ use bevy::{
     ui::{
         node_bundles::{NodeBundle, TextBundle},
         widget::Label,
-        BackgroundColor, BorderColor, FlexDirection, JustifyContent, Style, UiRect, Val,
+        FlexDirection, JustifyContent, Style, UiRect, Val,
     },
 };
 use cosmos_core::{
+    economy::Credits,
     ecs::{
         mut_events::{MutEvent, MutEventsCommand},
         NeedsDespawned,
@@ -33,12 +34,13 @@ use cosmos_core::{
 
 use crate::{
     lang::Lang,
+    netty::flags::LocalPlayer,
     ui::{
         components::{
-            button::{register_button, Button, ButtonBundle, ButtonEvent, ButtonStyles, ButtonUiSystemSet},
+            button::{register_button, Button, ButtonBundle, ButtonEvent, ButtonStyles},
             scollable_container::{ScrollBox, ScrollBundle},
-            slider::{Slider, SliderBundle},
-            text_input::{InputType, TextInput, TextInputBundle},
+            slider::{Slider, SliderBundle, SliderValue},
+            text_input::{InputType, InputValue, TextInput, TextInputBundle},
             window::{GuiWindow, WindowBundle},
         },
         UiSystemSet,
@@ -57,12 +59,25 @@ struct ShopUi {
 #[derive(Component)]
 struct ShopUiEntity(Entity);
 
-struct DescriptionSection(Entity);
-struct PriceSection(Entity);
+#[derive(Component)]
+struct ShopEntities {
+    item_name_entity: Entity,
+    item_description_entity: Entity,
+    item_stats_list: Entity,
+
+    amount_text_input: Entity,
+    amount_slider: Entity,
+    amount_max_text: Entity,
+
+    current_money_text: Entity,
+    delta_money_text: Entity,
+    final_money_text: Entity,
+
+    buy_sell_button: Entity,
+}
 
 struct SelectedItem {
     entry: ShopEntry,
-    amount_selected: u32,
 }
 
 fn open_shop_ui(mut commands: Commands, mut ev_reader: EventReader<MutEvent<OpenShopUiEvent>>, q_open_shops: Query<Entity, With<ShopUi>>) {
@@ -85,8 +100,14 @@ fn render_shop_ui(
     asset_server: Res<AssetServer>,
     items: Res<Registry<Item>>,
     lang: Res<Lang<Item>>,
+    player_credits: Query<&Credits, With<LocalPlayer>>,
 ) {
     let Ok((shop_ui, ui_ent)) = q_shop_ui.get_single() else {
+        return;
+    };
+
+    let Ok(credits) = player_credits.get_single() else {
+        error!("Missing credits on player?");
         return;
     };
 
@@ -102,6 +123,19 @@ fn render_shop_ui(
         color: Color::WHITE,
         font_size: 24.0,
         font: asset_server.load("fonts/PixeloidSans.ttf"),
+    };
+
+    let mut shop_entities = ShopEntities {
+        amount_max_text: Entity::PLACEHOLDER,
+        amount_slider: Entity::PLACEHOLDER,
+        amount_text_input: Entity::PLACEHOLDER,
+        current_money_text: Entity::PLACEHOLDER,
+        delta_money_text: Entity::PLACEHOLDER,
+        final_money_text: Entity::PLACEHOLDER,
+        item_description_entity: Entity::PLACEHOLDER,
+        item_name_entity: Entity::PLACEHOLDER,
+        item_stats_list: Entity::PLACEHOLDER,
+        buy_sell_button: Entity::PLACEHOLDER,
     };
 
     commands
@@ -225,31 +259,35 @@ fn render_shop_ui(
                         },
                     ))
                     .with_children(|p| {
-                        p.spawn(TextBundle {
-                            text: Text::from_section("Laser Cannon", text_style.clone()),
-                            style: Style {
-                                margin: UiRect {
-                                    bottom: Val::Px(10.0),
-                                    top: Val::Px(10.0),
+                        shop_entities.item_name_entity = p
+                            .spawn(TextBundle {
+                                text: Text::from_section("Select an item...", text_style.clone()),
+                                style: Style {
+                                    margin: UiRect {
+                                        bottom: Val::Px(10.0),
+                                        top: Val::Px(10.0),
+                                        ..Default::default()
+                                    },
                                     ..Default::default()
                                 },
                                 ..Default::default()
-                            },
-                            ..Default::default()
-                        });
+                            })
+                            .id();
 
-                        p.spawn(TextBundle {
-                            text: Text::from_section("Description of Cannon", text_style_small.clone()),
-                            style: Style {
-                                margin: UiRect {
-                                    bottom: Val::Px(30.0),
-                                    top: Val::Px(10.0),
+                        shop_entities.item_description_entity = p
+                            .spawn(TextBundle {
+                                text: Text::from_section("", text_style_small.clone()),
+                                style: Style {
+                                    margin: UiRect {
+                                        bottom: Val::Px(30.0),
+                                        top: Val::Px(10.0),
+                                        ..Default::default()
+                                    },
                                     ..Default::default()
                                 },
                                 ..Default::default()
-                            },
-                            ..Default::default()
-                        });
+                            })
+                            .id();
 
                         p.spawn(TextBundle {
                             text: Text::from_section("Stats", text_style.clone()),
@@ -263,6 +301,22 @@ fn render_shop_ui(
                             },
                             ..Default::default()
                         });
+
+                        shop_entities.item_stats_list = p
+                            .spawn(TextBundle {
+                                text: Text::from_section("", text_style_small.clone()),
+                                style: Style {
+                                    margin: UiRect {
+                                        left: Val::Px(20.0),
+                                        bottom: Val::Px(10.0),
+                                        top: Val::Px(10.0),
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            })
+                            .id();
                     });
 
                     body.spawn((Name::new("Item picture"), NodeBundle { ..Default::default() }));
@@ -360,7 +414,7 @@ fn render_shop_ui(
                                 let ShopEntry::Selling {
                                     item_id,
                                     max_quantity_selling,
-                                    price_per,
+                                    price_per: _,
                                 } = shop_entry
                                 else {
                                     continue;
@@ -457,20 +511,24 @@ fn render_shop_ui(
                         ..Default::default()
                     })
                     .with_children(|p| {
-                        p.spawn(TextBundle {
-                            text: Text::from_section("$1000", text_style.clone()),
-                            ..Default::default()
-                        });
+                        shop_entities.current_money_text = p
+                            .spawn(TextBundle {
+                                text: Text::from_section(format!("${}", credits.amount()), text_style.clone()),
+                                ..Default::default()
+                            })
+                            .id();
                     });
 
-                    p.spawn(TextBundle {
-                        text: Text::from_section("- $20 x 6 = $120", text_style.clone()),
-                        style: Style {
-                            bottom: Val::Px(10.0),
+                    shop_entities.delta_money_text = p
+                        .spawn(TextBundle {
+                            text: Text::from_section("", text_style.clone()),
+                            style: Style {
+                                bottom: Val::Px(10.0),
+                                ..Default::default()
+                            },
                             ..Default::default()
-                        },
-                        ..Default::default()
-                    });
+                        })
+                        .id();
 
                     p.spawn(NodeBundle {
                         border_color: Color::hex("555555").unwrap().into(),
@@ -489,10 +547,12 @@ fn render_shop_ui(
                         ..Default::default()
                     })
                     .with_children(|p| {
-                        p.spawn(TextBundle {
-                            text: Text::from_section("$880", text_style.clone()),
-                            ..Default::default()
-                        });
+                        shop_entities.final_money_text = p
+                            .spawn(TextBundle {
+                                text: Text::from_section("", text_style.clone()),
+                                ..Default::default()
+                            })
+                            .id();
                     });
                 });
 
@@ -510,24 +570,26 @@ fn render_shop_ui(
                         ..Default::default()
                     })
                     .with_children(|p| {
-                        p.spawn(TextInputBundle {
-                            node_bundle: NodeBundle {
-                                style: Style {
-                                    width: Val::Px(250.0),
-                                    padding: UiRect::all(Val::Px(10.0)),
+                        shop_entities.amount_text_input = p
+                            .spawn(TextInputBundle {
+                                node_bundle: NodeBundle {
+                                    style: Style {
+                                        width: Val::Px(250.0),
+                                        padding: UiRect::all(Val::Px(10.0)),
+                                        ..Default::default()
+                                    },
+                                    border_color: Color::hex("111111").unwrap().into(),
+                                    background_color: Color::hex("555555").unwrap().into(),
                                     ..Default::default()
                                 },
-                                border_color: Color::hex("111111").unwrap().into(),
-                                background_color: Color::hex("555555").unwrap().into(),
+                                text_input: TextInput {
+                                    input_type: InputType::Integer { min: 0, max: 1000 },
+                                    style: text_style.clone(),
+                                    ..Default::default()
+                                },
                                 ..Default::default()
-                            },
-                            text_input: TextInput {
-                                input_type: InputType::Integer { min: 0, max: 1000 },
-                                style: text_style.clone(),
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        });
+                            })
+                            .id();
 
                         p.spawn(NodeBundle {
                             style: Style {
@@ -558,121 +620,76 @@ fn render_shop_ui(
                                     ..Default::default()
                                 });
 
-                                p.spawn(TextBundle {
-                                    text: Text::from_section("1000", text_style_small.clone()),
-                                    ..Default::default()
-                                });
+                                shop_entities.amount_max_text = p
+                                    .spawn(TextBundle {
+                                        text: Text::from_section("", text_style_small.clone()),
+                                        ..Default::default()
+                                    })
+                                    .id();
                             });
 
-                            p.spawn(SliderBundle {
-                                node_bundle: NodeBundle {
-                                    style: Style { ..Default::default() },
-                                    ..Default::default()
-                                },
-                                slider: Slider {
-                                    range: 0..1001,
-                                    background_color: Color::hex("999999").unwrap(),
-                                    foreground_color: Color::AQUAMARINE,
-                                    square_color: Color::hex("555555").unwrap(),
-                                    ..Default::default()
-                                },
-                                ..Default::default()
-                            });
+                            shop_entities.amount_slider = p
+                                .spawn((
+                                    Name::new("Amount slider"),
+                                    ShopUiEntity(ui_ent),
+                                    SliderBundle {
+                                        node_bundle: NodeBundle {
+                                            style: Style { ..Default::default() },
+                                            ..Default::default()
+                                        },
+                                        slider: Slider {
+                                            range: 0..1001,
+                                            background_color: Color::hex("999999").unwrap(),
+                                            foreground_color: Color::AQUAMARINE,
+                                            square_color: Color::hex("555555").unwrap(),
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
+                                    },
+                                ))
+                                .id();
                         });
                     });
 
-                    p.spawn(ButtonBundle::<BuyBtnEvent> {
-                        node_bundle: NodeBundle {
-                            style: Style {
-                                margin: UiRect::top(Val::Px(10.0)),
-                                height: Val::Px(80.0),
+                    shop_entities.buy_sell_button = p
+                        .spawn(ButtonBundle::<BuyBtnEvent> {
+                            node_bundle: NodeBundle {
+                                style: Style {
+                                    margin: UiRect::top(Val::Px(10.0)),
+                                    height: Val::Px(80.0),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            button: Button {
+                                text: Some(("BUY".into(), text_style.clone())),
+                                button_styles: Some(ButtonStyles {
+                                    background_color: Color::GREEN,
+                                    hover_background_color: Color::DARK_GREEN,
+                                    press_background_color: Color::DARK_GREEN,
+                                    ..Default::default()
+                                }),
                                 ..Default::default()
                             },
                             ..Default::default()
-                        },
-                        button: Button {
-                            text: Some(("BUY".into(), text_style.clone())),
-                            button_styles: Some(ButtonStyles {
-                                background_color: Color::GREEN,
-                                hover_background_color: Color::DARK_GREEN,
-                                press_background_color: Color::DARK_GREEN,
-                                ..Default::default()
-                            }),
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    });
+                        })
+                        .id();
                 });
             });
-
-            // p.spawn(TextInputBundle {
-            //     node_bundle: NodeBundle {
-            //         background_color: Color::DARK_GRAY.into(),
-            //         style: Style {
-            //             width: Val::Px(200.0),
-            //             height: Val::Px(40.0),
-            //             ..Default::default()
-            //         },
-            //         ..Default::default()
-            //     },
-            //     text_input: TextInput {
-            //         style: TextStyle {
-            //             font_size: 32.0,
-            //             ..Default::default()
-            //         },
-            //         input_type: InputType::Integer { min: -10000, max: 10000 },
-            //         ..Default::default()
-            //     },
-            //     ..Default::default()
-            // });
-
-            // p.spawn(ButtonBundle::<ClickBtnEvent> {
-            //     node_bundle: NodeBundle {
-            //         style: Style {
-            //             width: Val::Px(400.0),
-            //             height: Val::Px(200.0),
-            //             ..Default::default()
-            //         },
-            //         ..Default::default()
-            //     },
-            //     button: Button::<ClickBtnEvent> {
-            //         text: Some(("Hello!".into(), text_style.clone())),
-            //         button_styles: Some(ButtonStyles {
-            //             background_color: Color::RED,
-            //             foreground_color: Color::BLACK,
-            //             hover_background_color: Color::GREEN,
-            //             hover_foreground_color: Color::WHITE,
-            //             press_background_color: Color::PURPLE,
-            //             press_foreground_color: Color::YELLOW,
-            //         }),
-            //         ..Default::default()
-            //     },
-
-            //     ..Default::default()
-            // });
-
-            // p.spawn(SliderBundle {
-            //     node_bundle: NodeBundle {
-            //         style: Style {
-            //             width: Val::Px(400.0),
-            //             height: Val::Px(200.0),
-            //             ..Default::default()
-            //         },
-            //         ..Default::default()
-            //     },
-            //     slider: Slider {
-            //         range: 0..1001,
-            //         slider_styles: Some(SliderStyles {
-            //             hover_background_color: Color::GREEN,
-            //             hover_foreground_color: Color::WHITE,
-            //             press_background_color: Color::PURPLE,
-            //             press_foreground_color: Color::YELLOW,
-            //         }),
-            //         ..Default::default()
-            //     },
-            //     ..Default::default()
-            // });
         });
+
+    debug_assert!(shop_entities.amount_max_text != Entity::PLACEHOLDER);
+    debug_assert!(shop_entities.amount_slider != Entity::PLACEHOLDER);
+    debug_assert!(shop_entities.amount_text_input != Entity::PLACEHOLDER);
+    debug_assert!(shop_entities.current_money_text != Entity::PLACEHOLDER);
+    debug_assert!(shop_entities.delta_money_text != Entity::PLACEHOLDER);
+    debug_assert!(shop_entities.final_money_text != Entity::PLACEHOLDER);
+    debug_assert!(shop_entities.item_description_entity != Entity::PLACEHOLDER);
+    debug_assert!(shop_entities.item_name_entity != Entity::PLACEHOLDER);
+    debug_assert!(shop_entities.item_stats_list != Entity::PLACEHOLDER);
+    debug_assert!(shop_entities.buy_sell_button != Entity::PLACEHOLDER);
+
+    commands.entity(ui_ent).insert(shop_entities);
 }
 
 #[derive(Event, Debug)]
@@ -694,15 +711,6 @@ impl ButtonEvent for ClickBuyTabEvent {
 }
 
 #[derive(Event, Debug)]
-struct ClickBtnEvent {}
-
-impl ButtonEvent for ClickBtnEvent {
-    fn create_event(_: Entity) -> Self {
-        Self {}
-    }
-}
-
-#[derive(Event, Debug)]
 struct BuyBtnEvent {}
 
 impl ButtonEvent for BuyBtnEvent {
@@ -720,18 +728,11 @@ impl ButtonEvent for ClickItemEvent {
     }
 }
 
-fn reader(mut ev_reader: EventReader<ClickBtnEvent>) {
-    for _ in ev_reader.read() {
-        println!("Click event!");
-    }
-}
-
 fn click_item_event(
     mut ev_reader: EventReader<ClickItemEvent>,
     q_shop_entry: Query<(&ShopEntry, &ShopUiEntity)>,
-    items: Res<Registry<Item>>,
-    lang: Res<Lang<Item>>,
-    mut q_shop: Query<&mut ShopUi>,
+    mut q_shop: Query<(&mut ShopUi, &ShopEntities)>,
+    mut q_slider_value: Query<&mut SliderValue>,
 ) {
     for ev in ev_reader.read() {
         let Ok((entry, shop_ui_ent)) = q_shop_entry.get(ev.0) else {
@@ -739,33 +740,203 @@ fn click_item_event(
             return;
         };
 
-        let Ok(mut shop_ui) = q_shop.get_mut(shop_ui_ent.0) else {
+        let Ok((mut shop_ui, shop_entities)) = q_shop.get_mut(shop_ui_ent.0) else {
             error!("Shop item button had invalid shop ui entity?");
             return;
         };
 
+        q_slider_value.get_mut(shop_entities.amount_slider).unwrap().set_value(0);
+
         if shop_ui.selected_item.as_ref().map(|x| x.entry != *entry).unwrap_or(true) {
-            shop_ui.selected_item = Some(SelectedItem {
-                entry: *entry,
-                amount_selected: 0,
-            });
+            shop_ui.selected_item = Some(SelectedItem { entry: *entry });
+        }
+    }
+}
+
+fn on_change_slider_value(
+    q_shop_ui: Query<(&ShopUi, &ShopEntities)>,
+    mut q_slider_value: Query<(&mut SliderValue, &ShopUiEntity), Changed<SliderValue>>,
+    mut q_text: Query<&mut Text>,
+    mut q_text_input_value: Query<&mut InputValue>,
+    player_credits: Query<&Credits, With<LocalPlayer>>,
+) {
+    for (mut slider_value, shop_ui_ent) in &mut q_slider_value {
+        let credits = player_credits.get_single().copied().unwrap_or_default();
+
+        let Ok((shop_ui, shop_entities)) = q_shop_ui.get(shop_ui_ent.0) else {
+            continue;
+        };
+
+        let val = slider_value.value();
+
+        let mut input_val = q_text_input_value.get_mut(shop_entities.amount_text_input).unwrap();
+
+        // it fails if the input field is blank, so set it
+        if input_val.value().parse::<i64>().unwrap_or(-1) != val {
+            input_val.set_value(format!("{}", val));
+        }
+
+        if let Some(selected_item) = &shop_ui.selected_item {
+            match selected_item.entry {
+                ShopEntry::Buying {
+                    item_id: _,
+                    max_quantity_buying: _,
+                    price_per,
+                } => {
+                    let buy_amount = val as u64;
+
+                    let final_amount = credits.amount() + price_per as u64 * buy_amount;
+
+                    if let Ok(mut text) = q_text.get_mut(shop_entities.delta_money_text) {
+                        text.sections[0].value = format!("+ ${price_per} x {buy_amount}");
+                    }
+
+                    if let Ok(mut text) = q_text.get_mut(shop_entities.final_money_text) {
+                        text.sections[0].value = format!("${final_amount}");
+                    }
+                }
+                ShopEntry::Selling {
+                    item_id: _,
+                    max_quantity_selling: _,
+                    price_per,
+                } => {
+                    let sell_amount = val as i64;
+
+                    let final_amount = credits.amount() as i64 - price_per as i64 * sell_amount;
+
+                    if let Ok(mut text) = q_text.get_mut(shop_entities.delta_money_text) {
+                        text.sections[0].value = format!("- ${price_per} x {sell_amount}");
+                    }
+
+                    if let Ok(mut text) = q_text.get_mut(shop_entities.final_money_text) {
+                        text.sections[0].value = format!("${final_amount}");
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn on_change_selected_item(
+    items: Res<Registry<Item>>,
+    langs: Res<Lang<Item>>,
+    q_shop_changed: Query<(&ShopUi, &ShopEntities), Changed<ShopUi>>,
+    mut q_text: Query<&mut Text>,
+    mut q_slider_value: Query<&mut SliderValue>,
+    mut q_slider: Query<&mut Slider>,
+    player_credits: Query<&Credits, With<LocalPlayer>>,
+) {
+    for (shop_ui, shop_entities) in &q_shop_changed {
+        let credits = player_credits.get_single().copied().unwrap_or_default();
+
+        if let Some(selected_item) = &shop_ui.selected_item {
+            let item_id = match selected_item.entry {
+                ShopEntry::Buying {
+                    item_id,
+                    max_quantity_buying,
+                    price_per,
+                } => {
+                    let buy_amount = q_slider_value
+                        .get(shop_entities.amount_slider)
+                        .expect("Slider value missing")
+                        .value() as u64;
+
+                    let final_amount = credits.amount() - price_per as u64 * buy_amount;
+
+                    if let Ok(mut text) = q_text.get_mut(shop_entities.delta_money_text) {
+                        text.sections[0].value = format!("- ${price_per} x {buy_amount}");
+                    }
+
+                    if let Ok(mut text) = q_text.get_mut(shop_entities.final_money_text) {
+                        text.sections[0].value = format!("${final_amount}");
+                    }
+
+                    if let Ok(mut text) = q_text.get_mut(shop_entities.amount_max_text) {
+                        text.sections[0].value = max_quantity_buying.map(|x| format! {"{x}"}).unwrap_or("All".to_owned());
+                    }
+
+                    if let Ok(mut slider) = q_slider.get_mut(shop_entities.amount_slider) {
+                        let amt = max_quantity_buying.unwrap_or(10000);
+                        slider.range = 0..(amt as i64 + 1);
+                    }
+
+                    item_id
+                }
+                ShopEntry::Selling {
+                    item_id,
+                    max_quantity_selling,
+                    price_per,
+                } => {
+                    let sell_amount = q_slider_value
+                        .get(shop_entities.amount_slider)
+                        .expect("Slider value missing")
+                        .value() as u64;
+
+                    let final_amount = price_per as u64 * sell_amount + credits.amount();
+
+                    if let Ok(mut text) = q_text.get_mut(shop_entities.delta_money_text) {
+                        text.sections[0].value = format!("+ ${price_per} x {sell_amount}");
+                    }
+
+                    if let Ok(mut text) = q_text.get_mut(shop_entities.final_money_text) {
+                        text.sections[0].value = format!("${final_amount}");
+                    }
+
+                    if let Ok(mut text) = q_text.get_mut(shop_entities.amount_max_text) {
+                        text.sections[0].value = format!("{max_quantity_selling}");
+                    }
+
+                    if let Ok(mut slider) = q_slider.get_mut(shop_entities.amount_slider) {
+                        slider.range = 0..(max_quantity_selling as i64 + 1);
+
+                        let mut slider_value = q_slider_value.get_mut(shop_entities.amount_slider).expect("Should have this");
+                        let cur_val = slider_value.value();
+                        slider_value.set_value(cur_val.clamp(0, max_quantity_selling as i64));
+                    }
+
+                    item_id
+                }
+            };
+
+            let item = items.from_numeric_id(item_id);
+            let item_name = langs.get_name(item).unwrap_or(item.unlocalized_name());
+
+            if let Ok(mut text) = q_text.get_mut(shop_entities.item_name_entity) {
+                text.sections[0].value = item_name.to_owned();
+            }
+
+            if let Ok(mut text) = q_text.get_mut(shop_entities.item_description_entity) {
+                text.sections[0].value = format!("Description of {item_name}");
+            }
+
+            if let Ok(mut text) = q_text.get_mut(shop_entities.item_stats_list) {
+                text.sections[0].value = format!("stats for {item_name}");
+            }
+
+            if let Ok(mut text) = q_text.get_mut(shop_entities.amount_text_input) {
+                text.sections[0].value = "".into();
+            }
         }
     }
 }
 
 pub(super) fn register(app: &mut App) {
-    register_button::<ClickBtnEvent>(app);
     register_button::<ClickSellTabEvent>(app);
     register_button::<ClickBuyTabEvent>(app);
     register_button::<BuyBtnEvent>(app);
     register_button::<ClickItemEvent>(app);
 
-    app.add_mut_event::<OpenShopUiEvent>()
-        .add_systems(
-            Update,
-            (open_shop_ui, render_shop_ui)
-                .after(NetworkingSystemsSet::FlushReceiveMessages)
-                .before(UiSystemSet::ApplyDeferredA),
+    app.add_mut_event::<OpenShopUiEvent>().add_systems(
+        Update,
+        (
+            open_shop_ui,
+            click_item_event,
+            on_change_selected_item,
+            on_change_slider_value,
+            render_shop_ui,
         )
-        .add_systems(Update, reader.after(ButtonUiSystemSet::SendButtonEvents));
+            .chain()
+            .after(NetworkingSystemsSet::FlushReceiveMessages)
+            .before(UiSystemSet::ApplyDeferredA),
+    );
 }

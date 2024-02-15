@@ -14,6 +14,10 @@ impl Credits {
     pub fn new(amount: u64) -> Self {
         Self(amount)
     }
+
+    pub fn amount(&self) -> u64 {
+        self.0
+    }
 }
 
 impl Display for Credits {
