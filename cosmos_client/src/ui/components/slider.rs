@@ -2,8 +2,6 @@
 //!
 //! Similar to the HTML `input type="range"`.use std::ops::Range;
 
-use std::ops::Range;
-
 use bevy::{
     app::{App, Update},
     ecs::{
@@ -33,8 +31,10 @@ use crate::ui::UiSystemSet;
 pub struct Slider {
     /// Optional styles to further customize the slider
     pub slider_styles: Option<SliderStyles>,
-    /// The range of values you want the slider to use
-    pub range: Range<i64>,
+    /// The minimum value you can slide to
+    pub min: i64,
+    /// The maximum value you can slide to
+    pub max: i64,
     /// The color of the background bar
     pub background_color: Color,
     /// The color of the bar that represents % filled
@@ -83,7 +83,8 @@ impl Default for Slider {
             background_color: Color::RED,
             foreground_color: Color::GRAY,
             square_color: Color::AQUAMARINE,
-            range: 0..101,
+            min: 0,
+            max: 100,
             slider_styles: Default::default(),
             height: 10.0,
         }
@@ -111,8 +112,7 @@ struct SliderProgressEntites {
 }
 
 fn slider_percent(slider: &Slider, value: &SliderValue) -> f32 {
-    // .end - 1 because the range is exclusive of the ending value (which end is for some reason)
-    (value.0 as f32 - slider.range.start as f32) / ((slider.range.end - 1) - slider.range.start) as f32
+    (value.0 as f32 - slider.min as f32) / ((slider.max) - slider.min) as f32
 }
 
 const BASE_SQUARE_SIZE: f32 = 10.0;
@@ -219,13 +219,13 @@ fn on_interact_slider(
             slider_bounds.max.x -= X_MARGIN;
 
             slider_value.0 = if cursor_pos.x <= slider_bounds.min.x {
-                slider.range.start
+                slider.min
             } else if cursor_pos.x >= slider_bounds.max.x {
-                slider.range.end - 1
+                slider.max
             } else {
                 (((cursor_pos.x - slider_bounds.min.x) as f32 / (slider_bounds.max.x - slider_bounds.min.x) as f32)
-                    * ((slider.range.end - 1) as f32 - slider.range.start as f32)
-                    + slider.range.start as f32)
+                    * ((slider.max) as f32 - slider.min as f32)
+                    + slider.min as f32)
                     .round() as i64
             };
         }

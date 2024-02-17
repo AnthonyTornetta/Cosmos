@@ -5,6 +5,7 @@ use bevy::{
     ecs::{
         component::Component,
         entity::Entity,
+        event::{Event, EventReader, EventWriter},
         query::{Changed, With, Without},
         schedule::IntoSystemConfigs,
         system::{Commands, Query},
@@ -44,12 +45,12 @@ pub trait ReactableValue: Send + Sync + 'static + PartialEq + Component {
 // }
 
 #[derive(Component)]
-pub struct BindValue<T: ReactableValue> {
+pub struct BindValue<K: Send + Sync + 'static> {
     bound_entity: Entity,
-    _phantom: PhantomData<T>,
+    _phantom: PhantomData<K>,
 }
 
-impl<T: ReactableValue> BindValue<T> {
+impl<K: Send + Sync + 'static> BindValue<K> {
     pub fn new(bound_entity: Entity) -> Self {
         Self {
             bound_entity,
@@ -59,14 +60,32 @@ impl<T: ReactableValue> BindValue<T> {
 }
 
 #[derive(Component)]
-pub struct NeedsValueFetched {
-    storage_entity: Entity,
+pub struct NeedsValueFetched;
+
+#[derive(Event)]
+struct ReactValueUpdated {
+    value_entity: Entity,
+}
+
+fn notify_listeners<K: Send + Sync + 'static>(
+    mut ev_listeners: EventReader<ReactValueUpdated>,
+    q_bound_listeners: Query<(Entity, &BindValue<K>)>,
+    mut commands: Commands,
+) {
+    for ev in ev_listeners.read() {
+        for (bound_ent, bound_value) in q_bound_listeners.iter() {
+            if bound_value.bound_entity == ev.value_entity {
+                commands.entity(bound_ent).insert(NeedsValueFetched);
+            }
+        }
+    }
 }
 
 fn listen_changes<T: ReactableValue>(
-    mut commands: Commands,
-    q_bound_listeners: Query<(Entity, &BindValue<T>)>,
+    // mut commands: Commands,
+    // q_bound_listeners: Query<(Entity, &BindValue<K>)>,
     mut q_changed_reactors: Query<(Entity, &mut T, &ReactValueAsString), Changed<ReactValueAsString>>,
+    mut ev_writer: EventWriter<ReactValueUpdated>,
 ) {
     for (ent, mut react, value_as_string) in q_changed_reactors.iter_mut() {
         if react.as_value() == value_as_string.0 {
@@ -75,18 +94,19 @@ fn listen_changes<T: ReactableValue>(
 
         react.set_from_value(&value_as_string.0);
 
-        for (bound_ent, bound_value) in q_bound_listeners.iter() {
-            if bound_value.bound_entity == ent {
-                commands.entity(bound_ent).insert(NeedsValueFetched { storage_entity: ent });
-            }
-        }
+        ev_writer.send(ReactValueUpdated { value_entity: ent });
+
+        // for (bound_ent, bound_value) in q_bound_listeners.iter() {
+        //     if bound_value.bound_entity == ent {
+        //         // commands.entity(bound_ent).insert(NeedsValueFetched { storage_entity: ent });
+        //     }
+        // }
     }
 }
 
 fn on_change_react_value<T: ReactableValue>(mut q_changed_react: Query<(&T, &mut ReactValueAsString), Changed<T>>) {
     for (react, mut changed_value) in q_changed_react.iter_mut() {
         changed_value.0 = react.as_value();
-        println!("Changing string version!");
     }
 }
 
@@ -106,6 +126,13 @@ pub(crate) fn add_reactable_type<T: ReactableValue>(app: &mut App) {
     );
 }
 
+pub(crate) fn add_reactable_component_type<K: Send + Sync + 'static>(app: &mut App) {
+    app.add_systems(Update, notify_listeners::<K>);
+}
+
 pub(super) fn register(app: &mut App) {
+    app.add_event::<ReactValueUpdated>();
+
     text::register(app);
+    slider::register(app);
 }

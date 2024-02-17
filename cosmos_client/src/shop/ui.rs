@@ -43,7 +43,7 @@ use crate::{
             text_input::{InputType, InputValue, TextInput, TextInputBundle},
             window::{GuiWindow, WindowBundle},
         },
-        reactivity::BindValue,
+        reactivity::{text::TextBinding, BindValue},
         UiSystemSet,
     },
 };
@@ -515,7 +515,7 @@ fn render_shop_ui(
                         shop_entities.current_money_text = p
                             .spawn((
                                 Name::new("Credits amount"),
-                                BindValue::<Credits>::new(player_entity),
+                                BindValue::<TextBinding>::new(player_entity),
                                 TextBundle {
                                     text: Text::from_section(format!("${}", credits.amount()), text_style.clone()),
                                     ..Default::default()
@@ -643,7 +643,8 @@ fn render_shop_ui(
                                             ..Default::default()
                                         },
                                         slider: Slider {
-                                            range: 0..1001,
+                                            min: 0,
+                                            max: 1,
                                             background_color: Color::hex("999999").unwrap(),
                                             foreground_color: Color::AQUAMARINE,
                                             square_color: Color::hex("555555").unwrap(),
@@ -862,7 +863,7 @@ fn on_change_selected_item(
 
                     if let Ok(mut slider) = q_slider.get_mut(shop_entities.amount_slider) {
                         let amt = max_quantity_buying.unwrap_or(10000);
-                        slider.range = 0..(amt as i64 + 1);
+                        slider.max = amt as i64;
                     }
 
                     item_id
@@ -892,7 +893,7 @@ fn on_change_selected_item(
                     }
 
                     if let Ok(mut slider) = q_slider.get_mut(shop_entities.amount_slider) {
-                        slider.range = 0..(max_quantity_selling as i64 + 1);
+                        slider.max = max_quantity_selling as i64;
 
                         let mut slider_value = q_slider_value.get_mut(shop_entities.amount_slider).expect("Should have this");
                         let cur_val = slider_value.value();
