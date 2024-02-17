@@ -18,6 +18,10 @@ impl Credits {
     pub fn amount(&self) -> u64 {
         self.0
     }
+
+    pub fn set_amount(&mut self, amount: u64) {
+        self.0 = amount;
+    }
 }
 
 impl Display for Credits {

@@ -12,6 +12,7 @@ pub mod debug_info_display;
 pub mod hotbar;
 pub mod item_renderer;
 pub mod message;
+pub mod reactivity;
 mod ship_flight;
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
@@ -37,6 +38,7 @@ pub(super) fn register(app: &mut App) {
     message::register(app);
     ship_flight::register(app);
     components::register(app);
+    reactivity::register(app);
 
     app.configure_sets(
         Update,

@@ -2,11 +2,13 @@
 
 #![warn(missing_docs)]
 #![feature(iter_array_chunks)]
+#![feature(min_specialization)]
 
 pub mod asset;
 pub mod audio;
 pub mod block;
 pub mod camera;
+pub mod economy;
 pub mod ecs;
 pub mod entities;
 pub mod events;
@@ -141,6 +143,7 @@ fn main() {
     physics::register(&mut app);
     ecs::register(&mut app);
     shop::register(&mut app);
+    economy::register(&mut app);
 
     if cfg!(feature = "print-schedule") {
         bevy_mod_debugdump::print_schedule_graph(&mut app, Update);

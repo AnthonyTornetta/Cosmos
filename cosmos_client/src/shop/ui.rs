@@ -43,6 +43,7 @@ use crate::{
             text_input::{InputType, InputValue, TextInput, TextInputBundle},
             window::{GuiWindow, WindowBundle},
         },
+        reactivity::BindValue,
         UiSystemSet,
     },
 };
@@ -100,13 +101,13 @@ fn render_shop_ui(
     asset_server: Res<AssetServer>,
     items: Res<Registry<Item>>,
     lang: Res<Lang<Item>>,
-    player_credits: Query<&Credits, With<LocalPlayer>>,
+    player_credits: Query<(Entity, &Credits), With<LocalPlayer>>,
 ) {
     let Ok((shop_ui, ui_ent)) = q_shop_ui.get_single() else {
         return;
     };
 
-    let Ok(credits) = player_credits.get_single() else {
+    let Ok((player_entity, credits)) = player_credits.get_single() else {
         error!("Missing credits on player?");
         return;
     };
@@ -512,10 +513,14 @@ fn render_shop_ui(
                     })
                     .with_children(|p| {
                         shop_entities.current_money_text = p
-                            .spawn(TextBundle {
-                                text: Text::from_section(format!("${}", credits.amount()), text_style.clone()),
-                                ..Default::default()
-                            })
+                            .spawn((
+                                Name::new("Credits amount"),
+                                BindValue::<Credits>::new(player_entity),
+                                TextBundle {
+                                    text: Text::from_section(format!("${}", credits.amount()), text_style.clone()),
+                                    ..Default::default()
+                                },
+                            ))
                             .id();
                     });
 
