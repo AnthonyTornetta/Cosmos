@@ -995,7 +995,7 @@ fn on_change_selected_item(
             } => {
                 selected_item_max_quantity.0 = max_quantity_buying.unwrap_or(10000);
                 shop_price_per.0 = price_per;
-                *shop_mode = ShopMode::Buy;
+                *shop_mode = ShopMode::Sell;
 
                 item_id
             }
@@ -1006,7 +1006,7 @@ fn on_change_selected_item(
             } => {
                 selected_item_max_quantity.0 = max_quantity_selling;
                 shop_price_per.0 = price_per;
-                *shop_mode = ShopMode::Sell;
+                *shop_mode = ShopMode::Buy;
 
                 item_id
             }
