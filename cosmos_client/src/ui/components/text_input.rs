@@ -346,17 +346,22 @@ fn flash_cursor(
 
 fn value_changed(
     focused: Res<Focus>,
-    q_values_changed: Query<(Entity, &InputValue, &TextInput, &TextEnt), Or<(Changed<InputValue>, Changed<TextInput>)>>,
+    mut q_values_changed: Query<(Entity, &InputValue, &mut TextInput, &TextEnt), Or<(Changed<InputValue>, Changed<TextInput>)>>,
     mut q_text: Query<&mut Text>,
     mut cursor_flash_time: ResMut<CursorFlashTime>,
 ) {
-    for (entity, input_val, text_input, text) in q_values_changed.iter() {
+    for (entity, input_val, mut text_input, text) in q_values_changed.iter_mut() {
         let Ok(mut text) = q_text.get_mut(text.0) else {
             continue;
         };
 
         if focused.0.map(|x| x == entity).unwrap_or(false) {
             cursor_flash_time.0 = 0.0;
+        }
+
+        // If something modified the InputValue externally, the cursor pos may be outside the number, so make sure it isn't
+        if text_input.cursor_pos > input_val.len() {
+            text_input.cursor_pos = input_val.len();
         }
 
         text.sections[0].value = input_val[0..text_input.cursor_pos].to_owned();

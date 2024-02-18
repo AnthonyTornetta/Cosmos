@@ -1,34 +1,42 @@
 use bevy::{
     app::{App, Update},
-    ecs::{query::With, system::Query},
-    log::warn,
+    ecs::{event::EventReader, system::Query},
+    log::{error, warn},
     text::Text,
 };
 
-use super::{add_reactable_component_type, BindValue, NeedsValueFetched, ReactValueAsString};
+use super::{BindValues, NeedsValueFetched, ReactableFields, ReactableValue};
 
-pub struct TextBinding;
-
-fn on_need_update(
-    q_react_value: Query<&ReactValueAsString>,
-    mut q_changed_value: Query<(&mut Text, &BindValue<TextBinding>), With<NeedsValueFetched>>,
+fn on_need_update_value<T: ReactableValue>(
+    q_react_value: Query<&T>,
+    mut ev_reader: EventReader<NeedsValueFetched>,
+    mut q_changed_value: Query<(&mut Text, &BindValues<T>)>,
 ) {
-    for (mut text, bind_value) in q_changed_value.iter_mut() {
-        let Some(sec) = text.sections.get_mut(0) else {
-            warn!("Text needs at least one section to be updated properly!");
-            continue;
-        };
-        let Ok(value) = q_react_value.get(bind_value.bound_entity) else {
-            warn!("Missing bound value for text entity.");
+    for ev in ev_reader.read() {
+        let Ok((mut text_input_value, bind_values)) = q_changed_value.get_mut(ev.0) else {
             continue;
         };
 
-        sec.value = value.0.to_owned();
+        for bind_value in bind_values.iter() {
+            let Ok(react_value) = q_react_value.get(bind_value.bound_entity) else {
+                warn!("Missing bound value for text entity.");
+                continue;
+            };
+
+            match bind_value.field {
+                ReactableFields::Text { section } => {
+                    if let Some(section) = text_input_value.sections.get_mut(section) {
+                        section.value = react_value.as_value();
+                    } else {
+                        error!("Text missing {section} section but is bound to value!");
+                    }
+                }
+                _ => {}
+            }
+        }
     }
 }
 
-pub(super) fn register(app: &mut App) {
-    add_reactable_component_type::<TextBinding>(app);
-
-    app.add_systems(Update, on_need_update);
+pub(super) fn register<T: ReactableValue>(app: &mut App) {
+    app.add_systems(Update, on_need_update_value::<T>);
 }

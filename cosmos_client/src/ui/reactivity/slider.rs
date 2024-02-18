@@ -1,73 +1,88 @@
 use bevy::{
     app::{App, Update},
-    ecs::{query::With, system::Query},
+    ecs::{event::EventReader, query::Changed, system::Query},
     log::{error, warn},
 };
 
-use crate::ui::components::{slider::Slider, text_input::InputValue};
+use crate::ui::components::slider::{Slider, SliderValue};
 
-use super::{add_reactable_component_type, BindValue, NeedsValueFetched, ReactValueAsString};
+use super::{BindValues, NeedsValueFetched, ReactableFields, ReactableValue};
 
-struct SliderValueBinding;
-struct SliderMinBinding;
-struct SliderMaxBinding;
-
-fn on_need_update_value(
-    q_react_value: Query<&ReactValueAsString>,
-    mut q_changed_value: Query<(&mut InputValue, &BindValue<SliderValueBinding>), With<NeedsValueFetched>>,
+fn on_update_bound_values<T: ReactableValue>(
+    q_react_value: Query<&T>,
+    mut ev_reader: EventReader<NeedsValueFetched>,
+    mut q_changed_value: Query<(&mut SliderValue, &mut Slider, &BindValues<T>)>,
 ) {
-    for (mut text_input_value, bind_value) in q_changed_value.iter_mut() {
-        let Ok(react_value) = q_react_value.get(bind_value.bound_entity) else {
-            warn!("Missing bound value for text entity.");
+    for ev in ev_reader.read() {
+        let Ok((mut numeric_value, mut slider, bind_values)) = q_changed_value.get_mut(ev.0) else {
             continue;
         };
 
-        text_input_value.set_value(react_value.0.to_owned());
+        for bind_value in bind_values.iter() {
+            let Ok(react_value) = q_react_value.get(bind_value.bound_entity) else {
+                warn!("Missing bound value for text entity.");
+                continue;
+            };
+
+            match bind_value.field {
+                ReactableFields::Value => {
+                    let Ok(val) = react_value.as_value().parse::<i64>() else {
+                        error!("Invalid i64 value: {}", react_value.as_value());
+                        continue;
+                    };
+
+                    if numeric_value.value() != val {
+                        numeric_value.set_value(val);
+                    }
+                }
+                ReactableFields::Min => {
+                    let Ok(val) = react_value.as_value().parse::<i64>() else {
+                        error!("Invalid i64 value: {}", react_value.as_value());
+                        continue;
+                    };
+
+                    if slider.min != val {
+                        slider.min = val;
+                    }
+                }
+                ReactableFields::Max => {
+                    let Ok(val) = react_value.as_value().parse::<i64>() else {
+                        error!("Invalid i64 value: {}", react_value.as_value());
+                        continue;
+                    };
+
+                    if slider.max != val {
+                        slider.max = val;
+                    }
+                }
+                _ => {}
+            }
+        }
     }
 }
 
-fn on_need_update_min_bound(
-    q_react_value: Query<&ReactValueAsString>,
-    mut q_changed_value: Query<(&mut Slider, &BindValue<SliderMinBinding>), With<NeedsValueFetched>>,
+fn on_update_slider_value<T: ReactableValue>(
+    mut q_react_value: Query<&mut T>,
+    q_changed_value: Query<(&SliderValue, &BindValues<T>), Changed<SliderValue>>,
 ) {
-    for (mut slider, bind_value) in q_changed_value.iter_mut() {
-        let Ok(react_value) = q_react_value.get(bind_value.bound_entity) else {
-            warn!("Missing bound value for text entity.");
-            continue;
-        };
+    for (text_input_value, bind_values) in q_changed_value.iter() {
+        for bind_value in bind_values.iter() {
+            if matches!(bind_value.field, ReactableFields::Value) {
+                let Ok(mut react_value) = q_react_value.get_mut(bind_value.bound_entity) else {
+                    warn!("Missing bound value for text entity.");
+                    continue;
+                };
 
-        let Ok(val) = react_value.0.to_owned().parse::<i64>() else {
-            error!("Invalid i64 value: {}", react_value.0);
-            continue;
-        };
+                let num_as_str = format!("{}", text_input_value.value());
 
-        slider.min = val;
+                if react_value.as_value() != num_as_str {
+                    react_value.set_from_value(&num_as_str);
+                }
+            }
+        }
     }
 }
 
-fn on_need_update_max_bound(
-    q_react_value: Query<&ReactValueAsString>,
-    mut q_changed_value: Query<(&mut Slider, &BindValue<SliderMaxBinding>), With<NeedsValueFetched>>,
-) {
-    for (mut slider, bind_value) in q_changed_value.iter_mut() {
-        let Ok(react_value) = q_react_value.get(bind_value.bound_entity) else {
-            warn!("Missing bound value for text entity.");
-            continue;
-        };
-
-        let Ok(val) = react_value.0.to_owned().parse::<i64>() else {
-            error!("Invalid i64 value: {}", react_value.0);
-            continue;
-        };
-
-        slider.max = val;
-    }
-}
-
-pub(super) fn register(app: &mut App) {
-    add_reactable_component_type::<SliderValueBinding>(app);
-    add_reactable_component_type::<SliderMinBinding>(app);
-    add_reactable_component_type::<SliderMaxBinding>(app);
-
-    app.add_systems(Update, (on_need_update_value, on_need_update_min_bound, on_need_update_max_bound));
+pub(super) fn register<T: ReactableValue>(app: &mut App) {
+    app.add_systems(Update, (on_update_bound_values::<T>, on_update_slider_value::<T>));
 }

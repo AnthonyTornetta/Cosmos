@@ -12,12 +12,13 @@ use bevy::{
     },
     hierarchy::BuildChildren,
     log::error,
+    reflect::Reflect,
     render::color::Color,
-    text::{Text, TextStyle},
+    text::{Text, TextSection, TextStyle},
     ui::{
         node_bundles::{NodeBundle, TextBundle},
         widget::Label,
-        FlexDirection, JustifyContent, Style, UiRect, Val,
+        Display, FlexDirection, JustifyContent, PositionType, Style, UiRect, Val,
     },
 };
 use cosmos_core::{
@@ -43,7 +44,7 @@ use crate::{
             text_input::{InputType, InputValue, TextInput, TextInputBundle},
             window::{GuiWindow, WindowBundle},
         },
-        reactivity::{text::TextBinding, BindValue},
+        reactivity::{add_reactable_type, BindValue, BindValues, ReactableFields, ReactableValue},
         UiSystemSet,
     },
 };
@@ -95,6 +96,19 @@ fn open_shop_ui(mut commands: Commands, mut ev_reader: EventReader<MutEvent<Open
     }
 }
 
+#[derive(Reflect, Component, PartialEq, Eq)]
+struct AmountSelected(u64);
+
+impl ReactableValue for AmountSelected {
+    fn as_value(&self) -> String {
+        format!("{}", self.0)
+    }
+
+    fn set_from_value(&mut self, new_value: &str) {
+        self.0 = new_value.parse().unwrap_or(0);
+    }
+}
+
 fn render_shop_ui(
     mut commands: Commands,
     q_shop_ui: Query<(&ShopUi, Entity), Added<ShopUi>>,
@@ -138,6 +152,23 @@ fn render_shop_ui(
         item_stats_list: Entity::PLACEHOLDER,
         buy_sell_button: Entity::PLACEHOLDER,
     };
+
+    let amount_selected_entity = commands
+        .spawn((
+            NodeBundle {
+                style: Style {
+                    display: Display::None,
+                    position_type: PositionType::Absolute,
+                    left: Val::Px(0.0),
+                    top: Val::Px(0.0),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            AmountSelected(0),
+        ))
+        .set_parent(ui_ent)
+        .id();
 
     commands
         .entity(ui_ent)
@@ -515,9 +546,12 @@ fn render_shop_ui(
                         shop_entities.current_money_text = p
                             .spawn((
                                 Name::new("Credits amount"),
-                                BindValue::<TextBinding>::new(player_entity),
+                                BindValues::<Credits>::new(vec![BindValue::new(player_entity, ReactableFields::Text { section: 1 })]),
                                 TextBundle {
-                                    text: Text::from_section(format!("${}", credits.amount()), text_style.clone()),
+                                    text: Text::from_sections([
+                                        TextSection::new("$", text_style.clone()),
+                                        TextSection::new(format!("{}", credits.amount()), text_style.clone()),
+                                    ]),
                                     ..Default::default()
                                 },
                             ))
@@ -576,24 +610,28 @@ fn render_shop_ui(
                     })
                     .with_children(|p| {
                         shop_entities.amount_text_input = p
-                            .spawn(TextInputBundle {
-                                node_bundle: NodeBundle {
-                                    style: Style {
-                                        width: Val::Px(250.0),
-                                        padding: UiRect::all(Val::Px(10.0)),
+                            .spawn((
+                                Name::new("Amount Input"),
+                                BindValues::<AmountSelected>::new(vec![BindValue::new(amount_selected_entity, ReactableFields::Value)]),
+                                TextInputBundle {
+                                    node_bundle: NodeBundle {
+                                        style: Style {
+                                            width: Val::Px(250.0),
+                                            padding: UiRect::all(Val::Px(10.0)),
+                                            ..Default::default()
+                                        },
+                                        border_color: Color::hex("111111").unwrap().into(),
+                                        background_color: Color::hex("555555").unwrap().into(),
                                         ..Default::default()
                                     },
-                                    border_color: Color::hex("111111").unwrap().into(),
-                                    background_color: Color::hex("555555").unwrap().into(),
+                                    text_input: TextInput {
+                                        input_type: InputType::Integer { min: 0, max: 1000 },
+                                        style: text_style.clone(),
+                                        ..Default::default()
+                                    },
                                     ..Default::default()
                                 },
-                                text_input: TextInput {
-                                    input_type: InputType::Integer { min: 0, max: 1000 },
-                                    style: text_style.clone(),
-                                    ..Default::default()
-                                },
-                                ..Default::default()
-                            })
+                            ))
                             .id();
 
                         p.spawn(NodeBundle {
@@ -637,6 +675,7 @@ fn render_shop_ui(
                                 .spawn((
                                     Name::new("Amount slider"),
                                     ShopUiEntity(ui_ent),
+                                    BindValues::<AmountSelected>::new(vec![BindValue::new(amount_selected_entity, ReactableFields::Value)]),
                                     SliderBundle {
                                         node_bundle: NodeBundle {
                                             style: Style { ..Default::default() },
@@ -766,61 +805,61 @@ fn on_change_slider_value(
     mut q_text_input_value: Query<&mut InputValue>,
     player_credits: Query<&Credits, With<LocalPlayer>>,
 ) {
-    for (mut slider_value, shop_ui_ent) in &mut q_slider_value {
-        let credits = player_credits.get_single().copied().unwrap_or_default();
+    // for (mut slider_value, shop_ui_ent) in &mut q_slider_value {
+    //     let credits = player_credits.get_single().copied().unwrap_or_default();
 
-        let Ok((shop_ui, shop_entities)) = q_shop_ui.get(shop_ui_ent.0) else {
-            continue;
-        };
+    //     let Ok((shop_ui, shop_entities)) = q_shop_ui.get(shop_ui_ent.0) else {
+    //         continue;
+    //     };
 
-        let val = slider_value.value();
+    //     let val = slider_value.value();
 
-        let mut input_val = q_text_input_value.get_mut(shop_entities.amount_text_input).unwrap();
+    //     let mut input_val = q_text_input_value.get_mut(shop_entities.amount_text_input).unwrap();
 
-        // it fails if the input field is blank, so set it
-        if input_val.value().parse::<i64>().unwrap_or(-1) != val {
-            input_val.set_value(format!("{}", val));
-        }
+    //     // it fails if the input field is blank, so set it
+    //     if input_val.value().parse::<i64>().unwrap_or(-1) != val {
+    //         input_val.set_value(format!("{}", val));
+    //     }
 
-        if let Some(selected_item) = &shop_ui.selected_item {
-            match selected_item.entry {
-                ShopEntry::Buying {
-                    item_id: _,
-                    max_quantity_buying: _,
-                    price_per,
-                } => {
-                    let buy_amount = val as u64;
+    //     if let Some(selected_item) = &shop_ui.selected_item {
+    //         match selected_item.entry {
+    //             ShopEntry::Buying {
+    //                 item_id: _,
+    //                 max_quantity_buying: _,
+    //                 price_per,
+    //             } => {
+    //                 let buy_amount = val as u64;
 
-                    let final_amount = credits.amount() + price_per as u64 * buy_amount;
+    //                 let final_amount = credits.amount() + price_per as u64 * buy_amount;
 
-                    if let Ok(mut text) = q_text.get_mut(shop_entities.delta_money_text) {
-                        text.sections[0].value = format!("+ ${price_per} x {buy_amount}");
-                    }
+    //                 if let Ok(mut text) = q_text.get_mut(shop_entities.delta_money_text) {
+    //                     text.sections[0].value = format!("+ ${price_per} x {buy_amount}");
+    //                 }
 
-                    if let Ok(mut text) = q_text.get_mut(shop_entities.final_money_text) {
-                        text.sections[0].value = format!("${final_amount}");
-                    }
-                }
-                ShopEntry::Selling {
-                    item_id: _,
-                    max_quantity_selling: _,
-                    price_per,
-                } => {
-                    let sell_amount = val as i64;
+    //                 if let Ok(mut text) = q_text.get_mut(shop_entities.final_money_text) {
+    //                     text.sections[0].value = format!("${final_amount}");
+    //                 }
+    //             }
+    //             ShopEntry::Selling {
+    //                 item_id: _,
+    //                 max_quantity_selling: _,
+    //                 price_per,
+    //             } => {
+    //                 let sell_amount = val as i64;
 
-                    let final_amount = credits.amount() as i64 - price_per as i64 * sell_amount;
+    //                 let final_amount = credits.amount() as i64 - price_per as i64 * sell_amount;
 
-                    if let Ok(mut text) = q_text.get_mut(shop_entities.delta_money_text) {
-                        text.sections[0].value = format!("- ${price_per} x {sell_amount}");
-                    }
+    //                 if let Ok(mut text) = q_text.get_mut(shop_entities.delta_money_text) {
+    //                     text.sections[0].value = format!("- ${price_per} x {sell_amount}");
+    //                 }
 
-                    if let Ok(mut text) = q_text.get_mut(shop_entities.final_money_text) {
-                        text.sections[0].value = format!("${final_amount}");
-                    }
-                }
-            }
-        }
-    }
+    //                 if let Ok(mut text) = q_text.get_mut(shop_entities.final_money_text) {
+    //                     text.sections[0].value = format!("${final_amount}");
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
 }
 
 fn on_change_selected_item(
@@ -927,22 +966,26 @@ fn on_change_selected_item(
 }
 
 pub(super) fn register(app: &mut App) {
+    add_reactable_type::<AmountSelected>(app);
+
     register_button::<ClickSellTabEvent>(app);
     register_button::<ClickBuyTabEvent>(app);
     register_button::<BuyBtnEvent>(app);
     register_button::<ClickItemEvent>(app);
 
-    app.add_mut_event::<OpenShopUiEvent>().add_systems(
-        Update,
-        (
-            open_shop_ui,
-            click_item_event,
-            on_change_selected_item,
-            on_change_slider_value,
-            render_shop_ui,
+    app.add_mut_event::<OpenShopUiEvent>()
+        .add_systems(
+            Update,
+            (
+                open_shop_ui,
+                click_item_event,
+                on_change_selected_item,
+                on_change_slider_value,
+                render_shop_ui,
+            )
+                .chain()
+                .after(NetworkingSystemsSet::FlushReceiveMessages)
+                .before(UiSystemSet::ApplyDeferredA),
         )
-            .chain()
-            .after(NetworkingSystemsSet::FlushReceiveMessages)
-            .before(UiSystemSet::ApplyDeferredA),
-    );
+        .register_type::<AmountSelected>();
 }
