@@ -58,11 +58,118 @@ struct ShopUi {
     selected_item: Option<SelectedItem>,
 }
 
+#[derive(Reflect, Component, PartialEq, Eq, Default)]
+struct SelectedItemName(String);
+
+impl ReactableValue for SelectedItemName {
+    fn as_value(&self) -> String {
+        self.0.clone()
+    }
+
+    fn set_from_value(&mut self, new_value: &str) {
+        self.0 = new_value.to_owned();
+    }
+}
+
+#[derive(Reflect, Component, PartialEq, Eq, Default)]
+struct SelectedItemDescription(String);
+
+impl ReactableValue for SelectedItemDescription {
+    fn as_value(&self) -> String {
+        self.0.clone()
+    }
+
+    fn set_from_value(&mut self, new_value: &str) {
+        self.0 = new_value.to_owned();
+    }
+}
+
+#[derive(Reflect, Component, PartialEq, Eq, Default)]
+struct SelectedItemMaxQuantity(u32);
+
+impl ReactableValue for SelectedItemMaxQuantity {
+    fn as_value(&self) -> String {
+        format!("{}", self.0)
+    }
+
+    fn set_from_value(&mut self, new_value: &str) {
+        self.0 = new_value.parse().unwrap_or(0);
+    }
+}
+
+#[derive(Reflect, Component, PartialEq, Eq, Default)]
+struct PricePerUnit(u32);
+
+impl ReactableValue for PricePerUnit {
+    fn as_value(&self) -> String {
+        format!("{}", self.0)
+    }
+
+    fn set_from_value(&mut self, new_value: &str) {
+        self.0 = new_value.parse().unwrap_or(0);
+    }
+}
+
+#[derive(Reflect, Component, PartialEq, Eq, Default)]
+struct NetCredits(i64);
+
+impl ReactableValue for NetCredits {
+    fn as_value(&self) -> String {
+        format!("{}", self.0)
+    }
+
+    fn set_from_value(&mut self, new_value: &str) {
+        self.0 = new_value.parse().unwrap_or(0);
+    }
+}
+
+#[derive(Reflect, Component, PartialEq, Eq, Default)]
+struct AmountSelected(u64);
+
+impl ReactableValue for AmountSelected {
+    fn as_value(&self) -> String {
+        format!("{}", self.0)
+    }
+
+    fn set_from_value(&mut self, new_value: &str) {
+        self.0 = new_value.parse().unwrap_or(0);
+    }
+}
+
+#[derive(Reflect, Component, PartialEq, Eq, Clone, Copy)]
+enum ShopMode {
+    Buy,
+    Sell,
+}
+
+impl ReactableValue for ShopMode {
+    fn as_value(&self) -> String {
+        match *self {
+            Self::Buy => "BUY",
+            Self::Sell => "SELL",
+        }
+        .into()
+    }
+
+    fn set_from_value(&mut self, new_value: &str) {
+        match new_value {
+            "BUY" => *self = Self::Buy,
+            "SELL" => *self = Self::Sell,
+            _ => {
+                error!("Invalid buy/sell state: {new_value} (Valid types are 'BUY' or 'SELL'.");
+                *self = Self::Buy;
+            }
+        }
+    }
+}
+
 #[derive(Component)]
 struct ShopUiEntity(Entity);
 
 #[derive(Component)]
 struct ShopEntities {
+    variables: Entity,
+
     item_name_entity: Entity,
     item_description_entity: Entity,
     item_stats_list: Entity,
@@ -93,19 +200,6 @@ fn open_shop_ui(mut commands: Commands, mut ev_reader: EventReader<MutEvent<Open
         }
 
         commands.spawn(ShopUi { shop, selected_item: None });
-    }
-}
-
-#[derive(Reflect, Component, PartialEq, Eq)]
-struct AmountSelected(u64);
-
-impl ReactableValue for AmountSelected {
-    fn as_value(&self) -> String {
-        format!("{}", self.0)
-    }
-
-    fn set_from_value(&mut self, new_value: &str) {
-        self.0 = new_value.parse().unwrap_or(0);
     }
 }
 
@@ -140,7 +234,32 @@ fn render_shop_ui(
         font: asset_server.load("fonts/PixeloidSans.ttf"),
     };
 
+    let ui_variables_entity = commands
+        .spawn((
+            Name::new("UI variables"),
+            NodeBundle {
+                style: Style {
+                    display: Display::None,
+                    position_type: PositionType::Absolute,
+                    left: Val::Px(0.0),
+                    top: Val::Px(0.0),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            SelectedItemName::default(),
+            SelectedItemDescription::default(),
+            SelectedItemMaxQuantity::default(),
+            NetCredits::default(),
+            AmountSelected::default(),
+            PricePerUnit::default(),
+            ShopMode::Buy,
+        ))
+        .set_parent(ui_ent)
+        .id();
+
     let mut shop_entities = ShopEntities {
+        variables: ui_variables_entity,
         amount_max_text: Entity::PLACEHOLDER,
         amount_slider: Entity::PLACEHOLDER,
         amount_text_input: Entity::PLACEHOLDER,
@@ -152,23 +271,6 @@ fn render_shop_ui(
         item_stats_list: Entity::PLACEHOLDER,
         buy_sell_button: Entity::PLACEHOLDER,
     };
-
-    let amount_selected_entity = commands
-        .spawn((
-            NodeBundle {
-                style: Style {
-                    display: Display::None,
-                    position_type: PositionType::Absolute,
-                    left: Val::Px(0.0),
-                    top: Val::Px(0.0),
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            AmountSelected(0),
-        ))
-        .set_parent(ui_ent)
-        .id();
 
     commands
         .entity(ui_ent)
@@ -292,33 +394,47 @@ fn render_shop_ui(
                     ))
                     .with_children(|p| {
                         shop_entities.item_name_entity = p
-                            .spawn(TextBundle {
-                                text: Text::from_section("Select an item...", text_style.clone()),
-                                style: Style {
-                                    margin: UiRect {
-                                        bottom: Val::Px(10.0),
-                                        top: Val::Px(10.0),
+                            .spawn((
+                                Name::new("Item Name"),
+                                BindValues::<SelectedItemName>::new(vec![BindValue::new(
+                                    ui_variables_entity,
+                                    ReactableFields::Text { section: 0 },
+                                )]),
+                                TextBundle {
+                                    text: Text::from_section("Select an item...", text_style.clone()),
+                                    style: Style {
+                                        margin: UiRect {
+                                            bottom: Val::Px(10.0),
+                                            top: Val::Px(10.0),
+                                            ..Default::default()
+                                        },
                                         ..Default::default()
                                     },
                                     ..Default::default()
                                 },
-                                ..Default::default()
-                            })
+                            ))
                             .id();
 
                         shop_entities.item_description_entity = p
-                            .spawn(TextBundle {
-                                text: Text::from_section("", text_style_small.clone()),
-                                style: Style {
-                                    margin: UiRect {
-                                        bottom: Val::Px(30.0),
-                                        top: Val::Px(10.0),
+                            .spawn((
+                                Name::new("Description"),
+                                BindValues::<SelectedItemDescription>::new(vec![BindValue::new(
+                                    ui_variables_entity,
+                                    ReactableFields::Text { section: 0 },
+                                )]),
+                                TextBundle {
+                                    text: Text::from_section("", text_style_small.clone()),
+                                    style: Style {
+                                        margin: UiRect {
+                                            bottom: Val::Px(30.0),
+                                            top: Val::Px(10.0),
+                                            ..Default::default()
+                                        },
                                         ..Default::default()
                                     },
                                     ..Default::default()
                                 },
-                                ..Default::default()
-                            })
+                            ))
                             .id();
 
                         p.spawn(TextBundle {
@@ -559,14 +675,29 @@ fn render_shop_ui(
                     });
 
                     shop_entities.delta_money_text = p
-                        .spawn(TextBundle {
-                            text: Text::from_section("", text_style.clone()),
-                            style: Style {
-                                bottom: Val::Px(10.0),
+                        .spawn((
+                            BindValues::<PricePerUnit>::new(vec![BindValue::new(
+                                ui_variables_entity,
+                                ReactableFields::Text { section: 1 },
+                            )]),
+                            BindValues::<AmountSelected>::new(vec![BindValue::new(
+                                ui_variables_entity,
+                                ReactableFields::Text { section: 3 },
+                            )]),
+                            TextBundle {
+                                text: Text::from_sections([
+                                    TextSection::new("- ", text_style.clone()),
+                                    TextSection::new("", text_style.clone()),
+                                    TextSection::new(" x ", text_style.clone()),
+                                    TextSection::new("", text_style.clone()),
+                                ]),
+                                style: Style {
+                                    bottom: Val::Px(10.0),
+                                    ..Default::default()
+                                },
                                 ..Default::default()
                             },
-                            ..Default::default()
-                        })
+                        ))
                         .id();
 
                     p.spawn(NodeBundle {
@@ -587,10 +718,19 @@ fn render_shop_ui(
                     })
                     .with_children(|p| {
                         shop_entities.final_money_text = p
-                            .spawn(TextBundle {
-                                text: Text::from_section("", text_style.clone()),
-                                ..Default::default()
-                            })
+                            .spawn((
+                                BindValues::<NetCredits>::new(vec![BindValue::new(
+                                    ui_variables_entity,
+                                    ReactableFields::Text { section: 1 },
+                                )]),
+                                TextBundle {
+                                    text: Text::from_sections([
+                                        TextSection::new("$", text_style.clone()),
+                                        TextSection::new("", text_style.clone()),
+                                    ]),
+                                    ..Default::default()
+                                },
+                            ))
                             .id();
                     });
                 });
@@ -612,7 +752,8 @@ fn render_shop_ui(
                         shop_entities.amount_text_input = p
                             .spawn((
                                 Name::new("Amount Input"),
-                                BindValues::<AmountSelected>::new(vec![BindValue::new(amount_selected_entity, ReactableFields::Value)]),
+                                BindValues::<AmountSelected>::new(vec![BindValue::new(ui_variables_entity, ReactableFields::Value)]),
+                                BindValues::<SelectedItemMaxQuantity>::new(vec![BindValue::new(ui_variables_entity, ReactableFields::Max)]),
                                 TextInputBundle {
                                     node_bundle: NodeBundle {
                                         style: Style {
@@ -664,10 +805,16 @@ fn render_shop_ui(
                                 });
 
                                 shop_entities.amount_max_text = p
-                                    .spawn(TextBundle {
-                                        text: Text::from_section("", text_style_small.clone()),
-                                        ..Default::default()
-                                    })
+                                    .spawn((
+                                        BindValues::<SelectedItemMaxQuantity>::new(vec![BindValue::new(
+                                            ui_variables_entity,
+                                            ReactableFields::Text { section: 0 },
+                                        )]),
+                                        TextBundle {
+                                            text: Text::from_section("", text_style_small.clone()),
+                                            ..Default::default()
+                                        },
+                                    ))
                                     .id();
                             });
 
@@ -675,7 +822,11 @@ fn render_shop_ui(
                                 .spawn((
                                     Name::new("Amount slider"),
                                     ShopUiEntity(ui_ent),
-                                    BindValues::<AmountSelected>::new(vec![BindValue::new(amount_selected_entity, ReactableFields::Value)]),
+                                    BindValues::<AmountSelected>::new(vec![BindValue::new(ui_variables_entity, ReactableFields::Value)]),
+                                    BindValues::<SelectedItemMaxQuantity>::new(vec![BindValue::new(
+                                        ui_variables_entity,
+                                        ReactableFields::Max,
+                                    )]),
                                     SliderBundle {
                                         node_bundle: NodeBundle {
                                             style: Style { ..Default::default() },
@@ -798,168 +949,92 @@ fn click_item_event(
     }
 }
 
-fn on_change_slider_value(
-    q_shop_ui: Query<(&ShopUi, &ShopEntities)>,
-    mut q_slider_value: Query<(&mut SliderValue, &ShopUiEntity), Changed<SliderValue>>,
-    mut q_text: Query<&mut Text>,
-    mut q_text_input_value: Query<&mut InputValue>,
-    player_credits: Query<&Credits, With<LocalPlayer>>,
-) {
-    // for (mut slider_value, shop_ui_ent) in &mut q_slider_value {
-    //     let credits = player_credits.get_single().copied().unwrap_or_default();
-
-    //     let Ok((shop_ui, shop_entities)) = q_shop_ui.get(shop_ui_ent.0) else {
-    //         continue;
-    //     };
-
-    //     let val = slider_value.value();
-
-    //     let mut input_val = q_text_input_value.get_mut(shop_entities.amount_text_input).unwrap();
-
-    //     // it fails if the input field is blank, so set it
-    //     if input_val.value().parse::<i64>().unwrap_or(-1) != val {
-    //         input_val.set_value(format!("{}", val));
-    //     }
-
-    //     if let Some(selected_item) = &shop_ui.selected_item {
-    //         match selected_item.entry {
-    //             ShopEntry::Buying {
-    //                 item_id: _,
-    //                 max_quantity_buying: _,
-    //                 price_per,
-    //             } => {
-    //                 let buy_amount = val as u64;
-
-    //                 let final_amount = credits.amount() + price_per as u64 * buy_amount;
-
-    //                 if let Ok(mut text) = q_text.get_mut(shop_entities.delta_money_text) {
-    //                     text.sections[0].value = format!("+ ${price_per} x {buy_amount}");
-    //                 }
-
-    //                 if let Ok(mut text) = q_text.get_mut(shop_entities.final_money_text) {
-    //                     text.sections[0].value = format!("${final_amount}");
-    //                 }
-    //             }
-    //             ShopEntry::Selling {
-    //                 item_id: _,
-    //                 max_quantity_selling: _,
-    //                 price_per,
-    //             } => {
-    //                 let sell_amount = val as i64;
-
-    //                 let final_amount = credits.amount() as i64 - price_per as i64 * sell_amount;
-
-    //                 if let Ok(mut text) = q_text.get_mut(shop_entities.delta_money_text) {
-    //                     text.sections[0].value = format!("- ${price_per} x {sell_amount}");
-    //                 }
-
-    //                 if let Ok(mut text) = q_text.get_mut(shop_entities.final_money_text) {
-    //                     text.sections[0].value = format!("${final_amount}");
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }
-}
-
 fn on_change_selected_item(
     items: Res<Registry<Item>>,
     langs: Res<Lang<Item>>,
     q_shop_changed: Query<(&ShopUi, &ShopEntities), Changed<ShopUi>>,
-    mut q_text: Query<&mut Text>,
-    mut q_slider_value: Query<&mut SliderValue>,
-    mut q_slider: Query<&mut Slider>,
     player_credits: Query<&Credits, With<LocalPlayer>>,
+    mut vars: Query<(
+        &mut AmountSelected,
+        &mut SelectedItemName,
+        &mut SelectedItemDescription,
+        &mut SelectedItemMaxQuantity,
+        &mut NetCredits,
+        &mut PricePerUnit,
+        &mut ShopMode,
+    )>,
 ) {
     for (shop_ui, shop_entities) in &q_shop_changed {
+        let Some(selected_item) = &shop_ui.selected_item else {
+            continue;
+        };
+
         let credits = player_credits.get_single().copied().unwrap_or_default();
 
-        if let Some(selected_item) = &shop_ui.selected_item {
-            let item_id = match selected_item.entry {
-                ShopEntry::Buying {
-                    item_id,
-                    max_quantity_buying,
-                    price_per,
-                } => {
-                    let buy_amount = q_slider_value
-                        .get(shop_entities.amount_slider)
-                        .expect("Slider value missing")
-                        .value() as u64;
+        let Ok((
+            mut amount_selected,
+            mut selected_item_name,
+            mut selected_item_description,
+            mut selected_item_max_quantity,
+            mut net_credits,
+            mut shop_price_per,
+            mut shop_mode,
+        )) = vars.get_mut(shop_entities.variables)
+        else {
+            continue;
+        };
 
-                    let final_amount = credits.amount() - price_per as u64 * buy_amount;
+        amount_selected.0 = 0;
+        net_credits.0 = credits.amount() as i64;
 
-                    if let Ok(mut text) = q_text.get_mut(shop_entities.delta_money_text) {
-                        text.sections[0].value = format!("- ${price_per} x {buy_amount}");
-                    }
+        let item_id = match selected_item.entry {
+            ShopEntry::Buying {
+                item_id,
+                max_quantity_buying,
+                price_per,
+            } => {
+                selected_item_max_quantity.0 = max_quantity_buying.unwrap_or(10000);
+                shop_price_per.0 = price_per;
+                *shop_mode = ShopMode::Buy;
 
-                    if let Ok(mut text) = q_text.get_mut(shop_entities.final_money_text) {
-                        text.sections[0].value = format!("${final_amount}");
-                    }
-
-                    if let Ok(mut text) = q_text.get_mut(shop_entities.amount_max_text) {
-                        text.sections[0].value = max_quantity_buying.map(|x| format! {"{x}"}).unwrap_or("All".to_owned());
-                    }
-
-                    if let Ok(mut slider) = q_slider.get_mut(shop_entities.amount_slider) {
-                        let amt = max_quantity_buying.unwrap_or(10000);
-                        slider.max = amt as i64;
-                    }
-
-                    item_id
-                }
-                ShopEntry::Selling {
-                    item_id,
-                    max_quantity_selling,
-                    price_per,
-                } => {
-                    let sell_amount = q_slider_value
-                        .get(shop_entities.amount_slider)
-                        .expect("Slider value missing")
-                        .value() as u64;
-
-                    let final_amount = price_per as u64 * sell_amount + credits.amount();
-
-                    if let Ok(mut text) = q_text.get_mut(shop_entities.delta_money_text) {
-                        text.sections[0].value = format!("+ ${price_per} x {sell_amount}");
-                    }
-
-                    if let Ok(mut text) = q_text.get_mut(shop_entities.final_money_text) {
-                        text.sections[0].value = format!("${final_amount}");
-                    }
-
-                    if let Ok(mut text) = q_text.get_mut(shop_entities.amount_max_text) {
-                        text.sections[0].value = format!("{max_quantity_selling}");
-                    }
-
-                    if let Ok(mut slider) = q_slider.get_mut(shop_entities.amount_slider) {
-                        slider.max = max_quantity_selling as i64;
-
-                        let mut slider_value = q_slider_value.get_mut(shop_entities.amount_slider).expect("Should have this");
-                        let cur_val = slider_value.value();
-                        slider_value.set_value(cur_val.clamp(0, max_quantity_selling as i64));
-                    }
-
-                    item_id
-                }
-            };
-
-            let item = items.from_numeric_id(item_id);
-            let item_name = langs.get_name(item).unwrap_or(item.unlocalized_name());
-
-            if let Ok(mut text) = q_text.get_mut(shop_entities.item_name_entity) {
-                text.sections[0].value = item_name.to_owned();
+                item_id
             }
+            ShopEntry::Selling {
+                item_id,
+                max_quantity_selling,
+                price_per,
+            } => {
+                selected_item_max_quantity.0 = max_quantity_selling;
+                shop_price_per.0 = price_per;
+                *shop_mode = ShopMode::Sell;
 
-            if let Ok(mut text) = q_text.get_mut(shop_entities.item_description_entity) {
-                text.sections[0].value = format!("Description of {item_name}");
+                item_id
             }
+        };
 
-            if let Ok(mut text) = q_text.get_mut(shop_entities.item_stats_list) {
-                text.sections[0].value = format!("stats for {item_name}");
+        let item = items.from_numeric_id(item_id);
+        let item_name = langs.get_name(item).unwrap_or(item.unlocalized_name());
+
+        selected_item_name.0 = item_name.to_owned();
+        selected_item_description.0 = format!("Description for {item_name}");
+    }
+}
+
+fn update_total(
+    q_credits: Query<&Credits, With<LocalPlayer>>,
+    mut q_changed_amount_selected: Query<(&AmountSelected, &PricePerUnit, &ShopMode, &mut NetCredits), Changed<AmountSelected>>,
+) {
+    for (amount_selected, price_per_unit, shop_mode, mut net_credits) in q_changed_amount_selected.iter_mut() {
+        let Ok(credits) = q_credits.get_single() else {
+            continue;
+        };
+
+        match *shop_mode {
+            ShopMode::Buy => {
+                net_credits.0 = credits.amount() as i64 - (price_per_unit.0 as u64 * amount_selected.0) as i64;
             }
-
-            if let Ok(mut text) = q_text.get_mut(shop_entities.amount_text_input) {
-                text.sections[0].value = "".into();
+            ShopMode::Sell => {
+                net_credits.0 = credits.amount() as i64 + (price_per_unit.0 as u64 * amount_selected.0) as i64;
             }
         }
     }
@@ -967,6 +1042,13 @@ fn on_change_selected_item(
 
 pub(super) fn register(app: &mut App) {
     add_reactable_type::<AmountSelected>(app);
+    add_reactable_type::<AmountSelected>(app);
+    add_reactable_type::<SelectedItemName>(app);
+    add_reactable_type::<SelectedItemDescription>(app);
+    add_reactable_type::<SelectedItemMaxQuantity>(app);
+    add_reactable_type::<NetCredits>(app);
+    add_reactable_type::<PricePerUnit>(app);
+    add_reactable_type::<ShopMode>(app);
 
     register_button::<ClickSellTabEvent>(app);
     register_button::<ClickBuyTabEvent>(app);
@@ -980,12 +1062,18 @@ pub(super) fn register(app: &mut App) {
                 open_shop_ui,
                 click_item_event,
                 on_change_selected_item,
-                on_change_slider_value,
+                update_total,
                 render_shop_ui,
             )
                 .chain()
                 .after(NetworkingSystemsSet::FlushReceiveMessages)
                 .before(UiSystemSet::ApplyDeferredA),
         )
-        .register_type::<AmountSelected>();
+        .register_type::<AmountSelected>()
+        .register_type::<SelectedItemName>()
+        .register_type::<SelectedItemDescription>()
+        .register_type::<SelectedItemMaxQuantity>()
+        .register_type::<NetCredits>()
+        .register_type::<PricePerUnit>()
+        .register_type::<ShopMode>();
 }

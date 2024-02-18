@@ -72,7 +72,6 @@ fn listen_changes_to_reactors<T: ReactableValue>(
     for ent in q_changed_reactors.iter_mut() {
         for (bound_ent, bound_value) in q_bound_listeners.iter() {
             if bound_value.iter().any(|x| x.bound_entity == ent) {
-                // commands.entity(bound_ent).insert(NeedsValueFetched);
                 ev_writer.send(NeedsValueFetched(bound_ent));
             }
         }

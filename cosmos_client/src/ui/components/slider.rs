@@ -112,7 +112,11 @@ struct SliderProgressEntites {
 }
 
 fn slider_percent(slider: &Slider, value: &SliderValue) -> f32 {
-    (value.0 as f32 - slider.min as f32) / ((slider.max) - slider.min) as f32
+    if slider.max == slider.min {
+        1.0
+    } else {
+        (value.0 as f32 - slider.min as f32) / ((slider.max) - slider.min) as f32
+    }
 }
 
 const BASE_SQUARE_SIZE: f32 = 10.0;
