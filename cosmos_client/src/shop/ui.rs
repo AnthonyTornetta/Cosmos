@@ -6,11 +6,11 @@ use bevy::{
         component::Component,
         entity::Entity,
         event::{Event, EventReader},
-        query::{Added, Changed, With},
+        query::{Added, Changed, Or, With},
         schedule::IntoSystemConfigs,
         system::{Commands, Query, Res},
     },
-    hierarchy::BuildChildren,
+    hierarchy::{BuildChildren, DespawnRecursiveExt},
     log::error,
     reflect::Reflect,
     render::color::Color,
@@ -18,7 +18,7 @@ use bevy::{
     ui::{
         node_bundles::{NodeBundle, TextBundle},
         widget::Label,
-        Display, FlexDirection, JustifyContent, PositionType, Style, UiRect, Val,
+        BackgroundColor, FlexDirection, JustifyContent, Style, UiRect, Val,
     },
 };
 use cosmos_core::{
@@ -40,8 +40,8 @@ use crate::{
         components::{
             button::{register_button, Button, ButtonBundle, ButtonEvent, ButtonStyles},
             scollable_container::{ScrollBox, ScrollBundle},
-            slider::{Slider, SliderBundle, SliderValue},
-            text_input::{InputType, InputValue, TextInput, TextInputBundle},
+            slider::{Slider, SliderBundle},
+            text_input::{InputType, TextInput, TextInputBundle},
             window::{GuiWindow, WindowBundle},
         },
         reactivity::{add_reactable_type, BindValue, BindValues, ReactableFields, ReactableValue},
@@ -62,6 +62,19 @@ struct ShopUi {
 struct SelectedItemName(String);
 
 impl ReactableValue for SelectedItemName {
+    fn as_value(&self) -> String {
+        self.0.clone()
+    }
+
+    fn set_from_value(&mut self, new_value: &str) {
+        self.0 = new_value.to_owned();
+    }
+}
+
+#[derive(Reflect, Component, PartialEq, Eq, Default)]
+struct SearchItemQuery(String);
+
+impl ReactableValue for SearchItemQuery {
     fn as_value(&self) -> String {
         self.0.clone()
     }
@@ -169,6 +182,7 @@ struct ShopUiEntity(Entity);
 #[derive(Component)]
 struct ShopEntities {
     variables: Entity,
+    contents_entity: Entity,
 
     item_name_entity: Entity,
     item_description_entity: Entity,
@@ -207,8 +221,6 @@ fn render_shop_ui(
     mut commands: Commands,
     q_shop_ui: Query<(&ShopUi, Entity), Added<ShopUi>>,
     asset_server: Res<AssetServer>,
-    items: Res<Registry<Item>>,
-    lang: Res<Lang<Item>>,
     player_credits: Query<(Entity, &Credits), With<LocalPlayer>>,
 ) {
     let Ok((shop_ui, ui_ent)) = q_shop_ui.get_single() else {
@@ -234,32 +246,11 @@ fn render_shop_ui(
         font: asset_server.load("fonts/PixeloidSans.ttf"),
     };
 
-    let ui_variables_entity = commands
-        .spawn((
-            Name::new("UI variables"),
-            NodeBundle {
-                style: Style {
-                    display: Display::None,
-                    position_type: PositionType::Absolute,
-                    left: Val::Px(0.0),
-                    top: Val::Px(0.0),
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            SelectedItemName::default(),
-            SelectedItemDescription::default(),
-            SelectedItemMaxQuantity::default(),
-            NetCredits::default(),
-            AmountSelected::default(),
-            PricePerUnit::default(),
-            ShopMode::Buy,
-        ))
-        .set_parent(ui_ent)
-        .id();
+    let ui_variables_entity = ui_ent;
 
     let mut shop_entities = ShopEntities {
         variables: ui_variables_entity,
+        contents_entity: Entity::PLACEHOLDER,
         amount_max_text: Entity::PLACEHOLDER,
         amount_slider: Entity::PLACEHOLDER,
         amount_text_input: Entity::PLACEHOLDER,
@@ -274,33 +265,46 @@ fn render_shop_ui(
 
     commands
         .entity(ui_ent)
-        .insert(WindowBundle {
-            node_bundle: NodeBundle {
-                background_color: Color::hex("2D2D2D").unwrap().into(),
-                style: Style {
-                    width: Val::Px(1000.0),
-                    height: Val::Px(800.0),
-                    left: Val::Percent(51.0),
-                    margin: UiRect {
-                        // Centers it vertically
-                        top: Val::Auto,
-                        bottom: Val::Auto,
+        .insert((
+            SelectedItemName::default(),
+            SelectedItemDescription::default(),
+            SelectedItemMaxQuantity::default(),
+            NetCredits::default(),
+            AmountSelected::default(),
+            PricePerUnit::default(),
+            SearchItemQuery::default(),
+            ShopMode::Buy,
+        ))
+        .insert((
+            Name::new("Shop UI"),
+            WindowBundle {
+                node_bundle: NodeBundle {
+                    background_color: Color::hex("2D2D2D").unwrap().into(),
+                    style: Style {
+                        width: Val::Px(1000.0),
+                        height: Val::Px(800.0),
+                        left: Val::Percent(51.0),
+                        margin: UiRect {
+                            // Centers it vertically
+                            top: Val::Auto,
+                            bottom: Val::Auto,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                window: GuiWindow {
+                    title: name.into(),
+                    body_styles: Style {
+                        flex_direction: FlexDirection::Column,
                         ..Default::default()
                     },
                     ..Default::default()
                 },
                 ..Default::default()
             },
-            window: GuiWindow {
-                title: name.into(),
-                body_styles: Style {
-                    flex_direction: FlexDirection::Column,
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            ..Default::default()
-        })
+        ))
         .with_children(|p| {
             p.spawn(NodeBundle {
                 style: Style {
@@ -507,9 +511,11 @@ fn render_shop_ui(
 
                     body.spawn((
                         Name::new("Search Text Box"),
+                        BindValues::<SearchItemQuery>::new(vec![BindValue::new(ui_variables_entity, ReactableFields::Value)]),
                         TextInputBundle {
                             text_input: TextInput {
                                 style: text_style.clone(),
+                                input_type: InputType::Text { max_length: Some(20) },
                                 ..Default::default()
                             },
                             node_bundle: NodeBundle {
@@ -546,76 +552,19 @@ fn render_shop_ui(
                         },
                     ))
                     .with_children(|p| {
-                        p.spawn((
-                            Name::new("Contents"),
-                            NodeBundle {
-                                style: Style {
-                                    padding: UiRect::all(Val::Px(10.0)),
-                                    flex_direction: FlexDirection::Column,
-                                    ..Default::default()
-                                },
-                                ..Default::default()
-                            },
-                        ))
-                        .with_children(|p| {
-                            for shop_entry in &shop_ui.shop.contents {
-                                let ShopEntry::Selling {
-                                    item_id,
-                                    max_quantity_selling,
-                                    price_per: _,
-                                } = shop_entry
-                                else {
-                                    continue;
-                                };
-
-                                let item = items.from_numeric_id(*item_id);
-                                let display_name = lang.get_name(item).unwrap_or(item.unlocalized_name());
-
-                                p.spawn((
-                                    Name::new(display_name.to_owned()),
-                                    *shop_entry,
-                                    ShopUiEntity(ui_ent),
-                                    ButtonBundle::<ClickItemEvent> {
-                                        button: Button {
-                                            // text: Some((display_name.to_owned(), text_style_small.clone())),
-                                            ..Default::default()
-                                        },
-                                        node_bundle: NodeBundle {
-                                            style: Style {
-                                                flex_direction: FlexDirection::Row,
-                                                ..Default::default()
-                                            },
-                                            ..Default::default()
-                                        },
+                        shop_entities.contents_entity = p
+                            .spawn((
+                                Name::new("Contents"),
+                                NodeBundle {
+                                    style: Style {
+                                        padding: UiRect::all(Val::Px(10.0)),
+                                        flex_direction: FlexDirection::Column,
                                         ..Default::default()
                                     },
-                                ))
-                                .with_children(|p| {
-                                    p.spawn((
-                                        Name::new("Item Name"),
-                                        TextBundle {
-                                            text: Text::from_section(display_name, text_style_small.clone()),
-                                            style: Style {
-                                                flex_grow: 1.0,
-                                                ..Default::default()
-                                            },
-                                            ..Default::default()
-                                        },
-                                    ));
-                                    p.spawn((
-                                        Name::new("Quantity"),
-                                        TextBundle {
-                                            text: Text::from_section(format!("({max_quantity_selling})"), text_style_small.clone()),
-                                            ..Default::default()
-                                        },
-                                    ));
-                                });
-                            }
-                        });
-
-                        // for i in 0..100 {
-                        // p.spawn((TextBundle::from_section(format!("Item {i}"), text_style_small.clone()), Label));
-                        // }
+                                    ..Default::default()
+                                },
+                            ))
+                            .id();
                     });
                 });
             });
@@ -634,7 +583,19 @@ fn render_shop_ui(
             .with_children(|p| {
                 p.spawn(NodeBundle {
                     style: Style {
-                        flex_grow: 2.0,
+                        // WIERDNESS:
+                        width: Val::Percent(0.0),
+                        flex_grow: 4.0,
+                        /*
+                           Explanation:
+
+                           Idk why it works like this, but if I make width auto and flex_grow: 2.0 (which are what they are supposed to be),
+                           when the text changes its length the container width changes, which it shouldnt.
+
+                           However, by randomly guessing i found that a width of 0 and flex_grow of 4.0 (???) makes it look like
+                           flex_grow 2.0 and its width isn't effected by the size of the text. Idk why.
+                        */
+                        // END WEIRDNESS
                         flex_direction: FlexDirection::Column,
                         padding: UiRect {
                             bottom: Val::Px(10.0),
@@ -924,11 +885,15 @@ impl ButtonEvent for ClickItemEvent {
     }
 }
 
+#[derive(Component)]
+struct PrevClickedEntity(Entity);
+
 fn click_item_event(
     mut ev_reader: EventReader<ClickItemEvent>,
     q_shop_entry: Query<(&ShopEntry, &ShopUiEntity)>,
-    mut q_shop: Query<(&mut ShopUi, &ShopEntities)>,
-    mut q_slider_value: Query<&mut SliderValue>,
+    mut q_shop: Query<(&mut ShopUi, Option<&PrevClickedEntity>)>,
+    mut q_background_color: Query<&mut BackgroundColor>,
+    mut commands: Commands,
 ) {
     for ev in ev_reader.read() {
         let Ok((entry, shop_ui_ent)) = q_shop_entry.get(ev.0) else {
@@ -936,12 +901,17 @@ fn click_item_event(
             return;
         };
 
-        let Ok((mut shop_ui, shop_entities)) = q_shop.get_mut(shop_ui_ent.0) else {
+        let Ok((mut shop_ui, prev_clicked)) = q_shop.get_mut(shop_ui_ent.0) else {
             error!("Shop item button had invalid shop ui entity?");
             return;
         };
 
-        q_slider_value.get_mut(shop_entities.amount_slider).unwrap().set_value(0);
+        if let Some(prev_clicked) = &prev_clicked {
+            *q_background_color.get_mut(prev_clicked.0).expect("Missing background color!") = Color::NONE.into();
+        }
+
+        commands.entity(shop_ui_ent.0).insert(PrevClickedEntity(ev.0));
+        *q_background_color.get_mut(ev.0).expect("Missing background color!") = Color::AQUAMARINE.into();
 
         if shop_ui.selected_item.as_ref().map(|x| x.entry != *entry).unwrap_or(true) {
             shop_ui.selected_item = Some(SelectedItem { entry: *entry });
@@ -961,7 +931,6 @@ fn on_change_selected_item(
         &mut SelectedItemMaxQuantity,
         &mut NetCredits,
         &mut PricePerUnit,
-        &mut ShopMode,
     )>,
 ) {
     for (shop_ui, shop_entities) in &q_shop_changed {
@@ -978,7 +947,6 @@ fn on_change_selected_item(
             mut selected_item_max_quantity,
             mut net_credits,
             mut shop_price_per,
-            mut shop_mode,
         )) = vars.get_mut(shop_entities.variables)
         else {
             continue;
@@ -995,7 +963,6 @@ fn on_change_selected_item(
             } => {
                 selected_item_max_quantity.0 = max_quantity_buying.unwrap_or(10000);
                 shop_price_per.0 = price_per;
-                *shop_mode = ShopMode::Sell;
 
                 item_id
             }
@@ -1006,7 +973,6 @@ fn on_change_selected_item(
             } => {
                 selected_item_max_quantity.0 = max_quantity_selling;
                 shop_price_per.0 = price_per;
-                *shop_mode = ShopMode::Buy;
 
                 item_id
             }
@@ -1040,6 +1006,107 @@ fn update_total(
     }
 }
 
+fn update_search(
+    q_search: Query<(Entity, &ShopEntities, &ShopUi, &ShopMode, &SearchItemQuery), Or<(Changed<SearchItemQuery>, Changed<ShopMode>)>>,
+    mut commands: Commands,
+
+    asset_server: Res<AssetServer>,
+
+    items: Res<Registry<Item>>,
+    lang: Res<Lang<Item>>,
+) {
+    for (ui_ent, shop_ents, shop_ui, shop_mode, search_item_query) in &q_search {
+        let text_style_small = TextStyle {
+            color: Color::WHITE,
+            font_size: 24.0,
+            font: asset_server.load("fonts/PixeloidSans.ttf"),
+        };
+
+        commands.entity(shop_ents.contents_entity).despawn_descendants().with_children(|p| {
+            let search = search_item_query.0.to_lowercase();
+
+            for shop_entry in shop_ui.shop.contents.iter() {
+                let (item_id, max_quantity_selling) = match *shop_mode {
+                    ShopMode::Buy => {
+                        let ShopEntry::Selling {
+                            item_id,
+                            max_quantity_selling,
+                            price_per: _,
+                        } = shop_entry
+                        else {
+                            continue;
+                        };
+
+                        (*item_id, Some(*max_quantity_selling))
+                    }
+                    ShopMode::Sell => {
+                        let ShopEntry::Buying {
+                            item_id,
+                            max_quantity_buying,
+                            price_per: _,
+                        } = shop_entry
+                        else {
+                            continue;
+                        };
+
+                        (*item_id, *max_quantity_buying)
+                    }
+                };
+
+                let item = items.from_numeric_id(item_id);
+                let display_name = lang.get_name(item).unwrap_or(item.unlocalized_name());
+
+                if !display_name.to_lowercase().contains(&search) {
+                    continue;
+                }
+
+                let amount_display = if let Some(max_quantity_selling) = max_quantity_selling {
+                    format!("{max_quantity_selling}")
+                } else {
+                    "Unlimited".into()
+                };
+
+                p.spawn((
+                    Name::new(display_name.to_owned()),
+                    *shop_entry,
+                    ShopUiEntity(ui_ent),
+                    ButtonBundle::<ClickItemEvent> {
+                        button: Button { ..Default::default() },
+                        node_bundle: NodeBundle {
+                            style: Style {
+                                flex_direction: FlexDirection::Row,
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                ))
+                .with_children(|p| {
+                    p.spawn((
+                        Name::new("Item Name"),
+                        TextBundle {
+                            text: Text::from_section(display_name, text_style_small.clone()),
+                            style: Style {
+                                flex_grow: 1.0,
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                    ));
+                    p.spawn((
+                        Name::new("Quantity"),
+                        TextBundle {
+                            text: Text::from_section(format!("({amount_display})"), text_style_small.clone()),
+                            ..Default::default()
+                        },
+                    ));
+                });
+            }
+        });
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     add_reactable_type::<AmountSelected>(app);
     add_reactable_type::<AmountSelected>(app);
@@ -1049,6 +1116,7 @@ pub(super) fn register(app: &mut App) {
     add_reactable_type::<NetCredits>(app);
     add_reactable_type::<PricePerUnit>(app);
     add_reactable_type::<ShopMode>(app);
+    add_reactable_type::<SearchItemQuery>(app);
 
     register_button::<ClickSellTabEvent>(app);
     register_button::<ClickBuyTabEvent>(app);
@@ -1063,6 +1131,7 @@ pub(super) fn register(app: &mut App) {
                 click_item_event,
                 on_change_selected_item,
                 update_total,
+                update_search,
                 render_shop_ui,
             )
                 .chain()
@@ -1075,5 +1144,6 @@ pub(super) fn register(app: &mut App) {
         .register_type::<SelectedItemMaxQuantity>()
         .register_type::<NetCredits>()
         .register_type::<PricePerUnit>()
-        .register_type::<ShopMode>();
+        .register_type::<ShopMode>()
+        .register_type::<SearchItemQuery>();
 }
