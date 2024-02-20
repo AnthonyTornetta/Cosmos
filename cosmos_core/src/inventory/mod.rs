@@ -134,6 +134,39 @@ impl Inventory {
         Ok(())
     }
 
+    /// Returns true if there is enough space in this inventory to insert this itemstack.
+    pub fn can_insert_itemstack(&self, itemstack: &ItemStack) -> bool {
+        self.can_insert_raw(itemstack.item_id(), itemstack.max_stack_size(), itemstack.quantity())
+    }
+
+    /// Returns true if there is enough space in this inventory to insert an item of this quantity.
+    pub fn can_insert(&self, item: &Item, quantity: u16) -> bool {
+        self.can_insert_raw(item.id(), item.max_stack_size(), quantity)
+    }
+    /// Returns (the overflow that could not fit and the slot
+    pub fn can_insert_raw(&self, item_id: u16, max_stack_size: u16, mut quantity: u16) -> bool {
+        for is in &mut self.items.iter().flatten().filter(|x| x.item_id() == item_id) {
+            let delta = max_stack_size - is.quantity();
+            if delta >= quantity {
+                return true;
+            }
+
+            quantity -= delta;
+        }
+
+        // no suitable locations found with pre-existing stacks of that item, check for new ones
+
+        for _ in self.items.iter().filter(|x| x.is_none()) {
+            if max_stack_size >= quantity {
+                return true;
+            }
+
+            quantity -= max_stack_size;
+        }
+
+        false
+    }
+
     /// Returns the overflow that could not fit
     pub fn insert_itemstack(&mut self, itemstack: &ItemStack) -> u16 {
         self.insert_raw(itemstack.item_id(), itemstack.max_stack_size(), itemstack.quantity())

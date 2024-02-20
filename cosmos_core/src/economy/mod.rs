@@ -22,6 +22,15 @@ impl Credits {
     pub fn set_amount(&mut self, amount: u64) {
         self.0 = amount;
     }
+
+    pub fn decrease(&mut self, amount: u64) -> bool {
+        if self.0 < amount {
+            false
+        } else {
+            self.0 -= amount;
+            true
+        }
+    }
 }
 
 impl Display for Credits {

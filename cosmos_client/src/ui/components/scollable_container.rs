@@ -10,7 +10,7 @@ use bevy::{
         component::Component,
         entity::Entity,
         event::EventReader,
-        query::{Added, With},
+        query::{Added, With, Without},
         schedule::{apply_deferred, IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
         system::{Commands, Query, Res},
     },
@@ -29,6 +29,8 @@ use bevy::{
 };
 
 use crate::ui::UiSystemSet;
+
+use super::Disabled;
 
 #[derive(Component, Default, Debug)]
 /// Put content you want to scroll through as a child of this
@@ -169,14 +171,17 @@ fn on_add_scrollbar(mut commands: Commands, mut q_added_button: Query<(Entity, &
 
 fn on_interact_slider(
     mut mouse_wheel_events: EventReader<MouseWheel>,
-    mut q_scroll_containers: Query<(
-        &mut ScrollBox,
-        &Interaction,
-        &Node,
-        &ContentsContainer,
-        &ScrollbarEntity,
-        &GlobalTransform,
-    )>,
+    mut q_scroll_containers: Query<
+        (
+            &mut ScrollBox,
+            &Interaction,
+            &Node,
+            &ContentsContainer,
+            &ScrollbarEntity,
+            &GlobalTransform,
+        ),
+        Without<Disabled>,
+    >,
     mut q_container: Query<(&mut Style, &Node)>,
     input: Res<Input<KeyCode>>,
     scale: Res<UiScale>,

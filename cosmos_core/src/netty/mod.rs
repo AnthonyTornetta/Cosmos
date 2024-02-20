@@ -57,6 +57,8 @@ pub enum NettyChannelClient {
     Unreliable,
     /// used for inventories
     Inventory,
+    /// Used for shops
+    Shop,
 }
 
 impl From<NettyChannelClient> for u8 {
@@ -65,6 +67,7 @@ impl From<NettyChannelClient> for u8 {
             NettyChannelClient::Reliable => 0,
             NettyChannelClient::Unreliable => 1,
             NettyChannelClient::Inventory => 2,
+            NettyChannelClient::Shop => 3,
         }
     }
 }
@@ -90,6 +93,13 @@ impl NettyChannelClient {
             },
             ChannelConfig {
                 channel_id: Self::Inventory.into(),
+                max_memory_usage_bytes: 5 * MB,
+                send_type: SendType::ReliableOrdered {
+                    resend_time: Duration::from_millis(200),
+                },
+            },
+            ChannelConfig {
+                channel_id: Self::Shop.into(),
                 max_memory_usage_bytes: 5 * MB,
                 send_type: SendType::ReliableOrdered {
                     resend_time: Duration::from_millis(200),

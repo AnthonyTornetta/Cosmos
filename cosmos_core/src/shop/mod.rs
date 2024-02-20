@@ -1,6 +1,10 @@
 use bevy::{app::App, ecs::component::Component, reflect::Reflect};
 use serde::{Deserialize, Serialize};
 
+use crate::economy::Credits;
+
+use self::netty::ShopPurchaseError;
+
 pub mod netty;
 
 #[derive(Debug, Serialize, Deserialize, Reflect, Component, Clone, Copy, PartialEq, Eq)]
@@ -17,10 +21,43 @@ pub enum ShopEntry {
     },
 }
 
-#[derive(Debug, Serialize, Deserialize, Reflect, Default)]
+#[derive(Debug, Serialize, Deserialize, Reflect, Default, Component, Clone)]
 pub struct Shop {
     pub name: String,
     pub contents: Vec<ShopEntry>,
+}
+
+impl Shop {
+    pub fn buy(&mut self, item_id: u16, quantity: u32, credits: &mut Credits) -> Result<u32, ShopPurchaseError> {
+        for entry in self.contents.iter_mut() {
+            match entry {
+                ShopEntry::Selling {
+                    item_id: entry_id,
+                    max_quantity_selling,
+                    price_per,
+                } => {
+                    if *entry_id == item_id {
+                        let cost = *price_per as u64 * quantity as u64;
+
+                        if *max_quantity_selling < quantity {
+                            return Err(ShopPurchaseError::NoStock(self.clone()));
+                        }
+
+                        if !credits.decrease(cost) {
+                            return Err(ShopPurchaseError::InsufficientFunds);
+                        }
+
+                        *max_quantity_selling -= quantity;
+
+                        return Ok(quantity);
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        Err(ShopPurchaseError::NoStock(self.clone()))
+    }
 }
 
 pub(super) fn register(app: &mut App) {

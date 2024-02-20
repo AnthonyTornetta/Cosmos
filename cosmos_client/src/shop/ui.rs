@@ -7,11 +7,11 @@ use bevy::{
         entity::Entity,
         event::{Event, EventReader},
         query::{Added, Changed, Or, With},
-        schedule::IntoSystemConfigs,
-        system::{Commands, Query, Res},
+        schedule::{common_conditions::in_state, IntoSystemConfigs},
+        system::{Commands, Query, Res, ResMut},
     },
     hierarchy::{BuildChildren, DespawnRecursiveExt},
-    log::error,
+    log::{error, info},
     reflect::Reflect,
     render::color::Color,
     text::{Text, TextSection, TextStyle},
@@ -21,6 +21,7 @@ use bevy::{
         BackgroundColor, FlexDirection, JustifyContent, Style, UiRect, Val,
     },
 };
+use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     economy::Credits,
     ecs::{
@@ -28,14 +29,16 @@ use cosmos_core::{
         NeedsDespawned,
     },
     item::Item,
-    netty::system_sets::NetworkingSystemsSet,
+    netty::{cosmos_encoder, system_sets::NetworkingSystemsSet, NettyChannelClient},
     registry::{identifiable::Identifiable, Registry},
-    shop::{Shop, ShopEntry},
+    shop::{netty::ClientShopMessages, Shop, ShopEntry},
+    structure::structure_block::StructureBlock,
 };
 
 use crate::{
     lang::Lang,
     netty::flags::LocalPlayer,
+    state::game_state::GameState,
     ui::{
         components::{
             button::{register_button, Button, ButtonBundle, ButtonEvent, ButtonStyles},
@@ -43,18 +46,30 @@ use crate::{
             slider::{Slider, SliderBundle},
             text_input::{InputType, TextInput, TextInputBundle},
             window::{GuiWindow, WindowBundle},
+            Disabled,
         },
         reactivity::{add_reactable_type, BindValue, BindValues, ReactableFields, ReactableValue},
         UiSystemSet,
     },
 };
 
-#[derive(Event)]
-pub(super) struct OpenShopUiEvent(pub Shop);
+use super::PurchasedEvent;
 
-#[derive(Component)]
+#[derive(Event)]
+pub(super) struct OpenShopUiEvent {
+    pub shop: Shop,
+    pub structure_entity: Entity,
+    pub structure_block: StructureBlock,
+}
+
+#[derive(Component, Debug)]
 struct ShopUi {
     shop: Shop,
+    structure_block: StructureBlock,
+    /// # ⚠️ WARNING ⚠️
+    ///
+    /// This refers to the server's entity NOT the client's
+    structure_entity: Entity,
     selected_item: Option<SelectedItem>,
 }
 
@@ -188,7 +203,6 @@ struct ShopEntities {
     item_description_entity: Entity,
     item_stats_list: Entity,
 
-    amount_text_input: Entity,
     amount_slider: Entity,
     amount_max_text: Entity,
 
@@ -199,21 +213,26 @@ struct ShopEntities {
     buy_sell_button: Entity,
 }
 
+#[derive(Debug)]
 struct SelectedItem {
     entry: ShopEntry,
 }
 
 fn open_shop_ui(mut commands: Commands, mut ev_reader: EventReader<MutEvent<OpenShopUiEvent>>, q_open_shops: Query<Entity, With<ShopUi>>) {
     for ev in ev_reader.read() {
-        let shop = std::mem::take(&mut ev.write().0);
-
-        println!("Display: {shop:?}");
+        let mut ev = ev.write();
+        let shop = std::mem::take(&mut ev.shop);
 
         for ent in q_open_shops.iter() {
             commands.entity(ent).insert(NeedsDespawned);
         }
 
-        commands.spawn(ShopUi { shop, selected_item: None });
+        commands.spawn(ShopUi {
+            shop,
+            selected_item: None,
+            structure_block: ev.structure_block,
+            structure_entity: ev.structure_entity,
+        });
     }
 }
 
@@ -253,7 +272,6 @@ fn render_shop_ui(
         contents_entity: Entity::PLACEHOLDER,
         amount_max_text: Entity::PLACEHOLDER,
         amount_slider: Entity::PLACEHOLDER,
-        amount_text_input: Entity::PLACEHOLDER,
         current_money_text: Entity::PLACEHOLDER,
         delta_money_text: Entity::PLACEHOLDER,
         final_money_text: Entity::PLACEHOLDER,
@@ -283,11 +301,12 @@ fn render_shop_ui(
                     style: Style {
                         width: Val::Px(1000.0),
                         height: Val::Px(800.0),
-                        left: Val::Percent(51.0),
                         margin: UiRect {
                             // Centers it vertically
                             top: Val::Auto,
                             bottom: Val::Auto,
+                            left: Val::Auto,
+                            right: Val::Auto,
                             ..Default::default()
                         },
                         ..Default::default()
@@ -329,26 +348,29 @@ fn render_shop_ui(
                     ..Default::default()
                 });
 
-                p.spawn(ButtonBundle::<ClickBuyTabEvent> {
-                    node_bundle: NodeBundle {
-                        style: Style {
-                            flex_grow: 1.0,
+                p.spawn((
+                    ShopUiEntity(ui_ent),
+                    ButtonBundle::<ClickBuyTabEvent> {
+                        node_bundle: NodeBundle {
+                            style: Style {
+                                flex_grow: 1.0,
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        button: Button {
+                            button_styles: Some(ButtonStyles {
+                                background_color: Color::hex("008000").unwrap(),
+                                hover_background_color: Color::DARK_GREEN,
+                                press_background_color: Color::DARK_GREEN,
+                                ..Default::default()
+                            }),
+                            text: Some(("Buy".into(), text_style.clone())),
                             ..Default::default()
                         },
                         ..Default::default()
                     },
-                    button: Button {
-                        button_styles: Some(ButtonStyles {
-                            background_color: Color::GREEN,
-                            hover_background_color: Color::DARK_GREEN,
-                            press_background_color: Color::DARK_GREEN,
-                            ..Default::default()
-                        }),
-                        text: Some(("Buy".into(), text_style.clone())),
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                });
+                ));
             });
 
             p.spawn((
@@ -647,7 +669,7 @@ fn render_shop_ui(
                             )]),
                             TextBundle {
                                 text: Text::from_sections([
-                                    TextSection::new("- ", text_style.clone()),
+                                    TextSection::new("- $", text_style.clone()),
                                     TextSection::new("", text_style.clone()),
                                     TextSection::new(" x ", text_style.clone()),
                                     TextSection::new("", text_style.clone()),
@@ -710,31 +732,29 @@ fn render_shop_ui(
                         ..Default::default()
                     })
                     .with_children(|p| {
-                        shop_entities.amount_text_input = p
-                            .spawn((
-                                Name::new("Amount Input"),
-                                BindValues::<AmountSelected>::new(vec![BindValue::new(ui_variables_entity, ReactableFields::Value)]),
-                                BindValues::<SelectedItemMaxQuantity>::new(vec![BindValue::new(ui_variables_entity, ReactableFields::Max)]),
-                                TextInputBundle {
-                                    node_bundle: NodeBundle {
-                                        style: Style {
-                                            width: Val::Px(250.0),
-                                            padding: UiRect::all(Val::Px(10.0)),
-                                            ..Default::default()
-                                        },
-                                        border_color: Color::hex("111111").unwrap().into(),
-                                        background_color: Color::hex("555555").unwrap().into(),
+                        p.spawn((
+                            Name::new("Amount Input"),
+                            BindValues::<AmountSelected>::new(vec![BindValue::new(ui_variables_entity, ReactableFields::Value)]),
+                            BindValues::<SelectedItemMaxQuantity>::new(vec![BindValue::new(ui_variables_entity, ReactableFields::Max)]),
+                            TextInputBundle {
+                                node_bundle: NodeBundle {
+                                    style: Style {
+                                        width: Val::Px(250.0),
+                                        padding: UiRect::all(Val::Px(10.0)),
                                         ..Default::default()
                                     },
-                                    text_input: TextInput {
-                                        input_type: InputType::Integer { min: 0, max: 1000 },
-                                        style: text_style.clone(),
-                                        ..Default::default()
-                                    },
+                                    border_color: Color::hex("111111").unwrap().into(),
+                                    background_color: Color::hex("555555").unwrap().into(),
                                     ..Default::default()
                                 },
-                            ))
-                            .id();
+                                text_input: TextInput {
+                                    input_type: InputType::Integer { min: 0, max: 1000 },
+                                    style: text_style.clone(),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                        ));
 
                         p.spawn(NodeBundle {
                             style: Style {
@@ -809,27 +829,30 @@ fn render_shop_ui(
                     });
 
                     shop_entities.buy_sell_button = p
-                        .spawn(ButtonBundle::<BuyBtnEvent> {
-                            node_bundle: NodeBundle {
-                                style: Style {
-                                    margin: UiRect::top(Val::Px(10.0)),
-                                    height: Val::Px(80.0),
+                        .spawn((
+                            BuyButton { shop_entity: ui_ent },
+                            ButtonBundle::<BuyBtnEvent> {
+                                node_bundle: NodeBundle {
+                                    style: Style {
+                                        margin: UiRect::top(Val::Px(10.0)),
+                                        height: Val::Px(80.0),
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                button: Button {
+                                    text: Some(("BUY".into(), text_style.clone())),
+                                    button_styles: Some(ButtonStyles {
+                                        background_color: Color::hex("008000").unwrap(),
+                                        hover_background_color: Color::DARK_GREEN,
+                                        press_background_color: Color::DARK_GREEN,
+                                        ..Default::default()
+                                    }),
                                     ..Default::default()
                                 },
                                 ..Default::default()
                             },
-                            button: Button {
-                                text: Some(("BUY".into(), text_style.clone())),
-                                button_styles: Some(ButtonStyles {
-                                    background_color: Color::GREEN,
-                                    hover_background_color: Color::DARK_GREEN,
-                                    press_background_color: Color::DARK_GREEN,
-                                    ..Default::default()
-                                }),
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        })
+                        ))
                         .id();
                 });
             });
@@ -837,7 +860,6 @@ fn render_shop_ui(
 
     debug_assert!(shop_entities.amount_max_text != Entity::PLACEHOLDER);
     debug_assert!(shop_entities.amount_slider != Entity::PLACEHOLDER);
-    debug_assert!(shop_entities.amount_text_input != Entity::PLACEHOLDER);
     debug_assert!(shop_entities.current_money_text != Entity::PLACEHOLDER);
     debug_assert!(shop_entities.delta_money_text != Entity::PLACEHOLDER);
     debug_assert!(shop_entities.final_money_text != Entity::PLACEHOLDER);
@@ -867,12 +889,17 @@ impl ButtonEvent for ClickBuyTabEvent {
     }
 }
 
+#[derive(Component)]
+struct BuyButton {
+    shop_entity: Entity,
+}
+
 #[derive(Event, Debug)]
-struct BuyBtnEvent {}
+struct BuyBtnEvent(Entity);
 
 impl ButtonEvent for BuyBtnEvent {
-    fn create_event(_: Entity) -> Self {
-        Self {}
+    fn create_event(entity: Entity) -> Self {
+        Self(entity)
     }
 }
 
@@ -907,11 +934,15 @@ fn click_item_event(
         };
 
         if let Some(prev_clicked) = &prev_clicked {
-            *q_background_color.get_mut(prev_clicked.0).expect("Missing background color!") = Color::NONE.into();
+            if let Ok(mut background_color) = q_background_color.get_mut(prev_clicked.0) {
+                *background_color = Color::NONE.into();
+            }
         }
 
         commands.entity(shop_ui_ent.0).insert(PrevClickedEntity(ev.0));
-        *q_background_color.get_mut(ev.0).expect("Missing background color!") = Color::AQUAMARINE.into();
+        if let Ok(mut background_color) = q_background_color.get_mut(ev.0) {
+            *background_color = Color::AQUAMARINE.into();
+        }
 
         if shop_ui.selected_item.as_ref().map(|x| x.entry != *entry).unwrap_or(true) {
             shop_ui.selected_item = Some(SelectedItem { entry: *entry });
@@ -923,13 +954,11 @@ fn on_change_selected_item(
     items: Res<Registry<Item>>,
     langs: Res<Lang<Item>>,
     q_shop_changed: Query<(&ShopUi, &ShopEntities), Changed<ShopUi>>,
-    player_credits: Query<&Credits, With<LocalPlayer>>,
     mut vars: Query<(
         &mut AmountSelected,
         &mut SelectedItemName,
         &mut SelectedItemDescription,
         &mut SelectedItemMaxQuantity,
-        &mut NetCredits,
         &mut PricePerUnit,
     )>,
 ) {
@@ -938,22 +967,16 @@ fn on_change_selected_item(
             continue;
         };
 
-        let credits = player_credits.get_single().copied().unwrap_or_default();
-
         let Ok((
             mut amount_selected,
             mut selected_item_name,
             mut selected_item_description,
             mut selected_item_max_quantity,
-            mut net_credits,
             mut shop_price_per,
         )) = vars.get_mut(shop_entities.variables)
         else {
             continue;
         };
-
-        amount_selected.0 = 0;
-        net_credits.0 = credits.amount() as i64;
 
         let item_id = match selected_item.entry {
             ShopEntry::Buying {
@@ -977,6 +1000,8 @@ fn on_change_selected_item(
                 item_id
             }
         };
+
+        amount_selected.0 = amount_selected.0.min(selected_item_max_quantity.0 as u64);
 
         let item = items.from_numeric_id(item_id);
         let item_name = langs.get_name(item).unwrap_or(item.unlocalized_name());
@@ -1107,6 +1132,94 @@ fn update_search(
     }
 }
 
+fn enable_buy_button(
+    mut commands: Commands,
+    mut q_shop_ui: Query<&mut ShopUi>,
+    q_buy_button: Query<(Entity, &BuyButton), With<Button<BuyBtnEvent>>>,
+    mut ev_reader: EventReader<PurchasedEvent>,
+) {
+    for ev in ev_reader.read() {
+        for (entity, buy_button) in q_buy_button.iter() {
+            let Ok(mut shop_ui) = q_shop_ui.get_mut(buy_button.shop_entity) else {
+                continue;
+            };
+
+            if shop_ui.structure_entity == ev.structure_entity && shop_ui.structure_block.coords() == ev.shop_block {
+                match &ev.details {
+                    Ok(shop) => {
+                        shop_ui.shop = shop.clone();
+                        info!("Purchase successful!");
+                    }
+                    Err(err) => {
+                        info!("{err:?}");
+                    }
+                };
+
+                commands.entity(entity).remove::<Disabled>();
+            }
+        }
+    }
+}
+
+fn on_buy(
+    mut commands: Commands,
+    mut client: ResMut<RenetClient>,
+    q_shop_ui: Query<(&ShopUi, &AmountSelected)>,
+    q_buy_button: Query<&BuyButton>,
+    mut ev_reader: EventReader<BuyBtnEvent>,
+) {
+    for ev in ev_reader.read() {
+        let Ok(buy_button) = q_buy_button.get(ev.0) else {
+            error!("Buy button event missing buy button entity");
+            continue;
+        };
+
+        let Ok((shop_ui, amount_selected)) = q_shop_ui.get(buy_button.shop_entity) else {
+            continue;
+        };
+
+        let Some(selected_item) = &shop_ui.selected_item else {
+            continue;
+        };
+
+        // Prevent accidental duplicate purchases
+        commands.entity(ev.0).insert(Disabled);
+
+        match selected_item.entry {
+            ShopEntry::Buying {
+                item_id,
+                max_quantity_buying: _,
+                price_per: _,
+            } => {
+                client.send_message(
+                    NettyChannelClient::Shop,
+                    cosmos_encoder::serialize(&ClientShopMessages::Sell {
+                        shop_block: shop_ui.structure_block.coords(),
+                        structure_entity: shop_ui.structure_entity,
+                        item_id,
+                        quantity: amount_selected.0 as u32,
+                    }),
+                );
+            }
+            ShopEntry::Selling {
+                item_id,
+                max_quantity_selling: _,
+                price_per: _,
+            } => {
+                client.send_message(
+                    NettyChannelClient::Shop,
+                    cosmos_encoder::serialize(&ClientShopMessages::Buy {
+                        shop_block: shop_ui.structure_block.coords(),
+                        structure_entity: shop_ui.structure_entity,
+                        item_id,
+                        quantity: amount_selected.0 as u32,
+                    }),
+                );
+            }
+        }
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     add_reactable_type::<AmountSelected>(app);
     add_reactable_type::<AmountSelected>(app);
@@ -1133,10 +1246,13 @@ pub(super) fn register(app: &mut App) {
                 update_total,
                 update_search,
                 render_shop_ui,
+                enable_buy_button,
+                on_buy,
             )
                 .chain()
                 .after(NetworkingSystemsSet::FlushReceiveMessages)
-                .before(UiSystemSet::ApplyDeferredA),
+                .before(UiSystemSet::ApplyDeferredA)
+                .run_if(in_state(GameState::Playing)),
         )
         .register_type::<AmountSelected>()
         .register_type::<SelectedItemName>()

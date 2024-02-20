@@ -10,7 +10,7 @@ use bevy::{
         component::Component,
         entity::Entity,
         event::{Event, EventWriter},
-        query::{Added, Changed},
+        query::{Added, Changed, Without},
         schedule::{apply_deferred, IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
         system::{Commands, Query},
     },
@@ -24,6 +24,8 @@ use bevy::{
 };
 
 use crate::ui::UiSystemSet;
+
+use super::Disabled;
 
 /// An event that will be created and sent when a button is interacted with
 pub trait ButtonEvent: Sized + Event + std::fmt::Debug {
@@ -145,7 +147,10 @@ fn on_add_button<T: ButtonEvent>(
 
 fn on_interact_button<T: ButtonEvent>(
     mut ev_writer: EventWriter<T>,
-    mut q_added_button: Query<(Entity, &Interaction, &mut Button<T>, &mut BackgroundColor, &Children), Changed<Interaction>>,
+    mut q_added_button: Query<
+        (Entity, &Interaction, &mut Button<T>, &mut BackgroundColor, &Children),
+        (Changed<Interaction>, Without<Disabled>),
+    >,
     mut q_text: Query<&mut Text>,
 ) {
     for (btn_entity, interaction, mut button, mut bg_color, children) in q_added_button.iter_mut() {

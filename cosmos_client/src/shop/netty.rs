@@ -11,13 +11,18 @@ use cosmos_core::{
     ecs::mut_events::MutEvent,
     netty::{cosmos_encoder, system_sets::NetworkingSystemsSet, NettyChannelServer},
     shop::netty::ServerShopMessages,
+    structure::structure_block::StructureBlock,
 };
 
 use crate::state::game_state::GameState;
 
-use super::ui::OpenShopUiEvent;
+use super::{ui::OpenShopUiEvent, PurchasedEvent};
 
-fn listen_netty(mut client: ResMut<RenetClient>, mut ev_writer: EventWriter<MutEvent<OpenShopUiEvent>>) {
+fn listen_netty(
+    mut client: ResMut<RenetClient>,
+    mut ev_writer_open_shop_ui: EventWriter<MutEvent<OpenShopUiEvent>>,
+    mut ev_writer_purchased: EventWriter<PurchasedEvent>,
+) {
     while let Some(message) = client.receive_message(NettyChannelServer::Shop) {
         let msg: ServerShopMessages = cosmos_encoder::deserialize(&message).expect("Bad shop message");
 
@@ -27,7 +32,14 @@ fn listen_netty(mut client: ResMut<RenetClient>, mut ev_writer: EventWriter<MutE
                 structure_entity,
                 shop_data,
             } => {
-                ev_writer.send(OpenShopUiEvent(shop_data).into());
+                ev_writer_open_shop_ui.send(
+                    OpenShopUiEvent {
+                        shop: shop_data,
+                        structure_block: StructureBlock::new(shop_block),
+                        structure_entity,
+                    }
+                    .into(),
+                );
             }
             ServerShopMessages::ShopContents {
                 shop_block,
@@ -35,6 +47,17 @@ fn listen_netty(mut client: ResMut<RenetClient>, mut ev_writer: EventWriter<MutE
                 shop_data,
             } => {
                 todo!();
+            }
+            ServerShopMessages::Purchase {
+                shop_block,
+                structure_entity,
+                details,
+            } => {
+                ev_writer_purchased.send(PurchasedEvent {
+                    details,
+                    shop_block,
+                    structure_entity,
+                });
             }
         }
     }

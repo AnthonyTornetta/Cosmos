@@ -51,3 +51,4 @@ lz4_flex = { workspace = true }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
 bitflags = { workspace = true }
+derive_more = { workspace = true }

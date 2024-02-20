@@ -9,7 +9,7 @@ use bevy::{
         change_detection::DetectChanges,
         component::Component,
         entity::Entity,
-        query::{Added, Changed, With},
+        query::{Added, Changed, With, Without},
         schedule::{apply_deferred, IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
         system::{Commands, Query, Res},
         world::Ref,
@@ -23,6 +23,8 @@ use bevy::{
 };
 
 use crate::ui::UiSystemSet;
+
+use super::Disabled;
 
 #[derive(Component, Debug, Reflect)]
 /// A UI component that is used to select a number between a range of values using a slider.
@@ -197,18 +199,21 @@ fn on_add_slider(mut commands: Commands, mut q_added_button: Query<(Entity, &mut
 
 fn on_interact_slider(
     ui_scale: Res<UiScale>,
-    mut q_added_button: Query<(
-        Ref<Interaction>,
-        &Slider,
-        &mut SliderValue,
-        &Node,
-        &GlobalTransform,
-        &SliderProgressEntites,
-    )>,
+    mut q_sliders: Query<
+        (
+            Ref<Interaction>,
+            &Slider,
+            &mut SliderValue,
+            &Node,
+            &GlobalTransform,
+            &SliderProgressEntites,
+        ),
+        Without<Disabled>,
+    >,
     mut q_bg_color: Query<&mut BackgroundColor>,
     q_windows: Query<&Window, With<PrimaryWindow>>,
 ) {
-    for (interaction, slider, mut slider_value, node, g_trans, progress_entities) in q_added_button.iter_mut() {
+    for (interaction, slider, mut slider_value, node, g_trans, progress_entities) in q_sliders.iter_mut() {
         if *interaction == Interaction::Pressed {
             let Ok(window) = q_windows.get_single() else {
                 continue;
