@@ -232,7 +232,7 @@ fn on_interact_slider(
             } else if cursor_pos.x >= slider_bounds.max.x {
                 slider.max
             } else {
-                (((cursor_pos.x - slider_bounds.min.x) as f32 / (slider_bounds.max.x - slider_bounds.min.x) as f32)
+                (((cursor_pos.x - slider_bounds.min.x) / (slider_bounds.max.x - slider_bounds.min.x))
                     * ((slider.max) as f32 - slider.min as f32)
                     + slider.min as f32)
                     .round() as i64

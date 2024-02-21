@@ -94,7 +94,7 @@ fn on_update_text_value<T: ReactableValue>(
                     continue;
                 };
 
-                let num_as_str = format!("{}", text_input_value.value());
+                let num_as_str = text_input_value.value().to_string();
 
                 if react_value.as_value() != num_as_str {
                     react_value.set_from_value(&num_as_str);

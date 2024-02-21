@@ -342,10 +342,8 @@ fn flash_cursor(
         if text.sections[1].style.color != text_input.style.color {
             text.sections[1].style.color = text_input.style.color;
         }
-    } else if !text.sections[1].value.is_empty() {
-        if text.sections[1].style.color != Color::NONE {
-            text.sections[1].style.color = Color::NONE;
-        }
+    } else if !text.sections[1].value.is_empty() && text.sections[1].style.color != Color::NONE {
+        text.sections[1].style.color = Color::NONE;
     }
 
     cursor_flash_time.0 += time.delta_seconds();

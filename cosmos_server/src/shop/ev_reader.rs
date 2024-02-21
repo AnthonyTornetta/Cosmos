@@ -141,7 +141,7 @@ fn get_shop(
 
     // let mut shop = q_shop_data.get_mut(block_data).ok()?;
 
-    Some(generate_fake_shop(&items))
+    Some(generate_fake_shop(items))
 }
 
 fn listen_sell_events(

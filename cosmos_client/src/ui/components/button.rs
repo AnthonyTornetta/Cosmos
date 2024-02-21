@@ -212,8 +212,7 @@ fn on_change_button<T: ButtonEvent>(
                     Interaction::None => btn_styles.foreground_color,
                     Interaction::Hovered => btn_styles.hover_foreground_color,
                     Interaction::Pressed => btn_styles.press_foreground_color,
-                }
-                .into();
+                };
             }
         }
 
@@ -241,7 +240,7 @@ fn on_change_button<T: ButtonEvent>(
                     continue;
                 };
 
-                if let Some(text_section) = text.sections.get(0) {
+                if let Some(text_section) = text.sections.first() {
                     let same_text_style = text_section.style.color == text_style.color
                         && text_section.style.font_size == text_style.font_size
                         && text_section.style.font == text_style.font;
