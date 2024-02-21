@@ -191,6 +191,19 @@ impl ReactableValue for ShopMode {
     }
 }
 
+#[derive(Reflect, Component, PartialEq, Eq, Default)]
+struct ShopModeSign(String);
+
+impl ReactableValue for ShopModeSign {
+    fn as_value(&self) -> String {
+        self.0.clone()
+    }
+
+    fn set_from_value(&mut self, new_value: &str) {
+        self.0 = new_value.to_owned();
+    }
+}
+
 #[derive(Component)]
 struct ShopUiEntity(Entity);
 
@@ -291,6 +304,7 @@ fn render_shop_ui(
             AmountSelected::default(),
             PricePerUnit::default(),
             SearchItemQuery::default(),
+            ShopModeSign("- $".into()),
             ShopMode::Buy,
         ))
         .insert((
@@ -333,20 +347,29 @@ fn render_shop_ui(
                 ..Default::default()
             })
             .with_children(|p| {
-                p.spawn(ButtonBundle::<ClickSellTabEvent> {
-                    node_bundle: NodeBundle {
-                        style: Style {
-                            flex_grow: 1.0,
+                p.spawn((
+                    ShopUiEntity(ui_ent),
+                    ButtonBundle::<ClickSellTabEvent> {
+                        node_bundle: NodeBundle {
+                            style: Style {
+                                flex_grow: 1.0,
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        button: Button {
+                            button_styles: Some(ButtonStyles {
+                                background_color: Color::hex("880000").unwrap(),
+                                hover_background_color: Color::hex("880000").unwrap(),
+                                press_background_color: Color::hex("880000").unwrap(),
+                                ..Default::default()
+                            }),
+                            text: Some(("Sell".into(), text_style.clone())),
                             ..Default::default()
                         },
                         ..Default::default()
                     },
-                    button: Button {
-                        text: Some(("Sell".into(), text_style.clone())),
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                });
+                ));
 
                 p.spawn((
                     ShopUiEntity(ui_ent),
@@ -360,7 +383,7 @@ fn render_shop_ui(
                         },
                         button: Button {
                             button_styles: Some(ButtonStyles {
-                                background_color: Color::hex("008000").unwrap(),
+                                background_color: Color::DARK_GREEN,
                                 hover_background_color: Color::DARK_GREEN,
                                 press_background_color: Color::DARK_GREEN,
                                 ..Default::default()
@@ -659,6 +682,10 @@ fn render_shop_ui(
 
                     shop_entities.delta_money_text = p
                         .spawn((
+                            BindValues::<ShopModeSign>::new(vec![BindValue::new(
+                                ui_variables_entity,
+                                ReactableFields::Text { section: 0 },
+                            )]),
                             BindValues::<PricePerUnit>::new(vec![BindValue::new(
                                 ui_variables_entity,
                                 ReactableFields::Text { section: 1 },
@@ -669,7 +696,7 @@ fn render_shop_ui(
                             )]),
                             TextBundle {
                                 text: Text::from_sections([
-                                    TextSection::new("- $", text_style.clone()),
+                                    TextSection::new("", text_style.clone()),
                                     TextSection::new("", text_style.clone()),
                                     TextSection::new(" x ", text_style.clone()),
                                     TextSection::new("", text_style.clone()),
@@ -830,8 +857,8 @@ fn render_shop_ui(
 
                     shop_entities.buy_sell_button = p
                         .spawn((
-                            BuyButton { shop_entity: ui_ent },
-                            ButtonBundle::<BuyBtnEvent> {
+                            BuyOrSellButton { shop_entity: ui_ent },
+                            ButtonBundle::<BuyOrSellBtnEvent> {
                                 node_bundle: NodeBundle {
                                     style: Style {
                                         margin: UiRect::top(Val::Px(10.0)),
@@ -872,32 +899,32 @@ fn render_shop_ui(
 }
 
 #[derive(Event, Debug)]
-struct ClickSellTabEvent;
+struct ClickSellTabEvent(Entity);
 
 impl ButtonEvent for ClickSellTabEvent {
-    fn create_event(_: Entity) -> Self {
-        Self
+    fn create_event(e: Entity) -> Self {
+        Self(e)
     }
 }
 
 #[derive(Event, Debug)]
-struct ClickBuyTabEvent;
+struct ClickBuyTabEvent(Entity);
 
 impl ButtonEvent for ClickBuyTabEvent {
-    fn create_event(_: Entity) -> Self {
-        Self
+    fn create_event(e: Entity) -> Self {
+        Self(e)
     }
 }
 
 #[derive(Component)]
-struct BuyButton {
+struct BuyOrSellButton {
     shop_entity: Entity,
 }
 
 #[derive(Event, Debug)]
-struct BuyBtnEvent(Entity);
+struct BuyOrSellBtnEvent(Entity);
 
-impl ButtonEvent for BuyBtnEvent {
+impl ButtonEvent for BuyOrSellBtnEvent {
     fn create_event(entity: Entity) -> Self {
         Self(entity)
     }
@@ -1135,7 +1162,7 @@ fn update_search(
 fn enable_buy_button(
     mut commands: Commands,
     mut q_shop_ui: Query<&mut ShopUi>,
-    q_buy_button: Query<(Entity, &BuyButton), With<Button<BuyBtnEvent>>>,
+    q_buy_button: Query<(Entity, &BuyOrSellButton), With<Button<BuyOrSellBtnEvent>>>,
     mut ev_reader: EventReader<PurchasedEvent>,
 ) {
     for ev in ev_reader.read() {
@@ -1165,8 +1192,8 @@ fn on_buy(
     mut commands: Commands,
     mut client: ResMut<RenetClient>,
     q_shop_ui: Query<(&ShopUi, &AmountSelected)>,
-    q_buy_button: Query<&BuyButton>,
-    mut ev_reader: EventReader<BuyBtnEvent>,
+    q_buy_button: Query<&BuyOrSellButton>,
+    mut ev_reader: EventReader<BuyOrSellBtnEvent>,
 ) {
     for ev in ev_reader.read() {
         let Ok(buy_button) = q_buy_button.get(ev.0) else {
@@ -1220,8 +1247,125 @@ fn on_buy(
     }
 }
 
+fn click_buy_tab(
+    mut q_shop_mode: Query<&mut ShopMode>,
+    q_shop_ui_entity: Query<&ShopUiEntity>,
+    mut ev_reader: EventReader<ClickBuyTabEvent>,
+) {
+    for ev in ev_reader.read() {
+        let Ok(shop_ui_ent) = q_shop_ui_entity.get(ev.0) else {
+            continue;
+        };
+
+        let Ok(mut shop_mode) = q_shop_mode.get_mut(shop_ui_ent.0) else {
+            continue;
+        };
+
+        if *shop_mode != ShopMode::Buy {
+            *shop_mode = ShopMode::Buy;
+        }
+    }
+}
+
+fn click_sell_tab(
+    mut q_shop_mode: Query<&mut ShopMode>,
+    q_shop_ui_entity: Query<&ShopUiEntity>,
+    mut ev_reader: EventReader<ClickSellTabEvent>,
+) {
+    for ev in ev_reader.read() {
+        let Ok(shop_ui_ent) = q_shop_ui_entity.get(ev.0) else {
+            continue;
+        };
+
+        let Ok(mut shop_mode) = q_shop_mode.get_mut(shop_ui_ent.0) else {
+            continue;
+        };
+
+        if *shop_mode != ShopMode::Sell {
+            *shop_mode = ShopMode::Sell;
+        }
+    }
+}
+
+/*
+SelectedItemName::default(),
+SelectedItemDescription::default(),
+SelectedItemMaxQuantity::default(),
+NetCredits::default(),
+AmountSelected::default(),
+PricePerUnit::default(),
+SearchItemQuery::default(),
+ShopMode::Buy,
+*/
+
+fn on_change_shop_mode(
+    mut q_shop: Query<
+        (
+            &ShopMode,
+            &ShopEntities,
+            &mut SelectedItemName,
+            &mut SelectedItemDescription,
+            &mut SelectedItemMaxQuantity,
+            &mut PricePerUnit,
+            &mut AmountSelected,
+            &mut ShopModeSign,
+            &mut ShopUi,
+        ),
+        Changed<ShopMode>,
+    >,
+    mut q_button: Query<&mut Button<BuyOrSellBtnEvent>>,
+) {
+    for (
+        &shop_mode,
+        shop_entities,
+        mut selected_item_name,
+        mut selected_item_desc,
+        mut selected_item_max_qty,
+        mut price_per_unit,
+        mut amount_selected,
+        mut shop_mode_sign,
+        mut shop_ui,
+    ) in q_shop.iter_mut()
+    {
+        shop_ui.selected_item = None;
+        amount_selected.0 = 0;
+        *selected_item_name = Default::default();
+        *selected_item_desc = Default::default();
+        *selected_item_max_qty = Default::default();
+        *price_per_unit = Default::default();
+
+        shop_mode_sign.0 = match shop_mode {
+            ShopMode::Buy => "- $",
+            ShopMode::Sell => "+ $",
+        }
+        .into();
+
+        if let Ok(mut btn) = q_button.get_mut(shop_entities.buy_sell_button) {
+            btn.text.as_mut().expect("Buy/sell has no text?").0 = match shop_mode {
+                ShopMode::Buy => "BUY",
+                ShopMode::Sell => "SELL",
+            }
+            .into();
+
+            btn.button_styles = Some(match shop_mode {
+                ShopMode::Buy => ButtonStyles {
+                    background_color: Color::DARK_GREEN,
+                    hover_background_color: Color::DARK_GREEN,
+                    press_background_color: Color::DARK_GREEN,
+                    ..Default::default()
+                },
+                ShopMode::Sell => ButtonStyles {
+                    background_color: Color::hex("880000").unwrap(),
+                    hover_background_color: Color::hex("880000").unwrap(),
+                    press_background_color: Color::hex("880000").unwrap(),
+                    ..Default::default()
+                },
+            });
+        }
+    }
+}
+
 pub(super) fn register(app: &mut App) {
-    add_reactable_type::<AmountSelected>(app);
     add_reactable_type::<AmountSelected>(app);
     add_reactable_type::<SelectedItemName>(app);
     add_reactable_type::<SelectedItemDescription>(app);
@@ -1230,10 +1374,11 @@ pub(super) fn register(app: &mut App) {
     add_reactable_type::<PricePerUnit>(app);
     add_reactable_type::<ShopMode>(app);
     add_reactable_type::<SearchItemQuery>(app);
+    add_reactable_type::<ShopModeSign>(app);
 
     register_button::<ClickSellTabEvent>(app);
     register_button::<ClickBuyTabEvent>(app);
-    register_button::<BuyBtnEvent>(app);
+    register_button::<BuyOrSellBtnEvent>(app);
     register_button::<ClickItemEvent>(app);
 
     app.add_mut_event::<OpenShopUiEvent>()
@@ -1241,6 +1386,9 @@ pub(super) fn register(app: &mut App) {
             Update,
             (
                 open_shop_ui,
+                click_buy_tab,
+                click_sell_tab,
+                on_change_shop_mode,
                 click_item_event,
                 on_change_selected_item,
                 update_total,

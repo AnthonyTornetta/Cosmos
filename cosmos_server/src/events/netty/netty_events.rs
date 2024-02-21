@@ -134,7 +134,7 @@ fn handle_server_events(
                     LoadingDistance::new(2, 9999),
                     ActiveEvents::COLLISION_EVENTS,
                     Name::new(format!("Player ({name})")),
-                    Credits::new(50_000),
+                    Credits::new(1_000_000),
                 ));
 
                 let player_entity = player_commands.id();
