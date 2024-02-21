@@ -211,18 +211,6 @@ struct ShopUiEntity(Entity);
 struct ShopEntities {
     variables: Entity,
     contents_entity: Entity,
-
-    item_name_entity: Entity,
-    item_description_entity: Entity,
-    item_stats_list: Entity,
-
-    amount_slider: Entity,
-    amount_max_text: Entity,
-
-    current_money_text: Entity,
-    delta_money_text: Entity,
-    final_money_text: Entity,
-
     buy_sell_button: Entity,
 }
 
@@ -283,14 +271,6 @@ fn render_shop_ui(
     let mut shop_entities = ShopEntities {
         variables: ui_variables_entity,
         contents_entity: Entity::PLACEHOLDER,
-        amount_max_text: Entity::PLACEHOLDER,
-        amount_slider: Entity::PLACEHOLDER,
-        current_money_text: Entity::PLACEHOLDER,
-        delta_money_text: Entity::PLACEHOLDER,
-        final_money_text: Entity::PLACEHOLDER,
-        item_description_entity: Entity::PLACEHOLDER,
-        item_name_entity: Entity::PLACEHOLDER,
-        item_stats_list: Entity::PLACEHOLDER,
         buy_sell_button: Entity::PLACEHOLDER,
     };
 
@@ -442,49 +422,45 @@ fn render_shop_ui(
                         },
                     ))
                     .with_children(|p| {
-                        shop_entities.item_name_entity = p
-                            .spawn((
-                                Name::new("Item Name"),
-                                BindValues::<SelectedItemName>::new(vec![BindValue::new(
-                                    ui_variables_entity,
-                                    ReactableFields::Text { section: 0 },
-                                )]),
-                                TextBundle {
-                                    text: Text::from_section("Select an item...", text_style.clone()),
-                                    style: Style {
-                                        margin: UiRect {
-                                            bottom: Val::Px(10.0),
-                                            top: Val::Px(10.0),
-                                            ..Default::default()
-                                        },
+                        p.spawn((
+                            Name::new("Item Name"),
+                            BindValues::<SelectedItemName>::new(vec![BindValue::new(
+                                ui_variables_entity,
+                                ReactableFields::Text { section: 0 },
+                            )]),
+                            TextBundle {
+                                text: Text::from_section("Select an item...", text_style.clone()),
+                                style: Style {
+                                    margin: UiRect {
+                                        bottom: Val::Px(10.0),
+                                        top: Val::Px(10.0),
                                         ..Default::default()
                                     },
                                     ..Default::default()
                                 },
-                            ))
-                            .id();
+                                ..Default::default()
+                            },
+                        ));
 
-                        shop_entities.item_description_entity = p
-                            .spawn((
-                                Name::new("Description"),
-                                BindValues::<SelectedItemDescription>::new(vec![BindValue::new(
-                                    ui_variables_entity,
-                                    ReactableFields::Text { section: 0 },
-                                )]),
-                                TextBundle {
-                                    text: Text::from_section("", text_style_small.clone()),
-                                    style: Style {
-                                        margin: UiRect {
-                                            bottom: Val::Px(30.0),
-                                            top: Val::Px(10.0),
-                                            ..Default::default()
-                                        },
+                        p.spawn((
+                            Name::new("Description"),
+                            BindValues::<SelectedItemDescription>::new(vec![BindValue::new(
+                                ui_variables_entity,
+                                ReactableFields::Text { section: 0 },
+                            )]),
+                            TextBundle {
+                                text: Text::from_section("", text_style_small.clone()),
+                                style: Style {
+                                    margin: UiRect {
+                                        bottom: Val::Px(30.0),
+                                        top: Val::Px(10.0),
                                         ..Default::default()
                                     },
                                     ..Default::default()
                                 },
-                            ))
-                            .id();
+                                ..Default::default()
+                            },
+                        ));
 
                         p.spawn(TextBundle {
                             text: Text::from_section("Stats", text_style.clone()),
@@ -499,21 +475,19 @@ fn render_shop_ui(
                             ..Default::default()
                         });
 
-                        shop_entities.item_stats_list = p
-                            .spawn(TextBundle {
-                                text: Text::from_section("", text_style_small.clone()),
-                                style: Style {
-                                    margin: UiRect {
-                                        left: Val::Px(20.0),
-                                        bottom: Val::Px(10.0),
-                                        top: Val::Px(10.0),
-                                        ..Default::default()
-                                    },
+                        p.spawn(TextBundle {
+                            text: Text::from_section("", text_style_small.clone()),
+                            style: Style {
+                                margin: UiRect {
+                                    left: Val::Px(20.0),
+                                    bottom: Val::Px(10.0),
+                                    top: Val::Px(10.0),
                                     ..Default::default()
                                 },
                                 ..Default::default()
-                            })
-                            .id();
+                            },
+                            ..Default::default()
+                        });
                     });
 
                     body.spawn((Name::new("Item picture"), NodeBundle { ..Default::default() }));
@@ -665,50 +639,37 @@ fn render_shop_ui(
                         ..Default::default()
                     })
                     .with_children(|p| {
-                        shop_entities.current_money_text = p
-                            .spawn((
-                                Name::new("Credits amount"),
-                                BindValues::<Credits>::new(vec![BindValue::new(player_entity, ReactableFields::Text { section: 1 })]),
-                                TextBundle {
-                                    text: Text::from_sections([
-                                        TextSection::new("$", text_style.clone()),
-                                        TextSection::new(format!("{}", credits.amount()), text_style.clone()),
-                                    ]),
-                                    ..Default::default()
-                                },
-                            ))
-                            .id();
-                    });
-
-                    shop_entities.delta_money_text = p
-                        .spawn((
-                            BindValues::<ShopModeSign>::new(vec![BindValue::new(
-                                ui_variables_entity,
-                                ReactableFields::Text { section: 0 },
-                            )]),
-                            BindValues::<PricePerUnit>::new(vec![BindValue::new(
-                                ui_variables_entity,
-                                ReactableFields::Text { section: 1 },
-                            )]),
-                            BindValues::<AmountSelected>::new(vec![BindValue::new(
-                                ui_variables_entity,
-                                ReactableFields::Text { section: 3 },
-                            )]),
+                        p.spawn((
+                            Name::new("Credits amount"),
+                            BindValues::<Credits>::new(vec![BindValue::new(player_entity, ReactableFields::Text { section: 1 })]),
                             TextBundle {
                                 text: Text::from_sections([
-                                    TextSection::new("", text_style.clone()),
-                                    TextSection::new("", text_style.clone()),
-                                    TextSection::new(" x ", text_style.clone()),
-                                    TextSection::new("", text_style.clone()),
+                                    TextSection::new("$", text_style.clone()),
+                                    TextSection::new(format!("{}", credits.amount()), text_style.clone()),
                                 ]),
-                                style: Style {
-                                    bottom: Val::Px(10.0),
-                                    ..Default::default()
-                                },
                                 ..Default::default()
                             },
-                        ))
-                        .id();
+                        ));
+                    });
+
+                    p.spawn((
+                        BindValues::<ShopModeSign>::new(vec![BindValue::new(ui_variables_entity, ReactableFields::Text { section: 0 })]),
+                        BindValues::<PricePerUnit>::new(vec![BindValue::new(ui_variables_entity, ReactableFields::Text { section: 1 })]),
+                        BindValues::<AmountSelected>::new(vec![BindValue::new(ui_variables_entity, ReactableFields::Text { section: 3 })]),
+                        TextBundle {
+                            text: Text::from_sections([
+                                TextSection::new("", text_style.clone()),
+                                TextSection::new("", text_style.clone()),
+                                TextSection::new(" x ", text_style.clone()),
+                                TextSection::new("", text_style.clone()),
+                            ]),
+                            style: Style {
+                                bottom: Val::Px(10.0),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                    ));
 
                     p.spawn(NodeBundle {
                         border_color: Color::hex("555555").unwrap().into(),
@@ -727,21 +688,16 @@ fn render_shop_ui(
                         ..Default::default()
                     })
                     .with_children(|p| {
-                        shop_entities.final_money_text = p
-                            .spawn((
-                                BindValues::<NetCredits>::new(vec![BindValue::new(
-                                    ui_variables_entity,
-                                    ReactableFields::Text { section: 1 },
-                                )]),
-                                TextBundle {
-                                    text: Text::from_sections([
-                                        TextSection::new("$", text_style.clone()),
-                                        TextSection::new("", text_style.clone()),
-                                    ]),
-                                    ..Default::default()
-                                },
-                            ))
-                            .id();
+                        p.spawn((
+                            BindValues::<NetCredits>::new(vec![BindValue::new(ui_variables_entity, ReactableFields::Text { section: 1 })]),
+                            TextBundle {
+                                text: Text::from_sections([
+                                    TextSection::new("$", text_style.clone()),
+                                    TextSection::new("", text_style.clone()),
+                                ]),
+                                ..Default::default()
+                            },
+                        ));
                     });
                 });
 
@@ -812,46 +768,39 @@ fn render_shop_ui(
                                     ..Default::default()
                                 });
 
-                                shop_entities.amount_max_text = p
-                                    .spawn((
-                                        BindValues::<SelectedItemMaxQuantity>::new(vec![BindValue::new(
-                                            ui_variables_entity,
-                                            ReactableFields::Text { section: 0 },
-                                        )]),
-                                        TextBundle {
-                                            text: Text::from_section("", text_style_small.clone()),
-                                            ..Default::default()
-                                        },
-                                    ))
-                                    .id();
-                            });
-
-                            shop_entities.amount_slider = p
-                                .spawn((
-                                    Name::new("Amount slider"),
-                                    ShopUiEntity(ui_ent),
-                                    BindValues::<AmountSelected>::new(vec![BindValue::new(ui_variables_entity, ReactableFields::Value)]),
+                                p.spawn((
                                     BindValues::<SelectedItemMaxQuantity>::new(vec![BindValue::new(
                                         ui_variables_entity,
-                                        ReactableFields::Max,
+                                        ReactableFields::Text { section: 0 },
                                     )]),
-                                    SliderBundle {
-                                        node_bundle: NodeBundle {
-                                            style: Style { ..Default::default() },
-                                            ..Default::default()
-                                        },
-                                        slider: Slider {
-                                            min: 0,
-                                            max: 1,
-                                            background_color: Color::hex("999999").unwrap(),
-                                            foreground_color: Color::AQUAMARINE,
-                                            square_color: Color::hex("555555").unwrap(),
-                                            ..Default::default()
-                                        },
+                                    TextBundle {
+                                        text: Text::from_section("", text_style_small.clone()),
                                         ..Default::default()
                                     },
-                                ))
-                                .id();
+                                ));
+                            });
+
+                            p.spawn((
+                                Name::new("Amount slider"),
+                                ShopUiEntity(ui_ent),
+                                BindValues::<AmountSelected>::new(vec![BindValue::new(ui_variables_entity, ReactableFields::Value)]),
+                                BindValues::<SelectedItemMaxQuantity>::new(vec![BindValue::new(ui_variables_entity, ReactableFields::Max)]),
+                                SliderBundle {
+                                    node_bundle: NodeBundle {
+                                        style: Style { ..Default::default() },
+                                        ..Default::default()
+                                    },
+                                    slider: Slider {
+                                        min: 0,
+                                        max: 1,
+                                        background_color: Color::hex("999999").unwrap(),
+                                        foreground_color: Color::AQUAMARINE,
+                                        square_color: Color::hex("555555").unwrap(),
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                            ));
                         });
                     });
 
@@ -885,14 +834,6 @@ fn render_shop_ui(
             });
         });
 
-    debug_assert!(shop_entities.amount_max_text != Entity::PLACEHOLDER);
-    debug_assert!(shop_entities.amount_slider != Entity::PLACEHOLDER);
-    debug_assert!(shop_entities.current_money_text != Entity::PLACEHOLDER);
-    debug_assert!(shop_entities.delta_money_text != Entity::PLACEHOLDER);
-    debug_assert!(shop_entities.final_money_text != Entity::PLACEHOLDER);
-    debug_assert!(shop_entities.item_description_entity != Entity::PLACEHOLDER);
-    debug_assert!(shop_entities.item_name_entity != Entity::PLACEHOLDER);
-    debug_assert!(shop_entities.item_stats_list != Entity::PLACEHOLDER);
     debug_assert!(shop_entities.buy_sell_button != Entity::PLACEHOLDER);
 
     commands.entity(ui_ent).insert(shop_entities);
@@ -1127,6 +1068,7 @@ fn update_search(
                         node_bundle: NodeBundle {
                             style: Style {
                                 flex_direction: FlexDirection::Row,
+                                margin: UiRect::vertical(Val::Px(2.0)),
                                 ..Default::default()
                             },
                             ..Default::default()
