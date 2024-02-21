@@ -7,10 +7,13 @@ use bevy::utils::HashMap;
 use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::{ClientId, RenetServer};
 use cosmos_core::block::block_events::{BlockBreakEvent, BlockInteractEvent, BlockPlaceEvent};
+use cosmos_core::inventory::Inventory;
+use cosmos_core::item::Item;
 use cosmos_core::netty::netty_rigidbody::NettyRigidBodyLocation;
 use cosmos_core::netty::system_sets::NetworkingSystemsSet;
 use cosmos_core::netty::{cosmos_encoder, NettyChannelClient, NettyChannelServer};
 use cosmos_core::physics::location::Location;
+use cosmos_core::registry::Registry;
 use cosmos_core::structure::loading::ChunksNeedLoaded;
 use cosmos_core::structure::shared::build_mode::{BuildMode, ExitBuildModeEvent};
 use cosmos_core::structure::systems::Systems;
@@ -65,6 +68,8 @@ fn server_listen_messages(
         EventWriter<RequestedEntityEvent>,
         EventWriter<RequestChunkEvent>,
     ),
+    mut q_inventory: Query<&mut Inventory>,
+    items: Res<Registry<Item>>,
     (mut ship_movement_event_writer, mut pilot_change_event_writer): (EventWriter<ShipSetMovementEvent>, EventWriter<ChangePilotEvent>),
     pilot_query: Query<&Pilot>,
     player_parent_location: Query<&Location, Without<Player>>,
@@ -183,16 +188,34 @@ fn server_listen_messages(
                     });
                 }
                 ClientReliableMessages::CreateShip { name: _name } => {
-                    if let Some(client) = lobby.player_from_id(client_id) {
-                        if let Ok((transform, location, looking, _)) = change_player_query.get(client) {
-                            let ship_location =
-                                *location + transform.rotation.mul_vec3(looking.rotation.mul_vec3(Vec3::new(0.0, 0.0, -4.0)));
+                    let Some(client) = lobby.player_from_id(client_id) else {
+                        continue;
+                    };
 
-                            create_ship_event_writer.send(CreateShipEvent {
-                                ship_location,
-                                rotation: looking.rotation,
-                            });
-                        }
+                    commands.entity(client).log_components();
+
+                    let Ok(mut inventory) = q_inventory.get_mut(client) else {
+                        info!("No inventory ;(");
+                        continue;
+                    };
+
+                    let Some(ship_core) = items.from_id("cosmos:ship_core") else {
+                        info!("Does not have ship corer registered");
+                        continue;
+                    };
+
+                    if inventory.take_item(ship_core, 1) != 0 {
+                        info!("Does not have ship core");
+                        continue;
+                    }
+
+                    if let Ok((transform, location, looking, _)) = change_player_query.get(client) {
+                        let ship_location = *location + transform.rotation.mul_vec3(looking.rotation.mul_vec3(Vec3::new(0.0, 0.0, -4.0)));
+
+                        create_ship_event_writer.send(CreateShipEvent {
+                            ship_location,
+                            rotation: looking.rotation,
+                        });
                     }
                 }
                 ClientReliableMessages::CreateStation { name: _name } => {

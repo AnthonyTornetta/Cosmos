@@ -15,14 +15,23 @@ impl Credits {
         Self(amount)
     }
 
+    /// The amount as a u64
     pub fn amount(&self) -> u64 {
         self.0
     }
 
+    /// Sets the amount from a u64
     pub fn set_amount(&mut self, amount: u64) {
         self.0 = amount;
     }
 
+    /// Decreases the amount without going below 0.
+    ///
+    /// Returns a bool if there was enough to decrease it by.
+    ///
+    /// If true, then the amount was decreased.
+    ///
+    /// If false, then the amount was not changed.
     pub fn decrease(&mut self, amount: u64) -> bool {
         if self.0 < amount {
             false
@@ -32,6 +41,7 @@ impl Credits {
         }
     }
 
+    /// Increases the credits by this amount
     pub fn increase(&mut self, amount: u64) {
         self.0 += amount;
     }

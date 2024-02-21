@@ -1,3 +1,5 @@
+//! An easy way to show/hide the cursor
+
 use bevy::{
     app::{App, Update},
     ecs::{

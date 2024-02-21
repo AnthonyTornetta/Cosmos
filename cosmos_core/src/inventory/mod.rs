@@ -459,11 +459,14 @@ impl Inventory {
             .sum()
     }
 
+    /// Checks if the inventory can have this quantity of this item removed from its contents
     pub fn can_take_item(&self, item: &Item, quantity: usize) -> bool {
         self.quantity_of(item) >= quantity
     }
 
-    /// Returns amount that couldn't be taken
+    /// Removes up to the amount specified of this item from the inventory.
+    ///
+    /// Returns amount that couldn't be taken.
     pub fn take_item(&mut self, item: &Item, mut quantity: usize) -> usize {
         for maybe_is in self
             .items

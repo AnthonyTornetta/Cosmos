@@ -1,3 +1,5 @@
+//! Reactivity for text inputs
+
 use bevy::{
     app::{App, Update},
     ecs::{event::EventReader, query::Changed, system::Query},

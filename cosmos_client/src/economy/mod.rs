@@ -1,3 +1,5 @@
+//! Client-related economy logic
+
 use bevy::{app::App, log::error};
 use cosmos_core::economy::Credits;
 

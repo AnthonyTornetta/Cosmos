@@ -16,16 +16,28 @@ mod netty;
 mod ui;
 
 #[derive(Event, Debug)]
+/// Sent whenever an item is purchased from the shop.
+///
+/// The purchase may have been unsuccessful, so make sure to check the details field.
 pub struct PurchasedEvent {
+    /// The structure that holds the shop
     pub structure_entity: Entity,
+    /// The shop's block's coordinates.
     pub shop_block: BlockCoordinate,
+    /// If the buying was successful or not.
     pub details: Result<Shop, ShopPurchaseError>,
 }
 
 #[derive(Event, Debug)]
+/// Sent whenever an item is sold to the shop.
+///
+/// The selling may have been unsuccessful, so make sure to check the details field.
 pub struct SoldEvent {
+    /// The structure that holds the shop
     pub structure_entity: Entity,
+    /// The shop's block's coordinates.
     pub shop_block: BlockCoordinate,
+    /// If the selling was successful or not.
     pub details: Result<Shop, ShopSellError>,
 }
 

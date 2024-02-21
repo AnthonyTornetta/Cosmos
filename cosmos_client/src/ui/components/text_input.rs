@@ -50,10 +50,17 @@ struct CursorFlashTime(f32);
 pub struct InputValue(String);
 
 impl InputValue {
+    /// Sets the value
     pub fn set_value(&mut self, value: impl Into<String>) {
         self.0 = value.into();
     }
 
+    /// Gets the value.
+    ///
+    /// ## Warning
+    /// If you parse this, ensure you handle the error case properly.
+    /// For example, empty strings are valid for `InputType::Decimal` but
+    /// will parse badly.
     pub fn value(&self) -> &str {
         &self.0
     }
