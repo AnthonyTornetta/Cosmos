@@ -301,7 +301,6 @@ fn render_shop_ui(
                             bottom: Val::Auto,
                             left: Val::Auto,
                             right: Val::Auto,
-                            ..Default::default()
                         },
                         ..Default::default()
                     },
@@ -313,7 +312,6 @@ fn render_shop_ui(
                         flex_direction: FlexDirection::Column,
                         ..Default::default()
                     },
-                    ..Default::default()
                 },
                 ..Default::default()
             },
@@ -347,7 +345,6 @@ fn render_shop_ui(
                             text: Some(("Sell".into(), text_style.clone())),
                             ..Default::default()
                         },
-                        ..Default::default()
                     },
                 ));
 
@@ -371,7 +368,6 @@ fn render_shop_ui(
                             text: Some(("Buy".into(), text_style.clone())),
                             ..Default::default()
                         },
-                        ..Default::default()
                     },
                 ));
             });
@@ -567,7 +563,6 @@ fn render_shop_ui(
                                 ..Default::default()
                             },
                             slider: ScrollBox { ..Default::default() },
-                            ..Default::default()
                         },
                     ))
                     .with_children(|p| {
@@ -826,7 +821,6 @@ fn render_shop_ui(
                                     }),
                                     ..Default::default()
                                 },
-                                ..Default::default()
                             },
                         ))
                         .id();
@@ -1073,7 +1067,6 @@ fn update_search(
                             },
                             ..Default::default()
                         },
-                        ..Default::default()
                     },
                 ))
                 .with_children(|p| {

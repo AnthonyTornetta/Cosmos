@@ -25,15 +25,12 @@ fn on_need_update_value<T: ReactableValue>(
                 continue;
             };
 
-            match bind_value.field {
-                ReactableFields::Text { section } => {
-                    if let Some(section) = text_input_value.sections.get_mut(section) {
-                        section.value = react_value.as_value();
-                    } else {
-                        error!("Text missing {section} section but is bound to value!");
-                    }
+            if let ReactableFields::Text { section } = bind_value.field {
+                if let Some(section) = text_input_value.sections.get_mut(section) {
+                    section.value = react_value.as_value();
+                } else {
+                    error!("Text missing {section} section but is bound to value!");
                 }
-                _ => {}
             }
         }
     }

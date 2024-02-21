@@ -45,30 +45,31 @@ impl Shop {
     /// Buys an item from this shop, or returns an error if the purchase was unsuccessful
     pub fn buy(&mut self, item_id: u16, quantity: u32, credits: &mut Credits) -> Result<(), ShopPurchaseError> {
         for entry in self.contents.iter_mut() {
-            match entry {
-                ShopEntry::Selling {
-                    item_id: entry_id,
-                    max_quantity_selling,
-                    price_per,
-                } => {
-                    if *entry_id == item_id {
-                        let cost = *price_per as u64 * quantity as u64;
-
-                        if *max_quantity_selling < quantity {
-                            return Err(ShopPurchaseError::NoStock(self.clone()));
-                        }
-
-                        if !credits.decrease(cost) {
-                            return Err(ShopPurchaseError::InsufficientFunds);
-                        }
-
-                        *max_quantity_selling -= quantity;
-
-                        return Ok(());
-                    }
-                }
-                _ => {}
+            let ShopEntry::Selling {
+                item_id: entry_id,
+                max_quantity_selling,
+                price_per,
+            } = entry
+            else {
+                continue;
+            };
+            if *entry_id != item_id {
+                continue;
             }
+
+            let cost = *price_per as u64 * quantity as u64;
+
+            if *max_quantity_selling < quantity {
+                return Err(ShopPurchaseError::NoStock(self.clone()));
+            }
+
+            if !credits.decrease(cost) {
+                return Err(ShopPurchaseError::InsufficientFunds);
+            }
+
+            *max_quantity_selling -= quantity;
+
+            return Ok(());
         }
 
         Err(ShopPurchaseError::NoStock(self.clone()))
@@ -77,30 +78,31 @@ impl Shop {
     /// Sells an item to this shop, or returns an error if the selling was unsuccessful
     pub fn sell(&mut self, item_id: u16, quantity: u32, credits: &mut Credits) -> Result<(), ShopSellError> {
         for entry in self.contents.iter_mut() {
-            match entry {
-                ShopEntry::Buying {
-                    item_id: entry_id,
-                    max_quantity_buying,
-                    price_per,
-                } => {
-                    if *entry_id == item_id {
-                        let credits_gain = *price_per as u64 * quantity as u64;
-
-                        if max_quantity_buying.unwrap_or(u32::MAX) < quantity {
-                            return Err(ShopSellError::NotWillingToBuyThatMany(self.clone()));
-                        }
-
-                        if let Some(max_qty_buying) = max_quantity_buying {
-                            *max_qty_buying -= *max_qty_buying - quantity;
-                        }
-
-                        credits.increase(credits_gain);
-
-                        return Ok(());
-                    }
-                }
-                _ => {}
+            let ShopEntry::Buying {
+                item_id: entry_id,
+                max_quantity_buying,
+                price_per,
+            } = entry
+            else {
+                continue;
+            };
+            if *entry_id != item_id {
+                continue;
             }
+
+            let credits_gain = *price_per as u64 * quantity as u64;
+
+            if max_quantity_buying.unwrap_or(u32::MAX) < quantity {
+                return Err(ShopSellError::NotWillingToBuyThatMany(self.clone()));
+            }
+
+            if let Some(max_qty_buying) = max_quantity_buying {
+                *max_qty_buying -= quantity;
+            }
+
+            credits.increase(credits_gain);
+
+            return Ok(());
         }
 
         Err(ShopSellError::NotWillingToBuyThatMany(self.clone()))

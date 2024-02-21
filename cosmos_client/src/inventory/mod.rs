@@ -215,7 +215,6 @@ fn toggle_inventory_rendering(
                             flex_direction: FlexDirection::Column,
                             ..Default::default()
                         },
-                        ..Default::default()
                     },
                     node_bundle: NodeBundle {
                         style: Style {
