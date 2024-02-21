@@ -53,7 +53,7 @@ use crate::{
     },
 };
 
-use super::PurchasedEvent;
+use super::{PurchasedEvent, SoldEvent};
 
 #[derive(Event)]
 pub(super) struct OpenShopUiEvent {
@@ -1188,6 +1188,35 @@ fn enable_buy_button(
     }
 }
 
+fn enable_sell_button(
+    mut commands: Commands,
+    mut q_shop_ui: Query<&mut ShopUi>,
+    q_buy_button: Query<(Entity, &BuyOrSellButton), With<Button<BuyOrSellBtnEvent>>>,
+    mut ev_reader: EventReader<SoldEvent>,
+) {
+    for ev in ev_reader.read() {
+        for (entity, buy_button) in q_buy_button.iter() {
+            let Ok(mut shop_ui) = q_shop_ui.get_mut(buy_button.shop_entity) else {
+                continue;
+            };
+
+            if shop_ui.structure_entity == ev.structure_entity && shop_ui.structure_block.coords() == ev.shop_block {
+                match &ev.details {
+                    Ok(shop) => {
+                        shop_ui.shop = shop.clone();
+                        info!("Sell successful!");
+                    }
+                    Err(err) => {
+                        info!("{err:?}");
+                    }
+                };
+
+                commands.entity(entity).remove::<Disabled>();
+            }
+        }
+    }
+}
+
 fn on_buy(
     mut commands: Commands,
     mut client: ResMut<RenetClient>,
@@ -1395,6 +1424,7 @@ pub(super) fn register(app: &mut App) {
                 update_search,
                 render_shop_ui,
                 enable_buy_button,
+                enable_sell_button,
                 on_buy,
             )
                 .chain()

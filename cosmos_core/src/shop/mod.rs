@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::economy::Credits;
 
-use self::netty::ShopPurchaseError;
+use self::netty::{ShopPurchaseError, ShopSellError};
 
 pub mod netty;
 
@@ -57,6 +57,37 @@ impl Shop {
         }
 
         Err(ShopPurchaseError::NoStock(self.clone()))
+    }
+
+    pub fn sell(&mut self, item_id: u16, quantity: u32, credits: &mut Credits) -> Result<u32, ShopSellError> {
+        for entry in self.contents.iter_mut() {
+            match entry {
+                ShopEntry::Buying {
+                    item_id: entry_id,
+                    max_quantity_buying,
+                    price_per,
+                } => {
+                    if *entry_id == item_id {
+                        let credits_gain = *price_per as u64 * quantity as u64;
+
+                        if max_quantity_buying.unwrap_or(u32::MAX) < quantity {
+                            return Err(ShopSellError::NotSellingThatMany(self.clone()));
+                        }
+
+                        if let Some(max_qty_buying) = max_quantity_buying {
+                            *max_qty_buying -= *max_qty_buying - quantity;
+                        }
+
+                        credits.increase(credits_gain);
+
+                        return Ok(quantity);
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        Err(ShopSellError::NotSellingThatMany(self.clone()))
     }
 }
 

@@ -16,12 +16,13 @@ use cosmos_core::{
 
 use crate::state::game_state::GameState;
 
-use super::{ui::OpenShopUiEvent, PurchasedEvent};
+use super::{ui::OpenShopUiEvent, PurchasedEvent, SoldEvent};
 
 fn listen_netty(
     mut client: ResMut<RenetClient>,
     mut ev_writer_open_shop_ui: EventWriter<MutEvent<OpenShopUiEvent>>,
     mut ev_writer_purchased: EventWriter<PurchasedEvent>,
+    mut ev_writer_sold: EventWriter<SoldEvent>,
 ) {
     while let Some(message) = client.receive_message(NettyChannelServer::Shop) {
         let msg: ServerShopMessages = cosmos_encoder::deserialize(&message).expect("Bad shop message");
@@ -41,19 +42,23 @@ fn listen_netty(
                     .into(),
                 );
             }
-            ServerShopMessages::ShopContents {
-                shop_block,
-                structure_entity,
-                shop_data,
-            } => {
-                todo!();
-            }
-            ServerShopMessages::Purchase {
+            ServerShopMessages::PurchaseResult {
                 shop_block,
                 structure_entity,
                 details,
             } => {
                 ev_writer_purchased.send(PurchasedEvent {
+                    details,
+                    shop_block,
+                    structure_entity,
+                });
+            }
+            ServerShopMessages::SellResult {
+                shop_block,
+                structure_entity,
+                details,
+            } => {
+                ev_writer_sold.send(SoldEvent {
                     details,
                     shop_block,
                     structure_entity,

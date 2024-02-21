@@ -14,6 +14,16 @@ pub enum ShopPurchaseError {
     NotEnoughInventorySpace,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub enum ShopSellError {
+    /// never thrown yet (eventually shops will have their own money)
+    InsufficientFunds,
+    NotEnoughItems,
+    /// never thrown yet (eventually shops will store their items in an inventory)
+    NotEnoughInventorySpace,
+    NotSellingThatMany(Shop),
+}
+
 #[derive(Debug, Serialize, Deserialize, Component)]
 pub enum ServerShopMessages {
     OpenShop {
@@ -21,15 +31,15 @@ pub enum ServerShopMessages {
         structure_entity: Entity,
         shop_data: Shop,
     },
-    ShopContents {
-        shop_block: BlockCoordinate,
-        structure_entity: Entity,
-        shop_data: Shop,
-    },
-    Purchase {
+    PurchaseResult {
         shop_block: BlockCoordinate,
         structure_entity: Entity,
         details: Result<Shop, ShopPurchaseError>,
+    },
+    SellResult {
+        shop_block: BlockCoordinate,
+        structure_entity: Entity,
+        details: Result<Shop, ShopSellError>,
     },
 }
 

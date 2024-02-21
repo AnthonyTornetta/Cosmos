@@ -459,6 +459,34 @@ impl Inventory {
             .sum()
     }
 
+    pub fn can_take_item(&self, item: &Item, quantity: usize) -> bool {
+        self.quantity_of(item) >= quantity
+    }
+
+    /// Returns amount that couldn't be taken
+    pub fn take_item(&mut self, item: &Item, mut quantity: usize) -> usize {
+        for maybe_is in self
+            .items
+            .iter_mut()
+            .filter(|x| x.as_ref().map(|x| x.item_id() == item.id()).unwrap_or(false))
+        {
+            let Some(is) = maybe_is else {
+                continue;
+            };
+
+            let qty = is.quantity();
+            if quantity >= qty as usize {
+                quantity -= is.quantity() as usize;
+                *maybe_is = None;
+            } else {
+                is.set_quantity(qty - quantity as u16);
+                quantity = 0;
+            }
+        }
+
+        quantity
+    }
+
     /// Iterates over every slot in the inventory.
     pub fn iter(&self) -> std::slice::Iter<'_, Option<ItemStack>> {
         self.items.iter()

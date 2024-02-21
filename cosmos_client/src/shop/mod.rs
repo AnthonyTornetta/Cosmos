@@ -5,7 +5,10 @@ use bevy::{
     ecs::{entity::Entity, event::Event},
 };
 use cosmos_core::{
-    shop::{netty::ShopPurchaseError, Shop},
+    shop::{
+        netty::{ShopPurchaseError, ShopSellError},
+        Shop,
+    },
     structure::coordinates::BlockCoordinate,
 };
 
@@ -19,9 +22,16 @@ pub struct PurchasedEvent {
     pub details: Result<Shop, ShopPurchaseError>,
 }
 
+#[derive(Event, Debug)]
+pub struct SoldEvent {
+    pub structure_entity: Entity,
+    pub shop_block: BlockCoordinate,
+    pub details: Result<Shop, ShopSellError>,
+}
+
 pub(super) fn register(app: &mut App) {
     ui::register(app);
     netty::register(app);
 
-    app.add_event::<PurchasedEvent>();
+    app.add_event::<PurchasedEvent>().add_event::<SoldEvent>();
 }

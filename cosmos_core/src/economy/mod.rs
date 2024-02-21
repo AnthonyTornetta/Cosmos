@@ -31,6 +31,10 @@ impl Credits {
             true
         }
     }
+
+    pub fn increase(&mut self, amount: u64) {
+        self.0 += amount;
+    }
 }
 
 impl Display for Credits {
