@@ -1,13 +1,13 @@
 //! Temporary: generates default shop prices
 
-use cosmos_core::shop::ShopEntry;
 use bevy::{
     app::App,
-    prelude::{Resource, Commands},
     ecs::{schedule::OnEnter, system::Res},
+    prelude::{Commands, Resource},
 };
-use cosmos_core::{item::Item, registry::Registry};
 use cosmos_core::registry::identifiable::Identifiable;
+use cosmos_core::shop::ShopEntry;
+use cosmos_core::{item::Item, registry::Registry};
 
 use crate::state::GameState;
 
@@ -345,22 +345,28 @@ fn create_default_shop_entires(mut commands: Commands, items: Res<Registry<Item>
         },
     ];
 
-    let new_entries = entries.into_iter().flat_map(|x| {
-        let ShopEntry::Selling {
-            item_id,
-            max_quantity_selling: _,
-            price_per
-        } = x else {panic!(":O")};
-
-        [
-            x,
-            ShopEntry::Buying {
+    let new_entries = entries
+        .into_iter()
+        .flat_map(|x| {
+            let ShopEntry::Selling {
                 item_id,
-                max_quantity_buying: None,
-                price_per: (price_per as f32 * 0.9) as u32
-            }
-        ]
-    }).collect::<Vec<ShopEntry>>();
+                max_quantity_selling: _,
+                price_per,
+            } = x
+            else {
+                panic!(":O")
+            };
+
+            [
+                x,
+                ShopEntry::Buying {
+                    item_id,
+                    max_quantity_buying: None,
+                    price_per: (price_per as f32 * 0.9) as u32,
+                },
+            ]
+        })
+        .collect::<Vec<ShopEntry>>();
 
     println!("{}", serde_json::to_string_pretty(&new_entries).unwrap());
 
@@ -382,8 +388,7 @@ pub struct DefaultShopEntries(pub Vec<ShopEntry>);
 pub(super) fn register(app: &mut App) {
     if !std::fs::try_exists("./config/cosmos/default_shop.json").unwrap_or(false) {
         app.add_systems(OnEnter(GameState::Playing), create_default_shop_entires);
-    }
-    else {
+    } else {
         app.add_systems(OnEnter(GameState::Playing), load_default_shop_data);
     }
 }

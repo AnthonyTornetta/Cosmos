@@ -10,22 +10,19 @@ use cosmos_core::{
     registry::{identifiable::Identifiable, Registry},
     shop::{
         netty::{ClientShopMessages, ServerShopMessages, ShopPurchaseError, ShopSellError},
-        Shop, 
+        Shop,
     },
     structure::{coordinates::BlockCoordinate, Structure},
 };
 
 use super::prices::DefaultShopEntries;
 
-use crate::{
-    GameState,
-    netty::network_helpers::ServerLobby
-};
+use crate::{netty::network_helpers::ServerLobby, GameState};
 
 fn generate_fake_shop(default: &DefaultShopEntries) -> Shop {
     Shop {
         name: "Fake Shop".into(),
-        contents: default.0.clone()
+        contents: default.0.clone(),
     }
 }
 
