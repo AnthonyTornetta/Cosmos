@@ -1673,6 +1673,7 @@ dependencies = [
  "rayon",
  "renet_visualizer",
  "serde",
+ "serde_json",
  "thiserror",
  "thread-priority",
  "walkdir",

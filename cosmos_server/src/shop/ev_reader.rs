@@ -1,13 +1,4 @@
-use bevy::{
-    app::{App, Update},
-    ecs::{
-        entity::Entity,
-        event::{Event, EventReader, EventWriter},
-        schedule::IntoSystemConfigs,
-        system::{Query, Res, ResMut},
-    },
-    log::{error, info},
-};
+use bevy::prelude::*;
 use bevy_renet::renet::{ClientId, RenetServer};
 use cosmos_core::{
     block::{block_events::BlockInteractEvent, Block},
@@ -19,58 +10,22 @@ use cosmos_core::{
     registry::{identifiable::Identifiable, Registry},
     shop::{
         netty::{ClientShopMessages, ServerShopMessages, ShopPurchaseError, ShopSellError},
-        Shop, ShopEntry,
+        Shop, 
     },
     structure::{coordinates::BlockCoordinate, Structure},
 };
 
-use crate::netty::network_helpers::ServerLobby;
+use super::prices::DefaultShopEntries;
 
-fn generate_fake_shop(items: &Registry<Item>) -> Shop {
+use crate::{
+    GameState,
+    netty::network_helpers::ServerLobby
+};
+
+fn generate_fake_shop(default: &DefaultShopEntries) -> Shop {
     Shop {
         name: "Fake Shop".into(),
-        contents: vec![
-            ShopEntry::Selling {
-                item_id: items.from_id("cosmos:laser_cannon").expect("Missing laser_cannon").id(),
-                max_quantity_selling: 1000,
-                price_per: 100,
-            },
-            ShopEntry::Selling {
-                item_id: items.from_id("cosmos:plasma_drill").expect("Missing plasma_drill").id(),
-                max_quantity_selling: 1000,
-                price_per: 100,
-            },
-            ShopEntry::Selling {
-                item_id: items.from_id("cosmos:ship_hull_grey").expect("Missing ship_hull_grey").id(),
-                max_quantity_selling: 1000,
-                price_per: 100,
-            },
-            ShopEntry::Selling {
-                item_id: items.from_id("cosmos:thruster").expect("Missing thruster").id(),
-                max_quantity_selling: 1000,
-                price_per: 100,
-            },
-            ShopEntry::Buying {
-                item_id: items.from_id("cosmos:laser_cannon").expect("Missing laser_cannon").id(),
-                max_quantity_buying: Some(2),
-                price_per: 100,
-            },
-            ShopEntry::Buying {
-                item_id: items.from_id("cosmos:plasma_drill").expect("Missing plasma_drill").id(),
-                max_quantity_buying: Some(10000),
-                price_per: 100,
-            },
-            ShopEntry::Buying {
-                item_id: items.from_id("cosmos:ship_hull_grey").expect("Missing ship_hull_grey").id(),
-                max_quantity_buying: None,
-                price_per: 100,
-            },
-            ShopEntry::Buying {
-                item_id: items.from_id("cosmos:thruster").expect("Missing thruster").id(),
-                max_quantity_buying: None,
-                price_per: 100,
-            },
-        ],
+        contents: default.0.clone()
     }
 }
 
@@ -80,7 +35,7 @@ fn on_interact_with_shop(
     q_player: Query<&Player>,
     blocks: Res<Registry<Block>>,
     mut ev_reader: EventReader<BlockInteractEvent>,
-    items: Res<Registry<Item>>,
+    default_shop_entries: Res<DefaultShopEntries>,
 ) {
     for ev in ev_reader.read() {
         let Ok(player) = q_player.get(ev.interactor) else {
@@ -94,7 +49,7 @@ fn on_interact_with_shop(
         let block = ev.structure_block.block(structure, &blocks);
 
         if block.unlocalized_name() == "cosmos:shop" {
-            let fake_shop_data = generate_fake_shop(&items);
+            let fake_shop_data = generate_fake_shop(&default_shop_entries);
 
             server.send_message(
                 player.id(),
@@ -131,7 +86,7 @@ struct SellEvent {
 fn get_shop(
     _structure_entity: Entity,
     _shop_block: BlockCoordinate,
-    items: &Registry<Item>,
+    default_shop_entries: &DefaultShopEntries,
     _q_structure: &Query<&Structure>,
     _q_shop_data: &mut Query<&mut Shop>,
 ) -> Option<Shop> {
@@ -141,7 +96,7 @@ fn get_shop(
 
     // let mut shop = q_shop_data.get_mut(block_data).ok()?;
 
-    Some(generate_fake_shop(items))
+    Some(generate_fake_shop(default_shop_entries))
 }
 
 fn listen_sell_events(
@@ -152,6 +107,7 @@ fn listen_sell_events(
     lobby: Res<ServerLobby>,
     mut q_player: Query<(&mut Inventory, &mut Credits)>,
     items: Res<Registry<Item>>,
+    default_shop_entries: Res<DefaultShopEntries>,
 ) {
     for &SellEvent {
         client_id,
@@ -189,7 +145,7 @@ fn listen_sell_events(
             continue;
         }
 
-        let Some(mut shop) = get_shop(structure_entity, shop_block, &items, &q_structure, &mut q_shop_data) else {
+        let Some(mut shop) = get_shop(structure_entity, shop_block, &default_shop_entries, &q_structure, &mut q_shop_data) else {
             continue;
         };
 
@@ -219,6 +175,7 @@ fn listen_buy_events(
     lobby: Res<ServerLobby>,
     mut q_player: Query<(&mut Inventory, &mut Credits)>,
     items: Res<Registry<Item>>,
+    default_shop_entries: Res<DefaultShopEntries>,
 ) {
     for &BuyEvent {
         client_id,
@@ -256,7 +213,7 @@ fn listen_buy_events(
             continue;
         }
 
-        let Some(mut shop) = get_shop(structure_entity, shop_block, &items, &q_structure, &mut q_shop_data) else {
+        let Some(mut shop) = get_shop(structure_entity, shop_block, &default_shop_entries, &q_structure, &mut q_shop_data) else {
             continue;
         };
 
@@ -343,6 +300,7 @@ pub(super) fn register(app: &mut App) {
             listen_sell_events,
         )
             .chain()
+            .run_if(in_state(GameState::Playing))
             .after(NetworkingSystemsSet::FlushReceiveMessages),
     )
     .add_event::<BuyEvent>()
