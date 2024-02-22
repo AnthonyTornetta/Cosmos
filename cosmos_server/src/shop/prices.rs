@@ -8,85 +8,344 @@ use cosmos_core::{item::Item, registry::Registry};
 
 use crate::state::GameState;
 
-fn create_default_shop_entires(_items: Res<Registry<Item>>) {
-    /*
-    cosmos:grass=Grass
-    cosmos:stone=Stone
-    cosmos:dirt=Dirt
-    cosmos:log=Log
-    cosmos:laser_cannon=Laser Cannon
-    cosmos:cherry_leaf=Cherry Leaf
-    cosmos:redwood_log=Redwood Log
-    cosmos:redwood_leaf=Redwood Leaf
-    cosmos:ship_core=Ship Core
-    cosmos:energy_cell=Energy Cell
-    cosmos:reactor=Reactor
-    cosmos:thruster=Thruster
-    cosmos:light=Light
-    cosmos:glass=Glass
-    cosmos:molten_stone=Molten Stone
-    cosmos:cheese=Cheese (Lava)
-    cosmos:ice=Ice
-    cosmos:water=Water
-    cosmos:sand=Sand
-    cosmos:cactus=Cactus
-    cosmos:build_block=Build Block
-
-    cosmos:ship_hull_grey=Grey Ship Hull
-    cosmos:ship_hull_black=Black Ship Hull
-    cosmos:ship_hull_dark_grey=Dark Grey Ship Hull
-    cosmos:ship_hull_white=White Ship Hull
-    cosmos:ship_hull_blue=Blue Ship Hull
-    cosmos:ship_hull_dark_blue=Dark Blue Ship Hull
-    cosmos:ship_hull_brown=Brown Ship Hull
-    cosmos:ship_hull_green=Green Ship Hull
-    cosmos:ship_hull_dark_green=Dark Green Ship Hull
-    cosmos:ship_hull_orange=Orange Ship Hull
-    cosmos:ship_hull_dark_orange=Dark Orange Ship Hull
-    cosmos:ship_hull_pink=Pink Ship Hull
-    cosmos:ship_hull_dark_pink=Dark Pink Ship Hull
-    cosmos:ship_hull_purple=Purple Ship Hull
-    cosmos:ship_hull_dark_purple=Dark Purple Ship Hull
-    cosmos:ship_hull_red=Red Ship Hull
-    cosmos:ship_hull_dark_red=Dark Red Ship Hull
-    cosmos:ship_hull_yellow=Yellow Ship Hull
-    cosmos:ship_hull_dark_yellow=Dark Yellow Ship Hull
-    cosmos:ship_hull_mint=Mint Ship Hull
-
-    cosmos:glass_white=White Glass
-    cosmos:glass_blue=Blue Glass
-    cosmos:glass_dark_blue=Dark Blue Glass
-    cosmos:glass_brown=Brown Glass
-    cosmos:glass_green=Green Glass
-    cosmos:glass_dark_green=Dark Green Glass
-    cosmos:glass_orange=Orange Glass
-    cosmos:glass_dark_orange=Dark Orange Glass
-    cosmos:glass_pink=Pink Glass
-    cosmos:glass_dark_pink=Dark Pink Glass
-    cosmos:glass_purple=Purple Glass
-    cosmos:glass_dark_purple=Dark Purple Glass
-    cosmos:glass_red=Red Glass
-    cosmos:glass_dark_red=Dark Red Glass
-    cosmos:glass_yellow=Yellow Glass
-    cosmos:glass_dark_yellow=Dark Yellow Glass
-    cosmos:glass_mint=Mint Glass
-
-    cosmos:reactor_controller=Reactor Controller
-    cosmos:reactor_casing=Reactor Casing
-    cosmos:reactor_window=Reactor Window
-    cosmos:reactor_cell=Reactor Power Cell
-    cosmos:fan=Fan
-    cosmos:storage=Storage
-    cosmos:station_core=Station Core
-    cosmos:test_ore=Test Ore
-    cosmos:plasma_drill=Plasma Drill
-    cosmos:shop=Shop */
-
-    // ShopEntry::Buying {
-    //     item_id: (),
-    //     max_quantity_buying: (),
-    //     price_per: (),
-    // }
+fn create_default_shop_entires(items: Res<Registry<Item>>) {
+    let entries = [
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:grass").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 30,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:stone").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 10,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:dirt").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 10,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:log").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 10,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:laser_cannon").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 300,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:cherry_leaf").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 20,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:redwood_log").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 30,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:redwood_leaf").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 20,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:ship_core").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 1000,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:energy_cell").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 300,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:reactor").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 300,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:thruster").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 200,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:light").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 50,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:glass").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 50,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:molten_stone").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 10,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:cheese").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 10,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:ice").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 30,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:water").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 30,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:sand").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 30,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:cactus").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 50,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:build_block").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 40,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:ship_hull_grey").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 40,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:ship_hull_black").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 40,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:ship_hull_dark_grey").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 40,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:ship_hull_white").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 40,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:ship_hull_blue").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 40,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:ship_hull_dark_blue").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 40,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:ship_hull_brown").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 40,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:ship_hull_green").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 40,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:ship_hull_dark_green").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 40,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:ship_hull_orange").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 40,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:ship_hull_dark_orange").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 40,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:ship_hull_pink").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 40,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:ship_hull_dark_pink").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 40,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:ship_hull_purple").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 40,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:ship_hull_dark_purple").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 40,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:ship_hull_red").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 40,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:ship_hull_dark_red").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 40,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:ship_hull_yellow").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 40,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:ship_hull_dark_yellow").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 40,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:ship_hull_mint").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 40,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:glass_white").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 40,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:glass_blue").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 40,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:glass_dark_blue").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 40,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:glass_brown").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 40,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:glass_green").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 40,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:glass_dark_green").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 40,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:glass_orange").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 40,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:glass_dark_orange").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 40,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:glass_pink").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 40,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:glass_dark_pink").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 40,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:glass_purple").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 40,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:glass_dark_purple").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 40,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:glass_red").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 40,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:glass_dark_red").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 40,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:glass_yellow").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 40,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:glass_dark_yellow").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 40,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:glass_mint").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 40,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:reactor_controller").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 1000,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:reactor_casing").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 100,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:reactor_window").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 100,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:reactor_cell").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 200,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:fan").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 10,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:storage").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 100,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:station_core").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 25_000,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:test_ore").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 200,
+    },
+    ShopEntry::Buying {
+        item_id: items.from_id("cosmos:plasma_drill").expect("Missing Item")),
+        max_quantity_buying: 100000,
+        price_per: 200,
+    },
+    ];
 }
 
 pub(super) fn register(app: &mut App) {
