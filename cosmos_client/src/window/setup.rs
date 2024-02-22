@@ -3,7 +3,7 @@
 use bevy::{
     input::mouse::MouseMotion,
     prelude::*,
-    window::{CursorGrabMode, PrimaryWindow, Window, WindowFocused},
+    window::{CursorGrabMode, PrimaryWindow, WindowFocused},
 };
 use cosmos_core::ecs::NeedsDespawned;
 

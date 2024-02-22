@@ -2,7 +2,7 @@
 
 use bevy::{
     pbr::{deferred::DEFAULT_PBR_DEFERRED_LIGHTING_PASS_ID, MaterialPipeline, MaterialPipelineKey, OpaqueRendererMethod},
-    prelude::{Asset, Color, Handle, Reflect, Vec4},
+    prelude::{Asset, Reflect},
     render::{
         mesh::{MeshVertexAttribute, MeshVertexBufferLayout},
         render_asset::RenderAssets,
