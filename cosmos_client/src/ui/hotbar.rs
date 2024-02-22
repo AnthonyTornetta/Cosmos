@@ -14,7 +14,7 @@ use crate::{
     state::game_state::GameState,
 };
 
-use super::item_renderer::RenderItem;
+use super::{components::show_cursor::no_open_menus, item_renderer::RenderItem};
 
 const ITEM_NAME_FADE_DURATION_SEC: f32 = 5.0;
 
@@ -364,7 +364,7 @@ pub(super) fn register(app: &mut App) {
             (
                 populate_hotbar,
                 listen_for_change_events,
-                listen_button_presses,
+                listen_button_presses.run_if(no_open_menus),
                 tick_text_alpha_down,
             )
                 .run_if(in_state(GameState::Playing)),

@@ -12,6 +12,7 @@ use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     netty::flags::LocalPlayer,
     state::game_state::GameState,
+    ui::components::show_cursor::no_open_menus,
 };
 
 #[derive(Component, Default, Reflect)]
@@ -92,7 +93,13 @@ fn check_removed_pilot(mut commands: Commands, mut removed: RemovedComponents<Pi
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        (check_system_in_use, check_became_pilot, check_removed_pilot, swap_selected).run_if(in_state(GameState::Playing)),
+        (
+            check_system_in_use.run_if(no_open_menus),
+            check_became_pilot,
+            check_removed_pilot,
+            swap_selected.run_if(no_open_menus),
+        )
+            .run_if(in_state(GameState::Playing)),
     )
     .register_type::<HoveredSystem>();
 }

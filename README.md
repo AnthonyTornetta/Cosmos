@@ -49,26 +49,22 @@ Every time you want to view the documentation, navigate to the `docs/` directory
 
 See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the list of current features/bugs in development.
 
-## Release 0.0.5a - The Aesthetic Release (In Progress)
-
-- [ ] Biosphere Improvements
-  - [ ] Ice biosphere glaciers
-  - [ ] Water block
-  - [ ] Lava block
-  - [ ] Structures
-    - [ ] Rocks spawning
-    - [ ] Undergrowth
-    - [ ] 1 More tree type
-  - [ ] Groundwork for biomes
-    - [ ] Plane,
-    - [ ] Redwood forest,
-    - [ ] 1 Additional forest
-    - [ ] Ocean
-  - [ ] On-planet skybox
-    - [ ] Sun-side skybox
-      - [ ] Perhaps done via a sphere surrounding the planet that always faces the nearest star
-    - [ ] Sun-set skybox
-    - [ ] Night-side skybox
+## Release 0.0.5a - The Playable Release (In Progress)
+- [ ] Pirates
+  - [ ] Create a number of pirate ships
+    - [ ] Each ship has a difficulty
+  - [ ] Difficulty of spawns scales off player's money & ship's number of blocks
+  - [ ] Basic AI
+    - [ ] Spawn within 2 sectors of player
+    - [ ] Spawn in fleets based on player's difficulty
+    - [ ] If within ~1 sector of player, fly towards player
+    - [ ] Shoot towards player, trying to predict their position based off distance & velocity
+- [x] Shop
+  - [x] Buy from shop
+  - [x] Sell to shop
+  - [x] Players have money
+  - [x] For now shops have unlimited stock & funds
+  - [x] Shop block
 - [x] Animated textures
 - [x] Storage system
   - [x] Support for blocks that store their own data
@@ -256,6 +252,24 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 
 ## Everything that will still have to be done after 0.0.5a
 
+- [ ] Biosphere Improvements
+  - [ ] Ice biosphere glaciers
+  - [ ] Water block
+  - [ ] Lava block
+  - [ ] Structures
+    - [ ] Rocks spawning
+    - [ ] Undergrowth
+    - [ ] 1 More tree type
+  - [ ] Groundwork for biomes
+    - [ ] Plane,
+    - [ ] Redwood forest,
+    - [ ] 1 Additional forest
+    - [ ] Ocean
+  - [ ] On-planet skybox
+    - [ ] Sun-side skybox
+      - [ ] Perhaps done via a sphere surrounding the planet that always faces the nearest star
+    - [ ] Sun-set skybox
+    - [ ] Night-side skybox
 - [ ] Mining beam system
   - [ ] Mining beam block
     - [ ] Can be placed in line to create more powerful miners

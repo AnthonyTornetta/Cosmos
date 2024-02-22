@@ -31,6 +31,7 @@ use crate::{
     rendering::MainCamera,
     state::game_state::GameState,
     structure::planet::align_player::{self, PlayerAlignment},
+    ui::components::show_cursor::no_open_menus,
 };
 
 fn exit_build_mode(
@@ -334,7 +335,13 @@ fn change_visuals(
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        (place_symmetries, exit_build_mode, control_build_mode, change_visuals, clear_visuals)
+        (
+            (place_symmetries, exit_build_mode, control_build_mode)
+                .chain()
+                .run_if(no_open_menus),
+            change_visuals,
+            clear_visuals,
+        )
             .chain()
             .run_if(in_state(GameState::Playing)),
     );

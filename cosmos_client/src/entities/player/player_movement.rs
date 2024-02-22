@@ -10,6 +10,7 @@ use crate::{
     rendering::MainCamera,
     state::game_state::GameState,
     structure::planet::align_player::{self, PlayerAlignment},
+    ui::components::show_cursor::no_open_menus,
 };
 
 fn process_player_movement(
@@ -146,5 +147,8 @@ fn process_player_movement(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, process_player_movement.run_if(in_state(GameState::Playing)));
+    app.add_systems(
+        Update,
+        process_player_movement.run_if(no_open_menus).run_if(in_state(GameState::Playing)),
+    );
 }

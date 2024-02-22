@@ -15,6 +15,7 @@ use cosmos_core::structure::ship::ship_movement::ShipMovement;
 use crate::input::inputs::{CosmosInputs, InputChecker, InputHandler};
 use crate::netty::flags::LocalPlayer;
 use crate::state::game_state::GameState;
+use crate::ui::components::show_cursor::no_open_menus;
 use crate::ui::crosshair::CrosshairOffset;
 use crate::window::setup::{CursorFlags, DeltaCursorPosition};
 
@@ -112,5 +113,8 @@ fn reset_cursor(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, (process_ship_movement, reset_cursor).run_if(in_state(GameState::Playing)));
+    app.add_systems(
+        Update,
+        (process_ship_movement.run_if(no_open_menus), reset_cursor).run_if(in_state(GameState::Playing)),
+    );
 }
