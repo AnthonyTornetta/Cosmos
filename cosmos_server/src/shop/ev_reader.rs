@@ -57,7 +57,6 @@ fn on_interact_with_shop(
                     shop_data: fake_shop_data,
                 }),
             );
-            info!("Interacted w/ shop");
         }
     }
 }
