@@ -21,7 +21,7 @@ use crate::{netty::network_helpers::ServerLobby, GameState};
 
 fn generate_fake_shop(default: &DefaultShopEntries) -> Shop {
     Shop {
-        name: "Fake Shop".into(),
+        name: "Cool Shop".into(),
         contents: default.0.clone(),
     }
 }
