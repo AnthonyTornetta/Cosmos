@@ -20,6 +20,8 @@ use crate::{
     state::game_state::GameState,
 };
 
+use super::components::show_cursor::no_open_menus;
+
 #[derive(Clone, Copy, Component, Debug)]
 struct IndicatorSettings {
     pub color: Color,
@@ -438,7 +440,7 @@ pub(super) fn register(app: &mut App) {
                 add_indicators.run_if(resource_exists::<IndicatorImage>()),
                 added,
                 position_diamonds,
-                focus_waypoint,
+                focus_waypoint.run_if(no_open_menus),
             )
                 .chain()
                 .run_if(in_state(GameState::Playing)),

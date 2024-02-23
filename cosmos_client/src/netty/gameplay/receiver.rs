@@ -4,7 +4,7 @@
 
 use std::sync::{Arc, Mutex};
 
-use bevy::{core_pipeline::bloom::BloomSettings, prelude::*, render::camera::Projection, window::PrimaryWindow};
+use bevy::{core_pipeline::bloom::BloomSettings, prelude::*, window::PrimaryWindow};
 use bevy_kira_audio::prelude::AudioReceiver;
 use bevy_rapier3d::prelude::*;
 use bevy_renet::renet::{transport::NetcodeClientTransport, ClientId, RenetClient};

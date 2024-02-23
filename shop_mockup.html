@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            border: none;
+            font-family: Verdana, Geneva, Tahoma, sans-serif;
+            box-sizing: border-box;
+        }
+
+        html {
+            background-color: black;
+            min-height: 100%;
+            display: flex;
+        }
+
+        body {
+            flex: 1;
+            display: flex;
+
+        }
+
+        .shop {
+            position: relative;
+            margin: auto;
+
+            height: 800px;
+            width: 1000px;
+            background-color: #2D2D2D;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .top-bar {
+            width: 100%;
+            color: white;
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        main {
+            flex: 1;
+            display: flex;
+        }
+
+        .main-stuff {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .categories {
+            width: 400px;
+            padding: 10px;
+            border-left: thick solid #1C1C1C;
+            height: 100%;
+            display: flex;
+        }
+
+        p,
+        h2,
+        h3 {
+            color: white;
+            margin: 10px 0;
+            line-height: 1.5em;
+        }
+
+        ul {
+            margin-left: 20px;
+        }
+
+        li {
+            list-style-type: none;
+            line-height: 1.5em;
+        }
+
+        .top {
+            flex: 1;
+            padding: 20px 40px;
+        }
+
+        .money {
+            font-size: 1.5em;
+            color: white;
+            display: inline-block;
+            display: flex;
+            margin: 0 10px;
+        }
+
+        .scrollbar {
+            width: 15px;
+            background-color: #888;
+            height: 100%;
+        }
+
+        .scroll-pos {
+            height: 20%;
+            background-color: #555;
+        }
+
+        .items li {
+            color: white;
+        }
+
+        .left {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+
+        .tab-btn {
+            height: 100%;
+            font-size: 2em;
+            flex: 1;
+            background-color: green;
+            color: white;
+            width: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="shop">
+        <div class="top-bar">
+            <h1>Shop</h1>
+            <h1>X</h1>
+        </div>
+        <div style="display: flex; width: 100%; height: 50px; border-bottom: thick solid #1C1C1C;">
+            <button class="tab-btn" style="background-color: #555">Sell</button>
+            <button class="tab-btn" style="background-color: green;">> Buy &lt;</button>
+        </div>
+        <main>
+            <div class="main-stuff">
+                <div class="top">
+                    <div style="display: flex;">
+                        <div class="left">
+                            <h2>Laser Cannon</h2>
+                            <p>Description of laser cannon</p>
+                        </div>
+                        <div class="right">
+                            <div
+                                style="width: 128px; height: 128px; background-color: #eee; display: flex; justify-content: center; align-items: center; text-align: center;">
+                                image of laser cannon
+                            </div>
+                        </div>
+                    </div>
+                    <h3>Stats</h3>
+                    <ul>
+                        <li style="color: red">Physical Damage: 20</li>
+                        <li style="color: yellow">Shield Damage: 20</li>
+                        <li style="color: aqua">Hardness: 20</li>
+                        <li style="color: aqua">Density: 20</li>
+                        <li style="color: aqua">Mining Resistance: 20</li>
+                    </ul>
+                </div>
+
+            </div>
+            <div class="categories">
+                <div style="display: flex; flex: 1; flex-direction: column;">
+                    <h2>
+                        Selling
+                    </h2>
+                    <input type="text"
+                        style="width: 100%; font-size: 1.1em; padding: 4px; background-color: #555; color: white; border: #1c1c1c 2px solid">
+
+                    <div style="display: flex; flex-direction: row; flex: 1; margin-top: 10px;">
+
+                        <div style="display: flex; flex-direction:column; flex: 1;">
+                            <ul class="items">
+                                <li>&gt; Building</li>
+                                <li>v Weapons</li>
+                                <ul>
+                                    <li
+                                        style="background-color: #0081a8; display: flex; justify-content: space-between; margin-right: 10px;">
+                                        <span>Laser Cannon</span>
+                                        <span>(1000)</span>
+                                    </li>
+                                    <li
+                                        style="display: flex; justify-content: space-between; margin-right: 10px; color: orange">
+                                        <span>Holy Flaming Laser Cannon</span>
+                                        <span>(1)</span>
+                                    </li>
+                                </ul>
+                                <li>v Energy</li>
+                                <ul>
+                                    <li style="display: flex; justify-content: space-between; margin-right: 10px;">
+                                        <span>Reactor Cell</span>
+                                        <span>(126)</span>
+                                    </li>
+                                    <li style="display: flex; justify-content: space-between; margin-right: 10px;">
+                                        <span>Reactor Casing</span>
+                                        <span>(400)</span>
+                                    </li>
+                                    <li style="display: flex; justify-content: space-between; margin-right: 10px;">
+                                        <span>Reactor Window</span>
+                                        <span>(400)</span>
+                                    </li>
+                                    <li style="display: flex; justify-content: space-between; margin-right: 10px;">
+                                        <span>Reactor Controller</span>
+                                        <span>(15)</span>
+                                    </li>
+                                </ul>
+                            </ul>
+                        </div>
+
+                        <div class="scrollbar">
+                            <div class="scroll-pos"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+        <div class="buying" style="border-top: #1c1c1c thick solid; display: flex; padding-top: 10px;">
+            <div style="display: flex; flex: 2; height: 100%; flex-direction: column; gap: 10px;">
+                <span class="money" style="padding-left: 16px;">$1000</span>
+                <span class="money">- $20 x 6 = $120</span>
+                <span class="money"
+                    style="padding-left: 16px; padding-top: 10px; border-top: thick solid #555">$880</span>
+            </div>
+            <div style="display: flex; flex-direction: column; flex: 3; margin: 0 20px">
+                <div style="display: flex;  ">
+                    <input
+                        style="width: 250px; font-size: 1.5em; padding: 10px; background-color: #555; border: 2px solid #111; color: white;">
+                    <div style="display: inline-flex; flex-direction: column; margin-left: 50px; flex: 1; ">
+                        <div style="display: flex; justify-content: space-between; color: white; font-size: 1.5em;">
+                            <span>0</span><span>1000</span>
+                        </div>
+                        <input style=" font-size: 1.5em;" type="range">
+                    </div>
+                </div>
+                <div style="display: flex;  margin-top: 10px;">
+
+                    <button style="height: 80px; font-size: 3em; flex: 1; background-color: green; color: white; display:
+                        inline-block; width: 50%; display: inline-flex; justify-content: center; align-items:
+                        center; cursor: pointer;">BUY</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

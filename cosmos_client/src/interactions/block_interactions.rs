@@ -17,8 +17,7 @@ use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     rendering::MainCamera,
     state::game_state::GameState,
-    ui::hotbar::Hotbar,
-    window::setup::CursorFlags,
+    ui::{components::show_cursor::no_open_menus, hotbar::Hotbar},
     LocalPlayer,
 };
 
@@ -43,14 +42,8 @@ pub(crate) fn process_player_interaction(
     hotbar: Query<&Hotbar>,
     items: Res<Registry<Item>>,
     block_items: Res<BlockItems>,
-    cursor_flags: Res<CursorFlags>,
     mut commands: Commands,
 ) {
-    // They're in a menu if the cursor isn't locked
-    if !cursor_flags.is_cursor_locked() {
-        return;
-    }
-
     // this fails if the player is a pilot
     let Ok((player_entity, mut inventory, looking_at)) = player_body.get_single_mut() else {
         return;
@@ -165,5 +158,10 @@ pub(crate) fn process_player_interaction(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, process_player_interaction.run_if(in_state(GameState::Playing)));
+    app.add_systems(
+        Update,
+        process_player_interaction
+            .run_if(no_open_menus)
+            .run_if(in_state(GameState::Playing)),
+    );
 }

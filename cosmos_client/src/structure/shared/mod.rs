@@ -11,6 +11,7 @@ use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     netty::flags::LocalPlayer,
     state::game_state::GameState,
+    ui::components::show_cursor::no_open_menus,
 };
 
 pub mod build_mode;
@@ -38,5 +39,10 @@ fn remove_self_from_structure(
 pub(super) fn register(app: &mut App) {
     build_mode::register(app);
 
-    app.add_systems(Update, remove_self_from_structure.run_if(in_state(GameState::Playing)));
+    app.add_systems(
+        Update,
+        remove_self_from_structure
+            .run_if(no_open_menus)
+            .run_if(in_state(GameState::Playing)),
+    );
 }

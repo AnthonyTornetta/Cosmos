@@ -134,6 +134,39 @@ impl Inventory {
         Ok(())
     }
 
+    /// Returns true if there is enough space in this inventory to insert this itemstack.
+    pub fn can_insert_itemstack(&self, itemstack: &ItemStack) -> bool {
+        self.can_insert_raw(itemstack.item_id(), itemstack.max_stack_size(), itemstack.quantity())
+    }
+
+    /// Returns true if there is enough space in this inventory to insert an item of this quantity.
+    pub fn can_insert(&self, item: &Item, quantity: u16) -> bool {
+        self.can_insert_raw(item.id(), item.max_stack_size(), quantity)
+    }
+    /// Returns (the overflow that could not fit and the slot
+    pub fn can_insert_raw(&self, item_id: u16, max_stack_size: u16, mut quantity: u16) -> bool {
+        for is in &mut self.items.iter().flatten().filter(|x| x.item_id() == item_id) {
+            let delta = max_stack_size - is.quantity();
+            if delta >= quantity {
+                return true;
+            }
+
+            quantity -= delta;
+        }
+
+        // no suitable locations found with pre-existing stacks of that item, check for new ones
+
+        for _ in self.items.iter().filter(|x| x.is_none()) {
+            if max_stack_size >= quantity {
+                return true;
+            }
+
+            quantity -= max_stack_size;
+        }
+
+        false
+    }
+
     /// Returns the overflow that could not fit
     pub fn insert_itemstack(&mut self, itemstack: &ItemStack) -> u16 {
         self.insert_raw(itemstack.item_id(), itemstack.max_stack_size(), itemstack.quantity())
@@ -424,6 +457,37 @@ impl Inventory {
             .filter(|x| x.item_id() == item.id())
             .map(|x| x.quantity() as usize)
             .sum()
+    }
+
+    /// Checks if the inventory can have this quantity of this item removed from its contents
+    pub fn can_take_item(&self, item: &Item, quantity: usize) -> bool {
+        self.quantity_of(item) >= quantity
+    }
+
+    /// Removes up to the amount specified of this item from the inventory.
+    ///
+    /// Returns amount that couldn't be taken.
+    pub fn take_item(&mut self, item: &Item, mut quantity: usize) -> usize {
+        for maybe_is in self
+            .items
+            .iter_mut()
+            .filter(|x| x.as_ref().map(|x| x.item_id() == item.id()).unwrap_or(false))
+        {
+            let Some(is) = maybe_is else {
+                continue;
+            };
+
+            let qty = is.quantity();
+            if quantity >= qty as usize {
+                quantity -= is.quantity() as usize;
+                *maybe_is = None;
+            } else {
+                is.set_quantity(qty - quantity as u16);
+                quantity = 0;
+            }
+        }
+
+        quantity
     }
 
     /// Iterates over every slot in the inventory.

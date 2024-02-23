@@ -1,7 +1,6 @@
 use crate::asset::asset_loading::{AllTexturesDoneLoadingEvent, AssetsDoneLoadingEvent, CosmosTextureAtlas};
 
 use super::super::{block_materials::ArrayTextureMaterial, *};
-use bevy::prelude::Commands;
 
 #[derive(Resource)]
 pub(crate) struct DefaultMaterial(pub Handle<ArrayTextureMaterial>);

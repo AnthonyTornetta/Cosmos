@@ -43,6 +43,8 @@ pub enum NettyChannelServer {
     SystemReplication,
     /// Syncing of registry data
     Registry,
+    /// Syncs information about shops
+    Shop,
 }
 
 /// Network channels that clients send to the server
@@ -55,6 +57,8 @@ pub enum NettyChannelClient {
     Unreliable,
     /// used for inventories
     Inventory,
+    /// Used for shops
+    Shop,
 }
 
 impl From<NettyChannelClient> for u8 {
@@ -63,6 +67,7 @@ impl From<NettyChannelClient> for u8 {
             NettyChannelClient::Reliable => 0,
             NettyChannelClient::Unreliable => 1,
             NettyChannelClient::Inventory => 2,
+            NettyChannelClient::Shop => 3,
         }
     }
 }
@@ -93,6 +98,13 @@ impl NettyChannelClient {
                     resend_time: Duration::from_millis(200),
                 },
             },
+            ChannelConfig {
+                channel_id: Self::Shop.into(),
+                max_memory_usage_bytes: 5 * MB,
+                send_type: SendType::ReliableOrdered {
+                    resend_time: Duration::from_millis(200),
+                },
+            },
         ]
     }
 }
@@ -108,6 +120,7 @@ impl From<NettyChannelServer> for u8 {
             NettyChannelServer::Inventory => 5,
             NettyChannelServer::SystemReplication => 6,
             NettyChannelServer::Registry => 7,
+            NettyChannelServer::Shop => 8,
         }
     }
 }
@@ -163,6 +176,13 @@ impl NettyChannelServer {
             },
             ChannelConfig {
                 channel_id: Self::Registry.into(),
+                max_memory_usage_bytes: 5 * MB,
+                send_type: SendType::ReliableOrdered {
+                    resend_time: Duration::from_millis(200),
+                },
+            },
+            ChannelConfig {
+                channel_id: Self::Shop.into(),
                 max_memory_usage_bytes: 5 * MB,
                 send_type: SendType::ReliableOrdered {
                     resend_time: Duration::from_millis(200),

@@ -49,7 +49,7 @@ pub struct CosmosCommandInfo {
     pub name: String,
     /// How to use the command.
     ///
-    /// Example: "despawn [entity_id]"
+    /// Example: "despawn \[entity_id\]"
     pub usage: String,
     /// What the command does.
     ///

@@ -19,8 +19,11 @@ use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     netty::{flags::LocalPlayer, mapping::NetworkMapping},
     state::game_state::GameState,
-    ui::item_renderer::{RenderItem, RenderItemSystemSet},
-    window::setup::CursorFlags,
+    ui::{
+        components::window::{GuiWindow, WindowBundle},
+        item_renderer::RenderItem,
+        UiSystemSet,
+    },
 };
 
 pub mod netty;
@@ -43,7 +46,9 @@ fn get_server_inventory_identifier(entity: Entity, mapping: &NetworkMapping, q_b
 }
 
 #[derive(Component)]
-struct RenderedInventory;
+struct RenderedInventory {
+    inventory_holder: Entity,
+}
 
 fn toggle_inventory(
     mut commands: Commands,
@@ -66,18 +71,16 @@ fn toggle_inventory(
     }
 }
 
-#[derive(Component, Debug)]
-struct CloseInventoryButton;
-
 fn close_button_system(
     mut commands: Commands,
-    mut interaction_query: Query<&Interaction, (Changed<Interaction>, With<Button>, With<CloseInventoryButton>)>,
+    q_close_inventory: Query<&RenderedInventory, With<NeedsDespawned>>,
     open_inventories: Query<Entity, With<NeedsDisplayed>>,
 ) {
-    for interaction in interaction_query.iter_mut() {
-        if *interaction == Interaction::Pressed {
-            open_inventories.iter().for_each(|entity| {
-                commands.entity(entity).remove::<NeedsDisplayed>();
+    for rendered_inventory in q_close_inventory.iter() {
+        // TODO: fix inventory closing to only close the one open
+        if let Some(mut _ecmds) = commands.get_entity(rendered_inventory.inventory_holder) {
+            open_inventories.iter().for_each(|ent| {
+                commands.entity(ent).remove::<NeedsDisplayed>().log_components();
             });
         }
     }
@@ -107,16 +110,11 @@ fn toggle_inventory_rendering(
     added_inventories: Query<(Entity, &Inventory, &NeedsDisplayed, Option<&OpenInventoryEntity>), Added<NeedsDisplayed>>,
     mut without_needs_displayed_inventories: Query<(Entity, &mut Inventory, Option<&OpenInventoryEntity>), Without<NeedsDisplayed>>,
     mut holding_item: Query<(Entity, &DisplayedItemFromInventory, &mut HeldItemStack), With<FollowCursor>>,
-    mut cursor_flags: ResMut<CursorFlags>,
     mut client: ResMut<RenetClient>,
     mapping: Res<NetworkMapping>,
     mut removed_components: RemovedComponents<NeedsDisplayed>,
-    rendered_inventories: Query<(), With<RenderedInventory>>,
     q_block_data: Query<&BlockData>,
 ) {
-    let mut n_open_inventories = rendered_inventories.iter().len();
-    let mut decreased = false;
-
     for removed in removed_components.read() {
         let Ok((inventory_holder, mut local_inventory, open_inventory_entity)) = without_needs_displayed_inventories.get_mut(removed)
         else {
@@ -130,9 +128,9 @@ fn toggle_inventory_rendering(
         let entity = open_ent.0;
 
         commands.entity(inventory_holder).remove::<OpenInventoryEntity>();
-        commands.entity(entity).insert(NeedsDespawned);
-        n_open_inventories -= 1;
-        decreased = true;
+        if let Some(mut ecmds) = commands.get_entity(entity) {
+            ecmds.insert(NeedsDespawned);
+        }
 
         if let Ok((entity, displayed_item, mut held_item_stack)) = holding_item.get_single_mut() {
             let server_inventory_holder = get_server_inventory_identifier(inventory_holder, &mapping, &q_block_data);
@@ -188,10 +186,6 @@ fn toggle_inventory_rendering(
             continue;
         }
 
-        cursor_flags.show();
-
-        n_open_inventories += 1;
-
         let font = asset_server.load("fonts/PixeloidSans.ttf");
 
         let text_style = TextStyle {
@@ -213,101 +207,32 @@ fn toggle_inventory_rendering(
         let open_inventory = commands
             .spawn((
                 Name::new("Rendered Inventory"),
-                RenderedInventory,
-                NodeBundle {
-                    style: Style {
-                        position_type: PositionType::Absolute,
-                        display: Display::Flex,
-                        flex_direction: FlexDirection::Column,
-                        right,
-                        left,
-                        top: Val::Px(100.0),
-                        width: Val::Px(n_slots_per_row as f32 * slot_size + inventory_border_size * 2.0),
-                        border: UiRect::all(Val::Px(inventory_border_size)),
+                RenderedInventory { inventory_holder },
+                WindowBundle {
+                    window: GuiWindow {
+                        title: inventory.name().into(),
+                        body_styles: Style {
+                            flex_direction: FlexDirection::Column,
+                            ..Default::default()
+                        },
+                    },
+                    node_bundle: NodeBundle {
+                        style: Style {
+                            position_type: PositionType::Absolute,
+                            right,
+                            left,
+                            top: Val::Px(100.0),
+                            width: Val::Px(n_slots_per_row as f32 * slot_size + inventory_border_size * 2.0),
+                            border: UiRect::all(Val::Px(inventory_border_size)),
+                            ..default()
+                        },
+                        border_color: BorderColor(Color::BLACK),
                         ..default()
                     },
-                    border_color: BorderColor(Color::BLACK),
-                    ..default()
+                    ..Default::default()
                 },
             ))
             .with_children(|parent| {
-                // Title bar
-                parent
-                    .spawn((
-                        Name::new("Title Bar"),
-                        NodeBundle {
-                            style: Style {
-                                display: Display::Flex,
-                                flex_direction: FlexDirection::Row,
-                                justify_content: JustifyContent::SpaceBetween,
-                                align_items: AlignItems::Center,
-                                width: Val::Percent(100.0),
-                                height: Val::Px(60.0),
-                                padding: UiRect::new(Val::Px(20.0), Val::Px(20.0), Val::Px(0.0), Val::Px(0.0)),
-
-                                ..default()
-                            },
-                            background_color: BackgroundColor(Color::WHITE),
-                            ..default()
-                        },
-                        UiImage {
-                            texture: asset_server.load("cosmos/images/ui/inventory-header.png"),
-                            ..Default::default()
-                        },
-                    ))
-                    .with_children(|parent| {
-                        parent.spawn(TextBundle {
-                            style: Style { ..default() },
-                            text: Text::from_section(
-                                inventory.name(),
-                                TextStyle {
-                                    color: Color::WHITE,
-                                    font_size: 24.0,
-                                    font: font.clone(),
-                                },
-                            )
-                            .with_alignment(TextAlignment::Center),
-                            ..default()
-                        });
-
-                        parent
-                            .spawn((
-                                ButtonBundle {
-                                    style: Style {
-                                        width: Val::Px(50.0),
-                                        height: Val::Px(50.0),
-                                        // horizontally center child text
-                                        justify_content: JustifyContent::Center,
-                                        // vertically center child text
-                                        align_items: AlignItems::Center,
-                                        ..default()
-                                    },
-                                    background_color: BackgroundColor(Color::WHITE),
-                                    image: UiImage {
-                                        texture: asset_server.load("cosmos/images/ui/inventory-close-button.png"),
-                                        ..Default::default()
-                                    },
-                                    ..Default::default()
-                                },
-                                CloseInventoryButton,
-                            ))
-                            .with_children(|button| {
-                                button.spawn(TextBundle {
-                                    style: Style { ..default() },
-                                    text: Text::from_section(
-                                        "X",
-                                        TextStyle {
-                                            color: Color::WHITE,
-                                            font_size: 24.0,
-                                            font: font.clone(),
-                                        },
-                                    )
-                                    .with_alignment(TextAlignment::Center),
-                                    ..default()
-                                });
-                            });
-                    });
-
                 let priority_slots = inventory.priority_slots();
 
                 parent
@@ -376,10 +301,6 @@ fn toggle_inventory_rendering(
             .id();
 
         commands.entity(inventory_holder).insert(OpenInventoryEntity(open_inventory));
-    }
-
-    if decreased && n_open_inventories == 0 {
-        cursor_flags.hide();
     }
 }
 
@@ -799,7 +720,7 @@ pub(super) fn register(app: &mut App) {
             InventorySet::ToggleInventoryRendering,
             InventorySet::FlushToggleInventoryRendering,
         )
-            .before(RenderItemSystemSet::BeginRenderingItems)
+            .before(UiSystemSet::ApplyDeferredA)
             .chain(),
     )
     .add_systems(

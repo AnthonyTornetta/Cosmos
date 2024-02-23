@@ -7,6 +7,7 @@ pub mod asset;
 pub mod audio;
 pub mod block;
 pub mod camera;
+pub mod economy;
 pub mod ecs;
 pub mod entities;
 pub mod events;
@@ -23,6 +24,7 @@ pub mod projectiles;
 pub mod registry;
 pub mod rendering;
 pub mod settings;
+pub mod shop;
 pub mod skybox;
 pub mod state;
 pub mod structure;
@@ -139,6 +141,8 @@ fn main() {
     settings::register(&mut app);
     physics::register(&mut app);
     ecs::register(&mut app);
+    shop::register(&mut app);
+    economy::register(&mut app);
 
     if cfg!(feature = "print-schedule") {
         bevy_mod_debugdump::print_schedule_graph(&mut app, Update);

@@ -7,12 +7,17 @@ use bevy::{
 use bevy_rapier3d::prelude::{ReadMassProperties, RigidBody, Velocity};
 
 use crate::{
-    persistence::LoadingDistance,
+    persistence::{Blueprintable, LoadingDistance},
     physics::location::Location,
     structure::{loading::StructureLoadingSet, structure_builder::TStructureBuilder, Structure},
 };
 
 use super::Station;
+
+/// Distance (in sectors) a station should be loaded in
+pub const STATION_LOAD_DISTANCE: u32 = 6;
+/// Distance (in sectors) a station should be unloaded
+pub const STATION_UNLOAD_DISTANCE: u32 = STATION_LOAD_DISTANCE + 1;
 
 /// Implement this to add a custom way to build stations
 pub trait TStationBuilder {
@@ -46,7 +51,8 @@ fn on_add_station(query: Query<Entity, Added<Station>>, mut commands: Commands) 
         commands.entity(entity).insert((
             RigidBody::Fixed,
             ReadMassProperties::default(),
-            LoadingDistance::new(6, 7),
+            Blueprintable,
+            LoadingDistance::new(STATION_LOAD_DISTANCE, STATION_UNLOAD_DISTANCE),
             Name::new("Station"),
         ));
     }

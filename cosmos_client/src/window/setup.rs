@@ -3,10 +3,14 @@
 use bevy::{
     input::mouse::MouseMotion,
     prelude::*,
-    window::{CursorGrabMode, PrimaryWindow, Window, WindowFocused},
+    window::{CursorGrabMode, PrimaryWindow, WindowFocused},
 };
+use cosmos_core::ecs::NeedsDespawned;
 
-use crate::input::inputs::{CosmosInputs, InputChecker, InputHandler};
+use crate::{
+    input::inputs::{CosmosInputs, InputChecker, InputHandler},
+    ui::components::show_cursor::ShowCursor,
+};
 
 #[derive(Resource, Copy, Clone)]
 /// Resource containing the various flags about the cursor, like if it's hidden or not
@@ -45,7 +49,7 @@ impl CursorFlags {
     }
 }
 
-#[derive(Resource)]
+#[derive(Resource, Debug, Clone, Copy, Default)]
 /// How much the cursor has moved since the last frame
 pub struct DeltaCursorPosition {
     /// Delta cursor x
@@ -62,30 +66,26 @@ fn setup_window(mut primary_query: Query<&mut Window, With<PrimaryWindow>>) {
     window.cursor.grab_mode = CursorGrabMode::Locked;
 }
 
-fn update_mouse_deltas(
-    mut delta: ResMut<DeltaCursorPosition>,
-    cursor_flags: Res<CursorFlags>,
-    mut ev_mouse_motion: EventReader<MouseMotion>,
-    mut primary_query: Query<&mut Window, With<PrimaryWindow>>,
-) {
-    let window = primary_query.get_single_mut().expect("Missing primary window.");
-
+fn update_mouse_deltas(mut delta: ResMut<DeltaCursorPosition>, mut ev_mouse_motion: EventReader<MouseMotion>) {
     delta.x = 0.0;
     delta.y = 0.0;
 
-    if cursor_flags.locked {
-        for ev in ev_mouse_motion.read() {
-            if window.cursor.grab_mode == CursorGrabMode::Locked {
-                delta.x += ev.delta.x;
-                delta.y += -ev.delta.y;
-            }
-        }
+    for ev in ev_mouse_motion.read() {
+        delta.x += ev.delta.x;
+        delta.y += -ev.delta.y;
     }
 }
 
-fn toggle_mouse_freeze(input_handler: InputChecker, mut cursor_flags: ResMut<CursorFlags>) {
+#[derive(Component)]
+struct CursorUnlocker;
+
+fn toggle_mouse_freeze(mut commands: Commands, q_cursor_unlocked: Query<Entity, With<CursorUnlocker>>, input_handler: InputChecker) {
     if input_handler.check_just_pressed(CosmosInputs::UnlockMouse) {
-        cursor_flags.toggle();
+        if let Ok(ent) = q_cursor_unlocked.get_single() {
+            commands.entity(ent).insert(NeedsDespawned);
+        } else {
+            commands.spawn((CursorUnlocker, ShowCursor));
+        }
     }
 }
 
@@ -94,7 +94,9 @@ fn window_focus_changed(
     mut ev_focus: EventReader<WindowFocused>,
     cursor_flags: Res<CursorFlags>,
 ) {
-    let (window_entity, mut window) = primary_query.get_single_mut().expect("Missing primary window.");
+    let Ok((window_entity, mut window)) = primary_query.get_single_mut() else {
+        return;
+    };
 
     if let Some(ev) = ev_focus.read().find(|e| e.window == window_entity) {
         if ev.focused {
@@ -116,7 +118,9 @@ fn apply_cursor_flags(window: &mut Window, cursor_flags: CursorFlags) {
 }
 
 fn apply_cursor_flags_on_change(cursor_flags: Res<CursorFlags>, mut primary_query: Query<&mut Window, With<PrimaryWindow>>) {
-    let mut window = primary_query.get_single_mut().expect("Missing primary window.");
+    let Ok(mut window) = primary_query.get_single_mut() else {
+        return;
+    };
 
     apply_cursor_flags(&mut window, *cursor_flags);
 }

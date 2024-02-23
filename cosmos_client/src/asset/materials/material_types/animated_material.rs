@@ -4,7 +4,6 @@ use crate::asset::{
 };
 
 use super::super::*;
-use bevy::{prelude::Commands, utils::HashMap};
 use serde::{Deserialize, Serialize};
 
 #[derive(Resource)]

@@ -57,9 +57,11 @@ rayon = { workspace = true }
 bevy_kira_audio = { workspace = true }
 
 toml = { workspace = true }
+arboard = { workspace = true }
 
 thread-priority = { workspace = true }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
 bitflags = { workspace = true }
 bevy_mod_debugdump = { workspace = true }
+derive_more = { workspace = true }

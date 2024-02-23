@@ -12,8 +12,8 @@ use bevy::{
 };
 use cosmos_core::{
     ecs::NeedsDespawned,
+    persistence::Blueprintable,
     physics::location::{Location, Sector, SectorUnit},
-    structure::ship::Ship,
 };
 use thiserror::Error;
 
@@ -96,7 +96,7 @@ fn cosmos_command_listener(
     mut command_events: EventReader<CosmosCommandSent>,
     cosmos_commands: Res<CosmosCommands>,
 
-    all_blueprintable_entities: Query<(Entity, &Name, &Location), With<Ship>>,
+    all_blueprintable_entities: Query<(Entity, &Name, &Location), With<Blueprintable>>,
 ) {
     for ev in command_events.read() {
         match ev.name.as_str() {

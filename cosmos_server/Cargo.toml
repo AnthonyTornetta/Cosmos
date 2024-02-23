@@ -46,6 +46,7 @@ bevy_rapier3d = { workspace = true }
 crossterm = { workspace = true }
 renet_visualizer = { workspace = true }
 futures-lite = { workspace = true }
+serde_json = { workspace = true }
 
 rayon = { workspace = true }
 
@@ -62,3 +63,4 @@ anyhow = { workspace = true }
 thiserror = { workspace = true }
 bitflags = { workspace = true }
 bevy_mod_debugdump = { workspace = true }
+derive_more = { workspace = true }

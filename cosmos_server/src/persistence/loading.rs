@@ -5,13 +5,13 @@
 //! Use the query: `Query<(Entity, &SerializedData), With<NeedsLoaded>>` to get all the data that will need
 //! loaded. From there, you can add any components necessary to the entity to fully load it in.
 //!
-//! See [`loading::default_load`] for an example.
+//! See [`default_load`] for an example.
 
 use std::fs;
 
 use bevy::{
     ecs::schedule::{apply_deferred, IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
-    log::warn,
+    log::{error, warn},
     prelude::{App, Commands, Component, Entity, Quat, Query, Update, With, Without},
     reflect::Reflect,
 };
@@ -44,6 +44,8 @@ pub enum LoadingSystemSet {
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 /// Put anything related to loading blueprinted entities in from serialized data into this set
 pub enum LoadingBlueprintSystemSet {
+    /// apply_deferred
+    FlushPreBeginLoadingBlueprints,
     /// Sets up the loading entities
     BeginLoadingBlueprints,
     /// apply_deferred
@@ -96,13 +98,13 @@ fn check_blueprint_needs_loaded(query: Query<(Entity, &NeedsBlueprintLoaded), Wi
     for (ent, blueprint_needs_loaded) in query.iter() {
         let path = &blueprint_needs_loaded.path;
         let Ok(data) = fs::read(path) else {
-            warn!("Error reading file at '{path}'. Is it there?");
+            error!("Error reading file at '{path}'. Is it there?");
             commands.entity(ent).insert(NeedsDespawned);
             continue;
         };
 
         let Ok(serialized_data) = cosmos_encoder::deserialize::<SerializedData>(&data) else {
-            warn!("Error deserializing data for {path}");
+            error!("Error deserializing data for {path}");
             continue;
         };
 
@@ -187,6 +189,7 @@ pub(super) fn register(app: &mut App) {
     app.configure_sets(
         LOADING_SCHEDULE,
         (
+            LoadingBlueprintSystemSet::FlushPreBeginLoadingBlueprints,
             LoadingBlueprintSystemSet::BeginLoadingBlueprints,
             LoadingBlueprintSystemSet::FlushBeginLoadingBlueprints,
             LoadingBlueprintSystemSet::DoLoadingBlueprints,
@@ -201,6 +204,7 @@ pub(super) fn register(app: &mut App) {
         LOADING_SCHEDULE,
         (
             // Defers
+            apply_deferred.in_set(LoadingBlueprintSystemSet::FlushPreBeginLoadingBlueprints),
             apply_deferred.in_set(LoadingBlueprintSystemSet::FlushBeginLoadingBlueprints),
             apply_deferred.in_set(LoadingBlueprintSystemSet::FlushDoLoadingBlueprints),
             apply_deferred.in_set(LoadingBlueprintSystemSet::FlushDoneLoadingBlueprints),

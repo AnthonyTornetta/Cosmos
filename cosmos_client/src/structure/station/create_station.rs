@@ -11,6 +11,7 @@ use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     netty::flags::LocalPlayer,
     state::game_state::GameState,
+    ui::components::show_cursor::no_open_menus,
 };
 
 #[derive(Debug, Event)]
@@ -44,6 +45,10 @@ fn event_handler(mut event_reader: EventReader<CreateStationEvent>, mut client: 
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_event::<CreateStationEvent>()
-        .add_systems(Update, (listener, event_handler).chain().run_if(in_state(GameState::Playing)));
+    app.add_event::<CreateStationEvent>().add_systems(
+        Update,
+        (listener.run_if(no_open_menus), event_handler)
+            .chain()
+            .run_if(in_state(GameState::Playing)),
+    );
 }

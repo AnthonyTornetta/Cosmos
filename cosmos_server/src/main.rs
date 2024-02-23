@@ -32,6 +32,7 @@ pub mod plugin;
 pub mod projectiles;
 pub mod registry;
 pub mod rng;
+pub mod shop;
 pub mod state;
 pub mod structure;
 pub mod universe;
