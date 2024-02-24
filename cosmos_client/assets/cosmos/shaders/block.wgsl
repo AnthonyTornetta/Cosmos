@@ -126,7 +126,7 @@ fn vertex(vertex_no_morph: Vertex) -> VertexOutput {
         vertex.normal,
         // Use vertex_no_morph.instance_index instead of vertex.instance_index to work around a wgpu dx12 bug.
         // See https://github.com/gfx-rs/naga/issues/2416
-        get_instance_index(vertex_no_morph.instance_index)
+        vertex_no_morph.instance_index
     );
 #endif
 #endif
@@ -146,7 +146,7 @@ fn vertex(vertex_no_morph: Vertex) -> VertexOutput {
 //         vertex.tangent,
 //         // Use vertex_no_morph.instance_index instead of vertex.instance_index to work around a wgpu dx12 bug.
 //         // See https://github.com/gfx-rs/naga/issues/2416
-//         get_instance_index(vertex_no_morph.instance_index)
+//         vertex_no_morph.instance_index
 //     );
 // #endif
 
@@ -157,7 +157,7 @@ fn vertex(vertex_no_morph: Vertex) -> VertexOutput {
 #ifdef VERTEX_OUTPUT_INSTANCE_INDEX
     // Use vertex_no_morph.instance_index instead of vertex.instance_index to work around a wgpu dx12 bug.
     // See https://github.com/gfx-rs/naga/issues/2416
-    out.instance_index = get_instance_index(vertex_no_morph.instance_index);
+    out.instance_index = vertex_no_morph.instance_index;
 #endif
 
     out.texture_index = vertex.texture_index;

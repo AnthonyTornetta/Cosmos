@@ -31,7 +31,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 fn added_skybox(mut query: Query<&mut Skybox, Added<Skybox>>, cubemap: Res<Cubemap>) {
     for mut skybox in query.iter_mut() {
         if cubemap.is_loaded {
-            skybox.0 = cubemap.image_handle.clone();
+            skybox.image = cubemap.image_handle.clone();
         }
     }
 }
@@ -55,7 +55,10 @@ fn asset_loaded(asset_server: Res<AssetServer>, mut images: ResMut<Assets<Image>
 
 fn on_add_main_camera(cubemap: Res<Cubemap>, mut commands: Commands, query: Query<Entity, Added<MainCamera>>) {
     for ent in query.iter() {
-        commands.entity(ent).insert(Skybox(cubemap.image_handle.clone()));
+        commands.entity(ent).insert(Skybox {
+            image: cubemap.image_handle.clone(),
+            brightness: 150.0,
+        });
     }
 }
 

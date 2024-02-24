@@ -148,11 +148,13 @@ fn server_listen_messages(
 
                     send_all_chunks.0.entry(server_entity).or_insert(vec![]).push(client_id);
                 }
-                ClientReliableMessages::SendSingleChunk { structure_entity, chunk } => request_chunk_event_writer.send(RequestChunkEvent {
-                    requester_id: client_id,
-                    structure_entity,
-                    chunk_coords: chunk,
-                }),
+                ClientReliableMessages::SendSingleChunk { structure_entity, chunk } => {
+                    request_chunk_event_writer.send(RequestChunkEvent {
+                        requester_id: client_id,
+                        structure_entity,
+                        chunk_coords: chunk,
+                    });
+                }
                 ClientReliableMessages::BreakBlock { structure_entity, block } => {
                     if let Some(player_entity) = lobby.player_from_id(client_id) {
                         break_block_event.send(BlockBreakEvent {

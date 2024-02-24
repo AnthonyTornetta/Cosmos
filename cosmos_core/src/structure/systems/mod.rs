@@ -8,7 +8,7 @@
 use std::{error::Error, fmt::Formatter};
 
 use bevy::{
-    ecs::query::{ReadOnlyWorldQuery, WorldQuery},
+    ecs::query::{QueryData, QueryFilter, QueryItem, ROQueryItem},
     prelude::*,
     utils::HashMap,
 };
@@ -232,10 +232,10 @@ impl Systems {
     }
 
     /// Queries all the systems of a structure with this specific query, or returns `Err(NoSystemFound)` if none matched this query.
-    pub fn query<'a, Q, F>(&'a self, query: &'a Query<Q, F>) -> Result<<<Q as WorldQuery>::ReadOnly as WorldQuery>::Item<'a>, NoSystemFound>
+    pub fn query<'a, Q, F>(&'a self, query: &'a Query<Q, F>) -> Result<ROQueryItem<'a, Q>, NoSystemFound>
     where
-        F: ReadOnlyWorldQuery,
-        Q: WorldQuery,
+        F: QueryFilter,
+        Q: QueryData,
     {
         for ent in self.systems.iter() {
             if let Ok(res) = query.get(*ent) {
@@ -247,10 +247,10 @@ impl Systems {
     }
 
     /// Queries all the systems of a structure with this specific query, or returns `Err(NoSystemFound)` if none matched this query.
-    pub fn query_mut<'a, Q, F>(&'a self, query: &'a mut Query<Q, F>) -> Result<<Q as WorldQuery>::Item<'a>, NoSystemFound>
+    pub fn query_mut<'a, Q, F>(&'a self, query: &'a mut Query<Q, F>) -> Result<QueryItem<'a, Q>, NoSystemFound>
     where
-        F: ReadOnlyWorldQuery,
-        Q: WorldQuery,
+        F: QueryFilter,
+        Q: QueryData,
     {
         for ent in self.systems.iter() {
             // for some reason, the borrow checker gets mad when I do a get_mut in this if statement

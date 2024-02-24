@@ -21,5 +21,5 @@ fn take_damage_reader(
     }
 }
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, take_damage_reader.run_if(resource_exists::<Registry<Block>>()));
+    app.add_systems(Update, take_damage_reader.run_if(resource_exists::<Registry<Block>>));
 }

@@ -394,7 +394,7 @@ pub(super) fn register(app: &mut App) {
         .add_systems(
             Update,
             (
-                check_assets_ready.run_if(resource_exists::<Registry<LoadingTextureAtlas>>()),
+                check_assets_ready.run_if(resource_exists::<Registry<LoadingTextureAtlas>>),
                 assets_done_loading,
             )
                 .run_if(in_state(GameState::PostLoading)),

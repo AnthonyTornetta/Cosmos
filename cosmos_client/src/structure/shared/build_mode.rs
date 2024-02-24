@@ -1,10 +1,11 @@
 //! Handles the build mode logic on the client-side
 
 use bevy::{
+    math::primitives::Cuboid,
     pbr::{NotShadowCaster, NotShadowReceiver},
     prelude::{
-        in_state, shape, App, AssetServer, Assets, BuildChildren, Changed, Color, Commands, Component, DespawnRecursiveExt, Entity,
-        EventReader, IntoSystemConfigs, MaterialMeshBundle, Mesh, Name, Parent, Query, Res, ResMut, Transform, Update, Vec3, With, Without,
+        in_state, App, AssetServer, Assets, BuildChildren, Changed, Color, Commands, Component, DespawnRecursiveExt, Entity, EventReader,
+        IntoSystemConfigs, MaterialMeshBundle, Mesh, Name, Parent, Query, Res, ResMut, Transform, Update, Vec3, With, Without,
     },
     time::Time,
 };
@@ -69,9 +70,9 @@ fn control_build_mode(
         true => 20.0,
     };
 
-    let mut forward = cam_trans.forward();
-    let mut right = cam_trans.right();
-    let up = transform.up();
+    let mut forward = *cam_trans.forward();
+    let mut right = *cam_trans.right();
+    let up = *transform.up();
 
     match player_alignment.copied().unwrap_or_default().0 {
         align_player::Axis::X => {
@@ -248,7 +249,7 @@ fn change_visuals(
                         NotShadowReceiver,
                         Name::new("X Axis - build mode"),
                         MaterialMeshBundle {
-                            mesh: meshes.add(shape::Box::new(0.001, size as f32, size as f32).into()),
+                            mesh: meshes.add(Cuboid::new(0.001, size as f32, size as f32)),
                             material: materials.add(UnlitRepeatedMaterial {
                                 repeats: Repeats {
                                     horizontal: size as u32 / 4,
@@ -279,7 +280,7 @@ fn change_visuals(
                         NotShadowReceiver,
                         Name::new("Y Axis - build mode"),
                         MaterialMeshBundle {
-                            mesh: meshes.add(shape::Box::new(size as f32, 0.001, size as f32).into()),
+                            mesh: meshes.add(Cuboid::new(size as f32, 0.001, size as f32)),
                             material: materials.add(UnlitRepeatedMaterial {
                                 repeats: Repeats {
                                     horizontal: size as u32 / 4,
@@ -310,7 +311,7 @@ fn change_visuals(
                         NotShadowReceiver,
                         Name::new("Z Axis - build mode"),
                         MaterialMeshBundle {
-                            mesh: meshes.add(shape::Box::new(size as f32, size as f32, 0.001).into()),
+                            mesh: meshes.add(Cuboid::new(size as f32, size as f32, 0.001)),
                             material: materials.add(UnlitRepeatedMaterial {
                                 repeats: Repeats {
                                     horizontal: size as u32 / 4,

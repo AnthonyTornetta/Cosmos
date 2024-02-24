@@ -85,5 +85,5 @@ pub(super) fn register(app: &mut App) {
         },
     );
 
-    app.add_systems(Update, on_add_ship.run_if(resource_exists::<EngineIdleSound>()));
+    app.add_systems(Update, on_add_ship.run_if(resource_exists::<EngineIdleSound>));
 }

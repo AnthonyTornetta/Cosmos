@@ -15,7 +15,7 @@ use bevy::{
     },
     hierarchy::{BuildChildren, Children},
     render::color::Color,
-    text::{Text, TextAlignment, TextStyle},
+    text::{JustifyText, Text, TextStyle},
     transform::components::GlobalTransform,
     ui::{
         node_bundles::{NodeBundle, TextBundle},
@@ -128,7 +128,7 @@ fn add_window(
                                     font: font.clone(),
                                 },
                             )
-                            .with_alignment(TextAlignment::Center),
+                            .with_justify(JustifyText::Center),
                             ..default()
                         },
                     ));

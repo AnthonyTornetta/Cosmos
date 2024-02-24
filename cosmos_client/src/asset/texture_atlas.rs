@@ -4,6 +4,7 @@ use bevy::{
     prelude::{Assets, Handle, Image},
     reflect::Reflect,
     render::{
+        render_asset::RenderAssetUsages,
         render_resource::{Extent3d, TextureDimension, TextureFormat},
         texture::TextureFormatPixelInfo,
     },
@@ -130,6 +131,7 @@ impl SquareTextureAtlasBuilder {
             TextureDimension::D2,
             vec![0; format_size * (self.texture_dimensions * total_height) as usize],
             format,
+            RenderAssetUsages::default(),
         );
 
         let mut y = 0;
