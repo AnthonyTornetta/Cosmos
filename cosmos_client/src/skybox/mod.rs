@@ -57,7 +57,7 @@ fn on_add_main_camera(cubemap: Res<Cubemap>, mut commands: Commands, query: Quer
     for ent in query.iter() {
         commands.entity(ent).insert(Skybox {
             image: cubemap.image_handle.clone(),
-            brightness: 150.0,
+            brightness: 1000.0,
         });
     }
 }

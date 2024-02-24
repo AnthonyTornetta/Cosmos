@@ -17,7 +17,7 @@ use crate::state::game_state::GameState;
 /// Determines how bright light is based off your distance from a star.
 ///
 /// This is a random number I made up, but looks nice enough
-const LIGHT_INTENSITY_CONSTANT: f32 = 3_000_000_000_000_000.0;
+const LIGHT_INTENSITY_CONSTANT: f32 = 300_000_000_000_000.0;
 
 fn point_light_from_sun(sun: Query<&Transform, With<Star>>, mut light: Query<(&mut Transform, &mut DirectionalLight), Without<Star>>) {
     if let Ok((mut transform, mut light)) = light.get_single_mut() {
