@@ -39,6 +39,7 @@ bitflags = "2.4.2"
 bevy_mod_debugdump = "0.10.0"
 arboard = "3.3.1"
 derive_more = "0.99.17"
+clap = "4.4.2"
 
 # For any non workspace package
 [profile.dev.package."*"]
