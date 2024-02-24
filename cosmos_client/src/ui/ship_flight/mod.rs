@@ -185,52 +185,54 @@ fn add_indicators(
     };
 
     let Ok(pilot) = player_piloting.get_single() else {
-        all_indicators.for_each(despawn_indicator);
+        all_indicators.iter().for_each(despawn_indicator);
         return;
     };
 
     let Ok(player_location) = location_query.get(pilot.entity) else {
-        all_indicators.for_each(despawn_indicator);
+        all_indicators.iter().for_each(despawn_indicator);
         return;
     };
 
-    nearby_entities.for_each(|(entity, location, indicator_settings, has_indicator)| {
-        if pilot.entity == entity {
-            // Don't put an indicator on the ship you're currently flying
-            return;
-        }
+    nearby_entities
+        .iter()
+        .for_each(|(entity, location, indicator_settings, has_indicator)| {
+            if pilot.entity == entity {
+                // Don't put an indicator on the ship you're currently flying
+                return;
+            }
 
-        let max_distance = indicator_settings.max_distance;
+            let max_distance = indicator_settings.max_distance;
 
-        let max_dist_sqrd = max_distance * max_distance;
+            let max_dist_sqrd = max_distance * max_distance;
 
-        let distance_sqrd = location.distance_sqrd(player_location);
+            let distance_sqrd = location.distance_sqrd(player_location);
 
-        if distance_sqrd <= max_dist_sqrd {
-            if let Some(has_indicator) = has_indicator {
-                if let Ok(text_entity) = q_text_entity_with_focus.get(has_indicator.0) {
-                    if let Ok(mut text) = text_query.get_mut(text_entity.0) {
-                        text.sections[0].value = get_distance_text(distance_sqrd.sqrt());
+            if distance_sqrd <= max_dist_sqrd {
+                if let Some(has_indicator) = has_indicator {
+                    if let Ok(text_entity) = q_text_entity_with_focus.get(has_indicator.0) {
+                        if let Ok(mut text) = text_query.get_mut(text_entity.0) {
+                            text.sections[0].value = get_distance_text(distance_sqrd.sqrt());
+                        }
                     }
+                } else {
+                    create_indicator(
+                        entity,
+                        &mut commands,
+                        indicator_image.0.clone_weak(),
+                        &mut images,
+                        indicator_settings.color,
+                        &mut indicator_images,
+                        &asset_server,
+                    );
                 }
-            } else {
-                create_indicator(
-                    entity,
-                    &mut commands,
-                    indicator_image.0.clone_weak(),
-                    &mut images,
-                    indicator_settings.color,
-                    &mut indicator_images,
-                    &asset_server,
-                );
+            } else if let Some(has_indicator) = has_indicator {
+                commands.entity(entity).remove::<HasIndicator>();
+                if let Some(ecmds) = commands.get_entity(has_indicator.0) {
+                    ecmds.despawn_recursive();
+                }
             }
-        } else if let Some(has_indicator) = has_indicator {
-            commands.entity(entity).remove::<HasIndicator>();
-            if let Some(ecmds) = commands.get_entity(has_indicator.0) {
-                ecmds.despawn_recursive();
-            }
-        }
-    });
+        });
 }
 
 fn added(
@@ -241,35 +243,35 @@ fn added(
     player_query: Query<Entity, (Added<Player>, Without<LocalPlayer>)>,
     mut commands: Commands,
 ) {
-    ship_query.for_each(|ent| {
+    ship_query.iter().for_each(|ent| {
         commands.entity(ent).insert(IndicatorSettings {
             color: Color::hex("FF57337F").unwrap(),
             max_distance: 20_000.0,
             offset: Vec3::new(0.5, 0.5, 0.5), // Accounts for the ship core being at 0.5, 0.5, 0.5 instead of the origin
         });
     });
-    station_query.for_each(|ent| {
+    station_query.iter().for_each(|ent| {
         commands.entity(ent).insert(IndicatorSettings {
             color: Color::hex("5b4fff7F").unwrap(),
             max_distance: 20_000.0,
             offset: Vec3::new(0.5, 0.5, 0.5), // Accounts for the station core being at 0.5, 0.5, 0.5 instead of the origin
         });
     });
-    planet_query.for_each(|ent| {
+    planet_query.iter().for_each(|ent| {
         commands.entity(ent).insert(IndicatorSettings {
             color: Color::hex("BC8F8F7F").unwrap(),
             max_distance: 200_000.0,
             offset: Vec3::ZERO,
         });
     });
-    asteroid_query.for_each(|ent| {
+    asteroid_query.iter().for_each(|ent| {
         commands.entity(ent).insert(IndicatorSettings {
             color: Color::hex("6159427F").unwrap(),
             max_distance: 20_000.0,
             offset: Vec3::ZERO,
         });
     });
-    player_query.for_each(|ent| {
+    player_query.iter().for_each(|ent| {
         commands.entity(ent).insert(IndicatorSettings {
             color: Color::hex("FFFFFF7F").unwrap(),
             max_distance: 5_000.0,
@@ -437,7 +439,7 @@ pub(super) fn register(app: &mut App) {
         .add_systems(
             Update,
             (
-                add_indicators.run_if(resource_exists::<IndicatorImage>()),
+                add_indicators.run_if(resource_exists::<IndicatorImage>),
                 added,
                 position_diamonds,
                 focus_waypoint.run_if(no_open_menus),

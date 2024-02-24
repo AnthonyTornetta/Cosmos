@@ -40,8 +40,8 @@ impl TStationBuilder for ClientStationBuilder {
     }
 }
 
-fn on_add_station(query: Query<Entity, Added<Station>>, mut commands: Commands) {
-    query.for_each(|entity| {
+fn on_add_station(q_station_entities: Query<Entity, Added<Station>>, mut commands: Commands) {
+    q_station_entities.iter().for_each(|entity| {
         commands.entity(entity).insert(NeedsPopulated);
     });
 }

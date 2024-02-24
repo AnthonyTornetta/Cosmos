@@ -40,7 +40,7 @@ fn save_storage(
     q_storage_blocks: Query<(&Parent, &Inventory, &BlockData), With<BlockDataNeedsSaved>>,
     mut q_chunk: Query<&mut SerializedBlockData>,
 ) {
-    q_storage_blocks.for_each(|(parent, inventory, block_data)| {
+    q_storage_blocks.iter().for_each(|(parent, inventory, block_data)| {
         let mut serialized_block_data = q_chunk
             .get_mut(parent.get())
             .expect("Block data's parent didn't have SerializedBlockData???");

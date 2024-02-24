@@ -3,7 +3,7 @@
 use bevy::{
     asset::Asset,
     prelude::{AlphaMode, App, Color, Handle, Image, Material, MaterialPlugin},
-    reflect::{Reflect, TypeUuid},
+    reflect::{Reflect, TypePath},
     render::render_resource::{AsBindGroup, ShaderRef, ShaderType},
 };
 
@@ -16,8 +16,7 @@ pub(crate) struct Repeats {
     pub(crate) _wasm_padding2: u32,
 }
 
-#[derive(AsBindGroup, Debug, Clone, TypeUuid, Reflect, Asset)]
-#[uuid = "82d336c5-fd6c-41a3-bdd4-267cd4c9be22"]
+#[derive(AsBindGroup, Debug, Clone, TypePath, Asset)]
 pub(crate) struct UnlitRepeatedMaterial {
     #[texture(0)]
     #[sampler(1)]

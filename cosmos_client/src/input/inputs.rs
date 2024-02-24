@@ -121,65 +121,65 @@ pub enum CosmosInputs {
 
 fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     // In future load these from settings
-    input_handler.set_keycode(CosmosInputs::MoveForward, KeyCode::W);
-    input_handler.set_keycode(CosmosInputs::MoveLeft, KeyCode::A);
-    input_handler.set_keycode(CosmosInputs::MoveBackward, KeyCode::S);
-    input_handler.set_keycode(CosmosInputs::MoveRight, KeyCode::D);
+    input_handler.set_keycode(CosmosInputs::MoveForward, KeyCode::KeyW);
+    input_handler.set_keycode(CosmosInputs::MoveLeft, KeyCode::KeyA);
+    input_handler.set_keycode(CosmosInputs::MoveBackward, KeyCode::KeyS);
+    input_handler.set_keycode(CosmosInputs::MoveRight, KeyCode::KeyD);
     input_handler.set_keycode(CosmosInputs::SlowDown, KeyCode::ShiftLeft);
     input_handler.set_keycode(CosmosInputs::Jump, KeyCode::Space);
-    input_handler.set_keycode(CosmosInputs::MoveDown, KeyCode::Q);
-    input_handler.set_keycode(CosmosInputs::MoveUp, KeyCode::E);
+    input_handler.set_keycode(CosmosInputs::MoveDown, KeyCode::KeyQ);
+    input_handler.set_keycode(CosmosInputs::MoveUp, KeyCode::KeyE);
     input_handler.set_keycode(CosmosInputs::Sprint, KeyCode::ControlLeft);
 
-    input_handler.set_keycode(CosmosInputs::RollLeft, KeyCode::Z);
-    input_handler.set_keycode(CosmosInputs::RollRight, KeyCode::C);
+    input_handler.set_keycode(CosmosInputs::RollLeft, KeyCode::KeyZ);
+    input_handler.set_keycode(CosmosInputs::RollRight, KeyCode::KeyC);
 
     input_handler.set_mouse_button(CosmosInputs::BreakBlock, MouseButton::Left);
     input_handler.set_mouse_button(CosmosInputs::PlaceBlock, MouseButton::Right);
-    input_handler.set_keycode(CosmosInputs::Interact, KeyCode::R);
-    input_handler.set_keycode(CosmosInputs::StopPiloting, KeyCode::R);
+    input_handler.set_keycode(CosmosInputs::Interact, KeyCode::KeyR);
+    input_handler.set_keycode(CosmosInputs::StopPiloting, KeyCode::KeyR);
 
-    input_handler.set_keycode(CosmosInputs::CreateShip, KeyCode::X);
-    input_handler.set_keycode(CosmosInputs::CreateStation, KeyCode::Y);
+    input_handler.set_keycode(CosmosInputs::CreateShip, KeyCode::KeyX);
+    input_handler.set_keycode(CosmosInputs::CreateStation, KeyCode::KeyY);
 
     input_handler.set_keycode(CosmosInputs::UnlockMouse, KeyCode::Escape);
 
-    input_handler.set_keycode(CosmosInputs::HotbarSlot1, KeyCode::Key1);
-    input_handler.set_keycode(CosmosInputs::HotbarSlot2, KeyCode::Key2);
-    input_handler.set_keycode(CosmosInputs::HotbarSlot3, KeyCode::Key3);
-    input_handler.set_keycode(CosmosInputs::HotbarSlot4, KeyCode::Key4);
-    input_handler.set_keycode(CosmosInputs::HotbarSlot5, KeyCode::Key5);
-    input_handler.set_keycode(CosmosInputs::HotbarSlot6, KeyCode::Key6);
-    input_handler.set_keycode(CosmosInputs::HotbarSlot7, KeyCode::Key7);
-    input_handler.set_keycode(CosmosInputs::HotbarSlot8, KeyCode::Key8);
-    input_handler.set_keycode(CosmosInputs::HotbarSlot9, KeyCode::Key9);
+    input_handler.set_keycode(CosmosInputs::HotbarSlot1, KeyCode::Digit1);
+    input_handler.set_keycode(CosmosInputs::HotbarSlot2, KeyCode::Digit2);
+    input_handler.set_keycode(CosmosInputs::HotbarSlot3, KeyCode::Digit3);
+    input_handler.set_keycode(CosmosInputs::HotbarSlot4, KeyCode::Digit4);
+    input_handler.set_keycode(CosmosInputs::HotbarSlot5, KeyCode::Digit5);
+    input_handler.set_keycode(CosmosInputs::HotbarSlot6, KeyCode::Digit6);
+    input_handler.set_keycode(CosmosInputs::HotbarSlot7, KeyCode::Digit7);
+    input_handler.set_keycode(CosmosInputs::HotbarSlot8, KeyCode::Digit8);
+    input_handler.set_keycode(CosmosInputs::HotbarSlot9, KeyCode::Digit9);
 
-    input_handler.set_keycode(CosmosInputs::SelectSystem1, KeyCode::Key1);
-    input_handler.set_keycode(CosmosInputs::SelectSystem2, KeyCode::Key2);
-    input_handler.set_keycode(CosmosInputs::SelectSystem3, KeyCode::Key3);
-    input_handler.set_keycode(CosmosInputs::SelectSystem4, KeyCode::Key4);
-    input_handler.set_keycode(CosmosInputs::SelectSystem5, KeyCode::Key5);
-    input_handler.set_keycode(CosmosInputs::SelectSystem6, KeyCode::Key6);
-    input_handler.set_keycode(CosmosInputs::SelectSystem7, KeyCode::Key7);
-    input_handler.set_keycode(CosmosInputs::SelectSystem8, KeyCode::Key8);
-    input_handler.set_keycode(CosmosInputs::SelectSystem9, KeyCode::Key9);
+    input_handler.set_keycode(CosmosInputs::SelectSystem1, KeyCode::Digit1);
+    input_handler.set_keycode(CosmosInputs::SelectSystem2, KeyCode::Digit2);
+    input_handler.set_keycode(CosmosInputs::SelectSystem3, KeyCode::Digit3);
+    input_handler.set_keycode(CosmosInputs::SelectSystem4, KeyCode::Digit4);
+    input_handler.set_keycode(CosmosInputs::SelectSystem5, KeyCode::Digit5);
+    input_handler.set_keycode(CosmosInputs::SelectSystem6, KeyCode::Digit6);
+    input_handler.set_keycode(CosmosInputs::SelectSystem7, KeyCode::Digit7);
+    input_handler.set_keycode(CosmosInputs::SelectSystem8, KeyCode::Digit8);
+    input_handler.set_keycode(CosmosInputs::SelectSystem9, KeyCode::Digit9);
 
-    input_handler.set_keycode(CosmosInputs::Disconnect, KeyCode::P);
+    input_handler.set_keycode(CosmosInputs::Disconnect, KeyCode::KeyP);
 
     input_handler.set_mouse_button(CosmosInputs::UseSelectedSystem, MouseButton::Left);
 
-    input_handler.set_keycode(CosmosInputs::LeaveShip, KeyCode::L);
+    input_handler.set_keycode(CosmosInputs::LeaveShip, KeyCode::KeyL);
 
-    input_handler.set_keycode(CosmosInputs::ToggleInventory, KeyCode::T);
+    input_handler.set_keycode(CosmosInputs::ToggleInventory, KeyCode::KeyT);
     input_handler.set_keycode(CosmosInputs::AutoMoveItem, KeyCode::ShiftLeft);
 
-    input_handler.set_keycode(CosmosInputs::ToggleBuildMode, KeyCode::B);
+    input_handler.set_keycode(CosmosInputs::ToggleBuildMode, KeyCode::KeyB);
     input_handler.set_keycode(CosmosInputs::ClearSymmetry, KeyCode::ShiftLeft);
-    input_handler.set_keycode(CosmosInputs::SymmetryX, KeyCode::X);
-    input_handler.set_keycode(CosmosInputs::SymmetryY, KeyCode::Y);
-    input_handler.set_keycode(CosmosInputs::SymmetryZ, KeyCode::Z);
+    input_handler.set_keycode(CosmosInputs::SymmetryX, KeyCode::KeyX);
+    input_handler.set_keycode(CosmosInputs::SymmetryY, KeyCode::KeyY);
+    input_handler.set_keycode(CosmosInputs::SymmetryZ, KeyCode::KeyZ);
 
-    input_handler.set_keycode(CosmosInputs::FocusWaypoint, KeyCode::F);
+    input_handler.set_keycode(CosmosInputs::FocusWaypoint, KeyCode::KeyF);
 }
 
 #[derive(Resource, Default, Debug)]
@@ -210,17 +210,21 @@ pub trait InputHandler {
     /// Check if this input is currently being used.
     fn check_pressed(&self, input_code: CosmosInputs) -> bool;
 
-    /// Gets the raw mouse key structure (Res<Input<KeyCode>>)
-    fn key_inputs(&self) -> &Input<KeyCode>;
+    /// Gets the raw mouse key structure (Res<ButtonInput<KeyCode>>)
+    fn key_inputs(&self) -> &ButtonInput<KeyCode>;
 
-    /// Gets the raw mouse inputs structure (Res<Input<KeyCode>>)
-    fn mouse_inputs(&self) -> &Input<MouseButton>;
+    /// Gets the raw mouse inputs structure (Res<ButtonInput<KeyCode>>)
+    fn mouse_inputs(&self) -> &ButtonInput<MouseButton>;
 }
 
 /// A wrapper around [`CosmosInputHandler`] and all the resources it needs.
 ///
 /// It just makes calling the functions a little bit easier
-pub type InputChecker<'a> = (Res<'a, CosmosInputHandler>, Res<'a, Input<KeyCode>>, Res<'a, Input<MouseButton>>);
+pub type InputChecker<'a> = (
+    Res<'a, CosmosInputHandler>,
+    Res<'a, ButtonInput<KeyCode>>,
+    Res<'a, ButtonInput<MouseButton>>,
+);
 
 impl<'a> InputHandler for InputChecker<'a> {
     fn check_just_pressed(&self, input_code: CosmosInputs) -> bool {
@@ -239,11 +243,11 @@ impl<'a> InputHandler for InputChecker<'a> {
         self.0.check_released(input_code, &self.1, &self.2)
     }
 
-    fn key_inputs(&self) -> &Input<KeyCode> {
+    fn key_inputs(&self) -> &ButtonInput<KeyCode> {
         &self.1
     }
 
-    fn mouse_inputs(&self) -> &Input<MouseButton> {
+    fn mouse_inputs(&self) -> &ButtonInput<MouseButton> {
         &self.2
     }
 }
@@ -257,7 +261,7 @@ impl CosmosInputHandler {
     /// Check if the given input was just released.
     ///
     /// Use this to see if something was held in the last frame but is no longer being held.
-    pub fn check_just_released(&self, input_code: CosmosInputs, inputs: &Input<KeyCode>, mouse: &Input<MouseButton>) -> bool {
+    pub fn check_just_released(&self, input_code: CosmosInputs, inputs: &ButtonInput<KeyCode>, mouse: &ButtonInput<MouseButton>) -> bool {
         let keycode = self.keycode_for(input_code);
         let mouse_button = self.mouse_button_for(input_code);
 
@@ -265,14 +269,14 @@ impl CosmosInputHandler {
     }
 
     /// Check if the given input is not being used.
-    pub fn check_released(&self, input_code: CosmosInputs, inputs: &Input<KeyCode>, mouse: &Input<MouseButton>) -> bool {
+    pub fn check_released(&self, input_code: CosmosInputs, inputs: &ButtonInput<KeyCode>, mouse: &ButtonInput<MouseButton>) -> bool {
         !self.check_pressed(input_code, inputs, mouse)
     }
 
     /// Checks if the given input was just pressed.
     ///
     /// Use this to see if something was pressed just this frame.
-    pub fn check_just_pressed(&self, input_code: CosmosInputs, inputs: &Input<KeyCode>, mouse: &Input<MouseButton>) -> bool {
+    pub fn check_just_pressed(&self, input_code: CosmosInputs, inputs: &ButtonInput<KeyCode>, mouse: &ButtonInput<MouseButton>) -> bool {
         let keycode = self.keycode_for(input_code);
         let mouse_button = self.mouse_button_for(input_code);
 
@@ -280,7 +284,7 @@ impl CosmosInputHandler {
     }
 
     /// Check if this input is currently being used.
-    pub fn check_pressed(&self, input_code: CosmosInputs, keys: &Input<KeyCode>, mouse: &Input<MouseButton>) -> bool {
+    pub fn check_pressed(&self, input_code: CosmosInputs, keys: &ButtonInput<KeyCode>, mouse: &ButtonInput<MouseButton>) -> bool {
         let keycode = self.keycode_for(input_code);
         let mouse_button = self.mouse_button_for(input_code);
 

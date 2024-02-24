@@ -17,7 +17,7 @@ use crate::{
 struct LaserMesh(Handle<Mesh>);
 
 fn create_laser_mesh(mut meshes: ResMut<Assets<Mesh>>, mut commands: Commands) {
-    commands.insert_resource(LaserMesh(meshes.add(Mesh::from(shape::Box::new(0.1, 0.1, 1.0)))));
+    commands.insert_resource(LaserMesh(meshes.add(Mesh::from(Cuboid::new(0.1, 0.1, 1.0)))));
 }
 
 fn lasers_netty(

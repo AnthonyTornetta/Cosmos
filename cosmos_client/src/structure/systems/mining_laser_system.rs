@@ -237,7 +237,7 @@ fn resize_lasers(
 }
 
 fn create_mining_laser_mesh(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
-    let shape = meshes.add(bevy::prelude::shape::Box::new(BEAM_SIZE, BEAM_SIZE, 0.5).into());
+    let shape = meshes.add(Cuboid::new(BEAM_SIZE, BEAM_SIZE, 0.5));
 
     commands.insert_resource(MiningLaserMesh(shape));
 }

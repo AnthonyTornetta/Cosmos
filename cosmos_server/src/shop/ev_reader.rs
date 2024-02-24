@@ -274,13 +274,15 @@ fn listen_client_shop_messages(
                     structure_entity,
                     item_id,
                     quantity,
-                } => ev_writer_sell.send(SellEvent {
-                    client_id,
-                    item_id,
-                    quantity,
-                    shop_block,
-                    structure_entity,
-                }),
+                } => {
+                    ev_writer_sell.send(SellEvent {
+                        client_id,
+                        item_id,
+                        quantity,
+                        shop_block,
+                        structure_entity,
+                    });
+                }
             }
         }
     }

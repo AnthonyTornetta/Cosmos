@@ -65,5 +65,5 @@ pub(super) fn register(app: &mut App) {
         },
     );
 
-    app.add_systems(Update, play_block_damage_sound.run_if(resource_exists::<BlockDamageSound>()));
+    app.add_systems(Update, play_block_damage_sound.run_if(resource_exists::<BlockDamageSound>));
 }

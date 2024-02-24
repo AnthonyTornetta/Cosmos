@@ -30,6 +30,6 @@ fn recursively_remove(entity: Entity, children_query: &Query<&Children>, network
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         First,
-        remove_mappings.after(despawn_needed).run_if(resource_exists::<NetworkMapping>()),
+        remove_mappings.after(despawn_needed).run_if(resource_exists::<NetworkMapping>),
     );
 }

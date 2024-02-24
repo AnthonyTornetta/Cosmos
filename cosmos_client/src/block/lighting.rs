@@ -68,7 +68,7 @@ fn register_all_lights(blocks: Res<Registry<Block>>, mut registry: ResMut<Regist
     register_light(
         BlockLightProperties {
             color: Color::WHITE,
-            intensity: 500.0,
+            intensity: 600_000.0,
             range: 12.0,
             ..Default::default()
         },
@@ -80,7 +80,7 @@ fn register_all_lights(blocks: Res<Registry<Block>>, mut registry: ResMut<Regist
     register_light(
         BlockLightProperties {
             color: Color::rgb(81.0 / 255.0, 143.0 / 255.0, 225.0 / 255.0),
-            intensity: 100.0,
+            intensity: 20_000.0,
             range: 6.0,
             ..Default::default()
         },
@@ -92,7 +92,7 @@ fn register_all_lights(blocks: Res<Registry<Block>>, mut registry: ResMut<Regist
     register_light(
         BlockLightProperties {
             color: Color::rgb(81.0 / 255.0, 225.0 / 255.0, 143.0 / 255.0),
-            intensity: 100.0,
+            intensity: 20_000.0,
             range: 6.0,
             ..Default::default()
         },

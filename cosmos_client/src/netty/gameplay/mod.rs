@@ -21,5 +21,5 @@ pub(super) fn register(app: &mut App) {
     sync::register(app);
     receiver::register(app);
 
-    app.add_systems(Update, remove_despawned_entities.run_if(resource_exists::<NetworkMapping>()));
+    app.add_systems(Update, remove_despawned_entities.run_if(resource_exists::<NetworkMapping>));
 }

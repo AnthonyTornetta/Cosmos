@@ -7,7 +7,7 @@ use std::sync::{Arc, Mutex};
 use bevy::{core_pipeline::bloom::BloomSettings, prelude::*, window::PrimaryWindow};
 use bevy_kira_audio::prelude::AudioReceiver;
 use bevy_rapier3d::prelude::*;
-use bevy_renet::renet::{transport::NetcodeClientTransport, ClientId, RenetClient};
+use bevy_renet::renet::{transport::NetcodeClientTransport, RenetClient};
 use cosmos_core::{
     block::Block,
     ecs::{bundles::CosmosPbrBundle, NeedsDespawned},
@@ -198,7 +198,7 @@ pub(crate) fn client_sync_players(
 
     (mut build_mode_enter, mut build_mode_exit): (EventWriter<EnterBuildModeEvent>, EventWriter<ExitBuildModeEvent>),
 ) {
-    let client_id = ClientId::from_raw(transport.client_id());
+    let client_id = transport.client_id();
 
     requested_entities.entities.retain_mut(|x| {
         x.seconds_since_request += time.delta_seconds();
@@ -324,7 +324,7 @@ pub(crate) fn client_sync_players(
                     CosmosPbrBundle {
                         location: loc,
                         rotation: body.rotation.into(),
-                        mesh: meshes.add(shape::Capsule::default().into()),
+                        mesh: meshes.add(Capsule3d::default()),
                         ..default()
                     },
                     Collider::capsule_y(0.65, 0.25),
@@ -371,7 +371,6 @@ pub(crate) fn client_sync_players(
                                 Name::new("Main Camera"),
                                 MainCamera,
                                 // No double UI rendering
-                                UiCameraConfig { show_ui: false },
                                 AudioReceiver,
                             ));
                         });

@@ -34,9 +34,9 @@ fn process_player_movement(
         };
 
         // All relative to player
-        let mut forward = cam_trans.forward();
-        let mut right = cam_trans.right();
-        let up = player_transform.up();
+        let mut forward = *cam_trans.forward();
+        let mut right = *cam_trans.right();
+        let up = *player_transform.up();
 
         if let Some(player_alignment) = player_alignment {
             match player_alignment.0 {

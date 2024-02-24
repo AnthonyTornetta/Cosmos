@@ -6,7 +6,7 @@ use arboard::Clipboard;
 use bevy::{
     a11y::Focus,
     app::{App, Update},
-    asset::AssetServer,
+    asset::{AssetId, AssetServer, Handle},
     core::Name,
     ecs::{
         bundle::Bundle,
@@ -21,7 +21,7 @@ use bevy::{
     input::{
         keyboard::{KeyCode, KeyboardInput},
         mouse::MouseButton,
-        ButtonState, Input,
+        ButtonInput, ButtonState,
     },
     log::{info, warn},
     prelude::Deref,
@@ -146,7 +146,7 @@ fn monitor_clicked(
     mut focused: ResMut<Focus>,
     mut focused_time: ResMut<CursorFlashTime>,
     mut q_clicked_text_inputs: Query<(Entity, &mut TextInput, &Interaction)>,
-    mouse_inputs: Res<Input<MouseButton>>,
+    mouse_inputs: Res<ButtonInput<MouseButton>>,
 ) {
     if mouse_inputs.just_pressed(MouseButton::Left) {
         focused_time.0 = 0.0;
@@ -176,9 +176,11 @@ fn added_text_input_bundle(
     for (entity, input_value, mut text_input) in q_added.iter_mut() {
         commands.entity(entity).insert(Interaction::None).insert(FocusPolicy::Block);
 
-        if text_input.style.font == Default::default() {
-            // Font hasn't been assigned yet if it's the default handle, so assign the default now.
-            text_input.style.font = asset_server.load("fonts/PixeloidSans.ttf");
+        if let Handle::Weak(id) = text_input.style.font {
+            if id == AssetId::default() {
+                // Font hasn't been assigned yet if it's the default handle, so assign the default now.
+                text_input.style.font = asset_server.load("fonts/PixeloidSans.ttf");
+            }
         }
 
         let mut text_ent = None;
@@ -241,7 +243,7 @@ fn send_key_inputs(
         }
 
         match pressed.key_code {
-            Some(KeyCode::Back) => {
+            KeyCode::Backspace => {
                 if text.is_empty() {
                     continue;
                 }
@@ -256,7 +258,7 @@ fn send_key_inputs(
                     focused_input_field.cursor_pos -= 1;
                 }
             }
-            Some(KeyCode::Delete) => {
+            KeyCode::Delete => {
                 if text.is_empty() {
                     continue;
                 }
@@ -275,29 +277,31 @@ fn send_key_inputs(
     }
 
     for ev in evr_char.read() {
-        if !ev.char.is_control() {
-            let mut new_value = text.0.clone();
-            let new_cursor_pos;
+        for c in ev.char.chars() {
+            if c.is_control() {
+                let mut new_value = text.0.clone();
+                let new_cursor_pos;
 
-            if let Some(range) = focused_input_field.get_highlighted_range() {
-                let replace_string = ev.char.to_string();
-                new_cursor_pos = range.start + replace_string.len();
+                if let Some(range) = focused_input_field.get_highlighted_range() {
+                    let replace_string = c.to_string();
+                    new_cursor_pos = range.start + replace_string.len();
 
-                text.0.replace_range(range, &replace_string);
-            } else if focused_input_field.cursor_pos == text.len() {
-                new_value.push(ev.char);
+                    text.0.replace_range(range, &replace_string);
+                } else if focused_input_field.cursor_pos == text.len() {
+                    new_value.push(c);
 
-                new_cursor_pos = focused_input_field.cursor_pos + 1;
-            } else {
-                new_value.insert(focused_input_field.cursor_pos, ev.char);
+                    new_cursor_pos = focused_input_field.cursor_pos + 1;
+                } else {
+                    new_value.insert(focused_input_field.cursor_pos, c);
 
-                new_cursor_pos = focused_input_field.cursor_pos + 1;
-            }
+                    new_cursor_pos = focused_input_field.cursor_pos + 1;
+                }
 
-            if verify_input(&focused_input_field, &new_value) {
-                text.0 = new_value;
-                focused_input_field.cursor_pos = new_cursor_pos;
-                focused_input_field.highlight_begin = None;
+                if verify_input(&focused_input_field, &new_value) {
+                    text.0 = new_value;
+                    focused_input_field.cursor_pos = new_cursor_pos;
+                    focused_input_field.highlight_begin = None;
+                }
             }
         }
     }
@@ -382,7 +386,7 @@ fn handle_keyboard_shortcuts(
     focused: Res<Focus>,
     mut q_text_inputs: Query<(&mut InputValue, &mut TextInput)>,
     mut cursor_flash_time: ResMut<CursorFlashTime>,
-    inputs: Res<Input<KeyCode>>,
+    inputs: Res<ButtonInput<KeyCode>>,
     mut evr_keyboard: EventReader<KeyboardInput>,
 ) {
     let Some(focused_entity) = focused.0 else {
@@ -400,13 +404,9 @@ fn handle_keyboard_shortcuts(
             continue;
         }
 
-        let Some(keycode) = pressed.key_code else {
-            continue;
-        };
-
         if inputs.pressed(KeyCode::ControlLeft) || inputs.pressed(KeyCode::ControlRight) {
-            match keycode {
-                KeyCode::A => {
+            match pressed.key_code {
+                KeyCode::KeyA => {
                     if !value.is_empty() {
                         text_input.highlight_begin = Some(0);
                         text_input.cursor_pos = value.len();
@@ -414,7 +414,7 @@ fn handle_keyboard_shortcuts(
 
                     cursor_flash_time.0 = 0.0;
                 }
-                KeyCode::C => {
+                KeyCode::KeyC => {
                     let Ok(mut clipboard) = Clipboard::new() else {
                         continue;
                     };
@@ -427,7 +427,7 @@ fn handle_keyboard_shortcuts(
                         warn!("{err}");
                     }
                 }
-                KeyCode::X => {
+                KeyCode::KeyX => {
                     let Ok(mut clipboard) = Clipboard::new() else {
                         continue;
                     };
@@ -450,7 +450,7 @@ fn handle_keyboard_shortcuts(
                         text_input.highlight_begin = None;
                     }
                 }
-                KeyCode::V => {
+                KeyCode::KeyV => {
                     let Ok(mut clipboard) = Clipboard::new() else {
                         continue;
                     };
@@ -483,7 +483,7 @@ fn handle_keyboard_shortcuts(
                         text_input.highlight_begin = None;
                     }
                 }
-                KeyCode::Left => {
+                KeyCode::ArrowLeft => {
                     if inputs.pressed(KeyCode::ShiftLeft) || inputs.pressed(KeyCode::ShiftRight) {
                         text_input.highlight_begin = Some(text_input.cursor_pos);
                     } else {
@@ -492,7 +492,7 @@ fn handle_keyboard_shortcuts(
                     text_input.cursor_pos = 0;
                     cursor_flash_time.0 = 0.0;
                 }
-                KeyCode::Right => {
+                KeyCode::ArrowRight => {
                     if inputs.pressed(KeyCode::ShiftLeft) || inputs.pressed(KeyCode::ShiftRight) {
                         text_input.highlight_begin = Some(text_input.cursor_pos);
                     } else {
@@ -504,8 +504,8 @@ fn handle_keyboard_shortcuts(
                 _ => {}
             }
         } else {
-            match keycode {
-                KeyCode::Left => {
+            match pressed.key_code {
+                KeyCode::ArrowLeft => {
                     if text_input.cursor_pos != 0 {
                         if inputs.pressed(KeyCode::ShiftLeft) || inputs.pressed(KeyCode::ShiftRight) {
                             if text_input.highlight_begin.is_none() {
@@ -518,7 +518,7 @@ fn handle_keyboard_shortcuts(
                     }
                     cursor_flash_time.0 = 0.0;
                 }
-                KeyCode::Right => {
+                KeyCode::ArrowRight => {
                     if text_input.cursor_pos != value.len() {
                         if inputs.pressed(KeyCode::ShiftLeft) || inputs.pressed(KeyCode::ShiftRight) {
                             if text_input.highlight_begin.is_none() {
@@ -608,7 +608,7 @@ pub(super) fn register(app: &mut App) {
             added_text_input_bundle.in_set(TextInputUiSystemSet::AddTextInputBundle),
             (
                 monitor_clicked,
-                show_text_cursor.run_if(resource_changed::<Focus>()),
+                show_text_cursor.run_if(resource_changed::<Focus>),
                 handle_keyboard_shortcuts,
                 flash_cursor,
                 send_key_inputs,

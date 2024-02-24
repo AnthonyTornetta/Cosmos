@@ -89,11 +89,11 @@ pub(super) fn register(app: &mut App) {
             (
                 start_playing
                     .run_if(on_event::<PlayMusicEvent>())
-                    .run_if(not(resource_exists::<BackgroundSong>())),
-                monitor_background_song.run_if(resource_exists::<BackgroundSong>()),
+                    .run_if(not(resource_exists::<BackgroundSong>)),
+                monitor_background_song.run_if(resource_exists::<BackgroundSong>),
                 adjust_volume
-                    .run_if(resource_changed::<VolumeSetting>())
-                    .run_if(resource_exists::<BackgroundSong>()),
+                    .run_if(resource_changed::<VolumeSetting>)
+                    .run_if(resource_exists::<BackgroundSong>),
                 play_music_when_enter_new_sector,
             ),
         )
