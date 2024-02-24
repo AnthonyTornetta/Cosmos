@@ -1,7 +1,6 @@
 //! Renders items as 3d models at based off the RenderItem present in a UI element
 
 use bevy::{
-    core_pipeline::clear_color::ClearColorConfig,
     prelude::*,
     render::{camera::ScalingMode, view::RenderLayers},
     window::PrimaryWindow,
@@ -40,12 +39,10 @@ fn create_ui_camera(mut commands: Commands) {
                 scaling_mode: ScalingMode::WindowSize(40.0),
                 ..Default::default()
             }),
-            camera_3d: Camera3d {
-                clear_color: ClearColorConfig::None,
-                ..Default::default()
-            },
+            camera_3d: Camera3d::default(),
             camera: Camera {
                 order: 1,
+                clear_color: ClearColorConfig::None,
                 hdr: true, // this has to be true or the camera doesn't render over the main one correctly.
                 ..Default::default()
             },

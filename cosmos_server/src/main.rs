@@ -75,7 +75,7 @@ fn main() {
 
     app
         // This must be the first thing added or systems don't get added correctly
-        .add_state::<GameState>()
+        .init_state::<GameState>()
         .insert_resource(RapierConfiguration {
             gravity: Vec3::ZERO,
             timestep_mode: TimestepMode::Interpolated {

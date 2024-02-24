@@ -228,7 +228,7 @@ fn add_item_text(mut commands: Commands, asset_server: Res<AssetServer>) {
                             font: asset_server.load("fonts/PixeloidSans.ttf"),
                         },
                     )
-                    .with_alignment(TextAlignment::Center),
+                    .with_justify(JustifyText::Center),
                     ..default()
                 })
                 .insert(ItemNameDisplay);
@@ -340,7 +340,7 @@ fn add_hotbar(mut commands: Commands, asset_server: Res<AssetServer>) {
                                         font: asset_server.load("fonts/PixeloidSans.ttf"),
                                     },
                                 )
-                                .with_alignment(TextAlignment::Right),
+                                .with_justify(JustifyText::Right),
                                 ..default()
                             })
                             .id(),

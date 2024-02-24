@@ -18,12 +18,12 @@
 #import bevy_pbr::rgb9e5
 #endif
 
-@group(0) @binding(1)
-var<uniform> globals: Globals;
+// @group(1) @binding(1)
+// var<uniform> globals: Globals;
 
-@group(1) @binding(1)
+@group(2) @binding(1)
 var my_array_texture: texture_2d_array<f32>;
-@group(1) @binding(2)
+@group(2) @binding(2)
 var my_array_texture_sampler: sampler;
 
 
@@ -153,7 +153,7 @@ fn vertex(vertex_no_morph: Vertex) -> VertexOutput {
         vertex.normal,
         // Use vertex_no_morph.instance_index instead of vertex.instance_index to work around a wgpu dx12 bug.
         // See https://github.com/gfx-rs/naga/issues/2416
-        get_instance_index(vertex_no_morph.instance_index)
+        vertex_no_morph.instance_index
     );
 #endif // SKINNED
 
@@ -163,7 +163,7 @@ fn vertex(vertex_no_morph: Vertex) -> VertexOutput {
         vertex.tangent,
         // Use vertex_no_morph.instance_index instead of vertex.instance_index to work around a wgpu dx12 bug.
         // See https://github.com/gfx-rs/naga/issues/2416
-        get_instance_index(vertex_no_morph.instance_index)
+        vertex_no_morph.instance_index
     );
 #endif // VERTEX_TANGENTS
 #endif // NORMAL_PREPASS_OR_DEFERRED_PREPASS
@@ -188,13 +188,13 @@ fn vertex(vertex_no_morph: Vertex) -> VertexOutput {
 #ifdef VERTEX_OUTPUT_INSTANCE_INDEX
     // Use vertex_no_morph.instance_index instead of vertex.instance_index to work around a wgpu dx12 bug.
     // See https://github.com/gfx-rs/naga/issues/2416
-    out.instance_index = get_instance_index(vertex_no_morph.instance_index);
+    out.instance_index = vertex_no_morph.instance_index;
 #endif
 
     var frame_duration_ms = f32(vertex.animation_data >> u32(16)) / 1000.0;
     var n_frames = vertex.animation_data & u32(0xFFFF);
 
-    var texture_index_offset = u32(globals.time / frame_duration_ms) % n_frames;
+    var texture_index_offset = u32(/*globals.time*/0.0 / frame_duration_ms) % n_frames;
 
     out.texture_index = vertex.texture_index + texture_index_offset;
 

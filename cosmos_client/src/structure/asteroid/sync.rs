@@ -64,5 +64,5 @@ fn receive_asteroids(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, receive_asteroids.run_if(resource_exists::<RenetClient>()));
+    app.add_systems(Update, receive_asteroids.run_if(resource_exists::<RenetClient>));
 }

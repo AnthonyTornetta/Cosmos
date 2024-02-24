@@ -7,7 +7,7 @@ use bevy::{
         in_state, App, AssetServer, BuildChildren, Color, Commands, Component, DespawnRecursiveExt, IntoSystemConfigs, Name, NodeBundle,
         Parent, Query, Res, ResMut, Resource, TextBundle, Update,
     },
-    text::{Text, TextAlignment, TextSection, TextStyle},
+    text::{JustifyText, Text, TextSection, TextStyle},
     time::Time,
     ui::{JustifyContent, PositionType, Style, Val},
 };
@@ -194,7 +194,7 @@ fn display_hud_messages(
                                     },
                                 })
                                 .collect(),
-                            alignment: TextAlignment::Center,
+                            justify: JustifyText::Center,
                             ..Default::default()
                         },
                         ..Default::default()

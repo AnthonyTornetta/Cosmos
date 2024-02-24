@@ -93,9 +93,9 @@ fn morph_vertex(vertex_in: Vertex) -> Vertex {
 }
 #endif
 
-@group(1) @binding(1)
+@group(2) @binding(1)
 var my_array_texture: texture_2d_array<f32>;
-@group(1) @binding(2)
+@group(2) @binding(2)
 var my_array_texture_sampler: sampler;
 
 
@@ -126,7 +126,7 @@ fn vertex(vertex_no_morph: Vertex) -> VertexOutput {
         vertex.normal,
         // Use vertex_no_morph.instance_index instead of vertex.instance_index to work around a wgpu dx12 bug.
         // See https://github.com/gfx-rs/naga/issues/2416
-        get_instance_index(vertex_no_morph.instance_index)
+        vertex_no_morph.instance_index
     );
 #endif
 #endif
@@ -146,7 +146,7 @@ fn vertex(vertex_no_morph: Vertex) -> VertexOutput {
 //         vertex.tangent,
 //         // Use vertex_no_morph.instance_index instead of vertex.instance_index to work around a wgpu dx12 bug.
 //         // See https://github.com/gfx-rs/naga/issues/2416
-//         get_instance_index(vertex_no_morph.instance_index)
+//         vertex_no_morph.instance_index
 //     );
 // #endif
 
@@ -157,7 +157,7 @@ fn vertex(vertex_no_morph: Vertex) -> VertexOutput {
 #ifdef VERTEX_OUTPUT_INSTANCE_INDEX
     // Use vertex_no_morph.instance_index instead of vertex.instance_index to work around a wgpu dx12 bug.
     // See https://github.com/gfx-rs/naga/issues/2416
-    out.instance_index = get_instance_index(vertex_no_morph.instance_index);
+    out.instance_index = vertex_no_morph.instance_index;
 #endif
 
     out.texture_index = vertex.texture_index;
@@ -311,21 +311,25 @@ fn pbr_input_from_standard_material(
 #endif
         pbr_input.material.diffuse_transmission = diffuse_transmission;
 
-        // occlusion
-        // TODO: Split into diffuse/specular occlusion?
-        var occlusion: vec3<f32> = vec3(1.0);
+
+        var diffuse_occlusion: vec3<f32> = vec3(1.0);
+        var specular_occlusion: f32 = 1.0;
 #ifdef VERTEX_UVS
         if ((pbr_bindings::material.flags & pbr_types::STANDARD_MATERIAL_FLAGS_OCCLUSION_TEXTURE_BIT) != 0u) {
-            occlusion = vec3(textureSampleBias(pbr_bindings::occlusion_texture, pbr_bindings::occlusion_sampler, uv, view.mip_bias).r);
+            diffuse_occlusion = vec3(textureSampleBias(pbr_bindings::occlusion_texture, pbr_bindings::occlusion_sampler, uv, view.mip_bias).r);
         }
 #endif
 #ifdef SCREEN_SPACE_AMBIENT_OCCLUSION
         let ssao = textureLoad(screen_space_ambient_occlusion_texture, vec2<i32>(in.position.xy), 0i).r;
         let ssao_multibounce = gtao_multibounce(ssao, pbr_input.material.base_color.rgb);
-        occlusion = min(occlusion, ssao_multibounce);
+        diffuse_occlusion = min(diffuse_occlusion, ssao_multibounce);
+        // Use SSAO to estimate the specular occlusion.
+        // Lagarde and Rousiers 2014, "Moving Frostbite to Physically Based Rendering"
+        specular_occlusion =  saturate(pow(NdotV + ssao, exp2(-16.0 * roughness - 1.0)) - 1.0 + ssao);
 #endif
-        pbr_input.occlusion = occlusion;
-
+        pbr_input.diffuse_occlusion = diffuse_occlusion;
+        pbr_input.specular_occlusion = specular_occlusion;
+        
         // N (normal vector)
 #ifndef LOAD_PREPASS_NORMALS
         pbr_input.N = pbr_functions::apply_normal_mapping(

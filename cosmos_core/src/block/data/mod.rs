@@ -57,9 +57,9 @@ impl BlockData {
 fn despawn_dead_data(
     mut commands: Commands,
     mut q_structure: Query<&mut Structure>,
-    query: Query<(Entity, &BlockData), Changed<BlockData>>,
+    q_block_data: Query<(Entity, &BlockData), Changed<BlockData>>,
 ) {
-    query.for_each(|(ent, block_data)| {
+    q_block_data.iter().for_each(|(ent, block_data)| {
         if block_data.data_count == 0 {
             if let Ok(mut structure) = q_structure.get_mut(block_data.identifier.structure_entity) {
                 structure.remove_block_data(block_data.identifier.block.coords());

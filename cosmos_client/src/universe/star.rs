@@ -3,10 +3,11 @@
 use std::f32::consts::PI;
 
 use bevy::{
+    math::primitives::Sphere,
     pbr::NotShadowCaster,
     prelude::{
-        shape, Added, App, Assets, Commands, DirectionalLight, DirectionalLightBundle, Entity, EulerRot, Mesh, Name, OnEnter, PbrBundle,
-        Quat, Query, ResMut, StandardMaterial, Transform, Update, Vec3, With, Without,
+        Added, App, Assets, Commands, DirectionalLight, DirectionalLightBundle, Entity, EulerRot, Mesh, Name, OnEnter, PbrBundle, Quat,
+        Query, ResMut, StandardMaterial, Transform, Update, Vec3, With, Without,
     },
 };
 use cosmos_core::{physics::location::SECTOR_DIMENSIONS, universe::star::Star};
@@ -16,7 +17,7 @@ use crate::state::game_state::GameState;
 /// Determines how bright light is based off your distance from a star.
 ///
 /// This is a random number I made up, but looks nice enough
-const LIGHT_INTENSITY_CONSTANT: f32 = 3_000_000_000_000_000.0;
+const LIGHT_INTENSITY_CONSTANT: f32 = 300_000_000_000_000.0;
 
 fn point_light_from_sun(sun: Query<&Transform, With<Star>>, mut light: Query<(&mut Transform, &mut DirectionalLight), Without<Star>>) {
     if let Ok((mut transform, mut light)) = light.get_single_mut() {
@@ -40,14 +41,9 @@ fn create_added_star(
     for (entity, star) in added.iter() {
         commands.entity(entity).insert((
             PbrBundle {
-                mesh: meshes.add(
-                    shape::UVSphere {
-                        sectors: 256,
-                        stacks: 256,
-                        radius: SECTOR_DIMENSIONS * 2.0,
-                    }
-                    .into(),
-                ),
+                mesh: meshes.add(Sphere {
+                    radius: SECTOR_DIMENSIONS * 2.0,
+                }),
                 material: materials.add(StandardMaterial {
                     base_color: star.color(),
                     unlit: true,

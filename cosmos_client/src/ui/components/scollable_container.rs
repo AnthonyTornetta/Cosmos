@@ -18,7 +18,7 @@ use bevy::{
     input::{
         keyboard::KeyCode,
         mouse::{MouseButton, MouseScrollUnit, MouseWheel},
-        Input,
+        ButtonInput,
     },
     log::error,
     reflect::Reflect,
@@ -183,9 +183,9 @@ fn on_interact_slider(
         Without<Disabled>,
     >,
     mut q_container: Query<(&mut Style, &Node)>,
-    input: Res<Input<KeyCode>>,
+    input: Res<ButtonInput<KeyCode>>,
     scale: Res<UiScale>,
-    mouse_btns: Res<Input<MouseButton>>,
+    mouse_btns: Res<ButtonInput<MouseButton>>,
     q_windows: Query<&Window, With<PrimaryWindow>>,
     q_interaction: Query<&Interaction>,
 ) {

@@ -32,24 +32,35 @@ pub mod ui;
 pub mod universe;
 pub mod window;
 
-use std::env;
-
 use bevy::core::TaskPoolThreadAssignmentPolicy;
+use bevy::prelude::*;
+use bevy::window::WindowMode;
+use bevy_rapier3d::prelude::{RapierConfiguration, TimestepMode};
 use bevy_renet::transport::NetcodeClientPlugin;
+use bevy_renet::RenetClientPlugin;
+use clap::{arg, Parser};
 use cosmos_core::netty::get_local_ipaddress;
+use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
 use netty::connect::{self, HostConfig};
 use netty::flags::LocalPlayer;
 use netty::mapping::NetworkMapping;
 use state::game_state::GameState;
 use thread_priority::{set_current_thread_priority, ThreadPriority};
 
-use bevy::prelude::*;
-use bevy_rapier3d::prelude::{RapierConfiguration, TimestepMode};
-use bevy_renet::RenetClientPlugin;
-use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
-
 #[cfg(feature = "print-schedule")]
 use bevy::log::LogPlugin;
+
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    /// Ip of the server to connect to
+    #[arg(long)]
+    ip: Option<String>,
+
+    /// If this is fullscreen, the app will start in fullscreen
+    #[arg(short, long, default_value_t = false)]
+    fullscreen: bool,
+}
 
 fn main() {
     if set_current_thread_priority(ThreadPriority::Max).is_err() {
@@ -61,13 +72,9 @@ fn main() {
     // #[cfg(debug_assertions)]
     // env::set_var("RUST_BACKTRACE", "1");
 
-    let args: Vec<String> = env::args().collect();
+    let args = Args::parse();
 
-    let host_name = if args.len() > 1 {
-        args.get(1).unwrap().to_owned()
-    } else {
-        get_local_ipaddress()
-    };
+    let host_name = args.ip.unwrap_or_else(get_local_ipaddress);
 
     info!("Host: {host_name}");
 
@@ -83,6 +90,17 @@ fn main() {
                 },
                 ..Default::default()
             },
+        })
+        .set(WindowPlugin {
+            primary_window: Some(Window {
+                mode: if args.fullscreen {
+                    WindowMode::BorderlessFullscreen
+                } else {
+                    WindowMode::Windowed
+                },
+                ..Default::default()
+            }),
+            ..Default::default()
         })
         .set(ImagePlugin::default_nearest());
 
@@ -101,7 +119,7 @@ fn main() {
         })
         .insert_resource(ClearColor(Color::BLACK))
         // This must be registered here, before it is used anywhere
-        .add_state::<GameState>()
+        .init_state::<GameState>()
         .add_plugins(default_plugins)
         .add_plugins(CosmosCorePluginGroup::new(
             GameState::PreLoading,
