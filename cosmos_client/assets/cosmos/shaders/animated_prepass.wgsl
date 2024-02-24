@@ -18,12 +18,12 @@
 #import bevy_pbr::rgb9e5
 #endif
 
-@group(0) @binding(1)
+@group(1) @binding(1)
 var<uniform> globals: Globals;
 
-@group(1) @binding(1)
+@group(2) @binding(1)
 var my_array_texture: texture_2d_array<f32>;
-@group(1) @binding(2)
+@group(2) @binding(2)
 var my_array_texture_sampler: sampler;
 
 

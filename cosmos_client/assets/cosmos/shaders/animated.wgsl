@@ -94,9 +94,9 @@ fn morph_vertex(vertex_in: Vertex) -> Vertex {
 }
 #endif
 
-@group(1) @binding(1)
+@group(2) @binding(1)
 var my_array_texture: texture_2d_array<f32>;
-@group(1) @binding(2)
+@group(2) @binding(2)
 var my_array_texture_sampler: sampler;
 
 
@@ -212,6 +212,8 @@ fn pbr_input_from_vertex_output(
 }
 
 
+// Stolen from: https://github.com/bevyengine/bevy/blob/v0.13.0/crates/bevy_pbr/src/render/pbr_fragment.wgsl
+
 // Prepare a full PbrInput by sampling all textures to resolve
 // the material members
 fn pbr_input_from_standard_material(
@@ -317,21 +319,24 @@ fn pbr_input_from_standard_material(
 #endif
         pbr_input.material.diffuse_transmission = diffuse_transmission;
 
-        // occlusion
-        // TODO: Split into diffuse/specular occlusion?
-        var occlusion: vec3<f32> = vec3(1.0);
+        var diffuse_occlusion: vec3<f32> = vec3(1.0);
+        var specular_occlusion: f32 = 1.0;
 #ifdef VERTEX_UVS
         if ((pbr_bindings::material.flags & pbr_types::STANDARD_MATERIAL_FLAGS_OCCLUSION_TEXTURE_BIT) != 0u) {
-            occlusion = vec3(textureSampleBias(pbr_bindings::occlusion_texture, pbr_bindings::occlusion_sampler, uv, view.mip_bias).r);
+            diffuse_occlusion = vec3(textureSampleBias(pbr_bindings::occlusion_texture, pbr_bindings::occlusion_sampler, uv, view.mip_bias).r);
         }
 #endif
 #ifdef SCREEN_SPACE_AMBIENT_OCCLUSION
         let ssao = textureLoad(screen_space_ambient_occlusion_texture, vec2<i32>(in.position.xy), 0i).r;
         let ssao_multibounce = gtao_multibounce(ssao, pbr_input.material.base_color.rgb);
-        occlusion = min(occlusion, ssao_multibounce);
+        diffuse_occlusion = min(diffuse_occlusion, ssao_multibounce);
+        // Use SSAO to estimate the specular occlusion.
+        // Lagarde and Rousiers 2014, "Moving Frostbite to Physically Based Rendering"
+        specular_occlusion =  saturate(pow(NdotV + ssao, exp2(-16.0 * roughness - 1.0)) - 1.0 + ssao);
 #endif
-        pbr_input.occlusion = occlusion;
-
+        pbr_input.diffuse_occlusion = diffuse_occlusion;
+        pbr_input.specular_occlusion = specular_occlusion;
+        
         // N (normal vector)
 #ifndef LOAD_PREPASS_NORMALS
         pbr_input.N = pbr_functions::apply_normal_mapping(
@@ -349,6 +354,13 @@ fn pbr_input_from_standard_material(
 #endif
             view.mip_bias,
         );
+#endif
+
+#ifdef LIGHTMAP
+        pbr_input.lightmap_light = lightmap(
+            in.uv_b,
+            pbr_bindings::material.lightmap_exposure,
+            in.instance_index);
 #endif
     }
 
