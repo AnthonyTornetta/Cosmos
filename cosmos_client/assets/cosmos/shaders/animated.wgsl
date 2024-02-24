@@ -164,7 +164,7 @@ fn vertex(vertex_no_morph: Vertex) -> VertexOutput {
     var frame_duration_ms = f32(vertex_no_morph.animation_data >> u32(16)) / 1000.0;
     var n_frames = vertex_no_morph.animation_data & u32(0xFFFF);
 
-    var texture_index_offset = u32(globals.time / frame_duration_ms) % n_frames;
+    var texture_index_offset = u32(/*globals.time*/0.0 / frame_duration_ms) % n_frames;
 
     out.texture_index = vertex.texture_index + texture_index_offset;
 
@@ -336,7 +336,7 @@ fn pbr_input_from_standard_material(
 #endif
         pbr_input.diffuse_occlusion = diffuse_occlusion;
         pbr_input.specular_occlusion = specular_occlusion;
-        
+
         // N (normal vector)
 #ifndef LOAD_PREPASS_NORMALS
         pbr_input.N = pbr_functions::apply_normal_mapping(
