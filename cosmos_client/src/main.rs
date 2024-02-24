@@ -74,7 +74,7 @@ fn main() {
 
     let args = Args::parse();
 
-    let host_name = args.ip.unwrap_or_else(|| get_local_ipaddress());
+    let host_name = args.ip.unwrap_or_else(get_local_ipaddress);
 
     info!("Host: {host_name}");
 
