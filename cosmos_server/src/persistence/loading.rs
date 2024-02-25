@@ -142,20 +142,6 @@ fn default_load(query: Query<(Entity, &SerializedData), With<NeedsLoaded>>, mut 
     }
 }
 
-// pub(super) fn register(app: &mut App) {
-//     app.add_systems(PreUpdate, (check_needs_loaded, check_blueprint_needs_loaded))
-//         .add_systems(
-//             Update,
-//             (begin_loading_blueprint, done_loading_blueprint).chain().before(begin_loading),
-//         )
-//         // Put all loading-related systems after this
-//         .add_systems(Update, begin_loading)
-//         // Put all loading-related systems before this
-//         .add_systems(Update, done_loading.after(begin_loading))
-//         // Like this:
-//         .add_systems(Update, default_load.after(begin_loading).before(done_loading));
-// }
-
 /// The schedule loading takes place in - this may change in the future
 pub const LOADING_SCHEDULE: Update = Update;
 
