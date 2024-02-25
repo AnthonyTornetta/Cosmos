@@ -10,6 +10,7 @@ use crate::structure::block_storage::BlockStorer;
 use crate::structure::chunk::{Chunk, ChunkUnloadEvent, CHUNK_DIMENSIONS};
 use crate::structure::coordinates::{ChunkBlockCoordinate, ChunkCoordinate, CoordinateType};
 use crate::structure::events::ChunkSetEvent;
+use crate::structure::loading::StructureLoadingSet;
 use crate::structure::Structure;
 use bevy::prelude::{
     Added, App, BuildChildren, Commands, Component, DespawnRecursiveExt, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, Query,
@@ -496,6 +497,7 @@ pub(super) fn register(app: &mut App) {
                 listen_for_new_physics_event,
                 clean_unloaded_chunks,
             )
-                .chain(),
+                .chain()
+                .after(StructureLoadingSet::StructureLoaded),
         );
 }

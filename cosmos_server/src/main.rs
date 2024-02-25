@@ -2,6 +2,7 @@
 
 #![feature(fs_try_exists)]
 #![feature(get_many_mut)]
+#![feature(duration_constructors)]
 // #![warn(missing_docs)]
 
 use std::env;

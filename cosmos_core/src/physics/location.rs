@@ -80,6 +80,9 @@ pub type SectorUnit = i64;
 pub struct Sector(SectorUnit, SectorUnit, SectorUnit);
 
 impl Sector {
+    /// Represents the sector at 0, 0, 0.
+    pub const ZERO: Sector = Sector(0, 0, 0);
+
     #[inline]
     /// Creates a new Sector at the given coordinates
     pub const fn new(x: SectorUnit, y: SectorUnit, z: SectorUnit) -> Self {
@@ -133,11 +136,11 @@ impl Sector {
     }
 }
 
-impl Add<Sector> for Sector {
-    type Output = Sector;
+impl Add<Self> for Sector {
+    type Output = Self;
 
-    fn add(self, rhs: Sector) -> Self::Output {
-        Sector(self.0 + rhs.0, self.1 + rhs.1, self.2 + rhs.2)
+    fn add(self, rhs: Self) -> Self::Output {
+        Self(self.0 + rhs.0, self.1 + rhs.1, self.2 + rhs.2)
     }
 }
 
@@ -290,8 +293,11 @@ impl From<Location> for Vec3 {
 }
 
 impl Location {
+    /// Represents the origin point of the universe
+    pub const ZERO: Location = Location::new(Vec3::ZERO, Sector::ZERO);
+
     /// Creates a new location at these coordinates
-    pub fn new(local: Vec3, sector: Sector) -> Self {
+    pub const fn new(local: Vec3, sector: Sector) -> Self {
         Self {
             local,
             sector,
