@@ -7,7 +7,7 @@ use bevy::{
         component::Component,
         entity::Entity,
         query::With,
-        schedule::{common_conditions::in_state, IntoSystemConfigs},
+        schedule::{common_conditions::in_state, IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
         system::{Commands, Query, Res, Resource},
     },
     math::{Quat, Vec3},
@@ -15,13 +15,15 @@ use bevy::{
     time::{common_conditions::on_timer, Time},
     utils::hashbrown::HashMap,
 };
-use bevy_rapier3d::{dynamics::PhysicsWorld, plugin::DEFAULT_WORLD_ID};
 use cosmos_core::{
     entities::player::Player,
     physics::location::{Location, Sector, SectorUnit, SECTOR_DIMENSIONS},
 };
 
-use crate::{persistence::loading::NeedsBlueprintLoaded, state::GameState};
+use crate::{
+    persistence::loading::{LoadingBlueprintSystemSet, NeedsBlueprintLoaded},
+    state::GameState,
+};
 
 #[derive(Component)]
 pub struct PirateNeedsSpawned(Location);
@@ -106,7 +108,7 @@ fn spawn_pirates(
 
             let loc_here = fleet_origin + Vec3::new(offset, 0.0, 0.0);
 
-            commands.spawn((Name::new("Pirate Ship"), PirateNeedsSpawned(loc_here)));
+            commands.spawn((Name::new("Loading Pirate Ship"), PirateNeedsSpawned(loc_here)));
         }
 
         for player_ent in player_ents {
@@ -126,23 +128,24 @@ fn load_settings(mut commands: Commands) {
     commands.insert_resource(MinPirateSpawnTime(Duration::from_mins(10)));
 }
 
-pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, print_phys_world)
-        .add_systems(Startup, load_settings)
-        .add_systems(
-            Update,
-            (spawn_pirates, on_needs_pirate_spawned)
-                .chain()
-                .run_if(in_state(GameState::Playing))
-                .run_if(on_timer(Duration::from_secs(10))),
-        );
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+enum PirateSpawningSet {
+    PirateSpawningLogic,
 }
 
-fn print_phys_world(mut commands: Commands, q_phsy_world: Query<(Entity, &PhysicsWorld)>) {
-    for (ent, p_world) in q_phsy_world.iter() {
-        if p_world.world_id == DEFAULT_WORLD_ID {
-            println!("!!!!!!!!!!!!!!!!!!");
-            commands.entity(ent).log_components();
-        }
-    }
+pub(super) fn register(app: &mut App) {
+    app.configure_sets(
+        Update,
+        PirateSpawningSet::PirateSpawningLogic
+            .before(LoadingBlueprintSystemSet::BeginLoadingBlueprints)
+            .run_if(in_state(GameState::Playing))
+            .run_if(on_timer(Duration::from_secs(10))),
+    )
+    .add_systems(Startup, load_settings)
+    .add_systems(
+        Update,
+        (spawn_pirates, on_needs_pirate_spawned)
+            .in_set(PirateSpawningSet::PirateSpawningLogic)
+            .chain(),
+    );
 }

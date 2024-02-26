@@ -7,11 +7,8 @@
 
 use std::env;
 
-use bevy::{
-    core::TaskPoolThreadAssignmentPolicy,
-    ecs::schedule::{LogLevel, ScheduleBuildSettings},
-    prelude::*,
-};
+use bevy::{core::TaskPoolThreadAssignmentPolicy, prelude::*};
+use bevy_mod_debugdump::schedule_graph;
 use bevy_rapier3d::prelude::{RapierConfiguration, TimestepMode};
 use bevy_renet::{transport::NetcodeServerPlugin, RenetServerPlugin};
 use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
@@ -90,12 +87,12 @@ fn main() {
             },
             ..default()
         })
-        .edit_schedule(Update, |s| {
-            s.set_build_settings(ScheduleBuildSettings {
-                ambiguity_detection: LogLevel::Warn,
-                ..Default::default()
-            });
-        })
+        // .edit_schedule(Update, |s| {
+        //     s.set_build_settings(ScheduleBuildSettings {
+        //         ambiguity_detection: LogLevel::Warn,
+        //         ..Default::default()
+        //     });
+        // })
         .add_plugins(default_plugins)
         .add_plugins(CosmosCorePluginGroup::new(
             GameState::PreLoading,
@@ -107,7 +104,18 @@ fn main() {
         .add_plugins((RenetServerPlugin, NetcodeServerPlugin, ServerPlugin { ip }));
 
     if cfg!(feature = "print-schedule") {
-        bevy_mod_debugdump::print_schedule_graph(&mut app, Update);
+        println!(
+            "{}",
+            bevy_mod_debugdump::schedule_graph_dot(
+                &mut app,
+                Update,
+                &schedule_graph::Settings {
+                    ambiguity_enable: false,
+                    ambiguity_enable_on_world: false,
+                    ..Default::default()
+                }
+            )
+        );
         return;
     }
 

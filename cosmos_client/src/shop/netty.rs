@@ -18,7 +18,7 @@ use crate::state::game_state::GameState;
 
 use super::{ui::OpenShopUiEvent, PurchasedEvent, SoldEvent};
 
-fn listen_netty(
+fn shop_listen_netty(
     mut client: ResMut<RenetClient>,
     mut ev_writer_open_shop_ui: EventWriter<MutEvent<OpenShopUiEvent>>,
     mut ev_writer_purchased: EventWriter<PurchasedEvent>,
@@ -71,7 +71,7 @@ fn listen_netty(
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        listen_netty
+        shop_listen_netty
             .run_if(in_state(GameState::Playing))
             .in_set(NetworkingSystemsSet::ReceiveMessages),
     );

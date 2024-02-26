@@ -1,6 +1,9 @@
 //! Handles the loading of ships
 
-use bevy::prelude::{in_state, App, Commands, Component, Entity, EventWriter, IntoSystemConfigs, Query, Res, Update, With};
+use bevy::{
+    log::info,
+    prelude::{in_state, App, Commands, Component, Entity, EventWriter, IntoSystemConfigs, Query, Res, Update, With},
+};
 use cosmos_core::{
     block::{Block, BlockFace},
     registry::Registry,
@@ -27,6 +30,7 @@ fn create_ships(
     mut chunk_set_event_writer: EventWriter<ChunkInitEvent>,
 ) {
     for (mut structure, entity) in query.iter_mut() {
+        info!("Got ship needs created!");
         let ship_core = blocks.from_id("cosmos:ship_core").expect("Ship core block missing!");
 
         let (w, h, l) = structure.block_dimensions().into();

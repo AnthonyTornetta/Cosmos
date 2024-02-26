@@ -326,6 +326,8 @@ pub(super) fn register(app: &mut App) {
         .add_event::<BlockInteractEvent>()
         .add_systems(
             Update,
-            (handle_block_break_events, handle_block_place_events).in_set(BlockEventsSet::ProcessEvents),
+            (handle_block_break_events, handle_block_place_events)
+                .chain()
+                .in_set(BlockEventsSet::ProcessEvents),
         );
 }

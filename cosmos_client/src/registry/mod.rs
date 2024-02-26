@@ -57,7 +57,7 @@ pub fn sync_registry<T: Identifiable + Serialize + DeserializeOwned + std::fmt::
     app.add_systems(Update, sync::<T>.run_if(in_state(GameState::LoadingData)));
 }
 
-fn listen_netty(
+fn registry_listen_netty(
     mut client: ResMut<RenetClient>,
     mut ev_writer: EventWriter<ReceivedRegistryEvent>,
     mut registry_count: ResMut<RegistriesLeftToSync>,
@@ -96,7 +96,9 @@ fn transition_state(
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        (listen_netty, transition_state).chain().run_if(in_state(GameState::LoadingData)),
+        (registry_listen_netty, transition_state)
+            .chain()
+            .run_if(in_state(GameState::LoadingData)),
     )
     .init_resource::<RegistriesLeftToSync>()
     .add_event::<ReceivedRegistryEvent>();

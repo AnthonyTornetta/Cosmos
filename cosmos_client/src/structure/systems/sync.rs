@@ -56,7 +56,7 @@ impl<T> Default for SystemsQueue<T> {
     }
 }
 
-fn listen_netty(
+fn replication_listen_netty(
     mut client: ResMut<RenetClient>,
     mapping: Res<NetworkMapping>,
     mut event_writer: EventWriter<StructureSystemNeedsUpdated>,
@@ -174,8 +174,11 @@ fn sync<T: StructureSystemImpl + Serialize + DeserializeOwned>(
 }
 
 pub fn sync_system<T: StructureSystemImpl + Serialize + DeserializeOwned>(app: &mut App) {
-    app.add_systems(Update, sync::<T>.run_if(in_state(GameState::Playing)).after(listen_netty))
-        .init_resource::<SystemsQueue<T>>();
+    app.add_systems(
+        Update,
+        sync::<T>.run_if(in_state(GameState::Playing)).after(replication_listen_netty),
+    )
+    .init_resource::<SystemsQueue<T>>();
 }
 
 pub(super) fn register(app: &mut App) {
@@ -183,7 +186,7 @@ pub(super) fn register(app: &mut App) {
 
     app.add_systems(
         Update,
-        listen_netty
+        replication_listen_netty
             .run_if(in_state(GameState::Playing))
             .after(StructureLoadingSet::StructureLoaded),
     )

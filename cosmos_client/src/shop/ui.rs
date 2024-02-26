@@ -7,7 +7,7 @@ use bevy::{
         entity::Entity,
         event::{Event, EventReader},
         query::{Added, Changed, Or, With},
-        schedule::{common_conditions::in_state, IntoSystemConfigs},
+        schedule::{common_conditions::in_state, IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
         system::{Commands, Query, Res, ResMut},
     },
     hierarchy::{BuildChildren, DespawnRecursiveExt},
@@ -1329,6 +1329,11 @@ fn on_change_shop_mode(
     }
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+enum ShopLogicSet {
+    ShopLogic,
+}
+
 pub(super) fn register(app: &mut App) {
     add_reactable_type::<AmountSelected>(app);
     add_reactable_type::<SelectedItemName>(app);
@@ -1344,6 +1349,14 @@ pub(super) fn register(app: &mut App) {
     register_button::<ClickBuyTabEvent>(app);
     register_button::<BuyOrSellBtnEvent>(app);
     register_button::<ClickItemEvent>(app);
+
+    app.configure_sets(
+        Update,
+        ShopLogicSet::ShopLogic
+            .after(NetworkingSystemsSet::ProcessReceivedMessages)
+            .before(UiSystemSet::DoUi)
+            .run_if(in_state(GameState::Playing)),
+    );
 
     app.add_mut_event::<OpenShopUiEvent>()
         .add_systems(
@@ -1362,10 +1375,8 @@ pub(super) fn register(app: &mut App) {
                 enable_sell_button,
                 on_buy,
             )
-                .chain()
-                .after(NetworkingSystemsSet::ProcessReceivedMessages)
-                .before(UiSystemSet::DoUi)
-                .run_if(in_state(GameState::Playing)),
+                .in_set(ShopLogicSet::ShopLogic)
+                .chain(),
         )
         .register_type::<AmountSelected>()
         .register_type::<SelectedItemName>()

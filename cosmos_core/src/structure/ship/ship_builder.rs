@@ -55,5 +55,5 @@ fn on_add_ship(query: Query<Entity, Added<Ship>>, mut commands: Commands) {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, on_add_ship.in_set(StructureLoadingSet::AddStructureComponents));
+    app.add_systems(Update, on_add_ship.before(StructureLoadingSet::LoadStructure));
 }

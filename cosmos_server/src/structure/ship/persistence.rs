@@ -22,7 +22,7 @@ use crate::{
 
 use super::server_ship_builder::ServerShipBuilder;
 
-fn on_blueprint_structure(mut query: Query<(&mut SerializedData, &Structure, &mut NeedsBlueprinted), With<Ship>>, mut commands: Commands) {
+fn on_blueprint_ship(mut query: Query<(&mut SerializedData, &Structure, &mut NeedsBlueprinted), With<Ship>>, mut commands: Commands) {
     for (mut s_data, structure, mut blueprint) in query.iter_mut() {
         blueprint.subdir_name = "ship".into();
 
@@ -31,7 +31,7 @@ fn on_blueprint_structure(mut query: Query<(&mut SerializedData, &Structure, &mu
     }
 }
 
-fn on_save_structure(mut query: Query<(&mut SerializedData, &Structure), (With<NeedsSaved>, With<Ship>)>, mut commands: Commands) {
+fn on_save_ship(mut query: Query<(&mut SerializedData, &Structure), (With<NeedsSaved>, With<Ship>)>, mut commands: Commands) {
     for (mut s_data, structure) in query.iter_mut() {
         save_structure(structure, &mut s_data, &mut commands);
         s_data.serialize_data("cosmos:is_ship", &true);
@@ -89,7 +89,7 @@ fn load_structure(
     }
 }
 
-fn on_load_blueprint(
+fn on_load_ship_blueprint(
     query: Query<(Entity, &SerializedData, &NeedsBlueprintLoaded)>,
     mut commands: Commands,
     mut chunk_load_block_data_event_writer: EventWriter<ChunkLoadBlockDataEvent>,
@@ -99,6 +99,7 @@ fn on_load_blueprint(
     for (entity, s_data, needs_blueprinted) in query.iter() {
         if s_data.deserialize_data::<bool>("cosmos:is_ship").unwrap_or(false) {
             if let Some(structure) = s_data.deserialize_data::<Structure>("cosmos:structure") {
+                println!("Loading ship blueprint!");
                 load_structure(
                     entity,
                     &mut commands,
@@ -114,7 +115,7 @@ fn on_load_blueprint(
     }
 }
 
-fn on_load_structure(
+fn on_load_ship(
     query: Query<(Entity, &SerializedData), With<NeedsLoaded>>,
     mut commands: Commands,
     mut chunk_load_block_data_event_writer: EventWriter<ChunkLoadBlockDataEvent>,
@@ -147,15 +148,15 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         SAVING_SCHEDULE,
         (
-            on_blueprint_structure.in_set(BlueprintingSystemSet::DoBlueprinting),
-            on_save_structure.in_set(SavingSystemSet::DoSaving),
+            on_blueprint_ship.in_set(BlueprintingSystemSet::DoBlueprinting),
+            on_save_ship.in_set(SavingSystemSet::DoSaving),
         ),
     )
     .add_systems(
         LOADING_SCHEDULE,
         (
-            on_load_blueprint.in_set(LoadingBlueprintSystemSet::DoLoadingBlueprints),
-            on_load_structure.in_set(LoadingSystemSet::DoLoading),
+            on_load_ship_blueprint.in_set(LoadingBlueprintSystemSet::DoLoadingBlueprints),
+            on_load_ship.in_set(LoadingSystemSet::DoLoading),
         ),
     );
 }

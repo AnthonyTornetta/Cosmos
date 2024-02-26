@@ -49,7 +49,12 @@ impl TShipBuilder for ClientShipBuilder {
     }
 }
 
-fn on_add_ship(query: Query<Entity, Added<Ship>>, engine_idle_sound: Res<EngineIdleSound>, audio: Res<Audio>, mut commands: Commands) {
+fn client_on_add_ship(
+    query: Query<Entity, Added<Ship>>,
+    engine_idle_sound: Res<EngineIdleSound>,
+    audio: Res<Audio>,
+    mut commands: Commands,
+) {
     for entity in query.iter() {
         let playing_sound: Handle<AudioInstance> = audio.play(engine_idle_sound.0.clone()).with_volume(0.0).looped().handle();
 
@@ -88,7 +93,7 @@ pub(super) fn register(app: &mut App) {
 
     app.add_systems(
         Update,
-        on_add_ship
+        client_on_add_ship
             .in_set(StructureLoadingSet::AddStructureComponents)
             .run_if(resource_exists::<EngineIdleSound>),
     );
