@@ -20,6 +20,7 @@ use thread_priority::{set_current_thread_priority, ThreadPriority};
 #[cfg(feature = "print-schedule")]
 use bevy::log::LogPlugin;
 
+pub mod ai;
 pub mod blocks;
 pub mod commands;
 pub mod economy;

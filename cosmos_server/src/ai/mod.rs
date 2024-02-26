@@ -1,6 +1,8 @@
+//! basically agi
+
 use bevy::app::App;
 
-pub mod pirate;
+mod pirate;
 
 pub(super) fn register(app: &mut App) {
     pirate::register(app);

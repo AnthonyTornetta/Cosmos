@@ -39,7 +39,7 @@ fn register_laser_blocks(blocks: Res<Registry<Block>>, mut cannon: ResMut<LineBl
     }
 }
 
-const LASER_BASE_VELOCITY: f32 = 200.0;
+pub const LASER_BASE_VELOCITY: f32 = 200.0;
 
 fn update_system(
     mut query: Query<(&LaserCannonSystem, &StructureSystem, &mut SystemCooldown), With<SystemActive>>,

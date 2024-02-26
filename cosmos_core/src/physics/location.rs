@@ -426,6 +426,16 @@ impl Location {
             self.sector.z() as f64 * SECTOR_DIMENSIONS as f64 + self.local.z as f64,
         )
     }
+
+    /// This will return true if the other location is within 200 sectors of this location.
+    ///
+    /// This is useful if you're dealing with f32 distances between two locations.
+    /// If the two locations are far apart where distances become nonsensical, this will return false.
+    pub fn is_within_reasonable_range(&self, other: &Location) -> bool {
+        let sec_diff = (other.sector - self.sector).abs();
+
+        sec_diff.max_element() < 200
+    }
 }
 
 #[derive(Component, Debug, Reflect, Deref, DerefMut, Clone, Copy)]
