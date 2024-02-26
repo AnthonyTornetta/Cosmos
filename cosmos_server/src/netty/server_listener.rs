@@ -194,8 +194,6 @@ fn server_listen_messages(
                         continue;
                     };
 
-                    commands.entity(client).log_components();
-
                     let Ok(mut inventory) = q_inventory.get_mut(client) else {
                         info!("No inventory ;(");
                         continue;
