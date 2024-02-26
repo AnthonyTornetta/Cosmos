@@ -13,6 +13,7 @@ use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
     physics::location::Location,
     structure::{
+        loading::StructureLoadingSet,
         shared::DespawnWithStructure,
         ship::{
             ship_builder::{ShipBuilder, TShipBuilder},
@@ -85,5 +86,10 @@ pub(super) fn register(app: &mut App) {
         },
     );
 
-    app.add_systems(Update, on_add_ship.run_if(resource_exists::<EngineIdleSound>));
+    app.add_systems(
+        Update,
+        on_add_ship
+            .in_set(StructureLoadingSet::AddStructureComponents)
+            .run_if(resource_exists::<EngineIdleSound>),
+    );
 }

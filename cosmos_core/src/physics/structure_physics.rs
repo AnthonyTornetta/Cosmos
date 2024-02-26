@@ -12,6 +12,7 @@ use crate::structure::coordinates::{ChunkBlockCoordinate, ChunkCoordinate, Coord
 use crate::structure::events::ChunkSetEvent;
 use crate::structure::loading::StructureLoadingSet;
 use crate::structure::Structure;
+use bevy::ecs::schedule::apply_deferred;
 use bevy::prelude::{
     Added, App, BuildChildren, Commands, Component, DespawnRecursiveExt, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, Query,
     Res, Transform, Update,
@@ -19,6 +20,7 @@ use bevy::prelude::{
 use bevy::reflect::Reflect;
 use bevy::transform::TransformBundle;
 use bevy::utils::HashSet;
+use bevy_rapier3d::dynamics::RigidBody;
 use bevy_rapier3d::math::Vect;
 use bevy_rapier3d::prelude::{Collider, ColliderMassProperties, ReadMassProperties, Rot, Sensor};
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
@@ -297,7 +299,7 @@ struct ChunkNeedsPhysicsEvent {
 /// This may need to be async-ified in the future
 fn listen_for_new_physics_event(
     mut commands: Commands,
-    structure_query: Query<&Structure>,
+    structure_query: Query<(&Structure, Option<&RigidBody>)>,
     mut event_reader: EventReader<ChunkNeedsPhysicsEvent>,
     blocks: Res<Registry<Block>>,
     colliders: Res<Registry<BlockCollider>>,
@@ -313,12 +315,14 @@ fn listen_for_new_physics_event(
     let mut todo = Vec::with_capacity(to_process.capacity());
     // clean up old collider entities
     for ev in to_process.iter() {
-        let Ok(Some(chunk_entity)) = structure_query
+        let Ok((Some(chunk_entity), rb)) = structure_query
             .get(ev.structure_entity)
-            .map(|structure| structure.chunk_entity(ev.chunk))
+            .map(|(structure, rb)| (structure.chunk_entity(ev.chunk), rb))
         else {
             continue;
         };
+
+        println!("{rb:?}");
 
         remove_chunk_colliders(&mut commands, &mut physics_components_query, ev.structure_entity, chunk_entity);
 
@@ -334,9 +338,11 @@ fn listen_for_new_physics_event(
     let commands = Arc::new(Mutex::new(commands));
 
     todo.into_par_iter().for_each(|(chunk_coord, structure_entity)| {
-        let Ok(structure) = structure_query.get(structure_entity) else {
+        let Ok((structure, rb)) = structure_query.get(structure_entity) else {
             return;
         };
+
+        println!("{rb:?}");
 
         let Some(chunk) = structure.chunk_from_chunk_coordinates(chunk_coord) else {
             return;
@@ -494,6 +500,7 @@ pub(super) fn register(app: &mut App) {
             (
                 add_physics_parts,
                 listen_for_structure_event,
+                apply_deferred,
                 listen_for_new_physics_event,
                 clean_unloaded_chunks,
             )

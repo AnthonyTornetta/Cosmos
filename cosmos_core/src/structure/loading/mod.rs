@@ -61,7 +61,7 @@ pub(super) fn register(app: &mut App) {
         Update,
         (
             StructureLoadingSet::LoadStructure,
-            StructureLoadingSet::FlushStructureComponents,
+            StructureLoadingSet::AddStructureComponents,
             StructureLoadingSet::CreateChunkEntities,
             StructureLoadingSet::FlushChunkComponents,
             StructureLoadingSet::InitializeChunkBlockData,
@@ -73,7 +73,7 @@ pub(super) fn register(app: &mut App) {
             .after(NetworkingSystemsSet::FlushReceiveMessages)
             .chain(),
     )
-    .add_systems(Update, apply_deferred.in_set(StructureLoadingSet::FlushStructureComponents))
+    .add_systems(Update, apply_deferred.in_set(StructureLoadingSet::AddStructureComponents))
     .add_systems(Update, apply_deferred.in_set(StructureLoadingSet::FlushChunkComponents))
     .add_systems(Update, apply_deferred.in_set(StructureLoadingSet::FlushBlockDataBase))
     .add_systems(Update, apply_deferred.in_set(StructureLoadingSet::FlushLoadChunkData));
@@ -93,8 +93,8 @@ pub(super) fn register(app: &mut App) {
 pub enum StructureLoadingSet {
     /// Initially sets up the structure being loaded, such as creating the `Structure` component
     LoadStructure,
-    /// apply_deferred
-    FlushStructureComponents,
+    /// Adds structure components that need to be present
+    AddStructureComponents,
     /// Creates all entnties the chunks would have
     CreateChunkEntities,
     /// apply_deferred

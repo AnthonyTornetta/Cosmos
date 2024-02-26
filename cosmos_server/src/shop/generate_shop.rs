@@ -102,7 +102,7 @@ fn spawn_shop(
 
             let loc = Location::new(
                 if sector == ORIGIN_SECTOR {
-                    Vec3::new(0.0, 0.0, 0.0)
+                    Vec3::new(0.0, 1200.0, 0.0)
                 } else {
                     Vec3::new(
                         rng.gen::<f32>() * multiplier + adder,

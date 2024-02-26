@@ -59,5 +59,5 @@ fn on_add_station(query: Query<Entity, Added<Station>>, mut commands: Commands) 
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, on_add_station.in_set(StructureLoadingSet::LoadStructure));
+    app.add_systems(Update, on_add_station.before(StructureLoadingSet::LoadStructure));
 }
