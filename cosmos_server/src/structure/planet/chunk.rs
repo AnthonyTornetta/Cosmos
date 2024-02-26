@@ -4,7 +4,7 @@ use bevy::{
     app::Update,
     ecs::{
         entity::Entity,
-        schedule::{apply_deferred, IntoSystemSetConfigs, SystemSet},
+        schedule::{IntoSystemSetConfigs, SystemSet},
         system::{Commands, ResMut},
     },
     log::warn,
@@ -50,16 +50,10 @@ pub struct ChunkNeedsSent {
 pub enum SerializeChunkBlockDataSet {
     /// Add the `SerializedChunkBlockData` component to chunk entities with `ChunkNeedsSent` field
     BeginSerialization,
-    /// apply_deferred
-    FlushBeginSerialization,
     /// Populate the `SerializedChunkBlockData` component with block data players need to know about
     Serialize,
-    /// apply_deferred
-    FlushSerialize,
     /// Sends the serialized block data + chunks to players
     SendChunks,
-    /// apply_deferred
-    FlushSendChunks,
 }
 
 fn begin_serialization(
@@ -137,24 +131,16 @@ pub(super) fn register(app: &mut App) {
         Update,
         (
             SerializeChunkBlockDataSet::BeginSerialization,
-            SerializeChunkBlockDataSet::FlushBeginSerialization,
             SerializeChunkBlockDataSet::Serialize,
-            SerializeChunkBlockDataSet::FlushSerialize,
             SerializeChunkBlockDataSet::SendChunks,
-            SerializeChunkBlockDataSet::FlushSendChunks,
         )
-            .after(LoadingSystemSet::FlushDoneLoading)
-            .after(NetworkingSystemsSet::FlushReceiveMessages)
+            .after(LoadingSystemSet::DoneLoading)
+            .after(NetworkingSystemsSet::ProcessReceivedMessages)
             .chain(),
     )
     .add_systems(
         Update,
         (
-            // Defers
-            apply_deferred.in_set(SerializeChunkBlockDataSet::FlushBeginSerialization),
-            apply_deferred.in_set(SerializeChunkBlockDataSet::FlushSerialize),
-            apply_deferred.in_set(SerializeChunkBlockDataSet::FlushSendChunks),
-            // Logic
             begin_serialization.in_set(SerializeChunkBlockDataSet::BeginSerialization),
             send_chunks.in_set(SerializeChunkBlockDataSet::SendChunks),
         ),

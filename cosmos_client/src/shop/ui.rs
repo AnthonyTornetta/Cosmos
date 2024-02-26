@@ -1363,8 +1363,8 @@ pub(super) fn register(app: &mut App) {
                 on_buy,
             )
                 .chain()
-                .after(NetworkingSystemsSet::FlushReceiveMessages)
-                .before(UiSystemSet::ApplyDeferredA)
+                .after(NetworkingSystemsSet::ProcessReceivedMessages)
+                .before(UiSystemSet::DoUi)
                 .run_if(in_state(GameState::Playing)),
         )
         .register_type::<AmountSelected>()

@@ -14,7 +14,7 @@ use bevy::{
         entity::Entity,
         event::EventReader,
         query::{Added, Changed, Or},
-        schedule::{apply_deferred, common_conditions::resource_changed, IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
+        schedule::{common_conditions::resource_changed, IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
         system::{Commands, Query, Res, ResMut, Resource},
     },
     hierarchy::BuildChildren,
@@ -562,18 +562,12 @@ fn verify_input(text_input: &TextInput, test_value: &str) -> bool {
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 /// System set the TextInput component uses. Make sure you add any [`TextInput`] components before this set!
 pub enum TextInputUiSystemSet {
-    /// apply_deferred
-    ApplyDeferredA,
     /// Make sure you add any [`TextInput`] components before this set!
     ///
     /// Sets up any [`TextInput`] components added.
     AddTextInputBundle,
-    /// apply_deferred
-    ApplyDeferredB,
     /// Sends user input to the various [`TextInput`] components.
     SendKeyInputs,
-    /// apply_deferred
-    ApplyDeferredC,
     /// Updates any components based on the value being changed in this [`TextInput`]
     ///
     /// The results of this can be read in [`InputValue`].
@@ -584,23 +578,12 @@ pub(super) fn register(app: &mut App) {
     app.configure_sets(
         Update,
         (
-            TextInputUiSystemSet::ApplyDeferredA,
             TextInputUiSystemSet::AddTextInputBundle,
-            TextInputUiSystemSet::ApplyDeferredB,
             TextInputUiSystemSet::SendKeyInputs,
-            TextInputUiSystemSet::ApplyDeferredC,
             TextInputUiSystemSet::ValueChanged,
         )
             .chain()
             .in_set(UiSystemSet::DoUi),
-    )
-    .add_systems(
-        Update,
-        (
-            apply_deferred.in_set(TextInputUiSystemSet::ApplyDeferredA),
-            apply_deferred.in_set(TextInputUiSystemSet::ApplyDeferredB),
-            apply_deferred.in_set(TextInputUiSystemSet::ApplyDeferredC),
-        ),
     )
     .add_systems(
         Update,

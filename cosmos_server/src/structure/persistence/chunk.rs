@@ -9,7 +9,7 @@ use bevy::{
         component::Component,
         entity::Entity,
         query::{With, Without},
-        schedule::{apply_deferred, IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
+        schedule::{IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
         system::{Commands, Query},
     },
     prelude::{Deref, DerefMut},
@@ -116,12 +116,8 @@ fn done_saving_block_data_fixed_structure(
 pub enum BlockDataSavingSet {
     /// Nothing yet =).
     BeginSavingBlockData,
-    /// apply_deferred
-    FlushBeginSavingBlockData,
     /// This is where you should add any saving logic and write to the `SerializedData` component.
     SaveBlockData,
-    /// apply_deferred
-    FlushSaveBlockData,
     /// This writes the block data to the structures' `SerializedData` fields `SerializedData` and `NeedsSaved` components.
     DoneSavingBlockData,
 }
@@ -133,12 +129,8 @@ pub enum BlockDataSavingSet {
 pub enum BlockDataBlueprintingSet {
     /// Nothing yet =).
     BeginBlueprintingBlockData,
-    /// apply_deferred.
-    FlushBeginBlueprintingBlockData,
     /// This is where you should add any saving logic and write to the `SerializedData` component.
     BlueprintBlockData,
-    /// apply_deferred.
-    FlushBlueprintBlockData,
     /// Nothing yet =).
     DoneBlueprintingBlockData,
 }
@@ -148,47 +140,31 @@ pub(super) fn register(app: &mut App) {
         SAVING_SCHEDULE,
         (
             BlockDataSavingSet::BeginSavingBlockData,
-            BlockDataSavingSet::FlushBeginSavingBlockData,
             BlockDataSavingSet::SaveBlockData,
-            BlockDataSavingSet::FlushSaveBlockData,
             BlockDataSavingSet::DoneSavingBlockData,
         )
             .chain()
             .after(SavingSystemSet::DoSaving)
-            .before(SavingSystemSet::FlushDoSaving),
+            .before(SavingSystemSet::DoneSaving),
     )
     .add_systems(
         SAVING_SCHEDULE,
-        (
-            // Deferred
-            apply_deferred.in_set(BlockDataSavingSet::FlushBeginSavingBlockData),
-            apply_deferred.in_set(BlockDataSavingSet::FlushSaveBlockData),
-            // Logic
-            (done_saving_block_data_fixed_structure, save_dynamic_structure_block_data).in_set(BlockDataSavingSet::DoneSavingBlockData),
-        ),
+        ((done_saving_block_data_fixed_structure, save_dynamic_structure_block_data).in_set(BlockDataSavingSet::DoneSavingBlockData),),
     );
 
     app.configure_sets(
         SAVING_SCHEDULE,
         (
             BlockDataBlueprintingSet::BeginBlueprintingBlockData,
-            BlockDataBlueprintingSet::FlushBeginBlueprintingBlockData,
             BlockDataBlueprintingSet::BlueprintBlockData,
-            BlockDataBlueprintingSet::FlushBlueprintBlockData,
             BlockDataBlueprintingSet::DoneBlueprintingBlockData,
         )
             .chain()
             .after(BlueprintingSystemSet::DoBlueprinting)
-            .before(BlueprintingSystemSet::FlushDoneBlueprinting),
+            .before(BlueprintingSystemSet::DoneBlueprinting),
     )
     .add_systems(
         SAVING_SCHEDULE,
-        (
-            // Deferred
-            apply_deferred.in_set(BlockDataBlueprintingSet::FlushBeginBlueprintingBlockData),
-            apply_deferred.in_set(BlockDataBlueprintingSet::FlushBlueprintBlockData),
-            // Logic
-            done_blueprinting_block_data_fixed_structure.in_set(BlockDataBlueprintingSet::DoneBlueprintingBlockData),
-        ),
+        (done_blueprinting_block_data_fixed_structure.in_set(BlockDataBlueprintingSet::DoneBlueprintingBlockData),),
     );
 }

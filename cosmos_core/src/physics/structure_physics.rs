@@ -12,7 +12,6 @@ use crate::structure::coordinates::{ChunkBlockCoordinate, ChunkCoordinate, Coord
 use crate::structure::events::ChunkSetEvent;
 use crate::structure::loading::StructureLoadingSet;
 use crate::structure::Structure;
-use bevy::ecs::schedule::apply_deferred;
 use bevy::prelude::{
     Added, App, BuildChildren, Commands, Component, DespawnRecursiveExt, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, Query,
     Res, Transform, Update,
@@ -500,7 +499,6 @@ pub(super) fn register(app: &mut App) {
             (
                 add_physics_parts,
                 listen_for_structure_event,
-                apply_deferred,
                 listen_for_new_physics_event,
                 clean_unloaded_chunks,
             )

@@ -247,7 +247,6 @@ struct LaserCannonLoadingFlag;
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 enum LasersSystemSet {
     CreateLasers,
-    ApplyDeferred,
     UpdateLasers,
 }
 
@@ -269,16 +268,7 @@ pub(super) fn register(app: &mut App) {
         },
     );
 
-    app.configure_sets(
-        Update,
-        (
-            LasersSystemSet::CreateLasers,
-            LasersSystemSet::ApplyDeferred,
-            LasersSystemSet::UpdateLasers,
-        )
-            .chain(),
-    )
-    .add_systems(Update, apply_deferred.in_set(LasersSystemSet::ApplyDeferred));
+    app.configure_sets(Update, (LasersSystemSet::CreateLasers, LasersSystemSet::UpdateLasers).chain());
 
     app.add_event::<LaserCannonSystemFiredEvent>()
         .init_resource::<MiningLaserMaterialCache>()

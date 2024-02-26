@@ -12,7 +12,7 @@ use bevy::{
         entity::Entity,
         event::{Event, EventWriter},
         query::{Added, Changed, Without},
-        schedule::{apply_deferred, IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
+        schedule::{IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
         system::{Commands, Query},
         world::Ref,
     },
@@ -290,14 +290,10 @@ fn on_change_button<T: ButtonEvent>(
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 /// System set the [`Button`]` component uses. Make sure you add any [`Button`] components before this set!
 pub enum ButtonUiSystemSet {
-    /// apply_deferred
-    ApplyDeferredA,
     /// Make sure you add any [`Button`] components before this set!
     ///
     /// Sets up any [`Button`] components added.
     AddButtonBundle,
-    /// apply_deferred
-    ApplyDeferredB,
     /// Sends user events from the various [`Button`] components.
     SendButtonEvents,
 }
@@ -318,20 +314,8 @@ pub fn register_button<T: ButtonEvent>(app: &mut App) {
 pub(super) fn register(app: &mut App) {
     app.configure_sets(
         Update,
-        (
-            ButtonUiSystemSet::ApplyDeferredA,
-            ButtonUiSystemSet::AddButtonBundle,
-            ButtonUiSystemSet::ApplyDeferredB,
-            ButtonUiSystemSet::SendButtonEvents,
-        )
+        (ButtonUiSystemSet::AddButtonBundle, ButtonUiSystemSet::SendButtonEvents)
             .chain()
             .in_set(UiSystemSet::DoUi),
-    )
-    .add_systems(
-        Update,
-        (
-            apply_deferred.in_set(ButtonUiSystemSet::ApplyDeferredA),
-            apply_deferred.in_set(ButtonUiSystemSet::ApplyDeferredB),
-        ),
     );
 }

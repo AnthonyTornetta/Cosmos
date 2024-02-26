@@ -5,7 +5,7 @@ use crate::{
     structure::events::{ChunkSetEvent, StructureLoadedEvent},
 };
 use bevy::{
-    ecs::schedule::{apply_deferred, IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
+    ecs::schedule::{IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
     prelude::{App, Commands, Component, EventReader, EventWriter, Query, Update},
     reflect::Reflect,
 };
@@ -63,20 +63,13 @@ pub(super) fn register(app: &mut App) {
             StructureLoadingSet::LoadStructure,
             StructureLoadingSet::AddStructureComponents,
             StructureLoadingSet::CreateChunkEntities,
-            StructureLoadingSet::FlushChunkComponents,
             StructureLoadingSet::InitializeChunkBlockData,
-            StructureLoadingSet::FlushBlockDataBase,
             StructureLoadingSet::LoadChunkData,
-            StructureLoadingSet::FlushLoadChunkData,
             StructureLoadingSet::StructureLoaded,
         )
-            .after(NetworkingSystemsSet::FlushReceiveMessages)
+            .after(NetworkingSystemsSet::ProcessReceivedMessages)
             .chain(),
-    )
-    .add_systems(Update, apply_deferred.in_set(StructureLoadingSet::AddStructureComponents))
-    .add_systems(Update, apply_deferred.in_set(StructureLoadingSet::FlushChunkComponents))
-    .add_systems(Update, apply_deferred.in_set(StructureLoadingSet::FlushBlockDataBase))
-    .add_systems(Update, apply_deferred.in_set(StructureLoadingSet::FlushLoadChunkData));
+    );
 
     app.add_systems(
         Update,
@@ -97,16 +90,10 @@ pub enum StructureLoadingSet {
     AddStructureComponents,
     /// Creates all entnties the chunks would have
     CreateChunkEntities,
-    /// apply_deferred
-    FlushChunkComponents,
     /// Sets up the `BlockData` components used by block data
     InitializeChunkBlockData,
-    /// apply_deferred
-    FlushBlockDataBase,
     /// Loads any chunk's block data
     LoadChunkData,
-    /// apply_deferred
-    FlushLoadChunkData,
     /// Run once the structure is finished loaded. Used to notify other systems a chunk is ready to be processed
     StructureLoaded,
 }

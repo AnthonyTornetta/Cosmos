@@ -299,7 +299,7 @@ pub(super) fn register(app: &mut App) {
         )
             .chain()
             .run_if(in_state(GameState::Playing))
-            .after(NetworkingSystemsSet::FlushReceiveMessages),
+            .after(NetworkingSystemsSet::ProcessReceivedMessages),
     )
     .add_event::<BuyEvent>()
     .add_event::<SellEvent>();

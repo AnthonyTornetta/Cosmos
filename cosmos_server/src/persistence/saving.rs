@@ -9,7 +9,7 @@
 
 use bevy::{
     core::Name,
-    ecs::schedule::{apply_deferred, IntoSystemSetConfigs, SystemSet},
+    ecs::schedule::{IntoSystemSetConfigs, SystemSet},
     log::warn,
     prelude::{App, Commands, Component, Entity, First, IntoSystemConfigs, Query, ResMut, With, Without},
     reflect::Reflect,
@@ -33,16 +33,10 @@ use super::{EntityId, SaveFileIdentifier, SaveFileIdentifierType, SectorsCache, 
 pub enum SavingSystemSet {
     /// Adds the `SerializedData` component to any entities that have the `NeedsSaved` component.
     BeginSaving,
-    /// apply_deferred
-    FlushBeginSaving,
     /// Put all your saving logic in here
     DoSaving,
-    /// apply_deferred
-    FlushDoSaving,
     /// This writes the save data to the disk and removes the `SerializedData` and `NeedsSaved` components.
     DoneSaving,
-    /// apply_deferred
-    FlushDoneSaving,
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
@@ -50,16 +44,10 @@ pub enum SavingSystemSet {
 pub enum BlueprintingSystemSet {
     /// Adds the `SerializedData` component to any entities that have the `NeedsBlueprinted` component.
     BeginBlueprinting,
-    /// apply_deferred
-    FlushBeginBlueprinting,
     /// Put all your blueprinting logic in here
     DoBlueprinting,
-    /// apply_deferred
-    FlushDoBlueprinting,
     /// This writes the save data to the disk and removes the `SerializedData` and `NeedsBlueprinted` components.
     DoneBlueprinting,
-    /// apply_deferred
-    FlushDoneBlueprinting,
 }
 
 /// Denotes that this entity should be saved. Once this entity is saved,
@@ -261,25 +249,13 @@ pub const SAVING_SCHEDULE: First = First;
 pub(super) fn register(app: &mut App) {
     app.configure_sets(
         SAVING_SCHEDULE,
-        (
-            SavingSystemSet::BeginSaving,
-            SavingSystemSet::FlushBeginSaving,
-            SavingSystemSet::DoSaving,
-            SavingSystemSet::FlushDoSaving,
-            SavingSystemSet::DoneSaving,
-            SavingSystemSet::FlushDoneSaving,
-        )
+        (SavingSystemSet::BeginSaving, SavingSystemSet::DoSaving, SavingSystemSet::DoneSaving)
             .chain()
             .before(despawn_needed),
     )
     .add_systems(
         SAVING_SCHEDULE,
         (
-            // Defers
-            apply_deferred.in_set(SavingSystemSet::FlushBeginSaving),
-            apply_deferred.in_set(SavingSystemSet::FlushDoSaving),
-            apply_deferred.in_set(SavingSystemSet::FlushDoneSaving),
-            // Logic
             check_needs_saved.in_set(SavingSystemSet::BeginSaving),
             default_save.in_set(SavingSystemSet::DoSaving),
             done_saving.in_set(SavingSystemSet::DoneSaving),
@@ -290,11 +266,8 @@ pub(super) fn register(app: &mut App) {
         SAVING_SCHEDULE,
         (
             BlueprintingSystemSet::BeginBlueprinting,
-            BlueprintingSystemSet::FlushBeginBlueprinting,
             BlueprintingSystemSet::DoBlueprinting,
-            BlueprintingSystemSet::FlushDoBlueprinting,
             BlueprintingSystemSet::DoneBlueprinting,
-            BlueprintingSystemSet::FlushDoneBlueprinting,
         )
             .chain()
             .before(SavingSystemSet::BeginSaving),
@@ -302,10 +275,6 @@ pub(super) fn register(app: &mut App) {
     .add_systems(
         SAVING_SCHEDULE,
         (
-            // Defers
-            apply_deferred.in_set(BlueprintingSystemSet::FlushBeginBlueprinting),
-            apply_deferred.in_set(BlueprintingSystemSet::FlushDoBlueprinting),
-            apply_deferred.in_set(BlueprintingSystemSet::FlushDoneBlueprinting),
             // Logic
             check_needs_blueprinted.in_set(BlueprintingSystemSet::BeginBlueprinting),
             done_blueprinting.in_set(BlueprintingSystemSet::DoneBlueprinting),

@@ -5,7 +5,7 @@ use bevy::{
         component::Component,
         event::Event,
         query::With,
-        schedule::{apply_deferred, IntoSystemSetConfigs, SystemSet},
+        schedule::{IntoSystemSetConfigs, SystemSet},
         system::{ResMut, Resource},
     },
     prelude::{in_state, App, Commands, Entity, EventWriter, IntoSystemConfigs, Query, Update},
@@ -132,27 +132,18 @@ fn send_events(
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 /// Put stuff related to generating asteroid terrain in `Self::GenerateAsteroid`
 pub enum AsteroidGenerationSet {
-    /// apply_deferred
-    PreStartGeneratingAsteroidFlush,
     /// Inital asteroid setup
     StartGeneratingAsteroid,
-    /// apply_deferred
-    FlushStartGeneratingAsteroid,
-    /// Put asteroid generation logic here
+    /// Triggers the generation of the actual blocks of the asteroid
     GenerateAsteroid,
-    /// apply_deferred
-    FlushGenerateAsteroid,
 }
 
 pub(super) fn register(app: &mut App) {
     app.configure_sets(
         Update,
         (
-            AsteroidGenerationSet::PreStartGeneratingAsteroidFlush,
             AsteroidGenerationSet::StartGeneratingAsteroid,
-            AsteroidGenerationSet::FlushStartGeneratingAsteroid,
             AsteroidGenerationSet::GenerateAsteroid,
-            AsteroidGenerationSet::FlushGenerateAsteroid,
         )
             .chain()
             .in_set(StructureLoadingSet::LoadStructure),
@@ -161,13 +152,8 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         (
-            // apply_deferred
-            apply_deferred.in_set(AsteroidGenerationSet::PreStartGeneratingAsteroidFlush),
-            apply_deferred.in_set(AsteroidGenerationSet::FlushStartGeneratingAsteroid),
-            apply_deferred.in_set(AsteroidGenerationSet::FlushGenerateAsteroid),
-            // Logic
             send_events.in_set(AsteroidGenerationSet::StartGeneratingAsteroid),
-            notify_when_done_generating.after(AsteroidGenerationSet::FlushGenerateAsteroid),
+            notify_when_done_generating.after(AsteroidGenerationSet::GenerateAsteroid),
         )
             .run_if(in_state(GameState::Playing)),
     )

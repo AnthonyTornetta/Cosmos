@@ -354,7 +354,7 @@ pub(super) fn register(app: &mut App) {
         )
             .chain()
             .run_if(in_state(GameState::Playing))
-            .before(NetworkingSystemsSet::PreReceiveMessages),
+            .before(NetworkingSystemsSet::ReceiveMessages),
     )
     .add_systems(PostUpdate, fix_location)
     // This must be last due to commands being delayed when adding PhysicsWorlds.

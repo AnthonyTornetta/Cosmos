@@ -10,7 +10,7 @@
 use std::fs;
 
 use bevy::{
-    ecs::schedule::{apply_deferred, IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
+    ecs::schedule::{IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
     log::{error, warn},
     prelude::{App, Commands, Component, Entity, Quat, Query, Update, With, Without},
     reflect::Reflect,
@@ -29,35 +29,21 @@ use super::{SaveFileIdentifier, SaveFileIdentifierType, SerializedData};
 pub enum LoadingSystemSet {
     /// Sets up the loading entities
     BeginLoading,
-    /// apply_deferred
-    FlushBeginLoading,
     /// Put all your loading logic in here
     DoLoading,
-    /// apply_deferred
-    FlushDoLoading,
     /// Removes all unneeded components
     DoneLoading,
-    /// apply_deferred
-    FlushDoneLoading,
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 /// Put anything related to loading blueprinted entities in from serialized data into this set
 pub enum LoadingBlueprintSystemSet {
-    /// apply_deferred
-    FlushPreBeginLoadingBlueprints,
     /// Sets up the loading entities
     BeginLoadingBlueprints,
-    /// apply_deferred
-    FlushBeginLoadingBlueprints,
     /// Put all your blueprint loading logic in here
     DoLoadingBlueprints,
-    /// apply_deferred
-    FlushDoLoadingBlueprints,
     /// Removes all unneeded components
     DoneLoadingBlueprints,
-    /// apply_deferred
-    FlushDoneLoadingBlueprints,
 }
 
 #[derive(Component, Debug, Reflect)]
@@ -150,22 +136,14 @@ pub(super) fn register(app: &mut App) {
         LOADING_SCHEDULE,
         (
             LoadingSystemSet::BeginLoading,
-            LoadingSystemSet::FlushBeginLoading,
-            LoadingSystemSet::DoLoading,
-            LoadingSystemSet::FlushDoLoading.before(StructureLoadingSet::LoadStructure),
+            LoadingSystemSet::DoLoading.before(StructureLoadingSet::LoadStructure),
             LoadingSystemSet::DoneLoading.after(StructureLoadingSet::StructureLoaded),
-            LoadingSystemSet::FlushDoneLoading,
         )
             .chain(),
     )
     .add_systems(
         LOADING_SCHEDULE,
         (
-            // Defers
-            apply_deferred.in_set(LoadingSystemSet::FlushBeginLoading),
-            apply_deferred.in_set(LoadingSystemSet::FlushDoLoading),
-            apply_deferred.in_set(LoadingSystemSet::FlushDoneLoading),
-            // Logic
             check_needs_loaded.in_set(LoadingSystemSet::BeginLoading),
             default_load.in_set(LoadingSystemSet::DoLoading),
             done_loading.in_set(LoadingSystemSet::DoneLoading),
@@ -175,13 +153,9 @@ pub(super) fn register(app: &mut App) {
     app.configure_sets(
         LOADING_SCHEDULE,
         (
-            LoadingBlueprintSystemSet::FlushPreBeginLoadingBlueprints,
             LoadingBlueprintSystemSet::BeginLoadingBlueprints,
-            LoadingBlueprintSystemSet::FlushBeginLoadingBlueprints,
             LoadingBlueprintSystemSet::DoLoadingBlueprints,
-            LoadingBlueprintSystemSet::FlushDoLoadingBlueprints,
             LoadingBlueprintSystemSet::DoneLoadingBlueprints,
-            LoadingBlueprintSystemSet::FlushDoneLoadingBlueprints,
         )
             .chain()
             .before(LoadingSystemSet::BeginLoading),
@@ -189,11 +163,6 @@ pub(super) fn register(app: &mut App) {
     .add_systems(
         LOADING_SCHEDULE,
         (
-            // Defers
-            apply_deferred.in_set(LoadingBlueprintSystemSet::FlushPreBeginLoadingBlueprints),
-            apply_deferred.in_set(LoadingBlueprintSystemSet::FlushBeginLoadingBlueprints),
-            apply_deferred.in_set(LoadingBlueprintSystemSet::FlushDoLoadingBlueprints),
-            apply_deferred.in_set(LoadingBlueprintSystemSet::FlushDoneLoadingBlueprints),
             // Logic
             check_blueprint_needs_loaded.in_set(LoadingBlueprintSystemSet::BeginLoadingBlueprints),
             done_loading_blueprint.in_set(LoadingBlueprintSystemSet::DoneLoadingBlueprints),

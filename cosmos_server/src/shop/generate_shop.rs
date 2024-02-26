@@ -141,7 +141,7 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         spawn_shop
-            .before(LoadingBlueprintSystemSet::FlushPreBeginLoadingBlueprints)
+            .before(LoadingBlueprintSystemSet::BeginLoadingBlueprints)
             .run_if(on_timer(Duration::from_secs(1)))
             .run_if(in_state(GameState::Playing)),
     )

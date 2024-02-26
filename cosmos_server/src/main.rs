@@ -7,7 +7,11 @@
 
 use std::env;
 
-use bevy::{core::TaskPoolThreadAssignmentPolicy, prelude::*};
+use bevy::{
+    core::TaskPoolThreadAssignmentPolicy,
+    ecs::schedule::{LogLevel, ScheduleBuildSettings},
+    prelude::*,
+};
 use bevy_rapier3d::prelude::{RapierConfiguration, TimestepMode};
 use bevy_renet::{transport::NetcodeServerPlugin, RenetServerPlugin};
 use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
@@ -85,6 +89,12 @@ fn main() {
                 substeps: 2,
             },
             ..default()
+        })
+        .edit_schedule(Update, |s| {
+            s.set_build_settings(ScheduleBuildSettings {
+                ambiguity_detection: LogLevel::Warn,
+                ..Default::default()
+            });
         })
         .add_plugins(default_plugins)
         .add_plugins(CosmosCorePluginGroup::new(

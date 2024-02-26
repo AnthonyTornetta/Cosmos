@@ -111,7 +111,7 @@ pub(super) fn register(app: &mut App) {
         (
             server_sync_bodies
                 .after(add_previous_location)
-                .before(NetworkingSystemsSet::PreReceiveMessages),
+                .before(NetworkingSystemsSet::ReceiveMessages),
             pinger,
         ),
     );
