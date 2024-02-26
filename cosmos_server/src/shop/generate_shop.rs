@@ -4,7 +4,6 @@ use std::{f32::consts::PI, time::Duration};
 
 use bevy::{
     ecs::{component::Component, query::Or},
-    log::info,
     math::Quat,
     prelude::{in_state, App, Commands, Deref, DerefMut, IntoSystemConfigs, Query, Res, ResMut, Resource, Update, Vec3, With},
     time::common_conditions::on_timer,
@@ -113,7 +112,6 @@ fn spawn_shop(
                 sector,
             );
 
-            info!("Created blueprint load request @ {loc}");
             commands.spawn(NeedsBlueprintLoaded {
                 path: "default_blueprints/shop/default.bp".into(),
                 rotation: random_quat(&mut rng),
