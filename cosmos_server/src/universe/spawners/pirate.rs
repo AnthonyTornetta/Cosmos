@@ -125,7 +125,7 @@ fn random_coord() -> f32 {
 struct MinPirateSpawnTime(Duration);
 
 fn load_settings(mut commands: Commands) {
-    commands.insert_resource(MinPirateSpawnTime(Duration::from_mins(10)));
+    commands.insert_resource(MinPirateSpawnTime(Duration::from_mins(30)));
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]

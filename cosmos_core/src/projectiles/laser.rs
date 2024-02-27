@@ -1,6 +1,8 @@
 //! A laser is something that flies in a straight line & may collide with a block, causing
 //! it to take damage. Use `Laser::spawn` to create a laser.
 
+use std::time::Duration;
+
 use bevy::{
     log::warn,
     pbr::{NotShadowCaster, NotShadowReceiver},
@@ -20,6 +22,9 @@ use crate::{
         player_world::{PlayerWorld, WorldWithin},
     },
 };
+
+/// How long a laser will stay alive for before despawning
+pub const LASER_LIVE_TIME: Duration = Duration::from_secs(5);
 
 #[derive(Debug, Event)]
 /// The entity hit represents the entity hit by the laser
@@ -272,7 +277,7 @@ fn handle_events(
 
 fn despawn_lasers(mut commands: Commands, query: Query<(Entity, &FireTime), With<Laser>>, time: Res<Time>) {
     for (ent, fire_time) in query.iter() {
-        if time.elapsed_seconds() - fire_time.time > 5.0 {
+        if time.elapsed_seconds() - fire_time.time > LASER_LIVE_TIME.as_secs_f32() {
             commands.entity(ent).insert(NeedsDespawned);
         }
     }
