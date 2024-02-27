@@ -44,7 +44,7 @@ const PIRATE_MAX_CHASE_DISTANCE: f32 = 20_000.0;
 fn handle_pirate_movement(
     mut commands: Commands,
     q_laser_cannon_system: Query<Entity, With<LaserCannonSystem>>,
-    mut q_pirates: Query<(&Systems, &Location, Velocity, &mut ShipMovement, &mut Transform, &PirateAi), With<Pirate>>,
+    mut q_pirates: Query<(&Systems, &Location, &Velocity, &mut ShipMovement, &mut Transform, &PirateAi), With<Pirate>>,
     q_players: Query<(&Location, &Velocity), (Without<Pirate>, With<PirateTarget>)>,
 ) {
     for (pirate_systems, pirate_loc, pirate_vel, mut pirate_ship_movement, mut pirate_transform, pirate_ai) in q_pirates.iter_mut() {
