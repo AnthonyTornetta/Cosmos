@@ -27,7 +27,7 @@ use super::{line_system::add_line_system, sync::register_structure_system};
 fn on_add_laser(mut commands: Commands, query: Query<Entity, Added<LaserCannonSystem>>) {
     for ent in query.iter() {
         commands.entity(ent).insert(SystemCooldown {
-            cooldown_time: Duration::from_millis(200),
+            cooldown_time: Duration::from_millis(1000),
             ..Default::default()
         });
     }

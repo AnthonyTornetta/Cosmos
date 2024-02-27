@@ -1,6 +1,10 @@
 //! Handles the logic behind the creation of a reactor multiblock
 
-use bevy::prelude::{in_state, App, Changed, Entity, EventReader, IntoSystemConfigs, Query, Res, ResMut, Update};
+use bevy::{
+    ecs::query::{Added, Or, With},
+    log::warn,
+    prelude::{in_state, App, Changed, Entity, EventReader, IntoSystemConfigs, Query, Res, ResMut, Update},
+};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::{
@@ -18,7 +22,7 @@ use cosmos_core::{
     },
 };
 
-use crate::{netty::sync::entities::RequestedEntityEvent, state::GameState};
+use crate::{ai::AiControlled, netty::sync::entities::RequestedEntityEvent, state::GameState};
 
 /// Represents the maximum dimensions of the reactor, including the reactor casing
 const MAX_REACTOR_SIZE: CoordinateType = 11;
@@ -346,6 +350,36 @@ fn create_reactor(
     Reactor::new(controller, power_per_second, bounds)
 }
 
+fn on_piloted_by_ai(
+    blocks: Res<Registry<Block>>,
+    reactor_blocks: Res<Registry<ReactorPowerGenerationBlock>>,
+    mut q_structure: Query<(&Structure, &mut Reactors), (With<AiControlled>, Or<(Added<AiControlled>, Added<Reactors>)>)>,
+) {
+    for (structure, mut reactors) in q_structure.iter_mut() {
+        let reactor_block = blocks
+            .from_id("cosmos:reactor_controller")
+            .expect("Missing reactor controller block!");
+
+        for block_here in structure
+            .all_blocks_iter(false)
+            .filter(|x| structure.block_id_at(x.coords()) == reactor_block.id())
+        {
+            if let Some(bounds) = check_is_valid_multiblock(structure, block_here.coords(), &blocks) {
+                match check_valid(bounds, structure, &blocks) {
+                    ReactorValidity::Valid => {
+                        let reactor = create_reactor(structure, &blocks, &reactor_blocks, bounds, block_here);
+
+                        reactors.add_reactor(reactor);
+                    }
+                    _ => {
+                        warn!("Invalid reactor on AI-Controlled structure");
+                    }
+                }
+            }
+        }
+    }
+}
+
 fn on_interact_reactor(
     mut structure_query: Query<(&Structure, &mut Reactors)>,
     blocks: Res<Registry<Block>>,
@@ -433,6 +467,8 @@ fn on_change_reactors(query: Query<(Entity, &Reactors), Changed<Reactors>>, mut 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        (on_interact_reactor, request_reactor_event, on_change_reactors).run_if(in_state(GameState::Playing)),
+        (on_interact_reactor, on_piloted_by_ai, request_reactor_event, on_change_reactors)
+            .chain()
+            .run_if(in_state(GameState::Playing)),
     );
 }

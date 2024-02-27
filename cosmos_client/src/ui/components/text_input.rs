@@ -558,7 +558,6 @@ fn verify_input(text_input: &TextInput, test_value: &str) -> bool {
     }
 }
 
-// https://github.com/bevyengine/bevy/pull/9822
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 /// System set the TextInput component uses. Make sure you add any [`TextInput`] components before this set!
 pub enum TextInputUiSystemSet {

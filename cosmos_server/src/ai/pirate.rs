@@ -4,6 +4,7 @@ use bevy::{
         component::Component,
         entity::Entity,
         query::{Added, Or, With, Without},
+        schedule::{IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
         system::{Commands, Query, Res},
     },
     hierarchy::BuildChildren,
@@ -18,10 +19,16 @@ use cosmos_core::{
     structure::{
         shared::DespawnWithStructure,
         ship::{pilot::Pilot, ship_movement::ShipMovement, Ship},
+        systems::{laser_cannon_system::LaserCannonSystem, SystemActive, Systems},
     },
 };
 
-use crate::{structure::systems::laser_cannon_system::LASER_BASE_VELOCITY, universe::spawners::pirate::Pirate};
+use crate::{
+    persistence::loading::LoadingSystemSet, structure::systems::laser_cannon_system::LASER_BASE_VELOCITY,
+    universe::spawners::pirate::Pirate,
+};
+
+use super::AiControlled;
 
 #[derive(Component)]
 pub struct PirateTarget;
@@ -35,10 +42,12 @@ const PIRATE_MAX_CHASE_DISTANCE: f32 = 20_000.0;
 
 /// Attempt to maintain a distance of ~500 blocks from closest target
 fn handle_pirate_movement(
-    mut q_pirates: Query<(&Location, &mut Velocity, &mut ShipMovement, &mut Transform, &PirateAi), With<Pirate>>,
+    mut commands: Commands,
+    q_laser_cannon_system: Query<Entity, With<LaserCannonSystem>>,
+    mut q_pirates: Query<(&Systems, &Location, Velocity, &mut ShipMovement, &mut Transform, &PirateAi), With<Pirate>>,
     q_players: Query<(&Location, &Velocity), (Without<Pirate>, With<PirateTarget>)>,
 ) {
-    for (pirate_loc, mut pirate_vel, mut pirate_ship_movement, mut pirate_transform, pirate_ai) in q_pirates.iter_mut() {
+    for (pirate_systems, pirate_loc, pirate_vel, mut pirate_ship_movement, mut pirate_transform, pirate_ai) in q_pirates.iter_mut() {
         let Some(accel_per_sec) = pirate_ai.accel_per_sec else {
             continue;
         };
@@ -57,7 +66,12 @@ fn handle_pirate_movement(
             continue;
         }
 
-        let direction = (*target_loc - *pirate_loc).absolute_coords_f32().normalize_or_zero();
+        let laser_vel = pirate_vel.linvel.length() + LASER_BASE_VELOCITY - target_vel.linvel.length();
+
+        let distance = (*target_loc - *pirate_loc).absolute_coords_f32();
+        let laser_secs_to_reach_target = (distance.length() / laser_vel).max(0.0);
+
+        let direction = (distance + (target_vel.linvel - pirate_vel.linvel) * laser_secs_to_reach_target).normalize_or_zero();
 
         // I don't feel like doing the angle math to make it use angular acceleration to look towards it.
         pirate_transform.look_to(direction, Vec3::Y);
@@ -76,6 +90,14 @@ fn handle_pirate_movement(
         } else {
             pirate_ship_movement.movement = -Vec3::Z;
         }
+
+        if let Ok(laser_cannon_system) = pirate_systems.query(&q_laser_cannon_system) {
+            if dist > 2000.0 {
+                commands.entity(laser_cannon_system).remove::<SystemActive>();
+            } else {
+                commands.entity(laser_cannon_system).insert(SystemActive);
+            }
+        }
     }
 }
 
@@ -90,7 +112,7 @@ fn add_pirate_ai(mut commands: Commands, q_needs_ai: Query<Entity, (With<Pirate>
         let pilot_ent = commands.spawn((PiratePilot, DespawnWithStructure, Pilot { entity: ent })).id();
         commands
             .entity(ent)
-            .insert((PirateAi::default(), SpeedNeedsMeasured, Pilot { entity: pilot_ent }))
+            .insert((AiControlled, PirateAi::default(), SpeedNeedsMeasured, Pilot { entity: pilot_ent }))
             .add_child(pilot_ent);
     }
 }
@@ -143,14 +165,22 @@ fn measure_acceleration_per_second(
 #[derive(Component)]
 struct PiratePilot;
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+enum PirateSystemSet {
+    PirateAiLogic,
+}
+
 pub(super) fn register(app: &mut App) {
-    app.add_systems(
-        Update,
-        (
-            handle_pirate_movement,
-            add_pirate_targets,
-            add_pirate_ai,
-            measure_acceleration_per_second,
-        ),
-    );
+    app.configure_sets(Update, PirateSystemSet::PirateAiLogic.after(LoadingSystemSet::DoneLoading))
+        .add_systems(
+            Update,
+            (
+                add_pirate_ai,
+                measure_acceleration_per_second,
+                add_pirate_targets,
+                handle_pirate_movement,
+            )
+                .in_set(PirateSystemSet::PirateAiLogic)
+                .chain(),
+        );
 }
