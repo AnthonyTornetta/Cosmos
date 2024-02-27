@@ -1,3 +1,5 @@
+//! Spawns pirate ships
+
 use std::time::Duration;
 
 use bevy::{
@@ -26,9 +28,11 @@ use crate::{
 };
 
 #[derive(Component)]
+/// A pirate needs spawned for this entity, please add the components it needs to function
 pub struct PirateNeedsSpawned(Location);
 
 #[derive(Component)]
+/// A pirate-controlled ship
 pub struct Pirate;
 
 fn on_needs_pirate_spawned(mut commands: Commands, q_needs_pirate_spawned: Query<(Entity, &PirateNeedsSpawned)>) {

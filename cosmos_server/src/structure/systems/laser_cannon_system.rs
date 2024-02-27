@@ -1,3 +1,5 @@
+//! Server-side laser cannon logic
+
 use std::time::Duration;
 
 use bevy::prelude::*;
@@ -39,6 +41,7 @@ fn register_laser_blocks(blocks: Res<Registry<Block>>, mut cannon: ResMut<LineBl
     }
 }
 
+/// How fast a laser will travel (m/s) ignoring the speed of its shooter.
 pub const LASER_BASE_VELOCITY: f32 = 200.0;
 
 fn update_system(

@@ -60,7 +60,7 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
   - [x] Generates randomly
     - [x] Implement random structure Generation
   - [x] Implement currency system for player
-    - [ ] Money GUI
+    - [x] Money GUI
   - [x] Shop GUI
 - [x] Mining beam system
   - [x] Mining beam block
@@ -72,11 +72,11 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
   - [ ] Create a number of pirate ships
     - [ ] Each ship has a difficulty
   - [ ] Difficulty of spawns scales off player's money & ship's number of blocks
-  - [ ] Basic AI
-    - [ ] Spawn within 2 sectors of player
-    - [ ] Spawn in fleets based on player's difficulty
-    - [ ] If within ~1 sector of player, fly towards player
-    - [ ] Shoot towards player, trying to predict their position based off distance & velocity
+  - [x] Basic AI
+    - [x] Spawn within 2 sectors of player
+    - [x] Spawn in fleets based on player's difficulty
+    - [x] If within ~1 sector of player, fly towards player
+    - [x] Shoot towards player, trying to predict their position based off distance & velocity
 - [x] Shop
   - [x] Buy from shop
   - [x] Sell to shop

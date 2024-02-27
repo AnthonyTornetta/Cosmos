@@ -10,6 +10,7 @@ pub mod components;
 pub mod crosshair;
 pub mod debug_info_display;
 pub mod hotbar;
+mod hud;
 pub mod item_renderer;
 pub mod message;
 pub mod reactivity;
@@ -33,6 +34,7 @@ pub(super) fn register(app: &mut App) {
     ship_flight::register(app);
     components::register(app);
     reactivity::register(app);
+    hud::register(app);
 
     app.configure_sets(Update, (UiSystemSet::DoUi, UiSystemSet::FinishUi).chain());
 }
