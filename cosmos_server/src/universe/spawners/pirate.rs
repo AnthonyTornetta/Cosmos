@@ -83,13 +83,13 @@ fn spawn_pirates(
     }
 
     for (sector, (last_pirate_spawn, player_ents)) in player_groups {
-        if !(time.elapsed_seconds_f64() - last_pirate_spawn.0 > min_pirate_spawn_time.0.as_secs_f64()) {
+        if time.elapsed_seconds_f64() - last_pirate_spawn.0 <= min_pirate_spawn_time.0.as_secs_f64() {
             continue;
         }
 
         const SPAWN_ODDS: f32 = 0.0; // lower = more likely
 
-        if !(rand::random::<f32>() > SPAWN_ODDS) {
+        if rand::random::<f32>() <= SPAWN_ODDS {
             continue;
         }
 
