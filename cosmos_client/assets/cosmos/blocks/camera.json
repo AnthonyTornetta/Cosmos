@@ -1,0 +1,6 @@
+{
+    "texture": {
+        "all": "cosmos:ship_hull_grey",
+        "front": "cosmos:camera_front"
+    }
+}

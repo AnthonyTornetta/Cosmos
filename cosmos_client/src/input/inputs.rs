@@ -117,6 +117,11 @@ pub enum CosmosInputs {
 
     /// Focuses/unfofcuses the waypoint the player is looking at
     FocusWaypoint,
+
+    /// Changes which camera is selected in a ship
+    SwapCameraLeft,
+    /// Changes which camera is selected in a ship
+    SwapCameraRight,
 }
 
 fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
@@ -180,6 +185,9 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     input_handler.set_keycode(CosmosInputs::SymmetryZ, KeyCode::KeyZ);
 
     input_handler.set_keycode(CosmosInputs::FocusWaypoint, KeyCode::KeyF);
+
+    input_handler.set_keycode(CosmosInputs::SwapCameraLeft, KeyCode::ArrowLeft);
+    input_handler.set_keycode(CosmosInputs::SwapCameraRight, KeyCode::ArrowRight);
 }
 
 #[derive(Resource, Default, Debug)]
