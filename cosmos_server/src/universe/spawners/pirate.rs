@@ -8,7 +8,7 @@ use bevy::{
     ecs::{
         component::Component,
         entity::Entity,
-        query::With,
+        query::{With, Without},
         schedule::{common_conditions::in_state, IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
         system::{Commands, Query, Res, Resource},
     },
@@ -20,6 +20,7 @@ use bevy::{
 use cosmos_core::{
     entities::player::Player,
     physics::location::{Location, Sector, SectorUnit, SECTOR_DIMENSIONS},
+    utils::random::random_range,
 };
 
 use crate::{
@@ -48,26 +49,33 @@ fn on_needs_pirate_spawned(mut commands: Commands, q_needs_pirate_spawned: Query
     }
 }
 
-#[derive(Default, Component, Clone, Copy, PartialEq, PartialOrd)]
+#[derive(Component, Clone, Copy, PartialEq, PartialOrd, Reflect, Debug)]
 /// Goes on the player and ensures they don't deal with too many pirates
-struct LastPirateSpawn(f64);
+struct NextPirateSpawn(f64);
+
+fn add_spawn_times(q_players: Query<Entity, (With<Player>, Without<NextPirateSpawn>)>, time: Res<Time>, mut commands: Commands) {
+    for ent in q_players.iter() {
+        commands.entity(ent).insert(NextPirateSpawn(time.delta_seconds_f64()));
+    }
+}
 
 fn spawn_pirates(
     mut commands: Commands,
-    q_players: Query<(Entity, &Location, Option<&LastPirateSpawn>), With<Player>>,
+    q_players: Query<(Entity, &Location, &NextPirateSpawn), With<Player>>,
     time: Res<Time>,
     min_pirate_spawn_time: Res<MinPirateSpawnTime>,
 ) {
-    let mut player_groups: HashMap<Sector, (LastPirateSpawn, Vec<Entity>)> = HashMap::default();
+    let mut player_groups: HashMap<Sector, (NextPirateSpawn, Vec<Entity>)> = HashMap::default();
 
-    const MAX_DIST: f32 = SECTOR_DIMENSIONS + 20.0;
+    const MAX_DIST: f32 = SECTOR_DIMENSIONS * 2.0 + 20.0;
 
-    for (player_ent, player_loc, player_last_pirate_spawn) in q_players.iter() {
-        let player_last_pirate_spawn = player_last_pirate_spawn.copied().unwrap_or(LastPirateSpawn(-100000.0)); //.unwrap_or_default();
-
+    for (player_ent, player_loc, &player_last_pirate_spawn) in q_players.iter() {
         if let Some(sec) = player_groups
             .keys()
-            .find(|&sec| Location::new(Vec3::ZERO, *sec - player_loc.sector).distance_sqrd(&Location::ZERO) <= MAX_DIST * MAX_DIST)
+            .find(|&sec| {
+                player_loc.is_within_reasonable_range_sector(*sec)
+                    && Location::new(Vec3::ZERO, *sec - player_loc.sector).distance_sqrd(&Location::ZERO) <= MAX_DIST * MAX_DIST
+            })
             .copied()
         {
             let (last_pirate_spawn, ents) = player_groups.get_mut(&sec).expect("Confirmed to exist above");
@@ -82,47 +90,69 @@ fn spawn_pirates(
         }
     }
 
-    for (sector, (last_pirate_spawn, player_ents)) in player_groups {
-        if time.elapsed_seconds_f64() - last_pirate_spawn.0 <= min_pirate_spawn_time.0.as_secs_f64() {
+    for (sector, (next_pirate_spawn, player_ents)) in player_groups {
+        if time.elapsed_seconds_f64() < next_pirate_spawn.0 {
             continue;
         }
 
-        const SPAWN_ODDS: f32 = 0.0; // lower = more likely
+        const MIN_SPAWN_DISTANCE: f32 = 5000.0;
+        const MAX_SPAWN_TRIES: usize = 20;
 
-        if rand::random::<f32>() <= SPAWN_ODDS {
-            continue;
+        let mut fleet_origin = None;
+
+        let mut itrs = 0;
+        while fleet_origin.is_none() {
+            if itrs >= MAX_SPAWN_TRIES {
+                // give up before killing server
+                break;
+            }
+
+            let origin = Location::new(
+                Vec3::new(random_coord(), random_coord(), random_coord()),
+                sector
+                    + Sector::new(
+                        random_range(-1.0, 1.0).round() as SectorUnit,
+                        random_range(-1.0, 1.0).round() as SectorUnit,
+                        random_range(-1.0, 1.0).round() as SectorUnit,
+                    ),
+            );
+
+            if q_players
+                .iter()
+                .any(|x| x.1.is_within_reasonable_range(&origin) && x.1.distance_sqrd(&origin) < MIN_SPAWN_DISTANCE * MIN_SPAWN_DISTANCE)
+            {
+                itrs += 1;
+                continue;
+            }
+
+            fleet_origin = Some(origin);
         }
 
-        let n_pirates = (rand::random::<f32>() * 3.0) as usize + 1; // 1-3
+        if let Some(fleet_origin) = fleet_origin {
+            const SPACING: f32 = 500.0;
 
-        let fleet_origin = Location::new(
-            Vec3::new(random_coord(), random_coord(), random_coord()),
-            sector
-                + Sector::new(
-                    rand::random::<f32>() as SectorUnit,
-                    rand::random::<f32>() as SectorUnit,
-                    rand::random::<f32>() as SectorUnit,
-                ),
-        );
+            let n_pirates = random_range(1.0, 4.0).round() as usize;
 
-        const SPACING: f32 = 500.0;
+            for p_idx in 0..n_pirates {
+                let offset = p_idx as f32 * SPACING;
 
-        for p_idx in 0..n_pirates {
-            let offset = p_idx as f32 * SPACING;
+                let loc_here = fleet_origin + Vec3::new(offset, 0.0, 0.0);
 
-            let loc_here = fleet_origin + Vec3::new(offset, 0.0, 0.0);
-
-            commands.spawn((Name::new("Loading Pirate Ship"), PirateNeedsSpawned(loc_here)));
+                commands.spawn((Name::new("Loading Pirate Ship"), PirateNeedsSpawned(loc_here)));
+            }
         }
+
+        let min_secs = min_pirate_spawn_time.0.as_secs_f64();
+        let next_spawn_time = rand::random::<f64>() * min_secs * 3.0 + min_secs + time.elapsed_seconds_f64();
 
         for player_ent in player_ents {
-            commands.entity(player_ent).insert(LastPirateSpawn(time.elapsed_seconds_f64()));
+            commands.entity(player_ent).insert(NextPirateSpawn(next_spawn_time));
         }
     }
 }
 
 fn random_coord() -> f32 {
-    rand::random::<f32>() * SECTOR_DIMENSIONS - SECTOR_DIMENSIONS / 2.0
+    random_range(-SECTOR_DIMENSIONS / 2.0, SECTOR_DIMENSIONS / 2.0)
 }
 
 #[derive(Resource, Reflect)]
@@ -148,8 +178,9 @@ pub(super) fn register(app: &mut App) {
     .add_systems(Startup, load_settings)
     .add_systems(
         Update,
-        (spawn_pirates, on_needs_pirate_spawned)
+        (add_spawn_times, spawn_pirates, on_needs_pirate_spawned)
             .in_set(PirateSpawningSet::PirateSpawningLogic)
             .chain(),
-    );
+    )
+    .register_type::<NextPirateSpawn>();
 }

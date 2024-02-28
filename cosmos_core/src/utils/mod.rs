@@ -2,5 +2,6 @@
 
 pub mod array_utils;
 pub mod quat_math;
+pub mod random;
 pub mod smooth_clamp;
 pub mod timer;
