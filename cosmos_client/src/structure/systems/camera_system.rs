@@ -21,7 +21,7 @@ use cosmos_core::structure::{
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     netty::flags::LocalPlayer,
-    rendering::MainCamera,
+    rendering::{CameraPlayerOffset, MainCamera},
     state::game_state::GameState,
 };
 
@@ -115,13 +115,13 @@ fn swap_camera(
 fn on_change_selected_camera(
     mut main_camera: Query<&mut Transform, With<MainCamera>>,
     q_became_pilot: Query<Has<LocalPlayer>, Added<Pilot>>,
-    q_pilot: Query<&Pilot, With<LocalPlayer>>,
+    q_pilot: Query<(&Pilot, &CameraPlayerOffset), With<LocalPlayer>>,
     q_selected_camera: Query<(Entity, &SelectedCamera, &Systems, &Structure)>,
     q_changed_stuff: Query<(Entity, &SelectedCamera, &Systems, &Structure), Changed<SelectedCamera>>,
     q_changed_camera_system: Query<(&StructureSystem, &CameraSystem), Changed<CameraSystem>>,
     q_camera_system: Query<&CameraSystem>,
 ) {
-    let Ok(pilot) = q_pilot.get_single() else {
+    let Ok((pilot, camera_player_offset)) = q_pilot.get_single() else {
         return;
     };
     let Ok(mut main_cam_trans) = main_camera.get_single_mut() else {
@@ -137,7 +137,7 @@ fn on_change_selected_camera(
             return;
         };
 
-        adjust_camera(camera_system, selected_camera, structure, &mut main_cam_trans);
+        adjust_camera(camera_system, selected_camera, structure, &mut main_cam_trans, camera_player_offset);
     }
 
     for (ent, selected_camera, systems, structure) in q_changed_stuff.iter() {
@@ -149,7 +149,7 @@ fn on_change_selected_camera(
             continue;
         };
 
-        adjust_camera(camera_system, selected_camera, structure, &mut main_cam_trans);
+        adjust_camera(camera_system, selected_camera, structure, &mut main_cam_trans, camera_player_offset);
     }
 
     for (ss, camera_system) in q_changed_camera_system.iter() {
@@ -161,11 +161,17 @@ fn on_change_selected_camera(
             continue;
         }
 
-        adjust_camera(camera_system, selected_camera, structure, &mut main_cam_trans);
+        adjust_camera(camera_system, selected_camera, structure, &mut main_cam_trans, camera_player_offset);
     }
 }
 
-fn adjust_camera(camera_system: &CameraSystem, selected_camera: &SelectedCamera, structure: &Structure, main_cam_trans: &mut Transform) {
+fn adjust_camera(
+    camera_system: &CameraSystem,
+    selected_camera: &SelectedCamera,
+    structure: &Structure,
+    main_cam_trans: &mut Transform,
+    cam_offset: &CameraPlayerOffset,
+) {
     let cams = camera_system.camera_locations();
     let cam_block_coords = match *selected_camera {
         SelectedCamera::Camera(idx) => {
@@ -176,25 +182,27 @@ fn adjust_camera(camera_system: &CameraSystem, selected_camera: &SelectedCamera,
         }
         SelectedCamera::ShipCore => Ship::ship_core_block_coords(structure),
     };
+
     let local_pos = structure.block_relative_position(cam_block_coords);
-    main_cam_trans.translation = local_pos + Vec3::new(-0.5, 0.25, -0.5);
+    let offset = cam_offset.0 - Vec3::splat(0.5);
+    main_cam_trans.translation = local_pos + offset;
 }
 
 fn on_stop_piloting(
     mut q_removed_pilots: RemovedComponents<Pilot>,
-    q_player: Query<Has<LocalPlayer>>,
+    q_player: Query<&CameraPlayerOffset, With<LocalPlayer>>,
     mut q_main_camera: Query<&mut Transform, With<MainCamera>>,
 ) {
     for ent in q_removed_pilots.read() {
-        if !q_player.contains(ent) {
+        let Ok(cam_offset) = q_player.get(ent) else {
             continue;
-        }
+        };
 
         let Ok(mut trans) = q_main_camera.get_single_mut() else {
             return;
         };
 
-        trans.translation = Vec3::new(0.0, 0.75, 0.0);
+        trans.translation = cam_offset.0;
     }
 }
 
