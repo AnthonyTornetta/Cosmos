@@ -54,6 +54,10 @@ If you want to view the ordering of the systems, run (on linux) `cargo run --fea
 See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the list of current features/bugs in development.
 
 ## Release 0.0.5a - The Playable Release (In Progress)
+- [ ] Camera system
+  - [ ] Camera block
+  - [ ] Use left/right to switch between ship cameras
+    - [ ] Changes where your view is
 - [x] Shops
   - [x] Sell blocks/items
   - [x] Buy blocks/items
@@ -128,6 +132,24 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
     - [x] Camera becomes a noclip free cam and goes outside of player's body.
     - [x] Player no longer piloting ship, & is able to create + destroy blocks on the ship but ONLY the ship
     - [x] Symmetry modes are added that will mirror blocks on user-defined axis
+
+## Release 0.0.6a
+- [ ] Place rotated blocks
+- [ ] Inventory UI improvements
+- [ ] 
+- [ ] Money
+  - [ ] Pay others
+- [ ] A way of selecting which systems to use preventing use of systems that are not meant to be actively used
+- [ ] Dropped item entity
+- [ ] Wires
+  - [ ] Electrical
+  - [ ] Logic
+- [ ] Planet generation & LOD overhaul
+  - [ ] Performance improvements
+  - [ ] GPU-based generation
+- [ ] Structure gets deleted when no more blocks are left
+- [ ] An interface into all the storage devices on the ship
+- [ ] 
 
 ## Release 0.0.4a
 
@@ -281,7 +303,6 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 
 ## Everything that will still have to be done after 0.0.5a
 
-- [ ] Place rotated blocks
 - [ ] Biosphere Improvements
   - [ ] Ice biosphere glaciers
   - [ ] Water block
@@ -291,26 +312,16 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
     - [ ] Undergrowth
     - [ ] 1 More tree type
   - [ ] Groundwork for biomes
-    - [ ] Plane,
+    - [ ] Planes,
     - [ ] Redwood forest,
     - [ ] 1 Additional forest
-    - [ ] Ocean
+    - [x] Ocean
   - [ ] On-planet skybox
     - [ ] Sun-side skybox
       - [ ] Perhaps done via a sphere surrounding the planet that always faces the nearest star
     - [ ] Sun-set skybox
     - [ ] Night-side skybox
-- [ ] Structure gets deleted when no more blocks are left
-- [ ] An interface into all the storage devices on the ship
-- [ ] A way of selecting which systems to use preventing use of systems that are not meant to be actively used
-- [ ] Dropped item entity
-- [ ] Camera system
-  - [ ] Camera block
-  - [ ] Use left/right to switch between ship cameras
-    - [ ] Changes where your view is
 - [ ] Shops
   - [ ] Prices based on supply + rarity
     - [ ] Keep supply relatively equal between nearby shops
   - [ ] Each shop has its own supply of money that it cannot go below
-- [ ] Money
-  - [ ] Pay others
