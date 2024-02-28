@@ -97,18 +97,15 @@ fn swap_camera(
         }
     }
 
-    match *selected_camera {
-        SelectedCamera::Camera(idx) => {
-            let len = cam_system.camera_locations().len();
-            if idx > len {
-                if len == 0 {
-                    *selected_camera = SelectedCamera::ShipCore;
-                } else {
-                    *selected_camera = SelectedCamera::Camera(len - 1)
-                }
+    if let SelectedCamera::Camera(idx) = *selected_camera {
+        let len = cam_system.camera_locations().len();
+        if idx > len {
+            if len == 0 {
+                *selected_camera = SelectedCamera::ShipCore;
+            } else {
+                *selected_camera = SelectedCamera::Camera(len - 1)
             }
         }
-        _ => {}
     }
 }
 
