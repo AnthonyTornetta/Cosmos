@@ -4,7 +4,7 @@
 //!
 //! Note that this logic does rely on the `AudioReceiver` defined in kira's implementation.
 
-use bevy::{prelude::*, utils::HashMap};
+use bevy::{prelude::*, utils::hashbrown::HashMap};
 use bevy_kira_audio::{prelude::*, AudioSystemSet};
 
 /// Contains information for a specific audio emission.
@@ -21,6 +21,8 @@ pub struct AudioEmission {
     pub peak_volume: f64,
     /// Tween used when the sound is removed from the audio emitter - Default will immediately cut it off
     pub stop_tween: AudioTween,
+    /// A weak-cloned handle that is being played. This is to prevent too many of the same audio source blowing people's ears out
+    pub handle: Handle<AudioSource>,
 }
 
 impl Default for AudioEmission {
@@ -29,6 +31,7 @@ impl Default for AudioEmission {
             max_distance: 100.0,
             peak_volume: 1.0,
             instance: Default::default(),
+            handle: Default::default(),
             stop_tween: Default::default(),
         }
     }
@@ -104,30 +107,57 @@ pub struct AudioEmitterBundle {
     pub transform: TransformBundle,
 }
 
+/// Prevents too many sounds of the same type creating an awful sound
+// const MAX_AUDIO_SOURCES_PLAYING_SAME_SOUND: usize = 4;
+
 fn run_spacial_audio(
     receiver: Query<&GlobalTransform, With<AudioReceiver>>,
     emitters: Query<(&GlobalTransform, &CosmosAudioEmitter)>,
     mut audio_instances: ResMut<Assets<AudioInstance>>,
 ) {
-    if let Ok(receiver_transform) = receiver.get_single() {
-        for (emitter_transform, emitter) in emitters.iter() {
-            let sound_path = emitter_transform.translation() - receiver_transform.translation();
+    let Ok(receiver_transform) = receiver.get_single() else {
+        return;
+    };
 
-            let mut right_ear_angle = receiver_transform.right().angle_between(sound_path);
-            if right_ear_angle.is_nan() {
-                right_ear_angle = 0.0;
-            }
+    // let mut num_audios_of_same_source: HashMap<AssetId<AudioSource>, usize> = HashMap::default();
 
-            let panning = ((right_ear_angle.cos() + 1.0) / 2.0) as f64;
+    for (emitter_transform, emitter) in emitters.iter() {
+        let sound_path = emitter_transform.translation() - receiver_transform.translation();
 
-            for emission in emitter.emissions.iter() {
-                if let Some(instance) = audio_instances.get_mut(&emission.instance) {
-                    let volume = emission.peak_volume * (1.0 - sound_path.length() / emission.max_distance).clamp(0., 1.).powi(2) as f64;
+        let mut right_ear_angle = receiver_transform.right().angle_between(sound_path);
+        // This happens if you're facing a direction that is exactly in line with whatever it is for some reason.
+        if right_ear_angle.is_nan() {
+            right_ear_angle = 0.0;
+        }
 
-                    instance.set_volume(volume, AudioTween::default());
-                    instance.set_panning(panning, AudioTween::default());
-                }
-            }
+        let panning = ((right_ear_angle.cos() + 1.0) / 2.0) as f64;
+
+        for emission in emitter.emissions.iter() {
+            let Some(instance) = audio_instances.get_mut(&emission.instance) else {
+                continue;
+            };
+
+            let volume = emission.peak_volume * (1.0 - sound_path.length() / emission.max_distance).clamp(0., 1.).powi(2) as f64;
+
+            // if let Some(amt) = num_audios_of_same_source.get_mut(&emission.handle.id()) {
+            //     *amt += 1;
+
+            //     if *amt == MAX_AUDIO_SOURCES_PLAYING_SAME_SOUND {
+            //         instance.set_volume(emission.peak_volume, AudioTween::default());
+            //         // 0.5 = equal left + right panning
+            //         instance.set_panning(0.5, AudioTween::default());
+            //         continue;
+            //     } else if *amt > MAX_AUDIO_SOURCES_PLAYING_SAME_SOUND {
+            //         instance.set_volume(emission.peak_volume, AudioTween::default());
+            //         instance.set_panning(0.5, AudioTween::default());
+            //         continue;
+            //     }
+            // } else {
+            //     num_audios_of_same_source.insert(emission.handle.id(), 1);
+            // }
+
+            instance.set_volume(volume, AudioTween::default());
+            instance.set_panning(panning, AudioTween::default());
         }
     }
 }

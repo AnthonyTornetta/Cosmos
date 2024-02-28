@@ -99,7 +99,7 @@ fn on_load_ship_blueprint(
     for (entity, s_data, needs_blueprinted) in query.iter() {
         if s_data.deserialize_data::<bool>("cosmos:is_ship").unwrap_or(false) {
             if let Some(structure) = s_data.deserialize_data::<Structure>("cosmos:structure") {
-                println!("Loading ship blueprint!");
+                info!("Loading ship blueprint!");
                 load_structure(
                     entity,
                     &mut commands,

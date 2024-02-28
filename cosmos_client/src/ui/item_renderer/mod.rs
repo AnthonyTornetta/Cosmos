@@ -24,7 +24,7 @@ use crate::{
     rendering::{BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder},
 };
 
-use super::UiSystemSet;
+use super::{UiSystemSet, UiTopRoot};
 
 const INVENTORY_SLOT_LAYER: u8 = 0b1;
 
@@ -34,6 +34,7 @@ struct UICamera;
 fn create_ui_camera(mut commands: Commands) {
     commands.spawn((
         Name::new("UI Camera"),
+        UiTopRoot,
         Camera3dBundle {
             projection: Projection::Orthographic(OrthographicProjection {
                 scaling_mode: ScalingMode::WindowSize(40.0),

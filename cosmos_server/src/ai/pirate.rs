@@ -3,7 +3,7 @@ use bevy::{
     ecs::{
         component::Component,
         entity::Entity,
-        query::{Added, Or, With, Without},
+        query::{Or, With, Without},
         schedule::{IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
         system::{Commands, Query, Res},
     },
@@ -18,7 +18,7 @@ use cosmos_core::{
     physics::location::Location,
     projectiles::laser::LASER_LIVE_TIME,
     structure::{
-        shared::DespawnWithStructure,
+        shared::{DespawnWithStructure, MeltingDown},
         ship::{pilot::Pilot, ship_movement::ShipMovement, Ship},
         systems::{laser_cannon_system::LaserCannonSystem, SystemActive, Systems},
     },
@@ -68,7 +68,7 @@ fn handle_pirate_movement(
         ),
         With<Pirate>,
     >,
-    q_players: Query<(&Location, &Velocity), (Without<Pirate>, With<PirateTarget>)>,
+    q_targets: Query<(&Location, &Velocity, Option<&MeltingDown>), (Without<Pirate>, With<PirateTarget>)>,
     time: Res<Time>,
 ) {
     for (pirate_systems, pirate_loc, pirate_vel, mut pirate_ship_movement, mut pirate_transform, mut pirate_ai, pirate_g_transform) in
@@ -78,10 +78,11 @@ fn handle_pirate_movement(
         //     continue;
         // };
 
-        let Some((target_loc, target_vel)) = q_players
+        let Some((target_loc, target_vel, _)) = q_targets
             .iter()
             .filter(|x| x.0.is_within_reasonable_range(pirate_loc))
-            .min_by_key(|x| x.0.distance_sqrd(pirate_loc).floor() as u64)
+            // add a large penalty for something that's melting down so they prioritize non-melting down things
+            .min_by_key(|x| x.0.distance_sqrd(pirate_loc).floor() as u64 + x.2.map(|_| 100_000_000_000).unwrap_or(0))
         else {
             continue;
         };
@@ -156,8 +157,11 @@ fn handle_pirate_movement(
     }
 }
 
-fn add_pirate_targets(mut commands: Commands, q_targets: Query<Entity, Or<(Added<Player>, (Added<Ship>, Without<Pirate>))>>) {
-    for ent in &q_targets {
+fn add_pirate_targets(
+    mut commands: Commands,
+    q_should_be_targets: Query<Entity, (Without<PirateTarget>, Or<(With<Player>, (With<Ship>, Without<Pirate>))>)>,
+) {
+    for ent in &q_should_be_targets {
         commands.entity(ent).insert(PirateTarget);
     }
 }
@@ -201,8 +205,6 @@ fn add_pirate_ai(mut commands: Commands, q_needs_ai: Query<Entity, (With<Pirate>
 //                 if delta >= 1.0 {
 //                     // a = v/t
 //                     pirate_ai.accel_per_sec = Some(speed_being_measured.starting_vel.distance(ship_vel.linvel) / delta);
-
-//                     println!("Measured acceleration per sec {:?}!", pirate_ai.accel_per_sec);
 
 //                     commands
 //                         .entity(entity)

@@ -2,7 +2,10 @@
 
 use bevy::{
     app::Update,
-    ecs::schedule::{IntoSystemSetConfigs, SystemSet},
+    ecs::{
+        component::Component,
+        schedule::{IntoSystemSetConfigs, SystemSet},
+    },
     prelude::App,
 };
 
@@ -24,6 +27,18 @@ pub enum UiSystemSet {
     /// After this, all UI systems are finished
     FinishUi,
 }
+
+#[derive(Component)]
+/// Append most UI nodes to this.
+///
+/// Note that UI nodes appended to this will display behind 3d block models. Use `UiTopRoot` to display past those.
+pub struct UiRoot;
+
+#[derive(Component)]
+/// Append UI nodes you want to display in front of 3d-models to this.
+///
+/// If you're not dealing with 3d model weirdness, please prefer to use `UiRoot`.
+pub struct UiTopRoot;
 
 pub(super) fn register(app: &mut App) {
     crosshair::register(app);

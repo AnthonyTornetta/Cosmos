@@ -47,7 +47,7 @@ fn apply_thruster_sound(
                 }
             }
         } else if !thrusters_off && thruster_sound_instance.is_none() {
-            let playing_sound: Handle<AudioInstance> = audio.play(audio_handle.0.clone()).with_volume(0.0).looped().handle();
+            let playing_sound: Handle<AudioInstance> = audio.play(audio_handle.0.clone_weak()).with_volume(0.0).looped().handle();
 
             let stop_tween = AudioTween::new(Duration::from_millis(400), AudioEasing::Linear);
 
@@ -59,6 +59,7 @@ fn apply_thruster_sound(
                         max_distance: 100.0,
                         peak_volume: 0.3,
                         stop_tween,
+                        handle: audio_handle.0.clone_weak(),
                     }],
                 },
             ));

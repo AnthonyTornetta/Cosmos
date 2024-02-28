@@ -57,6 +57,7 @@ use crate::{
     ui::{
         crosshair::CrosshairOffset,
         message::{HudMessage, HudMessages},
+        UiRoot,
     },
 };
 
@@ -370,6 +371,7 @@ pub(crate) fn client_sync_players(
                                 CameraHelper::default(),
                                 Name::new("Main Camera"),
                                 MainCamera,
+                                UiRoot,
                                 // No double UI rendering
                                 AudioReceiver,
                             ));

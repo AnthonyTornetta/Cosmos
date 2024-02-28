@@ -6,7 +6,8 @@ use std::{
 };
 
 use bevy::{
-    app::PreUpdate,
+    app::Update,
+    ecs::schedule::IntoSystemConfigs,
     log::warn,
     prelude::{App, Commands, Entity, EventReader, Name, Quat, Query, Res, ResMut, Startup, Vec3, With},
 };
@@ -17,7 +18,10 @@ use cosmos_core::{
 };
 use thiserror::Error;
 
-use crate::persistence::{loading::NeedsBlueprintLoaded, saving::NeedsBlueprinted};
+use crate::persistence::{
+    loading::{LoadingSystemSet, NeedsBlueprintLoaded},
+    saving::NeedsBlueprinted,
+};
 
 use super::{CosmosCommandInfo, CosmosCommandSent, CosmosCommands};
 
@@ -262,5 +266,5 @@ fn cosmos_command_listener(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(Startup, register_commands)
-        .add_systems(PreUpdate, cosmos_command_listener);
+        .add_systems(Update, cosmos_command_listener.before(LoadingSystemSet::BeginLoading));
 }

@@ -37,12 +37,15 @@ fn apply_shooting_sound(
 
         let idx = rand::random::<usize>() % audio_handles.0.len();
 
-        let playing_sound: Handle<AudioInstance> = audio.play(audio_handles.0[idx].clone()).handle();
+        let handle = audio_handles.0[idx].clone_weak();
+
+        let playing_sound: Handle<AudioInstance> = audio.play(handle.clone_weak()).handle();
 
         commands.spawn((
             CosmosAudioEmitter {
                 emissions: vec![AudioEmission {
                     instance: playing_sound,
+                    handle,
                     ..Default::default()
                 }],
             },
