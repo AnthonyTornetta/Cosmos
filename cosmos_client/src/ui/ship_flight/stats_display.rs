@@ -15,7 +15,7 @@ use bevy::{
     text::{Text, TextStyle},
     ui::{
         node_bundles::{NodeBundle, TextBundle},
-        FlexDirection, Style, TargetCamera, UiRect, Val,
+        FlexDirection, Style, UiRect, Val,
     },
 };
 use bevy_rapier3d::dynamics::Velocity;
@@ -27,7 +27,7 @@ use cosmos_core::{
     },
 };
 
-use crate::{netty::flags::LocalPlayer, ui::UiRoot};
+use crate::netty::flags::LocalPlayer;
 
 #[derive(Component)]
 struct StatsNodes;
@@ -41,13 +41,13 @@ struct SpeedText;
 fn create_nodes(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    q_ui_root: Query<Entity, With<UiRoot>>,
+    // q_ui_root: Query<Entity, With<UiRoot>>,
     q_became_pilot: Query<Has<LocalPlayer>, Added<Pilot>>,
 ) {
     if !q_became_pilot.is_empty() {
-        let Ok(ui_root) = q_ui_root.get_single() else {
-            return;
-        };
+        // let Ok(ui_root) = q_ui_root.get_single() else {
+        //     return;
+        // };
 
         let font = asset_server.load("fonts/PixeloidSans.ttf");
 
