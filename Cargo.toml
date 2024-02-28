@@ -7,8 +7,7 @@ resolver = "2"
 
 [workspace.dependencies]
 bevy = { version = "0.13.0", default-features = false }
-bevy_rapier3d = { path = "/home/cornchip/Programming/rust/bevy_rapier/bevy_rapier3d", version = "0.25.0", features = [
-  # bevy_rapier3d = { git = "https://github.com/AnthonyTornetta/bevy_rapier/", version = "0.25.0", features = [
+bevy_rapier3d = { git = "https://github.com/AnthonyTornetta/bevy_rapier/", version = "0.25.0", features = [
   "simd-stable",
   "serde-serialize",
 ] }
