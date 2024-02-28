@@ -58,7 +58,7 @@ fn structure_loaded_event(
     mut structure_query: Query<(&Structure, &mut Systems)>,
     blocks: Res<Registry<Block>>,
     mut commands: Commands,
-    thruster_blocks: Res<EnergyStorageBlocks>,
+    energy_storage_blocks: Res<EnergyStorageBlocks>,
     registry: Res<Registry<StructureSystemType>>,
 ) {
     for ev in event_reader.read() {
@@ -66,7 +66,7 @@ fn structure_loaded_event(
             let mut system = EnergyStorageSystem::default();
 
             for block in structure.all_blocks_iter(false) {
-                if let Some(prop) = thruster_blocks.get(block.block(structure, &blocks)) {
+                if let Some(prop) = energy_storage_blocks.get(block.block(structure, &blocks)) {
                     system.block_added(prop);
                 }
             }

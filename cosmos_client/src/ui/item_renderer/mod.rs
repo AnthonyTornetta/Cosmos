@@ -114,7 +114,9 @@ fn render_items(
 
             rendered_item_entity
         } else {
-            let mut transform = Transform::from_rotation(Quat::from_xyzw(0.18354653, 0.37505528, 0.07602747, 0.90546346)); // This makes it look cool
+            let mut transform = Transform::from_rotation(
+                Quat::from_xyzw(0.071989365, 0.9134604, 0.18516758, 0.3551347), // Quat::from_xyzw(0.18354653, 0.37505528, 0.07602747, 0.90546346)
+            ); // This makes it look cool
 
             // hide it till we position it properly
             transform.translation.x = -1000000.0;
@@ -155,7 +157,7 @@ fn render_items(
         let material = material_definitions_registry.from_numeric_id(mat_id);
 
         if block_mesh_info.has_multiple_face_meshes() {
-            for face in [BlockFace::Top, BlockFace::Left, BlockFace::Back] {
+            for face in [BlockFace::Top, BlockFace::Left, BlockFace::Front] {
                 let Some(mut mesh_info) = block_mesh_info.info_for_face(face).cloned() else {
                     break;
                 };
@@ -247,8 +249,13 @@ fn reposition_ui_items(query: Query<&Window, With<PrimaryWindow>>, mut rendered_
         x *= x_num;
         y *= -y_num;
 
-        transform.translation.x = x;
-        transform.translation.y = y;
+        // if to avoid excess change detection
+        if transform.translation.x != x {
+            transform.translation.x = x;
+        }
+        if transform.translation.y != y {
+            transform.translation.y = y;
+        }
     }
 }
 

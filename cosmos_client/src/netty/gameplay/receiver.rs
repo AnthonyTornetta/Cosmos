@@ -48,7 +48,7 @@ use crate::{
         lobby::{ClientLobby, PlayerInfo},
         mapping::{Mappable, NetworkMapping},
     },
-    rendering::MainCamera,
+    rendering::{CameraPlayerOffset, MainCamera},
     state::game_state::GameState,
     structure::{
         planet::client_planet_builder::ClientPlanetBuilder, ship::client_ship_builder::ClientShipBuilder,
@@ -349,10 +349,11 @@ pub(crate) fn client_sync_players(
                 lobby.players.insert(id, player_info);
                 network_mapping.add_mapping(client_entity, server_entity);
 
+                let camera_offset = Vec3::new(0.0, 0.75, 0.0);
+
                 if client_id == id {
                     entity_cmds
-                        .insert(LocalPlayer)
-                        .insert(RenderDistance::default())
+                        .insert((LocalPlayer, RenderDistance::default(), CameraPlayerOffset(camera_offset)))
                         .with_children(|parent| {
                             parent.spawn((
                                 Camera3dBundle {
@@ -360,7 +361,7 @@ pub(crate) fn client_sync_players(
                                         hdr: true,
                                         ..Default::default()
                                     },
-                                    transform: Transform::from_xyz(0.0, 0.75, 0.0),
+                                    transform: Transform::from_translation(camera_offset),
                                     projection: Projection::from(PerspectiveProjection {
                                         fov: (90.0 / 180.0) * std::f32::consts::PI,
                                         ..default()

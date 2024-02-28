@@ -8,8 +8,8 @@ use cosmos_core::{
     block::{Block, BlockFace},
     registry::Registry,
     structure::{
-        coordinates::BlockCoordinate,
         loading::{ChunksNeedLoaded, StructureLoadingSet},
+        ship::Ship,
         structure_iterator::ChunkIteratorResult,
         ChunkInitEvent, Structure,
     },
@@ -33,17 +33,15 @@ fn create_ships(
         info!("Got ship needs created!");
         let ship_core = blocks.from_id("cosmos:ship_core").expect("Ship core block missing!");
 
-        let (w, h, l) = structure.block_dimensions().into();
-
-        let coords = BlockCoordinate::new(w / 2, h / 2, l / 2);
-
         if let Structure::Full(full) = structure.as_mut() {
             full.set_loaded();
         } else {
             panic!("Ship must be full!");
         }
 
-        structure.set_block_at(coords, ship_core, BlockFace::Top, &blocks, None);
+        let ship_core_coords = Ship::ship_core_block_coords(&structure);
+
+        structure.set_block_at(ship_core_coords, ship_core, BlockFace::Top, &blocks, None);
 
         let itr = structure.all_chunks_iter(false);
 

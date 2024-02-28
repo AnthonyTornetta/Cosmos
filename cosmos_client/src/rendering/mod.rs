@@ -35,6 +35,10 @@ mod structure_renderer;
 /// The player's active camera will have this component
 pub struct MainCamera;
 
+/// Where the camera is relative to the player
+#[derive(Component, Debug)]
+pub struct CameraPlayerOffset(pub Vec3);
+
 #[derive(Default, Debug, Reflect, Clone)]
 /// Stores all the needed information for a mesh
 pub struct MeshInformation {

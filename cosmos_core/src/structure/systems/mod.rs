@@ -18,6 +18,7 @@ use crate::registry::{create_registry, identifiable::Identifiable, Registry};
 
 use super::{loading::StructureLoadingSet, ship::Ship, Structure};
 
+pub mod camera_system;
 pub mod energy_generation_system;
 pub mod energy_storage_system;
 pub mod laser_cannon_system;
@@ -327,6 +328,7 @@ pub(super) fn register(app: &mut App) {
         .register_type::<StructureSystem>();
 
     line_system::register(app);
+    camera_system::register(app);
     energy_storage_system::register(app);
     energy_generation_system::register(app);
     thruster_system::register(app);
