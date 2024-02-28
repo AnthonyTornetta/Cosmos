@@ -278,7 +278,7 @@ fn send_key_inputs(
 
     for ev in evr_char.read() {
         for c in ev.char.chars() {
-            if c.is_control() {
+            if !c.is_control() {
                 let mut new_value = text.0.clone();
                 let new_cursor_pos;
 
