@@ -36,12 +36,18 @@ pub struct PirateNeedsSpawned(Location);
 /// A pirate-controlled ship
 pub struct Pirate;
 
+const MAX_DIFFICULTY: u64 = 4;
+const SECTORS_DIFFICULTY_INCREASE: u64 = 4;
+
 fn on_needs_pirate_spawned(mut commands: Commands, q_needs_pirate_spawned: Query<(Entity, &PirateNeedsSpawned)>) {
     for (ent, pns) in q_needs_pirate_spawned.iter() {
+        let difficulty = (pns.0.sector - Sector::new(25, 25, 25)).abs().max_element();
+        let difficulty = (difficulty as u64 / SECTORS_DIFFICULTY_INCREASE).min(MAX_DIFFICULTY);
+
         commands.entity(ent).remove::<PirateNeedsSpawned>().insert((
             Pirate,
             NeedsBlueprintLoaded {
-                path: "default_blueprints/pirate/default.bp".into(),
+                path: format!("default_blueprints/pirate/default_{difficulty}.bp"),
                 rotation: Quat::IDENTITY,
                 spawn_at: pns.0,
             },

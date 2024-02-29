@@ -222,6 +222,7 @@ fn send_key_inputs(
     mut evr_char: EventReader<ReceivedCharacter>,
     focused: Res<Focus>,
     mut q_focused_input_field: Query<(&mut TextInput, &mut InputValue, &Interaction)>,
+    inputs: Res<ButtonInput<KeyCode>>,
 ) {
     let Some(focused) = focused.0 else {
         // Consumes the event so they don't all pile up and are released when we regain focus
@@ -274,6 +275,10 @@ fn send_key_inputs(
             }
             _ => {}
         }
+    }
+
+    if inputs.pressed(KeyCode::ControlLeft) || inputs.pressed(KeyCode::ControlRight) {
+        return;
     }
 
     for ev in evr_char.read() {

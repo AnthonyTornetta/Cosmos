@@ -54,10 +54,10 @@ If you want to view the ordering of the systems, run (on linux) `cargo run --fea
 See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the list of current features/bugs in development.
 
 ## Release 0.0.5a - The Playable Release (In Progress)
-- [ ] Camera system
-  - [ ] Camera block
-  - [ ] Use left/right to switch between ship cameras
-    - [ ] Changes where your view is
+- [x] Camera system
+  - [x] Camera block
+  - [x] Use left/right to switch between ship cameras
+    - [x] Changes where your view is
 - [x] Shops
   - [x] Sell blocks/items
   - [x] Buy blocks/items
@@ -132,24 +132,6 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
     - [x] Camera becomes a noclip free cam and goes outside of player's body.
     - [x] Player no longer piloting ship, & is able to create + destroy blocks on the ship but ONLY the ship
     - [x] Symmetry modes are added that will mirror blocks on user-defined axis
-
-## Release 0.0.6a
-- [ ] Place rotated blocks
-- [ ] Inventory UI improvements
-- [ ] 
-- [ ] Money
-  - [ ] Pay others
-- [ ] A way of selecting which systems to use preventing use of systems that are not meant to be actively used
-- [ ] Dropped item entity
-- [ ] Wires
-  - [ ] Electrical
-  - [ ] Logic
-- [ ] Planet generation & LOD overhaul
-  - [ ] Performance improvements
-  - [ ] GPU-based generation
-- [ ] Structure gets deleted when no more blocks are left
-- [ ] An interface into all the storage devices on the ship
-- [ ] 
 
 ## Release 0.0.4a
 
@@ -301,7 +283,7 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 - [x] Add Crosshair
 - [x] Support re-sizable window
 
-## Everything that will still have to be done after 0.0.5a
+## Everything that will still have to be done after 0.0.6a
 
 - [ ] Biosphere Improvements
   - [ ] Ice biosphere glaciers
@@ -312,8 +294,8 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
     - [ ] Undergrowth
     - [ ] 1 More tree type
   - [ ] Groundwork for biomes
-    - [ ] Planes,
-    - [ ] Redwood forest,
+    - [ ] Planes
+    - [ ] Redwood forest
     - [ ] 1 Additional forest
     - [x] Ocean
   - [ ] On-planet skybox
@@ -322,6 +304,46 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
     - [ ] Sun-set skybox
     - [ ] Night-side skybox
 - [ ] Shops
+  - [ ] Peace zone?
   - [ ] Prices based on supply + rarity
     - [ ] Keep supply relatively equal between nearby shops
   - [ ] Each shop has its own supply of money that it cannot go below
+
+## Release 0.0.6a
+- [ ] Place rotated blocks
+- [ ] Inventory UI improvements
+- [ ] Money
+  - [ ] Pay others
+- [ ] A way of selecting which systems to use preventing use of systems that are not meant to be actively used
+- [ ] Dropped item entity
+- [ ] Wires
+  - [ ] Electrical
+  - [ ] Logic
+- [ ] Planet generation & LOD overhaul
+  - [ ] Performance improvements
+  - [ ] GPU-based generation
+- [ ] Structure gets deleted when no more blocks are left
+- [ ] An interface into all the storage devices on the ship
+- [ ] Gravity Block
+  - [ ] Interact to become "docked" to that structure and have a configurable amount of gravity applied
+
+## NPCs
+
+### Factions
+
+NPC controlled OR player controlled
+NPC controlled factions store reputation of other factions + players
+Factions have different attributes
+  - One may steal your ship blueprints
+    - To balance this:
+      - scrap is collected when you mine melting down ships instead of the actual blocks
+        - Different scrap types
+      - Substitute expensive blocks for less expensive ones if needed
+      - If ship is below 50% success rate, don't produce it again
+  - Dynamic faction expansion
+Bounty board
+  - Take down X ship
+  - Selling the ship
+- Selling ship designs
+- Buying ship designs
+
