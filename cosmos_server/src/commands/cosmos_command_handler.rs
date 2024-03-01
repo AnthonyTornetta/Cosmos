@@ -118,7 +118,7 @@ fn cosmos_command_listener(
                 println!("All blueprintable entities: ");
                 println!("Name\tSector\t\tId");
                 for (entity, name, location) in all_blueprintable_entities.iter() {
-                    println!("{name}\t{}\t{} ", location.sector(), entity.index());
+                    println!("{name}\t{}\t{} ", location.sector(), entity.to_bits());
                 }
                 println!("======================================")
             }
@@ -126,13 +126,15 @@ fn cosmos_command_listener(
                 if ev.args.len() != 1 {
                     display_help(Some("despawn"), &cosmos_commands);
                 } else if let Ok(index) = ev.args[0].parse::<u64>() {
-                    let entity = Entity::from_bits(index);
-
-                    if let Some(mut entity_commands) = commands.get_entity(entity) {
-                        entity_commands.insert(NeedsDespawned);
-                        println!("Despawned entity {index}");
+                    if let Ok(entity) = Entity::try_from_bits(index) {
+                        if let Some(mut entity_commands) = commands.get_entity(entity) {
+                            entity_commands.insert(NeedsDespawned);
+                            println!("Despawned entity {index}");
+                        } else {
+                            println!("Entity not found");
+                        }
                     } else {
-                        println!("Entity not found");
+                        println!("Invalid entity id - {index}.");
                     }
                 } else {
                     println!("This must be the entity's ID (positive whole number)");
@@ -189,19 +191,24 @@ fn cosmos_command_listener(
                     display_help(Some("blueprint"), &cosmos_commands);
                     continue;
                 }
-                let Ok(index) = ev.args[0].parse::<u32>() else {
+                let Ok(index) = ev.args[0].parse::<u64>() else {
                     println!("The first argument must be the entity's index (positive number)");
                     continue;
                 };
 
-                let Some(entity) = all_blueprintable_entities.iter().find(|entity| entity.0.index() == index) else {
+                let Ok(entity) = Entity::try_from_bits(index) else {
                     println!("Invalid entity index {index}");
                     continue;
                 };
 
-                let mut entity_cmds = commands.entity(entity.0);
+                if !all_blueprintable_entities.contains(entity) {
+                    println!("This entity is not blueprintable!");
+                    continue;
+                };
 
-                entity_cmds.insert(NeedsBlueprinted {
+                println!("Blueprinting entity!");
+
+                commands.entity(entity).insert(NeedsBlueprinted {
                     blueprint_name: ev.args[1].to_owned(),
                     ..Default::default()
                 });

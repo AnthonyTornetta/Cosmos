@@ -1,9 +1,10 @@
 use bevy::{
     app::{App, Update},
+    core::Name,
     ecs::{
         component::Component,
         entity::Entity,
-        query::{Or, With, Without},
+        query::{Has, Or, With, Without},
         schedule::{IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
         system::{Commands, Query, Res},
     },
@@ -14,6 +15,7 @@ use bevy::{
 };
 use bevy_rapier3d::dynamics::Velocity;
 use cosmos_core::{
+    ecs::NeedsDespawned,
     entities::player::Player,
     physics::location::Location,
     projectiles::laser::LASER_LIVE_TIME,
@@ -23,9 +25,15 @@ use cosmos_core::{
         systems::{laser_cannon_system::LaserCannonSystem, SystemActive, Systems},
     },
 };
+use serde::{Deserialize, Serialize};
 
 use crate::{
-    persistence::loading::LoadingSystemSet, structure::systems::laser_cannon_system::LASER_BASE_VELOCITY,
+    persistence::{
+        loading::{LoadingSystemSet, NeedsLoaded, LOADING_SCHEDULE},
+        saving::{SavingSystemSet, SAVING_SCHEDULE},
+        SerializedData,
+    },
+    structure::systems::laser_cannon_system::LASER_BASE_VELOCITY,
     universe::spawners::pirate::Pirate,
 };
 
@@ -34,7 +42,7 @@ use super::AiControlled;
 #[derive(Component)]
 pub struct PirateTarget;
 
-#[derive(Component, Default)]
+#[derive(Component, Default, Serialize, Deserialize)]
 struct PirateAi {
     inaccuracy: f32,
     brake_check: Option<f32>,
@@ -168,7 +176,14 @@ fn add_pirate_targets(
 
 fn add_pirate_ai(mut commands: Commands, q_needs_ai: Query<Entity, (With<Pirate>, Without<PirateAi>)>) {
     for ent in &q_needs_ai {
-        let pilot_ent = commands.spawn((PiratePilot, DespawnWithStructure, Pilot { entity: ent })).id();
+        let pilot_ent = commands
+            .spawn((
+                Name::new("Fake pirate pilot"),
+                PiratePilot,
+                DespawnWithStructure,
+                Pilot { entity: ent },
+            ))
+            .id();
 
         let mut ai = PirateAi::default();
         ai.randomize_inaccuracy();
@@ -177,6 +192,20 @@ fn add_pirate_ai(mut commands: Commands, q_needs_ai: Query<Entity, (With<Pirate>
             .entity(ent)
             .insert((AiControlled, ai, /*SpeedNeedsMeasured,*/ Pilot { entity: pilot_ent }))
             .add_child(pilot_ent);
+    }
+}
+
+fn on_melt_down(
+    q_is_pirate: Query<Has<PiratePilot>>,
+    q_melting_down: Query<(Entity, &Pilot), (With<MeltingDown>, With<PirateAi>, With<AiControlled>)>,
+    mut commands: Commands,
+) {
+    for (ent, pilot) in &q_melting_down {
+        commands.entity(ent).remove::<(PirateAi, AiControlled, Pirate, Pilot)>();
+
+        if q_is_pirate.contains(pilot.entity) {
+            commands.entity(pilot.entity).insert(NeedsDespawned);
+        }
     }
 }
 
@@ -231,11 +260,40 @@ enum PirateSystemSet {
     PirateAiLogic,
 }
 
+fn on_save_pirate(mut q_pirate: Query<&mut SerializedData, With<Pirate>>) {
+    for mut serialized_data in q_pirate.iter_mut() {
+        serialized_data.serialize_data("cosmos:pirate", &true);
+    }
+}
+
+fn on_load_pirate(mut commands: Commands, query: Query<(Entity, &SerializedData), With<NeedsLoaded>>) {
+    for (entity, serialized_data) in query.iter() {
+        if serialized_data.deserialize_data::<bool>("cosmos:pirate").unwrap_or(false) {
+            commands.entity(entity).insert(Pirate);
+        }
+    }
+}
+
+fn on_save_pirate_ai(mut q_pirate_ai: Query<(&PirateAi, &mut SerializedData)>) {
+    for (pirate_ai, mut serialized_data) in q_pirate_ai.iter_mut() {
+        serialized_data.serialize_data("cosmos:pirate_ai", pirate_ai);
+    }
+}
+
+fn on_load_pirate_ai(mut commands: Commands, query: Query<(Entity, &SerializedData), With<NeedsLoaded>>) {
+    for (entity, serialized_data) in query.iter() {
+        if let Some(pirate_ai) = serialized_data.deserialize_data::<PirateAi>("cosmos:pirate_ai") {
+            commands.entity(entity).insert(pirate_ai);
+        }
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.configure_sets(Update, PirateSystemSet::PirateAiLogic.after(LoadingSystemSet::DoneLoading))
         .add_systems(
             Update,
             (
+                on_melt_down,
                 add_pirate_ai,
                 // measure_acceleration_per_second,
                 add_pirate_targets,
@@ -243,5 +301,13 @@ pub(super) fn register(app: &mut App) {
             )
                 .in_set(PirateSystemSet::PirateAiLogic)
                 .chain(),
+        )
+        .add_systems(
+            LOADING_SCHEDULE,
+            (on_load_pirate, on_load_pirate_ai).in_set(LoadingSystemSet::DoLoading),
+        )
+        .add_systems(
+            SAVING_SCHEDULE,
+            (on_save_pirate, on_save_pirate_ai).in_set(SavingSystemSet::DoSaving),
         );
 }
