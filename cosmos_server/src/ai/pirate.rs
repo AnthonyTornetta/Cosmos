@@ -8,7 +8,7 @@ use bevy::{
         schedule::{IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
         system::{Commands, Query, Res},
     },
-    hierarchy::BuildChildren,
+    hierarchy::{BuildChildren, Parent},
     math::{Quat, Vec3},
     time::Time,
     transform::components::{GlobalTransform, Transform},
@@ -66,6 +66,7 @@ fn handle_pirate_movement(
     q_laser_cannon_system: Query<Entity, With<LaserCannonSystem>>,
     mut q_pirates: Query<
         (
+            Entity,
             &Systems,
             &Location,
             &Velocity,
@@ -76,24 +77,50 @@ fn handle_pirate_movement(
         ),
         With<Pirate>,
     >,
-    q_targets: Query<(&Location, &Velocity, Option<&MeltingDown>), (Without<Pirate>, With<PirateTarget>)>,
+    q_parent: Query<&Parent>,
+    q_velocity: Query<&Velocity>,
+    q_targets: Query<(Entity, &Location, &Velocity, Option<&MeltingDown>), (Without<Pirate>, With<PirateTarget>)>,
     time: Res<Time>,
 ) {
-    for (pirate_systems, pirate_loc, pirate_vel, mut pirate_ship_movement, mut pirate_transform, mut pirate_ai, pirate_g_transform) in
-        q_pirates.iter_mut()
+    for (
+        pirate_ent,
+        pirate_systems,
+        pirate_loc,
+        pirate_vel,
+        mut pirate_ship_movement,
+        mut pirate_transform,
+        mut pirate_ai,
+        pirate_g_transform,
+    ) in q_pirates.iter_mut()
     {
         // let Some(accel_per_sec) = pirate_ai.accel_per_sec else {
         //     continue;
         // };
 
-        let Some((target_loc, target_vel, _)) = q_targets
+        let Some((target_ent, target_loc, target_vel, _)) = q_targets
             .iter()
-            .filter(|x| x.0.is_within_reasonable_range(pirate_loc))
+            .filter(|x| x.1.is_within_reasonable_range(pirate_loc))
             // add a large penalty for something that's melting down so they prioritize non-melting down things
-            .min_by_key(|x| x.0.distance_sqrd(pirate_loc).floor() as u64 + x.2.map(|_| 100_000_000_000).unwrap_or(0))
+            .min_by_key(|x| x.1.distance_sqrd(pirate_loc).floor() as u64 + x.3.map(|_| 100_000_000_000).unwrap_or(0))
         else {
             continue;
         };
+
+        let mut target_linvel = target_vel.linvel;
+
+        let mut entity = target_ent;
+        while let Ok(parent) = q_parent.get(entity) {
+            entity = parent.get();
+            target_linvel += q_velocity.get(entity).map(|x| x.linvel).unwrap_or(Vec3::ZERO);
+        }
+
+        let mut pirate_linvel = pirate_vel.linvel;
+
+        let mut entity = pirate_ent;
+        while let Ok(parent) = q_parent.get(entity) {
+            entity = parent.get();
+            pirate_linvel += q_velocity.get(entity).map(|x| x.linvel).unwrap_or(Vec3::ZERO);
+        }
 
         if rand::random::<f32>() < 0.01 {
             pirate_ai.randomize_inaccuracy();
@@ -105,19 +132,18 @@ fn handle_pirate_movement(
             continue;
         }
 
-        let laser_vel = pirate_vel.linvel
+        let laser_vel = pirate_linvel
             + Quat::from_affine3(&pirate_g_transform.affine()).mul_vec3(Vec3::new(0.0, 0.0, -LASER_BASE_VELOCITY))
-            - target_vel.linvel;
+            - target_linvel;
 
         let distance = (*target_loc - *pirate_loc).absolute_coords_f32();
         let laser_secs_to_reach_target = (distance.length() / laser_vel.length()).max(0.0);
 
         // Prevents a pirate from shooting the same spot repeatedly and missing and simulates inaccuracy in velocity predicting
-        let max_fudge = (pirate_vel.linvel - target_vel.linvel).length() / 4.0;
+        let max_fudge = (pirate_linvel - target_linvel).length() / 4.0;
         let velocity_fudging = pirate_ai.inaccuracy * max_fudge;
 
-        let direction =
-            (distance + (target_vel.linvel - pirate_vel.linvel + velocity_fudging) * laser_secs_to_reach_target).normalize_or_zero();
+        let direction = (distance + (target_linvel - pirate_linvel + velocity_fudging) * laser_secs_to_reach_target).normalize_or_zero();
 
         // Sometimes they make some crazy predictions, this generally just means they expect you to fly behind them which is generally wrong.
         // if direction.normalize().dot(distance.normalize()).abs() > 0.4 {
@@ -129,11 +155,11 @@ fn handle_pirate_movement(
 
         // LASER_BASE_VELOCITY
 
-        // let target_net_v = target_vel.linvel - pirate_vel.linvel;
+        // let target_net_v = target_linvel - pirate_linvel;
 
-        // let delta_v = -(-direction - (target_net_v - pirate_vel.linvel)).normalize_or_zero();
+        // let delta_v = -(-direction - (target_net_v - pirate_linvel)).normalize_or_zero();
 
-        // pirate_vel.linvel = delta_v * 128.0;
+        // pirate_linvel = delta_v * 128.0;
         // // pirate_ship_movement
 
         if let Some(brake_check_start) = pirate_ai.brake_check {

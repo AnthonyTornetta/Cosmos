@@ -4,6 +4,8 @@
 //!
 //! Note that this logic does rely on the `AudioReceiver` defined in kira's implementation.
 
+use std::time::Duration;
+
 use bevy::{prelude::*, utils::hashbrown::HashMap};
 use bevy_kira_audio::{prelude::*, AudioSystemSet};
 
@@ -87,8 +89,6 @@ impl CosmosAudioEmitter {
         if let Some(removed) = self.remove(handle) {
             if let Some(instance) = audio_instances.remove(&removed.instance) {
                 stop_later.push((instance, removed.stop_tween.clone()));
-            } else {
-                warn!("NO INSTANCE FOUND!")
             }
 
             Some(removed)
@@ -108,7 +108,7 @@ pub struct AudioEmitterBundle {
 }
 
 /// Prevents too many sounds of the same type creating an awful sound
-// const MAX_AUDIO_SOURCES_PLAYING_SAME_SOUND: usize = 4;
+const MAX_AUDIO_SOURCES_PLAYING_SAME_SOUND: usize = 3;
 
 fn run_spacial_audio(
     receiver: Query<&GlobalTransform, With<AudioReceiver>>,
@@ -119,7 +119,7 @@ fn run_spacial_audio(
         return;
     };
 
-    // let mut num_audios_of_same_source: HashMap<AssetId<AudioSource>, usize> = HashMap::default();
+    let mut num_audios_of_same_source: HashMap<AssetId<AudioSource>, usize> = HashMap::default();
 
     for (emitter_transform, emitter) in emitters.iter() {
         let sound_path = emitter_transform.translation() - receiver_transform.translation();
@@ -139,22 +139,18 @@ fn run_spacial_audio(
 
             let volume = emission.peak_volume * (1.0 - sound_path.length() / emission.max_distance).clamp(0., 1.).powi(2) as f64;
 
-            // if let Some(amt) = num_audios_of_same_source.get_mut(&emission.handle.id()) {
-            //     *amt += 1;
+            if volume > 0.01 {
+                if let Some(amt) = num_audios_of_same_source.get_mut(&emission.handle.id()) {
+                    *amt += 1;
 
-            //     if *amt == MAX_AUDIO_SOURCES_PLAYING_SAME_SOUND {
-            //         instance.set_volume(emission.peak_volume, AudioTween::default());
-            //         // 0.5 = equal left + right panning
-            //         instance.set_panning(0.5, AudioTween::default());
-            //         continue;
-            //     } else if *amt > MAX_AUDIO_SOURCES_PLAYING_SAME_SOUND {
-            //         instance.set_volume(emission.peak_volume, AudioTween::default());
-            //         instance.set_panning(0.5, AudioTween::default());
-            //         continue;
-            //     }
-            // } else {
-            //     num_audios_of_same_source.insert(emission.handle.id(), 1);
-            // }
+                    if *amt >= MAX_AUDIO_SOURCES_PLAYING_SAME_SOUND {
+                        instance.stop(AudioTween::linear(Duration::from_secs(0)));
+                        continue;
+                    }
+                } else {
+                    num_audios_of_same_source.insert(emission.handle.id(), 1);
+                }
+            }
 
             instance.set_volume(volume, AudioTween::default());
             instance.set_panning(panning, AudioTween::default());
