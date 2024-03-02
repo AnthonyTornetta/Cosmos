@@ -8,7 +8,10 @@ use bevy::{
     },
     reflect::Reflect,
 };
-use bevy_rapier3d::prelude::{RigidBodyDisabled, Sensor};
+use bevy_rapier3d::{
+    dynamics::RigidBody,
+    prelude::{RigidBodyDisabled, Sensor},
+};
 use serde::{Deserialize, Serialize};
 
 use crate::structure::coordinates::CoordinateType;
@@ -90,6 +93,7 @@ fn enter_build_mode_listener(mut commands: Commands, mut event_reader: EventRead
         ecmds
             .insert(BuildMode::default())
             .insert(RigidBodyDisabled)
+            .insert(RigidBody::Fixed)
             .insert(Sensor)
             .set_parent(ev.structure_entity);
     }
@@ -106,6 +110,7 @@ fn exit_build_mode_listener(mut commands: Commands, mut event_reader: EventReade
             .remove::<BuildMode>()
             .remove::<RigidBodyDisabled>()
             .remove::<Sensor>()
+            .insert(RigidBody::Dynamic)
             .remove::<InBuildModeFlag>();
     }
 }

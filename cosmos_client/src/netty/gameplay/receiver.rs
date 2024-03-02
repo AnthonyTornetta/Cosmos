@@ -630,21 +630,27 @@ pub(crate) fn client_sync_players(
                 player_entity,
                 ship_entity,
             } => {
-                if let Some(player_entity) = network_mapping.client_from_server(&player_entity) {
-                    if let Some(mut ecmds) = commands.get_entity(player_entity) {
-                        if let Some(ship_entity) = network_mapping.client_from_server(&ship_entity) {
-                            ecmds.set_parent(ship_entity);
+                let Some(player_entity) = network_mapping.client_from_server(&player_entity) else {
+                    continue;
+                };
 
-                            let Ok(Some(ship_loc)) = query_body.get(ship_entity).map(|x| x.0.cloned()) else {
-                                continue;
-                            };
+                let Some(mut ecmds) = commands.get_entity(player_entity) else {
+                    continue;
+                };
 
-                            if let Ok((Some(mut loc), Some(mut trans), _, _, _)) = query_body.get_mut(player_entity) {
-                                trans.translation = (*loc - ship_loc).absolute_coords_f32();
-                                loc.last_transform_loc = Some(trans.translation);
-                            }
-                        }
-                    }
+                let Some(ship_entity) = network_mapping.client_from_server(&ship_entity) else {
+                    continue;
+                };
+
+                ecmds.set_parent(ship_entity);
+
+                let Ok(Some(ship_loc)) = query_body.get(ship_entity).map(|x| x.0.cloned()) else {
+                    continue;
+                };
+
+                if let Ok((Some(mut loc), Some(mut trans), _, _, _)) = query_body.get_mut(player_entity) {
+                    trans.translation = (*loc - ship_loc).absolute_coords_f32();
+                    loc.last_transform_loc = Some(trans.translation);
                 }
             }
             ServerReliableMessages::PlayerEnterBuildMode {

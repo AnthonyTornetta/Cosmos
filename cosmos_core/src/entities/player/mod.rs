@@ -1,6 +1,6 @@
 //! Represents a player
 
-pub mod apart_of_ship;
+// pub mod apart_of_ship;
 pub mod render_distance;
 
 use bevy::prelude::{App, Component};
@@ -34,5 +34,5 @@ impl Player {
 
 pub(super) fn register(app: &mut App) {
     // app.register_type::<Player>();
-    apart_of_ship::register(app);
+    // apart_of_ship::register(app);
 }

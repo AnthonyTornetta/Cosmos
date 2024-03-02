@@ -15,6 +15,7 @@ use bevy::{
 };
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
+    block::gravity_well::UnderGravityWell,
     netty::{cosmos_encoder, server_replication::ReplicationMessage, NettyChannelServer},
     registry::{identifiable::Identifiable, Registry},
     structure::{
@@ -111,6 +112,29 @@ fn replication_listen_netty(
                     }
                 } else if q_is_active.contains(system) {
                     commands.entity(system).remove::<SystemActive>();
+                }
+            }
+            ReplicationMessage::GravityWell { gravity_well, entity } => {
+                let Some(entity) = mapping.client_from_server(&entity) else {
+                    warn!("Missing entity for gravity well!");
+                    continue;
+                };
+
+                let Some(mut ecmds) = commands.get_entity(entity) else {
+                    continue;
+                };
+
+                if let Some(mut grav_well) = gravity_well {
+                    let Some(structure_entity) = mapping.client_from_server(&grav_well.structure_entity) else {
+                        warn!("Missing structure entity for gravity well!");
+                        continue;
+                    };
+
+                    grav_well.structure_entity = structure_entity;
+
+                    ecmds.insert(grav_well);
+                } else {
+                    ecmds.remove::<UnderGravityWell>();
                 }
             }
         }

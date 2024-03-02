@@ -88,12 +88,6 @@ fn main() {
             },
             ..default()
         })
-        // .edit_schedule(Update, |s| {
-        //     s.set_build_settings(ScheduleBuildSettings {
-        //         ambiguity_detection: LogLevel::Warn,
-        //         ..Default::default()
-        //     });
-        // })
         .add_plugins(default_plugins)
         .add_plugins(CosmosCorePluginGroup::new(
             GameState::PreLoading,

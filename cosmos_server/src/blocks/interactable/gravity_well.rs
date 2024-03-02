@@ -1,0 +1,131 @@
+use crate::{netty::sync::entities::RequestedEntityEvent, state::GameState};
+use bevy::{
+    app::{App, Update},
+    ecs::{
+        entity::Entity,
+        event::EventReader,
+        query::Changed,
+        removal_detection::RemovedComponents,
+        schedule::{common_conditions::in_state, IntoSystemConfigs},
+        system::{Commands, Query, ResMut},
+    },
+    hierarchy::{BuildChildren, Parent},
+    math::Vec3,
+    prelude::Res,
+};
+use bevy_renet::renet::RenetServer;
+use cosmos_core::{
+    block::{block_events::BlockInteractEvent, gravity_well::UnderGravityWell, Block},
+    netty::{cosmos_encoder, server_replication::ReplicationMessage, NettyChannelServer},
+    registry::{identifiable::Identifiable, Registry},
+    structure::Structure,
+};
+
+fn grav_well_handle_block_event(
+    mut interact_events: EventReader<BlockInteractEvent>,
+    q_grav_well: Query<&UnderGravityWell>,
+    q_structure: Query<&Structure>,
+    blocks: Res<Registry<Block>>,
+    mut commands: Commands,
+) {
+    for ev in interact_events.read() {
+        let Ok(structure) = q_structure.get(ev.structure_entity) else {
+            continue;
+        };
+
+        let block = structure.block_at(ev.structure_block.coords(), &blocks);
+
+        if block.unlocalized_name() == "cosmos:gravity_well" {
+            if let Ok(grav_well) = q_grav_well.get(ev.interactor) {
+                if grav_well.block == ev.structure_block.coords() && grav_well.structure_entity == ev.structure_entity {
+                    commands.entity(ev.interactor).remove::<UnderGravityWell>();
+
+                    continue;
+                }
+            }
+
+            commands
+                .entity(ev.interactor)
+                .insert(UnderGravityWell {
+                    block: ev.structure_block.coords(),
+                    g_constant: Vec3::new(0.0, -9.8, 0.0),
+                    structure_entity: ev.structure_entity,
+                })
+                .set_parent(ev.structure_entity);
+        }
+    }
+}
+
+fn sync_gravity_well(
+    mut server: ResMut<RenetServer>,
+    q_grav_well: Query<(Entity, &UnderGravityWell), Changed<UnderGravityWell>>,
+    mut removed_components: RemovedComponents<UnderGravityWell>,
+) {
+    for (entity, under_grav_well) in &q_grav_well {
+        server.broadcast_message(
+            NettyChannelServer::SystemReplication,
+            cosmos_encoder::serialize(&ReplicationMessage::GravityWell {
+                gravity_well: Some(*under_grav_well),
+                entity,
+            }),
+        );
+    }
+
+    for entity in removed_components.read() {
+        server.broadcast_message(
+            NettyChannelServer::SystemReplication,
+            cosmos_encoder::serialize(&ReplicationMessage::GravityWell {
+                gravity_well: None,
+                entity,
+            }),
+        );
+    }
+}
+
+fn remove_gravity_wells(mut commands: Commands, q_grav_wells: Query<(Entity, &UnderGravityWell, Option<&Parent>)>) {
+    for (ent, grav_well, parent) in q_grav_wells.iter() {
+        let Some(parent) = parent else {
+            commands.entity(ent).remove::<UnderGravityWell>();
+            continue;
+        };
+
+        if parent.get() != grav_well.structure_entity {
+            commands.entity(ent).remove::<UnderGravityWell>();
+        }
+    }
+}
+
+fn on_request_under_grav(
+    mut request_entity_reader: EventReader<RequestedEntityEvent>,
+    mut server: ResMut<RenetServer>,
+    q_grav_well: Query<&UnderGravityWell>,
+) {
+    for ev in request_entity_reader.read() {
+        let Ok(grav_well) = q_grav_well.get(ev.entity) else {
+            continue;
+        };
+
+        server.send_message(
+            ev.client_id,
+            NettyChannelServer::SystemReplication,
+            cosmos_encoder::serialize(&ReplicationMessage::GravityWell {
+                gravity_well: Some(*grav_well),
+                entity: ev.entity,
+            }),
+        );
+    }
+}
+
+pub(super) fn register(app: &mut App) {
+    app.add_systems(
+        Update,
+        (
+            grav_well_handle_block_event,
+            remove_gravity_wells,
+            sync_gravity_well,
+            on_request_under_grav,
+        )
+            .chain()
+            .run_if(in_state(GameState::Playing)),
+    );
+}

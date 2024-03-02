@@ -1,0 +1,7 @@
+{
+    "texture": {
+        "all": "cosmos:gravity_well_sides",
+        "top": "cosmos:gravity_well_top_bottom",
+        "bottom": "cosmos:gravity_well_top_bottom"
+    }
+}

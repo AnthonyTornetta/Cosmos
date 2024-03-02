@@ -4,7 +4,10 @@
 use bevy::ecs::entity::Entity;
 use serde::{Deserialize, Serialize};
 
-use crate::structure::systems::{StructureSystemId, StructureSystemTypeId};
+use crate::{
+    block::gravity_well::UnderGravityWell,
+    structure::systems::{StructureSystemId, StructureSystemTypeId},
+};
 
 #[derive(Debug, Serialize, Deserialize)]
 /// Eventually used to replicate entities from the server -> client.
@@ -30,5 +33,12 @@ pub enum ReplicationMessage {
         structure_entity: Entity,
         /// If the system is active or not
         active: bool,
+    },
+    /// A gravity well. I'm trying stuff out rn, which is why this is a Vec<u8> instead of a gravity well
+    GravityWell {
+        /// The gravity well or None if this entity has no `UnderGravityWell` component.
+        gravity_well: Option<UnderGravityWell>,
+        /// The entity that has this component
+        entity: Entity,
     },
 }

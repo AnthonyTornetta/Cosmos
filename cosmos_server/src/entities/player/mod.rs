@@ -1,6 +1,6 @@
 //! Server-related components for the player
 
-mod apart_of_ship;
+// mod apart_of_ship;
 
 use bevy::prelude::{App, Component, Quat};
 
@@ -12,5 +12,5 @@ pub struct PlayerLooking {
 }
 
 pub(super) fn register(app: &mut App) {
-    apart_of_ship::register(app);
+    // apart_of_ship::register(app);
 }

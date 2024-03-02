@@ -10,7 +10,7 @@ use crate::{
     rendering::MainCamera,
     state::game_state::GameState,
     structure::planet::align_player::{self, PlayerAlignment},
-    ui::components::show_cursor::no_open_menus,
+    ui::components::show_cursor::ShowCursor,
 };
 
 fn process_player_movement(
@@ -23,14 +23,18 @@ fn process_player_movement(
     cam_query: Query<&Transform, With<MainCamera>>,
     parent_query: Query<&Parent>,
     global_transform_query: Query<&GlobalTransform>,
+    q_show_cursor: Query<(), With<ShowCursor>>,
 ) {
+    let any_open_menus = !q_show_cursor.is_empty();
+
     // This will be err if the player is piloting a ship
     if let Ok((ent, mut velocity, player_transform, player_alignment)) = query.get_single_mut() {
         let cam_trans = player_transform.mul_transform(*cam_query.single());
 
-        let max_speed: f32 = match input_handler.check_pressed(CosmosInputs::Sprint) {
-            false => 3.0,
-            true => 20.0,
+        let max_speed: f32 = if !any_open_menus && input_handler.check_pressed(CosmosInputs::Sprint) {
+            20.0
+        } else {
+            3.0
         };
 
         // All relative to player
@@ -73,33 +77,35 @@ fn process_player_movement(
 
         let mut new_linvel = parent_rot.inverse().mul_vec3(velocity.linvel);
 
-        if input_handler.check_pressed(CosmosInputs::MoveForward) {
-            new_linvel += forward * time;
-        }
-        if input_handler.check_pressed(CosmosInputs::MoveBackward) {
-            new_linvel -= forward * time;
-        }
-        if input_handler.check_pressed(CosmosInputs::MoveUp) {
-            new_linvel += movement_up * time;
-        }
-        if input_handler.check_pressed(CosmosInputs::MoveDown) {
-            new_linvel -= movement_up * time;
-        }
-        if input_handler.check_just_pressed(CosmosInputs::Jump) {
-            new_linvel += up * 5.0;
-        }
-        if input_handler.check_pressed(CosmosInputs::MoveLeft) {
-            new_linvel -= right * time;
-        }
-        if input_handler.check_pressed(CosmosInputs::MoveRight) {
-            new_linvel += right * time;
-        }
-        if input_handler.check_pressed(CosmosInputs::SlowDown) {
-            let mut amt = new_linvel * 0.5;
-            if amt.dot(amt) > max_speed * max_speed {
-                amt = amt.normalize() * max_speed;
+        if !any_open_menus {
+            if input_handler.check_pressed(CosmosInputs::MoveForward) {
+                new_linvel += forward * time;
             }
-            new_linvel -= amt;
+            if input_handler.check_pressed(CosmosInputs::MoveBackward) {
+                new_linvel -= forward * time;
+            }
+            if input_handler.check_pressed(CosmosInputs::MoveUp) {
+                new_linvel += movement_up * time;
+            }
+            if input_handler.check_pressed(CosmosInputs::MoveDown) {
+                new_linvel -= movement_up * time;
+            }
+            if input_handler.check_just_pressed(CosmosInputs::Jump) {
+                new_linvel += up * 5.0;
+            }
+            if input_handler.check_pressed(CosmosInputs::MoveLeft) {
+                new_linvel -= right * time;
+            }
+            if input_handler.check_pressed(CosmosInputs::MoveRight) {
+                new_linvel += right * time;
+            }
+            if input_handler.check_pressed(CosmosInputs::SlowDown) {
+                let mut amt = new_linvel * 0.5;
+                if amt.dot(amt) > max_speed * max_speed {
+                    amt = amt.normalize() * max_speed;
+                }
+                new_linvel -= amt;
+            }
         }
 
         if let Some(player_alignment) = player_alignment {
@@ -147,8 +153,5 @@ fn process_player_movement(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(
-        Update,
-        process_player_movement.run_if(no_open_menus).run_if(in_state(GameState::Playing)),
-    );
+    app.add_systems(Update, process_player_movement.run_if(in_state(GameState::Playing)));
 }

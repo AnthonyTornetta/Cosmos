@@ -16,6 +16,7 @@ use cosmos_core::physics::location::Location;
 use cosmos_core::registry::Registry;
 use cosmos_core::structure::loading::ChunksNeedLoaded;
 use cosmos_core::structure::shared::build_mode::{BuildMode, ExitBuildModeEvent};
+use cosmos_core::structure::ship::Ship;
 use cosmos_core::structure::systems::Systems;
 use cosmos_core::{
     entities::player::Player,
@@ -49,6 +50,7 @@ fn server_listen_messages(
     structure_query: Query<&Structure>,
     (
         mut systems_query,
+        is_ship,
         mut break_block_event,
         mut place_block_event,
         mut block_interact_event,
@@ -59,6 +61,7 @@ fn server_listen_messages(
         mut request_chunk_event_writer,
     ): (
         Query<&mut Systems>,
+        Query<Has<Ship>>,
         EventWriter<BlockBreakEvent>,
         EventWriter<BlockPlaceEvent>,
         EventWriter<BlockInteractEvent>,
@@ -291,30 +294,36 @@ fn server_listen_messages(
                     }
                 }
                 ClientReliableMessages::JoinShip { ship_entity } => {
-                    if let Some(player_entity) = lobby.player_from_id(client_id) {
-                        if let Some(mut e) = commands.get_entity(player_entity) {
-                            // This should be verified in the future to make sure the entity is actually a ship
-                            e.set_parent(ship_entity);
+                    let Some(player_entity) = lobby.player_from_id(client_id) else {
+                        continue;
+                    };
+                    let Some(mut e) = commands.get_entity(player_entity) else {
+                        continue;
+                    };
 
-                            // This is stupid, but when a parent changes the transform isn't properly updated for the player, which is super cool.
-                            // At some point this should be fixed in a way that doesn't require this stuck everywhere
-                            if let Ok((mut trans, _, _, _)) = change_player_query.get_mut(player_entity) {
-                                trans.translation -= non_player_transform_query
-                                    .get(ship_entity)
-                                    .expect("A ship should always have a transform.")
-                                    .translation;
-                            }
-
-                            server.broadcast_message_except(
-                                client_id,
-                                NettyChannelServer::Reliable,
-                                cosmos_encoder::serialize(&ServerReliableMessages::PlayerJoinShip {
-                                    player_entity,
-                                    ship_entity,
-                                }),
-                            );
-                        }
+                    if !is_ship.contains(ship_entity) {
+                        continue;
                     }
+
+                    e.set_parent(ship_entity);
+
+                    // This is stupid, but when a parent changes the transform isn't properly updated for the player, which is super cool.
+                    // At some point this should be fixed in a way that doesn't require this stuck everywhere
+                    if let Ok((mut trans, _, _, _)) = change_player_query.get_mut(player_entity) {
+                        trans.translation -= non_player_transform_query
+                            .get(ship_entity)
+                            .expect("A ship should always have a transform.")
+                            .translation;
+                    }
+
+                    server.broadcast_message_except(
+                        client_id,
+                        NettyChannelServer::Reliable,
+                        cosmos_encoder::serialize(&ServerReliableMessages::PlayerJoinShip {
+                            player_entity,
+                            ship_entity,
+                        }),
+                    );
                 }
                 ClientReliableMessages::ExitBuildMode => {
                     if let Some(player_entity) = lobby.player_from_id(client_id) {
