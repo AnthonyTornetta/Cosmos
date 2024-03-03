@@ -52,9 +52,6 @@ impl PirateAi {
     fn randomize_inaccuracy(&mut self) {
         const INACCURACY_MULTIPLIER: f32 = 2.0;
         self.inaccuracy = (rand::random::<f32>() - 0.5) * INACCURACY_MULTIPLIER;
-        // self.inaccuracy.x = rand::random::<f32>() - 0.5;
-        // self.inaccuracy.y = rand::random::<f32>() - 0.5;
-        // self.inaccuracy.z = rand::random::<f32>() - 0.5;
     }
 }
 
@@ -318,13 +315,7 @@ pub(super) fn register(app: &mut App) {
     app.configure_sets(Update, PirateSystemSet::PirateAiLogic.after(LoadingSystemSet::DoneLoading))
         .add_systems(
             Update,
-            (
-                on_melt_down,
-                add_pirate_ai,
-                // measure_acceleration_per_second,
-                add_pirate_targets,
-                handle_pirate_movement,
-            )
+            (on_melt_down, add_pirate_ai, add_pirate_targets, handle_pirate_movement)
                 .in_set(PirateSystemSet::PirateAiLogic)
                 .chain(),
         )
