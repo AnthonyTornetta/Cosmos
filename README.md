@@ -54,6 +54,8 @@ If you want to view the ordering of the systems, run (on linux) `cargo run --fea
 See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the list of current features/bugs in development.
 
 ## Release 0.0.5a - The Playable Release (In Progress)
+- [x] Add a gravity well block
+  - [x] Remove snapping to structures on collision
 - [x] Camera system
   - [x] Camera block
   - [x] Use left/right to switch between ship cameras
@@ -74,8 +76,8 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
     - [x] Hold lmb to continually fire the laser
 - [ ] Pirates
   - [ ] Create a number of pirate ships
-    - [ ] Each ship has a difficulty
-  - [ ] Difficulty of spawns scales off player's money & ship's number of blocks
+    - [x] Each ship has a difficulty
+  - [x] Difficulty of spawns scales off player's money & ship's number of blocks
   - [x] Basic AI
     - [x] Spawn within 2 sectors of player
     - [x] Spawn in fleets based on player's difficulty
