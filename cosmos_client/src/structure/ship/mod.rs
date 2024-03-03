@@ -110,14 +110,18 @@ fn respond_to_collisions(
 }
 
 fn remove_parent_when_too_far(
-    mut query: Query<(Entity, &Parent, &mut Location, &Transform), (With<LocalPlayer>, Without<Ship>, Without<BuildMode>)>,
-    is_ship: Query<&Location, With<Ship>>,
+    mut query: Query<(Entity, &Parent, &mut Location, &Transform), (With<LocalPlayer>, Without<Structure>, Without<BuildMode>)>,
+    q_structure: Query<(&Location, &Structure)>,
     mut commands: Commands,
     mut renet_client: ResMut<RenetClient>,
 ) {
     if let Ok((player_entity, parent, mut player_loc, player_trans)) = query.get_single_mut() {
-        if let Ok(ship_loc) = is_ship.get(parent.get()) {
-            if player_loc.distance_sqrd(ship_loc).sqrt() >= CHUNK_DIMENSIONSF * 10.0 {
+        if let Ok((structure_loc, structure)) = q_structure.get(parent.get()) {
+            if !matches!(structure, Structure::Full(_)) {
+                return;
+            }
+
+            if player_loc.distance_sqrd(structure_loc).sqrt() >= CHUNK_DIMENSIONSF * 10.0 {
                 commands.entity(player_entity).remove_parent();
 
                 player_loc.last_transform_loc = Some(player_trans.translation);

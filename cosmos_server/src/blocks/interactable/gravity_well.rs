@@ -10,6 +10,7 @@ use bevy::{
         system::{Commands, Query, ResMut},
     },
     hierarchy::{BuildChildren, Parent},
+    log::info,
     math::Vec3,
     prelude::Res,
 };
@@ -38,6 +39,11 @@ fn grav_well_handle_block_event(
         let Ok(structure) = q_structure.get(ev.structure_entity) else {
             continue;
         };
+
+        if !matches!(structure, Structure::Full(_)) {
+            info!("Cannot use gravity well on dynamic structure (like planet) - please send a notification to the player here eventually");
+            continue;
+        }
 
         let block = structure.block_at(ev.structure_block.coords(), &blocks);
 
@@ -68,11 +74,13 @@ fn grav_well_handle_block_event(
 
         let block = structure.block_at(ev.block.coords(), &blocks);
 
-        if block.unlocalized_name() == "cosmos:gravity_well" {
-            for (ent, grav_well) in &q_has_gravity_wells {
-                if grav_well.block == ev.block.coords() && grav_well.structure_entity == ev.structure_entity {
-                    commands.entity(ent).remove::<UnderGravityWell>();
-                }
+        if block.unlocalized_name() != "cosmos:gravity_well" {
+            continue;
+        }
+
+        for (ent, grav_well) in &q_has_gravity_wells {
+            if grav_well.block == ev.block.coords() && grav_well.structure_entity == ev.structure_entity {
+                commands.entity(ent).remove::<UnderGravityWell>();
             }
         }
     }
