@@ -138,22 +138,8 @@ fn handle_pirate_movement(
 
         let direction = (distance + (target_linvel - pirate_linvel + velocity_fudging) * laser_secs_to_reach_target).normalize_or_zero();
 
-        // Sometimes they make some crazy predictions, this generally just means they expect you to fly behind them which is generally wrong.
-        // if direction.normalize().dot(distance.normalize()).abs() > 0.4 {
-        //     direction = distance.normalize();
-        // }
-
         // I don't feel like doing the angle math to make it use angular acceleration to look towards it.
         pirate_transform.look_to(direction, Vec3::Y);
-
-        // LASER_BASE_VELOCITY
-
-        // let target_net_v = target_linvel - pirate_linvel;
-
-        // let delta_v = -(-direction - (target_net_v - pirate_linvel)).normalize_or_zero();
-
-        // pirate_linvel = delta_v * 128.0;
-        // // pirate_ship_movement
 
         if let Some(brake_check_start) = pirate_ai.brake_check {
             pirate_ship_movement.movement = Vec3::ZERO;
@@ -227,49 +213,6 @@ fn on_melt_down(
         }
     }
 }
-
-// #[derive(Component)]
-// struct SpeedBeingMeasured {
-//     start_time: f64,
-//     starting_vel: Vec3,
-// }
-
-// #[derive(Component)]
-// struct SpeedNeedsMeasured;
-
-/// This will gauge the average acceleration per second a pirate has.
-///
-/// Note that this function assumes optimal conditions - the pirate has an unobstructed path and there is nothing
-/// that would change how fast they can move in a second.
-// fn measure_acceleration_per_second(
-//     mut commands: Commands,
-//     mut q_added_ai: Query<(Entity, &Velocity, &mut ShipMovement, &mut PirateAi, Option<&SpeedBeingMeasured>), With<SpeedNeedsMeasured>>,
-//     time: Res<Time>,
-// ) {
-//     for (entity, ship_vel, mut ship_movement, mut pirate_ai, speed_being_measured) in q_added_ai.iter_mut() {
-//         if pirate_ai.accel_per_sec.is_none() {
-//             if let Some(speed_being_measured) = speed_being_measured {
-//                 let delta = (time.elapsed_seconds_f64() - speed_being_measured.start_time) as f32;
-//                 if delta >= 1.0 {
-//                     // a = v/t
-//                     pirate_ai.accel_per_sec = Some(speed_being_measured.starting_vel.distance(ship_vel.linvel) / delta);
-
-//                     commands
-//                         .entity(entity)
-//                         .remove::<SpeedBeingMeasured>()
-//                         .remove::<SpeedNeedsMeasured>();
-//                 }
-//             } else {
-//                 commands.entity(entity).insert(SpeedBeingMeasured {
-//                     start_time: time.elapsed_seconds_f64(),
-//                     starting_vel: ship_vel.linvel,
-//                 });
-//             }
-
-//             ship_movement.movement.x = 1.0;
-//         }
-//     }
-// }
 
 #[derive(Component)]
 struct PiratePilot;
