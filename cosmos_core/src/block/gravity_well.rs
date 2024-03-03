@@ -8,6 +8,7 @@ use bevy::{
         system::{Query, Res},
     },
     math::{Quat, Vec3},
+    reflect::Reflect,
     time::Time,
     transform::components::GlobalTransform,
 };
@@ -16,9 +17,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::structure::coordinates::BlockCoordinate;
 
-/// The player is under the well of gravity
-#[derive(Serialize, Deserialize, Component, Clone, Copy, Debug)]
-pub struct UnderGravityWell {
+/// This component indicates the entity is under the affects of a gravity well.
+#[derive(Serialize, Deserialize, Component, Clone, Copy, Debug, Reflect)]
+pub struct GravityWell {
     /// g_constant * mass = force
     pub g_constant: Vec3,
     /// The structure this gravity well is for
@@ -29,7 +30,7 @@ pub struct UnderGravityWell {
 
 fn do_gravity_well(
     time: Res<Time>,
-    mut q_grav_well: Query<(&UnderGravityWell, &ReadMassProperties, &mut ExternalImpulse)>,
+    mut q_grav_well: Query<(&GravityWell, &ReadMassProperties, &mut ExternalImpulse)>,
     q_global_trans: Query<&GlobalTransform>,
 ) {
     for (under_gravity_well, read_mass_props, mut ext_impulse) in q_grav_well.iter_mut() {
@@ -43,5 +44,5 @@ fn do_gravity_well(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, do_gravity_well);
+    app.add_systems(Update, do_gravity_well).register_type::<GravityWell>();
 }

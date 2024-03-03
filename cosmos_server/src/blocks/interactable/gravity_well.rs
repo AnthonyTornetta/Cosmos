@@ -18,7 +18,7 @@ use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::{
         block_events::{BlockBreakEvent, BlockInteractEvent},
-        gravity_well::UnderGravityWell,
+        gravity_well::GravityWell,
         Block,
     },
     netty::{cosmos_encoder, server_replication::ReplicationMessage, NettyChannelServer},
@@ -29,10 +29,10 @@ use cosmos_core::{
 fn grav_well_handle_block_event(
     mut interact_events: EventReader<BlockInteractEvent>,
     mut block_break_events: EventReader<BlockBreakEvent>,
-    q_grav_well: Query<&UnderGravityWell>,
+    q_grav_well: Query<&GravityWell>,
     q_structure: Query<&Structure>,
     blocks: Res<Registry<Block>>,
-    q_has_gravity_wells: Query<(Entity, &UnderGravityWell)>,
+    q_has_gravity_wells: Query<(Entity, &GravityWell)>,
     mut commands: Commands,
 ) {
     for ev in interact_events.read() {
@@ -50,7 +50,7 @@ fn grav_well_handle_block_event(
         if block.unlocalized_name() == "cosmos:gravity_well" {
             if let Ok(grav_well) = q_grav_well.get(ev.interactor) {
                 if grav_well.block == ev.structure_block.coords() && grav_well.structure_entity == ev.structure_entity {
-                    commands.entity(ev.interactor).remove::<UnderGravityWell>();
+                    commands.entity(ev.interactor).remove::<GravityWell>();
 
                     continue;
                 }
@@ -58,7 +58,7 @@ fn grav_well_handle_block_event(
 
             commands
                 .entity(ev.interactor)
-                .insert(UnderGravityWell {
+                .insert(GravityWell {
                     block: ev.structure_block.coords(),
                     g_constant: Vec3::new(0.0, -9.8, 0.0),
                     structure_entity: ev.structure_entity,
@@ -80,7 +80,7 @@ fn grav_well_handle_block_event(
 
         for (ent, grav_well) in &q_has_gravity_wells {
             if grav_well.block == ev.block.coords() && grav_well.structure_entity == ev.structure_entity {
-                commands.entity(ent).remove::<UnderGravityWell>();
+                commands.entity(ent).remove::<GravityWell>();
             }
         }
     }
@@ -88,8 +88,8 @@ fn grav_well_handle_block_event(
 
 fn sync_gravity_well(
     mut server: ResMut<RenetServer>,
-    q_grav_well: Query<(Entity, &UnderGravityWell), Changed<UnderGravityWell>>,
-    mut removed_components: RemovedComponents<UnderGravityWell>,
+    q_grav_well: Query<(Entity, &GravityWell), Changed<GravityWell>>,
+    mut removed_components: RemovedComponents<GravityWell>,
 ) {
     for (entity, under_grav_well) in &q_grav_well {
         server.broadcast_message(
@@ -112,15 +112,15 @@ fn sync_gravity_well(
     }
 }
 
-fn remove_gravity_wells(mut commands: Commands, q_grav_wells: Query<(Entity, &UnderGravityWell, Option<&Parent>)>) {
+fn remove_gravity_wells(mut commands: Commands, q_grav_wells: Query<(Entity, &GravityWell, Option<&Parent>)>) {
     for (ent, grav_well, parent) in q_grav_wells.iter() {
         let Some(parent) = parent else {
-            commands.entity(ent).remove::<UnderGravityWell>();
+            commands.entity(ent).remove::<GravityWell>();
             continue;
         };
 
         if parent.get() != grav_well.structure_entity {
-            commands.entity(ent).remove::<UnderGravityWell>();
+            commands.entity(ent).remove::<GravityWell>();
         }
     }
 }
@@ -128,7 +128,7 @@ fn remove_gravity_wells(mut commands: Commands, q_grav_wells: Query<(Entity, &Un
 fn on_request_under_grav(
     mut request_entity_reader: EventReader<RequestedEntityEvent>,
     mut server: ResMut<RenetServer>,
-    q_grav_well: Query<&UnderGravityWell>,
+    q_grav_well: Query<&GravityWell>,
 ) {
     for ev in request_entity_reader.read() {
         let Ok(grav_well) = q_grav_well.get(ev.entity) else {

@@ -16,7 +16,7 @@ use bevy::{
 };
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
-    block::gravity_well::UnderGravityWell,
+    block::gravity_well::GravityWell,
     netty::{cosmos_encoder, server_replication::ReplicationMessage, NettyChannelServer},
     physics::location::LocationPhysicsSet,
     registry::{identifiable::Identifiable, Registry},
@@ -143,7 +143,7 @@ fn replication_listen_netty(
                         .insert((grav_well, PlayerAlignment(align_player::Axis::Y)))
                         .set_parent(structure_entity);
                 } else {
-                    ecmds.remove::<UnderGravityWell>();
+                    ecmds.remove::<GravityWell>();
                 }
             }
         }
