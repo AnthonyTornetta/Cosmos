@@ -10,7 +10,3 @@ pub struct PlayerLooking {
     /// What the player's camera rotation would be
     pub rotation: Quat,
 }
-
-pub(super) fn register(app: &mut App) {
-    // apart_of_ship::register(app);
-}
