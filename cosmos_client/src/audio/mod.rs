@@ -107,9 +107,6 @@ pub struct AudioEmitterBundle {
     pub transform: TransformBundle,
 }
 
-/// Prevents too many sounds of the same type creating an awful sound
-const MAX_AUDIO_SOURCES_PLAYING_SAME_SOUND: usize = 3;
-
 fn run_spacial_audio(
     receiver: Query<&GlobalTransform, With<AudioReceiver>>,
     emitters: Query<(&GlobalTransform, &CosmosAudioEmitter)>,
@@ -119,7 +116,7 @@ fn run_spacial_audio(
         return;
     };
 
-    let mut num_audios_of_same_source: HashMap<AssetId<AudioSource>, usize> = HashMap::default();
+    let mut num_audios_of_same_source: HashMap<(AssetId<AudioSource>, u32), (Handle<AudioInstance>, f32)> = HashMap::default();
 
     for (emitter_transform, emitter) in emitters.iter() {
         let sound_path = emitter_transform.translation() - receiver_transform.translation();
@@ -139,21 +136,27 @@ fn run_spacial_audio(
 
             let volume = emission.peak_volume * (1.0 - sound_path.length() / emission.max_distance).clamp(0., 1.).powi(2) as f64;
 
-            if volume > 0.01 {
-                if let Some(amt) = num_audios_of_same_source.get_mut(&emission.handle.id()) {
-                    *amt += 1;
+            instance.set_volume(volume, AudioTween::default());
+            instance.set_panning(panning, AudioTween::default());
 
-                    if *amt >= MAX_AUDIO_SOURCES_PLAYING_SAME_SOUND {
+            if let PlaybackState::Playing { position } = instance.state() {
+                let pos_hashable = (position * 100.0).round() as u32;
+
+                let this_dist = emitter_transform.translation().length_squared();
+                
+                if let Some((other_instance, dist)) = num_audios_of_same_source.get(&(emission.handle.id(), pos_hashable)) {
+                    if this_dist >= *dist {
                         instance.stop(AudioTween::linear(Duration::from_secs(0)));
                         continue;
                     }
-                } else {
-                    num_audios_of_same_source.insert(emission.handle.id(), 1);
-                }
-            }
 
-            instance.set_volume(volume, AudioTween::default());
-            instance.set_panning(panning, AudioTween::default());
+                    if let Some(other_instance) = audio_instances.get_mut(other_instance) {
+                        other_instance.stop(AudioTween::linear(Duration::from_secs(0)));
+                    }
+                }
+
+                num_audios_of_same_source.insert((emission.handle.id(), pos_hashable), (emission.instance.clone_weak(), this_dist));
+            }
         }
     }
 }
