@@ -236,20 +236,6 @@ fn on_load_pirate(mut commands: Commands, query: Query<(Entity, &SerializedData)
     }
 }
 
-fn on_save_pirate_ai(mut q_pirate_ai: Query<(&PirateAi, &mut SerializedData)>) {
-    for (pirate_ai, mut serialized_data) in q_pirate_ai.iter_mut() {
-        serialized_data.serialize_data("cosmos:pirate_ai", pirate_ai);
-    }
-}
-
-fn on_load_pirate_ai(mut commands: Commands, query: Query<(Entity, &SerializedData), With<NeedsLoaded>>) {
-    for (entity, serialized_data) in query.iter() {
-        if let Some(pirate_ai) = serialized_data.deserialize_data::<PirateAi>("cosmos:pirate_ai") {
-            commands.entity(entity).insert(pirate_ai);
-        }
-    }
-}
-
 pub(super) fn register(app: &mut App) {
     app.configure_sets(Update, PirateSystemSet::PirateAiLogic.after(LoadingSystemSet::DoneLoading))
         .add_systems(
@@ -258,12 +244,6 @@ pub(super) fn register(app: &mut App) {
                 .in_set(PirateSystemSet::PirateAiLogic)
                 .chain(),
         )
-        .add_systems(
-            LOADING_SCHEDULE,
-            (on_load_pirate, on_load_pirate_ai).in_set(LoadingSystemSet::DoLoading),
-        )
-        .add_systems(
-            SAVING_SCHEDULE,
-            (on_save_pirate, on_save_pirate_ai).in_set(SavingSystemSet::DoSaving),
-        );
+        .add_systems(LOADING_SCHEDULE, on_load_pirate.in_set(LoadingSystemSet::DoLoading))
+        .add_systems(SAVING_SCHEDULE, on_save_pirate.in_set(SavingSystemSet::DoSaving));
 }
