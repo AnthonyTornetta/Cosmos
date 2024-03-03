@@ -936,5 +936,19 @@
       "max_quantity_buying": null,
       "price_per": 180
     }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:gravity_well",
+      "max_quantity_selling": 10000,
+      "price_per": 200
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:gravity_well",
+      "max_quantity_buying": null,
+      "price_per": 180
+    }
   }
 ]
