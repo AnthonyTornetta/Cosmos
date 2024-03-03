@@ -15,7 +15,11 @@ use bevy::{
 };
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
-    block::{block_events::BlockInteractEvent, gravity_well::UnderGravityWell, Block},
+    block::{
+        block_events::{BlockBreakEvent, BlockInteractEvent},
+        gravity_well::UnderGravityWell,
+        Block,
+    },
     netty::{cosmos_encoder, server_replication::ReplicationMessage, NettyChannelServer},
     registry::{identifiable::Identifiable, Registry},
     structure::Structure,
@@ -23,9 +27,11 @@ use cosmos_core::{
 
 fn grav_well_handle_block_event(
     mut interact_events: EventReader<BlockInteractEvent>,
+    mut block_break_events: EventReader<BlockBreakEvent>,
     q_grav_well: Query<&UnderGravityWell>,
     q_structure: Query<&Structure>,
     blocks: Res<Registry<Block>>,
+    q_has_gravity_wells: Query<(Entity, &UnderGravityWell)>,
     mut commands: Commands,
 ) {
     for ev in interact_events.read() {
@@ -52,6 +58,22 @@ fn grav_well_handle_block_event(
                     structure_entity: ev.structure_entity,
                 })
                 .set_parent(ev.structure_entity);
+        }
+    }
+
+    for ev in block_break_events.read() {
+        let Ok(structure) = q_structure.get(ev.structure_entity) else {
+            continue;
+        };
+
+        let block = structure.block_at(ev.block.coords(), &blocks);
+
+        if block.unlocalized_name() == "cosmos:gravity_well" {
+            for (ent, grav_well) in &q_has_gravity_wells {
+                if grav_well.block == ev.block.coords() && grav_well.structure_entity == ev.structure_entity {
+                    commands.entity(ent).remove::<UnderGravityWell>();
+                }
+            }
         }
     }
 }
