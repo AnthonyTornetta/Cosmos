@@ -143,7 +143,7 @@ fn run_spacial_audio(
                 let pos_hashable = (position * 100.0).round() as u32;
 
                 let this_dist = emitter_transform.translation().length_squared();
-                
+
                 if let Some((other_instance, dist)) = num_audios_of_same_source.get(&(emission.handle.id(), pos_hashable)) {
                     if this_dist >= *dist {
                         instance.stop(AudioTween::linear(Duration::from_secs(0)));
