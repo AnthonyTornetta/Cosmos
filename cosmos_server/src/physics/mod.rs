@@ -8,7 +8,7 @@ use cosmos_core::{
     entities::player::Player,
     netty::system_sets::NetworkingSystemsSet,
     physics::{
-        location::{add_previous_location, handle_child_syncing, Location, SECTOR_DIMENSIONS},
+        location::{add_previous_location, handle_child_syncing, Location, LocationPhysicsSet, SECTOR_DIMENSIONS},
         player_world::{PlayerWorld, WorldWithin},
     },
 };
@@ -343,23 +343,49 @@ fn sync_transforms_and_locations(
     }
 }
 
+/// Fixes oddities that happen when changing parent of player
+fn player_changed_parent(
+    q_parent: Query<(&GlobalTransform, &Location)>,
+    mut q_local_player: Query<(Entity, &mut Transform, &Location, &Parent, &PlayerWorld), (Changed<Parent>, With<Player>)>,
+) {
+    for (entity, mut player_trans, player_loc, parent, player_world) in q_local_player.iter_mut() {
+        if entity != player_world.player {
+            // This problem only effects players that control their world
+            continue;
+        }
+
+        let Ok((parent_trans, parent_loc)) = q_parent.get(parent.get()) else {
+            continue;
+        };
+
+        // Because the player's translation is always 0, 0, 0 we need to adjust it so the player is put into the
+        // right spot in its parent.
+        player_trans.translation = Quat::from_affine3(&parent_trans.affine())
+            .inverse()
+            .mul_vec3((*player_loc - *parent_loc).absolute_coords_f32());
+    }
+}
+
 pub(super) fn register(app: &mut App) {
-    app.add_systems(
-        Update,
-        (
-            fix_location,
-            sync_transforms_and_locations,
-            handle_child_syncing,
-            add_previous_location,
+    app.configure_sets(Update, LocationPhysicsSet::DoPhysics)
+        .add_systems(
+            Update,
+            (
+                player_changed_parent,
+                fix_location,
+                sync_transforms_and_locations,
+                handle_child_syncing,
+                add_previous_location,
+            )
+                .chain()
+                .in_set(LocationPhysicsSet::DoPhysics)
+                .run_if(in_state(GameState::Playing))
+                .before(NetworkingSystemsSet::ReceiveMessages),
         )
-            .chain()
-            .run_if(in_state(GameState::Playing))
-            .before(NetworkingSystemsSet::ReceiveMessages),
-    )
-    .add_systems(PostUpdate, fix_location)
-    // This must be last due to commands being delayed when adding PhysicsWorlds.
-    .add_systems(
-        Last,
-        (move_players_between_worlds, move_non_players_between_worlds, remove_empty_worlds).chain(),
-    );
+        .add_systems(PostUpdate, fix_location)
+        // This must be last due to commands being delayed when adding PhysicsWorlds.
+        .add_systems(
+            Last,
+            (move_players_between_worlds, move_non_players_between_worlds, remove_empty_worlds).chain(),
+        );
 }

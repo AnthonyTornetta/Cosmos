@@ -9,6 +9,7 @@ use bevy::{
         schedule::{common_conditions::in_state, IntoSystemConfigs},
         system::{Commands, Query, Res, ResMut, Resource},
     },
+    hierarchy::BuildChildren,
     log::{error, warn},
     prelude::{Deref, DerefMut},
     utils::HashMap,
@@ -17,6 +18,7 @@ use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     block::gravity_well::UnderGravityWell,
     netty::{cosmos_encoder, server_replication::ReplicationMessage, NettyChannelServer},
+    physics::location::LocationPhysicsSet,
     registry::{identifiable::Identifiable, Registry},
     structure::{
         loading::StructureLoadingSet,
@@ -27,7 +29,12 @@ use cosmos_core::{
 };
 use serde::{de::DeserializeOwned, Serialize};
 
-use crate::{netty::mapping::NetworkMapping, registry::sync_registry, state::game_state::GameState};
+use crate::{
+    netty::mapping::NetworkMapping,
+    registry::sync_registry,
+    state::game_state::GameState,
+    structure::planet::align_player::{self, PlayerAlignment},
+};
 
 #[derive(Event, Debug, Clone)]
 struct StructureSystemNeedsUpdated {
@@ -132,7 +139,9 @@ fn replication_listen_netty(
 
                     grav_well.structure_entity = structure_entity;
 
-                    ecmds.insert(grav_well);
+                    ecmds
+                        .insert((grav_well, PlayerAlignment(align_player::Axis::Y)))
+                        .set_parent(structure_entity);
                 } else {
                     ecmds.remove::<UnderGravityWell>();
                 }
@@ -211,6 +220,7 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         replication_listen_netty
+            .before(LocationPhysicsSet::DoPhysics)
             .run_if(in_state(GameState::Playing))
             .after(StructureLoadingSet::StructureLoaded),
     )

@@ -24,7 +24,7 @@ use cosmos_core::{
     },
     persistence::LoadingDistance,
     physics::{
-        location::{add_previous_location, handle_child_syncing, Location, SYSTEM_SECTORS},
+        location::{add_previous_location, handle_child_syncing, Location, LocationPhysicsSet, SYSTEM_SECTORS},
         player_world::PlayerWorld,
     },
     registry::Registry,
@@ -114,6 +114,7 @@ pub(crate) struct RequestedEntities {
 }
 
 #[derive(Component, Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
+/// Unused
 pub struct NetworkTick(pub u64);
 
 #[derive(Debug, Component, Deref)]
@@ -781,8 +782,29 @@ fn sync_transforms_and_locations(
     }
 }
 
+/// Fixes oddities that happen when changing parent of player
+fn player_changed_parent(
+    q_parent: Query<(&GlobalTransform, &Location)>,
+    mut q_local_player: Query<(&mut Transform, &Location, &Parent), (Changed<Parent>, With<LocalPlayer>)>,
+) {
+    let Ok((mut player_trans, player_loc, parent)) = q_local_player.get_single_mut() else {
+        return;
+    };
+
+    let Ok((parent_trans, parent_loc)) = q_parent.get(parent.get()) else {
+        return;
+    };
+
+    // Because the player's translation is always 0, 0, 0 we need to adjust it so the player is put into the
+    // right spot in its parent.
+    player_trans.translation = Quat::from_affine3(&parent_trans.affine())
+        .inverse()
+        .mul_vec3((*player_loc - *parent_loc).absolute_coords_f32());
+}
+
 pub(super) fn register(app: &mut App) {
     app.insert_resource(RequestedEntities::default())
+        .configure_sets(Update, LocationPhysicsSet::DoPhysics)
         .add_systems(Update, (update_crosshair, insert_last_rotation))
         .add_systems(
             Update,
@@ -793,7 +815,14 @@ pub(super) fn register(app: &mut App) {
             (
                 fix_location.before(client_sync_players),
                 lerp_towards.after(client_sync_players),
-                (sync_transforms_and_locations, handle_child_syncing, add_previous_location).chain(), //.run_if(on_timer(Duration::from_millis(1000))),
+                (
+                    player_changed_parent,
+                    sync_transforms_and_locations,
+                    handle_child_syncing,
+                    add_previous_location,
+                )
+                    .chain()
+                    .in_set(LocationPhysicsSet::DoPhysics),
             )
                 .chain()
                 .run_if(in_state(GameState::Playing)),

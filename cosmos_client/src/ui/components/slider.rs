@@ -283,7 +283,6 @@ fn on_change_value(
     }
 }
 
-// https://github.com/bevyengine/bevy/pull/9822
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 /// System set the [`Button`]` component uses. Make sure you add any [`Button`] components before this set!
 pub enum SliderUiSystemSet {

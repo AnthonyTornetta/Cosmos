@@ -2,7 +2,7 @@
 
 // mod apart_of_ship;
 
-use bevy::prelude::{App, Component, Quat};
+use bevy::prelude::{Component, Quat};
 
 #[derive(Component)]
 /// The server doesn't have a camera, so this is used to track where the player is looking

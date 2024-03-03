@@ -18,6 +18,7 @@ use std::{
 };
 
 use bevy::{
+    ecs::schedule::SystemSet,
     log::warn,
     prelude::{
         Added, App, Children, Commands, Component, Deref, DerefMut, Entity, GlobalTransform, Parent, Quat, Query, Transform, Update, Vec3,
@@ -44,6 +45,17 @@ pub const SYSTEM_SECTORS: u32 = 100;
 
 /// This is the size in blocks of one system
 pub const SYSTEM_DIMENSIONS: f32 = SYSTEM_SECTORS as f32 * SECTOR_DIMENSIONS;
+
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// Sets used to sync entities' locations & translations.
+///
+/// There are a couple bad things that happen because of this. If you do any logic that
+/// changes a player's parent, make sure to put that logic **before** these systems.
+
+pub enum LocationPhysicsSet {
+    /// Syncs locations & transforms
+    DoPhysics,
+}
 
 #[derive(Default, Component, Debug, PartialEq, Serialize, Deserialize, Reflect, Clone, Copy)]
 /// Used to represent a point in a near-infinite space
