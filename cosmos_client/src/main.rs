@@ -70,9 +70,6 @@ fn main() {
         info!("Successfully set main thread priority to max!");
     }
 
-    // #[cfg(debug_assertions)]
-    // env::set_var("RUST_BACKTRACE", "1");
-
     let args = Args::parse();
 
     let host_name = args.ip.unwrap_or_else(get_local_ipaddress);
