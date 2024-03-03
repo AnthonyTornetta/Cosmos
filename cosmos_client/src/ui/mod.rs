@@ -2,7 +2,10 @@
 
 use bevy::{
     app::Update,
-    ecs::schedule::{apply_deferred, IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
+    ecs::{
+        component::Component,
+        schedule::{IntoSystemSetConfigs, SystemSet},
+    },
     prelude::App,
 };
 
@@ -10,6 +13,7 @@ pub mod components;
 pub mod crosshair;
 pub mod debug_info_display;
 pub mod hotbar;
+mod hud;
 pub mod item_renderer;
 pub mod message;
 pub mod reactivity;
@@ -18,17 +22,23 @@ mod ship_flight;
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 /// All systems that handle GUI interactions should be in here
 pub enum UiSystemSet {
-    /// apply_deferred
-    ApplyDeferredA,
     /// UI systems should do their work here
     DoUi,
-    /// apply_deferred
-    ApplyDeferredB,
     /// After this, all UI systems are finished
     FinishUi,
-    /// apply_deferred
-    ApplyDeferredC,
 }
+
+#[derive(Component)]
+/// Append most UI nodes to this.
+///
+/// Note that UI nodes appended to this will display behind 3d block models. Use `UiTopRoot` to display past those.
+pub struct UiRoot;
+
+#[derive(Component)]
+/// Append UI nodes you want to display in front of 3d-models to this.
+///
+/// If you're not dealing with 3d model weirdness, please prefer to use `UiRoot`.
+pub struct UiTopRoot;
 
 pub(super) fn register(app: &mut App) {
     crosshair::register(app);
@@ -39,24 +49,7 @@ pub(super) fn register(app: &mut App) {
     ship_flight::register(app);
     components::register(app);
     reactivity::register(app);
+    hud::register(app);
 
-    app.configure_sets(
-        Update,
-        (
-            UiSystemSet::ApplyDeferredA,
-            UiSystemSet::DoUi,
-            UiSystemSet::ApplyDeferredB,
-            UiSystemSet::FinishUi,
-            UiSystemSet::ApplyDeferredC,
-        )
-            .chain(),
-    )
-    .add_systems(
-        Update,
-        (
-            apply_deferred.in_set(UiSystemSet::ApplyDeferredA),
-            apply_deferred.in_set(UiSystemSet::ApplyDeferredB),
-            apply_deferred.in_set(UiSystemSet::ApplyDeferredC),
-        ),
-    );
+    app.configure_sets(Update, (UiSystemSet::DoUi, UiSystemSet::FinishUi).chain());
 }

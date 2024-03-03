@@ -106,7 +106,6 @@ fn on_load_blueprint(
                     s_data,
                     temperature,
                     &mut chunk_load_block_data_event_writer,
-                    // &mut event_writer,
                     &mut chunk_set_event_writer,
                     &mut structure_loaded_event_writer,
                 );

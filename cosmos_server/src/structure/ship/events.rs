@@ -2,6 +2,7 @@
 
 use bevy::{
     ecs::system::Commands,
+    log::info,
     math::Quat,
     prelude::{in_state, App, Entity, Event, EventReader, IntoSystemConfigs, Query, ResMut, Update},
 };
@@ -79,6 +80,8 @@ pub struct CreateShipEvent {
 
 pub(crate) fn create_ship_event_reader(mut event_reader: EventReader<CreateShipEvent>, mut commands: Commands) {
     for ev in event_reader.read() {
+        info!("Creating ship!!");
+
         let mut entity = commands.spawn_empty();
 
         let mut structure = Structure::Full(FullStructure::new(ChunkCoordinate::new(10, 10, 10)));

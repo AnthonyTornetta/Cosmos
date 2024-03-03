@@ -36,7 +36,7 @@ For release builds, append the `--release` flag to the build/run commands.
 
 ## Documentation
 
-The first time you view the cosmos documentation, run the following commands
+The first time you view the cosmos documentation, make sure you have mdbook **and** mdbook-mermaid installed. If you don't you can install them by running the following commands:
 
 ```console
 cargo install mdbook
@@ -45,20 +45,44 @@ cargo install mdbook-mermaid
 
 Every time you want to view the documentation, navigate to the `docs/` directory. To have it update as you modify it, run `mdbook serve` and navigate to the URL it provides, or to just build it run `mdbook build`.
 
+#### System ordering
+
+If you want to view the ordering of the systems, run (on linux) `cargo run --features print-schedule | dot -Tsvg > ./debug.svg` for either the cosmos_client or cosmos_server projects. If the `print-schedule` feature is enabled, these are setup to use bevy_mod_debugdump to create graphs of the `Update` schedule. If you need a different schedule, you'll have to change the `main.rs` file for either project to specify the correct schedule.  Note, you'll need [graphviz](https://graphviz.org/download/) for the dot cmomand to work.
+
 # Cosmos Roadmap
 
 See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the list of current features/bugs in development.
 
 ## Release 0.0.5a - The Playable Release (In Progress)
+- [x] Add a gravity well block
+  - [x] Remove snapping to structures on collision
+- [x] Camera system
+  - [x] Camera block
+  - [x] Use left/right to switch between ship cameras
+    - [x] Changes where your view is
+- [x] Shops
+  - [x] Sell blocks/items
+  - [x] Buy blocks/items
+  - [x] Generates randomly
+    - [x] Implement random structure Generation
+  - [x] Implement currency system for player
+    - [x] Money GUI
+  - [x] Shop GUI
+- [x] Mining beam system
+  - [x] Mining beam block
+    - [x] Can be placed in line to create more powerful miners
+  - [x] Mines the first block hit by the beam after a given time
+    - [x] Inserts the item into the ship's inventory
+    - [x] Hold lmb to continually fire the laser
 - [ ] Pirates
   - [ ] Create a number of pirate ships
-    - [ ] Each ship has a difficulty
-  - [ ] Difficulty of spawns scales off player's money & ship's number of blocks
-  - [ ] Basic AI
-    - [ ] Spawn within 2 sectors of player
-    - [ ] Spawn in fleets based on player's difficulty
-    - [ ] If within ~1 sector of player, fly towards player
-    - [ ] Shoot towards player, trying to predict their position based off distance & velocity
+    - [x] Each ship has a difficulty
+  - [x] Difficulty of spawns scales off player's money & ship's number of blocks
+  - [x] Basic AI
+    - [x] Spawn within 2 sectors of player
+    - [x] Spawn in fleets based on player's difficulty
+    - [x] If within ~1 sector of player, fly towards player
+    - [x] Shoot towards player, trying to predict their position based off distance & velocity
 - [x] Shop
   - [x] Buy from shop
   - [x] Sell to shop
@@ -66,8 +90,12 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
   - [x] For now shops have unlimited stock & funds
   - [x] Shop block
 - [x] Animated textures
-- [x] Storage system
+- [x] Block data system
   - [x] Support for blocks that store their own data
+  - [x] Storage block
+    - [x] A block that stores an amount of items
+    - [x] Can be interacted with to view the items
+      - [x] A GUI to view items
 - [x] Sounds
   - [x] Laser cannon fire
   - [x] Block take damage
@@ -75,7 +103,6 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
   - [x] Space ship idle
   - [x] Background space music
   - [x] Block place/break
-- [ ] Place rotated blocks
 - [x] Multiblock machines
   - [x] Revamp power generation to use reactor multiblock structure
 - [x] Colored laser
@@ -90,6 +117,14 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 - [x] Update to bevy 0.11
   - [x] Update physics
   - [x] Update bevy
+- [x] Update to bevy 0.12
+  - [x] Update physics
+  - [x] Update bevy
+- [x] Update to bevy 0.13
+  - [x] Update physics
+  - [x] Update bevy
+- [x] Update asteroid generation to make it decent
+  - [x] Add ores to mine on them
 - [x] GUI to interact with inventory
   - [x] Easier way of adding 3d blocks to GUI
   - [x] Move items around in inventory via mouse
@@ -250,7 +285,7 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 - [x] Add Crosshair
 - [x] Support re-sizable window
 
-## Everything that will still have to be done after 0.0.5a
+## Everything that will still have to be done after 0.0.6a
 
 - [ ] Biosphere Improvements
   - [ ] Ice biosphere glaciers
@@ -261,42 +296,56 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
     - [ ] Undergrowth
     - [ ] 1 More tree type
   - [ ] Groundwork for biomes
-    - [ ] Plane,
-    - [ ] Redwood forest,
+    - [ ] Planes
+    - [ ] Redwood forest
     - [ ] 1 Additional forest
-    - [ ] Ocean
+    - [x] Ocean
   - [ ] On-planet skybox
     - [ ] Sun-side skybox
       - [ ] Perhaps done via a sphere surrounding the planet that always faces the nearest star
     - [ ] Sun-set skybox
     - [ ] Night-side skybox
-- [ ] Mining beam system
-  - [ ] Mining beam block
-    - [ ] Can be placed in line to create more powerful miners
-  - [ ] Mines the first block hit by the beam after a given time
-    - [ ] Inserts the item into the ship's inventory
-    - [ ] Hold lmb to continually fire the laser
-  - [ ] Structure gets deleted when no more blocks are left
-- [ ] An interface into all the storage devices on the ship
-- [ ] A way of selecting which systems to use preventing use of systems that are not meant to be actively used
-- [ ] Dropped item entity
-- [ ] Storage block
-  - [ ] A block that stores an amount of items
-  - [ ] Can be interacted with to view the items
-    - [ ] A GUI to view items
-- [ ] Camera system
-  - [ ] Camera block
-  - [ ] Use left/right to switch between ship cameras
-    - [ ] Changes where your view is
 - [ ] Shops
-  - [ ] Sell blocks/items
-  - [ ] Buy blocks/items
-  - [ ] Generates randomly
-    - [ ] Implement random structure Generation
+  - [ ] Peace zone?
   - [ ] Prices based on supply + rarity
     - [ ] Keep supply relatively equal between nearby shops
   - [ ] Each shop has its own supply of money that it cannot go below
-  - [ ] Implement currency system for player
-    - [ ] Money GUI
-    - [ ] Pay others
-  - [ ] Shop GUI
+
+## Release 0.0.6a
+- [ ] Place rotated blocks
+- [ ] Inventory UI improvements
+- [ ] Money
+  - [ ] Pay others
+- [ ] A way of selecting which systems to use preventing use of systems that are not meant to be actively used
+- [ ] Dropped item entity
+- [ ] Wires
+  - [ ] Electrical
+  - [ ] Logic
+- [ ] Planet generation & LOD overhaul
+  - [ ] Performance improvements
+  - [ ] GPU-based generation
+- [ ] Structure gets deleted when no more blocks are left
+- [ ] An interface into all the storage devices on the ship
+- [ ] Gravity Block
+  - [ ] Interact to become "docked" to that structure and have a configurable amount of gravity applied
+
+## NPCs
+
+### Factions
+
+NPC controlled OR player controlled
+NPC controlled factions store reputation of other factions + players
+Factions have different attributes
+  - One may steal your ship blueprints
+    - To balance this:
+      - scrap is collected when you mine melting down ships instead of the actual blocks
+        - Different scrap types
+      - Substitute expensive blocks for less expensive ones if needed
+      - If ship is below 50% success rate, don't produce it again
+  - Dynamic faction expansion
+Bounty board
+  - Take down X ship
+  - Selling the ship
+- Selling ship designs
+- Buying ship designs
+

@@ -64,5 +64,5 @@ fn on_add_planet(query: Query<(Entity, &Structure), Added<Planet>>, mut commands
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, on_add_planet.in_set(StructureLoadingSet::LoadStructure));
+    app.add_systems(Update, on_add_planet.in_set(StructureLoadingSet::AddStructureComponents));
 }

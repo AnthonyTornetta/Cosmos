@@ -24,7 +24,7 @@ use crate::{
     rendering::{BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder},
 };
 
-use super::UiSystemSet;
+use super::{UiSystemSet, UiTopRoot};
 
 const INVENTORY_SLOT_LAYER: u8 = 0b1;
 
@@ -34,6 +34,7 @@ struct UICamera;
 fn create_ui_camera(mut commands: Commands) {
     commands.spawn((
         Name::new("UI Camera"),
+        UiTopRoot,
         Camera3dBundle {
             projection: Projection::Orthographic(OrthographicProjection {
                 scaling_mode: ScalingMode::WindowSize(40.0),
@@ -263,31 +264,20 @@ fn reposition_ui_items(query: Query<&Window, With<PrimaryWindow>>, mut rendered_
 ///
 /// Use the `RenderItem` component to render an item in a ui component.
 pub enum RenderItemSystemSet {
-    /// apply_deferred
-    BeginRenderingItems,
     /// Turn the `RenderItem` component into an actual UI component on your screen
     RenderItems,
-    /// apply_deferred
-    FlushRenderItems,
 }
 
 pub(super) fn register(app: &mut App) {
     app.configure_sets(
         Update,
-        (
-            RenderItemSystemSet::BeginRenderingItems,
-            RenderItemSystemSet::RenderItems.before(remove_materials).before(add_materials),
-            RenderItemSystemSet::FlushRenderItems,
-        )
+        (RenderItemSystemSet::RenderItems.before(remove_materials).before(add_materials),)
             .chain()
             .in_set(UiSystemSet::DoUi),
     )
     .add_systems(
         Update,
         (
-            // apply_deferred
-            apply_deferred.in_set(RenderItemSystemSet::BeginRenderingItems),
-            apply_deferred.in_set(RenderItemSystemSet::FlushRenderItems),
             // Logic
             (update_rendered_items_transforms, reposition_ui_items, render_items)
                 .in_set(RenderItemSystemSet::RenderItems)

@@ -6,7 +6,7 @@ use cosmos_core::structure::structure_block::StructureBlock;
 mod camera_system;
 mod energy_generation_system;
 mod energy_storage_system;
-mod laser_cannon_system;
+pub mod laser_cannon_system;
 mod line_system;
 mod mining_laser_system;
 pub(crate) mod sync;

@@ -35,6 +35,7 @@ pub mod window;
 use bevy::core::TaskPoolThreadAssignmentPolicy;
 use bevy::prelude::*;
 use bevy::window::WindowMode;
+use bevy_mod_debugdump::schedule_graph;
 use bevy_rapier3d::prelude::{RapierConfiguration, TimestepMode};
 use bevy_renet::transport::NetcodeClientPlugin;
 use bevy_renet::RenetClientPlugin;
@@ -68,9 +69,6 @@ fn main() {
     } else {
         info!("Successfully set main thread priority to max!");
     }
-
-    // #[cfg(debug_assertions)]
-    // env::set_var("RUST_BACKTRACE", "1");
 
     let args = Args::parse();
 
@@ -163,7 +161,18 @@ fn main() {
     economy::register(&mut app);
 
     if cfg!(feature = "print-schedule") {
-        bevy_mod_debugdump::print_schedule_graph(&mut app, Update);
+        println!(
+            "{}",
+            bevy_mod_debugdump::schedule_graph_dot(
+                &mut app,
+                Update,
+                &schedule_graph::Settings {
+                    ambiguity_enable: false,
+                    ambiguity_enable_on_world: false,
+                    ..Default::default()
+                }
+            )
+        );
         return;
     }
 

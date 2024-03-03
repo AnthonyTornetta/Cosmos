@@ -10,7 +10,7 @@ use bevy::{
         component::Component,
         entity::Entity,
         query::{Added, Changed, With, Without},
-        schedule::{apply_deferred, IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
+        schedule::{IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
         system::{Commands, Query, Res},
         world::Ref,
     },
@@ -283,22 +283,15 @@ fn on_change_value(
     }
 }
 
-// https://github.com/bevyengine/bevy/pull/9822
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 /// System set the [`Button`]` component uses. Make sure you add any [`Button`] components before this set!
 pub enum SliderUiSystemSet {
-    /// apply_deferred
-    ApplyDeferredA,
     /// Make sure you add any [`Button`] components before this set!
     ///
     /// Sets up any [`Button`] components added.
     AddSliderBundle,
-    /// apply_deferred
-    ApplyDeferredB,
     /// Sends user events from the various [`Button`] components.
     SliderInteraction,
-    /// apply_deferred
-    ApplyDeferredC,
     /// Sends user events from the various [`Button`] components.
     UpdateSliderDisplay,
 }
@@ -307,23 +300,12 @@ pub(super) fn register(app: &mut App) {
     app.configure_sets(
         Update,
         (
-            SliderUiSystemSet::ApplyDeferredA,
             SliderUiSystemSet::AddSliderBundle,
-            SliderUiSystemSet::ApplyDeferredB,
             SliderUiSystemSet::SliderInteraction,
-            SliderUiSystemSet::ApplyDeferredC,
             SliderUiSystemSet::UpdateSliderDisplay,
         )
             .chain()
             .in_set(UiSystemSet::DoUi),
-    )
-    .add_systems(
-        Update,
-        (
-            apply_deferred.in_set(SliderUiSystemSet::ApplyDeferredA),
-            apply_deferred.in_set(SliderUiSystemSet::ApplyDeferredB),
-            apply_deferred.in_set(SliderUiSystemSet::ApplyDeferredC),
-        ),
     )
     .add_systems(
         Update,

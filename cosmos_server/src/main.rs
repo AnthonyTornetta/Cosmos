@@ -2,11 +2,13 @@
 
 #![feature(fs_try_exists)]
 #![feature(get_many_mut)]
+#![feature(duration_constructors)]
 #![warn(missing_docs)]
 
 use std::env;
 
 use bevy::{core::TaskPoolThreadAssignmentPolicy, prelude::*};
+use bevy_mod_debugdump::schedule_graph;
 use bevy_rapier3d::prelude::{RapierConfiguration, TimestepMode};
 use bevy_renet::{transport::NetcodeServerPlugin, RenetServerPlugin};
 use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
@@ -18,6 +20,7 @@ use thread_priority::{set_current_thread_priority, ThreadPriority};
 #[cfg(feature = "print-schedule")]
 use bevy::log::LogPlugin;
 
+pub mod ai;
 pub mod blocks;
 pub mod commands;
 pub mod economy;
@@ -43,9 +46,6 @@ fn main() {
     } else {
         info!("Successfully set main thread priority to max!");
     }
-
-    // #[cfg(debug_assertions)]
-    // env::set_var("RUST_BACKTRACE", "1");
 
     let args: Vec<String> = env::args().collect();
 
@@ -96,7 +96,18 @@ fn main() {
         .add_plugins((RenetServerPlugin, NetcodeServerPlugin, ServerPlugin { ip }));
 
     if cfg!(feature = "print-schedule") {
-        bevy_mod_debugdump::print_schedule_graph(&mut app, Update);
+        println!(
+            "{}",
+            bevy_mod_debugdump::schedule_graph_dot(
+                &mut app,
+                Update,
+                &schedule_graph::Settings {
+                    ambiguity_enable: false,
+                    ambiguity_enable_on_world: false,
+                    ..Default::default()
+                }
+            )
+        );
         return;
     }
 

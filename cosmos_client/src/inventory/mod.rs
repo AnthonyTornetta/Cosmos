@@ -80,7 +80,7 @@ fn close_button_system(
         // TODO: fix inventory closing to only close the one open
         if let Some(mut _ecmds) = commands.get_entity(rendered_inventory.inventory_holder) {
             open_inventories.iter().for_each(|ent| {
-                commands.entity(ent).remove::<NeedsDisplayed>().log_components();
+                commands.entity(ent).remove::<NeedsDisplayed>();
             });
         }
     }
@@ -694,15 +694,10 @@ fn follow_cursor(mut query: Query<&mut Style, With<FollowCursor>>, primary_windo
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 enum InventorySet {
     ToggleInventory,
-    FlushToggleInventory,
     UpdateInventory,
-    FlushUpdateInventory,
     HandleInteractions,
-    FlushHandleInteractions,
     FollowCursor,
-    FlushFollowCursor,
     ToggleInventoryRendering,
-    FlushToggleInventoryRendering,
 }
 
 pub(super) fn register(app: &mut App) {
@@ -710,29 +705,17 @@ pub(super) fn register(app: &mut App) {
         Update,
         (
             InventorySet::ToggleInventory,
-            InventorySet::FlushToggleInventory,
             InventorySet::UpdateInventory,
-            InventorySet::FlushUpdateInventory,
             InventorySet::HandleInteractions,
-            InventorySet::FlushHandleInteractions,
             InventorySet::FollowCursor,
-            InventorySet::FlushFollowCursor,
             InventorySet::ToggleInventoryRendering,
-            InventorySet::FlushToggleInventoryRendering,
         )
-            .before(UiSystemSet::ApplyDeferredA)
+            .before(UiSystemSet::DoUi)
             .chain(),
     )
     .add_systems(
         Update,
         (
-            // apply_deferred
-            apply_deferred.in_set(InventorySet::FlushToggleInventory),
-            apply_deferred.in_set(InventorySet::FlushUpdateInventory),
-            apply_deferred.in_set(InventorySet::FlushHandleInteractions),
-            apply_deferred.in_set(InventorySet::FlushFollowCursor),
-            apply_deferred.in_set(InventorySet::FlushToggleInventoryRendering),
-            // Logic
             (toggle_inventory, close_button_system).in_set(InventorySet::ToggleInventory),
             on_update_inventory.in_set(InventorySet::UpdateInventory),
             handle_interactions.in_set(InventorySet::HandleInteractions),

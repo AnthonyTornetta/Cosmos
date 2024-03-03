@@ -18,6 +18,7 @@ use std::{
 };
 
 use bevy::{
+    ecs::schedule::SystemSet,
     log::warn,
     prelude::{
         Added, App, Children, Commands, Component, Deref, DerefMut, Entity, GlobalTransform, Parent, Quat, Query, Transform, Update, Vec3,
@@ -44,6 +45,17 @@ pub const SYSTEM_SECTORS: u32 = 100;
 
 /// This is the size in blocks of one system
 pub const SYSTEM_DIMENSIONS: f32 = SYSTEM_SECTORS as f32 * SECTOR_DIMENSIONS;
+
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// Sets used to sync entities' locations & translations.
+///
+/// There are a couple bad things that happen because of this. If you do any logic that
+/// changes a player's parent, make sure to put that logic **before** these systems.
+
+pub enum LocationPhysicsSet {
+    /// Syncs locations & transforms
+    DoPhysics,
+}
 
 #[derive(Default, Component, Debug, PartialEq, Serialize, Deserialize, Reflect, Clone, Copy)]
 /// Used to represent a point in a near-infinite space
@@ -80,6 +92,9 @@ pub type SectorUnit = i64;
 pub struct Sector(SectorUnit, SectorUnit, SectorUnit);
 
 impl Sector {
+    /// Represents the sector at 0, 0, 0.
+    pub const ZERO: Sector = Sector(0, 0, 0);
+
     #[inline]
     /// Creates a new Sector at the given coordinates
     pub const fn new(x: SectorUnit, y: SectorUnit, z: SectorUnit) -> Self {
@@ -133,11 +148,11 @@ impl Sector {
     }
 }
 
-impl Add<Sector> for Sector {
-    type Output = Sector;
+impl Add<Self> for Sector {
+    type Output = Self;
 
-    fn add(self, rhs: Sector) -> Self::Output {
-        Sector(self.0 + rhs.0, self.1 + rhs.1, self.2 + rhs.2)
+    fn add(self, rhs: Self) -> Self::Output {
+        Self(self.0 + rhs.0, self.1 + rhs.1, self.2 + rhs.2)
     }
 }
 
@@ -290,8 +305,11 @@ impl From<Location> for Vec3 {
 }
 
 impl Location {
+    /// Represents the origin point of the universe
+    pub const ZERO: Location = Location::new(Vec3::ZERO, Sector::ZERO);
+
     /// Creates a new location at these coordinates
-    pub fn new(local: Vec3, sector: Sector) -> Self {
+    pub const fn new(local: Vec3, sector: Sector) -> Self {
         Self {
             local,
             sector,
@@ -419,6 +437,24 @@ impl Location {
             self.sector.y() as f64 * SECTOR_DIMENSIONS as f64 + self.local.y as f64,
             self.sector.z() as f64 * SECTOR_DIMENSIONS as f64 + self.local.z as f64,
         )
+    }
+
+    /// This will return true if the other location is within 200 sectors of this location.
+    ///
+    /// This is useful if you're dealing with f32 distances between two locations.
+    /// If the two locations are far apart where distances become nonsensical, this will return false.
+    pub fn is_within_reasonable_range(&self, other: &Location) -> bool {
+        self.is_within_reasonable_range_sector(other.sector)
+    }
+
+    /// This will return true if the sector is within 200 sectors of this location.
+    ///
+    /// This is useful if you're dealing with f32 distances between two locations.
+    /// If the two locations are far apart where distances become nonsensical, this will return false.
+    pub fn is_within_reasonable_range_sector(&self, other: Sector) -> bool {
+        let sec_diff = (other - self.sector).abs();
+
+        sec_diff.max_element() < 200
     }
 }
 

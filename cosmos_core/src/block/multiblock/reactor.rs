@@ -16,6 +16,7 @@ use crate::{
     registry::{create_registry, identifiable::Identifiable, Registry},
     structure::{
         coordinates::BlockCoordinate,
+        loading::StructureLoadingSet,
         structure_block::StructureBlock,
         systems::{energy_storage_system::EnergyStorageSystem, Systems},
         Structure,
@@ -129,7 +130,7 @@ impl Registry<ReactorPowerGenerationBlock> {
     }
 }
 
-fn on_structure_add(mut commands: Commands, query: Query<Entity, (Added<Structure>, Without<Reactors>)>) {
+fn add_reactor_to_structure(mut commands: Commands, query: Query<Entity, (Added<Structure>, Without<Reactors>)>) {
     for ent in query.iter() {
         commands.entity(ent).insert(Reactors::default());
     }
@@ -204,7 +205,12 @@ pub(super) fn register<T: States>(app: &mut App, post_loading_state: T, playing_
     app.add_systems(OnEnter(post_loading_state), register_power_blocks)
         .add_systems(
             Update,
-            (on_structure_add, generate_power, on_modify_reactor).run_if(in_state(playing_state)),
+            (
+                add_reactor_to_structure.in_set(StructureLoadingSet::AddStructureComponents),
+                generate_power,
+                on_modify_reactor,
+            )
+                .run_if(in_state(playing_state)),
         )
         .register_type::<Reactor>()
         .register_type::<Reactors>();

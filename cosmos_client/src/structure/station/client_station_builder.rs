@@ -5,12 +5,14 @@ use bevy::{
     ecs::{
         entity::Entity,
         query::Added,
+        schedule::IntoSystemConfigs,
         system::{Commands, EntityCommands, Query},
     },
 };
 use cosmos_core::{
     physics::location::Location,
     structure::{
+        loading::StructureLoadingSet,
         station::{
             station_builder::{StationBuilder, TStationBuilder},
             Station,
@@ -47,5 +49,5 @@ fn on_add_station(q_station_entities: Query<Entity, Added<Station>>, mut command
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, on_add_station);
+    app.add_systems(Update, on_add_station.in_set(StructureLoadingSet::AddStructureComponents));
 }

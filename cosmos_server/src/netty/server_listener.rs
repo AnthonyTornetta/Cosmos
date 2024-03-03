@@ -74,7 +74,6 @@ fn server_listen_messages(
     pilot_query: Query<&Pilot>,
     player_parent_location: Query<&Location, Without<Player>>,
     mut change_player_query: Query<(&mut Transform, &mut Location, &mut PlayerLooking, &mut Velocity), With<Player>>,
-    non_player_transform_query: Query<&Transform, Without<Player>>,
     mut build_mode: Query<&mut BuildMode>,
 
     mut send_all_chunks: ResMut<SendAllChunks>,
@@ -194,8 +193,6 @@ fn server_listen_messages(
                         continue;
                     };
 
-                    commands.entity(client).log_components();
-
                     let Ok(mut inventory) = q_inventory.get_mut(client) else {
                         info!("No inventory ;(");
                         continue;
@@ -288,32 +285,6 @@ fn server_listen_messages(
                                 client_id,
                                 NettyChannelServer::Reliable,
                                 cosmos_encoder::serialize(&ServerReliableMessages::PlayerLeaveShip { player_entity }),
-                            );
-                        }
-                    }
-                }
-                ClientReliableMessages::JoinShip { ship_entity } => {
-                    if let Some(player_entity) = lobby.player_from_id(client_id) {
-                        if let Some(mut e) = commands.get_entity(player_entity) {
-                            // This should be verified in the future to make sure the entity is actually a ship
-                            e.set_parent(ship_entity);
-
-                            // This is stupid, but when a parent changes the transform isn't properly updated for the player, which is super cool.
-                            // At some point this should be fixed in a way that doesn't require this stuck everywhere
-                            if let Ok((mut trans, _, _, _)) = change_player_query.get_mut(player_entity) {
-                                trans.translation -= non_player_transform_query
-                                    .get(ship_entity)
-                                    .expect("A ship should always have a transform.")
-                                    .translation;
-                            }
-
-                            server.broadcast_message_except(
-                                client_id,
-                                NettyChannelServer::Reliable,
-                                cosmos_encoder::serialize(&ServerReliableMessages::PlayerJoinShip {
-                                    player_entity,
-                                    ship_entity,
-                                }),
                             );
                         }
                     }

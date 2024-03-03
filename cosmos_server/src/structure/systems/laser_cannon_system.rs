@@ -1,3 +1,5 @@
+//! Server-side laser cannon logic
+
 use std::time::Duration;
 
 use bevy::prelude::*;
@@ -27,7 +29,7 @@ use super::{line_system::add_line_system, sync::register_structure_system};
 fn on_add_laser(mut commands: Commands, query: Query<Entity, Added<LaserCannonSystem>>) {
     for ent in query.iter() {
         commands.entity(ent).insert(SystemCooldown {
-            cooldown_time: Duration::from_millis(200),
+            cooldown_time: Duration::from_millis(1000),
             ..Default::default()
         });
     }
@@ -39,7 +41,8 @@ fn register_laser_blocks(blocks: Res<Registry<Block>>, mut cannon: ResMut<LineBl
     }
 }
 
-const LASER_BASE_VELOCITY: f32 = 200.0;
+/// How fast a laser will travel (m/s) ignoring the speed of its shooter.
+pub const LASER_BASE_VELOCITY: f32 = 200.0;
 
 fn update_system(
     mut query: Query<(&LaserCannonSystem, &StructureSystem, &mut SystemCooldown), With<SystemActive>>,

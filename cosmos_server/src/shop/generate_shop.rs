@@ -4,7 +4,6 @@ use std::{f32::consts::PI, time::Duration};
 
 use bevy::{
     ecs::{component::Component, query::Or},
-    log::info,
     math::Quat,
     prelude::{in_state, App, Commands, Deref, DerefMut, IntoSystemConfigs, Query, Res, ResMut, Resource, Update, Vec3, With},
     time::common_conditions::on_timer,
@@ -102,7 +101,7 @@ fn spawn_shop(
 
             let loc = Location::new(
                 if sector == ORIGIN_SECTOR {
-                    Vec3::new(0.0, 0.0, 0.0)
+                    Vec3::new(0.0, 1200.0, 0.0)
                 } else {
                     Vec3::new(
                         rng.gen::<f32>() * multiplier + adder,
@@ -113,7 +112,6 @@ fn spawn_shop(
                 sector,
             );
 
-            info!("Created blueprint load request @ {loc}");
             commands.spawn(NeedsBlueprintLoaded {
                 path: "default_blueprints/shop/default.bp".into(),
                 rotation: random_quat(&mut rng),
@@ -141,7 +139,7 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         spawn_shop
-            .before(LoadingBlueprintSystemSet::FlushPreBeginLoadingBlueprints)
+            .before(LoadingBlueprintSystemSet::BeginLoadingBlueprints)
             .run_if(on_timer(Duration::from_secs(1)))
             .run_if(in_state(GameState::Playing)),
     )

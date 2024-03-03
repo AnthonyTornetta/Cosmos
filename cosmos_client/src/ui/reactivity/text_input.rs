@@ -1,8 +1,14 @@
 //! Reactivity for text inputs
 
 use bevy::{
+    a11y::Focus,
     app::{App, Update},
-    ecs::{event::EventReader, query::Changed, system::Query},
+    ecs::{
+        entity::Entity,
+        event::EventReader,
+        query::Changed,
+        system::{Query, Res},
+    },
     log::{error, warn},
 };
 
@@ -13,12 +19,18 @@ use super::{BindValues, NeedsValueFetched, ReactableFields, ReactableValue};
 fn on_update_bound_values<T: ReactableValue>(
     q_react_value: Query<&T>,
     mut ev_reader: EventReader<NeedsValueFetched>,
-    mut q_changed_value: Query<(&mut InputValue, &mut TextInput, &BindValues<T>)>,
+    focused: Res<Focus>,
+    mut q_changed_value: Query<(Entity, &mut InputValue, &mut TextInput, &BindValues<T>)>,
 ) {
     for ev in ev_reader.read() {
-        let Ok((mut input_value, mut text_input, bind_values)) = q_changed_value.get_mut(ev.0) else {
+        let Ok((entity, mut input_value, mut text_input, bind_values)) = q_changed_value.get_mut(ev.0) else {
             continue;
         };
+
+        if focused.0 == Some(entity) {
+            // Don't interrupt the user while they're typing
+            continue;
+        }
 
         for bind_value in bind_values.iter() {
             let Ok(react_value) = q_react_value.get(bind_value.bound_entity) else {

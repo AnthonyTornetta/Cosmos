@@ -14,7 +14,7 @@ use bevy::{
         entity::Entity,
         event::EventReader,
         query::{Added, Changed, Or},
-        schedule::{apply_deferred, common_conditions::resource_changed, IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
+        schedule::{common_conditions::resource_changed, IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
         system::{Commands, Query, Res, ResMut, Resource},
     },
     hierarchy::BuildChildren,
@@ -222,6 +222,7 @@ fn send_key_inputs(
     mut evr_char: EventReader<ReceivedCharacter>,
     focused: Res<Focus>,
     mut q_focused_input_field: Query<(&mut TextInput, &mut InputValue, &Interaction)>,
+    inputs: Res<ButtonInput<KeyCode>>,
 ) {
     let Some(focused) = focused.0 else {
         // Consumes the event so they don't all pile up and are released when we regain focus
@@ -276,9 +277,13 @@ fn send_key_inputs(
         }
     }
 
+    if inputs.pressed(KeyCode::ControlLeft) || inputs.pressed(KeyCode::ControlRight) {
+        return;
+    }
+
     for ev in evr_char.read() {
         for c in ev.char.chars() {
-            if c.is_control() {
+            if !c.is_control() {
                 let mut new_value = text.0.clone();
                 let new_cursor_pos;
 
@@ -558,22 +563,15 @@ fn verify_input(text_input: &TextInput, test_value: &str) -> bool {
     }
 }
 
-// https://github.com/bevyengine/bevy/pull/9822
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 /// System set the TextInput component uses. Make sure you add any [`TextInput`] components before this set!
 pub enum TextInputUiSystemSet {
-    /// apply_deferred
-    ApplyDeferredA,
     /// Make sure you add any [`TextInput`] components before this set!
     ///
     /// Sets up any [`TextInput`] components added.
     AddTextInputBundle,
-    /// apply_deferred
-    ApplyDeferredB,
     /// Sends user input to the various [`TextInput`] components.
     SendKeyInputs,
-    /// apply_deferred
-    ApplyDeferredC,
     /// Updates any components based on the value being changed in this [`TextInput`]
     ///
     /// The results of this can be read in [`InputValue`].
@@ -584,23 +582,12 @@ pub(super) fn register(app: &mut App) {
     app.configure_sets(
         Update,
         (
-            TextInputUiSystemSet::ApplyDeferredA,
             TextInputUiSystemSet::AddTextInputBundle,
-            TextInputUiSystemSet::ApplyDeferredB,
             TextInputUiSystemSet::SendKeyInputs,
-            TextInputUiSystemSet::ApplyDeferredC,
             TextInputUiSystemSet::ValueChanged,
         )
             .chain()
             .in_set(UiSystemSet::DoUi),
-    )
-    .add_systems(
-        Update,
-        (
-            apply_deferred.in_set(TextInputUiSystemSet::ApplyDeferredA),
-            apply_deferred.in_set(TextInputUiSystemSet::ApplyDeferredB),
-            apply_deferred.in_set(TextInputUiSystemSet::ApplyDeferredC),
-        ),
     )
     .add_systems(
         Update,

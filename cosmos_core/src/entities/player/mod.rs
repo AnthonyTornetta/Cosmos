@@ -1,9 +1,9 @@
 //! Represents a player
 
-pub mod apart_of_ship;
+// pub mod apart_of_ship;
 pub mod render_distance;
 
-use bevy::prelude::{App, Component};
+use bevy::prelude::Component;
 use bevy_renet::renet::ClientId;
 
 #[derive(Component, Debug)]
@@ -30,9 +30,4 @@ impl Player {
     pub fn id(&self) -> ClientId {
         self.id
     }
-}
-
-pub(super) fn register(app: &mut App) {
-    // app.register_type::<Player>();
-    apart_of_ship::register(app);
 }

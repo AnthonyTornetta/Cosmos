@@ -37,6 +37,7 @@ use cosmos_core::{
         coordinates::{ChunkBlockCoordinate, ChunkCoordinate, CoordinateType},
         lod::{Lod, ReadOnlyLod},
         lod_chunk::LodChunk,
+        shared::DespawnWithStructure,
         ChunkState, Structure,
     },
     utils::array_utils::expand,
@@ -594,9 +595,10 @@ fn poll_rendering_lods(
                         .spawn((
                             TransformBundle::from_transform(Transform::from_translation(offset)),
                             VisibilityBundle::default(),
-                            // Remove this once https://github.com/bevyengine/bevy/issues/4294 is done (when bevy ~0.10~ ~0.11~ ~0.12~ 0.13 is released)
+                            // Remove this once https://github.com/bevyengine/bevy/issues/4294 is done (when bevy ~0.10~ ~0.11~ ~0.12~ ~0.13~ 0.never is released)
                             Aabb::from_min_max(Vec3::new(-s, -s, -s), Vec3::new(s, s, s)),
                             RenderedLod { scale },
+                            DespawnWithStructure,
                         ))
                         .id();
 

@@ -125,7 +125,8 @@ fn apply_mining_effects(
 
         let idx = rand::random::<usize>() % audio_handles.0.len();
 
-        let playing_sound: Handle<AudioInstance> = audio.play(audio_handles.0[idx].clone()).handle();
+        let handle = audio_handles.0[idx].clone_weak();
+        let playing_sound: Handle<AudioInstance> = audio.play(handle.clone_weak()).handle();
 
         commands.entity(structure_entity).with_children(|p| {
             p.spawn((
@@ -133,6 +134,7 @@ fn apply_mining_effects(
                     emissions: vec![AudioEmission {
                         instance: playing_sound,
                         peak_volume: 0.3,
+                        handle,
                         ..Default::default()
                     }],
                 },
@@ -247,7 +249,6 @@ struct LaserCannonLoadingFlag;
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 enum LasersSystemSet {
     CreateLasers,
-    ApplyDeferred,
     UpdateLasers,
 }
 
@@ -269,16 +270,7 @@ pub(super) fn register(app: &mut App) {
         },
     );
 
-    app.configure_sets(
-        Update,
-        (
-            LasersSystemSet::CreateLasers,
-            LasersSystemSet::ApplyDeferred,
-            LasersSystemSet::UpdateLasers,
-        )
-            .chain(),
-    )
-    .add_systems(Update, apply_deferred.in_set(LasersSystemSet::ApplyDeferred));
+    app.configure_sets(Update, (LasersSystemSet::CreateLasers, LasersSystemSet::UpdateLasers).chain());
 
     app.add_event::<LaserCannonSystemFiredEvent>()
         .init_resource::<MiningLaserMaterialCache>()

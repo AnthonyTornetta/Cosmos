@@ -9,13 +9,16 @@ use bevy::{
         schedule::{common_conditions::in_state, IntoSystemConfigs},
         system::{Commands, Query, Res, ResMut, Resource},
     },
+    hierarchy::BuildChildren,
     log::{error, warn},
     prelude::{Deref, DerefMut},
     utils::HashMap,
 };
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
+    block::gravity_well::GravityWell,
     netty::{cosmos_encoder, server_replication::ReplicationMessage, NettyChannelServer},
+    physics::location::LocationPhysicsSet,
     registry::{identifiable::Identifiable, Registry},
     structure::{
         loading::StructureLoadingSet,
@@ -26,7 +29,12 @@ use cosmos_core::{
 };
 use serde::{de::DeserializeOwned, Serialize};
 
-use crate::{netty::mapping::NetworkMapping, registry::sync_registry, state::game_state::GameState};
+use crate::{
+    netty::mapping::NetworkMapping,
+    registry::sync_registry,
+    state::game_state::GameState,
+    structure::planet::align_player::{self, PlayerAlignment},
+};
 
 #[derive(Event, Debug, Clone)]
 struct StructureSystemNeedsUpdated {
@@ -56,7 +64,7 @@ impl<T> Default for SystemsQueue<T> {
     }
 }
 
-fn listen_netty(
+fn replication_listen_netty(
     mut client: ResMut<RenetClient>,
     mapping: Res<NetworkMapping>,
     mut event_writer: EventWriter<StructureSystemNeedsUpdated>,
@@ -111,6 +119,31 @@ fn listen_netty(
                     }
                 } else if q_is_active.contains(system) {
                     commands.entity(system).remove::<SystemActive>();
+                }
+            }
+            ReplicationMessage::GravityWell { gravity_well, entity } => {
+                let Some(entity) = mapping.client_from_server(&entity) else {
+                    warn!("Missing entity for gravity well!");
+                    continue;
+                };
+
+                let Some(mut ecmds) = commands.get_entity(entity) else {
+                    continue;
+                };
+
+                if let Some(mut grav_well) = gravity_well {
+                    let Some(structure_entity) = mapping.client_from_server(&grav_well.structure_entity) else {
+                        warn!("Missing structure entity for gravity well!");
+                        continue;
+                    };
+
+                    grav_well.structure_entity = structure_entity;
+
+                    ecmds
+                        .insert((grav_well, PlayerAlignment(align_player::Axis::Y)))
+                        .set_parent(structure_entity);
+                } else {
+                    ecmds.remove::<GravityWell>();
                 }
             }
         }
@@ -174,8 +207,11 @@ fn sync<T: StructureSystemImpl + Serialize + DeserializeOwned>(
 }
 
 pub fn sync_system<T: StructureSystemImpl + Serialize + DeserializeOwned>(app: &mut App) {
-    app.add_systems(Update, sync::<T>.run_if(in_state(GameState::Playing)).after(listen_netty))
-        .init_resource::<SystemsQueue<T>>();
+    app.add_systems(
+        Update,
+        sync::<T>.run_if(in_state(GameState::Playing)).after(replication_listen_netty),
+    )
+    .init_resource::<SystemsQueue<T>>();
 }
 
 pub(super) fn register(app: &mut App) {
@@ -183,7 +219,8 @@ pub(super) fn register(app: &mut App) {
 
     app.add_systems(
         Update,
-        listen_netty
+        replication_listen_netty
+            .before(LocationPhysicsSet::DoPhysics)
             .run_if(in_state(GameState::Playing))
             .after(StructureLoadingSet::StructureLoaded),
     )

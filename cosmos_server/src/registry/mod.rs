@@ -86,7 +86,7 @@ pub(super) fn register(app: &mut App) {
         Update,
         send_number_of_registries
             .run_if(in_state(GameState::Playing))
-            .after(NetworkingSystemsSet::FlushReceiveMessages),
+            .after(NetworkingSystemsSet::ProcessReceivedMessages),
     )
     .init_resource::<NumRegistriesToSync>();
 }

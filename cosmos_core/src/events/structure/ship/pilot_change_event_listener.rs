@@ -6,7 +6,7 @@ use bevy_rapier3d::prelude::{RigidBody, Sensor};
 
 use crate::entities::player::Player;
 use crate::events::structure::change_pilot_event::ChangePilotEvent;
-use crate::physics::location::{handle_child_syncing, Location};
+use crate::physics::location::{Location, LocationPhysicsSet};
 use crate::structure::ship::pilot::Pilot;
 
 #[derive(Component, Debug)]
@@ -135,12 +135,16 @@ pub(super) fn register<T: States + Clone + Copy>(app: &mut App, playing_state: T
         Update,
         (
             add_pilot,
-            pilot_removed.after(handle_child_syncing),
+            pilot_removed,
             remove_sensor,
             bouncer,
             verify_pilot_exists,
-            event_listener.after(handle_child_syncing).after(verify_pilot_exists),
+            event_listener,
         )
+            // Normally you'd want to put parent-changing systems before this set, but this was all designed before this was a thing.
+            // Perhaps in the future refactor this? To see how you should actually change parents, see the GravityWell logic.
+            .after(LocationPhysicsSet::DoPhysics)
+            .chain()
             .run_if(in_state(playing_state)),
     )
     .add_event::<RemoveSensorFrom>()

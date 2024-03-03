@@ -10,7 +10,9 @@ use crate::structure::block_storage::BlockStorer;
 use crate::structure::chunk::{Chunk, ChunkUnloadEvent, CHUNK_DIMENSIONS};
 use crate::structure::coordinates::{ChunkBlockCoordinate, ChunkCoordinate, CoordinateType};
 use crate::structure::events::ChunkSetEvent;
+use crate::structure::loading::StructureLoadingSet;
 use crate::structure::Structure;
+use bevy::ecs::schedule::{IntoSystemSetConfigs, SystemSet};
 use bevy::prelude::{
     Added, App, BuildChildren, Commands, Component, DespawnRecursiveExt, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, Query,
     Res, Transform, Update,
@@ -412,7 +414,7 @@ fn listen_for_new_physics_event(
     }
 }
 
-fn clean_unloaded_chunks(
+fn clean_unloaded_chunk_colliders(
     mut commands: Commands,
     mut physics_components_query: Query<&mut ChunkPhysicsParts>,
     mut event_reader: EventReader<ChunkUnloadEvent>,
@@ -482,7 +484,17 @@ fn listen_for_structure_event(
     }
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+enum StructurePhysicsSet {
+    StructurePhysicsLogic,
+}
+
 pub(super) fn register(app: &mut App) {
+    app.configure_sets(
+        Update,
+        StructurePhysicsSet::StructurePhysicsLogic.after(StructureLoadingSet::StructureLoaded),
+    );
+
     app.add_event::<ChunkNeedsPhysicsEvent>()
         // This wasn't registered in bevy_rapier
         .register_type::<ReadMassProperties>()
@@ -494,8 +506,9 @@ pub(super) fn register(app: &mut App) {
                 add_physics_parts,
                 listen_for_structure_event,
                 listen_for_new_physics_event,
-                clean_unloaded_chunks,
+                clean_unloaded_chunk_colliders,
             )
-                .chain(),
+                .chain()
+                .in_set(StructurePhysicsSet::StructurePhysicsLogic),
         );
 }
