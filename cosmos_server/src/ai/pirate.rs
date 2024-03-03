@@ -90,10 +90,6 @@ fn handle_pirate_movement(
         pirate_g_transform,
     ) in q_pirates.iter_mut()
     {
-        // let Some(accel_per_sec) = pirate_ai.accel_per_sec else {
-        //     continue;
-        // };
-
         let Some((target_ent, target_loc, target_vel, _)) = q_targets
             .iter()
             .filter(|x| x.1.is_within_reasonable_range(pirate_loc))
