@@ -4,11 +4,11 @@ use bevy::{
     prelude::*,
     render::{
         extract_resource::{ExtractResource, ExtractResourcePlugin},
-        render_asset::RenderAssetUsages,
-        render_asset::RenderAssets,
+        render_asset::{RenderAssetUsages, RenderAssets},
         render_graph::{self, RenderGraph, RenderLabel},
         render_resource::*,
         renderer::{RenderContext, RenderDevice},
+        texture::FallbackImage,
         Render, RenderApp, RenderSet,
     },
 };
@@ -16,10 +16,12 @@ use bevy::{
 const SIZE: (u32, u32) = (1280, 720);
 const WORKGROUP_SIZE: u32 = 8;
 
-#[derive(Resource, Clone, Deref, ExtractResource, AsBindGroup)]
-struct GolTexture {
+#[derive(Resource, Clone, ExtractResource, AsBindGroup)]
+struct ComputeValues {
     #[storage_texture(0, image_format = R32Float, access = ReadWrite)]
     image: Handle<Image>,
+    #[storage(1, visibility(compute))]
+    values: Vec<f32>,
 }
 
 fn setup(
@@ -56,25 +58,28 @@ fn setup(
         },
     ));
 
-    commands.insert_resource(GolTexture { image });
+    commands.insert_resource(ComputeValues {
+        image,
+        values: vec![100.0],
+    });
 }
 
 #[derive(Resource)]
-struct GameOfLifePipeline {
-    texture_bind_group_layout: BindGroupLayout,
+struct CustomComputePipeline {
+    bind_group_layout: BindGroupLayout,
     init_pipeline: CachedComputePipelineId,
     update_pipeline: CachedComputePipelineId,
 }
 
-impl FromWorld for GameOfLifePipeline {
+impl FromWorld for CustomComputePipeline {
     fn from_world(world: &mut World) -> Self {
         let render_device = world.resource::<RenderDevice>();
-        let texture_bind_group_layout = GolTexture::bind_group_layout(render_device);
+        let bind_group_layout = ComputeValues::bind_group_layout(render_device);
         let shader = world.resource::<AssetServer>().load("cosmos/shaders/compute.wgsl");
         let pipeline_cache = world.resource::<PipelineCache>();
         let init_pipeline = pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
             label: None,
-            layout: vec![texture_bind_group_layout.clone()],
+            layout: vec![bind_group_layout.clone()],
             push_constant_ranges: Vec::new(),
             shader: shader.clone(),
             shader_defs: vec![],
@@ -82,15 +87,15 @@ impl FromWorld for GameOfLifePipeline {
         });
         let update_pipeline = pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
             label: None,
-            layout: vec![texture_bind_group_layout.clone()],
+            layout: vec![bind_group_layout.clone()],
             push_constant_ranges: Vec::new(),
             shader,
             shader_defs: vec![],
             entry_point: Cow::from("update"),
         });
 
-        GameOfLifePipeline {
-            texture_bind_group_layout,
+        CustomComputePipeline {
+            bind_group_layout,
             init_pipeline,
             update_pipeline,
         }
@@ -98,22 +103,68 @@ impl FromWorld for GameOfLifePipeline {
 }
 
 #[derive(Resource)]
-struct GameOfLifeImageBindGroup(BindGroup);
+struct GameOfLifeImageBindGroup(PreparedBindGroup<()>);
 
 fn prepare_bind_group(
     mut commands: Commands,
-    pipeline: Res<GameOfLifePipeline>,
+    pipeline: Res<CustomComputePipeline>,
     gpu_images: Res<RenderAssets<Image>>,
-    gol_image: Res<GolTexture>,
+    compute_values: Res<ComputeValues>,
     render_device: Res<RenderDevice>,
+    fb_image: Res<FallbackImage>,
 ) {
-    let view = gpu_images.get(&gol_image.image).expect("Unable to get image from gpu");
+    // let view = gpu_images.get(&compute_values.image).expect("Unable to get gpu image");
 
-    let bind_group = render_device.create_bind_group(
-        None,
-        &pipeline.texture_bind_group_layout,
-        &BindGroupEntries::single(&view.texture_view),
-    );
+    // let bind_group = render_device.create_bind_group(
+    //     None,
+    //     &pipeline.bind_group_layout,
+    //     &BindGroupEntries::sequential((&view.texture_view, &compute_values.values)),
+    // );
+
+    let bind_group = compute_values
+        .as_bind_group(&pipeline.bind_group_layout, &render_device, &gpu_images, &fb_image)
+        .expect("Nope");
+
+    // let bind_group_layout = render_device.create_bind_group_layout(
+    //     None,
+    //     &[
+    //         BindGroupLayoutEntry {
+    //             binding: 1,
+    //             count: None,
+    //             visibility: ShaderStages::COMPUTE,
+    //             ty: BindingType::Buffer {
+    //                 has_dynamic_offset: false,
+    //                 min_binding_size: Some(NonZeroU64::new(1).unwrap()),
+    //                 ty: BufferBindingType::Storage { read_only: false },
+    //             },
+    //         },
+    //         BindGroupLayoutEntry {
+    //             binding: 1,
+    //             count: None,
+    //             visibility: ShaderStages::COMPUTE,
+    //             ty: BindingType::Buffer {
+    //                 has_dynamic_offset: false,
+    //                 min_binding_size: Some(NonZeroU64::new(1).unwrap()),
+    //                 ty: BufferBindingType::Storage { read_only: false },
+    //             },
+    //         },
+    //     ],
+    // );
+
+    // let storage_buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
+    //     label: Some("Collatz Conjecture Input"),
+    //     contents: gol_image.values.as_slice().as_bytes(),
+    //     usage: BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::COPY_SRC,
+    // });
+
+    // let bind_group = render_device.create_bind_group(&wgpu::BindGroupDescriptor {
+    //     label: None,
+    //     layout: &bind_group_layout,
+    //     entries: &[wgpu::BindGroupEntry {
+    //         binding: 0,
+    //         resource: storage_buffer.as_entire_binding(),
+    //     }],
+    // });
 
     commands.insert_resource(GameOfLifeImageBindGroup(bind_group));
 }
@@ -145,7 +196,7 @@ impl Plugin for GameOfLifeComputePlugin {
     fn build(&self, app: &mut App) {
         // Extract the game of life image resource from the main world into the render world
         // for operation on by the compute shader and display on the sprite.
-        app.add_plugins(ExtractResourcePlugin::<GolTexture>::default());
+        app.add_plugins(ExtractResourcePlugin::<ComputeValues>::default());
         let render_app = app.sub_app_mut(RenderApp);
         render_app.add_systems(Render, prepare_bind_group.in_set(RenderSet::PrepareBindGroups));
 
@@ -156,13 +207,13 @@ impl Plugin for GameOfLifeComputePlugin {
 
     fn finish(&self, app: &mut App) {
         let render_app = app.sub_app_mut(RenderApp);
-        render_app.init_resource::<GameOfLifePipeline>();
+        render_app.init_resource::<CustomComputePipeline>();
     }
 }
 
 impl render_graph::Node for GameOfLifeNode {
     fn update(&mut self, world: &mut World) {
-        let pipeline = world.resource::<GameOfLifePipeline>();
+        let pipeline = world.resource::<CustomComputePipeline>();
         let pipeline_cache = world.resource::<PipelineCache>();
 
         // if the corresponding pipeline has loaded, transition to the next stage
@@ -189,13 +240,13 @@ impl render_graph::Node for GameOfLifeNode {
     ) -> Result<(), render_graph::NodeRunError> {
         let texture_bind_group = &world.resource::<GameOfLifeImageBindGroup>().0;
         let pipeline_cache = world.resource::<PipelineCache>();
-        let pipeline = world.resource::<GameOfLifePipeline>();
+        let pipeline = world.resource::<CustomComputePipeline>();
 
         let mut pass = render_context
             .command_encoder()
             .begin_compute_pass(&ComputePassDescriptor::default());
 
-        pass.set_bind_group(0, texture_bind_group, &[]);
+        pass.set_bind_group(0, &texture_bind_group.bind_group, &[]);
 
         // select the pipeline based on the current state
         match self.state {
@@ -216,6 +267,12 @@ impl render_graph::Node for GameOfLifeNode {
     }
 }
 
+fn printy(res: Res<ComputeValues>) {
+    println!("{:?}", res.values);
+}
+
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Startup, setup).add_plugins(GameOfLifeComputePlugin);
+    app.add_systems(Startup, setup)
+        .add_plugins(GameOfLifeComputePlugin)
+        .add_systems(Update, printy);
 }

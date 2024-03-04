@@ -1,4 +1,5 @@
 @group(0) @binding(0) var texture: texture_storage_2d<r32float, read_write>;
+@group(0) @binding(1) var<storage, read_write> values: array<f32>;
 
 fn hash(value: u32) -> u32 {
     var state = value;
@@ -57,9 +58,10 @@ fn update(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
     } else {
         alive = false;
     }
-    let color = vec4<f32>(f32(alive));
+    let color = vec4<f32>(values[0] / values[0], values[0] / values[0], 0, 1);
 
     storageBarrier();
 
     textureStore(texture, location, color);
+    values[0] = 3.0;
 }
