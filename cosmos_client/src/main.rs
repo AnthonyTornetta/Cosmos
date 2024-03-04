@@ -35,6 +35,7 @@ pub mod window;
 use bevy::core::TaskPoolThreadAssignmentPolicy;
 use bevy::prelude::*;
 use bevy::window::WindowMode;
+use bevy_app_compute::prelude::AppComputePlugin;
 use bevy_mod_debugdump::schedule_graph;
 use bevy_rapier3d::prelude::{RapierConfiguration, TimestepMode};
 use bevy_renet::transport::NetcodeClientPlugin;
@@ -126,8 +127,7 @@ fn main() {
             GameState::Connecting,
             GameState::Playing,
         ))
-        .add_plugins(RenetClientPlugin)
-        .add_plugins(NetcodeClientPlugin)
+        .add_plugins((RenetClientPlugin, NetcodeClientPlugin, AppComputePlugin))
         // .add_plugins(RapierDebugRenderPlugin::default())
         .add_systems(OnEnter(GameState::Connecting), connect::establish_connection)
         .add_systems(Update, connect::wait_for_connection.run_if(in_state(GameState::Connecting)))

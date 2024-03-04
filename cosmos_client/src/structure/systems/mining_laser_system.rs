@@ -37,7 +37,7 @@ const BEAM_MAX_RANGE: f32 = 250.0;
 pub struct LaserCannonSystemFiredEvent(pub Entity);
 
 #[derive(Resource)]
-struct LaserCannonFireHandles(Vec<Handle<AudioSource>>);
+struct LaserCannonFireHandles(Vec<Handle<bevy_kira_audio::prelude::AudioSource>>);
 
 #[derive(Resource)]
 struct MiningLaserMesh(Handle<Mesh>);
@@ -255,7 +255,7 @@ enum LasersSystemSet {
 pub(super) fn register(app: &mut App) {
     sync_system::<MiningLaserSystem>(app);
 
-    load_assets::<AudioSource, LaserCannonLoadingFlag>(
+    load_assets::<bevy_kira_audio::prelude::AudioSource, LaserCannonLoadingFlag>(
         app,
         GameState::PreLoading,
         vec![

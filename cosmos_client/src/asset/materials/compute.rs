@@ -122,6 +122,8 @@ fn prepare_bind_group(
         .as_bind_group(&pipeline.bind_group_layout, &render_device, &gpu_images, &fb_image)
         .expect("Nope");
 
+    // bind_group.bindings
+
     // let bind_group_layout = render_device.create_bind_group_layout(
     //     None,
     //     &[
@@ -281,7 +283,7 @@ fn printy(res: Res<ComputeValues>) {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Startup, setup)
-        .add_plugins(GameOfLifeComputePlugin)
-        .add_systems(Update, printy);
+    // app.add_systems(Startup, setup)
+    //     .add_plugins(GameOfLifeComputePlugin)
+    //     .add_systems(Update, printy);
 }

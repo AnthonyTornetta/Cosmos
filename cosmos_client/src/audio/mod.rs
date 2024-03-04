@@ -6,7 +6,23 @@
 
 use std::time::Duration;
 
-use bevy::{prelude::*, utils::hashbrown::HashMap};
+use bevy::{
+    app::{App, PostUpdate, PreUpdate, Update},
+    asset::{AssetId, Assets, Handle},
+    ecs::{
+        bundle::Bundle,
+        component::Component,
+        entity::Entity,
+        query::{Changed, With},
+        removal_detection::RemovedComponents,
+        schedule::IntoSystemConfigs,
+        system::{Commands, Query, ResMut, Resource},
+    },
+    hierarchy::DespawnRecursiveExt,
+    prelude::{Deref, DerefMut},
+    transform::{components::GlobalTransform, TransformBundle},
+    utils::hashbrown::HashMap,
+};
 use bevy_kira_audio::{prelude::*, AudioSystemSet};
 
 /// Contains information for a specific audio emission.
@@ -203,7 +219,7 @@ fn monitor_attached_audio_sources(
 
 fn cleanup_stopped_spacial_instances(
     mut emitters: Query<(Entity, &mut CosmosAudioEmitter, Option<&DespawnOnNoEmissions>)>,
-    instances: Res<Assets<AudioInstance>>,
+    instances: ResMut<Assets<AudioInstance>>,
     mut commands: Commands,
 ) {
     for (entity, mut emitter, despawn_when_empty) in emitters.iter_mut() {

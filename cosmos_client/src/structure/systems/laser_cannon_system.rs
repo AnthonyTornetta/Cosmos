@@ -17,7 +17,7 @@ use super::sync::sync_system;
 pub struct LaserCannonSystemFiredEvent(pub Entity);
 
 #[derive(Resource)]
-struct LaserCannonFireHandles(Vec<Handle<AudioSource>>);
+struct LaserCannonFireHandles(Vec<Handle<bevy_kira_audio::prelude::AudioSource>>);
 
 fn apply_shooting_sound(
     query: Query<(&Location, &GlobalTransform)>,
@@ -61,7 +61,7 @@ struct LaserCannonLoadingFlag;
 pub(super) fn register(app: &mut App) {
     sync_system::<LaserCannonSystem>(app);
 
-    load_assets::<AudioSource, LaserCannonLoadingFlag>(
+    load_assets::<bevy_kira_audio::prelude::AudioSource, LaserCannonLoadingFlag>(
         app,
         GameState::PreLoading,
         vec![

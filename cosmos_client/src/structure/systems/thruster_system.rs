@@ -68,14 +68,14 @@ fn apply_thruster_sound(
 }
 
 #[derive(Resource)]
-struct ThrusterAudioHandle(Handle<AudioSource>);
+struct ThrusterAudioHandle(Handle<bevy_kira_audio::prelude::AudioSource>);
 
 struct ThrusterSoundLoading;
 
 pub(super) fn register(app: &mut App) {
     sync_system::<ThrusterSystem>(app);
 
-    load_assets::<AudioSource, ThrusterSoundLoading>(
+    load_assets::<bevy_kira_audio::prelude::AudioSource, ThrusterSoundLoading>(
         app,
         GameState::PreLoading,
         vec!["cosmos/sounds/sfx/thruster-running.ogg"],

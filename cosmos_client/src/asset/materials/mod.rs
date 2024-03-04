@@ -19,6 +19,7 @@ use super::asset_loading::{load_block_rendering_information, BlockRenderingInfo}
 pub mod animated_material;
 pub mod block_materials;
 mod compute;
+mod compute_2;
 pub(super) mod material_types;
 
 #[derive(Hash, Clone, Copy, Debug, PartialEq, Eq)]
@@ -216,6 +217,7 @@ pub(super) fn register(app: &mut App) {
     block_materials::register(app);
     animated_material::register(app);
     compute::register(app);
+    compute_2::register(app);
 
     app.add_systems(
         OnExit(GameState::PostLoading),
