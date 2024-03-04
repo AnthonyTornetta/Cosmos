@@ -1,4 +1,4 @@
-@group(0) @binding(0) var texture: texture_storage_2d<r32float, read_write>;
+// @group(0) @binding(0) var texture: texture_storage_2d<r32float, read_write>;
 @group(0) @binding(1) var<storage, read_write> values: array<f32>;
 
 fn hash(value: u32) -> u32 {
@@ -18,13 +18,13 @@ fn randomFloat(value: u32) -> f32 {
 
 @compute @workgroup_size(8, 8, 1)
 fn init(@builtin(global_invocation_id) invocation_id: vec3<u32>, @builtin(num_workgroups) num_workgroups: vec3<u32>) {
-    let location = vec2<i32>(i32(invocation_id.x), i32(invocation_id.y));
+    // let location = vec2<i32>(i32(invocation_id.x), i32(invocation_id.y));
 
-    let randomNumber = randomFloat(invocation_id.y * num_workgroups.x + invocation_id.x);
-    let alive = randomNumber > 0.9;
-    let color = vec4<f32>(f32(alive));
+    // let randomNumber = randomFloat(invocation_id.y * num_workgroups.x + invocation_id.x);
+    // let alive = randomNumber > 0.9;
+    // let color = vec4<f32>(f32(alive));
 
-    textureStore(texture, location, color);
+    // textureStore(texture, location, color);
 }
 
 fn is_alive(location: vec2<i32>, offset_x: i32, offset_y: i32) -> i32 {
@@ -45,23 +45,23 @@ fn count_alive(location: vec2<i32>) -> i32 {
 
 @compute @workgroup_size(8, 8, 1)
 fn update(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
-    let location = vec2<i32>(i32(invocation_id.x), i32(invocation_id.y));
+    // let location = vec2<i32>(i32(invocation_id.x), i32(invocation_id.y));
 
-    let n_alive = count_alive(location);
+    // let n_alive = count_alive(location);
 
-    var alive: bool;
-    if (n_alive == 3) {
-        alive = true;
-    } else if (n_alive == 2) {
-        let currently_alive = is_alive(location, 0, 0);
-        alive = bool(currently_alive);
-    } else {
-        alive = false;
-    }
-    let color = vec4<f32>(values[0] / values[0], values[0] / values[0], 0, 1);
+    // var alive: bool;
+    // if (n_alive == 3) {
+    //     alive = true;
+    // } else if (n_alive == 2) {
+    //     let currently_alive = is_alive(location, 0, 0);
+    //     alive = bool(currently_alive);
+    // } else {
+    //     alive = false;
+    // }
+    // let color = vec4<f32>(values[0] * alive, 0, 0, 1);
 
-    storageBarrier();
+    // storageBarrier();
 
-    textureStore(texture, location, color);
-    values[0] = 3.0;
+    // textureStore(texture, location, color);
+    values[0] = 1.0;
 }

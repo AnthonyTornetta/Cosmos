@@ -16,9 +16,9 @@ use bevy::{
 const SIZE: (u32, u32) = (1280, 720);
 const WORKGROUP_SIZE: u32 = 8;
 
-#[derive(Resource, Clone, ExtractResource, AsBindGroup)]
+#[derive(Resource, Clone, ExtractResource, AsBindGroup, Debug)]
 struct ComputeValues {
-    #[storage_texture(0, image_format = R32Float, access = ReadWrite)]
+    // #[storage_texture(0, image_format = R32Float, access = ReadWrite)]
     image: Handle<Image>,
     #[storage(1, visibility(compute))]
     values: Vec<f32>,
@@ -58,10 +58,7 @@ fn setup(
         },
     ));
 
-    commands.insert_resource(ComputeValues {
-        image,
-        values: vec![100.0],
-    });
+    commands.insert_resource(ComputeValues { image, values: vec![0.0] });
 }
 
 #[derive(Resource)]
@@ -196,13 +193,25 @@ impl Plugin for GameOfLifeComputePlugin {
     fn build(&self, app: &mut App) {
         // Extract the game of life image resource from the main world into the render world
         // for operation on by the compute shader and display on the sprite.
-        app.add_plugins(ExtractResourcePlugin::<ComputeValues>::default());
+        // app.add_plugins(ExtractResourcePlugin::<ComputeValues>::default());
+
         let render_app = app.sub_app_mut(RenderApp);
+
+        render_app.insert_resource(ComputeValues {
+            image: Handle::default(),
+            values: vec![0.0],
+        });
+
         render_app.add_systems(Render, prepare_bind_group.in_set(RenderSet::PrepareBindGroups));
 
         let mut render_graph = render_app.world.resource_mut::<RenderGraph>();
         render_graph.add_node(GameOfLifeLabel, GameOfLifeNode::default());
         render_graph.add_node_edge(GameOfLifeLabel, bevy::render::graph::CameraDriverLabel);
+
+        render_app.add_systems(
+            Render,
+            (|cv: Res<ComputeValues>| println!("{cv:?}")).in_set(RenderSet::PrepareBindGroups),
+        );
     }
 
     fn finish(&self, app: &mut App) {
