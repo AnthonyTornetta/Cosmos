@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::registry::{create_registry, identifiable::Identifiable, Registry};
 
-use super::{loading::StructureLoadingSet, ship::Ship, Structure};
+use super::{loading::StructureLoadingSet, shared::MeltingDown, ship::Ship, Structure};
 
 pub mod camera_system;
 pub mod energy_generation_system;
@@ -42,6 +42,20 @@ pub mod thruster_system;
 ///
 /// would give you every laser cannon system that is currently being activated.
 pub struct SystemActive;
+
+fn remove_system_actives_when_melting_down(
+    mut commands: Commands,
+    q_system_active: Query<Entity, With<SystemActive>>,
+    q_melting_down: Query<&Systems, With<MeltingDown>>,
+) {
+    for systems in &q_melting_down {
+        let Ok(ent) = systems.query(&q_system_active) else {
+            continue;
+        };
+
+        commands.entity(ent).remove::<SystemActive>();
+    }
+}
 
 #[derive(Component)]
 /// Used to tell if a system has a specified controller
@@ -324,8 +338,14 @@ impl Identifiable for StructureSystemType {
 pub(super) fn register(app: &mut App) {
     create_registry::<StructureSystemType>(app, "cosmos:structure_system_types");
 
-    app.add_systems(Update, add_structure.in_set(StructureLoadingSet::LoadChunkData))
-        .register_type::<StructureSystem>();
+    app.add_systems(
+        Update,
+        (
+            add_structure.in_set(StructureLoadingSet::LoadChunkData),
+            remove_system_actives_when_melting_down,
+        ),
+    )
+    .register_type::<StructureSystem>();
 
     line_system::register(app);
     camera_system::register(app);
