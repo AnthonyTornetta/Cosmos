@@ -2,19 +2,23 @@
 
 A multiplayer block-based space exploration game, written in rust using the [Bevy](https://www.bevyengine.org/) engine.
 
-If you're interested, join our new discord server here:
+If you're interested in playing the game, helping out, pitching ideas, or just hanging out, join our discord server!
 [![Join Cosmos's Discord server here!](https://dcbadge.vercel.app/api/server/VeuqvnxsZb)](https://discord.gg/VeuqvnxsZb)
 
 ## Screenshots
 
-Cosmos is a game where you can create your dream spaceship that you can pilot through space. (And add those are working laser cannons.)
+Cosmos is a game where you can create your dream spaceship that you can pilot through space.
 ![](./showcase/gunship_top.png)
 
-Build your own ship block by block and walk inside with friends while cruising through space.
-![](./showcase/gunner_flying_towards_planet.png)
+Build your own ship block by block and cruise through space with friends, or make have everyone build their own ship.
+![](./showcase/many_ships.png)
 
-Once you reach your destination, make a _hopefully safer than this_ landing.
-![](./showcase/safely_landed_gunner.png)
+Fly by huge, fully-interactable, planets
+![](./showcase/planet_close.png)
+![](./showcase/on_planet.png)
+
+Beware! In the depths of space, there's always someone that wants you dead. Watch out for pirates! They spawn in pacts and, once they see you, will hunt you mercilessly.
+![](./showcase/shooting_ship.png)
 
 ## Compilation
 
@@ -53,7 +57,41 @@ If you want to view the ordering of the systems, run (on linux) `cargo run --fea
 
 See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the list of current features/bugs in development.
 
-## Release 0.0.5a - The Playable Release (In Progress)
+## Release 0.0.6a (In Progress)
+- [ ] Place rotated blocks
+- [ ] Inventory UI improvements
+- [ ] Money
+  - [ ] Pay others
+- [ ] A way of selecting which systems to use preventing use of systems that are not meant to be actively used
+- [ ] Dropped item entity
+- [ ] Wires
+  - [ ] Electrical
+  - [ ] Logic
+- [ ] Planet generation & LOD overhaul
+  - [ ] Performance improvements
+  - [ ] GPU-based generation
+  - [ ] Biosphere Improvements
+  - [ ] Ice biosphere glaciers
+    - [ ] Water block
+    - [ ] Lava block
+    - [ ] Structures
+      - [ ] Rocks spawning
+      - [ ] Undergrowth
+      - [ ] 1 More tree type
+    - [ ] Groundwork for biomes
+      - [ ] Planes
+      - [ ] Redwood forest
+      - [ ] 1 Additional forest
+      - [ ] Ocean
+    - [ ] On-planet skybox
+      - [ ] Sun-side skybox
+        - [ ] Perhaps done via a sphere surrounding the planet that always faces the nearest star
+      - [ ] Sun-set skybox
+      - [ ] Night-side skybox
+- [ ] Structure gets deleted when no more blocks are left
+- [ ] An interface into all the storage devices on the ship
+
+## Release 0.0.5a
 - [x] Add a gravity well block
   - [x] Remove snapping to structures on collision
 - [x] Camera system
@@ -74,8 +112,8 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
   - [x] Mines the first block hit by the beam after a given time
     - [x] Inserts the item into the ship's inventory
     - [x] Hold lmb to continually fire the laser
-- [ ] Pirates
-  - [ ] Create a number of pirate ships
+- [x] Pirates
+  - [x] Create a number of pirate ships
     - [x] Each ship has a difficulty
   - [x] Difficulty of spawns scales off player's money & ship's number of blocks
   - [x] Basic AI
@@ -286,48 +324,11 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 - [x] Support re-sizable window
 
 ## Everything that will still have to be done after 0.0.6a
-
-- [ ] Biosphere Improvements
-  - [ ] Ice biosphere glaciers
-  - [ ] Water block
-  - [ ] Lava block
-  - [ ] Structures
-    - [ ] Rocks spawning
-    - [ ] Undergrowth
-    - [ ] 1 More tree type
-  - [ ] Groundwork for biomes
-    - [ ] Planes
-    - [ ] Redwood forest
-    - [ ] 1 Additional forest
-    - [x] Ocean
-  - [ ] On-planet skybox
-    - [ ] Sun-side skybox
-      - [ ] Perhaps done via a sphere surrounding the planet that always faces the nearest star
-    - [ ] Sun-set skybox
-    - [ ] Night-side skybox
 - [ ] Shops
   - [ ] Peace zone?
   - [ ] Prices based on supply + rarity
     - [ ] Keep supply relatively equal between nearby shops
   - [ ] Each shop has its own supply of money that it cannot go below
-
-## Release 0.0.6a
-- [ ] Place rotated blocks
-- [ ] Inventory UI improvements
-- [ ] Money
-  - [ ] Pay others
-- [ ] A way of selecting which systems to use preventing use of systems that are not meant to be actively used
-- [ ] Dropped item entity
-- [ ] Wires
-  - [ ] Electrical
-  - [ ] Logic
-- [ ] Planet generation & LOD overhaul
-  - [ ] Performance improvements
-  - [ ] GPU-based generation
-- [ ] Structure gets deleted when no more blocks are left
-- [ ] An interface into all the storage devices on the ship
-- [ ] Gravity Block
-  - [ ] Interact to become "docked" to that structure and have a configurable amount of gravity applied
 
 ## NPCs
 
