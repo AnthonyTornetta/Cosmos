@@ -45,9 +45,11 @@ local-ip-address = { workspace = true }
 bevy_rapier3d = { workspace = true }
 bigdecimal = { workspace = true }
 futures-lite = { workspace = true }
+noise = { workspace = true }
 
 serde_json = { workspace = true }
 image = { workspace = true }
+bytemuck = { workspace = true }
 
 bevy-inspector-egui = { workspace = true }
 

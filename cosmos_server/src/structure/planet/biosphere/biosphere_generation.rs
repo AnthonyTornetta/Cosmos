@@ -1249,7 +1249,7 @@ fn guide(
     block_up: BlockFace,
     block_coords: BlockCoordinate,
     structure_coords: (f64, f64, f64),
-    middle_air_start: CoordinateType,
+    sea_level: CoordinateType,
     amplitude: f64,
     delta: f64,
     iterations: usize,
@@ -1257,7 +1257,7 @@ fn guide(
 ) -> CoordinateType {
     // The amplitude * iterations is an approximation to account for needing to guide the terrain farther from the edge
     // the bumpier the terrain is. Terrain may still get too bumpy.
-    let top = middle_air_start - (amplitude * iterations as f64) as CoordinateType;
+    let top = sea_level - (amplitude * iterations as f64) as CoordinateType;
     let bottom = s_dimensions - top;
     let min = top - GUIDE_MIN;
 
@@ -1275,15 +1275,7 @@ fn guide(
             BlockFace::Left => (x_coord, block_coords.y, block_coords.z),
         }
         .into();
-        x_height = get_block_height(
-            noise_generator,
-            x_seed,
-            structure_coords,
-            middle_air_start,
-            amplitude,
-            delta,
-            iterations,
-        );
+        x_height = get_block_height(noise_generator, x_seed, structure_coords, sea_level, amplitude, delta, iterations);
         x_coefficient = get_mirror_coefficient(block_coords.x, x_height as CoordinateType, s_dimensions);
     }
 
@@ -1301,15 +1293,7 @@ fn guide(
             BlockFace::Left => (bottom, y_coord, block_coords.z.clamp(bottom, top)),
         }
         .into();
-        y_height = get_block_height(
-            noise_generator,
-            y_seed,
-            structure_coords,
-            middle_air_start,
-            amplitude,
-            delta,
-            iterations,
-        );
+        y_height = get_block_height(noise_generator, y_seed, structure_coords, sea_level, amplitude, delta, iterations);
         y_coefficient = get_mirror_coefficient(block_coords.y, y_height as CoordinateType, s_dimensions);
     }
 
@@ -1327,15 +1311,7 @@ fn guide(
             BlockFace::Left => (bottom, block_coords.y.clamp(bottom, top), z_coord),
         }
         .into();
-        z_height = get_block_height(
-            noise_generator,
-            z_seed,
-            structure_coords,
-            middle_air_start,
-            amplitude,
-            delta,
-            iterations,
-        );
+        z_height = get_block_height(noise_generator, z_seed, structure_coords, sea_level, amplitude, delta, iterations);
         z_coefficient = get_mirror_coefficient(block_coords.z, z_height as CoordinateType, s_dimensions);
     }
 

@@ -42,6 +42,7 @@ bevy_mod_debugdump = "0.10.0"
 arboard = "3.3.1"
 derive_more = "0.99.17"
 clap = "4.4.2"
+bytemuck = "1.14.3"
 
 # For any non workspace package
 [profile.dev.package."*"]
