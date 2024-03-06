@@ -33,6 +33,10 @@ default = [
 ]
 
 [dependencies]
+cosmos_core = { version = "0.0.5", path = "../cosmos_core", features = [
+    "server",
+] }
+
 bevy = { workspace = true }
 bevy_renet = { workspace = true, features = ["serde"] }
 serde = { workspace = true }
@@ -50,10 +54,6 @@ serde_json = { workspace = true }
 
 rayon = { workspace = true }
 
-cosmos_core = { version = "0.0.5", path = "../cosmos_core", features = [
-    "server",
-] }
-
 bevy-inspector-egui = { workspace = true }
 
 walkdir = { workspace = true }
@@ -64,3 +64,6 @@ thiserror = { workspace = true }
 bitflags = { workspace = true }
 bevy_mod_debugdump = { workspace = true }
 derive_more = { workspace = true }
+
+bevy_app_compute = { workspace = true }
+bytemuck = { workspace = true }

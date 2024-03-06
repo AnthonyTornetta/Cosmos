@@ -70,7 +70,7 @@ impl ComputeWorker for ShaderWorker {
         assert!((SIZE * SIZE * SIZE) % WORKGROUP_SIZE == 0);
 
         let mut worker = AppComputeWorkerBuilder::new(world)
-            .one_shot()
+            //          .one_shot()
             .add_uniform("params", &params)
             .add_staging("values", &vals)
             .add_pass::<ComputeShaderInstance>(
@@ -101,7 +101,6 @@ fn print_value(
     blocks: Res<Registry<Block>>,
 ) {
     if !worker.ready() {
-        worker.execute();
         println!("Worker not ready");
         return;
     }
@@ -110,10 +109,9 @@ fn print_value(
 
     let v: Vec<f32> = worker.try_read_vec("values").expect("OH NOEEEE!");
 
-    let block = blocks.from_id("cosmos:stone").unwrap();
-
     for (ent, mut s) in &mut q_structures {
         if s.get_chunk_state(ChunkCoordinate::new(0, 0, 0)) == ChunkState::Loaded {
+            let block = blocks.from_id("cosmos:stone").unwrap();
             println!("Changing structure!");
             for (i, v) in v.iter().enumerate() {
                 let (x, y, z) = expand(i, CHUNK_DIMENSIONS_USIZE, CHUNK_DIMENSIONS_USIZE);
