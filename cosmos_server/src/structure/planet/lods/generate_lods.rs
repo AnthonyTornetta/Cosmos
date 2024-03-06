@@ -221,19 +221,19 @@ pub(crate) fn start_generating_lods(
             continue;
         };
 
-        let generating_lod = create_generating_lod(&lod_request.request, (BlockCoordinate::new(0, 0, 0), structure.block_dimensions()));
+        // let generating_lod = create_generating_lod(&lod_request.request, (BlockCoordinate::new(0, 0, 0), structure.block_dimensions()));
 
-        debug!("Starting to generate lod for {:?}", lod_request.structure_entity);
+        // debug!("Starting to generate lod for {:?}", lod_request.structure_entity);
 
-        commands
-            .entity(entity)
-            .remove::<LodGenerationRequest>()
-            .insert(LodNeedsGeneratedForPlayer {
-                structure_entity: lod_request.structure_entity,
-                generating_lod,
-                player_entity: lod_request.player_entity,
-                current_lod: lod_request.current_lod.clone(),
-            });
+        // commands
+        //     .entity(entity)
+        //     .remove::<LodGenerationRequest>()
+        //     .insert(LodNeedsGeneratedForPlayer {
+        //         structure_entity: lod_request.structure_entity,
+        //         generating_lod,
+        //         player_entity: lod_request.player_entity,
+        //         current_lod: lod_request.current_lod.clone(),
+        //     });
     }
 }
 
