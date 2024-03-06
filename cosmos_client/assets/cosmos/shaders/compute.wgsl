@@ -142,6 +142,12 @@ fn main(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
     // SIZE
     let coords = expand(idx, u32(32), u32(32));
 
+    let coords_f32 = vec3(f32(coords.x), f32(coords.y), f32(coords.z)) * params.scale;
+
+    coords_f32.x += params.chunk_coords.x;
+    coords_f32.y += params.chunk_coords.y;
+    coords_f32.z += params.chunk_coords.z;
+
     // let n_alive = count_alive(location);
 
     // var alive: bool;
@@ -155,11 +161,13 @@ fn main(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
     // }
     // let color = vec4<f32>(values[0] * alive, 0, 0, 1);
 
-    storageBarrier();
+    // storageBarrier();
 
     // textureStore(texture, location, color);
 
-    let has_block = f32(coords.y) * params.scale < params.sea_level + sin(0.1 * (f32(coords.x) * params.scale + f32(coords.z) * params.scale)) * 9;
+    let has_block = abs(coords_f32.y) < params.sea_level + sin(0.1 * (coords_f32.x + coords_f32.z)) * 9;
 
     values[idx] = f32(has_block);// params.chunk_coords.x + params.structure_pos.x;
+
+    // values[idx] = 1.0;
 }

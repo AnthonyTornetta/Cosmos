@@ -116,7 +116,7 @@ fn start_generating_asteroid(
 }
 
 pub(super) fn register(app: &mut App) {
-    register_asteroid_generator::<IcyAsteroidMarker>(app, "cosmos:icy", TemperatureRange::new(0.0, 700.0));
+    register_asteroid_generator::<IcyAsteroidMarker>(app, "cosmos:icy", TemperatureRange::new(800.0, 700.0));
 
     app.add_systems(
         Update,

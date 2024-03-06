@@ -3,6 +3,7 @@
 use bevy::{
     log::warn,
     prelude::{App, Component, Entity, Event, OnEnter, Res, ResMut},
+    reflect::TypePath,
 };
 use cosmos_core::{registry::Registry, structure::coordinates::ChunkCoordinate};
 
@@ -13,7 +14,7 @@ use super::{
     register_biosphere, BiosphereMarkerComponent, TBiosphere, TGenerateChunkEvent, TemperatureRange,
 };
 
-#[derive(Component, Debug, Default, Clone, Copy)]
+#[derive(Component, Debug, Default, Clone, Copy, TypePath)]
 /// Marks that this is for a grass biosphere
 pub struct IceBiosphereMarker;
 

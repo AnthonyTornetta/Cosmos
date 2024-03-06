@@ -17,7 +17,7 @@ use cosmos_core::{
 use crate::{
     init::init_world::{Noise, ServerSeed},
     state::GameState,
-    structure::planet::biosphere::biosphere_generation::BlockLayers,
+    structure::planet::biosphere::biosphere_generation_old::BlockLayers,
 };
 
 use super::{biome_registry::RegisteredBiome, Biome};

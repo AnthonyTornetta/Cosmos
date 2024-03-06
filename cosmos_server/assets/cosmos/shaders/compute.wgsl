@@ -3,10 +3,11 @@
 @group(0) @binding(1) var<storage, read_write> values: array<f32>;
 
 struct GenerationParams {
-    chunk_coords: vec3<f32>,
-    structure_pos: vec3<f32>,
-    scale: f32,
-    sea_level: f32,
+    // Everythihng has to be a vec4 because padding. Otherwise things get super wack
+    chunk_coords: vec4<f32>,
+    structure_pos: vec4<f32>,
+    sea_level: vec4<f32>,
+    scale: vec4<f32>,
 }
 
 // enum BlockFace {
@@ -142,6 +143,8 @@ fn main(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
     // SIZE
     let coords = expand(idx, u32(32), u32(32));
 
+    let coords_f32 = vec4(f32(coords.x), f32(coords.y), f32(coords.z), 0.0) * params.scale + params.chunk_coords;
+
     // let n_alive = count_alive(location);
 
     // var alive: bool;
@@ -155,11 +158,13 @@ fn main(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
     // }
     // let color = vec4<f32>(values[0] * alive, 0, 0, 1);
 
-    storageBarrier();
+    // storageBarrier();
 
     // textureStore(texture, location, color);
 
-    let has_block = f32(coords.y) * params.scale < params.sea_level + sin(0.1 * (f32(coords.x) * params.scale + f32(coords.z) * params.scale)) * 9;
+    let has_block = abs(coords_f32.y) < f32(params.sea_level.y) + sin(0.1 * (coords_f32.x + coords_f32.z)) * 9;
 
-    values[idx] = f32(has_block);// params.chunk_coords.x + params.structure_pos.x;
+    // values[idx] = f32(params.sea_level);// f32(coords_f32.y < params.sea_level);//f32(coords_f32.y < 500.0);// params.chunk_coords.x + params.structure_pos.x;
+    values[idx] = f32(has_block);// f32(coords_f32.y < params.sea_level.y); //f32(coords_f32.y < 500.0);// params.chunk_coords.x + params.structure_pos.x;
+    // values[idx] = 1.0 + params.chunk_coords.x;
 }

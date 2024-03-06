@@ -70,7 +70,7 @@ impl ComputeWorker for ShaderWorker {
         assert!((SIZE * SIZE * SIZE) % WORKGROUP_SIZE == 0);
 
         let mut worker = AppComputeWorkerBuilder::new(world)
-            //          .one_shot()
+            .one_shot()
             .add_uniform("params", &params)
             .add_staging("values", &vals)
             .add_pass::<ComputeShaderInstance>(
@@ -86,8 +86,8 @@ impl ComputeWorker for ShaderWorker {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_plugins(AppComputeWorkerPlugin::<ShaderWorker>::default())
-        .add_systems(Update, print_value);
+    // app.add_plugins(AppComputeWorkerPlugin::<ShaderWorker>::default())
+    //     .add_systems(Update, print_value);
 }
 
 #[derive(Component)]
@@ -101,7 +101,7 @@ fn print_value(
     blocks: Res<Registry<Block>>,
 ) {
     if !worker.ready() {
-        println!("Worker not ready");
+        worker.execute();
         return;
     }
 

@@ -18,7 +18,7 @@ use noise::NoiseFn;
 use crate::{
     init::init_world::{Noise, ServerSeed},
     state::GameState,
-    structure::planet::biosphere::{biosphere_generation::BlockLayers, generation_tools::fill},
+    structure::planet::biosphere::{biosphere_generation_old::BlockLayers, generation_tools::fill},
 };
 
 use super::{biome_registry::RegisteredBiome, Biome};

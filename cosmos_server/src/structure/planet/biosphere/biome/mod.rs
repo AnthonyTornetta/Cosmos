@@ -31,7 +31,7 @@ use crate::{
     state::GameState,
 };
 
-use super::{biosphere_generation::BlockLayers, BiosphereMarkerComponent};
+use super::{biosphere_generation_old::BlockLayers, BiosphereMarkerComponent};
 
 pub mod biome_registry;
 pub mod desert;

@@ -8,6 +8,7 @@ use bevy::{
         in_state, Added, App, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, Query, Res, ResMut,
         Resource, Startup, Update, With, Without,
     },
+    reflect::TypePath,
     tasks::Task,
 };
 use cosmos_core::{
@@ -38,7 +39,7 @@ use crate::{
 
 use self::{
     biome::{create_biosphere_biomes_registry, BiomeParameters, BiosphereBiomesRegistry},
-    biosphere_generation::{begin_generating_lods, generate_planet, notify_when_done_generating_terrain, GenerateChunkFeaturesEvent},
+    biosphere_generation_old::{begin_generating_lods, generate_planet, notify_when_done_generating_terrain, GenerateChunkFeaturesEvent},
 };
 
 use super::{
@@ -48,6 +49,7 @@ use super::{
 
 pub mod biome;
 pub mod biosphere_generation;
+pub mod biosphere_generation_old;
 pub mod generation_tools;
 pub mod grass_biosphere;
 pub mod ice_biosphere;
@@ -58,7 +60,7 @@ pub mod molten_biosphere;
 /// Ideally, this should be a 0-size type to allow for quick creation of it.
 ///
 /// Generally, you should just create a new marker component for every new biosphere you create, as each biosphere needs a unique component to work properly.
-pub trait BiosphereMarkerComponent: Component + Default + Clone + Copy {}
+pub trait BiosphereMarkerComponent: Component + Default + Clone + Copy + TypePath {}
 
 #[derive(Debug, Event)]
 /// This event is generated whenever a structure needs a biosphere
@@ -238,6 +240,8 @@ pub fn register_biosphere<T: BiosphereMarkerComponent + Default + Clone, E: Send
     create_biosphere_biomes_registry::<T>(app);
     info!("Done creating biome registry.");
 
+    biosphere_generation::register::<T>(app);
+
     app.add_event::<E>()
         .add_systems(Startup, move |mut registry: ResMut<BiosphereTemperatureRegistry>| {
             registry.register(biosphere_id.to_owned(), temperature_range);
@@ -277,8 +281,8 @@ pub fn register_biosphere<T: BiosphereMarkerComponent + Default + Clone, E: Send
                 // Checks if any blocks need generated for this biosphere
                 (
                     (
-                        generate_planet::<T, E>,
-                        notify_when_done_generating_terrain::<T>,
+                        biosphere_generation::generate_planet::<T, E>,
+                        biosphere_generation::send_and_read_chunks_gpu::<T, E>,
                         generate_chunk_featuress::<T>,
                     )
                         .chain(),
