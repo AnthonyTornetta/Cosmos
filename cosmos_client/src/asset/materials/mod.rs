@@ -217,8 +217,8 @@ pub(super) fn register(app: &mut App) {
     block_materials::register(app);
     animated_material::register(app);
     compute::register(app);
-    compute_2::register(app);
-
+    // compute_2::register(app);
+    //
     app.add_systems(
         OnExit(GameState::PostLoading),
         register_materials.after(load_block_rendering_information),

@@ -477,7 +477,6 @@ dependencies = [
 [[package]]
 name = "bevy_app_compute"
 version = "0.13.0"
-source = "git+https://github.com/sclausen/bevy_app_compute/#78822a84c660f5c921abdb8bee8b48400335adf9"
 dependencies = [
  "bevy",
  "bytemuck",
@@ -1805,11 +1804,13 @@ dependencies = [
  "anyhow",
  "bevy",
  "bevy-inspector-egui",
+ "bevy_app_compute",
  "bevy_rapier3d",
  "bevy_renet",
  "bigdecimal",
  "bincode",
  "bitflags 2.4.2",
+ "bytemuck",
  "derive_more",
  "image",
  "local-ip-address",

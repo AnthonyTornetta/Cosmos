@@ -2,6 +2,7 @@
 
 use bevy::app::PluginGroupBuilder;
 use bevy::prelude::{App, Plugin, PluginGroup, States};
+use bevy_app_compute::prelude::AppComputePlugin;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_rapier3d::prelude::{NoUserData, RapierPhysicsPlugin};
 
@@ -112,6 +113,7 @@ impl<T: States + Clone + Copy> PluginGroup for CosmosCorePluginGroup<T> {
             // .add(RenderPlugin::default())
             .add(RapierPhysicsPlugin::<NoUserData>::default())
             // .add(ImagePlugin::default_nearest())
+            .add(AppComputePlugin)
             .add(WorldInspectorPlugin::default())
             .add(CosmosCorePlugin::new(
                 self.pre_loading_state,

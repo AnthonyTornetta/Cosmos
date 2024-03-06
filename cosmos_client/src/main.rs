@@ -35,7 +35,6 @@ pub mod window;
 use bevy::core::TaskPoolThreadAssignmentPolicy;
 use bevy::prelude::*;
 use bevy::window::WindowMode;
-use bevy_app_compute::prelude::AppComputePlugin;
 use bevy_mod_debugdump::schedule_graph;
 use bevy_rapier3d::prelude::{RapierConfiguration, TimestepMode};
 use bevy_renet::transport::NetcodeClientPlugin;
