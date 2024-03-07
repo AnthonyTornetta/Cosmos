@@ -121,7 +121,6 @@ fn planet_face_relative(relative_position: vec3<f32>) -> i32 {
 //     }
 // }
 
-
 /// Reverses the operation of flatten, and gives the 3d x/y/z coordinates for a 3d array given a 1d array coordinate
 fn expand(index: u32, width: u32, height: u32) -> vec3<u32> {
     let wh = width * height;
@@ -164,7 +163,14 @@ fn main(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
 
     var iterations = 9;
     let delta = f64(0.01);
-    let amplitude = f64(9.0);
+
+    // let amplitude = noise(
+    //         f64(coords_f32.x + 1.0) * (delta),
+    //         f64(coords_f32.y - 1.0) * (delta),
+    //         f64(coords_f32.z + 1.0) * (delta),
+    //     ) * 9.0;
+
+    let amplitude = f64(4.0);
 
     var depth: f64 = 0.0;
 
@@ -183,7 +189,21 @@ fn main(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
     // 9.0 * f32(noise(f64(coords_f32.x * 0.01), f64(coords_f32.y * 0.01), f64(coords_f32.z * 0.01)))
 
     // let has_block = abs(coords_f32.y) < f32(params.sea_level.y) + sin(0.1 * (coords_f32.x + coords_f32.z)) * 9;
-    let has_block = abs(coords_f32.y) < f32(params.sea_level.y) + f32(depth);
+    var coord: f32 = coords_f32.x;
+    
+    let face = planet_face_relative(vec3(coords_f32.x, coords_f32.y, coords_f32.z));
+
+    if face == BF_LEFT || face == BF_RIGHT {
+        coord = coords_f32.x;
+    }
+    else if face == BF_TOP || face == BF_BOTTOM {
+        coord = coords_f32.y;
+    }
+    else if face == BF_FRONT || face == BF_BACK {
+        coord = coords_f32.z;
+    }
+
+    let has_block = abs(coord) < f32(params.sea_level.y) + f32(depth);
 
     // values[idx] = f32(params.sea_level);// f32(coords_f32.y < params.sea_level);//f32(coords_f32.y < 500.0);// params.chunk_coords.x + params.structure_pos.x;
     values[idx] = f32(has_block);// f32(coords_f32.y < params.sea_level.y); //f32(coords_f32.y < 500.0);// params.chunk_coords.x + params.structure_pos.x;
