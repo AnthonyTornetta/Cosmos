@@ -9,7 +9,7 @@ use cosmos_core::{
     structure::{
         block_storage::BlockStorer,
         chunk::{Chunk, CHUNK_DIMENSIONS, CHUNK_DIMENSIONSF, CHUNK_DIMENSIONS_USIZE},
-        coordinates::{BlockCoordinate, ChunkBlockCoordinate, CoordinateType},
+        coordinates::{ChunkBlockCoordinate, CoordinateType},
         planet::Planet,
         Structure,
     },
@@ -28,7 +28,7 @@ use super::{
 };
 
 const N_CHUNKS: u32 = 32;
-const DIMS: usize = (SIZE * SIZE * SIZE * N_CHUNKS) as usize;
+const DIMS: usize = CHUNK_DIMENSIONS_USIZE * CHUNK_DIMENSIONS_USIZE * CHUNK_DIMENSIONS_USIZE * N_CHUNKS as usize;
 
 #[derive(Debug)]
 pub(crate) struct NeedGeneratedChunk<T> {
@@ -273,10 +273,7 @@ impl<T: BiosphereMarkerComponent + TypePath> ComputeShader for ComputeShaderInst
     }
 }
 
-// If you change this, make sure to modify the '32' values in the shader aswell.
-const SIZE: u32 = CHUNK_DIMENSIONS as u32;
-
-// If you change this, make sure to modify the '512' values in the shader aswell.
+// If you change this, make sure to modify the '@workgroup_size' value in the shader aswell.
 const WORKGROUP_SIZE: u32 = 1024;
 
 #[derive(Default)]
