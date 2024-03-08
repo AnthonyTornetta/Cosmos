@@ -1,10 +1,10 @@
-const N_CHUNKS: u32 = 8;
+const N_CHUNKS: u32 = 32;
 const CHUNK_DIMENSIONS: u32 = 32;
 
 // @group(0) @binding(0) var texture: texture_storage_2d<r32float, read_write>;
 @group(0) @binding(0) var<uniform> permutation_table: array<vec4<u32>, 64>;
 @group(0) @binding(1) var<uniform> params: array<GenerationParams, N_CHUNKS>;
-@group(0) @binding(2) var<storage, read_write> values: array<f32>;
+@group(0) @binding(2) var<storage, read_write> values: array<TerrainData>;
 
 struct GenerationParams {
     // Everythihng has to be a vec4 because padding. Otherwise things get super wack
@@ -12,6 +12,11 @@ struct GenerationParams {
     structure_pos: vec4<f32>,
     sea_level: vec4<f32>,
     scale: vec4<f32>,
+}
+
+struct TerrainData {
+    depth: i32,
+    data: u32,
 }
 
 const BF_BACK: i32 = 1;
@@ -60,13 +65,13 @@ fn calculate_depth_at(coords_f32: vec3<f32>, sea_level: f32) -> i32 {
     var iterations = 9;
     let delta = f64(0.01);
 
-    // let amplitude = noise(
+    // let amplitude = abs(noise(
     //         f64(coords_f32.x + 1.0) * (delta),
     //         f64(coords_f32.y - 1.0) * (delta),
     //         f64(coords_f32.z + 1.0) * (delta),
-    //     ) * 9.0;
+    //     )) * 1.0;
 
-    let amplitude = f64(4.0);
+    let amplitude = f64(9.0);
 
     var depth: f64 = 0.0;
 
@@ -100,6 +105,42 @@ fn calculate_depth_at(coords_f32: vec3<f32>, sea_level: f32) -> i32 {
     return block_depth;
 }
 
+fn calculate_biome_parameters(coords_f32: vec4<f32>, s_loc: vec4<f32>) -> u32 {
+    // Random values I made up
+    let elevation_seed: vec3<f64> = vec3(f64(903.0), f64(278.0), f64(510.0));
+    let humidity_seed: vec3<f64> = vec3(f64(630.0), f64(238.0), f64(129.0));
+    let temperature_seed: vec3<f64> = vec3(f64(410.0), f64(378.0), f64(160.0));
+
+    let delta = f64(0.01);
+
+    let lx = (f64(s_loc.x) + f64(coords_f32.x)) * delta;
+    let ly = (f64(s_loc.y) + f64(coords_f32.y)) * delta;
+    let lz = (f64(s_loc.z) + f64(coords_f32.z)) * delta;
+
+        var temperature = noise(
+            temperature_seed.x + lx,
+            temperature_seed.y + ly,
+            temperature_seed.z + lz,
+        );
+
+        var humidity = noise(humidity_seed.x + lx, humidity_seed.y + ly, humidity_seed.z + lz);
+
+        var elevation = noise(elevation_seed.x + lx, elevation_seed.y + ly, elevation_seed.z + lz);
+
+        // Clamps all values to be [0, 100.0)
+
+        temperature = (max(min(temperature, f64(0.999)), f64(-1.0)) * 0.5 + 0.5) * 100.0;
+        humidity = (max(min(humidity, f64(0.999)), f64(-1.0)) * 0.5 + 0.5) * 100.0;
+        elevation = (max(min(elevation, f64(0.999)), f64(-1.0)) * 0.5 + 0.5) * 100.0;
+
+        let temperature_u32 = u32(temperature);
+        let humidity_u32 = u32(humidity);
+        let elevation_u32 = u32(elevation);
+
+        // You only need 7 bits to store a number from 0 to 100, but I like << 8 better.
+        return temperature_u32 << 16 | humidity_u32 << 8 | elevation_u32;
+}
+
 @compute @workgroup_size(1024)
 fn main(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
     let idx = invocation_id.x;
@@ -109,7 +150,7 @@ fn main(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
 
     let param = params[coords.w];
 
-    let coords_f32 = vec4(f32(coords.x), f32(coords.y), f32(coords.z), 0.0) * param.scale + param.chunk_coords;
+    let coords_f32: vec4<f32> = vec4(f32(coords.x), f32(coords.y), f32(coords.z), 0.0) * param.scale + param.chunk_coords;
     let sea_level = param.sea_level.y;
 
     let coords_vec3 = vec3(coords_f32.x, coords_f32.y, coords_f32.z);
@@ -162,7 +203,9 @@ fn main(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
         }
     }
 
-    values[idx] = f32(depth_here);
+    let biome_data = calculate_biome_parameters(coords_f32, param.structure_pos);
+
+    values[idx] = TerrainData(depth_here, biome_data);
 }
 
 

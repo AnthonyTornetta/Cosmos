@@ -26,7 +26,7 @@ use super::{
     BiosphereMarkerComponent, BiosphereSeaLevel, TGenerateChunkEvent,
 };
 
-const N_CHUNKS: u32 = 8;
+const N_CHUNKS: u32 = 32;
 const DIMS: usize = (SIZE * SIZE * SIZE * N_CHUNKS) as usize;
 
 #[derive(Debug)]
@@ -49,6 +49,13 @@ pub(crate) struct GeneratingChunks<T>(Vec<NeedGeneratedChunk<T>>);
 #[derive(Resource, Default)]
 pub(crate) struct SentToGpuTime(f32);
 
+#[derive(Default, Debug, ShaderType, Pod, Zeroable, Clone, Copy)]
+#[repr(C)]
+struct TerrainData {
+    depth: i32,
+    data: u32,
+}
+
 pub(crate) fn send_and_read_chunks_gpu<T: BiosphereMarkerComponent, E: TGenerateChunkEvent>(
     mut needs_generated_chunks: ResMut<NeedGeneratedChunks<T>>,
     mut currently_generating_chunks: ResMut<GeneratingChunks<T>>,
@@ -69,7 +76,7 @@ pub(crate) fn send_and_read_chunks_gpu<T: BiosphereMarkerComponent, E: TGenerate
             (1000.0 * (time.elapsed_seconds() - sent_to_gpu_time.0)).floor()
         );
 
-        let v: Vec<f32> = worker.try_read_vec("values").expect("Failed to read values!");
+        let v: Vec<TerrainData> = worker.try_read_vec("values").expect("Failed to read values!");
 
         for (w, mut needs_generated_chunk) in std::mem::take(&mut currently_generating_chunks.0).into_iter().enumerate() {
             if let Ok(mut structure) = q_structure.get_mut(needs_generated_chunk.structure_entity) {
@@ -88,16 +95,21 @@ pub(crate) fn send_and_read_chunks_gpu<T: BiosphereMarkerComponent, E: TGenerate
 
                             let value = v[idx];
 
-                            if value >= 0.0 {
+                            if value.depth >= 0 {
+                                // return temperature_u32 << 16 | humidity_u32 << 8 | elevation_u32;
+                                let ideal_elevation = (value.data & 0xFF) as f32;
+                                let ideal_humidity = ((value.data >> 8) & 0xFF) as f32;
+                                let ideal_temperature = ((value.data >> 16) & 0xFF) as f32;
+
                                 let ideal_biome = biosphere_biomes.ideal_biome_for(BiomeParameters {
-                                    ideal_elevation: 50.0,
-                                    ideal_humidity: 50.0,
-                                    ideal_temperature: 50.0,
+                                    ideal_elevation,
+                                    ideal_humidity,
+                                    ideal_temperature,
                                 });
 
                                 let block_layers: &BlockLayers = ideal_biome.block_layers();
 
-                                let block = block_layers.block_for_depth(value as u64);
+                                let block = block_layers.block_for_depth(value.depth as u64);
 
                                 let coord = needs_generated_chunk.chunk_pos + Vec3::new(x as f32, y as f32, z as f32);
 
@@ -153,7 +165,7 @@ pub(crate) fn send_and_read_chunks_gpu<T: BiosphereMarkerComponent, E: TGenerate
                 currently_generating_chunks.0.push(doing);
             }
 
-            let vals: Vec<f32> = vec![0.0; DIMS]; // Useless, but nice for debugging (and line below)
+            let vals: Vec<TerrainData> = vec![TerrainData::zeroed(); DIMS]; // Useless, but nice for debugging (and line below)
             worker.write_slice("values", &vals);
 
             // Not useless
@@ -271,7 +283,7 @@ impl<T: BiosphereMarkerComponent + TypePath> ComputeWorker for BiosphereShaderWo
             .one_shot()
             .add_empty_uniform("permutation_table", size_of::<[U32Vec4; 256 / 4]>() as u64) // Vec<f32>
             .add_empty_uniform("params", size_of::<[GenerationParams; N_CHUNKS as usize]>() as u64) // GenerationParams
-            .add_empty_staging("values", size_of::<[f32; DIMS]>() as u64)
+            .add_empty_staging("values", size_of::<[TerrainData; DIMS]>() as u64)
             .add_pass::<ComputeShaderInstance<T>>(
                 [DIMS as u32 / WORKGROUP_SIZE, 1, 1], //SIZE / WORKGROUP_SIZE, SIZE / WORKGROUP_SIZE, SIZE / WORKGROUP_SIZE
                 &["permutation_table", "params", "values"],

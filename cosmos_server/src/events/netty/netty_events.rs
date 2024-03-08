@@ -112,7 +112,7 @@ fn handle_server_events(
                 };
 
                 let player = Player::new(name.clone(), client_id);
-                let starting_pos = Vec3::new(0.0, CHUNK_DIMENSIONSF * 18.0 / 2.0, 0.0);
+                let starting_pos = Vec3::new(0.0, CHUNK_DIMENSIONSF * 70.0 / 2.0, 0.0);
                 let location = Location::new(starting_pos, Sector::new(25, 25, 25));
                 let velocity = Velocity::default();
                 let inventory = generate_player_inventory(&items);
