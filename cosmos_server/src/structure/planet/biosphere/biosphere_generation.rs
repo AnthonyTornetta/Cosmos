@@ -9,8 +9,9 @@ use cosmos_core::{
     registry::Registry,
     structure::{
         block_storage::BlockStorer,
-        chunk::{Chunk, CHUNK_DIMENSIONS_USIZE},
+        chunk::{Chunk, CHUNK_DIMENSIONSF, CHUNK_DIMENSIONS_USIZE},
         coordinates::{ChunkBlockCoordinate, ChunkCoordinate, CoordinateType},
+        planet::Planet,
         Structure,
     },
     utils::array_utils::expand,
@@ -25,228 +26,79 @@ use std::marker::PhantomData;
 use crate::init::init_world::{Noise, ReadOnlyNoise};
 
 use super::{
-    biome::BiosphereBiomesRegistry, biosphere_generation_old::GenerateChunkFeaturesEvent, BiomeDecider, BiosphereMarkerComponent,
-    BiosphereSeaLevel, TGenerateChunkEvent,
+    biome::{BiomeParameters, BiosphereBiomesRegistry},
+    biosphere_generation_old::{BlockLayers, GenerateChunkFeaturesEvent},
+    BiomeDecider, BiosphereMarkerComponent, BiosphereSeaLevel, TGenerateChunkEvent,
 };
 
 #[derive(Debug)]
-pub struct NeedGeneratedChunk<T> {
+pub(crate) struct NeedGeneratedChunk<T> {
     chunk: Chunk,
     structure_entity: Entity,
     chunk_pos: Vec3,
     structure_dimensions: CoordinateType,
     structure_location: Location,
+    time: f32,
     _phantom: PhantomData<T>,
 }
 
 #[derive(Resource, Debug, Default)]
-pub struct NeedGeneratedChunks<T>(Vec<NeedGeneratedChunk<T>>);
+pub(crate) struct NeedGeneratedChunks<T>(Vec<NeedGeneratedChunk<T>>);
 
 #[derive(Resource, Debug, Default)]
-pub struct GeneratingChunks<T>(Vec<NeedGeneratedChunk<T>>);
+pub(crate) struct GeneratingChunks<T>(Vec<NeedGeneratedChunk<T>>);
 
-const TABLE_SIZE: usize = 256;
-
-/// A seed table, required by all noise functions.
-///
-/// Table creation is expensive, so in most circumstances you'll only want to
-/// create one of these per generator.
-#[derive(Copy, Clone)]
-pub struct PermutationTable {
-    values: [u8; TABLE_SIZE],
-}
-
-fn hash(perm_table: &PermutationTable, to_hash: &[isize]) -> usize {
-    let index = to_hash
-        .iter()
-        .map(|&a| (a & 0xff) as usize)
-        .reduce(|a, b| perm_table.values[a] as usize ^ b)
-        .unwrap();
-    perm_table.values[index] as usize
-}
-
-#[inline(always)]
-#[rustfmt::skip]
-pub(crate) fn grad3(index: usize) -> Vector3<f64> {
-    // Vectors are combinations of -1, 0, and 1
-    // Precompute the normalized elements
-    const DIAG : f64 = core::f64::consts::FRAC_1_SQRT_2;
-    const DIAG2 : f64 = 0.577_350_269_189_625_8;
-
-    match index % 32 {
-        // 12 edges repeated twice then 8 corners
-        0  | 12 => Vector3::new(  DIAG,   DIAG,    0.0),
-        1  | 13 => Vector3::new( -DIAG,   DIAG,    0.0),
-        2  | 14 => Vector3::new(  DIAG,  -DIAG,    0.0),
-        3  | 15 => Vector3::new( -DIAG,  -DIAG,    0.0),
-        4  | 16 => Vector3::new(  DIAG,    0.0,   DIAG),
-        5  | 17 => Vector3::new( -DIAG,    0.0,   DIAG),
-        6  | 18 => Vector3::new(  DIAG,    0.0,  -DIAG),
-        7  | 19 => Vector3::new( -DIAG,    0.0,  -DIAG),
-        8  | 20 => Vector3::new(   0.0,   DIAG,   DIAG),
-        9  | 21 => Vector3::new(   0.0,  -DIAG,   DIAG),
-        10 | 22 => Vector3::new(   0.0,   DIAG,  -DIAG),
-        11 | 23 => Vector3::new(   0.0,  -DIAG,  -DIAG),
-        24      => Vector3::new( DIAG2,  DIAG2,  DIAG2),
-        25      => Vector3::new(-DIAG2,  DIAG2,  DIAG2),
-        26      => Vector3::new( DIAG2, -DIAG2,  DIAG2),
-        27      => Vector3::new(-DIAG2, -DIAG2,  DIAG2),
-        28      => Vector3::new( DIAG2,  DIAG2, -DIAG2),
-        29      => Vector3::new(-DIAG2,  DIAG2, -DIAG2),
-        30      => Vector3::new( DIAG2, -DIAG2, -DIAG2),
-        31      => Vector3::new(-DIAG2, -DIAG2, -DIAG2),
-        _       => panic!("Attempt to access gradient {} of 32", index % 32),
-    }
-}
-
-fn floor_vec3(v: Vector3<f64>) -> Vector3<f64> {
-    Vector3::new(v.x.floor(), v.y.floor(), v.z.floor())
-}
-
-fn create_perm_table() -> PermutationTable {
-    PermutationTable { values: [21; TABLE_SIZE] }
-}
-
-pub fn open_simplex_3d<NH>(point: [f64; 3]) -> f64 {
-    let perm_table = create_perm_table();
-
-    const STRETCH_CONSTANT: f64 = -1.0 / 6.0; //(1/Math.sqrt(3+1)-1)/3;
-    const SQUISH_CONSTANT: f64 = 1.0 / 3.0; //(Math.sqrt(3+1)-1)/3;
-    const NORM_CONSTANT: f64 = 1.0 / 14.0;
-
-    fn surflet(index: usize, point: Vector3<f64>) -> f64 {
-        let t = 2.0 - point.magnitude_squared();
-
-        if t > 0.0 {
-            let gradient = Vector3::from(grad3(index));
-            t.powi(4) * point.dot(&gradient)
-        } else {
-            0.0
-        }
-    }
-
-    let point = Vector3::from(point);
-
-    // Place input coordinates on simplectic honeycomb.
-    let stretch_offset = point.sum() * STRETCH_CONSTANT;
-    let stretched = point.map(|v| v + stretch_offset);
-
-    // Floor to get simplectic honeycomb coordinates of rhombohedron
-    // (stretched cube) super-cell origin.
-    let stretched_floor = floor_vec3(stretched);
-
-    // Skew out to get actual coordinates of rhombohedron origin. We'll need
-    // these later.
-    let squish_offset = stretched_floor.sum() * SQUISH_CONSTANT;
-    let origin = stretched_floor.map(|v| v + squish_offset);
-
-    // Compute simplectic honeycomb coordinates relative to rhombohedral origin.
-    let rel_coords = stretched - stretched_floor;
-
-    // Sum those together to get a value that determines which region we're in.
-    let region_sum = rel_coords.sum();
-
-    // Positions relative to origin point.
-    let rel_pos = point - origin;
-
-    macro_rules! contribute (
-            ($x:expr, $y:expr, $z:expr) => {
-                {
-                    let offset = Vector3::new($x, $y, $z);
-                    let vertex = stretched_floor + offset;
-                    let index = hash(&perm_table, &[vertex.x as isize, vertex.y as isize, vertex.z as isize]);
-                    let dpos = rel_pos - (Vector3::from_element(SQUISH_CONSTANT) * offset.sum()) - offset;
-
-                    surflet(index, dpos)
-                }
-            }
-        );
-
-    let mut value = 0.0;
-
-    if region_sum <= 1.0 {
-        // We're inside the tetrahedron (3-Simplex) at (0, 0, 0)
-
-        // Contribution at (0, 0, 0)
-        value += contribute!(0.0, 0.0, 0.0);
-
-        // Contribution at (1, 0, 0)
-        value += contribute!(1.0, 0.0, 0.0);
-
-        // Contribution at (0, 1, 0)
-        value += contribute!(0.0, 1.0, 0.0);
-
-        // Contribution at (0, 0, 1)
-        value += contribute!(0.0, 0.0, 1.0);
-    } else if region_sum >= 2.0 {
-        // We're inside the tetrahedron (3-Simplex) at (1, 1, 1)
-
-        // Contribution at (1, 1, 0)
-        value += contribute!(1.0, 1.0, 0.0);
-
-        // Contribution at (1, 0, 1)
-        value += contribute!(1.0, 0.0, 1.0);
-
-        // Contribution at (0, 1, 1)
-        value += contribute!(0.0, 1.0, 1.0);
-
-        // Contribution at (1, 1, 1)
-        value += contribute!(1.0, 1.0, 1.0);
-    } else {
-        // We're inside the octahedron (Rectified 3-Simplex) inbetween.
-
-        // Contribution at (1, 0, 0)
-        value += contribute!(1.0, 0.0, 0.0);
-
-        // Contribution at (0, 1, 0)
-        value += contribute!(0.0, 1.0, 0.0);
-
-        // Contribution at (0, 0, 1)
-        value += contribute!(0.0, 0.0, 1.0);
-
-        // Contribution at (1, 1, 0)
-        value += contribute!(1.0, 1.0, 0.0);
-
-        // Contribution at (1, 0, 1)
-        value += contribute!(1.0, 0.0, 1.0);
-
-        // Contribution at (0, 1, 1)
-        value += contribute!(0.0, 1.0, 1.0);
-    }
-
-    value * NORM_CONSTANT
-}
-
-pub fn send_and_read_chunks_gpu<T: BiosphereMarkerComponent, E: TGenerateChunkEvent>(
+pub(crate) fn send_and_read_chunks_gpu<T: BiosphereMarkerComponent, E: TGenerateChunkEvent>(
     mut needs_generated_chunks: ResMut<NeedGeneratedChunks<T>>,
     mut currently_generating_chunks: ResMut<GeneratingChunks<T>>,
     noise_generator: Res<Noise>,
-    // biosphere_biomes: Res<BiosphereBiomesRegistry<T>>,
-    // biome_decider: Res<BiomeDecider<T>>,
+    biosphere_biomes: Res<BiosphereBiomesRegistry<T>>,
+    biome_decider: Res<BiomeDecider<T>>,
     sea_level: Option<Res<BiosphereSeaLevel<T>>>,
     mut worker: ResMut<AppComputeWorker<ShaderWorker<T>>>,
     mut ev_writer: EventWriter<GenerateChunkFeaturesEvent<T>>,
     blocks: Res<Registry<Block>>,
     mut q_structure: Query<&mut Structure>,
+
+    time: Res<Time>,
 ) {
     if worker.ready() {
         if let Some(mut needs_generated_chunk) = currently_generating_chunks.0.pop() {
             if let Ok(mut structure) = q_structure.get_mut(needs_generated_chunk.structure_entity) {
                 let v: Vec<f32> = worker.try_read_vec("values").expect("Failed to read values!");
 
-                let b = blocks.from_id("cosmos:stone").expect("Missing stone?");
-
                 for (i, value) in v.into_iter().enumerate() {
                     let (x, y, z) = expand(i, CHUNK_DIMENSIONS_USIZE, CHUNK_DIMENSIONS_USIZE);
 
-                    if value != 0.0 {
+                    if value >= 0.0 {
+                        let ideal_biome = biosphere_biomes.ideal_biome_for(BiomeParameters {
+                            ideal_elevation: 50.0,
+                            ideal_humidity: 50.0,
+                            ideal_temperature: 50.0,
+                        });
+
+                        let block_layers: &BlockLayers = ideal_biome.block_layers();
+
+                        let block = block_layers.block_for_depth(value as u64);
+
+                        let coord = needs_generated_chunk.chunk_pos + Vec3::new(x as f32, y as f32, z as f32);
+
+                        let face = Planet::planet_face_relative(coord);
+
                         needs_generated_chunk.chunk.set_block_at(
                             ChunkBlockCoordinate::new(x as CoordinateType, y as CoordinateType, z as CoordinateType),
-                            &b,
-                            BlockFace::Top,
-                        )
+                            &block,
+                            face,
+                        );
                     }
                 }
+
+                info!(
+                    "Got generated chunk - took {}ms to generate",
+                    1000.0 * (time.elapsed_seconds() - needs_generated_chunk.time)
+                );
+
+                // ideal_biome.generate_face_chunk(self_as_dyn, block_coords, s_dimensions, chunk, up, biome_id_list, self_biome_id, elevation, sea_level)
 
                 ev_writer.send(GenerateChunkFeaturesEvent {
                     chunk_coords: needs_generated_chunk.chunk.chunk_coordinates(),
@@ -262,7 +114,7 @@ pub fn send_and_read_chunks_gpu<T: BiosphereMarkerComponent, E: TGenerateChunkEv
     }
 
     if currently_generating_chunks.0.is_empty() {
-        if let Some(todo) = needs_generated_chunks.0.pop() {
+        if let Some(mut todo) = needs_generated_chunks.0.pop() {
             let structure_loc = todo.structure_location.absolute_coords_f32();
 
             let params = GenerationParams {
@@ -277,6 +129,8 @@ pub fn send_and_read_chunks_gpu<T: BiosphereMarkerComponent, E: TGenerateChunkEv
             let vals: Vec<f32> = vec![0.0; CHUNK_DIMENSIONS_USIZE * CHUNK_DIMENSIONS_USIZE * CHUNK_DIMENSIONS_USIZE];
 
             worker.write_slice("values", &vals);
+
+            todo.time = time.elapsed_seconds();
 
             currently_generating_chunks.0.push(todo);
             worker.execute();
@@ -323,7 +177,9 @@ pub fn generate_planet<T: BiosphereMarkerComponent, E: TGenerateChunkEvent>(
 
             let s_dimensions = planet.block_dimensions();
             let location = *location;
-            let chunk_rel_pos = planet.chunk_relative_position(chunk.chunk_coordinates());
+
+            // This should be negative-most position of chunk, but chunk_relative_position returns the middle coordinate.
+            let chunk_rel_pos = planet.chunk_relative_position(chunk.chunk_coordinates()) - Vec3::splat(CHUNK_DIMENSIONSF / 2.0);
 
             Some(NeedGeneratedChunk {
                 chunk,
@@ -331,6 +187,7 @@ pub fn generate_planet<T: BiosphereMarkerComponent, E: TGenerateChunkEvent>(
                 structure_dimensions: s_dimensions,
                 structure_entity,
                 structure_location: location,
+                time: 0.0,
                 _phantom: Default::default(),
             })
         }));

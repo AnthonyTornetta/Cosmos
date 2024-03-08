@@ -132,6 +132,50 @@ fn expand(index: u32, width: u32, height: u32) -> vec3<u32> {
     return vec3(x, y, z);
 }
 
+fn calculate_value_at(coords_f32: vec3<f32>) -> i32 {
+    var iterations = 9;
+    let delta = f64(0.01);
+
+    // let amplitude = noise(
+    //         f64(coords_f32.x + 1.0) * (delta),
+    //         f64(coords_f32.y - 1.0) * (delta),
+    //         f64(coords_f32.z + 1.0) * (delta),
+    //     ) * 9.0;
+
+    let amplitude = f64(4.0);
+
+    var depth: f64 = 0.0;
+
+    while iterations > 0 {
+        let iteration = f64(iterations);
+
+        depth += noise(
+            f64(coords_f32.x) * (delta / f64(iteration)),
+            f64(coords_f32.y) * (delta / f64(iteration)),
+            f64(coords_f32.z) * (delta / f64(iteration)),
+        ) * amplitude * iteration;
+
+        iterations -= 1;
+    }
+
+    var coord: f32 = coords_f32.x;
+    
+    let face = planet_face_relative(vec3(coords_f32.x, coords_f32.y, coords_f32.z));
+
+    if face == BF_TOP || face == BF_BOTTOM {
+        coord = coords_f32.y;
+    }
+    else if face == BF_FRONT || face == BF_BACK {
+        coord = coords_f32.z;
+    }
+
+    let depth_here = f32(params.sea_level.y) + f32(depth);
+
+    let block_depth = i32(floor(depth_here - abs(coord)));
+
+    return block_depth;
+}
+
 @compute @workgroup_size(512)
 fn main(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
     // let location = vec2<i32>(i32(invocation_id.x), i32(invocation_id.y));
@@ -161,52 +205,96 @@ fn main(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
 
     // textureStore(texture, location, color);
 
-    var iterations = 9;
-    let delta = f64(0.01);
+    // var iterations = 9;
+    // let delta = f64(0.01);
 
-    // let amplitude = noise(
-    //         f64(coords_f32.x + 1.0) * (delta),
-    //         f64(coords_f32.y - 1.0) * (delta),
-    //         f64(coords_f32.z + 1.0) * (delta),
-    //     ) * 9.0;
+    // // let amplitude = noise(
+    // //         f64(coords_f32.x + 1.0) * (delta),
+    // //         f64(coords_f32.y - 1.0) * (delta),
+    // //         f64(coords_f32.z + 1.0) * (delta),
+    // //     ) * 9.0;
 
-    let amplitude = f64(4.0);
+    // let amplitude = f64(4.0);
 
-    var depth: f64 = 0.0;
+    // var depth: f64 = 0.0;
 
-    while iterations > 0 {
-        let iteration = f64(iterations);
+    // while iterations > 0 {
+    //     let iteration = f64(iterations);
 
-        depth += noise(
-            f64(coords_f32.x) * (delta / f64(iteration)),
-            f64(coords_f32.y) * (delta / f64(iteration)),
-            f64(coords_f32.z) * (delta / f64(iteration)),
-        ) * amplitude * iteration;
+    //     depth += noise(
+    //         f64(coords_f32.x) * (delta / f64(iteration)),
+    //         f64(coords_f32.y) * (delta / f64(iteration)),
+    //         f64(coords_f32.z) * (delta / f64(iteration)),
+    //     ) * amplitude * iteration;
 
-        iterations -= 1;
-    }
+    //     iterations -= 1;
+    // }
 
-    // 9.0 * f32(noise(f64(coords_f32.x * 0.01), f64(coords_f32.y * 0.01), f64(coords_f32.z * 0.01)))
+    // // 9.0 * f32(noise(f64(coords_f32.x * 0.01), f64(coords_f32.y * 0.01), f64(coords_f32.z * 0.01)))
 
-    // let has_block = abs(coords_f32.y) < f32(params.sea_level.y) + sin(0.1 * (coords_f32.x + coords_f32.z)) * 9;
-    var coord: f32 = coords_f32.x;
+    // // let has_block = abs(coords_f32.y) < f32(params.sea_level.y) + sin(0.1 * (coords_f32.x + coords_f32.z)) * 9;
+    // var coord: f32 = coords_f32.x;
     
-    let face = planet_face_relative(vec3(coords_f32.x, coords_f32.y, coords_f32.z));
+    // let face = planet_face_relative(vec3(coords_f32.x, coords_f32.y, coords_f32.z));
 
-    if face == BF_LEFT || face == BF_RIGHT {
-        coord = coords_f32.x;
-    }
-    else if face == BF_TOP || face == BF_BOTTOM {
-        coord = coords_f32.y;
-    }
-    else if face == BF_FRONT || face == BF_BACK {
-        coord = coords_f32.z;
-    }
+    // if face == BF_TOP || face == BF_BOTTOM {
+    //     coord = coords_f32.y;
+    // }
+    // else if face == BF_FRONT || face == BF_BACK {
+    //     coord = coords_f32.z;
+    // }
 
-    let has_block = abs(coord) < f32(params.sea_level.y) + f32(depth);
+    // let depth_here = f32(params.sea_level.y) + f32(depth);
+
+    // let has_block = depth_here - abs(coord);
+
+    let coords_vec3 = vec3(coords_f32.x, coords_f32.y, coords_f32.z);
+
+    var depth_here = calculate_value_at(coords_vec3);
+
+    if depth_here >= 0 && depth_here < 10 {
+        let face = planet_face_relative(coords_vec3);
+        var delta: vec3<f32> = vec3(0, 0, 0);
+
+        switch face {
+            case BF_TOP: {
+                delta = vec3(0.0, 1.0, 0.0);
+                break;
+            }
+            case BF_BOTTOM: {
+                delta = vec3(0.0, -1.0, 0.0);
+                break;
+            }
+            case BF_RIGHT: {
+                delta = vec3(1.0, 0.0, 0.0);
+                break;
+            }
+            case BF_LEFT: {
+                delta = vec3(-1.0, 0.0, 0.0);
+                break;
+            }
+            case BF_FRONT: {
+                delta = vec3(0.0, 0.0, 1.0);
+                break;
+            }
+            case BF_BACK: {
+                delta = vec3(0.0, 0.0, -1.0);
+                break;
+            }
+            default:
+            {
+                // This will never happen
+                break;
+            }
+        }
+
+        if calculate_value_at(coords_vec3 + delta) < 0 {
+            depth_here = 0;
+        }
+    }
 
     // values[idx] = f32(params.sea_level);// f32(coords_f32.y < params.sea_level);//f32(coords_f32.y < 500.0);// params.chunk_coords.x + params.structure_pos.x;
-    values[idx] = f32(has_block);// f32(coords_f32.y < params.sea_level.y); //f32(coords_f32.y < 500.0);// params.chunk_coords.x + params.structure_pos.x;
+    values[idx] = f32(depth_here);// f32(coords_f32.y < params.sea_level.y); //f32(coords_f32.y < 500.0);// params.chunk_coords.x + params.structure_pos.x;
     // values[idx] = 1.0 + params.chunk_coords.x;
 }
 

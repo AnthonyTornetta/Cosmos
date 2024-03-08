@@ -93,6 +93,21 @@ impl BlockLayers {
     pub fn ranges(&self) -> std::slice::Iter<(cosmos_core::block::Block, BlockLayer)> {
         self.ranges.iter()
     }
+
+    pub fn block_for_depth(&self, depth: u64) -> &Block {
+        let mut itr = self.ranges();
+        let mut cur_block = &itr.next().expect("This block range has no blocks!").0;
+
+        while let Some((next_block, next_layer)) = itr.next() {
+            if next_layer.middle_depth > depth {
+                break;
+            } else {
+                cur_block = next_block;
+            }
+        }
+
+        cur_block
+    }
 }
 
 /// Stores the blocks and all the noise information for creating the top of their layer.
@@ -157,23 +172,23 @@ impl BlockLayers {
         Self::default()
     }
 
-    /// Does what `add_fixed_layer` does, but makes the layer depth vary based off the noise parameters.
-    pub fn add_noise_layer(
-        mut self,
-        block_id: &str,
-        block_registry: &Registry<Block>,
-        middle_depth: CoordinateType,
-        delta: f64,
-        amplitude: f64,
-        iterations: usize,
-    ) -> Result<Self, BlockRangeError> {
-        let Some(block) = block_registry.from_id(block_id) else {
-            return Err(BlockRangeError::MissingBlock(self));
-        };
-        let layer = BlockLayer::noise_layer(middle_depth, delta, amplitude, iterations);
-        self.ranges.push((block.clone(), layer));
-        Ok(self)
-    }
+    // /// Does what `add_fixed_layer` does, but makes the layer depth vary based off the noise parameters.
+    // pub fn add_noise_layer(
+    //     mut self,
+    //     block_id: &str,
+    //     block_registry: &Registry<Block>,
+    //     middle_depth: CoordinateType,
+    //     delta: f64,
+    //     amplitude: f64,
+    //     iterations: usize,
+    // ) -> Result<Self, BlockRangeError> {
+    //     let Some(block) = block_registry.from_id(block_id) else {
+    //         return Err(BlockRangeError::MissingBlock(self));
+    //     };
+    //     let layer = BlockLayer::noise_layer(middle_depth, delta, amplitude, iterations);
+    //     self.ranges.push((block.clone(), layer));
+    //     Ok(self)
+    // }
 
     /// Use this to construct the various ranges of the blocks.
     ///

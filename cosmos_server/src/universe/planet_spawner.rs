@@ -143,7 +143,7 @@ fn spawn_planet(
 
                 if let Some(temperature) = calculate_temperature_at(stars.iter(), &location) {
                     let size = if is_origin {
-                        64
+                        16
                     } else {
                         2_f32.powi(rng.gen_range(7..=9)) as CoordinateType
                     };
