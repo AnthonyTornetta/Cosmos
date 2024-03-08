@@ -4,7 +4,6 @@ use std::{marker::PhantomData, mem::swap, sync::RwLockReadGuard};
 
 use bevy::{
     log::warn,
-    math::Vec3,
     prelude::{Commands, DespawnRecursiveExt, Entity, Event, EventReader, EventWriter, Query, Res, ResMut, Resource, With},
     tasks::AsyncComputeTaskPool,
 };
@@ -94,6 +93,7 @@ impl BlockLayers {
         self.ranges.iter()
     }
 
+    /// Gets the block that should appear at this depth level. 0 would be the top block.
     pub fn block_for_depth(&self, depth: u64) -> &Block {
         let mut itr = self.ranges();
         let mut cur_block = &itr.next().expect("This block range has no blocks!").0;
@@ -123,7 +123,7 @@ pub struct BlockLayer {
     /// - `Dirt` 1
     /// - `Stone` 4
     ///
-    /// Would create 1 top layer of grass starting at the proper elevation, 4 layers of dirt below that, and however many layers of stone till the bottom
+    /// Would create 1 top layer of grass starting at the proper elevation, 3 layers of dirt below that, and however many layers of stone till the bottom
     pub middle_depth: CoordinateType,
     /// How much each change in coordinate will effect the change of the block
     ///

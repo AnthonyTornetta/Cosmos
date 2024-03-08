@@ -1,3 +1,5 @@
+//! Responsible for the default generation of biospheres.
+
 use bevy::prelude::*;
 use bevy_app_compute::prelude::*;
 use bytemuck::{Pod, Zeroable};
@@ -214,6 +216,7 @@ pub(crate) struct BiosphereShaderWorker<T: BiosphereMarkerComponent>(PhantomData
 
 #[repr(C)]
 #[derive(Debug, ShaderType, Pod, Zeroable, Clone, Copy)]
+/// Gives 16 bit packing that wgpu loves
 struct U32Vec4 {
     pub x: u32,
     pub y: u32,
@@ -231,95 +234,13 @@ impl<T: BiosphereMarkerComponent + TypePath> ComputeWorker for BiosphereShaderWo
     fn build(world: &mut bevy::prelude::World) -> AppComputeWorker<Self> {
         const DIMS: usize = (SIZE * SIZE * SIZE) as usize;
 
-        // let noise = noise::OpenSimplex::new(1596);
-        // noise.
-        // let perm_table = PermutationTable;
-
-        let params = GenerationParams {
-            chunk_coords: Vec4::splat(13.0),
-            structure_pos: Vec4::splat(12.0),
-            sea_level: Vec4::splat(11.0),
-            scale: Vec4::splat(10.0),
-        };
-
-        let icrs = vec![1.0; DIMS];
-
         assert!((SIZE * SIZE * SIZE) % WORKGROUP_SIZE == 0);
-
-        // let permutation_table: [U32Vec4; 256 / 4] = [
-        //     // U32Vec4::new(151, 160, 137, 91),
-        //     U32Vec4::new(151, 160, 137, 91),
-        //     U32Vec4::new(90, 15, 131, 13),
-        //     U32Vec4::new(201, 95, 96, 53),
-        //     U32Vec4::new(194, 233, 7, 225),
-        //     U32Vec4::new(140, 36, 103, 30),
-        //     U32Vec4::new(69, 142, 8, 99),
-        //     U32Vec4::new(37, 240, 21, 10),
-        //     U32Vec4::new(23, 190, 6, 148),
-        //     U32Vec4::new(247, 120, 234, 75),
-        //     U32Vec4::new(0, 26, 197, 62),
-        //     U32Vec4::new(94, 252, 219, 203),
-        //     U32Vec4::new(117, 35, 11, 32),
-        //     U32Vec4::new(57, 177, 33, 88),
-        //     U32Vec4::new(237, 149, 56, 87),
-        //     U32Vec4::new(174, 20, 125, 136),
-        //     U32Vec4::new(171, 168, 68, 175),
-        //     U32Vec4::new(74, 165, 71, 134),
-        //     U32Vec4::new(139, 48, 27, 166),
-        //     U32Vec4::new(77, 146, 158, 231),
-        //     U32Vec4::new(83, 111, 229, 122),
-        //     U32Vec4::new(60, 211, 133, 230),
-        //     U32Vec4::new(220, 105, 92, 41),
-        //     U32Vec4::new(55, 46, 245, 40),
-        //     U32Vec4::new(244, 102, 143, 54),
-        //     U32Vec4::new(65, 25, 63, 161),
-        //     U32Vec4::new(1, 216, 80, 73),
-        //     U32Vec4::new(209, 76, 132, 187),
-        //     U32Vec4::new(208, 89, 18, 169),
-        //     U32Vec4::new(200, 196, 135, 130),
-        //     U32Vec4::new(116, 188, 159, 86),
-        //     U32Vec4::new(164, 100, 109, 198),
-        //     U32Vec4::new(173, 186, 3, 64),
-        //     U32Vec4::new(52, 217, 226, 250),
-        //     U32Vec4::new(124, 123, 5, 202),
-        //     U32Vec4::new(38, 147, 118, 126),
-        //     U32Vec4::new(255, 82, 85, 212),
-        //     U32Vec4::new(207, 206, 59, 227),
-        //     U32Vec4::new(47, 16, 58, 17),
-        //     U32Vec4::new(182, 189, 28, 42),
-        //     U32Vec4::new(223, 183, 170, 213),
-        //     U32Vec4::new(119, 248, 152, 2),
-        //     U32Vec4::new(44, 154, 163, 70),
-        //     U32Vec4::new(221, 153, 101, 155),
-        //     U32Vec4::new(167, 43, 172, 9),
-        //     U32Vec4::new(129, 22, 39, 253),
-        //     U32Vec4::new(19, 98, 108, 110),
-        //     U32Vec4::new(79, 113, 224, 232),
-        //     U32Vec4::new(178, 185, 112, 104),
-        //     U32Vec4::new(218, 246, 97, 228),
-        //     U32Vec4::new(251, 34, 242, 193),
-        //     U32Vec4::new(238, 210, 144, 12),
-        //     U32Vec4::new(191, 179, 162, 241),
-        //     U32Vec4::new(81, 51, 145, 235),
-        //     U32Vec4::new(249, 14, 239, 107),
-        //     U32Vec4::new(49, 192, 214, 31),
-        //     U32Vec4::new(181, 199, 106, 157),
-        //     U32Vec4::new(184, 84, 204, 176),
-        //     U32Vec4::new(115, 121, 50, 45),
-        //     U32Vec4::new(127, 4, 150, 254),
-        //     U32Vec4::new(138, 236, 205, 93),
-        //     U32Vec4::new(222, 114, 67, 29),
-        //     U32Vec4::new(24, 72, 243, 141),
-        //     U32Vec4::new(128, 195, 78, 66),
-        //     U32Vec4::new(215, 61, 156, 180),
-        // ];
 
         let worker = AppComputeWorkerBuilder::new(world)
             .one_shot()
-            // .add_empty_uniform("params", std::mem::size_of::<GenerationParams>() as u64) // GenerationParams
             .add_empty_uniform("permutation_table", size_of::<[U32Vec4; 256 / 4]>() as u64) // Vec<f32>
-            .add_uniform("params", &params) // GenerationParams
-            .add_staging("values", &icrs)
+            .add_empty_uniform("params", size_of::<GenerationParams>() as u64) // GenerationParams
+            .add_empty_staging("values", size_of::<[f32; DIMS]>() as u64)
             .add_pass::<ComputeShaderInstance<T>>(
                 [SIZE * SIZE * SIZE / WORKGROUP_SIZE, 1, 1], //SIZE / WORKGROUP_SIZE, SIZE / WORKGROUP_SIZE, SIZE / WORKGROUP_SIZE
                 &["permutation_table", "params", "values"],
@@ -370,73 +291,6 @@ fn setup_permutation_table(seed: Res<ServerSeed>, mut commands: Commands) {
         .collect();
 
     commands.insert_resource(PermutationTable(permutation_table));
-
-    // let permutation_table: [U32Vec4; 256 / 4] = [
-    //     U32Vec4::new(151, 160, 137, 91),
-    //     U32Vec4::new(90, 15, 131, 13),
-    //     U32Vec4::new(201, 95, 96, 53),
-    //     U32Vec4::new(194, 233, 7, 225),
-    //     U32Vec4::new(140, 36, 103, 30),
-    //     U32Vec4::new(69, 142, 8, 99),
-    //     U32Vec4::new(37, 240, 21, 10),
-    //     U32Vec4::new(23, 190, 6, 148),
-    //     U32Vec4::new(247, 120, 234, 75),
-    //     U32Vec4::new(0, 26, 197, 62),
-    //     U32Vec4::new(94, 252, 219, 203),
-    //     U32Vec4::new(117, 35, 11, 32),
-    //     U32Vec4::new(57, 177, 33, 88),
-    //     U32Vec4::new(237, 149, 56, 87),
-    //     U32Vec4::new(174, 20, 125, 136),
-    //     U32Vec4::new(171, 168, 68, 175),
-    //     U32Vec4::new(74, 165, 71, 134),
-    //     U32Vec4::new(139, 48, 27, 166),
-    //     U32Vec4::new(77, 146, 158, 231),
-    //     U32Vec4::new(83, 111, 229, 122),
-    //     U32Vec4::new(60, 211, 133, 230),
-    //     U32Vec4::new(220, 105, 92, 41),
-    //     U32Vec4::new(55, 46, 245, 40),
-    //     U32Vec4::new(244, 102, 143, 54),
-    //     U32Vec4::new(65, 25, 63, 161),
-    //     U32Vec4::new(1, 216, 80, 73),
-    //     U32Vec4::new(209, 76, 132, 187),
-    //     U32Vec4::new(208, 89, 18, 169),
-    //     U32Vec4::new(200, 196, 135, 130),
-    //     U32Vec4::new(116, 188, 159, 86),
-    //     U32Vec4::new(164, 100, 109, 198),
-    //     U32Vec4::new(173, 186, 3, 64),
-    //     U32Vec4::new(52, 217, 226, 250),
-    //     U32Vec4::new(124, 123, 5, 202),
-    //     U32Vec4::new(38, 147, 118, 126),
-    //     U32Vec4::new(255, 82, 85, 212),
-    //     U32Vec4::new(207, 206, 59, 227),
-    //     U32Vec4::new(47, 16, 58, 17),
-    //     U32Vec4::new(182, 189, 28, 42),
-    //     U32Vec4::new(223, 183, 170, 213),
-    //     U32Vec4::new(119, 248, 152, 2),
-    //     U32Vec4::new(44, 154, 163, 70),
-    //     U32Vec4::new(221, 153, 101, 155),
-    //     U32Vec4::new(167, 43, 172, 9),
-    //     U32Vec4::new(129, 22, 39, 253),
-    //     U32Vec4::new(19, 98, 108, 110),
-    //     U32Vec4::new(79, 113, 224, 232),
-    //     U32Vec4::new(178, 185, 112, 104),
-    //     U32Vec4::new(218, 246, 97, 228),
-    //     U32Vec4::new(251, 34, 242, 193),
-    //     U32Vec4::new(238, 210, 144, 12),
-    //     U32Vec4::new(191, 179, 162, 241),
-    //     U32Vec4::new(81, 51, 145, 235),
-    //     U32Vec4::new(249, 14, 239, 107),
-    //     U32Vec4::new(49, 192, 214, 31),
-    //     U32Vec4::new(181, 199, 106, 157),
-    //     U32Vec4::new(184, 84, 204, 176),
-    //     U32Vec4::new(115, 121, 50, 45),
-    //     U32Vec4::new(127, 4, 150, 254),
-    //     U32Vec4::new(138, 236, 205, 93),
-    //     U32Vec4::new(222, 114, 67, 29),
-    //     U32Vec4::new(24, 72, 243, 141),
-    //     U32Vec4::new(128, 195, 78, 66),
-    //     U32Vec4::new(215, 61, 156, 180),
-    // ];
 }
 
 pub(super) fn register_biosphere<T: BiosphereMarkerComponent>(app: &mut App) {

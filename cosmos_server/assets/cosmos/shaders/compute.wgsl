@@ -179,75 +179,12 @@ fn calculate_value_at(coords_f32: vec3<f32>) -> i32 {
 
 @compute @workgroup_size(1024)
 fn main(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
-    // let location = vec2<i32>(i32(invocation_id.x), i32(invocation_id.y));
-
-    // let idx = invocation_id.z * 2 * 2 + invocation_id.y * 2 + invocation_id.x;
     let idx = invocation_id.x;
 
     // SIZE
     let coords = expand(idx, u32(32), u32(32));
 
     let coords_f32 = vec4(f32(coords.x), f32(coords.y), f32(coords.z), 0.0) * params.scale + params.chunk_coords;
-
-    // let n_alive = count_alive(location);
-
-    // var alive: bool;
-    // if (n_alive == 3) {
-    //     alive = true;
-    // } else if (n_alive == 2) {
-    //     let currently_alive = is_alive(location, 0, 0);
-    //     alive = bool(currently_alive);
-    // } else {
-    //     alive = false;
-    // }
-    // let color = vec4<f32>(values[0] * alive, 0, 0, 1);
-
-    // storageBarrier();
-
-    // textureStore(texture, location, color);
-
-    // var iterations = 9;
-    // let delta = f64(0.01);
-
-    // // let amplitude = noise(
-    // //         f64(coords_f32.x + 1.0) * (delta),
-    // //         f64(coords_f32.y - 1.0) * (delta),
-    // //         f64(coords_f32.z + 1.0) * (delta),
-    // //     ) * 9.0;
-
-    // let amplitude = f64(4.0);
-
-    // var depth: f64 = 0.0;
-
-    // while iterations > 0 {
-    //     let iteration = f64(iterations);
-
-    //     depth += noise(
-    //         f64(coords_f32.x) * (delta / f64(iteration)),
-    //         f64(coords_f32.y) * (delta / f64(iteration)),
-    //         f64(coords_f32.z) * (delta / f64(iteration)),
-    //     ) * amplitude * iteration;
-
-    //     iterations -= 1;
-    // }
-
-    // // 9.0 * f32(noise(f64(coords_f32.x * 0.01), f64(coords_f32.y * 0.01), f64(coords_f32.z * 0.01)))
-
-    // // let has_block = abs(coords_f32.y) < f32(params.sea_level.y) + sin(0.1 * (coords_f32.x + coords_f32.z)) * 9;
-    // var coord: f32 = coords_f32.x;
-    
-    // let face = planet_face_relative(vec3(coords_f32.x, coords_f32.y, coords_f32.z));
-
-    // if face == BF_TOP || face == BF_BOTTOM {
-    //     coord = coords_f32.y;
-    // }
-    // else if face == BF_FRONT || face == BF_BACK {
-    //     coord = coords_f32.z;
-    // }
-
-    // let depth_here = f32(params.sea_level.y) + f32(depth);
-
-    // let has_block = depth_here - abs(coord);
 
     let coords_vec3 = vec3(coords_f32.x, coords_f32.y, coords_f32.z);
 
@@ -289,8 +226,13 @@ fn main(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
             }
         }
 
-        if calculate_value_at(coords_vec3 + delta) < 0 {
+        let value_above = calculate_value_at(coords_vec3 + delta);
+        if value_above < 0 {
+            // There is no block above us, so make sure we're the top layer.
             depth_here = 0;
+        } else if depth_here == 0 && value_above >= 0 {
+            // There is a block above us, so ensure we're not the top layer.
+            depth_here = 1;
         }
     }
 

@@ -39,7 +39,7 @@ use crate::{
 
 use self::{
     biome::{create_biosphere_biomes_registry, BiomeParameters, BiosphereBiomesRegistry},
-    biosphere_generation_old::{begin_generating_lods, generate_planet, notify_when_done_generating_terrain, GenerateChunkFeaturesEvent},
+    biosphere_generation_old::{begin_generating_lods, GenerateChunkFeaturesEvent},
 };
 
 use super::{
