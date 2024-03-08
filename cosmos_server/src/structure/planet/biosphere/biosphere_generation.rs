@@ -4,11 +4,12 @@ use bevy::prelude::*;
 use bevy_app_compute::prelude::*;
 use bytemuck::{Pod, Zeroable};
 use cosmos_core::{
+    block::BlockFace,
     physics::location::Location,
     structure::{
         block_storage::BlockStorer,
         chunk::{Chunk, CHUNK_DIMENSIONS, CHUNK_DIMENSIONSF, CHUNK_DIMENSIONS_USIZE},
-        coordinates::{ChunkBlockCoordinate, CoordinateType},
+        coordinates::{BlockCoordinate, ChunkBlockCoordinate, CoordinateType},
         planet::Planet,
         Structure,
     },
@@ -111,15 +112,37 @@ pub(crate) fn send_and_read_chunks_gpu<T: BiosphereMarkerComponent, E: TGenerate
 
                                 let block = block_layers.block_for_depth(value.depth as u64);
 
-                                let coord = needs_generated_chunk.chunk_pos + Vec3::new(x as f32, y as f32, z as f32);
+                                let block_relative_coord = needs_generated_chunk.chunk_pos + Vec3::new(x as f32, y as f32, z as f32);
 
-                                let face = Planet::planet_face_relative(coord);
+                                let face = Planet::planet_face_relative(block_relative_coord);
 
                                 needs_generated_chunk.chunk.set_block_at(
                                     ChunkBlockCoordinate::new(x as CoordinateType, y as CoordinateType, z as CoordinateType),
                                     &block,
                                     face,
                                 );
+                            } else if let Some(sea_level) = sea_level.as_ref() {
+                                if let Some(sea_level_block) = sea_level.block.as_ref() {
+                                    let sea_level_coordinate =
+                                        ((needs_generated_chunk.structure_dimensions / 2) as f32 * sea_level.level) as u64;
+
+                                    let block_relative_coord = needs_generated_chunk.chunk_pos + Vec3::new(x as f32, y as f32, z as f32);
+                                    let face = Planet::planet_face_relative(block_relative_coord);
+
+                                    let coord = match face {
+                                        BlockFace::Left | BlockFace::Right => block_relative_coord.x,
+                                        BlockFace::Top | BlockFace::Bottom => block_relative_coord.y,
+                                        BlockFace::Front | BlockFace::Back => block_relative_coord.z,
+                                    };
+
+                                    if (coord.abs()) as CoordinateType <= sea_level_coordinate {
+                                        needs_generated_chunk.chunk.set_block_at(
+                                            ChunkBlockCoordinate::new(x as CoordinateType, y as CoordinateType, z as CoordinateType),
+                                            sea_level_block,
+                                            face,
+                                        );
+                                    }
+                                }
                             }
                         }
                     }

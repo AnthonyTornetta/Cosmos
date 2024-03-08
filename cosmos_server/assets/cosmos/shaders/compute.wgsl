@@ -111,34 +111,28 @@ fn calculate_biome_parameters(coords_f32: vec4<f32>, s_loc: vec4<f32>) -> u32 {
     let humidity_seed: vec3<f64> = vec3(f64(630.0), f64(238.0), f64(129.0));
     let temperature_seed: vec3<f64> = vec3(f64(410.0), f64(378.0), f64(160.0));
 
-    let delta = f64(0.01);
+    let delta = f64(0.001);
 
     let lx = (f64(s_loc.x) + f64(coords_f32.x)) * delta;
     let ly = (f64(s_loc.y) + f64(coords_f32.y)) * delta;
     let lz = (f64(s_loc.z) + f64(coords_f32.z)) * delta;
 
-        var temperature = noise(
-            temperature_seed.x + lx,
-            temperature_seed.y + ly,
-            temperature_seed.z + lz,
-        );
+    var temperature = noise(temperature_seed.x + lx, temperature_seed.y + ly, temperature_seed.z + lz);
+    var humidity = noise(humidity_seed.x + lx, humidity_seed.y + ly, humidity_seed.z + lz);
+    var elevation = noise(elevation_seed.x + lx, elevation_seed.y + ly, elevation_seed.z + lz);
 
-        var humidity = noise(humidity_seed.x + lx, humidity_seed.y + ly, humidity_seed.z + lz);
+    // Clamps all values to be [0, 100.0)
 
-        var elevation = noise(elevation_seed.x + lx, elevation_seed.y + ly, elevation_seed.z + lz);
+    temperature = (max(min(temperature, f64(0.999)), f64(-1.0)) * 0.5 + 0.5) * 100.0;
+    humidity = (max(min(humidity, f64(0.999)), f64(-1.0)) * 0.5 + 0.5) * 100.0;
+    elevation = (max(min(elevation, f64(0.999)), f64(-1.0)) * 0.5 + 0.5) * 100.0;
 
-        // Clamps all values to be [0, 100.0)
+    let temperature_u32 = u32(temperature);
+    let humidity_u32 = u32(humidity);
+    let elevation_u32 = u32(elevation);
 
-        temperature = (max(min(temperature, f64(0.999)), f64(-1.0)) * 0.5 + 0.5) * 100.0;
-        humidity = (max(min(humidity, f64(0.999)), f64(-1.0)) * 0.5 + 0.5) * 100.0;
-        elevation = (max(min(elevation, f64(0.999)), f64(-1.0)) * 0.5 + 0.5) * 100.0;
-
-        let temperature_u32 = u32(temperature);
-        let humidity_u32 = u32(humidity);
-        let elevation_u32 = u32(elevation);
-
-        // You only need 7 bits to store a number from 0 to 100, but I like << 8 better.
-        return temperature_u32 << 16 | humidity_u32 << 8 | elevation_u32;
+    // You only need 7 bits to store a number from 0 to 100, but I like << 8 better.
+    return temperature_u32 << 16 | humidity_u32 << 8 | elevation_u32;
 }
 
 @compute @workgroup_size(1024)
