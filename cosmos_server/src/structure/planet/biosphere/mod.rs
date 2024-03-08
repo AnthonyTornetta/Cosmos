@@ -240,7 +240,7 @@ pub fn register_biosphere<T: BiosphereMarkerComponent + Default + Clone, E: Send
     create_biosphere_biomes_registry::<T>(app);
     info!("Done creating biome registry.");
 
-    biosphere_generation::register::<T>(app);
+    biosphere_generation::register_biosphere::<T>(app);
 
     app.add_event::<E>()
         .add_systems(Startup, move |mut registry: ResMut<BiosphereTemperatureRegistry>| {
@@ -388,6 +388,7 @@ pub(super) fn register(app: &mut App) {
         .insert_resource(BiosphereTemperatureRegistry::default())
         .add_systems(Update, add_biosphere);
 
+    biosphere_generation::register(app);
     biome::register(app);
     grass_biosphere::register(app);
     molten_biosphere::register(app);
