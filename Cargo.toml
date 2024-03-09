@@ -12,7 +12,7 @@ bevy_rapier3d = { git = "https://github.com/AnthonyTornetta/bevy_rapier/", versi
   "serde-serialize",
 ] }
 
-bevy_app_compute = { path = "/home/cornchip/Programming/rust/bevy_app_compute", version = "0.13.0" }
+bevy_app_compute = { git = "https://github.com/AnthonyTornetta/bevy_app_compute", version = "0.13.0" }
 
 bevy_renet = "0.0.11"
 serde = "1.0.197"
