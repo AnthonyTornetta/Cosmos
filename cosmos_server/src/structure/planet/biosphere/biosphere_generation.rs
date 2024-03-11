@@ -28,6 +28,8 @@ use super::{
     BiosphereMarkerComponent, BiosphereSeaLevel, TGenerateChunkEvent,
 };
 
+// If you change this, make sure to modify the '@workgroup_size' value in the shader aswell.
+const WORKGROUP_SIZE: u32 = 1024;
 const N_CHUNKS: u32 = 32;
 const DIMS: usize = CHUNK_DIMENSIONS_USIZE * CHUNK_DIMENSIONS_USIZE * CHUNK_DIMENSIONS_USIZE * N_CHUNKS as usize;
 
@@ -321,6 +323,7 @@ pub(crate) fn generate_planet<T: BiosphereMarkerComponent, E: TGenerateChunkEven
                     scale: Vec4::splat(1.0),
                     sea_level: Vec4::splat((sea_level.as_ref().map(|x| x.level).unwrap_or(0.75) * (s_dimensions / 2) as f32) as f32),
                     structure_pos: Vec4::new(structure_loc.x, structure_loc.y, structure_loc.z, 0.0),
+                    biosphere_id: U32Vec4::splat(0),
                 },
                 biosphere_type: type_path,
             })
@@ -335,6 +338,7 @@ struct GenerationParams {
     structure_pos: Vec4,
     sea_level: Vec4,
     scale: Vec4,
+    biosphere_id: U32Vec4,
 }
 
 #[derive(TypePath, Default)]
@@ -346,14 +350,11 @@ impl ComputeShader for ComputeShaderInstance {
     }
 }
 
-// If you change this, make sure to modify the '@workgroup_size' value in the shader aswell.
-const WORKGROUP_SIZE: u32 = 1024;
-
 #[derive(Default)]
 pub(crate) struct BiosphereShaderWorker;
 
 #[repr(C)]
-#[derive(Debug, ShaderType, Pod, Zeroable, Clone, Copy)]
+#[derive(Default, Debug, ShaderType, Pod, Zeroable, Clone, Copy)]
 /// Gives 16 bit packing that wgpu loves
 struct U32Vec4 {
     pub x: u32,
@@ -365,6 +366,10 @@ struct U32Vec4 {
 impl U32Vec4 {
     pub fn new(x: u32, y: u32, z: u32, w: u32) -> Self {
         Self { x, y, z, w }
+    }
+
+    pub fn splat(val: u32) -> Self {
+        Self::new(val, val, val, val)
     }
 }
 
