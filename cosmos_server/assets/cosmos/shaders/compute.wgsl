@@ -4,7 +4,8 @@ const CHUNK_DIMENSIONS: u32 = 32;
 // @group(0) @binding(0) var texture: texture_storage_2d<r32float, read_write>;
 @group(0) @binding(0) var<uniform> permutation_table: array<vec4<u32>, 64>;
 @group(0) @binding(1) var<uniform> params: array<GenerationParams, N_CHUNKS>;
-@group(0) @binding(2) var<storage, read_write> values: array<TerrainData>;
+@group(0) @binding(2) var<uniform> chunk_count: u32;
+@group(0) @binding(3) var<storage, read_write> values: array<TerrainData>;
 
 struct GenerationParams {
     // Everythihng has to be a vec4 because padding. Otherwise things get super wack
@@ -139,8 +140,12 @@ fn calculate_biome_parameters(coords_f32: vec4<f32>, s_loc: vec4<f32>) -> u32 {
 fn main(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
     let idx = invocation_id.x;
 
-    // SIZE, SIZE, SIZE
     let coords = expand(idx, CHUNK_DIMENSIONS, CHUNK_DIMENSIONS, CHUNK_DIMENSIONS);
+    if coords.w >= chunk_count {
+        // Most times we won't be generating the full number of chunks we can at the same time, 
+        // so exit early if we aren't generating this one.
+        return;
+    }
 
     let param = params[coords.w];
 

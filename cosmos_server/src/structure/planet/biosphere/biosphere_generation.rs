@@ -77,7 +77,7 @@ pub(crate) fn send_and_read_chunks_gpu<T: BiosphereMarkerComponent, E: TGenerate
             (1000.0 * (time.elapsed_seconds() - sent_to_gpu_time.0)).floor()
         );
 
-        let v: Vec<TerrainData> = worker.try_read_vec("values").expect("Failed to read values!");
+        let v: Vec<TerrainData> = worker.try_read_vec("values").expect("Failed to read chunk generation values!");
 
         for (w, mut needs_generated_chunk) in std::mem::take(&mut currently_generating_chunks.0).into_iter().enumerate() {
             if let Ok(mut structure) = q_structure.get_mut(needs_generated_chunk.structure_entity) {
@@ -167,11 +167,17 @@ pub(crate) fn send_and_read_chunks_gpu<T: BiosphereMarkerComponent, E: TGenerate
     }
 
     if currently_generating_chunks.0.is_empty() {
-        if needs_generated_chunks.0.len() >= N_CHUNKS as usize {
-            let mut todo: [GenerationParams; N_CHUNKS as usize] = Default::default();
+        if !needs_generated_chunks.0.is_empty() {
+            let mut chunk_count: u32 = 0;
+
+            let mut todo: [GenerationParams; N_CHUNKS as usize] = [GenerationParams::default(); N_CHUNKS as usize];
 
             for i in 0..N_CHUNKS {
-                let mut doing = needs_generated_chunks.0.remove(0);
+                let Some(mut doing) = needs_generated_chunks.0.pop() else {
+                    break;
+                };
+
+                chunk_count += 1;
 
                 let structure_loc = doing.structure_location.absolute_coords_f32();
 
@@ -188,11 +194,12 @@ pub(crate) fn send_and_read_chunks_gpu<T: BiosphereMarkerComponent, E: TGenerate
                 currently_generating_chunks.0.push(doing);
             }
 
-            let vals: Vec<TerrainData> = vec![TerrainData::zeroed(); DIMS]; // Useless, but nice for debugging (and line below)
-            worker.write_slice("values", &vals);
+            // let vals: Vec<TerrainData> = vec![TerrainData::zeroed(); DIMS]; // Useless, but nice for debugging (and line below)
+            // worker.write_slice("values", &vals);
 
             // Not useless
             worker.write("params", &todo);
+            worker.write("chunk_count", &chunk_count);
 
             worker.execute();
 
@@ -303,10 +310,11 @@ impl<T: BiosphereMarkerComponent + TypePath> ComputeWorker for BiosphereShaderWo
             .one_shot()
             .add_empty_uniform("permutation_table", size_of::<[U32Vec4; 256 / 4]>() as u64) // Vec<f32>
             .add_empty_uniform("params", size_of::<[GenerationParams; N_CHUNKS as usize]>() as u64) // GenerationParams
+            .add_empty_uniform("chunk_count", size_of::<u32>() as u64)
             .add_empty_staging("values", size_of::<[TerrainData; DIMS]>() as u64)
             .add_pass::<ComputeShaderInstance<T>>(
                 [DIMS as u32 / WORKGROUP_SIZE, 1, 1], //SIZE / WORKGROUP_SIZE, SIZE / WORKGROUP_SIZE, SIZE / WORKGROUP_SIZE
-                &["permutation_table", "params", "values"],
+                &["permutation_table", "params", "chunk_count", "values"],
             )
             .build();
 
