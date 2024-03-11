@@ -5,6 +5,7 @@ use bevy_app_compute::prelude::*;
 use bytemuck::{Pod, Zeroable};
 use cosmos_core::{
     block::BlockFace,
+    ecs::mut_events::{EventWriterCustomSend, MutEvent, MutEventsCommand},
     physics::location::Location,
     structure::{
         block_storage::BlockStorer,
@@ -13,11 +14,11 @@ use cosmos_core::{
         planet::Planet,
         Structure,
     },
-    utils::array_utils::flatten_4d,
+    utils::array_utils::{flatten, flatten_4d},
 };
 use rand::{seq::SliceRandom, SeedableRng};
 use rand_chacha::ChaCha8Rng;
-use std::{marker::PhantomData, mem::size_of};
+use std::mem::size_of;
 
 use crate::{init::init_world::ServerSeed, state::GameState};
 
@@ -31,141 +32,206 @@ const N_CHUNKS: u32 = 32;
 const DIMS: usize = CHUNK_DIMENSIONS_USIZE * CHUNK_DIMENSIONS_USIZE * CHUNK_DIMENSIONS_USIZE * N_CHUNKS as usize;
 
 #[derive(Debug)]
-pub(crate) struct NeedGeneratedChunk<T> {
+pub(crate) struct NeedGeneratedChunk {
     chunk: Chunk,
     structure_entity: Entity,
     chunk_pos: Vec3,
     structure_dimensions: CoordinateType,
-    structure_location: Location,
     time: f32,
-    _phantom: PhantomData<T>,
+    generation_params: GenerationParams,
+    biosphere_type: &'static str,
 }
 
 #[derive(Resource, Debug, Default)]
-pub(crate) struct NeedGeneratedChunks<T>(Vec<NeedGeneratedChunk<T>>);
+pub(crate) struct NeedGeneratedChunks(Vec<NeedGeneratedChunk>);
 
 #[derive(Resource, Debug, Default)]
-pub(crate) struct GeneratingChunks<T>(Vec<NeedGeneratedChunk<T>>);
+pub(crate) struct GeneratingChunks(Vec<NeedGeneratedChunk>);
 
 #[derive(Resource, Default)]
 pub(crate) struct SentToGpuTime(f32);
 
 #[derive(Default, Debug, ShaderType, Pod, Zeroable, Clone, Copy)]
 #[repr(C)]
-struct TerrainData {
+pub(crate) struct TerrainData {
     depth: i32,
     data: u32,
 }
 
-pub(crate) fn send_and_read_chunks_gpu<T: BiosphereMarkerComponent, E: TGenerateChunkEvent>(
-    mut needs_generated_chunks: ResMut<NeedGeneratedChunks<T>>,
-    mut currently_generating_chunks: ResMut<GeneratingChunks<T>>,
-    biosphere_biomes: Res<BiosphereBiomesRegistry<T>>,
-    // biome_decider: Res<BiomeDecider<T>>,
-    sea_level: Option<Res<BiosphereSeaLevel<T>>>,
-    mut worker: ResMut<AppComputeWorker<BiosphereShaderWorker<T>>>,
-    mut ev_writer: EventWriter<GenerateChunkFeaturesEvent<T>>,
-    // blocks: Res<Registry<Block>>,
-    mut q_structure: Query<&mut Structure>,
+#[derive(Event)]
+pub(crate) struct DoneGeneratingChunkEvent {
+    needs_generated_chunk: Option<NeedGeneratedChunk>,
+    chunk_data_slice: ChunkDataSlice,
+}
 
-    mut sent_to_gpu_time: ResMut<SentToGpuTime>,
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct ChunkDataSlice {
+    start: usize,
+    end: usize,
+}
+
+#[derive(Resource, Default)]
+pub(crate) struct ChunkData(Vec<TerrainData>);
+
+impl ChunkData {
+    fn data_slice(&self, chunk_data_slice: ChunkDataSlice) -> &[TerrainData] {
+        &self.0.as_slice()[chunk_data_slice.start..chunk_data_slice.end]
+    }
+}
+
+fn read_gpu_data(
+    worker: ResMut<AppComputeWorker<BiosphereShaderWorker>>,
+    mut ev_writer: EventWriter<MutEvent<DoneGeneratingChunkEvent>>,
+    mut currently_generating_chunks: ResMut<GeneratingChunks>,
+    mut chunk_data: ResMut<ChunkData>,
+
+    sent_to_gpu_time: ResMut<SentToGpuTime>,
     time: Res<Time>,
 ) {
-    if worker.ready() {
-        println!(
-            "GPU DONE - took {}ms",
-            (1000.0 * (time.elapsed_seconds() - sent_to_gpu_time.0)).floor()
-        );
+    if !worker.ready() {
+        return;
+    }
 
-        let v: Vec<TerrainData> = worker.try_read_vec("values").expect("Failed to read chunk generation values!");
+    info!(
+        "GPU DONE - took {}ms",
+        (1000.0 * (time.elapsed_seconds() - sent_to_gpu_time.0)).floor()
+    );
 
-        for (w, mut needs_generated_chunk) in std::mem::take(&mut currently_generating_chunks.0).into_iter().enumerate() {
-            if let Ok(mut structure) = q_structure.get_mut(needs_generated_chunk.structure_entity) {
-                for z in 0..CHUNK_DIMENSIONS {
-                    for y in 0..CHUNK_DIMENSIONS {
-                        for x in 0..CHUNK_DIMENSIONS {
-                            let idx = flatten_4d(
-                                x as usize,
-                                y as usize,
-                                z as usize,
-                                w,
-                                CHUNK_DIMENSIONS_USIZE,
-                                CHUNK_DIMENSIONS_USIZE,
-                                CHUNK_DIMENSIONS_USIZE,
-                            );
+    let v: Vec<TerrainData> = worker.try_read_vec("values").expect("Failed to read chunk generation values!");
+    *chunk_data = ChunkData(v);
 
-                            let value = v[idx];
+    for (w, needs_generated_chunk) in std::mem::take(&mut currently_generating_chunks.0).into_iter().enumerate() {
+        let chunk_data_slice = ChunkDataSlice {
+            start: flatten_4d(0, 0, 0, w, CHUNK_DIMENSIONS_USIZE, CHUNK_DIMENSIONS_USIZE, CHUNK_DIMENSIONS_USIZE),
+            end: flatten_4d(
+                0,
+                0,
+                0,
+                w + 1,
+                CHUNK_DIMENSIONS_USIZE,
+                CHUNK_DIMENSIONS_USIZE,
+                CHUNK_DIMENSIONS_USIZE,
+            ),
+        };
 
-                            if value.depth >= 0 {
-                                // return temperature_u32 << 16 | humidity_u32 << 8 | elevation_u32;
-                                let ideal_elevation = (value.data & 0xFF) as f32;
-                                let ideal_humidity = ((value.data >> 8) & 0xFF) as f32;
-                                let ideal_temperature = ((value.data >> 16) & 0xFF) as f32;
+        ev_writer.send_mut(DoneGeneratingChunkEvent {
+            chunk_data_slice,
+            needs_generated_chunk: Some(needs_generated_chunk),
+        });
+    }
+}
 
-                                let ideal_biome = biosphere_biomes.ideal_biome_for(BiomeParameters {
-                                    ideal_elevation,
-                                    ideal_humidity,
-                                    ideal_temperature,
-                                });
+pub(crate) fn generate_chunks_from_gpu_data<T: BiosphereMarkerComponent, E: TGenerateChunkEvent>(
+    mut ev_reader: EventReader<MutEvent<DoneGeneratingChunkEvent>>,
+    chunk_data: Res<ChunkData>,
+    biosphere_biomes: Res<BiosphereBiomesRegistry<T>>,
+    sea_level: Option<Res<BiosphereSeaLevel<T>>>,
+    mut ev_writer: EventWriter<GenerateChunkFeaturesEvent<T>>,
+    mut q_structure: Query<&mut Structure>,
 
-                                let block_layers: &BlockLayers = ideal_biome.block_layers();
+    time: Res<Time>,
+) {
+    for ev in ev_reader.read() {
+        let mut ev = ev.write();
 
-                                let block = block_layers.block_for_depth(value.depth as u64);
+        let Some(needs_generated_chunk) = &mut ev.needs_generated_chunk else {
+            continue;
+        };
 
-                                let block_relative_coord = needs_generated_chunk.chunk_pos + Vec3::new(x as f32, y as f32, z as f32);
+        if needs_generated_chunk.biosphere_type != T::type_path() {
+            continue;
+        }
 
-                                let face = Planet::planet_face_relative(block_relative_coord);
+        let chunk_data = chunk_data.data_slice(ev.chunk_data_slice);
 
+        let mut needs_generated_chunk = std::mem::take(&mut ev.needs_generated_chunk).expect("Verified to be Some above.");
+
+        let Ok(mut structure) = q_structure.get_mut(needs_generated_chunk.structure_entity) else {
+            continue;
+        };
+
+        for z in 0..CHUNK_DIMENSIONS {
+            for y in 0..CHUNK_DIMENSIONS {
+                for x in 0..CHUNK_DIMENSIONS {
+                    let idx = flatten(x as usize, y as usize, z as usize, CHUNK_DIMENSIONS_USIZE, CHUNK_DIMENSIONS_USIZE);
+
+                    let value = chunk_data[idx];
+
+                    if value.depth >= 0 {
+                        // return temperature_u32 << 16 | humidity_u32 << 8 | elevation_u32;
+                        let ideal_elevation = (value.data & 0xFF) as f32;
+                        let ideal_humidity = ((value.data >> 8) & 0xFF) as f32;
+                        let ideal_temperature = ((value.data >> 16) & 0xFF) as f32;
+
+                        let ideal_biome = biosphere_biomes.ideal_biome_for(BiomeParameters {
+                            ideal_elevation,
+                            ideal_humidity,
+                            ideal_temperature,
+                        });
+
+                        let block_layers: &BlockLayers = ideal_biome.block_layers();
+
+                        let block = block_layers.block_for_depth(value.depth as u64);
+
+                        let block_relative_coord = needs_generated_chunk.chunk_pos + Vec3::new(x as f32, y as f32, z as f32);
+
+                        let face = Planet::planet_face_relative(block_relative_coord);
+
+                        needs_generated_chunk.chunk.set_block_at(
+                            ChunkBlockCoordinate::new(x as CoordinateType, y as CoordinateType, z as CoordinateType),
+                            &block,
+                            face,
+                        );
+                    } else if let Some(sea_level) = sea_level.as_ref() {
+                        if let Some(sea_level_block) = sea_level.block.as_ref() {
+                            let sea_level_coordinate = ((needs_generated_chunk.structure_dimensions / 2) as f32 * sea_level.level) as u64;
+
+                            let block_relative_coord = needs_generated_chunk.chunk_pos + Vec3::new(x as f32, y as f32, z as f32);
+                            let face = Planet::planet_face_relative(block_relative_coord);
+
+                            let coord = match face {
+                                BlockFace::Left | BlockFace::Right => block_relative_coord.x,
+                                BlockFace::Top | BlockFace::Bottom => block_relative_coord.y,
+                                BlockFace::Front | BlockFace::Back => block_relative_coord.z,
+                            };
+
+                            if (coord.abs()) as CoordinateType <= sea_level_coordinate {
                                 needs_generated_chunk.chunk.set_block_at(
                                     ChunkBlockCoordinate::new(x as CoordinateType, y as CoordinateType, z as CoordinateType),
-                                    &block,
+                                    sea_level_block,
                                     face,
                                 );
-                            } else if let Some(sea_level) = sea_level.as_ref() {
-                                if let Some(sea_level_block) = sea_level.block.as_ref() {
-                                    let sea_level_coordinate =
-                                        ((needs_generated_chunk.structure_dimensions / 2) as f32 * sea_level.level) as u64;
-
-                                    let block_relative_coord = needs_generated_chunk.chunk_pos + Vec3::new(x as f32, y as f32, z as f32);
-                                    let face = Planet::planet_face_relative(block_relative_coord);
-
-                                    let coord = match face {
-                                        BlockFace::Left | BlockFace::Right => block_relative_coord.x,
-                                        BlockFace::Top | BlockFace::Bottom => block_relative_coord.y,
-                                        BlockFace::Front | BlockFace::Back => block_relative_coord.z,
-                                    };
-
-                                    if (coord.abs()) as CoordinateType <= sea_level_coordinate {
-                                        needs_generated_chunk.chunk.set_block_at(
-                                            ChunkBlockCoordinate::new(x as CoordinateType, y as CoordinateType, z as CoordinateType),
-                                            sea_level_block,
-                                            face,
-                                        );
-                                    }
-                                }
                             }
                         }
                     }
                 }
-
-                info!(
-                    "Got generated chunk - took {}ms to generate",
-                    (1000.0 * (time.elapsed_seconds() - needs_generated_chunk.time)).floor()
-                );
-
-                // ideal_biome.generate_face_chunk(self_as_dyn, block_coords, s_dimensions, chunk, up, biome_id_list, self_biome_id, elevation, sea_level)
-
-                ev_writer.send(GenerateChunkFeaturesEvent {
-                    chunk_coords: needs_generated_chunk.chunk.chunk_coordinates(),
-                    structure_entity: needs_generated_chunk.structure_entity,
-                    _phantom: Default::default(),
-                });
-
-                structure.set_chunk(needs_generated_chunk.chunk);
             }
         }
-    }
 
+        info!(
+            "Got generated chunk - took {}ms to generate",
+            (1000.0 * (time.elapsed_seconds() - needs_generated_chunk.time)).floor()
+        );
+
+        // ideal_biome.generate_face_chunk(self_as_dyn, block_coords, s_dimensions, chunk, up, biome_id_list, self_biome_id, elevation, sea_level)
+
+        ev_writer.send(GenerateChunkFeaturesEvent {
+            chunk_coords: needs_generated_chunk.chunk.chunk_coordinates(),
+            structure_entity: needs_generated_chunk.structure_entity,
+            _phantom: Default::default(),
+        });
+
+        structure.set_chunk(needs_generated_chunk.chunk);
+    }
+}
+
+fn send_chunks_to_gpu(
+    mut currently_generating_chunks: ResMut<GeneratingChunks>,
+    mut needs_generated_chunks: ResMut<NeedGeneratedChunks>,
+    time: Res<Time>,
+    mut worker: ResMut<AppComputeWorker<BiosphereShaderWorker>>,
+    mut sent_to_gpu_time: ResMut<SentToGpuTime>,
+) {
     if currently_generating_chunks.0.is_empty() {
         if !needs_generated_chunks.0.is_empty() {
             let mut chunk_count: u32 = 0;
@@ -179,16 +245,7 @@ pub(crate) fn send_and_read_chunks_gpu<T: BiosphereMarkerComponent, E: TGenerate
 
                 chunk_count += 1;
 
-                let structure_loc = doing.structure_location.absolute_coords_f32();
-
-                todo[i as usize] = GenerationParams {
-                    chunk_coords: Vec4::new(doing.chunk_pos.x, doing.chunk_pos.y, doing.chunk_pos.z, 0.0),
-                    scale: Vec4::splat(1.0),
-                    sea_level: Vec4::splat(
-                        (sea_level.as_ref().map(|x| x.level).unwrap_or(0.75) * (doing.structure_dimensions / 2) as f32) as f32,
-                    ),
-                    structure_pos: Vec4::new(structure_loc.x, structure_loc.y, structure_loc.z, 0.0),
-                };
+                todo[i as usize] = doing.generation_params;
 
                 doing.time = time.elapsed_seconds();
                 currently_generating_chunks.0.push(doing);
@@ -197,7 +254,6 @@ pub(crate) fn send_and_read_chunks_gpu<T: BiosphereMarkerComponent, E: TGenerate
             // let vals: Vec<TerrainData> = vec![TerrainData::zeroed(); DIMS]; // Useless, but nice for debugging (and line below)
             // worker.write_slice("values", &vals);
 
-            // Not useless
             worker.write("params", &todo);
             worker.write("chunk_count", &chunk_count);
 
@@ -212,9 +268,12 @@ pub(crate) fn send_and_read_chunks_gpu<T: BiosphereMarkerComponent, E: TGenerate
 pub(crate) fn generate_planet<T: BiosphereMarkerComponent, E: TGenerateChunkEvent>(
     mut query: Query<(&mut Structure, &Location)>,
     mut events: EventReader<E>,
+    sea_level: Option<Res<BiosphereSeaLevel<T>>>,
 
-    mut needs_generated_chunks: ResMut<NeedGeneratedChunks<T>>,
+    mut needs_generated_chunks: ResMut<NeedGeneratedChunks>,
 ) {
+    let type_path = T::type_path();
+
     let chunks = events
         .read()
         .filter_map(|ev| {
@@ -249,14 +308,21 @@ pub(crate) fn generate_planet<T: BiosphereMarkerComponent, E: TGenerateChunkEven
             // This should be negative-most position of chunk, but chunk_relative_position returns the middle coordinate.
             let chunk_rel_pos = planet.chunk_relative_position(chunk.chunk_coordinates()) - Vec3::splat(CHUNK_DIMENSIONSF / 2.0);
 
+            let structure_loc = location.absolute_coords_f32();
+
             Some(NeedGeneratedChunk {
                 chunk,
                 chunk_pos: chunk_rel_pos,
                 structure_dimensions: s_dimensions,
                 structure_entity,
-                structure_location: location,
                 time: 0.0,
-                _phantom: Default::default(),
+                generation_params: GenerationParams {
+                    chunk_coords: Vec4::new(chunk_rel_pos.x, chunk_rel_pos.y, chunk_rel_pos.z, 0.0),
+                    scale: Vec4::splat(1.0),
+                    sea_level: Vec4::splat((sea_level.as_ref().map(|x| x.level).unwrap_or(0.75) * (s_dimensions / 2) as f32) as f32),
+                    structure_pos: Vec4::new(structure_loc.x, structure_loc.y, structure_loc.z, 0.0),
+                },
+                biosphere_type: type_path,
             })
         }));
 }
@@ -272,9 +338,9 @@ struct GenerationParams {
 }
 
 #[derive(TypePath, Default)]
-struct ComputeShaderInstance<T: BiosphereMarkerComponent + TypePath>(PhantomData<T>);
+struct ComputeShaderInstance;
 
-impl<T: BiosphereMarkerComponent + TypePath> ComputeShader for ComputeShaderInstance<T> {
+impl ComputeShader for ComputeShaderInstance {
     fn shader() -> ShaderRef {
         "cosmos/shaders/compute.wgsl".into()
     }
@@ -284,7 +350,7 @@ impl<T: BiosphereMarkerComponent + TypePath> ComputeShader for ComputeShaderInst
 const WORKGROUP_SIZE: u32 = 1024;
 
 #[derive(Default)]
-pub(crate) struct BiosphereShaderWorker<T: BiosphereMarkerComponent>(PhantomData<T>);
+pub(crate) struct BiosphereShaderWorker;
 
 #[repr(C)]
 #[derive(Debug, ShaderType, Pod, Zeroable, Clone, Copy)]
@@ -302,7 +368,7 @@ impl U32Vec4 {
     }
 }
 
-impl<T: BiosphereMarkerComponent + TypePath> ComputeWorker for BiosphereShaderWorker<T> {
+impl ComputeWorker for BiosphereShaderWorker {
     fn build(world: &mut bevy::prelude::World) -> AppComputeWorker<Self> {
         assert!(DIMS as u32 % WORKGROUP_SIZE == 0);
 
@@ -312,7 +378,7 @@ impl<T: BiosphereMarkerComponent + TypePath> ComputeWorker for BiosphereShaderWo
             .add_empty_uniform("params", size_of::<[GenerationParams; N_CHUNKS as usize]>() as u64) // GenerationParams
             .add_empty_uniform("chunk_count", size_of::<u32>() as u64)
             .add_empty_staging("values", size_of::<[TerrainData; DIMS]>() as u64)
-            .add_pass::<ComputeShaderInstance<T>>(
+            .add_pass::<ComputeShaderInstance>(
                 [DIMS as u32 / WORKGROUP_SIZE, 1, 1], //SIZE / WORKGROUP_SIZE, SIZE / WORKGROUP_SIZE, SIZE / WORKGROUP_SIZE
                 &["permutation_table", "params", "chunk_count", "values"],
             )
@@ -325,10 +391,7 @@ impl<T: BiosphereMarkerComponent + TypePath> ComputeWorker for BiosphereShaderWo
 #[derive(Resource)]
 struct PermutationTable(Vec<U32Vec4>);
 
-fn set_permutation_table<T: BiosphereMarkerComponent>(
-    perm_table: Res<PermutationTable>,
-    mut worker: ResMut<AppComputeWorker<BiosphereShaderWorker<T>>>,
-) {
+fn set_permutation_table(perm_table: Res<PermutationTable>, mut worker: ResMut<AppComputeWorker<BiosphereShaderWorker>>) {
     worker.write_slice("permutation_table", &perm_table.0);
 }
 
@@ -364,14 +427,43 @@ fn setup_permutation_table(seed: Res<ServerSeed>, mut commands: Commands) {
     commands.insert_resource(PermutationTable(permutation_table));
 }
 
-pub(super) fn register_biosphere<T: BiosphereMarkerComponent>(app: &mut App) {
-    app.add_plugins(AppComputeWorkerPlugin::<BiosphereShaderWorker<T>>::default())
-        .add_systems(OnEnter(GameState::PostLoading), set_permutation_table::<T>)
-        .init_resource::<NeedGeneratedChunks<T>>()
-        .init_resource::<GeneratingChunks<T>>();
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// Stages a biosphere must go through to generate a chunk
+pub enum BiosphereGenerationSet {
+    /// The biosphere should flag the chunks they want generated by adding them to the [`NeedGeneratedChunks`] resource.
+    FlagChunksNeedGenerated,
+    /// Chunk generation requests are sent to the GPU when it is available for new generations. This is handled for all biospheres
+    /// automatically that put their chunk requests in [`NeedGeneratedChunks`]
+    GpuInteraction,
+    /// Chunks that are ready to be populated with blocks are now sent and can be read via the EventReader for [`DoneGeneratingChunkEvent`].
+    GenerateChunks,
+    /// Called after the [`BiosphereGenerationSet::GenerateChunks`] set. This should be used for things like trees.
+    GenerateChunkFeatures,
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(OnEnter(GameState::PreLoading), setup_permutation_table)
-        .init_resource::<SentToGpuTime>();
+    app.configure_sets(
+        Update,
+        (
+            BiosphereGenerationSet::FlagChunksNeedGenerated,
+            BiosphereGenerationSet::GpuInteraction,
+            BiosphereGenerationSet::GenerateChunks,
+            BiosphereGenerationSet::GenerateChunkFeatures,
+        )
+            .chain(),
+    )
+    .add_plugins(AppComputeWorkerPlugin::<BiosphereShaderWorker>::default())
+    .add_systems(OnEnter(GameState::PreLoading), setup_permutation_table)
+    .add_systems(OnEnter(GameState::PostLoading), set_permutation_table)
+    .add_systems(
+        Update,
+        (send_chunks_to_gpu, read_gpu_data)
+            .in_set(BiosphereGenerationSet::GpuInteraction)
+            .chain(),
+    )
+    .init_resource::<NeedGeneratedChunks>()
+    .init_resource::<GeneratingChunks>()
+    .init_resource::<ChunkData>()
+    .init_resource::<SentToGpuTime>()
+    .add_mut_event::<DoneGeneratingChunkEvent>();
 }

@@ -35,6 +35,7 @@ use crate::{
     },
     rng::get_rng_for_sector,
     state::GameState,
+    structure::planet::biosphere::biosphere_generation::BiosphereGenerationSet,
 };
 
 use self::{
@@ -240,7 +241,7 @@ pub fn register_biosphere<T: BiosphereMarkerComponent + Default + Clone, E: Send
     create_biosphere_biomes_registry::<T>(app);
     info!("Done creating biome registry.");
 
-    biosphere_generation::register_biosphere::<T>(app);
+    // biosphere_generation::register_biosphere::<T>(app);
 
     app.add_event::<E>()
         .add_systems(Startup, move |mut registry: ResMut<BiosphereTemperatureRegistry>| {
@@ -281,11 +282,10 @@ pub fn register_biosphere<T: BiosphereMarkerComponent + Default + Clone, E: Send
                 // Checks if any blocks need generated for this biosphere
                 (
                     (
-                        biosphere_generation::generate_planet::<T, E>,
-                        biosphere_generation::send_and_read_chunks_gpu::<T, E>,
-                        generate_chunk_featuress::<T>,
-                    )
-                        .chain(),
+                        biosphere_generation::generate_planet::<T, E>.in_set(BiosphereGenerationSet::FlagChunksNeedGenerated),
+                        biosphere_generation::generate_chunks_from_gpu_data::<T, E>.in_set(BiosphereGenerationSet::GenerateChunks),
+                        generate_chunk_featuress::<T>.in_set(BiosphereGenerationSet::GenerateChunkFeatures),
+                    ),
                     (
                         // order doesn't matter for these
                         generate_player_lods::<T>.before(start_generating_lods),
