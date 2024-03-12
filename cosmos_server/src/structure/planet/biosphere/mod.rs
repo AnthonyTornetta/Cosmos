@@ -43,7 +43,9 @@ use crate::{
     registry::sync_registry,
     rng::get_rng_for_sector,
     state::GameState,
-    structure::planet::biosphere::biosphere_generation::BiosphereGenerationSet,
+    structure::planet::{
+        biosphere::biosphere_generation::BiosphereGenerationSet, generation::planet_generator::check_needs_generated_system,
+    },
 };
 
 use self::{
@@ -296,8 +298,10 @@ pub fn register_biosphere<T: BiosphereMarkerComponent + Default + Clone, E: Send
                     biosphere_generation::generate_planet::<T, E>.in_set(BiosphereGenerationSet::FlagChunksNeedGenerated),
                     biosphere_generation::generate_chunks_from_gpu_data::<T, E>.in_set(BiosphereGenerationSet::GenerateChunks),
                     generate_chunk_featuress::<T>.in_set(BiosphereGenerationSet::GenerateChunkFeatures),
-                ),)
-                    .run_if(in_state(GameState::Playing)),
+                    check_needs_generated_system::<E, T>,
+                )
+                    .chain())
+                .run_if(in_state(GameState::Playing)),
             ),
         )
         .init_resource::<GeneratingChunks<T>>()

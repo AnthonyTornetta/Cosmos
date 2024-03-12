@@ -9,7 +9,7 @@ use std::{
 use bevy::{
     ecs::{
         event::{Event, EventReader, EventWriter},
-        query::{Changed, Without},
+        query::{Added, Changed, Without},
     },
     log::info,
     math::{Vec3, Vec4},
@@ -577,7 +577,7 @@ fn read_gpu_data(
             ),
         };
 
-        info!("Got chunk back in {}", time.elapsed_seconds() - needs_generated_chunk.time);
+        info!("Got chunk back in {}s", time.elapsed_seconds() - needs_generated_chunk.time);
 
         ev_writer.send_mut(DoneGeneratingChunkEvent {
             chunk_data_slice,
@@ -720,6 +720,19 @@ pub(crate) fn generate_chunks_from_gpu_data(
                             face,
                         );
                     }
+
+                    //  else {
+                    //     let block = blocks.from_id("cosmos:sand").expect("Missing sand?");
+                    //     let block_relative_coord = chunk_pos + Vec3::new(x as f32, y as f32, z as f32) * needs_generated_chunk.scale;
+
+                    //     let face = Planet::planet_face_relative(block_relative_coord);
+
+                    //     needs_generated_chunk.chunk.set_block_at(
+                    //         ChunkBlockCoordinate::new(x as CoordinateType, y as CoordinateType, z as CoordinateType),
+                    //         &block,
+                    //         face,
+                    //     );
+                    // }
                     // else if let Some(sea_level) = sea_level.as_ref() {
                     //     if let Some(sea_level_block) = sea_level.block.as_ref() {
                     //         let sea_level_coordinate = ((needs_generated_chunk.structure_dimensions / 2) as f32 * sea_level.level) as u64;
@@ -804,7 +817,7 @@ fn on_change_being_generated(
 
         propagate_changes(lod_request, &mut lod);
 
-        info!("Propagated changes! It should now be re-rendered.");
+        info!("Propagated changes! It should now be re-rendered. {lod:?}");
 
         commands.entity(ent).remove::<LodBeingGenerated>();
     }
@@ -826,10 +839,17 @@ fn recursively_change(lod_requst: &mut LodRequest, steps: &[usize], chunk: LodCh
     }
 }
 
+fn on_add_planet(mut commands: Commands, q_planets: Query<Entity, Added<Planet>>) {
+    for ent in &q_planets {
+        commands.entity(ent).insert(Lod::None);
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         (
+            on_add_planet,
             generate_player_lods,
             flag_for_generation,
             read_gpu_data,
@@ -840,5 +860,7 @@ pub(super) fn register(app: &mut App) {
             .chain()
             .run_if(in_state(GameState::Playing)),
     )
-    .add_mut_event::<DoneGeneratingChunkEvent>();
+    .add_mut_event::<DoneGeneratingChunkEvent>()
+    .init_resource::<NeedGeneratedLodChunks>()
+    .init_resource::<GeneratingLodChunks>();
 }

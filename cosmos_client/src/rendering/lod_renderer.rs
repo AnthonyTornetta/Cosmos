@@ -713,6 +713,7 @@ struct NeedLods(HashSet<Entity>);
 
 fn monitor_lods_needs_rendered_system(lods_needed: Query<Entity, Changed<Lod>>, mut should_render_lods: ResMut<NeedLods>) {
     for needs_lod in lods_needed.iter() {
+        info!("Added lod to be re-rendered for {needs_lod:?}");
         should_render_lods.0.insert(needs_lod);
     }
 }
@@ -845,7 +846,7 @@ fn trigger_lod_render(
     materials_registry: Res<ReadOnlyRegistry<MaterialDefinition>>,
     meshes_registry: Res<ReadOnlyBlockMeshRegistry>,
     block_textures: Res<ReadOnlyRegistry<BlockTextureIndex>>,
-    lods_query: Query<(&ReadOnlyLod, &Structure)>,
+    lods_query: Query<(&Lod, &Structure)>,
     mut rendering_lods: ResMut<RenderingLods>,
     mut lods_needed: ResMut<NeedLods>,
 ) {
@@ -863,6 +864,7 @@ fn trigger_lod_render(
         // Don't double-render same lod because that causes many issues. Instead put it back into the queue for when the current one finishes.
         if rendering_lods.iter().any(|r_lod| r_lod.0 == entity) {
             lods_needed.0.insert(entity);
+            info!("Already currently rendering.");
             continue;
         }
 
@@ -880,7 +882,6 @@ fn trigger_lod_render(
         let lod = lod.clone();
 
         let task = thread_pool.spawn(async move {
-            let lod = lod.inner();
             let mut non_dirty = vec![];
             find_non_dirty(&lod, Vec3::ZERO, &mut non_dirty, block_dimensions as f32);
 
