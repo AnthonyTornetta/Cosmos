@@ -18,7 +18,11 @@ use super::{
 /// Marks that this is for a grass biosphere
 pub struct MoltenBiosphereMarker;
 
-impl BiosphereMarkerComponent for MoltenBiosphereMarker {}
+impl BiosphereMarkerComponent for MoltenBiosphereMarker {
+    fn unlocalized_name() -> &'static str {
+        "cosmos:molten"
+    }
+}
 
 /// Marks that a grass chunk needs generated
 #[derive(Debug, Event)]
@@ -174,11 +178,7 @@ fn register_biosphere_biomes(
 }
 
 pub(super) fn register(app: &mut App) {
-    register_biosphere::<MoltenBiosphereMarker, MoltenChunkNeedsGeneratedEvent>(
-        app,
-        "cosmos:biosphere_molten",
-        TemperatureRange::new(0.0, 0.0),
-    );
+    register_biosphere::<MoltenBiosphereMarker, MoltenChunkNeedsGeneratedEvent>(app, TemperatureRange::new(0.0, 0.0));
 
     app.add_systems(OnEnter(GameState::PostLoading), register_biosphere_biomes);
 }

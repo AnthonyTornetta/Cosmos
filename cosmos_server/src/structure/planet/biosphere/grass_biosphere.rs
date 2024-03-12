@@ -18,7 +18,11 @@ use super::{
 /// Marks that this is for a grass biosphere
 pub struct GrassBiosphereMarker;
 
-impl BiosphereMarkerComponent for GrassBiosphereMarker {}
+impl BiosphereMarkerComponent for GrassBiosphereMarker {
+    fn unlocalized_name() -> &'static str {
+        "cosmos:grass"
+    }
+}
 
 /// Marks that a grass chunk needs generated
 #[derive(Debug, Event)]
@@ -109,11 +113,7 @@ fn add_ocean_level(mut commands: Commands, blocks: Res<Registry<Block>>) {
 }
 
 pub(super) fn register(app: &mut App) {
-    register_biosphere::<GrassBiosphereMarker, GrassChunkNeedsGeneratedEvent>(
-        app,
-        "cosmos:biosphere_grass",
-        TemperatureRange::new(0.0, 400.0),
-    );
+    register_biosphere::<GrassBiosphereMarker, GrassChunkNeedsGeneratedEvent>(app, TemperatureRange::new(0.0, 400.0));
 
     app.add_systems(OnEnter(GameState::PostLoading), (register_biosphere_biomes, add_ocean_level));
 }

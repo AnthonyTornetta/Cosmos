@@ -7,6 +7,7 @@ use cosmos_core::{
     block::BlockFace,
     ecs::mut_events::{EventWriterCustomSend, MutEvent, MutEventsCommand},
     physics::location::Location,
+    registry::{identifiable::Identifiable, Registry},
     structure::{
         block_storage::BlockStorer,
         chunk::{Chunk, CHUNK_DIMENSIONS, CHUNK_DIMENSIONSF, CHUNK_DIMENSIONS_USIZE},
@@ -25,7 +26,7 @@ use crate::{init::init_world::ServerSeed, state::GameState};
 use super::{
     biome::{BiomeParameters, BiosphereBiomesRegistry},
     biosphere_generation_old::{BlockLayers, GenerateChunkFeaturesEvent},
-    BiosphereMarkerComponent, BiosphereSeaLevel, TGenerateChunkEvent,
+    BiosphereMarkerComponent, BiosphereSeaLevel, RegisteredBiosphere, TGenerateChunkEvent,
 };
 
 // If you change this, make sure to modify the '@workgroup_size' value in the shader aswell.
@@ -215,8 +216,6 @@ pub(crate) fn generate_chunks_from_gpu_data<T: BiosphereMarkerComponent, E: TGen
             (1000.0 * (time.elapsed_seconds() - needs_generated_chunk.time)).floor()
         );
 
-        // ideal_biome.generate_face_chunk(self_as_dyn, block_coords, s_dimensions, chunk, up, biome_id_list, self_biome_id, elevation, sea_level)
-
         ev_writer.send(GenerateChunkFeaturesEvent {
             chunk_coords: needs_generated_chunk.chunk.chunk_coordinates(),
             structure_entity: needs_generated_chunk.structure_entity,
@@ -271,6 +270,7 @@ pub(crate) fn generate_planet<T: BiosphereMarkerComponent, E: TGenerateChunkEven
     mut query: Query<(&mut Structure, &Location)>,
     mut events: EventReader<E>,
     sea_level: Option<Res<BiosphereSeaLevel<T>>>,
+    biosphere_registry: Res<Registry<RegisteredBiosphere>>,
 
     mut needs_generated_chunks: ResMut<NeedGeneratedChunks>,
 ) {
@@ -292,6 +292,14 @@ pub(crate) fn generate_planet<T: BiosphereMarkerComponent, E: TGenerateChunkEven
             }
         })
         .collect::<Vec<(Entity, Chunk)>>();
+
+    if chunks.is_empty() {
+        return;
+    }
+
+    let Some(registered_biosphere) = biosphere_registry.from_id(T::unlocalized_name()) else {
+        return;
+    };
 
     needs_generated_chunks
         .0
@@ -323,7 +331,7 @@ pub(crate) fn generate_planet<T: BiosphereMarkerComponent, E: TGenerateChunkEven
                     scale: Vec4::splat(1.0),
                     sea_level: Vec4::splat((sea_level.as_ref().map(|x| x.level).unwrap_or(0.75) * (s_dimensions / 2) as f32) as f32),
                     structure_pos: Vec4::new(structure_loc.x, structure_loc.y, structure_loc.z, 0.0),
-                    biosphere_id: U32Vec4::splat(0),
+                    biosphere_id: U32Vec4::splat(registered_biosphere.id() as u32),
                 },
                 biosphere_type: type_path,
             })

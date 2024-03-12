@@ -15,16 +15,20 @@ use cosmos_core::{
     block::Block,
     events::block_events::BlockChangedEvent,
     physics::location::Location,
-    registry::Registry,
+    registry::{create_registry, identifiable::Identifiable, Registry},
     structure::{
         chunk::Chunk,
         coordinates::{BlockCoordinate, ChunkCoordinate},
-        planet::{biosphere::BiosphereMarker, Planet},
+        planet::{
+            biosphere::{BiosphereMarker, RegisteredBiosphere},
+            Planet,
+        },
         ChunkInitEvent, Structure,
     },
 };
 use noise::NoiseFn;
 use rand::Rng;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     init::init_world::{Noise, ServerSeed},
@@ -33,6 +37,7 @@ use crate::{
         saving::{NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
         SerializedData,
     },
+    registry::sync_registry,
     rng::get_rng_for_sector,
     state::GameState,
     structure::planet::biosphere::biosphere_generation::BiosphereGenerationSet,
@@ -61,7 +66,9 @@ pub mod molten_biosphere;
 /// Ideally, this should be a 0-size type to allow for quick creation of it.
 ///
 /// Generally, you should just create a new marker component for every new biosphere you create, as each biosphere needs a unique component to work properly.
-pub trait BiosphereMarkerComponent: Component + Default + Clone + Copy + TypePath {}
+pub trait BiosphereMarkerComponent: Component + Default + Clone + Copy + TypePath {
+    fn unlocalized_name() -> &'static str;
+}
 
 #[derive(Debug, Event)]
 /// This event is generated whenever a structure needs a biosphere
@@ -234,19 +241,23 @@ impl<T: BiosphereMarkerComponent> Default for BiosphereSeaLevel<T> {
 /// E: The biosphere's generate chunk event type
 pub fn register_biosphere<T: BiosphereMarkerComponent + Default + Clone, E: Send + Sync + 'static + TGenerateChunkEvent>(
     app: &mut App,
-    biosphere_id: &'static str,
     temperature_range: TemperatureRange,
 ) {
     info!("Creating a biome registry.");
     create_biosphere_biomes_registry::<T>(app);
     info!("Done creating biome registry.");
 
-    // biosphere_generation::register_biosphere::<T>(app);
+    let biosphere_id = T::unlocalized_name();
 
     app.add_event::<E>()
-        .add_systems(Startup, move |mut registry: ResMut<BiosphereTemperatureRegistry>| {
-            registry.register(biosphere_id.to_owned(), temperature_range);
-        })
+        .add_systems(
+            Startup,
+            move |mut instance_registry: ResMut<Registry<RegisteredBiosphere>>,
+                  mut temperature_registry: ResMut<BiosphereTemperatureRegistry>| {
+                instance_registry.register(RegisteredBiosphere::new(biosphere_id));
+                temperature_registry.register(biosphere_id.to_owned(), temperature_range);
+            },
+        )
         .add_systems(
             SAVING_SCHEDULE,
             (
@@ -387,6 +398,8 @@ pub(super) fn register(app: &mut App) {
     app.add_event::<NeedsBiosphereEvent>()
         .insert_resource(BiosphereTemperatureRegistry::default())
         .add_systems(Update, add_biosphere);
+
+    sync_registry::<RegisteredBiosphere>(app);
 
     biosphere_generation::register(app);
     biome::register(app);

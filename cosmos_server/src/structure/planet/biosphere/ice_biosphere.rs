@@ -18,7 +18,11 @@ use super::{
 /// Marks that this is for a grass biosphere
 pub struct IceBiosphereMarker;
 
-impl BiosphereMarkerComponent for IceBiosphereMarker {}
+impl BiosphereMarkerComponent for IceBiosphereMarker {
+    fn unlocalized_name() -> &'static str {
+        "cosmos:ice"
+    }
+}
 
 /// Marks that an ice chunk needs generated
 #[derive(Event, Debug)]
@@ -89,7 +93,7 @@ fn register_biosphere_biomes(
 }
 
 pub(super) fn register(app: &mut App) {
-    register_biosphere::<IceBiosphereMarker, IceChunkNeedsGeneratedEvent>(app, "cosmos:biosphere_ice", TemperatureRange::new(0.0, 0.0));
+    register_biosphere::<IceBiosphereMarker, IceChunkNeedsGeneratedEvent>(app, TemperatureRange::new(0.0, 0.0));
 
     app.add_systems(OnEnter(GameState::PostLoading), register_biosphere_biomes);
 }
