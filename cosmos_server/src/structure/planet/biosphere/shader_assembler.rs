@@ -74,7 +74,7 @@ fn assemble_shaders(mut commands: Commands, registered_biospheres: Res<Registry<
         .replace("// generate_biosphere_switch", &biosphere_switch_text)
         .replace("// generate_imports", &import_text);
 
-    cached_shaders.0.push((main_path.to_owned(), main_text.clone()));
+    cached_shaders.0.push(("main.wgsl".to_owned(), main_text.clone()));
 
     commands.insert_resource(cached_shaders);
 
@@ -93,22 +93,22 @@ fn recursively_add_files(
     for file in contents {
         let file = file?;
         let path = file.path();
+        let path_str = path.as_os_str().to_str().expect("Failed to convert OsStr to str.");
+        // Remove the assets/ folder from the path because it's meaningless to the client
+        let clean_path = &path_str["assets/".len()..].replacen("\\", "/", usize::MAX);
 
-        if path.as_os_str() == main_path {
+        if clean_path == main_path {
             continue;
         }
 
         if path.is_file() {
             if path.extension().map(|x| x == "wgsl").unwrap_or(false) {
                 // Removes the "assets/" from the beginning of the path and converts any '\' to /
-                let file_path =
-                    &path.as_os_str().to_str().expect("Failed to convert OsStr to str.")["assets/".len()..].replacen("\\", "/", usize::MAX);
-
-                biospheres_to_find.remove(file_path);
+                biospheres_to_find.remove(clean_path);
 
                 let shader_text = fs::read_to_string(&path)?.replacen("\r", "", usize::MAX);
 
-                cached_shaders.0.push((file_path.to_owned(), shader_text));
+                cached_shaders.0.push((clean_path.to_owned(), shader_text));
             }
         } else {
             recursively_add_files(path.as_os_str(), cached_shaders, biospheres_to_find, main_path)?;

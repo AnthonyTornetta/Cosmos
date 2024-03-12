@@ -5,22 +5,16 @@ use std::fs;
 use crate::{netty::connect::WaitingOnServer, registry::sync_registry, state::game_state::GameState};
 use bevy::prelude::*;
 use bevy_app_compute::prelude::*;
-use bytemuck::{Pod, Zeroable};
 use cosmos_core::{
-    block::BlockFace,
     ecs::mut_events::{EventWriterCustomSend, MutEvent, MutEventsCommand},
-    physics::location::Location,
-    registry::{identifiable::Identifiable, Registry},
     structure::{
-        block_storage::BlockStorer,
-        chunk::{Chunk, CHUNK_DIMENSIONS, CHUNK_DIMENSIONSF, CHUNK_DIMENSIONS_USIZE},
-        coordinates::{ChunkBlockCoordinate, CoordinateType},
+        chunk::{Chunk, CHUNK_DIMENSIONS, CHUNK_DIMENSIONS_USIZE},
+        coordinates::CoordinateType,
         planet::{
             biosphere::RegisteredBiosphere,
             generation::terrain_generation::{
                 BiosphereShaderWorker, ChunkData, ChunkDataSlice, GenerationParams, GpuPermutationTable, TerrainData, N_CHUNKS,
             },
-            Planet,
         },
         Structure,
     },
