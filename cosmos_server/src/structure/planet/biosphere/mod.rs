@@ -63,6 +63,7 @@ pub mod generation_tools;
 pub mod grass_biosphere;
 pub mod ice_biosphere;
 pub mod molten_biosphere;
+pub mod shader_assembler;
 
 /// This component is only used to mark a planet as a specific biosphere.
 ///
@@ -428,4 +429,5 @@ pub(super) fn register(app: &mut App) {
     grass_biosphere::register(app);
     molten_biosphere::register(app);
     ice_biosphere::register(app);
+    shader_assembler::register(app);
 }

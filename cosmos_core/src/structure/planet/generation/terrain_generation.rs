@@ -58,7 +58,7 @@ pub struct ComputeShaderInstance;
 
 impl ComputeShader for ComputeShaderInstance {
     fn shader() -> ShaderRef {
-        "cosmos/shaders/compute.wgsl".into()
+        "temp/shaders/biosphere/main.wgsl".into()
     }
 }
 

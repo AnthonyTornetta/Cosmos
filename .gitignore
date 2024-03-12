@@ -17,6 +17,7 @@ cosmos_client/assets/shaders/temp/
 # Don't include any saved world files
 cosmos_server/blueprints/
 cosmos_server/world/*
+cosmos_server/assets/temp/
 
 trace-*.json
 
