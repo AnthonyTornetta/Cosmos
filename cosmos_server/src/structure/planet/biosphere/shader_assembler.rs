@@ -16,7 +16,7 @@ use cosmos_core::{
 use crate::state::GameState;
 
 #[derive(Debug, Resource, Default)]
-struct CachedShaders(Vec<(String, String)>);
+pub struct CachedShaders(pub Vec<(String, String)>);
 
 fn assemble_shaders(mut commands: Commands, registered_biospheres: Res<Registry<RegisteredBiosphere>>) {
     let main_path = "cosmos/shaders/biosphere/main.wgsl";

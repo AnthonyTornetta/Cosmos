@@ -338,7 +338,7 @@ fn setup_lod_generation(
 ) {
     for ev in ev_reader.read() {
         let mut working_dir = std::env::current_dir().expect("Can't get working dir");
-        working_dir.push("./assets/shaders/temp/biosphere/");
+        working_dir.push("./assets/temp/shaders/biosphere/");
 
         // Clears out any existing shaders from previous servers
         let _ = fs::remove_dir_all(&working_dir);
@@ -360,6 +360,8 @@ fn setup_lod_generation(
             let dir = path_buf.parent().expect("Path has no directory? This should be impossible.");
             // This can fail if it's already there
             let _ = fs::create_dir_all(dir);
+
+            let file_contents = file_contents.replacen("#import \"", "#import \"temp/shaders/biosphere/", usize::MAX);
 
             if let Err(e) = fs::write(path_buf, file_contents) {
                 error!("{:?}", e);

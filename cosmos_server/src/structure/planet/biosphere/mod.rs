@@ -49,6 +49,7 @@ use crate::{
 use self::{
     biome::{create_biosphere_biomes_registry, BiomeParameters, BiosphereBiomesRegistry},
     biosphere_generation_old::{begin_generating_lods, GenerateChunkFeaturesEvent},
+    shader_assembler::CachedShaders,
 };
 
 use super::{
@@ -403,13 +404,14 @@ fn on_connect(
     mut server: ResMut<RenetServer>,
     mut ev_reader: EventReader<PlayerConnectedEvent>,
     permutation_table: Res<GpuPermutationTable>,
+    shaders: Res<CachedShaders>,
 ) {
     for ev in ev_reader.read() {
         server.send_message(
             ev.client_id,
             NettyChannelServer::Reliable,
             cosmos_encoder::serialize(&ServerReliableMessages::TerrainGenJazz {
-                shaders: vec![("test/test.wgsl".into(), "Hello, WGSL!".into())],
+                shaders: shaders.0.clone(),
                 permutation_table: permutation_table.clone(),
             }),
         );

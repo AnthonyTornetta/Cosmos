@@ -12,11 +12,12 @@
 # Don't include user-specific settings
 cosmos_client/settings
 # These are cached from the last server they connected to
-cosmos_client/assets/shaders/temp/
+cosmos_client/assets/temp/shaders/biosphere/
 
 # Don't include any saved world files
 cosmos_server/blueprints/
 cosmos_server/world/*
+# This directory is for run-time generated assets
 cosmos_server/assets/temp/
 
 trace-*.json
