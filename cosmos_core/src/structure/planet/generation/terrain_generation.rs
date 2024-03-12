@@ -1,40 +1,60 @@
-use crate::{
-    block::{Block, BlockFace},
-    events::block_events::BlockChangedEvent,
-    registry::Registry,
-    structure::{
-        chunk::CHUNK_DIMENSIONS_USIZE,
-        coordinates::{BlockCoordinate, ChunkCoordinate},
-        ChunkState, Structure,
-    },
-    utils::array_utils::expand,
-};
+use std::mem::size_of;
+
+use crate::structure::chunk::CHUNK_DIMENSIONS_USIZE;
 use bevy::{
-    app::{App, Update},
     core::{Pod, Zeroable},
-    ecs::{
-        component::Component,
-        entity::Entity,
-        event::EventWriter,
-        query::Without,
-        system::{Commands, Query, Res, ResMut},
-    },
-    math::Vec3,
+    ecs::system::Resource,
+    math::Vec4,
     reflect::TypePath,
 };
 use bevy_app_compute::prelude::*;
+use serde::{Deserialize, Serialize};
 
-#[derive(ShaderType, Pod, Zeroable, Clone, Copy)]
+// If you change this, make sure to modify the '@workgroup_size' value in the shader aswell.
+// TODO: Make these not defined in core
+pub const WORKGROUP_SIZE: u32 = 1024;
+pub const N_CHUNKS: u32 = 32;
+pub const DIMS: usize = CHUNK_DIMENSIONS_USIZE * CHUNK_DIMENSIONS_USIZE * CHUNK_DIMENSIONS_USIZE * N_CHUNKS as usize;
+
+#[derive(Default, Debug, ShaderType, Pod, Zeroable, Clone, Copy)]
 #[repr(C)]
-struct GenerationParams {
-    chunk_coords: Vec3,
-    structure_pos: Vec3,
-    scale: f32,
-    sea_level: f32,
+pub struct GenerationParams {
+    // Everythihng has to be a vec4 because padding. Otherwise things get super wack
+    pub chunk_coords: Vec4,
+    pub structure_pos: Vec4,
+    pub sea_level: Vec4,
+    pub scale: Vec4,
+    pub biosphere_id: U32Vec4,
 }
 
-#[derive(TypePath)]
-struct ComputeShaderInstance;
+#[derive(Default, Debug, ShaderType, Pod, Zeroable, Clone, Copy)]
+#[repr(C)]
+pub struct TerrainData {
+    pub depth: i32,
+    pub data: u32,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct ChunkDataSlice {
+    pub start: usize,
+    pub end: usize,
+}
+
+#[derive(Resource, Default)]
+pub struct ChunkData(Vec<TerrainData>);
+
+impl ChunkData {
+    pub fn new(data: Vec<TerrainData>) -> Self {
+        Self(data)
+    }
+
+    pub fn data_slice(&self, chunk_data_slice: ChunkDataSlice) -> &[TerrainData] {
+        &self.0.as_slice()[chunk_data_slice.start..chunk_data_slice.end]
+    }
+}
+
+#[derive(TypePath, Default)]
+pub struct ComputeShaderInstance;
 
 impl ComputeShader for ComputeShaderInstance {
     fn shader() -> ShaderRef {
@@ -42,97 +62,48 @@ impl ComputeShader for ComputeShaderInstance {
     }
 }
 
-// If you change this, make sure to modify the '32' values in the shader aswell.
-const SIZE: u32 = 32;
-// If you change this, make sure to modify the '512' values in the shader aswell.
-const WORKGROUP_SIZE: u32 = 512;
+#[derive(Default)]
+pub struct BiosphereShaderWorker;
 
-struct ShaderWorker;
+#[repr(C)]
+#[derive(Default, Debug, ShaderType, Pod, Zeroable, Clone, Copy, Serialize, Deserialize)]
+/// Gives 16 bit packing that wgpu loves
+pub struct U32Vec4 {
+    pub x: u32,
+    pub y: u32,
+    pub z: u32,
+    pub w: u32,
+}
 
-impl ComputeWorker for ShaderWorker {
+impl U32Vec4 {
+    pub fn new(x: u32, y: u32, z: u32, w: u32) -> Self {
+        Self { x, y, z, w }
+    }
+
+    pub fn splat(val: u32) -> Self {
+        Self::new(val, val, val, val)
+    }
+}
+
+impl ComputeWorker for BiosphereShaderWorker {
     fn build(world: &mut bevy::prelude::World) -> AppComputeWorker<Self> {
-        const DIMS: usize = (SIZE * SIZE * SIZE) as usize;
+        assert!(DIMS as u32 % WORKGROUP_SIZE == 0);
 
-        // let noise = noise::OpenSimplex::new(1596);
-        // noise.
-        // let perm_table = PermutationTable;
-
-        let params = GenerationParams {
-            chunk_coords: Vec3::new(16.0, 16.0, 16.0),
-            structure_pos: Vec3::new(0.0, 0.0, 0.0),
-            scale: 1.0,
-            sea_level: 10.0,
-        };
-
-        // let icrs = vec![1.0; DIMS];
-        let vals = vec![0.0; DIMS];
-
-        assert!((SIZE * SIZE * SIZE) % WORKGROUP_SIZE == 0);
-
-        let mut worker = AppComputeWorkerBuilder::new(world)
+        let worker = AppComputeWorkerBuilder::new(world)
             .one_shot()
-            .add_uniform("params", &params)
-            .add_staging("values", &vals)
+            .add_empty_uniform("permutation_table", size_of::<[U32Vec4; 256 / 4]>() as u64) // Vec<f32>
+            .add_empty_uniform("params", size_of::<[GenerationParams; N_CHUNKS as usize]>() as u64) // GenerationParams
+            .add_empty_uniform("chunk_count", size_of::<u32>() as u64)
+            .add_empty_staging("values", size_of::<[TerrainData; DIMS]>() as u64)
             .add_pass::<ComputeShaderInstance>(
-                [SIZE * SIZE * SIZE / WORKGROUP_SIZE, 1, 1], //SIZE / WORKGROUP_SIZE, SIZE / WORKGROUP_SIZE, SIZE / WORKGROUP_SIZE
-                &["params", "values"],
+                [DIMS as u32 / WORKGROUP_SIZE, 1, 1], //SIZE / WORKGROUP_SIZE, SIZE / WORKGROUP_SIZE, SIZE / WORKGROUP_SIZE
+                &["permutation_table", "params", "chunk_count", "values"],
             )
             .build();
-
-        worker.execute();
 
         worker
     }
 }
 
-pub(super) fn register(app: &mut App) {
-    // app.add_plugins(AppComputeWorkerPlugin::<ShaderWorker>::default())
-    //     .add_systems(Update, print_value);
-}
-
-#[derive(Component)]
-struct Done;
-
-fn print_value(
-    mut worker: ResMut<AppComputeWorker<ShaderWorker>>,
-    mut q_structures: Query<(Entity, &mut Structure), Without<Done>>,
-    mut ev_writer: EventWriter<BlockChangedEvent>,
-    mut commands: Commands,
-    blocks: Res<Registry<Block>>,
-) {
-    if !worker.ready() {
-        worker.execute();
-        return;
-    }
-
-    worker.execute();
-
-    let v: Vec<f32> = worker.try_read_vec("values").expect("OH NOEEEE!");
-
-    for (ent, mut s) in &mut q_structures {
-        if s.get_chunk_state(ChunkCoordinate::new(0, 0, 0)) == ChunkState::Loaded {
-            let block = blocks.from_id("cosmos:stone").unwrap();
-            println!("Changing structure!");
-            for (i, v) in v.iter().enumerate() {
-                let (x, y, z) = expand(i, CHUNK_DIMENSIONS_USIZE, CHUNK_DIMENSIONS_USIZE);
-
-                if *v == 0.0 {
-                    s.remove_block_at(BlockCoordinate::new(x as u64, y as u64, z as u64), &blocks, Some(&mut ev_writer));
-                } else {
-                    s.set_block_at(
-                        BlockCoordinate::new(x as u64, y as u64, z as u64),
-                        block,
-                        BlockFace::Top,
-                        &blocks,
-                        Some(&mut ev_writer),
-                    );
-                }
-            }
-
-            commands.entity(ent).insert(Done);
-        }
-    }
-
-    // println!("{v:?}");
-    println!("{} and {} (length of {})", v[0], v[v.len() - 1], v.len());
-}
+#[derive(Clone, Resource, Serialize, Deserialize, Debug)]
+pub struct GpuPermutationTable(pub Vec<U32Vec4>);

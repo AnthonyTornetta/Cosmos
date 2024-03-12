@@ -11,16 +11,19 @@ use bevy::{
     reflect::TypePath,
     tasks::Task,
 };
+use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::Block,
     events::block_events::BlockChangedEvent,
+    netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannelServer},
     physics::location::Location,
-    registry::{create_registry, identifiable::Identifiable, Registry},
+    registry::Registry,
     structure::{
         chunk::Chunk,
         coordinates::{BlockCoordinate, ChunkCoordinate},
         planet::{
             biosphere::{BiosphereMarker, RegisteredBiosphere},
+            generation::terrain_generation::GpuPermutationTable,
             Planet,
         },
         ChunkInitEvent, Structure,
@@ -28,9 +31,9 @@ use cosmos_core::{
 };
 use noise::NoiseFn;
 use rand::Rng;
-use serde::{Deserialize, Serialize};
 
 use crate::{
+    events::netty::netty_events::PlayerConnectedEvent,
     init::init_world::{Noise, ServerSeed},
     persistence::{
         loading::{LoadingSystemSet, NeedsLoaded},
@@ -67,6 +70,7 @@ pub mod molten_biosphere;
 ///
 /// Generally, you should just create a new marker component for every new biosphere you create, as each biosphere needs a unique component to work properly.
 pub trait BiosphereMarkerComponent: Component + Default + Clone + Copy + TypePath {
+    /// Returns the unlocalized name of this biosphere
     fn unlocalized_name() -> &'static str;
 }
 
@@ -394,10 +398,28 @@ impl BiosphereTemperatureRegistry {
     }
 }
 
+fn on_connect(
+    mut server: ResMut<RenetServer>,
+    mut ev_reader: EventReader<PlayerConnectedEvent>,
+    permutation_table: Res<GpuPermutationTable>,
+) {
+    for ev in ev_reader.read() {
+        server.send_message(
+            ev.client_id,
+            NettyChannelServer::Reliable,
+            cosmos_encoder::serialize(&ServerReliableMessages::TerrainGenJazz {
+                shaders: vec![("test/test.wgsl".into(), "Hello, WGSL!".into())],
+                permutation_table: permutation_table.clone(),
+            }),
+        );
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_event::<NeedsBiosphereEvent>()
         .insert_resource(BiosphereTemperatureRegistry::default())
-        .add_systems(Update, add_biosphere);
+        .add_systems(Update, add_biosphere)
+        .add_systems(Update, on_connect.run_if(in_state(GameState::Playing)));
 
     sync_registry::<RegisteredBiosphere>(app);
 

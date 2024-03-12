@@ -2,7 +2,6 @@
 
 use bevy::prelude::*;
 use bevy_app_compute::prelude::*;
-use bytemuck::{Pod, Zeroable};
 use cosmos_core::{
     block::BlockFace,
     ecs::mut_events::{EventWriterCustomSend, MutEvent, MutEventsCommand},
@@ -12,14 +11,18 @@ use cosmos_core::{
         block_storage::BlockStorer,
         chunk::{Chunk, CHUNK_DIMENSIONS, CHUNK_DIMENSIONSF, CHUNK_DIMENSIONS_USIZE},
         coordinates::{ChunkBlockCoordinate, CoordinateType},
-        planet::Planet,
+        planet::{
+            generation::terrain_generation::{
+                BiosphereShaderWorker, ChunkData, ChunkDataSlice, GenerationParams, GpuPermutationTable, TerrainData, U32Vec4, N_CHUNKS,
+            },
+            Planet,
+        },
         Structure,
     },
     utils::array_utils::{flatten, flatten_4d},
 };
 use rand::{seq::SliceRandom, SeedableRng};
 use rand_chacha::ChaCha8Rng;
-use std::mem::size_of;
 
 use crate::{init::init_world::ServerSeed, state::GameState};
 
@@ -28,11 +31,6 @@ use super::{
     biosphere_generation_old::{BlockLayers, GenerateChunkFeaturesEvent},
     BiosphereMarkerComponent, BiosphereSeaLevel, RegisteredBiosphere, TGenerateChunkEvent,
 };
-
-// If you change this, make sure to modify the '@workgroup_size' value in the shader aswell.
-const WORKGROUP_SIZE: u32 = 1024;
-const N_CHUNKS: u32 = 32;
-const DIMS: usize = CHUNK_DIMENSIONS_USIZE * CHUNK_DIMENSIONS_USIZE * CHUNK_DIMENSIONS_USIZE * N_CHUNKS as usize;
 
 #[derive(Debug)]
 pub(crate) struct NeedGeneratedChunk {
@@ -54,32 +52,10 @@ pub(crate) struct GeneratingChunks(Vec<NeedGeneratedChunk>);
 #[derive(Resource, Default)]
 pub(crate) struct SentToGpuTime(f32);
 
-#[derive(Default, Debug, ShaderType, Pod, Zeroable, Clone, Copy)]
-#[repr(C)]
-pub(crate) struct TerrainData {
-    depth: i32,
-    data: u32,
-}
-
 #[derive(Event)]
 pub(crate) struct DoneGeneratingChunkEvent {
     needs_generated_chunk: Option<NeedGeneratedChunk>,
     chunk_data_slice: ChunkDataSlice,
-}
-
-#[derive(Clone, Copy, Debug)]
-pub(crate) struct ChunkDataSlice {
-    start: usize,
-    end: usize,
-}
-
-#[derive(Resource, Default)]
-pub(crate) struct ChunkData(Vec<TerrainData>);
-
-impl ChunkData {
-    fn data_slice(&self, chunk_data_slice: ChunkDataSlice) -> &[TerrainData] {
-        &self.0.as_slice()[chunk_data_slice.start..chunk_data_slice.end]
-    }
 }
 
 fn read_gpu_data(
@@ -101,7 +77,7 @@ fn read_gpu_data(
     );
 
     let v: Vec<TerrainData> = worker.try_read_vec("values").expect("Failed to read chunk generation values!");
-    *chunk_data = ChunkData(v);
+    *chunk_data = ChunkData::new(v);
 
     for (w, needs_generated_chunk) in std::mem::take(&mut currently_generating_chunks.0).into_iter().enumerate() {
         let chunk_data_slice = ChunkDataSlice {
@@ -338,73 +314,7 @@ pub(crate) fn generate_planet<T: BiosphereMarkerComponent, E: TGenerateChunkEven
         }));
 }
 
-#[derive(Default, Debug, ShaderType, Pod, Zeroable, Clone, Copy)]
-#[repr(C)]
-struct GenerationParams {
-    // Everythihng has to be a vec4 because padding. Otherwise things get super wack
-    chunk_coords: Vec4,
-    structure_pos: Vec4,
-    sea_level: Vec4,
-    scale: Vec4,
-    biosphere_id: U32Vec4,
-}
-
-#[derive(TypePath, Default)]
-struct ComputeShaderInstance;
-
-impl ComputeShader for ComputeShaderInstance {
-    fn shader() -> ShaderRef {
-        "cosmos/shaders/compute.wgsl".into()
-    }
-}
-
-#[derive(Default)]
-pub(crate) struct BiosphereShaderWorker;
-
-#[repr(C)]
-#[derive(Default, Debug, ShaderType, Pod, Zeroable, Clone, Copy)]
-/// Gives 16 bit packing that wgpu loves
-struct U32Vec4 {
-    pub x: u32,
-    pub y: u32,
-    pub z: u32,
-    pub w: u32,
-}
-
-impl U32Vec4 {
-    pub fn new(x: u32, y: u32, z: u32, w: u32) -> Self {
-        Self { x, y, z, w }
-    }
-
-    pub fn splat(val: u32) -> Self {
-        Self::new(val, val, val, val)
-    }
-}
-
-impl ComputeWorker for BiosphereShaderWorker {
-    fn build(world: &mut bevy::prelude::World) -> AppComputeWorker<Self> {
-        assert!(DIMS as u32 % WORKGROUP_SIZE == 0);
-
-        let worker = AppComputeWorkerBuilder::new(world)
-            .one_shot()
-            .add_empty_uniform("permutation_table", size_of::<[U32Vec4; 256 / 4]>() as u64) // Vec<f32>
-            .add_empty_uniform("params", size_of::<[GenerationParams; N_CHUNKS as usize]>() as u64) // GenerationParams
-            .add_empty_uniform("chunk_count", size_of::<u32>() as u64)
-            .add_empty_staging("values", size_of::<[TerrainData; DIMS]>() as u64)
-            .add_pass::<ComputeShaderInstance>(
-                [DIMS as u32 / WORKGROUP_SIZE, 1, 1], //SIZE / WORKGROUP_SIZE, SIZE / WORKGROUP_SIZE, SIZE / WORKGROUP_SIZE
-                &["permutation_table", "params", "chunk_count", "values"],
-            )
-            .build();
-
-        worker
-    }
-}
-
-#[derive(Resource)]
-struct PermutationTable(Vec<U32Vec4>);
-
-fn set_permutation_table(perm_table: Res<PermutationTable>, mut worker: ResMut<AppComputeWorker<BiosphereShaderWorker>>) {
+fn set_permutation_table(perm_table: Res<GpuPermutationTable>, mut worker: ResMut<AppComputeWorker<BiosphereShaderWorker>>) {
     worker.write_slice("permutation_table", &perm_table.0);
 }
 
@@ -437,7 +347,7 @@ fn setup_permutation_table(seed: Res<ServerSeed>, mut commands: Commands) {
         .map(|[x, y, z, w]| U32Vec4::new(x as u32, y as u32, z as u32, w as u32))
         .collect();
 
-    commands.insert_resource(PermutationTable(permutation_table));
+    commands.insert_resource(GpuPermutationTable(permutation_table));
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]

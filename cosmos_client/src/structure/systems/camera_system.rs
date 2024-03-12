@@ -111,7 +111,7 @@ fn swap_camera(
 
 fn on_change_selected_camera(
     mut main_camera: Query<&mut Transform, With<MainCamera>>,
-    q_became_pilot: Query<Has<LocalPlayer>, Added<Pilot>>,
+    q_became_pilot: Query<(), (Added<Pilot>, With<LocalPlayer>)>,
     q_pilot: Query<(&Pilot, &CameraPlayerOffset), With<LocalPlayer>>,
     q_selected_camera: Query<(Entity, &SelectedCamera, &Systems, &Structure)>,
     q_changed_stuff: Query<(Entity, &SelectedCamera, &Systems, &Structure), Changed<SelectedCamera>>,

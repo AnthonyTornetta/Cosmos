@@ -22,7 +22,7 @@ use crate::{
 pub mod align_player;
 pub mod biosphere;
 pub mod client_planet_builder;
-mod generation;
+pub mod generation;
 mod lod;
 
 #[cfg(debug_assertions)]

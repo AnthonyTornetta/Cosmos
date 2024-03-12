@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use bevy_renet::renet::transport::NetcodeServerTransport;
-use bevy_renet::renet::{RenetServer, ServerEvent};
+use bevy_renet::renet::{ClientId, RenetServer, ServerEvent};
 use cosmos_core::economy::Credits;
 use cosmos_core::ecs::NeedsDespawned;
 use cosmos_core::entities::player::render_distance::RenderDistance;
@@ -62,6 +62,8 @@ fn generate_player_inventory(items: &Registry<Item>) -> Inventory {
 pub struct PlayerConnectedEvent {
     /// The player's entity
     pub player_entity: Entity,
+    /// Player's client id
+    pub client_id: ClientId,
 }
 
 fn handle_server_events(
@@ -162,7 +164,7 @@ fn handle_server_events(
 
                 server.broadcast_message(NettyChannelServer::Reliable, msg);
 
-                player_join_ev_writer.send(PlayerConnectedEvent { player_entity });
+                player_join_ev_writer.send(PlayerConnectedEvent { player_entity, client_id });
             }
             ServerEvent::ClientDisconnected { client_id, reason } => {
                 info!("Client {client_id} disconnected: {reason}");

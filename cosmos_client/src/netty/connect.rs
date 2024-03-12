@@ -87,10 +87,22 @@ pub fn wait_for_connection(mut state_changer: ResMut<NextState<GameState>>, clie
     }
 }
 
+#[derive(Component)]
+/// Add this component to an entity to ensure the state isn't advanced to playing. Remove this when you're ready to start playing.
+pub struct WaitingOnServer;
+
 // GameState::LoadingData -> GameState::LoadingWorld in registry/mod.rs
 
 /// Waits for the `LoadingWorld` state to be done loading, then transitions to the `GameState::Playing`
-pub fn wait_for_done_loading(mut state_changer: ResMut<NextState<GameState>>, query: Query<&Player, With<LocalPlayer>>) {
+pub fn wait_for_done_loading(
+    mut state_changer: ResMut<NextState<GameState>>,
+    q_waiting: Query<(), With<WaitingOnServer>>,
+    query: Query<&Player, With<LocalPlayer>>,
+) {
+    if !q_waiting.is_empty() {
+        return;
+    }
+
     if query.get_single().is_ok() {
         info!("Got local player, starting game!");
         state_changer.set(GameState::Playing);

@@ -16,7 +16,7 @@ use crate::{
         chunk::netty::SerializedChunkBlockData,
         coordinates::{ChunkCoordinate, CoordinateType},
         loading::ChunksNeedLoaded,
-        planet::Planet,
+        planet::{generation::terrain_generation::GpuPermutationTable, Planet},
         shared::build_mode::BuildMode,
         structure_block::StructureBlock,
     },
@@ -218,5 +218,9 @@ pub enum ServerReliableMessages {
         credits: Credits,
         /// The entity that has these credits
         entity: Entity,
+    },
+    TerrainGenJazz {
+        shaders: Vec<(String, String)>,
+        permutation_table: GpuPermutationTable,
     },
 }

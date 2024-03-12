@@ -5,7 +5,7 @@
 #![feature(duration_constructors)]
 #![feature(iter_array_chunks)]
 #![feature(iterator_try_collect)]
-#![warn(missing_docs)]
+// #![warn(missing_docs)]
 
 use std::env;
 

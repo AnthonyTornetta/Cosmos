@@ -51,7 +51,8 @@ use crate::{
     rendering::{CameraPlayerOffset, MainCamera},
     state::game_state::GameState,
     structure::{
-        planet::client_planet_builder::ClientPlanetBuilder, ship::client_ship_builder::ClientShipBuilder,
+        planet::{client_planet_builder::ClientPlanetBuilder, generation::SetTerrainGenData},
+        ship::client_ship_builder::ClientShipBuilder,
         station::client_station_builder::ClientStationBuilder,
     },
     ui::{
@@ -173,10 +174,11 @@ pub(crate) fn client_sync_players(
         ResMut<ClientLobby>,
         ResMut<NetworkMapping>,
     ),
-    (mut set_chunk_event_writer, mut block_change_event_writer, mut take_damage_event_writer): (
+    (mut set_chunk_event_writer, mut block_change_event_writer, mut take_damage_event_writer, mut set_terrain_data_ev_writer): (
         EventWriter<ChunkInitEvent>,
         EventWriter<BlockChangedEvent>,
         EventWriter<BlockTakeDamageEvent>,
+        EventWriter<SetTerrainGenData>,
     ),
     (query_player, parent_query): (Query<&Player>, Query<&Parent>),
     mut query_body: Query<
@@ -706,6 +708,15 @@ pub(crate) fn client_sync_players(
                 if let Some(entity) = network_mapping.client_from_server(&entity) {
                     commands.entity(entity).insert(credits);
                 }
+            }
+            ServerReliableMessages::TerrainGenJazz {
+                shaders,
+                permutation_table,
+            } => {
+                set_terrain_data_ev_writer.send(SetTerrainGenData {
+                    files: shaders,
+                    permutation_table,
+                });
             }
         }
     }
