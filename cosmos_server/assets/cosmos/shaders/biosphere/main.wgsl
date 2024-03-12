@@ -1,4 +1,4 @@
-#import "cosmos/shaders/generation_utils.wgsl"::{
+#import "cosmos/shaders/biosphere/generation_utils.wgsl"::{
     GenerationParams,
     TerrainData,
     expand,

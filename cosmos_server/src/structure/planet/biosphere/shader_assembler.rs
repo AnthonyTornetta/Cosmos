@@ -1,4 +1,4 @@
-use std::fs;
+use std::{ffi::OsStr, fs};
 
 use bevy::{
     app::App,
@@ -6,6 +6,7 @@ use bevy::{
         schedule::OnEnter,
         system::{Commands, Res, Resource},
     },
+    utils::hashbrown::HashSet,
 };
 use cosmos_core::{
     registry::{identifiable::Identifiable, Registry},
@@ -14,17 +15,19 @@ use cosmos_core::{
 
 use crate::state::GameState;
 
-#[derive(Resource, Default)]
+#[derive(Debug, Resource, Default)]
 struct CachedShaders(Vec<(String, String)>);
 
 fn assemble_shaders(mut commands: Commands, registered_biospheres: Res<Registry<RegisteredBiosphere>>) {
-    let main_path = "cosmos/shaders/main.wgsl";
+    let main_path = "cosmos/shaders/biosphere/main.wgsl";
     let main_text = fs::read_to_string(&format!("assets/{main_path}")).expect("Missing main.wgsl file for biosphere generation!");
 
     let mut biosphere_switch_text = String::from("switch param.biosphere_id.x {\n");
     let mut import_text = String::new();
 
     let mut cached_shaders = CachedShaders::default();
+
+    let mut biospheres_to_find = HashSet::default();
 
     for biosphere in registered_biospheres.iter() {
         let num = biosphere.id();
@@ -35,13 +38,9 @@ fn assemble_shaders(mut commands: Commands, registered_biospheres: Res<Registry<
             .next()
             .unwrap_or_else(|| panic!("Unlocalized names must be formatted as modid:name - {unlocalized_name} is not valid."));
 
-        let shader_path = format!("{mod_id}/shaders/biosphere/{biosphere_name}.wgsl");
-        let shader_text =
-            fs::read_to_string(format!("assets/{shader_path}")).unwrap_or_else(|_| panic!("Unable to read shader @ assets/{shader_path}."));
-
+        let shader_path = format!("{mod_id}/shaders/biosphere/biospheres/{biosphere_name}.wgsl");
         import_text.push_str(&format!("#import \"{shader_path}\"::{{generate as generate_{num}}};\n",));
-
-        cached_shaders.0.push((shader_path, shader_text));
+        biospheres_to_find.insert(shader_path);
 
         biosphere_switch_text.push_str(&format!(
             "        case {num}u: {{
@@ -59,6 +58,18 @@ fn assemble_shaders(mut commands: Commands, registered_biospheres: Res<Registry<
     }",
     );
 
+    recursively_add_files(
+        OsStr::new("assets/cosmos/shaders/biosphere/"),
+        &mut cached_shaders,
+        &mut biospheres_to_find,
+        &main_path,
+    )
+    .unwrap_or_else(|e| panic!("Failed to load files {e:?}!"));
+
+    if !biospheres_to_find.is_empty() {
+        panic!("Failed to find biosphere generation scripts for all biospheres! Missing: {biospheres_to_find:?}");
+    }
+
     let main_text = main_text
         .replace("// generate_biosphere_switch", &biosphere_switch_text)
         .replace("// generate_imports", &import_text);
@@ -69,6 +80,42 @@ fn assemble_shaders(mut commands: Commands, registered_biospheres: Res<Registry<
 
     let _ = fs::create_dir_all("assets/temp/shaders/biosphere");
     fs::write("assets/temp/shaders/biosphere/main.wgsl", main_text).expect("Failed to write biosphere generation file!");
+}
+
+fn recursively_add_files(
+    path: &OsStr,
+    cached_shaders: &mut CachedShaders,
+    biospheres_to_find: &mut HashSet<String>,
+    main_path: &str,
+) -> std::io::Result<()> {
+    let contents = fs::read_dir(path)?;
+
+    for file in contents {
+        let file = file?;
+        let path = file.path();
+
+        if path.as_os_str() == main_path {
+            continue;
+        }
+
+        if path.is_file() {
+            if path.extension().map(|x| x == "wgsl").unwrap_or(false) {
+                // Removes the "assets/" from the beginning of the path and converts any '\' to /
+                let file_path =
+                    &path.as_os_str().to_str().expect("Failed to convert OsStr to str.")["assets/".len()..].replacen("\\", "/", usize::MAX);
+
+                biospheres_to_find.remove(file_path);
+
+                let shader_text = fs::read_to_string(&path)?.replacen("\r", "", usize::MAX);
+
+                cached_shaders.0.push((file_path.to_owned(), shader_text));
+            }
+        } else {
+            recursively_add_files(path.as_os_str(), cached_shaders, biospheres_to_find, main_path)?;
+        }
+    }
+
+    Ok(())
 }
 
 pub(super) fn register(app: &mut App) {

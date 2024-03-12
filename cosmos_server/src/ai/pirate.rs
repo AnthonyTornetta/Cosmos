@@ -4,7 +4,7 @@ use bevy::{
     ecs::{
         component::Component,
         entity::Entity,
-        query::{Has, Or, With, Without},
+        query::{Or, With, Without},
         schedule::{IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
         system::{Commands, Query, Res},
     },

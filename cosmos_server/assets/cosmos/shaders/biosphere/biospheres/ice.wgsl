@@ -1,4 +1,4 @@
-#import "cosmos/shaders/generation_utils.wgsl"::{
+#import "cosmos/shaders/biosphere/generation_utils.wgsl"::{
     GenerationParams,
     TerrainData,
     BF_BACK, BF_FRONT, BF_LEFT, BF_RIGHT, BF_TOP, BF_BOTTOM,
