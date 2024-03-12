@@ -48,13 +48,8 @@ use crate::{
 
 use self::{
     biome::{create_biosphere_biomes_registry, BiomeParameters, BiosphereBiomesRegistry},
-    biosphere_generation_old::{begin_generating_lods, GenerateChunkFeaturesEvent},
+    biosphere_generation_old::GenerateChunkFeaturesEvent,
     shader_assembler::CachedShaders,
-};
-
-use super::{
-    generation::planet_generator::check_needs_generated_system,
-    lods::generate_lods::{check_done_generating_lods, generate_player_lods, start_generating_lods, GeneratingLods},
 };
 
 pub mod biome;
@@ -297,25 +292,15 @@ pub fn register_biosphere<T: BiosphereMarkerComponent + Default + Clone, E: Send
                 })
                 .in_set(LoadingSystemSet::DoLoading),
                 // Checks if any blocks need generated for this biosphere
-                (
-                    (
-                        biosphere_generation::generate_planet::<T, E>.in_set(BiosphereGenerationSet::FlagChunksNeedGenerated),
-                        biosphere_generation::generate_chunks_from_gpu_data::<T, E>.in_set(BiosphereGenerationSet::GenerateChunks),
-                        generate_chunk_featuress::<T>.in_set(BiosphereGenerationSet::GenerateChunkFeatures),
-                    ),
-                    (
-                        // order doesn't matter for these
-                        generate_player_lods::<T>.before(start_generating_lods),
-                        begin_generating_lods::<T>,
-                        check_needs_generated_system::<E, T>,
-                        check_done_generating_lods::<T>,
-                    ),
-                )
+                ((
+                    biosphere_generation::generate_planet::<T, E>.in_set(BiosphereGenerationSet::FlagChunksNeedGenerated),
+                    biosphere_generation::generate_chunks_from_gpu_data::<T, E>.in_set(BiosphereGenerationSet::GenerateChunks),
+                    generate_chunk_featuress::<T>.in_set(BiosphereGenerationSet::GenerateChunkFeatures),
+                ),)
                     .run_if(in_state(GameState::Playing)),
             ),
         )
         .init_resource::<GeneratingChunks<T>>()
-        .init_resource::<GeneratingLods<T>>()
         .insert_resource(BiomeDecider::<T> {
             _phantom: Default::default(),
             // These seeds are random values I made up - make these not that in the future

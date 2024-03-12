@@ -5,7 +5,6 @@ use bevy::prelude::*;
 pub mod biosphere;
 pub mod chunk;
 pub mod generation;
-mod lods;
 pub mod persistence;
 pub mod server_planet_builder;
 mod sync;
@@ -16,5 +15,4 @@ pub(super) fn register(app: &mut App) {
     sync::register(app);
     generation::register(app);
     chunk::register(app);
-    lods::register(app);
 }

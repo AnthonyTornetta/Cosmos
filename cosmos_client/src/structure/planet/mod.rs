@@ -24,6 +24,7 @@ pub mod biosphere;
 pub mod client_planet_builder;
 pub mod generation;
 mod lod;
+mod lods;
 
 #[cfg(debug_assertions)]
 const RENDER_DISTANCE: UnboundCoordinateType = 2;
@@ -137,9 +138,10 @@ pub fn unload_chunks_far_from_players(
 
 pub(super) fn register(app: &mut App) {
     align_player::register(app);
-    generation::register(app);
     biosphere::register(app);
     lod::register(app);
+    lods::register(app);
+    generation::register(app);
 
     app.add_systems(
         Update,

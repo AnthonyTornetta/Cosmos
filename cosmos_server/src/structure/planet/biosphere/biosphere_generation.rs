@@ -209,35 +209,37 @@ fn send_chunks_to_gpu(
     mut worker: ResMut<AppComputeWorker<BiosphereShaderWorker>>,
     mut sent_to_gpu_time: ResMut<SentToGpuTime>,
 ) {
-    if currently_generating_chunks.0.is_empty() {
-        if !needs_generated_chunks.0.is_empty() {
-            let mut chunk_count: u32 = 0;
+    if !currently_generating_chunks.0.is_empty() {
+        return;
+    }
 
-            let mut todo: [GenerationParams; N_CHUNKS as usize] = [GenerationParams::default(); N_CHUNKS as usize];
+    if !needs_generated_chunks.0.is_empty() {
+        let mut chunk_count: u32 = 0;
 
-            for i in 0..N_CHUNKS {
-                let Some(mut doing) = needs_generated_chunks.0.pop() else {
-                    break;
-                };
+        let mut todo: [GenerationParams; N_CHUNKS as usize] = [GenerationParams::default(); N_CHUNKS as usize];
 
-                chunk_count += 1;
+        for i in 0..N_CHUNKS {
+            let Some(mut doing) = needs_generated_chunks.0.pop() else {
+                break;
+            };
 
-                todo[i as usize] = doing.generation_params;
+            chunk_count += 1;
 
-                doing.time = time.elapsed_seconds();
-                currently_generating_chunks.0.push(doing);
-            }
+            todo[i as usize] = doing.generation_params;
 
-            // let vals: Vec<TerrainData> = vec![TerrainData::zeroed(); DIMS]; // Useless, but nice for debugging (and line below)
-            // worker.write_slice("values", &vals);
-
-            worker.write("params", &todo);
-            worker.write("chunk_count", &chunk_count);
-
-            worker.execute();
-
-            sent_to_gpu_time.0 = time.elapsed_seconds();
+            doing.time = time.elapsed_seconds();
+            currently_generating_chunks.0.push(doing);
         }
+
+        // let vals: Vec<TerrainData> = vec![TerrainData::zeroed(); DIMS]; // Useless, but nice for debugging (and line below)
+        // worker.write_slice("values", &vals);
+
+        worker.write("params", &todo);
+        worker.write("chunk_count", &chunk_count);
+
+        worker.execute();
+
+        sent_to_gpu_time.0 = time.elapsed_seconds();
     }
 }
 

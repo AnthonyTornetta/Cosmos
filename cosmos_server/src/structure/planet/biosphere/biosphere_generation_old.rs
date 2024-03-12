@@ -26,12 +26,7 @@ use futures_lite::future;
 use noise::NoiseFn;
 use rayon::prelude::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
 
-use crate::{
-    init::init_world::{Noise, ReadOnlyNoise},
-    structure::planet::lods::generate_lods::{
-        AsyncGeneratingLod, DoneGeneratingLod, GeneratingLod, GeneratingLods, LodNeedsGeneratedForPlayer,
-    },
-};
+use crate::init::init_world::{Noise, ReadOnlyNoise};
 
 use super::{
     biome::{Biome, BiomeIdList, BiomeParameters, BiosphereBiomesRegistry},
@@ -737,285 +732,285 @@ fn calculate_biomes_and_elevations_corner<'a, T: BiosphereMarkerComponent>(
     (biomes, elevations, BiomeIdList::Corner(biome_list))
 }
 
-fn generate<T: BiosphereMarkerComponent>(
-    generating_lod: &mut GeneratingLod,
-    structure_location: &Location,
-    first_block_coord: BlockCoordinate,
-    s_dimensions: CoordinateType,
-    scale: CoordinateType,
-    noise_generator: &Noise,
-    biome_decider: &BiomeDecider<T>,
-    biosphere_biomes: &BiosphereBiomesRegistry<T>,
-    sea_level: Option<&BiosphereSeaLevel<T>>,
-) {
-    let mut lod_chunk = Box::new(LodChunk::new());
-    let chunk_faces = Planet::chunk_planet_faces_with_scale(first_block_coord, s_dimensions, scale);
+// fn generate<T: BiosphereMarkerComponent>(
+//     generating_lod: &mut GeneratingLod,
+//     structure_location: &Location,
+//     first_block_coord: BlockCoordinate,
+//     s_dimensions: CoordinateType,
+//     scale: CoordinateType,
+//     noise_generator: &Noise,
+//     biome_decider: &BiomeDecider<T>,
+//     biosphere_biomes: &BiosphereBiomesRegistry<T>,
+//     sea_level: Option<&BiosphereSeaLevel<T>>,
+// ) {
+//     let mut lod_chunk = Box::new(LodChunk::new());
+//     let chunk_faces = Planet::chunk_planet_faces_with_scale(first_block_coord, s_dimensions, scale);
 
-    let sea_level = sea_level.map(|x| ((x.level * s_dimensions as f32) as CoordinateType, x.block.as_ref()));
-    let numeric_sea_level = sea_level.as_ref().map(|(level, _)| *level).unwrap_or(s_dimensions * 3 / 4);
+//     let sea_level = sea_level.map(|x| ((x.level * s_dimensions as f32) as CoordinateType, x.block.as_ref()));
+//     let numeric_sea_level = sea_level.as_ref().map(|(level, _)| *level).unwrap_or(s_dimensions * 3 / 4);
 
-    match chunk_faces {
-        ChunkFaces::Face(up) => {
-            let (biomes, elevations, biome_list) = calculate_biomes_and_elevations_face(
-                first_block_coord,
-                structure_location,
-                noise_generator,
-                scale,
-                biome_decider,
-                biosphere_biomes,
-                numeric_sea_level,
-                up,
-                s_dimensions,
-            );
+//     match chunk_faces {
+//         ChunkFaces::Face(up) => {
+//             let (biomes, elevations, biome_list) = calculate_biomes_and_elevations_face(
+//                 first_block_coord,
+//                 structure_location,
+//                 noise_generator,
+//                 scale,
+//                 biome_decider,
+//                 biosphere_biomes,
+//                 numeric_sea_level,
+//                 up,
+//                 s_dimensions,
+//             );
 
-            for (biome, biome_id) in biomes {
-                let biome_id = biome_id as u8;
+//             for (biome, biome_id) in biomes {
+//                 let biome_id = biome_id as u8;
 
-                biome.generate_face_chunk_lod(
-                    biome.as_ref(),
-                    first_block_coord,
-                    s_dimensions,
-                    &mut lod_chunk,
-                    up,
-                    scale,
-                    &biome_list,
-                    biome_id,
-                    elevations.as_ref(),
-                    sea_level,
-                );
-            }
-        }
-        ChunkFaces::Edge(j_up, k_up) => {
-            let (biomes, elevations, biome_list) = calculate_biomes_and_elevations_edge(
-                first_block_coord,
-                structure_location,
-                noise_generator,
-                scale,
-                biome_decider,
-                biosphere_biomes,
-                numeric_sea_level,
-                j_up,
-                k_up,
-                s_dimensions,
-            );
+//                 biome.generate_face_chunk_lod(
+//                     biome.as_ref(),
+//                     first_block_coord,
+//                     s_dimensions,
+//                     &mut lod_chunk,
+//                     up,
+//                     scale,
+//                     &biome_list,
+//                     biome_id,
+//                     elevations.as_ref(),
+//                     sea_level,
+//                 );
+//             }
+//         }
+//         ChunkFaces::Edge(j_up, k_up) => {
+//             let (biomes, elevations, biome_list) = calculate_biomes_and_elevations_edge(
+//                 first_block_coord,
+//                 structure_location,
+//                 noise_generator,
+//                 scale,
+//                 biome_decider,
+//                 biosphere_biomes,
+//                 numeric_sea_level,
+//                 j_up,
+//                 k_up,
+//                 s_dimensions,
+//             );
 
-            for (biome, biome_id) in biomes {
-                biome.generate_edge_chunk_lod(
-                    biome.as_ref(),
-                    first_block_coord,
-                    s_dimensions,
-                    &mut lod_chunk,
-                    j_up,
-                    k_up,
-                    scale,
-                    &biome_list,
-                    biome_id as u8,
-                    elevations.as_ref(),
-                    sea_level,
-                );
-            }
-        }
-        ChunkFaces::Corner(x_up, y_up, z_up) => {
-            let (biomes, elevations, biome_list) = calculate_biomes_and_elevations_corner(
-                first_block_coord,
-                structure_location,
-                noise_generator,
-                scale,
-                biome_decider,
-                biosphere_biomes,
-                numeric_sea_level,
-                x_up,
-                y_up,
-                z_up,
-                s_dimensions,
-            );
+//             for (biome, biome_id) in biomes {
+//                 biome.generate_edge_chunk_lod(
+//                     biome.as_ref(),
+//                     first_block_coord,
+//                     s_dimensions,
+//                     &mut lod_chunk,
+//                     j_up,
+//                     k_up,
+//                     scale,
+//                     &biome_list,
+//                     biome_id as u8,
+//                     elevations.as_ref(),
+//                     sea_level,
+//                 );
+//             }
+//         }
+//         ChunkFaces::Corner(x_up, y_up, z_up) => {
+//             let (biomes, elevations, biome_list) = calculate_biomes_and_elevations_corner(
+//                 first_block_coord,
+//                 structure_location,
+//                 noise_generator,
+//                 scale,
+//                 biome_decider,
+//                 biosphere_biomes,
+//                 numeric_sea_level,
+//                 x_up,
+//                 y_up,
+//                 z_up,
+//                 s_dimensions,
+//             );
 
-            for (biome, biome_id) in biomes {
-                biome.generate_corner_chunk_lod(
-                    biome.as_ref(),
-                    first_block_coord,
-                    s_dimensions,
-                    &mut lod_chunk,
-                    x_up,
-                    y_up,
-                    z_up,
-                    scale,
-                    &biome_list,
-                    biome_id as u8,
-                    elevations.as_ref(),
-                    sea_level,
-                );
-            }
-        }
-    }
+//             for (biome, biome_id) in biomes {
+//                 biome.generate_corner_chunk_lod(
+//                     biome.as_ref(),
+//                     first_block_coord,
+//                     s_dimensions,
+//                     &mut lod_chunk,
+//                     x_up,
+//                     y_up,
+//                     z_up,
+//                     scale,
+//                     &biome_list,
+//                     biome_id as u8,
+//                     elevations.as_ref(),
+//                     sea_level,
+//                 );
+//             }
+//         }
+//     }
 
-    *generating_lod = GeneratingLod::DoneGenerating(lod_chunk);
-}
+//     *generating_lod = GeneratingLod::DoneGenerating(lod_chunk);
+// }
 
-fn recurse<T: BiosphereMarkerComponent>(
-    generating_lod: &mut GeneratingLod,
-    structure_location: &Location,
-    first_block_coord: BlockCoordinate,
-    s_dimensions: CoordinateType,
-    scale: CoordinateType,
-    noise_generator: &Noise,
-    biome_decider: &BiomeDecider<T>,
-    biosphere_biomes: &BiosphereBiomesRegistry<T>,
-    sea_level: Option<&BiosphereSeaLevel<T>>,
-) {
-    match generating_lod {
-        GeneratingLod::NeedsGenerated => {
-            *generating_lod = GeneratingLod::BeingGenerated;
-            generate::<T>(
-                generating_lod,
-                structure_location,
-                first_block_coord,
-                s_dimensions,
-                scale,
-                noise_generator,
-                biome_decider,
-                biosphere_biomes,
-                sea_level,
-            );
-        }
-        GeneratingLod::Children(children) => {
-            let s2 = scale / 2;
+// fn recurse<T: BiosphereMarkerComponent>(
+//     generating_lod: &mut GeneratingLod,
+//     structure_location: &Location,
+//     first_block_coord: BlockCoordinate,
+//     s_dimensions: CoordinateType,
+//     scale: CoordinateType,
+//     noise_generator: &Noise,
+//     biome_decider: &BiomeDecider<T>,
+//     biosphere_biomes: &BiosphereBiomesRegistry<T>,
+//     sea_level: Option<&BiosphereSeaLevel<T>>,
+// ) {
+//     match generating_lod {
+//         GeneratingLod::NeedsGenerated => {
+//             *generating_lod = GeneratingLod::BeingGenerated;
+//             generate::<T>(
+//                 generating_lod,
+//                 structure_location,
+//                 first_block_coord,
+//                 s_dimensions,
+//                 scale,
+//                 noise_generator,
+//                 biome_decider,
+//                 biosphere_biomes,
+//                 sea_level,
+//             );
+//         }
+//         GeneratingLod::Children(children) => {
+//             let s2 = scale / 2;
 
-            let sc = s2 * CHUNK_DIMENSIONS;
+//             let sc = s2 * CHUNK_DIMENSIONS;
 
-            let coords = [
-                (0, 0, 0),
-                (0, 0, sc),
-                (sc, 0, sc),
-                (sc, 0, 0),
-                (0, sc, 0),
-                (0, sc, sc),
-                (sc, sc, sc),
-                (sc, sc, 0),
-            ];
+//             let coords = [
+//                 (0, 0, 0),
+//                 (0, 0, sc),
+//                 (sc, 0, sc),
+//                 (sc, 0, 0),
+//                 (0, sc, 0),
+//                 (0, sc, sc),
+//                 (sc, sc, sc),
+//                 (sc, sc, 0),
+//             ];
 
-            children.par_iter_mut().zip(coords).for_each(|(child, (bx, by, bz))| {
-                recurse::<T>(
-                    child,
-                    structure_location,
-                    BlockCoordinate::new(bx, by, bz) + first_block_coord,
-                    s_dimensions,
-                    s2,
-                    noise_generator,
-                    biome_decider,
-                    biosphere_biomes,
-                    sea_level,
-                );
-            });
-        }
-        _ => {}
-    }
-}
+//             children.par_iter_mut().zip(coords).for_each(|(child, (bx, by, bz))| {
+//                 recurse::<T>(
+//                     child,
+//                     structure_location,
+//                     BlockCoordinate::new(bx, by, bz) + first_block_coord,
+//                     s_dimensions,
+//                     s2,
+//                     noise_generator,
+//                     biome_decider,
+//                     biosphere_biomes,
+//                     sea_level,
+//                 );
+//             });
+//         }
+//         _ => {}
+//     }
+// }
 
-pub(crate) fn begin_generating_lods<T: BiosphereMarkerComponent>(
-    query: Query<(Entity, &LodNeedsGeneratedForPlayer), With<T>>,
-    is_biosphere: Query<(&Structure, &Location), With<T>>,
-    noise_generator: Res<ReadOnlyNoise>,
-    mut currently_generating: ResMut<GeneratingLods<T>>,
-    mut commands: Commands,
-    biosphere_biomes: Res<BiosphereBiomesRegistry<T>>,
-    biome_decider: Res<BiomeDecider<T>>,
-    sea_level: Option<Res<BiosphereSeaLevel<T>>>,
-) {
-    let sea_level = sea_level.map(|x| x.clone());
+// pub(crate) fn begin_generating_lods<T: BiosphereMarkerComponent>(
+//     query: Query<(Entity, &LodNeedsGeneratedForPlayer), With<T>>,
+//     is_biosphere: Query<(&Structure, &Location), With<T>>,
+//     noise_generator: Res<ReadOnlyNoise>,
+//     mut currently_generating: ResMut<GeneratingLods<T>>,
+//     mut commands: Commands,
+//     biosphere_biomes: Res<BiosphereBiomesRegistry<T>>,
+//     biome_decider: Res<BiomeDecider<T>>,
+//     sea_level: Option<Res<BiosphereSeaLevel<T>>>,
+// ) {
+//     let sea_level = sea_level.map(|x| x.clone());
 
-    for (entity, generating_lod) in query.iter() {
-        commands.entity(entity).despawn_recursive();
+//     for (entity, generating_lod) in query.iter() {
+//         commands.entity(entity).despawn_recursive();
 
-        let Ok((structure, location)) = is_biosphere.get(generating_lod.structure_entity) else {
-            return;
-        };
+//         let Ok((structure, location)) = is_biosphere.get(generating_lod.structure_entity) else {
+//             return;
+//         };
 
-        let (player_entity, structure_entity) = (generating_lod.player_entity, generating_lod.structure_entity);
+//         let (player_entity, structure_entity) = (generating_lod.player_entity, generating_lod.structure_entity);
 
-        let task_pool = AsyncComputeTaskPool::get();
+//         let task_pool = AsyncComputeTaskPool::get();
 
-        let s_dimensions = structure.block_dimensions().x;
+//         let s_dimensions = structure.block_dimensions().x;
 
-        let mut generating_lod = generating_lod.clone();
-        let noise_generator = noise_generator.clone();
+//         let mut generating_lod = generating_lod.clone();
+//         let noise_generator = noise_generator.clone();
 
-        let biome_decider = *biome_decider;
-        let biosphere_biomes = biosphere_biomes.clone();
-        let structure_location = *location;
-        let sea_level = sea_level.clone();
+//         let biome_decider = *biome_decider;
+//         let biosphere_biomes = biosphere_biomes.clone();
+//         let structure_location = *location;
+//         let sea_level = sea_level.clone();
 
-        let task = task_pool.spawn(async move {
-            let noise_generator = noise_generator.inner();
+//         let task = task_pool.spawn(async move {
+//             let noise_generator = noise_generator.inner();
 
-            let first_block_coord = BlockCoordinate::new(0, 0, 0);
+//             let first_block_coord = BlockCoordinate::new(0, 0, 0);
 
-            recurse::<T>(
-                &mut generating_lod.generating_lod,
-                &structure_location,
-                first_block_coord,
-                s_dimensions,
-                s_dimensions / CHUNK_DIMENSIONS,
-                &noise_generator,
-                &biome_decider,
-                &biosphere_biomes,
-                sea_level.as_ref(),
-            );
+//             recurse::<T>(
+//                 &mut generating_lod.generating_lod,
+//                 &structure_location,
+//                 first_block_coord,
+//                 s_dimensions,
+//                 s_dimensions / CHUNK_DIMENSIONS,
+//                 &noise_generator,
+//                 &biome_decider,
+//                 &biosphere_biomes,
+//                 sea_level.as_ref(),
+//             );
 
-            let lod_delta = recursively_create_lod_delta(generating_lod.generating_lod);
-            let cloned_delta = lod_delta.clone();
+//             let lod_delta = recursively_create_lod_delta(generating_lod.generating_lod);
+//             let cloned_delta = lod_delta.clone();
 
-            let new_lod = if let Some(read_only_current_lod) = generating_lod.current_lod {
-                let mut current_lod = read_only_current_lod.inner().clone();
-                cloned_delta.apply_changes(&mut current_lod);
-                current_lod
-            } else {
-                cloned_delta.create_lod()
-            };
+//             let new_lod = if let Some(read_only_current_lod) = generating_lod.current_lod {
+//                 let mut current_lod = read_only_current_lod.inner().clone();
+//                 cloned_delta.apply_changes(&mut current_lod);
+//                 current_lod
+//             } else {
+//                 cloned_delta.create_lod()
+//             };
 
-            // lod delta is only used for network requests, so serializing it here saves a ton of processing power on the main thread
-            let lod_delta = cosmos_encoder::serialize(&LodNetworkMessage::SetLod(SetLodMessage {
-                serialized_lod: cosmos_encoder::serialize(&lod_delta),
-                structure: structure_entity,
-            }));
+//             // lod delta is only used for network requests, so serializing it here saves a ton of processing power on the main thread
+//             let lod_delta = cosmos_encoder::serialize(&LodNetworkMessage::SetLod(SetLodMessage {
+//                 serialized_lod: cosmos_encoder::serialize(&lod_delta),
+//                 structure: structure_entity,
+//             }));
 
-            let cloned_new_lod = new_lod.clone();
+//             let cloned_new_lod = new_lod.clone();
 
-            DoneGeneratingLod {
-                lod_delta,
-                new_lod,
-                cloned_new_lod,
-            }
-        });
+//             DoneGeneratingLod {
+//                 lod_delta,
+//                 new_lod,
+//                 cloned_new_lod,
+//             }
+//         });
 
-        currently_generating.push(AsyncGeneratingLod::<T>::new(player_entity, structure_entity, task));
-    }
-}
+//         currently_generating.push(AsyncGeneratingLod::<T>::new(player_entity, structure_entity, task));
+//     }
+// }
 
-fn recursively_create_lod_delta(generated_lod: GeneratingLod) -> LodDelta {
-    match generated_lod {
-        GeneratingLod::Same => LodDelta::NoChange,
-        GeneratingLod::Children(children) => {
-            let [c0, c1, c2, c3, c4, c5, c6, c7] = *children;
+// fn recursively_create_lod_delta(generated_lod: GeneratingLod) -> LodDelta {
+//     match generated_lod {
+//         GeneratingLod::Same => LodDelta::NoChange,
+//         GeneratingLod::Children(children) => {
+//             let [c0, c1, c2, c3, c4, c5, c6, c7] = *children;
 
-            LodDelta::Children(Box::new([
-                recursively_create_lod_delta(c0),
-                recursively_create_lod_delta(c1),
-                recursively_create_lod_delta(c2),
-                recursively_create_lod_delta(c3),
-                recursively_create_lod_delta(c4),
-                recursively_create_lod_delta(c5),
-                recursively_create_lod_delta(c6),
-                recursively_create_lod_delta(c7),
-            ]))
-        }
-        GeneratingLod::DoneGenerating(lod_chunk) => LodDelta::Single(lod_chunk),
-        _ => {
-            warn!("Invalid lod state: {generated_lod:?}");
-            LodDelta::None
-        }
-    }
-}
+//             LodDelta::Children(Box::new([
+//                 recursively_create_lod_delta(c0),
+//                 recursively_create_lod_delta(c1),
+//                 recursively_create_lod_delta(c2),
+//                 recursively_create_lod_delta(c3),
+//                 recursively_create_lod_delta(c4),
+//                 recursively_create_lod_delta(c5),
+//                 recursively_create_lod_delta(c6),
+//                 recursively_create_lod_delta(c7),
+//             ]))
+//         }
+//         GeneratingLod::DoneGenerating(lod_chunk) => LodDelta::Single(lod_chunk),
+//         _ => {
+//             warn!("Invalid lod state: {generated_lod:?}");
+//             LodDelta::None
+//         }
+//     }
+// }
 
 /// Calls generate_face_chunk, generate_edge_chunk, and generate_corner_chunk to generate the chunks of a planet.
 pub fn generate_planet<T: BiosphereMarkerComponent, E: TGenerateChunkEvent>(
