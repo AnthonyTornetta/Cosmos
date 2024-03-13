@@ -1,7 +1,4 @@
-use std::{
-    sync::{Arc, Mutex},
-    time::SystemTime,
-};
+use std::sync::{Arc, Mutex};
 
 use bevy::{
     ecs::{
@@ -13,7 +10,6 @@ use bevy::{
     prelude::{
         in_state, App, Commands, Component, Entity, GlobalTransform, IntoSystemConfigs, Quat, Query, Res, ResMut, Resource, Update, With,
     },
-    time::Timer,
 };
 use bevy_app_compute::prelude::AppComputeWorker;
 use cosmos_core::{
@@ -40,7 +36,7 @@ use cosmos_core::{
         timer::UtilsTimer,
     },
 };
-use rayon::iter::{IntoParallelIterator, ParallelBridge, ParallelIterator};
+use rayon::iter::{ParallelBridge, ParallelIterator};
 
 use crate::{netty::flags::LocalPlayer, state::game_state::GameState};
 
@@ -69,29 +65,7 @@ enum LodRequest {
 }
 
 #[derive(Debug, Component)]
-pub struct LodBeingGenerated(LodRequest);
-
-// #[derive(Debug)]
-// pub struct AsyncGeneratingLod<T> {
-//     player_entity: Entity,
-//     structure_entity: Entity,
-//     task: Task<DoneGeneratingLod>,
-//     _phantom: PhantomData<T>,
-// }
-
-// impl<T> AsyncGeneratingLod<T> {
-//     pub fn new(player_entity: Entity, structure_entity: Entity, task: Task<DoneGeneratingLod>) -> Self {
-//         Self {
-//             _phantom: PhantomData,
-//             player_entity,
-//             structure_entity,
-//             task,
-//         }
-//     }
-// }
-
-// #[derive(Debug, Resource, Deref, DerefMut, Default)]
-// pub(crate) struct GeneratingLods(pub Vec<AsyncGeneratingLod>);
+pub(crate) struct LodBeingGenerated(LodRequest);
 
 #[derive(Debug)]
 pub(crate) struct NeedsGeneratedChunk {
@@ -102,7 +76,6 @@ pub(crate) struct NeedsGeneratedChunk {
     structure_dimensions: CoordinateType,
     generation_params: GenerationParams,
     biosphere_type: &'static str,
-    time: SystemTime,
 }
 
 #[derive(Resource, Debug, Default)]
@@ -110,127 +83,6 @@ pub(crate) struct NeedGeneratedLodChunks(Vec<NeedsGeneratedChunk>);
 
 #[derive(Resource, Debug, Default)]
 pub(crate) struct GeneratingLodChunks(Vec<NeedsGeneratedChunk>);
-
-#[derive(Debug, Clone)]
-/// Represents a reduced-detail version of a planet undergoing generation
-pub enum GeneratingLod {
-    /// Represents an LOD that needs generated
-    NeedsGenerated,
-    /// Represents an LOD that is currently being generated
-    BeingGenerated,
-    /// Represents a single chunk of blocks at any scale.
-    DoneGenerating(Box<LodChunk>),
-    /// Represents no change required
-    Same,
-
-    Children(Box<[GeneratingLod; 8]>),
-}
-
-// pub(crate) fn check_done_generating_lods<T: Component + Default>(
-//     mut commands: Commands,
-//     mut lod_query: Query<(Entity, &mut PlayerLod, &Parent)>,
-//     mut generating_lods: ResMut<GeneratingLods<T>>,
-// ) {
-//     let mut todo = Vec::with_capacity(generating_lods.capacity());
-
-//     swap(&mut todo, &mut generating_lods.0);
-
-//     for mut task in todo {
-//         if let Some(done_generating_lod) = future::block_on(future::poll_once(&mut task.task)) {
-//             let lod = done_generating_lod.new_lod;
-//             let read_only_lod = ReadOnlyLod::from(done_generating_lod.cloned_new_lod);
-//             let lod_delta = done_generating_lod.lod_delta;
-
-//             if let Some((_, mut player_lod, _)) = lod_query
-//                 .iter_mut()
-//                 .find(|(_, player_lod, parent)| player_lod.player == task.player_entity && parent.get() == task.structure_entity)
-//             {
-//                 player_lod.lod = lod;
-//                 player_lod.deltas.push(lod_delta);
-//                 player_lod.read_only_lod = read_only_lod;
-//             } else if let Some(mut ecmds) = commands.get_entity(task.structure_entity) {
-//                 ecmds.with_children(|cmds| {
-//                     cmds.spawn((
-//                         PlayerLod {
-//                             lod,
-//                             deltas: vec![lod_delta],
-//                             player: task.player_entity,
-//                             read_only_lod,
-//                         },
-//                         DespawnWithStructure,
-//                     ));
-//                 });
-//             }
-//         } else {
-//             generating_lods.push(task);
-//         }
-//     }
-// }
-
-// fn create_generating_lod(
-//     request: &LodRequest,
-//     (min_block_range_inclusive, max_block_range_exclusive): (BlockCoordinate, BlockCoordinate),
-// ) -> GeneratingLod {
-//     match request {
-//         LodRequest::Same => GeneratingLod::Same,
-//         LodRequest::Single => {
-//             debug_assert!(
-//                 max_block_range_exclusive.x - min_block_range_inclusive.x == max_block_range_exclusive.y - min_block_range_inclusive.y
-//                     && max_block_range_exclusive.x - min_block_range_inclusive.x
-//                         == max_block_range_exclusive.z - min_block_range_inclusive.z
-//             );
-
-//             GeneratingLod::NeedsGenerated
-//         }
-//         LodRequest::Multi(child_requests) => {
-//             let (dx, dy, dz) = (
-//                 (max_block_range_exclusive.x - min_block_range_inclusive.x) / 2,
-//                 (max_block_range_exclusive.y - min_block_range_inclusive.y) / 2,
-//                 (max_block_range_exclusive.z - min_block_range_inclusive.z) / 2,
-//             );
-
-//             let min = min_block_range_inclusive;
-//             let max = max_block_range_exclusive;
-
-//             GeneratingLod::Children(Box::new([
-//                 create_generating_lod(
-//                     &child_requests[0],
-//                     ((min.x, min.y, min.z).into(), (max.x - dx, max.y - dy, max.z - dz).into()),
-//                 ),
-//                 create_generating_lod(
-//                     &child_requests[1],
-//                     ((min.x, min.y, min.z + dz).into(), (max.x - dx, max.y - dy, max.z).into()),
-//                 ),
-//                 create_generating_lod(
-//                     &child_requests[2],
-//                     ((min.x + dx, min.y, min.z + dz).into(), (max.x, max.y - dy, max.z).into()),
-//                 ),
-//                 create_generating_lod(
-//                     &child_requests[3],
-//                     ((min.x + dx, min.y, min.z).into(), (max.x, max.y - dy, max.z - dz).into()),
-//                 ),
-//                 create_generating_lod(
-//                     &child_requests[4],
-//                     ((min.x, min.y + dy, min.z).into(), (max.x - dx, max.y, max.z - dz).into()),
-//                 ),
-//                 create_generating_lod(
-//                     &child_requests[5],
-//                     ((min.x, min.y + dy, min.z + dz).into(), (max.x - dx, max.y, max.z).into()),
-//                 ),
-//                 create_generating_lod(
-//                     &child_requests[6],
-//                     ((min.x + dx, min.y + dy, min.z + dz).into(), (max.x, max.y, max.z).into()),
-//                 ),
-//                 create_generating_lod(
-//                     &child_requests[7],
-//                     ((min.x + dx, min.y + dy, min.z).into(), (max.x, max.y, max.z - dz).into()),
-//                 ),
-//             ]))
-//         }
-//     }
-// }
-
-// LodGenerationRequest
 
 #[derive(Component, Debug)]
 struct LodStuffTodo {
@@ -486,7 +338,6 @@ fn add_new_needs_generated_chunk(
         scale: scale as f32,
         structure_dimensions: structure.block_dimensions().x,
         structure_entity,
-        time: SystemTime::now(),
     });
 }
 
@@ -530,7 +381,6 @@ fn send_chunks_to_gpu(
 
             todo[i as usize] = doing.generation_params;
 
-            doing.time = SystemTime::now();
             currently_generating_chunks.0.push(doing);
         }
 
@@ -578,11 +428,6 @@ fn read_gpu_data(
                 CHUNK_DIMENSIONS_USIZE,
             ),
         };
-
-        // info!(
-        //     "Got lod data from GPU in {}ms",
-        //     (SystemTime::now().duration_since(needs_generated_chunk.time).unwrap().as_millis())
-        // );
 
         ev_writer.send_mut(DoneGeneratingChunkEvent {
             chunk_data_slice,
@@ -780,14 +625,6 @@ pub(crate) fn generate_chunks_from_gpu_data(
             &needs_generated_chunk.steps,
             needs_generated_chunk.chunk,
         );
-
-        drop(q_lod);
-        // info!(
-        //     "Got generated chunk - took {}ms to generate",
-        //     (SystemTime::now().duration_since(needs_generated_chunk.time).unwrap().as_millis())
-        // );
-
-        // structure.set_chunk(needs_generated_chunk.chunk);
     });
 
     timer.log_duration(&format!("Updated lod data from GPU for {num_events} lod chunks"));
