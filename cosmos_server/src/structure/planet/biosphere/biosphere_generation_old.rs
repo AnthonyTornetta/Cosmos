@@ -24,7 +24,7 @@ use cosmos_core::{
 };
 use futures_lite::future;
 use noise::NoiseFn;
-use rayon::prelude::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
+use rayon::prelude::{IndexedParallelIterator, IntoParallelRefMutIterator};
 
 use crate::init::init_world::{Noise, ReadOnlyNoise};
 

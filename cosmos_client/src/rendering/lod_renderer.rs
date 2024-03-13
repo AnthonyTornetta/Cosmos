@@ -35,7 +35,7 @@ use cosmos_core::{
         block_storage::BlockStorer,
         chunk::{CHUNK_DIMENSIONS, CHUNK_DIMENSIONSF},
         coordinates::{ChunkBlockCoordinate, ChunkCoordinate, CoordinateType},
-        lod::{Lod, ReadOnlyLod},
+        lod::Lod,
         lod_chunk::LodChunk,
         shared::DespawnWithStructure,
         ChunkState, Structure,

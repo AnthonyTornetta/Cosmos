@@ -1,4 +1,7 @@
-use std::time::SystemTime;
+use std::{
+    sync::{Arc, Mutex},
+    time::SystemTime,
+};
 
 use bevy::{
     ecs::{
@@ -10,7 +13,7 @@ use bevy::{
     prelude::{
         in_state, App, Commands, Component, Entity, GlobalTransform, IntoSystemConfigs, Quat, Query, Res, ResMut, Resource, Update, With,
     },
-    time::Time,
+    time::Timer,
 };
 use bevy_app_compute::prelude::AppComputeWorker;
 use cosmos_core::{
@@ -32,8 +35,12 @@ use cosmos_core::{
         },
         Structure,
     },
-    utils::array_utils::{flatten, flatten_4d},
+    utils::{
+        array_utils::{flatten, flatten_4d},
+        timer::UtilsTimer,
+    },
 };
+use rayon::iter::{IntoParallelIterator, ParallelBridge, ParallelIterator};
 
 use crate::{netty::flags::LocalPlayer, state::game_state::GameState};
 
@@ -41,21 +48,28 @@ use crate::{netty::flags::LocalPlayer, state::game_state::GameState};
 enum LodRequest {
     #[default]
     Same,
-    Single(usize),
+    Single,
+    /// Breaks a single cube into 8 sub-cubes.
+    ///
+    /// The indicies of each cube follow a clockwise direction starting on the bottom-left-back
+    ///
+    /// ```
+    ///    +-----------+
+    ///   /  5    6   /|
+    ///  /  4    7   / |
+    /// +-----------+  |
+    /// |           |  |  
+    /// |           |  +
+    /// |   1    2  | /
+    /// |  0    3   |/
+    /// +-----------+
+    /// ```
     Multi(Box<[LodRequest; 8]>),
     Done(Box<LodChunk>),
 }
 
 #[derive(Debug, Component)]
 pub struct LodBeingGenerated(LodRequest);
-
-#[derive(Debug, Component, Clone)]
-pub struct DoneGeneratingLod {
-    /// Represents `LodNetworkMessage::SetLod` but is pre-serialized to save time when sending this to players
-    pub lod_delta: Vec<u8>,
-    pub new_lod: Lod,
-    pub cloned_new_lod: Lod,
-}
 
 // #[derive(Debug)]
 // pub struct AsyncGeneratingLod<T> {
@@ -108,21 +122,7 @@ pub enum GeneratingLod {
     DoneGenerating(Box<LodChunk>),
     /// Represents no change required
     Same,
-    /// Breaks a single cube into 8 sub-cubes.
-    ///
-    /// The indicies of each cube follow a clockwise direction starting on the bottom-left-back
-    ///
-    /// ```
-    ///    +-----------+
-    ///   /  5    6   /|
-    ///  /  4    7   / |
-    /// +-----------+  |
-    /// |           |  |  
-    /// |           |  +
-    /// |   1    2  | /
-    /// |  0    3   |/
-    /// +-----------+
-    /// ```
+
     Children(Box<[GeneratingLod; 8]>),
 }
 
@@ -266,7 +266,7 @@ fn create_lod_request(
                     structure_location,
                 );
 
-                LodRequest::Single(lod_chunks.len() - 1)
+                LodRequest::Single
             }
         };
     }
@@ -290,7 +290,7 @@ fn create_lod_request(
                     structure_location,
                 );
 
-                LodRequest::Single(lod_chunks.len() - 1)
+                LodRequest::Single
             }
         }
     } else {
@@ -540,7 +540,7 @@ fn send_chunks_to_gpu(
         worker.write("params", &todo);
         worker.write("chunk_count", &chunk_count);
 
-        info!("Executing GPU shader to generate chunks!");
+        info!("Executing GPU shader to generate LODs!");
 
         worker.execute();
     }
@@ -579,10 +579,10 @@ fn read_gpu_data(
             ),
         };
 
-        info!(
-            "Got chunk back in {}ms",
-            (SystemTime::now().duration_since(needs_generated_chunk.time).unwrap().as_millis())
-        );
+        // info!(
+        //     "Got lod data from GPU in {}ms",
+        //     (SystemTime::now().duration_since(needs_generated_chunk.time).unwrap().as_millis())
+        // );
 
         ev_writer.send_mut(DoneGeneratingChunkEvent {
             chunk_data_slice,
@@ -648,7 +648,6 @@ fn generate_player_lods(
         }
 
         info!("Requesting new lod generation for {structure_ent:?}");
-        info!("{chunks:?}");
 
         let lods_todo = LodStuffTodo { chunks, request };
 
@@ -662,10 +661,20 @@ pub(crate) fn generate_chunks_from_gpu_data(
     // biosphere_biomes: Res<BiosphereBiomesRegistry<T>>,
     // sea_level: Option<Res<BiosphereSeaLevel<T>>>,
     // mut ev_writer: EventWriter<GenerateChunkFeaturesEvent<T>>,
-    mut q_lod: Query<&mut LodBeingGenerated>,
+    q_lod: Query<&mut LodBeingGenerated>,
     blocks: Res<Registry<Block>>,
 ) {
-    for ev in ev_reader.read() {
+    if ev_reader.is_empty() {
+        return;
+    }
+
+    let num_events = ev_reader.len();
+
+    let mutexed_query = Arc::new(Mutex::new(q_lod));
+
+    let timer = UtilsTimer::start();
+
+    ev_reader.read().par_bridge().for_each(|ev| {
         let mut ev = ev.write();
 
         // let Some(needs_generated_chunk) = &mut ev.needs_generated_chunk else {
@@ -679,12 +688,6 @@ pub(crate) fn generate_chunks_from_gpu_data(
         let chunk_data = chunk_data.data_slice(ev.chunk_data_slice);
 
         let mut needs_generated_chunk = std::mem::take(&mut ev.needs_generated_chunk).expect("Verified to be Some above.");
-
-        let Ok(mut lod_being_generated) = q_lod.get_mut(needs_generated_chunk.structure_entity) else {
-            continue;
-        };
-
-        println!("VALUE SAMPLE: {:?} & {:?}", chunk_data[0], chunk_data[chunk_data.len() - 1]);
 
         for z in 0..CHUNK_DIMENSIONS {
             for y in 0..CHUNK_DIMENSIONS {
@@ -766,32 +769,41 @@ pub(crate) fn generate_chunks_from_gpu_data(
             }
         }
 
+        let mut q_lod = mutexed_query.lock().unwrap();
+
+        let Ok(mut lod_being_generated) = q_lod.get_mut(needs_generated_chunk.structure_entity) else {
+            return;
+        };
+
         recursively_change(
             &mut lod_being_generated.0,
             &needs_generated_chunk.steps,
             needs_generated_chunk.chunk,
         );
 
+        drop(q_lod);
         // info!(
         //     "Got generated chunk - took {}ms to generate",
         //     (SystemTime::now().duration_since(needs_generated_chunk.time).unwrap().as_millis())
         // );
 
         // structure.set_chunk(needs_generated_chunk.chunk);
-    }
+    });
+
+    timer.log_duration(&format!("Updated lod data from GPU for {num_events} lod chunks"));
 }
 
 fn is_still_working(lod_requst: &LodRequest) -> bool {
     match lod_requst {
         LodRequest::Same | LodRequest::Done(_) => false,
-        LodRequest::Single(_) => true,
+        LodRequest::Single => true,
         LodRequest::Multi(c) => c.iter().any(is_still_working),
     }
 }
 
 fn propagate_changes(lod_requst: LodRequest, lod: &mut Lod) {
     match lod_requst {
-        LodRequest::Single(_) => panic!("Invalid state!"),
+        LodRequest::Single => panic!("Invalid state!"),
         LodRequest::Multi(c) => {
             if !matches!(lod, Lod::Children(_)) {
                 const NONE_LOD: Lod = Lod::None;
@@ -824,7 +836,7 @@ fn on_change_being_generated(
 
         propagate_changes(lod_request, &mut lod);
 
-        info!("Propagated changes! It should now be re-rendered. {lod:?}");
+        info!("Propagated changes! It should now be re-rendered.");
 
         commands.entity(ent).remove::<LodBeingGenerated>();
     }
@@ -832,7 +844,7 @@ fn on_change_being_generated(
 
 fn recursively_change(lod_requst: &mut LodRequest, steps: &[usize], chunk: LodChunk) {
     if steps.is_empty() {
-        if let LodRequest::Single(_) = lod_requst {
+        if let LodRequest::Single = lod_requst {
             *lod_requst = LodRequest::Done(Box::new(chunk));
         } else {
             panic!("Invalid state.");

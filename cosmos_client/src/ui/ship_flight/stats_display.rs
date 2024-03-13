@@ -5,7 +5,7 @@ use bevy::{
     ecs::{
         component::Component,
         entity::Entity,
-        query::{Added, Has, With, Without},
+        query::{Added, With, Without},
         removal_detection::RemovedComponents,
         schedule::IntoSystemConfigs,
         system::{Commands, Query, Res},
