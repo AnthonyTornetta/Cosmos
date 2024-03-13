@@ -1,10 +1,4 @@
-use std::{
-    default,
-    marker::PhantomData,
-    mem::swap,
-    rc::Rc,
-    sync::{Arc, Mutex},
-};
+use std::time::SystemTime;
 
 use bevy::{
     ecs::{
@@ -14,24 +8,21 @@ use bevy::{
     log::info,
     math::{Vec3, Vec4},
     prelude::{
-        debug, in_state, App, BuildChildren, Children, Commands, Component, Deref, DerefMut, Entity, GlobalTransform, IntoSystemConfigs,
-        Parent, Quat, Query, Res, ResMut, Resource, Update, With,
+        in_state, App, Commands, Component, Entity, GlobalTransform, IntoSystemConfigs, Quat, Query, Res, ResMut, Resource, Update, With,
     },
-    tasks::Task,
     time::Time,
 };
 use bevy_app_compute::prelude::AppComputeWorker;
 use cosmos_core::{
     block::Block,
     ecs::mut_events::{EventWriterCustomSend, MutEvent, MutEventsCommand},
-    entities::player::Player,
     physics::location::Location,
     registry::Registry,
     structure::{
         block_storage::BlockStorer,
         chunk::{CHUNK_DIMENSIONS, CHUNK_DIMENSIONS_USIZE},
         coordinates::{BlockCoordinate, ChunkBlockCoordinate, CoordinateType, UnboundChunkCoordinate, UnboundCoordinateType},
-        lod::{Lod, LodDelta, ReadOnlyLod},
+        lod::Lod,
         lod_chunk::LodChunk,
         planet::{
             generation::terrain_generation::{
@@ -97,7 +88,7 @@ pub(crate) struct NeedsGeneratedChunk {
     structure_dimensions: CoordinateType,
     generation_params: GenerationParams,
     biosphere_type: &'static str,
-    time: f32,
+    time: SystemTime,
 }
 
 #[derive(Resource, Debug, Default)]
@@ -255,6 +246,7 @@ fn create_lod_request(
     current_lod: Option<&Lod>,
     lod_chunks: &mut Vec<NeedsGeneratedChunk>,
     structure: &Structure,
+    structure_location: &Location,
     structure_entity: Entity,
     (min_block_range_inclusive, max_block_range_exclusive): (BlockCoordinate, BlockCoordinate),
     steps: Vec<usize>,
@@ -271,6 +263,7 @@ fn create_lod_request(
                     scale,
                     structure_entity,
                     steps,
+                    structure_location,
                 );
 
                 LodRequest::Single(lod_chunks.len() - 1)
@@ -294,6 +287,7 @@ fn create_lod_request(
                     scale,
                     structure_entity,
                     steps,
+                    structure_location,
                 );
 
                 LodRequest::Single(lod_chunks.len() - 1)
@@ -332,6 +326,7 @@ fn create_lod_request(
                 },
                 lod_chunks,
                 structure,
+                structure_location,
                 structure_entity,
                 ((min.x, min.y, min.z).into(), (max.x - dx, max.y - dy, max.z - dz).into()),
                 new_steps.remove(0),
@@ -347,6 +342,7 @@ fn create_lod_request(
                 },
                 lod_chunks,
                 structure,
+                structure_location,
                 structure_entity,
                 ((min.x, min.y, min.z + dz).into(), (max.x - dx, max.y - dy, max.z).into()),
                 new_steps.remove(0),
@@ -362,6 +358,7 @@ fn create_lod_request(
                 },
                 lod_chunks,
                 structure,
+                structure_location,
                 structure_entity,
                 ((min.x + dx, min.y, min.z + dz).into(), (max.x, max.y - dy, max.z).into()),
                 new_steps.remove(0),
@@ -377,6 +374,7 @@ fn create_lod_request(
                 },
                 lod_chunks,
                 structure,
+                structure_location,
                 structure_entity,
                 ((min.x + dx, min.y, min.z).into(), (max.x, max.y - dy, max.z - dz).into()),
                 new_steps.remove(0),
@@ -392,6 +390,7 @@ fn create_lod_request(
                 },
                 lod_chunks,
                 structure,
+                structure_location,
                 structure_entity,
                 ((min.x, min.y + dy, min.z).into(), (max.x - dx, max.y, max.z - dz).into()),
                 new_steps.remove(0),
@@ -407,6 +406,7 @@ fn create_lod_request(
                 },
                 lod_chunks,
                 structure,
+                structure_location,
                 structure_entity,
                 ((min.x, min.y + dy, min.z + dz).into(), (max.x - dx, max.y, max.z).into()),
                 new_steps.remove(0),
@@ -422,6 +422,7 @@ fn create_lod_request(
                 },
                 lod_chunks,
                 structure,
+                structure_location,
                 structure_entity,
                 ((min.x + dx, min.y + dy, min.z + dz).into(), (max.x, max.y, max.z).into()),
                 new_steps.remove(0),
@@ -437,6 +438,7 @@ fn create_lod_request(
                 },
                 lod_chunks,
                 structure,
+                structure_location,
                 structure_entity,
                 ((min.x + dx, min.y + dy, min.z).into(), (max.x, max.y, max.z - dz).into()),
                 new_steps.remove(0),
@@ -459,13 +461,16 @@ fn add_new_needs_generated_chunk(
     scale: u64,
     structure_entity: Entity,
     steps: Vec<usize>,
+    structure_loc: &Location,
 ) {
     debug_assert!(
         max_block_range_exclusive.x - min_block_range_inclusive.x == max_block_range_exclusive.y - min_block_range_inclusive.y
             && max_block_range_exclusive.x - min_block_range_inclusive.x == max_block_range_exclusive.z - min_block_range_inclusive.z
     );
 
-    let block_pos = structure.block_relative_position(min_block_range_inclusive);
+    let block_pos = structure.block_relative_position(min_block_range_inclusive) - Vec3::new(-0.5, 0.5, 0.5);
+
+    let structure_loc = structure_loc.absolute_coords_f32();
 
     lod_chunks.push(NeedsGeneratedChunk {
         biosphere_type: "temp",
@@ -475,13 +480,13 @@ fn add_new_needs_generated_chunk(
             biosphere_id: U32Vec4::splat(1),
             chunk_coords: Vec4::new(block_pos.x, block_pos.y, block_pos.z, 0.0),
             scale: Vec4::splat(scale as f32),
-            sea_level: Vec4::splat(0.75 * structure.block_dimensions().x as f32),
-            structure_pos: Vec4::splat(0.0),
+            sea_level: Vec4::splat(0.75 * structure.block_dimensions().x as f32 / 2.0),
+            structure_pos: Vec4::new(structure_loc.x, structure_loc.y, structure_loc.z, 0.0),
         },
         scale: scale as f32,
         structure_dimensions: structure.block_dimensions().x,
         structure_entity,
-        time: 0.0,
+        time: SystemTime::now(),
     });
 }
 
@@ -506,7 +511,6 @@ fn send_chunks_to_gpu(
     mut currently_generating_chunks: ResMut<GeneratingLodChunks>,
     mut needs_generated_chunks: ResMut<NeedGeneratedLodChunks>,
     mut worker: ResMut<AppComputeWorker<BiosphereShaderWorker>>,
-    time: Res<Time>,
 ) {
     if !currently_generating_chunks.0.is_empty() {
         return;
@@ -526,7 +530,7 @@ fn send_chunks_to_gpu(
 
             todo[i as usize] = doing.generation_params;
 
-            doing.time = time.elapsed_seconds();
+            doing.time = SystemTime::now();
             currently_generating_chunks.0.push(doing);
         }
 
@@ -553,8 +557,6 @@ fn read_gpu_data(
     mut ev_writer: EventWriter<MutEvent<DoneGeneratingChunkEvent>>,
     mut currently_generating_chunks: ResMut<GeneratingLodChunks>,
     mut chunk_data: ResMut<ChunkData>,
-
-    time: Res<Time>,
 ) {
     if !worker.ready() {
         return;
@@ -577,7 +579,10 @@ fn read_gpu_data(
             ),
         };
 
-        info!("Got chunk back in {}s", time.elapsed_seconds() - needs_generated_chunk.time);
+        info!(
+            "Got chunk back in {}ms",
+            (SystemTime::now().duration_since(needs_generated_chunk.time).unwrap().as_millis())
+        );
 
         ev_writer.send_mut(DoneGeneratingChunkEvent {
             chunk_data_slice,
@@ -631,6 +636,7 @@ fn generate_player_lods(
             current_lod,
             &mut chunks,
             structure,
+            structure_location,
             structure_ent,
             (BlockCoordinate::new(0, 0, 0), structure.block_dimensions()),
             vec![],
@@ -641,9 +647,10 @@ fn generate_player_lods(
             continue;
         }
 
-        let lods_todo = LodStuffTodo { chunks, request };
+        info!("Requesting new lod generation for {structure_ent:?}");
+        info!("{chunks:?}");
 
-        debug!("Requesting new lod generation for {structure_ent:?}");
+        let lods_todo = LodStuffTodo { chunks, request };
 
         commands.entity(structure_ent).insert(lods_todo);
     }
@@ -657,8 +664,6 @@ pub(crate) fn generate_chunks_from_gpu_data(
     // mut ev_writer: EventWriter<GenerateChunkFeaturesEvent<T>>,
     mut q_lod: Query<&mut LodBeingGenerated>,
     blocks: Res<Registry<Block>>,
-
-    time: Res<Time>,
 ) {
     for ev in ev_reader.read() {
         let mut ev = ev.write();
@@ -678,6 +683,8 @@ pub(crate) fn generate_chunks_from_gpu_data(
         let Ok(mut lod_being_generated) = q_lod.get_mut(needs_generated_chunk.structure_entity) else {
             continue;
         };
+
+        println!("VALUE SAMPLE: {:?} & {:?}", chunk_data[0], chunk_data[chunk_data.len() - 1]);
 
         for z in 0..CHUNK_DIMENSIONS {
             for y in 0..CHUNK_DIMENSIONS {
@@ -765,10 +772,10 @@ pub(crate) fn generate_chunks_from_gpu_data(
             needs_generated_chunk.chunk,
         );
 
-        info!(
-            "Got generated chunk - took {}ms to generate",
-            (1000.0 * (time.elapsed_seconds() - needs_generated_chunk.time)).floor()
-        );
+        // info!(
+        //     "Got generated chunk - took {}ms to generate",
+        //     (SystemTime::now().duration_since(needs_generated_chunk.time).unwrap().as_millis())
+        // );
 
         // structure.set_chunk(needs_generated_chunk.chunk);
     }

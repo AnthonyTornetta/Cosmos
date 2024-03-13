@@ -53,7 +53,9 @@ fn generate(
             }
         }
 
-        let value_above = calculate_depth_at(coords_vec3 + delta, sea_level);
+        let scale_f32 = vec3(param.scale.x, param.scale.y, param.scale.z);
+
+        let value_above = calculate_depth_at(coords_vec3 + delta * scale_f32, sea_level);
         if value_above < 0 {
             // There is no block above us, so make sure we're the top layer.
             depth_here = 0;

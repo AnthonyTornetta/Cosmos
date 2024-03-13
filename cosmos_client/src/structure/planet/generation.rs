@@ -5,20 +5,9 @@ use std::fs;
 use crate::{netty::connect::WaitingOnServer, registry::sync_registry, state::game_state::GameState};
 use bevy::prelude::*;
 use bevy_app_compute::prelude::*;
-use cosmos_core::{
-    ecs::mut_events::{EventWriterCustomSend, MutEvent, MutEventsCommand},
-    structure::{
-        chunk::{Chunk, CHUNK_DIMENSIONS, CHUNK_DIMENSIONS_USIZE},
-        coordinates::CoordinateType,
-        planet::{
-            biosphere::RegisteredBiosphere,
-            generation::terrain_generation::{
-                BiosphereShaderWorker, ChunkData, ChunkDataSlice, GenerationParams, GpuPermutationTable, TerrainData, N_CHUNKS,
-            },
-        },
-        Structure,
-    },
-    utils::array_utils::{flatten, flatten_4d},
+use cosmos_core::structure::planet::{
+    biosphere::RegisteredBiosphere,
+    generation::terrain_generation::{BiosphereShaderWorker, ChunkData, GpuPermutationTable},
 };
 
 #[derive(Event, Debug)]
@@ -329,6 +318,7 @@ fn setup_lod_generation(
     mut commands: Commands,
     mut ev_reader: EventReader<SetTerrainGenData>,
     terrain_data_flag: Res<NeedsTerrainDataFlag>,
+    mut worker: ResMut<AppComputeWorker<BiosphereShaderWorker>>,
 ) {
     for ev in ev_reader.read() {
         let mut working_dir = std::env::current_dir().expect("Can't get working dir");
@@ -363,7 +353,7 @@ fn setup_lod_generation(
             }
         }
 
-        println!("{:?}", ev.permutation_table);
+        worker.write_slice("permutation_table", &ev.permutation_table.0);
 
         commands.insert_resource(ev.permutation_table.clone());
         commands.remove_resource::<NeedsTerrainDataFlag>();
