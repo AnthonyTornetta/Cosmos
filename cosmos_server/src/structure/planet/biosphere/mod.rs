@@ -14,7 +14,6 @@ use bevy::{
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::Block,
-    events::block_events::BlockChangedEvent,
     netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannelServer},
     physics::location::Location,
     registry::Registry,
@@ -26,7 +25,7 @@ use cosmos_core::{
             generation::terrain_generation::GpuPermutationTable,
             Planet,
         },
-        ChunkInitEvent, Structure,
+        Structure,
     },
 };
 use noise::NoiseFn;
@@ -49,14 +48,13 @@ use crate::{
 };
 
 use self::{
-    biome::{create_biosphere_biomes_registry, BiomeParameters, BiosphereBiomesRegistry},
-    biosphere_generation_old::GenerateChunkFeaturesEvent,
+    biome::{create_biosphere_biomes_registry, BiomeParameters},
     shader_assembler::CachedShaders,
 };
 
 pub mod biome;
 pub mod biosphere_generation;
-pub mod biosphere_generation_old;
+pub mod block_layers;
 pub mod generation_tools;
 pub mod grass_biosphere;
 pub mod ice_biosphere;
@@ -132,15 +130,13 @@ const BIOME_DECIDER_DELTA: f64 = 0.01;
 #[derive(Resource, Clone, Copy)]
 /// This is used to calculate which biosphere parameters are present at specific blocks,
 /// and is used to decide which biosphere goes here in conjunction with the `BiosphereBiomeRegistry`
-pub struct BiomeDecider<T: BiosphereMarkerComponent> {
-    _phantom: PhantomData<T>,
-
+pub struct BiomeDecider {
     temperature_seed: (f64, f64, f64),
     humidity_seed: (f64, f64, f64),
     elevation_seed: (f64, f64, f64),
 }
 
-impl<T: BiosphereMarkerComponent> BiomeDecider<T> {
+impl BiomeDecider {
     /// Gets the biome parameters at this block coordinate
     ///
     /// - `location` The structure's location (used for seeding the noise function)
@@ -177,43 +173,6 @@ impl<T: BiosphereMarkerComponent> BiomeDecider<T> {
             ideal_elevation: elevation as f32,
             ideal_humidity: humidity as f32,
             ideal_temperature: temperature as f32,
-        }
-    }
-}
-
-fn generate_chunk_featuress<T: BiosphereMarkerComponent>(
-    mut event_reader: EventReader<GenerateChunkFeaturesEvent<T>>,
-    mut init_event_writer: EventWriter<ChunkInitEvent>,
-    mut block_event_writer: EventWriter<BlockChangedEvent>,
-    mut structure_query: Query<(&mut Structure, &Location)>,
-    blocks: Res<Registry<Block>>,
-    noise_generator: Res<Noise>,
-    biosphere_biomes: Res<BiosphereBiomesRegistry<T>>,
-    biome_decider: Res<BiomeDecider<T>>,
-    seed: Res<ServerSeed>,
-) {
-    for ev in event_reader.read() {
-        if let Ok((mut structure, location)) = structure_query.get_mut(ev.structure_entity) {
-            let block_coords = ev.chunk_coords.middle_structure_block();
-            let biome_params = biome_decider.biome_parameters_at(location, block_coords, &noise_generator);
-
-            let biome = biosphere_biomes.ideal_biome_for(biome_params);
-
-            biome.generate_chunk_features(
-                &mut block_event_writer,
-                ev.chunk_coords,
-                &mut structure,
-                location,
-                &blocks,
-                &noise_generator,
-                &seed,
-            );
-
-            init_event_writer.send(ChunkInitEvent {
-                structure_entity: ev.structure_entity,
-                coords: ev.chunk_coords,
-                serialized_block_data: None,
-            });
         }
     }
 }
@@ -297,22 +256,15 @@ pub fn register_biosphere<T: BiosphereMarkerComponent + Default + Clone, E: Send
                 ((
                     biosphere_generation::generate_planet::<T, E>.in_set(BiosphereGenerationSet::FlagChunksNeedGenerated),
                     biosphere_generation::generate_chunks_from_gpu_data::<T, E>.in_set(BiosphereGenerationSet::GenerateChunks),
-                    generate_chunk_featuress::<T>.in_set(BiosphereGenerationSet::GenerateChunkFeatures),
+                    // generate_chunk_features::<T>.in_set(BiosphereGenerationSet::GenerateChunkFeatures),
                     check_needs_generated_system::<E, T>,
                 )
                     .chain())
                 .run_if(in_state(GameState::Playing)),
             ),
         )
-        .init_resource::<GeneratingChunks<T>>()
-        .insert_resource(BiomeDecider::<T> {
-            _phantom: Default::default(),
-            // These seeds are random values I made up - make these not that in the future
-            elevation_seed: (903.0, 278.0, 510.0),
-            humidity_seed: (630.0, 238.0, 129.0),
-            temperature_seed: (410.0, 378.0, 160.0),
-        })
-        .add_event::<GenerateChunkFeaturesEvent<T>>();
+        .init_resource::<GeneratingChunks<T>>();
+    // .add_event::<GenerateChunkFeaturesEvent<T>>();
 }
 
 fn add_biosphere(
@@ -411,7 +363,13 @@ pub(super) fn register(app: &mut App) {
     app.add_event::<NeedsBiosphereEvent>()
         .insert_resource(BiosphereTemperatureRegistry::default())
         .add_systems(Update, add_biosphere)
-        .add_systems(Update, on_connect.run_if(in_state(GameState::Playing)));
+        .add_systems(Update, on_connect.run_if(in_state(GameState::Playing)))
+        .insert_resource(BiomeDecider {
+            // These seeds are random values I made up - make these not that in the future
+            elevation_seed: (903.0, 278.0, 510.0),
+            humidity_seed: (630.0, 238.0, 129.0),
+            temperature_seed: (410.0, 378.0, 160.0),
+        });
 
     sync_registry::<RegisteredBiosphere>(app);
 

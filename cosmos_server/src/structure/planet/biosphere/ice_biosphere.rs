@@ -10,7 +10,7 @@ use cosmos_core::{registry::Registry, structure::coordinates::ChunkCoordinate};
 use crate::GameState;
 
 use super::{
-    biome::{biome_registry::RegisteredBiome, BiomeParameters, BiosphereBiomesRegistry},
+    biome::{Biome, BiomeParameters, BiosphereBiomesRegistry},
     register_biosphere, BiosphereMarkerComponent, TBiosphere, TGenerateChunkEvent, TemperatureRange,
 };
 
@@ -75,12 +75,12 @@ impl TBiosphere<IceBiosphereMarker, IceChunkNeedsGeneratedEvent> for IceBiospher
 // }
 
 fn register_biosphere_biomes(
-    biome_registry: Res<Registry<RegisteredBiome>>,
+    biome_registry: Res<Registry<Biome>>,
     mut biosphere_biomes_registry: ResMut<BiosphereBiomesRegistry<IceBiosphereMarker>>,
 ) {
     if let Some(plains) = biome_registry.from_id("cosmos:plains") {
         biosphere_biomes_registry.register(
-            plains.biome(),
+            plains,
             BiomeParameters {
                 ideal_elevation: 30.0,
                 ideal_humidity: 30.0,

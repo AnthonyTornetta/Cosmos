@@ -10,7 +10,7 @@ use cosmos_core::{block::Block, registry::Registry, structure::coordinates::Chun
 use crate::GameState;
 
 use super::{
-    biome::{biome_registry::RegisteredBiome, BiomeParameters, BiosphereBiomesRegistry},
+    biome::{Biome, BiomeParameters, BiosphereBiomesRegistry},
     register_biosphere, BiosphereMarkerComponent, BiosphereSeaLevel, TBiosphere, TGenerateChunkEvent, TemperatureRange,
 };
 
@@ -60,12 +60,12 @@ impl TBiosphere<GrassBiosphereMarker, GrassChunkNeedsGeneratedEvent> for GrassBi
 }
 
 fn register_biosphere_biomes(
-    biome_registry: Res<Registry<RegisteredBiome>>,
+    biome_registry: Res<Registry<Biome>>,
     mut biosphere_biomes_registry: ResMut<BiosphereBiomesRegistry<GrassBiosphereMarker>>,
 ) {
     if let Some(ocean) = biome_registry.from_id("cosmos:ocean") {
         biosphere_biomes_registry.register(
-            ocean.biome(),
+            ocean,
             BiomeParameters {
                 ideal_elevation: 49.0,
                 ideal_humidity: 0.0,
@@ -78,7 +78,7 @@ fn register_biosphere_biomes(
 
     if let Some(plains) = biome_registry.from_id("cosmos:plains") {
         biosphere_biomes_registry.register(
-            plains.biome(),
+            plains,
             BiomeParameters {
                 ideal_elevation: 50.0,
                 ideal_humidity: 0.0,
@@ -91,7 +91,7 @@ fn register_biosphere_biomes(
 
     if let Some(desert) = biome_registry.from_id("cosmos:desert") {
         biosphere_biomes_registry.register(
-            desert.biome(),
+            desert,
             BiomeParameters {
                 ideal_elevation: 50.0,
                 ideal_humidity: 0.0,

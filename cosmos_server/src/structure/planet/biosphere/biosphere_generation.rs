@@ -1,6 +1,6 @@
 //! Responsible for the default generation of biospheres.
 
-use bevy::prelude::*;
+use bevy::{prelude::*, utils::hashbrown::HashSet};
 use bevy_app_compute::prelude::*;
 use cosmos_core::{
     block::BlockFace,
@@ -17,18 +17,18 @@ use cosmos_core::{
             },
             Planet,
         },
-        Structure,
+        ChunkInitEvent, Structure,
     },
     utils::array_utils::{flatten, flatten_4d},
 };
 use rand::{seq::SliceRandom, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 
-use crate::{init::init_world::ServerSeed, state::GameState};
+use crate::{init::init_world::ServerSeed, state::GameState, structure::planet::biosphere::biome::GenerateChunkFeaturesEvent};
 
 use super::{
-    biome::{BiomeParameters, BiosphereBiomesRegistry},
-    biosphere_generation_old::{BlockLayers, GenerateChunkFeaturesEvent},
+    biome::{Biome, BiomeParameters, BiosphereBiomesRegistry},
+    block_layers::BlockLayers,
     BiosphereMarkerComponent, BiosphereSeaLevel, RegisteredBiosphere, TGenerateChunkEvent,
 };
 
@@ -105,8 +105,9 @@ pub(crate) fn generate_chunks_from_gpu_data<T: BiosphereMarkerComponent, E: TGen
     chunk_data: Res<ChunkData>,
     biosphere_biomes: Res<BiosphereBiomesRegistry<T>>,
     sea_level: Option<Res<BiosphereSeaLevel<T>>>,
-    mut ev_writer: EventWriter<GenerateChunkFeaturesEvent<T>>,
+    mut ev_writer: EventWriter<GenerateChunkFeaturesEvent>,
     mut q_structure: Query<&mut Structure>,
+    biome_registry: Res<Registry<Biome>>,
 
     time: Res<Time>,
 ) {
@@ -129,6 +130,9 @@ pub(crate) fn generate_chunks_from_gpu_data<T: BiosphereMarkerComponent, E: TGen
             continue;
         };
 
+        // let mut biome_ids = Box::new([0u16; CHUNK_DIMENSIONS_USIZE * CHUNK_DIMENSIONS_USIZE * CHUNK_DIMENSIONS_USIZE]);
+        let mut included_biomes = HashSet::new();
+
         for z in 0..CHUNK_DIMENSIONS {
             for y in 0..CHUNK_DIMENSIONS {
                 for x in 0..CHUNK_DIMENSIONS {
@@ -142,11 +146,18 @@ pub(crate) fn generate_chunks_from_gpu_data<T: BiosphereMarkerComponent, E: TGen
                         let ideal_humidity = ((value.data >> 8) & 0xFF) as f32;
                         let ideal_temperature = ((value.data >> 16) & 0xFF) as f32;
 
-                        let ideal_biome = biosphere_biomes.ideal_biome_for(BiomeParameters {
-                            ideal_elevation,
-                            ideal_humidity,
-                            ideal_temperature,
-                        });
+                        let ideal_biome = biosphere_biomes.ideal_biome_for(
+                            BiomeParameters {
+                                ideal_elevation,
+                                ideal_humidity,
+                                ideal_temperature,
+                            },
+                            &biome_registry,
+                        );
+
+                        let biome_id = ideal_biome.id();
+                        // biome_ids[idx] = biome_id;
+                        included_biomes.insert(biome_id);
 
                         let block_layers: &BlockLayers = ideal_biome.block_layers();
 
@@ -193,12 +204,27 @@ pub(crate) fn generate_chunks_from_gpu_data<T: BiosphereMarkerComponent, E: TGen
         );
 
         ev_writer.send(GenerateChunkFeaturesEvent {
-            chunk_coords: needs_generated_chunk.chunk.chunk_coordinates(),
+            included_biomes,
+            // biome_ids,
+            chunk: needs_generated_chunk.chunk.chunk_coordinates(),
             structure_entity: needs_generated_chunk.structure_entity,
-            _phantom: Default::default(),
         });
 
         structure.set_chunk(needs_generated_chunk.chunk);
+    }
+}
+
+/// Sends the chunk init event once it receives the generate chunk features event.
+///
+/// This is because during this set, the chunk features should be being generated,
+/// so by the end of this set the chunk is ready to go.
+fn send_chunk_init_event(mut chunk_init_event_writer: EventWriter<ChunkInitEvent>, mut ev_reader: EventReader<GenerateChunkFeaturesEvent>) {
+    for generate_chunk_features_event_reader in ev_reader.read() {
+        chunk_init_event_writer.send(ChunkInitEvent {
+            coords: generate_chunk_features_event_reader.chunk,
+            serialized_block_data: None,
+            structure_entity: generate_chunk_features_event_reader.structure_entity,
+        });
     }
 }
 
@@ -386,6 +412,7 @@ pub(super) fn register(app: &mut App) {
             .in_set(BiosphereGenerationSet::GpuInteraction)
             .chain(),
     )
+    .add_systems(Update, send_chunk_init_event.in_set(BiosphereGenerationSet::GenerateChunkFeatures))
     .init_resource::<NeedGeneratedChunks>()
     .init_resource::<GeneratingChunks>()
     .init_resource::<ChunkData>()
