@@ -2,6 +2,7 @@ use std::sync::{Arc, Mutex};
 
 use bevy::{
     ecs::{
+        change_detection::DetectChangesMut,
         event::{Event, EventReader, EventWriter},
         query::{Added, Changed, Without},
     },
@@ -21,7 +22,7 @@ use cosmos_core::{
         block_storage::BlockStorer,
         chunk::{CHUNK_DIMENSIONS, CHUNK_DIMENSIONS_USIZE},
         coordinates::{BlockCoordinate, ChunkBlockCoordinate, CoordinateType, UnboundChunkCoordinate, UnboundCoordinateType},
-        lod::Lod,
+        lod::{Lod, LodComponent},
         lod_chunk::LodChunk,
         planet::{
             generation::terrain_generation::{
@@ -440,7 +441,7 @@ fn generate_player_lods(
     mut commands: Commands,
     players: Query<&Location, With<LocalPlayer>>,
     structures: Query<
-        (Entity, &Structure, &Location, &GlobalTransform, Option<&Lod>),
+        (Entity, &Structure, &Location, &GlobalTransform, &LodComponent),
         (Without<LodStuffTodo>, Without<LodBeingGenerated>, With<Planet>),
     >,
 ) {
@@ -473,12 +474,14 @@ fn generate_player_lods(
         );
 
         let mut chunks = vec![];
+
+        let lod = current_lod.0.lock().unwrap();
         let request = create_lod_request(
             scale,
             render_distance,
             rel_coords - middle_chunk,
             true,
-            current_lod,
+            Some(&lod),
             &mut chunks,
             structure,
             structure_location,
@@ -486,6 +489,8 @@ fn generate_player_lods(
             (BlockCoordinate::new(0, 0, 0), structure.block_dimensions()),
             vec![],
         );
+        // Remove lock on lod
+        drop(lod);
 
         // Same lod, don't generate
         if matches!(request, LodRequest::Same) {
@@ -662,7 +667,7 @@ fn propagate_changes(lod_requst: LodRequest, lod: &mut Lod) {
 
 fn on_change_being_generated(
     mut commands: Commands,
-    mut q_changed: Query<(Entity, &mut LodBeingGenerated, &mut Lod), Changed<LodBeingGenerated>>,
+    mut q_changed: Query<(Entity, &mut LodBeingGenerated, &mut LodComponent), Changed<LodBeingGenerated>>,
 ) {
     for (ent, mut lod_being_generated, mut lod) in q_changed.iter_mut() {
         if is_still_working(&lod_being_generated.0) {
@@ -671,7 +676,12 @@ fn on_change_being_generated(
 
         let lod_request = std::mem::take(&mut lod_being_generated.0);
 
+        // Because lods use interior mutability, we have to manually trigger change detection
+        lod.set_changed();
+        let mut lod = lod.0.lock().unwrap();
         propagate_changes(lod_request, &mut lod);
+        // Drop lock
+        drop(lod);
 
         info!("Propagated changes! It should now be re-rendered.");
 
@@ -697,7 +707,7 @@ fn recursively_change(lod_requst: &mut LodRequest, steps: &[usize], chunk: LodCh
 
 fn on_add_planet(mut commands: Commands, q_planets: Query<Entity, Added<Planet>>) {
     for ent in &q_planets {
-        commands.entity(ent).insert(Lod::None);
+        commands.entity(ent).insert(LodComponent(Arc::new(Mutex::new(Lod::None))));
     }
 }
 

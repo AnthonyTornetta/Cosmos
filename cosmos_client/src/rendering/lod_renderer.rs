@@ -5,10 +5,12 @@
 //! I'm sorry. I'll fix it when I feel inspired.
 
 use std::{
+    borrow::Cow,
     collections::VecDeque,
     f32::consts::PI,
     mem::swap,
     sync::{Arc, Mutex},
+    time::SystemTime,
     usize,
 };
 
@@ -35,7 +37,7 @@ use cosmos_core::{
         block_storage::BlockStorer,
         chunk::{CHUNK_DIMENSIONS, CHUNK_DIMENSIONSF},
         coordinates::{ChunkBlockCoordinate, ChunkCoordinate, CoordinateType},
-        lod::Lod,
+        lod::{Lod, LodComponent},
         lod_chunk::LodChunk,
         shared::DespawnWithStructure,
         ChunkState, Structure,
@@ -491,7 +493,7 @@ fn find_non_dirty(lod: &Lod, offset: Vec3, to_process: &mut Vec<Vec3>, scale: f3
 }
 
 #[derive(Debug)]
-struct RenderingLod(Task<(Vec<Vec3>, Vec<(LodMesh, Vec3, CoordinateType)>, Lod)>);
+struct RenderingLod(Task<(Vec<Vec3>, Vec<(LodMesh, Vec3, CoordinateType)>)>);
 
 #[derive(Component, Debug)]
 struct RenderedLod {
@@ -561,7 +563,7 @@ fn poll_rendering_lods(
     rendered_lod_query: Query<&RenderedLod>,
     mut rendering_lods: ResMut<RenderingLods>,
     // bypass change detection to not trigger re-render
-    mut lod_query: Query<&mut Lod>,
+    mut lod_query: Query<&mut LodComponent>,
 
     mut meshes_to_compute: ResMut<MeshesToCompute>,
     mut event_writer: EventWriter<AddMaterialEvent>,
@@ -571,7 +573,7 @@ fn poll_rendering_lods(
     swap(&mut rendering_lods.0, &mut todo);
 
     for (structure_entity, mut rendering_lod) in todo {
-        if let Some((to_keep_locations, ent_meshes, lod)) = future::block_on(future::poll_once(&mut rendering_lod.0)) {
+        if let Some((to_keep_locations, ent_meshes)) = future::block_on(future::poll_once(&mut rendering_lod.0)) {
             let mut structure_meshes_component = LodMeshes::default();
             let mut entities_to_add = Vec::new();
 
@@ -662,13 +664,14 @@ fn poll_rendering_lods(
                 entity_commands.add_child(entity);
             }
 
-            if let Ok(mut l) = lod_query.get_mut(structure_entity) {
-                // Avoid recursively re-rendering the lod. The only thing changing about the lod are the dirty flags.
-                // This could be refactored to store dirty flags elsewhere, but I'm not sure about the performance cost of that.
-                *(l.bypass_change_detection()) = lod;
-            } else {
-                entity_commands.insert(lod);
-            }
+            // if let Ok(mut l) = lod_query.get_mut(structure_entity) {
+            //     // Avoid recursively re-rendering the lod. The only thing changing about the lod are the dirty flags.
+            //     // This could be refactored to store dirty flags elsewhere, but I'm not sure about the performance cost of that.
+            //     // *(l.bypass_change_detection()) = lod;
+            //     *l.0.lock().unwrap() = lod;
+            // } else {
+            //     entity_commands.insert(LodComponent(Arc::new(Mutex::new(lod))));
+            // }
 
             entity_commands.insert(structure_meshes_component);
 
@@ -711,7 +714,7 @@ fn hide_lod(mut query: Query<(&Transform, &Parent, &mut Visibility, &RenderedLod
 #[derive(Debug, Resource, Default)]
 struct NeedLods(HashSet<Entity>);
 
-fn monitor_lods_needs_rendered_system(lods_needed: Query<Entity, Changed<Lod>>, mut should_render_lods: ResMut<NeedLods>) {
+fn monitor_lods_needs_rendered_system(lods_needed: Query<Entity, Changed<LodComponent>>, mut should_render_lods: ResMut<NeedLods>) {
     for needs_lod in lods_needed.iter() {
         info!("Added lod to be re-rendered for {needs_lod:?}");
         should_render_lods.0.insert(needs_lod);
@@ -846,7 +849,7 @@ fn trigger_lod_render(
     materials_registry: Res<ReadOnlyRegistry<MaterialDefinition>>,
     meshes_registry: Res<ReadOnlyBlockMeshRegistry>,
     block_textures: Res<ReadOnlyRegistry<BlockTextureIndex>>,
-    lods_query: Query<(&Lod, &Structure)>,
+    lods_query: Query<(&LodComponent, &Structure)>,
     mut rendering_lods: ResMut<RenderingLods>,
     mut lods_needed: ResMut<NeedLods>,
 ) {
@@ -879,9 +882,13 @@ fn trigger_lod_render(
         let chunk_dimensions = structure.chunk_dimensions().x;
         let block_dimensions = structure.block_dimensions().x;
 
+        let time = SystemTime::now();
+        println!("LOD clone time: {}ms", SystemTime::now().duration_since(time).unwrap().as_millis());
+
         let lod = lod.clone();
 
         let task = thread_pool.spawn(async move {
+            let mut lod = lod.0.lock().unwrap();
             let mut non_dirty = vec![];
             find_non_dirty(&lod, Vec3::ZERO, &mut non_dirty, block_dimensions as f32);
 
@@ -893,13 +900,14 @@ fn trigger_lod_render(
             let blocks = blocks.registry();
             let block_textures = block_textures.registry();
             let materials = materials.registry();
-            let meshes_registry = meshes_registry.registry();
+            let meshes_registry: std::sync::RwLockReadGuard<'_, ManyToOneRegistry<Block, crate::rendering::BlockMeshInformation>> =
+                meshes_registry.registry();
             let materials_registry = materials_registry.registry();
 
-            let mut cloned_lod = lod.clone();
+            // let mut cloned_lod = lod.clone();
 
             let lod_path = LodPath::Top(PathInfo {
-                lod: &cloned_lod,
+                lod: &lod,
                 depth: 1,
                 scale: chunk_dimensions as f32,
                 offset: Vec3::ZERO,
@@ -914,11 +922,11 @@ fn trigger_lod_render(
                 &materials_registry,
             );
 
-            mark_non_dirty(&mut cloned_lod);
+            mark_non_dirty(&mut lod);
 
             let to_process_chunks = to_process.lock().unwrap().take().unwrap();
 
-            (non_dirty, to_process_chunks, cloned_lod)
+            (non_dirty, to_process_chunks)
         });
 
         rendering_lods.push((entity, RenderingLod(task)));

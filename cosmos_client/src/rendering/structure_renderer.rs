@@ -29,7 +29,9 @@ use cosmos_core::structure::coordinates::{ChunkBlockCoordinate, ChunkCoordinate,
 use cosmos_core::structure::events::ChunkSetEvent;
 use cosmos_core::structure::Structure;
 use cosmos_core::utils::array_utils::expand;
+use cosmos_core::utils::timer::UtilsTimer;
 use futures_lite::future;
+use std::borrow::Cow;
 use std::collections::HashSet;
 use std::f32::consts::PI;
 use std::mem::swap;
@@ -406,12 +408,14 @@ fn monitor_needs_rendered_system(
 
         let unbound = UnboundChunkCoordinate::from(coords);
 
+        let chunk_clone_time = UtilsTimer::start();
         let left = structure.chunk_from_chunk_coordinates_unbound(unbound.left()).cloned();
         let right = structure.chunk_from_chunk_coordinates_unbound(unbound.right()).cloned();
         let bottom = structure.chunk_from_chunk_coordinates_unbound(unbound.bottom()).cloned();
         let top = structure.chunk_from_chunk_coordinates_unbound(unbound.top()).cloned();
         let back = structure.chunk_from_chunk_coordinates_unbound(unbound.back()).cloned();
         let front = structure.chunk_from_chunk_coordinates_unbound(unbound.front()).cloned();
+        chunk_clone_time.log_duration("Chunks cloned in");
 
         // "gee, you sure have a way with the borrow checker"
 

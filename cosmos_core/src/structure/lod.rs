@@ -2,7 +2,7 @@
 
 use std::{
     backtrace::Backtrace,
-    sync::{Arc, RwLock, RwLockReadGuard},
+    sync::{Arc, Mutex, RwLock, RwLockReadGuard},
 };
 
 use bevy::{
@@ -13,7 +13,11 @@ use serde::{Deserialize, Serialize};
 
 use super::lod_chunk::LodChunk;
 
-#[derive(Serialize, Deserialize, Component, Debug, Clone)]
+#[derive(Debug, Clone, Component)]
+/// Represents a reduced-detail version of a planet
+pub struct LodComponent(pub Arc<Mutex<Lod>>);
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 /// Represents a reduced-detail version of a planet
 pub enum Lod {
     /// No Lod here - this means there should be an actual chunk here
@@ -36,23 +40,6 @@ pub enum Lod {
     /// +-----------+
     /// ```
     Children(Box<[Self; 8]>),
-}
-
-#[derive(Serialize, Deserialize, Component, Debug, Clone)]
-/// Represents thread-safe a reduced-detail version of a planet
-pub struct ReadOnlyLod(Arc<RwLock<Lod>>);
-
-impl ReadOnlyLod {
-    /// Grabs the inner lod
-    pub fn inner(&self) -> RwLockReadGuard<Lod> {
-        self.0.read().expect("Failed to read")
-    }
-}
-
-impl From<Lod> for ReadOnlyLod {
-    fn from(value: Lod) -> Self {
-        Self(Arc::new(RwLock::new(value)))
-    }
 }
 
 #[derive(Serialize, Deserialize, Component, Debug, Clone)]

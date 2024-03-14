@@ -139,7 +139,7 @@ pub fn unload_chunks_far_from_players(
 pub(super) fn register(app: &mut App) {
     align_player::register(app);
     biosphere::register(app);
-    lod::register(app);
+    // lod::register(app);
     lods::register(app);
     generation::register(app);
 
