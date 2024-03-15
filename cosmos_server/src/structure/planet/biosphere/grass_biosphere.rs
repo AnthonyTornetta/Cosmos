@@ -5,14 +5,18 @@ use bevy::{
     prelude::{App, Commands, Component, Entity, Event, OnEnter, Res, ResMut},
     reflect::TypePath,
 };
-use cosmos_core::{block::Block, registry::Registry, structure::coordinates::ChunkCoordinate};
+use cosmos_core::{
+    block::Block,
+    registry::Registry,
+    structure::{
+        coordinates::ChunkCoordinate,
+        planet::generation::biome::{Biome, BiomeParameters, BiosphereBiomesRegistry},
+    },
+};
 
 use crate::GameState;
 
-use super::{
-    biome::{Biome, BiomeParameters, BiosphereBiomesRegistry},
-    register_biosphere, BiosphereMarkerComponent, BiosphereSeaLevel, TBiosphere, TGenerateChunkEvent, TemperatureRange,
-};
+use super::{register_biosphere, BiosphereMarkerComponent, BiosphereSeaLevel, TBiosphere, TGenerateChunkEvent, TemperatureRange};
 
 #[derive(Component, Debug, Default, Clone, Copy, TypePath)]
 /// Marks that this is for a grass biosphere
@@ -61,10 +65,14 @@ impl TBiosphere<GrassBiosphereMarker, GrassChunkNeedsGeneratedEvent> for GrassBi
 
 fn register_biosphere_biomes(
     biome_registry: Res<Registry<Biome>>,
-    mut biosphere_biomes_registry: ResMut<BiosphereBiomesRegistry<GrassBiosphereMarker>>,
+    mut biosphere_biomes_registry: ResMut<Registry<BiosphereBiomesRegistry>>,
 ) {
+    let biosphere_registry = biosphere_biomes_registry
+        .from_id_mut(GrassBiosphereMarker::unlocalized_name())
+        .expect("Missing grass biosphere registry!");
+
     if let Some(ocean) = biome_registry.from_id("cosmos:ocean") {
-        biosphere_biomes_registry.register(
+        biosphere_registry.register(
             ocean,
             BiomeParameters {
                 ideal_elevation: 49.0,
@@ -77,7 +85,7 @@ fn register_biosphere_biomes(
     }
 
     if let Some(plains) = biome_registry.from_id("cosmos:plains") {
-        biosphere_biomes_registry.register(
+        biosphere_registry.register(
             plains,
             BiomeParameters {
                 ideal_elevation: 50.0,
@@ -90,7 +98,7 @@ fn register_biosphere_biomes(
     }
 
     if let Some(desert) = biome_registry.from_id("cosmos:desert") {
-        biosphere_biomes_registry.register(
+        biosphere_registry.register(
             desert,
             BiomeParameters {
                 ideal_elevation: 50.0,

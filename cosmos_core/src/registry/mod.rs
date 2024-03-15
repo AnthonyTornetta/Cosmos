@@ -8,7 +8,7 @@ use bevy::prelude::{resource_exists_and_changed, App, IntoSystemConfigs, Res, Re
 use bevy::utils::HashMap;
 use serde::{Deserialize, Serialize};
 use std::fmt;
-use std::slice::Iter;
+use std::slice::{Iter, IterMut};
 use std::sync::{Arc, RwLock, RwLockReadGuard};
 
 use self::identifiable::Identifiable;
@@ -72,6 +72,14 @@ impl<T: Identifiable + Sync + Send> Registry<T> {
         &self.contents[id as usize]
     }
 
+    /// Prefer to use `Self::from_id_mut` in general, numeric IDs may change, unlocalized names should not
+    ///
+    /// This assumes the id has been registered, and will panic if it hasn't been
+    #[inline]
+    pub fn from_numeric_id_mut(&mut self, id: u16) -> &mut T {
+        &mut self.contents[id as usize]
+    }
+
     /// Prefer to use `Self::from_id` in general, numeric IDs may change, unlocalized names should not
     ///
     /// Returns None if no item exists for this id
@@ -80,12 +88,31 @@ impl<T: Identifiable + Sync + Send> Registry<T> {
         self.contents.get(id as usize)
     }
 
+    /// Prefer to use `Self::from_id_mut` in general, numeric IDs may change, unlocalized names should not
+    ///
+    /// Returns None if no item exists for this id
+    #[inline]
+    pub fn try_from_numeric_id_mut(&mut self, id: u16) -> Option<&mut T> {
+        self.contents.get_mut(id as usize)
+    }
+
     /// Gets the value that has been registered with that unlocalized name.
     ///
     /// Returns None if no value was found.
     pub fn from_id(&self, id: &str) -> Option<&T> {
         if let Some(num_id) = self.unlocalized_name_to_id.get(id) {
             Some(self.from_numeric_id(*num_id))
+        } else {
+            None
+        }
+    }
+
+    /// Gets the value that has been registered with that unlocalized name.
+    ///
+    /// Returns None if no value was found.
+    pub fn from_id_mut(&mut self, id: &str) -> Option<&mut T> {
+        if let Some(num_id) = self.unlocalized_name_to_id.get(id) {
+            Some(self.from_numeric_id_mut(*num_id))
         } else {
             None
         }
@@ -102,6 +129,11 @@ impl<T: Identifiable + Sync + Send> Registry<T> {
     /// Iterates over every registered value
     pub fn iter(&self) -> Iter<T> {
         self.contents.iter()
+    }
+
+    /// Iterates over every registered value mutably
+    pub fn iter_mut(&mut self) -> IterMut<T> {
+        self.contents.iter_mut()
     }
 }
 

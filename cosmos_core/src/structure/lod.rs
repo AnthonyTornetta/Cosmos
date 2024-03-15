@@ -2,7 +2,7 @@
 
 use std::{
     backtrace::Backtrace,
-    sync::{Arc, Mutex, RwLock, RwLockReadGuard},
+    sync::{Arc, Mutex},
 };
 
 use bevy::{

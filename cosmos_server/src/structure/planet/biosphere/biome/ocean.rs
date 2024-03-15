@@ -1,9 +1,9 @@
 //! Desert biome
 
 use bevy::prelude::{App, OnExit, Res, ResMut};
-use cosmos_core::{block::Block, registry::Registry};
+use cosmos_core::{block::Block, registry::Registry, structure::planet::generation::block_layers::BlockLayers};
 
-use crate::{state::GameState, structure::planet::biosphere::block_layers::BlockLayers};
+use crate::state::GameState;
 
 use super::Biome;
 

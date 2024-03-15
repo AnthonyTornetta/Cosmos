@@ -5,14 +5,17 @@ use bevy::{
     prelude::{App, Component, Entity, Event, OnEnter, Res, ResMut},
     reflect::TypePath,
 };
-use cosmos_core::{registry::Registry, structure::coordinates::ChunkCoordinate};
+use cosmos_core::{
+    registry::Registry,
+    structure::{
+        coordinates::ChunkCoordinate,
+        planet::generation::biome::{Biome, BiomeParameters, BiosphereBiomesRegistry},
+    },
+};
 
 use crate::GameState;
 
-use super::{
-    biome::{Biome, BiomeParameters, BiosphereBiomesRegistry},
-    register_biosphere, BiosphereMarkerComponent, TBiosphere, TGenerateChunkEvent, TemperatureRange,
-};
+use super::{register_biosphere, BiosphereMarkerComponent, TBiosphere, TGenerateChunkEvent, TemperatureRange};
 
 #[derive(Component, Debug, Default, Clone, Copy, TypePath)]
 /// Marks that this is for a grass biosphere
@@ -161,10 +164,14 @@ impl TBiosphere<MoltenBiosphereMarker, MoltenChunkNeedsGeneratedEvent> for Molte
 
 fn register_biosphere_biomes(
     biome_registry: Res<Registry<Biome>>,
-    mut biosphere_biomes_registry: ResMut<BiosphereBiomesRegistry<MoltenBiosphereMarker>>,
+    mut biosphere_biomes_registry: ResMut<Registry<BiosphereBiomesRegistry>>,
 ) {
+    let biosphere_registry = biosphere_biomes_registry
+        .from_id_mut(MoltenBiosphereMarker::unlocalized_name())
+        .expect("Missing molten biosphere registry!");
+
     if let Some(plains) = biome_registry.from_id("cosmos:plains") {
-        biosphere_biomes_registry.register(
+        biosphere_registry.register(
             plains,
             BiomeParameters {
                 ideal_elevation: 30.0,

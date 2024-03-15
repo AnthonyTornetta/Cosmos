@@ -13,7 +13,7 @@ use cosmos_core::{
     structure::{
         chunk::CHUNK_DIMENSIONS,
         coordinates::{BlockCoordinate, ChunkCoordinate, CoordinateType, UnboundBlockCoordinate, UnboundCoordinateType},
-        planet::Planet,
+        planet::{generation::block_layers::BlockLayers, Planet},
         rotate, Structure,
     },
 };
@@ -22,7 +22,7 @@ use noise::NoiseFn;
 use crate::{
     init::init_world::{Noise, ServerSeed},
     state::GameState,
-    structure::planet::biosphere::{biosphere_generation::BiosphereGenerationSet, block_layers::BlockLayers, generation_tools::fill},
+    structure::planet::biosphere::{biosphere_generation::BiosphereGenerationSet, generation_tools::fill},
 };
 
 use super::{Biome, GenerateChunkFeaturesEvent};

@@ -19,7 +19,7 @@ use cosmos_core::{
     registry::Registry,
     structure::{
         chunk::Chunk,
-        coordinates::{BlockCoordinate, ChunkCoordinate},
+        coordinates::ChunkCoordinate,
         planet::{
             biosphere::{BiosphereMarker, RegisteredBiosphere},
             generation::terrain_generation::GpuPermutationTable,
@@ -28,12 +28,11 @@ use cosmos_core::{
         Structure,
     },
 };
-use noise::NoiseFn;
 use rand::Rng;
 
 use crate::{
     events::netty::netty_events::PlayerConnectedEvent,
-    init::init_world::{Noise, ServerSeed},
+    init::init_world::ServerSeed,
     persistence::{
         loading::{LoadingSystemSet, NeedsLoaded},
         saving::{NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
@@ -47,14 +46,10 @@ use crate::{
     },
 };
 
-use self::{
-    biome::{create_biosphere_biomes_registry, BiomeParameters},
-    shader_assembler::CachedShaders,
-};
+use self::{biome::create_biosphere_biomes_registry, shader_assembler::CachedShaders};
 
 pub mod biome;
 pub mod biosphere_generation;
-pub mod block_layers;
 pub mod generation_tools;
 pub mod grass_biosphere;
 pub mod ice_biosphere;
@@ -121,58 +116,6 @@ impl<T: BiosphereMarkerComponent> GeneratingChunk<T> {
         Self {
             task,
             phantom: PhantomData,
-        }
-    }
-}
-
-const BIOME_DECIDER_DELTA: f64 = 0.01;
-
-#[derive(Resource, Clone, Copy)]
-/// This is used to calculate which biosphere parameters are present at specific blocks,
-/// and is used to decide which biosphere goes here in conjunction with the `BiosphereBiomeRegistry`
-pub struct BiomeDecider {
-    temperature_seed: (f64, f64, f64),
-    humidity_seed: (f64, f64, f64),
-    elevation_seed: (f64, f64, f64),
-}
-
-impl BiomeDecider {
-    /// Gets the biome parameters at this block coordinate
-    ///
-    /// - `location` The structure's location (used for seeding the noise function)
-    /// - `block_coords` The coordinates of the block to look at
-    /// - `noise` The noise function to use
-    pub fn biome_parameters_at(&self, location: &Location, block_coords: BlockCoordinate, noise: &Noise) -> BiomeParameters {
-        let (lx, ly, lz) = (
-            (location.absolute_coords_f64().x + block_coords.x as f64) * BIOME_DECIDER_DELTA,
-            (location.absolute_coords_f64().y + block_coords.y as f64) * BIOME_DECIDER_DELTA,
-            (location.absolute_coords_f64().z + block_coords.z as f64) * BIOME_DECIDER_DELTA,
-        );
-
-        let mut temperature = noise.get([
-            self.temperature_seed.0 + lx,
-            self.temperature_seed.1 + ly,
-            self.temperature_seed.2 + lz,
-        ]);
-
-        let mut humidity = noise.get([self.humidity_seed.0 + lx, self.humidity_seed.1 + ly, self.humidity_seed.2 + lz]);
-
-        let mut elevation = noise.get([self.elevation_seed.0 + lx, self.elevation_seed.1 + ly, self.elevation_seed.2 + lz]);
-
-        // Clamps all values to be [0, 100.0)
-
-        temperature = (temperature.min(0.999).max(-1.0) * 0.5 + 0.5) * 100.0;
-        humidity = (humidity.min(0.999).max(-1.0) * 0.5 + 0.5) * 100.0;
-        elevation = (elevation.min(0.999).max(-1.0) * 0.5 + 0.5) * 100.0;
-
-        debug_assert!((0.0..100.0).contains(&elevation), "Bad elevation: {elevation}",);
-        debug_assert!((0.0..100.0).contains(&humidity), "Bad humidity: {humidity}",);
-        debug_assert!((0.0..100.0).contains(&temperature), "Bad temperature: {temperature}",);
-
-        BiomeParameters {
-            ideal_elevation: elevation as f32,
-            ideal_humidity: humidity as f32,
-            ideal_temperature: temperature as f32,
         }
     }
 }
@@ -363,13 +306,7 @@ pub(super) fn register(app: &mut App) {
     app.add_event::<NeedsBiosphereEvent>()
         .insert_resource(BiosphereTemperatureRegistry::default())
         .add_systems(Update, add_biosphere)
-        .add_systems(Update, on_connect.run_if(in_state(GameState::Playing)))
-        .insert_resource(BiomeDecider {
-            // These seeds are random values I made up - make these not that in the future
-            elevation_seed: (903.0, 278.0, 510.0),
-            humidity_seed: (630.0, 238.0, 129.0),
-            temperature_seed: (410.0, 378.0, 160.0),
-        });
+        .add_systems(Update, on_connect.run_if(in_state(GameState::Playing)));
 
     sync_registry::<RegisteredBiosphere>(app);
 

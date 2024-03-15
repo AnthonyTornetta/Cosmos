@@ -12,8 +12,11 @@ use cosmos_core::{
         chunk::{Chunk, CHUNK_DIMENSIONS, CHUNK_DIMENSIONSF, CHUNK_DIMENSIONS_USIZE},
         coordinates::{ChunkBlockCoordinate, CoordinateType},
         planet::{
-            generation::terrain_generation::{
-                BiosphereShaderWorker, ChunkData, ChunkDataSlice, GenerationParams, GpuPermutationTable, TerrainData, U32Vec4, N_CHUNKS,
+            generation::{
+                biome::{Biome, BiomeParameters, BiosphereBiomesRegistry},
+                terrain_generation::{
+                    BiosphereShaderWorker, ChunkData, ChunkDataSlice, GenerationParams, GpuPermutationTable, TerrainData, U32Vec4, N_CHUNKS,
+                },
             },
             Planet,
         },
@@ -26,11 +29,7 @@ use rand_chacha::ChaCha8Rng;
 
 use crate::{init::init_world::ServerSeed, state::GameState, structure::planet::biosphere::biome::GenerateChunkFeaturesEvent};
 
-use super::{
-    biome::{Biome, BiomeParameters, BiosphereBiomesRegistry},
-    block_layers::BlockLayers,
-    BiosphereMarkerComponent, BiosphereSeaLevel, RegisteredBiosphere, TGenerateChunkEvent,
-};
+use super::{BiosphereMarkerComponent, BiosphereSeaLevel, RegisteredBiosphere, TGenerateChunkEvent};
 
 #[derive(Debug)]
 pub(crate) struct NeedGeneratedChunk {
@@ -103,7 +102,7 @@ fn read_gpu_data(
 pub(crate) fn generate_chunks_from_gpu_data<T: BiosphereMarkerComponent, E: TGenerateChunkEvent>(
     mut ev_reader: EventReader<MutEvent<DoneGeneratingChunkEvent>>,
     chunk_data: Res<ChunkData>,
-    biosphere_biomes: Res<BiosphereBiomesRegistry<T>>,
+    biosphere_biomes: Res<Registry<BiosphereBiomesRegistry>>,
     sea_level: Option<Res<BiosphereSeaLevel<T>>>,
     mut ev_writer: EventWriter<GenerateChunkFeaturesEvent>,
     mut q_structure: Query<&mut Structure>,
@@ -118,7 +117,9 @@ pub(crate) fn generate_chunks_from_gpu_data<T: BiosphereMarkerComponent, E: TGen
             continue;
         };
 
-        if needs_generated_chunk.biosphere_type != T::type_path() {
+        let biosphere_unlocalized_name = T::unlocalized_name();
+
+        if needs_generated_chunk.biosphere_type != biosphere_unlocalized_name {
             continue;
         }
 
@@ -132,6 +133,10 @@ pub(crate) fn generate_chunks_from_gpu_data<T: BiosphereMarkerComponent, E: TGen
 
         // let mut biome_ids = Box::new([0u16; CHUNK_DIMENSIONS_USIZE * CHUNK_DIMENSIONS_USIZE * CHUNK_DIMENSIONS_USIZE]);
         let mut included_biomes = HashSet::new();
+
+        let biosphere_biomes = biosphere_biomes
+            .from_id(biosphere_unlocalized_name)
+            .unwrap_or_else(|| panic!("Missing biosphere biomes registry entry for {biosphere_unlocalized_name}"));
 
         for z in 0..CHUNK_DIMENSIONS {
             for y in 0..CHUNK_DIMENSIONS {
@@ -159,7 +164,7 @@ pub(crate) fn generate_chunks_from_gpu_data<T: BiosphereMarkerComponent, E: TGen
                         // biome_ids[idx] = biome_id;
                         included_biomes.insert(biome_id);
 
-                        let block_layers: &BlockLayers = ideal_biome.block_layers();
+                        let block_layers = ideal_biome.block_layers();
 
                         let block = block_layers.block_for_depth(value.depth as u64);
 
@@ -278,7 +283,7 @@ pub(crate) fn generate_planet<T: BiosphereMarkerComponent, E: TGenerateChunkEven
 
     mut needs_generated_chunks: ResMut<NeedGeneratedChunks>,
 ) {
-    let type_path = T::type_path();
+    let unlocalized_name = T::unlocalized_name();
 
     let chunks = events
         .read()
@@ -337,7 +342,7 @@ pub(crate) fn generate_planet<T: BiosphereMarkerComponent, E: TGenerateChunkEven
                     structure_pos: Vec4::new(structure_loc.x, structure_loc.y, structure_loc.z, 0.0),
                     biosphere_id: U32Vec4::splat(registered_biosphere.id() as u32),
                 },
-                biosphere_type: type_path,
+                biosphere_type: unlocalized_name,
             })
         }));
 }

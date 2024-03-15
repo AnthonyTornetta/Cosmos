@@ -1,7 +1,7 @@
 //! Responsible for the default generation of biospheres.
 
+use crate::{block::Block, registry::Registry, structure::coordinates::CoordinateType};
 use bevy::prelude::Resource;
-use cosmos_core::{block::Block, registry::Registry, structure::coordinates::CoordinateType};
 
 /// Stores which blocks make up each biosphere, and how far below the top solid block each block generates.
 /// Blocks in ascending order ("stone" = 5 first, "grass" = 0 last).
@@ -12,7 +12,7 @@ pub struct BlockLayers {
 
 impl BlockLayers {
     /// Returns an iterator over all the block ranges in the order they were added
-    pub fn ranges(&self) -> std::slice::Iter<(cosmos_core::block::Block, BlockLayer)> {
+    pub fn ranges(&self) -> std::slice::Iter<(Block, BlockLayer)> {
         self.ranges.iter()
     }
 
