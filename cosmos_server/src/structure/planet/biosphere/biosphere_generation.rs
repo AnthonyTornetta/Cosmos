@@ -356,6 +356,28 @@ fn set_permutation_table(perm_table: Res<GpuPermutationTable>, mut worker: ResMu
 }
 
 fn setup_permutation_table(seed: Res<ServerSeed>, mut commands: Commands) {
+    /*
+    https://github.com/lmas/opensimplex/blob/master/opensimplex/internals.py
+
+        # Have to zero fill so we can properly loop over it later
+    perm = np.zeros(256, dtype=np.int64)
+    perm_grad_index3 = np.zeros(256, dtype=np.int64)
+    source = np.arange(256)
+    # Generates a proper permutation (i.e. doesn't merely perform N
+    # successive pair swaps on a base array)
+    seed = _overflow(seed * 6364136223846793005 + 1442695040888963407)
+    seed = _overflow(seed * 6364136223846793005 + 1442695040888963407)
+    seed = _overflow(seed * 6364136223846793005 + 1442695040888963407)
+    for i in range(255, -1, -1):
+        seed = _overflow(seed * 6364136223846793005 + 1442695040888963407)
+        r = int((seed + 31) % (i + 1))
+        if r < 0:
+            r += i + 1
+        perm[i] = source[r]
+        perm_grad_index3[i] = int((perm[i] % (len(GRADIENTS3) / 3)) * 3)
+        source[r] = source[i]
+    return perm, perm_grad_index3
+     */
     let seed = seed.as_u64();
     let mut permutation_table_array: Vec<u8> = (0..256).map(|x| x as u8).collect();
 

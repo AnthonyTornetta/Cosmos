@@ -5,7 +5,6 @@
 //! I'm sorry. I'll fix it when I feel inspired.
 
 use std::{
-    borrow::Cow,
     collections::VecDeque,
     f32::consts::PI,
     mem::swap,
@@ -562,9 +561,6 @@ fn poll_rendering_lods(
     transform_query: Query<&Transform>,
     rendered_lod_query: Query<&RenderedLod>,
     mut rendering_lods: ResMut<RenderingLods>,
-    // bypass change detection to not trigger re-render
-    mut lod_query: Query<&mut LodComponent>,
-
     mut meshes_to_compute: ResMut<MeshesToCompute>,
     mut event_writer: EventWriter<AddMaterialEvent>,
 ) {
