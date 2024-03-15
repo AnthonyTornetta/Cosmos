@@ -1,6 +1,6 @@
 const GRAD_TABLE_LEN: u32 = 24;
 
-@group(0) @binding(0) var<uniform> permutation_table: array<vec4<u32>, 64>;
+@group(0) @binding(0) var<uniform> permutation_table: array<vec4<u32>, 512>; // 2048/4
 
 // This should be constant defined in this shader, but wgpu hates cool things like indexing
 // a constant array dynamically.
@@ -80,7 +80,7 @@ fn calculate_depth_at(coords_f32: vec3<f32>, sea_level: f32) -> i32 {
     var iterations = 9;
     let delta = f64(0.01);
 
-    let amplitude_delta = f64(0.001);
+    let amplitude_delta = f64(0.01);
     let amplitude = abs(noise(
             f64(coords_f32.x + 537.0) * amplitude_delta,
             f64(coords_f32.y - 1123.0) * amplitude_delta,

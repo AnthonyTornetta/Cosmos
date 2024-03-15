@@ -1,5 +1,6 @@
 //! Responsible for the default generation of biospheres.
 
+use crate::{init::init_world::ServerSeed, state::GameState, structure::planet::biosphere::biome::GenerateChunkFeaturesEvent};
 use bevy::{prelude::*, utils::hashbrown::HashSet};
 use bevy_app_compute::prelude::*;
 use cosmos_core::{
@@ -24,10 +25,6 @@ use cosmos_core::{
     },
     utils::array_utils::{flatten, flatten_4d},
 };
-use rand::{seq::SliceRandom, SeedableRng};
-use rand_chacha::ChaCha8Rng;
-
-use crate::{init::init_world::ServerSeed, state::GameState, structure::planet::biosphere::biome::GenerateChunkFeaturesEvent};
 
 use super::{BiosphereMarkerComponent, RegisteredBiosphere, TGenerateChunkEvent};
 
@@ -355,6 +352,31 @@ fn set_permutation_table(perm_table: Res<GpuPermutationTable>, mut worker: ResMu
     worker.write_slice("permutation_table", &perm_table.0);
 }
 
+/// https://github.com/Mapet13/opensimplex_noise_rust/blob/master/src/lib.rs#L54
+fn generate_perm_array(seed: u64) -> GpuPermutationTable {
+    let mut perm = [0; GpuPermutationTable::TALBE_SIZE];
+
+    let mut source: Vec<i64> = (0..GpuPermutationTable::TALBE_SIZE).map(|x| x as i64).collect();
+
+    let seed: i128 = (seed as i128 * 6_364_136_223_846_793_005) + 1_442_695_040_888_963_407;
+    for i in (0..GpuPermutationTable::TALBE_SIZE).rev() {
+        let mut r = ((seed + 31) % (i as i128 + 1)) as i64;
+        if r < 0 {
+            r += (i + 1) as i64;
+        }
+        perm[i as usize] = source[r as usize];
+        source[r as usize] = source[i as usize];
+    }
+
+    GpuPermutationTable(
+        perm.into_iter()
+            .array_chunks::<4>()
+            // Unfortunately must truncate the i64 to u32 to play nice with the gpu
+            .map(|[x, y, z, w]| U32Vec4::new(x as u32, y as u32, z as u32, w as u32))
+            .collect(),
+    )
+}
+
 fn setup_permutation_table(seed: Res<ServerSeed>, mut commands: Commands) {
     /*
     https://github.com/lmas/opensimplex/blob/master/opensimplex/internals.py
@@ -378,35 +400,37 @@ fn setup_permutation_table(seed: Res<ServerSeed>, mut commands: Commands) {
         source[r] = source[i]
     return perm, perm_grad_index3
      */
-    let seed = seed.as_u64();
-    let mut permutation_table_array: Vec<u8> = (0..256).map(|x| x as u8).collect();
+    // let seed = seed.as_u64();
+    // let mut permutation_table_array: Vec<u8> = (0..256).map(|x| x as u8).collect();
 
-    let mut real = [0; 32];
-    real[0] = 1;
-    for i in 1..4 {
-        real[i * 4] = seed as u8;
-        real[(i * 4) + 1] = (seed >> 8) as u8;
-        real[(i * 4) + 2] = (seed >> 16) as u8;
-        real[(i * 4) + 3] = (seed >> 24) as u8;
-        real[(i * 4) + 4] = (seed >> 32) as u8;
-        real[(i * 4) + 5] = (seed >> 40) as u8;
-        real[(i * 4) + 6] = (seed >> 48) as u8;
-        real[(i * 4) + 7] = (seed >> 56) as u8;
-    }
+    // let mut real = [0; 32];
+    // real[0] = 1;
+    // for i in 1..4 {
+    //     real[i * 4] = seed as u8;
+    //     real[(i * 4) + 1] = (seed >> 8) as u8;
+    //     real[(i * 4) + 2] = (seed >> 16) as u8;
+    //     real[(i * 4) + 3] = (seed >> 24) as u8;
+    //     real[(i * 4) + 4] = (seed >> 32) as u8;
+    //     real[(i * 4) + 5] = (seed >> 40) as u8;
+    //     real[(i * 4) + 6] = (seed >> 48) as u8;
+    //     real[(i * 4) + 7] = (seed >> 56) as u8;
+    // }
 
-    let mut rng = ChaCha8Rng::from_seed(real);
+    // let mut rng = ChaCha8Rng::from_seed(real);
 
-    permutation_table_array.shuffle(&mut rng);
+    // permutation_table_array.shuffle(&mut rng);
 
-    // Convert it to more wgpu friendly table
+    // // Convert it to more wgpu friendly table
 
-    let permutation_table: Vec<U32Vec4> = permutation_table_array
-        .into_iter()
-        .array_chunks::<4>()
-        .map(|[x, y, z, w]| U32Vec4::new(x as u32, y as u32, z as u32, w as u32))
-        .collect();
+    // let permutation_table: Vec<U32Vec4> = permutation_table_array
+    //     .into_iter()
+    //     .array_chunks::<4>()
+    //     .map(|[x, y, z, w]| U32Vec4::new(x as u32, y as u32, z as u32, w as u32))
+    //     .collect();
 
-    commands.insert_resource(GpuPermutationTable(permutation_table));
+    let permutation_table = generate_perm_array(seed.as_u64());
+
+    commands.insert_resource(permutation_table);
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]

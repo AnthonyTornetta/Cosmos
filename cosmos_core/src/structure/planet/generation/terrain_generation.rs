@@ -118,7 +118,10 @@ impl ComputeWorker for BiosphereShaderWorker {
 
         let worker = AppComputeWorkerBuilder::new(world)
             .one_shot()
-            .add_empty_uniform("permutation_table", size_of::<[U32Vec4; 256 / 4]>() as u64) // Vec<f32>
+            .add_empty_uniform(
+                "permutation_table",
+                size_of::<[U32Vec4; GpuPermutationTable::TALBE_SIZE / 4]>() as u64,
+            ) // Vec<f32>
             .add_empty_uniform("params", size_of::<[GenerationParams; N_CHUNKS as usize]>() as u64) // GenerationParams
             .add_empty_uniform("chunk_count", size_of::<u32>() as u64)
             .add_empty_staging("values", size_of::<[TerrainData; DIMS]>() as u64)
@@ -135,3 +138,7 @@ impl ComputeWorker for BiosphereShaderWorker {
 
 #[derive(Clone, Resource, Serialize, Deserialize, Debug)]
 pub struct GpuPermutationTable(pub Vec<U32Vec4>);
+
+impl GpuPermutationTable {
+    pub const TALBE_SIZE: usize = 2048;
+}
