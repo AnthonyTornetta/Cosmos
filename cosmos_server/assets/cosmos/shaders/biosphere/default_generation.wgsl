@@ -17,7 +17,7 @@ fn default_generate(
 
     var depth_here = calculate_depth_at(coords_vec3, sea_level);
 
-    if depth_here >= 0 && depth_here < 10 {
+    if depth_here >= 0 && depth_here < i32(10.0 * param.scale.x) {
         let face = planet_face_relative(coords_vec3);
         var delta: vec3<f32> = vec3(0, 0, 0);
 

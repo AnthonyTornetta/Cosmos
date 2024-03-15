@@ -1,6 +1,7 @@
 use std::hash::Hash;
 
 use bevy::{app::App, math::Vec3};
+use serde::{Deserialize, Serialize};
 
 use crate::{
     registry::{create_registry, identifiable::Identifiable, Registry},
@@ -18,7 +19,7 @@ use super::block_layers::BlockLayers;
 /// Most methods in here don't need to be modified, and will work for most biome implementations.
 /// The main ones to mess with are:
 /// `id, unlocailized_name, set_numeric_id, block_layers`.
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Biome {
     unlocalized_name: String,
     id: u16,
@@ -71,7 +72,7 @@ impl Hash for Biome {
 const LOOKUP_TABLE_PRECISION: usize = 101;
 const LOOKUP_TABLE_SIZE: usize = LOOKUP_TABLE_PRECISION * LOOKUP_TABLE_PRECISION * LOOKUP_TABLE_PRECISION;
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 /// Links a biosphere and all the biomes it has together
 ///
 /// `T` is the marker component for the biosphere this goes with

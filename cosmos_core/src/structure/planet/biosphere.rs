@@ -6,7 +6,10 @@ use bevy::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::registry::{create_registry, identifiable::Identifiable};
+use crate::{
+    registry::{create_registry, identifiable::Identifiable},
+    structure::coordinates::CoordinateType,
+};
 
 /// Represents the information about a biosphere
 #[derive(Debug, Component, Reflect)]
@@ -33,14 +36,30 @@ impl BiosphereMarker {
 pub struct RegisteredBiosphere {
     unlocalized_name: String,
     id: u16,
+    sea_level: f32,
+    sea_level_block: Option<String>,
 }
 
 impl RegisteredBiosphere {
-    pub fn new(name: impl Into<String>) -> Self {
+    pub fn new(name: impl Into<String>, sea_level: f32, sea_level_block: Option<String>) -> Self {
         Self {
             unlocalized_name: name.into(),
             id: 0,
+            sea_level,
+            sea_level_block,
         }
+    }
+
+    pub fn sea_level_percent(&self) -> f32 {
+        self.sea_level
+    }
+
+    pub fn sea_level(&self, structure_dimensions: CoordinateType) -> CoordinateType {
+        (self.sea_level * (structure_dimensions / 2) as f32).floor() as CoordinateType
+    }
+
+    pub fn sea_level_block(&self) -> Option<&str> {
+        self.sea_level_block.as_ref().map(|x| x.as_str())
     }
 }
 

@@ -14,7 +14,7 @@ use bevy::{
 };
 use bevy_app_compute::prelude::AppComputeWorker;
 use cosmos_core::{
-    block::Block,
+    block::{Block, BlockFace},
     ecs::mut_events::{EventWriterCustomSend, MutEvent, MutEventsCommand},
     physics::location::Location,
     registry::Registry,
@@ -25,8 +25,10 @@ use cosmos_core::{
         lod::{Lod, LodComponent},
         lod_chunk::LodChunk,
         planet::{
-            generation::terrain_generation::{
-                BiosphereShaderWorker, ChunkData, ChunkDataSlice, GenerationParams, TerrainData, U32Vec4, N_CHUNKS,
+            biosphere::RegisteredBiosphere,
+            generation::{
+                biome::{Biome, BiomeParameters, BiosphereBiomesRegistry},
+                terrain_generation::{BiosphereShaderWorker, ChunkData, ChunkDataSlice, GenerationParams, TerrainData, U32Vec4, N_CHUNKS},
             },
             Planet,
         },
@@ -76,7 +78,7 @@ pub(crate) struct NeedsGeneratedChunk {
     structure_entity: Entity,
     structure_dimensions: CoordinateType,
     generation_params: GenerationParams,
-    biosphere_type: &'static str,
+    biosphere_unlocalized_name: &'static str,
 }
 
 #[derive(Resource, Debug, Default)]
@@ -326,7 +328,7 @@ fn add_new_needs_generated_chunk(
     let structure_loc = structure_loc.absolute_coords_f32();
 
     lod_chunks.push(NeedsGeneratedChunk {
-        biosphere_type: "temp",
+        biosphere_unlocalized_name: "cosmos:grass",
         steps,
         chunk: LodChunk::default(),
         generation_params: GenerationParams {
@@ -374,7 +376,7 @@ fn send_chunks_to_gpu(
         let mut todo: [GenerationParams; N_CHUNKS as usize] = [GenerationParams::default(); N_CHUNKS as usize];
 
         for i in 0..N_CHUNKS {
-            let Some(mut doing) = needs_generated_chunks.0.pop() else {
+            let Some(doing) = needs_generated_chunks.0.pop() else {
                 break;
             };
 
@@ -508,7 +510,9 @@ fn generate_player_lods(
 pub(crate) fn generate_chunks_from_gpu_data(
     mut ev_reader: EventReader<MutEvent<DoneGeneratingChunkEvent>>,
     chunk_data: Res<ChunkData>,
-    // biosphere_biomes: Res<BiosphereBiomesRegistry<T>>,
+    biosphere_biomes: Res<Registry<BiosphereBiomesRegistry>>,
+    biomes: Res<Registry<Biome>>,
+    biospheres: Res<Registry<RegisteredBiosphere>>,
     // sea_level: Option<Res<BiosphereSeaLevel<T>>>,
     // mut ev_writer: EventWriter<GenerateChunkFeaturesEvent<T>>,
     q_lod: Query<&mut LodBeingGenerated>,
@@ -539,6 +543,20 @@ pub(crate) fn generate_chunks_from_gpu_data(
 
         let mut needs_generated_chunk = std::mem::take(&mut ev.needs_generated_chunk).expect("Verified to be Some above.");
 
+        let structure_dimensions = needs_generated_chunk.structure_dimensions;
+
+        let biosphere_unlocalized_name = needs_generated_chunk.biosphere_unlocalized_name;
+
+        let biosphere_biomes = biosphere_biomes
+            .from_id(biosphere_unlocalized_name)
+            .unwrap_or_else(|| panic!("Missing biosphere biomes registry entry for {biosphere_unlocalized_name}"));
+
+        let biosphere = biospheres
+            .from_id(biosphere_unlocalized_name)
+            .unwrap_or_else(|| panic!("Missing biosphere biomes registry entry for {biosphere_unlocalized_name}"));
+
+        let sea_level_block = biosphere.sea_level_block().map(|x| blocks.from_id(x)).flatten();
+
         for z in 0..CHUNK_DIMENSIONS {
             for y in 0..CHUNK_DIMENSIONS {
                 for x in 0..CHUNK_DIMENSIONS {
@@ -552,69 +570,52 @@ pub(crate) fn generate_chunks_from_gpu_data(
                         needs_generated_chunk.generation_params.chunk_coords.z,
                     );
 
+                    let block_relative_coord = chunk_pos + Vec3::new(x as f32, y as f32, z as f32) * needs_generated_chunk.scale;
+                    let face = Planet::planet_face_relative(block_relative_coord);
+
                     if value.depth >= 0 {
                         // return temperature_u32 << 16 | humidity_u32 << 8 | elevation_u32;
-                        // let ideal_elevation = (value.data & 0xFF) as f32;
-                        // let ideal_humidity = ((value.data >> 8) & 0xFF) as f32;
-                        // let ideal_temperature = ((value.data >> 16) & 0xFF) as f32;
+                        let ideal_elevation = (value.data & 0xFF) as f32;
+                        let ideal_humidity = ((value.data >> 8) & 0xFF) as f32;
+                        let ideal_temperature = ((value.data >> 16) & 0xFF) as f32;
 
-                        // let ideal_biome = biosphere_biomes.ideal_biome_for(BiomeParameters {
-                        //     ideal_elevation,
-                        //     ideal_humidity,
-                        //     ideal_temperature,
-                        // });
+                        let ideal_biome = biosphere_biomes.ideal_biome_for(
+                            BiomeParameters {
+                                ideal_elevation,
+                                ideal_humidity,
+                                ideal_temperature,
+                            },
+                            &biomes,
+                        );
 
-                        // let block_layers: &BlockLayers = ideal_biome.block_layers();
+                        let block_layers = ideal_biome.block_layers();
 
-                        // let block = block_layers.block_for_depth(value.depth as u64);
+                        let block = block_layers.block_for_depth(value.depth as u64);
 
-                        let block = blocks.from_id("cosmos:stone").expect("Missing stone?");
-
-                        let block_relative_coord = chunk_pos + Vec3::new(x as f32, y as f32, z as f32) * needs_generated_chunk.scale;
-
-                        let face = Planet::planet_face_relative(block_relative_coord);
+                        // let block = blocks.from_id("cosmos:stone").expect("Missing stone?");
 
                         needs_generated_chunk.chunk.set_block_at(
                             ChunkBlockCoordinate::new(x as CoordinateType, y as CoordinateType, z as CoordinateType),
                             &block,
                             face,
                         );
+                    } else if let Some(sea_level_block) = sea_level_block {
+                        let sea_level_coordinate = biosphere.sea_level(structure_dimensions) as CoordinateType;
+
+                        let coord = match face {
+                            BlockFace::Left | BlockFace::Right => block_relative_coord.x,
+                            BlockFace::Top | BlockFace::Bottom => block_relative_coord.y,
+                            BlockFace::Front | BlockFace::Back => block_relative_coord.z,
+                        };
+
+                        if (coord.abs()) as CoordinateType <= sea_level_coordinate {
+                            needs_generated_chunk.chunk.set_block_at(
+                                ChunkBlockCoordinate::new(x as CoordinateType, y as CoordinateType, z as CoordinateType),
+                                sea_level_block,
+                                face,
+                            );
+                        }
                     }
-
-                    //  else {
-                    //     let block = blocks.from_id("cosmos:sand").expect("Missing sand?");
-                    //     let block_relative_coord = chunk_pos + Vec3::new(x as f32, y as f32, z as f32) * needs_generated_chunk.scale;
-
-                    //     let face = Planet::planet_face_relative(block_relative_coord);
-
-                    //     needs_generated_chunk.chunk.set_block_at(
-                    //         ChunkBlockCoordinate::new(x as CoordinateType, y as CoordinateType, z as CoordinateType),
-                    //         &block,
-                    //         face,
-                    //     );
-                    // }
-                    // else if let Some(sea_level) = sea_level.as_ref() {
-                    //     if let Some(sea_level_block) = sea_level.block.as_ref() {
-                    //         let sea_level_coordinate = ((needs_generated_chunk.structure_dimensions / 2) as f32 * sea_level.level) as u64;
-
-                    //         let block_relative_coord = needs_generated_chunk.chunk_pos + Vec3::new(x as f32, y as f32, z as f32);
-                    //         let face = Planet::planet_face_relative(block_relative_coord);
-
-                    //         let coord = match face {
-                    //             BlockFace::Left | BlockFace::Right => block_relative_coord.x,
-                    //             BlockFace::Top | BlockFace::Bottom => block_relative_coord.y,
-                    //             BlockFace::Front | BlockFace::Back => block_relative_coord.z,
-                    //         };
-
-                    //         if (coord.abs()) as CoordinateType <= sea_level_coordinate {
-                    //             needs_generated_chunk.chunk.set_block_at(
-                    //                 ChunkBlockCoordinate::new(x as CoordinateType, y as CoordinateType, z as CoordinateType),
-                    //                 sea_level_block,
-                    //                 face,
-                    //             );
-                    //         }
-                    //     }
-                    // }
                 }
             }
         }

@@ -13,7 +13,6 @@ use bevy::{
 };
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
-    block::Block,
     netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannelServer},
     physics::location::Location,
     registry::Registry,
@@ -22,7 +21,10 @@ use cosmos_core::{
         coordinates::ChunkCoordinate,
         planet::{
             biosphere::{BiosphereMarker, RegisteredBiosphere},
-            generation::terrain_generation::GpuPermutationTable,
+            generation::{
+                biome::{Biome, BiosphereBiomesRegistry},
+                terrain_generation::GpuPermutationTable,
+            },
             Planet,
         },
         Structure,
@@ -120,26 +122,6 @@ impl<T: BiosphereMarkerComponent> GeneratingChunk<T> {
     }
 }
 
-#[derive(Resource, Clone)]
-/// Dictates where the sea level will be and what block it should be for a biosphere
-pub struct BiosphereSeaLevel<T: BiosphereMarkerComponent> {
-    _phantom: PhantomData<T>,
-    /// The sea level as a fraction of the world's size (default 0.75)
-    pub level: f32,
-    /// The block to put there - leave `None` for air
-    pub block: Option<Block>,
-}
-
-impl<T: BiosphereMarkerComponent> Default for BiosphereSeaLevel<T> {
-    fn default() -> Self {
-        Self {
-            level: 0.75,
-            block: None,
-            _phantom: PhantomData,
-        }
-    }
-}
-
 /// Use this to register a biosphere
 ///
 /// T: The biosphere's marker component type
@@ -147,6 +129,8 @@ impl<T: BiosphereMarkerComponent> Default for BiosphereSeaLevel<T> {
 pub fn register_biosphere<T: BiosphereMarkerComponent + Default + Clone, E: Send + Sync + 'static + TGenerateChunkEvent>(
     app: &mut App,
     temperature_range: TemperatureRange,
+    sea_level_percent: f32,
+    sea_level_block: Option<&str>,
 ) {
     info!("Creating a biome registry.");
     create_biosphere_biomes_registry::<T>(app);
@@ -154,12 +138,14 @@ pub fn register_biosphere<T: BiosphereMarkerComponent + Default + Clone, E: Send
 
     let biosphere_id = T::unlocalized_name();
 
+    let sea_level_block = sea_level_block.map(|x| x.to_owned());
+
     app.add_event::<E>()
         .add_systems(
             Startup,
             move |mut instance_registry: ResMut<Registry<RegisteredBiosphere>>,
                   mut temperature_registry: ResMut<BiosphereTemperatureRegistry>| {
-                instance_registry.register(RegisteredBiosphere::new(biosphere_id));
+                instance_registry.register(RegisteredBiosphere::new(biosphere_id, sea_level_percent, sea_level_block.clone()));
                 temperature_registry.register(biosphere_id.to_owned(), temperature_range);
             },
         )
@@ -303,12 +289,14 @@ fn on_connect(
 }
 
 pub(super) fn register(app: &mut App) {
+    sync_registry::<RegisteredBiosphere>(app);
+    sync_registry::<Biome>(app);
+    sync_registry::<BiosphereBiomesRegistry>(app);
+
     app.add_event::<NeedsBiosphereEvent>()
         .insert_resource(BiosphereTemperatureRegistry::default())
         .add_systems(Update, add_biosphere)
         .add_systems(Update, on_connect.run_if(in_state(GameState::Playing)));
-
-    sync_registry::<RegisteredBiosphere>(app);
 
     biosphere_generation::register(app);
     biome::register(app);

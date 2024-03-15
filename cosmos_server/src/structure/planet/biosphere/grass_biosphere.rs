@@ -2,11 +2,10 @@
 
 use bevy::{
     log::warn,
-    prelude::{App, Commands, Component, Entity, Event, OnEnter, Res, ResMut},
+    prelude::{App, Component, Entity, Event, OnEnter, Res, ResMut},
     reflect::TypePath,
 };
 use cosmos_core::{
-    block::Block,
     registry::Registry,
     structure::{
         coordinates::ChunkCoordinate,
@@ -16,7 +15,7 @@ use cosmos_core::{
 
 use crate::GameState;
 
-use super::{register_biosphere, BiosphereMarkerComponent, BiosphereSeaLevel, TBiosphere, TGenerateChunkEvent, TemperatureRange};
+use super::{register_biosphere, BiosphereMarkerComponent, TBiosphere, TGenerateChunkEvent, TemperatureRange};
 
 #[derive(Component, Debug, Default, Clone, Copy, TypePath)]
 /// Marks that this is for a grass biosphere
@@ -111,17 +110,13 @@ fn register_biosphere_biomes(
     }
 }
 
-fn add_ocean_level(mut commands: Commands, blocks: Res<Registry<Block>>) {
-    if let Some(water) = blocks.from_id("cosmos:water") {
-        commands.insert_resource(BiosphereSeaLevel::<GrassBiosphereMarker> {
-            block: Some(water.clone()),
-            ..Default::default()
-        });
-    }
-}
-
 pub(super) fn register(app: &mut App) {
-    register_biosphere::<GrassBiosphereMarker, GrassChunkNeedsGeneratedEvent>(app, TemperatureRange::new(0.0, 400.0));
+    register_biosphere::<GrassBiosphereMarker, GrassChunkNeedsGeneratedEvent>(
+        app,
+        TemperatureRange::new(0.0, 400.0),
+        0.75,
+        Some("cosmos:water"),
+    );
 
-    app.add_systems(OnEnter(GameState::PostLoading), (register_biosphere_biomes, add_ocean_level));
+    app.add_systems(OnEnter(GameState::PostLoading), register_biosphere_biomes);
 }

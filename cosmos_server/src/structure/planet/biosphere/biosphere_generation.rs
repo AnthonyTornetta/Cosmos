@@ -3,7 +3,7 @@
 use bevy::{prelude::*, utils::hashbrown::HashSet};
 use bevy_app_compute::prelude::*;
 use cosmos_core::{
-    block::BlockFace,
+    block::{Block, BlockFace},
     ecs::mut_events::{EventWriterCustomSend, MutEvent, MutEventsCommand},
     physics::location::Location,
     registry::{identifiable::Identifiable, Registry},
@@ -29,14 +29,13 @@ use rand_chacha::ChaCha8Rng;
 
 use crate::{init::init_world::ServerSeed, state::GameState, structure::planet::biosphere::biome::GenerateChunkFeaturesEvent};
 
-use super::{BiosphereMarkerComponent, BiosphereSeaLevel, RegisteredBiosphere, TGenerateChunkEvent};
+use super::{BiosphereMarkerComponent, RegisteredBiosphere, TGenerateChunkEvent};
 
 #[derive(Debug)]
 pub(crate) struct NeedGeneratedChunk {
     chunk: Chunk,
     structure_entity: Entity,
     chunk_pos: Vec3,
-    structure_dimensions: CoordinateType,
     time: f32,
     generation_params: GenerationParams,
     biosphere_type: &'static str,
@@ -103,10 +102,11 @@ pub(crate) fn generate_chunks_from_gpu_data<T: BiosphereMarkerComponent, E: TGen
     mut ev_reader: EventReader<MutEvent<DoneGeneratingChunkEvent>>,
     chunk_data: Res<ChunkData>,
     biosphere_biomes: Res<Registry<BiosphereBiomesRegistry>>,
-    sea_level: Option<Res<BiosphereSeaLevel<T>>>,
+    biospheres: Res<Registry<RegisteredBiosphere>>,
     mut ev_writer: EventWriter<GenerateChunkFeaturesEvent>,
     mut q_structure: Query<&mut Structure>,
     biome_registry: Res<Registry<Biome>>,
+    blocks: Res<Registry<Block>>,
 
     time: Res<Time>,
 ) {
@@ -131,12 +131,20 @@ pub(crate) fn generate_chunks_from_gpu_data<T: BiosphereMarkerComponent, E: TGen
             continue;
         };
 
+        let structure_dimensions = structure.block_dimensions().x;
+
         // let mut biome_ids = Box::new([0u16; CHUNK_DIMENSIONS_USIZE * CHUNK_DIMENSIONS_USIZE * CHUNK_DIMENSIONS_USIZE]);
         let mut included_biomes = HashSet::new();
 
         let biosphere_biomes = biosphere_biomes
             .from_id(biosphere_unlocalized_name)
             .unwrap_or_else(|| panic!("Missing biosphere biomes registry entry for {biosphere_unlocalized_name}"));
+
+        let biosphere = biospheres
+            .from_id(biosphere_unlocalized_name)
+            .unwrap_or_else(|| panic!("Missing biosphere biomes registry entry for {biosphere_unlocalized_name}"));
+
+        let sea_level_block = biosphere.sea_level_block().map(|x| blocks.from_id(x)).flatten();
 
         for z in 0..CHUNK_DIMENSIONS {
             for y in 0..CHUNK_DIMENSIONS {
@@ -177,26 +185,24 @@ pub(crate) fn generate_chunks_from_gpu_data<T: BiosphereMarkerComponent, E: TGen
                             &block,
                             face,
                         );
-                    } else if let Some(sea_level) = sea_level.as_ref() {
-                        if let Some(sea_level_block) = sea_level.block.as_ref() {
-                            let sea_level_coordinate = ((needs_generated_chunk.structure_dimensions / 2) as f32 * sea_level.level) as u64;
+                    } else if let Some(sea_level_block) = sea_level_block {
+                        let sea_level_coordinate = biosphere.sea_level(structure_dimensions) as CoordinateType;
 
-                            let block_relative_coord = needs_generated_chunk.chunk_pos + Vec3::new(x as f32, y as f32, z as f32);
-                            let face = Planet::planet_face_relative(block_relative_coord);
+                        let block_relative_coord = needs_generated_chunk.chunk_pos + Vec3::new(x as f32, y as f32, z as f32);
+                        let face = Planet::planet_face_relative(block_relative_coord);
 
-                            let coord = match face {
-                                BlockFace::Left | BlockFace::Right => block_relative_coord.x,
-                                BlockFace::Top | BlockFace::Bottom => block_relative_coord.y,
-                                BlockFace::Front | BlockFace::Back => block_relative_coord.z,
-                            };
+                        let coord = match face {
+                            BlockFace::Left | BlockFace::Right => block_relative_coord.x,
+                            BlockFace::Top | BlockFace::Bottom => block_relative_coord.y,
+                            BlockFace::Front | BlockFace::Back => block_relative_coord.z,
+                        };
 
-                            if (coord.abs()) as CoordinateType <= sea_level_coordinate {
-                                needs_generated_chunk.chunk.set_block_at(
-                                    ChunkBlockCoordinate::new(x as CoordinateType, y as CoordinateType, z as CoordinateType),
-                                    sea_level_block,
-                                    face,
-                                );
-                            }
+                        if (coord.abs()) as CoordinateType <= sea_level_coordinate {
+                            needs_generated_chunk.chunk.set_block_at(
+                                ChunkBlockCoordinate::new(x as CoordinateType, y as CoordinateType, z as CoordinateType),
+                                sea_level_block,
+                                face,
+                            );
                         }
                     }
                 }
@@ -278,7 +284,6 @@ fn send_chunks_to_gpu(
 pub(crate) fn generate_planet<T: BiosphereMarkerComponent, E: TGenerateChunkEvent>(
     mut query: Query<(&mut Structure, &Location)>,
     mut events: EventReader<E>,
-    sea_level: Option<Res<BiosphereSeaLevel<T>>>,
     biosphere_registry: Res<Registry<RegisteredBiosphere>>,
 
     mut needs_generated_chunks: ResMut<NeedGeneratedChunks>,
@@ -332,13 +337,12 @@ pub(crate) fn generate_planet<T: BiosphereMarkerComponent, E: TGenerateChunkEven
             Some(NeedGeneratedChunk {
                 chunk,
                 chunk_pos: chunk_rel_pos,
-                structure_dimensions: s_dimensions,
                 structure_entity,
                 time: 0.0,
                 generation_params: GenerationParams {
                     chunk_coords: Vec4::new(chunk_rel_pos.x, chunk_rel_pos.y, chunk_rel_pos.z, 0.0),
                     scale: Vec4::splat(1.0),
-                    sea_level: Vec4::splat((sea_level.as_ref().map(|x| x.level).unwrap_or(0.75) * (s_dimensions / 2) as f32) as f32),
+                    sea_level: Vec4::splat(registered_biosphere.sea_level(s_dimensions) as f32),
                     structure_pos: Vec4::new(structure_loc.x, structure_loc.y, structure_loc.z, 0.0),
                     biosphere_id: U32Vec4::splat(registered_biosphere.id() as u32),
                 },

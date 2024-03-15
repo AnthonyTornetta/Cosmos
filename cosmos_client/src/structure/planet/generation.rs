@@ -7,7 +7,10 @@ use bevy::prelude::*;
 use bevy_app_compute::prelude::*;
 use cosmos_core::structure::planet::{
     biosphere::RegisteredBiosphere,
-    generation::terrain_generation::{BiosphereShaderWorker, ChunkData, GpuPermutationTable},
+    generation::{
+        biome::{Biome, BiosphereBiomesRegistry},
+        terrain_generation::{BiosphereShaderWorker, ChunkData, GpuPermutationTable},
+    },
 };
 
 #[derive(Event, Debug)]
@@ -363,6 +366,8 @@ fn setup_lod_generation(
 
 pub(super) fn register(app: &mut App) {
     sync_registry::<RegisteredBiosphere>(app);
+    sync_registry::<Biome>(app);
+    sync_registry::<BiosphereBiomesRegistry>(app);
 
     app.configure_sets(
         Update,
@@ -375,7 +380,6 @@ pub(super) fn register(app: &mut App) {
             .chain(),
     )
     .add_plugins(AppComputeWorkerPlugin::<BiosphereShaderWorker>::default())
-    // .add_systems(OnEnter(GameState::PreLoading), setup_permutation_table)
     .add_systems(OnEnter(GameState::LoadingWorld), add_needs_terrain_data)
     .add_systems(
         Update,
@@ -383,16 +387,6 @@ pub(super) fn register(app: &mut App) {
             .run_if(resource_exists::<NeedsTerrainDataFlag>)
             .run_if(in_state(GameState::LoadingWorld)),
     )
-    // .add_systems(
-    //     Update,
-    //     (send_chunks_to_gpu, read_gpu_data)
-    //         .in_set(BiosphereGenerationSet::GpuInteraction)
-    //         .chain(),
-    // )
-    // .init_resource::<NeedGeneratedChunks>()
-    // .init_resource::<GeneratingChunks>()
     .init_resource::<ChunkData>()
-    // .init_resource::<SentToGpuTime>()
-    // .add_mut_event::<DoneGeneratingChunkEvent>()
     .add_event::<SetTerrainGenData>();
 }

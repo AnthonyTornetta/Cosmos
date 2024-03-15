@@ -62,7 +62,7 @@ fn calculate_depth_at(coords_f32: vec3<f32>, sea_level: f32) -> i32 {
 
     let amplitude_delta = f64(0.001);
     let amplitude = abs(noise(
-            f64(coords_f32.x + 8437.0) * amplitude_delta,
+            f64(coords_f32.x + 537.0) * amplitude_delta,
             f64(coords_f32.y - 1123.0) * amplitude_delta,
             f64(coords_f32.z + 1458.0) * amplitude_delta,
         )) * 9.0;

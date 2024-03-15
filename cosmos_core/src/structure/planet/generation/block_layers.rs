@@ -2,10 +2,11 @@
 
 use crate::{block::Block, registry::Registry, structure::coordinates::CoordinateType};
 use bevy::prelude::Resource;
+use serde::{Deserialize, Serialize};
 
 /// Stores which blocks make up each biosphere, and how far below the top solid block each block generates.
 /// Blocks in ascending order ("stone" = 5 first, "grass" = 0 last).
-#[derive(Resource, Clone, Default, Debug)]
+#[derive(Resource, Clone, Default, Debug, Serialize, Deserialize)]
 pub struct BlockLayers {
     ranges: Vec<(Block, BlockLayer)>,
 }
@@ -35,7 +36,7 @@ impl BlockLayers {
 
 /// Stores the blocks and all the noise information for creating the top of their layer.
 /// For example, the "stone" BlockLevel has the noise paramters that create the boundry between dirt and stone.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct BlockLayer {
     /// How far away from this elevation should this generate
     ///

@@ -185,7 +185,12 @@ fn register_biosphere_biomes(
 }
 
 pub(super) fn register(app: &mut App) {
-    register_biosphere::<MoltenBiosphereMarker, MoltenChunkNeedsGeneratedEvent>(app, TemperatureRange::new(0.0, 0.0));
+    register_biosphere::<MoltenBiosphereMarker, MoltenChunkNeedsGeneratedEvent>(
+        app,
+        TemperatureRange::new(0.0, 0.0),
+        0.75,
+        Some("cosmos:cheese"),
+    );
 
     app.add_systems(OnEnter(GameState::PostLoading), register_biosphere_biomes);
 }
