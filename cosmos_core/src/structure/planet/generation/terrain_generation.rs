@@ -4,7 +4,7 @@ use crate::structure::chunk::CHUNK_DIMENSIONS_USIZE;
 use bevy::{
     core::{Pod, Zeroable},
     ecs::system::Resource,
-    math::Vec4,
+    math::{Vec3, Vec4},
     reflect::TypePath,
 };
 use bevy_app_compute::prelude::*;
@@ -90,32 +90,32 @@ impl ComputeWorker for BiosphereShaderWorker {
     fn build(world: &mut bevy::prelude::World) -> AppComputeWorker<Self> {
         assert!(DIMS as u32 % WORKGROUP_SIZE == 0);
 
-        // const GRAD_TABLE: [Vector3<f64>; 24] = [
-        //     Vector3::new(-11.0, 4.0, 4.0),
-        //     Vector3::new(-4.0, 11.0, 4.0),
-        //     Vector3::new(-4.0, 4.0, 11.0),
-        //     Vector3::new(11.0, 4.0, 4.0),
-        //     Vector3::new(4.0, 11.0, 4.0),
-        //     Vector3::new(4.0, 4.0, 11.0),
-        //     Vector3::new(-11.0, -4.0, 4.0),
-        //     Vector3::new(-4.0, -11.0, 4.0),
-        //     Vector3::new(-4.0, -4.0, 11.0),
-        //     Vector3::new(11.0, -4.0, 4.0),
-        //     Vector3::new(4.0, -11.0, 4.0),
-        //     Vector3::new(4.0, -4.0, 11.0),
-        //     Vector3::new(-11.0, 4.0, -4.0),
-        //     Vector3::new(-4.0, 11.0, -4.0),
-        //     Vector3::new(-4.0, 4.0, -11.0),
-        //     Vector3::new(11.0, 4.0, -4.0),
-        //     Vector3::new(4.0, 11.0, -4.0),
-        //     Vector3::new(4.0, 4.0, -11.0),
-        //     Vector3::new(-11.0, -4.0, -4.0),
-        //     Vector3::new(-4.0, -11.0, -4.0),
-        //     Vector3::new(-4.0, -4.0, -11.0),
-        //     Vector3::new(11.0, -4.0, -4.0),
-        //     Vector3::new(4.0, -11.0, -4.0),
-        //     Vector3::new(4.0, -4.0, -11.0),
-        // ];
+        const GRAD_TABLE: [Vec3; 24] = [
+            Vec3::new(-11.0, 4.0, 4.0),
+            Vec3::new(-4.0, 11.0, 4.0),
+            Vec3::new(-4.0, 4.0, 11.0),
+            Vec3::new(11.0, 4.0, 4.0),
+            Vec3::new(4.0, 11.0, 4.0),
+            Vec3::new(4.0, 4.0, 11.0),
+            Vec3::new(-11.0, -4.0, 4.0),
+            Vec3::new(-4.0, -11.0, 4.0),
+            Vec3::new(-4.0, -4.0, 11.0),
+            Vec3::new(11.0, -4.0, 4.0),
+            Vec3::new(4.0, -11.0, 4.0),
+            Vec3::new(4.0, -4.0, 11.0),
+            Vec3::new(-11.0, 4.0, -4.0),
+            Vec3::new(-4.0, 11.0, -4.0),
+            Vec3::new(-4.0, 4.0, -11.0),
+            Vec3::new(11.0, 4.0, -4.0),
+            Vec3::new(4.0, 11.0, -4.0),
+            Vec3::new(4.0, 4.0, -11.0),
+            Vec3::new(-11.0, -4.0, -4.0),
+            Vec3::new(-4.0, -11.0, -4.0),
+            Vec3::new(-4.0, -4.0, -11.0),
+            Vec3::new(11.0, -4.0, -4.0),
+            Vec3::new(4.0, -11.0, -4.0),
+            Vec3::new(4.0, -4.0, -11.0),
+        ];
 
         let worker = AppComputeWorkerBuilder::new(world)
             .one_shot()
@@ -123,10 +123,10 @@ impl ComputeWorker for BiosphereShaderWorker {
             .add_empty_uniform("params", size_of::<[GenerationParams; N_CHUNKS as usize]>() as u64) // GenerationParams
             .add_empty_uniform("chunk_count", size_of::<u32>() as u64)
             .add_empty_staging("values", size_of::<[TerrainData; DIMS]>() as u64)
-            // .add_uniform("grad_table", GRAD_TABLE)
+            .add_uniform("grad_table", &GRAD_TABLE)
             .add_pass::<ComputeShaderInstance>(
                 [DIMS as u32 / WORKGROUP_SIZE, 1, 1], //SIZE / WORKGROUP_SIZE, SIZE / WORKGROUP_SIZE, SIZE / WORKGROUP_SIZE
-                &["permutation_table", "params", "chunk_count", "values"],
+                &["permutation_table", "params", "chunk_count", "values", "grad_table"],
             )
             .build();
 
