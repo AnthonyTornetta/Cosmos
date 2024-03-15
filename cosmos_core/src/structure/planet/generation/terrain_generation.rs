@@ -8,7 +8,6 @@ use bevy::{
     reflect::TypePath,
 };
 use bevy_app_compute::prelude::*;
-use bevy_rapier3d::na::Vector3;
 use serde::{Deserialize, Serialize};
 
 // If you change this, make sure to modify the '@workgroup_size' value in the shader aswell.

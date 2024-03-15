@@ -4,7 +4,7 @@ const GRAD_TABLE_LEN: u32 = 24;
 
 // This should be constant defined in this shader, but wgpu hates cool things like indexing
 // a constant array dynamically.
-@group(0) @binding(5) var<uniform> grad_table: array<vec3f, GRAD_TABLE_LEN>;
+@group(0) @binding(4) var<uniform> grad_table: array<vec3f, GRAD_TABLE_LEN>;
 
 struct GenerationParams {
     // Everythihng has to be a vec4 because padding. Otherwise things get super wack
