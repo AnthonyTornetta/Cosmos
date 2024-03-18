@@ -13,6 +13,7 @@ use bevy::{
     },
 };
 use bevy_app_compute::prelude::AppComputeWorker;
+use cosmos_core::structure::planet::biosphere::BiosphereMarker;
 use cosmos_core::{
     block::{Block, BlockFace},
     ecs::mut_events::{EventWriterCustomSend, MutEvent, MutEventsCommand},
@@ -78,7 +79,7 @@ pub(crate) struct NeedsGeneratedChunk {
     structure_entity: Entity,
     structure_dimensions: CoordinateType,
     generation_params: GenerationParams,
-    biosphere_unlocalized_name: &'static str,
+    biosphere_unlocalized_name: String,
 }
 
 #[derive(Resource, Debug, Default)]
@@ -101,6 +102,7 @@ fn create_lod_request(
     current_lod: Option<&Lod>,
     lod_chunks: &mut Vec<NeedsGeneratedChunk>,
     structure: &Structure,
+    biosphere_id: &str,
     structure_location: &Location,
     structure_entity: Entity,
     (min_block_range_inclusive, max_block_range_exclusive): (BlockCoordinate, BlockCoordinate),
@@ -114,6 +116,7 @@ fn create_lod_request(
                     min_block_range_inclusive,
                     max_block_range_exclusive,
                     structure,
+                    biosphere_id,
                     lod_chunks,
                     scale,
                     structure_entity,
@@ -138,6 +141,7 @@ fn create_lod_request(
                     min_block_range_inclusive,
                     max_block_range_exclusive,
                     structure,
+                    biosphere_id,
                     lod_chunks,
                     scale,
                     structure_entity,
@@ -181,6 +185,7 @@ fn create_lod_request(
                 },
                 lod_chunks,
                 structure,
+                biosphere_id,
                 structure_location,
                 structure_entity,
                 ((min.x, min.y, min.z).into(), (max.x - dx, max.y - dy, max.z - dz).into()),
@@ -197,6 +202,7 @@ fn create_lod_request(
                 },
                 lod_chunks,
                 structure,
+                biosphere_id,
                 structure_location,
                 structure_entity,
                 ((min.x, min.y, min.z + dz).into(), (max.x - dx, max.y - dy, max.z).into()),
@@ -213,6 +219,7 @@ fn create_lod_request(
                 },
                 lod_chunks,
                 structure,
+                biosphere_id,
                 structure_location,
                 structure_entity,
                 ((min.x + dx, min.y, min.z + dz).into(), (max.x, max.y - dy, max.z).into()),
@@ -229,6 +236,7 @@ fn create_lod_request(
                 },
                 lod_chunks,
                 structure,
+                biosphere_id,
                 structure_location,
                 structure_entity,
                 ((min.x + dx, min.y, min.z).into(), (max.x, max.y - dy, max.z - dz).into()),
@@ -245,6 +253,7 @@ fn create_lod_request(
                 },
                 lod_chunks,
                 structure,
+                biosphere_id,
                 structure_location,
                 structure_entity,
                 ((min.x, min.y + dy, min.z).into(), (max.x - dx, max.y, max.z - dz).into()),
@@ -261,6 +270,7 @@ fn create_lod_request(
                 },
                 lod_chunks,
                 structure,
+                biosphere_id,
                 structure_location,
                 structure_entity,
                 ((min.x, min.y + dy, min.z + dz).into(), (max.x - dx, max.y, max.z).into()),
@@ -277,6 +287,7 @@ fn create_lod_request(
                 },
                 lod_chunks,
                 structure,
+                biosphere_id,
                 structure_location,
                 structure_entity,
                 ((min.x + dx, min.y + dy, min.z + dz).into(), (max.x, max.y, max.z).into()),
@@ -293,6 +304,7 @@ fn create_lod_request(
                 },
                 lod_chunks,
                 structure,
+                biosphere_id,
                 structure_location,
                 structure_entity,
                 ((min.x + dx, min.y + dy, min.z).into(), (max.x, max.y, max.z - dz).into()),
@@ -312,6 +324,7 @@ fn add_new_needs_generated_chunk(
     min_block_range_inclusive: BlockCoordinate,
     max_block_range_exclusive: BlockCoordinate,
     structure: &Structure,
+    biosphere_id: &str,
     lod_chunks: &mut Vec<NeedsGeneratedChunk>,
     scale: u64,
     structure_entity: Entity,
@@ -328,7 +341,7 @@ fn add_new_needs_generated_chunk(
     let structure_loc = structure_loc.absolute_coords_f32();
 
     lod_chunks.push(NeedsGeneratedChunk {
-        biosphere_unlocalized_name: "cosmos:grass",
+        biosphere_unlocalized_name: biosphere_id.into(),
         steps,
         chunk: LodChunk::default(),
         generation_params: GenerationParams {
@@ -443,7 +456,7 @@ fn generate_player_lods(
     mut commands: Commands,
     players: Query<&Location, With<LocalPlayer>>,
     structures: Query<
-        (Entity, &Structure, &Location, &GlobalTransform, &LodComponent),
+        (Entity, &Structure, &Location, &GlobalTransform, &LodComponent, &BiosphereMarker),
         (Without<LodStuffTodo>, Without<LodBeingGenerated>, With<Planet>),
     >,
 ) {
@@ -453,7 +466,7 @@ fn generate_player_lods(
 
     let render_distance = 4;
 
-    for (structure_ent, structure, structure_location, g_trans, current_lod) in structures.iter() {
+    for (structure_ent, structure, structure_location, g_trans, current_lod, biospehre_marker) in structures.iter() {
         let Structure::Dynamic(ds) = structure else {
             panic!("Planet was a non-dynamic!!!");
         };
@@ -486,6 +499,7 @@ fn generate_player_lods(
             Some(&lod),
             &mut chunks,
             structure,
+            biospehre_marker.biosphere_name(),
             structure_location,
             structure_ent,
             (BlockCoordinate::new(0, 0, 0), structure.block_dimensions()),
@@ -545,7 +559,7 @@ pub(crate) fn generate_chunks_from_gpu_data(
 
         let structure_dimensions = needs_generated_chunk.structure_dimensions;
 
-        let biosphere_unlocalized_name = needs_generated_chunk.biosphere_unlocalized_name;
+        let biosphere_unlocalized_name = &needs_generated_chunk.biosphere_unlocalized_name;
 
         let biosphere_biomes = biosphere_biomes
             .from_id(biosphere_unlocalized_name)

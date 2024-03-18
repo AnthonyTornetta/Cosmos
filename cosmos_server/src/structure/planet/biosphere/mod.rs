@@ -3,7 +3,7 @@
 use std::marker::PhantomData;
 
 use bevy::{
-    log::info,
+    log::{info, warn},
     prelude::{
         in_state, Added, App, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, Query, Res, ResMut,
         Resource, Startup, Update, With, Without,
@@ -219,6 +219,11 @@ fn add_biosphere(
                 biosphere_id: biosphere.to_owned(),
                 entity,
             });
+        } else {
+            warn!(
+                "No biosphere for temperature {} @ sector {sector} - this planet will not be generated!",
+                planet.temperature()
+            );
         }
     }
 }

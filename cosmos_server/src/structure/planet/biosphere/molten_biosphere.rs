@@ -187,7 +187,7 @@ fn register_biosphere_biomes(
 pub(super) fn register(app: &mut App) {
     register_biosphere::<MoltenBiosphereMarker, MoltenChunkNeedsGeneratedEvent>(
         app,
-        TemperatureRange::new(0.0, 0.0),
+        TemperatureRange::new(450.0, f32::MAX),
         0.75,
         Some("cosmos:cheese"),
     );
