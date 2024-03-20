@@ -438,12 +438,12 @@ fn read_gpu_data(
 
     let millis_took = SystemTime::now().duration_since(timer.0).unwrap().as_millis();
 
-    if millis_took > 1000 {
-        warn!(
-            "Got lod chunks back from gpu after a long wait! Took {millis_took}ms for {} lod chunks.",
-            currently_generating_chunks.0.len()
-        );
-    }
+    // if millis_took > 1000 {
+    warn!(
+        "Got lod chunks back from gpu after a long wait! Took {millis_took}ms for {} lod chunks.",
+        currently_generating_chunks.0.len()
+    );
+    // }
 
     let v: Vec<TerrainData> = worker.try_read_vec("values").expect("Failed to read chunk generation values!");
     *chunk_data = ChunkData::new(v);
@@ -664,7 +664,7 @@ pub(crate) fn generate_chunks_from_gpu_data(
         );
     });
 
-    timer.log_duration(&format!("Updated lod data from GPU for {num_events} lod chunks"));
+    timer.log_duration_if_at_least(&format!("Updated lod data from GPU for {num_events} lod chunks"), 16);
 }
 
 fn is_still_working(lod_requst: &LodRequest) -> bool {
