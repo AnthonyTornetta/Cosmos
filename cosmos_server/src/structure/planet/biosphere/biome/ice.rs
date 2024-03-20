@@ -1,4 +1,4 @@
-//! Molten biome generation
+//! Ice biome generation
 
 use bevy::{
     ecs::{
@@ -17,10 +17,12 @@ use crate::state::GameState;
 
 fn register_biome_molten(mut registry: ResMut<Registry<Biome>>, blocks: Res<Registry<Block>>) {
     registry.register(Biome::new(
-        "cosmos:molten",
+        "cosmos:ice",
         BlockLayers::default()
-            .add_fixed_layer("cosmos:molten_stone", &blocks, 0)
-            .expect("cosmos:molten_stone missing!"),
+            .add_fixed_layer("cosmos:ice", &blocks, 0)
+            .expect("cosmos:ice missing!")
+            .add_fixed_layer("cosmos:water", &blocks, 4)
+            .expect("cosmos:water missing!"),
     ));
 }
 

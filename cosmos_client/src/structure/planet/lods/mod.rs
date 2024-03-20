@@ -1,12 +1,16 @@
-use std::sync::{Arc, Mutex};
+use std::{
+    sync::{Arc, Mutex},
+    time::SystemTime,
+};
 
 use bevy::{
     ecs::{
         change_detection::DetectChangesMut,
         event::{Event, EventReader, EventWriter},
         query::{Added, Changed, Without},
+        schedule::common_conditions::resource_exists,
     },
-    log::info,
+    log::{info, warn},
     math::{Vec3, Vec4},
     prelude::{
         in_state, App, Commands, Component, Entity, GlobalTransform, IntoSystemConfigs, Quat, Query, Res, ResMut, Resource, Update, With,
@@ -374,10 +378,14 @@ fn flag_for_generation(
     }
 }
 
+#[derive(Resource)]
+struct ChunkGenerationTimer(SystemTime);
+
 fn send_chunks_to_gpu(
     mut currently_generating_chunks: ResMut<GeneratingLodChunks>,
     mut needs_generated_chunks: ResMut<NeedGeneratedLodChunks>,
     mut worker: ResMut<AppComputeWorker<BiosphereShaderWorker>>,
+    mut commands: Commands,
 ) {
     if !currently_generating_chunks.0.is_empty() {
         return;
@@ -400,13 +408,12 @@ fn send_chunks_to_gpu(
             currently_generating_chunks.0.push(doing);
         }
 
-        // let vals: Vec<TerrainData> = vec![TerrainData::zeroed(); DIMS]; // Useless, but nice for debugging (and line below)
-        // worker.write_slice("values", &vals);
-
         worker.write("params", &todo);
         worker.write("chunk_count", &chunk_count);
 
         info!("Executing GPU shader to generate LODs!");
+
+        commands.insert_resource(ChunkGenerationTimer(SystemTime::now()));
 
         worker.execute();
     }
@@ -423,9 +430,19 @@ fn read_gpu_data(
     mut ev_writer: EventWriter<MutEvent<DoneGeneratingChunkEvent>>,
     mut currently_generating_chunks: ResMut<GeneratingLodChunks>,
     mut chunk_data: ResMut<ChunkData>,
+    timer: Res<ChunkGenerationTimer>,
 ) {
     if !worker.ready() {
         return;
+    }
+
+    let millis_took = SystemTime::now().duration_since(timer.0).unwrap().as_millis();
+
+    if millis_took > 1000 {
+        warn!(
+            "Got lod chunks back from gpu after a long wait! Took {millis_took}ms for {} lod chunks.",
+            currently_generating_chunks.0.len()
+        );
     }
 
     let v: Vec<TerrainData> = worker.try_read_vec("values").expect("Failed to read chunk generation values!");
@@ -698,8 +715,6 @@ fn on_change_being_generated(
         // Drop lock
         drop(lod);
 
-        info!("Propagated changes! It should now be re-rendered.");
-
         commands.entity(ent).remove::<LodBeingGenerated>();
     }
 }
@@ -733,7 +748,7 @@ pub(super) fn register(app: &mut App) {
             on_add_planet,
             generate_player_lods,
             flag_for_generation,
-            read_gpu_data,
+            read_gpu_data.run_if(resource_exists::<ChunkGenerationTimer>),
             send_chunks_to_gpu,
             generate_chunks_from_gpu_data,
             on_change_being_generated,

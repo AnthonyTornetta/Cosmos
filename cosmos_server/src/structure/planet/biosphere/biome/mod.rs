@@ -18,6 +18,8 @@ use crate::state::GameState;
 use super::BiosphereMarkerComponent;
 
 pub mod desert;
+pub mod ice;
+pub mod molten;
 pub mod ocean;
 pub mod plains;
 
@@ -50,6 +52,8 @@ pub(super) fn register(app: &mut App) {
     app.add_event::<GenerateChunkFeaturesEvent>()
         .add_systems(OnExit(GameState::PostLoading), construct_lookup_tables);
 
+    ice::register(app);
+    molten::register(app);
     desert::register(app);
     plains::register(app);
     ocean::register(app);

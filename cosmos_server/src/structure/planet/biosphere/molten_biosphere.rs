@@ -170,7 +170,7 @@ fn register_biosphere_biomes(
         .from_id_mut(MoltenBiosphereMarker::unlocalized_name())
         .expect("Missing molten biosphere registry!");
 
-    if let Some(plains) = biome_registry.from_id("cosmos:plains") {
+    if let Some(plains) = biome_registry.from_id("cosmos:molten") {
         biosphere_registry.register(
             plains,
             BiomeParameters {
@@ -180,7 +180,7 @@ fn register_biosphere_biomes(
             },
         );
     } else {
-        warn!("Missing plains biome!");
+        warn!("Missing molten biome!");
     }
 }
 

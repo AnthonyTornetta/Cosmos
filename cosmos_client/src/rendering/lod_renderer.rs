@@ -9,7 +9,6 @@ use std::{
     f32::consts::PI,
     mem::swap,
     sync::{Arc, Mutex},
-    time::SystemTime,
     usize,
 };
 
@@ -712,7 +711,6 @@ struct NeedLods(HashSet<Entity>);
 
 fn monitor_lods_needs_rendered_system(lods_needed: Query<Entity, Changed<LodComponent>>, mut should_render_lods: ResMut<NeedLods>) {
     for needs_lod in lods_needed.iter() {
-        info!("Added lod to be re-rendered for {needs_lod:?}");
         should_render_lods.0.insert(needs_lod);
     }
 }
@@ -863,7 +861,6 @@ fn trigger_lod_render(
         // Don't double-render same lod because that causes many issues. Instead put it back into the queue for when the current one finishes.
         if rendering_lods.iter().any(|r_lod| r_lod.0 == entity) {
             lods_needed.0.insert(entity);
-            info!("Already currently rendering.");
             continue;
         }
 
@@ -877,9 +874,6 @@ fn trigger_lod_render(
 
         let chunk_dimensions = structure.chunk_dimensions().x;
         let block_dimensions = structure.block_dimensions().x;
-
-        let time = SystemTime::now();
-        println!("LOD clone time: {}ms", SystemTime::now().duration_since(time).unwrap().as_millis());
 
         let lod = lod.clone();
 

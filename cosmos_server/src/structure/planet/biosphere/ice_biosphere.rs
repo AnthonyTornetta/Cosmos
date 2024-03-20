@@ -65,18 +65,6 @@ impl TBiosphere<IceBiosphereMarker, IceChunkNeedsGeneratedEvent> for IceBiospher
     }
 }
 
-// fn make_block_ranges(block_registry: Res<Registry<Block>>, mut commands: Commands) {
-//     commands.insert_resource(
-//         BlockLayers::default()
-//             .add_noise_layer("cosmos:ice", &block_registry, 160, 0.01, 4.0, 1)
-//             .expect("Ice missing")
-//             .add_fixed_layer("cosmos:water", &block_registry, 4)
-//             .expect("Water missing")
-//             .add_fixed_layer("cosmos:stone", &block_registry, 296)
-//             .expect("Stone missing"),
-//     );
-// }
-
 fn register_biosphere_biomes(
     biome_registry: Res<Registry<Biome>>,
     mut biosphere_biomes_registry: ResMut<Registry<BiosphereBiomesRegistry>>,
@@ -85,7 +73,7 @@ fn register_biosphere_biomes(
         .from_id_mut(IceBiosphereMarker::unlocalized_name())
         .expect("Missing ice biosphere registry!");
 
-    if let Some(plains) = biome_registry.from_id("cosmos:plains") {
+    if let Some(plains) = biome_registry.from_id("cosmos:ice") {
         biosphere_registry.register(
             plains,
             BiomeParameters {
@@ -95,7 +83,7 @@ fn register_biosphere_biomes(
             },
         );
     } else {
-        warn!("Missing plains biome!");
+        warn!("Missing ice biome!");
     }
 }
 

@@ -205,10 +205,9 @@ fn add_biosphere(
 ) {
     for (entity, planet, location) in query.iter() {
         let biospheres = registry.get_biospheres_for(planet.temperature());
+        let sector = location.sector();
 
         if !biospheres.is_empty() {
-            let sector = location.sector();
-
             let mut rng = get_rng_for_sector(&server_seed, &sector);
 
             let biosphere = biospheres[rng.gen_range(0..biospheres.len())];

@@ -33,7 +33,6 @@ pub(crate) struct NeedGeneratedChunk {
     chunk: Chunk,
     structure_entity: Entity,
     chunk_pos: Vec3,
-    time: f32,
     generation_params: GenerationParams,
     biosphere_type: &'static str,
 }
@@ -104,8 +103,6 @@ pub(crate) fn generate_chunks_from_gpu_data<T: BiosphereMarkerComponent, E: TGen
     mut q_structure: Query<&mut Structure>,
     biome_registry: Res<Registry<Biome>>,
     blocks: Res<Registry<Block>>,
-
-    time: Res<Time>,
 ) {
     for ev in ev_reader.read() {
         let mut ev = ev.write();
@@ -206,11 +203,6 @@ pub(crate) fn generate_chunks_from_gpu_data<T: BiosphereMarkerComponent, E: TGen
             }
         }
 
-        info!(
-            "Got generated chunk - took {}ms to generate",
-            (1000.0 * (time.elapsed_seconds() - needs_generated_chunk.time)).floor()
-        );
-
         ev_writer.send(GenerateChunkFeaturesEvent {
             included_biomes,
             // biome_ids,
@@ -253,7 +245,7 @@ fn send_chunks_to_gpu(
         let mut todo: [GenerationParams; N_CHUNKS as usize] = [GenerationParams::default(); N_CHUNKS as usize];
 
         for i in 0..N_CHUNKS {
-            let Some(mut doing) = needs_generated_chunks.0.pop() else {
+            let Some(doing) = needs_generated_chunks.0.pop() else {
                 break;
             };
 
@@ -261,7 +253,6 @@ fn send_chunks_to_gpu(
 
             todo[i as usize] = doing.generation_params;
 
-            doing.time = time.elapsed_seconds();
             currently_generating_chunks.0.push(doing);
         }
 
@@ -335,7 +326,6 @@ pub(crate) fn generate_planet<T: BiosphereMarkerComponent, E: TGenerateChunkEven
                 chunk,
                 chunk_pos: chunk_rel_pos,
                 structure_entity,
-                time: 0.0,
                 generation_params: GenerationParams {
                     chunk_coords: Vec4::new(chunk_rel_pos.x, chunk_rel_pos.y, chunk_rel_pos.z, 0.0),
                     scale: Vec4::splat(1.0),
