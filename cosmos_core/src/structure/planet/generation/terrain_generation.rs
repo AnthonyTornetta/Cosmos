@@ -1,4 +1,4 @@
-use std::mem::size_of;
+use std::{mem::size_of, time::Duration};
 
 use crate::structure::chunk::CHUNK_DIMENSIONS_USIZE;
 use bevy::{
@@ -130,6 +130,7 @@ impl ComputeWorker for BiosphereShaderWorker {
                 [DIMS as u32 / WORKGROUP_SIZE, 1, 1], //SIZE / WORKGROUP_SIZE, SIZE / WORKGROUP_SIZE, SIZE / WORKGROUP_SIZE
                 &["permutation_table", "params", "chunk_count", "values", "grad_table"],
             )
+            .asynchronous(Some(Duration::from_millis(100)))
             .build();
 
         worker
