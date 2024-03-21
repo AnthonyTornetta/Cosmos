@@ -475,19 +475,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bevy_app_compute"
-version = "0.13.0"
-source = "git+https://github.com/sclausen/bevy_app_compute#6974f9df4ec57c9e552d7c84f74a07b6cb547c4e"
-dependencies = [
- "bevy",
- "bytemuck",
- "naga",
- "naga_oil",
- "parking_lot",
- "wgpu",
-]
-
-[[package]]
 name = "bevy_asset"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
