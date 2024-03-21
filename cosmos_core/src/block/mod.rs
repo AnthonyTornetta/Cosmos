@@ -28,6 +28,8 @@ pub enum BlockProperty {
     Full,
     /// Does this block not take up any space (such as air)
     Empty,
+    /// This block can be rotated on all axis (such as ramps)
+    FullyRotatable,
 }
 
 #[derive(Debug, PartialEq, Eq, Reflect, Default, Copy, Clone, Serialize, Deserialize, Hash)]
@@ -244,6 +246,7 @@ impl BlockProperty {
             Self::Transparent => 0b1,
             Self::Full => 0b10,
             Self::Empty => 0b100,
+            Self::FullyRotatable => 0b1000,
         }
     }
 

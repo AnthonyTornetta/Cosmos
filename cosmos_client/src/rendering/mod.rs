@@ -475,7 +475,8 @@ fn register_meshes(mut registry: ResMut<BlockMeshRegistry>) {
         "cosmos:base_block",
         MeshInformation {
             indices: vec![0, 1, 2, 2, 3, 0],
-            uvs: vec![[0.0, 1.0], [0.0, 0.0], [1.0, 0.0], [1.0, 1.0]],
+            uvs: vec![[1.0, 1.0], [1.0, 0.0], [0.0, 1.0], [0.0, 0.0]],
+            // uvs: vec![[0.0, 1.0], [0.0, 0.0], [1.0, 0.0], [1.0, 1.0]],
             positions: vec![[0.5, -0.5, -0.5], [0.5, 0.5, -0.5], [0.5, 0.5, 0.5], [0.5, -0.5, 0.5]],
             normals: [[1.0, 0.0, 0.0]; 4].to_vec(),
         },
@@ -519,7 +520,8 @@ fn stupid_parse(file: &str) -> Option<MeshInformation> {
             .replace('\r', "")
             .split('\n')
             .filter(|x| !x.trim().starts_with('#') && !x.trim().is_empty())
-            .map(|x| x.to_owned())
+            // These aid in readability of file, but are not required
+            .map(|x| x.replace(",", "").replace("]", "").replace("[", ""))
             .collect::<Vec<String>>();
 
         // parses a .stupid file the way it was intended - stupidly

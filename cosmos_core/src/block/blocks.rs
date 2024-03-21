@@ -287,6 +287,12 @@ fn add_cosmos_blocks(
             .create(),
     );
 
+    blocks.register(
+        BlockBuilder::new("cosmos:ramp", 2.0, 20.0, 5.0)
+            .add_property(BlockProperty::FullyRotatable)
+            .create(),
+    );
+
     loading.finish_loading(id, &mut end_writer);
 }
 
