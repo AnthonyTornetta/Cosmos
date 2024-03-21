@@ -12,7 +12,7 @@ use bevy::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    block::{blocks::AIR_BLOCK_ID, Block, BlockFace},
+    block::{blocks::AIR_BLOCK_ID, Block, BlockFace, BlockRotation},
     ecs::NeedsDespawned,
     events::block_events::BlockChangedEvent,
     registry::{identifiable::Identifiable, Registry},
@@ -44,7 +44,7 @@ pub struct DynamicStructure {
 
     /// Outer hashmap maps coordinates of a chunk to a hashmap that maps coordinates in that chunk to block ids.
     #[serde(skip)]
-    unloaded_chunk_blocks: HashMap<ChunkCoordinate, HashMap<ChunkBlockCoordinate, (u16, BlockFace)>>,
+    unloaded_chunk_blocks: HashMap<ChunkCoordinate, HashMap<ChunkBlockCoordinate, (u16, BlockRotation)>>,
 
     dimensions: CoordinateType,
 }
@@ -104,7 +104,7 @@ impl DynamicStructure {
         &mut self,
         coords: BlockCoordinate,
         block: &Block,
-        block_up: BlockFace,
+        block_rotation: BlockRotation,
         blocks: &Registry<Block>,
         event_writer: Option<&mut EventWriter<BlockChangedEvent>>,
     ) {
@@ -118,7 +118,7 @@ impl DynamicStructure {
 
         let mut send_event = true;
         if let Some(chunk) = self.mut_chunk_from_chunk_coordinates(chunk_coords) {
-            chunk.set_block_at(chunk_block_coords, block, block_up);
+            chunk.set_block_at(chunk_block_coords, block, block_rotation);
 
             if chunk.is_empty() {
                 self.base_structure.unload_chunk(chunk_coords);
@@ -126,7 +126,7 @@ impl DynamicStructure {
         } else if block.id() != AIR_BLOCK_ID {
             if self.get_chunk_state(chunk_coords) == ChunkState::Loaded {
                 let chunk = self.create_chunk_at(chunk_coords);
-                chunk.set_block_at(chunk_block_coords, block, block_up);
+                chunk.set_block_at(chunk_block_coords, block, block_rotation);
             } else {
                 // put into some chunk queue that will be put into the chunk once it's loaded
                 if !self.unloaded_chunk_blocks.contains_key(&chunk_coords) {
@@ -135,7 +135,7 @@ impl DynamicStructure {
                 self.unloaded_chunk_blocks
                     .get_mut(&chunk_coords)
                     .expect("Chunk hashmap insert above failed")
-                    .insert(chunk_block_coords, (block.id(), block_up));
+                    .insert(chunk_block_coords, (block.id(), block_rotation));
 
                 send_event = false;
             }
@@ -149,8 +149,8 @@ impl DynamicStructure {
                         old_block,
                         structure_entity: self_entity,
                         block: StructureBlock::new(coords),
-                        old_block_up: self.block_rotation(coords),
-                        new_block_up: block_up,
+                        old_block_rotation: self.block_rotation(coords),
+                        new_block_rotation: block_rotation,
                     });
                 }
             }
@@ -174,7 +174,13 @@ impl DynamicStructure {
         blocks: &Registry<Block>,
         event_writer: Option<&mut EventWriter<BlockChangedEvent>>,
     ) {
-        self.set_block_at(coords, blocks.from_numeric_id(AIR_BLOCK_ID), BlockFace::Top, blocks, event_writer);
+        self.set_block_at(
+            coords,
+            blocks.from_numeric_id(AIR_BLOCK_ID),
+            BlockRotation::default(),
+            blocks,
+            event_writer,
+        );
     }
 
     /// A static version of [`Self::block_relative_position`]. This is useful if you know

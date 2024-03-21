@@ -45,7 +45,7 @@ noise = { workspace = true }
 rand = { workspace = true }
 rand_chacha = { workspace = true }
 local-ip-address = { workspace = true }
-clap = { workspace = true }
+clap = { workspace = true, features = ["derive"] }
 
 bevy_rapier3d = { workspace = true }
 crossterm = { workspace = true }

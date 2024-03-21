@@ -2,7 +2,7 @@
 
 use bevy::prelude::{in_state, App, Commands, Component, Entity, EventWriter, IntoSystemConfigs, Query, Res, Update, With};
 use cosmos_core::{
-    block::{Block, BlockFace},
+    block::{Block, BlockRotation},
     registry::Registry,
     structure::{
         coordinates::BlockCoordinate,
@@ -39,7 +39,7 @@ fn create_stations(
             panic!("Station must be full!");
         }
 
-        structure.set_block_at(coords, station_core, BlockFace::Top, &blocks, None);
+        structure.set_block_at(coords, station_core, BlockRotation::default(), &blocks, None);
 
         let itr = structure.all_chunks_iter(false);
 

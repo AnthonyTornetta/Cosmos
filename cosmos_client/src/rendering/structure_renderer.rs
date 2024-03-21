@@ -664,7 +664,7 @@ impl ChunkRenderer {
 
                 let rotation = block_info.get_rotation();
 
-                for face in faces.iter().map(|x| BlockFace::rotate_face(*x, rotation)) {
+                for face in faces.iter().map(|x| BlockFace::rotate_face(*x, rotation.block_up)) {
                     let index = block_textures
                         .from_id(block.unlocalized_name())
                         .unwrap_or_else(|| block_textures.from_id("missing").expect("Missing texture should exist."));
@@ -675,8 +675,8 @@ impl ChunkRenderer {
                     };
 
                     let uvs = Rect::new(0.0, 0.0, 1.0, 1.0);
-
-                    let rotation = match rotation {
+                    // here
+                    let rotation = match rotation.block_up {
                         BlockFace::Top => Quat::IDENTITY,
                         BlockFace::Front => Quat::from_axis_angle(Vec3::X, PI / 2.0),
                         BlockFace::Back => Quat::from_axis_angle(Vec3::X, -PI / 2.0),

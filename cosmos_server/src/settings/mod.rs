@@ -1,8 +1,11 @@
+//! Settings for the server
+
 use bevy::ecs::system::Resource;
-use clap::*;
+use clap::{arg, Parser};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
+/// Command line arguments for the server
 pub struct Args {
     /// Ip of the server
     #[arg(long)]
@@ -22,14 +25,20 @@ pub struct Args {
 }
 
 #[derive(Resource)]
+/// Settings for the server from the command line
 pub struct ServerSettings {
+    /// The IP the server should run on
     pub ip: Option<String>,
+    /// If enemies shouldn't spawn
     pub peaceful: bool,
+    /// If asteroids should spawn
     pub spawn_asteroids: bool,
+    /// If planets should spawn
     pub spawn_planets: bool,
 }
 
-pub fn read_server_settings() -> ServerSettings {
+/// Reads the server settings passed in from the command line
+pub(super) fn read_server_settings() -> ServerSettings {
     let args = Args::parse();
 
     ServerSettings {

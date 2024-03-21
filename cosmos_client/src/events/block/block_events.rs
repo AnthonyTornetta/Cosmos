@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
-    block::{block_events::BlockInteractEvent, BlockFace},
+    block::{block_events::BlockInteractEvent, BlockFace, BlockRotation},
     netty::{client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannelClient},
     structure::structure_block::StructureBlock,
 };
@@ -30,8 +30,8 @@ pub struct RequestBlockPlaceEvent {
     pub inventory_slot: usize,
     /// The block's id
     pub block_id: u16,
-    /// The block's top face
-    pub block_up: BlockFace,
+    /// The block's rotation
+    pub block_up: BlockRotation,
 }
 
 fn handle_block_break(
@@ -62,7 +62,7 @@ fn handle_block_place(
                 structure_entity: network_mapping.server_from_client(&ev.structure_entity).unwrap(),
                 block: ev.block,
                 block_id: ev.block_id,
-                block_up: ev.block_up,
+                block_rotation: ev.block_up,
                 inventory_slot: ev.inventory_slot as u32,
             }),
         );

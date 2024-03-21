@@ -8,7 +8,7 @@ use bevy_renet::renet::ClientId;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    block::{multiblock::reactor::Reactors, BlockFace},
+    block::{multiblock::reactor::Reactors, BlockFace, BlockRotation},
     economy::Credits,
     entities::player::render_distance::RenderDistance,
     physics::location::Location,
@@ -32,8 +32,8 @@ pub struct BlockChanged {
     pub coordinates: StructureBlock,
     /// The block it was changed to.
     pub block_id: u16,
-    /// The block's up direction.
-    pub block_up: BlockFace,
+    /// The block's rotation
+    pub block_rotation: BlockRotation,
 }
 
 #[derive(Debug, Serialize, Deserialize, Component)]

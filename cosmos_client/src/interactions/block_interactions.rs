@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::{QueryFilter, RapierContext, DEFAULT_WORLD_ID};
 use cosmos_core::{
-    block::{block_events::BlockInteractEvent, BlockFace},
+    block::{block_events::BlockInteractEvent, BlockFace, BlockRotation, BlockSubRotation},
     blockitems::BlockItems,
     inventory::Inventory,
     item::Item,
@@ -86,11 +86,10 @@ pub(crate) fn process_player_interaction(
         return;
     };
 
-    let structure_physics_transform = transform;
+    let structure_g_transform = transform;
+    let moved_point = intersection.point - intersection.normal * 0.01;
 
-    let moved_point = intersection.point - intersection.normal * 0.3;
-
-    let point = structure_physics_transform.compute_matrix().inverse().transform_point3(moved_point);
+    let point = structure_g_transform.compute_matrix().inverse().transform_point3(moved_point);
 
     if let Ok(coords) = structure.relative_coords_to_local_coords_checked(point.x, point.y, point.z) {
         let looking_at_block = Some((parent.get(), StructureBlock::new(coords)));
@@ -120,7 +119,7 @@ pub(crate) fn process_player_interaction(
                 if let Some(block_id) = block_items.block_from_item(item) {
                     let moved_point = intersection.point + intersection.normal * 0.75;
 
-                    let point = structure_physics_transform.compute_matrix().inverse().transform_point3(moved_point);
+                    let point = structure_g_transform.compute_matrix().inverse().transform_point3(moved_point);
 
                     if let Ok(coords) = structure.relative_coords_to_local_coords_checked(point.x, point.y, point.z) {
                         if structure.is_within_blocks(coords) {
@@ -132,12 +131,22 @@ pub(crate) fn process_player_interaction(
                                 BlockFace::Top
                             };
 
+                            let block_sub_rotation = match coords.x % 4 {
+                                0 => BlockSubRotation::None,
+                                1 => BlockSubRotation::Right,
+                                2 => BlockSubRotation::Left,
+                                _ => BlockSubRotation::Flip,
+                            };
+
                             place_writer.send(RequestBlockPlaceEvent {
                                 structure_entity: structure.get_entity().unwrap(),
                                 block: StructureBlock::new(coords),
                                 inventory_slot,
                                 block_id,
-                                block_up,
+                                block_up: BlockRotation {
+                                    block_up,
+                                    sub_rotation: block_sub_rotation,
+                                },
                             });
                         }
                     }

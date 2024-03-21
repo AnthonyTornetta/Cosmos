@@ -558,7 +558,7 @@ pub(crate) fn client_sync_players(
                             structure.set_block_at(
                                 block_changed.coordinates.coords(),
                                 blocks.from_numeric_id(block_changed.block_id),
-                                block_changed.block_up,
+                                block_changed.block_rotation,
                                 &blocks,
                                 Some(&mut block_change_event_writer),
                             );

@@ -27,7 +27,7 @@ pub(crate) fn fill(
             structure.set_block_at(
                 rotated_block_pos,
                 block,
-                BlockFace::rotate_face(block_up, planet_face),
+                BlockFace::rotate_face(block_up, planet_face).into(),
                 blocks,
                 Some(event_writer),
             );

@@ -33,6 +33,54 @@ pub enum BlockProperty {
 }
 
 #[derive(Debug, PartialEq, Eq, Reflect, Default, Copy, Clone, Serialize, Deserialize, Hash)]
+pub struct BlockRotation {
+    /// The block's top face
+    pub block_up: BlockFace,
+    /// The rotation of the block in respect to its block up (for ramps and stuff like that)
+    pub sub_rotation: BlockSubRotation,
+}
+
+impl From<BlockFace> for BlockRotation {
+    fn from(value: BlockFace) -> Self {
+        Self {
+            block_up: value,
+            sub_rotation: BlockSubRotation::default(),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Reflect, Default, Copy, Clone, Serialize, Deserialize, Hash)]
+pub enum BlockSubRotation {
+    #[default]
+    None, // No rotation
+    Right, // 90 degrees to right
+    Left,  // 90 degress to left
+    Flip,  // 180 degree rotation
+}
+
+impl BlockSubRotation {
+    /// Returns the index of this rotation
+    pub fn index(&self) -> usize {
+        match *self {
+            BlockSubRotation::None => 0,
+            BlockSubRotation::Right => 1,
+            BlockSubRotation::Left => 2,
+            BlockSubRotation::Flip => 3,
+        }
+    }
+
+    pub fn from_index(index: usize) -> Self {
+        match index {
+            0 => Self::None,
+            1 => Self::Right,
+            2 => Self::Left,
+            3 => Self::Flip,
+            _ => panic!("Index must be 0 <= {index} <= 3"),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Reflect, Default, Copy, Clone, Serialize, Deserialize, Hash)]
 /// Represents the different faces of a block.
 ///
 /// Even non-cube blocks will have this.
@@ -137,7 +185,7 @@ impl BlockFace {
             3 => BlockFace::Bottom,
             4 => BlockFace::Front,
             5 => BlockFace::Back,
-            _ => panic!("Index must be 0 <= index <= 5"),
+            _ => panic!("Index must be 0 <= {index} <= 5"),
         }
     }
 

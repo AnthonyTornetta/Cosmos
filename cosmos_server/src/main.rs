@@ -51,7 +51,7 @@ fn main() {
 
     let server_settings = read_server_settings();
 
-    let ip = server_settings.ip;
+    let ip = server_settings.ip.clone();
 
     let mut app = App::new();
 

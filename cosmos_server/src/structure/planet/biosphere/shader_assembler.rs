@@ -1,3 +1,5 @@
+//! Assembles the shaders in the assets directory for terrain generation & gets it ready to be used by the server and sent to the clients.
+
 use std::{ffi::OsStr, fs};
 
 use bevy::{
@@ -16,6 +18,9 @@ use cosmos_core::{
 use crate::state::GameState;
 
 #[derive(Debug, Resource, Default)]
+/// Contains every shader loaded with its path and contents to send to clients
+///
+/// Vec<(path, contents)>
 pub struct CachedShaders(pub Vec<(String, String)>);
 
 fn assemble_shaders(mut commands: Commands, registered_biospheres: Res<Registry<RegisteredBiosphere>>) {

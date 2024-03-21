@@ -16,7 +16,7 @@ use crate::{
     },
 };
 
-use super::{blocks::AIR_BLOCK_ID, data::BlockData, Block, BlockFace};
+use super::{blocks::AIR_BLOCK_ID, data::BlockData, Block, BlockFace, BlockRotation, BlockSubRotation};
 
 /// This is sent whenever a player breaks a block
 #[derive(Debug, Event)]
@@ -49,8 +49,8 @@ pub struct BlockPlaceEvent {
     pub structure_block: StructureBlock,
     /// The placed block's id
     pub block_id: u16,
-    /// The block's top face
-    pub block_up: BlockFace,
+    /// The block's rotation
+    pub block_up: BlockRotation,
     /// The inventory slot this block came from
     pub inventory_slot: usize,
     /// The player who placed this block
@@ -117,7 +117,7 @@ fn handle_block_break_events(
             structure.remove_block_at(coord, &blocks, Some(&mut event_writer));
         } else if let Ok((mut inventory, build_mode, parent)) = inventory_query.get_mut(ev.breaker) {
             if let Ok(mut structure) = q_structure.get_mut(ev.structure_entity) {
-                let mut structure_blocks = vec![(ev.block.coords(), BlockFace::Top)];
+                let mut structure_blocks = vec![(ev.block.coords(), BlockRotation::default())];
 
                 if let (Some(build_mode), Some(parent)) = (build_mode, parent) {
                     structure_blocks = calculate_build_mode_blocks(
@@ -164,7 +164,7 @@ fn handle_block_break_events(
 }
 
 /// Ensure we're not double-placing any blocks, which could happen if you place on the symmetry line
-fn unique_push(vec: &mut Vec<(BlockCoordinate, BlockFace)>, item: (BlockCoordinate, BlockFace)) {
+fn unique_push(vec: &mut Vec<(BlockCoordinate, BlockRotation)>, item: (BlockCoordinate, BlockRotation)) {
     for already_there in vec.iter() {
         if already_there.0 == item.0 {
             return;
@@ -175,13 +175,13 @@ fn unique_push(vec: &mut Vec<(BlockCoordinate, BlockFace)>, item: (BlockCoordina
 }
 
 fn calculate_build_mode_blocks(
-    mut structure_blocks: Vec<(BlockCoordinate, BlockFace)>,
+    mut structure_blocks: Vec<(BlockCoordinate, BlockRotation)>,
     build_mode: &BuildMode,
     parent: &Parent,
     structure_entity: Entity,
     inventory: &mut Mut<'_, Inventory>,
     structure: &Structure,
-) -> Vec<(BlockCoordinate, BlockFace)> {
+) -> Vec<(BlockCoordinate, BlockRotation)> {
     if parent.get() != structure_entity {
         // Tried to place a block on a structure they're not in build mode on
 

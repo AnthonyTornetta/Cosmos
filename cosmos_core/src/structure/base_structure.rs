@@ -8,7 +8,7 @@ use bevy::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    block::{blocks::AIR_BLOCK_ID, Block, BlockFace},
+    block::{blocks::AIR_BLOCK_ID, Block, BlockRotation},
     physics::location::Location,
     registry::Registry,
 };
@@ -300,11 +300,11 @@ impl BaseStructure {
 
     /// Gets the block's up facing face at this location.
     ///
-    /// If no block was found, returns BlockFace::Top.
-    pub fn block_rotation(&self, coords: BlockCoordinate) -> BlockFace {
+    /// If no block was found, returns the default.
+    pub fn block_rotation(&self, coords: BlockCoordinate) -> BlockRotation {
         self.chunk_at_block_coordinates(coords)
             .map(|chunk| chunk.block_rotation(ChunkBlockCoordinate::for_block_coordinate(coords)))
-            .unwrap_or(BlockFace::Top)
+            .unwrap_or_default()
     }
 
     /// If the chunk is loaded, non-empty, returns the block at that coordinate.

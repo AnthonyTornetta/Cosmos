@@ -628,7 +628,7 @@ pub(crate) fn generate_chunks_from_gpu_data(
                         needs_generated_chunk.chunk.set_block_at(
                             ChunkBlockCoordinate::new(x as CoordinateType, y as CoordinateType, z as CoordinateType),
                             &block,
-                            face,
+                            face.into(),
                         );
                     } else if let Some(sea_level_block) = sea_level_block {
                         let sea_level_coordinate = biosphere.sea_level(structure_dimensions) as CoordinateType;
@@ -643,7 +643,7 @@ pub(crate) fn generate_chunks_from_gpu_data(
                             needs_generated_chunk.chunk.set_block_at(
                                 ChunkBlockCoordinate::new(x as CoordinateType, y as CoordinateType, z as CoordinateType),
                                 sea_level_block,
-                                face,
+                                face.into(),
                             );
                         }
                     }
