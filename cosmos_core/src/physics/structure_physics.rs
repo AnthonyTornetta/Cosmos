@@ -106,14 +106,14 @@ fn generate_colliders(
                                     BlockColliderMode::NormalCollider => {
                                         colliders.push((
                                             location + custom_collider.offset,
-                                            Rot::IDENTITY,
+                                            custom_collider.rotation,
                                             custom_collider.collider.clone(),
                                         ));
                                     }
                                     BlockColliderMode::SensorCollider => {
                                         sensor_colliders.push((
                                             location + custom_collider.offset,
-                                            Rot::IDENTITY,
+                                            custom_collider.rotation,
                                             custom_collider.collider.clone(),
                                         ));
                                     }
