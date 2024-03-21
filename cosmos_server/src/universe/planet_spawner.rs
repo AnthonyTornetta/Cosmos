@@ -27,7 +27,7 @@ use futures_lite::future;
 use rand::Rng;
 
 use crate::{
-    init::init_world::ServerSeed, persistence::is_sector_generated, rng::get_rng_for_sector, state::GameState,
+    init::init_world::ServerSeed, persistence::is_sector_generated, rng::get_rng_for_sector, settings::ServerSettings, state::GameState,
     structure::planet::server_planet_builder::ServerPlanetBuilder,
 };
 
@@ -84,7 +84,12 @@ fn spawn_planet(
     stars: Query<(&Location, &Star), With<Star>>,
     cache: Res<CachedSectors>,
     is_already_generating: Query<(), With<PlanetSpawnerAsyncTask>>,
+    server_settings: Res<ServerSettings>,
 ) {
+    if !server_settings.spawn_planets {
+        return;
+    }
+
     if !is_already_generating.is_empty() {
         // an async task is already running, don't make another one
         return;

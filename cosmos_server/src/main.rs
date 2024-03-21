@@ -5,9 +5,7 @@
 #![feature(duration_constructors)]
 #![feature(iter_array_chunks)]
 #![feature(iterator_try_collect)]
-// #![warn(missing_docs)]
-
-use std::env;
+#![warn(missing_docs)]
 
 use bevy::{core::TaskPoolThreadAssignmentPolicy, prelude::*};
 use bevy_mod_debugdump::schedule_graph;
@@ -16,6 +14,7 @@ use bevy_renet::{transport::NetcodeServerPlugin, RenetServerPlugin};
 use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
 
 use plugin::server_plugin::ServerPlugin;
+use settings::read_server_settings;
 use state::GameState;
 use thread_priority::{set_current_thread_priority, ThreadPriority};
 
@@ -37,6 +36,7 @@ pub mod plugin;
 pub mod projectiles;
 pub mod registry;
 pub mod rng;
+pub mod settings;
 pub mod shop;
 pub mod state;
 pub mod structure;
@@ -49,13 +49,9 @@ fn main() {
         info!("Successfully set main thread priority to max!");
     }
 
-    let args: Vec<String> = env::args().collect();
+    let server_settings = read_server_settings();
 
-    let ip = if args.len() > 1 {
-        Some(args.get(1).unwrap().to_owned())
-    } else {
-        None
-    };
+    let ip = server_settings.ip;
 
     let mut app = App::new();
 
@@ -95,7 +91,8 @@ fn main() {
             GameState::Playing,
             GameState::Playing,
         ))
-        .add_plugins((RenetServerPlugin, NetcodeServerPlugin, ServerPlugin { ip }));
+        .add_plugins((RenetServerPlugin, NetcodeServerPlugin, ServerPlugin { ip }))
+        .insert_resource(server_settings);
 
     if cfg!(feature = "print-schedule") {
         println!(

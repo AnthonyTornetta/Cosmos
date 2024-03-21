@@ -1837,6 +1837,7 @@ dependencies = [
  "bincode",
  "bitflags 2.4.2",
  "bytemuck",
+ "clap",
  "cosmos_core",
  "crossterm",
  "derive_more",
