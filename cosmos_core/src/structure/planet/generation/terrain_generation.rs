@@ -138,8 +138,15 @@ impl ComputeWorker for BiosphereShaderWorker {
 }
 
 #[derive(Clone, Resource, Serialize, Deserialize, Debug)]
+/// The permutation table sent to the GPU for terrain generation
+///
+/// This is generated on the server & sent to the clients
 pub struct GpuPermutationTable(pub Vec<U32Vec4>);
 
 impl GpuPermutationTable {
+    /// Size of the permutation table (number of u32s)
+    ///
+    /// Note the actual vector will be 1/4 this size because it stores
+    /// the u32s in pairs of 4.
     pub const TALBE_SIZE: usize = 2048;
 }
