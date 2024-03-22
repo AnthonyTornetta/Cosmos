@@ -12,7 +12,7 @@ use bevy::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    block::{blocks::AIR_BLOCK_ID, Block, BlockFace, BlockRotation},
+    block::{blocks::AIR_BLOCK_ID, Block, BlockRotation},
     ecs::NeedsDespawned,
     events::block_events::BlockChangedEvent,
     registry::{identifiable::Identifiable, Registry},

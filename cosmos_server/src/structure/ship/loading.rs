@@ -5,7 +5,7 @@ use bevy::{
     prelude::{in_state, App, Commands, Component, Entity, EventWriter, IntoSystemConfigs, Query, Res, Update, With},
 };
 use cosmos_core::{
-    block::{Block, BlockFace, BlockRotation},
+    block::{Block, BlockRotation},
     registry::Registry,
     structure::{
         loading::{ChunksNeedLoaded, StructureLoadingSet},

@@ -35,7 +35,7 @@ pub mod structure_iterator;
 pub mod systems;
 
 use crate::block::data::persistence::ChunkLoadBlockDataEvent;
-use crate::block::{Block, BlockFace, BlockRotation, BlockSubRotation};
+use crate::block::{Block, BlockFace, BlockRotation};
 use crate::ecs::NeedsDespawned;
 use crate::events::block_events::BlockChangedEvent;
 use crate::netty::NoSendEntity;

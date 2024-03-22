@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
-    block::{block_events::BlockInteractEvent, BlockFace, BlockRotation},
+    block::{block_events::BlockInteractEvent, BlockRotation},
     netty::{client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannelClient},
     structure::structure_block::StructureBlock,
 };

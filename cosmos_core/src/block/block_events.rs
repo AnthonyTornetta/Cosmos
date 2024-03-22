@@ -16,7 +16,7 @@ use crate::{
     },
 };
 
-use super::{blocks::AIR_BLOCK_ID, data::BlockData, Block, BlockFace, BlockRotation, BlockSubRotation};
+use super::{blocks::AIR_BLOCK_ID, data::BlockData, Block, BlockRotation};
 
 /// This is sent whenever a player breaks a block
 #[derive(Debug, Event)]
