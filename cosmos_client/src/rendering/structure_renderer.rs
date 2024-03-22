@@ -17,7 +17,7 @@ use bevy::render::primitives::Aabb;
 use bevy::tasks::{AsyncComputeTaskPool, Task};
 use bevy::transform::TransformBundle;
 use bevy::utils::hashbrown::HashMap;
-use cosmos_core::block::{Block, BlockFace};
+use cosmos_core::block::{Block, BlockFace, BlockSubRotation};
 use cosmos_core::events::block_events::BlockChangedEvent;
 use cosmos_core::physics::location::SECTOR_DIMENSIONS;
 use cosmos_core::registry::identifiable::Identifiable;
@@ -662,9 +662,9 @@ impl ChunkRenderer {
 
                 let mesh_builder = self.meshes.get_mut(&mat_id).unwrap();
 
-                let rotation = block_info.get_rotation();
+                let block_rotation = block_info.get_rotation();
 
-                for face in faces.iter().map(|x| BlockFace::rotate_face(*x, rotation.block_up)) {
+                for face in faces.iter().map(|x| BlockFace::rotate_face(*x, block_rotation.block_up)) {
                     let index = block_textures
                         .from_id(block.unlocalized_name())
                         .unwrap_or_else(|| block_textures.from_id("missing").expect("Missing texture should exist."));
@@ -675,15 +675,8 @@ impl ChunkRenderer {
                     };
 
                     let uvs = Rect::new(0.0, 0.0, 1.0, 1.0);
-                    // here
-                    let rotation = match rotation.block_up {
-                        BlockFace::Top => Quat::IDENTITY,
-                        BlockFace::Front => Quat::from_axis_angle(Vec3::X, PI / 2.0),
-                        BlockFace::Back => Quat::from_axis_angle(Vec3::X, -PI / 2.0),
-                        BlockFace::Left => Quat::from_axis_angle(Vec3::Z, PI / 2.0),
-                        BlockFace::Right => Quat::from_axis_angle(Vec3::Z, -PI / 2.0),
-                        BlockFace::Bottom => Quat::from_axis_angle(Vec3::X, PI),
-                    };
+
+                    let rotation = block_rotation.as_quat();
 
                     let mut one_mesh_only = false;
 

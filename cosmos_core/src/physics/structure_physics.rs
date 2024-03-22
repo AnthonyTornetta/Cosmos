@@ -81,13 +81,13 @@ fn generate_colliders(
         for y in offset.y..(offset.y + size) {
             for x in offset.x..(offset.x + size) {
                 let coord = ChunkBlockCoordinate::new(x, y, z);
-                let b: &Block = blocks.from_numeric_id(chunk.block_at(coord));
+                let block = blocks.from_numeric_id(chunk.block_at(coord));
 
-                let block_mass = b.density(); // mass = volume * density = 1*1*1*density = density
+                let block_mass = block.density(); // mass = volume * density = 1*1*1*density = density
 
                 temp_mass += block_mass;
 
-                let (is_empty, is_different) = match colliders_registry.from_id(b.unlocalized_name()).map(|x| &x.collider) {
+                let (is_empty, is_different) = match colliders_registry.from_id(block.unlocalized_name()).map(|x| &x.collider) {
                     Some(BlockColliderType::Full(mode)) => match mode {
                         BlockColliderMode::NormalCollider => (false, false),
                         BlockColliderMode::SensorCollider => {
@@ -101,21 +101,20 @@ fn generate_colliders(
                     Some(BlockColliderType::Empty) => (true, false),
                     Some(BlockColliderType::Custom(custom_colliders)) => {
                         if size == 1 {
+                            let block_rotation = chunk.block_rotation(coord).as_quat();
+
                             for custom_collider in custom_colliders.iter() {
+                                let loc = location + block_rotation.mul_vec3(custom_collider.offset);
+                                let rot = block_rotation.mul_quat(custom_collider.rotation);
+
+                                let collider_info = (loc, rot, custom_collider.collider.clone());
+
                                 match custom_collider.mode {
                                     BlockColliderMode::NormalCollider => {
-                                        colliders.push((
-                                            location + custom_collider.offset,
-                                            custom_collider.rotation,
-                                            custom_collider.collider.clone(),
-                                        ));
+                                        colliders.push(collider_info);
                                     }
                                     BlockColliderMode::SensorCollider => {
-                                        sensor_colliders.push((
-                                            location + custom_collider.offset,
-                                            custom_collider.rotation,
-                                            custom_collider.collider.clone(),
-                                        ));
+                                        sensor_colliders.push(collider_info);
                                     }
                                 }
                             }
@@ -123,7 +122,7 @@ fn generate_colliders(
 
                         (true, true)
                     }
-                    _ => panic!("Got None for block collider for block {}!", b.unlocalized_name()),
+                    _ => panic!("Got None for block collider for block {}!", block.unlocalized_name()),
                 };
 
                 if last_seen_empty.is_none() {

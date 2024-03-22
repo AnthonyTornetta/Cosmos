@@ -1,8 +1,9 @@
 //! Blocks are the smallest thing found on any structure
 
-use std::fmt::Display;
+use std::{f32::consts::PI, fmt::Display};
 
 use bevy::{
+    math::Quat,
     prelude::{App, States, Vec3},
     reflect::Reflect,
 };
@@ -38,6 +39,26 @@ pub struct BlockRotation {
     pub block_up: BlockFace,
     /// The rotation of the block in respect to its block up (for ramps and stuff like that)
     pub sub_rotation: BlockSubRotation,
+}
+
+impl BlockRotation {
+    /// Returns this rotation's representation as a quaternion
+    pub fn as_quat(&self) -> Quat {
+        match self.block_up {
+            BlockFace::Top => Quat::IDENTITY,
+            BlockFace::Front => Quat::from_axis_angle(Vec3::X, PI / 2.0),
+            BlockFace::Back => Quat::from_axis_angle(Vec3::X, -PI / 2.0),
+            BlockFace::Left => Quat::from_axis_angle(Vec3::Z, PI / 2.0),
+            BlockFace::Right => Quat::from_axis_angle(Vec3::Z, -PI / 2.0),
+            BlockFace::Bottom => Quat::from_axis_angle(Vec3::X, PI),
+        }
+        .mul_quat(match self.sub_rotation {
+            BlockSubRotation::None => Quat::IDENTITY,
+            BlockSubRotation::Right => Quat::from_axis_angle(Vec3::Y, -PI / 2.0),
+            BlockSubRotation::Left => Quat::from_axis_angle(Vec3::Y, PI / 2.0),
+            BlockSubRotation::Flip => Quat::from_axis_angle(Vec3::Y, PI),
+        })
+    }
 }
 
 impl From<BlockFace> for BlockRotation {
