@@ -48,8 +48,10 @@ impl BlockRotation {
             BlockFace::Top => Quat::IDENTITY,
             BlockFace::Front => Quat::from_axis_angle(Vec3::X, PI / 2.0),
             BlockFace::Back => Quat::from_axis_angle(Vec3::X, -PI / 2.0),
-            BlockFace::Left => Quat::from_axis_angle(Vec3::Z, PI / 2.0),
-            BlockFace::Right => Quat::from_axis_angle(Vec3::Z, -PI / 2.0),
+            BlockFace::Left => Quat::from_axis_angle(Vec3::Z, -PI / 2.0),
+            BlockFace::Right => Quat::from_axis_angle(Vec3::Y, PI)
+                .mul_quat(Quat::from_axis_angle(Vec3::Z, PI / 2.0))
+                .normalize(),
             BlockFace::Bottom => Quat::from_axis_angle(Vec3::X, PI),
         }
         .mul_quat(match self.sub_rotation {
@@ -58,6 +60,152 @@ impl BlockRotation {
             BlockSubRotation::Left => Quat::from_axis_angle(Vec3::Y, PI / 2.0),
             BlockSubRotation::Flip => Quat::from_axis_angle(Vec3::Y, PI),
         })
+    }
+
+    pub fn rotate_face(&self, face: BlockFace) -> BlockFace {
+        use BlockFace as BF;
+
+        let rotated_face = match self.sub_rotation {
+            BlockSubRotation::None => face,
+            BlockSubRotation::Flip => match face {
+                BF::Top | BF::Bottom => face,
+                _ => face.inverse(),
+            },
+            BlockSubRotation::Right => match face {
+                BF::Top | BF::Bottom => face,
+                BF::Back => BF::Right,
+                BF::Front => BF::Left,
+                BF::Left => BF::Back,
+                BF::Right => BF::Front,
+            },
+            BlockSubRotation::Left => match face {
+                BF::Top | BF::Bottom => face,
+                BF::Back => BF::Left,
+                BF::Front => BF::Right,
+                BF::Left => BF::Front,
+                BF::Right => BF::Back,
+            },
+        };
+
+        if self.block_up != BlockFace::Top {
+            println!("\t 1. {rotated_face:?}");
+        }
+
+        // let rotated = BlockFace::rotate_face(face, self.block_up);
+        BlockFace::rotate_face(rotated_face, self.block_up)
+
+        //     // bottom
+        //     match self.block_up {
+        //         BF::Top => match rotated {
+        //             BF::Top | BlockFace::Bottom => rotated,
+        //             BF::Left => match self.sub_rotation {
+        //                 BlockSubRotation::None => rotated,
+        //                 BlockSubRotation::Flip => BF::Right,
+        //                 BlockSubRotation::Left => BF::Back,
+        //                 BlockSubRotation::Right => BF::Front,
+        //             },
+        //             BF::Right => match self.sub_rotation {
+        //                 BlockSubRotation::None => rotated,
+        //                 BlockSubRotation::Flip => BF::Left,
+        //                 BlockSubRotation::Left => BF::Front,
+        //                 BlockSubRotation::Right => BF::Back,
+        //             },
+        //             BF::Front => match self.sub_rotation {
+        //                 BlockSubRotation::None => rotated,
+        //                 BlockSubRotation::Flip => BF::Back,
+        //                 BlockSubRotation::Left => BF::Left,
+        //                 BlockSubRotation::Right => BF::Right,
+        //             },
+        //             BF::Back => match self.sub_rotation {
+        //                 BlockSubRotation::None => rotated,
+        //                 BlockSubRotation::Flip => BF::Front,
+        //                 BlockSubRotation::Left => BF::Right,
+        //                 BlockSubRotation::Right => BF::Left,
+        //             },
+        //         },
+        //         BF::Bottom => match rotated {
+        //             BF::Top | BlockFace::Bottom => rotated,
+        //             BF::Left => match self.sub_rotation {
+        //                 BlockSubRotation::None => rotated,
+        //                 BlockSubRotation::Flip => BF::Right,
+        //                 BlockSubRotation::Left => BF::Front,
+        //                 BlockSubRotation::Right => BF::Back,
+        //             },
+        //             BF::Right => match self.sub_rotation {
+        //                 BlockSubRotation::None => rotated,
+        //                 BlockSubRotation::Flip => BF::Left,
+        //                 BlockSubRotation::Left => BF::Back,
+        //                 BlockSubRotation::Right => BF::Front,
+        //             },
+        //             BF::Front => match self.sub_rotation {
+        //                 BlockSubRotation::None => rotated,
+        //                 BlockSubRotation::Flip => BF::Back,
+        //                 BlockSubRotation::Left => BF::Right,
+        //                 BlockSubRotation::Right => BF::Left,
+        //             },
+        //             BF::Back => match self.sub_rotation {
+        //                 BlockSubRotation::None => rotated,
+        //                 BlockSubRotation::Flip => BF::Front,
+        //                 BlockSubRotation::Left => BF::Left,
+        //                 BlockSubRotation::Right => BF::Right,
+        //             },
+        //         },
+        //         BF::Right => match rotated {
+        //             BF::Right | BlockFace::Left => rotated, // OK
+        //             BF::Bottom => match self.sub_rotation {
+        //                 BlockSubRotation::None => rotated,
+        //                 BlockSubRotation::Flip => rotated.inverse(),
+        //                 BlockSubRotation::Left => BF::Front,
+        //                 BlockSubRotation::Right => BF::Back,
+        //             },
+        //             BF::Top => match self.sub_rotation {
+        //                 BlockSubRotation::None => rotated,
+        //                 BlockSubRotation::Flip => BF::Bottom,
+        //                 BlockSubRotation::Left => BF::Back,
+        //                 BlockSubRotation::Right => BF::Front,
+        //             },
+        //             BF::Front => match self.sub_rotation {
+        //                 BlockSubRotation::None => rotated,
+        //                 BlockSubRotation::Flip => BF::Back,
+        //                 BlockSubRotation::Left => BF::Top,
+        //                 BlockSubRotation::Right => BF::Bottom,
+        //             },
+        //             BF::Back => match self.sub_rotation {
+        //                 BlockSubRotation::None => rotated,
+        //                 BlockSubRotation::Flip => BF::Front,
+        //                 BlockSubRotation::Left => BF::Bottom,
+        //                 BlockSubRotation::Right => BF::Top,
+        //             },
+        //         },
+        //         BF::Left => match rotated {
+        //             BF::Right | BlockFace::Left => rotated,
+        //             BF::Bottom => match self.sub_rotation {
+        //                 BlockSubRotation::None => rotated,
+        //                 BlockSubRotation::Flip => BF::Top,
+        //                 BlockSubRotation::Left => BF::Front,
+        //                 BlockSubRotation::Right => BF::Back,
+        //             },
+        //             BF::Top => match self.sub_rotation {
+        //                 BlockSubRotation::None => rotated,
+        //                 BlockSubRotation::Flip => BF::Bottom,
+        //                 BlockSubRotation::Left => BF::Back,
+        //                 BlockSubRotation::Right => BF::Front,
+        //             },
+        //             BF::Front => match self.sub_rotation {
+        //                 BlockSubRotation::None => rotated,
+        //                 BlockSubRotation::Flip => BF::Back,
+        //                 BlockSubRotation::Left => BF::Bottom,
+        //                 BlockSubRotation::Right => BF::Top,
+        //             },
+        //             BF::Back => match self.sub_rotation {
+        //                 BlockSubRotation::None => rotated,
+        //                 BlockSubRotation::Flip => BF::Front,
+        //                 BlockSubRotation::Left => BF::Top,
+        //                 BlockSubRotation::Right => BF::Bottom,
+        //             },
+        //         },
+        //         _ => rotated,
+        //     }
     }
 }
 
@@ -277,10 +425,10 @@ impl BlockFace {
                 _ => face,
             },
             Self::Right => match face {
-                Self::Bottom => Self::Right,
                 Self::Right => Self::Top,
                 Self::Left => Self::Bottom,
-                Self::Top => Self::Left,
+                Self::Top => Self::Right,
+                Self::Bottom => Self::Left,
                 _ => face,
             },
             Self::Front => match face {

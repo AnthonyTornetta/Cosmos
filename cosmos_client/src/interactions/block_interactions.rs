@@ -128,7 +128,7 @@ pub(crate) fn process_player_interaction(
                             let block_up = if is_planet.is_some() {
                                 Planet::planet_face(structure, coords)
                             } else {
-                                BlockFace::Bottom
+                                BlockFace::Right
                             };
 
                             let block_sub_rotation = match coords.x % 4 {

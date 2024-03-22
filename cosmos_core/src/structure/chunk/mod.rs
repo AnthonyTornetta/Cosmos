@@ -275,3 +275,16 @@ pub struct ChunkUnloadEvent {
 pub(super) fn register(app: &mut App) {
     app.add_event::<ChunkUnloadEvent>().register_type::<Chunk>();
 }
+
+// #[cfg(test)]
+// mod tests {
+//     use crate::block::{BlockFace, BlockRotation, BlockSubRotation};
+
+//     #[test]
+//     fn test_quaternion() {
+//         let rot = BlockRotation {
+//             block_up: BlockFace::Right,
+//             sub_rotation: BlockSubRotation::
+//         }
+//     }
+// }
