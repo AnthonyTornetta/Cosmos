@@ -219,8 +219,13 @@ pub enum ServerReliableMessages {
         /// The entity that has these credits
         entity: Entity,
     },
-    TerrainGenJazz {
+    /// Shaders the client should run for LOD generation
+    TerrainGenerationShaders {
+        /// The shaders the client needs to know about
+        ///
+        /// Formatted as (file_path, shader code)
         shaders: Vec<(String, String)>,
+        /// The Permutation table the client should send to the GPU when generating the terrain
         permutation_table: GpuPermutationTable,
     },
 }

@@ -34,6 +34,7 @@ pub enum BlockProperty {
 }
 
 #[derive(Debug, PartialEq, Eq, Reflect, Default, Copy, Clone, Serialize, Deserialize, Hash)]
+/// Stores a block's rotation data
 pub struct BlockRotation {
     /// The block's top face
     pub block_up: BlockFace,
@@ -71,16 +72,21 @@ impl From<BlockFace> for BlockRotation {
 }
 
 #[derive(Debug, PartialEq, Eq, Reflect, Default, Copy, Clone, Serialize, Deserialize, Hash)]
+/// Block's rotation in addition to its BlockFace rotation (rotation around the Y axis relative to its BlockUp direction)
 pub enum BlockSubRotation {
     #[default]
-    None, // No rotation
-    Right, // 90 degrees to right
-    Left,  // 90 degress to left
-    Flip,  // 180 degree rotation
+    /// No rotation
+    None,
+    /// 90 degree rotation clockwise
+    Right,
+    /// 90 degree rotation counter-clockwise
+    Left,
+    /// 180 degree rotation
+    Flip,
 }
 
 impl BlockSubRotation {
-    /// Returns the index of this rotation
+    /// Returns the index of this rotation. For use in conjunction with [`Self::from_index`]
     pub fn index(&self) -> usize {
         match *self {
             BlockSubRotation::None => 0,
@@ -90,6 +96,7 @@ impl BlockSubRotation {
         }
     }
 
+    /// Gets the [`BlockSubRotation`] from its index - based on [`Self::index`]
     pub fn from_index(index: usize) -> Self {
         match index {
             0 => Self::None,

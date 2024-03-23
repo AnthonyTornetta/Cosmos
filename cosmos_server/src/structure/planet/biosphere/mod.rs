@@ -20,7 +20,7 @@ use cosmos_core::{
         chunk::Chunk,
         coordinates::ChunkCoordinate,
         planet::{
-            biosphere::{BiosphereMarker, RegisteredBiosphere},
+            biosphere::{Biosphere, BiosphereMarker},
             generation::{
                 biome::{Biome, BiosphereBiomesRegistry},
                 terrain_generation::GpuPermutationTable,
@@ -143,9 +143,8 @@ pub fn register_biosphere<T: BiosphereMarkerComponent + Default + Clone, E: Send
     app.add_event::<E>()
         .add_systems(
             Startup,
-            move |mut instance_registry: ResMut<Registry<RegisteredBiosphere>>,
-                  mut temperature_registry: ResMut<BiosphereTemperatureRegistry>| {
-                instance_registry.register(RegisteredBiosphere::new(biosphere_id, sea_level_percent, sea_level_block.clone()));
+            move |mut instance_registry: ResMut<Registry<Biosphere>>, mut temperature_registry: ResMut<BiosphereTemperatureRegistry>| {
+                instance_registry.register(Biosphere::new(biosphere_id, sea_level_percent, sea_level_block.clone()));
                 temperature_registry.register(biosphere_id.to_owned(), temperature_range);
             },
         )
@@ -284,7 +283,7 @@ fn on_connect(
         server.send_message(
             ev.client_id,
             NettyChannelServer::Reliable,
-            cosmos_encoder::serialize(&ServerReliableMessages::TerrainGenJazz {
+            cosmos_encoder::serialize(&ServerReliableMessages::TerrainGenerationShaders {
                 shaders: shaders.0.clone(),
                 permutation_table: permutation_table.clone(),
             }),
@@ -293,7 +292,7 @@ fn on_connect(
 }
 
 pub(super) fn register(app: &mut App) {
-    sync_registry::<RegisteredBiosphere>(app);
+    sync_registry::<Biosphere>(app);
     sync_registry::<Biome>(app);
     sync_registry::<BiosphereBiomesRegistry>(app);
 

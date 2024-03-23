@@ -9,7 +9,7 @@ use crate::structure::planet::unload_chunks_far_from_players;
 use bevy::log::warn;
 use bevy::prelude::{
     in_state, App, BuildChildren, Component, Deref, DerefMut, DespawnRecursiveExt, EventReader, EventWriter, GlobalTransform,
-    IntoSystemConfigs, Mesh, PointLight, PointLightBundle, Quat, Rect, Resource, Transform, Update, Vec3, VisibilityBundle, With,
+    IntoSystemConfigs, Mesh, PointLight, PointLightBundle, Rect, Resource, Transform, Update, Vec3, VisibilityBundle, With,
 };
 use bevy::reflect::Reflect;
 use bevy::render::mesh::{MeshVertexAttribute, VertexAttributeValues};
@@ -17,7 +17,7 @@ use bevy::render::primitives::Aabb;
 use bevy::tasks::{AsyncComputeTaskPool, Task};
 use bevy::transform::TransformBundle;
 use bevy::utils::hashbrown::HashMap;
-use cosmos_core::block::{Block, BlockFace, BlockSubRotation};
+use cosmos_core::block::{Block, BlockFace};
 use cosmos_core::events::block_events::BlockChangedEvent;
 use cosmos_core::physics::location::SECTOR_DIMENSIONS;
 use cosmos_core::registry::identifiable::Identifiable;
@@ -31,7 +31,6 @@ use cosmos_core::structure::Structure;
 use cosmos_core::utils::array_utils::expand;
 use futures_lite::future;
 use std::collections::HashSet;
-use std::f32::consts::PI;
 use std::mem::swap;
 
 use crate::{Assets, Commands, Entity, Handle, Query, Res, ResMut};
