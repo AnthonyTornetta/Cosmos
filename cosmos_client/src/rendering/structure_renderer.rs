@@ -570,7 +570,7 @@ impl ChunkRenderer {
             if (z != CHUNK_DIMENSIONS - 1 && check(chunk, coords.front()))
                 || (z == CHUNK_DIMENSIONS - 1 && (front.map(|c| check(c, ChunkBlockCoordinate::new(x, y, 0))).unwrap_or(true)))
             {
-                faces.push(BlockFace::Back);
+                faces.push(BlockFace::Front);
             }
             // back
             if (z != 0 && check(chunk, coords.back().expect("Checked in first condition")))
@@ -579,7 +579,7 @@ impl ChunkRenderer {
                         .map(|c| check(c, ChunkBlockCoordinate::new(x, y, CHUNK_DIMENSIONS - 1)))
                         .unwrap_or(true)))
             {
-                faces.push(BlockFace::Front);
+                faces.push(BlockFace::Back);
             }
 
             if !faces.is_empty() {
@@ -605,16 +605,28 @@ impl ChunkRenderer {
 
                 let block_rotation = block_info.get_rotation();
 
-                if block_rotation.block_up == BlockFace::Right {
-                    faces.iter().for_each(|x| {
-                        println!("{x:?}");
-                        println!("\t 2. {:?}", block_rotation.rotate_face(*x));
-                    });
-                }
+                // if block_rotation.block_up == BlockFace::Right {
+                //     faces.iter().for_each(|x| {
+                //         println!("{x:?}");
+                //         println!("\t 2. {:?}", block_rotation.rotate_face(*x));
+                //     });
+                // }
 
                 let rotation = block_rotation.as_quat();
 
-                for face in faces.iter().map(|x| block_rotation.rotate_face(*x)) {
+                if block_rotation.block_up != BlockFace::Top {
+                    println!("{block_rotation:?}");
+                }
+
+                for face in faces.iter().map(|x| {
+                    let res = block_rotation.rotate_face(*x);
+
+                    if block_rotation.block_up != BlockFace::Top {
+                        println!("{x:?} -> {res:?}");
+                    }
+
+                    res
+                }) {
                     let index = block_textures
                         .from_id(block.unlocalized_name())
                         .unwrap_or_else(|| block_textures.from_id("missing").expect("Missing texture should exist."));
