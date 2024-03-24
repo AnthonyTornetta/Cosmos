@@ -265,7 +265,14 @@ impl BlockFace {
         Self::rotate_face(self, BlockFace::Front)
     }
 
-    /// BlockFace::Top will result in no rotation being made
+    /// Rotates a block face assuming it's "up" orientation is [`BlockFace::Top`].
+    /// For example, if `face` is [`BlockFace::Left`], and `top_face` is [`BlockFace::Right`],
+    /// this means the "top" direction of this block is facing to +X direction. So, the +Y direction
+    /// would then be [`BlockFace::Left`], so this function would return the [`BlockFace`] that
+    /// represents the +Y direction - [`BlockFace::Top`].
+    ///
+    /// - `face` - The face of the block being rotated
+    /// - `top_face` - The face to rotate the given face by. [`BlockFace::Top`] will result in no rotation being made
     pub fn rotate_face(face: BlockFace, top_face: BlockFace) -> BlockFace {
         match top_face {
             Self::Top => face,
@@ -416,6 +423,10 @@ impl Block {
         self.property_flags & BlockProperty::Empty.id() != 0
     }
 
+    /// Returns true if this block can have sub-rotations.
+    ///
+    /// If this is enabled on a full block, instead of sub-rotations the block will
+    /// have its front face equal the top face of the block it was placed on.
     #[inline]
     pub fn is_fully_rotatable(&self) -> bool {
         self.property_flags & BlockProperty::FullyRotatable.id() != 0
