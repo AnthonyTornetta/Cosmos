@@ -343,7 +343,7 @@ impl BlockProperty {
 ///
 /// A block takes a maximum of 1x1x1 meters of space, but can take up less than that.
 pub struct Block {
-    visibility: u8,
+    property_flags: u8,
     id: u16,
     unlocalized_name: String,
     density: f32,
@@ -383,7 +383,7 @@ impl Block {
         mining_resistance: f32,
     ) -> Self {
         Self {
-            visibility: BlockProperty::create_id(properties),
+            property_flags: BlockProperty::create_id(properties),
             id,
             unlocalized_name,
             density,
@@ -401,19 +401,24 @@ impl Block {
     /// Returns true if this block is transparent
     #[inline]
     pub fn is_transparent(&self) -> bool {
-        self.visibility & BlockProperty::Transparent.id() != 0
+        self.property_flags & BlockProperty::Transparent.id() != 0
     }
 
     /// Returns true if this block takes up the full 1x1x1 meters of space
     #[inline]
     pub fn is_full(&self) -> bool {
-        self.visibility & BlockProperty::Full.id() != 0
+        self.property_flags & BlockProperty::Full.id() != 0
     }
 
     /// Returns true if this block takes up no space
     #[inline]
     pub fn is_empty(&self) -> bool {
-        self.visibility & BlockProperty::Empty.id() != 0
+        self.property_flags & BlockProperty::Empty.id() != 0
+    }
+
+    #[inline]
+    pub fn is_fully_rotatable(&self) -> bool {
+        self.property_flags & BlockProperty::FullyRotatable.id() != 0
     }
 
     /// Returns the density of this block

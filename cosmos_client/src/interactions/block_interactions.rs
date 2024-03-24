@@ -3,13 +3,13 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::{QueryFilter, RapierContext, DEFAULT_WORLD_ID};
 use cosmos_core::{
-    block::{block_events::BlockInteractEvent, BlockFace, BlockRotation, BlockSubRotation},
+    block::{block_events::BlockInteractEvent, Block, BlockFace, BlockRotation, BlockSubRotation},
     blockitems::BlockItems,
     inventory::Inventory,
     item::Item,
     physics::structure_physics::ChunkPhysicsPart,
     registry::Registry,
-    structure::{planet::Planet, ship::pilot::Pilot, structure_block::StructureBlock, Structure},
+    structure::{coordinates::UnboundBlockCoordinate, planet::Planet, ship::pilot::Pilot, structure_block::StructureBlock, Structure},
 };
 
 use crate::{
@@ -41,6 +41,7 @@ pub(crate) fn process_player_interaction(
     mut interact_writer: EventWriter<BlockInteractEvent>,
     hotbar: Query<&Hotbar>,
     items: Res<Registry<Item>>,
+    blocks: Res<Registry<Block>>,
     block_items: Res<BlockItems>,
     mut commands: Commands,
 ) {
@@ -91,78 +92,191 @@ pub(crate) fn process_player_interaction(
 
     let point = structure_g_transform.compute_matrix().inverse().transform_point3(moved_point);
 
-    if let Ok(coords) = structure.relative_coords_to_local_coords_checked(point.x, point.y, point.z) {
-        let looking_at_block = Some((parent.get(), StructureBlock::new(coords)));
-        if let Some(mut looking_at) = looking_at {
-            looking_at.looking_at_block = looking_at_block;
-        } else {
-            commands.entity(player_entity).insert(LookingAt { looking_at_block });
-        }
+    let Ok(coords) = structure.relative_coords_to_local_coords_checked(point.x, point.y, point.z) else {
+        return;
+    };
+
+    let looking_at_block = Some((parent.get(), StructureBlock::new(coords)));
+    if let Some(mut looking_at) = looking_at {
+        looking_at.looking_at_block = looking_at_block;
+    } else {
+        commands.entity(player_entity).insert(LookingAt { looking_at_block });
     }
 
     if input_handler.check_just_pressed(CosmosInputs::BreakBlock) {
-        if let Ok(coords) = structure.relative_coords_to_local_coords_checked(point.x, point.y, point.z) {
-            break_writer.send(RequestBlockBreakEvent {
-                structure_entity: structure.get_entity().unwrap(),
-                block: StructureBlock::new(coords),
-            });
-        }
+        break_writer.send(RequestBlockBreakEvent {
+            structure_entity: structure.get_entity().unwrap(),
+            block: StructureBlock::new(coords),
+        });
     }
 
     if input_handler.check_just_pressed(CosmosInputs::PlaceBlock) {
-        if let Ok(hotbar) = hotbar.get_single() {
+        (|| {
+            let Ok(hotbar) = hotbar.get_single() else {
+                return;
+            };
             let inventory_slot = hotbar.selected_slot();
 
-            if let Some(is) = inventory.itemstack_at(inventory_slot) {
-                let item = items.from_numeric_id(is.item_id());
+            let Some(is) = inventory.itemstack_at(inventory_slot) else {
+                return;
+            };
 
-                if let Some(block_id) = block_items.block_from_item(item) {
-                    let moved_point = intersection.point + intersection.normal * 0.75;
+            let item = items.from_numeric_id(is.item_id());
 
-                    let point = structure_g_transform.compute_matrix().inverse().transform_point3(moved_point);
+            let Some(block_id) = block_items.block_from_item(item) else {
+                return;
+            };
 
-                    if let Ok(coords) = structure.relative_coords_to_local_coords_checked(point.x, point.y, point.z) {
-                        if structure.is_within_blocks(coords) {
-                            inventory.decrease_quantity_at(inventory_slot, 1);
+            let block = blocks.from_numeric_id(block_id);
 
-                            let block_up = if is_planet.is_some() {
-                                Planet::planet_face(structure, coords)
-                            } else {
-                                BlockFace::Bottom
-                            };
+            let moved_point = intersection.point + intersection.normal * 0.75;
 
-                            let block_sub_rotation = match coords.x % 4 {
-                                0 => BlockSubRotation::None,
-                                1 => BlockSubRotation::Right,
-                                2 => BlockSubRotation::Left,
-                                _ => BlockSubRotation::Flip,
-                            };
+            let point = structure_g_transform.compute_matrix().inverse().transform_point3(moved_point);
 
-                            place_writer.send(RequestBlockPlaceEvent {
-                                structure_entity: structure.get_entity().unwrap(),
-                                block: StructureBlock::new(coords),
-                                inventory_slot,
-                                block_id,
-                                block_up: BlockRotation {
-                                    block_up,
-                                    sub_rotation: block_sub_rotation,
-                                },
-                            });
+            let Ok(place_at_coords) = structure.relative_coords_to_local_coords_checked(point.x, point.y, point.z) else {
+                return;
+            };
+
+            if !structure.is_within_blocks(place_at_coords) {
+                return;
+            }
+
+            inventory.decrease_quantity_at(inventory_slot, 1);
+
+            let block_up = if block.is_fully_rotatable() {
+                let delta = UnboundBlockCoordinate::from(place_at_coords) - UnboundBlockCoordinate::from(coords);
+
+                match delta {
+                    UnboundBlockCoordinate { x: -1, y: 0, z: 0 } => BlockFace::Left,
+                    UnboundBlockCoordinate { x: 1, y: 0, z: 0 } => BlockFace::Right,
+                    UnboundBlockCoordinate { x: 0, y: -1, z: 0 } => BlockFace::Bottom,
+                    UnboundBlockCoordinate { x: 0, y: 1, z: 0 } => BlockFace::Top,
+                    UnboundBlockCoordinate { x: 0, y: 0, z: -1 } => BlockFace::Back,
+                    UnboundBlockCoordinate { x: 0, y: 0, z: 1 } => BlockFace::Front,
+                    _ => return, // invalid direction, something wonky happened w/ the block selection logic
+                }
+            } else {
+                if is_planet.is_some() {
+                    Planet::planet_face(structure, place_at_coords)
+                } else {
+                    BlockFace::Top
+                }
+            };
+
+            let point = (point - point.floor()) - Vec3::new(0.5, 0.5, 0.5);
+
+            let block_sub_rotation = match block_up {
+                BlockFace::Top => {
+                    if point.x.abs() > point.z.abs() {
+                        if point.x < 0.0 {
+                            BlockSubRotation::Left
+                        } else {
+                            BlockSubRotation::Right
+                        }
+                    } else {
+                        if point.z < 0.0 {
+                            BlockSubRotation::None
+                        } else {
+                            BlockSubRotation::Flip
                         }
                     }
                 }
-            }
-        }
+                BlockFace::Bottom => {
+                    if point.x.abs() > point.z.abs() {
+                        if point.x < 0.0 {
+                            BlockSubRotation::Left
+                        } else {
+                            BlockSubRotation::Right
+                        }
+                    } else {
+                        if point.z < 0.0 {
+                            BlockSubRotation::Flip
+                        } else {
+                            BlockSubRotation::None
+                        }
+                    }
+                }
+                BlockFace::Right => {
+                    if point.y.abs() > point.z.abs() {
+                        if point.y < 0.0 {
+                            BlockSubRotation::Right
+                        } else {
+                            BlockSubRotation::Left
+                        }
+                    } else {
+                        if point.z < 0.0 {
+                            BlockSubRotation::None
+                        } else {
+                            BlockSubRotation::Flip
+                        }
+                    }
+                }
+                BlockFace::Left => {
+                    if point.y.abs() > point.z.abs() {
+                        if point.y < 0.0 {
+                            BlockSubRotation::Left
+                        } else {
+                            BlockSubRotation::Right
+                        }
+                    } else {
+                        if point.z < 0.0 {
+                            BlockSubRotation::None
+                        } else {
+                            BlockSubRotation::Flip
+                        }
+                    }
+                }
+                BlockFace::Front => {
+                    if point.x.abs() > point.y.abs() {
+                        if point.x < 0.0 {
+                            BlockSubRotation::Left
+                        } else {
+                            BlockSubRotation::Right
+                        }
+                    } else {
+                        if point.y < 0.0 {
+                            BlockSubRotation::Flip
+                        } else {
+                            BlockSubRotation::None
+                        }
+                    }
+                }
+                BlockFace::Back => {
+                    if point.x.abs() > point.y.abs() {
+                        if point.x < 0.0 {
+                            BlockSubRotation::Left
+                        } else {
+                            BlockSubRotation::Right
+                        }
+                    } else {
+                        if point.y < 0.0 {
+                            BlockSubRotation::None
+                        } else {
+                            BlockSubRotation::Flip
+                        }
+                    }
+                }
+            };
+
+            place_writer.send(RequestBlockPlaceEvent {
+                structure_entity: structure.get_entity().unwrap(),
+                block: StructureBlock::new(place_at_coords),
+                inventory_slot,
+                block_id,
+                block_up: BlockRotation {
+                    block_up,
+                    sub_rotation: block_sub_rotation,
+                },
+            });
+        })();
     }
 
     if input_handler.check_just_pressed(CosmosInputs::Interact) {
-        if let Ok(coords) = structure.relative_coords_to_local_coords_checked(point.x, point.y, point.z) {
-            interact_writer.send(BlockInteractEvent {
-                structure_entity: structure.get_entity().unwrap(),
-                structure_block: StructureBlock::new(coords),
-                interactor: player_entity,
-            });
-        }
+        interact_writer.send(BlockInteractEvent {
+            structure_entity: structure.get_entity().unwrap(),
+            structure_block: StructureBlock::new(coords),
+            interactor: player_entity,
+        });
     }
 }
 
