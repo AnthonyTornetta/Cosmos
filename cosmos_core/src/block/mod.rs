@@ -105,6 +105,33 @@ impl BlockRotation {
                     BF::Front => BF::Front,
                 },
             },
+            BF::Left => match self.sub_rotation {
+                BlockSubRotation::None => BlockFace::rotate_face(face, self.block_up),
+                BlockSubRotation::Right => match face {
+                    BF::Top => BF::Front,
+                    BF::Bottom => BF::Back,
+                    BF::Right => BF::Bottom,
+                    BF::Left => BF::Top,
+                    BF::Back => BF::Right,
+                    BF::Front => BF::Left,
+                },
+                BlockSubRotation::Left => match face {
+                    BF::Top => BF::Back,
+                    BF::Bottom => BF::Front,
+                    BF::Right => BF::Bottom,
+                    BF::Left => BF::Top,
+                    BF::Back => BF::Left,
+                    BF::Front => BF::Right,
+                },
+                BlockSubRotation::Flip => match face {
+                    BF::Top => BF::Right,
+                    BF::Bottom => BF::Left,
+                    BF::Right => BF::Bottom,
+                    BF::Left => BF::Top,
+                    BF::Back => BF::Back,
+                    BF::Front => BF::Front,
+                },
+            },
             _ => {
                 let as_quat = self.as_quat();
 
@@ -515,10 +542,10 @@ impl BlockFace {
                 _ => face,
             },
             Self::Left => match face {
-                Self::Bottom => Self::Left,
+                Self::Top => Self::Left,
+                Self::Bottom => Self::Right,
                 Self::Right => Self::Bottom,
                 Self::Left => Self::Top,
-                Self::Top => Self::Right,
                 Self::Back => Self::Front,
                 Self::Front => Self::Back,
             },
