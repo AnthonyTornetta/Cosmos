@@ -49,7 +49,9 @@ impl BlockRotation {
             BlockFace::Top => Quat::IDENTITY,
             BlockFace::Front => Quat::from_axis_angle(Vec3::X, PI / 2.0),
             BlockFace::Back => Quat::from_axis_angle(Vec3::X, -PI / 2.0),
-            BlockFace::Left => Quat::from_axis_angle(Vec3::Z, -PI / 2.0),
+            BlockFace::Left => Quat::from_axis_angle(Vec3::Y, PI)
+                .mul_quat(Quat::from_axis_angle(-Vec3::Z, PI / 2.0))
+                .normalize(),
             BlockFace::Right => Quat::from_axis_angle(Vec3::Y, PI)
                 .mul_quat(Quat::from_axis_angle(Vec3::Z, PI / 2.0))
                 .normalize(),

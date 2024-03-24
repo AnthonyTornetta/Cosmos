@@ -199,30 +199,30 @@ pub(crate) fn process_player_interaction(
                 BlockFace::Right => {
                     if point.y.abs() > point.z.abs() {
                         if point.y < 0.0 {
-                            BlockSubRotation::Right
-                        } else {
                             BlockSubRotation::Left
+                        } else {
+                            BlockSubRotation::Right
                         }
                     } else {
                         if point.z < 0.0 {
-                            BlockSubRotation::None
-                        } else {
                             BlockSubRotation::Flip
+                        } else {
+                            BlockSubRotation::None
                         }
                     }
                 }
                 BlockFace::Left => {
                     if point.y.abs() > point.z.abs() {
                         if point.y < 0.0 {
-                            BlockSubRotation::Left
-                        } else {
                             BlockSubRotation::Right
+                        } else {
+                            BlockSubRotation::Left
                         }
                     } else {
                         if point.z < 0.0 {
-                            BlockSubRotation::None
-                        } else {
                             BlockSubRotation::Flip
+                        } else {
+                            BlockSubRotation::None
                         }
                     }
                 }
