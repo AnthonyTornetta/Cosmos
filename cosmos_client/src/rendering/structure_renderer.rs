@@ -17,7 +17,7 @@ use bevy::render::primitives::Aabb;
 use bevy::tasks::{AsyncComputeTaskPool, Task};
 use bevy::transform::TransformBundle;
 use bevy::utils::hashbrown::HashMap;
-use cosmos_core::block::{Block, BlockFace, BlockRotation};
+use cosmos_core::block::{Block, BlockFace};
 use cosmos_core::events::block_events::BlockChangedEvent;
 use cosmos_core::physics::location::SECTOR_DIMENSIONS;
 use cosmos_core::registry::identifiable::Identifiable;
@@ -605,28 +605,9 @@ impl ChunkRenderer {
 
                 let block_rotation = block_info.get_rotation();
 
-                // if block_rotation.block_up == BlockFace::Right {
-                //     faces.iter().for_each(|x| {
-                //         println!("{x:?}");
-                //         println!("\t 2. {:?}", block_rotation.rotate_face(*x));
-                //     });
-                // }
-
                 let rotation = block_rotation.as_quat();
 
-                if block_rotation != BlockRotation::IDENTITY {
-                    println!("{block_rotation:?}");
-                }
-
-                for face in faces.iter().map(|x| {
-                    let res = block_rotation.rotate_face(*x);
-
-                    if block_rotation != BlockRotation::IDENTITY {
-                        println!("{x:?} -> {res:?}");
-                    }
-
-                    res
-                }) {
+                for face in faces.iter().map(|x| block_rotation.rotate_face(*x)) {
                     let index = block_textures
                         .from_id(block.unlocalized_name())
                         .unwrap_or_else(|| block_textures.from_id("missing").expect("Missing texture should exist."));
@@ -656,9 +637,6 @@ impl ChunkRenderer {
 
                     for norm in mesh_info.normals.iter_mut() {
                         *norm = rotation.mul_vec3((*norm).into()).into();
-                        // if block_rotation.block_up == BlockFace::Right {
-                        //     println!("{face:?} -> {norm:?}");
-                        // }
                     }
 
                     let additional_info = material_definition.add_material_data(block_id, &mesh_info);
