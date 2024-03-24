@@ -143,10 +143,10 @@ pub(crate) fn process_player_interaction(
 
             inventory.decrease_quantity_at(inventory_slot, 1);
 
-            let block_up = if block.is_fully_rotatable() {
+            let (block_up, block_sub_rotation) = if block.is_fully_rotatable() {
                 let delta = UnboundBlockCoordinate::from(place_at_coords) - UnboundBlockCoordinate::from(coords);
 
-                match delta {
+                let block_up = match delta {
                     UnboundBlockCoordinate { x: -1, y: 0, z: 0 } => BlockFace::Left,
                     UnboundBlockCoordinate { x: 1, y: 0, z: 0 } => BlockFace::Right,
                     UnboundBlockCoordinate { x: 0, y: -1, z: 0 } => BlockFace::Bottom,
@@ -154,108 +154,122 @@ pub(crate) fn process_player_interaction(
                     UnboundBlockCoordinate { x: 0, y: 0, z: -1 } => BlockFace::Back,
                     UnboundBlockCoordinate { x: 0, y: 0, z: 1 } => BlockFace::Front,
                     _ => return, // invalid direction, something wonky happened w/ the block selection logic
+                };
+
+                if block.is_full() {
+                    let block_up = BlockFace::rotate_face(block_up, BlockFace::Front);
+
+                    match block_up {
+                        BlockFace::Left => (BlockFace::Top, BlockSubRotation::Right),
+                        BlockFace::Right => (BlockFace::Top, BlockSubRotation::Left),
+                        _ => (block_up, BlockSubRotation::None),
+                    }
+                } else {
+                    let point = (point - point.floor()) - Vec3::new(0.5, 0.5, 0.5);
+
+                    let block_sub_rotation = match block_up {
+                        BlockFace::Top => {
+                            if point.x.abs() > point.z.abs() {
+                                if point.x < 0.0 {
+                                    BlockSubRotation::Left
+                                } else {
+                                    BlockSubRotation::Right
+                                }
+                            } else {
+                                if point.z < 0.0 {
+                                    BlockSubRotation::None
+                                } else {
+                                    BlockSubRotation::Flip
+                                }
+                            }
+                        }
+                        BlockFace::Bottom => {
+                            if point.x.abs() > point.z.abs() {
+                                if point.x < 0.0 {
+                                    BlockSubRotation::Left
+                                } else {
+                                    BlockSubRotation::Right
+                                }
+                            } else {
+                                if point.z < 0.0 {
+                                    BlockSubRotation::Flip
+                                } else {
+                                    BlockSubRotation::None
+                                }
+                            }
+                        }
+                        BlockFace::Right => {
+                            if point.y.abs() > point.z.abs() {
+                                if point.y < 0.0 {
+                                    BlockSubRotation::Left
+                                } else {
+                                    BlockSubRotation::Right
+                                }
+                            } else {
+                                if point.z < 0.0 {
+                                    BlockSubRotation::Flip
+                                } else {
+                                    BlockSubRotation::None
+                                }
+                            }
+                        }
+                        BlockFace::Left => {
+                            if point.y.abs() > point.z.abs() {
+                                if point.y < 0.0 {
+                                    BlockSubRotation::Right
+                                } else {
+                                    BlockSubRotation::Left
+                                }
+                            } else {
+                                if point.z < 0.0 {
+                                    BlockSubRotation::Flip
+                                } else {
+                                    BlockSubRotation::None
+                                }
+                            }
+                        }
+                        BlockFace::Front => {
+                            if point.x.abs() > point.y.abs() {
+                                if point.x < 0.0 {
+                                    BlockSubRotation::Left
+                                } else {
+                                    BlockSubRotation::Right
+                                }
+                            } else {
+                                if point.y < 0.0 {
+                                    BlockSubRotation::Flip
+                                } else {
+                                    BlockSubRotation::None
+                                }
+                            }
+                        }
+                        BlockFace::Back => {
+                            if point.x.abs() > point.y.abs() {
+                                if point.x < 0.0 {
+                                    BlockSubRotation::Left
+                                } else {
+                                    BlockSubRotation::Right
+                                }
+                            } else {
+                                if point.y < 0.0 {
+                                    BlockSubRotation::None
+                                } else {
+                                    BlockSubRotation::Flip
+                                }
+                            }
+                        }
+                    };
+
+                    (block_up, block_sub_rotation)
                 }
             } else {
-                if is_planet.is_some() {
+                let block_up = if is_planet.is_some() {
                     Planet::planet_face(structure, place_at_coords)
                 } else {
                     BlockFace::Top
-                }
-            };
+                };
 
-            let point = (point - point.floor()) - Vec3::new(0.5, 0.5, 0.5);
-
-            let block_sub_rotation = match block_up {
-                BlockFace::Top => {
-                    if point.x.abs() > point.z.abs() {
-                        if point.x < 0.0 {
-                            BlockSubRotation::Left
-                        } else {
-                            BlockSubRotation::Right
-                        }
-                    } else {
-                        if point.z < 0.0 {
-                            BlockSubRotation::None
-                        } else {
-                            BlockSubRotation::Flip
-                        }
-                    }
-                }
-                BlockFace::Bottom => {
-                    if point.x.abs() > point.z.abs() {
-                        if point.x < 0.0 {
-                            BlockSubRotation::Left
-                        } else {
-                            BlockSubRotation::Right
-                        }
-                    } else {
-                        if point.z < 0.0 {
-                            BlockSubRotation::Flip
-                        } else {
-                            BlockSubRotation::None
-                        }
-                    }
-                }
-                BlockFace::Right => {
-                    if point.y.abs() > point.z.abs() {
-                        if point.y < 0.0 {
-                            BlockSubRotation::Left
-                        } else {
-                            BlockSubRotation::Right
-                        }
-                    } else {
-                        if point.z < 0.0 {
-                            BlockSubRotation::Flip
-                        } else {
-                            BlockSubRotation::None
-                        }
-                    }
-                }
-                BlockFace::Left => {
-                    if point.y.abs() > point.z.abs() {
-                        if point.y < 0.0 {
-                            BlockSubRotation::Right
-                        } else {
-                            BlockSubRotation::Left
-                        }
-                    } else {
-                        if point.z < 0.0 {
-                            BlockSubRotation::Flip
-                        } else {
-                            BlockSubRotation::None
-                        }
-                    }
-                }
-                BlockFace::Front => {
-                    if point.x.abs() > point.y.abs() {
-                        if point.x < 0.0 {
-                            BlockSubRotation::Left
-                        } else {
-                            BlockSubRotation::Right
-                        }
-                    } else {
-                        if point.y < 0.0 {
-                            BlockSubRotation::Flip
-                        } else {
-                            BlockSubRotation::None
-                        }
-                    }
-                }
-                BlockFace::Back => {
-                    if point.x.abs() > point.y.abs() {
-                        if point.x < 0.0 {
-                            BlockSubRotation::Left
-                        } else {
-                            BlockSubRotation::Right
-                        }
-                    } else {
-                        if point.y < 0.0 {
-                            BlockSubRotation::None
-                        } else {
-                            BlockSubRotation::Flip
-                        }
-                    }
-                }
+                (block_up, BlockSubRotation::None)
             };
 
             place_writer.send(RequestBlockPlaceEvent {
