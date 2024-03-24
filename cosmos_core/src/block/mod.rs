@@ -34,6 +34,7 @@ pub enum BlockProperty {
 }
 
 #[derive(Debug, PartialEq, Eq, Reflect, Default, Copy, Clone, Serialize, Deserialize, Hash)]
+/// Stores a block's rotation data
 pub struct BlockRotation {
     /// The block's top face
     pub block_up: BlockFace,
@@ -219,16 +220,21 @@ impl From<BlockFace> for BlockRotation {
 }
 
 #[derive(Debug, PartialEq, Eq, Reflect, Default, Copy, Clone, Serialize, Deserialize, Hash)]
+/// Block's rotation in addition to its BlockFace rotation (rotation around the Y axis relative to its BlockUp direction)
 pub enum BlockSubRotation {
     #[default]
-    None, // No rotation
-    Right, // 90 degrees to right
-    Left,  // 90 degress to left
-    Flip,  // 180 degree rotation
+    /// No rotation
+    None,
+    /// 90 degree rotation clockwise
+    Right,
+    /// 90 degree rotation counter-clockwise
+    Left,
+    /// 180 degree rotation
+    Flip,
 }
 
 impl BlockSubRotation {
-    /// Returns the index of this rotation
+    /// Returns the index of this rotation. For use in conjunction with [`Self::from_index`]
     pub fn index(&self) -> usize {
         match *self {
             BlockSubRotation::None => 0,
@@ -238,6 +244,7 @@ impl BlockSubRotation {
         }
     }
 
+    /// Gets the [`BlockSubRotation`] from its index - based on [`Self::index`]
     pub fn from_index(index: usize) -> Self {
         match index {
             0 => Self::None,
@@ -406,7 +413,14 @@ impl BlockFace {
         Self::rotate_face(self, BlockFace::Front)
     }
 
-    /// BlockFace::Top will result in no rotation being made
+    /// Rotates a block face assuming it's "up" orientation is [`BlockFace::Top`].
+    /// For example, if `face` is [`BlockFace::Left`], and `top_face` is [`BlockFace::Right`],
+    /// this means the "top" direction of this block is facing to +X direction. So, the +Y direction
+    /// would then be [`BlockFace::Left`], so this function would return the [`BlockFace`] that
+    /// represents the +Y direction - [`BlockFace::Top`].
+    ///
+    /// - `face` - The face of the block being rotated
+    /// - `top_face` - The face to rotate the given face by. [`BlockFace::Top`] will result in no rotation being made
     pub fn rotate_face(face: BlockFace, top_face: BlockFace) -> BlockFace {
         match top_face {
             Self::Top => face,
@@ -484,7 +498,7 @@ impl BlockProperty {
 ///
 /// A block takes a maximum of 1x1x1 meters of space, but can take up less than that.
 pub struct Block {
-    visibility: u8,
+    property_flags: u8,
     id: u16,
     unlocalized_name: String,
     density: f32,
@@ -524,7 +538,7 @@ impl Block {
         mining_resistance: f32,
     ) -> Self {
         Self {
-            visibility: BlockProperty::create_id(properties),
+            property_flags: BlockProperty::create_id(properties),
             id,
             unlocalized_name,
             density,
@@ -542,19 +556,28 @@ impl Block {
     /// Returns true if this block is transparent
     #[inline]
     pub fn is_transparent(&self) -> bool {
-        self.visibility & BlockProperty::Transparent.id() != 0
+        self.property_flags & BlockProperty::Transparent.id() != 0
     }
 
     /// Returns true if this block takes up the full 1x1x1 meters of space
     #[inline]
     pub fn is_full(&self) -> bool {
-        self.visibility & BlockProperty::Full.id() != 0
+        self.property_flags & BlockProperty::Full.id() != 0
     }
 
     /// Returns true if this block takes up no space
     #[inline]
     pub fn is_empty(&self) -> bool {
-        self.visibility & BlockProperty::Empty.id() != 0
+        self.property_flags & BlockProperty::Empty.id() != 0
+    }
+
+    /// Returns true if this block can have sub-rotations.
+    ///
+    /// If this is enabled on a full block, instead of sub-rotations the block will
+    /// have its front face equal the top face of the block it was placed on.
+    #[inline]
+    pub fn is_fully_rotatable(&self) -> bool {
+        self.property_flags & BlockProperty::FullyRotatable.id() != 0
     }
 
     /// Returns the density of this block

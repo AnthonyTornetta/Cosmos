@@ -6,7 +6,6 @@
 
 use std::{
     collections::VecDeque,
-    f32::consts::PI,
     mem::swap,
     sync::{Arc, Mutex},
     usize,
@@ -274,9 +273,10 @@ impl ChunkRenderer {
 
                 let mesh_builder = self.meshes.get_mut(&mat_id).unwrap();
 
-                let rotation = block_info.get_rotation();
+                let block_rotation = block_info.get_rotation();
+                let rotation = block_rotation.as_quat();
 
-                for face in faces.iter().map(|x| BlockFace::rotate_face(*x, rotation.block_up)) {
+                for face in faces.iter().map(|x| BlockFace::rotate_face(*x, block_rotation.block_up)) {
                     let index = block_textures
                         .from_id(block.unlocalized_name())
                         .unwrap_or_else(|| block_textures.from_id("missing").expect("Missing texture should exist."));
@@ -294,8 +294,6 @@ impl ChunkRenderer {
                         warn!("Missing image index -- {index:?}");
                         continue;
                     };
-
-                    let rotation = rotation.as_quat();
 
                     let mut one_mesh_only = false;
 

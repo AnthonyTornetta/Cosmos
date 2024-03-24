@@ -30,7 +30,7 @@ use cosmos_core::{
         lod::{Lod, LodComponent},
         lod_chunk::LodChunk,
         planet::{
-            biosphere::RegisteredBiosphere,
+            biosphere::Biosphere,
             generation::{
                 biome::{Biome, BiomeParameters, BiosphereBiomesRegistry},
                 terrain_generation::{BiosphereShaderWorker, ChunkData, ChunkDataSlice, GenerationParams, TerrainData, U32Vec4, N_CHUNKS},
@@ -543,7 +543,7 @@ pub(crate) fn generate_chunks_from_gpu_data(
     chunk_data: Res<ChunkData>,
     biosphere_biomes: Res<Registry<BiosphereBiomesRegistry>>,
     biomes: Res<Registry<Biome>>,
-    biospheres: Res<Registry<RegisteredBiosphere>>,
+    biospheres: Res<Registry<Biosphere>>,
     // sea_level: Option<Res<BiosphereSeaLevel<T>>>,
     // mut ev_writer: EventWriter<GenerateChunkFeaturesEvent<T>>,
     q_lod: Query<&mut LodBeingGenerated>,

@@ -26,7 +26,7 @@ use cosmos_core::{
     utils::array_utils::{flatten, flatten_4d},
 };
 
-use super::{BiosphereMarkerComponent, RegisteredBiosphere, TGenerateChunkEvent};
+use super::{Biosphere, BiosphereMarkerComponent, TGenerateChunkEvent};
 
 #[derive(Debug)]
 pub(crate) struct NeedGeneratedChunk {
@@ -98,7 +98,7 @@ pub(crate) fn generate_chunks_from_gpu_data<T: BiosphereMarkerComponent, E: TGen
     mut ev_reader: EventReader<MutEvent<DoneGeneratingChunkEvent>>,
     chunk_data: Res<ChunkData>,
     biosphere_biomes: Res<Registry<BiosphereBiomesRegistry>>,
-    biospheres: Res<Registry<RegisteredBiosphere>>,
+    biospheres: Res<Registry<Biosphere>>,
     mut ev_writer: EventWriter<GenerateChunkFeaturesEvent>,
     mut q_structure: Query<&mut Structure>,
     biome_registry: Res<Registry<Biome>>,
@@ -272,7 +272,7 @@ fn send_chunks_to_gpu(
 pub(crate) fn generate_planet<T: BiosphereMarkerComponent, E: TGenerateChunkEvent>(
     mut query: Query<(&mut Structure, &Location)>,
     mut events: EventReader<E>,
-    biosphere_registry: Res<Registry<RegisteredBiosphere>>,
+    biosphere_registry: Res<Registry<Biosphere>>,
 
     mut needs_generated_chunks: ResMut<NeedGeneratedChunks>,
 ) {

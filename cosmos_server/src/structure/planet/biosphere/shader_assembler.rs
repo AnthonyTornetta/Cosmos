@@ -12,7 +12,7 @@ use bevy::{
 };
 use cosmos_core::{
     registry::{identifiable::Identifiable, Registry},
-    structure::planet::biosphere::RegisteredBiosphere,
+    structure::planet::biosphere::Biosphere,
 };
 
 use crate::state::GameState;
@@ -23,7 +23,7 @@ use crate::state::GameState;
 /// Vec<(path, contents)>
 pub struct CachedShaders(pub Vec<(String, String)>);
 
-fn assemble_shaders(mut commands: Commands, registered_biospheres: Res<Registry<RegisteredBiosphere>>) {
+fn assemble_shaders(mut commands: Commands, registered_biospheres: Res<Registry<Biosphere>>) {
     let main_path = "cosmos/shaders/biosphere/main.wgsl";
     let main_text = fs::read_to_string(&format!("assets/{main_path}")).expect("Missing main.wgsl file for biosphere generation!");
 

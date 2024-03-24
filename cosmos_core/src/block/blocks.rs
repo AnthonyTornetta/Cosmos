@@ -79,6 +79,7 @@ fn add_cosmos_blocks(
     blocks.register(
         BlockBuilder::new("cosmos:laser_cannon", 2.0, 20.0, 5.0)
             .add_property(BlockProperty::Full)
+            .add_property(BlockProperty::FullyRotatable)
             .create(),
     );
 
@@ -187,6 +188,7 @@ fn add_cosmos_blocks(
     blocks.register(
         BlockBuilder::new("cosmos:reactor_controller", 2.0, 20.0, 5.0)
             .add_property(BlockProperty::Full)
+            .add_property(BlockProperty::FullyRotatable)
             .create(),
     );
 
@@ -266,6 +268,7 @@ fn add_cosmos_blocks(
     blocks.register(
         BlockBuilder::new("cosmos:plasma_drill", 2.0, 20.0, 5.0)
             .add_property(BlockProperty::Full)
+            .add_property(BlockProperty::FullyRotatable)
             .create(),
     );
 
@@ -278,6 +281,7 @@ fn add_cosmos_blocks(
     blocks.register(
         BlockBuilder::new("cosmos:camera", 2.0, 20.0, 5.0)
             .add_property(BlockProperty::Full)
+            .add_property(BlockProperty::FullyRotatable)
             .create(),
     );
 

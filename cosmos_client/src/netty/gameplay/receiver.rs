@@ -709,7 +709,7 @@ pub(crate) fn client_sync_players(
                     commands.entity(entity).insert(credits);
                 }
             }
-            ServerReliableMessages::TerrainGenJazz {
+            ServerReliableMessages::TerrainGenerationShaders {
                 shaders,
                 permutation_table,
             } => {
