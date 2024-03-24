@@ -17,7 +17,7 @@ use bevy::render::primitives::Aabb;
 use bevy::tasks::{AsyncComputeTaskPool, Task};
 use bevy::transform::TransformBundle;
 use bevy::utils::hashbrown::HashMap;
-use cosmos_core::block::{Block, BlockFace};
+use cosmos_core::block::{Block, BlockFace, BlockRotation};
 use cosmos_core::events::block_events::BlockChangedEvent;
 use cosmos_core::physics::location::SECTOR_DIMENSIONS;
 use cosmos_core::registry::identifiable::Identifiable;
@@ -614,14 +614,14 @@ impl ChunkRenderer {
 
                 let rotation = block_rotation.as_quat();
 
-                if block_rotation.block_up != BlockFace::Top {
+                if block_rotation != BlockRotation::IDENTITY {
                     println!("{block_rotation:?}");
                 }
 
                 for face in faces.iter().map(|x| {
                     let res = block_rotation.rotate_face(*x);
 
-                    if block_rotation.block_up != BlockFace::Top {
+                    if block_rotation != BlockRotation::IDENTITY {
                         println!("{x:?} -> {res:?}");
                     }
 
