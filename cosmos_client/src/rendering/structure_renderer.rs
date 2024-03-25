@@ -607,7 +607,7 @@ impl ChunkRenderer {
 
                 let rotation = block_rotation.as_quat();
 
-                for face in faces.iter().map(|x| block_rotation.rotate_face(*x)) {
+                for face in faces.iter().map(|face| block_rotation.rotate_face(*face)) {
                     let index = block_textures
                         .from_id(block.unlocalized_name())
                         .unwrap_or_else(|| block_textures.from_id("missing").expect("Missing texture should exist."));

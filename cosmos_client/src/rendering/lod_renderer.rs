@@ -225,7 +225,7 @@ impl ChunkRenderer {
                         .map(|c| check(c, block_id, actual_block, blocks, ChunkBlockCoordinate::new(x, y, 0)))
                         .unwrap_or(true)))
             {
-                faces.push(BlockFace::Back);
+                faces.push(BlockFace::Front);
             }
             // back
             if (z != 0
@@ -249,7 +249,7 @@ impl ChunkRenderer {
                         })
                         .unwrap_or(true)))
             {
-                faces.push(BlockFace::Front);
+                faces.push(BlockFace::Back);
             }
 
             if !faces.is_empty() {
@@ -274,9 +274,10 @@ impl ChunkRenderer {
                 let mesh_builder = self.meshes.get_mut(&mat_id).unwrap();
 
                 let block_rotation = block_info.get_rotation();
+
                 let rotation = block_rotation.as_quat();
 
-                for face in faces.iter().map(|x| BlockFace::rotate_face(*x, block_rotation.block_up)) {
+                for face in faces.iter().map(|face| block_rotation.rotate_face(*face)) {
                     let index = block_textures
                         .from_id(block.unlocalized_name())
                         .unwrap_or_else(|| block_textures.from_id("missing").expect("Missing texture should exist."));
