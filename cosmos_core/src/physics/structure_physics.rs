@@ -73,7 +73,8 @@ fn generate_colliders(
     size: CoordinateType,
     mass: &mut f32,
 ) {
-    let mut last_seen_empty = None;
+    let mut contains_any_empty_block = None;
+    let mut can_be_one_square_collider = true;
 
     let mut temp_mass = 0.0;
 
@@ -120,14 +121,15 @@ fn generate_colliders(
                             }
                         }
 
-                        (true, true)
+                        can_be_one_square_collider = false;
+                        (false, true)
                     }
                     _ => panic!("Got None for block collider for block {}!", block.unlocalized_name()),
                 };
 
-                if last_seen_empty.is_none() {
-                    last_seen_empty = Some(is_empty);
-                } else if last_seen_empty.unwrap() != is_empty || is_different {
+                if contains_any_empty_block.is_none() {
+                    contains_any_empty_block = Some(is_empty);
+                } else if contains_any_empty_block.unwrap() != is_empty || is_different {
                     let s2 = size / 2;
                     let s4 = s2 as f32 / 2.0;
 
@@ -240,8 +242,8 @@ fn generate_colliders(
         }
     }
 
-    // If this is true, then this cube was fully empty.
-    if !last_seen_empty.unwrap() {
+    // If this `last_seen_empty` is false, then the cube is completely filled
+    if !contains_any_empty_block.unwrap() && can_be_one_square_collider {
         let s2 = size as f32 / 2.0;
 
         *mass += temp_mass;
