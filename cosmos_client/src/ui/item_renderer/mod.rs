@@ -114,9 +114,7 @@ fn render_items(
 
             rendered_item_entity
         } else {
-            let mut transform = Transform::from_rotation(
-                Quat::from_xyzw(0.071989365, 0.9134604, 0.18516758, 0.3551347), // Quat::from_xyzw(0.18354653, 0.37505528, 0.07602747, 0.90546346)
-            ); // This makes it look cool
+            let mut transform = Transform::from_rotation(Quat::from_xyzw(-0.18800081, 0.31684527, 0.06422775, -0.9274371)); // This makes it look cool
 
             // hide it till we position it properly
             transform.translation.x = -1000000.0;
@@ -157,7 +155,7 @@ fn render_items(
         let material = material_definitions_registry.from_numeric_id(mat_id);
 
         if block_mesh_info.has_multiple_face_meshes() {
-            for face in [BlockFace::Top, BlockFace::Left, BlockFace::Front] {
+            for face in [BlockFace::Top, BlockFace::Right, BlockFace::Front] {
                 let Some(mut mesh_info) = block_mesh_info.info_for_face(face).cloned() else {
                     break;
                 };
@@ -267,6 +265,15 @@ pub enum RenderItemSystemSet {
     /// Turn the `RenderItem` component into an actual UI component on your screen
     RenderItems,
 }
+
+// fn print_quat(query: Query<&Transform, (Changed<Transform>, With<RenderedItem>)>) {
+//     for trans in query.iter() {
+//         println!(
+//             "{}, {}, {}, {}",
+//             trans.rotation.x, trans.rotation.y, trans.rotation.z, trans.rotation.w
+//         );
+//     }
+// }
 
 pub(super) fn register(app: &mut App) {
     app.configure_sets(
