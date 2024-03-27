@@ -25,7 +25,7 @@ pub struct CachedShaders(pub Vec<(String, String)>);
 
 fn assemble_shaders(mut commands: Commands, registered_biospheres: Res<Registry<Biosphere>>) {
     let main_path = "cosmos/shaders/biosphere/main.wgsl";
-    let main_text = fs::read_to_string(&format!("assets/{main_path}")).expect("Missing main.wgsl file for biosphere generation!");
+    let main_text = fs::read_to_string(format!("assets/{main_path}")).expect("Missing main.wgsl file for biosphere generation!");
 
     let mut biosphere_switch_text = String::from("switch param.biosphere_id.x {\n");
     let mut import_text = String::new();
@@ -37,7 +37,7 @@ fn assemble_shaders(mut commands: Commands, registered_biospheres: Res<Registry<
     for biosphere in registered_biospheres.iter() {
         let num = biosphere.id();
         let unlocalized_name = biosphere.unlocalized_name();
-        let mut split = unlocalized_name.split(":");
+        let mut split = unlocalized_name.split(':');
         let mod_id = split.next().expect("Empty biosphere name?");
         let biosphere_name = split
             .next()
@@ -67,7 +67,7 @@ fn assemble_shaders(mut commands: Commands, registered_biospheres: Res<Registry<
         OsStr::new("assets/cosmos/shaders/biosphere/"),
         &mut cached_shaders,
         &mut biospheres_to_find,
-        &main_path,
+        main_path,
     )
     .unwrap_or_else(|e| panic!("Failed to load files {e:?}!"));
 
@@ -100,7 +100,7 @@ fn recursively_add_files(
         let path = file.path();
         let path_str = path.as_os_str().to_str().expect("Failed to convert OsStr to str.");
         // Remove the assets/ folder from the path because it's meaningless to the client
-        let clean_path = &path_str["assets/".len()..].replacen("\\", "/", usize::MAX);
+        let clean_path = &path_str["assets/".len()..].replacen('\\', "/", usize::MAX);
 
         if clean_path == main_path {
             continue;
@@ -111,7 +111,7 @@ fn recursively_add_files(
                 // Removes the "assets/" from the beginning of the path and converts any '\' to /
                 biospheres_to_find.remove(clean_path);
 
-                let shader_text = fs::read_to_string(&path)?.replacen("\r", "", usize::MAX);
+                let shader_text = fs::read_to_string(&path)?.replacen('\r', "", usize::MAX);
 
                 cached_shaders.0.push((clean_path.to_owned(), shader_text));
             }

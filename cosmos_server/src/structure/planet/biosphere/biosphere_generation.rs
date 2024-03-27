@@ -139,7 +139,7 @@ pub(crate) fn generate_chunks_from_gpu_data<T: BiosphereMarkerComponent>(
             .from_id(biosphere_unlocalized_name)
             .unwrap_or_else(|| panic!("Missing biosphere biomes registry entry for {biosphere_unlocalized_name}"));
 
-        let sea_level_block = biosphere.sea_level_block().map(|x| blocks.from_id(x)).flatten();
+        let sea_level_block = biosphere.sea_level_block().and_then(|x| blocks.from_id(x));
 
         for z in 0..CHUNK_DIMENSIONS {
             for y in 0..CHUNK_DIMENSIONS {
@@ -177,7 +177,7 @@ pub(crate) fn generate_chunks_from_gpu_data<T: BiosphereMarkerComponent>(
 
                         needs_generated_chunk.chunk.set_block_at(
                             ChunkBlockCoordinate::new(x as CoordinateType, y as CoordinateType, z as CoordinateType),
-                            &block,
+                            block,
                             face.into(),
                         );
                     } else if let Some(sea_level_block) = sea_level_block {
@@ -355,8 +355,8 @@ fn generate_perm_table(seed: u64) -> GpuPermutationTable {
         if r < 0 {
             r += (i + 1) as i64;
         }
-        perm[i as usize] = source[r as usize];
-        source[r as usize] = source[i as usize];
+        perm[i] = source[r as usize];
+        source[r as usize] = source[i];
     }
 
     GpuPermutationTable(
