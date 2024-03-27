@@ -7,7 +7,7 @@ use std::{mem::size_of, time::Duration};
 use crate::structure::chunk::CHUNK_DIMENSIONS_USIZE;
 use bevy::{
     core::{Pod, Zeroable},
-    ecs::system::Resource,
+    ecs::{system::Resource, world::World},
     math::{Vec3, Vec4},
     reflect::TypePath,
 };
@@ -102,6 +102,12 @@ impl ComputeShader for ComputeShaderInstance {
 /// Used as the generic type for [`AppComputeWorker`]
 pub struct BiosphereShaderWorker;
 
+/// This system must be run once we have generated the shader data from the server
+pub fn add_terrain_compute_worker(world: &mut World) {
+    let worker = BiosphereShaderWorker::build(world);
+    world.insert_resource(worker);
+}
+
 #[repr(C)]
 #[derive(Default, Debug, ShaderType, Pod, Zeroable, Clone, Copy, Serialize, Deserialize)]
 /// Gives 16 bit packing that wgpu loves
@@ -180,7 +186,7 @@ impl ComputeWorker for BiosphereShaderWorker {
     }
 }
 
-#[derive(Clone, Resource, Serialize, Deserialize, Debug)]
+#[derive(Clone, Resource, Serialize, Deserialize, Debug, Default)]
 /// The permutation table sent to the GPU for terrain generation
 ///
 /// This is generated on the server & sent to the clients

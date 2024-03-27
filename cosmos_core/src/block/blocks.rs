@@ -292,7 +292,8 @@ fn add_cosmos_blocks(
     );
 
     blocks.register(
-        BlockBuilder::new("cosmos:ramp", 2.0, 20.0, 5.0)
+        // ramp colliders are super small, so to compensate I give them a high density
+        BlockBuilder::new("cosmos:ramp", 40.0, 100.0, 10.0)
             .add_property(BlockProperty::FullyRotatable)
             .create(),
     );

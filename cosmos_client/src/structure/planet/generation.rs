@@ -9,7 +9,7 @@ use cosmos_core::structure::planet::{
     biosphere::Biosphere,
     generation::{
         biome::{Biome, BiosphereBiomesRegistry},
-        terrain_generation::{BiosphereShaderWorker, ChunkData, GpuPermutationTable},
+        terrain_generation::{add_terrain_compute_worker, BiosphereShaderWorker, ChunkData, GpuPermutationTable},
     },
 };
 
@@ -47,11 +47,14 @@ fn add_needs_terrain_data(mut commands: Commands) {
     commands.insert_resource(NeedsTerrainDataFlag(entity));
 }
 
+#[derive(Resource, Default)]
+struct SetPermutationTable(GpuPermutationTable);
+
 fn setup_lod_generation(
     mut commands: Commands,
     mut ev_reader: EventReader<SetTerrainGenData>,
     terrain_data_flag: Res<NeedsTerrainDataFlag>,
-    mut worker: ResMut<AppComputeWorker<BiosphereShaderWorker>>,
+    mut gpu_perm_table: ResMut<SetPermutationTable>,
 ) {
     for ev in ev_reader.read() {
         let mut working_dir = std::env::current_dir().expect("Can't get working dir");
@@ -86,12 +89,22 @@ fn setup_lod_generation(
             }
         }
 
-        worker.write_slice("permutation_table", &ev.permutation_table.0);
+        gpu_perm_table.0 = ev.permutation_table.clone();
 
         commands.insert_resource(ev.permutation_table.clone());
         commands.remove_resource::<NeedsTerrainDataFlag>();
         commands.entity(terrain_data_flag.0).despawn_recursive();
     }
+}
+
+fn send_permutation_table_to_worker(
+    mut commands: Commands,
+    mut worker: ResMut<AppComputeWorker<BiosphereShaderWorker>>,
+    permutation_table: Res<SetPermutationTable>,
+) {
+    worker.write_slice("permutation_table", &permutation_table.0 .0);
+
+    commands.remove_resource::<SetPermutationTable>();
 }
 
 pub(super) fn register(app: &mut App) {
@@ -110,6 +123,7 @@ pub(super) fn register(app: &mut App) {
             .chain(),
     )
     .add_plugins(AppComputeWorkerPlugin::<BiosphereShaderWorker>::default())
+    .add_systems(OnExit(GameState::LoadingWorld), add_terrain_compute_worker)
     .add_systems(OnEnter(GameState::LoadingWorld), add_needs_terrain_data)
     .add_systems(
         Update,
@@ -117,6 +131,8 @@ pub(super) fn register(app: &mut App) {
             .run_if(resource_exists::<NeedsTerrainDataFlag>)
             .run_if(in_state(GameState::LoadingWorld)),
     )
+    .add_systems(OnEnter(GameState::Playing), send_permutation_table_to_worker)
     .init_resource::<ChunkData>()
+    .init_resource::<SetPermutationTable>()
     .add_event::<SetTerrainGenData>();
 }
