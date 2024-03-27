@@ -520,7 +520,7 @@ fn stupid_parse(file: &str) -> Option<MeshInformation> {
             .split('\n')
             .filter(|x| !x.trim().starts_with('#') && !x.trim().is_empty())
             // These aid in readability of file, but are not required
-            .map(|x| x.replace(",", "").replace("]", "").replace("[", ""))
+            .map(|x| x.replace([',', ']', '['], ""))
             .collect::<Vec<String>>();
 
         // parses a .stupid file the way it was intended - stupidly

@@ -95,7 +95,7 @@ fn read_gpu_data(
     }
 }
 
-pub(crate) fn generate_chunks_from_gpu_data<T: BiosphereMarkerComponent, E: TGenerateChunkEvent>(
+pub(crate) fn generate_chunks_from_gpu_data<T: BiosphereMarkerComponent>(
     mut ev_reader: EventReader<MutEvent<DoneGeneratingChunkEvent>>,
     chunk_data: Res<ChunkData>,
     biosphere_biomes: Res<Registry<BiosphereBiomesRegistry>>,

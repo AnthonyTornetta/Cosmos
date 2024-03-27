@@ -151,7 +151,7 @@ fn redwood_tree(
                 (-1, h, -2).into(),
             ],
             log,
-            BlockFace::Top.into(),
+            BlockFace::Top,
             planet_face,
             structure,
             blocks,

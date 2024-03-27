@@ -55,7 +55,7 @@ impl Biosphere {
     /// A good default value for this is 0.75.
     pub fn new(name: impl Into<String>, sea_level_percent: f32, sea_level_block: Option<String>) -> Self {
         assert!(
-            sea_level_percent >= 0.0 && sea_level_percent <= 1.0,
+            (0.0..=1.0).contains(&sea_level_percent),
             "Sea level percentage ({sea_level_percent}) was not between 0.0 <= x <= 1.0"
         );
 
@@ -81,7 +81,7 @@ impl Biosphere {
 
     /// Gets the sea level block (if there is one) as its unlocalized name.
     pub fn sea_level_block(&self) -> Option<&str> {
-        self.sea_level_block.as_ref().map(|x| x.as_str())
+        self.sea_level_block.as_deref()
     }
 }
 

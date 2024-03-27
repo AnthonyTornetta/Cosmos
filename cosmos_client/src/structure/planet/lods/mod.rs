@@ -169,7 +169,6 @@ fn create_lod_request(
         let max = max_block_range_exclusive;
 
         let mut new_steps = (0..8)
-            .into_iter()
             .map(|x| {
                 let mut s = steps.clone();
                 s.push(x);
@@ -586,7 +585,7 @@ pub(crate) fn generate_chunks_from_gpu_data(
             .from_id(biosphere_unlocalized_name)
             .unwrap_or_else(|| panic!("Missing biosphere biomes registry entry for {biosphere_unlocalized_name}"));
 
-        let sea_level_block = biosphere.sea_level_block().map(|x| blocks.from_id(x)).flatten();
+        let sea_level_block = biosphere.sea_level_block().and_then(|x| blocks.from_id(x));
 
         for z in 0..CHUNK_DIMENSIONS {
             for y in 0..CHUNK_DIMENSIONS {
@@ -627,7 +626,7 @@ pub(crate) fn generate_chunks_from_gpu_data(
 
                         needs_generated_chunk.chunk.set_block_at(
                             ChunkBlockCoordinate::new(x as CoordinateType, y as CoordinateType, z as CoordinateType),
-                            &block,
+                            block,
                             face.into(),
                         );
                     } else if let Some(sea_level_block) = sea_level_block {
@@ -726,12 +725,10 @@ fn recursively_change(lod_requst: &mut LodRequest, steps: &[usize], chunk: LodCh
         } else {
             panic!("Invalid state.");
         }
+    } else if let LodRequest::Multi(children) = lod_requst {
+        recursively_change(&mut children[steps[0]], &steps[1..], chunk);
     } else {
-        if let LodRequest::Multi(children) = lod_requst {
-            recursively_change(&mut children[steps[0]], &steps[1..], chunk);
-        } else {
-            panic!("Invalid state.");
-        }
+        panic!("Invalid state.");
     }
 }
 
