@@ -21,7 +21,7 @@ fn handle_block_changed_event(mut event_reader: EventReader<BlockChangedEvent>, 
         map.get_mut(&ev.structure_entity).expect("Set above").push(BlockChanged {
             coordinates: ev.block,
             block_id: ev.new_block,
-            block_up: ev.new_block_up,
+            block_rotation: ev.new_block_rotation,
         });
     }
 

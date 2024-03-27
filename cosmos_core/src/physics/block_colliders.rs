@@ -1,6 +1,11 @@
 //! Assigns each block their respective collider
 
-use bevy::prelude::{App, IntoSystemConfigs, OnEnter, Res, ResMut, States, Vec3};
+use std::f32::consts::PI;
+
+use bevy::{
+    math::Quat,
+    prelude::{App, IntoSystemConfigs, OnEnter, Res, ResMut, States, Vec3},
+};
 use bevy_rapier3d::prelude::Collider;
 
 use crate::{
@@ -24,6 +29,8 @@ pub enum BlockColliderMode {
 pub struct CustomCollider {
     /// How far away this collider's origin is from the center of this block
     pub offset: Vec3,
+    /// Collider's rotation
+    pub rotation: Quat,
     /// The collider to use
     pub collider: Collider,
     /// What mode this collider should be treated with
@@ -35,7 +42,7 @@ pub struct CustomCollider {
 pub enum BlockColliderType {
     /// Takes an entire block
     Full(BlockColliderMode),
-    /// Not yet supported - will panic
+    /// A custom collider that is more complex than the default options
     Custom(Vec<CustomCollider>),
     /// No collider at all
     Empty,
@@ -69,9 +76,54 @@ fn register_custom_colliders(blocks: Res<Registry<Block>>, mut registry: ResMut<
             BlockColliderType::Custom(vec![CustomCollider {
                 collider: Collider::cuboid(0.5, 0.2, 0.5),
                 mode: BlockColliderMode::SensorCollider,
+                rotation: Quat::IDENTITY,
                 offset: Vec3::new(0.0, -(0.5 - 0.2), 0.0),
             }]),
             "cosmos:short_grass",
+        ));
+    }
+
+    if blocks.from_id("cosmos:ramp").is_some() {
+        const EPSILON: f32 = 0.001;
+        registry.register(BlockCollider::new(
+            BlockColliderType::Custom(vec![
+                // top
+                CustomCollider {
+                    rotation: Quat::from_axis_angle(Vec3::X, PI / 4.0),
+                    collider: Collider::cuboid(0.5, EPSILON, 2.0f32.sqrt() / 2.0),
+                    mode: BlockColliderMode::NormalCollider,
+                    offset: Vec3::ZERO,
+                },
+                // left
+                CustomCollider {
+                    rotation: Quat::IDENTITY,
+                    collider: Collider::triangle(Vec3::new(-0.5, -0.5, 0.5), Vec3::new(-0.5, -0.5, -0.5), Vec3::new(-0.5, 0.5, -0.5)),
+                    mode: BlockColliderMode::NormalCollider,
+                    offset: Vec3::ZERO,
+                },
+                // right
+                CustomCollider {
+                    rotation: Quat::IDENTITY,
+                    collider: Collider::triangle(Vec3::new(0.5, -0.5, 0.5), Vec3::new(0.5, -0.5, -0.5), Vec3::new(0.5, 0.5, -0.5)),
+                    mode: BlockColliderMode::NormalCollider,
+                    offset: Vec3::ZERO,
+                },
+                // bottom
+                CustomCollider {
+                    rotation: Quat::IDENTITY,
+                    collider: Collider::cuboid(0.5, EPSILON, 0.5),
+                    mode: BlockColliderMode::NormalCollider,
+                    offset: Vec3::new(0.0, -0.5 + EPSILON, 0.0),
+                },
+                // front
+                CustomCollider {
+                    rotation: Quat::IDENTITY,
+                    collider: Collider::cuboid(0.5, 0.5, EPSILON),
+                    mode: BlockColliderMode::NormalCollider,
+                    offset: Vec3::new(0.0, 0.0, -0.5 + EPSILON),
+                },
+            ]),
+            "cosmos:ramp",
         ));
     }
 }

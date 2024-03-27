@@ -7,7 +7,7 @@ use bevy::reflect::Reflect;
 use bevy::utils::HashMap;
 use serde::{Deserialize, Serialize};
 
-use crate::block::{Block, BlockFace};
+use crate::block::{Block, BlockFace, BlockRotation, BlockSubRotation};
 use crate::registry::Registry;
 
 use super::block_health::BlockHealth;
@@ -55,7 +55,7 @@ impl BlockStorer for Chunk {
     }
 
     #[inline(always)]
-    fn block_rotation(&self, coords: ChunkBlockCoordinate) -> BlockFace {
+    fn block_rotation(&self, coords: ChunkBlockCoordinate) -> BlockRotation {
         self.block_storage.block_rotation(coords)
     }
 
@@ -90,13 +90,13 @@ impl BlockStorer for Chunk {
     }
 
     #[inline(always)]
-    fn set_block_at(&mut self, coords: ChunkBlockCoordinate, b: &Block, block_up: BlockFace) {
-        self.block_storage.set_block_at(coords, b, block_up)
+    fn set_block_at(&mut self, coords: ChunkBlockCoordinate, b: &Block, block_rotation: BlockRotation) {
+        self.block_storage.set_block_at(coords, b, block_rotation)
     }
 
     #[inline(always)]
-    fn set_block_at_from_id(&mut self, coords: ChunkBlockCoordinate, id: u16, block_up: BlockFace) {
-        self.block_storage.set_block_at_from_id(coords, id, block_up)
+    fn set_block_at_from_id(&mut self, coords: ChunkBlockCoordinate, id: u16, block_rotation: BlockRotation) {
+        self.block_storage.set_block_at_from_id(coords, id, block_rotation)
     }
 
     #[inline(always)]
@@ -234,16 +234,17 @@ impl BlockInfo {
     #[inline]
     /// Gets the rotation data
     ///
-    /// This will return which BlockFace represents the UP direction (no rotation is BlockFace::Top)
-    pub fn get_rotation(&self) -> BlockFace {
-        BlockFace::from_index((self.0 & 0b111) as usize)
+    /// This will return which BlockFace represents the UP direction (no rotation is BlockFace::Top, BlockSubRotation::None)
+    pub fn get_rotation(&self) -> BlockRotation {
+        let block_up = BlockFace::from_index((self.0 & 0b111) as usize);
+        let sub_rotation = BlockSubRotation::from_index(((self.0 >> 3) & 0b11) as usize);
+
+        BlockRotation { block_up, sub_rotation }
     }
 
     /// Sets the rotation data
-    ///
-    /// This should be the BlockFace that represents the UP direction (no rotation is BlockFace::Top)
-    pub fn set_rotation(&mut self, rotation: BlockFace) {
-        self.0 = self.0 & !0b111 | rotation.index() as u8;
+    pub fn set_rotation(&mut self, rotation: BlockRotation) {
+        self.0 = self.0 & !0b11111 | (rotation.block_up.index() as u8 | (rotation.sub_rotation.index() << 3) as u8);
     }
 }
 
@@ -274,3 +275,16 @@ pub struct ChunkUnloadEvent {
 pub(super) fn register(app: &mut App) {
     app.add_event::<ChunkUnloadEvent>().register_type::<Chunk>();
 }
+
+// #[cfg(test)]
+// mod tests {
+//     use crate::block::{BlockFace, BlockRotation, BlockSubRotation};
+
+//     #[test]
+//     fn test_quaternion() {
+//         let rot = BlockRotation {
+//             block_up: BlockFace::Right,
+//             sub_rotation: BlockSubRotation::
+//         }
+//     }
+// }

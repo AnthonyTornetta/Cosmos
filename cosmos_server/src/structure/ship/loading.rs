@@ -5,7 +5,7 @@ use bevy::{
     prelude::{in_state, App, Commands, Component, Entity, EventWriter, IntoSystemConfigs, Query, Res, Update, With},
 };
 use cosmos_core::{
-    block::{Block, BlockFace},
+    block::{Block, BlockRotation},
     registry::Registry,
     structure::{
         loading::{ChunksNeedLoaded, StructureLoadingSet},
@@ -41,7 +41,7 @@ fn create_ships(
 
         let ship_core_coords = Ship::ship_core_block_coords(&structure);
 
-        structure.set_block_at(ship_core_coords, ship_core, BlockFace::Top, &blocks, None);
+        structure.set_block_at(ship_core_coords, ship_core, BlockRotation::default(), &blocks, None);
 
         let itr = structure.all_chunks_iter(false);
 

@@ -6,7 +6,7 @@ use bevy::reflect::Reflect;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    block::{blocks::AIR_BLOCK_ID, Block, BlockFace},
+    block::{blocks::AIR_BLOCK_ID, Block, BlockRotation},
     registry::{identifiable::Identifiable, Registry},
     structure::chunk::CHUNK_DIMENSIONS,
 };
@@ -42,7 +42,7 @@ pub trait BlockStorer {
     /// You should only call this if you know what you're doing.
     ///
     /// No events are generated from this.
-    fn set_block_at(&mut self, coords: ChunkBlockCoordinate, b: &Block, block_up: BlockFace);
+    fn set_block_at(&mut self, coords: ChunkBlockCoordinate, b: &Block, block_rotation: BlockRotation);
 
     /// Sets the block at the given location.
     ///
@@ -50,13 +50,13 @@ pub trait BlockStorer {
     /// You should only call this if you know what you're doing.
     ///
     /// No events are generated from this.
-    fn set_block_at_from_id(&mut self, coords: ChunkBlockCoordinate, id: u16, block_up: BlockFace);
+    fn set_block_at_from_id(&mut self, coords: ChunkBlockCoordinate, id: u16, block_rotation: BlockRotation);
 
     /// Gets the block at this location. Air is returned for empty blocks.
     fn block_at(&self, coords: ChunkBlockCoordinate) -> u16;
 
     /// Gets the block's rotation at this location
-    fn block_rotation(&self, coords: ChunkBlockCoordinate) -> BlockFace;
+    fn block_rotation(&self, coords: ChunkBlockCoordinate) -> BlockRotation;
 
     /// Returns true if this chunk only contains air.
     fn is_empty(&self) -> bool;
@@ -107,11 +107,11 @@ impl BlockStorage {
     }
 
     /// Sets every block within this to be this block + rotation
-    pub fn fill(&mut self, block: &Block, block_up: BlockFace) {
+    pub fn fill(&mut self, block: &Block, block_rotation: BlockRotation) {
         for z in 0..self.length {
             for y in 0..self.height {
                 for x in 0..self.width {
-                    self.set_block_at((x, y, z).into(), block, block_up);
+                    self.set_block_at((x, y, z).into(), block, block_rotation);
                 }
             }
         }
@@ -134,16 +134,16 @@ impl BlockStorer for BlockStorage {
     }
 
     #[inline]
-    fn set_block_at(&mut self, coords: ChunkBlockCoordinate, b: &Block, block_up: BlockFace) {
-        self.set_block_at_from_id(coords, b.id(), block_up);
+    fn set_block_at(&mut self, coords: ChunkBlockCoordinate, b: &Block, block_rotation: BlockRotation) {
+        self.set_block_at_from_id(coords, b.id(), block_rotation);
     }
 
-    fn set_block_at_from_id(&mut self, coords: ChunkBlockCoordinate, id: u16, block_up: BlockFace) {
+    fn set_block_at_from_id(&mut self, coords: ChunkBlockCoordinate, id: u16, block_rotation: BlockRotation) {
         self.debug_assert_is_within_blocks(coords);
 
         let index = Self::flatten(coords);
 
-        self.block_info[index].set_rotation(block_up);
+        self.block_info[index].set_rotation(block_rotation);
 
         if self.blocks[index] != id {
             if self.blocks[index] == AIR_BLOCK_ID {
@@ -160,7 +160,7 @@ impl BlockStorer for BlockStorage {
         self.blocks[Self::flatten(coords)]
     }
 
-    fn block_rotation(&self, coords: ChunkBlockCoordinate) -> BlockFace {
+    fn block_rotation(&self, coords: ChunkBlockCoordinate) -> BlockRotation {
         self.block_info[Self::flatten(coords)].get_rotation()
     }
 

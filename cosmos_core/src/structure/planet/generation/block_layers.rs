@@ -22,7 +22,7 @@ impl BlockLayers {
         let mut itr = self.ranges();
         let mut cur_block = &itr.next().expect("This block range has no blocks!").0;
 
-        while let Some((next_block, next_layer)) = itr.next() {
+        for (next_block, next_layer) in itr {
             if next_layer.middle_depth > depth {
                 break;
             } else {

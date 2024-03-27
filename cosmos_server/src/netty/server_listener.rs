@@ -167,7 +167,7 @@ fn server_listen_messages(
                     structure_entity,
                     block,
                     block_id,
-                    block_up,
+                    block_rotation: block_up,
                     inventory_slot,
                 } => {
                     if let Some(player_entity) = lobby.player_from_id(client_id) {

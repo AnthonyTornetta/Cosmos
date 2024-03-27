@@ -1,6 +1,6 @@
 use bevy::{prelude::*, tasks::AsyncComputeTaskPool, utils::HashMap};
 use cosmos_core::{
-    block::{Block, BlockFace},
+    block::{Block, BlockRotation},
     physics::location::Location,
     registry::ReadOnlyRegistry,
     structure::{
@@ -99,7 +99,7 @@ fn start_generating_asteroid(
                             chunks.entry(chunk_coords).or_insert_with(|| Chunk::new(chunk_coords)).set_block_at(
                                 chunk_block_coords,
                                 block,
-                                BlockFace::Top,
+                                BlockRotation::default(),
                             );
                         }
                     }
@@ -116,7 +116,7 @@ fn start_generating_asteroid(
 }
 
 pub(super) fn register(app: &mut App) {
-    register_asteroid_generator::<IcyAsteroidMarker>(app, "cosmos:icy", TemperatureRange::new(800.0, 700.0));
+    register_asteroid_generator::<IcyAsteroidMarker>(app, "cosmos:icy", TemperatureRange::new(0.0, 700.0));
 
     app.add_systems(
         Update,

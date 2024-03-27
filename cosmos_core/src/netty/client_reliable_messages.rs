@@ -5,7 +5,7 @@ use bevy::prelude::{Component, Entity};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    block::BlockFace,
+    block::BlockRotation,
     entities::player::render_distance::RenderDistance,
     structure::{
         coordinates::{ChunkCoordinate, CoordinateType},
@@ -49,7 +49,7 @@ pub enum ClientReliableMessages {
         /// This is passed along with `inventory_slot` to verify that the client + server are still in sync
         block_id: u16,
         /// The block's top face
-        block_up: BlockFace,
+        block_rotation: BlockRotation,
         /// The inventory slot the block came from
         inventory_slot: u32,
     },

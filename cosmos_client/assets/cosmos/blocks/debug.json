@@ -1,0 +1,10 @@
+{
+    "texture": {
+        "left": "cosmos:debug_left",
+        "right": "cosmos:debug_right",
+        "top": "cosmos:debug_top",
+        "bottom": "cosmos:debug_bottom",
+        "front": "cosmos:debug_front",
+        "back": "cosmos:debug_back"
+    }
+}

@@ -9,7 +9,7 @@ use crate::structure::planet::unload_chunks_far_from_players;
 use bevy::log::warn;
 use bevy::prelude::{
     in_state, App, BuildChildren, Component, Deref, DerefMut, DespawnRecursiveExt, EventReader, EventWriter, GlobalTransform,
-    IntoSystemConfigs, Mesh, PointLight, PointLightBundle, Quat, Rect, Resource, Transform, Update, Vec3, VisibilityBundle, With,
+    IntoSystemConfigs, Mesh, PointLight, PointLightBundle, Rect, Resource, Transform, Update, Vec3, VisibilityBundle, With,
 };
 use bevy::reflect::Reflect;
 use bevy::render::mesh::{MeshVertexAttribute, VertexAttributeValues};
@@ -31,7 +31,6 @@ use cosmos_core::structure::Structure;
 use cosmos_core::utils::array_utils::expand;
 use futures_lite::future;
 use std::collections::HashSet;
-use std::f32::consts::PI;
 use std::mem::swap;
 
 use crate::{Assets, Commands, Entity, Handle, Query, Res, ResMut};
@@ -522,123 +521,65 @@ impl ChunkRenderer {
             })
             .filter(|(coords, _)| chunk.has_block_at(*coords))
         {
-            // helps the lsp out
-            let coords: ChunkBlockCoordinate = coords;
-
             let (center_offset_x, center_offset_y, center_offset_z) = (
                 coords.x as f32 - cd2 + 0.5,
                 coords.y as f32 - cd2 + 0.5,
                 coords.z as f32 - cd2 + 0.5,
             );
-            let actual_block = blocks.from_numeric_id(block_id);
+            let block = blocks.from_numeric_id(block_id);
 
-            #[inline(always)]
-            fn check(c: &Chunk, block: u16, actual_block: &Block, blocks: &Registry<Block>, coords: ChunkBlockCoordinate) -> bool {
-                (block != c.block_at(coords) || !actual_block.is_full()) && c.has_see_through_block_at(coords, blocks)
-            }
+            let check = |c: &Chunk, coords: ChunkBlockCoordinate| -> bool {
+                (block_id != c.block_at(coords) || !block.is_full()) && chunk.has_see_through_block_at(coords, blocks)
+            };
 
             let (x, y, z) = (coords.x, coords.y, coords.z);
 
             // right
-            if (x != CHUNK_DIMENSIONS - 1 && check(chunk, block_id, actual_block, blocks, coords.right()))
-                || (x == CHUNK_DIMENSIONS - 1
-                    && (right
-                        .map(|c| check(c, block_id, actual_block, blocks, ChunkBlockCoordinate::new(0, y, z)))
-                        .unwrap_or(true)))
+            if (x != CHUNK_DIMENSIONS - 1 && check(chunk, coords.right()))
+                || (x == CHUNK_DIMENSIONS - 1 && (right.map(|c| check(c, ChunkBlockCoordinate::new(0, y, z))).unwrap_or(true)))
             {
                 faces.push(BlockFace::Right);
             }
             // left
-            if (x != 0
-                && check(
-                    chunk,
-                    block_id,
-                    actual_block,
-                    blocks,
-                    coords.left().expect("Checked in first condition"),
-                ))
+            if (x != 0 && check(chunk, coords.left().expect("Checked in first condition")))
                 || (x == 0
                     && (left
-                        .map(|c| {
-                            check(
-                                c,
-                                block_id,
-                                actual_block,
-                                blocks,
-                                ChunkBlockCoordinate::new(CHUNK_DIMENSIONS - 1, y, z),
-                            )
-                        })
+                        .map(|c| check(c, ChunkBlockCoordinate::new(CHUNK_DIMENSIONS - 1, y, z)))
                         .unwrap_or(true)))
             {
                 faces.push(BlockFace::Left);
             }
 
             // top
-            if (y != CHUNK_DIMENSIONS - 1 && check(chunk, block_id, actual_block, blocks, coords.top()))
-                || (y == CHUNK_DIMENSIONS - 1
-                    && top
-                        .map(|c| check(c, block_id, actual_block, blocks, ChunkBlockCoordinate::new(x, 0, z)))
-                        .unwrap_or(true))
+            if (y != CHUNK_DIMENSIONS - 1 && check(chunk, coords.top()))
+                || (y == CHUNK_DIMENSIONS - 1 && top.map(|c| check(c, ChunkBlockCoordinate::new(x, 0, z))).unwrap_or(true))
             {
                 faces.push(BlockFace::Top);
             }
             // bottom
-            if (y != 0
-                && check(
-                    chunk,
-                    block_id,
-                    actual_block,
-                    blocks,
-                    coords.bottom().expect("Checked in first condition"),
-                ))
+            if (y != 0 && check(chunk, coords.bottom().expect("Checked in first condition")))
                 || (y == 0
                     && (bottom
-                        .map(|c| {
-                            check(
-                                c,
-                                block_id,
-                                actual_block,
-                                blocks,
-                                ChunkBlockCoordinate::new(x, CHUNK_DIMENSIONS - 1, z),
-                            )
-                        })
+                        .map(|c| check(c, ChunkBlockCoordinate::new(x, CHUNK_DIMENSIONS - 1, z)))
                         .unwrap_or(true)))
             {
                 faces.push(BlockFace::Bottom);
             }
 
             // front
-            if (z != CHUNK_DIMENSIONS - 1 && check(chunk, block_id, actual_block, blocks, coords.front()))
-                || (z == CHUNK_DIMENSIONS - 1
-                    && (front
-                        .map(|c| check(c, block_id, actual_block, blocks, ChunkBlockCoordinate::new(x, y, 0)))
+            if (z != CHUNK_DIMENSIONS - 1 && check(chunk, coords.front()))
+                || (z == CHUNK_DIMENSIONS - 1 && (front.map(|c| check(c, ChunkBlockCoordinate::new(x, y, 0))).unwrap_or(true)))
+            {
+                faces.push(BlockFace::Front);
+            }
+            // back
+            if (z != 0 && check(chunk, coords.back().expect("Checked in first condition")))
+                || (z == 0
+                    && (back
+                        .map(|c| check(c, ChunkBlockCoordinate::new(x, y, CHUNK_DIMENSIONS - 1)))
                         .unwrap_or(true)))
             {
                 faces.push(BlockFace::Back);
-            }
-            // back
-            if (z != 0
-                && check(
-                    chunk,
-                    block_id,
-                    actual_block,
-                    blocks,
-                    coords.back().expect("Checked in first condition"),
-                ))
-                || (z == 0
-                    && (back
-                        .map(|c| {
-                            check(
-                                c,
-                                block_id,
-                                actual_block,
-                                blocks,
-                                ChunkBlockCoordinate::new(x, y, CHUNK_DIMENSIONS - 1),
-                            )
-                        })
-                        .unwrap_or(true)))
-            {
-                faces.push(BlockFace::Front);
             }
 
             if !faces.is_empty() {
@@ -662,9 +603,11 @@ impl ChunkRenderer {
 
                 let mesh_builder = self.meshes.get_mut(&mat_id).unwrap();
 
-                let rotation = block_info.get_rotation();
+                let block_rotation = block_info.get_rotation();
 
-                for face in faces.iter().map(|x| BlockFace::rotate_face(*x, rotation)) {
+                let rotation = block_rotation.as_quat();
+
+                for face in faces.iter().map(|face| block_rotation.rotate_face(*face)) {
                     let index = block_textures
                         .from_id(block.unlocalized_name())
                         .unwrap_or_else(|| block_textures.from_id("missing").expect("Missing texture should exist."));
@@ -675,15 +618,6 @@ impl ChunkRenderer {
                     };
 
                     let uvs = Rect::new(0.0, 0.0, 1.0, 1.0);
-
-                    let rotation = match rotation {
-                        BlockFace::Top => Quat::IDENTITY,
-                        BlockFace::Front => Quat::from_axis_angle(Vec3::X, PI / 2.0),
-                        BlockFace::Back => Quat::from_axis_angle(Vec3::X, -PI / 2.0),
-                        BlockFace::Left => Quat::from_axis_angle(Vec3::Z, PI / 2.0),
-                        BlockFace::Right => Quat::from_axis_angle(Vec3::Z, -PI / 2.0),
-                        BlockFace::Bottom => Quat::from_axis_angle(Vec3::X, PI),
-                    };
 
                     let mut one_mesh_only = false;
 

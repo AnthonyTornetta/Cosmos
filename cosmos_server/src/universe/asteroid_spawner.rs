@@ -21,7 +21,7 @@ use cosmos_core::{
 use rand::Rng;
 
 use crate::{
-    init::init_world::ServerSeed, persistence::is_sector_generated, rng::get_rng_for_sector, state::GameState,
+    init::init_world::ServerSeed, persistence::is_sector_generated, rng::get_rng_for_sector, settings::ServerSettings, state::GameState,
     structure::asteroid::server_asteroid_builder::ServerAsteroidBuilder, universe::star::calculate_temperature_at,
 };
 
@@ -37,7 +37,12 @@ fn spawn_asteroid(
     mut cache: ResMut<CachedSectors>,
     mut commands: Commands,
     q_stars: Query<(&Location, &Star)>,
+    settings: Res<ServerSettings>,
 ) {
+    if !settings.spawn_asteroids {
+        return;
+    }
+
     let mut to_check_sectors = HashSet::new();
 
     for l in players.iter() {

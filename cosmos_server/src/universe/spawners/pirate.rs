@@ -25,6 +25,7 @@ use cosmos_core::{
 
 use crate::{
     persistence::loading::{LoadingBlueprintSystemSet, NeedsBlueprintLoaded},
+    settings::ServerSettings,
     state::GameState,
 };
 
@@ -70,7 +71,12 @@ fn spawn_pirates(
     q_players: Query<(Entity, &Location, &NextPirateSpawn), With<Player>>,
     time: Res<Time>,
     min_pirate_spawn_time: Res<MinPirateSpawnTime>,
+    server_settings: Res<ServerSettings>,
 ) {
+    if server_settings.peaceful {
+        return;
+    }
+
     let mut player_groups: HashMap<Sector, (NextPirateSpawn, Vec<Entity>)> = HashMap::default();
 
     const MAX_DIST: f32 = SECTOR_DIMENSIONS * 2.0 + 20.0;

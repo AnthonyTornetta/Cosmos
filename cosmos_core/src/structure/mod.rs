@@ -35,7 +35,7 @@ pub mod structure_iterator;
 pub mod systems;
 
 use crate::block::data::persistence::ChunkLoadBlockDataEvent;
-use crate::block::{Block, BlockFace};
+use crate::block::{Block, BlockFace, BlockRotation};
 use crate::ecs::NeedsDespawned;
 use crate::events::block_events::BlockChangedEvent;
 use crate::netty::NoSendEntity;
@@ -248,7 +248,7 @@ impl Structure {
     /// Gets the block's up facing face at this location.
     ///
     /// If no block was found, returns BlockFace::Top.
-    pub fn block_rotation(&self, coords: BlockCoordinate) -> BlockFace {
+    pub fn block_rotation(&self, coords: BlockCoordinate) -> BlockRotation {
         match self {
             Self::Full(fs) => fs.block_rotation(coords),
             Self::Dynamic(ds) => ds.block_rotation(coords),
@@ -304,13 +304,13 @@ impl Structure {
         &mut self,
         coords: BlockCoordinate,
         block: &Block,
-        block_up: BlockFace,
+        block_rotation: BlockRotation,
         blocks: &Registry<Block>,
         event_writer: Option<&mut EventWriter<BlockChangedEvent>>,
     ) {
         match self {
-            Self::Full(fs) => fs.set_block_at(coords, block, block_up, blocks, event_writer),
-            Self::Dynamic(ds) => ds.set_block_at(coords, block, block_up, blocks, event_writer),
+            Self::Full(fs) => fs.set_block_at(coords, block, block_rotation, blocks, event_writer),
+            Self::Dynamic(ds) => ds.set_block_at(coords, block, block_rotation, blocks, event_writer),
         }
     }
 

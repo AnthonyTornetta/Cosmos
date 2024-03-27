@@ -1,3 +1,5 @@
+//!
+
 use std::hash::Hash;
 
 use bevy::{app::App, math::Vec3};
@@ -10,15 +12,11 @@ use crate::{
 
 use super::block_layers::BlockLayers;
 
-/// A biome is a structure that dictates how terrain will be generated.
+/// A biome represents what blocks will be used to populate & decorate the generated terrain.
 ///
 /// Biomes can be linked to biospheres, which will then call their methods to generate their terrain.
 ///
-/// Biomes don't do anything, until registered in the [`BiosphereBiomesRegistry<T>`] where `T` is the biosphere they belong to.
-///
-/// Most methods in here don't need to be modified, and will work for most biome implementations.
-/// The main ones to mess with are:
-/// `id, unlocailized_name, set_numeric_id, block_layers`.
+/// Biomes don't do anything, until registered in the [`BiosphereBiomesRegistry`] for the biosphere(s) they should belong to.
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Biome {
     unlocalized_name: String,
@@ -27,6 +25,7 @@ pub struct Biome {
 }
 
 impl Biome {
+    /// A biome is a structure that dictates how terrain will be generated.
     pub fn new(unlocalized_name: impl Into<String>, block_layers: BlockLayers) -> Self {
         Self {
             unlocalized_name: unlocalized_name.into(),
@@ -35,7 +34,7 @@ impl Biome {
         }
     }
 
-    /// Returns this biome's block layers
+    /// Returns this biome's block layers that will be used to fill in the terrain
     pub fn block_layers(&self) -> &BlockLayers {
         &self.block_layers
     }
@@ -74,8 +73,6 @@ const LOOKUP_TABLE_SIZE: usize = LOOKUP_TABLE_PRECISION * LOOKUP_TABLE_PRECISION
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 /// Links a biosphere and all the biomes it has together
-///
-/// `T` is the marker component for the biosphere this goes with
 pub struct BiosphereBiomesRegistry {
     id: u16,
     unlocalized_name: String,
@@ -130,6 +127,9 @@ impl BiosphereBiomesRegistry {
         }
     }
 
+    /// This only has to be called on the server
+    ///
+    /// The BiosphereBiomesRegistry will not reutrn proper biomes until this is called.
     pub fn construct_lookup_table(&mut self) {
         for here_elevation in 0..LOOKUP_TABLE_PRECISION {
             for here_humidity in 0..LOOKUP_TABLE_PRECISION {

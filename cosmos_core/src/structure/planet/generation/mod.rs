@@ -1,3 +1,5 @@
+//! Biome-specific generation
+
 use bevy::prelude::App;
 
 pub mod biome;
