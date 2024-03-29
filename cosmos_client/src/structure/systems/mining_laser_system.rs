@@ -177,11 +177,18 @@ fn apply_mining_effects(
 
                 let material = materials_cache.0.get(&hashed).expect("Added above");
 
+                let mut beam_direction = line.direction.direction_vec3();
+
+                // Every direction that isn't Z is opposite of what it should be.
+                if beam_direction.z == 0.0 {
+                    beam_direction *= -1.0;
+                }
+
                 let laser_start = structure.block_relative_position(line.start.coords());
                 let beam_ent = p
                     .spawn((
                         PbrBundle {
-                            transform: Transform::from_translation(laser_start).looking_to(line.direction.direction_vec3(), Vec3::Y),
+                            transform: Transform::from_translation(laser_start).looking_to(beam_direction, Vec3::Y),
                             material: material.clone_weak(),
                             mesh: mesh.0.clone_weak(),
                             ..Default::default()

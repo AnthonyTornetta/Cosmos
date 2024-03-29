@@ -283,7 +283,12 @@ fn on_activate_system(
                     let energy = line.property.energy_per_second * sec;
 
                     if energy_storage_system.decrease_energy(energy) {
-                        let beam_direction = line.direction.direction_vec3();
+                        let mut beam_direction = line.direction.direction_vec3();
+
+                        // Every direction that isn't Z is opposite of what it should be.
+                        if beam_direction.z == 0.0 {
+                            beam_direction *= -1.0;
+                        }
 
                         let beam_begin = line.end();
                         let rel_pos = structure.block_relative_position(beam_begin.coords());
