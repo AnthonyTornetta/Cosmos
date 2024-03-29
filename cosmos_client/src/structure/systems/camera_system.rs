@@ -8,7 +8,7 @@ use bevy::{
         schedule::{common_conditions::in_state, IntoSystemConfigs},
         system::{Commands, Query},
     },
-    math::Vec3,
+    math::{Quat, Vec3},
     reflect::Reflect,
     transform::components::Transform,
 };
@@ -113,7 +113,7 @@ fn on_change_selected_camera(
     mut main_camera: Query<&mut Transform, With<MainCamera>>,
     q_became_pilot: Query<(), (Added<Pilot>, With<LocalPlayer>)>,
     q_pilot: Query<(&Pilot, &CameraPlayerOffset), With<LocalPlayer>>,
-    q_selected_camera: Query<(Entity, &SelectedCamera, &Systems, &Structure)>,
+    q_selected_camera: Query<(Entity, Option<&SelectedCamera>, &Systems, &Structure)>,
     q_changed_stuff: Query<(Entity, &SelectedCamera, &Systems, &Structure), Changed<SelectedCamera>>,
     q_changed_camera_system: Query<(&StructureSystem, &CameraSystem), Changed<CameraSystem>>,
     q_camera_system: Query<&CameraSystem>,
@@ -130,11 +130,19 @@ fn on_change_selected_camera(
             return;
         };
 
+        let selected_camera = selected_camera.copied().unwrap_or(SelectedCamera::ShipCore);
+
         let Ok(camera_system) = systems.query(&q_camera_system) else {
             return;
         };
 
-        adjust_camera(camera_system, selected_camera, structure, &mut main_cam_trans, camera_player_offset);
+        adjust_camera(
+            camera_system,
+            &selected_camera,
+            structure,
+            &mut main_cam_trans,
+            camera_player_offset,
+        );
     }
 
     for (ent, selected_camera, systems, structure) in q_changed_stuff.iter() {
@@ -150,7 +158,7 @@ fn on_change_selected_camera(
     }
 
     for (ss, camera_system) in q_changed_camera_system.iter() {
-        let Ok((ent, selected_camera, _, structure)) = q_selected_camera.get(ss.structure_entity()) else {
+        let Ok((ent, Some(selected_camera), _, structure)) = q_selected_camera.get(ss.structure_entity()) else {
             continue;
         };
 
@@ -181,8 +189,17 @@ fn adjust_camera(
     };
 
     let local_pos = structure.block_relative_position(cam_block_coords);
+
+    let forward = match selected_camera {
+        SelectedCamera::ShipCore => Vec3::NEG_Z, // The ship core's forward face does not represent the looking direction
+        SelectedCamera::Camera(_) => structure.block_rotation(cam_block_coords).as_quat().mul_vec3(Vec3::Z),
+    }
+    .normalize();
+
     let offset = cam_offset.0 - Vec3::splat(0.5);
+
     main_cam_trans.translation = local_pos + offset;
+    *main_cam_trans = main_cam_trans.looking_to(forward, Vec3::Y);
 }
 
 fn on_stop_piloting(
@@ -199,6 +216,7 @@ fn on_stop_piloting(
             return;
         };
 
+        trans.rotation = Quat::IDENTITY;
         trans.translation = cam_offset.0;
     }
 }
