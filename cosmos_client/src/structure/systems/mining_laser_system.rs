@@ -9,6 +9,7 @@ use bevy::{
 use bevy_kira_audio::prelude::*;
 use bevy_rapier3d::{dynamics::PhysicsWorld, pipeline::QueryFilter, plugin::RapierContext};
 use cosmos_core::{
+    block::BlockFace,
     ecs::NeedsDespawned,
     structure::{
         shared::DespawnWithStructure,
@@ -61,6 +62,7 @@ struct MiningLaser {
     /// Relative to structure
     start_loc: Vec3,
     max_length: f32,
+    laser_direction: BlockFace, // which direction (relative to ship's core) the laser is going. (ex: Front is +Z)
 }
 
 #[derive(Component, Debug)]
@@ -169,7 +171,7 @@ fn apply_mining_effects(
                 let beam_ent = p
                     .spawn((
                         PbrBundle {
-                            transform: Transform::from_translation(laser_start).looking_to(-line.direction.direction_vec3(), Vec3::Y),
+                            transform: Transform::from_translation(laser_start).looking_to(line.direction.direction_vec3(), Vec3::Y),
                             material: material.clone_weak(),
                             mesh: mesh.0.clone_weak(),
                             ..Default::default()
@@ -177,6 +179,7 @@ fn apply_mining_effects(
                         NotShadowCaster,
                         NotShadowReceiver,
                         MiningLaser {
+                            laser_direction: line.direction,
                             start_loc: laser_start,
                             max_length: BEAM_MAX_RANGE,
                         },
@@ -234,7 +237,14 @@ fn resize_lasers(
         };
 
         trans.scale.z = toi * 2.0;
-        trans.translation.z = mining_laser.start_loc.z - toi / 2.0;
+        match mining_laser.laser_direction {
+            BlockFace::Front => trans.translation.z = mining_laser.start_loc.z + toi / 2.0,
+            BlockFace::Back => trans.translation.z = mining_laser.start_loc.z - toi / 2.0,
+            BlockFace::Top => trans.translation.y = mining_laser.start_loc.y - toi / 2.0,
+            BlockFace::Bottom => trans.translation.y = mining_laser.start_loc.y + toi / 2.0,
+            BlockFace::Right => trans.translation.x = mining_laser.start_loc.x - toi / 2.0,
+            BlockFace::Left => trans.translation.x = mining_laser.start_loc.x + toi / 2.0,
+        }
     }
 }
 

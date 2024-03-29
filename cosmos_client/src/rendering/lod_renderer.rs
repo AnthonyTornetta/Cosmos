@@ -292,7 +292,7 @@ impl ChunkRenderer {
                     };
 
                     let Some(image_index) = maybe_img_idx else {
-                        warn!("Missing image index -- {index:?}");
+                        warn!("Missing image index for face {face} -- {index:?}");
                         continue;
                     };
 
@@ -491,14 +491,14 @@ struct RenderedLod {
 }
 
 #[derive(Debug, Clone, DerefMut, Deref)]
-struct ToKill(Arc<Mutex<(Entity, usize)>>);
+struct LodRendersToDespawn(Arc<Mutex<(Entity, usize)>>);
 
 #[derive(Debug, Resource, Default, Deref, DerefMut)]
-struct MeshesToCompute(VecDeque<(Mesh, Entity, Vec<ToKill>)>);
+struct MeshesToCompute(VecDeque<(Mesh, Entity, Vec<LodRendersToDespawn>)>);
 
 const MESHES_PER_FRAME: usize = 15;
 
-fn kill_all(to_kill: Vec<ToKill>, commands: &mut Commands) {
+fn kill_all(to_kill: Vec<LodRendersToDespawn>, commands: &mut Commands) {
     for x in to_kill {
         let mut unlocked = x.lock().expect("Failed lock");
         unlocked.1 -= 1;
@@ -624,7 +624,7 @@ fn poll_rendering_lods(
                     to_despawn.push((
                         transform.translation,
                         rendered_lod.scale,
-                        ToKill(Arc::new(Mutex::new((mesh_entity, 0)))),
+                        LodRendersToDespawn(Arc::new(Mutex::new((mesh_entity, 0)))),
                     ));
                 }
             }
