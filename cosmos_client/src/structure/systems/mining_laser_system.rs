@@ -68,7 +68,11 @@ struct MiningLaser {
 #[derive(Component, Debug)]
 struct ActiveBeams(Vec<Entity>);
 
-fn remove_dead_beams(mut commands: Commands, q_has_beams: Query<&ActiveBeams>, mut q_deactivated_systems: RemovedComponents<SystemActive>) {
+fn remove_dead_mining_beams(
+    mut commands: Commands,
+    q_has_beams: Query<&ActiveBeams>,
+    mut q_deactivated_systems: RemovedComponents<SystemActive>,
+) {
     for deactivated_system in q_deactivated_systems.read() {
         let Ok(active_beams) = q_has_beams.get(deactivated_system) else {
             continue;
@@ -158,8 +162,14 @@ fn apply_mining_effects(
                         hashed,
                         materials.add(StandardMaterial {
                             unlit: true,
-                            base_color: color,
+                            base_color: Color::Rgba {
+                                red: color.r(),
+                                green: color.g(),
+                                blue: color.b(),
+                                alpha: 0.8,
+                            },
                             emissive: color,
+                            alpha_mode: AlphaMode::Add,
                             ..Default::default()
                         }),
                     );
@@ -196,7 +206,7 @@ fn apply_mining_effects(
     }
 }
 
-fn resize_lasers(
+fn resize_mining_lasers(
     q_parent: Query<&Parent>,
     mut q_lasers: Query<(&GlobalTransform, &mut Transform, &PhysicsWorld, &MiningLaser, &Parent)>,
     q_global_trans: Query<&GlobalTransform>,
@@ -254,6 +264,13 @@ fn create_mining_laser_mesh(mut commands: Commands, mut meshes: ResMut<Assets<Me
     commands.insert_resource(MiningLaserMesh(shape));
 }
 
+fn rotate_mining_lasers(time: Res<Time>, mut q_transforms: Query<(&mut Transform, &MiningLaser)>) {
+    for (mut trans, mining_laser) in q_transforms.iter_mut() {
+        trans.rotation =
+            Quat::from_axis_angle(mining_laser.laser_direction.direction_vec3(), time.delta_seconds()).mul_quat(trans.rotation);
+    }
+}
+
 struct LaserCannonLoadingFlag;
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
@@ -289,8 +306,8 @@ pub(super) fn register(app: &mut App) {
             Update,
             (
                 apply_mining_effects.in_set(LasersSystemSet::CreateLasers),
-                resize_lasers.in_set(LasersSystemSet::UpdateLasers),
-                remove_dead_beams.in_set(LasersSystemSet::UpdateLasers),
+                (resize_mining_lasers, rotate_mining_lasers).in_set(LasersSystemSet::UpdateLasers),
+                remove_dead_mining_beams.in_set(LasersSystemSet::UpdateLasers),
             )
                 .chain()
                 .run_if(in_state(GameState::Playing)),

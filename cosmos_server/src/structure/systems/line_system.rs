@@ -340,9 +340,12 @@ impl<T: LineProperty, S: LinePropertyCalculator<T>> BlockStructureSystem<T> for 
 
 fn is_in_line_with(block: &StructureBlock, direction: BlockFace, coord: &BlockCoordinate) -> bool {
     match direction {
-        BlockFace::Front => coord.x == block.x && coord.y == block.y && coord.z <= block.z,
-        BlockFace::Back => coord.x == block.x && coord.y == block.y && coord.z >= block.z,
-        _ => todo!(),
+        BlockFace::Front => coord.x == block.x && coord.y == block.y && coord.z >= block.z,
+        BlockFace::Back => coord.x == block.x && coord.y == block.y && coord.z <= block.z,
+        BlockFace::Top => coord.x == block.x && coord.y <= block.y && coord.z == block.z,
+        BlockFace::Bottom => coord.x == block.x && coord.y >= block.y && coord.z == block.z,
+        BlockFace::Right => coord.x <= block.x && coord.y == block.y && coord.z == block.z,
+        BlockFace::Left => coord.x >= block.x && coord.y == block.y && coord.z == block.z,
     }
 }
 
