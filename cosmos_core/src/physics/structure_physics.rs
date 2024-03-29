@@ -1,4 +1,4 @@
-//! Responsible for the collider generation of a structure.
+//! Responsible for the collider generation of a structure.structure_physics.rs
 
 use std::sync::{Arc, Mutex};
 
@@ -96,7 +96,8 @@ fn generate_colliders(
                                 sensor_colliders.push((location, Rot::IDENTITY, Collider::cuboid(0.5, 0.5, 0.5)));
                             }
 
-                            (true, true)
+                            can_be_one_square_collider = false;
+                            (false, true)
                         }
                     },
                     Some(BlockColliderType::Empty) => (true, false),
