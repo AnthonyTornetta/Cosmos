@@ -47,23 +47,46 @@ fn process_ship_movement(
     let mut movement = ShipMovement::default();
 
     if input_handler.check_pressed(CosmosInputs::MoveForward) {
-        movement.movement.z += 1.0;
+        // z movement is inverted for when cam forward is in the +/-Z direction for some reason
+        if cam_trans.forward().z != 0.0 {
+            movement.movement -= Vec3::from(cam_trans.forward());
+        } else {
+            movement.movement += Vec3::from(cam_trans.forward());
+        }
     }
     if input_handler.check_pressed(CosmosInputs::MoveBackward) {
-        movement.movement.z -= 1.0;
+        // z movement is inverted for when cam forward is in the +/-Z direction for some reason
+        if cam_trans.forward().z != 0.0 {
+            movement.movement += Vec3::from(cam_trans.forward());
+        } else {
+            movement.movement -= Vec3::from(cam_trans.forward());
+        }
     }
     if input_handler.check_pressed(CosmosInputs::MoveUp) {
-        movement.movement.y += 1.0;
+        movement.movement += Vec3::from(cam_trans.up());
     }
     if input_handler.check_pressed(CosmosInputs::MoveDown) {
-        movement.movement.y -= 1.0;
-    }
-    if input_handler.check_pressed(CosmosInputs::MoveLeft) {
-        movement.movement.x -= 1.0;
+        movement.movement -= Vec3::from(cam_trans.up());
     }
     if input_handler.check_pressed(CosmosInputs::MoveRight) {
-        movement.movement.x += 1.0;
+        // x movement is inverted for when cam forward is not in the +/-Z direction for some reason
+        if cam_trans.forward().z == 0.0 {
+            movement.movement -= Vec3::from(cam_trans.right());
+        } else {
+            movement.movement += Vec3::from(cam_trans.right());
+        }
     }
+    if input_handler.check_pressed(CosmosInputs::MoveLeft) {
+        // x movement is inverted for when cam forward is not in the +/-Z direction for some reason
+        if cam_trans.forward().z == 0.0 {
+            movement.movement += Vec3::from(cam_trans.right());
+        } else {
+            movement.movement -= Vec3::from(cam_trans.right());
+        }
+    }
+
+    // Redundant because this is done on the server, but makes for nicer printouts
+    movement.movement = movement.movement.normalize_or_zero();
 
     movement.braking = input_handler.check_pressed(CosmosInputs::SlowDown);
 

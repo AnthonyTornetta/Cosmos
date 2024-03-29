@@ -91,8 +91,6 @@ fn update_crosshair(
             return;
         };
 
-        println!("{}", Vec3::from(cam_trans.forward()));
-
         if let Some(mut pos_on_screen) = camera.world_to_viewport(
             cam_global_trans,
             last_rotation.0.mul_vec3(Vec3::from(cam_trans.forward())) + cam_global_trans.translation(),
