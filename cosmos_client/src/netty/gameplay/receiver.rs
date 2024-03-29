@@ -95,7 +95,7 @@ fn update_crosshair(
 
         if let Some(mut pos_on_screen) = camera.world_to_viewport(
             cam_global_trans,
-            last_rotation.0.mul_vec3(-Vec3::new(0.0, 0.0, 1.0) + cam_global_trans.translation()),
+            last_rotation.0.mul_vec3(Vec3::from(cam_trans.forward())) + cam_global_trans.translation(),
         ) {
             pos_on_screen -= Vec2::new(primary.width() / 2.0, primary.height() / 2.0);
 
