@@ -115,6 +115,14 @@ impl BlockRotation {
         Self::rotate_face(self, BlockFace::Front)
     }
 
+    /// Gets the complete opposite of this rotation
+    pub fn inverse(&self) -> Self {
+        Self {
+            block_up: self.block_up.inverse(),
+            sub_rotation: self.sub_rotation.inverse(),
+        }
+    }
+
     /// Gets the face that should be used for this "absolute" side.
     ///
     /// "Absolute" means that +Y is [`BlockFace::Top`], -X is [`BlockFace::Left`], etc.
@@ -333,6 +341,16 @@ impl BlockSubRotation {
             2 => Self::CW,
             3 => Self::Flip,
             _ => panic!("Index must be 0 <= {index} <= 3"),
+        }
+    }
+
+    /// Inverts this sub rotation to be its opposite
+    pub fn inverse(&self) -> Self {
+        match self {
+            BlockSubRotation::None => BlockSubRotation::Flip,
+            BlockSubRotation::Flip => BlockSubRotation::None,
+            BlockSubRotation::CW => BlockSubRotation::CCW,
+            BlockSubRotation::CCW => BlockSubRotation::CW,
         }
     }
 }

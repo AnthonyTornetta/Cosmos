@@ -16,7 +16,7 @@ use crate::{
     },
 };
 
-use super::{blocks::AIR_BLOCK_ID, data::BlockData, Block, BlockRotation};
+use super::{blocks::AIR_BLOCK_ID, data::BlockData, Block, BlockFace, BlockRotation, BlockSubRotation};
 
 /// This is sent whenever a player breaks a block
 #[derive(Debug, Event)]
@@ -195,14 +195,36 @@ fn calculate_build_mode_blocks(
 
         let mut new_coords = vec![];
 
-        for (old_coords, block_up) in structure_blocks {
-            unique_push(&mut new_coords, (old_coords, block_up));
+        for (old_coords, block_rotation) in structure_blocks {
+            unique_push(&mut new_coords, (old_coords, block_rotation));
 
             let new_x_coord = 2 * (axis_coord - old_coords.x as UnboundCoordinateType) + old_coords.x as UnboundCoordinateType;
             if new_x_coord >= 0 {
                 let new_block_coords = BlockCoordinate::new(new_x_coord as CoordinateType, old_coords.y, old_coords.z);
                 if structure.is_within_blocks(new_block_coords) {
-                    unique_push(&mut new_coords, (new_block_coords, block_up));
+                    let new_block_rotation = match block_rotation {
+                        BlockRotation {
+                            block_up: BlockFace::Left | BlockFace::Right,
+                            sub_rotation: BlockSubRotation::CCW | BlockSubRotation::CW,
+                        } => block_rotation.inverse(),
+                        BlockRotation {
+                            block_up: BlockFace::Left | BlockFace::Right,
+                            sub_rotation: BlockSubRotation::None | BlockSubRotation::Flip,
+                        } => BlockRotation {
+                            block_up: block_rotation.block_up.inverse(),
+                            sub_rotation: block_rotation.sub_rotation,
+                        },
+                        BlockRotation {
+                            block_up: _,
+                            sub_rotation: BlockSubRotation::CCW | BlockSubRotation::CW,
+                        } => BlockRotation {
+                            block_up: block_rotation.block_up,
+                            sub_rotation: block_rotation.sub_rotation.inverse(),
+                        },
+                        _ => block_rotation,
+                    };
+
+                    unique_push(&mut new_coords, (new_block_coords, new_block_rotation));
                 }
             }
         }
@@ -215,14 +237,43 @@ fn calculate_build_mode_blocks(
 
         let mut new_coords = vec![];
 
-        for (old_coords, block_up) in structure_blocks {
-            unique_push(&mut new_coords, (old_coords, block_up));
+        for (old_coords, block_rotation) in structure_blocks {
+            unique_push(&mut new_coords, (old_coords, block_rotation));
 
             let new_y_coord = 2 * (axis_coord - old_coords.y as UnboundCoordinateType) + old_coords.y as UnboundCoordinateType;
             if new_y_coord >= 0 {
                 let new_block_coords = BlockCoordinate::new(old_coords.x, new_y_coord as CoordinateType, old_coords.z);
                 if structure.is_within_blocks(new_block_coords) {
-                    unique_push(&mut new_coords, (new_block_coords, block_up));
+                    let new_block_rotation = match block_rotation {
+                        BlockRotation {
+                            block_up: BlockFace::Top | BlockFace::Bottom,
+                            sub_rotation: BlockSubRotation::Flip | BlockSubRotation::None,
+                        } => block_rotation.inverse(),
+                        BlockRotation {
+                            block_up: BlockFace::Top | BlockFace::Bottom,
+                            sub_rotation: BlockSubRotation::CCW | BlockSubRotation::CW,
+                        } => BlockRotation {
+                            block_up: block_rotation.block_up.inverse(),
+                            sub_rotation: block_rotation.sub_rotation,
+                        },
+                        BlockRotation {
+                            block_up: BlockFace::Right | BlockFace::Left,
+                            sub_rotation: BlockSubRotation::CCW | BlockSubRotation::CW,
+                        } => BlockRotation {
+                            block_up: block_rotation.block_up,
+                            sub_rotation: block_rotation.sub_rotation.inverse(),
+                        },
+                        BlockRotation {
+                            block_up: BlockFace::Front | BlockFace::Back,
+                            sub_rotation: BlockSubRotation::Flip | BlockSubRotation::None,
+                        } => BlockRotation {
+                            block_up: block_rotation.block_up,
+                            sub_rotation: block_rotation.sub_rotation.inverse(),
+                        },
+                        _ => block_rotation,
+                    };
+
+                    unique_push(&mut new_coords, (new_block_coords, new_block_rotation));
                 }
             }
         }
@@ -235,14 +286,36 @@ fn calculate_build_mode_blocks(
 
         let mut new_coords = vec![];
 
-        for (old_coords, block_up) in structure_blocks {
-            unique_push(&mut new_coords, (old_coords, block_up));
+        for (old_coords, block_rotation) in structure_blocks {
+            unique_push(&mut new_coords, (old_coords, block_rotation));
 
             let new_z_coord = 2 * (axis_coord - old_coords.z as UnboundCoordinateType) + old_coords.z as UnboundCoordinateType;
             if new_z_coord >= 0 {
                 let new_block_coords = BlockCoordinate::new(old_coords.x, old_coords.y, new_z_coord as CoordinateType);
                 if structure.is_within_blocks(new_block_coords) {
-                    unique_push(&mut new_coords, (new_block_coords, block_up));
+                    let new_block_rotation = match block_rotation {
+                        BlockRotation {
+                            block_up: BlockFace::Front | BlockFace::Back,
+                            sub_rotation: BlockSubRotation::None | BlockSubRotation::Flip,
+                        } => block_rotation.inverse(),
+                        BlockRotation {
+                            block_up: BlockFace::Front | BlockFace::Back,
+                            sub_rotation: BlockSubRotation::CCW | BlockSubRotation::CW,
+                        } => BlockRotation {
+                            block_up: block_rotation.block_up.inverse(),
+                            sub_rotation: block_rotation.sub_rotation,
+                        },
+                        BlockRotation {
+                            block_up: _,
+                            sub_rotation: BlockSubRotation::None | BlockSubRotation::Flip,
+                        } => BlockRotation {
+                            block_up: block_rotation.block_up,
+                            sub_rotation: block_rotation.sub_rotation.inverse(),
+                        },
+                        _ => block_rotation,
+                    };
+
+                    unique_push(&mut new_coords, (new_block_coords, new_block_rotation));
                 }
             }
         }
