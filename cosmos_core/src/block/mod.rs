@@ -136,20 +136,20 @@ impl BlockRotation {
             BF::Right => match self.sub_rotation {
                 BlockSubRotation::None => BlockFace::rotate_face(face, self.block_up),
                 BlockSubRotation::CCW => match face {
-                    BF::Top => BF::Back,
-                    BF::Bottom => BF::Front,
-                    BF::Right => BF::Top,
-                    BF::Left => BF::Bottom,
-                    BF::Back => BF::Right,
-                    BF::Front => BF::Left,
-                },
-                BlockSubRotation::CW => match face {
                     BF::Top => BF::Front,
                     BF::Bottom => BF::Back,
                     BF::Right => BF::Top,
                     BF::Left => BF::Bottom,
                     BF::Back => BF::Left,
                     BF::Front => BF::Right,
+                },
+                BlockSubRotation::CW => match face {
+                    BF::Top => BF::Back,
+                    BF::Bottom => BF::Front,
+                    BF::Right => BF::Top,
+                    BF::Left => BF::Bottom,
+                    BF::Back => BF::Right,
+                    BF::Front => BF::Left,
                 },
                 BlockSubRotation::Flip => match face {
                     BF::Top => BF::Left,
@@ -163,20 +163,20 @@ impl BlockRotation {
             BF::Left => match self.sub_rotation {
                 BlockSubRotation::None => BlockFace::rotate_face(face, self.block_up),
                 BlockSubRotation::CCW => match face {
-                    BF::Top => BF::Front,
-                    BF::Bottom => BF::Back,
-                    BF::Right => BF::Bottom,
-                    BF::Left => BF::Top,
-                    BF::Back => BF::Right,
-                    BF::Front => BF::Left,
-                },
-                BlockSubRotation::CW => match face {
                     BF::Top => BF::Back,
                     BF::Bottom => BF::Front,
                     BF::Right => BF::Bottom,
                     BF::Left => BF::Top,
                     BF::Back => BF::Left,
                     BF::Front => BF::Right,
+                },
+                BlockSubRotation::CW => match face {
+                    BF::Top => BF::Front,
+                    BF::Bottom => BF::Back,
+                    BF::Right => BF::Bottom,
+                    BF::Left => BF::Top,
+                    BF::Back => BF::Right,
+                    BF::Front => BF::Left,
                 },
                 BlockSubRotation::Flip => match face {
                     BF::Top => BF::Right,
@@ -206,10 +206,10 @@ impl BlockRotation {
                     BF::Front => BF::Top,
                 },
                 BlockSubRotation::Flip => match face {
-                    BF::Top => BF::Front,
-                    BF::Bottom => BF::Back,
-                    BF::Right => BF::Left,
-                    BF::Left => BF::Right,
+                    BF::Top => BF::Back,
+                    BF::Bottom => BF::Front,
+                    BF::Right => BF::Right,
+                    BF::Left => BF::Left,
                     BF::Back => BF::Bottom,
                     BF::Front => BF::Top,
                 },
@@ -233,10 +233,10 @@ impl BlockRotation {
                     BF::Front => BF::Bottom,
                 },
                 BlockSubRotation::Flip => match face {
-                    BF::Top => BF::Back,
-                    BF::Bottom => BF::Front,
-                    BF::Right => BF::Left,
-                    BF::Left => BF::Right,
+                    BF::Top => BF::Front,
+                    BF::Bottom => BF::Back,
+                    BF::Right => BF::Right,
+                    BF::Left => BF::Left,
                     BF::Back => BF::Top,
                     BF::Front => BF::Bottom,
                 },
@@ -246,18 +246,18 @@ impl BlockRotation {
                 BlockSubRotation::CCW => match face {
                     BF::Top => BF::Bottom,
                     BF::Bottom => BF::Top,
-                    BF::Right => BF::Back,
-                    BF::Left => BF::Front,
-                    BF::Back => BF::Right,
-                    BF::Front => BF::Left,
-                },
-                BlockSubRotation::CW => match face {
-                    BF::Top => BF::Bottom,
-                    BF::Bottom => BF::Top,
                     BF::Right => BF::Front,
                     BF::Left => BF::Back,
                     BF::Back => BF::Left,
                     BF::Front => BF::Right,
+                },
+                BlockSubRotation::CW => match face {
+                    BF::Top => BF::Bottom,
+                    BF::Bottom => BF::Top,
+                    BF::Right => BF::Back,
+                    BF::Left => BF::Front,
+                    BF::Back => BF::Right,
+                    BF::Front => BF::Left,
                 },
                 BlockSubRotation::Flip => match face {
                     BF::Top => BF::Bottom,
@@ -273,18 +273,18 @@ impl BlockRotation {
                 BlockSubRotation::CCW => match face {
                     BF::Top => BF::Top,
                     BF::Bottom => BF::Bottom,
-                    BF::Right => BF::Back,
-                    BF::Left => BF::Front,
-                    BF::Back => BF::Left,
-                    BF::Front => BF::Right,
-                },
-                BlockSubRotation::CW => match face {
-                    BF::Top => BF::Top,
-                    BF::Bottom => BF::Bottom,
                     BF::Right => BF::Front,
                     BF::Left => BF::Back,
                     BF::Back => BF::Right,
                     BF::Front => BF::Left,
+                },
+                BlockSubRotation::CW => match face {
+                    BF::Top => BF::Top,
+                    BF::Bottom => BF::Bottom,
+                    BF::Right => BF::Back,
+                    BF::Left => BF::Front,
+                    BF::Back => BF::Left,
+                    BF::Front => BF::Right,
                 },
                 BlockSubRotation::Flip => match face {
                     BF::Top => BF::Top,
@@ -360,12 +360,12 @@ impl BlockSubRotation {
 ///
 /// Even non-cube blocks will have this.
 pub enum BlockFace {
-    #[default]
     /// +Z
     Front,
     /// -Z
     Back,
     /// +Y
+    #[default]
     Top,
     /// -Y
     Bottom,
@@ -548,17 +548,19 @@ impl BlockFace {
             },
             Self::Front => match face {
                 Self::Back => Self::Bottom,
-                Self::Bottom => Self::Front,
+                Self::Bottom => Self::Back,
                 Self::Front => Self::Top,
-                Self::Top => Self::Back,
-                _ => face,
+                Self::Top => Self::Front,
+                Self::Left => Self::Right,
+                Self::Right => Self::Left,
             },
             Self::Back => match face {
                 Self::Front => Self::Bottom,
                 Self::Back => Self::Top,
-                Self::Top => Self::Front,
-                Self::Bottom => Self::Back,
-                _ => face,
+                Self::Top => Self::Back,
+                Self::Bottom => Self::Front,
+                Self::Left => Self::Right,
+                Self::Right => Self::Left,
             },
         }
     }
