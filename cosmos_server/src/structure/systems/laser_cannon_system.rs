@@ -81,14 +81,8 @@ fn update_system(
 
                             let location = structure.block_world_location(line.start.coords(), global_transform, location);
 
-                            let mut direction = line.direction.direction_vec3();
-
-                            // The left/right & up/down directions are inverted for some reason
-                            if direction.z == 0.0 {
-                                direction *= -1.0;
-                            }
-
-                            let laser_velocity = global_transform.affine().matrix3.mul_vec3(direction) * LASER_BASE_VELOCITY;
+                            let relative_direction = line.direction.direction_vec3();
+                            let laser_velocity = global_transform.affine().matrix3.mul_vec3(relative_direction) * LASER_BASE_VELOCITY;
 
                             let strength = (5.0 * line.len as f32).powf(1.2);
                             let no_hit = Some(system.structure_entity());

@@ -160,7 +160,7 @@ fn add_colors(mut colors: ResMut<Registry<LineColorBlock>>, blocks: Res<Registry
 
 impl<T: LineProperty, S: LinePropertyCalculator<T>> BlockStructureSystem<T> for LineSystem<T, S> {
     fn add_block(&mut self, block: &StructureBlock, block_rotation: BlockRotation, prop: &T) {
-        let block_direction = block_rotation.rotate_face(BlockFace::Front);
+        let block_direction = block_rotation.which_face_is(BlockFace::Front);
 
         let mut found_line = None;
         // If a structure has two lines like this: (XXXXX XXXXXX) and an X is placed
@@ -338,14 +338,14 @@ impl<T: LineProperty, S: LinePropertyCalculator<T>> BlockStructureSystem<T> for 
     }
 }
 
-fn is_in_line_with(block: &StructureBlock, direction: BlockFace, coord: &BlockCoordinate) -> bool {
+fn is_in_line_with(testing_block: &StructureBlock, direction: BlockFace, line_coord: &BlockCoordinate) -> bool {
     match direction {
-        BlockFace::Front => coord.x == block.x && coord.y == block.y && coord.z >= block.z,
-        BlockFace::Back => coord.x == block.x && coord.y == block.y && coord.z <= block.z,
-        BlockFace::Top => coord.x == block.x && coord.y <= block.y && coord.z == block.z,
-        BlockFace::Bottom => coord.x == block.x && coord.y >= block.y && coord.z == block.z,
-        BlockFace::Right => coord.x <= block.x && coord.y == block.y && coord.z == block.z,
-        BlockFace::Left => coord.x >= block.x && coord.y == block.y && coord.z == block.z,
+        BlockFace::Front => line_coord.x == testing_block.x && line_coord.y == testing_block.y && line_coord.z >= testing_block.z,
+        BlockFace::Back => line_coord.x == testing_block.x && line_coord.y == testing_block.y && line_coord.z <= testing_block.z,
+        BlockFace::Top => line_coord.x == testing_block.x && line_coord.y >= testing_block.y && line_coord.z == testing_block.z,
+        BlockFace::Bottom => line_coord.x == testing_block.x && line_coord.y <= testing_block.y && line_coord.z == testing_block.z,
+        BlockFace::Right => line_coord.x >= testing_block.x && line_coord.y == testing_block.y && line_coord.z == testing_block.z,
+        BlockFace::Left => line_coord.x <= testing_block.x && line_coord.y == testing_block.y && line_coord.z == testing_block.z,
     }
 }
 

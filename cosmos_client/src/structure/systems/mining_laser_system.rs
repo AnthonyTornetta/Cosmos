@@ -177,12 +177,7 @@ fn apply_mining_effects(
 
                 let material = materials_cache.0.get(&hashed).expect("Added above");
 
-                let mut beam_direction = line.direction.direction_vec3();
-
-                // Every direction that isn't Z is opposite of what it should be.
-                if beam_direction.z == 0.0 {
-                    beam_direction *= -1.0;
-                }
+                let beam_direction = line.direction.direction_vec3();
 
                 let laser_start = structure.block_relative_position(line.start.coords());
                 let beam_ent = p
@@ -257,10 +252,10 @@ fn resize_mining_lasers(
         match mining_laser.laser_direction {
             BlockFace::Front => trans.translation.z = mining_laser.start_loc.z + toi / 2.0,
             BlockFace::Back => trans.translation.z = mining_laser.start_loc.z - toi / 2.0,
-            BlockFace::Top => trans.translation.y = mining_laser.start_loc.y - toi / 2.0,
-            BlockFace::Bottom => trans.translation.y = mining_laser.start_loc.y + toi / 2.0,
-            BlockFace::Right => trans.translation.x = mining_laser.start_loc.x - toi / 2.0,
-            BlockFace::Left => trans.translation.x = mining_laser.start_loc.x + toi / 2.0,
+            BlockFace::Top => trans.translation.y = mining_laser.start_loc.y + toi / 2.0,
+            BlockFace::Bottom => trans.translation.y = mining_laser.start_loc.y - toi / 2.0,
+            BlockFace::Right => trans.translation.x = mining_laser.start_loc.x + toi / 2.0,
+            BlockFace::Left => trans.translation.x = mining_laser.start_loc.x - toi / 2.0,
         }
     }
 }

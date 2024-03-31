@@ -123,6 +123,31 @@ impl BlockRotation {
         }
     }
 
+    /// Returns which face of this rotation represents the given face.
+    ///
+    /// For example, if your left face is [`BlockFace::Front`] and you ask for the [`BlockFace::Left`], you will be given [`BlockFace::Front`]
+    pub fn which_face_is(&self, face: BlockFace) -> BlockFace {
+        let direction = face.direction_vec3();
+        let q = self.as_quat();
+        let rotated = q.mul_vec3(direction);
+
+        println!("Rotated: {rotated}");
+
+        if rotated.x > 0.9 {
+            BlockFace::Right
+        } else if rotated.x < -0.9 {
+            BlockFace::Left
+        } else if rotated.y > 0.9 {
+            BlockFace::Top
+        } else if rotated.y < -0.9 {
+            BlockFace::Bottom
+        } else if rotated.z > 0.9 {
+            BlockFace::Front
+        } else {
+            BlockFace::Back
+        }
+    }
+
     /// Gets the face that should be used for this "absolute" side.
     ///
     /// "Absolute" means that +Y is [`BlockFace::Top`], -X is [`BlockFace::Left`], etc.
