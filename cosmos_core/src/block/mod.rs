@@ -73,6 +73,42 @@ impl BlockRotation {
         })
     }
 
+    #[inline(always)]
+    /// Returns the `BlockFace` that is this rotations's top
+    pub fn local_top(&self) -> BlockFace {
+        Self::rotate_face(self, BlockFace::Top)
+    }
+
+    #[inline(always)]
+    /// Returns the `BlockFace` that is this rotations's bottom
+    pub fn local_bottom(&self) -> BlockFace {
+        Self::rotate_face(self, BlockFace::Bottom)
+    }
+
+    #[inline(always)]
+    /// Returns the `BlockFace` that is this rotations's left
+    pub fn local_left(&self) -> BlockFace {
+        Self::rotate_face(self, BlockFace::Left)
+    }
+
+    #[inline(always)]
+    /// Returns the `BlockFace` that is this rotations's right
+    pub fn local_right(&self) -> BlockFace {
+        Self::rotate_face(self, BlockFace::Right)
+    }
+
+    #[inline(always)]
+    /// Returns the `BlockFace` that is this rotations's back
+    pub fn local_back(&self) -> BlockFace {
+        Self::rotate_face(self, BlockFace::Back)
+    }
+
+    #[inline(always)]
+    /// Returns the `BlockFace` that is this rotations's front
+    pub fn local_front(&self) -> BlockFace {
+        Self::rotate_face(self, BlockFace::Front)
+    }
+
     /// Gets the face that should be used for this "absolute" side.
     ///
     /// "Absolute" means that +Y is [`BlockFace::Top`], -X is [`BlockFace::Left`], etc.

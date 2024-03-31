@@ -146,7 +146,7 @@ pub(crate) fn process_player_interaction(
             let (block_up, block_sub_rotation) = if block.is_fully_rotatable() {
                 let delta = UnboundBlockCoordinate::from(place_at_coords) - UnboundBlockCoordinate::from(coords);
 
-                let block_up = match delta {
+                let block_front = match delta {
                     UnboundBlockCoordinate { x: -1, y: 0, z: 0 } => BlockFace::Left,
                     UnboundBlockCoordinate { x: 1, y: 0, z: 0 } => BlockFace::Right,
                     UnboundBlockCoordinate { x: 0, y: -1, z: 0 } => BlockFace::Bottom,
@@ -157,17 +157,18 @@ pub(crate) fn process_player_interaction(
                 };
 
                 if block.is_full() {
-                    let block_up = BlockFace::rotate_face(block_up, BlockFace::Front);
-
-                    match block_up {
-                        BlockFace::Left => (BlockFace::Top, BlockSubRotation::Right),
+                    match block_front {
+                        BlockFace::Front => (BlockFace::Top, BlockSubRotation::None),
+                        BlockFace::Back => (BlockFace::Top, BlockSubRotation::Flip),
                         BlockFace::Right => (BlockFace::Top, BlockSubRotation::Left),
-                        _ => (block_up, BlockSubRotation::None),
+                        BlockFace::Left => (BlockFace::Top, BlockSubRotation::Right),
+                        BlockFace::Top => (BlockFace::Back, BlockSubRotation::None),
+                        BlockFace::Bottom => (BlockFace::Front, BlockSubRotation::None),
                     }
                 } else {
                     let point = (point - point.floor()) - Vec3::new(0.5, 0.5, 0.5);
 
-                    let block_sub_rotation = match block_up {
+                    let block_sub_rotation = match block_front {
                         BlockFace::Top => {
                             if point.x.abs() > point.z.abs() {
                                 if point.x < 0.0 {
@@ -248,7 +249,7 @@ pub(crate) fn process_player_interaction(
                         }
                     };
 
-                    (block_up, block_sub_rotation)
+                    (block_front, block_sub_rotation)
                 }
             } else {
                 let block_up = if is_planet.is_some() {
