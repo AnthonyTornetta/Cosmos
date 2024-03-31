@@ -131,8 +131,6 @@ impl BlockRotation {
         let q = self.as_quat();
         let rotated = q.mul_vec3(direction);
 
-        println!("Rotated: {rotated}");
-
         if rotated.x > 0.9 {
             BlockFace::Right
         } else if rotated.x < -0.9 {
