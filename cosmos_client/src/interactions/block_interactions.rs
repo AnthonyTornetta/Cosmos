@@ -160,8 +160,8 @@ pub(crate) fn process_player_interaction(
                     match block_front {
                         BlockFace::Front => (BlockFace::Top, BlockSubRotation::None),
                         BlockFace::Back => (BlockFace::Top, BlockSubRotation::Flip),
-                        BlockFace::Right => (BlockFace::Top, BlockSubRotation::Right),
-                        BlockFace::Left => (BlockFace::Top, BlockSubRotation::Left),
+                        BlockFace::Right => (BlockFace::Top, BlockSubRotation::CCW),
+                        BlockFace::Left => (BlockFace::Top, BlockSubRotation::CW),
                         BlockFace::Top => (BlockFace::Front, BlockSubRotation::None),
                         BlockFace::Bottom => (BlockFace::Back, BlockSubRotation::None),
                     }
@@ -172,61 +172,61 @@ pub(crate) fn process_player_interaction(
                         BlockFace::Top => {
                             if point.x.abs() > point.z.abs() {
                                 if point.x < 0.0 {
-                                    BlockSubRotation::Left
+                                    BlockSubRotation::CW
                                 } else {
-                                    BlockSubRotation::Right
+                                    BlockSubRotation::CCW
                                 }
                             } else if point.z < 0.0 {
-                                BlockSubRotation::None
-                            } else {
                                 BlockSubRotation::Flip
+                            } else {
+                                BlockSubRotation::None
                             }
                         }
                         BlockFace::Bottom => {
                             if point.x.abs() > point.z.abs() {
                                 if point.x < 0.0 {
-                                    BlockSubRotation::Left
+                                    BlockSubRotation::CW
                                 } else {
-                                    BlockSubRotation::Right
+                                    BlockSubRotation::CCW
                                 }
                             } else if point.z < 0.0 {
-                                BlockSubRotation::Flip
-                            } else {
                                 BlockSubRotation::None
+                            } else {
+                                BlockSubRotation::Flip
                             }
                         }
                         BlockFace::Right => {
                             if point.y.abs() > point.z.abs() {
                                 if point.y < 0.0 {
-                                    BlockSubRotation::Left
+                                    BlockSubRotation::CW
                                 } else {
-                                    BlockSubRotation::Right
+                                    BlockSubRotation::CCW
                                 }
                             } else if point.z < 0.0 {
-                                BlockSubRotation::Flip
-                            } else {
                                 BlockSubRotation::None
+                            } else {
+                                BlockSubRotation::Flip
                             }
                         }
                         BlockFace::Left => {
                             if point.y.abs() > point.z.abs() {
                                 if point.y < 0.0 {
-                                    BlockSubRotation::Right
+                                    BlockSubRotation::CCW
                                 } else {
-                                    BlockSubRotation::Left
+                                    BlockSubRotation::CW
                                 }
                             } else if point.z < 0.0 {
-                                BlockSubRotation::Flip
-                            } else {
                                 BlockSubRotation::None
+                            } else {
+                                BlockSubRotation::Flip
                             }
                         }
                         BlockFace::Front => {
                             if point.x.abs() > point.y.abs() {
                                 if point.x < 0.0 {
-                                    BlockSubRotation::Left
+                                    BlockSubRotation::CCW
                                 } else {
-                                    BlockSubRotation::Right
+                                    BlockSubRotation::CW
                                 }
                             } else if point.y < 0.0 {
                                 BlockSubRotation::Flip
@@ -237,9 +237,9 @@ pub(crate) fn process_player_interaction(
                         BlockFace::Back => {
                             if point.x.abs() > point.y.abs() {
                                 if point.x < 0.0 {
-                                    BlockSubRotation::Left
+                                    BlockSubRotation::CCW
                                 } else {
-                                    BlockSubRotation::Right
+                                    BlockSubRotation::CW
                                 }
                             } else if point.y < 0.0 {
                                 BlockSubRotation::None
