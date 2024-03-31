@@ -143,7 +143,7 @@ pub(crate) fn process_player_interaction(
 
             inventory.decrease_quantity_at(inventory_slot, 1);
 
-            let (block_up, block_sub_rotation) = if block.is_fully_rotatable() {
+            let (block_up, block_sub_rotation) = if block.is_fully_rotatable() || block.should_face_front() {
                 let delta = UnboundBlockCoordinate::from(place_at_coords) - UnboundBlockCoordinate::from(coords);
 
                 let block_front = match delta {
@@ -156,14 +156,14 @@ pub(crate) fn process_player_interaction(
                     _ => return, // invalid direction, something wonky happened w/ the block selection logic
                 };
 
-                if block.is_full() {
+                if block.should_face_front() {
                     match block_front {
                         BlockFace::Front => (BlockFace::Top, BlockSubRotation::None),
                         BlockFace::Back => (BlockFace::Top, BlockSubRotation::Flip),
-                        BlockFace::Right => (BlockFace::Top, BlockSubRotation::Left),
-                        BlockFace::Left => (BlockFace::Top, BlockSubRotation::Right),
-                        BlockFace::Top => (BlockFace::Back, BlockSubRotation::None),
-                        BlockFace::Bottom => (BlockFace::Front, BlockSubRotation::None),
+                        BlockFace::Right => (BlockFace::Top, BlockSubRotation::Right),
+                        BlockFace::Left => (BlockFace::Top, BlockSubRotation::Left),
+                        BlockFace::Top => (BlockFace::Front, BlockSubRotation::None),
+                        BlockFace::Bottom => (BlockFace::Back, BlockSubRotation::None),
                     }
                 } else {
                     let point = (point - point.floor()) - Vec3::new(0.5, 0.5, 0.5);

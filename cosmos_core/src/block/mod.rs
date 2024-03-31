@@ -29,6 +29,8 @@ pub enum BlockProperty {
     Full,
     /// Does this block not take up any space (such as air)
     Empty,
+    /// This block, when placed, should have the front direction facing in a specified direction
+    FaceFront,
     /// This block can be rotated on all axis (such as ramps)
     FullyRotatable,
 }
@@ -55,20 +57,20 @@ impl BlockRotation {
     pub fn as_quat(&self) -> Quat {
         match self.block_up {
             BlockFace::Top => Quat::IDENTITY,
-            BlockFace::Front => Quat::from_axis_angle(Vec3::X, PI / 2.0),
-            BlockFace::Back => Quat::from_axis_angle(Vec3::X, -PI / 2.0),
+            BlockFace::Bottom => Quat::from_axis_angle(Vec3::X, PI),
+            BlockFace::Front => Quat::from_axis_angle(Vec3::X, -PI / 2.0),
+            BlockFace::Back => Quat::from_axis_angle(Vec3::X, PI / 2.0),
             BlockFace::Left => Quat::from_axis_angle(Vec3::Y, PI)
-                .mul_quat(Quat::from_axis_angle(-Vec3::Z, PI / 2.0))
-                .normalize(),
-            BlockFace::Right => Quat::from_axis_angle(Vec3::Y, PI)
                 .mul_quat(Quat::from_axis_angle(Vec3::Z, PI / 2.0))
                 .normalize(),
-            BlockFace::Bottom => Quat::from_axis_angle(Vec3::X, PI),
+            BlockFace::Right => Quat::from_axis_angle(Vec3::Y, PI)
+                .mul_quat(Quat::from_axis_angle(Vec3::Z, -PI / 2.0))
+                .normalize(),
         }
         .mul_quat(match self.sub_rotation {
             BlockSubRotation::None => Quat::IDENTITY,
-            BlockSubRotation::Right => Quat::from_axis_angle(Vec3::Y, -PI / 2.0),
-            BlockSubRotation::Left => Quat::from_axis_angle(Vec3::Y, PI / 2.0),
+            BlockSubRotation::Right => Quat::from_axis_angle(Vec3::Y, PI / 2.0),
+            BlockSubRotation::Left => Quat::from_axis_angle(Vec3::Y, -PI / 2.0),
             BlockSubRotation::Flip => Quat::from_axis_angle(Vec3::Y, PI),
         })
     }
@@ -554,7 +556,8 @@ impl BlockProperty {
             Self::Transparent => 0b1,
             Self::Full => 0b10,
             Self::Empty => 0b100,
-            Self::FullyRotatable => 0b1000,
+            Self::FaceFront => 0b1000,
+            Self::FullyRotatable => 0b10000,
         }
     }
 
@@ -646,6 +649,15 @@ impl Block {
     #[inline]
     pub fn is_empty(&self) -> bool {
         self.property_flags & BlockProperty::Empty.id() != 0
+    }
+
+    /// Returns true if this block can have sub-rotations.
+    ///
+    /// If this is enabled on a full block, instead of sub-rotations the block will
+    /// have its front face equal the top face of the block it was placed on.
+    #[inline]
+    pub fn should_face_front(&self) -> bool {
+        self.property_flags & BlockProperty::FaceFront.id() != 0
     }
 
     /// Returns true if this block can have sub-rotations.
