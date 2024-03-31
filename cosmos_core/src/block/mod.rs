@@ -69,8 +69,8 @@ impl BlockRotation {
         }
         .mul_quat(match self.sub_rotation {
             BlockSubRotation::None => Quat::IDENTITY,
-            BlockSubRotation::Right => Quat::from_axis_angle(Vec3::Y, PI / 2.0),
-            BlockSubRotation::Left => Quat::from_axis_angle(Vec3::Y, -PI / 2.0),
+            BlockSubRotation::Right => Quat::from_axis_angle(Vec3::Y, -PI / 2.0),
+            BlockSubRotation::Left => Quat::from_axis_angle(Vec3::Y, PI / 2.0),
             BlockSubRotation::Flip => Quat::from_axis_angle(Vec3::Y, PI),
         })
     }

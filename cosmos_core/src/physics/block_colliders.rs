@@ -89,7 +89,7 @@ fn register_custom_colliders(blocks: Res<Registry<Block>>, mut registry: ResMut<
             BlockColliderType::Custom(vec![
                 // top
                 CustomCollider {
-                    rotation: Quat::from_axis_angle(Vec3::X, PI / 4.0),
+                    rotation: Quat::from_axis_angle(Vec3::X, -PI / 4.0),
                     collider: Collider::cuboid(0.5, EPSILON, 2.0f32.sqrt() / 2.0),
                     mode: BlockColliderMode::NormalCollider,
                     offset: Vec3::ZERO,
@@ -97,14 +97,14 @@ fn register_custom_colliders(blocks: Res<Registry<Block>>, mut registry: ResMut<
                 // left
                 CustomCollider {
                     rotation: Quat::IDENTITY,
-                    collider: Collider::triangle(Vec3::new(-0.5, -0.5, 0.5), Vec3::new(-0.5, -0.5, -0.5), Vec3::new(-0.5, 0.5, -0.5)),
+                    collider: Collider::triangle(Vec3::new(-0.5, -0.5, -0.5), Vec3::new(-0.5, -0.5, 0.5), Vec3::new(-0.5, 0.5, 0.5)),
                     mode: BlockColliderMode::NormalCollider,
                     offset: Vec3::ZERO,
                 },
                 // right
                 CustomCollider {
                     rotation: Quat::IDENTITY,
-                    collider: Collider::triangle(Vec3::new(0.5, -0.5, 0.5), Vec3::new(0.5, -0.5, -0.5), Vec3::new(0.5, 0.5, -0.5)),
+                    collider: Collider::triangle(Vec3::new(0.5, -0.5, -0.5), Vec3::new(0.5, -0.5, 0.5), Vec3::new(0.5, 0.5, 0.5)),
                     mode: BlockColliderMode::NormalCollider,
                     offset: Vec3::ZERO,
                 },
@@ -120,7 +120,7 @@ fn register_custom_colliders(blocks: Res<Registry<Block>>, mut registry: ResMut<
                     rotation: Quat::IDENTITY,
                     collider: Collider::cuboid(0.5, 0.5, EPSILON),
                     mode: BlockColliderMode::NormalCollider,
-                    offset: Vec3::new(0.0, 0.0, -0.5 + EPSILON),
+                    offset: Vec3::new(0.0, 0.0, 0.5 + EPSILON),
                 },
             ]),
             "cosmos:ramp",
