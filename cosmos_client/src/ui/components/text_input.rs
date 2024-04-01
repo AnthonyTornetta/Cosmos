@@ -378,9 +378,9 @@ fn value_changed(
             text_input.cursor_pos = input_val.len();
         }
 
-        text.sections[0].value = input_val[0..text_input.cursor_pos].to_owned();
+        input_val[0..text_input.cursor_pos].clone_into(&mut text.sections[0].value);
         if text_input.cursor_pos < input_val.len() {
-            text.sections[2].value = input_val[text_input.cursor_pos..input_val.len()].to_owned();
+            input_val[text_input.cursor_pos..input_val.len()].clone_into(&mut text.sections[2].value);
         } else {
             text.sections[2].value = "".into();
         }

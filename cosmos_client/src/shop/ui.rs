@@ -82,7 +82,7 @@ impl ReactableValue for SelectedItemName {
     }
 
     fn set_from_value(&mut self, new_value: &str) {
-        self.0 = new_value.to_owned();
+        new_value.clone_into(&mut self.0);
     }
 }
 
@@ -95,7 +95,7 @@ impl ReactableValue for SearchItemQuery {
     }
 
     fn set_from_value(&mut self, new_value: &str) {
-        self.0 = new_value.to_owned();
+        new_value.clone_into(&mut self.0);
     }
 }
 
@@ -108,7 +108,7 @@ impl ReactableValue for SelectedItemDescription {
     }
 
     fn set_from_value(&mut self, new_value: &str) {
-        self.0 = new_value.to_owned();
+        new_value.clone_into(&mut self.0);
     }
 }
 
@@ -200,7 +200,7 @@ impl ReactableValue for ShopModeSign {
     }
 
     fn set_from_value(&mut self, new_value: &str) {
-        self.0 = new_value.to_owned();
+        new_value.clone_into(&mut self.0);
     }
 }
 
@@ -968,7 +968,7 @@ fn on_change_selected_item(
         let item = items.from_numeric_id(item_id);
         let item_name = langs.get_name(item).unwrap_or(item.unlocalized_name());
 
-        selected_item_name.0 = item_name.to_owned();
+        item_name.clone_into(&mut selected_item_name.0);
         selected_item_description.0 = format!("Description for {item_name}");
     }
 }
