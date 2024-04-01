@@ -18,8 +18,8 @@
 #import bevy_pbr::rgb9e5
 #endif
 
-// @group(1) @binding(1)
-// var<uniform> globals: Globals;
+@group(0) @binding(1)
+var<uniform> globals: Globals;
 
 @group(2) @binding(1)
 var my_array_texture: texture_2d_array<f32>;
@@ -194,7 +194,7 @@ fn vertex(vertex_no_morph: Vertex) -> VertexOutput {
     var frame_duration_ms = f32(vertex.animation_data >> u32(16)) / 1000.0;
     var n_frames = vertex.animation_data & u32(0xFFFF);
 
-    var texture_index_offset = u32(/*globals.time*/0.0 / frame_duration_ms) % n_frames;
+    var texture_index_offset = u32(globals.time / frame_duration_ms) % n_frames;
 
     out.texture_index = vertex.texture_index + texture_index_offset;
 
