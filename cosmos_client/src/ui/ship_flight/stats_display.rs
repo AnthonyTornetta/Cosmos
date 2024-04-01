@@ -5,7 +5,7 @@ use bevy::{
     ecs::{
         component::Component,
         entity::Entity,
-        query::{Added, Has, With, Without},
+        query::{Added, With, Without},
         removal_detection::RemovedComponents,
         schedule::IntoSystemConfigs,
         system::{Commands, Query, Res},
@@ -42,7 +42,7 @@ fn create_nodes(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     // q_ui_root: Query<Entity, With<UiRoot>>,
-    q_became_pilot: Query<Has<LocalPlayer>, Added<Pilot>>,
+    q_became_pilot: Query<(), (With<LocalPlayer>, Added<Pilot>)>,
 ) {
     if !q_became_pilot.is_empty() {
         // let Ok(ui_root) = q_ui_root.get_single() else {
@@ -134,7 +134,7 @@ fn update_nodes(
 
 fn despawn_nodes(
     mut removed_pilot: RemovedComponents<Pilot>,
-    q_local_player: Query<Has<LocalPlayer>>,
+    q_local_player: Query<(), With<LocalPlayer>>,
     q_stats_nodes: Query<Entity, With<StatsNodes>>,
     mut commands: Commands,
 ) {

@@ -6,7 +6,6 @@
 
 use std::{
     collections::VecDeque,
-    f32::consts::PI,
     mem::swap,
     sync::{Arc, Mutex},
     usize,
@@ -35,7 +34,7 @@ use cosmos_core::{
         block_storage::BlockStorer,
         chunk::{CHUNK_DIMENSIONS, CHUNK_DIMENSIONSF},
         coordinates::{ChunkBlockCoordinate, ChunkCoordinate, CoordinateType},
-        lod::{Lod, ReadOnlyLod},
+        lod::{Lod, LodComponent},
         lod_chunk::LodChunk,
         shared::DespawnWithStructure,
         ChunkState, Structure,
@@ -226,7 +225,7 @@ impl ChunkRenderer {
                         .map(|c| check(c, block_id, actual_block, blocks, ChunkBlockCoordinate::new(x, y, 0)))
                         .unwrap_or(true)))
             {
-                faces.push(BlockFace::Back);
+                faces.push(BlockFace::Front);
             }
             // back
             if (z != 0
@@ -250,7 +249,7 @@ impl ChunkRenderer {
                         })
                         .unwrap_or(true)))
             {
-                faces.push(BlockFace::Front);
+                faces.push(BlockFace::Back);
             }
 
             if !faces.is_empty() {
@@ -274,9 +273,11 @@ impl ChunkRenderer {
 
                 let mesh_builder = self.meshes.get_mut(&mat_id).unwrap();
 
-                let rotation = block_info.get_rotation();
+                let block_rotation = block_info.get_rotation();
 
-                for face in faces.iter().map(|x| BlockFace::rotate_face(*x, rotation)) {
+                let rotation = block_rotation.as_quat();
+
+                for face in faces.iter().map(|face| block_rotation.rotate_face(*face)) {
                     let index = block_textures
                         .from_id(block.unlocalized_name())
                         .unwrap_or_else(|| block_textures.from_id("missing").expect("Missing texture should exist."));
@@ -291,17 +292,8 @@ impl ChunkRenderer {
                     };
 
                     let Some(image_index) = maybe_img_idx else {
-                        warn!("Missing image index -- {index:?}");
+                        warn!("Missing image index for face {face} -- {index:?}");
                         continue;
-                    };
-
-                    let rotation = match rotation {
-                        BlockFace::Top => Quat::IDENTITY,
-                        BlockFace::Front => Quat::from_axis_angle(Vec3::X, PI / 2.0),
-                        BlockFace::Back => Quat::from_axis_angle(Vec3::X, -PI / 2.0),
-                        BlockFace::Left => Quat::from_axis_angle(Vec3::Z, PI / 2.0),
-                        BlockFace::Right => Quat::from_axis_angle(Vec3::Z, -PI / 2.0),
-                        BlockFace::Bottom => Quat::from_axis_angle(Vec3::X, PI),
                     };
 
                     let mut one_mesh_only = false;
@@ -491,7 +483,7 @@ fn find_non_dirty(lod: &Lod, offset: Vec3, to_process: &mut Vec<Vec3>, scale: f3
 }
 
 #[derive(Debug)]
-struct RenderingLod(Task<(Vec<Vec3>, Vec<(LodMesh, Vec3, CoordinateType)>, Lod)>);
+struct RenderingLod(Task<(Vec<Vec3>, Vec<(LodMesh, Vec3, CoordinateType)>)>);
 
 #[derive(Component, Debug)]
 struct RenderedLod {
@@ -499,14 +491,14 @@ struct RenderedLod {
 }
 
 #[derive(Debug, Clone, DerefMut, Deref)]
-struct ToKill(Arc<Mutex<(Entity, usize)>>);
+struct LodRendersToDespawn(Arc<Mutex<(Entity, usize)>>);
 
 #[derive(Debug, Resource, Default, Deref, DerefMut)]
-struct MeshesToCompute(VecDeque<(Mesh, Entity, Vec<ToKill>)>);
+struct MeshesToCompute(VecDeque<(Mesh, Entity, Vec<LodRendersToDespawn>)>);
 
 const MESHES_PER_FRAME: usize = 15;
 
-fn kill_all(to_kill: Vec<ToKill>, commands: &mut Commands) {
+fn kill_all(to_kill: Vec<LodRendersToDespawn>, commands: &mut Commands) {
     for x in to_kill {
         let mut unlocked = x.lock().expect("Failed lock");
         unlocked.1 -= 1;
@@ -560,9 +552,6 @@ fn poll_rendering_lods(
     transform_query: Query<&Transform>,
     rendered_lod_query: Query<&RenderedLod>,
     mut rendering_lods: ResMut<RenderingLods>,
-    // bypass change detection to not trigger re-render
-    mut lod_query: Query<&mut Lod>,
-
     mut meshes_to_compute: ResMut<MeshesToCompute>,
     mut event_writer: EventWriter<AddMaterialEvent>,
 ) {
@@ -571,7 +560,7 @@ fn poll_rendering_lods(
     swap(&mut rendering_lods.0, &mut todo);
 
     for (structure_entity, mut rendering_lod) in todo {
-        if let Some((to_keep_locations, ent_meshes, lod)) = future::block_on(future::poll_once(&mut rendering_lod.0)) {
+        if let Some((to_keep_locations, ent_meshes)) = future::block_on(future::poll_once(&mut rendering_lod.0)) {
             let mut structure_meshes_component = LodMeshes::default();
             let mut entities_to_add = Vec::new();
 
@@ -635,7 +624,7 @@ fn poll_rendering_lods(
                     to_despawn.push((
                         transform.translation,
                         rendered_lod.scale,
-                        ToKill(Arc::new(Mutex::new((mesh_entity, 0)))),
+                        LodRendersToDespawn(Arc::new(Mutex::new((mesh_entity, 0)))),
                     ));
                 }
             }
@@ -662,13 +651,14 @@ fn poll_rendering_lods(
                 entity_commands.add_child(entity);
             }
 
-            if let Ok(mut l) = lod_query.get_mut(structure_entity) {
-                // Avoid recursively re-rendering the lod. The only thing changing about the lod are the dirty flags.
-                // This could be refactored to store dirty flags elsewhere, but I'm not sure about the performance cost of that.
-                *(l.bypass_change_detection()) = lod;
-            } else {
-                entity_commands.insert(lod);
-            }
+            // if let Ok(mut l) = lod_query.get_mut(structure_entity) {
+            //     // Avoid recursively re-rendering the lod. The only thing changing about the lod are the dirty flags.
+            //     // This could be refactored to store dirty flags elsewhere, but I'm not sure about the performance cost of that.
+            //     // *(l.bypass_change_detection()) = lod;
+            //     *l.0.lock().unwrap() = lod;
+            // } else {
+            //     entity_commands.insert(LodComponent(Arc::new(Mutex::new(lod))));
+            // }
 
             entity_commands.insert(structure_meshes_component);
 
@@ -711,7 +701,7 @@ fn hide_lod(mut query: Query<(&Transform, &Parent, &mut Visibility, &RenderedLod
 #[derive(Debug, Resource, Default)]
 struct NeedLods(HashSet<Entity>);
 
-fn monitor_lods_needs_rendered_system(lods_needed: Query<Entity, Changed<Lod>>, mut should_render_lods: ResMut<NeedLods>) {
+fn monitor_lods_needs_rendered_system(lods_needed: Query<Entity, Changed<LodComponent>>, mut should_render_lods: ResMut<NeedLods>) {
     for needs_lod in lods_needed.iter() {
         should_render_lods.0.insert(needs_lod);
     }
@@ -845,7 +835,7 @@ fn trigger_lod_render(
     materials_registry: Res<ReadOnlyRegistry<MaterialDefinition>>,
     meshes_registry: Res<ReadOnlyBlockMeshRegistry>,
     block_textures: Res<ReadOnlyRegistry<BlockTextureIndex>>,
-    lods_query: Query<(&ReadOnlyLod, &Structure)>,
+    lods_query: Query<(&LodComponent, &Structure)>,
     mut rendering_lods: ResMut<RenderingLods>,
     mut lods_needed: ResMut<NeedLods>,
 ) {
@@ -880,7 +870,7 @@ fn trigger_lod_render(
         let lod = lod.clone();
 
         let task = thread_pool.spawn(async move {
-            let lod = lod.inner();
+            let mut lod = lod.0.lock().unwrap();
             let mut non_dirty = vec![];
             find_non_dirty(&lod, Vec3::ZERO, &mut non_dirty, block_dimensions as f32);
 
@@ -892,13 +882,14 @@ fn trigger_lod_render(
             let blocks = blocks.registry();
             let block_textures = block_textures.registry();
             let materials = materials.registry();
-            let meshes_registry = meshes_registry.registry();
+            let meshes_registry: std::sync::RwLockReadGuard<'_, ManyToOneRegistry<Block, crate::rendering::BlockMeshInformation>> =
+                meshes_registry.registry();
             let materials_registry = materials_registry.registry();
 
-            let mut cloned_lod = lod.clone();
+            // let mut cloned_lod = lod.clone();
 
             let lod_path = LodPath::Top(PathInfo {
-                lod: &cloned_lod,
+                lod: &lod,
                 depth: 1,
                 scale: chunk_dimensions as f32,
                 offset: Vec3::ZERO,
@@ -913,11 +904,11 @@ fn trigger_lod_render(
                 &materials_registry,
             );
 
-            mark_non_dirty(&mut cloned_lod);
+            mark_non_dirty(&mut lod);
 
             let to_process_chunks = to_process.lock().unwrap().take().unwrap();
 
-            (non_dirty, to_process_chunks, cloned_lod)
+            (non_dirty, to_process_chunks)
         });
 
         rendering_lods.push((entity, RenderingLod(task)));

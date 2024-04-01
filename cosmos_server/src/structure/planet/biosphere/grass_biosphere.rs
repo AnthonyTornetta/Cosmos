@@ -2,22 +2,30 @@
 
 use bevy::{
     log::warn,
-    prelude::{App, Commands, Component, Entity, Event, OnEnter, Res, ResMut},
+    prelude::{App, Component, Entity, Event, OnEnter, Res, ResMut},
+    reflect::TypePath,
 };
-use cosmos_core::{block::Block, registry::Registry, structure::coordinates::ChunkCoordinate};
+use cosmos_core::{
+    registry::Registry,
+    structure::{
+        coordinates::ChunkCoordinate,
+        planet::generation::biome::{Biome, BiomeParameters, BiosphereBiomesRegistry},
+    },
+};
 
 use crate::GameState;
 
-use super::{
-    biome::{biome_registry::RegisteredBiome, BiomeParameters, BiosphereBiomesRegistry},
-    register_biosphere, BiosphereMarkerComponent, BiosphereSeaLevel, TBiosphere, TGenerateChunkEvent, TemperatureRange,
-};
+use super::{register_biosphere, BiosphereMarkerComponent, TBiosphere, TGenerateChunkEvent, TemperatureRange};
 
-#[derive(Component, Debug, Default, Clone, Copy)]
+#[derive(Component, Debug, Default, Clone, Copy, TypePath)]
 /// Marks that this is for a grass biosphere
 pub struct GrassBiosphereMarker;
 
-impl BiosphereMarkerComponent for GrassBiosphereMarker {}
+impl BiosphereMarkerComponent for GrassBiosphereMarker {
+    fn unlocalized_name() -> &'static str {
+        "cosmos:grass"
+    }
+}
 
 /// Marks that a grass chunk needs generated
 #[derive(Debug, Event)]
@@ -55,12 +63,16 @@ impl TBiosphere<GrassBiosphereMarker, GrassChunkNeedsGeneratedEvent> for GrassBi
 }
 
 fn register_biosphere_biomes(
-    biome_registry: Res<Registry<RegisteredBiome>>,
-    mut biosphere_biomes_registry: ResMut<BiosphereBiomesRegistry<GrassBiosphereMarker>>,
+    biome_registry: Res<Registry<Biome>>,
+    mut biosphere_biomes_registry: ResMut<Registry<BiosphereBiomesRegistry>>,
 ) {
+    let biosphere_registry = biosphere_biomes_registry
+        .from_id_mut(GrassBiosphereMarker::unlocalized_name())
+        .expect("Missing grass biosphere registry!");
+
     if let Some(ocean) = biome_registry.from_id("cosmos:ocean") {
-        biosphere_biomes_registry.register(
-            ocean.biome(),
+        biosphere_registry.register(
+            ocean,
             BiomeParameters {
                 ideal_elevation: 49.0,
                 ideal_humidity: 0.0,
@@ -72,8 +84,8 @@ fn register_biosphere_biomes(
     }
 
     if let Some(plains) = biome_registry.from_id("cosmos:plains") {
-        biosphere_biomes_registry.register(
-            plains.biome(),
+        biosphere_registry.register(
+            plains,
             BiomeParameters {
                 ideal_elevation: 50.0,
                 ideal_humidity: 0.0,
@@ -85,8 +97,8 @@ fn register_biosphere_biomes(
     }
 
     if let Some(desert) = biome_registry.from_id("cosmos:desert") {
-        biosphere_biomes_registry.register(
-            desert.biome(),
+        biosphere_registry.register(
+            desert,
             BiomeParameters {
                 ideal_elevation: 50.0,
                 ideal_humidity: 0.0,
@@ -98,21 +110,13 @@ fn register_biosphere_biomes(
     }
 }
 
-fn add_ocean_level(mut commands: Commands, blocks: Res<Registry<Block>>) {
-    if let Some(water) = blocks.from_id("cosmos:water") {
-        commands.insert_resource(BiosphereSeaLevel::<GrassBiosphereMarker> {
-            block: Some(water.clone()),
-            ..Default::default()
-        });
-    }
-}
-
 pub(super) fn register(app: &mut App) {
     register_biosphere::<GrassBiosphereMarker, GrassChunkNeedsGeneratedEvent>(
         app,
-        "cosmos:biosphere_grass",
-        TemperatureRange::new(0.0, 400.0),
+        TemperatureRange::new(200.0, 500.0),
+        0.75,
+        Some("cosmos:water"),
     );
 
-    app.add_systems(OnEnter(GameState::PostLoading), (register_biosphere_biomes, add_ocean_level));
+    app.add_systems(OnEnter(GameState::PostLoading), register_biosphere_biomes);
 }

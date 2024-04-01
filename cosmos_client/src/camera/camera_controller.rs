@@ -34,7 +34,7 @@ fn process_player_camera(
     // assuming there is exactly one main camera entity, so query::single() is OK
     let (mut camera_transform, mut camera_helper) = query.single_mut();
 
-    if is_pilot_query.iter().len() == 0 {
+    if is_pilot_query.is_empty() {
         camera_helper.angle_x += cursor_delta.y * 0.005;
         camera_helper.angle_y += -cursor_delta.x * 0.005;
 
@@ -46,7 +46,6 @@ fn process_player_camera(
     } else {
         camera_helper.angle_x = 0.0;
         camera_helper.angle_y = 0.0;
-        camera_transform.rotation = Quat::IDENTITY;
     }
 }
 

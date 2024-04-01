@@ -51,7 +51,8 @@ use crate::{
     rendering::{CameraPlayerOffset, MainCamera},
     state::game_state::GameState,
     structure::{
-        planet::client_planet_builder::ClientPlanetBuilder, ship::client_ship_builder::ClientShipBuilder,
+        planet::{client_planet_builder::ClientPlanetBuilder, generation::SetTerrainGenData},
+        ship::client_ship_builder::ClientShipBuilder,
         station::client_station_builder::ClientStationBuilder,
     },
     ui::{
@@ -71,33 +72,36 @@ fn insert_last_rotation(mut commands: Commands, query: Query<Entity, Added<Struc
 }
 
 fn update_crosshair(
-    mut query: Query<(&Pilot, &mut LastRotation, &Transform), (With<Ship>, Changed<Transform>)>,
+    mut q_ships: Query<(&Pilot, &mut LastRotation, &Transform), (With<Ship>, Changed<Transform>)>,
     local_player_query: Query<(), With<LocalPlayer>>,
-    camera_query: Query<(Entity, &Camera), With<MainCamera>>,
-    transform_query: Query<&GlobalTransform>,
+    camera_query: Query<(&GlobalTransform, &Transform, &Camera), With<MainCamera>>,
     mut crosshair_offset: ResMut<CrosshairOffset>,
     primary_query: Query<&Window, With<PrimaryWindow>>,
 ) {
-    for (pilot, mut last_rotation, transform) in query.iter_mut() {
-        if local_player_query.contains(pilot.entity) {
-            let (cam_entity, camera) = camera_query.get_single().unwrap();
-
-            let cam_global = transform_query.get(cam_entity).unwrap();
-
-            let primary = primary_query.get_single().expect("Missing primary window");
-
-            if let Some(mut pos_on_screen) = camera.world_to_viewport(
-                cam_global,
-                last_rotation.0.mul_vec3(Vec3::new(0.0, 0.0, -1.0)) + cam_global.translation(),
-            ) {
-                pos_on_screen -= Vec2::new(primary.width() / 2.0, primary.height() / 2.0);
-
-                crosshair_offset.x += pos_on_screen.x;
-                crosshair_offset.y -= pos_on_screen.y;
-            }
-
-            last_rotation.0 = transform.rotation;
+    for (pilot, mut last_rotation, transform) in q_ships.iter_mut() {
+        if !local_player_query.contains(pilot.entity) {
+            continue;
         }
+
+        let Ok((cam_global_trans, cam_trans, camera)) = camera_query.get_single() else {
+            return;
+        };
+
+        let Ok(primary) = primary_query.get_single() else {
+            return;
+        };
+
+        if let Some(mut pos_on_screen) = camera.world_to_viewport(
+            cam_global_trans,
+            last_rotation.0.mul_vec3(Vec3::from(cam_trans.forward())) + cam_global_trans.translation(),
+        ) {
+            pos_on_screen -= Vec2::new(primary.width() / 2.0, primary.height() / 2.0);
+
+            crosshair_offset.x += pos_on_screen.x;
+            crosshair_offset.y -= pos_on_screen.y;
+        }
+
+        last_rotation.0 = transform.rotation;
     }
 }
 
@@ -173,10 +177,11 @@ pub(crate) fn client_sync_players(
         ResMut<ClientLobby>,
         ResMut<NetworkMapping>,
     ),
-    (mut set_chunk_event_writer, mut block_change_event_writer, mut take_damage_event_writer): (
+    (mut set_chunk_event_writer, mut block_change_event_writer, mut take_damage_event_writer, mut set_terrain_data_ev_writer): (
         EventWriter<ChunkInitEvent>,
         EventWriter<BlockChangedEvent>,
         EventWriter<BlockTakeDamageEvent>,
+        EventWriter<SetTerrainGenData>,
     ),
     (query_player, parent_query): (Query<&Player>, Query<&Parent>),
     mut query_body: Query<
@@ -556,7 +561,7 @@ pub(crate) fn client_sync_players(
                             structure.set_block_at(
                                 block_changed.coordinates.coords(),
                                 blocks.from_numeric_id(block_changed.block_id),
-                                block_changed.block_up,
+                                block_changed.block_rotation,
                                 &blocks,
                                 Some(&mut block_change_event_writer),
                             );
@@ -706,6 +711,15 @@ pub(crate) fn client_sync_players(
                 if let Some(entity) = network_mapping.client_from_server(&entity) {
                     commands.entity(entity).insert(credits);
                 }
+            }
+            ServerReliableMessages::TerrainGenerationShaders {
+                shaders,
+                permutation_table,
+            } => {
+                set_terrain_data_ev_writer.send(SetTerrainGenData {
+                    files: shaders,
+                    permutation_table,
+                });
             }
         }
     }

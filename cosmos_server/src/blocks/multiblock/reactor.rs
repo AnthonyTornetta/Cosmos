@@ -47,6 +47,8 @@ fn find_wall_coords(
                 return None;
             };
 
+            // structure.set_block_at(check_here, valid_blocks[1], Default::default(), blocks, Some(ev_writer));
+
             width += 1;
 
             let block_here = structure.block_at(check_here, blocks);
@@ -360,10 +362,12 @@ fn on_piloted_by_ai(
             .from_id("cosmos:reactor_controller")
             .expect("Missing reactor controller block!");
 
-        for block_here in structure
+        let blockz = structure
             .all_blocks_iter(false)
             .filter(|x| structure.block_id_at(x.coords()) == reactor_block.id())
-        {
+            .collect::<Vec<StructureBlock>>();
+
+        for block_here in blockz {
             if let Some(bounds) = check_is_valid_multiblock(structure, block_here.coords(), &blocks) {
                 match check_valid(bounds, structure, &blocks) {
                     ReactorValidity::Valid => {
@@ -381,7 +385,7 @@ fn on_piloted_by_ai(
 }
 
 fn on_interact_reactor(
-    mut structure_query: Query<(&Structure, &mut Reactors)>,
+    mut structure_query: Query<(&mut Structure, &mut Reactors)>,
     blocks: Res<Registry<Block>>,
     reactor_blocks: Res<Registry<ReactorPowerGenerationBlock>>,
     mut interaction: EventReader<BlockInteractEvent>,
@@ -400,8 +404,8 @@ fn on_interact_reactor(
                 continue;
             }
 
-            if let Some(bounds) = check_is_valid_multiblock(structure, ev.structure_block.coords(), &blocks) {
-                match check_valid(bounds, structure, &blocks) {
+            if let Some(bounds) = check_is_valid_multiblock(&structure, ev.structure_block.coords(), &blocks) {
+                match check_valid(bounds, &structure, &blocks) {
                     ReactorValidity::MissingCasing(_) => {
                         let Ok(player) = player_query.get(ev.interactor) else {
                             continue;
@@ -427,11 +431,22 @@ fn on_interact_reactor(
                         );
                     }
                     ReactorValidity::Valid => {
-                        let reactor = create_reactor(structure, &blocks, &reactor_blocks, bounds, ev.structure_block);
+                        let reactor = create_reactor(&structure, &blocks, &reactor_blocks, bounds, ev.structure_block);
 
                         reactors.add_reactor(reactor);
                     }
                 };
+            } else {
+                let Ok(player) = player_query.get(ev.interactor) else {
+                    continue;
+                };
+                server.send_message(
+                    player.id(),
+                    NettyChannelServer::Reliable,
+                    cosmos_encoder::serialize(&ServerReliableMessages::InvalidReactor {
+                        reason: "Invalid bounds for the reactor - maximum of 11x11x11.".into(),
+                    }),
+                );
             }
         }
     }

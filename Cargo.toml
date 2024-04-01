@@ -12,6 +12,8 @@ bevy_rapier3d = { git = "https://github.com/AnthonyTornetta/bevy_rapier/", versi
   "serde-serialize",
 ] }
 
+bevy_app_compute = { git = "https://github.com/AnthonyTornetta/bevy_app_compute", branch = "no-build-worker", version = "0.13.0" }
+
 bevy_renet = "0.0.11"
 serde = "1.0.197"
 serde_json = "1.0.114"
@@ -40,6 +42,7 @@ bevy_mod_debugdump = "0.10.0"
 arboard = "3.3.1"
 derive_more = "0.99.17"
 clap = "4.4.2"
+bytemuck = "1.14.3"
 
 # For any non workspace package
 [profile.dev.package."*"]

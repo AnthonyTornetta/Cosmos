@@ -2,11 +2,14 @@
 
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
-use bevy::prelude::{App, Event};
+use bevy::{
+    ecs::event::EventWriter,
+    prelude::{App, Event},
+};
 
 #[derive(Event)]
 /// Same as a bevy Event, but you can read & write to it
-pub struct MutEvent<E: Event>(Arc<RwLock<E>>);
+pub struct MutEvent<E: Event + Send + Sync + 'static>(Arc<RwLock<E>>);
 
 impl<E: Event> MutEvent<E> {
     /// Reads the contents of this event
@@ -23,6 +26,26 @@ impl<E: Event> MutEvent<E> {
 impl<E: Event> From<E> for MutEvent<E> {
     fn from(value: E) -> Self {
         Self(Arc::new(RwLock::new(value)))
+    }
+}
+
+/// Custom send function for bevy `EventWriter`s that will automatically call `into` for you.
+pub trait EventWriterCustomSend<E: Event> {
+    /// Custom send function for bevy `EventWriter`s that will automatically call `into` for you.
+    ///
+    /// ```rs
+    /// event_writer.send_mut(e);
+    /// // is the same as
+    /// event_writer.send(e.into());
+    /// // is the same as
+    /// event_writer.send(MutEvent::from(e));
+    /// ```
+    fn send_mut(&mut self, e: impl Into<MutEvent<E>>);
+}
+
+impl<E: Event + Send + Sync + 'static> EventWriterCustomSend<E> for EventWriter<'_, MutEvent<E>> {
+    fn send_mut(&mut self, e: impl Into<MutEvent<E>>) {
+        self.send(e.into());
     }
 }
 

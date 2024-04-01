@@ -1,15 +1,19 @@
 //! Plains biome
 
-use bevy::prelude::{App, EventWriter, OnExit, Res, ResMut};
+use bevy::{
+    app::Update,
+    ecs::{event::EventReader, schedule::IntoSystemConfigs, system::Query},
+    prelude::{App, EventWriter, OnExit, Res, ResMut},
+};
 use cosmos_core::{
     block::{Block, BlockFace},
     events::block_events::BlockChangedEvent,
     physics::location::Location,
-    registry::Registry,
+    registry::{identifiable::Identifiable, Registry},
     structure::{
         chunk::CHUNK_DIMENSIONS,
         coordinates::{BlockCoordinate, ChunkCoordinate, CoordinateType, UnboundBlockCoordinate, UnboundCoordinateType},
-        planet::Planet,
+        planet::{generation::block_layers::BlockLayers, Planet},
         rotate, Structure,
     },
 };
@@ -18,28 +22,10 @@ use noise::NoiseFn;
 use crate::{
     init::init_world::{Noise, ServerSeed},
     state::GameState,
-    structure::planet::biosphere::{biosphere_generation::BlockLayers, generation_tools::fill},
+    structure::planet::biosphere::{biosphere_generation::BiosphereGenerationSet, generation_tools::fill},
 };
 
-use super::{biome_registry::RegisteredBiome, Biome};
-
-/// Grassy and has trees
-pub struct PlainsBiome {
-    id: u16,
-    unlocalized_name: String,
-    block_layers: BlockLayers,
-}
-
-impl PlainsBiome {
-    /// Creates a new plains biome
-    pub fn new(name: impl Into<String>, block_layers: BlockLayers) -> Self {
-        Self {
-            id: 0,
-            block_layers,
-            unlocalized_name: name.into(),
-        }
-    }
-}
+use super::{Biome, GenerateChunkFeaturesEvent};
 
 const DELTA: f64 = 1.0;
 const FOREST: f64 = 0.235;
@@ -47,144 +33,6 @@ const DIST_BETWEEN_TREES: CoordinateType = 5;
 const SEGMENT_HEIGHT: CoordinateType = 10;
 const BRANCH_START: f64 = 0.5;
 const BETWEEN_BRANCHES: CoordinateType = 3;
-
-impl Biome for PlainsBiome {
-    fn block_layers(&self) -> &BlockLayers {
-        &self.block_layers
-    }
-
-    fn id(&self) -> u16 {
-        self.id
-    }
-
-    fn set_numeric_id(&mut self, id: u16) {
-        self.id = id;
-    }
-
-    fn unlocalized_name(&self) -> &str {
-        &self.unlocalized_name
-    }
-
-    fn generate_chunk_features(
-        &self,
-        block_event_writer: &mut EventWriter<BlockChangedEvent>,
-        coords: ChunkCoordinate,
-        structure: &mut Structure,
-        location: &Location,
-        blocks: &Registry<Block>,
-        noise_generator: &Noise,
-        _seed: &ServerSeed,
-    ) {
-        let Structure::Dynamic(planet) = structure else {
-            panic!("A planet must be dynamic!");
-        };
-
-        let first_block_coords = coords.first_structure_block();
-        let s_dimension = planet.block_dimensions();
-        let s_dims = structure.block_dimensions();
-
-        let air = blocks.from_id("cosmos:air").unwrap();
-        let short_grass = blocks.from_id("cosmos:short_grass").unwrap();
-        let grass = blocks.from_id("cosmos:grass").unwrap();
-
-        let structure_coords = location.absolute_coords_f64();
-
-        let faces = Planet::chunk_planet_faces(first_block_coords, s_dimension);
-        for block_up in faces.iter() {
-            // Getting the noise value for every block in the chunk, to find where to put trees.
-            let noise_height = match block_up {
-                BlockFace::Front | BlockFace::Top | BlockFace::Right => s_dimension,
-                _ => 0,
-            };
-
-            let mut noise_cache =
-                [[0.0; (CHUNK_DIMENSIONS + DIST_BETWEEN_TREES * 2) as usize]; (CHUNK_DIMENSIONS + DIST_BETWEEN_TREES * 2) as usize];
-
-            for (z, slice) in noise_cache.iter_mut().enumerate().map(|(z, noise)| (z as CoordinateType, noise)) {
-                for (x, noise) in slice.iter_mut().enumerate().map(|(x, noise)| (x as CoordinateType, noise)) {
-                    let (nx, ny, nz) = match block_up {
-                        BlockFace::Front | BlockFace::Back => (
-                            (first_block_coords.x + x) as f64 - DIST_BETWEEN_TREES as f64,
-                            (first_block_coords.z + z) as f64 - DIST_BETWEEN_TREES as f64,
-                            noise_height as f64,
-                        ),
-                        BlockFace::Top | BlockFace::Bottom => (
-                            (first_block_coords.x + x) as f64 - DIST_BETWEEN_TREES as f64,
-                            noise_height as f64,
-                            (first_block_coords.z + z) as f64 - DIST_BETWEEN_TREES as f64,
-                        ),
-                        BlockFace::Right | BlockFace::Left => (
-                            noise_height as f64,
-                            (first_block_coords.y + x) as f64 - DIST_BETWEEN_TREES as f64,
-                            (first_block_coords.z + z) as f64 - DIST_BETWEEN_TREES as f64,
-                        ),
-                    };
-                    *noise = noise_generator.get([
-                        (nx + structure_coords.x) * DELTA,
-                        (ny + structure_coords.y) * DELTA,
-                        (nz + structure_coords.z) * DELTA,
-                    ]);
-                }
-            }
-
-            for z in 0..CHUNK_DIMENSIONS {
-                'next: for x in 0..CHUNK_DIMENSIONS {
-                    let noise = noise_cache[(z + DIST_BETWEEN_TREES) as usize][(x + DIST_BETWEEN_TREES) as usize];
-
-                    // Noise value not in forest range.
-                    if noise * noise <= FOREST {
-                        continue 'next;
-                    }
-
-                    // Noise value not a local maximum of enough blocks.
-                    for dz in 0..=DIST_BETWEEN_TREES * 2 {
-                        for dx in 0..=DIST_BETWEEN_TREES * 2 {
-                            if noise < noise_cache[(z + dz) as usize][(x + dx) as usize] {
-                                continue 'next;
-                            }
-                        }
-                    }
-
-                    let coords: BlockCoordinate = match block_up {
-                        BlockFace::Front | BlockFace::Back => (first_block_coords.x + x, first_block_coords.y + z, first_block_coords.z),
-                        BlockFace::Top | BlockFace::Bottom => (first_block_coords.x + x, first_block_coords.y, first_block_coords.z + z),
-                        BlockFace::Right | BlockFace::Left => (first_block_coords.x, first_block_coords.y + x, first_block_coords.z + z),
-                    }
-                    .into();
-
-                    let mut height = CHUNK_DIMENSIONS as UnboundCoordinateType - 1;
-                    while height >= 0
-                        && rotate(coords, UnboundBlockCoordinate::new(0, height, 0), s_dims, block_up)
-                            .map(|rotated| structure.block_at(rotated, blocks) == air)
-                            .unwrap_or(false)
-                    {
-                        height -= 1;
-                    }
-
-                    // // No grass block to grow tree from.
-                    if let Ok(rotated) = rotate(coords, UnboundBlockCoordinate::new(0, height, 0), s_dims, block_up) {
-                        let block = structure.block_at(rotated, blocks);
-                        if height < 0 || (block != grass && block != short_grass) || structure.block_rotation(rotated) != block_up {
-                            continue 'next;
-                        }
-
-                        if let Ok(lowered_rotated) = rotate(coords, UnboundBlockCoordinate::new(0, height - 4, 0), s_dims, block_up) {
-                            redwood_tree(
-                                lowered_rotated,
-                                block_up,
-                                structure,
-                                location,
-                                block_event_writer,
-                                blocks,
-                                noise_generator,
-                            );
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
 
 /// Generates a redwood tree at the given coordinates.
 fn redwood_tree(
@@ -478,7 +326,7 @@ fn redwood_tree(
             structure.set_block_at(
                 rotated,
                 log,
-                BlockFace::rotate_face(BlockFace::Top, planet_face),
+                BlockFace::rotate_face(BlockFace::Top, planet_face).into(),
                 blocks,
                 Some(block_event_writer),
             );
@@ -529,7 +377,7 @@ fn branch(
             structure.set_block_at(
                 rotated,
                 log,
-                BlockFace::rotate_face(block_up, planet_face),
+                BlockFace::rotate_face(block_up, planet_face).into(),
                 blocks,
                 Some(event_writer),
             );
@@ -537,19 +385,166 @@ fn branch(
     }
 }
 
-fn register_biome(mut registry: ResMut<Registry<RegisteredBiome>>, block_registry: Res<Registry<Block>>) {
-    registry.register(RegisteredBiome::new(Box::new(PlainsBiome::new(
+fn plains_generate_chunk_features(
+    mut ev_reader: EventReader<GenerateChunkFeaturesEvent>,
+    mut ev_writer: EventWriter<BlockChangedEvent>,
+    mut q_structure: Query<(&Location, &mut Structure)>,
+    biomes: Res<Registry<Biome>>,
+    blocks: Res<Registry<Block>>,
+    noise_generator: Res<Noise>,
+    seed: Res<ServerSeed>,
+) {
+    for ev in ev_reader.read() {
+        let Some(plains) = biomes.from_id("cosmos:plains") else {
+            return;
+        };
+
+        if ev.included_biomes.contains(&plains.id()) {
+            let Ok((location, mut structure)) = q_structure.get_mut(ev.structure_entity) else {
+                continue;
+            };
+
+            generate_chunk_features(&mut ev_writer, ev.chunk, &mut structure, location, &blocks, &noise_generator, &seed);
+        }
+    }
+}
+
+fn generate_chunk_features(
+    block_event_writer: &mut EventWriter<BlockChangedEvent>,
+    coords: ChunkCoordinate,
+    structure: &mut Structure,
+    location: &Location,
+    blocks: &Registry<Block>,
+    noise_generator: &Noise,
+    _seed: &ServerSeed,
+) {
+    let Structure::Dynamic(planet) = structure else {
+        panic!("A planet must be dynamic!");
+    };
+
+    let first_block_coords = coords.first_structure_block();
+    let s_dimension = planet.block_dimensions();
+    let s_dims = structure.block_dimensions();
+
+    let air = blocks.from_id("cosmos:air").unwrap();
+    let short_grass = blocks.from_id("cosmos:short_grass").unwrap();
+    let grass = blocks.from_id("cosmos:grass").unwrap();
+
+    let structure_coords = location.absolute_coords_f64();
+
+    let faces = Planet::chunk_planet_faces(first_block_coords, s_dimension);
+    for block_up in faces.iter() {
+        // Getting the noise value for every block in the chunk, to find where to put trees.
+        let noise_height = match block_up {
+            BlockFace::Front | BlockFace::Top | BlockFace::Right => s_dimension,
+            _ => 0,
+        };
+
+        let mut noise_cache =
+            [[0.0; (CHUNK_DIMENSIONS + DIST_BETWEEN_TREES * 2) as usize]; (CHUNK_DIMENSIONS + DIST_BETWEEN_TREES * 2) as usize];
+
+        for (z, slice) in noise_cache.iter_mut().enumerate().map(|(z, noise)| (z as CoordinateType, noise)) {
+            for (x, noise) in slice.iter_mut().enumerate().map(|(x, noise)| (x as CoordinateType, noise)) {
+                let (nx, ny, nz) = match block_up {
+                    BlockFace::Front | BlockFace::Back => (
+                        (first_block_coords.x + x) as f64 - DIST_BETWEEN_TREES as f64,
+                        (first_block_coords.z + z) as f64 - DIST_BETWEEN_TREES as f64,
+                        noise_height as f64,
+                    ),
+                    BlockFace::Top | BlockFace::Bottom => (
+                        (first_block_coords.x + x) as f64 - DIST_BETWEEN_TREES as f64,
+                        noise_height as f64,
+                        (first_block_coords.z + z) as f64 - DIST_BETWEEN_TREES as f64,
+                    ),
+                    BlockFace::Right | BlockFace::Left => (
+                        noise_height as f64,
+                        (first_block_coords.y + x) as f64 - DIST_BETWEEN_TREES as f64,
+                        (first_block_coords.z + z) as f64 - DIST_BETWEEN_TREES as f64,
+                    ),
+                };
+                *noise = noise_generator.get([
+                    (nx + structure_coords.x) * DELTA,
+                    (ny + structure_coords.y) * DELTA,
+                    (nz + structure_coords.z) * DELTA,
+                ]);
+            }
+        }
+
+        for z in 0..CHUNK_DIMENSIONS {
+            'next: for x in 0..CHUNK_DIMENSIONS {
+                let noise = noise_cache[(z + DIST_BETWEEN_TREES) as usize][(x + DIST_BETWEEN_TREES) as usize];
+
+                // Noise value not in forest range.
+                if noise * noise <= FOREST {
+                    continue 'next;
+                }
+
+                // Noise value not a local maximum of enough blocks.
+                for dz in 0..=DIST_BETWEEN_TREES * 2 {
+                    for dx in 0..=DIST_BETWEEN_TREES * 2 {
+                        if noise < noise_cache[(z + dz) as usize][(x + dx) as usize] {
+                            continue 'next;
+                        }
+                    }
+                }
+
+                let coords: BlockCoordinate = match block_up {
+                    BlockFace::Front | BlockFace::Back => (first_block_coords.x + x, first_block_coords.y + z, first_block_coords.z),
+                    BlockFace::Top | BlockFace::Bottom => (first_block_coords.x + x, first_block_coords.y, first_block_coords.z + z),
+                    BlockFace::Right | BlockFace::Left => (first_block_coords.x, first_block_coords.y + x, first_block_coords.z + z),
+                }
+                .into();
+
+                let mut height = CHUNK_DIMENSIONS as UnboundCoordinateType - 1;
+                while height >= 0
+                    && rotate(coords, UnboundBlockCoordinate::new(0, height, 0), s_dims, block_up)
+                        .map(|rotated| structure.block_at(rotated, blocks) == air)
+                        .unwrap_or(false)
+                {
+                    height -= 1;
+                }
+
+                // // No grass block to grow tree from.
+                if let Ok(rotated) = rotate(coords, UnboundBlockCoordinate::new(0, height, 0), s_dims, block_up) {
+                    let block = structure.block_at(rotated, blocks);
+                    if height < 0 || (block != grass && block != short_grass) || structure.block_rotation(rotated).block_up != block_up {
+                        continue 'next;
+                    }
+
+                    if let Ok(lowered_rotated) = rotate(coords, UnboundBlockCoordinate::new(0, height - 4, 0), s_dims, block_up) {
+                        redwood_tree(
+                            lowered_rotated,
+                            block_up,
+                            structure,
+                            location,
+                            block_event_writer,
+                            blocks,
+                            noise_generator,
+                        );
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn register_biome(mut registry: ResMut<Registry<Biome>>, block_registry: Res<Registry<Block>>) {
+    registry.register(Biome::new(
         "cosmos:plains",
         BlockLayers::default()
-            .add_noise_layer("cosmos:grass", &block_registry, 0, 0.05, 7.0, 9)
+            // .add_noise_layer("cosmos:grass", &block_registry, 0, 0.05, 7.0, 9)
+            .add_fixed_layer("cosmos:grass", &block_registry, 0)
             .expect("Grass missing")
             .add_fixed_layer("cosmos:dirt", &block_registry, 1)
             .expect("Dirt missing")
             .add_fixed_layer("cosmos:stone", &block_registry, 4)
             .expect("Stone missing"),
-    ))));
+    ));
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(OnExit(GameState::Loading), register_biome);
+    app.add_systems(OnExit(GameState::Loading), register_biome).add_systems(
+        Update,
+        plains_generate_chunk_features.in_set(BiosphereGenerationSet::GenerateChunkFeatures),
+    );
 }

@@ -28,6 +28,14 @@ impl UtilsTimer {
             "{} {}ms",
             message,
             SystemTime::now().duration_since(self.start).unwrap().as_millis()
-        )
+        );
+    }
+
+    /// info! the difference in time - does not reset timer.
+    pub fn log_duration_if_at_least(&self, message: &str, min_millis: u128) {
+        let ms = SystemTime::now().duration_since(self.start).unwrap().as_millis();
+        if ms >= min_millis {
+            info!("{} {ms}ms", message);
+        }
     }
 }

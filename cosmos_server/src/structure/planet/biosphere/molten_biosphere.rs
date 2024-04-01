@@ -3,21 +3,29 @@
 use bevy::{
     log::warn,
     prelude::{App, Component, Entity, Event, OnEnter, Res, ResMut},
+    reflect::TypePath,
 };
-use cosmos_core::{registry::Registry, structure::coordinates::ChunkCoordinate};
+use cosmos_core::{
+    registry::Registry,
+    structure::{
+        coordinates::ChunkCoordinate,
+        planet::generation::biome::{Biome, BiomeParameters, BiosphereBiomesRegistry},
+    },
+};
 
 use crate::GameState;
 
-use super::{
-    biome::{biome_registry::RegisteredBiome, BiomeParameters, BiosphereBiomesRegistry},
-    register_biosphere, BiosphereMarkerComponent, TBiosphere, TGenerateChunkEvent, TemperatureRange,
-};
+use super::{register_biosphere, BiosphereMarkerComponent, TBiosphere, TGenerateChunkEvent, TemperatureRange};
 
-#[derive(Component, Debug, Default, Clone, Copy)]
+#[derive(Component, Debug, Default, Clone, Copy, TypePath)]
 /// Marks that this is for a grass biosphere
 pub struct MoltenBiosphereMarker;
 
-impl BiosphereMarkerComponent for MoltenBiosphereMarker {}
+impl BiosphereMarkerComponent for MoltenBiosphereMarker {
+    fn unlocalized_name() -> &'static str {
+        "cosmos:molten"
+    }
+}
 
 /// Marks that a grass chunk needs generated
 #[derive(Debug, Event)]
@@ -155,12 +163,16 @@ impl TBiosphere<MoltenBiosphereMarker, MoltenChunkNeedsGeneratedEvent> for Molte
 // }
 
 fn register_biosphere_biomes(
-    biome_registry: Res<Registry<RegisteredBiome>>,
-    mut biosphere_biomes_registry: ResMut<BiosphereBiomesRegistry<MoltenBiosphereMarker>>,
+    biome_registry: Res<Registry<Biome>>,
+    mut biosphere_biomes_registry: ResMut<Registry<BiosphereBiomesRegistry>>,
 ) {
-    if let Some(plains) = biome_registry.from_id("cosmos:plains") {
-        biosphere_biomes_registry.register(
-            plains.biome(),
+    let biosphere_registry = biosphere_biomes_registry
+        .from_id_mut(MoltenBiosphereMarker::unlocalized_name())
+        .expect("Missing molten biosphere registry!");
+
+    if let Some(plains) = biome_registry.from_id("cosmos:molten") {
+        biosphere_registry.register(
+            plains,
             BiomeParameters {
                 ideal_elevation: 30.0,
                 ideal_humidity: 30.0,
@@ -168,15 +180,16 @@ fn register_biosphere_biomes(
             },
         );
     } else {
-        warn!("Missing plains biome!");
+        warn!("Missing molten biome!");
     }
 }
 
 pub(super) fn register(app: &mut App) {
     register_biosphere::<MoltenBiosphereMarker, MoltenChunkNeedsGeneratedEvent>(
         app,
-        "cosmos:biosphere_molten",
-        TemperatureRange::new(0.0, 0.0),
+        TemperatureRange::new(450.0, f32::MAX),
+        0.75,
+        Some("cosmos:cheese"),
     );
 
     app.add_systems(OnEnter(GameState::PostLoading), register_biosphere_biomes);

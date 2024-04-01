@@ -6,7 +6,7 @@ use bevy::reflect::Reflect;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    block::{Block, BlockFace},
+    block::{Block, BlockRotation},
     registry::Registry,
 };
 
@@ -53,7 +53,7 @@ impl BlockStorer for LodChunk {
     }
 
     #[inline(always)]
-    fn block_rotation(&self, coords: ChunkBlockCoordinate) -> BlockFace {
+    fn block_rotation(&self, coords: ChunkBlockCoordinate) -> BlockRotation {
         self.0.block_rotation(coords)
     }
 
@@ -88,12 +88,12 @@ impl BlockStorer for LodChunk {
     }
 
     #[inline(always)]
-    fn set_block_at(&mut self, coords: ChunkBlockCoordinate, b: &Block, block_up: BlockFace) {
+    fn set_block_at(&mut self, coords: ChunkBlockCoordinate, b: &Block, block_up: BlockRotation) {
         self.0.set_block_at(coords, b, block_up)
     }
 
     #[inline(always)]
-    fn set_block_at_from_id(&mut self, coords: ChunkBlockCoordinate, id: u16, block_up: BlockFace) {
+    fn set_block_at_from_id(&mut self, coords: ChunkBlockCoordinate, id: u16, block_up: BlockRotation) {
         self.0.set_block_at_from_id(coords, id, block_up)
     }
 

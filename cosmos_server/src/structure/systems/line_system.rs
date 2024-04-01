@@ -8,11 +8,11 @@ use bevy::{
     render::color::Color,
 };
 use cosmos_core::{
-    block::{Block, BlockFace},
+    block::{Block, BlockFace, BlockRotation},
     events::block_events::BlockChangedEvent,
     registry::Registry,
     structure::{
-        coordinates::{BlockCoordinate, CoordinateType},
+        coordinates::{BlockCoordinate, CoordinateType, UnboundBlockCoordinate, UnboundCoordinateType},
         events::StructureLoadedEvent,
         loading::StructureLoadingSet,
         structure_block::StructureBlock,
@@ -47,7 +47,7 @@ fn block_update_system<T: LineProperty, S: LinePropertyCalculator<T>>(
                 }
 
                 if let Some(property) = laser_cannon_blocks.get(new_block) {
-                    system.add_block(&ev.block, property);
+                    system.add_block(&ev.block, ev.new_block_rotation, property);
                 }
 
                 let mut recalc = false;
@@ -85,8 +85,9 @@ fn structure_loaded_event<T: LineProperty, S: LinePropertyCalculator<T>>(
 
             for structure_block in structure.all_blocks_iter(false) {
                 let block = structure_block.block(structure, &blocks);
+                let block_rotation = structure.block_rotation(structure_block.coords());
                 if let Some(prop) = line_blocks.get(block) {
-                    system.add_block(&structure_block, prop);
+                    system.add_block(&structure_block, block_rotation, prop);
                 }
                 if let Some(color_property) = color_blocks.from_block(block) {
                     color_found = true;
@@ -158,29 +159,34 @@ fn add_colors(mut colors: ResMut<Registry<LineColorBlock>>, blocks: Res<Registry
 }
 
 impl<T: LineProperty, S: LinePropertyCalculator<T>> BlockStructureSystem<T> for LineSystem<T, S> {
-    fn add_block(&mut self, block: &StructureBlock, prop: &T) {
-        // Always assume +z direction (for now)
-        let block_direction = BlockFace::Front; // eventually take this as argument
+    fn add_block(&mut self, block: &StructureBlock, block_rotation: BlockRotation, prop: &T) {
+        let block_direction = block_rotation.which_face_is(BlockFace::Front);
 
         let mut found_line = None;
+        // If a structure has two lines like this: (XXXXX XXXXXX) and an X is placed
+        // in that space, then those two lines need to be linked toegether into one cannon.
+        //
+        // If this variable is ever Some index, then the found_line has to be linked with
+        // the line at this index.
         let mut link_to = None;
 
         for (i, line) in self.lines.iter_mut().filter(|x| x.direction == block_direction).enumerate() {
-            let (dx, dy, dz) = line.direction.direction();
+            let d = block_direction.direction_coordinates();
 
-            let (sx, sy, sz) = (line.start.x as i32, line.start.y as i32, line.start.z as i32);
+            let start: UnboundBlockCoordinate = line.start.coords().into();
 
-            let (bx, by, bz) = (block.x as i32, block.y as i32, block.z as i32);
+            let block: UnboundBlockCoordinate = block.coords().into();
 
             // Block is before start
-            if sx - dx == bx && sy - dy == by && sz - dz == bz {
+            if start.x - d.x == block.x && start.y - d.y == block.y && start.z - d.z == block.z {
                 if found_line.is_some() {
                     link_to = Some(i);
                     break;
                 } else {
-                    line.start.x -= dx as CoordinateType;
-                    line.start.y -= dy as CoordinateType;
-                    line.start.z -= dz as CoordinateType;
+                    // This should always be >= 0 because a block cannot placed at negative coordinates
+                    line.start.x = (start.x - d.x) as CoordinateType;
+                    line.start.y = (start.y - d.y) as CoordinateType;
+                    line.start.z = (start.z - d.z) as CoordinateType;
                     line.len += 1;
                     line.properties.insert(0, *prop);
                     line.property = S::calculate_property(&line.properties);
@@ -189,7 +195,10 @@ impl<T: LineProperty, S: LinePropertyCalculator<T>> BlockStructureSystem<T> for 
                 }
             }
             // Block is after end
-            else if sx + dx * (line.len as i32) == bx && sy + dy * (line.len as i32) == by && sz + dz * (line.len as i32) == bz {
+            else if start.x + d.x * (line.len as UnboundCoordinateType) == block.x
+                && start.y + d.y * (line.len as UnboundCoordinateType) == block.y
+                && start.z + d.z * (line.len as UnboundCoordinateType) == block.z
+            {
                 if found_line.is_some() {
                     link_to = Some(i);
                     break;
@@ -329,11 +338,14 @@ impl<T: LineProperty, S: LinePropertyCalculator<T>> BlockStructureSystem<T> for 
     }
 }
 
-fn is_in_line_with(block: &StructureBlock, direction: BlockFace, coord: &BlockCoordinate) -> bool {
+fn is_in_line_with(testing_block: &StructureBlock, direction: BlockFace, line_coord: &BlockCoordinate) -> bool {
     match direction {
-        BlockFace::Front => coord.x == block.x && coord.y == block.y && coord.z <= block.z,
-        BlockFace::Back => coord.x == block.x && coord.y == block.y && coord.z >= block.z,
-        _ => todo!(),
+        BlockFace::Front => line_coord.x == testing_block.x && line_coord.y == testing_block.y && line_coord.z >= testing_block.z,
+        BlockFace::Back => line_coord.x == testing_block.x && line_coord.y == testing_block.y && line_coord.z <= testing_block.z,
+        BlockFace::Top => line_coord.x == testing_block.x && line_coord.y >= testing_block.y && line_coord.z == testing_block.z,
+        BlockFace::Bottom => line_coord.x == testing_block.x && line_coord.y <= testing_block.y && line_coord.z == testing_block.z,
+        BlockFace::Right => line_coord.x >= testing_block.x && line_coord.y == testing_block.y && line_coord.z == testing_block.z,
+        BlockFace::Left => line_coord.x <= testing_block.x && line_coord.y == testing_block.y && line_coord.z == testing_block.z,
     }
 }
 

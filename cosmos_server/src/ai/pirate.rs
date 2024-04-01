@@ -4,7 +4,7 @@ use bevy::{
     ecs::{
         component::Component,
         entity::Entity,
-        query::{Has, Or, With, Without},
+        query::{Or, With, Without},
         schedule::{IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
         system::{Commands, Query, Res},
     },
@@ -201,7 +201,7 @@ fn add_pirate_ai(mut commands: Commands, q_needs_ai: Query<Entity, (With<Pirate>
 }
 
 fn on_melt_down(
-    q_is_pirate: Query<Has<PiratePilot>>,
+    q_is_pirate: Query<(), With<PiratePilot>>,
     q_melting_down: Query<(Entity, &Pilot), (With<MeltingDown>, With<PirateAi>, With<AiControlled>)>,
     mut commands: Commands,
 ) {

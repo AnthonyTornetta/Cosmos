@@ -167,14 +167,14 @@ fn listen_for_change_events(
                 if let Ok(ent) = item_name_query.get_single() {
                     if let Ok(mut name_text) = text_query.get_mut(ent) {
                         if let Some(is) = inv.itemstack_at(hb.selected_slot()) {
-                            name_text.sections[0].value = names
+                            names
                                 .get_name_from_numeric_id(is.item_id())
                                 .unwrap_or(items.from_numeric_id(is.item_id()).unlocalized_name())
-                                .to_owned();
+                                .clone_into(&mut name_text.sections[0].value);
 
                             name_text.sections[0].style.color = Color::WHITE;
                         } else {
-                            name_text.sections[0].value = "".to_owned();
+                            "".clone_into(&mut name_text.sections[0].value);
                         }
                     }
                 }

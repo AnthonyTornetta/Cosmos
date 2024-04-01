@@ -27,7 +27,7 @@ use futures_lite::future;
 use rand::Rng;
 
 use crate::{
-    init::init_world::ServerSeed, persistence::is_sector_generated, rng::get_rng_for_sector, state::GameState,
+    init::init_world::ServerSeed, persistence::is_sector_generated, rng::get_rng_for_sector, settings::ServerSettings, state::GameState,
     structure::planet::server_planet_builder::ServerPlanetBuilder,
 };
 
@@ -84,7 +84,12 @@ fn spawn_planet(
     stars: Query<(&Location, &Star), With<Star>>,
     cache: Res<CachedSectors>,
     is_already_generating: Query<(), With<PlanetSpawnerAsyncTask>>,
+    server_settings: Res<ServerSettings>,
 ) {
+    if !server_settings.spawn_planets {
+        return;
+    }
+
     if !is_already_generating.is_empty() {
         // an async task is already running, don't make another one
         return;
@@ -138,7 +143,7 @@ fn spawn_planet(
 
             let is_origin = sector.x() == 25 && sector.y() == 25 && sector.z() == 25;
 
-            if !is_origin && rng.gen_range(0..1000) == 9 {
+            if is_origin || rng.gen_range(0..1000) == 9 {
                 let location = Location::new(Vec3::ZERO, sector);
 
                 if let Some(temperature) = calculate_temperature_at(stars.iter(), &location) {

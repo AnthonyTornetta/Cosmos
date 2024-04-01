@@ -3,21 +3,29 @@
 use bevy::{
     log::warn,
     prelude::{App, Component, Entity, Event, OnEnter, Res, ResMut},
+    reflect::TypePath,
 };
-use cosmos_core::{registry::Registry, structure::coordinates::ChunkCoordinate};
+use cosmos_core::{
+    registry::Registry,
+    structure::{
+        coordinates::ChunkCoordinate,
+        planet::generation::biome::{Biome, BiomeParameters, BiosphereBiomesRegistry},
+    },
+};
 
 use crate::GameState;
 
-use super::{
-    biome::{biome_registry::RegisteredBiome, BiomeParameters, BiosphereBiomesRegistry},
-    register_biosphere, BiosphereMarkerComponent, TBiosphere, TGenerateChunkEvent, TemperatureRange,
-};
+use super::{register_biosphere, BiosphereMarkerComponent, TBiosphere, TGenerateChunkEvent, TemperatureRange};
 
-#[derive(Component, Debug, Default, Clone, Copy)]
+#[derive(Component, Debug, Default, Clone, Copy, TypePath)]
 /// Marks that this is for a grass biosphere
 pub struct IceBiosphereMarker;
 
-impl BiosphereMarkerComponent for IceBiosphereMarker {}
+impl BiosphereMarkerComponent for IceBiosphereMarker {
+    fn unlocalized_name() -> &'static str {
+        "cosmos:ice"
+    }
+}
 
 /// Marks that an ice chunk needs generated
 #[derive(Event, Debug)]
@@ -45,7 +53,7 @@ impl TGenerateChunkEvent for IceChunkNeedsGeneratedEvent {
 
 #[derive(Default, Debug)]
 /// Creates a ice planet
-pub struct IceBiosphere;
+struct IceBiosphere;
 
 impl TBiosphere<IceBiosphereMarker, IceChunkNeedsGeneratedEvent> for IceBiosphere {
     fn get_marker_component(&self) -> IceBiosphereMarker {
@@ -57,25 +65,17 @@ impl TBiosphere<IceBiosphereMarker, IceChunkNeedsGeneratedEvent> for IceBiospher
     }
 }
 
-// fn make_block_ranges(block_registry: Res<Registry<Block>>, mut commands: Commands) {
-//     commands.insert_resource(
-//         BlockLayers::default()
-//             .add_noise_layer("cosmos:ice", &block_registry, 160, 0.01, 4.0, 1)
-//             .expect("Ice missing")
-//             .add_fixed_layer("cosmos:water", &block_registry, 4)
-//             .expect("Water missing")
-//             .add_fixed_layer("cosmos:stone", &block_registry, 296)
-//             .expect("Stone missing"),
-//     );
-// }
-
 fn register_biosphere_biomes(
-    biome_registry: Res<Registry<RegisteredBiome>>,
-    mut biosphere_biomes_registry: ResMut<BiosphereBiomesRegistry<IceBiosphereMarker>>,
+    biome_registry: Res<Registry<Biome>>,
+    mut biosphere_biomes_registry: ResMut<Registry<BiosphereBiomesRegistry>>,
 ) {
-    if let Some(plains) = biome_registry.from_id("cosmos:plains") {
-        biosphere_biomes_registry.register(
-            plains.biome(),
+    let biosphere_registry = biosphere_biomes_registry
+        .from_id_mut(IceBiosphereMarker::unlocalized_name())
+        .expect("Missing ice biosphere registry!");
+
+    if let Some(plains) = biome_registry.from_id("cosmos:ice") {
+        biosphere_registry.register(
+            plains,
             BiomeParameters {
                 ideal_elevation: 30.0,
                 ideal_humidity: 30.0,
@@ -83,12 +83,17 @@ fn register_biosphere_biomes(
             },
         );
     } else {
-        warn!("Missing plains biome!");
+        warn!("Missing ice biome!");
     }
 }
 
 pub(super) fn register(app: &mut App) {
-    register_biosphere::<IceBiosphereMarker, IceChunkNeedsGeneratedEvent>(app, "cosmos:biosphere_ice", TemperatureRange::new(0.0, 0.0));
+    register_biosphere::<IceBiosphereMarker, IceChunkNeedsGeneratedEvent>(
+        app,
+        TemperatureRange::new(0.0, 300.0),
+        0.75,
+        Some("cosmos:water"),
+    );
 
     app.add_systems(OnEnter(GameState::PostLoading), register_biosphere_biomes);
 }

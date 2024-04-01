@@ -4,7 +4,10 @@ use bevy::{
     app::{App, Update},
     ecs::{
         event::{Event, EventReader, EventWriter},
-        schedule::{common_conditions::in_state, IntoSystemConfigs, NextState},
+        schedule::{
+            common_conditions::{in_state, resource_exists},
+            IntoSystemConfigs, NextState,
+        },
         system::{Commands, Res, ResMut, Resource},
     },
     log::{error, info},
@@ -97,6 +100,7 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         (registry_listen_netty, transition_state)
+            .run_if(resource_exists::<RegistriesLeftToSync>)
             .chain()
             .run_if(in_state(GameState::LoadingData)),
     )

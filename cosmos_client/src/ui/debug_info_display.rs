@@ -1,15 +1,23 @@
 //! Displays debug info
 
 use bevy::prelude::*;
-use cosmos_core::physics::location::Location;
+use cosmos_core::{
+    block::Block,
+    physics::location::Location,
+    registry::{identifiable::Identifiable, Registry},
+    structure::Structure,
+};
 
-use crate::{netty::flags::LocalPlayer, state::game_state::GameState};
+use crate::{interactions::block_interactions::LookingAt, netty::flags::LocalPlayer, state::game_state::GameState};
 
 #[derive(Component, Debug, Default)]
 struct FPSCounter {
     count: usize,
     delta_time: f32,
 }
+
+#[derive(Component)]
+struct LookingAtText;
 
 #[derive(Component)]
 struct CoordsCounter;
@@ -64,11 +72,62 @@ fn add_text(mut commands: Commands, asset_server: Res<AssetServer>) {
 
                 ..default()
             },
-            text: Text::from_section("FPS: ", text_style),
+            text: Text::from_section("FPS: ", text_style.clone()),
             ..default()
         },
         FPSCounter::default(),
     ));
+
+    commands.spawn((
+        TextBundle {
+            style: Style {
+                bottom: Val::Px(5.0 + text_gap * 3.0),
+                left: Val::Px(5.0),
+                position_type: PositionType::Absolute,
+
+                ..default()
+            },
+            text: Text::from_sections(vec![
+                TextSection::new("Looking At: ", text_style.clone()),
+                TextSection::new("Nothing", text_style.clone()),
+            ]),
+            ..default()
+        },
+        LookingAtText,
+    ));
+}
+
+fn update_looking_at_text(
+    q_looking_at: Query<&LookingAt>,
+    q_structure: Query<&Structure>,
+    blocks: Res<Registry<Block>>,
+    mut q_looking_at_text: Query<&mut Text, With<LookingAtText>>,
+) {
+    let Ok(mut text) = q_looking_at_text.get_single_mut() else {
+        return;
+    };
+
+    let Ok(looking_at) = q_looking_at.get_single() else {
+        return;
+    };
+
+    if let Some((structure_ent, structure_block)) = looking_at.looking_at_block {
+        let Ok(structure) = q_structure.get(structure_ent) else {
+            return;
+        };
+
+        let block = structure.block_at(structure_block.coords(), &blocks);
+        let block_rotation = structure.block_rotation(structure_block.coords());
+
+        text.sections[1].value = format!(
+            "{}: {:?}, {:?}",
+            block.unlocalized_name(),
+            block_rotation.block_up,
+            block_rotation.sub_rotation
+        );
+    } else {
+        text.sections[1].value = "Nothing".into();
+    }
 }
 
 fn update_coords(
@@ -102,6 +161,8 @@ fn update_fps(mut query: Query<(&mut Text, &mut FPSCounter)>, time: Res<Time>) {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(OnEnter(GameState::Playing), add_text)
-        .add_systems(Update, (update_coords, update_fps).run_if(in_state(GameState::Playing)));
+    app.add_systems(OnEnter(GameState::Playing), add_text).add_systems(
+        Update,
+        (update_coords, update_looking_at_text, update_fps).run_if(in_state(GameState::Playing)),
+    );
 }

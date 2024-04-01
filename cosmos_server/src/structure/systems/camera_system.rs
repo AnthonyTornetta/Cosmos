@@ -21,14 +21,10 @@ use crate::state::GameState;
 
 use super::sync::register_structure_system;
 
-fn register_camera_blocks(blocks: Res<Registry<Block>>, mut storage: ResMut<CameraBlocks>) {
+fn register_camera_blocks(blocks: Res<Registry<Block>>, mut camera_blocks: ResMut<CameraBlocks>) {
     if let Some(block) = blocks.from_id("cosmos:camera") {
-        storage.insert(block);
+        camera_blocks.insert(block);
     }
-
-    // if let Some(block) = blocks.from_id("cosmos:ship_core") {
-    //     storage.insert(block);
-    // }
 }
 
 fn camera_block_update_system(
@@ -36,10 +32,10 @@ fn camera_block_update_system(
     camera_blocks: Res<CameraBlocks>,
     blocks: Res<Registry<Block>>,
     mut system_query: Query<&mut CameraSystem>,
-    systems_query: Query<&Systems>,
+    q_systems: Query<&Systems>,
 ) {
     for ev in event.read() {
-        let Ok(systems) = systems_query.get(ev.structure_entity) else {
+        let Ok(systems) = q_systems.get(ev.structure_entity) else {
             continue;
         };
 

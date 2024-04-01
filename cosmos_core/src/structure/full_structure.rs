@@ -11,7 +11,7 @@ use bevy::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    block::{blocks::AIR_BLOCK_ID, Block, BlockFace},
+    block::{blocks::AIR_BLOCK_ID, Block, BlockRotation},
     events::block_events::BlockChangedEvent,
     registry::{identifiable::Identifiable, Registry},
 };
@@ -95,14 +95,14 @@ impl FullStructure {
         &mut self,
         coords: BlockCoordinate,
         block: &Block,
-        block_up: BlockFace,
+        block_rotation: BlockRotation,
         blocks: &Registry<Block>,
         event_writer: Option<&mut EventWriter<BlockChangedEvent>>,
     ) {
         self.base_structure.debug_assert_block_coords_within(coords);
 
         let old_block = self.block_id_at(coords);
-        if blocks.from_numeric_id(old_block) == block {
+        if blocks.from_numeric_id(old_block) == block && self.block_rotation(coords) == block_rotation {
             return;
         }
 
@@ -111,7 +111,7 @@ impl FullStructure {
         let mut send_event = false;
 
         if let Some(chunk) = self.mut_chunk_from_chunk_coordinates(chunk_coords) {
-            chunk.set_block_at(chunk_block_coords, block, block_up);
+            chunk.set_block_at(chunk_block_coords, block, block_rotation);
 
             if chunk.is_empty() {
                 self.base_structure.unload_chunk(chunk_coords);
@@ -120,7 +120,7 @@ impl FullStructure {
             send_event = true;
         } else if block.id() != AIR_BLOCK_ID {
             let mut chunk = Chunk::new(chunk_coords);
-            chunk.set_block_at(chunk_block_coords, block, block_up);
+            chunk.set_block_at(chunk_block_coords, block, block_rotation);
             self.base_structure.chunks.insert(self.base_structure.flatten(chunk_coords), chunk);
             send_event = true;
         }
@@ -140,8 +140,8 @@ impl FullStructure {
             old_block,
             structure_entity: self_entity,
             block: StructureBlock::new(coords),
-            old_block_up: self.block_rotation(coords),
-            new_block_up: block_up,
+            old_block_rotation: self.block_rotation(coords),
+            new_block_rotation: block_rotation,
         });
     }
 
@@ -154,7 +154,13 @@ impl FullStructure {
         blocks: &Registry<Block>,
         event_writer: Option<&mut EventWriter<BlockChangedEvent>>,
     ) {
-        self.set_block_at(coords, blocks.from_numeric_id(AIR_BLOCK_ID), BlockFace::Top, blocks, event_writer);
+        self.set_block_at(
+            coords,
+            blocks.from_numeric_id(AIR_BLOCK_ID),
+            BlockRotation::default(),
+            blocks,
+            event_writer,
+        );
     }
 
     /// Marks this structure as being completely loaded
