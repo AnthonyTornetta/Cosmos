@@ -1,10 +1,7 @@
 //! Handles the logic behind the creation of a reactor multiblock
 
 use bevy::{
-    ecs::{
-        event::EventWriter,
-        query::{Added, Or, With},
-    },
+    ecs::query::{Added, Or, With},
     log::warn,
     prelude::{in_state, App, Changed, Entity, EventReader, IntoSystemConfigs, Query, Res, ResMut, Update},
 };
@@ -16,7 +13,6 @@ use cosmos_core::{
         Block,
     },
     entities::player::Player,
-    events::block_events::BlockChangedEvent,
     netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannelServer},
     registry::{identifiable::Identifiable, Registry},
     structure::{
@@ -33,8 +29,7 @@ const MAX_REACTOR_SIZE: CoordinateType = 11;
 
 fn find_wall_coords(
     ub_controller_coords: UnboundBlockCoordinate,
-    structure: &mut Structure,
-    ev_writer: &mut EventWriter<BlockChangedEvent>,
+    structure: &Structure,
     direction_a: UnboundBlockCoordinate,
     direction_b: UnboundBlockCoordinate,
     blocks: &Registry<Block>,
@@ -52,13 +47,14 @@ fn find_wall_coords(
                 return None;
             };
 
-            structure.set_block_at(check_here, valid_blocks[1], Default::default(), blocks, Some(ev_writer));
+            // structure.set_block_at(check_here, valid_blocks[1], Default::default(), blocks, Some(ev_writer));
 
             width += 1;
 
             let block_here = structure.block_at(check_here, blocks);
 
             if !valid_blocks.contains(&block_here) {
+                println!("Bad block: {block_here:?}");
                 found_coords = Some(
                     BlockCoordinate::try_from(UnboundBlockCoordinate::from(check_here) - search_direction)
                         .expect("This is guarenteed from previous logic to be within the structure"),
@@ -69,6 +65,8 @@ fn find_wall_coords(
             check_coords = check_coords + search_direction;
         }
     }
+
+    println!("Coords? {found_coords:?}");
 
     let left_wall_coords = found_coords?;
 
@@ -82,11 +80,10 @@ fn find_wall_coords(
                 return None;
             };
 
-            structure.set_block_at(check_here, valid_blocks[1], Default::default(), blocks, Some(ev_writer));
-
             let block_here = structure.block_at(check_here, blocks);
 
             if !valid_blocks.contains(&block_here) {
+                println!("Bad block: {block_here:?}");
                 found_coords = Some(
                     BlockCoordinate::try_from(UnboundBlockCoordinate::from(check_here) - search_direction)
                         .expect("This is guarenteed from previous logic to be within the structure"),
@@ -98,17 +95,14 @@ fn find_wall_coords(
         }
     }
 
+    println!("Coords 2? {found_coords:?}");
+
     let right_wall_coords = found_coords?;
 
     Some((left_wall_coords, right_wall_coords))
 }
 
-fn check_is_valid_multiblock(
-    structure: &mut Structure,
-    controller_coords: BlockCoordinate,
-    blocks: &Registry<Block>,
-    ev_writer: &mut EventWriter<BlockChangedEvent>,
-) -> Option<ReactorBounds> {
+fn check_is_valid_multiblock(structure: &Structure, controller_coords: BlockCoordinate, blocks: &Registry<Block>) -> Option<ReactorBounds> {
     let valid_blocks = [
         blocks.from_id("cosmos:reactor_casing").expect("Missing reactor casing"),
         blocks.from_id("cosmos:reactor_window").expect("Missing cosmos:reactor_window"),
@@ -150,8 +144,6 @@ fn check_is_valid_multiblock(
                 break;
             }
 
-            structure.set_block_at(check_here, valid_blocks[1], Default::default(), blocks, Some(ev_writer));
-
             check_coords = check_coords + search_direction;
         }
     }
@@ -161,7 +153,6 @@ fn check_is_valid_multiblock(
     let (left_wall_coords, right_wall_coords) = find_wall_coords(
         ub_controller_coords,
         structure,
-        ev_writer,
         direction.local_left().direction_coordinates(),
         direction.local_right().direction_coordinates(),
         blocks,
@@ -171,7 +162,6 @@ fn check_is_valid_multiblock(
     let (down_wall_coords, up_wall_coords) = find_wall_coords(
         ub_controller_coords,
         structure,
-        ev_writer,
         direction.local_bottom().direction_coordinates(),
         direction.local_top().direction_coordinates(),
         blocks,
@@ -381,10 +371,9 @@ fn create_reactor(
 fn on_piloted_by_ai(
     blocks: Res<Registry<Block>>,
     reactor_blocks: Res<Registry<ReactorPowerGenerationBlock>>,
-    mut q_structure: Query<(&mut Structure, &mut Reactors), (With<AiControlled>, Or<(Added<AiControlled>, Added<Reactors>)>)>,
-    mut ev_writer: EventWriter<BlockChangedEvent>,
+    mut q_structure: Query<(&Structure, &mut Reactors), (With<AiControlled>, Or<(Added<AiControlled>, Added<Reactors>)>)>,
 ) {
-    for (mut structure, mut reactors) in q_structure.iter_mut() {
+    for (structure, mut reactors) in q_structure.iter_mut() {
         let reactor_block = blocks
             .from_id("cosmos:reactor_controller")
             .expect("Missing reactor controller block!");
@@ -395,7 +384,7 @@ fn on_piloted_by_ai(
             .collect::<Vec<StructureBlock>>();
 
         for block_here in blockz {
-            if let Some(bounds) = check_is_valid_multiblock(&mut structure, block_here.coords(), &blocks, &mut ev_writer) {
+            if let Some(bounds) = check_is_valid_multiblock(&structure, block_here.coords(), &blocks) {
                 match check_valid(bounds, &structure, &blocks) {
                     ReactorValidity::Valid => {
                         let reactor = create_reactor(&structure, &blocks, &reactor_blocks, bounds, block_here);
@@ -418,10 +407,9 @@ fn on_interact_reactor(
     mut interaction: EventReader<BlockInteractEvent>,
     mut server: ResMut<RenetServer>,
     player_query: Query<&Player>,
-    mut ev_writer: EventWriter<BlockChangedEvent>,
 ) {
     for ev in interaction.read() {
-        let Ok((mut structure, mut reactors)) = structure_query.get_mut(ev.structure_entity) else {
+        let Ok((structure, mut reactors)) = structure_query.get_mut(ev.structure_entity) else {
             continue;
         };
 
@@ -432,9 +420,7 @@ fn on_interact_reactor(
                 continue;
             }
 
-            println!("Interacted w/ reactor!");
-
-            if let Some(bounds) = check_is_valid_multiblock(&mut structure, ev.structure_block.coords(), &blocks, &mut ev_writer) {
+            if let Some(bounds) = check_is_valid_multiblock(&structure, ev.structure_block.coords(), &blocks) {
                 match check_valid(bounds, &structure, &blocks) {
                     ReactorValidity::MissingCasing(_) => {
                         let Ok(player) = player_query.get(ev.interactor) else {

@@ -526,57 +526,112 @@ impl ChunkRenderer {
                 coords.y as f32 - cd2 + 0.5,
                 coords.z as f32 - cd2 + 0.5,
             );
-            let block = blocks.from_numeric_id(block_id);
+            let actual_block = blocks.from_numeric_id(block_id);
 
-            let check = |c: &Chunk, coords: ChunkBlockCoordinate| -> bool {
-                (block_id != c.block_at(coords) || !block.is_full()) && chunk.has_see_through_block_at(coords, blocks)
-            };
+            #[inline(always)]
+            fn check(c: &Chunk, block: u16, actual_block: &Block, blocks: &Registry<Block>, coords: ChunkBlockCoordinate) -> bool {
+                (block != c.block_at(coords) || !actual_block.is_full()) && c.has_see_through_block_at(coords, blocks)
+            }
 
             let (x, y, z) = (coords.x, coords.y, coords.z);
 
             // right
-            if (x != CHUNK_DIMENSIONS - 1 && check(chunk, coords.right()))
-                || (x == CHUNK_DIMENSIONS - 1 && (right.map(|c| check(c, ChunkBlockCoordinate::new(0, y, z))).unwrap_or(true)))
+            if (x != CHUNK_DIMENSIONS - 1 && check(chunk, block_id, actual_block, blocks, coords.right()))
+                || (x == CHUNK_DIMENSIONS - 1
+                    && (right
+                        .map(|c| check(c, block_id, actual_block, blocks, ChunkBlockCoordinate::new(0, y, z)))
+                        .unwrap_or(true)))
             {
                 faces.push(BlockFace::Right);
             }
             // left
-            if (x != 0 && check(chunk, coords.left().expect("Checked in first condition")))
+            if (x != 0
+                && check(
+                    chunk,
+                    block_id,
+                    actual_block,
+                    blocks,
+                    coords.left().expect("Checked in first condition"),
+                ))
                 || (x == 0
                     && (left
-                        .map(|c| check(c, ChunkBlockCoordinate::new(CHUNK_DIMENSIONS - 1, y, z)))
+                        .map(|c| {
+                            check(
+                                c,
+                                block_id,
+                                actual_block,
+                                blocks,
+                                ChunkBlockCoordinate::new(CHUNK_DIMENSIONS - 1, y, z),
+                            )
+                        })
                         .unwrap_or(true)))
             {
                 faces.push(BlockFace::Left);
             }
 
             // top
-            if (y != CHUNK_DIMENSIONS - 1 && check(chunk, coords.top()))
-                || (y == CHUNK_DIMENSIONS - 1 && top.map(|c| check(c, ChunkBlockCoordinate::new(x, 0, z))).unwrap_or(true))
+            if (y != CHUNK_DIMENSIONS - 1 && check(chunk, block_id, actual_block, blocks, coords.top()))
+                || (y == CHUNK_DIMENSIONS - 1
+                    && top
+                        .map(|c| check(c, block_id, actual_block, blocks, ChunkBlockCoordinate::new(x, 0, z)))
+                        .unwrap_or(true))
             {
                 faces.push(BlockFace::Top);
             }
             // bottom
-            if (y != 0 && check(chunk, coords.bottom().expect("Checked in first condition")))
+            if (y != 0
+                && check(
+                    chunk,
+                    block_id,
+                    actual_block,
+                    blocks,
+                    coords.bottom().expect("Checked in first condition"),
+                ))
                 || (y == 0
                     && (bottom
-                        .map(|c| check(c, ChunkBlockCoordinate::new(x, CHUNK_DIMENSIONS - 1, z)))
+                        .map(|c| {
+                            check(
+                                c,
+                                block_id,
+                                actual_block,
+                                blocks,
+                                ChunkBlockCoordinate::new(x, CHUNK_DIMENSIONS - 1, z),
+                            )
+                        })
                         .unwrap_or(true)))
             {
                 faces.push(BlockFace::Bottom);
             }
 
             // front
-            if (z != CHUNK_DIMENSIONS - 1 && check(chunk, coords.front()))
-                || (z == CHUNK_DIMENSIONS - 1 && (front.map(|c| check(c, ChunkBlockCoordinate::new(x, y, 0))).unwrap_or(true)))
+            if (z != CHUNK_DIMENSIONS - 1 && check(chunk, block_id, actual_block, blocks, coords.front()))
+                || (z == CHUNK_DIMENSIONS - 1
+                    && (front
+                        .map(|c| check(c, block_id, actual_block, blocks, ChunkBlockCoordinate::new(x, y, 0)))
+                        .unwrap_or(true)))
             {
                 faces.push(BlockFace::Front);
             }
             // back
-            if (z != 0 && check(chunk, coords.back().expect("Checked in first condition")))
+            if (z != 0
+                && check(
+                    chunk,
+                    block_id,
+                    actual_block,
+                    blocks,
+                    coords.back().expect("Checked in first condition"),
+                ))
                 || (z == 0
                     && (back
-                        .map(|c| check(c, ChunkBlockCoordinate::new(x, y, CHUNK_DIMENSIONS - 1)))
+                        .map(|c| {
+                            check(
+                                c,
+                                block_id,
+                                actual_block,
+                                blocks,
+                                ChunkBlockCoordinate::new(x, y, CHUNK_DIMENSIONS - 1),
+                            )
+                        })
                         .unwrap_or(true)))
             {
                 faces.push(BlockFace::Back);

@@ -82,39 +82,40 @@ impl BlockRotation {
     #[inline(always)]
     /// Returns the `BlockFace` that is this rotations's top
     pub fn local_top(&self) -> BlockFace {
-        Self::rotate_face(self, BlockFace::Top)
+        Self::which_face_is(self, BlockFace::Top)
     }
 
     #[inline(always)]
     /// Returns the `BlockFace` that is this rotations's bottom
     pub fn local_bottom(&self) -> BlockFace {
-        Self::rotate_face(self, BlockFace::Bottom)
+        Self::which_face_is(self, BlockFace::Bottom)
     }
 
     #[inline(always)]
     /// Returns the `BlockFace` that is this rotations's left
     pub fn local_left(&self) -> BlockFace {
-        Self::rotate_face(self, BlockFace::Left)
+        Self::which_face_is(self, BlockFace::Left)
     }
 
     #[inline(always)]
     /// Returns the `BlockFace` that is this rotations's right
     pub fn local_right(&self) -> BlockFace {
-        Self::rotate_face(self, BlockFace::Right)
+        Self::which_face_is(self, BlockFace::Right)
     }
 
     #[inline(always)]
     /// Returns the `BlockFace` that is this rotations's back
     pub fn local_back(&self) -> BlockFace {
-        Self::rotate_face(self, BlockFace::Back)
+        Self::which_face_is(self, BlockFace::Back)
     }
 
     #[inline(always)]
     /// Returns the `BlockFace` that is this rotations's front
     pub fn local_front(&self) -> BlockFace {
-        Self::rotate_face(self, BlockFace::Front)
+        Self::which_face_is(self, BlockFace::Front)
     }
 
+    #[inline(always)]
     /// Gets the complete opposite of this rotation
     pub fn inverse(&self) -> Self {
         Self {
