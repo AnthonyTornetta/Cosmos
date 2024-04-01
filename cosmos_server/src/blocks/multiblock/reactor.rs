@@ -54,7 +54,6 @@ fn find_wall_coords(
             let block_here = structure.block_at(check_here, blocks);
 
             if !valid_blocks.contains(&block_here) {
-                println!("Bad block: {block_here:?}");
                 found_coords = Some(
                     BlockCoordinate::try_from(UnboundBlockCoordinate::from(check_here) - search_direction)
                         .expect("This is guarenteed from previous logic to be within the structure"),
@@ -65,8 +64,6 @@ fn find_wall_coords(
             check_coords = check_coords + search_direction;
         }
     }
-
-    println!("Coords? {found_coords:?}");
 
     let left_wall_coords = found_coords?;
 
@@ -83,7 +80,6 @@ fn find_wall_coords(
             let block_here = structure.block_at(check_here, blocks);
 
             if !valid_blocks.contains(&block_here) {
-                println!("Bad block: {block_here:?}");
                 found_coords = Some(
                     BlockCoordinate::try_from(UnboundBlockCoordinate::from(check_here) - search_direction)
                         .expect("This is guarenteed from previous logic to be within the structure"),
@@ -94,8 +90,6 @@ fn find_wall_coords(
             check_coords = check_coords + search_direction;
         }
     }
-
-    println!("Coords 2? {found_coords:?}");
 
     let right_wall_coords = found_coords?;
 
@@ -112,16 +106,6 @@ fn check_is_valid_multiblock(structure: &Structure, controller_coords: BlockCoor
     ];
 
     let direction = structure.block_rotation(controller_coords);
-
-    println!("Checking {direction:?}");
-
-    println!("Locals:");
-    println!("Top: {:?}", direction.local_top());
-    println!("Bottom: {:?}", direction.local_bottom());
-    println!("Right: {:?}", direction.local_right());
-    println!("Left: {:?}", direction.local_left());
-    println!("Front: {:?}", direction.local_front());
-    println!("Back: {:?}", direction.local_back());
 
     let ub_controller_coords = UnboundBlockCoordinate::from(controller_coords);
 

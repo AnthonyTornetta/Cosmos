@@ -109,7 +109,7 @@ impl DynamicStructure {
         event_writer: Option<&mut EventWriter<BlockChangedEvent>>,
     ) {
         let old_block = self.block_id_at(coords);
-        if blocks.from_numeric_id(old_block) == block {
+        if blocks.from_numeric_id(old_block) == block && self.block_rotation(coords) == block_rotation {
             return;
         }
 

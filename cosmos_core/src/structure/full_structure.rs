@@ -102,7 +102,7 @@ impl FullStructure {
         self.base_structure.debug_assert_block_coords_within(coords);
 
         let old_block = self.block_id_at(coords);
-        if blocks.from_numeric_id(old_block) == block {
+        if blocks.from_numeric_id(old_block) == block && self.block_rotation(coords) == block_rotation {
             return;
         }
 

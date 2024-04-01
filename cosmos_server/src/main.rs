@@ -42,6 +42,8 @@ pub mod state;
 pub mod structure;
 pub mod universe;
 
+mod utility_runs;
+
 fn main() {
     if set_current_thread_priority(ThreadPriority::Max).is_err() {
         warn!("Failed to set main thread priority to max - this can lead to lag.");
