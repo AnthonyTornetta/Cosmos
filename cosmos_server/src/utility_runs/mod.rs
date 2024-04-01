@@ -6,6 +6,6 @@ use bevy::app::App;
 
 pub mod block_flipper;
 
-pub(super) fn register(app: &mut App) {
-    block_flipper::register(app);
+pub(super) fn register(_app: &mut App) {
+    // block_flipper::register(app);
 }
