@@ -169,7 +169,8 @@ fn listen_for_change_events(
                         if let Some(is) = inv.itemstack_at(hb.selected_slot()) {
                             names
                                 .get_name_from_numeric_id(is.item_id())
-                                .unwrap_or(items.from_numeric_id(is.item_id()).unlocalized_name()).clone_into(&mut name_text.sections[0].value);
+                                .unwrap_or(items.from_numeric_id(is.item_id()).unlocalized_name())
+                                .clone_into(&mut name_text.sections[0].value);
 
                             name_text.sections[0].style.color = Color::WHITE;
                         } else {
