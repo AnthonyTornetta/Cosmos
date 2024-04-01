@@ -1,4 +1,4 @@
-//!
+//! This dictates which blocks should be placed on the generated terrain
 
 use std::hash::Hash;
 

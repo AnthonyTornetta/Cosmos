@@ -58,18 +58,29 @@ If you want to view the ordering of the systems, run (on linux) `cargo run --fea
 See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the list of current features/bugs in development.
 
 ## Release 0.0.6a (In Progress)
-- [ ] Place rotated blocks
+- [x] Place rotated blocks
 - [ ] Inventory UI improvements
 - [ ] Money
   - [ ] Pay others
+- [ ] In-flight UI
+  - [ ] Weapons selection hotbar
+  - [ ] Speed display
+  - [ ] Energy display
+  - [ ] Critical information alerts
 - [ ] A way of selecting which systems to use preventing use of systems that are not meant to be actively used
 - [ ] Dropped item entity
+  - [ ] When storage is broken, drop items on ground
+  - [ ] If not enough inventory room when player is mining something, drop item
 - [ ] Wires
   - [ ] Electrical
   - [ ] Logic
+- [ ] Galaxy map
+  - [ ] Able to view stars
+  - [ ] Zoom in to view planets
+  - [ ] Set waypoint
 - [ ] Planet generation & LOD overhaul
-  - [ ] Performance improvements
-  - [ ] GPU-based generation
+  - [x] Performance improvements
+  - [x] GPU-based generation
   - [ ] Biosphere Improvements
   - [ ] Ice biosphere glaciers
     - [ ] Water block
@@ -83,7 +94,7 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
       - [ ] Redwood forest
       - [ ] 1 Additional forest
       - [ ] Ocean
-    - [ ] On-planet skybox
+    - [ ] On-planet skybox (maybe)
       - [ ] Sun-side skybox
         - [ ] Perhaps done via a sphere surrounding the planet that always faces the nearest star
       - [ ] Sun-set skybox
