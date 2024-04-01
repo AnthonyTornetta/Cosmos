@@ -6,7 +6,6 @@
 
 use std::{
     collections::VecDeque,
-    f32::consts::PI,
     mem::swap,
     sync::{Arc, Mutex},
     usize,
@@ -226,7 +225,7 @@ impl ChunkRenderer {
                         .map(|c| check(c, block_id, actual_block, blocks, ChunkBlockCoordinate::new(x, y, 0)))
                         .unwrap_or(true)))
             {
-                faces.push(BlockFace::Back);
+                faces.push(BlockFace::Front);
             }
             // back
             if (z != 0
@@ -250,7 +249,7 @@ impl ChunkRenderer {
                         })
                         .unwrap_or(true)))
             {
-                faces.push(BlockFace::Front);
+                faces.push(BlockFace::Back);
             }
 
             if !faces.is_empty() {
@@ -274,9 +273,11 @@ impl ChunkRenderer {
 
                 let mesh_builder = self.meshes.get_mut(&mat_id).unwrap();
 
-                let rotation = block_info.get_rotation();
+                let block_rotation = block_info.get_rotation();
 
-                for face in faces.iter().map(|x| BlockFace::rotate_face(*x, rotation)) {
+                let rotation = block_rotation.as_quat();
+
+                for face in faces.iter().map(|face| block_rotation.rotate_face(*face)) {
                     let index = block_textures
                         .from_id(block.unlocalized_name())
                         .unwrap_or_else(|| block_textures.from_id("missing").expect("Missing texture should exist."));
@@ -291,17 +292,8 @@ impl ChunkRenderer {
                     };
 
                     let Some(image_index) = maybe_img_idx else {
-                        warn!("Missing image index -- {index:?}");
+                        warn!("Missing image index for face {face} -- {index:?}");
                         continue;
-                    };
-
-                    let rotation = match rotation {
-                        BlockFace::Top => Quat::IDENTITY,
-                        BlockFace::Front => Quat::from_axis_angle(Vec3::X, PI / 2.0),
-                        BlockFace::Back => Quat::from_axis_angle(Vec3::X, -PI / 2.0),
-                        BlockFace::Left => Quat::from_axis_angle(Vec3::Z, PI / 2.0),
-                        BlockFace::Right => Quat::from_axis_angle(Vec3::Z, -PI / 2.0),
-                        BlockFace::Bottom => Quat::from_axis_angle(Vec3::X, PI),
                     };
 
                     let mut one_mesh_only = false;
@@ -499,14 +491,14 @@ struct RenderedLod {
 }
 
 #[derive(Debug, Clone, DerefMut, Deref)]
-struct ToKill(Arc<Mutex<(Entity, usize)>>);
+struct LodRendersToDespawn(Arc<Mutex<(Entity, usize)>>);
 
 #[derive(Debug, Resource, Default, Deref, DerefMut)]
-struct MeshesToCompute(VecDeque<(Mesh, Entity, Vec<ToKill>)>);
+struct MeshesToCompute(VecDeque<(Mesh, Entity, Vec<LodRendersToDespawn>)>);
 
 const MESHES_PER_FRAME: usize = 15;
 
-fn kill_all(to_kill: Vec<ToKill>, commands: &mut Commands) {
+fn kill_all(to_kill: Vec<LodRendersToDespawn>, commands: &mut Commands) {
     for x in to_kill {
         let mut unlocked = x.lock().expect("Failed lock");
         unlocked.1 -= 1;
@@ -632,7 +624,7 @@ fn poll_rendering_lods(
                     to_despawn.push((
                         transform.translation,
                         rendered_lod.scale,
-                        ToKill(Arc::new(Mutex::new((mesh_entity, 0)))),
+                        LodRendersToDespawn(Arc::new(Mutex::new((mesh_entity, 0)))),
                     ));
                 }
             }

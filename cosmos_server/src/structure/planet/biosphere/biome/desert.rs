@@ -123,7 +123,7 @@ fn generate_chunk_features(
             // No sand block to grow cactus from.
             if let Ok(rotated) = rotate(coords, UnboundBlockCoordinate::new(0, height, 0), s_dims, block_up) {
                 let block = structure.block_at(rotated, blocks);
-                if height < 0 || block != sand || structure.block_rotation(rotated) != block_up {
+                if height < 0 || block != sand || structure.block_rotation(rotated).block_up != block_up {
                     continue;
                 }
 
@@ -144,7 +144,7 @@ fn generate_chunk_features(
                         s_dims,
                         block_up,
                     ) {
-                        structure.set_block_at(cactus_coord, cactus, block_up, blocks, Some(block_event_writer));
+                        structure.set_block_at(cactus_coord, cactus, block_up.into(), blocks, Some(block_event_writer));
                     }
                 }
             }

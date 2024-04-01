@@ -283,12 +283,7 @@ fn on_activate_system(
                     let energy = line.property.energy_per_second * sec;
 
                     if energy_storage_system.decrease_energy(energy) {
-                        // AT SOME POINT, THE NEGATIVE SIGN HAS TO BE REMOVED HERE!!!!!
-                        // I SHOULD NOT HAVE TO NEGATE THE DIRECTION
-                        // SINCE THERE IS NO WAY TO ROTATE THE CANNONS, FOR NOW THIS HAS
-                        // TO BE HERE, BUT ONCE CANNONS CAN BE ROTATED, REMOVE THIS!
-                        // let beam_direction = global_transform.affine().matrix3.mul_vec3(-line.direction.direction_vec3());
-                        let beam_direction = -line.direction.direction_vec3();
+                        let beam_direction = line.direction.direction_vec3();
 
                         let beam_begin = line.end();
                         let rel_pos = structure.block_relative_position(beam_begin.coords());

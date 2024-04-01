@@ -7,7 +7,7 @@ use bevy::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    block::{Block, BlockFace},
+    block::{Block, BlockRotation},
     registry::Registry,
 };
 
@@ -59,7 +59,7 @@ impl StructureBlock {
 
     #[inline]
     /// Returns this block's top facing face
-    pub fn block_up(&self, structure: &Structure) -> BlockFace {
+    pub fn block_up(&self, structure: &Structure) -> BlockRotation {
         structure.block_rotation(self.0)
     }
 

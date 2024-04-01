@@ -79,6 +79,7 @@ fn add_cosmos_blocks(
     blocks.register(
         BlockBuilder::new("cosmos:laser_cannon", 2.0, 20.0, 5.0)
             .add_property(BlockProperty::Full)
+            .add_property(BlockProperty::FaceFront)
             .create(),
     );
 
@@ -187,6 +188,7 @@ fn add_cosmos_blocks(
     blocks.register(
         BlockBuilder::new("cosmos:reactor_controller", 2.0, 20.0, 5.0)
             .add_property(BlockProperty::Full)
+            .add_property(BlockProperty::FaceFront)
             .create(),
     );
 
@@ -266,6 +268,7 @@ fn add_cosmos_blocks(
     blocks.register(
         BlockBuilder::new("cosmos:plasma_drill", 2.0, 20.0, 5.0)
             .add_property(BlockProperty::Full)
+            .add_property(BlockProperty::FaceFront)
             .create(),
     );
 
@@ -278,11 +281,26 @@ fn add_cosmos_blocks(
     blocks.register(
         BlockBuilder::new("cosmos:camera", 2.0, 20.0, 5.0)
             .add_property(BlockProperty::Full)
+            .add_property(BlockProperty::FaceFront)
             .create(),
     );
 
     blocks.register(
         BlockBuilder::new("cosmos:gravity_well", 2.0, 20.0, 5.0)
+            .add_property(BlockProperty::Full)
+            .create(),
+    );
+
+    blocks.register(
+        // ramp colliders are super small, so to compensate I give them a high density
+        BlockBuilder::new("cosmos:ramp", 40.0, 100.0, 10.0)
+            .add_property(BlockProperty::FullyRotatable)
+            .create(),
+    );
+
+    blocks.register(
+        BlockBuilder::new("cosmos:debug", 2.0, 20.0, 5.0)
+            .add_property(BlockProperty::FullyRotatable)
             .add_property(BlockProperty::Full)
             .create(),
     );

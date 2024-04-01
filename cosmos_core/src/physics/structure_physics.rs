@@ -1,4 +1,4 @@
-//! Responsible for the collider generation of a structure.
+//! Responsible for the collider generation of a structure.structure_physics.rs
 
 use std::sync::{Arc, Mutex};
 
@@ -73,7 +73,8 @@ fn generate_colliders(
     size: CoordinateType,
     mass: &mut f32,
 ) {
-    let mut last_seen_empty = None;
+    let mut contains_any_empty_block = None;
+    let mut can_be_one_square_collider = true;
 
     let mut temp_mass = 0.0;
 
@@ -81,13 +82,13 @@ fn generate_colliders(
         for y in offset.y..(offset.y + size) {
             for x in offset.x..(offset.x + size) {
                 let coord = ChunkBlockCoordinate::new(x, y, z);
-                let b: &Block = blocks.from_numeric_id(chunk.block_at(coord));
+                let block = blocks.from_numeric_id(chunk.block_at(coord));
 
-                let block_mass = b.density(); // mass = volume * density = 1*1*1*density = density
+                let block_mass = block.density(); // mass = volume * density = 1*1*1*density = density
 
                 temp_mass += block_mass;
 
-                let (is_empty, is_different) = match colliders_registry.from_id(b.unlocalized_name()).map(|x| &x.collider) {
+                let (is_empty, is_different) = match colliders_registry.from_id(block.unlocalized_name()).map(|x| &x.collider) {
                     Some(BlockColliderType::Full(mode)) => match mode {
                         BlockColliderMode::NormalCollider => (false, false),
                         BlockColliderMode::SensorCollider => {
@@ -95,40 +96,41 @@ fn generate_colliders(
                                 sensor_colliders.push((location, Rot::IDENTITY, Collider::cuboid(0.5, 0.5, 0.5)));
                             }
 
-                            (true, true)
+                            can_be_one_square_collider = false;
+                            (false, true)
                         }
                     },
                     Some(BlockColliderType::Empty) => (true, false),
                     Some(BlockColliderType::Custom(custom_colliders)) => {
                         if size == 1 {
+                            let block_rotation = chunk.block_rotation(coord).as_quat();
+
                             for custom_collider in custom_colliders.iter() {
+                                let loc = location + block_rotation.mul_vec3(custom_collider.offset);
+                                let rot = block_rotation.mul_quat(custom_collider.rotation);
+
+                                let collider_info = (loc, rot, custom_collider.collider.clone());
+
                                 match custom_collider.mode {
                                     BlockColliderMode::NormalCollider => {
-                                        colliders.push((
-                                            location + custom_collider.offset,
-                                            Rot::IDENTITY,
-                                            custom_collider.collider.clone(),
-                                        ));
+                                        colliders.push(collider_info);
                                     }
                                     BlockColliderMode::SensorCollider => {
-                                        sensor_colliders.push((
-                                            location + custom_collider.offset,
-                                            Rot::IDENTITY,
-                                            custom_collider.collider.clone(),
-                                        ));
+                                        sensor_colliders.push(collider_info);
                                     }
                                 }
                             }
                         }
 
-                        (true, true)
+                        can_be_one_square_collider = false;
+                        (false, true)
                     }
-                    _ => panic!("Got None for block collider for block {}!", b.unlocalized_name()),
+                    _ => panic!("Got None for block collider for block {}!", block.unlocalized_name()),
                 };
 
-                if last_seen_empty.is_none() {
-                    last_seen_empty = Some(is_empty);
-                } else if last_seen_empty.unwrap() != is_empty || is_different {
+                if contains_any_empty_block.is_none() {
+                    contains_any_empty_block = Some(is_empty);
+                } else if contains_any_empty_block.unwrap() != is_empty || is_different {
                     let s2 = size / 2;
                     let s4 = s2 as f32 / 2.0;
 
@@ -241,8 +243,8 @@ fn generate_colliders(
         }
     }
 
-    // If this is true, then this cube was fully empty.
-    if !last_seen_empty.unwrap() {
+    // If this `last_seen_empty` is false, then the cube is completely filled
+    if !contains_any_empty_block.unwrap() && can_be_one_square_collider {
         let s2 = size as f32 / 2.0;
 
         *mass += temp_mass;

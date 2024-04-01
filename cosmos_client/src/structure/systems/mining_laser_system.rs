@@ -9,6 +9,7 @@ use bevy::{
 use bevy_kira_audio::prelude::*;
 use bevy_rapier3d::{dynamics::PhysicsWorld, pipeline::QueryFilter, plugin::RapierContext};
 use cosmos_core::{
+    block::BlockFace,
     ecs::NeedsDespawned,
     structure::{
         shared::DespawnWithStructure,
@@ -61,12 +62,17 @@ struct MiningLaser {
     /// Relative to structure
     start_loc: Vec3,
     max_length: f32,
+    laser_direction: BlockFace, // which direction (relative to ship's core) the laser is going. (ex: Front is +Z)
 }
 
 #[derive(Component, Debug)]
 struct ActiveBeams(Vec<Entity>);
 
-fn remove_dead_beams(mut commands: Commands, q_has_beams: Query<&ActiveBeams>, mut q_deactivated_systems: RemovedComponents<SystemActive>) {
+fn remove_dead_mining_beams(
+    mut commands: Commands,
+    q_has_beams: Query<&ActiveBeams>,
+    mut q_deactivated_systems: RemovedComponents<SystemActive>,
+) {
     for deactivated_system in q_deactivated_systems.read() {
         let Ok(active_beams) = q_has_beams.get(deactivated_system) else {
             continue;
@@ -156,8 +162,14 @@ fn apply_mining_effects(
                         hashed,
                         materials.add(StandardMaterial {
                             unlit: true,
-                            base_color: color,
+                            base_color: Color::Rgba {
+                                red: color.r(),
+                                green: color.g(),
+                                blue: color.b(),
+                                alpha: 0.8,
+                            },
                             emissive: color,
+                            alpha_mode: AlphaMode::Add,
                             ..Default::default()
                         }),
                     );
@@ -165,11 +177,13 @@ fn apply_mining_effects(
 
                 let material = materials_cache.0.get(&hashed).expect("Added above");
 
+                let beam_direction = line.direction.direction_vec3();
+
                 let laser_start = structure.block_relative_position(line.start.coords());
                 let beam_ent = p
                     .spawn((
                         PbrBundle {
-                            transform: Transform::from_translation(laser_start).looking_to(-line.direction.direction_vec3(), Vec3::Y),
+                            transform: Transform::from_translation(laser_start).looking_to(beam_direction, Vec3::Y),
                             material: material.clone_weak(),
                             mesh: mesh.0.clone_weak(),
                             ..Default::default()
@@ -177,6 +191,7 @@ fn apply_mining_effects(
                         NotShadowCaster,
                         NotShadowReceiver,
                         MiningLaser {
+                            laser_direction: line.direction,
                             start_loc: laser_start,
                             max_length: BEAM_MAX_RANGE,
                         },
@@ -193,7 +208,7 @@ fn apply_mining_effects(
     }
 }
 
-fn resize_lasers(
+fn resize_mining_lasers(
     q_parent: Query<&Parent>,
     mut q_lasers: Query<(&GlobalTransform, &mut Transform, &PhysicsWorld, &MiningLaser, &Parent)>,
     q_global_trans: Query<&GlobalTransform>,
@@ -234,7 +249,14 @@ fn resize_lasers(
         };
 
         trans.scale.z = toi * 2.0;
-        trans.translation.z = mining_laser.start_loc.z - toi / 2.0;
+        match mining_laser.laser_direction {
+            BlockFace::Front => trans.translation.z = mining_laser.start_loc.z + toi / 2.0,
+            BlockFace::Back => trans.translation.z = mining_laser.start_loc.z - toi / 2.0,
+            BlockFace::Top => trans.translation.y = mining_laser.start_loc.y + toi / 2.0,
+            BlockFace::Bottom => trans.translation.y = mining_laser.start_loc.y - toi / 2.0,
+            BlockFace::Right => trans.translation.x = mining_laser.start_loc.x + toi / 2.0,
+            BlockFace::Left => trans.translation.x = mining_laser.start_loc.x - toi / 2.0,
+        }
     }
 }
 
@@ -242,6 +264,13 @@ fn create_mining_laser_mesh(mut commands: Commands, mut meshes: ResMut<Assets<Me
     let shape = meshes.add(Cuboid::new(BEAM_SIZE, BEAM_SIZE, 0.5));
 
     commands.insert_resource(MiningLaserMesh(shape));
+}
+
+fn rotate_mining_lasers(time: Res<Time>, mut q_transforms: Query<(&mut Transform, &MiningLaser)>) {
+    for (mut trans, mining_laser) in q_transforms.iter_mut() {
+        trans.rotation =
+            Quat::from_axis_angle(mining_laser.laser_direction.direction_vec3(), time.delta_seconds()).mul_quat(trans.rotation);
+    }
 }
 
 struct LaserCannonLoadingFlag;
@@ -279,8 +308,8 @@ pub(super) fn register(app: &mut App) {
             Update,
             (
                 apply_mining_effects.in_set(LasersSystemSet::CreateLasers),
-                resize_lasers.in_set(LasersSystemSet::UpdateLasers),
-                remove_dead_beams.in_set(LasersSystemSet::UpdateLasers),
+                (resize_mining_lasers, rotate_mining_lasers).in_set(LasersSystemSet::UpdateLasers),
+                remove_dead_mining_beams.in_set(LasersSystemSet::UpdateLasers),
             )
                 .chain()
                 .run_if(in_state(GameState::Playing)),

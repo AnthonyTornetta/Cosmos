@@ -14,6 +14,7 @@ use cosmos_core::structure::ship::ship_movement::ShipMovement;
 
 use crate::input::inputs::{CosmosInputs, InputChecker, InputHandler};
 use crate::netty::flags::LocalPlayer;
+use crate::rendering::MainCamera;
 use crate::state::game_state::GameState;
 use crate::ui::components::show_cursor::no_open_menus;
 use crate::ui::crosshair::CrosshairOffset;
@@ -22,84 +23,119 @@ use crate::window::setup::{CursorFlags, DeltaCursorPosition};
 fn process_ship_movement(
     input_handler: InputChecker,
     query: Query<Entity, (With<LocalPlayer>, With<Pilot>, Without<BuildMode>)>,
+    q_cam_trans: Query<&Transform, With<MainCamera>>,
     mut client: ResMut<RenetClient>,
     mut crosshair_offset: ResMut<CrosshairOffset>,
     cursor_delta_position: Res<DeltaCursorPosition>,
     primary_query: Query<&Window, With<PrimaryWindow>>,
     cursor_flags: Res<CursorFlags>,
 ) {
+    if query.get_single().is_err() {
+        return;
+    }
+
+    let Ok(cam_trans) = q_cam_trans.get_single() else {
+        return;
+    };
+
     let cursor_delta_position = if cursor_flags.is_cursor_locked() {
         *cursor_delta_position
     } else {
         DeltaCursorPosition::default()
     };
 
-    if query.get_single().is_ok() {
-        let mut movement = ShipMovement::default();
+    let mut movement = ShipMovement::default();
 
-        if input_handler.check_pressed(CosmosInputs::MoveForward) {
-            movement.movement.z += 1.0;
+    if input_handler.check_pressed(CosmosInputs::MoveForward) {
+        // z movement is inverted for when cam forward is in the +/-Z direction for some reason
+        if cam_trans.forward().z != 0.0 {
+            movement.movement -= Vec3::from(cam_trans.forward());
+        } else {
+            movement.movement += Vec3::from(cam_trans.forward());
         }
-        if input_handler.check_pressed(CosmosInputs::MoveBackward) {
-            movement.movement.z -= 1.0;
+    }
+    if input_handler.check_pressed(CosmosInputs::MoveBackward) {
+        // z movement is inverted for when cam forward is in the +/-Z direction for some reason
+        if cam_trans.forward().z != 0.0 {
+            movement.movement += Vec3::from(cam_trans.forward());
+        } else {
+            movement.movement -= Vec3::from(cam_trans.forward());
         }
-        if input_handler.check_pressed(CosmosInputs::MoveUp) {
-            movement.movement.y += 1.0;
+    }
+    if input_handler.check_pressed(CosmosInputs::MoveUp) {
+        movement.movement += Vec3::from(cam_trans.up());
+    }
+    if input_handler.check_pressed(CosmosInputs::MoveDown) {
+        movement.movement -= Vec3::from(cam_trans.up());
+    }
+    if input_handler.check_pressed(CosmosInputs::MoveRight) {
+        // x movement is inverted for when cam forward is not in the +/-Z direction for some reason
+        if cam_trans.forward().z == 0.0 {
+            movement.movement -= Vec3::from(cam_trans.right());
+        } else {
+            movement.movement += Vec3::from(cam_trans.right());
         }
-        if input_handler.check_pressed(CosmosInputs::MoveDown) {
-            movement.movement.y -= 1.0;
+    }
+    if input_handler.check_pressed(CosmosInputs::MoveLeft) {
+        // x movement is inverted for when cam forward is not in the +/-Z direction for some reason
+        if cam_trans.forward().z == 0.0 {
+            movement.movement += Vec3::from(cam_trans.right());
+        } else {
+            movement.movement -= Vec3::from(cam_trans.right());
         }
-        if input_handler.check_pressed(CosmosInputs::MoveLeft) {
-            movement.movement.x -= 1.0;
-        }
-        if input_handler.check_pressed(CosmosInputs::MoveRight) {
-            movement.movement.x += 1.0;
-        }
+    }
 
-        movement.braking = input_handler.check_pressed(CosmosInputs::SlowDown);
+    // Redundant because this is done on the server, but makes for nicer printouts
+    movement.movement = movement.movement.normalize_or_zero();
 
-        if input_handler.check_just_pressed(CosmosInputs::StopPiloting) {
-            client.send_message(
-                NettyChannelClient::Reliable,
-                cosmos_encoder::serialize(&ClientReliableMessages::StopPiloting),
-            );
-        }
+    movement.braking = input_handler.check_pressed(CosmosInputs::SlowDown);
 
-        let Ok(w) = primary_query.get_single() else {
-            return;
-        };
-
-        let hw = w.width() / 2.0;
-        let hh = w.height() / 2.0;
-        let p2 = PI / 2.0; // 45 deg (half of FOV)
-
-        let max_w = hw * 0.9;
-        let max_h = hh * 0.9;
-
-        // Prevents you from moving cursor off screen
-        // Reduces cursor movement the closer you get to edge of screen until it reaches 0 at hw/2 or hh/2
-        crosshair_offset.x += cursor_delta_position.x - (cursor_delta_position.x * (crosshair_offset.x.abs() / max_w));
-        crosshair_offset.y += cursor_delta_position.y - (cursor_delta_position.y * (crosshair_offset.y.abs() / max_h));
-
-        crosshair_offset.x = crosshair_offset.x.clamp(-hw, hw);
-        crosshair_offset.y = crosshair_offset.y.clamp(-hh, hh);
-
-        let mut roll = 0.0;
-
-        if input_handler.check_pressed(CosmosInputs::RollLeft) {
-            roll += 0.25;
-        }
-        if input_handler.check_pressed(CosmosInputs::RollRight) {
-            roll -= 0.25;
-        }
-
-        movement.torque = Vec3::new(crosshair_offset.y / hh * p2 / 2.0, -crosshair_offset.x / hw * p2 / 2.0, roll);
-
+    if input_handler.check_just_pressed(CosmosInputs::StopPiloting) {
         client.send_message(
-            NettyChannelClient::Unreliable,
-            cosmos_encoder::serialize(&ClientUnreliableMessages::SetMovement { movement }),
+            NettyChannelClient::Reliable,
+            cosmos_encoder::serialize(&ClientReliableMessages::StopPiloting),
         );
     }
+
+    let Ok(w) = primary_query.get_single() else {
+        return;
+    };
+
+    let hw = w.width() / 2.0;
+    let hh = w.height() / 2.0;
+    let p2 = PI / 2.0; // 45 deg (half of FOV)
+
+    let max_w = hw * 0.9;
+    let max_h = hh * 0.9;
+
+    // Prevents you from moving cursor off screen
+    // Reduces cursor movement the closer you get to edge of screen until it reaches 0 at hw/2 or hh/2
+    crosshair_offset.x += cursor_delta_position.x - (cursor_delta_position.x * (crosshair_offset.x.abs() / max_w));
+    crosshair_offset.y += cursor_delta_position.y - (cursor_delta_position.y * (crosshair_offset.y.abs() / max_h));
+
+    crosshair_offset.x = crosshair_offset.x.clamp(-hw, hw);
+    crosshair_offset.y = crosshair_offset.y.clamp(-hh, hh);
+
+    let mut roll = 0.0;
+
+    if input_handler.check_pressed(CosmosInputs::RollLeft) {
+        roll += 0.25;
+    }
+    if input_handler.check_pressed(CosmosInputs::RollRight) {
+        roll -= 0.25;
+    }
+
+    // Camera rotation must effect torque to support steering ship from multiple angles
+    movement.torque = cam_trans.rotation.mul_vec3(Vec3::new(
+        crosshair_offset.y / hh * p2 / 2.0,
+        -crosshair_offset.x / hw * p2 / 2.0,
+        roll,
+    ));
+
+    client.send_message(
+        NettyChannelClient::Unreliable,
+        cosmos_encoder::serialize(&ClientUnreliableMessages::SetMovement { movement }),
+    );
 }
 
 fn reset_cursor(

@@ -81,12 +81,8 @@ fn update_system(
 
                             let location = structure.block_world_location(line.start.coords(), global_transform, location);
 
-                            // AT SOME POINT, THE NEGATIVE SIGN HAS TO BE REMOVED HERE!!!!!
-                            // I SHOULD NOT HAVE TO NEGATE THE DIRECTION
-                            // SINCE THERE IS NO WAY TO ROTATE THE CANNONS, FOR NOW THIS HAS
-                            // TO BE HERE, BUT ONCE CANNONS CAN BE ROTATED, REMOVE THIS!
-                            let laser_velocity =
-                                global_transform.affine().matrix3.mul_vec3(-line.direction.direction_vec3()) * LASER_BASE_VELOCITY;
+                            let relative_direction = line.direction.direction_vec3();
+                            let laser_velocity = global_transform.affine().matrix3.mul_vec3(relative_direction) * LASER_BASE_VELOCITY;
 
                             let strength = (5.0 * line.len as f32).powf(1.2);
                             let no_hit = Some(system.structure_entity());

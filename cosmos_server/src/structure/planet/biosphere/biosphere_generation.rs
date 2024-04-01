@@ -16,7 +16,8 @@ use cosmos_core::{
             generation::{
                 biome::{Biome, BiomeParameters, BiosphereBiomesRegistry},
                 terrain_generation::{
-                    BiosphereShaderWorker, ChunkData, ChunkDataSlice, GenerationParams, GpuPermutationTable, TerrainData, U32Vec4, N_CHUNKS,
+                    add_terrain_compute_worker, BiosphereShaderWorker, ChunkData, ChunkDataSlice, GenerationParams, GpuPermutationTable,
+                    TerrainData, U32Vec4, N_CHUNKS,
                 },
             },
             Planet,
@@ -26,7 +27,7 @@ use cosmos_core::{
     utils::array_utils::{flatten, flatten_4d},
 };
 
-use super::{BiosphereMarkerComponent, RegisteredBiosphere, TGenerateChunkEvent};
+use super::{Biosphere, BiosphereMarkerComponent, TGenerateChunkEvent};
 
 #[derive(Debug)]
 pub(crate) struct NeedGeneratedChunk {
@@ -94,11 +95,11 @@ fn read_gpu_data(
     }
 }
 
-pub(crate) fn generate_chunks_from_gpu_data<T: BiosphereMarkerComponent, E: TGenerateChunkEvent>(
+pub(crate) fn generate_chunks_from_gpu_data<T: BiosphereMarkerComponent>(
     mut ev_reader: EventReader<MutEvent<DoneGeneratingChunkEvent>>,
     chunk_data: Res<ChunkData>,
     biosphere_biomes: Res<Registry<BiosphereBiomesRegistry>>,
-    biospheres: Res<Registry<RegisteredBiosphere>>,
+    biospheres: Res<Registry<Biosphere>>,
     mut ev_writer: EventWriter<GenerateChunkFeaturesEvent>,
     mut q_structure: Query<&mut Structure>,
     biome_registry: Res<Registry<Biome>>,
@@ -138,7 +139,7 @@ pub(crate) fn generate_chunks_from_gpu_data<T: BiosphereMarkerComponent, E: TGen
             .from_id(biosphere_unlocalized_name)
             .unwrap_or_else(|| panic!("Missing biosphere biomes registry entry for {biosphere_unlocalized_name}"));
 
-        let sea_level_block = biosphere.sea_level_block().map(|x| blocks.from_id(x)).flatten();
+        let sea_level_block = biosphere.sea_level_block().and_then(|x| blocks.from_id(x));
 
         for z in 0..CHUNK_DIMENSIONS {
             for y in 0..CHUNK_DIMENSIONS {
@@ -176,8 +177,8 @@ pub(crate) fn generate_chunks_from_gpu_data<T: BiosphereMarkerComponent, E: TGen
 
                         needs_generated_chunk.chunk.set_block_at(
                             ChunkBlockCoordinate::new(x as CoordinateType, y as CoordinateType, z as CoordinateType),
-                            &block,
-                            face,
+                            block,
+                            face.into(),
                         );
                     } else if let Some(sea_level_block) = sea_level_block {
                         let sea_level_coordinate = biosphere.sea_level(structure_dimensions) as CoordinateType;
@@ -195,7 +196,7 @@ pub(crate) fn generate_chunks_from_gpu_data<T: BiosphereMarkerComponent, E: TGen
                             needs_generated_chunk.chunk.set_block_at(
                                 ChunkBlockCoordinate::new(x as CoordinateType, y as CoordinateType, z as CoordinateType),
                                 sea_level_block,
-                                face,
+                                face.into(),
                             );
                         }
                     }
@@ -272,7 +273,7 @@ fn send_chunks_to_gpu(
 pub(crate) fn generate_planet<T: BiosphereMarkerComponent, E: TGenerateChunkEvent>(
     mut query: Query<(&mut Structure, &Location)>,
     mut events: EventReader<E>,
-    biosphere_registry: Res<Registry<RegisteredBiosphere>>,
+    biosphere_registry: Res<Registry<Biosphere>>,
 
     mut needs_generated_chunks: ResMut<NeedGeneratedChunks>,
 ) {
@@ -343,7 +344,7 @@ fn set_permutation_table(perm_table: Res<GpuPermutationTable>, mut worker: ResMu
 }
 
 /// https://github.com/Mapet13/opensimplex_noise_rust/blob/master/src/lib.rs#L54
-fn generate_perm_array(seed: u64) -> GpuPermutationTable {
+fn generate_perm_table(seed: u64) -> GpuPermutationTable {
     let mut perm = [0; GpuPermutationTable::TALBE_SIZE];
 
     let mut source: Vec<i64> = (0..GpuPermutationTable::TALBE_SIZE).map(|x| x as i64).collect();
@@ -354,8 +355,8 @@ fn generate_perm_array(seed: u64) -> GpuPermutationTable {
         if r < 0 {
             r += (i + 1) as i64;
         }
-        perm[i as usize] = source[r as usize];
-        source[r as usize] = source[i as usize];
+        perm[i] = source[r as usize];
+        source[r as usize] = source[i];
     }
 
     GpuPermutationTable(
@@ -368,57 +369,7 @@ fn generate_perm_array(seed: u64) -> GpuPermutationTable {
 }
 
 fn setup_permutation_table(seed: Res<ServerSeed>, mut commands: Commands) {
-    /*
-    https://github.com/lmas/opensimplex/blob/master/opensimplex/internals.py
-
-        # Have to zero fill so we can properly loop over it later
-    perm = np.zeros(256, dtype=np.int64)
-    perm_grad_index3 = np.zeros(256, dtype=np.int64)
-    source = np.arange(256)
-    # Generates a proper permutation (i.e. doesn't merely perform N
-    # successive pair swaps on a base array)
-    seed = _overflow(seed * 6364136223846793005 + 1442695040888963407)
-    seed = _overflow(seed * 6364136223846793005 + 1442695040888963407)
-    seed = _overflow(seed * 6364136223846793005 + 1442695040888963407)
-    for i in range(255, -1, -1):
-        seed = _overflow(seed * 6364136223846793005 + 1442695040888963407)
-        r = int((seed + 31) % (i + 1))
-        if r < 0:
-            r += i + 1
-        perm[i] = source[r]
-        perm_grad_index3[i] = int((perm[i] % (len(GRADIENTS3) / 3)) * 3)
-        source[r] = source[i]
-    return perm, perm_grad_index3
-     */
-    // let seed = seed.as_u64();
-    // let mut permutation_table_array: Vec<u8> = (0..256).map(|x| x as u8).collect();
-
-    // let mut real = [0; 32];
-    // real[0] = 1;
-    // for i in 1..4 {
-    //     real[i * 4] = seed as u8;
-    //     real[(i * 4) + 1] = (seed >> 8) as u8;
-    //     real[(i * 4) + 2] = (seed >> 16) as u8;
-    //     real[(i * 4) + 3] = (seed >> 24) as u8;
-    //     real[(i * 4) + 4] = (seed >> 32) as u8;
-    //     real[(i * 4) + 5] = (seed >> 40) as u8;
-    //     real[(i * 4) + 6] = (seed >> 48) as u8;
-    //     real[(i * 4) + 7] = (seed >> 56) as u8;
-    // }
-
-    // let mut rng = ChaCha8Rng::from_seed(real);
-
-    // permutation_table_array.shuffle(&mut rng);
-
-    // // Convert it to more wgpu friendly table
-
-    // let permutation_table: Vec<U32Vec4> = permutation_table_array
-    //     .into_iter()
-    //     .array_chunks::<4>()
-    //     .map(|[x, y, z, w]| U32Vec4::new(x as u32, y as u32, z as u32, w as u32))
-    //     .collect();
-
-    let permutation_table = generate_perm_array(seed.as_u64());
+    let permutation_table = generate_perm_table(seed.as_u64());
 
     commands.insert_resource(permutation_table);
 }
@@ -446,11 +397,13 @@ pub(super) fn register(app: &mut App) {
             BiosphereGenerationSet::GenerateChunks,
             BiosphereGenerationSet::GenerateChunkFeatures,
         )
+            .run_if(in_state(GameState::Playing))
             .chain(),
     )
     .add_plugins(AppComputeWorkerPlugin::<BiosphereShaderWorker>::default())
     .add_systems(OnEnter(GameState::PreLoading), setup_permutation_table)
-    .add_systems(OnEnter(GameState::PostLoading), set_permutation_table)
+    .add_systems(OnExit(GameState::PostLoading), add_terrain_compute_worker)
+    .add_systems(OnEnter(GameState::Playing), set_permutation_table)
     .add_systems(
         Update,
         (send_chunks_to_gpu, read_gpu_data)
