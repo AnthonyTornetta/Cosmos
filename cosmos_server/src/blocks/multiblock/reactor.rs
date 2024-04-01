@@ -368,10 +368,10 @@ fn on_piloted_by_ai(
             .collect::<Vec<StructureBlock>>();
 
         for block_here in blockz {
-            if let Some(bounds) = check_is_valid_multiblock(&structure, block_here.coords(), &blocks) {
-                match check_valid(bounds, &structure, &blocks) {
+            if let Some(bounds) = check_is_valid_multiblock(structure, block_here.coords(), &blocks) {
+                match check_valid(bounds, structure, &blocks) {
                     ReactorValidity::Valid => {
-                        let reactor = create_reactor(&structure, &blocks, &reactor_blocks, bounds, block_here);
+                        let reactor = create_reactor(structure, &blocks, &reactor_blocks, bounds, block_here);
 
                         reactors.add_reactor(reactor);
                     }
