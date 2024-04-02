@@ -289,7 +289,11 @@ fn listen_for_change_events(
 
             if let Ok(mut text) = text_query.get_mut(hb.slots[hb_slot].1) {
                 if let Some(is) = is {
-                    text.sections[0].value = format!("{}", is.quantity());
+                    if is.quantity() != 1 {
+                        text.sections[0].value = format!("{}", is.quantity());
+                    } else {
+                        text.sections[0].value = "".into();
+                    }
                 } else {
                     text.sections[0].value = "".into();
                 }
