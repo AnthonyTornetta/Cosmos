@@ -15,6 +15,7 @@ use crate::{netty::flags::LocalPlayer, state::game_state::GameState};
 pub mod client_ship_builder;
 pub mod create_ship;
 pub mod ship_movement;
+mod ui;
 
 fn remove_parent_when_too_far(
     mut query: Query<(Entity, &Parent, &mut Location, &Transform), (With<LocalPlayer>, Without<Structure>, Without<BuildMode>)>,
@@ -46,6 +47,7 @@ pub(super) fn register(app: &mut App) {
     client_ship_builder::register(app);
     ship_movement::register(app);
     create_ship::register(app);
+    ui::register(app);
 
     app.add_systems(Update, remove_parent_when_too_far.run_if(in_state(GameState::Playing)));
 }

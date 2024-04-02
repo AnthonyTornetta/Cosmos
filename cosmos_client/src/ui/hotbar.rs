@@ -1,8 +1,10 @@
 //! Displays the player's hotbar
 
+use std::marker::PhantomData;
+
 use bevy::{input::mouse::MouseWheel, prelude::*};
 use cosmos_core::{
-    inventory::Inventory,
+    inventory::{itemstack::ItemStack, Inventory},
     item::Item,
     registry::{identifiable::Identifiable, Registry},
 };
@@ -17,6 +19,70 @@ use crate::{
 use super::{components::show_cursor::no_open_menus, item_renderer::RenderItem};
 
 const ITEM_NAME_FADE_DURATION_SEC: f32 = 5.0;
+
+#[derive(Debug, Component)]
+pub struct LocalPlayerHotbar;
+
+#[derive(Component, Default)]
+pub struct HotbarContents {
+    items: Vec<Option<ItemStack>>,
+}
+
+impl HotbarContents {
+    pub fn new(n_slots: usize) -> Self {
+        Self {
+            items: vec![None; n_slots],
+        }
+    }
+
+    pub fn itemstack_at(&self, slot: usize) -> Option<&ItemStack> {
+        self.items.get(slot).map(|x| x.as_ref()).flatten()
+    }
+
+    pub fn set_itemstack_at(&mut self, slot: usize, itemstack: Option<ItemStack>) {
+        self.items[slot] = itemstack;
+    }
+
+    pub fn clear_contents(&mut self) {
+        self.items.clear();
+    }
+
+    pub fn iter(&self) -> std::slice::Iter<Option<ItemStack>> {
+        self.items.iter()
+    }
+
+    pub fn n_slots(&self) -> usize {
+        self.items.len()
+    }
+}
+
+pub type HotbarPriorityQueue = PriorityQueue<HotbarContents>;
+
+#[derive(Component)]
+pub struct PriorityQueue<HotbarContents> {
+    _phantom: PhantomData<HotbarContents>,
+    queue: Vec<(String, i32)>,
+}
+
+impl<T> PriorityQueue<T> {
+    pub fn add(&mut self, id: impl Into<String>, queue_priority: i32) {
+        self.queue.push((id.into(), queue_priority));
+        self.queue.sort_by_key(|x| x.1);
+    }
+
+    pub fn active(&self) -> Option<&str> {
+        self.queue.get(0).map(|x| x.0.as_str())
+    }
+}
+
+impl<T> Default for PriorityQueue<T> {
+    fn default() -> Self {
+        Self {
+            _phantom: PhantomData::default(),
+            queue: vec![],
+        }
+    }
+}
 
 #[derive(Component)]
 /// The hotbar the player can see
@@ -142,8 +208,8 @@ fn tick_text_alpha_down(mut query: Query<&mut Text, With<ItemNameDisplay>>, time
 
 fn listen_for_change_events(
     mut query_hb: Query<&mut Hotbar>,
-    query_inventory: Query<&Inventory, (Changed<Inventory>, With<LocalPlayer>)>,
-    inventory_unchanged: Query<&Inventory, With<LocalPlayer>>,
+    query_inventory: Query<&HotbarContents, (Changed<HotbarContents>, With<LocalPlayerHotbar>)>,
+    inventory_unchanged: Query<&HotbarContents, With<LocalPlayerHotbar>>,
     asset_server: Res<AssetServer>,
     mut text_query: Query<&mut Text>,
     item_name_query: Query<Entity, With<ItemNameDisplay>>,
@@ -151,46 +217,48 @@ fn listen_for_change_events(
     names: Res<Lang<Item>>,
     items: Res<Registry<Item>>,
 ) {
-    if let Ok(mut hb) = query_hb.get_single_mut() {
-        if hb.selected_slot != hb.prev_slot {
-            commands
-                .entity(hb.slots[hb.prev_slot].0)
-                .insert(UiImage::new(asset_server.load(image_path(false))));
+    let Ok(mut hb) = query_hb.get_single_mut() else {
+        return;
+    };
 
-            commands
-                .entity(hb.slots[hb.selected_slot].0)
-                .insert(UiImage::new(asset_server.load(image_path(true))));
+    if hb.selected_slot != hb.prev_slot {
+        commands
+            .entity(hb.slots[hb.prev_slot].0)
+            .insert(UiImage::new(asset_server.load(image_path(false))));
 
-            hb.prev_slot = hb.selected_slot;
+        commands
+            .entity(hb.slots[hb.selected_slot].0)
+            .insert(UiImage::new(asset_server.load(image_path(true))));
 
-            if let Ok(inv) = inventory_unchanged.get_single() {
-                if let Ok(ent) = item_name_query.get_single() {
-                    if let Ok(mut name_text) = text_query.get_mut(ent) {
-                        if let Some(is) = inv.itemstack_at(hb.selected_slot()) {
-                            names
-                                .get_name_from_numeric_id(is.item_id())
-                                .unwrap_or(items.from_numeric_id(is.item_id()).unlocalized_name())
-                                .clone_into(&mut name_text.sections[0].value);
+        hb.prev_slot = hb.selected_slot;
 
-                            name_text.sections[0].style.color = Color::WHITE;
-                        } else {
-                            "".clone_into(&mut name_text.sections[0].value);
-                        }
+        if let Ok(inv) = inventory_unchanged.get_single() {
+            if let Ok(ent) = item_name_query.get_single() {
+                if let Ok(mut name_text) = text_query.get_mut(ent) {
+                    if let Some(is) = inv.itemstack_at(hb.selected_slot()) {
+                        names
+                            .get_name_from_numeric_id(is.item_id())
+                            .unwrap_or(items.from_numeric_id(is.item_id()).unlocalized_name())
+                            .clone_into(&mut name_text.sections[0].value);
+
+                        name_text.sections[0].style.color = Color::WHITE;
+                    } else {
+                        "".clone_into(&mut name_text.sections[0].value);
                     }
                 }
             }
         }
+    }
 
-        if let Ok(inv) = query_inventory.get_single() {
-            for hb_slot in 0..hb.max_slots {
-                let is = inv.itemstack_at(hb_slot);
+    if let Ok(hotbar_contents) = query_inventory.get_single() {
+        for hb_slot in 0..hb.max_slots {
+            let is = hotbar_contents.itemstack_at(hb_slot);
 
-                if let Ok(mut text) = text_query.get_mut(hb.slots[hb_slot].1) {
-                    if let Some(is) = is {
-                        text.sections[0].value = format!("{}", is.quantity());
-                    } else {
-                        text.sections[0].value = "".into();
-                    }
+            if let Ok(mut text) = text_query.get_mut(hb.slots[hb_slot].1) {
+                if let Some(is) = is {
+                    text.sections[0].value = format!("{}", is.quantity());
+                } else {
+                    text.sections[0].value = "".into();
                 }
             }
         }
@@ -236,7 +304,7 @@ fn add_item_text(mut commands: Commands, asset_server: Res<AssetServer>) {
 }
 
 fn populate_hotbar(
-    inventory: Query<&Inventory, (Changed<Inventory>, With<LocalPlayer>)>,
+    q_hotbar_contents: Query<&HotbarContents, (Changed<HotbarContents>, With<LocalPlayerHotbar>)>,
     hotbar: Query<&Hotbar>,
 
     render_item_query: Query<&RenderItem>,
@@ -247,11 +315,11 @@ fn populate_hotbar(
         return;
     };
 
-    let Ok(inventory) = inventory.get_single() else {
+    let Ok(hotbar_contents) = q_hotbar_contents.get_single() else {
         return;
     };
 
-    for (item, &(slot_entity, _)) in inventory.iter().take(hotbar.slots.len()).zip(hotbar.slots.iter()) {
+    for (item, &(slot_entity, _)) in hotbar_contents.iter().take(hotbar.slots.len()).zip(hotbar.slots.iter()) {
         let Some(item_stack) = item else {
             commands.entity(slot_entity).remove::<RenderItem>();
 
@@ -267,7 +335,7 @@ fn populate_hotbar(
                 RenderItem {
                     item_id: item_stack.item_id(),
                 },
-                Name::new("Inventory Item Slot"),
+                Name::new("Hotbar Item Slot"),
             ));
         }
     }
@@ -303,6 +371,7 @@ fn add_hotbar(mut commands: Commands, asset_server: Res<AssetServer>) {
                     },
                     ..default()
                 },
+                LocalPlayerHotbar,
                 Name::new("Hotbar"),
             ));
 
@@ -357,16 +426,80 @@ fn add_hotbar(mut commands: Commands, asset_server: Res<AssetServer>) {
         });
 }
 
+#[derive(Component)]
+/// If this component is present on any entity, the hotbar will not be rendered.
+pub struct HotbarDisabled;
+
+fn is_hotbar_enabled(q_hotbar_disabled: Query<(), With<HotbarDisabled>>) -> bool {
+    q_hotbar_disabled.is_empty()
+}
+
+fn add_hotbar_contents_to_player(
+    mut commands: Commands,
+    q_player: Query<(Entity, &Hotbar), (With<LocalPlayerHotbar>, Without<HotbarContents>)>,
+) {
+    if let Ok((player_ent, hotbar)) = q_player.get_single() {
+        commands
+            .entity(player_ent)
+            .insert((HotbarPriorityQueue::default(), HotbarContents::new(hotbar.max_slots)));
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_systems(OnEnter(GameState::Playing), (add_hotbar, add_item_text))
         .add_systems(
             Update,
             (
+                add_inventory_to_priority_queue,
+                add_hotbar_contents_to_player,
+                sync_inventory,
                 populate_hotbar,
                 listen_for_change_events,
                 listen_button_presses.run_if(no_open_menus),
                 tick_text_alpha_down,
             )
-                .run_if(in_state(GameState::Playing)),
+                .chain()
+                .run_if(in_state(GameState::Playing))
+                .run_if(is_hotbar_enabled),
         );
+}
+
+// move to separate file
+const INVENTORY_PRIORITY_IDENTIFIER: &'static str = "cosmos:inventory";
+
+fn add_inventory_to_priority_queue(
+    mut q_added_queue: Query<&mut HotbarPriorityQueue, (With<LocalPlayerHotbar>, Added<HotbarPriorityQueue>)>,
+) {
+    for mut priority_queue in &mut q_added_queue {
+        priority_queue.add(INVENTORY_PRIORITY_IDENTIFIER, 0);
+    }
+}
+
+fn sync_inventory(
+    q_inventory: Query<&Inventory, With<LocalPlayer>>,
+    q_inventory_changed: Query<(), (Changed<Inventory>, With<LocalPlayer>)>,
+    q_priority_changed: Query<(), (Changed<HotbarPriorityQueue>, With<LocalPlayerHotbar>)>,
+    mut q_hotbar: Query<(&HotbarPriorityQueue, &mut HotbarContents), With<LocalPlayerHotbar>>,
+) {
+    let Ok((hotbar_prio_queue, mut hotbar_contents)) = q_hotbar.get_single_mut() else {
+        return;
+    };
+
+    if hotbar_prio_queue.active() != Some(INVENTORY_PRIORITY_IDENTIFIER) {
+        return;
+    }
+
+    if q_inventory_changed.is_empty() && q_priority_changed.is_empty() {
+        return;
+    }
+
+    let Ok(inventory) = q_inventory.get_single() else {
+        return;
+    };
+
+    let n_slots = hotbar_contents.n_slots();
+
+    for (slot, itemstack) in inventory.iter().take(n_slots).enumerate() {
+        hotbar_contents.set_itemstack_at(slot, itemstack.clone());
+    }
 }
