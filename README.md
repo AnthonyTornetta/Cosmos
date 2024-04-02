@@ -63,7 +63,7 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 - [ ] Money
   - [ ] Pay others
 - [ ] In-flight UI
-  - [ ] Weapons selection hotbar
+  - [x] Weapons selection hotbar
   - [ ] Speed display
   - [ ] Energy display
   - [ ] Critical information alerts
