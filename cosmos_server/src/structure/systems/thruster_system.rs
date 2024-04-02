@@ -189,5 +189,5 @@ pub(super) fn register(app: &mut App) {
         )
         .register_type::<ThrusterSystem>();
 
-    register_structure_system::<ThrusterSystem>(app);
+    register_structure_system::<ThrusterSystem>(app, false, "cosmos:thruster");
 }

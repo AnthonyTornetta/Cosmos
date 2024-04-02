@@ -106,5 +106,5 @@ pub(super) fn register(app: &mut App) {
         )
         .register_type::<EnergyGenerationSystem>();
 
-    register_structure_system::<EnergyGenerationSystem>(app);
+    register_structure_system::<EnergyGenerationSystem>(app, false, "cosmos:reactor");
 }

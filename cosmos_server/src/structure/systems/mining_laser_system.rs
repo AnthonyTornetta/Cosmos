@@ -356,5 +356,5 @@ pub(super) fn register(app: &mut App) {
     )
     .add_systems(OnEnter(GameState::PostLoading), register_laser_blocks);
 
-    register_structure_system::<MiningLaserSystem>(app);
+    register_structure_system::<MiningLaserSystem>(app, true, "cosmos:plasma_drill");
 }

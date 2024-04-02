@@ -89,5 +89,5 @@ pub(super) fn register(app: &mut App) {
         )
         .register_type::<CameraSystem>();
 
-    register_structure_system::<CameraSystem>(app);
+    register_structure_system::<CameraSystem>(app, false, "cosmos:camera");
 }

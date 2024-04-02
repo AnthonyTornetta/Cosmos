@@ -21,57 +21,90 @@ use super::{components::show_cursor::no_open_menus, item_renderer::RenderItem};
 const ITEM_NAME_FADE_DURATION_SEC: f32 = 5.0;
 
 #[derive(Debug, Component)]
+/// The hotbar that will be rendered for the player
+///
+/// This is to identify the entity with the player's hotbar.
 pub struct LocalPlayerHotbar;
 
-#[derive(Component, Default)]
+#[derive(Component, Default, Debug)]
+/// The contents that should be displayed on the hotbar
 pub struct HotbarContents {
     items: Vec<Option<ItemStack>>,
 }
 
 impl HotbarContents {
+    /// Creates a new hotbar contents that can hold up to the specified size.
     pub fn new(n_slots: usize) -> Self {
         Self {
             items: vec![None; n_slots],
         }
     }
 
+    /// Gets the item stack at this slot if there is one. If the slot is out of bounds, this will also return None.
     pub fn itemstack_at(&self, slot: usize) -> Option<&ItemStack> {
         self.items.get(slot).map(|x| x.as_ref()).flatten()
     }
 
+    /// Sets the itemstack at this slot. If slot is out of bounds, the program will panic.
     pub fn set_itemstack_at(&mut self, slot: usize, itemstack: Option<ItemStack>) {
         self.items[slot] = itemstack;
     }
 
+    /// Clears any items that are in the contents
     pub fn clear_contents(&mut self) {
-        self.items.clear();
+        let n_slots = self.items.len();
+        self.items = vec![None; n_slots];
     }
 
+    /// Iterates over every slot
     pub fn iter(&self) -> std::slice::Iter<Option<ItemStack>> {
         self.items.iter()
     }
 
+    /// Reports the number of slots this can hold
     pub fn n_slots(&self) -> usize {
         self.items.len()
     }
 }
 
+/// The priority queue for a hotbar
 pub type HotbarPriorityQueue = PriorityQueue<HotbarContents>;
 
-#[derive(Component)]
+#[derive(Component, Debug)]
+/// Represents who should have ownership over this component. This is useful when multiple
+/// sources want to control the same thing, but one should have priority over the other.
 pub struct PriorityQueue<HotbarContents> {
     _phantom: PhantomData<HotbarContents>,
     queue: Vec<(String, i32)>,
 }
 
 impl<T> PriorityQueue<T> {
+    /// Adds an id to the priority queue.
+    ///
+    /// If the queue priority is the highest out of any other waiting, then ownership will be given to that id in the [`Self::active`] method.
     pub fn add(&mut self, id: impl Into<String>, queue_priority: i32) {
         self.queue.push((id.into(), queue_priority));
-        self.queue.sort_by_key(|x| x.1);
+        // highest -> smallest
+        self.queue.sort_by_key(|x| -x.1);
     }
 
+    /// Returns the current id that has the highest priority
     pub fn active(&self) -> Option<&str> {
         self.queue.get(0).map(|x| x.0.as_str())
+    }
+
+    /// Removes this id from the priority queue
+    ///
+    /// Returns if that id was ever in the queue
+    pub fn remove(&mut self, id: &str) -> bool {
+        let Some((idx, _)) = self.queue.iter().enumerate().find(|(_, x)| x.0 == id) else {
+            return false;
+        };
+
+        self.queue.remove(idx);
+        // Will already be sorted, no need to re-sort
+
+        true
     }
 }
 

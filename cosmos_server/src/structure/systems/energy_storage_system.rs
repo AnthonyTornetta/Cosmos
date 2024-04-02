@@ -89,5 +89,5 @@ pub(super) fn register(app: &mut App) {
         )
         .register_type::<EnergyStorageSystem>();
 
-    register_structure_system::<EnergyStorageSystem>(app);
+    register_structure_system::<EnergyStorageSystem>(app, false, "cosmos:energy_cell");
 }
