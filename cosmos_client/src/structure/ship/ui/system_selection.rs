@@ -27,7 +27,7 @@ use crate::{
     ui::hotbar::{Hotbar, HotbarContents, HotbarPriorityQueue, LocalPlayerHotbar},
 };
 
-const SHIP_PRIORITY_IDENTIFIER: &'static str = "cosmos:ship_systems";
+const SHIP_PRIORITY_IDENTIFIER: &str = "cosmos:ship_systems";
 
 fn add_priority_when_flying(
     mut q_hotbar_priority: Query<&mut HotbarPriorityQueue, With<LocalPlayerHotbar>>,

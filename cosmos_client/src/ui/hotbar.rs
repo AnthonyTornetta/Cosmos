@@ -42,7 +42,7 @@ impl HotbarContents {
 
     /// Gets the item stack at this slot if there is one. If the slot is out of bounds, this will also return None.
     pub fn itemstack_at(&self, slot: usize) -> Option<&ItemStack> {
-        self.items.get(slot).map(|x| x.as_ref()).flatten()
+        self.items.get(slot).and_then(|x| x.as_ref())
     }
 
     /// Sets the itemstack at this slot. If slot is out of bounds, the program will panic.
@@ -90,7 +90,7 @@ impl<T> PriorityQueue<T> {
 
     /// Returns the current id that has the highest priority
     pub fn active(&self) -> Option<&str> {
-        self.queue.get(0).map(|x| x.0.as_str())
+        self.queue.first().map(|x| x.0.as_str())
     }
 
     /// Removes this id from the priority queue
@@ -111,7 +111,7 @@ impl<T> PriorityQueue<T> {
 impl<T> Default for PriorityQueue<T> {
     fn default() -> Self {
         Self {
-            _phantom: PhantomData::default(),
+            _phantom: PhantomData,
             queue: vec![],
         }
     }
@@ -502,7 +502,7 @@ pub(super) fn register(app: &mut App) {
 }
 
 // move to separate file
-const INVENTORY_PRIORITY_IDENTIFIER: &'static str = "cosmos:inventory";
+const INVENTORY_PRIORITY_IDENTIFIER: &str = "cosmos:inventory";
 
 fn add_inventory_to_priority_queue(
     mut q_added_queue: Query<&mut HotbarPriorityQueue, (With<LocalPlayerHotbar>, Added<HotbarPriorityQueue>)>,
