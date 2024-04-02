@@ -5,7 +5,7 @@ mod energy_generation_system;
 mod energy_storage_system;
 pub mod laser_cannon_system;
 pub mod mining_laser_system;
-mod player_interactions;
+pub mod player_interactions;
 mod sync;
 pub mod thruster_system;
 

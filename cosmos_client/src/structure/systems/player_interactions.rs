@@ -1,3 +1,5 @@
+//! Player interactions with structures
+
 use bevy::{
     prelude::{in_state, Added, App, Commands, Component, Entity, IntoSystemConfigs, Query, RemovedComponents, ResMut, Update, With},
     reflect::Reflect,
@@ -16,9 +18,12 @@ use crate::{
 };
 
 #[derive(Component, Default, Reflect)]
-struct HoveredSystem {
-    system_index: usize,
-    active: bool,
+/// Contains the structure system's information currently hovered by the player
+pub struct HoveredSystem {
+    /// The index of the system, relative to the `active_systems` iterator
+    pub system_index: usize,
+    /// If the hovered system is active
+    pub active: bool,
 }
 
 fn check_system_in_use(
@@ -50,38 +55,6 @@ fn check_became_pilot(mut commands: Commands, query: Query<Entity, (Added<Pilot>
     }
 }
 
-fn swap_selected(mut query: Query<&mut HoveredSystem, (With<Pilot>, With<LocalPlayer>)>, input_handler: InputChecker) {
-    if let Ok(mut hovered_system) = query.get_single_mut() {
-        if input_handler.check_just_pressed(CosmosInputs::SelectSystem1) {
-            hovered_system.system_index = 0;
-        }
-        if input_handler.check_just_pressed(CosmosInputs::SelectSystem2) {
-            hovered_system.system_index = 1;
-        }
-        if input_handler.check_just_pressed(CosmosInputs::SelectSystem3) {
-            hovered_system.system_index = 2;
-        }
-        if input_handler.check_just_pressed(CosmosInputs::SelectSystem4) {
-            hovered_system.system_index = 3;
-        }
-        if input_handler.check_just_pressed(CosmosInputs::SelectSystem5) {
-            hovered_system.system_index = 4;
-        }
-        if input_handler.check_just_pressed(CosmosInputs::SelectSystem6) {
-            hovered_system.system_index = 5;
-        }
-        if input_handler.check_just_pressed(CosmosInputs::SelectSystem7) {
-            hovered_system.system_index = 6;
-        }
-        if input_handler.check_just_pressed(CosmosInputs::SelectSystem8) {
-            hovered_system.system_index = 7;
-        }
-        if input_handler.check_just_pressed(CosmosInputs::SelectSystem9) {
-            hovered_system.system_index = 8;
-        }
-    }
-}
-
 fn check_removed_pilot(mut commands: Commands, mut removed: RemovedComponents<Pilot>) {
     for ent in removed.read() {
         if let Some(mut ecmds) = commands.get_entity(ent) {
@@ -93,13 +66,7 @@ fn check_removed_pilot(mut commands: Commands, mut removed: RemovedComponents<Pi
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        (
-            check_system_in_use.run_if(no_open_menus),
-            check_became_pilot,
-            check_removed_pilot,
-            swap_selected.run_if(no_open_menus),
-        )
-            .run_if(in_state(GameState::Playing)),
+        (check_system_in_use.run_if(no_open_menus), check_became_pilot, check_removed_pilot).run_if(in_state(GameState::Playing)),
     )
     .register_type::<HoveredSystem>();
 }

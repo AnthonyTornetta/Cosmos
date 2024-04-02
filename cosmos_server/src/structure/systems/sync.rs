@@ -1,18 +1,19 @@
 use bevy::{
-    app::{App, Startup, Update},
+    app::{App, Update},
     ecs::{
         entity::Entity,
         event::EventReader,
         query::{Added, Changed},
         removal_detection::RemovedComponents,
-        schedule::{common_conditions::in_state, IntoSystemConfigs},
-        system::{Query, ResMut},
+        schedule::{common_conditions::in_state, IntoSystemConfigs, OnExit},
+        system::{Query, Res, ResMut},
     },
 };
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
+    item::Item,
     netty::{cosmos_encoder, server_replication::ReplicationMessage, NettyChannelServer},
-    registry::Registry,
+    registry::{identifiable::Identifiable, Registry},
     structure::systems::{sync::SyncableSystem, StructureSystem, StructureSystemType, SystemActive, Systems},
 };
 
@@ -97,14 +98,22 @@ fn sync_active_systems(
     }
 }
 
-fn register_system<T: SyncableSystem>(mut registry: ResMut<Registry<StructureSystemType>>) {
-    registry.register(StructureSystemType::new(T::unlocalized_name()));
-}
+pub fn register_structure_system<T: SyncableSystem>(app: &mut App, activatable: bool, item_icon_unlocalized_name: impl Into<String>) {
+    let item_icon_unlocalized_name = item_icon_unlocalized_name.into();
 
-pub fn register_structure_system<T: SyncableSystem>(app: &mut App) {
-    app.add_systems(Startup, register_system::<T>).add_systems(
+    app.add_systems(
         Update,
         (sync_system::<T>, sync_active_systems, on_request_systems_entity::<T>).run_if(in_state(GameState::Playing)),
+    )
+    .add_systems(
+        OnExit(GameState::PostLoading),
+        move |items: Res<Registry<Item>>, mut registry: ResMut<Registry<StructureSystemType>>| {
+            let Some(item) = items.from_id(&item_icon_unlocalized_name) else {
+                panic!("Could not find item with id {}", item_icon_unlocalized_name);
+            };
+
+            registry.register(StructureSystemType::new(T::unlocalized_name(), activatable, item.id()));
+        },
     );
 }
 

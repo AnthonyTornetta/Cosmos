@@ -58,25 +58,6 @@ pub enum CosmosInputs {
     /// Unlocks the mouse from the window
     UnlockMouse,
 
-    /// Change the selected block system while piloting ship
-    SelectSystem1,
-    /// Change the selected block system while piloting ship
-    SelectSystem2,
-    /// Change the selected block system while piloting ship
-    SelectSystem3,
-    /// Change the selected block system while piloting ship
-    SelectSystem4,
-    /// Change the selected block system while piloting ship
-    SelectSystem5,
-    /// Change the selected block system while piloting ship
-    SelectSystem6,
-    /// Change the selected block system while piloting ship
-    SelectSystem7,
-    /// Change the selected block system while piloting ship
-    SelectSystem8,
-    /// Change the selected block system while piloting ship
-    SelectSystem9,
-
     /// Change the selected inventory item
     HotbarSlot1,
     /// Change the selected inventory item
@@ -158,16 +139,6 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     input_handler.set_keycode(CosmosInputs::HotbarSlot7, KeyCode::Digit7);
     input_handler.set_keycode(CosmosInputs::HotbarSlot8, KeyCode::Digit8);
     input_handler.set_keycode(CosmosInputs::HotbarSlot9, KeyCode::Digit9);
-
-    input_handler.set_keycode(CosmosInputs::SelectSystem1, KeyCode::Digit1);
-    input_handler.set_keycode(CosmosInputs::SelectSystem2, KeyCode::Digit2);
-    input_handler.set_keycode(CosmosInputs::SelectSystem3, KeyCode::Digit3);
-    input_handler.set_keycode(CosmosInputs::SelectSystem4, KeyCode::Digit4);
-    input_handler.set_keycode(CosmosInputs::SelectSystem5, KeyCode::Digit5);
-    input_handler.set_keycode(CosmosInputs::SelectSystem6, KeyCode::Digit6);
-    input_handler.set_keycode(CosmosInputs::SelectSystem7, KeyCode::Digit7);
-    input_handler.set_keycode(CosmosInputs::SelectSystem8, KeyCode::Digit8);
-    input_handler.set_keycode(CosmosInputs::SelectSystem9, KeyCode::Digit9);
 
     input_handler.set_keycode(CosmosInputs::Disconnect, KeyCode::KeyP);
 

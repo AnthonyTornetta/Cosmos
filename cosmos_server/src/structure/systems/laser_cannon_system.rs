@@ -135,5 +135,5 @@ pub(super) fn register(app: &mut App) {
         .add_systems(OnEnter(GameState::PostLoading), register_laser_blocks)
         .add_systems(Update, on_add_laser);
 
-    register_structure_system::<LaserCannonSystem>(app);
+    register_structure_system::<LaserCannonSystem>(app, true, "cosmos:laser_cannon");
 }

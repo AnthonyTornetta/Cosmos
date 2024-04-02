@@ -130,9 +130,10 @@ impl Error for NoSystemFound {}
 /// Stores all the systems a structure has
 pub struct Systems {
     /// These entities should have the `StructureSystem` component
-    pub systems: Vec<Entity>,
+    systems: Vec<StructureSystemId>,
+    activatable_systems: Vec<StructureSystemId>,
     /// The system ids
-    ids: HashMap<StructureSystemId, usize>,
+    ids: HashMap<StructureSystemId, Entity>,
     /// More than just one system can be active at a time, but the pilot can only personally activate one system at a time
     /// Perhaps make this a component on the pilot entity in the future?
     /// Currently this limits a ship to one pilot, the above would fix this issue, but this is a future concern.
@@ -140,37 +141,113 @@ pub struct Systems {
     entity: Entity,
 }
 
+/// Iterates over structure systems a structure has
+pub struct SystemsIterator<'a> {
+    iterating_over: &'a [StructureSystemId],
+    id_mapping: &'a HashMap<StructureSystemId, Entity>,
+}
+
+impl<'a> Iterator for SystemsIterator<'a> {
+    type Item = Entity;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let system = self.iterating_over.first()?;
+
+        self.iterating_over = &self.iterating_over[1..];
+
+        Some(
+            *self
+                .id_mapping
+                .get(system)
+                .expect("Invalid state - system id has no entity mapping"),
+        )
+    }
+}
+
 impl Systems {
+    /// Returns an iterator through every system
+    pub fn all_systems<'a>(&'a self) -> SystemsIterator<'a> {
+        SystemsIterator::<'a> {
+            id_mapping: &self.ids,
+            iterating_over: &self.systems,
+        }
+    }
+
+    /// Returns an iterator that only iterates over the activatable systems
+    pub fn all_activatable_systems(&self) -> SystemsIterator {
+        SystemsIterator {
+            id_mapping: &self.ids,
+            iterating_over: &self.activatable_systems,
+        }
+    }
+
+    /// This index is relative to the [`all_systems`] iterator.
+    pub fn get_system_from_index(&self, idx: usize) -> Entity {
+        *self
+            .ids
+            .get(&self.systems[idx])
+            .expect("Invalid state - system id has no entity mapping")
+    }
+
+    /// This index is relative to the [`all_activatable_systems`] iterator NOT the [`all_systems`] index.
+    pub fn get_activatable_system_from_activatable_index(&self, idx: usize) -> Entity {
+        *self
+            .ids
+            .get(&self.activatable_systems[idx])
+            .expect("Invalid state - system id has no entity mapping")
+    }
+
     fn has_id(&self, id: StructureSystemId) -> bool {
         self.ids.contains_key(&id)
     }
 
-    fn insert_system(&mut self, system_id: StructureSystemId, entity: Entity) {
-        let idx = self.systems.len();
-        self.ids.insert(system_id, idx);
-        self.systems.push(entity);
+    fn insert_system(&mut self, system_id: StructureSystemId, system_type: &StructureSystemType, entity: Entity) {
+        self.ids.insert(system_id, entity);
+        self.systems.push(system_id);
+        // This ensures the client + server have the same order, which is important.
+        // Making this up to user preference would be pointless, since they only should be able
+        // to interact with activatable systems.
+        self.systems.sort();
+        if system_type.is_activatable() {
+            self.activatable_systems.push(system_id);
+            // This ensures the client + server have the same order, which is important.
+            // In the future, this should be up to user-preference.
+            self.activatable_systems.sort();
+        }
     }
 
     /// Gets the entity that corresponds to the system id, or none if not found.
     pub fn get_system_entity(&self, system_id: StructureSystemId) -> Option<Entity> {
-        self.ids.get(&system_id).copied().and_then(|idx| self.systems.get(idx)).copied()
+        self.ids.get(&system_id).copied()
     }
 
     /// Activates the passed in selected system, and deactivates the system that was previously selected
+    ///
+    /// The passed in system index must be based off the [`Self::all_activatable_systems`] iterator.
     pub fn set_active_system(&mut self, active: Option<u32>, commands: &mut Commands) {
         if active == self.active_system {
             return;
         }
 
         if let Some(active_system) = self.active_system {
-            if (active_system as usize) < self.systems.len() {
-                commands.entity(self.systems[active_system as usize]).remove::<SystemActive>();
+            if (active_system as usize) < self.activatable_systems.len() {
+                let ent = self
+                    .ids
+                    .get(&self.activatable_systems[active_system as usize])
+                    .expect("Invalid state - system id has no entity mapping");
+
+                commands.entity(*ent).remove::<SystemActive>();
             }
         }
 
         if let Some(active_system) = active {
-            if (active_system as usize) < self.systems.len() {
-                commands.entity(self.systems[active_system as usize]).insert(SystemActive);
+            if (active_system as usize) < self.activatable_systems.len() {
+                let ent = self
+                    .ids
+                    .get(&self.activatable_systems[active_system as usize])
+                    .expect("Invalid state - system id has no entity mapping");
+
+                commands.entity(*ent).insert(SystemActive);
 
                 self.active_system = active;
             } else {
@@ -183,7 +260,13 @@ impl Systems {
 
     /// Returns the active system entity, if there is one.
     pub fn active_system(&self) -> Option<Entity> {
-        self.active_system.map(|x| self.systems[x as usize])
+        self.active_system
+            .map(|x| {
+                self.ids
+                    .get(&self.activatable_systems[x as usize])
+                    .expect("Invalid state - system id has no entity mapping")
+            })
+            .copied()
     }
 
     /// Generates a new id for a system while avoiding collisions
@@ -222,11 +305,11 @@ impl Systems {
                 .insert(StructureSystem {
                     structure_entity: self.entity,
                     system_id,
-                    system_type_id: system_type.system_type_id,
+                    system_type_id: system_type.id,
                 })
                 .id();
 
-            self.insert_system(system_id, entity);
+            self.insert_system(system_id, system_type, entity);
 
             ent = Some(entity);
         });
@@ -252,7 +335,11 @@ impl Systems {
         F: QueryFilter,
         Q: QueryData,
     {
-        for ent in self.systems.iter() {
+        for ent in self
+            .systems
+            .iter()
+            .map(|x| self.ids.get(x).expect("Invalid state - system id has no entity mapping"))
+        {
             if let Ok(res) = query.get(*ent) {
                 return Ok(res);
             }
@@ -267,7 +354,11 @@ impl Systems {
         F: QueryFilter,
         Q: QueryData,
     {
-        for ent in self.systems.iter() {
+        for ent in self
+            .systems
+            .iter()
+            .map(|x| self.ids.get(x).expect("Invalid state - system id has no entity mapping"))
+        {
             // for some reason, the borrow checker gets mad when I do a get_mut in this if statement
             if query.get(*ent).is_ok() {
                 return Ok(query.get_mut(*ent).expect("This should be valid"));
@@ -282,6 +373,7 @@ fn add_structure(mut commands: Commands, query: Query<Entity, (Added<Structure>,
     for entity in query.iter() {
         commands.entity(entity).insert(Systems {
             systems: Vec::new(),
+            activatable_systems: Vec::new(),
             entity,
             active_system: None,
             ids: Default::default(),
@@ -299,35 +391,46 @@ pub trait StructureSystemImpl: Component + std::fmt::Debug {
 /// Links a structure system's type id with their unlocalized name
 pub struct StructureSystemType {
     unlocalized_name: String,
-    id: u16,
+    id: StructureSystemTypeId,
 
-    system_type_id: StructureSystemTypeId,
+    activatable: bool,
+    item_icon: u16,
 }
 
 impl StructureSystemType {
     /// Creates a new structure system type
-    pub fn new(unlocalized_name: impl Into<String>) -> Self {
+    pub fn new(unlocalized_name: impl Into<String>, activatable: bool, item_icon: u16) -> Self {
         Self {
-            id: 0,
-            system_type_id: StructureSystemTypeId::default(),
+            id: StructureSystemTypeId::default(),
             unlocalized_name: unlocalized_name.into(),
+            activatable,
+            item_icon,
         }
     }
 
     /// The numeric id of this structure system type
     pub fn system_type_id(&self) -> StructureSystemTypeId {
-        self.system_type_id
+        self.id
+    }
+
+    /// Returns the item icon for this structure system. This is guarenteed to be a valid item's id
+    pub fn item_icon_id(&self) -> u16 {
+        self.item_icon
+    }
+
+    /// Returns true if this system can be activated by the pilot
+    pub fn is_activatable(&self) -> bool {
+        self.activatable
     }
 }
 
 impl Identifiable for StructureSystemType {
     fn id(&self) -> u16 {
-        self.id
+        self.id.0
     }
 
     fn set_numeric_id(&mut self, id: u16) {
-        self.id = id;
-        self.system_type_id = StructureSystemTypeId(id);
+        self.id = StructureSystemTypeId(id);
     }
 
     fn unlocalized_name(&self) -> &str {
