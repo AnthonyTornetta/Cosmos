@@ -8,7 +8,7 @@ use cosmos_core::{
     structure::Structure,
 };
 
-use crate::{interactions::block_interactions::LookingAt, netty::flags::LocalPlayer, state::game_state::GameState};
+use crate::{interactions::block_interactions::LookingAt, lang::Lang, netty::flags::LocalPlayer, state::game_state::GameState};
 
 #[derive(Component, Debug, Default)]
 struct FPSCounter {
@@ -102,6 +102,7 @@ fn update_looking_at_text(
     q_structure: Query<&Structure>,
     blocks: Res<Registry<Block>>,
     mut q_looking_at_text: Query<&mut Text, With<LookingAtText>>,
+    lang: Res<Lang<Block>>,
 ) {
     let Ok(mut text) = q_looking_at_text.get_single_mut() else {
         return;
@@ -121,7 +122,7 @@ fn update_looking_at_text(
 
         text.sections[1].value = format!(
             "{}: {:?}, {:?}",
-            block.unlocalized_name(),
+            lang.get_name(block).unwrap_or(block.unlocalized_name()),
             block_rotation.block_up,
             block_rotation.sub_rotation
         );

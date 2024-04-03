@@ -15,7 +15,7 @@ use bevy::{
     text::{Text, TextStyle},
     ui::{
         node_bundles::{NodeBundle, TextBundle},
-        FlexDirection, Style, UiRect, Val,
+        FlexDirection, PositionType, Style, UiRect, Val,
     },
 };
 use bevy_rapier3d::dynamics::Velocity;
@@ -73,6 +73,7 @@ fn create_nodes(
                         width: Val::Percent(100.0),
                         height: Val::Percent(100.0),
                         flex_direction: FlexDirection::Column,
+                        position_type: PositionType::Absolute,
                         ..Default::default()
                     },
                     ..Default::default()
