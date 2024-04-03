@@ -64,11 +64,7 @@ pub(super) fn register(app: &mut App) {
     load_assets::<bevy_kira_audio::prelude::AudioSource, MissileLauncherLoadingFlag>(
         app,
         GameState::PreLoading,
-        vec![
-            "cosmos/sounds/sfx/laser-fire-1.ogg",
-            "cosmos/sounds/sfx/laser-fire-2.ogg",
-            "cosmos/sounds/sfx/laser-fire-3.ogg",
-        ],
+        vec!["cosmos/sounds/sfx/missile-launch-1.ogg", "cosmos/sounds/sfx/missile-launch-2.ogg"],
         |mut commands, handles| {
             commands.insert_resource(MissileLauncherFireHandles(
                 handles.into_iter().filter(|x| x.1 == LoadState::Loaded).map(|x| x.0).collect(),
