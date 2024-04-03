@@ -24,6 +24,7 @@ pub mod energy_storage_system;
 pub mod laser_cannon_system;
 pub mod line_system;
 pub mod mining_laser_system;
+pub mod missile_launcher_system;
 pub mod sync;
 pub mod thruster_system;
 
