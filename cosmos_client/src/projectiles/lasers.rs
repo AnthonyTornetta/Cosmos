@@ -6,7 +6,7 @@ use bevy_renet::renet::*;
 use cosmos_core::{
     ecs::bundles::CosmosPbrBundle,
     netty::{cosmos_encoder, server_laser_cannon_system_messages::ServerLaserCannonSystemMessages, NettyChannelServer},
-    projectiles::laser::Laser,
+    projectiles::{laser::Laser, missile::Missile},
 };
 
 use crate::{
@@ -48,6 +48,41 @@ fn lasers_netty(
                 }
 
                 Laser::spawn_custom_pbr(
+                    location,
+                    laser_velocity,
+                    firer_velocity,
+                    strength,
+                    no_hit,
+                    CosmosPbrBundle {
+                        mesh: laser_mesh.0.clone(),
+                        material: materials.add(StandardMaterial {
+                            base_color: color,
+                            // emissive: color,
+                            unlit: true,
+                            ..Default::default()
+                        }),
+                        ..Default::default()
+                    },
+                    &time,
+                    DEFAULT_WORLD_ID,
+                    &mut commands,
+                );
+            }
+            ServerLaserCannonSystemMessages::CreateMissile {
+                color,
+                location,
+                laser_velocity,
+                firer_velocity,
+                strength,
+                mut no_hit,
+            } => {
+                if let Some(server_entity) = no_hit {
+                    if let Some(client_entity) = network_mapping.client_from_server(&server_entity) {
+                        no_hit = Some(client_entity);
+                    }
+                }
+
+                Missile::spawn_custom_pbr(
                     location,
                     laser_velocity,
                     firer_velocity,

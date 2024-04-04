@@ -3,6 +3,7 @@
 use bevy::prelude::{App, States};
 
 pub mod block_colliders;
+pub mod collision_handling;
 pub mod gravity_system;
 pub mod location;
 pub mod player_world;

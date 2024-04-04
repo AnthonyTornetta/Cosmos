@@ -5,29 +5,29 @@ use std::time::Duration;
 
 use bevy::{
     core::Name,
+    ecs::event::EventReader,
+    hierarchy::BuildChildren,
     pbr::{NotShadowCaster, NotShadowReceiver},
-    prelude::{
-        App, Commands, Component, Entity, Event, EventWriter, GlobalTransform, Parent, Quat, Query, Res, Transform, Update, Vec3, With,
-        Without,
-    },
+    prelude::{App, Commands, Component, Entity, Event, Query, Res, Transform, Update, Vec3, With},
+    reflect::Reflect,
     time::Time,
 };
 use bevy_rapier3d::{
-    geometry::{ActiveEvents, Sensor},
-    prelude::{LockedAxes, PhysicsWorld, RapierContext, RigidBody, Velocity, WorldId, DEFAULT_WORLD_ID},
+    geometry::{ActiveEvents, ActiveHooks, Collider},
+    pipeline::CollisionEvent,
+    prelude::{LockedAxes, PhysicsWorld, RigidBody, Velocity, WorldId},
 };
 
 use crate::{
     ecs::{bundles::CosmosPbrBundle, NeedsDespawned},
-    netty::NoSendEntity,
     physics::{
+        collision_handling::{CannotCollideWith, CannotCollideWithEntity},
         location::Location,
-        player_world::{PlayerWorld, WorldWithin},
     },
 };
 
 /// How long a missile will stay alive for before despawning
-pub const MISSILE_LIVE_TIME: Duration = Duration::from_secs(5);
+pub const MISSILE_LIVE_TIME: Duration = Duration::from_secs(20);
 
 #[derive(Debug, Event)]
 /// The entity hit represents the entity hit by the missile
@@ -63,11 +63,6 @@ impl MissileCollideEvent {
         self.local_position_hit
     }
 }
-
-#[derive(Component)]
-/// This is used to prevent the missile from colliding with the entity that fired it
-/// If this component is found on the object that it was fired on, then no collision will be registered
-pub struct NoCollide(Entity);
 
 #[derive(Component)]
 struct FireTime {
@@ -115,6 +110,7 @@ impl Missile {
             pbr,
             RigidBody::Dynamic,
             LockedAxes::ROTATION_LOCKED,
+            Collider::cuboid(0.15, 0.15, 0.7),
             Velocity {
                 linvel: missile_velocity + firer_velocity,
                 ..Default::default()
@@ -122,15 +118,18 @@ impl Missile {
             FireTime {
                 time: time.elapsed_seconds(),
             },
-            Sensor,
             PhysicsWorld { world_id },
             NotShadowCaster,
             ActiveEvents::COLLISION_EVENTS,
+            ActiveHooks::FILTER_CONTACT_PAIRS,
             NotShadowReceiver,
         ));
 
         if let Some(ent) = no_collide_entity {
-            ent_cmds.insert(NoCollide(ent));
+            ent_cmds.insert(CannotCollideWith::single(CannotCollideWithEntity {
+                entity: ent,
+                search_parents: true,
+            }));
         }
 
         missile_entity
@@ -164,120 +163,50 @@ impl Missile {
     }
 }
 
-fn handle_events(
-    mut query: Query<
-        (
-            Option<&PhysicsWorld>,
-            &Location,
-            Entity,
-            Option<&NoCollide>,
-            &mut Missile,
-            &Velocity,
-            Option<&WorldWithin>,
-        ),
-        With<Missile>,
-    >,
-    mut commands: Commands,
-    mut event_writer: EventWriter<MissileCollideEvent>,
-    rapier_context: Res<RapierContext>,
-    parent_query: Query<&Parent>,
-    transform_query: Query<&GlobalTransform, Without<Missile>>,
-    worlds: Query<(&Location, &PhysicsWorld, Entity), With<PlayerWorld>>,
-) {
-    for (world, location, missile_entity, no_collide_entity, mut missile, velocity, world_within) in query.iter_mut() {
-        // if missile.active {
-        //     let last_pos = missile.last_position;
-        //     let delta_position = last_pos.relative_coords_to(location);
-        //     missile.last_position = *location;
+#[derive(Component, Reflect)]
+struct Explosion {
+    power: f32,
+}
 
-        //     let world_id = world.map(|bw| bw.world_id).unwrap_or(DEFAULT_WORLD_ID);
+fn respond_to_collisions(mut ev_reader: EventReader<CollisionEvent>, q_missile: Query<&Missile>, mut commands: Commands) {
+    for ev in ev_reader.read() {
+        let &CollisionEvent::Started(e1, e2, _) = ev else {
+            continue;
+        };
 
-        //     let coords: Option<Vec3> = world_within
-        //         .map(|world_within| {
-        //             if let Ok((loc, _, _)) = worlds.get(world_within.0) {
-        //                 Some(loc.relative_coords_to(location))
-        //             } else {
-        //                 warn!("Missile playerworld not found!");
-        //                 None
-        //             }
-        //         })
-        //         .unwrap_or(None);
+        let entities = if let Ok(missile) = q_missile.get(e1) {
+            Some((missile, e1, e2))
+        } else if let Ok(missile) = q_missile.get(e2) {
+            Some((missile, e2, e1))
+        } else {
+            None
+        };
 
-        //     let Some(coords) = coords else {
-        //         continue;
-        //     };
+        let Some((missile, missile_entity, hit_entity)) = entities else {
+            continue;
+        };
 
-        //     let ray_start = coords - delta_position;
+        println!("Missile hit something! {hit_entity:?}");
 
-        //     // * 2.0 to account for checking behind the missile
-        //     let ray_distance = ((delta_position * 2.0).dot(delta_position * 2.0)).sqrt();
-
-        //     // The transform's rotation may not accurately represent the direction the missile is travelling,
-        //     // so rather use its actual delta position for direction of travel calculations
-        //     let ray_direction = delta_position.normalize_or_zero();
-
-        //     if let Ok(Some((entity, toi))) = rapier_context.cast_ray(
-        //         world_id,
-        //         ray_start, // sometimes missiles pass through things that are next to where they are spawned, thus we check starting a bit behind them
-        //         ray_direction,
-        //         ray_distance,
-        //         false,
-        //         QueryFilter::predicate(QueryFilter::default(), &|entity| {
-        //             if let Some(no_collide_entity) = no_collide_entity {
-        //                 if no_collide_entity.0 == entity {
-        //                     false
-        //                 } else if let Ok(parent) = parent_query.get(entity) {
-        //                     parent.get() != no_collide_entity.0
-        //                 } else {
-        //                     false
-        //                 }
-        //             } else {
-        //                 true
-        //             }
-        //         }),
-        //     ) {
-        //         let pos = ray_start + (toi * ray_direction) + (velocity.linvel.normalize() * 0.01);
-
-        //         if let Ok(parent) = parent_query.get(entity) {
-        //             if let Ok(transform) = transform_query.get(parent.get()) {
-        //                 let lph = Quat::from_affine3(&transform.affine())
-        //                     .inverse()
-        //                     .mul_vec3(pos - transform.translation());
-
-        //                 event_writer.send(MissileCollideEvent {
-        //                     entity_hit: entity,
-        //                     local_position_hit: lph,
-        //                     missile_strength: missile.strength,
-        //                 });
-        //             }
-        //         } else if let Ok(transform) = transform_query.get(entity) {
-        //             let lph = Quat::from_affine3(&transform.affine())
-        //                 .inverse()
-        //                 .mul_vec3(pos - transform.translation());
-
-        //             event_writer.send(MissileCollideEvent {
-        //                 entity_hit: entity,
-        //                 local_position_hit: lph,
-        //                 missile_strength: missile.strength,
-        //             });
-        //         }
-
-        //         missile.active = false;
-        //         commands.entity(missile_entity).insert(NeedsDespawned);
-        //     }
-        // }
+        commands
+            .entity(missile_entity)
+            .remove::<(Missile, FireTime, RigidBody)>()
+            .insert(Explosion { power: missile.strength })
+            .set_parent(hit_entity);
     }
 }
 
 fn despawn_missiles(mut commands: Commands, query: Query<(Entity, &FireTime), With<Missile>>, time: Res<Time>) {
     for (ent, fire_time) in query.iter() {
         if time.elapsed_seconds() - fire_time.time > MISSILE_LIVE_TIME.as_secs_f32() {
+            println!("Missile died of old age");
             commands.entity(ent).insert(NeedsDespawned);
         }
     }
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, (handle_events, despawn_missiles))
-        .add_event::<MissileCollideEvent>();
+    app.add_systems(Update, (respond_to_collisions, despawn_missiles))
+        .add_event::<MissileCollideEvent>()
+        .register_type::<Explosion>();
 }

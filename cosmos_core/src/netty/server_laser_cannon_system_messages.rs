@@ -23,6 +23,21 @@ pub enum ServerLaserCannonSystemMessages {
         /// Which entity this laser shouldn't hit (None if it should hit all)
         no_hit: Option<Entity>,
     },
+    /// Creates a laser at a specific location
+    CreateMissile {
+        /// The color the laser should have
+        color: Color,
+        /// Where the laser should be spawned
+        location: Location,
+        /// The laser's initial velocity
+        laser_velocity: Vec3,
+        /// The firer's velocity
+        firer_velocity: Vec3,
+        /// The strength of the laser
+        strength: f32,
+        /// Which entity this laser shouldn't hit (None if it should hit all)
+        no_hit: Option<Entity>,
+    },
     /// Sent whenever a laser cannon system is activated
     LaserCannonSystemFired {
         /// The ship the system was a part of

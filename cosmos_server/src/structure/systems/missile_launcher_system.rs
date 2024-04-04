@@ -9,7 +9,7 @@ use cosmos_core::{
     block::Block,
     netty::{cosmos_encoder, server_laser_cannon_system_messages::ServerLaserCannonSystemMessages, NettyChannelServer},
     physics::location::Location,
-    projectiles::laser::Laser,
+    projectiles::missile::Missile,
     registry::Registry,
     structure::{
         systems::{
@@ -43,7 +43,7 @@ fn register_missile_launcher_blocks(blocks: Res<Registry<Block>>, mut cannon: Re
 }
 
 /// How fast a laser will travel (m/s) ignoring the speed of its shooter.
-pub const LASER_BASE_VELOCITY: f32 = 200.0;
+pub const MISSILE_BASE_VELOCITY: f32 = 3.0;
 
 fn update_system(
     mut query: Query<(&MissileLauncherSystem, &StructureSystem, &mut SystemCooldown), With<SystemActive>>,
@@ -83,14 +83,14 @@ fn update_system(
                             let location = structure.block_world_location(line.start.coords(), global_transform, location);
 
                             let relative_direction = line.direction.direction_vec3();
-                            let laser_velocity = global_transform.affine().matrix3.mul_vec3(relative_direction) * LASER_BASE_VELOCITY;
+                            let missile_velocity = global_transform.affine().matrix3.mul_vec3(relative_direction) * MISSILE_BASE_VELOCITY;
 
                             let strength = (5.0 * line.len as f32).powf(1.2);
                             let no_hit = Some(system.structure_entity());
 
-                            Laser::spawn(
+                            Missile::spawn(
                                 location,
-                                laser_velocity,
+                                missile_velocity,
                                 ship_velocity.linvel,
                                 strength,
                                 no_hit,
@@ -103,10 +103,10 @@ fn update_system(
 
                             server.broadcast_message(
                                 NettyChannelServer::LaserCannonSystem,
-                                cosmos_encoder::serialize(&ServerLaserCannonSystemMessages::CreateLaser {
+                                cosmos_encoder::serialize(&ServerLaserCannonSystemMessages::CreateMissile {
                                     color,
                                     location,
-                                    laser_velocity,
+                                    laser_velocity: missile_velocity,
                                     firer_velocity: ship_velocity.linvel,
                                     strength,
                                     no_hit,
