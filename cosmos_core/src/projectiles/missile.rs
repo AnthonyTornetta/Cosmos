@@ -5,17 +5,20 @@ use std::time::Duration;
 
 use bevy::{
     core::Name,
-    ecs::event::EventReader,
+    ecs::{event::EventReader, query::Added, schedule::IntoSystemConfigs},
     hierarchy::BuildChildren,
+    math::Quat,
     pbr::{NotShadowCaster, NotShadowReceiver},
     prelude::{App, Commands, Component, Entity, Event, Query, Res, Transform, Update, Vec3, With},
     reflect::Reflect,
     time::Time,
+    transform::components::GlobalTransform,
 };
 use bevy_rapier3d::{
     geometry::{ActiveEvents, ActiveHooks, Collider},
-    pipeline::CollisionEvent,
-    prelude::{LockedAxes, PhysicsWorld, RigidBody, Velocity, WorldId},
+    pipeline::{CollisionEvent, QueryFilter},
+    plugin::RapierContext,
+    prelude::{PhysicsWorld, RigidBody, Velocity, WorldId},
 };
 
 use crate::{
@@ -27,7 +30,7 @@ use crate::{
 };
 
 /// How long a missile will stay alive for before despawning
-pub const MISSILE_LIVE_TIME: Duration = Duration::from_secs(20);
+pub const MISSILE_LIVE_TIME: Duration = Duration::from_secs(3);
 
 #[derive(Debug, Event)]
 /// The entity hit represents the entity hit by the missile
@@ -109,7 +112,6 @@ impl Missile {
             Missile { strength },
             pbr,
             RigidBody::Dynamic,
-            LockedAxes::ROTATION_LOCKED,
             Collider::cuboid(0.15, 0.15, 0.7),
             Velocity {
                 linvel: missile_velocity + firer_velocity,
@@ -196,17 +198,51 @@ fn respond_to_collisions(mut ev_reader: EventReader<CollisionEvent>, q_missile: 
     }
 }
 
-fn despawn_missiles(mut commands: Commands, query: Query<(Entity, &FireTime), With<Missile>>, time: Res<Time>) {
-    for (ent, fire_time) in query.iter() {
+fn despawn_missiles(mut commands: Commands, query: Query<(Entity, &FireTime, &Missile)>, time: Res<Time>) {
+    for (ent, fire_time, missile) in query.iter() {
         if time.elapsed_seconds() - fire_time.time > MISSILE_LIVE_TIME.as_secs_f32() {
-            println!("Missile died of old age");
-            commands.entity(ent).insert(NeedsDespawned);
+            println!("Missile exploded of old age");
+
+            commands
+                .entity(ent)
+                .remove::<(Missile, FireTime, RigidBody, Collider, ActiveHooks, ActiveEvents, Velocity)>()
+                .insert(Explosion { power: missile.strength });
+        }
+    }
+}
+
+fn respond_to_explosion(
+    mut commands: Commands,
+    q_explosions: Query<(Entity, &GlobalTransform, Option<&PhysicsWorld>, &Explosion), Added<Explosion>>,
+    q_is_explosion: Query<(), With<Explosion>>,
+    context: Res<RapierContext>,
+) {
+    for (ent, g_trans, physics_world, explosion) in q_explosions.iter() {
+        commands.entity(ent).insert(NeedsDespawned);
+
+        let pw = physics_world.copied().unwrap_or_default();
+        if let Ok(Some(_)) = context.cast_shape(
+            pw.world_id,
+            g_trans.translation(),
+            Quat::IDENTITY,
+            Vec3::new(0.001, 0.001, 0.001), // rapier gets sad and doesn't work when i make this zero
+            &Collider::ball(1.0),
+            1.0,
+            true,
+            QueryFilter::default()
+                .exclude_collider(ent)
+                .exclude_sensors()
+                .predicate(&|x| !q_is_explosion.contains(x)),
+        ) {
+            println!("BOOM!");
+        } else {
+            println!("Miss!");
         }
     }
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, (respond_to_collisions, despawn_missiles))
+    app.add_systems(Update, (respond_to_collisions, despawn_missiles, respond_to_explosion).chain())
         .add_event::<MissileCollideEvent>()
         .register_type::<Explosion>();
 }
