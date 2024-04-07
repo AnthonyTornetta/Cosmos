@@ -5,7 +5,11 @@ use std::time::Duration;
 
 use bevy::{
     core::Name,
-    ecs::{event::EventReader, query::Added, schedule::IntoSystemConfigs},
+    ecs::{
+        event::EventReader,
+        query::{Added, Without},
+        schedule::IntoSystemConfigs,
+    },
     hierarchy::BuildChildren,
     math::Quat,
     pbr::{NotShadowCaster, NotShadowReceiver},
@@ -15,7 +19,7 @@ use bevy::{
     transform::components::GlobalTransform,
 };
 use bevy_rapier3d::{
-    geometry::{ActiveEvents, ActiveHooks, Collider},
+    geometry::{ActiveEvents, ActiveHooks, Collider, Sensor},
     pipeline::{CollisionEvent, QueryFilter},
     plugin::RapierContext,
     prelude::{PhysicsWorld, RigidBody, Velocity, WorldId},
@@ -216,17 +220,21 @@ fn respond_to_explosion(
     q_explosions: Query<(Entity, &GlobalTransform, Option<&PhysicsWorld>, &Explosion), Added<Explosion>>,
     q_is_explosion: Query<(), With<Explosion>>,
     context: Res<RapierContext>,
+
+    q_entities: Query<(Entity, &GlobalTransform, &PhysicsWorld), (With<Collider>, Without<Sensor>)>,
 ) {
     for (ent, g_trans, physics_world, explosion) in q_explosions.iter() {
         commands.entity(ent).insert(NeedsDespawned);
 
-        let pw = physics_world.copied().unwrap_or_default();
+        let max_radius = explosion.power.sqrt();
+
+        let physics_world = physics_world.copied().unwrap_or_default();
         if let Ok(Some(_)) = context.cast_shape(
-            pw.world_id,
+            physics_world.world_id,
             g_trans.translation(),
             Quat::IDENTITY,
             Vec3::new(0.001, 0.001, 0.001), // rapier gets sad and doesn't work when i make this zero
-            &Collider::ball(1.0),
+            &Collider::ball(max_radius),
             1.0,
             true,
             QueryFilter::default()
@@ -234,6 +242,57 @@ fn respond_to_explosion(
                 .exclude_sensors()
                 .predicate(&|x| !q_is_explosion.contains(x)),
         ) {
+            // We've hit something, proceed to do more expensive checking
+
+            // There's no easy way (that I'm aware of) in rapier to find all entities a given shape cast is hitting,
+            // so manually loop through every entity and check.
+            //
+            // This is pretty awful, so please find a better way asap.
+            let mut hits = vec![];
+            for (test_entity, g_trans, this_pw) in &q_entities {
+                if test_entity == ent || *this_pw != physics_world {
+                    continue;
+                }
+
+                if context
+                    .cast_shape(
+                        physics_world.world_id,
+                        g_trans.translation(),
+                        Quat::IDENTITY,
+                        Vec3::new(0.001, 0.001, 0.001), // rapier gets sad and doesn't work when i make this zero
+                        &Collider::ball(max_radius),
+                        1.0,
+                        true,
+                        QueryFilter::default().predicate(&|x| x == test_entity),
+                    )
+                    .ok()
+                    .flatten()
+                    .is_some()
+                {
+                    hits.push(test_entity);
+                }
+            }
+
+            let explosion_position = g_trans.translation();
+
+            let mut hits = vec![];
+
+            context
+                .intersections_with_ray(
+                    physics_world.world_id,
+                    explosion_position,
+                    Vec3::NEG_Z,
+                    max_radius,
+                    true,
+                    QueryFilter::default().exclude_collider(ent),
+                    |entity_hit, ray_intersection| {
+                        hits.push((ray_intersection.toi, ray_intersection.point));
+
+                        true
+                    },
+                )
+                .expect("Unable to find world!");
+
             println!("BOOM!");
         } else {
             println!("Miss!");

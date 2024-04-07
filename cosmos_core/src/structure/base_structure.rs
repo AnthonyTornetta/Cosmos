@@ -5,6 +5,7 @@ use bevy::{
     reflect::Reflect,
     utils::HashMap,
 };
+use bigdecimal::num_traits::Pow;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -557,5 +558,256 @@ impl BaseStructure {
         } else {
             None
         }
+    }
+
+    pub fn raycast_iter<'a>(&'a self, start_relative_position: Vec3, direction: Vec3, max_length: f32) -> RaycastIter<'a> {
+        println!("TODO! Force start to be within structure!");
+
+        RaycastIter {
+            at: start_relative_position,
+            start: start_relative_position,
+            base_structure: self,
+            dir: direction,
+            max_length_sqrd: max_length * max_length,
+        }
+    }
+
+    fn find_next_raycast_block(&self, include_within: bool, start: Vec3, direction: Vec3, max_length_sqrd: f32) -> Vec3 {
+        if include_within {
+            if self
+                .relative_coords_to_local_coords_checked(start.x, start.y, start.z)
+                .map(|x| self.has_block_at(x))
+                .unwrap_or(false)
+            {
+                return start;
+            }
+        }
+
+        let mut at = start;
+
+        while at.distance_squared(start) <= max_length_sqrd
+            && !self
+                .relative_coords_to_local_coords_checked(at.x, at.y, at.z)
+                .map(|x| self.has_block_at(x))
+                .unwrap_or(false)
+        {
+            let delta_position = calculate_raycast_delta(at, direction);
+
+            at += delta_position;
+        }
+
+        println!("{at}");
+
+        at
+    }
+}
+
+fn calculate_raycast_delta(at: Vec3, direction: Vec3) -> Vec3 {
+    debug_assert_ne!(direction, Vec3::ZERO);
+
+    let x_dec = at.x.abs() - (at.x.abs() as i32) as f32;
+    let desiered_x = if direction.x < 0.0 && at.x < 0.0 {
+        x_dec - 1.0
+    } else if direction.x < 0.0 && at.x >= 0.0 {
+        if x_dec < f32::EPSILON {
+            -1.0
+        } else {
+            -x_dec
+        }
+    } else if direction.x >= 0.0 && at.x < 0.0 {
+        if x_dec < f32::EPSILON {
+            1.0
+        } else {
+            x_dec
+        }
+    } else {
+        1.0 - x_dec
+    };
+
+    let x_amount = desiered_x / direction.x;
+
+    let y_dec = at.y.abs() - (at.y.abs() as i32) as f32;
+    let desiered_y = if direction.y < 0.0 && at.y < 0.0 {
+        y_dec - 1.0
+    } else if direction.y < 0.0 && at.y >= 0.0 {
+        -y_dec
+    } else if direction.y >= 0.0 && at.y < 0.0 {
+        y_dec
+    } else {
+        1.0 - y_dec
+    };
+
+    let y_amount = desiered_y / direction.y;
+
+    let z_dec = at.z.abs() - (at.z.abs() as i32) as f32;
+    let desiered_z = if direction.z < 0.0 && at.z < 0.0 {
+        z_dec - 1.0
+    } else if direction.z < 0.0 && at.z >= 0.0 {
+        -z_dec
+    } else if direction.z >= 0.0 && at.z < 0.0 {
+        z_dec
+    } else {
+        1.0 - z_dec
+    };
+
+    let z_amount = desiered_z / direction.z;
+
+    let min_amount = if x_amount <= y_amount && x_amount <= z_amount {
+        x_amount
+    } else if y_amount <= x_amount && y_amount <= z_amount {
+        y_amount
+    } else {
+        z_amount
+    };
+
+    min_amount * direction
+}
+
+#[cfg(test)]
+mod test {
+    use bevy::math::Vec3;
+
+    use super::calculate_raycast_delta;
+
+    fn vec3_assert(a: Vec3, b: Vec3) {
+        const EPSILON: f32 = 0.001;
+
+        assert!(
+            (a.x - b.x).abs() < EPSILON && (a.y - b.y).abs() < EPSILON && (a.z - b.z).abs() < EPSILON,
+            "assertion `left == right` failed\n\tleft: {a:?}\n\tright: {b:?}"
+        );
+    }
+
+    #[test]
+    fn test_next_position_all_pos_dec() {
+        let at = Vec3::new(5.5, 2.1, 2.1);
+
+        let direction = Vec3::new(1.0, 1.0, 1.0).normalize();
+
+        let delta_pos = calculate_raycast_delta(at, direction);
+
+        vec3_assert(delta_pos + at, Vec3::new(6.0, 2.6, 2.6));
+    }
+
+    #[test]
+    fn test_next_position_at_neg_dec() {
+        let at = Vec3::new(-5.5, -2.1, -2.1);
+
+        let direction = Vec3::new(1.0, 1.0, 1.0).normalize();
+
+        let delta_pos = calculate_raycast_delta(at, direction);
+
+        vec3_assert(delta_pos + at, Vec3::new(-5.4, -2.0, -2.0));
+    }
+
+    #[test]
+    fn test_next_position_dir_neg_dec() {
+        let at = Vec3::new(5.6, 2.1, 2.95);
+
+        let direction = Vec3::new(-1.0, -1.0, -1.0).normalize();
+
+        let delta_pos = calculate_raycast_delta(at, direction);
+
+        vec3_assert(delta_pos + at, Vec3::new(5.5, 2.0, 2.85));
+    }
+
+    #[test]
+    fn test_next_position_all_neg_dec() {
+        let at = Vec3::new(-5.5, -2.1, -2.1);
+
+        let direction = Vec3::new(-1.0, -1.0, -1.0).normalize();
+
+        let delta_pos = calculate_raycast_delta(at, direction);
+
+        vec3_assert(delta_pos + at, Vec3::new(-6.0, -2.6, -2.6));
+    }
+
+    #[test]
+    fn test_next_position_all_pos_whole() {
+        let at = Vec3::new(5.0, 2.1, 2.1);
+
+        let direction = Vec3::new(1.0, 1.0, 1.0).normalize();
+
+        let delta_pos = calculate_raycast_delta(at, direction);
+
+        vec3_assert(delta_pos + at, Vec3::new(5.9, 3.0, 3.0));
+    }
+
+    #[test]
+    fn test_next_position_all_neg_whole() {
+        let at = Vec3::new(-5.0, -2.1, -2.1);
+
+        let direction = Vec3::new(-1.0, -1.0, -1.0).normalize();
+
+        let delta_pos = calculate_raycast_delta(at, direction);
+
+        vec3_assert(delta_pos + at, Vec3::new(-5.9, -3.0, -3.0));
+    }
+
+    #[test]
+    fn test_next_position_at_neg_whole() {
+        let at = Vec3::new(-5.0, -2.1, -2.1);
+
+        let direction = Vec3::new(1.0, 1.0, 1.0).normalize();
+
+        let delta_pos = calculate_raycast_delta(at, direction);
+
+        vec3_assert(delta_pos + at, Vec3::new(-4.9, -2.0, -2.0));
+    }
+
+    #[test]
+    fn test_next_position_dir_neg_whole() {
+        let at = Vec3::new(5.0, 2.1, 2.1);
+
+        let direction = Vec3::new(-1.0, -1.0, -1.0).normalize();
+
+        let delta_pos = calculate_raycast_delta(at, direction);
+
+        vec3_assert(delta_pos + at, Vec3::new(4.9, 2.0, 2.0));
+    }
+}
+
+pub struct RaycastIter<'a> {
+    base_structure: &'a BaseStructure,
+    start: Vec3,
+    at: Vec3,
+    dir: Vec3,
+    max_length_sqrd: f32,
+}
+
+impl<'a> Iterator for RaycastIter<'a> {
+    type Item = BlockCoordinate;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.at.distance_squared(self.start) > self.max_length_sqrd {
+            return None;
+        }
+
+        let mut block_id = AIR_BLOCK_ID;
+        let mut at_coords = BlockCoordinate::new(0, 0, 0);
+
+        while block_id == AIR_BLOCK_ID {
+            let Ok(coords) = self
+                .base_structure
+                .relative_coords_to_local_coords_checked(self.at.x, self.at.y, self.at.z)
+            else {
+                return None;
+            };
+
+            at_coords = coords;
+            let b_id = self.base_structure.block_id_at(coords);
+
+            // Advance ray after finding next block
+            self.at = self.base_structure.find_next_raycast_block(
+                false,
+                self.at,
+                self.dir,
+                (self.max_length_sqrd.sqrt() - self.at.distance(self.start)).pow(2),
+            );
+
+            block_id = b_id;
+        }
+
+        Some(at_coords)
     }
 }

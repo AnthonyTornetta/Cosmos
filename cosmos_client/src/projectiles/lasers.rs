@@ -10,7 +10,9 @@ use cosmos_core::{
 };
 
 use crate::{
-    netty::mapping::NetworkMapping, state::game_state::GameState, structure::systems::laser_cannon_system::LaserCannonSystemFiredEvent,
+    netty::mapping::NetworkMapping,
+    state::game_state::GameState,
+    structure::systems::{laser_cannon_system::LaserCannonSystemFiredEvent, missile_launcher_system::MissileLauncherSystemFiredEvent},
 };
 
 #[derive(Resource)]
@@ -27,7 +29,8 @@ fn lasers_netty(
     time: Res<Time>,
     network_mapping: Res<NetworkMapping>,
     laser_mesh: Res<LaserMesh>,
-    mut event_writer: EventWriter<LaserCannonSystemFiredEvent>,
+    mut ev_writer_laser_cannon_fired: EventWriter<LaserCannonSystemFiredEvent>,
+    mut ev_writer_missile_launcher_fired: EventWriter<MissileLauncherSystemFiredEvent>,
 ) {
     while let Some(message) = client.receive_message(NettyChannelServer::LaserCannonSystem) {
         let msg: ServerLaserCannonSystemMessages = cosmos_encoder::deserialize(&message).unwrap();
@@ -108,7 +111,14 @@ fn lasers_netty(
                     continue;
                 };
 
-                event_writer.send(LaserCannonSystemFiredEvent(ship_entity));
+                ev_writer_laser_cannon_fired.send(LaserCannonSystemFiredEvent(ship_entity));
+            }
+            ServerLaserCannonSystemMessages::MissileLauncherSystemFired { ship_entity } => {
+                let Some(ship_entity) = network_mapping.client_from_server(&ship_entity) else {
+                    continue;
+                };
+
+                ev_writer_missile_launcher_fired.send(MissileLauncherSystemFiredEvent(ship_entity));
             }
         }
     }

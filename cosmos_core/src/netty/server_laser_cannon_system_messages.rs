@@ -38,8 +38,13 @@ pub enum ServerLaserCannonSystemMessages {
         /// Which entity this laser shouldn't hit (None if it should hit all)
         no_hit: Option<Entity>,
     },
-    /// Sent whenever a laser cannon system is activated
+    /// Sent whenever a laser cannon system is fired
     LaserCannonSystemFired {
+        /// The ship the system was a part of
+        ship_entity: Entity,
+    },
+    /// Sent whenever a missile launcher system is fired
+    MissileLauncherSystemFired {
         /// The ship the system was a part of
         ship_entity: Entity,
     },

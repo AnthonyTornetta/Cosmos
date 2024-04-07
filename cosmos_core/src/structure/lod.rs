@@ -28,7 +28,7 @@ pub enum Lod {
     ///
     /// The indicies of each cube follow a clockwise direction starting on the bottom-left-back
     ///
-    /// ```
+    /// ```txt
     ///    +-----------+
     ///   /  5    6   /|
     ///  /  4    7   / |
@@ -55,7 +55,7 @@ pub enum LodDelta {
     ///
     /// The indicies of each cube follow a clockwise direction starting on the bottom-left-back
     ///
-    /// ```
+    /// ```txt
     ///    +-----------+
     ///   /  5    6   /|
     ///  /  4    7   / |
