@@ -94,7 +94,7 @@ fn say_what_player_sees(
             false,
         ) {
             let block = structure.block_at(coord, &blocks);
-            println!("Viewing block {}", block.unlocalized_name());
+            // println!("Viewing block {}", block.unlocalized_name());
 
             coords.push(coord);
         }

@@ -7,7 +7,7 @@ use bevy::{
     core::Name,
     ecs::{
         event::EventReader,
-        query::{Added, Without},
+        query::{Added, Or, Without},
         schedule::IntoSystemConfigs,
     },
     hierarchy::BuildChildren,
@@ -218,7 +218,7 @@ fn despawn_missiles(mut commands: Commands, query: Query<(Entity, &FireTime, &Mi
 fn respond_to_explosion(
     mut commands: Commands,
     q_explosions: Query<(Entity, &GlobalTransform, Option<&PhysicsWorld>, &Explosion), Added<Explosion>>,
-    q_is_explosion: Query<(), With<Explosion>>,
+    q_excluded: Query<(), Or<(With<Explosion>, With<Sensor>)>>,
     context: Res<RapierContext>,
 
     q_entities: Query<(Entity, &GlobalTransform, &PhysicsWorld), (With<Collider>, Without<Sensor>)>,
@@ -229,74 +229,25 @@ fn respond_to_explosion(
         let max_radius = explosion.power.sqrt();
 
         let physics_world = physics_world.copied().unwrap_or_default();
-        if let Ok(Some(_)) = context.cast_shape(
-            physics_world.world_id,
-            g_trans.translation(),
-            Quat::IDENTITY,
-            Vec3::new(0.001, 0.001, 0.001), // rapier gets sad and doesn't work when i make this zero
-            &Collider::ball(max_radius),
-            1.0,
-            true,
-            QueryFilter::default()
-                .exclude_collider(ent)
-                .exclude_sensors()
-                .predicate(&|x| !q_is_explosion.contains(x)),
-        ) {
-            // We've hit something, proceed to do more expensive checking
 
-            // There's no easy way (that I'm aware of) in rapier to find all entities a given shape cast is hitting,
-            // so manually loop through every entity and check.
-            //
-            // This is pretty awful, so please find a better way asap.
-            let mut hits = vec![];
-            for (test_entity, g_trans, this_pw) in &q_entities {
-                if test_entity == ent || *this_pw != physics_world {
-                    continue;
-                }
+        let mut hits = vec![];
 
-                if context
-                    .cast_shape(
-                        physics_world.world_id,
-                        g_trans.translation(),
-                        Quat::IDENTITY,
-                        Vec3::new(0.001, 0.001, 0.001), // rapier gets sad and doesn't work when i make this zero
-                        &Collider::ball(max_radius),
-                        1.0,
-                        true,
-                        QueryFilter::default().predicate(&|x| x == test_entity),
-                    )
-                    .ok()
-                    .flatten()
-                    .is_some()
-                {
-                    hits.push(test_entity);
-                }
-            }
+        context
+            .intersections_with_shape(
+                physics_world.world_id,
+                g_trans.translation(),
+                Quat::IDENTITY,
+                &Collider::ball(max_radius),
+                QueryFilter::default().exclude_collider(ent).predicate(&|x| !q_excluded.contains(x)),
+                |hit_entity| {
+                    hits.push(hit_entity);
 
-            let explosion_position = g_trans.translation();
+                    true
+                },
+            )
+            .expect("Invalid world id used in explosion!");
 
-            let mut hits = vec![];
-
-            context
-                .intersections_with_ray(
-                    physics_world.world_id,
-                    explosion_position,
-                    Vec3::NEG_Z,
-                    max_radius,
-                    true,
-                    QueryFilter::default().exclude_collider(ent),
-                    |entity_hit, ray_intersection| {
-                        hits.push((ray_intersection.toi, ray_intersection.point));
-
-                        true
-                    },
-                )
-                .expect("Unable to find world!");
-
-            println!("BOOM!");
-        } else {
-            println!("Miss!");
-        }
+        println!("Hits: {hits:?}");
     }
 }
 

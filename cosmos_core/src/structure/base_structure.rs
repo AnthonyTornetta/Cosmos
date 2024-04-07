@@ -5,7 +5,6 @@ use bevy::{
     reflect::Reflect,
     utils::HashMap,
 };
-use bigdecimal::num_traits::Pow;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -761,6 +760,9 @@ fn calculate_raycast_delta(at: Vec3, direction: Vec3) -> Vec3 {
     min_amount * direction
 }
 
+/// Iterates over the range of blocks hit by this raycast
+///
+/// Create this using [`Structure::raycast_iter`]
 pub struct RaycastIter<'a> {
     base_structure: &'a BaseStructure,
     start: Vec3,
