@@ -238,6 +238,8 @@ impl BaseStructure {
     }
 
     /// Returns the number of blocks in the x, y, z direction of this structure.
+    ///
+    /// Valid block coordinates of this structure are from [0, [`Self::block_dimensions`])
     pub fn block_dimensions(&self) -> BlockCoordinate {
         self.dimensions.first_structure_block()
     }
@@ -288,7 +290,7 @@ impl BaseStructure {
     /// - (x, y, z) of the block coordinates, even if they are outside the structure
     pub fn relative_coords_to_local_coords(&self, x: f32, y: f32, z: f32) -> UnboundBlockCoordinate {
         let (w, h, l) = self.block_dimensions().into();
-        let xx: f32 = x + (w as f32 / 2.0);
+        let xx = x + (w as f32 / 2.0);
         let yy = y + (h as f32 / 2.0);
         let zz = z + (l as f32 / 2.0);
 
@@ -560,45 +562,125 @@ impl BaseStructure {
         }
     }
 
-    pub fn raycast_iter<'a>(&'a self, start_relative_position: Vec3, direction: Vec3, max_length: f32) -> RaycastIter<'a> {
-        println!("TODO! Force start to be within structure!");
+    /// Returns an iterator that acts as a raycast over a set of blocks in this structure
+    pub fn raycast_iter<'a>(
+        &'a self,
+        start_relative_position: Vec3,
+        mut direction: Vec3,
+        mut max_length: f32,
+        include_air: bool,
+    ) -> RaycastIter<'a> {
+        debug_assert_ne!(direction, Vec3::ZERO);
+
+        direction = direction.normalize();
+
+        let (min_coords, max_coords) = (
+            self.block_relative_position(BlockCoordinate::new(0, 0, 0)),
+            self.block_relative_position(
+                BlockCoordinate::try_from(UnboundBlockCoordinate::from(self.block_dimensions()) - UnboundBlockCoordinate::new(1, 1, 1))
+                    .expect("Structure cannot have dimensions of 0x0x0"),
+            ),
+        );
+
+        let mut start = start_relative_position;
+
+        if start.x < min_coords.x && direction.x > 0.0 {
+            let delta_travel = min_coords.x - start.x;
+
+            let direction_multiplier = direction.x / delta_travel;
+
+            let start_delta = direction_multiplier * direction;
+
+            max_length -= start_delta.length();
+
+            start += start_delta;
+        }
+        if start.x > max_coords.x && direction.x < 0.0 {
+            let delta_travel = min_coords.x - start.x;
+
+            let direction_multiplier = direction.x / delta_travel;
+
+            let start_delta = direction_multiplier * direction;
+
+            max_length -= start_delta.length();
+
+            start += start_delta;
+        }
+
+        if start.y < min_coords.y && direction.y > 0.0 {
+            let delta_travel = min_coords.y - start.y;
+
+            let direction_multiplier = direction.y / delta_travel;
+
+            let start_delta = direction_multiplier * direction;
+
+            max_length -= start_delta.length();
+
+            start += start_delta;
+        }
+        if start.y > max_coords.y && direction.y < 0.0 {
+            let delta_travel = min_coords.y - start.y;
+
+            let direction_multiplier = direction.y / delta_travel;
+
+            let start_delta = direction_multiplier * direction;
+
+            max_length -= start_delta.length();
+
+            start += start_delta;
+        }
+
+        if start.z < min_coords.z && direction.z > 0.0 {
+            let delta_travel = min_coords.z - start.z;
+
+            let direction_multiplier = direction.z / delta_travel;
+
+            let start_delta = direction_multiplier * direction;
+
+            max_length -= start_delta.length();
+
+            start += start_delta;
+        }
+        if start.z > max_coords.z && direction.z < 0.0 {
+            let delta_travel = min_coords.z - start.z;
+
+            let direction_multiplier = direction.z / delta_travel;
+
+            let start_delta = direction_multiplier * direction;
+
+            max_length -= start_delta.length();
+
+            start += start_delta;
+        }
+
+        let end_pos = start_relative_position + max_length * direction;
+        if start.x < min_coords.x && end_pos.x < min_coords.x
+            || start.y < min_coords.y && end_pos.y < min_coords.y
+            || start.z < min_coords.z && end_pos.z < min_coords.z
+            || start.x > max_coords.x && end_pos.x > max_coords.x
+            || start.y > max_coords.y && end_pos.y > max_coords.y
+            || start.z > max_coords.z && end_pos.z > max_coords.z
+        {
+            // This ray will never intersect this structure, so save some processing time
+            // by returning an iterator that will immediately return `None`.
+            return RaycastIter {
+                at: start,
+                start,
+                base_structure: self,
+                dir: direction,
+                max_length_sqrd: -1.0,
+                include_air,
+            };
+        }
 
         RaycastIter {
-            at: start_relative_position,
-            start: start_relative_position,
+            at: start,
+            start,
             base_structure: self,
             dir: direction,
             max_length_sqrd: max_length * max_length,
+            include_air,
         }
-    }
-
-    fn find_next_raycast_block(&self, include_within: bool, start: Vec3, direction: Vec3, max_length_sqrd: f32) -> Vec3 {
-        if include_within {
-            if self
-                .relative_coords_to_local_coords_checked(start.x, start.y, start.z)
-                .map(|x| self.has_block_at(x))
-                .unwrap_or(false)
-            {
-                return start;
-            }
-        }
-
-        let mut at = start;
-
-        while at.distance_squared(start) <= max_length_sqrd
-            && !self
-                .relative_coords_to_local_coords_checked(at.x, at.y, at.z)
-                .map(|x| self.has_block_at(x))
-                .unwrap_or(false)
-        {
-            let delta_position = calculate_raycast_delta(at, direction);
-
-            at += delta_position;
-        }
-
-        println!("{at}");
-
-        at
     }
 }
 
@@ -630,9 +712,17 @@ fn calculate_raycast_delta(at: Vec3, direction: Vec3) -> Vec3 {
     let desiered_y = if direction.y < 0.0 && at.y < 0.0 {
         y_dec - 1.0
     } else if direction.y < 0.0 && at.y >= 0.0 {
-        -y_dec
+        if y_dec < f32::EPSILON {
+            -1.0
+        } else {
+            -y_dec
+        }
     } else if direction.y >= 0.0 && at.y < 0.0 {
-        y_dec
+        if y_dec < f32::EPSILON {
+            1.0
+        } else {
+            y_dec
+        }
     } else {
         1.0 - y_dec
     };
@@ -643,9 +733,17 @@ fn calculate_raycast_delta(at: Vec3, direction: Vec3) -> Vec3 {
     let desiered_z = if direction.z < 0.0 && at.z < 0.0 {
         z_dec - 1.0
     } else if direction.z < 0.0 && at.z >= 0.0 {
-        -z_dec
+        if z_dec < f32::EPSILON {
+            -1.0
+        } else {
+            -z_dec
+        }
     } else if direction.z >= 0.0 && at.z < 0.0 {
-        z_dec
+        if z_dec < f32::EPSILON {
+            1.0
+        } else {
+            z_dec
+        }
     } else {
         1.0 - z_dec
     };
@@ -661,6 +759,60 @@ fn calculate_raycast_delta(at: Vec3, direction: Vec3) -> Vec3 {
     };
 
     min_amount * direction
+}
+
+pub struct RaycastIter<'a> {
+    base_structure: &'a BaseStructure,
+    start: Vec3,
+    at: Vec3,
+    dir: Vec3,
+    max_length_sqrd: f32,
+    include_air: bool,
+}
+
+impl<'a> Iterator for RaycastIter<'a> {
+    type Item = BlockCoordinate;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.at.distance_squared(self.start) > self.max_length_sqrd {
+            return None;
+        }
+
+        let mut block_id = AIR_BLOCK_ID;
+        let mut n_itrs = 0;
+        let mut at_coords = BlockCoordinate::new(0, 0, 0);
+
+        while (!self.include_air && block_id == AIR_BLOCK_ID) || (n_itrs == 0) {
+            let Ok(coords) = self.base_structure.relative_coords_to_local_coords_checked(
+                // add just a little bit of dir to fix any rounding issues
+                self.at.x + self.dir.x * 0.001,
+                self.at.y + self.dir.y * 0.001,
+                self.at.z + self.dir.z * 0.001,
+            ) else {
+                return None;
+            };
+
+            if self.at.distance_squared(self.start) > self.max_length_sqrd {
+                return None;
+            }
+
+            at_coords = coords;
+
+            let b_id = self.base_structure.block_id_at(coords);
+
+            // Advance ray after finding next block
+            self.at += calculate_raycast_delta(self.at, self.dir);
+
+            block_id = b_id;
+            n_itrs += 1;
+        }
+
+        if self.at.distance_squared(self.start) > self.max_length_sqrd {
+            return None;
+        }
+
+        Some(at_coords)
+    }
 }
 
 #[cfg(test)]
@@ -764,50 +916,5 @@ mod test {
         let delta_pos = calculate_raycast_delta(at, direction);
 
         vec3_assert(delta_pos + at, Vec3::new(4.9, 2.0, 2.0));
-    }
-}
-
-pub struct RaycastIter<'a> {
-    base_structure: &'a BaseStructure,
-    start: Vec3,
-    at: Vec3,
-    dir: Vec3,
-    max_length_sqrd: f32,
-}
-
-impl<'a> Iterator for RaycastIter<'a> {
-    type Item = BlockCoordinate;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.at.distance_squared(self.start) > self.max_length_sqrd {
-            return None;
-        }
-
-        let mut block_id = AIR_BLOCK_ID;
-        let mut at_coords = BlockCoordinate::new(0, 0, 0);
-
-        while block_id == AIR_BLOCK_ID {
-            let Ok(coords) = self
-                .base_structure
-                .relative_coords_to_local_coords_checked(self.at.x, self.at.y, self.at.z)
-            else {
-                return None;
-            };
-
-            at_coords = coords;
-            let b_id = self.base_structure.block_id_at(coords);
-
-            // Advance ray after finding next block
-            self.at = self.base_structure.find_next_raycast_block(
-                false,
-                self.at,
-                self.dir,
-                (self.max_length_sqrd.sqrt() - self.at.distance(self.start)).pow(2),
-            );
-
-            block_id = b_id;
-        }
-
-        Some(at_coords)
     }
 }

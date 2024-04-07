@@ -47,6 +47,7 @@ use bevy::prelude::{
 };
 use serde::{Deserialize, Serialize};
 
+use self::base_structure::RaycastIter;
 use self::block_health::events::{BlockDestroyedEvent, BlockTakeDamageEvent};
 use self::block_storage::BlockStorer;
 use self::chunk::netty::SerializedChunkBlockData;
@@ -528,6 +529,20 @@ impl Structure {
         match self {
             Self::Full(fs) => fs.remove_block_data(coords),
             Self::Dynamic(ds) => ds.remove_block_data(coords),
+        }
+    }
+
+    /// Returns an iterator that acts as a raycast over a set of blocks in this structure
+    pub fn raycast_iter<'a>(
+        &'a self,
+        start_relative_position: Vec3,
+        direction: Vec3,
+        max_length: f32,
+        include_air: bool,
+    ) -> RaycastIter<'a> {
+        match self {
+            Self::Full(fs) => fs.raycast_iter(start_relative_position, direction, max_length, include_air),
+            Self::Dynamic(ds) => ds.raycast_iter(start_relative_position, direction, max_length, include_air),
         }
     }
 }
