@@ -15,7 +15,7 @@ use bevy_rapier3d::{
 };
 
 /// Indicates that this entity cannot be collided with.
-/// This should be used with [`CannotCollideWith`]
+/// This should be used with [`CollisionBlacklist`]
 pub struct CollisionBlacklistedEntity {
     /// The entity to not collide with
     pub entity: Entity,
@@ -29,7 +29,7 @@ pub struct CollisionBlacklistedEntity {
 
 #[derive(Component)]
 /// If this is on an entity, then this entity will not collide with any entities
-/// present in the list of [`CannotCollideWithEntity`]s.
+/// present in the list of [`CollisionBlacklistedEntity`]s.
 ///
 /// This doesn't work for collisions with sensors though, so keep that in mind.
 ///
@@ -80,7 +80,7 @@ impl CollisionBlacklist {
 // From: https://rapier.rs/docs/user_guides/bevy_plugin/advanced_collision_detection/#contact-and-intersection-filtering
 
 /// A custom filter that allows filters collisions between rigid-bodies
-/// with the CannotCollideWith component.
+/// with the [`CollisionBlacklist`] component.
 #[derive(SystemParam)]
 pub struct CosmosPhysicsFilter<'w, 's> {
     q_collision_blacklist: Query<'w, 's, &'static CollisionBlacklist>,
