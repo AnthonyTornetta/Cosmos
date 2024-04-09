@@ -16,7 +16,7 @@ use bevy_rapier3d::{
 
 /// Indicates that this entity cannot be collided with.
 /// This should be used with [`CannotCollideWith`]
-pub struct CannotCollideWithEntity {
+pub struct CollisionBlacklistedEntity {
     /// The entity to not collide with
     pub entity: Entity,
     /// If this is true, when an entity is hit the parent(s) of that
@@ -35,23 +35,23 @@ pub struct CannotCollideWithEntity {
 ///
 /// # DON'T FORGET TO ADD THE `ActiveHooks::FILTER_CONTACT_PAIRS` COMPONENT FROM `bevy_rapier`!
 /// See https://rapier.rs/docs/user_guides/bevy_plugin/advanced_collision_detection/#contact-and-intersection-filtering for more.
-pub struct CannotCollideWith(Vec<CannotCollideWithEntity>);
+pub struct CollisionBlacklist(Vec<CollisionBlacklistedEntity>);
 
-impl CannotCollideWith {
+impl CollisionBlacklist {
     /// A convenience method to initialize this with just one cannot collide with entity.
     ///
     /// # DON'T FORGET TO ADD THE `ActiveHooks::FILTER_CONTACT_PAIRS` COMPONENT FROM `bevy_rapier`!
     /// See https://rapier.rs/docs/user_guides/bevy_plugin/advanced_collision_detection/#contact-and-intersection-filtering for more.
-    pub fn single(cannot_collide_with_entity: CannotCollideWithEntity) -> Self {
-        Self::new(vec![cannot_collide_with_entity])
+    pub fn single(blacklist_entity: CollisionBlacklistedEntity) -> Self {
+        Self::new(vec![blacklist_entity])
     }
 
     /// This entity will not collidew with any of the entities provided.
     ///
     /// # DON'T FORGET TO ADD THE `ActiveHooks::FILTER_CONTACT_PAIRS` COMPONENT FROM `bevy_rapier`!
     /// See https://rapier.rs/docs/user_guides/bevy_plugin/advanced_collision_detection/#contact-and-intersection-filtering for more.
-    pub fn new(cannot_collide_with_enties: Vec<CannotCollideWithEntity>) -> Self {
-        Self(cannot_collide_with_enties)
+    pub fn new(blacklist_entity: Vec<CollisionBlacklistedEntity>) -> Self {
+        Self(blacklist_entity)
     }
 
     /// Checks if this entity should be collided with.
@@ -83,20 +83,20 @@ impl CannotCollideWith {
 /// with the CannotCollideWith component.
 #[derive(SystemParam)]
 pub struct CosmosPhysicsFilter<'w, 's> {
-    q_cannot_collide_with: Query<'w, 's, &'static CannotCollideWith>,
+    q_collision_blacklist: Query<'w, 's, &'static CollisionBlacklist>,
     q_parent: Query<'w, 's, &'static Parent>,
 }
 
 impl<'w, 's> CosmosPhysicsFilter<'w, 's> {
     fn check_pair_filter(&self, context: PairFilterContextView) -> bool {
-        if let Ok(cannot_collide_with) = self.q_cannot_collide_with.get(context.collider1()) {
-            if !cannot_collide_with.check_should_collide(context.collider2(), &self.q_parent) {
+        if let Ok(collision_blacklist) = self.q_collision_blacklist.get(context.collider1()) {
+            if !collision_blacklist.check_should_collide(context.collider2(), &self.q_parent) {
                 return false;
             }
         }
 
-        if let Ok(cannot_collide_with) = self.q_cannot_collide_with.get(context.collider2()) {
-            if !cannot_collide_with.check_should_collide(context.collider1(), &self.q_parent) {
+        if let Ok(collision_blacklist) = self.q_collision_blacklist.get(context.collider2()) {
+            if !collision_blacklist.check_should_collide(context.collider1(), &self.q_parent) {
                 return false;
             }
         }

@@ -24,7 +24,7 @@ use bevy_rapier3d::{
 use crate::{
     ecs::bundles::CosmosPbrBundle,
     physics::{
-        collision_handling::{CannotCollideWith, CannotCollideWithEntity},
+        collision_handling::{CollisionBlacklist, CollisionBlacklistedEntity},
         location::Location,
     },
 };
@@ -128,7 +128,7 @@ impl Missile {
         ));
 
         if let Some(ent) = no_collide_entity {
-            ent_cmds.insert(CannotCollideWith::single(CannotCollideWithEntity {
+            ent_cmds.insert(CollisionBlacklist::single(CollisionBlacklistedEntity {
                 entity: ent,
                 search_parents: true,
             }));
@@ -176,7 +176,7 @@ pub struct Explosion {
 
 fn respond_to_collisions(
     mut ev_reader: EventReader<CollisionEvent>,
-    q_missile: Query<(&Missile, &CannotCollideWith)>,
+    q_missile: Query<(&Missile, &CollisionBlacklist)>,
     q_parent: Query<&Parent>,
     mut commands: Commands,
 ) {
@@ -193,11 +193,11 @@ fn respond_to_collisions(
             None
         };
 
-        let Some(((missile, cannot_collide_with), missile_entity, hit_entity)) = entities else {
+        let Some(((missile, collision_blacklist), missile_entity, hit_entity)) = entities else {
             continue;
         };
 
-        if !cannot_collide_with.check_should_collide(hit_entity, &q_parent) {
+        if !collision_blacklist.check_should_collide(hit_entity, &q_parent) {
             continue;
         }
 
