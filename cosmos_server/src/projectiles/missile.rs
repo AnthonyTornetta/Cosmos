@@ -4,7 +4,8 @@ use bevy::{
         query::{Added, Or, Without},
         schedule::IntoSystemConfigs,
     },
-    math::Quat,
+    log::info,
+    math::{Quat, Vec3},
     prelude::{App, Commands, Entity, Query, Res, Update, With},
     transform::components::GlobalTransform,
     utils::HashSet,
@@ -24,11 +25,13 @@ use cosmos_core::{
     registry::Registry,
     structure::{
         chunk::ChunkEntity,
-        coordinates::{UnboundBlockCoordinate, UnboundCoordinateType},
-        structure_block::StructureBlock,
+        coordinates::{BlockCoordinate, UnboundBlockCoordinate, UnboundCoordinateType},
         Structure,
     },
 };
+
+/// 1 unit of explosion power = this amount of health. Bigger this number is, the more damage explosives will do.
+const HEALTH_PER_EXPLOSION_POWER: f32 = 8.0;
 
 fn respond_to_explosion(
     mut commands: Commands,
@@ -66,7 +69,7 @@ fn respond_to_explosion(
             )
             .expect("Invalid world id used in explosion!");
 
-        println!("Hits: {hits:?}");
+        info!("Missile hit entities: {hits:?}");
 
         let mut ents = HashSet::new();
         for ent in hits {
@@ -78,37 +81,102 @@ fn respond_to_explosion(
         }
 
         let max_block_radius = max_radius.ceil() as UnboundCoordinateType;
+        let max_radius_sqrd = max_radius * max_radius;
 
         for &hit in ents.iter() {
-            if let Ok((structure_g_trans, mut structure)) = q_structure.get_mut(hit) {
-                let relative_position =
-                    structure_g_trans.affine().inverse().matrix3 * (explosion_g_trans.translation() - structure_g_trans.translation());
+            let Ok((structure_g_trans, mut structure)) = q_structure.get_mut(hit) else {
+                continue;
+            };
+            let explosion_relative_position =
+                structure_g_trans.affine().inverse().matrix3 * (explosion_g_trans.translation() - structure_g_trans.translation());
 
-                let local_coords = structure.relative_coords_to_local_coords(relative_position.x, relative_position.y, relative_position.z);
+            let local_coords = structure.relative_coords_to_local_coords(
+                explosion_relative_position.x,
+                explosion_relative_position.y,
+                explosion_relative_position.z,
+            );
 
-                println!("{relative_position} => {local_coords} +- {max_block_radius}");
-
-                let blocks = structure
-                    .block_iter(
-                        local_coords - UnboundBlockCoordinate::splat(max_block_radius),
-                        local_coords + UnboundBlockCoordinate::splat(max_block_radius),
-                        true, // Include air false is broken for some reason
+            // Intermediate Vec to please the borrow checker
+            let hit_blocks = structure
+                .block_iter(
+                    local_coords - UnboundBlockCoordinate::splat(max_block_radius),
+                    local_coords + UnboundBlockCoordinate::splat(max_block_radius),
+                    true, // Include air false is broken for some reason
+                )
+                .map(|x| x.coords())
+                .filter(|&coords| structure.has_block_at(coords)) // Remove this once `include_air` works.
+                // .filter(|&this_block| {
+                //     structure
+                //         .block_relative_position(this_block)
+                //         .distance_squared(explosion_relative_position)
+                //         <= max_radius_sqrd
+                // })
+                .flat_map(|this_block| {
+                    calculate_block_explosion_power(
+                        &structure,
+                        this_block,
+                        explosion_relative_position,
+                        explosion,
+                        &blocks_registry,
+                        max_radius_sqrd,
                     )
-                    .collect::<Vec<StructureBlock>>();
+                })
+                .collect::<Vec<(BlockCoordinate, f32)>>();
 
-                for block in blocks {
-                    structure.remove_block_at(block.coords(), &blocks_registry, Some(&mut ev_writer));
+            for (block, explosion_power) in hit_blocks {
+                let cur_health = structure.get_block_health(block, &blocks_registry);
+                structure.set_block_health(block, cur_health - explosion_power * HEALTH_PER_EXPLOSION_POWER, &blocks_registry);
+
+                if structure.get_block_health(block, &blocks_registry) <= 0.0 {
+                    structure.remove_block_at(block, &blocks_registry, Some(&mut ev_writer));
                 }
-
-                // structure.set_block_at(
-                //     BlockCoordinate::try_from(local_coords).unwrap(),
-                //     blocks_registry.from_id("cosmos:glass").unwrap(),
-                //     Default::default(),
-                //     &blocks_registry,
-                //     Some(&mut ev_writer),
-                // );
             }
         }
+    }
+}
+
+/// Finds how much explosive power should be applied to a block coordinate from the explosive's position.
+///
+/// Returns None if this block has been shielded by other blocks.
+fn calculate_block_explosion_power(
+    structure: &Structure,
+    this_block: BlockCoordinate,
+    explosion_relative_position: Vec3,
+    explosion: &Explosion,
+    blocks_registry: &Registry<Block>,
+    max_distance_sqrd: f32,
+) -> Option<(BlockCoordinate, f32)> {
+    let block_pos = structure.block_relative_position(this_block);
+
+    let distance = block_pos - explosion_relative_position;
+
+    let mut remaining_explosion_power = explosion.power;
+
+    for intercepting_block in structure
+        .raycast_iter(explosion_relative_position, distance.normalize_or_zero(), distance.length(), false)
+        .filter(|&intercepting_block| intercepting_block != this_block)
+    {
+        remaining_explosion_power -= structure.get_block_health(intercepting_block, blocks_registry) / HEALTH_PER_EXPLOSION_POWER;
+
+        let block_pos = structure.block_relative_position(intercepting_block);
+        // exponential decay is intended
+        let decay_percent = block_pos.distance_squared(explosion_relative_position) / max_distance_sqrd;
+
+        if remaining_explosion_power * (1.0 - decay_percent) <= 0.0 {
+            return None;
+        }
+    }
+
+    let block_pos = structure.block_relative_position(this_block);
+    // exponential decay is intended
+    let decay_percent = block_pos.distance_squared(explosion_relative_position) / max_distance_sqrd;
+
+    remaining_explosion_power = remaining_explosion_power * (1.0 - decay_percent);
+
+    if remaining_explosion_power > 0.0 {
+        Some((this_block, remaining_explosion_power))
+    } else {
+        None
     }
 }
 

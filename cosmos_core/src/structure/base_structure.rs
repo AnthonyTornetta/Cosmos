@@ -569,7 +569,18 @@ impl BaseStructure {
         mut max_length: f32,
         include_air: bool,
     ) -> RaycastIter<'a> {
-        debug_assert_ne!(direction, Vec3::ZERO);
+        if direction == Vec3::ZERO {
+            // If direction is zero, then the ray would never move.
+            // Thus, this should only iterate over the point that is given for the start.
+            return RaycastIter {
+                at: start_relative_position,
+                start: start_relative_position,
+                base_structure: self,
+                dir: Vec3::Z,
+                max_length_sqrd: 0.0,
+                include_air,
+            };
+        }
 
         direction = direction.normalize();
 

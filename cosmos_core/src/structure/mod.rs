@@ -424,7 +424,7 @@ impl Structure {
     /// Gets the block's health at that given coordinate
     /// - x/y/z: block coordinate
     /// - block_hardness: The hardness for the block at those coordinates
-    pub fn get_block_health(&mut self, coords: BlockCoordinate, blocks: &Registry<Block>) -> f32 {
+    pub fn get_block_health(&self, coords: BlockCoordinate, blocks: &Registry<Block>) -> f32 {
         match self {
             Self::Full(fs) => fs.get_block_health(coords, blocks),
             Self::Dynamic(ds) => ds.get_block_health(coords, blocks),
@@ -453,7 +453,7 @@ impl Structure {
 
     /// This should be used in response to a `BlockTakeDamageEvent`
     ///
-    /// This will NOT delete the block if the health is 0.0
+    /// # This will NOT delete the block if the health is 0.0
     pub fn set_block_health(&mut self, coords: BlockCoordinate, amount: f32, blocks: &Registry<Block>) {
         debug_assert!(amount != 0.0, "Block health cannot be 0.0!");
 
@@ -532,6 +532,7 @@ impl Structure {
         }
     }
 
+    #[must_use]
     /// Returns an iterator that acts as a raycast over a set of blocks in this structure
     pub fn raycast_iter<'a>(
         &'a self,

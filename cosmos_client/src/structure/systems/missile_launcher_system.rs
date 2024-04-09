@@ -2,20 +2,11 @@
 
 use bevy::{asset::LoadState, prelude::*};
 use bevy_kira_audio::prelude::*;
-use cosmos_core::{
-    block::Block,
-    events::block_events::BlockChangedEvent,
-    physics::location::Location,
-    registry::Registry,
-    structure::{systems::missile_launcher_system::MissileLauncherSystem, Structure},
-};
+use cosmos_core::{physics::location::Location, structure::systems::missile_launcher_system::MissileLauncherSystem};
 
 use crate::{
     asset::asset_loader::load_assets,
     audio::{AudioEmission, CosmosAudioEmitter, DespawnOnNoEmissions},
-    input::inputs::{CosmosInputs, InputChecker, InputHandler},
-    netty::flags::LocalPlayer,
-    rendering::MainCamera,
     state::game_state::GameState,
 };
 
@@ -67,51 +58,51 @@ fn apply_shooting_sound(
 
 struct MissileLauncherLoadingFlag;
 
-fn say_what_player_sees(
-    q_main_camera: Query<(&Transform, &GlobalTransform), With<MainCamera>>,
-    q_player: Query<&Location, With<LocalPlayer>>,
-    mut q_structures: Query<(&mut Structure, &Location, &GlobalTransform)>,
-    blocks: Res<Registry<Block>>,
-    inputs: InputChecker,
-    mut event_writer: EventWriter<BlockChangedEvent>,
-) {
-    let Ok((cam_trans, cam_g_trans)) = q_main_camera.get_single() else {
-        return;
-    };
+// fn say_what_player_sees(
+//     q_main_camera: Query<(&Transform, &GlobalTransform), With<MainCamera>>,
+//     q_player: Query<&Location, With<LocalPlayer>>,
+//     mut q_structures: Query<(&mut Structure, &Location, &GlobalTransform)>,
+//     blocks: Res<Registry<Block>>,
+//     inputs: InputChecker,
+//     mut event_writer: EventWriter<BlockChangedEvent>,
+// ) {
+//     let Ok((cam_trans, cam_g_trans)) = q_main_camera.get_single() else {
+//         return;
+//     };
 
-    let Ok(p_loc) = q_player.get_single() else {
-        return;
-    };
+//     let Ok(p_loc) = q_player.get_single() else {
+//         return;
+//     };
 
-    for (mut structure, loc, structure_trans) in q_structures.iter_mut() {
-        let direction = cam_g_trans.affine().matrix3 * structure_trans.affine().inverse().matrix3;
+//     for (mut structure, loc, structure_trans) in q_structures.iter_mut() {
+//         let direction = cam_g_trans.affine().matrix3 * structure_trans.affine().inverse().matrix3;
 
-        let mut coords = vec![];
-        for coord in structure.raycast_iter(
-            cam_trans.translation + loc.relative_coords_to(p_loc),
-            direction * Vec3::NEG_Z,
-            10.0,
-            false,
-        ) {
-            // let block = structure.block_at(coord, &blocks);
-            // println!("Viewing block {}", block.unlocalized_name());
+//         let mut coords = vec![];
+//         for coord in structure.raycast_iter(
+//             cam_trans.translation + loc.relative_coords_to(p_loc),
+//             direction * Vec3::NEG_Z,
+//             10.0,
+//             false,
+//         ) {
+//             // let block = structure.block_at(coord, &blocks);
+//             // println!("Viewing block {}", block.unlocalized_name());
 
-            coords.push(coord);
-        }
+//             coords.push(coord);
+//         }
 
-        if inputs.check_just_pressed(CosmosInputs::SymmetryZ) {
-            for coord in coords {
-                structure.set_block_at(
-                    coord,
-                    blocks.from_id("cosmos:glass").unwrap(),
-                    Default::default(),
-                    &blocks,
-                    Some(&mut event_writer),
-                );
-            }
-        }
-    }
-}
+//         if inputs.check_just_pressed(CosmosInputs::SymmetryZ) {
+//             for coord in coords {
+//                 structure.set_block_at(
+//                     coord,
+//                     blocks.from_id("cosmos:glass").unwrap(),
+//                     Default::default(),
+//                     &blocks,
+//                     Some(&mut event_writer),
+//                 );
+//             }
+//         }
+//     }
+// }
 
 pub(super) fn register(app: &mut App) {
     sync_system::<MissileLauncherSystem>(app);
@@ -129,6 +120,6 @@ pub(super) fn register(app: &mut App) {
 
     app.add_event::<MissileLauncherSystemFiredEvent>().add_systems(
         Update,
-        (say_what_player_sees, apply_shooting_sound).run_if(in_state(GameState::Playing)),
+        (/*say_what_player_sees,*/apply_shooting_sound).run_if(in_state(GameState::Playing)),
     );
 }
