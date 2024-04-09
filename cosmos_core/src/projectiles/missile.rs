@@ -7,26 +7,22 @@ use bevy::{
     core::Name,
     ecs::{
         event::EventReader,
-        query::{Added, Or, Without},
-        schedule::IntoSystemConfigs,
+        schedule::{IntoSystemConfigs, SystemSet},
     },
-    hierarchy::BuildChildren,
-    math::Quat,
+    hierarchy::Parent,
     pbr::{NotShadowCaster, NotShadowReceiver},
-    prelude::{App, Commands, Component, Entity, Event, Query, Res, Transform, Update, Vec3, With},
+    prelude::{App, Commands, Component, Entity, Event, Query, Res, Transform, Update, Vec3},
     reflect::Reflect,
     time::Time,
-    transform::components::GlobalTransform,
 };
 use bevy_rapier3d::{
-    geometry::{ActiveEvents, ActiveHooks, Collider, Sensor},
-    pipeline::{CollisionEvent, QueryFilter},
-    plugin::RapierContext,
+    geometry::{ActiveEvents, ActiveHooks, Collider},
+    pipeline::CollisionEvent,
     prelude::{PhysicsWorld, RigidBody, Velocity, WorldId},
 };
 
 use crate::{
-    ecs::{bundles::CosmosPbrBundle, NeedsDespawned},
+    ecs::bundles::CosmosPbrBundle,
     physics::{
         collision_handling::{CannotCollideWith, CannotCollideWithEntity},
         location::Location,
@@ -170,11 +166,20 @@ impl Missile {
 }
 
 #[derive(Component, Reflect)]
-struct Explosion {
-    power: f32,
+/// Something that will cause damage to nearby entities that it hits.
+pub struct Explosion {
+    /// The power of the explosion is used to calculate its radius & effectiveness against blocks.
+    ///
+    /// The radius of an explosion (assuming no blocks to dampen its power) is calculated as `sqrt(power)`.
+    pub power: f32,
 }
 
-fn respond_to_collisions(mut ev_reader: EventReader<CollisionEvent>, q_missile: Query<&Missile>, mut commands: Commands) {
+fn respond_to_collisions(
+    mut ev_reader: EventReader<CollisionEvent>,
+    q_missile: Query<(&Missile, &CannotCollideWith)>,
+    q_parent: Query<&Parent>,
+    mut commands: Commands,
+) {
     for ev in ev_reader.read() {
         let &CollisionEvent::Started(e1, e2, _) = ev else {
             continue;
@@ -188,17 +193,20 @@ fn respond_to_collisions(mut ev_reader: EventReader<CollisionEvent>, q_missile: 
             None
         };
 
-        let Some((missile, missile_entity, hit_entity)) = entities else {
+        let Some(((missile, cannot_collide_with), missile_entity, hit_entity)) = entities else {
             continue;
         };
+
+        if !cannot_collide_with.check_should_collide(hit_entity, &q_parent) {
+            continue;
+        }
 
         println!("Missile hit something! {hit_entity:?}");
 
         commands
             .entity(missile_entity)
-            .remove::<(Missile, FireTime, RigidBody)>()
-            .insert(Explosion { power: missile.strength })
-            .set_parent(hit_entity);
+            .remove::<(Missile, FireTime, Collider, ActiveHooks, ActiveEvents)>()
+            .insert(Explosion { power: missile.strength });
     }
 }
 
@@ -209,50 +217,32 @@ fn despawn_missiles(mut commands: Commands, query: Query<(Entity, &FireTime, &Mi
 
             commands
                 .entity(ent)
-                .remove::<(Missile, FireTime, RigidBody, Collider, ActiveHooks, ActiveEvents, Velocity)>()
+                .remove::<(Missile, FireTime, Collider, ActiveHooks, ActiveEvents)>()
                 .insert(Explosion { power: missile.strength });
         }
     }
 }
 
-fn respond_to_explosion(
-    mut commands: Commands,
-    q_explosions: Query<(Entity, &GlobalTransform, Option<&PhysicsWorld>, &Explosion), Added<Explosion>>,
-    q_excluded: Query<(), Or<(With<Explosion>, With<Sensor>)>>,
-    context: Res<RapierContext>,
-
-    q_entities: Query<(Entity, &GlobalTransform, &PhysicsWorld), (With<Collider>, Without<Sensor>)>,
-) {
-    for (ent, g_trans, physics_world, explosion) in q_explosions.iter() {
-        commands.entity(ent).insert(NeedsDespawned);
-
-        let max_radius = explosion.power.sqrt();
-
-        let physics_world = physics_world.copied().unwrap_or_default();
-
-        let mut hits = vec![];
-
-        context
-            .intersections_with_shape(
-                physics_world.world_id,
-                g_trans.translation(),
-                Quat::IDENTITY,
-                &Collider::ball(max_radius),
-                QueryFilter::default().exclude_collider(ent).predicate(&|x| !q_excluded.contains(x)),
-                |hit_entity| {
-                    hits.push(hit_entity);
-
-                    true
-                },
-            )
-            .expect("Invalid world id used in explosion!");
-
-        println!("Hits: {hits:?}");
-    }
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// System used for dealing with explosions that happen in the world.
+///
+/// Put anything that creates an explosion before [`ExplosionSystemSet::ProcessExplosions`].
+pub enum ExplosionSystemSet {
+    /// Put anything that creates an explosion before [`ExplosionSystemSet::ProcessExplosions`].
+    ///
+    /// In this set, explosions will cause damage to things they are near
+    ProcessExplosions,
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, (respond_to_collisions, despawn_missiles, respond_to_explosion).chain())
-        .add_event::<MissileCollideEvent>()
-        .register_type::<Explosion>();
+    app.configure_sets(Update, ExplosionSystemSet::ProcessExplosions);
+
+    app.add_systems(
+        Update,
+        (respond_to_collisions, despawn_missiles)
+            .before(ExplosionSystemSet::ProcessExplosions)
+            .chain(),
+    )
+    .add_event::<MissileCollideEvent>()
+    .register_type::<Explosion>();
 }

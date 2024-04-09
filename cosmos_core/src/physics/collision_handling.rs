@@ -53,6 +53,28 @@ impl CannotCollideWith {
     pub fn new(cannot_collide_with_enties: Vec<CannotCollideWithEntity>) -> Self {
         Self(cannot_collide_with_enties)
     }
+
+    /// Checks if this entity should be collided with.
+    pub fn check_should_collide(&self, mut entity_checking: Entity, q_parent: &Query<&Parent>) -> bool {
+        self.0.iter().any(|x| {
+            if x.entity == entity_checking {
+                return false;
+            }
+
+            if !x.search_parents {
+                return true;
+            }
+
+            while let Ok(check_next) = q_parent.get(entity_checking) {
+                entity_checking = check_next.get();
+                if x.entity == entity_checking {
+                    return false;
+                }
+            }
+
+            true
+        })
+    }
 }
 
 // From: https://rapier.rs/docs/user_guides/bevy_plugin/advanced_collision_detection/#contact-and-intersection-filtering
@@ -68,40 +90,19 @@ pub struct CosmosPhysicsFilter<'w, 's> {
 impl<'w, 's> CosmosPhysicsFilter<'w, 's> {
     fn check_pair_filter(&self, context: PairFilterContextView) -> bool {
         if let Ok(cannot_collide_with) = self.q_cannot_collide_with.get(context.collider1()) {
-            if !check_should_collide(context.collider2(), &self.q_parent, cannot_collide_with) {
+            if !cannot_collide_with.check_should_collide(context.collider2(), &self.q_parent) {
                 return false;
             }
         }
 
         if let Ok(cannot_collide_with) = self.q_cannot_collide_with.get(context.collider2()) {
-            if !check_should_collide(context.collider1(), &self.q_parent, cannot_collide_with) {
+            if !cannot_collide_with.check_should_collide(context.collider1(), &self.q_parent) {
                 return false;
             }
         }
 
         true
     }
-}
-
-fn check_should_collide(mut entity_checking: Entity, q_parent: &Query<&Parent>, cannot_collide_with: &CannotCollideWith) -> bool {
-    cannot_collide_with.0.iter().any(|x| {
-        if x.entity == entity_checking {
-            return false;
-        }
-
-        if !x.search_parents {
-            return true;
-        }
-
-        while let Ok(check_next) = q_parent.get(entity_checking) {
-            entity_checking = check_next.get();
-            if x.entity == entity_checking {
-                return false;
-            }
-        }
-
-        true
-    })
 }
 
 impl BevyPhysicsHooks for CosmosPhysicsFilter<'_, '_> {

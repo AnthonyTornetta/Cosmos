@@ -60,6 +60,14 @@ macro_rules! create_coordinate {
                 Self { x, y, z }
             }
 
+            #[doc=$structComment]
+            ///
+            /// - `all` The value of every coordinate
+            #[inline(always)]
+            pub fn splat(all: CoordinateType) -> Self {
+                Self::new(all, all, all)
+            }
+
             /// Computes self - (1, 0, 0)
             ///
             /// Will return an err if the result would be negative
@@ -186,6 +194,14 @@ macro_rules! create_coordinate {
             /// Creates a new unbounded version that can have negative as well as positive values.
             pub fn new(x: UnboundCoordinateType, y: UnboundCoordinateType, z: UnboundCoordinateType) -> Self {
                 Self { x, y, z }
+            }
+
+            /// Creates a new unbounded version that can have negative as well as positive values.
+            ///
+            /// - `all` The value of every coordinate
+            #[inline(always)]
+            pub fn splat(all: UnboundCoordinateType) -> Self {
+                Self::new(all, all, all)
             }
 
             /// Computes self - (1, 0, 0)

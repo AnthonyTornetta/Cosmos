@@ -6,7 +6,7 @@ use cosmos_core::{
     block::Block,
     events::block_events::BlockChangedEvent,
     physics::location::Location,
-    registry::{identifiable::Identifiable, Registry},
+    registry::Registry,
     structure::{systems::missile_launcher_system::MissileLauncherSystem, Structure},
 };
 
@@ -93,7 +93,7 @@ fn say_what_player_sees(
             10.0,
             false,
         ) {
-            let block = structure.block_at(coord, &blocks);
+            // let block = structure.block_at(coord, &blocks);
             // println!("Viewing block {}", block.unlocalized_name());
 
             coords.push(coord);
