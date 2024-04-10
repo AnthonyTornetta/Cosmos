@@ -49,9 +49,9 @@ const MISSILE_SPEED_MULTIPLIER: f32 = 30.0; // higher = higher speed for way les
 const MISSILE_SPEED_DIVIDER: f32 = 1.0 / 5.0; // lower = more cannons required for same effect
 
 /// How long a missile will stay alive for before despawning
-pub const MISSILE_LIVE_TIME: Duration = Duration::from_secs(20);
+pub const MISSILE_LIFETIME: Duration = Duration::from_secs(20);
 /// The missile's life time may be +/- this number
-pub const MISSILE_LIVE_TIME_FUDGE: Duration = Duration::from_secs(1);
+pub const MISSILE_LIFETIME_FUDGE: Duration = Duration::from_secs(1);
 
 fn update_system(
     mut query: Query<(&MissileLauncherSystem, &StructureSystem, &mut SystemCooldown), With<SystemActive>>,
@@ -109,7 +109,7 @@ fn update_system(
                 let no_hit = Some(system.structure_entity());
 
                 let lifetime = Duration::from_secs_f32(
-                    MISSILE_LIVE_TIME.as_secs_f32() + (MISSILE_LIVE_TIME_FUDGE.as_secs_f32() * (rand::random::<f32>() - 0.5) * 2.0),
+                    MISSILE_LIFETIME.as_secs_f32() + (MISSILE_LIFETIME_FUDGE.as_secs_f32() * (rand::random::<f32>() - 0.5) * 2.0),
                 );
 
                 Missile::spawn(
