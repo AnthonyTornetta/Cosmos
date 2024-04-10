@@ -18,7 +18,7 @@ use std::{
 };
 
 use bevy::{
-    ecs::schedule::SystemSet,
+    ecs::schedule::{IntoSystemConfigs, SystemSet},
     log::warn,
     prelude::{
         Added, App, Children, Commands, Component, Deref, DerefMut, Entity, GlobalTransform, Parent, Quat, Query, Transform, Update, Vec3,
@@ -568,10 +568,23 @@ fn on_add_location_without_transform(
     }
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// Handles ordering of systems that rely on custom bundles.
+///
+/// Make sure to put anything that creates a custom bundle before this set.
+pub enum CosmosBundleSet {
+    /// Make sure to put anything that creates a custom bundle before this set.
+    HandleCosmosBundles,
+}
+
 pub(super) fn register(app: &mut App) {
     app.register_type::<Location>()
         .register_type::<PreviousLocation>()
-        .add_systems(Update, on_add_location_without_transform);
+        .configure_sets(Update, CosmosBundleSet::HandleCosmosBundles)
+        .add_systems(
+            Update,
+            on_add_location_without_transform.in_set(CosmosBundleSet::HandleCosmosBundles),
+        );
 }
 
 #[cfg(test)]

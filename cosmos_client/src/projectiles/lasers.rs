@@ -6,6 +6,7 @@ use bevy_renet::renet::*;
 use cosmos_core::{
     ecs::bundles::CosmosPbrBundle,
     netty::{cosmos_encoder, server_laser_cannon_system_messages::ServerLaserCannonSystemMessages, NettyChannelServer},
+    physics::location::CosmosBundleSet,
     projectiles::{laser::Laser, missile::Missile},
 };
 
@@ -125,6 +126,10 @@ fn lasers_netty(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(OnEnter(GameState::Loading), create_laser_mesh)
-        .add_systems(Update, lasers_netty.run_if(in_state(GameState::Playing)));
+    app.add_systems(OnEnter(GameState::Loading), create_laser_mesh).add_systems(
+        Update,
+        lasers_netty
+            .before(CosmosBundleSet::HandleCosmosBundles)
+            .run_if(in_state(GameState::Playing)),
+    );
 }

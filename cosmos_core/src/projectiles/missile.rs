@@ -14,6 +14,7 @@ use bevy::{
     prelude::{App, Commands, Component, Entity, Event, Query, Res, Transform, Update, Vec3},
     reflect::Reflect,
     time::Time,
+    transform::components::GlobalTransform,
 };
 use bevy_rapier3d::{
     geometry::{ActiveEvents, ActiveHooks, Collider},
@@ -176,7 +177,7 @@ pub struct Explosion {
 
 fn respond_to_collisions(
     mut ev_reader: EventReader<CollisionEvent>,
-    q_missile: Query<(&Missile, &CollisionBlacklist)>,
+    q_missile: Query<(&GlobalTransform, &Missile, &CollisionBlacklist)>,
     q_parent: Query<&Parent>,
     mut commands: Commands,
 ) {
@@ -193,7 +194,7 @@ fn respond_to_collisions(
             None
         };
 
-        let Some(((missile, collision_blacklist), missile_entity, hit_entity)) = entities else {
+        let Some(((g_t, missile, collision_blacklist), missile_entity, hit_entity)) = entities else {
             continue;
         };
 
@@ -201,7 +202,7 @@ fn respond_to_collisions(
             continue;
         }
 
-        println!("Missile hit something! {hit_entity:?}");
+        println!("Missile @ {} hit something! {hit_entity:?}", g_t.translation());
 
         commands
             .entity(missile_entity)

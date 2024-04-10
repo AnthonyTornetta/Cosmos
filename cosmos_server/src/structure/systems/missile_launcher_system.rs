@@ -43,7 +43,10 @@ fn register_missile_launcher_blocks(blocks: Res<Registry<Block>>, mut cannon: Re
 }
 
 /// How fast a laser will travel (m/s) ignoring the speed of its shooter.
-pub const MISSILE_BASE_VELOCITY: f32 = 3.0;
+pub const MISSILE_BASE_VELOCITY: f32 = 20.0;
+
+const MISSILE_SPEED_MULTIPLIER: f32 = 30.0; // higher = higher speed for way less cannons
+const MISSILE_SPEED_DIVIDER: f32 = 1.0 / 5.0; // lower = more cannons required for same effect
 
 fn update_system(
     mut query: Query<(&MissileLauncherSystem, &StructureSystem, &mut SystemCooldown), With<SystemActive>>,
@@ -83,7 +86,11 @@ fn update_system(
                             let location = structure.block_world_location(line.start.coords(), global_transform, location);
 
                             let relative_direction = line.direction.direction_vec3();
-                            let missile_velocity = global_transform.affine().matrix3.mul_vec3(relative_direction) * MISSILE_BASE_VELOCITY;
+
+                            let missile_vel =
+                                MISSILE_BASE_VELOCITY + (line.len as f32 * MISSILE_SPEED_DIVIDER + 1.0).ln() * MISSILE_SPEED_MULTIPLIER;
+
+                            let missile_velocity = global_transform.affine().matrix3.mul_vec3(relative_direction) * missile_vel;
 
                             let strength = (5.0 * line.len as f32).powf(1.2);
                             let no_hit = Some(system.structure_entity());
@@ -120,7 +127,7 @@ fn update_system(
                     if any_fired {
                         server.broadcast_message(
                             NettyChannelServer::LaserCannonSystem,
-                            cosmos_encoder::serialize(&ServerLaserCannonSystemMessages::LaserCannonSystemFired { ship_entity }),
+                            cosmos_encoder::serialize(&ServerLaserCannonSystemMessages::MissileLauncherSystemFired { ship_entity }),
                         );
                     }
                 }
