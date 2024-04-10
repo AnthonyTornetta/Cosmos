@@ -69,3 +69,4 @@ bevy_mod_debugdump = { workspace = true }
 derive_more = { workspace = true }
 clap = { workspace = true, features = ["derive"] }
 bevy_app_compute = { workspace = true }
+bevy_obj = { workspace = true }

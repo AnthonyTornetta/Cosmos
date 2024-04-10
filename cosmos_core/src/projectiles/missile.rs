@@ -113,7 +113,7 @@ impl Missile {
             Missile { strength },
             pbr,
             RigidBody::Dynamic,
-            Collider::cuboid(0.15, 0.15, 0.7),
+            Collider::cuboid(0.15, 0.15, 0.5),
             Velocity {
                 linvel: missile_velocity + firer_velocity,
                 ..Default::default()

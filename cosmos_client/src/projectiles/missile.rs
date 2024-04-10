@@ -20,7 +20,7 @@ use cosmos_core::{
 
 use crate::{
     asset::asset_loader::load_assets,
-    audio::{AudioEmission, AudioEmitterBundle, CosmosAudioEmitter},
+    audio::{AudioEmission, AudioEmitterBundle, CosmosAudioEmitter, DespawnOnNoEmissions},
     state::game_state::GameState,
 };
 
@@ -39,16 +39,19 @@ fn respond_to_explosion(
 
         let playing_sound: Handle<AudioInstance> = audio.play(handle.clone()).with_volume(0.0).handle();
 
-        commands.spawn((AudioEmitterBundle {
-            emitter: CosmosAudioEmitter::with_emissions(vec![AudioEmission {
-                instance: playing_sound,
-                handle,
-                max_distance: 200.0,
-                peak_volume: 1.0,
-                ..Default::default()
-            }]),
-            transform: TransformBundle::from_transform(Transform::from_translation(g_trans.translation())),
-        },));
+        commands.spawn((
+            DespawnOnNoEmissions,
+            AudioEmitterBundle {
+                emitter: CosmosAudioEmitter::with_emissions(vec![AudioEmission {
+                    instance: playing_sound,
+                    handle,
+                    max_distance: 200.0,
+                    peak_volume: 1.0,
+                    ..Default::default()
+                }]),
+                transform: TransformBundle::from_transform(Transform::from_translation(g_trans.translation())),
+            },
+        ));
     }
 }
 

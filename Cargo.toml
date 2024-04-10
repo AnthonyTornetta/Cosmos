@@ -43,6 +43,7 @@ arboard = "3.3.1"
 derive_more = "0.99.17"
 clap = "4.4.2"
 bytemuck = "1.14.3"
+bevy_obj = "0.13"
 
 # For any non workspace package
 [profile.dev.package."*"]

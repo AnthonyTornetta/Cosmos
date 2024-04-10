@@ -23,6 +23,13 @@ fn create_laser_mesh(mut meshes: ResMut<Assets<Mesh>>, mut commands: Commands) {
     commands.insert_resource(LaserMesh(meshes.add(Mesh::from(Cuboid::new(0.1, 0.1, 1.0)))));
 }
 
+#[derive(Resource)]
+struct MissileMesh(Handle<Mesh>);
+
+fn create_missile_mesh(asset_server: Res<AssetServer>, mut commands: Commands) {
+    commands.insert_resource(MissileMesh(asset_server.load("cosmos/models/misc/missile.obj")));
+}
+
 fn lasers_netty(
     mut commands: Commands,
     mut client: ResMut<RenetClient>,
@@ -30,6 +37,7 @@ fn lasers_netty(
     time: Res<Time>,
     network_mapping: Res<NetworkMapping>,
     laser_mesh: Res<LaserMesh>,
+    missie_mesh: Res<MissileMesh>,
     mut ev_writer_laser_cannon_fired: EventWriter<LaserCannonSystemFiredEvent>,
     mut ev_writer_missile_launcher_fired: EventWriter<MissileLauncherSystemFiredEvent>,
 ) {
@@ -58,7 +66,7 @@ fn lasers_netty(
                     strength,
                     no_hit,
                     CosmosPbrBundle {
-                        mesh: laser_mesh.0.clone(),
+                        mesh: laser_mesh.0.clone_weak(),
                         material: materials.add(StandardMaterial {
                             base_color: color,
                             // emissive: color,
@@ -73,7 +81,7 @@ fn lasers_netty(
                 );
             }
             ServerLaserCannonSystemMessages::CreateMissile {
-                color,
+                color: _,
                 location,
                 laser_velocity,
                 firer_velocity,
@@ -93,11 +101,9 @@ fn lasers_netty(
                     strength,
                     no_hit,
                     CosmosPbrBundle {
-                        mesh: laser_mesh.0.clone(),
+                        mesh: missie_mesh.0.clone_weak(),
                         material: materials.add(StandardMaterial {
-                            base_color: color,
-                            // emissive: color,
-                            unlit: true,
+                            base_color: Color::DARK_GRAY,
                             ..Default::default()
                         }),
                         ..Default::default()
@@ -126,10 +132,11 @@ fn lasers_netty(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(OnEnter(GameState::Loading), create_laser_mesh).add_systems(
-        Update,
-        lasers_netty
-            .before(CosmosBundleSet::HandleCosmosBundles)
-            .run_if(in_state(GameState::Playing)),
-    );
+    app.add_systems(OnEnter(GameState::Loading), (create_missile_mesh, create_laser_mesh))
+        .add_systems(
+            Update,
+            lasers_netty
+                .before(CosmosBundleSet::HandleCosmosBundles)
+                .run_if(in_state(GameState::Playing)),
+        );
 }
