@@ -31,7 +31,7 @@ use crate::{
 };
 
 /// How long a missile will stay alive for before despawning
-pub const MISSILE_LIVE_TIME: Duration = Duration::from_secs(3);
+pub const MISSILE_LIVE_TIME: Duration = Duration::from_secs(20);
 
 #[derive(Debug, Event)]
 /// The entity hit represents the entity hit by the missile
