@@ -30,7 +30,7 @@ use super::{line_system::add_line_system, sync::register_structure_system};
 fn on_add_missile_launcher(mut commands: Commands, query: Query<Entity, Added<MissileLauncherSystem>>) {
     for ent in query.iter() {
         commands.entity(ent).insert(SystemCooldown {
-            cooldown_time: Duration::from_millis(1000),
+            cooldown_time: Duration::from_secs(5),
             ..Default::default()
         });
     }
@@ -65,73 +65,78 @@ fn update_system(
     mut server: ResMut<RenetServer>,
 ) {
     for (cannon_system, system, mut cooldown) in query.iter_mut() {
-        if let Ok((ship_entity, systems, structure, location, global_transform, ship_velocity, physics_world)) =
+        let Ok((ship_entity, systems, structure, location, global_transform, ship_velocity, physics_world)) =
             systems.get(system.structure_entity())
-        {
-            if let Ok(mut energy_storage_system) = systems.query_mut(&mut es_query) {
-                let sec = time.elapsed_seconds();
+        else {
+            continue;
+        };
+        let Ok(mut energy_storage_system) = systems.query_mut(&mut es_query) else {
+            continue;
+        };
 
-                if sec - cooldown.last_use_time > cooldown.cooldown_time.as_secs_f32() {
-                    cooldown.last_use_time = sec;
+        let sec = time.elapsed_seconds();
 
-                    let world_id = physics_world.map(|bw| bw.world_id).unwrap_or(DEFAULT_WORLD_ID);
+        if sec - cooldown.last_use_time <= cooldown.cooldown_time.as_secs_f32() {
+            continue;
+        }
 
-                    let mut any_fired = false;
+        cooldown.last_use_time = sec;
 
-                    for line in cannon_system.lines.iter() {
-                        if energy_storage_system.get_energy() >= line.property.energy_per_shot {
-                            any_fired = true;
-                            energy_storage_system.decrease_energy(line.property.energy_per_shot);
+        let world_id = physics_world.map(|bw| bw.world_id).unwrap_or(DEFAULT_WORLD_ID);
 
-                            let location = structure.block_world_location(line.start.coords(), global_transform, location);
+        let mut any_fired = false;
 
-                            let relative_direction = line.direction.direction_vec3();
+        for line in cannon_system.lines.iter() {
+            if energy_storage_system.get_energy() >= line.property.energy_per_shot {
+                any_fired = true;
+                energy_storage_system.decrease_energy(line.property.energy_per_shot);
 
-                            let missile_vel =
-                                MISSILE_BASE_VELOCITY + (line.len as f32 * MISSILE_SPEED_DIVIDER + 1.0).ln() * MISSILE_SPEED_MULTIPLIER;
+                let location = structure.block_world_location(line.start.coords(), global_transform, location);
 
-                            let missile_velocity = global_transform.affine().matrix3.mul_vec3(relative_direction) * missile_vel;
+                let relative_direction = line.direction.direction_vec3();
 
-                            let strength = (5.0 * line.len as f32).powf(1.2);
-                            let no_hit = Some(system.structure_entity());
+                let missile_vel = MISSILE_BASE_VELOCITY + (line.len as f32 * MISSILE_SPEED_DIVIDER + 1.0).ln() * MISSILE_SPEED_MULTIPLIER;
 
-                            Missile::spawn(
-                                location,
-                                missile_velocity,
-                                ship_velocity.linvel,
-                                strength,
-                                no_hit,
-                                &time,
-                                world_id,
-                                &mut commands,
-                            );
+                let missile_velocity = global_transform.affine().matrix3.mul_vec3(relative_direction) * missile_vel;
 
-                            let color = line.color;
+                // TODO: Make missile launcher take item and strength is determined by the item they hold
+                let strength = 10.0; //(5.0 * line.len as f32).powf(1.2);
+                let no_hit = Some(system.structure_entity());
 
-                            server.broadcast_message(
-                                NettyChannelServer::LaserCannonSystem,
-                                cosmos_encoder::serialize(&ServerLaserCannonSystemMessages::CreateMissile {
-                                    color,
-                                    location,
-                                    laser_velocity: missile_velocity,
-                                    firer_velocity: ship_velocity.linvel,
-                                    strength,
-                                    no_hit,
-                                }),
-                            );
-                        } else {
-                            break;
-                        }
-                    }
+                Missile::spawn(
+                    location,
+                    missile_velocity,
+                    ship_velocity.linvel,
+                    strength,
+                    no_hit,
+                    &time,
+                    world_id,
+                    &mut commands,
+                );
 
-                    if any_fired {
-                        server.broadcast_message(
-                            NettyChannelServer::LaserCannonSystem,
-                            cosmos_encoder::serialize(&ServerLaserCannonSystemMessages::MissileLauncherSystemFired { ship_entity }),
-                        );
-                    }
-                }
+                let color = line.color;
+
+                server.broadcast_message(
+                    NettyChannelServer::LaserCannonSystem,
+                    cosmos_encoder::serialize(&ServerLaserCannonSystemMessages::CreateMissile {
+                        color,
+                        location,
+                        laser_velocity: missile_velocity,
+                        firer_velocity: ship_velocity.linvel,
+                        strength,
+                        no_hit,
+                    }),
+                );
+            } else {
+                break;
             }
+        }
+
+        if any_fired {
+            server.broadcast_message(
+                NettyChannelServer::LaserCannonSystem,
+                cosmos_encoder::serialize(&ServerLaserCannonSystemMessages::MissileLauncherSystemFired { ship_entity }),
+            );
         }
     }
 }
