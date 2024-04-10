@@ -1,5 +1,7 @@
 //! Represents the communications a laser cannon system sends
 
+use std::time::Duration;
+
 use bevy::prelude::{Color, Component, Entity, Vec3};
 use serde::{Deserialize, Serialize};
 
@@ -37,6 +39,8 @@ pub enum ServerLaserCannonSystemMessages {
         strength: f32,
         /// Which entity this laser shouldn't hit (None if it should hit all)
         no_hit: Option<Entity>,
+        /// How long the missile can live for
+        lifetime: Duration,
     },
     /// Sent whenever a laser cannon system is fired
     LaserCannonSystemFired {

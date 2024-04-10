@@ -87,6 +87,7 @@ fn lasers_netty(
                 firer_velocity,
                 strength,
                 mut no_hit,
+                lifetime,
             } => {
                 if let Some(server_entity) = no_hit {
                     if let Some(client_entity) = network_mapping.client_from_server(&server_entity) {
@@ -111,6 +112,7 @@ fn lasers_netty(
                     &time,
                     DEFAULT_WORLD_ID,
                     &mut commands,
+                    lifetime,
                 );
             }
             ServerLaserCannonSystemMessages::LaserCannonSystemFired { ship_entity } => {

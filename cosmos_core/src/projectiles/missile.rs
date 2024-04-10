@@ -30,9 +30,6 @@ use crate::{
     },
 };
 
-/// How long a missile will stay alive for before despawning
-pub const MISSILE_LIVE_TIME: Duration = Duration::from_secs(20);
-
 #[derive(Debug, Event)]
 /// The entity hit represents the entity hit by the missile
 ///
@@ -79,6 +76,9 @@ struct FireTime {
 pub struct Missile {
     /// The strength of this missile, used to calculate block damage
     pub strength: f32,
+
+    /// How long the missile can be alive before exploding
+    lifetime: Duration,
 }
 
 impl Missile {
@@ -97,6 +97,7 @@ impl Missile {
         time: &Time,
         world_id: WorldId,
         commands: &mut Commands,
+        missile_lifetime: Duration,
     ) -> Entity {
         pbr.rotation = Transform::from_xyz(0.0, 0.0, 0.0)
             .looking_at(missile_velocity, Vec3::Y)
@@ -110,7 +111,10 @@ impl Missile {
 
         ent_cmds.insert((
             Name::new("Missile"),
-            Missile { strength },
+            Missile {
+                strength,
+                lifetime: missile_lifetime,
+            },
             pbr,
             RigidBody::Dynamic,
             Collider::cuboid(0.15, 0.15, 0.5),
@@ -151,6 +155,7 @@ impl Missile {
         time: &Time,
         world_id: WorldId,
         commands: &mut Commands,
+        missile_lifetime: Duration,
     ) -> Entity {
         Self::spawn_custom_pbr(
             position,
@@ -162,6 +167,7 @@ impl Missile {
             time,
             world_id,
             commands,
+            missile_lifetime,
         )
     }
 }
@@ -213,7 +219,7 @@ fn respond_to_collisions(
 
 fn despawn_missiles(mut commands: Commands, query: Query<(Entity, &FireTime, &Missile)>, time: Res<Time>) {
     for (ent, fire_time, missile) in query.iter() {
-        if time.elapsed_seconds() - fire_time.time > MISSILE_LIVE_TIME.as_secs_f32() {
+        if time.elapsed_seconds() - fire_time.time > missile.lifetime.as_secs_f32() {
             println!("Missile exploded of old age");
 
             commands
