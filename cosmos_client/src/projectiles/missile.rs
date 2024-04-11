@@ -170,9 +170,9 @@ fn create_particle_fx(color: Color, effects: &mut Assets<EffectAsset>) -> Handle
 
     let mut color_gradient1 = Gradient::new();
     color_gradient1.add_key(0.0, color.rgba_to_vec4() * Vec4::new(4.0, 4.0, 4.0, 1.0));
-    color_gradient1.add_key(0.1, color.rgba_to_vec4() * Vec4::new(4.0, 4.0, 0.0, 1.0));
-    color_gradient1.add_key(0.9, color.rgba_to_vec4() * Vec4::new(4.0, 0.0, 0.0, 1.0));
-    color_gradient1.add_key(1.0, color.rgba_to_vec4() * Vec4::new(4.0, 0.0, 0.0, 0.0));
+    color_gradient1.add_key(0.1, color.rgba_to_vec4() * Vec4::new(3.0, 3.0, 3.0, 1.0));
+    color_gradient1.add_key(0.9, color.rgba_to_vec4() * Vec4::new(2.0, 2.0, 2.0, 1.0));
+    color_gradient1.add_key(1.0, color.rgba_to_vec4() * Vec4::new(2.0, 2.0, 2.0, 0.0));
 
     let mut size_gradient1 = Gradient::new();
     size_gradient1.add_key(0.0, Vec2::splat(0.2));
