@@ -18,6 +18,8 @@ use crate::{
     structure::systems::{laser_cannon_system::LaserCannonSystemFiredEvent, missile_launcher_system::MissileLauncherSystemFiredEvent},
 };
 
+use super::missile::ExplosionColor;
+
 #[derive(Resource)]
 struct LaserMesh(Handle<Mesh>);
 
@@ -83,7 +85,7 @@ fn lasers_netty(
                 );
             }
             ServerLaserCannonSystemMessages::CreateMissile {
-                color: _,
+                color,
                 location,
                 laser_velocity,
                 firer_velocity,
@@ -97,7 +99,7 @@ fn lasers_netty(
                     }
                 }
 
-                Missile::spawn_custom_pbr(
+                let missile_entity = Missile::spawn_custom_pbr(
                     location,
                     laser_velocity,
                     firer_velocity,
@@ -116,6 +118,8 @@ fn lasers_netty(
                     &mut commands,
                     lifetime,
                 );
+
+                commands.entity(missile_entity).insert(ExplosionColor(color));
             }
             ServerLaserCannonSystemMessages::LaserCannonSystemFired { ship_entity } => {
                 let Some(ship_entity) = network_mapping.client_from_server(&ship_entity) else {

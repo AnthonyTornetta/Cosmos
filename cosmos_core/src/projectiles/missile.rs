@@ -220,8 +220,6 @@ fn respond_to_collisions(
 fn despawn_missiles(mut commands: Commands, query: Query<(Entity, &FireTime, &Missile)>, time: Res<Time>) {
     for (ent, fire_time, missile) in query.iter() {
         if time.elapsed_seconds() - fire_time.time > missile.lifetime.as_secs_f32() {
-            println!("Missile exploded of old age");
-
             commands
                 .entity(ent)
                 .remove::<(Missile, FireTime, Collider, ActiveHooks, ActiveEvents)>()

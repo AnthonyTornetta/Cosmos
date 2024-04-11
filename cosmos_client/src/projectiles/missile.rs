@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use bevy::{asset::LoadState, prelude::*};
+use bevy::{asset::LoadState, prelude::*, utils::HashMap};
 use bevy_hanabi::prelude::*;
 
 use bevy_kira_audio::{Audio, AudioControl, AudioInstance, AudioSource};
@@ -38,24 +38,51 @@ fn track_time_alive(mut commands: Commands, time: Res<Time>, mut q_time_alive: Q
 #[derive(Component)]
 struct ExplosionParticle;
 
+#[derive(Component)]
+pub struct ExplosionColor(pub Color);
+
+fn color_hash(color: Color) -> u32 {
+    let (r, g, b, a) = (
+        (color.r() * 255.0) as u8,
+        (color.g() * 255.0) as u8,
+        (color.b() * 255.0) as u8,
+        (color.a() * 255.0) as u8,
+    );
+
+    u32::from_be_bytes([r, g, b, a])
+}
+
+#[derive(Resource, Default)]
+struct ParticleEffectsForColor(HashMap<u32, Handle<EffectAsset>>);
+
 fn respond_to_explosion(
     mut commands: Commands,
     q_local_player: Query<&GlobalTransform, With<LocalPlayer>>,
-    q_explosions: Query<(Entity, &Location, &GlobalTransform), Added<Explosion>>,
+    q_explosions: Query<(Entity, &Location, &GlobalTransform, Option<&ExplosionColor>), Added<Explosion>>,
     audio: Res<Audio>,
     audio_sources: Res<ExplosionAudio>,
-    particle_effect: Res<ExplosionParticleEffect>,
+    mut particles: ResMut<ParticleEffectsForColor>,
+    mut effects: ResMut<Assets<EffectAsset>>,
 ) {
     let Ok(local_g_trans) = q_local_player.get_single() else {
         return;
     };
 
-    for (ent, explosion_loc, g_trans) in q_explosions.iter() {
+    for (ent, explosion_loc, g_trans, explosion_color) in q_explosions.iter() {
+        let explosion_color = explosion_color.map(|x| x.0).unwrap_or(Color::WHITE);
+        let hash = color_hash(explosion_color);
+
+        let particle_handle = particles.0.get(&hash).map(|x| x.clone_weak()).unwrap_or_else(|| {
+            let fx_handle = create_particle_fx(explosion_color, &mut effects);
+
+            let fx_handle_weak = fx_handle.clone_weak();
+
+            particles.0.insert(hash, fx_handle);
+
+            fx_handle_weak
+        });
+
         commands.entity(ent).insert(NeedsDespawned);
-
-        let handle = audio_sources.0[rand::random::<usize>() % audio_sources.0.len()].clone_weak();
-
-        let playing_sound: Handle<AudioInstance> = audio.play(handle.clone()).with_volume(0.0).handle();
 
         commands.spawn((
             Name::new("Explosion particle"),
@@ -64,11 +91,16 @@ fn respond_to_explosion(
             MaxTimeAlive(MAX_PARTICLE_LIFETIME),
             ExplosionParticle,
             ParticleEffectBundle {
-                effect: ParticleEffect::new(particle_effect.0.clone_weak()),
+                effect: ParticleEffect::new(particle_handle),
                 transform: Transform::from_translation(g_trans.translation()).looking_at(local_g_trans.translation(), Vec3::Y),
                 ..Default::default()
             },
         ));
+
+        let audio_handle = audio_sources.0[rand::random::<usize>() % audio_sources.0.len()].clone_weak();
+
+        let playing_sound: Handle<AudioInstance> = audio.play(audio_handle.clone()).with_volume(0.0).handle();
+
         commands.spawn((
             Name::new("Explosion sound"),
             DespawnOnNoEmissions,
@@ -76,7 +108,7 @@ fn respond_to_explosion(
             AudioEmitterBundle {
                 emitter: CosmosAudioEmitter::with_emissions(vec![AudioEmission {
                     instance: playing_sound,
-                    handle,
+                    handle: audio_handle,
                     max_distance: 200.0,
                     peak_volume: 1.0,
                     ..Default::default()
@@ -98,12 +130,9 @@ fn start_explosion_particle_system(mut q_spawner: Query<&mut EffectSpawner, (Add
     }
 }
 
-#[derive(Resource)]
-struct ExplosionParticleEffect(Handle<EffectAsset>);
-
 const MAX_PARTICLE_LIFETIME: Duration = Duration::from_millis(1200);
 
-fn init_explosion_particle_effect(mut commands: Commands, mut effects: ResMut<Assets<EffectAsset>>) {
+fn create_particle_fx(color: Color, effects: &mut Assets<EffectAsset>) -> Handle<EffectAsset> {
     // let gradient = Gradient::default()
     //     .with_key(0.0, Vec4::new(1.0, 0.0, 0.0, 1.0))
     //     .with_key(1.0, Vec4::new(0.0, 0.0, 0.0, 0.0));
@@ -140,14 +169,14 @@ fn init_explosion_particle_effect(mut commands: Commands, mut effects: ResMut<As
     // stolen & slightly modified from: https://github.com/djeedai/bevy_hanabi/blob/cf16097a7c034c27f36c34ab339941242deddb1f/examples/firework.rs
 
     let mut color_gradient1 = Gradient::new();
-    color_gradient1.add_key(0.0, Vec4::new(4.0, 4.0, 4.0, 1.0));
-    color_gradient1.add_key(0.1, Vec4::new(4.0, 4.0, 0.0, 1.0));
-    color_gradient1.add_key(0.9, Vec4::new(4.0, 0.0, 0.0, 1.0));
-    color_gradient1.add_key(1.0, Vec4::new(4.0, 0.0, 0.0, 0.0));
+    color_gradient1.add_key(0.0, color.rgba_to_vec4() * Vec4::new(4.0, 4.0, 4.0, 1.0));
+    color_gradient1.add_key(0.1, color.rgba_to_vec4() * Vec4::new(4.0, 4.0, 0.0, 1.0));
+    color_gradient1.add_key(0.9, color.rgba_to_vec4() * Vec4::new(4.0, 0.0, 0.0, 1.0));
+    color_gradient1.add_key(1.0, color.rgba_to_vec4() * Vec4::new(4.0, 0.0, 0.0, 0.0));
 
     let mut size_gradient1 = Gradient::new();
-    size_gradient1.add_key(0.0, Vec2::splat(0.1));
-    size_gradient1.add_key(0.3, Vec2::splat(0.1));
+    size_gradient1.add_key(0.0, Vec2::splat(0.2));
+    size_gradient1.add_key(0.3, Vec2::splat(0.2));
     size_gradient1.add_key(1.0, Vec2::splat(0.0));
 
     let writer = ExprWriter::new();
@@ -166,7 +195,7 @@ fn init_explosion_particle_effect(mut commands: Commands, mut effects: ResMut<As
     // let update_accel = AccelModifier::new(accel);
 
     // Add drag to make particles slow down a bit after the initial explosion
-    let drag = writer.lit(5.).expr();
+    let drag = writer.lit(10.).expr();
     let update_drag = LinearDragModifier::new(drag);
 
     let init_pos = SetPositionSphereModifier {
@@ -181,7 +210,7 @@ fn init_explosion_particle_effect(mut commands: Commands, mut effects: ResMut<As
         speed: (writer.rand(ScalarType::Float) * writer.lit(20.) + writer.lit(20.)).expr(),
     };
 
-    let effect = EffectAsset::new(32768, Spawner::once(2500.0.into(), true), writer.finish())
+    let effect = EffectAsset::new(32768, Spawner::once(1250.0.into(), true), writer.finish())
         .with_name("explosion")
         .init(init_pos)
         .init(init_vel)
@@ -195,9 +224,7 @@ fn init_explosion_particle_effect(mut commands: Commands, mut effects: ResMut<As
             screen_space_size: false,
         });
 
-    let effect_handle = effects.add(effect);
-
-    commands.insert_resource(ExplosionParticleEffect(effect_handle));
+    effects.add(effect)
 }
 
 #[derive(Resource)]
@@ -234,5 +261,5 @@ pub(super) fn register(app: &mut App) {
             .run_if(in_state(GameState::Playing)),
     )
     .add_systems(Update, track_time_alive)
-    .add_systems(OnEnter(GameState::Loading), init_explosion_particle_effect);
+    .init_resource::<ParticleEffectsForColor>();
 }
