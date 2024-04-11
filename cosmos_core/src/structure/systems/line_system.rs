@@ -117,9 +117,9 @@ impl Registry<LineColorBlock> {
 }
 
 #[derive(Reflect, Debug, Serialize, Deserialize)]
-/// Represents a line of laser cannons.
+/// Represents a line of blocks that are connected and should act as one unit.
 ///
-/// All laser cannons in this line are facing the same direction.
+/// All blocks in this line are facing the same direction.
 pub struct Line<T: LineProperty> {
     /// The block at the start
     pub start: StructureBlock,
@@ -127,8 +127,8 @@ pub struct Line<T: LineProperty> {
     pub direction: BlockFace,
     /// How many blocks this line has
     pub len: CoordinateType,
-    /// The color of the laser
-    pub color: Color,
+    /// The color of the line
+    pub color: Option<Color>,
     /// The combined property of all the blocks in this line
     pub property: T,
     /// All the properties of the laser cannons in this line

@@ -13,7 +13,7 @@ pub enum ServerLaserCannonSystemMessages {
     /// Creates a laser at a specific location
     CreateLaser {
         /// The color the laser should have
-        color: Color,
+        color: Option<Color>,
         /// Where the laser should be spawned
         location: Location,
         /// The laser's initial velocity
@@ -27,8 +27,8 @@ pub enum ServerLaserCannonSystemMessages {
     },
     /// Creates a laser at a specific location
     CreateMissile {
-        /// The color the laser should have
-        color: Color,
+        /// The optional color the missile should explode with
+        color: Option<Color>,
         /// Where the laser should be spawned
         location: Location,
         /// The laser's initial velocity

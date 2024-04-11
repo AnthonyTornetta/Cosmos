@@ -153,7 +153,7 @@ fn apply_mining_effects(
 
         commands.entity(structure_system.structure_entity()).with_children(|p| {
             for line in &mining_laser_system.lines {
-                let color = line.color;
+                let color = line.color.unwrap_or(Color::WHITE);
 
                 let hashed = color_hash(color);
 

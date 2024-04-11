@@ -72,7 +72,7 @@ fn lasers_netty(
                     CosmosPbrBundle {
                         mesh: laser_mesh.0.clone_weak(),
                         material: materials.add(StandardMaterial {
-                            base_color: color,
+                            base_color: color.unwrap_or(Color::WHITE),
                             // emissive: color,
                             unlit: true,
                             ..Default::default()
@@ -119,7 +119,9 @@ fn lasers_netty(
                     lifetime,
                 );
 
-                commands.entity(missile_entity).insert(ExplosionColor(color));
+                if let Some(color) = color {
+                    commands.entity(missile_entity).insert(ExplosionColor(color));
+                }
             }
             ServerLaserCannonSystemMessages::LaserCannonSystemFired { ship_entity } => {
                 let Some(ship_entity) = network_mapping.client_from_server(&ship_entity) else {

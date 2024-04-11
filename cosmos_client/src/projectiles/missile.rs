@@ -69,8 +69,8 @@ fn respond_to_explosion(
     };
 
     for (ent, explosion_loc, g_trans, explosion_color) in q_explosions.iter() {
-        let explosion_color = explosion_color.map(|x| x.0).unwrap_or(Color::WHITE);
-        let hash = color_hash(explosion_color);
+        let explosion_color = explosion_color.map(|x| x.0);
+        let hash = explosion_color.map(|explosion_color| color_hash(explosion_color)).unwrap_or(0);
 
         let particle_handle = particles.0.get(&hash).map(|x| x.clone_weak()).unwrap_or_else(|| {
             let fx_handle = create_particle_fx(explosion_color, &mut effects);
@@ -132,7 +132,7 @@ fn start_explosion_particle_system(mut q_spawner: Query<&mut EffectSpawner, (Add
 
 const MAX_PARTICLE_LIFETIME: Duration = Duration::from_millis(1200);
 
-fn create_particle_fx(color: Color, effects: &mut Assets<EffectAsset>) -> Handle<EffectAsset> {
+fn create_particle_fx(color: Option<Color>, effects: &mut Assets<EffectAsset>) -> Handle<EffectAsset> {
     // let gradient = Gradient::default()
     //     .with_key(0.0, Vec4::new(1.0, 0.0, 0.0, 1.0))
     //     .with_key(1.0, Vec4::new(0.0, 0.0, 0.0, 0.0));
@@ -169,10 +169,17 @@ fn create_particle_fx(color: Color, effects: &mut Assets<EffectAsset>) -> Handle
     // stolen & slightly modified from: https://github.com/djeedai/bevy_hanabi/blob/cf16097a7c034c27f36c34ab339941242deddb1f/examples/firework.rs
 
     let mut color_gradient1 = Gradient::new();
-    color_gradient1.add_key(0.0, color.rgba_to_vec4() * Vec4::new(4.0, 4.0, 4.0, 1.0));
-    color_gradient1.add_key(0.1, color.rgba_to_vec4() * Vec4::new(3.0, 3.0, 3.0, 1.0));
-    color_gradient1.add_key(0.9, color.rgba_to_vec4() * Vec4::new(2.0, 2.0, 2.0, 1.0));
-    color_gradient1.add_key(1.0, color.rgba_to_vec4() * Vec4::new(2.0, 2.0, 2.0, 0.0));
+    if let Some(color) = color {
+        color_gradient1.add_key(0.0, color.rgba_to_vec4() * Vec4::new(4.0, 4.0, 4.0, 1.0));
+        color_gradient1.add_key(0.1, color.rgba_to_vec4() * Vec4::new(3.0, 3.0, 3.0, 1.0));
+        color_gradient1.add_key(0.9, color.rgba_to_vec4() * Vec4::new(2.0, 2.0, 2.0, 1.0));
+        color_gradient1.add_key(1.0, color.rgba_to_vec4() * Vec4::new(2.0, 2.0, 2.0, 0.0));
+    } else {
+        color_gradient1.add_key(0.0, Vec4::new(4.0, 4.0, 4.0, 1.0));
+        color_gradient1.add_key(0.1, Vec4::new(4.0, 4.0, 0.0, 1.0));
+        color_gradient1.add_key(0.9, Vec4::new(4.0, 0.0, 0.0, 1.0));
+        color_gradient1.add_key(1.0, Vec4::new(4.0, 0.0, 0.0, 0.0));
+    }
 
     let mut size_gradient1 = Gradient::new();
     size_gradient1.add_key(0.0, Vec2::splat(0.2));
