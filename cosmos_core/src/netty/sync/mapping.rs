@@ -1,10 +1,13 @@
 //! Used to map server entities to client entities and client entities to server entities.
+//!
+//! The resources in this file are **exclusively** used on the client-side. They are only
+//! in the core project for specific client-only use cases.
 
+use crate::netty::netty_rigidbody::{NettyRigidBody, NettyRigidBodyLocation};
 use bevy::{
     prelude::{Entity, Resource},
     utils::HashMap,
 };
-use cosmos_core::netty::netty_rigidbody::{NettyRigidBody, NettyRigidBodyLocation};
 
 #[derive(Default, Resource)]
 /// Used to map server entities to client entities and client entities to server entities.

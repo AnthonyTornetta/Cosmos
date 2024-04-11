@@ -3,7 +3,7 @@
 use bevy::prelude::{in_state, App, Commands, Entity, EventWriter, IntoSystemConfigs, Query, Res, ResMut, Update, Vec3, With};
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
-    netty::{client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannelClient},
+    netty::{client_reliable_messages::ClientReliableMessages, cosmos_encoder, sync::mapping::NetworkMapping, NettyChannelClient},
     physics::location::Location,
     structure::{
         chunk::{Chunk, ChunkUnloadEvent},
@@ -14,10 +14,7 @@ use cosmos_core::{
     },
 };
 
-use crate::{
-    netty::{flags::LocalPlayer, mapping::NetworkMapping},
-    state::game_state::GameState,
-};
+use crate::{netty::flags::LocalPlayer, state::game_state::GameState};
 
 pub mod align_player;
 pub mod biosphere;

@@ -17,7 +17,7 @@ use bevy::{
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     block::gravity_well::GravityWell,
-    netty::{cosmos_encoder, server_replication::ReplicationMessage, NettyChannelServer},
+    netty::{cosmos_encoder, server_replication::ReplicationMessage, sync::mapping::NetworkMapping, NettyChannelServer},
     physics::location::LocationPhysicsSet,
     registry::{identifiable::Identifiable, Registry},
     structure::{
@@ -30,7 +30,6 @@ use cosmos_core::{
 use serde::{de::DeserializeOwned, Serialize};
 
 use crate::{
-    netty::mapping::NetworkMapping,
     registry::sync_registry,
     state::game_state::GameState,
     structure::planet::align_player::{self, PlayerAlignment},

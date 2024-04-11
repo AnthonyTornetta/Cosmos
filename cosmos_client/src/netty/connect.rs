@@ -14,14 +14,11 @@ use bevy_renet::renet::{
 };
 use cosmos_core::{
     entities::player::Player,
-    netty::{connection_config, PROTOCOL_ID},
+    netty::{connection_config, sync::mapping::NetworkMapping, PROTOCOL_ID},
 };
 
 use crate::{
-    netty::{
-        lobby::{ClientLobby, MostRecentTick},
-        mapping::NetworkMapping,
-    },
+    netty::lobby::{ClientLobby, MostRecentTick},
     state::game_state::GameState,
 };
 

@@ -20,6 +20,7 @@ use cosmos_core::{
         netty_rigidbody::{NettyRigidBody, NettyRigidBodyLocation},
         server_reliable_messages::ServerReliableMessages,
         server_unreliable_messages::ServerUnreliableMessages,
+        sync::mapping::{Mappable, NetworkMapping},
         NettyChannelClient, NettyChannelServer,
     },
     persistence::LoadingDistance,
@@ -46,7 +47,6 @@ use crate::{
     netty::{
         flags::LocalPlayer,
         lobby::{ClientLobby, PlayerInfo},
-        mapping::{Mappable, NetworkMapping},
     },
     rendering::{CameraPlayerOffset, MainCamera},
     state::game_state::GameState,

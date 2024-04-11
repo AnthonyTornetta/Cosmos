@@ -6,12 +6,13 @@ use cosmos_core::{
         client_unreliable_messages::ClientUnreliableMessages,
         cosmos_encoder,
         netty_rigidbody::{NettyRigidBody, NettyRigidBodyLocation},
+        sync::mapping::NetworkMapping,
         NettyChannelClient,
     },
     physics::location::Location,
 };
 
-use crate::{input::inputs::InputChecker, netty::mapping::NetworkMapping, rendering::MainCamera, state::game_state::GameState};
+use crate::{input::inputs::InputChecker, rendering::MainCamera, state::game_state::GameState};
 use crate::{
     input::inputs::{CosmosInputs, InputHandler},
     netty::flags::LocalPlayer,

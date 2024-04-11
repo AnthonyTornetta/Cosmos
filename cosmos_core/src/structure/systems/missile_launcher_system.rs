@@ -1,7 +1,20 @@
 //! Represents all the missile launchers on this structure
 
-use bevy::reflect::Reflect;
+use std::time::Duration;
+
+use bevy::{
+    app::{App, Update},
+    ecs::{
+        component::Component,
+        entity::Entity,
+        query::Added,
+        system::{Commands, Query},
+    },
+    reflect::Reflect,
+};
 use serde::{Deserialize, Serialize};
+
+use crate::netty::sync::{sync_component, SyncableComponent};
 
 use super::{
     line_system::{LineProperty, LinePropertyCalculator, LineSystem},
@@ -44,4 +57,37 @@ impl LinePropertyCalculator<MissileLauncherProperty> for MissileLauncherCalculat
     fn unlocalized_name() -> &'static str {
         "cosmos:missile_launcher_system"
     }
+}
+
+#[derive(Debug, Serialize, Deserialize, Component, Clone, Copy, Default)]
+/// Tracks the current target the missile system is targetting
+pub struct MissileLauncherFocus {
+    focusing_entity: Option<Entity>,
+    time_focused: Duration,
+}
+
+#[derive(Debug, Serialize, Deserialize, Component, Clone, Copy)]
+/// Prefers focusing this entity if there are many potential candidates
+pub struct MissileLauncherPreferredFocus(Entity);
+
+impl SyncableComponent for MissileLauncherPreferredFocus {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:missile_launcher_focus"
+    }
+
+    fn get_sync_type() -> crate::netty::sync::SyncType {
+        crate::netty::sync::SyncType::ClientAuthoritative
+    }
+}
+
+fn add_focus_to_new_missile_system(mut commands: Commands, q_added_missile_launcher_system: Query<Entity, Added<MissileLauncherSystem>>) {
+    for ent in &q_added_missile_launcher_system {
+        commands.entity(ent).insert(MissileLauncherFocus::default());
+    }
+}
+
+pub(super) fn register(app: &mut App) {
+    sync_component::<MissileLauncherPreferredFocus>(app);
+
+    app.add_systems(Update, add_focus_to_new_missile_system);
 }

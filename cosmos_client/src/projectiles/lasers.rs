@@ -5,13 +5,15 @@ use bevy_rapier3d::prelude::DEFAULT_WORLD_ID;
 use bevy_renet::renet::*;
 use cosmos_core::{
     ecs::bundles::CosmosPbrBundle,
-    netty::{cosmos_encoder, server_laser_cannon_system_messages::ServerLaserCannonSystemMessages, NettyChannelServer},
+    netty::{
+        cosmos_encoder, server_laser_cannon_system_messages::ServerLaserCannonSystemMessages, sync::mapping::NetworkMapping,
+        NettyChannelServer,
+    },
     physics::location::CosmosBundleSet,
     projectiles::{laser::Laser, missile::Missile},
 };
 
 use crate::{
-    netty::mapping::NetworkMapping,
     state::game_state::GameState,
     structure::systems::{laser_cannon_system::LaserCannonSystemFiredEvent, missile_launcher_system::MissileLauncherSystemFiredEvent},
 };

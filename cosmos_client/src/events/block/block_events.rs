@@ -4,11 +4,11 @@ use bevy::prelude::*;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     block::{block_events::BlockInteractEvent, BlockRotation},
-    netty::{client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannelClient},
+    netty::{client_reliable_messages::ClientReliableMessages, cosmos_encoder, sync::mapping::NetworkMapping, NettyChannelClient},
     structure::structure_block::StructureBlock,
 };
 
-use crate::{interactions::block_interactions::process_player_interaction, netty::mapping::NetworkMapping, state::game_state::GameState};
+use crate::{interactions::block_interactions::process_player_interaction, state::game_state::GameState};
 
 #[derive(Debug, Event)]
 /// Sent when this client tries to breaks a block
