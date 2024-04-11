@@ -3,7 +3,7 @@
 //! See [`sync_component`]
 
 use bevy::{
-    app::{App, Update},
+    app::App,
     ecs::{
         component::Component,
         entity::Entity,
@@ -131,19 +131,21 @@ pub fn sync_component<T: SyncableComponent>(_app: &mut App) {
 
     #[cfg(feature = "client")]
     #[cfg(not(feature = "server"))]
-    sync_component_client(_app);
+    client_syncing::sync_component_client::<T>(_app);
 
-    #[cfg(feature = "client")]
-    #[cfg(not(feature = "server"))]
-    sync_component_server(_app);
+    #[cfg(feature = "server")]
+    #[cfg(not(feature = "client"))]
+    server_syncing::sync_component_server::<T>(_app);
 }
 
 pub(super) fn register(app: &mut App) {
     create_registry::<SyncedComponentId>(app, "cosmos:syncable_components");
 
+    app.add_event::<GotComponentToSyncEvent>();
+
     #[cfg(feature = "client")]
-    app.add_systems(Update, client_syncing::client_receive_components);
+    client_syncing::setup_client(app);
 
     #[cfg(feature = "server")]
-    app.add_systems(Update, server_syncing::server_receive_components);
+    server_syncing::setup_server(app);
 }

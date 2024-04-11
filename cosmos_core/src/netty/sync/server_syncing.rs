@@ -1,9 +1,9 @@
-use super::mapping::NetworkMapping;
 use super::{deserialize_component, register_component, ComponentReplicationMessage, SyncType, SyncableComponent, SyncedComponentId};
 use crate::netty::sync::GotComponentToSyncEvent;
 use crate::netty::{cosmos_encoder, NettyChannelServer};
 use crate::registry::{identifiable::Identifiable, Registry};
-use bevy::log::warn;
+use bevy::ecs::schedule::common_conditions::resource_exists;
+use bevy::ecs::schedule::IntoSystemConfigs;
 use bevy::{
     app::{App, Startup, Update},
     ecs::{
@@ -43,12 +43,7 @@ fn server_send_component<T: SyncableComponent>(
     });
 }
 
-#[cfg(feature = "server")]
-pub(super) fn server_receive_components(
-    mut server: ResMut<RenetServer>,
-    mut ev_writer: EventWriter<GotComponentToSyncEvent>,
-    mapping: Res<NetworkMapping>,
-) {
+fn server_receive_components(mut server: ResMut<RenetServer>, mut ev_writer: EventWriter<GotComponentToSyncEvent>) {
     use crate::netty::NettyChannelClient;
 
     for client_id in server.clients_id().into_iter() {
@@ -63,11 +58,6 @@ pub(super) fn server_receive_components(
                     entity,
                     raw_data,
                 } => {
-                    let Some(entity) = mapping.client_from_server(&entity) else {
-                        warn!("Missing entity from server: {:?}", entity);
-                        continue;
-                    };
-
                     ev_writer.send(GotComponentToSyncEvent {
                         component_id,
                         entity,
@@ -79,12 +69,16 @@ pub(super) fn server_receive_components(
     }
 }
 
+pub(super) fn setup_server(app: &mut App) {
+    app.add_systems(Update, server_receive_components);
+}
+
 #[allow(unused)] // This function is used, but the LSP can't figure that out.
 pub(super) fn sync_component_server<T: SyncableComponent>(app: &mut App) {
     app.add_systems(Startup, register_component::<T>);
 
     if T::get_sync_type() != SyncType::ServerAuthoritative {
-        app.add_systems(Update, server_send_component::<T>);
+        app.add_systems(Update, server_send_component::<T>.run_if(resource_exists::<RenetServer>));
     }
 
     if T::get_sync_type() != SyncType::ClientAuthoritative {
