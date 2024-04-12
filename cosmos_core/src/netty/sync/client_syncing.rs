@@ -32,7 +32,6 @@ fn client_send_components<T: SyncableComponent>(
     if q_changed_component.is_empty() {
         return;
     }
-
     let Some(id) = id_registry.from_id(T::get_component_unlocalized_name()) else {
         error!("Invalid component unlocalized name - {}", T::get_component_unlocalized_name());
         return;
@@ -131,11 +130,11 @@ pub(super) fn setup_client(app: &mut App) {
 pub(super) fn sync_component_client<T: SyncableComponent>(app: &mut App) {
     app.add_systems(Startup, register_component::<T>);
 
-    if T::get_sync_type() != SyncType::ClientAuthoritative {
+    if T::get_sync_type() != SyncType::ServerAuthoritative {
         app.add_systems(Update, client_send_components::<T>.run_if(resource_exists::<RenetClient>));
     }
 
-    if T::get_sync_type() != SyncType::ServerAuthoritative {
+    if T::get_sync_type() != SyncType::ClientAuthoritative {
         app.add_systems(
             Update,
             deserialize_component::<T>.run_if(resource_exists::<Registry<SyncedComponentId>>),

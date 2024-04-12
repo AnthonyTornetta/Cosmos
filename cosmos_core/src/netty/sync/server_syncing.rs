@@ -8,7 +8,7 @@ use crate::registry::{identifiable::Identifiable, Registry};
 use crate::structure::systems::{StructureSystem, StructureSystems};
 use bevy::ecs::schedule::common_conditions::resource_exists;
 use bevy::ecs::schedule::IntoSystemConfigs;
-use bevy::log::warn;
+use bevy::log::{info, warn};
 use bevy::{
     app::{App, Startup, Update},
     ecs::{
@@ -72,6 +72,7 @@ fn server_receive_components(
     for client_id in server.clients_id().into_iter() {
         while let Some(message) = server.receive_message(client_id, NettyChannelClient::ComponentReplication) {
             let Ok(msg) = cosmos_encoder::deserialize::<ComponentReplicationMessage>(&message) else {
+                warn!("Bad deserialization");
                 continue;
             };
 
@@ -85,16 +86,20 @@ fn server_receive_components(
                         ComponentEntityIdentifier::Entity(entity) => entity,
                         ComponentEntityIdentifier::StructureSystem { structure_entity, id } => {
                             let Ok(structure_systems) = q_structure_systems.get(structure_entity) else {
+                                warn!("Bad structure entity {structure_entity:?}");
                                 continue;
                             };
 
                             let Some(system_entity) = structure_systems.get_system_entity(id) else {
+                                warn!("Bad structure system id {id:?}");
                                 continue;
                             };
 
                             system_entity
                         }
                     };
+
+                    info!("Syncing component from client!");
 
                     ev_writer.send(GotComponentToSyncEvent {
                         component_id,
@@ -115,11 +120,11 @@ pub(super) fn setup_server(app: &mut App) {
 pub(super) fn sync_component_server<T: SyncableComponent>(app: &mut App) {
     app.add_systems(Startup, register_component::<T>);
 
-    if T::get_sync_type() != SyncType::ServerAuthoritative {
+    if T::get_sync_type() != SyncType::ClientAuthoritative {
         app.add_systems(Update, server_send_component::<T>.run_if(resource_exists::<RenetServer>));
     }
 
-    if T::get_sync_type() != SyncType::ClientAuthoritative {
+    if T::get_sync_type() != SyncType::ServerAuthoritative {
         app.add_systems(Update, deserialize_component::<T>);
     }
 }
