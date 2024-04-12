@@ -1,5 +1,7 @@
 //! Contains all the information required for network requests
 
+#[cfg(feature = "client")]
+pub mod client;
 pub mod client_reliable_messages;
 pub mod client_unreliable_messages;
 pub mod cosmos_encoder;

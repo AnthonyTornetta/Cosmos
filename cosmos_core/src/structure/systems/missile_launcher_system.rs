@@ -14,7 +14,7 @@ use bevy::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::netty::sync::{sync_component, SyncableComponent};
+use crate::netty::sync::{sync_component, ClientAuthority, SyncableComponent};
 
 use super::{
     line_system::{LineProperty, LinePropertyCalculator, LineSystem},
@@ -106,7 +106,7 @@ impl SyncableComponent for MissileLauncherPreferredFocus {
     }
 
     fn get_sync_type() -> crate::netty::sync::SyncType {
-        crate::netty::sync::SyncType::ClientAuthoritative
+        crate::netty::sync::SyncType::ClientAuthoritative(ClientAuthority::Piloting)
     }
 }
 

@@ -3,10 +3,11 @@
 use bevy::prelude::*;
 use bevy_inspector_egui::prelude::*;
 use bevy_kira_audio::prelude::*;
-use cosmos_core::physics::location::{Location, Sector};
+use cosmos_core::{
+    netty::client::LocalPlayer,
+    physics::location::{Location, Sector},
+};
 use std::time::Duration;
-
-use crate::netty::flags::LocalPlayer;
 
 #[derive(Resource)]
 struct BackgroundSong(Handle<AudioInstance>);

@@ -2,13 +2,13 @@
 
 use bevy::prelude::*;
 use bevy_renet::renet::RenetClient;
+use cosmos_core::netty::client::LocalPlayer;
 use cosmos_core::netty::client_reliable_messages::ClientReliableMessages;
 use cosmos_core::netty::sync::mapping::NetworkMapping;
 use cosmos_core::netty::{cosmos_encoder, NettyChannelClient};
 use cosmos_core::physics::location::{Location, SECTOR_DIMENSIONS};
 use cosmos_core::structure::Structure;
 
-use crate::netty::flags::LocalPlayer;
 use crate::state::game_state::GameState;
 
 #[derive(Component, Default)]

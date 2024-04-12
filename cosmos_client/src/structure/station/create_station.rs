@@ -3,13 +3,12 @@
 use bevy::prelude::{in_state, App, Event, EventReader, EventWriter, IntoSystemConfigs, Query, ResMut, Update, With};
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
-    netty::{client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannelClient},
+    netty::{client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannelClient},
     structure::shared::build_mode::BuildMode,
 };
 
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
-    netty::flags::LocalPlayer,
     state::game_state::GameState,
     ui::components::show_cursor::no_open_menus,
 };

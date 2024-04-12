@@ -7,12 +7,12 @@ use bevy::{
 use bevy_rapier3d::pipeline::CollisionEvent;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
-    netty::{client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannelClient},
+    netty::{client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannelClient},
     physics::location::Location,
     structure::{chunk::CHUNK_DIMENSIONSF, planet::Planet, shared::build_mode::BuildMode, ship::pilot::Pilot, Structure},
 };
 
-use crate::{netty::flags::LocalPlayer, state::game_state::GameState};
+use crate::state::game_state::GameState;
 
 pub mod client_ship_builder;
 pub mod create_ship;

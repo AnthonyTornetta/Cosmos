@@ -3,7 +3,7 @@
 use bevy::{asset::LoadState, prelude::*};
 use bevy_kira_audio::prelude::*;
 use cosmos_core::{
-    netty::sync::mapping::NetworkMapping,
+    netty::{client::LocalPlayer, sync::mapping::NetworkMapping},
     physics::location::Location,
     structure::{
         ship::pilot::Pilot,
@@ -17,7 +17,6 @@ use cosmos_core::{
 use crate::{
     asset::asset_loader::load_assets,
     audio::{AudioEmission, CosmosAudioEmitter, DespawnOnNoEmissions},
-    netty::flags::LocalPlayer,
     state::game_state::GameState,
     ui::ship_flight::indicators::{ClosestWaypoint, FocusedWaypointEntity, Indicating},
 };

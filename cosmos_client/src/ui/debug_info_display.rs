@@ -3,12 +3,13 @@
 use bevy::prelude::*;
 use cosmos_core::{
     block::Block,
+    netty::client::LocalPlayer,
     physics::location::Location,
     registry::{identifiable::Identifiable, Registry},
     structure::Structure,
 };
 
-use crate::{interactions::block_interactions::LookingAt, lang::Lang, netty::flags::LocalPlayer, state::game_state::GameState};
+use crate::{interactions::block_interactions::LookingAt, lang::Lang, state::game_state::GameState};
 
 #[derive(Component, Debug, Default)]
 struct FPSCounter {

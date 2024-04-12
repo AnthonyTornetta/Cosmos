@@ -120,11 +120,12 @@ pub(super) fn setup_server(app: &mut App) {
 pub(super) fn sync_component_server<T: SyncableComponent>(app: &mut App) {
     app.add_systems(Startup, register_component::<T>);
 
-    if T::get_sync_type() != SyncType::ClientAuthoritative {
-        app.add_systems(Update, server_send_component::<T>.run_if(resource_exists::<RenetServer>));
-    }
-
-    if T::get_sync_type() != SyncType::ServerAuthoritative {
-        app.add_systems(Update, deserialize_component::<T>);
+    match T::get_sync_type() {
+        SyncType::ServerAuthoritative => {
+            app.add_systems(Update, server_send_component::<T>.run_if(resource_exists::<RenetServer>));
+        }
+        SyncType::ClientAuthoritative(_) => {
+            app.add_systems(Update, deserialize_component::<T>);
+        }
     }
 }

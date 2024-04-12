@@ -15,6 +15,7 @@ use cosmos_core::{
     events::{block_events::BlockChangedEvent, structure::change_pilot_event::ChangePilotEvent},
     inventory::Inventory,
     netty::{
+        client::LocalPlayer,
         client_reliable_messages::ClientReliableMessages,
         cosmos_encoder,
         netty_rigidbody::{NettyRigidBody, NettyRigidBodyLocation},
@@ -44,10 +45,7 @@ use cosmos_core::{
 
 use crate::{
     camera::camera_controller::CameraHelper,
-    netty::{
-        flags::LocalPlayer,
-        lobby::{ClientLobby, PlayerInfo},
-    },
+    netty::lobby::{ClientLobby, PlayerInfo},
     rendering::{CameraPlayerOffset, MainCamera},
     state::game_state::GameState,
     structure::{

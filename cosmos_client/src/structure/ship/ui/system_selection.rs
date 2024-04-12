@@ -13,6 +13,7 @@ use bevy::{
 use cosmos_core::{
     inventory::itemstack::ItemStack,
     item::Item,
+    netty::client::LocalPlayer,
     registry::Registry,
     structure::{
         ship::pilot::Pilot,
@@ -21,7 +22,6 @@ use cosmos_core::{
 };
 
 use crate::{
-    netty::flags::LocalPlayer,
     state::game_state::GameState,
     structure::systems::player_interactions::HoveredSystem,
     ui::hotbar::{Hotbar, HotbarContents, HotbarPriorityQueue, LocalPlayerHotbar},

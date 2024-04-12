@@ -4,10 +4,9 @@ use std::f32::consts::PI;
 
 use bevy::prelude::*;
 use bevy_rapier3d::na::clamp;
-use cosmos_core::structure::ship::pilot::Pilot;
+use cosmos_core::{netty::client::LocalPlayer, structure::ship::pilot::Pilot};
 
 use crate::{
-    netty::flags::LocalPlayer,
     rendering::MainCamera,
     state::game_state::GameState,
     window::setup::{CursorFlags, DeltaCursorPosition},

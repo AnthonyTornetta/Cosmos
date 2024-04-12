@@ -12,7 +12,7 @@ use bevy::{
 use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
-    netty::{client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannelClient},
+    netty::{client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannelClient},
     structure::{
         chunk::CHUNK_DIMENSIONSF,
         coordinates::BlockCoordinate,
@@ -28,7 +28,6 @@ use crate::{
     asset::repeating_material::{Repeats, UnlitRepeatedMaterial},
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     interactions::block_interactions::LookingAt,
-    netty::flags::LocalPlayer,
     rendering::MainCamera,
     state::game_state::GameState,
     structure::planet::align_player::{self, PlayerAlignment},

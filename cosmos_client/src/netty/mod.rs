@@ -6,7 +6,6 @@ use cosmos_core::netty::sync::SyncedComponentId;
 use crate::registry::sync_registry;
 
 pub mod connect;
-pub mod flags;
 mod gameplay;
 pub mod lobby;
 

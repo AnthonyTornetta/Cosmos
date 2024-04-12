@@ -29,7 +29,7 @@ use cosmos_core::{
         NeedsDespawned,
     },
     item::Item,
-    netty::{cosmos_encoder, system_sets::NetworkingSystemsSet, NettyChannelClient},
+    netty::{client::LocalPlayer, cosmos_encoder, system_sets::NetworkingSystemsSet, NettyChannelClient},
     registry::{identifiable::Identifiable, Registry},
     shop::{netty::ClientShopMessages, Shop, ShopEntry},
     structure::structure_block::StructureBlock,
@@ -37,7 +37,6 @@ use cosmos_core::{
 
 use crate::{
     lang::Lang,
-    netty::flags::LocalPlayer,
     state::game_state::GameState,
     ui::{
         components::{

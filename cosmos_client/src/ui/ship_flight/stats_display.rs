@@ -21,13 +21,12 @@ use bevy::{
 use bevy_rapier3d::dynamics::Velocity;
 use cosmos_core::{
     ecs::NeedsDespawned,
+    netty::client::LocalPlayer,
     structure::{
         ship::pilot::Pilot,
         systems::{energy_storage_system::EnergyStorageSystem, StructureSystems},
     },
 };
-
-use crate::netty::flags::LocalPlayer;
 
 #[derive(Component)]
 struct StatsNodes;

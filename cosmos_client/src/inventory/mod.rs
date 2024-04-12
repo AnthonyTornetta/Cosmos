@@ -11,13 +11,12 @@ use cosmos_core::{
         HeldItemStack, Inventory,
     },
     item::Item,
-    netty::{cosmos_encoder, sync::mapping::NetworkMapping, NettyChannelClient},
+    netty::{client::LocalPlayer, cosmos_encoder, sync::mapping::NetworkMapping, NettyChannelClient},
     registry::Registry,
 };
 
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
-    netty::flags::LocalPlayer,
     state::game_state::GameState,
     ui::{
         components::window::{GuiWindow, WindowBundle},

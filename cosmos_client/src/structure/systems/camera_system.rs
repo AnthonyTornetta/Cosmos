@@ -12,15 +12,17 @@ use bevy::{
     reflect::Reflect,
     transform::components::Transform,
 };
-use cosmos_core::structure::{
-    ship::{pilot::Pilot, Ship},
-    systems::{camera_system::CameraSystem, StructureSystem, StructureSystems},
-    Structure,
+use cosmos_core::{
+    netty::client::LocalPlayer,
+    structure::{
+        ship::{pilot::Pilot, Ship},
+        systems::{camera_system::CameraSystem, StructureSystem, StructureSystems},
+        Structure,
+    },
 };
 
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
-    netty::flags::LocalPlayer,
     rendering::{CameraPlayerOffset, MainCamera},
     state::game_state::GameState,
 };

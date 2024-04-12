@@ -68,12 +68,27 @@ pub enum SyncType {
     ServerAuthoritative,
     /// Client will sync this with the server, and the server will not sync this
     /// with the client.
-    ClientAuthoritative,
+    ClientAuthoritative(ClientAuthority),
     // Both the server and client will sync each other on changes.
     // This is commented out because I don't have anything to use this on, and logic
     // will have to be added to prevent the server + client from repeatedly detecting
     // changes.
     // BothAuthoritative,
+}
+
+/// Clients can rarely (if ever) sync components that belong to anything.
+///
+/// They normally have to have some sort of authority over it, and this enforces that.
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum ClientAuthority {
+    /// The server will not check if the player has any rights to change this component.
+    ///
+    /// It will just accept whatever the client gives it
+    Anything,
+    /// The server will only accept this change if the client is piloting the entity they are changing
+    Piloting,
+    /// The server will only accept changes to this component if it's on their player
+    Themselves,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

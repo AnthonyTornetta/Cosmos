@@ -6,6 +6,7 @@ use bevy_hanabi::prelude::*;
 use bevy_kira_audio::{Audio, AudioControl, AudioInstance, AudioSource};
 use cosmos_core::{
     ecs::NeedsDespawned,
+    netty::client::LocalPlayer,
     physics::location::Location,
     projectiles::missile::{Explosion, ExplosionSystemSet},
 };
@@ -13,7 +14,6 @@ use cosmos_core::{
 use crate::{
     asset::asset_loader::load_assets,
     audio::{AudioEmission, AudioEmitterBundle, CosmosAudioEmitter, DespawnOnNoEmissions},
-    netty::flags::LocalPlayer,
     state::game_state::GameState,
 };
 

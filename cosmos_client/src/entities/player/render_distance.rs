@@ -4,10 +4,10 @@ use bevy::prelude::{in_state, App, Changed, IntoSystemConfigs, Query, ResMut, Up
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     entities::player::render_distance::RenderDistance,
-    netty::{client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannelClient},
+    netty::{client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannelClient},
 };
 
-use crate::{netty::flags::LocalPlayer, state::game_state::GameState};
+use crate::state::game_state::GameState;
 
 fn send_render_distance(query: Query<&RenderDistance, (With<LocalPlayer>, Changed<RenderDistance>)>, mut client: ResMut<RenetClient>) {
     if let Ok(render_distance) = query.get_single() {

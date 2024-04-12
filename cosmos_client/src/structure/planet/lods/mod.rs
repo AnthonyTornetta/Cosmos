@@ -17,7 +17,6 @@ use bevy::{
     },
 };
 use bevy_app_compute::prelude::AppComputeWorker;
-use cosmos_core::structure::planet::biosphere::BiosphereMarker;
 use cosmos_core::{
     block::{Block, BlockFace},
     ecs::mut_events::{EventWriterCustomSend, MutEvent, MutEventsCommand},
@@ -44,9 +43,10 @@ use cosmos_core::{
         timer::UtilsTimer,
     },
 };
+use cosmos_core::{netty::client::LocalPlayer, structure::planet::biosphere::BiosphereMarker};
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
-use crate::{netty::flags::LocalPlayer, state::game_state::GameState};
+use crate::state::game_state::GameState;
 
 #[derive(Debug, Default)]
 enum LodRequest {

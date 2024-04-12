@@ -7,6 +7,7 @@ use cosmos_core::{
     blockitems::BlockItems,
     inventory::Inventory,
     item::Item,
+    netty::client::LocalPlayer,
     physics::structure_physics::ChunkPhysicsPart,
     registry::Registry,
     structure::{coordinates::UnboundBlockCoordinate, planet::Planet, ship::pilot::Pilot, structure_block::StructureBlock, Structure},
@@ -18,7 +19,6 @@ use crate::{
     rendering::MainCamera,
     state::game_state::GameState,
     ui::{components::show_cursor::no_open_menus, hotbar::Hotbar},
-    LocalPlayer,
 };
 
 #[derive(Component, Debug)]

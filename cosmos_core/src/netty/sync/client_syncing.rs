@@ -1,13 +1,16 @@
 use super::mapping::NetworkMapping;
 use super::{
-    deserialize_component, register_component, ComponentEntityIdentifier, ComponentReplicationMessage, SyncType, SyncableComponent,
-    SyncableEntity, SyncedComponentId,
+    deserialize_component, register_component, ClientAuthority, ComponentEntityIdentifier, ComponentReplicationMessage, SyncType,
+    SyncableComponent, SyncableEntity, SyncedComponentId,
 };
+use crate::netty::client::LocalPlayer;
 use crate::netty::sync::GotComponentToSyncEvent;
 use crate::netty::NettyChannelServer;
 use crate::netty::{cosmos_encoder, NettyChannelClient};
 use crate::registry::{identifiable::Identifiable, Registry};
+use crate::structure::ship::pilot::Pilot;
 use crate::structure::systems::{StructureSystem, StructureSystems};
+use bevy::ecs::query::With;
 use bevy::ecs::schedule::common_conditions::resource_exists;
 use bevy::ecs::schedule::IntoSystemConfigs;
 use bevy::log::warn;
@@ -28,7 +31,13 @@ fn client_send_components<T: SyncableComponent>(
     q_changed_component: Query<(Entity, &T, Option<&SyncableEntity>, Option<&StructureSystem>), Changed<T>>,
     mut client: ResMut<RenetClient>,
     mapping: Res<NetworkMapping>,
+    q_local_player: Query<(), With<LocalPlayer>>,
+    q_local_piloting: Query<&Pilot, With<LocalPlayer>>,
 ) {
+    let SyncType::ClientAuthoritative(authority) = T::get_sync_type() else {
+        unreachable!("This function cannot be caled if synctype != client authoritative.")
+    };
+
     if q_changed_component.is_empty() {
         return;
     }
@@ -40,6 +49,24 @@ fn client_send_components<T: SyncableComponent>(
     q_changed_component
         .iter()
         .for_each(|(entity, component, syncable_entity, structure_system)| {
+            match authority {
+                ClientAuthority::Anything => {}
+                ClientAuthority::Piloting => {
+                    let Ok(piloting) = q_local_piloting.get_single() else {
+                        return;
+                    };
+
+                    if piloting.entity != entity {
+                        return;
+                    }
+                }
+                ClientAuthority::Themselves => {
+                    if !q_local_player.contains(entity) {
+                        return;
+                    }
+                }
+            }
+
             let entity_identifier = match (syncable_entity, structure_system) {
                 (None, _) => mapping.server_from_client(&entity).map(|e| ComponentEntityIdentifier::Entity(e)),
                 (Some(SyncableEntity::StructureSystem), Some(structure_system)) => mapping
@@ -130,14 +157,15 @@ pub(super) fn setup_client(app: &mut App) {
 pub(super) fn sync_component_client<T: SyncableComponent>(app: &mut App) {
     app.add_systems(Startup, register_component::<T>);
 
-    if T::get_sync_type() != SyncType::ServerAuthoritative {
-        app.add_systems(Update, client_send_components::<T>.run_if(resource_exists::<RenetClient>));
-    }
-
-    if T::get_sync_type() != SyncType::ClientAuthoritative {
-        app.add_systems(
-            Update,
-            deserialize_component::<T>.run_if(resource_exists::<Registry<SyncedComponentId>>),
-        );
+    match T::get_sync_type() {
+        SyncType::ClientAuthoritative(_) => {
+            app.add_systems(Update, client_send_components::<T>.run_if(resource_exists::<RenetClient>));
+        }
+        SyncType::ServerAuthoritative => {
+            app.add_systems(
+                Update,
+                deserialize_component::<T>.run_if(resource_exists::<Registry<SyncedComponentId>>),
+            );
+        }
     }
 }

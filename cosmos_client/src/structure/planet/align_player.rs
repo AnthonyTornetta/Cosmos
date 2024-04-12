@@ -5,11 +5,10 @@ use std::f32::consts::PI;
 use bevy::prelude::{App, Commands, Component, Entity, Parent, Quat, Query, Transform, Update, Vec3, With, Without};
 use cosmos_core::{
     block::BlockFace,
+    netty::client::LocalPlayer,
     physics::{gravity_system::GravityEmitter, location::Location},
     structure::{planet::Planet, ship::pilot::Pilot},
 };
-
-use crate::netty::flags::LocalPlayer;
 
 #[derive(Debug, Component)]
 struct PreviousOrientation(Axis);

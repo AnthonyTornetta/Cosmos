@@ -3,6 +3,7 @@
 use bevy::{asset::LoadState, prelude::*, utils::HashMap};
 use cosmos_core::{
     entities::player::Player,
+    netty::client::LocalPlayer,
     physics::location::Location,
     structure::{
         asteroid::Asteroid,
@@ -15,7 +16,6 @@ use cosmos_core::{
 use crate::{
     asset::asset_loader::load_assets,
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
-    netty::flags::LocalPlayer,
     rendering::MainCamera,
     state::game_state::GameState,
 };
