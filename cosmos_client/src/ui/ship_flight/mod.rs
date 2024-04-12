@@ -2,7 +2,7 @@
 
 use bevy::app::App;
 
-mod indicators;
+pub mod indicators;
 mod stats_display;
 
 pub(super) fn register(app: &mut App) {

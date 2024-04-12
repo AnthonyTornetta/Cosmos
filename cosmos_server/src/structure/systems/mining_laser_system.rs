@@ -16,7 +16,7 @@ use cosmos_core::{
             energy_storage_system::EnergyStorageSystem,
             line_system::LineBlocks,
             mining_laser_system::{MiningLaserProperty, MiningLaserPropertyCalculator, MiningLaserSystem},
-            StructureSystem, SystemActive, Systems,
+            StructureSystem, StructureSystems, SystemActive,
         },
         Structure,
     },
@@ -105,7 +105,7 @@ fn check_should_break(
 fn update_mining_beams(
     mut commands: Commands,
     mut q_mining_beams: Query<(Entity, &mut MiningBeam, &PhysicsWorld, &GlobalTransform)>,
-    q_systems: Query<&Systems>,
+    q_systems: Query<&StructureSystems>,
     mut q_energy_storage_system: Query<&mut EnergyStorageSystem>,
     q_structure: Query<(&Structure, &GlobalTransform), Without<CannotBeMinedByMiningLaser>>,
     mut q_mining_block: Query<&mut MiningBlock>,
@@ -268,7 +268,7 @@ struct MiningBeam {
 fn on_activate_system(
     mut query: Query<(Entity, &MiningLaserSystem, &StructureSystem), Added<SystemActive>>,
     mut es_query: Query<&mut EnergyStorageSystem>,
-    systems: Query<(Entity, &Systems, &Structure, Option<&PhysicsWorld>)>,
+    systems: Query<(Entity, &StructureSystems, &Structure, Option<&PhysicsWorld>)>,
     time: Res<Time>,
     mut commands: Commands,
 ) {

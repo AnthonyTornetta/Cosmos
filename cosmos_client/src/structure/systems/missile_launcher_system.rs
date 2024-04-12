@@ -2,12 +2,24 @@
 
 use bevy::{asset::LoadState, prelude::*};
 use bevy_kira_audio::prelude::*;
-use cosmos_core::{physics::location::Location, structure::systems::missile_launcher_system::MissileLauncherSystem};
+use cosmos_core::{
+    netty::sync::mapping::NetworkMapping,
+    physics::location::Location,
+    structure::{
+        ship::pilot::Pilot,
+        systems::{
+            missile_launcher_system::{MissileLauncherPreferredFocus, MissileLauncherSystem},
+            StructureSystems,
+        },
+    },
+};
 
 use crate::{
     asset::asset_loader::load_assets,
     audio::{AudioEmission, CosmosAudioEmitter, DespawnOnNoEmissions},
+    netty::flags::LocalPlayer,
     state::game_state::GameState,
+    ui::ship_flight::indicators::{ClosestWaypoint, FocusedWaypointEntity, Indicating},
 };
 
 use super::sync::sync_system;
@@ -56,53 +68,59 @@ fn apply_shooting_sound(
     }
 }
 
+fn focus_looking_at(
+    q_systems: Query<&StructureSystems>,
+    mut q_missile_focus: Query<&mut MissileLauncherPreferredFocus>,
+    q_local_player: Query<&Pilot, With<LocalPlayer>>,
+    q_focused: Query<Entity, With<FocusedWaypointEntity>>,
+    q_indicating: Query<&Indicating>,
+
+    mapping: Res<NetworkMapping>,
+    closest_waypoint: Res<ClosestWaypoint>,
+) {
+    let Ok(pilot) = q_local_player.get_single() else {
+        return;
+    };
+
+    let Ok(systems) = q_systems.get(pilot.entity) else {
+        return;
+    };
+
+    let Ok(mut missile_focus) = systems.query_mut(&mut q_missile_focus) else {
+        return;
+    };
+
+    let ent = if let Ok(focused_ent) = q_focused.get_single() {
+        focused_ent
+    } else if let Some(closest_waypoint) = closest_waypoint.0 {
+        closest_waypoint
+    } else {
+        if missile_focus.focusing_server_entity != None {
+            missile_focus.focusing_server_entity = None;
+        }
+        return;
+    };
+
+    let Ok(ent) = q_indicating.get(ent).map(|x| x.0) else {
+        return;
+    };
+
+    let Some(server_ent) = mapping.server_from_client(&ent) else {
+        if missile_focus.focusing_server_entity != None {
+            missile_focus.focusing_server_entity = None;
+        }
+
+        warn!("Missing server entity for {ent:?}");
+
+        return;
+    };
+
+    if missile_focus.focusing_server_entity != Some(server_ent) {
+        missile_focus.focusing_server_entity = Some(server_ent);
+    }
+}
+
 struct MissileLauncherLoadingFlag;
-
-// fn say_what_player_sees(
-//     q_main_camera: Query<(&Transform, &GlobalTransform), With<MainCamera>>,
-//     q_player: Query<&Location, With<LocalPlayer>>,
-//     mut q_structures: Query<(&mut Structure, &Location, &GlobalTransform)>,
-//     blocks: Res<Registry<Block>>,
-//     inputs: InputChecker,
-//     mut event_writer: EventWriter<BlockChangedEvent>,
-// ) {
-//     let Ok((cam_trans, cam_g_trans)) = q_main_camera.get_single() else {
-//         return;
-//     };
-
-//     let Ok(p_loc) = q_player.get_single() else {
-//         return;
-//     };
-
-//     for (mut structure, loc, structure_trans) in q_structures.iter_mut() {
-//         let direction = cam_g_trans.affine().matrix3 * structure_trans.affine().inverse().matrix3;
-
-//         let mut coords = vec![];
-//         for coord in structure.raycast_iter(
-//             cam_trans.translation + loc.relative_coords_to(p_loc),
-//             direction * Vec3::NEG_Z,
-//             10.0,
-//             false,
-//         ) {
-//             // let block = structure.block_at(coord, &blocks);
-//             // println!("Viewing block {}", block.unlocalized_name());
-
-//             coords.push(coord);
-//         }
-
-//         if inputs.check_just_pressed(CosmosInputs::SymmetryZ) {
-//             for coord in coords {
-//                 structure.set_block_at(
-//                     coord,
-//                     blocks.from_id("cosmos:glass").unwrap(),
-//                     Default::default(),
-//                     &blocks,
-//                     Some(&mut event_writer),
-//                 );
-//             }
-//         }
-//     }
-// }
 
 pub(super) fn register(app: &mut App) {
     sync_system::<MissileLauncherSystem>(app);
@@ -120,6 +138,6 @@ pub(super) fn register(app: &mut App) {
 
     app.add_event::<MissileLauncherSystemFiredEvent>().add_systems(
         Update,
-        (/*say_what_player_sees,*/apply_shooting_sound).run_if(in_state(GameState::Playing)),
+        (focus_looking_at, apply_shooting_sound).run_if(in_state(GameState::Playing)),
     );
 }

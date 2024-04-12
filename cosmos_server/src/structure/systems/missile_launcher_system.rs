@@ -17,7 +17,7 @@ use cosmos_core::{
             laser_cannon_system::SystemCooldown,
             line_system::LineBlocks,
             missile_launcher_system::{MissileLauncherCalculator, MissileLauncherProperty, MissileLauncherSystem},
-            StructureSystem, SystemActive, Systems,
+            StructureSystem, StructureSystems, SystemActive,
         },
         Structure,
     },
@@ -58,7 +58,7 @@ fn update_system(
     mut es_query: Query<&mut EnergyStorageSystem>,
     systems: Query<(
         Entity,
-        &Systems,
+        &StructureSystems,
         &Structure,
         &Location,
         &GlobalTransform,

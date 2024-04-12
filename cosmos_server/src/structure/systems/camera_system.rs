@@ -11,7 +11,7 @@ use cosmos_core::{
         loading::StructureLoadingSet,
         systems::{
             camera_system::{CameraBlocks, CameraSystem},
-            StructureSystemType, Systems,
+            StructureSystemType, StructureSystems,
         },
         Structure,
     },
@@ -32,7 +32,7 @@ fn camera_block_update_system(
     camera_blocks: Res<CameraBlocks>,
     blocks: Res<Registry<Block>>,
     mut system_query: Query<&mut CameraSystem>,
-    q_systems: Query<&Systems>,
+    q_systems: Query<&StructureSystems>,
 ) {
     for ev in event.read() {
         let Ok(systems) = q_systems.get(ev.structure_entity) else {
@@ -55,7 +55,7 @@ fn camera_block_update_system(
 
 fn camera_structure_loaded_event_processor(
     mut event_reader: EventReader<StructureLoadedEvent>,
-    mut structure_query: Query<(&Structure, &mut Systems)>,
+    mut structure_query: Query<(&Structure, &mut StructureSystems)>,
     blocks: Res<Registry<Block>>,
     mut commands: Commands,
     camera_blocks: Res<CameraBlocks>,

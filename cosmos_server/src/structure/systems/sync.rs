@@ -14,7 +14,7 @@ use cosmos_core::{
     item::Item,
     netty::{cosmos_encoder, server_replication::ReplicationMessage, NettyChannelServer},
     registry::{identifiable::Identifiable, Registry},
-    structure::systems::{sync::SyncableSystem, StructureSystem, StructureSystemType, SystemActive, Systems},
+    structure::systems::{sync::SyncableSystem, StructureSystem, StructureSystemType, StructureSystems, SystemActive},
 };
 
 use crate::{netty::sync::entities::RequestedEntityEvent, registry::sync_registry, state::GameState};
@@ -36,7 +36,7 @@ fn sync_system<T: SyncableSystem>(mut server: ResMut<RenetServer>, q_changed_sys
 fn on_request_systems_entity<T: SyncableSystem>(
     mut server: ResMut<RenetServer>,
     mut ev_reader: EventReader<RequestedEntityEvent>,
-    q_systems: Query<&Systems>,
+    q_systems: Query<&StructureSystems>,
     q_syncable_system: Query<(&T, &StructureSystem)>,
 ) {
     for ev in ev_reader.read() {

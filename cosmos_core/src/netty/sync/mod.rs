@@ -13,13 +13,16 @@ use bevy::{
 };
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use crate::registry::{create_registry, identifiable::Identifiable, Registry};
+use crate::{
+    registry::{create_registry, identifiable::Identifiable, Registry},
+    structure::systems::StructureSystemId,
+};
 
 #[derive(Debug, Serialize, Deserialize)]
 enum ComponentReplicationMessage {
     ComponentReplication {
         component_id: u16,
-        entity: Entity,
+        entity_identifier: ComponentEntityIdentifier,
         raw_data: Vec<u8>,
     },
 }
@@ -71,6 +74,20 @@ pub enum SyncType {
     // will have to be added to prevent the server + client from repeatedly detecting
     // changes.
     // BothAuthoritative,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+enum ComponentEntityIdentifier {
+    Entity(Entity),
+    StructureSystem { structure_entity: Entity, id: StructureSystemId },
+}
+
+#[derive(Debug, Clone, Copy, Component)]
+/// Represents how to find this entity for the syncing system.
+///
+/// This should be handled automatically.
+pub(crate) enum SyncableEntity {
+    StructureSystem,
 }
 
 /// Indicates that a component can be synchronized either from `Server -> Client` or `Client -> Server`.

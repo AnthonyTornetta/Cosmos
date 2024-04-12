@@ -17,7 +17,7 @@ mod hud;
 pub mod item_renderer;
 pub mod message;
 pub mod reactivity;
-mod ship_flight;
+pub mod ship_flight;
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 /// All systems that handle GUI interactions should be in here

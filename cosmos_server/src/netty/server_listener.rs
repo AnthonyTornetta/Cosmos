@@ -16,7 +16,7 @@ use cosmos_core::physics::location::Location;
 use cosmos_core::registry::Registry;
 use cosmos_core::structure::loading::ChunksNeedLoaded;
 use cosmos_core::structure::shared::build_mode::{BuildMode, ExitBuildModeEvent};
-use cosmos_core::structure::systems::Systems;
+use cosmos_core::structure::systems::StructureSystems;
 use cosmos_core::{
     entities::player::Player,
     events::structure::change_pilot_event::ChangePilotEvent,
@@ -58,7 +58,7 @@ fn server_listen_messages(
         mut requested_entities_writer,
         mut request_chunk_event_writer,
     ): (
-        Query<&mut Systems>,
+        Query<&mut StructureSystems>,
         EventWriter<BlockBreakEvent>,
         EventWriter<BlockPlaceEvent>,
         EventWriter<BlockInteractEvent>,

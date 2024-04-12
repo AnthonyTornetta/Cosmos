@@ -59,20 +59,50 @@ impl LinePropertyCalculator<MissileLauncherProperty> for MissileLauncherCalculat
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Component, Clone, Copy, Default)]
-/// Tracks the current target the missile system is targetting
-pub struct MissileLauncherFocus {
-    focusing_entity: Option<Entity>,
-    time_focused: Duration,
+#[derive(Debug, Serialize, Deserialize, Component, Clone, Copy, Default, Reflect)]
+/// Tracks how long the current target has been targetted by the missile system.
+pub enum MissileLauncherFocus {
+    #[default]
+    /// The missile launcher is not focusing anything
+    NotFocusing,
+    /// The missile launcher is focusing something
+    Focusing {
+        /// The **SERVER** entity that is being focused. Even on the client, this
+        /// will represent the server's representation of this entity. This is to make
+        /// syncing this with the server easier.
+        focusing_server_entity: Option<Entity>,
+        /// How long the focusing has been happening.
+        ///
+        /// Capped to [`Self::complete_duration`]
+        focused_duration: Duration,
+        /// The maximum amount the missile launcher can focus for
+        /// before it's ready to track that target.
+        complete_duration: Duration,
+    },
 }
 
-#[derive(Debug, Serialize, Deserialize, Component, Clone, Copy)]
+impl SyncableComponent for MissileLauncherFocus {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:missile_launcher_focus"
+    }
+
+    fn get_sync_type() -> crate::netty::sync::SyncType {
+        crate::netty::sync::SyncType::ServerAuthoritative
+    }
+}
+
+#[derive(Default, Debug, Serialize, Deserialize, Component, Clone, Copy, Reflect)]
 /// Prefers focusing this entity if there are many potential candidates
-pub struct MissileLauncherPreferredFocus(Entity);
+pub struct MissileLauncherPreferredFocus {
+    /// The **SERVER** entity that is being focused. Even on the client, this
+    /// will represent the server's representation of this entity. This is to make
+    /// syncing this with the server easier.
+    pub focusing_server_entity: Option<Entity>,
+}
 
 impl SyncableComponent for MissileLauncherPreferredFocus {
     fn get_component_unlocalized_name() -> &'static str {
-        "cosmos:missile_launcher_focus"
+        "cosmos:missile_launcher_preferred_focus"
     }
 
     fn get_sync_type() -> crate::netty::sync::SyncType {
@@ -82,12 +112,17 @@ impl SyncableComponent for MissileLauncherPreferredFocus {
 
 fn add_focus_to_new_missile_system(mut commands: Commands, q_added_missile_launcher_system: Query<Entity, Added<MissileLauncherSystem>>) {
     for ent in &q_added_missile_launcher_system {
-        commands.entity(ent).insert(MissileLauncherFocus::default());
+        commands
+            .entity(ent)
+            .insert((MissileLauncherFocus::default(), MissileLauncherPreferredFocus::default()));
     }
 }
 
 pub(super) fn register(app: &mut App) {
     sync_component::<MissileLauncherPreferredFocus>(app);
+    sync_component::<MissileLauncherFocus>(app);
 
-    app.add_systems(Update, add_focus_to_new_missile_system);
+    app.add_systems(Update, add_focus_to_new_missile_system)
+        .register_type::<MissileLauncherPreferredFocus>()
+        .register_type::<MissileLauncherFocus>();
 }

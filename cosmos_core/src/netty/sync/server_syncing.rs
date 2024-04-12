@@ -1,9 +1,14 @@
-use super::{deserialize_component, register_component, ComponentReplicationMessage, SyncType, SyncableComponent, SyncedComponentId};
+use super::{
+    deserialize_component, register_component, ComponentEntityIdentifier, ComponentReplicationMessage, SyncType, SyncableComponent,
+    SyncableEntity, SyncedComponentId,
+};
 use crate::netty::sync::GotComponentToSyncEvent;
-use crate::netty::{cosmos_encoder, NettyChannelServer};
+use crate::netty::{cosmos_encoder, NettyChannelClient, NettyChannelServer};
 use crate::registry::{identifiable::Identifiable, Registry};
+use crate::structure::systems::{StructureSystem, StructureSystems};
 use bevy::ecs::schedule::common_conditions::resource_exists;
 use bevy::ecs::schedule::IntoSystemConfigs;
+use bevy::log::warn;
 use bevy::{
     app::{App, Startup, Update},
     ecs::{
@@ -18,7 +23,7 @@ use bevy_renet::renet::RenetServer;
 
 fn server_send_component<T: SyncableComponent>(
     id_registry: Res<Registry<SyncedComponentId>>,
-    q_changed_component: Query<(Entity, &T), Changed<T>>,
+    q_changed_component: Query<(Entity, &T, Option<&SyncableEntity>, Option<&StructureSystem>), Changed<T>>,
     mut server: ResMut<RenetServer>,
 ) {
     if q_changed_component.is_empty() {
@@ -30,22 +35,40 @@ fn server_send_component<T: SyncableComponent>(
         return;
     };
 
-    q_changed_component.iter().for_each(|(entity, component)| {
-        server.broadcast_message(
-            NettyChannelServer::ComponentReplication,
-            cosmos_encoder::serialize(&ComponentReplicationMessage::ComponentReplication {
-                component_id: id.id(),
-                entity,
-                // Avoid double compression using bincode instead of cosmos_encoder.
-                raw_data: bincode::serialize(component).expect("Failed to serialize component."),
-            }),
-        )
-    });
+    q_changed_component
+        .iter()
+        .for_each(|(entity, component, syncable_entity, structure_system)| {
+            let entity_identifier = match (syncable_entity, structure_system) {
+                (None, _) => Some(ComponentEntityIdentifier::Entity(entity)),
+                (Some(SyncableEntity::StructureSystem), Some(structure_system)) => Some(ComponentEntityIdentifier::StructureSystem {
+                    structure_entity: structure_system.structure_entity(),
+                    id: structure_system.id(),
+                }),
+                _ => None,
+            };
+
+            let Some(entity_identifier) = entity_identifier else {
+                warn!("Invalid entity found - {entity_identifier:?} SyncableEntity settings: {syncable_entity:?}");
+                return;
+            };
+
+            server.broadcast_message(
+                NettyChannelServer::ComponentReplication,
+                cosmos_encoder::serialize(&ComponentReplicationMessage::ComponentReplication {
+                    component_id: id.id(),
+                    entity_identifier,
+                    // Avoid double compression using bincode instead of cosmos_encoder.
+                    raw_data: bincode::serialize(component).expect("Failed to serialize component."),
+                }),
+            )
+        });
 }
 
-fn server_receive_components(mut server: ResMut<RenetServer>, mut ev_writer: EventWriter<GotComponentToSyncEvent>) {
-    use crate::netty::NettyChannelClient;
-
+fn server_receive_components(
+    mut server: ResMut<RenetServer>,
+    mut ev_writer: EventWriter<GotComponentToSyncEvent>,
+    q_structure_systems: Query<&StructureSystems>,
+) {
     for client_id in server.clients_id().into_iter() {
         while let Some(message) = server.receive_message(client_id, NettyChannelClient::ComponentReplication) {
             let Ok(msg) = cosmos_encoder::deserialize::<ComponentReplicationMessage>(&message) else {
@@ -55,9 +78,24 @@ fn server_receive_components(mut server: ResMut<RenetServer>, mut ev_writer: Eve
             match msg {
                 ComponentReplicationMessage::ComponentReplication {
                     component_id,
-                    entity,
+                    entity_identifier,
                     raw_data,
                 } => {
+                    let entity = match entity_identifier {
+                        ComponentEntityIdentifier::Entity(entity) => entity,
+                        ComponentEntityIdentifier::StructureSystem { structure_entity, id } => {
+                            let Ok(structure_systems) = q_structure_systems.get(structure_entity) else {
+                                continue;
+                            };
+
+                            let Some(system_entity) = structure_systems.get_system_entity(id) else {
+                                continue;
+                            };
+
+                            system_entity
+                        }
+                    };
+
                     ev_writer.send(GotComponentToSyncEvent {
                         component_id,
                         entity,

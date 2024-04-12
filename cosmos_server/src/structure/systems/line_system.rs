@@ -18,7 +18,7 @@ use cosmos_core::{
         structure_block::StructureBlock,
         systems::{
             line_system::{Line, LineBlocks, LineColorBlock, LineColorProperty, LineProperty, LinePropertyCalculator, LineSystem},
-            StructureSystemType, Systems,
+            StructureSystemType, StructureSystems,
         },
         Structure,
     },
@@ -34,7 +34,7 @@ fn block_update_system<T: LineProperty, S: LinePropertyCalculator<T>>(
     color_blocks: Res<Registry<LineColorBlock>>,
     blocks: Res<Registry<Block>>,
     mut system_query: Query<&mut LineSystem<T, S>>,
-    systems_query: Query<&Systems>,
+    systems_query: Query<&StructureSystems>,
 ) {
     for ev in event.read() {
         if let Ok(systems) = systems_query.get(ev.structure_entity) {
@@ -70,7 +70,7 @@ fn block_update_system<T: LineProperty, S: LinePropertyCalculator<T>>(
 
 fn structure_loaded_event<T: LineProperty, S: LinePropertyCalculator<T>>(
     mut event_reader: EventReader<StructureLoadedEvent>,
-    mut structure_query: Query<(&Structure, &mut Systems)>,
+    mut structure_query: Query<(&Structure, &mut StructureSystems)>,
     blocks: Res<Registry<Block>>,
     color_blocks: Res<Registry<LineColorBlock>>,
     mut commands: Commands,

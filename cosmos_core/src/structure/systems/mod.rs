@@ -14,7 +14,10 @@ use bevy::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::registry::{create_registry, identifiable::Identifiable, Registry};
+use crate::{
+    netty::sync::SyncableEntity,
+    registry::{create_registry, identifiable::Identifiable, Registry},
+};
 
 use super::{loading::StructureLoadingSet, shared::MeltingDown, ship::Ship, Structure};
 
@@ -47,7 +50,7 @@ pub struct SystemActive;
 fn remove_system_actives_when_melting_down(
     mut commands: Commands,
     q_system_active: Query<Entity, With<SystemActive>>,
-    q_melting_down: Query<&Systems, With<MeltingDown>>,
+    q_melting_down: Query<&StructureSystems, With<MeltingDown>>,
 ) {
     for systems in &q_melting_down {
         let Ok(ent) = systems.query(&q_system_active) else {
@@ -129,7 +132,7 @@ impl Error for NoSystemFound {}
 
 #[derive(Component, Debug)]
 /// Stores all the systems a structure has
-pub struct Systems {
+pub struct StructureSystems {
     /// These entities should have the `StructureSystem` component
     systems: Vec<StructureSystemId>,
     activatable_systems: Vec<StructureSystemId>,
@@ -165,7 +168,7 @@ impl<'a> Iterator for SystemsIterator<'a> {
     }
 }
 
-impl Systems {
+impl StructureSystems {
     /// Returns an iterator through every system
     pub fn all_systems<'a>(&'a self) -> SystemsIterator<'a> {
         SystemsIterator::<'a> {
@@ -360,8 +363,8 @@ impl Systems {
             .iter()
             .map(|x| self.ids.get(x).expect("Invalid state - system id has no entity mapping"))
         {
-            // for some reason, the borrow checker gets mad when I do a get_mut in this if statement
-            if query.get(*ent).is_ok() {
+            // the borrow checker gets mad when I do a get_mut in this if statement
+            if query.contains(*ent) {
                 return Ok(query.get_mut(*ent).expect("This should be valid"));
             }
         }
@@ -372,7 +375,7 @@ impl Systems {
 
 fn add_structure(mut commands: Commands, query: Query<Entity, (Added<Structure>, With<Ship>)>) {
     for entity in query.iter() {
-        commands.entity(entity).insert(Systems {
+        commands.entity(entity).insert(StructureSystems {
             systems: Vec::new(),
             activatable_systems: Vec::new(),
             entity,
@@ -439,6 +442,12 @@ impl Identifiable for StructureSystemType {
     }
 }
 
+fn update_systems_sync_entity_type(mut commands: Commands, q_add_structure_system: Query<Entity, Added<StructureSystem>>) {
+    for ent in q_add_structure_system.iter() {
+        commands.entity(ent).insert(SyncableEntity::StructureSystem);
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     create_registry::<StructureSystemType>(app, "cosmos:structure_system_types");
 
@@ -446,6 +455,7 @@ pub(super) fn register(app: &mut App) {
         Update,
         (
             add_structure.in_set(StructureLoadingSet::LoadChunkData),
+            update_systems_sync_entity_type.in_set(StructureLoadingSet::StructureLoaded),
             remove_system_actives_when_melting_down,
         ),
     )

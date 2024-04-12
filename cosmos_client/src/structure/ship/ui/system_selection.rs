@@ -16,7 +16,7 @@ use cosmos_core::{
     registry::Registry,
     structure::{
         ship::pilot::Pilot,
-        systems::{StructureSystem, StructureSystemType, Systems},
+        systems::{StructureSystem, StructureSystemType, StructureSystems},
     },
 };
 
@@ -63,9 +63,9 @@ fn add_priority_when_flying(
 }
 
 fn sync_ship_systems(
-    q_systems: Query<&Systems>,
+    q_systems: Query<&StructureSystems>,
     q_piloting: Query<&Pilot, With<LocalPlayer>>,
-    q_systems_changed: Query<(), Changed<Systems>>,
+    q_systems_changed: Query<(), Changed<StructureSystems>>,
     q_priority_changed: Query<(), (Changed<HotbarPriorityQueue>, With<LocalPlayerHotbar>)>,
     q_structure_system: Query<&StructureSystem>,
     structure_system_types: Res<Registry<StructureSystemType>>,
