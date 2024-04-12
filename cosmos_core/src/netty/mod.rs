@@ -6,6 +6,8 @@ pub mod client_reliable_messages;
 pub mod client_unreliable_messages;
 pub mod cosmos_encoder;
 pub mod netty_rigidbody;
+#[cfg(feature = "server")]
+pub mod server;
 pub mod server_laser_cannon_system_messages;
 pub mod server_registry;
 pub mod server_reliable_messages;

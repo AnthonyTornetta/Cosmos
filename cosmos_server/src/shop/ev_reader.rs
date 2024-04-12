@@ -6,7 +6,7 @@ use cosmos_core::{
     entities::player::Player,
     inventory::Inventory,
     item::Item,
-    netty::{cosmos_encoder, system_sets::NetworkingSystemsSet, NettyChannelClient, NettyChannelServer},
+    netty::{cosmos_encoder, server::ServerLobby, system_sets::NetworkingSystemsSet, NettyChannelClient, NettyChannelServer},
     registry::{identifiable::Identifiable, Registry},
     shop::{
         netty::{ClientShopMessages, ServerShopMessages, ShopPurchaseError, ShopSellError},
@@ -17,7 +17,7 @@ use cosmos_core::{
 
 use super::prices::DefaultShopEntries;
 
-use crate::{netty::network_helpers::ServerLobby, GameState};
+use crate::GameState;
 
 fn generate_fake_shop(default: &DefaultShopEntries) -> Shop {
     Shop {

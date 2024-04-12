@@ -1,7 +1,7 @@
 use super::mapping::NetworkMapping;
 use super::{
-    deserialize_component, register_component, ClientAuthority, ComponentEntityIdentifier, ComponentReplicationMessage, SyncType,
-    SyncableComponent, SyncableEntity, SyncedComponentId,
+    register_component, ClientAuthority, ComponentEntityIdentifier, ComponentReplicationMessage, SyncType, SyncableComponent,
+    SyncableEntity, SyncedComponentId,
 };
 use crate::netty::client::LocalPlayer;
 use crate::netty::sync::GotComponentToSyncEvent;
@@ -10,9 +10,11 @@ use crate::netty::{cosmos_encoder, NettyChannelClient};
 use crate::registry::{identifiable::Identifiable, Registry};
 use crate::structure::ship::pilot::Pilot;
 use crate::structure::systems::{StructureSystem, StructureSystems};
+use bevy::ecs::event::EventReader;
 use bevy::ecs::query::With;
 use bevy::ecs::schedule::common_conditions::resource_exists;
 use bevy::ecs::schedule::IntoSystemConfigs;
+use bevy::ecs::system::Commands;
 use bevy::log::warn;
 use bevy::{
     app::{App, Startup, Update},
@@ -24,7 +26,27 @@ use bevy::{
     },
     log::error,
 };
-use bevy_renet::renet::RenetClient;
+use bevy_renet::renet::{ClientId, RenetClient};
+
+fn client_deserialize_component<T: SyncableComponent>(
+    components_registry: Res<Registry<SyncedComponentId>>,
+    mut ev_reader: EventReader<GotComponentToSyncEvent>,
+    mut commands: Commands,
+) {
+    for ev in ev_reader.read() {
+        let synced_id = components_registry
+            .try_from_numeric_id(ev.component_id)
+            .unwrap_or_else(|| panic!("Missing component with id {}", ev.component_id));
+
+        if T::get_component_unlocalized_name() != synced_id.unlocalized_name {
+            continue;
+        }
+
+        commands
+            .entity(ev.entity)
+            .try_insert(bincode::deserialize::<T>(&ev.raw_data).expect("Failed to deserialize component sent from server!"));
+    }
+}
 
 fn client_send_components<T: SyncableComponent>(
     id_registry: Res<Registry<SyncedComponentId>>,
@@ -135,6 +157,10 @@ pub(super) fn client_receive_components(
                 };
 
                 ev_writer.send(GotComponentToSyncEvent {
+                    // `client_id` only matters on the server-side, but I don't feel like fighting with
+                    // my LSP to have this variable only show up in the server project. Thus, I fill it with
+                    // dummy data.
+                    client_id: ClientId::from_raw(0),
                     component_id,
                     entity,
                     raw_data,
@@ -164,7 +190,7 @@ pub(super) fn sync_component_client<T: SyncableComponent>(app: &mut App) {
         SyncType::ServerAuthoritative => {
             app.add_systems(
                 Update,
-                deserialize_component::<T>.run_if(resource_exists::<Registry<SyncedComponentId>>),
+                client_deserialize_component::<T>.run_if(resource_exists::<Registry<SyncedComponentId>>),
             );
         }
     }

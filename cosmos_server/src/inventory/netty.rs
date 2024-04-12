@@ -14,12 +14,12 @@ use cosmos_core::{
         HeldItemStack, Inventory,
     },
     item::Item,
-    netty::{cosmos_encoder, NettyChannelClient, NettyChannelServer, NoSendEntity},
+    netty::{cosmos_encoder, server::ServerLobby, NettyChannelClient, NettyChannelServer, NoSendEntity},
     registry::Registry,
     structure::Structure,
 };
 
-use crate::{netty::network_helpers::ServerLobby, state::GameState};
+use crate::state::GameState;
 
 fn sync_inventories(
     query: Query<(Entity, &Inventory, Option<&BlockData>), (Changed<Inventory>, Without<NoSendEntity>)>,

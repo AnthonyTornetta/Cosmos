@@ -10,6 +10,7 @@ use cosmos_core::block::block_events::{BlockBreakEvent, BlockInteractEvent, Bloc
 use cosmos_core::inventory::Inventory;
 use cosmos_core::item::Item;
 use cosmos_core::netty::netty_rigidbody::NettyRigidBodyLocation;
+use cosmos_core::netty::server::ServerLobby;
 use cosmos_core::netty::system_sets::NetworkingSystemsSet;
 use cosmos_core::netty::{cosmos_encoder, NettyChannelClient, NettyChannelServer};
 use cosmos_core::physics::location::Location;
@@ -33,7 +34,6 @@ use crate::structure::planet::generation::planet_generator::RequestChunkEvent;
 use crate::structure::ship::events::{CreateShipEvent, ShipSetMovementEvent};
 use crate::structure::station::events::CreateStationEvent;
 
-use super::network_helpers::ServerLobby;
 use super::sync::entities::RequestedEntityEvent;
 
 #[derive(Resource, Default)]

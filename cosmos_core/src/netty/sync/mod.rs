@@ -4,13 +4,9 @@
 
 use bevy::{
     app::App,
-    ecs::{
-        component::Component,
-        entity::Entity,
-        event::{Event, EventReader},
-        system::{Commands, Res, ResMut},
-    },
+    ecs::{component::Component, entity::Entity, event::Event, system::ResMut},
 };
+use bevy_renet::renet::ClientId;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::{
@@ -119,29 +115,10 @@ pub trait SyncableComponent: Component + Serialize + DeserializeOwned {
 
 #[derive(Event, Debug)]
 struct GotComponentToSyncEvent {
+    client_id: ClientId,
     component_id: u16,
     entity: Entity,
     raw_data: Vec<u8>,
-}
-
-fn deserialize_component<T: SyncableComponent>(
-    components_registry: Res<Registry<SyncedComponentId>>,
-    mut ev_reader: EventReader<GotComponentToSyncEvent>,
-    mut commands: Commands,
-) {
-    for ev in ev_reader.read() {
-        let synced_id = components_registry
-            .try_from_numeric_id(ev.component_id)
-            .unwrap_or_else(|| panic!("Missing component with id {}", ev.component_id));
-
-        if T::get_component_unlocalized_name() != synced_id.unlocalized_name {
-            continue;
-        }
-
-        commands
-            .entity(ev.entity)
-            .try_insert(bincode::deserialize::<T>(&ev.raw_data).expect("Failed to deserialize component sent from server!"));
-    }
 }
 
 fn register_component<T: SyncableComponent>(mut registry: ResMut<Registry<SyncedComponentId>>) {

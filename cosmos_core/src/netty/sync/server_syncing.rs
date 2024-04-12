@@ -1,13 +1,17 @@
 use super::{
-    deserialize_component, register_component, ComponentEntityIdentifier, ComponentReplicationMessage, SyncType, SyncableComponent,
+    register_component, ClientAuthority, ComponentEntityIdentifier, ComponentReplicationMessage, SyncType, SyncableComponent,
     SyncableEntity, SyncedComponentId,
 };
+use crate::netty::server::ServerLobby;
 use crate::netty::sync::GotComponentToSyncEvent;
 use crate::netty::{cosmos_encoder, NettyChannelClient, NettyChannelServer};
 use crate::registry::{identifiable::Identifiable, Registry};
+use crate::structure::ship::pilot::Pilot;
 use crate::structure::systems::{StructureSystem, StructureSystems};
+use bevy::ecs::event::EventReader;
 use bevy::ecs::schedule::common_conditions::resource_exists;
 use bevy::ecs::schedule::IntoSystemConfigs;
+use bevy::ecs::system::Commands;
 use bevy::log::{info, warn};
 use bevy::{
     app::{App, Startup, Update},
@@ -20,6 +24,59 @@ use bevy::{
     log::error,
 };
 use bevy_renet::renet::RenetServer;
+
+fn server_deserialize_component<T: SyncableComponent>(
+    components_registry: Res<Registry<SyncedComponentId>>,
+    mut ev_reader: EventReader<GotComponentToSyncEvent>,
+    mut commands: Commands,
+    lobby: Res<ServerLobby>,
+    q_piloting: Query<&Pilot>,
+) {
+    for ev in ev_reader.read() {
+        let Some(synced_id) = components_registry.try_from_numeric_id(ev.component_id) else {
+            warn!("Missing component with id {}", ev.component_id);
+            continue;
+        };
+
+        if T::get_component_unlocalized_name() != synced_id.unlocalized_name {
+            continue;
+        }
+
+        let SyncType::ClientAuthoritative(authority) = T::get_sync_type() else {
+            unreachable!("This function cannot be caled if synctype != client authoritative in the server project.")
+        };
+
+        match authority {
+            ClientAuthority::Anything => {}
+            ClientAuthority::Piloting => {
+                let Some(player) = lobby.player_from_id(ev.client_id) else {
+                    return;
+                };
+
+                let Ok(piloting) = q_piloting.get(player) else {
+                    return;
+                };
+
+                if piloting.entity != ev.entity {
+                    return;
+                }
+            }
+            ClientAuthority::Themselves => {
+                let Some(player) = lobby.player_from_id(ev.client_id) else {
+                    return;
+                };
+
+                if player != ev.entity {
+                    return;
+                }
+            }
+        }
+
+        commands
+            .entity(ev.entity)
+            .try_insert(bincode::deserialize::<T>(&ev.raw_data).expect("Failed to deserialize component sent from server!"));
+    }
+}
 
 fn server_send_component<T: SyncableComponent>(
     id_registry: Res<Registry<SyncedComponentId>>,
@@ -102,6 +159,7 @@ fn server_receive_components(
                     info!("Syncing component from client!");
 
                     ev_writer.send(GotComponentToSyncEvent {
+                        client_id,
                         component_id,
                         entity,
                         raw_data,
@@ -125,7 +183,7 @@ pub(super) fn sync_component_server<T: SyncableComponent>(app: &mut App) {
             app.add_systems(Update, server_send_component::<T>.run_if(resource_exists::<RenetServer>));
         }
         SyncType::ClientAuthoritative(_) => {
-            app.add_systems(Update, deserialize_component::<T>);
+            app.add_systems(Update, server_deserialize_component::<T>);
         }
     }
 }

@@ -11,6 +11,7 @@ use cosmos_core::inventory::itemstack::ItemStack;
 use cosmos_core::inventory::Inventory;
 use cosmos_core::item::Item;
 use cosmos_core::netty::netty_rigidbody::NettyRigidBodyLocation;
+use cosmos_core::netty::server::ServerLobby;
 use cosmos_core::netty::server_reliable_messages::ServerReliableMessages;
 use cosmos_core::netty::system_sets::NetworkingSystemsSet;
 use cosmos_core::netty::{cosmos_encoder, NettyChannelServer};
@@ -24,7 +25,7 @@ use cosmos_core::{entities::player::Player, netty::netty_rigidbody::NettyRigidBo
 use renet_visualizer::RenetServerVisualizer;
 
 use crate::entities::player::PlayerLooking;
-use crate::netty::network_helpers::{ClientTicks, ServerLobby};
+use crate::netty::network_helpers::ClientTicks;
 use crate::netty::sync::entities::RequestedEntityEvent;
 use crate::physics::assign_player_world;
 use crate::state::GameState;
