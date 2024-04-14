@@ -84,6 +84,10 @@ fn missile_lockon(
         };
 
         if structure_systems.hovered_system() != Some(system_entity) {
+            // Don't trigger un-needed change detections
+            if !matches!(*missile_launmcher_focus, MissileLauncherFocus::NotFocusing) {
+                missile_launmcher_focus.clear_focus();
+            }
             continue;
         }
 
@@ -120,7 +124,9 @@ fn missile_lockon(
         }
 
         let Some(best_target) = best_target else {
-            missile_launmcher_focus.clear_focus();
+            if !matches!(*missile_launmcher_focus, MissileLauncherFocus::NotFocusing) {
+                missile_launmcher_focus.clear_focus();
+            }
             continue;
         };
 
