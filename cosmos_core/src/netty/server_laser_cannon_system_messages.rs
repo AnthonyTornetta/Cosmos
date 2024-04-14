@@ -9,7 +9,7 @@ use crate::physics::location::Location;
 
 #[derive(Debug, Serialize, Deserialize, Component)]
 /// All the laser cannon system messages
-pub enum ServerLaserCannonSystemMessages {
+pub enum ServerStructureSystemMessages {
     /// Creates a laser at a specific location
     CreateLaser {
         /// The color the laser should have

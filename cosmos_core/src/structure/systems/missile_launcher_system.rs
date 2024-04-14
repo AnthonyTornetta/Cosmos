@@ -70,7 +70,7 @@ pub enum MissileLauncherFocus {
         /// The **SERVER** entity that is being focused. Even on the client, this
         /// will represent the server's representation of this entity. This is to make
         /// syncing this with the server easier.
-        focusing_server_entity: Option<Entity>,
+        focusing_server_entity: Entity,
         /// How long the focusing has been happening.
         ///
         /// Capped to [`Self::complete_duration`]
@@ -79,6 +79,45 @@ pub enum MissileLauncherFocus {
         /// before it's ready to track that target.
         complete_duration: Duration,
     },
+}
+
+impl MissileLauncherFocus {
+    /// Changes the missile focus to not focus on anything
+    pub fn clear_focus(&mut self) {
+        *self = MissileLauncherFocus::NotFocusing;
+    }
+
+    /// Changes the focus of the missile system.
+    ///
+    /// This does NOT check if it's already focused on the target, and will clear any currently focused
+    /// progress.
+    pub fn change_focus(&mut self, target: Entity, max_focus_duration: Duration) {
+        *self = MissileLauncherFocus::Focusing {
+            focusing_server_entity: target,
+            focused_duration: Duration::default(),
+            complete_duration: max_focus_duration,
+        };
+    }
+
+    /// Returns the entity this is locked onto, if any.
+    ///
+    /// The focus duration must be equal to or exceed the compelte duration to be locked on.
+    pub fn locked_on_to(&self) -> Option<Entity> {
+        match *self {
+            MissileLauncherFocus::Focusing {
+                focusing_server_entity,
+                focused_duration,
+                complete_duration,
+            } => {
+                if focused_duration >= complete_duration {
+                    Some(focusing_server_entity)
+                } else {
+                    None
+                }
+            }
+            MissileLauncherFocus::NotFocusing => None,
+        }
+    }
 }
 
 impl SyncableComponent for MissileLauncherFocus {

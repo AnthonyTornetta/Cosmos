@@ -7,7 +7,7 @@ use bevy_rapier3d::prelude::{PhysicsWorld, Velocity, DEFAULT_WORLD_ID};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::Block,
-    netty::{cosmos_encoder, server_laser_cannon_system_messages::ServerLaserCannonSystemMessages, NettyChannelServer},
+    netty::{cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages, NettyChannelServer},
     physics::location::Location,
     projectiles::laser::Laser,
     registry::Registry,
@@ -101,8 +101,8 @@ fn update_system(
                             let color = line.color;
 
                             server.broadcast_message(
-                                NettyChannelServer::LaserCannonSystem,
-                                cosmos_encoder::serialize(&ServerLaserCannonSystemMessages::CreateLaser {
+                                NettyChannelServer::StructureSystems,
+                                cosmos_encoder::serialize(&ServerStructureSystemMessages::CreateLaser {
                                     color,
                                     location,
                                     laser_velocity,
@@ -118,8 +118,8 @@ fn update_system(
 
                     if any_fired {
                         server.broadcast_message(
-                            NettyChannelServer::LaserCannonSystem,
-                            cosmos_encoder::serialize(&ServerLaserCannonSystemMessages::LaserCannonSystemFired { ship_entity }),
+                            NettyChannelServer::StructureSystems,
+                            cosmos_encoder::serialize(&ServerStructureSystemMessages::LaserCannonSystemFired { ship_entity }),
                         );
                     }
                 }

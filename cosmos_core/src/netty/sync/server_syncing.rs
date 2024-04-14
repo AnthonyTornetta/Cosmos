@@ -50,14 +50,17 @@ fn server_deserialize_component<T: SyncableComponent>(
             ClientAuthority::Anything => {}
             ClientAuthority::Piloting => {
                 let Some(player) = lobby.player_from_id(ev.client_id) else {
+                    println!("No player!");
                     return;
                 };
 
                 let Ok(piloting) = q_piloting.get(player) else {
+                    println!("Not piloting anything!");
                     return;
                 };
 
-                if piloting.entity != ev.entity {
+                if piloting.entity != ev.authority_entity {
+                    println!("Not piloting same entity!");
                     return;
                 }
             }
@@ -66,7 +69,7 @@ fn server_deserialize_component<T: SyncableComponent>(
                     return;
                 };
 
-                if player != ev.entity {
+                if player != ev.authority_entity {
                     return;
                 }
             }
@@ -139,8 +142,8 @@ fn server_receive_components(
                     entity_identifier,
                     raw_data,
                 } => {
-                    let entity = match entity_identifier {
-                        ComponentEntityIdentifier::Entity(entity) => entity,
+                    let (entity, authority_entity) = match entity_identifier {
+                        ComponentEntityIdentifier::Entity(entity) => (entity, entity),
                         ComponentEntityIdentifier::StructureSystem { structure_entity, id } => {
                             let Ok(structure_systems) = q_structure_systems.get(structure_entity) else {
                                 warn!("Bad structure entity {structure_entity:?}");
@@ -152,7 +155,7 @@ fn server_receive_components(
                                 continue;
                             };
 
-                            system_entity
+                            (system_entity, structure_entity)
                         }
                     };
 
@@ -162,6 +165,7 @@ fn server_receive_components(
                         client_id,
                         component_id,
                         entity,
+                        authority_entity,
                         raw_data,
                     });
                 }

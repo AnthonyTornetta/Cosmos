@@ -118,6 +118,8 @@ struct GotComponentToSyncEvent {
     client_id: ClientId,
     component_id: u16,
     entity: Entity,
+    /// The entity authority should be checked against - not the entity being targetted.
+    authority_entity: Entity,
     raw_data: Vec<u8>,
 }
 

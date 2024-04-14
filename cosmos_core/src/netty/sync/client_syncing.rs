@@ -42,9 +42,9 @@ fn client_deserialize_component<T: SyncableComponent>(
             continue;
         }
 
-        commands
-            .entity(ev.entity)
-            .try_insert(bincode::deserialize::<T>(&ev.raw_data).expect("Failed to deserialize component sent from server!"));
+        if let Some(mut ecmds) = commands.get_entity(ev.entity) {
+            ecmds.try_insert(bincode::deserialize::<T>(&ev.raw_data).expect("Failed to deserialize component sent from server!"));
+        }
     }
 }
 
@@ -71,6 +71,30 @@ fn client_send_components<T: SyncableComponent>(
     q_changed_component
         .iter()
         .for_each(|(entity, component, syncable_entity, structure_system)| {
+            let entity_identifier = match (syncable_entity, structure_system) {
+                (None, _) => mapping
+                    .server_from_client(&entity)
+                    .map(|e| (ComponentEntityIdentifier::Entity(e), entity)),
+                (Some(SyncableEntity::StructureSystem), Some(structure_system)) => {
+                    mapping.server_from_client(&structure_system.structure_entity()).map(|e| {
+                        (
+                            ComponentEntityIdentifier::StructureSystem {
+                                structure_entity: e,
+                                id: structure_system.id(),
+                            },
+                            structure_system.structure_entity(),
+                        )
+                    })
+                }
+                _ => None,
+            };
+
+            let Some((entity_identifier, authority_entity)) = entity_identifier else {
+                warn!("Invalid entity found - {entity_identifier:?} SyncableEntity settings: {syncable_entity:?}");
+                return;
+            };
+
+            // The server checks this anyway, but save the client+server some bandwidth
             match authority {
                 ClientAuthority::Anything => {}
                 ClientAuthority::Piloting => {
@@ -78,7 +102,8 @@ fn client_send_components<T: SyncableComponent>(
                         return;
                     };
 
-                    if piloting.entity != entity {
+                    if piloting.entity != authority_entity {
+                        println!("Not piloting - no dice!");
                         return;
                     }
                 }
@@ -88,22 +113,6 @@ fn client_send_components<T: SyncableComponent>(
                     }
                 }
             }
-
-            let entity_identifier = match (syncable_entity, structure_system) {
-                (None, _) => mapping.server_from_client(&entity).map(|e| ComponentEntityIdentifier::Entity(e)),
-                (Some(SyncableEntity::StructureSystem), Some(structure_system)) => mapping
-                    .server_from_client(&structure_system.structure_entity())
-                    .map(|e| ComponentEntityIdentifier::StructureSystem {
-                        structure_entity: e,
-                        id: structure_system.id(),
-                    }),
-                _ => None,
-            };
-
-            let Some(entity_identifier) = entity_identifier else {
-                warn!("Invalid entity found - {entity_identifier:?} SyncableEntity settings: {syncable_entity:?}");
-                return;
-            };
 
             client.send_message(
                 NettyChannelClient::ComponentReplication,
@@ -134,7 +143,7 @@ pub(super) fn client_receive_components(
                 raw_data,
             } => {
                 let entity = match entity_identifier {
-                    ComponentEntityIdentifier::Entity(entity) => mapping.client_from_server(&entity),
+                    ComponentEntityIdentifier::Entity(entity) => mapping.client_from_server(&entity).map(|x| (x, x)),
                     ComponentEntityIdentifier::StructureSystem { structure_entity, id } => mapping
                         .client_from_server(&structure_entity)
                         .map(|structure_entity| {
@@ -146,12 +155,12 @@ pub(super) fn client_receive_components(
                                 return None;
                             };
 
-                            Some(system_entity)
+                            Some((system_entity, structure_entity))
                         })
                         .flatten(),
                 };
 
-                let Some(entity) = entity else {
+                let Some((entity, authority_entity)) = entity else {
                     warn!("Missing entity from server: {:?}", entity_identifier);
                     continue;
                 };
@@ -163,6 +172,8 @@ pub(super) fn client_receive_components(
                     client_id: ClientId::from_raw(0),
                     component_id,
                     entity,
+                    // This also only matters on server-side, but once again I don't care
+                    authority_entity,
                     raw_data,
                 });
             }

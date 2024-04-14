@@ -36,8 +36,8 @@ pub enum NettyChannelServer {
     /// These are unreliably sent, and may never reach their destination or become corrupted.
     /// Used for sending `ServerUnreliableMessages`
     Unreliable,
-    /// Used for `ServerLaserCannonSystemMessages`
-    LaserCannonSystem,
+    /// Used for networking communications for structure systems
+    StructureSystems,
     /// Used for asteroids
     Asteroid,
     /// Sending LOD information to the client
@@ -131,7 +131,7 @@ impl From<NettyChannelServer> for u8 {
         match channel_id {
             NettyChannelServer::Reliable => 0,
             NettyChannelServer::Unreliable => 1,
-            NettyChannelServer::LaserCannonSystem => 2,
+            NettyChannelServer::StructureSystems => 2,
             NettyChannelServer::Asteroid => 3,
             NettyChannelServer::DeltaLod => 4,
             NettyChannelServer::Inventory => 5,
@@ -160,7 +160,7 @@ impl NettyChannelServer {
                 send_type: SendType::Unreliable,
             },
             ChannelConfig {
-                channel_id: Self::LaserCannonSystem.into(),
+                channel_id: Self::StructureSystems.into(),
                 max_memory_usage_bytes: 5 * MB,
                 send_type: SendType::Unreliable,
             },

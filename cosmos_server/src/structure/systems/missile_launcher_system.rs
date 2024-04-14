@@ -7,7 +7,8 @@ use bevy_rapier3d::prelude::{PhysicsWorld, Velocity, DEFAULT_WORLD_ID};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::Block,
-    netty::{cosmos_encoder, server_laser_cannon_system_messages::ServerLaserCannonSystemMessages, NettyChannelServer},
+    entities::player::Player,
+    netty::{cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages, NettyChannelServer},
     physics::location::Location,
     projectiles::missile::Missile,
     registry::Registry,
@@ -16,7 +17,10 @@ use cosmos_core::{
             energy_storage_system::EnergyStorageSystem,
             laser_cannon_system::SystemCooldown,
             line_system::LineBlocks,
-            missile_launcher_system::{MissileLauncherCalculator, MissileLauncherProperty, MissileLauncherSystem},
+            missile_launcher_system::{
+                MissileLauncherCalculator, MissileLauncherFocus, MissileLauncherPreferredFocus, MissileLauncherProperty,
+                MissileLauncherSystem,
+            },
             StructureSystem, StructureSystems, SystemActive,
         },
         Structure,
@@ -52,6 +56,118 @@ const MISSILE_SPEED_DIVIDER: f32 = 1.0 / 5.0; // lower = more cannons required f
 pub const MISSILE_LIFETIME: Duration = Duration::from_secs(20);
 /// The missile's life time may be +/- this number
 pub const MISSILE_LIFETIME_FUDGE: Duration = Duration::from_secs(1);
+
+/// How long the missile system must focus on a target before it's locked on
+pub const MISSILE_FOCUS_TIME: Duration = Duration::from_secs(5);
+
+const MAX_MISSILE_FOCUS_DISTANCE: f32 = 2000.0;
+
+#[derive(Component, Debug)]
+struct MissileTargettable;
+
+fn add_missile_targettable(q_added_targettable: Query<Entity, Or<(Added<Structure>, Added<Player>)>>, mut commands: Commands) {
+    for ent in &q_added_targettable {
+        commands.entity(ent).insert(MissileTargettable);
+    }
+}
+
+fn missile_lockon(
+    mut q_missile_systems: Query<(Entity, &StructureSystem, &mut MissileLauncherFocus, &MissileLauncherPreferredFocus)>,
+    q_structure: Query<(&StructureSystems, &Location, &GlobalTransform)>,
+    q_targettable: Query<(Entity, &Location), With<MissileTargettable>>,
+    time: Res<Time>,
+) {
+    for (system_entity, structure_system, mut missile_launmcher_focus, preferred_focus) in q_missile_systems.iter_mut() {
+        // Verify system is hovered
+        let Ok((structure_systems, structure_location, g_trans)) = q_structure.get(structure_system.structure_entity()) else {
+            continue;
+        };
+
+        if structure_systems.hovered_system() != Some(system_entity) {
+            continue;
+        }
+
+        // TODO: Make this dependent on direction the player is looking (because of camera blocks)
+        let targetting_forward = g_trans.forward();
+
+        // Find best cadidate for focusing
+        let mut best_target = preferred_focus
+            .focusing_server_entity
+            .map(|ent| {
+                let (ent, loc) = q_targettable.get(ent).ok()?;
+
+                calculate_focusable_properties(ent, structure_system, loc, structure_location, targetting_forward)?;
+
+                Some(ent)
+            })
+            .flatten();
+
+        if best_target.is_none() {
+            best_target = q_targettable
+                .iter()
+                .filter_map(|(ent, loc)| {
+                    let (dist, dot) = calculate_focusable_properties(ent, structure_system, loc, structure_location, targetting_forward)?;
+
+                    // Closer focusable targets will be somewhat preferred over distant ones.
+                    Some((
+                        // cast to i32 so it implements ord
+                        ((dot * dist.sqrt() / MAX_MISSILE_FOCUS_DISTANCE) * MAX_MISSILE_FOCUS_DISTANCE) as i32,
+                        ent,
+                    ))
+                })
+                .min_by_key(|x| x.0)
+                .map(|x| x.1);
+        }
+
+        let Some(best_target) = best_target else {
+            missile_launmcher_focus.clear_focus();
+            continue;
+        };
+
+        match missile_launmcher_focus.as_mut() {
+            MissileLauncherFocus::Focusing {
+                focusing_server_entity,
+                focused_duration,
+                complete_duration: _,
+            } => {
+                if *focusing_server_entity != best_target {
+                    missile_launmcher_focus.change_focus(best_target, MISSILE_FOCUS_TIME);
+                } else {
+                    *focused_duration += Duration::from_secs_f32(time.delta_seconds());
+                }
+            }
+            MissileLauncherFocus::NotFocusing => {
+                missile_launmcher_focus.change_focus(best_target, MISSILE_FOCUS_TIME);
+            }
+        }
+    }
+}
+
+/// Returns None if this entity cannot be focused on.
+///
+/// Otherwise, returns Some((distance, dot))
+fn calculate_focusable_properties(
+    ent: Entity,
+    structure_system: &StructureSystem,
+    loc: &Location,
+    structure_location: &Location,
+    targetting_forward: Vec3,
+) -> Option<(f32, f32)> {
+    if ent == structure_system.structure_entity() {
+        return None;
+    }
+    let dist = loc.distance_sqrd(structure_location);
+    if dist > MAX_MISSILE_FOCUS_DISTANCE * MAX_MISSILE_FOCUS_DISTANCE {
+        return None;
+    }
+    let direction = (*loc - *structure_location).absolute_coords_f32().normalize_or_zero();
+    let dot = targetting_forward.dot(direction);
+    if dot < 0.7 {
+        return None;
+    };
+
+    Some((dist, dot))
+}
 
 fn update_system(
     mut query: Query<(&MissileLauncherSystem, &StructureSystem, &mut SystemCooldown), With<SystemActive>>,
@@ -127,8 +243,8 @@ fn update_system(
                 let color = line.color;
 
                 server.broadcast_message(
-                    NettyChannelServer::LaserCannonSystem,
-                    cosmos_encoder::serialize(&ServerLaserCannonSystemMessages::CreateMissile {
+                    NettyChannelServer::StructureSystems,
+                    cosmos_encoder::serialize(&ServerStructureSystemMessages::CreateMissile {
                         color,
                         location,
                         laser_velocity: missile_velocity,
@@ -145,8 +261,8 @@ fn update_system(
 
         if any_fired {
             server.broadcast_message(
-                NettyChannelServer::LaserCannonSystem,
-                cosmos_encoder::serialize(&ServerLaserCannonSystemMessages::MissileLauncherSystemFired { ship_entity }),
+                NettyChannelServer::StructureSystems,
+                cosmos_encoder::serialize(&ServerStructureSystemMessages::MissileLauncherSystemFired { ship_entity }),
             );
         }
     }
@@ -157,7 +273,7 @@ pub(super) fn register(app: &mut App) {
 
     app.add_systems(Update, update_system.run_if(in_state(GameState::Playing)))
         .add_systems(OnEnter(GameState::PostLoading), register_missile_launcher_blocks)
-        .add_systems(Update, on_add_missile_launcher);
+        .add_systems(Update, (add_missile_targettable, on_add_missile_launcher, missile_lockon).chain());
 
     register_structure_system::<MissileLauncherSystem>(app, true, "cosmos:missile_launcher");
 }

@@ -6,7 +6,7 @@ use bevy_renet::renet::*;
 use cosmos_core::{
     ecs::bundles::CosmosPbrBundle,
     netty::{
-        cosmos_encoder, server_laser_cannon_system_messages::ServerLaserCannonSystemMessages, sync::mapping::NetworkMapping,
+        cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages, sync::mapping::NetworkMapping,
         NettyChannelServer,
     },
     physics::location::CosmosBundleSet,
@@ -45,11 +45,11 @@ fn lasers_netty(
     mut ev_writer_laser_cannon_fired: EventWriter<LaserCannonSystemFiredEvent>,
     mut ev_writer_missile_launcher_fired: EventWriter<MissileLauncherSystemFiredEvent>,
 ) {
-    while let Some(message) = client.receive_message(NettyChannelServer::LaserCannonSystem) {
-        let msg: ServerLaserCannonSystemMessages = cosmos_encoder::deserialize(&message).unwrap();
+    while let Some(message) = client.receive_message(NettyChannelServer::StructureSystems) {
+        let msg: ServerStructureSystemMessages = cosmos_encoder::deserialize(&message).unwrap();
 
         match msg {
-            ServerLaserCannonSystemMessages::CreateLaser {
+            ServerStructureSystemMessages::CreateLaser {
                 color,
                 location,
                 laser_velocity,
@@ -84,7 +84,7 @@ fn lasers_netty(
                     &mut commands,
                 );
             }
-            ServerLaserCannonSystemMessages::CreateMissile {
+            ServerStructureSystemMessages::CreateMissile {
                 color,
                 location,
                 laser_velocity,
@@ -123,14 +123,14 @@ fn lasers_netty(
                     commands.entity(missile_entity).insert(ExplosionColor(color));
                 }
             }
-            ServerLaserCannonSystemMessages::LaserCannonSystemFired { ship_entity } => {
+            ServerStructureSystemMessages::LaserCannonSystemFired { ship_entity } => {
                 let Some(ship_entity) = network_mapping.client_from_server(&ship_entity) else {
                     continue;
                 };
 
                 ev_writer_laser_cannon_fired.send(LaserCannonSystemFiredEvent(ship_entity));
             }
-            ServerLaserCannonSystemMessages::MissileLauncherSystemFired { ship_entity } => {
+            ServerStructureSystemMessages::MissileLauncherSystemFired { ship_entity } => {
                 let Some(ship_entity) = network_mapping.client_from_server(&ship_entity) else {
                     continue;
                 };

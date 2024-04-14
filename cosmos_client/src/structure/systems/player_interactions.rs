@@ -7,7 +7,7 @@ use bevy::{
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     netty::{client::LocalPlayer, client_unreliable_messages::ClientUnreliableMessages, cosmos_encoder, NettyChannelClient},
-    structure::ship::pilot::Pilot,
+    structure::{ship::pilot::Pilot, systems::ShipActiveSystem},
 };
 
 use crate::{
@@ -37,14 +37,14 @@ fn check_system_in_use(
     hovered_system.active = input_handler.check_pressed(CosmosInputs::UseSelectedSystem);
 
     let active_system = if hovered_system.active {
-        Some(hovered_system.system_index as u32)
+        ShipActiveSystem::Active(hovered_system.system_index as u32)
     } else {
-        None
+        ShipActiveSystem::Hovered(hovered_system.system_index as u32)
     };
 
     client.send_message(
         NettyChannelClient::Unreliable,
-        cosmos_encoder::serialize(&ClientUnreliableMessages::ShipActiveSystem { active_system }),
+        cosmos_encoder::serialize(&ClientUnreliableMessages::ShipActiveSystem(active_system)),
     );
 }
 
