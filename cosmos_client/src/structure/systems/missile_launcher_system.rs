@@ -18,7 +18,7 @@ use crate::{
     asset::asset_loader::load_assets,
     audio::{AudioEmission, CosmosAudioEmitter, DespawnOnNoEmissions},
     state::game_state::GameState,
-    ui::ship_flight::indicators::{ClosestWaypoint, FocusedWaypointEntity, Indicating},
+    ui::ship_flight::indicators::{FocusedWaypointEntity, Indicating},
 };
 
 use super::sync::sync_system;
@@ -75,7 +75,6 @@ fn focus_looking_at(
     q_indicating: Query<&Indicating>,
 
     mapping: Res<NetworkMapping>,
-    closest_waypoint: Res<ClosestWaypoint>,
 ) {
     let Ok(pilot) = q_local_player.get_single() else {
         return;
@@ -91,8 +90,6 @@ fn focus_looking_at(
 
     let ent = if let Ok(focused_ent) = q_focused.get_single() {
         focused_ent
-    } else if let Some(closest_waypoint) = closest_waypoint.0 {
-        closest_waypoint
     } else {
         if missile_focus.focusing_server_entity != None {
             missile_focus.focusing_server_entity = None;
