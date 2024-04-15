@@ -149,10 +149,12 @@ pub trait SyncableComponent: Component + Serialize + DeserializeOwned + Clone {
 
 #[derive(Event, Debug)]
 struct GotComponentToSyncEvent {
+    #[allow(dead_code)] // on client this is unused
     client_id: ClientId,
     component_id: u16,
     entity: Entity,
     /// The entity authority should be checked against - not the entity being targetted.
+    #[allow(dead_code)] // on client this is unused
     authority_entity: Entity,
     raw_data: Vec<u8>,
 }

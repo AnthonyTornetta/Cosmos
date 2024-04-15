@@ -136,7 +136,7 @@ fn on_change_hotbar(
     }
 
     let selected = hotbar.selected_slot();
-    selected_system.system_index = selected;
+    selected_system.hovered_system_index = selected;
 }
 
 pub(super) fn register(app: &mut App) {

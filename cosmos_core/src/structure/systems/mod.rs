@@ -206,10 +206,15 @@ impl StructureSystems {
 
     /// This index is relative to the [`all_activatable_systems`] iterator NOT the [`all_systems`] index.
     pub fn get_activatable_system_from_activatable_index(&self, idx: usize) -> Entity {
-        *self
-            .ids
-            .get(&self.activatable_systems[idx])
-            .expect("Invalid state - system id has no entity mapping")
+        self.try_get_activatable_system_from_activatable_index(idx)
+            .unwrap_or_else(|| panic!("Invalid active system index provided {idx} < {}.", self.ids.len()))
+    }
+
+    /// This index is relative to the [`all_activatable_systems`] iterator NOT the [`all_systems`] index.
+    pub fn try_get_activatable_system_from_activatable_index(&self, idx: usize) -> Option<Entity> {
+        self.activatable_systems
+            .get(idx)
+            .map(|x| *self.ids.get(x).expect("Invalid state - system id has no entity mapping"))
     }
 
     fn has_id(&self, id: StructureSystemId) -> bool {
