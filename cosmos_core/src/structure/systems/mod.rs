@@ -14,10 +14,7 @@ use bevy::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    netty::sync::SyncableEntity,
-    registry::{create_registry, identifiable::Identifiable, Registry},
-};
+use crate::registry::{create_registry, identifiable::Identifiable, Registry};
 
 use super::{loading::StructureLoadingSet, shared::MeltingDown, ship::Ship, Structure};
 
@@ -481,12 +478,6 @@ impl Identifiable for StructureSystemType {
     }
 }
 
-fn update_systems_sync_entity_type(mut commands: Commands, q_add_structure_system: Query<Entity, Added<StructureSystem>>) {
-    for ent in q_add_structure_system.iter() {
-        commands.entity(ent).insert(SyncableEntity::StructureSystem);
-    }
-}
-
 pub(super) fn register(app: &mut App) {
     create_registry::<StructureSystemType>(app, "cosmos:structure_system_types");
 
@@ -494,7 +485,6 @@ pub(super) fn register(app: &mut App) {
         Update,
         (
             add_structure.in_set(StructureLoadingSet::LoadChunkData),
-            update_systems_sync_entity_type.in_set(StructureLoadingSet::StructureLoaded),
             remove_system_actives_when_melting_down,
         ),
     )

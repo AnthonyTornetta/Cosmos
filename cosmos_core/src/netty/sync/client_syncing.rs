@@ -1,7 +1,7 @@
 use super::mapping::NetworkMapping;
 use super::{
     register_component, ClientAuthority, ComponentEntityIdentifier, ComponentReplicationMessage, ComponentSyncingSet, SyncType,
-    SyncableComponent, SyncableEntity, SyncedComponentId,
+    SyncableComponent, SyncedComponentId,
 };
 use crate::netty::client::LocalPlayer;
 use crate::netty::sync::GotComponentToSyncEvent;
@@ -60,7 +60,7 @@ fn client_deserialize_component<T: SyncableComponent>(
 
 fn client_send_components<T: SyncableComponent>(
     id_registry: Res<Registry<SyncedComponentId>>,
-    q_changed_component: Query<(Entity, &T, Option<&SyncableEntity>, Option<&StructureSystem>), Changed<T>>,
+    q_changed_component: Query<(Entity, &T, Option<&StructureSystem>), Changed<T>>,
     mut client: ResMut<RenetClient>,
     mapping: Res<NetworkMapping>,
     q_local_player: Query<(), With<LocalPlayer>>,
@@ -78,75 +78,70 @@ fn client_send_components<T: SyncableComponent>(
         return;
     };
 
-    q_changed_component
-        .iter()
-        .for_each(|(entity, component, syncable_entity, structure_system)| {
-            let entity_identifier = match (syncable_entity, structure_system) {
-                (None, _) => mapping
-                    .server_from_client(&entity)
-                    .map(|e| (ComponentEntityIdentifier::Entity(e), entity)),
-                (Some(SyncableEntity::StructureSystem), Some(structure_system)) => {
-                    mapping.server_from_client(&structure_system.structure_entity()).map(|e| {
-                        (
-                            ComponentEntityIdentifier::StructureSystem {
-                                structure_entity: e,
-                                id: structure_system.id(),
-                            },
-                            structure_system.structure_entity(),
-                        )
-                    })
-                }
-                _ => None,
-            };
+    q_changed_component.iter().for_each(|(entity, component, structure_system)| {
+        let entity_identifier = match structure_system {
+            None => mapping
+                .server_from_client(&entity)
+                .map(|e| (ComponentEntityIdentifier::Entity(e), entity)),
+            Some(structure_system) => mapping.server_from_client(&structure_system.structure_entity()).map(|e| {
+                (
+                    ComponentEntityIdentifier::StructureSystem {
+                        structure_entity: e,
+                        id: structure_system.id(),
+                    },
+                    structure_system.structure_entity(),
+                )
+            }),
+        };
 
-            let Some((entity_identifier, authority_entity)) = entity_identifier else {
-                warn!("Invalid entity found - {entity_identifier:?} SyncableEntity settings: {syncable_entity:?}");
-                return;
-            };
+        let Some((entity_identifier, authority_entity)) = entity_identifier else {
+            warn!("Invalid entity found - {entity_identifier:?} - no match on server entities!");
+            return;
+        };
 
-            // The server checks this anyway, but save the client+server some bandwidth
-            match authority {
-                ClientAuthority::Anything => {}
-                ClientAuthority::Piloting => {
-                    let Ok(piloting) = q_local_piloting.get_single() else {
-                        return;
-                    };
-
-                    if piloting.entity != authority_entity {
-                        println!("Not piloting - no dice!");
-                        return;
-                    }
-                }
-                ClientAuthority::Themselves => {
-                    if !q_local_player.contains(entity) {
-                        return;
-                    }
-                }
-            }
-
-            let raw_data = if T::needs_entity_conversion() {
-                let mapped = component.clone().convert_entities_client_to_server(&mapping);
-
-                let Some(mapped) = mapped else {
+        // The server checks this anyway, but save the client+server some bandwidth
+        match authority {
+            ClientAuthority::Anything => {}
+            ClientAuthority::Piloting => {
+                let Ok(piloting) = q_local_piloting.get_single() else {
                     return;
                 };
 
-                bincode::serialize(&mapped)
-            } else {
-                bincode::serialize(component)
+                if piloting.entity != authority_entity {
+                    println!("Not piloting - no dice!");
+                    return;
+                }
             }
-            .expect("Failed to serialize component.");
+            ClientAuthority::Themselves => {
+                if !q_local_player.contains(entity) {
+                    return;
+                }
+            }
+        }
 
-            client.send_message(
-                NettyChannelClient::ComponentReplication,
-                cosmos_encoder::serialize(&ComponentReplicationMessage::ComponentReplication {
-                    component_id: id.id(),
-                    entity_identifier,
-                    // Avoid double compression using bincode instead of cosmos_encoder.
-                    raw_data,
-                }),
-            )
-        });
+        let raw_data = if T::needs_entity_conversion() {
+            let mapped = component.clone().convert_entities_client_to_server(&mapping);
+
+            let Some(mapped) = mapped else {
+                return;
+            };
+
+            bincode::serialize(&mapped)
+        } else {
+            bincode::serialize(component)
+        }
+        .expect("Failed to serialize component.");
+
+        client.send_message(
+            NettyChannelClient::ComponentReplication,
+            cosmos_encoder::serialize(&ComponentReplicationMessage::ComponentReplication {
+                component_id: id.id(),
+                entity_identifier,
+                // Avoid double compression using bincode instead of cosmos_encoder.
+                raw_data,
+            }),
+        )
+    });
 }
 
 pub(super) fn client_receive_components(

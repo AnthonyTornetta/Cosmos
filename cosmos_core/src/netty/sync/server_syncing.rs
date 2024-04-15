@@ -1,7 +1,7 @@
 use super::server_entity_syncing::RequestedEntityEvent;
 use super::{
     register_component, ClientAuthority, ComponentEntityIdentifier, ComponentReplicationMessage, ComponentSyncingSet, SyncType,
-    SyncableComponent, SyncableEntity, SyncedComponentId,
+    SyncableComponent, SyncedComponentId,
 };
 use crate::netty::server::ServerLobby;
 use crate::netty::sync::GotComponentToSyncEvent;
@@ -84,7 +84,7 @@ fn server_deserialize_component<T: SyncableComponent>(
 
 fn server_send_component<T: SyncableComponent>(
     id_registry: Res<Registry<SyncedComponentId>>,
-    q_changed_component: Query<(Entity, &T, Option<&SyncableEntity>, Option<&StructureSystem>), Changed<T>>,
+    q_changed_component: Query<(Entity, &T, Option<&StructureSystem>), Changed<T>>,
     mut server: ResMut<RenetServer>,
 ) {
     if q_changed_component.is_empty() {
@@ -96,44 +96,37 @@ fn server_send_component<T: SyncableComponent>(
         return;
     };
 
-    q_changed_component
-        .iter()
-        .for_each(|(entity, component, syncable_entity, structure_system)| {
-            let entity_identifier = match (syncable_entity, structure_system) {
-                (None, _) => Some(ComponentEntityIdentifier::Entity(entity)),
-                (Some(SyncableEntity::StructureSystem), Some(structure_system)) => Some(ComponentEntityIdentifier::StructureSystem {
-                    structure_entity: structure_system.structure_entity(),
-                    id: structure_system.id(),
-                }),
-                _ => None,
-            };
+    q_changed_component.iter().for_each(|(entity, component, structure_system)| {
+        let entity_identifier = if let Some(structure_system) = structure_system {
+            ComponentEntityIdentifier::StructureSystem {
+                structure_entity: structure_system.structure_entity(),
+                id: structure_system.id(),
+            }
+        } else {
+            ComponentEntityIdentifier::Entity(entity)
+        };
 
-            let Some(entity_identifier) = entity_identifier else {
-                warn!("Invalid entity found - {entity_identifier:?} SyncableEntity settings: {syncable_entity:?}");
-                return;
-            };
-
-            server.broadcast_message(
-                NettyChannelServer::ComponentReplication,
-                cosmos_encoder::serialize(&ComponentReplicationMessage::ComponentReplication {
-                    component_id: id.id(),
-                    entity_identifier,
-                    // Avoid double compression using bincode instead of cosmos_encoder.
-                    raw_data: bincode::serialize(component).expect("Failed to serialize component."),
-                }),
-            );
-        });
+        server.broadcast_message(
+            NettyChannelServer::ComponentReplication,
+            cosmos_encoder::serialize(&ComponentReplicationMessage::ComponentReplication {
+                component_id: id.id(),
+                entity_identifier,
+                // Avoid double compression using bincode instead of cosmos_encoder.
+                raw_data: bincode::serialize(component).expect("Failed to serialize component."),
+            }),
+        );
+    });
 }
 
 fn on_request_component<T: SyncableComponent>(
-    q_t: Query<(&T, Option<&SyncableEntity>, Option<&StructureSystem>)>,
+    q_t: Query<(&T, Option<&StructureSystem>)>,
     // q_rb: Query<(&Location, &GlobalTransform, &Velocity)>,
     mut ev_reader: EventReader<RequestedEntityEvent>,
     id_registry: Res<Registry<SyncedComponentId>>,
     mut server: ResMut<RenetServer>,
 ) {
     for ev in ev_reader.read() {
-        let Ok((component, syncable_entity, structure_system)) = q_t.get(ev.entity) else {
+        let Ok((component, structure_system)) = q_t.get(ev.entity) else {
             continue;
         };
 
@@ -142,39 +135,13 @@ fn on_request_component<T: SyncableComponent>(
             return;
         };
 
-        // if T::is_base_component() {
-        //     if let Ok((location, g_trans, vel)) = q_rb.get(ev.entity) {
-        //         info!("Sending netty rigid body!");
-
-        //         server.send_message(
-        //             ev.client_id,
-        //             NettyChannelServer::Reliable,
-        //             cosmos_encoder::serialize(&ServerReliableMessages::NettyRigidBody {
-        //                 body: NettyRigidBody::new(
-        //                     vel,
-        //                     Quat::from_affine3(&g_trans.affine()),
-        //                     NettyRigidBodyLocation::Absolute(*location),
-        //                 ),
-        //                 entity: ev.entity,
-        //             }),
-        //         );
-        //     } else {
-        //         warn!("Base component was on entity w/out location/g_trans/velocity.");
-        //     }
-        // }
-
-        let entity_identifier = match (syncable_entity, structure_system) {
-            (None, _) => Some(ComponentEntityIdentifier::Entity(ev.entity)),
-            (Some(SyncableEntity::StructureSystem), Some(structure_system)) => Some(ComponentEntityIdentifier::StructureSystem {
+        let entity_identifier = if let Some(structure_system) = structure_system {
+            ComponentEntityIdentifier::StructureSystem {
                 structure_entity: structure_system.structure_entity(),
                 id: structure_system.id(),
-            }),
-            _ => None,
-        };
-
-        let Some(entity_identifier) = entity_identifier else {
-            warn!("Invalid entity found - {entity_identifier:?} SyncableEntity settings: {syncable_entity:?}");
-            return;
+            }
+        } else {
+            ComponentEntityIdentifier::Entity(ev.entity)
         };
 
         server.send_message(

@@ -84,7 +84,7 @@ fn toggle_mouse_freeze(mut commands: Commands, q_cursor_unlocked: Query<Entity, 
         if let Ok(ent) = q_cursor_unlocked.get_single() {
             commands.entity(ent).insert(NeedsDespawned);
         } else {
-            commands.spawn((CursorUnlocker, ShowCursor));
+            commands.spawn((Name::new("Cursor Unlocker"), CursorUnlocker, ShowCursor));
         }
     }
 }

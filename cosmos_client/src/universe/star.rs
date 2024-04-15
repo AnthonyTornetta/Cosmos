@@ -40,6 +40,7 @@ fn create_added_star(
 ) {
     for (entity, star) in added.iter() {
         commands.entity(entity).insert((
+            Name::new("Star"),
             PbrBundle {
                 mesh: meshes.add(Sphere {
                     radius: SECTOR_DIMENSIONS * 2.0,

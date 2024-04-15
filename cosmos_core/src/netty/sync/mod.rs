@@ -102,14 +102,6 @@ enum ComponentEntityIdentifier {
     StructureSystem { structure_entity: Entity, id: StructureSystemId },
 }
 
-#[derive(Debug, Clone, Copy, Component)]
-/// Represents how to find this entity for the syncing system.
-///
-/// This should be handled automatically.
-pub(crate) enum SyncableEntity {
-    StructureSystem,
-}
-
 /// Indicates that a component can be synchronized either from `Server -> Client` or `Client -> Server`.
 ///
 /// Not that `clone()` is only called if the client is sending something to the server ([`SyncType::ClientAuthoritative`]) AND
