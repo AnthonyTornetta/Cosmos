@@ -98,7 +98,7 @@ fn focus_looking_at(
     let ent = if let Ok(focused_ent) = q_focused.get_single() {
         focused_ent
     } else {
-        if missile_focus.focusing_server_entity != None {
+        if missile_focus.focusing_server_entity.is_some() {
             missile_focus.focusing_server_entity = None;
         }
         return;
@@ -109,7 +109,7 @@ fn focus_looking_at(
     };
 
     let Some(server_ent) = mapping.server_from_client(&ent) else {
-        if missile_focus.focusing_server_entity != None {
+        if missile_focus.focusing_server_entity.is_some() {
             missile_focus.focusing_server_entity = None;
         }
 
@@ -161,8 +161,7 @@ fn render_lockon_status(
 
     let Some(missile_focus) = systems
         .try_get_activatable_system_from_activatable_index(hovered_system.hovered_system_index)
-        .map(|x| q_missile_focus.get(x).ok())
-        .flatten()
+        .and_then(|x| q_missile_focus.get(x).ok())
     else {
         if let Ok((ent, _)) = focus_ui {
             commands.entity(ent).insert(NeedsDespawned);

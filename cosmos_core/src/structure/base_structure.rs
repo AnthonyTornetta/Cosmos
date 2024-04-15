@@ -562,13 +562,13 @@ impl BaseStructure {
     }
 
     /// Returns an iterator that acts as a raycast over a set of blocks in this structure
-    pub fn raycast_iter<'a>(
-        &'a self,
+    pub fn raycast_iter(
+        &self,
         start_relative_position: Vec3,
         mut direction: Vec3,
         mut max_length: f32,
         include_air: bool,
-    ) -> RaycastIter<'a> {
+    ) -> RaycastIter<'_> {
         if direction == Vec3::ZERO {
             // If direction is zero, then the ray would never move.
             // Thus, this should only iterate over the point that is given for the start.

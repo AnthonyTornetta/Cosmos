@@ -93,7 +93,7 @@ fn respond_to_explosion(
     };
 
     for (ent, explosion_loc, g_trans, explosion) in q_explosions.iter() {
-        let hash = explosion.color.map(|explosion_color| color_hash(explosion_color)).unwrap_or(0);
+        let hash = explosion.color.map(color_hash).unwrap_or(0);
 
         let particle_handle = particles.0.get(&hash).map(|x| x.clone_weak()).unwrap_or_else(|| {
             let fx_handle = create_particle_fx(explosion.color, &mut effects);

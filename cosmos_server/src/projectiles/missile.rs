@@ -178,7 +178,7 @@ fn calculate_block_explosion_power(
     // exponential decay is intended
     let decay_percent = block_pos.distance_squared(explosion_relative_position) / max_distance_sqrd;
 
-    remaining_explosion_power = remaining_explosion_power * (1.0 - decay_percent);
+    remaining_explosion_power *= 1.0 - decay_percent;
 
     if remaining_explosion_power > 0.0 {
         Some((this_block, remaining_explosion_power))

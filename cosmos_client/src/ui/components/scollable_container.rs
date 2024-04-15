@@ -257,7 +257,7 @@ fn on_interact_slider(
             let min = phys_rect.min.y + scrollbar_height_px / 2.0;
             let max = phys_rect.max.y - scrollbar_height_px / 2.0;
 
-            let mouse_percent = ((cursor_pos.y - min) / (max - min)).max(0.0).min(1.0);
+            let mouse_percent = ((cursor_pos.y - min) / (max - min)).clamp(0.0, 1.0);
 
             scrollbar.scroll_amount = mouse_percent * max_scroll;
             style.top = Val::Px(-scrollbar.scroll_amount);

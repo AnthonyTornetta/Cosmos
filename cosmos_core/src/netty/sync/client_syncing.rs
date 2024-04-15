@@ -162,20 +162,15 @@ pub(super) fn client_receive_components(
             } => {
                 let entity = match entity_identifier {
                     ComponentEntityIdentifier::Entity(entity) => network_mapping.client_from_server(&entity).map(|x| (x, x)),
-                    ComponentEntityIdentifier::StructureSystem { structure_entity, id } => network_mapping
-                        .client_from_server(&structure_entity)
-                        .map(|structure_entity| {
-                            let Ok(structure_systems) = q_structure_systems.get(structure_entity) else {
-                                return None;
-                            };
+                    ComponentEntityIdentifier::StructureSystem { structure_entity, id } => {
+                        network_mapping.client_from_server(&structure_entity).and_then(|structure_entity| {
+                            let structure_systems = q_structure_systems.get(structure_entity).ok()?;
 
-                            let Some(system_entity) = structure_systems.get_system_entity(id) else {
-                                return None;
-                            };
+                            let system_entity = structure_systems.get_system_entity(id)?;
 
                             Some((system_entity, structure_entity))
                         })
-                        .flatten(),
+                    }
                 };
 
                 let (entity, authority_entity) = if let Some(entity) = entity {

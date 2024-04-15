@@ -421,7 +421,7 @@ impl Star {
     ///
     /// * `temperature` In Kelvin. Our sun is 5,772.0K. This is clamped to be within `MIN_TEMPERATURE` and `MAX_TEMPERATURE`.
     pub fn new(temperature: f32) -> Self {
-        let temperature = temperature.max(MIN_TEMPERATURE).min(MAX_TEMPERATURE);
+        let temperature = temperature.clamp(MIN_TEMPERATURE, MAX_TEMPERATURE);
 
         Self { temperature }
     }

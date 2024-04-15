@@ -83,7 +83,7 @@ fn main() {
             task_pool_options: TaskPoolOptions {
                 compute: TaskPoolThreadAssignmentPolicy {
                     min_threads: 1,
-                    max_threads: std::usize::MAX,
+                    max_threads: usize::MAX,
                     percent: 0.25,
                 },
                 ..Default::default()
