@@ -1,32 +1,39 @@
 //! Server-related missile logic
 
+use std::time::Duration;
+
 use bevy::{
     ecs::{
         component::Component,
-        event::EventWriter,
+        event::{EventReader, EventWriter},
         query::{Added, Or, Without},
         schedule::IntoSystemConfigs,
     },
+    hierarchy::Parent,
     log::info,
     math::{Quat, Vec3},
     prelude::{App, Commands, Entity, Query, Res, Update, With},
     time::Time,
-    transform::components::{GlobalTransform, Transform},
+    transform::{
+        components::{GlobalTransform, Transform},
+        TransformBundle,
+    },
     utils::HashSet,
 };
 use bevy_rapier3d::{
-    dynamics::ExternalImpulse,
+    dynamics::{ExternalImpulse, Velocity},
     geometry::{Collider, Sensor},
-    pipeline::QueryFilter,
+    pipeline::{CollisionEvent, QueryFilter},
     plugin::RapierContext,
-    prelude::PhysicsWorld,
+    prelude::{PhysicsWorld, RigidBody},
 };
 
 use cosmos_core::{
     block::Block,
     ecs::NeedsDespawned,
     events::block_events::BlockChangedEvent,
-    physics::location::Location,
+    persistence::LoadingDistance,
+    physics::{collision_handling::CollisionBlacklist, location::Location},
     projectiles::missile::{Explosion, ExplosionSystemSet, Missile},
     registry::Registry,
     structure::{
@@ -111,12 +118,6 @@ fn respond_to_explosion(
                 )
                 .map(|x| x.coords())
                 .filter(|&coords| structure.has_block_at(coords)) // Remove this once `include_air` works.
-                // .filter(|&this_block| {
-                //     structure
-                //         .block_relative_position(this_block)
-                //         .distance_squared(explosion_relative_position)
-                //         <= max_radius_sqrd
-                // })
                 .flat_map(|this_block| {
                     calculate_block_explosion_power(
                         &structure,
@@ -217,7 +218,94 @@ fn apply_missile_thrust(mut commands: Commands, time: Res<Time>, q_missiles: Que
     }
 }
 
+fn respond_to_collisions(
+    mut ev_reader: EventReader<CollisionEvent>,
+    q_missile: Query<(&GlobalTransform, &Location, &Velocity, &Missile, &CollisionBlacklist)>,
+    q_parent: Query<&Parent>,
+    mut commands: Commands,
+) {
+    for ev in ev_reader.read() {
+        let &CollisionEvent::Started(e1, e2, _) = ev else {
+            continue;
+        };
+
+        let entities = if let Ok(missile) = q_missile.get(e1) {
+            Some((missile, e1, e2))
+        } else if let Ok(missile) = q_missile.get(e2) {
+            Some((missile, e2, e1))
+        } else {
+            None
+        };
+
+        let Some(((g_t, location, velocity, missile, collision_blacklist), missile_entity, hit_entity)) = entities else {
+            continue;
+        };
+
+        if !collision_blacklist.check_should_collide(hit_entity, &q_parent) {
+            continue;
+        }
+
+        commands.entity(missile_entity).insert(NeedsDespawned);
+
+        let translation = g_t.translation();
+        let mut loc = *location;
+        loc.last_transform_loc = Some(translation);
+
+        commands.spawn((
+            loc,
+            *velocity,
+            RigidBody::Dynamic,
+            LoadingDistance::new(1, 2),
+            TransformBundle::from_transform(Transform::from_translation(translation)),
+            Explosion {
+                power: missile.strength,
+                color: missile.color,
+            },
+        ));
+    }
+}
+
+fn despawn_missiles(
+    mut commands: Commands,
+    mut query: Query<(Entity, &GlobalTransform, &Velocity, &Location, &mut Missile)>,
+    time: Res<Time>,
+) {
+    for (ent, g_trans, velocity, location, mut missile) in query.iter_mut() {
+        missile.lifetime = missile
+            .lifetime
+            .checked_sub(Duration::from_secs_f32(time.delta_seconds()))
+            .unwrap_or(Duration::ZERO);
+
+        if missile.lifetime == Duration::ZERO {
+            commands.entity(ent).insert(NeedsDespawned);
+
+            let translation = g_trans.translation();
+            let mut loc = *location;
+            loc.last_transform_loc = Some(translation);
+
+            commands.spawn((
+                loc,
+                *velocity,
+                RigidBody::Dynamic,
+                LoadingDistance::new(1, 2),
+                TransformBundle::from_transform(Transform::from_translation(translation)),
+                Explosion {
+                    power: missile.strength,
+                    color: missile.color,
+                },
+            ));
+        }
+    }
+}
+
 pub(super) fn register(app: &mut App) {
+    app.add_systems(
+        Update,
+        (respond_to_collisions, despawn_missiles)
+            .before(ExplosionSystemSet::ProcessExplosions)
+            .chain(),
+    );
+
     app.add_systems(Update, respond_to_explosion.in_set(ExplosionSystemSet::ProcessExplosions))
         .add_systems(Update, (look_towards_target, apply_missile_thrust).chain());
 }

@@ -170,7 +170,7 @@ fn calculate_focusable_properties(
     }
     let direction = (*loc - *structure_location).absolute_coords_f32().normalize_or_zero();
     let dot = targetting_forward.dot(direction);
-    if dot < 0.7 {
+    if dot < 0.9 {
         return None;
     };
 
@@ -243,7 +243,6 @@ fn update_missile_system(
                     ship_velocity.linvel,
                     strength,
                     no_hit,
-                    &time,
                     world_id,
                     &mut commands,
                     lifetime,

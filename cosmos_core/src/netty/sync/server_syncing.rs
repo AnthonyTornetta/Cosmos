@@ -51,17 +51,14 @@ fn server_deserialize_component<T: SyncableComponent>(
             ClientAuthority::Anything => {}
             ClientAuthority::Piloting => {
                 let Some(player) = lobby.player_from_id(ev.client_id) else {
-                    println!("No player!");
                     return;
                 };
 
                 let Ok(piloting) = q_piloting.get(player) else {
-                    println!("Not piloting anything!");
                     return;
                 };
 
                 if piloting.entity != ev.authority_entity {
-                    println!("Not piloting same entity!");
                     return;
                 }
             }

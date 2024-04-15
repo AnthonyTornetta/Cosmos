@@ -548,7 +548,7 @@ pub(crate) fn client_sync_players(
                     }
                 }
             }
-            ServerReliableMessages::StructureRemove { entity: server_entity } => {
+            ServerReliableMessages::EntityDespawn { entity: server_entity } => {
                 if let Some(entity) = network_mapping.client_from_server(&server_entity) {
                     commands.entity(entity).insert(NeedsDespawned);
                 }

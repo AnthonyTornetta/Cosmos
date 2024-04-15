@@ -81,9 +81,9 @@ pub enum ServerReliableMessages {
         /// The id of the player removed.
         id: ClientId,
     },
-    /// A structure has been removed, and the client should remove it.
-    StructureRemove {
-        /// The server's structure entity.
+    /// An entity has been despawned, and the client should remove it.
+    EntityDespawn {
+        /// The server's version of the entity.
         entity: Entity,
     },
     /// This represents the data for a serialized chunk.

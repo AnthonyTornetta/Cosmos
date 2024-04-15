@@ -60,52 +60,10 @@ fn on_add_missile(mut commands: Commands, missile_mesh: Res<MissileRenderingInfo
             missile_mesh.1.clone_weak(),
         ));
     }
-    // ServerStructureSystemMessages::CreateMissile {
-    //     color,
-    //     location,
-    //     laser_velocity,
-    //     firer_velocity,
-    //     strength,
-    //     mut no_hit,
-    //     lifetime,
-    // } => {
-    //     if let Some(server_entity) = no_hit {
-    //         if let Some(client_entity) = network_mapping.client_from_server(&server_entity) {
-    //             no_hit = Some(client_entity);
-    //         }
-    //     }
-
-    //     let missile_entity = Missile::spawn_custom_pbr(
-    //         location,
-    //         laser_velocity,
-    //         firer_velocity,
-    //         strength,
-    //         no_hit,
-    //         CosmosPbrBundle {
-    //             mesh: missie_mesh.0.clone_weak(),
-    //             material: materials.add(StandardMaterial {
-    //                 base_color: Color::DARK_GRAY,
-    //                 ..Default::default()
-    //             }),
-    //             ..Default::default()
-    //         },
-    //         &time,
-    //         DEFAULT_WORLD_ID,
-    //         &mut commands,
-    //         lifetime,
-    //     );
-
-    //     if let Some(color) = color {
-    //         commands.entity(missile_entity).insert(ExplosionColor(color));
-    //     }
-    // }
 }
 
 #[derive(Component)]
 struct ExplosionParticle;
-
-#[derive(Component)]
-pub struct ExplosionColor(pub Color);
 
 fn color_hash(color: Color) -> u32 {
     let (r, g, b, a) = (
@@ -124,7 +82,7 @@ struct ParticleEffectsForColor(HashMap<u32, Handle<EffectAsset>>);
 fn respond_to_explosion(
     mut commands: Commands,
     q_local_player: Query<&GlobalTransform, With<LocalPlayer>>,
-    q_explosions: Query<(Entity, &Location, &GlobalTransform, Option<&ExplosionColor>), Added<Explosion>>,
+    q_explosions: Query<(Entity, &Location, &GlobalTransform, &Explosion), Added<Explosion>>,
     audio: Res<Audio>,
     audio_sources: Res<ExplosionAudio>,
     mut particles: ResMut<ParticleEffectsForColor>,
@@ -134,12 +92,11 @@ fn respond_to_explosion(
         return;
     };
 
-    for (ent, explosion_loc, g_trans, explosion_color) in q_explosions.iter() {
-        let explosion_color = explosion_color.map(|x| x.0);
-        let hash = explosion_color.map(|explosion_color| color_hash(explosion_color)).unwrap_or(0);
+    for (ent, explosion_loc, g_trans, explosion) in q_explosions.iter() {
+        let hash = explosion.color.map(|explosion_color| color_hash(explosion_color)).unwrap_or(0);
 
         let particle_handle = particles.0.get(&hash).map(|x| x.clone_weak()).unwrap_or_else(|| {
-            let fx_handle = create_particle_fx(explosion_color, &mut effects);
+            let fx_handle = create_particle_fx(explosion.color, &mut effects);
 
             let fx_handle_weak = fx_handle.clone_weak();
 

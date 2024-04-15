@@ -6,22 +6,17 @@ use std::time::Duration;
 use bevy::{
     core::Name,
     ecs::{
-        event::EventReader,
         query::Added,
-        schedule::{IntoSystemConfigs, SystemSet},
+        schedule::{IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
         system::EntityCommands,
     },
-    hierarchy::Parent,
     pbr::{NotShadowCaster, NotShadowReceiver},
-    prelude::{App, Commands, Component, Entity, Event, Query, Res, Transform, Update, Vec3},
+    prelude::{App, Commands, Component, Entity, Event, Query, Transform, Update, Vec3},
     reflect::Reflect,
     render::color::Color,
-    time::Time,
-    transform::components::GlobalTransform,
 };
 use bevy_rapier3d::{
     geometry::{ActiveEvents, ActiveHooks, Collider},
-    pipeline::CollisionEvent,
     prelude::{PhysicsWorld, RigidBody, Velocity, WorldId},
 };
 use serde::{Deserialize, Serialize};
@@ -32,7 +27,7 @@ use crate::{
     persistence::LoadingDistance,
     physics::{
         collision_handling::{CollisionBlacklist, CollisionBlacklistedEntity},
-        location::Location,
+        location::{CosmosBundleSet, Location, LocationPhysicsSet},
     },
 };
 
@@ -71,11 +66,6 @@ impl MissileCollideEvent {
     }
 }
 
-#[derive(Component)]
-struct FireTime {
-    time: f32,
-}
-
 #[derive(Component, Serialize, Deserialize, Clone)]
 /// A missile is something that flies in a straight line & may collide with a block, causing
 /// it to take damage. Use `Missile::spawn` to create a missile.
@@ -84,10 +74,10 @@ pub struct Missile {
     pub strength: f32,
 
     /// How long the missile can be alive before exploding
-    lifetime: Duration,
+    pub lifetime: Duration,
 
     /// Color of the missile's explosion, if it has one specified
-    color: Option<Color>,
+    pub color: Option<Color>,
 }
 
 impl SyncableComponent for Missile {
@@ -112,7 +102,6 @@ impl Missile {
         firer_velocity: Vec3,
         strength: f32,
         no_collide_entity: Option<Entity>,
-        time: &Time,
         world_id: WorldId,
         commands: &'a mut Commands,
         missile_lifetime: Duration,
@@ -136,9 +125,6 @@ impl Missile {
             Velocity {
                 linvel: missile_velocity + firer_velocity,
                 ..Default::default()
-            },
-            FireTime {
-                time: time.elapsed_seconds(),
             },
             PhysicsWorld { world_id },
             LoadingDistance::new(1, 2),
@@ -169,59 +155,25 @@ fn on_add_missile(q_added_missile: Query<Entity, Added<Missile>>, mut commands: 
     }
 }
 
-#[derive(Component, Reflect)]
+#[derive(Component, Reflect, Clone, Serialize, Deserialize)]
 /// Something that will cause damage to nearby entities that it hits.
 pub struct Explosion {
     /// The power of the explosion is used to calculate its radius & effectiveness against blocks.
     ///
     /// The radius of an explosion (assuming no blocks to dampen its power) is calculated as `sqrt(power)`.
     pub power: f32,
+
+    /// The color the explosion should be
+    pub color: Option<Color>,
 }
 
-fn respond_to_collisions(
-    mut ev_reader: EventReader<CollisionEvent>,
-    q_missile: Query<(&GlobalTransform, &Missile, &CollisionBlacklist)>,
-    q_parent: Query<&Parent>,
-    mut commands: Commands,
-) {
-    for ev in ev_reader.read() {
-        let &CollisionEvent::Started(e1, e2, _) = ev else {
-            continue;
-        };
-
-        let entities = if let Ok(missile) = q_missile.get(e1) {
-            Some((missile, e1, e2))
-        } else if let Ok(missile) = q_missile.get(e2) {
-            Some((missile, e2, e1))
-        } else {
-            None
-        };
-
-        let Some(((g_t, missile, collision_blacklist), missile_entity, hit_entity)) = entities else {
-            continue;
-        };
-
-        if !collision_blacklist.check_should_collide(hit_entity, &q_parent) {
-            continue;
-        }
-
-        println!("Missile @ {} hit something! {hit_entity:?}", g_t.translation());
-
-        commands
-            .entity(missile_entity)
-            .remove::<(Missile, FireTime, Collider, ActiveHooks, ActiveEvents)>()
-            .insert(Explosion { power: missile.strength });
+impl SyncableComponent for Explosion {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:explosion"
     }
-}
 
-fn despawn_missiles(mut commands: Commands, query: Query<(Entity, &FireTime, &Missile)>, time: Res<Time>) {
-    for (ent, fire_time, missile) in query.iter() {
-        if time.elapsed_seconds() - fire_time.time > missile.lifetime.as_secs_f32() {
-            commands
-                .entity(ent)
-                .remove::<(Missile, FireTime, Collider, ActiveHooks, ActiveEvents)>()
-                .insert(Explosion { power: missile.strength });
-        }
+    fn get_sync_type() -> crate::netty::sync::SyncType {
+        crate::netty::sync::SyncType::ServerAuthoritative
     }
 }
 
@@ -238,20 +190,35 @@ pub enum ExplosionSystemSet {
 
 pub(super) fn register(app: &mut App) {
     sync_component::<Missile>(app);
+    sync_component::<Explosion>(app);
 
-    app.configure_sets(Update, ExplosionSystemSet::ProcessExplosions);
+    let mut sets = ExplosionSystemSet::ProcessExplosions
+        .before(LocationPhysicsSet::DoPhysics)
+        .before(CosmosBundleSet::HandleCosmosBundles);
+
+    #[cfg(feature = "server")]
+    {
+        // Setup explosion before they are synced to clients
+        sets = sets.before(ComponentSyncingSet::PreComponentSyncing);
+    }
+    #[cfg(feature = "client")]
+    {
+        // Receive explosions from server before processing them
+        sets = sets.after(ComponentSyncingSet::PostComponentSyncing);
+    }
+
+    app.configure_sets(Update, sets);
 
     #[cfg(feature = "client")]
     app.add_systems(Update, on_add_missile.in_set(ComponentSyncingSet::PostComponentSyncing));
     #[cfg(feature = "server")]
     app.add_systems(Update, on_add_missile.in_set(ComponentSyncingSet::PreComponentSyncing));
 
-    app.add_systems(
-        Update,
-        (respond_to_collisions, despawn_missiles)
-            .before(ExplosionSystemSet::ProcessExplosions)
-            .chain(),
-    )
-    .add_event::<MissileCollideEvent>()
-    .register_type::<Explosion>();
+    // app.add_systems(
+    //     Update,
+    //     (respond_to_collisions, despawn_missiles)
+    //         .before(ExplosionSystemSet::ProcessExplosions)
+    //         .chain(),
+    // )
+    app.add_event::<MissileCollideEvent>().register_type::<Explosion>();
 }

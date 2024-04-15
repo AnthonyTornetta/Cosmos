@@ -108,7 +108,6 @@ fn client_send_components<T: SyncableComponent>(
                 };
 
                 if piloting.entity != authority_entity {
-                    println!("Not piloting - no dice!");
                     return;
                 }
             }
@@ -191,7 +190,7 @@ pub(super) fn client_receive_components(
                         }
                         ComponentEntityIdentifier::StructureSystem { structure_entity, id } => {
                             warn!(
-                                "Got structure system synced component, but no valid structure exists for it! ({structure_entity:?}, {id:?})"
+                                "Got structure system synced component, but no valid structure exists for it! ({structure_entity:?}, {id:?}). In the future, this should try again once we receive the correct structure from the server."
                             );
 
                             continue;

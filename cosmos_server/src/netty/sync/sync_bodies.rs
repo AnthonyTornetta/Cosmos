@@ -102,6 +102,15 @@ fn pinger(mut server: ResMut<RenetServer>, mut event_reader: EventReader<Request
     }
 }
 
+fn notify_despawned_entities(mut removed_components: RemovedComponents<LoadingDistance>, mut server: ResMut<RenetServer>) {
+    for killed_entity in removed_components.read() {
+        server.broadcast_message(
+            NettyChannelServer::Reliable,
+            cosmos_encoder::serialize(&ServerReliableMessages::EntityDespawn { entity: killed_entity }),
+        );
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
@@ -113,5 +122,6 @@ pub(super) fn register(app: &mut App) {
                 .before(NetworkingSystemsSet::ReceiveMessages),
             pinger,
         ),
-    );
+    )
+    .add_systems(Update, notify_despawned_entities);
 }
