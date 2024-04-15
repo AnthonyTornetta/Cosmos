@@ -102,15 +102,13 @@ fn missile_lockon(
         let targetting_forward = g_trans.forward();
 
         // Find best cadidate for focusing
-        let mut best_target = preferred_focus
-            .focusing_server_entity
-            .and_then(|ent| {
-                let (ent, loc) = q_targettable.get(ent).ok()?;
+        let mut best_target = preferred_focus.focusing_server_entity.and_then(|ent| {
+            let (ent, loc) = q_targettable.get(ent).ok()?;
 
-                calculate_focusable_properties(ent, structure_system, loc, structure_location, targetting_forward)?;
+            calculate_focusable_properties(ent, structure_system, loc, structure_location, targetting_forward)?;
 
-                Some(ent)
-            });
+            Some(ent)
+        });
 
         if best_target.is_none() {
             best_target = q_targettable

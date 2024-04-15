@@ -534,13 +534,7 @@ impl Structure {
 
     #[must_use]
     /// Returns an iterator that acts as a raycast over a set of blocks in this structure
-    pub fn raycast_iter(
-        &self,
-        start_relative_position: Vec3,
-        direction: Vec3,
-        max_length: f32,
-        include_air: bool,
-    ) -> RaycastIter<'_> {
+    pub fn raycast_iter(&self, start_relative_position: Vec3, direction: Vec3, max_length: f32, include_air: bool) -> RaycastIter<'_> {
         match self {
             Self::Full(fs) => fs.raycast_iter(start_relative_position, direction, max_length, include_air),
             Self::Dynamic(ds) => ds.raycast_iter(start_relative_position, direction, max_length, include_air),
