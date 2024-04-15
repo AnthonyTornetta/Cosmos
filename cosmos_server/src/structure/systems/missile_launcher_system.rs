@@ -7,11 +7,16 @@ use bevy_rapier3d::prelude::{PhysicsWorld, Velocity, DEFAULT_WORLD_ID};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::Block,
+    ecs::bundles::CosmosPbrBundle,
     entities::player::Player,
     netty::{
         cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages, sync::ComponentSyncingSet, NettyChannelServer,
     },
-    physics::location::{CosmosBundleSet, Location},
+    persistence::LoadingDistance,
+    physics::{
+        collision_handling::{CollisionBlacklist, CollisionBlacklistedEntity},
+        location::{CosmosBundleSet, Location},
+    },
     projectiles::missile::Missile,
     registry::Registry,
     structure::{
@@ -230,23 +235,36 @@ fn update_missile_system(
 
                 // TODO: Make missile launcher take item and strength is determined by the item they hold
                 let strength = 10.0; //(5.0 * line.len as f32).powf(1.2);
-                let no_hit = Some(system.structure_entity());
 
                 let lifetime = Duration::from_secs_f32(
                     MISSILE_LIFETIME.as_secs_f32() + (MISSILE_LIFETIME_FUDGE.as_secs_f32() * (rand::random::<f32>() - 0.5) * 2.0),
                 );
 
-                let mut missile_cmds = Missile::spawn(
-                    location,
-                    line.color,
-                    missile_velocity,
-                    ship_velocity.linvel,
-                    strength,
-                    no_hit,
-                    world_id,
-                    &mut commands,
-                    lifetime,
-                );
+                let mut missile_cmds = commands.spawn((
+                    Missile {
+                        color: line.color,
+                        strength,
+                        lifetime,
+                    },
+                    CosmosPbrBundle {
+                        rotation: Transform::from_xyz(0.0, 0.0, 0.0)
+                            .looking_at(missile_velocity, Vec3::Y)
+                            .rotation
+                            .into(),
+                        location,
+                        ..Default::default()
+                    },
+                    Velocity {
+                        linvel: missile_velocity + ship_velocity.linvel,
+                        ..Default::default()
+                    },
+                    PhysicsWorld { world_id },
+                    LoadingDistance::new(1, 2),
+                    CollisionBlacklist::single(CollisionBlacklistedEntity {
+                        entity: system.structure_entity(),
+                        search_parents: true,
+                    }),
+                ));
 
                 if let Some(targetting) = focus.locked_on_to() {
                     missile_cmds.insert(MissileTargetting {
