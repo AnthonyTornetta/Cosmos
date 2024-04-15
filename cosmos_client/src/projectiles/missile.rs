@@ -54,9 +54,11 @@ fn create_missile_mesh(asset_server: Res<AssetServer>, mut materials: ResMut<Ass
 
 fn on_add_missile(mut commands: Commands, missile_mesh: Res<MissileRenderingInfo>, q_added_missile: Query<Entity, Added<Missile>>) {
     for ent in &q_added_missile {
-        commands
-            .entity(ent)
-            .insert((missile_mesh.0.clone_weak(), missile_mesh.1.clone_weak()));
+        commands.entity(ent).insert((
+            VisibilityBundle::default(),
+            missile_mesh.0.clone_weak(),
+            missile_mesh.1.clone_weak(),
+        ));
     }
     // ServerStructureSystemMessages::CreateMissile {
     //     color,

@@ -33,6 +33,7 @@ fn client_deserialize_component<T: SyncableComponent>(
     components_registry: Res<Registry<SyncedComponentId>>,
     mut ev_reader: EventReader<GotComponentToSyncEvent>,
     mut commands: Commands,
+    mapping: Res<NetworkMapping>,
 ) {
     for ev in ev_reader.read() {
         let synced_id = components_registry
@@ -44,7 +45,15 @@ fn client_deserialize_component<T: SyncableComponent>(
         }
 
         if let Some(mut ecmds) = commands.get_entity(ev.entity) {
-            ecmds.try_insert(bincode::deserialize::<T>(&ev.raw_data).expect("Failed to deserialize component sent from server!"));
+            let mut component = bincode::deserialize::<T>(&ev.raw_data).expect("Failed to deserialize component sent from server!");
+            if T::needs_entity_conversion() {
+                let Some(mapped) = component.convert_entities_server_to_client(&mapping) else {
+                    continue;
+                };
+
+                component = mapped;
+            }
+            ecmds.try_insert(component);
         }
     }
 }
@@ -115,13 +124,26 @@ fn client_send_components<T: SyncableComponent>(
                 }
             }
 
+            let raw_data = if T::needs_entity_conversion() {
+                let mapped = component.clone().convert_entities_client_to_server(&mapping);
+
+                let Some(mapped) = mapped else {
+                    return;
+                };
+
+                bincode::serialize(&mapped)
+            } else {
+                bincode::serialize(component)
+            }
+            .expect("Failed to serialize component.");
+
             client.send_message(
                 NettyChannelClient::ComponentReplication,
                 cosmos_encoder::serialize(&ComponentReplicationMessage::ComponentReplication {
                     component_id: id.id(),
                     entity_identifier,
                     // Avoid double compression using bincode instead of cosmos_encoder.
-                    raw_data: bincode::serialize(component).expect("Failed to serialize component."),
+                    raw_data,
                 }),
             )
         });
@@ -224,6 +246,7 @@ pub(super) fn sync_component_client<T: SyncableComponent>(app: &mut App) {
             app.add_systems(
                 Update,
                 client_deserialize_component::<T>
+                    .run_if(resource_exists::<NetworkMapping>)
                     .run_if(resource_exists::<Registry<SyncedComponentId>>)
                     .in_set(ComponentSyncingSet::DoComponentSyncing),
             );

@@ -255,19 +255,6 @@ fn update_missile_system(
                         targetting_fudge: Vec3::ZERO,
                     });
                 }
-
-                // server.broadcast_message(
-                //     NettyChannelServer::StructureSystems,
-                //     cosmos_encoder::serialize(&ServerStructureSystemMessages::CreateMissile {
-                //         color: line.color,
-                //         location,
-                //         laser_velocity: missile_velocity,
-                //         firer_velocity: ship_velocity.linvel,
-                //         strength,
-                //         no_hit,
-                //         lifetime,
-                //     }),
-                // );
             } else {
                 break;
             }

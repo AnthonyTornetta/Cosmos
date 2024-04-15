@@ -206,7 +206,7 @@ fn look_towards_target(mut q_targetting_missiles: Query<(&Location, &mut Transfo
     }
 }
 
-const MISSILE_IMPULSE_PER_SEC: f32 = 0.1;
+const MISSILE_IMPULSE_PER_SEC: f32 = 1.5;
 
 fn apply_missile_thrust(mut commands: Commands, time: Res<Time>, q_missiles: Query<(Entity, &GlobalTransform), With<Missile>>) {
     for (ent, g_trans) in &q_missiles {

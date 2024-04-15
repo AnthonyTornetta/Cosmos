@@ -228,11 +228,4 @@ pub enum ServerReliableMessages {
         /// The Permutation table the client should send to the GPU when generating the terrain
         permutation_table: GpuPermutationTable,
     },
-    /// Just sends the rigidbody for an entity
-    NettyRigidBody {
-        /// The entity the body is for
-        entity: Entity,
-        /// The entity's body
-        body: NettyRigidBody,
-    },
 }

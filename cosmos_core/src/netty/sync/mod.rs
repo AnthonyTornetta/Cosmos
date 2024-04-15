@@ -142,7 +142,7 @@ pub trait SyncableComponent: Component + Serialize + DeserializeOwned + Clone {
     /// Converts server-side entities to their client-side equivalent.
     ///
     /// Return None if this fails.
-    fn convert_entities_server_to_client(self, _mapping: self::mapping::NetworkMapping) -> Option<Self> {
+    fn convert_entities_server_to_client(self, _mapping: &self::mapping::NetworkMapping) -> Option<Self> {
         Some(self)
     }
 
@@ -150,7 +150,7 @@ pub trait SyncableComponent: Component + Serialize + DeserializeOwned + Clone {
     /// Converts client-side entities to their server-side equivalent.
     ///
     /// Return None if this fails.
-    fn convert_entities_client_to_server(&self, _mapping: self::mapping::NetworkMapping) -> Option<Self> {
+    fn convert_entities_client_to_server(&self, _mapping: &self::mapping::NetworkMapping) -> Option<Self> {
         Some(self.clone())
     }
 }

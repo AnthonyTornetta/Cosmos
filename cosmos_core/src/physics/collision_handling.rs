@@ -101,7 +101,7 @@ impl SyncableComponent for CollisionBlacklist {
     }
 
     #[cfg(feature = "client")]
-    fn convert_entities_server_to_client(self, mapping: crate::netty::sync::mapping::NetworkMapping) -> Option<Self> {
+    fn convert_entities_server_to_client(self, mapping: &crate::netty::sync::mapping::NetworkMapping) -> Option<Self> {
         Some(Self(
             self.0
                 .into_iter()

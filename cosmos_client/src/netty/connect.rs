@@ -71,7 +71,7 @@ pub fn establish_connection(mut commands: Commands, host_config: Res<HostConfig>
     commands.insert_resource(MostRecentTick(None));
     commands.insert_resource(RenetClient::new(connection_config()));
     commands.insert_resource(new_netcode_transport(host_config.host_name.as_str()));
-    commands.insert_resource(NetworkMapping::default());
+    commands.init_resource::<NetworkMapping>();
 }
 
 /// Waits for a connection to be made, then changes the game state to `GameState::LoadingWorld`.

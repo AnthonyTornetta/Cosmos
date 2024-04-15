@@ -10,7 +10,10 @@ use bevy_rapier3d::prelude::*;
 use bevy_renet::renet::{transport::NetcodeClientTransport, RenetClient};
 use cosmos_core::{
     block::Block,
-    ecs::{bundles::CosmosPbrBundle, NeedsDespawned},
+    ecs::{
+        bundles::{BundleStartingRotation, CosmosPbrBundle},
+        NeedsDespawned,
+    },
     entities::player::{render_distance::RenderDistance, Player},
     events::{block_events::BlockChangedEvent, structure::change_pilot_event::ChangePilotEvent},
     inventory::Inventory,
@@ -26,7 +29,7 @@ use cosmos_core::{
     },
     persistence::LoadingDistance,
     physics::{
-        location::{add_previous_location, handle_child_syncing, Location, LocationPhysicsSet, SYSTEM_SECTORS},
+        location::{add_previous_location, handle_child_syncing, CosmosBundleSet, Location, LocationPhysicsSet, SYSTEM_SECTORS},
         player_world::PlayerWorld,
     },
     registry::Registry,
@@ -255,7 +258,12 @@ pub(crate) fn client_sync_players(
                                     }
                                 };
 
-                                commands.entity(entity).insert((loc, body.create_velocity(), LerpTowards(body)));
+                                commands.entity(entity).insert((
+                                    loc,
+                                    BundleStartingRotation(body.rotation),
+                                    body.create_velocity(),
+                                    LerpTowards(body),
+                                ));
                             }
                         }
                     } else if !requested_entities.entities.iter().any(|x| x.server_entity == *server_entity) {
@@ -719,36 +727,6 @@ pub(crate) fn client_sync_players(
                     permutation_table,
                 });
             }
-            ServerReliableMessages::NettyRigidBody {
-                body,
-                entity: server_entity,
-            } => {
-                let Some(entity) = network_mapping.client_from_server(&server_entity) else {
-                    continue;
-                };
-
-                let Ok(body) = body.map(&network_mapping) else {
-                    continue;
-                };
-
-                let location = match body.location {
-                    NettyRigidBodyLocation::Absolute(location) => location,
-                    NettyRigidBodyLocation::Relative(rel_trans, entity) => {
-                        let parent_loc = query_body.get(entity).map(|x| x.0.copied()).unwrap_or(None).unwrap_or_default();
-
-                        parent_loc + rel_trans
-                    }
-                };
-
-                commands.entity(entity).insert((
-                    body.create_velocity(),
-                    CosmosPbrBundle {
-                        location,
-                        rotation: body.rotation.into(),
-                        ..Default::default()
-                    },
-                ));
-            }
         }
     }
 }
@@ -850,7 +828,9 @@ pub(super) fn register(app: &mut App) {
         .add_systems(Update, (update_crosshair, insert_last_rotation))
         .add_systems(
             Update,
-            client_sync_players.run_if(in_state(GameState::Playing).or_else(in_state(GameState::LoadingWorld))),
+            client_sync_players
+                .run_if(in_state(GameState::Playing).or_else(in_state(GameState::LoadingWorld)))
+                .before(CosmosBundleSet::HandleCosmosBundles),
         )
         .add_systems(
             Update,
