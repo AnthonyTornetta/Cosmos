@@ -2,6 +2,7 @@
 //! https://rapier.rs/docs/user_guides/bevy_plugin/advanced_collision_detection/#contact-and-intersection-filtering
 
 use bevy::{
+    app::App,
     ecs::{
         component::Component,
         entity::Entity,
@@ -13,7 +14,11 @@ use bevy_rapier3d::{
     geometry::SolverFlags,
     pipeline::{BevyPhysicsHooks, PairFilterContextView},
 };
+use serde::{Deserialize, Serialize};
 
+use crate::netty::sync::{sync_component, SyncableComponent};
+
+#[derive(Clone, Serialize, Deserialize)]
 /// Indicates that this entity cannot be collided with.
 /// This should be used with [`CollisionBlacklist`]
 pub struct CollisionBlacklistedEntity {
@@ -27,7 +32,7 @@ pub struct CollisionBlacklistedEntity {
     pub search_parents: bool,
 }
 
-#[derive(Component)]
+#[derive(Component, Clone, Serialize, Deserialize)]
 /// If this is on an entity, then this entity will not collide with any entities
 /// present in the list of [`CollisionBlacklistedEntity`]s.
 ///
@@ -77,6 +82,40 @@ impl CollisionBlacklist {
     }
 }
 
+impl SyncableComponent for CollisionBlacklist {
+    fn get_sync_type() -> crate::netty::sync::SyncType {
+        crate::netty::sync::SyncType::ServerAuthoritative
+    }
+
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:collision_blacklist"
+    }
+
+    fn is_base_component() -> bool {
+        false
+    }
+
+    #[cfg(feature = "client")]
+    fn needs_entity_conversion() -> bool {
+        true
+    }
+
+    #[cfg(feature = "client")]
+    fn convert_entities_server_to_client(self, mapping: crate::netty::sync::mapping::NetworkMapping) -> Option<Self> {
+        Some(Self(
+            self.0
+                .into_iter()
+                .flat_map(|x| {
+                    Some(CollisionBlacklistedEntity {
+                        search_parents: x.search_parents,
+                        entity: mapping.client_from_server(&x.entity)?,
+                    })
+                })
+                .collect::<Vec<CollisionBlacklistedEntity>>(),
+        ))
+    }
+}
+
 // From: https://rapier.rs/docs/user_guides/bevy_plugin/advanced_collision_detection/#contact-and-intersection-filtering
 
 /// A custom filter that allows filters collisions between rigid-bodies
@@ -117,4 +156,8 @@ impl BevyPhysicsHooks for CosmosPhysicsFilter<'_, '_> {
     fn filter_intersection_pair(&self, context: PairFilterContextView) -> bool {
         self.check_pair_filter(context)
     }
+}
+
+pub(super) fn register(app: &mut App) {
+    sync_component::<CollisionBlacklist>(app);
 }

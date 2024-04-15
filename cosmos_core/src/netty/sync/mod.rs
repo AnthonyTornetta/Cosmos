@@ -3,8 +3,14 @@
 //! See [`sync_component`]
 
 use bevy::{
-    app::App,
-    ecs::{component::Component, entity::Entity, event::Event, system::ResMut},
+    app::{App, Update},
+    ecs::{
+        component::Component,
+        entity::Entity,
+        event::Event,
+        schedule::{IntoSystemSetConfigs, SystemSet},
+        system::ResMut,
+    },
 };
 use bevy_renet::renet::ClientId;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
@@ -25,6 +31,9 @@ enum ComponentReplicationMessage {
 
 #[cfg(feature = "client")]
 pub mod mapping;
+
+#[cfg(feature = "server")]
+pub mod server_entity_syncing;
 
 #[cfg(feature = "client")]
 mod client_syncing;
@@ -103,14 +112,47 @@ pub(crate) enum SyncableEntity {
 
 /// Indicates that a component can be synchronized either from `Server -> Client` or `Client -> Server`.
 ///
+/// Not that `clone()` is only called if the client is sending something to the server ([`SyncType::ClientAuthoritative`]) AND
+/// [`SyncableComponent::needs_entity_conversion`] returns true.
+///
 /// Used in conjunction with [`sync_component`]
-pub trait SyncableComponent: Component + Serialize + DeserializeOwned {
+pub trait SyncableComponent: Component + Serialize + DeserializeOwned + Clone {
     /// Returns how this component should be synced
     fn get_sync_type() -> SyncType;
     /// Returns an unlocalized name that should be unique to this component.
     ///
     /// A good practice is to use `mod_id:component_name` format. For example, `cosmos:missile_focused`
     fn get_component_unlocalized_name() -> &'static str;
+    /// Returns if this component should act as a "base" component.
+    ///
+    /// This just means, that if this component is present, the Location & Velocity
+    /// of this entity will also be synced.
+    fn is_base_component() -> bool;
+
+    /// The [`SyncableComponent::convert_entities_client_to_server`] function requires cloning this struct,
+    /// so to avoid clones on structs without any entities this method can be used.
+    ///
+    /// This only has to be implemented if this is sent from client to server.
+    #[cfg(feature = "client")]
+    fn needs_entity_conversion() -> bool {
+        false
+    }
+
+    #[cfg(feature = "client")]
+    /// Converts server-side entities to their client-side equivalent.
+    ///
+    /// Return None if this fails.
+    fn convert_entities_server_to_client(self, _mapping: self::mapping::NetworkMapping) -> Option<Self> {
+        Some(self)
+    }
+
+    #[cfg(feature = "client")]
+    /// Converts client-side entities to their server-side equivalent.
+    ///
+    /// Return None if this fails.
+    fn convert_entities_client_to_server(&self, _mapping: self::mapping::NetworkMapping) -> Option<Self> {
+        Some(self.clone())
+    }
 }
 
 #[derive(Event, Debug)]
@@ -128,6 +170,17 @@ fn register_component<T: SyncableComponent>(mut registry: ResMut<Registry<Synced
         unlocalized_name: T::get_component_unlocalized_name().to_owned(),
         id: 0,
     });
+}
+
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// Reads component data from incoming data and upates component data locally.
+pub enum ComponentSyncingSet {
+    /// Process any data needed before components are synced here
+    PreComponentSyncing,
+    /// Reads component data from incoming data and upates component data locally.
+    DoComponentSyncing,
+    /// Process any data after components were synced here
+    PostComponentSyncing,
 }
 
 /// Indicates that a component should be synced across the client and the server.
@@ -151,6 +204,16 @@ pub fn sync_component<T: SyncableComponent>(_app: &mut App) {
 
 pub(super) fn register(app: &mut App) {
     create_registry::<SyncedComponentId>(app, "cosmos:syncable_components");
+
+    app.configure_sets(
+        Update,
+        (
+            ComponentSyncingSet::PreComponentSyncing,
+            ComponentSyncingSet::DoComponentSyncing,
+            ComponentSyncingSet::PostComponentSyncing,
+        )
+            .chain(),
+    );
 
     app.add_event::<GotComponentToSyncEvent>();
 

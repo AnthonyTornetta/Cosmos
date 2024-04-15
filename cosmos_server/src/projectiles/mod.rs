@@ -3,7 +3,7 @@
 use bevy::prelude::App;
 
 mod laser;
-mod missile;
+pub mod missile;
 
 pub(super) fn register(app: &mut App) {
     laser::register(app);

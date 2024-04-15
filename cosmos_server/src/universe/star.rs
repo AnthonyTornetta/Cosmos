@@ -5,13 +5,15 @@ use std::slice::Iter;
 use bevy::prelude::{in_state, App, EventReader, IntoSystemConfigs, Query, ResMut, Update, With};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
-    netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannelServer},
+    netty::{
+        cosmos_encoder, server_reliable_messages::ServerReliableMessages, sync::server_entity_syncing::RequestedEntityEvent,
+        NettyChannelServer,
+    },
     physics::location::Location,
     universe::star::Star,
 };
 
 use crate::{
-    netty::sync::entities::RequestedEntityEvent,
     persistence::{
         saving::{NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
         SerializedData,

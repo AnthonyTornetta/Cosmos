@@ -719,6 +719,36 @@ pub(crate) fn client_sync_players(
                     permutation_table,
                 });
             }
+            ServerReliableMessages::NettyRigidBody {
+                body,
+                entity: server_entity,
+            } => {
+                let Some(entity) = network_mapping.client_from_server(&server_entity) else {
+                    continue;
+                };
+
+                let Ok(body) = body.map(&network_mapping) else {
+                    continue;
+                };
+
+                let location = match body.location {
+                    NettyRigidBodyLocation::Absolute(location) => location,
+                    NettyRigidBodyLocation::Relative(rel_trans, entity) => {
+                        let parent_loc = query_body.get(entity).map(|x| x.0.copied()).unwrap_or(None).unwrap_or_default();
+
+                        parent_loc + rel_trans
+                    }
+                };
+
+                commands.entity(entity).insert((
+                    body.create_velocity(),
+                    CosmosPbrBundle {
+                        location,
+                        rotation: body.rotation.into(),
+                        ..Default::default()
+                    },
+                ));
+            }
         }
     }
 }

@@ -1,5 +1,8 @@
+//! Server-related missile logic
+
 use bevy::{
     ecs::{
+        component::Component,
         event::EventWriter,
         query::{Added, Or, Without},
         schedule::IntoSystemConfigs,
@@ -7,10 +10,12 @@ use bevy::{
     log::info,
     math::{Quat, Vec3},
     prelude::{App, Commands, Entity, Query, Res, Update, With},
-    transform::components::GlobalTransform,
+    time::Time,
+    transform::components::{GlobalTransform, Transform},
     utils::HashSet,
 };
 use bevy_rapier3d::{
+    dynamics::ExternalImpulse,
     geometry::{Collider, Sensor},
     pipeline::QueryFilter,
     plugin::RapierContext,
@@ -21,7 +26,8 @@ use cosmos_core::{
     block::Block,
     ecs::NeedsDespawned,
     events::block_events::BlockChangedEvent,
-    projectiles::missile::{Explosion, ExplosionSystemSet},
+    physics::location::Location,
+    projectiles::missile::{Explosion, ExplosionSystemSet, Missile},
     registry::Registry,
     structure::{
         chunk::ChunkEntity,
@@ -180,6 +186,38 @@ fn calculate_block_explosion_power(
     }
 }
 
+#[derive(Component)]
+/// Represents which entity the missile should be targetting
+pub struct MissileTargetting {
+    /// Makes the missile diverge from the origin a bit
+    pub targetting_fudge: Vec3,
+    /// The entity being targetted
+    pub targetting: Entity,
+}
+
+fn look_towards_target(mut q_targetting_missiles: Query<(&Location, &mut Transform, &MissileTargetting)>, q_targets: Query<&Location>) {
+    for (missile_loc, mut missile_trans, missile_targetting) in &mut q_targetting_missiles {
+        let Ok(target_loc) = q_targets.get(missile_targetting.targetting) else {
+            continue;
+        };
+
+        let direction = (*target_loc - *missile_loc).absolute_coords_f32().normalize_or_zero() + missile_targetting.targetting_fudge;
+        missile_trans.look_to(direction, Vec3::Y);
+    }
+}
+
+const MISSILE_IMPULSE_PER_SEC: f32 = 0.1;
+
+fn apply_missile_thrust(mut commands: Commands, time: Res<Time>, q_missiles: Query<(Entity, &GlobalTransform), With<Missile>>) {
+    for (ent, g_trans) in &q_missiles {
+        commands.entity(ent).insert(ExternalImpulse {
+            impulse: g_trans.forward() * MISSILE_IMPULSE_PER_SEC * time.delta_seconds(),
+            ..Default::default()
+        });
+    }
+}
+
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, respond_to_explosion.in_set(ExplosionSystemSet::ProcessExplosions));
+    app.add_systems(Update, respond_to_explosion.in_set(ExplosionSystemSet::ProcessExplosions))
+        .add_systems(Update, (look_towards_target, apply_missile_thrust).chain());
 }

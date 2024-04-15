@@ -7,12 +7,15 @@ use bevy::{
     core::Name,
     ecs::{
         event::EventReader,
+        query::Added,
         schedule::{IntoSystemConfigs, SystemSet},
+        system::EntityCommands,
     },
     hierarchy::Parent,
     pbr::{NotShadowCaster, NotShadowReceiver},
     prelude::{App, Commands, Component, Entity, Event, Query, Res, Transform, Update, Vec3},
     reflect::Reflect,
+    render::color::Color,
     time::Time,
     transform::components::GlobalTransform,
 };
@@ -21,9 +24,12 @@ use bevy_rapier3d::{
     pipeline::CollisionEvent,
     prelude::{PhysicsWorld, RigidBody, Velocity, WorldId},
 };
+use serde::{Deserialize, Serialize};
 
 use crate::{
     ecs::bundles::CosmosPbrBundle,
+    netty::sync::{sync_component, ComponentSyncingSet, SyncableComponent},
+    persistence::LoadingDistance,
     physics::{
         collision_handling::{CollisionBlacklist, CollisionBlacklistedEntity},
         location::Location,
@@ -70,7 +76,7 @@ struct FireTime {
     time: f32,
 }
 
-#[derive(Component)]
+#[derive(Component, Serialize, Deserialize, Clone)]
 /// A missile is something that flies in a straight line & may collide with a block, causing
 /// it to take damage. Use `Missile::spawn` to create a missile.
 pub struct Missile {
@@ -79,6 +85,23 @@ pub struct Missile {
 
     /// How long the missile can be alive before exploding
     lifetime: Duration,
+
+    /// Color of the missile's explosion, if it has one specified
+    color: Option<Color>,
+}
+
+impl SyncableComponent for Missile {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:missile"
+    }
+
+    fn get_sync_type() -> crate::netty::sync::SyncType {
+        crate::netty::sync::SyncType::ServerAuthoritative
+    }
+
+    fn is_base_component() -> bool {
+        true
+    }
 }
 
 impl Missile {
@@ -86,38 +109,34 @@ impl Missile {
     ///
     /// * `missile_velocity` - The missile's velocity. Do not add the parent's velocity for this, use `firer_velocity` instead.
     /// * `firer_velocity` - The missile's parent's velocity.
-    /// * `pbr` - This takes a PBR that contains mesh data. The location & rotation fields will be overwritten
-    pub fn spawn_custom_pbr(
-        location: Location,
+    pub fn spawn<'a>(
+        position: Location,
+        color: Option<Color>,
         missile_velocity: Vec3,
         firer_velocity: Vec3,
         strength: f32,
         no_collide_entity: Option<Entity>,
-        mut pbr: CosmosPbrBundle,
         time: &Time,
         world_id: WorldId,
-        commands: &mut Commands,
+        commands: &'a mut Commands,
         missile_lifetime: Duration,
-    ) -> Entity {
-        pbr.rotation = Transform::from_xyz(0.0, 0.0, 0.0)
-            .looking_at(missile_velocity, Vec3::Y)
-            .rotation
-            .into();
-        pbr.location = location;
+    ) -> EntityCommands<'a> {
+        let pbr = CosmosPbrBundle {
+            rotation: Transform::from_xyz(0.0, 0.0, 0.0)
+                .looking_at(missile_velocity, Vec3::Y)
+                .rotation
+                .into(),
+            location: position,
+            ..Default::default()
+        };
 
-        let mut ent_cmds = commands.spawn_empty();
-
-        let missile_entity = ent_cmds.id();
-
-        ent_cmds.insert((
-            Name::new("Missile"),
+        let mut ent_cmds = commands.spawn((
             Missile {
+                color,
                 strength,
                 lifetime: missile_lifetime,
             },
             pbr,
-            RigidBody::Dynamic,
-            Collider::cuboid(0.15, 0.15, 0.5),
             Velocity {
                 linvel: missile_velocity + firer_velocity,
                 ..Default::default()
@@ -126,10 +145,7 @@ impl Missile {
                 time: time.elapsed_seconds(),
             },
             PhysicsWorld { world_id },
-            NotShadowCaster,
-            ActiveEvents::COLLISION_EVENTS,
-            ActiveHooks::FILTER_CONTACT_PAIRS,
-            NotShadowReceiver,
+            LoadingDistance::new(1, 2),
         ));
 
         if let Some(ent) = no_collide_entity {
@@ -139,36 +155,21 @@ impl Missile {
             }));
         }
 
-        missile_entity
+        ent_cmds
     }
+}
 
-    /// Spawns a missile with the given position & velocity
-    ///
-    /// * `missile_velocity` - The missile's velocity. Do not add the parent's velocity for this, use `firer_velocity` instead.
-    /// * `firer_velocity` - The missile's parent's velocity.
-    pub fn spawn(
-        position: Location,
-        missile_velocity: Vec3,
-        firer_velocity: Vec3,
-        strength: f32,
-        no_collide_entity: Option<Entity>,
-        time: &Time,
-        world_id: WorldId,
-        commands: &mut Commands,
-        missile_lifetime: Duration,
-    ) -> Entity {
-        Self::spawn_custom_pbr(
-            position,
-            missile_velocity,
-            firer_velocity,
-            strength,
-            no_collide_entity,
-            CosmosPbrBundle { ..Default::default() },
-            time,
-            world_id,
-            commands,
-            missile_lifetime,
-        )
+fn on_add_missile(q_added_missile: Query<Entity, Added<Missile>>, mut commands: Commands) {
+    for missile_ent in q_added_missile.iter() {
+        commands.entity(missile_ent).insert((
+            Name::new("Missile"),
+            RigidBody::Dynamic,
+            Collider::cuboid(0.15, 0.15, 0.5),
+            NotShadowCaster,
+            ActiveEvents::COLLISION_EVENTS,
+            ActiveHooks::FILTER_CONTACT_PAIRS,
+            NotShadowReceiver,
+        ));
     }
 }
 
@@ -240,7 +241,14 @@ pub enum ExplosionSystemSet {
 }
 
 pub(super) fn register(app: &mut App) {
+    sync_component::<Missile>(app);
+
     app.configure_sets(Update, ExplosionSystemSet::ProcessExplosions);
+
+    #[cfg(feature = "client")]
+    app.add_systems(Update, on_add_missile.in_set(ComponentSyncingSet::PostComponentSyncing));
+    #[cfg(feature = "server")]
+    app.add_systems(Update, on_add_missile.in_set(ComponentSyncingSet::PreComponentSyncing));
 
     app.add_systems(
         Update,

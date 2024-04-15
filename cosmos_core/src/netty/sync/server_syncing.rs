@@ -1,6 +1,7 @@
+use super::server_entity_syncing::RequestedEntityEvent;
 use super::{
-    register_component, ClientAuthority, ComponentEntityIdentifier, ComponentReplicationMessage, SyncType, SyncableComponent,
-    SyncableEntity, SyncedComponentId,
+    register_component, ClientAuthority, ComponentEntityIdentifier, ComponentReplicationMessage, ComponentSyncingSet, SyncType,
+    SyncableComponent, SyncableEntity, SyncedComponentId,
 };
 use crate::netty::server::ServerLobby;
 use crate::netty::sync::GotComponentToSyncEvent;
@@ -120,8 +121,73 @@ fn server_send_component<T: SyncableComponent>(
                     // Avoid double compression using bincode instead of cosmos_encoder.
                     raw_data: bincode::serialize(component).expect("Failed to serialize component."),
                 }),
-            )
+            );
         });
+}
+
+fn on_request_component<T: SyncableComponent>(
+    q_t: Query<(&T, Option<&SyncableEntity>, Option<&StructureSystem>)>,
+    // q_rb: Query<(&Location, &GlobalTransform, &Velocity)>,
+    mut ev_reader: EventReader<RequestedEntityEvent>,
+    id_registry: Res<Registry<SyncedComponentId>>,
+    mut server: ResMut<RenetServer>,
+) {
+    for ev in ev_reader.read() {
+        let Ok((component, syncable_entity, structure_system)) = q_t.get(ev.entity) else {
+            continue;
+        };
+
+        let Some(id) = id_registry.from_id(T::get_component_unlocalized_name()) else {
+            error!("Invalid component unlocalized name - {}", T::get_component_unlocalized_name());
+            return;
+        };
+
+        // if T::is_base_component() {
+        //     if let Ok((location, g_trans, vel)) = q_rb.get(ev.entity) {
+        //         info!("Sending netty rigid body!");
+
+        //         server.send_message(
+        //             ev.client_id,
+        //             NettyChannelServer::Reliable,
+        //             cosmos_encoder::serialize(&ServerReliableMessages::NettyRigidBody {
+        //                 body: NettyRigidBody::new(
+        //                     vel,
+        //                     Quat::from_affine3(&g_trans.affine()),
+        //                     NettyRigidBodyLocation::Absolute(*location),
+        //                 ),
+        //                 entity: ev.entity,
+        //             }),
+        //         );
+        //     } else {
+        //         warn!("Base component was on entity w/out location/g_trans/velocity.");
+        //     }
+        // }
+
+        let entity_identifier = match (syncable_entity, structure_system) {
+            (None, _) => Some(ComponentEntityIdentifier::Entity(ev.entity)),
+            (Some(SyncableEntity::StructureSystem), Some(structure_system)) => Some(ComponentEntityIdentifier::StructureSystem {
+                structure_entity: structure_system.structure_entity(),
+                id: structure_system.id(),
+            }),
+            _ => None,
+        };
+
+        let Some(entity_identifier) = entity_identifier else {
+            warn!("Invalid entity found - {entity_identifier:?} SyncableEntity settings: {syncable_entity:?}");
+            return;
+        };
+
+        server.send_message(
+            ev.client_id,
+            NettyChannelServer::ComponentReplication,
+            cosmos_encoder::serialize(&ComponentReplicationMessage::ComponentReplication {
+                component_id: id.id(),
+                entity_identifier,
+                // Avoid double compression using bincode instead of cosmos_encoder.
+                raw_data: bincode::serialize(component).expect("Failed to serialize component."),
+            }),
+        );
+    }
 }
 
 fn server_receive_components(
@@ -175,7 +241,8 @@ fn server_receive_components(
 }
 
 pub(super) fn setup_server(app: &mut App) {
-    app.add_systems(Update, server_receive_components);
+    app.add_systems(Update, server_receive_components)
+        .add_event::<RequestedEntityEvent>();
 }
 
 #[allow(unused)] // This function is used, but the LSP can't figure that out.
@@ -184,10 +251,18 @@ pub(super) fn sync_component_server<T: SyncableComponent>(app: &mut App) {
 
     match T::get_sync_type() {
         SyncType::ServerAuthoritative => {
-            app.add_systems(Update, server_send_component::<T>.run_if(resource_exists::<RenetServer>));
+            app.add_systems(
+                Update,
+                (on_request_component::<T>, server_send_component::<T>)
+                    .run_if(resource_exists::<RenetServer>)
+                    .in_set(ComponentSyncingSet::DoComponentSyncing),
+            );
         }
         SyncType::ClientAuthoritative(_) => {
-            app.add_systems(Update, server_deserialize_component::<T>);
+            app.add_systems(
+                Update,
+                server_deserialize_component::<T>.in_set(ComponentSyncingSet::DoComponentSyncing),
+            );
         }
     }
 }

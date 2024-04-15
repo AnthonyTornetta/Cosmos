@@ -15,6 +15,7 @@ pub(super) fn register<T: States + Copy>(app: &mut App, post_loading_state: T) {
     gravity_system::register(app);
     location::register(app);
     player_world::register(app);
+    collision_handling::register(app);
     stop_near_unloaded_chunks::register(app);
     block_colliders::register(app, post_loading_state);
 }

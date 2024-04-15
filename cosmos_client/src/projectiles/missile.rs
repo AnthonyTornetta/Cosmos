@@ -6,9 +6,9 @@ use bevy_hanabi::prelude::*;
 use bevy_kira_audio::{Audio, AudioControl, AudioInstance, AudioSource};
 use cosmos_core::{
     ecs::NeedsDespawned,
-    netty::client::LocalPlayer,
+    netty::{client::LocalPlayer, sync::ComponentSyncingSet},
     physics::location::Location,
-    projectiles::missile::{Explosion, ExplosionSystemSet},
+    projectiles::missile::{Explosion, ExplosionSystemSet, Missile},
 };
 
 use crate::{
@@ -18,12 +18,16 @@ use crate::{
 };
 
 #[derive(Component)]
-struct TimeAlive(f32);
+struct ExplosionTimeAlive(f32);
 
 #[derive(Component)]
-struct MaxTimeAlive(Duration);
+struct MaxTimeExplosionAlive(Duration);
 
-fn track_time_alive(mut commands: Commands, time: Res<Time>, mut q_time_alive: Query<(Entity, &mut TimeAlive, Option<&MaxTimeAlive>)>) {
+fn track_time_alive(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut q_time_alive: Query<(Entity, &mut ExplosionTimeAlive, Option<&MaxTimeExplosionAlive>)>,
+) {
     for (ent, mut time_alive, max_time) in &mut q_time_alive {
         time_alive.0 += time.delta_seconds();
 
@@ -33,6 +37,66 @@ fn track_time_alive(mut commands: Commands, time: Res<Time>, mut q_time_alive: Q
             }
         }
     }
+}
+
+#[derive(Resource)]
+struct MissileRenderingInfo(Handle<Mesh>, Handle<StandardMaterial>);
+
+fn create_missile_mesh(asset_server: Res<AssetServer>, mut materials: ResMut<Assets<StandardMaterial>>, mut commands: Commands) {
+    commands.insert_resource(MissileRenderingInfo(
+        asset_server.load("cosmos/models/misc/missile.obj"),
+        materials.add(StandardMaterial {
+            base_color: Color::DARK_GRAY,
+            ..Default::default()
+        }),
+    ));
+}
+
+fn on_add_missile(mut commands: Commands, missile_mesh: Res<MissileRenderingInfo>, q_added_missile: Query<Entity, Added<Missile>>) {
+    for ent in &q_added_missile {
+        commands
+            .entity(ent)
+            .insert((missile_mesh.0.clone_weak(), missile_mesh.1.clone_weak()));
+    }
+    // ServerStructureSystemMessages::CreateMissile {
+    //     color,
+    //     location,
+    //     laser_velocity,
+    //     firer_velocity,
+    //     strength,
+    //     mut no_hit,
+    //     lifetime,
+    // } => {
+    //     if let Some(server_entity) = no_hit {
+    //         if let Some(client_entity) = network_mapping.client_from_server(&server_entity) {
+    //             no_hit = Some(client_entity);
+    //         }
+    //     }
+
+    //     let missile_entity = Missile::spawn_custom_pbr(
+    //         location,
+    //         laser_velocity,
+    //         firer_velocity,
+    //         strength,
+    //         no_hit,
+    //         CosmosPbrBundle {
+    //             mesh: missie_mesh.0.clone_weak(),
+    //             material: materials.add(StandardMaterial {
+    //                 base_color: Color::DARK_GRAY,
+    //                 ..Default::default()
+    //             }),
+    //             ..Default::default()
+    //         },
+    //         &time,
+    //         DEFAULT_WORLD_ID,
+    //         &mut commands,
+    //         lifetime,
+    //     );
+
+    //     if let Some(color) = color {
+    //         commands.entity(missile_entity).insert(ExplosionColor(color));
+    //     }
+    // }
 }
 
 #[derive(Component)]
@@ -87,8 +151,8 @@ fn respond_to_explosion(
         commands.spawn((
             Name::new("Explosion particle"),
             *explosion_loc,
-            TimeAlive(0.0),
-            MaxTimeAlive(MAX_PARTICLE_LIFETIME),
+            ExplosionTimeAlive(0.0),
+            MaxTimeExplosionAlive(MAX_PARTICLE_LIFETIME),
             ExplosionParticle,
             ParticleEffectBundle {
                 effect: ParticleEffect::new(particle_handle),
@@ -267,6 +331,13 @@ pub(super) fn register(app: &mut App) {
             .in_set(ExplosionSystemSet::ProcessExplosions)
             .run_if(in_state(GameState::Playing)),
     )
+    .add_systems(
+        Update,
+        on_add_missile
+            .in_set(ComponentSyncingSet::PostComponentSyncing)
+            .run_if(in_state(GameState::Playing)),
+    )
+    .add_systems(OnEnter(GameState::Loading), create_missile_mesh)
     .add_systems(Update, track_time_alive)
     .init_resource::<ParticleEffectsForColor>();
 }

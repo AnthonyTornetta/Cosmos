@@ -128,6 +128,10 @@ impl SyncableComponent for MissileLauncherFocus {
     fn get_sync_type() -> crate::netty::sync::SyncType {
         crate::netty::sync::SyncType::ServerAuthoritative
     }
+
+    fn is_base_component() -> bool {
+        false
+    }
 }
 
 #[derive(Default, Debug, Serialize, Deserialize, Component, Clone, Copy, Reflect)]
@@ -146,6 +150,10 @@ impl SyncableComponent for MissileLauncherPreferredFocus {
 
     fn get_sync_type() -> crate::netty::sync::SyncType {
         crate::netty::sync::SyncType::ClientAuthoritative(ClientAuthority::Piloting)
+    }
+
+    fn is_base_component() -> bool {
+        false
     }
 }
 

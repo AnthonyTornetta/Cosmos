@@ -8,8 +8,10 @@ use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::Block,
     entities::player::Player,
-    netty::{cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages, NettyChannelServer},
-    physics::location::Location,
+    netty::{
+        cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages, sync::ComponentSyncingSet, NettyChannelServer,
+    },
+    physics::location::{CosmosBundleSet, Location},
     projectiles::missile::Missile,
     registry::Registry,
     structure::{
@@ -27,7 +29,7 @@ use cosmos_core::{
     },
 };
 
-use crate::state::GameState;
+use crate::{projectiles::missile::MissileTargetting, state::GameState};
 
 use super::{line_system::add_line_system, sync::register_structure_system};
 
@@ -175,8 +177,8 @@ fn calculate_focusable_properties(
     Some((dist, dot))
 }
 
-fn update_system(
-    mut query: Query<(&MissileLauncherSystem, &StructureSystem, &mut SystemCooldown), With<SystemActive>>,
+fn update_missile_system(
+    mut query: Query<(&MissileLauncherSystem, &MissileLauncherFocus, &StructureSystem, &mut SystemCooldown), With<SystemActive>>,
     mut es_query: Query<&mut EnergyStorageSystem>,
     systems: Query<(
         Entity,
@@ -191,7 +193,7 @@ fn update_system(
     mut commands: Commands,
     mut server: ResMut<RenetServer>,
 ) {
-    for (cannon_system, system, mut cooldown) in query.iter_mut() {
+    for (cannon_system, focus, system, mut cooldown) in query.iter_mut() {
         let Ok((ship_entity, systems, structure, location, global_transform, ship_velocity, physics_world)) =
             systems.get(system.structure_entity())
         else {
@@ -234,8 +236,9 @@ fn update_system(
                     MISSILE_LIFETIME.as_secs_f32() + (MISSILE_LIFETIME_FUDGE.as_secs_f32() * (rand::random::<f32>() - 0.5) * 2.0),
                 );
 
-                Missile::spawn(
+                let mut missile_cmds = Missile::spawn(
                     location,
+                    line.color,
                     missile_velocity,
                     ship_velocity.linvel,
                     strength,
@@ -246,20 +249,25 @@ fn update_system(
                     lifetime,
                 );
 
-                let color = line.color;
+                if let Some(targetting) = focus.locked_on_to() {
+                    missile_cmds.insert(MissileTargetting {
+                        targetting,
+                        targetting_fudge: Vec3::ZERO,
+                    });
+                }
 
-                server.broadcast_message(
-                    NettyChannelServer::StructureSystems,
-                    cosmos_encoder::serialize(&ServerStructureSystemMessages::CreateMissile {
-                        color,
-                        location,
-                        laser_velocity: missile_velocity,
-                        firer_velocity: ship_velocity.linvel,
-                        strength,
-                        no_hit,
-                        lifetime,
-                    }),
-                );
+                // server.broadcast_message(
+                //     NettyChannelServer::StructureSystems,
+                //     cosmos_encoder::serialize(&ServerStructureSystemMessages::CreateMissile {
+                //         color: line.color,
+                //         location,
+                //         laser_velocity: missile_velocity,
+                //         firer_velocity: ship_velocity.linvel,
+                //         strength,
+                //         no_hit,
+                //         lifetime,
+                //     }),
+                // );
             } else {
                 break;
             }
@@ -277,9 +285,15 @@ fn update_system(
 pub(super) fn register(app: &mut App) {
     add_line_system::<MissileLauncherProperty, MissileLauncherCalculator>(app);
 
-    app.add_systems(Update, update_system.run_if(in_state(GameState::Playing)))
-        .add_systems(OnEnter(GameState::PostLoading), register_missile_launcher_blocks)
-        .add_systems(Update, (add_missile_targettable, on_add_missile_launcher, missile_lockon).chain());
+    app.add_systems(
+        Update,
+        update_missile_system
+            .run_if(in_state(GameState::Playing))
+            .before(CosmosBundleSet::HandleCosmosBundles)
+            .before(ComponentSyncingSet::PreComponentSyncing),
+    )
+    .add_systems(OnEnter(GameState::PostLoading), register_missile_launcher_blocks)
+    .add_systems(Update, (add_missile_targettable, on_add_missile_launcher, missile_lockon).chain());
 
     register_structure_system::<MissileLauncherSystem>(app, true, "cosmos:missile_launcher");
 }

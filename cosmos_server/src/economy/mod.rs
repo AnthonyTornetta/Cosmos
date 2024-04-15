@@ -13,10 +13,13 @@ use bevy::{
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     economy::Credits,
-    netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannelServer},
+    netty::{
+        cosmos_encoder, server_reliable_messages::ServerReliableMessages, sync::server_entity_syncing::RequestedEntityEvent,
+        NettyChannelServer,
+    },
 };
 
-use crate::{netty::sync::entities::RequestedEntityEvent, state::GameState};
+use crate::state::GameState;
 
 fn send_economy_updates(
     mut server: ResMut<RenetServer>,

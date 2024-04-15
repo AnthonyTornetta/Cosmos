@@ -1,7 +1,7 @@
 use super::mapping::NetworkMapping;
 use super::{
-    register_component, ClientAuthority, ComponentEntityIdentifier, ComponentReplicationMessage, SyncType, SyncableComponent,
-    SyncableEntity, SyncedComponentId,
+    register_component, ClientAuthority, ComponentEntityIdentifier, ComponentReplicationMessage, ComponentSyncingSet, SyncType,
+    SyncableComponent, SyncableEntity, SyncedComponentId,
 };
 use crate::netty::client::LocalPlayer;
 use crate::netty::sync::GotComponentToSyncEvent;
@@ -10,6 +10,7 @@ use crate::netty::{cosmos_encoder, NettyChannelClient};
 use crate::registry::{identifiable::Identifiable, Registry};
 use crate::structure::ship::pilot::Pilot;
 use crate::structure::systems::{StructureSystem, StructureSystems};
+use bevy::core::Name;
 use bevy::ecs::event::EventReader;
 use bevy::ecs::query::With;
 use bevy::ecs::schedule::common_conditions::resource_exists;
@@ -129,8 +130,9 @@ fn client_send_components<T: SyncableComponent>(
 pub(super) fn client_receive_components(
     mut client: ResMut<RenetClient>,
     mut ev_writer: EventWriter<GotComponentToSyncEvent>,
-    mapping: Res<NetworkMapping>,
     q_structure_systems: Query<&StructureSystems>,
+    mut network_mapping: ResMut<NetworkMapping>,
+    mut commands: Commands,
 ) {
     while let Some(message) = client.receive_message(NettyChannelServer::ComponentReplication) {
         let msg: ComponentReplicationMessage =
@@ -143,8 +145,8 @@ pub(super) fn client_receive_components(
                 raw_data,
             } => {
                 let entity = match entity_identifier {
-                    ComponentEntityIdentifier::Entity(entity) => mapping.client_from_server(&entity).map(|x| (x, x)),
-                    ComponentEntityIdentifier::StructureSystem { structure_entity, id } => mapping
+                    ComponentEntityIdentifier::Entity(entity) => network_mapping.client_from_server(&entity).map(|x| (x, x)),
+                    ComponentEntityIdentifier::StructureSystem { structure_entity, id } => network_mapping
                         .client_from_server(&structure_entity)
                         .map(|structure_entity| {
                             let Ok(structure_systems) = q_structure_systems.get(structure_entity) else {
@@ -160,9 +162,24 @@ pub(super) fn client_receive_components(
                         .flatten(),
                 };
 
-                let Some((entity, authority_entity)) = entity else {
-                    warn!("Missing entity from server: {:?}", entity_identifier);
-                    continue;
+                let (entity, authority_entity) = if let Some(entity) = entity {
+                    entity
+                } else {
+                    match entity_identifier {
+                        ComponentEntityIdentifier::Entity(entity) => {
+                            let client_entity = commands.spawn(Name::new("Waiting for server...")).id();
+                            network_mapping.add_mapping(client_entity, entity);
+
+                            (client_entity, client_entity)
+                        }
+                        ComponentEntityIdentifier::StructureSystem { structure_entity, id } => {
+                            warn!(
+                                "Got structure system synced component, but no valid structure exists for it! ({structure_entity:?}, {id:?})"
+                            );
+
+                            continue;
+                        }
+                    }
                 };
 
                 ev_writer.send(GotComponentToSyncEvent {
@@ -196,12 +213,19 @@ pub(super) fn sync_component_client<T: SyncableComponent>(app: &mut App) {
 
     match T::get_sync_type() {
         SyncType::ClientAuthoritative(_) => {
-            app.add_systems(Update, client_send_components::<T>.run_if(resource_exists::<RenetClient>));
+            app.add_systems(
+                Update,
+                client_send_components::<T>
+                    .run_if(resource_exists::<RenetClient>)
+                    .in_set(ComponentSyncingSet::DoComponentSyncing),
+            );
         }
         SyncType::ServerAuthoritative => {
             app.add_systems(
                 Update,
-                client_deserialize_component::<T>.run_if(resource_exists::<Registry<SyncedComponentId>>),
+                client_deserialize_component::<T>
+                    .run_if(resource_exists::<Registry<SyncedComponentId>>)
+                    .in_set(ComponentSyncingSet::DoComponentSyncing),
             );
         }
     }

@@ -12,12 +12,14 @@ use bevy::{
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     item::Item,
-    netty::{cosmos_encoder, server_replication::ReplicationMessage, NettyChannelServer},
+    netty::{
+        cosmos_encoder, server_replication::ReplicationMessage, sync::server_entity_syncing::RequestedEntityEvent, NettyChannelServer,
+    },
     registry::{identifiable::Identifiable, Registry},
     structure::systems::{sync::SyncableSystem, StructureSystem, StructureSystemType, StructureSystems, SystemActive},
 };
 
-use crate::{netty::sync::entities::RequestedEntityEvent, registry::sync_registry, state::GameState};
+use crate::{registry::sync_registry, state::GameState};
 
 fn sync_system<T: SyncableSystem>(mut server: ResMut<RenetServer>, q_changed_systems: Query<(&T, &StructureSystem), Changed<T>>) {
     for (changed_system, structure_system) in q_changed_systems.iter() {

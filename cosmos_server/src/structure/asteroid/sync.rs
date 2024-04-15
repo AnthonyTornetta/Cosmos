@@ -5,6 +5,7 @@ use cosmos_core::{
     netty::{
         cosmos_encoder,
         netty_rigidbody::{NettyRigidBody, NettyRigidBodyLocation},
+        sync::server_entity_syncing::RequestedEntityEvent,
         NettyChannelServer,
     },
     physics::location::Location,
@@ -13,8 +14,6 @@ use cosmos_core::{
         Structure,
     },
 };
-
-use crate::netty::sync::entities::RequestedEntityEvent;
 
 fn on_request_asteroid(
     mut event_reader: EventReader<RequestedEntityEvent>,

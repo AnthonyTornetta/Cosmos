@@ -1,6 +1,9 @@
-//! Handles syncing entities
+//! Server entity syncing related logic.
+//!
+//! The resources in this file are **exclusively** used on the server-side. They are only
+//! in the core project for specific server-only use cases.
 
-use bevy::prelude::*;
+use bevy::ecs::{entity::Entity, event::Event};
 use bevy_renet::renet::ClientId;
 
 /// Entities requested are **NOT** guarenteed to exist!
@@ -12,8 +15,4 @@ pub struct RequestedEntityEvent {
     pub client_id: ClientId,
     /// The entitiy they requested
     pub entity: Entity,
-}
-
-pub(super) fn register(app: &mut App) {
-    app.add_event::<RequestedEntityEvent>();
 }

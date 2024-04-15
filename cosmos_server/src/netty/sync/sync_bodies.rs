@@ -10,6 +10,7 @@ use cosmos_core::{
         netty_rigidbody::{NettyRigidBody, NettyRigidBodyLocation},
         server_reliable_messages::ServerReliableMessages,
         server_unreliable_messages::ServerUnreliableMessages,
+        sync::server_entity_syncing::RequestedEntityEvent,
         system_sets::NetworkingSystemsSet,
         NettyChannelServer, NoSendEntity,
     },
@@ -18,8 +19,6 @@ use cosmos_core::{
 };
 
 use crate::netty::network_helpers::NetworkTick;
-
-use super::entities::RequestedEntityEvent;
 
 /// Sends bodies to players only if it's within their render distance.
 fn send_bodies(
