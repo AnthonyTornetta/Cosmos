@@ -91,10 +91,6 @@ impl SyncableComponent for CollisionBlacklist {
         "cosmos:collision_blacklist"
     }
 
-    fn is_base_component() -> bool {
-        false
-    }
-
     #[cfg(feature = "client")]
     fn needs_entity_conversion() -> bool {
         true

@@ -98,10 +98,6 @@ impl SyncableComponent for Missile {
     fn get_sync_type() -> crate::netty::sync::SyncType {
         crate::netty::sync::SyncType::ServerAuthoritative
     }
-
-    fn is_base_component() -> bool {
-        true
-    }
 }
 
 impl Missile {

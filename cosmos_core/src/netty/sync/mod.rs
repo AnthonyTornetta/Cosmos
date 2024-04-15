@@ -107,7 +107,12 @@ enum ComponentEntityIdentifier {
 /// Not that `clone()` is only called if the client is sending something to the server ([`SyncType::ClientAuthoritative`]) AND
 /// [`SyncableComponent::needs_entity_conversion`] returns true.
 ///
-/// Used in conjunction with [`sync_component`]
+/// Make sure to call [`sync_component`] for your component type if you want it synced.
+///
+/// Not that just because a component is syncable, doesn't mean it will be synced. The client must first be aware
+/// of the entity before it will sync it.  This is most commonly done via the [`super::server_unreliable_messages::ServerUnreliableMessages::BulkBodies`] networking request.
+/// Note that this requires the following components to sync the entity:
+/// `Location`, `Transform`, `Velocity`, and `LoadingDistance`. Additionally, the player must be within the `LoadingDistance`.
 pub trait SyncableComponent: Component + Serialize + DeserializeOwned + Clone {
     /// Returns how this component should be synced
     fn get_sync_type() -> SyncType;
@@ -115,11 +120,6 @@ pub trait SyncableComponent: Component + Serialize + DeserializeOwned + Clone {
     ///
     /// A good practice is to use `mod_id:component_name` format. For example, `cosmos:missile_focused`
     fn get_component_unlocalized_name() -> &'static str;
-    /// Returns if this component should act as a "base" component.
-    ///
-    /// This just means, that if this component is present, the Location & Velocity
-    /// of this entity will also be synced.
-    fn is_base_component() -> bool;
 
     /// The [`SyncableComponent::convert_entities_client_to_server`] function requires cloning this struct,
     /// so to avoid clones on structs without any entities this method can be used.

@@ -58,7 +58,7 @@ fn server_sync_bodies(
 ) {
     tick.0 += 1;
 
-    let mut bodies = Vec::new();
+    let mut bodies = Vec::with_capacity(20);
 
     for (entity, transform, location, velocity, unload_distance, parent) in entities.iter() {
         bodies.push((
@@ -79,9 +79,9 @@ fn server_sync_bodies(
         ));
 
         // The packet size can only be so big, so limit syncing to 20 per packet
-        if bodies.len() > 20 {
+        if bodies.len() >= 20 {
             send_bodies(&players, &bodies, &mut server, &tick);
-            bodies = Vec::new();
+            bodies.clear();
         }
     }
 
