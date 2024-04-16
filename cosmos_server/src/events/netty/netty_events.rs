@@ -74,7 +74,16 @@ fn handle_server_events(
     mut server_events: EventReader<ServerEvent>,
     mut lobby: ResMut<ServerLobby>,
     mut client_ticks: ResMut<ClientTicks>,
-    players: Query<(Entity, &Player, &Transform, &Location, &Velocity, &Inventory, &RenderDistance)>,
+    q_players: Query<(
+        Entity,
+        &Player,
+        &Transform,
+        &Location,
+        &Velocity,
+        &Inventory,
+        &RenderDistance,
+        &Credits,
+    )>,
     player_worlds: Query<(&Location, &WorldWithin, &PhysicsWorld), (With<Player>, Without<Parent>)>,
     items: Res<Registry<Item>>,
     mut visualizer: ResMut<RenetServerVisualizer<200>>,
@@ -89,7 +98,7 @@ fn handle_server_events(
                 info!("Client {client_id} connected");
                 visualizer.add_client(client_id);
 
-                for (entity, player, transform, location, velocity, inventory, render_distance) in players.iter() {
+                for (entity, player, transform, location, velocity, inventory, render_distance, credits) in q_players.iter() {
                     let body = NettyRigidBody::new(velocity, transform.rotation, NettyRigidBodyLocation::Absolute(*location));
 
                     let msg = cosmos_encoder::serialize(&ServerReliableMessages::PlayerCreate {
@@ -99,6 +108,7 @@ fn handle_server_events(
                         name: player.name().clone(),
                         inventory_serialized: cosmos_encoder::serialize(inventory),
                         render_distance: Some(*render_distance),
+                        credits: *credits,
                     });
 
                     server.send_message(client_id, NettyChannelServer::Reliable, msg);
@@ -124,6 +134,8 @@ fn handle_server_events(
 
                 let inventory_serialized = cosmos_encoder::serialize(&inventory);
 
+                let credits = Credits::new(1_000_000);
+
                 let player_commands = commands.spawn((
                     location,
                     LockedAxes::ROTATION_LOCKED,
@@ -137,7 +149,7 @@ fn handle_server_events(
                     LoadingDistance::new(2, 9999),
                     ActiveEvents::COLLISION_EVENTS,
                     Name::new(format!("Player ({name})")),
-                    Credits::new(1_000_000),
+                    credits,
                 ));
 
                 let player_entity = player_commands.id();
@@ -153,6 +165,7 @@ fn handle_server_events(
                     body: netty_body,
                     inventory_serialized,
                     render_distance: None,
+                    credits,
                 });
 
                 server.send_message(

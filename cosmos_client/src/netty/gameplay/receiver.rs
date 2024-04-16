@@ -302,6 +302,7 @@ pub(crate) fn client_sync_players(
                 name,
                 inventory_serialized,
                 render_distance: _,
+                credits,
             } => {
                 // Prevents creation of duplicate players
                 if lobby.players.contains_key(&id) {
@@ -349,6 +350,7 @@ pub(crate) fn client_sync_players(
                     ReadMassProperties::default(),
                     ActiveEvents::COLLISION_EVENTS,
                     inventory,
+                    credits,
                 ));
 
                 let client_entity = entity_cmds.id();
@@ -712,11 +714,6 @@ pub(crate) fn client_sync_players(
                             new_health: ev.new_health,
                         })
                 }));
-            }
-            ServerReliableMessages::Credits { credits, entity } => {
-                if let Some(entity) = network_mapping.client_from_server(&entity) {
-                    commands.entity(entity).insert(credits);
-                }
             }
             ServerReliableMessages::TerrainGenerationShaders {
                 shaders,

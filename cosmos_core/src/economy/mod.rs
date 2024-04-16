@@ -5,6 +5,8 @@ use std::fmt::Display;
 use bevy::{app::App, ecs::component::Component, reflect::Reflect};
 use serde::{Deserialize, Serialize};
 
+use crate::netty::sync::{sync_component, SyncableComponent};
+
 #[derive(Component, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize, Reflect, Default)]
 /// Represents a quantity of money. If attached to an entity, this is how much money that entity has
 pub struct Credits(u64);
@@ -53,6 +55,18 @@ impl Display for Credits {
     }
 }
 
+impl SyncableComponent for Credits {
+    fn get_sync_type() -> crate::netty::sync::SyncType {
+        crate::netty::sync::SyncType::ServerAuthoritative
+    }
+
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:credits"
+    }
+}
+
 pub(super) fn register(app: &mut App) {
+    sync_component::<Credits>(app);
+
     app.register_type::<Credits>();
 }

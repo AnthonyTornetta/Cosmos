@@ -5,7 +5,7 @@ use bevy_hanabi::prelude::*;
 
 use bevy_kira_audio::{Audio, AudioControl, AudioInstance, AudioSource};
 use cosmos_core::{
-    ecs::NeedsDespawned,
+    ecs::{bundles::BundleStartingRotation, NeedsDespawned},
     netty::{client::LocalPlayer, sync::ComponentSyncingSet},
     physics::location::Location,
     projectiles::missile::{Explosion, ExplosionSystemSet, Missile},
@@ -93,6 +93,8 @@ fn respond_to_explosion(
     };
 
     for (ent, explosion_loc, g_trans, explosion) in q_explosions.iter() {
+        // Makes the particles appear 3d
+
         let hash = explosion.color.map(color_hash).unwrap_or(0);
 
         let particle_handle = particles.0.get(&hash).map(|x| x.clone_weak()).unwrap_or_else(|| {
@@ -110,6 +112,11 @@ fn respond_to_explosion(
         commands.spawn((
             Name::new("Explosion particle"),
             *explosion_loc,
+            BundleStartingRotation(
+                Transform::from_xyz(0.0, 0.0, 0.0)
+                    .looking_to(local_g_trans.translation() - g_trans.translation(), Vec3::Y)
+                    .rotation,
+            ),
             ExplosionTimeAlive(0.0),
             MaxTimeExplosionAlive(MAX_PARTICLE_LIFETIME),
             ExplosionParticle,

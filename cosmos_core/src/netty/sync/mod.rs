@@ -116,6 +116,8 @@ enum ComponentEntityIdentifier {
 /// `Location`, `Transform`, `Velocity`, and `LoadingDistance`. Additionally, the player must be within the `LoadingDistance`.
 pub trait SyncableComponent: Component + Serialize + DeserializeOwned + Clone + std::fmt::Debug {
     /// Returns how this component should be synced
+    ///
+    /// Either from `server -> client` or `client -> server`.
     fn get_sync_type() -> SyncType;
     /// Returns an unlocalized name that should be unique to this component.
     ///

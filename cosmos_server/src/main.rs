@@ -24,7 +24,6 @@ use bevy::log::LogPlugin;
 pub mod ai;
 pub mod blocks;
 pub mod commands;
-pub mod economy;
 pub mod entities;
 pub mod events;
 pub mod init;
