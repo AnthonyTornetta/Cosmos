@@ -53,6 +53,7 @@ fn client_deserialize_component<T: SyncableComponent>(
 
                 component = mapped;
             }
+
             ecmds.try_insert(component);
         }
     }

@@ -3,14 +3,15 @@
 use std::time::Duration;
 
 use bevy::prelude::*;
-use bevy_rapier3d::prelude::{PhysicsWorld, Velocity, DEFAULT_WORLD_ID};
+use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::Block,
     ecs::bundles::CosmosPbrBundle,
     entities::player::Player,
     netty::{
-        cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages, sync::ComponentSyncingSet, NettyChannelServer,
+        cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages, sync::ComponentSyncingSet,
+        system_sets::NetworkingSystemsSet, NettyChannelServer,
     },
     persistence::LoadingDistance,
     physics::{
@@ -102,15 +103,13 @@ fn missile_lockon(
         let targetting_forward = g_trans.forward();
 
         // Find best cadidate for focusing
-        let mut best_target = preferred_focus
-            .focusing_server_entity
-            .and_then(|ent| {
-                let (ent, loc) = q_targettable.get(ent).ok()?;
+        let mut best_target = preferred_focus.focusing_server_entity.and_then(|ent| {
+            let (ent, loc) = q_targettable.get(ent).ok()?;
 
-                calculate_focusable_properties(ent, structure_system, loc, structure_location, targetting_forward)?;
+            calculate_focusable_properties(ent, structure_system, loc, structure_location, targetting_forward)?;
 
-                Some(ent)
-            });
+            Some(ent)
+        });
 
         if best_target.is_none() {
             best_target = q_targettable
@@ -184,22 +183,13 @@ fn calculate_focusable_properties(
 fn update_missile_system(
     mut query: Query<(&MissileLauncherSystem, &MissileLauncherFocus, &StructureSystem, &mut SystemCooldown), With<SystemActive>>,
     mut es_query: Query<&mut EnergyStorageSystem>,
-    systems: Query<(
-        Entity,
-        &StructureSystems,
-        &Structure,
-        &Location,
-        &GlobalTransform,
-        &Velocity,
-        Option<&PhysicsWorld>,
-    )>,
+    systems: Query<(Entity, &StructureSystems, &Structure, &Location, &GlobalTransform, &Velocity)>,
     time: Res<Time>,
     mut commands: Commands,
     mut server: ResMut<RenetServer>,
 ) {
     for (cannon_system, focus, system, mut cooldown) in query.iter_mut() {
-        let Ok((ship_entity, systems, structure, location, global_transform, ship_velocity, physics_world)) =
-            systems.get(system.structure_entity())
+        let Ok((ship_entity, systems, structure, location, global_transform, ship_velocity)) = systems.get(system.structure_entity())
         else {
             continue;
         };
@@ -214,8 +204,6 @@ fn update_missile_system(
         }
 
         cooldown.last_use_time = sec;
-
-        let world_id = physics_world.map(|bw| bw.world_id).unwrap_or(DEFAULT_WORLD_ID);
 
         let mut any_fired = false;
 
@@ -257,7 +245,6 @@ fn update_missile_system(
                         linvel: missile_velocity + ship_velocity.linvel,
                         ..Default::default()
                     },
-                    PhysicsWorld { world_id },
                     LoadingDistance::new(1, 2),
                     CollisionBlacklist::single(CollisionBlacklistedEntity {
                         entity: system.structure_entity(),
@@ -292,6 +279,7 @@ pub(super) fn register(app: &mut App) {
         Update,
         update_missile_system
             .run_if(in_state(GameState::Playing))
+            .before(NetworkingSystemsSet::SyncEntities)
             .before(CosmosBundleSet::HandleCosmosBundles)
             .before(ComponentSyncingSet::PreComponentSyncing),
     )

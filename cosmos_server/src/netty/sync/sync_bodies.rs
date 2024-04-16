@@ -4,6 +4,7 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
+    ecs::{despawn_needed, NeedsDespawned},
     entities::player::{render_distance::RenderDistance, Player},
     netty::{
         cosmos_encoder,
@@ -19,6 +20,12 @@ use cosmos_core::{
 };
 
 use crate::netty::network_helpers::NetworkTick;
+
+#[derive(Component)]
+/// Does not send a despawn message to the client when this entity is despawned.
+///
+/// This only works if the entity is despawned via the `NeedsDespawned` component.
+pub struct DontNotifyClientOfDespawn;
 
 /// Sends bodies to players only if it's within their render distance.
 fn send_bodies(
@@ -102,8 +109,11 @@ fn pinger(mut server: ResMut<RenetServer>, mut event_reader: EventReader<Request
     }
 }
 
-fn notify_despawned_entities(mut removed_components: RemovedComponents<LoadingDistance>, mut server: ResMut<RenetServer>) {
-    for killed_entity in removed_components.read() {
+fn notify_despawned_entities(
+    removed_components: Query<Entity, (With<NeedsDespawned>, Without<DontNotifyClientOfDespawn>)>,
+    mut server: ResMut<RenetServer>,
+) {
+    for killed_entity in removed_components.iter() {
         server.broadcast_message(
             NettyChannelServer::Reliable,
             cosmos_encoder::serialize(&ServerReliableMessages::EntityDespawn { entity: killed_entity }),
@@ -123,5 +133,5 @@ pub(super) fn register(app: &mut App) {
             pinger,
         ),
     )
-    .add_systems(Update, notify_despawned_entities);
+    .add_systems(First, notify_despawned_entities.before(despawn_needed));
 }

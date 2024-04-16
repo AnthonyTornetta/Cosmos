@@ -14,10 +14,7 @@ use bevy::{
     math::{Quat, Vec3},
     prelude::{App, Commands, Entity, Query, Res, Update, With},
     time::Time,
-    transform::{
-        components::{GlobalTransform, Transform},
-        TransformBundle,
-    },
+    transform::components::{GlobalTransform, Transform},
     utils::HashSet,
 };
 use bevy_rapier3d::{
@@ -33,7 +30,11 @@ use cosmos_core::{
     ecs::NeedsDespawned,
     events::block_events::BlockChangedEvent,
     persistence::LoadingDistance,
-    physics::{collision_handling::CollisionBlacklist, location::Location},
+    physics::{
+        collision_handling::CollisionBlacklist,
+        location::{CosmosBundleSet, Location},
+        player_world::{PlayerWorld, WorldWithin},
+    },
     projectiles::missile::{Explosion, ExplosionSystemSet, Missile},
     registry::Registry,
     structure::{
@@ -43,34 +44,45 @@ use cosmos_core::{
     },
 };
 
+use crate::netty::sync::sync_bodies::DontNotifyClientOfDespawn;
+
 /// 1 unit of explosion power = this amount of health. Bigger this number is, the more damage explosives will do.
 const HEALTH_PER_EXPLOSION_POWER: f32 = 8.0;
 
 fn respond_to_explosion(
     mut commands: Commands,
-    q_explosions: Query<(Entity, &GlobalTransform, Option<&PhysicsWorld>, &Explosion), Added<Explosion>>,
+    q_explosions: Query<(Entity, &Location, &WorldWithin, Option<&PhysicsWorld>, &Explosion), Added<Explosion>>,
+    q_player_world: Query<&Location, With<PlayerWorld>>,
     q_excluded: Query<(), Or<(With<Explosion>, Without<Collider>, With<Sensor>)>>,
 
-    mut q_structure: Query<(&GlobalTransform, &mut Structure)>,
+    mut q_structure: Query<(&GlobalTransform, &Location, &mut Structure)>,
     context: Res<RapierContext>,
 
     q_chunk: Query<&ChunkEntity>,
     blocks_registry: Res<Registry<Block>>,
     mut ev_writer: EventWriter<BlockChangedEvent>,
 ) {
-    for (ent, explosion_g_trans, physics_world, explosion) in q_explosions.iter() {
-        commands.entity(ent).insert(NeedsDespawned);
+    for (ent, explosion_loc, world_within, physics_world, explosion) in q_explosions.iter() {
+        commands.entity(ent).insert((NeedsDespawned, DontNotifyClientOfDespawn));
+
+        let Ok(player_world_loc) = q_player_world.get(world_within.0) else {
+            continue;
+        };
 
         let max_radius = explosion.power.sqrt();
 
         let physics_world = physics_world.copied().unwrap_or_default();
+
+        // Have to do this by hand because `GlobalTransform` doesn't have enough time to
+        // propagate down
+        let rapier_coordinates = (*explosion_loc - *player_world_loc).absolute_coords_f32();
 
         let mut hits = vec![];
 
         context
             .intersections_with_shape(
                 physics_world.world_id,
-                explosion_g_trans.translation(),
+                rapier_coordinates,
                 Quat::IDENTITY,
                 &Collider::ball(max_radius),
                 QueryFilter::default().exclude_collider(ent).predicate(&|x| !q_excluded.contains(x)),
@@ -97,11 +109,11 @@ fn respond_to_explosion(
         let max_radius_sqrd = max_radius * max_radius;
 
         for &hit in ents.iter() {
-            let Ok((structure_g_trans, mut structure)) = q_structure.get_mut(hit) else {
+            let Ok((structure_g_trans, structure_loc, mut structure)) = q_structure.get_mut(hit) else {
                 continue;
             };
             let explosion_relative_position =
-                structure_g_trans.affine().inverse().matrix3 * (explosion_g_trans.translation() - structure_g_trans.translation());
+                structure_g_trans.affine().inverse().matrix3 * (*explosion_loc - *structure_loc).absolute_coords_f32();
 
             let local_coords = structure.relative_coords_to_local_coords(
                 explosion_relative_position.x,
@@ -196,6 +208,12 @@ pub struct MissileTargetting {
     pub targetting: Entity,
 }
 
+fn print_rot(q_mis: Query<&Transform, With<Missile>>) {
+    for x in &q_mis {
+        println!("{}", x.rotation);
+    }
+}
+
 fn look_towards_target(mut q_targetting_missiles: Query<(&Location, &mut Transform, &MissileTargetting)>, q_targets: Query<&Location>) {
     for (missile_loc, mut missile_trans, missile_targetting) in &mut q_targetting_missiles {
         let Ok(target_loc) = q_targets.get(missile_targetting.targetting) else {
@@ -220,7 +238,7 @@ fn apply_missile_thrust(mut commands: Commands, time: Res<Time>, q_missiles: Que
 
 fn respond_to_collisions(
     mut ev_reader: EventReader<CollisionEvent>,
-    q_missile: Query<(&GlobalTransform, &Location, &Velocity, &Missile, &CollisionBlacklist)>,
+    q_missile: Query<(&Location, &Velocity, &Missile, &CollisionBlacklist)>,
     q_parent: Query<&Parent>,
     mut commands: Commands,
 ) {
@@ -237,7 +255,7 @@ fn respond_to_collisions(
             None
         };
 
-        let Some(((g_t, location, velocity, missile, collision_blacklist), missile_entity, hit_entity)) = entities else {
+        let Some(((location, velocity, missile, collision_blacklist), missile_entity, hit_entity)) = entities else {
             continue;
         };
 
@@ -247,16 +265,11 @@ fn respond_to_collisions(
 
         commands.entity(missile_entity).insert(NeedsDespawned);
 
-        let translation = g_t.translation();
-        let mut loc = *location;
-        loc.last_transform_loc = Some(translation);
-
         commands.spawn((
-            loc,
+            *location,
             *velocity,
             RigidBody::Dynamic,
             LoadingDistance::new(1, 2),
-            TransformBundle::from_transform(Transform::from_translation(translation)),
             Explosion {
                 power: missile.strength,
                 color: missile.color,
@@ -265,12 +278,8 @@ fn respond_to_collisions(
     }
 }
 
-fn despawn_missiles(
-    mut commands: Commands,
-    mut query: Query<(Entity, &GlobalTransform, &Velocity, &Location, &mut Missile)>,
-    time: Res<Time>,
-) {
-    for (ent, g_trans, velocity, location, mut missile) in query.iter_mut() {
+fn despawn_missiles(mut commands: Commands, mut query: Query<(Entity, &Velocity, &Location, &mut Missile)>, time: Res<Time>) {
+    for (ent, velocity, location, mut missile) in query.iter_mut() {
         missile.lifetime = missile
             .lifetime
             .checked_sub(Duration::from_secs_f32(time.delta_seconds()))
@@ -279,16 +288,11 @@ fn despawn_missiles(
         if missile.lifetime == Duration::ZERO {
             commands.entity(ent).insert(NeedsDespawned);
 
-            let translation = g_trans.translation();
-            let mut loc = *location;
-            loc.last_transform_loc = Some(translation);
-
             commands.spawn((
-                loc,
+                *location,
                 *velocity,
                 RigidBody::Dynamic,
                 LoadingDistance::new(1, 2),
-                TransformBundle::from_transform(Transform::from_translation(translation)),
                 Explosion {
                     power: missile.strength,
                     color: missile.color,
@@ -302,10 +306,16 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         (respond_to_collisions, despawn_missiles)
-            .before(ExplosionSystemSet::ProcessExplosions)
+            .before(ExplosionSystemSet::PreProcessExplosions)
+            .before(CosmosBundleSet::HandleCosmosBundles)
             .chain(),
     );
 
     app.add_systems(Update, respond_to_explosion.in_set(ExplosionSystemSet::ProcessExplosions))
-        .add_systems(Update, (look_towards_target, apply_missile_thrust).chain());
+        .add_systems(
+            Update,
+            (print_rot, look_towards_target, apply_missile_thrust)
+                .after(CosmosBundleSet::HandleCosmosBundles)
+                .chain(),
+        );
 }

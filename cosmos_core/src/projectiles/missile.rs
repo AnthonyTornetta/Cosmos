@@ -25,7 +25,7 @@ use crate::{
     physics::location::{CosmosBundleSet, LocationPhysicsSet},
 };
 
-#[derive(Component, Serialize, Deserialize, Clone)]
+#[derive(Component, Debug, Serialize, Deserialize, Clone)]
 /// A missile is something that flies in a straight line & may collide with a block, causing
 /// it to take damage.
 pub struct Missile {
@@ -63,7 +63,7 @@ fn on_add_missile(q_added_missile: Query<Entity, Added<Missile>>, mut commands: 
     }
 }
 
-#[derive(Component, Reflect, Clone, Serialize, Deserialize)]
+#[derive(Component, Debug, Reflect, Clone, Serialize, Deserialize)]
 /// Something that will cause damage to nearby entities that it hits.
 pub struct Explosion {
     /// The power of the explosion is used to calculate its radius & effectiveness against blocks.
@@ -90,7 +90,11 @@ impl SyncableComponent for Explosion {
 ///
 /// Put anything that creates an explosion before [`ExplosionSystemSet::ProcessExplosions`].
 pub enum ExplosionSystemSet {
-    /// Put anything that creates an explosion before [`ExplosionSystemSet::ProcessExplosions`].
+    /// Put anything that creates an explosion before [`ExplosionSystemSet::PreProcessExplosions`].
+    ///
+    /// This set exists to give the cosmos location system time to assign the explosion a world & transform.
+    PreProcessExplosions,
+    /// Put anything that creates an explosion before [`ExplosionSystemSet::PreProcessExplosions`].
     ///
     /// In this set, explosions will cause damage to things they are near
     ProcessExplosions,
@@ -100,22 +104,41 @@ pub(super) fn register(app: &mut App) {
     sync_component::<Missile>(app);
     sync_component::<Explosion>(app);
 
-    let mut sets = ExplosionSystemSet::ProcessExplosions
-        .before(LocationPhysicsSet::DoPhysics)
-        .before(CosmosBundleSet::HandleCosmosBundles);
-
     #[cfg(feature = "server")]
     {
         // Setup explosion before they are synced to clients
-        sets = sets.before(ComponentSyncingSet::PreComponentSyncing);
+        app.configure_sets(
+            Update,
+            (
+                ExplosionSystemSet::PreProcessExplosions
+                    .before(LocationPhysicsSet::DoPhysics)
+                    .before(CosmosBundleSet::HandleCosmosBundles)
+                    .before(ComponentSyncingSet::PreComponentSyncing),
+                ExplosionSystemSet::ProcessExplosions
+                    .after(LocationPhysicsSet::DoPhysics)
+                    .after(CosmosBundleSet::HandleCosmosBundles)
+                    .after(ComponentSyncingSet::PreComponentSyncing),
+            )
+                .chain(),
+        );
     }
     #[cfg(feature = "client")]
     {
         // Receive explosions from server before processing them
-        sets = sets.after(ComponentSyncingSet::PostComponentSyncing);
+        app.configure_sets(
+            Update,
+            (
+                ExplosionSystemSet::PreProcessExplosions
+                    .before(LocationPhysicsSet::DoPhysics)
+                    .before(CosmosBundleSet::HandleCosmosBundles)
+                    .after(ComponentSyncingSet::PreComponentSyncing),
+                ExplosionSystemSet::ProcessExplosions
+                    .after(LocationPhysicsSet::DoPhysics)
+                    .after(CosmosBundleSet::HandleCosmosBundles),
+            )
+                .chain(),
+        );
     }
-
-    app.configure_sets(Update, sets);
 
     #[cfg(feature = "client")]
     app.add_systems(Update, on_add_missile.in_set(ComponentSyncingSet::PostComponentSyncing));

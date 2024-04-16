@@ -545,6 +545,8 @@ fn on_add_location_without_transform(
 
         let rotation = starting_rotation.map(|x| x.0).unwrap_or(Quat::IDENTITY);
 
+        println!("Starting rot: {rotation}");
+
         if let (Some(best_physics_world), Some(best_player_world_loc)) = (best_physics_world, best_player_world_loc) {
             let transform = Transform::from_translation(best_player_world_loc.relative_coords_to(&my_loc)).with_rotation(rotation);
 

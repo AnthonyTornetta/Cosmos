@@ -16,6 +16,7 @@ use bevy_renet::renet::ClientId;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::{
+    physics::location::CosmosBundleSet,
     registry::{create_registry, identifiable::Identifiable, Registry},
     structure::systems::StructureSystemId,
 };
@@ -113,7 +114,7 @@ enum ComponentEntityIdentifier {
 /// of the entity before it will sync it.  This is most commonly done via the [`super::server_unreliable_messages::ServerUnreliableMessages::BulkBodies`] networking request.
 /// Note that this requires the following components to sync the entity:
 /// `Location`, `Transform`, `Velocity`, and `LoadingDistance`. Additionally, the player must be within the `LoadingDistance`.
-pub trait SyncableComponent: Component + Serialize + DeserializeOwned + Clone {
+pub trait SyncableComponent: Component + Serialize + DeserializeOwned + Clone + std::fmt::Debug {
     /// Returns how this component should be synced
     fn get_sync_type() -> SyncType;
     /// Returns an unlocalized name that should be unique to this component.
@@ -199,21 +200,37 @@ pub fn sync_component<T: SyncableComponent>(_app: &mut App) {
 pub(super) fn register(app: &mut App) {
     create_registry::<SyncedComponentId>(app, "cosmos:syncable_components");
 
-    app.configure_sets(
-        Update,
-        (
-            ComponentSyncingSet::PreComponentSyncing,
-            ComponentSyncingSet::DoComponentSyncing,
-            ComponentSyncingSet::PostComponentSyncing,
-        )
-            .chain(),
-    );
-
     app.add_event::<GotComponentToSyncEvent>();
 
     #[cfg(feature = "client")]
-    client_syncing::setup_client(app);
+    {
+        app.configure_sets(
+            Update,
+            (
+                ComponentSyncingSet::PreComponentSyncing,
+                ComponentSyncingSet::DoComponentSyncing,
+                ComponentSyncingSet::PostComponentSyncing,
+            )
+                .before(CosmosBundleSet::HandleCosmosBundles)
+                .chain(),
+        );
+
+        client_syncing::setup_client(app);
+    }
 
     #[cfg(feature = "server")]
-    server_syncing::setup_server(app);
+    {
+        app.configure_sets(
+            Update,
+            (
+                ComponentSyncingSet::PreComponentSyncing,
+                ComponentSyncingSet::DoComponentSyncing,
+                ComponentSyncingSet::PostComponentSyncing,
+            )
+                .after(CosmosBundleSet::HandleCosmosBundles)
+                .chain(),
+        );
+
+        server_syncing::setup_server(app);
+    }
 }
