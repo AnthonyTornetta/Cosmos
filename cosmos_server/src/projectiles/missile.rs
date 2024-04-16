@@ -208,12 +208,6 @@ pub struct MissileTargetting {
     pub targetting: Entity,
 }
 
-fn print_rot(q_mis: Query<&Transform, With<Missile>>) {
-    for x in &q_mis {
-        println!("{}", x.rotation);
-    }
-}
-
 fn look_towards_target(mut q_targetting_missiles: Query<(&Location, &mut Transform, &MissileTargetting)>, q_targets: Query<&Location>) {
     for (missile_loc, mut missile_trans, missile_targetting) in &mut q_targetting_missiles {
         let Ok(target_loc) = q_targets.get(missile_targetting.targetting) else {
@@ -314,7 +308,7 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(Update, respond_to_explosion.in_set(ExplosionSystemSet::ProcessExplosions))
         .add_systems(
             Update,
-            (print_rot, look_towards_target, apply_missile_thrust)
+            (look_towards_target, apply_missile_thrust)
                 .after(CosmosBundleSet::HandleCosmosBundles)
                 .chain(),
         );
