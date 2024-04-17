@@ -109,11 +109,11 @@ fn focus_looking_at(
     };
 
     let Some(server_ent) = mapping.server_from_client(&ent) else {
+        // This can happen if the entity is dead on the client, but we're getting out of date data from the server
+
         if missile_focus.focusing_server_entity.is_some() {
             missile_focus.focusing_server_entity = None;
         }
-
-        warn!("Missing server entity for {ent:?}");
 
         return;
     };

@@ -10,7 +10,6 @@ use bevy::{
         schedule::IntoSystemConfigs,
     },
     hierarchy::Parent,
-    log::info,
     math::{Quat, Vec3},
     prelude::{App, Commands, Entity, Query, Res, Update, With},
     time::Time,
@@ -93,8 +92,6 @@ fn respond_to_explosion(
                 },
             )
             .expect("Invalid world id used in explosion!");
-
-        info!("Missile hit entities: {hits:?}");
 
         let mut ents = HashSet::new();
         for ent in hits {

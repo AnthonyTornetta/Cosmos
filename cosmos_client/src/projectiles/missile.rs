@@ -5,7 +5,7 @@ use bevy_hanabi::prelude::*;
 
 use bevy_kira_audio::{Audio, AudioControl, AudioInstance, AudioSource};
 use cosmos_core::{
-    ecs::{bundles::BundleStartingRotation, NeedsDespawned},
+    ecs::NeedsDespawned,
     netty::{client::LocalPlayer, sync::ComponentSyncingSet},
     physics::location::Location,
     projectiles::missile::{Explosion, ExplosionSystemSet, Missile},
@@ -112,11 +112,6 @@ fn respond_to_explosion(
         commands.spawn((
             Name::new("Explosion particle"),
             *explosion_loc,
-            BundleStartingRotation(
-                Transform::from_xyz(0.0, 0.0, 0.0)
-                    .looking_to(local_g_trans.translation() - g_trans.translation(), Vec3::Y)
-                    .rotation,
-            ),
             ExplosionTimeAlive(0.0),
             MaxTimeExplosionAlive(MAX_PARTICLE_LIFETIME),
             ExplosionParticle,

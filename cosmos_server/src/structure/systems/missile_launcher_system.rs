@@ -80,24 +80,16 @@ fn add_missile_targettable(q_added_targettable: Query<Entity, Or<(Added<Structur
 }
 
 fn missile_lockon(
-    mut q_missile_systems: Query<(Entity, &StructureSystem, &mut MissileLauncherFocus, &MissileLauncherPreferredFocus)>,
-    q_structure: Query<(&StructureSystems, &Location, &GlobalTransform)>,
+    mut q_missile_systems: Query<(&StructureSystem, &mut MissileLauncherFocus, &MissileLauncherPreferredFocus)>,
+    q_structure: Query<(&Location, &GlobalTransform)>,
     q_targettable: Query<(Entity, &Location), With<MissileTargettable>>,
     time: Res<Time>,
 ) {
-    for (system_entity, structure_system, mut missile_launmcher_focus, preferred_focus) in q_missile_systems.iter_mut() {
+    for (structure_system, mut missile_launmcher_focus, preferred_focus) in q_missile_systems.iter_mut() {
         // Verify system is hovered
-        let Ok((structure_systems, structure_location, g_trans)) = q_structure.get(structure_system.structure_entity()) else {
+        let Ok((structure_location, g_trans)) = q_structure.get(structure_system.structure_entity()) else {
             continue;
         };
-
-        if structure_systems.hovered_system() != Some(system_entity) {
-            // Don't trigger un-needed change detections
-            if !matches!(*missile_launmcher_focus, MissileLauncherFocus::NotFocusing) {
-                missile_launmcher_focus.clear_focus();
-            }
-            continue;
-        }
 
         // TODO: Make this dependent on direction the player is looking (because of camera blocks)
         let targetting_forward = g_trans.forward();
