@@ -158,39 +158,6 @@ fn start_explosion_particle_system(mut q_spawner: Query<&mut EffectSpawner, (Add
 const MAX_PARTICLE_LIFETIME: Duration = Duration::from_millis(1200);
 
 fn create_particle_fx(color: Option<Color>, effects: &mut Assets<EffectAsset>) -> Handle<EffectAsset> {
-    // let gradient = Gradient::default()
-    //     .with_key(0.0, Vec4::new(1.0, 0.0, 0.0, 1.0))
-    //     .with_key(1.0, Vec4::new(0.0, 0.0, 0.0, 0.0));
-
-    // let mut module = Module::default();
-
-    // let init_pos = SetPositionSphereModifier {
-    //     center: module.lit(Vec3::ZERO),
-    //     radius: module.lit(1.0),
-    //     dimension: ShapeDimension::Surface,
-    // };
-
-    // let init_vel = SetVelocitySphereModifier {
-    //     center: module.lit(Vec3::ZERO),
-    //     speed: module.lit(6.0),
-    // };
-
-    // let lifetime = module.lit(10.0);
-    // let init_lifetime = SetAttributeModifier::new(Attribute::LIFETIME, lifetime);
-
-    // let accel = module.lit(Vec3::new(0.0, -3.0, 0.0));
-    // let update_accel = AccelModifier::new(accel);
-
-    // let effect = EffectAsset::new(32768, Spawner::rate(5.0.into()), module)
-    //     .with_name("TestEffect")
-    //     .init(init_pos)
-    //     .init(init_vel)
-    //     .init(init_lifetime)
-    //     .update(update_accel)
-    //     .render(ColorOverLifetimeModifier { gradient });
-
-    // let effect_handle = effects.add(effect);
-
     // stolen & slightly modified from: https://github.com/djeedai/bevy_hanabi/blob/cf16097a7c034c27f36c34ab339941242deddb1f/examples/firework.rs
 
     let mut color_gradient1 = Gradient::new();
@@ -222,10 +189,6 @@ fn create_particle_fx(color: Option<Color>, effects: &mut Assets<EffectAsset>) -
     let lifetime = writer.lit(0.8).uniform(writer.lit(MAX_PARTICLE_LIFETIME.as_secs_f32())).expr();
     let init_lifetime = SetAttributeModifier::new(Attribute::LIFETIME, lifetime);
 
-    // Add constant downward acceleration to simulate gravity
-    // let accel = writer.lit(Vec3::Y * -8.).expr();
-    // let update_accel = AccelModifier::new(accel);
-
     // Add drag to make particles slow down a bit after the initial explosion
     let drag = writer.lit(10.).expr();
     let update_drag = LinearDragModifier::new(drag);
@@ -249,7 +212,7 @@ fn create_particle_fx(color: Option<Color>, effects: &mut Assets<EffectAsset>) -
         .init(init_age)
         .init(init_lifetime)
         .update(update_drag)
-        // .update(update_accel)
+        .with_simulation_space(SimulationSpace::Local)
         .render(ColorOverLifetimeModifier { gradient: color_gradient1 })
         .render(SizeOverLifetimeModifier {
             gradient: size_gradient1,
