@@ -208,14 +208,28 @@ pub struct MissileTargetting {
     pub targetting: Entity,
 }
 
-fn look_towards_target(mut q_targetting_missiles: Query<(&Location, &mut Transform, &MissileTargetting)>, q_targets: Query<&Location>) {
-    for (missile_loc, mut missile_trans, missile_targetting) in &mut q_targetting_missiles {
-        let Ok(target_loc) = q_targets.get(missile_targetting.targetting) else {
+fn look_towards_target(
+    mut q_targetting_missiles: Query<(&Location, &mut Transform, &Velocity, &MissileTargetting)>,
+    q_targets: Query<(&Location, &Velocity)>,
+    time: Res<Time>,
+) {
+    for (missile_loc, mut missile_trans, missile_vel, missile_targetting) in &mut q_targetting_missiles {
+        let Ok((target_loc, target_vel)) = q_targets.get(missile_targetting.targetting) else {
             continue;
         };
 
-        let direction = (*target_loc - *missile_loc).absolute_coords_f32().normalize_or_zero() + missile_targetting.targetting_fudge;
-        missile_trans.look_to(direction, Vec3::Y);
+        let target_loc = *target_loc + missile_targetting.targetting_fudge;
+
+        let distance = (target_loc - *missile_loc).absolute_coords_f32();
+        let missile_secs_to_reach_target = (distance.length() / missile_vel.linvel.length()).max(0.0);
+
+        let direction = (distance + (target_vel.linvel - missile_vel.linvel) * missile_secs_to_reach_target).normalize_or_zero();
+
+        let cur_forward = missile_trans.forward();
+
+        let dir_lerped = cur_forward.lerp(direction, time.delta_seconds().min(1.0));
+
+        missile_trans.look_to(dir_lerped, Vec3::Y);
     }
 }
 
