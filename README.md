@@ -59,6 +59,14 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 
 ## Release 0.0.6a (In Progress)
 - [x] Place rotated blocks
+- [x] Missiles
+  - [x] Auto targetting
+  - [x] Explosion logic
+- [ ] Shields
+  - [ ] Emit a spherical shield
+    - [ ] Shield size based on multiblock structure
+  - [ ] Absorb incoming damage
+  - [ ] Block incoming ships (not players though)
 - [ ] Inventory UI improvements
 - [ ] Money
   - [ ] Pay others
