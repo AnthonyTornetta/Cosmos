@@ -19,6 +19,7 @@ use super::asset_loading::{load_block_rendering_information, BlockRenderingInfo}
 pub mod animated_material;
 pub mod block_materials;
 pub(super) mod material_types;
+pub mod shield;
 
 #[derive(Hash, Clone, Copy, Debug, PartialEq, Eq)]
 /// Materials are used for different things, and sometimes need to be in different states.
@@ -211,6 +212,7 @@ fn register_materials(
 pub(super) fn register(app: &mut App) {
     registry::create_registry::<MaterialDefinition>(app, "cosmos:material_definitions");
     registry::many_to_one::create_many_to_one_registry::<Block, BlockMaterialMapping>(app);
+    shield::register(app);
     material_types::register(app);
     block_materials::register(app);
     animated_material::register(app);
