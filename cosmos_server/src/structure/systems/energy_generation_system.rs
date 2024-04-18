@@ -12,7 +12,7 @@ use cosmos_core::{
         systems::{
             energy_generation_system::{EnergyGenerationBlocks, EnergyGenerationProperty, EnergyGenerationSystem},
             energy_storage_system::EnergyStorageSystem,
-            StructureSystem, StructureSystemType, Systems,
+            StructureSystem, StructureSystemType, StructureSystems,
         },
         Structure,
     },
@@ -37,7 +37,7 @@ fn block_update_system(
     energy_generation_blocks: Res<EnergyGenerationBlocks>,
     blocks: Res<Registry<Block>>,
     mut system_query: Query<&mut EnergyGenerationSystem>,
-    systems_query: Query<&Systems>,
+    systems_query: Query<&StructureSystems>,
 ) {
     for ev in event.read() {
         if let Ok(systems) = systems_query.get(ev.structure_entity) {
@@ -55,7 +55,7 @@ fn block_update_system(
 }
 
 fn update_energy(
-    sys_query: Query<&Systems>,
+    sys_query: Query<&StructureSystems>,
     e_gen_query: Query<(&EnergyGenerationSystem, &StructureSystem)>,
     mut e_storage_query: Query<&mut EnergyStorageSystem>,
     time: Res<Time>,
@@ -71,7 +71,7 @@ fn update_energy(
 
 fn structure_loaded_event(
     mut event_reader: EventReader<StructureLoadedEvent>,
-    mut structure_query: Query<(&Structure, &mut Systems)>,
+    mut structure_query: Query<(&Structure, &mut StructureSystems)>,
     blocks: Res<Registry<Block>>,
     mut commands: Commands,
     energy_generation_blocks: Res<EnergyGenerationBlocks>,

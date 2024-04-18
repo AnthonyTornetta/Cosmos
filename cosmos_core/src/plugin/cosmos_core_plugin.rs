@@ -4,8 +4,9 @@ use bevy::app::PluginGroupBuilder;
 use bevy::prelude::{App, Plugin, PluginGroup, States};
 use bevy_app_compute::prelude::AppComputePlugin;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use bevy_rapier3d::prelude::{NoUserData, RapierPhysicsPlugin};
+use bevy_rapier3d::prelude::RapierPhysicsPlugin;
 
+use crate::physics::collision_handling::CosmosPhysicsFilter;
 use crate::{block, economy, ecs, inventory, netty, persistence, projectiles, shop, universe};
 use crate::{blockitems, structure};
 use crate::{events, loader};
@@ -111,7 +112,7 @@ impl<T: States + Clone + Copy> PluginGroup for CosmosCorePluginGroup<T> {
             // .add(AssetPlugin::default())
             // .add(ScenePlugin::default())
             // .add(RenderPlugin::default())
-            .add(RapierPhysicsPlugin::<NoUserData>::default())
+            .add(RapierPhysicsPlugin::<CosmosPhysicsFilter>::default())
             // .add(ImagePlugin::default_nearest())
             .add(AppComputePlugin)
             .add(WorldInspectorPlugin::default())

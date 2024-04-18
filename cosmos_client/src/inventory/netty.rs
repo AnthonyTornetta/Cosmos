@@ -14,14 +14,11 @@ use cosmos_core::{
         netty::{InventoryIdentifier, ServerInventoryMessages},
         Inventory,
     },
-    netty::{cosmos_encoder, NettyChannelServer},
+    netty::{client::LocalPlayer, cosmos_encoder, sync::mapping::NetworkMapping, NettyChannelServer},
     structure::{coordinates::ChunkCoordinate, structure_block::StructureBlock, Structure},
 };
 
-use crate::{
-    netty::{flags::LocalPlayer, mapping::NetworkMapping},
-    state::game_state::GameState,
-};
+use crate::state::game_state::GameState;
 
 use super::{HeldItemStack, InventorySide, NeedsDisplayed};
 

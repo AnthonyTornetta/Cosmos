@@ -3,6 +3,7 @@
 use bevy::{asset::LoadState, prelude::*, utils::HashMap};
 use cosmos_core::{
     entities::player::Player,
+    netty::client::LocalPlayer,
     physics::location::Location,
     structure::{
         asteroid::Asteroid,
@@ -15,7 +16,6 @@ use cosmos_core::{
 use crate::{
     asset::asset_loader::load_assets,
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
-    netty::flags::LocalPlayer,
     rendering::MainCamera,
     state::game_state::GameState,
 };
@@ -34,20 +34,22 @@ struct IndicatorSettings {
 struct HasIndicator(Entity);
 
 #[derive(Component, Debug)]
-struct Indicating(Entity);
+/// Indicates which entity this waypoint is a waypoint for.
+pub struct Indicating(pub Entity);
 
 #[derive(Resource, Default)]
 struct IndicatorImages(HashMap<u32, Handle<Image>>);
 
 #[derive(Component)]
-struct Focused;
+/// The entity the player has intentionally focused while piloting a ship
+pub struct FocusedWaypointEntity;
 
 #[derive(Component)]
 struct IndicatorTextEntity(Entity);
 
 #[derive(Resource, Default)]
 /// Waypoint closest to the center of your screen NOT your character/ship
-struct ClosestWaypoint(Option<Entity>);
+pub struct ClosestWaypoint(pub Option<Entity>);
 
 fn get_distance_text(distance: f32) -> String {
     const METERS_TO_KM: f32 = 1.0 / 1000.0;
@@ -177,7 +179,7 @@ fn add_indicators(
     mut images: ResMut<Assets<Image>>,
     mut indicator_images: ResMut<IndicatorImages>,
     asset_server: Res<AssetServer>,
-    q_text_entity_with_focus: Query<&IndicatorTextEntity, With<Focused>>,
+    q_text_entity_with_focus: Query<&IndicatorTextEntity, With<FocusedWaypointEntity>>,
 ) {
     let despawn_indicator = |(entity, indicator): (Entity, &HasIndicator)| {
         commands.entity(indicator.0).despawn_recursive();
@@ -379,35 +381,37 @@ fn position_diamonds(
 
 fn focus_waypoint(
     inputs: InputChecker,
-    focused: Query<(Entity, &IndicatorTextEntity), With<Focused>>,
+    focused: Query<(Entity, &IndicatorTextEntity), With<FocusedWaypointEntity>>,
     q_indicator_text: Query<&IndicatorTextEntity>,
     mut visibility: Query<&mut Visibility>,
     closest_waypoint: Res<ClosestWaypoint>,
     mut commands: Commands,
 ) {
-    if inputs.check_just_pressed(CosmosInputs::FocusWaypoint) {
-        if let Ok((current_ent, indicator_text_ent)) = focused.get_single() {
-            *visibility.get_mut(indicator_text_ent.0).expect("This always has visibility") = Visibility::Hidden;
-            commands.entity(current_ent).remove::<Focused>();
+    if !inputs.check_just_pressed(CosmosInputs::FocusWaypoint) {
+        return;
+    }
 
-            if let Some(closest_waypoint) = closest_waypoint.0 {
-                if current_ent != closest_waypoint {
-                    let Ok(closest) = q_indicator_text.get(closest_waypoint) else {
-                        return;
-                    };
+    if let Ok((current_ent, indicator_text_ent)) = focused.get_single() {
+        *visibility.get_mut(indicator_text_ent.0).expect("This always has visibility") = Visibility::Hidden;
+        commands.entity(current_ent).remove::<FocusedWaypointEntity>();
 
-                    *visibility.get_mut(closest.0).expect("This always has visibility") = Visibility::Visible;
-                    commands.entity(closest_waypoint).insert(Focused);
-                }
+        if let Some(closest_waypoint) = closest_waypoint.0 {
+            if current_ent != closest_waypoint {
+                let Ok(closest) = q_indicator_text.get(closest_waypoint) else {
+                    return;
+                };
+
+                *visibility.get_mut(closest.0).expect("This always has visibility") = Visibility::Visible;
+                commands.entity(closest_waypoint).insert(FocusedWaypointEntity);
             }
-        } else if let Some(closest_waypoint) = closest_waypoint.0 {
-            let Ok(closest) = q_indicator_text.get(closest_waypoint) else {
-                return;
-            };
-
-            *visibility.get_mut(closest.0).expect("This always has visibility") = Visibility::Visible;
-            commands.entity(closest_waypoint).insert(Focused);
         }
+    } else if let Some(closest_waypoint) = closest_waypoint.0 {
+        let Ok(closest) = q_indicator_text.get(closest_waypoint) else {
+            return;
+        };
+
+        *visibility.get_mut(closest.0).expect("This always has visibility") = Visibility::Visible;
+        commands.entity(closest_waypoint).insert(FocusedWaypointEntity);
     }
 }
 

@@ -1,14 +1,14 @@
 //! All unreliable messages a client can send are in here.
 //! Don't add any more here, and try to add a more specific enum for whatever you're doing.
 
-use bevy::prelude::{Component, Quat};
+use bevy::prelude::Quat;
 use serde::{Deserialize, Serialize};
 
-use crate::structure::ship::ship_movement::ShipMovement;
+use crate::structure::{ship::ship_movement::ShipMovement, systems::ShipActiveSystem};
 
 use super::netty_rigidbody::NettyRigidBody;
 
-#[derive(Debug, Serialize, Deserialize, Component)]
+#[derive(Debug, Serialize, Deserialize)]
 /// All unreliable messages a client can send
 pub enum ClientUnreliableMessages {
     /// The body of the player + their camera info
@@ -24,8 +24,5 @@ pub enum ClientUnreliableMessages {
         movement: ShipMovement,
     },
     /// Which system is the pilot currently settnig to active
-    ShipActiveSystem {
-        /// Sets the system the player has selected
-        active_system: Option<u32>,
-    },
+    ShipActiveSystem(ShipActiveSystem),
 }

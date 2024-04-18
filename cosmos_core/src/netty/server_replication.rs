@@ -34,7 +34,7 @@ pub enum ReplicationMessage {
         /// If the system is active or not
         active: bool,
     },
-    /// A gravity well. I'm trying stuff out rn, which is why this is a Vec<u8> instead of a gravity well
+    /// A gravity well status
     GravityWell {
         /// The gravity well or None if this entity has no `UnderGravityWell` component.
         gravity_well: Option<GravityWell>,

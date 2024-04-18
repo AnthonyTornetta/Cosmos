@@ -14,18 +14,13 @@ use bevy_renet::renet::{
 };
 use cosmos_core::{
     entities::player::Player,
-    netty::{connection_config, PROTOCOL_ID},
+    netty::{client::LocalPlayer, connection_config, sync::mapping::NetworkMapping, PROTOCOL_ID},
 };
 
 use crate::{
-    netty::{
-        lobby::{ClientLobby, MostRecentTick},
-        mapping::NetworkMapping,
-    },
+    netty::lobby::{ClientLobby, MostRecentTick},
     state::game_state::GameState,
 };
-
-use super::flags::LocalPlayer;
 
 fn new_netcode_transport(host: &str) -> NetcodeClientTransport {
     let port: u16 = 1337;
@@ -76,7 +71,7 @@ pub fn establish_connection(mut commands: Commands, host_config: Res<HostConfig>
     commands.insert_resource(MostRecentTick(None));
     commands.insert_resource(RenetClient::new(connection_config()));
     commands.insert_resource(new_netcode_transport(host_config.host_name.as_str()));
-    commands.insert_resource(NetworkMapping::default());
+    commands.init_resource::<NetworkMapping>();
 }
 
 /// Waits for a connection to be made, then changes the game state to `GameState::LoadingWorld`.

@@ -1,9 +1,10 @@
 //! Some utility systems that make working with the bevy ECS a bit easier in a multiplayer environment.
 
 use bevy::prelude::{resource_exists, App, Children, Entity, First, IntoSystemConfigs, Query, ResMut, With};
-use cosmos_core::ecs::{despawn_needed, NeedsDespawned};
-
-use crate::netty::mapping::NetworkMapping;
+use cosmos_core::{
+    ecs::{despawn_needed, NeedsDespawned},
+    netty::sync::mapping::NetworkMapping,
+};
 
 /// Recursively removes the networking mappings to all entities that are about to be despawned
 pub fn remove_mappings(

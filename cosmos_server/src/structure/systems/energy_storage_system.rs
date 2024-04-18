@@ -11,7 +11,7 @@ use cosmos_core::{
         loading::StructureLoadingSet,
         systems::{
             energy_storage_system::{EnergyStorageBlocks, EnergyStorageProperty, EnergyStorageSystem},
-            StructureSystemType, Systems,
+            StructureSystemType, StructureSystems,
         },
         Structure,
     },
@@ -36,7 +36,7 @@ fn block_update_system(
     energy_storage_blocks: Res<EnergyStorageBlocks>,
     blocks: Res<Registry<Block>>,
     mut system_query: Query<&mut EnergyStorageSystem>,
-    systems_query: Query<&Systems>,
+    systems_query: Query<&StructureSystems>,
 ) {
     for ev in event.read() {
         if let Ok(systems) = systems_query.get(ev.structure_entity) {
@@ -55,7 +55,7 @@ fn block_update_system(
 
 fn structure_loaded_event(
     mut event_reader: EventReader<StructureLoadedEvent>,
-    mut structure_query: Query<(&Structure, &mut Systems)>,
+    mut structure_query: Query<(&Structure, &mut StructureSystems)>,
     blocks: Res<Registry<Block>>,
     mut commands: Commands,
     energy_storage_blocks: Res<EnergyStorageBlocks>,

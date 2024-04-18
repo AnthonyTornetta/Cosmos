@@ -14,7 +14,8 @@ use cosmos_core::{
     structure::{
         shared::DespawnWithStructure,
         systems::{
-            energy_storage_system::EnergyStorageSystem, mining_laser_system::MiningLaserSystem, StructureSystem, SystemActive, Systems,
+            energy_storage_system::EnergyStorageSystem, mining_laser_system::MiningLaserSystem, StructureSystem, StructureSystems,
+            SystemActive,
         },
         Structure,
     },
@@ -89,7 +90,7 @@ fn remove_dead_mining_beams(
 }
 
 fn apply_mining_effects(
-    q_systems: Query<&Systems>,
+    q_systems: Query<&StructureSystems>,
     q_mining_lasers: Query<(Entity, &StructureSystem, &MiningLaserSystem), Added<SystemActive>>,
     q_energy_storage_system: Query<&EnergyStorageSystem>,
     mut commands: Commands,
@@ -153,7 +154,7 @@ fn apply_mining_effects(
 
         commands.entity(structure_system.structure_entity()).with_children(|p| {
             for line in &mining_laser_system.lines {
-                let color = line.color;
+                let color = line.color.unwrap_or(Color::WHITE);
 
                 let hashed = color_hash(color);
 

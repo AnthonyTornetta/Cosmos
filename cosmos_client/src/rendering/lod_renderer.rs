@@ -8,7 +8,6 @@ use std::{
     collections::VecDeque,
     mem::swap,
     sync::{Arc, Mutex},
-    usize,
 };
 
 use bevy::{

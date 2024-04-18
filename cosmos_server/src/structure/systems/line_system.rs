@@ -18,7 +18,7 @@ use cosmos_core::{
         structure_block::StructureBlock,
         systems::{
             line_system::{Line, LineBlocks, LineColorBlock, LineColorProperty, LineProperty, LinePropertyCalculator, LineSystem},
-            StructureSystemType, Systems,
+            StructureSystemType, StructureSystems,
         },
         Structure,
     },
@@ -34,7 +34,7 @@ fn block_update_system<T: LineProperty, S: LinePropertyCalculator<T>>(
     color_blocks: Res<Registry<LineColorBlock>>,
     blocks: Res<Registry<Block>>,
     mut system_query: Query<&mut LineSystem<T, S>>,
-    systems_query: Query<&Systems>,
+    systems_query: Query<&StructureSystems>,
 ) {
     for ev in event.read() {
         if let Ok(systems) = systems_query.get(ev.structure_entity) {
@@ -70,7 +70,7 @@ fn block_update_system<T: LineProperty, S: LinePropertyCalculator<T>>(
 
 fn structure_loaded_event<T: LineProperty, S: LinePropertyCalculator<T>>(
     mut event_reader: EventReader<StructureLoadedEvent>,
-    mut structure_query: Query<(&Structure, &mut Systems)>,
+    mut structure_query: Query<(&Structure, &mut StructureSystems)>,
     blocks: Res<Registry<Block>>,
     color_blocks: Res<Registry<LineColorBlock>>,
     mut commands: Commands,
@@ -353,7 +353,7 @@ fn calculate_color_for_line<T: LineProperty, S: LinePropertyCalculator<T>>(
     line_system: &LineSystem<T, S>,
     block: &StructureBlock,
     direction: BlockFace,
-) -> Color {
+) -> Option<Color> {
     let colors = line_system
         .colors
         .iter()
@@ -361,21 +361,22 @@ fn calculate_color_for_line<T: LineProperty, S: LinePropertyCalculator<T>>(
         .map(|x| x.1)
         .collect::<Vec<LineColorProperty>>();
 
-    let len = colors.len();
-    let averaged_color = colors
-        .into_iter()
-        .map(|x| x.color)
-        .reduce(|x, y| Color::rgb(x.r() + y.r(), x.g() + y.g(), x.b() + y.b()))
-        .unwrap_or(Color::WHITE);
+    if !colors.is_empty() {
+        let len = colors.len();
 
-    if len != 0 {
-        Color::rgb(
+        let averaged_color = colors
+            .into_iter()
+            .map(|x| x.color)
+            .reduce(|x, y| Color::rgb(x.r() + y.r(), x.g() + y.g(), x.b() + y.b()))
+            .unwrap_or(Color::WHITE);
+
+        Some(Color::rgb(
             averaged_color.r() / len as f32,
             averaged_color.g() / len as f32,
             averaged_color.b() / len as f32,
-        )
+        ))
     } else {
-        averaged_color
+        None
     }
 }
 

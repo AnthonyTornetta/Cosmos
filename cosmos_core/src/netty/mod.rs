@@ -1,14 +1,19 @@
 //! Contains all the information required for network requests
 
+#[cfg(feature = "client")]
+pub mod client;
 pub mod client_reliable_messages;
 pub mod client_unreliable_messages;
 pub mod cosmos_encoder;
 pub mod netty_rigidbody;
+#[cfg(feature = "server")]
+pub mod server;
 pub mod server_laser_cannon_system_messages;
 pub mod server_registry;
 pub mod server_reliable_messages;
 pub mod server_replication;
 pub mod server_unreliable_messages;
+pub mod sync;
 pub mod system_sets;
 pub mod world_tick;
 
@@ -31,8 +36,8 @@ pub enum NettyChannelServer {
     /// These are unreliably sent, and may never reach their destination or become corrupted.
     /// Used for sending `ServerUnreliableMessages`
     Unreliable,
-    /// Used for `ServerLaserCannonSystemMessages`
-    LaserCannonSystem,
+    /// Used for networking communications for structure systems
+    StructureSystems,
     /// Used for asteroids
     Asteroid,
     /// Sending LOD information to the client
@@ -45,6 +50,8 @@ pub enum NettyChannelServer {
     Registry,
     /// Syncs information about shops
     Shop,
+    /// Generalized component syncing
+    ComponentReplication,
 }
 
 /// Network channels that clients send to the server
@@ -59,6 +66,8 @@ pub enum NettyChannelClient {
     Inventory,
     /// Used for shops
     Shop,
+    /// Generalized component syncing
+    ComponentReplication,
 }
 
 impl From<NettyChannelClient> for u8 {
@@ -68,6 +77,7 @@ impl From<NettyChannelClient> for u8 {
             NettyChannelClient::Unreliable => 1,
             NettyChannelClient::Inventory => 2,
             NettyChannelClient::Shop => 3,
+            NettyChannelClient::ComponentReplication => 4,
         }
     }
 }
@@ -105,6 +115,13 @@ impl NettyChannelClient {
                     resend_time: Duration::from_millis(200),
                 },
             },
+            ChannelConfig {
+                channel_id: Self::ComponentReplication.into(),
+                max_memory_usage_bytes: 5 * MB,
+                send_type: SendType::ReliableOrdered {
+                    resend_time: Duration::from_millis(200),
+                },
+            },
         ]
     }
 }
@@ -114,13 +131,14 @@ impl From<NettyChannelServer> for u8 {
         match channel_id {
             NettyChannelServer::Reliable => 0,
             NettyChannelServer::Unreliable => 1,
-            NettyChannelServer::LaserCannonSystem => 2,
+            NettyChannelServer::StructureSystems => 2,
             NettyChannelServer::Asteroid => 3,
             NettyChannelServer::DeltaLod => 4,
             NettyChannelServer::Inventory => 5,
             NettyChannelServer::SystemReplication => 6,
             NettyChannelServer::Registry => 7,
             NettyChannelServer::Shop => 8,
+            NettyChannelServer::ComponentReplication => 9,
         }
     }
 }
@@ -142,7 +160,7 @@ impl NettyChannelServer {
                 send_type: SendType::Unreliable,
             },
             ChannelConfig {
-                channel_id: Self::LaserCannonSystem.into(),
+                channel_id: Self::StructureSystems.into(),
                 max_memory_usage_bytes: 5 * MB,
                 send_type: SendType::Unreliable,
             },
@@ -188,6 +206,13 @@ impl NettyChannelServer {
                     resend_time: Duration::from_millis(200),
                 },
             },
+            ChannelConfig {
+                channel_id: Self::ComponentReplication.into(),
+                max_memory_usage_bytes: 5 * MB,
+                send_type: SendType::ReliableOrdered {
+                    resend_time: Duration::from_millis(200),
+                },
+            },
         ]
     }
 }
@@ -212,6 +237,7 @@ pub fn get_local_ipaddress() -> String {
 }
 
 pub(super) fn register(app: &mut App) {
+    sync::register(app);
     world_tick::register(app);
     system_sets::register(app);
 }

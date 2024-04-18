@@ -24,6 +24,7 @@ pub mod energy_storage_system;
 pub mod laser_cannon_system;
 pub mod line_system;
 pub mod mining_laser_system;
+pub mod missile_launcher_system;
 pub mod sync;
 pub mod thruster_system;
 
@@ -43,10 +44,24 @@ pub mod thruster_system;
 /// would give you every laser cannon system that is currently being activated.
 pub struct SystemActive;
 
+#[derive(Default, Clone, Copy, PartialEq, Eq, Debug, Serialize, Deserialize, Reflect)]
+/// Sets the system the player has selected
+pub enum ShipActiveSystem {
+    /// No system hovered/active
+    #[default]
+    None,
+    /// A system is being hovered by the user, but is not being activated.
+    ///
+    /// (Usefor for missile that need time to focus before being used)
+    Hovered(u32),
+    /// The user is actively firing the system
+    Active(u32),
+}
+
 fn remove_system_actives_when_melting_down(
     mut commands: Commands,
     q_system_active: Query<Entity, With<SystemActive>>,
-    q_melting_down: Query<&Systems, With<MeltingDown>>,
+    q_melting_down: Query<&StructureSystems, With<MeltingDown>>,
 ) {
     for systems in &q_melting_down {
         let Ok(ent) = systems.query(&q_system_active) else {
@@ -126,9 +141,9 @@ impl std::fmt::Display for NoSystemFound {
 
 impl Error for NoSystemFound {}
 
-#[derive(Component, Debug)]
+#[derive(Component, Debug, Reflect)]
 /// Stores all the systems a structure has
-pub struct Systems {
+pub struct StructureSystems {
     /// These entities should have the `StructureSystem` component
     systems: Vec<StructureSystemId>,
     activatable_systems: Vec<StructureSystemId>,
@@ -137,7 +152,7 @@ pub struct Systems {
     /// More than just one system can be active at a time, but the pilot can only personally activate one system at a time
     /// Perhaps make this a component on the pilot entity in the future?
     /// Currently this limits a ship to one pilot, the above would fix this issue, but this is a future concern.
-    active_system: Option<u32>,
+    active_system: ShipActiveSystem,
     entity: Entity,
 }
 
@@ -164,7 +179,7 @@ impl<'a> Iterator for SystemsIterator<'a> {
     }
 }
 
-impl Systems {
+impl StructureSystems {
     /// Returns an iterator through every system
     pub fn all_systems<'a>(&'a self) -> SystemsIterator<'a> {
         SystemsIterator::<'a> {
@@ -191,10 +206,15 @@ impl Systems {
 
     /// This index is relative to the [`all_activatable_systems`] iterator NOT the [`all_systems`] index.
     pub fn get_activatable_system_from_activatable_index(&self, idx: usize) -> Entity {
-        *self
-            .ids
-            .get(&self.activatable_systems[idx])
-            .expect("Invalid state - system id has no entity mapping")
+        self.try_get_activatable_system_from_activatable_index(idx)
+            .unwrap_or_else(|| panic!("Invalid active system index provided {idx} < {}.", self.ids.len()))
+    }
+
+    /// This index is relative to the [`all_activatable_systems`] iterator NOT the [`all_systems`] index.
+    pub fn try_get_activatable_system_from_activatable_index(&self, idx: usize) -> Option<Entity> {
+        self.activatable_systems
+            .get(idx)
+            .map(|x| *self.ids.get(x).expect("Invalid state - system id has no entity mapping"))
     }
 
     fn has_id(&self, id: StructureSystemId) -> bool {
@@ -224,12 +244,12 @@ impl Systems {
     /// Activates the passed in selected system, and deactivates the system that was previously selected
     ///
     /// The passed in system index must be based off the [`Self::all_activatable_systems`] iterator.
-    pub fn set_active_system(&mut self, active: Option<u32>, commands: &mut Commands) {
+    pub fn set_active_system(&mut self, active: ShipActiveSystem, commands: &mut Commands) {
         if active == self.active_system {
             return;
         }
 
-        if let Some(active_system) = self.active_system {
+        if let ShipActiveSystem::Active(active_system) = self.active_system {
             if (active_system as usize) < self.activatable_systems.len() {
                 let ent = self
                     .ids
@@ -240,33 +260,58 @@ impl Systems {
             }
         }
 
-        if let Some(active_system) = active {
-            if (active_system as usize) < self.activatable_systems.len() {
-                let ent = self
-                    .ids
-                    .get(&self.activatable_systems[active_system as usize])
-                    .expect("Invalid state - system id has no entity mapping");
+        match active {
+            ShipActiveSystem::Active(active_system) => {
+                if (active_system as usize) < self.activatable_systems.len() {
+                    let ent = self
+                        .ids
+                        .get(&self.activatable_systems[active_system as usize])
+                        .expect("Invalid state - system id has no entity mapping");
 
-                commands.entity(*ent).insert(SystemActive);
+                    commands.entity(*ent).insert(SystemActive);
 
-                self.active_system = active;
-            } else {
-                self.active_system = None;
+                    self.active_system = active;
+                } else {
+                    self.active_system = ShipActiveSystem::None;
+                }
             }
-        } else {
-            self.active_system = None;
+            ShipActiveSystem::Hovered(hovered_system) => {
+                if (hovered_system as usize) < self.activatable_systems.len() {
+                    self.active_system = active;
+                } else {
+                    self.active_system = ShipActiveSystem::None;
+                }
+            }
+            ShipActiveSystem::None => self.active_system = ShipActiveSystem::None,
         }
     }
 
     /// Returns the active system entity, if there is one.
     pub fn active_system(&self) -> Option<Entity> {
-        self.active_system
-            .map(|x| {
-                self.ids
-                    .get(&self.activatable_systems[x as usize])
-                    .expect("Invalid state - system id has no entity mapping")
-            })
-            .copied()
+        match self.active_system {
+            ShipActiveSystem::Active(active_system_idx) => Some(
+                *self
+                    .ids
+                    .get(&self.activatable_systems[active_system_idx as usize])
+                    .expect("Invalid state - system id has no entity mapping"),
+            ),
+            _ => None,
+        }
+    }
+
+    /// Returns the hovered system entity, if there is one.
+    ///
+    /// If this system is active, it would still also count as hovered.
+    pub fn hovered_system(&self) -> Option<Entity> {
+        match self.active_system {
+            ShipActiveSystem::Active(active_system_idx) | ShipActiveSystem::Hovered(active_system_idx) => Some(
+                *self
+                    .ids
+                    .get(&self.activatable_systems[active_system_idx as usize])
+                    .expect("Invalid state - system id has no entity mapping"),
+            ),
+            ShipActiveSystem::None => None,
+        }
     }
 
     /// Generates a new id for a system while avoiding collisions
@@ -359,8 +404,8 @@ impl Systems {
             .iter()
             .map(|x| self.ids.get(x).expect("Invalid state - system id has no entity mapping"))
         {
-            // for some reason, the borrow checker gets mad when I do a get_mut in this if statement
-            if query.get(*ent).is_ok() {
+            // the borrow checker gets mad when I do a get_mut in this if statement
+            if query.contains(*ent) {
                 return Ok(query.get_mut(*ent).expect("This should be valid"));
             }
         }
@@ -371,11 +416,11 @@ impl Systems {
 
 fn add_structure(mut commands: Commands, query: Query<Entity, (Added<Structure>, With<Ship>)>) {
     for entity in query.iter() {
-        commands.entity(entity).insert(Systems {
+        commands.entity(entity).insert(StructureSystems {
             systems: Vec::new(),
             activatable_systems: Vec::new(),
             entity,
-            active_system: None,
+            active_system: ShipActiveSystem::None,
             ids: Default::default(),
         });
     }
@@ -448,11 +493,13 @@ pub(super) fn register(app: &mut App) {
             remove_system_actives_when_melting_down,
         ),
     )
-    .register_type::<StructureSystem>();
+    .register_type::<StructureSystem>()
+    .register_type::<StructureSystems>();
 
     line_system::register(app);
     camera_system::register(app);
     energy_storage_system::register(app);
     energy_generation_system::register(app);
     thruster_system::register(app);
+    missile_launcher_system::register(app);
 }

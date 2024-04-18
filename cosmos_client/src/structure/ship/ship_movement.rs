@@ -5,6 +5,7 @@ use std::f32::consts::PI;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 use bevy_renet::renet::RenetClient;
+use cosmos_core::netty::client::LocalPlayer;
 use cosmos_core::netty::client_reliable_messages::ClientReliableMessages;
 use cosmos_core::netty::client_unreliable_messages::ClientUnreliableMessages;
 use cosmos_core::netty::{cosmos_encoder, NettyChannelClient};
@@ -13,7 +14,6 @@ use cosmos_core::structure::ship::pilot::Pilot;
 use cosmos_core::structure::ship::ship_movement::ShipMovement;
 
 use crate::input::inputs::{CosmosInputs, InputChecker, InputHandler};
-use crate::netty::flags::LocalPlayer;
 use crate::rendering::MainCamera;
 use crate::state::game_state::GameState;
 use crate::ui::components::show_cursor::no_open_menus;

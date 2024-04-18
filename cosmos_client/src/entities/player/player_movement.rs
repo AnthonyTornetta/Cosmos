@@ -2,11 +2,13 @@
 
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
-use cosmos_core::structure::{shared::build_mode::BuildMode, ship::pilot::Pilot};
+use cosmos_core::{
+    netty::client::LocalPlayer,
+    structure::{shared::build_mode::BuildMode, ship::pilot::Pilot},
+};
 
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
-    netty::flags::LocalPlayer,
     rendering::MainCamera,
     state::game_state::GameState,
     structure::planet::align_player::{self, PlayerAlignment},

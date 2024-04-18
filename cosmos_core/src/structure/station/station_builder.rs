@@ -46,14 +46,14 @@ impl<T: TStructureBuilder> TStationBuilder for StationBuilder<T> {
     }
 }
 
-fn on_add_station(query: Query<Entity, Added<Station>>, mut commands: Commands) {
-    for entity in query.iter() {
+fn on_add_station(query: Query<(Entity, &Location), Added<Station>>, mut commands: Commands) {
+    for (entity, loc) in query.iter() {
         commands.entity(entity).insert((
             RigidBody::Fixed,
             ReadMassProperties::default(),
             Blueprintable,
             LoadingDistance::new(STATION_LOAD_DISTANCE, STATION_UNLOAD_DISTANCE),
-            Name::new("Station"),
+            Name::new(format!("Station @ {}", loc.sector())),
         ));
     }
 }

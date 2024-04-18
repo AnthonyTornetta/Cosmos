@@ -3,19 +3,18 @@ use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::{transport::NetcodeClientTransport, RenetClient};
 use cosmos_core::{
     netty::{
+        client::LocalPlayer,
         client_unreliable_messages::ClientUnreliableMessages,
         cosmos_encoder,
         netty_rigidbody::{NettyRigidBody, NettyRigidBodyLocation},
+        sync::mapping::NetworkMapping,
         NettyChannelClient,
     },
     physics::location::Location,
 };
 
-use crate::{input::inputs::InputChecker, netty::mapping::NetworkMapping, rendering::MainCamera, state::game_state::GameState};
-use crate::{
-    input::inputs::{CosmosInputs, InputHandler},
-    netty::flags::LocalPlayer,
-};
+use crate::input::inputs::{CosmosInputs, InputHandler};
+use crate::{input::inputs::InputChecker, rendering::MainCamera, state::game_state::GameState};
 
 fn send_position(
     mut client: ResMut<RenetClient>,

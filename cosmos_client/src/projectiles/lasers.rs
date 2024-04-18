@@ -5,12 +5,17 @@ use bevy_rapier3d::prelude::DEFAULT_WORLD_ID;
 use bevy_renet::renet::*;
 use cosmos_core::{
     ecs::bundles::CosmosPbrBundle,
-    netty::{cosmos_encoder, server_laser_cannon_system_messages::ServerLaserCannonSystemMessages, NettyChannelServer},
+    netty::{
+        cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages, sync::mapping::NetworkMapping,
+        NettyChannelServer,
+    },
+    physics::location::CosmosBundleSet,
     projectiles::laser::Laser,
 };
 
 use crate::{
-    netty::mapping::NetworkMapping, state::game_state::GameState, structure::systems::laser_cannon_system::LaserCannonSystemFiredEvent,
+    state::game_state::GameState,
+    structure::systems::{laser_cannon_system::LaserCannonSystemFiredEvent, missile_launcher_system::MissileLauncherSystemFiredEvent},
 };
 
 #[derive(Resource)]
@@ -27,13 +32,14 @@ fn lasers_netty(
     time: Res<Time>,
     network_mapping: Res<NetworkMapping>,
     laser_mesh: Res<LaserMesh>,
-    mut event_writer: EventWriter<LaserCannonSystemFiredEvent>,
+    mut ev_writer_laser_cannon_fired: EventWriter<LaserCannonSystemFiredEvent>,
+    mut ev_writer_missile_launcher_fired: EventWriter<MissileLauncherSystemFiredEvent>,
 ) {
-    while let Some(message) = client.receive_message(NettyChannelServer::LaserCannonSystem) {
-        let msg: ServerLaserCannonSystemMessages = cosmos_encoder::deserialize(&message).unwrap();
+    while let Some(message) = client.receive_message(NettyChannelServer::StructureSystems) {
+        let msg: ServerStructureSystemMessages = cosmos_encoder::deserialize(&message).unwrap();
 
         match msg {
-            ServerLaserCannonSystemMessages::CreateLaser {
+            ServerStructureSystemMessages::CreateLaser {
                 color,
                 location,
                 laser_velocity,
@@ -54,9 +60,9 @@ fn lasers_netty(
                     strength,
                     no_hit,
                     CosmosPbrBundle {
-                        mesh: laser_mesh.0.clone(),
+                        mesh: laser_mesh.0.clone_weak(),
                         material: materials.add(StandardMaterial {
-                            base_color: color,
+                            base_color: color.unwrap_or(Color::WHITE),
                             // emissive: color,
                             unlit: true,
                             ..Default::default()
@@ -68,18 +74,29 @@ fn lasers_netty(
                     &mut commands,
                 );
             }
-            ServerLaserCannonSystemMessages::LaserCannonSystemFired { ship_entity } => {
+            ServerStructureSystemMessages::LaserCannonSystemFired { ship_entity } => {
                 let Some(ship_entity) = network_mapping.client_from_server(&ship_entity) else {
                     continue;
                 };
 
-                event_writer.send(LaserCannonSystemFiredEvent(ship_entity));
+                ev_writer_laser_cannon_fired.send(LaserCannonSystemFiredEvent(ship_entity));
+            }
+            ServerStructureSystemMessages::MissileLauncherSystemFired { ship_entity } => {
+                let Some(ship_entity) = network_mapping.client_from_server(&ship_entity) else {
+                    continue;
+                };
+
+                ev_writer_missile_launcher_fired.send(MissileLauncherSystemFiredEvent(ship_entity));
             }
         }
     }
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(OnEnter(GameState::Loading), create_laser_mesh)
-        .add_systems(Update, lasers_netty.run_if(in_state(GameState::Playing)));
+    app.add_systems(OnEnter(GameState::Loading), create_laser_mesh).add_systems(
+        Update,
+        lasers_netty
+            .before(CosmosBundleSet::HandleCosmosBundles)
+            .run_if(in_state(GameState::Playing)),
+    );
 }

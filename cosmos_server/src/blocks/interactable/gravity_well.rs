@@ -1,4 +1,4 @@
-use crate::{netty::sync::entities::RequestedEntityEvent, state::GameState};
+use crate::state::GameState;
 use bevy::{
     app::{App, Update},
     ecs::{
@@ -21,7 +21,9 @@ use cosmos_core::{
         gravity_well::GravityWell,
         Block,
     },
-    netty::{cosmos_encoder, server_replication::ReplicationMessage, NettyChannelServer},
+    netty::{
+        cosmos_encoder, server_replication::ReplicationMessage, sync::server_entity_syncing::RequestedEntityEvent, NettyChannelServer,
+    },
     registry::{identifiable::Identifiable, Registry},
     structure::Structure,
 };

@@ -1,7 +1,5 @@
 use bevy::prelude::{resource_exists, App, IntoSystemConfigs, RemovedComponents, ResMut, Update};
-use cosmos_core::physics::location::Location;
-
-use super::mapping::NetworkMapping;
+use cosmos_core::{netty::sync::mapping::NetworkMapping, physics::location::Location};
 
 mod receiver;
 mod sync;

@@ -18,7 +18,7 @@ use crate::{
         coordinates::BlockCoordinate,
         loading::StructureLoadingSet,
         structure_block::StructureBlock,
-        systems::{energy_storage_system::EnergyStorageSystem, Systems},
+        systems::{energy_storage_system::EnergyStorageSystem, StructureSystems},
         Structure,
     },
 };
@@ -180,7 +180,7 @@ fn on_modify_reactor(
 
 fn generate_power(
     reactors: Query<(&Reactors, Entity)>,
-    structure: Query<&Systems>,
+    structure: Query<&StructureSystems>,
     mut energy_storage_system_query: Query<&mut EnergyStorageSystem>,
     time: Res<Time>,
 ) {

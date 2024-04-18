@@ -12,15 +12,17 @@ use bevy::{
     reflect::Reflect,
     transform::components::Transform,
 };
-use cosmos_core::structure::{
-    ship::{pilot::Pilot, Ship},
-    systems::{camera_system::CameraSystem, StructureSystem, Systems},
-    Structure,
+use cosmos_core::{
+    netty::client::LocalPlayer,
+    structure::{
+        ship::{pilot::Pilot, Ship},
+        systems::{camera_system::CameraSystem, StructureSystem, StructureSystems},
+        Structure,
+    },
 };
 
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
-    netty::flags::LocalPlayer,
     rendering::{CameraPlayerOffset, MainCamera},
     state::game_state::GameState,
 };
@@ -44,7 +46,7 @@ fn swap_camera(
     inputs: InputChecker,
     q_pilot: Query<&Pilot, With<LocalPlayer>>,
     q_camera_system: Query<&CameraSystem>,
-    mut q_ship_query: Query<(&mut SelectedCamera, &Systems)>,
+    mut q_ship_query: Query<(&mut SelectedCamera, &StructureSystems)>,
 ) {
     let Ok(pilot) = q_pilot.get_single() else {
         return;
@@ -113,8 +115,8 @@ fn on_change_selected_camera(
     mut main_camera: Query<&mut Transform, With<MainCamera>>,
     q_became_pilot: Query<(), (Added<Pilot>, With<LocalPlayer>)>,
     q_pilot: Query<(&Pilot, &CameraPlayerOffset), With<LocalPlayer>>,
-    q_selected_camera: Query<(Entity, Option<&SelectedCamera>, &Systems, &Structure)>,
-    q_changed_stuff: Query<(Entity, &SelectedCamera, &Systems, &Structure), Changed<SelectedCamera>>,
+    q_selected_camera: Query<(Entity, Option<&SelectedCamera>, &StructureSystems, &Structure)>,
+    q_changed_stuff: Query<(Entity, &SelectedCamera, &StructureSystems, &Structure), Changed<SelectedCamera>>,
     q_changed_camera_system: Query<(&StructureSystem, &CameraSystem), Changed<CameraSystem>>,
     q_camera_system: Query<&CameraSystem>,
 ) {

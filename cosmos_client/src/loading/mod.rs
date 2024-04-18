@@ -4,11 +4,10 @@ use bevy::prelude::{App, Commands, Entity, Parent, Query, Update, With, Without}
 use cosmos_core::{
     ecs::NeedsDespawned,
     entities::player::Player,
+    netty::client::LocalPlayer,
     persistence::LoadingDistance,
     physics::location::{Location, SectorUnit},
 };
-
-use crate::netty::flags::LocalPlayer;
 
 fn unload_far_entities(
     query: Query<(Entity, &Location, &LoadingDistance), (Without<Player>, Without<Parent>)>,

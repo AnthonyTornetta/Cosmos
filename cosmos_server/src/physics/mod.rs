@@ -8,7 +8,7 @@ use cosmos_core::{
     entities::player::Player,
     netty::system_sets::NetworkingSystemsSet,
     physics::{
-        location::{add_previous_location, handle_child_syncing, Location, LocationPhysicsSet, SECTOR_DIMENSIONS},
+        location::{add_previous_location, handle_child_syncing, CosmosBundleSet, Location, LocationPhysicsSet, SECTOR_DIMENSIONS},
         player_world::{PlayerWorld, WorldWithin},
     },
 };
@@ -378,6 +378,7 @@ pub(super) fn register(app: &mut App) {
                 add_previous_location,
             )
                 .chain()
+                .after(CosmosBundleSet::HandleCosmosBundles)
                 .in_set(LocationPhysicsSet::DoPhysics)
                 .run_if(in_state(GameState::Playing))
                 .before(NetworkingSystemsSet::ReceiveMessages),

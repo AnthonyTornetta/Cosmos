@@ -17,20 +17,20 @@ use bevy::{
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     block::gravity_well::GravityWell,
-    netty::{cosmos_encoder, server_replication::ReplicationMessage, NettyChannelServer},
+    netty::{cosmos_encoder, server_replication::ReplicationMessage, sync::mapping::NetworkMapping, NettyChannelServer},
     physics::location::LocationPhysicsSet,
     registry::{identifiable::Identifiable, Registry},
     structure::{
         loading::StructureLoadingSet,
         systems::{
-            StructureSystem, StructureSystemId, StructureSystemImpl, StructureSystemType, StructureSystemTypeId, SystemActive, Systems,
+            StructureSystem, StructureSystemId, StructureSystemImpl, StructureSystemType, StructureSystemTypeId, StructureSystems,
+            SystemActive,
         },
     },
 };
 use serde::{de::DeserializeOwned, Serialize};
 
 use crate::{
-    netty::mapping::NetworkMapping,
     registry::sync_registry,
     state::game_state::GameState,
     structure::planet::align_player::{self, PlayerAlignment},
@@ -68,7 +68,7 @@ fn replication_listen_netty(
     mut client: ResMut<RenetClient>,
     mapping: Res<NetworkMapping>,
     mut event_writer: EventWriter<StructureSystemNeedsUpdated>,
-    q_systems: Query<&Systems>,
+    q_systems: Query<&StructureSystems>,
     mut commands: Commands,
     q_is_active: Query<(), With<SystemActive>>,
 ) {
@@ -153,7 +153,7 @@ fn replication_listen_netty(
 fn sync<T: StructureSystemImpl + Serialize + DeserializeOwned>(
     system_types: Res<Registry<StructureSystemType>>,
     mut ev_reader: EventReader<StructureSystemNeedsUpdated>,
-    mut systems_query: Query<&mut Systems>,
+    mut systems_query: Query<&mut StructureSystems>,
     mut q_system: Query<(&mut T, &StructureSystem)>,
     mut commands: Commands,
     mut sys_queue: ResMut<SystemsQueue<T>>,

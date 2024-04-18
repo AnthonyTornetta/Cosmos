@@ -3,13 +3,12 @@
 use bevy::prelude::*;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
-    netty::{client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannelClient},
+    netty::{client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannelClient},
     structure::ship::{pilot::Pilot, Ship},
 };
 
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
-    netty::flags::LocalPlayer,
     state::game_state::GameState,
     ui::components::show_cursor::no_open_menus,
 };

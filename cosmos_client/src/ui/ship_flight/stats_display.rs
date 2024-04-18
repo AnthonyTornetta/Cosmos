@@ -15,19 +15,18 @@ use bevy::{
     text::{Text, TextStyle},
     ui::{
         node_bundles::{NodeBundle, TextBundle},
-        FlexDirection, Style, UiRect, Val,
+        FlexDirection, PositionType, Style, UiRect, Val,
     },
 };
 use bevy_rapier3d::dynamics::Velocity;
 use cosmos_core::{
     ecs::NeedsDespawned,
+    netty::client::LocalPlayer,
     structure::{
         ship::pilot::Pilot,
-        systems::{energy_storage_system::EnergyStorageSystem, Systems},
+        systems::{energy_storage_system::EnergyStorageSystem, StructureSystems},
     },
 };
-
-use crate::netty::flags::LocalPlayer;
 
 #[derive(Component)]
 struct StatsNodes;
@@ -73,6 +72,7 @@ fn create_nodes(
                         width: Val::Percent(100.0),
                         height: Val::Percent(100.0),
                         flex_direction: FlexDirection::Column,
+                        position_type: PositionType::Absolute,
                         ..Default::default()
                     },
                     ..Default::default()
@@ -101,7 +101,7 @@ fn create_nodes(
 
 fn update_nodes(
     piloting: Query<&Pilot, With<LocalPlayer>>,
-    q_piloting: Query<(&Velocity, &Systems)>,
+    q_piloting: Query<(&Velocity, &StructureSystems)>,
     mut q_energy_text: Query<&mut Text, (With<EnergyText>, Without<SpeedText>)>,
     mut q_speed_text: Query<&mut Text, (With<SpeedText>, Without<EnergyText>)>,
 

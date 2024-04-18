@@ -1,0 +1,10 @@
+{
+    "texture": {
+        "front": "cosmos:missile_launcher_front",
+        "back": "cosmos:missile_launcher_back",
+        "left": "cosmos:missile_launcher_left_right",
+        "right": "cosmos:missile_launcher_left_right",
+        "top": "cosmos:missile_launcher_top_bottom",
+        "bottom": "cosmos:missile_launcher_top_bottom"
+    }
+}

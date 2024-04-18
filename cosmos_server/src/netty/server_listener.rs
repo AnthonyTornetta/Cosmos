@@ -10,13 +10,15 @@ use cosmos_core::block::block_events::{BlockBreakEvent, BlockInteractEvent, Bloc
 use cosmos_core::inventory::Inventory;
 use cosmos_core::item::Item;
 use cosmos_core::netty::netty_rigidbody::NettyRigidBodyLocation;
+use cosmos_core::netty::server::ServerLobby;
+use cosmos_core::netty::sync::server_entity_syncing::RequestedEntityEvent;
 use cosmos_core::netty::system_sets::NetworkingSystemsSet;
 use cosmos_core::netty::{cosmos_encoder, NettyChannelClient, NettyChannelServer};
 use cosmos_core::physics::location::Location;
 use cosmos_core::registry::Registry;
 use cosmos_core::structure::loading::ChunksNeedLoaded;
 use cosmos_core::structure::shared::build_mode::{BuildMode, ExitBuildModeEvent};
-use cosmos_core::structure::systems::Systems;
+use cosmos_core::structure::systems::StructureSystems;
 use cosmos_core::{
     entities::player::Player,
     events::structure::change_pilot_event::ChangePilotEvent,
@@ -32,9 +34,6 @@ use crate::structure::planet::chunk::ChunkNeedsSent;
 use crate::structure::planet::generation::planet_generator::RequestChunkEvent;
 use crate::structure::ship::events::{CreateShipEvent, ShipSetMovementEvent};
 use crate::structure::station::events::CreateStationEvent;
-
-use super::network_helpers::ServerLobby;
-use super::sync::entities::RequestedEntityEvent;
 
 #[derive(Resource, Default)]
 struct SendAllChunks(HashMap<Entity, Vec<ClientId>>);
@@ -58,7 +57,7 @@ fn server_listen_messages(
         mut requested_entities_writer,
         mut request_chunk_event_writer,
     ): (
-        Query<&mut Systems>,
+        Query<&mut StructureSystems>,
         EventWriter<BlockBreakEvent>,
         EventWriter<BlockPlaceEvent>,
         EventWriter<BlockInteractEvent>,
@@ -114,7 +113,7 @@ fn server_listen_messages(
                             ship_movement_event_writer.send(ShipSetMovementEvent { movement, ship });
                         }
                     }
-                    ClientUnreliableMessages::ShipActiveSystem { active_system } => {
+                    ClientUnreliableMessages::ShipActiveSystem(active_system) => {
                         if let Ok(pilot) = pilot_query.get(player_entity) {
                             if let Ok(mut systems) = systems_query.get_mut(pilot.entity) {
                                 systems.set_active_system(active_system, &mut commands);

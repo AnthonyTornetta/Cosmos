@@ -3,7 +3,12 @@
 use bevy::prelude::{resource_exists, App, Commands, IntoSystemConfigs, Query, ResMut, Update};
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
-    netty::{cosmos_encoder, netty_rigidbody::NettyRigidBodyLocation, NettyChannelServer},
+    netty::{
+        cosmos_encoder,
+        netty_rigidbody::NettyRigidBodyLocation,
+        sync::mapping::{Mappable, NetworkMapping},
+        NettyChannelServer,
+    },
     physics::location::Location,
     structure::{
         asteroid::{asteroid_builder::TAsteroidBuilder, asteroid_netty::AsteroidServerMessages},
@@ -11,8 +16,6 @@ use cosmos_core::{
         Structure,
     },
 };
-
-use crate::netty::mapping::{Mappable, NetworkMapping};
 
 use super::client_asteroid_builder::ClientAsteroidBuilder;
 

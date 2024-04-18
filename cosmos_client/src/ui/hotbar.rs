@@ -6,13 +6,13 @@ use bevy::{input::mouse::MouseWheel, prelude::*};
 use cosmos_core::{
     inventory::{itemstack::ItemStack, Inventory},
     item::Item,
+    netty::client::LocalPlayer,
     registry::{identifiable::Identifiable, Registry},
 };
 
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     lang::Lang,
-    netty::flags::LocalPlayer,
     state::game_state::GameState,
 };
 

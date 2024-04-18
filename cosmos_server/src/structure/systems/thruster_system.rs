@@ -16,7 +16,7 @@ use cosmos_core::{
         systems::{
             energy_storage_system::EnergyStorageSystem,
             thruster_system::{ThrusterBlocks, ThrusterProperty, ThrusterSystem},
-            StructureSystem, StructureSystemType, Systems,
+            StructureSystem, StructureSystemType, StructureSystems,
         },
         Structure,
     },
@@ -56,7 +56,7 @@ fn block_update_system(
     energy_storage_blocks: Res<ThrusterBlocks>,
     blocks: Res<Registry<Block>>,
     mut system_query: Query<&mut ThrusterSystem>,
-    systems_query: Query<&Systems>,
+    systems_query: Query<&StructureSystems>,
 ) {
     for ev in event.read() {
         if let Ok(systems) = systems_query.get(ev.structure_entity) {
@@ -78,7 +78,7 @@ fn update_movement(
     mut query: Query<
         (
             &ShipMovement,
-            &Systems,
+            &StructureSystems,
             &Transform,
             &mut Velocity,
             &mut ExternalImpulse,
@@ -154,7 +154,7 @@ fn update_movement(
 
 fn structure_loaded_event(
     mut event_reader: EventReader<StructureLoadedEvent>,
-    mut structure_query: Query<(&Structure, &mut Systems)>,
+    mut structure_query: Query<(&Structure, &mut StructureSystems)>,
     blocks: Res<Registry<Block>>,
     mut commands: Commands,
     thruster_blocks: Res<ThrusterBlocks>,

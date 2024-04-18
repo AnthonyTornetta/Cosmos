@@ -67,7 +67,7 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
   - [ ] Speed display
   - [ ] Energy display
   - [ ] Critical information alerts
-- [ ] A way of selecting which systems to use preventing use of systems that are not meant to be actively used
+  - [x] A way of selecting which systems to use preventing use of systems that are not meant to be actively used
 - [ ] Dropped item entity
   - [ ] When storage is broken, drop items on ground
   - [ ] If not enough inventory room when player is mining something, drop item

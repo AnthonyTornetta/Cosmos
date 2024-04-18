@@ -47,6 +47,7 @@ use bevy::prelude::{
 };
 use serde::{Deserialize, Serialize};
 
+use self::base_structure::RaycastIter;
 use self::block_health::events::{BlockDestroyedEvent, BlockTakeDamageEvent};
 use self::block_storage::BlockStorer;
 use self::chunk::netty::SerializedChunkBlockData;
@@ -423,7 +424,7 @@ impl Structure {
     /// Gets the block's health at that given coordinate
     /// - x/y/z: block coordinate
     /// - block_hardness: The hardness for the block at those coordinates
-    pub fn get_block_health(&mut self, coords: BlockCoordinate, blocks: &Registry<Block>) -> f32 {
+    pub fn get_block_health(&self, coords: BlockCoordinate, blocks: &Registry<Block>) -> f32 {
         match self {
             Self::Full(fs) => fs.get_block_health(coords, blocks),
             Self::Dynamic(ds) => ds.get_block_health(coords, blocks),
@@ -452,7 +453,7 @@ impl Structure {
 
     /// This should be used in response to a `BlockTakeDamageEvent`
     ///
-    /// This will NOT delete the block if the health is 0.0
+    /// # This will NOT delete the block if the health is 0.0
     pub fn set_block_health(&mut self, coords: BlockCoordinate, amount: f32, blocks: &Registry<Block>) {
         debug_assert!(amount != 0.0, "Block health cannot be 0.0!");
 
@@ -528,6 +529,15 @@ impl Structure {
         match self {
             Self::Full(fs) => fs.remove_block_data(coords),
             Self::Dynamic(ds) => ds.remove_block_data(coords),
+        }
+    }
+
+    #[must_use]
+    /// Returns an iterator that acts as a raycast over a set of blocks in this structure
+    pub fn raycast_iter(&self, start_relative_position: Vec3, direction: Vec3, max_length: f32, include_air: bool) -> RaycastIter<'_> {
+        match self {
+            Self::Full(fs) => fs.raycast_iter(start_relative_position, direction, max_length, include_air),
+            Self::Dynamic(ds) => ds.raycast_iter(start_relative_position, direction, max_length, include_air),
         }
     }
 }

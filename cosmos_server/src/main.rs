@@ -24,7 +24,6 @@ use bevy::log::LogPlugin;
 pub mod ai;
 pub mod blocks;
 pub mod commands;
-pub mod economy;
 pub mod entities;
 pub mod events;
 pub mod init;
@@ -62,7 +61,7 @@ fn main() {
             task_pool_options: TaskPoolOptions {
                 compute: TaskPoolThreadAssignmentPolicy {
                     min_threads: 1,
-                    max_threads: std::usize::MAX,
+                    max_threads: usize::MAX,
                     percent: 0.25,
                 },
                 ..Default::default()

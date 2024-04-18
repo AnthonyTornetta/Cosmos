@@ -6,13 +6,12 @@ use cosmos_core::{
         cosmos_encoder,
         netty_rigidbody::{NettyRigidBody, NettyRigidBodyLocation},
         server_reliable_messages::ServerReliableMessages,
+        sync::server_entity_syncing::RequestedEntityEvent,
         NettyChannelServer,
     },
     physics::location::Location,
     structure::{station::Station, Structure},
 };
-
-use crate::netty::sync::entities::RequestedEntityEvent;
 
 fn on_request_station(
     mut event_reader: EventReader<RequestedEntityEvent>,

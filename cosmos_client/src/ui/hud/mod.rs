@@ -14,12 +14,12 @@ use bevy::{
     text::{Text, TextSection, TextStyle},
     ui::{
         node_bundles::{NodeBundle, TextBundle},
-        AlignContent, JustifyContent, Style, UiRect, Val,
+        AlignContent, JustifyContent, PositionType, Style, UiRect, Val,
     },
 };
-use cosmos_core::economy::Credits;
+use cosmos_core::{economy::Credits, netty::client::LocalPlayer};
 
-use crate::{netty::flags::LocalPlayer, state::game_state::GameState};
+use crate::state::game_state::GameState;
 
 use super::reactivity::{BindValue, BindValues, ReactableFields};
 
@@ -47,6 +47,7 @@ fn create_credits_node(mut commands: Commands, asset_server: Res<AssetServer>, l
                     justify_content: JustifyContent::End,
                     align_content: AlignContent::Start,
                     padding: UiRect::all(Val::Px(10.0)),
+                    position_type: PositionType::Absolute,
                     ..Default::default()
                 },
                 ..Default::default()

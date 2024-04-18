@@ -3,13 +3,13 @@ use crate::asset::materials::{
     add_materials, remove_materials, AddMaterialEvent, BlockMaterialMapping, MaterialDefinition, MaterialType, RemoveAllMaterialsEvent,
 };
 use crate::block::lighting::{BlockLightProperties, BlockLighting};
-use crate::netty::flags::LocalPlayer;
 use crate::state::game_state::GameState;
 use crate::structure::planet::unload_chunks_far_from_players;
 use bevy::log::warn;
 use bevy::prelude::{
-    in_state, App, BuildChildren, Component, Deref, DerefMut, DespawnRecursiveExt, EventReader, EventWriter, GlobalTransform,
-    IntoSystemConfigs, Mesh, PointLight, PointLightBundle, Rect, Resource, Transform, Update, Vec3, VisibilityBundle, With,
+    in_state, App, Assets, BuildChildren, Commands, Component, Deref, DerefMut, DespawnRecursiveExt, Entity, EventReader, EventWriter,
+    GlobalTransform, Handle, IntoSystemConfigs, Mesh, PointLight, PointLightBundle, Query, Rect, Res, ResMut, Resource, Transform, Update,
+    Vec3, VisibilityBundle, With,
 };
 use bevy::reflect::Reflect;
 use bevy::render::mesh::{MeshVertexAttribute, VertexAttributeValues};
@@ -19,6 +19,7 @@ use bevy::transform::TransformBundle;
 use bevy::utils::hashbrown::HashMap;
 use cosmos_core::block::{Block, BlockFace};
 use cosmos_core::events::block_events::BlockChangedEvent;
+use cosmos_core::netty::client::LocalPlayer;
 use cosmos_core::physics::location::SECTOR_DIMENSIONS;
 use cosmos_core::registry::identifiable::Identifiable;
 use cosmos_core::registry::many_to_one::{ManyToOneRegistry, ReadOnlyManyToOneRegistry};
@@ -32,8 +33,6 @@ use cosmos_core::utils::array_utils::expand;
 use futures_lite::future;
 use std::collections::HashSet;
 use std::mem::swap;
-
-use crate::{Assets, Commands, Entity, Handle, Query, Res, ResMut};
 
 use super::{BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder, MeshInformation, ReadOnlyBlockMeshRegistry};
 

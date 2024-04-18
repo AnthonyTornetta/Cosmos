@@ -55,6 +55,8 @@ pub struct BlockHealthUpdate {
 /// A mash of a bunch of different packets the server reliably sends.
 pub enum ServerReliableMessages {
     /// A player has been created, and the client should add them.
+    ///
+    /// TODO: Remove this in favor of using the `RequestEntity` request.
     PlayerCreate {
         /// The server entity for this player.
         entity: Entity,
@@ -68,6 +70,8 @@ pub enum ServerReliableMessages {
         inventory_serialized: Vec<u8>,
         /// The player's render distance.
         render_distance: Option<RenderDistance>,
+        /// The player's credits
+        credits: Credits,
     },
     /// This contains the information for a star entity.
     Star {
@@ -81,9 +85,9 @@ pub enum ServerReliableMessages {
         /// The id of the player removed.
         id: ClientId,
     },
-    /// A structure has been removed, and the client should remove it.
-    StructureRemove {
-        /// The server's structure entity.
+    /// An entity has been despawned, and the client should remove it.
+    EntityDespawn {
+        /// The server's version of the entity.
         entity: Entity,
     },
     /// This represents the data for a serialized chunk.
@@ -211,13 +215,6 @@ pub enum ServerReliableMessages {
     BlockHealthChange {
         /// All the health changes packed into a vec
         changes: Vec<BlockHealthUpdate>,
-    },
-    /// Sent whenever the credits for an entity need set
-    Credits {
-        /// The number of credits
-        credits: Credits,
-        /// The entity that has these credits
-        entity: Entity,
     },
     /// Shaders the client should run for LOD generation
     TerrainGenerationShaders {

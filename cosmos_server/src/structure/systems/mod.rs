@@ -9,6 +9,7 @@ mod energy_storage_system;
 pub mod laser_cannon_system;
 mod line_system;
 mod mining_laser_system;
+pub mod missile_launcher_system;
 pub(crate) mod sync;
 mod thruster_system;
 
@@ -29,4 +30,5 @@ pub(super) fn register(app: &mut App) {
     energy_generation_system::register(app);
     mining_laser_system::register(app);
     energy_storage_system::register(app);
+    missile_launcher_system::register(app);
 }

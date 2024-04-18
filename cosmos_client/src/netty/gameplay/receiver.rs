@@ -10,21 +10,26 @@ use bevy_rapier3d::prelude::*;
 use bevy_renet::renet::{transport::NetcodeClientTransport, RenetClient};
 use cosmos_core::{
     block::Block,
-    ecs::{bundles::CosmosPbrBundle, NeedsDespawned},
+    ecs::{
+        bundles::{BundleStartingRotation, CosmosPbrBundle},
+        NeedsDespawned,
+    },
     entities::player::{render_distance::RenderDistance, Player},
     events::{block_events::BlockChangedEvent, structure::change_pilot_event::ChangePilotEvent},
     inventory::Inventory,
     netty::{
+        client::LocalPlayer,
         client_reliable_messages::ClientReliableMessages,
         cosmos_encoder,
         netty_rigidbody::{NettyRigidBody, NettyRigidBodyLocation},
         server_reliable_messages::ServerReliableMessages,
         server_unreliable_messages::ServerUnreliableMessages,
+        sync::mapping::{Mappable, NetworkMapping},
         NettyChannelClient, NettyChannelServer,
     },
     persistence::LoadingDistance,
     physics::{
-        location::{add_previous_location, handle_child_syncing, Location, LocationPhysicsSet, SYSTEM_SECTORS},
+        location::{add_previous_location, handle_child_syncing, CosmosBundleSet, Location, LocationPhysicsSet, SYSTEM_SECTORS},
         player_world::PlayerWorld,
     },
     registry::Registry,
@@ -43,11 +48,7 @@ use cosmos_core::{
 
 use crate::{
     camera::camera_controller::CameraHelper,
-    netty::{
-        flags::LocalPlayer,
-        lobby::{ClientLobby, PlayerInfo},
-        mapping::{Mappable, NetworkMapping},
-    },
+    netty::lobby::{ClientLobby, PlayerInfo},
     rendering::{CameraPlayerOffset, MainCamera},
     state::game_state::GameState,
     structure::{
@@ -257,7 +258,12 @@ pub(crate) fn client_sync_players(
                                     }
                                 };
 
-                                commands.entity(entity).insert((loc, body.create_velocity(), LerpTowards(body)));
+                                commands.entity(entity).insert((
+                                    loc,
+                                    BundleStartingRotation(body.rotation),
+                                    body.create_velocity(),
+                                    LerpTowards(body),
+                                ));
                             }
                         }
                     } else if !requested_entities.entities.iter().any(|x| x.server_entity == *server_entity) {
@@ -296,6 +302,7 @@ pub(crate) fn client_sync_players(
                 name,
                 inventory_serialized,
                 render_distance: _,
+                credits,
             } => {
                 // Prevents creation of duplicate players
                 if lobby.players.contains_key(&id) {
@@ -343,6 +350,7 @@ pub(crate) fn client_sync_players(
                     ReadMassProperties::default(),
                     ActiveEvents::COLLISION_EVENTS,
                     inventory,
+                    credits,
                 ));
 
                 let client_entity = entity_cmds.id();
@@ -542,7 +550,7 @@ pub(crate) fn client_sync_players(
                     }
                 }
             }
-            ServerReliableMessages::StructureRemove { entity: server_entity } => {
+            ServerReliableMessages::EntityDespawn { entity: server_entity } => {
                 if let Some(entity) = network_mapping.client_from_server(&server_entity) {
                     commands.entity(entity).insert(NeedsDespawned);
                 }
@@ -707,11 +715,6 @@ pub(crate) fn client_sync_players(
                         })
                 }));
             }
-            ServerReliableMessages::Credits { credits, entity } => {
-                if let Some(entity) = network_mapping.client_from_server(&entity) {
-                    commands.entity(entity).insert(credits);
-                }
-            }
             ServerReliableMessages::TerrainGenerationShaders {
                 shaders,
                 permutation_table,
@@ -822,7 +825,9 @@ pub(super) fn register(app: &mut App) {
         .add_systems(Update, (update_crosshair, insert_last_rotation))
         .add_systems(
             Update,
-            client_sync_players.run_if(in_state(GameState::Playing).or_else(in_state(GameState::LoadingWorld))),
+            client_sync_players
+                .run_if(in_state(GameState::Playing).or_else(in_state(GameState::LoadingWorld)))
+                .before(CosmosBundleSet::HandleCosmosBundles),
         )
         .add_systems(
             Update,

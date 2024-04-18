@@ -22,7 +22,7 @@ use cosmos_core::{
     structure::{
         shared::{DespawnWithStructure, MeltingDown},
         ship::{pilot::Pilot, ship_movement::ShipMovement, Ship},
-        systems::{laser_cannon_system::LaserCannonSystem, SystemActive, Systems},
+        systems::{laser_cannon_system::LaserCannonSystem, StructureSystems, SystemActive},
     },
 };
 use serde::{Deserialize, Serialize};
@@ -64,7 +64,7 @@ fn handle_pirate_movement(
     mut q_pirates: Query<
         (
             Entity,
-            &Systems,
+            &StructureSystems,
             &Location,
             &Velocity,
             &mut ShipMovement,

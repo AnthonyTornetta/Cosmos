@@ -1,15 +1,16 @@
 use bevy::prelude::*;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
-    netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannelServer},
+    netty::{
+        cosmos_encoder, server_reliable_messages::ServerReliableMessages, sync::server_entity_syncing::RequestedEntityEvent,
+        NettyChannelServer,
+    },
     physics::location::Location,
     structure::{
         planet::{biosphere::BiosphereMarker, Planet},
         Structure,
     },
 };
-
-use crate::netty::sync::entities::RequestedEntityEvent;
 
 fn on_request_planet(
     mut event_reader: EventReader<RequestedEntityEvent>,

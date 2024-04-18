@@ -13,15 +13,15 @@ use bevy::{
 use cosmos_core::{
     inventory::itemstack::ItemStack,
     item::Item,
+    netty::client::LocalPlayer,
     registry::Registry,
     structure::{
         ship::pilot::Pilot,
-        systems::{StructureSystem, StructureSystemType, Systems},
+        systems::{StructureSystem, StructureSystemType, StructureSystems},
     },
 };
 
 use crate::{
-    netty::flags::LocalPlayer,
     state::game_state::GameState,
     structure::systems::player_interactions::HoveredSystem,
     ui::hotbar::{Hotbar, HotbarContents, HotbarPriorityQueue, LocalPlayerHotbar},
@@ -63,9 +63,9 @@ fn add_priority_when_flying(
 }
 
 fn sync_ship_systems(
-    q_systems: Query<&Systems>,
+    q_systems: Query<&StructureSystems>,
     q_piloting: Query<&Pilot, With<LocalPlayer>>,
-    q_systems_changed: Query<(), Changed<Systems>>,
+    q_systems_changed: Query<(), Changed<StructureSystems>>,
     q_priority_changed: Query<(), (Changed<HotbarPriorityQueue>, With<LocalPlayerHotbar>)>,
     q_structure_system: Query<&StructureSystem>,
     structure_system_types: Res<Registry<StructureSystemType>>,
@@ -136,7 +136,7 @@ fn on_change_hotbar(
     }
 
     let selected = hotbar.selected_slot();
-    selected_system.system_index = selected;
+    selected_system.hovered_system_index = selected;
 }
 
 pub(super) fn register(app: &mut App) {

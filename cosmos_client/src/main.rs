@@ -35,7 +35,9 @@ pub mod window;
 use bevy::core::TaskPoolThreadAssignmentPolicy;
 use bevy::prelude::*;
 use bevy::window::WindowMode;
+use bevy_hanabi::HanabiPlugin;
 use bevy_mod_debugdump::schedule_graph;
+use bevy_obj::ObjPlugin;
 use bevy_rapier3d::prelude::{RapierConfiguration, TimestepMode};
 use bevy_renet::transport::NetcodeClientPlugin;
 use bevy_renet::RenetClientPlugin;
@@ -43,8 +45,6 @@ use clap::{arg, Parser};
 use cosmos_core::netty::get_local_ipaddress;
 use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
 use netty::connect::{self, HostConfig};
-use netty::flags::LocalPlayer;
-use netty::mapping::NetworkMapping;
 use state::game_state::GameState;
 use thread_priority::{set_current_thread_priority, ThreadPriority};
 
@@ -83,7 +83,7 @@ fn main() {
             task_pool_options: TaskPoolOptions {
                 compute: TaskPoolThreadAssignmentPolicy {
                     min_threads: 1,
-                    max_threads: std::usize::MAX,
+                    max_threads: usize::MAX,
                     percent: 0.25,
                 },
                 ..Default::default()
@@ -126,7 +126,7 @@ fn main() {
             GameState::Connecting,
             GameState::Playing,
         ))
-        .add_plugins((RenetClientPlugin, NetcodeClientPlugin))
+        .add_plugins((RenetClientPlugin, NetcodeClientPlugin, ObjPlugin, HanabiPlugin))
         // .add_plugins(RapierDebugRenderPlugin::default())
         .add_systems(OnEnter(GameState::Connecting), connect::establish_connection)
         .add_systems(Update, connect::wait_for_connection.run_if(in_state(GameState::Connecting)))
