@@ -8,7 +8,7 @@ use bevy::{
         system::{Commands, Query, Res, ResMut, Resource},
     },
     hierarchy::BuildChildren,
-    math::{primitives::Sphere, Vec3},
+    math::{primitives::Sphere, Vec3, Vec4},
     pbr::{AlphaMode, MaterialMeshBundle, PbrBundle, StandardMaterial},
     prelude::App,
     render::{color::Color, mesh::Mesh},
@@ -81,9 +81,12 @@ fn create_shield_material(mut commands: Commands, mut materials: ResMut<Assets<S
         base: StandardMaterial {
             // unlit: true,
             alpha_mode: AlphaMode::Add,
+            base_color: Color::BLUE,
             ..Default::default()
         },
-        extension: ShieldMaterialExtension { color: Color::AQUAMARINE },
+        extension: ShieldMaterialExtension {
+            ripples: [Vec4::new(0.0, 1.0, 0.0, 0.0); 20],
+        }, //  { color: Color::AQUAMARINE },
     })));
 }
 

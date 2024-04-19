@@ -1,6 +1,7 @@
 use bevy::{
     app::App,
     asset::Asset,
+    math::Vec4,
     pbr::{AlphaMode, ExtendedMaterial, Material, MaterialExtension, MaterialPlugin, StandardMaterial},
     reflect::TypePath,
     render::{color::Color, render_resource::AsBindGroup},
@@ -9,7 +10,7 @@ use bevy::{
 #[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
 pub struct ShieldMaterialExtension {
     #[uniform(100)]
-    pub color: Color,
+    pub ripples: [Vec4; 20],
 }
 
 impl MaterialExtension for ShieldMaterialExtension {
