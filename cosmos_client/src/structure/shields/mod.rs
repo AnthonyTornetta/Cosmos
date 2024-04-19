@@ -1,17 +1,20 @@
 use bevy::{
-    app::{Startup, Update},
+    app::Update,
     asset::{Assets, Handle},
+    core::Name,
     ecs::{
+        component::Component,
         entity::Entity,
-        query::{Added, Changed},
+        query::{Added, Changed, With},
         schedule::IntoSystemConfigs,
-        system::{Commands, Query, Res, ResMut, Resource},
+        system::{Commands, Query, Res, ResMut},
     },
     hierarchy::BuildChildren,
     math::{primitives::Sphere, Vec3, Vec4},
     pbr::{AlphaMode, MaterialMeshBundle, PbrBundle, StandardMaterial},
     prelude::App,
     render::{color::Color, mesh::Mesh},
+    time::Time,
     transform::components::Transform,
 };
 use cosmos_core::structure::{shields::Shield, ship::Ship};
@@ -22,9 +25,9 @@ use crate::asset::materials::shield::{ShieldMaterial, ShieldMaterialExtension};
 
 fn on_add_shield(
     mut commands: Commands,
-    shield_material: Res<ShieldMaterialHandle>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut q_changed_shield: Query<(Entity, &mut Shield), Changed<Shield>>,
+    mut materials: ResMut<Assets<ShieldMaterial>>,
 ) {
     for (shield_ent, mut shield) in q_changed_shield.iter_mut() {
         if shield.strength == 0.0 {
@@ -34,7 +37,7 @@ fn on_add_shield(
             }
         } else {
             if shield.emitting_entity.is_none() {
-                let shield_physical = create_shield_entity(shield.radius, &mut commands, &mut meshes, &shield_material);
+                let shield_physical = create_shield_entity(shield.radius, &mut commands, &mut meshes, &mut materials);
                 shield.emitting_entity = Some(shield_physical);
 
                 commands.entity(shield_physical).set_parent(shield_ent);
@@ -62,35 +65,56 @@ fn add_shield(mut commands: Commands, q_added_ship: Query<Entity, Added<Ship>>) 
     }
 }
 
-#[derive(Resource)]
-struct ShieldMaterialHandle(Handle<ShieldMaterial>);
+fn update_shield_times(
+    time: Res<Time>,
+    mut materials: ResMut<Assets<ShieldMaterial>>,
+    q_shields: Query<&Handle<ShieldMaterial>, With<ShieldRender>>,
+) {
+    for handle in &q_shields {
+        let Some(mat) = materials.get_mut(handle) else {
+            continue;
+        };
 
-fn create_shield_entity(radius: f32, commands: &mut Commands, meshes: &mut Assets<Mesh>, shield_material: &ShieldMaterialHandle) -> Entity {
+        for ripple in &mut mat.extension.ripples {
+            let old = ripple.w;
+            ripple.w = (time.elapsed_seconds() * 4.0) % 2.0;
+            if old > ripple.w {
+                ripple.x = rand::random::<f32>() * 2.0 - 1.0;
+                ripple.y = rand::random::<f32>() * 2.0 - 1.0;
+                ripple.z = rand::random::<f32>() * 2.0 - 1.0;
+            }
+        }
+    }
+}
+
+#[derive(Component)]
+struct ShieldRender;
+
+fn create_shield_entity(radius: f32, commands: &mut Commands, meshes: &mut Assets<Mesh>, materials: &mut Assets<ShieldMaterial>) -> Entity {
     commands
-        .spawn((MaterialMeshBundle {
-            transform: Transform::from_xyz(0.0, 0.0, 0.0),
-            material: shield_material.0.clone_weak(),
-            mesh: meshes.add(Sphere::new(radius)),
-            ..Default::default()
-        },))
+        .spawn((
+            Name::new("Rendered Shield"),
+            ShieldRender,
+            MaterialMeshBundle {
+                transform: Transform::from_xyz(0.0, 0.0, 0.0),
+                material: materials.add(ShieldMaterial {
+                    base: StandardMaterial {
+                        // unlit: true,
+                        alpha_mode: AlphaMode::Add,
+                        base_color: Color::BLUE,
+                        ..Default::default()
+                    },
+                    extension: ShieldMaterialExtension {
+                        ripples: [Vec4::new(0.0, 1.0, 0.0, 0.0); 20],
+                    },
+                }),
+                mesh: meshes.add(Sphere::new(radius)),
+                ..Default::default()
+            },
+        ))
         .id()
 }
 
-fn create_shield_material(mut commands: Commands, mut materials: ResMut<Assets<ShieldMaterial>>) {
-    commands.insert_resource(ShieldMaterialHandle(materials.add(ShieldMaterial {
-        base: StandardMaterial {
-            // unlit: true,
-            alpha_mode: AlphaMode::Add,
-            base_color: Color::BLUE,
-            ..Default::default()
-        },
-        extension: ShieldMaterialExtension {
-            ripples: [Vec4::new(0.0, 1.0, 0.0, 0.0); 20],
-        }, //  { color: Color::AQUAMARINE },
-    })));
-}
-
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Startup, create_shield_material)
-        .add_systems(Update, (add_shield, on_add_shield).chain());
+    app.add_systems(Update, (add_shield, on_add_shield, update_shield_times).chain());
 }

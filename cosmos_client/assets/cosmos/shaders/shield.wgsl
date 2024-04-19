@@ -1,7 +1,6 @@
 #import bevy_pbr::{
     pbr_fragment::pbr_input_from_standard_material,
     pbr_functions::alpha_discard,
-    mesh_view_bindings::globals,
 }
 
 #ifdef PREPASS_PIPELINE
@@ -38,18 +37,20 @@ fn fragment(
     var color = apply_pbr_lighting(pbr_input);
     out.color = vec4(0.0, 0.0, 0.0, 0.0);
 
-    let dotted = dot(
-        normalize(vec3(ripples[0].x, ripples[0].y, ripples[0].z)), 
-        normalize(vec3(in.world_normal.x, in.world_normal.y, in.world_normal.z))
-    );
+    for (var i = 0; i < 20; i++) {
+        let dotted = dot(
+            normalize(vec3(ripples[i].x, ripples[i].y, ripples[i].z)), 
+            normalize(vec3(in.world_normal.x, in.world_normal.y, in.world_normal.z))
+        );
 
-    let c = 1000.0;
-    let e = 2.718;
+        let c = 1000.0 - (ripples[i].w * 500);
+        let e = 2.718;
 
-    let exponential = 8.0 * pow(e, c * (-1 + dotted));
+        let exponential = (8.0 - (ripples[i].w * 4.0)) * pow(e, c * (-1 + dotted));
 
-    if dotted >= 0.0 {
-        out.color += color * vec4(exponential, exponential, exponential, exponential);
+        if dotted >= 0.0 {
+            out.color += color * vec4(exponential, exponential, exponential, exponential);
+        }
     }
 
     // apply in-shader post processing (fog, alpha-premultiply, and also tonemapping, debanding if the camera is non-hdr)
