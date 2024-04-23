@@ -10,10 +10,13 @@ use bevy::{
         system::{Commands, Query, Res, ResMut},
     },
     hierarchy::BuildChildren,
-    math::{primitives::Sphere, Vec3, Vec4},
+    math::{Vec3, Vec4},
     pbr::{AlphaMode, MaterialMeshBundle, PbrBundle, StandardMaterial},
     prelude::App,
-    render::{color::Color, mesh::Mesh},
+    render::{
+        color::Color,
+        mesh::{Mesh, SphereKind, SphereMeshBuilder},
+    },
     time::Time,
     transform::components::Transform,
 };
@@ -77,7 +80,7 @@ fn update_shield_times(
 
         for ripple in &mut mat.extension.ripples {
             let old = ripple.w;
-            ripple.w = (time.elapsed_seconds() * 4.0) % 2.0;
+            ripple.w = time.elapsed_seconds() % 2.0;
             if old > ripple.w {
                 ripple.x = rand::random::<f32>() * 2.0 - 1.0;
                 ripple.y = rand::random::<f32>() * 2.0 - 1.0;
@@ -108,7 +111,7 @@ fn create_shield_entity(radius: f32, commands: &mut Commands, meshes: &mut Asset
                         ripples: [Vec4::new(0.0, 1.0, 0.0, 0.0); 20],
                     },
                 }),
-                mesh: meshes.add(Sphere::new(radius)),
+                mesh: meshes.add(SphereMeshBuilder::new(radius, SphereKind::Uv { sectors: 256, stacks: 256 }).build()),
                 ..Default::default()
             },
         ))
