@@ -102,7 +102,7 @@ fn server_listen_messages(
                             location.set_from(&new_loc);
                             location.last_transform_loc = Some(transform.translation);
                             currently_looking.rotation = looking;
-                            velocity.linvel = body.body_vel.linvel.into();
+                            velocity.linvel = body.body_vel.map(|x| x.linvel).unwrap_or(Vec3::ZERO);
                             transform.rotation = body.rotation;
                         }
                     }

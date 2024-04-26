@@ -9,62 +9,31 @@ use bevy::{
         schedule::IntoSystemConfigs,
         system::{Commands, Query, Res, ResMut},
     },
-    hierarchy::BuildChildren,
-    math::{Vec3, Vec4},
-    pbr::{AlphaMode, MaterialMeshBundle, PbrBundle, StandardMaterial},
+    math::Vec4,
+    pbr::{AlphaMode, StandardMaterial},
     prelude::App,
     render::{
         color::Color,
         mesh::{Mesh, SphereKind, SphereMeshBuilder},
+        view::{Visibility, VisibilityBundle},
     },
     time::Time,
-    transform::components::Transform,
 };
-use cosmos_core::structure::{shields::Shield, ship::Ship};
-
-use cosmos_core::ecs::NeedsDespawned;
+use cosmos_core::structure::shields::Shield;
 
 use crate::asset::materials::shield::{ShieldMaterial, ShieldMaterialExtension};
 
-fn on_add_shield(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut q_changed_shield: Query<(Entity, &mut Shield), Changed<Shield>>,
-    mut materials: ResMut<Assets<ShieldMaterial>>,
-) {
-    for (shield_ent, mut shield) in q_changed_shield.iter_mut() {
+fn on_change_shield_update_rendering(mut q_changed_shield: Query<(&Shield, &mut Visibility), Changed<Shield>>) {
+    for (shield, mut visibility) in q_changed_shield.iter_mut() {
         if shield.strength == 0.0 {
-            if let Some(emitting_entity) = shield.emitting_entity {
-                commands.entity(emitting_entity).insert(NeedsDespawned);
-                shield.emitting_entity = None;
+            if *visibility != Visibility::Hidden {
+                *visibility = Visibility::Hidden;
             }
         } else {
-            if shield.emitting_entity.is_none() {
-                let shield_physical = create_shield_entity(shield.radius, &mut commands, &mut meshes, &mut materials);
-                shield.emitting_entity = Some(shield_physical);
-
-                commands.entity(shield_physical).set_parent(shield_ent);
+            if *visibility != Visibility::Inherited {
+                *visibility = Visibility::Inherited;
             }
         }
-    }
-}
-
-fn add_shield(mut commands: Commands, q_added_ship: Query<Entity, Added<Ship>>) {
-    for ent in q_added_ship.iter() {
-        commands.entity(ent).with_children(|p| {
-            p.spawn((
-                PbrBundle {
-                    transform: Transform::from_translation(Vec3::ZERO),
-                    ..Default::default()
-                },
-                Shield {
-                    emitting_entity: None,
-                    max_strength: 100.0,
-                    radius: 20.0,
-                    strength: 1.0,
-                },
-            ));
-        });
     }
 }
 
@@ -93,31 +62,43 @@ fn update_shield_times(
 #[derive(Component)]
 struct ShieldRender;
 
-fn create_shield_entity(radius: f32, commands: &mut Commands, meshes: &mut Assets<Mesh>, materials: &mut Assets<ShieldMaterial>) -> Entity {
-    commands
-        .spawn((
-            Name::new("Rendered Shield"),
+fn on_add_shield_create_rendering(
+    q_shield_added: Query<(Entity, &Shield), Added<Shield>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ShieldMaterial>>,
+    mut commands: Commands,
+) {
+    for (shield_entity, shield) in q_shield_added.iter() {
+        commands.entity(shield_entity).insert((
+            Name::new("Shield"),
             ShieldRender,
-            MaterialMeshBundle {
-                transform: Transform::from_xyz(0.0, 0.0, 0.0),
-                material: materials.add(ShieldMaterial {
-                    base: StandardMaterial {
-                        // unlit: true,
-                        alpha_mode: AlphaMode::Add,
-                        base_color: Color::BLUE,
-                        ..Default::default()
-                    },
-                    extension: ShieldMaterialExtension {
-                        ripples: [Vec4::new(0.0, 1.0, 0.0, 0.0); 20],
-                    },
-                }),
-                mesh: meshes.add(SphereMeshBuilder::new(radius, SphereKind::Uv { sectors: 256, stacks: 256 }).build()),
-                ..Default::default()
-            },
-        ))
-        .id()
+            VisibilityBundle::default(),
+            materials.add(ShieldMaterial {
+                base: StandardMaterial {
+                    // unlit: true,
+                    alpha_mode: AlphaMode::Add,
+                    base_color: Color::BLUE,
+                    ..Default::default()
+                },
+                extension: ShieldMaterialExtension {
+                    ripples: [Vec4::new(0.0, 1.0, 0.0, 0.0); 20],
+                },
+            }),
+            meshes.add(SphereMeshBuilder::new(shield.radius, SphereKind::Uv { sectors: 256, stacks: 256 }).build()),
+        ));
+
+        println!("Added shield: {shield_entity:?}");
+    }
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, (add_shield, on_add_shield, update_shield_times).chain());
+    app.add_systems(
+        Update,
+        (
+            on_add_shield_create_rendering,
+            on_change_shield_update_rendering,
+            update_shield_times,
+        )
+            .chain(),
+    );
 }

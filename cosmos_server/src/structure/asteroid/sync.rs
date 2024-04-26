@@ -26,7 +26,7 @@ fn on_request_asteroid(
                 ev.client_id,
                 NettyChannelServer::Asteroid,
                 cosmos_encoder::serialize(&AsteroidServerMessages::Asteroid {
-                    body: NettyRigidBody::new(velocity, transform.rotation, NettyRigidBodyLocation::Absolute(*location)),
+                    body: NettyRigidBody::new(Some(*velocity), transform.rotation, NettyRigidBodyLocation::Absolute(*location)),
                     entity: ev.entity,
                     dimensions: structure.chunk_dimensions(),
                     temperature: asteroid.temperature(),

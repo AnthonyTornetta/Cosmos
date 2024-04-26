@@ -25,6 +25,7 @@ pub mod laser_cannon_system;
 pub mod line_system;
 pub mod mining_laser_system;
 pub mod missile_launcher_system;
+pub mod shield_system;
 pub mod sync;
 pub mod thruster_system;
 
@@ -497,6 +498,7 @@ pub(super) fn register(app: &mut App) {
     .register_type::<StructureSystems>();
 
     line_system::register(app);
+    shield_system::register(app);
     camera_system::register(app);
     energy_storage_system::register(app);
     energy_generation_system::register(app);

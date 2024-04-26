@@ -312,6 +312,12 @@ fn add_cosmos_blocks(
             .create(),
     );
 
+    blocks.register(
+        BlockBuilder::new("cosmos:shield", 2.0, 20.0, 5.0)
+            .add_property(BlockProperty::Full)
+            .create(),
+    );
+
     loading.finish_loading(id, &mut end_writer);
 }
 
@@ -326,7 +332,6 @@ fn add_air_block(
 
     blocks.register(
         BlockBuilder::new("cosmos:air", 0.0, 0.0, 0.0)
-            .add_property(BlockProperty::Transparent)
             .add_property(BlockProperty::Empty)
             .create(),
     );

@@ -99,7 +99,7 @@ fn handle_server_events(
                 visualizer.add_client(client_id);
 
                 for (entity, player, transform, location, velocity, inventory, render_distance, credits) in q_players.iter() {
-                    let body = NettyRigidBody::new(velocity, transform.rotation, NettyRigidBodyLocation::Absolute(*location));
+                    let body = NettyRigidBody::new(Some(*velocity), transform.rotation, NettyRigidBodyLocation::Absolute(*location));
 
                     let msg = cosmos_encoder::serialize(&ServerReliableMessages::PlayerCreate {
                         entity,
@@ -130,7 +130,7 @@ fn handle_server_events(
                 let velocity = Velocity::default();
                 let inventory = generate_player_inventory(&items);
 
-                let netty_body = NettyRigidBody::new(&velocity, Quat::IDENTITY, NettyRigidBodyLocation::Absolute(location));
+                let netty_body = NettyRigidBody::new(Some(velocity), Quat::IDENTITY, NettyRigidBodyLocation::Absolute(location));
 
                 let inventory_serialized = cosmos_encoder::serialize(&inventory);
 
