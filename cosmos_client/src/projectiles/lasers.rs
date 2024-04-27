@@ -15,7 +15,10 @@ use cosmos_core::{
 
 use crate::{
     state::game_state::GameState,
-    structure::systems::{laser_cannon_system::LaserCannonSystemFiredEvent, missile_launcher_system::MissileLauncherSystemFiredEvent},
+    structure::{
+        shields::ShieldRender,
+        systems::{laser_cannon_system::LaserCannonSystemFiredEvent, missile_launcher_system::MissileLauncherSystemFiredEvent},
+    },
 };
 
 #[derive(Resource)]
@@ -34,6 +37,7 @@ fn lasers_netty(
     laser_mesh: Res<LaserMesh>,
     mut ev_writer_laser_cannon_fired: EventWriter<LaserCannonSystemFiredEvent>,
     mut ev_writer_missile_launcher_fired: EventWriter<MissileLauncherSystemFiredEvent>,
+    mut q_shield_render: Query<&mut ShieldRender>,
 ) {
     while let Some(message) = client.receive_message(NettyChannelServer::StructureSystems) {
         let msg: ServerStructureSystemMessages = cosmos_encoder::deserialize(&message).unwrap();
@@ -87,6 +91,20 @@ fn lasers_netty(
                 };
 
                 ev_writer_missile_launcher_fired.send(MissileLauncherSystemFiredEvent(ship_entity));
+            }
+            ServerStructureSystemMessages::ShieldHit {
+                shield_entity,
+                relative_location,
+            } => {
+                let Some(shield_entity) = network_mapping.client_from_server(&shield_entity) else {
+                    continue;
+                };
+
+                let Ok(mut shield_render) = q_shield_render.get_mut(shield_entity) else {
+                    continue;
+                };
+
+                shield_render.add_hit_point(relative_location);
             }
         }
     }

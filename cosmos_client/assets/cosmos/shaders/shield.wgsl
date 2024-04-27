@@ -40,6 +40,10 @@ fn fragment(
     out.color = vec4(0.0, 0.0, 0.0, 0.0);
 
     for (var i = 0; i < 20; i++) {
+        if ripples[i].w < 0.0 {
+            continue;
+        }
+
         let dotted = dot(
             normalize(vec3(ripples[i].x, ripples[i].y, ripples[i].z)), 
             normalize(vec3(in.world_normal.x, in.world_normal.y, in.world_normal.z))

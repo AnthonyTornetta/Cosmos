@@ -2,7 +2,7 @@
 
 use bevy::{
     core::Name,
-    ecs::query::Added,
+    ecs::{entity::Entity, event::Event, query::Added, schedule::SystemSet},
     hierarchy::BuildChildren,
     log::warn,
     math::Vec3,
@@ -13,9 +13,11 @@ use bevy::{
     },
 };
 
+use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::Block,
     events::block_events::BlockChangedEvent,
+    netty::{cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages, NettyChannelServer},
     persistence::LoadingDistance,
     physics::location::Location,
     registry::{identifiable::Identifiable, Registry},
@@ -37,6 +39,12 @@ use super::sync::register_structure_system;
 
 mod explosion;
 mod laser;
+
+#[derive(Event)]
+pub struct ShieldHitEvent {
+    shield_entity: Entity,
+    relative_position: Vec3,
+}
 
 fn register_energy_blocks(blocks: Res<Registry<Block>>, mut storage: ResMut<ShieldBlocks>) {
     if let Some(block) = blocks.from_id("cosmos:shield") {
@@ -118,16 +126,35 @@ fn add_shield(
                 Shield {
                     max_strength: 100.0,
                     radius: 20.0,
-                    strength: 1.0,
+                    strength: 100.0,
                 },
             ));
         });
     }
 }
 
+fn send_shield_hits(mut ev_reader: EventReader<ShieldHitEvent>, mut server: ResMut<RenetServer>) {
+    for ev in ev_reader.read() {
+        server.broadcast_message(
+            NettyChannelServer::StructureSystems,
+            cosmos_encoder::serialize(&ServerStructureSystemMessages::ShieldHit {
+                shield_entity: ev.shield_entity,
+                relative_location: ev.relative_position,
+            }),
+        );
+    }
+}
+
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+pub enum ShieldHitProcessing {
+    OnShieldHit,
+}
+
 pub(super) fn register(app: &mut App) {
     laser::register(app);
     explosion::register(app);
+
+    app.configure_sets(Update, ShieldHitProcessing::OnShieldHit);
 
     app.insert_resource(ShieldBlocks::default())
         .add_systems(OnEnter(GameState::PostLoading), register_energy_blocks)
@@ -141,7 +168,9 @@ pub(super) fn register(app: &mut App) {
                 .chain()
                 .run_if(in_state(GameState::Playing)),
         )
-        .register_type::<ShieldSystem>();
+        .add_systems(Update, send_shield_hits.after(ShieldHitProcessing::OnShieldHit))
+        .register_type::<ShieldSystem>()
+        .add_event::<ShieldHitEvent>();
 
     register_structure_system::<ShieldSystem>(app, false, "cosmos:shield");
 }

@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use bevy::{
     app::Update,
     asset::{Assets, Handle},
@@ -5,11 +7,11 @@ use bevy::{
     ecs::{
         component::Component,
         entity::Entity,
-        query::{Added, Changed, With},
+        query::{Added, Changed},
         schedule::IntoSystemConfigs,
         system::{Commands, Query, Res, ResMut},
     },
-    math::Vec4,
+    math::{Vec3, Vec4},
     pbr::{AlphaMode, StandardMaterial},
     prelude::App,
     render::{
@@ -37,30 +39,54 @@ fn on_change_shield_update_rendering(mut q_changed_shield: Query<(&Shield, &mut 
     }
 }
 
+const MAX_ANIMATION_DURATION: Duration = Duration::from_secs(2);
+const MAX_ANIMATIONS: usize = 20;
+
 fn update_shield_times(
     time: Res<Time>,
     mut materials: ResMut<Assets<ShieldMaterial>>,
-    q_shields: Query<&Handle<ShieldMaterial>, With<ShieldRender>>,
+    mut q_shields: Query<(&mut ShieldRender, &Handle<ShieldMaterial>)>,
 ) {
-    for handle in &q_shields {
+    for (mut shield_render, handle) in &mut q_shields {
         let Some(mat) = materials.get_mut(handle) else {
             continue;
         };
 
-        // for ripple in &mut mat.extension.ripples {
-        //     let old = ripple.w;
-        //     ripple.w = time.elapsed_seconds() % 2.0;
-        //     if old > ripple.w {
-        //         ripple.x = rand::random::<f32>() * 2.0 - 1.0;
-        //         ripple.y = rand::random::<f32>() * 2.0 - 1.0;
-        //         ripple.z = rand::random::<f32>() * 2.0 - 1.0;
-        //     }
-        // }
+        for (ripple, hit) in mat.extension.ripples.iter_mut().zip(shield_render.hit_locations.iter_mut()) {
+            let Some((hit_point, hit_time)) = hit else {
+                if ripple.w >= 0.0 {
+                    ripple.w = -1.0;
+                }
+                continue;
+            };
+
+            ripple.w = *hit_time;
+
+            ripple.x = hit_point.x;
+            ripple.y = hit_point.y;
+            ripple.z = hit_point.z;
+
+            *hit_time += time.delta_seconds();
+
+            if *hit_time > MAX_ANIMATION_DURATION.as_secs_f32() {
+                *hit = None;
+            }
+        }
     }
 }
 
-#[derive(Component)]
-struct ShieldRender;
+#[derive(Component, Default)]
+pub struct ShieldRender {
+    hit_locations: [Option<(Vec3, f32)>; MAX_ANIMATIONS],
+}
+
+impl ShieldRender {
+    pub fn add_hit_point(&mut self, point: Vec3) {
+        if let Some(entry) = self.hit_locations.iter_mut().find(|x| x.is_none()) {
+            *entry = Some((point.normalize_or_zero(), 0.0));
+        }
+    }
+}
 
 fn on_add_shield_create_rendering(
     q_shield_added: Query<(Entity, &Shield), Added<Shield>>,
@@ -71,7 +97,7 @@ fn on_add_shield_create_rendering(
     for (shield_entity, shield) in q_shield_added.iter() {
         commands.entity(shield_entity).insert((
             Name::new("Shield"),
-            ShieldRender,
+            ShieldRender::default(),
             VisibilityBundle::default(),
             materials.add(ShieldMaterial {
                 base: StandardMaterial {
@@ -81,7 +107,7 @@ fn on_add_shield_create_rendering(
                     ..Default::default()
                 },
                 extension: ShieldMaterialExtension {
-                    ripples: [Vec4::new(0.0, 1.0, 0.0, 0.0); 20],
+                    ripples: [Vec4::new(0.0, 0.0, 0.0, -1.0); MAX_ANIMATIONS],
                 },
             }),
             meshes.add(SphereMeshBuilder::new(shield.radius, SphereKind::Uv { sectors: 256, stacks: 256 }).build()),
