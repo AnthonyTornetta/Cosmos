@@ -2,9 +2,9 @@ use bevy::{
     app::App,
     asset::Asset,
     math::Vec4,
-    pbr::{AlphaMode, ExtendedMaterial, Material, MaterialExtension, MaterialPlugin, StandardMaterial},
+    pbr::{ExtendedMaterial, MaterialExtension, MaterialPlugin, StandardMaterial},
     reflect::TypePath,
-    render::{color::Color, render_resource::AsBindGroup},
+    render::render_resource::AsBindGroup,
 };
 
 #[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]

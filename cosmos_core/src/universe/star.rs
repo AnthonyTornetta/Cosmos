@@ -435,7 +435,7 @@ impl Star {
 
         let rgb = COLOR_TABLE[temp_index];
 
-        Color::rgb(rgb[0], rgb[1], rgb[2])
+        Color::rgb(rgb[0] * 20.0, rgb[1] * 20.0, rgb[2] * 20.0)
     }
 
     /// Gets this star's temperature in Kelvin

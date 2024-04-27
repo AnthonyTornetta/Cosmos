@@ -13,6 +13,7 @@ use bevy::{
     },
 };
 
+use bevy_rapier3d::geometry::{Collider, ColliderMassProperties, CollisionGroups, Group, Sensor};
 use cosmos_core::{
     block::Block,
     events::block_events::BlockChangedEvent,
@@ -90,6 +91,8 @@ fn structure_loaded_event(
     }
 }
 
+pub const SHIELD_COLLISION_GROUP: Group = Group::GROUP_3;
+
 fn add_shield(
     mut commands: Commands,
     q_added_ship: Query<&StructureSystem, Added<ShieldSystem>>,
@@ -112,6 +115,10 @@ fn add_shield(
                 TransformBundle::from_transform(Transform::from_translation(shield_pos)),
                 *loc + shield_loc,
                 LoadingDistance::new(1, 2),
+                Collider::ball(20.0),
+                CollisionGroups::new(SHIELD_COLLISION_GROUP, SHIELD_COLLISION_GROUP),
+                ColliderMassProperties::Mass(0.0),
+                Sensor,
                 Shield {
                     max_strength: 100.0,
                     radius: 20.0,

@@ -47,15 +47,15 @@ fn update_shield_times(
             continue;
         };
 
-        for ripple in &mut mat.extension.ripples {
-            let old = ripple.w;
-            ripple.w = time.elapsed_seconds() % 2.0;
-            if old > ripple.w {
-                ripple.x = rand::random::<f32>() * 2.0 - 1.0;
-                ripple.y = rand::random::<f32>() * 2.0 - 1.0;
-                ripple.z = rand::random::<f32>() * 2.0 - 1.0;
-            }
-        }
+        // for ripple in &mut mat.extension.ripples {
+        //     let old = ripple.w;
+        //     ripple.w = time.elapsed_seconds() % 2.0;
+        //     if old > ripple.w {
+        //         ripple.x = rand::random::<f32>() * 2.0 - 1.0;
+        //         ripple.y = rand::random::<f32>() * 2.0 - 1.0;
+        //         ripple.z = rand::random::<f32>() * 2.0 - 1.0;
+        //     }
+        // }
     }
 }
 
