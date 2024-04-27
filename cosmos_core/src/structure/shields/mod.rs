@@ -3,11 +3,12 @@ use bevy::{
     ecs::{
         component::Component,
         entity::Entity,
-        query::Added,
+        query::{Added, Changed},
         system::{Commands, Query},
     },
     reflect::Reflect,
 };
+use bevy_rapier3d::geometry::{Collider, ColliderMassProperties, CollisionGroups, Group, Sensor};
 use serde::{Deserialize, Serialize};
 
 use crate::netty::sync::{sync_component, SyncableComponent};
@@ -21,6 +22,12 @@ pub struct Shield {
     pub max_strength: f32,
 }
 
+impl Shield {
+    pub fn is_enabled(&self) -> bool {
+        self.strength > 0.0
+    }
+}
+
 impl SyncableComponent for Shield {
     fn get_component_unlocalized_name() -> &'static str {
         "cosmos:shield"
@@ -31,9 +38,31 @@ impl SyncableComponent for Shield {
     }
 }
 
-fn on_add_shield(q_added_shield: Query<Entity, Added<Shield>>, mut commands: Commands) {
-    for ent in q_added_shield.iter() {
-        commands.entity(ent).insert(DespawnWithStructure);
+/// Things that should collide with shields should be put into this group
+pub const SHIELD_COLLISION_GROUP: Group = Group::GROUP_3;
+
+fn on_add_shield(q_added_shield: Query<(Entity, &Shield), Changed<Shield>>, mut commands: Commands) {
+    for (ent, shield) in q_added_shield.iter() {
+        let mut ecmds = commands.entity(ent);
+
+        if shield.is_enabled() {
+            ecmds.insert((
+                DespawnWithStructure,
+                Collider::ball(shield.radius),
+                CollisionGroups::new(SHIELD_COLLISION_GROUP, SHIELD_COLLISION_GROUP),
+                ColliderMassProperties::Mass(0.0),
+                Sensor,
+            ));
+        } else {
+            ecmds
+                .insert((
+                    DespawnWithStructure,
+                    CollisionGroups::new(SHIELD_COLLISION_GROUP, SHIELD_COLLISION_GROUP),
+                    ColliderMassProperties::Mass(0.0),
+                    Sensor,
+                ))
+                .remove::<Collider>();
+        }
     }
 }
 

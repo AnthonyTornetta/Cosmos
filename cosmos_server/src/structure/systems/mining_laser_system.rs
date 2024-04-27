@@ -1,5 +1,10 @@
 use bevy::{prelude::*, utils::HashMap};
-use bevy_rapier3d::{pipeline::QueryFilter, plugin::RapierContext, prelude::PhysicsWorld};
+use bevy_rapier3d::{
+    geometry::{CollisionGroups, Group},
+    pipeline::QueryFilter,
+    plugin::RapierContext,
+    prelude::PhysicsWorld,
+};
 use cosmos_core::{
     block::{
         block_events::{BlockBreakEvent, BlockEventsSet},
@@ -10,6 +15,7 @@ use cosmos_core::{
     structure::{
         coordinates::BlockCoordinate,
         shared::{DespawnWithStructure, MeltingDown},
+        shields::SHIELD_COLLISION_GROUP,
         ship::Ship,
         structure_block::StructureBlock,
         systems::{
@@ -169,7 +175,11 @@ fn update_mining_beams(
                 } else {
                     false
                 }
-            }),
+            })
+            .groups(CollisionGroups::new(
+                Group::ALL & !SHIELD_COLLISION_GROUP,
+                Group::ALL & !SHIELD_COLLISION_GROUP,
+            )),
         ) else {
             continue;
         };
