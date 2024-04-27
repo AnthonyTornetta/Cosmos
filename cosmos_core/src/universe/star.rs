@@ -435,7 +435,14 @@ impl Star {
 
         let rgb = COLOR_TABLE[temp_index];
 
-        Color::rgb(rgb[0] * 20.0, rgb[1] * 20.0, rgb[2] * 20.0)
+        /// Makes the sun glow when HDR is enabled
+        const SUN_BRIGHTNESS_MULTIPLIER: f32 = 10.0;
+
+        Color::rgb(
+            rgb[0] * SUN_BRIGHTNESS_MULTIPLIER,
+            rgb[1] * SUN_BRIGHTNESS_MULTIPLIER,
+            rgb[2] * SUN_BRIGHTNESS_MULTIPLIER,
+        )
     }
 
     /// Gets this star's temperature in Kelvin
