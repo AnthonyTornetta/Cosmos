@@ -13,7 +13,6 @@ use bevy::{
     },
 };
 
-use bevy_rapier3d::geometry::{Collider, ColliderMassProperties, CollisionGroups, Group, Sensor};
 use cosmos_core::{
     block::Block,
     events::block_events::BlockChangedEvent,
@@ -35,6 +34,9 @@ use cosmos_core::{
 use crate::state::GameState;
 
 use super::sync::register_structure_system;
+
+mod explosion;
+mod laser;
 
 fn register_energy_blocks(blocks: Res<Registry<Block>>, mut storage: ResMut<ShieldBlocks>) {
     if let Some(block) = blocks.from_id("cosmos:shield") {
@@ -124,6 +126,9 @@ fn add_shield(
 }
 
 pub(super) fn register(app: &mut App) {
+    laser::register(app);
+    explosion::register(app);
+
     app.insert_resource(ShieldBlocks::default())
         .add_systems(OnEnter(GameState::PostLoading), register_energy_blocks)
         .add_systems(

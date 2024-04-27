@@ -3,7 +3,7 @@ use bevy::{
     ecs::{
         component::Component,
         entity::Entity,
-        query::{Added, Changed},
+        query::Changed,
         system::{Commands, Query},
     },
     reflect::Reflect,
@@ -24,7 +24,14 @@ pub struct Shield {
 
 impl Shield {
     pub fn is_enabled(&self) -> bool {
-        self.strength > 0.0
+        self.strength > f32::EPSILON
+    }
+
+    /// Reduces the shield's strength based on the amount provided.
+    ///
+    /// The shield's strength cannot go below 0.0.
+    pub fn take_damage(&mut self, amount: f32) {
+        self.strength = (self.strength - amount).max(0.0);
     }
 }
 

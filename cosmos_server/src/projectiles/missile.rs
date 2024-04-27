@@ -5,7 +5,7 @@ use std::time::Duration;
 use bevy::{
     ecs::{
         component::Component,
-        event::{EventReader, EventWriter},
+        event::{Event, EventReader, EventWriter},
         query::{Added, Or, Without},
         schedule::IntoSystemConfigs,
     },
@@ -18,7 +18,7 @@ use bevy::{
 };
 use bevy_rapier3d::{
     dynamics::{ExternalImpulse, Velocity},
-    geometry::{Collider, Sensor},
+    geometry::Collider,
     pipeline::{CollisionEvent, QueryFilter},
     plugin::RapierContext,
     prelude::{PhysicsWorld, RigidBody},
@@ -48,20 +48,35 @@ use crate::netty::sync::sync_bodies::DontNotifyClientOfDespawn;
 /// 1 unit of explosion power = this amount of health. Bigger this number is, the more damage explosives will do.
 const HEALTH_PER_EXPLOSION_POWER: f32 = 8.0;
 
+#[derive(Event, Debug)]
+/// This event is sent whenever an explosion hits an entity
+///
+/// Currently this **isn't** sent for structures being hit, but it will be in the future.
+pub struct ExplosionHitEvent {
+    /// The explosion that caused this event
+    pub explosion: Explosion,
+    /// The explosion's location
+    pub explosion_location: Location,
+    /// The entity that was hit by the explosion
+    pub hit_entity: Entity,
+}
+
 fn respond_to_explosion(
     mut commands: Commands,
     q_explosions: Query<(Entity, &Location, &WorldWithin, Option<&PhysicsWorld>, &Explosion), Added<Explosion>>,
     q_player_world: Query<&Location, With<PlayerWorld>>,
-    q_excluded: Query<(), Or<(With<Explosion>, Without<Collider>, With<Sensor>)>>,
+    q_excluded: Query<(), Or<(With<Explosion>, Without<Collider>)>>,
 
     mut q_structure: Query<(&GlobalTransform, &Location, &mut Structure)>,
     context: Res<RapierContext>,
 
     q_chunk: Query<&ChunkEntity>,
     blocks_registry: Res<Registry<Block>>,
-    mut ev_writer: EventWriter<BlockChangedEvent>,
+    mut ev_writer_block_changed: EventWriter<BlockChangedEvent>,
+
+    mut ev_writer_explosion_hit: EventWriter<ExplosionHitEvent>,
 ) {
-    for (ent, explosion_loc, world_within, physics_world, explosion) in q_explosions.iter() {
+    for (ent, &explosion_loc, world_within, physics_world, &explosion) in q_explosions.iter() {
         commands.entity(ent).insert((NeedsDespawned, DontNotifyClientOfDespawn));
 
         let Ok(player_world_loc) = q_player_world.get(world_within.0) else {
@@ -74,7 +89,7 @@ fn respond_to_explosion(
 
         // Have to do this by hand because `GlobalTransform` doesn't have enough time to
         // propagate down
-        let rapier_coordinates = (*explosion_loc - *player_world_loc).absolute_coords_f32();
+        let rapier_coordinates = (explosion_loc - *player_world_loc).absolute_coords_f32();
 
         let mut hits = vec![];
 
@@ -107,10 +122,16 @@ fn respond_to_explosion(
 
         for &hit in ents.iter() {
             let Ok((structure_g_trans, structure_loc, mut structure)) = q_structure.get_mut(hit) else {
+                ev_writer_explosion_hit.send(ExplosionHitEvent {
+                    explosion,
+                    explosion_location: explosion_loc,
+                    hit_entity: hit,
+                });
+
                 continue;
             };
             let explosion_relative_position =
-                structure_g_trans.affine().inverse().matrix3 * (*explosion_loc - *structure_loc).absolute_coords_f32();
+                structure_g_trans.affine().inverse().matrix3 * (explosion_loc - *structure_loc).absolute_coords_f32();
 
             let local_coords = structure.relative_coords_to_local_coords(
                 explosion_relative_position.x,
@@ -132,7 +153,7 @@ fn respond_to_explosion(
                         &structure,
                         this_block,
                         explosion_relative_position,
-                        explosion,
+                        &explosion,
                         &blocks_registry,
                         max_radius_sqrd,
                     )
@@ -144,7 +165,7 @@ fn respond_to_explosion(
                 structure.set_block_health(block, cur_health - explosion_power * HEALTH_PER_EXPLOSION_POWER, &blocks_registry);
 
                 if structure.get_block_health(block, &blocks_registry) <= 0.0 {
-                    structure.remove_block_at(block, &blocks_registry, Some(&mut ev_writer));
+                    structure.remove_block_at(block, &blocks_registry, Some(&mut ev_writer_block_changed));
                 }
             }
         }
@@ -314,7 +335,8 @@ pub(super) fn register(app: &mut App) {
             .before(ExplosionSystemSet::PreProcessExplosions)
             .before(CosmosBundleSet::HandleCosmosBundles)
             .chain(),
-    );
+    )
+    .add_event::<ExplosionHitEvent>();
 
     app.add_systems(Update, respond_to_explosion.in_set(ExplosionSystemSet::ProcessExplosions))
         .add_systems(

@@ -86,8 +86,6 @@ fn on_add_shield_create_rendering(
             }),
             meshes.add(SphereMeshBuilder::new(shield.radius, SphereKind::Uv { sectors: 256, stacks: 256 }).build()),
         ));
-
-        println!("Added shield: {shield_entity:?}");
     }
 }
 
