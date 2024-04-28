@@ -14,7 +14,7 @@ use bevy::{
         system::{Commands, Query, Res, ResMut},
     },
     math::{Vec3, Vec4},
-    pbr::{AlphaMode, StandardMaterial},
+    pbr::{AlphaMode, NotShadowCaster, StandardMaterial},
     prelude::App,
     render::{
         color::Color,
@@ -27,8 +27,14 @@ use cosmos_core::structure::shields::Shield;
 
 use crate::asset::materials::shield::{ShieldMaterial, ShieldMaterialExtension, MAX_SHIELD_HIT_POINTS};
 
-fn on_change_shield_update_rendering(mut q_changed_shield: Query<(&Shield, &mut Visibility), Changed<Shield>>) {
-    for (shield, mut visibility) in q_changed_shield.iter_mut() {
+#[derive(Component)]
+struct OldRadius(f32);
+
+fn on_change_shield_update_rendering(
+    mut q_changed_shield: Query<(&Shield, &mut OldRadius, &mut Visibility, &mut Handle<Mesh>), Changed<Shield>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+) {
+    for (shield, mut old_radius, mut visibility, mut mesh_handle) in q_changed_shield.iter_mut() {
         if shield.strength == 0.0 {
             if *visibility != Visibility::Hidden {
                 *visibility = Visibility::Hidden;
@@ -37,6 +43,11 @@ fn on_change_shield_update_rendering(mut q_changed_shield: Query<(&Shield, &mut 
             if *visibility != Visibility::Inherited {
                 *visibility = Visibility::Inherited;
             }
+        }
+
+        if old_radius.0 != shield.radius {
+            *mesh_handle = meshes.add(SphereMeshBuilder::new(shield.radius, SphereKind::Uv { sectors: 256, stacks: 256 }).build());
+            old_radius.0 = shield.radius;
         }
     }
 }
@@ -110,6 +121,7 @@ fn on_add_shield_create_rendering(
             Name::new("Shield"),
             ShieldRender::default(),
             VisibilityBundle::default(),
+            NotShadowCaster,
             materials.add(ShieldMaterial {
                 base: StandardMaterial {
                     // unlit: true,
@@ -121,6 +133,7 @@ fn on_add_shield_create_rendering(
                     ripples: [Vec4::new(0.0, 0.0, 0.0, -1.0); MAX_SHIELD_HIT_POINTS],
                 },
             }),
+            OldRadius(shield.radius),
             meshes.add(SphereMeshBuilder::new(shield.radius, SphereKind::Uv { sectors: 256, stacks: 256 }).build()),
         ));
     }

@@ -1,3 +1,5 @@
+//! Server-related logic for explosions
+
 use bevy::{
     ecs::{
         event::{Event, EventWriter},
@@ -13,7 +15,7 @@ use bevy_rapier3d::{geometry::Collider, pipeline::QueryFilter, plugin::RapierCon
 
 use cosmos_core::{
     block::Block,
-    ecs::{mut_events::MutEventsCommand, NeedsDespawned},
+    ecs::NeedsDespawned,
     events::block_events::BlockChangedEvent,
     physics::{
         location::Location,

@@ -2,7 +2,7 @@
 
 extern crate proc_macro;
 
-use std::ops::{Add, Sub};
+use std::ops::{Add, Neg, Sub};
 
 use bevy::reflect::Reflect;
 use serde::{Deserialize, Serialize};
@@ -56,7 +56,7 @@ macro_rules! create_coordinate {
             /// - `y` The y coordinate
             /// - `z` The z coordinate
             #[inline(always)]
-            pub fn new(x: CoordinateType, y: CoordinateType, z: CoordinateType) -> Self {
+            pub const fn new(x: CoordinateType, y: CoordinateType, z: CoordinateType) -> Self {
                 Self { x, y, z }
             }
 
@@ -192,7 +192,7 @@ macro_rules! create_coordinate {
         impl $unbounded {
             #[inline(always)]
             /// Creates a new unbounded version that can have negative as well as positive values.
-            pub fn new(x: UnboundCoordinateType, y: UnboundCoordinateType, z: UnboundCoordinateType) -> Self {
+            pub const fn new(x: UnboundCoordinateType, y: UnboundCoordinateType, z: UnboundCoordinateType) -> Self {
                 Self { x, y, z }
             }
 
@@ -336,6 +336,17 @@ macro_rules! create_coordinate {
 
             fn sub(self, rhs: Self) -> Self::Output {
                 Self::new(self.x - rhs.x, self.y - rhs.y, self.z - rhs.z)
+            }
+        }
+
+        impl Neg for $unbounded {
+            type Output = Self;
+            fn neg(self) -> Self::Output {
+                Self {
+                    x: -self.x,
+                    y: -self.y,
+                    z: -self.z,
+                }
             }
         }
     };

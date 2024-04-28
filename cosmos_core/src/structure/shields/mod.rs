@@ -57,6 +57,8 @@ pub const SHIELD_COLLISION_GROUP: Group = Group::GROUP_3;
 
 fn on_add_shield(q_added_shield: Query<(Entity, &Shield), Changed<Shield>>, mut commands: Commands) {
     for (ent, shield) in q_added_shield.iter() {
+        assert!(shield.radius > 0.0, "Shield radius cannot be <= 0.0!");
+
         let mut ecmds = commands.entity(ent);
 
         if shield.is_enabled() {
