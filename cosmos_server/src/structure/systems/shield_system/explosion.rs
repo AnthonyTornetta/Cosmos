@@ -8,7 +8,7 @@ use bevy::{
 };
 use cosmos_core::{physics::location::Location, structure::shields::Shield};
 
-use crate::projectiles::missile::ExplosionHitEvent;
+use crate::projectiles::explosion::ExplosionHitEvent;
 
 use super::{ShieldHitEvent, ShieldHitProcessing};
 
