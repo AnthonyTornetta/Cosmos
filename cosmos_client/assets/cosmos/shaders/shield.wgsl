@@ -16,8 +16,8 @@
 }
 #endif
 
-
-@group(2) @binding(100) var<uniform> ripples: array<vec4<f32>, 20>;
+const MAX_HITS: u32 = 100;
+@group(2) @binding(100) var<uniform> ripples: array<vec4<f32>, MAX_HITS>;
 
 @fragment
 fn fragment(
@@ -39,7 +39,7 @@ fn fragment(
     let color = apply_pbr_lighting(pbr_input);
     out.color = vec4(0.0, 0.0, 0.0, 0.0);
 
-    for (var i = 0; i < 20; i++) {
+    for (var i = 0; i < MAX_HITS; i++) {
         if ripples[i].w < 0.0 {
             continue;
         }

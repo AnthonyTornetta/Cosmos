@@ -1,3 +1,5 @@
+//! Represents the shield functionality
+
 use bevy::{
     app::App,
     ecs::{component::Component, system::Resource},

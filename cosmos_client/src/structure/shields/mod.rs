@@ -1,3 +1,5 @@
+//! Client-side logic for the rendering of shields
+
 use std::time::Duration;
 
 use bevy::{
@@ -23,7 +25,7 @@ use bevy::{
 };
 use cosmos_core::structure::shields::Shield;
 
-use crate::asset::materials::shield::{ShieldMaterial, ShieldMaterialExtension};
+use crate::asset::materials::shield::{ShieldMaterial, ShieldMaterialExtension, MAX_SHIELD_HIT_POINTS};
 
 fn on_change_shield_update_rendering(mut q_changed_shield: Query<(&Shield, &mut Visibility), Changed<Shield>>) {
     for (shield, mut visibility) in q_changed_shield.iter_mut() {
@@ -40,7 +42,6 @@ fn on_change_shield_update_rendering(mut q_changed_shield: Query<(&Shield, &mut 
 }
 
 const MAX_ANIMATION_DURATION: Duration = Duration::from_secs(2);
-const MAX_ANIMATIONS: usize = 20;
 
 fn update_shield_times(
     time: Res<Time>,
@@ -75,12 +76,22 @@ fn update_shield_times(
     }
 }
 
-#[derive(Component, Default)]
+#[derive(Component)]
+/// Contains the info necessary for rendering hits on shield
 pub struct ShieldRender {
-    hit_locations: [Option<(Vec3, f32)>; MAX_ANIMATIONS],
+    hit_locations: [Option<(Vec3, f32)>; MAX_SHIELD_HIT_POINTS],
+}
+
+impl Default for ShieldRender {
+    fn default() -> Self {
+        Self {
+            hit_locations: [None; MAX_SHIELD_HIT_POINTS],
+        }
+    }
 }
 
 impl ShieldRender {
+    /// Adds a point that was hit on the shield
     pub fn add_hit_point(&mut self, point: Vec3) {
         if let Some(entry) = self.hit_locations.iter_mut().find(|x| x.is_none()) {
             *entry = Some((point.normalize_or_zero(), 0.0));
@@ -107,7 +118,7 @@ fn on_add_shield_create_rendering(
                     ..Default::default()
                 },
                 extension: ShieldMaterialExtension {
-                    ripples: [Vec4::new(0.0, 0.0, 0.0, -1.0); MAX_ANIMATIONS],
+                    ripples: [Vec4::new(0.0, 0.0, 0.0, -1.0); MAX_SHIELD_HIT_POINTS],
                 },
             }),
             meshes.add(SphereMeshBuilder::new(shield.radius, SphereKind::Uv { sectors: 256, stacks: 256 }).build()),

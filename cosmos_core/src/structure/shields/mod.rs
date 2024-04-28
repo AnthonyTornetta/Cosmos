@@ -1,3 +1,5 @@
+//! Handles the [`Shield`] component and its shared logic
+
 use bevy::{
     app::{App, PostUpdate},
     ecs::{
@@ -16,13 +18,18 @@ use crate::netty::sync::{sync_component, SyncableComponent};
 use super::shared::DespawnWithStructure;
 
 #[derive(Component, Reflect, Clone, Debug, Serialize, Deserialize)]
+/// Blocks projectiles that are within the shields bounds
 pub struct Shield {
+    /// How big the shield's radius is
     pub radius: f32,
+    /// How much damage the shield can block before it breaks
     pub strength: f32,
+    /// The maximum amount of strength a shield can hold
     pub max_strength: f32,
 }
 
 impl Shield {
+    /// Returns true if this shield is currently active
     pub fn is_enabled(&self) -> bool {
         self.strength > f32::EPSILON
     }

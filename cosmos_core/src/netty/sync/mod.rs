@@ -30,8 +30,6 @@ enum ComponentReplicationMessage {
     },
 }
 
-mod default_syncing;
-
 #[cfg(feature = "client")]
 pub mod mapping;
 
@@ -202,8 +200,6 @@ pub fn sync_component<T: SyncableComponent>(_app: &mut App) {
 }
 
 pub(super) fn register(app: &mut App) {
-    default_syncing::register(app);
-
     create_registry::<SyncedComponentId>(app, "cosmos:syncable_components");
 
     app.add_event::<GotComponentToSyncEvent>();

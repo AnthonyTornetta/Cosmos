@@ -7,10 +7,16 @@ use bevy::{
     render::render_resource::AsBindGroup,
 };
 
+/// The maximum number of shield hits that can be rendered
+pub const MAX_SHIELD_HIT_POINTS: usize = 100;
+
 #[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
+/// The Material responsible for shield rendering
 pub struct ShieldMaterialExtension {
     #[uniform(100)]
-    pub ripples: [Vec4; 20],
+    /// Controls the ripple animation of the shield when hit
+    /// Vector format: (normal x, normal y, normal z, time since start)
+    pub ripples: [Vec4; MAX_SHIELD_HIT_POINTS],
 }
 
 impl MaterialExtension for ShieldMaterialExtension {
@@ -34,6 +40,7 @@ impl MaterialExtension for ShieldMaterialExtension {
     }
 }
 
+/// The Material responsible for shield rendering
 pub type ShieldMaterial = ExtendedMaterial<StandardMaterial, ShieldMaterialExtension>;
 
 pub(super) fn register(app: &mut App) {
