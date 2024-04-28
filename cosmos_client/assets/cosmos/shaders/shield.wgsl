@@ -39,7 +39,7 @@ fn fragment(
     let color = apply_pbr_lighting(pbr_input);
     out.color = vec4(0.0, 0.0, 0.0, 0.0);
 
-    for (var i = 0; i < MAX_HITS; i++) {
+    for (var i = u32(0); i < MAX_HITS; i++) {
         if ripples[i].w < 0.0 {
             continue;
         }
