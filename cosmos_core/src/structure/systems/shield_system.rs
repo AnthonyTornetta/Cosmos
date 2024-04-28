@@ -6,12 +6,10 @@ use bevy::{
     reflect::Reflect,
     utils::HashMap,
 };
+use bigdecimal::num_traits::Pow;
 use serde::{Deserialize, Serialize};
 
-use crate::structure::{
-    coordinates::{BlockCoordinate, UnboundBlockCoordinate},
-    shields::Shield,
-};
+use crate::structure::coordinates::{BlockCoordinate, UnboundBlockCoordinate};
 
 use super::{sync::SyncableSystem, StructureSystemImpl};
 
@@ -131,8 +129,8 @@ impl ShieldSystem {
             }
 
             let shield = ShieldDetails {
-                max_strength: min_radius as f32 * 100.0 * 12.0,
-                radius: min_radius as f32 * 6.0 + 10.0,
+                max_strength: (min_radius as f32).pow(1.5) * 100.0,
+                radius: min_radius as f32 * 2.0 + 10.0,
             };
 
             self.shields.push((center, shield));
