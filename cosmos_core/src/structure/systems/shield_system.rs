@@ -126,6 +126,7 @@ impl ShieldSystem {
         self.needs_shields_recalculated = false;
 
         let mut projectors = self.projectors.clone();
+        let mut generators = self.generators.clone();
 
         self.shields.clear();
 
@@ -173,6 +174,8 @@ impl ShieldSystem {
                         if let Ok(bc) = BlockCoordinate::try_from(dir + coord) {
                             if projectors.remove(&bc).is_some() {
                                 new_doing.push(bc);
+                            } else if generators.remove(&bc).is_some() {
+                                new_doing.push(bc);
                             }
                         }
                     }
@@ -193,9 +196,15 @@ impl ShieldSystem {
 
             let mut center = BlockCoordinate::splat(0);
 
-            let group_len = group.len();
+            let mut n_projectors = 0;
 
             for projector_coord in group {
+                // These can be generators, which are calculated below.
+                let Some(property) = self.projectors.get(&projector_coord) else {
+                    continue;
+                };
+
+                n_projectors += 1;
                 center = center + projector_coord;
 
                 // calculate projector effectiveness
@@ -212,8 +221,11 @@ impl ShieldSystem {
                     }
                 }
 
-                let property = self.projectors.get(&projector_coord).expect("This must exist");
                 shield_details.max_strength += property.shield_strength * (touching_projectors as f32 + 1.0).pow(1.2);
+            }
+
+            if n_projectors == 0 {
+                continue;
             }
 
             let (generator_power_per_sec, generator_efficiency) = group_generators
@@ -233,9 +245,9 @@ impl ShieldSystem {
             shield_details.generation_efficiency = generator_efficiency;
             shield_details.generation_power_per_sec = generator_power_per_sec;
 
-            center.x /= group_len as CoordinateType;
-            center.y /= group_len as CoordinateType;
-            center.z /= group_len as CoordinateType;
+            center.x /= n_projectors as CoordinateType;
+            center.y /= n_projectors as CoordinateType;
+            center.z /= n_projectors as CoordinateType;
 
             let distance = max_bounds - min_bounds;
             shield_details.radius = distance.x.min(distance.y).min(distance.z) as f32 * 2.0 + 10.0;
