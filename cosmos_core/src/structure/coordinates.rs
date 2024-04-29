@@ -175,6 +175,14 @@ macro_rules! create_coordinate {
             }
         }
 
+        impl Sub<$name> for $name {
+            type Output = $unbounded;
+
+            fn sub(self, rhs: Self) -> Self::Output {
+                $unbounded::from(self) - $unbounded::from(rhs)
+            }
+        }
+
         #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Reflect, Hash)]
         #[doc=$structComment]
         ///

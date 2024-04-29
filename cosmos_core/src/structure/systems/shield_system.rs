@@ -4,26 +4,25 @@ use bevy::{
     app::App,
     ecs::{component::Component, system::Resource},
     reflect::Reflect,
-    utils::HashMap,
+    utils::hashbrown::HashMap,
 };
 use bigdecimal::num_traits::Pow;
 use serde::{Deserialize, Serialize};
 
-use crate::structure::coordinates::{BlockCoordinate, UnboundBlockCoordinate};
+use crate::structure::coordinates::{BlockCoordinate, CoordinateType, UnboundBlockCoordinate};
 
 use super::{sync::SyncableSystem, StructureSystemImpl};
 
 #[derive(Reflect, Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct ShieldProjectorProperty {
     pub shield_strength: f32,
-    pub shield_range_increase: f32,
 }
 
 #[derive(Reflect, Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct ShieldGeneratorProperty {
     /// 1.0 = every J of power turns into 1 Unit if shielding
-    pub efficiency: f32,
-    pub max_power_usage_per_sec: f32,
+    pub peak_efficiency: f32,
+    pub power_usage_per_sec: f32,
 }
 
 #[derive(Resource, Default)]
@@ -35,7 +34,7 @@ pub struct ShieldGeneratorBlocks(pub HashMap<u16, ShieldGeneratorProperty>);
 #[derive(Reflect, Default, Component, Clone, Serialize, Deserialize, Debug)]
 pub struct ShieldSystem {
     projectors: HashMap<BlockCoordinate, ShieldProjectorProperty>,
-    converters: HashMap<BlockCoordinate, ShieldGeneratorProperty>,
+    generators: HashMap<BlockCoordinate, ShieldGeneratorProperty>,
 
     needs_shields_recalculated: bool,
     shields: Vec<(BlockCoordinate, ShieldDetails)>,
@@ -44,6 +43,10 @@ pub struct ShieldSystem {
 #[derive(Reflect, Default, Component, Clone, Copy, Serialize, Deserialize, Debug)]
 pub struct ShieldDetails {
     pub max_strength: f32,
+    /// shield units/seconds
+    pub generation_power_per_sec: f32,
+    /// Power per Shield Unit (p/su) -- 0.5 means 2 power per shield unit
+    pub generation_efficiency: f32,
     pub radius: f32,
 }
 
@@ -63,12 +66,12 @@ impl ShieldSystem {
     }
 
     pub fn generator_removed(&mut self, coords: BlockCoordinate) {
-        self.converters.remove(&coords);
+        self.generators.remove(&coords);
         self.needs_shields_recalculated = true;
     }
 
     pub fn generator_added(&mut self, property: ShieldGeneratorProperty, coords: BlockCoordinate) {
-        self.converters.insert(coords, property);
+        self.generators.insert(coords, property);
         self.needs_shields_recalculated = true;
     }
 
@@ -88,81 +91,178 @@ impl ShieldSystem {
     pub fn recalculate_shields(&mut self) {
         self.needs_shields_recalculated = false;
 
-        // 1. find shield centers
-        let mut centers = vec![];
-
-        for (&coord, _) in self.projectors.iter() {
-            let mut neighbors = 0;
-            if coord.left().map(|x| self.projectors.contains_key(&x)).unwrap_or(false) {
-                neighbors += 1;
-            }
-            if coord.bottom().map(|x| self.projectors.contains_key(&x)).unwrap_or(false) {
-                neighbors += 1;
-            }
-            if coord.back().map(|x| self.projectors.contains_key(&x)).unwrap_or(false) {
-                neighbors += 1;
-            }
-            if self.projectors.contains_key(&coord.right()) {
-                neighbors += 1;
-            }
-            if self.projectors.contains_key(&coord.top()) {
-                neighbors += 1;
-            }
-            if self.projectors.contains_key(&coord.front()) {
-                neighbors += 1;
-            }
-
-            if neighbors == 6 {
-                centers.push(coord);
-            }
-        }
-
-        // 2. calculate min length (that is shield radius)
+        let mut projectors = self.projectors.clone();
 
         self.shields.clear();
 
-        for &center in centers.iter() {
-            let mut min_radius = usize::MAX;
+        // Group projectors into their respective groups
+        let mut projector_coord_groups = vec![];
 
-            for dir in Self::DIRS {
-                min_radius = min_radius.min(self.count_projector_length(center, dir, min_radius));
+        while !projectors.is_empty() {
+            let (&bc, _) = projectors.iter().next().expect("This is not empty.");
+            projectors.remove(&bc).expect("Guarenteed");
+
+            let mut min_bounds = bc;
+            let mut max_bounds = bc;
+
+            let mut doing = vec![bc];
+
+            let mut projector_coords = vec![];
+
+            while !doing.is_empty() {
+                let mut new_doing = vec![];
+
+                for coord in doing {
+                    projector_coords.push(coord);
+
+                    if coord.x < min_bounds.x {
+                        min_bounds.x = coord.x;
+                    }
+                    if coord.y < min_bounds.y {
+                        min_bounds.y = coord.y;
+                    }
+                    if coord.z < min_bounds.z {
+                        min_bounds.z = coord.z;
+                    }
+
+                    if coord.x > max_bounds.x {
+                        max_bounds.x = coord.x;
+                    }
+                    if coord.y > max_bounds.y {
+                        max_bounds.y = coord.y;
+                    }
+                    if coord.z > max_bounds.z {
+                        max_bounds.z = coord.z;
+                    }
+
+                    if let Ok(bc) = coord.left() {
+                        if projectors.remove(&bc).is_some() {
+                            new_doing.push(bc);
+                        }
+                    }
+                    if let Ok(bc) = coord.bottom() {
+                        if projectors.remove(&bc).is_some() {
+                            new_doing.push(bc);
+                        }
+                    }
+                    if let Ok(bc) = coord.back() {
+                        if projectors.remove(&bc).is_some() {
+                            new_doing.push(bc);
+                        }
+                    }
+                    let bc = coord.top();
+                    if projectors.remove(&bc).is_some() {
+                        new_doing.push(bc);
+                    }
+                    let bc = coord.right();
+                    if projectors.remove(&bc).is_some() {
+                        new_doing.push(bc);
+                    }
+                    let bc = coord.front();
+                    if projectors.remove(&bc).is_some() {
+                        new_doing.push(bc);
+                    }
+                }
+
+                doing = new_doing;
             }
 
-            let shield = ShieldDetails {
-                max_strength: (min_radius as f32).pow(1.5) * 100.0,
-                radius: min_radius as f32 * 2.0 + 10.0,
-            };
-
-            self.shields.push((center, shield));
+            projector_coord_groups.push((projector_coords, min_bounds, max_bounds));
         }
 
-        // 3. calculate generation amount
-    }
+        // Step 2: Go through each group & calculate its properties
 
-    fn count_projector_length(&mut self, center: BlockCoordinate, dir: UnboundBlockCoordinate, min_radius: usize) -> usize {
-        let mut at = center + dir;
+        for (group, min_bounds, max_bounds) in projector_coord_groups {
+            let mut group_generators = HashMap::<BlockCoordinate, u8>::default();
 
-        let mut len = 0;
-        while BlockCoordinate::try_from(at)
-            .map(|x| self.projectors.get(&x).is_some())
-            .unwrap_or(false)
-        {
-            // Ensure the only projectors touching this projector are in the direction we are travelling/coming from
-            if Self::DIRS.into_iter().filter(|&d| d != dir && d != -dir).any(|d| {
-                BlockCoordinate::try_from(at + d)
-                    .map(|x| self.projectors.get(&x).is_some())
-                    .unwrap_or(true)
-            }) {
-                break;
+            let mut shield_details = ShieldDetails::default();
+
+            let mut center = BlockCoordinate::splat(0);
+
+            let group_len = group.len();
+
+            for projector_coord in group {
+                center = center + projector_coord;
+
+                // calculate projector effectiveness
+                let mut touching_projectors = 0;
+
+                if let Ok(bc) = projector_coord.left() {
+                    if self.projectors.contains_key(&bc) {
+                        touching_projectors += 1;
+                    } else if self.generators.contains_key(&bc) {
+                        let value = *group_generators.entry(bc).or_default() + 1;
+                        group_generators.insert(bc, value);
+                    }
+                }
+                if let Ok(bc) = projector_coord.bottom() {
+                    if self.projectors.contains_key(&bc) {
+                        touching_projectors += 1;
+                    } else if self.generators.contains_key(&bc) {
+                        let value = *group_generators.entry(bc).or_default() + 1;
+                        group_generators.insert(bc, value);
+                    }
+                }
+                if let Ok(bc) = projector_coord.back() {
+                    if self.projectors.contains_key(&bc) {
+                        touching_projectors += 1;
+                    } else if self.generators.contains_key(&bc) {
+                        let value = *group_generators.entry(bc).or_default() + 1;
+                        group_generators.insert(bc, value);
+                    }
+                }
+                let bc = projector_coord.top();
+                if self.projectors.contains_key(&bc) {
+                    touching_projectors += 1;
+                } else if self.generators.contains_key(&bc) {
+                    let value = *group_generators.entry(bc).or_default() + 1;
+                    group_generators.insert(bc, value);
+                }
+                let bc = projector_coord.right();
+                if self.projectors.contains_key(&bc) {
+                    touching_projectors += 1;
+                } else if self.generators.contains_key(&bc) {
+                    let value = *group_generators.entry(bc).or_default() + 1;
+                    group_generators.insert(bc, value);
+                }
+                let bc = projector_coord.front();
+                if self.projectors.contains_key(&bc) {
+                    touching_projectors += 1;
+                } else if self.generators.contains_key(&bc) {
+                    let value = *group_generators.entry(bc).or_default() + 1;
+                    group_generators.insert(bc, value);
+                }
+
+                let property = self.projectors.get(&projector_coord).expect("This must exist");
+                shield_details.max_strength += property.shield_strength * (touching_projectors as f32 + 1.0).pow(1.2);
             }
 
-            len += 1;
-            if len > min_radius {
-                break;
-            }
-            at = at + dir;
+            let (generator_power_per_sec, generator_efficiency) = group_generators
+                .iter()
+                .map(|(coord, &total)| {
+                    let gen_property = self.generators.get(coord).expect("This must exist");
+
+                    (
+                        gen_property.power_usage_per_sec,
+                        gen_property.peak_efficiency.pow((7 - total) as f32),
+                    )
+                })
+                .reduce(|(a, b), (x, y)| (a + x, b + y))
+                .map(|(power_per_sec, efficiency)| (power_per_sec, efficiency / group_generators.len() as f32))
+                .unwrap_or((0.0, 0.0));
+
+            shield_details.generation_efficiency = generator_efficiency;
+            shield_details.generation_power_per_sec = generator_power_per_sec;
+
+            center.x /= group_len as CoordinateType;
+            center.y /= group_len as CoordinateType;
+            center.z /= group_len as CoordinateType;
+
+            let distance = max_bounds - min_bounds;
+            shield_details.radius = distance.x.min(distance.y).min(distance.z) as f32 * 2.0 + 10.0;
+
+            self.shields.push((center, shield_details));
         }
-        len
     }
 }
 

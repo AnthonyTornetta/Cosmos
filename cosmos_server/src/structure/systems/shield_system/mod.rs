@@ -60,21 +60,15 @@ fn register_energy_blocks(
     mut proj_storage: ResMut<ShieldProjectorBlocks>,
 ) {
     if let Some(block) = blocks.from_id("cosmos:shield_projector") {
-        proj_storage.0.insert(
-            block.id(),
-            ShieldProjectorProperty {
-                shield_range_increase: 1.0,
-                shield_strength: 1.0,
-            },
-        );
+        proj_storage.0.insert(block.id(), ShieldProjectorProperty { shield_strength: 1.0 });
     }
 
     if let Some(block) = blocks.from_id("cosmos:shield_generator") {
         gen_storage.0.insert(
             block.id(),
             ShieldGeneratorProperty {
-                efficiency: 0.5,
-                max_power_usage_per_sec: 20.0,
+                peak_efficiency: 0.85,
+                power_usage_per_sec: 20.0,
             },
         );
     }
