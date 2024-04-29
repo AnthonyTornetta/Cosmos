@@ -26,6 +26,10 @@ pub struct Shield {
     pub strength: f32,
     /// The maximum amount of strength a shield can hold
     pub max_strength: f32,
+    /// How much power is consumed to generate the shield each second
+    pub power_per_second: f32,
+    /// How efficient the power usage is
+    pub power_efficiency: f32,
 }
 
 impl Shield {

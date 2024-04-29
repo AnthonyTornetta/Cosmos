@@ -153,7 +153,7 @@ fn update_mining_beams(
             continue;
         };
 
-        if !energy_storage_system.decrease_energy(beam.property.energy_per_second * delta_time) {
+        if energy_storage_system.decrease_energy(beam.property.energy_per_second * delta_time) != 0.0 {
             commands.entity(entity).insert(NeedsDespawned);
             continue;
         }
@@ -292,7 +292,7 @@ fn on_activate_system(
                 for line in mining_system.lines.iter() {
                     let energy = line.property.energy_per_second * sec;
 
-                    if energy_storage_system.decrease_energy(energy) {
+                    if energy_storage_system.decrease_energy(energy) == 0.0 {
                         let beam_direction = line.direction.direction_vec3();
 
                         let beam_begin = line.end();

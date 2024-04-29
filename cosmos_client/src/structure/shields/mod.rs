@@ -35,13 +35,13 @@ fn on_change_shield_update_rendering(
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
     for (shield, mut old_radius, mut visibility, mut mesh_handle) in q_changed_shield.iter_mut() {
-        if shield.strength == 0.0 {
-            if *visibility != Visibility::Hidden {
-                *visibility = Visibility::Hidden;
-            }
-        } else {
+        if shield.is_enabled() {
             if *visibility != Visibility::Inherited {
                 *visibility = Visibility::Inherited;
+            }
+        } else {
+            if *visibility != Visibility::Hidden {
+                *visibility = Visibility::Hidden;
             }
         }
 
@@ -120,7 +120,10 @@ fn on_add_shield_create_rendering(
         commands.entity(shield_entity).insert((
             Name::new("Shield"),
             ShieldRender::default(),
-            VisibilityBundle::default(),
+            VisibilityBundle {
+                visibility: Visibility::Hidden,
+                ..Default::default()
+            },
             NotShadowCaster,
             materials.add(ShieldMaterial {
                 base: StandardMaterial {

@@ -1,12 +1,16 @@
 //! Represents all the energy stored on a structure
 
+use std::time::Duration;
+
 use bevy::{
     core::Name,
     ecs::{component::Component, entity::Entity, event::Event, query::Changed, schedule::SystemSet},
-    hierarchy::BuildChildren,
+    hierarchy::{BuildChildren, Parent},
     log::warn,
     math::Vec3,
     prelude::{in_state, App, Commands, EventReader, IntoSystemConfigs, OnEnter, Query, Res, ResMut, Update},
+    reflect::Reflect,
+    time::Time,
     transform::{
         components::{GlobalTransform, Transform},
         TransformBundle,
@@ -28,6 +32,7 @@ use cosmos_core::{
         loading::StructureLoadingSet,
         shields::Shield,
         systems::{
+            energy_storage_system::EnergyStorageSystem,
             shield_system::{ShieldGeneratorBlocks, ShieldGeneratorProperty, ShieldProjectorBlocks, ShieldProjectorProperty, ShieldSystem},
             StructureSystem, StructureSystemType, StructureSystems,
         },
@@ -181,6 +186,8 @@ fn recalculate_shields_if_needed(
                     shield.max_strength = shield_details.max_strength;
                     shield.radius = shield_details.radius;
                     shield.strength = shield.strength.min(shield_details.max_strength);
+                    shield.power_per_second = shield_details.generation_power_per_sec;
+                    shield.power_efficiency = shield_details.generation_efficiency;
 
                     new_placed_shields.push((coord, ent));
                 }
@@ -211,7 +218,9 @@ fn recalculate_shields_if_needed(
                         Shield {
                             max_strength: shield_details.max_strength,
                             radius: shield_details.radius,
-                            strength: shield_details.max_strength,
+                            strength: 0.0,
+                            power_efficiency: shield_details.generation_efficiency,
+                            power_per_second: shield_details.generation_power_per_sec,
                         },
                     ))
                     .id();
@@ -221,6 +230,59 @@ fn recalculate_shields_if_needed(
         });
 
         commands.entity(structure_entity).insert(PlacedShields(new_placed_shields));
+    }
+}
+
+#[derive(Component, Debug, Reflect)]
+struct ShieldDowntime(f32);
+
+const MAX_SHIELD_DOWNTIME: Duration = Duration::from_secs(10);
+
+fn power_shields(
+    mut commands: Commands,
+    mut q_storage_system: Query<&mut EnergyStorageSystem>,
+    q_systems: Query<&StructureSystems>,
+    mut q_shields: Query<(Entity, &mut Shield, &Parent, Option<&mut ShieldDowntime>)>,
+    time: Res<Time>,
+) {
+    for (ent, mut shield, parent, shield_downtime) in &mut q_shields {
+        if shield.strength < shield.max_strength {
+            if shield.strength == 0.0 {
+                let Some(mut shield_downtime) = shield_downtime else {
+                    commands.entity(ent).insert(ShieldDowntime(time.delta_seconds()));
+                    continue;
+                };
+
+                if shield_downtime.0 < MAX_SHIELD_DOWNTIME.as_secs_f32() {
+                    shield_downtime.0 += time.delta_seconds();
+                    continue;
+                }
+            }
+
+            let strength_missing = shield.max_strength - shield.strength;
+
+            let optimal_power_usage = strength_missing / shield.power_efficiency;
+            let power_usage = optimal_power_usage.min(shield.power_per_second * time.delta_seconds());
+
+            let Ok(systems) = q_systems.get(parent.get()) else {
+                warn!("Shield's parent isn't a structure?");
+                continue;
+            };
+
+            let Ok(mut ecs) = systems.query_mut(&mut q_storage_system) else {
+                warn!("Structure w/ shield missing energy storage system!");
+                continue;
+            };
+
+            let not_used = ecs.decrease_energy(power_usage);
+
+            let old_strength = shield.strength;
+            shield.strength += (power_usage - not_used) * shield.power_efficiency;
+
+            if old_strength == 0.0 && shield.strength != 0.0 {
+                commands.entity(ent).remove::<ShieldDowntime>();
+            }
+        }
     }
 }
 
@@ -244,13 +306,15 @@ pub(super) fn register(app: &mut App) {
                 recalculate_shields_if_needed, // before so this runs next frame (so the globaltransform has been added to the structure)
                 structure_loaded_event.in_set(StructureLoadingSet::StructureLoaded),
                 block_update_system,
+                power_shields,
             )
                 .chain()
                 .run_if(in_state(GameState::Playing)),
         )
         .add_systems(Update, send_shield_hits.after(ShieldHitProcessing::OnShieldHit))
         .register_type::<ShieldSystem>()
-        .add_event::<ShieldHitEvent>();
+        .add_event::<ShieldHitEvent>()
+        .register_type::<ShieldDowntime>();
 
     register_structure_system::<ShieldSystem>(app, false, "cosmos:shield_projector");
 }
