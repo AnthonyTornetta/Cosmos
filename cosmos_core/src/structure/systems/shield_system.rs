@@ -172,9 +172,7 @@ impl ShieldSystem {
 
                     for dir in Self::DIRS {
                         if let Ok(bc) = BlockCoordinate::try_from(dir + coord) {
-                            if projectors.remove(&bc).is_some() {
-                                new_doing.push(bc);
-                            } else if generators.remove(&bc).is_some() {
+                            if projectors.remove(&bc).is_some() || generators.remove(&bc).is_some() {
                                 new_doing.push(bc);
                             }
                         }

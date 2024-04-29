@@ -77,7 +77,7 @@ impl EnergyStorageSystem {
         self.energy = amount_left.max(0.0);
 
         if amount_left < 0.0 {
-            return -amount_left;
+            -amount_left
         } else {
             0.0
         }

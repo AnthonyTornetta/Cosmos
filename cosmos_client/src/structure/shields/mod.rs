@@ -39,10 +39,8 @@ fn on_change_shield_update_rendering(
             if *visibility != Visibility::Inherited {
                 *visibility = Visibility::Inherited;
             }
-        } else {
-            if *visibility != Visibility::Hidden {
-                *visibility = Visibility::Hidden;
-            }
+        } else if *visibility != Visibility::Hidden {
+            *visibility = Visibility::Hidden;
         }
 
         if old_radius.0 != shield.radius {

@@ -159,11 +159,11 @@ fn lerp_towards(
 
         let vel = lerp_towards.body_vel.unwrap_or_default();
 
-        velocity.linvel = vel.linvel.into();
+        velocity.linvel = vel.linvel;
         // velocity
         //     .linvel
         //     .lerp(lerp_towards.body_vel.linvel.into(), 0.1);
-        velocity.angvel = vel.angvel.into();
+        velocity.angvel = vel.angvel;
         // velocity
         //     .angvel
         //     .lerp(lerp_towards.body_vel.angvel.into(), 0.1);
