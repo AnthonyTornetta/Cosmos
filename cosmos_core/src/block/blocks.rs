@@ -313,7 +313,13 @@ fn add_cosmos_blocks(
     );
 
     blocks.register(
-        BlockBuilder::new("cosmos:shield", 2.0, 20.0, 5.0)
+        BlockBuilder::new("cosmos:shield_projector", 2.0, 20.0, 5.0)
+            .add_property(BlockProperty::Full)
+            .create(),
+    );
+
+    blocks.register(
+        BlockBuilder::new("cosmos:shield_generator", 2.0, 20.0, 5.0)
             .add_property(BlockProperty::Full)
             .create(),
     );

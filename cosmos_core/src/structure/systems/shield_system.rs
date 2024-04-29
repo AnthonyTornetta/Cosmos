@@ -20,7 +20,7 @@ pub struct ShieldProjectorProperty {
 }
 
 #[derive(Reflect, Clone, Copy, Debug, Serialize, Deserialize)]
-pub struct ShieldEnergyConverterProperty {
+pub struct ShieldGeneratorProperty {
     /// 1.0 = every J of power turns into 1 Unit if shielding
     pub efficiency: f32,
     pub max_power_usage_per_sec: f32,
@@ -30,12 +30,12 @@ pub struct ShieldEnergyConverterProperty {
 pub struct ShieldProjectorBlocks(pub HashMap<u16, ShieldProjectorProperty>);
 
 #[derive(Resource, Default)]
-pub struct ShieldEnergyConverterBlocks(pub HashMap<u16, ShieldProjectorProperty>);
+pub struct ShieldGeneratorBlocks(pub HashMap<u16, ShieldGeneratorProperty>);
 
 #[derive(Reflect, Default, Component, Clone, Serialize, Deserialize, Debug)]
 pub struct ShieldSystem {
     projectors: HashMap<BlockCoordinate, ShieldProjectorProperty>,
-    converters: HashMap<BlockCoordinate, ShieldEnergyConverterProperty>,
+    converters: HashMap<BlockCoordinate, ShieldGeneratorProperty>,
 
     needs_shields_recalculated: bool,
     shields: Vec<(BlockCoordinate, ShieldDetails)>,
@@ -62,12 +62,12 @@ impl ShieldSystem {
         self.needs_shields_recalculated = true;
     }
 
-    pub fn converter_removed(&mut self, coords: BlockCoordinate) {
+    pub fn generator_removed(&mut self, coords: BlockCoordinate) {
         self.converters.remove(&coords);
         self.needs_shields_recalculated = true;
     }
 
-    pub fn converter_added(&mut self, property: ShieldEnergyConverterProperty, coords: BlockCoordinate) {
+    pub fn generator_added(&mut self, property: ShieldGeneratorProperty, coords: BlockCoordinate) {
         self.converters.insert(coords, property);
         self.needs_shields_recalculated = true;
     }

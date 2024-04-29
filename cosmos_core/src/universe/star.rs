@@ -436,12 +436,12 @@ impl Star {
         let rgb = COLOR_TABLE[temp_index];
 
         /// Makes the sun glow when HDR is enabled
-        const SUN_BRIGHTNESS_MULTIPLIER: f32 = 10.0;
+        const STAR_BRIGHTNESS_MULTIPLIER: f32 = 10.0;
 
         Color::rgb(
-            rgb[0] * SUN_BRIGHTNESS_MULTIPLIER,
-            rgb[1] * SUN_BRIGHTNESS_MULTIPLIER,
-            rgb[2] * SUN_BRIGHTNESS_MULTIPLIER,
+            rgb[0] * STAR_BRIGHTNESS_MULTIPLIER,
+            rgb[1] * STAR_BRIGHTNESS_MULTIPLIER,
+            rgb[2] * STAR_BRIGHTNESS_MULTIPLIER,
         )
     }
 

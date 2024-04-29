@@ -28,7 +28,7 @@ use cosmos_core::{
         loading::StructureLoadingSet,
         shields::Shield,
         systems::{
-            shield_system::{ShieldProjectorBlocks, ShieldProjectorProperty, ShieldSystem},
+            shield_system::{ShieldGeneratorBlocks, ShieldGeneratorProperty, ShieldProjectorBlocks, ShieldProjectorProperty, ShieldSystem},
             StructureSystem, StructureSystemType, StructureSystems,
         },
         Structure,
@@ -42,15 +42,25 @@ use super::sync::register_structure_system;
 mod explosion;
 mod laser;
 
+/*
+Shield plan:
+Projectors + generators more effective when placed next to other projectors
+Shield radius based on max dimensions of projectors
+*/
+
 #[derive(Event)]
 pub struct ShieldHitEvent {
     shield_entity: Entity,
     relative_position: Vec3,
 }
 
-fn register_energy_blocks(blocks: Res<Registry<Block>>, mut storage: ResMut<ShieldProjectorBlocks>) {
-    if let Some(block) = blocks.from_id("cosmos:shield") {
-        storage.0.insert(
+fn register_energy_blocks(
+    blocks: Res<Registry<Block>>,
+    mut gen_storage: ResMut<ShieldGeneratorBlocks>,
+    mut proj_storage: ResMut<ShieldProjectorBlocks>,
+) {
+    if let Some(block) = blocks.from_id("cosmos:shield_projector") {
+        proj_storage.0.insert(
             block.id(),
             ShieldProjectorProperty {
                 shield_range_increase: 1.0,
@@ -58,23 +68,42 @@ fn register_energy_blocks(blocks: Res<Registry<Block>>, mut storage: ResMut<Shie
             },
         );
     }
+
+    if let Some(block) = blocks.from_id("cosmos:shield_generator") {
+        gen_storage.0.insert(
+            block.id(),
+            ShieldGeneratorProperty {
+                efficiency: 0.5,
+                max_power_usage_per_sec: 20.0,
+            },
+        );
+    }
 }
 
 fn block_update_system(
     mut event: EventReader<BlockChangedEvent>,
-    projector_blocks: Res<ShieldProjectorBlocks>,
+    shield_projector_blocks: Res<ShieldProjectorBlocks>,
+    shield_generator_blocks: Res<ShieldGeneratorBlocks>,
     mut system_query: Query<&mut ShieldSystem>,
     systems_query: Query<&StructureSystems>,
 ) {
     for ev in event.read() {
         if let Ok(systems) = systems_query.get(ev.structure_entity) {
             if let Ok(mut system) = systems.query_mut(&mut system_query) {
-                if projector_blocks.0.get(&ev.old_block).is_some() {
+                if shield_projector_blocks.0.get(&ev.old_block).is_some() {
                     system.projector_removed(ev.block.coords());
                 }
 
-                if let Some(&prop) = projector_blocks.0.get(&ev.new_block) {
+                if let Some(&prop) = shield_projector_blocks.0.get(&ev.new_block) {
                     system.projector_added(prop, ev.block.coords());
+                }
+
+                if shield_generator_blocks.0.get(&ev.old_block).is_some() {
+                    system.generator_removed(ev.block.coords());
+                }
+
+                if let Some(&prop) = shield_generator_blocks.0.get(&ev.new_block) {
+                    system.generator_added(prop, ev.block.coords());
                 }
             }
         }
@@ -85,7 +114,8 @@ fn structure_loaded_event(
     mut event_reader: EventReader<StructureLoadedEvent>,
     mut structure_query: Query<(&Structure, &mut StructureSystems)>,
     mut commands: Commands,
-    energy_storage_blocks: Res<ShieldProjectorBlocks>,
+    shield_projector_blocks: Res<ShieldProjectorBlocks>,
+    shield_generator_blocks: Res<ShieldGeneratorBlocks>,
     registry: Res<Registry<StructureSystemType>>,
 ) {
     for ev in event_reader.read() {
@@ -93,8 +123,12 @@ fn structure_loaded_event(
             let mut system = ShieldSystem::default();
 
             for block in structure.all_blocks_iter(false) {
-                if let Some(&prop) = energy_storage_blocks.0.get(&structure.block_id_at(block.coords())) {
+                if let Some(&prop) = shield_projector_blocks.0.get(&structure.block_id_at(block.coords())) {
                     system.projector_added(prop, block.coords());
+                }
+
+                if let Some(&prop) = shield_generator_blocks.0.get(&structure.block_id_at(block.coords())) {
+                    system.generator_added(prop, block.coords());
                 }
             }
 
@@ -207,7 +241,8 @@ pub(super) fn register(app: &mut App) {
 
     app.configure_sets(Update, ShieldHitProcessing::OnShieldHit);
 
-    app.insert_resource(ShieldProjectorBlocks::default())
+    app.init_resource::<ShieldProjectorBlocks>()
+        .init_resource::<ShieldGeneratorBlocks>()
         .add_systems(OnEnter(GameState::PostLoading), register_energy_blocks)
         .add_systems(
             Update,
@@ -223,5 +258,5 @@ pub(super) fn register(app: &mut App) {
         .register_type::<ShieldSystem>()
         .add_event::<ShieldHitEvent>();
 
-    register_structure_system::<ShieldSystem>(app, false, "cosmos:shield");
+    register_structure_system::<ShieldSystem>(app, false, "cosmos:shield_projector");
 }
