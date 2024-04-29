@@ -1,3 +1,5 @@
+//! Contains the materials for the client rendering of shields.
+
 use bevy::{
     app::App,
     asset::Asset,

@@ -14,24 +14,43 @@ use crate::structure::coordinates::{BlockCoordinate, CoordinateType, UnboundBloc
 use super::{sync::SyncableSystem, StructureSystemImpl};
 
 #[derive(Reflect, Clone, Copy, Debug, Serialize, Deserialize)]
+/// How much strength this shield projector will add to the shield
+///
+/// This is scaled with the number of projectors touching it exponentially.
+/// If this is touching no other projectors, then the strength will be this amount.
 pub struct ShieldProjectorProperty {
+    /// How much strength this shield projector will add to the shield
+    ///
+    /// This is scaled with the number of projectors touching it exponentially.
+    /// If this is touching no other projectors, then the strength will be this amount.
     pub shield_strength: f32,
 }
 
 #[derive(Reflect, Clone, Copy, Debug, Serialize, Deserialize)]
+/// This block can be used to generate shield strength
 pub struct ShieldGeneratorProperty {
-    /// 1.0 = every J of power turns into 1 Unit if shielding
+    /// The amount of shield produced per second = `efficiency` * `power_usage_per_sec`
+    ///
+    /// This peak efficiency is reached when the generator is adjacent to 6 projectors.
+    /// Efficiencies lower than 0.70 tend to be very ineffective with few adjacent projectors
+    /// because the efficiency calculation is exponential.
     pub peak_efficiency: f32,
+    /// How much power this generator can consume per second.
+    ///
+    /// The amount of shield produced per second = efficiency * this
     pub power_usage_per_sec: f32,
 }
 
 #[derive(Resource, Default)]
+/// All blocks that can be used to project shields
 pub struct ShieldProjectorBlocks(pub HashMap<u16, ShieldProjectorProperty>);
 
 #[derive(Resource, Default)]
+/// All blocks that can be used to generate shield strength
 pub struct ShieldGeneratorBlocks(pub HashMap<u16, ShieldGeneratorProperty>);
 
 #[derive(Reflect, Default, Component, Clone, Serialize, Deserialize, Debug)]
+/// Contains logic for shields
 pub struct ShieldSystem {
     projectors: HashMap<BlockCoordinate, ShieldProjectorProperty>,
     generators: HashMap<BlockCoordinate, ShieldGeneratorProperty>,
@@ -41,40 +60,51 @@ pub struct ShieldSystem {
 }
 
 #[derive(Reflect, Default, Component, Clone, Copy, Serialize, Deserialize, Debug)]
+/// Contains information about how a shield should be
 pub struct ShieldDetails {
+    /// The maximum amount of strength this shield can hold
     pub max_strength: f32,
-    /// shield units/seconds
+    /// How much power this shield can turn into shield units per second
     pub generation_power_per_sec: f32,
     /// Power per Shield Unit (p/su) -- 0.5 means 2 power per shield unit
     pub generation_efficiency: f32,
+    /// The radius of the shield (in meters)
     pub radius: f32,
 }
 
 impl ShieldSystem {
+    /// Returns true if the [`Self::recalculate_shields`] needs to be called for updated shield information.
+    ///
+    /// This is useful, because Changed<ShieldSystem> doesn't always mean the shields need to be recalculated.
     pub fn needs_shields_recalculated(&self) -> bool {
         self.needs_shields_recalculated
     }
 
+    /// Call this whenever a projector block is removed from the structure
     pub fn projector_removed(&mut self, coords: BlockCoordinate) {
         self.projectors.remove(&coords);
         self.needs_shields_recalculated = true;
     }
 
+    /// Call this whenever a projector block is added to the structure
     pub fn projector_added(&mut self, property: ShieldProjectorProperty, coords: BlockCoordinate) {
         self.projectors.insert(coords, property);
         self.needs_shields_recalculated = true;
     }
 
+    /// Call this whenever a generator block is removed from the structure
     pub fn generator_removed(&mut self, coords: BlockCoordinate) {
         self.generators.remove(&coords);
         self.needs_shields_recalculated = true;
     }
 
+    /// Call this whenever a generator block is added to the structure
     pub fn generator_added(&mut self, property: ShieldGeneratorProperty, coords: BlockCoordinate) {
         self.generators.insert(coords, property);
         self.needs_shields_recalculated = true;
     }
 
+    /// Returns the shield details generated from [`Self::recalculate_shields`]
     pub fn shield_details(&self) -> &[(BlockCoordinate, ShieldDetails)] {
         &self.shields
     }
@@ -88,6 +118,10 @@ impl ShieldSystem {
         UnboundBlockCoordinate::new(0, 0, 1),
     ];
 
+    /// Calculates all the shields that should be present in this structure.
+    ///
+    /// This is rather expensive, so only call this if [`Self::needs_shields_recalculated`] is true.
+    /// To get the result of this, call [`Self::shield_details`].
     pub fn recalculate_shields(&mut self) {
         self.needs_shields_recalculated = false;
 
@@ -135,32 +169,12 @@ impl ShieldSystem {
                         max_bounds.z = coord.z;
                     }
 
-                    if let Ok(bc) = coord.left() {
-                        if projectors.remove(&bc).is_some() {
-                            new_doing.push(bc);
+                    for dir in Self::DIRS {
+                        if let Ok(bc) = BlockCoordinate::try_from(dir + coord) {
+                            if projectors.remove(&bc).is_some() {
+                                new_doing.push(bc);
+                            }
                         }
-                    }
-                    if let Ok(bc) = coord.bottom() {
-                        if projectors.remove(&bc).is_some() {
-                            new_doing.push(bc);
-                        }
-                    }
-                    if let Ok(bc) = coord.back() {
-                        if projectors.remove(&bc).is_some() {
-                            new_doing.push(bc);
-                        }
-                    }
-                    let bc = coord.top();
-                    if projectors.remove(&bc).is_some() {
-                        new_doing.push(bc);
-                    }
-                    let bc = coord.right();
-                    if projectors.remove(&bc).is_some() {
-                        new_doing.push(bc);
-                    }
-                    let bc = coord.front();
-                    if projectors.remove(&bc).is_some() {
-                        new_doing.push(bc);
                     }
                 }
 
@@ -187,50 +201,15 @@ impl ShieldSystem {
                 // calculate projector effectiveness
                 let mut touching_projectors = 0;
 
-                if let Ok(bc) = projector_coord.left() {
-                    if self.projectors.contains_key(&bc) {
-                        touching_projectors += 1;
-                    } else if self.generators.contains_key(&bc) {
-                        let value = *group_generators.entry(bc).or_default() + 1;
-                        group_generators.insert(bc, value);
+                for dir in Self::DIRS {
+                    if let Ok(bc) = BlockCoordinate::try_from(dir + projector_coord) {
+                        if self.projectors.contains_key(&bc) {
+                            touching_projectors += 1;
+                        } else if self.generators.contains_key(&bc) {
+                            let value = *group_generators.entry(bc).or_default() + 1;
+                            group_generators.insert(bc, value);
+                        }
                     }
-                }
-                if let Ok(bc) = projector_coord.bottom() {
-                    if self.projectors.contains_key(&bc) {
-                        touching_projectors += 1;
-                    } else if self.generators.contains_key(&bc) {
-                        let value = *group_generators.entry(bc).or_default() + 1;
-                        group_generators.insert(bc, value);
-                    }
-                }
-                if let Ok(bc) = projector_coord.back() {
-                    if self.projectors.contains_key(&bc) {
-                        touching_projectors += 1;
-                    } else if self.generators.contains_key(&bc) {
-                        let value = *group_generators.entry(bc).or_default() + 1;
-                        group_generators.insert(bc, value);
-                    }
-                }
-                let bc = projector_coord.top();
-                if self.projectors.contains_key(&bc) {
-                    touching_projectors += 1;
-                } else if self.generators.contains_key(&bc) {
-                    let value = *group_generators.entry(bc).or_default() + 1;
-                    group_generators.insert(bc, value);
-                }
-                let bc = projector_coord.right();
-                if self.projectors.contains_key(&bc) {
-                    touching_projectors += 1;
-                } else if self.generators.contains_key(&bc) {
-                    let value = *group_generators.entry(bc).or_default() + 1;
-                    group_generators.insert(bc, value);
-                }
-                let bc = projector_coord.front();
-                if self.projectors.contains_key(&bc) {
-                    touching_projectors += 1;
-                } else if self.generators.contains_key(&bc) {
-                    let value = *group_generators.entry(bc).or_default() + 1;
-                    group_generators.insert(bc, value);
                 }
 
                 let property = self.projectors.get(&projector_coord).expect("This must exist");

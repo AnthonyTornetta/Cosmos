@@ -2,7 +2,7 @@
     "material": {
         "name": "cosmos:animated",
         "data": {
-            "frame_duration_ms": "100",
+            "frame_duration_ms": "50",
             "n_frames": "4"
         }
     }
