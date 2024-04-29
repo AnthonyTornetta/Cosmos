@@ -4,7 +4,13 @@ use std::time::Duration;
 
 use bevy::{
     core::Name,
-    ecs::{component::Component, entity::Entity, event::Event, query::Changed, schedule::SystemSet},
+    ecs::{
+        component::Component,
+        entity::Entity,
+        event::Event,
+        query::{Added, Changed, Or, With},
+        schedule::SystemSet,
+    },
     hierarchy::{BuildChildren, Parent},
     log::warn,
     math::Vec3,
@@ -40,7 +46,7 @@ use cosmos_core::{
     },
 };
 
-use crate::state::GameState;
+use crate::{ai::AiControlled, state::GameState};
 
 use super::sync::register_structure_system;
 
@@ -286,6 +292,24 @@ fn power_shields(
     }
 }
 
+/// AIs should spawn with full shield systems
+fn fill_ai_controlled_shields_on_spawn(
+    q_structure: Query<&PlacedShields, (With<AiControlled>, Or<(Added<AiControlled>, Added<PlacedShields>)>)>,
+    mut q_shield: Query<&mut Shield>,
+) {
+    for placed_shields in q_structure.iter() {
+        for &(_, shield_ent) in placed_shields.0.iter() {
+            let Ok(mut shield) = q_shield.get_mut(shield_ent) else {
+                continue;
+            };
+
+            if shield.power_per_second > 0.0 && shield.power_efficiency > 0.0 {
+                shield.strength = shield.max_strength;
+            }
+        }
+    }
+}
+
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 pub enum ShieldHitProcessing {
     OnShieldHit,
@@ -304,6 +328,7 @@ pub(super) fn register(app: &mut App) {
             Update,
             (
                 recalculate_shields_if_needed, // before so this runs next frame (so the globaltransform has been added to the structure)
+                fill_ai_controlled_shields_on_spawn,
                 structure_loaded_event.in_set(StructureLoadingSet::StructureLoaded),
                 block_update_system,
                 power_shields,
