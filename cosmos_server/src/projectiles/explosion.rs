@@ -164,13 +164,7 @@ fn respond_to_explosion(
                         explosion_rapier_coordinates - block_coord,
                         1.0,
                         true,
-                        QueryFilter::default().predicate(&|e| {
-                            let Ok(shield) = q_shield.get(e) else {
-                                return false;
-                            };
-
-                            shield.is_enabled()
-                        }),
+                        QueryFilter::default().predicate(&|e| q_shield.get(e).map(|s| s.is_enabled()).unwrap_or(false)),
                     )
                     .ok()
                     .flatten()
