@@ -1808,7 +1808,7 @@ dependencies = [
 
 [[package]]
 name = "cosmos_client"
-version = "0.0.5"
+version = "0.0.6"
 dependencies = [
  "anyhow",
  "arboard",
@@ -1844,7 +1844,7 @@ dependencies = [
 
 [[package]]
 name = "cosmos_core"
-version = "0.0.5"
+version = "0.0.6"
 dependencies = [
  "anyhow",
  "bevy",
@@ -1869,7 +1869,7 @@ dependencies = [
 
 [[package]]
 name = "cosmos_server"
-version = "0.0.5"
+version = "0.0.6"
 dependencies = [
  "anyhow",
  "bevy",

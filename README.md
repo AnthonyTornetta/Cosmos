@@ -62,11 +62,10 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 - [x] Missiles
   - [x] Auto targetting
   - [x] Explosion logic
-- [ ] Shields
-  - [ ] Emit a spherical shield
-    - [ ] Shield size based on multiblock structure
-  - [ ] Absorb incoming damage
-  - [ ] Block incoming ships (not players though)
+- [x] Shields
+  - [x] Emit a spherical shield
+    - [x] Shield size based on multiblock structure
+  - [x] Absorb incoming damage
 - [ ] Inventory UI improvements
 - [ ] Money
   - [ ] Pay others
@@ -107,7 +106,6 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
         - [ ] Perhaps done via a sphere surrounding the planet that always faces the nearest star
       - [ ] Sun-set skybox
       - [ ] Night-side skybox
-- [ ] Structure gets deleted when no more blocks are left
 - [ ] An interface into all the storage devices on the ship
 
 ## Release 0.0.5a
