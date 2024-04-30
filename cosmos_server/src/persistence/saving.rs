@@ -146,7 +146,7 @@ fn done_saving(
         if fs::try_exists(&path).unwrap_or(false) {
             fs::remove_file(path).expect("Error deleting old save file!");
 
-            if let SaveFileIdentifierType::Base((entity_id, Some(sector), load_distance)) = &dead_save.identifier_type {
+            if let SaveFileIdentifierType::Base(entity_id, Some(sector), load_distance) = &dead_save.identifier_type {
                 sectors_cache.remove(entity_id, *sector, *load_distance);
             }
         }
@@ -182,7 +182,7 @@ fn done_saving(
             if fs::try_exists(&path).unwrap_or(false) {
                 fs::remove_file(path).expect("Error deleting old save file!");
 
-                if let SaveFileIdentifierType::Base((entity_id, Some(sector), load_distance)) = &save_file_identifier.identifier_type {
+                if let SaveFileIdentifierType::Base(entity_id, Some(sector), load_distance) = &save_file_identifier.identifier_type {
                     sectors_cache.remove(entity_id, *sector, *load_distance);
                 }
             }
@@ -207,7 +207,7 @@ fn done_saving(
             continue;
         }
 
-        if matches!(&save_identifier.identifier_type, SaveFileIdentifierType::Base(_)) {
+        if matches!(&save_identifier.identifier_type, SaveFileIdentifierType::Base(_, _, _)) {
             if let Some(loc) = sd.location {
                 sectors_cache.insert(loc.sector(), entity_id, loading_distance.map(|ld| ld.load_distance()));
             }

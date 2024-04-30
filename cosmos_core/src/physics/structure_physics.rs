@@ -16,7 +16,7 @@ use bevy::app::PreUpdate;
 use bevy::ecs::schedule::{IntoSystemSetConfigs, SystemSet};
 use bevy::prelude::{
     Added, App, BuildChildren, Commands, Component, DespawnRecursiveExt, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, Query,
-    Res, Transform, Update,
+    Res, Transform,
 };
 use bevy::reflect::Reflect;
 use bevy::transform::TransformBundle;

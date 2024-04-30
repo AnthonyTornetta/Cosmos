@@ -46,7 +46,14 @@ use cosmos_core::{
     },
 };
 
-use crate::{ai::AiControlled, state::GameState};
+use crate::{
+    ai::AiControlled,
+    persistence::{
+        saving::{NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
+        SerializedData,
+    },
+    state::GameState,
+};
 
 use super::sync::register_structure_system;
 
@@ -310,6 +317,12 @@ fn fill_ai_controlled_shields_on_spawn(
     }
 }
 
+fn on_save_shield(mut q_needs_saved: Query<(&Shield, &mut SerializedData), With<NeedsSaved>>) {
+    for (shield, mut sd) in q_needs_saved.iter_mut() {
+        sd.serialize_data("cosmos:shield", shield);
+    }
+}
+
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 pub enum ShieldHitProcessing {
     OnShieldHit,
@@ -337,6 +350,7 @@ pub(super) fn register(app: &mut App) {
                 .run_if(in_state(GameState::Playing)),
         )
         .add_systems(Update, send_shield_hits.after(ShieldHitProcessing::OnShieldHit))
+        .add_systems(SAVING_SCHEDULE, on_save_shield.in_set(SavingSystemSet::DoSaving))
         .register_type::<ShieldSystem>()
         .add_event::<ShieldHitEvent>()
         .register_type::<ShieldDowntime>();

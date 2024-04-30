@@ -74,7 +74,7 @@ fn check_needs_loaded(query: Query<(Entity, &SaveFileIdentifier), (Without<Seria
 
         commands.entity(ent).insert(serialized_data);
 
-        if let SaveFileIdentifierType::Base((entity_id, _, _)) = &nl.identifier_type {
+        if let SaveFileIdentifierType::Base(entity_id, _, _) = &nl.identifier_type {
             commands.entity(ent).insert(entity_id.clone());
         }
     }
