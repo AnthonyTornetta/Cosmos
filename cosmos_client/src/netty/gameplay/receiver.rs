@@ -216,7 +216,9 @@ fn client_sync_players(
         if x.seconds_since_request < 10.0 {
             true
         } else {
-            commands.entity(x.client_entity).despawn_recursive();
+            if let Some(ecmds) = commands.get_entity(x.client_entity) {
+                ecmds.despawn_recursive();
+            }
             false
         }
     });

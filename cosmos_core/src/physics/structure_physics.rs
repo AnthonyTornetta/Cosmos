@@ -12,6 +12,7 @@ use crate::structure::coordinates::{ChunkBlockCoordinate, ChunkCoordinate, Coord
 use crate::structure::events::ChunkSetEvent;
 use crate::structure::loading::StructureLoadingSet;
 use crate::structure::Structure;
+use bevy::app::PreUpdate;
 use bevy::ecs::schedule::{IntoSystemSetConfigs, SystemSet};
 use bevy::prelude::{
     Added, App, BuildChildren, Commands, Component, DespawnRecursiveExt, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, Query,
@@ -492,9 +493,12 @@ enum StructurePhysicsSet {
 }
 
 pub(super) fn register(app: &mut App) {
+    // This goes in `PreUpdate` because rapier seems to hate adding a rigid body w/ children that have colliders in the same frame.
+    // If you feel like fixing this, more power to you.
     app.configure_sets(
-        Update,
+        PreUpdate,
         StructurePhysicsSet::StructurePhysicsLogic.after(StructureLoadingSet::StructureLoaded),
+        // StructurePhysicsSet::StructurePhysicsLogic.after(StructureLoadingSet::StructureLoaded),
     );
 
     app.add_event::<ChunkNeedsPhysicsEvent>()
@@ -503,7 +507,7 @@ pub(super) fn register(app: &mut App) {
         .register_type::<ColliderMassProperties>()
         .register_type::<ChunkPhysicsParts>()
         .add_systems(
-            Update,
+            PreUpdate,
             (
                 add_physics_parts,
                 listen_for_structure_event,
