@@ -10,7 +10,8 @@
 use bevy::{
     core::Name,
     ecs::schedule::{IntoSystemSetConfigs, SystemSet},
-    log::warn,
+    hierarchy::Parent,
+    log::{error, warn},
     prelude::{App, Commands, Component, Entity, First, IntoSystemConfigs, Query, ResMut, With, Without},
     reflect::Reflect,
 };
@@ -124,6 +125,16 @@ fn done_blueprinting(mut query: Query<(Entity, &mut SerializedData, &NeedsBluepr
     }
 }
 
+fn create_entity_ids(mut commands: Commands, q_without_id: Query<(Entity, &SerializedData), (Without<EntityId>, With<NeedsSaved>)>) {
+    for (ent, sd) in q_without_id.iter() {
+        if !sd.should_save() {
+            continue;
+        }
+
+        commands.entity(ent).insert(EntityId::generate());
+    }
+}
+
 /// Make sure any systems that serialize data for saving are run before this
 fn done_saving(
     query: Query<
@@ -131,12 +142,15 @@ fn done_saving(
             Entity,
             Option<&Name>,
             &SerializedData,
-            Option<&EntityId>,
+            &EntityId,
             Option<&LoadingDistance>,
             Option<&SaveFileIdentifier>,
         ),
         With<NeedsSaved>,
     >,
+    q_parent: Query<&Parent>,
+    q_entity_id: Query<&EntityId>,
+    q_serialized_data: Query<(&SerializedData, &EntityId, Option<&LoadingDistance>)>,
     dead_saves_query: Query<&SaveFileIdentifier, (With<NeedsDespawned>, Without<NeedsSaved>)>,
     mut sectors_cache: ResMut<SectorsCache>,
     mut commands: Commands,
@@ -161,26 +175,18 @@ fn done_saving(
 
         if loading_distance.is_none() {
             if let Some(name) = name {
-                warn!("Missing load distance for {name}");
+                warn!("Missing load distance for {name} {entity:?}");
             } else {
                 warn!("Missing load distance for {entity:?}");
             }
         }
 
-        let entity_id = if let Some(id) = entity_id {
-            id.clone()
-        } else {
-            let entity_id = EntityId::generate();
-
-            commands.entity(entity).insert(entity_id.clone());
-
-            entity_id
-        };
-
         if let Some(save_file_identifier) = save_file_identifier {
             let path = save_file_identifier.get_save_file_path();
             if fs::try_exists(&path).unwrap_or(false) {
-                fs::remove_file(path).expect("Error deleting old save file!");
+                if !fs::remove_file(&path).is_ok() {
+                    warn!("Error deleting old save file at {path}!");
+                }
 
                 if let SaveFileIdentifierType::Base(entity_id, Some(sector), load_distance) = &save_file_identifier.identifier_type {
                     sectors_cache.remove(entity_id, *sector, *load_distance);
@@ -190,17 +196,10 @@ fn done_saving(
 
         let serialized: Vec<u8> = cosmos_encoder::serialize(&sd);
 
-        let save_identifier = save_file_identifier.cloned().unwrap_or_else(|| {
-            let sfi = SaveFileIdentifier::new(
-                sd.location.map(|l| l.sector()),
-                entity_id.clone(),
-                loading_distance.map(|ld| ld.load_distance()),
-            );
-
-            commands.entity(entity).insert(sfi.clone());
-
-            sfi
-        });
+        let Some(save_identifier) = calculate_sfi(entity, &q_parent, &q_entity_id, &q_serialized_data) else {
+            error!("Could not calculate save file identifier for {entity:?}");
+            continue;
+        };
 
         if let Err(e) = write_file(&save_identifier, &serialized) {
             warn!("{e}");
@@ -209,10 +208,44 @@ fn done_saving(
 
         if matches!(&save_identifier.identifier_type, SaveFileIdentifierType::Base(_, _, _)) {
             if let Some(loc) = sd.location {
-                sectors_cache.insert(loc.sector(), entity_id, loading_distance.map(|ld| ld.load_distance()));
+                sectors_cache.insert(loc.sector(), entity_id.clone(), loading_distance.map(|ld| ld.load_distance()));
             }
         }
+
+        commands.entity(entity).insert(save_identifier);
     }
+}
+
+fn calculate_sfi(
+    entity: Entity,
+    q_parent: &Query<&Parent>,
+    q_entity_id: &Query<&EntityId>,
+    q_serialized_data: &Query<(&SerializedData, &EntityId, Option<&LoadingDistance>)>,
+) -> Option<SaveFileIdentifier> {
+    let Ok(parent) = q_parent.get(entity) else {
+        let Ok((sd, entity_id, loading_distance)) = q_serialized_data.get(entity) else {
+            error!("Entity {entity:?} missing entity serialized data. Cannot save {entity:?}.");
+            return None;
+        };
+
+        return Some(SaveFileIdentifier::new(
+            sd.location.map(|l| l.sector()),
+            entity_id.clone(),
+            loading_distance.map(|ld| ld.load_distance()),
+        ));
+    };
+
+    let Ok(entity_id) = q_entity_id.get(entity) else {
+        error!("Missing entity id for {entity:?} - cannot generate save file identifier.");
+        return None;
+    };
+
+    let Some(parent_sfi) = calculate_sfi(parent.get(), &q_parent, &q_entity_id, &q_serialized_data) else {
+        error!("Could not calculate parent save file identifier - not saving {entity:?}");
+        return None;
+    };
+
+    Some(SaveFileIdentifier::sub_entity(parent_sfi, entity_id.clone()))
 }
 
 fn write_file(save_identifier: &SaveFileIdentifier, serialized: &[u8]) -> io::Result<()> {
@@ -258,7 +291,7 @@ pub(super) fn register(app: &mut App) {
         (
             check_needs_saved.in_set(SavingSystemSet::BeginSaving),
             default_save.in_set(SavingSystemSet::DoSaving),
-            done_saving.in_set(SavingSystemSet::DoneSaving),
+            (create_entity_ids, done_saving).chain().in_set(SavingSystemSet::DoneSaving),
         ),
     );
 

@@ -15,13 +15,15 @@ use serde::{Deserialize, Serialize};
 
 use crate::netty::sync::{sync_component, SyncableComponent};
 
-use super::shared::DespawnWithStructure;
+use super::{coordinates::BlockCoordinate, shared::DespawnWithStructure};
 
 #[derive(Component, Reflect, Clone, Debug, Serialize, Deserialize)]
 /// Blocks projectiles that are within the shields bounds
 pub struct Shield {
     /// How big the shield's radius is
     pub radius: f32,
+    /// Where the shield is
+    pub block_coord: BlockCoordinate,
     /// How much damage the shield can block before it breaks
     pub strength: f32,
     /// The maximum amount of strength a shield can hold

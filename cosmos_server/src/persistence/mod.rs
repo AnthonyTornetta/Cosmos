@@ -7,9 +7,6 @@ use std::{
 };
 
 use bevy::{
-    app::Update,
-    core::Name,
-    ecs::system::Query,
     prelude::{App, Component, Resource},
     reflect::Reflect,
     utils::{HashMap, HashSet},
@@ -300,20 +297,10 @@ pub fn is_sector_generated(sector: Sector) -> bool {
     fs::try_exists(SaveFileIdentifier::get_sector_path(sector)).unwrap_or(false)
 }
 
-fn print_trying_to_load(q_sfi: Query<(&SaveFileIdentifier, &Name)>) {
-    for (sfi, n) in q_sfi.iter() {
-        if n.as_str() == "Needs Loaded Entity" {
-            println!("{sfi:?}");
-        }
-    }
-}
-
 pub(super) fn register(app: &mut App) {
     saving::register(app);
     loading::register(app);
     player_loading::register(app);
 
-    app.add_systems(Update, print_trying_to_load);
-
-    app.register_type::<EntityId>();
+    app.register_type::<EntityId>().register_type::<SerializedData>();
 }

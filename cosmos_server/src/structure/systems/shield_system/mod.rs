@@ -21,6 +21,7 @@ use bevy::{
         components::{GlobalTransform, Transform},
         TransformBundle,
     },
+    utils::hashbrown::HashMap,
 };
 
 use bevy_renet::renet::RenetServer;
@@ -49,6 +50,7 @@ use cosmos_core::{
 use crate::{
     ai::AiControlled,
     persistence::{
+        loading::{LoadingSystemSet, NeedsLoaded, LOADING_SCHEDULE},
         saving::{NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
         SerializedData,
     },
@@ -161,7 +163,7 @@ fn send_shield_hits(mut ev_reader: EventReader<ShieldHitEvent>, mut server: ResM
     }
 }
 
-#[derive(Component)]
+#[derive(Debug, Component, Clone, Default, Reflect)]
 struct PlacedShields(Vec<(BlockCoordinate, Entity)>);
 
 fn recalculate_shields_if_needed(
@@ -172,9 +174,11 @@ fn recalculate_shields_if_needed(
     q_structure: Query<(&Location, &GlobalTransform, &Structure)>,
 ) {
     for (mut shield_system, ss) in &mut q_shield_system {
-        if shield_system.needs_shields_recalculated() {
-            shield_system.recalculate_shields();
+        if !shield_system.needs_shields_recalculated() {
+            continue;
         }
+
+        shield_system.recalculate_shields();
 
         let mut keep = vec![];
         let mut done = vec![];
@@ -231,6 +235,7 @@ fn recalculate_shields_if_needed(
                         Shield {
                             max_strength: shield_details.max_strength,
                             radius: shield_details.radius,
+                            block_coord: shield_coord,
                             strength: 0.0,
                             power_efficiency: shield_details.generation_efficiency,
                             power_per_second: shield_details.generation_power_per_sec,
@@ -249,7 +254,7 @@ fn recalculate_shields_if_needed(
 #[derive(Component, Debug, Reflect)]
 struct ShieldDowntime(f32);
 
-const MAX_SHIELD_DOWNTIME: Duration = Duration::from_secs(10);
+const MAX_SHIELD_DOWNTIME: Duration = Duration::from_secs(100);
 
 fn power_shields(
     mut commands: Commands,
@@ -323,8 +328,34 @@ fn on_save_shield(mut q_needs_saved: Query<(&Shield, &mut SerializedData), With<
     }
 }
 
+fn on_load_shield(
+    mut commands: Commands,
+    q_placed_shields: Query<&PlacedShields>,
+    q_needs_saved: Query<(Entity, &SerializedData, &Parent), With<NeedsLoaded>>,
+) {
+    let mut hm = HashMap::new();
+
+    for (ent, sd, parent) in q_needs_saved.iter() {
+        if let Some(shield) = sd.deserialize_data::<Shield>("cosmos:shield") {
+            hm.entry(parent.get()).or_insert(Vec::new()).push((ent, shield.block_coord));
+            commands.entity(ent).insert(shield).insert(Name::new("Shield"));
+        }
+    }
+
+    for (parent, shields) in hm {
+        // The parent shouldn't ever have any placed shields since it should also be loading in, but juuuuust in case we grab it.
+        let mut placed_shields = q_placed_shields.get(parent).cloned().unwrap_or_default();
+
+        for (ent, bc) in shields {
+            placed_shields.0.push((bc, ent));
+        }
+
+        commands.entity(parent).insert(placed_shields);
+    }
+}
+
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
-pub enum ShieldHitProcessing {
+enum ShieldHitProcessing {
     OnShieldHit,
 }
 
@@ -351,9 +382,11 @@ pub(super) fn register(app: &mut App) {
         )
         .add_systems(Update, send_shield_hits.after(ShieldHitProcessing::OnShieldHit))
         .add_systems(SAVING_SCHEDULE, on_save_shield.in_set(SavingSystemSet::DoSaving))
+        .add_systems(LOADING_SCHEDULE, on_load_shield.in_set(LoadingSystemSet::DoLoading))
         .register_type::<ShieldSystem>()
         .add_event::<ShieldHitEvent>()
-        .register_type::<ShieldDowntime>();
+        .register_type::<ShieldDowntime>()
+        .register_type::<PlacedShields>();
 
     register_structure_system::<ShieldSystem>(app, false, "cosmos:shield_projector");
 }

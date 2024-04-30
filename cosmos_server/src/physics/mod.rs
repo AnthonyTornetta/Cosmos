@@ -215,17 +215,20 @@ fn remove_empty_worlds(
 
 /// Handles any just-added locations that need to sync up to their transforms
 fn fix_location(
-    mut query: Query<(Entity, &mut Location, Option<&mut Transform>), (Added<Location>, Without<PlayerWorld>, Without<Parent>)>,
-    player_worlds: Query<(&Location, &WorldWithin, &PhysicsWorld), With<PlayerWorld>>,
+    mut q_added_locations_no_parent: Query<
+        (Entity, &mut Location, Option<&mut Transform>),
+        (Added<Location>, Without<PlayerWorld>, Without<Parent>),
+    >,
+    q_player_worlds: Query<(&Location, &WorldWithin, &PhysicsWorld), With<PlayerWorld>>,
     mut commands: Commands,
-    player_world_loc_query: Query<&Location, With<PlayerWorld>>,
+    q_player_world_loc: Query<&Location, With<PlayerWorld>>,
 ) {
-    for (entity, mut location, my_trans) in query.iter_mut() {
+    for (entity, mut location, my_trans) in q_added_locations_no_parent.iter_mut() {
         let mut best_distance = None;
         let mut best_world = None;
         let mut best_world_id = None;
 
-        for (loc, ww, body_world) in player_worlds.iter() {
+        for (loc, ww, body_world) in q_player_worlds.iter() {
             let distance = location.distance_sqrd(loc);
 
             if best_distance.is_none() || distance < best_distance.unwrap() {
@@ -237,7 +240,7 @@ fn fix_location(
 
         match (best_world, best_world_id) {
             (Some(world), Some(world_id)) => {
-                if let Ok(loc) = player_world_loc_query.get(world.0) {
+                if let Ok(loc) = q_player_world_loc.get(world.0) {
                     let translation = -location.relative_coords_to(loc);
 
                     location.last_transform_loc = Some(translation);
