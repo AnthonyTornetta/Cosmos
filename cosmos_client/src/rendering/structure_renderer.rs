@@ -729,6 +729,26 @@ impl ChunkRenderer {
                 let rotation = block_rotation.as_quat();
 
                 for (og_face, face) in faces.iter().map(|face| (*face, block_rotation.rotate_face(*face))) {
+                    let mut one_mesh_only = false;
+
+                    let Some(mut mesh_info) = mesh
+                        .info_for_face(face, same_blocks[og_face.index()])
+                        .map(|x| Some(x))
+                        .unwrap_or_else(|| {
+                            let single_mesh = mesh.info_for_whole_block();
+
+                            if single_mesh.is_some() {
+                                one_mesh_only = true;
+                            }
+
+                            single_mesh
+                        })
+                        .cloned()
+                    else {
+                        // This face has no model, ignore
+                        continue;
+                    };
+
                     let index = block_textures
                         .from_id(block.unlocalized_name())
                         .unwrap_or_else(|| block_textures.from_id("missing").expect("Missing texture should exist."));
@@ -739,18 +759,6 @@ impl ChunkRenderer {
                     };
 
                     let uvs = Rect::new(0.0, 0.0, 1.0, 1.0);
-
-                    let mut one_mesh_only = false;
-
-                    let mut mesh_info = mesh
-                        .info_for_face(face, same_blocks[og_face.index()])
-                        .unwrap_or_else(|| {
-                            one_mesh_only = true;
-
-                            mesh.info_for_whole_block()
-                                .expect("Block must have either face or whole block meshes")
-                        })
-                        .clone();
 
                     for pos in mesh_info.positions.iter_mut() {
                         *pos = rotation.mul_vec3((*pos).into()).into();

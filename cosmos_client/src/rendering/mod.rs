@@ -365,13 +365,13 @@ enum MeshType {
     ///
     /// Make sure this is in the same order as the [`BlockFace::index`] method.
     MultipleFaceMeshConnected {
-        base: Box<[MeshInformation; 6]>,
-        connected: Box<[MeshInformation; 6]>,
+        base: Box<[Option<MeshInformation>; 6]>,
+        connected: Box<[Option<MeshInformation>; 6]>,
     },
     /// The mesh is broken up into its 6 faces, which can all be stitched together to create the full mesh
     ///
     /// Make sure this is in the same order as the [`BlockFace::index`] method.
-    MultipleFaceMesh(Box<[MeshInformation; 6]>),
+    MultipleFaceMesh(Box<[Option<MeshInformation>; 6]>),
     /// This mesh contains the model data for every face
     AllFacesMesh(Box<MeshInformation>),
 }
@@ -405,12 +405,12 @@ impl BlockMeshInformation {
     pub fn new_multi_face(
         unlocalized_name: impl Into<String>,
 
-        right: MeshInformation,
-        left: MeshInformation,
-        top: MeshInformation,
-        bottom: MeshInformation,
-        front: MeshInformation,
-        back: MeshInformation,
+        right: Option<MeshInformation>,
+        left: Option<MeshInformation>,
+        top: Option<MeshInformation>,
+        bottom: Option<MeshInformation>,
+        front: Option<MeshInformation>,
+        back: Option<MeshInformation>,
     ) -> Self {
         // If this ever fails, change the `mesh_info` ordering + comment below
         debug_assert!(BlockFace::Right.index() == 0);
@@ -447,6 +447,7 @@ impl BlockMeshInformation {
     /// Returns true if the block has an individual mesh for each face of the block
     pub fn has_multiple_face_meshes(&self) -> bool {
         matches!(self.mesh_info, MeshType::MultipleFaceMesh(_))
+            || matches!(self.mesh_info, MeshType::MultipleFaceMeshConnected { base: _, connected: _ })
     }
 
     /// Returns true if the block only one mesh and does not have meshes for each side of the block
@@ -461,12 +462,12 @@ impl BlockMeshInformation {
         match &self.mesh_info {
             MeshType::MultipleFaceMeshConnected { base, connected } => {
                 if same_block_adjacent {
-                    Some(&connected[face.index()])
+                    connected[face.index()].as_ref()
                 } else {
-                    Some(&base[face.index()])
+                    base[face.index()].as_ref()
                 }
             }
-            MeshType::MultipleFaceMesh(faces) => Some(&faces[face.index()]),
+            MeshType::MultipleFaceMesh(faces) => faces[face.index()].as_ref(),
             MeshType::AllFacesMesh(_) => None,
         }
     }
@@ -493,37 +494,43 @@ fn register_meshes(mut registry: ResMut<BlockMeshRegistry>) {
             uvs: vec![[0.0, 1.0], [0.0, 0.0], [1.0, 0.0], [1.0, 1.0]],
             positions: vec![[0.5, -0.5, -0.5], [0.5, 0.5, -0.5], [0.5, 0.5, 0.5], [0.5, -0.5, 0.5]],
             normals: [[1.0, 0.0, 0.0]; 4].to_vec(),
-        },
+        }
+        .into(),
         MeshInformation {
             indices: vec![0, 1, 2, 2, 3, 0],
             uvs: vec![[0.0, 1.0], [0.0, 0.0], [1.0, 0.0], [1.0, 1.0]],
             positions: vec![[-0.5, -0.5, 0.5], [-0.5, 0.5, 0.5], [-0.5, 0.5, -0.5], [-0.5, -0.5, -0.5]],
             normals: [[-1.0, 0.0, 0.0]; 4].to_vec(),
-        },
+        }
+        .into(),
         MeshInformation {
             indices: vec![0, 1, 2, 2, 3, 0],
             uvs: vec![[1.0, 1.0], [0.0, 1.0], [0.0, 0.0], [1.0, 0.0]],
             positions: vec![[0.5, 0.5, -0.5], [-0.5, 0.5, -0.5], [-0.5, 0.5, 0.5], [0.5, 0.5, 0.5]],
             normals: [[0.0, 1.0, 0.0]; 4].to_vec(),
-        },
+        }
+        .into(),
         MeshInformation {
             indices: vec![0, 1, 2, 2, 3, 0],
             uvs: vec![[1.0, 0.0], [0.0, 0.0], [0.0, 1.0], [1.0, 1.0]],
             positions: vec![[0.5, -0.5, 0.5], [-0.5, -0.5, 0.5], [-0.5, -0.5, -0.5], [0.5, -0.5, -0.5]],
             normals: [[0.0, -1.0, 0.0]; 4].to_vec(),
-        },
+        }
+        .into(),
         MeshInformation {
             indices: vec![0, 1, 2, 2, 3, 0],
             uvs: vec![[0.0, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0]],
             positions: vec![[-0.5, -0.5, 0.5], [0.5, -0.5, 0.5], [0.5, 0.5, 0.5], [-0.5, 0.5, 0.5]],
             normals: [[0.0, 0.0, 1.0]; 4].to_vec(),
-        },
+        }
+        .into(),
         MeshInformation {
             indices: vec![0, 1, 2, 2, 3, 0],
             uvs: vec![[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]],
             positions: vec![[-0.5, 0.5, -0.5], [0.5, 0.5, -0.5], [0.5, -0.5, -0.5], [-0.5, -0.5, -0.5]],
             normals: [[0.0, 0.0, -1.0]; 4].to_vec(),
-        },
+        }
+        .into(),
     ));
 }
 
@@ -811,7 +818,7 @@ fn register_block_meshes(
 
                     let block_mesh_info = match model_data {
                         ModelData::All(model_data) => {
-                            let mesh_info = get_mesh_information(model_data);
+                            let mesh_info = get_mesh_information(model_data).expect("All face model cannot be none!");
 
                             BlockMeshInformation {
                                 mesh_info: MeshType::AllFacesMesh(Box::new(mesh_info)),
@@ -885,15 +892,20 @@ fn register_block_meshes(
     }
 }
 
-fn get_mesh_information(model_data: &String) -> MeshInformation {
-    let mut split = model_data.split(':');
+fn get_mesh_information(model_name: &String) -> Option<MeshInformation> {
+    if model_name.to_ascii_lowercase() == "none" {
+        return None;
+    }
+
+    let mut split = model_name.split(':');
     let (Some(mod_id), Some(model_name), None) = (split.next(), split.next(), split.next()) else {
-        panic!("Invalid model name: {model_data}. Must be mod_id:model_name");
+        panic!("Invalid model name: {model_name}. Must be mod_id:model_name");
     };
 
     let path = format!("assets/{mod_id}/models/blocks/{model_name}.stupid");
     let mesh_info = stupid_parse(&path).unwrap_or_else(|| panic!("Unable to parse/read/find file at {path}"));
-    mesh_info
+
+    Some(mesh_info)
 }
 
 /// This is a `ManyToOneRegistry` mapping Blocks to `BlockMeshInformation`.
