@@ -187,30 +187,11 @@ fn check_assets_ready(
     }
 }
 
-// #[derive(Debug, Clone)]
-// /// Contains information that links the block faces to their texture indices.
-// ///
-// /// This could also link non-face imformation to their texture indices.
-// // struct BlockTextureIndicies(HashMap<String, u32>);
-// struct BlockTextureIndicies(LoadedTexture);
-
-// impl BlockTextureIndicies {
-//     fn all(index: u32) -> Self {
-//         let mut map = HashMap::new();
-//         map.insert("all".into(), index);
-//         Self(map)
-//     }
-
-//     fn new(map: HashMap<String, u32>) -> Self {
-//         Self(map)
-//     }
-// }
-
 #[derive(Debug, Clone)]
 /// Links blocks to their correspoding atlas index.
 pub struct BlockTextureIndex {
     lod_texture: Option<LoadedTextureType>,
-    indices: LoadedTexture,
+    texture: LoadedTexture,
     id: u16,
     unlocalized_name: String,
 }
@@ -229,7 +210,7 @@ impl BlockTextureIndex {
     #[inline]
     /// Returns the index for that block face, if one exists
     pub fn atlas_index_from_face(&self, face: BlockFace, neighbors: BlockNeighbors) -> Option<u32> {
-        match &self.indices {
+        match &self.texture {
             LoadedTexture::All(texture_type) => get_texture_index_from_type(texture_type, neighbors),
             LoadedTexture::Sides {
                 right,
@@ -421,7 +402,7 @@ pub fn load_block_rendering_information(
         id: 0,
         unlocalized_name: "missing".to_owned(),
         lod_texture: None,
-        indices: LoadedTexture::All(LoadedTextureType::Single(missing_texture_index)),
+        texture: LoadedTexture::All(LoadedTextureType::Single(missing_texture_index)),
     });
 
     for block in blocks.iter() {
@@ -490,7 +471,7 @@ pub fn load_block_rendering_information(
             id: 0,
             unlocalized_name: unlocalized_name.to_owned(),
             lod_texture,
-            indices: map,
+            texture: map,
         });
 
         info_registry.register(block_info);

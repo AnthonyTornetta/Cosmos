@@ -755,17 +755,64 @@ impl ChunkRenderer {
 
                     let mut neighbors = BlockNeighbors::empty();
 
-                    if same_blocks[og_face.local_right().index()] {
-                        neighbors |= BlockNeighbors::Right;
-                    }
-                    if same_blocks[og_face.local_left().index()] {
-                        neighbors |= BlockNeighbors::Left;
-                    }
-                    if same_blocks[og_face.local_top().index()] {
-                        neighbors |= BlockNeighbors::Top;
-                    }
-                    if same_blocks[og_face.local_bottom().index()] {
-                        neighbors |= BlockNeighbors::Bottom;
+                    match og_face {
+                        BlockFace::Front | BlockFace::Back => {
+                            if same_blocks[BlockFace::Right.index()] {
+                                neighbors |= BlockNeighbors::Right;
+                            }
+                            if same_blocks[BlockFace::Left.index()] {
+                                neighbors |= BlockNeighbors::Left;
+                            }
+                            if same_blocks[BlockFace::Top.index()] {
+                                neighbors |= BlockNeighbors::Top;
+                            }
+                            if same_blocks[BlockFace::Bottom.index()] {
+                                neighbors |= BlockNeighbors::Bottom;
+                            }
+                        }
+                        BlockFace::Top | BlockFace::Bottom => {
+                            if same_blocks[BlockFace::Right.index()] {
+                                neighbors |= BlockNeighbors::Right;
+                            }
+                            if same_blocks[BlockFace::Left.index()] {
+                                neighbors |= BlockNeighbors::Left;
+                            }
+                            if same_blocks[BlockFace::Front.index()] {
+                                neighbors |= BlockNeighbors::Top;
+                            }
+                            if same_blocks[BlockFace::Back.index()] {
+                                neighbors |= BlockNeighbors::Bottom;
+                            }
+                        }
+                        // idk why right and left have to separate, and I don't want to know why
+                        BlockFace::Right => {
+                            if same_blocks[BlockFace::Front.index()] {
+                                neighbors |= BlockNeighbors::Right;
+                            }
+                            if same_blocks[BlockFace::Back.index()] {
+                                neighbors |= BlockNeighbors::Left;
+                            }
+                            if same_blocks[BlockFace::Top.index()] {
+                                neighbors |= BlockNeighbors::Top;
+                            }
+                            if same_blocks[BlockFace::Bottom.index()] {
+                                neighbors |= BlockNeighbors::Bottom;
+                            }
+                        }
+                        BlockFace::Left => {
+                            if same_blocks[BlockFace::Back.index()] {
+                                neighbors |= BlockNeighbors::Right;
+                            }
+                            if same_blocks[BlockFace::Front.index()] {
+                                neighbors |= BlockNeighbors::Left;
+                            }
+                            if same_blocks[BlockFace::Top.index()] {
+                                neighbors |= BlockNeighbors::Top;
+                            }
+                            if same_blocks[BlockFace::Bottom.index()] {
+                                neighbors |= BlockNeighbors::Bottom;
+                            }
+                        }
                     }
 
                     let Some(image_index) = index.atlas_index_from_face(face, neighbors) else {
