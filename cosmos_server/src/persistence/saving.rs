@@ -184,7 +184,7 @@ fn done_saving(
         if let Some(save_file_identifier) = save_file_identifier {
             let path = save_file_identifier.get_save_file_path();
             if fs::try_exists(&path).unwrap_or(false) {
-                if !fs::remove_file(&path).is_ok() {
+                if fs::remove_file(&path).is_err() {
                     warn!("Error deleting old save file at {path}!");
                 }
 
@@ -240,7 +240,7 @@ fn calculate_sfi(
         return None;
     };
 
-    let Some(parent_sfi) = calculate_sfi(parent.get(), &q_parent, &q_entity_id, &q_serialized_data) else {
+    let Some(parent_sfi) = calculate_sfi(parent.get(), q_parent, q_entity_id, q_serialized_data) else {
         error!("Could not calculate parent save file identifier - not saving {entity:?}");
         return None;
     };

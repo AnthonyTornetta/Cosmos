@@ -205,7 +205,7 @@ fn load_all(base: SaveFileIdentifier, file: DirEntry, to_load: &mut Vec<SaveFile
 
         let child_dir = sfi.get_children_directory();
 
-        for file in WalkDir::new(&child_dir)
+        for file in WalkDir::new(child_dir)
             .max_depth(1)
             .into_iter()
             .flatten()
