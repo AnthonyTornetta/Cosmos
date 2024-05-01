@@ -801,7 +801,7 @@ fn register_block_meshes(
             if let Some(model_data) = block_info.from_id(block.unlocalized_name()).map(|x| &x.model) {
                 let name = match model_data {
                     ModelData::All(name) => name,
-                    ModelData::Sided {
+                    ModelData::Sides {
                         name,
                         right: _,
                         left: _,
@@ -826,7 +826,7 @@ fn register_block_meshes(
                                 unlocalized_name: name.into(),
                             }
                         }
-                        ModelData::Sided {
+                        ModelData::Sides {
                             name: _,
                             right,
                             left,

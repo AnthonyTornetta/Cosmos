@@ -1,7 +1,24 @@
 {
     "texture": {
-        "all": "cosmos:gravity_well_sides",
-        "top": "cosmos:gravity_well_top_bottom",
-        "bottom": "cosmos:gravity_well_top_bottom"
+        "Sides": {
+            "right": {
+                "Single": "cosmos:gravity_well_sides"
+            },
+            "left": {
+                "Single": "cosmos:gravity_well_sides"
+            },
+            "front": {
+                "Single": "cosmos:gravity_well_sides"
+            },
+            "back": {
+                "Single": "cosmos:gravity_well_sides"
+            },
+            "top": {
+                "Single": "cosmos:gravity_well_top_bottom"
+            },
+            "bottom": {
+                "Single": "cosmos:gravity_well_top_bottom"
+            }
+        }
     }
 }

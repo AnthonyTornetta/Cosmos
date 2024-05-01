@@ -44,7 +44,7 @@ use rayon::prelude::{IndexedParallelIterator, IntoParallelRefIterator, ParallelI
 
 use crate::{
     asset::{
-        asset_loading::BlockTextureIndex,
+        asset_loading::{BlockNeighbors, BlockTextureIndex},
         materials::{add_materials, remove_materials, AddMaterialEvent, BlockMaterialMapping, MaterialDefinition, MaterialType},
     },
     state::game_state::GameState,
@@ -281,13 +281,15 @@ impl ChunkRenderer {
                         .from_id(block.unlocalized_name())
                         .unwrap_or_else(|| block_textures.from_id("missing").expect("Missing texture should exist."));
 
+                    let neighbors = BlockNeighbors::empty();
+
                     let maybe_img_idx = if self.scale > 8.0 {
                         index
-                            .atlas_index("lod")
+                            .atlas_index_for_lod(neighbors)
                             .map(Some)
-                            .unwrap_or_else(|| index.atlas_index_from_face(face))
+                            .unwrap_or_else(|| index.atlas_index_from_face(face, neighbors))
                     } else {
-                        index.atlas_index_from_face(face)
+                        index.atlas_index_from_face(face, neighbors)
                     };
 
                     let Some(image_index) = maybe_img_idx else {

@@ -1,6 +1,6 @@
 {
     "model": {
-        "Sided": {
+        "Sides": {
             "name": "cosmos:logic_wire",
             "left": "cosmos:logic_wire_left",
             "right": "cosmos:logic_wire_right",

@@ -1,6 +1,28 @@
 {
+    "texture": {
+        "All": {
+            "Connected": [
+                "cosmos:glass_0",
+                "cosmos:glass_1",
+                "cosmos:glass_2",
+                "cosmos:glass_3",
+                "cosmos:glass_4",
+                "cosmos:glass_5",
+                "cosmos:glass_6",
+                "cosmos:glass_7",
+                "cosmos:glass_8",
+                "cosmos:glass_9",
+                "cosmos:glass_10",
+                "cosmos:glass_11",
+                "cosmos:glass_12",
+                "cosmos:glass_13",
+                "cosmos:glass_14",
+                "cosmos:glass_15"
+            ]
+        }
+    },
     "model": {
-        "Sided": {
+        "Sides": {
             "name": "cosmos:glass",
             "top": "cosmos:base_top",
             "bottom": "cosmos:base_bottom",

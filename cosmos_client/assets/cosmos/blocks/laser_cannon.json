@@ -1,10 +1,24 @@
 {
     "texture": {
-        "front": "cosmos:laser_cannon_front",
-        "back": "cosmos:laser_cannon_back",
-        "left": "cosmos:laser_cannon_left_right",
-        "right": "cosmos:laser_cannon_left_right",
-        "top": "cosmos:laser_cannon_top_bottom",
-        "bottom": "cosmos:laser_cannon_top_bottom"
+        "Sides": {
+            "front": {
+                "Single": "cosmos:laser_cannon_front"
+            },
+            "back": {
+                "Single": "cosmos:laser_cannon_back"
+            },
+            "left": {
+                "Single": "cosmos:laser_cannon_left_right"
+            },
+            "right": {
+                "Single": "cosmos:laser_cannon_left_right"
+            },
+            "top": {
+                "Single": "cosmos:laser_cannon_top_bottom"
+            },
+            "bottom": {
+                "Single": "cosmos:laser_cannon_top_bottom"
+            }
+        }
     }
 }

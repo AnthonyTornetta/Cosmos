@@ -1,4 +1,4 @@
-use crate::asset::asset_loading::BlockTextureIndex;
+use crate::asset::asset_loading::{BlockNeighbors, BlockTextureIndex};
 use crate::asset::materials::{
     add_materials, remove_materials, AddMaterialEvent, BlockMaterialMapping, MaterialDefinition, MaterialType, RemoveAllMaterialsEvent,
 };
@@ -753,7 +753,22 @@ impl ChunkRenderer {
                         .from_id(block.unlocalized_name())
                         .unwrap_or_else(|| block_textures.from_id("missing").expect("Missing texture should exist."));
 
-                    let Some(image_index) = index.atlas_index_from_face(face) else {
+                    let mut neighbors = BlockNeighbors::empty();
+
+                    if same_blocks[og_face.local_right().index()] {
+                        neighbors |= BlockNeighbors::Right;
+                    }
+                    if same_blocks[og_face.local_left().index()] {
+                        neighbors |= BlockNeighbors::Left;
+                    }
+                    if same_blocks[og_face.local_top().index()] {
+                        neighbors |= BlockNeighbors::Top;
+                    }
+                    if same_blocks[og_face.local_bottom().index()] {
+                        neighbors |= BlockNeighbors::Bottom;
+                    }
+
+                    let Some(image_index) = index.atlas_index_from_face(face, neighbors) else {
                         warn!("Missing image index for face {face} -- {index:?}");
                         continue;
                     };

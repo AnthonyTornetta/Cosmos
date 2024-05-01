@@ -15,7 +15,7 @@ use cosmos_core::{
 
 use crate::{
     asset::{
-        asset_loading::BlockTextureIndex,
+        asset_loading::{BlockNeighbors, BlockTextureIndex},
         materials::{
             add_materials, block_materials::ArrayTextureMaterial, remove_materials, AddMaterialEvent, BlockMaterialMapping,
             MaterialDefinition, MaterialType,
@@ -162,7 +162,7 @@ fn render_items(
 
                 mesh_info.scale(Vec3::new(size, size, size));
 
-                let Some(image_index) = index.atlas_index_from_face(face) else {
+                let Some(image_index) = index.atlas_index_from_face(face, BlockNeighbors::empty()) else {
                     continue;
                 };
 
@@ -181,7 +181,7 @@ fn render_items(
 
             mesh_info.scale(Vec3::new(size, size, size));
 
-            let Some(image_index) = index.atlas_index("all") else {
+            let Some(image_index) = index.atlas_index_from_face(BlockFace::Front, BlockNeighbors::empty()) else {
                 continue;
             };
 

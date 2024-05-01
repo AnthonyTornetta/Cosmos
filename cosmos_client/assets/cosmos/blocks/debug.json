@@ -1,10 +1,24 @@
 {
     "texture": {
-        "left": "cosmos:debug_left",
-        "right": "cosmos:debug_right",
-        "top": "cosmos:debug_top",
-        "bottom": "cosmos:debug_bottom",
-        "front": "cosmos:debug_front",
-        "back": "cosmos:debug_back"
+        "Sides": {
+            "left": {
+                "Single": "cosmos:debug_left"
+            },
+            "right": {
+                "Single": "cosmos:debug_right"
+            },
+            "top": {
+                "Single": "cosmos:debug_top"
+            },
+            "bottom": {
+                "Single": "cosmos:debug_bottom"
+            },
+            "front": {
+                "Single": "cosmos:debug_front"
+            },
+            "back": {
+                "Single": "cosmos:debug_back"
+            }
+        }
     }
 }
