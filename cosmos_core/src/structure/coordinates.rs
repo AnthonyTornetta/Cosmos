@@ -250,11 +250,7 @@ macro_rules! create_coordinate {
 
             /// Computes the abs() of each value and converts to a bounded coordinate type
             pub fn abs(&self) -> $name {
-                $name::new(
-                    self.x.abs() as CoordinateType,
-                    self.y.abs() as CoordinateType,
-                    self.z.abs() as CoordinateType,
-                )
+                $name::new(self.x.unsigned_abs(), self.y.unsigned_abs(), self.z.unsigned_abs())
             }
         }
 
