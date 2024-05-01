@@ -537,7 +537,7 @@ impl ChunkRenderer {
                 same_block: &mut bool,
             ) -> bool {
                 *same_block = block == c.block_at(coords);
-                (!*same_block || !actual_block.is_full()) && c.has_see_through_block_at(coords, blocks)
+                c.has_see_through_block_at(coords, blocks) || !actual_block.is_full()
             }
 
             let (x, y, z) = (coords.x, coords.y, coords.z);
