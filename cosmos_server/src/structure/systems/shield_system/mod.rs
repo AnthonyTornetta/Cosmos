@@ -254,7 +254,7 @@ fn recalculate_shields_if_needed(
 #[derive(Component, Debug, Reflect)]
 struct ShieldDowntime(f32);
 
-const MAX_SHIELD_DOWNTIME: Duration = Duration::from_secs(100);
+const MAX_SHIELD_DOWNTIME: Duration = Duration::from_secs(10);
 
 fn power_shields(
     mut commands: Commands,
