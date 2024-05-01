@@ -198,10 +198,18 @@ pub struct BlockTextureIndex {
 
 bitflags! {
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    /// Flags that control connected textures
+    ///
+    /// If this is a part of a structure, you should compute the blocks that are in these positions
+    /// relative to the face.
     pub struct BlockNeighbors: usize {
+        /// There is a block this should connect with to the left of this face
         const Left = 0b1;
+        /// There is a block this should connect with to the right of this face
         const Right = 0b10;
+        /// There is a block this should connect with to the top of this face
         const Top = 0b100;
+        /// There is a block this should connect with to the bottom of this face
         const Bottom = 0b1000;
     }
 }
@@ -282,16 +290,29 @@ struct ReadBlockInfo {
 }
 
 #[derive(Serialize, Clone, Deserialize, Debug)]
+/// Points to the model files of this block
 pub enum ModelData {
+    /// The block is made up of one model and cannot be divided into separate faces.
     All(String),
+    /// The block is made up of models that are divided into separate faces.
     Sides {
+        /// The model's name. This should almost always be the unlocalized_name of the block it belongs to.
+        ///
+        /// This should be unique to the combination of faces & connected faces.
         name: String,
+        /// The model for the right block face
         right: String,
+        /// The model for the left block face
         left: String,
+        /// The model for the top block face
         top: String,
+        /// The model for the bottom block face
         bottom: String,
+        /// The model for the front block face
         front: String,
+        /// The model for the back block face
         back: String,
+        /// If this should have separate faces used when adjacent to other types of itself, this field can be used
         connected: Option<ConnectedModelData>,
     },
 }
@@ -303,18 +324,26 @@ impl Default for ModelData {
 }
 
 #[derive(Serialize, Clone, Deserialize, Debug)]
+/// These models whill be used when the same type of block is placed adjacent to one of the faces of this block
 pub struct ConnectedModelData {
+    /// Used when the same type of block is placed adjacent to the right face. This will replace the normal right face model.
     pub right: String,
+    /// Used when the same type of block is placed adjacent to the left face. This will replace the normal left face model.
     pub left: String,
+    /// Used when the same type of block is placed adjacent to the top face. This will replace the normal top face model.
     pub top: String,
+    /// Used when the same type of block is placed adjacent to the bottom face. This will replace the normal bottom face model.
     pub bottom: String,
+    /// Used when the same type of block is placed adjacent to the front face. This will replace the normal front face model.
     pub front: String,
+    /// Used when the same type of block is placed adjacent to the back face. This will replace the normal back face model.
     pub back: String,
 }
 
 #[derive(Debug, Clone)]
 /// Every block will have information about how to render it -- even air
 pub struct BlockRenderingInfo {
+    /// Texture used when rendering LODs
     pub lod_texture: Option<LoadingTextureType>,
     /// This maps textures ids to the various parts of its model.
     pub texture: LoadingTexture,
@@ -328,40 +357,76 @@ pub struct BlockRenderingInfo {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+/// Indicates the texture that should be used for this block.
+///
+/// This is for textures that haven't been assigned indexes yet.
+///
+/// This will get turned into a [`LoadedTexture`] during the loading phase.
 pub enum LoadingTexture {
+    /// Each side uses the same texture
     All(LoadingTextureType),
+    /// Each side uses a different texture
     Sides {
+        /// The right face's texture
         right: LoadingTextureType,
+        /// The left face's texture
         left: LoadingTextureType,
+        /// The top face's texture
         top: LoadingTextureType,
+        /// The bottom face's texture
         bottom: LoadingTextureType,
+        /// The front face's texture
         front: LoadingTextureType,
+        /// The back face's texture
         back: LoadingTextureType,
     },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+/// Indicates if this texture is connected or is single
 pub enum LoadingTextureType {
+    /// This texture will not respond to nearby blocks
     Single(String),
+    /// This texture will change based on nearby blocks.
+    ///
+    /// Index order is based on the bitwise value of [`BlockNeighbor`].
+    /// Check the docs for how you should set these textures.
+    /// TODO: make docs. For now just check out how glass works.
     Connected(Box<[String; 16]>),
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+/// Indicates the texture that should be used for this block.
 pub enum LoadedTexture {
+    /// Each side uses the same texture
     All(LoadedTextureType),
+    /// Each side uses a different texture
     Sides {
+        /// The right face's texture
         right: LoadedTextureType,
+        /// The left face's texture
         left: LoadedTextureType,
+        /// The top face's texture
         top: LoadedTextureType,
+        /// The bottom face's texture
         bottom: LoadedTextureType,
+        /// The front face's texture
         front: LoadedTextureType,
+        /// The back face's texture
         back: LoadedTextureType,
     },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+/// Indicates if this texture is connected or is single
 pub enum LoadedTextureType {
+    /// This texture will not respond to nearby blocks
     Single(u32),
+    /// This texture will change based on nearby blocks.
+    ///
+    /// Index order is based on the bitwise value of [`BlockNeighbors`].
+    /// Check the docs for how you should set these textures.
+    /// TODO: make docs. For now just check out how glass works.
     Connected([u32; 16]),
 }
 
