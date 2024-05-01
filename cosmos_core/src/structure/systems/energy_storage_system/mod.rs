@@ -71,10 +71,16 @@ impl EnergyStorageSystem {
     ///
     /// You can use `get_energy` to see if there is enough to use.
     ///
-    /// Returns true if there is enough power to perform this operation, false if not.
-    pub fn decrease_energy(&mut self, delta: f32) -> bool {
-        self.energy = (self.energy - delta).max(0.0);
-        self.energy > 0.0
+    /// Returns 0.0 if there is enough power to perform this operation, however much power was not able to be taken if not.
+    pub fn decrease_energy(&mut self, delta: f32) -> f32 {
+        let amount_left = self.energy - delta;
+        self.energy = amount_left.max(0.0);
+
+        if amount_left < 0.0 {
+            -amount_left
+        } else {
+            0.0
+        }
     }
 
     /// Gets the current stored energy of the system

@@ -3,7 +3,10 @@
 //! Mostly used to move entities between worlds & sync up locations to their transforms.
 
 use bevy::{prelude::*, utils::HashSet};
-use bevy_rapier3d::prelude::{PhysicsWorld, RapierContext, RapierWorld, DEFAULT_WORLD_ID};
+use bevy_rapier3d::{
+    plugin::WorldId,
+    prelude::{PhysicsWorld, RapierContext, RapierWorld, DEFAULT_WORLD_ID},
+};
 use cosmos_core::{
     entities::player::Player,
     netty::system_sets::NetworkingSystemsSet,
@@ -213,19 +216,37 @@ fn remove_empty_worlds(
     }
 }
 
+#[derive(Resource, Default)]
+struct FixParentLocation(Vec<Entity>);
+
+/// Bevy's query mutability rules require this query to be in a separate system than fix_location
+fn find_need_fixed(
+    q_added_locations_no_parent: Query<Entity, (Added<Location>, Without<PlayerWorld>, Without<Parent>)>,
+    mut fix: ResMut<FixParentLocation>,
+) {
+    for e in q_added_locations_no_parent.iter() {
+        fix.0.push(e);
+    }
+}
+
 /// Handles any just-added locations that need to sync up to their transforms
 fn fix_location(
-    mut query: Query<(Entity, &mut Location, Option<&mut Transform>), (Added<Location>, Without<PlayerWorld>, Without<Parent>)>,
-    player_worlds: Query<(&Location, &WorldWithin, &PhysicsWorld), With<PlayerWorld>>,
+    mut q_location_info: Query<(&mut Location, Option<&mut Transform>), Without<PlayerWorld>>,
+    q_children: Query<&Children>,
+    q_player_worlds: Query<(&Location, &WorldWithin, &PhysicsWorld), With<PlayerWorld>>,
     mut commands: Commands,
-    player_world_loc_query: Query<&Location, With<PlayerWorld>>,
+    q_player_world_loc: Query<&Location, With<PlayerWorld>>,
+    mut fix: ResMut<FixParentLocation>,
 ) {
-    for (entity, mut location, my_trans) in query.iter_mut() {
+    for entity in std::mem::take(&mut fix.0) {
+        // This makes the borrow checker happy
+        let (location, _) = q_location_info.get(entity).expect("Guarenteed in query conditions");
+
         let mut best_distance = None;
         let mut best_world = None;
         let mut best_world_id = None;
 
-        for (loc, ww, body_world) in player_worlds.iter() {
+        for (loc, ww, body_world) in q_player_worlds.iter() {
             let distance = location.distance_sqrd(loc);
 
             if best_distance.is_none() || distance < best_distance.unwrap() {
@@ -237,29 +258,68 @@ fn fix_location(
 
         match (best_world, best_world_id) {
             (Some(world), Some(world_id)) => {
-                if let Ok(loc) = player_world_loc_query.get(world.0) {
-                    let translation = -location.relative_coords_to(loc);
-
-                    location.last_transform_loc = Some(translation);
-
-                    commands.entity(entity).insert((world, PhysicsWorld { world_id }));
-
-                    if let Some(mut my_trans) = my_trans {
-                        my_trans.translation = translation;
-                    } else {
-                        commands
-                            .entity(entity)
-                            .insert((TransformBundle::from_transform(Transform::from_translation(translation)),));
-                    }
-                } else {
+                let Ok(loc) = q_player_world_loc.get(world.0) else {
                     warn!("A player world was missing a location");
-                }
+                    continue;
+                };
+
+                recursively_fix_locations(
+                    entity,
+                    *loc,
+                    Quat::IDENTITY,
+                    &mut q_location_info,
+                    &q_children,
+                    &mut commands,
+                    world,
+                    world_id,
+                );
             }
             _ => {
                 warn!("Something was added with a location before a player world was created.");
                 commands.entity(entity).log_components();
             }
         }
+    }
+}
+
+fn recursively_fix_locations(
+    entity: Entity,
+    parent_loc: Location,
+    mut parent_rotation: Quat,
+    q_info: &mut Query<(&mut Location, Option<&mut Transform>), Without<PlayerWorld>>,
+    q_children: &Query<&Children>,
+    commands: &mut Commands,
+    world: WorldWithin,
+    world_id: WorldId,
+) {
+    let Ok((mut my_loc, my_trans)) = q_info.get_mut(entity) else {
+        return;
+    };
+
+    let translation = parent_rotation.inverse().mul_vec3(-my_loc.relative_coords_to(&parent_loc));
+
+    my_loc.last_transform_loc = Some(translation);
+
+    commands.entity(entity).insert((world, PhysicsWorld { world_id }));
+
+    if let Some(mut my_trans) = my_trans {
+        my_trans.translation = translation;
+
+        parent_rotation *= my_trans.rotation;
+    } else {
+        commands
+            .entity(entity)
+            .insert((TransformBundle::from_transform(Transform::from_translation(translation)),));
+    }
+
+    let Ok(children) = q_children.get(entity) else {
+        return;
+    };
+
+    let my_loc = *my_loc;
+
+    for &child in children {
+        recursively_fix_locations(child, my_loc, parent_rotation, q_info, q_children, commands, world, world_id);
     }
 }
 
@@ -372,10 +432,14 @@ pub(super) fn register(app: &mut App) {
             Update,
             (
                 player_changed_parent,
+                find_need_fixed,
                 fix_location,
                 sync_transforms_and_locations,
                 handle_child_syncing,
                 add_previous_location,
+                // consider for future:
+                // sync_simple_transforms,
+                // propagate_transforms,
             )
                 .chain()
                 .after(CosmosBundleSet::HandleCosmosBundles)
@@ -388,5 +452,6 @@ pub(super) fn register(app: &mut App) {
         .add_systems(
             Last,
             (move_players_between_worlds, move_non_players_between_worlds, remove_empty_worlds).chain(),
-        );
+        )
+        .init_resource::<FixParentLocation>();
 }

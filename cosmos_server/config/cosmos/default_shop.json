@@ -950,5 +950,61 @@
       "max_quantity_buying": null,
       "price_per": 180
     }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:ramp",
+      "max_quantity_selling": 10000,
+      "price_per": 40
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:ramp",
+      "max_quantity_buying": null,
+      "price_per": 36
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:missile_launcher",
+      "max_quantity_selling": 10000,
+      "price_per": 600
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:missile_launcher",
+      "max_quantity_buying": null,
+      "price_per": 540
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:shield_projector",
+      "max_quantity_selling": 10000,
+      "price_per": 600
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:shield_projector",
+      "max_quantity_buying": null,
+      "price_per": 540
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:shield_generator",
+      "max_quantity_selling": 10000,
+      "price_per": 600
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:shield_generator",
+      "max_quantity_buying": null,
+      "price_per": 540
+    }
   }
 ]

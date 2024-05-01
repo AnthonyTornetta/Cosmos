@@ -11,6 +11,7 @@ use std::fs;
 
 use bevy::{
     ecs::schedule::{IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
+    hierarchy::BuildChildren,
     log::{error, warn},
     prelude::{App, Commands, Component, Entity, Quat, Query, Update, With, Without},
     reflect::Reflect,
@@ -22,7 +23,7 @@ use cosmos_core::{
     structure::loading::StructureLoadingSet,
 };
 
-use super::{SaveFileIdentifier, SaveFileIdentifierType, SerializedData};
+use super::{EntityId, SaveFileIdentifier, SaveFileIdentifierType, SerializedData};
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 /// Put anything related to loading entities in from serialized data into this set
@@ -61,8 +62,12 @@ pub struct NeedsBlueprintLoaded {
     pub path: String,
 }
 
-fn check_needs_loaded(query: Query<(Entity, &SaveFileIdentifier), (Without<SerializedData>, With<NeedsLoaded>)>, mut commands: Commands) {
-    for (ent, nl) in query.iter() {
+fn check_needs_loaded(
+    q_entity_ids: Query<(Entity, &EntityId)>,
+    q_sfis: Query<(Entity, &SaveFileIdentifier), (Without<SerializedData>, With<NeedsLoaded>)>,
+    mut commands: Commands,
+) {
+    for (ent, nl) in q_sfis.iter() {
         let path = nl.get_save_file_path();
         let Ok(data) = fs::read(&path) else {
             warn!("Error reading file at '{path}'. Is it there?");
@@ -72,11 +77,57 @@ fn check_needs_loaded(query: Query<(Entity, &SaveFileIdentifier), (Without<Seria
 
         let serialized_data: SerializedData = cosmos_encoder::deserialize(&data).expect("Error deserializing data for {path}");
 
-        commands.entity(ent).insert(serialized_data);
+        match &nl.identifier_type {
+            SaveFileIdentifierType::Base(entity_id, _, _) => {
+                commands.entity(ent).insert(entity_id.clone());
+            }
+            SaveFileIdentifierType::SubEntity(base, entity_id) => {
+                if let Some(looking_for_entity) = match &base.identifier_type {
+                    SaveFileIdentifierType::Base(entity_id, _, _) => Some(entity_id),
+                    SaveFileIdentifierType::SubEntity(_, entity_id) => Some(entity_id),
+                    SaveFileIdentifierType::BelongsTo(_, _) => None,
+                } {
+                    let mut parent = None;
+                    // Most often the parent will also be being loaded, so we have to search through the currently being loaded.
+                    for (entity, sfi) in q_sfis.iter() {
+                        match &sfi.identifier_type {
+                            SaveFileIdentifierType::Base(entity_id, _, _) => {
+                                if entity_id == looking_for_entity {
+                                    parent = Some(entity);
+                                    break;
+                                }
+                            }
+                            SaveFileIdentifierType::SubEntity(_, entity_id) => {
+                                if entity_id == looking_for_entity {
+                                    parent = Some(entity);
+                                    break;
+                                }
+                            }
+                            // Not managed by this system, managed by whoever this belongs to
+                            SaveFileIdentifierType::BelongsTo(_, _) => {}
+                        }
+                    }
 
-        if let SaveFileIdentifierType::Base((entity_id, _, _)) = &nl.identifier_type {
-            commands.entity(ent).insert(entity_id.clone());
+                    if parent.is_none() {
+                        if let Some((ent, _)) = q_entity_ids.iter().find(|(_, eid)| *eid == looking_for_entity) {
+                            parent = Some(ent);
+                        }
+                    }
+
+                    if let Some(parent) = parent {
+                        commands.entity(ent).set_parent(parent);
+                    } else {
+                        warn!("Unable to find parent with entity id {looking_for_entity:?} for entity {ent:?}");
+                    }
+                }
+
+                commands.entity(ent).insert(entity_id.clone());
+            }
+            // Not managed by this system, managed by whoever this belongs to
+            SaveFileIdentifierType::BelongsTo(_, _) => {}
         }
+
+        commands.entity(ent).insert(serialized_data);
     }
 }
 

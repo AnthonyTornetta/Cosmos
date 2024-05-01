@@ -7,6 +7,7 @@ pub mod laser_cannon_system;
 pub mod mining_laser_system;
 pub mod missile_launcher_system;
 pub mod player_interactions;
+mod shield_system;
 mod sync;
 pub mod thruster_system;
 
@@ -14,6 +15,7 @@ use bevy::prelude::App;
 
 pub(super) fn register(app: &mut App) {
     player_interactions::register(app);
+    shield_system::register(app);
     thruster_system::register(app);
     camera_system::register(app);
     laser_cannon_system::register(app);

@@ -63,7 +63,7 @@ fn on_add_missile(q_added_missile: Query<Entity, Added<Missile>>, mut commands: 
     }
 }
 
-#[derive(Component, Debug, Reflect, Clone, Serialize, Deserialize)]
+#[derive(Component, Debug, Reflect, Clone, Copy, Serialize, Deserialize)]
 /// Something that will cause damage to nearby entities that it hits.
 pub struct Explosion {
     /// The power of the explosion is used to calculate its radius & effectiveness against blocks.

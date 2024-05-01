@@ -157,11 +157,13 @@ fn lerp_towards(
         transform.rotation = //lerp_towards.rotation;
             transform.rotation.lerp(lerp_towards.rotation, 0.1);
 
-        velocity.linvel = lerp_towards.body_vel.linvel.into();
+        let vel = lerp_towards.body_vel.unwrap_or_default();
+
+        velocity.linvel = vel.linvel;
         // velocity
         //     .linvel
         //     .lerp(lerp_towards.body_vel.linvel.into(), 0.1);
-        velocity.angvel = lerp_towards.body_vel.angvel.into();
+        velocity.angvel = vel.angvel;
         // velocity
         //     .angvel
         //     .lerp(lerp_towards.body_vel.angvel.into(), 0.1);
@@ -169,7 +171,7 @@ fn lerp_towards(
 }
 
 /// TODO: super split this up
-pub(crate) fn client_sync_players(
+fn client_sync_players(
     mut commands: Commands,
     (mut meshes, mut client, transport, mut lobby, mut network_mapping): (
         ResMut<Assets<Mesh>>,
@@ -195,6 +197,7 @@ pub(crate) fn client_sync_players(
         ),
         Without<LocalPlayer>,
     >,
+    q_parent: Query<&Parent>,
     mut query_structure: Query<&mut Structure>,
     blocks: Res<Registry<Block>>,
     mut pilot_change_event_writer: EventWriter<ChangePilotEvent>,
@@ -213,7 +216,9 @@ pub(crate) fn client_sync_players(
         if x.seconds_since_request < 10.0 {
             true
         } else {
-            commands.entity(x.client_entity).despawn_recursive();
+            if let Some(ecmds) = commands.get_entity(x.client_entity) {
+                ecmds.despawn_recursive();
+            }
             false
         }
     });
@@ -253,6 +258,14 @@ pub(crate) fn client_sync_players(
                                     NettyRigidBodyLocation::Relative(rel_trans, parent_ent) => {
                                         let parent_loc =
                                             query_body.get(parent_ent).map(|x| x.0.copied()).unwrap_or(None).unwrap_or_default();
+
+                                        if let Ok(parent) = q_parent.get(entity) {
+                                            if parent.get() != parent_ent {
+                                                commands.entity(entity).set_parent(parent_ent);
+                                            }
+                                        } else {
+                                            commands.entity(entity).set_parent(parent_ent);
+                                        }
 
                                         parent_loc + rel_trans
                                     }

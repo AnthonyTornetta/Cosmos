@@ -21,6 +21,7 @@ use crate::{
         location::Location,
         player_world::{PlayerWorld, WorldWithin},
     },
+    structure::chunk::ChunkEntity,
 };
 
 /// How long a laser will stay alive for before despawning
@@ -187,6 +188,7 @@ fn handle_events(
     mut event_writer: EventWriter<LaserCollideEvent>,
     rapier_context: Res<RapierContext>,
     parent_query: Query<&Parent>,
+    chunk_parent_query: Query<&Parent, With<ChunkEntity>>,
     transform_query: Query<&GlobalTransform, Without<Laser>>,
     worlds: Query<(&Location, &PhysicsWorld, Entity), With<PlayerWorld>>,
 ) {
@@ -244,7 +246,7 @@ fn handle_events(
             ) {
                 let pos = ray_start + (toi * ray_direction) + (velocity.linvel.normalize() * 0.01);
 
-                if let Ok(parent) = parent_query.get(entity) {
+                if let Ok(parent) = chunk_parent_query.get(entity) {
                     if let Ok(transform) = transform_query.get(parent.get()) {
                         let lph = Quat::from_affine3(&transform.affine())
                             .inverse()

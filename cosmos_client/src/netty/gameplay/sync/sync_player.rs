@@ -43,7 +43,7 @@ fn send_position(
         };
 
         let msg = ClientUnreliableMessages::PlayerBody {
-            body: NettyRigidBody::new(velocity, transform.rotation, netty_loc),
+            body: NettyRigidBody::new(Some(*velocity), transform.rotation, netty_loc),
             looking,
         };
 

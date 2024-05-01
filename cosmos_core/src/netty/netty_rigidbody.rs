@@ -2,7 +2,6 @@
 
 use bevy::prelude::{Entity, Quat, Transform, Vec3};
 use bevy_rapier3d::prelude::Velocity;
-use bevy_rapier3d::rapier::prelude::RigidBodyVelocity;
 use serde::{Deserialize, Serialize};
 
 use crate::physics::location::Location;
@@ -22,7 +21,7 @@ pub enum NettyRigidBodyLocation {
 /// The rigidbody to send
 pub struct NettyRigidBody {
     /// The velocity
-    pub body_vel: RigidBodyVelocity,
+    pub body_vel: Option<Velocity>,
     /// The location
     pub location: NettyRigidBodyLocation,
     /// The rotation
@@ -31,9 +30,9 @@ pub struct NettyRigidBody {
 
 impl NettyRigidBody {
     /// Creates a new rigidbody
-    pub fn new(body_vel: &Velocity, rotation: Quat, location: NettyRigidBodyLocation) -> Self {
+    pub fn new(body_vel: Option<Velocity>, rotation: Quat, location: NettyRigidBodyLocation) -> Self {
         Self {
-            body_vel: RigidBodyVelocity::new(body_vel.linvel.into(), body_vel.angvel.into()),
+            body_vel,
             location,
             rotation,
         }
@@ -53,9 +52,6 @@ impl NettyRigidBody {
 
     /// Creates a usable velocity component
     pub fn create_velocity(&self) -> Velocity {
-        Velocity {
-            angvel: self.body_vel.angvel.into(),
-            linvel: self.body_vel.linvel.into(),
-        }
+        self.body_vel.unwrap_or_default()
     }
 }

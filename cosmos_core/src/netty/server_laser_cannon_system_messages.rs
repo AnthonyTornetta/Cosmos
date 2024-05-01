@@ -33,4 +33,11 @@ pub enum ServerStructureSystemMessages {
         /// The ship the system was a part of
         ship_entity: Entity,
     },
+    /// Sent whenever a shield is hit
+    ShieldHit {
+        /// The shield entity that was hit
+        shield_entity: Entity,
+        /// The relative location that was hit of the shield (not normalized)
+        relative_location: Vec3,
+    },
 }

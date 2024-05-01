@@ -27,6 +27,7 @@ pub mod lod;
 pub mod lod_chunk;
 pub mod planet;
 pub mod shared;
+pub mod shields;
 pub mod ship;
 pub mod station;
 pub mod structure_block;
@@ -765,6 +766,7 @@ pub(super) fn register<T: States + Clone + Copy>(app: &mut App, playing_state: T
     shared::register(app);
     loading::register(app);
     systems::register(app);
+    shields::register(app);
     block_health::register(app);
     structure_block::register(app);
 

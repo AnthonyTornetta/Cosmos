@@ -36,7 +36,7 @@ fn on_request_station(
                 NettyChannelServer::Reliable,
                 cosmos_encoder::serialize(&ServerReliableMessages::Station {
                     entity: ev.entity,
-                    body: NettyRigidBody::new(velocity, transform.rotation, NettyRigidBodyLocation::Absolute(*location)),
+                    body: NettyRigidBody::new(Some(*velocity), transform.rotation, NettyRigidBodyLocation::Absolute(*location)),
                     dimensions: structure.chunk_dimensions(),
                 }),
             );

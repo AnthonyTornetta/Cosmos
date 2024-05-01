@@ -60,8 +60,15 @@ fn server_sync_bodies(
     mut server: ResMut<RenetServer>,
     mut tick: ResMut<NetworkTick>,
     location_query: Query<&Location>,
-    entities: Query<(Entity, &Transform, &Location, &Velocity, &LoadingDistance, Option<&Parent>), Without<NoSendEntity>>,
+    entities: Query<(Entity, &Transform, &Location, Option<&Velocity>, &LoadingDistance, Option<&Parent>), Without<NoSendEntity>>,
     players: Query<(&Player, &RenderDistance, &Location)>,
+    // Often children will not have locations or loading distances, but still need to by synced
+    // q_children_need_synced: Query<
+    //     (Entity, Option<&Velocity>, &Transform, &Parent),
+    //     (Without<LoadingDistance>, Without<NoSendEntity>, Without<Location>),
+    // >,
+    // q_loading_distance: Query<(&Location, &LoadingDistance)>,
+    // q_parent: Query<&Parent>,
 ) {
     tick.0 += 1;
 
@@ -71,7 +78,7 @@ fn server_sync_bodies(
         bodies.push((
             entity,
             NettyRigidBody::new(
-                velocity,
+                velocity.copied(),
                 transform.rotation,
                 match parent.map(|p| p.get()) {
                     Some(parent_entity) => NettyRigidBodyLocation::Relative(
@@ -91,6 +98,28 @@ fn server_sync_bodies(
             bodies.clear();
         }
     }
+
+    // for (ent, velocity, transform, parent) in q_children_need_synced.iter() {
+    //     let mut info = None;
+
+    //     let mut cur_ent = parent.get();
+    //     while info.is_none() {
+    //         if let Ok((loc, load_dist)) = q_loading_distance.get(cur_ent) {
+    //             info = Some((*loc, *load_dist));
+    //         } else {
+    //             if let Ok(next_ent) = q_parent.get(cur_ent) {
+    //                 cur_ent = next_ent.get();
+    //             } else {
+    //                 break;
+    //             }
+    //         }
+    //     }
+
+    //     let Some((parent_loc, parent_loading_distance)) = info else {
+    //         continue;
+    //     };
+
+    // }
 
     if !bodies.is_empty() {
         send_bodies(&players, &bodies, &mut server, &tick);

@@ -3,7 +3,10 @@
 use std::time::Duration;
 
 use bevy::prelude::*;
-use bevy_rapier3d::prelude::Velocity;
+use bevy_rapier3d::{
+    geometry::{CollisionGroups, Group},
+    prelude::Velocity,
+};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::Block,
@@ -238,6 +241,7 @@ fn update_missile_system(
                         ..Default::default()
                     },
                     LoadingDistance::new(1, 2),
+                    CollisionGroups::new(Group::ALL, Group::ALL),
                     CollisionBlacklist::single(CollisionBlacklistedEntity {
                         entity: system.structure_entity(),
                         search_parents: true,

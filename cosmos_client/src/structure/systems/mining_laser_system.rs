@@ -7,12 +7,18 @@ use bevy::{
     utils::HashMap,
 };
 use bevy_kira_audio::prelude::*;
-use bevy_rapier3d::{dynamics::PhysicsWorld, pipeline::QueryFilter, plugin::RapierContext};
+use bevy_rapier3d::{
+    dynamics::PhysicsWorld,
+    geometry::{CollisionGroups, Group},
+    pipeline::QueryFilter,
+    plugin::RapierContext,
+};
 use cosmos_core::{
     block::BlockFace,
     ecs::NeedsDespawned,
     structure::{
         shared::DespawnWithStructure,
+        shields::SHIELD_COLLISION_GROUP,
         systems::{
             energy_storage_system::EnergyStorageSystem, mining_laser_system::MiningLaserSystem, StructureSystem, StructureSystems,
             SystemActive,
@@ -243,7 +249,11 @@ fn resize_mining_lasers(
                 } else {
                     false
                 }
-            }),
+            })
+            .groups(CollisionGroups::new(
+                Group::ALL & !SHIELD_COLLISION_GROUP,
+                Group::ALL & !SHIELD_COLLISION_GROUP,
+            )),
         ) {
             Ok(Some((_, toi))) => toi,
             _ => mining_laser.max_length,

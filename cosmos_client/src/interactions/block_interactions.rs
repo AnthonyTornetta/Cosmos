@@ -1,7 +1,10 @@
 //! Used to handle client interactions with various blocks
 
 use bevy::prelude::*;
-use bevy_rapier3d::prelude::{QueryFilter, RapierContext, DEFAULT_WORLD_ID};
+use bevy_rapier3d::{
+    geometry::{CollisionGroups, Group},
+    prelude::{QueryFilter, RapierContext, DEFAULT_WORLD_ID},
+};
 use cosmos_core::{
     block::{block_events::BlockInteractEvent, Block, BlockFace, BlockRotation, BlockSubRotation},
     blockitems::BlockItems,
@@ -10,7 +13,10 @@ use cosmos_core::{
     netty::client::LocalPlayer,
     physics::structure_physics::ChunkPhysicsPart,
     registry::Registry,
-    structure::{coordinates::UnboundBlockCoordinate, planet::Planet, ship::pilot::Pilot, structure_block::StructureBlock, Structure},
+    structure::{
+        coordinates::UnboundBlockCoordinate, planet::Planet, shields::SHIELD_COLLISION_GROUP, ship::pilot::Pilot,
+        structure_block::StructureBlock, Structure,
+    },
 };
 
 use crate::{
@@ -63,7 +69,10 @@ pub(crate) fn process_player_interaction(
         cam_trans.forward(),
         10.0,
         true,
-        QueryFilter::new().exclude_rigid_body(player_entity), // don't want to hit yourself
+        QueryFilter::new().exclude_rigid_body(player_entity).groups(CollisionGroups::new(
+            Group::ALL & !SHIELD_COLLISION_GROUP,
+            Group::ALL & !SHIELD_COLLISION_GROUP,
+        )), // don't want to hit yourself
     ) else {
         if let Some(mut looking_at) = looking_at {
             looking_at.looking_at_block = None;

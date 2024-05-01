@@ -1,5 +1,10 @@
 use bevy::{prelude::*, utils::HashMap};
-use bevy_rapier3d::{pipeline::QueryFilter, plugin::RapierContext, prelude::PhysicsWorld};
+use bevy_rapier3d::{
+    geometry::{CollisionGroups, Group},
+    pipeline::QueryFilter,
+    plugin::RapierContext,
+    prelude::PhysicsWorld,
+};
 use cosmos_core::{
     block::{
         block_events::{BlockBreakEvent, BlockEventsSet},
@@ -10,6 +15,7 @@ use cosmos_core::{
     structure::{
         coordinates::BlockCoordinate,
         shared::{DespawnWithStructure, MeltingDown},
+        shields::SHIELD_COLLISION_GROUP,
         ship::Ship,
         structure_block::StructureBlock,
         systems::{
@@ -147,7 +153,7 @@ fn update_mining_beams(
             continue;
         };
 
-        if !energy_storage_system.decrease_energy(beam.property.energy_per_second * delta_time) {
+        if energy_storage_system.decrease_energy(beam.property.energy_per_second * delta_time) != 0.0 {
             commands.entity(entity).insert(NeedsDespawned);
             continue;
         }
@@ -169,7 +175,11 @@ fn update_mining_beams(
                 } else {
                     false
                 }
-            }),
+            })
+            .groups(CollisionGroups::new(
+                Group::ALL & !SHIELD_COLLISION_GROUP,
+                Group::ALL & !SHIELD_COLLISION_GROUP,
+            )),
         ) else {
             continue;
         };
@@ -282,7 +292,7 @@ fn on_activate_system(
                 for line in mining_system.lines.iter() {
                     let energy = line.property.energy_per_second * sec;
 
-                    if energy_storage_system.decrease_energy(energy) {
+                    if energy_storage_system.decrease_energy(energy) == 0.0 {
                         let beam_direction = line.direction.direction_vec3();
 
                         let beam_begin = line.end();
