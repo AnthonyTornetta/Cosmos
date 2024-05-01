@@ -262,7 +262,38 @@ pub struct MaterialData {
 struct ReadBlockInfo {
     material: Option<MaterialData>,
     texture: Option<HashMap<String, String>>,
-    model: Option<String>,
+    model: Option<ModelData>,
+}
+
+#[derive(Serialize, Clone, Deserialize, Debug)]
+pub enum ModelData {
+    All(String),
+    Sided {
+        name: String,
+        right: String,
+        left: String,
+        top: String,
+        bottom: String,
+        front: String,
+        back: String,
+        connected: Option<ConnectedModelData>,
+    },
+}
+
+impl Default for ModelData {
+    fn default() -> Self {
+        Self::All("cosmos:base_block".into())
+    }
+}
+
+#[derive(Serialize, Clone, Deserialize, Debug)]
+pub struct ConnectedModelData {
+    pub right: String,
+    pub left: String,
+    pub top: String,
+    pub bottom: String,
+    pub front: String,
+    pub back: String,
 }
 
 #[derive(Debug, Clone)]
@@ -271,7 +302,7 @@ pub struct BlockRenderingInfo {
     /// This maps textures ids to the various parts of its model.
     pub texture: HashMap<String, String>,
     /// This is the model id this block has
-    pub model: String,
+    pub model: ModelData,
     /// This data is sent to the material for its own processing, if it is provided
     pub material_data: Option<MaterialData>,
 
@@ -333,7 +364,7 @@ pub fn load_block_rendering_information(
             BlockRenderingInfo {
                 id: 0,
                 unlocalized_name: block.unlocalized_name().to_owned(),
-                model: read_info.model.unwrap_or("cosmos:base_block".into()),
+                model: read_info.model.unwrap_or_default(),
                 texture: read_info.texture.unwrap_or_else(|| {
                     let mut default_hashmap = HashMap::new();
                     default_hashmap.insert("all".into(), unlocalized_name.to_owned());
@@ -347,7 +378,7 @@ pub fn load_block_rendering_information(
 
             BlockRenderingInfo {
                 texture: default_hashmap.clone(),
-                model: "cosmos:base_block".into(),
+                model: ModelData::default(),
                 id: 0,
                 unlocalized_name: block.unlocalized_name().to_owned(),
                 material_data: None,

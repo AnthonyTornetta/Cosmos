@@ -413,7 +413,7 @@ impl BlockFace {
     /// Returns the index for each block face [0, 5].
     ///
     /// Useful for storing faces in an array
-    pub fn index(&self) -> usize {
+    pub const fn index(&self) -> usize {
         match *self {
             BlockFace::Right => 0,
             BlockFace::Left => 1,
@@ -425,7 +425,7 @@ impl BlockFace {
     }
 
     /// Returns the integer direction each face represents
-    pub fn direction(&self) -> (i32, i32, i32) {
+    pub const fn direction(&self) -> (i32, i32, i32) {
         match *self {
             Self::Front => (0, 0, 1),
             Self::Back => (0, 0, -1),
@@ -437,7 +437,7 @@ impl BlockFace {
     }
 
     /// Returns the direction each face represents as a Vec3
-    pub fn direction_vec3(&self) -> Vec3 {
+    pub const fn direction_vec3(&self) -> Vec3 {
         match *self {
             Self::Front => Vec3::Z,
             Self::Back => Vec3::NEG_Z,
@@ -449,7 +449,7 @@ impl BlockFace {
     }
 
     /// Returns the direction each face represents as an UnboundBlockCoordinate
-    pub fn direction_coordinates(&self) -> UnboundBlockCoordinate {
+    pub const fn direction_coordinates(&self) -> UnboundBlockCoordinate {
         match *self {
             Self::Front => UnboundBlockCoordinate::new(0, 0, 1),
             Self::Back => UnboundBlockCoordinate::new(0, 0, -1),
@@ -461,7 +461,7 @@ impl BlockFace {
     }
 
     /// Returns the string representation of this face.
-    pub fn as_str(&self) -> &'static str {
+    pub const fn as_str(&self) -> &'static str {
         match *self {
             Self::Front => "front",
             Self::Back => "back",

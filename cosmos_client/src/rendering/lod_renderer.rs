@@ -298,7 +298,7 @@ impl ChunkRenderer {
                     let mut one_mesh_only = false;
 
                     let mut mesh_info = mesh
-                        .info_for_face(face)
+                        .info_for_face(face, false)
                         .unwrap_or_else(|| {
                             one_mesh_only = true;
 

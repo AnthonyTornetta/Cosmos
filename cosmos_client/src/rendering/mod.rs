@@ -21,7 +21,7 @@ use cosmos_core::{
 
 use crate::{
     asset::{
-        asset_loading::{load_block_rendering_information, BlockRenderingInfo},
+        asset_loading::{load_block_rendering_information, BlockRenderingInfo, ModelData},
         materials::block_materials::ATTRIBUTE_TEXTURE_INDEX,
     },
     state::game_state::GameState,
@@ -364,6 +364,13 @@ enum MeshType {
     /// The mesh is broken up into its 6 faces, which can all be stitched together to create the full mesh
     ///
     /// Make sure this is in the same order as the [`BlockFace::index`] method.
+    MultipleFaceMeshConnected {
+        base: Box<[MeshInformation; 6]>,
+        connected: Box<[MeshInformation; 6]>,
+    },
+    /// The mesh is broken up into its 6 faces, which can all be stitched together to create the full mesh
+    ///
+    /// Make sure this is in the same order as the [`BlockFace::index`] method.
     MultipleFaceMesh(Box<[MeshInformation; 6]>),
     /// This mesh contains the model data for every face
     AllFacesMesh(Box<MeshInformation>),
@@ -450,8 +457,15 @@ impl BlockMeshInformation {
     /// Gets the mesh information for that block face if the model is divided into multiple faces.
     ///
     /// If the block only contains one mesh, None is returned.
-    pub fn info_for_face(&self, face: BlockFace) -> Option<&MeshInformation> {
+    pub fn info_for_face(&self, face: BlockFace, same_block_adjacent: bool) -> Option<&MeshInformation> {
         match &self.mesh_info {
+            MeshType::MultipleFaceMeshConnected { base, connected } => {
+                if same_block_adjacent {
+                    Some(&connected[face.index()])
+                } else {
+                    Some(&base[face.index()])
+                }
+            }
             MeshType::MultipleFaceMesh(faces) => Some(&faces[face.index()]),
             MeshType::AllFacesMesh(_) => None,
         }
@@ -464,6 +478,7 @@ impl BlockMeshInformation {
     pub fn info_for_whole_block(&self) -> Option<&MeshInformation> {
         match &self.mesh_info {
             MeshType::MultipleFaceMesh(_) => None,
+            MeshType::MultipleFaceMeshConnected { base: _, connected: _ } => None,
             MeshType::AllFacesMesh(mesh) => Some(mesh),
         }
     }
@@ -513,6 +528,8 @@ fn register_meshes(mut registry: ResMut<BlockMeshRegistry>) {
 }
 
 fn stupid_parse(file: &str) -> Option<MeshInformation> {
+    info!("Parsing stupid file: {file}");
+
     let obj = fs::read_to_string(file);
     if let Ok(obj) = obj {
         let split = obj
@@ -530,25 +547,25 @@ fn stupid_parse(file: &str) -> Option<MeshInformation> {
                 (
                     arr[0]
                         .split(' ')
-                        .map(|x| x.parse::<u32>().expect("bad parse"))
+                        .map(|x| x.parse::<u32>().unwrap_or_else(|_| panic!("bad parse: {}", arr[0])))
                         .collect::<Vec<u32>>(),
                     arr[1]
                         .split(' ')
-                        .map(|x| x.parse::<f32>().expect("bad parse"))
+                        .map(|x| x.parse::<f32>().unwrap_or_else(|_| panic!("bad parse: {}", arr[1])))
                         .collect::<Vec<f32>>()
                         .chunks(2)
                         .map(|x| [x[0], x[1]])
                         .collect::<Vec<[f32; 2]>>(),
                     arr[2]
                         .split(' ')
-                        .map(|x| x.parse::<f32>().expect("bad parse"))
+                        .map(|x| x.parse::<f32>().unwrap_or_else(|_| panic!("bad parse: {}", arr[2])))
                         .collect::<Vec<f32>>()
                         .chunks(3)
                         .map(|x| [x[0], x[1], x[2]])
                         .collect::<Vec<[f32; 3]>>(),
                     arr[3]
                         .split(' ')
-                        .map(|x| x.parse::<f32>().expect("bad parse"))
+                        .map(|x| x.parse::<f32>().unwrap_or_else(|_| panic!("bad parse: {}", arr[3])))
                         .collect::<Vec<f32>>()
                         .chunks(3)
                         .map(|x| [x[0], x[1], x[2]])
@@ -774,26 +791,89 @@ fn register_block_meshes(
 ) {
     for block in blocks.iter() {
         if !model_registry.contains(block) {
-            if let Some(mesh_name) = block_info.from_id(block.unlocalized_name()).map(|x| x.model.as_ref()) {
-                if model_registry.add_link(block, mesh_name).is_err() {
+            if let Some(model_data) = block_info.from_id(block.unlocalized_name()).map(|x| &x.model) {
+                let name = match model_data {
+                    ModelData::All(name) => name,
+                    ModelData::Sided {
+                        name,
+                        right: _,
+                        left: _,
+                        top: _,
+                        bottom: _,
+                        front: _,
+                        back: _,
+                        connected: _,
+                    } => name,
+                };
+
+                if model_registry.add_link(block, name).is_err() {
                     // model doesn't exist yet - add it
-                    let mut split = mesh_name.split(':');
-                    if let (Some(mod_id), Some(model_name), None) = (split.next(), split.next(), split.next()) {
-                        let path = format!("assets/{mod_id}/models/blocks/{model_name}.stupid");
-                        let mesh_info = stupid_parse(&path).unwrap_or_else(|| panic!("Unable to parse/read/find file at {path}"));
 
-                        model_registry.insert_value(BlockMeshInformation {
-                            mesh_info: MeshType::AllFacesMesh(Box::new(mesh_info)),
-                            id: 0,
-                            unlocalized_name: mesh_name.into(),
-                        });
+                    let block_mesh_info = match model_data {
+                        ModelData::All(model_data) => {
+                            let mesh_info = get_mesh_information(model_data);
 
-                        model_registry
-                            .add_link(block, mesh_name)
-                            .expect("This was just added, so should always work.");
-                    } else {
-                        panic!("Invalid model name: {mesh_name}. Must be mod_id:model_name");
-                    }
+                            BlockMeshInformation {
+                                mesh_info: MeshType::AllFacesMesh(Box::new(mesh_info)),
+                                id: 0,
+                                unlocalized_name: name.into(),
+                            }
+                        }
+                        ModelData::Sided {
+                            name: _,
+                            right,
+                            left,
+                            top,
+                            bottom,
+                            front,
+                            back,
+                            connected,
+                        } => {
+                            let right = get_mesh_information(right);
+                            let left = get_mesh_information(left);
+                            let top = get_mesh_information(top);
+                            let bottom = get_mesh_information(bottom);
+                            let front = get_mesh_information(front);
+                            let back = get_mesh_information(back);
+
+                            if let Some(connected) = connected {
+                                let connected_right = get_mesh_information(&connected.right);
+                                let connected_left = get_mesh_information(&connected.left);
+                                let connected_top = get_mesh_information(&connected.top);
+                                let connected_bottom = get_mesh_information(&connected.bottom);
+                                let connected_front = get_mesh_information(&connected.front);
+                                let connected_back = get_mesh_information(&connected.back);
+
+                                BlockMeshInformation {
+                                    mesh_info: MeshType::MultipleFaceMeshConnected {
+                                        base: Box::new([right, left, top, bottom, front, back]),
+                                        connected: Box::new([
+                                            connected_right,
+                                            connected_left,
+                                            connected_top,
+                                            connected_bottom,
+                                            connected_front,
+                                            connected_back,
+                                        ]),
+                                    },
+                                    id: 0,
+                                    unlocalized_name: name.into(),
+                                }
+                            } else {
+                                BlockMeshInformation {
+                                    mesh_info: MeshType::MultipleFaceMesh(Box::new([right, left, top, bottom, front, back])),
+                                    id: 0,
+                                    unlocalized_name: name.into(),
+                                }
+                            }
+                        }
+                    };
+
+                    model_registry.insert_value(block_mesh_info);
+
+                    model_registry
+                        .add_link(block, name)
+                        .expect("This was just added, so should always work.");
                 }
             } else {
                 warn!("Missing block info for {}", block.unlocalized_name());
@@ -803,6 +883,17 @@ fn register_block_meshes(
             }
         }
     }
+}
+
+fn get_mesh_information(model_data: &String) -> MeshInformation {
+    let mut split = model_data.split(':');
+    let (Some(mod_id), Some(model_name), None) = (split.next(), split.next(), split.next()) else {
+        panic!("Invalid model name: {model_data}. Must be mod_id:model_name");
+    };
+
+    let path = format!("assets/{mod_id}/models/blocks/{model_name}.stupid");
+    let mesh_info = stupid_parse(&path).unwrap_or_else(|| panic!("Unable to parse/read/find file at {path}"));
+    mesh_info
 }
 
 /// This is a `ManyToOneRegistry` mapping Blocks to `BlockMeshInformation`.

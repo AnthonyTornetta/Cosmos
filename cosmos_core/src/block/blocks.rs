@@ -298,12 +298,12 @@ fn add_cosmos_blocks(
             .create(),
     );
 
-    blocks.register(
-        BlockBuilder::new("cosmos:debug", 2.0, 20.0, 5.0)
-            .add_property(BlockProperty::FullyRotatable)
-            .add_property(BlockProperty::Full)
-            .create(),
-    );
+    // blocks.register(
+    //     BlockBuilder::new("cosmos:debug", 2.0, 20.0, 5.0)
+    //         .add_property(BlockProperty::FullyRotatable)
+    //         .add_property(BlockProperty::Full)
+    //         .create(),
+    // );
 
     blocks.register(
         BlockBuilder::new("cosmos:missile_launcher", 2.0, 20.0, 5.0)
@@ -323,6 +323,16 @@ fn add_cosmos_blocks(
             .add_property(BlockProperty::Full)
             .create(),
     );
+
+    blocks.register(
+        BlockBuilder::new("cosmos:logic_on", 0.1, 20.0, 5.0)
+            .add_property(BlockProperty::Full)
+            .create(),
+    );
+
+    blocks.register(BlockBuilder::new("cosmos:logic_wire", 0.1, 20.0, 5.0).create());
+
+    // blocks.register(BlockBuilder::new("cosmos:electric_wire", 0.1, 20.0, 5.0).create());
 
     loading.finish_loading(id, &mut end_writer);
 }

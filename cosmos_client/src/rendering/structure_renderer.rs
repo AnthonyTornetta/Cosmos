@@ -528,17 +528,44 @@ impl ChunkRenderer {
             let actual_block = blocks.from_numeric_id(block_id);
 
             #[inline(always)]
-            fn check(c: &Chunk, block: u16, actual_block: &Block, blocks: &Registry<Block>, coords: ChunkBlockCoordinate) -> bool {
-                (block != c.block_at(coords) || !actual_block.is_full()) && c.has_see_through_block_at(coords, blocks)
+            fn check(
+                c: &Chunk,
+                block: u16,
+                actual_block: &Block,
+                blocks: &Registry<Block>,
+                coords: ChunkBlockCoordinate,
+                same_block: &mut bool,
+            ) -> bool {
+                *same_block = block == c.block_at(coords);
+                (!*same_block || !actual_block.is_full()) && c.has_see_through_block_at(coords, blocks)
             }
 
             let (x, y, z) = (coords.x, coords.y, coords.z);
 
+            let mut same_blocks = [false; 6];
+
             // right
-            if (x != CHUNK_DIMENSIONS - 1 && check(chunk, block_id, actual_block, blocks, coords.right()))
+            if (x != CHUNK_DIMENSIONS - 1
+                && check(
+                    chunk,
+                    block_id,
+                    actual_block,
+                    blocks,
+                    coords.right(),
+                    &mut same_blocks[BlockFace::Right.index()],
+                ))
                 || (x == CHUNK_DIMENSIONS - 1
                     && (right
-                        .map(|c| check(c, block_id, actual_block, blocks, ChunkBlockCoordinate::new(0, y, z)))
+                        .map(|c| {
+                            check(
+                                c,
+                                block_id,
+                                actual_block,
+                                blocks,
+                                ChunkBlockCoordinate::new(0, y, z),
+                                &mut same_blocks[BlockFace::Right.index()],
+                            )
+                        })
                         .unwrap_or(true)))
             {
                 faces.push(BlockFace::Right);
@@ -551,6 +578,7 @@ impl ChunkRenderer {
                     actual_block,
                     blocks,
                     coords.left().expect("Checked in first condition"),
+                    &mut same_blocks[BlockFace::Left.index()],
                 ))
                 || (x == 0
                     && (left
@@ -561,6 +589,7 @@ impl ChunkRenderer {
                                 actual_block,
                                 blocks,
                                 ChunkBlockCoordinate::new(CHUNK_DIMENSIONS - 1, y, z),
+                                &mut same_blocks[BlockFace::Left.index()],
                             )
                         })
                         .unwrap_or(true)))
@@ -569,10 +598,27 @@ impl ChunkRenderer {
             }
 
             // top
-            if (y != CHUNK_DIMENSIONS - 1 && check(chunk, block_id, actual_block, blocks, coords.top()))
+            if (y != CHUNK_DIMENSIONS - 1
+                && check(
+                    chunk,
+                    block_id,
+                    actual_block,
+                    blocks,
+                    coords.top(),
+                    &mut same_blocks[BlockFace::Top.index()],
+                ))
                 || (y == CHUNK_DIMENSIONS - 1
                     && top
-                        .map(|c| check(c, block_id, actual_block, blocks, ChunkBlockCoordinate::new(x, 0, z)))
+                        .map(|c| {
+                            check(
+                                c,
+                                block_id,
+                                actual_block,
+                                blocks,
+                                ChunkBlockCoordinate::new(x, 0, z),
+                                &mut same_blocks[BlockFace::Top.index()],
+                            )
+                        })
                         .unwrap_or(true))
             {
                 faces.push(BlockFace::Top);
@@ -585,6 +631,7 @@ impl ChunkRenderer {
                     actual_block,
                     blocks,
                     coords.bottom().expect("Checked in first condition"),
+                    &mut same_blocks[BlockFace::Bottom.index()],
                 ))
                 || (y == 0
                     && (bottom
@@ -595,6 +642,7 @@ impl ChunkRenderer {
                                 actual_block,
                                 blocks,
                                 ChunkBlockCoordinate::new(x, CHUNK_DIMENSIONS - 1, z),
+                                &mut same_blocks[BlockFace::Bottom.index()],
                             )
                         })
                         .unwrap_or(true)))
@@ -603,10 +651,27 @@ impl ChunkRenderer {
             }
 
             // front
-            if (z != CHUNK_DIMENSIONS - 1 && check(chunk, block_id, actual_block, blocks, coords.front()))
+            if (z != CHUNK_DIMENSIONS - 1
+                && check(
+                    chunk,
+                    block_id,
+                    actual_block,
+                    blocks,
+                    coords.front(),
+                    &mut same_blocks[BlockFace::Front.index()],
+                ))
                 || (z == CHUNK_DIMENSIONS - 1
                     && (front
-                        .map(|c| check(c, block_id, actual_block, blocks, ChunkBlockCoordinate::new(x, y, 0)))
+                        .map(|c| {
+                            check(
+                                c,
+                                block_id,
+                                actual_block,
+                                blocks,
+                                ChunkBlockCoordinate::new(x, y, 0),
+                                &mut same_blocks[BlockFace::Front.index()],
+                            )
+                        })
                         .unwrap_or(true)))
             {
                 faces.push(BlockFace::Front);
@@ -619,6 +684,7 @@ impl ChunkRenderer {
                     actual_block,
                     blocks,
                     coords.back().expect("Checked in first condition"),
+                    &mut same_blocks[BlockFace::Back.index()],
                 ))
                 || (z == 0
                     && (back
@@ -629,6 +695,7 @@ impl ChunkRenderer {
                                 actual_block,
                                 blocks,
                                 ChunkBlockCoordinate::new(x, y, CHUNK_DIMENSIONS - 1),
+                                &mut same_blocks[BlockFace::Back.index()],
                             )
                         })
                         .unwrap_or(true)))
@@ -661,7 +728,7 @@ impl ChunkRenderer {
 
                 let rotation = block_rotation.as_quat();
 
-                for face in faces.iter().map(|face| block_rotation.rotate_face(*face)) {
+                for (og_face, face) in faces.iter().map(|face| (*face, block_rotation.rotate_face(*face))) {
                     let index = block_textures
                         .from_id(block.unlocalized_name())
                         .unwrap_or_else(|| block_textures.from_id("missing").expect("Missing texture should exist."));
@@ -676,7 +743,7 @@ impl ChunkRenderer {
                     let mut one_mesh_only = false;
 
                     let mut mesh_info = mesh
-                        .info_for_face(face)
+                        .info_for_face(face, same_blocks[og_face.index()])
                         .unwrap_or_else(|| {
                             one_mesh_only = true;
 

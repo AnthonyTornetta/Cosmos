@@ -156,7 +156,7 @@ fn render_items(
 
         if block_mesh_info.has_multiple_face_meshes() {
             for face in [BlockFace::Top, BlockFace::Right, BlockFace::Front] {
-                let Some(mut mesh_info) = block_mesh_info.info_for_face(face).cloned() else {
+                let Some(mut mesh_info) = block_mesh_info.info_for_face(face, true).cloned() else {
                     break;
                 };
 

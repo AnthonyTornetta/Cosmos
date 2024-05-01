@@ -212,7 +212,9 @@ fn recalculate_shields_if_needed(
             }
 
             for &(_, e) in placed_shields.0.iter().filter(|(_, e)| !keep.contains(e)) {
-                commands.entity(e).insert(NeedsDespawned);
+                if let Some(mut ecmds) = commands.get_entity(e) {
+                    ecmds.insert(NeedsDespawned);
+                }
             }
         }
 
