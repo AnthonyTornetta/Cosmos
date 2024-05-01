@@ -46,6 +46,7 @@ use cosmos_core::{
         Structure,
     },
 };
+use serde::{Deserialize, Serialize};
 
 use crate::{
     ai::AiControlled,
@@ -251,7 +252,7 @@ fn recalculate_shields_if_needed(
     }
 }
 
-#[derive(Component, Debug, Reflect)]
+#[derive(Component, Serialize, Deserialize, Debug, Reflect)]
 struct ShieldDowntime(f32);
 
 const MAX_SHIELD_DOWNTIME: Duration = Duration::from_secs(10);
@@ -322,9 +323,12 @@ fn fill_ai_controlled_shields_on_spawn(
     }
 }
 
-fn on_save_shield(mut q_needs_saved: Query<(&Shield, &mut SerializedData), With<NeedsSaved>>) {
-    for (shield, mut sd) in q_needs_saved.iter_mut() {
+fn on_save_shield(mut q_needs_saved: Query<(&Shield, Option<&ShieldDowntime>, &mut SerializedData), With<NeedsSaved>>) {
+    for (shield, downtime, mut sd) in q_needs_saved.iter_mut() {
         sd.serialize_data("cosmos:shield", shield);
+        if let Some(dt) = downtime {
+            sd.serialize_data("cosmos:shield_downtime", dt);
+        }
     }
 }
 
@@ -338,7 +342,11 @@ fn on_load_shield(
     for (ent, sd, parent) in q_needs_saved.iter() {
         if let Some(shield) = sd.deserialize_data::<Shield>("cosmos:shield") {
             hm.entry(parent.get()).or_insert(Vec::new()).push((ent, shield.block_coord));
-            commands.entity(ent).insert(shield).insert(Name::new("Shield"));
+            commands.entity(ent).insert((shield, Name::new("Shield")));
+
+            if let Some(downtime) = sd.deserialize_data::<ShieldDowntime>("cosmos:shield_downtime") {
+                commands.entity(ent).insert(downtime);
+            }
         }
     }
 
