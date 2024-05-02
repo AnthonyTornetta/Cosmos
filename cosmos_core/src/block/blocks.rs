@@ -67,12 +67,14 @@ fn add_cosmos_blocks(
     blocks.register(
         BlockBuilder::new("cosmos:energy_cell", 2.0, 20.0, 5.0)
             .add_property(BlockProperty::Full)
+            .add_connection_group("cosmos:stores_power")
             .create(),
     );
 
     blocks.register(
         BlockBuilder::new("cosmos:reactor", 2.0, 20.0, 5.0)
             .add_property(BlockProperty::Full)
+            .add_connection_group("cosmos:produces_power")
             .create(),
     );
 
@@ -81,6 +83,7 @@ fn add_cosmos_blocks(
             .add_property(BlockProperty::Full)
             .add_property(BlockProperty::FaceFront)
             .add_connection_group("cosmos:uses_logic")
+            .add_connection_group("cosmos:consumes_power")
             .create(),
     );
 
@@ -93,6 +96,7 @@ fn add_cosmos_blocks(
     blocks.register(
         BlockBuilder::new("cosmos:thruster", 2.0, 20.0, 10.0)
             .add_property(BlockProperty::Full)
+            .add_connection_group("cosmos:consumes_power")
             .create(),
     );
 
@@ -194,6 +198,7 @@ fn add_cosmos_blocks(
             .add_property(BlockProperty::Full)
             .add_property(BlockProperty::FaceFront)
             .add_connection_group("cosmos:uses_logic")
+            .add_connection_group("cosmos:produces_power")
             .create(),
     );
 
@@ -279,6 +284,7 @@ fn add_cosmos_blocks(
             .add_property(BlockProperty::Full)
             .add_property(BlockProperty::FaceFront)
             .add_connection_group("cosmos:uses_logic")
+            .add_connection_group("cosmos:consumes_power")
             .create(),
     );
 
@@ -320,6 +326,7 @@ fn add_cosmos_blocks(
             .add_property(BlockProperty::FaceFront)
             .add_property(BlockProperty::Full)
             .add_connection_group("cosmos:uses_logic")
+            .add_connection_group("cosmos:consumes_power")
             .create(),
     );
 
@@ -332,6 +339,7 @@ fn add_cosmos_blocks(
     blocks.register(
         BlockBuilder::new("cosmos:shield_generator", 2.0, 20.0, 5.0)
             .add_property(BlockProperty::Full)
+            .add_connection_group("cosmos:consumes_power")
             .create(),
     );
 
@@ -350,7 +358,15 @@ fn add_cosmos_blocks(
             .create(),
     );
 
-    // blocks.register(BlockBuilder::new("cosmos:electric_wire", 0.1, 20.0, 5.0).create());
+    blocks.register(
+        BlockBuilder::new("cosmos:power_cable", 0.1, 20.0, 5.0)
+            .add_connection_group("cosmos:power_cable")
+            .connect_to_group("cosmos:consumes_power")
+            .connect_to_group("cosmos:produces_power")
+            .connect_to_group("cosmos:stores_power")
+            .connect_to_group("cosmos:power_cable")
+            .create(),
+    );
 
     loading.finish_loading(id, &mut end_writer);
 }
