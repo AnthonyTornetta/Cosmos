@@ -1,0 +1,43 @@
+{
+    "texture": {
+        "All": {
+            "Connected": [
+                "cosmos:reactor_window_0",
+                "cosmos:reactor_window_1",
+                "cosmos:reactor_window_2",
+                "cosmos:reactor_window_3",
+                "cosmos:reactor_window_4",
+                "cosmos:reactor_window_5",
+                "cosmos:reactor_window_6",
+                "cosmos:reactor_window_7",
+                "cosmos:reactor_window_8",
+                "cosmos:reactor_window_9",
+                "cosmos:reactor_window_10",
+                "cosmos:reactor_window_11",
+                "cosmos:reactor_window_12",
+                "cosmos:reactor_window_13",
+                "cosmos:reactor_window_14",
+                "cosmos:reactor_window_15"
+            ]
+        }
+    },
+    "model": {
+        "Sides": {
+            "name": "cosmos:reactor_window",
+            "top": "cosmos:base_top",
+            "bottom": "cosmos:base_bottom",
+            "left": "cosmos:base_left",
+            "right": "cosmos:base_right",
+            "front": "cosmos:base_front",
+            "back": "cosmos:base_back",
+            "connected": {
+                "top": "none",
+                "bottom": "none",
+                "left": "none",
+                "right": "none",
+                "front": "none",
+                "back": "none"
+            }
+        }
+    }
+}

@@ -635,6 +635,9 @@ pub struct Block {
     ///
     /// This is (for now) how long it takes 1 mining beam to mine this block in seconds
     mining_resistance: f32,
+
+    connect_to_groups: Vec<ConnectionGroup>,
+    connection_groups: Vec<ConnectionGroup>,
 }
 
 impl Identifiable for Block {
@@ -664,6 +667,8 @@ impl Block {
         density: f32,
         hardness: f32,
         mining_resistance: f32,
+        connect_to_groups: Vec<ConnectionGroup>,
+        connection_groups: Vec<ConnectionGroup>,
     ) -> Self {
         Self {
             property_flags: BlockProperty::create_id(properties),
@@ -672,7 +677,14 @@ impl Block {
             density,
             hardness,
             mining_resistance,
+            connect_to_groups,
+            connection_groups,
         }
+    }
+
+    /// Returns true if this block should connect to the other block
+    pub fn should_connect_with(&self, other: &Self) -> bool {
+        self.connect_to_groups.iter().any(|group| other.connection_groups.contains(group))
     }
 
     #[inline]
@@ -749,6 +761,25 @@ impl Block {
 impl PartialEq for Block {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Reflect)]
+/// This is how you signify which blocks should connect to which other blocks.
+///
+/// For example, wires will connect to anything with the group "cosmos:machine".
+pub struct ConnectionGroup(String);
+
+impl ConnectionGroup {
+    /// Creates a connection group from this unlocalized name.
+    pub fn new(unlocalized_name: impl Into<String>) -> Self {
+        Self(unlocalized_name.into())
+    }
+}
+
+impl From<&str> for ConnectionGroup {
+    fn from(value: &str) -> Self {
+        Self(value.to_owned())
     }
 }
 

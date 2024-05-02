@@ -530,40 +530,39 @@ impl ChunkRenderer {
             #[inline(always)]
             fn check(
                 c: &Chunk,
-                block: u16,
                 actual_block: &Block,
                 blocks: &Registry<Block>,
                 coords: ChunkBlockCoordinate,
-                same_block: &mut bool,
+                should_connect: &mut bool,
             ) -> bool {
-                *same_block = block == c.block_at(coords);
-                c.has_see_through_block_at(coords, blocks) || !actual_block.is_full()
+                let block_here = blocks.from_numeric_id(c.block_at(coords));
+                *should_connect = actual_block.should_connect_with(block_here);
+
+                block_here.is_see_through() || !actual_block.is_full()
             }
 
             let (x, y, z) = (coords.x, coords.y, coords.z);
 
-            let mut same_blocks = [false; 6];
+            let mut block_connections = [false; 6];
 
             // right
             if (x != CHUNK_DIMENSIONS - 1
                 && check(
                     chunk,
-                    block_id,
                     actual_block,
                     blocks,
                     coords.right(),
-                    &mut same_blocks[BlockFace::Right.index()],
+                    &mut block_connections[BlockFace::Right.index()],
                 ))
                 || (x == CHUNK_DIMENSIONS - 1
                     && (right
                         .map(|c| {
                             check(
                                 c,
-                                block_id,
                                 actual_block,
                                 blocks,
                                 ChunkBlockCoordinate::new(0, y, z),
-                                &mut same_blocks[BlockFace::Right.index()],
+                                &mut block_connections[BlockFace::Right.index()],
                             )
                         })
                         .unwrap_or(true)))
@@ -574,22 +573,20 @@ impl ChunkRenderer {
             if (x != 0
                 && check(
                     chunk,
-                    block_id,
                     actual_block,
                     blocks,
                     coords.left().expect("Checked in first condition"),
-                    &mut same_blocks[BlockFace::Left.index()],
+                    &mut block_connections[BlockFace::Left.index()],
                 ))
                 || (x == 0
                     && (left
                         .map(|c| {
                             check(
                                 c,
-                                block_id,
                                 actual_block,
                                 blocks,
                                 ChunkBlockCoordinate::new(CHUNK_DIMENSIONS - 1, y, z),
-                                &mut same_blocks[BlockFace::Left.index()],
+                                &mut block_connections[BlockFace::Left.index()],
                             )
                         })
                         .unwrap_or(true)))
@@ -601,22 +598,20 @@ impl ChunkRenderer {
             if (y != CHUNK_DIMENSIONS - 1
                 && check(
                     chunk,
-                    block_id,
                     actual_block,
                     blocks,
                     coords.top(),
-                    &mut same_blocks[BlockFace::Top.index()],
+                    &mut block_connections[BlockFace::Top.index()],
                 ))
                 || (y == CHUNK_DIMENSIONS - 1
                     && top
                         .map(|c| {
                             check(
                                 c,
-                                block_id,
                                 actual_block,
                                 blocks,
                                 ChunkBlockCoordinate::new(x, 0, z),
-                                &mut same_blocks[BlockFace::Top.index()],
+                                &mut block_connections[BlockFace::Top.index()],
                             )
                         })
                         .unwrap_or(true))
@@ -627,22 +622,20 @@ impl ChunkRenderer {
             if (y != 0
                 && check(
                     chunk,
-                    block_id,
                     actual_block,
                     blocks,
                     coords.bottom().expect("Checked in first condition"),
-                    &mut same_blocks[BlockFace::Bottom.index()],
+                    &mut block_connections[BlockFace::Bottom.index()],
                 ))
                 || (y == 0
                     && (bottom
                         .map(|c| {
                             check(
                                 c,
-                                block_id,
                                 actual_block,
                                 blocks,
                                 ChunkBlockCoordinate::new(x, CHUNK_DIMENSIONS - 1, z),
-                                &mut same_blocks[BlockFace::Bottom.index()],
+                                &mut block_connections[BlockFace::Bottom.index()],
                             )
                         })
                         .unwrap_or(true)))
@@ -654,22 +647,20 @@ impl ChunkRenderer {
             if (z != CHUNK_DIMENSIONS - 1
                 && check(
                     chunk,
-                    block_id,
                     actual_block,
                     blocks,
                     coords.front(),
-                    &mut same_blocks[BlockFace::Front.index()],
+                    &mut block_connections[BlockFace::Front.index()],
                 ))
                 || (z == CHUNK_DIMENSIONS - 1
                     && (front
                         .map(|c| {
                             check(
                                 c,
-                                block_id,
                                 actual_block,
                                 blocks,
                                 ChunkBlockCoordinate::new(x, y, 0),
-                                &mut same_blocks[BlockFace::Front.index()],
+                                &mut block_connections[BlockFace::Front.index()],
                             )
                         })
                         .unwrap_or(true)))
@@ -680,22 +671,20 @@ impl ChunkRenderer {
             if (z != 0
                 && check(
                     chunk,
-                    block_id,
                     actual_block,
                     blocks,
                     coords.back().expect("Checked in first condition"),
-                    &mut same_blocks[BlockFace::Back.index()],
+                    &mut block_connections[BlockFace::Back.index()],
                 ))
                 || (z == 0
                     && (back
                         .map(|c| {
                             check(
                                 c,
-                                block_id,
                                 actual_block,
                                 blocks,
                                 ChunkBlockCoordinate::new(x, y, CHUNK_DIMENSIONS - 1),
-                                &mut same_blocks[BlockFace::Back.index()],
+                                &mut block_connections[BlockFace::Back.index()],
                             )
                         })
                         .unwrap_or(true)))
@@ -732,7 +721,7 @@ impl ChunkRenderer {
                     let mut one_mesh_only = false;
 
                     let Some(mut mesh_info) = mesh
-                        .info_for_face(face, same_blocks[og_face.index()])
+                        .info_for_face(face, block_connections[og_face.index()])
                         .map(|x| Some(x))
                         .unwrap_or_else(|| {
                             let single_mesh = mesh.info_for_whole_block();
@@ -757,59 +746,59 @@ impl ChunkRenderer {
 
                     match og_face {
                         BlockFace::Front | BlockFace::Back => {
-                            if same_blocks[BlockFace::Right.index()] {
+                            if block_connections[BlockFace::Right.index()] {
                                 neighbors |= BlockNeighbors::Right;
                             }
-                            if same_blocks[BlockFace::Left.index()] {
+                            if block_connections[BlockFace::Left.index()] {
                                 neighbors |= BlockNeighbors::Left;
                             }
-                            if same_blocks[BlockFace::Top.index()] {
+                            if block_connections[BlockFace::Top.index()] {
                                 neighbors |= BlockNeighbors::Top;
                             }
-                            if same_blocks[BlockFace::Bottom.index()] {
+                            if block_connections[BlockFace::Bottom.index()] {
                                 neighbors |= BlockNeighbors::Bottom;
                             }
                         }
                         BlockFace::Top | BlockFace::Bottom => {
-                            if same_blocks[BlockFace::Right.index()] {
+                            if block_connections[BlockFace::Right.index()] {
                                 neighbors |= BlockNeighbors::Right;
                             }
-                            if same_blocks[BlockFace::Left.index()] {
+                            if block_connections[BlockFace::Left.index()] {
                                 neighbors |= BlockNeighbors::Left;
                             }
-                            if same_blocks[BlockFace::Front.index()] {
+                            if block_connections[BlockFace::Front.index()] {
                                 neighbors |= BlockNeighbors::Top;
                             }
-                            if same_blocks[BlockFace::Back.index()] {
+                            if block_connections[BlockFace::Back.index()] {
                                 neighbors |= BlockNeighbors::Bottom;
                             }
                         }
                         // idk why right and left have to separate, and I don't want to know why
                         BlockFace::Right => {
-                            if same_blocks[BlockFace::Front.index()] {
+                            if block_connections[BlockFace::Front.index()] {
                                 neighbors |= BlockNeighbors::Right;
                             }
-                            if same_blocks[BlockFace::Back.index()] {
+                            if block_connections[BlockFace::Back.index()] {
                                 neighbors |= BlockNeighbors::Left;
                             }
-                            if same_blocks[BlockFace::Top.index()] {
+                            if block_connections[BlockFace::Top.index()] {
                                 neighbors |= BlockNeighbors::Top;
                             }
-                            if same_blocks[BlockFace::Bottom.index()] {
+                            if block_connections[BlockFace::Bottom.index()] {
                                 neighbors |= BlockNeighbors::Bottom;
                             }
                         }
                         BlockFace::Left => {
-                            if same_blocks[BlockFace::Back.index()] {
+                            if block_connections[BlockFace::Back.index()] {
                                 neighbors |= BlockNeighbors::Right;
                             }
-                            if same_blocks[BlockFace::Front.index()] {
+                            if block_connections[BlockFace::Front.index()] {
                                 neighbors |= BlockNeighbors::Left;
                             }
-                            if same_blocks[BlockFace::Top.index()] {
+                            if block_connections[BlockFace::Top.index()] {
                                 neighbors |= BlockNeighbors::Top;
                             }
-                            if same_blocks[BlockFace::Bottom.index()] {
+                            if block_connections[BlockFace::Bottom.index()] {
                                 neighbors |= BlockNeighbors::Bottom;
                             }
                         }
