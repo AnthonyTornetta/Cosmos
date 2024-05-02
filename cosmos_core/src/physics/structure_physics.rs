@@ -452,8 +452,40 @@ fn listen_for_new_physics_event(
 
         remove_chunk_colliders(&mut commands, &mut physics_components_query, ev.structure_entity, chunk_entity);
 
-        if !todo.iter().any(|(c, se)| c == &ev.chunk && se == &ev.structure_entity) {
+        if !todo.iter().any(|(c, se)| *c == ev.chunk && *se == ev.structure_entity) {
             todo.push((ev.chunk, ev.structure_entity));
+
+            // Need to recalculate every chunk's colliders in the case of connected colliders.
+            // This isn't super efficient, and in the future we should check if there are any connected
+            // blocks in neighborin chunks before doing this. Maybe cache that?
+
+            if let Ok(coord) = ev.chunk.left() {
+                if !todo.iter().any(|(c, se)| *c == coord && *se == ev.structure_entity) {
+                    todo.push((coord, ev.structure_entity));
+                }
+            }
+            if let Ok(coord) = ev.chunk.bottom() {
+                if !todo.iter().any(|(c, se)| *c == coord && *se == ev.structure_entity) {
+                    todo.push((coord, ev.structure_entity));
+                }
+            }
+            if let Ok(coord) = ev.chunk.back() {
+                if !todo.iter().any(|(c, se)| *c == coord && *se == ev.structure_entity) {
+                    todo.push((coord, ev.structure_entity));
+                }
+            }
+            let coord = ev.chunk.right();
+            if !todo.iter().any(|(c, se)| *c == coord && *se == ev.structure_entity) {
+                todo.push((coord, ev.structure_entity));
+            }
+            let coord = ev.chunk.top();
+            if !todo.iter().any(|(c, se)| *c == coord && *se == ev.structure_entity) {
+                todo.push((coord, ev.structure_entity));
+            }
+            let coord = ev.chunk.front();
+            if !todo.iter().any(|(c, se)| *c == coord && *se == ev.structure_entity) {
+                todo.push((coord, ev.structure_entity));
+            }
         }
     }
 
