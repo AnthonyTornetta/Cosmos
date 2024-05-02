@@ -14,6 +14,7 @@ use crate::structure::loading::StructureLoadingSet;
 use crate::structure::Structure;
 use bevy::app::PreUpdate;
 use bevy::ecs::schedule::{IntoSystemSetConfigs, SystemSet};
+use bevy::math::{Quat, Vec3};
 use bevy::prelude::{
     Added, App, BuildChildren, Commands, Component, DespawnRecursiveExt, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, Query,
     Res, Transform,
@@ -25,7 +26,7 @@ use bevy_rapier3d::math::Vect;
 use bevy_rapier3d::prelude::{Collider, ColliderMassProperties, ReadMassProperties, Rot, Sensor};
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 
-use super::block_colliders::{BlockCollider, BlockColliderMode, BlockColliderType};
+use super::block_colliders::{BlockCollider, BlockColliderMode, BlockColliderType, ConnectedCollider, CustomCollider};
 
 type GenerateCollider = (Collider, f32, BlockColliderMode);
 
@@ -64,6 +65,7 @@ struct ChunkPhysicsParts {
 ///
 /// This prevents the creation of tons of small colliders while being relatively easy to implement.
 fn generate_colliders(
+    structure: &Structure,
     chunk: &Chunk,
     blocks: &Registry<Block>,
     colliders_registry: &Registry<BlockCollider>,
@@ -106,27 +108,63 @@ fn generate_colliders(
                         if size == 1 {
                             let block_rotation = chunk.block_rotation(coord).as_quat();
 
-                            for custom_collider in custom_colliders.iter() {
-                                let loc = location + block_rotation.mul_vec3(custom_collider.offset);
-                                let rot = block_rotation.mul_quat(custom_collider.rotation);
-
-                                let collider_info = (loc, rot, custom_collider.collider.clone());
-
-                                match custom_collider.mode {
-                                    BlockColliderMode::NormalCollider => {
-                                        colliders.push(collider_info);
-                                    }
-                                    BlockColliderMode::SensorCollider => {
-                                        sensor_colliders.push(collider_info);
-                                    }
-                                }
-                            }
+                            process_custom_collider(custom_colliders, location, block_rotation, colliders, sensor_colliders);
                         }
 
                         can_be_one_square_collider = false;
                         (false, true)
                     }
-                    _ => panic!("Got None for block collider for block {}!", block.unlocalized_name()),
+                    Some(BlockColliderType::Connected(connected_colliders)) => {
+                        can_be_one_square_collider = false;
+
+                        if size == 1 {
+                            let block_rotation = chunk.block_rotation(coord).as_quat();
+
+                            // check connections
+                            let left = coord
+                                .to_block_coordinate(chunk.chunk_coordinates())
+                                .left()
+                                .map(|x| block.should_connect_with(structure.block_at(x, blocks)))
+                                .unwrap_or(false);
+                            let bottom = coord
+                                .to_block_coordinate(chunk.chunk_coordinates())
+                                .bottom()
+                                .map(|x| block.should_connect_with(structure.block_at(x, blocks)))
+                                .unwrap_or(false);
+                            let back = coord
+                                .to_block_coordinate(chunk.chunk_coordinates())
+                                .back()
+                                .map(|x| block.should_connect_with(structure.block_at(x, blocks)))
+                                .unwrap_or(false);
+
+                            let right = block.should_connect_with(
+                                structure.block_at(coord.right().to_block_coordinate(chunk.chunk_coordinates()), blocks),
+                            );
+                            let top = block.should_connect_with(
+                                structure.block_at(coord.top().to_block_coordinate(chunk.chunk_coordinates()), blocks),
+                            );
+                            let front = block.should_connect_with(
+                                structure.block_at(coord.front().to_block_coordinate(chunk.chunk_coordinates()), blocks),
+                            );
+
+                            process_connected_colliders(
+                                right,
+                                left,
+                                top,
+                                bottom,
+                                front,
+                                back,
+                                connected_colliders,
+                                location,
+                                block_rotation,
+                                colliders,
+                                sensor_colliders,
+                            );
+                        }
+
+                        (false, true)
+                    }
+                    None => panic!("Got None for block collider for block {}!", block.unlocalized_name()),
                 };
 
                 if contains_any_empty_block.is_none() {
@@ -137,6 +175,7 @@ fn generate_colliders(
 
                     // left bottom back
                     generate_colliders(
+                        structure,
                         chunk,
                         blocks,
                         colliders_registry,
@@ -150,6 +189,7 @@ fn generate_colliders(
 
                     // right bottom back
                     generate_colliders(
+                        structure,
                         chunk,
                         blocks,
                         colliders_registry,
@@ -163,6 +203,7 @@ fn generate_colliders(
 
                     // left top back
                     generate_colliders(
+                        structure,
                         chunk,
                         blocks,
                         colliders_registry,
@@ -176,6 +217,7 @@ fn generate_colliders(
 
                     // left bottom front
                     generate_colliders(
+                        structure,
                         chunk,
                         blocks,
                         colliders_registry,
@@ -189,6 +231,7 @@ fn generate_colliders(
 
                     // right bottom front
                     generate_colliders(
+                        structure,
                         chunk,
                         blocks,
                         colliders_registry,
@@ -202,6 +245,7 @@ fn generate_colliders(
 
                     // left top front
                     generate_colliders(
+                        structure,
                         chunk,
                         blocks,
                         colliders_registry,
@@ -215,6 +259,7 @@ fn generate_colliders(
 
                     // right top front
                     generate_colliders(
+                        structure,
                         chunk,
                         blocks,
                         colliders_registry,
@@ -228,6 +273,7 @@ fn generate_colliders(
 
                     // right top back
                     generate_colliders(
+                        structure,
                         chunk,
                         blocks,
                         colliders_registry,
@@ -254,13 +300,93 @@ fn generate_colliders(
     }
 }
 
-fn generate_chunk_collider(chunk: &Chunk, blocks: &Registry<Block>, colliders_registry: &Registry<BlockCollider>) -> Vec<GenerateCollider> {
+fn process_connected_colliders(
+    right: bool,
+    left: bool,
+    top: bool,
+    bottom: bool,
+    front: bool,
+    back: bool,
+    cc: &ConnectedCollider,
+    location: Vec3,
+    block_rotation: Quat,
+    colliders: &mut Vec<(Vec3, Quat, Collider)>,
+    sensor_colliders: &mut Vec<(Vec3, Quat, Collider)>,
+) {
+    if right {
+        process_custom_collider(&cc.right.connected, location, block_rotation, colliders, sensor_colliders);
+    } else {
+        process_custom_collider(&cc.right.non_connected, location, block_rotation, colliders, sensor_colliders);
+    }
+
+    if left {
+        process_custom_collider(&cc.left.connected, location, block_rotation, colliders, sensor_colliders);
+    } else {
+        process_custom_collider(&cc.left.non_connected, location, block_rotation, colliders, sensor_colliders);
+    }
+
+    if top {
+        process_custom_collider(&cc.top.connected, location, block_rotation, colliders, sensor_colliders);
+    } else {
+        process_custom_collider(&cc.top.non_connected, location, block_rotation, colliders, sensor_colliders);
+    }
+
+    if bottom {
+        process_custom_collider(&cc.bottom.connected, location, block_rotation, colliders, sensor_colliders);
+    } else {
+        process_custom_collider(&cc.bottom.non_connected, location, block_rotation, colliders, sensor_colliders);
+    }
+
+    if front {
+        process_custom_collider(&cc.front.connected, location, block_rotation, colliders, sensor_colliders);
+    } else {
+        process_custom_collider(&cc.front.non_connected, location, block_rotation, colliders, sensor_colliders);
+    }
+
+    if back {
+        process_custom_collider(&cc.back.connected, location, block_rotation, colliders, sensor_colliders);
+    } else {
+        process_custom_collider(&cc.back.non_connected, location, block_rotation, colliders, sensor_colliders);
+    }
+}
+
+fn process_custom_collider(
+    custom_colliders: &[CustomCollider],
+    location: Vec3,
+    block_rotation: Quat,
+    colliders: &mut Vec<(Vec3, Quat, Collider)>,
+    sensor_colliders: &mut Vec<(Vec3, Quat, Collider)>,
+) {
+    for custom_collider in custom_colliders.iter() {
+        let loc = location + block_rotation.mul_vec3(custom_collider.offset);
+        let rot = block_rotation.mul_quat(custom_collider.rotation);
+
+        let collider_info = (loc, rot, custom_collider.collider.clone());
+
+        match custom_collider.mode {
+            BlockColliderMode::NormalCollider => {
+                colliders.push(collider_info);
+            }
+            BlockColliderMode::SensorCollider => {
+                sensor_colliders.push(collider_info);
+            }
+        }
+    }
+}
+
+fn generate_chunk_collider(
+    structure: &Structure,
+    chunk: &Chunk,
+    blocks: &Registry<Block>,
+    colliders_registry: &Registry<BlockCollider>,
+) -> Vec<GenerateCollider> {
     let mut colliders: Vec<(Vect, Rot, Collider)> = Vec::new();
     let mut sensor_colliders: Vec<(Vect, Rot, Collider)> = Vec::new();
 
     let mut mass: f32 = 0.0;
 
     generate_colliders(
+        structure,
         chunk,
         blocks,
         colliders_registry,
@@ -352,7 +478,7 @@ fn listen_for_new_physics_event(
 
         // let chunk_colliders = vec![(Collider::cuboid(16.0, 16.0, 16.0), 10.0, BlockColliderMode::NormalCollider)];
 
-        let chunk_colliders = generate_chunk_collider(chunk, &blocks, &colliders);
+        let chunk_colliders = generate_chunk_collider(structure, chunk, &blocks, &colliders);
 
         let mut first = true;
 
