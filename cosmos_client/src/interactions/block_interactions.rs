@@ -39,9 +39,8 @@ pub(crate) fn process_player_interaction(
     camera: Query<&GlobalTransform, With<MainCamera>>,
     mut player_body: Query<(Entity, &mut Inventory, Option<&mut LookingAt>), (With<LocalPlayer>, Without<Pilot>)>,
     rapier_context: Res<RapierContext>,
-    parent_query: Query<&Parent>,
-    chunk_physics_part: Query<&ChunkPhysicsPart>,
-    structure_query: Query<(&Structure, &GlobalTransform, Option<&Planet>)>,
+    q_chunk_physics_part: Query<&ChunkPhysicsPart>,
+    q_structure: Query<(&Structure, &GlobalTransform, Option<&Planet>)>,
     mut break_writer: EventWriter<RequestBlockBreakEvent>,
     mut place_writer: EventWriter<RequestBlockPlaceEvent>,
     mut interact_writer: EventWriter<BlockInteractEvent>,
@@ -80,23 +79,20 @@ pub(crate) fn process_player_interaction(
         return;
     };
 
-    let entity = chunk_physics_part.get(entity).map(|x| x.chunk_entity).unwrap_or(entity);
-
-    let Ok(parent) = parent_query.get(entity) else {
+    let Ok(structure_entity) = q_chunk_physics_part.get(entity).map(|x| x.structure_entity) else {
         if let Some(mut looking_at) = looking_at {
             looking_at.looking_at_block = None;
         }
         return;
     };
 
-    let Ok((structure, transform, is_planet)) = structure_query.get(parent.get()) else {
+    let Ok((structure, structure_g_transform, is_planet)) = q_structure.get(structure_entity) else {
         if let Some(mut looking_at) = looking_at {
             looking_at.looking_at_block = None;
         }
         return;
     };
 
-    let structure_g_transform = transform;
     let moved_point = intersection.point - intersection.normal * 0.01;
 
     let point = structure_g_transform.compute_matrix().inverse().transform_point3(moved_point);
@@ -105,7 +101,7 @@ pub(crate) fn process_player_interaction(
         return;
     };
 
-    let looking_at_block = Some((parent.get(), StructureBlock::new(coords)));
+    let looking_at_block = Some((structure_entity, StructureBlock::new(coords)));
     if let Some(mut looking_at) = looking_at {
         looking_at.looking_at_block = looking_at_block;
     } else {

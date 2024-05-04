@@ -368,6 +368,13 @@ fn add_cosmos_blocks(
             .create(),
     );
 
+    blocks.register(
+        BlockBuilder::new("cosmos:ship_dock", 2.0, 20.0, 5.0)
+            .add_property(BlockProperty::Full)
+            .add_property(BlockProperty::FaceFront)
+            .create(),
+    );
+
     loading.finish_loading(id, &mut end_writer);
 }
 

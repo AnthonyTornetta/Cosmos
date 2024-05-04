@@ -4,6 +4,7 @@ use bevy::prelude::App;
 use cosmos_core::{block::BlockRotation, structure::structure_block::StructureBlock};
 
 mod camera_system;
+mod dock_system;
 mod energy_generation_system;
 mod energy_storage_system;
 pub mod laser_cannon_system;
@@ -24,8 +25,9 @@ pub trait BlockStructureSystem<T> {
 
 pub(super) fn register(app: &mut App) {
     sync::register(app);
-    camera_system::register(app);
+    dock_system::register(app);
     line_system::register(app);
+    camera_system::register(app);
     shield_system::register(app);
     laser_cannon_system::register(app);
     thruster_system::register(app);

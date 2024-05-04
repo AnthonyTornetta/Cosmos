@@ -248,7 +248,11 @@ impl BlockInfo {
     }
 }
 
-/// Represents a child of a structure that represents a chunk
+/// This entity represents a chunk stored within the structure
+///
+/// For performance reasons, the chunk itself is stored within the [`Structure`](super::Structure)
+/// component in a structure entity.
+/// To access this structure entity, use this component's [`structure_entity`](Self::structure_entity) field.
 #[derive(Debug, Reflect, Component)]
 pub struct ChunkEntity {
     /// The entity of the structure this is a part of

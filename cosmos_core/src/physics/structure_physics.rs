@@ -37,12 +37,16 @@ struct StructureMass {
 }
 
 #[derive(Component, Debug, Reflect, Clone, Copy)]
-/// This means that this entity should be treated as if it were the chunk itself.
+/// Often times chunks will need multiple entities to store their physics information.
 ///
-/// This entity stores chunk colliders
+/// As such, each entity that stores the colliders of a chunk as well as the chunk entity itself will have this component.
+/// When doing things such as raycasting, make sure to query against the [`ChunkPhysicsPart`] component instead
+/// of the [`crate::structure::chunk::ChunkEntity`] component.
 pub struct ChunkPhysicsPart {
     /// The chunk this belongs to
     pub chunk_entity: Entity,
+    /// The structure this belongs to
+    pub structure_entity: Entity,
 }
 
 #[derive(Debug, Reflect)]
@@ -523,7 +527,14 @@ fn listen_for_new_physics_event(
         for (collider, mass, collider_mode) in chunk_colliders {
             if first {
                 if let Some(mut entity_commands) = commands.get_entity(chunk_entity) {
-                    entity_commands.insert((collider, ColliderMassProperties::Mass(mass)));
+                    entity_commands.insert((
+                        collider,
+                        ColliderMassProperties::Mass(mass),
+                        ChunkPhysicsPart {
+                            chunk_entity,
+                            structure_entity,
+                        },
+                    ));
 
                     if matches!(collider_mode, BlockColliderMode::SensorCollider) {
                         entity_commands.insert(Sensor);
@@ -539,7 +550,10 @@ fn listen_for_new_physics_event(
                     .expect("No transform on a chunk??? (megamind face)");
 
                 let mut child = commands.spawn((
-                    ChunkPhysicsPart { chunk_entity },
+                    ChunkPhysicsPart {
+                        chunk_entity,
+                        structure_entity,
+                    },
                     TransformBundle::from_transform(*chunk_trans),
                     collider,
                     ColliderMassProperties::Mass(mass),

@@ -1,6 +1,7 @@
 //! Client-side ship systems logic
 
 mod camera_system;
+mod dock_system;
 mod energy_generation_system;
 mod energy_storage_system;
 pub mod laser_cannon_system;
@@ -14,6 +15,7 @@ pub mod thruster_system;
 use bevy::prelude::App;
 
 pub(super) fn register(app: &mut App) {
+    dock_system::register(app);
     player_interactions::register(app);
     shield_system::register(app);
     thruster_system::register(app);
