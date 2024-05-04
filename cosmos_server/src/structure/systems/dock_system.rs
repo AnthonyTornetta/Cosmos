@@ -5,7 +5,8 @@ use bevy::{
         change_detection::DetectChanges,
         component::Component,
         entity::Entity,
-        query::{With, Without},
+        query::{Changed, With, Without},
+        removal_detection::RemovedComponents,
         world::Ref,
     },
     math::{Quat, Vec3},
@@ -25,6 +26,7 @@ use cosmos_core::{
     physics::structure_physics::ChunkPhysicsPart,
     registry::{identifiable::Identifiable, Registry},
     structure::{
+        coordinates::BlockCoordinate,
         events::StructureLoadedEvent,
         loading::StructureLoadingSet,
         shields::SHIELD_COLLISION_GROUP,
@@ -88,7 +90,15 @@ fn dock_structure_loaded_event_processor(
 }
 
 #[derive(Component)]
-struct Docked(Entity);
+struct Docked {
+    to: Entity,
+    to_block: BlockCoordinate,
+    this_block: BlockCoordinate,
+
+    /// Relative to entity we are docked to
+    relative_rotation: Quat,
+    relative_translation: Vec3,
+}
 
 #[derive(Component)]
 struct JustUndocked;
@@ -117,14 +127,9 @@ fn on_active(
 
         if active_system_flag.is_added() {
             if let Ok(docked) = docked {
-                let vel = q_velocity.get(docked.0).copied().unwrap_or_default();
+                let vel = q_velocity.get(docked.to).copied().unwrap_or_default();
 
-                commands
-                    .entity(ss.structure_entity())
-                    .remove::<Docked>()
-                    .remove::<ImpulseJoint>()
-                    .insert(vel);
-
+                commands.entity(ss.structure_entity()).remove::<Docked>().insert(vel);
                 commands.entity(system_entity).insert(JustUndocked);
 
                 continue;
@@ -200,34 +205,63 @@ fn on_active(
                 continue;
             }
 
-            // let q = Transform::from_translation(Vec3::ZERO)
-            //     .looking_to(-hit_block_face.direction_vec3(), Vec3::Y)
-            //     .rotation;
-
-            // let q = match hit_block_face {
-            //     cosmos_core::block::BlockFace::Right => fun_name(my_rotation, Vec3::X, Quat::from_axis_angle(Vec3::X, -PI / 2.0)),
-            //     cosmos_core::block::BlockFace::Left => fun_name(my_rotation, Vec3::X, Quat::from_axis_angle(Vec3::X, PI / 2.0)),
-            //     cosmos_core::block::BlockFace::Top => fun_name(my_rotation, Vec3::Y, Quat::IDENTITY),
-            //     cosmos_core::block::BlockFace::Bottom => fun_name(my_rotation, Vec3::Y, Quat::from_axis_angle(Vec3::Z, PI)),
-            //     cosmos_core::block::BlockFace::Front => fun_name(my_rotation, Vec3::Z, Quat::from_axis_angle(Vec3::X, -PI / 2.0)),
-            //     cosmos_core::block::BlockFace::Back => fun_name(my_rotation, Vec3::Z, Quat::from_axis_angle(Vec3::X, PI / 2.0)),
-            // };
-
             let relative_docked_ship_rotation = snap_to_right_angle(hit_rotation.inverse() * my_rotation);
 
             let rel_pos = hit_structure.block_relative_position(hit_coords)
                 - relative_docked_ship_rotation.mul_vec3(structure.block_relative_position(docking_block) - Vec3::new(0.0, 0.0, 1.0));
 
-            let joint = FixedJointBuilder::default()
-                .local_anchor1(rel_pos)
-                .local_basis1(relative_docked_ship_rotation);
-
             // dock
-            commands
-                .entity(ss.structure_entity())
-                .insert(Docked(structure_entity))
-                .insert(ImpulseJoint::new(structure_entity, joint));
+            commands.entity(ss.structure_entity()).insert(Docked {
+                to: structure_entity,
+                to_block: hit_coords,
+                relative_rotation: relative_docked_ship_rotation,
+                this_block: docking_block,
+                relative_translation: rel_pos,
+            });
         }
+    }
+}
+
+fn monitor_removed_dock_blocks(
+    blocks: Res<Registry<Block>>,
+    q_docked: Query<(Entity, &Docked)>,
+    mut block_change_reader: EventReader<BlockChangedEvent>,
+    q_velocity: Query<&Velocity>,
+    mut commands: Commands,
+) {
+    for ev in block_change_reader.read() {
+        if blocks.from_numeric_id(ev.old_block).unlocalized_name() != "cosmos:ship_dock" {
+            continue;
+        }
+
+        for (docked_entity, docked) in q_docked.iter() {
+            if docked.to == ev.structure_entity && docked.to_block == ev.block.coords()
+                || ev.structure_entity == docked_entity && docked.this_block == ev.block.coords()
+            {
+                let vel = q_velocity.get(docked.to).copied().unwrap_or_default();
+                commands.entity(docked_entity).remove::<Docked>().insert(vel);
+            }
+        }
+    }
+}
+
+fn create_dock_physics(
+    mut removed_docks_reader: RemovedComponents<Docked>,
+    q_added_dock: Query<(Entity, &Docked), Changed<Docked>>,
+    mut commands: Commands,
+) {
+    for removed_dock_ent in removed_docks_reader.read() {
+        if let Some(mut ecmds) = commands.get_entity(removed_dock_ent) {
+            ecmds.remove::<ImpulseJoint>();
+        }
+    }
+
+    for (ent, docked) in q_added_dock.iter() {
+        let joint = FixedJointBuilder::default()
+            .local_anchor1(docked.relative_translation)
+            .local_basis1(docked.relative_rotation);
+
+        commands.entity(ent).insert(ImpulseJoint::new(docked.to, joint));
     }
 }
 
@@ -260,7 +294,10 @@ pub(super) fn register(app: &mut App) {
             dock_structure_loaded_event_processor.in_set(StructureLoadingSet::StructureLoaded),
             dock_block_update_system,
             on_active,
+            monitor_removed_dock_blocks,
+            create_dock_physics,
         )
+            .chain()
             .run_if(in_state(GameState::Playing)),
     );
 
