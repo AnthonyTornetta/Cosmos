@@ -83,7 +83,7 @@ fn swap_camera(
     if inputs.check_just_pressed(CosmosInputs::SwapCameraRight) {
         *selected_camera = match *selected_camera {
             SelectedCamera::Camera(idx) => {
-                if idx >= cam_system.camera_locations().len() - 1 {
+                if cam_system.camera_locations().is_empty() || idx >= cam_system.camera_locations().len() - 1 {
                     SelectedCamera::ShipCore
                 } else {
                     SelectedCamera::Camera(idx + 1)

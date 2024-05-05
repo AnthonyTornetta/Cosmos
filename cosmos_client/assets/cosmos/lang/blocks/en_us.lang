@@ -78,3 +78,4 @@ cosmos:shield_generator=Shield Generator
 cosmos:logic_wire=Logical Wire
 cosmos:logic_on=Logic On
 cosmos:power_cable=Power Cable
+cosmos:ship_dock=Ship Docking Unit
