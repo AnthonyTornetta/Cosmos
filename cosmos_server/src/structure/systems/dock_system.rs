@@ -220,7 +220,8 @@ fn on_active(
             let delta_rotation = my_new_abs_rotation.inverse() * my_rotation;
 
             let rel_pos = hit_structure.block_relative_position(hit_coords)
-                - relative_docked_ship_rotation.mul_vec3(structure.block_relative_position(docking_block) - Vec3::new(0.0, 0.0, 1.0));
+                - relative_docked_ship_rotation
+                    .mul_vec3(structure.block_relative_position(docking_block) + docking_look_face.direction_vec3());
 
             let delta_position = rel_pos - (g_trans.translation() - hit_g_trans.translation());
 
@@ -258,10 +259,6 @@ fn on_active(
 
         let aabb = Aabb::from_min_max(min + Vec3::splat(0.1), max - Vec3::splat(0.1));
 
-        println!("Checking aabb: {aabb:?}");
-        println!("min/max: {min} | {max}");
-        println!("delta pos: {delta_position:?}");
-
         let mut hit_something_bad = false;
 
         context
@@ -270,7 +267,6 @@ fn on_active(
                 if let Ok(ce) = q_chunk_entity.get(e) {
                     if ce.structure_entity != entity {
                         if !check_docked_entities(&ce.structure_entity, &q_docked_list, &e) {
-                            println!("Hit: {e:?}");
                             hit_something_bad = true;
                         }
                     }
@@ -282,8 +278,6 @@ fn on_active(
 
         if !hit_something_bad {
             commands.entity(entity).insert(docked);
-        } else {
-            println!("HIT SOMETHING BAD!");
         }
     }
 }
@@ -320,8 +314,6 @@ fn computed_total_aabb(
     let Some((min_block_bounds, max_block_bounds)) = FullStructure::placed_block_bounds(&mut structure) else {
         return (Vec3::ZERO, Vec3::ZERO);
     };
-
-    println!("|||||| {min_block_bounds} | {max_block_bounds}");
 
     let trans = g_trans.translation() + delta_position;
     let rot = Quat::from_affine3(&g_trans.affine()) * delta_rotation;
