@@ -12,6 +12,7 @@ use cosmos_core::netty::{cosmos_encoder, NettyChannelClient};
 use cosmos_core::structure::shared::build_mode::BuildMode;
 use cosmos_core::structure::ship::pilot::Pilot;
 use cosmos_core::structure::ship::ship_movement::ShipMovement;
+use cosmos_core::structure::systems::dock_system::Docked;
 
 use crate::input::inputs::{CosmosInputs, InputChecker, InputHandler};
 use crate::rendering::MainCamera;
@@ -22,17 +23,18 @@ use crate::window::setup::{CursorFlags, DeltaCursorPosition};
 
 fn process_ship_movement(
     input_handler: InputChecker,
-    query: Query<Entity, (With<LocalPlayer>, With<Pilot>, Without<BuildMode>)>,
+    q_local_pilot: Query<&Pilot, (With<LocalPlayer>, Without<BuildMode>)>,
     q_cam_trans: Query<&Transform, With<MainCamera>>,
     mut client: ResMut<RenetClient>,
     mut crosshair_offset: ResMut<CrosshairOffset>,
+    q_docked: Query<&Docked>,
     cursor_delta_position: Res<DeltaCursorPosition>,
     primary_query: Query<&Window, With<PrimaryWindow>>,
     cursor_flags: Res<CursorFlags>,
 ) {
-    if query.get_single().is_err() {
+    let Ok(pilot) = q_local_pilot.get_single() else {
         return;
-    }
+    };
 
     let Ok(cam_trans) = q_cam_trans.get_single() else {
         return;
@@ -101,36 +103,40 @@ fn process_ship_movement(
         return;
     };
 
-    let hw = w.width() / 2.0;
-    let hh = w.height() / 2.0;
-    let p2 = PI / 2.0; // 45 deg (half of FOV)
+    let is_docked = q_docked.contains(pilot.entity);
 
-    let max_w = hw * 0.9;
-    let max_h = hh * 0.9;
+    if !is_docked {
+        let hw = w.width() / 2.0;
+        let hh = w.height() / 2.0;
+        let p2 = PI / 2.0; // 45 deg (half of FOV)
 
-    // Prevents you from moving cursor off screen
-    // Reduces cursor movement the closer you get to edge of screen until it reaches 0 at hw/2 or hh/2
-    crosshair_offset.x += cursor_delta_position.x - (cursor_delta_position.x * (crosshair_offset.x.abs() / max_w));
-    crosshair_offset.y += cursor_delta_position.y - (cursor_delta_position.y * (crosshair_offset.y.abs() / max_h));
+        let max_w = hw * 0.9;
+        let max_h = hh * 0.9;
 
-    crosshair_offset.x = crosshair_offset.x.clamp(-hw, hw);
-    crosshair_offset.y = crosshair_offset.y.clamp(-hh, hh);
+        // Prevents you from moving cursor off screen
+        // Reduces cursor movement the closer you get to edge of screen until it reaches 0 at hw/2 or hh/2
+        crosshair_offset.x += cursor_delta_position.x - (cursor_delta_position.x * (crosshair_offset.x.abs() / max_w));
+        crosshair_offset.y += cursor_delta_position.y - (cursor_delta_position.y * (crosshair_offset.y.abs() / max_h));
 
-    let mut roll = 0.0;
+        crosshair_offset.x = crosshair_offset.x.clamp(-hw, hw);
+        crosshair_offset.y = crosshair_offset.y.clamp(-hh, hh);
 
-    if input_handler.check_pressed(CosmosInputs::RollLeft) {
-        roll += 0.25;
+        let mut roll = 0.0;
+
+        if input_handler.check_pressed(CosmosInputs::RollLeft) {
+            roll += 0.25;
+        }
+        if input_handler.check_pressed(CosmosInputs::RollRight) {
+            roll -= 0.25;
+        }
+
+        // Camera rotation must effect torque to support steering ship from multiple angles
+        movement.torque = cam_trans.rotation.mul_vec3(Vec3::new(
+            crosshair_offset.y / hh * p2 / 2.0,
+            -crosshair_offset.x / hw * p2 / 2.0,
+            roll,
+        ));
     }
-    if input_handler.check_pressed(CosmosInputs::RollRight) {
-        roll -= 0.25;
-    }
-
-    // Camera rotation must effect torque to support steering ship from multiple angles
-    movement.torque = cam_trans.rotation.mul_vec3(Vec3::new(
-        crosshair_offset.y / hh * p2 / 2.0,
-        -crosshair_offset.x / hw * p2 / 2.0,
-        roll,
-    ));
 
     client.send_message(
         NettyChannelClient::Unreliable,

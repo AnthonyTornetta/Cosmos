@@ -28,12 +28,14 @@ use cosmos_core::{
     physics::structure_physics::ChunkPhysicsPart,
     registry::{identifiable::Identifiable, Registry},
     structure::{
-        coordinates::BlockCoordinate,
         events::StructureLoadedEvent,
         full_structure::FullStructure,
         loading::StructureLoadingSet,
         shields::SHIELD_COLLISION_GROUP,
-        systems::{dock_system::DockSystem, StructureSystem, StructureSystemType, StructureSystems, SystemActive},
+        systems::{
+            dock_system::{DockSystem, Docked},
+            StructureSystem, StructureSystemType, StructureSystems, SystemActive,
+        },
         Structure,
     },
     utils::quat_math::QuatMath,
@@ -93,17 +95,6 @@ fn dock_structure_loaded_event_processor(
             systems.add_system(&mut commands, system, &registry);
         }
     }
-}
-
-#[derive(Component)]
-struct Docked {
-    to: Entity,
-    to_block: BlockCoordinate,
-    this_block: BlockCoordinate,
-
-    /// Relative to entity we are docked to
-    relative_rotation: Quat,
-    relative_translation: Vec3,
 }
 
 #[derive(Component)]

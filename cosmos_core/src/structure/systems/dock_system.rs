@@ -1,12 +1,17 @@
 //! Represents all the energy stored on a structure
 
 use bevy::{
+    ecs::entity::Entity,
+    math::{Quat, Vec3},
     prelude::{App, Component},
     reflect::Reflect,
 };
 use serde::{Deserialize, Serialize};
 
-use crate::structure::coordinates::BlockCoordinate;
+use crate::{
+    netty::sync::{sync_component, SyncableComponent},
+    structure::coordinates::BlockCoordinate,
+};
 
 use super::{sync::SyncableSystem, StructureSystemImpl};
 
@@ -14,6 +19,43 @@ use super::{sync::SyncableSystem, StructureSystemImpl};
 /// Represents the energy storage of a structure
 pub struct DockSystem {
     docking_blocks: Vec<BlockCoordinate>,
+}
+
+#[derive(Component, Debug, Serialize, Deserialize, Clone)]
+/// If a structure is docked to another, it will have this component
+pub struct Docked {
+    /// The entity this is docked to
+    pub to: Entity,
+    /// The block on the entity it is docked to that acts as the docking block
+    pub to_block: BlockCoordinate,
+    /// The block on this entity that acts as the docking block
+    pub this_block: BlockCoordinate,
+
+    /// Relative to entity we are docked to
+    pub relative_rotation: Quat,
+    /// Relative translation to the entity we are docked to
+    pub relative_translation: Vec3,
+}
+
+impl SyncableComponent for Docked {
+    fn get_sync_type() -> crate::netty::sync::SyncType {
+        crate::netty::sync::SyncType::ServerAuthoritative
+    }
+
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:docked"
+    }
+
+    #[cfg(feature = "client")]
+    fn needs_entity_conversion() -> bool {
+        true
+    }
+
+    #[cfg(feature = "client")]
+    fn convert_entities_server_to_client(mut self, _mapping: &crate::netty::sync::mapping::NetworkMapping) -> Option<Self> {
+        self.to = _mapping.client_from_server(&self.to)?;
+        Some(self)
+    }
 }
 
 impl SyncableSystem for DockSystem {}
@@ -46,5 +88,7 @@ impl DockSystem {
 }
 
 pub(super) fn register(app: &mut App) {
+    sync_component::<Docked>(app);
+
     app.register_type::<DockSystem>();
 }

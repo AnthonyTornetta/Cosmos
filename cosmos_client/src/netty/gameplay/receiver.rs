@@ -42,6 +42,7 @@ use cosmos_core::{
         shared::build_mode::{EnterBuildModeEvent, ExitBuildModeEvent},
         ship::{pilot::Pilot, ship_builder::TShipBuilder, Ship},
         station::station_builder::TStationBuilder,
+        systems::dock_system::Docked,
         ChunkInitEvent, Structure,
     },
 };
@@ -73,13 +74,13 @@ fn insert_last_rotation(mut commands: Commands, query: Query<Entity, Added<Struc
 }
 
 fn update_crosshair(
-    mut q_ships: Query<(&Pilot, &mut LastRotation, &Transform), (With<Ship>, Changed<Transform>)>,
+    mut q_ships: Query<(&Pilot, &mut LastRotation, &Transform, Option<&Docked>), (With<Ship>, Changed<Transform>)>,
     local_player_query: Query<(), With<LocalPlayer>>,
     camera_query: Query<(&GlobalTransform, &Transform, &Camera), With<MainCamera>>,
     mut crosshair_offset: ResMut<CrosshairOffset>,
     primary_query: Query<&Window, With<PrimaryWindow>>,
 ) {
-    for (pilot, mut last_rotation, transform) in q_ships.iter_mut() {
+    for (pilot, mut last_rotation, transform, docked) in q_ships.iter_mut() {
         if !local_player_query.contains(pilot.entity) {
             continue;
         }
@@ -92,7 +93,10 @@ fn update_crosshair(
             return;
         };
 
-        if let Some(mut pos_on_screen) = camera.world_to_viewport(
+        if docked.is_some() {
+            crosshair_offset.x = 0.0;
+            crosshair_offset.y = 0.0;
+        } else if let Some(mut pos_on_screen) = camera.world_to_viewport(
             cam_global_trans,
             last_rotation.0.mul_vec3(Vec3::from(cam_trans.forward())) + cam_global_trans.translation(),
         ) {
