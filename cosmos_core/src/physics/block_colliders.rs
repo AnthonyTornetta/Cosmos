@@ -71,7 +71,7 @@ pub enum BlockColliderType {
     /// A custom collider that is more complex than the default options
     Custom(Vec<CustomCollider>),
     /// Represents a collider that will change when this is connected to other blocks
-    Connected(ConnectedCollider),
+    Connected(Box<ConnectedCollider>),
     /// No collider at all
     Empty,
 }
@@ -158,7 +158,7 @@ fn register_custom_colliders(blocks: Res<Registry<Block>>, mut registry: ResMut<
 
     if blocks.from_id("cosmos:power_cable").is_some() {
         registry.register(BlockCollider::new(
-            BlockColliderType::Connected(ConnectedCollider {
+            BlockColliderType::Connected(Box::new(ConnectedCollider {
                 top: FaceColldier {
                     non_connected: vec![CustomCollider {
                         collider: Collider::cuboid(0.2, EPSILON, 0.2),
@@ -243,7 +243,7 @@ fn register_custom_colliders(blocks: Res<Registry<Block>>, mut registry: ResMut<
                         rotation: Quat::IDENTITY,
                     }],
                 },
-            }),
+            })),
             "cosmos:power_cable",
         ));
     }

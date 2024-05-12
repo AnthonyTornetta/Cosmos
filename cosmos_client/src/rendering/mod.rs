@@ -801,16 +801,7 @@ fn register_block_meshes(
             if let Some(model_data) = block_info.from_id(block.unlocalized_name()).map(|x| &x.model) {
                 let name = match model_data {
                     ModelData::All(name) => name,
-                    ModelData::Sides {
-                        name,
-                        right: _,
-                        left: _,
-                        top: _,
-                        bottom: _,
-                        front: _,
-                        back: _,
-                        connected: _,
-                    } => name,
+                    ModelData::Sides(sides) => &sides.name,
                 };
 
                 if model_registry.add_link(block, name).is_err() {
@@ -826,24 +817,15 @@ fn register_block_meshes(
                                 unlocalized_name: name.into(),
                             }
                         }
-                        ModelData::Sides {
-                            name: _,
-                            right,
-                            left,
-                            top,
-                            bottom,
-                            front,
-                            back,
-                            connected,
-                        } => {
-                            let right = get_mesh_information(right);
-                            let left = get_mesh_information(left);
-                            let top = get_mesh_information(top);
-                            let bottom = get_mesh_information(bottom);
-                            let front = get_mesh_information(front);
-                            let back = get_mesh_information(back);
+                        ModelData::Sides(sides) => {
+                            let right = get_mesh_information(&sides.right);
+                            let left = get_mesh_information(&sides.left);
+                            let top = get_mesh_information(&sides.top);
+                            let bottom = get_mesh_information(&sides.bottom);
+                            let front = get_mesh_information(&sides.front);
+                            let back = get_mesh_information(&sides.back);
 
-                            if let Some(connected) = connected {
+                            if let Some(connected) = &sides.connected {
                                 let connected_right = get_mesh_information(&connected.right);
                                 let connected_left = get_mesh_information(&connected.left);
                                 let connected_top = get_mesh_information(&connected.top);

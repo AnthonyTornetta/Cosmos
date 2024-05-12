@@ -220,20 +220,13 @@ impl BlockTextureIndex {
     pub fn atlas_index_from_face(&self, face: BlockFace, neighbors: BlockNeighbors) -> Option<u32> {
         match &self.texture {
             LoadedTexture::All(texture_type) => get_texture_index_from_type(texture_type, neighbors),
-            LoadedTexture::Sides {
-                right,
-                left,
-                top,
-                bottom,
-                front,
-                back,
-            } => match face {
-                BlockFace::Right => get_texture_index_from_type(right, neighbors),
-                BlockFace::Left => get_texture_index_from_type(left, neighbors),
-                BlockFace::Top => get_texture_index_from_type(top, neighbors),
-                BlockFace::Bottom => get_texture_index_from_type(bottom, neighbors),
-                BlockFace::Front => get_texture_index_from_type(front, neighbors),
-                BlockFace::Back => get_texture_index_from_type(back, neighbors),
+            LoadedTexture::Sides(sides) => match face {
+                BlockFace::Right => get_texture_index_from_type(&sides.right, neighbors),
+                BlockFace::Left => get_texture_index_from_type(&sides.left, neighbors),
+                BlockFace::Top => get_texture_index_from_type(&sides.top, neighbors),
+                BlockFace::Bottom => get_texture_index_from_type(&sides.bottom, neighbors),
+                BlockFace::Front => get_texture_index_from_type(&sides.front, neighbors),
+                BlockFace::Back => get_texture_index_from_type(&sides.back, neighbors),
             },
         }
     }
@@ -290,31 +283,35 @@ struct ReadBlockInfo {
 }
 
 #[derive(Serialize, Clone, Deserialize, Debug)]
+/// The block is made up of models that are divided into separate faces.
+pub struct SideRenderingInfo {
+    /// The model's name. This should almost always be the unlocalized_name of the block it belongs to.
+    ///
+    /// This should be unique to the combination of faces & connected faces.
+    pub name: String,
+    /// The model for the right block face
+    pub right: String,
+    /// The model for the left block face
+    pub left: String,
+    /// The model for the top block face
+    pub top: String,
+    /// The model for the bottom block face
+    pub bottom: String,
+    /// The model for the front block face
+    pub front: String,
+    /// The model for the back block face
+    pub back: String,
+    /// If this should have separate faces used when adjacent to other types of itself, this field can be used
+    pub connected: Option<ConnectedModelData>,
+}
+
+#[derive(Serialize, Clone, Deserialize, Debug)]
 /// Points to the model files of this block
 pub enum ModelData {
     /// The block is made up of one model and cannot be divided into separate faces.
     All(String),
     /// The block is made up of models that are divided into separate faces.
-    Sides {
-        /// The model's name. This should almost always be the unlocalized_name of the block it belongs to.
-        ///
-        /// This should be unique to the combination of faces & connected faces.
-        name: String,
-        /// The model for the right block face
-        right: String,
-        /// The model for the left block face
-        left: String,
-        /// The model for the top block face
-        top: String,
-        /// The model for the bottom block face
-        bottom: String,
-        /// The model for the front block face
-        front: String,
-        /// The model for the back block face
-        back: String,
-        /// If this should have separate faces used when adjacent to other types of itself, this field can be used
-        connected: Option<ConnectedModelData>,
-    },
+    Sides(Box<SideRenderingInfo>),
 }
 
 impl Default for ModelData {
@@ -396,25 +393,29 @@ pub enum LoadingTextureType {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+/// Each side uses a different texture
+pub struct LoadedTextureSides {
+    /// The right face's texture
+    right: LoadedTextureType,
+    /// The left face's texture
+    left: LoadedTextureType,
+    /// The top face's texture
+    top: LoadedTextureType,
+    /// The bottom face's texture
+    bottom: LoadedTextureType,
+    /// The front face's texture
+    front: LoadedTextureType,
+    /// The back face's texture
+    back: LoadedTextureType,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 /// Indicates the texture that should be used for this block.
 pub enum LoadedTexture {
     /// Each side uses the same texture
     All(LoadedTextureType),
     /// Each side uses a different texture
-    Sides {
-        /// The right face's texture
-        right: LoadedTextureType,
-        /// The left face's texture
-        left: LoadedTextureType,
-        /// The top face's texture
-        top: LoadedTextureType,
-        /// The bottom face's texture
-        bottom: LoadedTextureType,
-        /// The front face's texture
-        front: LoadedTextureType,
-        /// The back face's texture
-        back: LoadedTextureType,
-    },
+    Sides(Box<LoadedTextureSides>),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -517,14 +518,14 @@ pub fn load_block_rendering_information(
                 bottom,
                 front,
                 back,
-            } => LoadedTexture::Sides {
+            } => LoadedTexture::Sides(Box::new(LoadedTextureSides {
                 right: process_loading_texture_type(right, &atlas_registry, &server, missing_texture_index),
                 left: process_loading_texture_type(left, &atlas_registry, &server, missing_texture_index),
                 top: process_loading_texture_type(top, &atlas_registry, &server, missing_texture_index),
                 bottom: process_loading_texture_type(bottom, &atlas_registry, &server, missing_texture_index),
                 front: process_loading_texture_type(front, &atlas_registry, &server, missing_texture_index),
                 back: process_loading_texture_type(back, &atlas_registry, &server, missing_texture_index),
-            },
+            })),
         };
 
         let lod_texture = block_info
