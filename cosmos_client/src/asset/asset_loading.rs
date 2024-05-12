@@ -562,7 +562,7 @@ fn process_loading_texture_type(
                 .from_id("cosmos:main") // Eventually load this via the block_info file
                 .expect("No main atlas")
                 .texture_atlas
-                .get_texture_index(&server.get_handle(&format!("{mod_id}/images/blocks/{name}.png")).unwrap_or_default())
+                .get_texture_index(&server.get_handle(format!("{mod_id}/images/blocks/{name}.png")).unwrap_or_default())
                 .unwrap_or_else(|| {
                     warn!("Could not find texture with ID {mod_id}:{name}");
 
@@ -588,7 +588,7 @@ fn process_loading_texture_type(
                         .from_id("cosmos:main") // Eventually load this via the block_info file
                         .expect("No main atlas")
                         .texture_atlas
-                        .get_texture_index(&server.get_handle(&format!("{mod_id}/images/blocks/{name}.png")).unwrap_or_default())
+                        .get_texture_index(&server.get_handle(format!("{mod_id}/images/blocks/{name}.png")).unwrap_or_default())
                         .unwrap_or(missing_texture_index)
                 })
                 .collect::<Vec<u32>>()

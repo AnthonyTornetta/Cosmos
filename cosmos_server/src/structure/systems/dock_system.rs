@@ -256,10 +256,8 @@ fn on_active(
             .colliders_with_aabb_intersecting_aabb(world_id, aabb, |e| {
                 //
                 if let Ok(ce) = q_chunk_entity.get(e) {
-                    if ce.structure_entity != entity {
-                        if !check_docked_entities(&ce.structure_entity, &q_docked_list, &e) {
-                            hit_something_bad = true;
-                        }
+                    if ce.structure_entity != entity && !check_docked_entities(&ce.structure_entity, &q_docked_list, &e) {
+                        hit_something_bad = true;
                     }
                 }
 
@@ -407,7 +405,7 @@ fn snap_to_right_angle(rot: Quat) -> Quat {
     let nearest_forward = nearest_axis(rot * Vec3::Z);
     let nearest_up = nearest_axis(rot * Vec3::Y);
     // return Quat::look_to(nearest_forward, nearest_up);
-    return Quat::looking_to(-nearest_forward, nearest_up);
+    Quat::looking_to(-nearest_forward, nearest_up)
 }
 
 /// Find the absolute axis that is closest to the given direction

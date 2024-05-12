@@ -722,7 +722,7 @@ impl ChunkRenderer {
 
                     let Some(mut mesh_info) = mesh
                         .info_for_face(face, block_connections[og_face.index()])
-                        .map(|x| Some(x))
+                        .map(Some)
                         .unwrap_or_else(|| {
                             let single_mesh = mesh.info_for_whole_block();
 

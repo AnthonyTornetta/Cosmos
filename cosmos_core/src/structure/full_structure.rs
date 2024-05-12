@@ -219,7 +219,7 @@ impl FullStructure {
         };
 
         let bb = match fs.block_bounds {
-            None => Self::compute_block_bounds(&self_as_structure),
+            None => Self::compute_block_bounds(self_as_structure),
             Some(bb) => Some(bb),
         };
 

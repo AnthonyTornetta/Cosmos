@@ -3,20 +3,13 @@
 //! See [`sync_component`]
 
 use bevy::{
-    app::{App, Update},
-    ecs::{
-        component::Component,
-        entity::Entity,
-        event::Event,
-        schedule::{IntoSystemSetConfigs, SystemSet},
-        system::ResMut,
-    },
+    app::App,
+    ecs::{component::Component, entity::Entity, event::Event, schedule::SystemSet, system::ResMut},
 };
 use bevy_renet::renet::ClientId;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::{
-    physics::location::CosmosBundleSet,
     registry::{create_registry, identifiable::Identifiable, Registry},
     structure::systems::StructureSystemId,
 };
@@ -27,6 +20,11 @@ enum ComponentReplicationMessage {
         component_id: u16,
         entity_identifier: ComponentEntityIdentifier,
         raw_data: Vec<u8>,
+    },
+    /// *Server Authoritative Note:* Removed components will NOT be synced if the entity is despawned.
+    RemovedComponent {
+        component_id: u16,
+        entity_identifier: ComponentEntityIdentifier,
     },
 }
 
@@ -162,6 +160,17 @@ struct GotComponentToSyncEvent {
     raw_data: Vec<u8>,
 }
 
+#[derive(Event, Debug)]
+struct GotComponentToRemoveEvent {
+    #[allow(dead_code)] // on client this is unused
+    client_id: ClientId,
+    component_id: u16,
+    entity: Entity,
+    /// The entity authority should be checked against - not the entity being targetted.
+    #[allow(dead_code)] // on client this is unused
+    authority_entity: Entity,
+}
+
 fn register_component<T: SyncableComponent>(mut registry: ResMut<Registry<SyncedComponentId>>) {
     registry.register(SyncedComponentId {
         unlocalized_name: T::get_component_unlocalized_name().to_owned(),
@@ -202,37 +211,15 @@ pub fn sync_component<T: SyncableComponent>(_app: &mut App) {
 pub(super) fn register(app: &mut App) {
     create_registry::<SyncedComponentId>(app, "cosmos:syncable_components");
 
-    app.add_event::<GotComponentToSyncEvent>();
+    app.add_event::<GotComponentToSyncEvent>().add_event::<GotComponentToRemoveEvent>();
 
     #[cfg(feature = "client")]
     {
-        app.configure_sets(
-            Update,
-            (
-                ComponentSyncingSet::PreComponentSyncing,
-                ComponentSyncingSet::DoComponentSyncing,
-                ComponentSyncingSet::PostComponentSyncing,
-            )
-                .before(CosmosBundleSet::HandleCosmosBundles)
-                .chain(),
-        );
-
         client_syncing::setup_client(app);
     }
 
     #[cfg(feature = "server")]
     {
-        app.configure_sets(
-            Update,
-            (
-                ComponentSyncingSet::PreComponentSyncing,
-                ComponentSyncingSet::DoComponentSyncing,
-                ComponentSyncingSet::PostComponentSyncing,
-            )
-                .after(CosmosBundleSet::HandleCosmosBundles)
-                .chain(),
-        );
-
         server_syncing::setup_server(app);
     }
 }
