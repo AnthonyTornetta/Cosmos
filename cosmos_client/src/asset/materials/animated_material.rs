@@ -178,16 +178,6 @@ pub struct AnimatedArrayTextureMaterial {
     #[doc(alias = "translucency")]
     pub diffuse_transmission: f32,
 
-    /// A map that modulates diffuse transmission via its alpha channel. Multiplied by [`AnimatedArrayTextureMaterial::diffuse_transmission`]
-    /// to obtain the final result.
-    ///
-    /// **Important:** The [`AnimatedArrayTextureMaterial::diffuse_transmission`] property must be set to a value higher than 0.0,
-    /// or this texture won't have any effect.
-    #[texture(17)]
-    #[sampler(18)]
-    #[cfg(feature = "pbr_transmission_textures")]
-    pub diffuse_transmission_texture: Option<Handle<Image>>,
-
     /// The amount of light transmitted _specularly_ through the material (i.e. via refraction)
     ///
     /// - When set to `0.0` (the default) no light is transmitted.
@@ -213,16 +203,6 @@ pub struct AnimatedArrayTextureMaterial {
     #[doc(alias = "refraction")]
     pub specular_transmission: f32,
 
-    /// A map that modulates specular transmission via its red channel. Multiplied by [`AnimatedArrayTextureMaterial::specular_transmission`]
-    /// to obtain the final result.
-    ///
-    /// **Important:** The [`AnimatedArrayTextureMaterial::specular_transmission`] property must be set to a value higher than 0.0,
-    /// or this texture won't have any effect.
-    #[texture(13)]
-    #[sampler(14)]
-    #[cfg(feature = "pbr_transmission_textures")]
-    pub specular_transmission_texture: Option<Handle<Image>>,
-
     /// Thickness of the volume beneath the material surface.
     ///
     /// When set to `0.0` (the default) the material appears as an infinitely-thin film,
@@ -235,16 +215,6 @@ pub struct AnimatedArrayTextureMaterial {
     #[doc(alias = "volume")]
     #[doc(alias = "thin_walled")]
     pub thickness: f32,
-
-    /// A map that modulates thickness via its green channel. Multiplied by [`AnimatedArrayTextureMaterial::thickness`]
-    /// to obtain the final result.
-    ///
-    /// **Important:** The [`AnimatedArrayTextureMaterial::thickness`] property must be set to a value higher than 0.0,
-    /// or this texture won't have any effect.
-    #[texture(15)]
-    #[sampler(16)]
-    #[cfg(feature = "pbr_transmission_textures")]
-    pub thickness_texture: Option<Handle<Image>>,
 
     /// The [index of refraction](https://en.wikipedia.org/wiki/Refractive_index) of the material.
     ///
@@ -508,14 +478,8 @@ impl Default for AnimatedArrayTextureMaterial {
             // <https://google.github.io/filament/Material%20Properties.pdf>
             reflectance: 0.5,
             diffuse_transmission: 0.0,
-            #[cfg(feature = "pbr_transmission_textures")]
-            diffuse_transmission_texture: None,
             specular_transmission: 0.0,
-            #[cfg(feature = "pbr_transmission_textures")]
-            specular_transmission_texture: None,
             thickness: 0.0,
-            #[cfg(feature = "pbr_transmission_textures")]
-            thickness_texture: None,
             ior: 1.5,
             attenuation_color: Color::WHITE,
             attenuation_distance: f32::INFINITY,
@@ -690,18 +654,6 @@ impl AsBindGroupShaderType<AnimatedArrayTextureMaterialUniform> for AnimatedArra
         }
         if self.depth_map.is_some() {
             flags |= AnimatedArrayTextureMaterialFlags::DEPTH_MAP;
-        }
-        #[cfg(feature = "pbr_transmission_textures")]
-        {
-            if self.specular_transmission_texture.is_some() {
-                flags |= AnimatedArrayTextureMaterialFlags::SPECULAR_TRANSMISSION_TEXTURE;
-            }
-            if self.thickness_texture.is_some() {
-                flags |= AnimatedArrayTextureMaterialFlags::THICKNESS_TEXTURE;
-            }
-            if self.diffuse_transmission_texture.is_some() {
-                flags |= AnimatedArrayTextureMaterialFlags::DIFFUSE_TRANSMISSION_TEXTURE;
-            }
         }
         let has_normal_map = self.normal_map_texture.is_some();
         if has_normal_map {
