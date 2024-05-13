@@ -11,6 +11,7 @@ pub mod economy;
 pub mod ecs;
 pub mod entities;
 pub mod events;
+pub mod fluid;
 pub mod input;
 pub mod interactions;
 pub mod inventory;
@@ -158,6 +159,7 @@ fn main() {
     ecs::register(&mut app);
     shop::register(&mut app);
     economy::register(&mut app);
+    fluid::register(&mut app);
 
     if cfg!(feature = "print-schedule") {
         println!(

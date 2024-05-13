@@ -101,7 +101,7 @@ fn register_custom_colliders(blocks: Res<Registry<Block>>, mut registry: ResMut<
 
     const EPSILON: f32 = 0.001;
 
-    if blocks.from_id("cosmos:short_grass").is_some() {
+    if blocks.contains("cosmos:short_grass") {
         registry.register(BlockCollider::new(
             BlockColliderType::Custom(vec![CustomCollider {
                 collider: Collider::cuboid(0.5, 0.2, 0.5),
@@ -113,7 +113,7 @@ fn register_custom_colliders(blocks: Res<Registry<Block>>, mut registry: ResMut<
         ));
     }
 
-    if blocks.from_id("cosmos:ramp").is_some() {
+    if blocks.contains("cosmos:ramp") {
         registry.register(BlockCollider::new(
             BlockColliderType::Custom(vec![
                 // top
@@ -156,7 +156,7 @@ fn register_custom_colliders(blocks: Res<Registry<Block>>, mut registry: ResMut<
         ));
     }
 
-    if blocks.from_id("cosmos:power_cable").is_some() {
+    if blocks.contains("cosmos:power_cable") {
         registry.register(BlockCollider::new(
             BlockColliderType::Connected(Box::new(ConnectedCollider {
                 top: FaceColldier {

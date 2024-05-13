@@ -133,16 +133,14 @@ fn add_cosmos_blocks(
         BlockBuilder::new("cosmos:water".to_owned(), 2.0, 50.0, 10.0)
             .add_property(BlockProperty::Transparent)
             .add_property(BlockProperty::Full)
-            .add_connection_group("cosmos:water")
-            .connect_to_group("cosmos:water")
+            .add_property(BlockProperty::Fluid)
             .create(),
     );
 
     blocks.register(
         BlockBuilder::new("cosmos:lava", 10.0, 50.0, 10.0)
             .add_property(BlockProperty::Full)
-            .add_connection_group("cosmos:lava")
-            .connect_to_group("cosmos:lava")
+            .add_property(BlockProperty::Fluid)
             .create(),
     );
 

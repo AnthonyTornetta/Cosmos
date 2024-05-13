@@ -26,6 +26,7 @@ pub mod blocks;
 pub mod commands;
 pub mod entities;
 pub mod events;
+pub mod fluid;
 pub mod init;
 pub mod inventory;
 pub mod netty;
