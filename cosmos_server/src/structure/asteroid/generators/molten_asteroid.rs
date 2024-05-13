@@ -60,7 +60,7 @@ fn start_generating_asteroid(
 
             let blocks = blocks.registry();
             let stone = blocks.from_id("cosmos:molten_stone").expect("Missing cosmos:molten_stone");
-            let lava = blocks.from_id("cosmos:cheese").expect("Missing cosmos:cheese");
+            let lava = blocks.from_id("cosmos:lava").expect("Missing cosmos:lava");
             let ore = blocks.from_id("cosmos:test_ore").expect("Missing text ore");
 
             let mut chunks = HashMap::new();
