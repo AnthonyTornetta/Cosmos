@@ -11,6 +11,8 @@ use bevy::prelude::{App, EventWriter, OnEnter, ResMut, States};
 
 use super::{Block, BlockProperty};
 
+mod fluid;
+
 /// Air's ID - this block will always exist
 pub static AIR_BLOCK_ID: u16 = 0;
 
@@ -132,15 +134,17 @@ fn add_cosmos_blocks(
     blocks.register(
         BlockBuilder::new("cosmos:water".to_owned(), 2.0, 50.0, 10.0)
             .add_property(BlockProperty::Transparent)
-            .add_property(BlockProperty::Full)
             .add_property(BlockProperty::Fluid)
+            .add_connection_group("cosmos:fluid")
+            .connect_to_group("cosmos:fluid")
             .create(),
     );
 
     blocks.register(
         BlockBuilder::new("cosmos:lava", 10.0, 50.0, 10.0)
-            .add_property(BlockProperty::Full)
             .add_property(BlockProperty::Fluid)
+            .add_connection_group("cosmos:fluid")
+            .connect_to_group("cosmos:fluid")
             .create(),
     );
 
@@ -377,6 +381,15 @@ fn add_cosmos_blocks(
             .create(),
     );
 
+    blocks.register(
+        BlockBuilder::new("cosmos:tank", 2.0, 20.0, 5.0)
+            .add_property(BlockProperty::Full)
+            .add_property(BlockProperty::Transparent)
+            .add_connection_group("cosmos:tank")
+            .connect_to_group("cosmos:tank")
+            .create(),
+    );
+
     loading.finish_loading(id, &mut end_writer);
 }
 
@@ -398,8 +411,9 @@ fn add_air_block(
     loader.finish_loading(id, &mut done_loading_event);
 }
 
-pub(super) fn register<T: States>(app: &mut App, pre_loading_state: T, loading_state: T) {
+pub(super) fn register<T: States>(app: &mut App, pre_loading_state: T, loading_state: T, post_loading_state: T) {
     registry::create_registry::<Block>(app, "cosmos:blocks");
+    fluid::register(app, post_loading_state);
 
     app.add_systems(OnEnter(pre_loading_state), add_air_block);
     app.add_systems(OnEnter(loading_state), add_cosmos_blocks);

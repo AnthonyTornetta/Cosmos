@@ -107,6 +107,15 @@ fn generate_colliders(
                             (false, true)
                         }
                     },
+                    Some(BlockColliderType::Fluid) => {
+                        // TODO: Make this good
+                        if size == 1 {
+                            sensor_colliders.push((location, Rot::IDENTITY, Collider::cuboid(0.5, 0.5, 0.5)));
+                        }
+
+                        can_be_one_square_collider = false;
+                        (false, true)
+                    }
                     Some(BlockColliderType::Empty) => (true, false),
                     Some(BlockColliderType::Custom(custom_colliders)) => {
                         if size == 1 {
@@ -608,23 +617,20 @@ fn remove_chunk_colliders(
     let Ok(mut chunk_phys_parts) = physics_components_query.get_mut(structure_entity) else {
         return;
     };
-    let mut indices_to_remove = vec![];
 
-    for (idx, chunk_part_entity) in chunk_phys_parts
-        .pairs
-        .iter()
-        .enumerate()
-        .filter(|(_, x)| x.chunk_entity == chunk_entity)
-    {
-        if let Some(x) = commands.get_entity(chunk_part_entity.collider_entity) {
-            x.despawn_recursive()
+    chunk_phys_parts.pairs.retain(|chunk_part_entity| {
+        if chunk_part_entity.chunk_entity != chunk_entity {
+            return true;
         }
-        indices_to_remove.push(idx);
-    }
 
-    for index in indices_to_remove {
-        chunk_phys_parts.pairs.remove(index);
-    }
+        if let Some(x) = commands.get_entity(chunk_part_entity.collider_entity) {
+            x.despawn_recursive();
+
+            false
+        } else {
+            true
+        }
+    });
 }
 
 fn add_physics_parts(mut commands: Commands, query: Query<Entity, Added<Structure>>) {

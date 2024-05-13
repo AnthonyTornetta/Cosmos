@@ -5,7 +5,9 @@
 use bevy::app::App;
 
 pub mod block_flipper;
+pub mod structure_updater;
 
 pub(super) fn register(_app: &mut App) {
     // block_flipper::register(app);
+    // structure_updater::register(_app);
 }

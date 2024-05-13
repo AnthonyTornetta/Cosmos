@@ -1,6 +1,10 @@
 //! Blocks are the smallest thing found on any structure
 
-use std::{f32::consts::PI, fmt::Display};
+use std::{
+    f32::consts::PI,
+    fmt::Display,
+    hash::{DefaultHasher, Hash, Hasher},
+};
 
 use bevy::{
     math::Quat,
@@ -768,27 +772,44 @@ impl Block {
 }
 
 impl PartialEq for Block {
+    #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id
     }
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Reflect)]
+#[derive(Clone, Serialize, Deserialize, Debug, Eq, Hash, Reflect)]
 /// This is how you signify which blocks should connect to which other blocks.
 ///
 /// For example, wires will connect to anything with the group "cosmos:machine".
-pub struct ConnectionGroup(String);
+pub struct ConnectionGroup {
+    unlocalized_name: String,
+    hash: u64,
+}
+
+// This should be super quick because of how often it will happen
+impl PartialEq for ConnectionGroup {
+    #[inline(always)]
+    fn eq(&self, other: &Self) -> bool {
+        self.hash == other.hash
+    }
+}
 
 impl ConnectionGroup {
     /// Creates a connection group from this unlocalized name.
     pub fn new(unlocalized_name: impl Into<String>) -> Self {
-        Self(unlocalized_name.into())
+        let unlocalized_name = unlocalized_name.into();
+        let mut hasher = DefaultHasher::default();
+        unlocalized_name.hash(&mut hasher);
+        let hash = hasher.finish();
+
+        Self { unlocalized_name, hash }
     }
 }
 
 impl From<&str> for ConnectionGroup {
     fn from(value: &str) -> Self {
-        Self(value.to_owned())
+        Self::new(value)
     }
 }
 
@@ -799,7 +820,7 @@ pub(super) fn register<T: States + Clone + Copy>(
     post_loading_state: T,
     playing_state: T,
 ) {
-    blocks::register(app, pre_loading_state, loading_state);
+    blocks::register(app, pre_loading_state, loading_state, post_loading_state);
     block_events::register(app);
     multiblock::register(app, post_loading_state, playing_state);
     block_update::register(app);

@@ -528,7 +528,7 @@ impl ChunkRenderer {
             let actual_block = blocks.from_numeric_id(block_id);
 
             #[inline(always)]
-            fn check(
+            fn check_should_render(
                 c: &Chunk,
                 actual_block: &Block,
                 blocks: &Registry<Block>,
@@ -538,7 +538,7 @@ impl ChunkRenderer {
                 let block_here = blocks.from_numeric_id(c.block_at(coords));
                 *should_connect = actual_block.should_connect_with(block_here);
 
-                block_here.is_see_through() || !actual_block.is_full()
+                !(actual_block.is_fluid() && block_here == actual_block) && (block_here.is_see_through() || !actual_block.is_full())
             }
 
             let (x, y, z) = (coords.x, coords.y, coords.z);
@@ -547,7 +547,7 @@ impl ChunkRenderer {
 
             // right
             if (x != CHUNK_DIMENSIONS - 1
-                && check(
+                && check_should_render(
                     chunk,
                     actual_block,
                     blocks,
@@ -557,7 +557,7 @@ impl ChunkRenderer {
                 || (x == CHUNK_DIMENSIONS - 1
                     && (right
                         .map(|c| {
-                            check(
+                            check_should_render(
                                 c,
                                 actual_block,
                                 blocks,
@@ -571,7 +571,7 @@ impl ChunkRenderer {
             }
             // left
             if (x != 0
-                && check(
+                && check_should_render(
                     chunk,
                     actual_block,
                     blocks,
@@ -581,7 +581,7 @@ impl ChunkRenderer {
                 || (x == 0
                     && (left
                         .map(|c| {
-                            check(
+                            check_should_render(
                                 c,
                                 actual_block,
                                 blocks,
@@ -596,7 +596,7 @@ impl ChunkRenderer {
 
             // top
             if (y != CHUNK_DIMENSIONS - 1
-                && check(
+                && check_should_render(
                     chunk,
                     actual_block,
                     blocks,
@@ -606,7 +606,7 @@ impl ChunkRenderer {
                 || (y == CHUNK_DIMENSIONS - 1
                     && top
                         .map(|c| {
-                            check(
+                            check_should_render(
                                 c,
                                 actual_block,
                                 blocks,
@@ -620,7 +620,7 @@ impl ChunkRenderer {
             }
             // bottom
             if (y != 0
-                && check(
+                && check_should_render(
                     chunk,
                     actual_block,
                     blocks,
@@ -630,7 +630,7 @@ impl ChunkRenderer {
                 || (y == 0
                     && (bottom
                         .map(|c| {
-                            check(
+                            check_should_render(
                                 c,
                                 actual_block,
                                 blocks,
@@ -645,7 +645,7 @@ impl ChunkRenderer {
 
             // front
             if (z != CHUNK_DIMENSIONS - 1
-                && check(
+                && check_should_render(
                     chunk,
                     actual_block,
                     blocks,
@@ -655,7 +655,7 @@ impl ChunkRenderer {
                 || (z == CHUNK_DIMENSIONS - 1
                     && (front
                         .map(|c| {
-                            check(
+                            check_should_render(
                                 c,
                                 actual_block,
                                 blocks,
@@ -669,7 +669,7 @@ impl ChunkRenderer {
             }
             // back
             if (z != 0
-                && check(
+                && check_should_render(
                     chunk,
                     actual_block,
                     blocks,
@@ -679,7 +679,7 @@ impl ChunkRenderer {
                 || (z == 0
                     && (back
                         .map(|c| {
-                            check(
+                            check_should_render(
                                 c,
                                 actual_block,
                                 blocks,
