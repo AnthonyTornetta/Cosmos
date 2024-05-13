@@ -1,6 +1,24 @@
 {
     "texture": {
-        "all": "cosmos:ship_hull_grey",
-        "front": "cosmos:camera_front"
+        "Sides": {
+            "left": {
+                "Single": "cosmos:ship_hull_grey"
+            },
+            "right": {
+                "Single": "cosmos:ship_hull_grey"
+            },
+            "back": {
+                "Single": "cosmos:ship_hull_grey"
+            },
+            "top": {
+                "Single": "cosmos:ship_hull_grey"
+            },
+            "bottom": {
+                "Single": "cosmos:ship_hull_grey"
+            },
+            "front": {
+                "Single": "cosmos:camera_front"
+            }
+        }
     }
 }

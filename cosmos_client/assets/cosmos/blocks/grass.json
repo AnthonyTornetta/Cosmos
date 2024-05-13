@@ -1,8 +1,27 @@
 {
+    "lod_texture": {
+        "Single": "cosmos:grass_top"
+    },
     "texture": {
-        "all": "cosmos:grass_side",
-        "top": "cosmos:grass_top",
-        "bottom": "cosmos:dirt",
-        "lod": "cosmos:grass_top"
+        "Sides": {
+            "left": {
+                "Single": "cosmos:grass_side"
+            },
+            "right": {
+                "Single": "cosmos:grass_side"
+            },
+            "front": {
+                "Single": "cosmos:grass_side"
+            },
+            "back": {
+                "Single": "cosmos:grass_side"
+            },
+            "top": {
+                "Single": "cosmos:grass_top"
+            },
+            "bottom": {
+                "Single": "cosmos:dirt"
+            }
+        }
     }
 }

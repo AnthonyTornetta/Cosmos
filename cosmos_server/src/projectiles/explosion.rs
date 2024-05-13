@@ -20,11 +20,11 @@ use cosmos_core::{
     physics::{
         location::Location,
         player_world::{PlayerWorld, WorldWithin},
+        structure_physics::ChunkPhysicsPart,
     },
     projectiles::missile::{Explosion, ExplosionSystemSet},
     registry::Registry,
     structure::{
-        chunk::ChunkEntity,
         coordinates::{BlockCoordinate, UnboundBlockCoordinate, UnboundCoordinateType},
         shields::Shield,
         Structure,
@@ -58,7 +58,7 @@ fn respond_to_explosion(
     mut q_structure: Query<(&GlobalTransform, &Location, &mut Structure)>,
     context: Res<RapierContext>,
 
-    q_chunk: Query<&ChunkEntity>,
+    q_chunk: Query<&ChunkPhysicsPart>,
     blocks_registry: Res<Registry<Block>>,
     mut ev_writer_block_changed: EventWriter<BlockChangedEvent>,
 

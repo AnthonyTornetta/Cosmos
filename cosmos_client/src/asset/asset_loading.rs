@@ -9,6 +9,7 @@ use bevy::{
     prelude::*,
     utils::HashMap,
 };
+use bitflags::bitflags;
 use cosmos_core::{
     block::{Block, BlockFace},
     loader::{AddLoadingEvent, DoneLoadingEvent, LoadingManager},
@@ -187,48 +188,63 @@ fn check_assets_ready(
 }
 
 #[derive(Debug, Clone)]
-/// Contains information that links the block faces to their texture indices.
-///
-/// This could also link non-face imformation to their texture indices.
-struct BlockTextureIndicies(HashMap<String, u32>);
-
-impl BlockTextureIndicies {
-    fn all(index: u32) -> Self {
-        let mut map = HashMap::new();
-        map.insert("all".into(), index);
-        Self(map)
-    }
-
-    fn new(map: HashMap<String, u32>) -> Self {
-        Self(map)
-    }
-}
-
-#[derive(Debug, Clone)]
 /// Links blocks to their correspoding atlas index.
 pub struct BlockTextureIndex {
-    indices: BlockTextureIndicies,
+    lod_texture: Option<LoadedTextureType>,
+    texture: LoadedTexture,
     id: u16,
     unlocalized_name: String,
+}
+
+bitflags! {
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    /// Flags that control connected textures
+    ///
+    /// If this is a part of a structure, you should compute the blocks that are in these positions
+    /// relative to the face.
+    pub struct BlockNeighbors: usize {
+        /// There is a block this should connect with to the left of this face
+        const Left = 0b1;
+        /// There is a block this should connect with to the right of this face
+        const Right = 0b10;
+        /// There is a block this should connect with to the top of this face
+        const Top = 0b100;
+        /// There is a block this should connect with to the bottom of this face
+        const Bottom = 0b1000;
+    }
 }
 
 impl BlockTextureIndex {
     #[inline]
     /// Returns the index for that block face, if one exists
-    pub fn atlas_index_from_face(&self, face: BlockFace) -> Option<u32> {
-        self.atlas_index(face.as_str())
+    pub fn atlas_index_from_face(&self, face: BlockFace, neighbors: BlockNeighbors) -> Option<u32> {
+        match &self.texture {
+            LoadedTexture::All(texture_type) => get_texture_index_from_type(texture_type, neighbors),
+            LoadedTexture::Sides(sides) => match face {
+                BlockFace::Right => get_texture_index_from_type(&sides.right, neighbors),
+                BlockFace::Left => get_texture_index_from_type(&sides.left, neighbors),
+                BlockFace::Top => get_texture_index_from_type(&sides.top, neighbors),
+                BlockFace::Bottom => get_texture_index_from_type(&sides.bottom, neighbors),
+                BlockFace::Front => get_texture_index_from_type(&sides.front, neighbors),
+                BlockFace::Back => get_texture_index_from_type(&sides.back, neighbors),
+            },
+        }
     }
 
-    #[inline]
-    /// Returns the index for that specific identifier, if one exists.
-    ///
-    /// If none exists and an "all" identifier is present, "all" is returned.
-    pub fn atlas_index(&self, identifier: &str) -> Option<u32> {
-        if let Some(index) = self.indices.0.get(identifier) {
-            Some(*index)
-        } else {
-            self.indices.0.get("all").copied()
+    /// Returns the atlas information for a simplified LOD texture
+    pub fn atlas_index_for_lod(&self, neighbors: BlockNeighbors) -> Option<u32> {
+        match &self.lod_texture {
+            Some(texture_type) => get_texture_index_from_type(texture_type, neighbors),
+            None => None,
         }
+    }
+}
+
+#[inline(always)]
+fn get_texture_index_from_type(texture_type: &LoadedTextureType, neighbors: BlockNeighbors) -> Option<u32> {
+    match texture_type {
+        LoadedTextureType::Single(index) => Some(*index),
+        LoadedTextureType::Connected(connected) => Some(connected[neighbors.bits()]),
     }
 }
 
@@ -261,22 +277,158 @@ pub struct MaterialData {
 #[derive(Serialize, Deserialize, Debug)]
 struct ReadBlockInfo {
     material: Option<MaterialData>,
-    texture: Option<HashMap<String, String>>,
-    model: Option<String>,
+    lod_texture: Option<LoadingTextureType>,
+    texture: Option<LoadingTexture>,
+    model: Option<ModelData>,
+}
+
+#[derive(Serialize, Clone, Deserialize, Debug)]
+/// The block is made up of models that are divided into separate faces.
+pub struct SideRenderingInfo {
+    /// The model's name. This should almost always be the unlocalized_name of the block it belongs to.
+    ///
+    /// This should be unique to the combination of faces & connected faces.
+    pub name: String,
+    /// The model for the right block face
+    pub right: String,
+    /// The model for the left block face
+    pub left: String,
+    /// The model for the top block face
+    pub top: String,
+    /// The model for the bottom block face
+    pub bottom: String,
+    /// The model for the front block face
+    pub front: String,
+    /// The model for the back block face
+    pub back: String,
+    /// If this should have separate faces used when adjacent to other types of itself, this field can be used
+    pub connected: Option<ConnectedModelData>,
+}
+
+#[derive(Serialize, Clone, Deserialize, Debug)]
+/// Points to the model files of this block
+pub enum ModelData {
+    /// The block is made up of one model and cannot be divided into separate faces.
+    All(String),
+    /// The block is made up of models that are divided into separate faces.
+    Sides(Box<SideRenderingInfo>),
+}
+
+impl Default for ModelData {
+    fn default() -> Self {
+        Self::All("cosmos:base_block".into())
+    }
+}
+
+#[derive(Serialize, Clone, Deserialize, Debug)]
+/// These models whill be used when the same type of block is placed adjacent to one of the faces of this block
+pub struct ConnectedModelData {
+    /// Used when the same type of block is placed adjacent to the right face. This will replace the normal right face model.
+    pub right: String,
+    /// Used when the same type of block is placed adjacent to the left face. This will replace the normal left face model.
+    pub left: String,
+    /// Used when the same type of block is placed adjacent to the top face. This will replace the normal top face model.
+    pub top: String,
+    /// Used when the same type of block is placed adjacent to the bottom face. This will replace the normal bottom face model.
+    pub bottom: String,
+    /// Used when the same type of block is placed adjacent to the front face. This will replace the normal front face model.
+    pub front: String,
+    /// Used when the same type of block is placed adjacent to the back face. This will replace the normal back face model.
+    pub back: String,
 }
 
 #[derive(Debug, Clone)]
 /// Every block will have information about how to render it -- even air
 pub struct BlockRenderingInfo {
+    /// Texture used when rendering LODs
+    pub lod_texture: Option<LoadingTextureType>,
     /// This maps textures ids to the various parts of its model.
-    pub texture: HashMap<String, String>,
+    pub texture: LoadingTexture,
     /// This is the model id this block has
-    pub model: String,
+    pub model: ModelData,
     /// This data is sent to the material for its own processing, if it is provided
     pub material_data: Option<MaterialData>,
 
     unlocalized_name: String,
     id: u16,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+/// Indicates the texture that should be used for this block.
+///
+/// This is for textures that haven't been assigned indexes yet.
+///
+/// This will get turned into a [`LoadedTexture`] during the loading phase.
+pub enum LoadingTexture {
+    /// Each side uses the same texture
+    All(LoadingTextureType),
+    /// Each side uses a different texture
+    Sides {
+        /// The right face's texture
+        right: LoadingTextureType,
+        /// The left face's texture
+        left: LoadingTextureType,
+        /// The top face's texture
+        top: LoadingTextureType,
+        /// The bottom face's texture
+        bottom: LoadingTextureType,
+        /// The front face's texture
+        front: LoadingTextureType,
+        /// The back face's texture
+        back: LoadingTextureType,
+    },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+/// Indicates if this texture is connected or is single
+pub enum LoadingTextureType {
+    /// This texture will not respond to nearby blocks
+    Single(String),
+    /// This texture will change based on nearby blocks.
+    ///
+    /// Index order is based on the bitwise value of [`BlockNeighbor`].
+    /// Check the docs for how you should set these textures.
+    /// TODO: make docs. For now just check out how glass works.
+    Connected(Box<[String; 16]>),
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+/// Each side uses a different texture
+pub struct LoadedTextureSides {
+    /// The right face's texture
+    right: LoadedTextureType,
+    /// The left face's texture
+    left: LoadedTextureType,
+    /// The top face's texture
+    top: LoadedTextureType,
+    /// The bottom face's texture
+    bottom: LoadedTextureType,
+    /// The front face's texture
+    front: LoadedTextureType,
+    /// The back face's texture
+    back: LoadedTextureType,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+/// Indicates the texture that should be used for this block.
+pub enum LoadedTexture {
+    /// Each side uses the same texture
+    All(LoadedTextureType),
+    /// Each side uses a different texture
+    Sides(Box<LoadedTextureSides>),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+/// Indicates if this texture is connected or is single
+pub enum LoadedTextureType {
+    /// This texture will not respond to nearby blocks
+    Single(u32),
+    /// This texture will change based on nearby blocks.
+    ///
+    /// Index order is based on the bitwise value of [`BlockNeighbors`].
+    /// Check the docs for how you should set these textures.
+    /// TODO: make docs. For now just check out how glass works.
+    Connected([u32; 16]),
 }
 
 impl Identifiable for BlockRenderingInfo {
@@ -301,22 +453,23 @@ pub fn load_block_rendering_information(
     mut registry: ResMut<Registry<BlockTextureIndex>>,
     mut info_registry: ResMut<Registry<BlockRenderingInfo>>,
 ) {
-    if let Some(index) = atlas_registry
+    let missing_texture_index = atlas_registry
         .from_id("cosmos:main")
         .expect("Missing main atlas!")
         .texture_atlas
         .get_texture_index(
             &server
                 .get_handle("cosmos/images/blocks/missing.png")
-                .expect("Missing missing texture!!!! *world ends*"),
+                .expect("Missing `missing` texture!!!! *world ends*"),
         )
-    {
-        registry.register(BlockTextureIndex {
-            id: 0,
-            unlocalized_name: "missing".to_owned(),
-            indices: BlockTextureIndicies::all(index),
-        });
-    }
+        .expect("Missing `missing` texture index!!! *world double ends*");
+
+    registry.register(BlockTextureIndex {
+        id: 0,
+        unlocalized_name: "missing".to_owned(),
+        lod_texture: None,
+        texture: LoadedTexture::All(LoadedTextureType::Single(missing_texture_index)),
+    });
 
     for block in blocks.iter() {
         let unlocalized_name = block.unlocalized_name();
@@ -328,34 +481,77 @@ pub fn load_block_rendering_information(
 
         let block_info = if let Ok(block_info) = fs::read(&json_path) {
             let read_info = serde_json::from_slice::<ReadBlockInfo>(&block_info)
-                .unwrap_or_else(|e| panic!("Error reading json data in {json_path}. \nError: \n{e}\n"));
+                .unwrap_or_else(|e| panic!("Error reading json data in {json_path}\nError: \n{e}\n"));
 
             BlockRenderingInfo {
                 id: 0,
                 unlocalized_name: block.unlocalized_name().to_owned(),
-                model: read_info.model.unwrap_or("cosmos:base_block".into()),
-                texture: read_info.texture.unwrap_or_else(|| {
-                    let mut default_hashmap = HashMap::new();
-                    default_hashmap.insert("all".into(), unlocalized_name.to_owned());
-                    default_hashmap
-                }),
+                model: read_info.model.unwrap_or_default(),
+                lod_texture: read_info.lod_texture,
+                texture: read_info
+                    .texture
+                    .unwrap_or_else(|| LoadingTexture::All(LoadingTextureType::Single(unlocalized_name.to_owned()))),
                 material_data: read_info.material,
             }
         } else {
-            let mut default_hashmap = HashMap::new();
-            default_hashmap.insert("all".into(), unlocalized_name.to_owned());
-
             BlockRenderingInfo {
-                texture: default_hashmap.clone(),
-                model: "cosmos:base_block".into(),
+                texture: LoadingTexture::All(LoadingTextureType::Single(unlocalized_name.to_owned())),
+                model: ModelData::default(),
+                lod_texture: None,
                 id: 0,
                 unlocalized_name: block.unlocalized_name().to_owned(),
                 material_data: None,
             }
         };
 
-        let mut map = HashMap::new();
-        for (entry, texture_name) in block_info.texture.iter() {
+        let map = match &block_info.texture {
+            LoadingTexture::All(texture) => LoadedTexture::All(process_loading_texture_type(
+                texture,
+                &atlas_registry,
+                &server,
+                missing_texture_index,
+            )),
+            LoadingTexture::Sides {
+                right,
+                left,
+                top,
+                bottom,
+                front,
+                back,
+            } => LoadedTexture::Sides(Box::new(LoadedTextureSides {
+                right: process_loading_texture_type(right, &atlas_registry, &server, missing_texture_index),
+                left: process_loading_texture_type(left, &atlas_registry, &server, missing_texture_index),
+                top: process_loading_texture_type(top, &atlas_registry, &server, missing_texture_index),
+                bottom: process_loading_texture_type(bottom, &atlas_registry, &server, missing_texture_index),
+                front: process_loading_texture_type(front, &atlas_registry, &server, missing_texture_index),
+                back: process_loading_texture_type(back, &atlas_registry, &server, missing_texture_index),
+            })),
+        };
+
+        let lod_texture = block_info
+            .lod_texture
+            .as_ref()
+            .map(|x| process_loading_texture_type(x, &atlas_registry, &server, missing_texture_index));
+
+        registry.register(BlockTextureIndex {
+            id: 0,
+            unlocalized_name: unlocalized_name.to_owned(),
+            lod_texture,
+            texture: map,
+        });
+
+        info_registry.register(block_info);
+    }
+}
+
+fn process_loading_texture_type(
+    texture: &LoadingTextureType,
+    atlas_registry: &Registry<CosmosTextureAtlas>,
+    server: &AssetServer,
+    missing_texture_index: u32,
+) -> LoadedTextureType {
+    match texture {
+        LoadingTextureType::Single(texture_name) => {
             let mut name_split = texture_name.split(':');
 
             let mod_id = name_split.next().unwrap();
@@ -363,23 +559,45 @@ pub fn load_block_rendering_information(
                 .next()
                 .unwrap_or_else(|| panic!("Invalid texture - {texture_name}. Did you forget the 'cosmos:'?"));
 
-            if let Some(index) = atlas_registry
+            let index = atlas_registry
                 .from_id("cosmos:main") // Eventually load this via the block_info file
                 .expect("No main atlas")
                 .texture_atlas
-                .get_texture_index(&server.get_handle(&format!("{mod_id}/images/blocks/{name}.png")).unwrap_or_default())
-            {
-                map.insert(entry.to_owned(), index);
-            }
+                .get_texture_index(&server.get_handle(format!("{mod_id}/images/blocks/{name}.png")).unwrap_or_default())
+                .unwrap_or_else(|| {
+                    warn!("Could not find texture with ID {mod_id}:{name}");
+
+                    missing_texture_index
+                });
+
+            println!("Doing {texture_name:?} = {index}");
+
+            LoadedTextureType::Single(index)
         }
+        LoadingTextureType::Connected(textures) => {
+            let texture_indices = textures
+                .iter()
+                .map(|texture_name| {
+                    let mut name_split = texture_name.split(':');
 
-        registry.register(BlockTextureIndex {
-            id: 0,
-            unlocalized_name: unlocalized_name.to_owned(),
-            indices: BlockTextureIndicies::new(map),
-        });
+                    let mod_id = name_split.next().unwrap();
+                    let name = name_split
+                        .next()
+                        .unwrap_or_else(|| panic!("Invalid texture - {texture_name}. Did you forget the 'cosmos:'?"));
 
-        info_registry.register(block_info);
+                    atlas_registry
+                        .from_id("cosmos:main") // Eventually load this via the block_info file
+                        .expect("No main atlas")
+                        .texture_atlas
+                        .get_texture_index(&server.get_handle(format!("{mod_id}/images/blocks/{name}.png")).unwrap_or_default())
+                        .unwrap_or(missing_texture_index)
+                })
+                .collect::<Vec<u32>>()
+                .try_into()
+                .unwrap();
+
+            LoadedTextureType::Connected(texture_indices)
+        }
     }
 }
 

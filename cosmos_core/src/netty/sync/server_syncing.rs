@@ -4,14 +4,16 @@ use super::{
     SyncableComponent, SyncedComponentId,
 };
 use crate::netty::server::ServerLobby;
-use crate::netty::sync::GotComponentToSyncEvent;
+use crate::netty::sync::{GotComponentToRemoveEvent, GotComponentToSyncEvent};
 use crate::netty::{cosmos_encoder, NettyChannelClient, NettyChannelServer};
+use crate::physics::location::CosmosBundleSet;
 use crate::registry::{identifiable::Identifiable, Registry};
 use crate::structure::ship::pilot::Pilot;
 use crate::structure::systems::{StructureSystem, StructureSystems};
 use bevy::ecs::event::EventReader;
+use bevy::ecs::removal_detection::RemovedComponents;
 use bevy::ecs::schedule::common_conditions::resource_exists;
-use bevy::ecs::schedule::IntoSystemConfigs;
+use bevy::ecs::schedule::{IntoSystemConfigs, IntoSystemSetConfigs};
 use bevy::ecs::system::Commands;
 use bevy::log::{info, warn};
 use bevy::{
@@ -25,6 +27,59 @@ use bevy::{
     log::error,
 };
 use bevy_renet::renet::RenetServer;
+
+fn server_remove_component<T: SyncableComponent>(
+    components_registry: Res<Registry<SyncedComponentId>>,
+    mut ev_reader: EventReader<GotComponentToRemoveEvent>,
+    mut commands: Commands,
+    lobby: Res<ServerLobby>,
+    q_piloting: Query<&Pilot>,
+) {
+    for ev in ev_reader.read() {
+        let Some(synced_id) = components_registry.try_from_numeric_id(ev.component_id) else {
+            warn!("Missing component with id {}", ev.component_id);
+            continue;
+        };
+
+        if T::get_component_unlocalized_name() != synced_id.unlocalized_name {
+            continue;
+        }
+
+        let SyncType::ClientAuthoritative(authority) = T::get_sync_type() else {
+            unreachable!("This function cannot be caled if synctype != client authoritative in the server project.")
+        };
+
+        match authority {
+            ClientAuthority::Anything => {}
+            ClientAuthority::Piloting => {
+                let Some(player) = lobby.player_from_id(ev.client_id) else {
+                    return;
+                };
+
+                let Ok(piloting) = q_piloting.get(player) else {
+                    return;
+                };
+
+                if piloting.entity != ev.authority_entity {
+                    return;
+                }
+            }
+            ClientAuthority::Themselves => {
+                let Some(player) = lobby.player_from_id(ev.client_id) else {
+                    return;
+                };
+
+                if player != ev.authority_entity {
+                    return;
+                }
+            }
+        }
+
+        if let Some(mut ecmds) = commands.get_entity(ev.entity) {
+            ecmds.remove::<T>();
+        }
+    }
+}
 
 fn server_deserialize_component<T: SyncableComponent>(
     components_registry: Res<Registry<SyncedComponentId>>,
@@ -73,9 +128,9 @@ fn server_deserialize_component<T: SyncableComponent>(
             }
         }
 
-        commands
-            .entity(ev.entity)
-            .try_insert(bincode::deserialize::<T>(&ev.raw_data).expect("Failed to deserialize component sent from server!"));
+        if let Some(mut ecmds) = commands.get_entity(ev.entity) {
+            ecmds.try_insert(bincode::deserialize::<T>(&ev.raw_data).expect("Failed to deserialize component sent from server!"));
+        }
     }
 }
 
@@ -113,6 +168,45 @@ fn server_send_component<T: SyncableComponent>(
             }),
         );
     });
+}
+
+fn server_sync_removed_components<T: SyncableComponent>(
+    mut removed_components: RemovedComponents<T>,
+    q_structure_system: Query<Option<&StructureSystem>>,
+    id_registry: Res<Registry<SyncedComponentId>>,
+    mut server: ResMut<RenetServer>,
+) {
+    if removed_components.is_empty() {
+        return;
+    }
+
+    let Some(id) = id_registry.from_id(T::get_component_unlocalized_name()) else {
+        error!("Invalid component unlocalized name - {}", T::get_component_unlocalized_name());
+        return;
+    };
+
+    for removed_ent in removed_components.read() {
+        let Ok(structure_system) = q_structure_system.get(removed_ent) else {
+            continue;
+        };
+
+        let entity_identifier = if let Some(structure_system) = structure_system {
+            ComponentEntityIdentifier::StructureSystem {
+                structure_entity: structure_system.structure_entity(),
+                id: structure_system.id(),
+            }
+        } else {
+            ComponentEntityIdentifier::Entity(removed_ent)
+        };
+
+        server.broadcast_message(
+            NettyChannelServer::ComponentReplication,
+            cosmos_encoder::serialize(&ComponentReplicationMessage::RemovedComponent {
+                component_id: id.id(),
+                entity_identifier,
+            }),
+        );
+    }
 }
 
 fn on_request_component<T: SyncableComponent>(
@@ -156,7 +250,8 @@ fn on_request_component<T: SyncableComponent>(
 
 fn server_receive_components(
     mut server: ResMut<RenetServer>,
-    mut ev_writer: EventWriter<GotComponentToSyncEvent>,
+    mut ev_writer_sync: EventWriter<GotComponentToSyncEvent>,
+    mut ev_writer_remove: EventWriter<GotComponentToRemoveEvent>,
     q_structure_systems: Query<&StructureSystems>,
 ) {
     for client_id in server.clients_id().into_iter() {
@@ -191,12 +286,42 @@ fn server_receive_components(
 
                     info!("Syncing component from client!");
 
-                    ev_writer.send(GotComponentToSyncEvent {
+                    ev_writer_sync.send(GotComponentToSyncEvent {
                         client_id,
                         component_id,
                         entity,
                         authority_entity,
                         raw_data,
+                    });
+                }
+                ComponentReplicationMessage::RemovedComponent {
+                    component_id,
+                    entity_identifier,
+                } => {
+                    let (entity, authority_entity) = match entity_identifier {
+                        ComponentEntityIdentifier::Entity(entity) => (entity, entity),
+                        ComponentEntityIdentifier::StructureSystem { structure_entity, id } => {
+                            let Ok(structure_systems) = q_structure_systems.get(structure_entity) else {
+                                warn!("Bad structure entity {structure_entity:?}");
+                                continue;
+                            };
+
+                            let Some(system_entity) = structure_systems.get_system_entity(id) else {
+                                warn!("Bad structure system id {id:?}");
+                                continue;
+                            };
+
+                            (system_entity, structure_entity)
+                        }
+                    };
+
+                    info!("Syncing component from client!");
+
+                    ev_writer_remove.send(GotComponentToRemoveEvent {
+                        client_id,
+                        component_id,
+                        entity,
+                        authority_entity,
                     });
                 }
             }
@@ -205,6 +330,17 @@ fn server_receive_components(
 }
 
 pub(super) fn setup_server(app: &mut App) {
+    app.configure_sets(
+        Update,
+        (
+            ComponentSyncingSet::PreComponentSyncing,
+            ComponentSyncingSet::DoComponentSyncing,
+            ComponentSyncingSet::PostComponentSyncing,
+        )
+            .after(CosmosBundleSet::HandleCosmosBundles)
+            .chain(),
+    );
+
     app.add_systems(Update, server_receive_components)
         .add_event::<RequestedEntityEvent>();
 }
@@ -217,7 +353,12 @@ pub(super) fn sync_component_server<T: SyncableComponent>(app: &mut App) {
         SyncType::ServerAuthoritative => {
             app.add_systems(
                 Update,
-                (on_request_component::<T>, server_send_component::<T>)
+                (
+                    on_request_component::<T>,
+                    server_send_component::<T>,
+                    server_sync_removed_components::<T>,
+                )
+                    .chain()
                     .run_if(resource_exists::<RenetServer>)
                     .in_set(ComponentSyncingSet::DoComponentSyncing),
             );
@@ -225,7 +366,9 @@ pub(super) fn sync_component_server<T: SyncableComponent>(app: &mut App) {
         SyncType::ClientAuthoritative(_) => {
             app.add_systems(
                 Update,
-                server_deserialize_component::<T>.in_set(ComponentSyncingSet::DoComponentSyncing),
+                (server_deserialize_component::<T>, server_remove_component::<T>)
+                    .chain()
+                    .in_set(ComponentSyncingSet::DoComponentSyncing),
             );
         }
     }

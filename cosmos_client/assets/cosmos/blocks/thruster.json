@@ -7,11 +7,25 @@
         }
     },
     "texture": {
-        "back": "cosmos:thruster_back",
-        "front": "cosmos:thruster_front",
-        "left": "cosmos:thruster_left_right",
-        "right": "cosmos:thruster_left_right",
-        "top": "cosmos:thruster_top_bottom",
-        "bottom": "cosmos:thruster_top_bottom"
+        "Sides": {
+            "back": {
+                "Single": "cosmos:thruster_back"
+            },
+            "front": {
+                "Single": "cosmos:thruster_front"
+            },
+            "left": {
+                "Single": "cosmos:thruster_left_right"
+            },
+            "right": {
+                "Single": "cosmos:thruster_left_right"
+            },
+            "top": {
+                "Single": "cosmos:thruster_top_bottom"
+            },
+            "bottom": {
+                "Single": "cosmos:thruster_top_bottom"
+            }
+        }
     }
 }

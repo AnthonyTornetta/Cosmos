@@ -14,6 +14,7 @@ use cosmos_core::{
         loading::StructureLoadingSet,
         ship::{pilot::Pilot, ship_movement::ShipMovement},
         systems::{
+            dock_system::Docked,
             energy_storage_system::EnergyStorageSystem,
             thruster_system::{ThrusterBlocks, ThrusterProperty, ThrusterSystem},
             StructureSystem, StructureSystemType, StructureSystems,
@@ -83,6 +84,7 @@ fn update_movement(
             &mut Velocity,
             &mut ExternalImpulse,
             &ReadMassProperties,
+            Option<&Docked>,
         ),
         With<Pilot>,
     >,
@@ -90,17 +92,21 @@ fn update_movement(
     time: Res<Time>,
 ) {
     for (thruster_system, system) in thrusters_query.iter() {
-        if let Ok((movement, systems, transform, mut velocity, mut external_impulse, readmass)) = query.get_mut(system.structure_entity()) {
+        if let Ok((movement, systems, transform, mut velocity, mut external_impulse, readmass, docked)) =
+            query.get_mut(system.structure_entity())
+        {
             // Rotation
-            let torque = Quat::from_affine3(&transform.compute_affine()).mul(movement.torque * 5.0);
+            if docked.is_none() {
+                let torque = Quat::from_affine3(&transform.compute_affine()).mul(movement.torque * 5.0);
 
-            const MAX_ANGLE_PER_SECOND: f32 = 100.0;
+                const MAX_ANGLE_PER_SECOND: f32 = 100.0;
 
-            let max = MAX_ANGLE_PER_SECOND * time.delta_seconds();
+                let max = MAX_ANGLE_PER_SECOND * time.delta_seconds();
 
-            velocity.angvel = torque.clamp_length(0.0, max);
+                velocity.angvel = torque.clamp_length(0.0, max);
 
-            velocity.linvel = velocity.linvel.clamp_length(0.0, MAX_SHIP_SPEED);
+                velocity.linvel = velocity.linvel.clamp_length(0.0, MAX_SHIP_SPEED);
+            }
 
             // Position
             let normal = movement.into_normal_vector();

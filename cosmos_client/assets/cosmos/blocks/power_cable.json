@@ -1,0 +1,21 @@
+{
+    "model": {
+        "Sides": {
+            "name": "cosmos:power_cable",
+            "left": "cosmos:power_cable_left",
+            "right": "cosmos:power_cable_right",
+            "top": "cosmos:power_cable_top",
+            "bottom": "cosmos:power_cable_bottom",
+            "front": "cosmos:power_cable_front",
+            "back": "cosmos:power_cable_back",
+            "connected": {
+                "right": "cosmos:power_cable_right_connected",
+                "left": "cosmos:power_cable_left_connected",
+                "top": "cosmos:power_cable_top_connected",
+                "bottom": "cosmos:power_cable_bottom_connected",
+                "front": "cosmos:power_cable_front_connected",
+                "back": "cosmos:power_cable_back_connected"
+            }
+        }
+    }
+}

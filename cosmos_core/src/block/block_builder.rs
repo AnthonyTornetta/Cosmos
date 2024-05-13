@@ -2,6 +2,8 @@
 
 use crate::block::{Block, BlockProperty};
 
+use super::ConnectionGroup;
+
 /// Used to more easily create blocks
 pub struct BlockBuilder {
     properties: Vec<BlockProperty>,
@@ -9,6 +11,8 @@ pub struct BlockBuilder {
     density: f32,
     hardness: f32,
     mining_resistance: f32,
+    connect_to_groups: Vec<ConnectionGroup>,
+    connection_groups: Vec<ConnectionGroup>,
 }
 
 impl BlockBuilder {
@@ -22,25 +26,46 @@ impl BlockBuilder {
             density,
             hardness,
             mining_resistance,
+            connect_to_groups: vec![],
+            connection_groups: vec![],
         }
     }
 
+    /// Adds a [`super::ConnectionGroup`] that this block will connect to. You can call this multiple times to connect
+    /// to multiple groups of blocks.
+    ///
+    /// Note you still need to provide the proper art files & potentially collider data for it to look and act linked.
+    pub fn connect_to_group(mut self, connection_group: impl Into<ConnectionGroup>) -> Self {
+        self.connect_to_groups.push(connection_group.into());
+
+        self
+    }
+
+    /// Adds a [`super::ConnectionGroup`] that his block is a part of.
+    ///
+    /// You can be part of multiple connection groups.
+    pub fn add_connection_group(mut self, connection_group: impl Into<ConnectionGroup>) -> Self {
+        self.connection_groups.push(connection_group.into());
+
+        self
+    }
+
     /// Adds a property to this block
-    pub fn add_property(&mut self, prop: BlockProperty) -> &mut Self {
+    pub fn add_property(mut self, prop: BlockProperty) -> Self {
         self.properties.push(prop);
 
         self
     }
 
     /// Sets the density of the block
-    pub fn set_density(&mut self, density: f32) -> &mut Self {
+    pub fn set_density(mut self, density: f32) -> Self {
         self.density = density;
 
         self
     }
 
     /// Creates that block
-    pub fn create(&self) -> Block {
+    pub fn create(self) -> Block {
         Block::new(
             &self.properties,
             u16::MAX,
@@ -48,6 +73,8 @@ impl BlockBuilder {
             self.density,
             self.hardness,
             self.mining_resistance,
+            self.connect_to_groups,
+            self.connection_groups,
         )
     }
 }

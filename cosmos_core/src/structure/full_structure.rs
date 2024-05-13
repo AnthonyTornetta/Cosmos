@@ -22,7 +22,7 @@ use super::{
     chunk::Chunk,
     coordinates::{BlockCoordinate, ChunkBlockCoordinate, ChunkCoordinate, CoordinateType},
     structure_block::StructureBlock,
-    ChunkState,
+    ChunkState, Structure,
 };
 
 #[derive(Serialize, Deserialize, Reflect, Debug)]
@@ -31,6 +31,8 @@ use super::{
 /// This means that all chunks this structure needs are loaded as long as the structure exists.
 pub struct FullStructure {
     base_structure: BaseStructure,
+    #[serde(skip)]
+    block_bounds: Option<(BlockCoordinate, BlockCoordinate)>,
     #[serde(skip)]
     loaded: bool,
 }
@@ -56,6 +58,7 @@ impl FullStructure {
     pub fn new(dimensions: ChunkCoordinate) -> Self {
         Self {
             base_structure: BaseStructure::new(dimensions),
+            block_bounds: None,
             loaded: false,
         }
     }
@@ -110,6 +113,15 @@ impl FullStructure {
         let chunk_block_coords = ChunkBlockCoordinate::for_block_coordinate(coords);
         let mut send_event = false;
 
+        let block_id = block.id();
+
+        if let Some((min, max)) = &self.block_bounds {
+            if !(coords.x > min.x && coords.y > min.y && coords.z > min.z && coords.x < max.x && coords.y < max.y && coords.z < max.z) {
+                // Recompute these later lazily
+                self.block_bounds = None;
+            }
+        }
+
         if let Some(chunk) = self.mut_chunk_from_chunk_coordinates(chunk_coords) {
             chunk.set_block_at(chunk_block_coords, block, block_rotation);
 
@@ -118,7 +130,7 @@ impl FullStructure {
             }
 
             send_event = true;
-        } else if block.id() != AIR_BLOCK_ID {
+        } else if block_id != AIR_BLOCK_ID {
             let mut chunk = Chunk::new(chunk_coords);
             chunk.set_block_at(chunk_block_coords, block, block_rotation);
             self.base_structure.chunks.insert(self.base_structure.flatten(chunk_coords), chunk);
@@ -194,5 +206,68 @@ impl FullStructure {
     pub fn has_empty_chunk_at(&self, coords: ChunkCoordinate) -> bool {
         self.get_chunk_state(coords) == ChunkState::Loaded
             && self.chunk_from_chunk_coordinates(coords).map(|c| c.is_empty()).unwrap_or(true)
+    }
+
+    /// Lazily computes & returns the AABB in terms of [`BlockCoordinate`] values for this structure.
+    ///
+    /// This only accounts for placed blocks, and thus will often be < the maximum dimensions.
+    ///
+    /// If no blocks are placed on this structure, None is returned.
+    pub fn placed_block_bounds(self_as_structure: &mut Structure) -> Option<(BlockCoordinate, BlockCoordinate)> {
+        let Structure::Full(fs) = &self_as_structure else {
+            panic!("This method can only be used on a full structure!");
+        };
+
+        let bb = match fs.block_bounds {
+            None => Self::compute_block_bounds(self_as_structure),
+            Some(bb) => Some(bb),
+        };
+
+        let Structure::Full(fs) = self_as_structure else {
+            unreachable!("This is done above, but must be done again to please the borrow checker.");
+        };
+
+        fs.block_bounds = bb;
+
+        bb
+    }
+
+    fn compute_block_bounds(self_as_structure: &Structure) -> Option<(BlockCoordinate, BlockCoordinate)> {
+        let (mut min, mut max) = (
+            BlockCoordinate::splat(CoordinateType::MAX),
+            BlockCoordinate::splat(CoordinateType::MIN),
+        );
+
+        let mut any_blocks = false;
+        for b in self_as_structure.all_blocks_iter(false) {
+            any_blocks = true;
+
+            let c = b.coords();
+            if c.x < min.x {
+                min.x = c.x;
+            }
+            if c.y < min.y {
+                min.y = c.y;
+            }
+            if c.z < min.z {
+                min.z = c.z;
+            }
+
+            if c.x > max.x {
+                max.x = c.x;
+            }
+            if c.y > max.y {
+                max.y = c.y;
+            }
+            if c.z > max.z {
+                max.z = c.z;
+            }
+        }
+
+        if any_blocks {
+            Some((min, max))
+        } else {
+            None
+        }
     }
 }

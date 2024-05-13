@@ -425,6 +425,12 @@ impl ChunkBlockCoordinate {
         }
     }
 
+    #[inline(always)]
+    /// Calculates what this would be as a block coordinate, given its chunk's coordinate.
+    pub fn to_block_coordinate(self, chunk_coordinate: ChunkCoordinate) -> BlockCoordinate {
+        BlockCoordinate::new(self.x, self.y, self.z) + chunk_coordinate.first_structure_block()
+    }
+
     #[inline]
     /// `Self::new(0, 0, 0)`
     pub fn min() -> Self {

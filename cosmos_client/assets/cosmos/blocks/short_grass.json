@@ -1,3 +1,5 @@
 {
-    "model": "cosmos:short_grass"
+    "model": {
+        "All": "cosmos:short_grass"
+    }
 }

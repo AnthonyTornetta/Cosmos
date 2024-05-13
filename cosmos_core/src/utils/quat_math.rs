@@ -2,7 +2,10 @@
 
 use std::f64::consts::PI;
 
-use bevy::prelude::Vec3;
+use bevy::{
+    math::{Mat3, Quat},
+    prelude::Vec3,
+};
 use bevy_rapier3d::na::{Quaternion, UnitVector3, Vector3};
 
 /// https://stackoverflow.com/questions/1171849/finding-quaternion-representing-the-rotation-from-one-vector-to-another
@@ -22,5 +25,28 @@ pub fn quaternion_between_normalized_vectors(normalized_from: &Vec3, normalized_
         let cross = normalized_from_f64.cross(normalized_to_f64);
 
         Quaternion::from_parts(1.0 + dot, Vector3::new(cross.x, cross.y, cross.z))
+    }
+}
+
+/// Additional math functions for [`Quat`]s.
+pub trait QuatMath {
+    /// Creates a quaternion that this multiplied by [`Vec3::Z`] points in the given `direction`
+    /// and [`Vec3::Y`] points towards `up`.
+    ///
+    /// In some cases it's not possible to construct a rotation. Another axis will be picked in those cases:
+    /// * if `direction` is zero, `Vec3::NEG_Z` is used instead
+    /// * if `up` is zero, `Vec3::Y` is used instead
+    /// * if `direction` is parallel with `up`, an orthogonal vector is used as the "right" direction
+    fn looking_to(direction: Vec3, up: Vec3) -> Self;
+}
+
+impl QuatMath for Quat {
+    // stolen from: https://docs.rs/bevy_transform/0.13.2/src/bevy_transform/components/transform.rs.html#359
+    fn looking_to(direction: Vec3, up: Vec3) -> Self {
+        let back = -direction.try_normalize().unwrap_or(Vec3::NEG_Z);
+        let up = up.try_normalize().unwrap_or(Vec3::Y);
+        let right = up.cross(back).try_normalize().unwrap_or_else(|| up.any_orthonormal_vector());
+        let up = back.cross(right);
+        Quat::from_mat3(&Mat3::from_cols(right, up, back))
     }
 }

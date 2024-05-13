@@ -67,12 +67,14 @@ fn add_cosmos_blocks(
     blocks.register(
         BlockBuilder::new("cosmos:energy_cell", 2.0, 20.0, 5.0)
             .add_property(BlockProperty::Full)
+            .add_connection_group("cosmos:stores_power")
             .create(),
     );
 
     blocks.register(
         BlockBuilder::new("cosmos:reactor", 2.0, 20.0, 5.0)
             .add_property(BlockProperty::Full)
+            .add_connection_group("cosmos:produces_power")
             .create(),
     );
 
@@ -80,6 +82,8 @@ fn add_cosmos_blocks(
         BlockBuilder::new("cosmos:laser_cannon", 2.0, 20.0, 5.0)
             .add_property(BlockProperty::Full)
             .add_property(BlockProperty::FaceFront)
+            .add_connection_group("cosmos:uses_logic")
+            .add_connection_group("cosmos:consumes_power")
             .create(),
     );
 
@@ -92,12 +96,14 @@ fn add_cosmos_blocks(
     blocks.register(
         BlockBuilder::new("cosmos:thruster", 2.0, 20.0, 10.0)
             .add_property(BlockProperty::Full)
+            .add_connection_group("cosmos:consumes_power")
             .create(),
     );
 
     blocks.register(
         BlockBuilder::new("cosmos:light", 0.1, 20.0, 5.0)
             .add_property(BlockProperty::Full)
+            .add_connection_group("cosmos:uses_logic")
             .create(),
     );
 
@@ -105,6 +111,8 @@ fn add_cosmos_blocks(
         BlockBuilder::new("cosmos:glass", 4.0, 100.0, 10.0)
             .add_property(BlockProperty::Transparent)
             .add_property(BlockProperty::Full)
+            .add_connection_group("cosmos:glass")
+            .connect_to_group("cosmos:glass")
             .create(),
     );
 
@@ -189,6 +197,8 @@ fn add_cosmos_blocks(
         BlockBuilder::new("cosmos:reactor_controller", 2.0, 20.0, 5.0)
             .add_property(BlockProperty::Full)
             .add_property(BlockProperty::FaceFront)
+            .add_connection_group("cosmos:uses_logic")
+            .add_connection_group("cosmos:produces_power")
             .create(),
     );
 
@@ -202,6 +212,8 @@ fn add_cosmos_blocks(
         BlockBuilder::new("cosmos:reactor_window", 2.0, 20.0, 10.0)
             .add_property(BlockProperty::Transparent)
             .add_property(BlockProperty::Full)
+            .add_connection_group("cosmos:reactor_window")
+            .connect_to_group("cosmos:reactor_window")
             .create(),
     );
 
@@ -243,6 +255,8 @@ fn add_cosmos_blocks(
             BlockBuilder::new(format!("cosmos:glass_{color}"), 4.0, 100.0, 10.0)
                 .add_property(BlockProperty::Transparent)
                 .add_property(BlockProperty::Full)
+                .connect_to_group("cosmos:glass")
+                .add_connection_group("cosmos:glass")
                 .create(),
         );
     }
@@ -269,6 +283,8 @@ fn add_cosmos_blocks(
         BlockBuilder::new("cosmos:plasma_drill", 2.0, 20.0, 5.0)
             .add_property(BlockProperty::Full)
             .add_property(BlockProperty::FaceFront)
+            .add_connection_group("cosmos:uses_logic")
+            .add_connection_group("cosmos:consumes_power")
             .create(),
     );
 
@@ -298,17 +314,19 @@ fn add_cosmos_blocks(
             .create(),
     );
 
-    blocks.register(
-        BlockBuilder::new("cosmos:debug", 2.0, 20.0, 5.0)
-            .add_property(BlockProperty::FullyRotatable)
-            .add_property(BlockProperty::Full)
-            .create(),
-    );
+    // blocks.register(
+    //     BlockBuilder::new("cosmos:debug", 2.0, 20.0, 5.0)
+    //         .add_property(BlockProperty::FullyRotatable)
+    //         .add_property(BlockProperty::Full)
+    //         .create(),
+    // );
 
     blocks.register(
         BlockBuilder::new("cosmos:missile_launcher", 2.0, 20.0, 5.0)
             .add_property(BlockProperty::FaceFront)
             .add_property(BlockProperty::Full)
+            .add_connection_group("cosmos:uses_logic")
+            .add_connection_group("cosmos:consumes_power")
             .create(),
     );
 
@@ -321,6 +339,39 @@ fn add_cosmos_blocks(
     blocks.register(
         BlockBuilder::new("cosmos:shield_generator", 2.0, 20.0, 5.0)
             .add_property(BlockProperty::Full)
+            .add_connection_group("cosmos:consumes_power")
+            .create(),
+    );
+
+    blocks.register(
+        BlockBuilder::new("cosmos:logic_on", 0.1, 20.0, 5.0)
+            .add_property(BlockProperty::Full)
+            .add_connection_group("cosmos:uses_logic")
+            .create(),
+    );
+
+    blocks.register(
+        BlockBuilder::new("cosmos:logic_wire", 0.1, 20.0, 5.0)
+            .add_connection_group("cosmos:logic_wire")
+            .connect_to_group("cosmos:uses_logic")
+            .connect_to_group("cosmos:logic_wire")
+            .create(),
+    );
+
+    blocks.register(
+        BlockBuilder::new("cosmos:power_cable", 0.1, 20.0, 5.0)
+            .add_connection_group("cosmos:power_cable")
+            .connect_to_group("cosmos:consumes_power")
+            .connect_to_group("cosmos:produces_power")
+            .connect_to_group("cosmos:stores_power")
+            .connect_to_group("cosmos:power_cable")
+            .create(),
+    );
+
+    blocks.register(
+        BlockBuilder::new("cosmos:ship_dock", 2.0, 20.0, 5.0)
+            .add_property(BlockProperty::Full)
+            .add_property(BlockProperty::FaceFront)
             .create(),
     );
 

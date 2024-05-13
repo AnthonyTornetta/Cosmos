@@ -1,10 +1,24 @@
 {
     "texture": {
-        "front": "cosmos:plasma_drill_back",
-        "back": "cosmos:plasma_drill_front",
-        "left": "cosmos:plasma_drill_left_right",
-        "right": "cosmos:plasma_drill_left_right",
-        "top": "cosmos:plasma_drill_top_bottom",
-        "bottom": "cosmos:plasma_drill_top_bottom"
+        "Sides": {
+            "front": {
+                "Single": "cosmos:plasma_drill_back"
+            },
+            "back": {
+                "Single": "cosmos:plasma_drill_front"
+            },
+            "left": {
+                "Single": "cosmos:plasma_drill_left_right"
+            },
+            "right": {
+                "Single": "cosmos:plasma_drill_left_right"
+            },
+            "top": {
+                "Single": "cosmos:plasma_drill_top_bottom"
+            },
+            "bottom": {
+                "Single": "cosmos:plasma_drill_top_bottom"
+            }
+        }
     }
 }

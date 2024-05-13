@@ -38,12 +38,40 @@ pub struct CustomCollider {
 }
 
 #[derive(Debug, Clone)]
+/// The collider that should be used for this face
+pub struct FaceColldier {
+    /// Use this collider if this face isn't connected to anything
+    pub non_connected: Vec<CustomCollider>,
+    /// Use this collider if this face is connected to something
+    pub connected: Vec<CustomCollider>,
+}
+
+#[derive(Debug, Clone)]
+/// Represents a collider that will change when this is connected to other blocks
+pub struct ConnectedCollider {
+    /// Face's collider
+    pub right: FaceColldier,
+    /// Face's collider
+    pub left: FaceColldier,
+    /// Face's collider
+    pub top: FaceColldier,
+    /// Face's collider
+    pub bottom: FaceColldier,
+    /// Face's collider
+    pub front: FaceColldier,
+    /// Face's collider
+    pub back: FaceColldier,
+}
+
+#[derive(Debug, Clone)]
 /// The type of collider a block has
 pub enum BlockColliderType {
     /// Takes an entire block
     Full(BlockColliderMode),
     /// A custom collider that is more complex than the default options
     Custom(Vec<CustomCollider>),
+    /// Represents a collider that will change when this is connected to other blocks
+    Connected(Box<ConnectedCollider>),
     /// No collider at all
     Empty,
 }
@@ -71,6 +99,8 @@ impl BlockCollider {
 fn register_custom_colliders(blocks: Res<Registry<Block>>, mut registry: ResMut<Registry<BlockCollider>>) {
     registry.register(BlockCollider::new(BlockColliderType::Empty, "cosmos:air"));
 
+    const EPSILON: f32 = 0.001;
+
     if blocks.from_id("cosmos:short_grass").is_some() {
         registry.register(BlockCollider::new(
             BlockColliderType::Custom(vec![CustomCollider {
@@ -84,7 +114,6 @@ fn register_custom_colliders(blocks: Res<Registry<Block>>, mut registry: ResMut<
     }
 
     if blocks.from_id("cosmos:ramp").is_some() {
-        const EPSILON: f32 = 0.001;
         registry.register(BlockCollider::new(
             BlockColliderType::Custom(vec![
                 // top
@@ -124,6 +153,98 @@ fn register_custom_colliders(blocks: Res<Registry<Block>>, mut registry: ResMut<
                 },
             ]),
             "cosmos:ramp",
+        ));
+    }
+
+    if blocks.from_id("cosmos:power_cable").is_some() {
+        registry.register(BlockCollider::new(
+            BlockColliderType::Connected(Box::new(ConnectedCollider {
+                top: FaceColldier {
+                    non_connected: vec![CustomCollider {
+                        collider: Collider::cuboid(0.2, EPSILON, 0.2),
+                        mode: BlockColliderMode::NormalCollider,
+                        offset: Vec3::new(0.0, 0.2, 0.0),
+                        rotation: Quat::IDENTITY,
+                    }],
+                    connected: vec![CustomCollider {
+                        collider: Collider::cuboid(0.2, 0.25, 0.2),
+                        mode: BlockColliderMode::NormalCollider,
+                        offset: Vec3::new(0.0, 0.25, 0.0),
+                        rotation: Quat::IDENTITY,
+                    }],
+                },
+                bottom: FaceColldier {
+                    non_connected: vec![CustomCollider {
+                        collider: Collider::cuboid(0.2, EPSILON, 0.2),
+                        mode: BlockColliderMode::NormalCollider,
+                        offset: Vec3::new(0.0, -0.2 - EPSILON, 0.0),
+                        rotation: Quat::IDENTITY,
+                    }],
+                    connected: vec![CustomCollider {
+                        collider: Collider::cuboid(0.2, 0.25, 0.2),
+                        mode: BlockColliderMode::NormalCollider,
+                        offset: Vec3::new(0.0, -0.25, 0.0),
+                        rotation: Quat::IDENTITY,
+                    }],
+                },
+                front: FaceColldier {
+                    non_connected: vec![CustomCollider {
+                        collider: Collider::cuboid(0.2, 0.2, EPSILON),
+                        mode: BlockColliderMode::NormalCollider,
+                        offset: Vec3::new(0.0, 0.0, 0.2),
+                        rotation: Quat::IDENTITY,
+                    }],
+                    connected: vec![CustomCollider {
+                        collider: Collider::cuboid(0.2, 0.2, 0.25),
+                        mode: BlockColliderMode::NormalCollider,
+                        offset: Vec3::new(0.0, 0.0, 0.25),
+                        rotation: Quat::IDENTITY,
+                    }],
+                },
+                back: FaceColldier {
+                    non_connected: vec![CustomCollider {
+                        collider: Collider::cuboid(0.2, 0.2, EPSILON),
+                        mode: BlockColliderMode::NormalCollider,
+                        offset: Vec3::new(0.0, 0.0, -0.2 - EPSILON),
+                        rotation: Quat::IDENTITY,
+                    }],
+                    connected: vec![CustomCollider {
+                        collider: Collider::cuboid(0.2, 0.2, 0.25),
+                        mode: BlockColliderMode::NormalCollider,
+                        offset: Vec3::new(0.0, 0.0, -0.25),
+                        rotation: Quat::IDENTITY,
+                    }],
+                },
+                right: FaceColldier {
+                    non_connected: vec![CustomCollider {
+                        collider: Collider::cuboid(EPSILON, 0.2, 0.2),
+                        mode: BlockColliderMode::NormalCollider,
+                        offset: Vec3::new(0.2, 0.0, 0.0),
+                        rotation: Quat::IDENTITY,
+                    }],
+                    connected: vec![CustomCollider {
+                        collider: Collider::cuboid(0.25, 0.2, 0.2),
+                        mode: BlockColliderMode::NormalCollider,
+                        offset: Vec3::new(0.25, 0.0, 0.0),
+                        rotation: Quat::IDENTITY,
+                    }],
+                },
+                left: FaceColldier {
+                    non_connected: vec![CustomCollider {
+                        collider: Collider::cuboid(EPSILON, 0.2, 0.2),
+                        mode: BlockColliderMode::NormalCollider,
+                        offset: Vec3::new(-0.2 - EPSILON, 0.0, 0.0),
+                        rotation: Quat::IDENTITY,
+                    }],
+                    connected: vec![CustomCollider {
+                        collider: Collider::cuboid(0.25, 0.2, 0.2),
+                        mode: BlockColliderMode::NormalCollider,
+                        offset: Vec3::new(-0.25, 0.0, 0.0),
+                        rotation: Quat::IDENTITY,
+                    }],
+                },
+            })),
+            "cosmos:power_cable",
         ));
     }
 }

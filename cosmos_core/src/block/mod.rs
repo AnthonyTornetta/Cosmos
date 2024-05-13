@@ -413,7 +413,7 @@ impl BlockFace {
     /// Returns the index for each block face [0, 5].
     ///
     /// Useful for storing faces in an array
-    pub fn index(&self) -> usize {
+    pub const fn index(&self) -> usize {
         match *self {
             BlockFace::Right => 0,
             BlockFace::Left => 1,
@@ -425,7 +425,7 @@ impl BlockFace {
     }
 
     /// Returns the integer direction each face represents
-    pub fn direction(&self) -> (i32, i32, i32) {
+    pub const fn direction(&self) -> (i32, i32, i32) {
         match *self {
             Self::Front => (0, 0, 1),
             Self::Back => (0, 0, -1),
@@ -437,7 +437,7 @@ impl BlockFace {
     }
 
     /// Returns the direction each face represents as a Vec3
-    pub fn direction_vec3(&self) -> Vec3 {
+    pub const fn direction_vec3(&self) -> Vec3 {
         match *self {
             Self::Front => Vec3::Z,
             Self::Back => Vec3::NEG_Z,
@@ -449,7 +449,7 @@ impl BlockFace {
     }
 
     /// Returns the direction each face represents as an UnboundBlockCoordinate
-    pub fn direction_coordinates(&self) -> UnboundBlockCoordinate {
+    pub const fn direction_coordinates(&self) -> UnboundBlockCoordinate {
         match *self {
             Self::Front => UnboundBlockCoordinate::new(0, 0, 1),
             Self::Back => UnboundBlockCoordinate::new(0, 0, -1),
@@ -461,7 +461,7 @@ impl BlockFace {
     }
 
     /// Returns the string representation of this face.
-    pub fn as_str(&self) -> &'static str {
+    pub const fn as_str(&self) -> &'static str {
         match *self {
             Self::Front => "front",
             Self::Back => "back",
@@ -635,6 +635,9 @@ pub struct Block {
     ///
     /// This is (for now) how long it takes 1 mining beam to mine this block in seconds
     mining_resistance: f32,
+
+    connect_to_groups: Vec<ConnectionGroup>,
+    connection_groups: Vec<ConnectionGroup>,
 }
 
 impl Identifiable for Block {
@@ -664,6 +667,8 @@ impl Block {
         density: f32,
         hardness: f32,
         mining_resistance: f32,
+        connect_to_groups: Vec<ConnectionGroup>,
+        connection_groups: Vec<ConnectionGroup>,
     ) -> Self {
         Self {
             property_flags: BlockProperty::create_id(properties),
@@ -672,7 +677,14 @@ impl Block {
             density,
             hardness,
             mining_resistance,
+            connect_to_groups,
+            connection_groups,
         }
+    }
+
+    /// Returns true if this block should connect to the other block
+    pub fn should_connect_with(&self, other: &Self) -> bool {
+        self.connect_to_groups.iter().any(|group| other.connection_groups.contains(group))
     }
 
     #[inline]
@@ -749,6 +761,25 @@ impl Block {
 impl PartialEq for Block {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Reflect)]
+/// This is how you signify which blocks should connect to which other blocks.
+///
+/// For example, wires will connect to anything with the group "cosmos:machine".
+pub struct ConnectionGroup(String);
+
+impl ConnectionGroup {
+    /// Creates a connection group from this unlocalized name.
+    pub fn new(unlocalized_name: impl Into<String>) -> Self {
+        Self(unlocalized_name.into())
+    }
+}
+
+impl From<&str> for ConnectionGroup {
+    fn from(value: &str) -> Self {
+        Self(value.to_owned())
     }
 }
 

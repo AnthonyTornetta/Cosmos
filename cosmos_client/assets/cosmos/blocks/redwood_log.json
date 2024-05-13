@@ -1,7 +1,24 @@
 {
     "texture": {
-        "all": "cosmos:redwood_log_side",
-        "top": "cosmos:redwood_log_top_bottom",
-        "bottom": "cosmos:redwood_log_top_bottom"
+        "Sides": {
+            "right": {
+                "Single": "cosmos:redwood_log_side"
+            },
+            "left": {
+                "Single": "cosmos:redwood_log_side"
+            },
+            "front": {
+                "Single": "cosmos:redwood_log_side"
+            },
+            "back": {
+                "Single": "cosmos:redwood_log_side"
+            },
+            "top": {
+                "Single": "cosmos:redwood_log_top_bottom"
+            },
+            "bottom": {
+                "Single": "cosmos:redwood_log_top_bottom"
+            }
+        }
     }
 }

@@ -1,6 +1,24 @@
 {
     "texture": {
-        "all": "cosmos:reactor_casing",
-        "front": "cosmos:reactor_controller"
+        "Sides": {
+            "right": {
+                "Single": "cosmos:reactor_casing"
+            },
+            "left": {
+                "Single": "cosmos:reactor_casing"
+            },
+            "top": {
+                "Single": "cosmos:reactor_casing"
+            },
+            "bottom": {
+                "Single": "cosmos:reactor_casing"
+            },
+            "back": {
+                "Single": "cosmos:reactor_casing"
+            },
+            "front": {
+                "Single": "cosmos:reactor_controller"
+            }
+        }
     }
 }
