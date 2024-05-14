@@ -97,6 +97,8 @@ pub fn create_item_mesh(square_image_data: &[u8], item_id: u16, image_index: u32
             image_index,
             mat.add_item_material_data(item_id, &info),
         );
+
+        // TODO: Add side meshes when needed
     }
 
     cmbuilder.build_mesh()
