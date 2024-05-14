@@ -93,21 +93,28 @@ pub struct AnimationData {
 
 #[derive(Default, Clone)]
 struct AnimatedMaterialInformationGenerator {
-    mapping: HashMap<u16, u32>,
+    block_mapping: HashMap<u16, u32>,
+    item_mapping: HashMap<u16, u32>,
 }
 
 impl AnimatedMaterialInformationGenerator {
     pub fn add_block_animation_data(&mut self, block_id: u16, data: AnimationData) {
         let packed: u32 = ((data.frame_duration_ms as u32) << 16) | (data.n_frames as u32);
 
-        self.mapping.insert(block_id, packed);
+        self.block_mapping.insert(block_id, packed);
+    }
+
+    pub fn add_item_animation_data(&mut self, item_id: u16, data: AnimationData) {
+        let packed: u32 = ((data.frame_duration_ms as u32) << 16) | (data.n_frames as u32);
+
+        self.item_mapping.insert(item_id, packed);
     }
 }
 
 impl MaterialMeshInformationGenerator for AnimatedMaterialInformationGenerator {
-    fn generate_information(&self, block_id: u16, mesh_info: &MeshInformation) -> Vec<(MeshVertexAttribute, VertexAttributeValues)> {
+    fn generate_block_information(&self, block_id: u16, mesh_info: &MeshInformation) -> Vec<(MeshVertexAttribute, VertexAttributeValues)> {
         let packed = *self
-            .mapping
+            .block_mapping
             .get(&block_id)
             .unwrap_or_else(|| panic!("Missing animation data for block {block_id}"));
 
@@ -116,9 +123,38 @@ impl MaterialMeshInformationGenerator for AnimatedMaterialInformationGenerator {
         vec![(ATTRIBUTE_PACKED_ANIMATION_DATA, animation_data.into())]
     }
 
-    fn add_information(&mut self, block_id: u16, additional_information: &HashMap<String, String>) {
+    fn generate_item_information(&self, item_id: u16, mesh_info: &MeshInformation) -> Vec<(MeshVertexAttribute, VertexAttributeValues)> {
+        let packed = *self
+            .item_mapping
+            .get(&item_id)
+            .unwrap_or_else(|| panic!("Missing animation data for item {item_id}"));
+
+        let animation_data = (0..mesh_info.positions.len()).map(|_| packed).collect::<Vec<u32>>();
+
+        vec![(ATTRIBUTE_PACKED_ANIMATION_DATA, animation_data.into())]
+    }
+
+    fn add_block_information(&mut self, block_id: u16, additional_information: &HashMap<String, String>) {
         self.add_block_animation_data(
             block_id,
+            AnimationData {
+                frame_duration_ms: additional_information
+                    .get("frame_duration_ms")
+                    .expect("Missing 'frame_duration_ms' for animated material! Please add that to your json file.")
+                    .parse()
+                    .expect("Invalid 'frame_duration_ms' value. It must be a number between 0 and 65535"),
+                n_frames: additional_information
+                    .get("n_frames")
+                    .expect("Missing 'n_frames' for animated material! Please add that to your json file.")
+                    .parse()
+                    .expect("Invalid 'n_frames' value. It must be a number between 0 and 65535"),
+            },
+        );
+    }
+
+    fn add_item_information(&mut self, item_id: u16, additional_information: &HashMap<String, String>) {
+        self.add_item_animation_data(
+            item_id,
             AnimationData {
                 frame_duration_ms: additional_information
                     .get("frame_duration_ms")

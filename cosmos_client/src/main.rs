@@ -15,6 +15,7 @@ pub mod fluid;
 pub mod input;
 pub mod interactions;
 pub mod inventory;
+pub mod item;
 pub mod lang;
 pub mod loading;
 pub mod music;

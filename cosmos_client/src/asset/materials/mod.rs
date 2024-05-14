@@ -9,12 +9,13 @@ use bevy::{
 };
 use cosmos_core::{
     block::Block,
+    item::Item,
     registry::{self, identifiable::Identifiable, many_to_one::ManyToOneRegistry, Registry},
 };
 
 use crate::{rendering::MeshInformation, state::game_state::GameState};
 
-use super::asset_loading::{load_block_rendering_information, BlockRenderingInfo};
+use super::asset_loading::{load_block_rendering_information, BlockRenderingInfo, ItemRenderingInfo};
 
 pub mod animated_material;
 pub mod block_materials;
@@ -69,17 +70,25 @@ pub fn remove_materials() {}
 
 /// Generates any extra information need for meshes that use this material
 pub trait MaterialMeshInformationGenerator: Send + Sync {
-    /// Generates the information needed for this mesh information.
+    /// Generates the information needed for this block's mesh information.
     ///
     /// It is guarenteeed that this `mesh_info` uses this material.
-    fn generate_information(&self, block_id: u16, mesh_info: &MeshInformation) -> Vec<(MeshVertexAttribute, VertexAttributeValues)>;
+    fn generate_block_information(&self, block_id: u16, mesh_info: &MeshInformation) -> Vec<(MeshVertexAttribute, VertexAttributeValues)>;
+
+    /// Generates the information needed for this item's mesh information.
+    ///
+    /// It is guarenteeed that this `mesh_info` uses this material.
+    fn generate_item_information(&self, item_id: u16, mesh_info: &MeshInformation) -> Vec<(MeshVertexAttribute, VertexAttributeValues)>;
 
     /// Adds information about a block from its JSON file if that block uses this material
-    fn add_information(&mut self, block_id: u16, additional_information: &HashMap<String, String>);
+    fn add_block_information(&mut self, block_id: u16, additional_information: &HashMap<String, String>);
+
+    /// Adds information about an item from its JSON file if that block uses this material
+    fn add_item_information(&mut self, item_id: u16, additional_information: &HashMap<String, String>);
 }
 
 #[derive(Resource, Clone)]
-/// This stores the texture atlas for all blocks in the game.
+/// This stores the texture atlas for all blocks/items in the game.
 ///
 /// Eventually this will be redone to allow for multiple atlases, but for now this works fine.
 pub struct MaterialDefinition {
@@ -110,14 +119,31 @@ impl MaterialDefinition {
     pub fn add_material_data(&self, block_id: u16, mesh_info: &MeshInformation) -> Vec<(MeshVertexAttribute, VertexAttributeValues)> {
         self.generator
             .as_ref()
-            .map(|gen| gen.read().unwrap().generate_information(block_id, mesh_info))
+            .map(|gen| gen.read().unwrap().generate_block_information(block_id, mesh_info))
+            .unwrap_or_default()
+    }
+
+    /// Generates the information needed for this mesh information.
+    ///
+    /// It is guarenteeed that this `mesh_info` uses this material.
+    pub fn add_item_material_data(&self, item_id: u16, mesh_info: &MeshInformation) -> Vec<(MeshVertexAttribute, VertexAttributeValues)> {
+        self.generator
+            .as_ref()
+            .map(|gen| gen.read().unwrap().generate_item_information(item_id, mesh_info))
             .unwrap_or_default()
     }
 
     /// Adds information about a block from its JSON file if that block uses this material
     pub fn add_block_information(&self, block_id: u16, additional_information: &HashMap<String, String>) {
         if let Some(generator) = self.generator.as_ref() {
-            generator.write().unwrap().add_information(block_id, additional_information);
+            generator.write().unwrap().add_block_information(block_id, additional_information);
+        }
+    }
+
+    /// Adds information about a block from its JSON file if that block uses this material
+    pub fn add_item_information(&self, item_id: u16, additional_information: &HashMap<String, String>) {
+        if let Some(generator) = self.generator.as_ref() {
+            generator.write().unwrap().add_item_information(item_id, additional_information);
         }
     }
 }
@@ -168,28 +194,69 @@ impl Identifiable for BlockMaterialMapping {
     }
 }
 
+#[derive(Clone, Debug)]
+/// Represents a mapping between blocks and the materials they are attached to.
+///
+/// Do not use the `id` function to get the material's id - that only refers to this mapping's id.
+/// Instead use `material_id` to get the material this points to's id.
+pub struct ItemMaterialMapping {
+    id: u16,
+    unlocalized_name: String,
+    material_id: u16,
+}
+
+impl ItemMaterialMapping {
+    /// The id of the material this points to
+    pub fn material_id(&self) -> u16 {
+        self.material_id
+    }
+}
+
+impl Identifiable for ItemMaterialMapping {
+    fn id(&self) -> u16 {
+        self.id
+    }
+
+    fn set_numeric_id(&mut self, id: u16) {
+        self.id = id;
+    }
+
+    fn unlocalized_name(&self) -> &str {
+        &self.unlocalized_name
+    }
+}
+
 fn register_materials(
     blocks: Res<Registry<Block>>,
+    items: Res<Registry<Item>>,
     materials: Res<Registry<MaterialDefinition>>,
-    mut registry: ResMut<ManyToOneRegistry<Block, BlockMaterialMapping>>,
-    info_registry: Res<Registry<BlockRenderingInfo>>,
+    mut block_material_registry: ResMut<ManyToOneRegistry<Block, BlockMaterialMapping>>,
+    mut item_material_registry: ResMut<ManyToOneRegistry<Item, ItemMaterialMapping>>,
+    block_info_registry: Res<Registry<BlockRenderingInfo>>,
+    item_info_registry: Res<Registry<ItemRenderingInfo>>,
 ) {
     for material in materials.iter() {
-        registry.insert_value(BlockMaterialMapping {
+        block_material_registry.insert_value(BlockMaterialMapping {
+            id: 0,
+            material_id: material.id(),
+            unlocalized_name: material.unlocalized_name().to_owned(),
+        });
+
+        item_material_registry.insert_value(ItemMaterialMapping {
             id: 0,
             material_id: material.id(),
             unlocalized_name: material.unlocalized_name().to_owned(),
         });
     }
 
-    for (block_name, material_data) in info_registry
+    for (block_name, material_data) in block_info_registry
         .iter()
         .filter_map(|x| x.material_data.as_ref().map(|y| (x.unlocalized_name(), y)))
     {
         if let Some(block) = blocks.from_id(block_name) {
             let material_name = &material_data.name;
 
-            registry
+            block_material_registry
                 .add_link(block, material_name)
                 .unwrap_or_else(|_| panic!("Missing material {material_name} for block {block_name}"));
 
@@ -203,8 +270,38 @@ fn register_materials(
     }
 
     for block in blocks.iter() {
-        if !registry.contains(block) {
-            registry.add_link(block, "cosmos:main").expect("Animated material should exist");
+        if !block_material_registry.contains(block) {
+            block_material_registry
+                .add_link(block, "cosmos:main")
+                .expect("Main material should exist");
+        }
+    }
+
+    for (item_name, material_data) in item_info_registry
+        .iter()
+        .filter_map(|x| x.material_data.as_ref().map(|y| (x.unlocalized_name(), y)))
+    {
+        if let Some(item) = items.from_id(item_name) {
+            let material_name = &material_data.name;
+
+            item_material_registry
+                .add_link(item, material_name)
+                .unwrap_or_else(|_| panic!("Missing material {material_name} for item {item_name}"));
+
+            if let Some(data) = material_data.data.as_ref() {
+                materials
+                    .from_id(material_name)
+                    .expect("This was verified to exist above!")
+                    .add_item_information(item.id(), data);
+            }
+        }
+    }
+
+    for item in items.iter() {
+        if !item_material_registry.contains(item) {
+            item_material_registry
+                .add_link(item, "cosmos:main")
+                .expect("Main material should exist");
         }
     }
 }
@@ -212,6 +309,7 @@ fn register_materials(
 pub(super) fn register(app: &mut App) {
     registry::create_registry::<MaterialDefinition>(app, "cosmos:material_definitions");
     registry::many_to_one::create_many_to_one_registry::<Block, BlockMaterialMapping>(app);
+    registry::many_to_one::create_many_to_one_registry::<Item, ItemMaterialMapping>(app);
     shield::register(app);
     material_types::register(app);
     block_materials::register(app);
