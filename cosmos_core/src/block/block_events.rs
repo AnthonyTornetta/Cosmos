@@ -350,7 +350,7 @@ fn handle_block_place_events(
         }
 
         for (coords, block_up) in structure_blocks {
-            if structure.has_block_at(coords) {
+            if structure.has_block_at(coords) && !structure.block_at(coords, &blocks).is_fluid() {
                 continue;
             }
 

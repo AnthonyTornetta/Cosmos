@@ -11,7 +11,7 @@ use bevy::prelude::{App, EventWriter, OnEnter, ResMut, States};
 
 use super::{Block, BlockProperty};
 
-mod fluid;
+pub mod fluid;
 
 /// Air's ID - this block will always exist
 pub static AIR_BLOCK_ID: u16 = 0;

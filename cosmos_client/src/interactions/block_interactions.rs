@@ -2,11 +2,11 @@
 
 use bevy::prelude::*;
 use bevy_rapier3d::{
-    geometry::{CollisionGroups, Group},
+    geometry::{CollisionGroups, Group, RayIntersection},
     prelude::{QueryFilter, RapierContext, DEFAULT_WORLD_ID},
 };
 use cosmos_core::{
-    block::{block_events::BlockInteractEvent, Block, BlockFace, BlockRotation, BlockSubRotation},
+    block::{block_events::BlockInteractEvent, blocks::fluid::FLUID_COLLISION_GROUP, Block, BlockFace, BlockRotation, BlockSubRotation},
     blockitems::BlockItems,
     inventory::Inventory,
     item::Item,
@@ -27,17 +27,39 @@ use crate::{
     ui::{components::show_cursor::no_open_menus, hotbar::Hotbar},
 };
 
-#[derive(Component, Debug)]
+#[derive(Debug, Clone, Copy)]
+/// Represents a block that is being looked at by the player.
+///
+/// This could be a solid or a non-solid (fluid) block.
+pub struct LookedAtBlock {
+    /// The structure's entity
+    pub structure_entity: Entity,
+    /// The block on the structure
+    pub block: StructureBlock,
+    /// The information about the ray that intersected this block
+    pub intersection: RayIntersection,
+}
+
+#[derive(Component, Debug, Default, Clone)]
 /// Stores the block the player is last noted as looked at
 pub struct LookingAt {
-    /// The block the player is looking at
-    pub looking_at_block: Option<(Entity, StructureBlock)>,
+    /// The block the player is looking at, including any fluid blocks
+    pub looking_at_any: Option<LookedAtBlock>,
+
+    /// The block the player is looking at, including any fluid blocks
+    pub looking_at_block: Option<LookedAtBlock>,
+}
+
+fn add_looking_at_component(q_added_player: Query<Entity, Added<LocalPlayer>>, mut commands: Commands) {
+    for e in q_added_player.iter() {
+        commands.entity(e).insert(LookingAt::default());
+    }
 }
 
 pub(crate) fn process_player_interaction(
     input_handler: InputChecker,
     camera: Query<&GlobalTransform, With<MainCamera>>,
-    mut player_body: Query<(Entity, &mut Inventory, Option<&mut LookingAt>), (With<LocalPlayer>, Without<Pilot>)>,
+    mut player_body: Query<(Entity, &mut Inventory, &mut LookingAt), (With<LocalPlayer>, Without<Pilot>)>,
     rapier_context: Res<RapierContext>,
     q_chunk_physics_part: Query<&ChunkPhysicsPart>,
     q_structure: Query<(&Structure, &GlobalTransform, Option<&Planet>)>,
@@ -48,108 +70,96 @@ pub(crate) fn process_player_interaction(
     items: Res<Registry<Item>>,
     blocks: Res<Registry<Block>>,
     block_items: Res<BlockItems>,
-    mut commands: Commands,
 ) {
     // this fails if the player is a pilot
-    let Ok((player_entity, mut inventory, looking_at)) = player_body.get_single_mut() else {
+    let Ok((player_entity, mut inventory, mut looking_at)) = player_body.get_single_mut() else {
         return;
     };
+
+    looking_at.looking_at_any = None;
+    looking_at.looking_at_block = None;
 
     let Ok(cam_trans) = camera.get_single() else {
-        if let Some(mut looking_at) = looking_at {
-            looking_at.looking_at_block = None;
-        }
         return;
     };
 
-    let Ok(Some((entity, intersection))) = rapier_context.cast_ray_and_get_normal(
-        DEFAULT_WORLD_ID,
-        cam_trans.translation(),
-        cam_trans.forward(),
-        10.0,
-        true,
-        QueryFilter::new().exclude_rigid_body(player_entity).groups(CollisionGroups::new(
-            Group::ALL & !SHIELD_COLLISION_GROUP,
-            Group::ALL & !SHIELD_COLLISION_GROUP,
-        )), // don't want to hit yourself
+    let Some((hit_block, mut structure, mut structure_g_transform, mut is_planet)) = send_ray(
+        &rapier_context,
+        cam_trans,
+        player_entity,
+        &q_chunk_physics_part,
+        &q_structure,
+        Group::ALL & !SHIELD_COLLISION_GROUP,
     ) else {
-        if let Some(mut looking_at) = looking_at {
-            looking_at.looking_at_block = None;
+        return;
+    };
+
+    if !structure.has_block_at(hit_block.block.coords()) {
+        return;
+    }
+
+    looking_at.looking_at_any = Some(hit_block);
+
+    if structure.block_at(hit_block.block.coords(), &blocks).is_fluid() {
+        if let Some((hit_block, s, sgt, ip)) = send_ray(
+            &rapier_context,
+            cam_trans,
+            player_entity,
+            &q_chunk_physics_part,
+            &q_structure,
+            Group::ALL & !(SHIELD_COLLISION_GROUP | FLUID_COLLISION_GROUP),
+        ) {
+            structure = s;
+            structure_g_transform = sgt;
+            is_planet = ip;
+
+            if structure.has_block_at(hit_block.block.coords()) {
+                looking_at.looking_at_block = Some(hit_block);
+            }
         }
-        return;
-    };
-
-    let Ok(structure_entity) = q_chunk_physics_part.get(entity).map(|x| x.structure_entity) else {
-        if let Some(mut looking_at) = looking_at {
-            looking_at.looking_at_block = None;
-        }
-        return;
-    };
-
-    let Ok((structure, structure_g_transform, is_planet)) = q_structure.get(structure_entity) else {
-        if let Some(mut looking_at) = looking_at {
-            looking_at.looking_at_block = None;
-        }
-        return;
-    };
-
-    let moved_point = intersection.point - intersection.normal * 0.01;
-
-    let point = structure_g_transform.compute_matrix().inverse().transform_point3(moved_point);
-
-    let Ok(coords) = structure.relative_coords_to_local_coords_checked(point.x, point.y, point.z) else {
-        return;
-    };
-
-    let looking_at_block = Some((structure_entity, StructureBlock::new(coords)));
-    if let Some(mut looking_at) = looking_at {
-        looking_at.looking_at_block = looking_at_block;
     } else {
-        commands.entity(player_entity).insert(LookingAt { looking_at_block });
+        looking_at.looking_at_block = Some(hit_block);
     }
 
     if input_handler.check_just_pressed(CosmosInputs::BreakBlock) {
-        break_writer.send(RequestBlockBreakEvent {
-            structure_entity: structure.get_entity().unwrap(),
-            block: StructureBlock::new(coords),
-        });
+        if let Some(x) = &looking_at.looking_at_block {
+            break_writer.send(RequestBlockBreakEvent {
+                structure_entity: structure.get_entity().unwrap(),
+                block: x.block,
+            });
+        }
     }
 
     if input_handler.check_just_pressed(CosmosInputs::PlaceBlock) {
         (|| {
-            let Ok(hotbar) = hotbar.get_single() else {
-                return;
-            };
+            let looking_at_block = looking_at.looking_at_block.as_ref()?;
+
+            let hotbar = hotbar.get_single().ok()?;
+
             let inventory_slot = hotbar.selected_slot();
 
-            let Some(is) = inventory.itemstack_at(inventory_slot) else {
-                return;
-            };
+            let is = inventory.itemstack_at(inventory_slot)?;
 
             let item = items.from_numeric_id(is.item_id());
 
-            let Some(block_id) = block_items.block_from_item(item) else {
-                return;
-            };
+            let block_id = block_items.block_from_item(item)?;
 
             let block = blocks.from_numeric_id(block_id);
 
-            let moved_point = intersection.point + intersection.normal * 0.75;
+            let moved_point = looking_at_block.intersection.point + looking_at_block.intersection.normal * 0.75;
 
             let point = structure_g_transform.compute_matrix().inverse().transform_point3(moved_point);
 
-            let Ok(place_at_coords) = structure.relative_coords_to_local_coords_checked(point.x, point.y, point.z) else {
-                return;
-            };
+            let place_at_coords = structure.relative_coords_to_local_coords_checked(point.x, point.y, point.z).ok()?;
 
             if !structure.is_within_blocks(place_at_coords) {
-                return;
+                return Some(0); // the return doesn't matter, it's just used for early returns
             }
 
             inventory.decrease_quantity_at(inventory_slot, 1);
 
             let (block_up, block_sub_rotation) = if block.is_fully_rotatable() || block.should_face_front() {
-                let delta = UnboundBlockCoordinate::from(place_at_coords) - UnboundBlockCoordinate::from(coords);
+                let delta = UnboundBlockCoordinate::from(place_at_coords) - UnboundBlockCoordinate::from(looking_at_block.block.coords());
 
                 let block_front = match delta {
                     UnboundBlockCoordinate { x: -1, y: 0, z: 0 } => BlockFace::Left,
@@ -158,7 +168,7 @@ pub(crate) fn process_player_interaction(
                     UnboundBlockCoordinate { x: 0, y: 1, z: 0 } => BlockFace::Top,
                     UnboundBlockCoordinate { x: 0, y: 0, z: -1 } => BlockFace::Back,
                     UnboundBlockCoordinate { x: 0, y: 0, z: 1 } => BlockFace::Front,
-                    _ => return, // invalid direction, something wonky happened w/ the block selection logic
+                    _ => return None, // invalid direction, something wonky happened w/ the block selection logic
                 };
 
                 if block.should_face_front() {
@@ -276,22 +286,71 @@ pub(crate) fn process_player_interaction(
                     sub_rotation: block_sub_rotation,
                 },
             });
+
+            None
         })();
     }
 
     if input_handler.check_just_pressed(CosmosInputs::Interact) {
-        interact_writer.send(BlockInteractEvent {
-            structure_entity: structure.get_entity().unwrap(),
-            structure_block: StructureBlock::new(coords),
-            interactor: player_entity,
-        });
+        if let Some(looked_at) = &looking_at.looking_at_block {
+            interact_writer.send(BlockInteractEvent {
+                structure_entity: structure.get_entity().unwrap(),
+                structure_block: looked_at.block,
+                interactor: player_entity,
+            });
+        }
     }
+}
+
+fn send_ray<'a>(
+    rapier_context: &RapierContext,
+    cam_trans: &GlobalTransform,
+    player_entity: Entity,
+    q_chunk_physics_part: &Query<&ChunkPhysicsPart>,
+    q_structure: &'a Query<(&Structure, &GlobalTransform, Option<&Planet>)>,
+    collision_group: Group,
+) -> Option<(LookedAtBlock, &'a Structure, &'a GlobalTransform, Option<&'a Planet>)> {
+    let (entity, intersection) = rapier_context
+        .cast_ray_and_get_normal(
+            DEFAULT_WORLD_ID,
+            cam_trans.translation(),
+            cam_trans.forward(),
+            10.0,
+            true,
+            QueryFilter::new()
+                .exclude_rigid_body(player_entity)
+                .groups(CollisionGroups::new(collision_group, collision_group)), // don't want to hit yourself
+        )
+        .ok()
+        .flatten()?;
+
+    let structure_entity = q_chunk_physics_part.get(entity).map(|x| x.structure_entity).ok()?;
+
+    let (structure, structure_g_transform, is_planet) = q_structure.get(structure_entity).ok()?;
+
+    let moved_point = intersection.point - intersection.normal * 0.01;
+
+    let point = structure_g_transform.compute_matrix().inverse().transform_point3(moved_point);
+
+    let coords = structure.relative_coords_to_local_coords_checked(point.x, point.y, point.z).ok()?;
+
+    Some((
+        LookedAtBlock {
+            block: StructureBlock::new(coords),
+            intersection,
+            structure_entity,
+        },
+        structure,
+        structure_g_transform,
+        is_planet,
+    ))
 }
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        process_player_interaction
+        (add_looking_at_component, process_player_interaction)
+            .chain()
             .run_if(no_open_menus)
             .run_if(in_state(GameState::Playing)),
     );

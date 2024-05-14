@@ -7,12 +7,16 @@ use bevy::{
         system::{Res, ResMut},
     },
 };
+use bevy_rapier3d::geometry::Group;
 
 use crate::{
     block::Block,
     physics::block_colliders::*,
     registry::{identifiable::Identifiable, Registry},
 };
+
+/// Collision group all fluid blocks will use for their colliders
+pub const FLUID_COLLISION_GROUP: Group = Group::GROUP_4;
 
 fn create_fluid_colliders(blocks: Res<Registry<Block>>, mut registry: ResMut<Registry<BlockCollider>>) {
     for block in blocks.iter().filter(|b| b.is_fluid()) {
