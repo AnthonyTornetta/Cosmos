@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::netty::sync::{sync_component, SyncableComponent};
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 /// Indicates that this entity cannot be collided with.
 /// This should be used with [`CollisionBlacklist`]
 pub struct CollisionBlacklistedEntity {
@@ -32,7 +32,7 @@ pub struct CollisionBlacklistedEntity {
     pub search_parents: bool,
 }
 
-#[derive(Component, Debug, Clone, Serialize, Deserialize)]
+#[derive(Component, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 /// If this is on an entity, then this entity will not collide with any entities
 /// present in the list of [`CollisionBlacklistedEntity`]s.
 ///

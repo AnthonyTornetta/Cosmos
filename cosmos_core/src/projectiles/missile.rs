@@ -25,7 +25,7 @@ use crate::{
     physics::location::{CosmosBundleSet, LocationPhysicsSet},
 };
 
-#[derive(Component, Debug, Serialize, Deserialize, Clone)]
+#[derive(Component, Debug, Serialize, Deserialize, Clone, PartialEq)]
 /// A missile is something that flies in a straight line & may collide with a block, causing
 /// it to take damage.
 pub struct Missile {
@@ -63,7 +63,7 @@ fn on_add_missile(q_added_missile: Query<Entity, Added<Missile>>, mut commands: 
     }
 }
 
-#[derive(Component, Debug, Reflect, Clone, Copy, Serialize, Deserialize)]
+#[derive(Component, Debug, Reflect, Clone, Copy, Serialize, Deserialize, PartialEq)]
 /// Something that will cause damage to nearby entities that it hits.
 pub struct Explosion {
     /// The power of the explosion is used to calculate its radius & effectiveness against blocks.

@@ -21,7 +21,7 @@ pub struct DockSystem {
     docking_blocks: Vec<BlockCoordinate>,
 }
 
-#[derive(Component, Debug, Serialize, Deserialize, Clone)]
+#[derive(Component, Debug, Serialize, Deserialize, Clone, PartialEq)]
 /// If a structure is docked to another, it will have this component
 pub struct Docked {
     /// The entity this is docked to

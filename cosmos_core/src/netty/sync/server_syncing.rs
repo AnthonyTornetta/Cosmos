@@ -45,8 +45,12 @@ fn server_remove_component<T: SyncableComponent>(
             continue;
         }
 
-        let SyncType::ClientAuthoritative(authority) = T::get_sync_type() else {
-            unreachable!("This function cannot be caled if synctype != client authoritative in the server project.")
+        let authority = match T::get_sync_type() {
+            SyncType::ClientAuthoritative(authority) => authority,
+            SyncType::BothAuthoritative(authority) => authority,
+            SyncType::ServerAuthoritative => {
+                unreachable!("This function cannot be caled if synctype == ServerAuthoritative in the server project.")
+            }
         };
 
         match authority {
@@ -87,6 +91,7 @@ fn server_deserialize_component<T: SyncableComponent>(
     mut commands: Commands,
     lobby: Res<ServerLobby>,
     q_piloting: Query<&Pilot>,
+    q_t: Query<&T>,
 ) {
     for ev in ev_reader.read() {
         let Some(synced_id) = components_registry.try_from_numeric_id(ev.component_id) else {
@@ -98,8 +103,12 @@ fn server_deserialize_component<T: SyncableComponent>(
             continue;
         }
 
-        let SyncType::ClientAuthoritative(authority) = T::get_sync_type() else {
-            unreachable!("This function cannot be caled if synctype != client authoritative in the server project.")
+        let authority = match T::get_sync_type() {
+            SyncType::ClientAuthoritative(authority) => authority,
+            SyncType::BothAuthoritative(authority) => authority,
+            SyncType::ServerAuthoritative => {
+                unreachable!("This function cannot be caled if synctype == ServerAuthoritative in the server project.")
+            }
         };
 
         match authority {
@@ -129,7 +138,20 @@ fn server_deserialize_component<T: SyncableComponent>(
         }
 
         if let Some(mut ecmds) = commands.get_entity(ev.entity) {
-            ecmds.try_insert(bincode::deserialize::<T>(&ev.raw_data).expect("Failed to deserialize component sent from server!"));
+            let Ok(deserialized) = bincode::deserialize::<T>(&ev.raw_data) else {
+                continue;
+            };
+
+            if matches!(T::get_sync_type(), SyncType::BothAuthoritative(_)) {
+                // Attempt to prevent an endless chain of change detection, causing the client+server to repeatedly sync the same component.
+                if q_t.get(ev.entity).map(|x| *x == deserialized).unwrap_or(false) {
+                    continue;
+                }
+            }
+
+            if deserialized.validate() {
+                ecmds.try_insert(deserialized);
+            }
         }
     }
 }
@@ -284,8 +306,6 @@ fn server_receive_components(
                         }
                     };
 
-                    info!("Syncing component from client!");
-
                     ev_writer_sync.send(GotComponentToSyncEvent {
                         client_id,
                         component_id,
@@ -314,8 +334,6 @@ fn server_receive_components(
                             (system_entity, structure_entity)
                         }
                     };
-
-                    info!("Syncing component from client!");
 
                     ev_writer_remove.send(GotComponentToRemoveEvent {
                         client_id,
@@ -364,6 +382,25 @@ pub(super) fn sync_component_server<T: SyncableComponent>(app: &mut App) {
             );
         }
         SyncType::ClientAuthoritative(_) => {
+            app.add_systems(
+                Update,
+                (server_deserialize_component::<T>, server_remove_component::<T>)
+                    .chain()
+                    .in_set(ComponentSyncingSet::DoComponentSyncing),
+            );
+        }
+        SyncType::BothAuthoritative(_) => {
+            app.add_systems(
+                Update,
+                (
+                    on_request_component::<T>,
+                    server_send_component::<T>,
+                    server_sync_removed_components::<T>,
+                )
+                    .chain()
+                    .run_if(resource_exists::<RenetServer>)
+                    .in_set(ComponentSyncingSet::DoComponentSyncing),
+            );
             app.add_systems(
                 Update,
                 (server_deserialize_component::<T>, server_remove_component::<T>)

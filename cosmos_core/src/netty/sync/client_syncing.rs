@@ -36,6 +36,7 @@ fn client_deserialize_component<T: SyncableComponent>(
     mut ev_reader: EventReader<GotComponentToSyncEvent>,
     mut commands: Commands,
     mapping: Res<NetworkMapping>,
+    q_t: Query<&T>,
 ) {
     for ev in ev_reader.read() {
         let synced_id = components_registry
@@ -56,7 +57,16 @@ fn client_deserialize_component<T: SyncableComponent>(
                 component = mapped;
             }
 
-            ecmds.try_insert(component);
+            if matches!(T::get_sync_type(), SyncType::BothAuthoritative(_)) {
+                // Attempt to prevent an endless chain of change detection, causing the client+server to repeatedly sync the same component.
+                if q_t.get(ev.entity).map(|x| *x == component).unwrap_or(false) {
+                    continue;
+                }
+            }
+
+            if component.validate() {
+                ecmds.try_insert(component);
+            }
         }
     }
 }
@@ -89,8 +99,12 @@ fn client_send_components<T: SyncableComponent>(
     q_local_player: Query<(), With<LocalPlayer>>,
     q_local_piloting: Query<&Pilot, With<LocalPlayer>>,
 ) {
-    let SyncType::ClientAuthoritative(authority) = T::get_sync_type() else {
-        unreachable!("This function cannot be caled if synctype != client authoritative.")
+    let authority = match T::get_sync_type() {
+        SyncType::ClientAuthoritative(authority) => authority,
+        SyncType::BothAuthoritative(authority) => authority,
+        SyncType::ServerAuthoritative => {
+            unreachable!("This function cannot be caled if synctype == ServerAuthoritative in the server project.")
+        }
     };
 
     if q_changed_component.is_empty() {
@@ -175,8 +189,12 @@ fn client_send_removed_components<T: SyncableComponent>(
     q_local_player: Query<(), With<LocalPlayer>>,
     q_local_piloting: Query<&Pilot, With<LocalPlayer>>,
 ) {
-    let SyncType::ClientAuthoritative(authority) = T::get_sync_type() else {
-        unreachable!("This function cannot be caled if synctype != client authoritative.")
+    let authority = match T::get_sync_type() {
+        SyncType::ClientAuthoritative(authority) => authority,
+        SyncType::BothAuthoritative(authority) => authority,
+        SyncType::ServerAuthoritative => {
+            unreachable!("This function cannot be caled if synctype == ServerAuthoritative in the server project.")
+        }
     };
 
     if removed_components.is_empty() {
@@ -379,6 +397,23 @@ pub(super) fn sync_component_client<T: SyncableComponent>(app: &mut App) {
             );
         }
         SyncType::ServerAuthoritative => {
+            app.add_systems(
+                Update,
+                (client_deserialize_component::<T>, client_remove_component::<T>)
+                    .chain()
+                    .run_if(resource_exists::<NetworkMapping>)
+                    .run_if(resource_exists::<Registry<SyncedComponentId>>)
+                    .in_set(ComponentSyncingSet::DoComponentSyncing),
+            );
+        }
+        SyncType::BothAuthoritative(_) => {
+            app.add_systems(
+                Update,
+                (client_send_components::<T>, client_send_removed_components::<T>)
+                    .chain()
+                    .run_if(resource_exists::<RenetClient>)
+                    .in_set(ComponentSyncingSet::DoComponentSyncing),
+            );
             app.add_systems(
                 Update,
                 (client_deserialize_component::<T>, client_remove_component::<T>)

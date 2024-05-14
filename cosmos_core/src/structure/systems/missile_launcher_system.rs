@@ -59,7 +59,7 @@ impl LinePropertyCalculator<MissileLauncherProperty> for MissileLauncherCalculat
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Component, Clone, Copy, Default, Reflect)]
+#[derive(Debug, Serialize, Deserialize, Component, Clone, Copy, Default, Reflect, PartialEq, Eq)]
 /// Tracks how long the current target has been targetted by the missile system.
 pub enum MissileLauncherFocus {
     #[default]
@@ -130,7 +130,7 @@ impl SyncableComponent for MissileLauncherFocus {
     }
 }
 
-#[derive(Default, Debug, Serialize, Deserialize, Component, Clone, Copy, Reflect)]
+#[derive(Default, Debug, Serialize, Deserialize, Component, Clone, Copy, Reflect, PartialEq, Eq)]
 /// Prefers focusing this entity if there are many potential candidates
 pub struct MissileLauncherPreferredFocus {
     /// The **SERVER** entity that is being focused. Even on the client, this

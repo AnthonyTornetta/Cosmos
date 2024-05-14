@@ -73,11 +73,8 @@ pub enum SyncType {
     /// Client will sync this with the server, and the server will not sync this
     /// with the client.
     ClientAuthoritative(ClientAuthority),
-    // Both the server and client will sync each other on changes.
-    // This is commented out because I don't have anything to use this on, and logic
-    // will have to be added to prevent the server + client from repeatedly detecting
-    // changes.
-    // BothAuthoritative,
+    /// Both the server and client will sync each other on changes.
+    BothAuthoritative(ClientAuthority),
 }
 
 /// Clients can rarely (if ever) sync components that belong to anything.
@@ -112,7 +109,7 @@ enum ComponentEntityIdentifier {
 /// of the entity before it will sync it.  This is most commonly done via the [`super::server_unreliable_messages::ServerUnreliableMessages::BulkBodies`] networking request.
 /// Note that this requires the following components to sync the entity:
 /// `Location`, `Transform`, `Velocity`, and `LoadingDistance`. Additionally, the player must be within the `LoadingDistance`.
-pub trait SyncableComponent: Component + Serialize + DeserializeOwned + Clone + std::fmt::Debug {
+pub trait SyncableComponent: Component + Serialize + DeserializeOwned + Clone + std::fmt::Debug + PartialEq {
     /// Returns how this component should be synced
     ///
     /// Either from `server -> client` or `client -> server`.
@@ -121,6 +118,11 @@ pub trait SyncableComponent: Component + Serialize + DeserializeOwned + Clone + 
     ///
     /// A good practice is to use `mod_id:component_name` format. For example, `cosmos:missile_focused`
     fn get_component_unlocalized_name() -> &'static str;
+
+    /// Returns true if this is a valid instance of this component, false if this should be ignored
+    fn validate(&self) -> bool {
+        true
+    }
 
     /// The [`SyncableComponent::convert_entities_client_to_server`] function requires cloning this struct,
     /// so to avoid clones on structs without any entities this method can be used.

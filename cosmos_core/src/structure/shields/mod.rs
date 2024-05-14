@@ -17,7 +17,7 @@ use crate::netty::sync::{sync_component, SyncableComponent};
 
 use super::{coordinates::BlockCoordinate, shared::DespawnWithStructure};
 
-#[derive(Component, Reflect, Clone, Debug, Serialize, Deserialize)]
+#[derive(Component, Reflect, Clone, Debug, Serialize, Deserialize, PartialEq)]
 /// Blocks projectiles that are within the shields bounds
 pub struct Shield {
     /// How big the shield's radius is

@@ -14,6 +14,7 @@ use crate::{item::Item, registry::identifiable::Identifiable};
 
 use self::itemstack::ItemStack;
 
+pub mod held_item_slot;
 pub mod itemstack;
 pub mod netty;
 
@@ -498,5 +499,7 @@ impl Inventory {
 
 pub(super) fn register(app: &mut App) {
     itemstack::register(app);
+    held_item_slot::register(app);
+
     app.register_type::<Inventory>().register_type::<HeldItemStack>();
 }

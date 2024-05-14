@@ -16,7 +16,7 @@ use cosmos_core::{
     },
     entities::player::{render_distance::RenderDistance, Player},
     events::{block_events::BlockChangedEvent, structure::change_pilot_event::ChangePilotEvent},
-    inventory::Inventory,
+    inventory::{held_item_slot::HeldItemSlot, Inventory},
     netty::{
         client::LocalPlayer,
         client_reliable_messages::ClientReliableMessages,
@@ -384,7 +384,12 @@ fn client_sync_players(
 
                 if client_id == id {
                     entity_cmds
-                        .insert((LocalPlayer, RenderDistance::default(), CameraPlayerOffset(camera_offset)))
+                        .insert((
+                            LocalPlayer,
+                            HeldItemSlot::new(0).unwrap(),
+                            RenderDistance::default(),
+                            CameraPlayerOffset(camera_offset),
+                        ))
                         .with_children(|parent| {
                             parent.spawn((
                                 Camera3dBundle {
