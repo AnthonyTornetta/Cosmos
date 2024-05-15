@@ -15,7 +15,7 @@ use bevy::ecs::removal_detection::RemovedComponents;
 use bevy::ecs::schedule::common_conditions::resource_exists;
 use bevy::ecs::schedule::{IntoSystemConfigs, IntoSystemSetConfigs};
 use bevy::ecs::system::Commands;
-use bevy::log::{info, warn};
+use bevy::log::warn;
 use bevy::{
     app::{App, Startup, Update},
     ecs::{
