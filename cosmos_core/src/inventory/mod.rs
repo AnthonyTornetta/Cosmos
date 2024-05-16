@@ -5,6 +5,8 @@
 use std::ops::Range;
 
 use bevy::{
+    ecs::{entity::Entity, event::EventWriter, system::Commands},
+    hierarchy::BuildChildren,
     prelude::{App, Component, Deref, DerefMut},
     reflect::Reflect,
 };
@@ -12,7 +14,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{item::Item, registry::identifiable::Identifiable};
 
-use self::itemstack::ItemStack;
+use self::itemstack::{ItemStack, ItemStackNeedsDataCreatedEvent};
 
 pub mod held_item_slot;
 pub mod itemstack;
@@ -53,7 +55,7 @@ impl std::fmt::Display for InventorySlotError {
 }
 
 #[derive(Default, Component, Serialize, Deserialize, Debug, Reflect, Clone)]
-/// A collection of ItemStacks, organized into slots
+/// A collection of ItemStack entities, organized into slots
 pub struct Inventory {
     items: Vec<Option<ItemStack>>,
     priority_slots: Option<Range<usize>>,
@@ -122,12 +124,33 @@ impl Inventory {
     /// Swaps the contents of two inventory slots in two different inventories
     ///
     /// Returns Ok if both slots were within the bounds of their inventories, Err if either was not
-    pub fn swap_slots(&mut self, this_slot: usize, other: &mut Inventory, other_slot: usize) -> Result<(), InventorySlotError> {
+    pub fn swap_slots(
+        &mut self,
+        this_slot: usize,
+        other: &mut Inventory,
+        other_slot: usize,
+        self_entity: Entity,
+        other_entity: Entity,
+        commands: &mut Commands,
+    ) -> Result<(), InventorySlotError> {
         if this_slot >= self.items.len() {
             return Err(InventorySlotError::InvalidSlot(this_slot));
         }
         if other_slot >= other.len() {
             return Err(InventorySlotError::InvalidSlot(other_slot));
+        }
+
+        // Ensure item data is always a child of the proper inventory
+        if let Some(is) = &self.items[this_slot] {
+            if let Some(ent) = is.data_entity() {
+                commands.entity(ent).set_parent(other_entity);
+            }
+        }
+
+        if let Some(is) = &other.items[other_slot] {
+            if let Some(ent) = is.data_entity() {
+                commands.entity(ent).set_parent(self_entity);
+            }
         }
 
         std::mem::swap(&mut self.items[this_slot], &mut other.items[other_slot]);
@@ -169,24 +192,75 @@ impl Inventory {
     }
 
     /// Returns the overflow that could not fit
-    pub fn insert_itemstack(&mut self, itemstack: &ItemStack) -> u16 {
-        self.insert_raw(itemstack.item_id(), itemstack.max_stack_size(), itemstack.quantity())
+    pub fn insert_itemstack(
+        &mut self,
+        itemstack: &ItemStack,
+        ev_writer: Option<(Entity, &mut EventWriter<ItemStackNeedsDataCreatedEvent>)>,
+    ) -> u16 {
+        let (qty, slot) = self.insert_raw(
+            itemstack.item_id(),
+            itemstack.max_stack_size(),
+            itemstack.quantity(),
+            itemstack.data_entity(),
+        );
+
+        if itemstack.data_entity().is_none() {
+            if let Some(slot) = slot {
+                if let Some((self_entity, ev_writer)) = ev_writer {
+                    ev_writer.send(ItemStackNeedsDataCreatedEvent {
+                        inventory_entity: self_entity,
+                        inventory_slot: slot,
+                        item_id: itemstack.item_id(),
+                    });
+                }
+            }
+        }
+
+        qty
     }
 
     /// Returns (the overflow that could not fit and the slot
-    pub fn insert(&mut self, item: &Item, quantity: u16) -> u16 {
-        self.insert_raw(item.id(), item.max_stack_size(), quantity)
+    pub fn insert(
+        &mut self,
+        item: &Item,
+        quantity: u16,
+        ev_writer: Option<(Entity, &mut EventWriter<ItemStackNeedsDataCreatedEvent>)>,
+    ) -> u16 {
+        let (qty, slot) = self.insert_raw(item.id(), item.max_stack_size(), quantity, None);
+
+        if let Some(slot) = slot {
+            if let Some((self_entity, ev_writer)) = ev_writer {
+                ev_writer.send(ItemStackNeedsDataCreatedEvent {
+                    inventory_entity: self_entity,
+                    inventory_slot: slot,
+                    item_id: item.id(),
+                });
+            }
+        }
+
+        qty
     }
 
     /// Returns the overflow that could not fit
-    fn insert_raw(&mut self, item_id: u16, max_stack_size: u16, mut quantity: u16) -> u16 {
+    ///
+    /// Also returns the slot the item was inserted into if a new slot was occupied.
+    /// This is for items with data, since these items should never stack.
+    fn insert_raw(&mut self, item_id: u16, max_stack_size: u16, mut quantity: u16, data_ent: Option<Entity>) -> (u16, Option<u32>) {
         // Search for existing stacks, if none found that make new one(s)
 
-        for is in &mut self.items.iter_mut().flatten().filter(|x| x.item_id() == item_id) {
-            quantity = is.increase_quantity(quantity);
+        // Items with data cannot stack
+        if data_ent.is_none() {
+            for is in &mut self
+                .items
+                .iter_mut()
+                .flatten()
+                .filter(|x| x.item_id() == item_id && x.data_entity().is_none())
+            {
+                quantity = is.increase_quantity(quantity);
 
-            if quantity == 0 {
-                return 0;
+                if quantity == 0 {
+                    return (0, None);
+                }
             }
         }
 
@@ -195,19 +269,27 @@ impl Inventory {
         for i in 0..self.items.len() {
             if self.items[i].is_none() {
                 let mut is = ItemStack::raw_with_quantity(item_id, max_stack_size, 0);
+                if let Some(de) = data_ent {
+                    is.set_data_entity(de);
+                }
                 quantity = is.increase_quantity(quantity);
 
                 self.items[i] = Some(is);
 
+                // Items with data cannot be inserted more than once at a time
+                if data_ent.is_some() {
+                    return (quantity, Some(i as u32));
+                }
+
                 if quantity == 0 {
-                    return 0;
+                    return (0, Some(i as u32));
                 }
             }
         }
 
         // if any amount is left over, it will be represented in the quantity variable
 
-        quantity
+        (quantity, None)
     }
 
     /// Returns the ItemStack at that slot
@@ -251,7 +333,13 @@ impl Inventory {
 
     /// Inserts the items & quantity at that slot. Returns the number of items left over, or the full
     /// quantity of items if that slot doesn't represent that item.
-    pub fn insert_item_at(&mut self, slot: usize, item: &Item, quantity: u16) -> u16 {
+    pub fn insert_item_at(
+        &mut self,
+        slot: usize,
+        item: &Item,
+        quantity: u16,
+        ev_writer: Option<(Entity, &mut EventWriter<ItemStackNeedsDataCreatedEvent>)>,
+    ) -> u16 {
         self.insert_raw_at(slot, item.id(), item.max_stack_size(), quantity)
     }
 
@@ -268,7 +356,11 @@ impl Inventory {
 
     /// Inserts the items & quantity at that slot. Returns the number of items left over, or the full
     /// quantity of items if that slot doesn't represent that item.
-    fn insert_raw_at(&mut self, slot: usize, item_id: u16, max_stack_size: u16, quantity: u16) -> u16 {
+    fn insert_raw_at(&mut self, slot: usize, item_id: u16, max_stack_size: u16, quantity: u16, item_data: Option<Entity>) -> u16 {
+        if item_data.is_some() && max_stack_size > 1 {
+            panic!("Item with data cannot have max stack size > 1!");
+        }
+
         if let Some(slot) = &mut self.items[slot] {
             if slot.item_id() != item_id {
                 quantity
@@ -276,7 +368,12 @@ impl Inventory {
                 slot.increase_quantity(quantity)
             }
         } else {
-            self.items[slot] = Some(ItemStack::raw_with_quantity(item_id, max_stack_size, quantity));
+            let mut is = ItemStack::raw_with_quantity(item_id, max_stack_size, quantity);
+            if let Some(data) = item_data {
+                is.set_data_entity(data);
+            }
+
+            self.items[slot] = Some(is);
 
             0
         }
@@ -306,7 +403,13 @@ impl Inventory {
             if !priority_slots.contains(&slot) {
                 // attempt to move to priority slots first
                 for slot in priority_slots {
-                    let left_over = self.insert_raw_at(slot, item_stack.item_id(), item_stack.max_stack_size(), item_stack.quantity());
+                    let left_over = self.insert_raw_at(
+                        slot,
+                        item_stack.item_id(),
+                        item_stack.max_stack_size(),
+                        item_stack.quantity(),
+                        item_stack.data_entity(),
+                    );
 
                     item_stack.set_quantity(left_over);
 
@@ -327,7 +430,13 @@ impl Inventory {
                 break;
             }
 
-            let left_over = self.insert_raw_at(slot, item_stack.item_id(), item_stack.max_stack_size(), item_stack.quantity());
+            let left_over = self.insert_raw_at(
+                slot,
+                item_stack.item_id(),
+                item_stack.max_stack_size(),
+                item_stack.quantity(),
+                item_stack.data_entity(),
+            );
 
             item_stack.set_quantity(left_over);
         }
@@ -416,6 +525,9 @@ impl Inventory {
         to_inventory: &mut Inventory,
         to: usize,
         max_quantity: u16,
+        self_entity: Entity,
+        other_entity: Entity,
+        commands: &mut Commands,
     ) -> Result<u16, InventorySlotError> {
         if from >= self.items.len() {
             return Err(InventorySlotError::InvalidSlot(from));

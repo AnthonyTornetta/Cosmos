@@ -10,6 +10,7 @@ use cosmos_core::{
     block::data::BlockData,
     entities::player::Player,
     inventory::{
+        itemstack::ItemStack,
         netty::{ClientInventoryMessages, InventoryIdentifier, ServerInventoryMessages},
         HeldItemStack, Inventory,
     },
@@ -178,7 +179,7 @@ fn listen(
                     {
                         let from_slot = from_slot as usize;
                         if let Some(mut is) = from_inventory.remove_itemstack_at(from_slot) {
-                            let leftover = to_inventory.insert_itemstack(&is);
+                            let leftover = to_inventory.insert_itemstack(&is, None);
                             if leftover == 0 {
                                 from_inventory.remove_itemstack_at(from_slot);
                             } else if leftover == is.quantity() {
@@ -360,7 +361,12 @@ fn listen(
 
                     if let Some(mut inventory) = get_inventory_mut(inventory_holder, &mut q_inventory, &q_structure) {
                         let unused_leftover = held_item_stack.quantity() - quantity;
-                        let leftover = inventory.insert(items.from_numeric_id(held_item_stack.item_id()), quantity);
+                        let mut is = ItemStack::with_quantity(items.from_numeric_id(held_item_stack.item_id()), unused_leftover);
+
+                        if let Some(de) = held_item_stack.data_entity() {
+                            is.set_data_entity(de);
+                        }
+                        let leftover = inventory.insert_itemstack(&is, None);
 
                         held_item_stack.set_quantity(leftover + unused_leftover);
 

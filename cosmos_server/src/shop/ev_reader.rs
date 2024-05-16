@@ -4,7 +4,7 @@ use cosmos_core::{
     block::{block_events::BlockInteractEvent, Block},
     economy::Credits,
     entities::player::Player,
-    inventory::Inventory,
+    inventory::{itemstack::ItemStackNeedsDataCreatedEvent, Inventory},
     item::Item,
     netty::{cosmos_encoder, server::ServerLobby, system_sets::NetworkingSystemsSet, NettyChannelClient, NettyChannelServer},
     registry::{identifiable::Identifiable, Registry},
@@ -172,6 +172,7 @@ fn listen_buy_events(
     mut q_player: Query<(&mut Inventory, &mut Credits)>,
     items: Res<Registry<Item>>,
     default_shop_entries: Res<DefaultShopEntries>,
+    mut is_ev_writer: EventWriter<ItemStackNeedsDataCreatedEvent>,
 ) {
     for &BuyEvent {
         client_id,
@@ -225,7 +226,7 @@ fn listen_buy_events(
                     }),
                 );
 
-                inventory.insert(item, quantity as u16);
+                inventory.insert(item, quantity as u16, Some((player_ent, &mut is_ev_writer)));
             }
             Err(msg) => {
                 server.send_message(

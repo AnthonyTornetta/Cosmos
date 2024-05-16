@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use crate::{
     blockitems::BlockItems,
     events::block_events::BlockChangedEvent,
-    inventory::Inventory,
+    inventory::{itemstack::ItemStackNeedsDataCreatedEvent, Inventory},
     item::Item,
     registry::{identifiable::Identifiable, Registry},
     structure::{
@@ -65,8 +65,9 @@ fn handle_block_break_events(
     block_items: Res<BlockItems>, // TODO: Replace this with drop table
     mut inventory_query: Query<(&mut Inventory, Option<&BuildMode>, Option<&Parent>), Without<BlockData>>,
     mut event_writer: EventWriter<BlockChangedEvent>,
-    mut q_inventory_block_data: Query<(&BlockData, &mut Inventory)>,
+    mut q_inventory_block_data: Query<(Entity, &BlockData, &mut Inventory)>,
     mut commands: Commands,
+    mut itemstack_event_writer: EventWriter<ItemStackNeedsDataCreatedEvent>,
 ) {
     for ev in event_reader.read() {
         // This is a temporary fix for mining lasers - eventually these items will have specified destinations,
@@ -102,11 +103,11 @@ fn handle_block_break_events(
             if let Some(item_id) = item_id {
                 let item = items.from_numeric_id(item_id);
 
-                for (_, mut inventory) in q_inventory_block_data
+                for (inventory_entity, _, mut inventory) in q_inventory_block_data
                     .iter_mut()
-                    .filter(|(block_data, _)| block_data.identifier.structure_entity == ev.breaker)
+                    .filter(|(_, block_data, _)| block_data.identifier.structure_entity == ev.breaker)
                 {
-                    if inventory.insert(item, 1) == 0 {
+                    if inventory.insert(item, 1, Some((inventory_entity, &mut itemstack_event_writer))) == 0 {
                         break;
                     }
                 }
@@ -149,7 +150,7 @@ fn handle_block_break_events(
                         if let Some(item_id) = block_items.item_from_block(block) {
                             let item = items.from_numeric_id(item_id);
 
-                            inventory.insert(item, 1);
+                            inventory.insert(item, 1, Some((ev.breaker, &mut itemstack_event_writer)));
                         }
 
                         structure.remove_block_at(coord, &blocks, Some(&mut event_writer));

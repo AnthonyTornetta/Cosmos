@@ -7,7 +7,7 @@ use bevy_renet::renet::{ClientId, RenetServer, ServerEvent};
 use cosmos_core::economy::Credits;
 use cosmos_core::ecs::NeedsDespawned;
 use cosmos_core::entities::player::render_distance::RenderDistance;
-use cosmos_core::inventory::itemstack::ItemStack;
+use cosmos_core::inventory::itemstack::{ItemStack, ItemStackNeedsDataCreatedEvent, ItemStackSystemSet};
 use cosmos_core::inventory::Inventory;
 use cosmos_core::item::Item;
 use cosmos_core::netty::netty_rigidbody::NettyRigidBodyLocation;
@@ -30,7 +30,11 @@ use crate::netty::network_helpers::ClientTicks;
 use crate::physics::assign_player_world;
 use crate::state::GameState;
 
-fn generate_player_inventory(items: &Registry<Item>) -> Inventory {
+fn generate_player_inventory(
+    inventory_entity: Entity,
+    items: &Registry<Item>,
+    ev_writer: &mut EventWriter<ItemStackNeedsDataCreatedEvent>,
+) -> Inventory {
     let mut inventory = Inventory::new("Inventory", 9 * 10, Some(0..9));
 
     // inventory.insert_item_at(0, items.from_id("cosmos:ship_hull").expect("Ship hull item to exist"), 999);
@@ -52,7 +56,10 @@ fn generate_player_inventory(items: &Registry<Item>) -> Inventory {
     // inventory.insert_item_at(8, items.from_id("cosmos:redwood_log").expect("Redwood log item to exist"), 999);
 
     for item in items.iter().rev().filter(|item| item.unlocalized_name() != "cosmos:air") {
-        inventory.insert_itemstack(&ItemStack::with_quantity(item, 999));
+        inventory.insert_itemstack(
+            &ItemStack::with_quantity(item, item.max_stack_size()),
+            Some((inventory_entity, ev_writer)),
+        );
     }
 
     inventory
@@ -90,6 +97,7 @@ fn handle_server_events(
     mut rapier_context: ResMut<RapierContext>,
     mut requested_entity: EventWriter<RequestedEntityEvent>,
     mut player_join_ev_writer: EventWriter<PlayerConnectedEvent>,
+    mut itemstack_event_writer: EventWriter<ItemStackNeedsDataCreatedEvent>,
 ) {
     for event in server_events.read() {
         match event {
@@ -124,11 +132,15 @@ fn handle_server_events(
                     continue;
                 };
 
+                let mut player_commands = commands.spawn_empty();
+
+                let player_entity = player_commands.id();
+
                 let player = Player::new(name.clone(), client_id);
                 let starting_pos = Vec3::new(0.0, CHUNK_DIMENSIONSF * 70.0 / 2.0, 0.0);
                 let location = Location::new(starting_pos, Sector::new(25, 25, 25));
                 let velocity = Velocity::default();
-                let inventory = generate_player_inventory(&items);
+                let inventory = generate_player_inventory(player_entity, &items, &mut itemstack_event_writer);
 
                 let netty_body = NettyRigidBody::new(Some(velocity), Quat::IDENTITY, NettyRigidBodyLocation::Absolute(location));
 
@@ -136,7 +148,7 @@ fn handle_server_events(
 
                 let credits = Credits::new(1_000_000);
 
-                let player_commands = commands.spawn((
+                player_commands.insert((
                     location,
                     LockedAxes::ROTATION_LOCKED,
                     RigidBody::Dynamic,
@@ -151,8 +163,6 @@ fn handle_server_events(
                     Name::new(format!("Player ({name})")),
                     credits,
                 ));
-
-                let player_entity = player_commands.id();
 
                 lobby.add_player(client_id, player_entity);
 
@@ -202,7 +212,8 @@ pub(super) fn register(app: &mut App) {
         Update,
         handle_server_events
             .run_if(in_state(GameState::Playing))
-            .in_set(NetworkingSystemsSet::ReceiveMessages),
+            .in_set(NetworkingSystemsSet::ReceiveMessages)
+            .before(ItemStackSystemSet::CreateDataEntity),
     )
     .add_event::<PlayerConnectedEvent>();
 }
