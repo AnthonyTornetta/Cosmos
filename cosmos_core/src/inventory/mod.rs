@@ -5,7 +5,7 @@
 use std::ops::Range;
 
 use bevy::{
-    ecs::{entity::Entity, event::EventWriter, system::Commands},
+    ecs::{entity::Entity, system::Commands},
     hierarchy::BuildChildren,
     prelude::{App, Component, Deref, DerefMut},
     reflect::Reflect,
@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{item::Item, registry::identifiable::Identifiable};
 
-use self::itemstack::{ItemStack, ItemStackNeedsDataCreatedEvent};
+use self::itemstack::{ItemStack, ItemStackData, ItemStackNeedsDataCreatedEvent};
 
 pub mod held_item_slot;
 pub mod itemstack;
@@ -192,11 +192,7 @@ impl Inventory {
     }
 
     /// Returns the overflow that could not fit
-    pub fn insert_itemstack(
-        &mut self,
-        itemstack: &ItemStack,
-        ev_writer: Option<(Entity, &mut EventWriter<ItemStackNeedsDataCreatedEvent>)>,
-    ) -> u16 {
+    pub fn insert_itemstack(&mut self, itemstack: &ItemStack, ev_writer: Option<(Entity, &mut Commands)>) -> u16 {
         let (qty, slot) = self.insert_raw(
             itemstack.item_id(),
             itemstack.max_stack_size(),
@@ -220,12 +216,7 @@ impl Inventory {
     }
 
     /// Returns (the overflow that could not fit and the slot
-    pub fn insert(
-        &mut self,
-        item: &Item,
-        quantity: u16,
-        ev_writer: Option<(Entity, &mut EventWriter<ItemStackNeedsDataCreatedEvent>)>,
-    ) -> u16 {
+    pub fn insert(&mut self, item: &Item, quantity: u16, ev_writer: Option<(Entity, &mut Commands)>) -> u16 {
         let (qty, slot) = self.insert_raw(item.id(), item.max_stack_size(), quantity, None);
 
         if let Some(slot) = slot {
@@ -333,20 +324,25 @@ impl Inventory {
 
     /// Inserts the items & quantity at that slot. Returns the number of items left over, or the full
     /// quantity of items if that slot doesn't represent that item.
-    pub fn insert_item_at(
-        &mut self,
-        slot: usize,
-        item: &Item,
-        quantity: u16,
-        ev_writer: Option<(Entity, &mut EventWriter<ItemStackNeedsDataCreatedEvent>)>,
-    ) -> u16 {
-        self.insert_raw_at(slot, item.id(), item.max_stack_size(), quantity)
+    pub fn insert_item_at(&mut self, slot: usize, item: &Item, quantity: u16, ev_writer: Option<(Entity, &mut Commands)>) -> u16 {
+        let data = if let Some((ent, cmds)) = ev_writer {
+            Some(cmds.spawn(ItemStackData(ent)).id())
+        } else {
+            None
+        };
+        self.insert_raw_at(slot, item.id(), item.max_stack_size(), quantity, data)
     }
 
     /// Inserts the items & quantity at that slot. Returns the number of items left over, or the full
     /// quantity of items if that slot doesn't represent that item.
     pub fn insert_item_stack_at(&mut self, slot: usize, itemstack: &ItemStack) -> u16 {
-        self.insert_raw_at(slot, itemstack.item_id(), itemstack.max_stack_size(), itemstack.quantity())
+        self.insert_raw_at(
+            slot,
+            itemstack.item_id(),
+            itemstack.max_stack_size(),
+            itemstack.quantity(),
+            ev_writer,
+        )
     }
 
     /// Removes an itemstack at that slot and replaces it with `None`. Returns the itemstack previously in that slot
