@@ -4,7 +4,10 @@ use cosmos_core::{
     block::{block_events::BlockInteractEvent, Block},
     economy::Credits,
     entities::player::Player,
-    inventory::{itemstack::ItemStackNeedsDataCreatedEvent, Inventory},
+    inventory::{
+        itemstack::{ItemShouldHaveData, ItemStackSystemSet},
+        Inventory,
+    },
     item::Item,
     netty::{cosmos_encoder, server::ServerLobby, system_sets::NetworkingSystemsSet, NettyChannelClient, NettyChannelServer},
     registry::{identifiable::Identifiable, Registry},
@@ -104,6 +107,7 @@ fn listen_sell_events(
     mut q_player: Query<(&mut Inventory, &mut Credits)>,
     items: Res<Registry<Item>>,
     default_shop_entries: Res<DefaultShopEntries>,
+    mut commands: Commands,
 ) {
     for &SellEvent {
         client_id,
@@ -154,7 +158,7 @@ fn listen_sell_events(
                 details: if let Err(error) = shop.sell(item_id, quantity, &mut credits) {
                     Err(error)
                 } else {
-                    inventory.take_item(item, quantity as usize);
+                    inventory.take_and_remove_item(item, quantity as usize, &mut commands);
 
                     Ok(shop.clone())
                 },
@@ -172,7 +176,8 @@ fn listen_buy_events(
     mut q_player: Query<(&mut Inventory, &mut Credits)>,
     items: Res<Registry<Item>>,
     default_shop_entries: Res<DefaultShopEntries>,
-    mut is_ev_writer: EventWriter<ItemStackNeedsDataCreatedEvent>,
+    mut commands: Commands,
+    has_data: Res<ItemShouldHaveData>,
 ) {
     for &BuyEvent {
         client_id,
@@ -226,7 +231,7 @@ fn listen_buy_events(
                     }),
                 );
 
-                inventory.insert_item(item, quantity as u16, Some((player_ent, &mut is_ev_writer)));
+                inventory.insert_item(item, quantity as u16, &mut commands, &has_data);
             }
             Err(msg) => {
                 server.send_message(
@@ -300,7 +305,8 @@ pub(super) fn register(app: &mut App) {
         )
             .chain()
             .run_if(in_state(GameState::Playing))
-            .after(NetworkingSystemsSet::ProcessReceivedMessages),
+            .after(NetworkingSystemsSet::ProcessReceivedMessages)
+            .before(ItemStackSystemSet::CreateDataEntity),
     )
     .add_event::<BuyEvent>()
     .add_event::<SellEvent>();

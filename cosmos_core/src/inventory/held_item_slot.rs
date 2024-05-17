@@ -1,12 +1,18 @@
+//! Represents the item slot held by the player.
+
 use bevy::{app::App, ecs::component::Component, reflect::Reflect};
 use serde::{Deserialize, Serialize};
 
 use crate::netty::sync::{sync_component, ClientAuthority, SyncableComponent};
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Component, PartialEq, Eq, Reflect)]
+/// Represents the item slot that this player currently is holding
+///
+/// This is guarenteed to be a valid hotbar slot (0-9)
 pub struct HeldItemSlot(u32);
 
 impl HeldItemSlot {
+    /// Returns an instance of self if this is a valid hotbar slot (0-9).
     pub fn new(slot: u32) -> Option<Self> {
         let x = Self(slot);
         if !x.validate() {
@@ -16,10 +22,14 @@ impl HeldItemSlot {
         }
     }
 
+    /// Returns the slot this is referencing
     pub fn slot(&self) -> u32 {
         self.0
     }
 
+    /// Updates this slot to be the new slot if it is a valid slot (0-9).
+    ///
+    /// Returns false if that was an invalid slot.
     pub fn set_slot(&mut self, slot: u32) -> bool {
         let old = self.0;
         self.0 = slot;

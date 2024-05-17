@@ -7,11 +7,11 @@ use bevy::{
         query::{Added, Changed, Or, With},
         removal_detection::RemovedComponents,
         schedule::{common_conditions::in_state, IntoSystemConfigs},
-        system::{Query, Res},
+        system::{Commands, Query, Res},
     },
 };
 use cosmos_core::{
-    inventory::itemstack::ItemStack,
+    inventory::itemstack::{ItemShouldHaveData, ItemStack, ItemStackSystemSet},
     item::Item,
     netty::client::LocalPlayer,
     registry::Registry,
@@ -71,6 +71,8 @@ fn sync_ship_systems(
     structure_system_types: Res<Registry<StructureSystemType>>,
     items: Res<Registry<Item>>,
     mut q_hotbar: Query<(&HotbarPriorityQueue, &mut HotbarContents), With<LocalPlayerHotbar>>,
+    has_data: Res<ItemShouldHaveData>,
+    mut commands: Commands,
 ) {
     let Ok(piloting) = q_piloting.get_single() else {
         return;
@@ -95,7 +97,7 @@ fn sync_ship_systems(
     let n_slots = hotbar_contents.n_slots();
     let mut slot = 0;
 
-    hotbar_contents.clear_contents();
+    hotbar_contents.clear_contents(Some(&mut commands));
 
     for system_ent in ship_systems.all_activatable_systems() {
         let Ok(system) = q_structure_system.get(system_ent) else {
@@ -106,7 +108,7 @@ fn sync_ship_systems(
 
         let item = items.from_numeric_id(system_type.item_icon_id());
 
-        hotbar_contents.set_itemstack_at(slot, Some(ItemStack::with_quantity(item, 1)));
+        hotbar_contents.set_itemstack_at(slot, Some(ItemStack::with_quantity(item, 1, &mut commands, &has_data)));
 
         slot += 1;
 
@@ -142,7 +144,11 @@ fn on_change_hotbar(
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        (add_priority_when_flying, sync_ship_systems, on_change_hotbar)
+        (
+            add_priority_when_flying,
+            sync_ship_systems.in_set(ItemStackSystemSet::CreateDataEntity),
+            on_change_hotbar,
+        )
             .chain()
             .run_if(in_state(GameState::Playing)),
     );

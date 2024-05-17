@@ -202,7 +202,8 @@ fn server_listen_messages(
                         continue;
                     };
 
-                    if inventory.take_item(ship_core, 1) != 0 {
+                    let (remaining_didnt_take, _) = inventory.take_and_remove_item(ship_core, 1, &mut commands);
+                    if remaining_didnt_take != 0 {
                         info!("Does not have ship core");
                         continue;
                     }

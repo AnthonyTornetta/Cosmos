@@ -51,7 +51,17 @@ impl HotbarContents {
     }
 
     /// Clears any items that are in the contents
-    pub fn clear_contents(&mut self) {
+    ///
+    /// Unless you have safely transferred the data of the ItemStacks within this
+    /// inventory over to other entities, or manually removed those data entities
+    /// from the world, you should provide this with the Some value for the commands argument.
+    pub fn clear_contents(&mut self, remove_data_entities: Option<&mut Commands>) {
+        if let Some(cmds) = remove_data_entities {
+            for is in self.items.iter().flat_map(|x| x) {
+                is.remove(cmds);
+            }
+        }
+
         let n_slots = self.items.len();
         self.items = vec![None; n_slots];
     }

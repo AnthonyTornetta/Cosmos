@@ -2,7 +2,9 @@ use bevy::{
     app::{App, Update},
     ecs::{
         component::Component,
+        entity::Entity,
         event::EventReader,
+        query::With,
         schedule::{IntoSystemConfigs, OnEnter},
         system::{Commands, Query, Res, ResMut},
     },
@@ -14,7 +16,7 @@ use cosmos_core::{
     fluid::registry::Fluid,
     inventory::{
         held_item_slot::HeldItemSlot,
-        itemstack::{ItemStackNeedsDataCreatedEvent, ItemStackSystemSet, ItemStacksNeedData},
+        itemstack::{ItemShouldHaveData, ItemStackData, ItemStackNeedsDataCreated, ItemStackSystemSet},
         Inventory,
     },
     item::Item,
@@ -127,40 +129,26 @@ fn on_interact_with_fluid(
 }
 
 fn add_item_fluid_data(
-    mut ev_reader: EventReader<ItemStackNeedsDataCreatedEvent>,
+    q_needs_data: Query<(Entity, &ItemStackData), With<ItemStackNeedsDataCreated>>,
     mut commands: Commands,
-    q_inventory: Query<&Inventory>,
-
     items: Res<Registry<Item>>,
     fluid_holders: Res<Registry<FluidHolder>>,
 ) {
-    for ev in ev_reader.read() {
-        let Ok(inventory) = q_inventory.get(ev.inventory_entity) else {
-            continue;
-        };
+    for (ent, is_data) in q_needs_data.iter() {
+        let item = items.from_numeric_id(is_data.item_id);
 
-        let Some(is) = inventory.itemstack_at(ev.inventory_slot as usize) else {
-            continue;
-        };
-
-        let item = items.from_numeric_id(is.item_id());
         if !fluid_holders.contains(item.unlocalized_name()) {
             continue;
         };
 
-        let Some(is_data) = is.data_entity() else {
-            warn!("Missing data entity for fluid-storing item that needs data!");
-            continue;
-        };
-
         println!("Added fluid data!");
-        commands.entity(is_data).insert(FluidItemData::Empty);
+        commands.entity(ent).insert(FluidItemData::Empty);
     }
 }
 
 fn register_fluid_holder_items(
     items: Res<Registry<Item>>,
-    mut needs_data: ResMut<ItemStacksNeedData>,
+    mut needs_data: ResMut<ItemShouldHaveData>,
     mut fluid_holders: ResMut<Registry<FluidHolder>>,
 ) {
     if let Some(fluid_cell) = items.from_id("cosmos:fluid_cell") {

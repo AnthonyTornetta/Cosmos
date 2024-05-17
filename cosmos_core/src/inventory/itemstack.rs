@@ -6,19 +6,17 @@ use bevy::{
     ecs::{
         component::Component,
         entity::Entity,
-        event::EventReader,
         query::{Added, With, Without},
         schedule::{IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
-        system::{Commands, Query, Res, Resource},
+        system::{Commands, Query, Resource},
     },
-    hierarchy::BuildChildren,
     prelude::App,
     reflect::Reflect,
     utils::HashSet,
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{item::Item, registry::identifiable::Identifiable};
+use crate::{ecs::NeedsDespawned, item::Item, registry::identifiable::Identifiable};
 
 #[derive(Serialize, Deserialize, Component, Debug, Reflect, Clone, PartialEq, Eq)]
 /// An item & the quantity of that item
@@ -43,18 +41,32 @@ fn name_itemstack_data(mut commands: Commands, q_ent: Query<Entity, (Added<ItemS
 pub struct NeedsItemStackDataCopied(pub Entity);
 
 #[derive(Component)]
+/// This component will be present within the SystemSet [`ItemStackSystemSet::FillDataEntity`].
+/// During this set, entities with this component should have any relevent item data added to them.
+///
+/// The [`ItemStackData`] component will also exist on this entity.
 pub struct ItemStackNeedsDataCreated;
 
 #[derive(Component)]
+/// Represnets data about the [`ItemStack`] this entity is data for
 pub struct ItemStackData {
+    /// The item's id
     pub item_id: u16,
+    /// If the [`ItemStack`] is a part of an inventory, this will point to that inventory.
+    ///
+    /// TODO: If the [`ItemStack`] is not part of an inventory (e.g. dropped on the ground)
     pub inventory_pointer: Option<(Entity, u32)>,
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// The different stages [`ItemStack`]s will go through
 pub enum ItemStackSystemSet {
+    /// A data entity for [`ItemStack`]s that require data will be created during *or* before this set.
     CreateDataEntity,
+    /// Any relevent data for this [`ItemStack`] should be populated.
     FillDataEntity,
+    /// The [`ItemStackNeedsDataCreated`] component will be removed.
+    DoneFillingDataEntity,
     // AddCanSplit,
     // CanSplit,
     // ReadCanSplit,
@@ -70,17 +82,21 @@ impl ItemStack {
     // }
 
     /// Creates an ItemStack of that item with the given initial quantity
-    pub fn with_quantity(item: &Item, quantity: u16, commands: &mut Commands, has_data: &ItemStacksNeedData) -> Self {
+    ///
+    /// If you call this method, make sure you do so in or before [`ItemStackSystemSet::CreateDataEntity`]
+    pub fn with_quantity(item: &Item, quantity: u16, commands: &mut Commands, has_data: &ItemShouldHaveData) -> Self {
         Self::raw_with_quantity(item.id(), item.max_stack_size(), quantity, commands, has_data)
     }
 
     /// Creates an ItemStack of that item id, its max stack size, and with the given initial quantity
+    ///
+    /// If you call this method, make sure you do so in or before [`ItemStackSystemSet::CreateDataEntity`]
     pub(crate) fn raw_with_quantity(
         item_id: u16,
         max_stack_size: u16,
         quantity: u16,
         commands: &mut Commands,
-        has_data: &ItemStacksNeedData,
+        has_data: &ItemShouldHaveData,
     ) -> Self {
         Self::raw_with_quantity_and_dataitem_entity(
             item_id,
@@ -105,7 +121,7 @@ impl ItemStack {
         }
     }
 
-    fn create_data_entity(has_data: &ItemStacksNeedData, item_id: u16, commands: &mut Commands) -> Option<Entity> {
+    fn create_data_entity(has_data: &ItemShouldHaveData, item_id: u16, commands: &mut Commands) -> Option<Entity> {
         let data_entity = if has_data.contains(item_id) {
             Some(
                 commands
@@ -125,20 +141,34 @@ impl ItemStack {
         data_entity
     }
 
-    pub(crate) fn data_entity(&self) -> Option<Entity> {
+    /// Removes the [`ItemStack`] from the world. This essentially just removes the [`ItemStack`]'s
+    /// data entity.
+    pub fn remove(&self, commands: &mut Commands) {
+        if let Some(de) = self.data_entity {
+            commands.entity(de).insert(NeedsDespawned);
+        }
+    }
+
+    /// Returns the entity that stores all of this ItemStack's data.
+    ///
+    /// This will only exist if the ItemStack has data.
+    pub fn data_entity(&self) -> Option<Entity> {
         self.data_entity
     }
 
-    pub(crate) fn set_data_entity(&mut self, entity: Entity) {
-        self.data_entity = Some(entity);
-    }
+    /// This should be handled for you via the constructor methods and inventory methods.
+    ///
+    /// This will set the data entiy to the entity provided. It is up to you to properly handle this entity yourself.
+    // pub(crate) fn set_data_entity(&mut self, entity: Entity) {
+    //     self.data_entity = Some(entity);
+    // }
 
     /// This will NOT despawn the entity - make sure to do that yourself!
     ///
     /// Returns the data entity that this had before the removal.
-    pub(crate) fn remove_data_entity(&mut self) -> Option<Entity> {
-        std::mem::take(&mut self.data_entity)
-    }
+    // pub(crate) fn remove_data_entity(&mut self) -> Option<Entity> {
+    //     std::mem::take(&mut self.data_entity)
+    // }
 
     #[inline]
     /// Gets the item's id
@@ -222,52 +252,26 @@ impl ItemStack {
 // }
 
 #[derive(Resource, Debug, Default)]
-pub struct ItemStacksNeedData(HashSet<u16>);
+/// Contains every item that should have item data added to it in its [`ItemStack`].
+pub struct ItemShouldHaveData(HashSet<u16>);
 
-impl ItemStacksNeedData {
+impl ItemShouldHaveData {
+    /// Adds an item to this list of items that require item data.
     pub fn add_item(&mut self, item: &Item) {
         self.0.insert(item.id());
     }
 
+    /// Checks if this item should have item data.
     pub fn contains(&self, item_id: u16) -> bool {
         self.0.contains(&item_id)
     }
 }
 
-// fn create_itemstack_data_entity(
-//     q_needs_created: Query<(Entity, &ItemStackData), With<ItemStackNeedsDataCreated>>,
-//     mut commands: Commands,
-//     mut q_inventory: Query<&mut Inventory>,
-
-//     data_havers: Res<ItemStacksNeedData>,
-// ) {
-//     for (ent, is_data) in q_needs_created.iter() {
-//         // let Ok(mut inventory) = q_inventory.get_mut(ev.inventory_entity) else {
-//         //     continue;
-//         // };
-
-//         // Prevent change detection by doing mut call later
-//         // let Some(is) = inventory.itemstack_at(ev.inventory_slot as usize) else {
-//         //     continue;
-//         // };
-
-//         if !data_havers.contains(is_data.item_id) {
-//             continue;
-//         };
-
-//         // if is.data_entity().is_none() {
-//         //     let ent = commands
-//         //         .spawn(ItemStackData(ev.inventory_entity))
-//         //         .set_parent(ev.inventory_entity)
-//         //         .id();
-
-//         //     let Some(is) = inventory.mut_itemstack_at(ev.inventory_slot as usize) else {
-//         //         continue;
-//         //     };
-//         //     is.set_data_entity(ent);
-//         // }
-//     }
-// }
+fn remove_needs_filled(q_needs_filled: Query<Entity, With<ItemStackNeedsDataCreated>>, mut commands: Commands) {
+    for e in q_needs_filled.iter() {
+        commands.entity(e).remove::<ItemStackNeedsDataCreated>();
+    }
+}
 
 pub(super) fn register(app: &mut App) {
     app.register_type::<ItemStack>();
@@ -277,6 +281,7 @@ pub(super) fn register(app: &mut App) {
         (
             ItemStackSystemSet::CreateDataEntity,
             ItemStackSystemSet::FillDataEntity,
+            ItemStackSystemSet::DoneFillingDataEntity,
             // ItemStackSystemSet::AddCanSplit,
             // ItemStackSystemSet::CanSplit,
             // ItemStackSystemSet::ReadCanSplit,
@@ -289,6 +294,7 @@ pub(super) fn register(app: &mut App) {
     // .add_systems(Update, create_itemstack_data_entity.in_set(ItemStackSystemSet::CreateDataEntity))
     // .add_systems(Update, remove_copy_flag.in_set(ItemStackSystemSet::RemoveCopyFlag))
     .add_systems(Update, name_itemstack_data.after(ItemStackSystemSet::FillDataEntity))
+    .add_systems(Update, remove_needs_filled.in_set(ItemStackSystemSet::DoneFillingDataEntity))
     // .add_event::<ItemStackNeedsDataCreatedEvent>()
-    .init_resource::<ItemStacksNeedData>();
+    .init_resource::<ItemShouldHaveData>();
 }

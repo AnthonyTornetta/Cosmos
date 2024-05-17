@@ -7,7 +7,7 @@ use bevy_renet::renet::{ClientId, RenetServer, ServerEvent};
 use cosmos_core::economy::Credits;
 use cosmos_core::ecs::NeedsDespawned;
 use cosmos_core::entities::player::render_distance::RenderDistance;
-use cosmos_core::inventory::itemstack::{ItemStack, ItemStackNeedsDataCreatedEvent, ItemStackSystemSet};
+use cosmos_core::inventory::itemstack::{ItemShouldHaveData, ItemStackSystemSet};
 use cosmos_core::inventory::Inventory;
 use cosmos_core::item::Item;
 use cosmos_core::netty::netty_rigidbody::NettyRigidBodyLocation;
@@ -33,33 +33,13 @@ use crate::state::GameState;
 fn generate_player_inventory(
     inventory_entity: Entity,
     items: &Registry<Item>,
-    ev_writer: &mut EventWriter<ItemStackNeedsDataCreatedEvent>,
+    commands: &mut Commands,
+    has_data: &ItemShouldHaveData,
 ) -> Inventory {
-    let mut inventory = Inventory::new("Inventory", 9 * 10, Some(0..9));
-
-    // inventory.insert_item_at(0, items.from_id("cosmos:ship_hull").expect("Ship hull item to exist"), 999);
-
-    // inventory.insert_item_at(1, items.from_id("cosmos:glass").expect("Glass item to exist"), 999);
-
-    // inventory.insert_item_at(2, items.from_id("cosmos:build_block").expect("Build block item to exist"), 999);
-
-    // inventory.insert_item_at(3, items.from_id("cosmos:thruster").expect("Thruster item to exist"), 999);
-
-    // inventory.insert_item_at(4, items.from_id("cosmos:laser_cannon").expect("Laser cannon item to exist"), 999);
-
-    // inventory.insert_item_at(5, items.from_id("cosmos:reactor").expect("Reactor item to exist"), 999);
-
-    // inventory.insert_item_at(6, items.from_id("cosmos:energy_cell").expect("Energy cell item to exist"), 999);
-
-    // inventory.insert_item_at(7, items.from_id("cosmos:light").expect("Light item to exist"), 999);
-
-    // inventory.insert_item_at(8, items.from_id("cosmos:redwood_log").expect("Redwood log item to exist"), 999);
+    let mut inventory = Inventory::new("Inventory", 9 * 10, Some(0..9), inventory_entity);
 
     for item in items.iter().rev().filter(|item| item.unlocalized_name() != "cosmos:air") {
-        inventory.insert_itemstack(
-            &ItemStack::with_quantity(item, item.max_stack_size()),
-            Some((inventory_entity, ev_writer)),
-        );
+        inventory.insert_item(item, item.max_stack_size(), commands, has_data);
     }
 
     inventory
@@ -97,7 +77,7 @@ fn handle_server_events(
     mut rapier_context: ResMut<RapierContext>,
     mut requested_entity: EventWriter<RequestedEntityEvent>,
     mut player_join_ev_writer: EventWriter<PlayerConnectedEvent>,
-    mut itemstack_event_writer: EventWriter<ItemStackNeedsDataCreatedEvent>,
+    needs_data: Res<ItemShouldHaveData>,
 ) {
     for event in server_events.read() {
         match event {
@@ -132,15 +112,13 @@ fn handle_server_events(
                     continue;
                 };
 
-                let mut player_commands = commands.spawn_empty();
-
-                let player_entity = player_commands.id();
+                let player_entity = commands.spawn_empty().id();
 
                 let player = Player::new(name.clone(), client_id);
                 let starting_pos = Vec3::new(0.0, CHUNK_DIMENSIONSF * 70.0 / 2.0, 0.0);
                 let location = Location::new(starting_pos, Sector::new(25, 25, 25));
                 let velocity = Velocity::default();
-                let inventory = generate_player_inventory(player_entity, &items, &mut itemstack_event_writer);
+                let inventory = generate_player_inventory(player_entity, &items, &mut commands, &needs_data);
 
                 let netty_body = NettyRigidBody::new(Some(velocity), Quat::IDENTITY, NettyRigidBodyLocation::Absolute(location));
 
@@ -148,7 +126,7 @@ fn handle_server_events(
 
                 let credits = Credits::new(1_000_000);
 
-                player_commands.insert((
+                commands.entity(player_entity).insert((
                     location,
                     LockedAxes::ROTATION_LOCKED,
                     RigidBody::Dynamic,

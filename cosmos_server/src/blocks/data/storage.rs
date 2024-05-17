@@ -8,7 +8,6 @@ use bevy::{
         system::{Commands, Query, Res},
     },
     hierarchy::{BuildChildren, Parent},
-    log::warn,
 };
 use cosmos_core::{
     block::{
@@ -84,47 +83,48 @@ fn populate_inventory(
             continue;
         };
 
-        let inv = Inventory::new("Storage", 9 * 5, None);
+        let data_ent = structure
+            .block_data(coords)
+            .and_then(|data_ent| {
+                // TODO:
+                // If the BlockData was added the same frame as this from another system, this can cause the below if statement to be false,
+                // which could lead to issues if 2 pieces of block data are added in the same frame.
+                // This will need to be addressed in the future, as it will lead to data that holds nothing in blocks
+                // A simple method would be to remove the error-prone counting and just send out mutable events every time this entity is changed
+                // that would signal whether or not to remove this entity.
+                //
+                // For now, since there is only one possible type of data, this won't cause any issues (probably), but as soon as
+                // more than just storage blocks exist, this will be a problem
+                if let Ok(mut count) = q_block_data.get_mut(data_ent) {
+                    count.increment();
+                }
 
-        if let Some(data_ent) = structure.block_data(coords) {
-            // TODO:
-            // If the BlockData was added the same frame as this from another system, this can cause the below if statement to be false,
-            // which could lead to issues if 2 pieces of block data are added in the same frame.
-            // This will need to be addressed in the future, as it will lead to data that holds nothing in blocks
-            // A simple method would be to remove the error-prone counting and just send out mutable events every time this entity is changed
-            // that would signal whether or not to remove this entity.
-            //
-            // For now, since there is only one possible type of data, this won't cause any issues (probably), but as soon as
-            // more than just storage blocks exist, this will be a problem
-            if let Ok(mut count) = q_block_data.get_mut(data_ent) {
-                count.increment();
-            }
+                Some(data_ent)
+            })
+            .unwrap_or_else(|| {
+                let Some(chunk_ent) = structure.chunk_entity(ChunkCoordinate::for_block_coordinate(coords)) else {
+                    panic!("Missing chunk entity but got block change event? How???");
+                };
 
-            if let Some(mut ecmds) = commands.get_entity(data_ent) {
-                ecmds.insert(inv);
-            }
-        } else {
-            let Some(chunk_ent) = structure.chunk_entity(ChunkCoordinate::for_block_coordinate(coords)) else {
-                warn!("Missing chunk entity but got block change event? How???");
-                continue;
-            };
-
-            let data_ent = commands
-                .spawn((
-                    BlockData {
+                let data_ent = commands
+                    .spawn((BlockData {
                         identifier: BlockDataIdentifier {
                             block: ev.block,
                             structure_entity: ev.structure_entity,
                         },
                         data_count: 1,
-                    },
-                    inv,
-                ))
-                .id();
+                    },))
+                    .id();
 
-            commands.entity(chunk_ent).add_child(data_ent);
-            structure.set_block_data(coords, data_ent);
-        };
+                commands.entity(chunk_ent).add_child(data_ent);
+                structure.set_block_data(coords, data_ent);
+
+                data_ent
+            });
+
+        let inv = Inventory::new("Storage", 9 * 5, None, data_ent);
+
+        commands.entity(data_ent).insert(inv);
     }
 }
 

@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{ecs::NeedsDespawned, item::Item, registry::identifiable::Identifiable};
 
-use self::itemstack::{ItemStack, ItemStackData, ItemStacksNeedData};
+use self::itemstack::{ItemShouldHaveData, ItemStack, ItemStackData};
 
 pub mod held_item_slot;
 pub mod itemstack;
@@ -83,6 +83,8 @@ impl Inventory {
         }
     }
 
+    /// Sets the entity that contains this inventory. The will update all [`ItemStack`] that have a data entity
+    /// to now have their data entity be a child of this new entity.
     pub fn set_self_entity(&mut self, entity: Entity, commands: &mut Commands) {
         self.self_entity = entity;
         for (slot, _) in self.items.iter().enumerate().filter(|(_, x)| x.is_some()) {
@@ -138,7 +140,7 @@ impl Inventory {
     /// Swaps the contents of two inventory slots in the same inventory.
     ///
     /// Returns Ok if both slots were within the bounds of the inventory, Err if either was not
-    pub fn self_swap_slots(&mut self, slot_a: usize, slot_b: usize) -> Result<(), InventorySlotError> {
+    pub fn self_swap_slots(&mut self, slot_a: usize, slot_b: usize, commands: &mut Commands) -> Result<(), InventorySlotError> {
         if slot_a >= self.items.len() {
             return Err(InventorySlotError::InvalidSlot(slot_a));
         }
@@ -147,6 +149,8 @@ impl Inventory {
         }
 
         self.items.swap(slot_a, slot_b);
+        self.update_itemstack_data_parent(slot_a, commands);
+        self.update_itemstack_data_parent(slot_b, commands);
 
         Ok(())
     }
@@ -266,7 +270,9 @@ impl Inventory {
     /// Returns (the overflow that could not fit and the slot)
     ///
     /// If this [`Item`] is successfully added & requires a data entity, that entity will be created.
-    pub fn insert_item(&mut self, item: &Item, quantity: u16, commands: &mut Commands, has_data: &ItemStacksNeedData) -> u16 {
+    ///
+    /// Make sure to call this method in or before [`super::ItemStack::ItemStackSystemSet::CreateDataEntity`]
+    pub fn insert_item(&mut self, item: &Item, quantity: u16, commands: &mut Commands, has_data: &ItemShouldHaveData) -> u16 {
         let is = ItemStack::with_quantity(item, quantity, commands, has_data);
         let qty = self.insert_itemstack(&is, commands);
 
@@ -328,13 +334,15 @@ impl Inventory {
     ///
     /// This will create a data entity for the [`ItemStack`] if it is able to be inserted if it requires
     /// a data entity.
+    ///
+    /// Make sure to call this method in or before [`super::ItemStack::ItemStackSystemSet::CreateDataEntity`]
     pub fn insert_item_at(
         &mut self,
         slot: usize,
         item: &Item,
         quantity: u16,
         commands: &mut Commands,
-        needs_data: &ItemStacksNeedData,
+        needs_data: &ItemShouldHaveData,
     ) -> u16 {
         let is = ItemStack::with_quantity(item, quantity, commands, needs_data);
         let qty = self.insert_itemstack_at(slot, &is, commands);
@@ -520,8 +528,6 @@ impl Inventory {
         to_inventory: &mut Inventory,
         to: usize,
         max_quantity: u16,
-        self_entity: Entity,
-        other_entity: Entity,
         commands: &mut Commands,
     ) -> Result<u16, InventorySlotError> {
         if from >= self.items.len() {
@@ -603,6 +609,21 @@ impl Inventory {
         }
 
         (quantity, taken)
+    }
+
+    /// Similar to [`take_item`], but will also remove items from the world if all items were taken.
+    pub fn take_and_remove_item(&mut self, item: &Item, quantity: usize, commands: &mut Commands) -> (usize, Vec<ItemStack>) {
+        let (remaining, taken) = self.take_item(item, quantity);
+
+        if remaining == 0 {
+            for is in taken {
+                is.remove(commands);
+            }
+
+            (remaining, vec![])
+        } else {
+            (remaining, taken)
+        }
     }
 
     /// Iterates over every slot in the inventory.
