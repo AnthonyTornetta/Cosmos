@@ -107,7 +107,7 @@ fn handle_block_break_events(
                     .iter_mut()
                     .filter(|(_, block_data, _)| block_data.identifier.structure_entity == ev.breaker)
                 {
-                    if inventory.insert(item, 1, Some((inventory_entity, &mut itemstack_event_writer))) == 0 {
+                    if inventory.insert_item(item, 1, Some((inventory_entity, &mut itemstack_event_writer))) == 0 {
                         break;
                     }
                 }
@@ -150,7 +150,7 @@ fn handle_block_break_events(
                         if let Some(item_id) = block_items.item_from_block(block) {
                             let item = items.from_numeric_id(item_id);
 
-                            inventory.insert(item, 1, Some((ev.breaker, &mut itemstack_event_writer)));
+                            inventory.insert_item(item, 1, Some((ev.breaker, &mut itemstack_event_writer)));
                         }
 
                         structure.remove_block_at(coord, &blocks, Some(&mut event_writer));

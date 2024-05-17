@@ -226,7 +226,7 @@ fn listen_buy_events(
                     }),
                 );
 
-                inventory.insert(item, quantity as u16, Some((player_ent, &mut is_ev_writer)));
+                inventory.insert_item(item, quantity as u16, Some((player_ent, &mut is_ev_writer)));
             }
             Err(msg) => {
                 server.send_message(

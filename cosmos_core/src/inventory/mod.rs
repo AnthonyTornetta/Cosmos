@@ -266,7 +266,7 @@ impl Inventory {
     /// Returns (the overflow that could not fit and the slot)
     ///
     /// If this [`Item`] is successfully added & requires a data entity, that entity will be created.
-    pub fn insert(&mut self, item: &Item, quantity: u16, commands: &mut Commands, has_data: &ItemStacksNeedData) -> u16 {
+    pub fn insert_item(&mut self, item: &Item, quantity: u16, commands: &mut Commands, has_data: &ItemStacksNeedData) -> u16 {
         let is = ItemStack::with_quantity(item, quantity, commands, has_data);
         let qty = self.insert_itemstack(&is, commands);
 
