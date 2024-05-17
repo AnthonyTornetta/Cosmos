@@ -135,7 +135,7 @@ fn toggle_inventory_rendering(
             let server_inventory_holder = get_server_inventory_identifier(inventory_holder, &mapping, &q_block_data);
 
             // Try to put it in its original spot first
-            let leftover = local_inventory.insert_item_stack_at(displayed_item.slot_number, &held_item_stack);
+            let leftover = local_inventory.insert_itemstack_at(displayed_item.slot_number, &held_item_stack);
 
             if leftover != held_item_stack.quantity() {
                 // Only send information to server if there is a point to the move
