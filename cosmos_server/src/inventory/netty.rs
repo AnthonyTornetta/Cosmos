@@ -175,7 +175,7 @@ fn listen(
                     {
                         let from_slot = from_slot as usize;
                         if let Some(mut is) = from_inventory.remove_itemstack_at(from_slot) {
-                            let leftover = to_inventory.insert_itemstack(&is, &mut commands);
+                            let (leftover, _) = to_inventory.insert_itemstack(&is, &mut commands);
                             if leftover == 0 {
                                 from_inventory.remove_itemstack_at(from_slot);
                             } else if leftover == is.quantity() {
@@ -364,7 +364,7 @@ fn listen(
                         let mut is = held_item_stack.clone();
                         is.set_quantity(unused_leftover);
 
-                        let leftover = inventory.insert_itemstack(&is, &mut commands);
+                        let (leftover, _) = inventory.insert_itemstack(&is, &mut commands);
 
                         held_item_stack.set_quantity(leftover + unused_leftover);
 

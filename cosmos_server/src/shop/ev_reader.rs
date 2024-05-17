@@ -38,15 +38,19 @@ fn on_interact_with_shop(
     default_shop_entries: Res<DefaultShopEntries>,
 ) {
     for ev in ev_reader.read() {
+        let Some(s_block) = ev.block else {
+            continue;
+        };
+
         let Ok(player) = q_player.get(ev.interactor) else {
             continue;
         };
 
-        let Ok(structure) = q_structure.get(ev.structure_entity) else {
+        let Ok(structure) = q_structure.get(s_block.structure_entity) else {
             continue;
         };
 
-        let block = ev.structure_block.block(structure, &blocks);
+        let block = s_block.structure_block.block(structure, &blocks);
 
         if block.unlocalized_name() == "cosmos:shop" {
             let fake_shop_data = generate_fake_shop(&default_shop_entries);
@@ -55,8 +59,8 @@ fn on_interact_with_shop(
                 player.id(),
                 NettyChannelServer::Shop,
                 cosmos_encoder::serialize(&ServerShopMessages::OpenShop {
-                    shop_block: ev.structure_block.coords(),
-                    structure_entity: ev.structure_entity,
+                    shop_block: s_block.structure_block.coords(),
+                    structure_entity: s_block.structure_entity,
                     shop_data: fake_shop_data,
                 }),
             );

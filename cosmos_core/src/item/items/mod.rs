@@ -6,8 +6,6 @@ use bevy::prelude::*;
 
 use super::{Item, DEFAULT_MAX_STACK_SIZE};
 
-mod fluid_cell;
-
 fn add_cosmos_items(
     mut items: ResMut<Registry<Item>>,
     mut loading: ResMut<LoadingManager>,
@@ -18,16 +16,14 @@ fn add_cosmos_items(
 
     items.register(Item::new("cosmos:test_crystal", DEFAULT_MAX_STACK_SIZE));
 
-    items.register(Item::new("cosmos:fluid_cell", 1));
-    // items.register(Item::new("cosmos:filled_fluid_cell", 1));
+    items.register(Item::new("cosmos:fluid_cell", DEFAULT_MAX_STACK_SIZE));
+    items.register(Item::new("cosmos:fluid_cell_filled", 1));
 
     loading.finish_loading(id, &mut end_writer);
 }
 
 pub(super) fn register<T: States>(app: &mut App, loading_state: T) {
     registry::create_registry::<Item>(app, "cosmos:items");
-
-    fluid_cell::register(app);
 
     app.add_systems(OnEnter(loading_state), add_cosmos_items);
 }

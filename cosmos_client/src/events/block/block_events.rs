@@ -3,7 +3,10 @@
 use bevy::prelude::*;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
-    block::{block_events::BlockInteractEvent, BlockRotation},
+    block::{
+        block_events::{BlockInteractEvent, StructureBlockPair},
+        BlockRotation,
+    },
     netty::{client_reliable_messages::ClientReliableMessages, cosmos_encoder, sync::mapping::NetworkMapping, NettyChannelClient},
     structure::structure_block::StructureBlock,
 };
@@ -75,11 +78,28 @@ fn handle_block_interact(
     network_mapping: Res<NetworkMapping>,
 ) {
     for ev in event_reader.read() {
+        let Some(any_ent) = network_mapping.server_from_client(&ev.block_including_fluids.structure_entity) else {
+            continue;
+        };
+
         client.send_message(
             NettyChannelClient::Reliable,
             cosmos_encoder::serialize(&ClientReliableMessages::InteractWithBlock {
-                structure_entity: network_mapping.server_from_client(&ev.structure_entity).unwrap(),
-                block: ev.structure_block,
+                block_including_fluids: StructureBlockPair {
+                    structure_block: ev.block_including_fluids.structure_block,
+                    structure_entity: any_ent,
+                },
+                block: ev
+                    .block
+                    .map(|b| {
+                        network_mapping
+                            .server_from_client(&b.structure_entity)
+                            .map(|ent| StructureBlockPair {
+                                structure_block: b.structure_block,
+                                structure_entity: ent,
+                            })
+                    })
+                    .flatten(),
             }),
         );
     }

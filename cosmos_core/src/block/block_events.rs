@@ -1,6 +1,7 @@
 //! Contains the various types of block events
 
 use bevy::prelude::*;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     blockitems::BlockItems,
@@ -32,13 +33,22 @@ pub struct BlockBreakEvent {
     pub block: StructureBlock,
 }
 
-/// This is sent whenever a player interacts with a block
-#[derive(Debug, Event)]
-pub struct BlockInteractEvent {
+#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
+/// this is stupid.
+pub struct StructureBlockPair {
     /// The block interacted with
     pub structure_block: StructureBlock,
     /// The structure it is on
     pub structure_entity: Entity,
+}
+
+/// This is sent whenever a player interacts with a block
+#[derive(Debug, Event)]
+pub struct BlockInteractEvent {
+    /// The block that was interacted with by the player
+    pub block: Option<StructureBlockPair>,
+    /// Includes blocks normally ignored by most interaction checks
+    pub block_including_fluids: StructureBlockPair,
     /// The player that interacted with the block
     pub interactor: Entity,
 }
@@ -110,7 +120,7 @@ fn handle_block_break_events(
                     .iter_mut()
                     .filter(|(block_data, _)| block_data.identifier.structure_entity == ev.breaker)
                 {
-                    if inventory.insert_item(item, 1, &mut commands, &has_data) == 0 {
+                    if inventory.insert_item(item, 1, &mut commands, &has_data).0 == 0 {
                         break;
                     }
                 }
@@ -338,6 +348,7 @@ fn handle_block_place_events(
     items: Res<Registry<Item>>,
     blocks: Res<Registry<Block>>,
     block_items: Res<BlockItems>,
+    mut commands: Commands,
 ) {
     for ev in event_reader.read() {
         let Ok((mut inv, build_mode, parent)) = player_query.get_mut(ev.placer) else {
@@ -379,7 +390,7 @@ fn handle_block_place_events(
                 break;
             }
 
-            if inv.decrease_quantity_at(ev.inventory_slot, 1) == 0 {
+            if inv.decrease_quantity_at(ev.inventory_slot, 1, &mut commands) == 0 {
                 structure.set_block_at(coords, block, block_up, &blocks, Some(&mut event_writer));
             } else {
                 break;

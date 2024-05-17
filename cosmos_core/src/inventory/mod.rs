@@ -5,7 +5,7 @@
 use std::ops::Range;
 
 use bevy::{
-    ecs::{entity::Entity, system::Commands},
+    ecs::{bundle::Bundle, entity::Entity, system::Commands},
     hierarchy::BuildChildren,
     prelude::{App, Component, Deref, DerefMut},
     reflect::Reflect,
@@ -213,11 +213,13 @@ impl Inventory {
         false
     }
 
-    /// Returns the overflow that could not fit.
+    /// Returns the overflow that could not fit.  The second item in the tuple will be Some
+    /// if some or all of the ItemStack got its own slot. If it did, then this will represent the
+    /// new slot in use.
     ///
     /// If this [`ItemStack`] is successfully inserted and has a data entity, that entity will
     /// have its parent set to this inventory's entity.
-    pub fn insert_itemstack(&mut self, itemstack: &ItemStack, commands: &mut Commands) -> u16 {
+    pub fn insert_itemstack(&mut self, itemstack: &ItemStack, commands: &mut Commands) -> (u16, Option<usize>) {
         // Search for existing stacks, if none found that make new one(s)
 
         let mut quantity = itemstack.quantity();
@@ -233,7 +235,7 @@ impl Inventory {
                 quantity = is.increase_quantity(quantity);
 
                 if quantity == 0 {
-                    return 0;
+                    return (0, None);
                 }
             }
         }
@@ -258,23 +260,31 @@ impl Inventory {
 
             // Items with data cannot have a stack size > 1.
             if quantity == 0 || itemstack.data_entity().is_some() {
-                return 0;
+                return (0, Some(i));
             }
         }
 
         // if any amount is left over, it will be represented in the quantity variable
 
-        quantity
+        (quantity, None)
     }
 
-    /// Returns (the overflow that could not fit and the slot)
+    /// Returns the overflow that could not fit in any slot. The second item in the tuple will be Some
+    /// if some or all of the ItemStack got its own slot. If it did, then this will represent the
+    /// new slot in use.
     ///
     /// If this [`Item`] is successfully added & requires a data entity, that entity will be created.
     ///
     /// Make sure to call this method in or before [`super::ItemStack::ItemStackSystemSet::CreateDataEntity`]
-    pub fn insert_item(&mut self, item: &Item, quantity: u16, commands: &mut Commands, has_data: &ItemShouldHaveData) -> u16 {
+    pub fn insert_item(
+        &mut self,
+        item: &Item,
+        quantity: u16,
+        commands: &mut Commands,
+        has_data: &ItemShouldHaveData,
+    ) -> (u16, Option<usize>) {
         let is = ItemStack::with_quantity(item, quantity, commands, has_data);
-        let qty = self.insert_itemstack(&is, commands);
+        let (qty, new_slot) = self.insert_itemstack(&is, commands);
 
         if let Some(de) = is.data_entity() {
             if qty != 0 {
@@ -283,7 +293,35 @@ impl Inventory {
             }
         }
 
-        qty
+        (qty, new_slot)
+    }
+
+    /// Returns the overflow that could not fit in any slot. The second item in the tuple will be Some
+    /// if some or all of the ItemStack got its own slot. If it did, then this will represent the
+    /// new slot in use.
+    ///
+    /// If this [`Item`] is successfully added, a data entity will be created with the given data, even
+    /// if this item would not normally have data associated with it.
+    ///
+    /// Make sure to call this method in or before [`super::ItemStack::ItemStackSystemSet::CreateDataEntity`]
+    pub fn insert_item_with_data(
+        &mut self,
+        item: &Item,
+        quantity: u16,
+        commands: &mut Commands,
+        data: impl Bundle,
+    ) -> (u16, Option<usize>) {
+        let is = ItemStack::with_quantity_and_data(item, quantity, commands, data);
+        let (qty, new_slot) = self.insert_itemstack(&is, commands);
+
+        if let Some(de) = is.data_entity() {
+            if qty != 0 {
+                // We weren't able to fit in the data-having item, so delete the newly created data entity.
+                commands.entity(de).insert(NeedsDespawned);
+            }
+        }
+
+        (qty, new_slot)
     }
 
     /// Returns the ItemStack at that slot
@@ -296,12 +334,13 @@ impl Inventory {
         self.items[slot].as_mut()
     }
 
-    /// Returns the overflow quantity
-    pub fn decrease_quantity_at(&mut self, slot: usize, amount: u16) -> u16 {
+    /// Returns the quantity unable to be removed
+    pub fn decrease_quantity_at(&mut self, slot: usize, amount: u16, commands: &mut Commands) -> u16 {
         if let Some(is) = &mut self.items[slot] {
             let res = is.decrease_quantity(amount);
 
             if is.is_empty() {
+                is.remove(commands);
                 self.items[slot] = None;
             }
 
@@ -345,6 +384,27 @@ impl Inventory {
         needs_data: &ItemShouldHaveData,
     ) -> u16 {
         let is = ItemStack::with_quantity(item, quantity, commands, needs_data);
+        let qty = self.insert_itemstack_at(slot, &is, commands);
+
+        if let Some(de) = is.data_entity() {
+            if qty != 0 {
+                // We weren't able to fit in the data-having item, so delete the newly created data entity.
+                commands.entity(de).insert(NeedsDespawned);
+            }
+        }
+
+        qty
+    }
+
+    /// Inserts the items & quantity at that slot. Returns the number of items left over, or the full
+    /// quantity of items if that slot doesn't represent that item.
+    ///
+    /// This will create a data entity for the [`ItemStack`] if it is able to be inserted if it requires
+    /// a data entity.
+    ///
+    /// Make sure to call this method in or before [`super::ItemStack::ItemStackSystemSet::CreateDataEntity`]
+    pub fn insert_item_with_data_at(&mut self, slot: usize, item: &Item, quantity: u16, commands: &mut Commands, data: impl Bundle) -> u16 {
+        let is = ItemStack::with_quantity_and_data(item, quantity, commands, data);
         let qty = self.insert_itemstack_at(slot, &is, commands);
 
         if let Some(de) = is.data_entity() {
@@ -616,13 +676,43 @@ impl Inventory {
         let (remaining, taken) = self.take_item(item, quantity);
 
         if remaining == 0 {
-            for is in taken {
+            for mut is in taken {
                 is.remove(commands);
             }
 
             (remaining, vec![])
         } else {
             (remaining, taken)
+        }
+    }
+
+    /// Removes up to the amount specified of this item from the inventory.
+    ///
+    /// Returns amount remaining in that slot and the ItemStack taken if one was present.
+    ///
+    /// It is up to YOU to update the data entities of the ItemStacks taken
+    #[must_use]
+    pub fn remove_some_itemstack_at(&mut self, slot: usize, quantity: u16) -> (u16, Option<ItemStack>) {
+        if let Some(is) = &mut self.items[slot] {
+            let remaining_qty = quantity.min(is.quantity());
+
+            let taken = is.quantity() - remaining_qty;
+            is.set_quantity(remaining_qty);
+
+            let mut taken_is = is.clone();
+
+            if is.is_empty() {
+                self.items[slot] = None;
+            }
+
+            if taken > 0 {
+                taken_is.set_quantity(taken);
+                (remaining_qty, Some(taken_is))
+            } else {
+                (remaining_qty, None)
+            }
+        } else {
+            (0, None)
         }
     }
 

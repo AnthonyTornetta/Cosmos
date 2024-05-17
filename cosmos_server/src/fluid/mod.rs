@@ -1,6 +1,6 @@
 use bevy::app::App;
 
-mod interact_fluid;
+pub mod interact_fluid;
 mod register_blocks;
 
 pub(super) fn register(app: &mut App) {

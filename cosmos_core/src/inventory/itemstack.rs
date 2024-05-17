@@ -4,6 +4,7 @@ use bevy::{
     app::Update,
     core::Name,
     ecs::{
+        bundle::Bundle,
         component::Component,
         entity::Entity,
         query::{Added, With, Without},
@@ -47,7 +48,7 @@ pub struct NeedsItemStackDataCopied(pub Entity);
 /// The [`ItemStackData`] component will also exist on this entity.
 pub struct ItemStackNeedsDataCreated;
 
-#[derive(Component)]
+#[derive(Component, Debug, Reflect)]
 /// Represnets data about the [`ItemStack`] this entity is data for
 pub struct ItemStackData {
     /// The item's id
@@ -88,6 +89,18 @@ impl ItemStack {
         Self::raw_with_quantity(item.id(), item.max_stack_size(), quantity, commands, has_data)
     }
 
+    /// Creates an ItemStack of that item with an initial quantity of 0.
+    // pub fn new(item: &Item, data_entity: Option<Entity>) -> Self {
+    //     Self::with_quantity(item, 0, data_entity)
+    // }
+
+    /// Creates an ItemStack of that item with the given initial quantity
+    ///
+    /// If you call this method, make sure you do so in or before [`ItemStackSystemSet::CreateDataEntity`]
+    pub fn with_quantity_and_data(item: &Item, quantity: u16, commands: &mut Commands, data: impl Bundle) -> Self {
+        Self::raw_with_quantity_and_data(item.id(), item.max_stack_size(), quantity, commands, data)
+    }
+
     /// Creates an ItemStack of that item id, its max stack size, and with the given initial quantity
     ///
     /// If you call this method, make sure you do so in or before [`ItemStackSystemSet::CreateDataEntity`]
@@ -102,7 +115,25 @@ impl ItemStack {
             item_id,
             max_stack_size,
             quantity,
-            Self::create_data_entity(has_data, item_id, commands),
+            Self::create_data_entity(Some(has_data), item_id, commands, ()),
+        )
+    }
+
+    /// Creates an ItemStack of that item with the given initial quantity
+    ///
+    /// If you call this method, make sure you do so in or before [`ItemStackSystemSet::CreateDataEntity`]
+    pub fn raw_with_quantity_and_data(
+        item_id: u16,
+        max_stack_size: u16,
+        quantity: u16,
+        commands: &mut Commands,
+        data: impl Bundle,
+    ) -> Self {
+        Self::raw_with_quantity_and_dataitem_entity(
+            item_id,
+            max_stack_size,
+            quantity,
+            Self::create_data_entity(None, item_id, commands, data),
         )
     }
 
@@ -121,8 +152,13 @@ impl ItemStack {
         }
     }
 
-    fn create_data_entity(has_data: &ItemShouldHaveData, item_id: u16, commands: &mut Commands) -> Option<Entity> {
-        let data_entity = if has_data.contains(item_id) {
+    fn create_data_entity(
+        has_data: Option<&ItemShouldHaveData>,
+        item_id: u16,
+        commands: &mut Commands,
+        data: impl Bundle,
+    ) -> Option<Entity> {
+        let data_entity = if has_data.map(|x| x.contains(item_id)).unwrap_or(true) {
             Some(
                 commands
                     .spawn((
@@ -132,6 +168,7 @@ impl ItemStack {
                             item_id,
                             inventory_pointer: None,
                         },
+                        data,
                     ))
                     .id(),
             )
@@ -143,9 +180,11 @@ impl ItemStack {
 
     /// Removes the [`ItemStack`] from the world. This essentially just removes the [`ItemStack`]'s
     /// data entity.
-    pub fn remove(&self, commands: &mut Commands) {
+    pub fn remove(&mut self, commands: &mut Commands) {
         if let Some(de) = self.data_entity {
             commands.entity(de).insert(NeedsDespawned);
+
+            self.data_entity = None;
         }
     }
 
@@ -296,5 +335,6 @@ pub(super) fn register(app: &mut App) {
     .add_systems(Update, name_itemstack_data.after(ItemStackSystemSet::FillDataEntity))
     .add_systems(Update, remove_needs_filled.in_set(ItemStackSystemSet::DoneFillingDataEntity))
     // .add_event::<ItemStackNeedsDataCreatedEvent>()
-    .init_resource::<ItemShouldHaveData>();
+    .init_resource::<ItemShouldHaveData>()
+    .register_type::<ItemStackData>();
 }

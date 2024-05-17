@@ -180,10 +180,13 @@ fn server_listen_messages(
                         });
                     }
                 }
-                ClientReliableMessages::InteractWithBlock { structure_entity, block } => {
+                ClientReliableMessages::InteractWithBlock {
+                    block,
+                    block_including_fluids,
+                } => {
                     block_interact_event.send(BlockInteractEvent {
-                        structure_entity,
-                        structure_block: block,
+                        block,
+                        block_including_fluids,
                         interactor: lobby.player_from_id(client_id).unwrap(),
                     });
                 }

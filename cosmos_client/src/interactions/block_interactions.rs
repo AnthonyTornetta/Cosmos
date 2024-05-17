@@ -6,7 +6,11 @@ use bevy_rapier3d::{
     prelude::{QueryFilter, RapierContext, DEFAULT_WORLD_ID},
 };
 use cosmos_core::{
-    block::{block_events::BlockInteractEvent, blocks::fluid::FLUID_COLLISION_GROUP, Block, BlockFace, BlockRotation, BlockSubRotation},
+    block::{
+        block_events::{BlockInteractEvent, StructureBlockPair},
+        blocks::fluid::FLUID_COLLISION_GROUP,
+        Block, BlockFace, BlockRotation, BlockSubRotation,
+    },
     blockitems::BlockItems,
     inventory::Inventory,
     item::Item,
@@ -70,6 +74,7 @@ pub(crate) fn process_player_interaction(
     items: Res<Registry<Item>>,
     blocks: Res<Registry<Block>>,
     block_items: Res<BlockItems>,
+    mut commands: Commands,
 ) {
     // this fails if the player is a pilot
     let Ok((player_entity, mut inventory, mut looking_at)) = player_body.get_single_mut() else {
@@ -99,6 +104,8 @@ pub(crate) fn process_player_interaction(
     }
 
     looking_at.looking_at_any = Some(hit_block);
+
+    let any_structure = structure;
 
     if structure.block_at(hit_block.block.coords(), &blocks).is_fluid() {
         if let Some((hit_block, s, sgt, ip)) = send_ray(
@@ -156,7 +163,7 @@ pub(crate) fn process_player_interaction(
                 return Some(0); // the return doesn't matter, it's just used for early returns
             }
 
-            inventory.decrease_quantity_at(inventory_slot, 1);
+            inventory.decrease_quantity_at(inventory_slot, 1, &mut commands);
 
             let (block_up, block_sub_rotation) = if block.is_fully_rotatable() || block.should_face_front() {
                 let delta = UnboundBlockCoordinate::from(place_at_coords) - UnboundBlockCoordinate::from(looking_at_block.block.coords());
@@ -292,11 +299,17 @@ pub(crate) fn process_player_interaction(
     }
 
     if input_handler.check_just_pressed(CosmosInputs::Interact) {
-        if let Some(looked_at) = &looking_at.looking_at_block {
+        if let Some(looking_at_any) = &looking_at.looking_at_any {
             interact_writer.send(BlockInteractEvent {
-                structure_entity: structure.get_entity().unwrap(),
-                structure_block: looked_at.block,
+                block_including_fluids: StructureBlockPair {
+                    structure_block: looking_at_any.block,
+                    structure_entity: any_structure.get_entity().unwrap(),
+                },
                 interactor: player_entity,
+                block: looking_at.looking_at_block.map(|looked_at| StructureBlockPair {
+                    structure_block: looked_at.block,
+                    structure_entity: structure.get_entity().unwrap(),
+                }),
             });
         }
     }

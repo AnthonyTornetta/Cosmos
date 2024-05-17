@@ -396,18 +396,22 @@ fn on_interact_reactor(
     player_query: Query<&Player>,
 ) {
     for ev in interaction.read() {
-        let Ok((structure, mut reactors)) = structure_query.get_mut(ev.structure_entity) else {
+        let Some(s_block) = ev.block else {
             continue;
         };
 
-        let block = structure.block_at(ev.structure_block.coords(), &blocks);
+        let Ok((structure, mut reactors)) = structure_query.get_mut(s_block.structure_entity) else {
+            continue;
+        };
+
+        let block = structure.block_at(s_block.structure_block.coords(), &blocks);
 
         if block.unlocalized_name() == "cosmos:reactor_controller" {
-            if reactors.iter().any(|reactor| reactor.controller_block() == ev.structure_block) {
+            if reactors.iter().any(|reactor| reactor.controller_block() == s_block.structure_block) {
                 continue;
             }
 
-            if let Some(bounds) = check_is_valid_multiblock(&structure, ev.structure_block.coords(), &blocks) {
+            if let Some(bounds) = check_is_valid_multiblock(&structure, s_block.structure_block.coords(), &blocks) {
                 match check_valid(bounds, &structure, &blocks) {
                     ReactorValidity::MissingCasing(_) => {
                         let Ok(player) = player_query.get(ev.interactor) else {
@@ -434,7 +438,7 @@ fn on_interact_reactor(
                         );
                     }
                     ReactorValidity::Valid => {
-                        let reactor = create_reactor(&structure, &blocks, &reactor_blocks, bounds, ev.structure_block);
+                        let reactor = create_reactor(&structure, &blocks, &reactor_blocks, bounds, s_block.structure_block);
 
                         reactors.add_reactor(reactor);
                     }

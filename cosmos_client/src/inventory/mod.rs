@@ -151,7 +151,7 @@ fn toggle_inventory_rendering(
 
             if !held_item_stack.is_empty() {
                 // Put it wherever it can fit if it couldn't go back to its original spot
-                let leftover = local_inventory.insert_itemstack(&held_item_stack, &mut commands);
+                let (leftover, _) = local_inventory.insert_itemstack(&held_item_stack, &mut commands);
 
                 if leftover != held_item_stack.quantity() {
                     // Only send information to server if there is a point to the insertion
