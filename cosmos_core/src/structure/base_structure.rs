@@ -3,7 +3,7 @@
 use bevy::{
     ecs::{
         component::Component,
-        query::With,
+        query::{QueryData, QueryFilter, QueryItem, ROQueryItem, With},
         system::{Commands, Query},
     },
     prelude::{Entity, EventWriter, GlobalTransform, Vec3},
@@ -600,6 +600,28 @@ impl BaseStructure {
         ))
     }
 
+    /// Queries this block's data. Returns `None` if the requested query failed or if no block data exists for this block.
+    pub fn query_block_data<'a, Q, F>(&'a self, coords: BlockCoordinate, query: &'a Query<Q, F>) -> Option<ROQueryItem<'a, Q>>
+    where
+        F: QueryFilter,
+        Q: QueryData,
+    {
+        let chunk = self.chunk_at_block_coordinates(coords)?;
+
+        chunk.query_block_data(ChunkBlockCoordinate::for_block_coordinate(coords), query)
+    }
+
+    /// Queries this block's data mutibly. Returns `None` if the requested query failed or if no block data exists for this block.
+    pub fn query_block_data_mut<'a, Q, F>(&'a self, coords: BlockCoordinate, query: &'a mut Query<Q, F>) -> Option<QueryItem<'a, Q>>
+    where
+        F: QueryFilter,
+        Q: QueryData,
+    {
+        let chunk = self.chunk_at_block_coordinates(coords)?;
+
+        chunk.query_block_data_mut(ChunkBlockCoordinate::for_block_coordinate(coords), query)
+    }
+
     /// Removes this type of data from the block here. Returns the entity that stores this blocks data
     /// if it will still exist.
     pub fn remove_block_data<T: Component>(
@@ -607,7 +629,7 @@ impl BaseStructure {
         coords: BlockCoordinate,
         commands: &mut Commands,
         q_block_data: &mut Query<&mut BlockData>,
-        q_data: Query<(), With<T>>,
+        q_data: &Query<(), With<T>>,
     ) -> Option<Entity> {
         let chunk = self.mut_chunk_at_block_coordinates(coords)?;
 

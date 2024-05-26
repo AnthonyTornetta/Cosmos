@@ -7,10 +7,11 @@ use bevy::{
         bundle::Bundle,
         component::Component,
         entity::Entity,
-        query::{Added, With, Without},
+        query::{Added, QueryData, QueryFilter, QueryItem, ROQueryItem, With, Without},
         schedule::{IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
         system::{Commands, Query, Resource},
     },
+    hierarchy::BuildChildren,
     prelude::App,
     reflect::Reflect,
     utils::HashSet,
@@ -56,7 +57,7 @@ pub struct ItemStackData {
     /// If the [`ItemStack`] is a part of an inventory, this will point to that inventory.
     ///
     /// TODO: If the [`ItemStack`] is not part of an inventory (e.g. dropped on the ground)
-    pub inventory_pointer: Option<(Entity, u32)>,
+    pub inventory_pointer: (Entity, u32),
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
@@ -85,8 +86,14 @@ impl ItemStack {
     /// Creates an ItemStack of that item with the given initial quantity
     ///
     /// If you call this method, make sure you do so in or before [`ItemStackSystemSet::CreateDataEntity`]
-    pub fn with_quantity(item: &Item, quantity: u16, commands: &mut Commands, has_data: &ItemShouldHaveData) -> Self {
-        Self::raw_with_quantity(item.id(), item.max_stack_size(), quantity, commands, has_data)
+    pub fn with_quantity(
+        item: &Item,
+        quantity: u16,
+        inventory_pointer: (Entity, u32),
+        commands: &mut Commands,
+        has_data: &ItemShouldHaveData,
+    ) -> Self {
+        Self::raw_with_quantity(item.id(), item.max_stack_size(), quantity, inventory_pointer, commands, has_data)
     }
 
     /// Creates an ItemStack of that item with an initial quantity of 0.
@@ -97,8 +104,14 @@ impl ItemStack {
     /// Creates an ItemStack of that item with the given initial quantity
     ///
     /// If you call this method, make sure you do so in or before [`ItemStackSystemSet::CreateDataEntity`]
-    pub fn with_quantity_and_data(item: &Item, quantity: u16, commands: &mut Commands, data: impl Bundle) -> Self {
-        Self::raw_with_quantity_and_data(item.id(), item.max_stack_size(), quantity, commands, data)
+    pub fn with_quantity_and_data(
+        item: &Item,
+        quantity: u16,
+        inventory_pointer: (Entity, u32),
+        commands: &mut Commands,
+        data: impl Bundle,
+    ) -> Self {
+        Self::raw_with_quantity_and_data(item.id(), item.max_stack_size(), quantity, inventory_pointer, commands, data)
     }
 
     /// Creates an ItemStack of that item id, its max stack size, and with the given initial quantity
@@ -108,33 +121,39 @@ impl ItemStack {
         item_id: u16,
         max_stack_size: u16,
         quantity: u16,
+        inventory_pointer: (Entity, u32),
         commands: &mut Commands,
         has_data: &ItemShouldHaveData,
     ) -> Self {
-        Self::raw_with_quantity_and_dataitem_entity(
+        let data_entity = Self::create_data_entity(Some(has_data), item_id, inventory_pointer, commands, ());
+
+        Self {
             item_id,
             max_stack_size,
             quantity,
-            Self::create_data_entity(Some(has_data), item_id, commands, ()),
-        )
+            data_entity,
+        }
     }
 
     /// Creates an ItemStack of that item with the given initial quantity
     ///
     /// If you call this method, make sure you do so in or before [`ItemStackSystemSet::CreateDataEntity`]
-    pub fn raw_with_quantity_and_data(
+    pub(crate) fn raw_with_quantity_and_data(
         item_id: u16,
         max_stack_size: u16,
         quantity: u16,
+        inventory_pointer: (Entity, u32),
         commands: &mut Commands,
         data: impl Bundle,
     ) -> Self {
-        Self::raw_with_quantity_and_dataitem_entity(
+        let data_entity = Self::create_data_entity(None, item_id, inventory_pointer, commands, data);
+
+        Self {
+            data_entity,
             item_id,
             max_stack_size,
             quantity,
-            Self::create_data_entity(None, item_id, commands, data),
-        )
+        }
     }
 
     /// Creates an ItemStack of that item id, its max stack size, and with the given initial quantity
@@ -145,16 +164,17 @@ impl ItemStack {
         data_entity: Option<Entity>,
     ) -> Self {
         Self {
+            data_entity,
             item_id,
             max_stack_size,
             quantity,
-            data_entity,
         }
     }
 
     fn create_data_entity(
         has_data: Option<&ItemShouldHaveData>,
         item_id: u16,
+        inventory_pointer: (Entity, u32),
         commands: &mut Commands,
         data: impl Bundle,
     ) -> Option<Entity> {
@@ -162,11 +182,11 @@ impl ItemStack {
             Some(
                 commands
                     .spawn((
-                        Name::new("ItemStack Data"),
+                        Name::new("ItemStack data"),
                         ItemStackNeedsDataCreated,
                         ItemStackData {
                             item_id,
-                            inventory_pointer: None,
+                            inventory_pointer,
                         },
                         data,
                     ))
@@ -195,19 +215,120 @@ impl ItemStack {
         self.data_entity
     }
 
-    /// This should be handled for you via the constructor methods and inventory methods.
+    /// Inserts data into this itemstack. Returns the entity that stores this itemstack's data.
     ///
-    /// This will set the data entiy to the entity provided. It is up to you to properly handle this entity yourself.
-    // pub(crate) fn set_data_entity(&mut self, entity: Entity) {
-    //     self.data_entity = Some(entity);
-    // }
+    /// * `inventory_pointer` - If this is a part of an inventory, this should be (inventory_entity, slot).
+    pub fn insert_itemstack_data<T: Bundle>(&mut self, inventory_pointer: (Entity, u32), data: T, commands: &mut Commands) -> Entity {
+        if let Some(data_ent) = self.data_entity {
+            commands.entity(data_ent).insert(data);
 
-    /// This will NOT despawn the entity - make sure to do that yourself!
-    ///
-    /// Returns the data entity that this had before the removal.
-    // pub(crate) fn remove_data_entity(&mut self) -> Option<Entity> {
-    //     std::mem::take(&mut self.data_entity)
-    // }
+            data_ent
+        } else {
+            let mut ecmds = commands.spawn((
+                data,
+                Name::new("ItemStack data"),
+                ItemStackData {
+                    inventory_pointer,
+                    item_id: self.item_id,
+                },
+            ));
+
+            ecmds.set_parent(inventory_pointer.0);
+
+            let ent = ecmds.id();
+            self.data_entity = Some(ent);
+
+            ent
+        }
+    }
+
+    /// Inserts data into the itemstack here. This differs from the
+    /// normal [`Self::insert_itemstack_data`] in that it will call the closure
+    /// with the itemstack data entity to create the data to insert.
+    pub fn insert_itemstack_data_with_entity<T: Bundle, F>(
+        &mut self,
+        inventory_pointer: (Entity, u32),
+        create_data_closure: F,
+        commands: &mut Commands,
+    ) -> Entity
+    where
+        F: FnOnce(Entity) -> T,
+    {
+        if let Some(data_ent) = self.data_entity {
+            let data = create_data_closure(data_ent);
+
+            commands.entity(data_ent).insert(data);
+
+            data_ent
+        } else {
+            let mut ecmds = commands.spawn((
+                Name::new("ItemStack data"),
+                ItemStackData {
+                    inventory_pointer,
+                    item_id: self.item_id,
+                },
+            ));
+
+            let data_ent = ecmds.id();
+
+            let data = create_data_closure(data_ent);
+
+            ecmds.insert(data);
+
+            ecmds.set_parent(inventory_pointer.0);
+
+            self.data_entity = Some(data_ent);
+
+            data_ent
+        }
+    }
+
+    /// Queries this itemstack's data. Returns `None` if the requested query failed.
+    pub fn query_itemstack_data<'a, Q, F>(&'a self, query: &'a Query<Q, F>) -> Option<ROQueryItem<'a, Q>>
+    where
+        F: QueryFilter,
+        Q: QueryData,
+    {
+        let data_ent = self.data_entity?;
+
+        query.get(data_ent).ok()
+    }
+
+    /// Queries this itemstack's data mutibly. Returns `None` if the requested query failed.
+    pub fn query_itemstack_data_mut<'a, Q, F>(&'a self, query: &'a mut Query<Q, F>) -> Option<QueryItem<'a, Q>>
+    where
+        F: QueryFilter,
+        Q: QueryData,
+    {
+        let data_ent = self.data_entity?;
+
+        query.get_mut(data_ent).ok()
+    }
+
+    /// Removes this type of data from the itemstack here. Returns the entity that stores this itemstack's data
+    /// if it exists.
+    pub fn remove_itemstack_data<T: Bundle>(&self, commands: &mut Commands) -> Option<Entity> {
+        let ent = self.data_entity?;
+
+        commands.entity(ent).remove::<T>();
+
+        Some(ent)
+    }
+
+    /// Call this whenever the inventory an itemstack is a part of changes.
+    pub fn change_inventory_entity(&self, commands: &mut Commands, new_inventory_pointer: (Entity, u32)) {
+        let Some(data_ent) = self.data_entity else {
+            return;
+        };
+
+        commands
+            .entity(data_ent)
+            .insert(ItemStackData {
+                inventory_pointer: new_inventory_pointer,
+                item_id: self.item_id,
+            })
+            .set_parent(new_inventory_pointer.0);
+    }
 
     #[inline]
     /// Gets the item's id

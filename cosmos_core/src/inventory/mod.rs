@@ -5,7 +5,12 @@
 use std::ops::Range;
 
 use bevy::{
-    ecs::{bundle::Bundle, entity::Entity, system::Commands},
+    ecs::{
+        bundle::Bundle,
+        entity::Entity,
+        query::{QueryData, QueryFilter, QueryItem, ROQueryItem},
+        system::{Commands, Query},
+    },
     hierarchy::BuildChildren,
     prelude::{App, Component, Deref, DerefMut},
     reflect::Reflect,
@@ -97,7 +102,7 @@ impl Inventory {
             if let Some(de) = is.data_entity() {
                 if let Some(mut ecmds) = commands.get_entity(de) {
                     ecmds.set_parent(self.self_entity).insert(ItemStackData {
-                        inventory_pointer: Some((self.self_entity, slot as u32)),
+                        inventory_pointer: (self.self_entity, slot as u32),
                         item_id: is.item_id(),
                     });
                 }
@@ -178,6 +183,68 @@ impl Inventory {
         other.update_itemstack_data_parent(other_slot, commands);
 
         Ok(())
+    }
+
+    /// If there is no itemstack in this slot, returns None.
+    ///
+    /// Inserts data into this itemstack. Returns the entity that stores this itemstack's data.
+    ///
+    /// * `inventory_pointer` - If this is a part of an inventory, this should be (inventory_entity, slot).
+    pub fn insert_itemstack_data<T: Bundle>(&mut self, slot: usize, data: T, commands: &mut Commands) -> Option<Entity> {
+        let self_ent = self.self_entity;
+        let is = self.mut_itemstack_at(slot)?;
+
+        Some(is.insert_itemstack_data((self_ent, slot as u32), data, commands))
+    }
+
+    /// If there is no itemstack in this slot, returns None.
+    ///
+    /// Inserts data into the itemstack here. This differs from the
+    /// normal [`Self::insert_itemstack_data`] in that it will call the closure
+    /// with the itemstack data entity to create the data to insert.
+    pub fn insert_itemstack_data_with_entity<T: Bundle, F>(
+        &mut self,
+        slot: usize,
+        create_data_closure: F,
+        commands: &mut Commands,
+    ) -> Option<Entity>
+    where
+        F: FnOnce(Entity) -> T,
+    {
+        let self_ent = self.self_entity;
+        let is = self.mut_itemstack_at(slot)?;
+
+        Some(is.insert_itemstack_data_with_entity((self_ent, slot as u32), create_data_closure, commands))
+    }
+
+    /// Queries this itemstack's data. Returns `None` if the requested query failed or if no itemstack data exists for this slot.
+    pub fn query_itemstack_data<'a, Q, F>(&'a self, slot: usize, query: &'a Query<Q, F>) -> Option<ROQueryItem<'a, Q>>
+    where
+        F: QueryFilter,
+        Q: QueryData,
+    {
+        let is = self.itemstack_at(slot)?;
+
+        is.query_itemstack_data(query)
+    }
+
+    /// Queries this itemstack's data mutibly. Returns `None` if the requested query failed or if no itemstack data exists for this slot.
+    pub fn query_itemstack_data_mut<'a, Q, F>(&'a self, slot: usize, query: &'a mut Query<Q, F>) -> Option<QueryItem<'a, Q>>
+    where
+        F: QueryFilter,
+        Q: QueryData,
+    {
+        let is = self.itemstack_at(slot)?;
+
+        is.query_itemstack_data_mut(query)
+    }
+
+    /// Removes this type of data from the itemstack here. Returns the entity that stores this itemstack's data
+    /// if it exists.
+    pub fn remove_itemstack_data<T: Bundle>(&mut self, slot: usize, commands: &mut Commands) -> Option<Entity> {
+        let is = self.itemstack_at(slot)?;
+
+        is.remove_itemstack_data::<T>(commands)
     }
 
     /// Returns true if there is enough space in this inventory to insert this itemstack.
@@ -281,16 +348,13 @@ impl Inventory {
         item: &Item,
         quantity: u16,
         commands: &mut Commands,
-        has_data: &ItemShouldHaveData,
+        needs_data: &ItemShouldHaveData,
     ) -> (u16, Option<usize>) {
-        let is = ItemStack::with_quantity(item, quantity, commands, has_data);
+        let mut is = ItemStack::with_quantity(item, quantity, (self.self_entity, u32::MAX), commands, needs_data);
         let (qty, new_slot) = self.insert_itemstack(&is, commands);
 
-        if let Some(de) = is.data_entity() {
-            if qty != 0 {
-                // We weren't able to fit in the data-having item, so delete the newly created data entity.
-                commands.entity(de).insert(NeedsDespawned);
-            }
+        if qty != 0 {
+            is.remove(commands);
         }
 
         (qty, new_slot)
@@ -311,14 +375,12 @@ impl Inventory {
         commands: &mut Commands,
         data: impl Bundle,
     ) -> (u16, Option<usize>) {
-        let is = ItemStack::with_quantity_and_data(item, quantity, commands, data);
+        let mut is = ItemStack::with_quantity_and_data(item, quantity, (self.self_entity, 0), commands, data);
         let (qty, new_slot) = self.insert_itemstack(&is, commands);
 
-        if let Some(de) = is.data_entity() {
-            if qty != 0 {
-                // We weren't able to fit in the data-having item, so delete the newly created data entity.
-                commands.entity(de).insert(NeedsDespawned);
-            }
+        if qty != 0 {
+            // We weren't able to fit in the data-having item, so delete the newly created data entity.
+            is.remove(commands);
         }
 
         (qty, new_slot)
@@ -383,7 +445,7 @@ impl Inventory {
         commands: &mut Commands,
         needs_data: &ItemShouldHaveData,
     ) -> u16 {
-        let is = ItemStack::with_quantity(item, quantity, commands, needs_data);
+        let is = ItemStack::with_quantity(item, quantity, (self.self_entity, slot as u32), commands, needs_data);
         let qty = self.insert_itemstack_at(slot, &is, commands);
 
         if let Some(de) = is.data_entity() {
@@ -404,7 +466,7 @@ impl Inventory {
     ///
     /// Make sure to call this method in or before [`super::ItemStack::ItemStackSystemSet::CreateDataEntity`]
     pub fn insert_item_with_data_at(&mut self, slot: usize, item: &Item, quantity: u16, commands: &mut Commands, data: impl Bundle) -> u16 {
-        let is = ItemStack::with_quantity_and_data(item, quantity, commands, data);
+        let is = ItemStack::with_quantity_and_data(item, quantity, (self.self_entity, slot as u32), commands, data);
         let qty = self.insert_itemstack_at(slot, &is, commands);
 
         if let Some(de) = is.data_entity() {

@@ -7,7 +7,7 @@ use std::ops::DerefMut;
 use std::sync::{Arc, Mutex};
 
 use bevy::app::Update;
-use bevy::ecs::query::With;
+use bevy::ecs::query::{QueryData, QueryFilter, QueryItem, ROQueryItem, With};
 use bevy::prelude::{App, Event, IntoSystemConfigs, Name, PreUpdate, VisibilityBundle};
 use bevy::reflect::Reflect;
 use bevy::transform::TransformBundle;
@@ -546,6 +546,30 @@ impl Structure {
         }
     }
 
+    /// Queries this block's data. Returns `None` if the requested query failed or if no block data exists for this block.
+    pub fn query_block_data<'a, Q, F>(&'a self, coords: BlockCoordinate, query: &'a Query<Q, F>) -> Option<ROQueryItem<'a, Q>>
+    where
+        F: QueryFilter,
+        Q: QueryData,
+    {
+        match self {
+            Self::Full(fs) => fs.query_block_data(coords, query),
+            Self::Dynamic(ds) => ds.query_block_data(coords, query),
+        }
+    }
+
+    /// Queries this block's data mutibly. Returns `None` if the requested query failed or if no block data exists for this block.
+    pub fn query_block_data_mut<'a, Q, F>(&'a self, coords: BlockCoordinate, query: &'a mut Query<Q, F>) -> Option<QueryItem<'a, Q>>
+    where
+        F: QueryFilter,
+        Q: QueryData,
+    {
+        match self {
+            Self::Full(fs) => fs.query_block_data_mut(coords, query),
+            Self::Dynamic(ds) => ds.query_block_data_mut(coords, query),
+        }
+    }
+
     /// Returns `None` if the chunk is unloaded.
     ///
     /// Gets the entity that contains this block's information if there is one
@@ -564,7 +588,7 @@ impl Structure {
         coords: BlockCoordinate,
         commands: &mut Commands,
         q_block_data: &mut Query<&mut BlockData>,
-        q_data: Query<(), With<T>>,
+        q_data: &Query<(), With<T>>,
     ) -> Option<Entity> {
         match self {
             Self::Full(fs) => fs.remove_block_data(coords, commands, q_block_data, q_data),

@@ -108,7 +108,17 @@ fn sync_ship_systems(
 
         let item = items.from_numeric_id(system_type.item_icon_id());
 
-        hotbar_contents.set_itemstack_at(slot, Some(ItemStack::with_quantity(item, 1, &mut commands, &has_data)));
+        hotbar_contents.set_itemstack_at(
+            slot,
+            Some(ItemStack::with_quantity(
+                item,
+                1,
+                // TODO: Make this hotbar use an actual inventory so this isn't meaningless
+                (Entity::PLACEHOLDER, 0),
+                &mut commands,
+                &has_data,
+            )),
+        );
 
         slot += 1;
 

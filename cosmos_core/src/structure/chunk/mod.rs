@@ -320,7 +320,7 @@ impl Chunk {
     }
 
     /// Queries this block's data mutibly. Returns `None` if the requested query failed or if no block data exists for this block.
-    pub fn query_mut<'a, Q, F>(&'a self, coords: ChunkBlockCoordinate, query: &'a mut Query<Q, F>) -> Option<QueryItem<'a, Q>>
+    pub fn query_block_data_mut<'a, Q, F>(&'a self, coords: ChunkBlockCoordinate, query: &'a mut Query<Q, F>) -> Option<QueryItem<'a, Q>>
     where
         F: QueryFilter,
         Q: QueryData,
@@ -337,7 +337,7 @@ impl Chunk {
         coords: ChunkBlockCoordinate,
         commands: &mut Commands,
         q_block_data: &mut Query<&mut BlockData>,
-        q_data: Query<(), With<T>>,
+        q_data: &Query<(), With<T>>,
     ) -> Option<Entity> {
         let ent = self.block_data(coords)?;
 
