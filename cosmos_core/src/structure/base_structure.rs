@@ -1,6 +1,11 @@
 //! Internally used common logic between dynamic + full structures.
 
 use bevy::{
+    ecs::{
+        component::Component,
+        query::With,
+        system::{Commands, Query},
+    },
     prelude::{Entity, EventWriter, GlobalTransform, Vec3},
     reflect::Reflect,
     utils::HashMap,
@@ -8,7 +13,7 @@ use bevy::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    block::{blocks::AIR_BLOCK_ID, Block, BlockRotation},
+    block::{blocks::AIR_BLOCK_ID, data::BlockData, Block, BlockRotation},
     physics::location::Location,
     registry::Registry,
 };
@@ -535,30 +540,78 @@ impl BaseStructure {
         }
     }
 
-    /// Returns `None` if the chunk is unloaded.
+    /// Returns `None` if the chunk is unloaded. Will return Some(block data entity) otherwise.
     ///
-    /// Sets the block at these coordinate's data.
-    ///
-    /// This does NOT despawn previous data that was here.
-    ///
-    /// Will return the entity that was previously here, if any.
-    pub fn set_block_data(&mut self, coords: BlockCoordinate, data_entity: Entity) -> Option<Entity> {
-        if let Some(chunk) = self.mut_chunk_at_block_coordinates(coords) {
-            chunk.set_block_data(ChunkBlockCoordinate::for_block_coordinate(coords), data_entity)
-        } else {
-            None
-        }
+    /// Inserts data into the block here.
+    pub fn insert_block_data<T: Component>(
+        &mut self,
+        coords: BlockCoordinate,
+        data: T,
+        commands: &mut Commands,
+        q_block_data: &mut Query<&mut BlockData>,
+        q_data: &Query<(), With<T>>,
+    ) -> Option<Entity> {
+        let self_entity = self.get_entity()?;
+        let chunk_entity = self.chunk_entity(ChunkCoordinate::for_block_coordinate(coords))?;
+        let chunk = self.mut_chunk_at_block_coordinates(coords)?;
+
+        Some(chunk.insert_block_data(
+            ChunkBlockCoordinate::for_block_coordinate(coords),
+            chunk_entity,
+            self_entity,
+            data,
+            commands,
+            q_block_data,
+            q_data,
+        ))
     }
 
-    /// Removes any block data associated with this block
+    /// Returns `None` if the chunk is unloaded.
     ///
-    /// Will return the data entity that was previously here, if any
-    pub fn remove_block_data(&mut self, coords: BlockCoordinate) -> Option<Entity> {
-        if let Some(chunk) = self.mut_chunk_at_block_coordinates(coords) {
-            chunk.remove_block_data(ChunkBlockCoordinate::for_block_coordinate(coords))
-        } else {
-            None
-        }
+    /// Inserts data into the block here. This differs from the
+    /// normal [`Self::insert_block_data`] in that it will call the closure
+    /// with the block data entity to create the data to insert.
+    ///
+    /// This is useful for things such as Inventories, which require the entity
+    /// that is storing them in their constructor method.
+    pub fn insert_block_data_with_entity<T: Component, F>(
+        &mut self,
+        coords: BlockCoordinate,
+        create_data_closure: F,
+        commands: &mut Commands,
+        q_block_data: &mut Query<&mut BlockData>,
+        q_data: &Query<(), With<T>>,
+    ) -> Option<Entity>
+    where
+        F: FnOnce(Entity) -> T,
+    {
+        let self_entity = self.get_entity()?;
+        let chunk_entity = self.chunk_entity(ChunkCoordinate::for_block_coordinate(coords))?;
+        let chunk = self.mut_chunk_at_block_coordinates(coords)?;
+
+        Some(chunk.insert_block_data_with_entity(
+            ChunkBlockCoordinate::for_block_coordinate(coords),
+            chunk_entity,
+            self_entity,
+            create_data_closure,
+            commands,
+            q_block_data,
+            q_data,
+        ))
+    }
+
+    /// Removes this type of data from the block here. Returns the entity that stores this blocks data
+    /// if it will still exist.
+    pub fn remove_block_data<T: Component>(
+        &mut self,
+        coords: BlockCoordinate,
+        commands: &mut Commands,
+        q_block_data: &mut Query<&mut BlockData>,
+        q_data: Query<(), With<T>>,
+    ) -> Option<Entity> {
+        let chunk = self.mut_chunk_at_block_coordinates(coords)?;
+
+        chunk.remove_block_data::<T>(ChunkBlockCoordinate::for_block_coordinate(coords), commands, q_block_data, q_data)
     }
 
     /// Returns an iterator that acts as a raycast over a set of blocks in this structure

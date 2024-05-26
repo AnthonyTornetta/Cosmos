@@ -7,6 +7,7 @@ use std::ops::DerefMut;
 use std::sync::{Arc, Mutex};
 
 use bevy::app::Update;
+use bevy::ecs::query::With;
 use bevy::prelude::{App, Event, IntoSystemConfigs, Name, PreUpdate, VisibilityBundle};
 use bevy::reflect::Reflect;
 use bevy::transform::TransformBundle;
@@ -36,6 +37,7 @@ pub mod structure_iterator;
 pub mod systems;
 
 use crate::block::data::persistence::ChunkLoadBlockDataEvent;
+use crate::block::data::BlockData;
 use crate::block::{Block, BlockFace, BlockRotation};
 use crate::ecs::NeedsDespawned;
 use crate::events::block_events::BlockChangedEvent;
@@ -501,6 +503,51 @@ impl Structure {
 
     /// Returns `None` if the chunk is unloaded.
     ///
+    /// Inserts data into the block here.
+    ///
+    /// If you need to know the block data entity to construct the
+    /// block data, use [`Self::insert_block_data_with_entity`] instead.
+    pub fn insert_block_data<T: Component>(
+        &mut self,
+        coords: BlockCoordinate,
+        data: T,
+        commands: &mut Commands,
+        q_block_data: &mut Query<&mut BlockData>,
+        q_data: &Query<(), With<T>>,
+    ) -> Option<Entity> {
+        match self {
+            Self::Full(fs) => fs.insert_block_data(coords, data, commands, q_block_data, q_data),
+            Self::Dynamic(ds) => ds.insert_block_data(coords, data, commands, q_block_data, q_data),
+        }
+    }
+
+    /// Returns `None` if the chunk is unloaded.
+    ///
+    /// Inserts data into the block here. This differs from the
+    /// normal [`Self::insert_block_data`] in that it will call the closure
+    /// with the block data entity to create the data to insert.
+    ///
+    /// This is useful for things such as Inventories, which require the entity
+    /// that is storing them in their constructor method.
+    pub fn insert_block_data_with_entity<T: Component, F>(
+        &mut self,
+        coords: BlockCoordinate,
+        create_data_closure: F,
+        commands: &mut Commands,
+        q_block_data: &mut Query<&mut BlockData>,
+        q_data: &Query<(), With<T>>,
+    ) -> Option<Entity>
+    where
+        F: FnOnce(Entity) -> T,
+    {
+        match self {
+            Self::Full(fs) => fs.insert_block_data_with_entity(coords, create_data_closure, commands, q_block_data, q_data),
+            Self::Dynamic(ds) => ds.insert_block_data_with_entity(coords, create_data_closure, commands, q_block_data, q_data),
+        }
+    }
+
+    /// Returns `None` if the chunk is unloaded.
+    ///
     /// Gets the entity that contains this block's information if there is one
     pub fn block_data(&self, coords: BlockCoordinate) -> Option<Entity> {
         match self {
@@ -509,27 +556,19 @@ impl Structure {
         }
     }
 
-    /// Returns `None` if the chunk is unloaded.
-    ///
-    /// Sets the block at these coordinate's data.
-    ///
-    /// This does NOT despawn previous data that was here.
-    ///
-    /// Will return the entity that was previously here, if any.
-    pub fn set_block_data(&mut self, coords: BlockCoordinate, data_entity: Entity) -> Option<Entity> {
-        match self {
-            Self::Full(fs) => fs.set_block_data(coords, data_entity),
-            Self::Dynamic(ds) => ds.set_block_data(coords, data_entity),
-        }
-    }
-
     /// Removes any block data associated with this block
     ///
     /// Will return the data entity that was previously here, if any
-    pub fn remove_block_data(&mut self, coords: BlockCoordinate) -> Option<Entity> {
+    pub fn remove_block_data<T: Component>(
+        &mut self,
+        coords: BlockCoordinate,
+        commands: &mut Commands,
+        q_block_data: &mut Query<&mut BlockData>,
+        q_data: Query<(), With<T>>,
+    ) -> Option<Entity> {
         match self {
-            Self::Full(fs) => fs.remove_block_data(coords),
-            Self::Dynamic(ds) => ds.remove_block_data(coords),
+            Self::Full(fs) => fs.remove_block_data(coords, commands, q_block_data, q_data),
+            Self::Dynamic(ds) => ds.remove_block_data(coords, commands, q_block_data, q_data),
         }
     }
 

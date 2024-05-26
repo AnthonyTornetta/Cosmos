@@ -28,9 +28,10 @@ fn sync(
     mut commands: Commands,
     mut held_item_query: Query<(Entity, &mut HeldItemStack)>,
     mut structure_query: Query<&mut Structure>,
-    mut block_data_query: Query<&mut BlockData>,
     q_inventory: Query<&Inventory>,
     local_player: Query<Entity, With<LocalPlayer>>,
+    q_check_inventory: Query<(), With<Inventory>>,
+    mut q_block_data: Query<&mut BlockData>,
 ) {
     while let Some(message) = client.receive_message(NettyChannelServer::Inventory) {
         let msg: ServerInventoryMessages = cosmos_encoder::deserialize(&message).expect("Failed to deserialize server inventory message!");
@@ -61,33 +62,7 @@ fn sync(
 
                     let coords = block_data.block.coords();
 
-                    if let Some(data_entity) = structure.block_data(coords) {
-                        if let Ok(mut block_data) = block_data_query.get_mut(data_entity) {
-                            if let Some(mut ecmds) = commands.get_entity(data_entity) {
-                                block_data.increment();
-
-                                ecmds.insert(inventory);
-                            }
-                        }
-                    } else if let Some(chunk_ent) = structure.chunk_entity(ChunkCoordinate::for_block_coordinate(coords)) {
-                        if let Some(mut ecmds) = commands.get_entity(chunk_ent) {
-                            ecmds.with_children(|p| {
-                                let data_entity = p
-                                    .spawn((
-                                        BlockData {
-                                            identifier: BlockDataIdentifier {
-                                                block: StructureBlock::new(coords),
-                                                structure_entity: client_entity,
-                                            },
-                                            data_count: 1,
-                                        },
-                                        inventory,
-                                    ))
-                                    .id();
-                                structure.set_block_data(coords, data_entity);
-                            });
-                        }
-                    }
+                    structure.insert_block_data(coords, inventory, &mut commands, &mut q_block_data, &q_check_inventory);
                 }
             },
             ServerInventoryMessages::HeldItemstack { itemstack } => {

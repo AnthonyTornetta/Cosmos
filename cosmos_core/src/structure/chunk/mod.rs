@@ -2,17 +2,23 @@
 //!
 //! These blocks can be updated.
 
+use bevy::ecs::query::{QueryData, QueryFilter, QueryItem, ROQueryItem, With};
+use bevy::ecs::system::{Commands, Query};
+use bevy::hierarchy::BuildChildren;
 use bevy::prelude::{App, Component, Entity, Event, Vec3};
 use bevy::reflect::Reflect;
 use bevy::utils::HashMap;
 use serde::{Deserialize, Serialize};
 
+use crate::block::data::{BlockData, BlockDataIdentifier};
 use crate::block::{Block, BlockFace, BlockRotation, BlockSubRotation};
+use crate::ecs::NeedsDespawned;
 use crate::registry::Registry;
 
 use super::block_health::BlockHealth;
 use super::block_storage::{BlockStorage, BlockStorer};
 use super::coordinates::{ChunkBlockCoordinate, ChunkCoordinate, CoordinateType, UnboundCoordinateType};
+use super::structure_block::StructureBlock;
 
 pub mod netty;
 
@@ -200,20 +206,158 @@ impl Chunk {
         self.block_data.get(&coords).copied()
     }
 
-    /// Sets the block at these coordinate's data.
-    ///
-    /// This does NOT despawn previous data that was here.
-    ///
-    /// Will return the entity that was previously here, if any
-    pub fn set_block_data(&mut self, coords: ChunkBlockCoordinate, data_entity: Entity) -> Option<Entity> {
-        self.block_data.insert(coords, data_entity)
+    /// Inserts data into the block here. Returns the entity that stores this block's data.
+    pub fn insert_block_data<T: Component>(
+        &mut self,
+        coords: ChunkBlockCoordinate,
+        chunk_entity: Entity,
+        structure_entity: Entity,
+        data: T,
+        commands: &mut Commands,
+        q_block_data: &mut Query<&mut BlockData>,
+        q_data: &Query<(), With<T>>,
+    ) -> Entity {
+        if let Some(data_ent) = self.block_data(coords) {
+            let Ok(mut bd) = q_block_data.get_mut(data_ent) else {
+                panic!("Block data entity missing BlockData component!");
+            };
+
+            if !q_data.contains(data_ent) {
+                bd.increment();
+            }
+
+            commands.entity(data_ent).insert(data);
+
+            data_ent
+        } else {
+            let data_ent = commands
+                .spawn((
+                    data,
+                    BlockData {
+                        data_count: 1,
+                        identifier: BlockDataIdentifier {
+                            block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords),
+                            structure_entity,
+                        },
+                    },
+                ))
+                .set_parent(chunk_entity)
+                .id();
+
+            self.block_data.insert(coords, data_ent);
+
+            data_ent
+        }
     }
 
-    /// Removes any block data associated with this block
+    /// Returns `None` if the chunk is unloaded.
     ///
-    /// Will return the data entity that was previously here, if any
-    pub fn remove_block_data(&mut self, coords: ChunkBlockCoordinate) -> Option<Entity> {
-        self.block_data.remove(&coords)
+    /// Inserts data into the block here. This differs from the
+    /// normal [`Self::insert_block_data`] in that it will call the closure
+    /// with the block data entity to create the data to insert.
+    ///
+    /// This is useful for things such as Inventories, which require the entity
+    /// that is storing them in their constructor method.
+    pub fn insert_block_data_with_entity<T: Component, F>(
+        &mut self,
+        coords: ChunkBlockCoordinate,
+        chunk_entity: Entity,
+        structure_entity: Entity,
+        create_data_closure: F,
+        commands: &mut Commands,
+        q_block_data: &mut Query<&mut BlockData>,
+        q_data: &Query<(), With<T>>,
+    ) -> Entity
+    where
+        F: FnOnce(Entity) -> T,
+    {
+        if let Some(data_ent) = self.block_data(coords) {
+            let data = create_data_closure(data_ent);
+
+            let Ok(mut bd) = q_block_data.get_mut(data_ent) else {
+                panic!("Block data entity missing BlockData component!");
+            };
+
+            if !q_data.contains(data_ent) {
+                bd.increment();
+            }
+
+            commands.entity(data_ent).insert(data);
+
+            data_ent
+        } else {
+            let mut ecmds = commands.spawn(BlockData {
+                data_count: 1,
+                identifier: BlockDataIdentifier {
+                    block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords),
+                    structure_entity,
+                },
+            });
+
+            ecmds.set_parent(chunk_entity);
+
+            let data_ent = ecmds.id();
+
+            let data = create_data_closure(data_ent);
+
+            ecmds.insert(data);
+
+            self.block_data.insert(coords, data_ent);
+
+            data_ent
+        }
+    }
+
+    /// Queries this block's data. Returns `None` if the requested query failed or if no block data exists for this block.
+    pub fn query_block_data<'a, Q, F>(&'a self, coords: ChunkBlockCoordinate, query: &'a Query<Q, F>) -> Option<ROQueryItem<'a, Q>>
+    where
+        F: QueryFilter,
+        Q: QueryData,
+    {
+        let data_ent = self.block_data(coords)?;
+
+        query.get(data_ent).ok()
+    }
+
+    /// Queries this block's data mutibly. Returns `None` if the requested query failed or if no block data exists for this block.
+    pub fn query_mut<'a, Q, F>(&'a self, coords: ChunkBlockCoordinate, query: &'a mut Query<Q, F>) -> Option<QueryItem<'a, Q>>
+    where
+        F: QueryFilter,
+        Q: QueryData,
+    {
+        let data_ent = self.block_data(coords)?;
+
+        query.get_mut(data_ent).ok()
+    }
+
+    /// Removes this type of data from the block here. Returns the entity that stores this blocks data
+    /// if it will still exist.
+    pub fn remove_block_data<T: Component>(
+        &mut self,
+        coords: ChunkBlockCoordinate,
+        commands: &mut Commands,
+        q_block_data: &mut Query<&mut BlockData>,
+        q_data: Query<(), With<T>>,
+    ) -> Option<Entity> {
+        let ent = self.block_data(coords)?;
+
+        let Ok(mut bd) = q_block_data.get_mut(ent) else {
+            panic!("Block data entity missing BlockData component!");
+        };
+
+        if q_data.contains(ent) {
+            bd.decrement();
+        }
+
+        if bd.is_empty() {
+            commands.entity(ent).insert(NeedsDespawned);
+            self.block_data.remove(&coords);
+            None
+        } else {
+            commands.entity(ent).remove::<T>();
+
+            Some(ent)
+        }
     }
 
     /// Returns all the block data entities this chunk has.
