@@ -230,7 +230,7 @@ impl ItemStack {
             if let Some(mut ecmds) = commands.get_entity(data_ent) {
                 ecmds.insert(data).log_components();
             } else {
-                error!("Invalid itemstack entity - {data_ent:?}");
+                panic!("Invalid itemstack entity - {data_ent:?}");
             }
 
             data_ent

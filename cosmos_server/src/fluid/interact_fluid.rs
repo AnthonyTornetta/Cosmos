@@ -200,14 +200,17 @@ fn on_interact_with_tank(
         };
 
         let Some(mut stored_fluid_item) = is.query_itemstack_data_mut(&mut q_fluid_data_is) else {
+            println!("Stored fluid block");
             let Some(mut stored_fluid_block) = structure.query_block_data_mut(coords, &mut q_stored_fluid_block) else {
                 continue;
             };
 
-            if fluid_holder.convert_to_item_id() != is.item_id() {
+            println!("Fluid holder not same!");
+            if fluid_holder.convert_to_item_id() == is.item_id() {
                 continue;
             }
 
+            println!("Decreased qty");
             if inventory.decrease_quantity_at(slot, 1, &mut commands) != 0 {
                 continue;
             }
@@ -215,6 +218,7 @@ fn on_interact_with_tank(
             let item = items.from_numeric_id(fluid_holder.convert_to_item_id());
 
             let fluid_data = if stored_fluid_block.fluid_stored <= fluid_holder.max_capacity() {
+                println!("Filled to not max cap");
                 let block_data = *stored_fluid_block;
 
                 structure.remove_block_data::<StoredBlockFluid>(coords, &mut commands, &mut q_block_data, &q_has_stored_fluid);
@@ -224,6 +228,7 @@ fn on_interact_with_tank(
                     fluid_stored: block_data.fluid_stored,
                 }
             } else {
+                println!("Filled to max cap");
                 stored_fluid_block.fluid_stored -= fluid_holder.max_capacity();
 
                 FluidItemData::Filled {
@@ -264,13 +269,29 @@ fn on_interact_with_tank(
             }
             FluidItemData::Filled { fluid_id, fluid_stored } => {
                 if !ev.alternate {
-                    // Insert fluid into tank
-                    let data = StoredBlockFluid {
-                        fluid_stored: tank_block.max_capacity().min(fluid_stored),
-                        fluid_id,
-                    };
+                    let cur_fluid = structure.query_block_data(coords, &q_stored_fluid_block);
 
-                    let left_over = data.fluid_stored - fluid_stored;
+                    // Insert fluid into tank
+                    let (data, left_over) = if let Some(cur_fluid) = cur_fluid {
+                        if fluid_id != cur_fluid.fluid_id {
+                            continue;
+                        }
+
+                        let prev_amount = cur_fluid.fluid_stored;
+
+                        let data = StoredBlockFluid {
+                            fluid_stored: tank_block.max_capacity().min(fluid_stored + cur_fluid.fluid_stored),
+                            fluid_id,
+                        };
+
+                        (data, fluid_stored - (data.fluid_stored - prev_amount))
+                    } else {
+                        let data = StoredBlockFluid {
+                            fluid_stored: tank_block.max_capacity().min(fluid_stored),
+                            fluid_id,
+                        };
+                        (data, fluid_stored - data.fluid_stored)
+                    };
 
                     if left_over > 0 {
                         *stored_fluid_item = FluidItemData::Filled {

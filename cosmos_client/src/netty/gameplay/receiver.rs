@@ -791,11 +791,7 @@ fn get_entity_identifier_entity(
             // If de is none, the inventory was already synced from the server, so the itemstack has no data pointer. Thus,
             // all we have to do is despawn the data entity.
             if de.is_none() {
-                if let Some(client_data_entity) = network_mapping.client_from_server(&server_data_entity) {
-                    Some(client_data_entity)
-                } else {
-                    None
-                }
+                network_mapping.client_from_server(&server_data_entity)
             } else {
                 de
             }

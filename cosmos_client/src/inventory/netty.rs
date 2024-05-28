@@ -2,20 +2,19 @@
 
 use bevy::{
     ecs::query::With,
-    hierarchy::BuildChildren,
     log::warn,
     prelude::{in_state, App, Commands, Entity, IntoSystemConfigs, Query, Res, ResMut, Update},
 };
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
-    block::data::{BlockData, BlockDataIdentifier},
+    block::data::BlockData,
     ecs::NeedsDespawned,
     inventory::{
         netty::{InventoryIdentifier, ServerInventoryMessages},
         Inventory,
     },
     netty::{client::LocalPlayer, cosmos_encoder, sync::mapping::NetworkMapping, NettyChannelServer},
-    structure::{coordinates::ChunkCoordinate, structure_block::StructureBlock, Structure},
+    structure::Structure,
 };
 
 use crate::state::game_state::GameState;
