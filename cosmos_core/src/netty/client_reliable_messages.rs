@@ -59,6 +59,8 @@ pub enum ClientReliableMessages {
         block: Option<StructureBlockPair>,
         /// Includes blocks normally ignored by most interaction checks
         block_including_fluids: StructureBlockPair,
+        /// Sent if the alternate interaction should be used
+        alternate: bool,
     },
     /// Asks the server to create a ship
     CreateShip {

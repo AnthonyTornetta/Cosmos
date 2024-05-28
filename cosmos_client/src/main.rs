@@ -40,10 +40,7 @@ use bevy::window::WindowMode;
 use bevy_hanabi::HanabiPlugin;
 use bevy_mod_debugdump::schedule_graph;
 use bevy_obj::ObjPlugin;
-use bevy_rapier3d::{
-    prelude::{RapierConfiguration, TimestepMode},
-    render::RapierDebugRenderPlugin,
-};
+use bevy_rapier3d::prelude::{RapierConfiguration, TimestepMode};
 use bevy_renet::transport::NetcodeClientPlugin;
 use bevy_renet::RenetClientPlugin;
 use clap::{arg, Parser};
@@ -132,7 +129,7 @@ fn main() {
             GameState::Playing,
         ))
         .add_plugins((RenetClientPlugin, NetcodeClientPlugin, ObjPlugin, HanabiPlugin))
-        .add_plugins(RapierDebugRenderPlugin::default())
+        // .add_plugins(RapierDebugRenderPlugin::default())
         .add_systems(OnEnter(GameState::Connecting), connect::establish_connection)
         .add_systems(Update, connect::wait_for_connection.run_if(in_state(GameState::Connecting)))
         .add_systems(Update, connect::wait_for_done_loading.run_if(in_state(GameState::LoadingWorld)));

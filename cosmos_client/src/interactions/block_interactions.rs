@@ -310,6 +310,7 @@ pub(crate) fn process_player_interaction(
                     structure_block: looked_at.block,
                     structure_entity: structure.get_entity().unwrap(),
                 }),
+                alternate: input_handler.check_pressed(CosmosInputs::AlternateInteraction),
             });
         }
     }

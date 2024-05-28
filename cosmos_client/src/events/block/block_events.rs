@@ -100,6 +100,7 @@ fn handle_block_interact(
                             })
                     })
                     .flatten(),
+                alternate: ev.alternate,
             }),
         );
     }

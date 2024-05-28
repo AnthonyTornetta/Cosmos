@@ -192,7 +192,7 @@ impl Identifiable for FluidTankBlock {
 #[derive(Component, Clone, Copy, Serialize, Deserialize, Reflect)]
 pub struct StoredBlockFluid {
     fluid_id: u16,
-    fluid_amount: f32,
+    fluid_stored: f32,
 }
 
 fn on_interact_with_tank(
@@ -242,16 +242,55 @@ fn on_interact_with_tank(
         };
 
         let Some(mut stored_fluid_item) = is.query_itemstack_data_mut(&mut q_fluid_data_is) else {
+            let Some(mut stored_fluid_block) = structure.query_block_data_mut(coords, &mut q_stored_fluid_block) else {
+                continue;
+            };
+
+            if fluid_holder.convert_to_item_id() != is.item_id() {
+                continue;
+            }
+
+            if inventory.decrease_quantity_at(slot, 1, &mut commands) != 0 {
+                continue;
+            }
+
+            let item = items.from_numeric_id(fluid_holder.convert_to_item_id());
+
+            let fluid_data = if stored_fluid_block.fluid_stored <= fluid_holder.max_capacity {
+                let block_data = *stored_fluid_block;
+
+                structure.remove_block_data::<StoredBlockFluid>(coords, &mut commands, &mut q_block_data, &q_has_stored_fluid);
+
+                FluidItemData::Filled {
+                    fluid_id: block_data.fluid_id,
+                    fluid_stored: block_data.fluid_stored,
+                }
+            } else {
+                stored_fluid_block.fluid_stored -= fluid_holder.max_capacity;
+
+                FluidItemData::Filled {
+                    fluid_id: stored_fluid_block.fluid_id,
+                    fluid_stored: fluid_holder.max_capacity,
+                }
+            };
+
+            // Attempt to insert item into its original spot, if that fails try to insert it anywhere
+            if inventory.insert_item_with_data_at(slot, item, 1, &mut commands, fluid_data) != 0 {
+                if inventory.insert_item_with_data(item, 1, &mut commands, fluid_data).1.is_none() {
+                    info!("TODO: Throw item because it doesn't fit in inventory");
+                }
+            }
+
             continue;
         };
 
         match *stored_fluid_item {
             FluidItemData::Empty => {
                 if let Some(mut stored_fluid_block) = structure.query_block_data_mut(coords, &mut q_stored_fluid_block) {
-                    if stored_fluid_block.fluid_amount <= fluid_holder.max_capacity {
+                    if stored_fluid_block.fluid_stored <= fluid_holder.max_capacity {
                         *stored_fluid_item = FluidItemData::Filled {
                             fluid_id: stored_fluid_block.fluid_id,
-                            fluid_stored: stored_fluid_block.fluid_amount,
+                            fluid_stored: stored_fluid_block.fluid_stored,
                         };
 
                         structure.remove_block_data::<StoredBlockFluid>(coords, &mut commands, &mut q_block_data, &q_has_stored_fluid);
@@ -261,45 +300,19 @@ fn on_interact_with_tank(
                             fluid_stored: fluid_holder.max_capacity,
                         };
 
-                        stored_fluid_block.fluid_amount -= fluid_holder.max_capacity;
+                        stored_fluid_block.fluid_stored -= fluid_holder.max_capacity;
                     }
                 }
             }
             FluidItemData::Filled { fluid_id, fluid_stored } => {
-                if let Some(mut stored_fluid_block) = structure.query_block_data_mut(coords, &mut q_stored_fluid_block) {
-                    // Put fluid into item
-                    if stored_fluid_block.fluid_id != fluid_id {
-                        continue;
-                    }
-
-                    if stored_fluid_block.fluid_amount <= fluid_holder.max_capacity - fluid_stored {
-                        *stored_fluid_item = FluidItemData::Filled {
-                            fluid_id,
-                            fluid_stored: fluid_stored + stored_fluid_block.fluid_amount,
-                        };
-
-                        structure.remove_block_data::<StoredBlockFluid>(coords, &mut commands, &mut q_block_data, &q_has_stored_fluid);
-                    } else {
-                        let delta = fluid_holder.max_capacity - fluid_stored;
-
-                        // Avoid change detection if not needed
-                        if delta != 0.0 {
-                            *stored_fluid_item = FluidItemData::Filled {
-                                fluid_id,
-                                fluid_stored: fluid_holder.max_capacity,
-                            };
-
-                            stored_fluid_block.fluid_amount -= delta;
-                        }
-                    }
-                } else {
+                if !ev.alternate {
                     // Insert fluid into tank
                     let data = StoredBlockFluid {
-                        fluid_amount: tank_block.max_capacity.min(fluid_stored),
+                        fluid_stored: tank_block.max_capacity.min(fluid_stored),
                         fluid_id,
                     };
 
-                    let left_over = data.fluid_amount - fluid_stored;
+                    let left_over = data.fluid_stored - fluid_stored;
 
                     if left_over > 0.0 {
                         *stored_fluid_item = FluidItemData::Filled {
@@ -325,6 +338,32 @@ fn on_interact_with_tank(
                             if inventory.insert_item(item, 1, &mut commands, &needs_data).1.is_none() {
                                 info!("TODO: Throw item because it doesn't fit in inventory");
                             }
+                        }
+                    }
+                } else if let Some(mut stored_fluid_block) = structure.query_block_data_mut(coords, &mut q_stored_fluid_block) {
+                    // Put fluid into item
+                    if stored_fluid_block.fluid_id != fluid_id {
+                        continue;
+                    }
+
+                    if stored_fluid_block.fluid_stored <= fluid_holder.max_capacity - fluid_stored {
+                        *stored_fluid_item = FluidItemData::Filled {
+                            fluid_id,
+                            fluid_stored: fluid_stored + stored_fluid_block.fluid_stored,
+                        };
+
+                        structure.remove_block_data::<StoredBlockFluid>(coords, &mut commands, &mut q_block_data, &q_has_stored_fluid);
+                    } else {
+                        let delta = fluid_holder.max_capacity - fluid_stored;
+
+                        // Avoid change detection if not needed
+                        if delta != 0.0 {
+                            *stored_fluid_item = FluidItemData::Filled {
+                                fluid_id,
+                                fluid_stored: fluid_holder.max_capacity,
+                            };
+
+                            stored_fluid_block.fluid_stored -= delta;
                         }
                     }
                 }

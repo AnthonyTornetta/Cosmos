@@ -51,6 +51,11 @@ pub struct BlockInteractEvent {
     pub block_including_fluids: StructureBlockPair,
     /// The player that interacted with the block
     pub interactor: Entity,
+    /// If this is true, the player was crouching while interacting with this block
+    ///
+    /// If the block being interacted with has two modes of interaction, this should be used to trigger
+    /// the second mode.
+    pub alternate: bool,
 }
 
 /// This is sent whenever a player places a block

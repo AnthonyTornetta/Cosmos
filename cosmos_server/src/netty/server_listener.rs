@@ -183,11 +183,13 @@ fn server_listen_messages(
                 ClientReliableMessages::InteractWithBlock {
                     block,
                     block_including_fluids,
+                    alternate,
                 } => {
                     block_interact_event.send(BlockInteractEvent {
                         block,
                         block_including_fluids,
                         interactor: lobby.player_from_id(client_id).unwrap(),
+                        alternate,
                     });
                 }
                 ClientReliableMessages::CreateShip { name: _name } => {
