@@ -3,6 +3,8 @@ use super::{
     register_component, ClientAuthority, ComponentEntityIdentifier, ComponentReplicationMessage, ComponentSyncingSet,
     GotComponentToRemoveEvent, SyncType, SyncableComponent, SyncedComponentId,
 };
+use crate::inventory::itemstack::ItemStackData;
+use crate::inventory::Inventory;
 use crate::netty::client::LocalPlayer;
 use crate::netty::sync::GotComponentToSyncEvent;
 use crate::netty::NettyChannelServer;
@@ -17,7 +19,7 @@ use bevy::ecs::query::With;
 use bevy::ecs::removal_detection::RemovedComponents;
 use bevy::ecs::schedule::common_conditions::resource_exists;
 use bevy::ecs::schedule::{IntoSystemConfigs, IntoSystemSetConfigs};
-use bevy::ecs::system::Commands;
+use bevy::ecs::system::{Commands, Resource};
 use bevy::log::warn;
 use bevy::{
     app::{App, Startup, Update},
@@ -93,7 +95,7 @@ fn client_remove_component<T: SyncableComponent>(
 
 fn client_send_components<T: SyncableComponent>(
     id_registry: Res<Registry<SyncedComponentId>>,
-    q_changed_component: Query<(Entity, &T, Option<&StructureSystem>), Changed<T>>,
+    q_changed_component: Query<(Entity, &T, Option<&StructureSystem>, Option<&ItemStackData>), Changed<T>>,
     mut client: ResMut<RenetClient>,
     mapping: Res<NetworkMapping>,
     q_local_player: Query<(), With<LocalPlayer>>,
@@ -115,75 +117,64 @@ fn client_send_components<T: SyncableComponent>(
         return;
     };
 
-    q_changed_component.iter().for_each(|(entity, component, structure_system)| {
-        let entity_identifier = match structure_system {
-            None => mapping
-                .server_from_client(&entity)
-                .map(|e| (ComponentEntityIdentifier::Entity(e), entity)),
-            Some(structure_system) => mapping.server_from_client(&structure_system.structure_entity()).map(|e| {
-                (
-                    ComponentEntityIdentifier::StructureSystem {
-                        structure_entity: e,
-                        id: structure_system.id(),
-                    },
-                    structure_system.structure_entity(),
-                )
-            }),
-        };
+    q_changed_component
+        .iter()
+        .for_each(|(entity, component, structure_system, is_data)| {
+            let entity_identifier = compute_entity_identifier(structure_system, &mapping, is_data, entity);
 
-        let Some((entity_identifier, authority_entity)) = entity_identifier else {
-            warn!("Invalid entity found - {entity_identifier:?} - no match on server entities!");
-            return;
-        };
-
-        // The server checks this anyway, but save the client+server some bandwidth
-        match authority {
-            ClientAuthority::Anything => {}
-            ClientAuthority::Piloting => {
-                let Ok(piloting) = q_local_piloting.get_single() else {
-                    return;
-                };
-
-                if piloting.entity != authority_entity {
-                    return;
-                }
-            }
-            ClientAuthority::Themselves => {
-                if !q_local_player.contains(entity) {
-                    return;
-                }
-            }
-        }
-
-        let raw_data = if T::needs_entity_conversion() {
-            let mapped = component.clone().convert_entities_client_to_server(&mapping);
-
-            let Some(mapped) = mapped else {
+            let Some((entity_identifier, authority_entity)) = entity_identifier else {
+                warn!("Invalid entity found - {entity_identifier:?} - no match on server entities!");
                 return;
             };
 
-            bincode::serialize(&mapped)
-        } else {
-            bincode::serialize(component)
-        }
-        .expect("Failed to serialize component.");
+            // The server checks this anyway, but save the client+server some bandwidth
+            match authority {
+                ClientAuthority::Anything => {}
+                ClientAuthority::Piloting => {
+                    let Ok(piloting) = q_local_piloting.get_single() else {
+                        return;
+                    };
 
-        client.send_message(
-            NettyChannelClient::ComponentReplication,
-            cosmos_encoder::serialize(&ComponentReplicationMessage::ComponentReplication {
-                component_id: id.id(),
-                entity_identifier,
-                // Avoid double compression using bincode instead of cosmos_encoder.
-                raw_data,
-            }),
-        )
-    });
+                    if piloting.entity != authority_entity {
+                        return;
+                    }
+                }
+                ClientAuthority::Themselves => {
+                    if !q_local_player.contains(entity) {
+                        return;
+                    }
+                }
+            }
+
+            let raw_data = if T::needs_entity_conversion() {
+                let mapped = component.clone().convert_entities_client_to_server(&mapping);
+
+                let Some(mapped) = mapped else {
+                    return;
+                };
+
+                bincode::serialize(&mapped)
+            } else {
+                bincode::serialize(component)
+            }
+            .expect("Failed to serialize component.");
+
+            client.send_message(
+                NettyChannelClient::ComponentReplication,
+                cosmos_encoder::serialize(&ComponentReplicationMessage::ComponentReplication {
+                    component_id: id.id(),
+                    entity_identifier,
+                    // Avoid double compression using bincode instead of cosmos_encoder.
+                    raw_data,
+                }),
+            )
+        });
 }
 
 fn client_send_removed_components<T: SyncableComponent>(
     id_registry: Res<Registry<SyncedComponentId>>,
     mut removed_components: RemovedComponents<T>,
-    q_structure_system: Query<Option<&StructureSystem>>,
+    q_entity_identifier: Query<(Option<&StructureSystem>, Option<&ItemStackData>)>,
     mut client: ResMut<RenetClient>,
     mapping: Res<NetworkMapping>,
     q_local_player: Query<(), With<LocalPlayer>>,
@@ -206,24 +197,11 @@ fn client_send_removed_components<T: SyncableComponent>(
     };
 
     for removed_ent in removed_components.read() {
-        let Ok(structure_system) = q_structure_system.get(removed_ent) else {
+        let Ok((structure_system, is_data)) = q_entity_identifier.get(removed_ent) else {
             continue;
         };
 
-        let entity_identifier = match structure_system {
-            None => mapping
-                .server_from_client(&removed_ent)
-                .map(|e| (ComponentEntityIdentifier::Entity(e), removed_ent)),
-            Some(structure_system) => mapping.server_from_client(&structure_system.structure_entity()).map(|e| {
-                (
-                    ComponentEntityIdentifier::StructureSystem {
-                        structure_entity: e,
-                        id: structure_system.id(),
-                    },
-                    structure_system.structure_entity(),
-                )
-            }),
-        };
+        let entity_identifier = compute_entity_identifier(structure_system, &mapping, is_data, removed_ent);
 
         let Some((entity_identifier, authority_entity)) = entity_identifier else {
             warn!("Invalid entity found - {entity_identifier:?} - no match on server entities!");
@@ -259,63 +237,154 @@ fn client_send_removed_components<T: SyncableComponent>(
     }
 }
 
-pub(super) fn client_receive_components(
+fn compute_entity_identifier(
+    structure_system: Option<&StructureSystem>,
+    mapping: &NetworkMapping,
+    is_data: Option<&ItemStackData>,
+    entity: Entity,
+) -> Option<(ComponentEntityIdentifier, Entity)> {
+    if let Some(structure_system) = structure_system {
+        mapping.server_from_client(&structure_system.structure_entity()).map(|e| {
+            (
+                ComponentEntityIdentifier::StructureSystem {
+                    structure_entity: e,
+                    id: structure_system.id(),
+                },
+                structure_system.structure_entity(),
+            )
+        })
+    } else if let Some(is_data) = is_data {
+        mapping.server_from_client(&is_data.inventory_pointer.0).map(|inv_e| {
+            (
+                ComponentEntityIdentifier::ItemData {
+                    inventory_entity: inv_e,
+                    item_slot: is_data.inventory_pointer.1,
+                },
+                is_data.inventory_pointer.0,
+            )
+        })
+    } else {
+        mapping
+            .server_from_client(&entity)
+            .map(|e| (ComponentEntityIdentifier::Entity(e), entity))
+    }
+}
+
+#[derive(Resource, Default)]
+struct WaitingData(Vec<ComponentReplicationMessage>);
+
+fn client_receive_components(
     mut client: ResMut<RenetClient>,
     mut ev_writer_sync: EventWriter<GotComponentToSyncEvent>,
     mut ev_writer_remove: EventWriter<GotComponentToRemoveEvent>,
     q_structure_systems: Query<&StructureSystems>,
+    mut q_inventory: Query<&mut Inventory>,
     mut network_mapping: ResMut<NetworkMapping>,
     mut commands: Commands,
+    mut waiting_data: ResMut<WaitingData>,
 ) {
+    let mut v = Vec::with_capacity(waiting_data.0.len());
+    std::mem::swap(&mut v, &mut waiting_data.0);
+    for msg in v {
+        if let Some(msg) = handle_incoming_component_data(
+            msg,
+            &mut network_mapping,
+            &q_structure_systems,
+            &mut q_inventory,
+            &mut commands,
+            &mut ev_writer_sync,
+            &mut ev_writer_remove,
+        ) {
+            waiting_data.0.push(msg);
+        }
+    }
+
     while let Some(message) = client.receive_message(NettyChannelServer::ComponentReplication) {
         let msg: ComponentReplicationMessage =
             cosmos_encoder::deserialize(&message).expect("Failed to parse component replication message from server!");
 
-        match msg {
-            ComponentReplicationMessage::ComponentReplication {
+        if let Some(msg) = handle_incoming_component_data(
+            msg,
+            &mut network_mapping,
+            &q_structure_systems,
+            &mut q_inventory,
+            &mut commands,
+            &mut ev_writer_sync,
+            &mut ev_writer_remove,
+        ) {
+            waiting_data.0.push(msg);
+        }
+    }
+}
+
+fn handle_incoming_component_data(
+    msg: ComponentReplicationMessage,
+    network_mapping: &mut ResMut<NetworkMapping>,
+    q_structure_systems: &Query<&StructureSystems, ()>,
+    q_inventory: &mut Query<&mut Inventory, ()>,
+    commands: &mut Commands,
+    ev_writer_sync: &mut EventWriter<GotComponentToSyncEvent>,
+    ev_writer_remove: &mut EventWriter<GotComponentToRemoveEvent>,
+) -> Option<ComponentReplicationMessage> {
+    match msg {
+        ComponentReplicationMessage::ComponentReplication {
+            component_id,
+            entity_identifier,
+            raw_data,
+        } => {
+            let (entity, authority_entity) =
+                match get_entity_identifier_info(entity_identifier, network_mapping, q_structure_systems, q_inventory, commands) {
+                    Some(value) => value,
+                    None => {
+                        return Some(ComponentReplicationMessage::ComponentReplication {
+                            component_id,
+                            entity_identifier,
+                            raw_data,
+                        })
+                    }
+                };
+
+            ev_writer_sync.send(GotComponentToSyncEvent {
+                // `client_id` only matters on the server-side, but I don't feel like fighting with
+                // my LSP to have this variable only show up in the server project. Thus, I fill it with
+                // dummy data.
+                client_id: ClientId::from_raw(0),
                 component_id,
-                entity_identifier,
+                entity,
+                // This also only matters on server-side, but once again I don't care
+                authority_entity,
                 raw_data,
-            } => {
-                let (entity, authority_entity) =
-                    match get_entity_identifier_info(entity_identifier, &mut network_mapping, &q_structure_systems, &mut commands) {
-                        Some(value) => value,
-                        None => continue,
-                    };
+            });
 
-                ev_writer_sync.send(GotComponentToSyncEvent {
-                    // `client_id` only matters on the server-side, but I don't feel like fighting with
-                    // my LSP to have this variable only show up in the server project. Thus, I fill it with
-                    // dummy data.
-                    client_id: ClientId::from_raw(0),
-                    component_id,
-                    entity,
-                    // This also only matters on server-side, but once again I don't care
-                    authority_entity,
-                    raw_data,
-                });
-            }
-            ComponentReplicationMessage::RemovedComponent {
+            None
+        }
+        ComponentReplicationMessage::RemovedComponent {
+            component_id,
+            entity_identifier,
+        } => {
+            let (entity, authority_entity) =
+                match get_entity_identifier_info(entity_identifier, network_mapping, q_structure_systems, q_inventory, commands) {
+                    Some(value) => value,
+                    None => {
+                        return Some(ComponentReplicationMessage::RemovedComponent {
+                            component_id,
+                            entity_identifier,
+                        })
+                    }
+                };
+
+            ev_writer_remove.send(GotComponentToRemoveEvent {
+                // `client_id` only matters on the server-side, but I don't feel like fighting with
+                // my LSP to have this variable only show up in the server project. Thus, I fill it with
+                // dummy data.
+                client_id: ClientId::from_raw(0),
                 component_id,
-                entity_identifier,
-            } => {
-                let (entity, authority_entity) =
-                    match get_entity_identifier_info(entity_identifier, &mut network_mapping, &q_structure_systems, &mut commands) {
-                        Some(value) => value,
-                        None => continue,
-                    };
+                entity,
+                // This also only matters on server-side, but once again I don't care
+                authority_entity,
+            });
 
-                ev_writer_remove.send(GotComponentToRemoveEvent {
-                    // `client_id` only matters on the server-side, but I don't feel like fighting with
-                    // my LSP to have this variable only show up in the server project. Thus, I fill it with
-                    // dummy data.
-                    client_id: ClientId::from_raw(0),
-                    component_id,
-                    entity,
-                    // This also only matters on server-side, but once again I don't care
-                    authority_entity,
-                });
-            }
+            None
         }
     }
 }
@@ -324,6 +393,7 @@ fn get_entity_identifier_info(
     entity_identifier: ComponentEntityIdentifier,
     network_mapping: &mut ResMut<NetworkMapping>,
     q_structure_systems: &Query<&StructureSystems, ()>,
+    q_inventory: &mut Query<&mut Inventory>,
     commands: &mut Commands,
 ) -> Option<(Entity, Entity)> {
     let identifier_entities = match entity_identifier {
@@ -337,6 +407,22 @@ fn get_entity_identifier_info(
                 Some((system_entity, structure_entity))
             })
         }
+        ComponentEntityIdentifier::ItemData {
+            inventory_entity,
+            item_slot,
+        } => network_mapping.client_from_server(&inventory_entity).and_then(|inventory_entity| {
+            println!("Got here - {inventory_entity:?}");
+            let mut inventory = q_inventory.get_mut(inventory_entity).ok()?;
+            println!("Got inventory!");
+
+            // This creates a data entity if it doesn't exist and gets the data entity.
+            // TODO: Make this a method to make this less hacky?
+            let maybe_data_ent = inventory.insert_itemstack_data(item_slot as usize, (), commands);
+
+            println!("{maybe_data_ent:?}");
+
+            maybe_data_ent.map(|x| (x, x))
+        }),
     };
 
     if let Some(identifier_entities) = identifier_entities {
@@ -354,6 +440,16 @@ fn get_entity_identifier_info(
             warn!(
                     "Got structure system synced component, but no valid structure exists for it! ({structure_entity:?}, {id:?}). In the future, this should try again once we receive the correct structure from the server."
                 );
+
+            return None;
+        }
+        ComponentEntityIdentifier::ItemData {
+            inventory_entity,
+            item_slot,
+        } => {
+            warn!(
+                "Got itemdata synced component, but no valid inventory OR itemstack exists for it! ({inventory_entity:?}, {item_slot}). In the future, this should try again once we receive the correct inventory from the server."
+            );
 
             return None;
         }
@@ -379,7 +475,8 @@ pub(super) fn setup_client(app: &mut App) {
         client_receive_components
             .run_if(resource_exists::<RenetClient>)
             .run_if(resource_exists::<NetworkMapping>),
-    );
+    )
+    .init_resource::<WaitingData>();
 }
 
 #[allow(unused)] // This function is used, but the LSP can't figure that out.

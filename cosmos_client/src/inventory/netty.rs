@@ -37,9 +37,11 @@ fn sync(
         let msg: ServerInventoryMessages = cosmos_encoder::deserialize(&message).expect("Failed to deserialize server inventory message!");
 
         match msg {
-            ServerInventoryMessages::UpdateInventory { inventory, owner } => match owner {
+            ServerInventoryMessages::UpdateInventory { mut inventory, owner } => match owner {
                 InventoryIdentifier::Entity(owner) => {
                     if let Some(client_entity) = network_mapping.client_from_server(&owner) {
+                        inventory.set_self_entity(client_entity, &mut commands);
+
                         if let Some(mut ecmds) = commands.get_entity(client_entity) {
                             ecmds.insert(inventory);
                         }

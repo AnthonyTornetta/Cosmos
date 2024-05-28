@@ -3,6 +3,7 @@ use super::{
     register_component, ClientAuthority, ComponentEntityIdentifier, ComponentReplicationMessage, ComponentSyncingSet, SyncType,
     SyncableComponent, SyncedComponentId,
 };
+use crate::inventory::itemstack::ItemStackData;
 use crate::netty::server::ServerLobby;
 use crate::netty::sync::{GotComponentToRemoveEvent, GotComponentToSyncEvent};
 use crate::netty::{cosmos_encoder, NettyChannelClient, NettyChannelServer};
@@ -158,7 +159,7 @@ fn server_deserialize_component<T: SyncableComponent>(
 
 fn server_send_component<T: SyncableComponent>(
     id_registry: Res<Registry<SyncedComponentId>>,
-    q_changed_component: Query<(Entity, &T, Option<&StructureSystem>), Changed<T>>,
+    q_changed_component: Query<(Entity, &T, Option<&StructureSystem>, Option<&ItemStackData>), Changed<T>>,
     mut server: ResMut<RenetServer>,
 ) {
     if q_changed_component.is_empty() {
@@ -170,31 +171,38 @@ fn server_send_component<T: SyncableComponent>(
         return;
     };
 
-    q_changed_component.iter().for_each(|(entity, component, structure_system)| {
-        let entity_identifier = if let Some(structure_system) = structure_system {
-            ComponentEntityIdentifier::StructureSystem {
-                structure_entity: structure_system.structure_entity(),
-                id: structure_system.id(),
-            }
-        } else {
-            ComponentEntityIdentifier::Entity(entity)
-        };
+    q_changed_component
+        .iter()
+        .for_each(|(entity, component, structure_system, is_data)| {
+            let entity_identifier = if let Some(structure_system) = structure_system {
+                ComponentEntityIdentifier::StructureSystem {
+                    structure_entity: structure_system.structure_entity(),
+                    id: structure_system.id(),
+                }
+            } else if let Some(is_data) = is_data {
+                ComponentEntityIdentifier::ItemData {
+                    inventory_entity: is_data.inventory_pointer.0,
+                    item_slot: is_data.inventory_pointer.1,
+                }
+            } else {
+                ComponentEntityIdentifier::Entity(entity)
+            };
 
-        server.broadcast_message(
-            NettyChannelServer::ComponentReplication,
-            cosmos_encoder::serialize(&ComponentReplicationMessage::ComponentReplication {
-                component_id: id.id(),
-                entity_identifier,
-                // Avoid double compression using bincode instead of cosmos_encoder.
-                raw_data: bincode::serialize(component).expect("Failed to serialize component."),
-            }),
-        );
-    });
+            server.broadcast_message(
+                NettyChannelServer::ComponentReplication,
+                cosmos_encoder::serialize(&ComponentReplicationMessage::ComponentReplication {
+                    component_id: id.id(),
+                    entity_identifier,
+                    // Avoid double compression using bincode instead of cosmos_encoder.
+                    raw_data: bincode::serialize(component).expect("Failed to serialize component."),
+                }),
+            );
+        });
 }
 
 fn server_sync_removed_components<T: SyncableComponent>(
     mut removed_components: RemovedComponents<T>,
-    q_structure_system: Query<Option<&StructureSystem>>,
+    q_entity_identifier: Query<(Option<&StructureSystem>, Option<&ItemStackData>)>,
     id_registry: Res<Registry<SyncedComponentId>>,
     mut server: ResMut<RenetServer>,
 ) {
@@ -208,7 +216,7 @@ fn server_sync_removed_components<T: SyncableComponent>(
     };
 
     for removed_ent in removed_components.read() {
-        let Ok(structure_system) = q_structure_system.get(removed_ent) else {
+        let Ok((structure_system, is_data)) = q_entity_identifier.get(removed_ent) else {
             continue;
         };
 
@@ -216,6 +224,11 @@ fn server_sync_removed_components<T: SyncableComponent>(
             ComponentEntityIdentifier::StructureSystem {
                 structure_entity: structure_system.structure_entity(),
                 id: structure_system.id(),
+            }
+        } else if let Some(is_data) = is_data {
+            ComponentEntityIdentifier::ItemData {
+                inventory_entity: is_data.inventory_pointer.0,
+                item_slot: is_data.inventory_pointer.1,
             }
         } else {
             ComponentEntityIdentifier::Entity(removed_ent)
@@ -232,14 +245,14 @@ fn server_sync_removed_components<T: SyncableComponent>(
 }
 
 fn on_request_component<T: SyncableComponent>(
-    q_t: Query<(&T, Option<&StructureSystem>)>,
+    q_t: Query<(&T, Option<&StructureSystem>, Option<&ItemStackData>)>,
     // q_rb: Query<(&Location, &GlobalTransform, &Velocity)>,
     mut ev_reader: EventReader<RequestedEntityEvent>,
     id_registry: Res<Registry<SyncedComponentId>>,
     mut server: ResMut<RenetServer>,
 ) {
     for ev in ev_reader.read() {
-        let Ok((component, structure_system)) = q_t.get(ev.entity) else {
+        let Ok((component, structure_system, is_data)) = q_t.get(ev.entity) else {
             continue;
         };
 
@@ -252,6 +265,11 @@ fn on_request_component<T: SyncableComponent>(
             ComponentEntityIdentifier::StructureSystem {
                 structure_entity: structure_system.structure_entity(),
                 id: structure_system.id(),
+            }
+        } else if let Some(is_data) = is_data {
+            ComponentEntityIdentifier::ItemData {
+                inventory_entity: is_data.inventory_pointer.0,
+                item_slot: is_data.inventory_pointer.1,
             }
         } else {
             ComponentEntityIdentifier::Entity(ev.entity)
@@ -304,6 +322,14 @@ fn server_receive_components(
 
                             (system_entity, structure_entity)
                         }
+                        ComponentEntityIdentifier::ItemData {
+                            inventory_entity: _,
+                            item_slot: _,
+                        } => {
+                            warn!("Client-authoritiative syncing of itemdata not yet implemented");
+
+                            continue;
+                        }
                     };
 
                     ev_writer_sync.send(GotComponentToSyncEvent {
@@ -332,6 +358,14 @@ fn server_receive_components(
                             };
 
                             (system_entity, structure_entity)
+                        }
+                        ComponentEntityIdentifier::ItemData {
+                            inventory_entity: _,
+                            item_slot: _,
+                        } => {
+                            warn!("Client-authoritiative syncing of itemdata not yet implemented");
+
+                            continue;
                         }
                     };
 

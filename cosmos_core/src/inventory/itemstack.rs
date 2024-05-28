@@ -220,7 +220,7 @@ impl ItemStack {
     /// * `inventory_pointer` - If this is a part of an inventory, this should be (inventory_entity, slot).
     pub fn insert_itemstack_data<T: Bundle>(&mut self, inventory_pointer: (Entity, u32), data: T, commands: &mut Commands) -> Entity {
         if let Some(data_ent) = self.data_entity {
-            commands.entity(data_ent).insert(data);
+            commands.entity(data_ent).insert(data).log_components();
 
             data_ent
         } else {
@@ -232,6 +232,10 @@ impl ItemStack {
                     item_id: self.item_id,
                 },
             ));
+
+            ecmds.log_components();
+
+            println!("Parent: {:?}", inventory_pointer.0);
 
             ecmds.set_parent(inventory_pointer.0);
 

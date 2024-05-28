@@ -1,7 +1,6 @@
 use bevy::{
     app::{App, Update},
     ecs::{
-        component::Component,
         entity::Entity,
         event::EventReader,
         query::{With, Without},
@@ -9,11 +8,13 @@ use bevy::{
         system::{Commands, Query, Res, ResMut},
     },
     log::{error, info},
-    reflect::Reflect,
 };
 use cosmos_core::{
     block::{block_events::BlockInteractEvent, data::BlockData, Block},
-    fluid::registry::Fluid,
+    fluid::{
+        data::{FluidHolder, FluidItemData, StoredBlockFluid},
+        registry::Fluid,
+    },
     inventory::{
         held_item_slot::HeldItemSlot,
         itemstack::{ItemShouldHaveData, ItemStackData, ItemStackNeedsDataCreated, ItemStackSystemSet},
@@ -23,93 +24,10 @@ use cosmos_core::{
     registry::{create_registry, identifiable::Identifiable, Registry},
     structure::Structure,
 };
-use serde::{Deserialize, Serialize};
 
 use crate::state::GameState;
 
 const FLUID_PER_BLOCK: u32 = 1000;
-
-#[derive(Clone, Debug)]
-/// This item can hold fluids
-pub struct FluidHolder {
-    id: u16,
-    /// Should match item's id
-    unlocalized_name: String,
-
-    /// The item this should convert to
-    convert_to_item: u16,
-    convert_from_item: u16,
-
-    max_capacity: u32,
-}
-
-impl FluidHolder {
-    /// Indicates this item can store fluids.
-    ///
-    /// * `item` - The item that can store fluids
-    /// * `max_capacity` - The maximum amount of fluid this item can hold
-    ///
-    /// Many items will swap between filled & unfilled forms, if this is the case, the
-    /// convert_to and convert_from fields can be of use. If this is not needed, simply make
-    /// these the same item as the `item` field.
-    ///
-    /// * `convert_to` - When fluid is attempted to be added to this item, this item will turn into the item provided
-    /// here.
-    /// * `convert_from` - If this item should turn into another item when empty, provide that item here.
-    pub fn new(item: &Item, convert_to: &Item, convert_from: &Item, max_capacity: u32) -> Self {
-        Self {
-            id: 0,
-            max_capacity,
-            convert_to_item: convert_to.id(),
-            convert_from_item: convert_from.id(),
-            unlocalized_name: item.unlocalized_name().to_owned(),
-        }
-    }
-
-    /// The item this should be when the item contains fluid.
-    ///
-    /// If this item id is the same as the current, no conversion is needed.
-    ///
-    /// For example, converting from "fluid_cell" to "fluid_cell_filled".
-    pub fn convert_to_item_id(&self) -> u16 {
-        self.convert_to_item
-    }
-
-    /// The item this should be when the item is empty.
-    ///
-    /// For example, converting from "fluid_cell_filled" to "fluid_cell".
-    pub fn convert_from_item_id(&self) -> u16 {
-        self.convert_from_item
-    }
-}
-
-impl Identifiable for FluidHolder {
-    fn id(&self) -> u16 {
-        self.id
-    }
-
-    fn set_numeric_id(&mut self, id: u16) {
-        self.id = id;
-    }
-
-    fn unlocalized_name(&self) -> &str {
-        &self.unlocalized_name
-    }
-}
-
-#[derive(Component, Debug, Reflect, Clone, Copy)]
-/// Represents the fluid an item may be storing
-pub enum FluidItemData {
-    /// The item contains no fluid
-    Empty,
-    /// The item is filled with some amount of fluid
-    Filled {
-        /// The id of the fluid stored
-        fluid_id: u16,
-        /// Total amount of fluid stored by this item
-        fluid_stored: u32,
-    },
-}
 
 fn on_interact_with_fluid(
     mut ev_reader: EventReader<BlockInteractEvent>,
@@ -161,7 +79,7 @@ fn on_interact_with_fluid(
             let item = items.from_numeric_id(fluid_holder.convert_to_item_id());
             let fluid_data = FluidItemData::Filled {
                 fluid_id: fluid.id(),
-                fluid_stored: FLUID_PER_BLOCK.min(fluid_holder.max_capacity),
+                fluid_stored: FLUID_PER_BLOCK.min(fluid_holder.max_capacity()),
             };
 
             // Attempt to insert item into its original spot, if that fails try to insert it anywhere
@@ -179,7 +97,7 @@ fn on_interact_with_fluid(
                 FluidItemData::Empty => {
                     *data = FluidItemData::Filled {
                         fluid_id: fluid.id(),
-                        fluid_stored: FLUID_PER_BLOCK.min(fluid_holder.max_capacity),
+                        fluid_stored: FLUID_PER_BLOCK.min(fluid_holder.max_capacity()),
                     }
                 }
                 FluidItemData::Filled { fluid_id, fluid_stored } => {
@@ -189,7 +107,7 @@ fn on_interact_with_fluid(
 
                     *data = FluidItemData::Filled {
                         fluid_id: fluid.id(),
-                        fluid_stored: (fluid_stored + FLUID_PER_BLOCK).min(fluid_holder.max_capacity),
+                        fluid_stored: (fluid_stored + FLUID_PER_BLOCK).min(fluid_holder.max_capacity()),
                     }
                 }
             }
@@ -233,15 +151,6 @@ impl Identifiable for FluidTankBlock {
     fn unlocalized_name(&self) -> &str {
         &self.unlocalized_name
     }
-}
-
-#[derive(Component, Clone, Copy, Serialize, Deserialize, Reflect)]
-/// The fluid stored by this block
-pub struct StoredBlockFluid {
-    /// The fluid's id
-    fluid_id: u16,
-    /// The amount stored
-    fluid_stored: u32,
 }
 
 fn on_interact_with_tank(
@@ -305,7 +214,7 @@ fn on_interact_with_tank(
 
             let item = items.from_numeric_id(fluid_holder.convert_to_item_id());
 
-            let fluid_data = if stored_fluid_block.fluid_stored <= fluid_holder.max_capacity {
+            let fluid_data = if stored_fluid_block.fluid_stored <= fluid_holder.max_capacity() {
                 let block_data = *stored_fluid_block;
 
                 structure.remove_block_data::<StoredBlockFluid>(coords, &mut commands, &mut q_block_data, &q_has_stored_fluid);
@@ -315,11 +224,11 @@ fn on_interact_with_tank(
                     fluid_stored: block_data.fluid_stored,
                 }
             } else {
-                stored_fluid_block.fluid_stored -= fluid_holder.max_capacity;
+                stored_fluid_block.fluid_stored -= fluid_holder.max_capacity();
 
                 FluidItemData::Filled {
                     fluid_id: stored_fluid_block.fluid_id,
-                    fluid_stored: fluid_holder.max_capacity,
+                    fluid_stored: fluid_holder.max_capacity(),
                 }
             };
 
@@ -336,7 +245,7 @@ fn on_interact_with_tank(
         match *stored_fluid_item {
             FluidItemData::Empty => {
                 if let Some(mut stored_fluid_block) = structure.query_block_data_mut(coords, &mut q_stored_fluid_block) {
-                    if stored_fluid_block.fluid_stored <= fluid_holder.max_capacity {
+                    if stored_fluid_block.fluid_stored <= fluid_holder.max_capacity() {
                         *stored_fluid_item = FluidItemData::Filled {
                             fluid_id: stored_fluid_block.fluid_id,
                             fluid_stored: stored_fluid_block.fluid_stored,
@@ -346,10 +255,10 @@ fn on_interact_with_tank(
                     } else {
                         *stored_fluid_item = FluidItemData::Filled {
                             fluid_id: stored_fluid_block.fluid_id,
-                            fluid_stored: fluid_holder.max_capacity,
+                            fluid_stored: fluid_holder.max_capacity(),
                         };
 
-                        stored_fluid_block.fluid_stored -= fluid_holder.max_capacity;
+                        stored_fluid_block.fluid_stored -= fluid_holder.max_capacity();
                     }
                 }
             }
@@ -357,7 +266,7 @@ fn on_interact_with_tank(
                 if !ev.alternate {
                     // Insert fluid into tank
                     let data = StoredBlockFluid {
-                        fluid_stored: tank_block.max_capacity.min(fluid_stored),
+                        fluid_stored: tank_block.max_capacity().min(fluid_stored),
                         fluid_id,
                     };
 
@@ -395,7 +304,7 @@ fn on_interact_with_tank(
                         continue;
                     }
 
-                    if stored_fluid_block.fluid_stored <= fluid_holder.max_capacity - fluid_stored {
+                    if stored_fluid_block.fluid_stored <= fluid_holder.max_capacity() - fluid_stored {
                         *stored_fluid_item = FluidItemData::Filled {
                             fluid_id,
                             fluid_stored: fluid_stored + stored_fluid_block.fluid_stored,
@@ -403,13 +312,13 @@ fn on_interact_with_tank(
 
                         structure.remove_block_data::<StoredBlockFluid>(coords, &mut commands, &mut q_block_data, &q_has_stored_fluid);
                     } else {
-                        let delta = fluid_holder.max_capacity - fluid_stored;
+                        let delta = fluid_holder.max_capacity() - fluid_stored;
 
                         // Avoid change detection if not needed
                         if delta != 0 {
                             *stored_fluid_item = FluidItemData::Filled {
                                 fluid_id,
-                                fluid_stored: fluid_holder.max_capacity,
+                                fluid_stored: fluid_holder.max_capacity(),
                             };
 
                             stored_fluid_block.fluid_stored -= delta;
@@ -461,12 +370,9 @@ fn fill_tank_registry(mut tank_reg: ResMut<Registry<FluidTankBlock>>, blocks: Re
 
 pub(super) fn register(app: &mut App) {
     create_registry::<FluidTankBlock>(app, "cosmos:tank_block");
-    create_registry::<FluidHolder>(app, "cosmos:fluid_holder");
 
     app.add_systems(OnEnter(GameState::PostLoading), (register_fluid_holder_items, fill_tank_registry))
         .add_systems(Update, on_interact_with_tank.before(ItemStackSystemSet::CreateDataEntity))
         .add_systems(Update, add_item_fluid_data.in_set(ItemStackSystemSet::FillDataEntity))
-        .add_systems(Update, on_interact_with_fluid.after(ItemStackSystemSet::FillDataEntity))
-        .register_type::<FluidItemData>()
-        .register_type::<StoredBlockFluid>();
+        .add_systems(Update, on_interact_with_fluid.after(ItemStackSystemSet::FillDataEntity));
 }
