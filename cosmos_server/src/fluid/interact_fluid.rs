@@ -8,7 +8,7 @@ use bevy::{
         schedule::{IntoSystemConfigs, OnEnter},
         system::{Commands, Query, Res, ResMut},
     },
-    log::{error, info, warn},
+    log::{error, info},
     reflect::Reflect,
 };
 use cosmos_core::{
@@ -27,9 +27,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::state::GameState;
 
-const FLUID_PER_BLOCK: f32 = 1000.0;
+const FLUID_PER_BLOCK: u32 = 1000;
 
 #[derive(Clone, Debug)]
+/// This item can hold fluids
 pub struct FluidHolder {
     id: u16,
     /// Should match item's id
@@ -39,24 +40,44 @@ pub struct FluidHolder {
     convert_to_item: u16,
     convert_from_item: u16,
 
-    max_capacity: f32,
+    max_capacity: u32,
 }
 
 impl FluidHolder {
-    pub fn new(item: &Item, convert_to: &Item, convert_from: &Item, max_capacity: f32) -> Self {
+    /// Indicates this item can store fluids.
+    ///
+    /// * `item` - The item that can store fluids
+    /// * `max_capacity` - The maximum amount of fluid this item can hold
+    ///
+    /// Many items will swap between filled & unfilled forms, if this is the case, the
+    /// convert_to and convert_from fields can be of use. If this is not needed, simply make
+    /// these the same item as the `item` field.
+    ///
+    /// * `convert_to` - When fluid is attempted to be added to this item, this item will turn into the item provided
+    /// here.
+    /// * `convert_from` - If this item should turn into another item when empty, provide that item here.
+    pub fn new(item: &Item, convert_to: &Item, convert_from: &Item, max_capacity: u32) -> Self {
         Self {
             id: 0,
-            max_capacity: max_capacity,
+            max_capacity,
             convert_to_item: convert_to.id(),
             convert_from_item: convert_from.id(),
             unlocalized_name: item.unlocalized_name().to_owned(),
         }
     }
 
+    /// The item this should be when the item contains fluid.
+    ///
+    /// If this item id is the same as the current, no conversion is needed.
+    ///
+    /// For example, converting from "fluid_cell" to "fluid_cell_filled".
     pub fn convert_to_item_id(&self) -> u16 {
         self.convert_to_item
     }
 
+    /// The item this should be when the item is empty.
+    ///
+    /// For example, converting from "fluid_cell_filled" to "fluid_cell".
     pub fn convert_from_item_id(&self) -> u16 {
         self.convert_from_item
     }
@@ -77,9 +98,17 @@ impl Identifiable for FluidHolder {
 }
 
 #[derive(Component, Debug, Reflect, Clone, Copy)]
+/// Represents the fluid an item may be storing
 pub enum FluidItemData {
+    /// The item contains no fluid
     Empty,
-    Filled { fluid_id: u16, fluid_stored: f32 },
+    /// The item is filled with some amount of fluid
+    Filled {
+        /// The id of the fluid stored
+        fluid_id: u16,
+        /// Total amount of fluid stored by this item
+        fluid_stored: u32,
+    },
 }
 
 fn on_interact_with_fluid(
@@ -169,10 +198,27 @@ fn on_interact_with_fluid(
 }
 
 #[derive(Clone)]
+/// This block is a fluid tank, and can store fluid
 pub struct FluidTankBlock {
     id: u16,
     unlocalized_name: String,
-    max_capacity: f32,
+    max_capacity: u32,
+}
+
+impl FluidTankBlock {
+    /// Indicates that this block can store fluids
+    pub fn new(block: &Block, max_capacity: u32) -> Self {
+        Self {
+            id: 0,
+            max_capacity,
+            unlocalized_name: block.unlocalized_name().to_owned(),
+        }
+    }
+
+    /// The maximimum capacity that this block can store of fluids.
+    pub fn max_capacity(&self) -> u32 {
+        self.max_capacity
+    }
 }
 
 impl Identifiable for FluidTankBlock {
@@ -190,9 +236,12 @@ impl Identifiable for FluidTankBlock {
 }
 
 #[derive(Component, Clone, Copy, Serialize, Deserialize, Reflect)]
+/// The fluid stored by this block
 pub struct StoredBlockFluid {
+    /// The fluid's id
     fluid_id: u16,
-    fluid_stored: f32,
+    /// The amount stored
+    fluid_stored: u32,
 }
 
 fn on_interact_with_tank(
@@ -314,7 +363,7 @@ fn on_interact_with_tank(
 
                     let left_over = data.fluid_stored - fluid_stored;
 
-                    if left_over > 0.0 {
+                    if left_over > 0 {
                         *stored_fluid_item = FluidItemData::Filled {
                             fluid_id,
                             fluid_stored: left_over,
@@ -357,7 +406,7 @@ fn on_interact_with_tank(
                         let delta = fluid_holder.max_capacity - fluid_stored;
 
                         // Avoid change detection if not needed
-                        if delta != 0.0 {
+                        if delta != 0 {
                             *stored_fluid_item = FluidItemData::Filled {
                                 fluid_id,
                                 fluid_stored: fluid_holder.max_capacity,
@@ -396,20 +445,18 @@ fn register_fluid_holder_items(
 ) {
     if let Some(fluid_cell_filled) = items.from_id("cosmos:fluid_cell_filled") {
         if let Some(fluid_cell) = items.from_id("cosmos:fluid_cell") {
-            fluid_holders.register(FluidHolder::new(fluid_cell_filled, fluid_cell_filled, fluid_cell, 10_000.0));
+            fluid_holders.register(FluidHolder::new(fluid_cell_filled, fluid_cell_filled, fluid_cell, 10_000));
             needs_data.add_item(fluid_cell_filled);
 
-            fluid_holders.register(FluidHolder::new(fluid_cell, fluid_cell_filled, fluid_cell, 10_000.0));
+            fluid_holders.register(FluidHolder::new(fluid_cell, fluid_cell_filled, fluid_cell, 10_000));
         }
     }
 }
 
-fn fill_tank_registry(mut reg: ResMut<Registry<FluidTankBlock>>) {
-    reg.register(FluidTankBlock {
-        id: 0,
-        max_capacity: 10_000.0,
-        unlocalized_name: "cosmos:tank".into(),
-    });
+fn fill_tank_registry(mut tank_reg: ResMut<Registry<FluidTankBlock>>, blocks: Res<Registry<Block>>) {
+    if let Some(tank) = blocks.from_id("cosmos:tank") {
+        tank_reg.register(FluidTankBlock::new(tank, 10_000));
+    }
 }
 
 pub(super) fn register(app: &mut App) {
