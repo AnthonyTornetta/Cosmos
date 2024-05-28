@@ -6,17 +6,19 @@ use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     ecs::{despawn_needed, NeedsDespawned},
     entities::player::{render_distance::RenderDistance, Player},
+    inventory::itemstack::ItemStackData,
     netty::{
         cosmos_encoder,
         netty_rigidbody::{NettyRigidBody, NettyRigidBodyLocation},
         server_reliable_messages::ServerReliableMessages,
         server_unreliable_messages::ServerUnreliableMessages,
-        sync::server_entity_syncing::RequestedEntityEvent,
+        sync::{server_entity_syncing::RequestedEntityEvent, ComponentEntityIdentifier},
         system_sets::NetworkingSystemsSet,
         NettyChannelServer, NoSendEntity,
     },
     persistence::LoadingDistance,
     physics::location::{add_previous_location, Location},
+    structure::systems::StructureSystem,
 };
 
 use crate::netty::network_helpers::NetworkTick;
@@ -140,12 +142,34 @@ fn pinger(mut server: ResMut<RenetServer>, mut event_reader: EventReader<Request
 
 fn notify_despawned_entities(
     removed_components: Query<Entity, (With<NeedsDespawned>, Without<DontNotifyClientOfDespawn>)>,
+    q_identifier: Query<(Option<&StructureSystem>, Option<&ItemStackData>)>,
     mut server: ResMut<RenetServer>,
 ) {
     for killed_entity in removed_components.iter() {
+        let Ok((structure_system, is_data)) = q_identifier.get(killed_entity) else {
+            continue;
+        };
+
+        let entity_identifier = if let Some(structure_system) = structure_system {
+            ComponentEntityIdentifier::StructureSystem {
+                structure_entity: structure_system.structure_entity(),
+                id: structure_system.id(),
+            }
+        } else if let Some(is_data) = is_data {
+            ComponentEntityIdentifier::ItemData {
+                inventory_entity: is_data.inventory_pointer.0,
+                item_slot: is_data.inventory_pointer.1,
+                server_data_entity: killed_entity,
+            }
+        } else {
+            ComponentEntityIdentifier::Entity(killed_entity)
+        };
+
+        println!("Sending despawn for {entity_identifier:?}");
+
         server.broadcast_message(
             NettyChannelServer::Reliable,
-            cosmos_encoder::serialize(&ServerReliableMessages::EntityDespawn { entity: killed_entity }),
+            cosmos_encoder::serialize(&ServerReliableMessages::EntityDespawn { entity: entity_identifier }),
         );
     }
 }

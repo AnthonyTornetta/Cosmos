@@ -23,7 +23,7 @@ use crate::{
     universe::star::Star,
 };
 
-use super::netty_rigidbody::NettyRigidBody;
+use super::{netty_rigidbody::NettyRigidBody, sync::ComponentEntityIdentifier};
 
 #[derive(Debug, Serialize, Deserialize, Component)]
 /// The data for a singular block changed.
@@ -88,7 +88,7 @@ pub enum ServerReliableMessages {
     /// An entity has been despawned, and the client should remove it.
     EntityDespawn {
         /// The server's version of the entity.
-        entity: Entity,
+        entity: ComponentEntityIdentifier,
     },
     /// This represents the data for a serialized chunk.
     ChunkData {

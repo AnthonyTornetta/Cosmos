@@ -93,10 +93,17 @@ pub enum ClientAuthority {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy)]
-enum ComponentEntityIdentifier {
+pub enum ComponentEntityIdentifier {
     Entity(Entity),
-    StructureSystem { structure_entity: Entity, id: StructureSystemId },
-    ItemData { inventory_entity: Entity, item_slot: u32 },
+    StructureSystem {
+        structure_entity: Entity,
+        id: StructureSystemId,
+    },
+    ItemData {
+        inventory_entity: Entity,
+        item_slot: u32,
+        server_data_entity: Entity,
+    },
 }
 
 /// Indicates that a component can be synchronized either from `Server -> Client` or `Client -> Server`.

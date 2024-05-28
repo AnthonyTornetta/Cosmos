@@ -11,13 +11,13 @@ use bevy::{
         query::{QueryData, QueryFilter, QueryItem, ROQueryItem},
         system::{Commands, Query},
     },
-    hierarchy::BuildChildren,
+    hierarchy::{BuildChildren, DespawnRecursiveExt},
     prelude::{App, Component, Deref, DerefMut},
     reflect::Reflect,
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{ecs::NeedsDespawned, item::Item, registry::identifiable::Identifiable};
+use crate::{item::Item, registry::identifiable::Identifiable};
 
 use self::itemstack::{ItemShouldHaveData, ItemStack, ItemStackData};
 
@@ -451,7 +451,7 @@ impl Inventory {
         if let Some(de) = is.data_entity() {
             if qty != 0 {
                 // We weren't able to fit in the data-having item, so delete the newly created data entity.
-                commands.entity(de).insert(NeedsDespawned);
+                commands.entity(de).despawn_recursive();
             }
         }
 
@@ -472,7 +472,7 @@ impl Inventory {
         if let Some(de) = is.data_entity() {
             if qty != 0 {
                 // We weren't able to fit in the data-having item, so delete the newly created data entity.
-                commands.entity(de).insert(NeedsDespawned);
+                commands.entity(de).despawn_recursive();
             }
         }
 
@@ -779,8 +779,13 @@ impl Inventory {
     }
 
     /// Iterates over every slot in the inventory.
-    pub fn iter(&self) -> std::slice::Iter<'_, Option<ItemStack>> {
+    pub fn iter(&self) -> std::slice::Iter<Option<ItemStack>> {
         self.items.iter()
+    }
+
+    /// Iterates over every slot in the inventory.
+    pub fn iter_mut(&mut self) -> std::slice::IterMut<Option<ItemStack>> {
+        self.items.iter_mut()
     }
 }
 

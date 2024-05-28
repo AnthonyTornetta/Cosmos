@@ -183,6 +183,7 @@ fn server_send_component<T: SyncableComponent>(
                 ComponentEntityIdentifier::ItemData {
                     inventory_entity: is_data.inventory_pointer.0,
                     item_slot: is_data.inventory_pointer.1,
+                    server_data_entity: entity,
                 }
             } else {
                 ComponentEntityIdentifier::Entity(entity)
@@ -229,6 +230,7 @@ fn server_sync_removed_components<T: SyncableComponent>(
             ComponentEntityIdentifier::ItemData {
                 inventory_entity: is_data.inventory_pointer.0,
                 item_slot: is_data.inventory_pointer.1,
+                server_data_entity: removed_ent,
             }
         } else {
             ComponentEntityIdentifier::Entity(removed_ent)
@@ -270,6 +272,7 @@ fn on_request_component<T: SyncableComponent>(
             ComponentEntityIdentifier::ItemData {
                 inventory_entity: is_data.inventory_pointer.0,
                 item_slot: is_data.inventory_pointer.1,
+                server_data_entity: ev.entity,
             }
         } else {
             ComponentEntityIdentifier::Entity(ev.entity)
@@ -325,6 +328,7 @@ fn server_receive_components(
                         ComponentEntityIdentifier::ItemData {
                             inventory_entity: _,
                             item_slot: _,
+                            server_data_entity: _,
                         } => {
                             warn!("Client-authoritiative syncing of itemdata not yet implemented");
 
@@ -362,6 +366,7 @@ fn server_receive_components(
                         ComponentEntityIdentifier::ItemData {
                             inventory_entity: _,
                             item_slot: _,
+                            server_data_entity: _,
                         } => {
                             warn!("Client-authoritiative syncing of itemdata not yet implemented");
 

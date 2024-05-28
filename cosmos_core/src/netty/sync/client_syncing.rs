@@ -259,6 +259,8 @@ fn compute_entity_identifier(
                 ComponentEntityIdentifier::ItemData {
                     inventory_entity: inv_e,
                     item_slot: is_data.inventory_pointer.1,
+                    // Server does not need this?
+                    server_data_entity: entity,
                 },
                 is_data.inventory_pointer.0,
             )
@@ -391,7 +393,7 @@ fn handle_incoming_component_data(
 
 fn get_entity_identifier_info(
     entity_identifier: ComponentEntityIdentifier,
-    network_mapping: &mut ResMut<NetworkMapping>,
+    network_mapping: &mut NetworkMapping,
     q_structure_systems: &Query<&StructureSystems, ()>,
     q_inventory: &mut Query<&mut Inventory>,
     commands: &mut Commands,
@@ -410,6 +412,7 @@ fn get_entity_identifier_info(
         ComponentEntityIdentifier::ItemData {
             inventory_entity,
             item_slot,
+            server_data_entity,
         } => network_mapping.client_from_server(&inventory_entity).and_then(|inventory_entity| {
             println!("Got here - {inventory_entity:?}");
             let mut inventory = q_inventory.get_mut(inventory_entity).ok()?;
@@ -420,6 +423,10 @@ fn get_entity_identifier_info(
             let maybe_data_ent = inventory.insert_itemstack_data(item_slot as usize, (), commands);
 
             println!("{maybe_data_ent:?}");
+
+            if let Some(de) = maybe_data_ent {
+                network_mapping.add_mapping(de, server_data_entity);
+            }
 
             maybe_data_ent.map(|x| (x, x))
         }),
@@ -446,9 +453,10 @@ fn get_entity_identifier_info(
         ComponentEntityIdentifier::ItemData {
             inventory_entity,
             item_slot,
+            server_data_entity,
         } => {
             warn!(
-                "Got itemdata synced component, but no valid inventory OR itemstack exists for it! ({inventory_entity:?}, {item_slot}). In the future, this should try again once we receive the correct inventory from the server."
+                "Got itemdata synced component, but no valid inventory OR itemstack exists for it! ({inventory_entity:?}, {item_slot} {server_data_entity:?}). In the future, this should try again once we receive the correct inventory from the server."
             );
 
             return None;

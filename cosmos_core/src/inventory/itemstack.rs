@@ -12,6 +12,7 @@ use bevy::{
         system::{Commands, Query, Resource},
     },
     hierarchy::BuildChildren,
+    log::error,
     prelude::App,
     reflect::Reflect,
     utils::HashSet,
@@ -26,7 +27,6 @@ pub struct ItemStack {
     item_id: u16,
     quantity: u16,
     max_stack_size: u16,
-    #[serde(skip)]
     data_entity: Option<Entity>,
 }
 
@@ -215,12 +215,23 @@ impl ItemStack {
         self.data_entity
     }
 
+    /// Sets the data entity this itemstack is using.
+    ///
+    /// This will not despawn or otherwise modify the original if there was one.
+    pub fn set_data_entity(&mut self, new_data_entity: Option<Entity>) {
+        self.data_entity = new_data_entity;
+    }
+
     /// Inserts data into this itemstack. Returns the entity that stores this itemstack's data.
     ///
     /// * `inventory_pointer` - If this is a part of an inventory, this should be (inventory_entity, slot).
     pub fn insert_itemstack_data<T: Bundle>(&mut self, inventory_pointer: (Entity, u32), data: T, commands: &mut Commands) -> Entity {
         if let Some(data_ent) = self.data_entity {
-            commands.entity(data_ent).insert(data).log_components();
+            if let Some(mut ecmds) = commands.get_entity(data_ent) {
+                ecmds.insert(data).log_components();
+            } else {
+                error!("Invalid itemstack entity - {data_ent:?}");
+            }
 
             data_ent
         } else {

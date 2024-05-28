@@ -28,7 +28,6 @@ fn sync(
     mut commands: Commands,
     mut held_item_query: Query<(Entity, &mut HeldItemStack)>,
     mut structure_query: Query<&mut Structure>,
-    q_inventory: Query<&Inventory>,
     local_player: Query<Entity, With<LocalPlayer>>,
     q_check_inventory: Query<(), With<Inventory>>,
     mut q_block_data: Query<&mut BlockData>,
@@ -37,36 +36,52 @@ fn sync(
         let msg: ServerInventoryMessages = cosmos_encoder::deserialize(&message).expect("Failed to deserialize server inventory message!");
 
         match msg {
-            ServerInventoryMessages::UpdateInventory { mut inventory, owner } => match owner {
-                InventoryIdentifier::Entity(owner) => {
-                    if let Some(client_entity) = network_mapping.client_from_server(&owner) {
+            ServerInventoryMessages::UpdateInventory { mut inventory, owner } => {
+                for is in inventory.iter_mut().flat_map(|x| x) {
+                    let Some(de) = is.data_entity() else {
+                        continue;
+                    };
+
+                    if network_mapping.client_from_server(&de).is_none() {
+                        warn!("Missing data entity for is!");
+                    }
+
+                    is.set_data_entity(network_mapping.client_from_server(&de));
+                }
+
+                match owner {
+                    InventoryIdentifier::Entity(owner) => {
+                        if let Some(client_entity) = network_mapping.client_from_server(&owner) {
+                            inventory.set_self_entity(client_entity, &mut commands);
+
+                            if let Some(mut ecmds) = commands.get_entity(client_entity) {
+                                ecmds.insert(inventory);
+                            }
+                        } else {
+                            warn!("Error: unrecognized entity {owner:?} received from server when trying to sync up inventories!");
+                        }
+                    }
+                    InventoryIdentifier::BlockData(block_data) => {
+                        let Some(client_entity) = network_mapping.client_from_server(&block_data.structure_entity) else {
+                            warn!(
+                                "Error: unrecognized entity {:?} received from server when trying to sync up inventories!",
+                                block_data.structure_entity
+                            );
+                            continue;
+                        };
+
                         inventory.set_self_entity(client_entity, &mut commands);
 
-                        if let Some(mut ecmds) = commands.get_entity(client_entity) {
-                            ecmds.insert(inventory);
-                        }
-                    } else {
-                        warn!("Error: unrecognized entity {owner:?} received from server when trying to sync up inventories!");
+                        let Ok(mut structure) = structure_query.get_mut(client_entity) else {
+                            continue;
+                        };
+
+                        let coords = block_data.block.coords();
+
+                        structure.insert_block_data(coords, inventory, &mut commands, &mut q_block_data, &q_check_inventory);
                     }
                 }
-                InventoryIdentifier::BlockData(block_data) => {
-                    let Some(client_entity) = network_mapping.client_from_server(&block_data.structure_entity) else {
-                        warn!(
-                            "Error: unrecognized entity {:?} received from server when trying to sync up inventories!",
-                            block_data.structure_entity
-                        );
-                        continue;
-                    };
-
-                    let Ok(mut structure) = structure_query.get_mut(client_entity) else {
-                        continue;
-                    };
-
-                    let coords = block_data.block.coords();
-
-                    structure.insert_block_data(coords, inventory, &mut commands, &mut q_block_data, &q_check_inventory);
-                }
-            },
+            }
             ServerInventoryMessages::HeldItemstack { itemstack } => {
                 if let Ok((entity, mut holding_itemstack)) = held_item_query.get_single_mut() {
                     if let Some(is) = itemstack {
@@ -111,7 +126,7 @@ fn sync(
                             continue;
                         };
 
-                        if q_inventory.get(data_entity).is_err() {
+                        if !q_check_inventory.contains(data_entity) {
                             warn!("Tried to open inventory of block with block data but without an inventory component!");
                             continue;
                         }

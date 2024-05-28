@@ -24,7 +24,10 @@ use cosmos_core::{
         netty_rigidbody::{NettyRigidBody, NettyRigidBodyLocation},
         server_reliable_messages::ServerReliableMessages,
         server_unreliable_messages::ServerUnreliableMessages,
-        sync::mapping::{Mappable, NetworkMapping},
+        sync::{
+            mapping::{Mappable, NetworkMapping},
+            ComponentEntityIdentifier,
+        },
         NettyChannelClient, NettyChannelServer,
     },
     persistence::LoadingDistance,
@@ -42,7 +45,7 @@ use cosmos_core::{
         shared::build_mode::{EnterBuildModeEvent, ExitBuildModeEvent},
         ship::{pilot::Pilot, ship_builder::TShipBuilder, Ship},
         station::station_builder::TStationBuilder,
-        systems::dock_system::Docked,
+        systems::{dock_system::Docked, StructureSystems},
         ChunkInitEvent, Structure,
     },
 };
@@ -190,7 +193,12 @@ fn client_sync_players(
         EventWriter<BlockTakeDamageEvent>,
         EventWriter<SetTerrainGenData>,
     ),
-    (query_player, parent_query): (Query<&Player>, Query<&Parent>),
+    (query_player, parent_query, q_structure_systems, q_inventory): (
+        Query<&Player>,
+        Query<&Parent>,
+        Query<&StructureSystems>,
+        Query<&Inventory>,
+    ),
     mut query_body: Query<
         (
             Option<&mut Location>,
@@ -573,7 +581,9 @@ fn client_sync_players(
                 }
             }
             ServerReliableMessages::EntityDespawn { entity: server_entity } => {
-                if let Some(entity) = network_mapping.client_from_server(&server_entity) {
+                if let Some(entity) = get_entity_identifier_entity(server_entity, &network_mapping, &q_structure_systems, &q_inventory) {
+                    println!("Despawning {entity:?} bcuz of server!");
+
                     commands.entity(entity).insert(NeedsDespawned);
                 }
             }
@@ -746,6 +756,78 @@ fn client_sync_players(
                     permutation_table,
                 });
             }
+        }
+    }
+}
+
+fn get_entity_identifier_entity(
+    entity_identifier: ComponentEntityIdentifier,
+    network_mapping: &NetworkMapping,
+    q_structure_systems: &Query<&StructureSystems, ()>,
+    q_inventory: &Query<&Inventory>,
+) -> Option<Entity> {
+    let identifier_entities = match entity_identifier {
+        ComponentEntityIdentifier::Entity(entity) => network_mapping.client_from_server(&entity),
+        ComponentEntityIdentifier::StructureSystem { structure_entity, id } => {
+            network_mapping.client_from_server(&structure_entity).and_then(|structure_entity| {
+                let structure_systems = q_structure_systems.get(structure_entity).ok()?;
+
+                let system_entity = structure_systems.get_system_entity(id)?;
+
+                Some(system_entity)
+            })
+        }
+        ComponentEntityIdentifier::ItemData {
+            inventory_entity,
+            item_slot,
+            server_data_entity,
+        } => network_mapping.client_from_server(&inventory_entity).and_then(|inventory_entity| {
+            println!("Got here - {inventory_entity:?}");
+            let inventory = q_inventory.get(inventory_entity).ok()?;
+            println!("Got inventory!");
+
+            let de = inventory.itemstack_at(item_slot as usize).map(|x| x.data_entity()).flatten();
+
+            // If de is none, the inventory was already synced from the server, so the itemstack has no data pointer. Thus,
+            // all we have to do is despawn the data entity.
+            if de.is_none() {
+                if let Some(client_data_entity) = network_mapping.client_from_server(&server_data_entity) {
+                    Some(client_data_entity)
+                } else {
+                    None
+                }
+            } else {
+                de
+            }
+        }),
+    };
+
+    if let Some(identifier_entities) = identifier_entities {
+        return Some(identifier_entities);
+    }
+
+    match entity_identifier {
+        ComponentEntityIdentifier::Entity(entity) => {
+            warn!(
+                "Got entity to despawn, but no valid entity exists for it! ({entity:?}). In the future, this should try again once we receive the correct entity from the server."
+            );
+            None
+        }
+        ComponentEntityIdentifier::StructureSystem { structure_entity, id } => {
+            warn!(
+                    "Got structure system to despawn, but no valid structure exists for it! ({structure_entity:?}, {id:?}). In the future, this should try again once we receive the correct structure from the server."
+            );
+            None
+        }
+        ComponentEntityIdentifier::ItemData {
+            inventory_entity,
+            item_slot,
+            server_data_entity,
+        } => {
+            warn!(
+                "Got itemdata to despawn, but no valid inventory OR itemstack exists for it! ({inventory_entity:?}, {item_slot} {server_data_entity:?}). In the future, this should try again once we receive the correct inventory from the server."
+            );
+            None
         }
     }
 }
