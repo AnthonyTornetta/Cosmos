@@ -462,45 +462,6 @@ impl Location {
 /// Stores the location from the previous frame
 pub struct PreviousLocation(pub Location);
 
-/// Recursively goes from the top of the parent tree to the bottom and lines up all their locations.
-///
-/// This needs tests written for it.
-fn sync_self_with_parents(
-    this_entity: Entity,
-    parent_query: &Query<&Parent>,
-    data_query: &mut Query<(&mut Location, &mut Transform, &mut PreviousLocation, &GlobalTransform)>,
-) {
-    if let Ok(parent) = parent_query.get(this_entity).map(|p| p.get()) {
-        sync_self_with_parents(parent, parent_query, data_query);
-
-        let Ok((parent_loc, parent_global_trans)) = data_query
-            .get(parent)
-            .map(|(loc, _, _, parent_global_trans)| (*loc, *parent_global_trans))
-        else {
-            return;
-        };
-
-        let Ok((mut my_loc, mut my_transform, my_prev_loc, _)) = data_query.get_mut(this_entity) else {
-            return;
-        };
-
-        // Calculates the change in location since the last time this ran
-        let delta_loc = (*my_loc - my_prev_loc.0).absolute_coords_f32();
-
-        let parent_rot = Quat::from_affine3(&parent_global_trans.affine());
-
-        // Applies that change to the transform
-        my_transform.translation += parent_rot.inverse().mul_vec3(delta_loc);
-
-        // Calculates how far away the entity was from its parent + its delta location.
-        let transform_delta_parent = parent_rot.mul_vec3(my_transform.translation);
-
-        // Updates the location to be based on the parent's location + your absolute coordinates to your parent.
-        my_loc.set_from(&(parent_loc + transform_delta_parent));
-        my_loc.last_transform_loc = Some(transform_delta_parent + parent_global_trans.translation());
-    }
-}
-
 /// Adds the previous location component. Put this before the sync bodies & transform
 pub fn add_previous_location(mut query: Query<(Entity, &Location, Option<&mut PreviousLocation>)>, mut commands: Commands) {
     for (entity, loc, prev_loc) in query.iter_mut() {
@@ -512,14 +473,52 @@ pub fn add_previous_location(mut query: Query<(Entity, &Location, Option<&mut Pr
     }
 }
 
+fn recursively_sync_child(
+    parent_loc: Location,
+    parent_g_trans: Vec3,
+    parent_rot: Quat,
+    ent: Entity,
+    q_data: &mut Query<(&mut Location, &mut Transform, &PreviousLocation), With<Parent>>,
+    q_children: &Query<&Children>,
+) {
+    let Ok((mut my_loc, mut my_transform, my_prev_loc)) = q_data.get_mut(ent) else {
+        return;
+    };
+
+    // Calculates the change in location since the last time this ran
+    let delta_loc = (*my_loc - my_prev_loc.0).absolute_coords_f32();
+
+    // Applies that change to the transform
+    my_transform.translation += parent_rot.inverse().mul_vec3(delta_loc);
+
+    // Calculates how far away the entity was from its parent + its delta location.
+    let transform_delta_parent = parent_rot.mul_vec3(my_transform.translation);
+
+    // Updates the location to be based on the parent's location + your absolute coordinates to your parent.
+    my_loc.set_from(&(parent_loc + transform_delta_parent));
+    my_loc.last_transform_loc = Some(transform_delta_parent + parent_g_trans);
+
+    let parent_loc = *my_loc;
+    let parent_g_trans = parent_g_trans + parent_rot.mul_vec3(my_transform.translation);
+    let parent_rot = parent_rot.mul_quat(my_transform.rotation);
+
+    if let Ok(children) = q_children.get(ent) {
+        for &child in children.iter() {
+            recursively_sync_child(parent_loc, parent_g_trans, parent_rot, child, q_data, q_children);
+        }
+    }
+}
+
 /// Handles children and their locations.
 pub fn handle_child_syncing(
-    initial_query: Query<Entity, (Without<Children>, Without<ChunkEntity>)>,
-    parent_query: Query<&Parent>,
-    mut data_query: Query<(&mut Location, &mut Transform, &mut PreviousLocation, &GlobalTransform)>,
+    q_top_level: Query<(&Location, &Transform, &Children), Without<Parent>>,
+    mut q_data: Query<(&mut Location, &mut Transform, &PreviousLocation), With<Parent>>,
+    q_children: Query<&Children>,
 ) {
-    for entity in initial_query.iter() {
-        sync_self_with_parents(entity, &parent_query, &mut data_query);
+    for (loc, trans, children) in q_top_level.iter() {
+        for &child in children.iter() {
+            recursively_sync_child(*loc, trans.translation, trans.rotation, child, &mut q_data, &q_children);
+        }
     }
 }
 

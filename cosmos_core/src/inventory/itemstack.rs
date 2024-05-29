@@ -12,7 +12,6 @@ use bevy::{
         system::{Commands, Query, Resource},
     },
     hierarchy::BuildChildren,
-    log::error,
     prelude::App,
     reflect::Reflect,
     utils::HashSet,
