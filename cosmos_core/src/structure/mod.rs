@@ -587,6 +587,14 @@ impl Structure {
         }
     }
 
+    /// Sets the block data entity for these coordinates.
+    pub fn set_block_data_entity(&mut self, coords: BlockCoordinate, entity: Option<Entity>) {
+        match self {
+            Self::Full(fs) => fs.set_block_data_entity(coords, entity),
+            Self::Dynamic(ds) => ds.set_block_data_entity(coords, entity),
+        }
+    }
+
     /// Removes any block data associated with this block
     ///
     /// Will return the data entity that was previously here, if any

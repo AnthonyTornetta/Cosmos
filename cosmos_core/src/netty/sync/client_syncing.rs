@@ -458,10 +458,12 @@ fn get_entity_identifier_info(
                 network_mapping
                     .client_from_server(&identifier.structure_entity)
                     .and_then(|structure_entity| {
-                        println!("Got block data!");
-
                         let mut structure = q_structure.get_mut(structure_entity).ok()?;
                         let data_entity = structure.get_or_create_block_data(identifier.block.coords(), commands)?;
+
+                        println!("Got block data! server {:?} -> client {data_entity:?}", server_data_entity);
+
+                        network_mapping.add_mapping(data_entity, server_data_entity);
 
                         Some((data_entity, data_entity))
                     })

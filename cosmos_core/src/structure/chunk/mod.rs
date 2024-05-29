@@ -206,6 +206,15 @@ impl Chunk {
         self.block_data.get(&coords).copied()
     }
 
+    /// Sets the block data entity for these coordinates.
+    pub fn set_block_data_entity(&mut self, coords: ChunkBlockCoordinate, entity: Option<Entity>) {
+        if let Some(e) = entity {
+            self.block_data.insert(coords, e);
+        } else {
+            self.block_data.remove(&coords);
+        }
+    }
+
     /// Inserts data into the block here. Returns the entity that stores this block's data.
     pub fn insert_block_data<T: Component>(
         &mut self,

@@ -193,11 +193,12 @@ fn client_sync_players(
         EventWriter<BlockTakeDamageEvent>,
         EventWriter<SetTerrainGenData>,
     ),
-    (query_player, parent_query, q_structure_systems, q_inventory): (
+    (query_player, parent_query, q_structure_systems, mut q_inventory, mut q_structure): (
         Query<&Player>,
         Query<&Parent>,
         Query<&StructureSystems>,
-        Query<&Inventory>,
+        Query<&mut Inventory>,
+        Query<&mut Structure>,
     ),
     mut query_body: Query<
         (
@@ -210,7 +211,6 @@ fn client_sync_players(
         Without<LocalPlayer>,
     >,
     q_parent: Query<&Parent>,
-    mut query_structure: Query<&mut Structure>,
     blocks: Res<Registry<Block>>,
     mut pilot_change_event_writer: EventWriter<ChangePilotEvent>,
     mut requested_entities: ResMut<RequestedEntities>,
@@ -553,7 +553,7 @@ fn client_sync_players(
                 serialized_block_data,
             } => {
                 if let Some(s_entity) = network_mapping.client_from_server(&server_structure_entity) {
-                    if let Ok(mut structure) = query_structure.get_mut(s_entity) {
+                    if let Ok(mut structure) = q_structure.get_mut(s_entity) {
                         let chunk: Chunk = cosmos_encoder::deserialize(&serialized_chunk).expect("Unable to deserialize chunk from server");
                         let chunk_coords = chunk.chunk_coordinates();
 
@@ -569,7 +569,7 @@ fn client_sync_players(
             }
             ServerReliableMessages::EmptyChunk { structure_entity, coords } => {
                 if let Some(s_entity) = network_mapping.client_from_server(&structure_entity) {
-                    if let Ok(mut structure) = query_structure.get_mut(s_entity) {
+                    if let Ok(mut structure) = q_structure.get_mut(s_entity) {
                         structure.set_to_empty_chunk(coords);
 
                         set_chunk_event_writer.send(ChunkInitEvent {
@@ -581,7 +581,13 @@ fn client_sync_players(
                 }
             }
             ServerReliableMessages::EntityDespawn { entity: server_entity } => {
-                if let Some(entity) = get_entity_identifier_entity(server_entity, &network_mapping, &q_structure_systems, &q_inventory) {
+                if let Some(entity) = get_entity_identifier_entity_for_despawning(
+                    server_entity,
+                    &network_mapping,
+                    &q_structure_systems,
+                    &mut q_inventory,
+                    &mut q_structure,
+                ) {
                     println!("Despawning {entity:?} bcuz of server!");
 
                     commands.entity(entity).insert(NeedsDespawned);
@@ -596,7 +602,7 @@ fn client_sync_players(
             } => {
                 // Sometimes you'll get block updates for structures that don't exist
                 if let Some(client_ent) = network_mapping.client_from_server(&structure_entity) {
-                    if let Ok(mut structure) = query_structure.get_mut(client_ent) {
+                    if let Ok(mut structure) = q_structure.get_mut(client_ent) {
                         for block_changed in blocks_changed_packet.0 {
                             structure.set_block_at(
                                 block_changed.coordinates.coords(),
@@ -760,11 +766,12 @@ fn client_sync_players(
     }
 }
 
-fn get_entity_identifier_entity(
+fn get_entity_identifier_entity_for_despawning(
     entity_identifier: ComponentEntityIdentifier,
     network_mapping: &NetworkMapping,
     q_structure_systems: &Query<&StructureSystems, ()>,
-    q_inventory: &Query<&Inventory>,
+    q_inventory: &mut Query<&mut Inventory>,
+    q_structure: &mut Query<&mut Structure>,
 ) -> Option<Entity> {
     let identifier_entities = match entity_identifier {
         ComponentEntityIdentifier::Entity(entity) => network_mapping.client_from_server(&entity),
@@ -783,10 +790,17 @@ fn get_entity_identifier_entity(
             server_data_entity,
         } => network_mapping.client_from_server(&inventory_entity).and_then(|inventory_entity| {
             println!("Got here - {inventory_entity:?}");
-            let inventory = q_inventory.get(inventory_entity).ok()?;
+            let mut inventory = q_inventory.get_mut(inventory_entity).ok()?;
             println!("Got inventory!");
 
-            let de = inventory.itemstack_at(item_slot as usize).map(|x| x.data_entity()).flatten();
+            let de = inventory
+                .mut_itemstack_at(item_slot as usize)
+                .map(|x| {
+                    let de = x.data_entity();
+                    x.set_data_entity(None);
+                    de
+                })
+                .flatten();
 
             // If de is none, the inventory was already synced from the server, so the itemstack has no data pointer. Thus,
             // all we have to do is despawn the data entity.
@@ -799,10 +813,23 @@ fn get_entity_identifier_entity(
         ComponentEntityIdentifier::BlockData {
             identifier,
             server_data_entity,
-        } => {
-            todo!();
-            // BD TODO!!!
-        }
+        } => network_mapping
+            .client_from_server(&identifier.structure_entity)
+            .and_then(|structure_entity| {
+                println!("Got structure - {structure_entity:?}");
+
+                let mut structure = q_structure.get_mut(structure_entity).ok()?;
+
+                println!("Structure was OK");
+
+                let bd = structure.block_data(identifier.block.coords());
+                structure.set_block_data_entity(identifier.block.coords(), None);
+
+                println!("Block Data Entity - {bd:?}");
+
+                Some(bd)
+            })
+            .unwrap_or_else(|| network_mapping.client_from_server(&server_data_entity)),
     };
 
     if let Some(identifier_entities) = identifier_entities {
@@ -836,8 +863,10 @@ fn get_entity_identifier_entity(
             identifier,
             server_data_entity,
         } => {
-            todo!();
-            // BD TODO!!!
+            warn!(
+                "Got block data to despawn, but no valid structure OR block exists for it! ({identifier:?}, {server_data_entity:?}). In the future, this should try again once we receive the correct structure+block from the server."
+            );
+            None
         }
     }
 }

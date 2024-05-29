@@ -540,6 +540,13 @@ impl BaseStructure {
         }
     }
 
+    /// Sets the block data entity for these coordinates.
+    pub fn set_block_data_entity(&mut self, coords: BlockCoordinate, entity: Option<Entity>) {
+        if let Some(chunk) = self.mut_chunk_at_block_coordinates(coords) {
+            chunk.set_block_data_entity(ChunkBlockCoordinate::for_block_coordinate(coords), entity)
+        }
+    }
+
     /// Returns `None` if the chunk is unloaded. Will return Some(block data entity) otherwise.
     ///
     /// Inserts data into the block here.
