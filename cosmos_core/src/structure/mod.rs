@@ -521,6 +521,13 @@ impl Structure {
         }
     }
 
+    pub fn get_or_create_block_data(&mut self, coords: BlockCoordinate, commands: &mut Commands) -> Option<Entity> {
+        match self {
+            Self::Full(fs) => fs.get_or_create_block_data(coords, commands),
+            Self::Dynamic(ds) => ds.get_or_create_block_data(coords, commands),
+        }
+    }
+
     /// Returns `None` if the chunk is unloaded.
     ///
     /// Inserts data into the block here. This differs from the

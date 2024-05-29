@@ -10,8 +10,9 @@ use bevy_renet::renet::ClientId;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::{
+    block::data::BlockDataIdentifier,
     registry::{create_registry, identifiable::Identifiable, Registry},
-    structure::systems::StructureSystemId,
+    structure::{structure_block::StructureBlock, systems::StructureSystemId},
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -102,6 +103,10 @@ pub enum ComponentEntityIdentifier {
     ItemData {
         inventory_entity: Entity,
         item_slot: u32,
+        server_data_entity: Entity,
+    },
+    BlockData {
+        identifier: BlockDataIdentifier,
         server_data_entity: Entity,
     },
 }

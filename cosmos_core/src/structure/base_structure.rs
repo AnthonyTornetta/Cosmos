@@ -566,6 +566,19 @@ impl BaseStructure {
         ))
     }
 
+    pub fn get_or_create_block_data(&mut self, coords: BlockCoordinate, commands: &mut Commands) -> Option<Entity> {
+        let self_entity = self.get_entity()?;
+        let chunk_entity = self.chunk_entity(ChunkCoordinate::for_block_coordinate(coords))?;
+        let chunk = self.mut_chunk_at_block_coordinates(coords)?;
+
+        chunk.get_or_create_block_data(
+            ChunkBlockCoordinate::for_block_coordinate(coords),
+            chunk_entity,
+            self_entity,
+            commands,
+        )
+    }
+
     /// Returns `None` if the chunk is unloaded.
     ///
     /// Inserts data into the block here. This differs from the

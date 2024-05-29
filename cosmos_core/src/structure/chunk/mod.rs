@@ -250,6 +250,33 @@ impl Chunk {
         }
     }
 
+    pub fn get_or_create_block_data(
+        &mut self,
+        coords: ChunkBlockCoordinate,
+        chunk_entity: Entity,
+        structure_entity: Entity,
+        commands: &mut Commands,
+    ) -> Option<Entity> {
+        if let Some(data_ent) = self.block_data(coords) {
+            return Some(data_ent);
+        }
+
+        let data_ent = commands
+            .spawn((BlockData {
+                data_count: 0,
+                identifier: BlockDataIdentifier {
+                    block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords),
+                    structure_entity,
+                },
+            },))
+            .set_parent(chunk_entity)
+            .id();
+
+        self.block_data.insert(coords, data_ent);
+
+        Some(data_ent)
+    }
+
     /// Returns `None` if the chunk is unloaded.
     ///
     /// Inserts data into the block here. This differs from the

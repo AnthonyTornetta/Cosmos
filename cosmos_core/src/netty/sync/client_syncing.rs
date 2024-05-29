@@ -13,6 +13,7 @@ use crate::physics::location::CosmosBundleSet;
 use crate::registry::{identifiable::Identifiable, Registry};
 use crate::structure::ship::pilot::Pilot;
 use crate::structure::systems::{StructureSystem, StructureSystems};
+use crate::structure::Structure;
 use bevy::core::Name;
 use bevy::ecs::event::EventReader;
 use bevy::ecs::query::With;
@@ -284,6 +285,7 @@ fn client_receive_components(
     mut network_mapping: ResMut<NetworkMapping>,
     mut commands: Commands,
     mut waiting_data: ResMut<WaitingData>,
+    mut q_structure: Query<&mut Structure>,
 ) {
     let mut v = Vec::with_capacity(waiting_data.0.len());
     std::mem::swap(&mut v, &mut waiting_data.0);
@@ -294,6 +296,7 @@ fn client_receive_components(
             &q_structure_systems,
             &mut q_inventory,
             &mut commands,
+            &mut q_structure,
             &mut ev_writer_sync,
             &mut ev_writer_remove,
         ) {
@@ -311,6 +314,7 @@ fn client_receive_components(
             &q_structure_systems,
             &mut q_inventory,
             &mut commands,
+            &mut q_structure,
             &mut ev_writer_sync,
             &mut ev_writer_remove,
         ) {
@@ -325,6 +329,7 @@ fn handle_incoming_component_data(
     q_structure_systems: &Query<&StructureSystems, ()>,
     q_inventory: &mut Query<&mut Inventory, ()>,
     commands: &mut Commands,
+    q_structure: &mut Query<&mut Structure>,
     ev_writer_sync: &mut EventWriter<GotComponentToSyncEvent>,
     ev_writer_remove: &mut EventWriter<GotComponentToRemoveEvent>,
 ) -> Option<ComponentReplicationMessage> {
@@ -334,17 +339,23 @@ fn handle_incoming_component_data(
             entity_identifier,
             raw_data,
         } => {
-            let (entity, authority_entity) =
-                match get_entity_identifier_info(entity_identifier, network_mapping, q_structure_systems, q_inventory, commands) {
-                    Some(value) => value,
-                    None => {
-                        return Some(ComponentReplicationMessage::ComponentReplication {
-                            component_id,
-                            entity_identifier,
-                            raw_data,
-                        })
-                    }
-                };
+            let (entity, authority_entity) = match get_entity_identifier_info(
+                entity_identifier,
+                network_mapping,
+                q_structure_systems,
+                q_inventory,
+                q_structure,
+                commands,
+            ) {
+                Some(value) => value,
+                None => {
+                    return Some(ComponentReplicationMessage::ComponentReplication {
+                        component_id,
+                        entity_identifier,
+                        raw_data,
+                    })
+                }
+            };
 
             ev_writer_sync.send(GotComponentToSyncEvent {
                 // `client_id` only matters on the server-side, but I don't feel like fighting with
@@ -364,16 +375,22 @@ fn handle_incoming_component_data(
             component_id,
             entity_identifier,
         } => {
-            let (entity, authority_entity) =
-                match get_entity_identifier_info(entity_identifier, network_mapping, q_structure_systems, q_inventory, commands) {
-                    Some(value) => value,
-                    None => {
-                        return Some(ComponentReplicationMessage::RemovedComponent {
-                            component_id,
-                            entity_identifier,
-                        })
-                    }
-                };
+            let (entity, authority_entity) = match get_entity_identifier_info(
+                entity_identifier,
+                network_mapping,
+                q_structure_systems,
+                q_inventory,
+                q_structure,
+                commands,
+            ) {
+                Some(value) => value,
+                None => {
+                    return Some(ComponentReplicationMessage::RemovedComponent {
+                        component_id,
+                        entity_identifier,
+                    })
+                }
+            };
 
             ev_writer_remove.send(GotComponentToRemoveEvent {
                 // `client_id` only matters on the server-side, but I don't feel like fighting with
@@ -396,6 +413,7 @@ fn get_entity_identifier_info(
     network_mapping: &mut NetworkMapping,
     q_structure_systems: &Query<&StructureSystems, ()>,
     q_inventory: &mut Query<&mut Inventory>,
+    q_structure: &mut Query<&mut Structure>,
     commands: &mut Commands,
 ) -> Option<(Entity, Entity)> {
     let identifier_entities = match entity_identifier {
@@ -430,6 +448,24 @@ fn get_entity_identifier_info(
 
             maybe_data_ent.map(|x| (x, x))
         }),
+        ComponentEntityIdentifier::BlockData {
+            identifier,
+            server_data_entity,
+        } => network_mapping
+            .client_from_server(&server_data_entity)
+            .map(|x| Some((x, x)))
+            .unwrap_or_else(|| {
+                network_mapping
+                    .client_from_server(&identifier.structure_entity)
+                    .and_then(|structure_entity| {
+                        println!("Got block data!");
+
+                        let mut structure = q_structure.get_mut(structure_entity).ok()?;
+                        let data_entity = structure.get_or_create_block_data(identifier.block.coords(), commands)?;
+
+                        Some((data_entity, data_entity))
+                    })
+            }),
     };
 
     if let Some(identifier_entities) = identifier_entities {
@@ -457,6 +493,16 @@ fn get_entity_identifier_info(
         } => {
             warn!(
                 "Got itemdata synced component, but no valid inventory OR itemstack exists for it! ({inventory_entity:?}, {item_slot} {server_data_entity:?}). In the future, this should try again once we receive the correct inventory from the server."
+            );
+
+            return None;
+        }
+        ComponentEntityIdentifier::BlockData {
+            identifier,
+            server_data_entity,
+        } => {
+            warn!(
+                "Got blockdata synced component, but no valid block exists for it! ({identifier:?}, {server_data_entity:?}). In the future, this should try again once we receive the correct inventory from the server."
             );
 
             return None;

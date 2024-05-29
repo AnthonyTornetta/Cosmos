@@ -109,7 +109,6 @@ fn main() {
 
     app.insert_resource(HostConfig { host_name })
         .insert_resource(RapierConfiguration {
-            gravity: Vec3::ZERO,
             timestep_mode: TimestepMode::Interpolated {
                 dt: 1.0 / 60.0,
                 time_scale: 1.0,

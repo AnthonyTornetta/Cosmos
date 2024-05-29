@@ -3,6 +3,7 @@ use super::{
     register_component, ClientAuthority, ComponentEntityIdentifier, ComponentReplicationMessage, ComponentSyncingSet, SyncType,
     SyncableComponent, SyncedComponentId,
 };
+use crate::block::data::BlockData;
 use crate::inventory::itemstack::ItemStackData;
 use crate::netty::server::ServerLobby;
 use crate::netty::sync::{GotComponentToRemoveEvent, GotComponentToSyncEvent};
@@ -159,7 +160,7 @@ fn server_deserialize_component<T: SyncableComponent>(
 
 fn server_send_component<T: SyncableComponent>(
     id_registry: Res<Registry<SyncedComponentId>>,
-    q_changed_component: Query<(Entity, &T, Option<&StructureSystem>, Option<&ItemStackData>), Changed<T>>,
+    q_changed_component: Query<(Entity, &T, Option<&StructureSystem>, Option<&ItemStackData>, Option<&BlockData>), Changed<T>>,
     mut server: ResMut<RenetServer>,
 ) {
     if q_changed_component.is_empty() {
@@ -173,7 +174,7 @@ fn server_send_component<T: SyncableComponent>(
 
     q_changed_component
         .iter()
-        .for_each(|(entity, component, structure_system, is_data)| {
+        .for_each(|(entity, component, structure_system, is_data, block_data)| {
             let entity_identifier = if let Some(structure_system) = structure_system {
                 ComponentEntityIdentifier::StructureSystem {
                     structure_entity: structure_system.structure_entity(),
@@ -183,6 +184,11 @@ fn server_send_component<T: SyncableComponent>(
                 ComponentEntityIdentifier::ItemData {
                     inventory_entity: is_data.inventory_pointer.0,
                     item_slot: is_data.inventory_pointer.1,
+                    server_data_entity: entity,
+                }
+            } else if let Some(block_data) = block_data {
+                ComponentEntityIdentifier::BlockData {
+                    identifier: block_data.identifier,
                     server_data_entity: entity,
                 }
             } else {
@@ -203,7 +209,7 @@ fn server_send_component<T: SyncableComponent>(
 
 fn server_sync_removed_components<T: SyncableComponent>(
     mut removed_components: RemovedComponents<T>,
-    q_entity_identifier: Query<(Option<&StructureSystem>, Option<&ItemStackData>)>,
+    q_entity_identifier: Query<(Option<&StructureSystem>, Option<&ItemStackData>, Option<&BlockData>)>,
     id_registry: Res<Registry<SyncedComponentId>>,
     mut server: ResMut<RenetServer>,
 ) {
@@ -217,7 +223,7 @@ fn server_sync_removed_components<T: SyncableComponent>(
     };
 
     for removed_ent in removed_components.read() {
-        let Ok((structure_system, is_data)) = q_entity_identifier.get(removed_ent) else {
+        let Ok((structure_system, is_data, block_data)) = q_entity_identifier.get(removed_ent) else {
             continue;
         };
 
@@ -230,6 +236,11 @@ fn server_sync_removed_components<T: SyncableComponent>(
             ComponentEntityIdentifier::ItemData {
                 inventory_entity: is_data.inventory_pointer.0,
                 item_slot: is_data.inventory_pointer.1,
+                server_data_entity: removed_ent,
+            }
+        } else if let Some(block_data) = block_data {
+            ComponentEntityIdentifier::BlockData {
+                identifier: block_data.identifier,
                 server_data_entity: removed_ent,
             }
         } else {
@@ -247,14 +258,14 @@ fn server_sync_removed_components<T: SyncableComponent>(
 }
 
 fn on_request_component<T: SyncableComponent>(
-    q_t: Query<(&T, Option<&StructureSystem>, Option<&ItemStackData>)>,
+    q_t: Query<(&T, Option<&StructureSystem>, Option<&ItemStackData>, Option<&BlockData>)>,
     // q_rb: Query<(&Location, &GlobalTransform, &Velocity)>,
     mut ev_reader: EventReader<RequestedEntityEvent>,
     id_registry: Res<Registry<SyncedComponentId>>,
     mut server: ResMut<RenetServer>,
 ) {
     for ev in ev_reader.read() {
-        let Ok((component, structure_system, is_data)) = q_t.get(ev.entity) else {
+        let Ok((component, structure_system, is_data, block_data)) = q_t.get(ev.entity) else {
             continue;
         };
 
@@ -272,6 +283,11 @@ fn on_request_component<T: SyncableComponent>(
             ComponentEntityIdentifier::ItemData {
                 inventory_entity: is_data.inventory_pointer.0,
                 item_slot: is_data.inventory_pointer.1,
+                server_data_entity: ev.entity,
+            }
+        } else if let Some(block_data) = block_data {
+            ComponentEntityIdentifier::BlockData {
+                identifier: block_data.identifier,
                 server_data_entity: ev.entity,
             }
         } else {
@@ -334,6 +350,14 @@ fn server_receive_components(
 
                             continue;
                         }
+                        ComponentEntityIdentifier::BlockData {
+                            identifier: _,
+                            server_data_entity: _,
+                        } => {
+                            warn!("Client-authoritiative syncing of blockdata not yet implemented");
+
+                            continue;
+                        }
                     };
 
                     ev_writer_sync.send(GotComponentToSyncEvent {
@@ -369,6 +393,14 @@ fn server_receive_components(
                             server_data_entity: _,
                         } => {
                             warn!("Client-authoritiative syncing of itemdata not yet implemented");
+
+                            continue;
+                        }
+                        ComponentEntityIdentifier::BlockData {
+                            identifier: _,
+                            server_data_entity: _,
+                        } => {
+                            warn!("Client-authoritiative syncing of blockdata not yet implemented");
 
                             continue;
                         }

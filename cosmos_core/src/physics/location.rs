@@ -21,8 +21,7 @@ use bevy::{
     ecs::schedule::{IntoSystemConfigs, SystemSet},
     log::warn,
     prelude::{
-        Added, App, Children, Commands, Component, Deref, DerefMut, Entity, GlobalTransform, Parent, Quat, Query, Transform, Update, Vec3,
-        With, Without,
+        Added, App, Children, Commands, Component, Deref, DerefMut, Entity, Parent, Quat, Query, Transform, Update, Vec3, With, Without,
     },
     reflect::Reflect,
     transform::TransformBundle,
@@ -31,7 +30,7 @@ use bevy_rapier3d::{na::Vector3, prelude::PhysicsWorld};
 use bigdecimal::{BigDecimal, FromPrimitive};
 use serde::{Deserialize, Serialize};
 
-use crate::{ecs::bundles::BundleStartingRotation, structure::chunk::ChunkEntity};
+use crate::ecs::bundles::BundleStartingRotation;
 
 use super::player_world::PlayerWorld;
 

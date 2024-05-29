@@ -4,6 +4,7 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
+    block::data::BlockData,
     ecs::{despawn_needed, NeedsDespawned},
     entities::player::{render_distance::RenderDistance, Player},
     inventory::itemstack::ItemStackData,
@@ -142,11 +143,11 @@ fn pinger(mut server: ResMut<RenetServer>, mut event_reader: EventReader<Request
 
 fn notify_despawned_entities(
     removed_components: Query<Entity, (With<NeedsDespawned>, Without<DontNotifyClientOfDespawn>)>,
-    q_identifier: Query<(Option<&StructureSystem>, Option<&ItemStackData>)>,
+    q_identifier: Query<(Option<&StructureSystem>, Option<&ItemStackData>, Option<&BlockData>)>,
     mut server: ResMut<RenetServer>,
 ) {
     for killed_entity in removed_components.iter() {
-        let Ok((structure_system, is_data)) = q_identifier.get(killed_entity) else {
+        let Ok((structure_system, is_data, block_data)) = q_identifier.get(killed_entity) else {
             continue;
         };
 
@@ -159,6 +160,11 @@ fn notify_despawned_entities(
             ComponentEntityIdentifier::ItemData {
                 inventory_entity: is_data.inventory_pointer.0,
                 item_slot: is_data.inventory_pointer.1,
+                server_data_entity: killed_entity,
+            }
+        } else if let Some(block_data) = block_data {
+            ComponentEntityIdentifier::BlockData {
+                identifier: block_data.identifier,
                 server_data_entity: killed_entity,
             }
         } else {

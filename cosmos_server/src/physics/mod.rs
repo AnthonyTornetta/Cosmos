@@ -48,7 +48,10 @@ pub fn assign_player_world(
             world_id: best_world_id.expect("This should never be None if world is some."),
         });
     } else {
-        let world_id = rapier_context.add_world(RapierWorld::default());
+        let mut rw = RapierWorld::default();
+        rw.set_gravity(Vec3::ZERO);
+
+        let world_id = rapier_context.add_world(rw);
 
         let world_entity = commands
             .spawn((
@@ -114,7 +117,10 @@ fn move_players_between_worlds(
             if needs_new_world {
                 getting_new_world.push(entity);
 
-                let world_id = rapier_context.add_world(RapierWorld::default());
+                let mut rw = RapierWorld::default();
+                rw.set_gravity(Vec3::ZERO);
+
+                let world_id = rapier_context.add_world(rw);
 
                 let world_entity = commands
                     .spawn((

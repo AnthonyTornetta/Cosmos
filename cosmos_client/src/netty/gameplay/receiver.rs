@@ -796,6 +796,13 @@ fn get_entity_identifier_entity(
                 de
             }
         }),
+        ComponentEntityIdentifier::BlockData {
+            identifier,
+            server_data_entity,
+        } => {
+            todo!();
+            // BD TODO!!!
+        }
     };
 
     if let Some(identifier_entities) = identifier_entities {
@@ -824,6 +831,13 @@ fn get_entity_identifier_entity(
                 "Got itemdata to despawn, but no valid inventory OR itemstack exists for it! ({inventory_entity:?}, {item_slot} {server_data_entity:?}). In the future, this should try again once we receive the correct inventory from the server."
             );
             None
+        }
+        ComponentEntityIdentifier::BlockData {
+            identifier,
+            server_data_entity,
+        } => {
+            todo!();
+            // BD TODO!!!
         }
     }
 }
