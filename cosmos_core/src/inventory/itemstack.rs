@@ -12,6 +12,7 @@ use bevy::{
         system::{Commands, Query, Resource},
     },
     hierarchy::BuildChildren,
+    log::warn,
     prelude::App,
     reflect::Reflect,
     utils::HashSet,
@@ -229,31 +230,36 @@ impl ItemStack {
             if let Some(mut ecmds) = commands.get_entity(data_ent) {
                 ecmds.insert(data).log_components();
             } else {
-                panic!("Invalid itemstack entity - {data_ent:?}");
+                warn!("Invalid itemstack entity - {data_ent:?}. Creating new one.");
+
+                return self.create_itemstack_data_entity(commands, data, inventory_pointer);
             }
 
             data_ent
         } else {
-            let mut ecmds = commands.spawn((
-                data,
-                Name::new("ItemStack data"),
-                ItemStackData {
-                    inventory_pointer,
-                    item_id: self.item_id,
-                },
-            ));
-
-            ecmds.log_components();
-
-            println!("Parent: {:?}", inventory_pointer.0);
-
-            ecmds.set_parent(inventory_pointer.0);
-
-            let ent = ecmds.id();
-            self.data_entity = Some(ent);
-
-            ent
+            self.create_itemstack_data_entity(commands, data, inventory_pointer)
         }
+    }
+
+    fn create_itemstack_data_entity<T: Bundle>(&mut self, commands: &mut Commands, data: T, inventory_pointer: (Entity, u32)) -> Entity {
+        let mut ecmds = commands.spawn((
+            data,
+            Name::new("ItemStack data"),
+            ItemStackData {
+                inventory_pointer,
+                item_id: self.item_id,
+            },
+        ));
+
+        ecmds.log_components();
+
+        println!("Parent: {:?}", inventory_pointer.0);
+
+        ecmds.set_parent(inventory_pointer.0);
+
+        let ent = ecmds.id();
+        self.data_entity = Some(ent);
+        ent
     }
 
     /// Inserts data into the itemstack here. This differs from the

@@ -11,6 +11,7 @@ use bevy::{
 };
 use cosmos_core::{
     block::{block_events::BlockInteractEvent, data::BlockData, Block},
+    events::block_events::BlockDataSystemParams,
     fluid::{
         data::{FluidHolder, FluidItemData, StoredBlockFluid},
         registry::Fluid,
@@ -163,6 +164,7 @@ fn on_interact_with_tank(
     mut q_fluid_data_is: Query<&mut FluidItemData>,
     tank_registry: Res<Registry<FluidTankBlock>>,
     mut commands: Commands,
+    mut block_data_params: BlockDataSystemParams,
     mut q_stored_fluid_block: Query<&mut StoredBlockFluid>,
     mut q_block_data: Query<&mut BlockData>,
     q_has_stored_fluid: Query<(), With<StoredBlockFluid>>,
@@ -221,7 +223,7 @@ fn on_interact_with_tank(
                 println!("Filled to not max cap");
                 let block_data = *stored_fluid_block;
 
-                structure.remove_block_data::<StoredBlockFluid>(coords, &mut commands, &mut q_block_data, &q_has_stored_fluid);
+                structure.remove_block_data::<StoredBlockFluid>(coords, &mut block_data_params, &mut q_block_data, &q_has_stored_fluid);
 
                 FluidItemData::Filled {
                     fluid_id: block_data.fluid_id,
@@ -256,7 +258,12 @@ fn on_interact_with_tank(
                             fluid_stored: stored_fluid_block.fluid_stored,
                         };
 
-                        structure.remove_block_data::<StoredBlockFluid>(coords, &mut commands, &mut q_block_data, &q_has_stored_fluid);
+                        structure.remove_block_data::<StoredBlockFluid>(
+                            coords,
+                            &mut block_data_params,
+                            &mut q_block_data,
+                            &q_has_stored_fluid,
+                        );
                     } else {
                         *stored_fluid_item = FluidItemData::Filled {
                             fluid_id: stored_fluid_block.fluid_id,
@@ -331,7 +338,12 @@ fn on_interact_with_tank(
                             fluid_stored: fluid_stored + stored_fluid_block.fluid_stored,
                         };
 
-                        structure.remove_block_data::<StoredBlockFluid>(coords, &mut commands, &mut q_block_data, &q_has_stored_fluid);
+                        structure.remove_block_data::<StoredBlockFluid>(
+                            coords,
+                            &mut block_data_params,
+                            &mut q_block_data,
+                            &q_has_stored_fluid,
+                        );
                     } else {
                         let delta = fluid_holder.max_capacity() - fluid_stored;
 

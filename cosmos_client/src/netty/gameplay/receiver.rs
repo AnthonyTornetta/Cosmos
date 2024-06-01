@@ -15,7 +15,10 @@ use cosmos_core::{
         NeedsDespawned,
     },
     entities::player::{render_distance::RenderDistance, Player},
-    events::{block_events::BlockChangedEvent, structure::change_pilot_event::ChangePilotEvent},
+    events::{
+        block_events::{BlockChangedEvent, BlockDataChangedEvent},
+        structure::change_pilot_event::ChangePilotEvent,
+    },
     inventory::{held_item_slot::HeldItemSlot, Inventory},
     netty::{
         client::LocalPlayer,
@@ -187,11 +190,18 @@ fn client_sync_players(
         ResMut<ClientLobby>,
         ResMut<NetworkMapping>,
     ),
-    (mut set_chunk_event_writer, mut block_change_event_writer, mut take_damage_event_writer, mut set_terrain_data_ev_writer): (
+    (
+        mut set_chunk_event_writer,
+        mut block_change_event_writer,
+        mut take_damage_event_writer,
+        mut set_terrain_data_ev_writer,
+        mut evw_block_data_changed,
+    ): (
         EventWriter<ChunkInitEvent>,
         EventWriter<BlockChangedEvent>,
         EventWriter<BlockTakeDamageEvent>,
         EventWriter<SetTerrainGenData>,
+        EventWriter<BlockDataChangedEvent>,
     ),
     (query_player, parent_query, q_structure_systems, mut q_inventory, mut q_structure): (
         Query<&Player>,
@@ -587,9 +597,8 @@ fn client_sync_players(
                     &q_structure_systems,
                     &mut q_inventory,
                     &mut q_structure,
+                    &mut evw_block_data_changed,
                 ) {
-                    println!("Despawning {entity:?} bcuz of server!");
-
                     commands.entity(entity).insert(NeedsDespawned);
                 }
             }
@@ -772,6 +781,7 @@ fn get_entity_identifier_entity_for_despawning(
     q_structure_systems: &Query<&StructureSystems, ()>,
     q_inventory: &mut Query<&mut Inventory>,
     q_structure: &mut Query<&mut Structure>,
+    block_data_changed: &mut EventWriter<BlockDataChangedEvent>,
 ) -> Option<Entity> {
     let identifier_entities = match entity_identifier {
         ComponentEntityIdentifier::Entity(entity) => network_mapping.client_from_server(&entity),
@@ -789,9 +799,7 @@ fn get_entity_identifier_entity_for_despawning(
             item_slot,
             server_data_entity,
         } => network_mapping.client_from_server(&inventory_entity).and_then(|inventory_entity| {
-            println!("Got here - {inventory_entity:?}");
             let mut inventory = q_inventory.get_mut(inventory_entity).ok()?;
-            println!("Got inventory!");
 
             let de = inventory
                 .mut_itemstack_at(item_slot as usize)
@@ -816,20 +824,32 @@ fn get_entity_identifier_entity_for_despawning(
         } => network_mapping
             .client_from_server(&identifier.structure_entity)
             .and_then(|structure_entity| {
-                println!("Got structure - {structure_entity:?}");
-
                 let mut structure = q_structure.get_mut(structure_entity).ok()?;
-
-                println!("Structure was OK");
 
                 let bd = structure.block_data(identifier.block.coords());
                 structure.set_block_data_entity(identifier.block.coords(), None);
 
-                println!("Block Data Entity - {bd:?}");
+                block_data_changed.send(BlockDataChangedEvent {
+                    block: identifier.block,
+                    structure_entity,
+                    block_data_entity: None,
+                });
 
                 Some(bd)
             })
-            .unwrap_or_else(|| network_mapping.client_from_server(&server_data_entity)),
+            .unwrap_or_else(|| {
+                network_mapping
+                    .client_from_server(&server_data_entity)
+                    .and_then(|structure_entity| {
+                        block_data_changed.send(BlockDataChangedEvent {
+                            block: identifier.block,
+                            structure_entity,
+                            block_data_entity: None,
+                        });
+
+                        Some(structure_entity)
+                    })
+            }),
     };
 
     if let Some(identifier_entities) = identifier_entities {

@@ -650,13 +650,20 @@ impl BaseStructure {
     pub fn remove_block_data<T: Component>(
         &mut self,
         coords: BlockCoordinate,
-        commands: &mut Commands,
+        params: &mut BlockDataSystemParams,
         q_block_data: &mut Query<&mut BlockData>,
         q_data: &Query<(), With<T>>,
     ) -> Option<Entity> {
+        let self_entity = self.get_entity()?;
         let chunk = self.mut_chunk_at_block_coordinates(coords)?;
 
-        chunk.remove_block_data::<T>(ChunkBlockCoordinate::for_block_coordinate(coords), commands, q_block_data, q_data)
+        chunk.remove_block_data::<T>(
+            self_entity,
+            ChunkBlockCoordinate::for_block_coordinate(coords),
+            params,
+            q_block_data,
+            q_data,
+        )
     }
 
     /// Returns an iterator that acts as a raycast over a set of blocks in this structure

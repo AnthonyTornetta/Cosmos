@@ -346,7 +346,7 @@ impl Chunk {
         };
 
         system_params.ev_writer.send(BlockDataChangedEvent {
-            block_data_entity: data_ent,
+            block_data_entity: Some(data_ent),
             block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords),
             structure_entity,
         });
@@ -380,8 +380,9 @@ impl Chunk {
     /// if it will still exist.
     pub fn remove_block_data<T: Component>(
         &mut self,
+        structure_entity: Entity,
         coords: ChunkBlockCoordinate,
-        commands: &mut Commands,
+        system_params: &mut BlockDataSystemParams,
         q_block_data: &mut Query<&mut BlockData>,
         q_data: &Query<(), With<T>>,
     ) -> Option<Entity> {
@@ -396,11 +397,24 @@ impl Chunk {
         }
 
         if bd.is_empty() {
-            commands.entity(ent).insert(NeedsDespawned);
+            system_params.commands.entity(ent).insert(NeedsDespawned);
             self.block_data.remove(&coords);
+
+            system_params.ev_writer.send(BlockDataChangedEvent {
+                block_data_entity: None,
+                block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords),
+                structure_entity,
+            });
+
             None
         } else {
-            commands.entity(ent).remove::<T>();
+            system_params.commands.entity(ent).remove::<T>();
+
+            system_params.ev_writer.send(BlockDataChangedEvent {
+                block_data_entity: Some(ent),
+                block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords),
+                structure_entity,
+            });
 
             Some(ent)
         }

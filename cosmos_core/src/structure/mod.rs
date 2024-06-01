@@ -8,7 +8,6 @@ use std::sync::{Arc, Mutex};
 
 use bevy::app::Update;
 use bevy::ecs::query::{QueryData, QueryFilter, QueryItem, ROQueryItem, With};
-use bevy::ecs::system::SystemParam;
 use bevy::prelude::{App, Event, IntoSystemConfigs, Name, PreUpdate, VisibilityBundle};
 use bevy::reflect::Reflect;
 use bevy::transform::TransformBundle;
@@ -605,13 +604,13 @@ impl Structure {
     pub fn remove_block_data<T: Component>(
         &mut self,
         coords: BlockCoordinate,
-        commands: &mut Commands,
+        params: &mut BlockDataSystemParams,
         q_block_data: &mut Query<&mut BlockData>,
         q_data: &Query<(), With<T>>,
     ) -> Option<Entity> {
         match self {
-            Self::Full(fs) => fs.remove_block_data(coords, commands, q_block_data, q_data),
-            Self::Dynamic(ds) => ds.remove_block_data(coords, commands, q_block_data, q_data),
+            Self::Full(fs) => fs.remove_block_data(coords, params, q_block_data, q_data),
+            Self::Dynamic(ds) => ds.remove_block_data(coords, params, q_block_data, q_data),
         }
     }
 

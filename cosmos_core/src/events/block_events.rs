@@ -32,15 +32,26 @@ pub struct BlockChangedEvent {
 }
 
 #[derive(Event, Debug)]
+/// Whenever a block's data is changed, this event will be sent.
+///
+/// Assuming you use `structure.insert_block_data` or `structure.remove_block_data`, this event will automatically be sent.
+/// This will be sent on the removal, insertion, and modification of block data. NOTE that if you query_mut block data,
+/// the change event will NOT be sent.
 pub struct BlockDataChangedEvent {
-    pub block_data_entity: Entity,
+    /// The block data entity (or None if it was removed)
+    pub block_data_entity: Option<Entity>,
+    /// The block this is referring to
     pub block: StructureBlock,
+    /// The structure's entity
     pub structure_entity: Entity,
 }
 
 #[derive(SystemParam)]
+/// Bevy SystemParams that the structure needs to properly handle block data
 pub struct BlockDataSystemParams<'w, 's> {
+    /// Commands
     pub commands: Commands<'w, 's>,
+    /// Sent whenever the structure thinks the BlockData is changing
     pub ev_writer: EventWriter<'w, BlockDataChangedEvent>,
 }
 

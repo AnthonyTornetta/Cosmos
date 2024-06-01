@@ -3,6 +3,7 @@ use super::{
     register_component, ClientAuthority, ComponentEntityIdentifier, ComponentReplicationMessage, ComponentSyncingSet,
     GotComponentToRemoveEvent, SyncType, SyncableComponent, SyncedComponentId,
 };
+use crate::events::block_events::BlockDataChangedEvent;
 use crate::inventory::itemstack::ItemStackData;
 use crate::inventory::Inventory;
 use crate::netty::client::LocalPlayer;
@@ -280,6 +281,7 @@ fn client_receive_components(
     mut client: ResMut<RenetClient>,
     mut ev_writer_sync: EventWriter<GotComponentToSyncEvent>,
     mut ev_writer_remove: EventWriter<GotComponentToRemoveEvent>,
+    mut evw_block_data_changed: EventWriter<BlockDataChangedEvent>,
     q_structure_systems: Query<&StructureSystems>,
     mut q_inventory: Query<&mut Inventory>,
     mut network_mapping: ResMut<NetworkMapping>,
@@ -299,14 +301,16 @@ fn client_receive_components(
             &mut q_structure,
             &mut ev_writer_sync,
             &mut ev_writer_remove,
+            &mut evw_block_data_changed,
         ) {
             waiting_data.0.push(msg);
         }
     }
 
     while let Some(message) = client.receive_message(NettyChannelServer::ComponentReplication) {
-        let msg: ComponentReplicationMessage =
-            cosmos_encoder::deserialize(&message).expect("Failed to parse component replication message from server!");
+        let msg: ComponentReplicationMessage = cosmos_encoder::deserialize(&message).unwrap_or_else(|e| {
+            panic!("Failed to parse component replication message from server! Bytes:\n{message:?}\nError: {e:?}");
+        });
 
         if let Some(msg) = handle_incoming_component_data(
             msg,
@@ -317,6 +321,7 @@ fn client_receive_components(
             &mut q_structure,
             &mut ev_writer_sync,
             &mut ev_writer_remove,
+            &mut evw_block_data_changed,
         ) {
             waiting_data.0.push(msg);
         }
@@ -332,6 +337,7 @@ fn handle_incoming_component_data(
     q_structure: &mut Query<&mut Structure>,
     ev_writer_sync: &mut EventWriter<GotComponentToSyncEvent>,
     ev_writer_remove: &mut EventWriter<GotComponentToRemoveEvent>,
+    evw_block_data_changed: &mut EventWriter<BlockDataChangedEvent>,
 ) -> Option<ComponentReplicationMessage> {
     match msg {
         ComponentReplicationMessage::ComponentReplication {
@@ -345,6 +351,7 @@ fn handle_incoming_component_data(
                 q_structure_systems,
                 q_inventory,
                 q_structure,
+                evw_block_data_changed,
                 commands,
             ) {
                 Some(value) => value,
@@ -381,6 +388,7 @@ fn handle_incoming_component_data(
                 q_structure_systems,
                 q_inventory,
                 q_structure,
+                evw_block_data_changed,
                 commands,
             ) {
                 Some(value) => value,
@@ -414,6 +422,7 @@ fn get_entity_identifier_info(
     q_structure_systems: &Query<&StructureSystems, ()>,
     q_inventory: &mut Query<&mut Inventory>,
     q_structure: &mut Query<&mut Structure>,
+    evw_block_data_changed: &mut EventWriter<BlockDataChangedEvent>,
     commands: &mut Commands,
 ) -> Option<(Entity, Entity)> {
     let identifier_entities = match entity_identifier {
@@ -464,6 +473,12 @@ fn get_entity_identifier_info(
                         println!("Got block data! server {:?} -> client {data_entity:?}", server_data_entity);
 
                         network_mapping.add_mapping(data_entity, server_data_entity);
+
+                        evw_block_data_changed.send(BlockDataChangedEvent {
+                            block: identifier.block,
+                            block_data_entity: Some(data_entity),
+                            structure_entity,
+                        });
 
                         Some((data_entity, data_entity))
                     })
