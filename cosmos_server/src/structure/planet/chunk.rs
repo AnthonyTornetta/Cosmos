@@ -66,7 +66,7 @@ fn begin_serialization(
             continue;
         };
 
-        let Some(chunk) = structure.chunk_from_chunk_coordinates(chunk_ent.chunk_location) else {
+        let Some(chunk) = structure.chunk_at(chunk_ent.chunk_location) else {
             continue;
         };
 
@@ -106,7 +106,7 @@ fn send_chunks(
         });
 
         structure
-            .chunk_from_chunk_coordinates(chunk_ent.chunk_location)
+            .chunk_at(chunk_ent.chunk_location)
             .expect("Chunk must still be loaded")
             .all_block_data_entities()
             .iter()

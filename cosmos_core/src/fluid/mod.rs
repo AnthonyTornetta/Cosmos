@@ -1,3 +1,5 @@
+//! Fluid
+
 use bevy::app::App;
 
 pub mod data;

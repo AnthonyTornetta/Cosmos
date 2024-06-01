@@ -5,7 +5,7 @@ use bevy::{
         event::{EventReader, EventWriter},
         query::With,
         schedule::IntoSystemConfigs,
-        system::{Commands, Query, Res},
+        system::{Query, Res},
     },
     hierarchy::Parent,
 };
@@ -15,6 +15,7 @@ use cosmos_core::{
         storage::storage_blocks::{on_add_storage, PopulateBlockInventoryEvent},
         Block,
     },
+    events::block_events::BlockDataSystemParams,
     inventory::Inventory,
     registry::{identifiable::Identifiable, Registry},
     structure::{chunk::netty::SerializedBlockData, coordinates::ChunkBlockCoordinate, Structure},
@@ -70,7 +71,7 @@ fn populate_inventory(
     mut q_structure: Query<&mut Structure>,
     mut q_block_data: Query<&mut BlockData>,
     q_has_inventory: Query<(), With<Inventory>>,
-    mut commands: Commands,
+    mut params: BlockDataSystemParams,
     mut ev_reader: EventReader<PopulateBlockInventoryEvent>,
 ) {
     for ev in ev_reader.read() {
@@ -83,7 +84,7 @@ fn populate_inventory(
         structure.insert_block_data_with_entity(
             coords,
             |e| Inventory::new("Storage", 9 * 5, None, e),
-            &mut commands,
+            &mut params,
             &mut q_block_data,
             &q_has_inventory,
         );

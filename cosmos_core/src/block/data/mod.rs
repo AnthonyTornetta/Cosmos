@@ -50,6 +50,7 @@ impl BlockData {
         self.data_count -= 1;
     }
 
+    /// Returns true if this [`BlockData`] entity contains no actual data
     pub fn is_empty(&self) -> bool {
         self.data_count == 0
     }

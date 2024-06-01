@@ -394,7 +394,7 @@ impl<'a> Iterator for ChunkIterator<'a> {
                     }
                 }
 
-                if let Some(chunk) = body.structure.chunk_from_chunk_coordinates(position) {
+                if let Some(chunk) = body.structure.chunk_at(position) {
                     Some(ChunkIteratorResult::FilledChunk { position, chunk })
                 } else {
                     Some(ChunkIteratorResult::EmptyChunk { position })

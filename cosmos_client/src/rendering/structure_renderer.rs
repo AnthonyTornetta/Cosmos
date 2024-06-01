@@ -5,6 +5,8 @@ use crate::asset::materials::{
 use crate::block::lighting::{BlockLightProperties, BlockLighting};
 use crate::state::game_state::GameState;
 use crate::structure::planet::unload_chunks_far_from_players;
+use bevy::ecs::event::Event;
+use bevy::ecs::schedule::{IntoSystemSetConfigs, OnExit, SystemSet};
 use bevy::log::warn;
 use bevy::prelude::{
     in_state, App, Assets, BuildChildren, Commands, Component, Deref, DerefMut, DespawnRecursiveExt, Entity, EventReader, EventWriter,
@@ -18,7 +20,7 @@ use bevy::tasks::{AsyncComputeTaskPool, Task};
 use bevy::transform::TransformBundle;
 use bevy::utils::hashbrown::HashMap;
 use cosmos_core::block::{Block, BlockFace};
-use cosmos_core::events::block_events::BlockChangedEvent;
+use cosmos_core::events::block_events::{BlockChangedEvent, BlockDataChangedEvent};
 use cosmos_core::netty::client::LocalPlayer;
 use cosmos_core::physics::location::SECTOR_DIMENSIONS;
 use cosmos_core::registry::identifiable::Identifiable;
@@ -49,20 +51,20 @@ struct ChunkMesh {
 }
 
 fn monitor_block_updates_system(
-    mut event: EventReader<BlockChangedEvent>,
-    mut chunk_set_event: EventReader<ChunkSetEvent>,
-    structure_query: Query<&Structure>,
+    mut evr_block_changed: EventReader<BlockChangedEvent>,
+    mut evr_chunk_set_event: EventReader<ChunkSetEvent>,
+    mut evr_changed_data: EventReader<BlockDataChangedEvent>,
+    q_structure: Query<&Structure>,
     mut commands: Commands,
 ) {
     let mut chunks_todo = HashMap::<Entity, HashSet<ChunkCoordinate>>::default();
 
-    for ev in event.read() {
-        let structure: &Structure = structure_query.get(ev.structure_entity).unwrap();
-        if !chunks_todo.contains_key(&ev.structure_entity) {
-            chunks_todo.insert(ev.structure_entity, HashSet::default());
-        }
+    for ev in evr_changed_data.read() {
+        let Ok(structure) = q_structure.get(ev.structure_entity) else {
+            continue;
+        };
 
-        let chunks = chunks_todo.get_mut(&ev.structure_entity).expect("This was just added");
+        let chunks = chunks_todo.entry(ev.structure_entity).or_default();
 
         let cc = ev.block.chunk_coords();
 
@@ -95,16 +97,50 @@ fn monitor_block_updates_system(
         chunks.insert(cc);
     }
 
-    for ev in chunk_set_event.read() {
-        let Ok(structure) = structure_query.get(ev.structure_entity) else {
+    for ev in evr_block_changed.read() {
+        let Ok(structure) = q_structure.get(ev.structure_entity) else {
             continue;
         };
 
-        if !chunks_todo.contains_key(&ev.structure_entity) {
-            chunks_todo.insert(ev.structure_entity, HashSet::default());
+        let chunks = chunks_todo.entry(ev.structure_entity).or_default();
+
+        let cc = ev.block.chunk_coords();
+
+        if ev.block.x() != 0 && ev.block.x() % CHUNK_DIMENSIONS == 0 {
+            chunks.insert(ChunkCoordinate::new(cc.x - 1, cc.y, cc.z));
         }
 
-        let chunks = chunks_todo.get_mut(&ev.structure_entity).expect("This was just added");
+        let dims = structure.block_dimensions();
+
+        if ev.block.x() != dims.x - 1 && (ev.block.x() + 1) % CHUNK_DIMENSIONS == 0 {
+            chunks.insert(ChunkCoordinate::new(cc.x + 1, cc.y, cc.z));
+        }
+
+        if ev.block.y() != 0 && ev.block.y() % CHUNK_DIMENSIONS == 0 {
+            chunks.insert(ChunkCoordinate::new(cc.x, cc.y - 1, cc.z));
+        }
+
+        if ev.block.y() != dims.y - 1 && (ev.block.y() + 1) % CHUNK_DIMENSIONS == 0 {
+            chunks.insert(ChunkCoordinate::new(cc.x, cc.y + 1, cc.z));
+        }
+
+        if ev.block.z() != 0 && ev.block.z() % CHUNK_DIMENSIONS == 0 {
+            chunks.insert(ChunkCoordinate::new(cc.x, cc.y, cc.z - 1));
+        }
+
+        if ev.block.z() != dims.z - 1 && (ev.block.z() + 1) % CHUNK_DIMENSIONS == 0 {
+            chunks.insert(ChunkCoordinate::new(cc.x, cc.y, cc.z + 1));
+        }
+
+        chunks.insert(cc);
+    }
+
+    for ev in evr_chunk_set_event.read() {
+        let Ok(structure) = q_structure.get(ev.structure_entity) else {
+            continue;
+        };
+
+        let chunks = chunks_todo.entry(ev.structure_entity).or_default();
 
         let cc = ev.coords;
 
@@ -133,13 +169,17 @@ fn monitor_block_updates_system(
     }
 
     for (structure, chunks) in chunks_todo {
-        if let Ok(structure) = structure_query.get(structure) {
-            for coords in chunks {
-                if let Some(chunk_entity) = structure.chunk_entity(coords) {
-                    if let Some(mut chunk_ent) = commands.get_entity(chunk_entity) {
-                        chunk_ent.insert(ChunkNeedsRendered);
-                    }
-                }
+        let Ok(structure) = q_structure.get(structure) else {
+            continue;
+        };
+
+        for coords in chunks {
+            let Some(chunk_entity) = structure.chunk_entity(coords) else {
+                continue;
+            };
+
+            if let Some(mut chunk_ent) = commands.get_entity(chunk_entity) {
+                chunk_ent.insert(ChunkNeedsRendered);
             }
         }
     }
@@ -167,6 +207,8 @@ struct ChunkMeshes(Vec<Entity>);
 #[derive(Debug)]
 struct ChunkRenderResult {
     chunk_entity: Entity,
+    /// Any blocks that need their own rendering logic applied to them
+    custom_blocks: HashSet<u16>,
     mesh: ChunkMesh,
 }
 
@@ -175,6 +217,14 @@ struct RenderingChunk(Task<ChunkRenderResult>);
 
 #[derive(Resource, Debug, DerefMut, Deref, Default)]
 struct RenderingChunks(Vec<RenderingChunk>);
+
+#[derive(Event)]
+pub struct ChunkNeedsCustomBlocksRendered {
+    pub structure_entity: Entity,
+    pub chunk_coordinate: ChunkCoordinate,
+    pub mesh_entity_parent: Entity,
+    pub block_ids: HashSet<u16>,
+}
 
 fn poll_rendering_chunks(
     mut rendering_chunks: ResMut<RenderingChunks>,
@@ -185,6 +235,8 @@ fn poll_rendering_chunks(
     chunk_meshes_query: Query<&ChunkMeshes>,
     mut event_writer: EventWriter<AddMaterialEvent>,
     mut remove_all_materials: EventWriter<RemoveAllMaterialsEvent>,
+    mut ev_writer: EventWriter<ChunkNeedsCustomBlocksRendered>,
+    q_chunk_entity: Query<&ChunkEntity>,
 ) {
     let mut todo = Vec::with_capacity(rendering_chunks.capacity());
 
@@ -197,6 +249,17 @@ fn poll_rendering_chunks(
             if commands.get_entity(entity).is_none() {
                 // Chunk may have been despawned during its rendering
                 continue;
+            }
+
+            if let Ok(chunk_entity) = q_chunk_entity.get(entity) {
+                // This should be sent even if there are no custom blocks, because the chunk may have had
+                // custom blocks in the past that need their rendering info cleaned up
+                ev_writer.send(ChunkNeedsCustomBlocksRendered {
+                    block_ids: rendered_chunk.custom_blocks,
+                    chunk_coordinate: chunk_entity.chunk_location,
+                    mesh_entity_parent: entity,
+                    structure_entity: chunk_entity.structure_entity,
+                });
             }
 
             let mut old_mesh_entities = Vec::new();
@@ -375,6 +438,7 @@ fn monitor_needs_rendered_system(
     local_player: Query<&GlobalTransform, With<LocalPlayer>>,
     chunks_need_rendered: Query<(Entity, &ChunkEntity, &GlobalTransform), With<ChunkNeedsRendered>>,
     materials_registry: Res<ReadOnlyRegistry<MaterialDefinition>>,
+    block_rendering_mode: Res<BlockRenderingModes>,
 ) {
     let Ok(local_transform) = local_player.get_single() else {
         return;
@@ -398,18 +462,18 @@ fn monitor_needs_rendered_system(
         //
         // please someone fix this when they feel inspired
 
-        let Some(chunk) = structure.chunk_from_chunk_coordinates(coords).cloned() else {
+        let Some(chunk) = structure.chunk_at(coords).cloned() else {
             continue;
         };
 
         let unbound = UnboundChunkCoordinate::from(coords);
 
-        let left = structure.chunk_from_chunk_coordinates_unbound(unbound.left()).cloned();
-        let right = structure.chunk_from_chunk_coordinates_unbound(unbound.right()).cloned();
-        let bottom = structure.chunk_from_chunk_coordinates_unbound(unbound.bottom()).cloned();
-        let top = structure.chunk_from_chunk_coordinates_unbound(unbound.top()).cloned();
-        let back = structure.chunk_from_chunk_coordinates_unbound(unbound.back()).cloned();
-        let front = structure.chunk_from_chunk_coordinates_unbound(unbound.front()).cloned();
+        let left = structure.chunk_at_unbound(unbound.left()).cloned();
+        let right = structure.chunk_at_unbound(unbound.right()).cloned();
+        let bottom = structure.chunk_at_unbound(unbound.bottom()).cloned();
+        let top = structure.chunk_at_unbound(unbound.top()).cloned();
+        let back = structure.chunk_at_unbound(unbound.back()).cloned();
+        let front = structure.chunk_at_unbound(unbound.front()).cloned();
 
         // "gee, you sure have a way with the borrow checker"
 
@@ -419,11 +483,12 @@ fn monitor_needs_rendered_system(
         let block_textures = block_textures.clone();
         let lighting = lighting.clone();
         let materials_registry = materials_registry.clone();
+        let block_rendering_mode = block_rendering_mode.clone();
 
         let task = async_task_pool.spawn(async move {
             let mut renderer = ChunkRenderer::new();
 
-            renderer.render(
+            let custom_blocks = renderer.render(
                 &materials.registry(),
                 &materials_registry.registry(),
                 &lighting.registry(),
@@ -436,11 +501,13 @@ fn monitor_needs_rendered_system(
                 front.as_ref(),
                 &blocks.registry(),
                 &meshes_registry.registry(),
+                &block_rendering_mode,
                 &block_textures.registry(),
             );
 
             ChunkRenderResult {
                 chunk_entity: entity,
+                custom_blocks,
                 mesh: renderer.create_mesh(),
             }
         });
@@ -481,6 +548,47 @@ struct ChunkRenderer {
     lights: HashMap<ChunkBlockCoordinate, BlockLightProperties>,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub enum RenderingMode {
+    #[default]
+    Standard,
+    Both,
+    Custom,
+}
+
+#[derive(Debug, Clone, Resource, Default)]
+pub struct BlockRenderingModes {
+    blocks: Vec<RenderingMode>,
+}
+
+impl BlockRenderingModes {
+    pub fn set_rendering_mode(&mut self, block: &Block, rendering_mode: RenderingMode) {
+        let id = block.id();
+
+        while self.blocks.len() <= id as usize {
+            self.blocks.push(RenderingMode::Standard);
+        }
+
+        self.blocks[id as usize] = rendering_mode;
+    }
+
+    pub fn try_rendering_mode(&self, block_id: u16) -> Option<RenderingMode> {
+        self.blocks.get(block_id as usize).copied()
+    }
+
+    pub fn rendering_mode(&self, block_id: u16) -> RenderingMode {
+        self.blocks[block_id as usize]
+    }
+}
+
+fn fill_rendering_mode(blocks: Res<Registry<Block>>, mut rendering_mode: ResMut<BlockRenderingModes>) {
+    for block in blocks.iter() {
+        if rendering_mode.try_rendering_mode(block.id()).is_none() {
+            rendering_mode.set_rendering_mode(block, RenderingMode::Standard);
+        }
+    }
+}
+
 impl ChunkRenderer {
     fn new() -> Self {
         Self::default()
@@ -501,11 +609,14 @@ impl ChunkRenderer {
         front: Option<&Chunk>,
         blocks: &Registry<Block>,
         meshes: &BlockMeshRegistry,
+        rendering_modes: &BlockRenderingModes,
         block_textures: &Registry<BlockTextureIndex>,
-    ) {
+    ) -> HashSet<u16> {
         let cd2 = CHUNK_DIMENSIONSF / 2.0;
 
         let mut faces = Vec::with_capacity(6);
+
+        let mut custom_blocks = HashSet::new();
 
         for (coords, (block_id, block_info)) in chunk
             .blocks()
@@ -520,6 +631,17 @@ impl ChunkRenderer {
             })
             .filter(|(coords, _)| chunk.has_block_at(*coords))
         {
+            let rendering_mode = rendering_modes.rendering_mode(block_id);
+
+            if rendering_mode == RenderingMode::Both || rendering_mode == RenderingMode::Custom {
+                custom_blocks.insert(block_id);
+            }
+
+            if rendering_mode == RenderingMode::Custom {
+                // If this is custom rendered, we shouldn't do the normal rendering logic here.
+                continue;
+            }
+
             let (center_offset_x, center_offset_y, center_offset_z) = (
                 coords.x as f32 - cd2 + 0.5,
                 coords.y as f32 - cd2 + 0.5,
@@ -527,19 +649,23 @@ impl ChunkRenderer {
             );
             let actual_block = blocks.from_numeric_id(block_id);
 
-            #[inline(always)]
-            fn check_should_render(
-                c: &Chunk,
-                actual_block: &Block,
-                blocks: &Registry<Block>,
-                coords: ChunkBlockCoordinate,
-                should_connect: &mut bool,
-            ) -> bool {
-                let block_here = blocks.from_numeric_id(c.block_at(coords));
+            let check_should_render = |c: &Chunk,
+                                       actual_block: &Block,
+                                       blocks: &Registry<Block>,
+                                       coords: ChunkBlockCoordinate,
+                                       should_connect: &mut bool|
+             -> bool {
+                let block_id_here = c.block_at(coords);
+                let block_here = blocks.from_numeric_id(block_id_here);
                 *should_connect = actual_block.should_connect_with(block_here);
 
-                !(actual_block.is_fluid() && block_here == actual_block) && (block_here.is_see_through() || !actual_block.is_full())
-            }
+                let custom_rendered = rendering_modes.rendering_mode(block_id_here);
+
+                // A block adjacent is custom
+                custom_rendered == RenderingMode::Custom
+                    || (!(actual_block.is_fluid() && block_here == actual_block)
+                        && (block_here.is_see_through() || !actual_block.is_full()))
+            };
 
             let (x, y, z) = (coords.x, coords.y, coords.z);
 
@@ -841,6 +967,8 @@ impl ChunkRenderer {
                 }
             }
         }
+
+        custom_blocks
     }
 
     fn create_mesh(self) -> ChunkMesh {
@@ -861,16 +989,41 @@ impl ChunkRenderer {
     }
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+pub enum StructureRenderingSet {
+    MonitorBlockUpdates,
+    BeginRendering,
+    CustomRendering,
+}
+
 pub(super) fn register(app: &mut App) {
-    app.add_systems(
+    app.configure_sets(
         Update,
-        (monitor_block_updates_system, monitor_needs_rendered_system, poll_rendering_chunks)
+        (
+            StructureRenderingSet::MonitorBlockUpdates,
+            StructureRenderingSet::BeginRendering,
+            StructureRenderingSet::CustomRendering,
+        )
             .chain()
             .run_if(in_state(GameState::Playing))
             .before(unload_chunks_far_from_players)
             .before(remove_materials)
             .before(add_materials),
+    );
+
+    app.add_systems(OnExit(GameState::PostLoading), fill_rendering_mode);
+
+    app.add_systems(
+        Update,
+        (
+            (monitor_block_updates_system, monitor_needs_rendered_system)
+                .chain()
+                .in_set(StructureRenderingSet::MonitorBlockUpdates),
+            poll_rendering_chunks.in_set(StructureRenderingSet::BeginRendering),
+        ),
     )
+    .add_event::<ChunkNeedsCustomBlocksRendered>()
     .init_resource::<RenderingChunks>()
+    .init_resource::<BlockRenderingModes>()
     .register_type::<LightsHolder>();
 }

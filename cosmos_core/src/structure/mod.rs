@@ -8,6 +8,7 @@ use std::sync::{Arc, Mutex};
 
 use bevy::app::Update;
 use bevy::ecs::query::{QueryData, QueryFilter, QueryItem, ROQueryItem, With};
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::{App, Event, IntoSystemConfigs, Name, PreUpdate, VisibilityBundle};
 use bevy::reflect::Reflect;
 use bevy::transform::TransformBundle;
@@ -40,7 +41,7 @@ use crate::block::data::persistence::ChunkLoadBlockDataEvent;
 use crate::block::data::BlockData;
 use crate::block::{Block, BlockFace, BlockRotation};
 use crate::ecs::NeedsDespawned;
-use crate::events::block_events::BlockChangedEvent;
+use crate::events::block_events::{BlockChangedEvent, BlockDataSystemParams};
 use crate::netty::NoSendEntity;
 use crate::physics::location::Location;
 use crate::registry::Registry;
@@ -159,10 +160,10 @@ impl Structure {
     ///  
     /// (0, 0, 0) => chunk @ 0, 0, 0\
     /// (1, 0, 0) => chunk @ 1, 0, 0
-    pub fn chunk_from_chunk_coordinates(&self, coords: ChunkCoordinate) -> Option<&Chunk> {
+    pub fn chunk_at(&self, coords: ChunkCoordinate) -> Option<&Chunk> {
         match self {
-            Self::Dynamic(ds) => ds.chunk_from_chunk_coordinates(coords),
-            Self::Full(fs) => fs.chunk_from_chunk_coordinates(coords),
+            Self::Dynamic(ds) => ds.chunk_at(coords),
+            Self::Full(fs) => fs.chunk_at(coords),
         }
     }
 
@@ -171,10 +172,10 @@ impl Structure {
     /// (0, 0, 0) => chunk @ 0, 0, 0\
     /// (1, 0, 0) => chunk @ 1, 0, 0\
     /// (-1, 0, 0) => None
-    pub fn chunk_from_chunk_coordinates_unbound(&self, unbound_coords: UnboundChunkCoordinate) -> Option<&Chunk> {
+    pub fn chunk_at_unbound(&self, unbound_coords: UnboundChunkCoordinate) -> Option<&Chunk> {
         match self {
-            Self::Full(fs) => fs.chunk_from_chunk_coordinates_unbound(unbound_coords),
-            Self::Dynamic(ds) => ds.chunk_from_chunk_coordinates_unbound(unbound_coords),
+            Self::Full(fs) => fs.chunk_at_unbound(unbound_coords),
+            Self::Dynamic(ds) => ds.chunk_at_unbound(unbound_coords),
         }
     }
 
@@ -185,10 +186,10 @@ impl Structure {
     /// Modifying a chunk will not update the structure or chunks surrounding it and it won't send any events.
     /// Unless you know what you're doing, you should use a mutable structure instead
     /// of a mutable chunk to make changes!
-    pub fn mut_chunk_from_chunk_coordinates(&mut self, coords: ChunkCoordinate) -> Option<&mut Chunk> {
+    pub fn mut_chunk_at(&mut self, coords: ChunkCoordinate) -> Option<&mut Chunk> {
         match self {
-            Self::Full(fs) => fs.mut_chunk_from_chunk_coordinates(coords),
-            Self::Dynamic(ds) => ds.mut_chunk_from_chunk_coordinates(coords),
+            Self::Full(fs) => fs.mut_chunk_at(coords),
+            Self::Dynamic(ds) => ds.mut_chunk_at(coords),
         }
     }
 
@@ -521,6 +522,9 @@ impl Structure {
         }
     }
 
+    /// Gets or creates the block data entity for the block here.
+    ///
+    /// Returns None if the chunk is not loaded here.
     pub fn get_or_create_block_data(&mut self, coords: BlockCoordinate, commands: &mut Commands) -> Option<Entity> {
         match self {
             Self::Full(fs) => fs.get_or_create_block_data(coords, commands),
@@ -540,7 +544,7 @@ impl Structure {
         &mut self,
         coords: BlockCoordinate,
         create_data_closure: F,
-        commands: &mut Commands,
+        system_params: &mut BlockDataSystemParams,
         q_block_data: &mut Query<&mut BlockData>,
         q_data: &Query<(), With<T>>,
     ) -> Option<Entity>
@@ -548,8 +552,8 @@ impl Structure {
         F: FnOnce(Entity) -> T,
     {
         match self {
-            Self::Full(fs) => fs.insert_block_data_with_entity(coords, create_data_closure, commands, q_block_data, q_data),
-            Self::Dynamic(ds) => ds.insert_block_data_with_entity(coords, create_data_closure, commands, q_block_data, q_data),
+            Self::Full(fs) => fs.insert_block_data_with_entity(coords, create_data_closure, system_params, q_block_data, q_data),
+            Self::Dynamic(ds) => ds.insert_block_data_with_entity(coords, create_data_closure, system_params, q_block_data, q_data),
         }
     }
 
@@ -647,7 +651,7 @@ fn remove_empty_chunks(
 
         let chunk_coords = bce.block.chunk_coords();
 
-        if structure.chunk_from_chunk_coordinates(chunk_coords).is_none() {
+        if structure.chunk_at(chunk_coords).is_none() {
             if let Some(chunk_entity) = structure.chunk_entity(chunk_coords) {
                 commands.entity(chunk_entity).insert(NeedsDespawned);
 
@@ -733,7 +737,7 @@ fn add_chunks_system(
             continue;
         };
 
-        let Some(chunk) = structure.chunk_from_chunk_coordinates(chunk_coordinate) else {
+        let Some(chunk) = structure.chunk_at(chunk_coordinate) else {
             continue;
         };
 

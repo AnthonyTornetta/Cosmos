@@ -1,9 +1,12 @@
+//! Fluids
+
 use bevy::app::App;
 use serde::{Deserialize, Serialize};
 
 use crate::registry::{create_registry, identifiable::Identifiable};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+/// A fluid
 pub struct Fluid {
     id: u16,
     unlocalized_name: String,
@@ -17,6 +20,7 @@ pub struct Fluid {
 }
 
 impl Fluid {
+    /// A fluid
     pub fn new(unlocalized_name: impl Into<String>, viscocity: f32) -> Self {
         Self {
             id: 0,

@@ -27,9 +27,10 @@ use crate::{
     state::game_state::GameState,
 };
 
+mod custom_blocks;
 mod lod_renderer;
 pub mod mesh_delayer;
-mod structure_renderer;
+pub(crate) mod structure_renderer;
 
 #[derive(Component, Debug)]
 /// The player's active camera will have this component
@@ -905,6 +906,7 @@ pub(super) fn register(app: &mut App) {
     structure_renderer::register(app);
     lod_renderer::register(app);
     mesh_delayer::register(app);
+    custom_blocks::register(app);
 
     app.add_systems(OnEnter(GameState::Loading), register_meshes).add_systems(
         OnExit(GameState::PostLoading),

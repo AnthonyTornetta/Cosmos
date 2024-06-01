@@ -12,7 +12,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use crate::{
     block::data::BlockDataIdentifier,
     registry::{create_registry, identifiable::Identifiable, Registry},
-    structure::{structure_block::StructureBlock, systems::StructureSystemId},
+    structure::systems::StructureSystemId,
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -94,19 +94,31 @@ pub enum ClientAuthority {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy)]
+/// Used to identify an entity sent from the client/server.
 pub enum ComponentEntityIdentifier {
+    /// Just a normal entity
     Entity(Entity),
+    /// This entity is a structure system
     StructureSystem {
+        /// The structure this system is a part of
         structure_entity: Entity,
+        /// The system's ID within the structure
         id: StructureSystemId,
     },
+    /// This entity represents data for an itemstack
     ItemData {
+        /// The inventory the ItemStack is in
         inventory_entity: Entity,
+        /// The slot the ItemStack is in
         item_slot: u32,
+        /// The server's entity that represents this ItemStack's data
         server_data_entity: Entity,
     },
+    /// This entity represents data for a block
     BlockData {
+        /// The identifier for the BlockData
         identifier: BlockDataIdentifier,
+        /// The server's entity that represents this block's data
         server_data_entity: Entity,
     },
 }

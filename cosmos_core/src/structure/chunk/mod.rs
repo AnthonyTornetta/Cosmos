@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 use crate::block::data::{BlockData, BlockDataIdentifier};
 use crate::block::{Block, BlockFace, BlockRotation, BlockSubRotation};
 use crate::ecs::NeedsDespawned;
+use crate::events::block_events::{BlockDataChangedEvent, BlockDataSystemParams};
 use crate::registry::Registry;
 
 use super::block_health::BlockHealth;
@@ -259,6 +260,7 @@ impl Chunk {
         }
     }
 
+    /// Gets or creates the block data entity for the block here.
     pub fn get_or_create_block_data(
         &mut self,
         coords: ChunkBlockCoordinate,
@@ -300,14 +302,14 @@ impl Chunk {
         chunk_entity: Entity,
         structure_entity: Entity,
         create_data_closure: F,
-        commands: &mut Commands,
+        system_params: &mut BlockDataSystemParams,
         q_block_data: &mut Query<&mut BlockData>,
         q_data: &Query<(), With<T>>,
     ) -> Entity
     where
         F: FnOnce(Entity) -> T,
     {
-        if let Some(data_ent) = self.block_data(coords) {
+        let data_ent = if let Some(data_ent) = self.block_data(coords) {
             let data = create_data_closure(data_ent);
 
             let Ok(mut bd) = q_block_data.get_mut(data_ent) else {
@@ -318,11 +320,11 @@ impl Chunk {
                 bd.increment();
             }
 
-            commands.entity(data_ent).insert(data);
+            system_params.commands.entity(data_ent).insert(data);
 
             data_ent
         } else {
-            let mut ecmds = commands.spawn(BlockData {
+            let mut ecmds = system_params.commands.spawn(BlockData {
                 data_count: 1,
                 identifier: BlockDataIdentifier {
                     block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords),
@@ -341,7 +343,15 @@ impl Chunk {
             self.block_data.insert(coords, data_ent);
 
             data_ent
-        }
+        };
+
+        system_params.ev_writer.send(BlockDataChangedEvent {
+            block_data_entity: data_ent,
+            block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords),
+            structure_entity,
+        });
+
+        data_ent
     }
 
     /// Queries this block's data. Returns `None` if the requested query failed or if no block data exists for this block.

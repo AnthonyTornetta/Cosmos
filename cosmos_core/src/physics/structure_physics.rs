@@ -535,7 +535,7 @@ fn listen_for_new_physics_event(
             return;
         };
 
-        let Some(chunk) = structure.chunk_from_chunk_coordinates(chunk_coord) else {
+        let Some(chunk) = structure.chunk_at(chunk_coord) else {
             return;
         };
 

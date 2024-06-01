@@ -28,7 +28,7 @@ use super::{
     },
     structure_block::StructureBlock,
     structure_iterator::{BlockIterator, ChunkIterator},
-    Structure,
+    BlockDataSystemParams, Structure,
 };
 
 #[derive(Reflect, Debug, Serialize, Deserialize)]
@@ -180,7 +180,7 @@ impl BaseStructure {
     ///  
     /// (0, 0, 0) => chunk @ 0, 0, 0\
     /// (1, 0, 0) => chunk @ 1, 0, 0
-    pub fn chunk_from_chunk_coordinates(&self, coords: ChunkCoordinate) -> Option<&Chunk> {
+    pub fn chunk_at(&self, coords: ChunkCoordinate) -> Option<&Chunk> {
         self.debug_assert_coords_within(coords);
 
         self.chunks.get(&self.flatten(coords))
@@ -191,13 +191,13 @@ impl BaseStructure {
     /// (0, 0, 0) => chunk @ 0, 0, 0\
     /// (1, 0, 0) => chunk @ 1, 0, 0\
     /// (-1, 0, 0) => None
-    pub fn chunk_from_chunk_coordinates_unbound(&self, unbound_coords: UnboundChunkCoordinate) -> Option<&Chunk> {
+    pub fn chunk_at_unbound(&self, unbound_coords: UnboundChunkCoordinate) -> Option<&Chunk> {
         let Ok(bounded) = ChunkCoordinate::try_from(unbound_coords) else {
             return None;
         };
 
         if self.chunk_coords_within(bounded) {
-            self.chunk_from_chunk_coordinates(bounded)
+            self.chunk_at(bounded)
         } else {
             None
         }
@@ -210,7 +210,7 @@ impl BaseStructure {
     /// Modifying a chunk will not update the structure or chunks surrounding it and it won't send any events.
     /// Unless you know what you're doing, you should use a mutable structure instead
     /// of a mutable chunk to make changes!
-    pub fn mut_chunk_from_chunk_coordinates(&mut self, coords: ChunkCoordinate) -> Option<&mut Chunk> {
+    pub fn mut_chunk_at(&mut self, coords: ChunkCoordinate) -> Option<&mut Chunk> {
         self.debug_assert_coords_within(coords);
 
         self.chunks.get_mut(&self.flatten(coords))
@@ -223,7 +223,7 @@ impl BaseStructure {
     /// - (5, 0, 0) => chunk @ 0, 0, 0\
     /// - (`CHUNK_DIMENSIONS`, 0, 0) => chunk @ 1, 0, 0
     pub fn chunk_at_block_coordinates(&self, coords: BlockCoordinate) -> Option<&Chunk> {
-        self.chunk_from_chunk_coordinates(ChunkCoordinate::for_block_coordinate(coords))
+        self.chunk_at(ChunkCoordinate::for_block_coordinate(coords))
     }
 
     /// Returns the mutable chunk at those block coordinates. If the chunk is unloaded OR empty, this will return None.
@@ -238,7 +238,7 @@ impl BaseStructure {
     /// Unless you know what you're doing, you should use a mutable structure instead
     /// of a mutable chunk to make changes!
     fn mut_chunk_at_block_coordinates(&mut self, coords: BlockCoordinate) -> Option<&mut Chunk> {
-        self.mut_chunk_from_chunk_coordinates(ChunkCoordinate::for_block_coordinate(coords))
+        self.mut_chunk_at(ChunkCoordinate::for_block_coordinate(coords))
     }
 
     /// Returns the number of blocks in the x, y, z direction of this structure.
@@ -573,6 +573,9 @@ impl BaseStructure {
         ))
     }
 
+    /// Gets or creates the block data entity for the block here.
+    ///
+    /// Returns None if the chunk is not loaded here.
     pub fn get_or_create_block_data(&mut self, coords: BlockCoordinate, commands: &mut Commands) -> Option<Entity> {
         let self_entity = self.get_entity()?;
         let chunk_entity = self.chunk_entity(ChunkCoordinate::for_block_coordinate(coords))?;
@@ -598,7 +601,7 @@ impl BaseStructure {
         &mut self,
         coords: BlockCoordinate,
         create_data_closure: F,
-        commands: &mut Commands,
+        system_params: &mut BlockDataSystemParams,
         q_block_data: &mut Query<&mut BlockData>,
         q_data: &Query<(), With<T>>,
     ) -> Option<Entity>
@@ -614,7 +617,7 @@ impl BaseStructure {
             chunk_entity,
             self_entity,
             create_data_closure,
-            commands,
+            system_params,
             q_block_data,
             q_data,
         ))

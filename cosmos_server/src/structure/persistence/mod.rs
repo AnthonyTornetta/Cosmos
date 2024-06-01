@@ -27,7 +27,7 @@ pub(crate) fn save_structure(structure: &Structure, s_data: &mut SerializedData,
             unreachable!();
         };
 
-        let Some(chunk) = structure.chunk_from_chunk_coordinates(position) else {
+        let Some(chunk) = structure.chunk_at(position) else {
             warn!("Missing chunk but tried to save it!");
             continue;
         };
