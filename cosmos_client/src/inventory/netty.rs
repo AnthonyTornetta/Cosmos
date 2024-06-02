@@ -41,11 +41,13 @@ fn sync(
                         continue;
                     };
 
-                    if network_mapping.client_from_server(&de).is_none() {
+                    let Some(mapped_entity) = network_mapping.client_from_server(&de) else {
                         warn!("Missing data entity for is!");
-                    }
+                        is.set_data_entity(None);
+                        continue;
+                    };
 
-                    is.set_data_entity(network_mapping.client_from_server(&de));
+                    is.set_data_entity(Some(mapped_entity));
                 }
 
                 match owner {
@@ -83,9 +85,18 @@ fn sync(
             }
             ServerInventoryMessages::HeldItemstack { itemstack } => {
                 if let Ok((entity, mut holding_itemstack)) = held_item_query.get_single_mut() {
-                    if let Some(is) = itemstack {
+                    if let Some(mut is) = itemstack {
                         // Don't trigger change detection unless it actually changed
                         if is.quantity() != holding_itemstack.quantity() || is.item_id() != holding_itemstack.item_id() {
+                            if let Some(de) = is.data_entity() {
+                                if let Some(de) = network_mapping.client_from_server(&de) {
+                                    is.set_data_entity(Some(de));
+                                } else {
+                                    warn!("Missing data entity for is!");
+                                    is.set_data_entity(None);
+                                }
+                            }
+
                             *holding_itemstack = is;
                         }
                     } else {

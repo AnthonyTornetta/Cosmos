@@ -1,3 +1,5 @@
+//! Client logic for fluids
+
 use bevy::app::App;
 use cosmos_core::fluid::registry::Fluid;
 

@@ -3,18 +3,20 @@
 //! Do not add more stuff to this, but prefer to break it into a seperate message enum & seperate channel.
 //! In the future, this itself will be broken up.
 
-use bevy::prelude::{Component, Entity};
+use bevy::{
+    prelude::{Component, Entity},
+    utils::HashMap,
+};
 use bevy_renet::renet::ClientId;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     block::{multiblock::reactor::Reactors, BlockRotation},
-    economy::Credits,
     entities::player::render_distance::RenderDistance,
     physics::location::Location,
     structure::{
         chunk::netty::SerializedChunkBlockData,
-        coordinates::{ChunkCoordinate, CoordinateType},
+        coordinates::{ChunkBlockCoordinate, ChunkCoordinate, CoordinateType},
         loading::ChunksNeedLoaded,
         planet::{generation::terrain_generation::GpuPermutationTable, Planet},
         shared::build_mode::BuildMode,
@@ -66,12 +68,8 @@ pub enum ServerReliableMessages {
         id: ClientId,
         /// The player's rigidbody.
         body: NettyRigidBody,
-        /// The player's inventory.
-        inventory_serialized: Vec<u8>,
         /// The player's render distance.
         render_distance: Option<RenderDistance>,
-        /// The player's credits
-        credits: Credits,
     },
     /// This contains the information for a star entity.
     Star {
@@ -98,6 +96,8 @@ pub enum ServerReliableMessages {
         serialized_chunk: Vec<u8>,
         /// The chunk's block data in serialized form
         serialized_block_data: Option<SerializedChunkBlockData>,
+        /// The chunk's block entities that need to be requested from the server
+        block_entities: HashMap<ChunkBlockCoordinate, Entity>,
     },
     /// This represents the data for an empty chunk.
     EmptyChunk {

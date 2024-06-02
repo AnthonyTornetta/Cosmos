@@ -50,10 +50,6 @@ fn on_interact_with_fluid(
 
         let block = structure.block_at(s_block.structure_block.coords(), &blocks);
 
-        // if !block.is_fluid() {
-        //     continue;
-        // }
-
         let Some(fluid) = fluid_registry.from_id(block.unlocalized_name()) else {
             continue;
         };

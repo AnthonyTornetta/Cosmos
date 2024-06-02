@@ -330,14 +330,13 @@ fn client_sync_players(
         let msg: ServerReliableMessages = cosmos_encoder::deserialize(&message).unwrap();
 
         match msg {
+            // TODO: Get player data via the normal request entity function!
             ServerReliableMessages::PlayerCreate {
                 body,
                 id,
                 entity: server_entity,
                 name,
-                inventory_serialized,
                 render_distance: _,
-                credits,
             } => {
                 // Prevents creation of duplicate players
                 if lobby.players.contains_key(&id) {
@@ -353,8 +352,6 @@ fn client_sync_players(
 
                 let mut entity_cmds = commands.spawn_empty();
 
-                let inventory: Inventory = cosmos_encoder::deserialize(&inventory_serialized).unwrap();
-
                 let mut loc = match body.location {
                     NettyRigidBodyLocation::Absolute(location) => location,
                     NettyRigidBodyLocation::Relative(rel_trans, entity) => {
@@ -364,9 +361,13 @@ fn client_sync_players(
                     }
                 };
 
-                // This should be set via the server, but just in case,
+                // Requests all components needed for the player
+                client.send_message(
+                    NettyChannelClient::Reliable,
+                    cosmos_encoder::serialize(&ClientReliableMessages::RequestEntityData { entity: server_entity }),
+                );
+
                 // this will avoid any position mismatching
-                // ** future note: this may not be needed??
                 loc.last_transform_loc = Some(loc.local);
 
                 entity_cmds.insert((
@@ -384,8 +385,6 @@ fn client_sync_players(
                     Player::new(name, id),
                     ReadMassProperties::default(),
                     ActiveEvents::COLLISION_EVENTS,
-                    inventory,
-                    credits,
                 ));
 
                 let client_entity = entity_cmds.id();
@@ -561,6 +560,7 @@ fn client_sync_players(
                 structure_entity: server_structure_entity,
                 serialized_chunk,
                 serialized_block_data,
+                block_entities,
             } => {
                 if let Some(s_entity) = network_mapping.client_from_server(&server_structure_entity) {
                     if let Ok(mut structure) = q_structure.get_mut(s_entity) {
@@ -568,6 +568,13 @@ fn client_sync_players(
                         let chunk_coords = chunk.chunk_coordinates();
 
                         structure.set_chunk(chunk);
+
+                        for (_, block_data_entity) in block_entities {
+                            client.send_message(
+                                NettyChannelClient::Reliable,
+                                cosmos_encoder::serialize(&ClientReliableMessages::RequestEntityData { entity: block_data_entity }),
+                            );
+                        }
 
                         set_chunk_event_writer.send(ChunkInitEvent {
                             coords: chunk_coords,

@@ -103,6 +103,7 @@ fn send_chunks(
             structure_entity: chunk_ent.structure_entity,
             serialized_chunk: cosmos_encoder::serialize(chunk),
             serialized_block_data: serialized_chunk_block_data.map(|mut x| x.take_save_data()),
+            block_entities: chunk.all_block_data_entities().clone(),
         });
 
         structure
