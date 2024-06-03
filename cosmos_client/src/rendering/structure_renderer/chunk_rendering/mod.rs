@@ -29,6 +29,7 @@ use cosmos_core::registry::{ReadOnlyRegistry, Registry};
 use cosmos_core::structure::block_storage::BlockStorer;
 use cosmos_core::structure::chunk::{Chunk, ChunkEntity, CHUNK_DIMENSIONS, CHUNK_DIMENSIONSF};
 use cosmos_core::structure::coordinates::{ChunkBlockCoordinate, ChunkCoordinate, UnboundChunkCoordinate};
+use cosmos_core::structure::events::ChunkSetEvent;
 use cosmos_core::structure::Structure;
 use cosmos_core::utils::array_utils::expand;
 use futures_lite::future;
@@ -37,76 +38,74 @@ use std::mem::swap;
 
 use super::{BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder, MeshInformation, ReadOnlyBlockMeshRegistry};
 
-pub mod chunk_rendering;
-mod monitor_needs_rerendered_chunks;
+mod async_rendering;
+pub mod chunk_renderer;
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
-pub enum RenderingMode {
-    #[default]
-    Standard,
-    Both,
-    Custom,
+#[derive(Debug)]
+struct MeshMaterial {
+    mesh: Mesh,
+    material_id: u16,
 }
 
-#[derive(Debug, Clone, Resource, Default)]
-pub struct BlockRenderingModes {
-    blocks: Vec<RenderingMode>,
+#[derive(Debug)]
+struct ChunkMesh {
+    mesh_materials: Vec<MeshMaterial>,
+    lights: HashMap<ChunkBlockCoordinate, BlockLightProperties>,
 }
 
-impl BlockRenderingModes {
-    pub fn set_rendering_mode(&mut self, block: &Block, rendering_mode: RenderingMode) {
-        let id = block.id();
-
-        while self.blocks.len() <= id as usize {
-            self.blocks.push(RenderingMode::Standard);
-        }
-
-        self.blocks[id as usize] = rendering_mode;
-    }
-
-    pub fn try_rendering_mode(&self, block_id: u16) -> Option<RenderingMode> {
-        self.blocks.get(block_id as usize).copied()
-    }
-
-    pub fn rendering_mode(&self, block_id: u16) -> RenderingMode {
-        self.blocks[block_id as usize]
-    }
+#[derive(Debug, Reflect, Clone, Copy)]
+struct LightEntry {
+    entity: Entity,
+    light: BlockLightProperties,
+    position: ChunkBlockCoordinate,
+    valid: bool,
 }
 
-fn fill_rendering_mode(blocks: Res<Registry<Block>>, mut rendering_mode: ResMut<BlockRenderingModes>) {
-    for block in blocks.iter() {
-        if rendering_mode.try_rendering_mode(block.id()).is_none() {
-            rendering_mode.set_rendering_mode(block, RenderingMode::Standard);
-        }
-    }
+#[derive(Component, Debug, Reflect, Default)]
+struct LightsHolder {
+    lights: Vec<LightEntry>,
 }
 
-#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
-pub enum StructureRenderingSet {
-    MonitorBlockUpdates,
-    BeginRendering,
-    CustomRendering,
+#[derive(Component, Debug, Reflect, Default)]
+struct ChunkMeshes(Vec<Entity>);
+
+#[derive(Debug)]
+struct ChunkRenderResult {
+    chunk_entity: Entity,
+    /// Any blocks that need their own rendering logic applied to them
+    custom_blocks: HashSet<u16>,
+    mesh: ChunkMesh,
+}
+
+#[derive(Component)]
+pub(super) struct ChunkNeedsRendered;
+
+#[derive(Default, Debug)]
+struct MeshInfo {
+    mesh_builder: CosmosMeshBuilder,
+}
+
+impl MeshBuilder for MeshInfo {
+    #[inline]
+    fn add_mesh_information(
+        &mut self,
+        mesh_info: &MeshInformation,
+        position: Vec3,
+        uvs: Rect,
+        texture_index: u32,
+        additional_info: Vec<(MeshVertexAttribute, VertexAttributeValues)>,
+    ) {
+        self.mesh_builder
+            .add_mesh_information(mesh_info, position, uvs, texture_index, additional_info);
+    }
+
+    fn build_mesh(self) -> Mesh {
+        self.mesh_builder.build_mesh()
+    }
 }
 
 pub(super) fn register(app: &mut App) {
-    app.configure_sets(
-        Update,
-        (
-            StructureRenderingSet::MonitorBlockUpdates,
-            StructureRenderingSet::BeginRendering,
-            StructureRenderingSet::CustomRendering,
-        )
-            .chain()
-            .run_if(in_state(GameState::Playing))
-            .before(unload_chunks_far_from_players)
-            .before(remove_materials)
-            .before(add_materials),
-    );
+    app.register_type::<LightsHolder>();
 
-    app.add_systems(OnExit(GameState::PostLoading), fill_rendering_mode);
-
-    chunk_rendering::register(app);
-    monitor_needs_rerendered_chunks::register(app);
-
-    app.init_resource::<BlockRenderingModes>();
+    async_rendering::register(app);
 }

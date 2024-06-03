@@ -20,7 +20,9 @@ use cosmos_core::{
 };
 
 use crate::{
-    rendering::structure_renderer::{BlockRenderingModes, ChunkNeedsCustomBlocksRendered, RenderingMode, StructureRenderingSet},
+    rendering::structure_renderer::{
+        chunk_rendering::chunk_renderer::ChunkNeedsCustomBlocksRendered, BlockRenderingModes, RenderingMode, StructureRenderingSet,
+    },
     state::game_state::GameState,
 };
 
