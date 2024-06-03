@@ -53,13 +53,12 @@ fn client_deserialize_component<T: SyncableComponent>(
 
         if let Some(mut ecmds) = commands.get_entity(ev.entity) {
             let mut component = bincode::deserialize::<T>(&ev.raw_data).expect("Failed to deserialize component sent from server!");
-            if T::needs_entity_conversion() {
-                let Some(mapped) = component.convert_entities_server_to_client(&mapping) else {
-                    continue;
-                };
 
-                component = mapped;
-            }
+            let Some(mapped) = component.convert_entities_server_to_client(&mapping) else {
+                continue;
+            };
+
+            component = mapped;
 
             if matches!(T::get_sync_type(), SyncType::BothAuthoritative(_)) {
                 // Attempt to prevent an endless chain of change detection, causing the client+server to repeatedly sync the same component.
@@ -445,6 +444,7 @@ fn get_entity_identifier_info(
 
             // This creates a data entity if it doesn't exist and gets the data entity.
             // TODO: Make this a method to make this less hacky?
+            println!("Inventory entity should be - {inventory_entity:?}");
             let maybe_data_ent = inventory.insert_itemstack_data(item_slot as usize, (), commands);
 
             if let Some(de) = maybe_data_ent {

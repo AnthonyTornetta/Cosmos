@@ -171,8 +171,6 @@ fn notify_despawned_entities(
             ComponentEntityIdentifier::Entity(killed_entity)
         };
 
-        println!("Sending despawn for {entity_identifier:?}");
-
         server.broadcast_message(
             NettyChannelServer::Reliable,
             cosmos_encoder::serialize(&ServerReliableMessages::EntityDespawn { entity: entity_identifier }),

@@ -253,8 +253,6 @@ impl ItemStack {
 
         ecmds.log_components();
 
-        println!("Parent: {:?}", inventory_pointer.0);
-
         ecmds.set_parent(inventory_pointer.0);
 
         let ent = ecmds.id();

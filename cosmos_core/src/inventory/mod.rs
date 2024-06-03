@@ -219,6 +219,11 @@ impl Inventory {
     /// * `inventory_pointer` - If this is a part of an inventory, this should be (inventory_entity, slot).
     pub fn insert_itemstack_data<T: Bundle>(&mut self, slot: usize, data: T, commands: &mut Commands) -> Option<Entity> {
         let self_ent = self.self_entity;
+        #[cfg(debug_assertions)]
+        if commands.get_entity(self_ent).is_none() {
+            panic!("Inventory entity {self_ent:?} does not exist, but is stored in an inventory component!");
+        }
+
         let is = self.mut_itemstack_at(slot)?;
 
         Some(is.insert_itemstack_data((self_ent, slot as u32), data, commands))
