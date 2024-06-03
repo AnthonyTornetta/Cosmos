@@ -28,7 +28,7 @@ use cosmos_core::{
         server_reliable_messages::ServerReliableMessages,
         server_unreliable_messages::ServerUnreliableMessages,
         sync::{
-            mapping::{Mappable, NetworkMapping},
+            mapping::{Mappable, NetworkMapping, ServerEntity},
             ComponentEntityIdentifier,
         },
         NettyChannelClient, NettyChannelServer,
@@ -302,7 +302,7 @@ fn client_sync_players(
                             }
                         }
                     } else if !requested_entities.entities.iter().any(|x| x.server_entity == *server_entity) {
-                        let client_entity = commands.spawn_empty().id();
+                        let client_entity = commands.spawn(ServerEntity(*server_entity)).id();
 
                         requested_entities.entities.push(RequestedEntity {
                             server_entity: *server_entity,
@@ -350,7 +350,12 @@ fn client_sync_players(
 
                 info!("Player {} ({}) connected!", name.as_str(), id);
 
-                let mut entity_cmds = commands.spawn_empty();
+                // The player entity may have already been created if some of their components were already synced.
+                let mut entity_cmds = if let Some(player_entity) = network_mapping.client_from_server(&server_entity) {
+                    commands.entity(player_entity)
+                } else {
+                    commands.spawn_empty()
+                };
 
                 let mut loc = match body.location {
                     NettyRigidBodyLocation::Absolute(location) => location,
@@ -360,12 +365,6 @@ fn client_sync_players(
                         parent_loc + rel_trans
                     }
                 };
-
-                // Requests all components needed for the player
-                client.send_message(
-                    NettyChannelClient::Reliable,
-                    cosmos_encoder::serialize(&ClientReliableMessages::RequestEntityData { entity: server_entity }),
-                );
 
                 // this will avoid any position mismatching
                 loc.last_transform_loc = Some(loc.local);
@@ -385,6 +384,7 @@ fn client_sync_players(
                     Player::new(name, id),
                     ReadMassProperties::default(),
                     ActiveEvents::COLLISION_EVENTS,
+                    ServerEntity(server_entity),
                 ));
 
                 let client_entity = entity_cmds.id();
@@ -398,6 +398,12 @@ fn client_sync_players(
                 network_mapping.add_mapping(client_entity, server_entity);
 
                 let camera_offset = Vec3::new(0.0, 0.75, 0.0);
+
+                // Requests all components needed for the player
+                client.send_message(
+                    NettyChannelClient::Reliable,
+                    cosmos_encoder::serialize(&ClientReliableMessages::RequestEntityData { entity: server_entity }),
+                );
 
                 if client_id == id {
                     entity_cmds

@@ -1,4 +1,4 @@
-use super::mapping::NetworkMapping;
+use super::mapping::{NetworkMapping, ServerEntity};
 use super::{
     register_component, ClientAuthority, ComponentEntityIdentifier, ComponentReplicationMessage, ComponentSyncingSet,
     GotComponentToRemoveEvent, SyncType, SyncableComponent, SyncedComponentId,
@@ -441,15 +441,11 @@ fn get_entity_identifier_info(
             item_slot,
             server_data_entity,
         } => network_mapping.client_from_server(&inventory_entity).and_then(|inventory_entity| {
-            println!("Got here - {inventory_entity:?}");
             let mut inventory = q_inventory.get_mut(inventory_entity).ok()?;
-            println!("Got inventory!");
 
             // This creates a data entity if it doesn't exist and gets the data entity.
             // TODO: Make this a method to make this less hacky?
             let maybe_data_ent = inventory.insert_itemstack_data(item_slot as usize, (), commands);
-
-            println!("{maybe_data_ent:?}");
 
             if let Some(de) = maybe_data_ent {
                 network_mapping.add_mapping(de, server_data_entity);
@@ -491,7 +487,7 @@ fn get_entity_identifier_info(
 
     let (entity, authority_entity) = match entity_identifier {
         ComponentEntityIdentifier::Entity(entity) => {
-            let client_entity = commands.spawn(Name::new("Waiting for server...")).id();
+            let client_entity = commands.spawn((ServerEntity(entity), Name::new("Waiting for server..."))).id();
             network_mapping.add_mapping(client_entity, entity);
 
             (client_entity, client_entity)
@@ -553,6 +549,8 @@ pub(super) fn setup_client(app: &mut App) {
 #[allow(unused)] // This function is used, but the LSP can't figure that out.
 pub(super) fn sync_component_client<T: SyncableComponent>(app: &mut App) {
     app.add_systems(Startup, register_component::<T>);
+
+    app.register_type::<ServerEntity>();
 
     match T::get_sync_type() {
         SyncType::ClientAuthoritative(_) => {
