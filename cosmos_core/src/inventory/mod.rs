@@ -17,7 +17,11 @@ use bevy::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{item::Item, registry::identifiable::Identifiable};
+use crate::{
+    item::Item,
+    netty::sync::{sync_component, SyncableComponent},
+    registry::identifiable::Identifiable,
+};
 
 use self::itemstack::{ItemShouldHaveData, ItemStack, ItemStackData};
 
@@ -59,7 +63,7 @@ impl std::fmt::Display for InventorySlotError {
     }
 }
 
-#[derive(Component, Serialize, Deserialize, Debug, Reflect, Clone)]
+#[derive(Component, Serialize, Deserialize, Debug, Reflect, Clone, PartialEq, Eq)]
 /// A collection of ItemStack entities, organized into slots
 pub struct Inventory {
     items: Vec<Option<ItemStack>>,
@@ -67,6 +71,29 @@ pub struct Inventory {
     name: String,
     /// Stores its own entity since many of the functions require its own entity
     self_entity: Entity,
+}
+
+impl SyncableComponent for Inventory {
+    fn get_sync_type() -> crate::netty::sync::SyncType {
+        crate::netty::sync::SyncType::ServerAuthoritative
+    }
+
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:inventory"
+    }
+
+    #[cfg(feature = "client")]
+    fn convert_entities_server_to_client(mut self, mapping: &crate::netty::sync::mapping::NetworkMapping) -> Option<Self> {
+        self.self_entity = mapping.client_from_server(&self.self_entity)?;
+
+        for is in self.items.iter_mut().flat_map(|x| x) {
+            if let Some(de) = is.data_entity() {
+                is.set_data_entity(mapping.client_from_server(&de));
+            }
+        }
+
+        Some(self)
+    }
 }
 
 type InventorySlot = usize;
@@ -792,6 +819,8 @@ impl Inventory {
 pub(super) fn register(app: &mut App) {
     itemstack::register(app);
     held_item_slot::register(app);
+
+    sync_component::<Inventory>(app);
 
     app.register_type::<Inventory>().register_type::<HeldItemStack>();
 }

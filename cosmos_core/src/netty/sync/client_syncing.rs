@@ -8,8 +8,8 @@ use crate::inventory::itemstack::ItemStackData;
 use crate::inventory::Inventory;
 use crate::netty::client::LocalPlayer;
 use crate::netty::sync::GotComponentToSyncEvent;
-use crate::netty::NettyChannelServer;
 use crate::netty::{cosmos_encoder, NettyChannelClient};
+use crate::netty::{NettyChannelServer, NoSendEntity};
 use crate::physics::location::CosmosBundleSet;
 use crate::registry::{identifiable::Identifiable, Registry};
 use crate::structure::ship::pilot::Pilot;
@@ -17,7 +17,7 @@ use crate::structure::systems::{StructureSystem, StructureSystems};
 use crate::structure::Structure;
 use bevy::core::Name;
 use bevy::ecs::event::EventReader;
-use bevy::ecs::query::With;
+use bevy::ecs::query::{With, Without};
 use bevy::ecs::removal_detection::RemovedComponents;
 use bevy::ecs::schedule::common_conditions::resource_exists;
 use bevy::ecs::schedule::{IntoSystemConfigs, IntoSystemSetConfigs};
@@ -97,7 +97,7 @@ fn client_remove_component<T: SyncableComponent>(
 
 fn client_send_components<T: SyncableComponent>(
     id_registry: Res<Registry<SyncedComponentId>>,
-    q_changed_component: Query<(Entity, &T, Option<&StructureSystem>, Option<&ItemStackData>), Changed<T>>,
+    q_changed_component: Query<(Entity, &T, Option<&StructureSystem>, Option<&ItemStackData>), (Without<NoSendEntity>, Changed<T>)>,
     mut client: ResMut<RenetClient>,
     mapping: Res<NetworkMapping>,
     q_local_player: Query<(), With<LocalPlayer>>,

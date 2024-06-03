@@ -1,48 +1,22 @@
 //! Syncs player inventories
 
 use bevy::{
-    ecs::{query::Without, world::Mut},
+    ecs::world::Mut,
     log::warn,
     prelude::{in_state, App, Changed, Commands, Entity, IntoSystemConfigs, Query, RemovedComponents, Res, ResMut, Update},
 };
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
-    block::data::BlockData,
     entities::player::Player,
     inventory::{
         netty::{ClientInventoryMessages, InventoryIdentifier, ServerInventoryMessages},
         HeldItemStack, Inventory,
     },
-    netty::{cosmos_encoder, server::ServerLobby, NettyChannelClient, NettyChannelServer, NoSendEntity},
+    netty::{cosmos_encoder, server::ServerLobby, NettyChannelClient, NettyChannelServer},
     structure::Structure,
 };
 
 use crate::state::GameState;
-
-fn sync_inventories(
-    query: Query<(Entity, &Inventory, Option<&BlockData>), (Changed<Inventory>, Without<NoSendEntity>)>,
-    mut server: ResMut<RenetServer>,
-) {
-    for (entity, inventory, block_data) in query.iter() {
-        if let Some(block_data) = block_data {
-            server.broadcast_message(
-                NettyChannelServer::Inventory,
-                cosmos_encoder::serialize(&ServerInventoryMessages::UpdateInventory {
-                    inventory: inventory.clone(),
-                    owner: InventoryIdentifier::BlockData(block_data.identifier),
-                }),
-            );
-        } else {
-            server.broadcast_message(
-                NettyChannelServer::Inventory,
-                cosmos_encoder::serialize(&ServerInventoryMessages::UpdateInventory {
-                    inventory: inventory.clone(),
-                    owner: InventoryIdentifier::Entity(entity),
-                }),
-            );
-        }
-    }
-}
 
 fn sync_held_items(
     query: Query<(&Player, &HeldItemStack), Changed<HeldItemStack>>,
@@ -120,7 +94,7 @@ fn get_many_inventories_mut<'a, const N: usize>(
     q_inventory.get_many_mut(ents).ok()
 }
 
-fn listen(
+fn listen_for_inventory_messages(
     mut commands: Commands,
     mut q_inventory: Query<&mut Inventory>,
     q_structure: Query<&Structure>,
@@ -382,7 +356,7 @@ fn listen(
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        (listen, sync_inventories, sync_held_items)
+        (listen_for_inventory_messages, sync_held_items)
             .chain()
             .run_if(in_state(GameState::Playing)),
     );

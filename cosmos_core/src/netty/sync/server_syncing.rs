@@ -7,12 +7,13 @@ use crate::block::data::BlockData;
 use crate::inventory::itemstack::ItemStackData;
 use crate::netty::server::ServerLobby;
 use crate::netty::sync::{GotComponentToRemoveEvent, GotComponentToSyncEvent};
-use crate::netty::{cosmos_encoder, NettyChannelClient, NettyChannelServer};
+use crate::netty::{cosmos_encoder, NettyChannelClient, NettyChannelServer, NoSendEntity};
 use crate::physics::location::CosmosBundleSet;
 use crate::registry::{identifiable::Identifiable, Registry};
 use crate::structure::ship::pilot::Pilot;
 use crate::structure::systems::{StructureSystem, StructureSystems};
 use bevy::ecs::event::EventReader;
+use bevy::ecs::query::Without;
 use bevy::ecs::removal_detection::RemovedComponents;
 use bevy::ecs::schedule::common_conditions::resource_exists;
 use bevy::ecs::schedule::{IntoSystemConfigs, IntoSystemSetConfigs};
@@ -160,7 +161,10 @@ fn server_deserialize_component<T: SyncableComponent>(
 
 fn server_send_component<T: SyncableComponent>(
     id_registry: Res<Registry<SyncedComponentId>>,
-    q_changed_component: Query<(Entity, &T, Option<&StructureSystem>, Option<&ItemStackData>, Option<&BlockData>), Changed<T>>,
+    q_changed_component: Query<
+        (Entity, &T, Option<&StructureSystem>, Option<&ItemStackData>, Option<&BlockData>),
+        (Without<NoSendEntity>, Changed<T>),
+    >,
     mut server: ResMut<RenetServer>,
 ) {
     if q_changed_component.is_empty() {
