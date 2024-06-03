@@ -18,7 +18,7 @@ struct MeshMaterial {
 }
 
 #[derive(Debug)]
-struct ChunkMesh {
+pub struct ChunkMesh {
     mesh_materials: Vec<MeshMaterial>,
     lights: HashMap<ChunkBlockCoordinate, BlockLightProperties>,
 }
@@ -78,4 +78,5 @@ pub(super) fn register(app: &mut App) {
     app.register_type::<LightsHolder>();
 
     async_rendering::register(app);
+    chunk_renderer::register(app);
 }

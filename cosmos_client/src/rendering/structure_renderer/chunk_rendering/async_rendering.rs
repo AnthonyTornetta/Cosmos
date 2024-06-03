@@ -3,7 +3,6 @@ use crate::asset::materials::{AddMaterialEvent, BlockMaterialMapping, MaterialDe
 use crate::block::lighting::BlockLighting;
 use crate::rendering::structure_renderer::{BlockRenderingModes, StructureRenderingSet};
 use crate::rendering::ReadOnlyBlockMeshRegistry;
-use bevy::ecs::schedule::IntoSystemSetConfigs;
 use bevy::prelude::{
     App, Assets, BuildChildren, Commands, DespawnRecursiveExt, Entity, EventWriter, GlobalTransform, Handle, IntoSystemConfigs, Mesh,
     PointLight, PointLightBundle, Query, Res, ResMut, Transform, Update, Vec3, VisibilityBundle, With,
@@ -14,10 +13,8 @@ use bevy::transform::TransformBundle;
 use cosmos_core::block::Block;
 use cosmos_core::netty::client::LocalPlayer;
 use cosmos_core::physics::location::SECTOR_DIMENSIONS;
-use cosmos_core::registry::identifiable::Identifiable;
 use cosmos_core::registry::many_to_one::ReadOnlyManyToOneRegistry;
 use cosmos_core::registry::ReadOnlyRegistry;
-use cosmos_core::structure::block_storage::BlockStorer;
 use cosmos_core::structure::chunk::{ChunkEntity, CHUNK_DIMENSIONS};
 use cosmos_core::structure::coordinates::UnboundChunkCoordinate;
 use cosmos_core::structure::Structure;

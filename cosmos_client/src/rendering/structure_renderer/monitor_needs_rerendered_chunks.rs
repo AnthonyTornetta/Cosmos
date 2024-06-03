@@ -1,4 +1,3 @@
-use bevy::ecs::schedule::IntoSystemSetConfigs;
 use bevy::prelude::{App, Commands, Entity, EventReader, IntoSystemConfigs, Query, Update};
 use bevy::utils::hashbrown::HashMap;
 use cosmos_core::events::block_events::{BlockChangedEvent, BlockDataChangedEvent};
