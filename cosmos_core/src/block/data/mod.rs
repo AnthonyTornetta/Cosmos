@@ -15,7 +15,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::structure::{coordinates::ChunkBlockCoordinate, structure_block::StructureBlock};
 
-pub mod instances;
 pub mod persistence;
 
 #[derive(Component, Clone, Copy, Debug, Serialize, Deserialize, Reflect)]
@@ -67,7 +66,6 @@ fn name_block_data(query: Query<(Entity, &BlockData), Without<Name>>, mut comman
 
 pub(super) fn register(app: &mut App) {
     persistence::register(app);
-    instances::register(app);
 
     app.add_systems(Update, name_block_data).register_type::<BlockData>();
 }
