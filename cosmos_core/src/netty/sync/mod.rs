@@ -15,7 +15,7 @@ use crate::{
     structure::systems::StructureSystemId,
 };
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 enum ComponentReplicationMessage {
     ComponentReplication {
         component_id: u16,
@@ -123,6 +123,14 @@ pub enum ComponentEntityIdentifier {
     },
 }
 
+/// Used to uniquely identify components
+pub trait IdentifiableComponent: Component {
+    /// This string should be a unique identifier for the component, using the `modid:name` format.
+    ///
+    /// For example, `cosmos:missile_focused`.
+    fn get_component_unlocalized_name() -> &'static str;
+}
+
 /// Indicates that a component can be synchronized either from `Server -> Client` or `Client -> Server`.
 ///
 /// Not that `clone()` is only called if the client is sending something to the server ([`SyncType::ClientAuthoritative`]) AND
@@ -134,15 +142,11 @@ pub enum ComponentEntityIdentifier {
 /// of the entity before it will sync it.  This is most commonly done via the [`super::server_unreliable_messages::ServerUnreliableMessages::BulkBodies`] networking request.
 /// Note that this requires the following components to sync the entity:
 /// `Location`, `Transform`, `Velocity`, and `LoadingDistance`. Additionally, the player must be within the `LoadingDistance`.
-pub trait SyncableComponent: Component + Serialize + DeserializeOwned + Clone + std::fmt::Debug + PartialEq {
+pub trait SyncableComponent: Serialize + DeserializeOwned + Clone + std::fmt::Debug + PartialEq + IdentifiableComponent {
     /// Returns how this component should be synced
     ///
     /// Either from `server -> client` or `client -> server`.
     fn get_sync_type() -> SyncType;
-    /// Returns an unlocalized name that should be unique to this component.
-    ///
-    /// A good practice is to use `mod_id:component_name` format. For example, `cosmos:missile_focused`
-    fn get_component_unlocalized_name() -> &'static str;
 
     /// Returns true if this is a valid instance of this component, false if this should be ignored
     fn validate(&self) -> bool {

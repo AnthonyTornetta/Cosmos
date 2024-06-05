@@ -223,7 +223,7 @@ impl Chunk {
         chunk_entity: Entity,
         structure_entity: Entity,
         data: T,
-        commands: &mut Commands,
+        system_params: &mut BlockDataSystemParams,
         q_block_data: &mut Query<&mut BlockData>,
         q_data: &Query<(), With<T>>,
     ) -> Entity {
@@ -236,11 +236,18 @@ impl Chunk {
                 bd.increment();
             }
 
-            commands.entity(data_ent).insert(data);
+            system_params.commands.entity(data_ent).insert(data);
+
+            system_params.ev_writer.send(BlockDataChangedEvent {
+                block_data_entity: Some(data_ent),
+                block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords),
+                structure_entity,
+            });
 
             data_ent
         } else {
-            let data_ent = commands
+            let data_ent = system_params
+                .commands
                 .spawn((
                     data,
                     BlockData {
@@ -255,6 +262,12 @@ impl Chunk {
                 .id();
 
             self.block_data.insert(coords, data_ent);
+
+            system_params.ev_writer.send(BlockDataChangedEvent {
+                block_data_entity: Some(data_ent),
+                block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords),
+                structure_entity,
+            });
 
             data_ent
         }

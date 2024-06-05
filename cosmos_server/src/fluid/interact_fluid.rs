@@ -58,6 +58,8 @@ fn on_interact_with_fluid(
             continue;
         };
 
+        let inventory_entity = ev.interactor;
+
         let slot = held_item.slot() as usize;
 
         let Some(is) = inventory.itemstack_at(slot) else {
@@ -80,8 +82,12 @@ fn on_interact_with_fluid(
             };
 
             // Attempt to insert item into its original spot, if that fails try to insert it anywhere
-            if inventory.insert_item_with_data_at(slot, item, 1, &mut commands, fluid_data) != 0 {
-                if inventory.insert_item_with_data(item, 1, &mut commands, fluid_data).1.is_none() {
+            if inventory.insert_item_with_data_at(inventory_entity, slot, item, 1, &mut commands, fluid_data) != 0 {
+                if inventory
+                    .insert_item_with_data(inventory_entity, item, 1, &mut commands, fluid_data)
+                    .1
+                    .is_none()
+                {
                     info!("TODO: Throw item because it doesn't fit in inventory");
                 }
             }
@@ -186,6 +192,7 @@ fn on_interact_with_tank(
         let Ok((held_item, mut inventory)) = q_held_item.get_mut(ev.interactor) else {
             continue;
         };
+        let inventory_entity = ev.interactor;
 
         let slot = held_item.slot() as usize;
 
@@ -236,8 +243,12 @@ fn on_interact_with_tank(
             };
 
             // Attempt to insert item into its original spot, if that fails try to insert it anywhere
-            if inventory.insert_item_with_data_at(slot, item, 1, &mut commands, fluid_data) != 0 {
-                if inventory.insert_item_with_data(item, 1, &mut commands, fluid_data).1.is_none() {
+            if inventory.insert_item_with_data_at(inventory_entity, slot, item, 1, &mut commands, fluid_data) != 0 {
+                if inventory
+                    .insert_item_with_data(inventory_entity, item, 1, &mut commands, fluid_data)
+                    .1
+                    .is_none()
+                {
                     info!("TODO: Throw item because it doesn't fit in inventory");
                 }
             }
@@ -305,7 +316,7 @@ fn on_interact_with_tank(
                         *stored_fluid_item = FluidItemData::Empty;
                     }
 
-                    structure.insert_block_data(coords, data, &mut commands, &mut q_block_data, &q_has_stored_fluid);
+                    structure.insert_block_data(coords, data, &mut block_data_params, &mut q_block_data, &q_has_stored_fluid);
 
                     if matches!(*stored_fluid_item, FluidItemData::Empty) && fluid_holder.convert_from_item_id() != is.item_id() {
                         if inventory.decrease_quantity_at(slot, 1, &mut commands) != 0 {
@@ -316,8 +327,12 @@ fn on_interact_with_tank(
                         let item = items.from_numeric_id(fluid_holder.convert_from_item_id());
 
                         // Attempt to insert item into its original spot, if that fails try to insert it anywhere
-                        if inventory.insert_item_at(slot, item, 1, &mut commands, &needs_data) != 0 {
-                            if inventory.insert_item(item, 1, &mut commands, &needs_data).1.is_none() {
+                        if inventory.insert_item_at(inventory_entity, slot, item, 1, &mut commands, &needs_data) != 0 {
+                            if inventory
+                                .insert_item(inventory_entity, item, 1, &mut commands, &needs_data)
+                                .1
+                                .is_none()
+                            {
                                 info!("TODO: Throw item because it doesn't fit in inventory");
                             }
                         }

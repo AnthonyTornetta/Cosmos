@@ -554,7 +554,7 @@ impl BaseStructure {
         &mut self,
         coords: BlockCoordinate,
         data: T,
-        commands: &mut Commands,
+        system_params: &mut BlockDataSystemParams,
         q_block_data: &mut Query<&mut BlockData>,
         q_data: &Query<(), With<T>>,
     ) -> Option<Entity> {
@@ -567,7 +567,7 @@ impl BaseStructure {
             chunk_entity,
             self_entity,
             data,
-            commands,
+            system_params,
             q_block_data,
             q_data,
         ))

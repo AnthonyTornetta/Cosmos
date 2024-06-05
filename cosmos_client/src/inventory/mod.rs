@@ -133,7 +133,8 @@ fn toggle_inventory_rendering(
             let server_inventory_holder = get_server_inventory_identifier(inventory_holder, &mapping, &q_block_data);
 
             // Try to put it in its original spot first
-            let leftover = local_inventory.insert_itemstack_at(displayed_item.slot_number, &held_item_stack, &mut commands);
+            let leftover =
+                local_inventory.insert_itemstack_at(inventory_holder, displayed_item.slot_number, &held_item_stack, &mut commands);
 
             if leftover != held_item_stack.quantity() {
                 // Only send information to server if there is a point to the move
@@ -151,7 +152,7 @@ fn toggle_inventory_rendering(
 
             if !held_item_stack.is_empty() {
                 // Put it wherever it can fit if it couldn't go back to its original spot
-                let (leftover, _) = local_inventory.insert_itemstack(&held_item_stack, &mut commands);
+                let (leftover, _) = local_inventory.insert_itemstack(inventory_holder, &held_item_stack, &mut commands);
 
                 if leftover != held_item_stack.quantity() {
                     // Only send information to server if there is a point to the insertion
@@ -543,7 +544,7 @@ fn handle_interactions(
 
             if other_inventory == server_inventory_holder {
                 inventory
-                    .auto_move(slot_num, quantity, &mut commands)
+                    .auto_move(inventory_entity, slot_num, quantity, &mut commands)
                     .expect("Bad inventory slot values");
             }
             // logic is handled on server otherwise, don't feel like copying it here
@@ -570,7 +571,12 @@ fn handle_interactions(
 
                 let over_quantity = held_item_stack.quantity() - move_quantity;
 
-                let leftover = inventory.insert_itemstack_at(clicked_slot, &moving_itemstack, &mut commands);
+                let leftover = inventory.insert_itemstack_at(
+                    displayed_item_clicked.inventory_holder,
+                    clicked_slot,
+                    &moving_itemstack,
+                    &mut commands,
+                );
 
                 held_item_stack.set_quantity(over_quantity + leftover);
 
@@ -597,7 +603,12 @@ fn handle_interactions(
 
                     let unused_itemstack = held_item_stack.quantity() - quantity;
 
-                    let leftover = inventory.insert_itemstack_at(clicked_slot, &moving_itemstack, &mut commands);
+                    let leftover = inventory.insert_itemstack_at(
+                        displayed_item_clicked.inventory_holder,
+                        clicked_slot,
+                        &moving_itemstack,
+                        &mut commands,
+                    );
 
                     assert_eq!(
                         leftover, 0,
@@ -630,7 +641,7 @@ fn handle_interactions(
 
                     client.send_message(NettyChannelClient::Inventory, message);
                 } else {
-                    inventory.set_itemstack_at(clicked_slot, is_here, &mut commands);
+                    inventory.set_itemstack_at(displayed_item_clicked.inventory_holder, clicked_slot, is_here, &mut commands);
                 }
             }
         }

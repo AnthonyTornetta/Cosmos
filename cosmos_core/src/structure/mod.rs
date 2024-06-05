@@ -511,13 +511,13 @@ impl Structure {
         &mut self,
         coords: BlockCoordinate,
         data: T,
-        commands: &mut Commands,
+        system_params: &mut BlockDataSystemParams,
         q_block_data: &mut Query<&mut BlockData>,
         q_data: &Query<(), With<T>>,
     ) -> Option<Entity> {
         match self {
-            Self::Full(fs) => fs.insert_block_data(coords, data, commands, q_block_data, q_data),
-            Self::Dynamic(ds) => ds.insert_block_data(coords, data, commands, q_block_data, q_data),
+            Self::Full(fs) => fs.insert_block_data(coords, data, system_params, q_block_data, q_data),
+            Self::Dynamic(ds) => ds.insert_block_data(coords, data, system_params, q_block_data, q_data),
         }
     }
 

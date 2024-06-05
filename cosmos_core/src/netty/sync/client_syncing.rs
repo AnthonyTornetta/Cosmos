@@ -43,11 +43,14 @@ fn client_deserialize_component<T: SyncableComponent>(
     q_t: Query<&T>,
 ) {
     for ev in ev_reader.read() {
+        println!("Got event!");
         let synced_id = components_registry
             .try_from_numeric_id(ev.component_id)
             .unwrap_or_else(|| panic!("Missing component with id {}", ev.component_id));
 
+        println!("{} != {}???", T::get_component_unlocalized_name(), synced_id.unlocalized_name);
         if T::get_component_unlocalized_name() != synced_id.unlocalized_name {
+            println!("NOT EQUAL!");
             continue;
         }
 
@@ -55,6 +58,7 @@ fn client_deserialize_component<T: SyncableComponent>(
             let mut component = bincode::deserialize::<T>(&ev.raw_data).expect("Failed to deserialize component sent from server!");
 
             let Some(mapped) = component.convert_entities_server_to_client(&mapping) else {
+                warn!("Couldn't convert entities for {}!", T::get_component_unlocalized_name());
                 continue;
             };
 
@@ -68,8 +72,11 @@ fn client_deserialize_component<T: SyncableComponent>(
             }
 
             if component.validate() {
+                println!("Inserting {component:?}");
                 ecmds.try_insert(component);
             }
+        } else {
+            warn!("No entity cmds for synced entity component - (entity {:?})", ev.entity);
         }
     }
 }
@@ -292,7 +299,7 @@ fn client_receive_components(
     std::mem::swap(&mut v, &mut waiting_data.0);
     for msg in v {
         if let Some(msg) = handle_incoming_component_data(
-            msg,
+            msg.clone(),
             &mut network_mapping,
             &q_structure_systems,
             &mut q_inventory,
@@ -303,6 +310,8 @@ fn client_receive_components(
             &mut evw_block_data_changed,
         ) {
             waiting_data.0.push(msg);
+        } else {
+            println!("Handled: {msg:?}");
         }
     }
 
@@ -363,7 +372,9 @@ fn handle_incoming_component_data(
                 }
             };
 
-            ev_writer_sync.send(GotComponentToSyncEvent {
+            println!("Sending `GotComponentToSyncEvent` event!");
+
+            let ev = GotComponentToSyncEvent {
                 // `client_id` only matters on the server-side, but I don't feel like fighting with
                 // my LSP to have this variable only show up in the server project. Thus, I fill it with
                 // dummy data.
@@ -373,7 +384,11 @@ fn handle_incoming_component_data(
                 // This also only matters on server-side, but once again I don't care
                 authority_entity,
                 raw_data,
-            });
+            };
+
+            println!("{ev:?}");
+
+            ev_writer_sync.send(ev);
 
             None
         }
@@ -445,7 +460,7 @@ fn get_entity_identifier_info(
             // This creates a data entity if it doesn't exist and gets the data entity.
             // TODO: Make this a method to make this less hacky?
             println!("Inventory entity should be - {inventory_entity:?}");
-            let maybe_data_ent = inventory.insert_itemstack_data(item_slot as usize, (), commands);
+            let maybe_data_ent = inventory.insert_itemstack_data(inventory_entity, item_slot as usize, (), commands);
 
             if let Some(de) = maybe_data_ent {
                 network_mapping.add_mapping(de, server_data_entity);
@@ -458,7 +473,11 @@ fn get_entity_identifier_info(
             server_data_entity,
         } => network_mapping
             .client_from_server(&server_data_entity)
-            .map(|x| Some((x, x)))
+            .map(|x| {
+                println!("Found matching entity {x:?}!");
+                commands.entity(x).log_components();
+                Some((x, x))
+            })
             .unwrap_or_else(|| {
                 network_mapping
                     .client_from_server(&identifier.structure_entity)

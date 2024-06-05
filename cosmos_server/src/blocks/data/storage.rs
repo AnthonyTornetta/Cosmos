@@ -7,7 +7,6 @@ use bevy::{
         schedule::IntoSystemConfigs,
         system::{Query, Res},
     },
-    hierarchy::Parent,
 };
 use cosmos_core::{
     block::{
@@ -18,36 +17,10 @@ use cosmos_core::{
     events::block_events::BlockDataSystemParams,
     inventory::Inventory,
     registry::{identifiable::Identifiable, Registry},
-    structure::{chunk::netty::SerializedBlockData, coordinates::ChunkBlockCoordinate, Structure},
+    structure::Structure,
 };
 
-use crate::{
-    persistence::{
-        loading::{LoadingBlueprintSystemSet, NeedsBlueprintLoaded, LOADING_SCHEDULE},
-        saving::SAVING_SCHEDULE,
-    },
-    structure::{
-        persistence::{chunk::BlockDataSavingSet, BlockDataNeedsSaved},
-        planet::chunk::SerializeChunkBlockDataSet,
-    },
-};
-
-fn save_storage(
-    q_storage_blocks: Query<(&Parent, &Inventory, &BlockData), With<BlockDataNeedsSaved>>,
-    mut q_chunk: Query<&mut SerializedBlockData>,
-) {
-    q_storage_blocks.iter().for_each(|(parent, inventory, block_data)| {
-        let mut serialized_block_data = q_chunk
-            .get_mut(parent.get())
-            .expect("Block data's parent didn't have SerializedBlockData???");
-
-        serialized_block_data.serialize_data(
-            ChunkBlockCoordinate::for_block_coordinate(block_data.identifier.block.coords()),
-            "cosmos:inventory",
-            inventory,
-        );
-    });
-}
+use crate::persistence::loading::{LoadingBlueprintSystemSet, NeedsBlueprintLoaded, LOADING_SCHEDULE};
 
 fn on_load_blueprint_storage(
     needs_blueprint_loaded_structure: Query<(Entity, &Structure), With<NeedsBlueprintLoaded>>,
@@ -81,9 +54,9 @@ fn populate_inventory(
             continue;
         };
 
-        structure.insert_block_data_with_entity(
+        structure.insert_block_data(
             coords,
-            |e| Inventory::new("Storage", 9 * 5, None, e),
+            Inventory::new("Storage", 9 * 5, None),
             &mut params,
             &mut q_block_data,
             &q_has_inventory,
@@ -92,12 +65,9 @@ fn populate_inventory(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, populate_inventory.after(on_add_storage))
-        .add_systems(SAVING_SCHEDULE, save_storage.in_set(BlockDataSavingSet::SaveBlockData))
-        .add_systems(Update, save_storage.in_set(SerializeChunkBlockDataSet::Serialize))
-        .add_systems(
-            LOADING_SCHEDULE,
-            // Need structure to be populated first, thus `DoneLoadingBlueprints` instead of `DoLoadingBlueprints``
-            on_load_blueprint_storage.in_set(LoadingBlueprintSystemSet::DoneLoadingBlueprints),
-        );
+    app.add_systems(Update, populate_inventory.after(on_add_storage)).add_systems(
+        LOADING_SCHEDULE,
+        // Need structure to be populated first, thus `DoneLoadingBlueprints` instead of `DoLoadingBlueprints``
+        on_load_blueprint_storage.in_set(LoadingBlueprintSystemSet::DoneLoadingBlueprints),
+    );
 }

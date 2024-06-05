@@ -83,7 +83,7 @@ fn handle_block_break_events(
     block_items: Res<BlockItems>, // TODO: Replace this with drop table
     mut inventory_query: Query<(&mut Inventory, Option<&BuildMode>, Option<&Parent>), Without<BlockData>>,
     mut event_writer: EventWriter<BlockChangedEvent>,
-    mut q_inventory_block_data: Query<(&BlockData, &mut Inventory)>,
+    mut q_inventory_block_data: Query<(Entity, &BlockData, &mut Inventory)>,
     mut commands: Commands,
     has_data: Res<ItemShouldHaveData>,
 ) {
@@ -121,11 +121,11 @@ fn handle_block_break_events(
             if let Some(item_id) = item_id {
                 let item = items.from_numeric_id(item_id);
 
-                for (_, mut inventory) in q_inventory_block_data
+                for (inv_entity, _, mut inventory) in q_inventory_block_data
                     .iter_mut()
-                    .filter(|(block_data, _)| block_data.identifier.structure_entity == ev.breaker)
+                    .filter(|(_, block_data, _)| block_data.identifier.structure_entity == ev.breaker)
                 {
-                    if inventory.insert_item(item, 1, &mut commands, &has_data).0 == 0 {
+                    if inventory.insert_item(inv_entity, item, 1, &mut commands, &has_data).0 == 0 {
                         break;
                     }
                 }
@@ -168,7 +168,7 @@ fn handle_block_break_events(
                         if let Some(item_id) = block_items.item_from_block(block) {
                             let item = items.from_numeric_id(item_id);
 
-                            inventory.insert_item(item, 1, &mut commands, &has_data);
+                            inventory.insert_item(ev.breaker, item, 1, &mut commands, &has_data);
                         }
 
                         structure.remove_block_at(coord, &blocks, Some(&mut event_writer));

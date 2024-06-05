@@ -14,7 +14,7 @@ use bevy::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::netty::sync::{sync_component, ClientAuthority, SyncableComponent};
+use crate::netty::sync::{sync_component, ClientAuthority, IdentifiableComponent, SyncableComponent};
 
 use super::{
     line_system::{LineProperty, LinePropertyCalculator, LineSystem},
@@ -120,11 +120,13 @@ impl MissileLauncherFocus {
     }
 }
 
-impl SyncableComponent for MissileLauncherFocus {
+impl IdentifiableComponent for MissileLauncherFocus {
     fn get_component_unlocalized_name() -> &'static str {
         "cosmos:missile_launcher_focus"
     }
+}
 
+impl SyncableComponent for MissileLauncherFocus {
     fn get_sync_type() -> crate::netty::sync::SyncType {
         crate::netty::sync::SyncType::ServerAuthoritative
     }
@@ -139,11 +141,13 @@ pub struct MissileLauncherPreferredFocus {
     pub focusing_server_entity: Option<Entity>,
 }
 
-impl SyncableComponent for MissileLauncherPreferredFocus {
+impl IdentifiableComponent for MissileLauncherPreferredFocus {
     fn get_component_unlocalized_name() -> &'static str {
         "cosmos:missile_launcher_preferred_focus"
     }
+}
 
+impl SyncableComponent for MissileLauncherPreferredFocus {
     fn get_sync_type() -> crate::netty::sync::SyncType {
         crate::netty::sync::SyncType::ClientAuthoritative(ClientAuthority::Piloting)
     }

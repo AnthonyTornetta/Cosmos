@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     item::Item,
-    netty::sync::{sync_component, SyncableComponent},
+    netty::sync::{sync_component, IdentifiableComponent, SyncableComponent},
     registry::{create_registry, identifiable::Identifiable},
 };
 
@@ -77,13 +77,15 @@ impl FluidHolder {
     }
 }
 
+impl IdentifiableComponent for StoredBlockFluid {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:stored_block_fluid"
+    }
+}
+
 impl SyncableComponent for StoredBlockFluid {
     fn get_sync_type() -> crate::netty::sync::SyncType {
         crate::netty::sync::SyncType::ServerAuthoritative
-    }
-
-    fn get_component_unlocalized_name() -> &'static str {
-        "cosmos:stored_block_fluid"
     }
 }
 
@@ -115,13 +117,15 @@ pub enum FluidItemData {
     },
 }
 
+impl IdentifiableComponent for FluidItemData {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:fluid_item_data"
+    }
+}
+
 impl SyncableComponent for FluidItemData {
     fn get_sync_type() -> crate::netty::sync::SyncType {
         crate::netty::sync::SyncType::ServerAuthoritative
-    }
-
-    fn get_component_unlocalized_name() -> &'static str {
-        "cosmos:fluid_item_data"
     }
 }
 

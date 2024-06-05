@@ -3,7 +3,7 @@
 use bevy::{app::App, ecs::component::Component, reflect::Reflect};
 use serde::{Deserialize, Serialize};
 
-use crate::netty::sync::{sync_component, ClientAuthority, SyncableComponent};
+use crate::netty::sync::{sync_component, ClientAuthority, IdentifiableComponent, SyncableComponent};
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Component, PartialEq, Eq, Reflect)]
 /// Represents the item slot that this player currently is holding
@@ -41,13 +41,15 @@ impl HeldItemSlot {
     }
 }
 
+impl IdentifiableComponent for HeldItemSlot {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:held_item_slot"
+    }
+}
+
 impl SyncableComponent for HeldItemSlot {
     fn get_sync_type() -> crate::netty::sync::SyncType {
         crate::netty::sync::SyncType::BothAuthoritative(ClientAuthority::Themselves)
-    }
-
-    fn get_component_unlocalized_name() -> &'static str {
-        "cosmos:held_item_slot"
     }
 
     fn validate(&self) -> bool {

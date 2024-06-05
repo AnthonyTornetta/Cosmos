@@ -49,9 +49,9 @@ fn get_inventory_mut<'a>(
     identifier: InventoryIdentifier,
     q_inventory: &'a mut Query<&mut Inventory>,
     q_structure: &'a Query<&Structure>,
-) -> Option<Mut<'a, Inventory>> {
+) -> Option<(Entity, Mut<'a, Inventory>)> {
     match identifier {
-        InventoryIdentifier::Entity(entity) => q_inventory.get_mut(entity).ok(),
+        InventoryIdentifier::Entity(entity) => q_inventory.get_mut(entity).ok().map(|x| (entity, x)),
         InventoryIdentifier::BlockData(block_data) => {
             let Ok(structure) = q_structure.get(block_data.structure_entity) else {
                 warn!("Missing structure entity for {:?}", block_data.structure_entity);
@@ -67,7 +67,7 @@ fn get_inventory_mut<'a>(
                 return None;
             };
 
-            q_inventory.get_mut(block_data_ent).ok()
+            q_inventory.get_mut(block_data_ent).ok().map(|x| (block_data_ent, x))
         }
     }
 }
@@ -76,7 +76,7 @@ fn get_many_inventories_mut<'a, const N: usize>(
     identifiers: [InventoryIdentifier; N],
     q_inventory: &'a mut Query<&mut Inventory>,
     q_structure: &'a Query<&Structure>,
-) -> Option<[Mut<'a, Inventory>; N]> {
+) -> Option<([Entity; N], [Mut<'a, Inventory>; N])> {
     let ents = identifiers
         .into_iter()
         .map(|x| match x {
@@ -91,7 +91,7 @@ fn get_many_inventories_mut<'a, const N: usize>(
 
     let ents = ents.try_into().expect("This is guarenteed to be the same size as input");
 
-    q_inventory.get_many_mut(ents).ok()
+    q_inventory.get_many_mut(ents).ok().map(|x| (ents, x))
 }
 
 fn listen_for_inventory_messages(
@@ -119,16 +119,16 @@ fn listen_for_inventory_messages(
                     inventory_b,
                 } => {
                     if inventory_a == inventory_b {
-                        if let Some(mut inventory) = get_inventory_mut(inventory_a, &mut q_inventory, &q_structure) {
+                        if let Some((inv_entity, mut inventory)) = get_inventory_mut(inventory_a, &mut q_inventory, &q_structure) {
                             inventory
-                                .self_swap_slots(slot_a as usize, slot_b as usize, &mut commands)
+                                .self_swap_slots(inv_entity, slot_a as usize, slot_b as usize, &mut commands)
                                 .unwrap_or_else(|_| panic!("Got bad inventory slots from player! {}, {}", slot_a, slot_b));
                         }
-                    } else if let Some([mut inventory_a, mut inventory_b]) =
+                    } else if let Some(([inv_ent_a, _], [mut inventory_a, mut inventory_b])) =
                         get_many_inventories_mut([inventory_a, inventory_b], &mut q_inventory, &q_structure)
                     {
                         inventory_a
-                            .swap_slots(slot_a as usize, &mut inventory_b, slot_b as usize, &mut commands)
+                            .swap_slots(inv_ent_a, slot_a as usize, &mut inventory_b, slot_b as usize, &mut commands)
                             .unwrap_or_else(|_| panic!("Got bad inventory slots from player! {}, {}", slot_a, slot_b));
                     }
                 }
@@ -139,28 +139,28 @@ fn listen_for_inventory_messages(
                     to_inventory,
                 } => {
                     if from_inventory == to_inventory {
-                        if let Some(mut inventory) = get_inventory_mut(from_inventory, &mut q_inventory, &q_structure) {
+                        if let Some((inv_entity, mut inventory)) = get_inventory_mut(from_inventory, &mut q_inventory, &q_structure) {
                             inventory
-                                .auto_move(from_slot as usize, quantity, &mut commands)
+                                .auto_move(inv_entity, from_slot as usize, quantity, &mut commands)
                                 .unwrap_or_else(|_| panic!("Got bad inventory slot from player! {}", from_slot));
                         }
-                    } else if let Some([mut from_inventory, mut to_inventory]) =
+                    } else if let Some(([from_inv_ent, to_inv_ent], [mut from_inventory, mut to_inventory])) =
                         get_many_inventories_mut([from_inventory, to_inventory], &mut q_inventory, &q_structure)
                     {
                         let from_slot = from_slot as usize;
                         if let Some(mut is) = from_inventory.remove_itemstack_at(from_slot) {
-                            let (leftover, _) = to_inventory.insert_itemstack(&is, &mut commands);
+                            let (leftover, _) = to_inventory.insert_itemstack(to_inv_ent, &is, &mut commands);
                             if leftover == 0 {
                                 from_inventory.remove_itemstack_at(from_slot);
                             } else if leftover == is.quantity() {
-                                from_inventory.set_itemstack_at(from_slot, Some(is), &mut commands);
+                                from_inventory.set_itemstack_at(from_inv_ent, from_slot, Some(is), &mut commands);
 
                                 from_inventory
-                                    .auto_move(from_slot, quantity, &mut commands)
+                                    .auto_move(from_inv_ent, from_slot, quantity, &mut commands)
                                     .unwrap_or_else(|_| panic!("Got bad inventory slot from player! {}", from_slot));
                             } else {
                                 is.set_quantity(leftover);
-                                from_inventory.set_itemstack_at(from_slot, Some(is), &mut commands);
+                                from_inventory.set_itemstack_at(from_inv_ent, from_slot, Some(is), &mut commands);
                             }
                         }
                     }
@@ -173,16 +173,23 @@ fn listen_for_inventory_messages(
                     to_slot,
                 } => {
                     if from_inventory == to_inventory {
-                        if let Some(mut inventory) = get_inventory_mut(from_inventory, &mut q_inventory, &q_structure) {
+                        if let Some((entity, mut inventory)) = get_inventory_mut(from_inventory, &mut q_inventory, &q_structure) {
                             inventory
-                                .self_move_itemstack(from_slot as usize, to_slot as usize, quantity, &mut commands)
+                                .self_move_itemstack(entity, from_slot as usize, to_slot as usize, quantity, &mut commands)
                                 .unwrap_or_else(|_| panic!("Got bad inventory slots from player! {}, {}", from_slot, to_slot));
                         }
-                    } else if let Some([mut inventory_a, mut inventory_b]) =
+                    } else if let Some(([ent_a, ent_b], [mut inventory_a, mut inventory_b])) =
                         get_many_inventories_mut([from_inventory, to_inventory], &mut q_inventory, &q_structure)
                     {
                         inventory_a
-                            .move_itemstack(from_slot as usize, &mut inventory_b, to_slot as usize, quantity, &mut commands)
+                            .move_itemstack(
+                                ent_a,
+                                from_slot as usize,
+                                &mut inventory_b,
+                                to_slot as usize,
+                                quantity,
+                                &mut commands,
+                            )
                             .unwrap_or_else(|_| panic!("Got bad inventory slots from player! {}, {}", from_slot, to_slot));
                     }
                 }
@@ -207,7 +214,7 @@ fn listen_for_inventory_messages(
 
                     // TODO: Check if has access to inventory
 
-                    if let Some(mut inventory) = get_inventory_mut(inventory_holder, &mut q_inventory, &q_structure) {
+                    if let Some((_, mut inventory)) = get_inventory_mut(inventory_holder, &mut q_inventory, &q_structure) {
                         if let Some(is) = inventory.mut_itemstack_at(slot) {
                             let quantity = quantity.min(is.quantity());
 

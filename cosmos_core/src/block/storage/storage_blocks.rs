@@ -5,14 +5,14 @@ use bevy::{
     ecs::{
         entity::Entity,
         event::{Event, EventReader, EventWriter},
-        system::{Commands, Query, Res},
+        query::With,
+        system::{Query, Res},
     },
-    log::warn,
 };
 
 use crate::{
     block::{data::BlockData, Block},
-    events::block_events::BlockChangedEvent,
+    events::block_events::{BlockChangedEvent, BlockDataSystemParams},
     inventory::Inventory,
     registry::Registry,
     structure::{structure_block::StructureBlock, Structure},
@@ -35,12 +35,13 @@ pub struct PopulateBlockInventoryEvent {
 ///
 /// Sends out the `PopulateBlockInventoryEvent` event when needed.
 pub fn on_add_storage(
-    q_structure: Query<&Structure>,
+    mut q_structure: Query<&mut Structure>,
     blocks: Res<Registry<Block>>,
     mut evr_block_changed: EventReader<BlockChangedEvent>,
-    mut commands: Commands,
     mut ev_writer: EventWriter<PopulateBlockInventoryEvent>,
     mut q_block_data: Query<&mut BlockData>,
+    mut params: BlockDataSystemParams,
+    q_has_data: Query<(), With<Inventory>>,
 ) {
     if evr_block_changed.is_empty() {
         return;
@@ -55,24 +56,14 @@ pub fn on_add_storage(
             continue;
         }
 
-        let Ok(structure) = q_structure.get(ev.structure_entity) else {
+        let Ok(mut structure) = q_structure.get_mut(ev.structure_entity) else {
             continue;
         };
 
         if blocks.from_numeric_id(ev.old_block) == block {
             let coords = ev.block.coords();
 
-            if let Some(data_ent) = structure.block_data(coords) {
-                if let Ok(mut block_data) = q_block_data.get_mut(data_ent) {
-                    block_data.decrement();
-                } else {
-                    warn!("Missing BlockData on block data component?");
-                }
-
-                if let Some(mut ecmds) = commands.get_entity(data_ent) {
-                    ecmds.remove::<Inventory>();
-                }
-            }
+            structure.remove_block_data::<Inventory>(coords, &mut params, &mut q_block_data, &q_has_data);
         }
 
         if blocks.from_numeric_id(ev.new_block) == block {

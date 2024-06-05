@@ -16,7 +16,7 @@ use bevy_rapier3d::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::netty::sync::{sync_component, SyncableComponent};
+use crate::netty::sync::{sync_component, IdentifiableComponent, SyncableComponent};
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 /// Indicates that this entity cannot be collided with.
@@ -82,13 +82,15 @@ impl CollisionBlacklist {
     }
 }
 
+impl IdentifiableComponent for CollisionBlacklist {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:collision_blacklist"
+    }
+}
+
 impl SyncableComponent for CollisionBlacklist {
     fn get_sync_type() -> crate::netty::sync::SyncType {
         crate::netty::sync::SyncType::ServerAuthoritative
-    }
-
-    fn get_component_unlocalized_name() -> &'static str {
-        "cosmos:collision_blacklist"
     }
 
     #[cfg(feature = "client")]

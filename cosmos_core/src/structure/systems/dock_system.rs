@@ -9,7 +9,7 @@ use bevy::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    netty::sync::{sync_component, SyncableComponent},
+    netty::sync::{sync_component, IdentifiableComponent, SyncableComponent},
     structure::coordinates::BlockCoordinate,
 };
 
@@ -37,13 +37,15 @@ pub struct Docked {
     pub relative_translation: Vec3,
 }
 
+impl IdentifiableComponent for Docked {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:docked"
+    }
+}
+
 impl SyncableComponent for Docked {
     fn get_sync_type() -> crate::netty::sync::SyncType {
         crate::netty::sync::SyncType::ServerAuthoritative
-    }
-
-    fn get_component_unlocalized_name() -> &'static str {
-        "cosmos:docked"
     }
 
     #[cfg(feature = "client")]

@@ -21,7 +21,7 @@ use bevy_rapier3d::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    netty::sync::{sync_component, ComponentSyncingSet, SyncableComponent},
+    netty::sync::{sync_component, ComponentSyncingSet, IdentifiableComponent, SyncableComponent},
     physics::location::{CosmosBundleSet, LocationPhysicsSet},
 };
 
@@ -39,11 +39,13 @@ pub struct Missile {
     pub color: Option<Color>,
 }
 
-impl SyncableComponent for Missile {
+impl IdentifiableComponent for Missile {
     fn get_component_unlocalized_name() -> &'static str {
         "cosmos:missile"
     }
+}
 
+impl SyncableComponent for Missile {
     fn get_sync_type() -> crate::netty::sync::SyncType {
         crate::netty::sync::SyncType::ServerAuthoritative
     }
@@ -75,11 +77,13 @@ pub struct Explosion {
     pub color: Option<Color>,
 }
 
-impl SyncableComponent for Explosion {
+impl IdentifiableComponent for Explosion {
     fn get_component_unlocalized_name() -> &'static str {
         "cosmos:explosion"
     }
+}
 
+impl SyncableComponent for Explosion {
     fn get_sync_type() -> crate::netty::sync::SyncType {
         crate::netty::sync::SyncType::ServerAuthoritative
     }
