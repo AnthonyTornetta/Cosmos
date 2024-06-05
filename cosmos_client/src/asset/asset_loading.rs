@@ -12,6 +12,7 @@ use bevy::{
 use bitflags::bitflags;
 use cosmos_core::{
     block::{Block, BlockFace},
+    blockitems::BlockItems,
     item::Item,
     loader::{AddLoadingEvent, DoneLoadingEvent, LoadingManager},
     registry::{self, identifiable::Identifiable, Registry},
@@ -646,6 +647,7 @@ fn load_item_rendering_information(
     server: Res<AssetServer>,
     mut registry: ResMut<Registry<ItemTextureIndex>>,
     mut info_registry: ResMut<Registry<ItemRenderingInfo>>,
+    block_items: Res<BlockItems>,
 ) {
     let missing_texture_index = atlas_registry
         .from_id("cosmos:main")
@@ -665,6 +667,11 @@ fn load_item_rendering_information(
     });
 
     for item in items.iter() {
+        if block_items.block_from_item(item).is_some() {
+            // No need to create rendering info for items that will be rendered as blocks.
+            continue;
+        }
+
         let unlocalized_name = item.unlocalized_name();
         let mut split = unlocalized_name.split(':');
         let mod_id = split.next().unwrap();
@@ -742,8 +749,6 @@ fn process_loading_texture_type(
 
                     missing_texture_index
                 });
-
-            println!("Doing {texture_name:?} = {index}");
 
             LoadedTextureType::Single(index)
         }
