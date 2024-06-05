@@ -69,6 +69,8 @@ pub struct Inventory {
     items: Vec<Option<ItemStack>>,
     priority_slots: Option<Range<usize>>,
     name: String,
+    /// Stores its own entity since many of the functions require its own entity
+    self_entity: Entity,
 }
 
 impl IdentifiableComponent for Inventory {
@@ -81,13 +83,28 @@ impl SyncableComponent for Inventory {
     fn get_sync_type() -> crate::netty::sync::SyncType {
         crate::netty::sync::SyncType::ServerAuthoritative
     }
+
+    #[cfg(feature = "client")]
+    fn convert_entities_server_to_client(mut self, mapping: &crate::netty::sync::mapping::NetworkMapping) -> Option<Self> {
+        println!("Self ent: {:?}", self.self_entity);
+
+        self.self_entity = mapping.client_from_server(&self.self_entity)?;
+
+        for is in self.items.iter_mut().flat_map(|x| x) {
+            if let Some(de) = is.data_entity() {
+                is.set_data_entity(mapping.client_from_server(&de));
+            }
+        }
+
+        Some(self)
+    }
 }
 
 type InventorySlot = usize;
 
 impl Inventory {
     /// Creates an empty inventory with that number of slots
-    pub fn new(name: impl Into<String>, n_slots: usize, priority_slots: Option<Range<usize>>) -> Self {
+    pub fn new(name: impl Into<String>, n_slots: usize, priority_slots: Option<Range<usize>>, self_entity: Entity) -> Self {
         let mut items = Vec::with_capacity(n_slots);
 
         for _ in 0..n_slots {
@@ -98,15 +115,25 @@ impl Inventory {
             items,
             priority_slots,
             name: name.into(),
+            self_entity,
         }
     }
 
-    fn update_itemstack_data_parent(&self, self_entity: Entity, slot: InventorySlot, commands: &mut Commands) {
+    /// Sets the entity that contains this inventory. The will update all [`ItemStack`] that have a data entity
+    /// to now have their data entity be a child of this new entity.
+    pub fn set_self_entity(&mut self, entity: Entity, commands: &mut Commands) {
+        self.self_entity = entity;
+        for (slot, _) in self.items.iter().enumerate().filter(|(_, x)| x.is_some()) {
+            self.update_itemstack_data_parent(slot as InventorySlot, commands);
+        }
+    }
+
+    fn update_itemstack_data_parent(&self, slot: InventorySlot, commands: &mut Commands) {
         if let Some(is) = self.items.get(slot as usize).map(|x| x.as_ref()).flatten() {
             if let Some(de) = is.data_entity() {
                 if let Some(mut ecmds) = commands.get_entity(de) {
-                    ecmds.set_parent(self_entity).insert(ItemStackData {
-                        inventory_pointer: (self_entity, slot as u32),
+                    ecmds.set_parent(self.self_entity).insert(ItemStackData {
+                        inventory_pointer: (self.self_entity, slot as u32),
                         item_id: is.item_id(),
                     });
                 }
@@ -114,9 +141,9 @@ impl Inventory {
         }
     }
 
-    fn set_items_at(&mut self, self_entity: Entity, slot: usize, itemstack: ItemStack, commands: &mut Commands) {
+    fn set_items_at(&mut self, slot: usize, itemstack: ItemStack, commands: &mut Commands) {
         self.items[slot] = Some(itemstack);
-        self.update_itemstack_data_parent(self_entity, slot, commands);
+        self.update_itemstack_data_parent(slot, commands);
     }
 
     /// Returns the name of this inventory
@@ -149,13 +176,7 @@ impl Inventory {
     /// Swaps the contents of two inventory slots in the same inventory.
     ///
     /// Returns Ok if both slots were within the bounds of the inventory, Err if either was not
-    pub fn self_swap_slots(
-        &mut self,
-        self_entity: Entity,
-        slot_a: usize,
-        slot_b: usize,
-        commands: &mut Commands,
-    ) -> Result<(), InventorySlotError> {
+    pub fn self_swap_slots(&mut self, slot_a: usize, slot_b: usize, commands: &mut Commands) -> Result<(), InventorySlotError> {
         if slot_a >= self.items.len() {
             return Err(InventorySlotError::InvalidSlot(slot_a));
         }
@@ -164,8 +185,8 @@ impl Inventory {
         }
 
         self.items.swap(slot_a, slot_b);
-        self.update_itemstack_data_parent(self_entity, slot_a, commands);
-        self.update_itemstack_data_parent(self_entity, slot_b, commands);
+        self.update_itemstack_data_parent(slot_a, commands);
+        self.update_itemstack_data_parent(slot_b, commands);
 
         Ok(())
     }
@@ -175,7 +196,6 @@ impl Inventory {
     /// Returns Ok if both slots were within the bounds of their inventories, Err if either was not
     pub fn swap_slots(
         &mut self,
-        self_entity: Entity,
         this_slot: usize,
         other: &mut Inventory,
         other_slot: usize,
@@ -190,8 +210,8 @@ impl Inventory {
 
         std::mem::swap(&mut self.items[this_slot], &mut other.items[other_slot]);
 
-        self.update_itemstack_data_parent(self_entity, this_slot, commands);
-        other.update_itemstack_data_parent(self_entity, other_slot, commands);
+        self.update_itemstack_data_parent(this_slot, commands);
+        other.update_itemstack_data_parent(other_slot, commands);
 
         Ok(())
     }
@@ -201,16 +221,16 @@ impl Inventory {
     /// Inserts data into this itemstack. Returns the entity that stores this itemstack's data.
     ///
     /// * `inventory_pointer` - If this is a part of an inventory, this should be (inventory_entity, slot).
-    pub fn insert_itemstack_data<T: Bundle>(
-        &mut self,
-        self_entity: Entity,
-        slot: usize,
-        data: T,
-        commands: &mut Commands,
-    ) -> Option<Entity> {
+    pub fn insert_itemstack_data<T: Bundle>(&mut self, slot: usize, data: T, commands: &mut Commands) -> Option<Entity> {
+        let self_ent = self.self_entity;
+        #[cfg(debug_assertions)]
+        if commands.get_entity(self_ent).is_none() {
+            panic!("Inventory entity {self_ent:?} does not exist, but is stored in an inventory component!");
+        }
+
         let is = self.mut_itemstack_at(slot)?;
 
-        Some(is.insert_itemstack_data((self_entity, slot as u32), data, commands))
+        Some(is.insert_itemstack_data((self_ent, slot as u32), data, commands))
     }
 
     /// If there is no itemstack in this slot, returns None.
@@ -220,7 +240,6 @@ impl Inventory {
     /// with the itemstack data entity to create the data to insert.
     pub fn insert_itemstack_data_with_entity<T: Bundle, F>(
         &mut self,
-        self_entity: Entity,
         slot: usize,
         create_data_closure: F,
         commands: &mut Commands,
@@ -228,9 +247,10 @@ impl Inventory {
     where
         F: FnOnce(Entity) -> T,
     {
+        let self_ent = self.self_entity;
         let is = self.mut_itemstack_at(slot)?;
 
-        Some(is.insert_itemstack_data_with_entity((self_entity, slot as u32), create_data_closure, commands))
+        Some(is.insert_itemstack_data_with_entity((self_ent, slot as u32), create_data_closure, commands))
     }
 
     /// Queries this itemstack's data. Returns `None` if the requested query failed or if no itemstack data exists for this slot.
@@ -302,7 +322,7 @@ impl Inventory {
     ///
     /// If this [`ItemStack`] is successfully inserted and has a data entity, that entity will
     /// have its parent set to this inventory's entity.
-    pub fn insert_itemstack(&mut self, self_entity: Entity, itemstack: &ItemStack, commands: &mut Commands) -> (u16, Option<usize>) {
+    pub fn insert_itemstack(&mut self, itemstack: &ItemStack, commands: &mut Commands) -> (u16, Option<usize>) {
         // Search for existing stacks, if none found that make new one(s)
 
         let mut quantity = itemstack.quantity();
@@ -339,7 +359,7 @@ impl Inventory {
 
             quantity = is.increase_quantity(quantity);
 
-            self.set_items_at(self_entity, i, is, commands);
+            self.set_items_at(i, is, commands);
 
             // Items with data cannot have a stack size > 1.
             if quantity == 0 || itemstack.data_entity().is_some() {
@@ -361,14 +381,13 @@ impl Inventory {
     /// Make sure to call this method in or before [`super::ItemStack::ItemStackSystemSet::CreateDataEntity`]
     pub fn insert_item(
         &mut self,
-        self_entity: Entity,
         item: &Item,
         quantity: u16,
         commands: &mut Commands,
         needs_data: &ItemShouldHaveData,
     ) -> (u16, Option<usize>) {
-        let mut is = ItemStack::with_quantity(item, quantity, (self_entity, u32::MAX), commands, needs_data);
-        let (qty, new_slot) = self.insert_itemstack(self_entity, &is, commands);
+        let mut is = ItemStack::with_quantity(item, quantity, (self.self_entity, u32::MAX), commands, needs_data);
+        let (qty, new_slot) = self.insert_itemstack(&is, commands);
 
         if qty != 0 {
             is.remove(commands);
@@ -387,14 +406,13 @@ impl Inventory {
     /// Make sure to call this method in or before [`super::ItemStack::ItemStackSystemSet::CreateDataEntity`]
     pub fn insert_item_with_data(
         &mut self,
-        self_entity: Entity,
         item: &Item,
         quantity: u16,
         commands: &mut Commands,
         data: impl Bundle,
     ) -> (u16, Option<usize>) {
-        let mut is = ItemStack::with_quantity_and_data(item, quantity, (self_entity, 0), commands, data);
-        let (qty, new_slot) = self.insert_itemstack(self_entity, &is, commands);
+        let mut is = ItemStack::with_quantity_and_data(item, quantity, (self.self_entity, 0), commands, data);
+        let (qty, new_slot) = self.insert_itemstack(&is, commands);
 
         if qty != 0 {
             // We weren't able to fit in the data-having item, so delete the newly created data entity.
@@ -440,9 +458,9 @@ impl Inventory {
     }
 
     /// Sets the ItemStack stored at that slot number. Will overwrite any previous stack
-    pub fn set_itemstack_at(&mut self, self_entity: Entity, slot: usize, item_stack: Option<ItemStack>, commands: &mut Commands) {
+    pub fn set_itemstack_at(&mut self, slot: usize, item_stack: Option<ItemStack>, commands: &mut Commands) {
         if let Some(is) = item_stack {
-            self.set_items_at(self_entity, slot, is, commands);
+            self.set_items_at(slot, is, commands);
         } else {
             self.items[slot] = None;
         }
@@ -457,15 +475,14 @@ impl Inventory {
     /// Make sure to call this method in or before [`super::ItemStack::ItemStackSystemSet::CreateDataEntity`]
     pub fn insert_item_at(
         &mut self,
-        self_entity: Entity,
         slot: usize,
         item: &Item,
         quantity: u16,
         commands: &mut Commands,
         needs_data: &ItemShouldHaveData,
     ) -> u16 {
-        let is = ItemStack::with_quantity(item, quantity, (self_entity, slot as u32), commands, needs_data);
-        let qty = self.insert_itemstack_at(self_entity, slot, &is, commands);
+        let is = ItemStack::with_quantity(item, quantity, (self.self_entity, slot as u32), commands, needs_data);
+        let qty = self.insert_itemstack_at(slot, &is, commands);
 
         if let Some(de) = is.data_entity() {
             if qty != 0 {
@@ -484,17 +501,9 @@ impl Inventory {
     /// a data entity.
     ///
     /// Make sure to call this method in or before [`super::ItemStack::ItemStackSystemSet::CreateDataEntity`]
-    pub fn insert_item_with_data_at(
-        &mut self,
-        self_entity: Entity,
-        slot: usize,
-        item: &Item,
-        quantity: u16,
-        commands: &mut Commands,
-        data: impl Bundle,
-    ) -> u16 {
-        let is = ItemStack::with_quantity_and_data(item, quantity, (self_entity, slot as u32), commands, data);
-        let qty = self.insert_itemstack_at(self_entity, slot, &is, commands);
+    pub fn insert_item_with_data_at(&mut self, slot: usize, item: &Item, quantity: u16, commands: &mut Commands, data: impl Bundle) -> u16 {
+        let is = ItemStack::with_quantity_and_data(item, quantity, (self.self_entity, slot as u32), commands, data);
+        let qty = self.insert_itemstack_at(slot, &is, commands);
 
         if let Some(de) = is.data_entity() {
             if qty != 0 {
@@ -512,7 +521,7 @@ impl Inventory {
     /// This method assumes the [`ItemStack`] has a proper data entity created if it needs one. This will, however,
     /// reassign the parent of that data entity to this inventory if it does successfully get added. If you want to
     /// automatically create the data entity if there is space, use [`Self::insert_item_at`] instead.
-    pub fn insert_itemstack_at(&mut self, self_entity: Entity, slot: usize, itemstack: &ItemStack, commands: &mut Commands) -> u16 {
+    pub fn insert_itemstack_at(&mut self, slot: usize, itemstack: &ItemStack, commands: &mut Commands) -> u16 {
         if let Some(slot) = &mut self.items[slot] {
             if slot.item_id() != itemstack.item_id() {
                 itemstack.quantity()
@@ -520,7 +529,7 @@ impl Inventory {
                 slot.increase_quantity(itemstack.quantity())
             }
         } else {
-            self.set_items_at(self_entity, slot, itemstack.clone(), commands);
+            self.set_items_at(slot, itemstack.clone(), commands);
 
             0
         }
@@ -535,7 +544,7 @@ impl Inventory {
     }
 
     /// Moves an item around an inventory to auto sort it
-    pub fn auto_move(&mut self, self_entity: Entity, slot: usize, amount: u16, commands: &mut Commands) -> Result<(), InventorySlotError> {
+    pub fn auto_move(&mut self, slot: usize, amount: u16, commands: &mut Commands) -> Result<(), InventorySlotError> {
         if slot >= self.items.len() {
             return Err(InventorySlotError::InvalidSlot(slot));
         }
@@ -558,7 +567,7 @@ impl Inventory {
             if !priority_slots.contains(&slot) {
                 // attempt to move to priority slots first
                 for slot in priority_slots {
-                    let left_over = self.insert_itemstack_at(self_entity, slot, &item_stack, commands);
+                    let left_over = self.insert_itemstack_at(slot, &item_stack, commands);
 
                     item_stack.set_quantity(left_over);
 
@@ -579,7 +588,7 @@ impl Inventory {
                 break;
             }
 
-            let left_over = self.insert_itemstack_at(self_entity, slot, &item_stack, commands);
+            let left_over = self.insert_itemstack_at(slot, &item_stack, commands);
 
             item_stack.set_quantity(left_over);
         }
@@ -587,9 +596,9 @@ impl Inventory {
         item_stack.set_quantity(item_stack.quantity() + final_left_over);
 
         if item_stack.quantity() != 0 {
-            self.set_itemstack_at(self_entity, slot, Some(item_stack), commands);
+            self.set_itemstack_at(slot, Some(item_stack), commands);
         } else {
-            self.set_itemstack_at(self_entity, slot, None, commands);
+            self.set_itemstack_at(slot, None, commands);
         }
 
         Ok(())
@@ -623,7 +632,6 @@ impl Inventory {
     /// This will respect stack sizes, and returns the "left over" amount in the slot it was moved from.
     pub fn self_move_itemstack(
         &mut self,
-        self_entity: Entity,
         from: usize,
         to: usize,
         max_quantity: u16,
@@ -656,14 +664,14 @@ impl Inventory {
         let mut move_itemstack = is.clone();
         move_itemstack.set_quantity(move_quantity);
 
-        let left_over = self.insert_itemstack_at(self_entity, to, &move_itemstack, commands) + reserve;
+        let left_over = self.insert_itemstack_at(to, &move_itemstack, commands) + reserve;
 
         self.mut_itemstack_at(from)
             .expect("Already exists because of above if")
             .set_quantity(left_over);
 
         if left_over == 0 {
-            self.set_itemstack_at(self_entity, from, None, commands);
+            self.set_itemstack_at(from, None, commands);
         }
 
         Ok(left_over)
@@ -674,7 +682,6 @@ impl Inventory {
     /// This will respect stack sizes, and returns the "left over" amount in the slot it was moved from.
     pub fn move_itemstack(
         &mut self,
-        self_entity: Entity,
         from: usize,
         to_inventory: &mut Inventory,
         to: usize,
@@ -703,14 +710,14 @@ impl Inventory {
         let mut move_itemstack = is.clone();
         move_itemstack.set_quantity(move_quantity);
 
-        let left_over = to_inventory.insert_itemstack_at(self_entity, to, &move_itemstack, commands) + reserve;
+        let left_over = to_inventory.insert_itemstack_at(to, &move_itemstack, commands) + reserve;
 
         self.mut_itemstack_at(from)
             .expect("Already exists because of above if")
             .set_quantity(left_over);
 
         if left_over == 0 {
-            self.set_itemstack_at(self_entity, from, None, commands);
+            self.set_itemstack_at(from, None, commands);
         }
 
         Ok(left_over)

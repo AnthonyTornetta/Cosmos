@@ -52,6 +52,8 @@ fn client_deserialize_component<T: SyncableComponent>(
         if T::get_component_unlocalized_name() != synced_id.unlocalized_name {
             println!("NOT EQUAL!");
             continue;
+        } else {
+            println!("equal :D");
         }
 
         if let Some(mut ecmds) = commands.get_entity(ev.entity) {
@@ -67,6 +69,7 @@ fn client_deserialize_component<T: SyncableComponent>(
             if matches!(T::get_sync_type(), SyncType::BothAuthoritative(_)) {
                 // Attempt to prevent an endless chain of change detection, causing the client+server to repeatedly sync the same component.
                 if q_t.get(ev.entity).map(|x| *x == component).unwrap_or(false) {
+                    println!("omegalul");
                     continue;
                 }
             }
@@ -74,6 +77,8 @@ fn client_deserialize_component<T: SyncableComponent>(
             if component.validate() {
                 println!("Inserting {component:?}");
                 ecmds.try_insert(component);
+            } else {
+                println!("INVALID!");
             }
         } else {
             warn!("No entity cmds for synced entity component - (entity {:?})", ev.entity);
@@ -460,7 +465,7 @@ fn get_entity_identifier_info(
             // This creates a data entity if it doesn't exist and gets the data entity.
             // TODO: Make this a method to make this less hacky?
             println!("Inventory entity should be - {inventory_entity:?}");
-            let maybe_data_ent = inventory.insert_itemstack_data(inventory_entity, item_slot as usize, (), commands);
+            let maybe_data_ent = inventory.insert_itemstack_data(item_slot as usize, (), commands);
 
             if let Some(de) = maybe_data_ent {
                 network_mapping.add_mapping(de, server_data_entity);

@@ -14,6 +14,7 @@ use bevy::{
 };
 use cosmos_core::{
     block::data::{persistence::ChunkLoadBlockDataEvent, BlockData},
+    events::block_events::BlockDataSystemParams,
     netty::sync::IdentifiableComponent,
     structure::{chunk::netty::SerializedBlockData, coordinates::ChunkBlockCoordinate, loading::StructureLoadingSet, Structure},
 };
@@ -64,7 +65,7 @@ fn load_component<T: IdentifiableComponent + DeserializeOwned>(
 fn load_component_from_block_data<T: IdentifiableComponent + DeserializeOwned>(
     mut q_structure: Query<&mut Structure>,
     mut q_block_data: Query<&mut BlockData>,
-    mut commands: Commands,
+    mut block_data_system_params: BlockDataSystemParams,
     mut ev_reader: EventReader<ChunkLoadBlockDataEvent>,
     q_has_component: Query<(), With<T>>,
 ) {
@@ -84,7 +85,13 @@ fn load_component_from_block_data<T: IdentifiableComponent + DeserializeOwned>(
                 continue;
             };
 
-            structure.insert_block_data(first + *data_coord, data, &mut commands, &mut q_block_data, &q_has_component);
+            structure.insert_block_data(
+                first + *data_coord,
+                data,
+                &mut block_data_system_params,
+                &mut q_block_data,
+                &q_has_component,
+            );
         }
     }
 }

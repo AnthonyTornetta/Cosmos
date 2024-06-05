@@ -54,9 +54,9 @@ fn populate_inventory(
             continue;
         };
 
-        structure.insert_block_data(
+        structure.insert_block_data_with_entity(
             coords,
-            Inventory::new("Storage", 9 * 5, None),
+            |e| Inventory::new("Storage", 9 * 5, None, e),
             &mut params,
             &mut q_block_data,
             &q_has_inventory,
