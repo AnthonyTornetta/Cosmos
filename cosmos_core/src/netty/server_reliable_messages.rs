@@ -11,7 +11,7 @@ use bevy_renet::renet::ClientId;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    block::{multiblock::reactor::Reactors, BlockRotation},
+    block::BlockRotation,
     entities::player::render_distance::RenderDistance,
     physics::location::Location,
     structure::{
@@ -201,13 +201,6 @@ pub enum ServerReliableMessages {
     InvalidReactor {
         /// The reason the reactor failed to be created
         reason: String,
-    },
-    /// Updates the reactors for a specific structure
-    Reactors {
-        /// The reactors the structure now has
-        reactors: Reactors,
-        /// The structure this the reactors are a part of
-        structure: Entity,
     },
     /// This signifies that the server is sending information for a requested entity
     RequestedEntityReceived(Entity),

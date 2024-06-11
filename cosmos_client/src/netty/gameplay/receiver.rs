@@ -756,11 +756,6 @@ fn client_sync_players(
                     Color::ORANGE_RED,
                 ));
             }
-            ServerReliableMessages::Reactors { reactors, structure } => {
-                if let Some(structure_entity) = network_mapping.client_from_server(&structure) {
-                    commands.entity(structure_entity).insert(reactors);
-                }
-            }
             ServerReliableMessages::RequestedEntityReceived(entity) => {
                 requested_entities.entities.retain(|x| x.server_entity != entity);
             }
