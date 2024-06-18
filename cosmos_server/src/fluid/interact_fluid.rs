@@ -13,7 +13,7 @@ use cosmos_core::{
     block::{block_events::BlockInteractEvent, data::BlockData, Block},
     events::block_events::BlockDataSystemParams,
     fluid::{
-        data::{FluidHolder, FluidItemData, StoredBlockFluid},
+        data::{FluidHolder, FluidItemData, FluidTankBlock, StoredBlockFluid},
         registry::Fluid,
     },
     inventory::{
@@ -22,7 +22,7 @@ use cosmos_core::{
         Inventory,
     },
     item::Item,
-    registry::{create_registry, identifiable::Identifiable, Registry},
+    registry::{identifiable::Identifiable, Registry},
     structure::Structure,
 };
 
@@ -109,44 +109,6 @@ fn on_interact_with_fluid(
                 }
             }
         };
-    }
-}
-
-#[derive(Clone)]
-/// This block is a fluid tank, and can store fluid
-pub struct FluidTankBlock {
-    id: u16,
-    unlocalized_name: String,
-    max_capacity: u32,
-}
-
-impl FluidTankBlock {
-    /// Indicates that this block can store fluids
-    pub fn new(block: &Block, max_capacity: u32) -> Self {
-        Self {
-            id: 0,
-            max_capacity,
-            unlocalized_name: block.unlocalized_name().to_owned(),
-        }
-    }
-
-    /// The maximimum capacity that this block can store of fluids.
-    pub fn max_capacity(&self) -> u32 {
-        self.max_capacity
-    }
-}
-
-impl Identifiable for FluidTankBlock {
-    fn id(&self) -> u16 {
-        self.id
-    }
-
-    fn set_numeric_id(&mut self, id: u16) {
-        self.id = id;
-    }
-
-    fn unlocalized_name(&self) -> &str {
-        &self.unlocalized_name
     }
 }
 
@@ -398,8 +360,6 @@ fn fill_tank_registry(mut tank_reg: ResMut<Registry<FluidTankBlock>>, blocks: Re
 }
 
 pub(super) fn register(app: &mut App) {
-    create_registry::<FluidTankBlock>(app, "cosmos:tank_block");
-
     app.add_systems(OnEnter(GameState::PostLoading), (register_fluid_holder_items, fill_tank_registry))
         .add_systems(Update, on_interact_with_tank.before(ItemStackSystemSet::CreateDataEntity))
         .add_systems(Update, add_item_fluid_data.in_set(ItemStackSystemSet::FillDataEntity))

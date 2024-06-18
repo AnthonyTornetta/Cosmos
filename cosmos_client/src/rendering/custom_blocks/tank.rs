@@ -20,7 +20,10 @@ use bevy::{
 use cosmos_core::{
     block::{Block, ALL_BLOCK_FACES},
     ecs::NeedsDespawned,
-    fluid::{data::StoredBlockFluid, registry::Fluid},
+    fluid::{
+        data::{FluidTankBlock, StoredBlockFluid},
+        registry::Fluid,
+    },
     registry::{identifiable::Identifiable, many_to_one::ManyToOneRegistry, Registry},
     structure::{
         chunk::CHUNK_DIMENSIONSF,
@@ -67,6 +70,7 @@ fn on_render_tanks(
     materials_registry: Res<Registry<MaterialDefinition>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut evw_add_material: EventWriter<AddMaterialEvent>,
+    fluid_tank_blocks: Res<Registry<FluidTankBlock>>,
 ) {
     for ev in ev_reader.read() {
         if let Ok(tank_renders) = q_tank_renders.get(ev.mesh_entity_parent) {
@@ -80,6 +84,11 @@ fn on_render_tanks(
         let tank_id = blocks.from_id("cosmos:tank").expect("no tank :(").id();
         if ev.block_ids.contains(&tank_id) {
             println!("Custom render contains tank!");
+
+            let Some(tank_block_entry) = fluid_tank_blocks.from_id("cosmos:tank") else {
+                warn!("Tank cannot store fluids.");
+                continue;
+            };
 
             let Ok(structure) = q_structure.get(ev.structure_entity) else {
                 continue;
@@ -154,15 +163,21 @@ fn on_render_tanks(
 
                     let uvs = Rect::new(0.0, 0.0, 1.0, 1.0);
 
+                    let y_scale = data.fluid_stored as f32 / tank_block_entry.max_capacity() as f32;
+
+                    mesh_info.scale(Vec3::new(1.0, y_scale, 1.0));
+
                     for pos in mesh_info.positions.iter_mut() {
-                        *pos = rotation.mul_vec3((*pos).into()).into();
+                        *pos = rotation
+                            .mul_vec3(Vec3::from(*pos) - Vec3::new(0.0, (1.0 - y_scale) * 0.5, 0.0))
+                            .into();
                     }
 
                     for norm in mesh_info.normals.iter_mut() {
                         *norm = rotation.mul_vec3((*norm).into()).into();
                     }
 
-                    // Scale the rotated positions, not the pre-rotated positions
+                    // Scale the rotated positions, not the pre-rotated positions since our side checks are absolute
 
                     let structure_coords = block.coords();
 

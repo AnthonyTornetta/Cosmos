@@ -4,6 +4,7 @@ use bevy::{app::App, ecs::component::Component, reflect::Reflect};
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    block::Block,
     item::Item,
     netty::sync::{sync_component, IdentifiableComponent, SyncableComponent},
     registry::{create_registry, identifiable::Identifiable},
@@ -129,9 +130,49 @@ impl SyncableComponent for FluidItemData {
     }
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+/// This block is a fluid tank, and can store fluid
+pub struct FluidTankBlock {
+    id: u16,
+    unlocalized_name: String,
+    max_capacity: u32,
+}
+
+impl FluidTankBlock {
+    /// Indicates that this block can store fluids
+    pub fn new(block: &Block, max_capacity: u32) -> Self {
+        Self {
+            id: 0,
+            max_capacity,
+            unlocalized_name: block.unlocalized_name().to_owned(),
+        }
+    }
+
+    /// The maximimum capacity that this block can store of fluids.
+    pub fn max_capacity(&self) -> u32 {
+        self.max_capacity
+    }
+}
+
+impl Identifiable for FluidTankBlock {
+    fn id(&self) -> u16 {
+        self.id
+    }
+
+    fn set_numeric_id(&mut self, id: u16) {
+        self.id = id;
+    }
+
+    fn unlocalized_name(&self) -> &str {
+        &self.unlocalized_name
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     // TODO: sync this?
     create_registry::<FluidHolder>(app, "cosmos:fluid_holder");
+
+    create_registry::<FluidTankBlock>(app, "cosmos:tank_block");
 
     sync_component::<FluidItemData>(app);
     sync_component::<StoredBlockFluid>(app);
