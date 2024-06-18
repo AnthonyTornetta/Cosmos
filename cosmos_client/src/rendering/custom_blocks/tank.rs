@@ -1,27 +1,44 @@
 use bevy::{
     app::{App, Update},
+    asset::Assets,
     core::Name,
     ecs::{
         component::Component,
         entity::Entity,
-        event::EventReader,
+        event::{EventReader, EventWriter},
         schedule::{IntoSystemConfigs, OnEnter},
         system::{Commands, Query, Res, ResMut},
     },
     hierarchy::BuildChildren,
+    log::warn,
+    math::{Rect, Vec3},
     reflect::Reflect,
+    render::{mesh::Mesh, view::VisibilityBundle},
+    transform::TransformBundle,
+    utils::HashMap,
 };
 use cosmos_core::{
-    block::Block,
+    block::{Block, ALL_BLOCK_FACES},
     ecs::NeedsDespawned,
-    fluid::data::StoredBlockFluid,
-    registry::{identifiable::Identifiable, Registry},
-    structure::Structure,
+    fluid::{data::StoredBlockFluid, registry::Fluid},
+    registry::{identifiable::Identifiable, many_to_one::ManyToOneRegistry, Registry},
+    structure::{
+        chunk::CHUNK_DIMENSIONSF,
+        coordinates::{BlockCoordinate, ChunkBlockCoordinate},
+        Structure,
+    },
 };
 
 use crate::{
-    rendering::structure_renderer::{
-        chunk_rendering::chunk_renderer::ChunkNeedsCustomBlocksRendered, BlockRenderingModes, RenderingMode, StructureRenderingSet,
+    asset::{
+        asset_loading::{BlockNeighbors, BlockTextureIndex},
+        materials::{AddMaterialEvent, BlockMaterialMapping, MaterialDefinition, MaterialType},
+    },
+    rendering::{
+        structure_renderer::{
+            chunk_rendering::chunk_renderer::ChunkNeedsCustomBlocksRendered, BlockRenderingModes, RenderingMode, StructureRenderingSet,
+        },
+        BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder,
     },
     state::game_state::GameState,
 };
@@ -42,6 +59,14 @@ fn on_render_tanks(
     mut commands: Commands,
     q_structure: Query<&Structure>,
     q_stored_fluid: Query<&StoredBlockFluid>,
+    fluids: Res<Registry<Fluid>>,
+    // block_rendering_info: Res<Registry<BlockRenderingInfo>>,
+    materials: Res<ManyToOneRegistry<Block, BlockMaterialMapping>>,
+    block_textures: Res<Registry<BlockTextureIndex>>,
+    block_mesh_registry: Res<BlockMeshRegistry>,
+    materials_registry: Res<Registry<MaterialDefinition>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut evw_add_material: EventWriter<AddMaterialEvent>,
 ) {
     for ev in ev_reader.read() {
         if let Ok(tank_renders) = q_tank_renders.get(ev.mesh_entity_parent) {
@@ -56,11 +81,11 @@ fn on_render_tanks(
         if ev.block_ids.contains(&tank_id) {
             println!("Custom render contains tank!");
 
-            let ent = commands.spawn(Name::new("Fake Render!")).set_parent(ev.mesh_entity_parent).id();
-
             let Ok(structure) = q_structure.get(ev.structure_entity) else {
                 continue;
             };
+
+            let mut material_meshes: HashMap<u16, CosmosMeshBuilder> = HashMap::default();
 
             for block in structure.block_iter_for_chunk(ev.chunk_coordinate, true) {
                 if structure.block_id_at(block.coords()) != tank_id {
@@ -72,9 +97,171 @@ fn on_render_tanks(
                 };
 
                 println!("Do special rendering for: {data:?}");
+
+                let fluid = fluids.from_numeric_id(data.fluid_id);
+                let Some(fluid_block) = blocks.from_id(fluid.unlocalized_name()) else {
+                    continue;
+                };
+
+                let Some(material_definition) = materials.get_value(fluid_block) else {
+                    continue;
+                };
+
+                let Some(block_mesh_info) = block_mesh_registry.get_value(fluid_block) else {
+                    continue;
+                };
+
+                let mat_id = material_definition.material_id();
+                let material_definition = materials_registry.from_numeric_id(mat_id);
+
+                let mut one_mesh_only = false;
+
+                let block_rotation = structure.block_rotation(block.coords());
+
+                let rotation = block_rotation.as_quat();
+
+                let mesh_builder = material_meshes.entry(mat_id).or_default();
+
+                for (og_face, face) in ALL_BLOCK_FACES.iter().map(|face| (*face, block_rotation.rotate_face(*face))) {
+                    let Some(mut mesh_info) = block_mesh_info
+                        .info_for_face(face, false)
+                        .map(Some)
+                        .unwrap_or_else(|| {
+                            let single_mesh = block_mesh_info.info_for_whole_block();
+
+                            if single_mesh.is_some() {
+                                one_mesh_only = true;
+                            }
+
+                            single_mesh
+                        })
+                        .cloned()
+                    else {
+                        // This face has no model, ignore
+                        continue;
+                    };
+
+                    let index = block_textures
+                        .from_id(fluid_block.unlocalized_name())
+                        .unwrap_or_else(|| block_textures.from_id("missing").expect("Missing texture should exist."));
+
+                    let neighbors = BlockNeighbors::empty();
+
+                    let Some(image_index) = index.atlas_index_from_face(face, neighbors) else {
+                        warn!("Missing image index for face {face} -- {index:?}");
+                        continue;
+                    };
+
+                    let uvs = Rect::new(0.0, 0.0, 1.0, 1.0);
+
+                    for pos in mesh_info.positions.iter_mut() {
+                        *pos = rotation.mul_vec3((*pos).into()).into();
+                    }
+
+                    for norm in mesh_info.normals.iter_mut() {
+                        *norm = rotation.mul_vec3((*norm).into()).into();
+                    }
+
+                    // Scale the rotated positions, not the pre-rotated positions
+
+                    let structure_coords = block.coords();
+
+                    const GAP: f32 = 0.01;
+                    let mut scale_x = 1.0;
+                    let mut x_offset = 0.0;
+                    if structure.block_id_at(structure_coords + BlockCoordinate::new(1, 0, 0)) != tank_id {
+                        x_offset -= GAP;
+                        scale_x -= GAP / 2.0;
+                    }
+                    if BlockCoordinate::try_from(structure_coords - BlockCoordinate::new(1, 0, 0))
+                        .map(|c| structure.block_id_at(c) != tank_id)
+                        .unwrap_or(true)
+                    {
+                        x_offset += GAP;
+                        scale_x -= GAP / 2.0;
+                    }
+
+                    let mut scale_y = 1.0;
+                    let mut y_offset = 0.0;
+                    if structure.block_id_at(structure_coords + BlockCoordinate::new(0, 1, 0)) != tank_id {
+                        y_offset -= GAP;
+                        scale_y -= GAP / 2.0;
+                    }
+                    if BlockCoordinate::try_from(structure_coords - BlockCoordinate::new(0, 1, 0))
+                        .map(|c| structure.block_id_at(c) != tank_id)
+                        .unwrap_or(true)
+                    {
+                        y_offset += GAP;
+                        scale_y -= GAP / 2.0;
+                    }
+
+                    let mut scale_z = 1.0;
+                    let mut z_offset = 0.0;
+                    if structure.block_id_at(structure_coords + BlockCoordinate::new(0, 0, 1)) != tank_id {
+                        z_offset -= GAP;
+                        scale_z -= GAP / 2.0;
+                    }
+                    if BlockCoordinate::try_from(structure_coords - BlockCoordinate::new(0, 0, 1))
+                        .map(|c| structure.block_id_at(c) != tank_id)
+                        .unwrap_or(true)
+                    {
+                        z_offset += GAP;
+                        scale_z -= GAP / 2.0;
+                    }
+
+                    mesh_info.scale(Vec3::new(scale_x, scale_y, scale_z));
+
+                    let additional_info = material_definition.add_material_data(fluid_block.id(), &mesh_info);
+
+                    let coords = ChunkBlockCoordinate::for_block_coordinate(structure_coords);
+                    const CHUNK_DIMS_HALVED: f32 = CHUNK_DIMENSIONSF / 2.0;
+
+                    let (center_offset_x, center_offset_y, center_offset_z) = (
+                        coords.x as f32 - CHUNK_DIMS_HALVED + 0.5 + x_offset,
+                        coords.y as f32 - CHUNK_DIMS_HALVED + 0.5 + y_offset,
+                        coords.z as f32 - CHUNK_DIMS_HALVED + 0.5 + z_offset,
+                    );
+                    mesh_builder.add_mesh_information(
+                        &mesh_info,
+                        Vec3::new(center_offset_x, center_offset_y, center_offset_z),
+                        uvs,
+                        image_index,
+                        additional_info,
+                    );
+
+                    if one_mesh_only {
+                        break;
+                    }
+                }
             }
 
-            commands.entity(ev.mesh_entity_parent).insert(TankRenders(vec![ent]));
+            let mut ents = vec![];
+
+            for (mat_id, mesh_builder) in material_meshes {
+                let mesh = mesh_builder.build_mesh();
+
+                let entity = commands
+                    .spawn((
+                        TransformBundle::default(),
+                        VisibilityBundle::default(),
+                        meshes.add(mesh),
+                        Name::new("Rendered Tank Fluid"),
+                    ))
+                    .set_parent(ev.mesh_entity_parent)
+                    .id();
+
+                evw_add_material.send(AddMaterialEvent {
+                    entity,
+                    add_material_id: mat_id,
+                    material_type: MaterialType::Normal,
+                });
+
+                ents.push(entity);
+            }
+
+            if !ents.is_empty() {
+                commands.entity(ev.mesh_entity_parent).insert(TankRenders(ents));
+            }
         }
     }
 }

@@ -21,7 +21,7 @@ use cosmos_core::{
     },
     inventory::{held_item_slot::HeldItemSlot, Inventory},
     netty::{
-        client::LocalPlayer,
+        client::{LocalPlayer, NeedsLoadedFromServer},
         client_reliable_messages::ClientReliableMessages,
         cosmos_encoder,
         netty_rigidbody::{NettyRigidBody, NettyRigidBodyLocation},
@@ -220,6 +220,7 @@ fn client_sync_players(
         ),
         Without<LocalPlayer>,
     >,
+    q_needs_loaded: Query<(), With<NeedsLoadedFromServer>>,
     q_parent: Query<&Parent>,
     blocks: Res<Registry<Block>>,
     mut pilot_change_event_writer: EventWriter<ChangePilotEvent>,
@@ -256,7 +257,20 @@ fn client_sync_players(
                     };
 
                     if let Some(entity) = network_mapping.client_from_server(server_entity) {
-                        if let Ok((location, transform, velocity, net_tick, lerp_towards)) = query_body.get_mut(entity) {
+                        if q_needs_loaded.contains(entity) {
+                            commands.entity(entity).remove::<NeedsLoadedFromServer>();
+
+                            requested_entities.entities.push(RequestedEntity {
+                                server_entity: *server_entity,
+                                client_entity: entity,
+                                seconds_since_request: 0.0,
+                            });
+
+                            client.send_message(
+                                NettyChannelClient::Reliable,
+                                cosmos_encoder::serialize(&ClientReliableMessages::RequestEntityData { entity: *server_entity }),
+                            );
+                        } else if let Ok((location, transform, velocity, net_tick, lerp_towards)) = query_body.get_mut(entity) {
                             if let Some(mut net_tick) = net_tick {
                                 if net_tick.0 >= time_stamp {
                                     // Received position packet for previous time, disregard.
@@ -311,6 +325,7 @@ fn client_sync_players(
                         });
                         network_mapping.add_mapping(client_entity, *server_entity);
 
+                        println!("That's odd, leme ask.");
                         client.send_message(
                             NettyChannelClient::Reliable,
                             cosmos_encoder::serialize(&ClientReliableMessages::RequestEntityData { entity: *server_entity }),
@@ -576,6 +591,7 @@ fn client_sync_players(
                         structure.set_chunk(chunk);
 
                         for (_, block_data_entity) in block_entities {
+                            println!("New block data -- asking.");
                             client.send_message(
                                 NettyChannelClient::Reliable,
                                 cosmos_encoder::serialize(&ClientReliableMessages::RequestEntityData { entity: block_data_entity }),

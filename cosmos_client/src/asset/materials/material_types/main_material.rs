@@ -27,23 +27,23 @@ fn respond_to_add_materials_event(
         match mat.unlocalized_name() {
             "cosmos:main" => {
                 commands.entity(ev.entity).insert(match ev.material_type {
-                    MaterialType::Normal => default_material.0.clone(),
-                    MaterialType::Unlit => unlit_material.0.clone(),
-                    MaterialType::FarAway => default_material.0.clone(),
+                    MaterialType::Normal => default_material.0.clone_weak(),
+                    MaterialType::Unlit => unlit_material.0.clone_weak(),
+                    MaterialType::FarAway => default_material.0.clone_weak(),
                 });
             }
             "cosmos:illuminated" => {
                 commands.entity(ev.entity).insert(match ev.material_type {
-                    MaterialType::Normal => unlit_material.0.clone(),
-                    MaterialType::Unlit => unlit_material.0.clone(),
-                    MaterialType::FarAway => unlit_material.0.clone(),
+                    MaterialType::Normal => unlit_material.0.clone_weak(),
+                    MaterialType::Unlit => unlit_material.0.clone_weak(),
+                    MaterialType::FarAway => unlit_material.0.clone_weak(),
                 });
             }
             "cosmos:transparent" => {
                 commands.entity(ev.entity).insert(match ev.material_type {
-                    MaterialType::Normal => transparent_material.0.clone(),
-                    MaterialType::Unlit => unlit_transparent_material.0.clone(),
-                    MaterialType::FarAway => default_material.0.clone(),
+                    MaterialType::Normal => transparent_material.0.clone_weak(),
+                    MaterialType::Unlit => unlit_transparent_material.0.clone_weak(),
+                    MaterialType::FarAway => default_material.0.clone_weak(),
                 });
             }
             _ => {}

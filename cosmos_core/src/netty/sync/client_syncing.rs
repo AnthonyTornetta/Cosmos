@@ -6,7 +6,7 @@ use super::{
 use crate::events::block_events::BlockDataChangedEvent;
 use crate::inventory::itemstack::ItemStackData;
 use crate::inventory::Inventory;
-use crate::netty::client::LocalPlayer;
+use crate::netty::client::{LocalPlayer, NeedsLoadedFromServer};
 use crate::netty::sync::GotComponentToSyncEvent;
 use crate::netty::{cosmos_encoder, NettyChannelClient};
 use crate::netty::{NettyChannelServer, NoSendEntity};
@@ -492,7 +492,9 @@ fn get_entity_identifier_info(
 
     let (entity, authority_entity) = match entity_identifier {
         ComponentEntityIdentifier::Entity(entity) => {
-            let client_entity = commands.spawn((ServerEntity(entity), Name::new("Waiting for server..."))).id();
+            let client_entity = commands
+                .spawn((ServerEntity(entity), NeedsLoadedFromServer, Name::new("Waiting for server...")))
+                .id();
             network_mapping.add_mapping(client_entity, entity);
 
             (client_entity, client_entity)
