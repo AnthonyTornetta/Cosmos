@@ -52,6 +52,14 @@ impl BlockStorer for LodChunk {
         self.0.block_info_iterator()
     }
 
+    fn block_info_at(&self, coords: ChunkBlockCoordinate) -> BlockInfo {
+        self.0.block_info_at(coords)
+    }
+
+    fn set_block_info_at(&mut self, coords: ChunkBlockCoordinate, block_info: BlockInfo) {
+        self.0.set_block_info_at(coords, block_info);
+    }
+
     #[inline(always)]
     fn block_rotation(&self, coords: ChunkBlockCoordinate) -> BlockRotation {
         self.0.block_rotation(coords)

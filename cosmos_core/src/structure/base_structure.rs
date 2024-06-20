@@ -16,7 +16,7 @@ use crate::{
 use super::{
     block_health::events::{BlockDestroyedEvent, BlockTakeDamageEvent},
     block_storage::BlockStorer,
-    chunk::{Chunk, CHUNK_DIMENSIONS},
+    chunk::{BlockInfo, Chunk, CHUNK_DIMENSIONS},
     coordinates::{
         BlockCoordinate, ChunkBlockCoordinate, ChunkCoordinate, Coordinate, CoordinateType, UnboundBlockCoordinate, UnboundChunkCoordinate,
         UnboundCoordinateType,
@@ -690,6 +690,22 @@ impl BaseStructure {
             dir: direction,
             max_length_sqrd: max_length * max_length,
             include_air,
+        }
+    }
+
+    /// Returns the small block information storage (for example, rotation) for this block within the chunk.
+    /// Returns the default block info if the chunk is unloaded.
+    pub fn block_info_at(&self, coords: BlockCoordinate) -> BlockInfo {
+        self.chunk_at_block_coordinates(coords)
+            .map(|x| x.block_info_at(ChunkBlockCoordinate::for_block_coordinate(coords)))
+            .unwrap_or_default()
+    }
+
+    /// Sets the small block information storage (for example, rotation) for this block within the chunk.
+    /// Does not set the information if the chunk is unloaded.
+    pub fn set_block_info_at(&mut self, coords: BlockCoordinate, block_info: BlockInfo) {
+        if let Some(chunk) = self.mut_chunk_at_block_coordinates(coords) {
+            chunk.set_block_info_at(ChunkBlockCoordinate::for_block_coordinate(coords), block_info);
         }
     }
 }

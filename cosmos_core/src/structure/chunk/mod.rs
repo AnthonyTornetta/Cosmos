@@ -54,6 +54,14 @@ impl BlockStorer for Chunk {
         self.block_storage.block_info_iterator()
     }
 
+    fn block_info_at(&self, coords: ChunkBlockCoordinate) -> BlockInfo {
+        self.block_storage.block_info_at(coords)
+    }
+
+    fn set_block_info_at(&mut self, coords: ChunkBlockCoordinate, block_info: BlockInfo) {
+        self.block_storage.set_block_info_at(coords, block_info);
+    }
+
     #[inline(always)]
     fn block_rotation(&self, coords: ChunkBlockCoordinate) -> BlockRotation {
         self.block_storage.block_rotation(coords)

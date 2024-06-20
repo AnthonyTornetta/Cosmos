@@ -12,6 +12,7 @@ use bevy::reflect::Reflect;
 use bevy::transform::TransformBundle;
 use bevy::utils::{HashMap, HashSet};
 use bevy_rapier3d::prelude::PhysicsWorld;
+use chunk::BlockInfo;
 
 pub mod asteroid;
 pub mod base_structure;
@@ -539,6 +540,22 @@ impl Structure {
         match self {
             Self::Full(fs) => fs.raycast_iter(start_relative_position, direction, max_length, include_air),
             Self::Dynamic(ds) => ds.raycast_iter(start_relative_position, direction, max_length, include_air),
+        }
+    }
+
+    /// Returns the small block information storage (for example, rotation) for this block within the chunk.
+    pub fn block_info_at(&self, coords: BlockCoordinate) -> BlockInfo {
+        match self {
+            Self::Full(fs) => fs.block_info_at(coords),
+            Self::Dynamic(ds) => ds.block_info_at(coords),
+        }
+    }
+
+    /// Sets the small block information storage (for example, rotation) for this block within the chunk.
+    pub fn set_block_info_at(&mut self, coords: BlockCoordinate, block_info: BlockInfo) {
+        match self {
+            Self::Full(fs) => fs.set_block_info_at(coords, block_info),
+            Self::Dynamic(ds) => ds.set_block_info_at(coords, block_info),
         }
     }
 }

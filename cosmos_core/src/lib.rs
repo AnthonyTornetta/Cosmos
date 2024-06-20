@@ -22,3 +22,4 @@ pub mod shop;
 pub mod structure;
 pub mod universe;
 pub mod utils;
+pub mod wires;

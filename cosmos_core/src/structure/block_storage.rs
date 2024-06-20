@@ -12,8 +12,8 @@ use crate::{
 };
 
 use super::{
-    chunk::BlockInfo,
-    coordinates::{ChunkBlockCoordinate, Coordinate, CoordinateType},
+    chunk::{BlockInfo, Chunk},
+    coordinates::{ChunkBlockCoordinate, ChunkCoordinate, Coordinate, CoordinateType},
 };
 
 #[derive(Debug, Reflect, Serialize, Deserialize, Clone)]
@@ -66,6 +66,12 @@ pub trait BlockStorer {
 
     /// Returns the iterator for all the block info of the chunk
     fn block_info_iterator(&self) -> Iter<BlockInfo>;
+
+    /// Returns the small block information storage (for example, rotation) for this block within the chunk.
+    fn block_info_at(&self, coords: ChunkBlockCoordinate) -> BlockInfo;
+
+    /// Sets the small block information storage (for example, rotation) for this block within the chunk.
+    fn set_block_info_at(&mut self, coords: ChunkBlockCoordinate, block_info: BlockInfo);
 
     /// Returns true if the block at these coordinates is a full block (1x1x1 cube). This is not determined
     /// by the model, but rather the flags the block is constructed with.
@@ -174,6 +180,14 @@ impl BlockStorer for BlockStorage {
 
     fn block_info_iterator(&self) -> Iter<BlockInfo> {
         self.block_info.iter()
+    }
+
+    fn block_info_at(&self, coords: ChunkBlockCoordinate) -> BlockInfo {
+        self.block_info[Self::flatten(coords)]
+    }
+
+    fn set_block_info_at(&mut self, coords: ChunkBlockCoordinate, block_info: BlockInfo) {
+        self.block_info[Self::flatten(coords)] = block_info;
     }
 
     #[inline]
