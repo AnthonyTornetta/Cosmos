@@ -3,10 +3,12 @@ use super::{
     register_component, ClientAuthority, ComponentEntityIdentifier, ComponentReplicationMessage, ComponentSyncingSet,
     GotComponentToRemoveEvent, SyncType, SyncableComponent, SyncedComponentId,
 };
+use crate::block::data::BlockData;
 use crate::events::block_events::BlockDataChangedEvent;
 use crate::inventory::itemstack::ItemStackData;
 use crate::inventory::Inventory;
 use crate::netty::client::{LocalPlayer, NeedsLoadedFromServer};
+use crate::netty::client_reliable_messages::ClientReliableMessages;
 use crate::netty::sync::GotComponentToSyncEvent;
 use crate::netty::{cosmos_encoder, NettyChannelClient};
 use crate::netty::{NettyChannelServer, NoSendEntity};
@@ -290,12 +292,15 @@ fn client_receive_components(
     mut commands: Commands,
     mut waiting_data: ResMut<WaitingData>,
     mut q_structure: Query<&mut Structure>,
+    q_block_data: Query<&BlockData>,
 ) {
     let mut v = Vec::with_capacity(waiting_data.0.len());
     std::mem::swap(&mut v, &mut waiting_data.0);
     for msg in v {
         if let Some(msg) = handle_incoming_component_data(
+            &mut client,
             msg.clone(),
+            &q_block_data,
             &mut network_mapping,
             &q_structure_systems,
             &mut q_inventory,
@@ -315,7 +320,9 @@ fn client_receive_components(
         });
 
         if let Some(msg) = handle_incoming_component_data(
+            &mut client,
             msg,
+            &q_block_data,
             &mut network_mapping,
             &q_structure_systems,
             &mut q_inventory,
@@ -331,7 +338,9 @@ fn client_receive_components(
 }
 
 fn handle_incoming_component_data(
+    client: &mut RenetClient,
     msg: ComponentReplicationMessage,
+    q_block_data: &Query<&BlockData>,
     network_mapping: &mut ResMut<NetworkMapping>,
     q_structure_systems: &Query<&StructureSystems, ()>,
     q_inventory: &mut Query<&mut Inventory, ()>,
@@ -348,7 +357,9 @@ fn handle_incoming_component_data(
             raw_data,
         } => {
             let (entity, authority_entity) = match get_entity_identifier_info(
+                client,
                 entity_identifier,
+                q_block_data,
                 network_mapping,
                 q_structure_systems,
                 q_inventory,
@@ -387,7 +398,9 @@ fn handle_incoming_component_data(
             entity_identifier,
         } => {
             let (entity, authority_entity) = match get_entity_identifier_info(
+                client,
                 entity_identifier,
+                q_block_data,
                 network_mapping,
                 q_structure_systems,
                 q_inventory,
@@ -421,7 +434,9 @@ fn handle_incoming_component_data(
 }
 
 fn get_entity_identifier_info(
+    client: &mut RenetClient,
     entity_identifier: ComponentEntityIdentifier,
+    q_block_data: &Query<&BlockData>,
     network_mapping: &mut NetworkMapping,
     q_structure_systems: &Query<&StructureSystems, ()>,
     q_inventory: &mut Query<&mut Inventory>,
@@ -463,7 +478,40 @@ fn get_entity_identifier_info(
         } => network_mapping
             .client_from_server(&server_data_entity)
             .map(|x| {
-                commands.entity(x).log_components();
+                let Ok(bd) = q_block_data.get(x) else {
+                    error!("Component got for block data but had no block data component - requesting entity.");
+
+                    client.send_message(
+                        NettyChannelClient::Reliable,
+                        cosmos_encoder::serialize(&ClientReliableMessages::RequestEntityData {
+                            entity: server_data_entity,
+                        }),
+                    );
+
+                    return network_mapping
+                        .client_from_server(&identifier.structure_entity)
+                        .and_then(|structure_entity| {
+                            let mut structure = q_structure.get_mut(structure_entity).ok()?;
+                            let data_entity = structure.get_or_create_block_data(identifier.block.coords(), commands)?;
+
+                            network_mapping.add_mapping(data_entity, server_data_entity);
+
+                            evw_block_data_changed.send(BlockDataChangedEvent {
+                                block: identifier.block,
+                                block_data_entity: Some(data_entity),
+                                structure_entity,
+                            });
+
+                            Some((data_entity, data_entity))
+                        });
+                };
+
+                evw_block_data_changed.send(BlockDataChangedEvent {
+                    block: identifier.block,
+                    block_data_entity: Some(x),
+                    structure_entity: bd.identifier.structure_entity,
+                });
+
                 Some((x, x))
             })
             .unwrap_or_else(|| {
@@ -512,7 +560,7 @@ fn get_entity_identifier_info(
             server_data_entity,
         } => {
             warn!(
-                "Got itemdata synced component, but no valid inventory OR itemstack exists for it! ({inventory_entity:?}, {item_slot} {server_data_entity:?}). In the future, this should try again once we receive the correct inventory from the server."
+                "Got itemdata synced component, but no valid inventory OR itemstack exists for it! ({inventory_entity:?}, {item_slot} {server_data_entity:?})."
             );
 
             return None;
@@ -521,9 +569,7 @@ fn get_entity_identifier_info(
             identifier,
             server_data_entity,
         } => {
-            warn!(
-                "Got blockdata synced component, but no valid block exists for it! ({identifier:?}, {server_data_entity:?}). In the future, this should try again once we receive the correct inventory from the server."
-            );
+            warn!("Got blockdata synced component, but no valid block exists for it! ({identifier:?}, {server_data_entity:?}).");
 
             return None;
         }

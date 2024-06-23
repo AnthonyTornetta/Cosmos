@@ -8,6 +8,7 @@ use crate::{
 
 pub mod interact_fluid;
 mod register_blocks;
+mod tank;
 
 impl PersistentComponent for StoredBlockFluid {}
 impl PersistentComponent for FluidItemData {}
@@ -15,6 +16,7 @@ impl PersistentComponent for FluidItemData {}
 pub(super) fn register(app: &mut App) {
     register_blocks::register(app);
     interact_fluid::register(app);
+    tank::register(app);
 
     sync_registry::<FluidTankBlock>(app);
     make_persistent::<FluidItemData>(app);
