@@ -4,6 +4,7 @@ use super::{
     GotComponentToRemoveEvent, SyncType, SyncableComponent, SyncedComponentId,
 };
 use crate::block::data::BlockData;
+use crate::ecs::NeedsDespawned;
 use crate::events::block_events::BlockDataChangedEvent;
 use crate::inventory::itemstack::ItemStackData;
 use crate::inventory::Inventory;
@@ -24,7 +25,7 @@ use bevy::ecs::removal_detection::RemovedComponents;
 use bevy::ecs::schedule::common_conditions::resource_exists;
 use bevy::ecs::schedule::{IntoSystemConfigs, IntoSystemSetConfigs};
 use bevy::ecs::system::{Commands, Resource};
-use bevy::log::warn;
+use bevy::log::{info, warn};
 use bevy::{
     app::{App, Startup, Update},
     ecs::{
@@ -479,7 +480,7 @@ fn get_entity_identifier_info(
             .client_from_server(&server_data_entity)
             .map(|x| {
                 let Ok(bd) = q_block_data.get(x) else {
-                    error!("Component got for block data but had no block data component - requesting entity.");
+                    error!("Component got for block data but had no block data component - requesting entity. (Client: {x:?})");
 
                     client.send_message(
                         NettyChannelClient::Reliable,
@@ -518,8 +519,31 @@ fn get_entity_identifier_info(
                 network_mapping
                     .client_from_server(&identifier.structure_entity)
                     .and_then(|structure_entity| {
+                        // We could either be
+
                         let mut structure = q_structure.get_mut(structure_entity).ok()?;
-                        let data_entity = structure.get_or_create_block_data(identifier.block.coords(), commands)?;
+
+                        let coords = identifier.block.coords();
+
+                        let mut data_entity = structure.get_or_create_block_data(coords, commands)?;
+
+                        if network_mapping
+                            .server_from_client(&data_entity)
+                            .map(|x| x != server_data_entity)
+                            .unwrap_or(false)
+                        {
+                            // We have an outdated data entity - remove it.
+                            // This happens when the server sending updated data for a new entity
+                            // happens before sending the command to despawn the old data entity.
+                            commands.entity(data_entity).insert(NeedsDespawned);
+
+                            info!("found old block data ent - killing early! (old: {data_entity:?}");
+                            structure.set_block_data_entity(coords, None);
+
+                            data_entity = structure.get_or_create_block_data(coords, commands)?;
+
+                            info!("New entity - {data_entity:?}");
+                        }
 
                         network_mapping.add_mapping(data_entity, server_data_entity);
 

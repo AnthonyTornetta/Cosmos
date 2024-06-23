@@ -181,6 +181,7 @@ fn on_interact_with_tank(
                 println!("Filled to not max cap");
                 let block_data = *stored_fluid_block;
 
+                info!("Removing stored fluid.");
                 structure.remove_block_data::<StoredBlockFluid>(coords, &mut block_data_params, &mut q_block_data, &q_has_stored_fluid);
 
                 FluidItemData::Filled {
@@ -296,6 +297,7 @@ fn on_interact_with_tank(
                             fluid_stored: fluid_stored + stored_fluid_block.fluid_stored,
                         };
 
+                        info!("Removing fluid data because item removed it at {coords}.");
                         structure.remove_block_data::<StoredBlockFluid>(
                             coords,
                             &mut block_data_params,

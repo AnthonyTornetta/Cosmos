@@ -5,6 +5,7 @@
 use bevy::ecs::query::{QueryData, QueryFilter, QueryItem, ROQueryItem, With};
 use bevy::ecs::system::{Commands, Query};
 use bevy::hierarchy::BuildChildren;
+use bevy::log::info;
 use bevy::prelude::{App, Component, Entity, Event, Vec3};
 use bevy::reflect::Reflect;
 use bevy::utils::HashMap;
@@ -228,6 +229,7 @@ impl Chunk {
         q_data: &Query<(), With<T>>,
     ) -> Entity {
         if let Some(data_ent) = self.block_data(coords) {
+            info!("Entity existed - {data_ent:?}");
             let Ok(mut bd) = q_block_data.get_mut(data_ent) else {
                 panic!("Block data entity missing BlockData component!");
             };
@@ -260,6 +262,8 @@ impl Chunk {
                 ))
                 .set_parent(chunk_entity)
                 .id();
+
+            info!("Created new data entity - {data_ent:?}");
 
             self.block_data.insert(coords, data_ent);
 
@@ -412,6 +416,8 @@ impl Chunk {
         if bd.is_empty() {
             system_params.commands.entity(ent).insert(NeedsDespawned);
             self.block_data.remove(&coords);
+
+            info!("Despawning bd entity - {ent:?}");
 
             system_params.ev_writer.send(BlockDataChangedEvent {
                 block_data_entity: None,

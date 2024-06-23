@@ -591,7 +591,7 @@ fn client_sync_players(
                         structure.set_chunk(chunk);
 
                         for (_, block_data_entity) in block_entities {
-                            println!("New block data -- asking.");
+                            info!("New block data -- asking.");
                             client.send_message(
                                 NettyChannelClient::Reliable,
                                 cosmos_encoder::serialize(&ClientReliableMessages::RequestEntityData { entity: block_data_entity }),
@@ -628,7 +628,9 @@ fn client_sync_players(
                     &mut q_structure,
                     &mut evw_block_data_changed,
                 ) {
-                    commands.entity(entity).insert(NeedsDespawned);
+                    if let Some(mut ecmds) = commands.get_entity(entity) {
+                        ecmds.insert(NeedsDespawned);
+                    }
                 }
             }
             ServerReliableMessages::MOTD { motd } => {
@@ -851,28 +853,32 @@ fn get_entity_identifier_entity_for_despawning(
                 let mut structure = q_structure.get_mut(structure_entity).ok()?;
 
                 let bd = structure.block_data(identifier.block.coords());
-                structure.set_block_data_entity(identifier.block.coords(), None);
 
-                block_data_changed.send(BlockDataChangedEvent {
-                    block: identifier.block,
-                    structure_entity,
-                    block_data_entity: None,
-                });
+                if let Some(bd) = bd {
+                    // If we have already cleaned up this entity, we don't want to replace the new one.
+                    if network_mapping
+                        .server_from_client(&bd)
+                        .map(|x| x != server_data_entity)
+                        .unwrap_or(true)
+                    {
+                        return None;
+                    }
+
+                    structure.set_block_data_entity(identifier.block.coords(), None);
+
+                    block_data_changed.send(BlockDataChangedEvent {
+                        block: identifier.block,
+                        structure_entity,
+                        block_data_entity: None,
+                    });
+                }
 
                 Some(bd)
             })
             .unwrap_or_else(|| {
                 network_mapping
                     .client_from_server(&server_data_entity)
-                    .and_then(|structure_entity| {
-                        block_data_changed.send(BlockDataChangedEvent {
-                            block: identifier.block,
-                            structure_entity,
-                            block_data_entity: None,
-                        });
-
-                        Some(structure_entity)
-                    })
+                    .and_then(|block_data_entity| Some(block_data_entity))
             }),
     };
 

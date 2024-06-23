@@ -2,6 +2,7 @@
 
 use bevy::{
     app::{App, Update},
+    log::info,
     prelude::{Entity, EventReader, IntoSystemConfigs, Query, Res, ResMut, Resource, With},
     utils::HashMap,
 };
@@ -265,7 +266,13 @@ fn apply_cached_fluid_changes(
             continue;
         }
 
-        structure.insert_block_data(block_coord, final_tank_data, &mut bd_params, &mut q_block_data, &q_has_data);
+        if final_tank_data.fluid_stored != 0 {
+            info!("Inserting stored fluid data {final_tank_data:?} for {block_coord}.");
+            structure.insert_block_data(block_coord, final_tank_data, &mut bd_params, &mut q_block_data, &q_has_data);
+        } else {
+            info!("Removing stored fluid data at {block_coord}.");
+            structure.remove_block_data::<StoredBlockFluid>(block_coord, &mut bd_params, &mut q_block_data, &q_has_data);
+        }
     }
 }
 
