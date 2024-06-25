@@ -621,7 +621,7 @@ impl BlockProperty {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Reflect)]
+#[derive(Debug, Clone, Serialize, Deserialize, Reflect, Default)]
 /// A block is the smallest unit used on a structure.
 ///
 /// A block takes a maximum of 1x1x1 meters of space, but can take up less than that.

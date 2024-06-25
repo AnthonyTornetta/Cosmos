@@ -558,6 +558,24 @@ impl Structure {
             Self::Dynamic(ds) => ds.set_block_info_at(coords, block_info),
         }
     }
+
+    /// Returns the 6 block IDs adjacent to the given coordinates.
+    /// Any error causes that entry to be AIR_BLOCK_ID.
+    pub fn block_ids_surrounding(&self, coords: BlockCoordinate) -> [u16; 6] {
+        match self {
+            Self::Full(fs) => fs.block_ids_surrounding(coords),
+            Self::Dynamic(ds) => ds.block_ids_surrounding(coords),
+        }
+    }
+
+    /// Returns the 6 blocks adjacent to the given coordinates.
+    /// Any error causes that entry to be air.
+    pub fn blocks_surrounding<'a>(&self, coords: BlockCoordinate, blocks: &'a Registry<Block>) -> [&'a Block; 6] {
+        match self {
+            Self::Full(fs) => fs.blocks_surrounding(coords, blocks),
+            Self::Dynamic(ds) => ds.blocks_surrounding(coords, blocks),
+        }
+    }
 }
 
 /// This event is sent when a chunk is initially filled out

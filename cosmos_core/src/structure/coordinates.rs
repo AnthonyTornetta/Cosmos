@@ -7,6 +7,8 @@ use std::ops::{Add, Neg, Sub};
 use bevy::reflect::Reflect;
 use serde::{Deserialize, Serialize};
 
+use crate::structure::BlockFace;
+
 use crate::utils::array_utils;
 
 use super::chunk::{CHUNK_DIMENSIONS, CHUNK_DIMENSIONSF, CHUNK_DIMENSIONS_UB};
@@ -38,7 +40,7 @@ pub enum BoundsError {
 
 macro_rules! create_coordinate {
     ($name: ident, $unbounded: ident, $structComment: literal, $fieldComment: literal) => {
-        #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Reflect, Hash)]
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Reflect, Hash, Default)]
         #[doc=$structComment]
         pub struct $name {
             #[doc=$fieldComment]
@@ -58,6 +60,16 @@ macro_rules! create_coordinate {
             #[inline(always)]
             pub const fn new(x: CoordinateType, y: CoordinateType, z: CoordinateType) -> Self {
                 Self { x, y, z }
+            }
+
+            #[inline(always)]
+            /// Creates a new unbounded coordinate from a single tuple argument.
+            pub const fn new_from_tuple(tuple: (CoordinateType, CoordinateType, CoordinateType)) -> Self {
+                Self {
+                    x: tuple.0,
+                    y: tuple.1,
+                    z: tuple.2,
+                }
             }
 
             #[doc=$structComment]
@@ -120,6 +132,19 @@ macro_rules! create_coordinate {
             #[inline(always)]
             pub fn front(&self) -> Self {
                 Self::new(self.x, self.y, self.z + 1)
+            }
+
+            /// Computes self + the direction change indicated by the BlockFace.
+            #[inline(always)]
+            pub fn step(&self, direction: BlockFace) -> Result<Self, BoundsError> {
+                match direction {
+                    BlockFace::Left => self.left(),
+                    BlockFace::Right => Ok(self.right()),
+                    BlockFace::Bottom => self.bottom(),
+                    BlockFace::Top => Ok(self.top()),
+                    BlockFace::Back => self.back(),
+                    BlockFace::Front => Ok(self.front()),
+                }
             }
         }
 
@@ -187,7 +212,7 @@ macro_rules! create_coordinate {
         #[doc=$structComment]
         ///
         /// Note that an unbound coordinate can be outside the structure  in both the
-        /// positive and nagative directionand should always be treated with caution.
+        /// positive and negative direction and should always be treated with caution.
         pub struct $unbounded {
             #[doc=$fieldComment]
             pub x: UnboundCoordinateType,
@@ -202,6 +227,16 @@ macro_rules! create_coordinate {
             /// Creates a new unbounded version that can have negative as well as positive values.
             pub const fn new(x: UnboundCoordinateType, y: UnboundCoordinateType, z: UnboundCoordinateType) -> Self {
                 Self { x, y, z }
+            }
+
+            #[inline(always)]
+            /// Creates a new unbounded coordinate from a single tuple argument.
+            pub const fn new_from_tuple(tuple: (UnboundCoordinateType, UnboundCoordinateType, UnboundCoordinateType)) -> Self {
+                Self {
+                    x: tuple.0,
+                    y: tuple.1,
+                    z: tuple.2,
+                }
             }
 
             /// Creates a new unbounded version that can have negative as well as positive values.
@@ -246,6 +281,19 @@ macro_rules! create_coordinate {
             #[inline(always)]
             pub fn front(&self) -> Self {
                 Self::new(self.x, self.y, self.z + 1)
+            }
+
+            /// Computes self + the direction change indicated by the BlockFace.
+            #[inline(always)]
+            pub fn step(&self, direction: BlockFace) -> Self {
+                match direction {
+                    BlockFace::Left => self.left(),
+                    BlockFace::Right => self.right(),
+                    BlockFace::Bottom => self.bottom(),
+                    BlockFace::Top => self.top(),
+                    BlockFace::Back => self.back(),
+                    BlockFace::Front => self.front(),
+                }
             }
 
             /// Computes the abs() of each value and converts to a bounded coordinate type

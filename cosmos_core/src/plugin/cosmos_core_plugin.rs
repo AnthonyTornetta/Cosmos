@@ -92,7 +92,7 @@ impl<T: States + Clone + Copy> Plugin for CosmosCorePlugin<T> {
         netty::register(app);
         economy::register(app);
         shop::register(app);
-        wires::register(app);
+        wires::register(app, self.post_loading_state);
     }
 }
 
