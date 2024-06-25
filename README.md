@@ -38,6 +38,10 @@ For the server, navigate to the cosmos_server directory and run
 
 For release builds, append the `--release` flag to the build/run commands.
 
+## Controls
+
+There is no option to modify controls yet, so for now check out `cosmos_client/src/input/inputs.rs` to see a list of all controls currently implemented.
+
 ## Documentation
 
 The first time you view the cosmos documentation, make sure you have mdbook **and** mdbook-mermaid installed. If you don't you can install them by running the following commands:

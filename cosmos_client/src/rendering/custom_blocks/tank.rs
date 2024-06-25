@@ -21,7 +21,7 @@ use cosmos_core::{
     block::{Block, ALL_BLOCK_FACES},
     ecs::NeedsDespawned,
     fluid::{
-        data::{FluidTankBlock, StoredBlockFluid},
+        data::{BlockFluidData, FluidTankBlock},
         registry::Fluid,
     },
     registry::{identifiable::Identifiable, many_to_one::ManyToOneRegistry, Registry},
@@ -61,7 +61,7 @@ fn on_render_tanks(
     blocks: Res<Registry<Block>>,
     mut commands: Commands,
     q_structure: Query<&Structure>,
-    q_stored_fluid: Query<&StoredBlockFluid>,
+    q_stored_fluid: Query<&BlockFluidData>,
     fluids: Res<Registry<Fluid>>,
     // block_rendering_info: Res<Registry<BlockRenderingInfo>>,
     materials: Res<ManyToOneRegistry<Block, BlockMaterialMapping>>,
@@ -82,201 +82,211 @@ fn on_render_tanks(
         }
 
         let tank_id = blocks.from_id("cosmos:tank").expect("no tank :(").id();
-        if ev.block_ids.contains(&tank_id) {
-            println!("Custom render contains tank!");
+        if !ev.block_ids.contains(&tank_id) {
+            continue;
+        }
 
-            let Some(tank_block_entry) = fluid_tank_blocks.from_id("cosmos:tank") else {
-                warn!("Tank cannot store fluids.");
+        println!("Custom render contains tank!");
+
+        let Some(tank_block_entry) = fluid_tank_blocks.from_id("cosmos:tank") else {
+            warn!("Tank cannot store fluids.");
+            continue;
+        };
+
+        let Ok(structure) = q_structure.get(ev.structure_entity) else {
+            continue;
+        };
+
+        let mut material_meshes: HashMap<u16, CosmosMeshBuilder> = HashMap::default();
+
+        for block in structure.block_iter_for_chunk(ev.chunk_coordinate, true) {
+            if structure.block_id_at(block.coords()) != tank_id {
+                continue;
+            }
+
+            let Some(&BlockFluidData::Fluid(data)) = structure.query_block_data(block.coords(), &q_stored_fluid) else {
+                warn!("{:?}", structure.query_block_data(block.coords(), &q_stored_fluid));
+                warn!("{:?}", structure.block_data(block.coords()));
+                warn!("No fluid!");
                 continue;
             };
 
-            let Ok(structure) = q_structure.get(ev.structure_entity) else {
+            if data.fluid_stored == 0 {
+                warn!("Fluid stored is 0.");
+                continue;
+            }
+
+            println!("Do special rendering for: {data:?}");
+
+            let fluid = fluids.from_numeric_id(data.fluid_id);
+            let Some(fluid_block) = blocks.from_id(fluid.unlocalized_name()) else {
                 continue;
             };
 
-            let mut material_meshes: HashMap<u16, CosmosMeshBuilder> = HashMap::default();
+            let Some(material_definition) = materials.get_value(fluid_block) else {
+                continue;
+            };
 
-            for block in structure.block_iter_for_chunk(ev.chunk_coordinate, true) {
-                if structure.block_id_at(block.coords()) != tank_id {
+            let Some(block_mesh_info) = block_mesh_registry.get_value(fluid_block) else {
+                continue;
+            };
+
+            let mat_id = material_definition.material_id();
+            let material_definition = materials_registry.from_numeric_id(mat_id);
+
+            let mut one_mesh_only = false;
+
+            let block_rotation = structure.block_rotation(block.coords());
+
+            let rotation = block_rotation.as_quat();
+
+            let mesh_builder = material_meshes.entry(mat_id).or_default();
+
+            for (og_face, face) in ALL_BLOCK_FACES.iter().map(|face| (*face, block_rotation.rotate_face(*face))) {
+                let Some(mut mesh_info) = block_mesh_info
+                    .info_for_face(face, false)
+                    .map(Some)
+                    .unwrap_or_else(|| {
+                        let single_mesh = block_mesh_info.info_for_whole_block();
+
+                        if single_mesh.is_some() {
+                            one_mesh_only = true;
+                        }
+
+                        single_mesh
+                    })
+                    .cloned()
+                else {
+                    // This face has no model, ignore
                     continue;
+                };
+
+                let index = block_textures
+                    .from_id(fluid_block.unlocalized_name())
+                    .unwrap_or_else(|| block_textures.from_id("missing").expect("Missing texture should exist."));
+
+                let neighbors = BlockNeighbors::empty();
+
+                let Some(image_index) = index.atlas_index_from_face(face, neighbors) else {
+                    warn!("Missing image index for face {face} -- {index:?}");
+                    continue;
+                };
+
+                let uvs = Rect::new(0.0, 0.0, 1.0, 1.0);
+
+                let y_scale = data.fluid_stored as f32 / tank_block_entry.max_capacity() as f32;
+
+                mesh_info.scale(Vec3::new(1.0, y_scale, 1.0));
+
+                for pos in mesh_info.positions.iter_mut() {
+                    *pos = rotation
+                        .mul_vec3(Vec3::from(*pos) - Vec3::new(0.0, (1.0 - y_scale) * 0.5, 0.0))
+                        .into();
                 }
 
-                let Some(data) = structure.query_block_data(block.coords(), &q_stored_fluid) else {
-                    continue;
-                };
+                for norm in mesh_info.normals.iter_mut() {
+                    *norm = rotation.mul_vec3((*norm).into()).into();
+                }
 
-                println!("Do special rendering for: {data:?}");
+                // Scale the rotated positions, not the pre-rotated positions since our side checks are absolute
 
-                let fluid = fluids.from_numeric_id(data.fluid_id);
-                let Some(fluid_block) = blocks.from_id(fluid.unlocalized_name()) else {
-                    continue;
-                };
+                let structure_coords = block.coords();
 
-                let Some(material_definition) = materials.get_value(fluid_block) else {
-                    continue;
-                };
+                const GAP: f32 = 0.01;
+                let mut scale_x = 1.0;
+                let mut x_offset = 0.0;
+                if structure.block_id_at(structure_coords + BlockCoordinate::new(1, 0, 0)) != tank_id {
+                    x_offset -= GAP;
+                    scale_x -= GAP / 2.0;
+                }
+                if BlockCoordinate::try_from(structure_coords - BlockCoordinate::new(1, 0, 0))
+                    .map(|c| structure.block_id_at(c) != tank_id)
+                    .unwrap_or(true)
+                {
+                    x_offset += GAP;
+                    scale_x -= GAP / 2.0;
+                }
 
-                let Some(block_mesh_info) = block_mesh_registry.get_value(fluid_block) else {
-                    continue;
-                };
+                let mut scale_y = 1.0;
+                let mut y_offset = 0.0;
+                if structure.block_id_at(structure_coords + BlockCoordinate::new(0, 1, 0)) != tank_id {
+                    y_offset -= GAP;
+                    scale_y -= GAP / 2.0;
+                }
+                if BlockCoordinate::try_from(structure_coords - BlockCoordinate::new(0, 1, 0))
+                    .map(|c| structure.block_id_at(c) != tank_id)
+                    .unwrap_or(true)
+                {
+                    y_offset += GAP;
+                    scale_y -= GAP / 2.0;
+                }
 
-                let mat_id = material_definition.material_id();
-                let material_definition = materials_registry.from_numeric_id(mat_id);
+                let mut scale_z = 1.0;
+                let mut z_offset = 0.0;
+                if structure.block_id_at(structure_coords + BlockCoordinate::new(0, 0, 1)) != tank_id {
+                    z_offset -= GAP;
+                    scale_z -= GAP / 2.0;
+                }
+                if BlockCoordinate::try_from(structure_coords - BlockCoordinate::new(0, 0, 1))
+                    .map(|c| structure.block_id_at(c) != tank_id)
+                    .unwrap_or(true)
+                {
+                    z_offset += GAP;
+                    scale_z -= GAP / 2.0;
+                }
 
-                let mut one_mesh_only = false;
+                mesh_info.scale(Vec3::new(scale_x, scale_y, scale_z));
 
-                let block_rotation = structure.block_rotation(block.coords());
+                let additional_info = material_definition.add_material_data(fluid_block.id(), &mesh_info);
 
-                let rotation = block_rotation.as_quat();
+                let coords = ChunkBlockCoordinate::for_block_coordinate(structure_coords);
+                const CHUNK_DIMS_HALVED: f32 = CHUNK_DIMENSIONSF / 2.0;
 
-                let mesh_builder = material_meshes.entry(mat_id).or_default();
+                let (center_offset_x, center_offset_y, center_offset_z) = (
+                    coords.x as f32 - CHUNK_DIMS_HALVED + 0.5 + x_offset,
+                    coords.y as f32 - CHUNK_DIMS_HALVED + 0.5 + y_offset,
+                    coords.z as f32 - CHUNK_DIMS_HALVED + 0.5 + z_offset,
+                );
+                mesh_builder.add_mesh_information(
+                    &mesh_info,
+                    Vec3::new(center_offset_x, center_offset_y, center_offset_z),
+                    uvs,
+                    image_index,
+                    additional_info,
+                );
 
-                for (og_face, face) in ALL_BLOCK_FACES.iter().map(|face| (*face, block_rotation.rotate_face(*face))) {
-                    let Some(mut mesh_info) = block_mesh_info
-                        .info_for_face(face, false)
-                        .map(Some)
-                        .unwrap_or_else(|| {
-                            let single_mesh = block_mesh_info.info_for_whole_block();
-
-                            if single_mesh.is_some() {
-                                one_mesh_only = true;
-                            }
-
-                            single_mesh
-                        })
-                        .cloned()
-                    else {
-                        // This face has no model, ignore
-                        continue;
-                    };
-
-                    let index = block_textures
-                        .from_id(fluid_block.unlocalized_name())
-                        .unwrap_or_else(|| block_textures.from_id("missing").expect("Missing texture should exist."));
-
-                    let neighbors = BlockNeighbors::empty();
-
-                    let Some(image_index) = index.atlas_index_from_face(face, neighbors) else {
-                        warn!("Missing image index for face {face} -- {index:?}");
-                        continue;
-                    };
-
-                    let uvs = Rect::new(0.0, 0.0, 1.0, 1.0);
-
-                    let y_scale = data.fluid_stored as f32 / tank_block_entry.max_capacity() as f32;
-
-                    mesh_info.scale(Vec3::new(1.0, y_scale, 1.0));
-
-                    for pos in mesh_info.positions.iter_mut() {
-                        *pos = rotation
-                            .mul_vec3(Vec3::from(*pos) - Vec3::new(0.0, (1.0 - y_scale) * 0.5, 0.0))
-                            .into();
-                    }
-
-                    for norm in mesh_info.normals.iter_mut() {
-                        *norm = rotation.mul_vec3((*norm).into()).into();
-                    }
-
-                    // Scale the rotated positions, not the pre-rotated positions since our side checks are absolute
-
-                    let structure_coords = block.coords();
-
-                    const GAP: f32 = 0.01;
-                    let mut scale_x = 1.0;
-                    let mut x_offset = 0.0;
-                    if structure.block_id_at(structure_coords + BlockCoordinate::new(1, 0, 0)) != tank_id {
-                        x_offset -= GAP;
-                        scale_x -= GAP / 2.0;
-                    }
-                    if BlockCoordinate::try_from(structure_coords - BlockCoordinate::new(1, 0, 0))
-                        .map(|c| structure.block_id_at(c) != tank_id)
-                        .unwrap_or(true)
-                    {
-                        x_offset += GAP;
-                        scale_x -= GAP / 2.0;
-                    }
-
-                    let mut scale_y = 1.0;
-                    let mut y_offset = 0.0;
-                    if structure.block_id_at(structure_coords + BlockCoordinate::new(0, 1, 0)) != tank_id {
-                        y_offset -= GAP;
-                        scale_y -= GAP / 2.0;
-                    }
-                    if BlockCoordinate::try_from(structure_coords - BlockCoordinate::new(0, 1, 0))
-                        .map(|c| structure.block_id_at(c) != tank_id)
-                        .unwrap_or(true)
-                    {
-                        y_offset += GAP;
-                        scale_y -= GAP / 2.0;
-                    }
-
-                    let mut scale_z = 1.0;
-                    let mut z_offset = 0.0;
-                    if structure.block_id_at(structure_coords + BlockCoordinate::new(0, 0, 1)) != tank_id {
-                        z_offset -= GAP;
-                        scale_z -= GAP / 2.0;
-                    }
-                    if BlockCoordinate::try_from(structure_coords - BlockCoordinate::new(0, 0, 1))
-                        .map(|c| structure.block_id_at(c) != tank_id)
-                        .unwrap_or(true)
-                    {
-                        z_offset += GAP;
-                        scale_z -= GAP / 2.0;
-                    }
-
-                    mesh_info.scale(Vec3::new(scale_x, scale_y, scale_z));
-
-                    let additional_info = material_definition.add_material_data(fluid_block.id(), &mesh_info);
-
-                    let coords = ChunkBlockCoordinate::for_block_coordinate(structure_coords);
-                    const CHUNK_DIMS_HALVED: f32 = CHUNK_DIMENSIONSF / 2.0;
-
-                    let (center_offset_x, center_offset_y, center_offset_z) = (
-                        coords.x as f32 - CHUNK_DIMS_HALVED + 0.5 + x_offset,
-                        coords.y as f32 - CHUNK_DIMS_HALVED + 0.5 + y_offset,
-                        coords.z as f32 - CHUNK_DIMS_HALVED + 0.5 + z_offset,
-                    );
-                    mesh_builder.add_mesh_information(
-                        &mesh_info,
-                        Vec3::new(center_offset_x, center_offset_y, center_offset_z),
-                        uvs,
-                        image_index,
-                        additional_info,
-                    );
-
-                    if one_mesh_only {
-                        break;
-                    }
+                if one_mesh_only {
+                    break;
                 }
             }
+        }
 
-            let mut ents = vec![];
+        let mut ents = vec![];
 
-            for (mat_id, mesh_builder) in material_meshes {
-                let mesh = mesh_builder.build_mesh();
+        for (mat_id, mesh_builder) in material_meshes {
+            let mesh = mesh_builder.build_mesh();
 
-                let entity = commands
-                    .spawn((
-                        TransformBundle::default(),
-                        VisibilityBundle::default(),
-                        meshes.add(mesh),
-                        Name::new("Rendered Tank Fluid"),
-                    ))
-                    .set_parent(ev.mesh_entity_parent)
-                    .id();
+            let entity = commands
+                .spawn((
+                    TransformBundle::default(),
+                    VisibilityBundle::default(),
+                    meshes.add(mesh),
+                    Name::new("Rendered Tank Fluid"),
+                ))
+                .set_parent(ev.mesh_entity_parent)
+                .id();
 
-                evw_add_material.send(AddMaterialEvent {
-                    entity,
-                    add_material_id: mat_id,
-                    material_type: MaterialType::Normal,
-                });
+            evw_add_material.send(AddMaterialEvent {
+                entity,
+                add_material_id: mat_id,
+                material_type: MaterialType::Normal,
+            });
 
-                ents.push(entity);
-            }
+            ents.push(entity);
+        }
 
-            if !ents.is_empty() {
-                commands.entity(ev.mesh_entity_parent).insert(TankRenders(ents));
-            }
+        if !ents.is_empty() {
+            commands.entity(ev.mesh_entity_parent).insert(TankRenders(ents));
         }
     }
 }

@@ -2,178 +2,217 @@
 
 use bevy::{
     app::{App, Update},
-    log::info,
+    log::warn,
     prelude::{Entity, EventReader, IntoSystemConfigs, Query, Res, ResMut, Resource, With},
-    utils::HashMap,
+    utils::{hashbrown::HashSet, HashMap},
 };
 use cosmos_core::{
-    block::{block_events::BlockEventsSet, block_update::BlockUpdate, data::BlockData, Block},
+    block::{block_events::BlockEventsSet, block_update::BlockUpdate, data::BlockData, Block, BlockFace},
     ecs::mut_events::MutEvent,
-    events::block_events::{BlockDataChangedEvent, BlockDataSystemParams},
-    fluid::data::{FluidTankBlock, StoredBlockFluid},
+    events::block_events::{BlockChangedEvent, BlockDataChangedEvent, BlockDataSystemParams},
+    fluid::data::{BlockFluidData, FluidTankBlock, StoredFluidData},
     registry::{identifiable::Identifiable, Registry},
-    structure::{coordinates::BlockCoordinate, Structure},
+    structure::{
+        coordinates::{BlockCoordinate, UnboundCoordinateType},
+        Structure,
+    },
 };
+
+use super::{TankGroup, TankGroupPointer};
 
 fn balance_tanks(
     structure: &Structure,
-    structure_entity: Entity,
     max_fluid_storable: u32,
     tank_block_id: u16,
     origin: BlockCoordinate,
-    q_stored_fluids: &Query<&StoredBlockFluid>,
-    cached_tanks: &mut HashMap<(Entity, BlockCoordinate), StoredBlockFluid>,
+    q_stored_fluids: &mut Query<&mut BlockFluidData>,
+    q_tank_group_ptr: &Query<&TankGroupPointer>,
+    // cached_tanks: &mut HashMap<BlockCoordinate, BlockFluidData>,
+    done_tanks: &mut HashSet<BlockCoordinate>,
+    q_tank_group: &Query<&TankGroup>,
+    bd_params: &mut BlockDataSystemParams,
 ) {
-    let mut origin_stored = structure.query_block_data(origin, q_stored_fluids).copied();
+    let Some(origin_stored) = structure.query_block_data(origin, q_stored_fluids).copied() else {
+        warn!("Called balance_tanks for block that has no fluid data.");
+        return;
+    };
 
-    let mut checking_fluid_id = origin_stored.map(|x| x.fluid_id);
+    let tank_rotation = structure.block_rotation(origin);
 
-    // flow water down
-    let check_pos = origin - BlockCoordinate::Y;
-    if let Ok(check_pos) = BlockCoordinate::try_from(check_pos) {
-        if structure.block_id_at(check_pos) == tank_block_id {
-            if !cached_tanks.contains_key(&(structure_entity, check_pos)) {
-                if let Some(stored) = structure.query_block_data(check_pos, q_stored_fluids) {
-                    cached_tanks.insert((structure_entity, check_pos), *stored);
-                }
-            }
+    let mut tank_group_pointers = vec![];
+    let tank_group_pointer = structure.query_block_data(origin, q_tank_group_ptr);
 
-            if let Some(stored) = cached_tanks.get_mut(&(structure_entity, check_pos)) {
-                let can_store_fluid = checking_fluid_id.map(|id| id == stored.fluid_id).unwrap_or(true);
-                let origin_fluid_stored = origin_stored.map(|x| x.fluid_stored).unwrap_or(0);
-
-                if can_store_fluid && stored.fluid_stored != 0 {
-                    if origin_fluid_stored + stored.fluid_stored > max_fluid_storable {
-                        stored.fluid_stored = stored.fluid_stored - (max_fluid_storable - origin_fluid_stored);
-                        if let Some(origin_stored) = origin_stored.as_mut() {
-                            origin_stored.fluid_stored = max_fluid_storable;
-                        } else {
-                            origin_stored = Some(StoredBlockFluid {
-                                fluid_id: stored.fluid_id,
-                                fluid_stored: max_fluid_storable,
-                            });
-                        }
-
-                        checking_fluid_id = Some(stored.fluid_id);
-                    } else {
-                        if let Some(origin_stored) = origin_stored.as_mut() {
-                            origin_stored.fluid_stored += stored.fluid_stored;
-                        } else {
-                            origin_stored = Some(StoredBlockFluid {
-                                fluid_id: stored.fluid_id,
-                                fluid_stored: stored.fluid_stored,
-                            });
-                        }
-
-                        checking_fluid_id = Some(stored.fluid_id);
-                        stored.fluid_stored = 0;
-                    }
-                }
-            }
-        }
+    if let Some(&tank_group_pointer) = tank_group_pointer {
+        tank_group_pointers.push(tank_group_pointer);
     }
 
-    let mut get_tank_data = |c: BlockCoordinate| {
-        if structure.block_id_at(c) != tank_block_id {
-            return None;
-        }
-
-        if let Some(stored_fluid) = cached_tanks.get(&(structure_entity, c)) {
-            if checking_fluid_id.map(|x| x == stored_fluid.fluid_id).unwrap_or(true) {
-                checking_fluid_id = Some(stored_fluid.fluid_id);
-                return Some((c, stored_fluid.fluid_stored));
-            }
-        }
-
-        if let Some(stored_fluid) = structure.query_block_data(c, q_stored_fluids) {
-            if checking_fluid_id.map(|x| x == stored_fluid.fluid_id).unwrap_or(true) {
-                checking_fluid_id = Some(stored_fluid.fluid_id);
-                Some((c, stored_fluid.fluid_stored))
+    let mut checking_fluid_id = match origin_stored {
+        BlockFluidData::Fluid(sf) => Some(sf.fluid_id),
+        BlockFluidData::NoFluid => {
+            if let Some(&tank_group_pointer) = tank_group_pointer {
+                q_tank_group.get(tank_group_pointer.0).map(|x| x.0.fluid_id).ok()
             } else {
                 None
             }
-        } else {
-            Some((c, 0))
         }
     };
 
-    let mut total_fluid_amount = origin_stored.map(|x| x.fluid_stored).unwrap_or(0);
-    let mut n_tanks = 1;
+    let mut checking: HashSet<BlockCoordinate> = HashSet::default();
+    checking.insert(origin);
+    let mut to_check: HashSet<BlockCoordinate> = HashSet::default();
+    let mut all_tanks_within: HashSet<BlockCoordinate> = HashSet::default();
 
-    let mut right = None;
-    if let Some((c, fluid_stored)) = get_tank_data(origin + BlockCoordinate::X) {
-        right = Some(c);
-        total_fluid_amount += fluid_stored;
-        n_tanks += 1;
-    }
-    let mut left = None;
-    if let Some((c, fluid_stored)) = BlockCoordinate::try_from(origin - BlockCoordinate::X)
-        .map(|c| get_tank_data(c))
-        .ok()
-        .flatten()
-    {
-        left = Some(c);
-        total_fluid_amount += fluid_stored;
-        n_tanks += 1;
-    }
-    let mut front = None;
-    if let Some((c, fluid_stored)) = get_tank_data(origin + BlockCoordinate::Z) {
-        front = Some(c);
-        total_fluid_amount += fluid_stored;
-        n_tanks += 1;
-    }
-    let mut back = None;
-    if let Some((c, fluid_stored)) = BlockCoordinate::try_from(origin - BlockCoordinate::Z)
-        .map(|c| get_tank_data(c))
-        .ok()
-        .flatten()
-    {
-        back = Some(c);
-        total_fluid_amount += fluid_stored;
-        n_tanks += 1;
+    let mut total_fluid = 0;
+
+    while !checking.is_empty() {
+        for &coord in &checking {
+            if structure.block_id_at(coord) != tank_block_id {
+                continue;
+            }
+
+            let Some(stored_fluid) = structure.query_block_data(coord, q_stored_fluids) else {
+                warn!("Tank missing fluid data.");
+                continue;
+            };
+
+            if let BlockFluidData::Fluid(sf) = stored_fluid {
+                if let Some(checking_fluid_id) = checking_fluid_id {
+                    if checking_fluid_id != sf.fluid_id {
+                        warn!("2 tanks of different fluids were placed in the same tank system. This is bad :(");
+                        continue;
+                    }
+                } else {
+                    checking_fluid_id = Some(sf.fluid_id);
+                }
+
+                total_fluid += sf.fluid_stored;
+            }
+
+            if let Some(ptr_ent) = structure.query_block_data(coord, q_tank_group_ptr) {
+                if !tank_group_pointers.contains(ptr_ent) {
+                    tank_group_pointers.push(*ptr_ent);
+                }
+            }
+
+            let right = coord.right();
+            if !all_tanks_within.contains(&right) && !checking.contains(&right) {
+                to_check.insert(right);
+            }
+            if let Ok(left) = coord.left() {
+                if !all_tanks_within.contains(&left) && !checking.contains(&left) {
+                    to_check.insert(left);
+                }
+            }
+            let top = coord.top();
+            if !all_tanks_within.contains(&top) && !checking.contains(&top) {
+                to_check.insert(top);
+            }
+            if let Ok(bottom) = coord.bottom() {
+                if !all_tanks_within.contains(&bottom) && !checking.contains(&bottom) {
+                    to_check.insert(bottom);
+                }
+            }
+            let front = coord.front();
+            if !all_tanks_within.contains(&front) && !checking.contains(&front) {
+                to_check.insert(front);
+            }
+            if let Ok(back) = coord.back() {
+                if !all_tanks_within.contains(&back) && !checking.contains(&back) {
+                    to_check.insert(back);
+                }
+            }
+
+            all_tanks_within.insert(coord);
+        }
+
+        let capacity = to_check.capacity();
+        checking = to_check;
+        to_check = HashSet::with_capacity(capacity);
     }
 
-    let avg_fluid = total_fluid_amount / n_tanks;
-    // Due to rounding, the average distributed evenly may be short.
-    // This represents how much fluid is still required to be distribtued post-rounding.
-    let mut missing_fluid = total_fluid_amount - avg_fluid * n_tanks;
+    if all_tanks_within.is_empty() {
+        return;
+    }
 
-    let mut distribute_fluid = |tank_coord: BlockCoordinate| {
-        let fluid_amount = if missing_fluid == 0 {
-            avg_fluid
-        } else {
-            missing_fluid -= 1;
-            avg_fluid + 1
+    let mut levels: Vec<(UnboundCoordinateType, Vec<BlockCoordinate>)> = vec![];
+
+    for &coord in &all_tanks_within {
+        let level = match tank_rotation.block_up {
+            BlockFace::Top => coord.y as UnboundCoordinateType,
+            BlockFace::Bottom => -(coord.y as UnboundCoordinateType),
+            BlockFace::Right => coord.x as UnboundCoordinateType,
+            BlockFace::Left => -(coord.x as UnboundCoordinateType),
+            BlockFace::Front => coord.z as UnboundCoordinateType,
+            BlockFace::Back => -(coord.z as UnboundCoordinateType),
         };
 
-        if let Some(checking_fluid_id) = checking_fluid_id {
-            cached_tanks.insert(
-                (structure_entity, tank_coord),
-                StoredBlockFluid {
-                    fluid_id: checking_fluid_id,
-                    fluid_stored: fluid_amount,
-                },
-            );
+        if let Some((idx, (closest, v))) = levels.iter_mut().enumerate().find(|(_, x)| x.0 >= level) {
+            if level == *closest {
+                v.push(coord)
+            } else {
+                levels.insert(idx, (level, vec![coord]));
+            }
+        } else {
+            levels.push((level, vec![coord]));
         }
-    };
-
-    if let Some(right) = right {
-        distribute_fluid(right);
-    }
-    if let Some(left) = left {
-        distribute_fluid(left);
-    }
-    if let Some(front) = front {
-        distribute_fluid(front);
-    }
-    if let Some(back) = back {
-        distribute_fluid(back);
     }
 
-    distribute_fluid(origin);
+    println!("{levels:?}");
 
-    // This should have been distributed evenly across all tanks. If not, somehow fluid was lost in the process, which should be impossible.
-    assert_eq!(missing_fluid, 0);
+    let mut fluid_left = total_fluid;
+
+    for (_, coords) in levels {
+        let n_tanks = coords.len() as u32;
+        let fluid_per_tank = (fluid_left / n_tanks).min(max_fluid_storable);
+        let mut overflow = if fluid_per_tank == max_fluid_storable {
+            0
+        } else {
+            fluid_left - n_tanks * fluid_per_tank
+        };
+
+        println!("fluid per tank: {fluid_per_tank}");
+
+        // fill tanks
+
+        for tank_coord in coords {
+            done_tanks.insert(tank_coord);
+
+            let mut fluid_stored_here = fluid_per_tank;
+            if overflow > 0 {
+                overflow -= 1;
+                fluid_stored_here += 1;
+            }
+
+            fluid_left -= fluid_stored_here;
+
+            let new_block_fluid_data = match checking_fluid_id {
+                Some(id) => BlockFluidData::Fluid(StoredFluidData {
+                    fluid_id: id,
+                    fluid_stored: fluid_stored_here,
+                }),
+                None => {
+                    assert_eq!(fluid_left, 0);
+
+                    BlockFluidData::NoFluid
+                }
+            };
+
+            let mut data_here = structure
+                .query_block_data_mut(tank_coord, q_stored_fluids, bd_params)
+                .expect("To get here, this tank had to have had fluid data.");
+
+            if *data_here != new_block_fluid_data {
+                // Don't trigger unneccesary change detection
+                *data_here = new_block_fluid_data;
+            }
+        }
+
+        // Overflow must be distributed between all tanks, otherwise we've lost fluid
+        debug_assert_eq!(overflow, 0);
+    }
+
+    // Ensures that no fluid was lost while distributing
+    assert_eq!(fluid_left, 0);
 }
 
 struct CombinedBlockEvent {
@@ -181,30 +220,47 @@ struct CombinedBlockEvent {
     block: BlockCoordinate,
 }
 
+fn on_add_tank(
+    blocks: Res<Registry<Block>>,
+    mut q_structure: Query<&mut Structure>,
+    mut ev_reader: EventReader<BlockChangedEvent>,
+    mut bs_params: BlockDataSystemParams,
+    mut q_block_data: Query<&mut BlockData>,
+    q_has_data: Query<(), With<BlockFluidData>>,
+) {
+    let Some(tank) = blocks.from_id("cosmos:tank").map(|x| x.id()) else {
+        return;
+    };
+
+    for ev in ev_reader.read() {
+        if ev.new_block == tank {
+            let Ok(mut structure) = q_structure.get_mut(ev.structure_entity) else {
+                continue;
+            };
+
+            let coords = ev.block.coords();
+            if structure.query_block_data(coords, &q_has_data).is_some() {
+                continue;
+            }
+
+            structure.insert_block_data(coords, BlockFluidData::NoFluid, &mut bs_params, &mut q_block_data, &q_has_data);
+        }
+    }
+}
+
 #[derive(Resource, Debug, Default)]
-/// `listen_for_changed_fluid_data` must be split into two parts due to the BlockDataChangedEvent event listener
-/// needing read in `listen_for_changed_fluid_data` and written to in `apply_cached_fluid_changes`.
-///
-/// This resource facilitates their communication
-struct CachedFluidChanges(HashMap<(Entity, BlockCoordinate), StoredBlockFluid>);
+struct TanksToBalance(HashMap<Entity, HashSet<BlockCoordinate>>);
 
 fn listen_for_changed_fluid_data(
     blocks: Res<Registry<Block>>,
-    q_stored_fluids: Query<&StoredBlockFluid>,
     mut evr_block_data_changed: EventReader<BlockDataChangedEvent>,
     mut evr_block_changed_event: EventReader<MutEvent<BlockUpdate>>,
     q_structure: Query<&Structure>,
-    fluid_tank_blocks: Res<Registry<FluidTankBlock>>,
-    mut fluid_changes: ResMut<CachedFluidChanges>,
+    mut to_balance: ResMut<TanksToBalance>,
 ) {
     let Some(tank_block) = blocks.from_id("cosmos:tank") else {
         return;
     };
-    let Some(tank_fluid_block) = fluid_tank_blocks.from_id("cosmos:tank") else {
-        return;
-    };
-
-    let mut block_fluid_cache = HashMap::default();
 
     for ev in evr_block_data_changed
         .read()
@@ -230,48 +286,51 @@ fn listen_for_changed_fluid_data(
             continue;
         };
 
-        balance_tanks(
-            structure,
-            ev.structure_entity,
-            tank_fluid_block.max_capacity(),
-            tank_block.id(),
-            ev.block,
-            &q_stored_fluids,
-            &mut block_fluid_cache,
-        );
+        to_balance.0.entry(ev.structure_entity).or_default().insert(ev.block);
     }
-
-    fluid_changes.0 = block_fluid_cache;
 }
 
-fn apply_cached_fluid_changes(
-    mut fluid_changes: ResMut<CachedFluidChanges>,
-    mut q_structure: Query<&mut Structure>,
+fn call_balance_tanks(
+    blocks: Res<Registry<Block>>,
+    mut q_stored_fluids: Query<&mut BlockFluidData>,
+    q_structure: Query<&Structure>,
+    fluid_tank_blocks: Res<Registry<FluidTankBlock>>,
+    q_tank_group: Query<&TankGroup>,
+    q_tank_group_ptr: Query<&TankGroupPointer>,
     mut bd_params: BlockDataSystemParams,
-    mut q_block_data: Query<&mut BlockData>,
-    q_has_data: Query<(), With<StoredBlockFluid>>,
-    q_stored_fluids: Query<&StoredBlockFluid>,
+    mut to_balance: ResMut<TanksToBalance>,
 ) {
-    for ((structure_entity, block_coord), final_tank_data) in std::mem::take(&mut fluid_changes.0) {
-        let Ok(mut structure) = q_structure.get_mut(structure_entity) else {
+    let Some(tank_block) = blocks.from_id("cosmos:tank") else {
+        return;
+    };
+    let Some(tank_fluid_block) = fluid_tank_blocks.from_id("cosmos:tank") else {
+        return;
+    };
+
+    for (s_ent, events) in std::mem::take(&mut to_balance.0) {
+        let Ok(structure) = q_structure.get(s_ent) else {
             continue;
         };
 
-        // Don't trigger unnecessary change detections
-        if structure
-            .query_block_data(block_coord, &q_stored_fluids)
-            .map(|x| *x == final_tank_data)
-            .unwrap_or(false)
-        {
-            continue;
-        }
+        let mut done_tanks = HashSet::default();
 
-        if final_tank_data.fluid_stored != 0 {
-            info!("Inserting stored fluid data {final_tank_data:?} for {block_coord}.");
-            structure.insert_block_data(block_coord, final_tank_data, &mut bd_params, &mut q_block_data, &q_has_data);
-        } else {
-            info!("Removing stored fluid data at {block_coord}.");
-            structure.remove_block_data::<StoredBlockFluid>(block_coord, &mut bd_params, &mut q_block_data, &q_has_data);
+        for coord in events {
+            let id = structure.block_id_at(coord);
+            if id != tank_block.id() {
+                continue;
+            };
+
+            balance_tanks(
+                structure,
+                tank_fluid_block.max_capacity(),
+                tank_block.id(),
+                coord,
+                &mut q_stored_fluids,
+                &q_tank_group_ptr,
+                &mut done_tanks,
+                &q_tank_group,
+                &mut bd_params,
+            );
         }
     }
 }
@@ -279,9 +338,9 @@ fn apply_cached_fluid_changes(
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        (listen_for_changed_fluid_data, apply_cached_fluid_changes)
+        (on_add_tank, listen_for_changed_fluid_data, call_balance_tanks)
             .chain()
             .in_set(BlockEventsSet::ProcessEvents),
     )
-    .init_resource::<CachedFluidChanges>();
+    .init_resource::<TanksToBalance>();
 }

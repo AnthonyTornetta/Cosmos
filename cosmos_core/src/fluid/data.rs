@@ -8,15 +8,25 @@ use crate::{
     item::Item,
     netty::sync::{sync_component, IdentifiableComponent, SyncableComponent},
     registry::{create_registry, identifiable::Identifiable},
+    structure::coordinates::BlockCoordinate,
 };
 
-#[derive(Component, Clone, Copy, Serialize, Deserialize, Reflect, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, Serialize, Deserialize, Reflect, PartialEq, Eq, Debug)]
 /// The fluid stored by this block
-pub struct StoredBlockFluid {
+pub struct StoredFluidData {
     /// The fluid's id
     pub fluid_id: u16,
     /// The amount stored
     pub fluid_stored: u32,
+}
+
+#[derive(Component, Clone, Copy, Serialize, Deserialize, Reflect, PartialEq, Eq, Debug, Default)]
+/// The fluid stored by this block
+pub enum BlockFluidData {
+    #[default]
+    NoFluid,
+    /// This can represent 0 fluid, if it is a part of a greater tank structure that contains fluid.
+    Fluid(StoredFluidData),
 }
 
 #[derive(Clone, Debug)]
@@ -78,13 +88,13 @@ impl FluidHolder {
     }
 }
 
-impl IdentifiableComponent for StoredBlockFluid {
+impl IdentifiableComponent for BlockFluidData {
     fn get_component_unlocalized_name() -> &'static str {
         "cosmos:stored_block_fluid"
     }
 }
 
-impl SyncableComponent for StoredBlockFluid {
+impl SyncableComponent for BlockFluidData {
     fn get_sync_type() -> crate::netty::sync::SyncType {
         crate::netty::sync::SyncType::ServerAuthoritative
     }
@@ -175,7 +185,7 @@ pub(super) fn register(app: &mut App) {
     create_registry::<FluidTankBlock>(app, "cosmos:tank_block");
 
     sync_component::<FluidItemData>(app);
-    sync_component::<StoredBlockFluid>(app);
+    sync_component::<BlockFluidData>(app);
 
-    app.register_type::<FluidItemData>().register_type::<StoredBlockFluid>();
+    app.register_type::<FluidItemData>().register_type::<BlockFluidData>();
 }

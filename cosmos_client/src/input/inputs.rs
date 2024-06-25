@@ -104,7 +104,7 @@ pub enum CosmosInputs {
     /// Changes which camera is selected in a ship
     SwapCameraRight,
 
-    /// When interacting with a block, the secondary interaction mode should be used.
+    /// When interacting with a block, if this key is pressed the "alternative" interaction mode should be used instead.
     AlternateInteraction,
 }
 

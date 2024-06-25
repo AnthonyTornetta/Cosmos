@@ -13,7 +13,7 @@ use cosmos_core::{
     block::{block_events::BlockInteractEvent, data::BlockData, Block},
     events::block_events::BlockDataSystemParams,
     fluid::{
-        data::{FluidHolder, FluidItemData, FluidTankBlock, StoredBlockFluid},
+        data::{BlockFluidData, FluidHolder, FluidItemData, FluidTankBlock, StoredFluidData},
         registry::Fluid,
     },
     inventory::{
@@ -123,9 +123,9 @@ fn on_interact_with_tank(
     tank_registry: Res<Registry<FluidTankBlock>>,
     mut commands: Commands,
     mut block_data_params: BlockDataSystemParams,
-    mut q_stored_fluid_block: Query<&mut StoredBlockFluid>,
+    mut q_stored_fluid_block: Query<&mut BlockFluidData>,
     mut q_block_data: Query<&mut BlockData>,
-    q_has_stored_fluid: Query<(), With<StoredBlockFluid>>,
+    q_has_stored_fluid: Query<(), With<BlockFluidData>>,
     needs_data: Res<ItemShouldHaveData>,
 ) {
     for ev in ev_reader.read() {
@@ -160,8 +160,14 @@ fn on_interact_with_tank(
         };
 
         let Some(mut stored_fluid_item) = is.query_itemstack_data_mut(&mut q_fluid_data_is) else {
-            println!("Stored fluid block");
-            let Some(mut stored_fluid_block) = structure.query_block_data_mut(coords, &mut q_stored_fluid_block) else {
+            // Attempt to take fluid from tank if no fluid in current item.
+
+            let Some(mut block_fluid_data) = structure.query_block_data_mut(coords, &mut q_stored_fluid_block, &mut block_data_params)
+            else {
+                continue;
+            };
+
+            let BlockFluidData::Fluid(stored_fluid_block) = *block_fluid_data else {
                 continue;
             };
 
@@ -179,19 +185,23 @@ fn on_interact_with_tank(
 
             let fluid_data = if stored_fluid_block.fluid_stored <= fluid_holder.max_capacity() {
                 println!("Filled to not max cap");
-                let block_data = *stored_fluid_block;
+                let block_data = stored_fluid_block;
 
                 info!("Removing stored fluid.");
-                structure.remove_block_data::<StoredBlockFluid>(coords, &mut block_data_params, &mut q_block_data, &q_has_stored_fluid);
+                *block_fluid_data = BlockFluidData::NoFluid;
 
                 FluidItemData::Filled {
                     fluid_id: block_data.fluid_id,
                     fluid_stored: block_data.fluid_stored,
                 }
             } else {
-                println!("Filled to max cap");
-                stored_fluid_block.fluid_stored -= fluid_holder.max_capacity();
+                let BlockFluidData::Fluid(stored_fluid_block) = block_fluid_data.as_mut() else {
+                    continue;
+                };
 
+                println!("Filled to max cap");
+
+                stored_fluid_block.fluid_stored -= fluid_holder.max_capacity();
                 FluidItemData::Filled {
                     fluid_id: stored_fluid_block.fluid_id,
                     fluid_stored: fluid_holder.max_capacity(),
@@ -210,27 +220,32 @@ fn on_interact_with_tank(
 
         match *stored_fluid_item {
             FluidItemData::Empty => {
-                if let Some(mut stored_fluid_block) = structure.query_block_data_mut(coords, &mut q_stored_fluid_block) {
-                    if stored_fluid_block.fluid_stored <= fluid_holder.max_capacity() {
-                        *stored_fluid_item = FluidItemData::Filled {
-                            fluid_id: stored_fluid_block.fluid_id,
-                            fluid_stored: stored_fluid_block.fluid_stored,
-                        };
+                let Some(mut stored_fluid_block) =
+                    structure.query_block_data_mut(coords, &mut q_stored_fluid_block, &mut block_data_params)
+                else {
+                    continue;
+                };
 
-                        structure.remove_block_data::<StoredBlockFluid>(
-                            coords,
-                            &mut block_data_params,
-                            &mut q_block_data,
-                            &q_has_stored_fluid,
-                        );
-                    } else {
-                        *stored_fluid_item = FluidItemData::Filled {
-                            fluid_id: stored_fluid_block.fluid_id,
-                            fluid_stored: fluid_holder.max_capacity(),
-                        };
+                let BlockFluidData::Fluid(stored_fluid_block) = stored_fluid_block.as_mut() else {
+                    continue;
+                };
 
-                        stored_fluid_block.fluid_stored -= fluid_holder.max_capacity();
-                    }
+                if stored_fluid_block.fluid_stored <= fluid_holder.max_capacity() {
+                    *stored_fluid_item = FluidItemData::Filled {
+                        fluid_id: stored_fluid_block.fluid_id,
+                        fluid_stored: stored_fluid_block.fluid_stored,
+                    };
+
+                    *structure
+                        .query_block_data_mut(coords, &mut q_stored_fluid_block, &mut block_data_params)
+                        .expect("Checked above") = BlockFluidData::NoFluid;
+                } else {
+                    *stored_fluid_item = FluidItemData::Filled {
+                        fluid_id: stored_fluid_block.fluid_id,
+                        fluid_stored: fluid_holder.max_capacity(),
+                    };
+
+                    stored_fluid_block.fluid_stored -= fluid_holder.max_capacity();
                 }
             }
             FluidItemData::Filled { fluid_id, fluid_stored } => {
@@ -238,25 +253,30 @@ fn on_interact_with_tank(
                     let cur_fluid = structure.query_block_data(coords, &q_stored_fluid_block);
 
                     // Insert fluid into tank
-                    let (data, left_over) = if let Some(cur_fluid) = cur_fluid {
+                    let (data, left_over) = if let Some(&BlockFluidData::Fluid(cur_fluid)) = cur_fluid {
                         if fluid_id != cur_fluid.fluid_id {
                             continue;
                         }
 
                         let prev_amount = cur_fluid.fluid_stored;
 
-                        let data = StoredBlockFluid {
-                            fluid_stored: tank_block.max_capacity().min(fluid_stored + cur_fluid.fluid_stored),
-                            fluid_id,
-                        };
+                        let new_fluid_stored = tank_block.max_capacity().min(fluid_stored + cur_fluid.fluid_stored);
 
-                        (data, fluid_stored - (data.fluid_stored - prev_amount))
-                    } else {
-                        let data = StoredBlockFluid {
-                            fluid_stored: tank_block.max_capacity().min(fluid_stored),
+                        let data = BlockFluidData::Fluid(StoredFluidData {
+                            fluid_stored: new_fluid_stored,
                             fluid_id,
-                        };
-                        (data, fluid_stored - data.fluid_stored)
+                        });
+
+                        (data, fluid_stored - (new_fluid_stored - prev_amount))
+                    } else {
+                        let new_fluid_stored = tank_block.max_capacity().min(fluid_stored);
+
+                        let data = BlockFluidData::Fluid(StoredFluidData {
+                            fluid_stored: new_fluid_stored,
+                            fluid_id,
+                        });
+
+                        (data, fluid_stored - new_fluid_stored)
                     };
 
                     if left_over > 0 {
@@ -285,7 +305,13 @@ fn on_interact_with_tank(
                             }
                         }
                     }
-                } else if let Some(mut stored_fluid_block) = structure.query_block_data_mut(coords, &mut q_stored_fluid_block) {
+                } else if let Some(mut block_fluid_data) =
+                    structure.query_block_data_mut(coords, &mut q_stored_fluid_block, &mut block_data_params)
+                {
+                    let BlockFluidData::Fluid(stored_fluid_block) = block_fluid_data.as_ref() else {
+                        continue;
+                    };
+
                     // Put fluid into item
                     if stored_fluid_block.fluid_id != fluid_id {
                         continue;
@@ -298,12 +324,9 @@ fn on_interact_with_tank(
                         };
 
                         info!("Removing fluid data because item removed it at {coords}.");
-                        structure.remove_block_data::<StoredBlockFluid>(
-                            coords,
-                            &mut block_data_params,
-                            &mut q_block_data,
-                            &q_has_stored_fluid,
-                        );
+                        *structure
+                            .query_block_data_mut(coords, &mut q_stored_fluid_block, &mut block_data_params)
+                            .expect("Checked above") = BlockFluidData::NoFluid;
                     } else {
                         let delta = fluid_holder.max_capacity() - fluid_stored;
 
@@ -312,6 +335,10 @@ fn on_interact_with_tank(
                             *stored_fluid_item = FluidItemData::Filled {
                                 fluid_id,
                                 fluid_stored: fluid_holder.max_capacity(),
+                            };
+
+                            let BlockFluidData::Fluid(stored_fluid_block) = block_fluid_data.as_mut() else {
+                                continue;
                             };
 
                             stored_fluid_block.fluid_stored -= delta;

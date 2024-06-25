@@ -547,6 +547,14 @@ impl BaseStructure {
         }
     }
 
+    /// Despawns any block data that is no longer used by any blocks. This should be called every frame
+    /// for general cleanup and avoid systems executing on dead block-data.
+    pub fn despawn_dead_block_data(&mut self, bs_commands: &mut BlockDataSystemParams) {
+        for (_, chunk) in &mut self.chunks {
+            chunk.despawn_dead_block_data(bs_commands);
+        }
+    }
+
     /// Returns `None` if the chunk is unloaded. Will return Some(block data entity) otherwise.
     ///
     /// Inserts data into the block here.
@@ -635,14 +643,23 @@ impl BaseStructure {
     }
 
     /// Queries this block's data mutibly. Returns `None` if the requested query failed or if no block data exists for this block.
-    pub fn query_block_data_mut<'a, Q, F>(&'a self, coords: BlockCoordinate, query: &'a mut Query<Q, F>) -> Option<QueryItem<'a, Q>>
+    pub fn query_block_data_mut<'a, Q, F>(
+        &'a self,
+        coords: BlockCoordinate,
+        query: &'a mut Query<Q, F>,
+        block_system_params: &mut BlockDataSystemParams,
+    ) -> Option<QueryItem<'a, Q>>
     where
         F: QueryFilter,
         Q: QueryData,
     {
         let chunk = self.chunk_at_block_coordinates(coords)?;
 
-        chunk.query_block_data_mut(ChunkBlockCoordinate::for_block_coordinate(coords), query)
+        if let Some(e) = self.get_entity() {
+            chunk.query_block_data_mut(ChunkBlockCoordinate::for_block_coordinate(coords), query, block_system_params, e)
+        } else {
+            None
+        }
     }
 
     /// Removes this type of data from the block here. Returns the entity that stores this blocks data

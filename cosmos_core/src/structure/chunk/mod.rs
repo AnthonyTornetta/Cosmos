@@ -4,8 +4,8 @@
 
 use bevy::ecs::query::{QueryData, QueryFilter, QueryItem, ROQueryItem, With};
 use bevy::ecs::system::{Commands, Query};
-use bevy::hierarchy::BuildChildren;
-use bevy::log::info;
+use bevy::hierarchy::{BuildChildren, DespawnRecursiveExt};
+use bevy::log::{error, info};
 use bevy::prelude::{App, Component, Entity, Event, Vec3};
 use bevy::reflect::Reflect;
 use bevy::utils::HashMap;
@@ -15,6 +15,7 @@ use crate::block::data::{BlockData, BlockDataIdentifier};
 use crate::block::{Block, BlockFace, BlockRotation, BlockSubRotation};
 use crate::ecs::NeedsDespawned;
 use crate::events::block_events::{BlockDataChangedEvent, BlockDataSystemParams};
+use crate::registry::identifiable::Identifiable;
 use crate::registry::Registry;
 
 use super::block_health::BlockHealth;
@@ -49,6 +50,11 @@ pub struct Chunk {
     /// Each entity this points to should ideally be a child of this chunk used to store data about a specific block
     #[serde(skip)]
     block_data: HashMap<ChunkBlockCoordinate, Entity>,
+    /// Removed block data should be stored here to be depsawned later
+    ///
+    /// Useful to not have every method require arguments to interact with the bevy ECS
+    #[serde(skip)]
+    removed_block_data: Vec<Entity>,
 }
 
 impl BlockStorer for Chunk {
@@ -99,11 +105,27 @@ impl BlockStorer for Chunk {
 
     #[inline(always)]
     fn set_block_at(&mut self, coords: ChunkBlockCoordinate, b: &Block, block_rotation: BlockRotation) {
+        if b.id() == self.block_at(coords) {
+            return;
+        }
+
+        // if let Some(bd_ent) = self.block_data.remove(&coords) {
+        //     self.removed_block_data.push(bd_ent);
+        // }
+
         self.block_storage.set_block_at(coords, b, block_rotation)
     }
 
     #[inline(always)]
     fn set_block_at_from_id(&mut self, coords: ChunkBlockCoordinate, id: u16, block_rotation: BlockRotation) {
+        if id == self.block_at(coords) {
+            return;
+        }
+
+        // if let Some(bd_ent) = self.block_data.remove(&coords) {
+        //     self.removed_block_data.push(bd_ent);
+        // }
+
         self.block_storage.set_block_at_from_id(coords, id, block_rotation)
     }
 
@@ -125,6 +147,7 @@ impl Chunk {
             block_storage: BlockStorage::new(CHUNK_DIMENSIONS, CHUNK_DIMENSIONS, CHUNK_DIMENSIONS),
             block_health: BlockHealth::default(),
             block_data: Default::default(),
+            removed_block_data: Default::default(),
         }
     }
 
@@ -209,11 +232,26 @@ impl Chunk {
     }
 
     /// Sets the block data entity for these coordinates.
+    ///
+    /// This will NOT despawn the entity, nor mark it for deletion.
     pub fn set_block_data_entity(&mut self, coords: ChunkBlockCoordinate, entity: Option<Entity>) {
         if let Some(e) = entity {
             self.block_data.insert(coords, e);
         } else {
             self.block_data.remove(&coords);
+        }
+    }
+
+    /// Despawns any block data that is no longer used by any blocks. This should be called every frame
+    /// for general cleanup and avoid systems executing on dead block-data.
+    pub fn despawn_dead_block_data(&mut self, bs_commands: &mut BlockDataSystemParams) {
+        for ent in std::mem::take(&mut self.removed_block_data) {
+            // Don't send block data changed event here, since the only way this happens is if the block itself is changed
+            // to another block.
+
+            if let Some(ecmds) = bs_commands.commands.get_entity(ent) {
+                ecmds.despawn_recursive();
+            }
         }
     }
 
@@ -230,12 +268,13 @@ impl Chunk {
     ) -> Entity {
         if let Some(data_ent) = self.block_data(coords) {
             info!("Entity existed - {data_ent:?}");
-            let Ok(mut bd) = q_block_data.get_mut(data_ent) else {
-                panic!("Block data entity missing BlockData component!");
-            };
-
-            if !q_data.contains(data_ent) {
-                bd.increment();
+            if let Ok(mut bd) = q_block_data.get_mut(data_ent) {
+                if !q_data.contains(data_ent) {
+                    bd.increment();
+                }
+            } else {
+                system_params.commands.entity(data_ent).log_components();
+                error!("Block data entity missing BlockData component!");
             }
 
             system_params.commands.entity(data_ent).insert(data);
@@ -383,14 +422,31 @@ impl Chunk {
     }
 
     /// Queries this block's data mutibly. Returns `None` if the requested query failed or if no block data exists for this block.
-    pub fn query_block_data_mut<'a, Q, F>(&'a self, coords: ChunkBlockCoordinate, query: &'a mut Query<Q, F>) -> Option<QueryItem<'a, Q>>
+    pub fn query_block_data_mut<'a, Q, F>(
+        &'a self,
+        coords: ChunkBlockCoordinate,
+        query: &'a mut Query<Q, F>,
+        block_system_params: &mut BlockDataSystemParams,
+        structure_entity: Entity,
+    ) -> Option<QueryItem<'a, Q>>
     where
         F: QueryFilter,
         Q: QueryData,
     {
         let data_ent = self.block_data(coords)?;
 
-        query.get_mut(data_ent).ok()
+        match query.get_mut(data_ent) {
+            Ok(result) => {
+                block_system_params.ev_writer.send(BlockDataChangedEvent {
+                    block_data_entity: Some(data_ent),
+                    block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords),
+                    structure_entity,
+                });
+
+                Some(result)
+            }
+            Err(_) => None,
+        }
     }
 
     /// Removes this type of data from the block here. Returns the entity that stores this blocks data
