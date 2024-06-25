@@ -188,10 +188,11 @@ impl WireGraph {
         structure: &Structure,
         start_face: BlockFace,
         visited: &mut HashSet<BlockCoordinate>,
+        blocks: &Registry<Block>,
         logic_blocks: &Registry<LogicBlock>,
     ) -> Option<u32> {
-        let block_id = structure.block_id_at(coords);
-        let Some(logic_block) = logic_blocks.try_from_numeric_id(block_id) else {
+        let block = structure.block_at(coords, blocks);
+        let Some(logic_block) = logic_blocks.from_id(block.unlocalized_name()) else {
             // Not a logic block.
             return None;
         };
@@ -224,8 +225,10 @@ impl WireGraph {
                 continue;
             };
 
-            if let Some(group) = self.dfs_find_group(neighbor_coords, structure, face.inverse(), visited, &logic_blocks) {
-                return Some(group);
+            if !visited.contains(&neighbor_coords) {
+                if let Some(group) = self.dfs_find_group(neighbor_coords, structure, face.inverse(), visited, blocks, logic_blocks) {
+                    return Some(group);
+                }
             }
         }
         return None;
