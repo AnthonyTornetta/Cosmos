@@ -12,7 +12,7 @@ use bevy::prelude::{App, EventWriter, OnEnter, ResMut, States};
 use super::{Block, BlockProperty};
 
 /// Air's ID - this block will always exist
-pub static AIR_BLOCK_ID: u16 = 0;
+pub const AIR_BLOCK_ID: u16 = 0;
 
 fn add_cosmos_blocks(
     mut blocks: ResMut<Registry<Block>>,

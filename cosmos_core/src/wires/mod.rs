@@ -1,10 +1,12 @@
 use bevy::{
     app::{App, Update},
-    prelude::{in_state, Added, Deref, DerefMut, OnEnter, ResMut, States},
-    prelude::{Commands, Component, Entity, EventReader, IntoSystemConfigs, Query, Res, With, Without},
+    prelude::{
+        in_state, Added, Commands, Component, Deref, DerefMut, Entity, EventReader, IntoSystemConfigs, OnEnter, Query, Res, ResMut, States,
+        With, Without,
+    },
     reflect::Reflect,
     time::Time,
-    utils::HashSet,
+    utils::{HashMap, HashSet},
 };
 
 use crate::{
@@ -106,17 +108,25 @@ impl LogicBlock {
         }
     }
 
-    /// Returns a vector of all block faces with the specified port type - for example: input or output.
+    /// Returns an iterator over all block faces with any port.
+    pub fn faces<'a>(&'a self) -> impl Iterator<Item = BlockFace> + 'a {
+        self.ports
+            .iter()
+            .enumerate()
+            .filter(|(_, maybe_port)| maybe_port.is_some())
+            .map(|(idx, _)| BlockFace::from_index(idx))
+    }
+
+    /// Returns an iterator over all block faces with the specified port type - for example: input or output.
     pub fn faces_with<'a>(&'a self, port_type: PortType) -> impl Iterator<Item = BlockFace> + 'a {
         self.ports
             .iter()
             .enumerate()
-            .flat_map(|(idx, maybe_port)| maybe_port.map(|port| (BlockFace::from_index(idx), port)))
-            .filter(move |(_, port)| *port == port_type)
-            .map(|(x, _)| x)
+            .filter(move |(_, maybe_port)| **maybe_port == Some(port_type))
+            .map(|(idx, _)| BlockFace::from_index(idx))
     }
 
-    // Any block with 6 connections and no input/output is a wire.
+    /// Any block with 6 connections and no input/output is a wire.
     pub fn is_wire(&self) -> bool {
         self.faces_with(PortType::Wire).count() == 6
     }
@@ -142,7 +152,7 @@ impl Registry<LogicBlock> {
     }
 }
 
-#[derive(Debug, Default, Reflect)]
+#[derive(Debug, Default, Reflect, Hash, PartialEq, Eq, Clone)]
 struct LogicGroup {
     on: bool,
     recent_coords: BlockCoordinate,
@@ -157,32 +167,96 @@ impl LogicGroup {
 #[derive(Debug, Default, Reflect)]
 struct Port {
     coords: BlockCoordinate,
-    group: u32,
+    group_id: usize,
 }
 
 impl Port {
-    fn new(coords: BlockCoordinate, group: u32) -> Port {
-        Port { coords, group }
+    fn new(coords: BlockCoordinate, group: usize) -> Port {
+        Port { coords, group_id: group }
     }
 }
 
 #[derive(Debug, Default, Reflect, Component)]
 struct WireGraph {
-    groups: Vec<LogicGroup>,
-    producers: Vec<Port>,
-    consumers: Vec<Port>,
+    /// As new logic groups are created, this tracks which ID is the next available.
+    next_group_id: usize,
+    groups: HashMap<usize, LogicGroup>,
+    outputs: Vec<Port>,
+    inputs: Vec<Port>,
 }
 
 impl WireGraph {
-    fn add_group(&mut self, on: bool, coords: BlockCoordinate) {
-        self.groups.push(LogicGroup::new(on, coords));
+    fn add_group(&mut self, id: usize, on: bool, coords: BlockCoordinate) {
+        self.groups.insert(id, LogicGroup::new(on, coords));
     }
 
     fn remove_group(&mut self) {}
 
-    fn merge_adjacent_groups(&self, coords: BlockCoordinate, structure: &Structure) {}
+    fn merge_adjacent_groups(
+        &mut self,
+        coords: BlockCoordinate,
+        structure: &Structure,
+        blocks: &Registry<Block>,
+        logic_blocks: &Registry<LogicBlock>,
+    ) {
+        let block = structure.block_at(coords, blocks);
+        let Some(logic_block) = logic_blocks.from_id(block.unlocalized_name()) else {
+            // Not a logic block.
+            return;
+        };
 
-    fn dfs_find_group(
+        // Get all adjacent group ID numbers.
+        let mut group_ids: HashSet<usize> = HashSet::new();
+        for face in logic_block.faces_with(PortType::Wire) {
+            let mut visited: HashSet<BlockCoordinate> = HashSet::new();
+            let Ok(neighbor_coords) = coords.step(face) else {
+                continue;
+            };
+
+            if let Some(group_id) = self.find_group(neighbor_coords, structure, face.inverse(), &mut visited, blocks, logic_blocks) {
+                group_ids.insert(group_id);
+            }
+        }
+
+        let mut new_group_on = false;
+
+        if !group_ids.is_empty() {
+            // Rewrite all inputs and outputs of adjacent groups to use the new ID number.
+            for output in self.outputs.iter_mut() {
+                if group_ids.contains(&output.group_id) {
+                    output.group_id = self.next_group_id;
+                }
+            }
+
+            for input in self.inputs.iter_mut() {
+                if group_ids.contains(&input.group_id) {
+                    input.group_id = self.next_group_id;
+                }
+            }
+
+            // The new group is on if any of its neighbors were.
+            new_group_on = group_ids.iter().fold(false, |or, group_id| or || self.groups[group_id].on);
+
+            // Remove the old groups.
+            for group_id in group_ids {
+                self.groups.remove(&group_id);
+            }
+        }
+
+        // Creating the new group. The most recent block added is the current block.
+        self.groups.insert(
+            self.next_group_id,
+            LogicGroup {
+                on: new_group_on,
+                recent_coords: coords,
+            },
+        );
+
+        // Necessary to make sure future groups get a unique ID.
+        self.next_group_id += 1;
+    }
+
+    fn find_group(
         &self,
         coords: BlockCoordinate,
         structure: &Structure,
@@ -190,7 +264,7 @@ impl WireGraph {
         visited: &mut HashSet<BlockCoordinate>,
         blocks: &Registry<Block>,
         logic_blocks: &Registry<LogicBlock>,
-    ) -> Option<u32> {
+    ) -> Option<usize> {
         let block = structure.block_at(coords, blocks);
         let Some(logic_block) = logic_blocks.from_id(block.unlocalized_name()) else {
             // Not a logic block.
@@ -199,22 +273,26 @@ impl WireGraph {
 
         // Input port found, return the group the port is part of.
         if logic_block.faces_with(PortType::Input).any(|face| face == start_face) {
-            if let Some(port) = self.consumers.iter().find(|gate| gate.coords == coords) {
-                return Some(port.group);
+            if let Some(port) = self.inputs.iter().find(|gate| gate.coords == coords) {
+                return Some(port.group_id);
             }
         }
 
         // Output gate found, retrun the group the port is part of.
         if logic_block.faces_with(PortType::Output).any(|face| face == start_face) {
-            if let Some(port) = self.producers.iter().find(|gate| gate.coords == coords) {
-                return Some(port.group);
+            if let Some(port) = self.outputs.iter().find(|gate| gate.coords == coords) {
+                return Some(port.group_id);
             }
         }
 
         // Most recent wire in the logic group found, return its group.
         if logic_block.is_wire() {
-            if let Some(group) = self.groups.iter().position(|group| group.recent_coords == coords) {
-                return Some(group as u32);
+            if let Some(&id) = self
+                .groups
+                .iter()
+                .find_map(|(id, group)| if group.recent_coords == coords { Some(id) } else { None })
+            {
+                return Some(id);
             }
         }
 
@@ -226,7 +304,7 @@ impl WireGraph {
             };
 
             if !visited.contains(&neighbor_coords) {
-                if let Some(group) = self.dfs_find_group(neighbor_coords, structure, face.inverse(), visited, blocks, logic_blocks) {
+                if let Some(group) = self.find_group(neighbor_coords, structure, face.inverse(), visited, blocks, logic_blocks) {
                     return Some(group);
                 }
             }
