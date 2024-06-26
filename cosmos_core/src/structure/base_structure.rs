@@ -1,5 +1,7 @@
 //! Internally used common logic between dynamic + full structures.
 
+use std::{cell::RefCell, rc::Rc};
+
 use bevy::{
     ecs::{
         component::Component,
@@ -26,6 +28,7 @@ use super::{
         BlockCoordinate, ChunkBlockCoordinate, ChunkCoordinate, Coordinate, CoordinateType, UnboundBlockCoordinate, UnboundChunkCoordinate,
         UnboundCoordinateType,
     },
+    query::MutBlockData,
     structure_block::StructureBlock,
     structure_iterator::{BlockIterator, ChunkIterator},
     BlockDataSystemParams, Structure,
@@ -643,12 +646,12 @@ impl BaseStructure {
     }
 
     /// Queries this block's data mutibly. Returns `None` if the requested query failed or if no block data exists for this block.
-    pub fn query_block_data_mut<'a, Q, F>(
-        &'a self,
+    pub fn query_block_data_mut<'q, 'w, 's, Q, F>(
+        &'q self,
         coords: BlockCoordinate,
-        query: &'a mut Query<Q, F>,
-        block_system_params: &mut BlockDataSystemParams,
-    ) -> Option<QueryItem<'a, Q>>
+        query: &'q mut Query<Q, F>,
+        block_system_params: Rc<RefCell<BlockDataSystemParams<'w, 's>>>,
+    ) -> Option<MutBlockData<'q, 'w, 's, Q>>
     where
         F: QueryFilter,
         Q: QueryData,

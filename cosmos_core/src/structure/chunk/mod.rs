@@ -2,11 +2,14 @@
 //!
 //! These blocks can be updated.
 
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use bevy::ecs::query::{QueryData, QueryFilter, QueryItem, ROQueryItem, With};
 use bevy::ecs::system::{Commands, Query};
 use bevy::hierarchy::{BuildChildren, DespawnRecursiveExt};
 use bevy::log::{error, info};
-use bevy::prelude::{App, Component, Entity, Event, Vec3};
+use bevy::prelude::{App, Component, Entity, Event, Mut, Vec3};
 use bevy::reflect::Reflect;
 use bevy::utils::HashMap;
 use serde::{Deserialize, Serialize};
@@ -21,6 +24,7 @@ use crate::registry::Registry;
 use super::block_health::BlockHealth;
 use super::block_storage::{BlockStorage, BlockStorer};
 use super::coordinates::{ChunkBlockCoordinate, ChunkCoordinate, CoordinateType, UnboundCoordinateType};
+use super::query::MutBlockData;
 use super::structure_block::StructureBlock;
 
 pub mod netty;
@@ -422,13 +426,13 @@ impl Chunk {
     }
 
     /// Queries this block's data mutibly. Returns `None` if the requested query failed or if no block data exists for this block.
-    pub fn query_block_data_mut<'a, Q, F>(
-        &'a self,
+    pub fn query_block_data_mut<'q, 'w, 's, Q, F>(
+        &'q self,
         coords: ChunkBlockCoordinate,
-        query: &'a mut Query<Q, F>,
-        block_system_params: &mut BlockDataSystemParams,
+        query: &'q mut Query<Q, F>,
+        block_system_params: Rc<RefCell<BlockDataSystemParams<'w, 's>>>,
         structure_entity: Entity,
-    ) -> Option<QueryItem<'a, Q>>
+    ) -> Option<MutBlockData<'q, 'w, 's, Q>>
     where
         F: QueryFilter,
         Q: QueryData,
@@ -437,13 +441,21 @@ impl Chunk {
 
         match query.get_mut(data_ent) {
             Ok(result) => {
-                block_system_params.ev_writer.send(BlockDataChangedEvent {
-                    block_data_entity: Some(data_ent),
-                    block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords),
-                    structure_entity,
-                });
+                // block_system_params.ev_writer.send(BlockDataChangedEvent {
+                //     block_data_entity: Some(data_ent),
+                //     block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords),
+                //     structure_entity,
+                // });
 
-                Some(result)
+                let mut_block_data = MutBlockData::new(
+                    result,
+                    block_system_params.clone(),
+                    StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords),
+                    structure_entity,
+                    data_ent,
+                );
+
+                Some(mut_block_data)
             }
             Err(_) => None,
         }

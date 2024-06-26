@@ -1,5 +1,7 @@
 //! Ensures connected tanks properly distribute their fluid quantities
 
+use std::{cell::RefCell, rc::Rc};
+
 use bevy::{
     app::{App, Update},
     log::warn,
@@ -13,7 +15,7 @@ use cosmos_core::{
     fluid::data::{BlockFluidData, FluidTankBlock, StoredFluidData},
     registry::{identifiable::Identifiable, Registry},
     structure::{
-        coordinates::{BlockCoordinate, UnboundCoordinateType},
+        coordinates::{BlockCoordinate, CoordinateType, UnboundCoordinateType},
         Structure,
     },
 };
@@ -30,7 +32,7 @@ fn balance_tanks(
     // cached_tanks: &mut HashMap<BlockCoordinate, BlockFluidData>,
     done_tanks: &mut HashSet<BlockCoordinate>,
     q_tank_group: &Query<&TankGroup>,
-    bd_params: &mut BlockDataSystemParams,
+    bd_params: Rc<RefCell<BlockDataSystemParams>>,
 ) {
     let Some(origin_stored) = structure.query_block_data(origin, q_stored_fluids).copied() else {
         warn!("Called balance_tanks for block that has no fluid data.");
@@ -157,11 +159,9 @@ fn balance_tanks(
         }
     }
 
-    println!("{levels:?}");
-
     let mut fluid_left = total_fluid;
 
-    for (_, coords) in levels {
+    for (_, mut coords) in levels {
         let n_tanks = coords.len() as u32;
         let fluid_per_tank = (fluid_left / n_tanks).min(max_fluid_storable);
         let mut overflow = if fluid_per_tank == max_fluid_storable {
@@ -170,9 +170,14 @@ fn balance_tanks(
             fluid_left - n_tanks * fluid_per_tank
         };
 
-        println!("fluid per tank: {fluid_per_tank}");
+        // By ensuring the ordering of tanks is always the same, micro amounts of fluid won't be "swished" around,
+        // causing tons of change detection for no reason and causing super-lag.
+        coords.sort_by(|a, b| {
+            let a = a.x as u128 + (a.z as u128) << CoordinateType::BITS;
+            let b = b.x as u128 + (b.z as u128) << CoordinateType::BITS;
 
-        // fill tanks
+            a.partial_cmp(&b).expect("comparing u128s will never fail")
+        });
 
         for tank_coord in coords {
             done_tanks.insert(tank_coord);
@@ -198,12 +203,12 @@ fn balance_tanks(
             };
 
             let mut data_here = structure
-                .query_block_data_mut(tank_coord, q_stored_fluids, bd_params)
+                .query_block_data_mut(tank_coord, q_stored_fluids, bd_params.clone())
                 .expect("To get here, this tank had to have had fluid data.");
 
-            if *data_here != new_block_fluid_data {
+            if **data_here != new_block_fluid_data {
                 // Don't trigger unneccesary change detection
-                *data_here = new_block_fluid_data;
+                **data_here = new_block_fluid_data;
             }
         }
 
@@ -297,15 +302,21 @@ fn call_balance_tanks(
     fluid_tank_blocks: Res<Registry<FluidTankBlock>>,
     q_tank_group: Query<&TankGroup>,
     q_tank_group_ptr: Query<&TankGroupPointer>,
-    mut bd_params: BlockDataSystemParams,
+    bd_params: BlockDataSystemParams,
     mut to_balance: ResMut<TanksToBalance>,
 ) {
+    if to_balance.0.is_empty() {
+        return;
+    }
+
     let Some(tank_block) = blocks.from_id("cosmos:tank") else {
         return;
     };
     let Some(tank_fluid_block) = fluid_tank_blocks.from_id("cosmos:tank") else {
         return;
     };
+
+    let bd_params = Rc::new(RefCell::new(bd_params));
 
     for (s_ent, events) in std::mem::take(&mut to_balance.0) {
         let Ok(structure) = q_structure.get(s_ent) else {
@@ -329,7 +340,7 @@ fn call_balance_tanks(
                 &q_tank_group_ptr,
                 &mut done_tanks,
                 &q_tank_group,
-                &mut bd_params,
+                bd_params.clone(),
             );
         }
     }
@@ -340,7 +351,7 @@ pub(super) fn register(app: &mut App) {
         Update,
         (on_add_tank, listen_for_changed_fluid_data, call_balance_tanks)
             .chain()
-            .in_set(BlockEventsSet::ProcessEvents),
+            .in_set(BlockEventsSet::ProcessEventsPostPlacement),
     )
     .init_resource::<TanksToBalance>();
 }

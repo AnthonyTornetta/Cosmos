@@ -31,7 +31,7 @@ pub struct BlockChangedEvent {
     pub new_block_rotation: BlockRotation,
 }
 
-#[derive(Event, Debug)]
+#[derive(Event, Debug, Clone)]
 /// Whenever a block's data is changed, this event will be sent.
 ///
 /// Assuming you use `structure.insert_block_data` or `structure.remove_block_data`, this event will automatically be sent.

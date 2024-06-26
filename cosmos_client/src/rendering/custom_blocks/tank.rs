@@ -105,18 +105,12 @@ fn on_render_tanks(
             }
 
             let Some(&BlockFluidData::Fluid(data)) = structure.query_block_data(block.coords(), &q_stored_fluid) else {
-                warn!("{:?}", structure.query_block_data(block.coords(), &q_stored_fluid));
-                warn!("{:?}", structure.block_data(block.coords()));
-                warn!("No fluid!");
                 continue;
             };
 
             if data.fluid_stored == 0 {
-                warn!("Fluid stored is 0.");
                 continue;
             }
-
-            println!("Do special rendering for: {data:?}");
 
             let fluid = fluids.from_numeric_id(data.fluid_id);
             let Some(fluid_block) = blocks.from_id(fluid.unlocalized_name()) else {

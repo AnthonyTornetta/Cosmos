@@ -2,8 +2,10 @@
 //!
 //! Structures are the backbone of everything that contains blocks.
 
+use std::cell::RefCell;
 use std::fmt::Display;
 use std::ops::DerefMut;
+use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
 use bevy::app::Update;
@@ -13,6 +15,7 @@ use bevy::reflect::Reflect;
 use bevy::transform::TransformBundle;
 use bevy::utils::{HashMap, HashSet};
 use bevy_rapier3d::prelude::PhysicsWorld;
+use query::MutBlockData;
 
 pub mod asteroid;
 pub mod base_structure;
@@ -27,6 +30,7 @@ pub mod loading;
 pub mod lod;
 pub mod lod_chunk;
 pub mod planet;
+pub mod query;
 pub mod shared;
 pub mod shields;
 pub mod ship;
@@ -569,12 +573,12 @@ impl Structure {
     }
 
     /// Queries this block's data mutibly. Returns `None` if the requested query failed or if no block data exists for this block.
-    pub fn query_block_data_mut<'a, Q, F>(
-        &'a self,
+    pub fn query_block_data_mut<'q, 'w, 's, Q, F>(
+        &'q self,
         coords: BlockCoordinate,
-        query: &'a mut Query<Q, F>,
-        block_system_params: &mut BlockDataSystemParams,
-    ) -> Option<QueryItem<'a, Q>>
+        query: &'q mut Query<Q, F>,
+        block_system_params: Rc<RefCell<BlockDataSystemParams<'w, 's>>>,
+    ) -> Option<MutBlockData<'q, 'w, 's, Q>>
     where
         F: QueryFilter,
         Q: QueryData,

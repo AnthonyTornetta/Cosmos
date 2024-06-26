@@ -407,12 +407,17 @@ fn handle_block_place_events(
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 /// The event set used for processing block events
 pub enum BlockEventsSet {
-    /// All block event processing happens here
+    /// All block events processing happens here - during this set the block is NOT guarenteed to be placed yet or have its data created
     ProcessEvents,
+    /// If your event processing relies on the block being placed, run it in this set
+    ProcessEventsPostPlacement,
 }
 
 pub(super) fn register(app: &mut App) {
-    app.configure_sets(Update, BlockEventsSet::ProcessEvents);
+    app.configure_sets(
+        Update,
+        (BlockEventsSet::ProcessEvents, BlockEventsSet::ProcessEventsPostPlacement).chain(),
+    );
 
     app.add_event::<BlockBreakEvent>()
         .add_event::<BlockPlaceEvent>()
