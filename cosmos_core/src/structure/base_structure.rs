@@ -5,7 +5,7 @@ use std::{cell::RefCell, rc::Rc};
 use bevy::{
     ecs::{
         component::Component,
-        query::{QueryData, QueryFilter, QueryItem, ROQueryItem, With},
+        query::{QueryData, QueryFilter, ROQueryItem, With},
         system::{Commands, Query},
     },
     prelude::{Entity, EventWriter, GlobalTransform, Vec3},

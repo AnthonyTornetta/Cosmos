@@ -8,7 +8,6 @@ use crate::{
     item::Item,
     netty::sync::{sync_component, IdentifiableComponent, SyncableComponent},
     registry::{create_registry, identifiable::Identifiable},
-    structure::coordinates::BlockCoordinate,
 };
 
 #[derive(Clone, Copy, Serialize, Deserialize, Reflect, PartialEq, Eq, Debug)]
@@ -24,6 +23,7 @@ pub struct StoredFluidData {
 /// The fluid stored by this block
 pub enum BlockFluidData {
     #[default]
+    /// No fluid is being stored, and there is no fluid type associated with it
     NoFluid,
     /// This can represent 0 fluid, if it is a part of a greater tank structure that contains fluid.
     Fluid(StoredFluidData),

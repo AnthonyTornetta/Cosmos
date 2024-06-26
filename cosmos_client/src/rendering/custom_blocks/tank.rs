@@ -136,7 +136,7 @@ fn on_render_tanks(
 
             let mesh_builder = material_meshes.entry(mat_id).or_default();
 
-            for (og_face, face) in ALL_BLOCK_FACES.iter().map(|face| (*face, block_rotation.rotate_face(*face))) {
+            for (_, face) in ALL_BLOCK_FACES.iter().map(|face| (*face, block_rotation.rotate_face(*face))) {
                 let Some(mut mesh_info) = block_mesh_info
                     .info_for_face(face, false)
                     .map(Some)

@@ -9,7 +9,7 @@ use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
 use bevy::app::Update;
-use bevy::ecs::query::{QueryData, QueryFilter, QueryItem, ROQueryItem, With};
+use bevy::ecs::query::{QueryData, QueryFilter, ROQueryItem, With};
 use bevy::prelude::{App, Event, IntoSystemConfigs, Name, PreUpdate, VisibilityBundle};
 use bevy::reflect::Reflect;
 use bevy::transform::TransformBundle;

@@ -20,18 +20,14 @@ use cosmos_core::{
     },
 };
 
-use super::{TankGroup, TankGroupPointer};
-
 fn balance_tanks(
     structure: &Structure,
     max_fluid_storable: u32,
     tank_block_id: u16,
     origin: BlockCoordinate,
     q_stored_fluids: &mut Query<&mut BlockFluidData>,
-    q_tank_group_ptr: &Query<&TankGroupPointer>,
     // cached_tanks: &mut HashMap<BlockCoordinate, BlockFluidData>,
     done_tanks: &mut HashSet<BlockCoordinate>,
-    q_tank_group: &Query<&TankGroup>,
     bd_params: Rc<RefCell<BlockDataSystemParams>>,
 ) {
     let Some(origin_stored) = structure.query_block_data(origin, q_stored_fluids).copied() else {
@@ -41,22 +37,9 @@ fn balance_tanks(
 
     let tank_rotation = structure.block_rotation(origin);
 
-    let mut tank_group_pointers = vec![];
-    let tank_group_pointer = structure.query_block_data(origin, q_tank_group_ptr);
-
-    if let Some(&tank_group_pointer) = tank_group_pointer {
-        tank_group_pointers.push(tank_group_pointer);
-    }
-
     let mut checking_fluid_id = match origin_stored {
         BlockFluidData::Fluid(sf) => Some(sf.fluid_id),
-        BlockFluidData::NoFluid => {
-            if let Some(&tank_group_pointer) = tank_group_pointer {
-                q_tank_group.get(tank_group_pointer.0).map(|x| x.0.fluid_id).ok()
-            } else {
-                None
-            }
-        }
+        BlockFluidData::NoFluid => None,
     };
 
     let mut checking: HashSet<BlockCoordinate> = HashSet::default();
@@ -88,12 +71,6 @@ fn balance_tanks(
                 }
 
                 total_fluid += sf.fluid_stored;
-            }
-
-            if let Some(ptr_ent) = structure.query_block_data(coord, q_tank_group_ptr) {
-                if !tank_group_pointers.contains(ptr_ent) {
-                    tank_group_pointers.push(*ptr_ent);
-                }
             }
 
             let right = coord.right();
@@ -300,8 +277,6 @@ fn call_balance_tanks(
     mut q_stored_fluids: Query<&mut BlockFluidData>,
     q_structure: Query<&Structure>,
     fluid_tank_blocks: Res<Registry<FluidTankBlock>>,
-    q_tank_group: Query<&TankGroup>,
-    q_tank_group_ptr: Query<&TankGroupPointer>,
     bd_params: BlockDataSystemParams,
     mut to_balance: ResMut<TanksToBalance>,
 ) {
@@ -337,9 +312,7 @@ fn call_balance_tanks(
                 tank_block.id(),
                 coord,
                 &mut q_stored_fluids,
-                &q_tank_group_ptr,
                 &mut done_tanks,
-                &q_tank_group,
                 bd_params.clone(),
             );
         }

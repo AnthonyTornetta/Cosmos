@@ -5,11 +5,11 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use bevy::ecs::query::{QueryData, QueryFilter, QueryItem, ROQueryItem, With};
+use bevy::ecs::query::{QueryData, QueryFilter, ROQueryItem, With};
 use bevy::ecs::system::{Commands, Query};
 use bevy::hierarchy::{BuildChildren, DespawnRecursiveExt};
 use bevy::log::{error, info};
-use bevy::prelude::{App, Component, Entity, Event, Mut, Vec3};
+use bevy::prelude::{App, Component, Entity, Event, Vec3};
 use bevy::reflect::Reflect;
 use bevy::utils::HashMap;
 use serde::{Deserialize, Serialize};

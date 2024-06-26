@@ -1,12 +1,13 @@
+//! Server fluid logic
+
 use bevy::{
     app::{App, Update},
-    prelude::{Component, Entity, EventReader, IntoSystemConfigs, Query, With},
-    reflect::Reflect,
+    prelude::{EventReader, IntoSystemConfigs, Query, With},
 };
 use cosmos_core::{
     block::{block_events::BlockEventsSet, data::BlockData},
     events::block_events::{BlockChangedEvent, BlockDataSystemParams},
-    fluid::data::{BlockFluidData, FluidItemData, FluidTankBlock, StoredFluidData},
+    fluid::data::{BlockFluidData, FluidItemData, FluidTankBlock},
     structure::Structure,
 };
 
@@ -21,12 +22,6 @@ mod tank;
 
 impl PersistentComponent for BlockFluidData {}
 impl PersistentComponent for FluidItemData {}
-
-#[derive(Component, Clone, Copy, Reflect, PartialEq, Eq, Debug)]
-pub struct TankGroup(pub StoredFluidData);
-
-#[derive(Component, Clone, Copy, Reflect, PartialEq, Eq, Debug)]
-pub struct TankGroupPointer(pub Entity);
 
 fn on_place_tank(
     mut evr_changed_block: EventReader<BlockChangedEvent>,
