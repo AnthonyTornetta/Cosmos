@@ -18,10 +18,10 @@ use bevy::{
     utils::HashMap,
 };
 use cosmos_core::{
-    block::{Block, ALL_BLOCK_FACES},
+    block::{Block, BlockFace, ALL_BLOCK_FACES},
     ecs::NeedsDespawned,
     fluid::{
-        data::{BlockFluidData, FluidTankBlock},
+        data::{BlockFluidData, FluidTankBlock, StoredFluidData},
         registry::Fluid,
     },
     registry::{identifiable::Identifiable, many_to_one::ManyToOneRegistry, Registry},
@@ -136,7 +136,20 @@ fn on_render_tanks(
 
             let mesh_builder = material_meshes.entry(mat_id).or_default();
 
-            for (_, face) in ALL_BLOCK_FACES.iter().map(|face| (*face, block_rotation.rotate_face(*face))) {
+            let faces = ALL_BLOCK_FACES.iter().copied().filter(|face| {
+                if let Ok(new_coord) = BlockCoordinate::try_from(block.coords() + face.direction_coordinates()) {
+                    if structure.block_id_at(new_coord) == tank_id {
+                        return match structure.query_block_data(new_coord, &q_stored_fluid) {
+                            Some(BlockFluidData::Fluid(sf)) => sf.fluid_stored == 0,
+                            _ => true,
+                        };
+                    }
+                }
+
+                true
+            });
+
+            for (_, face) in faces.map(|face| (face, block_rotation.rotate_face(face))) {
                 let Some(mut mesh_info) = block_mesh_info
                     .info_for_face(face, false)
                     .map(Some)
@@ -166,9 +179,18 @@ fn on_render_tanks(
                     continue;
                 };
 
-                let uvs = Rect::new(0.0, 0.0, 1.0, 1.0);
-
                 let y_scale = data.fluid_stored as f32 / tank_block_entry.max_capacity() as f32;
+
+                let uvs = Rect::new(
+                    0.0,
+                    0.0,
+                    1.0,
+                    if face != BlockFace::Top && face != BlockFace::Bottom {
+                        y_scale
+                    } else {
+                        1.0
+                    },
+                );
 
                 mesh_info.scale(Vec3::new(1.0, y_scale, 1.0));
 
@@ -191,42 +213,42 @@ fn on_render_tanks(
                 let mut x_offset = 0.0;
                 if structure.block_id_at(structure_coords + BlockCoordinate::new(1, 0, 0)) != tank_id {
                     x_offset -= GAP;
-                    scale_x -= GAP / 2.0;
+                    scale_x -= GAP;
                 }
                 if BlockCoordinate::try_from(structure_coords - BlockCoordinate::new(1, 0, 0))
                     .map(|c| structure.block_id_at(c) != tank_id)
                     .unwrap_or(true)
                 {
                     x_offset += GAP;
-                    scale_x -= GAP / 2.0;
+                    scale_x -= GAP;
                 }
 
                 let mut scale_y = 1.0;
                 let mut y_offset = 0.0;
                 if structure.block_id_at(structure_coords + BlockCoordinate::new(0, 1, 0)) != tank_id {
                     y_offset -= GAP;
-                    scale_y -= GAP / 2.0;
+                    scale_y -= GAP;
                 }
                 if BlockCoordinate::try_from(structure_coords - BlockCoordinate::new(0, 1, 0))
                     .map(|c| structure.block_id_at(c) != tank_id)
                     .unwrap_or(true)
                 {
                     y_offset += GAP;
-                    scale_y -= GAP / 2.0;
+                    scale_y -= GAP;
                 }
 
                 let mut scale_z = 1.0;
                 let mut z_offset = 0.0;
                 if structure.block_id_at(structure_coords + BlockCoordinate::new(0, 0, 1)) != tank_id {
                     z_offset -= GAP;
-                    scale_z -= GAP / 2.0;
+                    scale_z -= GAP;
                 }
                 if BlockCoordinate::try_from(structure_coords - BlockCoordinate::new(0, 0, 1))
                     .map(|c| structure.block_id_at(c) != tank_id)
                     .unwrap_or(true)
                 {
                     z_offset += GAP;
-                    scale_z -= GAP / 2.0;
+                    scale_z -= GAP;
                 }
 
                 mesh_info.scale(Vec3::new(scale_x, scale_y, scale_z));
