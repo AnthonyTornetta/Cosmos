@@ -360,7 +360,10 @@ impl WireGraph {
             let group_id = self
                 .find_group_all_faces(logic_block, coords, structure, &mut HashSet::new(), blocks, logic_blocks)
                 .expect("Block with 'wire' logic connection should have a logic group.");
-            self.groups.remove(&group_id);
+            let removed_group = self
+                .groups
+                .remove(&group_id)
+                .expect("Logic group ID found in logic graph should have an entry in the groups set.");
 
             // Setting new group IDs.
             let mut visited = Port::all_for(coords);
@@ -369,7 +372,20 @@ impl WireGraph {
                 let Ok(neighbor_coords) = coords.step(local_face) else {
                     continue;
                 };
-                self.rename_group(neighbor_coords, local_face.inverse(), structure, &mut visited, blocks, logic_blocks);
+                // For now, takes a new ID for every call, even though some (like air blocks or already visited wires) don't need it.
+                let id = self.new_group_id();
+                let (add_new_group, maybe_wire_coords) = self.rename_group(
+                    id,
+                    neighbor_coords,
+                    local_face.inverse(),
+                    structure,
+                    &mut visited,
+                    blocks,
+                    logic_blocks,
+                );
+                if add_new_group {
+                    self.groups.insert(id, LogicGroup::new(removed_group.on, maybe_wire_coords));
+                }
             }
         }
     }
@@ -471,32 +487,38 @@ impl WireGraph {
         None
     }
 
+    /// Explores a logic group using DFS, renaming any ports encountered with a new group ID.
+    /// Returns the coordinates of the first wire connection block encountered (if it exists) so it can be added to the new group.
     fn rename_group(
         &mut self,
+        new_group_id: usize,
         coords: BlockCoordinate,
         encountered_local_face: BlockFace,
         structure: &Structure,
         visited: &mut HashSet<Port>,
         blocks: &Registry<Block>,
         logic_blocks: &Registry<LogicBlock>,
-    ) {
-        // Renaming on this portion already completed.
+    ) -> (bool, Option<BlockCoordinate>) {
         if visited.contains(&Port::new(coords, encountered_local_face)) {
-            return;
+            // Renaming on this portion already completed.
+            return (false, None);
         }
         let block = structure.block_at(coords, blocks);
         let Some(logic_block) = logic_blocks.from_id(block.unlocalized_name()) else {
             // Not a logic block.
-            return;
+            return (false, None);
         };
-
-        // Because it has not yet been visited, the current connected group must still need a new ID.
-        let new_group_id = self.new_group_id();
 
         let encountered_face = structure.block_rotation(coords).local_to_global(encountered_local_face);
         match logic_block.connection_on(encountered_face) {
-            Some(LogicConnection::Port(PortType::Input)) => self.consumers.insert(Port::new(coords, encountered_local_face), new_group_id),
-            Some(LogicConnection::Port(PortType::Output)) => self.producers.insert(Port::new(coords, encountered_local_face), new_group_id),
+            Some(LogicConnection::Port(port_type)) => {
+                match port_type {
+                    PortType::Input => &mut self.consumers,
+                    PortType::Output => &mut self.producers,
+                }
+                .insert(Port::new(coords, encountered_local_face), new_group_id);
+                (true, None)
+            }
             Some(LogicConnection::Wire) => {
                 // Recurse to continue marking the ports reachable from this wire.
                 visited.insert(Port::new(coords, encountered_local_face));
@@ -509,12 +531,21 @@ impl WireGraph {
                     if visited.contains(&Port::new(neighbor_coords, local_face.inverse())) {
                         continue;
                     }
-                    self.rename_group(neighbor_coords, local_face.inverse(), structure, visited, blocks, logic_blocks)
+                    self.rename_group(
+                        new_group_id,
+                        neighbor_coords,
+                        local_face.inverse(),
+                        structure,
+                        visited,
+                        blocks,
+                        logic_blocks,
+                    );
                 }
-                None
+                // The first wire coords are always returned, because the only recursive call is in this arm, and its return value is not used.
+                (true, Some(coords))
             }
-            None => return,
-        };
+            None => (false, None),
+        }
     }
 }
 
