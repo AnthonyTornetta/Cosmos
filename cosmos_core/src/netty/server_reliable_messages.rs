@@ -97,7 +97,7 @@ pub enum ServerReliableMessages {
         /// The chunk's block data in serialized form
         serialized_block_data: Option<SerializedChunkBlockData>,
         /// The chunk's block entities that need to be requested from the server
-        block_entities: HashMap<ChunkBlockCoordinate, Entity>,
+        block_entities: HashMap<(u16, ChunkBlockCoordinate), Entity>,
     },
     /// This represents the data for an empty chunk.
     EmptyChunk {

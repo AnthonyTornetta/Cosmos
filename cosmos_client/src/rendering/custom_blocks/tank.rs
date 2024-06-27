@@ -21,7 +21,7 @@ use cosmos_core::{
     block::{Block, BlockFace, ALL_BLOCK_FACES},
     ecs::NeedsDespawned,
     fluid::{
-        data::{BlockFluidData, FluidTankBlock, StoredFluidData},
+        data::{BlockFluidData, FluidTankBlock},
         registry::Fluid,
     },
     registry::{identifiable::Identifiable, many_to_one::ManyToOneRegistry, Registry},

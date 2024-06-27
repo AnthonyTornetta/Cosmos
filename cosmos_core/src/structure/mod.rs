@@ -535,6 +535,23 @@ impl Structure {
         }
     }
 
+    /// Gets or creates the block data entity for the block here.
+    ///
+    /// Returns None if the chunk is not loaded here.
+    ///
+    /// Used exclusively for syncing from server -> client.
+    pub fn get_or_create_block_data_for_block_id(
+        &mut self,
+        coords: BlockCoordinate,
+        block_id: u16,
+        commands: &mut Commands,
+    ) -> Option<Entity> {
+        match self {
+            Self::Full(fs) => fs.get_or_create_block_data_for_block_id(coords, block_id, commands),
+            Self::Dynamic(ds) => ds.get_or_create_block_data_for_block_id(coords, block_id, commands),
+        }
+    }
+
     /// Returns `None` if the chunk is unloaded.
     ///
     /// Inserts data into the block here. This differs from the

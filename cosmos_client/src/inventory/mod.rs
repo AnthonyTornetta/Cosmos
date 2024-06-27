@@ -32,6 +32,7 @@ fn get_server_inventory_identifier(entity: Entity, mapping: &NetworkMapping, q_b
             structure_entity: mapping
                 .server_from_client(&block_data.identifier.structure_entity)
                 .expect("Unable to map inventory to server inventory"),
+            block_id: block_data.identifier.block_id,
         })
     } else {
         InventoryIdentifier::Entity(

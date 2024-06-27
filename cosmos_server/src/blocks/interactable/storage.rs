@@ -48,6 +48,7 @@ fn handle_block_event(
                     owner: InventoryIdentifier::BlockData(BlockDataIdentifier {
                         block: s_block.structure_block,
                         structure_entity: s_block.structure_entity,
+                        block_id,
                     }),
                 }),
             );

@@ -18,7 +18,7 @@ use bevy::ecs::removal_detection::RemovedComponents;
 use bevy::ecs::schedule::common_conditions::resource_exists;
 use bevy::ecs::schedule::{IntoSystemConfigs, IntoSystemSetConfigs};
 use bevy::ecs::system::Commands;
-use bevy::log::{info, warn};
+use bevy::log::warn;
 use bevy::{
     app::{App, Startup, Update},
     ecs::{
@@ -191,7 +191,6 @@ fn server_send_component<T: SyncableComponent>(
                     server_data_entity: entity,
                 }
             } else if let Some(block_data) = block_data {
-                info!("Syncing changed block data -- {:?}", block_data.identifier);
                 ComponentEntityIdentifier::BlockData {
                     identifier: block_data.identifier,
                     server_data_entity: entity,
@@ -250,7 +249,6 @@ fn server_sync_removed_components<T: SyncableComponent>(
                 server_data_entity: removed_ent,
             }
         } else {
-            info!("Syncing removed component from entity -- {removed_ent:?}");
             ComponentEntityIdentifier::Entity(removed_ent)
         };
 

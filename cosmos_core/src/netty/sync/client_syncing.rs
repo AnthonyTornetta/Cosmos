@@ -25,7 +25,7 @@ use bevy::ecs::removal_detection::RemovedComponents;
 use bevy::ecs::schedule::common_conditions::resource_exists;
 use bevy::ecs::schedule::{IntoSystemConfigs, IntoSystemSetConfigs};
 use bevy::ecs::system::{Commands, Resource};
-use bevy::log::{info, warn};
+use bevy::log::warn;
 use bevy::{
     app::{App, Startup, Update},
     ecs::{
@@ -493,7 +493,11 @@ fn get_entity_identifier_info(
                         .client_from_server(&identifier.structure_entity)
                         .and_then(|structure_entity| {
                             let mut structure = q_structure.get_mut(structure_entity).ok()?;
-                            let data_entity = structure.get_or_create_block_data(identifier.block.coords(), commands)?;
+                            let data_entity = structure.get_or_create_block_data_for_block_id(
+                                identifier.block.coords(),
+                                identifier.block_id,
+                                commands,
+                            )?;
 
                             network_mapping.add_mapping(data_entity, server_data_entity);
 
@@ -524,8 +528,9 @@ fn get_entity_identifier_info(
                         let mut structure = q_structure.get_mut(structure_entity).ok()?;
 
                         let coords = identifier.block.coords();
+                        let block_id = identifier.block_id;
 
-                        let mut data_entity = structure.get_or_create_block_data(coords, commands)?;
+                        let mut data_entity = structure.get_or_create_block_data_for_block_id(coords, block_id, commands)?;
 
                         if network_mapping
                             .server_from_client(&data_entity)
@@ -537,12 +542,9 @@ fn get_entity_identifier_info(
                             // happens before sending the command to despawn the old data entity.
                             commands.entity(data_entity).insert(NeedsDespawned);
 
-                            info!("found old block data ent - killing early! (old: {data_entity:?}");
                             structure.set_block_data_entity(coords, None);
 
-                            data_entity = structure.get_or_create_block_data(coords, commands)?;
-
-                            info!("New entity - {data_entity:?}");
+                            data_entity = structure.get_or_create_block_data_for_block_id(coords, block_id, commands)?;
                         }
 
                         network_mapping.add_mapping(data_entity, server_data_entity);
