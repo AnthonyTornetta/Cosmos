@@ -1,11 +1,7 @@
 use bevy::{
     app::{App, Update},
-    prelude::{
-        in_state, Added, Commands, Component, Deref, DerefMut, Entity, EventReader, IntoSystemConfigs, OnEnter, Query, Res, ResMut, States,
-        With, Without,
-    },
+    prelude::{in_state, Commands, Component, Entity, EventReader, IntoSystemConfigs, OnEnter, Query, Res, ResMut, States, With, Without},
     reflect::Reflect,
-    time::Time,
     utils::{HashMap, HashSet},
 };
 
@@ -13,64 +9,53 @@ use crate::{
     block::{Block, BlockFace},
     events::block_events::BlockChangedEvent,
     registry::{create_registry, identifiable::Identifiable, Registry},
-    structure::{
-        coordinates::{BlockCoordinate, UnboundBlockCoordinate},
-        loading::StructureLoadingSet,
-        structure_block::StructureBlock,
-        systems::{energy_storage_system::EnergyStorageSystem, StructureSystems},
-        Structure,
-    },
+    structure::{coordinates::BlockCoordinate, loading::StructureLoadingSet, Structure},
 };
 
 fn wire_place_event_listener(
     mut evr_block_updated: EventReader<BlockChangedEvent>,
-    registry: Res<Registry<Block>>,
+    blocks: Res<Registry<Block>>,
+    logic_blocks: Res<Registry<LogicBlock>>,
     mut q_wire_graph: Query<&mut WireGraph>,
     mut q_structure: Query<&mut Structure>,
 ) {
-    let Some(wire_block) = registry.from_id("cosmos:logic_wire") else {
-        return;
-    };
-
-    let Some(logic_on) = registry.from_id("cosmos:logic_on") else {
-        return;
-    };
-
-    // ev.block.coords
-    // structure.block_info_at(BlockCoordinate)
-    // structure.block_rotation(BlockCoordinate).local_front().direction_coordinates()
-
     for ev in evr_block_updated.read() {
-        // If was wire, remove from graph.
-        if ev.old_block == wire_block.id() {
-            let Ok(mut wire_graph) = q_wire_graph.get_mut(ev.structure_entity) else {
-                continue;
-            };
+        // If was logic block, remove from graph.
+        if let Some(logic_block) = logic_blocks.from_id(blocks.from_numeric_id(ev.old_block).unlocalized_name()) {
+            if let Ok(structure) = q_structure.get_mut(ev.structure_entity) {
+                if let Ok(mut wire_graph) = q_wire_graph.get_mut(ev.structure_entity) {
+                    wire_graph.remove_logic_block(logic_block, ev.block.coords(), &structure, &blocks, &logic_blocks)
+                }
+            }
         }
 
-        // If is now wire, add to graph.
-        if ev.new_block == wire_block.id() {
-            let Ok(mut wire_graph) = q_wire_graph.get_mut(ev.structure_entity) else {
-                continue;
-            };
-
-            let Ok(mut structure) = q_structure.get_mut(ev.structure_entity) else {
-                continue;
-            };
-
-            // ev.block.coords().front()
-            // structure.
+        // If is now logic block, add to graph.
+        if let Some(logic_block) = logic_blocks.from_id(blocks.from_numeric_id(ev.new_block).unlocalized_name()) {
+            if let Ok(structure) = q_structure.get_mut(ev.structure_entity) {
+                if let Ok(mut wire_graph) = q_wire_graph.get_mut(ev.structure_entity) {
+                    wire_graph.add_logic_block(logic_block, ev.block.coords(), &structure, &blocks, &logic_blocks)
+                }
+            }
         }
     }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
+/// Defines the types of logic ports, which read and write logic values.
+/// Each block face with a logic connection might be a logic port.
 pub enum PortType {
-    // Reads the Boolean value of the logic group adjacent to this face to help compute its internal Boolean value.
+    /// Reads the Boolean value of the logic group adjacent to this face to help compute its internal Boolean value.
     Input,
-    // Writes its internal Boolean value to the logic group adjacent to this face.
+    /// Writes its internal Boolean value to the logic group adjacent to this face.
     Output,
-    // Part of any adjacent logic groups without interrupting them or having delayed inputs or outputs - for example: wires.
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+/// Defines how a block face interacts with adjacent logic blocks.
+pub enum LogicConnection {
+    /// An input or output port.
+    Port(PortType),
+    /// Joins adjacent logic groups without interrupting them or having delayed inputs or outputs.
     Wire,
 }
 
@@ -78,7 +63,7 @@ pub enum PortType {
 /// A block that interacts with the logic system, like wires and gates.
 pub struct LogicBlock {
     // Specifies the roles of the 6 block faces, ordered by BlockFace index.
-    ports: [Option<PortType>; 6],
+    connections: [Option<LogicConnection>; 6],
 
     id: u16,
     unlocalized_name: String,
@@ -100,17 +85,22 @@ impl Identifiable for LogicBlock {
 
 impl LogicBlock {
     /// Creates a link to a block to define its logic connections.
-    pub fn new(block: &Block, ports: [Option<PortType>; 6]) -> Self {
+    pub fn new(block: &Block, connections: [Option<LogicConnection>; 6]) -> Self {
         Self {
-            ports,
+            connections,
             id: 0,
             unlocalized_name: block.unlocalized_name().to_owned(),
         }
     }
 
+    /// Convenience method for getting the port type without using the BlockFace index.
+    pub fn connection_on(&self, face: BlockFace) -> Option<LogicConnection> {
+        self.connections[BlockFace::index(&face)]
+    }
+
     /// Returns an iterator over all block faces with any port.
     pub fn faces<'a>(&'a self) -> impl Iterator<Item = BlockFace> + 'a {
-        self.ports
+        self.connections
             .iter()
             .enumerate()
             .filter(|(_, maybe_port)| maybe_port.is_some())
@@ -118,30 +108,45 @@ impl LogicBlock {
     }
 
     /// Returns an iterator over all block faces with the specified port type - for example: input or output.
-    pub fn faces_with<'a>(&'a self, port_type: PortType) -> impl Iterator<Item = BlockFace> + 'a {
-        self.ports
+    pub fn faces_with<'a>(&'a self, connection: Option<LogicConnection>) -> impl Iterator<Item = BlockFace> + 'a {
+        self.connections
             .iter()
             .enumerate()
-            .filter(move |(_, maybe_port)| **maybe_port == Some(port_type))
+            .filter(move |(_, maybe_connection)| **maybe_connection == connection)
             .map(|(idx, _)| BlockFace::from_index(idx))
     }
 
-    /// Any block with 6 connections and no input/output is a wire.
-    pub fn is_wire(&self) -> bool {
-        self.faces_with(PortType::Wire).count() == 6
+    /// Returns an iterator over all of this logic block's faces with input ports.
+    pub fn input_faces<'a>(&'a self) -> impl Iterator<Item = BlockFace> + 'a {
+        self.faces_with(Some(LogicConnection::Port(PortType::Input)))
+    }
+
+    /// Returns an iterator over all of this logic block's faces with output ports.
+    pub fn output_faces<'a>(&'a self) -> impl Iterator<Item = BlockFace> + 'a {
+        self.faces_with(Some(LogicConnection::Port(PortType::Output)))
+    }
+
+    /// Returns an iterator over all of this logic block's faces with wire connections.
+    pub fn wire_faces<'a>(&'a self) -> impl Iterator<Item = BlockFace> + 'a {
+        self.faces_with(Some(LogicConnection::Wire))
+    }
+
+    /// Returns an iterator over all of this logic block's faces with no logic connections.
+    pub fn non_logic_faces<'a>(&'a self) -> impl Iterator<Item = BlockFace> + 'a {
+        self.faces_with(None)
     }
 }
 
 fn register_logic_blocks(blocks: Res<Registry<Block>>, mut registry: ResMut<Registry<LogicBlock>>) {
-    use PortType as FP;
+    use LogicConnection as LC;
     if let Some(logic_wire) = blocks.from_id("cosmos:logic_wire") {
-        registry.register(LogicBlock::new(logic_wire, [Some(FP::Wire); 6]));
+        registry.register(LogicBlock::new(logic_wire, [Some(LC::Wire); 6]));
     }
     if let Some(logic_on) = blocks.from_id("cosmos:logic_on") {
-        registry.register(LogicBlock::new(logic_on, [Some(FP::Output); 6]));
+        registry.register(LogicBlock::new(logic_on, [Some(LC::Port(PortType::Output)); 6]));
     }
     if let Some(light) = blocks.from_id("cosmos:light") {
-        registry.register(LogicBlock::new(light, [Some(FP::Input); 6]));
+        registry.register(LogicBlock::new(light, [Some(LC::Port(PortType::Input)); 6]));
     }
 }
 
@@ -155,24 +160,24 @@ impl Registry<LogicBlock> {
 #[derive(Debug, Default, Reflect, Hash, PartialEq, Eq, Clone)]
 struct LogicGroup {
     on: bool,
-    recent_coords: BlockCoordinate,
+    recent_wire_coords: Option<BlockCoordinate>,
 }
 
 impl LogicGroup {
-    fn new(on: bool, coords: BlockCoordinate) -> LogicGroup {
-        LogicGroup { on, recent_coords: coords }
+    fn new(on: bool, recent_wire_coords: Option<BlockCoordinate>) -> LogicGroup {
+        LogicGroup { on, recent_wire_coords }
     }
 }
 
-#[derive(Debug, Default, Reflect)]
+#[derive(Debug, Default, Reflect, Hash, PartialEq, Eq, Clone)]
 struct Port {
     coords: BlockCoordinate,
-    group_id: usize,
+    local_face: BlockFace,
 }
 
 impl Port {
-    fn new(coords: BlockCoordinate, group: usize) -> Port {
-        Port { coords, group_id: group }
+    fn new(coords: BlockCoordinate, local_face: BlockFace) -> Port {
+        Port { coords, local_face }
     }
 }
 
@@ -181,86 +186,236 @@ struct WireGraph {
     /// As new logic groups are created, this tracks which ID is the next available.
     next_group_id: usize,
     groups: HashMap<usize, LogicGroup>,
-    outputs: Vec<Port>,
-    inputs: Vec<Port>,
+    producers: HashMap<Port, usize>,
+    consumers: HashMap<Port, usize>,
 }
 
 impl WireGraph {
-    fn add_group(&mut self, id: usize, on: bool, coords: BlockCoordinate) {
-        self.groups.insert(id, LogicGroup::new(on, coords));
+    fn new_group_id(&mut self) -> usize {
+        self.next_group_id += 1;
+        self.next_group_id - 1
     }
 
-    fn remove_group(&mut self) {}
+    fn add_group(&mut self, coords: Option<BlockCoordinate>) -> usize {
+        let id = self.new_group_id();
+        self.groups.insert(id, LogicGroup::new(false, coords));
+        id
+    }
 
-    fn merge_adjacent_groups(
+    fn add_port(
         &mut self,
+        coords: BlockCoordinate,
+        face: BlockFace,
+        port_type: PortType,
+        structure: &Structure,
+        blocks: &Registry<Block>,
+        logic_blocks: &Registry<LogicBlock>,
+    ) {
+        let local_face = structure.block_rotation(coords).global_to_local(face);
+        // If the neighbor coordinates don't exist, no port is added (and thus no new group).
+        if let Ok(neighbor_coords) = coords.step(local_face) {
+            let maybe_group = self.find_group(
+                neighbor_coords,
+                structure,
+                local_face.inverse(),
+                &mut HashSet::new(),
+                blocks,
+                logic_blocks,
+            );
+            let group_id = maybe_group.unwrap_or_else(|| self.add_group(None));
+            match port_type {
+                PortType::Input => &mut self.consumers,
+                PortType::Output => &mut self.producers,
+            }
+            .insert(Port::new(coords, local_face), group_id);
+        }
+    }
+
+    fn remove_port(
+        &mut self,
+        coords: BlockCoordinate,
+        face: BlockFace,
+        port_type: PortType,
+        structure: &Structure,
+        blocks: &Registry<Block>,
+        logic_blocks: &Registry<LogicBlock>,
+    ) {
+        let local_face = structure.block_rotation(coords).global_to_local(face);
+
+        // If the neighbor coordinates don't exist, no port is removed.
+        if let Ok(neighbor_coords) = coords.step(local_face) {
+            let port = Port::new(coords, local_face);
+            let Some(&group_id) = match port_type {
+                PortType::Input => &mut self.consumers,
+                PortType::Output => &mut self.producers,
+            }
+            .get(&port) else {
+                return;
+            };
+
+            // Check if this port is the last block of its group, and delete the group if so.
+            if self
+                .find_group(
+                    neighbor_coords,
+                    structure,
+                    local_face.inverse(),
+                    &mut HashSet::new(),
+                    blocks,
+                    logic_blocks,
+                )
+                .is_none()
+            {
+                self.groups.remove(&group_id);
+            }
+
+            // Delete the port.
+            match port_type {
+                PortType::Input => &mut self.consumers,
+                PortType::Output => &mut self.producers,
+            }
+            .remove(&port);
+        }
+    }
+
+    fn add_logic_block(
+        &mut self,
+        logic_block: &LogicBlock,
         coords: BlockCoordinate,
         structure: &Structure,
         blocks: &Registry<Block>,
         logic_blocks: &Registry<LogicBlock>,
     ) {
-        let block = structure.block_at(coords, blocks);
-        let Some(logic_block) = logic_blocks.from_id(block.unlocalized_name()) else {
-            // Not a logic block.
-            return;
-        };
+        // Adding input faces as consumers to their connected group, or a new group if there is no connected group.
+        for input_face in logic_block.input_faces() {
+            self.add_port(coords, input_face, PortType::Input, structure, blocks, logic_blocks)
+        }
 
-        // Get all adjacent group ID numbers.
-        let mut group_ids: HashSet<usize> = HashSet::new();
-        for face in logic_block.faces_with(PortType::Wire) {
-            let mut visited: HashSet<BlockCoordinate> = HashSet::new();
-            let Ok(neighbor_coords) = coords.step(face) else {
-                continue;
+        // Adding output faces as consumers to their connected group, or a new group if there is no connected group.
+        for output_face in logic_block.output_faces() {
+            self.add_port(coords, output_face, PortType::Output, structure, blocks, logic_blocks)
+        }
+
+        // Connect wire faces to all existing groups (by creating one new group that includes all adjacent groups).
+        if logic_block.wire_faces().count() > 0 {
+            let mut group_ids: HashSet<usize> = HashSet::new();
+
+            // Get all adjacent group IDs.
+            for wire_face in logic_block.wire_faces() {
+                let local_face = structure.block_rotation(coords).global_to_local(wire_face);
+                if let Ok(neighbor_coords) = coords.step(local_face) {
+                    if let Some(group_id) = self.find_group(
+                        neighbor_coords,
+                        structure,
+                        local_face.inverse(),
+                        &mut HashSet::new(),
+                        blocks,
+                        logic_blocks,
+                    ) {
+                        group_ids.insert(group_id);
+                    }
+                }
+            }
+
+            // Create a group if none exists, add to adjacent group if one exists, or merge all adjacent groups if there are multiple.
+            match group_ids.len() {
+                0 => {
+                    let id = self.new_group_id();
+                    self.groups.insert(id, LogicGroup::new(false, Some(coords)));
+                }
+                1 => drop(self.groups.get_mut(group_ids.iter().next().unwrap()).unwrap().recent_wire_coords = Some(coords)),
+                _ => self.merge_adjacent_groups(&group_ids, coords),
             };
+        }
+    }
 
-            if let Some(group_id) = self.find_group(neighbor_coords, structure, face.inverse(), &mut visited, blocks, logic_blocks) {
-                group_ids.insert(group_id);
+    fn remove_logic_block(
+        &mut self,
+        logic_block: &LogicBlock,
+        coords: BlockCoordinate,
+        structure: &Structure,
+        blocks: &Registry<Block>,
+        logic_blocks: &Registry<LogicBlock>,
+    ) {
+        // Adding input faces as consumers to their connected group, or a new group if there is no connected group.
+        for input_face in logic_block.input_faces() {
+            self.add_port(coords, input_face, PortType::Input, structure, blocks, logic_blocks)
+        }
+
+        // Adding output faces as consumers to their connected group, or a new group if there is no connected group.
+        for output_face in logic_block.output_faces() {
+            self.add_port(coords, output_face, PortType::Output, structure, blocks, logic_blocks)
+        }
+
+        // Connect wire faces to all existing groups (by creating one new group that includes all adjacent groups).
+        if logic_block.wire_faces().count() > 0 {
+            let mut group_ids: HashSet<usize> = HashSet::new();
+
+            // Get all adjacent group IDs.
+            for wire_face in logic_block.wire_faces() {
+                let local_face = structure.block_rotation(coords).global_to_local(wire_face);
+                if let Ok(neighbor_coords) = coords.step(local_face) {
+                    if let Some(group_id) = self.find_group(
+                        neighbor_coords,
+                        structure,
+                        local_face.inverse(),
+                        &mut HashSet::new(),
+                        blocks,
+                        logic_blocks,
+                    ) {
+                        group_ids.insert(group_id);
+                    }
+                }
+            }
+
+            // Create a group if none exists, add to adjacent group if one exists, or merge all adjacent groups if there are multiple.
+            match group_ids.len() {
+                0 => {
+                    let id = self.new_group_id();
+                    self.groups.insert(id, LogicGroup::new(false, Some(coords)));
+                }
+                1 => drop(self.groups.get_mut(group_ids.iter().next().unwrap()).unwrap().recent_wire_coords = Some(coords)),
+                _ => self.merge_adjacent_groups(&group_ids, coords),
+            };
+        }
+    }
+
+    fn merge_adjacent_groups(&mut self, group_ids: &HashSet<usize>, coords: BlockCoordinate) {
+        // Rewrite all output and input ports of adjacent groups to use the new ID number.
+        let new_group_id = self.new_group_id();
+        for group_id in self.producers.values_mut() {
+            if group_ids.contains(group_id) {
+                *group_id = new_group_id;
+            }
+        }
+        for group_id in self.consumers.values_mut() {
+            if group_ids.contains(group_id) {
+                *group_id = new_group_id;
             }
         }
 
-        let mut new_group_on = false;
+        // The new group is on if any of its neighbors were.
+        let new_group_on = group_ids.iter().fold(false, |or, group_id| or || self.groups[group_id].on);
 
-        if !group_ids.is_empty() {
-            // Rewrite all inputs and outputs of adjacent groups to use the new ID number.
-            for output in self.outputs.iter_mut() {
-                if group_ids.contains(&output.group_id) {
-                    output.group_id = self.next_group_id;
-                }
-            }
-
-            for input in self.inputs.iter_mut() {
-                if group_ids.contains(&input.group_id) {
-                    input.group_id = self.next_group_id;
-                }
-            }
-
-            // The new group is on if any of its neighbors were.
-            new_group_on = group_ids.iter().fold(false, |or, group_id| or || self.groups[group_id].on);
-
-            // Remove the old groups.
-            for group_id in group_ids {
-                self.groups.remove(&group_id);
-            }
+        // Remove the old groups.
+        for group_id in group_ids {
+            self.groups.remove(group_id);
         }
 
         // Creating the new group. The most recent block added is the current block.
         self.groups.insert(
-            self.next_group_id,
+            new_group_id,
             LogicGroup {
                 on: new_group_on,
-                recent_coords: coords,
+                recent_wire_coords: Some(coords),
             },
         );
-
-        // Necessary to make sure future groups get a unique ID.
-        self.next_group_id += 1;
     }
 
     fn find_group(
         &self,
         coords: BlockCoordinate,
         structure: &Structure,
-        start_face: BlockFace,
+        encountered_local_face: BlockFace,
         visited: &mut HashSet<BlockCoordinate>,
         blocks: &Registry<Block>,
         logic_blocks: &Registry<LogicBlock>,
@@ -271,45 +426,33 @@ impl WireGraph {
             return None;
         };
 
-        // Input port found, return the group the port is part of.
-        if logic_block.faces_with(PortType::Input).any(|face| face == start_face) {
-            if let Some(port) = self.inputs.iter().find(|gate| gate.coords == coords) {
-                return Some(port.group_id);
-            }
-        }
-
-        // Output gate found, retrun the group the port is part of.
-        if logic_block.faces_with(PortType::Output).any(|face| face == start_face) {
-            if let Some(port) = self.outputs.iter().find(|gate| gate.coords == coords) {
-                return Some(port.group_id);
-            }
-        }
-
-        // Most recent wire in the logic group found, return its group.
-        if logic_block.is_wire() {
-            if let Some(&id) = self
+        let encountered_face = structure.block_rotation(coords).local_to_global(encountered_local_face);
+        match logic_block.connection_on(encountered_face) {
+            Some(LogicConnection::Port(PortType::Input)) => self.consumers.get(&Port::new(coords, encountered_local_face)).copied(),
+            Some(LogicConnection::Port(PortType::Output)) => self.producers.get(&Port::new(coords, encountered_local_face)).copied(),
+            Some(LogicConnection::Wire) => self
                 .groups
                 .iter()
-                .find_map(|(id, group)| if group.recent_coords == coords { Some(id) } else { None })
-            {
-                return Some(id);
-            }
+                .find_map(|(&id, group)| if group.recent_wire_coords == Some(coords) { Some(id) } else { None })
+                .or_else(|| {
+                    // This wire block does not tell us what group we're in. Recurse on its neighbors.
+                    visited.insert(coords);
+                    for face in logic_block.wire_faces() {
+                        let local_face = structure.block_rotation(coords).global_to_local(face);
+                        let Ok(neighbor_coords) = coords.step(local_face) else {
+                            continue;
+                        };
+                        if visited.contains(&neighbor_coords) {
+                            continue;
+                        }
+                        if let Some(group) = self.find_group(neighbor_coords, structure, face.inverse(), visited, blocks, logic_blocks) {
+                            return Some(group);
+                        }
+                    }
+                    None
+                }),
+            None => return None,
         }
-
-        // This block does not tell us what group we're in. Recurse on its neighbors.
-        visited.insert(coords);
-        for face in logic_block.faces_with(PortType::Wire) {
-            let Ok(neighbor_coords) = coords.step(face) else {
-                continue;
-            };
-
-            if !visited.contains(&neighbor_coords) {
-                if let Some(group) = self.find_group(neighbor_coords, structure, face.inverse(), visited, blocks, logic_blocks) {
-                    return Some(group);
-                }
-            }
-        }
-        return None;
     }
 }
 
@@ -319,10 +462,17 @@ fn add_default_wire_graph(q_needs_wire_graph: Query<Entity, (With<Structure>, Wi
     }
 }
 
-pub(super) fn register<T: States>(app: &mut App, post_loading_state: T) {
+pub(super) fn register<T: States>(app: &mut App, post_loading_state: T, playing_state: T) {
     create_registry::<LogicBlock>(app, "cosmos:logic_blocks");
 
     app.add_systems(OnEnter(post_loading_state), register_logic_blocks)
-        .add_systems(Update, add_default_wire_graph.in_set(StructureLoadingSet::AddStructureComponents))
+        .add_systems(
+            Update,
+            (
+                add_default_wire_graph.in_set(StructureLoadingSet::AddStructureComponents),
+                wire_place_event_listener,
+            )
+                .run_if(in_state(playing_state)),
+        )
         .register_type::<WireGraph>();
 }
