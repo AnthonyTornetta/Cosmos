@@ -357,9 +357,15 @@ impl WireGraph {
         // For wire faces, 1 connection means just delete the wire. 2+ means delete the wire's group and make a new one for each connection.
         // For now, we just delete the group and start again every time to avoid edge cases.
         if logic_block.wire_faces().count() > 0 {
+            // Old group ID either comes from being the stored wire coordinate for a group, or searching all your neighbors.
             let group_id = self
-                .find_group_all_faces(logic_block, coords, structure, &mut HashSet::new(), blocks, logic_blocks)
-                .expect("Block with 'wire' logic connection should have a logic group.");
+                .groups
+                .iter()
+                .find_map(|(&id, group)| if group.recent_wire_coords == Some(coords) { Some(id) } else { None })
+                .unwrap_or_else(|| {
+                    self.find_group_all_faces(logic_block, coords, structure, &mut Port::all_for(coords), blocks, logic_blocks)
+                        .expect("Block with 'wire' logic connection should have a logic group.")
+                });
             let removed_group = self
                 .groups
                 .remove(&group_id)
@@ -480,7 +486,10 @@ impl WireGraph {
     ) -> Option<usize> {
         for wire_face in logic_block.wire_faces() {
             let local_face = structure.block_rotation(coords).global_to_local(wire_face);
-            if let Some(group_id) = self.find_group(coords, local_face.inverse(), structure, visited, blocks, logic_blocks) {
+            let Ok(neighbor_coords) = coords.step(local_face) else {
+                continue;
+            };
+            if let Some(group_id) = self.find_group(neighbor_coords, local_face.inverse(), structure, visited, blocks, logic_blocks) {
                 return Some(group_id);
             }
         }
