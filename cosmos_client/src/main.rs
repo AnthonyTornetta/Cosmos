@@ -98,8 +98,9 @@ fn main() {
                 } else {
                     WindowMode::Windowed
                 },
-                resolution: WindowResolution::new(500.0, 500.0),
-                decorations: false,
+                // for panorama generation:
+                // resolution: WindowResolution::new(1000.0, 1000.0),
+                // decorations: false,
                 ..Default::default()
             }),
             ..Default::default()

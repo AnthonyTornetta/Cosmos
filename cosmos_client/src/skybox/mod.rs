@@ -11,7 +11,7 @@ use crate::rendering::MainCamera;
 
 /// Order from top to bottom:
 /// Right, Left, Top, Bottom, Front, Back
-const CUBEMAP: &str = "skybox/skybox.png";
+const CUBEMAP: &str = "skybox/main-menu-panorama.png";
 
 #[derive(Resource)]
 struct Cubemap {
