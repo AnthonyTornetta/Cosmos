@@ -7,11 +7,13 @@ use bevy::{
     render::render_resource::{TextureViewDescriptor, TextureViewDimension},
 };
 
-use crate::rendering::MainCamera;
+use crate::{rendering::MainCamera, state::game_state::GameState};
+
+use super::MainMenuCamera;
 
 /// Order from top to bottom:
 /// Right, Left, Top, Bottom, Front, Back
-const CUBEMAP: &str = "skybox/skybox.png";
+const CUBEMAP: &str = "skybox/main-menu-panorama.png";
 
 #[derive(Resource)]
 struct Cubemap {
@@ -53,7 +55,7 @@ fn asset_loaded(asset_server: Res<AssetServer>, mut images: ResMut<Assets<Image>
     }
 }
 
-fn on_add_main_camera(cubemap: Res<Cubemap>, mut commands: Commands, query: Query<Entity, Added<MainCamera>>) {
+fn on_add_main_menu_camera(cubemap: Res<Cubemap>, mut commands: Commands, query: Query<Entity, Added<MainMenuCamera>>) {
     for ent in query.iter() {
         commands.entity(ent).insert(Skybox {
             image: cubemap.image_handle.clone(),
@@ -65,5 +67,8 @@ fn on_add_main_camera(cubemap: Res<Cubemap>, mut commands: Commands, query: Quer
 pub(super) fn register(app: &mut App) {
     app //.add_plugin(MaterialPlugin::<CubemapMaterial>::default())
         .add_systems(Startup, setup)
-        .add_systems(Update, (added_skybox, on_add_main_camera, asset_loaded));
+        .add_systems(
+            Update,
+            (added_skybox, on_add_main_menu_camera, asset_loaded).run_if(in_state(GameState::MainMenu)),
+        );
 }

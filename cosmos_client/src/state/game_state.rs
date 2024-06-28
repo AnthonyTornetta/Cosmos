@@ -12,6 +12,8 @@ pub enum GameState {
     Loading,
     /// Everything that needs to happen based on those filled out resources
     PostLoading,
+    /// On the main menu
+    MainMenu,
     /// Connecting to the server
     Connecting,
     /// Loading server data

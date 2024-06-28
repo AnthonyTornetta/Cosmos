@@ -116,7 +116,7 @@ impl<T: States + Clone + Copy> PluginGroup for CosmosCorePluginGroup<T> {
             .add(RapierPhysicsPlugin::<CosmosPhysicsFilter>::default())
             // .add(ImagePlugin::default_nearest())
             .add(AppComputePlugin)
-            // .add(WorldInspectorPlugin::default())
+            .add(WorldInspectorPlugin::default())
             .add(CosmosCorePlugin::new(
                 self.pre_loading_state,
                 self.loading_state,

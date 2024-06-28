@@ -127,7 +127,7 @@ fn main() {
             GameState::PreLoading,
             GameState::Loading,
             GameState::PostLoading,
-            GameState::Connecting,
+            GameState::MainMenu,
             GameState::Playing,
         ))
         .add_plugins((RenetClientPlugin, NetcodeClientPlugin, ObjPlugin, HanabiPlugin))

@@ -19,6 +19,5 @@ fn update_visulizer_system(
 
 pub(super) fn register(app: &mut App) {
     app.insert_resource(RenetServerVisualizer::<200>::default())
-        //.add_systems(Update, update_visulizer_system);
-        ;
+        .add_systems(Update, update_visulizer_system);
 }
